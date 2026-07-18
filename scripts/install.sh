@@ -444,6 +444,19 @@ else
   warn "Health check failed — panel may still be starting. Check logs."
 fi
 
+# ---------------------------------------------------------------
+# Remove temp git clone (never leave /tmp/tserver-* around)
+# ---------------------------------------------------------------
+if [[ -n "${CLEANUP_SOURCE_DIR:-}" && -d "${CLEANUP_SOURCE_DIR}" ]]; then
+  info "Removing temp source ${CLEANUP_SOURCE_DIR}"
+  rm -rf "${CLEANUP_SOURCE_DIR}"
+elif [[ -n "${SOURCE_DIR:-}" && "$SOURCE_DIR" == /tmp/tserver-* && -d "$SOURCE_DIR" ]]; then
+  info "Removing temp source $SOURCE_DIR"
+  rm -rf "$SOURCE_DIR"
+fi
+# Always scrub known temp paths
+rm -rf /tmp/tserver-install /tmp/tserver-update 2>/dev/null || true
+
 echo ""
 echo -e "${GRN}==> Install complete${NC}"
 echo "    Panel dir:   $PANEL_DIR"
@@ -456,4 +469,4 @@ if [[ "$PANEL_DOMAIN" != "$SERVER_IP" ]]; then
   echo "    DNS:         A ${PANEL_DOMAIN} → ${SERVER_IP}"
 fi
 echo ""
-echo "    Update later: sudo SOURCE_DIR=/path/to/repo bash $PANEL_DIR/scripts/update.sh"
+echo "    Update:  curl -fsSL https://raw.githubusercontent.com/toocomedia/tserver/main/scripts/get-update.sh | sudo bash"

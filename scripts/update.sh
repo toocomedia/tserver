@@ -167,6 +167,13 @@ else
   warn "Health endpoint not ready yet — check journalctl -u srv-panel"
 fi
 
+# Drop temp git clones (get-update.sh / manual /tmp sources)
+if [[ -n "${SOURCE_DIR:-}" && "$SOURCE_DIR" == /tmp/tserver-* && -d "$SOURCE_DIR" ]]; then
+  info "Removing temp source $SOURCE_DIR"
+  rm -rf "$SOURCE_DIR"
+fi
+rm -rf /tmp/tserver-install /tmp/tserver-update 2>/dev/null || true
+
 echo ""
 echo -e "${GRN}==> Update complete${NC}"
 echo "    Backup:  $BACKUP_DIR/*.$TS"

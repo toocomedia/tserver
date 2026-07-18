@@ -1,9 +1,9 @@
 #!/bin/bash
 # get.sh — One-line VPS bootstrap (curl | bash)
-# Usage:
+# Fresh Ubuntu 22.04/24.04:
 #   curl -fsSL https://raw.githubusercontent.com/toocomedia/tserver/main/scripts/get.sh | sudo bash
 #
-# Interactive by default (asks IP confirm, domain, email via /dev/tty).
+# Temp git clone is removed after install succeeds.
 # Automation:  curl ... | sudo NONINTERACTIVE=1 bash
 set -euo pipefail
 
@@ -16,15 +16,25 @@ die() { echo -e "${RED}ERROR:${NC} $*" >&2; exit 1; }
 
 [[ "$(id -u)" -eq 0 ]] || die "Run with sudo: curl ... | sudo bash"
 
-# apt noninteractive only — install prompts stay ON unless NONINTERACTIVE=1
 export DEBIAN_FRONTEND=noninteractive
-# Default: interactive (user answers domain + email). CI can set NONINTERACTIVE=1.
 export NONINTERACTIVE="${NONINTERACTIVE:-0}"
 
-# curl|bash: restore keyboard so install.sh can read answers
+# curl|bash: keyboard for install prompts
 if [[ -r /dev/tty ]]; then
   exec </dev/tty
 fi
+
+cleanup_temp() {
+  if [[ -n "${CLONE_DIR:-}" && -d "$CLONE_DIR" ]]; then
+    echo -e "${GRN}==>${NC} Removing temp clone $CLONE_DIR"
+    rm -rf "$CLONE_DIR"
+  fi
+  # leftover from older installs / failed runs
+  rm -rf /tmp/tserver-install /tmp/tserver-update 2>/dev/null || true
+}
+
+# On failure still try to drop temp (keeps disk clean)
+trap 'cleanup_temp' EXIT
 
 echo -e "${GRN}==>${NC} Installing git (if needed)..."
 if ! command -v git &>/dev/null; then
@@ -32,12 +42,17 @@ if ! command -v git &>/dev/null; then
   apt-get install -y git
 fi
 
-echo -e "${GRN}==>${NC} Cloning ${REPO_URL} (${REPO_BRANCH})..."
+echo -e "${GRN}==>${NC} Cloning ${REPO_URL} (${REPO_BRANCH}) → temp dir..."
 rm -rf "$CLONE_DIR"
 git clone --depth 1 --branch "$REPO_BRANCH" "$REPO_URL" "$CLONE_DIR"
 
 export SOURCE_DIR="$CLONE_DIR"
+export CLEANUP_SOURCE_DIR="$CLONE_DIR"
 chmod +x "$CLONE_DIR/scripts/"*.sh
 
-echo -e "${GRN}==>${NC} Starting installer (will ask for domain / email)..."
-exec bash "$CLONE_DIR/scripts/install.sh"
+echo -e "${GRN}==>${NC} Starting installer..."
+# Do NOT exec — we need to clean temp after install returns
+bash "$CLONE_DIR/scripts/install.sh"
+
+# Success path: trap still runs cleanup_temp on EXIT
+echo -e "${GRN}==>${NC} Install finished. Temp git files removed."

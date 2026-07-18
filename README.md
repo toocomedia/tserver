@@ -2,24 +2,22 @@
 
 Lightweight VPS control panel — domains, DNS (PowerDNS), SSL (Certbot), reverse proxy.
 
-## Install (Ubuntu 22.04 / 24.04)
+## Install (fresh Ubuntu 22.04 / 24.04)
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/toocomedia/tserver/main/scripts/get.sh | sudo bash
 ```
 
-The installer **asks you**:
+The installer will ask for:
 
-1. **SERVER_IP** — auto-detected, press Enter to confirm  
-2. **Panel domain?** — `n` = IP only (`http://IP/`), or `y` then type e.g. `panel.example.com`  
-3. **Email** — required for Let's Encrypt SSL later  
+1. **SERVER_IP** — auto-detected (Enter to confirm)  
+2. **Panel domain?** — `n` = IP only, or `y` + domain name  
+3. **Email** — for Let's Encrypt SSL  
 
-Fully automatic (no questions):
+Temp git files under `/tmp` are **deleted automatically** after install.  
+Live install path: `/opt/srv-panel` only.
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/toocomedia/tserver/main/scripts/get.sh \
-  | sudo NONINTERACTIVE=1 bash
-```
+Open: **http://YOUR.SERVER.IP/**
 
 ## Update
 
@@ -32,4 +30,5 @@ curl -fsSL https://raw.githubusercontent.com/toocomedia/tserver/main/scripts/get
 ```bash
 systemctl status srv-panel
 journalctl -u srv-panel -n 50
+curl -s http://127.0.0.1:8000/api/health
 ```
