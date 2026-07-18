@@ -98,29 +98,26 @@ PRIVILEGED_SUDO: bool = os.getenv("PRIVILEGED_SUDO", "true").lower() == "true"
 # ---------------------------------------------------------
 # DNS Record Templates
 # ---------------------------------------------------------
+# content may be a string or list[str] (multi-value RRset, e.g. two NS).
 DNS_TEMPLATES: dict = {
     "basic_web": {
         "label": "Basic Web (A + www)",
         "records": [
-            {"name": "@", "type": "A",     "content": "{server_ip}", "ttl": 3600},
+            {"name": "@", "type": "A", "content": "{server_ip}", "ttl": 3600},
             {"name": "www", "type": "CNAME", "content": "{domain}.", "ttl": 3600},
         ],
     },
-    "email_mx": {
-        "label": "Email (MX + SPF)",
+    "child_ns": {
+        "label": "Child NS (ns1 + ns2)",
         "records": [
-            {"name": "@", "type": "MX",  "content": "10 mail.{domain}.", "ttl": 3600},
-            {"name": "@", "type": "TXT", "content": "v=spf1 mx ~all",    "ttl": 3600},
-        ],
-    },
-    "full": {
-        "label": "Full (Web + Email + DMARC)",
-        "records": [
-            {"name": "@",      "type": "A",     "content": "{server_ip}",              "ttl": 3600},
-            {"name": "www",    "type": "CNAME", "content": "{domain}.",                "ttl": 3600},
-            {"name": "@",      "type": "MX",    "content": "10 mail.{domain}.",        "ttl": 3600},
-            {"name": "@",      "type": "TXT",   "content": "v=spf1 mx ~all",           "ttl": 3600},
-            {"name": "_dmarc", "type": "TXT",   "content": "v=DMARC1; p=none;",       "ttl": 3600},
+            {"name": "ns1", "type": "A", "content": "{server_ip}", "ttl": 3600},
+            {"name": "ns2", "type": "A", "content": "{server_ip}", "ttl": 3600},
+            {
+                "name": "@",
+                "type": "NS",
+                "content": ["ns1.{domain}.", "ns2.{domain}."],
+                "ttl": 3600,
+            },
         ],
     },
 }

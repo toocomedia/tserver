@@ -38,12 +38,19 @@ async def add_a_record(domain: str, name: str, ip: str, ttl: int = 3600) -> None
 async def add_record(
     domain: str, name: str, rtype: str, content: str, ttl: int = 3600
 ) -> None:
-    """Generic add record."""
+    """Generic add record (single value). TXT is auto-quoted in powerdns."""
     await powerdns.add_record(domain, name, rtype, content, ttl)
 
 
+async def add_records(
+    domain: str, name: str, rtype: str, contents: list[str], ttl: int = 3600
+) -> None:
+    """Add/replace multi-value RRset (e.g. two NS records)."""
+    await powerdns.add_records(domain, name, rtype, contents, ttl)
+
+
 async def delete_record(domain: str, name: str, rtype: str) -> None:
-    """Delete a specific record."""
+    """Delete a specific record (entire name+type RRset)."""
     await powerdns.delete_record(domain, name, rtype)
 
 
@@ -61,19 +68,33 @@ async def apply_template(domain: str, template_name: str) -> list[str]:
     """
     Apply a named DNS template from config.DNS_TEMPLATES.
     Returns list of record descriptions added.
+    content may be str or list[str] for multi-value RRsets.
     """
     template = config.DNS_TEMPLATES.get(template_name)
     if not template:
         raise HTTPException(status_code=400, detail=f"Unknown DNS template: {template_name}")
 
-    added = []
-    for rec in template["records"]:
-        content = rec["content"].format(
-            domain=domain,
-            server_ip=config.SERVER_IP,
-        )
-        await powerdns.add_record(domain, rec["name"], rec["type"], content, rec["ttl"])
-        added.append(f"{rec['name']} {rec['type']} {content}")
+    fmt = {"domain": domain, "server_ip": config.SERVER_IP}
+    added: list[str] = []
 
-    logger.info("DNS template '%s' applied to %s: %d records", template_name, domain, len(added))
+    for rec in template["records"]:
+        raw = rec["content"]
+        if isinstance(raw, list):
+            contents = [c.format(**fmt) for c in raw]
+            await powerdns.add_records(
+                domain, rec["name"], rec["type"], contents, rec["ttl"]
+            )
+            for c in contents:
+                added.append(f"{rec['name']} {rec['type']} {c}")
+        else:
+            content = raw.format(**fmt)
+            await powerdns.add_record(
+                domain, rec["name"], rec["type"], content, rec["ttl"]
+            )
+            added.append(f"{rec['name']} {rec['type']} {content}")
+
+    logger.info(
+        "DNS template '%s' applied to %s: %d records",
+        template_name, domain, len(added),
+    )
     return added

@@ -11,7 +11,10 @@ class SslCert(Base):
     __tablename__ = "ssl_certs"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    domain_id: Mapped[int] = mapped_column(Integer, ForeignKey("domains.id"), nullable=False)
+    # Nullable for external reverse-proxy hosts not tied to a managed domain
+    domain_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("domains.id"), nullable=True
+    )
     # full_domain may be a subdomain: sub.example.com
     full_domain: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     cert_path: Mapped[str | None] = mapped_column(String(512), nullable=True)

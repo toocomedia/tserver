@@ -29,24 +29,39 @@ async def proxy_index(request: Request, db: AsyncSession = Depends(get_db)):
     rows = []
 
     for p in proxies:
-        domain = await db.scalar(select(Domain).where(Domain.id == p.domain_id))
+        domain = None
+        if p.domain_id is not None:
+            domain = await db.scalar(select(Domain).where(Domain.id == p.domain_id))
+
+        dns_managed = getattr(p, "dns_managed", True)
         dns_ok = False
-        if domain:
+        dns_status = "external"
+
+        if not dns_managed:
+            dns_ok = True  # external DNS is user-managed
+            dns_status = "external"
+        elif domain:
+            dns_status = "missing"
             try:
                 rrsets = await dns_service.list_records(domain.name)
                 fqdn = f"{p.subdomain}.{domain.name}."
                 for rr in rrsets:
                     if rr.get("type") == "A" and rr.get("name", "").rstrip(".") == fqdn.rstrip("."):
                         dns_ok = True
+                        dns_status = "active"
                         break
             except Exception as e:
                 logger.warning("DNS status check failed for %s: %s", p.full_domain, e)
+        else:
+            dns_status = "missing"
 
         rows.append({
             "proxy": p,
-            "domain_name": domain.name if domain else "—",
+            "domain_name": domain.name if domain else "External",
             "nginx_active": nginx_service.config_exists(p.full_domain),
             "dns_ok": dns_ok,
+            "dns_status": dns_status,
+            "dns_managed": dns_managed,
         })
 
     return templates.TemplateResponse("pages/proxy/index.html", {
@@ -65,12 +80,12 @@ async def proxy_create_page(
     domain_id: int | None = Query(default=None),
     db: AsyncSession = Depends(get_db),
 ):
-    """Create reverse proxy form. Domain dropdown = managed domains only."""
+    """Create reverse proxy form — managed domain or external hostname."""
     domains = (await db.execute(
         select(Domain).order_by(Domain.name)
     )).scalars().all()
 
-    form = {}
+    form: dict = {"mode": "managed"}
     if domain_id is not None:
         form["domain_id"] = domain_id
 
@@ -90,25 +105,55 @@ async def proxy_create_page(
 @router.post("/create", response_class=HTMLResponse)
 async def proxy_create_submit(
     request: Request,
-    domain_id: int = Form(...),
-    subdomain: str = Form(...),
+    mode: str = Form("managed"),
+    domain_id: str = Form(""),
+    subdomain: str = Form(""),
+    hostname: str = Form(""),
     target_ip: str = Form(...),
     target_port: int = Form(...),
     protocol: str = Form("http"),
     enable_ssl: bool = Form(False),
     db: AsyncSession = Depends(get_db),
 ):
-    """Run full proxy cascade: DNS + nginx + optional SSL."""
+    """Run proxy cascade for managed or external mode."""
+    mode = (mode or "managed").strip().lower()
+    resolved_domain_id: int | None = None
+    if domain_id and str(domain_id).strip().isdigit():
+        resolved_domain_id = int(domain_id)
+
+    form_state = {
+        "mode": mode,
+        "domain_id": resolved_domain_id,
+        "subdomain": subdomain,
+        "hostname": hostname,
+        "target_ip": target_ip,
+        "target_port": target_port,
+        "protocol": protocol,
+        "enable_ssl": enable_ssl,
+    }
+
     try:
-        proxy = await proxy_service.create_proxy(
-            db,
-            domain_id=domain_id,
-            subdomain=subdomain,
-            target_ip=target_ip,
-            target_port=target_port,
-            protocol=protocol,
-            enable_ssl=enable_ssl,
-        )
+        if mode == "external":
+            proxy = await proxy_service.create_external_proxy(
+                db,
+                hostname=hostname,
+                target_ip=target_ip,
+                target_port=target_port,
+                protocol=protocol,
+                enable_ssl=enable_ssl,
+            )
+        else:
+            if resolved_domain_id is None:
+                raise ValueError("Parent domain is required for managed mode")
+            proxy = await proxy_service.create_proxy(
+                db,
+                domain_id=resolved_domain_id,
+                subdomain=subdomain,
+                target_ip=target_ip,
+                target_port=target_port,
+                protocol=protocol,
+                enable_ssl=enable_ssl,
+            )
         return RedirectResponse(
             f"/proxy/?created={proxy.full_domain}",
             status_code=303,
@@ -124,14 +169,7 @@ async def proxy_create_submit(
             "domains": domains,
             "server_ip": config.SERVER_IP,
             "error": error_msg,
-            "form": {
-                "domain_id": domain_id,
-                "subdomain": subdomain,
-                "target_ip": target_ip,
-                "target_port": target_port,
-                "protocol": protocol,
-                "enable_ssl": enable_ssl,
-            },
+            "form": form_state,
         }, status_code=400)
 
 

@@ -71,9 +71,12 @@
         <td class="truncate text-small">{{ row.content }}</td>
         <td class="text-small text-muted">{{ row.ttl }}</td>
         <td class="col-actions">
-          <button class="btn btn--danger btn--sm"
+          <button type="button"
+                  class="btn btn--danger btn--sm btn-del-record"
                   id="btn-del-{{ loop.index }}"
-                  onclick="deleteRecord('{{ domain.name }}', '{{ row.name }}', '{{ row.type }}', this)">
+                  data-domain="{{ domain.name }}"
+                  data-name="{{ row.name }}"
+                  data-type="{{ row.type }}">
             Del
           </button>
         </td>
@@ -161,22 +164,5 @@
 <script>
 // Pass content labels from server to JS
 const CONTENT_LABELS = {{ content_labels | tojson }};
-
-function deleteRecord(domain, name, type, btn) {
-  confirmAction(
-    `Delete ${type} record "${name}" from ${domain}?`,
-    async () => {
-      const form = document.createElement('form');
-      form.method = 'POST';
-      form.action = `/dns/${domain}/records/delete`;
-      form.innerHTML = `
-        <input type="hidden" name="name" value="${name}">
-        <input type="hidden" name="type" value="${type}">
-      `;
-      document.body.appendChild(form);
-      form.submit();
-    }
-  );
-}
 </script>
 {% endblock %}

@@ -38,13 +38,13 @@
         <div class="form-select-wrap">
           <select id="full_domain_select" class="form-select" required
                   onchange="syncHidden(this)">
-            <option value="" disabled {% if not preselect_id %}selected{% endif %}>
+            <option value="" disabled {% if not preselect_full_domain %}selected{% endif %}>
               Select a domain…
             </option>
             {% for item in eligible %}
               <option value="{{ item.full_domain }}"
-                      data-domain-id="{{ item.id }}"
-                      {% if preselect_id and item.id == preselect_id %}selected{% endif %}>
+                      data-domain-id="{{ item.id if item.id is not none else '' }}"
+                      {% if preselect_full_domain and item.full_domain == preselect_full_domain %}selected{% endif %}>
                 {{ item.label }}
               </option>
             {% endfor %}

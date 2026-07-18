@@ -93,24 +93,52 @@ document.addEventListener("keydown", (e) => {
 // CONFIRM DIALOG
 // ============================================================
 /**
- * confirm(message, onConfirm) — show confirm modal then call onConfirm
- * Uses the #confirm-modal in layout.html
+ * confirmAction(message, onConfirm) — show confirm modal then call onConfirm.
+ * Uses #confirm-modal in layout.html. Always clears prior OK handlers
+ * (clone button) so Cancel + re-open does not stack listeners.
  */
 function confirmAction(message, onConfirm) {
   const modal = document.getElementById("confirm-modal");
   const msgEl = document.getElementById("confirm-message");
-  const okBtn = document.getElementById("confirm-ok");
-  if (!modal || !msgEl || !okBtn) return;
+  let okBtn = document.getElementById("confirm-ok");
+
+  if (!modal || !msgEl || !okBtn) {
+    if (window.confirm(message)) {
+      Promise.resolve(onConfirm()).catch((err) => {
+        console.error(err);
+        toast(err.message || "Action failed", "danger");
+      });
+    }
+    return;
+  }
 
   msgEl.textContent = message;
+
+  // Drop any previous click handlers on OK
+  const freshOk = okBtn.cloneNode(true);
+  okBtn.parentNode.replaceChild(freshOk, okBtn);
+  okBtn = freshOk;
+
   modal.classList.remove("hidden");
 
-  const handler = async () => {
-    okBtn.removeEventListener("click", handler);
+  const close = () => {
     modal.classList.add("hidden");
-    await onConfirm();
   };
-  okBtn.addEventListener("click", handler);
+
+  const onOk = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    okBtn.removeEventListener("click", onOk);
+    close();
+    try {
+      await onConfirm();
+    } catch (err) {
+      console.error(err);
+      toast(err.message || "Action failed", "danger");
+    }
+  };
+
+  okBtn.addEventListener("click", onOk, { once: true });
 }
 
 // ============================================================

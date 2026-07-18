@@ -32,27 +32,34 @@ async def create_reverse_proxy_full(
     db: AsyncSession,
     *,
     domain_name: str,
-    domain_id: int,
+    domain_id: int | None,
     subdomain: str,
     full_domain: str,
     target_ip: str,
     target_port: int,
     protocol: str,
     enable_ssl: bool,
+    dns_managed: bool = True,
 ) -> ReverseProxy:
     """
     Atomic reverse-proxy create:
-      DNS A record → nginx config → reload → DB row → optional SSL
+      [optional DNS A] → nginx config → reload → DB row → optional SSL
     On failure, undoes completed steps in reverse order.
     """
     steps_done: list[str] = []
 
     try:
-        # 1. DNS: subdomain A → this server (nginx will forward to target)
-        await dns_service.add_record(
-            domain_name, subdomain, "A", config.SERVER_IP
-        )
-        steps_done.append("dns")
+        # 1. DNS: only when panel manages the parent zone
+        if dns_managed:
+            if not domain_name or not subdomain:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Managed proxy requires parent domain and subdomain",
+                )
+            await dns_service.add_record(
+                domain_name, subdomain, "A", config.SERVER_IP
+            )
+            steps_done.append("dns")
 
         # 2. Nginx reverse-proxy config (+ nginx -t inside)
         nginx_service.ensure_acme_root()
@@ -67,7 +74,7 @@ async def create_reverse_proxy_full(
         # 4. Persist proxy row (needed before SSL so issue_cert can find it)
         proxy = ReverseProxy(
             domain_id=domain_id,
-            subdomain=subdomain,
+            subdomain=subdomain or "",
             full_domain=full_domain,
             target_ip=target_ip,
             target_port=target_port,
@@ -75,6 +82,7 @@ async def create_reverse_proxy_full(
             ssl_enabled=False,
             ssl_cert_id=None,
             nginx_config_path=config_path,
+            dns_managed=dns_managed,
         )
         db.add(proxy)
         await db.flush()
@@ -87,8 +95,8 @@ async def create_reverse_proxy_full(
             await db.refresh(proxy)
 
         logger.info(
-            "Reverse proxy created: %s → %s://%s:%s (ssl=%s)",
-            full_domain, protocol, target_ip, target_port, enable_ssl,
+            "Reverse proxy created: %s → %s://%s:%s (ssl=%s dns_managed=%s)",
+            full_domain, protocol, target_ip, target_port, enable_ssl, dns_managed,
         )
         return proxy
 
@@ -113,6 +121,7 @@ async def create_reverse_proxy_full(
                 "target_port": target_port,
                 "protocol": protocol,
                 "enable_ssl": enable_ssl,
+                "dns_managed": dns_managed,
                 "steps_done": steps_done,
             },
         )
@@ -121,6 +130,7 @@ async def create_reverse_proxy_full(
             domain_name=domain_name,
             subdomain=subdomain,
             full_domain=full_domain,
+            dns_managed=dns_managed,
             steps_done=steps_done,
         )
         if isinstance(exc, HTTPException):
@@ -134,6 +144,7 @@ async def _rollback_create(
     domain_name: str,
     subdomain: str,
     full_domain: str,
+    dns_managed: bool,
     steps_done: list[str],
 ) -> None:
     """Undo create steps in reverse order."""
@@ -163,7 +174,7 @@ async def _rollback_create(
                 await nginx_service.reload()
             except Exception as e:
                 logger.error("Nginx reload after rollback failed: %s", e)
-        elif step == "dns":
+        elif step == "dns" and dns_managed:
             await _safe_rollback(
                 "dns",
                 lambda: dns_service.delete_record(domain_name, subdomain, "A"),
@@ -177,11 +188,12 @@ async def delete_reverse_proxy_full(
 ) -> None:
     """
     Full proxy teardown:
-      revoke SSL (if any) → remove nginx → remove DNS → delete DB row
+      revoke SSL (if any) → remove nginx → remove DNS (if managed) → delete DB row
     Best-effort cleanup; continues even if individual steps warn.
     """
     full_domain = proxy.full_domain
     subdomain = proxy.subdomain
+    dns_managed = getattr(proxy, "dns_managed", True)
 
     # 1. Revoke SSL if linked (or orphaned cert for this host)
     cert_id = proxy.ssl_cert_id
@@ -204,11 +216,12 @@ async def delete_reverse_proxy_full(
     except Exception as e:
         logger.warning("Nginx cleanup for %s failed: %s", full_domain, e)
 
-    # 3. DNS A record for subdomain
-    try:
-        await dns_service.delete_record(domain_name, subdomain, "A")
-    except Exception as e:
-        logger.warning("DNS cleanup for %s failed: %s", full_domain, e)
+    # 3. DNS A record for subdomain (managed only)
+    if dns_managed and domain_name and subdomain:
+        try:
+            await dns_service.delete_record(domain_name, subdomain, "A")
+        except Exception as e:
+            logger.warning("DNS cleanup for %s failed: %s", full_domain, e)
 
     # 4. DB
     await db.delete(proxy)

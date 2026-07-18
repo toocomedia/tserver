@@ -20,6 +20,44 @@ router = APIRouter(prefix="/ssl", tags=["ssl"])
 templates = Jinja2Templates(directory="templates")
 
 
+async def _build_eligible(db: AsyncSession) -> list[dict]:
+    """Domains and proxies with nginx active and no existing cert."""
+    issued_domains = {
+        r.full_domain
+        for r in (await db.execute(select(SslCert))).scalars().all()
+    }
+
+    eligible: list[dict] = []
+
+    all_domains = (await db.execute(
+        select(Domain).order_by(Domain.name)
+    )).scalars().all()
+
+    for d in all_domains:
+        if nginx_service.config_exists(d.name) and d.name not in issued_domains:
+            eligible.append({
+                "id": d.id,
+                "label": d.name,
+                "full_domain": d.name,
+                "type": "domain",
+            })
+
+    all_proxies = (await db.execute(
+        select(ReverseProxy).order_by(ReverseProxy.full_domain)
+    )).scalars().all()
+
+    for p in all_proxies:
+        if nginx_service.config_exists(p.full_domain) and p.full_domain not in issued_domains:
+            eligible.append({
+                "id": p.domain_id,  # may be None for external
+                "label": f"{p.full_domain} (proxy → {p.target_ip}:{p.target_port})",
+                "full_domain": p.full_domain,
+                "type": "proxy",
+            })
+
+    return eligible
+
+
 # ---------------------------------------------------------------
 # CERTS LIST
 # ---------------------------------------------------------------
@@ -41,6 +79,7 @@ async def ssl_index(request: Request, db: AsyncSession = Depends(get_db)):
 async def ssl_issue_page(
     request: Request,
     domain_id: int | None = Query(default=None),
+    full_domain: str | None = Query(default=None),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -48,41 +87,28 @@ async def ssl_issue_page(
     Dropdown shows domains AND proxy subdomains that:
       - have an active nginx config
       - do NOT already have a cert
+    Preselect prefers full_domain (exact host); falls back to domain_id.
     """
-    # All domains with nginx active and no cert yet
-    all_domains = (await db.execute(
-        select(Domain).order_by(Domain.name)
-    )).scalars().all()
+    eligible = await _build_eligible(db)
+    preselect_full = (full_domain or "").strip().lower() or None
 
-    issued_domains = {
-        r.full_domain
-        for r in (await db.execute(select(SslCert))).scalars().all()
-    }
-
-    eligible = []
-    for d in all_domains:
-        if nginx_service.config_exists(d.name) and d.name not in issued_domains:
-            eligible.append({"id": d.id, "label": d.name, "full_domain": d.name, "type": "domain"})
-
-    # Also include proxy subdomains eligible for SSL
-    all_proxies = (await db.execute(
-        select(ReverseProxy).order_by(ReverseProxy.full_domain)
-    )).scalars().all()
-
-    for p in all_proxies:
-        if nginx_service.config_exists(p.full_domain) and p.full_domain not in issued_domains:
-            eligible.append({
-                "id": p.domain_id,
-                "label": f"{p.full_domain} (proxy → {p.target_ip}:{p.target_port})",
-                "full_domain": p.full_domain,
-                "type": "proxy",
-            })
+    # Legacy: domain_id alone → preselect apex domain name if present
+    if not preselect_full and domain_id is not None:
+        for item in eligible:
+            if item.get("id") == domain_id and item.get("type") == "domain":
+                preselect_full = item["full_domain"]
+                break
+        if not preselect_full:
+            for item in eligible:
+                if item.get("id") == domain_id:
+                    preselect_full = item["full_domain"]
+                    break
 
     return templates.TemplateResponse("pages/ssl/issue.html", {
         "request": request,
         "active_page": "ssl",
         "eligible": eligible,
-        "preselect_id": domain_id,
+        "preselect_full_domain": preselect_full,
         "error": None,
     })
 
@@ -93,31 +119,42 @@ async def ssl_issue_page(
 @router.post("/issue", response_class=HTMLResponse)
 async def ssl_issue_submit(
     request: Request,
-    domain_id: int = Form(...),
     full_domain: str = Form(...),
+    domain_id: str = Form(""),
     include_www: bool = Form(default=False),
     db: AsyncSession = Depends(get_db),
 ):
     """Run certbot for the selected domain/subdomain."""
+    full_domain = full_domain.strip().lower()
+    resolved_domain_id: int | None = None
+    if domain_id and str(domain_id).strip().isdigit():
+        resolved_domain_id = int(domain_id)
+
+    # Resolve domain_id from host if missing (external proxy or form omit)
+    if resolved_domain_id is None:
+        domain = await db.scalar(select(Domain).where(Domain.name == full_domain))
+        if domain:
+            resolved_domain_id = domain.id
+        else:
+            proxy = await db.scalar(
+                select(ReverseProxy).where(ReverseProxy.full_domain == full_domain)
+            )
+            if proxy:
+                resolved_domain_id = proxy.domain_id
+
     try:
-        cert = await ssl_service.issue_cert(db, domain_id, full_domain, include_www)
+        cert = await ssl_service.issue_cert(
+            db, resolved_domain_id, full_domain, include_www
+        )
         return RedirectResponse(f"/ssl/?issued={cert.full_domain}", status_code=303)
     except Exception as exc:
         error_msg = str(exc.detail) if hasattr(exc, "detail") else str(exc)
-
-        # Re-render form with error
-        all_domains = (await db.execute(select(Domain).order_by(Domain.name))).scalars().all()
-        issued_domains = {r.full_domain for r in (await db.execute(select(SslCert))).scalars().all()}
-        eligible = [
-            {"id": d.id, "label": d.name, "full_domain": d.name, "type": "domain"}
-            for d in all_domains
-            if nginx_service.config_exists(d.name) and d.name not in issued_domains
-        ]
+        eligible = await _build_eligible(db)
         return templates.TemplateResponse("pages/ssl/issue.html", {
             "request": request,
             "active_page": "ssl",
             "eligible": eligible,
-            "preselect_id": domain_id,
+            "preselect_full_domain": full_domain,
             "error": error_msg,
         }, status_code=400)
 

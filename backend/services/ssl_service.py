@@ -119,15 +119,18 @@ async def list_certs(db: AsyncSession) -> list[dict]:
 # ---------------------------------------------------------------
 async def issue_cert(
     db: AsyncSession,
-    domain_id: int,
+    domain_id: int | None,
     full_domain: str,
     include_www: bool = False,
 ) -> SslCert:
     """
     Issue a Let's Encrypt cert via certbot certonly --webroot.
     Updates nginx config to HTTPS after success.
-    Works for both static domains and reverse-proxy subdomains.
+    Works for static domains, managed proxies, and external proxies.
+    domain_id may be None for external reverse-proxy hosts.
     """
+    full_domain = full_domain.strip().lower()
+
     # Guard: cert already exists
     existing = await db.scalar(
         select(SslCert).where(SslCert.full_domain == full_domain)
@@ -135,9 +138,8 @@ async def issue_cert(
     if existing:
         raise HTTPException(status_code=409, detail=f"Cert already exists for: {full_domain}")
 
-    # Guard: nginx must be active (HTTP must be reachable for challenge)
-    if not nginx_service.config_exists(full_domain) and \
-       not nginx_service.config_exists(full_domain.split(".", 1)[-1] if "." in full_domain else full_domain):
+    # Guard: nginx must exist for this exact host (not parent domain)
+    if not nginx_service.config_exists(full_domain):
         raise HTTPException(
             status_code=400,
             detail=f"Nginx config not found for {full_domain}. HTTP must be active before issuing SSL."
@@ -191,8 +193,13 @@ async def issue_cert(
     key_path  = _key_path(full_domain)
 
     # Update nginx config to HTTPS — determine if domain or proxy
-    domain_obj = await db.scalar(select(Domain).where(Domain.id == domain_id))
-    proxy_obj  = await db.scalar(
+    domain_obj = None
+    if domain_id is not None:
+        domain_obj = await db.scalar(select(Domain).where(Domain.id == domain_id))
+    if domain_obj is None:
+        domain_obj = await db.scalar(select(Domain).where(Domain.name == full_domain))
+
+    proxy_obj = await db.scalar(
         select(ReverseProxy).where(ReverseProxy.full_domain == full_domain)
     )
 
@@ -213,7 +220,14 @@ async def issue_cert(
                 full_domain, cert_path, key_path
             )
             domain_obj.nginx_config_path = new_config
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail=f"No domain or reverse proxy found for {full_domain}",
+            )
         await nginx_service.reload()
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error("Nginx SSL config update failed after cert issue: %s", e)
         await error_service.record(
@@ -227,9 +241,16 @@ async def issue_cert(
         )
         raise HTTPException(status_code=500, detail=f"Cert issued but nginx update failed: {e}")
 
+    # Resolve domain_id for DB (nullable for external proxies)
+    resolved_domain_id = domain_id
+    if resolved_domain_id is None and proxy_obj is not None:
+        resolved_domain_id = proxy_obj.domain_id
+    if resolved_domain_id is None and domain_obj is not None:
+        resolved_domain_id = domain_obj.id
+
     # Save cert to DB
     cert = SslCert(
-        domain_id=domain_id,
+        domain_id=resolved_domain_id,
         full_domain=full_domain,
         cert_path=cert_path,
         expiry_date=expiry,

@@ -4,9 +4,10 @@
 {% block page_title %}{{ domain.name }}{% endblock %}
 
 {% block topbar_actions %}
-  <a href="/dns/{{ domain.name }}" class="btn btn--secondary" id="btn-dns">DNS Records</a>
+  <a href="/dns/{{ domain.name }}/records" class="btn btn--secondary" id="btn-dns">DNS Records</a>
+  <a href="/dns/{{ domain.name }}/records?add=1" class="btn btn--ghost" id="btn-add-dns">+ DNS Record</a>
   {% if can_issue_ssl %}
-    <a href="/ssl/issue?domain_id={{ domain.id }}" class="btn btn--primary" id="btn-issue-ssl">Issue SSL</a>
+    <a href="/ssl/issue?full_domain={{ domain.name }}" class="btn btn--primary" id="btn-issue-ssl">Issue SSL</a>
   {% elif cert %}
     <span class="badge badge--ok" style="height:var(--button-height); padding:0 var(--space-md); display:inline-flex; align-items:center;">
       SSL Active
@@ -135,7 +136,13 @@
           {% endif %}
         </td>
         <td class="col-actions">
-          <a href="/proxy/" class="btn btn--secondary btn--sm">Manage</a>
+          <div class="d-flex gap-xs justify-end">
+            {% if not proxy.ssl_enabled %}
+            <a href="/ssl/issue?full_domain={{ proxy.full_domain }}"
+               class="btn btn--secondary btn--sm">Issue SSL</a>
+            {% endif %}
+            <a href="/proxy/" class="btn btn--secondary btn--sm">Manage</a>
+          </div>
         </td>
       </tr>
       {% endfor %}

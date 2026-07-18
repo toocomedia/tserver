@@ -27,10 +27,12 @@ templates = Jinja2Templates(directory="templates")
 async def domains_list(request: Request, db: AsyncSession = Depends(get_db)):
     domains = await domain_service.get_all(db)
 
-    # Attach live status to each domain
+    # Attach live status to each domain (apex SSL only — not proxy subdomains)
     domain_statuses = []
     for d in domains:
-        cert = await db.scalar(select(SslCert).where(SslCert.domain_id == d.id))
+        cert = await db.scalar(
+            select(SslCert).where(SslCert.full_domain == d.name)
+        )
         domain_statuses.append({
             "domain": d,
             "nginx_active": nginx_service.config_exists(d.name),
@@ -92,7 +94,10 @@ async def domains_detail(
     db: AsyncSession = Depends(get_db),
 ):
     domain = await domain_service.get_by_id(db, domain_id)
-    cert = await db.scalar(select(SslCert).where(SslCert.domain_id == domain_id))
+    # Apex cert only — proxy certs share parent domain_id but different full_domain
+    cert = await db.scalar(
+        select(SslCert).where(SslCert.full_domain == domain.name)
+    )
     proxies = (await db.execute(
         select(ReverseProxy).where(ReverseProxy.domain_id == domain_id)
     )).scalars().all()

@@ -4,6 +4,7 @@ Records are always fetched live from PowerDNS, not from local DB alone.
 Routes call dns_service only — no direct PowerDNS calls here.
 """
 import logging
+from urllib.parse import quote
 from fastapi import APIRouter, Depends, Request, Form
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
@@ -163,12 +164,38 @@ async def dns_delete_record(
     if not domain:
         return RedirectResponse("/dns/", status_code=303)
 
+    rtype = type.strip().upper()
+    if rtype == "SOA":
+        return RedirectResponse(
+            f"/dns/{domain_name}/records?error=SOA+records+cannot+be+deleted",
+            status_code=303,
+        )
+
+    # UI may pass FQDN (example.com or www.example.com); normalize to short name
+    name = name.strip()
+    zone = domain_name.rstrip(".").lower()
+    lower = name.rstrip(".").lower()
+    if lower == zone:
+        short_name = "@"
+    elif lower.endswith("." + zone):
+        short_name = lower[: -(len(zone) + 1)]
+    else:
+        short_name = name
+
     try:
-        await dns_service.delete_record(domain_name, name, type.upper())
+        await dns_service.delete_record(domain_name, short_name, rtype)
+        return RedirectResponse(
+            f"/dns/{domain_name}/records?success=Record+deleted",
+            status_code=303,
+        )
     except Exception as exc:
         logger.warning("Delete record failed: %s", exc)
-
-    return RedirectResponse(f"/dns/{domain_name}/records", status_code=303)
+        error = str(exc.detail) if hasattr(exc, "detail") else str(exc)
+        # Keep query string short for browser URL limits
+        return RedirectResponse(
+            f"/dns/{domain_name}/records?error={quote(error[:300])}",
+            status_code=303,
+        )
 
 
 # ---------------------------------------------------------------

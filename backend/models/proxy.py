@@ -11,10 +11,13 @@ class ReverseProxy(Base):
     __tablename__ = "reverse_proxies"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    domain_id: Mapped[int] = mapped_column(Integer, ForeignKey("domains.id"), nullable=False)
-    # subdomain prefix only: "app" (not "app.example.com")
-    subdomain: Mapped[str] = mapped_column(String(255), nullable=False)
-    # computed and stored: "app.example.com"
+    # Null when proxy is external (DNS managed outside the panel)
+    domain_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("domains.id"), nullable=True
+    )
+    # subdomain prefix only for managed: "app"; empty/full for external
+    subdomain: Mapped[str] = mapped_column(String(255), nullable=False, default="")
+    # public hostname: "app.example.com" or external FQDN
     full_domain: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     target_ip: Mapped[str] = mapped_column(String(64), nullable=False)
     target_port: Mapped[int] = mapped_column(Integer, nullable=False)
@@ -25,6 +28,8 @@ class ReverseProxy(Base):
         Integer, ForeignKey("ssl_certs.id"), nullable=True
     )
     nginx_config_path: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    # True = panel wrote DNS A on parent zone; False = external DNS only
+    dns_managed: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), nullable=False
     )

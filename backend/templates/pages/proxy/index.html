@@ -15,7 +15,8 @@
 
 {% if created %}
 <div class="alert alert--success mb-lg" id="alert-created">
-  Proxy created for <strong>{{ created }}</strong>. DNS and Nginx configured.
+  Proxy created for <strong>{{ created }}</strong>. Nginx configured
+  (DNS updated when using a managed domain).
 </div>
 {% endif %}
 {% if deleted %}
@@ -76,7 +77,9 @@
         </td>
 
         <td>
-          {% if item.dns_ok %}
+          {% if item.dns_status == 'external' %}
+            <span class="badge badge--neutral badge--dot">External</span>
+          {% elif item.dns_ok %}
             <span class="badge badge--ok badge--dot">Active</span>
           {% else %}
             <span class="badge badge--error badge--dot">Missing</span>
@@ -86,14 +89,15 @@
         <td class="col-actions">
           <div class="d-flex gap-xs justify-end">
             {% if not p.ssl_enabled %}
-            <a href="/ssl/issue?domain_id={{ p.domain_id }}"
+            <a href="/ssl/issue?full_domain={{ p.full_domain }}"
                class="btn btn--secondary btn--sm"
                id="btn-ssl-{{ p.id }}">SSL</a>
             {% endif %}
             <button class="btn btn--danger btn--sm"
                     id="btn-del-{{ p.id }}"
                     data-proxy-id="{{ p.id }}"
-                    data-full-domain="{{ p.full_domain }}">
+                    data-full-domain="{{ p.full_domain }}"
+                    data-dns-managed="{{ '1' if item.dns_managed else '0' }}">
               Del
             </button>
           </div>

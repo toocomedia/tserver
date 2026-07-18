@@ -12,6 +12,7 @@ from models.proxy import ReverseProxy
 from services import cascade_service, nginx_service
 from utils.validators import (
     sanitize_subdomain_label,
+    sanitize_domain,
     is_valid_ip,
     is_valid_port,
 )
@@ -47,7 +48,7 @@ async def get_by_full_domain(
 
 
 # ---------------------------------------------------------------
-# CREATE
+# CREATE — managed (panel DNS zone)
 # ---------------------------------------------------------------
 async def create_proxy(
     db: AsyncSession,
@@ -117,6 +118,78 @@ async def create_proxy(
         target_port=target_port,
         protocol=protocol,
         enable_ssl=enable_ssl,
+        dns_managed=True,
+    )
+
+
+# ---------------------------------------------------------------
+# CREATE — external (DNS already points here)
+# ---------------------------------------------------------------
+async def create_external_proxy(
+    db: AsyncSession,
+    hostname: str,
+    target_ip: str,
+    target_port: int,
+    protocol: str = "http",
+    enable_ssl: bool = False,
+) -> ReverseProxy:
+    """
+    Create reverse proxy for an outside domain/subdomain whose DNS
+    already points at this server. No PowerDNS writes.
+    """
+    try:
+        full_domain = sanitize_domain(hostname)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+    target_ip = target_ip.strip()
+    protocol = protocol.strip().lower()
+
+    if not is_valid_ip(target_ip):
+        raise HTTPException(status_code=400, detail=f"Invalid target IP: {target_ip}")
+    if not is_valid_port(target_port):
+        raise HTTPException(status_code=400, detail="Port must be between 1 and 65535")
+    if protocol not in ("http", "https"):
+        raise HTTPException(status_code=400, detail="Protocol must be http or https")
+
+    existing = await get_by_full_domain(db, full_domain)
+    if existing:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Proxy already exists for: {full_domain}",
+        )
+
+    # Collision with managed static domain would dual-bind nginx server_name
+    if await db.scalar(select(Domain).where(Domain.name == full_domain)):
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                f"'{full_domain}' is already a managed domain. "
+                "Use that domain's static site or remove it first."
+            ),
+        )
+
+    if nginx_service.server_name_in_use(full_domain):
+        raise HTTPException(
+            status_code=409,
+            detail=f"Nginx already has a config using server_name '{full_domain}'",
+        )
+
+    # Subdomain label for display only (first label or host)
+    parts = full_domain.split(".")
+    subdomain = parts[0] if len(parts) > 2 else "@"
+
+    return await cascade_service.create_reverse_proxy_full(
+        db,
+        domain_name="",
+        domain_id=None,
+        subdomain=subdomain,
+        full_domain=full_domain,
+        target_ip=target_ip,
+        target_port=target_port,
+        protocol=protocol,
+        enable_ssl=enable_ssl,
+        dns_managed=False,
     )
 
 
@@ -124,9 +197,13 @@ async def create_proxy(
 # DELETE
 # ---------------------------------------------------------------
 async def delete_proxy(db: AsyncSession, proxy_id: int) -> None:
-    """Remove proxy: SSL → nginx → DNS → DB."""
+    """Remove proxy: SSL → nginx → DNS (if managed) → DB."""
     proxy = await get_by_id(db, proxy_id)
-    domain = await db.scalar(select(Domain).where(Domain.id == proxy.domain_id))
-    domain_name = domain.name if domain else proxy.full_domain.split(".", 1)[-1]
+    domain_name = ""
+    if proxy.domain_id:
+        domain = await db.scalar(select(Domain).where(Domain.id == proxy.domain_id))
+        domain_name = domain.name if domain else ""
+    if not domain_name and proxy.full_domain and "." in proxy.full_domain:
+        domain_name = proxy.full_domain.split(".", 1)[-1]
 
     await cascade_service.delete_reverse_proxy_full(db, proxy, domain_name)

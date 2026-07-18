@@ -15,6 +15,9 @@ const TYPE_CONFIG = {
   CAA:   { label: "Flag Tag Value",                 placeholder: "0 issue \"letsencrypt.org\"" },
 };
 
+// Extra hints (quotes optional for TXT — panel auto-quotes for PowerDNS)
+
+
 /**
  * updateContentLabel — called when record type dropdown changes.
  * Updates the content field label and placeholder to match the selected type.
@@ -34,9 +37,65 @@ function updateContentLabel(type) {
     SRV: "Format: <priority> <weight> <port> <target>",
     CAA: "Format: <flag> issue|issuewild|iodef \"<value>\"",
     CNAME: "Must end with a dot for absolute names: example.com.",
-    NS:  "Must end with a dot: ns1.example.com.",
+    NS:  "Must end with a dot: ns1.example.com. (REPLACE overwrites same name+type — use Child NS template for ns1+ns2.)",
+    TXT: "Quotes optional — panel wraps TXT for PowerDNS automatically.",
   };
   if (hint) hint.textContent = hints[type] || "";
+}
+
+/**
+ * Submit a real HTML form POST (session cookie + Form fields).
+ * Safer than building innerHTML for values that may contain quotes.
+ */
+function postDeleteRecord(domain, name, type) {
+  const form = document.createElement("form");
+  form.method = "POST";
+  form.action = `/dns/${encodeURIComponent(domain)}/records/delete`;
+  form.style.display = "none";
+
+  const fields = { name, type };
+  Object.entries(fields).forEach(([key, value]) => {
+    const input = document.createElement("input");
+    input.type = "hidden";
+    input.name = key;
+    input.value = value;
+    form.appendChild(input);
+  });
+
+  document.body.appendChild(form);
+  form.submit();
+}
+
+function bindDeleteButtons() {
+  document.querySelectorAll(".btn-del-record").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const domain = btn.getAttribute("data-domain") || "";
+      const name = btn.getAttribute("data-name") || "";
+      const type = btn.getAttribute("data-type") || "";
+
+      if (!domain || !name || !type) {
+        toast("Missing record data for delete", "danger");
+        return;
+      }
+
+      if (type.toUpperCase() === "SOA") {
+        toast("SOA records cannot be deleted", "danger");
+        return;
+      }
+
+      confirmAction(
+        `Delete ${type} record "${name}" from ${domain}?`,
+        async () => {
+          btn.disabled = true;
+          btn.textContent = "…";
+          postDeleteRecord(domain, name, type);
+        }
+      );
+    });
+  });
 }
 
 // Apply label on page load for the default selected type
@@ -69,6 +128,14 @@ document.addEventListener("DOMContentLoaded", () => {
       applyBtn.textContent = "Applying...";
       applyBtn.disabled = true;
     });
+  }
+
+  bindDeleteButtons();
+
+  // Deep-link: /dns/{domain}/records?add=1 opens Add Record modal
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("add") === "1" && typeof openModal === "function") {
+    openModal("add-record-modal");
   }
 
   // Auto-dismiss success/error alerts after 5 seconds

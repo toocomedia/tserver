@@ -1,7 +1,6 @@
 """
 utils/powerdns.py — PowerDNS REST API client
 All calls to PowerDNS go through this module.
-Max 200 lines — split if exceeded.
 """
 import logging
 import httpx
@@ -30,9 +29,31 @@ def _record_name(name: str, domain: str) -> str:
     """
     if name == "@":
         return _zone_name(domain)
-    if not name.endswith("."):
-        return f"{name}.{domain}."
-    return name
+    # Already FQDN under this zone or absolute
+    if name.endswith("."):
+        return name
+    # User pasted full hostname without trailing dot
+    zone = domain.rstrip(".").lower()
+    lower = name.lower()
+    if lower == zone or lower.endswith("." + zone):
+        return name.rstrip(".") + "."
+    return f"{name}.{domain}."
+
+
+def format_record_content(rtype: str, content: str) -> str:
+    """
+    Normalize content for PowerDNS.
+    TXT must be quoted; escape inner quotes.
+    """
+    content = content.strip()
+    rtype = rtype.upper()
+    if rtype == "TXT":
+        # Already quoted (single PowerDNS string or multi-string)
+        if content.startswith('"'):
+            return content
+        escaped = content.replace("\\", "\\\\").replace('"', '\\"')
+        return f'"{escaped}"'
+    return content
 
 
 # ---------------------------------------------------------------
@@ -95,27 +116,57 @@ async def add_record(
     domain: str, name: str, rtype: str, content: str, ttl: int = 3600
 ) -> None:
     """Add or replace a single DNS record (PATCH rrsets)."""
+    await add_records(domain, name, rtype, [content], ttl)
+
+
+async def add_records(
+    domain: str,
+    name: str,
+    rtype: str,
+    contents: list[str],
+    ttl: int = 3600,
+) -> None:
+    """
+    Add or replace an RRset with one or more content values.
+    Multi-value types (NS, TXT, MX) should pass all values in one call
+    so REPLACE does not wipe earlier members.
+    """
+    if not contents:
+        raise HTTPException(status_code=400, detail="Record content cannot be empty")
+
     zone = _zone_name(domain)
     fqdn = _record_name(name, domain)
+    rtype_u = rtype.upper()
+    records = [
+        {"content": format_record_content(rtype_u, c), "disabled": False}
+        for c in contents
+        if c is not None and str(c).strip()
+    ]
+    if not records:
+        raise HTTPException(status_code=400, detail="Record content cannot be empty")
+
     payload = {
         "rrsets": [{
             "name": fqdn,
-            "type": rtype.upper(),
+            "type": rtype_u,
             "ttl": ttl,
             "changetype": "REPLACE",
-            "records": [{"content": content, "disabled": False}],
+            "records": records,
         }]
     }
     async with _client() as c:
         r = await c.patch(f"{BASE}/zones/{zone}", json=payload)
     if r.status_code not in (200, 204):
-        logger.error("PDNS add_record failed: %s %s", r.status_code, r.text)
+        logger.error("PDNS add_records failed: %s %s", r.status_code, r.text)
         raise HTTPException(status_code=502, detail=f"PowerDNS record error: {r.text}")
-    logger.info("PDNS record added: %s %s %s → %s", fqdn, rtype, domain, content)
+    logger.info(
+        "PDNS records set: %s %s %s → %s",
+        fqdn, rtype_u, domain, [rec["content"] for rec in records],
+    )
 
 
 async def delete_record(domain: str, name: str, rtype: str) -> None:
-    """Delete a specific DNS record."""
+    """Delete a specific DNS record (entire name+type RRset)."""
     zone = _zone_name(domain)
     fqdn = _record_name(name, domain)
     payload = {
