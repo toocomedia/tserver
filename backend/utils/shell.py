@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 # First-arg binaries that may need root on a real VPS
 _PRIVILEGED_BINS = frozenset({
-    "nginx", "certbot", "tee", "ln", "rm", "mkdir", "chmod", "chown",
+    "nginx", "certbot", "openssl", "tee", "ln", "rm", "mkdir", "chmod", "chown",
 })
 
 

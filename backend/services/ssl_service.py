@@ -39,39 +39,96 @@ def _key_path(domain: str) -> str:
     return str(_LE_LIVE / domain / "privkey.pem")
 
 
-def _parse_expiry(certbot_output: str, domain: str) -> datetime | None:
+def _parse_expiry_from_text(text: str) -> datetime | None:
     """
-    Extract expiry date from certbot certificates output.
+    Extract first expiry date from certbot output.
     Line format: Expiry Date: 2026-10-01 12:00:00+00:00 (VALID: 89 days)
     """
     match = re.search(
         r"Expiry Date:\s+(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}[+\-]\d{2}:\d{2})",
-        certbot_output,
+        text,
     )
     if match:
         try:
             return datetime.fromisoformat(match.group(1))
         except ValueError:
             pass
-    # Fallback: read expiry from the cert file itself
-    return _read_expiry_from_cert(_cert_path(domain))
+    return None
 
 
-def _read_expiry_from_cert(cert_path: str) -> datetime | None:
-    """Use openssl to read expiry date from cert file."""
-    import subprocess
+def _parse_expiry(certbot_output: str, domain: str) -> datetime | None:
+    """Extract expiry for a domain from certbot output; optional PEM fallback via sudo."""
+    # Prefer block that mentions this domain
+    blocks = re.split(r"\n\s*Certificate Name:", certbot_output)
+    for block in blocks:
+        if domain in block:
+            found = _parse_expiry_from_text(block)
+            if found:
+                return found
+    found = _parse_expiry_from_text(certbot_output)
+    if found:
+        return found
+    # Do not open /etc/letsencrypt as panel user — use sudo openssl if allowed
+    return None
+
+
+def _parse_certbot_certificates_map(output: str) -> dict[str, datetime]:
+    """
+    Parse `certbot certificates` into full_domain / cert-name → expiry.
+    """
+    result: dict[str, datetime] = {}
+    # Split on Certificate Name lines
+    parts = re.split(r"Certificate Name:\s*", output)
+    for part in parts[1:]:
+        lines = part.strip().splitlines()
+        if not lines:
+            continue
+        cert_name = lines[0].strip()
+        block = part
+        expiry = _parse_expiry_from_text(block)
+        if not expiry:
+            continue
+        result[cert_name] = expiry
+        # Domains: example.com www.example.com
+        m = re.search(r"Domains:\s*(.+)", block)
+        if m:
+            for d in m.group(1).split():
+                d = d.strip().lower()
+                if d:
+                    result[d] = expiry
+    return result
+
+
+async def _certbot_expiry_map() -> dict[str, datetime]:
+    """Load expiries via sudo certbot (panel cannot read /etc/letsencrypt directly)."""
     try:
-        result = subprocess.run(
-            ["openssl", "x509", "-enddate", "-noout", "-in", cert_path],
-            capture_output=True, text=True, timeout=10
+        r = await shell.run(
+            ["certbot", "certificates"],
+            timeout=30,
         )
-        if result.returncode == 0:
-            # notAfter=Oct  1 12:00:00 2026 GMT
+        if r.success or r.stdout:
+            return _parse_certbot_certificates_map(r.stdout + "\n" + r.stderr)
+    except Exception as e:
+        logger.warning("certbot certificates failed: %s", e)
+    return {}
+
+
+async def _read_expiry_from_cert(cert_path: str) -> datetime | None:
+    """
+    Read expiry via openssl (may use sudo -n). Never open the PEM in Python —
+    /etc/letsencrypt is root-only and causes PermissionError for panel user.
+    """
+    try:
+        result = await shell.run(
+            ["openssl", "x509", "-enddate", "-noout", "-in", cert_path],
+            timeout=10,
+        )
+        if result.success:
             m = re.search(r"notAfter=(.+)", result.stdout)
             if m:
-                return datetime.strptime(m.group(1).strip(), "%b %d %H:%M:%S %Y %Z").replace(
-                    tzinfo=timezone.utc
-                )
+                return datetime.strptime(
+                    m.group(1).strip(), "%b %d %H:%M:%S %Y %Z"
+                ).replace(tzinfo=timezone.utc)
     except Exception as e:
         logger.warning("openssl expiry read failed: %s", e)
     return None
@@ -83,49 +140,69 @@ def _read_expiry_from_cert(cert_path: str) -> datetime | None:
 async def list_certs(db: AsyncSession) -> list[dict]:
     """
     Return all certs from DB enriched with live expiry status.
-    Days remaining computed from expiry_date. Status: ok / warning / expired / issued.
-    Backfills missing expiry from the PEM file when possible.
+    Never reads /etc/letsencrypt as the panel user (PermissionError).
+    Expiry from DB, else sudo certbot certificates, else optional sudo openssl.
+    Always returns a list — never raises (SSL page must always load).
     """
-    certs = (await db.execute(select(SslCert))).scalars().all()
-    result = []
+    result: list[dict] = []
     now = datetime.now(timezone.utc)
 
+    try:
+        certs = (await db.execute(select(SslCert))).scalars().all()
+    except Exception as e:
+        logger.error("list_certs DB failed: %s", e)
+        return []
+
+    live_map: dict[str, datetime] = {}
+    try:
+        live_map = await _certbot_expiry_map()
+    except Exception as e:
+        logger.warning("list_certs certbot map failed: %s", e)
+
     for cert in certs:
-        # Backfill expiry if missing (old rows / certbot parse miss)
-        if not cert.expiry_date:
-            path = cert.cert_path or _cert_path(cert.full_domain)
-            filled = _read_expiry_from_cert(path)
-            if filled:
-                cert.expiry_date = filled
-                logger.info("Backfilled expiry for %s → %s", cert.full_domain, filled)
+        try:
+            days_left = None
+            status = "issued"
 
-        days_left = None
-        status = "issued"  # cert exists in DB even if expiry unreadable
-        if cert.expiry_date:
-            expiry = cert.expiry_date
-            if expiry.tzinfo is None:
-                expiry = expiry.replace(tzinfo=timezone.utc)
-            delta = expiry - now
-            days_left = delta.days
-            if days_left > 30:
-                status = "ok"
-            elif days_left > 0:
-                status = "warning"
-            else:
-                status = "expired"
-        else:
-            # Still no expiry — check live file
-            path = cert.cert_path or _cert_path(cert.full_domain)
-            if Path(path).is_file():
-                status = "ok"
-            else:
-                status = "issued"
+            if not cert.expiry_date:
+                filled = live_map.get(cert.full_domain) or live_map.get(
+                    cert.full_domain.lower()
+                )
+                if not filled:
+                    # Optional: sudo openssl (if sudoers allows openssl)
+                    path = cert.cert_path or _cert_path(cert.full_domain)
+                    filled = await _read_expiry_from_cert(path)
+                if filled:
+                    cert.expiry_date = filled
+                    logger.info("Backfilled expiry for %s → %s", cert.full_domain, filled)
 
-        result.append({
-            "cert": cert,
-            "days_left": days_left,
-            "status": status,
-        })
+            if cert.expiry_date:
+                expiry = cert.expiry_date
+                if expiry.tzinfo is None:
+                    expiry = expiry.replace(tzinfo=timezone.utc)
+                days_left = (expiry - now).days
+                if days_left > 30:
+                    status = "ok"
+                elif days_left > 0:
+                    status = "warning"
+                else:
+                    status = "expired"
+            elif cert.full_domain in live_map or cert.full_domain.lower() in live_map:
+                status = "ok"
+
+            result.append({
+                "cert": cert,
+                "days_left": days_left,
+                "status": status,
+            })
+        except Exception as e:
+            # One bad row must not break the whole SSL page
+            logger.warning("list_certs row failed for %s: %s", getattr(cert, "full_domain", "?"), e)
+            result.append({
+                "cert": cert,
+                "days_left": None,
+                "status": "issued",
+            })
 
     return result
 
@@ -202,8 +279,10 @@ async def issue_cert(
 
     logger.info("Certbot success for: %s", full_domain)
 
-    # Parse expiry from certbot output
+    # Parse expiry from certbot output (never open LE files as panel user)
     expiry = _parse_expiry(result.stdout + result.stderr, full_domain)
+    if not expiry:
+        expiry = await _read_expiry_from_cert(_cert_path(full_domain))
 
     cert_path = _cert_path(full_domain)
     key_path  = _key_path(full_domain)

@@ -424,6 +424,7 @@ SUDOERS_FILE="/etc/sudoers.d/srv-panel"
 # Resolve real binary paths (Ubuntu variants)
 NGINX_BIN="$(command -v nginx || echo /usr/sbin/nginx)"
 CERTBOT_BIN="$(command -v certbot || echo /usr/bin/certbot)"
+OPENSSL_BIN="$(command -v openssl || echo /usr/bin/openssl)"
 TEE_BIN="$(command -v tee || echo /usr/bin/tee)"
 LN_BIN="$(command -v ln || echo /bin/ln)"
 RM_BIN="$(command -v rm || echo /bin/rm)"
@@ -434,7 +435,7 @@ cat > "$SUDOERS_FILE" <<EOF
 # srv-panel — allow panel user to manage nginx + certbot + site files
 # Installed by scripts/install.sh — validate: visudo -cf $SUDOERS_FILE
 Defaults:$PANEL_USER !requiretty
-Cmnd_Alias SRV_PANEL_CMDS = $NGINX_BIN, $CERTBOT_BIN, $TEE_BIN, $LN_BIN, $RM_BIN, $MKDIR_BIN, $SYSTEMCTL_BIN
+Cmnd_Alias SRV_PANEL_CMDS = $NGINX_BIN, $CERTBOT_BIN, $OPENSSL_BIN, $TEE_BIN, $LN_BIN, $RM_BIN, $MKDIR_BIN, $SYSTEMCTL_BIN
 $PANEL_USER ALL=(root) NOPASSWD: SRV_PANEL_CMDS
 EOF
 chmod 440 "$SUDOERS_FILE"

@@ -151,6 +151,33 @@ if [[ -f "$PANEL_DIR/.env" ]]; then
 fi
 
 # ---------------------------------------------------------------
+# Refresh sudoers (nginx/certbot/openssl) for panel user
+# ---------------------------------------------------------------
+info "Refreshing sudoers for $PANEL_USER..."
+SUDOERS_FILE="/etc/sudoers.d/srv-panel"
+NGINX_BIN="$(command -v nginx || echo /usr/sbin/nginx)"
+CERTBOT_BIN="$(command -v certbot || echo /usr/bin/certbot)"
+OPENSSL_BIN="$(command -v openssl || echo /usr/bin/openssl)"
+TEE_BIN="$(command -v tee || echo /usr/bin/tee)"
+LN_BIN="$(command -v ln || echo /bin/ln)"
+RM_BIN="$(command -v rm || echo /bin/rm)"
+MKDIR_BIN="$(command -v mkdir || echo /bin/mkdir)"
+SYSTEMCTL_BIN="$(command -v systemctl || echo /bin/systemctl)"
+cat > "$SUDOERS_FILE" <<EOF
+# srv-panel — allow panel user to manage nginx + certbot + openssl
+# Updated by scripts/update.sh — validate: visudo -cf $SUDOERS_FILE
+Defaults:$PANEL_USER !requiretty
+Cmnd_Alias SRV_PANEL_CMDS = $NGINX_BIN, $CERTBOT_BIN, $OPENSSL_BIN, $TEE_BIN, $LN_BIN, $RM_BIN, $MKDIR_BIN, $SYSTEMCTL_BIN
+$PANEL_USER ALL=(root) NOPASSWD: SRV_PANEL_CMDS
+EOF
+chmod 440 "$SUDOERS_FILE"
+if ! visudo -cf "$SUDOERS_FILE" >/dev/null; then
+  warn "sudoers validation failed — left previous rules if any"
+else
+  info "    sudoers OK ($SUDOERS_FILE)"
+fi
+
+# ---------------------------------------------------------------
 # Optional panel nginx refresh (does not touch domain site configs)
 # ---------------------------------------------------------------
 if [[ "$REFRESH_PANEL_NGINX" == "1" ]]; then
