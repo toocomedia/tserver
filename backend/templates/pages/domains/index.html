@@ -1,0 +1,104 @@
+{% extends "layout.html" %}
+
+{% block title %}Domains — VPS Panel{% endblock %}
+{% block page_title %}Domains{% endblock %}
+
+{% block topbar_actions %}
+  <a href="/domains/create" class="btn btn--primary" id="btn-add-domain">+ Add Domain</a>
+{% endblock %}
+
+{% block content %}
+
+{% if domain_statuses %}
+<div class="table-wrap">
+  <table class="table" id="domains-table">
+    <colgroup>
+      <col style="width:34%">
+      <col style="width:16%">
+      <col style="width:16%">
+      <col style="width:16%">
+      <col style="width:18%">
+    </colgroup>
+    <thead>
+      <tr>
+        <th>Domain</th>
+        <th>DNS</th>
+        <th>Nginx</th>
+        <th>SSL</th>
+        <th class="col-actions">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in domain_statuses %}
+      <tr data-domain-id="{{ item.domain.id }}">
+        <td>
+          <span style="font-weight:700;">{{ item.domain.name }}</span>
+          <br>
+          <span class="text-small text-muted">{{ item.domain.server_ip }}</span>
+        </td>
+
+        <td>
+          {% if item.domain.dns_zone_created %}
+            <span class="badge badge--ok badge--dot">Active</span>
+          {% else %}
+            <span class="badge badge--error badge--dot">None</span>
+          {% endif %}
+        </td>
+
+        <td>
+          {% if item.nginx_active %}
+            <span class="badge badge--ok badge--dot">Active</span>
+          {% else %}
+            <span class="badge badge--error badge--dot">None</span>
+          {% endif %}
+        </td>
+
+        <td>
+          {% if item.ssl_active %}
+            <span class="badge badge--ok badge--dot">Issued</span>
+          {% else %}
+            <span class="badge badge--neutral badge--dot">None</span>
+          {% endif %}
+        </td>
+
+        <td class="col-actions">
+          <div class="d-flex gap-xs justify-end">
+            <a href="/domains/{{ item.domain.id }}"
+               class="btn btn--secondary btn--sm"
+               id="btn-view-{{ item.domain.id }}">View</a>
+            <button class="btn btn--danger btn--sm"
+                    id="btn-del-{{ item.domain.id }}"
+                    onclick="deleteDomain({{ item.domain.id }}, '{{ item.domain.name }}')">Del</button>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="alert alert--info" id="empty-state">
+  No domains yet. <a href="/domains/create" style="font-weight:700;">Add your first domain →</a>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function deleteDomain(id, name) {
+  confirmAction(`Delete domain "${name}"? This will remove the DNS zone, nginx config and webroot.`, async () => {
+    try {
+      const res = await fetch(`/domains/${id}/delete`, { method: 'POST' });
+      if (res.redirected || res.ok) {
+        window.location.href = '/domains/';
+      } else {
+        toast('Delete failed', 'danger');
+      }
+    } catch (e) {
+      toast(e.message, 'danger');
+    }
+  });
+}
+</script>
+{% endblock %}

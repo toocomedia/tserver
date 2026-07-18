@@ -1,0 +1,137 @@
+{% extends "layout.html" %}
+
+{% block title %}Errors — VPS Panel{% endblock %}
+{% block page_title %}Error Tracker{% endblock %}
+
+{% block topbar_actions %}
+  <form method="post" action="/admin/errors/clear-resolved" style="display:inline;" id="form-clear-resolved">
+    <button type="submit" class="btn btn--secondary btn--sm" id="btn-clear-resolved">Clear resolved</button>
+  </form>
+  <button type="button" class="btn btn--danger btn--sm" id="btn-clear-all">Clear all</button>
+{% endblock %}
+
+{% block content %}
+
+{% if flash_error %}
+<div class="alert alert--danger mb-lg" id="alert-error">{{ flash_error }}</div>
+{% endif %}
+{% if flash_ok %}
+<div class="alert alert--success mb-lg" id="alert-ok">{{ flash_ok }}</div>
+{% endif %}
+
+<!-- Filters -->
+<div class="panel mb-lg" id="error-filters">
+  <div class="panel__body">
+    <form method="get" action="/admin/errors/" class="form" id="filter-form">
+      <div class="d-flex gap-sm flex-wrap align-center">
+
+        <div class="form-group" style="margin:0; min-width:140px;">
+          <label class="form-label" for="status">Status</label>
+          <div class="form-select-wrap">
+            <select name="status" id="status" class="form-select" onchange="this.form.submit()">
+              <option value="open"     {% if filter_status == 'open' %}selected{% endif %}>Open ({{ open_count }})</option>
+              <option value="resolved" {% if filter_status == 'resolved' %}selected{% endif %}>Resolved</option>
+              <option value="all"      {% if filter_status == 'all' %}selected{% endif %}>All</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin:0; min-width:140px;">
+          <label class="form-label" for="source">Source</label>
+          <div class="form-select-wrap">
+            <select name="source" id="source" class="form-select" onchange="this.form.submit()">
+              <option value="">All sources</option>
+              {% for s in sources %}
+              <option value="{{ s }}" {% if filter_source == s %}selected{% endif %}>{{ s }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin:0; flex:1; min-width:180px;">
+          <label class="form-label" for="q">Search</label>
+          <input class="form-input" type="search" name="q" id="q"
+                 value="{{ filter_q }}" placeholder="message or operation…">
+        </div>
+
+        <div class="form-group" style="margin:0; align-self:flex-end;">
+          <button type="submit" class="btn btn--secondary btn--sm">Filter</button>
+        </div>
+
+      </div>
+    </form>
+  </div>
+</div>
+
+{% if events %}
+<div class="table-wrap">
+  <table class="table" id="errors-table">
+    <colgroup>
+      <col style="width:14%">
+      <col style="width:8%">
+      <col style="width:10%">
+      <col style="width:14%">
+      <col style="width:34%">
+      <col style="width:10%">
+      <col style="width:10%">
+    </colgroup>
+    <thead>
+      <tr>
+        <th>When</th>
+        <th>Level</th>
+        <th>Source</th>
+        <th>Operation</th>
+        <th>Message</th>
+        <th>Status</th>
+        <th class="col-actions">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for e in events %}
+      <tr id="error-row-{{ e.id }}"
+          class="{% if not e.resolved %}row--active{% endif %}"
+          data-error-id="{{ e.id }}">
+        <td class="text-small">
+          {% if e.created_at %}{{ e.created_at.strftime('%Y-%m-%d %H:%M') }}{% else %}—{% endif %}
+        </td>
+        <td>
+          {% if e.level == 'critical' %}
+            <span class="badge badge--error">{{ e.level }}</span>
+          {% elif e.level == 'warning' %}
+            <span class="badge badge--neutral">{{ e.level }}</span>
+          {% else %}
+            <span class="badge badge--error">{{ e.level }}</span>
+          {% endif %}
+        </td>
+        <td class="text-small">{{ e.source }}</td>
+        <td class="text-small" style="font-weight:600;">{{ e.operation }}</td>
+        <td class="text-small" title="{{ e.message }}">
+          {{ e.message[:80] }}{% if e.message|length > 80 %}…{% endif %}
+        </td>
+        <td>
+          {% if e.resolved %}
+            <span class="badge badge--ok badge--dot">Resolved</span>
+          {% else %}
+            <span class="badge badge--error badge--dot">Open</span>
+          {% endif %}
+        </td>
+        <td class="col-actions">
+          <a href="/admin/errors/{{ e.id }}" class="btn btn--secondary btn--sm">View</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="alert alert--info" id="empty-state">
+  No errors recorded{% if filter_status == 'open' %} (open){% endif %}.
+  Failures from domains, DNS, SSL, and proxy actions appear here automatically.
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/modules/errors.js"></script>
+{% endblock %}

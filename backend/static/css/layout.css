@@ -1,0 +1,264 @@
+/* layout.css — Sidebar, topbar, and content area structure */
+
+/* ============================================================
+   APP SHELL — full viewport layout
+   ============================================================ */
+.app {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ============================================================
+   SIDEBAR
+   ============================================================ */
+.sidebar {
+  width: var(--sidebar-width);
+  min-width: var(--sidebar-width);
+  background: var(--color-sidebar);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
+  flex-shrink: 0;
+}
+
+.sidebar__logo {
+  padding: var(--space-lg) var(--space-md);
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.sidebar__logo-text {
+  font-size: var(--font-body);
+  font-weight: 800;
+  color: var(--color-accent);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.sidebar__nav {
+  flex: 1;
+  padding: var(--space-sm) 0;
+}
+
+.sidebar__section-label {
+  font-size: var(--font-small);
+  font-weight: 600;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: var(--space-md) var(--space-md) var(--space-xs);
+}
+
+.sidebar__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  height: 40px;
+  padding: 0 var(--space-md);
+  font-size: var(--font-body);
+  font-weight: 600;
+  color: var(--color-icon);
+  cursor: pointer;
+  border-left: 4px solid transparent;
+  transition: background 0.1s, color 0.1s;
+  white-space: nowrap;
+}
+
+.sidebar__item:hover {
+  background: rgba(255,255,255,0.05);
+  color: #fff;
+}
+
+.sidebar__item--active {
+  background: var(--color-accent);
+  color: var(--color-neutral);
+  border-left-color: var(--color-accent-2);
+}
+
+.sidebar__item--active:hover {
+  background: var(--color-accent);
+  color: var(--color-neutral);
+}
+
+.sidebar__item svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.sidebar__footer {
+  padding: var(--space-md);
+  border-top: 1px solid rgba(255,255,255,0.07);
+  font-size: var(--font-small);
+  color: var(--color-muted);
+}
+
+/* ============================================================
+   MAIN AREA
+   ============================================================ */
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--color-bg);
+}
+
+/* ============================================================
+   TOPBAR
+   ============================================================ */
+.topbar {
+  height: var(--topbar-height);
+  min-height: var(--topbar-height);
+  background: var(--color-bg);
+  border-bottom: 1px solid var(--color-line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--page-gutter);
+  gap: var(--space-lg);
+  flex-shrink: 0;
+}
+
+.topbar__title {
+  font-size: var(--font-h1);
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.topbar__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-shrink: 0;
+}
+
+/* ============================================================
+   CONTENT AREA
+   ============================================================ */
+.content {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--page-gutter);
+}
+
+.content__inner {
+  max-width: var(--max-content-width);
+}
+
+/* ============================================================
+   SECTION HEADER (within content)
+   ============================================================ */
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-lg);
+  padding-bottom: var(--space-sm);
+  border-bottom: 1px solid var(--color-line);
+}
+
+.section-header h2 {
+  font-size: var(--font-h2);
+}
+
+/* ============================================================
+   STAT GRID (dashboard)
+   ============================================================ */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: var(--space-lg);
+  margin-bottom: var(--space-xl);
+}
+
+.stat-card {
+  border: 1px solid var(--color-line);
+  padding: var(--space-lg);
+  background: var(--color-bg);
+}
+
+.stat-card__label {
+  font-size: var(--font-small);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-muted);
+  margin-bottom: var(--space-xs);
+}
+
+.stat-card__value {
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--color-text);
+}
+
+.stat-card__value--accent {
+  color: var(--color-accent-2);
+}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width: 768px) {
+  .app {
+    flex-direction: column;
+    height: auto;
+    min-height: 100vh;
+    overflow: auto;
+  }
+
+  .sidebar {
+    width: 100%;
+    min-width: 0;
+    flex-direction: row;
+    flex-wrap: wrap;
+    height: auto;
+    overflow: visible;
+  }
+
+  .sidebar__nav {
+    display: flex;
+    flex-wrap: wrap;
+    padding: 0;
+  }
+
+  .sidebar__item {
+    height: 44px;
+    padding: 0 var(--space-lg);
+  }
+
+  .main {
+    overflow: visible;
+  }
+
+  .content {
+    overflow: visible;
+  }
+
+  .topbar {
+    flex-wrap: wrap;
+    height: auto;
+    padding: var(--space-sm) var(--page-gutter);
+    gap: var(--space-sm);
+  }
+
+  .topbar__actions {
+    width: 100%;
+  }
+
+  .topbar__actions .btn {
+    flex: 1;
+  }
+}

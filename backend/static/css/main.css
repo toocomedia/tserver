@@ -1,0 +1,133 @@
+/* main.css — Design tokens, reset, and base styles
+   All values come from DESIGN.md — do not add colors or sizes outside :root */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+
+/* ============================================================
+   DESIGN TOKENS
+   ============================================================ */
+:root {
+  /* Colors */
+  --color-bg:         #FFFFFF;
+  --color-surface:    #F5F6F5;
+  --color-sidebar:    #0B0C0B;
+  --color-text:       #0F1720;
+  --color-muted:      #6B6F6A;
+  --color-line:       #E6E6DF;
+  --color-accent:     #C7F464;
+  --color-accent-2:   #A8E04A;
+  --color-neutral:    #111111;
+  --color-danger:     #DC2626;
+  --color-icon:       #DDEDE0;
+
+  /* Spacing */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 24px;
+
+  /* Typography */
+  --font-h1:    24px;
+  --font-h2:    18px;
+  --font-h3:    14px;
+  --font-body:  13px;
+  --font-small: 11px;
+
+  /* Sizes */
+  --sidebar-width:     200px;
+  --sidebar-collapsed: 72px;
+  --topbar-height:     56px;
+  --button-height:     34px;
+  --page-gutter:       16px;
+  --content-gap:       16px;
+  --max-content-width: 1200px;
+}
+
+/* ============================================================
+   RESET
+   ============================================================ */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: var(--font-body);
+  color: var(--color-text);
+  background: var(--color-bg);
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.4;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+ul, ol {
+  list-style: none;
+}
+
+button, input, select, textarea {
+  font-family: inherit;
+  font-size: inherit;
+}
+
+/* ============================================================
+   TYPOGRAPHY
+   ============================================================ */
+h1 {
+  font-size: var(--font-h1);
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--color-text);
+}
+
+h2 {
+  font-size: var(--font-h2);
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--color-text);
+}
+
+h3 {
+  font-size: var(--font-h3);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text);
+}
+
+p {
+  font-size: var(--font-body);
+  color: var(--color-text);
+  line-height: 1.4;
+}
+
+.text-muted {
+  color: var(--color-muted);
+}
+
+.text-small {
+  font-size: var(--font-small);
+}
+
+.text-danger {
+  color: var(--color-danger);
+}
+
+.text-accent {
+  color: var(--color-accent-2);
+}
+
+/* ============================================================
+   FOCUS (Accessibility)
+   ============================================================ */
+:focus-visible {
+  outline: 2px solid var(--color-neutral);
+  outline-offset: 2px;
+}

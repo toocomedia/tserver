@@ -1,0 +1,225 @@
+{% extends "layout.html" %}
+
+{% block title %}{{ domain.name }} — VPS Panel{% endblock %}
+{% block page_title %}{{ domain.name }}{% endblock %}
+
+{% block topbar_actions %}
+  <a href="/dns/{{ domain.name }}" class="btn btn--secondary" id="btn-dns">DNS Records</a>
+  {% if can_issue_ssl %}
+    <a href="/ssl/issue?domain_id={{ domain.id }}" class="btn btn--primary" id="btn-issue-ssl">Issue SSL</a>
+  {% elif cert %}
+    <span class="badge badge--ok" style="height:var(--button-height); padding:0 var(--space-md); display:inline-flex; align-items:center;">
+      SSL Active
+    </span>
+  {% else %}
+    <button class="btn btn--primary btn--disabled" disabled
+            title="Nginx must be active before issuing SSL"
+            id="btn-issue-ssl-disabled">Issue SSL</button>
+  {% endif %}
+  <button class="btn btn--danger" id="btn-delete"
+          onclick="deleteDomain({{ domain.id }}, '{{ domain.name }}')">Delete</button>
+{% endblock %}
+
+{% block content %}
+
+{% if request.query_params.get('saved') %}
+<div class="alert alert--success mb-lg" id="saved-alert">Default page saved successfully.</div>
+{% endif %}
+
+{% if error %}
+<div class="alert alert--danger mb-lg" id="error-alert">{{ error }}</div>
+{% endif %}
+
+<!-- INFO ROW -->
+<div class="panel mb-lg" id="domain-info">
+  <div class="panel__header">
+    <h3>Domain Info</h3>
+  </div>
+  <div class="panel__body">
+    <div class="info-row">
+      <span class="info-row__label">Domain</span>
+      <span class="info-row__value" style="font-weight:700;">{{ domain.name }}</span>
+    </div>
+    <div class="info-row">
+      <span class="info-row__label">Server IP</span>
+      <span class="info-row__value">{{ domain.server_ip }}</span>
+    </div>
+    <div class="info-row">
+      <span class="info-row__label">Webroot</span>
+      <span class="info-row__value text-small">{{ domain.webroot_path or '—' }}</span>
+    </div>
+    <div class="info-row">
+      <span class="info-row__label">Nginx Config</span>
+      <span class="info-row__value text-small">{{ domain.nginx_config_path or '—' }}</span>
+    </div>
+    <div class="info-row">
+      <span class="info-row__label">Created</span>
+      <span class="info-row__value text-small">{{ domain.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
+    </div>
+  </div>
+</div>
+
+<!-- STATUS GRID -->
+<div class="stat-grid mb-lg" id="status-grid">
+  <div class="stat-card">
+    <div class="stat-card__label">DNS Zone</div>
+    <div style="margin-top:var(--space-xs);">
+      {% if domain.dns_zone_created %}
+        <span class="badge badge--ok badge--dot">Active</span>
+      {% else %}
+        <span class="badge badge--error badge--dot">None</span>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-card__label">Nginx</div>
+    <div style="margin-top:var(--space-xs);">
+      {% if nginx_active %}
+        <span class="badge badge--ok badge--dot">Active</span>
+      {% else %}
+        <span class="badge badge--error badge--dot">Inactive</span>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-card__label">SSL</div>
+    <div style="margin-top:var(--space-xs);">
+      {% if cert %}
+        <span class="badge badge--ok badge--dot">Issued</span>
+      {% else %}
+        <span class="badge badge--neutral badge--dot">None</span>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if cert %}
+  <div class="stat-card">
+    <div class="stat-card__label">Cert Expiry</div>
+    <div style="margin-top:var(--space-xs); font-size:var(--font-body); font-weight:700;">
+      {% if cert.expiry_date %}
+        {{ cert.expiry_date.strftime('%Y-%m-%d') }}
+      {% else %}—{% endif %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<!-- REVERSE PROXIES ON THIS DOMAIN -->
+{% if proxies %}
+<div class="section-header mb-md">
+  <h2>Reverse Proxies</h2>
+  <a href="/proxy/create?domain_id={{ domain.id }}" class="btn btn--secondary btn--sm">+ Add Proxy</a>
+</div>
+<div class="table-wrap mb-lg">
+  <table class="table" id="proxy-table">
+    <thead>
+      <tr>
+        <th>Subdomain</th>
+        <th>Target</th>
+        <th>SSL</th>
+        <th class="col-actions">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for proxy in proxies %}
+      <tr>
+        <td style="font-weight:700;">{{ proxy.full_domain }}</td>
+        <td class="text-small">{{ proxy.protocol }}://{{ proxy.target_ip }}:{{ proxy.target_port }}</td>
+        <td>
+          {% if proxy.ssl_enabled %}
+            <span class="badge badge--ok badge--dot">Yes</span>
+          {% else %}
+            <span class="badge badge--neutral badge--dot">No</span>
+          {% endif %}
+        </td>
+        <td class="col-actions">
+          <a href="/proxy/" class="btn btn--secondary btn--sm">Manage</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="d-flex gap-sm align-center mb-lg">
+  <span class="text-muted text-small">No reverse proxies on this domain.</span>
+  <a href="/proxy/create?domain_id={{ domain.id }}" class="btn btn--secondary btn--sm">+ Add Proxy</a>
+</div>
+{% endif %}
+
+<!-- EDIT DEFAULT PAGE -->
+<div class="section-header mb-md" id="edit-page-section">
+  <h2>Default Page</h2>
+  <button class="btn btn--ghost btn--sm" id="btn-toggle-editor"
+          onclick="toggleEditor()">Edit HTML</button>
+</div>
+
+<div id="page-editor" style="display:none;">
+  <form method="post" action="/domains/{{ domain.id }}/edit-page" id="edit-page-form">
+    <div class="form-group mb-md">
+      <textarea
+        name="content"
+        id="page-content"
+        class="form-input"
+        style="height:320px; resize:vertical; font-family:monospace; font-size:12px; padding:var(--space-md);"
+        spellcheck="false"
+      >{{ current_html }}</textarea>
+    </div>
+    <div class="form-actions">
+      <button type="submit" class="btn btn--primary" id="btn-save-page">Save Page</button>
+      <button type="button" class="btn btn--secondary" onclick="toggleEditor()">Cancel</button>
+    </div>
+  </form>
+</div>
+
+<div id="page-preview" style="border:1px solid var(--color-line); padding:var(--space-md);">
+  <span class="text-small text-muted">
+    Served at:
+    {% if cert %}
+      <strong>https://{{ domain.name }}</strong>
+    {% else %}
+      <strong>http://{{ domain.name }}</strong>
+    {% endif %}
+    &nbsp;·&nbsp;
+    <button class="btn btn--ghost btn--sm" onclick="toggleEditor()" style="height:auto; padding:2px 0;">
+      Edit page HTML
+    </button>
+  </span>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function toggleEditor() {
+  const editor = document.getElementById('page-editor');
+  const preview = document.getElementById('page-preview');
+  const isHidden = editor.style.display === 'none';
+  editor.style.display = isHidden ? 'block' : 'none';
+  preview.style.display = isHidden ? 'none' : 'block';
+  document.getElementById('btn-toggle-editor').textContent = isHidden ? 'Cancel Edit' : 'Edit HTML';
+}
+
+function deleteDomain(id, name) {
+  confirmAction(
+    `Delete "${name}"? This removes the DNS zone, nginx config, webroot, and SSL cert.`,
+    async () => {
+      const res = await fetch(`/domains/${id}/delete`, { method: 'POST' });
+      if (res.redirected || res.ok) {
+        window.location.href = '/domains/';
+      } else {
+        toast('Delete failed — check if reverse proxies exist', 'danger');
+      }
+    }
+  );
+}
+
+document.getElementById('edit-page-form')?.addEventListener('submit', (e) => {
+  const btn = document.getElementById('btn-save-page');
+  btn.textContent = 'Saving...';
+  btn.disabled = true;
+});
+</script>
+{% endblock %}

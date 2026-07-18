@@ -1,0 +1,161 @@
+{% extends "layout.html" %}
+
+{% block title %}Create Reverse Proxy — VPS Panel{% endblock %}
+{% block page_title %}Create Reverse Proxy{% endblock %}
+
+{% block topbar_actions %}
+  <a href="/proxy/" class="btn btn--secondary" id="btn-back">← Back</a>
+{% endblock %}
+
+{% block content %}
+
+<div class="panel" style="max-width:560px;" id="create-proxy-panel">
+  <div class="panel__header">
+    <h3>New Reverse Proxy</h3>
+  </div>
+  <div class="panel__body">
+
+    {% if error %}
+    <div class="alert alert--danger mb-lg" id="form-error" role="alert">{{ error }}</div>
+    {% endif %}
+
+    <div class="alert alert--info mb-lg" id="info-block">
+      Creating a proxy will automatically:<br>
+      <strong>1.</strong> Add an A record for the subdomain → <strong>{{ server_ip }}</strong><br>
+      <strong>2.</strong> Configure Nginx to forward traffic to the target<br>
+      <strong>3.</strong> Optionally issue an SSL certificate for the subdomain<br><br>
+      Traffic hits this server first; Nginx proxies to the target IP:port.
+    </div>
+
+    {% if domains %}
+    <form method="post" action="/proxy/create" class="form" id="create-proxy-form">
+
+      <!-- Domain dropdown -->
+      <div class="form-group">
+        <label class="form-label" for="domain_id">Parent Domain</label>
+        <div class="form-select-wrap">
+          <select id="domain_id" name="domain_id" class="form-select" required>
+            <option value="" disabled {% if not form.get('domain_id') %}selected{% endif %}>
+              Select a domain…
+            </option>
+            {% for d in domains %}
+            <option value="{{ d.id }}"
+                    data-name="{{ d.name }}"
+                    {% if form.get('domain_id') == d.id %}selected{% endif %}>
+              {{ d.name }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        <span class="form-hint">Domain must already be managed by the panel.</span>
+      </div>
+
+      <!-- Subdomain prefix -->
+      <div class="form-group">
+        <label class="form-label" for="subdomain">Subdomain</label>
+        <input
+          class="form-input"
+          type="text"
+          id="subdomain"
+          name="subdomain"
+          value="{{ form.get('subdomain', '') }}"
+          placeholder="app"
+          autocomplete="off"
+          autocapitalize="none"
+          spellcheck="false"
+          required
+        >
+        <span class="form-hint">
+          Prefix only — full host will be
+          <strong id="subdomain-hint">app.<span id="hint-domain">domain.com</span></strong>
+        </span>
+      </div>
+
+      <!-- Target IP -->
+      <div class="form-group">
+        <label class="form-label" for="target_ip">Target IP</label>
+        <input
+          class="form-input"
+          type="text"
+          id="target_ip"
+          name="target_ip"
+          value="{{ form.get('target_ip', '') }}"
+          placeholder="1.2.3.4"
+          autocomplete="off"
+          required
+        >
+      </div>
+
+      <!-- Target Port -->
+      <div class="form-group">
+        <label class="form-label" for="target_port">Target Port</label>
+        <input
+          class="form-input"
+          type="number"
+          id="target_port"
+          name="target_port"
+          value="{{ form.get('target_port', '') }}"
+          placeholder="9000"
+          min="1"
+          max="65535"
+          required
+        >
+      </div>
+
+      <!-- Protocol to backend -->
+      <div class="form-group">
+        <label class="form-label" for="protocol">Backend Protocol</label>
+        <div class="form-select-wrap">
+          <select id="protocol" name="protocol" class="form-select">
+            <option value="http"  {% if form.get('protocol', 'http') == 'http' %}selected{% endif %}>HTTP</option>
+            <option value="https" {% if form.get('protocol') == 'https' %}selected{% endif %}>HTTPS</option>
+          </select>
+        </div>
+        <span class="form-hint">Protocol used between Nginx and the target backend.</span>
+      </div>
+
+      <!-- Enable SSL -->
+      <div class="form-group">
+        <label class="form-check">
+          <input type="checkbox" name="enable_ssl" id="enable_ssl" value="true"
+                 {% if form.get('enable_ssl') %}checked{% endif %}>
+          <span>Enable SSL (Let's Encrypt)</span>
+        </label>
+        <div class="alert alert--info mt-sm" id="ssl-info" style="display:none;">
+          Will issue a certificate for the subdomain after the proxy is created.
+          DNS must resolve to this server first (auto-added A record).
+        </div>
+      </div>
+
+      <!-- Live preview -->
+      <div class="panel" id="proxy-preview" style="display:none; background:var(--color-surface);">
+        <div class="panel__body" style="padding:var(--space-md);">
+          <span class="text-small text-muted">Preview</span><br>
+          <span style="font-weight:700; font-size:var(--font-body);" id="preview-line">—</span>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn--primary" id="btn-submit">
+          Create Reverse Proxy
+        </button>
+        <a href="/proxy/" class="btn btn--secondary">Cancel</a>
+      </div>
+
+    </form>
+
+    {% else %}
+    <div class="alert alert--info" id="no-domains">
+      No managed domains found. Add a domain before creating a reverse proxy.<br><br>
+      <a href="/domains/create" class="btn btn--secondary btn--sm">Add a domain</a>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/modules/proxy.js"></script>
+{% endblock %}

@@ -1,0 +1,105 @@
+{% extends "layout.html" %}
+
+{% block title %}Issue SSL Certificate — VPS Panel{% endblock %}
+{% block page_title %}Issue SSL Certificate{% endblock %}
+
+{% block topbar_actions %}
+  <a href="/ssl/" class="btn btn--secondary" id="btn-back">← Back</a>
+{% endblock %}
+
+{% block content %}
+
+<div class="panel" style="max-width:560px;" id="issue-panel">
+  <div class="panel__header">
+    <h3>New Certificate</h3>
+  </div>
+  <div class="panel__body">
+
+    {% if error %}
+    <div class="alert alert--danger mb-lg" id="form-error">{{ error }}</div>
+    {% endif %}
+
+    <!-- How it works -->
+    <div class="alert alert--info mb-lg" id="info-block">
+      Certificates are issued via <strong>Let's Encrypt</strong> using the HTTP-01 challenge.<br><br>
+      Requirements before issuing:<br>
+      <strong>1.</strong> Domain DNS must point to this server<br>
+      <strong>2.</strong> Nginx must be active (HTTP must respond)<br>
+      <strong>3.</strong> No existing cert for this domain<br><br>
+      After issue, Nginx is automatically updated to redirect HTTP → HTTPS.
+    </div>
+
+    {% if eligible %}
+    <form method="post" action="/ssl/issue" class="form" id="issue-form">
+
+      <!-- DOMAIN — dropdown only, no free text -->
+      <div class="form-group">
+        <label class="form-label" for="full_domain_select">Domain / Subdomain</label>
+        <div class="form-select-wrap">
+          <select id="full_domain_select" class="form-select" required
+                  onchange="syncHidden(this)">
+            <option value="" disabled {% if not preselect_id %}selected{% endif %}>
+              Select a domain…
+            </option>
+            {% for item in eligible %}
+              <option value="{{ item.full_domain }}"
+                      data-domain-id="{{ item.id }}"
+                      {% if preselect_id and item.id == preselect_id %}selected{% endif %}>
+                {{ item.label }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+        <span class="form-hint">Only domains with active Nginx config and no existing cert are shown.</span>
+      </div>
+
+      <!-- Hidden fields synced from select -->
+      <input type="hidden" name="full_domain" id="full_domain" value="">
+      <input type="hidden" name="domain_id"   id="domain_id"   value="">
+
+      <!-- Include www -->
+      <div class="form-group" id="www-group" style="display:none;">
+        <label class="form-check">
+          <input type="checkbox" name="include_www" id="include_www" value="true">
+          <span>Also include <strong id="www-label">www.domain.com</strong></span>
+        </label>
+        <span class="form-hint">
+          Adds www subdomain to the same certificate. Only shown for root domains.
+        </span>
+      </div>
+
+      <!-- Live summary -->
+      <div class="panel" id="cert-preview" style="display:none; background:var(--color-surface);">
+        <div class="panel__body" style="padding:var(--space-md);">
+          <span class="text-small text-muted">Certificate will be issued for:</span><br>
+          <span style="font-weight:700; font-size:var(--font-body);" id="preview-domains"></span>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn--primary" id="btn-submit">
+          Issue Certificate
+        </button>
+        <a href="/ssl/" class="btn btn--secondary">Cancel</a>
+      </div>
+
+    </form>
+
+    {% else %}
+    <div class="alert alert--info" id="no-eligible">
+      No eligible domains found.<br><br>
+      A domain is eligible when:<br>
+      • It has an active Nginx config (HTTP working)<br>
+      • It does not already have an SSL certificate<br><br>
+      <a href="/domains/create" class="btn btn--secondary btn--sm">Add a domain</a>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/modules/ssl.js"></script>
+{% endblock %}

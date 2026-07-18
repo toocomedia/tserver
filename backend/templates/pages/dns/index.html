@@ -1,0 +1,60 @@
+{% extends "layout.html" %}
+
+{% block title %}DNS Manager — VPS Panel{% endblock %}
+{% block page_title %}DNS Manager{% endblock %}
+
+{% block topbar_actions %}
+  <a href="/domains/create" class="btn btn--secondary" id="btn-add-domain">+ Add Domain</a>
+{% endblock %}
+
+{% block content %}
+
+{% if zones %}
+<div class="table-wrap">
+  <table class="table" id="dns-zones-table">
+    <colgroup>
+      <col style="width:45%">
+      <col style="width:20%">
+      <col style="width:15%">
+      <col style="width:20%">
+    </colgroup>
+    <thead>
+      <tr>
+        <th>Zone (Domain)</th>
+        <th>Records</th>
+        <th>Status</th>
+        <th class="col-actions">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for z in zones %}
+      <tr>
+        <td style="font-weight:700;">{{ z.domain.name }}</td>
+        <td>
+          <span class="text-muted">{{ z.record_count }}</span>
+          <span class="text-small text-muted"> records</span>
+        </td>
+        <td>
+          {% if z.zone_exists %}
+            <span class="badge badge--ok badge--dot">Active</span>
+          {% else %}
+            <span class="badge badge--error badge--dot">Missing</span>
+          {% endif %}
+        </td>
+        <td class="col-actions">
+          <a href="/dns/{{ z.domain.name }}/records"
+             class="btn btn--secondary btn--sm"
+             id="btn-view-{{ z.domain.name }}">Manage Records</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="alert alert--info" id="empty-state">
+  No DNS zones yet. <a href="/domains/create" style="font-weight:700;">Add a domain first →</a>
+</div>
+{% endif %}
+
+{% endblock %}

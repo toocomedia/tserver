@@ -1,0 +1,116 @@
+{% extends "layout.html" %}
+
+{% block title %}Add Domain — VPS Panel{% endblock %}
+{% block page_title %}Add Domain{% endblock %}
+
+{% block topbar_actions %}
+  <a href="/domains/" class="btn btn--secondary" id="btn-back">← Back</a>
+{% endblock %}
+
+{% block content %}
+
+<div class="panel" style="max-width:560px;">
+  <div class="panel__header">
+    <h3>New Domain</h3>
+  </div>
+  <div class="panel__body">
+
+    {% if error %}
+    <div class="alert alert--danger mb-lg" id="form-error" role="alert">{{ error }}</div>
+    {% endif %}
+
+    <div class="alert alert--info mb-lg">
+      Adding a domain will automatically:<br>
+      <strong>1.</strong> Create a DNS zone in PowerDNS<br>
+      <strong>2.</strong> Add an A record pointing to <strong>{{ server_ip }}</strong><br>
+      <strong>3.</strong> Create a webroot and default HTML page<br>
+      <strong>4.</strong> Configure Nginx to serve the domain over HTTP
+    </div>
+
+    <form method="post" action="/domains/create" class="form" id="create-domain-form">
+
+      <div class="form-group">
+        <label class="form-label" for="name">Domain Name</label>
+        <input
+          class="form-input{% if error %} form-input--error{% endif %}"
+          type="text"
+          id="name"
+          name="name"
+          value="{{ name or '' }}"
+          placeholder="example.com"
+          autocomplete="off"
+          autocapitalize="none"
+          spellcheck="false"
+          required
+          autofocus
+        >
+        <span class="form-hint">Enter the root domain only (e.g. example.com — not www.example.com)</span>
+        <span class="form-error" id="name-error" style="display:none;"></span>
+      </div>
+
+      <!-- Live preview -->
+      <div class="panel" id="preview-panel" style="display:none; background:var(--color-surface);">
+        <div class="panel__body" style="padding:var(--space-md);">
+          <span class="text-small text-muted">Preview</span><br>
+          <span style="font-size:var(--font-body); font-weight:700;" id="preview-domain"></span>
+          <span class="text-muted"> → </span>
+          <span class="text-small" id="preview-ip">{{ server_ip }}</span>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn--primary" id="btn-submit">Create Domain</button>
+        <a href="/domains/" class="btn btn--secondary" id="btn-cancel">Cancel</a>
+      </div>
+
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+const input  = document.getElementById('name');
+const preview = document.getElementById('preview-panel');
+const previewDomain = document.getElementById('preview-domain');
+const nameError = document.getElementById('name-error');
+const form = document.getElementById('create-domain-form');
+const submitBtn = document.getElementById('btn-submit');
+
+// Simple domain regex for live validation
+const domainRe = /^(?!-)([A-Za-z0-9-]{1,63}\.)+[A-Za-z]{2,}$/;
+
+input.addEventListener('input', () => {
+  const val = input.value.trim().toLowerCase();
+  if (val.length > 2) {
+    preview.style.display = 'block';
+    previewDomain.textContent = val;
+  } else {
+    preview.style.display = 'none';
+  }
+
+  // Live validation hint
+  if (val.length > 0 && !domainRe.test(val)) {
+    nameError.textContent = 'Invalid domain format';
+    nameError.style.display = 'block';
+    input.classList.add('form-input--error');
+  } else {
+    nameError.style.display = 'none';
+    input.classList.remove('form-input--error');
+  }
+});
+
+form.addEventListener('submit', (e) => {
+  const val = input.value.trim();
+  if (!domainRe.test(val)) {
+    e.preventDefault();
+    nameError.textContent = 'Invalid domain format';
+    nameError.style.display = 'block';
+    return;
+  }
+  submitBtn.textContent = 'Creating...';
+  submitBtn.disabled = true;
+});
+</script>
+{% endblock %}

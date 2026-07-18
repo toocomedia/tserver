@@ -1,0 +1,118 @@
+{% extends "layout.html" %}
+
+{% block title %}Reverse Proxy — VPS Panel{% endblock %}
+{% block page_title %}Reverse Proxy{% endblock %}
+
+{% block topbar_actions %}
+  <a href="/proxy/create" class="btn btn--primary" id="btn-add-proxy">+ Create Proxy</a>
+{% endblock %}
+
+{% block content %}
+
+{% set created = request.query_params.get('created') %}
+{% set deleted = request.query_params.get('deleted') %}
+{% set error   = request.query_params.get('error') %}
+
+{% if created %}
+<div class="alert alert--success mb-lg" id="alert-created">
+  Proxy created for <strong>{{ created }}</strong>. DNS and Nginx configured.
+</div>
+{% endif %}
+{% if deleted %}
+<div class="alert alert--info mb-lg" id="alert-deleted">Reverse proxy deleted and cleaned up.</div>
+{% endif %}
+{% if error %}
+<div class="alert alert--danger mb-lg" id="alert-error">{{ error }}</div>
+{% endif %}
+
+{% if rows %}
+<div class="table-wrap">
+  <table class="table" id="proxy-table">
+    <colgroup>
+      <col style="width:24%">
+      <col style="width:22%">
+      <col style="width:10%">
+      <col style="width:12%">
+      <col style="width:12%">
+      <col style="width:20%">
+    </colgroup>
+    <thead>
+      <tr>
+        <th>Subdomain</th>
+        <th>Target</th>
+        <th>Protocol</th>
+        <th>SSL</th>
+        <th>DNS</th>
+        <th class="col-actions">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in rows %}
+      {% set p = item.proxy %}
+      <tr id="proxy-row-{{ p.id }}"
+          class="{% if item.nginx_active %}row--active{% endif %}"
+          data-proxy-id="{{ p.id }}">
+
+        <td>
+          <span style="font-weight:700;">{{ p.full_domain }}</span>
+          <br>
+          <span class="text-small text-muted">{{ item.domain_name }}</span>
+        </td>
+
+        <td class="text-small">
+          {{ p.target_ip }}:{{ p.target_port }}
+        </td>
+
+        <td>
+          <span class="badge badge--neutral">{{ p.protocol | upper }}</span>
+        </td>
+
+        <td>
+          {% if p.ssl_enabled %}
+            <span class="badge badge--ok badge--dot">SSL</span>
+          {% else %}
+            <span class="badge badge--neutral badge--dot">HTTP</span>
+          {% endif %}
+        </td>
+
+        <td>
+          {% if item.dns_ok %}
+            <span class="badge badge--ok badge--dot">Active</span>
+          {% else %}
+            <span class="badge badge--error badge--dot">Missing</span>
+          {% endif %}
+        </td>
+
+        <td class="col-actions">
+          <div class="d-flex gap-xs justify-end">
+            {% if not p.ssl_enabled %}
+            <a href="/ssl/issue?domain_id={{ p.domain_id }}"
+               class="btn btn--secondary btn--sm"
+               id="btn-ssl-{{ p.id }}">SSL</a>
+            {% endif %}
+            <button class="btn btn--danger btn--sm"
+                    id="btn-del-{{ p.id }}"
+                    data-proxy-id="{{ p.id }}"
+                    data-full-domain="{{ p.full_domain }}">
+              Del
+            </button>
+          </div>
+        </td>
+
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="alert alert--info" id="empty-state">
+  No reverse proxies yet.
+  <a href="/proxy/create" style="font-weight:700;">Create your first proxy →</a>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/modules/proxy.js"></script>
+{% endblock %}

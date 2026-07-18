@@ -1,0 +1,117 @@
+{% extends "layout.html" %}
+
+{% block title %}Error #{{ event.id }} — VPS Panel{% endblock %}
+{% block page_title %}Error #{{ event.id }}{% endblock %}
+
+{% block topbar_actions %}
+  <a href="/admin/errors/" class="btn btn--secondary" id="btn-back">← Back</a>
+  <button type="button" class="btn btn--primary" id="btn-copy-report"
+          data-report-target="error-report-text">Copy report</button>
+{% endblock %}
+
+{% block content %}
+
+{% set ok = request.query_params.get('ok') %}
+{% if ok %}
+<div class="alert alert--success mb-lg" id="alert-ok">{{ ok }}</div>
+{% endif %}
+
+<!-- Meta -->
+<div class="panel mb-lg" id="error-meta">
+  <div class="panel__header">
+    <h3>Summary</h3>
+    <div class="d-flex gap-xs">
+      {% if event.resolved %}
+        <span class="badge badge--ok badge--dot">Resolved</span>
+      {% else %}
+        <span class="badge badge--error badge--dot">Open</span>
+      {% endif %}
+      <span class="badge badge--error">{{ event.level }}</span>
+    </div>
+  </div>
+  <div class="panel__body">
+    <div class="info-row">
+      <span class="info-row__label">When</span>
+      <span class="info-row__value text-small">
+        {% if event.created_at %}{{ event.created_at.strftime('%Y-%m-%d %H:%M:%S') }}{% else %}—{% endif %}
+      </span>
+    </div>
+    <div class="info-row">
+      <span class="info-row__label">Source</span>
+      <span class="info-row__value" style="font-weight:700;">{{ event.source }}</span>
+    </div>
+    <div class="info-row">
+      <span class="info-row__label">Operation</span>
+      <span class="info-row__value">{{ event.operation }}</span>
+    </div>
+    <div class="info-row">
+      <span class="info-row__label">Request</span>
+      <span class="info-row__value text-small">
+        {% if event.request_method or event.request_path %}
+          {{ event.request_method or '' }} {{ event.request_path or '' }}
+        {% else %}—{% endif %}
+      </span>
+    </div>
+    <div class="info-row">
+      <span class="info-row__label">Request ID</span>
+      <span class="info-row__value text-small">{{ event.request_id or '—' }}</span>
+    </div>
+    <div class="info-row">
+      <span class="info-row__label">Message</span>
+      <span class="info-row__value" style="font-weight:700;">{{ event.message }}</span>
+    </div>
+  </div>
+</div>
+
+<!-- Detail -->
+<div class="panel mb-lg">
+  <div class="panel__header"><h3>Detail</h3></div>
+  <div class="panel__body">
+    <pre class="code-block" id="error-detail">{{ event.detail or '(none)' }}</pre>
+  </div>
+</div>
+
+<!-- Context -->
+<div class="panel mb-lg">
+  <div class="panel__header"><h3>Context</h3></div>
+  <div class="panel__body">
+    <pre class="code-block" id="error-context">{{ event.context_json or '(none)' }}</pre>
+  </div>
+</div>
+
+<!-- Traceback -->
+<div class="panel mb-lg">
+  <div class="panel__header"><h3>Traceback</h3></div>
+  <div class="panel__body">
+    <pre class="code-block" id="error-traceback">{{ event.traceback or '(none)' }}</pre>
+  </div>
+</div>
+
+<!-- Hidden report for copy -->
+<textarea id="error-report-text" class="d-none" readonly aria-hidden="true">{{ report }}</textarea>
+
+<!-- Actions -->
+<div class="d-flex gap-sm flex-wrap mb-lg">
+  <button type="button" class="btn btn--primary" id="btn-copy-report-2"
+          data-report-target="error-report-text">Copy report</button>
+  <a href="/admin/errors/{{ event.id }}/report.txt" class="btn btn--secondary" id="btn-download">Download .txt</a>
+
+  {% if not event.resolved %}
+  <form method="post" action="/admin/errors/{{ event.id }}/resolve" style="display:inline;">
+    <button type="submit" class="btn btn--secondary" id="btn-resolve">Mark resolved</button>
+  </form>
+  {% else %}
+  <form method="post" action="/admin/errors/{{ event.id }}/reopen" style="display:inline;">
+    <button type="submit" class="btn btn--secondary" id="btn-reopen">Reopen</button>
+  </form>
+  {% endif %}
+
+  <button type="button" class="btn btn--danger" id="btn-delete-error"
+          data-error-id="{{ event.id }}">Delete</button>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/modules/errors.js"></script>
+{% endblock %}

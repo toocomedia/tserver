@@ -1,0 +1,133 @@
+{% extends "layout.html" %}
+
+{% block title %}Dashboard — VPS Panel{% endblock %}
+
+{% block page_title %}Dashboard{% endblock %}
+
+{% block topbar_actions %}
+  <a href="/api/health" class="btn btn--secondary btn--sm" target="_blank" id="btn-health-check">Health Check</a>
+{% endblock %}
+
+{% block content %}
+
+<!-- STAT GRID -->
+<div class="stat-grid mb-xl">
+
+  <div class="stat-card">
+    <div class="stat-card__label">Domains</div>
+    <div class="stat-card__value" id="stat-domains">{{ domain_count }}</div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-card__label">SSL Certs</div>
+    <div class="stat-card__value" id="stat-certs">{{ cert_count }}</div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-card__label">Reverse Proxies</div>
+    <div class="stat-card__value" id="stat-proxies">{{ proxy_count }}</div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-card__label">Server IP</div>
+    <div class="stat-card__value" style="font-size:16px; font-weight:700;" id="stat-ip">{{ server_ip }}</div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-card__label">Open Errors</div>
+    <div class="stat-card__value" id="stat-errors">
+      {% if open_errors %}
+        <a href="/admin/errors/" style="color:var(--color-danger); text-decoration:none;">{{ open_errors }}</a>
+      {% else %}
+        0
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+
+<!-- SERVICE STATUS -->
+<div class="section-header">
+  <h2>Service Status</h2>
+  <button class="btn btn--ghost btn--sm" id="btn-refresh-status" onclick="refreshStatus()">Refresh</button>
+</div>
+
+<div class="panel mb-xl" id="status-panel">
+  <div class="panel__body">
+
+    <div class="info-row">
+      <span class="info-row__label">Hostname</span>
+      <span class="info-row__value">{{ hostname }}</span>
+    </div>
+
+    <div class="info-row">
+      <span class="info-row__label">Nginx</span>
+      <span class="info-row__value" id="nginx-status">
+        {% if nginx.ok %}
+          <span class="badge badge--ok badge--dot">OK</span>
+        {% else %}
+          <span class="badge badge--error badge--dot">ERROR</span>
+          <span class="text-small text-muted" style="margin-left:8px;">{{ nginx.detail }}</span>
+        {% endif %}
+      </span>
+    </div>
+
+    <div class="info-row">
+      <span class="info-row__label">PowerDNS</span>
+      <span class="info-row__value" id="pdns-status">
+        {% if powerdns.ok %}
+          <span class="badge badge--ok badge--dot">OK</span>
+        {% else %}
+          <span class="badge badge--error badge--dot">ERROR</span>
+          <span class="text-small text-muted" style="margin-left:8px;">{{ powerdns.detail }}</span>
+        {% endif %}
+      </span>
+    </div>
+
+  </div>
+</div>
+
+<!-- QUICK LINKS -->
+<div class="section-header">
+  <h2>Quick Actions</h2>
+</div>
+
+<div class="d-flex gap-sm flex-wrap">
+  <a href="/domains/create" class="btn btn--primary" id="btn-add-domain">+ Add Domain</a>
+  <a href="/proxy/create"   class="btn btn--secondary" id="btn-add-proxy">+ Add Reverse Proxy</a>
+  <a href="/ssl"            class="btn btn--secondary" id="btn-manage-ssl">Manage SSL</a>
+  <a href="/dns"            class="btn btn--secondary" id="btn-manage-dns">Manage DNS</a>
+  <a href="/admin/errors/"  class="btn btn--secondary" id="btn-manage-errors">Error Tracker</a>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function refreshStatus() {
+  const btn = document.getElementById('btn-refresh-status');
+  btn.textContent = 'Refreshing...';
+  btn.disabled = true;
+  try {
+    const data = await panel.get('/api/health');
+
+    document.getElementById('nginx-status').innerHTML = data.nginx.ok
+      ? '<span class="badge badge--ok badge--dot">OK</span>'
+      : `<span class="badge badge--error badge--dot">ERROR</span>
+         <span class="text-small text-muted" style="margin-left:8px;">${data.nginx.detail}</span>`;
+
+    document.getElementById('pdns-status').innerHTML = data.powerdns.ok
+      ? '<span class="badge badge--ok badge--dot">OK</span>'
+      : `<span class="badge badge--error badge--dot">ERROR</span>
+         <span class="text-small text-muted" style="margin-left:8px;">${data.powerdns.detail}</span>`;
+
+    toast('Status refreshed', 'success');
+  } catch (e) {
+    toast(e.message, 'danger');
+  } finally {
+    btn.textContent = 'Refresh';
+    btn.disabled = false;
+  }
+}
+</script>
+{% endblock %}

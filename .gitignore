@@ -1,0 +1,26 @@
+# Secrets & local state
+.env
+*.db
+*.db-*
+*.sqlite3
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.log
+
+# Install leftovers
+/opt/
+backups/
