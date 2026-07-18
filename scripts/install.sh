@@ -234,6 +234,8 @@ if [[ "$SKIP_APT" != "1" ]]; then
   fi
 
   info "Installing packages..."
+  # pdns postinst often fails on first install (port 53 / no config yet) — ignore,
+  # setup_powerdns.sh configures and starts it correctly afterwards.
   DEBIAN_FRONTEND=noninteractive apt-get install -y \
     python3 python3-venv python3-dev python3-pip \
     nginx \
@@ -241,7 +243,15 @@ if [[ "$SKIP_APT" != "1" ]]; then
     pdns-server pdns-backend-sqlite3 \
     sqlite3 \
     curl wget git ufw openssl rsync sudo \
-    || die "apt install failed"
+    || true
+
+  # Ensure critical packages are present even if apt returned non-zero from pdns restart
+  for pkg in python3 nginx certbot pdns-server pdns-backend-sqlite3 sqlite3; do
+    dpkg -s "$pkg" &>/dev/null || die "Package missing after apt: $pkg"
+  done
+  # Stop crash-loop until we write config
+  systemctl stop pdns 2>/dev/null || true
+  systemctl reset-failed pdns 2>/dev/null || true
 
   # Prefer python3.11 if available (optional package on some images)
   if ! command -v python3.11 &>/dev/null; then

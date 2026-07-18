@@ -94,8 +94,8 @@ def register_error_handlers(app: FastAPI) -> None:
         logger.exception("Unhandled exception on %s %s", request.method, request.url.path)
 
         accept = request.headers.get("accept", "")
-        if "text/html" in accept:
-            # Bounce to error list so operator can inspect
+        # Avoid redirect loop if the error page itself throws
+        if "text/html" in accept and not request.url.path.startswith("/admin/errors"):
             return RedirectResponse(
                 url="/admin/errors/?error=An+unexpected+error+occurred",
                 status_code=303,
