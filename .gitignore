@@ -21,6 +21,9 @@ Thumbs.db
 .vscode/
 *.log
 
+# Local-only helpers (not for the public repo)
+push-to-github.bat
+
 # Install leftovers
 /opt/
 backups/
