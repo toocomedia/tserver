@@ -30,12 +30,9 @@ if errorlevel 1 (
   exit /b 1
 )
 
-set /p REPO_URL=  GitHub repo URL: 
-if "%REPO_URL%"=="" (
-  echo  ERROR: URL is required.
-  pause
-  exit /b 1
-)
+set "DEFAULT_URL=https://github.com/toocomedia/tserver.git"
+set /p REPO_URL=  GitHub repo URL [%DEFAULT_URL%]: 
+if "%REPO_URL%"=="" set "REPO_URL=%DEFAULT_URL%"
 
 set /p BRANCH=  Branch name [main]: 
 if "%BRANCH%"=="" set BRANCH=main
