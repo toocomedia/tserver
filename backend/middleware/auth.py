@@ -37,7 +37,11 @@ class AuthMiddleware(BaseHTTPMiddleware):
         if is_public_path(path):
             return await call_next(request)
 
-        user_id = request.session.get("user_id")
+        try:
+            user_id = request.session.get("user_id")
+        except AssertionError:
+            # SessionMiddleware not installed — treat as logged out
+            user_id = None
         if user_id:
             return await call_next(request)
 

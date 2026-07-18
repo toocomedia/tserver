@@ -25,10 +25,11 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Initialize DB tables on startup."""
-    if not config.SECRET_KEY:
-        raise RuntimeError(
-            "SECRET_KEY is not set. Add it to .env "
-            "(install.sh / update.sh generate one automatically)."
+    if getattr(config, "_SECRET_KEY_EPHEMERAL", False):
+        logger.warning(
+            "SECRET_KEY was missing — using ephemeral key. "
+            "Add SECRET_KEY to .env (or re-run update/create_admin) "
+            "so login sessions survive restarts."
         )
     logger.info("Initializing database...")
     await init_db()
@@ -51,7 +52,7 @@ app.add_middleware(AuthMiddleware)
 app.add_middleware(RequestIdMiddleware)
 app.add_middleware(
     SessionMiddleware,
-    secret_key=config.SECRET_KEY or "insecure-dev-only-change-me",
+    secret_key=config.SECRET_KEY,
     session_cookie="srv_panel_session",
     max_age=config.SESSION_MAX_AGE,
     same_site="lax",

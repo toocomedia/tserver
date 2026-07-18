@@ -3,6 +3,7 @@ config.py — Application settings loaded from environment / .env file
 All service URLs, paths, and secrets are defined here only.
 """
 import os
+import secrets
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -10,20 +11,51 @@ from dotenv import load_dotenv
 _env_path = Path(__file__).parent.parent / ".env"
 load_dotenv(_env_path)
 
+
+def _env_str(name: str, default: str = "") -> str:
+    val = os.getenv(name, default)
+    if val is None:
+        return default
+    return str(val).strip()
+
+
+def _env_int(name: str, default: int) -> int:
+    raw = _env_str(name, str(default))
+    if not raw:
+        return default
+    try:
+        return int(raw)
+    except ValueError:
+        return default
+
+
+def _env_bool(name: str, default: bool = False) -> bool:
+    raw = _env_str(name, "true" if default else "false").lower()
+    return raw in ("1", "true", "yes", "on")
+
+
 # ---------------------------------------------------------
 # Server
 # ---------------------------------------------------------
-SERVER_IP: str = os.getenv("SERVER_IP", "127.0.0.1")
-PANEL_DOMAIN: str = os.getenv("PANEL_DOMAIN", "localhost")
-DEBUG: bool = os.getenv("DEBUG", "false").lower() == "true"
+SERVER_IP: str = _env_str("SERVER_IP", "127.0.0.1")
+PANEL_DOMAIN: str = _env_str("PANEL_DOMAIN", "localhost")
+DEBUG: bool = _env_bool("DEBUG", False)
 
 # ---------------------------------------------------------
 # Auth / sessions
 # ---------------------------------------------------------
-# Required in production — install.sh / update.sh generate if missing.
-SECRET_KEY: str = os.getenv("SECRET_KEY", "")
-SESSION_HTTPS_ONLY: bool = os.getenv("SESSION_HTTPS_ONLY", "false").lower() == "true"
-SESSION_MAX_AGE: int = int(os.getenv("SESSION_MAX_AGE", "604800"))  # 7 days
+# install.sh / update.sh / create_admin.sh normally set this.
+# If still empty, generate an ephemeral key so the service can start
+# (sessions reset on restart until SECRET_KEY is persisted in .env).
+SECRET_KEY: str = _env_str("SECRET_KEY", "")
+if not SECRET_KEY:
+    SECRET_KEY = secrets.token_hex(32)
+    _SECRET_KEY_EPHEMERAL = True
+else:
+    _SECRET_KEY_EPHEMERAL = False
+
+SESSION_HTTPS_ONLY: bool = _env_bool("SESSION_HTTPS_ONLY", False)
+SESSION_MAX_AGE: int = _env_int("SESSION_MAX_AGE", 604800)  # 7 days
 
 # ---------------------------------------------------------
 # Database
