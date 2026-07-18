@@ -25,10 +25,21 @@ The installer asks for:
 1. **SERVER_IP** — auto-detected (Enter to confirm)  
 2. **Panel domain?** — `n` = IP only, or `y` + domain  
 3. **Email** — for Let's Encrypt  
+4. **Admin username + password** — panel web login (min 8 characters)
 
 Temp files under `/tmp` are removed after install. Panel lives in `/opt/srv-panel`.
 
-Open: **http://YOUR.SERVER.IP/**
+Open: **http://YOUR.SERVER.IP/** and sign in with the admin you created.
+
+### Reset / create admin (existing installs)
+
+After an update that adds auth, or if you forget the password:
+
+```bash
+sudo bash /opt/srv-panel/scripts/create_admin.sh
+# or non-interactive:
+sudo bash /opt/srv-panel/scripts/create_admin.sh --user admin --password 'your-password' --force
+```
 
 ## Update
 

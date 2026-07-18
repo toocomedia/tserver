@@ -102,7 +102,8 @@ backend/
 - Sanitize all domain name inputs.
 - No user input goes directly into shell commands.
 - No user input goes directly into nginx config templates without escaping.
-- API routes must be protected (auth middleware — planned for v2).
+- Panel routes are protected by session auth (`middleware/auth.py`). Public: `/login`, `/logout`, `/static/*`, `/api/health`.
+- Admin user is seeded by `install.sh` or `scripts/create_admin.sh` (password hashed with bcrypt in SQLite).
 
 ## Comments
 - Comment why, not what.

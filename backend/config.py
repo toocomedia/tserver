@@ -18,6 +18,14 @@ PANEL_DOMAIN: str = os.getenv("PANEL_DOMAIN", "localhost")
 DEBUG: bool = os.getenv("DEBUG", "false").lower() == "true"
 
 # ---------------------------------------------------------
+# Auth / sessions
+# ---------------------------------------------------------
+# Required in production — install.sh / update.sh generate if missing.
+SECRET_KEY: str = os.getenv("SECRET_KEY", "")
+SESSION_HTTPS_ONLY: bool = os.getenv("SESSION_HTTPS_ONLY", "false").lower() == "true"
+SESSION_MAX_AGE: int = int(os.getenv("SESSION_MAX_AGE", "604800"))  # 7 days
+
+# ---------------------------------------------------------
 # Database
 # ---------------------------------------------------------
 BASE_DIR = Path(__file__).parent

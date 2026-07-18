@@ -143,6 +143,21 @@
   flex-shrink: 0;
 }
 
+.topbar__user {
+  font-size: var(--font-small);
+  font-weight: 600;
+  color: var(--color-muted);
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.topbar__logout {
+  display: inline-flex;
+  margin: 0;
+}
+
 /* ============================================================
    CONTENT AREA
    ============================================================ */

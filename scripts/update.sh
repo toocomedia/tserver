@@ -129,6 +129,23 @@ fi
 
 # Ensure .env not clobbered; re-assert ownership
 if [[ -f "$PANEL_DIR/.env" ]]; then
+  # Session signing key required after auth — generate once if missing
+  if ! grep -qE '^SECRET_KEY=.+' "$PANEL_DIR/.env" 2>/dev/null; then
+    _GEN_SECRET="$(openssl rand -hex 32 2>/dev/null || head -c 32 /dev/urandom | xxd -p -c 32)"
+    if grep -qE '^SECRET_KEY=' "$PANEL_DIR/.env" 2>/dev/null; then
+      sed -i "s|^SECRET_KEY=.*|SECRET_KEY=${_GEN_SECRET}|" "$PANEL_DIR/.env"
+    else
+      echo "SECRET_KEY=${_GEN_SECRET}" >> "$PANEL_DIR/.env"
+    fi
+    unset _GEN_SECRET
+    info "Generated SECRET_KEY in $PANEL_DIR/.env"
+  fi
+  if ! grep -qE '^SESSION_HTTPS_ONLY=' "$PANEL_DIR/.env" 2>/dev/null; then
+    echo "SESSION_HTTPS_ONLY=false" >> "$PANEL_DIR/.env"
+  fi
+  if ! grep -qE '^SESSION_MAX_AGE=' "$PANEL_DIR/.env" 2>/dev/null; then
+    echo "SESSION_MAX_AGE=604800" >> "$PANEL_DIR/.env"
+  fi
   chown root:"$PANEL_USER" "$PANEL_DIR/.env"
   chmod 640 "$PANEL_DIR/.env"
 fi
@@ -165,6 +182,20 @@ if curl -sf "http://127.0.0.1:${PANEL_PORT}/api/health" >/dev/null; then
   info "Health check OK"
 else
   warn "Health endpoint not ready yet — check journalctl -u srv-panel"
+fi
+
+# After auth rollout: existing installs may have no panel admin yet
+if [[ -x "$PANEL_DIR/scripts/create_admin.sh" ]]; then
+  if ! bash "$PANEL_DIR/scripts/create_admin.sh" --check >/dev/null 2>&1; then
+    warn "No panel admin user found. Create one before opening the UI:"
+    echo "    sudo bash $PANEL_DIR/scripts/create_admin.sh"
+  fi
+elif [[ -f "$PANEL_DIR/app/cli_create_admin.py" ]]; then
+  if ! (cd "$PANEL_DIR/app" && sudo -u "$PANEL_USER" "$PANEL_DIR/venv/bin/python" \
+      cli_create_admin.py --check >/dev/null 2>&1); then
+    warn "No panel admin user found. Create one:"
+    echo "    cd $PANEL_DIR/app && sudo -u $PANEL_USER $PANEL_DIR/venv/bin/python cli_create_admin.py"
+  fi
 fi
 
 # Drop temp git clones (get-update.sh / manual /tmp sources)

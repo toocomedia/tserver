@@ -209,6 +209,49 @@ else
   CERTBOT_EMAIL="${CERTBOT_EMAIL:-admin@localhost}"
 fi
 
+# --- Panel admin (web login) ---
+ADMIN_USER="${ADMIN_USER:-admin}"
+ADMIN_PASSWORD="${ADMIN_PASSWORD:-}"
+
+if can_prompt; then
+  echo ""
+  echo "  Panel web login (required to open the control panel)."
+  ask "Admin username" "${ADMIN_USER}"
+  ADMIN_USER="$(echo "${REPLY:-admin}" | tr -d '[:space:]')"
+  [[ -n "$ADMIN_USER" ]] || ADMIN_USER="admin"
+  while true; do
+    if [[ -r /dev/tty ]]; then
+      read -r -s -p "  Admin password (min 8 chars): " ADMIN_PASSWORD </dev/tty || ADMIN_PASSWORD=""
+      echo ""
+      read -r -s -p "  Confirm password: " ADMIN_PASSWORD2 </dev/tty || ADMIN_PASSWORD2=""
+      echo ""
+    else
+      read -r -s -p "  Admin password (min 8 chars): " ADMIN_PASSWORD || ADMIN_PASSWORD=""
+      echo ""
+      read -r -s -p "  Confirm password: " ADMIN_PASSWORD2 || ADMIN_PASSWORD2=""
+      echo ""
+    fi
+    if [[ ${#ADMIN_PASSWORD} -lt 8 ]]; then
+      echo "    Password must be at least 8 characters."
+      continue
+    fi
+    if [[ "$ADMIN_PASSWORD" != "$ADMIN_PASSWORD2" ]]; then
+      echo "    Passwords do not match."
+      continue
+    fi
+    break
+  done
+  unset ADMIN_PASSWORD2
+else
+  ADMIN_USER="${ADMIN_USER:-admin}"
+  if [[ -z "${ADMIN_PASSWORD:-}" ]]; then
+    die "NONINTERACTIVE install requires ADMIN_PASSWORD (min 8 chars)"
+  fi
+  if [[ ${#ADMIN_PASSWORD} -lt 8 ]]; then
+    die "ADMIN_PASSWORD must be at least 8 characters"
+  fi
+fi
+
 export SERVER_IP PANEL_DOMAIN CERTBOT_EMAIL PANEL_DIR PANEL_PORT
 
 info "Install config"
@@ -221,6 +264,7 @@ else
   echo "    PANEL_DOMAIN  = $PANEL_DOMAIN  (+ IP ${SERVER_IP})"
 fi
 echo "    CERTBOT_EMAIL = $CERTBOT_EMAIL"
+echo "    ADMIN_USER    = $ADMIN_USER"
 
 # ---------------------------------------------------------------
 # Packages
@@ -340,6 +384,15 @@ _set_env "NGINX_WEBROOT" "/var/www" 0
 _set_env "PRIVILEGED_SUDO" "true" 0
 _set_env "DEBUG" "false" 0
 _set_env "PDNS_URL" "http://127.0.0.1:8081" 0
+_set_env "SESSION_HTTPS_ONLY" "false" 0
+_set_env "SESSION_MAX_AGE" "604800" 0
+
+# Session signing key — generate once, never overwrite
+if ! grep -qE '^SECRET_KEY=.+' "$PANEL_ENV" 2>/dev/null; then
+  _GEN_SECRET="$(openssl rand -hex 32 2>/dev/null || head -c 32 /dev/urandom | xxd -p -c 32)"
+  _set_env "SECRET_KEY" "$_GEN_SECRET" 1
+  unset _GEN_SECRET
+fi
 
 chmod 640 "$PANEL_ENV"
 chown root:"$PANEL_USER" "$PANEL_ENV"
@@ -455,6 +508,34 @@ else
 fi
 
 # ---------------------------------------------------------------
+# Seed panel admin (web login) — password never written to .env
+# ---------------------------------------------------------------
+info "Creating panel admin user '${ADMIN_USER}'..."
+if [[ -x "$PANEL_DIR/scripts/create_admin.sh" ]]; then
+  if bash "$PANEL_DIR/scripts/create_admin.sh" \
+      --user "$ADMIN_USER" \
+      --password "$ADMIN_PASSWORD" \
+      --force; then
+    info "Admin user ready"
+  else
+    warn "Could not create admin via create_admin.sh — try manually:"
+    echo "    sudo bash $PANEL_DIR/scripts/create_admin.sh --user $ADMIN_USER"
+  fi
+elif [[ -f "$PANEL_DIR/app/cli_create_admin.py" ]]; then
+  cd "$PANEL_DIR/app"
+  if sudo -u "$PANEL_USER" "$PANEL_DIR/venv/bin/python" cli_create_admin.py \
+      --username "$ADMIN_USER" --password "$ADMIN_PASSWORD" --force; then
+    info "Admin user ready"
+  else
+    warn "cli_create_admin.py failed — create admin manually after install"
+  fi
+else
+  warn "create_admin tools missing — create admin after install"
+fi
+# Drop password from shell environment
+unset ADMIN_PASSWORD
+
+# ---------------------------------------------------------------
 # Remove temp git clone (never leave /tmp/tserver-* around)
 # ---------------------------------------------------------------
 if [[ -n "${CLEANUP_SOURCE_DIR:-}" && -d "${CLEANUP_SOURCE_DIR}" ]]; then
@@ -478,5 +559,8 @@ if [[ "$PANEL_DOMAIN" != "$SERVER_IP" ]]; then
   echo "    Open (name): http://${PANEL_DOMAIN}/"
   echo "    DNS:         A ${PANEL_DOMAIN} → ${SERVER_IP}"
 fi
+echo "    Login user:  ${ADMIN_USER}"
+echo "    (password as entered — not shown again)"
 echo ""
+echo "    Reset admin: sudo bash $PANEL_DIR/scripts/create_admin.sh --force"
 echo "    Update:  curl -fsSL https://raw.githubusercontent.com/toocomedia/tserver/main/scripts/get-update.sh | sudo bash"

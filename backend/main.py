@@ -7,10 +7,13 @@ import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.sessions import SessionMiddleware
 
+import config
 from database import init_db
-from routers import system, domains, dns, ssl, proxy, errors
+from routers import system, domains, dns, ssl, proxy, errors, auth
 from middleware.error_capture import RequestIdMiddleware, register_error_handlers
+from middleware.auth import AuthMiddleware
 
 logging.basicConfig(
     level=logging.INFO,
@@ -22,6 +25,11 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Initialize DB tables on startup."""
+    if not config.SECRET_KEY:
+        raise RuntimeError(
+            "SECRET_KEY is not set. Add it to .env "
+            "(install.sh / update.sh generate one automatically)."
+        )
     logger.info("Initializing database...")
     await init_db()
     logger.info("Panel ready.")
@@ -37,14 +45,25 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Request ID + error capture
+# Middleware order: last added runs first on the request.
+# Session → RequestId → Auth → app
+app.add_middleware(AuthMiddleware)
 app.add_middleware(RequestIdMiddleware)
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=config.SECRET_KEY or "insecure-dev-only-change-me",
+    session_cookie="srv_panel_session",
+    max_age=config.SESSION_MAX_AGE,
+    same_site="lax",
+    https_only=config.SESSION_HTTPS_ONLY,
+)
 register_error_handlers(app)
 
 # Static files
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Routers
+app.include_router(auth.router)
 app.include_router(system.router)
 app.include_router(domains.router)   # Phase 2
 app.include_router(dns.router)       # Phase 3
