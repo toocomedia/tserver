@@ -48,24 +48,47 @@ fi
 # ---------------------------------------------------------------
 detect_ip() {
   local ip=""
-  ip=$(curl -4 -fsS --max-time 3 ifconfig.me 2>/dev/null || true)
-  if [[ -z "$ip" ]]; then
-    ip=$(hostname -I 2>/dev/null | awk '{print $1}')
+  # Public IP (several fallbacks — no user input needed)
+  for url in \
+    "https://ifconfig.me" \
+    "https://api.ipify.org" \
+    "https://icanhazip.com" \
+    "https://checkip.amazonaws.com"
+  do
+    ip=$(curl -4 -fsS --max-time 3 "$url" 2>/dev/null | tr -d '[:space:]' || true)
+    if [[ "$ip" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+      echo "$ip"
+      return 0
+    fi
+  done
+  # Local primary address
+  ip=$(hostname -I 2>/dev/null | awk '{print $1}' | tr -d '[:space:]')
+  if [[ "$ip" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    echo "$ip"
+    return 0
   fi
-  echo "${ip:-127.0.0.1}"
+  echo ""
 }
 
-# SERVER_IP — always required (public IP of this VPS)
-if [[ -z "${SERVER_IP:-}" ]]; then
+# SERVER_IP — auto-detected by default (curl install never needs YOUR.VPS.IP)
+# Override only if needed: SERVER_IP=1.2.3.4 bash install.sh
+if [[ -z "${SERVER_IP:-}" ]] \
+   || [[ "${SERVER_IP}" == "YOUR.VPS.IP" ]] \
+   || [[ "${SERVER_IP}" == "x.x.x.x" ]] \
+   || [[ "${SERVER_IP}" == "1.2.3.4" ]]; then
+  if [[ -n "${SERVER_IP:-}" ]]; then
+    warn "Ignoring placeholder SERVER_IP=${SERVER_IP} — auto-detecting..."
+  fi
   SERVER_IP="$(detect_ip)"
-  if [[ "$NONINTERACTIVE" != "1" ]]; then
+  if [[ "$NONINTERACTIVE" != "1" && -n "$SERVER_IP" ]]; then
     echo ""
-    echo "  SERVER_IP = public IP of this VPS (used for DNS A records + panel access)."
+    echo "  SERVER_IP auto-detected (used for DNS A records + panel access)."
     read -r -p "  SERVER_IP [$SERVER_IP]: " _in || true
     SERVER_IP="${_in:-$SERVER_IP}"
   fi
 fi
-[[ -n "$SERVER_IP" ]] || die "SERVER_IP is required"
+[[ -n "$SERVER_IP" ]] || die "Could not detect SERVER_IP. Set it: SERVER_IP=x.x.x.x bash install.sh"
+info "Using SERVER_IP=$SERVER_IP"
 
 # PANEL_DOMAIN — optional. Leave empty / press Enter to use IP only.
 # Nginx will always accept the server IP; domain is extra if you set one later.

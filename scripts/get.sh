@@ -30,6 +30,6 @@ git clone --depth 1 --branch "$REPO_BRANCH" "$REPO_URL" "$CLONE_DIR"
 export SOURCE_DIR="$CLONE_DIR"
 chmod +x "$CLONE_DIR/scripts/"*.sh
 
-echo -e "${GRN}==>${NC} Running install.sh..."
-# Forward env the user may have set on the curl line
+echo -e "${GRN}==>${NC} Running install.sh (SERVER_IP auto-detected if unset)..."
+# SERVER_IP / PANEL_DOMAIN / CERTBOT_EMAIL are optional — install.sh detects IP
 exec bash "$CLONE_DIR/scripts/install.sh"
