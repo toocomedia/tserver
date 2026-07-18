@@ -8,17 +8,17 @@ Lightweight VPS control panel — domains, DNS (PowerDNS), SSL (Certbot), revers
 curl -fsSL https://raw.githubusercontent.com/toocomedia/tserver/main/scripts/get.sh | sudo bash
 ```
 
-IP and panel URL are set automatically. When it finishes, open:
+The installer **asks you**:
 
-```text
-http://<your-server-public-ip>/
-```
+1. **SERVER_IP** — auto-detected, press Enter to confirm  
+2. **Panel domain?** — `n` = IP only (`http://IP/`), or `y` then type e.g. `panel.example.com`  
+3. **Email** — required for Let's Encrypt SSL later  
 
-(Optional) force values if auto-detect is wrong:
+Fully automatic (no questions):
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/toocomedia/tserver/main/scripts/get.sh \
-  | sudo SERVER_IP=1.2.3.4 PANEL_DOMAIN=panel.example.com bash
+  | sudo NONINTERACTIVE=1 bash
 ```
 
 ## Update

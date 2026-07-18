@@ -44,11 +44,60 @@ fi
 [[ -f "$SOURCE_DIR/backend/requirements.txt" ]] || die "requirements.txt not found"
 
 # ---------------------------------------------------------------
-# Config values
+# Interactive input (works with curl | sudo bash via /dev/tty)
 # ---------------------------------------------------------------
+attach_tty() {
+  # curl|bash uses the pipe as stdin — reattach keyboard for prompts
+  if [[ -r /dev/tty ]]; then
+    exec </dev/tty
+  fi
+}
+
+can_prompt() {
+  [[ "${NONINTERACTIVE}" != "1" ]] && [[ -r /dev/tty || -t 0 ]]
+}
+
+ask() {
+  # ask "Prompt" "default" → sets REPLY
+  local prompt="$1" default="${2:-}"
+  if [[ -n "$default" ]]; then
+    read -r -p "  $prompt [$default]: " REPLY || REPLY=""
+    REPLY="${REPLY:-$default}"
+  else
+    read -r -p "  $prompt: " REPLY || REPLY=""
+  fi
+}
+
+ask_required() {
+  # ask_required "Prompt" "hint" → loops until non-empty REPLY
+  local prompt="$1" hint="${2:-}"
+  while true; do
+    if [[ -n "$hint" ]]; then
+      read -r -p "  $prompt ($hint): " REPLY || REPLY=""
+    else
+      read -r -p "  $prompt: " REPLY || REPLY=""
+    fi
+    REPLY="$(echo "${REPLY:-}" | tr -d '[:space:]')"
+    [[ -n "$REPLY" ]] && return 0
+    echo "    Required — please enter a value."
+  done
+}
+
+is_email() {
+  [[ "$1" =~ ^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$ ]]
+}
+
+is_ip() {
+  [[ "$1" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]
+}
+
+is_domainish() {
+  # simple hostname check (not full RFC)
+  [[ "$1" =~ ^[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?(\.[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?)+$ ]]
+}
+
 detect_ip() {
   local ip=""
-  # Public IP (several fallbacks — no user input needed)
   for url in \
     "https://ifconfig.me" \
     "https://api.ipify.org" \
@@ -56,66 +105,108 @@ detect_ip() {
     "https://checkip.amazonaws.com"
   do
     ip=$(curl -4 -fsS --max-time 3 "$url" 2>/dev/null | tr -d '[:space:]' || true)
-    if [[ "$ip" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    if is_ip "$ip"; then
       echo "$ip"
       return 0
     fi
   done
-  # Local primary address
   ip=$(hostname -I 2>/dev/null | awk '{print $1}' | tr -d '[:space:]')
-  if [[ "$ip" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+  if is_ip "$ip"; then
     echo "$ip"
     return 0
   fi
   echo ""
 }
 
-# SERVER_IP — auto-detected by default (curl install never needs YOUR.VPS.IP)
-# Override only if needed: SERVER_IP=1.2.3.4 bash install.sh
-if [[ -z "${SERVER_IP:-}" ]] \
-   || [[ "${SERVER_IP}" == "YOUR.VPS.IP" ]] \
-   || [[ "${SERVER_IP}" == "x.x.x.x" ]] \
-   || [[ "${SERVER_IP}" == "1.2.3.4" ]]; then
-  if [[ -n "${SERVER_IP:-}" ]]; then
-    warn "Ignoring placeholder SERVER_IP=${SERVER_IP} — auto-detecting..."
-  fi
-  SERVER_IP="$(detect_ip)"
-  if [[ "$NONINTERACTIVE" != "1" && -n "$SERVER_IP" ]]; then
-    echo ""
-    echo "  SERVER_IP auto-detected (used for DNS A records + panel access)."
-    read -r -p "  SERVER_IP [$SERVER_IP]: " _in || true
-    SERVER_IP="${_in:-$SERVER_IP}"
-  fi
+# ---------------------------------------------------------------
+# Config values (smart prompts)
+# ---------------------------------------------------------------
+if can_prompt; then
+  attach_tty
 fi
-[[ -n "$SERVER_IP" ]] || die "Could not detect SERVER_IP. Set it: SERVER_IP=x.x.x.x bash install.sh"
-info "Using SERVER_IP=$SERVER_IP"
 
-# PANEL_DOMAIN — optional. Leave empty / press Enter to use IP only.
-# Nginx will always accept the server IP; domain is extra if you set one later.
-if [[ -z "${PANEL_DOMAIN:-}" ]]; then
-  if [[ "$NONINTERACTIVE" != "1" ]]; then
-    echo ""
-    echo "  PANEL_DOMAIN = optional hostname for the panel UI."
-    echo "  Leave blank to access by IP only:  http://${SERVER_IP}/"
-    read -r -p "  PANEL_DOMAIN [IP-only]: " _in || true
-    PANEL_DOMAIN="${_in:-}"
-  else
-    PANEL_DOMAIN=""
+# Drop common doc placeholders
+case "${SERVER_IP:-}" in
+  YOUR.VPS.IP|x.x.x.x|1.2.3.4)
+    warn "Ignoring placeholder SERVER_IP=${SERVER_IP}"
+    SERVER_IP=""
+    ;;
+esac
+
+DETECTED_IP="$(detect_ip)"
+
+echo ""
+info "Install configuration"
+echo "    (Press Enter to accept defaults. Values are used for DNS + SSL later.)"
+echo ""
+
+# --- SERVER_IP (auto + confirm) ---
+if can_prompt; then
+  if [[ -z "${SERVER_IP:-}" ]]; then
+    SERVER_IP="${DETECTED_IP}"
   fi
+  while true; do
+    ask "Public SERVER_IP of this VPS" "${SERVER_IP:-$DETECTED_IP}"
+    SERVER_IP="$REPLY"
+    if is_ip "$SERVER_IP"; then
+      break
+    fi
+    echo "    Invalid IPv4. Example: 8.208.9.74"
+  done
+else
+  SERVER_IP="${SERVER_IP:-$DETECTED_IP}"
+  [[ -n "$SERVER_IP" ]] || die "Could not detect SERVER_IP. Set SERVER_IP=x.x.x.x"
 fi
-# Normalize: empty, "ip", "none", or same as IP → IP-only mode
+
+# --- PANEL_DOMAIN (optional, smart) ---
+if can_prompt && [[ -z "${PANEL_DOMAIN:-}" ]]; then
+  echo ""
+  echo "  Panel access:"
+  echo "    • IP only  → open http://${SERVER_IP}/  (no DNS needed)"
+  echo "    • Domain   → e.g. panel.example.com (point A record to ${SERVER_IP})"
+  ask "Use a domain for the panel? (y/N)" "n"
+  case "${REPLY,,}" in
+    y|yes)
+      while true; do
+        ask_required "Panel domain" "e.g. panel.example.com"
+        PANEL_DOMAIN="$REPLY"
+        if is_domainish "$PANEL_DOMAIN"; then
+          break
+        fi
+        echo "    Invalid domain. Use something like panel.example.com"
+      done
+      ;;
+    *)
+      PANEL_DOMAIN=""
+      echo "    → IP-only mode (http://${SERVER_IP}/)"
+      ;;
+  esac
+elif [[ -z "${PANEL_DOMAIN:-}" ]]; then
+  PANEL_DOMAIN=""
+fi
+
 case "${PANEL_DOMAIN,,}" in
   ""|ip|none|"_") PANEL_DOMAIN="$SERVER_IP" ;;
 esac
 
-if [[ -z "${CERTBOT_EMAIL:-}" ]]; then
-  CERTBOT_EMAIL="admin@localhost"
-  if [[ "$NONINTERACTIVE" != "1" ]]; then
-    echo ""
-    echo "  CERTBOT_EMAIL = Let's Encrypt contact (only needed when issuing SSL later)."
-    read -r -p "  CERTBOT_EMAIL [$CERTBOT_EMAIL]: " _in || true
-    CERTBOT_EMAIL="${_in:-$CERTBOT_EMAIL}"
-  fi
+# --- CERTBOT_EMAIL (required for SSL — always ask interactively) ---
+if can_prompt; then
+  echo ""
+  echo "  Email for Let's Encrypt SSL (required — used when you issue certificates)."
+  while true; do
+    if [[ -n "${CERTBOT_EMAIL:-}" && "$CERTBOT_EMAIL" != "admin@localhost" ]]; then
+      ask "CERTBOT_EMAIL" "$CERTBOT_EMAIL"
+    else
+      ask_required "CERTBOT_EMAIL" "you@example.com"
+    fi
+    CERTBOT_EMAIL="$REPLY"
+    if is_email "$CERTBOT_EMAIL"; then
+      break
+    fi
+    echo "    Invalid email. Example: admin@yourdomain.com"
+  done
+else
+  CERTBOT_EMAIL="${CERTBOT_EMAIL:-admin@localhost}"
 fi
 
 export SERVER_IP PANEL_DOMAIN CERTBOT_EMAIL PANEL_DIR PANEL_PORT

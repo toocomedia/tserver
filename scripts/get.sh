@@ -2,7 +2,9 @@
 # get.sh — One-line VPS bootstrap (curl | bash)
 # Usage:
 #   curl -fsSL https://raw.githubusercontent.com/toocomedia/tserver/main/scripts/get.sh | sudo bash
-#   curl -fsSL ... | sudo SERVER_IP=1.2.3.4 bash
+#
+# Interactive by default (asks IP confirm, domain, email via /dev/tty).
+# Automation:  curl ... | sudo NONINTERACTIVE=1 bash
 set -euo pipefail
 
 REPO_URL="${REPO_URL:-https://github.com/toocomedia/tserver.git}"
@@ -14,8 +16,15 @@ die() { echo -e "${RED}ERROR:${NC} $*" >&2; exit 1; }
 
 [[ "$(id -u)" -eq 0 ]] || die "Run with sudo: curl ... | sudo bash"
 
+# apt noninteractive only — install prompts stay ON unless NONINTERACTIVE=1
 export DEBIAN_FRONTEND=noninteractive
-export NONINTERACTIVE="${NONINTERACTIVE:-1}"
+# Default: interactive (user answers domain + email). CI can set NONINTERACTIVE=1.
+export NONINTERACTIVE="${NONINTERACTIVE:-0}"
+
+# curl|bash: restore keyboard so install.sh can read answers
+if [[ -r /dev/tty ]]; then
+  exec </dev/tty
+fi
 
 echo -e "${GRN}==>${NC} Installing git (if needed)..."
 if ! command -v git &>/dev/null; then
@@ -30,6 +39,5 @@ git clone --depth 1 --branch "$REPO_BRANCH" "$REPO_URL" "$CLONE_DIR"
 export SOURCE_DIR="$CLONE_DIR"
 chmod +x "$CLONE_DIR/scripts/"*.sh
 
-echo -e "${GRN}==>${NC} Running install.sh (SERVER_IP auto-detected if unset)..."
-# SERVER_IP / PANEL_DOMAIN / CERTBOT_EMAIL are optional — install.sh detects IP
+echo -e "${GRN}==>${NC} Starting installer (will ask for domain / email)..."
 exec bash "$CLONE_DIR/scripts/install.sh"
