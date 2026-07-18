@@ -44,27 +44,31 @@ fi
 [[ -f "$SOURCE_DIR/backend/requirements.txt" ]] || die "requirements.txt not found"
 
 # ---------------------------------------------------------------
-# Interactive input (works with curl | sudo bash via /dev/tty)
+# Interactive input — always read keyboard from /dev/tty
+# Never use `exec </dev/tty` (breaks curl|bash scripts).
 # ---------------------------------------------------------------
-attach_tty() {
-  # curl|bash uses the pipe as stdin — reattach keyboard for prompts
-  if [[ -r /dev/tty ]]; then
-    exec </dev/tty
-  fi
+can_prompt() {
+  [[ "${NONINTERACTIVE}" != "1" ]] && [[ -r /dev/tty ]]
 }
 
-can_prompt() {
-  [[ "${NONINTERACTIVE}" != "1" ]] && [[ -r /dev/tty || -t 0 ]]
+# read from /dev/tty so prompts work even if stdin is a pipe
+_read_tty() {
+  local prompt="$1"
+  if [[ -r /dev/tty ]]; then
+    read -r -p "$prompt" REPLY </dev/tty || REPLY=""
+  else
+    read -r -p "$prompt" REPLY || REPLY=""
+  fi
 }
 
 ask() {
   # ask "Prompt" "default" → sets REPLY
   local prompt="$1" default="${2:-}"
   if [[ -n "$default" ]]; then
-    read -r -p "  $prompt [$default]: " REPLY || REPLY=""
+    _read_tty "  $prompt [$default]: "
     REPLY="${REPLY:-$default}"
   else
-    read -r -p "  $prompt: " REPLY || REPLY=""
+    _read_tty "  $prompt: "
   fi
 }
 
@@ -73,9 +77,9 @@ ask_required() {
   local prompt="$1" hint="${2:-}"
   while true; do
     if [[ -n "$hint" ]]; then
-      read -r -p "  $prompt ($hint): " REPLY || REPLY=""
+      _read_tty "  $prompt ($hint): "
     else
-      read -r -p "  $prompt: " REPLY || REPLY=""
+      _read_tty "  $prompt: "
     fi
     REPLY="$(echo "${REPLY:-}" | tr -d '[:space:]')"
     [[ -n "$REPLY" ]] && return 0
@@ -121,10 +125,6 @@ detect_ip() {
 # ---------------------------------------------------------------
 # Config values (smart prompts)
 # ---------------------------------------------------------------
-if can_prompt; then
-  attach_tty
-fi
-
 # Drop common doc placeholders
 case "${SERVER_IP:-}" in
   YOUR.VPS.IP|x.x.x.x|1.2.3.4)
