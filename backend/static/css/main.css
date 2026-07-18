@@ -1,7 +1,7 @@
 /* main.css — Design tokens, reset, and base styles
    All values come from DESIGN.md — do not add colors or sizes outside :root */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap');
 
 /* ============================================================
    DESIGN TOKENS
@@ -55,7 +55,7 @@
 
 html, body {
   height: 100%;
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: 'Manrope', system-ui, sans-serif;
   font-size: var(--font-body);
   color: var(--color-text);
   background: var(--color-bg);

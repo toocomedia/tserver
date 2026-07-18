@@ -49,10 +49,26 @@ sudo bash /tmp/tserver-upd.sh
 rm -f /tmp/tserver-upd.sh
 ```
 
+The update script restarts the panel service for you. If you only changed files by hand, restart yourself:
+
+```bash
+sudo systemctl restart srv-panel
+```
+
+Check that it is running:
+
+```bash
+sudo systemctl status srv-panel
+curl -s http://127.0.0.1:8000/api/health
+```
+
+Hard-refresh the browser (Ctrl+F5) so new CSS/JS loads.
+
 ## Service
 
 ```bash
-systemctl status srv-panel
+sudo systemctl status srv-panel
+sudo systemctl restart srv-panel
 journalctl -u srv-panel -n 50
 curl -s http://127.0.0.1:8000/api/health
 ```

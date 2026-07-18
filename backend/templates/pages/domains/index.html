@@ -62,11 +62,16 @@
         </td>
 
         <td class="col-actions">
-          <div class="d-flex gap-xs justify-end">
+          <div class="d-flex gap-xs justify-end" style="flex-wrap:wrap;">
+            {% if not item.ssl_active %}
+            <a href="/ssl/issue?full_domain={{ item.domain.name }}"
+               class="btn btn--primary btn--sm"
+               id="btn-ssl-{{ item.domain.id }}">+ SSL</a>
+            {% endif %}
             <a href="/domains/{{ item.domain.id }}"
                class="btn btn--secondary btn--sm"
                id="btn-view-{{ item.domain.id }}">View</a>
-            <button class="btn btn--danger btn--sm"
+            <button type="button" class="btn btn--danger btn--sm"
                     id="btn-del-{{ item.domain.id }}"
                     onclick="deleteDomain({{ item.domain.id }}, '{{ item.domain.name }}')">Del</button>
           </div>

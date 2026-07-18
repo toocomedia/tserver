@@ -4,20 +4,16 @@
 {% block page_title %}{{ domain.name }}{% endblock %}
 
 {% block topbar_actions %}
-  <a href="/dns/{{ domain.name }}/records" class="btn btn--secondary" id="btn-dns">DNS Records</a>
-  <a href="/dns/{{ domain.name }}/records?add=1" class="btn btn--ghost" id="btn-add-dns">+ DNS Record</a>
-  {% if can_issue_ssl %}
-    <a href="/ssl/issue?full_domain={{ domain.name }}" class="btn btn--primary" id="btn-issue-ssl">Issue SSL</a>
-  {% elif cert %}
-    <span class="badge badge--ok" style="height:var(--button-height); padding:0 var(--space-md); display:inline-flex; align-items:center;">
-      SSL Active
-    </span>
-  {% else %}
-    <button class="btn btn--primary btn--disabled" disabled
-            title="Nginx must be active before issuing SSL"
-            id="btn-issue-ssl-disabled">Issue SSL</button>
+  <a href="/dns/{{ domain.name }}/records" class="btn btn--secondary" id="btn-dns">DNS</a>
+  {% if not cert %}
+    <a href="/ssl/issue?full_domain={{ domain.name }}"
+       class="btn btn--primary"
+       id="btn-issue-ssl"
+       title="{% if not nginx_active %}Nginx should be active for Let's Encrypt{% endif %}">
+      + Issue SSL
+    </a>
   {% endif %}
-  <button class="btn btn--danger" id="btn-delete"
+  <button type="button" class="btn btn--danger" id="btn-delete"
           onclick="deleteDomain({{ domain.id }}, '{{ domain.name }}')">Delete</button>
 {% endblock %}
 
@@ -60,7 +56,7 @@
   </div>
 </div>
 
-<!-- STATUS GRID -->
+<!-- STATUS + QUICK ACTIONS -->
 <div class="stat-grid mb-lg" id="status-grid">
   <div class="stat-card">
     <div class="stat-card__label">DNS Zone</div>
@@ -93,26 +89,47 @@
         <span class="badge badge--neutral badge--dot">None</span>
       {% endif %}
     </div>
-  </div>
-
-  {% if cert %}
-  <div class="stat-card">
-    <div class="stat-card__label">Cert Expiry</div>
-    <div style="margin-top:var(--space-xs); font-size:var(--font-body); font-weight:700;">
-      {% if cert.expiry_date %}
-        {{ cert.expiry_date.strftime('%Y-%m-%d') }}
-      {% else %}—{% endif %}
+    <div style="margin-top:var(--space-sm);">
+      {% if cert %}
+        <span class="text-small text-muted">
+          {% if cert.expiry_date %}Expires {{ cert.expiry_date.strftime('%Y-%m-%d') }}{% else %}Certificate active{% endif %}
+        </span>
+      {% else %}
+        <a href="/ssl/issue?full_domain={{ domain.name }}"
+           class="btn btn--primary btn--sm"
+           id="btn-issue-ssl-card">
+          + Issue SSL
+        </a>
+        {% if not nginx_active %}
+        <div class="text-small text-muted" style="margin-top:var(--space-xs);">
+          Nginx is inactive — fix nginx before certbot can succeed.
+        </div>
+        {% endif %}
+      {% endif %}
     </div>
   </div>
-  {% endif %}
+</div>
+
+<!-- DNS QUICK ACTIONS -->
+<div class="section-header mb-md">
+  <h2>DNS</h2>
+  <div class="d-flex gap-sm">
+    <a href="/dns/{{ domain.name }}/records?add=1" class="btn btn--primary btn--sm" id="btn-add-dns">
+      + Custom DNS record
+    </a>
+    <a href="/dns/{{ domain.name }}/records" class="btn btn--secondary btn--sm">Manage all records</a>
+  </div>
+</div>
+<div class="alert alert--info mb-lg text-small">
+  Add A, CNAME, TXT, NS, etc. for <strong>{{ domain.name }}</strong>, or apply templates (Basic Web / Child NS).
 </div>
 
 <!-- REVERSE PROXIES ON THIS DOMAIN -->
-{% if proxies %}
 <div class="section-header mb-md">
   <h2>Reverse Proxies</h2>
   <a href="/proxy/create?domain_id={{ domain.id }}" class="btn btn--secondary btn--sm">+ Add Proxy</a>
 </div>
+{% if proxies %}
 <div class="table-wrap mb-lg">
   <table class="table" id="proxy-table">
     <thead>
@@ -139,7 +156,7 @@
           <div class="d-flex gap-xs justify-end">
             {% if not proxy.ssl_enabled %}
             <a href="/ssl/issue?full_domain={{ proxy.full_domain }}"
-               class="btn btn--secondary btn--sm">Issue SSL</a>
+               class="btn btn--primary btn--sm">+ Issue SSL</a>
             {% endif %}
             <a href="/proxy/" class="btn btn--secondary btn--sm">Manage</a>
           </div>
@@ -159,7 +176,7 @@
 <!-- EDIT DEFAULT PAGE -->
 <div class="section-header mb-md" id="edit-page-section">
   <h2>Default Page</h2>
-  <button class="btn btn--ghost btn--sm" id="btn-toggle-editor"
+  <button type="button" class="btn btn--ghost btn--sm" id="btn-toggle-editor"
           onclick="toggleEditor()">Edit HTML</button>
 </div>
 
@@ -190,7 +207,7 @@
       <strong>http://{{ domain.name }}</strong>
     {% endif %}
     &nbsp;·&nbsp;
-    <button class="btn btn--ghost btn--sm" onclick="toggleEditor()" style="height:auto; padding:2px 0;">
+    <button type="button" class="btn btn--ghost btn--sm" onclick="toggleEditor()" style="height:auto; padding:2px 0;">
       Edit page HTML
     </button>
   </span>

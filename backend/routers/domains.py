@@ -112,8 +112,9 @@ async def domains_detail(
         "cert": cert,
         "proxies": proxies,
         "nginx_active": nginx_active,
-        "current_html": current_html,
-        "can_issue_ssl": nginx_active and cert is None,
+        "current_html": current_html or "",
+        # Always allow showing Issue SSL when apex has no cert (button in page body)
+        "can_issue_ssl": cert is None,
     })
 
 

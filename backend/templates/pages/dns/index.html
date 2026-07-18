@@ -9,14 +9,19 @@
 
 {% block content %}
 
+<div class="alert alert--info mb-lg" id="dns-help">
+  Pick a zone, then add <strong>custom DNS records</strong> (A, CNAME, TXT, NS, …) or apply a template.
+  Each zone is created when you add a domain.
+</div>
+
 {% if zones %}
 <div class="table-wrap">
   <table class="table" id="dns-zones-table">
     <colgroup>
-      <col style="width:45%">
-      <col style="width:20%">
-      <col style="width:15%">
-      <col style="width:20%">
+      <col style="width:36%">
+      <col style="width:14%">
+      <col style="width:14%">
+      <col style="width:36%">
     </colgroup>
     <thead>
       <tr>
@@ -42,9 +47,18 @@
           {% endif %}
         </td>
         <td class="col-actions">
-          <a href="/dns/{{ z.domain.name }}/records"
-             class="btn btn--secondary btn--sm"
-             id="btn-view-{{ z.domain.name }}">Manage Records</a>
+          <div class="d-flex gap-xs justify-end" style="flex-wrap:wrap;">
+            <a href="/dns/{{ z.domain.name }}/records?add=1"
+               class="btn btn--primary btn--sm"
+               id="btn-add-{{ z.domain.name }}">
+              + Custom record
+            </a>
+            <a href="/dns/{{ z.domain.name }}/records"
+               class="btn btn--secondary btn--sm"
+               id="btn-view-{{ z.domain.name }}">
+              Manage
+            </a>
+          </div>
         </td>
       </tr>
       {% endfor %}

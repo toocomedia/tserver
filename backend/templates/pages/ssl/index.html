@@ -87,8 +87,10 @@
             </span>
           {% elif item.status == 'expired' %}
             <span class="badge badge--error badge--dot">Expired</span>
+          {% elif item.status == 'issued' %}
+            <span class="badge badge--ok badge--dot">Issued</span>
           {% else %}
-            <span class="badge badge--neutral">Unknown</span>
+            <span class="badge badge--ok badge--dot">Issued</span>
           {% endif %}
         </td>
 

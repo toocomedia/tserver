@@ -83,15 +83,24 @@ def _read_expiry_from_cert(cert_path: str) -> datetime | None:
 async def list_certs(db: AsyncSession) -> list[dict]:
     """
     Return all certs from DB enriched with live expiry status.
-    Days remaining computed from expiry_date. Status: ok / warning / expired.
+    Days remaining computed from expiry_date. Status: ok / warning / expired / issued.
+    Backfills missing expiry from the PEM file when possible.
     """
     certs = (await db.execute(select(SslCert))).scalars().all()
     result = []
     now = datetime.now(timezone.utc)
 
     for cert in certs:
+        # Backfill expiry if missing (old rows / certbot parse miss)
+        if not cert.expiry_date:
+            path = cert.cert_path or _cert_path(cert.full_domain)
+            filled = _read_expiry_from_cert(path)
+            if filled:
+                cert.expiry_date = filled
+                logger.info("Backfilled expiry for %s → %s", cert.full_domain, filled)
+
         days_left = None
-        status = "unknown"
+        status = "issued"  # cert exists in DB even if expiry unreadable
         if cert.expiry_date:
             expiry = cert.expiry_date
             if expiry.tzinfo is None:
@@ -104,6 +113,13 @@ async def list_certs(db: AsyncSession) -> list[dict]:
                 status = "warning"
             else:
                 status = "expired"
+        else:
+            # Still no expiry — check live file
+            path = cert.cert_path or _cert_path(cert.full_domain)
+            if Path(path).is_file():
+                status = "ok"
+            else:
+                status = "issued"
 
         result.append({
             "cert": cert,
