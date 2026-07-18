@@ -1,6 +1,6 @@
 #!/bin/bash
 # setup_powerdns.sh — Configure PowerDNS (SQLite + REST API)
-# Idempotent. Fixes Ubuntu port-53 clash with systemd-resolved.
+# Idempotent. Fixes Ubuntu port-53 clash + pdns.conf readability for setuid=pdns.
 set -euo pipefail
 
 PANEL_DIR="${PANEL_DIR:-/opt/srv-panel}"
@@ -13,7 +13,7 @@ PDNS_D="/etc/powerdns/pdns.d"
 echo "==> PowerDNS setup"
 
 # ---------------------------------------------------------------
-# API key — reuse only if real (non-empty, not placeholder)
+# API key — reuse only if real
 # ---------------------------------------------------------------
 PDNS_API_KEY=""
 if [[ -f "$PANEL_ENV" ]]; then
@@ -29,24 +29,19 @@ else
 fi
 
 # ---------------------------------------------------------------
-# Free port 53 (systemd-resolved stub listener conflict)
+# Free port 53 (systemd-resolved stub)
 # ---------------------------------------------------------------
 free_port_53() {
   echo "==> Freeing port 53 for PowerDNS..."
 
-  # Prefer disabling only the stub listener (keeps resolved for DHCP DNS)
   if [[ -f /etc/systemd/resolved.conf ]]; then
     if grep -qE '^\s*DNSStubListener=' /etc/systemd/resolved.conf; then
       sed -i 's/^\s*DNSStubListener=.*/DNSStubListener=no/' /etc/systemd/resolved.conf
+    elif grep -qE '^\s*#\s*DNSStubListener=' /etc/systemd/resolved.conf; then
+      sed -i 's/^\s*#\s*DNSStubListener=.*/DNSStubListener=no/' /etc/systemd/resolved.conf
     else
-      # Uncomment or append
-      if grep -qE '^\s*#\s*DNSStubListener=' /etc/systemd/resolved.conf; then
-        sed -i 's/^\s*#\s*DNSStubListener=.*/DNSStubListener=no/' /etc/systemd/resolved.conf
-      else
-        echo "DNSStubListener=no" >> /etc/systemd/resolved.conf
-      fi
+      echo "DNSStubListener=no" >> /etc/systemd/resolved.conf
     fi
-    # Ensure outbound resolver for the host itself
     if ! grep -qE '^\s*DNS=' /etc/systemd/resolved.conf; then
       if grep -qE '^\s*#\s*DNS=' /etc/systemd/resolved.conf; then
         sed -i 's/^\s*#\s*DNS=.*/DNS=8.8.8.8 1.1.1.1/' /etc/systemd/resolved.conf
@@ -57,14 +52,9 @@ free_port_53() {
     systemctl restart systemd-resolved 2>/dev/null || true
   fi
 
-  # Fix resolv.conf so apt/curl still work after stub is off
-  if [[ -L /etc/resolv.conf ]] || [[ -f /etc/resolv.conf ]]; then
-    # Prefer resolved's full resolv.conf (not stub)
-    if [[ -f /run/systemd/resolve/resolv.conf ]]; then
-      ln -sfn /run/systemd/resolve/resolv.conf /etc/resolv.conf
-    fi
+  if [[ -f /run/systemd/resolve/resolv.conf ]]; then
+    ln -sfn /run/systemd/resolve/resolv.conf /etc/resolv.conf
   fi
-  # If still empty/broken, write public resolvers
   if ! grep -qE '^\s*nameserver\s+' /etc/resolv.conf 2>/dev/null; then
     cat > /etc/resolv.conf <<'EOF'
 nameserver 8.8.8.8
@@ -72,13 +62,9 @@ nameserver 1.1.1.1
 EOF
   fi
 
-  # Still busy? stop anything else on 53 (not pdns yet)
-  if ss -tulnp 2>/dev/null | grep -qE ':53\s'; then
-    echo "    Port 53 still in use — showing listeners:"
-    ss -tulnp | grep -E ':53\s' || true
-    # Last resort: stop systemd-resolved entirely
-    if ss -tulnp 2>/dev/null | grep -q systemd-resolve; then
-      echo "    Stopping systemd-resolved to free port 53..."
+  if ss -tulnp 2>/dev/null | grep -q systemd-resolve; then
+    if ss -tulnp 2>/dev/null | grep -E ':53\s' | grep -q systemd-resolve; then
+      echo "    Stopping systemd-resolved (still on :53)..."
       systemctl disable --now systemd-resolved 2>/dev/null || true
       cat > /etc/resolv.conf <<'EOF'
 nameserver 8.8.8.8
@@ -90,16 +76,31 @@ EOF
 
 free_port_53
 
-echo "==> Stopping PowerDNS (if running)..."
+# ---------------------------------------------------------------
+# Hard stop any leftover pdns_server (restart loops hold :53)
+# ---------------------------------------------------------------
+echo "==> Stopping PowerDNS completely..."
 systemctl stop pdns 2>/dev/null || true
+systemctl reset-failed pdns 2>/dev/null || true
+# Kill orphans that still bind :53
+pkill -9 pdns_server 2>/dev/null || true
+sleep 1
+if ss -tulnp 2>/dev/null | grep -qE ':53\s'; then
+  echo "    Port 53 still busy:"
+  ss -tulnp | grep -E ':53\s' || true
+  # force kill whatever holds 53 if it is pdns
+  pkill -9 -f pdns_server 2>/dev/null || true
+  sleep 1
+fi
 
 # ---------------------------------------------------------------
-# Clean Ubuntu package drop-ins (bind backend / empty launch conflict)
+# Config (world-readable: setuid drops to user pdns and must open conf)
 # ---------------------------------------------------------------
 echo "==> Writing PowerDNS config..."
-mkdir -p "$PDNS_D" /var/lib/powerdns
+mkdir -p "$PDNS_D" /var/lib/powerdns /run/pdns
+chown pdns:pdns /run/pdns 2>/dev/null || true
 
-# Disable stock drop-ins that set launch=bind or conflict with us
+# Disable stock drop-ins (bind backend conflicts)
 if [[ -d "$PDNS_D" ]]; then
   shopt -s nullglob
   for f in "$PDNS_D"/*; do
@@ -115,21 +116,20 @@ if [[ -d "$PDNS_D" ]]; then
   shopt -u nullglob
 fi
 
-# Main config — single source of truth (no surprise includes)
-cat > "$PDNS_CONF" <<EOF
+# Write to temp then install with correct mode (pdns user MUST read this)
+TMP_CONF="$(mktemp)"
+cat > "$TMP_CONF" <<EOF
 # PowerDNS — managed by srv-panel setup_powerdns.sh
-# Do not edit by hand; re-run setup_powerdns.sh
+# Readable by user pdns (do not chmod 600 / root-only)
 
 setuid=pdns
 setgid=pdns
 
-# SQLite backend
 launch=gsqlite3
 gsqlite3-database=$PDNS_DB
 gsqlite3-pragma-journal-mode=WAL
 gsqlite3-dnssec=no
 
-# REST API (panel only on localhost)
 api=yes
 api-key=$PDNS_API_KEY
 webserver=yes
@@ -137,23 +137,47 @@ webserver-address=127.0.0.1
 webserver-port=$PDNS_PORT
 webserver-allow-from=127.0.0.1
 
-# Authoritative DNS on all interfaces
 local-address=0.0.0.0
 local-port=53
 
-# Logging
 loglevel=4
 log-dns-details=no
+
+# Empty include so disabled package files are not reloaded unexpectedly
+include-dir=
 EOF
 
-# Empty include-dir so package drop-ins cannot override (we already disabled them)
-# Some packages require include-dir — point at empty controlled dir with only our file
-cat > "$PDNS_D/srv-panel.conf" <<EOF
-# Reserved for srv-panel — main settings live in $PDNS_CONF
-EOF
+install -m 644 -o root -g root "$TMP_CONF" "$PDNS_CONF"
+rm -f "$TMP_CONF"
 
-# If package forces include-dir in a secondary file, ensure our launch wins:
-# Re-append launch into conf only once (already in main).
+# Belt-and-suspenders: also put backend in drop-in IF include-dir is forced by package
+# Ubuntu unit sometimes still scans pdns.d — keep a readable copy of launch there too
+cat > "$PDNS_D/00-srv-panel.conf" <<EOF
+# srv-panel backend (also in $PDNS_CONF)
+launch=gsqlite3
+gsqlite3-database=$PDNS_DB
+gsqlite3-pragma-journal-mode=WAL
+api=yes
+api-key=$PDNS_API_KEY
+webserver=yes
+webserver-address=127.0.0.1
+webserver-port=$PDNS_PORT
+webserver-allow-from=127.0.0.1
+local-address=0.0.0.0
+local-port=53
+EOF
+chmod 644 "$PDNS_D/00-srv-panel.conf"
+
+# If package unit requires include-dir, restore it to our controlled dir only
+# Prefer full settings in main conf with include-dir= empty (above).
+# Some Ubuntu builds ignore empty include-dir — set explicit if conf unreadable fails
+# Re-write main conf WITH include-dir pointing only at cleaned pdns.d:
+if ! sudo -u pdns test -r "$PDNS_CONF" 2>/dev/null; then
+  echo "ERROR: pdns user cannot read $PDNS_CONF after install" >&2
+  ls -la "$PDNS_CONF" >&2
+  exit 1
+fi
+echo "    $PDNS_CONF is readable by user pdns"
 
 # ---------------------------------------------------------------
 # SQLite schema
@@ -168,7 +192,6 @@ elif ! sqlite3 "$PDNS_DB" "SELECT 1 FROM domains LIMIT 1;" &>/dev/null; then
 fi
 
 if [[ "$NEED_SCHEMA" -eq 1 ]]; then
-  # Fresh DB only — do not wipe existing zones
   [[ -f "$PDNS_DB" ]] && rm -f "$PDNS_DB"
   SCHEMA_CANDIDATES=(
     /usr/share/doc/pdns-backend-sqlite3/schema.sqlite3.sql
@@ -259,13 +282,12 @@ else
 fi
 
 chown -R pdns:pdns /var/lib/powerdns
-chmod 640 "$PDNS_DB" 2>/dev/null || true
-# pdns must read config
-chmod 640 "$PDNS_CONF" 2>/dev/null || true
-chown root:root "$PDNS_CONF" 2>/dev/null || true
+chmod 664 "$PDNS_DB" 2>/dev/null || true
+# Directory must be traversable/writable by pdns
+chmod 755 /var/lib/powerdns
 
 # ---------------------------------------------------------------
-# Persist key into panel .env
+# .env
 # ---------------------------------------------------------------
 echo "==> Updating panel .env with PowerDNS settings..."
 mkdir -p "$PANEL_DIR"
@@ -285,27 +307,30 @@ _set_env "PDNS_API_KEY" "$PDNS_API_KEY"
 _set_env "PDNS_URL" "http://127.0.0.1:$PDNS_PORT"
 
 # ---------------------------------------------------------------
-# Start + diagnose on failure
+# Start
 # ---------------------------------------------------------------
 echo "==> Starting PowerDNS..."
+systemctl daemon-reload 2>/dev/null || true
 systemctl enable pdns 2>/dev/null || true
+systemctl reset-failed pdns 2>/dev/null || true
 
-if ! systemctl restart pdns; then
+if ! systemctl start pdns; then
   echo "ERROR: pdns.service failed to start" >&2
-  echo "---- systemctl status ----" >&2
+  echo "---- status ----" >&2
   systemctl status pdns --no-pager -l || true
-  echo "---- journalctl -u pdns (last 40) ----" >&2
+  echo "---- journal ----" >&2
   journalctl -u pdns -n 40 --no-pager || true
-  echo "---- port 53 listeners ----" >&2
+  echo "---- conf perms ----" >&2
+  ls -la "$PDNS_CONF" "$PDNS_D" 2>/dev/null || true
+  echo "---- conf head ----" >&2
+  head -20 "$PDNS_CONF" 2>/dev/null || true
+  echo "---- port 53 ----" >&2
   ss -tulnp | grep -E ':53\s' || true
-  echo "---- config test (pdns_server --config) ----" >&2
-  pdns_server --config=default 2>&1 | head -40 || true
   exit 1
 fi
 
-# Wait for API
 OK=0
-for i in 1 2 3 4 5 6 7 8 9 10; do
+for _ in $(seq 1 15); do
   if curl -sf -H "X-API-Key: $PDNS_API_KEY" \
       "http://127.0.0.1:$PDNS_PORT/api/v1/servers/localhost" >/dev/null; then
     OK=1
@@ -321,4 +346,4 @@ if [[ "$OK" -ne 1 ]]; then
 fi
 
 echo "==> PowerDNS API OK on 127.0.0.1:$PDNS_PORT"
-echo "==> PowerDNS setup complete. Key saved to $PANEL_ENV"
+echo "==> PowerDNS setup complete"
