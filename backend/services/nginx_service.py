@@ -14,6 +14,9 @@ from utils import nginx_templates
 logger = logging.getLogger(__name__)
 
 PERFORMANCE_CONF_NAME = "performance"
+# Always-present http maps (WebSocket Connection + keepalive). Must not be removed
+# when optional gzip/static-cache toggles are turned off.
+HTTP_MAPS_CONF_NAME = "00-srv-maps"
 
 
 def _available_path(name: str) -> Path:
@@ -166,6 +169,16 @@ async def update_static_site_ssl(
     return config_path
 
 
+async def ensure_http_maps() -> None:
+    """
+    Write conf.d map for $connection_upgrade (WebSocket + upstream keepalive).
+    Safe to call on every proxy write; required before configs that use the variable.
+    """
+    conf_path = f"/etc/nginx/conf.d/{HTTP_MAPS_CONF_NAME}.conf"
+    await shell.write_file(conf_path, nginx_templates.http_core_maps_conf())
+    logger.info("HTTP maps conf written: %s", conf_path)
+
+
 async def create_proxy(
     full_domain: str,
     target_ip: str,
@@ -176,6 +189,7 @@ async def create_proxy(
     cache_ttl_minutes: int = 10,
 ) -> str:
     """Write HTTP reverse proxy nginx config. Returns config path."""
+    await ensure_http_maps()
     name = _conf_name(full_domain)
     content = nginx_templates.reverse_proxy_config(
         full_domain, target_ip, target_port, protocol,
@@ -205,6 +219,7 @@ async def update_proxy_ssl(
     cache_ttl_minutes: int = 10,
 ) -> str:
     """Replace proxy HTTP config with SSL config."""
+    await ensure_http_maps()
     name = _conf_name(full_domain)
     content = nginx_templates.reverse_proxy_ssl_config(
         full_domain, target_ip, target_port, protocol, cert_path, key_path,
@@ -239,8 +254,9 @@ async def reload() -> None:
 async def write_performance_conf() -> None:
     """
     Write /etc/nginx/conf.d/performance.conf with current gzip + static-cache settings.
-    Reload nginx after writing.
+    Also ensures http maps (connection upgrade) stay present.
     """
+    await ensure_http_maps()
     content = nginx_templates.performance_conf(
         gzip=config.NGINX_PERF_GZIP,
         static_cache=config.NGINX_PERF_STATIC_CACHE,
@@ -251,9 +267,10 @@ async def write_performance_conf() -> None:
 
 
 async def remove_performance_conf() -> None:
-    """Remove the performance.conf file (all optimizations off)."""
+    """Remove optional performance.conf; keep always-on http maps."""
     conf_path = f"/etc/nginx/conf.d/{PERFORMANCE_CONF_NAME}.conf"
     await shell.remove_path(conf_path)
+    await ensure_http_maps()
     logger.info("Performance conf removed")
 
 
@@ -340,6 +357,7 @@ async def apply_panel_config(
         except Exception as exc:
             logger.warning("Could not remove legacy panel conf %s: %s", legacy, exc)
 
+    await ensure_http_maps()
     config_path = str(await _write_config(name, content))
     result = await shell.nginx_test()
     if not result.success:
