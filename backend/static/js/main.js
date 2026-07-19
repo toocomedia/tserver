@@ -10,16 +10,37 @@
  * panel.post(url, data) — POST JSON, returns parsed response or throws.
  * panel.del(url)        — POST to delete endpoint.
  */
+function csrfToken() {
+  const meta = document.querySelector('meta[name="csrf-token"]');
+  return (meta && meta.getAttribute("content")) || "";
+}
+
+function withCsrfHeaders(headers = {}) {
+  const token = csrfToken();
+  const next = { ...headers };
+  if (token) next["X-CSRF-Token"] = token;
+  return next;
+}
+
+function formatDetail(detail) {
+  if (!detail) return "Request failed";
+  if (typeof detail === "string") return detail;
+  if (Array.isArray(detail)) {
+    return detail.map((d) => d.msg || JSON.stringify(d)).join("; ");
+  }
+  return String(detail);
+}
+
 const panel = {
   async post(url, data = {}) {
     const res = await fetch(url, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: withCsrfHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify(data),
     });
     const json = await res.json().catch(() => ({}));
     if (!res.ok) {
-      throw new Error(json.detail || `Request failed (${res.status})`);
+      throw new Error(formatDetail(json.detail) || `Request failed (${res.status})`);
     }
     return json;
   },
@@ -28,7 +49,7 @@ const panel = {
     const res = await fetch(url, { method: "GET" });
     const json = await res.json().catch(() => ({}));
     if (!res.ok) {
-      throw new Error(json.detail || `Request failed (${res.status})`);
+      throw new Error(formatDetail(json.detail) || `Request failed (${res.status})`);
     }
     return json;
   },
@@ -153,10 +174,26 @@ document.addEventListener("DOMContentLoaded", () => {
       item.classList.add("sidebar__item--active");
     }
   });
+
+  // Inject CSRF into HTML forms (login, logout, domain create, etc.)
+  const token = csrfToken();
+  if (token) {
+    document.querySelectorAll("form").forEach((form) => {
+      const method = (form.getAttribute("method") || "get").toLowerCase();
+      if (method !== "post") return;
+      if (form.querySelector('input[name="csrf_token"]')) return;
+      const input = document.createElement("input");
+      input.type = "hidden";
+      input.name = "csrf_token";
+      input.value = token;
+      form.appendChild(input);
+    });
+  }
 });
 
 // Export for modules
 window.panel = panel;
+window.csrfToken = csrfToken;
 window.toast = toast;
 window.openModal = openModal;
 window.closeModal = closeModal;

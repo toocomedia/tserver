@@ -5,6 +5,7 @@
     {% if request.session.get("username") %}
     <span class="topbar__user" title="Signed in">{{ request.session.get("username") }}</span>
     <form method="post" action="/logout" class="topbar__logout">
+      <input type="hidden" name="csrf_token" value="{{ request.session.get('csrf_token', '') }}">
       <button type="submit" class="btn btn--ghost">Logout</button>
     </form>
     {% endif %}

@@ -4,6 +4,7 @@ Generates, writes, enables, disables, and removes nginx site configs.
 All config tests run before any reload.
 """
 import logging
+import re
 from pathlib import Path
 
 import config
@@ -197,20 +198,79 @@ def config_exists(domain: str) -> bool:
     return _enabled_path(_conf_name(domain)).exists()
 
 
-def server_name_in_use(domain: str) -> bool:
+def server_name_in_use(domain: str, *, ignore_names: set[str] | None = None) -> bool:
     """
     Scan all enabled nginx configs for an existing server_name matching domain.
     Prevents duplicate server_name conflicts.
+    ignore_names: config basenames to skip (e.g. {"panel"} when updating panel).
     """
     enabled_dir = Path(config.NGINX_SITES_ENABLED)
     if not enabled_dir.exists():
         return False
+    ignore = ignore_names or set()
     needle = f"server_name {domain}"
     for conf in enabled_dir.iterdir():
+        if conf.name in ignore or conf.name.replace(".conf", "") in ignore:
+            continue
         try:
             text = conf.read_text(encoding="utf-8", errors="ignore")
+            # Match domain as a server_name token
+            if re.search(rf"server_name\s+[^;]*\b{re.escape(domain)}\b", text):
+                return True
             if needle in text:
                 return True
         except OSError:
             continue
     return False
+
+
+# ---------------------------------------------------------------
+# PANEL SITE (special config name: "panel")
+# ---------------------------------------------------------------
+PANEL_SITE_NAME = "panel"
+
+
+async def apply_panel_config(
+    content: str,
+    *,
+    previous_content: str | None = None,
+) -> str:
+    """
+    Write /etc/nginx/sites-available/panel, enable it, nginx -t, reload.
+    On test failure restores previous_content when provided.
+    """
+    name = PANEL_SITE_NAME
+    avail = _available_path(name)
+    old = previous_content
+    if old is None and avail.exists():
+        try:
+            old = avail.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            old = None
+
+    config_path = str(await _write_config(name, content))
+    result = await shell.nginx_test()
+    if not result.success:
+        if old is not None:
+            await _write_config(name, old)
+            await shell.nginx_test()
+        raise ValueError(f"Nginx config test failed: {result.stderr}")
+
+    await reload()
+    return config_path
+
+
+def read_panel_config() -> str | None:
+    """Return current panel nginx config text, or None."""
+    path = _available_path(PANEL_SITE_NAME)
+    if not path.exists():
+        return None
+    try:
+        return path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return None
+
+
+def panel_config_has_ssl() -> bool:
+    text = read_panel_config() or ""
+    return "listen 443" in text and "ssl_certificate" in text

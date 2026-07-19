@@ -41,6 +41,11 @@ SERVER_IP: str = _env_str("SERVER_IP", "127.0.0.1")
 PANEL_DOMAIN: str = _env_str("PANEL_DOMAIN", "localhost")
 DEBUG: bool = _env_bool("DEBUG", False)
 
+# Public panel access (nginx). Uvicorn stays on 127.0.0.1:PANEL_APP_PORT.
+PANEL_APP_PORT: int = _env_int("PANEL_PORT", 8000)
+PANEL_ALLOW_IP: bool = _env_bool("PANEL_ALLOW_IP", True)
+PANEL_IP_PORT: int = _env_int("PANEL_IP_PORT", 80)
+
 # ---------------------------------------------------------
 # Auth / sessions
 # ---------------------------------------------------------
@@ -56,6 +61,13 @@ else:
 
 SESSION_HTTPS_ONLY: bool = _env_bool("SESSION_HTTPS_ONLY", False)
 SESSION_MAX_AGE: int = _env_int("SESSION_MAX_AGE", 604800)  # 7 days
+
+# ---------------------------------------------------------
+# Security (panel browser hardening)
+# ---------------------------------------------------------
+SECURITY_HEADERS: bool = _env_bool("SECURITY_HEADERS", True)
+CSRF_ENABLED: bool = _env_bool("CSRF_ENABLED", True)
+HSTS_ENABLED: bool = _env_bool("HSTS_ENABLED", False)
 
 # ---------------------------------------------------------
 # Database

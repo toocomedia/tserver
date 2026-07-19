@@ -94,7 +94,10 @@
 function deleteDomain(id, name) {
   confirmAction(`Delete domain "${name}"? This will remove the DNS zone, nginx config and webroot.`, async () => {
     try {
-      const res = await fetch(`/domains/${id}/delete`, { method: 'POST' });
+      const res = await fetch(`/domains/${id}/delete`, {
+        method: 'POST',
+        headers: window.csrfToken ? { 'X-CSRF-Token': window.csrfToken() } : {},
+      });
       if (res.redirected || res.ok) {
         window.location.href = '/domains/';
       } else {

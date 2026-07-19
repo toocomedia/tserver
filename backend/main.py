@@ -11,9 +11,11 @@ from starlette.middleware.sessions import SessionMiddleware
 
 import config
 from database import init_db
-from routers import system, domains, dns, ssl, proxy, errors, auth
+from routers import system, domains, dns, ssl, proxy, errors, auth, settings
 from middleware.error_capture import RequestIdMiddleware, register_error_handlers
 from middleware.auth import AuthMiddleware
+from middleware.csrf import CsrfMiddleware
+from middleware.security_headers import SecurityHeadersMiddleware
 
 logging.basicConfig(
     level=logging.INFO,
@@ -47,9 +49,11 @@ app = FastAPI(
 )
 
 # Middleware order: last added runs first on the request.
-# Session → RequestId → Auth → app
+# Session → CSRF → SecurityHeaders → RequestId → Auth → app
 app.add_middleware(AuthMiddleware)
 app.add_middleware(RequestIdMiddleware)
+app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(CsrfMiddleware)
 app.add_middleware(
     SessionMiddleware,
     secret_key=config.SECRET_KEY,
@@ -66,6 +70,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 # Routers
 app.include_router(auth.router)
 app.include_router(system.router)
+app.include_router(settings.router)
 app.include_router(domains.router)   # Phase 2
 app.include_router(dns.router)       # Phase 3
 app.include_router(ssl.router)       # Phase 4

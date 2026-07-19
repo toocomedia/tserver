@@ -1,0 +1,175 @@
+{% extends "layout.html" %}
+
+{% block title %}Settings — VPS Panel{% endblock %}
+{% block page_title %}Settings{% endblock %}
+
+{% block topbar_actions %}
+  <button type="button" class="btn btn--secondary btn--sm" id="btn-refresh-settings">Refresh</button>
+{% endblock %}
+
+{% block content %}
+
+<div class="alert alert--info mb-lg" id="settings-hint">
+  Configure how you open the panel (domain + SSL), whether IP access is allowed, and browser security.
+  Nginx changes apply immediately; session cookie flags need
+  <code>sudo systemctl restart srv-panel</code>.
+</div>
+
+<div id="settings-notes" class="mb-lg" hidden></div>
+
+<!-- PANEL URL & SSL -->
+<div class="panel mb-xl" id="panel-url-section">
+  <div class="panel__header">
+    <h3>Panel URL &amp; SSL</h3>
+  </div>
+  <div class="panel__body">
+    <div class="info-row">
+      <span class="info-row__label">Server IP</span>
+      <span class="info-row__value" id="stat-server-ip">{{ s.server_ip }}</span>
+    </div>
+    <div class="info-row">
+      <span class="info-row__label">DNS</span>
+      <span class="info-row__value" id="stat-dns">
+        {% if s.panel_domain %}
+          {% if s.dns_ok is sameas true %}
+            <span class="badge badge--ok">points here</span>
+          {% elif s.dns_ok is sameas false %}
+            <span class="badge badge--error">not pointing here</span>
+          {% else %}
+            <span class="badge badge--neutral">unknown</span>
+          {% endif %}
+        {% else %}
+          <span class="text-muted">—</span>
+        {% endif %}
+      </span>
+    </div>
+    <div class="info-row">
+      <span class="info-row__label">SSL</span>
+      <span class="info-row__value" id="stat-ssl">
+        {% if s.ssl_active %}
+          <span class="badge badge--ok">active</span>
+        {% else %}
+          <span class="badge badge--neutral">off</span>
+        {% endif %}
+      </span>
+    </div>
+    <div class="info-row">
+      <span class="info-row__label">Open</span>
+      <span class="info-row__value text-small" id="stat-urls">
+        {% if s.urls.ip_http %}<a href="{{ s.urls.ip_http }}" target="_blank" rel="noopener">{{ s.urls.ip_http }}</a>{% endif %}
+        {% if s.urls.domain_http %}<br><a href="{{ s.urls.domain_http }}" target="_blank" rel="noopener">{{ s.urls.domain_http }}</a>{% endif %}
+        {% if s.urls.domain_https %}<br><a href="{{ s.urls.domain_https }}" target="_blank" rel="noopener">{{ s.urls.domain_https }}</a>{% endif %}
+      </span>
+    </div>
+
+    <div class="form-group" style="margin-top:var(--space-lg);">
+      <label class="form-label" for="panel_domain">Panel hostname</label>
+      <input
+        class="form-input"
+        type="text"
+        id="panel_domain"
+        name="panel_domain"
+        value="{{ s.panel_domain or '' }}"
+        placeholder="panel.example.com"
+        autocomplete="off"
+        spellcheck="false"
+      >
+      <p class="form-hint">Leave empty for IP-only. Point an A record to {{ s.server_ip }} before SSL.</p>
+    </div>
+
+    <label class="form-check mb-md">
+      <input type="checkbox" id="ensure_dns" name="ensure_dns">
+      <span>Create/update DNS A record if this hostname’s zone is managed here</span>
+    </label>
+
+    <div class="form-actions">
+      <button type="button" class="btn btn--primary" id="btn-save-panel">Save panel URL</button>
+      <button type="button" class="btn btn--secondary" id="btn-issue-ssl" {% if not s.panel_domain %}disabled{% endif %}>
+        Issue / renew SSL
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- IP ACCESS -->
+<div class="panel mb-xl" id="panel-ip-section">
+  <div class="panel__header">
+    <h3>IP access</h3>
+  </div>
+  <div class="panel__body">
+    <label class="form-check mb-md">
+      <input type="checkbox" id="allow_ip" name="allow_ip" {% if s.allow_ip %}checked{% endif %}>
+      <span>Allow access by server IP</span>
+    </label>
+    <p class="form-hint mb-md">
+      Turn off only after the panel hostname works. You can still recover over SSH.
+    </p>
+
+    <div class="form-group">
+      <label class="form-label" for="ip_port">Public port for IP access</label>
+      <input
+        class="form-input"
+        type="number"
+        id="ip_port"
+        name="ip_port"
+        min="1"
+        max="65535"
+        value="{{ s.ip_port or 80 }}"
+        style="max-width:160px;"
+      >
+      <p class="form-hint">Default 80. Example: 2087 → <code>http://{{ s.server_ip }}:2087/</code>. Does not change the internal app port ({{ s.app_port }}).</p>
+    </div>
+
+    <div class="form-actions">
+      <button type="button" class="btn btn--primary" id="btn-save-ip">Save IP access</button>
+    </div>
+  </div>
+</div>
+
+<!-- SECURITY -->
+<div class="panel mb-xl" id="panel-security-section">
+  <div class="panel__header">
+    <h3>Security</h3>
+  </div>
+  <div class="panel__body">
+    <label class="form-check mb-md">
+      <input type="checkbox" id="session_https_only" {% if s.session_https_only %}checked{% endif %}>
+      <span>Secure cookies (HTTPS only)</span>
+    </label>
+    <label class="form-check mb-md">
+      <input type="checkbox" id="csrf_enabled" {% if s.csrf_enabled %}checked{% endif %}>
+      <span>CSRF protection on form / API posts</span>
+    </label>
+    <label class="form-check mb-md">
+      <input type="checkbox" id="security_headers" {% if s.security_headers %}checked{% endif %}>
+      <span>Security headers (X-Frame-Options, CSP, nosniff, …)</span>
+    </label>
+    <label class="form-check mb-md">
+      <input type="checkbox" id="hsts_enabled" {% if s.hsts_enabled %}checked{% endif %}>
+      <span>HSTS (only with HTTPS panel hostname)</span>
+    </label>
+
+    <div class="form-group">
+      <label class="form-label" for="session_max_age_days">Session length (days)</label>
+      <input
+        class="form-input"
+        type="number"
+        id="session_max_age_days"
+        min="1"
+        max="365"
+        value="{{ s.session_max_age_days or 7 }}"
+        style="max-width:160px;"
+      >
+    </div>
+
+    <div class="form-actions">
+      <button type="button" class="btn btn--primary" id="btn-save-security">Save security</button>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/modules/settings.js"></script>
+{% endblock %}

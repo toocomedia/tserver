@@ -81,9 +81,15 @@ server {
 EOF
 ln -sfn "$NGINX_AVAIL/000-default" "$NGINX_SITES/000-default"
 
-echo "==> Writing panel site (IP-friendly)..."
-# server_name lists IP and optional domain so http://IP/ always works
-cat > "$NGINX_AVAIL/panel" <<EOF
+# If panel already has SSL / custom IP port from Settings UI, do not clobber it.
+if [[ -f "$NGINX_AVAIL/panel" ]] && grep -qE 'Managed via Settings|listen 443 ssl' "$NGINX_AVAIL/panel" 2>/dev/null; then
+  echo "==> Keeping existing panel nginx site (Settings-managed or SSL active)"
+  ln -sfn "$NGINX_AVAIL/panel" "$NGINX_SITES/panel"
+else
+  echo "==> Writing panel site (IP-friendly)..."
+  # server_name lists IP and optional domain so http://IP/ always works
+  # After install, Settings UI may rewrite this file (SSL, IP port, etc.)
+  cat > "$NGINX_AVAIL/panel" <<EOF
 # panel.conf — VPS Control Panel UI
 # Managed by srv-panel setup_nginx.sh
 # Access: http://SERVER_IP/ and optional http://PANEL_DOMAIN/
@@ -111,7 +117,8 @@ server {
     }
 }
 EOF
-ln -sfn "$NGINX_AVAIL/panel" "$NGINX_SITES/panel"
+  ln -sfn "$NGINX_AVAIL/panel" "$NGINX_SITES/panel"
+fi
 
 echo "==> Testing nginx config..."
 nginx -t
