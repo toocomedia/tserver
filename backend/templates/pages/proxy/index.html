@@ -3,11 +3,28 @@
 {% block title %}Reverse Proxy — VPS Panel{% endblock %}
 {% block page_title %}Reverse Proxy{% endblock %}
 
-{% block topbar_actions %}
-  <a href="/proxy/create" class="btn btn--primary" id="btn-add-proxy">+ Create Proxy</a>
-{% endblock %}
+{% block page_header_wrapper %}{% endblock %}
+
+{% block content_class %}content--flush{% endblock %}
 
 {% block content %}
+
+<div class="split-layout">
+  <!-- Sidebar -->
+  <div class="split-sidebar">
+    <a href="/proxy" class="split-sidebar__item active">All Proxies</a>
+    <a href="/proxy/create" class="split-sidebar__item">Create Proxy</a>
+  </div>
+
+  <!-- Content Area -->
+  <div class="split-content">
+    
+    <div class="page-header" style="margin-top: 0;">
+      <h1 class="page-header__title">Reverse Proxy</h1>
+      <div class="page-header__actions">
+        <a href="/proxy/create" class="btn btn--primary" id="btn-add-proxy">+ Create Proxy</a>
+      </div>
+    </div>
 
 {% set created = request.query_params.get('created') %}
 {% set deleted = request.query_params.get('deleted') %}

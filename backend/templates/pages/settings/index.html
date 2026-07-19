@@ -3,9 +3,7 @@
 {% block title %}Settings — VPS Panel{% endblock %}
 {% block page_title %}Settings{% endblock %}
 
-{% block topbar_actions %}
-  <button type="button" class="btn btn--secondary btn--sm" id="btn-refresh-settings">Refresh</button>
-{% endblock %}
+{% block page_header_wrapper %}{% endblock %}
 
 {% block content_class %}content--flush{% endblock %}
 
@@ -17,21 +15,28 @@
 <div class="alert alert--danger mb-lg">Could not load full status: {{ s.load_error }}</div>
 {% endif %}
 
-<div class="settings-layout">
+<div class="split-layout">
   <!-- Tabs Sidebar -->
-  <div class="settings-sidebar">
-    <div class="settings-sidebar__item active" data-tab="tab-access">Current Access</div>
-    <div class="settings-sidebar__item" data-tab="tab-url">Panel URL</div>
-    <div class="settings-sidebar__item" data-tab="tab-ip">IP Access</div>
-    <div class="settings-sidebar__item" data-tab="tab-security">Security</div>
-    <div class="settings-sidebar__item" data-tab="tab-perf">Performance</div>
+  <div class="split-sidebar">
+    <div class="split-sidebar__item active" data-tab="tab-access">Current Access</div>
+    <div class="split-sidebar__item" data-tab="tab-url">Panel URL</div>
+    <div class="split-sidebar__item" data-tab="tab-ip">IP Access</div>
+    <div class="split-sidebar__item" data-tab="tab-security">Security</div>
+    <div class="split-sidebar__item" data-tab="tab-perf">Performance</div>
   </div>
 
   <!-- Content Area -->
-  <div class="settings-content">
+  <div class="split-content">
     
+    <div class="page-header" style="margin-top: 0;">
+      <h1 class="page-header__title">Settings</h1>
+      <div class="page-header__actions">
+        <button type="button" class="btn btn--secondary btn--sm" id="btn-refresh-settings">Refresh</button>
+      </div>
+    </div>
+
     <!-- TAB: ACCESS -->
-    <div id="tab-access" class="settings-tab active">
+    <div id="tab-access" class="split-tab active">
       <div class="section mb-xl">
         <div class="section__header"><h3>Current access</h3></div>
         <div class="section__body">
@@ -73,7 +78,7 @@
     </div>
 
     <!-- TAB: URL -->
-    <div id="tab-url" class="settings-tab">
+    <div id="tab-url" class="split-tab">
       <div class="section mb-xl">
         <div class="section__header"><h3>Panel URL</h3></div>
         <div class="section__body">
@@ -200,7 +205,7 @@
     </div>
 
     <!-- TAB: IP ACCESS -->
-    <div id="tab-ip" class="settings-tab">
+    <div id="tab-ip" class="split-tab">
       <div class="section mb-xl">
         <div class="section__header"><h3>IP access</h3></div>
         <div class="section__body">
@@ -222,7 +227,7 @@
     </div>
 
     <!-- TAB: SECURITY -->
-    <div id="tab-security" class="settings-tab">
+    <div id="tab-security" class="split-tab">
       <div class="section mb-xl">
         <div class="section__header"><h3>Security</h3></div>
         <div class="section__body">
@@ -251,7 +256,7 @@
     </div>
 
     <!-- TAB: PERFORMANCE -->
-    <div id="tab-perf" class="settings-tab">
+    <div id="tab-perf" class="split-tab">
       <div class="section mb-xl">
         <div class="section__header"><h3>Performance</h3></div>
         <div class="section__body">
