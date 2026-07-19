@@ -35,7 +35,33 @@ class PanelSettingsIn(BaseModel):
 
 @router.get("/settings", response_class=HTMLResponse)
 async def settings_page(request: Request):
-    status = await panel_settings_service.get_status()
+    try:
+        status = await panel_settings_service.get_status()
+    except Exception as exc:
+        logger.exception("settings get_status failed")
+        # Degraded page so Settings always opens (e.g. LE permission edge cases)
+        status = {
+            "server_ip": "",
+            "panel_domain": "",
+            "url_mode": "none",
+            "parent_domain": "",
+            "subdomain_label": "panel",
+            "managed_domains": [],
+            "allow_ip": True,
+            "ip_port": 80,
+            "app_port": 8000,
+            "ssl_active": False,
+            "dns_ok": None,
+            "certbot_email": "",
+            "session_https_only": False,
+            "session_max_age": 604800,
+            "session_max_age_days": 7,
+            "security_headers": True,
+            "hsts_enabled": False,
+            "urls": {"ip_http": None, "domain_http": None, "domain_https": None},
+            "restart_hint": str(exc),
+            "load_error": str(exc),
+        }
     return templates.TemplateResponse(
         "pages/settings/index.html",
         {

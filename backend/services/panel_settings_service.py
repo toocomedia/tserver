@@ -91,20 +91,40 @@ def _infer_url_mode(domain: str, managed: list[str]) -> dict:
     }
 
 
-def _has_panel_cert(domain: str) -> bool:
-    if not domain:
-        return False
-    # Cert files are root-only; treat nginx SSL block or LE path presence via openssl
-    if nginx_service.panel_config_has_ssl():
-        return True
-    return (_LE_LIVE / domain / "fullchain.pem").exists()
-
-
 def _cert_paths(domain: str) -> tuple[str, str]:
     return (
         str(_LE_LIVE / domain / "fullchain.pem"),
         str(_LE_LIVE / domain / "privkey.pem"),
     )
+
+
+async def _cert_files_readable(domain: str) -> bool:
+    """
+    True if Let's Encrypt cert files exist for domain.
+    Never use Path.exists() on /etc/letsencrypt — panel user gets PermissionError.
+    Uses sudo openssl (allowed via sudoers).
+    """
+    if not domain:
+        return False
+    cert_path, _ = _cert_paths(domain)
+    try:
+        result = await shell.run(
+            ["openssl", "x509", "-in", cert_path, "-noout", "-subject"],
+            timeout=10,
+        )
+        return bool(result.success)
+    except Exception as exc:
+        logger.warning("cert check failed for %s: %s", domain, exc)
+        return False
+
+
+async def _panel_ssl_active(domain: str) -> bool:
+    """SSL is active only if nginx panel config has 443 AND cert files are readable."""
+    if not domain:
+        return False
+    if not nginx_service.panel_config_has_ssl():
+        return False
+    return await _cert_files_readable(domain)
 
 
 def _apply_config_runtime(updates: dict[str, str]) -> None:
@@ -137,6 +157,11 @@ def _bool_env(v: bool) -> str:
 
 
 def open_urls(domain: str, allow_ip: bool, ip_port: int, ssl: bool) -> dict:
+    """
+    Build open links.
+    - IP access uses PANEL_IP_PORT (e.g. :8080).
+    - Hostname always uses standard web ports (80 / 443), not the custom IP port.
+    """
     urls: dict[str, str | None] = {
         "ip_http": None,
         "domain_http": None,
@@ -144,11 +169,12 @@ def open_urls(domain: str, allow_ip: bool, ip_port: int, ssl: bool) -> dict:
     }
     ip = config.SERVER_IP
     if allow_ip and ip:
-        if ip_port == 80:
+        if int(ip_port or 80) == 80:
             urls["ip_http"] = f"http://{ip}/"
         else:
-            urls["ip_http"] = f"http://{ip}:{ip_port}/"
+            urls["ip_http"] = f"http://{ip}:{int(ip_port)}/"
     if domain:
+        # Hostnames are never served on custom IP ports in our nginx template
         urls["domain_http"] = f"http://{domain}/"
         if ssl:
             urls["domain_https"] = f"https://{domain}/"
@@ -161,11 +187,21 @@ async def get_status() -> dict:
         domain = ""
     allow_ip = bool(config.PANEL_ALLOW_IP)
     ip_port = int(config.PANEL_IP_PORT or 80)
-    ssl_active = bool(domain) and (
-        nginx_service.panel_config_has_ssl() or _has_panel_cert(domain)
-    )
 
-    managed = await _managed_domain_names()
+    # Never let cert path permission errors crash the Settings page
+    ssl_active = False
+    try:
+        ssl_active = await _panel_ssl_active(domain) if domain else False
+    except Exception as exc:
+        logger.warning("panel ssl status check failed: %s", exc)
+        ssl_active = False
+
+    managed: list[str] = []
+    try:
+        managed = await _managed_domain_names()
+    except Exception as exc:
+        logger.warning("managed domains list failed: %s", exc)
+
     mode_info = _infer_url_mode(domain, managed)
 
     dns_ok = None
@@ -310,13 +346,24 @@ async def apply_panel_nginx(
     cert_path = key_path = None
     if domain:
         if force_ssl is True:
-            use_ssl = True
+            # Only enable SSL if certbot files are actually readable
+            use_ssl = await _cert_files_readable(domain)
+            if not use_ssl:
+                logger.warning(
+                    "force_ssl requested for %s but cert files not readable — HTTP only",
+                    domain,
+                )
         elif force_ssl is False:
             use_ssl = False
         else:
-            use_ssl = nginx_service.panel_config_has_ssl() or _has_panel_cert(domain)
+            # Keep SSL only when both nginx config and cert files are good
+            use_ssl = await _panel_ssl_active(domain)
         if use_ssl:
             cert_path, key_path = _cert_paths(domain)
+
+    # Safety: never disable IP access with no hostname (avoids nginx 444 lockout)
+    if not domain:
+        allow_ip = True
 
     content = nginx_templates.panel_site_config(
         server_ip=config.SERVER_IP,

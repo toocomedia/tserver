@@ -54,11 +54,28 @@
     <div class="info-row">
       <span class="info-row__label">Open</span>
       <span class="info-row__value text-small" id="stat-urls">
-        {% if s.urls.ip_http %}<a href="{{ s.urls.ip_http }}" target="_blank" rel="noopener">{{ s.urls.ip_http }}</a>{% endif %}
-        {% if s.urls.domain_http %}<br><a href="{{ s.urls.domain_http }}" target="_blank" rel="noopener">{{ s.urls.domain_http }}</a>{% endif %}
-        {% if s.urls.domain_https %}<br><a href="{{ s.urls.domain_https }}" target="_blank" rel="noopener">{{ s.urls.domain_https }}</a>{% endif %}
+        {% if s.urls.ip_http %}
+          <div><strong>By IP</strong> (port {{ s.ip_port }}):
+            <a href="{{ s.urls.ip_http }}" target="_blank" rel="noopener">{{ s.urls.ip_http }}</a>
+          </div>
+        {% endif %}
+        {% if s.urls.domain_http %}
+          <div style="margin-top:4px;"><strong>By name</strong> (port 80):
+            <a href="{{ s.urls.domain_http }}" target="_blank" rel="noopener">{{ s.urls.domain_http }}</a>
+          </div>
+        {% endif %}
+        {% if s.urls.domain_https %}
+          <div style="margin-top:4px;"><strong>HTTPS</strong> (port 443):
+            <a href="{{ s.urls.domain_https }}" target="_blank" rel="noopener">{{ s.urls.domain_https }}</a>
+          </div>
+        {% endif %}
       </span>
     </div>
+    <p class="form-hint" style="margin-top:var(--space-sm);">
+      Custom IP port (e.g. 8080) only affects the <strong>IP</strong> address.
+      A panel hostname always uses normal web ports <code>80</code> / <code>443</code>.
+      Sidebar links stay on whatever host:port you used to open the panel (relative URLs).
+    </p>
   </div>
 </div>
 

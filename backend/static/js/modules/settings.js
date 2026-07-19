@@ -176,23 +176,26 @@
       }
     }
     if ($("stat-urls") && s.urls) {
-      const links = [];
+      const parts = [];
       if (s.urls.ip_http) {
-        links.push(
-          `<a href="${s.urls.ip_http}" target="_blank" rel="noopener">${s.urls.ip_http}</a>`
+        parts.push(
+          `<div><strong>By IP</strong> (port ${s.ip_port || 80}): ` +
+            `<a href="${s.urls.ip_http}" target="_blank" rel="noopener">${s.urls.ip_http}</a></div>`
         );
       }
       if (s.urls.domain_http) {
-        links.push(
-          `<a href="${s.urls.domain_http}" target="_blank" rel="noopener">${s.urls.domain_http}</a>`
+        parts.push(
+          `<div style="margin-top:4px;"><strong>By name</strong> (port 80): ` +
+            `<a href="${s.urls.domain_http}" target="_blank" rel="noopener">${s.urls.domain_http}</a></div>`
         );
       }
       if (s.urls.domain_https) {
-        links.push(
-          `<a href="${s.urls.domain_https}" target="_blank" rel="noopener">${s.urls.domain_https}</a>`
+        parts.push(
+          `<div style="margin-top:4px;"><strong>HTTPS</strong> (port 443): ` +
+            `<a href="${s.urls.domain_https}" target="_blank" rel="noopener">${s.urls.domain_https}</a></div>`
         );
       }
-      $("stat-urls").innerHTML = links.join("<br>") || '<span class="text-muted">—</span>';
+      $("stat-urls").innerHTML = parts.join("") || '<span class="text-muted">—</span>';
     }
 
     syncUrlModeUi();

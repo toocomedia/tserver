@@ -207,20 +207,27 @@ def server_name_in_use(domain: str, *, ignore_names: set[str] | None = None) -> 
     enabled_dir = Path(config.NGINX_SITES_ENABLED)
     if not enabled_dir.exists():
         return False
-    ignore = ignore_names or set()
-    needle = f"server_name {domain}"
+    ignore = {n.lower() for n in (ignore_names or set())}
+    domain = domain.strip().lower().rstrip(".")
+    # Word-boundary style: server_name tokens separated by spaces / ending with ;
+    token_re = re.compile(
+        rf"server_name\s+([^;]+);",
+        re.IGNORECASE,
+    )
     for conf in enabled_dir.iterdir():
-        if conf.name in ignore or conf.name.replace(".conf", "") in ignore:
+        base = conf.name.lower()
+        if base in ignore or base.replace(".conf", "") in ignore:
             continue
         try:
             text = conf.read_text(encoding="utf-8", errors="ignore")
-            # Match domain as a server_name token
-            if re.search(rf"server_name\s+[^;]*\b{re.escape(domain)}\b", text):
-                return True
-            if needle in text:
-                return True
         except OSError:
             continue
+        for m in token_re.finditer(text):
+            names = m.group(1).split()
+            for name in names:
+                n = name.strip().lower().rstrip(";")
+                if n == domain or n == f"www.{domain}":
+                    return True
     return False
 
 
