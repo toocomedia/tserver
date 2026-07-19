@@ -3,30 +3,17 @@
 {% block title %}Create Reverse Proxy — VPS Panel{% endblock %}
 {% block page_title %}Create Reverse Proxy{% endblock %}
 
-{% block page_header_wrapper %}{% endblock %}
-
-{% block content_class %}content--flush{% endblock %}
+{% block topbar_actions %}
+  <a href="/proxy/" class="btn btn--secondary" id="btn-back">← Back</a>
+{% endblock %}
 
 {% block content %}
 
-<div class="split-layout">
-  <!-- Sidebar -->
-  <div class="split-sidebar">
-    <a href="/proxy" class="split-sidebar__item">All Proxies</a>
-    <a href="/proxy/create" class="split-sidebar__item active">Create Proxy</a>
+<div class="section" style="max-width:560px;" id="create-proxy-panel">
+  <div class="section__header">
+    <h3>New Reverse Proxy</h3>
   </div>
-
-  <!-- Content Area -->
-  <div class="split-content">
-    
-    <div class="page-header" style="margin-top: 0;">
-      <h1 class="page-header__title">Create Proxy</h1>
-      <div class="page-header__actions">
-        <a href="/proxy/" class="btn btn--secondary" id="btn-back">← Back</a>
-      </div>
-    </div>
-
-    <div style="max-width: 560px;">
+  <div class="section__body">
 
     {% if error %}
     <div class="alert alert--danger mb-lg" id="form-error" role="alert">{{ error }}</div>
@@ -250,10 +237,8 @@
 
     </form>
 
-    </div> <!-- max-width -->
-
-  </div> <!-- /.split-content -->
-</div> <!-- /.split-layout -->
+  </div>
+</div>
 
 {% endblock %}
 
