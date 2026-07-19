@@ -19,10 +19,15 @@ templates = Jinja2Templates(directory="templates")
 
 
 class PanelSettingsIn(BaseModel):
+    # none = IP only | custom = external FQDN | subdomain = label under managed domain
+    url_mode: str = "none"
+    custom_domain: str = ""
+    parent_domain: str = ""
+    subdomain_label: str = "panel"
+    # legacy alias still accepted by service
     panel_domain: str = ""
     allow_ip: bool = True
     ip_port: int = Field(default=80, ge=1, le=65535)
-    ensure_dns: bool = False
     session_https_only: bool = False
     security_headers: bool = True
     csrf_enabled: bool = True

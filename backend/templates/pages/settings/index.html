@@ -63,24 +63,85 @@
     </div>
 
     <div class="form-group" style="margin-top:var(--space-lg);">
-      <label class="form-label" for="panel_domain">Panel hostname</label>
+      <span class="form-label">How to open the panel</span>
+      <div class="form-check mb-sm" style="margin-top:var(--space-sm);">
+        <input type="radio" name="url_mode" id="url_mode_none" value="none"
+          {% if s.url_mode == 'none' or not s.panel_domain %}checked{% endif %}>
+        <label for="url_mode_none"><strong>IP only</strong> — no hostname</label>
+      </div>
+      <div class="form-check mb-sm">
+        <input type="radio" name="url_mode" id="url_mode_custom" value="custom"
+          {% if s.url_mode == 'custom' %}checked{% endif %}>
+        <label for="url_mode_custom"><strong>Custom URL</strong> — DNS managed outside this panel</label>
+      </div>
+      <div class="form-check mb-md">
+        <input type="radio" name="url_mode" id="url_mode_subdomain" value="subdomain"
+          {% if s.url_mode == 'subdomain' %}checked{% endif %}
+          {% if not s.managed_domains %}disabled{% endif %}>
+        <label for="url_mode_subdomain"><strong>Subdomain</strong> — under a domain hosted here</label>
+      </div>
+      {% if not s.managed_domains %}
+      <p class="form-hint mb-md">Add a domain under <a href="/domains/">Domains</a> first to use the subdomain option.</p>
+      {% endif %}
+    </div>
+
+    <!-- Custom URL -->
+    <div id="url-custom-fields" class="form-group mb-md" hidden>
+      <label class="form-label" for="custom_domain">Hostname</label>
       <input
         class="form-input"
         type="text"
-        id="panel_domain"
-        name="panel_domain"
-        value="{{ s.panel_domain or '' }}"
+        id="custom_domain"
+        name="custom_domain"
+        value="{% if s.url_mode == 'custom' %}{{ s.panel_domain or '' }}{% endif %}"
         placeholder="panel.example.com"
         autocomplete="off"
         spellcheck="false"
       >
-      <p class="form-hint">Leave empty for IP-only. Point an A record to {{ s.server_ip }} before SSL.</p>
+      <p class="form-hint">
+        You manage DNS yourself. Create an A record:
+        <code id="custom-dns-hint">hostname → {{ s.server_ip }}</code>
+        then issue SSL.
+      </p>
     </div>
 
-    <label class="form-check mb-md">
-      <input type="checkbox" id="ensure_dns" name="ensure_dns">
-      <span>Create/update DNS A record if this hostname’s zone is managed here</span>
-    </label>
+    <!-- Subdomain of managed domain -->
+    <div id="url-subdomain-fields" class="mb-md" hidden>
+      <div class="form-group mb-md">
+        <label class="form-label" for="parent_domain">Domain on this panel</label>
+        <div class="form-select-wrap">
+          <select class="form-select" id="parent_domain" name="parent_domain">
+            <option value="">— select domain —</option>
+            {% for d in s.managed_domains %}
+            <option value="{{ d }}" {% if s.parent_domain == d %}selected{% endif %}>{{ d }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="form-group mb-md">
+        <label class="form-label" for="subdomain_label">Subdomain</label>
+        <input
+          class="form-input"
+          type="text"
+          id="subdomain_label"
+          name="subdomain_label"
+          value="{{ s.subdomain_label or 'panel' }}"
+          placeholder="panel"
+          autocomplete="off"
+          spellcheck="false"
+          style="max-width:220px;"
+        >
+        <p class="form-hint">
+          Preview: <code id="subdomain-preview">panel.example.com</code>
+          — panel will create the A record automatically.
+        </p>
+      </div>
+    </div>
+
+    <div class="info-row mb-md">
+      <span class="info-row__label">Result URL</span>
+      <span class="info-row__value" id="result-hostname">{{ s.panel_domain or '(IP only)' }}</span>
+    </div>
 
     <div class="form-actions">
       <button type="button" class="btn btn--primary" id="btn-save-panel">Save panel URL</button>

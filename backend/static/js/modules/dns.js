@@ -54,6 +54,11 @@ function postDeleteRecord(domain, name, type) {
   form.style.display = "none";
 
   const fields = { name, type };
+  // CSRF required by middleware — same as other POST forms
+  const token =
+    (typeof window.csrfToken === "function" && window.csrfToken()) || "";
+  if (token) fields.csrf_token = token;
+
   Object.entries(fields).forEach(([key, value]) => {
     const input = document.createElement("input");
     input.type = "hidden";
@@ -105,11 +110,19 @@ document.addEventListener("DOMContentLoaded", () => {
     updateContentLabel(typeSelect.value);
   }
 
+  // Refresh CSRF on all forms (cookie/meta may update after load)
+  if (typeof window.injectCsrfIntoForms === "function") {
+    window.injectCsrfIntoForms(document);
+  }
+
   // Disable submit while form submits (prevent double click)
   const form = document.getElementById("add-record-form");
   const saveBtn = document.getElementById("btn-save-record");
   if (form && saveBtn) {
     form.addEventListener("submit", () => {
+      if (typeof window.injectCsrfIntoForms === "function") {
+        window.injectCsrfIntoForms(form);
+      }
       saveBtn.textContent = "Adding...";
       saveBtn.disabled = true;
     });

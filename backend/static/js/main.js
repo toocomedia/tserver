@@ -12,14 +12,40 @@
  */
 function csrfToken() {
   const meta = document.querySelector('meta[name="csrf-token"]');
-  return (meta && meta.getAttribute("content")) || "";
+  const fromMeta = meta && meta.getAttribute("content");
+  if (fromMeta) return fromMeta;
+  // Cookie fallback (set by CsrfMiddleware — not HttpOnly)
+  const match = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]+)/);
+  return match ? decodeURIComponent(match[1]) : "";
 }
 
 function withCsrfHeaders(headers = {}) {
   const token = csrfToken();
   const next = { ...headers };
-  if (token) next["X-CSRF-Token"] = token;
+  if (token) {
+    next["X-CSRF-Token"] = token;
+    next["X-CSRFToken"] = token;
+  }
   return next;
+}
+
+/** Ensure every POST form has a hidden csrf_token input. */
+function injectCsrfIntoForms(root) {
+  const token = csrfToken();
+  if (!token) return;
+  const scope = root || document;
+  scope.querySelectorAll("form").forEach((form) => {
+    const method = (form.getAttribute("method") || "get").toLowerCase();
+    if (method !== "post") return;
+    let input = form.querySelector('input[name="csrf_token"]');
+    if (!input) {
+      input = document.createElement("input");
+      input.type = "hidden";
+      input.name = "csrf_token";
+      form.appendChild(input);
+    }
+    input.value = token;
+  });
 }
 
 function formatDetail(detail) {
@@ -175,25 +201,14 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // Inject CSRF into HTML forms (login, logout, domain create, etc.)
-  const token = csrfToken();
-  if (token) {
-    document.querySelectorAll("form").forEach((form) => {
-      const method = (form.getAttribute("method") || "get").toLowerCase();
-      if (method !== "post") return;
-      if (form.querySelector('input[name="csrf_token"]')) return;
-      const input = document.createElement("input");
-      input.type = "hidden";
-      input.name = "csrf_token";
-      input.value = token;
-      form.appendChild(input);
-    });
-  }
+  // Inject CSRF into HTML forms (login, logout, domain create, DNS, etc.)
+  injectCsrfIntoForms(document);
 });
 
 // Export for modules
 window.panel = panel;
 window.csrfToken = csrfToken;
+window.injectCsrfIntoForms = injectCsrfIntoForms;
 window.toast = toast;
 window.openModal = openModal;
 window.closeModal = closeModal;

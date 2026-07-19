@@ -45,6 +45,10 @@ DEBUG: bool = _env_bool("DEBUG", False)
 PANEL_APP_PORT: int = _env_int("PANEL_PORT", 8000)
 PANEL_ALLOW_IP: bool = _env_bool("PANEL_ALLOW_IP", True)
 PANEL_IP_PORT: int = _env_int("PANEL_IP_PORT", 80)
+# How panel hostname is chosen: none | custom | subdomain
+PANEL_URL_MODE: str = _env_str("PANEL_URL_MODE", "none").lower() or "none"
+PANEL_PARENT_DOMAIN: str = _env_str("PANEL_PARENT_DOMAIN", "")
+PANEL_SUBDOMAIN_LABEL: str = _env_str("PANEL_SUBDOMAIN_LABEL", "panel")
 
 # ---------------------------------------------------------
 # Auth / sessions

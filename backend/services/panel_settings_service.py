@@ -10,13 +10,18 @@ from pathlib import Path
 from fastapi import HTTPException
 
 import config
-from services import nginx_service, dns_service
+from services import nginx_service, dns_service, domain_service
 from utils import env_file, nginx_templates, shell
-from utils.validators import is_valid_domain, is_valid_port, sanitize_domain
+from utils.validators import (
+    is_valid_port,
+    sanitize_domain,
+    sanitize_subdomain_label,
+)
 
 logger = logging.getLogger(__name__)
 
 _LE_LIVE = Path("/etc/letsencrypt/live")
+_URL_MODES = frozenset({"none", "custom", "subdomain"})
 
 
 def _normalize_domain(raw: str | None) -> str:
@@ -32,6 +37,58 @@ def _normalize_domain(raw: str | None) -> str:
         return sanitize_domain(value)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+async def _managed_domain_names() -> list[str]:
+    """Domains this panel hosts (from DB)."""
+    from database import AsyncSessionLocal
+
+    async with AsyncSessionLocal() as db:
+        rows = await domain_service.get_all(db)
+        return [d.name for d in rows]
+
+
+def _infer_url_mode(domain: str, managed: list[str]) -> dict:
+    """
+    Build url_mode / parent / label for UI from saved config + current domain.
+    """
+    mode = (config.PANEL_URL_MODE or "none").strip().lower()
+    if mode not in _URL_MODES:
+        mode = "none"
+
+    parent = (config.PANEL_PARENT_DOMAIN or "").strip().lower()
+    label = (config.PANEL_SUBDOMAIN_LABEL or "panel").strip().lower() or "panel"
+
+    if not domain:
+        return {"url_mode": "none", "parent_domain": parent, "subdomain_label": label}
+
+    # Prefer explicit mode when it matches current hostname
+    if mode == "subdomain" and parent and domain == f"{label}.{parent}":
+        return {"url_mode": "subdomain", "parent_domain": parent, "subdomain_label": label}
+
+    # Infer subdomain if hostname is child of a managed domain
+    for m in managed:
+        if domain == m:
+            return {"url_mode": "custom", "parent_domain": m, "subdomain_label": label}
+        suffix = f".{m}"
+        if domain.endswith(suffix):
+            sub = domain[: -len(suffix)]
+            if sub and "." not in sub:
+                return {
+                    "url_mode": "subdomain" if mode == "subdomain" or mode == "none" else "custom",
+                    "parent_domain": m,
+                    "subdomain_label": sub,
+                }
+
+    if mode == "subdomain":
+        # Stale parent — fall back to custom display
+        return {"url_mode": "custom", "parent_domain": parent, "subdomain_label": label}
+
+    return {
+        "url_mode": "custom" if domain else "none",
+        "parent_domain": parent,
+        "subdomain_label": label,
+    }
 
 
 def _has_panel_cert(domain: str) -> bool:
@@ -54,6 +111,9 @@ def _apply_config_runtime(updates: dict[str, str]) -> None:
     """Update config module attributes so the running process sees new values."""
     mapping = {
         "PANEL_DOMAIN": ("PANEL_DOMAIN", str),
+        "PANEL_URL_MODE": ("PANEL_URL_MODE", str),
+        "PANEL_PARENT_DOMAIN": ("PANEL_PARENT_DOMAIN", str),
+        "PANEL_SUBDOMAIN_LABEL": ("PANEL_SUBDOMAIN_LABEL", str),
         "PANEL_ALLOW_IP": ("PANEL_ALLOW_IP", lambda v: str(v).lower() in ("1", "true", "yes", "on")),
         "PANEL_IP_PORT": ("PANEL_IP_PORT", int),
         "SESSION_HTTPS_ONLY": ("SESSION_HTTPS_ONLY", lambda v: str(v).lower() in ("1", "true", "yes", "on")),
@@ -106,6 +166,9 @@ async def get_status() -> dict:
         nginx_service.panel_config_has_ssl() or _has_panel_cert(domain)
     )
 
+    managed = await _managed_domain_names()
+    mode_info = _infer_url_mode(domain, managed)
+
     dns_ok = None
     if domain:
         try:
@@ -118,6 +181,10 @@ async def get_status() -> dict:
     return {
         "server_ip": config.SERVER_IP,
         "panel_domain": domain,
+        "url_mode": mode_info["url_mode"],
+        "parent_domain": mode_info["parent_domain"],
+        "subdomain_label": mode_info["subdomain_label"],
+        "managed_domains": managed,
         "allow_ip": allow_ip,
         "ip_port": ip_port,
         "app_port": config.PANEL_APP_PORT,
@@ -158,35 +225,78 @@ async def _maybe_open_firewall(port: int) -> str | None:
     return f"Could not update UFW for port {port}: {r.stderr or r.stdout}"
 
 
-async def _ensure_dns_a(domain: str) -> str | None:
-    """If parent zone exists in PowerDNS, set A for hostname. Returns note."""
-    labels = domain.split(".")
-    if len(labels) < 2:
-        return None
-    # Try parent zones from longest to apex-1
-    for i in range(1, len(labels) - 1):
-        parent = ".".join(labels[i:])
-        if await dns_service.zone_exists(parent):
-            name = ".".join(labels[:i])  # relative name under zone
-            # For zone example.com and host panel.example.com → name panel
-            # For zone example.com and host example.com → @
-            try:
-                await dns_service.add_a_record(parent, name, config.SERVER_IP)
-                return f"DNS A record set: {domain} → {config.SERVER_IP} (zone {parent})"
-            except Exception as exc:
-                logger.warning("DNS A upsert failed for %s: %s", domain, exc)
-                return f"Zone {parent} exists but could not set A: {exc}"
-    # Apex domain as panel host
-    if await dns_service.zone_exists(domain):
-        try:
-            await dns_service.add_a_record(domain, "@", config.SERVER_IP)
-            return f"DNS A record set: {domain} → {config.SERVER_IP}"
-        except Exception as exc:
-            return f"Could not set apex A: {exc}"
-    return (
-        f"No PowerDNS zone for {domain}. "
-        f"Create an A record at your DNS provider: {domain} → {config.SERVER_IP}"
-    )
+async def _set_subdomain_a(parent: str, label: str) -> str:
+    """Create/update A record for label.parent on the managed zone."""
+    fqdn = f"{label}.{parent}"
+    if not await dns_service.zone_exists(parent):
+        raise HTTPException(
+            status_code=400,
+            detail=f"DNS zone for '{parent}' was not found on this server. "
+            "Add the domain under Domains first, or use Custom URL.",
+        )
+    try:
+        await dns_service.add_a_record(parent, label, config.SERVER_IP)
+    except Exception as exc:
+        logger.warning("DNS A upsert failed for %s: %s", fqdn, exc)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Could not set DNS A for {fqdn}: {exc}",
+        ) from exc
+    return f"DNS A record set: {fqdn} → {config.SERVER_IP} (zone {parent})"
+
+
+def _resolve_hostname_from_payload(payload: dict, managed: list[str]) -> tuple[str, str, str, str]:
+    """
+    Returns (domain, url_mode, parent_domain, subdomain_label).
+    url_mode: none | custom | subdomain
+    """
+    mode = str(payload.get("url_mode") or "none").strip().lower()
+    if mode not in _URL_MODES:
+        # Backward compat: if only panel_domain sent
+        domain = _normalize_domain(payload.get("panel_domain") or payload.get("custom_domain"))
+        return (domain, "custom" if domain else "none", "", "panel")
+
+    if mode == "none":
+        return ("", "none", "", "panel")
+
+    if mode == "custom":
+        domain = _normalize_domain(
+            payload.get("custom_domain") or payload.get("panel_domain")
+        )
+        if not domain:
+            raise HTTPException(
+                status_code=400,
+                detail="Enter a custom hostname (e.g. panel.example.com), or choose another mode.",
+            )
+        return (domain, "custom", "", "panel")
+
+    # subdomain of a domain hosted on this panel
+    raw_parent = (payload.get("parent_domain") or "").strip().lower()
+    if not raw_parent:
+        raise HTTPException(
+            status_code=400,
+            detail="Select a domain hosted on this panel for the subdomain.",
+        )
+    try:
+        parent = sanitize_domain(raw_parent)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    if parent not in managed:
+        raise HTTPException(
+            status_code=400,
+            detail=f"'{parent}' is not a domain managed on this panel. "
+            "Add it under Domains first, or use Custom URL.",
+        )
+
+    raw_label = (payload.get("subdomain_label") or "panel").strip().lower() or "panel"
+    try:
+        label = sanitize_subdomain_label(raw_label)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    domain = f"{label}.{parent}"
+    return (domain, "subdomain", parent, label)
 
 
 async def apply_panel_nginx(
@@ -227,7 +337,9 @@ async def save_settings(payload: dict) -> dict:
     """
     Save panel access + security settings, rewrite nginx, persist .env.
     """
-    domain = _normalize_domain(payload.get("panel_domain"))
+    managed = await _managed_domain_names()
+    domain, url_mode, parent, label = _resolve_hostname_from_payload(payload, managed)
+
     allow_ip = bool(payload.get("allow_ip", True))
     try:
         ip_port = int(payload.get("ip_port", 80))
@@ -269,11 +381,22 @@ async def save_settings(payload: dict) -> dict:
             detail="HSTS requires a panel hostname with HTTPS.",
         )
 
-    ensure_dns = bool(payload.get("ensure_dns", False))
     notes: list[str] = []
+
+    # Subdomain mode: always write A record on the managed zone
+    if url_mode == "subdomain" and domain and parent and label:
+        notes.append(await _set_subdomain_a(parent, label))
+    elif url_mode == "custom" and domain:
+        notes.append(
+            f"Custom URL: create an A record at your DNS provider: "
+            f"{domain} → {config.SERVER_IP}"
+        )
 
     env_updates = {
         "PANEL_DOMAIN": domain if domain else config.SERVER_IP,
+        "PANEL_URL_MODE": url_mode,
+        "PANEL_PARENT_DOMAIN": parent,
+        "PANEL_SUBDOMAIN_LABEL": label if url_mode == "subdomain" else "panel",
         "PANEL_ALLOW_IP": _bool_env(allow_ip),
         "PANEL_IP_PORT": str(ip_port),
         "SESSION_HTTPS_ONLY": _bool_env(session_https_only),
@@ -297,11 +420,6 @@ async def save_settings(payload: dict) -> dict:
         note = await _maybe_open_firewall(ip_port)
         if note:
             notes.append(note)
-
-    if domain and ensure_dns:
-        dns_note = await _ensure_dns_a(domain)
-        if dns_note:
-            notes.append(dns_note)
 
     notes.append(
         "Nginx reloaded. Restart srv-panel if session cookie/security flags seem stale: "
