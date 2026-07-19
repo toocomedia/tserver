@@ -154,10 +154,14 @@ async def list_certs(db: AsyncSession) -> list[dict]:
         return []
 
     live_map: dict[str, datetime] = {}
-    try:
-        live_map = await _certbot_expiry_map()
-    except Exception as e:
-        logger.warning("list_certs certbot map failed: %s", e)
+    
+    # Running `certbot certificates` is slow. Only do it if a cert in the DB is missing its expiry date.
+    needs_live_check = any(not cert.expiry_date for cert in certs)
+    if needs_live_check:
+        try:
+            live_map = await _certbot_expiry_map()
+        except Exception as e:
+            logger.warning("list_certs certbot map failed: %s", e)
 
     for cert in certs:
         try:

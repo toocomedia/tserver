@@ -35,8 +35,14 @@ async def purge_proxy_cache(full_domain: str) -> bool:
         return False
         
     try:
-        shutil.rmtree(cache_dir)
-        # Nginx will automatically recreate the folder hierarchy when needed
+        # Delete only the contents of the folder, not the folder itself.
+        # This preserves the directory's ownership (e.g., www-data) and permissions,
+        # ensuring Nginx doesn't get confused and can still write new caches.
+        for item in cache_dir.iterdir():
+            if item.is_file():
+                item.unlink()
+            elif item.is_dir():
+                shutil.rmtree(item)
         return True
     except Exception as exc:
         logger.error("Failed to purge cache for %s: %s", full_domain, exc)

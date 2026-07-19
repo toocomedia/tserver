@@ -456,9 +456,10 @@ async def save_settings(payload: dict) -> dict:
     await env_file.set_env_values(env)
     _apply_runtime(env)
 
-    # New hostname starts HTTP-only (SSL not auto-moved to new name)
+    # If the hostname changed, drop to HTTP-only to avoid SSL mismatches.
+    # Otherwise, preserve the current SSL state.
     try:
-        await apply_panel_nginx(domain, allow_ip, ip_port, force_ssl=False)
+        await apply_panel_nginx(domain, allow_ip, ip_port, force_ssl=False if hostname_changed else None)
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Nginx apply failed: {exc}") from exc
 
