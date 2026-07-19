@@ -8,6 +8,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
 import config
 from database import init_db
@@ -48,7 +49,8 @@ app = FastAPI(
 )
 
 # Middleware order: last added runs first on the request.
-# Session → SecurityHeaders → RequestId → Auth → app
+# ProxyHeaders → Session → SecurityHeaders → RequestId → Auth → app
+# ProxyHeaders: honor X-Forwarded-* so redirects keep :8080 when behind nginx
 app.add_middleware(AuthMiddleware)
 app.add_middleware(RequestIdMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
@@ -62,6 +64,7 @@ app.add_middleware(
     # that locks HTTP IP login. Prefer explicit HTTPS only after panel SSL works.
     https_only=bool(config.SESSION_HTTPS_ONLY),
 )
+app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
 register_error_handlers(app)
 
 # Static files

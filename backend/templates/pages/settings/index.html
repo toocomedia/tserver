@@ -189,8 +189,10 @@
   </div>
   <div class="panel__body">
     <p class="form-hint mb-md">
-      Issues a Let’s Encrypt certificate for the panel hostname above.
-      DNS must already point to this server. Not available for IP-only mode.
+      Issues a Let's Encrypt certificate for the panel hostname.
+      DNS A must point here, and <strong>port 80</strong> must be open for the hostname
+      (Let's Encrypt does not use the custom IP port like 8080).
+      Test first: <code>http://your-hostname/</code> should open this panel.
     </p>
     <div class="form-actions">
       <button type="button" class="btn btn--primary" id="btn-issue-ssl" {% if not s.panel_domain %}disabled{% endif %}>

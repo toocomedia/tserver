@@ -341,24 +341,26 @@ async def apply_panel_nginx(
     force_ssl: bool | None = None,
 ) -> str:
     """Rebuild panel nginx site from current settings."""
-    nginx_service.ensure_acme_root()
+    try:
+        await nginx_service.ensure_acme_root_privileged()
+    except Exception:
+        nginx_service.ensure_acme_root()
     use_ssl = False
     cert_path = key_path = None
     if domain:
         if force_ssl is True:
-            # Only enable SSL if certbot files are actually readable
-            use_ssl = await _cert_files_readable(domain)
-            if not use_ssl:
-                logger.warning(
-                    "force_ssl requested for %s but cert files not readable — HTTP only",
-                    domain,
-                )
+            # Trust caller (certbot just succeeded). Nginx runs as root and can
+            # read /etc/letsencrypt even when the panel user cannot.
+            use_ssl = True
+            cert_path, key_path = _cert_paths(domain)
         elif force_ssl is False:
             use_ssl = False
         else:
-            # Keep SSL only when both nginx config and cert files are good
+            # Keep SSL only when nginx already has 443 and certs look valid
             use_ssl = await _panel_ssl_active(domain)
-        if use_ssl:
+            if use_ssl:
+                cert_path, key_path = _cert_paths(domain)
+        if use_ssl and not cert_path:
             cert_path, key_path = _cert_paths(domain)
 
     # Safety: never disable IP access with no hostname (avoids nginx 444 lockout)
@@ -477,6 +479,80 @@ async def save_settings(payload: dict) -> dict:
     return status
 
 
+async def _dns_points_here(domain: str) -> tuple[bool | None, str]:
+    """Return (ok, message). ok None = could not check."""
+    try:
+        infos = socket.getaddrinfo(domain, 80, type=socket.SOCK_STREAM)
+        ips = sorted({i[4][0] for i in infos})
+        if not ips:
+            return False, f"DNS for {domain} returned no addresses."
+        if config.SERVER_IP in ips:
+            return True, f"DNS OK: {domain} → {', '.join(ips)} (includes {config.SERVER_IP})"
+        return (
+            False,
+            f"DNS for {domain} resolves to {', '.join(ips)}, "
+            f"but this server is {config.SERVER_IP}. "
+            f"Point an A record to {config.SERVER_IP} and wait for propagation.",
+        )
+    except OSError as exc:
+        return False, f"DNS lookup failed for {domain}: {exc}"
+
+
+async def _verify_acme_local(domain: str, webroot: str) -> str | None:
+    """
+    Write a test challenge file and fetch it via nginx on localhost with Host header.
+    Returns None if OK, or an error hint string.
+    """
+    token = "srv-panel-acme-test"
+    challenge_dir = Path(webroot) / ".well-known" / "acme-challenge"
+    test_path = challenge_dir / token
+    body = b"srv-panel-ok"
+    try:
+        await shell.run(["mkdir", "-p", str(challenge_dir)], timeout=10)
+        # Write via shell tee so root-owned dirs work
+        await shell.write_file(str(test_path), body.decode("ascii"))
+        await shell.run(["chmod", "a+r", str(test_path)], timeout=5)
+    except Exception as exc:
+        return f"Could not write ACME test file under {challenge_dir}: {exc}"
+
+    # Hit nginx on port 80 (hostname vhost) — LE always uses port 80
+    url = f"http://127.0.0.1/.well-known/acme-challenge/{token}"
+    try:
+        r = await shell.run(
+            [
+                "curl", "-sS", "-m", "5",
+                "-H", f"Host: {domain}",
+                "-o", "-",
+                "-w", "\n%{http_code}",
+                url,
+            ],
+            timeout=15,
+        )
+        if not r.success and "not found" in (r.stderr or "").lower():
+            return "curl not found; skipping local ACME preflight"
+        out = (r.stdout or "").strip()
+        lines = out.splitlines()
+        code = lines[-1] if lines else ""
+        body = "\n".join(lines[:-1]) if len(lines) > 1 else out
+        if code == "200" and "srv-panel-ok" in body:
+            return None
+        if "srv-panel-ok" in out:
+            return None
+        return (
+            f"Local ACME check failed for Host {domain} on port 80 "
+            f"(HTTP {code or '?'}: {(body or r.stderr or 'empty')[:160]}). "
+            f"Open http://{domain}/ in a browser — it must show the panel. "
+            f"Custom IP port {config.PANEL_IP_PORT} is separate; LE always uses port 80."
+        )
+    except Exception as exc:
+        return f"Local ACME check error: {exc}"
+    finally:
+        try:
+            await shell.run(["rm", "-f", str(test_path)], timeout=5)
+        except Exception:
+            pass
+
+
 async def issue_panel_ssl() -> dict:
     """Issue/renew Let's Encrypt cert for PANEL_DOMAIN and enable HTTPS on panel vhost."""
     domain = _normalize_domain(config.PANEL_DOMAIN)
@@ -486,7 +562,14 @@ async def issue_panel_ssl() -> dict:
             detail="Set a panel hostname first before issuing SSL.",
         )
 
-    # Ensure HTTP vhost with ACME is present
+    notes: list[str] = []
+
+    dns_ok, dns_msg = await _dns_points_here(domain)
+    notes.append(dns_msg)
+    if dns_ok is False:
+        raise HTTPException(status_code=400, detail=dns_msg)
+
+    # HTTP-only panel vhost + ACME location on port 80 for this hostname
     try:
         await apply_panel_nginx(
             domain,
@@ -495,29 +578,64 @@ async def issue_panel_ssl() -> dict:
             force_ssl=False,
         )
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Could not prepare HTTP vhost: {exc}") from exc
+        raise HTTPException(
+            status_code=500,
+            detail=f"Could not prepare HTTP vhost for ACME: {exc}",
+        ) from exc
 
-    nginx_service.ensure_acme_root()
-    webroot = f"{config.NGINX_WEBROOT}/acme-challenge"
+    try:
+        webroot = await nginx_service.ensure_acme_root_privileged()
+    except Exception:
+        nginx_service.ensure_acme_root()
+        webroot = f"{config.NGINX_WEBROOT}/acme-challenge"
+
+    # Prove nginx serves challenges for this Host before calling Let's Encrypt
+    acme_hint = await _verify_acme_local(domain, webroot)
+    if acme_hint:
+        logger.warning("ACME preflight failed: %s", acme_hint)
+        # If curl is missing, continue to certbot; otherwise block with a clear fix
+        if "curl" in acme_hint.lower() and "not found" in acme_hint.lower():
+            notes.append(acme_hint)
+        else:
+            raise HTTPException(status_code=400, detail=acme_hint)
+
+    email = (config.CERTBOT_EMAIL or "").strip() or "admin@example.com"
     cmd = [
         "certbot", "certonly",
         "--webroot",
         f"--webroot-path={webroot}",
         "--non-interactive",
         "--agree-tos",
-        f"--email={config.CERTBOT_EMAIL}",
+        f"--email={email}",
         f"--cert-name={domain}",
         "-d", domain,
         "--keep-until-expiring",
         "--expand",
+        "--preferred-challenges", "http",
     ]
-    logger.info("Issuing panel SSL for %s", domain)
-    result = await shell.run(cmd, timeout=120)
+    logger.info("Issuing panel SSL for %s (webroot=%s)", domain, webroot)
+    result = await shell.run(cmd, timeout=180)
     if not result.success:
-        detail = (result.stderr or result.stdout or "certbot failed")[-400:]
-        raise HTTPException(status_code=500, detail=f"Certbot failed: {detail}")
+        detail = (result.stderr or result.stdout or "certbot failed").strip()
+        # Common LE messages → clearer hints
+        hint = ""
+        low = detail.lower()
+        if "connection refused" in low or "timeout" in low or "timed out" in low:
+            hint = (
+                " Let's Encrypt must reach http://{0}/.well-known/acme-challenge/ "
+                "on port 80 (not the custom IP port {1}). Open firewall TCP 80."
+            ).format(domain, config.PANEL_IP_PORT)
+        elif "unauthorized" in low or "invalid response" in low:
+            hint = (
+                " Challenge file was not served correctly. "
+                "Confirm http://{0}/ opens this panel and DNS A is {1}."
+            ).format(domain, config.SERVER_IP)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Certbot failed: {detail[-500:]}{hint}",
+        )
 
-    cert_path, key_path = _cert_paths(domain)
+    cert_path, _key_path = _cert_paths(domain)
     try:
         await apply_panel_nginx(
             domain,
@@ -528,20 +646,23 @@ async def issue_panel_ssl() -> dict:
     except Exception as exc:
         raise HTTPException(
             status_code=500,
-            detail=f"Cert issued but nginx SSL apply failed: {exc}",
+            detail=(
+                f"Certificate was issued for {domain}, but nginx HTTPS apply failed: {exc}. "
+                f"Cert path: {cert_path}"
+            ),
         ) from exc
 
-    # Secure cookies by default after SSL
-    env_updates = {"SESSION_HTTPS_ONLY": "true"}
-    await env_file.set_env_values(env_updates)
-    _apply_config_runtime(env_updates)
+    # Do NOT force SESSION_HTTPS_ONLY — that breaks login on http://IP:8080/
+    notes.extend([
+        f"Certificate issued for {domain}.",
+        f"Open https://{domain}/ (port 443).",
+        f"IP access remains http://{config.SERVER_IP}:{config.PANEL_IP_PORT}/ "
+        f"if IP port is not 80.",
+        "Optional: enable “Secure cookies” only if you always use HTTPS.",
+    ])
 
     status = await get_status()
     status["ok"] = True
-    status["notes"] = [
-        f"Certificate issued for {domain}.",
-        f"Open https://{domain}/",
-        "Restart panel to enforce secure cookies: sudo systemctl restart srv-panel",
-    ]
+    status["notes"] = notes
     status["cert_path"] = cert_path
     return status

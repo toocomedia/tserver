@@ -254,7 +254,10 @@
     $("btn-save-security")?.addEventListener("click", (e) => save(e.currentTarget));
     $("btn-issue-ssl")?.addEventListener("click", (e) => {
       confirmAction(
-        "Issue a Let's Encrypt certificate for the panel hostname? DNS must already point to this server.",
+        "Issue Let's Encrypt SSL for the panel hostname?\n\n" +
+          "Requires: DNS A → this server, and port 80 open for the hostname " +
+          "(not the custom IP port like 8080). " +
+          "http://your-hostname/ must already open this panel.",
         () => issueSsl(e.currentTarget)
       );
     });

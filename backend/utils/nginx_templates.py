@@ -108,10 +108,11 @@ server {{
     location / {{
         proxy_pass         {upstream};
         proxy_http_version 1.1;
-        proxy_set_header   Host              $host;
+        proxy_set_header   Host              $http_host;
         proxy_set_header   X-Real-IP         $remote_addr;
         proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
         proxy_set_header   X-Forwarded-Proto $scheme;
+        proxy_set_header   X-Forwarded-Host  $http_host;
         proxy_set_header   Upgrade           $http_upgrade;
         proxy_set_header   Connection        "upgrade";
         proxy_read_timeout 60s;
@@ -164,10 +165,11 @@ server {{
     location / {{
         proxy_pass         {upstream};
         proxy_http_version 1.1;
-        proxy_set_header   Host              $host;
+        proxy_set_header   Host              $http_host;
         proxy_set_header   X-Real-IP         $remote_addr;
         proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
         proxy_set_header   X-Forwarded-Proto $scheme;
+        proxy_set_header   X-Forwarded-Host  $http_host;
         proxy_set_header   Upgrade           $http_upgrade;
         proxy_set_header   Connection        "upgrade";
         proxy_read_timeout 60s;
@@ -181,10 +183,12 @@ def _panel_proxy_location(app_port: int) -> str:
     return f"""    location / {{
         proxy_pass         http://127.0.0.1:{app_port};
         proxy_http_version 1.1;
-        proxy_set_header   Host              $host;
+        # $http_host keeps :8080 etc. $host would strip the port and break redirects
+        proxy_set_header   Host              $http_host;
         proxy_set_header   X-Real-IP         $remote_addr;
         proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
         proxy_set_header   X-Forwarded-Proto $scheme;
+        proxy_set_header   X-Forwarded-Host  $http_host;
         proxy_set_header   Upgrade           $http_upgrade;
         proxy_set_header   Connection        "upgrade";
         proxy_read_timeout 60s;
@@ -193,7 +197,10 @@ def _panel_proxy_location(app_port: int) -> str:
 
 
 def _panel_acme_location() -> str:
-    return f"""    location /.well-known/acme-challenge/ {{
+    # root + URI path → /var/www/acme-challenge/.well-known/acme-challenge/<token>
+    # matches certbot --webroot-path=/var/www/acme-challenge
+    return f"""    location ^~ /.well-known/acme-challenge/ {{
+        default_type "text/plain";
         root {config.NGINX_WEBROOT}/acme-challenge;
         try_files $uri =404;
     }}"""

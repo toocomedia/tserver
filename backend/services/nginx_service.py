@@ -39,10 +39,29 @@ def _acme_root() -> str:
 # WEBROOT MANAGEMENT
 # ---------------------------------------------------------------
 def ensure_acme_root() -> None:
-    """Create the shared acme-challenge webroot if not present."""
+    """Create the shared acme-challenge webroot if not present (best-effort sync)."""
     path = Path(_acme_root())
-    path.mkdir(parents=True, exist_ok=True)
+    try:
+        path.mkdir(parents=True, exist_ok=True)
+        (path / ".well-known" / "acme-challenge").mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        logger.warning("ensure_acme_root mkdir failed (will try privileged later): %s", exc)
     logger.info("Acme root ensured: %s", path)
+
+
+async def ensure_acme_root_privileged() -> str:
+    """
+    Ensure ACME webroot exists with permissions certbot + nginx can use.
+    Returns the webroot path used with certbot --webroot-path.
+    """
+    root = _acme_root()
+    challenge = str(Path(root) / ".well-known" / "acme-challenge")
+    r = await shell.run(["mkdir", "-p", challenge], timeout=15)
+    if not r.success:
+        logger.warning("privileged acme mkdir: %s", r.stderr)
+    # World-readable so nginx worker can serve challenge files
+    await shell.run(["chmod", "-R", "a+rX", root], timeout=10)
+    return root
 
 
 def create_webroot(domain: str, html_content: str | None = None) -> str:
