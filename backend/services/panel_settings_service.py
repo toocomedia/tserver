@@ -283,9 +283,61 @@ async def get_status() -> dict:
     }
 
 
+async def _delete_cert_files(cert_name: str) -> str:
+    """Delete Let's Encrypt cert by name. Returns note string."""
+    cert_name = (cert_name or "").strip().lower().rstrip(".")
+    if not cert_name:
+        return "No cert name to delete."
+    r = await shell.run(
+        ["certbot", "delete", "--cert-name", cert_name, "--non-interactive"],
+        timeout=60,
+    )
+    if r.success:
+        return f"Deleted SSL certificate files for {cert_name}."
+    # Already gone is fine
+    err = (r.stderr or r.stdout or "").lower()
+    if "no such" in err or "not found" in err or "could not choose" in err:
+        return f"No certificate files found for {cert_name} (already removed)."
+    return f"Could not delete cert {cert_name}: {(r.stderr or r.stdout or '')[-200:]}"
+
+
+async def remove_panel_ssl() -> dict:
+    """
+    Turn off HTTPS for current panel hostname and delete cert files.
+    Does not change the hostname itself.
+    """
+    domain = _normalize_domain(config.PANEL_DOMAIN)
+    if not domain:
+        raise HTTPException(status_code=400, detail="No panel hostname — nothing to remove.")
+
+    notes: list[str] = []
+    # HTTP-only nginx first so reload never needs the cert files
+    try:
+        await apply_panel_nginx(
+            domain,
+            bool(config.PANEL_ALLOW_IP),
+            int(config.PANEL_IP_PORT or 80),
+            force_ssl=False,
+        )
+        notes.append("Panel nginx set to HTTP only.")
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to disable HTTPS: {exc}") from exc
+
+    notes.append(await _delete_cert_files(domain))
+
+    status = await get_status()
+    status["ok"] = True
+    status["notes"] = notes
+    status["message"] = f"SSL removed for {domain}."
+    return status
+
+
 async def save_settings(payload: dict) -> dict:
     managed = await _managed_domains()
     domain, mode, parent, label = _resolve_hostname(payload, managed)
+
+    old_domain = _normalize_domain(config.PANEL_DOMAIN)
+    remove_ssl_on_change = bool(payload.get("remove_ssl_on_change", False))
 
     allow_ip = bool(payload.get("allow_ip", True))
     try:
@@ -322,6 +374,28 @@ async def save_settings(payload: dict) -> dict:
     days = max(1, min(days, 365))
 
     notes: list[str] = []
+    hostname_changed = old_domain != domain
+
+    # Changing hostname does NOT auto-delete SSL. Optional cleanup:
+    if hostname_changed and old_domain and remove_ssl_on_change:
+        # Drop HTTPS before deleting files
+        try:
+            await apply_panel_nginx(
+                old_domain if not domain else domain,
+                allow_ip,
+                ip_port,
+                force_ssl=False,
+            )
+        except Exception:
+            pass
+        notes.append(await _delete_cert_files(old_domain))
+    elif hostname_changed and old_domain:
+        notes.append(
+            f"Hostname changed ({old_domain} → {domain or 'IP only'}). "
+            f"SSL for the old name was kept on disk. "
+            f"Enable “Remove SSL when changing URL” to delete it, or use Remove SSL."
+        )
+
     if mode == "subdomain" and parent and label:
         if not await dns_service.zone_exists(parent):
             raise HTTPException(status_code=400, detail=f"No DNS zone for {parent}")
@@ -345,8 +419,9 @@ async def save_settings(payload: dict) -> dict:
     await env_file.set_env_values(env)
     _apply_runtime(env)
 
+    # New hostname starts HTTP-only (SSL not auto-moved to new name)
     try:
-        await apply_panel_nginx(domain, allow_ip, ip_port)
+        await apply_panel_nginx(domain, allow_ip, ip_port, force_ssl=False)
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Nginx apply failed: {exc}") from exc
 

@@ -363,6 +363,17 @@
   font-weight: 700;
 }
 
+.settings-divider {
+  border: none;
+  border-top: 1px solid var(--color-line);
+  margin: var(--space-lg) 0;
+}
+.settings-subhead {
+  font-size: var(--font-body);
+  font-weight: 800;
+  margin: 0 0 var(--space-sm);
+}
+
 /* Checkbox */
 .form-check {
   display: flex;

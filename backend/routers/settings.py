@@ -24,6 +24,8 @@ class PanelSettingsIn(BaseModel):
     panel_domain: str = ""
     allow_ip: bool = True
     ip_port: int = Field(default=80, ge=1, le=65535)
+    # When hostname changes: also delete old Let's Encrypt cert files
+    remove_ssl_on_change: bool = False
     session_https_only: bool = False
     security_headers: bool = True
     hsts_enabled: bool = False
@@ -93,3 +95,9 @@ async def api_ssl_cert():
 async def api_ssl_apply():
     """SSL step 3 — enable HTTPS on panel vhost."""
     return await panel_settings_service.ssl_apply_https()
+
+
+@router.post("/api/settings/panel/ssl/remove")
+async def api_ssl_remove():
+    """Disable HTTPS and delete panel certificate files."""
+    return await panel_settings_service.remove_panel_ssl()

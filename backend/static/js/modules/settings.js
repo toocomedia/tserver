@@ -65,6 +65,7 @@
       panel_domain: computedHostname(),
       allow_ip: !!$("allow_ip")?.checked,
       ip_port: parseInt($("ip_port")?.value || "80", 10),
+      remove_ssl_on_change: !!$("remove_ssl_on_change")?.checked,
       session_https_only: !!$("session_https_only")?.checked,
       security_headers: !!$("security_headers")?.checked,
       hsts_enabled: !!$("hsts_enabled")?.checked,
@@ -196,12 +197,11 @@
         : "—";
     }
     const btn = $("btn-issue-ssl");
-    if (btn && !btn.disabled) {
-      // only update label when not mid-issue
-      if (btn.textContent !== "Issuing…") {
-        btn.textContent = active ? "Renew SSL" : "Issue SSL";
-      }
+    if (btn && btn.textContent !== "Issuing…") {
+      btn.textContent = active ? "Renew SSL" : "Issue SSL";
     }
+    const rm = $("btn-remove-ssl");
+    if (rm) rm.hidden = !active;
   }
 
   function sslButtonIdleLabel() {
@@ -317,6 +317,27 @@
     }
   }
 
+  async function removeSsl(btn) {
+    confirmAction(
+      "Remove panel SSL?\n\nThis turns off HTTPS and deletes the certificate files for the current panel hostname.",
+      async () => {
+        if (btn) btn.disabled = true;
+        try {
+          const data = await panel.post(path("api_settings") + "/panel/ssl/remove", {});
+          applyStatus(data);
+          showNotes(data.notes || [data.message || "SSL removed."], "success");
+          toast("SSL removed", "success");
+        } catch (err) {
+          showNotes([err.message || "Remove failed"], "danger");
+          toast(err.message || "Remove failed", "danger");
+        } finally {
+          if (btn) btn.disabled = false;
+        }
+      },
+      { title: "Remove panel SSL", okLabel: "Remove SSL", danger: true }
+    );
+  }
+
   async function refresh() {
     try {
       applyStatus(await panel.get(path("api_settings")));
@@ -339,6 +360,7 @@
     $("btn-save-ip")?.addEventListener("click", (e) => save(e.currentTarget));
     $("btn-save-security")?.addEventListener("click", (e) => save(e.currentTarget));
     $("btn-issue-ssl")?.addEventListener("click", (e) => issueSsl(e.currentTarget));
+    $("btn-remove-ssl")?.addEventListener("click", (e) => removeSsl(e.currentTarget));
     $("btn-refresh-settings")?.addEventListener("click", refresh);
 
     syncUrlModeUi();

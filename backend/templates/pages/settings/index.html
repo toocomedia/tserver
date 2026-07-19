@@ -55,12 +55,14 @@
   </div>
 </div>
 
-<!-- 1. Hostname -->
+<!-- ONE section: Panel URL + SSL -->
 <div class="panel mb-xl">
-  <div class="panel__header"><h3>1. Panel hostname</h3></div>
+  <div class="panel__header"><h3>Panel URL</h3></div>
   <div class="panel__body">
+
     <p class="form-hint mb-md">
-      IP access can use a custom port (e.g. 8080). Hostname uses ports 80/443 for SSL.
+      Hostname for the panel (SSL). IP can stay on a custom port (e.g. 8080).
+      Changing the URL does <strong>not</strong> delete SSL files unless you check the option below.
     </p>
 
     <div class="settings-choice-grid mb-lg">
@@ -75,13 +77,13 @@
           {% if s.url_mode == 'subdomain' %}checked{% endif %}
           {% if not s.managed_domains %}disabled{% endif %}>
         <span class="settings-choice__title">Subdomain here</span>
-        <span class="settings-choice__desc">e.g. panel.yourdomain.com — DNS auto</span>
+        <span class="settings-choice__desc">e.g. panel.yourdomain.com</span>
       </label>
       <label class="settings-choice {% if s.url_mode == 'custom' %}settings-choice--active{% endif %}">
         <input type="radio" name="url_mode" id="url_mode_custom" value="custom"
           {% if s.url_mode == 'custom' %}checked{% endif %}>
         <span class="settings-choice__title">Custom name</span>
-        <span class="settings-choice__desc">You create the A record</span>
+        <span class="settings-choice__desc">You set the A record</span>
       </label>
     </div>
 
@@ -117,29 +119,30 @@
       <span class="info-row__value" id="result-hostname">{{ s.panel_domain or '(IP only)' }}</span>
     </div>
 
-    <div class="form-actions">
-      <button type="button" class="btn btn--primary" id="btn-save-panel">Save hostname</button>
-    </div>
-  </div>
-</div>
+    <label class="form-check mb-md" id="remove-ssl-on-change-wrap">
+      <input type="checkbox" id="remove_ssl_on_change">
+      <span>When changing URL, also <strong>delete SSL</strong> for the old hostname</span>
+    </label>
 
-<!-- 2. SSL with live progress -->
-<div class="panel mb-xl">
-  <div class="panel__header"><h3>2. Panel SSL</h3></div>
-  <div class="panel__body">
+    <div class="form-actions mb-lg">
+      <button type="button" class="btn btn--primary" id="btn-save-panel">Save panel URL</button>
+    </div>
+
+    <hr class="settings-divider">
+
+    <h3 class="settings-subhead">SSL for this URL</h3>
     <p class="form-hint mb-md" id="ssl-section-hint">
       {% if s.ssl_active %}
-        Certificate is active. Use <strong>Renew SSL</strong> before it expires.
+        Certificate is active. Renew before it expires, or remove it.
       {% else %}
-        Issue Let’s Encrypt for the hostname above. Keep using IP:port for admin access.
+        After the hostname is saved, issue Let’s Encrypt SSL here.
       {% endif %}
     </p>
 
-    <!-- Shown when cert already exists -->
     <div id="ssl-active-box" class="settings-mode-box mb-md" {% if not s.ssl_active %}hidden{% endif %}>
       <div class="info-row">
         <span class="info-row__label">Status</span>
-        <span class="info-row__value"><span class="badge badge--ok" id="ssl-active-badge">Active</span></span>
+        <span class="info-row__value"><span class="badge badge--ok">Active</span></span>
       </div>
       <div class="info-row">
         <span class="info-row__label">Hostname</span>
@@ -171,13 +174,16 @@
       <button type="button" class="btn btn--primary" id="btn-issue-ssl" {% if not s.panel_domain %}disabled{% endif %}>
         {% if s.ssl_active %}Renew SSL{% else %}Issue SSL{% endif %}
       </button>
+      <button type="button" class="btn btn--danger" id="btn-remove-ssl" {% if not s.ssl_active %}hidden{% endif %}>
+        Remove SSL
+      </button>
     </div>
   </div>
 </div>
 
-<!-- 3. IP -->
+<!-- IP -->
 <div class="panel mb-xl">
-  <div class="panel__header"><h3>3. IP access</h3></div>
+  <div class="panel__header"><h3>IP access</h3></div>
   <div class="panel__body">
     <label class="form-check mb-md">
       <input type="checkbox" id="allow_ip" {% if s.allow_ip %}checked{% endif %}>
@@ -195,9 +201,9 @@
   </div>
 </div>
 
-<!-- 4. Security -->
+<!-- Security -->
 <div class="panel mb-xl">
-  <div class="panel__header"><h3>4. Security</h3></div>
+  <div class="panel__header"><h3>Security</h3></div>
   <div class="panel__body">
     <label class="form-check mb-md">
       <input type="checkbox" id="session_https_only" {% if s.session_https_only %}checked{% endif %}>
