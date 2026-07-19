@@ -7,18 +7,17 @@ import logging
 from urllib.parse import quote
 from fastapi import APIRouter, Depends, Request, Form
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
-from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from database import get_db
 from models.domain import Domain
 from services import dns_service
+from templating import templates
 import config
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/dns", tags=["dns"])
-templates = Jinja2Templates(directory="templates")
 
 RECORD_TYPES = ["A", "AAAA", "CNAME", "MX", "TXT", "NS", "SRV", "CAA"]
 

@@ -11,11 +11,13 @@
 
 <div id="settings-notes" class="mb-lg" hidden></div>
 
-<!-- ========== CURRENT ACCESS (status) ========== -->
-<div class="panel mb-xl" id="panel-status-section">
-  <div class="panel__header">
-    <h3>Current panel access</h3>
-  </div>
+{% if s.load_error %}
+<div class="alert alert--danger mb-lg">Could not load full status: {{ s.load_error }}</div>
+{% endif %}
+
+<!-- Status -->
+<div class="panel mb-xl">
+  <div class="panel__header"><h3>Current access</h3></div>
   <div class="panel__body">
     <div class="info-row">
       <span class="info-row__label">Server IP</span>
@@ -29,116 +31,67 @@
       <span class="info-row__label">DNS</span>
       <span class="info-row__value" id="stat-dns">
         {% if s.panel_domain %}
-          {% if s.dns_ok is sameas true %}
-            <span class="badge badge--ok">points here</span>
-          {% elif s.dns_ok is sameas false %}
-            <span class="badge badge--error">not pointing here</span>
-          {% else %}
-            <span class="badge badge--neutral">unknown</span>
-          {% endif %}
-        {% else %}
-          <span class="text-muted">—</span>
-        {% endif %}
+          {% if s.dns_ok is sameas true %}<span class="badge badge--ok">OK</span>
+          {% elif s.dns_ok is sameas false %}<span class="badge badge--error">wrong IP</span>
+          {% else %}<span class="badge badge--neutral">?</span>{% endif %}
+        {% else %}<span class="text-muted">—</span>{% endif %}
       </span>
     </div>
     <div class="info-row">
       <span class="info-row__label">SSL</span>
       <span class="info-row__value" id="stat-ssl">
-        {% if s.ssl_active %}
-          <span class="badge badge--ok">HTTPS active</span>
-        {% else %}
-          <span class="badge badge--neutral">HTTP only</span>
-        {% endif %}
+        {% if s.ssl_active %}<span class="badge badge--ok">HTTPS</span>
+        {% else %}<span class="badge badge--neutral">off</span>{% endif %}
       </span>
     </div>
     <div class="info-row">
       <span class="info-row__label">Open</span>
       <span class="info-row__value text-small" id="stat-urls">
-        {% if s.urls.ip_http %}
-          <div><strong>By IP</strong> (port {{ s.ip_port }}):
-            <a href="{{ s.urls.ip_http }}" target="_blank" rel="noopener">{{ s.urls.ip_http }}</a>
-          </div>
-        {% endif %}
-        {% if s.urls.domain_http %}
-          <div style="margin-top:4px;"><strong>By name</strong> (port 80):
-            <a href="{{ s.urls.domain_http }}" target="_blank" rel="noopener">{{ s.urls.domain_http }}</a>
-          </div>
-        {% endif %}
-        {% if s.urls.domain_https %}
-          <div style="margin-top:4px;"><strong>HTTPS</strong> (port 443):
-            <a href="{{ s.urls.domain_https }}" target="_blank" rel="noopener">{{ s.urls.domain_https }}</a>
-          </div>
-        {% endif %}
+        {% if s.urls.ip_http %}<div>IP: <a href="{{ s.urls.ip_http }}" target="_blank" rel="noopener">{{ s.urls.ip_http }}</a></div>{% endif %}
+        {% if s.urls.domain_http %}<div>HTTP: <a href="{{ s.urls.domain_http }}" target="_blank" rel="noopener">{{ s.urls.domain_http }}</a></div>{% endif %}
+        {% if s.urls.domain_https %}<div>HTTPS: <a href="{{ s.urls.domain_https }}" target="_blank" rel="noopener">{{ s.urls.domain_https }}</a></div>{% endif %}
       </span>
     </div>
-    <p class="form-hint" style="margin-top:var(--space-sm);">
-      Custom IP port (e.g. 8080) only affects the <strong>IP</strong> address.
-      A panel hostname always uses normal web ports <code>80</code> / <code>443</code>.
-      Sidebar links stay on whatever host:port you used to open the panel (relative URLs).
-    </p>
   </div>
 </div>
 
-<!-- ========== STEP 1: PANEL HOSTNAME ========== -->
-<div class="panel mb-xl" id="panel-url-section">
-  <div class="panel__header">
-    <h3>1. Panel hostname</h3>
-  </div>
+<!-- 1. Hostname -->
+<div class="panel mb-xl">
+  <div class="panel__header"><h3>1. Panel hostname</h3></div>
   <div class="panel__body">
     <p class="form-hint mb-md">
-      Choose how you want to open the control panel in the browser.
-      Hostname is required for free Let’s Encrypt SSL.
+      IP access can use a custom port (e.g. 8080). Hostname uses ports 80/443 for SSL.
     </p>
 
-    <div class="settings-choice-grid mb-lg" id="url-mode-choices">
-      <label class="settings-choice {% if s.url_mode == 'none' or not s.panel_domain %}settings-choice--active{% endif %}" id="choice-none">
+    <div class="settings-choice-grid mb-lg">
+      <label class="settings-choice {% if s.url_mode == 'none' or not s.panel_domain %}settings-choice--active{% endif %}">
         <input type="radio" name="url_mode" id="url_mode_none" value="none"
           {% if s.url_mode == 'none' or not s.panel_domain %}checked{% endif %}>
         <span class="settings-choice__title">IP only</span>
-        <span class="settings-choice__desc">Open via <code>{{ s.server_ip }}</code>. No domain, no SSL for panel.</span>
+        <span class="settings-choice__desc">No domain name</span>
       </label>
-
-      <label class="settings-choice {% if s.url_mode == 'subdomain' %}settings-choice--active{% endif %}" id="choice-subdomain">
+      <label class="settings-choice {% if s.url_mode == 'subdomain' %}settings-choice--active{% endif %}">
         <input type="radio" name="url_mode" id="url_mode_subdomain" value="subdomain"
           {% if s.url_mode == 'subdomain' %}checked{% endif %}
           {% if not s.managed_domains %}disabled{% endif %}>
-        <span class="settings-choice__title">Subdomain on this server</span>
-        <span class="settings-choice__desc">
-          e.g. <code>panel.yourdomain.com</code> — DNS zone must already be in Domains.
-          A record is created automatically.
-        </span>
-        {% if not s.managed_domains %}
-        <span class="settings-choice__warn">Add a domain under Domains first.</span>
-        {% endif %}
+        <span class="settings-choice__title">Subdomain here</span>
+        <span class="settings-choice__desc">e.g. panel.yourdomain.com — DNS auto</span>
       </label>
-
-      <label class="settings-choice {% if s.url_mode == 'custom' %}settings-choice--active{% endif %}" id="choice-custom">
+      <label class="settings-choice {% if s.url_mode == 'custom' %}settings-choice--active{% endif %}">
         <input type="radio" name="url_mode" id="url_mode_custom" value="custom"
           {% if s.url_mode == 'custom' %}checked{% endif %}>
-        <span class="settings-choice__title">Custom hostname</span>
-        <span class="settings-choice__desc">
-          Any FQDN (DNS at Cloudflare, registrar, etc.). You create the A record yourself.
-        </span>
+        <span class="settings-choice__title">Custom name</span>
+        <span class="settings-choice__desc">You create the A record</span>
       </label>
     </div>
 
-    <!-- Subdomain fields -->
     <div id="url-subdomain-fields" class="settings-mode-box mb-md" hidden>
-      <p class="form-label mb-sm">Build hostname</p>
       <div class="settings-subdomain-row">
-        <input
-          class="form-input"
-          type="text"
-          id="subdomain_label"
-          value="{{ s.subdomain_label or 'panel' }}"
-          placeholder="panel"
-          autocomplete="off"
-          spellcheck="false"
-          aria-label="Subdomain label"
-        >
+        <input class="form-input" type="text" id="subdomain_label"
+               value="{{ s.subdomain_label or 'panel' }}" placeholder="panel" style="max-width:140px;">
         <span class="settings-subdomain-dot">.</span>
         <div class="form-select-wrap" style="flex:1;">
-          <select class="form-select" id="parent_domain" name="parent_domain" aria-label="Parent domain">
+          <select class="form-select" id="parent_domain">
             <option value="">Select domain…</option>
             {% for d in s.managed_domains %}
             <option value="{{ d }}" {% if s.parent_domain == d %}selected{% endif %}>{{ d }}</option>
@@ -146,28 +99,16 @@
           </select>
         </div>
       </div>
-      <p class="form-hint" style="margin-top:var(--space-sm);">
-        Full name: <strong id="subdomain-preview">panel.example.com</strong>
-        · A record → <code>{{ s.server_ip }}</code> (automatic on Save)
-      </p>
+      <p class="form-hint" style="margin-top:8px;">Preview: <strong id="subdomain-preview">—</strong></p>
     </div>
 
-    <!-- Custom fields -->
     <div id="url-custom-fields" class="settings-mode-box mb-md" hidden>
-      <label class="form-label" for="custom_domain">Full hostname</label>
-      <input
-        class="form-input"
-        type="text"
-        id="custom_domain"
-        value="{% if s.url_mode == 'custom' %}{{ s.panel_domain or '' }}{% endif %}"
-        placeholder="panel.example.com"
-        autocomplete="off"
-        spellcheck="false"
-      >
-      <p class="form-hint" style="margin-top:var(--space-sm);">
-        At your DNS provider create:
-        <code id="custom-dns-hint">A  hostname  →  {{ s.server_ip }}</code>
-        then Save and wait for DNS before SSL.
+      <label class="form-label" for="custom_domain">Hostname</label>
+      <input class="form-input" type="text" id="custom_domain"
+             value="{% if s.url_mode == 'custom' %}{{ s.panel_domain or '' }}{% endif %}"
+             placeholder="panel.example.com">
+      <p class="form-hint" style="margin-top:8px;">
+        A record → <code id="custom-dns-hint">{{ s.server_ip }}</code>
       </p>
     </div>
 
@@ -182,127 +123,71 @@
   </div>
 </div>
 
-<!-- ========== STEP 2: SSL ========== -->
-<div class="panel mb-xl" id="panel-ssl-section">
-  <div class="panel__header">
-    <h3>2. Panel SSL (HTTPS)</h3>
-  </div>
+<!-- 2. SSL with live progress -->
+<div class="panel mb-xl">
+  <div class="panel__header"><h3>2. Panel SSL</h3></div>
   <div class="panel__body">
     <p class="form-hint mb-md">
-      <strong>Two different doors (this is the panel-only rule):</strong>
+      Issues Let’s Encrypt for the hostname above. Keep using IP:port for admin access.
     </p>
-    <ul class="form-hint mb-md" style="margin:0 0 var(--space-md) 1.2em; line-height:1.5;">
-      <li>
-        <strong>IP + custom port</strong> (e.g. <code>http://IP:8080/</code>) —
-        panel login for you. Port <strong>80 by IP</strong> stays free for normal websites
-        (default HTML / domains). That is OK.
-      </li>
-      <li>
-        <strong>Panel hostname</strong> (e.g. <code>panel.example.com</code>) —
-        must show the <strong>panel</strong> on port <strong>80</strong> (not Domain
-        “Site Coming Soon”). Let’s Encrypt needs that for SSL. After SSL you use
-        <code>https://panel…</code> on 443.
-      </li>
-    </ul>
-    <p class="form-hint mb-md">
-      If <code>http://panel…/</code> shows a default HTML page, SSL will fail —
-      delete that name under Domains if you created it as a site, then Save hostname again.
-    </p>
+
+    <div id="ssl-progress" class="ssl-progress mb-md" hidden>
+      <div class="ssl-step" data-step="1"><span class="ssl-step__icon">○</span> Save hostname</div>
+      <div class="ssl-step" data-step="2"><span class="ssl-step__icon">○</span> Prepare nginx</div>
+      <div class="ssl-step" data-step="3"><span class="ssl-step__icon">○</span> Request certificate <span class="text-muted">(1–2 min)</span></div>
+      <div class="ssl-step" data-step="4"><span class="ssl-step__icon">○</span> Enable HTTPS</div>
+      <p class="form-hint" id="ssl-progress-msg" style="margin-top:12px;"></p>
+    </div>
+
     <div class="form-actions">
       <button type="button" class="btn btn--primary" id="btn-issue-ssl" {% if not s.panel_domain %}disabled{% endif %}>
-        Issue / renew panel SSL
+        Issue / renew SSL
       </button>
     </div>
   </div>
 </div>
 
-<!-- ========== STEP 3: IP ACCESS ========== -->
-<div class="panel mb-xl" id="panel-ip-section">
-  <div class="panel__header">
-    <h3>3. Access by IP (custom port)</h3>
-  </div>
+<!-- 3. IP -->
+<div class="panel mb-xl">
+  <div class="panel__header"><h3>3. IP access</h3></div>
   <div class="panel__body">
-    <p class="form-hint mb-md">
-      For security, use a non-standard port (e.g. 8080) so the panel is not on
-      <code>http://IP/</code> port 80. This is independent of the hostname SSL URL.
-    </p>
-
     <label class="form-check mb-md">
-      <input type="checkbox" id="allow_ip" name="allow_ip" {% if s.allow_ip %}checked{% endif %}>
-      <span>Allow panel access via server IP</span>
+      <input type="checkbox" id="allow_ip" {% if s.allow_ip %}checked{% endif %}>
+      <span>Allow access by server IP</span>
     </label>
-
     <div class="form-group mb-md" id="ip-port-group">
-      <label class="form-label" for="ip_port">Public port for IP access</label>
-      <input
-        class="form-input"
-        type="number"
-        id="ip_port"
-        name="ip_port"
-        min="1"
-        max="65535"
-        value="{{ s.ip_port or 80 }}"
-        style="max-width:160px;"
-      >
-      <p class="form-hint">
-        Default <code>80</code> → <code>http://{{ s.server_ip }}/</code>.
-        Example <code>2087</code> → <code>http://{{ s.server_ip }}:2087/</code>.
-        (Internal app stays on localhost:{{ s.app_port }}.)
-      </p>
+      <label class="form-label" for="ip_port">Public port</label>
+      <input class="form-input" type="number" id="ip_port" min="1" max="65535"
+             value="{{ s.ip_port or 80 }}" style="max-width:140px;">
+      <p class="form-hint">e.g. 8080 → <code>http://{{ s.server_ip }}:8080/</code></p>
     </div>
-
-    <p class="form-hint mb-md">
-      Tip: disable IP access only after hostname + SSL work. Keep SSH for recovery.
-    </p>
-
     <div class="form-actions">
       <button type="button" class="btn btn--primary" id="btn-save-ip">Save IP access</button>
     </div>
   </div>
 </div>
 
-<!-- ========== STEP 4: SECURITY ========== -->
-<div class="panel mb-xl" id="panel-security-section">
-  <div class="panel__header">
-    <h3>4. Browser security</h3>
-  </div>
+<!-- 4. Security -->
+<div class="panel mb-xl">
+  <div class="panel__header"><h3>4. Security</h3></div>
   <div class="panel__body">
     <label class="form-check mb-md">
       <input type="checkbox" id="session_https_only" {% if s.session_https_only %}checked{% endif %}>
-      <span>Secure cookies (HTTPS only)</span>
+      <span>Secure cookies (HTTPS only — breaks IP HTTP login)</span>
     </label>
-    <p class="form-hint mb-md" style="margin-left:24px;">
-      Turn on only when you open the panel over HTTPS. Breaks login on plain HTTP (IP).
-    </p>
-
     <label class="form-check mb-md">
       <input type="checkbox" id="security_headers" {% if s.security_headers %}checked{% endif %}>
-      <span>Security headers (frame deny, CSP, nosniff)</span>
+      <span>Security headers</span>
     </label>
-
     <label class="form-check mb-md">
       <input type="checkbox" id="hsts_enabled" {% if s.hsts_enabled %}checked{% endif %}>
-      <span>HSTS (HTTPS hostname only)</span>
+      <span>HSTS</span>
     </label>
-
-    <div class="form-group" style="margin-top:var(--space-md);">
-      <label class="form-label" for="session_max_age_days">Session length (days)</label>
-      <input
-        class="form-input"
-        type="number"
-        id="session_max_age_days"
-        min="1"
-        max="365"
-        value="{{ s.session_max_age_days or 7 }}"
-        style="max-width:160px;"
-      >
+    <div class="form-group mb-md">
+      <label class="form-label" for="session_max_age_days">Session days</label>
+      <input class="form-input" type="number" id="session_max_age_days" min="1" max="365"
+             value="{{ s.session_max_age_days or 7 }}" style="max-width:140px;">
     </div>
-
-    <p class="form-hint mb-md" style="margin-top:var(--space-md);">
-      After changing cookies / session options run:
-      <code>sudo systemctl restart srv-panel</code>
-    </p>
-
     <div class="form-actions">
       <button type="button" class="btn btn--primary" id="btn-save-security">Save security</button>
     </div>

@@ -6,15 +6,14 @@ from urllib.parse import unquote
 
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
-from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
 from services import auth_service
+from templating import templates
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["auth"])
-templates = Jinja2Templates(directory="templates")
 
 
 def _safe_next(raw: str | None) -> str:

@@ -5,15 +5,14 @@ All paths under /admin/errors. Calls error_service only.
 import logging
 from fastapi import APIRouter, Depends, Request, Query
 from fastapi.responses import HTMLResponse, RedirectResponse, PlainTextResponse
-from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
 from services import error_service
+from templating import templates
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/admin/errors", tags=["admin-errors"])
-templates = Jinja2Templates(directory="templates")
 
 SOURCES = ["domain", "dns", "ssl", "proxy", "nginx", "powerdns", "system", "http"]
 

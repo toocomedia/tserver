@@ -5,7 +5,6 @@ Routes call services only — no direct DB or nginx calls here.
 import logging
 from fastapi import APIRouter, Depends, Request, Form
 from fastapi.responses import HTMLResponse, RedirectResponse
-from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
@@ -13,11 +12,11 @@ from services import domain_service, nginx_service
 from models.ssl_cert import SslCert
 from models.proxy import ReverseProxy
 from sqlalchemy import select
+from templating import templates
 import config
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/domains", tags=["domains"])
-templates = Jinja2Templates(directory="templates")
 
 
 # ---------------------------------------------------------------

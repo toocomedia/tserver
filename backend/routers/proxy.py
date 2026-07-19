@@ -5,18 +5,17 @@ Routes call proxy_service only — no direct nginx/DNS/SSL calls here.
 import logging
 from fastapi import APIRouter, Depends, Request, Form, Query
 from fastapi.responses import HTMLResponse, RedirectResponse
-from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from database import get_db
 from models.domain import Domain
 from services import proxy_service, dns_service, nginx_service
+from templating import templates
 import config
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/proxy", tags=["proxy"])
-templates = Jinja2Templates(directory="templates")
 
 
 # ---------------------------------------------------------------

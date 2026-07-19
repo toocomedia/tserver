@@ -6,24 +6,21 @@ from __future__ import annotations
 import logging
 
 from fastapi import APIRouter, Request
-from fastapi.responses import HTMLResponse
-from fastapi.templating import Jinja2Templates
+from fastapi.responses import HTMLResponse, RedirectResponse
 from pydantic import BaseModel, Field
 
 from services import panel_settings_service
+from templating import templates
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["settings"])
-templates = Jinja2Templates(directory="templates")
 
 
 class PanelSettingsIn(BaseModel):
-    # none = IP only | custom = external FQDN | subdomain = label under managed domain
     url_mode: str = "none"
     custom_domain: str = ""
     parent_domain: str = ""
     subdomain_label: str = "panel"
-    # legacy alias still accepted by service
     panel_domain: str = ""
     allow_ip: bool = True
     ip_port: int = Field(default=80, ge=1, le=65535)
@@ -33,13 +30,18 @@ class PanelSettingsIn(BaseModel):
     session_max_age_days: int = Field(default=7, ge=1, le=365)
 
 
-@router.get("/settings", response_class=HTMLResponse)
+@router.get("/settings", include_in_schema=False)
+async def settings_redirect():
+    """Normalize to trailing slash like other section indexes."""
+    return RedirectResponse("/settings/", status_code=307)
+
+
+@router.get("/settings/", response_class=HTMLResponse)
 async def settings_page(request: Request):
     try:
         status = await panel_settings_service.get_status()
     except Exception as exc:
-        logger.exception("settings get_status failed")
-        # Degraded page so Settings always opens (e.g. LE permission edge cases)
+        logger.exception("settings status failed")
         status = {
             "server_ip": "",
             "panel_domain": "",
@@ -52,28 +54,21 @@ async def settings_page(request: Request):
             "app_port": 8000,
             "ssl_active": False,
             "dns_ok": None,
-            "certbot_email": "",
             "session_https_only": False,
-            "session_max_age": 604800,
             "session_max_age_days": 7,
             "security_headers": True,
             "hsts_enabled": False,
-            "urls": {"ip_http": None, "domain_http": None, "domain_https": None},
-            "restart_hint": str(exc),
+            "urls": {},
             "load_error": str(exc),
         }
     return templates.TemplateResponse(
         "pages/settings/index.html",
-        {
-            "request": request,
-            "active_page": "settings",
-            "s": status,
-        },
+        {"request": request, "active_page": "settings", "s": status},
     )
 
 
 @router.get("/api/settings")
-async def api_get_settings(request: Request):
+async def api_get_settings():
     return await panel_settings_service.get_status()
 
 
@@ -82,6 +77,19 @@ async def api_save_panel_settings(body: PanelSettingsIn):
     return await panel_settings_service.save_settings(body.model_dump())
 
 
-@router.post("/api/settings/panel/ssl")
-async def api_issue_panel_ssl():
-    return await panel_settings_service.issue_panel_ssl()
+@router.post("/api/settings/panel/ssl/prepare")
+async def api_ssl_prepare():
+    """SSL step 1 — nginx HTTP ready."""
+    return await panel_settings_service.ssl_prepare()
+
+
+@router.post("/api/settings/panel/ssl/cert")
+async def api_ssl_cert():
+    """SSL step 2 — certbot (slow)."""
+    return await panel_settings_service.ssl_issue_cert()
+
+
+@router.post("/api/settings/panel/ssl/apply")
+async def api_ssl_apply():
+    """SSL step 3 — enable HTTPS on panel vhost."""
+    return await panel_settings_service.ssl_apply_https()

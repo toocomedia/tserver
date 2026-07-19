@@ -5,7 +5,6 @@ Routes call ssl_service only. No direct certbot or nginx calls here.
 import logging
 from fastapi import APIRouter, Depends, Request, Form, Query
 from fastapi.responses import HTMLResponse, RedirectResponse
-from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
@@ -14,10 +13,10 @@ from models.domain import Domain
 from models.ssl_cert import SslCert
 from models.proxy import ReverseProxy
 from services import ssl_service, nginx_service
+from templating import templates
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/ssl", tags=["ssl"])
-templates = Jinja2Templates(directory="templates")
 
 
 async def _build_eligible(db: AsyncSession) -> list[dict]:

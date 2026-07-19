@@ -3,6 +3,55 @@
  * All page-specific logic lives in modules/
  */
 
+/**
+ * One URL system for the panel (must match backend/templating.py PATHS).
+ * Section indexes end with /. Detail pages: path('domains', id) → /domains/3
+ */
+const PATHS = {
+  home: "/",
+  dashboard: "/",
+  login: "/login",
+  logout: "/logout",
+  domains: "/domains/",
+  domains_create: "/domains/create",
+  proxy: "/proxy/",
+  proxy_create: "/proxy/create",
+  dns: "/dns/",
+  ssl: "/ssl/",
+  ssl_issue: "/ssl/issue",
+  settings: "/settings/",
+  errors: "/admin/errors/",
+  health: "/api/health",
+  api_settings: "/api/settings",
+};
+
+function path(name, ...parts) {
+  let base = PATHS[name] || (String(name).startsWith("/") ? name : `/${name}`);
+  if (parts.length) {
+    const extra = parts
+      .filter((p) => p !== undefined && p !== null && String(p) !== "")
+      .map((p) => String(p).replace(/^\/+|\/+$/g, ""))
+      .join("/");
+    const root = base.replace(/\/+$/, "");
+    base = extra ? `${root}/${extra}` : base;
+  }
+  return base;
+}
+
+/** Public open URL — always trailing / (same as backend public_url). */
+function publicUrl(host, { https = false, port = null } = {}) {
+  const h = String(host || "").replace(/\/+$/, "");
+  if (!h) return "/";
+  const scheme = https ? "https" : "http";
+  if (port != null) {
+    const p = Number(port);
+    if (https && p === 443) return `${scheme}://${h}/`;
+    if (!https && p === 80) return `${scheme}://${h}/`;
+    return `${scheme}://${h}:${p}/`;
+  }
+  return `${scheme}://${h}/`;
+}
+
 function formatDetail(detail) {
   if (!detail) return "Request failed";
   if (typeof detail === "string") return detail;
@@ -171,15 +220,21 @@ function confirmAction(message, onConfirm, options) {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-  const path = window.location.pathname;
+  const current = window.location.pathname;
   document.querySelectorAll(".sidebar__item[data-path]").forEach((item) => {
-    const itemPath = item.getAttribute("data-path");
-    if (path === itemPath || (itemPath !== "/" && path.startsWith(itemPath))) {
+    const itemPath = item.getAttribute("data-path") || "";
+    // Normalize: /domains and /domains/ both match
+    const a = current.replace(/\/+$/, "") || "/";
+    const b = itemPath.replace(/\/+$/, "") || "/";
+    if (a === b || (b !== "/" && a.startsWith(b + "/"))) {
       item.classList.add("sidebar__item--active");
     }
   });
 });
 
+window.PATHS = PATHS;
+window.path = path;
+window.publicUrl = publicUrl;
 window.panel = panel;
 window.submitPost = submitPost;
 window.toast = toast;

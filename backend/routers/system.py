@@ -7,7 +7,6 @@ import socket
 import httpx
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
-from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from fastapi import Depends
@@ -17,11 +16,11 @@ from models.domain import Domain
 from models.ssl_cert import SslCert
 from models.proxy import ReverseProxy
 from services import error_service
+from templating import templates
 from utils.shell import run
 import config
 
 router = APIRouter()
-templates = Jinja2Templates(directory="templates")
 
 
 async def _check_nginx() -> dict:
