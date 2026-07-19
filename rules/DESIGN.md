@@ -46,12 +46,10 @@ Rules: Use sm, md, lg most often. Sidebar padding: sm horizontal, lg vertical.
 
 ---
 
-## Layout tokens
-- sidebar-width: 200px (compact)
-- page-gutter: 16px
-- content-gap: 16px
-- max-content-width: 1200px
-- grid: 12-column for complex pages; prefer two-column main (list / details) at desktop.
+## Layout
+- Sidebar: 200px (desktop), 72px (mobile/collapsed).
+- Topbar: 56px height.
+- Content: Full width of the remaining screen. No bounded boxes.
 
 ---
 
