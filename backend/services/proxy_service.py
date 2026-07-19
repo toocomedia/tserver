@@ -58,6 +58,9 @@ async def create_proxy(
     target_port: int,
     protocol: str = "http",
     enable_ssl: bool = False,
+    cache_enabled: bool = False,
+    cache_ttl_minutes: int = 10,
+    cache_auto_clear_hours: int = 0,
 ) -> ReverseProxy:
     """
     Create reverse proxy with full cascade (DNS + nginx + optional SSL).
@@ -119,6 +122,9 @@ async def create_proxy(
         protocol=protocol,
         enable_ssl=enable_ssl,
         dns_managed=True,
+        cache_enabled=cache_enabled,
+        cache_ttl_minutes=cache_ttl_minutes,
+        cache_auto_clear_hours=cache_auto_clear_hours,
     )
 
 
@@ -132,6 +138,9 @@ async def create_external_proxy(
     target_port: int,
     protocol: str = "http",
     enable_ssl: bool = False,
+    cache_enabled: bool = False,
+    cache_ttl_minutes: int = 10,
+    cache_auto_clear_hours: int = 0,
 ) -> ReverseProxy:
     """
     Create reverse proxy for an outside domain/subdomain whose DNS
@@ -190,7 +199,57 @@ async def create_external_proxy(
         protocol=protocol,
         enable_ssl=enable_ssl,
         dns_managed=False,
+        cache_enabled=cache_enabled,
+        cache_ttl_minutes=cache_ttl_minutes,
+        cache_auto_clear_hours=cache_auto_clear_hours,
     )
+
+
+# ---------------------------------------------------------------
+# UPDATE CACHE SETTINGS
+# ---------------------------------------------------------------
+async def update_cache_settings(
+    db: AsyncSession,
+    proxy_id: int,
+    cache_enabled: bool,
+    cache_ttl_minutes: int,
+    cache_auto_clear_hours: int,
+) -> ReverseProxy:
+    """Update cache fields and regenerate the nginx config for this proxy."""
+    proxy = await get_by_id(db, proxy_id)
+
+    proxy.cache_enabled = cache_enabled
+    proxy.cache_ttl_minutes = max(1, cache_ttl_minutes)
+    proxy.cache_auto_clear_hours = max(0, cache_auto_clear_hours)
+
+    # Regenerate nginx config to apply/remove cache directives
+    try:
+        if proxy.ssl_enabled and proxy.nginx_config_path:
+            from models.ssl_cert import SslCert
+            from sqlalchemy import select as sa_select
+            cert = await db.scalar(
+                sa_select(SslCert).where(SslCert.id == proxy.ssl_cert_id)
+            ) if proxy.ssl_cert_id else None
+            if cert:
+                await nginx_service.update_proxy_ssl(
+                    proxy.full_domain, proxy.target_ip, proxy.target_port,
+                    proxy.protocol, cert.cert_path, cert.cert_path.replace("fullchain", "privkey"),
+                    cache_enabled=cache_enabled,
+                    cache_ttl_minutes=proxy.cache_ttl_minutes,
+                )
+        else:
+            await nginx_service.create_proxy(
+                proxy.full_domain, proxy.target_ip, proxy.target_port, proxy.protocol,
+                cache_enabled=cache_enabled,
+                cache_ttl_minutes=proxy.cache_ttl_minutes,
+            )
+        await nginx_service.reload()
+    except Exception as exc:
+        logger.warning("Cache settings nginx update failed for %s: %s", proxy.full_domain, exc)
+
+    await db.flush()
+    return proxy
+
 
 
 # ---------------------------------------------------------------

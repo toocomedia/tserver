@@ -4,13 +4,13 @@ Routes call proxy_service only — no direct nginx/DNS/SSL calls here.
 """
 import logging
 from fastapi import APIRouter, Depends, Request, Form, Query
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from database import get_db
 from models.domain import Domain
-from services import proxy_service, dns_service, nginx_service
+from services import proxy_service, dns_service, nginx_service, cache_service
 from templating import templates
 import config
 
@@ -61,6 +61,9 @@ async def proxy_index(request: Request, db: AsyncSession = Depends(get_db)):
             "dns_ok": dns_ok,
             "dns_status": dns_status,
             "dns_managed": dns_managed,
+            "cache_enabled": getattr(p, "cache_enabled", False),
+            "cache_size_mb": cache_service.get_cache_size_mb(p.full_domain),
+            "last_cache_cleared": getattr(p, "last_cache_cleared", None),
         })
 
     return templates.TemplateResponse("pages/proxy/index.html", {
@@ -112,6 +115,9 @@ async def proxy_create_submit(
     target_port: int = Form(...),
     protocol: str = Form("http"),
     enable_ssl: bool = Form(False),
+    cache_enabled: bool = Form(False),
+    cache_ttl_minutes: int = Form(10),
+    cache_auto_clear_hours: int = Form(0),
     db: AsyncSession = Depends(get_db),
 ):
     """Run proxy cascade for managed or external mode."""
@@ -129,6 +135,9 @@ async def proxy_create_submit(
         "target_port": target_port,
         "protocol": protocol,
         "enable_ssl": enable_ssl,
+        "cache_enabled": cache_enabled,
+        "cache_ttl_minutes": cache_ttl_minutes,
+        "cache_auto_clear_hours": cache_auto_clear_hours,
     }
 
     try:
@@ -140,6 +149,9 @@ async def proxy_create_submit(
                 target_port=target_port,
                 protocol=protocol,
                 enable_ssl=enable_ssl,
+                cache_enabled=cache_enabled,
+                cache_ttl_minutes=cache_ttl_minutes,
+                cache_auto_clear_hours=cache_auto_clear_hours,
             )
         else:
             if resolved_domain_id is None:
@@ -152,6 +164,9 @@ async def proxy_create_submit(
                 target_port=target_port,
                 protocol=protocol,
                 enable_ssl=enable_ssl,
+                cache_enabled=cache_enabled,
+                cache_ttl_minutes=cache_ttl_minutes,
+                cache_auto_clear_hours=cache_auto_clear_hours,
             )
         return RedirectResponse(
             f"/proxy/?created={proxy.full_domain}",
@@ -184,3 +199,53 @@ async def proxy_delete(proxy_id: int, db: AsyncSession = Depends(get_db)):
     except Exception as exc:
         error = str(exc.detail) if hasattr(exc, "detail") else str(exc)
         return RedirectResponse(f"/proxy/?error={error}", status_code=303)
+
+
+# ---------------------------------------------------------------
+# CACHE — PURGE
+# ---------------------------------------------------------------
+@router.post("/{proxy_id}/cache/purge")
+async def proxy_cache_purge(
+    proxy_id: int,
+    db: AsyncSession = Depends(get_db),
+):
+    """Manually purge the Nginx cache for a specific proxy."""
+    proxy = await proxy_service.get_by_id(db, proxy_id)
+    purged = await cache_service.purge_proxy_cache(proxy.full_domain)
+    size_mb = cache_service.get_cache_size_mb(proxy.full_domain)
+    return JSONResponse({
+        "ok": True,
+        "purged": purged,
+        "cache_size_mb": size_mb,
+        "message": "Cache purged." if purged else "Cache was already empty.",
+    })
+
+
+# ---------------------------------------------------------------
+# CACHE — SETTINGS
+# ---------------------------------------------------------------
+@router.post("/{proxy_id}/cache/settings")
+async def proxy_cache_settings(
+    proxy_id: int,
+    cache_enabled: bool = Form(False),
+    cache_ttl_minutes: int = Form(10),
+    cache_auto_clear_hours: int = Form(0),
+    db: AsyncSession = Depends(get_db),
+):
+    """Save cache settings for a specific proxy and regenerate nginx config."""
+    proxy = await proxy_service.update_cache_settings(
+        db,
+        proxy_id=proxy_id,
+        cache_enabled=cache_enabled,
+        cache_ttl_minutes=max(1, cache_ttl_minutes),
+        cache_auto_clear_hours=max(0, cache_auto_clear_hours),
+    )
+    size_mb = cache_service.get_cache_size_mb(proxy.full_domain)
+    return JSONResponse({
+        "ok": True,
+        "cache_enabled": proxy.cache_enabled,
+        "cache_ttl_minutes": proxy.cache_ttl_minutes,
+        "cache_auto_clear_hours": proxy.cache_auto_clear_hours,
+        "cache_size_mb": size_mb,
+        "message": "Cache settings saved.",
+    })

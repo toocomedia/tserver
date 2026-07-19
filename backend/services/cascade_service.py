@@ -40,6 +40,9 @@ async def create_reverse_proxy_full(
     protocol: str,
     enable_ssl: bool,
     dns_managed: bool = True,
+    cache_enabled: bool = False,
+    cache_ttl_minutes: int = 10,
+    cache_auto_clear_hours: int = 0,
 ) -> ReverseProxy:
     """
     Atomic reverse-proxy create:
@@ -64,7 +67,9 @@ async def create_reverse_proxy_full(
         # 2. Nginx reverse-proxy config (+ nginx -t inside)
         nginx_service.ensure_acme_root()
         config_path = await nginx_service.create_proxy(
-            full_domain, target_ip, target_port, protocol
+            full_domain, target_ip, target_port, protocol,
+            cache_enabled=cache_enabled,
+            cache_ttl_minutes=cache_ttl_minutes,
         )
         steps_done.append("nginx")
 
@@ -83,6 +88,9 @@ async def create_reverse_proxy_full(
             ssl_cert_id=None,
             nginx_config_path=config_path,
             dns_managed=dns_managed,
+            cache_enabled=cache_enabled,
+            cache_ttl_minutes=cache_ttl_minutes,
+            cache_auto_clear_hours=cache_auto_clear_hours,
         )
         db.add(proxy)
         await db.flush()

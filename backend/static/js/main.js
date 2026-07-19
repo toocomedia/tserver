@@ -23,6 +23,7 @@ const PATHS = {
   errors: "/admin/errors/",
   health: "/api/health",
   api_settings: "/api/settings",
+  api_settings_performance: "/api/settings/performance",
 };
 
 function path(name, ...parts) {

@@ -13,6 +13,8 @@ from utils import nginx_templates
 
 logger = logging.getLogger(__name__)
 
+PERFORMANCE_CONF_NAME = "performance"
+
 
 def _available_path(name: str) -> Path:
     return Path(config.NGINX_SITES_AVAILABLE) / name
@@ -165,12 +167,21 @@ async def update_static_site_ssl(
 
 
 async def create_proxy(
-    full_domain: str, target_ip: str, target_port: int, protocol: str
+    full_domain: str,
+    target_ip: str,
+    target_port: int,
+    protocol: str,
+    *,
+    cache_enabled: bool = False,
+    cache_ttl_minutes: int = 10,
 ) -> str:
     """Write HTTP reverse proxy nginx config. Returns config path."""
     name = _conf_name(full_domain)
     content = nginx_templates.reverse_proxy_config(
-        full_domain, target_ip, target_port, protocol
+        full_domain, target_ip, target_port, protocol,
+        cache_enabled=cache_enabled,
+        cache_ttl_minutes=cache_ttl_minutes,
+        static_cache=config.NGINX_PERF_STATIC_CACHE,
     )
     config_path = str(await _write_config(name, content))
 
@@ -183,13 +194,23 @@ async def create_proxy(
 
 
 async def update_proxy_ssl(
-    full_domain: str, target_ip: str, target_port: int,
-    protocol: str, cert_path: str, key_path: str
+    full_domain: str,
+    target_ip: str,
+    target_port: int,
+    protocol: str,
+    cert_path: str,
+    key_path: str,
+    *,
+    cache_enabled: bool = False,
+    cache_ttl_minutes: int = 10,
 ) -> str:
     """Replace proxy HTTP config with SSL config."""
     name = _conf_name(full_domain)
     content = nginx_templates.reverse_proxy_ssl_config(
-        full_domain, target_ip, target_port, protocol, cert_path, key_path
+        full_domain, target_ip, target_port, protocol, cert_path, key_path,
+        cache_enabled=cache_enabled,
+        cache_ttl_minutes=cache_ttl_minutes,
+        static_cache=config.NGINX_PERF_STATIC_CACHE,
     )
     config_path = str(await _write_config(name, content))
 
@@ -210,6 +231,39 @@ async def reload() -> None:
     result = await shell.nginx_reload()
     if not result.success:
         raise ValueError(f"Nginx reload failed: {result.stderr}")
+
+
+# ---------------------------------------------------------------
+# PERFORMANCE CONFIG
+# ---------------------------------------------------------------
+async def write_performance_conf() -> None:
+    """
+    Write /etc/nginx/conf.d/performance.conf with current gzip + static-cache settings.
+    Reload nginx after writing.
+    """
+    content = nginx_templates.performance_conf(
+        gzip=config.NGINX_PERF_GZIP,
+        static_cache=config.NGINX_PERF_STATIC_CACHE,
+    )
+    conf_path = f"/etc/nginx/conf.d/{PERFORMANCE_CONF_NAME}.conf"
+    await shell.write_file(conf_path, content)
+    logger.info("Performance conf written: %s", conf_path)
+
+
+async def remove_performance_conf() -> None:
+    """Remove the performance.conf file (all optimizations off)."""
+    conf_path = f"/etc/nginx/conf.d/{PERFORMANCE_CONF_NAME}.conf"
+    await shell.remove_path(conf_path)
+    logger.info("Performance conf removed")
+
+
+# ---------------------------------------------------------------
+# CACHE PURGE
+# ---------------------------------------------------------------
+async def purge_proxy_cache(full_domain: str) -> bool:
+    """Purge the Nginx cache directory for a specific proxy."""
+    from services import cache_service
+    return await cache_service.purge_proxy_cache(full_domain)
 
 
 def config_exists(domain: str) -> bool:

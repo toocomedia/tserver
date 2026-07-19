@@ -3,6 +3,7 @@ main.py — FastAPI application entry point
 Mounts routers, static files, and templates. Initializes DB on startup.
 No routes defined here — all routes live in routers/.
 """
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
@@ -24,9 +25,25 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+async def _auto_purge_loop() -> None:
+    """Background task: check and clear expired proxy caches every hour."""
+    from database import AsyncSessionLocal
+    from services import cache_service
+
+    while True:
+        await asyncio.sleep(3600)  # run every hour
+        try:
+            async with AsyncSessionLocal() as db:
+                count = await cache_service.run_auto_purge_all(db)
+                if count:
+                    logger.info("Auto-purge: %d proxy cache(s) cleared", count)
+        except Exception as exc:
+            logger.warning("Auto-purge loop error: %s", exc)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Initialize DB tables on startup."""
+    """Initialize DB tables on startup and start background tasks."""
     if getattr(config, "_SECRET_KEY_EPHEMERAL", False):
         logger.warning(
             "SECRET_KEY was missing — using ephemeral key. "
@@ -35,8 +52,10 @@ async def lifespan(app: FastAPI):
         )
     logger.info("Initializing database...")
     await init_db()
+    purge_task = asyncio.create_task(_auto_purge_loop())
     logger.info("Panel ready.")
     yield
+    purge_task.cancel()
     logger.info("Panel shutting down.")
 
 

@@ -30,12 +30,13 @@
 <div class="table-wrap">
   <table class="table" id="proxy-table">
     <colgroup>
-      <col style="width:24%">
       <col style="width:22%">
+      <col style="width:18%">
+      <col style="width:8%">
+      <col style="width:9%">
+      <col style="width:9%">
       <col style="width:10%">
-      <col style="width:12%">
-      <col style="width:12%">
-      <col style="width:20%">
+      <col style="width:24%">
     </colgroup>
     <thead>
       <tr>
@@ -44,6 +45,7 @@
         <th>Protocol</th>
         <th>SSL</th>
         <th>DNS</th>
+        <th>Cache</th>
         <th class="col-actions">Actions</th>
       </tr>
     </thead>
@@ -86,13 +88,34 @@
           {% endif %}
         </td>
 
+        <td>
+          {% if item.cache_enabled %}
+            <span class="badge badge--ok badge--dot" id="cache-badge-{{ p.id }}">
+              ON{% if item.cache_size_mb > 0 %} · {{ item.cache_size_mb }}MB{% endif %}
+            </span>
+          {% else %}
+            <span class="badge badge--neutral badge--dot" id="cache-badge-{{ p.id }}">OFF</span>
+          {% endif %}
+        </td>
+
         <td class="col-actions">
-          <div class="d-flex gap-xs justify-end">
+          <div class="d-flex gap-xs justify-end flex-wrap">
             {% if not p.ssl_enabled %}
             <a href="/ssl/issue?full_domain={{ p.full_domain }}"
                class="btn btn--secondary btn--sm"
                id="btn-ssl-{{ p.id }}">SSL</a>
             {% endif %}
+
+            <button class="btn btn--secondary btn--sm"
+                    id="btn-cache-{{ p.id }}"
+                    data-proxy-id="{{ p.id }}"
+                    data-cache-enabled="{{ '1' if item.cache_enabled else '0' }}"
+                    data-cache-ttl="{{ p.cache_ttl_minutes }}"
+                    data-cache-auto="{{ p.cache_auto_clear_hours }}"
+                    title="Cache settings">
+              ⚙ Cache
+            </button>
+
             <button class="btn btn--danger btn--sm"
                     id="btn-del-{{ p.id }}"
                     data-proxy-id="{{ p.id }}"
@@ -104,6 +127,59 @@
         </td>
 
       </tr>
+
+      {# Inline cache settings row — hidden by default #}
+      <tr id="cache-panel-{{ p.id }}" class="cache-settings-row" style="display:none;">
+        <td colspan="7">
+          <div class="cache-settings-box" id="cache-box-{{ p.id }}">
+            <div class="cache-settings-header">
+              <strong>Cache settings — {{ p.full_domain }}</strong>
+              <span id="cache-status-msg-{{ p.id }}" class="text-small text-muted"></span>
+            </div>
+            <div class="cache-settings-body">
+              <label class="form-check">
+                <input type="checkbox" id="cache-chk-{{ p.id }}"
+                       {% if item.cache_enabled %}checked{% endif %}>
+                <span>Enable proxy cache</span>
+              </label>
+              <div class="d-flex gap-md align-center mt-sm" style="flex-wrap:wrap;">
+                <div class="form-group" style="margin:0;">
+                  <label class="form-label" for="cache-ttl-{{ p.id }}">TTL (minutes)</label>
+                  <input class="form-input" type="number" min="1" max="10080"
+                         id="cache-ttl-{{ p.id }}" value="{{ p.cache_ttl_minutes }}"
+                         style="max-width:100px;">
+                </div>
+                <div class="form-group" style="margin:0;">
+                  <label class="form-label" for="cache-auto-{{ p.id }}">Auto-clear (hours, 0=off)</label>
+                  <input class="form-input" type="number" min="0" max="8760"
+                         id="cache-auto-{{ p.id }}" value="{{ p.cache_auto_clear_hours }}"
+                         style="max-width:110px;">
+                </div>
+              </div>
+              <div class="d-flex gap-xs mt-sm">
+                <button class="btn btn--primary btn--sm"
+                        id="btn-cache-save-{{ p.id }}"
+                        data-proxy-id="{{ p.id }}">Save</button>
+                <button class="btn btn--warning btn--sm"
+                        id="btn-cache-purge-{{ p.id }}"
+                        data-proxy-id="{{ p.id }}"
+                        {% if not item.cache_enabled %}disabled{% endif %}>
+                  Purge Cache
+                </button>
+                <button class="btn btn--secondary btn--sm"
+                        id="btn-cache-close-{{ p.id }}"
+                        data-proxy-id="{{ p.id }}">Close</button>
+              </div>
+              {% if item.last_cache_cleared %}
+              <p class="form-hint mt-xs">
+                Last cleared: {{ item.last_cache_cleared.strftime('%Y-%m-%d %H:%M') }} UTC
+              </p>
+              {% endif %}
+            </div>
+          </div>
+        </td>
+      </tr>
+
       {% endfor %}
     </tbody>
   </table>

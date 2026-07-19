@@ -33,3 +33,8 @@ class ReverseProxy(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), nullable=False
     )
+    # Per-proxy cache settings
+    cache_enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    cache_ttl_minutes: Mapped[int] = mapped_column(Integer, default=10, nullable=False)
+    cache_auto_clear_hours: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    last_cache_cleared: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)

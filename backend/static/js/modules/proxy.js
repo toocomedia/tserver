@@ -1,11 +1,13 @@
 /**
  * modules/proxy.js — Reverse proxy list + create form logic.
  * Modes: managed (panel domain + subdomain) vs external (full hostname).
+ * Also handles per-proxy cache settings panel and purge actions.
  */
 
 document.addEventListener("DOMContentLoaded", () => {
   initCreateForm();
   initDeleteButtons();
+  initCacheButtons();
   dismissAlerts();
 });
 
@@ -35,6 +37,18 @@ function initCreateForm() {
   const previewLine  = document.getElementById("preview-line");
   const hintDomain   = document.getElementById("hint-domain");
   const submitBtn    = document.getElementById("btn-submit");
+
+  // Cache section toggle
+  const cacheLabel  = document.getElementById("cache-toggle-label");
+  const cacheFields = document.getElementById("cache-fields");
+  const cacheIcon   = document.getElementById("cache-toggle-icon");
+  if (cacheLabel && cacheFields) {
+    cacheLabel.addEventListener("click", () => {
+      const open = cacheFields.style.display !== "none";
+      cacheFields.style.display = open ? "none" : "block";
+      if (cacheIcon) cacheIcon.textContent = open ? "▶" : "▼";
+    });
+  }
 
   function isExternal() {
     return modeExternal && modeExternal.checked;
@@ -160,6 +174,131 @@ function initDeleteButtons() {
       );
     });
   });
+}
+
+// ---------------------------------------------------------------
+// CACHE PANEL
+// ---------------------------------------------------------------
+function initCacheButtons() {
+  document.querySelectorAll("[id^='btn-cache-'][data-proxy-id]").forEach((btn) => {
+    // Only the ⚙ Cache toggle buttons (not purge/save/close)
+    if (btn.id.startsWith("btn-cache-purge-") ||
+        btn.id.startsWith("btn-cache-save-") ||
+        btn.id.startsWith("btn-cache-close-")) return;
+
+    const id = btn.getAttribute("data-proxy-id");
+    if (!id) return;
+
+    const panel = document.getElementById(`cache-panel-${id}`);
+    if (!panel) return;
+
+    btn.addEventListener("click", () => {
+      const isOpen = panel.style.display !== "none";
+      // Close all other cache panels first
+      document.querySelectorAll("[id^='cache-panel-']").forEach((p) => {
+        p.style.display = "none";
+      });
+      panel.style.display = isOpen ? "none" : "table-row";
+    });
+  });
+
+  // Save buttons
+  document.querySelectorAll("[id^='btn-cache-save-']").forEach((btn) => {
+    const id = btn.getAttribute("data-proxy-id");
+    if (!id) return;
+    btn.addEventListener("click", () => saveCacheSettings(id, btn));
+  });
+
+  // Purge buttons
+  document.querySelectorAll("[id^='btn-cache-purge-']").forEach((btn) => {
+    const id = btn.getAttribute("data-proxy-id");
+    if (!id) return;
+    btn.addEventListener("click", () => purgeCache(id, btn));
+  });
+
+  // Close buttons
+  document.querySelectorAll("[id^='btn-cache-close-']").forEach((btn) => {
+    const id = btn.getAttribute("data-proxy-id");
+    if (!id) return;
+    btn.addEventListener("click", () => {
+      const panel = document.getElementById(`cache-panel-${id}`);
+      if (panel) panel.style.display = "none";
+    });
+  });
+}
+
+async function saveCacheSettings(proxyId, btn) {
+  const enabled = document.getElementById(`cache-chk-${proxyId}`)?.checked || false;
+  const ttl     = parseInt(document.getElementById(`cache-ttl-${proxyId}`)?.value || "10", 10);
+  const auto    = parseInt(document.getElementById(`cache-auto-${proxyId}`)?.value || "0", 10);
+  const msg     = document.getElementById(`cache-status-msg-${proxyId}`);
+  const badge   = document.getElementById(`cache-badge-${proxyId}`);
+  const purgeBtn = document.getElementById(`btn-cache-purge-${proxyId}`);
+
+  btn.textContent = "Saving…";
+  btn.disabled = true;
+
+  try {
+    const body = new URLSearchParams({
+      cache_enabled: enabled ? "true" : "false",
+      cache_ttl_minutes: ttl,
+      cache_auto_clear_hours: auto,
+    });
+    const res = await fetch(`/proxy/${proxyId}/cache/settings`, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: body.toString(),
+    });
+    const data = await res.json();
+
+    if (data.ok) {
+      if (msg) msg.textContent = "✓ Saved";
+      if (badge) {
+        badge.className = enabled
+          ? "badge badge--ok badge--dot"
+          : "badge badge--neutral badge--dot";
+        badge.textContent = enabled
+          ? `ON${data.cache_size_mb > 0 ? " · " + data.cache_size_mb + "MB" : ""}`
+          : "OFF";
+      }
+      if (purgeBtn) purgeBtn.disabled = !enabled;
+    } else {
+      if (msg) msg.textContent = "Error saving";
+    }
+  } catch (e) {
+    if (msg) msg.textContent = "Request failed";
+  } finally {
+    btn.textContent = "Save";
+    btn.disabled = false;
+  }
+}
+
+async function purgeCache(proxyId, btn) {
+  const msg   = document.getElementById(`cache-status-msg-${proxyId}`);
+  const badge = document.getElementById(`cache-badge-${proxyId}`);
+
+  btn.textContent = "Purging…";
+  btn.disabled = true;
+
+  try {
+    const res = await fetch(`/proxy/${proxyId}/cache/purge`, { method: "POST" });
+    const data = await res.json();
+
+    if (data.ok) {
+      if (msg) msg.textContent = data.message;
+      if (badge && badge.classList.contains("badge--ok")) {
+        // Update size display
+        badge.textContent = "ON · 0MB";
+      }
+    } else {
+      if (msg) msg.textContent = "Purge failed";
+    }
+  } catch (e) {
+    if (msg) msg.textContent = "Request failed";
+  } finally {
+    btn.textContent = "Purge Cache";
+    btn.disabled = false;
+  }
 }
 
 // ---------------------------------------------------------------

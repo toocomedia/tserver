@@ -185,6 +185,41 @@
         </div>
       </div>
 
+      <!-- Proxy Cache (optional) -->
+      <div class="form-group" id="cache-section">
+        <label class="form-label" style="cursor:pointer;" id="cache-toggle-label">
+          <span id="cache-toggle-icon">▶</span>
+          <span style="margin-left:6px;">Proxy cache <span class="text-muted text-small">(optional)</span></span>
+        </label>
+        <div id="cache-fields" style="display:none; margin-top:10px;">
+          <div class="alert alert--info mb-sm" style="font-size:var(--font-small);">
+            Caches upstream responses on disk. Good for static or slow-changing pages.
+            <strong>Do not enable for APIs or user-specific pages.</strong>
+          </div>
+          <label class="form-check mb-sm">
+            <input type="checkbox" name="cache_enabled" id="cache_enabled" value="true"
+                   {% if form.get('cache_enabled') %}checked{% endif %}>
+            <span>Enable proxy cache</span>
+          </label>
+          <div class="d-flex gap-md" style="flex-wrap:wrap;">
+            <div class="form-group" style="margin:0;">
+              <label class="form-label" for="cache_ttl_minutes">Cache TTL (minutes)</label>
+              <input class="form-input" type="number" id="cache_ttl_minutes"
+                     name="cache_ttl_minutes" value="{{ form.get('cache_ttl_minutes', 10) }}"
+                     min="1" max="10080" style="max-width:110px;">
+              <span class="form-hint">How long to keep cached responses</span>
+            </div>
+            <div class="form-group" style="margin:0;">
+              <label class="form-label" for="cache_auto_clear_hours">Auto-clear (hours)</label>
+              <input class="form-input" type="number" id="cache_auto_clear_hours"
+                     name="cache_auto_clear_hours" value="{{ form.get('cache_auto_clear_hours', 0) }}"
+                     min="0" max="8760" style="max-width:110px;">
+              <span class="form-hint">0 = disabled (manual only)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Live preview -->
       <div class="panel" id="proxy-preview" style="display:none; background:var(--color-surface);">
         <div class="panel__body" style="padding:var(--space-md);">
@@ -210,3 +245,4 @@
 {% block scripts %}
 <script src="/static/js/modules/proxy.js"></script>
 {% endblock %}
+

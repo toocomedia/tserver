@@ -228,8 +228,40 @@
   </div>
 </div>
 
+<!-- Performance -->
+<div class="panel mb-xl">
+  <div class="panel__header"><h3>Performance</h3></div>
+  <div class="panel__body">
+    <p class="form-hint mb-md">
+      Global Nginx optimizations applied to all proxies and sites.
+      Changes write <code>/etc/nginx/conf.d/performance.conf</code> and reload Nginx.
+    </p>
+
+    <div id="perf-notes" class="mb-md" hidden></div>
+
+    <label class="form-check mb-md">
+      <input type="checkbox" id="perf_gzip" {% if s.perf_gzip %}checked{% endif %}>
+      <span>
+        <strong>Gzip compression</strong>
+        <span class="form-hint d-block">Compress HTML, CSS, JS, JSON, SVG before sending — saves bandwidth, faster page loads.</span>
+      </span>
+    </label>
+    <label class="form-check mb-md">
+      <input type="checkbox" id="perf_static_cache" {% if s.perf_static_cache %}checked{% endif %}>
+      <span>
+        <strong>Browser cache for static assets</strong>
+        <span class="form-hint d-block">Adds 1-year Cache-Control headers for fonts, images, CSS, JS — eliminates repeat downloads.</span>
+      </span>
+    </label>
+    <div class="form-actions">
+      <button type="button" class="btn btn--primary" id="btn-save-perf">Save performance</button>
+    </div>
+  </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
 <script src="/static/js/modules/settings.js"></script>
 {% endblock %}
+

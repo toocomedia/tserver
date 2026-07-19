@@ -280,11 +280,48 @@ async def get_status() -> dict:
         "security_headers": bool(config.SECURITY_HEADERS),
         "hsts_enabled": bool(config.HSTS_ENABLED),
         "urls": _open_urls(domain, allow_ip, ip_port, ssl_active),
+        "perf_gzip": bool(config.NGINX_PERF_GZIP),
+        "perf_static_cache": bool(config.NGINX_PERF_STATIC_CACHE),
     }
+
+
+async def save_performance_settings(payload: dict) -> dict:
+    """
+    Save global nginx performance settings (gzip, static cache).
+    Writes performance.conf and reloads nginx.
+    """
+    gzip = bool(payload.get("perf_gzip", False))
+    static_cache = bool(payload.get("perf_static_cache", False))
+
+    env = {
+        "NGINX_PERF_GZIP": _bool_env(gzip),
+        "NGINX_PERF_STATIC_CACHE": _bool_env(static_cache),
+    }
+    await env_file.set_env_values(env)
+
+    config.NGINX_PERF_GZIP = gzip
+    config.NGINX_PERF_STATIC_CACHE = static_cache
+
+    try:
+        if gzip or static_cache:
+            await nginx_service.write_performance_conf()
+        else:
+            await nginx_service.remove_performance_conf()
+        await nginx_service.reload()
+        notes = ["Performance settings saved. Nginx reloaded."]
+    except Exception as exc:
+        notes = [f"Settings saved but nginx apply failed: {exc}"]
+        logger.warning("Performance conf apply failed: %s", exc)
+
+    status = await get_status()
+    status["ok"] = True
+    status["notes"] = notes
+    return status
 
 
 async def _delete_cert_files(cert_name: str) -> str:
     """Delete Let's Encrypt cert by name. Returns note string."""
+
     cert_name = (cert_name or "").strip().lower().rstrip(".")
     if not cert_name:
         return "No cert name to delete."

@@ -347,6 +347,36 @@
     }
   }
 
+  async function savePerformance(btn) {
+    const origText = btn.textContent;
+    btn.textContent = "Saving…";
+    btn.disabled = true;
+
+    const payload = {
+      perf_gzip:         !!($("perf_gzip")?.checked),
+      perf_static_cache: !!($("perf_static_cache")?.checked),
+    };
+
+    try {
+      const data = await panel.post(path("api_settings_performance"), payload);
+      showPerfNotes(data.notes || []);
+      toast("Performance settings saved.", "success");
+    } catch (err) {
+      toast(err.message || "Save failed", "danger");
+    } finally {
+      btn.textContent = origText;
+      btn.disabled = false;
+    }
+  }
+
+  function showPerfNotes(notes) {
+    const el = $("perf-notes");
+    if (!el) return;
+    if (!notes || !notes.length) { el.hidden = true; return; }
+    el.innerHTML = notes.map((n) => `<div class="alert alert--info">${n}</div>`).join("");
+    el.hidden = false;
+  }
+
   document.addEventListener("DOMContentLoaded", () => {
     document.querySelectorAll('input[name="url_mode"]').forEach((el) => {
       el.addEventListener("change", syncUrlModeUi);
@@ -362,6 +392,7 @@
     $("btn-issue-ssl")?.addEventListener("click", (e) => issueSsl(e.currentTarget));
     $("btn-remove-ssl")?.addEventListener("click", (e) => removeSsl(e.currentTarget));
     $("btn-refresh-settings")?.addEventListener("click", refresh);
+    $("btn-save-perf")?.addEventListener("click", (e) => savePerformance(e.currentTarget));
 
     syncUrlModeUi();
   });

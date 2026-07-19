@@ -74,6 +74,20 @@ def _migrate_sync(sync_conn) -> None:
             ))
             cols.add("dns_managed")
 
+        # --- cache columns (added in performance update) ---
+        cache_cols = {
+            "cache_enabled":          "BOOLEAN DEFAULT 0 NOT NULL",
+            "cache_ttl_minutes":      "INTEGER DEFAULT 10 NOT NULL",
+            "cache_auto_clear_hours": "INTEGER DEFAULT 0 NOT NULL",
+            "last_cache_cleared":     "DATETIME",
+        }
+        for col, ddl in cache_cols.items():
+            if col not in cols:
+                logger.info("Migrating reverse_proxies: add %s", col)
+                sync_conn.execute(text(
+                    f"ALTER TABLE reverse_proxies ADD COLUMN {col} {ddl}"
+                ))
+
         domain_nullable = _column_nullable(sync_conn, "reverse_proxies", "domain_id")
         if domain_nullable is False:
             logger.info("Migrating reverse_proxies: allow NULL domain_id (table rebuild)")

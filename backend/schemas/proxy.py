@@ -19,6 +19,9 @@ class ProxyCreate(BaseModel):
     target_port: int
     protocol: str = "http"
     enable_ssl: bool = False
+    cache_enabled: bool = False
+    cache_ttl_minutes: int = 10
+    cache_auto_clear_hours: int = 0
 
     @field_validator("subdomain")
     @classmethod
@@ -59,6 +62,9 @@ class ExternalProxyCreate(BaseModel):
     target_port: int
     protocol: str = "http"
     enable_ssl: bool = False
+    cache_enabled: bool = False
+    cache_ttl_minutes: int = 10
+    cache_auto_clear_hours: int = 0
 
     @field_validator("hostname")
     @classmethod
@@ -105,5 +111,10 @@ class ProxyResponse(BaseModel):
     nginx_config_path: str | None
     dns_managed: bool = True
     created_at: datetime
+    cache_enabled: bool
+    cache_ttl_minutes: int
+    cache_auto_clear_hours: int
+    last_cache_cleared: datetime | None
 
     model_config = {"from_attributes": True}
+

@@ -101,3 +101,14 @@ async def api_ssl_apply():
 async def api_ssl_remove():
     """Disable HTTPS and delete panel certificate files."""
     return await panel_settings_service.remove_panel_ssl()
+
+
+class PerformanceSettingsIn(BaseModel):
+    perf_gzip: bool = False
+    perf_static_cache: bool = False
+
+
+@router.post("/api/settings/performance")
+async def api_save_performance(body: PerformanceSettingsIn):
+    """Save global nginx performance settings (gzip, static asset cache)."""
+    return await panel_settings_service.save_performance_settings(body.model_dump())

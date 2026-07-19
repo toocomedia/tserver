@@ -96,6 +96,13 @@ NGINX_SITES_ENABLED: str = os.getenv(
     "NGINX_SITES_ENABLED", "/etc/nginx/sites-enabled"
 )
 NGINX_WEBROOT: str = os.getenv("NGINX_WEBROOT", "/var/www")
+NGINX_CACHE_DIR: str = os.getenv("NGINX_CACHE_DIR", "/var/cache/nginx")
+
+# ---------------------------------------------------------
+# Performance (nginx optimizations)
+# ---------------------------------------------------------
+NGINX_PERF_GZIP: bool = _env_bool("NGINX_PERF_GZIP", False)
+NGINX_PERF_STATIC_CACHE: bool = _env_bool("NGINX_PERF_STATIC_CACHE", False)
 
 # ---------------------------------------------------------
 # Certbot
