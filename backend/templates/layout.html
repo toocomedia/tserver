@@ -34,12 +34,17 @@
   <!-- MAIN -->
   <div class="main">
 
-    <!-- TOPBAR -->
-    {% include "partials/topbar.html" %}
-
     <!-- CONTENT -->
     <main class="content {% block content_class %}{% endblock %}" id="main-content">
       <div class="content__inner">
+        <!-- PAGE HEADER -->
+        <div class="page-header">
+          <h1 class="page-header__title">{% block page_title %}{% endblock %}</h1>
+          <div class="page-header__actions">
+            {% block topbar_actions %}{% endblock %}
+          </div>
+        </div>
+
         {# Flash-style messages come from query params / page templates (no Flask) #}
         {% block content %}{% endblock %}
       </div>
