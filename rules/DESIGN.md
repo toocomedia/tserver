@@ -36,12 +36,12 @@ Rules: Use sm, md, lg most often. Sidebar padding: sm horizontal, lg vertical.
 ## Typography
 - Font-family: Inter, system-sans
 - Sizes:
-  - H1: 32px / 800 / tight
-  - H2: 24px / 700
-  - H3: 18px / 700 / uppercase tracking
-  - Body: 16px / 400
-  - Small: 14px / 600 (labels/status)
-- Line-height: 1.1 (titles), 1.5 (body)
+  - H1: 24px / 800 / tight
+  - H2: 20px / 700
+  - H3: 16px / 700 / uppercase tracking
+  - Body: 14px / 400
+  - Small: 12px / 600 (labels/status)
+- Line-height: 1.1 (titles), 1.4 (body)
 - Use bold weights for titles and action labels.
 
 ---
@@ -56,7 +56,8 @@ Rules: Use sm, md, lg most often. Sidebar padding: sm horizontal, lg vertical.
 ---
 
 ## Borders & radius
-- layout containers: Use full width `.section` separated by a bottom `var(--color-line)` divider. No bounded boxes.
+- layout containers: Use full width `.section` separated by a bottom `var(--color-line)` divider. 
+- isolated cards: Use `.panel` for isolated views like Login, with a 1px border.
 - border-radius: 0 (no rounding)
 - shadows: none
 
@@ -65,7 +66,7 @@ Rules: Use sm, md, lg most often. Sidebar padding: sm horizontal, lg vertical.
 ## Buttons
 Base rules:
 - display: inline-flex; align-items:center; justify-content:center; gap: var(--space-xs);
-- height: 40px; padding: 0 16px; font-weight:700; font-size: 16px; line-height:normal
+- height: 36px; padding: 0 16px; font-weight:700; font-size: 14px; line-height:normal
 - border: 1px solid neutral-strong
 - border-radius: 0
 - no box-shadow
@@ -102,10 +103,10 @@ Alignment:
 
 ## Tables / Lists
 - full width; table-layout: fixed
-- th: font-size:14px; text-transform:uppercase; color: muted
-- td: font-size:16px; padding: 12px 0
+- th: font-size:12px; text-transform:uppercase; color: muted
+- td: font-size:14px; padding: 12px 0
 - separators: 1px line between rows
-- status label: small badge (14px), uppercase, weight 700
+- status label: small badge (12px), uppercase, weight 700
   - running: color accent-pistachio-2 (border + text)
   - stopped: color danger
   - neutral: muted

@@ -28,17 +28,17 @@
   --space-xl: 24px;
 
   /* Typography */
-  --font-h1:    32px;
-  --font-h2:    24px;
-  --font-h3:    18px;
-  --font-body:  16px;
-  --font-small: 14px;
+  --font-h1:    24px;
+  --font-h2:    20px;
+  --font-h3:    16px;
+  --font-body:  14px;
+  --font-small: 12px;
 
   /* Sizes */
   --sidebar-width:     200px;
   --sidebar-collapsed: 72px;
   --topbar-height:     56px;
-  --button-height:     40px;
+  --button-height:     36px;
   --page-gutter:       16px;
   --content-gap:       16px;
   --max-content-width: 1200px;
@@ -60,7 +60,7 @@ html, body {
   color: var(--color-text);
   background: var(--color-bg);
   -webkit-font-smoothing: antialiased;
-  line-height: 1.5;
+  line-height: 1.4;
 }
 
 a {
@@ -105,7 +105,7 @@ h3 {
 p {
   font-size: var(--font-body);
   color: var(--color-text);
-  line-height: 1.5;
+  line-height: 1.4;
 }
 
 .text-muted {

@@ -15,253 +15,295 @@
 <div class="alert alert--danger mb-lg">Could not load full status: {{ s.load_error }}</div>
 {% endif %}
 
-<!-- Status -->
-<div class="section mb-xl">
-  <div class="section__header"><h3>Current access</h3></div>
-  <div class="section__body">
-    <div class="info-row">
-      <span class="info-row__label">Server IP</span>
-      <span class="info-row__value" id="stat-server-ip">{{ s.server_ip }}</span>
-    </div>
-    <div class="info-row">
-      <span class="info-row__label">Hostname</span>
-      <span class="info-row__value" id="stat-hostname">{{ s.panel_domain or '— (IP only)' }}</span>
-    </div>
-    <div class="info-row">
-      <span class="info-row__label">DNS</span>
-      <span class="info-row__value" id="stat-dns">
-        {% if s.panel_domain %}
-          {% if s.dns_ok is sameas true %}<span class="badge badge--ok">OK</span>
-          {% elif s.dns_ok is sameas false %}<span class="badge badge--error">wrong IP</span>
-          {% else %}<span class="badge badge--neutral">?</span>{% endif %}
-        {% else %}<span class="text-muted">—</span>{% endif %}
-      </span>
-    </div>
-    <div class="info-row">
-      <span class="info-row__label">SSL</span>
-      <span class="info-row__value" id="stat-ssl">
-        {% if s.ssl_active %}<span class="badge badge--ok">HTTPS</span>
-        {% else %}<span class="badge badge--neutral">off</span>{% endif %}
-      </span>
-    </div>
-    <div class="info-row">
-      <span class="info-row__label">Open</span>
-      <span class="info-row__value text-small" id="stat-urls">
-        {% if s.urls.ip_http %}<div>IP: <a href="{{ s.urls.ip_http }}" target="_blank" rel="noopener">{{ s.urls.ip_http }}</a></div>{% endif %}
-        {% if s.urls.domain_http %}<div>HTTP: <a href="{{ s.urls.domain_http }}" target="_blank" rel="noopener">{{ s.urls.domain_http }}</a></div>{% endif %}
-        {% if s.urls.domain_https %}<div>HTTPS: <a href="{{ s.urls.domain_https }}" target="_blank" rel="noopener">{{ s.urls.domain_https }}</a></div>{% endif %}
-      </span>
-    </div>
+<div class="settings-layout">
+  <!-- Tabs Sidebar -->
+  <div class="settings-sidebar">
+    <div class="settings-sidebar__item active" data-tab="tab-access">Current Access</div>
+    <div class="settings-sidebar__item" data-tab="tab-url">Panel URL</div>
+    <div class="settings-sidebar__item" data-tab="tab-ip">IP Access</div>
+    <div class="settings-sidebar__item" data-tab="tab-security">Security</div>
+    <div class="settings-sidebar__item" data-tab="tab-perf">Performance</div>
   </div>
-</div>
 
-<!-- ONE section: Panel URL + SSL -->
-<div class="section mb-xl">
-  <div class="section__header"><h3>Panel URL</h3></div>
-  <div class="section__body">
-
-    <p class="form-hint mb-md">
-      Hostname for the panel (SSL). IP can stay on a custom port (e.g. 8080).
-      Changing the URL does <strong>not</strong> delete SSL files unless you check the option below.
-    </p>
-
-    <div class="settings-choice-grid mb-lg">
-      <label class="settings-choice {% if s.url_mode == 'none' or not s.panel_domain %}settings-choice--active{% endif %}">
-        <input type="radio" name="url_mode" id="url_mode_none" value="none"
-          {% if s.url_mode == 'none' or not s.panel_domain %}checked{% endif %}>
-        <span class="settings-choice__title">IP only</span>
-        <span class="settings-choice__desc">No domain name</span>
-      </label>
-      <label class="settings-choice {% if s.url_mode == 'subdomain' %}settings-choice--active{% endif %}">
-        <input type="radio" name="url_mode" id="url_mode_subdomain" value="subdomain"
-          {% if s.url_mode == 'subdomain' %}checked{% endif %}
-          {% if not s.managed_domains %}disabled{% endif %}>
-        <span class="settings-choice__title">Subdomain here</span>
-        <span class="settings-choice__desc">e.g. panel.yourdomain.com</span>
-      </label>
-      <label class="settings-choice {% if s.url_mode == 'custom' %}settings-choice--active{% endif %}">
-        <input type="radio" name="url_mode" id="url_mode_custom" value="custom"
-          {% if s.url_mode == 'custom' %}checked{% endif %}>
-        <span class="settings-choice__title">Custom name</span>
-        <span class="settings-choice__desc">You set the A record</span>
-      </label>
-    </div>
-
-    <div id="url-subdomain-fields" class="settings-mode-box mb-md" hidden>
-      <div class="settings-subdomain-row">
-        <input class="form-input" type="text" id="subdomain_label"
-               value="{{ s.subdomain_label or 'panel' }}" placeholder="panel" style="max-width:140px;">
-        <span class="settings-subdomain-dot">.</span>
-        <div class="form-select-wrap" style="flex:1;">
-          <select class="form-select" id="parent_domain">
-            <option value="">Select domain…</option>
-            {% for d in s.managed_domains %}
-            <option value="{{ d }}" {% if s.parent_domain == d %}selected{% endif %}>{{ d }}</option>
-            {% endfor %}
-          </select>
+  <!-- Content Area -->
+  <div class="settings-content">
+    
+    <!-- TAB: ACCESS -->
+    <div id="tab-access" class="settings-tab active">
+      <div class="section mb-xl">
+        <div class="section__header"><h3>Current access</h3></div>
+        <div class="section__body">
+          <div class="info-row">
+            <span class="info-row__label">Server IP</span>
+            <span class="info-row__value" id="stat-server-ip">{{ s.server_ip }}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-row__label">Hostname</span>
+            <span class="info-row__value" id="stat-hostname">{{ s.panel_domain or '— (IP only)' }}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-row__label">DNS</span>
+            <span class="info-row__value" id="stat-dns">
+              {% if s.panel_domain %}
+                {% if s.dns_ok is sameas true %}<span class="badge badge--ok">OK</span>
+                {% elif s.dns_ok is sameas false %}<span class="badge badge--error">wrong IP</span>
+                {% else %}<span class="badge badge--neutral">?</span>{% endif %}
+              {% else %}<span class="text-muted">—</span>{% endif %}
+            </span>
+          </div>
+          <div class="info-row">
+            <span class="info-row__label">SSL</span>
+            <span class="info-row__value" id="stat-ssl">
+              {% if s.ssl_active %}<span class="badge badge--ok">HTTPS</span>
+              {% else %}<span class="badge badge--neutral">off</span>{% endif %}
+            </span>
+          </div>
+          <div class="info-row">
+            <span class="info-row__label">Open</span>
+            <span class="info-row__value text-small" id="stat-urls">
+              {% if s.urls.ip_http %}<div>IP: <a href="{{ s.urls.ip_http }}" target="_blank" rel="noopener">{{ s.urls.ip_http }}</a></div>{% endif %}
+              {% if s.urls.domain_http %}<div>HTTP: <a href="{{ s.urls.domain_http }}" target="_blank" rel="noopener">{{ s.urls.domain_http }}</a></div>{% endif %}
+              {% if s.urls.domain_https %}<div>HTTPS: <a href="{{ s.urls.domain_https }}" target="_blank" rel="noopener">{{ s.urls.domain_https }}</a></div>{% endif %}
+            </span>
+          </div>
         </div>
       </div>
-      <p class="form-hint" style="margin-top:8px;">Preview: <strong id="subdomain-preview">—</strong></p>
     </div>
 
-    <div id="url-custom-fields" class="settings-mode-box mb-md" hidden>
-      <label class="form-label" for="custom_domain">Hostname</label>
-      <input class="form-input" type="text" id="custom_domain"
-             value="{% if s.url_mode == 'custom' %}{{ s.panel_domain or '' }}{% endif %}"
-             placeholder="panel.example.com">
-      <p class="form-hint" style="margin-top:8px;">
-        A record → <code id="custom-dns-hint">{{ s.server_ip }}</code>
-      </p>
-    </div>
+    <!-- TAB: URL -->
+    <div id="tab-url" class="settings-tab">
+      <div class="section mb-xl">
+        <div class="section__header"><h3>Panel URL</h3></div>
+        <div class="section__body">
+          <p class="form-hint mb-md">
+            Hostname for the panel (SSL). IP can stay on a custom port (e.g. 8080).
+            Changing the URL does <strong>not</strong> delete SSL files unless you check the option below.
+          </p>
 
-    <div class="info-row mb-md">
-      <span class="info-row__label">Will use</span>
-      <span class="info-row__value" id="result-hostname">{{ s.panel_domain or '(IP only)' }}</span>
-    </div>
+          <div class="settings-choice-grid mb-lg">
+            <label class="settings-choice {% if s.url_mode == 'none' or not s.panel_domain %}settings-choice--active{% endif %}">
+              <input type="radio" name="url_mode" id="url_mode_none" value="none"
+                {% if s.url_mode == 'none' or not s.panel_domain %}checked{% endif %}>
+              <span class="settings-choice__title">IP only</span>
+              <span class="settings-choice__desc">No domain name</span>
+            </label>
+            <label class="settings-choice {% if s.url_mode == 'subdomain' %}settings-choice--active{% endif %}">
+              <input type="radio" name="url_mode" id="url_mode_subdomain" value="subdomain"
+                {% if s.url_mode == 'subdomain' %}checked{% endif %}
+                {% if not s.managed_domains %}disabled{% endif %}>
+              <span class="settings-choice__title">Subdomain here</span>
+              <span class="settings-choice__desc">e.g. panel.yourdomain.com</span>
+            </label>
+            <label class="settings-choice {% if s.url_mode == 'custom' %}settings-choice--active{% endif %}">
+              <input type="radio" name="url_mode" id="url_mode_custom" value="custom"
+                {% if s.url_mode == 'custom' %}checked{% endif %}>
+              <span class="settings-choice__title">Custom name</span>
+              <span class="settings-choice__desc">You set the A record</span>
+            </label>
+          </div>
 
-    <label class="form-check mb-md" id="remove-ssl-on-change-wrap">
-      <input type="checkbox" id="remove_ssl_on_change">
-      <span>When changing URL, also <strong>delete SSL</strong> for the old hostname</span>
-    </label>
+          <div id="url-subdomain-fields" class="settings-mode-box mb-md" hidden>
+            <div class="settings-subdomain-row">
+              <input class="form-input" type="text" id="subdomain_label"
+                     value="{{ s.subdomain_label or 'panel' }}" placeholder="panel" style="max-width:140px;">
+              <span class="settings-subdomain-dot">.</span>
+              <div class="form-select-wrap" style="flex:1;">
+                <select class="form-select" id="parent_domain">
+                  <option value="">Select domain…</option>
+                  {% for d in s.managed_domains %}
+                  <option value="{{ d }}" {% if s.parent_domain == d %}selected{% endif %}>{{ d }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+            <p class="form-hint" style="margin-top:8px;">Preview: <strong id="subdomain-preview">—</strong></p>
+          </div>
 
-    <div class="form-actions mb-lg">
-      <button type="button" class="btn btn--primary" id="btn-save-panel">Save panel URL</button>
-    </div>
+          <div id="url-custom-fields" class="settings-mode-box mb-md" hidden>
+            <label class="form-label" for="custom_domain">Hostname</label>
+            <input class="form-input" type="text" id="custom_domain"
+                   value="{% if s.url_mode == 'custom' %}{{ s.panel_domain or '' }}{% endif %}"
+                   placeholder="panel.example.com">
+            <p class="form-hint" style="margin-top:8px;">
+              A record → <code id="custom-dns-hint">{{ s.server_ip }}</code>
+            </p>
+          </div>
 
-    <hr class="settings-divider">
+          <div class="info-row mb-md">
+            <span class="info-row__label">Will use</span>
+            <span class="info-row__value" id="result-hostname">{{ s.panel_domain or '(IP only)' }}</span>
+          </div>
 
-    <h3 class="settings-subhead">SSL for this URL</h3>
-    <p class="form-hint mb-md" id="ssl-section-hint">
-      {% if s.ssl_active %}
-        Certificate is active. Renew before it expires, or remove it.
-      {% else %}
-        After the hostname is saved, issue Let’s Encrypt SSL here.
-      {% endif %}
-    </p>
+          <label class="form-check mb-md" id="remove-ssl-on-change-wrap">
+            <input type="checkbox" id="remove_ssl_on_change">
+            <span>When changing URL, also <strong>delete SSL</strong> for the old hostname</span>
+          </label>
 
-    <div id="ssl-active-box" class="settings-mode-box mb-md" {% if not s.ssl_active %}hidden{% endif %}>
-      <div class="info-row">
-        <span class="info-row__label">Status</span>
-        <span class="info-row__value"><span class="badge badge--ok">Active</span></span>
+          <div class="form-actions mb-lg">
+            <button type="button" class="btn btn--primary" id="btn-save-panel">Save panel URL</button>
+          </div>
+
+          <hr class="settings-divider">
+
+          <h3 class="settings-subhead">SSL for this URL</h3>
+          <p class="form-hint mb-md" id="ssl-section-hint">
+            {% if s.ssl_active %}
+              Certificate is active. Renew before it expires, or remove it.
+            {% else %}
+              After the hostname is saved, issue Let’s Encrypt SSL here.
+            {% endif %}
+          </p>
+
+          <div id="ssl-active-box" class="settings-mode-box mb-md" {% if not s.ssl_active %}hidden{% endif %}>
+            <div class="info-row">
+              <span class="info-row__label">Status</span>
+              <span class="info-row__value"><span class="badge badge--ok">Active</span></span>
+            </div>
+            <div class="info-row">
+              <span class="info-row__label">Hostname</span>
+              <span class="info-row__value" id="ssl-active-host">{{ s.panel_domain or '—' }}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-row__label">Expires</span>
+              <span class="info-row__value" id="ssl-active-expiry">{{ s.ssl_expiry or '—' }}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-row__label">Open</span>
+              <span class="info-row__value text-small" id="ssl-active-link">
+                {% if s.urls.domain_https %}
+                <a href="{{ s.urls.domain_https }}" target="_blank" rel="noopener">{{ s.urls.domain_https }}</a>
+                {% else %}—{% endif %}
+              </span>
+            </div>
+          </div>
+
+          <div id="ssl-progress" class="ssl-progress mb-md" hidden>
+            <div class="ssl-step" data-step="1"><span class="ssl-step__icon">○</span> Save hostname</div>
+            <div class="ssl-step" data-step="2"><span class="ssl-step__icon">○</span> Prepare nginx</div>
+            <div class="ssl-step" data-step="3"><span class="ssl-step__icon">○</span> Request certificate <span class="text-muted">(1–2 min)</span></div>
+            <div class="ssl-step" data-step="4"><span class="ssl-step__icon">○</span> Enable HTTPS</div>
+            <p class="form-hint" id="ssl-progress-msg" style="margin-top:12px;"></p>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" class="btn btn--primary" id="btn-issue-ssl" {% if not s.panel_domain %}disabled{% endif %}>
+              {% if s.ssl_active %}Renew SSL{% else %}Issue SSL{% endif %}
+            </button>
+            <button type="button" class="btn btn--danger" id="btn-remove-ssl" {% if not s.ssl_active %}hidden{% endif %}>
+              Remove SSL
+            </button>
+          </div>
+        </div>
       </div>
-      <div class="info-row">
-        <span class="info-row__label">Hostname</span>
-        <span class="info-row__value" id="ssl-active-host">{{ s.panel_domain or '—' }}</span>
+    </div>
+
+    <!-- TAB: IP ACCESS -->
+    <div id="tab-ip" class="settings-tab">
+      <div class="section mb-xl">
+        <div class="section__header"><h3>IP access</h3></div>
+        <div class="section__body">
+          <label class="form-check mb-md">
+            <input type="checkbox" id="allow_ip" {% if s.allow_ip %}checked{% endif %}>
+            <span>Allow access by server IP</span>
+          </label>
+          <div class="form-group mb-md" id="ip-port-group">
+            <label class="form-label" for="ip_port">Public port</label>
+            <input class="form-input" type="number" id="ip_port" min="1" max="65535"
+                   value="{{ s.ip_port or 80 }}" style="max-width:140px;">
+            <p class="form-hint">e.g. 8080 → <code>http://{{ s.server_ip }}:8080/</code></p>
+          </div>
+          <div class="form-actions">
+            <button type="button" class="btn btn--primary" id="btn-save-ip">Save IP access</button>
+          </div>
+        </div>
       </div>
-      <div class="info-row">
-        <span class="info-row__label">Expires</span>
-        <span class="info-row__value" id="ssl-active-expiry">{{ s.ssl_expiry or '—' }}</span>
+    </div>
+
+    <!-- TAB: SECURITY -->
+    <div id="tab-security" class="settings-tab">
+      <div class="section mb-xl">
+        <div class="section__header"><h3>Security</h3></div>
+        <div class="section__body">
+          <label class="form-check mb-md">
+            <input type="checkbox" id="session_https_only" {% if s.session_https_only %}checked{% endif %}>
+            <span>Secure cookies (HTTPS only — breaks IP HTTP login)</span>
+          </label>
+          <label class="form-check mb-md">
+            <input type="checkbox" id="security_headers" {% if s.security_headers %}checked{% endif %}>
+            <span>Security headers</span>
+          </label>
+          <label class="form-check mb-md">
+            <input type="checkbox" id="hsts_enabled" {% if s.hsts_enabled %}checked{% endif %}>
+            <span>HSTS</span>
+          </label>
+          <div class="form-group mb-md">
+            <label class="form-label" for="session_max_age_days">Session days</label>
+            <input class="form-input" type="number" id="session_max_age_days" min="1" max="365"
+                   value="{{ s.session_max_age_days or 7 }}" style="max-width:140px;">
+          </div>
+          <div class="form-actions">
+            <button type="button" class="btn btn--primary" id="btn-save-security">Save security</button>
+          </div>
+        </div>
       </div>
-      <div class="info-row">
-        <span class="info-row__label">Open</span>
-        <span class="info-row__value text-small" id="ssl-active-link">
-          {% if s.urls.domain_https %}
-          <a href="{{ s.urls.domain_https }}" target="_blank" rel="noopener">{{ s.urls.domain_https }}</a>
-          {% else %}—{% endif %}
-        </span>
+    </div>
+
+    <!-- TAB: PERFORMANCE -->
+    <div id="tab-perf" class="settings-tab">
+      <div class="section mb-xl">
+        <div class="section__header"><h3>Performance</h3></div>
+        <div class="section__body">
+          <p class="form-hint mb-md">
+            Global Nginx optimizations applied to all proxies and sites.
+            Changes write <code>/etc/nginx/conf.d/performance.conf</code> and reload Nginx.
+          </p>
+
+          <div id="perf-notes" class="mb-md" hidden></div>
+
+          <label class="form-check mb-md">
+            <input type="checkbox" id="perf_gzip" {% if s.perf_gzip %}checked{% endif %}>
+            <span>
+              <strong>Gzip compression</strong>
+              <span class="form-hint d-block">Compress HTML, CSS, JS, JSON, SVG before sending — saves bandwidth, faster page loads.</span>
+            </span>
+          </label>
+          <label class="form-check mb-md">
+            <input type="checkbox" id="perf_static_cache" {% if s.perf_static_cache %}checked{% endif %}>
+            <span>
+              <strong>Browser cache for static assets</strong>
+              <span class="form-hint d-block">Adds 1-year Cache-Control headers for fonts, images, CSS, JS — eliminates repeat downloads.</span>
+            </span>
+          </label>
+          <div class="form-actions">
+            <button type="button" class="btn btn--primary" id="btn-save-perf">Save performance</button>
+          </div>
+        </div>
       </div>
     </div>
 
-    <div id="ssl-progress" class="ssl-progress mb-md" hidden>
-      <div class="ssl-step" data-step="1"><span class="ssl-step__icon">○</span> Save hostname</div>
-      <div class="ssl-step" data-step="2"><span class="ssl-step__icon">○</span> Prepare nginx</div>
-      <div class="ssl-step" data-step="3"><span class="ssl-step__icon">○</span> Request certificate <span class="text-muted">(1–2 min)</span></div>
-      <div class="ssl-step" data-step="4"><span class="ssl-step__icon">○</span> Enable HTTPS</div>
-      <p class="form-hint" id="ssl-progress-msg" style="margin-top:12px;"></p>
-    </div>
-
-    <div class="form-actions">
-      <button type="button" class="btn btn--primary" id="btn-issue-ssl" {% if not s.panel_domain %}disabled{% endif %}>
-        {% if s.ssl_active %}Renew SSL{% else %}Issue SSL{% endif %}
-      </button>
-      <button type="button" class="btn btn--danger" id="btn-remove-ssl" {% if not s.ssl_active %}hidden{% endif %}>
-        Remove SSL
-      </button>
-    </div>
-  </div>
-</div>
-
-<!-- IP -->
-<div class="section mb-xl">
-  <div class="section__header"><h3>IP access</h3></div>
-  <div class="section__body">
-    <label class="form-check mb-md">
-      <input type="checkbox" id="allow_ip" {% if s.allow_ip %}checked{% endif %}>
-      <span>Allow access by server IP</span>
-    </label>
-    <div class="form-group mb-md" id="ip-port-group">
-      <label class="form-label" for="ip_port">Public port</label>
-      <input class="form-input" type="number" id="ip_port" min="1" max="65535"
-             value="{{ s.ip_port or 80 }}" style="max-width:140px;">
-      <p class="form-hint">e.g. 8080 → <code>http://{{ s.server_ip }}:8080/</code></p>
-    </div>
-    <div class="form-actions">
-      <button type="button" class="btn btn--primary" id="btn-save-ip">Save IP access</button>
-    </div>
-  </div>
-</div>
-
-<!-- Security -->
-<div class="section mb-xl">
-  <div class="section__header"><h3>Security</h3></div>
-  <div class="section__body">
-    <label class="form-check mb-md">
-      <input type="checkbox" id="session_https_only" {% if s.session_https_only %}checked{% endif %}>
-      <span>Secure cookies (HTTPS only — breaks IP HTTP login)</span>
-    </label>
-    <label class="form-check mb-md">
-      <input type="checkbox" id="security_headers" {% if s.security_headers %}checked{% endif %}>
-      <span>Security headers</span>
-    </label>
-    <label class="form-check mb-md">
-      <input type="checkbox" id="hsts_enabled" {% if s.hsts_enabled %}checked{% endif %}>
-      <span>HSTS</span>
-    </label>
-    <div class="form-group mb-md">
-      <label class="form-label" for="session_max_age_days">Session days</label>
-      <input class="form-input" type="number" id="session_max_age_days" min="1" max="365"
-             value="{{ s.session_max_age_days or 7 }}" style="max-width:140px;">
-    </div>
-    <div class="form-actions">
-      <button type="button" class="btn btn--primary" id="btn-save-security">Save security</button>
-    </div>
-  </div>
-</div>
-
-<!-- Performance -->
-<div class="section mb-xl">
-  <div class="section__header"><h3>Performance</h3></div>
-  <div class="section__body">
-    <p class="form-hint mb-md">
-      Global Nginx optimizations applied to all proxies and sites.
-      Changes write <code>/etc/nginx/conf.d/performance.conf</code> and reload Nginx.
-    </p>
-
-    <div id="perf-notes" class="mb-md" hidden></div>
-
-    <label class="form-check mb-md">
-      <input type="checkbox" id="perf_gzip" {% if s.perf_gzip %}checked{% endif %}>
-      <span>
-        <strong>Gzip compression</strong>
-        <span class="form-hint d-block">Compress HTML, CSS, JS, JSON, SVG before sending — saves bandwidth, faster page loads.</span>
-      </span>
-    </label>
-    <label class="form-check mb-md">
-      <input type="checkbox" id="perf_static_cache" {% if s.perf_static_cache %}checked{% endif %}>
-      <span>
-        <strong>Browser cache for static assets</strong>
-        <span class="form-hint d-block">Adds 1-year Cache-Control headers for fonts, images, CSS, JS — eliminates repeat downloads.</span>
-      </span>
-    </label>
-    <div class="form-actions">
-      <button type="button" class="btn btn--primary" id="btn-save-perf">Save performance</button>
-    </div>
   </div>
 </div>
 
 {% endblock %}
 
 {% block scripts %}
+<script>
+  // Tab logic
+  document.addEventListener('DOMContentLoaded', () => {
+    const tabItems = document.querySelectorAll('.settings-sidebar__item');
+    const tabs = document.querySelectorAll('.settings-tab');
+    
+    tabItems.forEach(item => {
+      item.addEventListener('click', () => {
+        tabItems.forEach(t => t.classList.remove('active'));
+        tabs.forEach(t => t.classList.remove('active'));
+        
+        item.classList.add('active');
+        const tabId = item.getAttribute('data-tab');
+        document.getElementById(tabId).classList.add('active');
+      });
+    });
+  });
+</script>
 <script src="/static/js/modules/settings.js"></script>
 {% endblock %}
-
