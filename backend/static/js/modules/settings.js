@@ -77,7 +77,6 @@
       ip_port: parseInt($("ip_port")?.value || "80", 10),
       session_https_only: !!$("session_https_only")?.checked,
       security_headers: !!$("security_headers")?.checked,
-      csrf_enabled: !!$("csrf_enabled")?.checked,
       hsts_enabled: !!$("hsts_enabled")?.checked,
       session_max_age_days: parseInt($("session_max_age_days")?.value || "7", 10),
     };
@@ -150,7 +149,6 @@
       $("ip_port").value = s.ip_port || 80;
     }
     if ($("session_https_only")) $("session_https_only").checked = !!s.session_https_only;
-    if ($("csrf_enabled")) $("csrf_enabled").checked = !!s.csrf_enabled;
     if ($("security_headers")) $("security_headers").checked = !!s.security_headers;
     if ($("hsts_enabled")) $("hsts_enabled").checked = !!s.hsts_enabled;
     if ($("session_max_age_days")) {
@@ -233,10 +231,6 @@
     try {
       const data = await panel.get("/api/settings");
       applyStatus(data);
-      if (data.csrf_token) {
-        const meta = document.querySelector('meta[name="csrf-token"]');
-        if (meta) meta.setAttribute("content", data.csrf_token);
-      }
       toast("Status refreshed", "success");
     } catch (err) {
       toast(err.message || "Refresh failed", "danger");

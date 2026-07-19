@@ -239,13 +239,8 @@
       <span>Secure cookies (HTTPS only)</span>
     </label>
     <p class="form-hint mb-md" style="margin-left:24px;">
-      Turn on only when you open the panel over HTTPS. Breaks login on plain HTTP.
+      Turn on only when you open the panel over HTTPS. Breaks login on plain HTTP (IP).
     </p>
-
-    <label class="form-check mb-md">
-      <input type="checkbox" id="csrf_enabled" {% if s.csrf_enabled %}checked{% endif %}>
-      <span>CSRF protection</span>
-    </label>
 
     <label class="form-check mb-md">
       <input type="checkbox" id="security_headers" {% if s.security_headers %}checked{% endif %}>

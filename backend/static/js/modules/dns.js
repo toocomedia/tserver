@@ -44,7 +44,7 @@ function updateContentLabel(type) {
 }
 
 /**
- * Submit a real HTML form POST (session cookie + Form fields + CSRF).
+ * Submit a real HTML form POST (session cookie + Form fields).
  */
 function postDeleteRecord(domain, name, type) {
   if (typeof window.submitPost !== "function") {
@@ -96,19 +96,11 @@ document.addEventListener("DOMContentLoaded", () => {
     updateContentLabel(typeSelect.value);
   }
 
-  // Refresh CSRF on all forms (cookie/meta may update after load)
-  if (typeof window.injectCsrfIntoForms === "function") {
-    window.injectCsrfIntoForms(document);
-  }
-
   // Disable submit while form submits (prevent double click)
   const form = document.getElementById("add-record-form");
   const saveBtn = document.getElementById("btn-save-record");
   if (form && saveBtn) {
     form.addEventListener("submit", () => {
-      if (typeof window.injectCsrfIntoForms === "function") {
-        window.injectCsrfIntoForms(form);
-      }
       saveBtn.textContent = "Adding...";
       saveBtn.disabled = true;
     });

@@ -380,8 +380,8 @@ _set_env "CERTBOT_EMAIL" "$CERTBOT_EMAIL" 1
 _set_env "PANEL_ALLOW_IP" "true" 0
 _set_env "PANEL_IP_PORT" "80" 0
 _set_env "SECURITY_HEADERS" "true" 0
-_set_env "CSRF_ENABLED" "true" 0
 _set_env "HSTS_ENABLED" "false" 0
+_set_env "SESSION_HTTPS_ONLY" "false" 0
 _set_env "DB_PATH" "$PANEL_DIR/app/panel.db" 1
 _set_env "NGINX_SITES_AVAILABLE" "/etc/nginx/sites-available" 0
 _set_env "NGINX_SITES_ENABLED" "/etc/nginx/sites-enabled" 0

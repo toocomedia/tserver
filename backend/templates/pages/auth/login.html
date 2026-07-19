@@ -62,7 +62,6 @@
           {% endif %}
 
           <form method="post" action="/login" class="form" autocomplete="on">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token or request.session.get('csrf_token', '') }}">
             <input type="hidden" name="next" value="{{ next or '/' }}">
 
             <div class="form-group">

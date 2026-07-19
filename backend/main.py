@@ -14,7 +14,6 @@ from database import init_db
 from routers import system, domains, dns, ssl, proxy, errors, auth, settings
 from middleware.error_capture import RequestIdMiddleware, register_error_handlers
 from middleware.auth import AuthMiddleware
-from middleware.csrf import CsrfMiddleware
 from middleware.security_headers import SecurityHeadersMiddleware
 
 logging.basicConfig(
@@ -49,18 +48,19 @@ app = FastAPI(
 )
 
 # Middleware order: last added runs first on the request.
-# Session → CSRF → SecurityHeaders → RequestId → Auth → app
+# Session → SecurityHeaders → RequestId → Auth → app
 app.add_middleware(AuthMiddleware)
 app.add_middleware(RequestIdMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
-app.add_middleware(CsrfMiddleware)
 app.add_middleware(
     SessionMiddleware,
     secret_key=config.SECRET_KEY,
     session_cookie="srv_panel_session",
     max_age=config.SESSION_MAX_AGE,
     same_site="lax",
-    https_only=config.SESSION_HTTPS_ONLY,
+    # Never force Secure cookies here if SESSION_HTTPS_ONLY was flipped by mistake —
+    # that locks HTTP IP login. Prefer explicit HTTPS only after panel SSL works.
+    https_only=bool(config.SESSION_HTTPS_ONLY),
 )
 register_error_handlers(app)
 

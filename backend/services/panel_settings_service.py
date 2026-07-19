@@ -119,7 +119,6 @@ def _apply_config_runtime(updates: dict[str, str]) -> None:
         "SESSION_HTTPS_ONLY": ("SESSION_HTTPS_ONLY", lambda v: str(v).lower() in ("1", "true", "yes", "on")),
         "SESSION_MAX_AGE": ("SESSION_MAX_AGE", int),
         "SECURITY_HEADERS": ("SECURITY_HEADERS", lambda v: str(v).lower() in ("1", "true", "yes", "on")),
-        "CSRF_ENABLED": ("CSRF_ENABLED", lambda v: str(v).lower() in ("1", "true", "yes", "on")),
         "HSTS_ENABLED": ("HSTS_ENABLED", lambda v: str(v).lower() in ("1", "true", "yes", "on")),
         "CERTBOT_EMAIL": ("CERTBOT_EMAIL", str),
     }
@@ -195,7 +194,6 @@ async def get_status() -> dict:
         "session_max_age": int(config.SESSION_MAX_AGE),
         "session_max_age_days": max(1, int(config.SESSION_MAX_AGE) // 86400),
         "security_headers": bool(config.SECURITY_HEADERS),
-        "csrf_enabled": bool(config.CSRF_ENABLED),
         "hsts_enabled": bool(config.HSTS_ENABLED),
         "urls": open_urls(domain, allow_ip, ip_port, ssl_active),
         "restart_hint": (
@@ -366,7 +364,6 @@ async def save_settings(payload: dict) -> dict:
 
     session_https_only = bool(payload.get("session_https_only", config.SESSION_HTTPS_ONLY))
     security_headers = bool(payload.get("security_headers", config.SECURITY_HEADERS))
-    csrf_enabled = bool(payload.get("csrf_enabled", config.CSRF_ENABLED))
     hsts_enabled = bool(payload.get("hsts_enabled", config.HSTS_ENABLED))
     try:
         days = int(payload.get("session_max_age_days", max(1, config.SESSION_MAX_AGE // 86400)))
@@ -402,8 +399,9 @@ async def save_settings(payload: dict) -> dict:
         "SESSION_HTTPS_ONLY": _bool_env(session_https_only),
         "SESSION_MAX_AGE": str(session_max_age),
         "SECURITY_HEADERS": _bool_env(security_headers),
-        "CSRF_ENABLED": _bool_env(csrf_enabled),
         "HSTS_ENABLED": _bool_env(hsts_enabled),
+        # CSRF removed from the panel — keep env consistent if present
+        "CSRF_ENABLED": "false",
     }
     await env_file.set_env_values(env_updates)
     _apply_config_runtime(env_updates)

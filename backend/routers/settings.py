@@ -10,7 +10,6 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, Field
 
-from middleware.csrf import ensure_csrf_token
 from services import panel_settings_service
 
 logger = logging.getLogger(__name__)
@@ -30,7 +29,6 @@ class PanelSettingsIn(BaseModel):
     ip_port: int = Field(default=80, ge=1, le=65535)
     session_https_only: bool = False
     security_headers: bool = True
-    csrf_enabled: bool = True
     hsts_enabled: bool = False
     session_max_age_days: int = Field(default=7, ge=1, le=365)
 
@@ -38,13 +36,11 @@ class PanelSettingsIn(BaseModel):
 @router.get("/settings", response_class=HTMLResponse)
 async def settings_page(request: Request):
     status = await panel_settings_service.get_status()
-    csrf = ensure_csrf_token(request)
     return templates.TemplateResponse(
         "pages/settings/index.html",
         {
             "request": request,
             "active_page": "settings",
-            "csrf_token": csrf,
             "s": status,
         },
     )
@@ -52,9 +48,7 @@ async def settings_page(request: Request):
 
 @router.get("/api/settings")
 async def api_get_settings(request: Request):
-    status = await panel_settings_service.get_status()
-    status["csrf_token"] = ensure_csrf_token(request)
-    return status
+    return await panel_settings_service.get_status()
 
 
 @router.post("/api/settings/panel")

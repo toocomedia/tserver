@@ -10,7 +10,6 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
-from middleware.csrf import ensure_csrf_token
 from services import auth_service
 
 logger = logging.getLogger(__name__)
@@ -33,7 +32,6 @@ def _safe_next(raw: str | None) -> str:
 async def login_page(request: Request, next: str | None = None):
     if request.session.get("user_id"):
         return RedirectResponse(_safe_next(next), status_code=302)
-    csrf = ensure_csrf_token(request)
     return templates.TemplateResponse(
         "pages/auth/login.html",
         {
@@ -41,7 +39,6 @@ async def login_page(request: Request, next: str | None = None):
             "error": None,
             "username": "",
             "next": _safe_next(next),
-            "csrf_token": csrf,
         },
     )
 
@@ -57,7 +54,6 @@ async def login_submit(
     next_url = _safe_next(next)
     user = await auth_service.authenticate(db, username, password)
     if user is None:
-        csrf = ensure_csrf_token(request)
         return templates.TemplateResponse(
             "pages/auth/login.html",
             {
@@ -65,14 +61,11 @@ async def login_submit(
                 "error": "Invalid username or password",
                 "username": username.strip(),
                 "next": next_url,
-                "csrf_token": csrf,
             },
             status_code=401,
         )
     request.session["user_id"] = user.id
     request.session["username"] = user.username
-    # Rotate CSRF after privilege change
-    ensure_csrf_token(request)
     logger.info("User '%s' logged in", user.username)
     return RedirectResponse(next_url, status_code=303)
 

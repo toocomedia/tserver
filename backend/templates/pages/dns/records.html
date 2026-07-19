@@ -34,7 +34,6 @@
   </div>
   <form method="post" action="/dns/{{ domain.name }}/records/template"
         class="d-flex gap-sm align-center" id="template-form">
-    <input type="hidden" name="csrf_token" value="{{ request.session.get('csrf_token', '') }}">
     <div class="form-select-wrap">
       <select name="template_name" class="form-select"
               id="template-select" style="width:200px;" required>
@@ -113,7 +112,6 @@
 
     <form method="post" action="/dns/{{ domain.name }}/records/add"
           id="add-record-form" class="form" style="max-width:none;">
-      <input type="hidden" name="csrf_token" value="{{ request.session.get('csrf_token', '') }}">
       <div class="modal__body" style="display:flex; flex-direction:column; gap:var(--space-md);">
 
         <!-- TYPE — dropdown, not free text -->

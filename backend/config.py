@@ -70,7 +70,6 @@ SESSION_MAX_AGE: int = _env_int("SESSION_MAX_AGE", 604800)  # 7 days
 # Security (panel browser hardening)
 # ---------------------------------------------------------
 SECURITY_HEADERS: bool = _env_bool("SECURITY_HEADERS", True)
-CSRF_ENABLED: bool = _env_bool("CSRF_ENABLED", True)
 HSTS_ENABLED: bool = _env_bool("HSTS_ENABLED", False)
 
 # ---------------------------------------------------------
