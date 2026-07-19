@@ -38,7 +38,7 @@
     {% include "partials/topbar.html" %}
 
     <!-- CONTENT -->
-    <main class="content" id="main-content">
+    <main class="content {% block content_class %}{% endblock %}" id="main-content">
       <div class="content__inner">
         {# Flash-style messages come from query params / page templates (no Flask) #}
         {% block content %}{% endblock %}
