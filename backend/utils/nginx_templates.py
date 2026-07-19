@@ -21,7 +21,7 @@ def performance_conf(gzip: bool, static_cache: bool) -> str:
 
     if gzip:
         parts += [
-            "gzip on;",
+            "# 'gzip on;' is omitted because it is enabled by default in nginx.conf",
             "gzip_vary on;",
             "gzip_min_length 1024;",
             "gzip_comp_level 5;",

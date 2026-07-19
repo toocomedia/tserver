@@ -13,7 +13,7 @@ from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
 import config
 from database import init_db
-from routers import system, domains, dns, ssl, proxy, errors, auth, settings
+from routers import system, domains, dns, ssl, proxy, errors, auth, settings, dev
 from middleware.error_capture import RequestIdMiddleware, register_error_handlers
 from middleware.auth import AuthMiddleware
 from middleware.security_headers import SecurityHeadersMiddleware
@@ -98,3 +98,4 @@ app.include_router(dns.router)       # Phase 3
 app.include_router(ssl.router)       # Phase 4
 app.include_router(proxy.router)     # Phase 5
 app.include_router(errors.router)    # Phase 6
+app.include_router(dev.router)       # Testing tools
