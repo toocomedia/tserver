@@ -3,11 +3,28 @@
 {% block title %}Domains — VPS Panel{% endblock %}
 {% block page_title %}Domains{% endblock %}
 
-{% block topbar_actions %}
-  <a href="/domains/create" class="btn btn--primary" id="btn-add-domain">+ Add Domain</a>
-{% endblock %}
+{% block page_header_wrapper %}{% endblock %}
+
+{% block content_class %}content--flush{% endblock %}
 
 {% block content %}
+
+<div class="split-layout">
+  <!-- Sidebar -->
+  <div class="split-sidebar">
+    <a href="/domains" class="split-sidebar__item active">All Domains</a>
+    <a href="/domains/create" class="split-sidebar__item">Add Domain</a>
+  </div>
+
+  <!-- Content Area -->
+  <div class="split-content">
+    
+    <div class="page-header" style="margin-top: 0;">
+      <h1 class="page-header__title">Domains</h1>
+      <div class="page-header__actions">
+        <a href="/domains/create" class="btn btn--primary" id="btn-add-domain">+ Add Domain</a>
+      </div>
+    </div>
 
 {% if domain_statuses %}
 <div class="table-wrap">
@@ -82,10 +99,11 @@
   </table>
 </div>
 {% else %}
-<div class="alert alert--info" id="empty-state">
-  No domains yet. <a href="/domains/create" style="font-weight:700;">Add your first domain →</a>
-</div>
+<div class="alert alert--info" id="alert-empty">No domains configured yet.</div>
 {% endif %}
+
+  </div> <!-- /.split-content -->
+</div> <!-- /.split-layout -->
 
 {% endblock %}
 

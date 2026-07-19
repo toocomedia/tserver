@@ -3,17 +3,30 @@
 {% block title %}Add Domain — VPS Panel{% endblock %}
 {% block page_title %}Add Domain{% endblock %}
 
-{% block topbar_actions %}
-  <a href="/domains/" class="btn btn--secondary" id="btn-back">← Back</a>
-{% endblock %}
+{% block page_header_wrapper %}{% endblock %}
+
+{% block content_class %}content--flush{% endblock %}
 
 {% block content %}
 
-<div class="section" style="max-width:560px;">
-  <div class="section__header">
-    <h3>New Domain</h3>
+<div class="split-layout">
+  <!-- Sidebar -->
+  <div class="split-sidebar">
+    <a href="/domains" class="split-sidebar__item">All Domains</a>
+    <a href="/domains/create" class="split-sidebar__item active">Add Domain</a>
   </div>
-  <div class="section__body">
+
+  <!-- Content Area -->
+  <div class="split-content">
+    
+    <div class="page-header" style="margin-top: 0;">
+      <h1 class="page-header__title">Add Domain</h1>
+      <div class="page-header__actions">
+        <a href="/domains/" class="btn btn--secondary" id="btn-back">← Back</a>
+      </div>
+    </div>
+
+    <div style="max-width: 560px;">
 
     {% if error %}
     <div class="alert alert--danger mb-lg" id="form-error" role="alert">{{ error }}</div>
@@ -64,8 +77,10 @@
       </div>
 
     </form>
-  </div>
-</div>
+    </div> <!-- max-width -->
+
+  </div> <!-- /.split-content -->
+</div> <!-- /.split-layout -->
 
 {% endblock %}
 
