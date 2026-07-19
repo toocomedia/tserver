@@ -47,7 +47,7 @@ Rules: Use sm, md, lg most often. Sidebar padding: sm horizontal, lg vertical.
 ---
 
 ## Layout
-- Sidebar: 200px (desktop), 72px (mobile/collapsed).
+- Sidebar: 260px (desktop), 72px (mobile/collapsed).
 - Topbar: 56px height.
 - Content: Full width of the remaining screen. No bounded boxes.
 
