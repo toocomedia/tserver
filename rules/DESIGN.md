@@ -1,4 +1,4 @@
-﻿# DESIGN.md
+# DESIGN.md
 
 ## Brand
 Server control panel UI — minimal, technical, compact.
@@ -36,12 +36,12 @@ Rules: Use sm, md, lg most often. Sidebar padding: sm horizontal, lg vertical.
 ## Typography
 - Font-family: Inter, system-sans
 - Sizes:
-  - H1: 24px / 800 / tight
-  - H2: 18px / 700
-  - H3: 14px / 700 / uppercase tracking
-  - Body: 13px / 400
-  - Small: 11px / 600 (labels/status)
-- Line-height: 1.1 (titles), 1.4 (body)
+  - H1: 32px / 800 / tight
+  - H2: 24px / 700
+  - H3: 18px / 700 / uppercase tracking
+  - Body: 16px / 400
+  - Small: 14px / 600 (labels/status)
+- Line-height: 1.1 (titles), 1.5 (body)
 - Use bold weights for titles and action labels.
 
 ---
@@ -56,7 +56,7 @@ Rules: Use sm, md, lg most often. Sidebar padding: sm horizontal, lg vertical.
 ---
 
 ## Borders & radius
-- border-width: 1px solid var(--line)
+- layout containers: Use full width `.section` separated by a bottom `var(--color-line)` divider. No bounded boxes.
 - border-radius: 0 (no rounding)
 - shadows: none
 
@@ -64,8 +64,8 @@ Rules: Use sm, md, lg most often. Sidebar padding: sm horizontal, lg vertical.
 
 ## Buttons
 Base rules:
-- display: inline-flex; align-items:center; justify-content:center
-- height: 34px; padding: 0 12px; font-weight:700; font-size:13px; line-height:1
+- display: inline-flex; align-items:center; justify-content:center; gap: var(--space-xs);
+- height: 40px; padding: 0 16px; font-weight:700; font-size: 16px; line-height:normal
 - border: 1px solid neutral-strong
 - border-radius: 0
 - no box-shadow
@@ -85,7 +85,7 @@ Alignment:
 - background: sidebar-bg
 - padding: 12px
 - item height: 40px (align icons + label center)
-- item font-size: 13px; font-weight:600
+- item font-size: 14px; font-weight:600
 - active item: background: accent-pistachio; color: neutral-strong; left indicator: 4px accent strip
 - icon color: #DDEDE0 (muted light)
 - compact: allow icon-only collapsed state (width ~72px) — keep vertical alignment same.
@@ -102,21 +102,21 @@ Alignment:
 
 ## Tables / Lists
 - full width; table-layout: fixed
-- th: font-size:11px; text-transform:uppercase; color: muted
-- td: font-size:13px; padding: 12px 0
+- th: font-size:14px; text-transform:uppercase; color: muted
+- td: font-size:16px; padding: 12px 0
 - separators: 1px line between rows
-- status label: small badge (11px), uppercase, weight 700
+- status label: small badge (14px), uppercase, weight 700
   - running: color accent-pistachio-2 (border + text)
   - stopped: color danger
   - neutral: muted
 
 ---
 
-## Panels / Details
-- panels: white surface with 1px border
-- header inside panel: padding 14px 16px; bold short title
-- detail grid: two columns (info / metrics) or stack on mobile
-- quick actions: inline buttons under info header, aligned left with consistent gap
+## Sections (formerly Panels)
+- sections: full width `.section` container, no outer borders, separated by bottom line
+- header inside section: padding 24px 0 16px; bold short title
+- detail grid: layout with `gap`, no manual margins
+- quick actions: inline buttons aligned with flex gap
 
 ---
 

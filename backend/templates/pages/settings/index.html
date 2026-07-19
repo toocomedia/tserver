@@ -16,9 +16,9 @@
 {% endif %}
 
 <!-- Status -->
-<div class="panel mb-xl">
-  <div class="panel__header"><h3>Current access</h3></div>
-  <div class="panel__body">
+<div class="section mb-xl">
+  <div class="section__header"><h3>Current access</h3></div>
+  <div class="section__body">
     <div class="info-row">
       <span class="info-row__label">Server IP</span>
       <span class="info-row__value" id="stat-server-ip">{{ s.server_ip }}</span>
@@ -56,9 +56,9 @@
 </div>
 
 <!-- ONE section: Panel URL + SSL -->
-<div class="panel mb-xl">
-  <div class="panel__header"><h3>Panel URL</h3></div>
-  <div class="panel__body">
+<div class="section mb-xl">
+  <div class="section__header"><h3>Panel URL</h3></div>
+  <div class="section__body">
 
     <p class="form-hint mb-md">
       Hostname for the panel (SSL). IP can stay on a custom port (e.g. 8080).
@@ -182,9 +182,9 @@
 </div>
 
 <!-- IP -->
-<div class="panel mb-xl">
-  <div class="panel__header"><h3>IP access</h3></div>
-  <div class="panel__body">
+<div class="section mb-xl">
+  <div class="section__header"><h3>IP access</h3></div>
+  <div class="section__body">
     <label class="form-check mb-md">
       <input type="checkbox" id="allow_ip" {% if s.allow_ip %}checked{% endif %}>
       <span>Allow access by server IP</span>
@@ -202,9 +202,9 @@
 </div>
 
 <!-- Security -->
-<div class="panel mb-xl">
-  <div class="panel__header"><h3>Security</h3></div>
-  <div class="panel__body">
+<div class="section mb-xl">
+  <div class="section__header"><h3>Security</h3></div>
+  <div class="section__body">
     <label class="form-check mb-md">
       <input type="checkbox" id="session_https_only" {% if s.session_https_only %}checked{% endif %}>
       <span>Secure cookies (HTTPS only — breaks IP HTTP login)</span>
@@ -229,9 +229,9 @@
 </div>
 
 <!-- Performance -->
-<div class="panel mb-xl">
-  <div class="panel__header"><h3>Performance</h3></div>
-  <div class="panel__body">
+<div class="section mb-xl">
+  <div class="section__header"><h3>Performance</h3></div>
+  <div class="section__body">
     <p class="form-hint mb-md">
       Global Nginx optimizations applied to all proxies and sites.
       Changes write <code>/etc/nginx/conf.d/performance.conf</code> and reload Nginx.

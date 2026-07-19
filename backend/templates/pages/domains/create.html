@@ -9,11 +9,11 @@
 
 {% block content %}
 
-<div class="panel" style="max-width:560px;">
-  <div class="panel__header">
+<div class="section" style="max-width:560px;">
+  <div class="section__header">
     <h3>New Domain</h3>
   </div>
-  <div class="panel__body">
+  <div class="section__body">
 
     {% if error %}
     <div class="alert alert--danger mb-lg" id="form-error" role="alert">{{ error }}</div>
@@ -49,8 +49,8 @@
       </div>
 
       <!-- Live preview -->
-      <div class="panel" id="preview-panel" style="display:none; background:var(--color-surface);">
-        <div class="panel__body" style="padding:var(--space-md);">
+      <div class="section" id="preview-panel" style="display:none; background:var(--color-surface);">
+        <div class="section__body" style="padding:var(--space-md);">
           <span class="text-small text-muted">Preview</span><br>
           <span style="font-size:var(--font-body); font-weight:700;" id="preview-domain"></span>
           <span class="text-muted"> → </span>

@@ -1,0 +1,43 @@
+/* sections.css (formerly panels) */
+.section { 
+  display: flex;
+  flex-direction: column;
+  border-bottom: 1px solid var(--color-line); 
+  padding: var(--space-xl) 0 var(--space-lg);
+  margin-bottom: var(--space-lg);
+  width: 100%;
+}
+.section:last-child {
+  border-bottom: none;
+}
+.section__header { 
+  display: flex; 
+  align-items: center; 
+  justify-content: space-between; 
+  margin-bottom: var(--space-md);
+}
+.section__header h3 { 
+  font-size: var(--font-h3); 
+  font-weight: 700; 
+  text-transform: none; 
+  letter-spacing: 0; 
+}
+.section__body { 
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+/* Info row */
+.info-row { display: flex; align-items: baseline; gap: var(--space-md); padding: var(--space-sm) 0; border-bottom: 1px solid var(--color-line); }
+.info-row:last-child { border-bottom: none; }
+.info-row__label { font-size: var(--font-small); font-weight: 600; text-transform: uppercase; color: var(--color-muted); min-width: 140px; flex-shrink: 0; }
+.info-row__value { font-size: var(--font-body); color: var(--color-text); }
+/* Monospace block */
+.code-block { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: var(--font-small); line-height: 1.5; background: var(--color-surface); border: 1px solid var(--color-line); padding: var(--space-md); margin: 0; white-space: pre-wrap; word-break: break-word; max-height: 360px; overflow: auto; color: var(--color-text); }
+/* SSL Progress */
+.ssl-progress { border: 1px solid var(--color-line); background: var(--color-surface); padding: var(--space-md); }
+.ssl-step { display: flex; align-items: center; gap: var(--space-sm); padding: 6px 0; font-size: var(--font-body); color: var(--color-muted); }
+.ssl-step__icon { font-weight: 800; width: 1.2em; text-align: center; flex-shrink: 0; }
+.ssl-step--run { color: var(--color-text); font-weight: 700; }
+.ssl-step--ok { color: var(--color-accent-2, #6a9); }
+.ssl-step--fail { color: var(--color-danger); font-weight: 700; }

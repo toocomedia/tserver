@@ -9,11 +9,11 @@
 
 {% block content %}
 
-<div class="panel" style="max-width:560px;" id="create-proxy-panel">
-  <div class="panel__header">
+<div class="section" style="max-width:560px;" id="create-proxy-panel">
+  <div class="section__header">
     <h3>New Reverse Proxy</h3>
   </div>
-  <div class="panel__body">
+  <div class="section__body">
 
     {% if error %}
     <div class="alert alert--danger mb-lg" id="form-error" role="alert">{{ error }}</div>
@@ -221,8 +221,8 @@
       </div>
 
       <!-- Live preview -->
-      <div class="panel" id="proxy-preview" style="display:none; background:var(--color-surface);">
-        <div class="panel__body" style="padding:var(--space-md);">
+      <div class="section" id="proxy-preview" style="display:none; background:var(--color-surface);">
+        <div class="section__body" style="padding:var(--space-md);">
           <span class="text-small text-muted">Preview</span><br>
           <span style="font-weight:700; font-size:var(--font-body);" id="preview-line">—</span>
         </div>

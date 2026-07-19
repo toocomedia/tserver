@@ -17,8 +17,8 @@
 {% endif %}
 
 <!-- Meta -->
-<div class="panel mb-lg" id="error-meta">
-  <div class="panel__header">
+<div class="section mb-lg" id="error-meta">
+  <div class="section__header">
     <h3>Summary</h3>
     <div class="d-flex gap-xs">
       {% if event.resolved %}
@@ -29,7 +29,7 @@
       <span class="badge badge--error">{{ event.level }}</span>
     </div>
   </div>
-  <div class="panel__body">
+  <div class="section__body">
     <div class="info-row">
       <span class="info-row__label">When</span>
       <span class="info-row__value text-small">
@@ -64,25 +64,25 @@
 </div>
 
 <!-- Detail -->
-<div class="panel mb-lg">
-  <div class="panel__header"><h3>Detail</h3></div>
-  <div class="panel__body">
+<div class="section mb-lg">
+  <div class="section__header"><h3>Detail</h3></div>
+  <div class="section__body">
     <pre class="code-block" id="error-detail">{{ event.detail or '(none)' }}</pre>
   </div>
 </div>
 
 <!-- Context -->
-<div class="panel mb-lg">
-  <div class="panel__header"><h3>Context</h3></div>
-  <div class="panel__body">
+<div class="section mb-lg">
+  <div class="section__header"><h3>Context</h3></div>
+  <div class="section__body">
     <pre class="code-block" id="error-context">{{ event.context_json or '(none)' }}</pre>
   </div>
 </div>
 
 <!-- Traceback -->
-<div class="panel mb-lg">
-  <div class="panel__header"><h3>Traceback</h3></div>
-  <div class="panel__body">
+<div class="section mb-lg">
+  <div class="section__header"><h3>Traceback</h3></div>
+  <div class="section__body">
     <pre class="code-block" id="error-traceback">{{ event.traceback or '(none)' }}</pre>
   </div>
 </div>
