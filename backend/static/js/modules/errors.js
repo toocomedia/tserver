@@ -59,11 +59,11 @@ function initClearAll() {
     confirmAction(
       "Delete ALL error records? This cannot be undone.",
       async () => {
-        const form = document.createElement("form");
-        form.method = "POST";
-        form.action = "/admin/errors/clear-all";
-        document.body.appendChild(form);
-        form.submit();
+        if (typeof window.submitPost === "function") {
+          window.submitPost("/admin/errors/clear-all");
+        } else {
+          toast("Refresh the page (Ctrl+F5) and try again.", "danger");
+        }
       }
     );
   });
@@ -75,11 +75,11 @@ function initDelete() {
   btn.addEventListener("click", () => {
     const id = btn.getAttribute("data-error-id");
     confirmAction(`Delete error #${id}?`, async () => {
-      const form = document.createElement("form");
-      form.method = "POST";
-      form.action = `/admin/errors/${id}/delete`;
-      document.body.appendChild(form);
-      form.submit();
+      if (typeof window.submitPost === "function") {
+        window.submitPost(`/admin/errors/${id}/delete`);
+      } else {
+        toast("Refresh the page (Ctrl+F5) and try again.", "danger");
+      }
     });
   });
 }

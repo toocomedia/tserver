@@ -230,15 +230,11 @@ function deleteDomain(id, name) {
   confirmAction(
     `Delete "${name}"? This removes the DNS zone, nginx config, webroot, and SSL cert.`,
     async () => {
-      const res = await fetch(`/domains/${id}/delete`, {
-        method: 'POST',
-        headers: window.csrfToken ? { 'X-CSRF-Token': window.csrfToken() } : {},
-      });
-      if (res.redirected || res.ok) {
-        window.location.href = '/domains/';
-      } else {
-        toast('Delete failed — check if reverse proxies exist', 'danger');
+      if (typeof window.submitPost === 'function') {
+        window.submitPost(`/domains/${id}/delete`);
+        return;
       }
+      toast('Refresh the page (Ctrl+F5) and try again.', 'danger');
     }
   );
 }

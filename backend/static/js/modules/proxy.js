@@ -151,11 +151,11 @@ function initDeleteButtons() {
         `Delete reverse proxy "${name}"? This removes Nginx config and any linked SSL cert` +
         (btn.getAttribute("data-dns-managed") === "0" ? "." : ", and DNS."),
         async () => {
-          const form = document.createElement("form");
-          form.method = "POST";
-          form.action = `/proxy/${id}/delete`;
-          document.body.appendChild(form);
-          form.submit();
+          if (typeof window.submitPost === "function") {
+            window.submitPost(`/proxy/${id}/delete`);
+          } else {
+            toast("Refresh the page (Ctrl+F5) and try again.", "danger");
+          }
         }
       );
     });

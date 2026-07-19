@@ -138,11 +138,11 @@ function revokeCert(id, domain) {
   confirmAction(
     `Revoke SSL certificate for "${domain}"? The domain will revert to HTTP only.`,
     async () => {
-      const form = document.createElement('form');
-      form.method = 'POST';
-      form.action = `/ssl/${id}/revoke`;
-      document.body.appendChild(form);
-      form.submit();
+      if (typeof window.submitPost === "function") {
+        window.submitPost(`/ssl/${id}/revoke`);
+      } else {
+        toast("Refresh the page (Ctrl+F5) and try again.", "danger");
+      }
     }
   );
 }

@@ -16,7 +16,14 @@ function csrfToken() {
   if (fromMeta) return fromMeta;
   // Cookie fallback (set by CsrfMiddleware — not HttpOnly)
   const match = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]+)/);
-  return match ? decodeURIComponent(match[1]) : "";
+  if (match) {
+    try {
+      return decodeURIComponent(match[1]);
+    } catch (_) {
+      return match[1];
+    }
+  }
+  return "";
 }
 
 function withCsrfHeaders(headers = {}) {
@@ -33,19 +40,58 @@ function withCsrfHeaders(headers = {}) {
 function injectCsrfIntoForms(root) {
   const token = csrfToken();
   if (!token) return;
-  const scope = root || document;
-  scope.querySelectorAll("form").forEach((form) => {
-    const method = (form.getAttribute("method") || "get").toLowerCase();
-    if (method !== "post") return;
-    let input = form.querySelector('input[name="csrf_token"]');
-    if (!input) {
-      input = document.createElement("input");
-      input.type = "hidden";
-      input.name = "csrf_token";
-      form.appendChild(input);
-    }
-    input.value = token;
+  const scope = root && root.querySelectorAll ? root : document;
+  // If root is a single form element
+  if (root && root.tagName === "FORM") {
+    _setFormCsrf(root, token);
+    return;
+  }
+  scope.querySelectorAll("form").forEach((form) => _setFormCsrf(form, token));
+}
+
+function _setFormCsrf(form, token) {
+  const method = (form.getAttribute("method") || "get").toLowerCase();
+  if (method !== "post") return;
+  let input = form.querySelector('input[name="csrf_token"]');
+  if (!input) {
+    input = document.createElement("input");
+    input.type = "hidden";
+    input.name = "csrf_token";
+    form.appendChild(input);
+  }
+  input.value = token || csrfToken();
+}
+
+/**
+ * Submit a browser form POST with CSRF (for server-rendered Form routes).
+ * Use this instead of document.createElement('form') without a token.
+ *
+ * @param {string} action URL
+ * @param {Record<string,string|number|boolean>} [fields]
+ */
+function submitPost(action, fields = {}) {
+  const token = csrfToken();
+  if (!token) {
+    toast("Security token missing — refresh the page and try again.", "danger");
+    return;
+  }
+  const form = document.createElement("form");
+  form.method = "POST";
+  form.action = action;
+  form.style.display = "none";
+
+  const data = { csrf_token: token, ...fields };
+  Object.entries(data).forEach(([key, value]) => {
+    if (value === undefined || value === null) return;
+    const input = document.createElement("input");
+    input.type = "hidden";
+    input.name = key;
+    input.value = String(value);
+    form.appendChild(input);
   });
+
+  document.body.appendChild(form);
+  form.submit();
 }
 
 function formatDetail(detail) {
@@ -203,12 +249,30 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Inject CSRF into HTML forms (login, logout, domain create, DNS, etc.)
   injectCsrfIntoForms(document);
+
+  // Always refresh token right before any form POST (covers dynamic forms)
+  document.addEventListener(
+    "submit",
+    (e) => {
+      const form = e.target;
+      if (!(form instanceof HTMLFormElement)) return;
+      const method = (form.getAttribute("method") || "get").toLowerCase();
+      if (method !== "post") return;
+      injectCsrfIntoForms(form);
+      if (!csrfToken()) {
+        e.preventDefault();
+        toast("Security token missing — refresh the page and try again.", "danger");
+      }
+    },
+    true
+  );
 });
 
 // Export for modules
 window.panel = panel;
 window.csrfToken = csrfToken;
 window.injectCsrfIntoForms = injectCsrfIntoForms;
+window.submitPost = submitPost;
 window.toast = toast;
 window.openModal = openModal;
 window.closeModal = closeModal;

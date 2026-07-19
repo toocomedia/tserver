@@ -44,31 +44,17 @@ function updateContentLabel(type) {
 }
 
 /**
- * Submit a real HTML form POST (session cookie + Form fields).
- * Safer than building innerHTML for values that may contain quotes.
+ * Submit a real HTML form POST (session cookie + Form fields + CSRF).
  */
 function postDeleteRecord(domain, name, type) {
-  const form = document.createElement("form");
-  form.method = "POST";
-  form.action = `/dns/${encodeURIComponent(domain)}/records/delete`;
-  form.style.display = "none";
-
-  const fields = { name, type };
-  // CSRF required by middleware — same as other POST forms
-  const token =
-    (typeof window.csrfToken === "function" && window.csrfToken()) || "";
-  if (token) fields.csrf_token = token;
-
-  Object.entries(fields).forEach(([key, value]) => {
-    const input = document.createElement("input");
-    input.type = "hidden";
-    input.name = key;
-    input.value = value;
-    form.appendChild(input);
+  if (typeof window.submitPost !== "function") {
+    toast("Page scripts incomplete — hard-refresh (Ctrl+F5).", "danger");
+    return;
+  }
+  window.submitPost(`/dns/${encodeURIComponent(domain)}/records/delete`, {
+    name,
+    type,
   });
-
-  document.body.appendChild(form);
-  form.submit();
 }
 
 function bindDeleteButtons() {

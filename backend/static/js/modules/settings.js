@@ -1,5 +1,5 @@
 /**
- * settings.js — Panel URL modes, IP access, SSL, security
+ * settings.js — Panel hostname modes, IP access, SSL, security
  */
 (function () {
   function $(id) {
@@ -24,6 +24,13 @@
     return "";
   }
 
+  function syncChoiceCards() {
+    document.querySelectorAll(".settings-choice").forEach((card) => {
+      const radio = card.querySelector('input[type="radio"]');
+      card.classList.toggle("settings-choice--active", !!(radio && radio.checked));
+    });
+  }
+
   function syncUrlModeUi() {
     const mode = selectedUrlMode();
     const customBox = $("url-custom-fields");
@@ -40,7 +47,7 @@
     }
     if ($("custom-dns-hint") && mode === "custom") {
       const ip = $("stat-server-ip")?.textContent || "SERVER_IP";
-      $("custom-dns-hint").textContent = `${host || "hostname"} → ${ip}`;
+      $("custom-dns-hint").textContent = `A  ${host || "hostname"}  →  ${ip}`;
     }
     if (mode === "subdomain") {
       const label = ($("subdomain_label")?.value || "panel").trim().toLowerCase() || "panel";
@@ -49,6 +56,13 @@
         $("subdomain-preview").textContent = `${label}.${parent}`;
       }
     }
+
+    const portGroup = $("ip-port-group");
+    if (portGroup && $("allow_ip")) {
+      portGroup.style.opacity = $("allow_ip").checked ? "1" : "0.5";
+    }
+
+    syncChoiceCards();
   }
 
   function readPayload() {
@@ -97,7 +111,7 @@
     const sel = $("parent_domain");
     if (!sel) return;
     const current = selected || sel.value;
-    sel.innerHTML = '<option value="">— select domain —</option>';
+    sel.innerHTML = '<option value="">Select domain…</option>';
     (managed || []).forEach((d) => {
       const opt = document.createElement("option");
       opt.value = d;
@@ -122,10 +136,7 @@
     else if ($("url_mode_none")) $("url_mode_none").checked = true;
 
     if ($("custom_domain") && document.activeElement !== $("custom_domain")) {
-      $("custom_domain").value =
-        mode === "custom" ? s.panel_domain || "" : $("custom_domain").value;
-      if (mode !== "custom" && !s.panel_domain) $("custom_domain").value = "";
-      if (mode === "custom") $("custom_domain").value = s.panel_domain || "";
+      $("custom_domain").value = mode === "custom" ? s.panel_domain || "" : "";
     }
     if ($("subdomain_label") && document.activeElement !== $("subdomain_label")) {
       $("subdomain_label").value = s.subdomain_label || "panel";
@@ -146,11 +157,14 @@
       $("session_max_age_days").value = s.session_max_age_days || 7;
     }
     if ($("stat-server-ip")) $("stat-server-ip").textContent = s.server_ip || "";
+    if ($("stat-hostname")) {
+      $("stat-hostname").textContent = s.panel_domain || "— (IP only)";
+    }
 
     if ($("stat-ssl")) {
       $("stat-ssl").innerHTML = s.ssl_active
-        ? '<span class="badge badge--ok">active</span>'
-        : '<span class="badge badge--neutral">off</span>';
+        ? '<span class="badge badge--ok">HTTPS active</span>'
+        : '<span class="badge badge--neutral">HTTP only</span>';
     }
     if ($("stat-dns")) {
       if (!s.panel_domain) {
@@ -236,6 +250,7 @@
     $("custom_domain")?.addEventListener("input", syncUrlModeUi);
     $("subdomain_label")?.addEventListener("input", syncUrlModeUi);
     $("parent_domain")?.addEventListener("change", syncUrlModeUi);
+    $("allow_ip")?.addEventListener("change", syncUrlModeUi);
 
     $("btn-save-panel")?.addEventListener("click", (e) => save(e.currentTarget));
     $("btn-save-ip")?.addEventListener("click", (e) => save(e.currentTarget));
