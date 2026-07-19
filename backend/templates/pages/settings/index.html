@@ -189,10 +189,24 @@
   </div>
   <div class="panel__body">
     <p class="form-hint mb-md">
-      Issues a Let's Encrypt certificate for the panel hostname.
-      DNS A must point here, and <strong>port 80</strong> must be open for the hostname
-      (Let's Encrypt does not use the custom IP port like 8080).
-      Test first: <code>http://your-hostname/</code> should open this panel.
+      <strong>Two different doors (this is the panel-only rule):</strong>
+    </p>
+    <ul class="form-hint mb-md" style="margin:0 0 var(--space-md) 1.2em; line-height:1.5;">
+      <li>
+        <strong>IP + custom port</strong> (e.g. <code>http://IP:8080/</code>) —
+        panel login for you. Port <strong>80 by IP</strong> stays free for normal websites
+        (default HTML / domains). That is OK.
+      </li>
+      <li>
+        <strong>Panel hostname</strong> (e.g. <code>panel.example.com</code>) —
+        must show the <strong>panel</strong> on port <strong>80</strong> (not Domain
+        “Site Coming Soon”). Let’s Encrypt needs that for SSL. After SSL you use
+        <code>https://panel…</code> on 443.
+      </li>
+    </ul>
+    <p class="form-hint mb-md">
+      If <code>http://panel…/</code> shows a default HTML page, SSL will fail —
+      delete that name under Domains if you created it as a site, then Save hostname again.
     </p>
     <div class="form-actions">
       <button type="button" class="btn btn--primary" id="btn-issue-ssl" {% if not s.panel_domain %}disabled{% endif %}>
@@ -205,12 +219,12 @@
 <!-- ========== STEP 3: IP ACCESS ========== -->
 <div class="panel mb-xl" id="panel-ip-section">
   <div class="panel__header">
-    <h3>3. Access by IP</h3>
+    <h3>3. Access by IP (custom port)</h3>
   </div>
   <div class="panel__body">
     <p class="form-hint mb-md">
-      Independently of the hostname: allow opening the panel with the server IP
-      (useful for recovery). You can also use a non-standard public port.
+      For security, use a non-standard port (e.g. 8080) so the panel is not on
+      <code>http://IP/</code> port 80. This is independent of the hostname SSL URL.
     </p>
 
     <label class="form-check mb-md">

@@ -251,9 +251,12 @@ def server_name_in_use(domain: str, *, ignore_names: set[str] | None = None) -> 
 
 
 # ---------------------------------------------------------------
-# PANEL SITE (special config name: "panel")
+# PANEL SITE
+# Prefer 00-srv-panel so it loads before domain*.conf and wins if
+# the same server_name was also used as a static site by mistake.
 # ---------------------------------------------------------------
-PANEL_SITE_NAME = "panel"
+PANEL_SITE_NAME = "00-srv-panel"
+_LEGACY_PANEL_NAMES = ("panel", "00-panel")
 
 
 async def apply_panel_config(
@@ -262,8 +265,8 @@ async def apply_panel_config(
     previous_content: str | None = None,
 ) -> str:
     """
-    Write /etc/nginx/sites-available/panel, enable it, nginx -t, reload.
-    On test failure restores previous_content when provided.
+    Write panel nginx site, enable it, nginx -t, reload.
+    Removes legacy panel config names to avoid duplicate vhosts.
     """
     name = PANEL_SITE_NAME
     avail = _available_path(name)
@@ -273,6 +276,15 @@ async def apply_panel_config(
             old = avail.read_text(encoding="utf-8", errors="replace")
         except OSError:
             old = None
+
+    # Drop old filenames so only one panel vhost remains
+    for legacy in _LEGACY_PANEL_NAMES:
+        if legacy == name:
+            continue
+        try:
+            await _remove_config(legacy)
+        except Exception as exc:
+            logger.warning("Could not remove legacy panel conf %s: %s", legacy, exc)
 
     config_path = str(await _write_config(name, content))
     result = await shell.nginx_test()
@@ -288,13 +300,15 @@ async def apply_panel_config(
 
 def read_panel_config() -> str | None:
     """Return current panel nginx config text, or None."""
-    path = _available_path(PANEL_SITE_NAME)
-    if not path.exists():
-        return None
-    try:
-        return path.read_text(encoding="utf-8", errors="replace")
-    except OSError:
-        return None
+    for name in (PANEL_SITE_NAME, *_LEGACY_PANEL_NAMES):
+        path = _available_path(name)
+        if not path.exists():
+            continue
+        try:
+            return path.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+    return None
 
 
 def panel_config_has_ssl() -> bool:

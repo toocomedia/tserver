@@ -405,11 +405,30 @@ async def save_settings(payload: dict) -> dict:
             "Set a domain first so you can still reach the panel.",
         )
 
-    if domain and nginx_service.server_name_in_use(domain, ignore_names={"panel"}):
-        raise HTTPException(
-            status_code=409,
-            detail=f"Hostname '{domain}' is already used by another site on this server.",
-        )
+    if domain:
+        # Exact domain row = static "Site Coming Soon" HTML on :80 — steals panel hostname
+        if domain in managed:
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    f"'{domain}' is already a Domain site (default HTML page on port 80). "
+                    f"Delete that domain under Domains, or pick another panel hostname "
+                    f"(e.g. panel.{domain} as a subdomain of a parent domain). "
+                    f"Custom IP port does not move the panel hostname off port 80 — "
+                    f"port 80 for the hostname must be the panel, not the default page."
+                ),
+            )
+        if nginx_service.server_name_in_use(
+            domain, ignore_names={"panel", "00-panel", "00-srv-panel"}
+        ):
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    f"Hostname '{domain}' is already used by another nginx site "
+                    f"(often a Domain default page or reverse proxy). "
+                    f"Remove that site first so port 80 can serve the panel for SSL."
+                ),
+            )
 
     session_https_only = bool(payload.get("session_https_only", config.SESSION_HTTPS_ONLY))
     security_headers = bool(payload.get("security_headers", config.SECURITY_HEADERS))
@@ -653,12 +672,18 @@ async def issue_panel_ssl() -> dict:
         ) from exc
 
     # Do NOT force SESSION_HTTPS_ONLY — that breaks login on http://IP:8080/
+    ip_port = int(config.PANEL_IP_PORT or 80)
+    ip_url = (
+        f"http://{config.SERVER_IP}/"
+        if ip_port == 80
+        else f"http://{config.SERVER_IP}:{ip_port}/"
+    )
     notes.extend([
         f"Certificate issued for {domain}.",
-        f"Open https://{domain}/ (port 443).",
-        f"IP access remains http://{config.SERVER_IP}:{config.PANEL_IP_PORT}/ "
-        f"if IP port is not 80.",
-        "Optional: enable “Secure cookies” only if you always use HTTPS.",
+        f"Day-to-day panel URL: https://{domain}/ (port 443).",
+        f"IP recovery access (custom port): {ip_url}",
+        "Port 80 on the hostname only redirects to HTTPS now (plus ACME renewals).",
+        "Leave “Secure cookies” off if you still log in via IP HTTP.",
     ])
 
     status = await get_status()

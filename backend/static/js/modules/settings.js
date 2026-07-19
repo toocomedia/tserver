@@ -254,10 +254,10 @@
     $("btn-save-security")?.addEventListener("click", (e) => save(e.currentTarget));
     $("btn-issue-ssl")?.addEventListener("click", (e) => {
       confirmAction(
-        "Issue Let's Encrypt SSL for the panel hostname?\n\n" +
-          "Requires: DNS A → this server, and port 80 open for the hostname " +
-          "(not the custom IP port like 8080). " +
-          "http://your-hostname/ must already open this panel.",
+        "Issue SSL for the panel hostname (https://… on port 443)?\n\n" +
+          "Your IP custom port (e.g. 8080) is unchanged — that is only for IP access.\n\n" +
+          "Let's Encrypt will check the hostname on port 80 once (same as other domains). " +
+          "After that you use HTTPS on the name; IP stays on the custom port.",
         () => issueSsl(e.currentTarget)
       );
     });
