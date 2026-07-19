@@ -500,125 +500,52 @@ async def save_settings(payload: dict) -> dict:
 
 async def _dns_points_here(domain: str) -> tuple[bool | None, str]:
     """Return (ok, message). ok None = could not check."""
+    ips: set[str] = set()
+    # Prefer public view (what Let's Encrypt sees)
+    dig = await shell.run(
+        ["dig", "+short", "A", domain, "@8.8.8.8"],
+        timeout=10,
+    )
+    if dig.success and dig.stdout.strip():
+        for line in dig.stdout.splitlines():
+            line = line.strip()
+            if line and not line.startswith(";"):
+                ips.add(line)
     try:
         infos = socket.getaddrinfo(domain, 80, type=socket.SOCK_STREAM)
-        ips = sorted({i[4][0] for i in infos})
-        if not ips:
-            return False, f"DNS for {domain} returned no addresses."
-        if config.SERVER_IP in ips:
-            return True, f"DNS OK: {domain} → {', '.join(ips)} (includes {config.SERVER_IP})"
-        return (
-            False,
-            f"DNS for {domain} resolves to {', '.join(ips)}, "
-            f"but this server is {config.SERVER_IP}. "
-            f"Point an A record to {config.SERVER_IP} and wait for propagation.",
-        )
-    except OSError as exc:
-        return False, f"DNS lookup failed for {domain}: {exc}"
+        for i in infos:
+            ip = i[4][0]
+            if ":" not in ip:  # IPv4 only for LE A-record match
+                ips.add(ip)
+    except OSError:
+        pass
+
+    if not ips:
+        return None, f"DNS for {domain}: no A record found yet (will still try SSL)."
+    if config.SERVER_IP in ips:
+        return True, f"DNS OK: {domain} A → {', '.join(sorted(ips))}"
+    return (
+        False,
+        f"DNS for {domain} A → {', '.join(sorted(ips))}, "
+        f"but this server is {config.SERVER_IP}. "
+        f"Fix the A record, then retry.",
+    )
 
 
-async def _verify_acme_local(domain: str, webroot: str) -> str | None:
-    """
-    Write a test challenge file and fetch it via nginx on localhost with Host header.
-    Returns None if OK, or an error hint string.
-    """
-    token = "srv-panel-acme-test"
-    challenge_dir = Path(webroot) / ".well-known" / "acme-challenge"
-    test_path = challenge_dir / token
-    body = b"srv-panel-ok"
-    try:
-        await shell.run(["mkdir", "-p", str(challenge_dir)], timeout=10)
-        # Write via shell tee so root-owned dirs work
-        await shell.write_file(str(test_path), body.decode("ascii"))
-        await shell.run(["chmod", "a+r", str(test_path)], timeout=5)
-    except Exception as exc:
-        return f"Could not write ACME test file under {challenge_dir}: {exc}"
-
-    # Hit nginx on port 80 (hostname vhost) — LE always uses port 80
-    url = f"http://127.0.0.1/.well-known/acme-challenge/{token}"
-    try:
-        r = await shell.run(
-            [
-                "curl", "-sS", "-m", "5",
-                "-H", f"Host: {domain}",
-                "-o", "-",
-                "-w", "\n%{http_code}",
-                url,
-            ],
-            timeout=15,
-        )
-        if not r.success and "not found" in (r.stderr or "").lower():
-            return "curl not found; skipping local ACME preflight"
-        out = (r.stdout or "").strip()
-        lines = out.splitlines()
-        code = lines[-1] if lines else ""
-        body = "\n".join(lines[:-1]) if len(lines) > 1 else out
-        if code == "200" and "srv-panel-ok" in body:
-            return None
-        if "srv-panel-ok" in out:
-            return None
-        return (
-            f"Local ACME check failed for Host {domain} on port 80 "
-            f"(HTTP {code or '?'}: {(body or r.stderr or 'empty')[:160]}). "
-            f"Open http://{domain}/ in a browser — it must show the panel. "
-            f"Custom IP port {config.PANEL_IP_PORT} is separate; LE always uses port 80."
-        )
-    except Exception as exc:
-        return f"Local ACME check error: {exc}"
-    finally:
+async def _managed_zone_for_host(hostname: str) -> str | None:
+    """If hostname is under a PowerDNS zone on this panel, return that zone name."""
+    labels = hostname.strip(".").lower().split(".")
+    for i in range(len(labels)):
+        candidate = ".".join(labels[i:])
         try:
-            await shell.run(["rm", "-f", str(test_path)], timeout=5)
+            if await dns_service.zone_exists(candidate):
+                return candidate
         except Exception:
-            pass
+            continue
+    return None
 
 
-async def issue_panel_ssl() -> dict:
-    """Issue/renew Let's Encrypt cert for PANEL_DOMAIN and enable HTTPS on panel vhost."""
-    domain = _normalize_domain(config.PANEL_DOMAIN)
-    if not domain:
-        raise HTTPException(
-            status_code=400,
-            detail="Set a panel hostname first before issuing SSL.",
-        )
-
-    notes: list[str] = []
-
-    dns_ok, dns_msg = await _dns_points_here(domain)
-    notes.append(dns_msg)
-    if dns_ok is False:
-        raise HTTPException(status_code=400, detail=dns_msg)
-
-    # HTTP-only panel vhost + ACME location on port 80 for this hostname
-    try:
-        await apply_panel_nginx(
-            domain,
-            bool(config.PANEL_ALLOW_IP),
-            int(config.PANEL_IP_PORT or 80),
-            force_ssl=False,
-        )
-    except Exception as exc:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Could not prepare HTTP vhost for ACME: {exc}",
-        ) from exc
-
-    try:
-        webroot = await nginx_service.ensure_acme_root_privileged()
-    except Exception:
-        nginx_service.ensure_acme_root()
-        webroot = f"{config.NGINX_WEBROOT}/acme-challenge"
-
-    # Prove nginx serves challenges for this Host before calling Let's Encrypt
-    acme_hint = await _verify_acme_local(domain, webroot)
-    if acme_hint:
-        logger.warning("ACME preflight failed: %s", acme_hint)
-        # If curl is missing, continue to certbot; otherwise block with a clear fix
-        if "curl" in acme_hint.lower() and "not found" in acme_hint.lower():
-            notes.append(acme_hint)
-        else:
-            raise HTTPException(status_code=400, detail=acme_hint)
-
-    email = (config.CERTBOT_EMAIL or "").strip() or "admin@example.com"
+async def _certbot_http01(domain: str, email: str, webroot: str):
     cmd = [
         "certbot", "certonly",
         "--webroot",
@@ -632,27 +559,225 @@ async def issue_panel_ssl() -> dict:
         "--expand",
         "--preferred-challenges", "http",
     ]
-    logger.info("Issuing panel SSL for %s (webroot=%s)", domain, webroot)
-    result = await shell.run(cmd, timeout=180)
-    if not result.success:
-        detail = (result.stderr or result.stdout or "certbot failed").strip()
-        # Common LE messages → clearer hints
-        hint = ""
-        low = detail.lower()
-        if "connection refused" in low or "timeout" in low or "timed out" in low:
-            hint = (
-                " Let's Encrypt must reach http://{0}/.well-known/acme-challenge/ "
-                "on port 80 (not the custom IP port {1}). Open firewall TCP 80."
-            ).format(domain, config.PANEL_IP_PORT)
-        elif "unauthorized" in low or "invalid response" in low:
-            hint = (
-                " Challenge file was not served correctly. "
-                "Confirm http://{0}/ opens this panel and DNS A is {1}."
-            ).format(domain, config.SERVER_IP)
+    logger.info("Panel SSL HTTP-01: %s webroot=%s", domain, webroot)
+    return await shell.run(cmd, timeout=180)
+
+
+async def _certbot_dns01(domain: str, email: str):
+    """
+    Let's Encrypt DNS-01 via PowerDNS (no port 80 needed for the challenge).
+    Works when the zone is hosted on this panel — ideal for panel.subdomain + IP:8080.
+    """
+    import tempfile
+    import textwrap
+
+    pdns_url = (config.PDNS_URL or "").rstrip("/")
+    pdns_key = config.PDNS_API_KEY or ""
+    if not pdns_url or not pdns_key:
+        raise HTTPException(status_code=500, detail="PowerDNS API not configured")
+
+    # Hook scripts: certbot sets CERTBOT_DOMAIN / CERTBOT_VALIDATION
+    auth_body = textwrap.dedent(
+        f"""\
+        #!/usr/bin/env python3
+        import json, os, time, urllib.request
+        PDNS = {pdns_url!r}
+        KEY = {pdns_key!r}
+        domain = os.environ.get("CERTBOT_DOMAIN", "").strip().lower().rstrip(".")
+        validation = os.environ.get("CERTBOT_VALIDATION", "")
+        if not domain or not validation:
+            raise SystemExit("missing CERTBOT_DOMAIN/VALIDATION")
+        labels = domain.split(".")
+        zone = name = None
+        for i in range(len(labels)):
+            cand = ".".join(labels[i:])
+            req = urllib.request.Request(
+                f"{{PDNS}}/api/v1/servers/localhost/zones/{{cand}}.",
+                headers={{"X-API-Key": KEY}},
+            )
+            try:
+                urllib.request.urlopen(req, timeout=10)
+                zone = cand
+                prefix = ".".join(labels[:i])
+                name = f"_acme-challenge.{{prefix}}" if prefix else "_acme-challenge"
+                break
+            except Exception:
+                continue
+        if not zone:
+            raise SystemExit(f"no PowerDNS zone for {{domain}}")
+        rr_name = f"{{name}}.{{zone}}."
+        payload = {{
+            "rrsets": [{{
+                "name": rr_name,
+                "type": "TXT",
+                "ttl": 60,
+                "changetype": "REPLACE",
+                "records": [{{"content": json.dumps(validation), "disabled": False}}],
+            }}]
+        }}
+        data = json.dumps(payload).encode()
+        req = urllib.request.Request(
+            f"{{PDNS}}/api/v1/servers/localhost/zones/{{zone}}.",
+            data=data,
+            headers={{"X-API-Key": KEY, "Content-Type": "application/json"}},
+            method="PATCH",
+        )
+        urllib.request.urlopen(req, timeout=15)
+        time.sleep(8)
+        """
+    )
+    cleanup_body = textwrap.dedent(
+        f"""\
+        #!/usr/bin/env python3
+        import json, os, urllib.request
+        PDNS = {pdns_url!r}
+        KEY = {pdns_key!r}
+        domain = os.environ.get("CERTBOT_DOMAIN", "").strip().lower().rstrip(".")
+        labels = domain.split(".")
+        zone = name = None
+        for i in range(len(labels)):
+            cand = ".".join(labels[i:])
+            req = urllib.request.Request(
+                f"{{PDNS}}/api/v1/servers/localhost/zones/{{cand}}.",
+                headers={{"X-API-Key": KEY}},
+            )
+            try:
+                urllib.request.urlopen(req, timeout=10)
+                zone = cand
+                prefix = ".".join(labels[:i])
+                name = f"_acme-challenge.{{prefix}}" if prefix else "_acme-challenge"
+                break
+            except Exception:
+                continue
+        if not zone:
+            raise SystemExit(0)
+        rr_name = f"{{name}}.{{zone}}."
+        payload = {{
+            "rrsets": [{{
+                "name": rr_name,
+                "type": "TXT",
+                "changetype": "DELETE",
+            }}]
+        }}
+        data = json.dumps(payload).encode()
+        req = urllib.request.Request(
+            f"{{PDNS}}/api/v1/servers/localhost/zones/{{zone}}.",
+            data=data,
+            headers={{"X-API-Key": KEY, "Content-Type": "application/json"}},
+            method="PATCH",
+        )
+        try:
+            urllib.request.urlopen(req, timeout=15)
+        except Exception:
+            pass
+        """
+    )
+
+    auth_path = "/tmp/srv-panel-acme-dns-auth.py"
+    clean_path = "/tmp/srv-panel-acme-dns-cleanup.py"
+    await shell.write_file(auth_path, auth_body)
+    await shell.write_file(clean_path, cleanup_body)
+    await shell.run(["chmod", "755", auth_path, clean_path], timeout=5)
+
+    cmd = [
+        "certbot", "certonly",
+        "--manual",
+        "--preferred-challenges", "dns",
+        "--manual-auth-hook", f"python3 {auth_path}",
+        "--manual-cleanup-hook", f"python3 {clean_path}",
+        "--manual-public-ip-logging-ok",
+        "--non-interactive",
+        "--agree-tos",
+        f"--email={email}",
+        f"--cert-name={domain}",
+        "-d", domain,
+        "--keep-until-expiring",
+        "--expand",
+    ]
+    logger.info("Panel SSL DNS-01 (PowerDNS): %s", domain)
+    return await shell.run(cmd, timeout=240)
+
+
+async def issue_panel_ssl() -> dict:
+    """
+    Issue/renew Let's Encrypt cert for PANEL_DOMAIN and enable HTTPS on panel vhost.
+
+    Strategy:
+    1) If hostname is under a PowerDNS zone on this panel → DNS-01 (no port 80 challenge).
+    2) Else → HTTP-01 on port 80 (same as normal domain SSL).
+    """
+    domain = _normalize_domain(config.PANEL_DOMAIN)
+    if not domain:
+        raise HTTPException(
+            status_code=400,
+            detail="Set a panel hostname first (Settings → Save hostname), then Issue SSL.",
+        )
+
+    notes: list[str] = []
+    email = (config.CERTBOT_EMAIL or "").strip() or "admin@example.com"
+
+    # Always ensure HTTP panel vhost exists (for after-SSL redirect + HTTP-01 fallback)
+    try:
+        await apply_panel_nginx(
+            domain,
+            bool(config.PANEL_ALLOW_IP),
+            int(config.PANEL_IP_PORT or 80),
+            force_ssl=False,
+        )
+        notes.append("Panel nginx HTTP vhost ready for hostname on port 80.")
+    except Exception as exc:
         raise HTTPException(
             status_code=500,
-            detail=f"Certbot failed: {detail[-500:]}{hint}",
+            detail=f"Could not prepare panel nginx for {domain}: {exc}",
+        ) from exc
+
+    dns_ok, dns_msg = await _dns_points_here(domain)
+    notes.append(dns_msg)
+
+    zone = await _managed_zone_for_host(domain)
+    method = "dns-01" if zone else "http-01"
+    result = None
+    errors: list[str] = []
+
+    if zone:
+        notes.append(
+            f"Using DNS-01 via PowerDNS zone '{zone}' "
+            f"(works with custom IP port; does not need panel on port 80 for LE)."
         )
+        try:
+            result = await _certbot_dns01(domain, email)
+            if not result.success:
+                errors.append(f"DNS-01: {(result.stderr or result.stdout or '')[-400:]}")
+                result = None
+        except Exception as exc:
+            errors.append(f"DNS-01 error: {exc}")
+            result = None
+
+    if result is None or not result.success:
+        if dns_ok is False and not zone:
+            raise HTTPException(
+                status_code=400,
+                detail=dns_msg + " HTTP-01 cannot work until DNS A is correct.",
+            )
+        try:
+            webroot = await nginx_service.ensure_acme_root_privileged()
+        except Exception:
+            nginx_service.ensure_acme_root()
+            webroot = f"{config.NGINX_WEBROOT}/acme-challenge"
+        notes.append(f"Trying HTTP-01 webroot={webroot} (Let's Encrypt hits port 80).")
+        result = await _certbot_http01(domain, email, webroot)
+        if not result.success:
+            errors.append(f"HTTP-01: {(result.stderr or result.stdout or '')[-400:]}")
+            detail = " | ".join(errors) if errors else "certbot failed"
+            hint = (
+                f" Open http://{domain}/ — must show the panel login (not Domain HTML). "
+                f"IP custom port {config.PANEL_IP_PORT} is only for http://{config.SERVER_IP}:{config.PANEL_IP_PORT}/. "
+                f"If the zone is on this panel, DNS-01 should work after update; check PowerDNS API."
+            )
+            raise HTTPException(status_code=500, detail=f"Panel SSL failed. {detail}{hint}")
+
+    method = "dns-01" if zone and not errors else method
+    notes.append(f"Certificate OK via {method}.")
 
     cert_path, _key_path = _cert_paths(domain)
     try:
@@ -671,7 +796,6 @@ async def issue_panel_ssl() -> dict:
             ),
         ) from exc
 
-    # Do NOT force SESSION_HTTPS_ONLY — that breaks login on http://IP:8080/
     ip_port = int(config.PANEL_IP_PORT or 80)
     ip_url = (
         f"http://{config.SERVER_IP}/"
@@ -679,15 +803,14 @@ async def issue_panel_ssl() -> dict:
         else f"http://{config.SERVER_IP}:{ip_port}/"
     )
     notes.extend([
-        f"Certificate issued for {domain}.",
-        f"Day-to-day panel URL: https://{domain}/ (port 443).",
-        f"IP recovery access (custom port): {ip_url}",
-        "Port 80 on the hostname only redirects to HTTPS now (plus ACME renewals).",
-        "Leave “Secure cookies” off if you still log in via IP HTTP.",
+        f"Use https://{domain}/ for the panel (SSL).",
+        f"IP recovery: {ip_url}",
+        "Leave Secure cookies OFF if you still use IP HTTP login.",
     ])
 
     status = await get_status()
     status["ok"] = True
     status["notes"] = notes
     status["cert_path"] = cert_path
+    status["method"] = method
     return status

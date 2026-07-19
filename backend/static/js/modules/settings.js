@@ -224,7 +224,14 @@
       showNotes(data.notes || ["SSL issued."]);
       toast("Panel SSL issued", "success");
     } catch (err) {
-      toast(err.message || "SSL failed", "danger");
+      const msg = err.message || "SSL failed";
+      showNotes([msg]);
+      const box = $("settings-notes");
+      if (box) {
+        box.hidden = false;
+        box.className = "alert alert--danger mb-lg";
+      }
+      toast(msg.length > 120 ? msg.slice(0, 120) + "…" : msg, "danger");
     } finally {
       if (btn) btn.disabled = !computedHostname();
     }
@@ -253,12 +260,18 @@
     $("btn-save-ip")?.addEventListener("click", (e) => save(e.currentTarget));
     $("btn-save-security")?.addEventListener("click", (e) => save(e.currentTarget));
     $("btn-issue-ssl")?.addEventListener("click", (e) => {
+      const host = computedHostname();
+      if (!host) {
+        toast("Set and save a panel hostname first", "danger");
+        return;
+      }
+      // No scary "Delete" dialog — run SSL directly after a short primary confirm
       confirmAction(
-        "Issue SSL for the panel hostname (https://… on port 443)?\n\n" +
-          "Your IP custom port (e.g. 8080) is unchanged — that is only for IP access.\n\n" +
-          "Let's Encrypt will check the hostname on port 80 once (same as other domains). " +
-          "After that you use HTTPS on the name; IP stays on the custom port.",
-        () => issueSsl(e.currentTarget)
+        "Create HTTPS certificate for:\n" + host + "\n\n" +
+          "You can keep using the panel by IP (custom port). " +
+          "This only adds https://" + host + "/",
+        () => issueSsl(e.currentTarget),
+        { title: "Issue panel SSL", okLabel: "Issue SSL", danger: false }
       );
     });
     $("btn-refresh-settings")?.addEventListener("click", refresh);

@@ -106,9 +106,21 @@ document.addEventListener("keydown", (e) => {
   }
 });
 
-function confirmAction(message, onConfirm) {
+/**
+ * confirmAction(message, onConfirm, options?)
+ * options: { title, okLabel, danger }
+ * - Without options → delete-style (red "Delete") for existing callers
+ * - With okLabel / danger:false → primary confirm (e.g. Issue SSL)
+ */
+function confirmAction(message, onConfirm, options) {
+  const opts = options || {};
+  const title = opts.title || "Confirm Action";
+  const danger = options ? !!opts.danger : true;
+  const okLabel = opts.okLabel || (danger ? "Delete" : "Confirm");
+
   const modal = document.getElementById("confirm-modal");
   const msgEl = document.getElementById("confirm-message");
+  const titleEl = document.getElementById("confirm-title");
   let okBtn = document.getElementById("confirm-ok");
 
   if (!modal || !msgEl || !okBtn) {
@@ -121,16 +133,25 @@ function confirmAction(message, onConfirm) {
     return;
   }
 
+  if (titleEl) titleEl.textContent = title;
   msgEl.textContent = message;
+  okBtn.textContent = okLabel;
+  okBtn.className = danger ? "btn btn--danger" : "btn btn--primary";
 
   const freshOk = okBtn.cloneNode(true);
   okBtn.parentNode.replaceChild(freshOk, okBtn);
   okBtn = freshOk;
+  okBtn.textContent = okLabel;
+  okBtn.className = danger ? "btn btn--danger" : "btn btn--primary";
 
   modal.classList.remove("hidden");
 
   const close = () => {
     modal.classList.add("hidden");
+    // restore default for next delete dialogs
+    if (titleEl) titleEl.textContent = "Confirm Action";
+    okBtn.textContent = "Delete";
+    okBtn.className = "btn btn--danger";
   };
 
   const onOk = async (e) => {
