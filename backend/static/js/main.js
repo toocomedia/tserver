@@ -231,6 +231,25 @@ document.addEventListener("DOMContentLoaded", () => {
       item.classList.add("sidebar__item--active");
     }
   });
+
+  // Mobile menu toggle
+  const mobileToggle = document.getElementById("mobile-menu-toggle");
+  const sidebar = document.querySelector(".sidebar");
+  const backdrop = document.getElementById("sidebar-backdrop");
+
+  if (mobileToggle && sidebar && backdrop) {
+    const toggleMenu = () => {
+      sidebar.classList.toggle("sidebar--open");
+      backdrop.classList.toggle("sidebar-backdrop--visible");
+    };
+    const closeMenu = () => {
+      sidebar.classList.remove("sidebar--open");
+      backdrop.classList.remove("sidebar-backdrop--visible");
+    };
+
+    mobileToggle.addEventListener("click", toggleMenu);
+    backdrop.addEventListener("click", closeMenu);
+  }
 });
 
 window.PATHS = PATHS;
