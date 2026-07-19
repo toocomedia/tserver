@@ -83,17 +83,27 @@ def _proxy_cache_location_directives(full_domain: str, ttl_minutes: int) -> str:
 
 
 def _static_cache_location(static_cache: bool, upstream: str) -> str:
-    """Extra location block for browser-caching static file types through the proxy."""
+    """
+    Extra location block for browser-caching static file types through the proxy.
+
+    IMPORTANT: proxy_pass must be a real upstream URL (http://ip:port), never
+    $upstream_addr — that variable is logging-only / set after the upstream
+    response and causes HTTP 500 on every matching static request.
+    """
     if not static_cache:
         return ""
+    # upstream is always built as "{protocol}://{ip}:{port}" by callers
     return f"""
     location ~* \\.(css|js|woff2?|ttf|otf|eot|svg|png|jpg|jpeg|gif|ico|webp)$ {{
         proxy_pass         {upstream};
         proxy_http_version 1.1;
-        proxy_set_header   Host            $http_host;
-        proxy_set_header   X-Real-IP       $remote_addr;
+        proxy_set_header   Host              $http_host;
+        proxy_set_header   X-Real-IP         $remote_addr;
+        proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto $scheme;
+        proxy_set_header   X-Forwarded-Host  $http_host;
         expires            1y;
-        add_header         Cache-Control   "public, immutable";
+        add_header         Cache-Control     "public, immutable";
         access_log         off;
     }}"""
 

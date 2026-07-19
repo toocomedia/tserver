@@ -206,6 +206,83 @@ async def create_external_proxy(
 
 
 # ---------------------------------------------------------------
+# REWRITE NGINX CONFIG FOR ONE / ALL PROXIES
+# ---------------------------------------------------------------
+def _key_path_from_cert(cert_path: str | None, full_domain: str) -> tuple[str, str] | None:
+    """Return (fullchain, privkey) paths, or None if SSL files cannot be derived."""
+    if cert_path:
+        chain = cert_path
+        key = cert_path.replace("fullchain.pem", "privkey.pem").replace("fullchain", "privkey")
+        return chain, key
+    # Fallback to Let's Encrypt live paths by hostname
+    live = f"/etc/letsencrypt/live/{full_domain}"
+    return f"{live}/fullchain.pem", f"{live}/privkey.pem"
+
+
+async def rewrite_proxy_nginx(db: AsyncSession, proxy: ReverseProxy) -> None:
+    """
+    Rewrite the nginx site config for one reverse proxy from current DB + global flags.
+    Used after cache settings changes and global performance (static asset cache) toggles.
+    """
+    if proxy.ssl_enabled:
+        from models.ssl_cert import SslCert
+
+        cert = None
+        if proxy.ssl_cert_id:
+            cert = await db.scalar(
+                select(SslCert).where(SslCert.id == proxy.ssl_cert_id)
+            )
+        paths = _key_path_from_cert(
+            cert.cert_path if cert else None,
+            proxy.full_domain,
+        )
+        if paths:
+            cert_path, key_path = paths
+            await nginx_service.update_proxy_ssl(
+                proxy.full_domain,
+                proxy.target_ip,
+                proxy.target_port,
+                proxy.protocol,
+                cert_path,
+                key_path,
+                cache_enabled=bool(proxy.cache_enabled),
+                cache_ttl_minutes=int(proxy.cache_ttl_minutes or 10),
+            )
+            return
+
+    await nginx_service.create_proxy(
+        proxy.full_domain,
+        proxy.target_ip,
+        proxy.target_port,
+        proxy.protocol,
+        cache_enabled=bool(proxy.cache_enabled),
+        cache_ttl_minutes=int(proxy.cache_ttl_minutes or 10),
+    )
+
+
+async def regenerate_all_nginx_configs(db: AsyncSession) -> tuple[int, list[str]]:
+    """
+    Rewrite every reverse-proxy site config.
+
+    Required when global NGINX_PERF_STATIC_CACHE changes: save_performance_settings
+    used to only write performance.conf, leaving broken/outdated location blocks
+    (e.g. proxy_pass $upstream_addr) on disk.
+    """
+    proxies = await get_all(db)
+    ok = 0
+    errors: list[str] = []
+    for proxy in proxies:
+        try:
+            await rewrite_proxy_nginx(db, proxy)
+            ok += 1
+        except Exception as exc:
+            msg = f"{proxy.full_domain}: {exc}"
+            errors.append(msg)
+            logger.warning("Proxy nginx regenerate failed: %s", msg)
+    return ok, errors
+
+
+# ---------------------------------------------------------------
 # UPDATE CACHE SETTINGS
 # ---------------------------------------------------------------
 async def update_cache_settings(
@@ -222,27 +299,8 @@ async def update_cache_settings(
     proxy.cache_ttl_minutes = max(1, cache_ttl_minutes)
     proxy.cache_auto_clear_hours = max(0, cache_auto_clear_hours)
 
-    # Regenerate nginx config to apply/remove cache directives
     try:
-        if proxy.ssl_enabled and proxy.nginx_config_path:
-            from models.ssl_cert import SslCert
-            from sqlalchemy import select as sa_select
-            cert = await db.scalar(
-                sa_select(SslCert).where(SslCert.id == proxy.ssl_cert_id)
-            ) if proxy.ssl_cert_id else None
-            if cert:
-                await nginx_service.update_proxy_ssl(
-                    proxy.full_domain, proxy.target_ip, proxy.target_port,
-                    proxy.protocol, cert.cert_path, cert.cert_path.replace("fullchain", "privkey"),
-                    cache_enabled=cache_enabled,
-                    cache_ttl_minutes=proxy.cache_ttl_minutes,
-                )
-        else:
-            await nginx_service.create_proxy(
-                proxy.full_domain, proxy.target_ip, proxy.target_port, proxy.protocol,
-                cache_enabled=cache_enabled,
-                cache_ttl_minutes=proxy.cache_ttl_minutes,
-            )
+        await rewrite_proxy_nginx(db, proxy)
         await nginx_service.reload()
     except Exception as exc:
         logger.warning("Cache settings nginx update failed for %s: %s", proxy.full_domain, exc)

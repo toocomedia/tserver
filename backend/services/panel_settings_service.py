@@ -288,8 +288,15 @@ async def get_status() -> dict:
 async def save_performance_settings(payload: dict) -> dict:
     """
     Save global nginx performance settings (gzip, static cache).
-    Writes performance.conf and reloads nginx.
+
+    Writes performance.conf AND regenerates every reverse-proxy site config.
+    Static asset caching injects a location block into each proxy vhost; only
+    rewriting performance.conf leaves old/broken proxy_pass targets on disk
+    (which is what caused static *.css/*.js 500s).
     """
+    from database import AsyncSessionLocal
+    from services import proxy_service
+
     gzip = bool(payload.get("perf_gzip", False))
     static_cache = bool(payload.get("perf_static_cache", False))
 
@@ -302,13 +309,25 @@ async def save_performance_settings(payload: dict) -> dict:
     config.NGINX_PERF_GZIP = gzip
     config.NGINX_PERF_STATIC_CACHE = static_cache
 
+    notes: list[str] = []
     try:
         if gzip or static_cache:
             await nginx_service.write_performance_conf()
         else:
             await nginx_service.remove_performance_conf()
+
+        # Always rewrite proxy sites so static-cache location blocks match the flag
+        # and any previous bad templates (e.g. $upstream_addr) are replaced.
+        async with AsyncSessionLocal() as db:
+            ok_count, errors = await proxy_service.regenerate_all_nginx_configs(db)
+
         await nginx_service.reload()
-        notes = ["Performance settings saved. Nginx reloaded."]
+        notes.append(
+            f"Performance settings saved. Regenerated {ok_count} reverse proxy config(s). Nginx reloaded."
+        )
+        if errors:
+            notes.append(f"Some proxies failed to regenerate: {'; '.join(errors[:5])}")
+            logger.warning("Performance save: proxy regenerate errors: %s", errors)
     except Exception as exc:
         notes = [f"Settings saved but nginx apply failed: {exc}"]
         logger.warning("Performance conf apply failed: %s", exc)
