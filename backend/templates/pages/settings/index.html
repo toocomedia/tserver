@@ -127,9 +127,37 @@
 <div class="panel mb-xl">
   <div class="panel__header"><h3>2. Panel SSL</h3></div>
   <div class="panel__body">
-    <p class="form-hint mb-md">
-      Issues Let’s Encrypt for the hostname above. Keep using IP:port for admin access.
+    <p class="form-hint mb-md" id="ssl-section-hint">
+      {% if s.ssl_active %}
+        Certificate is active. Use <strong>Renew SSL</strong> before it expires.
+      {% else %}
+        Issue Let’s Encrypt for the hostname above. Keep using IP:port for admin access.
+      {% endif %}
     </p>
+
+    <!-- Shown when cert already exists -->
+    <div id="ssl-active-box" class="settings-mode-box mb-md" {% if not s.ssl_active %}hidden{% endif %}>
+      <div class="info-row">
+        <span class="info-row__label">Status</span>
+        <span class="info-row__value"><span class="badge badge--ok" id="ssl-active-badge">Active</span></span>
+      </div>
+      <div class="info-row">
+        <span class="info-row__label">Hostname</span>
+        <span class="info-row__value" id="ssl-active-host">{{ s.panel_domain or '—' }}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-row__label">Expires</span>
+        <span class="info-row__value" id="ssl-active-expiry">{{ s.ssl_expiry or '—' }}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-row__label">Open</span>
+        <span class="info-row__value text-small" id="ssl-active-link">
+          {% if s.urls.domain_https %}
+          <a href="{{ s.urls.domain_https }}" target="_blank" rel="noopener">{{ s.urls.domain_https }}</a>
+          {% else %}—{% endif %}
+        </span>
+      </div>
+    </div>
 
     <div id="ssl-progress" class="ssl-progress mb-md" hidden>
       <div class="ssl-step" data-step="1"><span class="ssl-step__icon">○</span> Save hostname</div>
@@ -141,7 +169,7 @@
 
     <div class="form-actions">
       <button type="button" class="btn btn--primary" id="btn-issue-ssl" {% if not s.panel_domain %}disabled{% endif %}>
-        Issue / renew SSL
+        {% if s.ssl_active %}Renew SSL{% else %}Issue SSL{% endif %}
       </button>
     </div>
   </div>

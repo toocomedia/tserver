@@ -31,7 +31,12 @@
 
     const host = computedHostname();
     if ($("result-hostname")) $("result-hostname").textContent = host || "(IP only)";
-    if ($("btn-issue-ssl")) $("btn-issue-ssl").disabled = !host;
+    if ($("btn-issue-ssl")) {
+      $("btn-issue-ssl").disabled = !host;
+      if ($("btn-issue-ssl").textContent !== "Issuing…") {
+        $("btn-issue-ssl").textContent = sslButtonIdleLabel();
+      }
+    }
 
     if (mode === "custom" && $("custom-dns-hint")) {
       const ip = $("stat-server-ip")?.textContent || "SERVER_IP";
@@ -141,6 +146,7 @@
         ? '<span class="badge badge--ok">HTTPS</span>'
         : '<span class="badge badge--neutral">off</span>';
     }
+    updateSslSection(s);
     if ($("stat-dns")) {
       if (!s.panel_domain) $("stat-dns").innerHTML = '<span class="text-muted">—</span>';
       else if (s.dns_ok === true) $("stat-dns").innerHTML = '<span class="badge badge--ok">OK</span>';
@@ -167,6 +173,41 @@
       $("stat-urls").innerHTML = parts.join("") || "—";
     }
     syncUrlModeUi();
+  }
+
+  /* ── SSL present + button label ── */
+  function updateSslSection(s) {
+    const active = !!s.ssl_active;
+    const host = s.panel_domain || "";
+    const box = $("ssl-active-box");
+    if (box) box.hidden = !active;
+
+    if ($("ssl-section-hint")) {
+      $("ssl-section-hint").innerHTML = active
+        ? "Certificate is <strong>active</strong>. Use <strong>Renew SSL</strong> before it expires."
+        : "Issue Let’s Encrypt for the hostname above. Keep using IP:port for admin access.";
+    }
+    if ($("ssl-active-host")) $("ssl-active-host").textContent = host || "—";
+    if ($("ssl-active-expiry")) $("ssl-active-expiry").textContent = s.ssl_expiry || "—";
+    if ($("ssl-active-link")) {
+      const href = (s.urls && s.urls.domain_https) || (host ? `https://${host}/` : "");
+      $("ssl-active-link").innerHTML = href
+        ? `<a href="${href}" target="_blank" rel="noopener">${href}</a>`
+        : "—";
+    }
+    const btn = $("btn-issue-ssl");
+    if (btn && !btn.disabled) {
+      // only update label when not mid-issue
+      if (btn.textContent !== "Issuing…") {
+        btn.textContent = active ? "Renew SSL" : "Issue SSL";
+      }
+    }
+  }
+
+  function sslButtonIdleLabel() {
+    const badge = $("ssl-active-box");
+    const active = badge && !badge.hidden;
+    return active ? "Renew SSL" : "Issue SSL";
   }
 
   /* ── SSL progress UI ── */
@@ -271,7 +312,7 @@
     } finally {
       if (btn) {
         btn.disabled = !computedHostname();
-        btn.textContent = "Issue / renew SSL";
+        btn.textContent = sslButtonIdleLabel();
       }
     }
   }

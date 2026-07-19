@@ -88,16 +88,32 @@ async def _managed_domains() -> list[str]:
 
 async def _cert_ok(domain: str) -> bool:
     """Never Path.exists() on /etc/letsencrypt (PermissionError for panel user)."""
+    info = await _cert_info(domain)
+    return bool(info.get("ok"))
+
+
+async def _cert_info(domain: str) -> dict:
+    """Return {ok, expiry, subject} via sudo openssl (no direct LE path reads)."""
     if not domain:
-        return False
+        return {"ok": False, "expiry": None, "subject": None}
+    cert = _cert_paths(domain)[0]
     try:
         r = await shell.run(
-            ["openssl", "x509", "-in", _cert_paths(domain)[0], "-noout", "-subject"],
+            ["openssl", "x509", "-in", cert, "-noout", "-enddate", "-subject"],
             timeout=10,
         )
-        return bool(r.success)
+        if not r.success:
+            return {"ok": False, "expiry": None, "subject": None}
+        expiry = subject = None
+        for line in (r.stdout or "").splitlines():
+            line = line.strip()
+            if line.startswith("notAfter="):
+                expiry = line.split("=", 1)[1].strip()
+            elif line.startswith("subject="):
+                subject = line.split("=", 1)[1].strip()
+        return {"ok": True, "expiry": expiry, "subject": subject}
     except Exception:
-        return False
+        return {"ok": False, "expiry": None, "subject": None}
 
 
 def _open_urls(domain: str, allow_ip: bool, ip_port: int, ssl: bool) -> dict:
@@ -225,9 +241,11 @@ async def get_status() -> dict:
     allow_ip = bool(config.PANEL_ALLOW_IP)
     ip_port = int(config.PANEL_IP_PORT or 80)
     ssl_active = False
+    cert_info: dict = {"ok": False, "expiry": None, "subject": None}
     if domain:
         try:
-            ssl_active = nginx_service.panel_config_has_ssl() and await _cert_ok(domain)
+            cert_info = await _cert_info(domain)
+            ssl_active = nginx_service.panel_config_has_ssl() and bool(cert_info.get("ok"))
         except Exception as exc:
             logger.warning("ssl status: %s", exc)
 
@@ -254,6 +272,8 @@ async def get_status() -> dict:
         "ip_port": ip_port,
         "app_port": config.PANEL_APP_PORT,
         "ssl_active": ssl_active,
+        "ssl_expiry": cert_info.get("expiry"),
+        "ssl_subject": cert_info.get("subject"),
         "dns_ok": dns_ok,
         "session_https_only": bool(config.SESSION_HTTPS_ONLY),
         "session_max_age_days": max(1, int(config.SESSION_MAX_AGE) // 86400),
