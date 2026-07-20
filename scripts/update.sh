@@ -205,10 +205,10 @@ if ! systemctl is-active --quiet srv-panel; then
   die "Update failed — see journalctl -u srv-panel -n 80"
 fi
 
-if curl -sf "http://127.0.0.1:${PANEL_PORT}/api/health" >/dev/null; then
+if curl -sf -o /dev/null -w "%{http_code}" "http://127.0.0.1:${PANEL_PORT}/" | grep -qE '^(200|302)'; then
   info "Health check OK"
 else
-  warn "Health endpoint not ready yet — check journalctl -u srv-panel"
+  warn "App not ready yet — check journalctl -u srv-panel"
 fi
 
 # After auth rollout: existing installs may have no panel admin yet

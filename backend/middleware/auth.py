@@ -8,7 +8,7 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
 # Paths that do not require authentication.
-_PUBLIC_EXACT = frozenset({"/api/health"})
+_PUBLIC_EXACT = frozenset()
 
 
 def is_public_path(path: str) -> bool:
