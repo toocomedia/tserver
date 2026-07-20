@@ -1,0 +1,331 @@
+{% extends "layout.html" %}
+
+{% block title %}Usage — VPS Panel{% endblock %}
+
+{% block page_title %}Server Usage{% endblock %}
+
+{% block topbar_actions %}
+  <span id="usage-last-updated" class="text-small text-muted"></span>
+  <button class="btn btn--secondary btn--sm" id="btn-pause-poll" onclick="togglePoll()">Pause</button>
+{% endblock %}
+
+{% block head %}
+<style>
+  /* Progress bar */
+  .usage-bar-wrap {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    flex: 1;
+  }
+  .usage-bar {
+    flex: 1;
+    height: 6px;
+    background: var(--color-line);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .usage-bar__fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.5s ease, background 0.3s;
+    background: var(--color-accent-2);
+  }
+  .usage-bar__fill--warn   { background: #f59e0b; }
+  .usage-bar__fill--danger { background: var(--color-danger); }
+  .usage-bar__pct {
+    font-size: var(--font-small);
+    font-weight: 700;
+    min-width: 38px;
+    text-align: right;
+    color: var(--color-text);
+  }
+
+  /* Stat overview grid */
+  .usage-overview {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: var(--space-xl);
+    margin-bottom: var(--space-xl);
+  }
+
+  /* Process table */
+  .proc-status--sleeping { color: var(--color-muted); }
+  .proc-status--running  { color: var(--color-accent-2); font-weight: 700; }
+  .proc-status--zombie   { color: var(--color-danger); }
+
+  .info-row__value .usage-bar-wrap { min-width: 200px; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- OVERVIEW STAT CARDS -->
+<div class="usage-overview" id="usage-overview">
+  <div class="stat-card">
+    <div class="stat-card__label">CPU</div>
+    <div class="stat-card__value" id="ov-cpu">—</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card__label">RAM Used</div>
+    <div class="stat-card__value" id="ov-ram">—</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card__label">Disk (root)</div>
+    <div class="stat-card__value" id="ov-disk">—</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card__label">Uptime</div>
+    <div class="stat-card__value" style="font-size:18px;font-weight:800;" id="ov-uptime">—</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card__label">CPU Cores</div>
+    <div class="stat-card__value" id="ov-cores">—</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card__label">CPU Freq</div>
+    <div class="stat-card__value" style="font-size:18px;font-weight:800;" id="ov-freq">—</div>
+  </div>
+</div>
+
+<!-- CPU & MEMORY -->
+<div class="section-header">
+  <h2>CPU &amp; Memory</h2>
+</div>
+<div class="section mb-xl">
+  <div class="section__body">
+
+    <div class="info-row">
+      <span class="info-row__label">CPU Usage</span>
+      <span class="info-row__value">
+        <div class="usage-bar-wrap">
+          <div class="usage-bar"><div class="usage-bar__fill" id="bar-cpu" style="width:0%"></div></div>
+          <span class="usage-bar__pct" id="pct-cpu">—</span>
+        </div>
+      </span>
+    </div>
+
+    <div class="info-row">
+      <span class="info-row__label">RAM</span>
+      <span class="info-row__value">
+        <div class="usage-bar-wrap">
+          <div class="usage-bar"><div class="usage-bar__fill" id="bar-ram" style="width:0%"></div></div>
+          <span class="usage-bar__pct" id="pct-ram">—</span>
+        </div>
+      </span>
+    </div>
+
+    <div class="info-row">
+      <span class="info-row__label">RAM Detail</span>
+      <span class="info-row__value text-muted" id="ram-detail">—</span>
+    </div>
+
+    <div class="info-row">
+      <span class="info-row__label">Swap</span>
+      <span class="info-row__value">
+        <div class="usage-bar-wrap">
+          <div class="usage-bar"><div class="usage-bar__fill" id="bar-swap" style="width:0%"></div></div>
+          <span class="usage-bar__pct" id="pct-swap">—</span>
+        </div>
+      </span>
+    </div>
+
+    <div class="info-row">
+      <span class="info-row__label">Swap Detail</span>
+      <span class="info-row__value text-muted" id="swap-detail">—</span>
+    </div>
+
+  </div>
+</div>
+
+<!-- DISK -->
+<div class="section-header">
+  <h2>Disk</h2>
+</div>
+<div class="section mb-xl">
+  <div class="section__body" id="disk-section">
+    <div class="info-row">
+      <span class="info-row__label text-muted">Loading…</span>
+    </div>
+  </div>
+</div>
+
+<!-- NETWORK -->
+<div class="section-header">
+  <h2>Network I/O</h2>
+</div>
+<div class="section mb-xl">
+  <div class="section__body">
+
+    <div class="info-row">
+      <span class="info-row__label">Total Sent</span>
+      <span class="info-row__value" id="net-sent">—</span>
+    </div>
+    <div class="info-row">
+      <span class="info-row__label">Total Received</span>
+      <span class="info-row__value" id="net-recv">—</span>
+    </div>
+    <div class="info-row">
+      <span class="info-row__label">Packets Sent</span>
+      <span class="info-row__value text-muted" id="net-pkts-sent">—</span>
+    </div>
+    <div class="info-row">
+      <span class="info-row__label">Packets Recv</span>
+      <span class="info-row__value text-muted" id="net-pkts-recv">—</span>
+    </div>
+
+  </div>
+</div>
+
+<!-- TOP PROCESSES -->
+<div class="section-header">
+  <h2>Top Processes</h2>
+</div>
+<div class="section">
+  <div class="section__body" style="overflow-x:auto;">
+    <table class="table" id="proc-table" style="min-width:480px;">
+      <thead>
+        <tr>
+          <th>PID</th>
+          <th>Name</th>
+          <th>CPU %</th>
+          <th>MEM %</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="proc-tbody">
+        <tr><td colspan="5" class="text-muted">Loading…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  let polling = true;
+  let pollTimer = null;
+  const INTERVAL = 3000;
+
+  // -- Helpers ----------------------------------------------------------------
+  function barClass(pct) {
+    if (pct >= 85) return 'usage-bar__fill--danger';
+    if (pct >= 60) return 'usage-bar__fill--warn';
+    return '';
+  }
+
+  function setBar(barId, pctId, pct) {
+    const fill = document.getElementById(barId);
+    const label = document.getElementById(pctId);
+    fill.style.width = pct + '%';
+    fill.className = 'usage-bar__fill ' + barClass(pct);
+    label.textContent = pct.toFixed(1) + '%';
+  }
+
+  function fmtMb(mb) {
+    return mb >= 1024
+      ? (mb / 1024).toFixed(1) + ' GB'
+      : mb.toFixed(0) + ' MB';
+  }
+
+  function procStatusClass(s) {
+    if (s === 'running')  return 'proc-status--running';
+    if (s === 'zombie')   return 'proc-status--zombie';
+    return 'proc-status--sleeping';
+  }
+
+  // -- Render -----------------------------------------------------------------
+  function render(d) {
+    // Overview cards
+    document.getElementById('ov-cpu').textContent    = d.cpu.percent.toFixed(1) + '%';
+    document.getElementById('ov-ram').textContent    = d.ram.used_gb + ' GB';
+    document.getElementById('ov-cores').textContent  = d.cpu.count;
+    document.getElementById('ov-freq').textContent   = d.cpu.freq_mhz ? d.cpu.freq_mhz + ' MHz' : '—';
+    document.getElementById('ov-uptime').textContent = d.uptime_human;
+
+    // Root disk overview
+    const root = d.disk.find(dk => dk.mount === '/' || dk.mount === 'C:\\') || d.disk[0];
+    document.getElementById('ov-disk').textContent = root
+      ? root.percent.toFixed(0) + '%'
+      : '—';
+
+    // CPU bar
+    setBar('bar-cpu', 'pct-cpu', d.cpu.percent);
+
+    // RAM bars
+    setBar('bar-ram', 'pct-ram', d.ram.percent);
+    document.getElementById('ram-detail').textContent =
+      `${d.ram.used_gb} GB used / ${d.ram.total_gb} GB total  (${d.ram.available_gb} GB free)`;
+
+    // Swap
+    setBar('bar-swap', 'pct-swap', d.swap.percent);
+    document.getElementById('swap-detail').textContent = d.swap.total_gb > 0
+      ? `${d.swap.used_gb} GB used / ${d.swap.total_gb} GB total`
+      : 'No swap configured';
+
+    // Disk rows
+    const diskSection = document.getElementById('disk-section');
+    diskSection.innerHTML = d.disk.map(dk => `
+      <div class="info-row">
+        <span class="info-row__label">${dk.mount}</span>
+        <span class="info-row__value">
+          <div class="usage-bar-wrap">
+            <div class="usage-bar">
+              <div class="usage-bar__fill ${barClass(dk.percent)}" style="width:${dk.percent}%"></div>
+            </div>
+            <span class="usage-bar__pct">${dk.percent.toFixed(1)}%</span>
+          </div>
+          <span class="text-small text-muted" style="margin-left:8px;">${dk.used_gb} / ${dk.total_gb} GB</span>
+        </span>
+      </div>
+    `).join('') || '<div class="info-row"><span class="info-row__label text-muted">No disks found</span></div>';
+
+    // Network
+    document.getElementById('net-sent').textContent      = fmtMb(d.net.bytes_sent_mb);
+    document.getElementById('net-recv').textContent      = fmtMb(d.net.bytes_recv_mb);
+    document.getElementById('net-pkts-sent').textContent = d.net.packets_sent.toLocaleString();
+    document.getElementById('net-pkts-recv').textContent = d.net.packets_recv.toLocaleString();
+
+    // Processes
+    const tbody = document.getElementById('proc-tbody');
+    tbody.innerHTML = d.processes.map(p => `
+      <tr>
+        <td class="text-muted">${p.pid}</td>
+        <td><strong>${p.name}</strong></td>
+        <td>${p.cpu.toFixed(1)}%</td>
+        <td>${p.mem.toFixed(1)}%</td>
+        <td><span class="${procStatusClass(p.status)}">${p.status}</span></td>
+      </tr>
+    `).join('') || '<tr><td colspan="5" class="text-muted">No processes</td></tr>';
+
+    // Last updated
+    const now = new Date();
+    document.getElementById('usage-last-updated').textContent =
+      'Updated ' + now.toLocaleTimeString();
+  }
+
+  // -- Polling ----------------------------------------------------------------
+  async function fetchStats() {
+    try {
+      const data = await panel.get('/api/stats');
+      render(data);
+    } catch (e) {
+      toast('Failed to fetch stats: ' + e.message, 'danger');
+    }
+    if (polling) {
+      pollTimer = setTimeout(fetchStats, INTERVAL);
+    }
+  }
+
+  function togglePoll() {
+    const btn = document.getElementById('btn-pause-poll');
+    polling = !polling;
+    btn.textContent = polling ? 'Pause' : 'Resume';
+    if (polling) fetchStats();
+  }
+
+  // Start immediately
+  fetchStats();
+</script>
+{% endblock %}
