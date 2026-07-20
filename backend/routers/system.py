@@ -6,7 +6,13 @@ import asyncio
 import socket
 import time
 import httpx
-import psutil
+try:
+    import psutil as _psutil
+    _PSUTIL_OK = True
+except ImportError:
+    _psutil = None  # type: ignore
+    _PSUTIL_OK = False
+
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -77,23 +83,30 @@ def _uptime_human(seconds: float) -> str:
 @router.get("/api/stats")
 async def server_stats():
     """Live server resource stats via psutil — CPU, RAM, disk, network, processes."""
+    from fastapi import HTTPException
+    if not _PSUTIL_OK:
+        raise HTTPException(
+            status_code=503,
+            detail="psutil not installed. Run: pip install psutil==6.0.0",
+        )
+
     # CPU (non-blocking: interval=None returns cached value since last call)
-    cpu_percent = psutil.cpu_percent(interval=None)
-    cpu_count = psutil.cpu_count(logical=True)
-    cpu_freq = psutil.cpu_freq()
+    cpu_percent = _psutil.cpu_percent(interval=None)
+    cpu_count = _psutil.cpu_count(logical=True)
+    cpu_freq = _psutil.cpu_freq()
     freq_mhz = round(cpu_freq.current) if cpu_freq else None
 
     # RAM
-    ram = psutil.virtual_memory()
+    ram = _psutil.virtual_memory()
 
     # Swap
-    swap = psutil.swap_memory()
+    swap = _psutil.swap_memory()
 
     # Disk — all mounted partitions
     disks = []
-    for part in psutil.disk_partitions(all=False):
+    for part in _psutil.disk_partitions(all=False):
         try:
-            usage = psutil.disk_usage(part.mountpoint)
+            usage = _psutil.disk_usage(part.mountpoint)
             disks.append({
                 "mount": part.mountpoint,
                 "device": part.device,
@@ -106,20 +119,20 @@ async def server_stats():
             pass
 
     # Network I/O
-    net = psutil.net_io_counters()
+    net = _psutil.net_io_counters()
 
     # Uptime
-    boot_ts = psutil.boot_time()
+    boot_ts = _psutil.boot_time()
     uptime_sec = time.time() - boot_ts
 
     # Top 15 processes by CPU usage
     procs = []
-    for p in psutil.process_iter(["pid", "name", "cpu_percent", "memory_percent", "status"]):
+    for p in _psutil.process_iter(["pid", "name", "cpu_percent", "memory_percent", "status"]):
         try:
             info = p.info
             if info["cpu_percent"] is not None:
                 procs.append(info)
-        except (psutil.NoSuchProcess, psutil.AccessDenied):
+        except (_psutil.NoSuchProcess, _psutil.AccessDenied):
             pass
     procs.sort(key=lambda x: x["cpu_percent"] or 0, reverse=True)
     top_procs = [
@@ -161,6 +174,7 @@ async def server_stats():
         "uptime_human": _uptime_human(uptime_sec),
         "processes": top_procs,
     }
+
 
 
 @router.get("/usage", response_class=HTMLResponse)

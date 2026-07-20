@@ -21,6 +21,7 @@ const PATHS = {
   ssl_issue: "/ssl/issue",
   settings: "/settings/",
   errors: "/admin/errors/",
+  usage: "/usage",
   health: "/api/health",
   api_settings: "/api/settings",
   api_settings_performance: "/api/settings/performance",

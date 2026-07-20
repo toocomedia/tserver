@@ -26,6 +26,7 @@ PATHS: dict[str, str] = {
     "ssl_issue": "/ssl/issue",
     "settings": "/settings/",
     "errors": "/admin/errors/",
+    "usage": "/usage",
     "health": "/api/health",
     "api_settings": "/api/settings",
 }
