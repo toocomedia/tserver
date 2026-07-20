@@ -125,15 +125,43 @@ async def server_stats():
     boot_ts = _psutil.boot_time()
     uptime_sec = time.time() - boot_ts
 
-    # Top 15 processes by CPU usage
+    # Top 15 processes by CPU usage & Stack Services
     procs = []
-    for p in _psutil.process_iter(["pid", "name", "cpu_percent", "memory_percent", "status"]):
+    services = {
+        "nginx": {"cpu": 0.0, "mem": 0.0, "count": 0, "status": "stopped"},
+        "powerdns": {"cpu": 0.0, "mem": 0.0, "count": 0, "status": "stopped"},
+        "panel": {"cpu": 0.0, "mem": 0.0, "count": 0, "status": "stopped"},
+    }
+    for p in _psutil.process_iter(["pid", "name", "cmdline", "cpu_percent", "memory_percent", "status"]):
         try:
             info = p.info
             if info["cpu_percent"] is not None:
                 procs.append(info)
+                
+                name = info.get("name", "").lower() if info.get("name") else ""
+                cmdline = " ".join(info.get("cmdline") or []).lower()
+                
+                svc = None
+                if "nginx" in name:
+                    svc = "nginx"
+                elif "pdns_server" in name:
+                    svc = "powerdns"
+                elif "python" in name or "uvicorn" in name:
+                    if "srv-panel" in cmdline or "main.py" in cmdline or "uvicorn" in cmdline:
+                        svc = "panel"
+                        
+                if svc:
+                    services[svc]["cpu"] += info["cpu_percent"] or 0.0
+                    services[svc]["mem"] += info["memory_percent"] or 0.0
+                    services[svc]["count"] += 1
+                    services[svc]["status"] = "running"
         except (_psutil.NoSuchProcess, _psutil.AccessDenied):
             pass
+            
+    for s in services.values():
+        s["cpu"] = round(s["cpu"], 1)
+        s["mem"] = round(s["mem"], 1)
+
     procs.sort(key=lambda x: x["cpu_percent"] or 0, reverse=True)
     top_procs = [
         {
@@ -172,6 +200,7 @@ async def server_stats():
         },
         "uptime_seconds": int(uptime_sec),
         "uptime_human": _uptime_human(uptime_sec),
+        "services": services,
         "processes": top_procs,
     }
 
