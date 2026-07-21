@@ -88,9 +88,13 @@ info "Backing up database and .env..."
 if [[ -f "$PANEL_DIR/app/panel.db" ]]; then
   cp -a "$PANEL_DIR/app/panel.db" "$BACKUP_DIR/panel.db.bak.$TS"
   info "    DB → $BACKUP_DIR/panel.db.bak.$TS"
+  # Keep only the 5 most recent database backups
+  ls -t "$BACKUP_DIR"/panel.db.bak.* 2>/dev/null | tail -n +6 | xargs rm -f 2>/dev/null || true
 fi
 if [[ -f "$PANEL_DIR/.env" ]]; then
   cp -a "$PANEL_DIR/.env" "$BACKUP_DIR/env.bak.$TS"
+  # Keep only the 5 most recent env backups
+  ls -t "$BACKUP_DIR"/env.bak.* 2>/dev/null | tail -n +6 | xargs rm -f 2>/dev/null || true
 fi
 
 # ---------------------------------------------------------------
@@ -104,6 +108,11 @@ rsync -a --delete \
   --exclude 'panel.db-*' \
   --exclude '.env' \
   "$BACKEND_SRC/" "$PANEL_DIR/app/"
+
+# Record git commit hash if available
+if command -v git &>/dev/null && git -C "$SOURCE_DIR" rev-parse HEAD &>/dev/null; then
+  git -C "$SOURCE_DIR" rev-parse HEAD > "$PANEL_DIR/app/COMMIT_HASH" 2>/dev/null || true
+fi
 
 if [[ -d "$SCRIPTS_SRC" ]]; then
   info "Syncing scripts..."
@@ -151,7 +160,7 @@ if [[ -f "$PANEL_DIR/.env" ]]; then
 fi
 
 # ---------------------------------------------------------------
-# Refresh sudoers (nginx/certbot/openssl) for panel user
+# Refresh sudoers (nginx/certbot/openssl/updates) for panel user
 # ---------------------------------------------------------------
 info "Refreshing sudoers for $PANEL_USER..."
 SUDOERS_FILE="/etc/sudoers.d/srv-panel"
@@ -163,11 +172,15 @@ LN_BIN="$(command -v ln || echo /bin/ln)"
 RM_BIN="$(command -v rm || echo /bin/rm)"
 MKDIR_BIN="$(command -v mkdir || echo /bin/mkdir)"
 SYSTEMCTL_BIN="$(command -v systemctl || echo /bin/systemctl)"
+BASH_BIN="$(command -v bash || echo /bin/bash)"
+UPDATE_SH="$PANEL_DIR/scripts/update.sh"
+GET_UPDATE_SH="$PANEL_DIR/scripts/get-update.sh"
+
 cat > "$SUDOERS_FILE" <<EOF
-# srv-panel — allow panel user to manage nginx + certbot + openssl
+# srv-panel — allow panel user to manage nginx + certbot + openssl + updates
 # Updated by scripts/update.sh — validate: visudo -cf $SUDOERS_FILE
 Defaults:$PANEL_USER !requiretty
-Cmnd_Alias SRV_PANEL_CMDS = $NGINX_BIN, $CERTBOT_BIN, $OPENSSL_BIN, $TEE_BIN, $LN_BIN, $RM_BIN, $MKDIR_BIN, $SYSTEMCTL_BIN
+Cmnd_Alias SRV_PANEL_CMDS = $NGINX_BIN, $CERTBOT_BIN, $OPENSSL_BIN, $TEE_BIN, $LN_BIN, $RM_BIN, $MKDIR_BIN, $SYSTEMCTL_BIN, $BASH_BIN $UPDATE_SH, $BASH_BIN $GET_UPDATE_SH, $UPDATE_SH, $GET_UPDATE_SH
 $PANEL_USER ALL=(root) NOPASSWD: SRV_PANEL_CMDS
 EOF
 chmod 440 "$SUDOERS_FILE"

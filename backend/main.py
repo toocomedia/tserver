@@ -15,7 +15,7 @@ from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
 import config
 from database import init_db
-from routers import system, domains, dns, ssl, proxy, errors, auth, settings, dev
+from routers import system, domains, dns, ssl, proxy, errors, auth, settings, updates, dev
 from middleware.error_capture import RequestIdMiddleware, register_error_handlers
 from middleware.auth import AuthMiddleware
 from middleware.csrf import CSRFMiddleware
@@ -124,6 +124,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 app.include_router(auth.router)
 app.include_router(system.router)
 app.include_router(settings.router)
+app.include_router(updates.router)
 app.include_router(domains.router)   # Phase 2
 app.include_router(dns.router)       # Phase 3
 app.include_router(ssl.router)       # Phase 4
