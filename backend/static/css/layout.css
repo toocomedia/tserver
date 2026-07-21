@@ -21,12 +21,12 @@
   overflow-y: auto;
   overflow-x: hidden;
   flex-shrink: 0;
-  border-right: 1px solid var(--color-line);
+  border-right: 1px solid var(--color-sidebar-border);
 }
 
 .sidebar__logo {
   padding: var(--space-lg) var(--space-md);
-  border-bottom: 1px solid var(--color-line);
+  border-bottom: 1px solid var(--color-sidebar-border);
   display: flex;
   align-items: center;
   gap: var(--space-sm);
@@ -62,7 +62,7 @@
   padding: 0 var(--space-md);
   font-size: var(--font-body);
   font-weight: 600;
-  color: var(--color-muted);
+  color: var(--color-sidebar-text);
   cursor: pointer;
   border-left: 4px solid transparent;
   transition: background 0.1s, color 0.1s;
@@ -70,19 +70,19 @@
 }
 
 .sidebar__item:hover {
-  background: var(--color-line);
-  color: var(--color-text);
+  background: var(--color-sidebar-bg-hover);
+  color: var(--color-sidebar-hover);
 }
 
 .sidebar__item--active {
   background: var(--color-accent);
-  color: var(--color-neutral);
+  color: var(--color-on-accent);
   border-left-color: var(--color-accent-2);
 }
 
 .sidebar__item--active:hover {
   background: var(--color-accent);
-  color: var(--color-neutral);
+  color: var(--color-on-accent);
 }
 
 .sidebar__item svg {
@@ -102,15 +102,15 @@
   align-items: center;
   gap: var(--space-sm);
   padding: var(--space-md);
-  border-top: 1px solid var(--color-line);
+  border-top: 1px solid var(--color-sidebar-border);
 }
 
 .sidebar__user-avatar {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: var(--color-line);
-  color: var(--color-text);
+  background: var(--color-sidebar-bg-hover);
+  color: var(--color-sidebar-hover);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -123,7 +123,7 @@
 }
 
 .sidebar__user-name {
-  color: var(--color-text);
+  color: var(--color-sidebar-hover);
   font-size: var(--font-small);
   font-weight: 600;
   white-space: nowrap;
@@ -144,7 +144,7 @@
 
 .sidebar__footer {
   padding: var(--space-md);
-  border-top: 1px solid var(--color-line);
+  border-top: 1px solid var(--color-sidebar-border);
   font-size: var(--font-small);
   color: var(--color-muted);
 }

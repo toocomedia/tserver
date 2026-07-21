@@ -10,7 +10,11 @@
   /* Colors */
   --color-bg:         #FFFFFF;
   --color-surface:    #F5F6F5;
-  --color-sidebar:    var(--color-surface);
+  --color-sidebar:    #0B0C0B;
+  --color-sidebar-text: #9AA0A6;
+  --color-sidebar-hover: #FFFFFF;
+  --color-sidebar-border: rgba(255,255,255,0.07);
+  --color-sidebar-bg-hover: rgba(255,255,255,0.05);
   --color-text:       #0F1720;
   --color-muted:      #6B6F6A;
   --color-line:       #E6E6DF;
@@ -146,7 +150,11 @@ p {
 [data-theme="dark"] {
   --color-bg:         #0F1720;
   --color-surface:    #1A2430;
-  --color-sidebar:    var(--color-surface);
+  --color-sidebar:    var(--color-bg); /* Match page background in dark mode */
+  --color-sidebar-text: var(--color-muted);
+  --color-sidebar-hover: var(--color-text);
+  --color-sidebar-border: var(--color-line);
+  --color-sidebar-bg-hover: var(--color-surface);
   --color-text:       #EAECEF;
   --color-muted:      #9AA0A6;
   --color-line:       #2A3441;
