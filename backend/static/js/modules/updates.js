@@ -1,5 +1,5 @@
 /**
- * updates.js — Frontend module for Git update check & deployment.
+ * updates.js — Light Git update check & silent background deployment.
  */
 document.addEventListener('DOMContentLoaded', () => {
   const btnCheck = document.getElementById('btn-check-updates');
@@ -12,16 +12,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const elCommitMsg = document.getElementById('update-commit-msg');
   const elLastChecked = document.getElementById('update-last-checked');
   const elStatusBadge = document.getElementById('update-status-badge');
-  const elStatusMsg = document.getElementById('update-status-msg');
-  const elStatusBanner = document.getElementById('update-status-banner');
-
-  const modalProgress = document.getElementById('modal-update-progress');
-  const logOutput = document.getElementById('update-log-output');
-  const reconnectStatus = document.getElementById('update-reconnect-status');
 
   if (!btnCheck) return; // Not on settings page
-
-  let isPollingLogs = false;
 
   async function checkUpdates(force = false) {
     if (btnCheckText) btnCheckText.textContent = 'Checking...';
@@ -29,9 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     try {
       const url = force ? '/api/updates/check?force=true' : '/api/updates/check';
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
+      const data = await window.panel.get(url);
 
       // Render info
       if (elLocalCommit) elLocalCommit.innerHTML = `<code>${data.local_short_sha || 'unknown'}</code>`;
@@ -42,14 +32,12 @@ document.addEventListener('DOMContentLoaded', () => {
         chkAutoUpdate.checked = data.auto_update_enabled;
       }
 
-      // Status badge & banner
+      // Status badge
       if (data.has_update) {
         if (elStatusBadge) {
           elStatusBadge.className = 'badge badge--error badge--dot';
           elStatusBadge.textContent = 'Update Available';
         }
-        if (elStatusMsg) elStatusMsg.innerHTML = '<strong>New update available!</strong> A new release is ready for installation.';
-        if (elStatusBanner) elStatusBanner.className = 'alert alert--danger mb-lg';
         if (btnApply) {
           btnApply.disabled = false;
           btnApply.textContent = 'Update & Restart Panel';
@@ -57,10 +45,8 @@ document.addEventListener('DOMContentLoaded', () => {
       } else {
         if (elStatusBadge) {
           elStatusBadge.className = 'badge badge--ok badge--dot';
-          elStatusBadge.textContent = 'Up to Date';
+          elStatusBadge.textContent = 'Up to date';
         }
-        if (elStatusMsg) elStatusMsg.innerHTML = '<strong>Up to Date!</strong> Your panel is running the latest code.';
-        if (elStatusBanner) elStatusBanner.className = 'alert alert--success mb-lg';
         if (btnApply) {
           btnApply.disabled = true;
           btnApply.textContent = 'Already Up to Date';
@@ -81,19 +67,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function toggleAutoUpdate(enabled) {
     try {
-      const csrfToken = getCookie('csrftoken') || '';
-      const res = await fetch('/api/updates/auto-update', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRFToken': csrfToken,
-        },
-        body: JSON.stringify({ enabled }),
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      await window.panel.post('/api/updates/auto-update', { enabled });
+      if (typeof window.toast === 'function') {
+        window.toast(`Automatic updates ${enabled ? 'enabled' : 'disabled'}.`, 'success');
+      }
     } catch (err) {
       console.error('Failed to update auto-update setting:', err);
-      alert(`Could not save auto-update setting: ${err.message}`);
+      if (typeof window.toast === 'function') {
+        window.toast(`Could not save auto-update setting: ${err.message}`, 'danger');
+      }
       if (chkAutoUpdate) chkAutoUpdate.checked = !enabled;
     }
   }
@@ -103,90 +85,56 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    // Show progress modal
-    if (modalProgress) modalProgress.style.display = 'flex';
-    if (logOutput) logOutput.textContent = 'Initializing update runner...\n';
-    if (btnApply) btnApply.disabled = true;
+    if (btnApply) {
+      btnApply.disabled = true;
+      btnApply.innerHTML = '<span class="spinner" style="display:inline-block; border:2px solid currentColor; border-top-color:transparent; border-radius:50%; width:12px; height:12px; animation:spin 1s linear infinite; margin-right:6px;"></span> Updating in background...';
+    }
 
     try {
-      const csrfToken = getCookie('csrftoken') || '';
-      const res = await fetch('/api/updates/apply', {
-        method: 'POST',
-        headers: { 'X-CSRFToken': csrfToken },
-      });
-      const data = await res.json();
+      const data = await window.panel.post('/api/updates/apply', {});
       if (data.status === 'error') {
-        alert(data.message);
-        if (modalProgress) modalProgress.style.display = 'none';
+        if (typeof window.toast === 'function') {
+          window.toast(data.message, 'danger');
+        }
+        if (btnApply) {
+          btnApply.disabled = false;
+          btnApply.textContent = 'Update & Restart Panel';
+        }
         return;
       }
 
-      // Start log polling
-      startPollingLogs();
+      if (typeof window.toast === 'function') {
+        window.toast('Update started in background! Database backed up. Panel will restart shortly.', 'success');
+      }
+
+      // Start background reconnect polling
+      startPollingHealth();
     } catch (err) {
-      console.error('Apply update trigger failed:', err);
-      if (logOutput) logOutput.textContent += `\nError launching update: ${err.message}\n`;
-      // Service might be restarting right now — proceed to health check polling
+      console.error('Apply update trigger:', err);
+      if (typeof window.toast === 'function') {
+        window.toast('Update process launched. Reconnecting to server...', 'info');
+      }
       startPollingHealth();
     }
   }
 
-  function startPollingLogs() {
-    if (isPollingLogs) return;
-    isPollingLogs = true;
-
-    const interval = setInterval(async () => {
-      try {
-        const res = await fetch('/api/updates/status');
-        if (res.ok) {
-          const data = await res.json();
-          if (logOutput && data.log) {
-            logOutput.textContent = data.log;
-            logOutput.scrollTop = logOutput.scrollHeight;
-          }
-          if (!data.is_updating && data.log.includes('=== Update finished')) {
-            clearInterval(interval);
-            isPollingLogs = false;
-            startPollingHealth();
-          }
-        }
-      } catch (e) {
-        // Fetch failed because service is restarting!
-        clearInterval(interval);
-        isPollingLogs = false;
-        startPollingHealth();
-      }
-    }, 1500);
-  }
-
   function startPollingHealth() {
-    if (reconnectStatus) {
-      reconnectStatus.innerHTML = '<span class="spinner"></span> Restarting srv-panel service... Reconnecting...';
-    }
-
     const healthInterval = setInterval(async () => {
       try {
         const res = await fetch('/api/health');
         if (res.ok) {
           clearInterval(healthInterval);
-          if (reconnectStatus) {
-            reconnectStatus.innerHTML = '<span style="color:#00ffaa;">✓ Panel updated and back online! Reloading...</span>';
+          if (typeof window.toast === 'function') {
+            window.toast('Panel updated successfully! Reloading...', 'success');
           }
           setTimeout(() => {
             window.location.reload();
           }, 1500);
         }
       } catch (e) {
-        // Still restarting...
+        // Service restarting...
       }
     }, 2000);
-  }
-
-  function getCookie(name) {
-    const value = `; ${document.cookie}`;
-    const parts = value.split(`; ${name}=`);
-    if (parts.length === 2) return parts.pop().split(';').shift();
-    return '';
   }
 
   // Event Listeners
