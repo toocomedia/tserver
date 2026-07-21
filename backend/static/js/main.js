@@ -240,7 +240,45 @@ function confirmAction(message, onConfirm, options) {
   okBtn.addEventListener("click", onOk, { once: true });
 }
 
+/**
+ * One submit per form: block double-clicks / repeated POSTs.
+ * Skips forms marked data-no-disable-submit.
+ */
+function guardFormSubmitButtons() {
+  document.addEventListener(
+    "submit",
+    (e) => {
+      const form = e.target;
+      if (!(form instanceof HTMLFormElement)) return;
+      if (form.hasAttribute("data-no-disable-submit")) return;
+      if (form.getAttribute("data-locked") === "1") {
+        e.preventDefault();
+        return;
+      }
+      // Second+ submit must be cancelled (disabled button alone is not enough).
+      if (form.getAttribute("data-submitting") === "1") {
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
+      form.setAttribute("data-submitting", "1");
+      form.querySelectorAll('button[type="submit"], input[type="submit"]').forEach((btn) => {
+        btn.disabled = true;
+        btn.setAttribute("aria-disabled", "true");
+        if (btn.tagName === "BUTTON" && !btn.dataset.originalLabel) {
+          btn.dataset.originalLabel = btn.textContent || "";
+          const label = (btn.textContent || "Working").trim();
+          if (!label.endsWith("…")) btn.textContent = `${label}…`;
+        }
+      });
+    },
+    true
+  );
+}
+
 document.addEventListener("DOMContentLoaded", () => {
+  guardFormSubmitButtons();
+
   const current = window.location.pathname;
   document.querySelectorAll(".sidebar__item[data-path]").forEach((item) => {
     const itemPath = item.getAttribute("data-path") || "";

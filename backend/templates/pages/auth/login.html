@@ -65,7 +65,7 @@
           <div class="alert alert--danger mb-lg" role="alert">{{ error }}</div>
           {% endif %}
 
-          <form method="post" action="/login" class="form" autocomplete="on">
+          <form method="post" action="/login" class="form" id="login-form" autocomplete="on"{% if locked %} data-locked="1"{% endif %}>
             {% include "partials/csrf_field.html" %}
             <input type="hidden" name="next" value="{{ next or '/' }}">
 
@@ -78,10 +78,11 @@
                 name="username"
                 value="{{ username or '' }}"
                 required
-                autofocus
+                {% if not locked %}autofocus{% endif %}
                 autocomplete="username"
                 autocapitalize="none"
                 spellcheck="false"
+                {% if locked %}disabled{% endif %}
               >
             </div>
 
@@ -94,16 +95,60 @@
                 name="password"
                 required
                 autocomplete="current-password"
+                {% if locked %}disabled{% endif %}
               >
             </div>
 
-            <button type="submit" class="btn btn--primary" style="width:100%;margin-top:var(--space-md);">
-              Sign in
+            <button
+              type="submit"
+              id="login-submit"
+              class="btn btn--primary"
+              style="width:100%;margin-top:var(--space-md);"
+              {% if locked %}disabled aria-disabled="true"{% endif %}
+            >
+              {% if locked %}Try again later{% else %}Sign in{% endif %}
             </button>
           </form>
         </div>
       </div>
     </div>
   </div>
+  <script>
+    (function () {
+      var form = document.getElementById("login-form");
+      var btn = document.getElementById("login-submit");
+      if (!form || !btn) return;
+
+      // Rate-limit / lockout page: never allow another POST.
+      if (form.getAttribute("data-locked") === "1") {
+        form.addEventListener("submit", function (e) {
+          e.preventDefault();
+        });
+        return;
+      }
+
+      // First submit only — extra clicks must not fire more POSTs.
+      form.addEventListener("submit", function (e) {
+        if (form.getAttribute("data-submitting") === "1") {
+          e.preventDefault();
+          e.stopPropagation();
+          return false;
+        }
+        form.setAttribute("data-submitting", "1");
+        btn.disabled = true;
+        btn.setAttribute("aria-disabled", "true");
+        btn.textContent = "Signing in…";
+      });
+
+      // Catch double-clicks before a second submit is queued.
+      btn.addEventListener("click", function (e) {
+        if (form.getAttribute("data-submitting") === "1" || btn.disabled) {
+          e.preventDefault();
+          e.stopPropagation();
+          return false;
+        }
+      });
+    })();
+  </script>
 </body>
 </html>

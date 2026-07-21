@@ -66,7 +66,7 @@ async def lifespan(app: FastAPI):
 
 
 async def _rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded):
-    """HTML login page on /login; JSON elsewhere."""
+    """HTML login page on /login; JSON elsewhere. Form stays disabled when locked."""
     detail = login_guard.LOCKOUT_MESSAGE
     path = request.url.path
     if path == "/login" or path.rstrip("/") == "/login":
@@ -77,6 +77,7 @@ async def _rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded)
                 "error": detail,
                 "username": "",
                 "next": "/",
+                "locked": True,
             },
             status_code=429,
         )

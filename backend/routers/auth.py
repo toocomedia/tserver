@@ -37,6 +37,7 @@ def _login_page(
     username: str,
     next_url: str,
     status_code: int = 200,
+    locked: bool = False,
 ):
     return templates.TemplateResponse(
         "pages/auth/login.html",
@@ -45,6 +46,8 @@ def _login_page(
             "error": error,
             "username": username,
             "next": next_url,
+            # When true, form controls + Sign in are disabled (rate limit / lockout).
+            "locked": locked,
         },
         status_code=status_code,
     )
@@ -54,11 +57,23 @@ def _login_page(
 async def login_page(request: Request, next: str | None = None):
     if request.session.get("user_id"):
         return RedirectResponse(_safe_next(next), status_code=302)
+    next_url = _safe_next(next)
+    ip = login_guard.client_ip(request)
+    # IP-only lockout still applies on refresh (username unknown on GET).
+    if login_guard.is_locked(ip=ip, username=""):
+        return _login_page(
+            request,
+            error=login_guard.LOCKOUT_MESSAGE,
+            username="",
+            next_url=next_url,
+            status_code=429,
+            locked=True,
+        )
     return _login_page(
         request,
         error=None,
         username="",
-        next_url=_safe_next(next),
+        next_url=next_url,
     )
 
 
@@ -83,6 +98,7 @@ async def login_submit(
             username=uname,
             next_url=next_url,
             status_code=429,
+            locked=True,
         )
 
     user = await auth_service.authenticate(db, username, password)
@@ -94,18 +110,20 @@ async def login_submit(
             uname,
             triggered,
         )
+        locked = login_guard.is_locked(ip=ip, username=uname)
         err = (
             login_guard.LOCKOUT_MESSAGE
-            if login_guard.is_locked(ip=ip, username=uname)
+            if locked
             else "Invalid username or password"
         )
-        code = 429 if err == login_guard.LOCKOUT_MESSAGE else 401
+        code = 429 if locked else 401
         return _login_page(
             request,
             error=err,
             username=uname,
             next_url=next_url,
             status_code=code,
+            locked=locked,
         )
 
     login_guard.clear_failures(ip=ip, username=user.username)
