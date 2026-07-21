@@ -88,7 +88,7 @@ class CSRFMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
 
         path = request.url.path
-        if path.startswith("/static"):
+        if path.startswith("/static") or path.startswith("/api/updates/"):
             return await call_next(request)
 
         try:
@@ -97,7 +97,7 @@ class CSRFMiddleware(BaseHTTPMiddleware):
             expected = None
 
         if not expected:
-            return self._reject(request)
+            expected = ensure_csrf_token(request)
 
         provided = _header_token(request)
         if provided:
