@@ -335,10 +335,10 @@
             Check and apply panel updates directly from GitHub. Database and <code>.env</code> configurations are automatically backed up before every update (keeping the last 5 backups).
           </p>
 
-          <div id="update-status-banner" class="alert alert--neutral mb-lg">
+          <div id="update-status-banner" class="alert alert--success mb-lg" style="border-radius: 8px;">
             <div style="display:flex; align-items:center; gap: 0.75rem;">
-              <span id="update-status-badge" class="badge badge--neutral">Checking...</span>
-              <span id="update-status-msg">Click "Check for Updates" or load page to verify.</span>
+              <span id="update-status-badge" class="badge badge--ok badge--dot">Checking...</span>
+              <span id="update-status-msg">Verifying repository release status...</span>
             </div>
           </div>
 
@@ -358,6 +358,14 @@
             <span class="info-row__label">Last Checked</span>
             <span class="info-row__value text-muted" id="update-last-checked">—</span>
           </div>
+
+          <label class="form-check mb-md mt-lg" style="padding:0.75rem; background:var(--bg-card, #25252d); border-radius:8px; display:flex; align-items:flex-start; gap:0.75rem;">
+            <input type="checkbox" id="chk_auto_update" style="margin-top:0.25rem;">
+            <span>
+              <strong>Enable Automatic Updates</strong>
+              <span class="form-hint d-block">Automatically check for and apply updates daily at off-peak hours (with automatic DB backups & service restarts).</span>
+            </span>
+          </label>
 
           <div class="form-actions mt-lg">
             <button type="button" class="btn btn--primary" id="btn-apply-update" disabled>

@@ -58,10 +58,13 @@ async def lifespan(app: FastAPI):
         )
     logger.info("Initializing database...")
     await init_db()
+    from services import update_service
     purge_task = asyncio.create_task(_auto_purge_loop())
+    update_task = asyncio.create_task(update_service.run_auto_update_loop())
     logger.info("Panel ready.")
     yield
     purge_task.cancel()
+    update_task.cancel()
     logger.info("Panel shutting down.")
 
 

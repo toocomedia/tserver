@@ -50,6 +50,7 @@ PANEL_IP_PORT: int = _env_int("PANEL_IP_PORT", 80)
 PANEL_URL_MODE: str = _env_str("PANEL_URL_MODE", "none").lower() or "none"
 PANEL_PARENT_DOMAIN: str = _env_str("PANEL_PARENT_DOMAIN", "")
 PANEL_SUBDOMAIN_LABEL: str = _env_str("PANEL_SUBDOMAIN_LABEL", "panel")
+AUTO_UPDATE_ENABLED: bool = _env_bool("AUTO_UPDATE_ENABLED", False)
 
 # ---------------------------------------------------------
 # Auth / sessions

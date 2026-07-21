@@ -5,6 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnCheck = document.getElementById('btn-check-updates');
   const btnCheckText = document.getElementById('btn-check-updates-text');
   const btnApply = document.getElementById('btn-apply-update');
+  const chkAutoUpdate = document.getElementById('chk_auto_update');
   
   const elLocalCommit = document.getElementById('update-local-commit');
   const elRemoteCommit = document.getElementById('update-remote-commit');
@@ -37,26 +38,29 @@ document.addEventListener('DOMContentLoaded', () => {
       if (elRemoteCommit) elRemoteCommit.innerHTML = `<code>${data.remote_short_sha || 'unknown'}</code>`;
       if (elCommitMsg) elCommitMsg.textContent = data.commit_message || '—';
       if (elLastChecked) elLastChecked.textContent = data.last_checked || 'Just now';
+      if (chkAutoUpdate && typeof data.auto_update_enabled === 'boolean') {
+        chkAutoUpdate.checked = data.auto_update_enabled;
+      }
 
       // Status badge & banner
       if (data.has_update) {
         if (elStatusBadge) {
-          elStatusBadge.className = 'badge badge--ok';
+          elStatusBadge.className = 'badge badge--error badge--dot';
           elStatusBadge.textContent = 'Update Available';
         }
-        if (elStatusMsg) elStatusMsg.textContent = 'A new release is ready for installation.';
-        if (elStatusBanner) elStatusBanner.className = 'alert alert--warning mb-lg';
+        if (elStatusMsg) elStatusMsg.innerHTML = '<strong>New update available!</strong> A new release is ready for installation.';
+        if (elStatusBanner) elStatusBanner.className = 'alert alert--danger mb-lg';
         if (btnApply) {
           btnApply.disabled = false;
           btnApply.textContent = 'Update & Restart Panel';
         }
       } else {
         if (elStatusBadge) {
-          elStatusBadge.className = 'badge badge--ok';
+          elStatusBadge.className = 'badge badge--ok badge--dot';
           elStatusBadge.textContent = 'Up to Date';
         }
-        if (elStatusMsg) elStatusMsg.textContent = 'Your panel is running the latest code.';
-        if (elStatusBanner) elStatusBanner.className = 'alert alert--neutral mb-lg';
+        if (elStatusMsg) elStatusMsg.innerHTML = '<strong>Up to Date!</strong> Your panel is running the latest code.';
+        if (elStatusBanner) elStatusBanner.className = 'alert alert--success mb-lg';
         if (btnApply) {
           btnApply.disabled = true;
           btnApply.textContent = 'Already Up to Date';
@@ -72,6 +76,25 @@ document.addEventListener('DOMContentLoaded', () => {
     } finally {
       if (btnCheckText) btnCheckText.textContent = 'Check for Updates';
       if (btnCheck) btnCheck.disabled = false;
+    }
+  }
+
+  async function toggleAutoUpdate(enabled) {
+    try {
+      const csrfToken = getCookie('csrftoken') || '';
+      const res = await fetch('/api/updates/auto-update', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrfToken,
+        },
+        body: JSON.stringify({ enabled }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    } catch (err) {
+      console.error('Failed to update auto-update setting:', err);
+      alert(`Could not save auto-update setting: ${err.message}`);
+      if (chkAutoUpdate) chkAutoUpdate.checked = !enabled;
     }
   }
 
@@ -172,6 +195,9 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   if (btnApply) {
     btnApply.addEventListener('click', applyUpdate);
+  }
+  if (chkAutoUpdate) {
+    chkAutoUpdate.addEventListener('change', (e) => toggleAutoUpdate(e.target.checked));
   }
 
   // Initial light check on page load
