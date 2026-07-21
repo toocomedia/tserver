@@ -143,12 +143,12 @@ p {
    DARK THEME
    ============================================================ */
 [data-theme="dark"] {
-  --color-bg:         #0F1720;
-  --color-surface:    #1A2430;
+  --color-bg:         #000000;
+  --color-surface:    #0D0D0D;
   --color-sidebar:    #0B0C0B; /* Keep sidebar dark */
-  --color-text:       #EAECEF;
-  --color-muted:      #9AA0A6;
-  --color-line:       #2A3441;
+  --color-text:       #F5F6F5;
+  --color-muted:      #888888;
+  --color-line:       #1A1A1A;
   
   /* Keep accents the same, or dim slightly */
   --color-accent:     #C7F464; 
@@ -156,11 +156,11 @@ p {
   --color-neutral:    #EAECEF; 
   --color-danger:     #EF4444; 
   --color-warn:       #FBBF24; /* Slightly lighter orange for dark mode */
-  --color-icon:       #2A3441; 
+  --color-icon:       #222222; 
 
   /* Components */
   --color-on-solid:   #FFFFFF;
-  --color-alert-success-bg: #1A2E22;
-  --color-alert-danger-bg:  #3A1A1A;
-  --color-row-active: #1E293B;
+  --color-alert-success-bg: #0D1C13;
+  --color-alert-danger-bg:  #1C0D0D;
+  --color-row-active: #111111;
 }
