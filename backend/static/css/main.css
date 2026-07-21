@@ -10,7 +10,7 @@
   /* Colors */
   --color-bg:         #FFFFFF;
   --color-surface:    #F5F6F5;
-  --color-sidebar:    #0B0C0B;
+  --color-sidebar:    var(--color-surface);
   --color-text:       #0F1720;
   --color-muted:      #6B6F6A;
   --color-line:       #E6E6DF;
@@ -146,7 +146,7 @@ p {
 [data-theme="dark"] {
   --color-bg:         #0F1720;
   --color-surface:    #1A2430;
-  --color-sidebar:    #0B0C0B; /* Keep sidebar dark */
+  --color-sidebar:    var(--color-surface);
   --color-text:       #EAECEF;
   --color-muted:      #9AA0A6;
   --color-line:       #2A3441;

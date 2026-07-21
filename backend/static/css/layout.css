@@ -21,11 +21,12 @@
   overflow-y: auto;
   overflow-x: hidden;
   flex-shrink: 0;
+  border-right: 1px solid var(--color-line);
 }
 
 .sidebar__logo {
   padding: var(--space-lg) var(--space-md);
-  border-bottom: 1px solid rgba(255,255,255,0.07);
+  border-bottom: 1px solid var(--color-line);
   display: flex;
   align-items: center;
   gap: var(--space-sm);
@@ -61,7 +62,7 @@
   padding: 0 var(--space-md);
   font-size: var(--font-body);
   font-weight: 600;
-  color: var(--color-icon);
+  color: var(--color-muted);
   cursor: pointer;
   border-left: 4px solid transparent;
   transition: background 0.1s, color 0.1s;
@@ -69,8 +70,8 @@
 }
 
 .sidebar__item:hover {
-  background: rgba(255,255,255,0.05);
-  color: var(--color-on-solid);
+  background: var(--color-line);
+  color: var(--color-text);
 }
 
 .sidebar__item--active {
@@ -101,15 +102,15 @@
   align-items: center;
   gap: var(--space-sm);
   padding: var(--space-md);
-  border-top: 1px solid rgba(255,255,255,0.07);
+  border-top: 1px solid var(--color-line);
 }
 
 .sidebar__user-avatar {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: rgba(255,255,255,0.1);
-  color: var(--color-on-solid);
+  background: var(--color-line);
+  color: var(--color-text);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -122,7 +123,7 @@
 }
 
 .sidebar__user-name {
-  color: var(--color-on-solid);
+  color: var(--color-text);
   font-size: var(--font-small);
   font-weight: 600;
   white-space: nowrap;
@@ -143,7 +144,7 @@
 
 .sidebar__footer {
   padding: var(--space-md);
-  border-top: 1px solid rgba(255,255,255,0.07);
+  border-top: 1px solid var(--color-line);
   font-size: var(--font-small);
   color: var(--color-muted);
 }
@@ -389,7 +390,7 @@
   }
   
   .mobile-header .btn {
-    color: var(--color-on-solid);
+    color: var(--color-text);
   }
 
   .sidebar {
