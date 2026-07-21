@@ -68,7 +68,7 @@
           {% if item.days_left is not none %}
             <span style="font-weight:700;
               color: {% if item.days_left > 30 %}var(--color-accent-2)
-                     {% elif item.days_left > 0 %}#D97706
+                     {% elif item.days_left > 0 %}var(--color-warn)
                      {% else %}var(--color-danger){% endif %};">
               {{ item.days_left }}d
             </span>
@@ -81,8 +81,8 @@
           {% if item.status == 'ok' %}
             <span class="badge badge--ok badge--dot">Valid</span>
           {% elif item.status == 'warning' %}
-            <span class="badge" style="color:#D97706; border-color:#D97706;">
-              <span class="badge--dot" style="background:#D97706;"></span>
+            <span class="badge" style="color:var(--color-warn); border-color:var(--color-warn);">
+              <span class="badge--dot" style="background:var(--color-warn);"></span>
               Expiring
             </span>
           {% elif item.status == 'expired' %}

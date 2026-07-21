@@ -58,5 +58,5 @@
 .ssl-step { display: flex; align-items: center; gap: var(--space-sm); padding: 6px 0; font-size: var(--font-body); color: var(--color-muted); }
 .ssl-step__icon { font-weight: 800; width: 1.2em; text-align: center; flex-shrink: 0; }
 .ssl-step--run { color: var(--color-text); font-weight: 700; }
-.ssl-step--ok { color: var(--color-accent-2, #6a9); }
+.ssl-step--ok { color: var(--color-accent-2); }
 .ssl-step--fail { color: var(--color-danger); font-weight: 700; }

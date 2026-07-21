@@ -378,6 +378,21 @@
   }
 
   document.addEventListener("DOMContentLoaded", () => {
+    // Theme toggle logic
+    const themeToggle = $("theme_dark");
+    if (themeToggle) {
+      themeToggle.checked = localStorage.getItem("theme") === "dark";
+      themeToggle.addEventListener("change", (e) => {
+        if (e.target.checked) {
+          document.documentElement.setAttribute("data-theme", "dark");
+          localStorage.setItem("theme", "dark");
+        } else {
+          document.documentElement.removeAttribute("data-theme");
+          localStorage.setItem("theme", "light");
+        }
+      });
+    }
+
     document.querySelectorAll('input[name="url_mode"]').forEach((el) => {
       el.addEventListener("change", syncUrlModeUi);
     });

@@ -18,7 +18,14 @@
   --color-accent-2:   #A8E04A;
   --color-neutral:    #111111;
   --color-danger:     #DC2626;
+  --color-warn:       #F59E0B;
   --color-icon:       #DDEDE0;
+  
+  /* Components */
+  --color-on-solid:   #FFFFFF;
+  --color-alert-success-bg: #f4fce8;
+  --color-alert-danger-bg: #fff5f5;
+  --color-row-active: #F7F8F3;
 
   /* Spacing */
   --space-xs: 4px;
@@ -130,4 +137,30 @@ p {
 :focus-visible {
   outline: 2px solid var(--color-neutral);
   outline-offset: 2px;
+}
+
+/* ============================================================
+   DARK THEME
+   ============================================================ */
+[data-theme="dark"] {
+  --color-bg:         #0F1720;
+  --color-surface:    #1A2430;
+  --color-sidebar:    #0B0C0B; /* Keep sidebar dark */
+  --color-text:       #EAECEF;
+  --color-muted:      #9AA0A6;
+  --color-line:       #2A3441;
+  
+  /* Keep accents the same, or dim slightly */
+  --color-accent:     #C7F464; 
+  --color-accent-2:   #A8E04A;
+  --color-neutral:    #EAECEF; 
+  --color-danger:     #EF4444; 
+  --color-warn:       #FBBF24; /* Slightly lighter orange for dark mode */
+  --color-icon:       #2A3441; 
+
+  /* Components */
+  --color-on-solid:   #FFFFFF;
+  --color-alert-success-bg: #1A2E22;
+  --color-alert-danger-bg:  #3A1A1A;
+  --color-row-active: #1E293B;
 }

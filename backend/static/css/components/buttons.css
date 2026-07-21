@@ -24,11 +24,11 @@
 .btn--secondary { background: var(--color-bg); color: var(--color-neutral); border-color: var(--color-neutral); }
 .btn--secondary:hover { background: var(--color-surface); }
 .btn--danger { background: var(--color-bg); color: var(--color-danger); border-color: var(--color-danger); }
-.btn--danger:hover { background: var(--color-danger); color: #fff; }
+.btn--danger:hover { background: var(--color-danger); color: var(--color-on-solid); }
 .btn--ghost { background: transparent; border-color: transparent; color: var(--color-muted); }
 .btn--ghost:hover { color: var(--color-text); background: var(--color-surface); }
-.btn--warning { background: var(--color-bg); color: #b45309; border-color: #b45309; }
-.btn--warning:hover { background: #b45309; color: #fff; }
+.btn--warning { background: var(--color-bg); color: var(--color-warn); border-color: var(--color-warn); }
+.btn--warning:hover { background: var(--color-warn); color: var(--color-on-solid); }
 .btn:disabled, .btn--disabled { opacity: 0.45; pointer-events: none; cursor: not-allowed; }
 .btn--sm { height: 32px; padding: 0 var(--space-md); font-size: var(--font-small); }
 .btn--icon { width: var(--button-height); padding: 0; }

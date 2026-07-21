@@ -70,7 +70,7 @@
 
 .sidebar__item:hover {
   background: rgba(255,255,255,0.05);
-  color: #fff;
+  color: var(--color-on-solid);
 }
 
 .sidebar__item--active {
@@ -109,7 +109,7 @@
   height: 32px;
   border-radius: 50%;
   background: rgba(255,255,255,0.1);
-  color: #fff;
+  color: var(--color-on-solid);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -122,7 +122,7 @@
 }
 
 .sidebar__user-name {
-  color: #fff;
+  color: var(--color-on-solid);
   font-size: var(--font-small);
   font-weight: 600;
   white-space: nowrap;
@@ -311,7 +311,7 @@
   font-size: var(--font-body);
   font-weight: 600;
   color: var(--color-text);
-  background: #ffffff;
+  background: var(--color-bg);
   border-bottom: 1px solid var(--color-line);
   cursor: pointer;
   white-space: nowrap;
@@ -324,12 +324,12 @@
   background: var(--color-surface);
 }
 .split-sidebar__item.active {
-  background: #1E3127;
-  color: #ffffff;
-  border-color: #1E3127;
+  background: var(--color-neutral);
+  color: var(--color-bg);
+  border-color: var(--color-neutral);
 }
 .split-sidebar__item.active:hover {
-  background: #1E3127;
+  background: var(--color-neutral);
 }
 .split-content {
   flex: 1;
@@ -389,7 +389,7 @@
   }
   
   .mobile-header .btn {
-    color: #fff;
+    color: var(--color-on-solid);
   }
 
   .sidebar {
