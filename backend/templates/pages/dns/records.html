@@ -27,10 +27,6 @@
 <div class="d-flex align-center justify-between mb-lg" id="records-toolbar" style="flex-wrap:wrap; gap:var(--space-sm);">
   <div class="d-flex gap-sm align-center">
     <span class="text-muted text-small">{{ rows|length }} record{{ 's' if rows|length != 1 else '' }}</span>
-    <button type="button" class="btn btn--primary btn--sm" id="btn-add-record-toolbar"
-            onclick="openModal('add-record-modal')">
-      + Custom DNS record
-    </button>
   </div>
   <form method="post" action="/dns/{{ domain.name }}/records/template"
         class="d-flex gap-sm align-center" id="template-form">

@@ -177,7 +177,7 @@ p {
 
 [data-theme="amoled"] {
   --color-bg:         #000000;
-  --color-surface:    #0A0A0A;
+  --color-surface:    #111111;
   --color-sidebar:    #000000;
   --color-sidebar-text: var(--color-muted);
   --color-sidebar-hover: var(--color-text);
@@ -185,7 +185,7 @@ p {
   --color-sidebar-bg-hover: var(--color-surface);
   --color-text:       #EAECEF;
   --color-muted:      #9AA0A6;
-  --color-line:       #1A1A1A;
+  --color-line:       #333333;
   
   /* Keep accents the same */
   --color-accent:     #C7F464; 
