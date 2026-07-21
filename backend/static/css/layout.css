@@ -325,12 +325,12 @@
   background: var(--color-surface);
 }
 .split-sidebar__item.active {
-  background: var(--color-neutral);
-  color: var(--color-bg);
-  border-color: var(--color-neutral);
+  background: var(--color-surface);
+  color: var(--color-text);
+  border-left: 3px solid var(--color-accent);
 }
 .split-sidebar__item.active:hover {
-  background: var(--color-neutral);
+  background: var(--color-surface);
 }
 .split-content {
   flex: 1;

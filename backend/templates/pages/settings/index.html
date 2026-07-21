@@ -261,16 +261,23 @@
       <div class="section mb-xl">
         <div class="section__header"><h3>Appearance</h3></div>
         <div class="section__body">
-          <label class="theme-switch mb-md">
-            <input type="checkbox" id="theme_dark">
-            <div class="theme-switch__track">
-              <div class="theme-switch__thumb"></div>
-            </div>
-            <span>
-              <strong>Dark Mode</strong>
-              <span class="form-hint d-block">Use an AMOLED dark theme for the panel</span>
-            </span>
-          </label>
+          <div class="settings-choice-grid mb-md">
+            <label class="settings-choice">
+              <input type="radio" name="theme_mode" value="light">
+              <span class="settings-choice__title">Light</span>
+              <span class="settings-choice__desc">Always use light mode</span>
+            </label>
+            <label class="settings-choice">
+              <input type="radio" name="theme_mode" value="dark">
+              <span class="settings-choice__title">Dark</span>
+              <span class="settings-choice__desc">Always use dark mode</span>
+            </label>
+            <label class="settings-choice">
+              <input type="radio" name="theme_mode" value="system">
+              <span class="settings-choice__title">System</span>
+              <span class="settings-choice__desc">Match system preference</span>
+            </label>
+          </div>
         </div>
       </div>
     </div>
