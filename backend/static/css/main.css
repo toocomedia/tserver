@@ -174,3 +174,31 @@ p {
   --color-alert-danger-bg:  #3A1A1A;
   --color-row-active: #1E293B;
 }
+
+[data-theme="amoled"] {
+  --color-bg:         #000000;
+  --color-surface:    #0A0A0A;
+  --color-sidebar:    #000000;
+  --color-sidebar-text: var(--color-muted);
+  --color-sidebar-hover: var(--color-text);
+  --color-sidebar-border: var(--color-line);
+  --color-sidebar-bg-hover: var(--color-surface);
+  --color-text:       #EAECEF;
+  --color-muted:      #9AA0A6;
+  --color-line:       #1A1A1A;
+  
+  /* Keep accents the same */
+  --color-accent:     #C7F464; 
+  --color-accent-2:   #A8E04A;
+  --color-neutral:    #EAECEF; 
+  --color-danger:     #EF4444; 
+  --color-warn:       #FBBF24;
+  --color-icon:       #6B7280; 
+
+  /* Components */
+  --color-on-solid:   #FFFFFF; 
+  --color-on-accent:  #111111;
+  --color-alert-success-bg: #111A11;
+  --color-alert-danger-bg:  #1A1111;
+  --color-row-active: #111111;
+}
