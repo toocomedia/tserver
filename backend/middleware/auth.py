@@ -14,7 +14,7 @@ _PUBLIC_EXACT = frozenset()
 def is_public_path(path: str) -> bool:
     if path in _PUBLIC_EXACT:
         return True
-    if path in ("/login", "/logout"):
+    if path in ("/login", "/logout", "/api/health"):
         return True
     if path.startswith("/static"):
         return True

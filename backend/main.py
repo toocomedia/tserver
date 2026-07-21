@@ -6,8 +6,10 @@ No routes defined here — all routes live in routers/.
 import asyncio
 import logging
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
+from slowapi.errors import RateLimitExceeded
 from starlette.middleware.sessions import SessionMiddleware
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
@@ -16,7 +18,11 @@ from database import init_db
 from routers import system, domains, dns, ssl, proxy, errors, auth, settings, dev
 from middleware.error_capture import RequestIdMiddleware, register_error_handlers
 from middleware.auth import AuthMiddleware
+from middleware.csrf import CSRFMiddleware
+from middleware.limiter import limiter
 from middleware.security_headers import SecurityHeadersMiddleware
+from services import login_guard
+from templating import templates
 
 logging.basicConfig(
     level=logging.INFO,
@@ -59,6 +65,24 @@ async def lifespan(app: FastAPI):
     logger.info("Panel shutting down.")
 
 
+async def _rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded):
+    """HTML login page on /login; JSON elsewhere."""
+    detail = login_guard.LOCKOUT_MESSAGE
+    path = request.url.path
+    if path == "/login" or path.rstrip("/") == "/login":
+        return templates.TemplateResponse(
+            "pages/auth/login.html",
+            {
+                "request": request,
+                "error": detail,
+                "username": "",
+                "next": "/",
+            },
+            status_code=429,
+        )
+    return JSONResponse({"detail": detail}, status_code=429)
+
+
 app = FastAPI(
     title="VPS Control Panel",
     version="1.0.0",
@@ -67,10 +91,15 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# slowapi: in-memory rate limits (login). No Redis.
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 # Middleware order: last added runs first on the request.
-# ProxyHeaders → Session → SecurityHeaders → RequestId → Auth → app
+# ProxyHeaders → Session → SecurityHeaders → RequestId → CSRF → Auth → app
 # ProxyHeaders: honor X-Forwarded-* so redirects keep :8080 when behind nginx
 app.add_middleware(AuthMiddleware)
+app.add_middleware(CSRFMiddleware)
 app.add_middleware(RequestIdMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(

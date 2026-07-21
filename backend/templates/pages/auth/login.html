@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="VPS Control Panel login">
+  <meta name="csrf-token" content="{{ csrf_token(request) }}">
   <title>Login — VPS Panel</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -65,6 +66,7 @@
           {% endif %}
 
           <form method="post" action="/login" class="form" autocomplete="on">
+            {% include "partials/csrf_field.html" %}
             <input type="hidden" name="next" value="{{ next or '/' }}">
 
             <div class="form-group">

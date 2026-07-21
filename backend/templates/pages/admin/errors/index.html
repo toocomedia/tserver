@@ -5,6 +5,7 @@
 
 {% block topbar_actions %}
   <form method="post" action="/admin/errors/clear-resolved" style="display:inline;" id="form-clear-resolved">
+    {% include "partials/csrf_field.html" %}
     <button type="submit" class="btn btn--secondary btn--sm" id="btn-clear-resolved">Clear resolved</button>
   </form>
   <button type="button" class="btn btn--danger btn--sm" id="btn-clear-all">Clear all</button>

@@ -97,6 +97,7 @@
         <td class="col-actions" style="width:26%;">
           <div class="d-flex gap-xs justify-end">
             <form method="post" action="/ssl/{{ cert.id }}/renew" style="display:inline;">
+              {% include "partials/csrf_field.html" %}
               <button type="submit" class="btn btn--secondary btn--sm"
                       id="btn-renew-{{ cert.id }}"
                       onclick="this.textContent='Renewing…'; this.disabled=true;">

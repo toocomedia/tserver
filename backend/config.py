@@ -72,6 +72,12 @@ SESSION_MAX_AGE: int = _env_int("SESSION_MAX_AGE", 604800)  # 7 days
 SECURITY_HEADERS: bool = _env_bool("SECURITY_HEADERS", True)
 HSTS_ENABLED: bool = _env_bool("HSTS_ENABLED", False)
 
+# Login brute-force limits (in-memory; per process). Works with or without nginx.
+# Keep SESSION_HTTPS_ONLY false for plain http://IP login.
+LOGIN_RATE_LIMIT: str = _env_str("LOGIN_RATE_LIMIT", "5/minute") or "5/minute"
+LOGIN_MAX_FAILURES: int = _env_int("LOGIN_MAX_FAILURES", 5)
+LOGIN_LOCKOUT_SECONDS: int = _env_int("LOGIN_LOCKOUT_SECONDS", 900)
+
 # ---------------------------------------------------------
 # Database
 # ---------------------------------------------------------

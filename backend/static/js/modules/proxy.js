@@ -244,9 +244,17 @@ async function saveCacheSettings(proxyId, btn) {
       cache_ttl_minutes: ttl,
       cache_auto_clear_hours: auto,
     });
+    const headers = { "Content-Type": "application/x-www-form-urlencoded" };
+    if (typeof window.csrfHeaders === "function") {
+      Object.assign(headers, window.csrfHeaders());
+    } else {
+      const m = document.querySelector('meta[name="csrf-token"]');
+      const t = m && m.getAttribute("content");
+      if (t) headers["X-CSRF-Token"] = t;
+    }
     const res = await fetch(`/proxy/${proxyId}/cache/settings`, {
       method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      headers,
       body: body.toString(),
     });
     const data = await res.json();
@@ -281,7 +289,12 @@ async function purgeCache(proxyId, btn) {
   btn.disabled = true;
 
   try {
-    const res = await fetch(`/proxy/${proxyId}/cache/purge`, { method: "POST" });
+    const headers =
+      typeof window.csrfHeaders === "function" ? window.csrfHeaders() : {};
+    const res = await fetch(`/proxy/${proxyId}/cache/purge`, {
+      method: "POST",
+      headers,
+    });
     const data = await res.json();
 
     if (data.ok) {

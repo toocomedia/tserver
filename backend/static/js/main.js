@@ -63,11 +63,24 @@ function formatDetail(detail) {
   return String(detail);
 }
 
+/** CSRF token from layout / login meta tag. */
+function getCsrfToken() {
+  const m = document.querySelector('meta[name="csrf-token"]');
+  return m ? (m.getAttribute("content") || "") : "";
+}
+
+function csrfHeaders(extra = {}) {
+  const headers = { ...extra };
+  const token = getCsrfToken();
+  if (token) headers["X-CSRF-Token"] = token;
+  return headers;
+}
+
 const panel = {
   async post(url, data = {}) {
     const res = await fetch(url, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: csrfHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify(data),
     });
     const json = await res.json().catch(() => ({}));
@@ -106,7 +119,13 @@ function submitPost(action, fields = {}) {
   form.action = action;
   form.style.display = "none";
 
-  Object.entries(fields || {}).forEach(([key, value]) => {
+  const payload = { ...(fields || {}) };
+  if (!payload.csrf_token) {
+    const token = getCsrfToken();
+    if (token) payload.csrf_token = token;
+  }
+
+  Object.entries(payload).forEach(([key, value]) => {
     if (value === undefined || value === null) return;
     const input = document.createElement("input");
     input.type = "hidden";
@@ -258,6 +277,8 @@ window.path = path;
 window.publicUrl = publicUrl;
 window.panel = panel;
 window.submitPost = submitPost;
+window.getCsrfToken = getCsrfToken;
+window.csrfHeaders = csrfHeaders;
 window.toast = toast;
 window.openModal = openModal;
 window.closeModal = closeModal;

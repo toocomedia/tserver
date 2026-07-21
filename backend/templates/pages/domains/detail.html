@@ -182,6 +182,7 @@
 
 <div id="page-editor" style="display:none;">
   <form method="post" action="/domains/{{ domain.id }}/edit-page" id="edit-page-form">
+    {% include "partials/csrf_field.html" %}
     <div class="form-group mb-md">
       <textarea
         name="content"

@@ -28,6 +28,7 @@
     </div>
 
     <form method="post" action="/domains/create" class="form" id="create-domain-form">
+      {% include "partials/csrf_field.html" %}
 
       <div class="form-group">
         <label class="form-label" for="name">Domain Name</label>

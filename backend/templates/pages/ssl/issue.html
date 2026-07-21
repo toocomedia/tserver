@@ -31,6 +31,7 @@
 
     {% if eligible %}
     <form method="post" action="/ssl/issue" class="form" id="issue-form">
+      {% include "partials/csrf_field.html" %}
 
       <!-- DOMAIN — dropdown only, no free text -->
       <div class="form-group">

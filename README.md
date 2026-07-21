@@ -47,3 +47,16 @@ If you get locked out, you can run the admin creation script locally on your ser
 ```bash
 sudo bash /opt/srv-panel/scripts/create_admin.sh --user admin --force
 ```
+
+---
+
+## Security (lightweight)
+
+Built into the app (works with or without nginx, IP or domain):
+
+- **Login rate limit** — `slowapi` (default `5/minute` per IP; `LOGIN_RATE_LIMIT`)
+- **Login lockout** — after 5 failures, 15 minutes (`LOGIN_MAX_FAILURES`, `LOGIN_LOCKOUT_SECONDS`)
+- **CSRF** — required on POST forms and `fetch` (`X-CSRF-Token`)
+- **Session cookie** — `SameSite=lax`; set `SESSION_HTTPS_ONLY=true` only when the panel is always HTTPS (leave false for plain `http://IP` login)
+
+Limits are in-memory (per process) and reset on restart.

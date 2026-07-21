@@ -22,6 +22,7 @@
     {% set mode = form.get('mode', 'managed') %}
 
     <form method="post" action="/proxy/create" class="form" id="create-proxy-form">
+      {% include "partials/csrf_field.html" %}
 
       <!-- Mode: managed vs external -->
       <div class="form-group">

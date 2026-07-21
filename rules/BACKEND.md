@@ -104,6 +104,10 @@ backend/
 - No user input goes directly into nginx config templates without escaping.
 - Panel routes are protected by session auth (`middleware/auth.py`). Public: `/login`, `/logout`, `/static/*`, `/api/health`.
 - Admin user is seeded by `install.sh` or `scripts/create_admin.sh` (password hashed with bcrypt in SQLite).
+- Login rate limit (`slowapi`, in-memory) + lockout (`services/login_guard.py`) by IP and username. Defaults: `LOGIN_RATE_LIMIT=5/minute`, `LOGIN_MAX_FAILURES=5`, `LOGIN_LOCKOUT_SECONDS=900`.
+- CSRF on state-changing methods (`middleware/csrf.py`): form field `csrf_token` or header `X-CSRF-Token`. Templates use `{% include "partials/csrf_field.html" %}`; JS uses `meta[name=csrf-token]`.
+- `SESSION_HTTPS_ONLY` stays false by default so `http://IP:port` login works; enable only when the panel is always HTTPS.
+- Do not rely on nginx-only limits — the app may run on a custom port without nginx.
 
 ## Comments
 - Comment why, not what.

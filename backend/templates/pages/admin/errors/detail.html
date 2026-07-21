@@ -98,10 +98,12 @@
 
   {% if not event.resolved %}
   <form method="post" action="/admin/errors/{{ event.id }}/resolve" style="display:inline;">
+    {% include "partials/csrf_field.html" %}
     <button type="submit" class="btn btn--secondary" id="btn-resolve">Mark resolved</button>
   </form>
   {% else %}
   <form method="post" action="/admin/errors/{{ event.id }}/reopen" style="display:inline;">
+    {% include "partials/csrf_field.html" %}
     <button type="submit" class="btn btn--secondary" id="btn-reopen">Reopen</button>
   </form>
   {% endif %}

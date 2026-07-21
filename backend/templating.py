@@ -9,7 +9,10 @@ Rules:
 """
 from __future__ import annotations
 
+from fastapi import Request
 from fastapi.templating import Jinja2Templates
+
+from middleware.csrf import ensure_csrf_token
 
 # Canonical app paths (section indexes — trailing slash)
 PATHS: dict[str, str] = {
@@ -79,10 +82,16 @@ def public_url(
     return f"{scheme}://{host}/"
 
 
+def csrf_token(request: Request) -> str:
+    """Jinja helper: {{ csrf_token(request) }} for hidden fields / meta tags."""
+    return ensure_csrf_token(request)
+
+
 templates = Jinja2Templates(directory="templates")
 templates.env.globals["path"] = app_path
 templates.env.globals["PATHS"] = PATHS
 templates.env.globals["public_url"] = public_url
+templates.env.globals["csrf_token"] = csrf_token
 
 # Aliases for Python imports
 path = app_path
