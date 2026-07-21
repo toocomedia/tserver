@@ -52,7 +52,9 @@
     }
     document.querySelectorAll(".settings-choice").forEach((card) => {
       const radio = card.querySelector('input[type="radio"]');
-      card.classList.toggle("settings-choice--active", !!(radio && radio.checked));
+      if (radio) {
+        card.classList.toggle("settings-choice--active", radio.checked);
+      }
     });
   }
 
@@ -387,6 +389,10 @@
         
         radio.addEventListener("change", (e) => {
           if (e.target.checked) {
+            themeRadios.forEach(r => {
+              const card = r.closest('.settings-choice');
+              if (card) card.classList.toggle('settings-choice--active', r.checked);
+            });
             const val = e.target.value;
             localStorage.setItem("theme", val);
             if (val === "dark" || (val === "system" && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
