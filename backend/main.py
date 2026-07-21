@@ -113,7 +113,8 @@ app.add_middleware(
     # that locks HTTP IP login. Prefer explicit HTTPS only after panel SSL works.
     https_only=bool(config.SESSION_HTTPS_ONLY),
 )
-app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
+trusted_proxies = [ip.strip() for ip in config.TRUSTED_PROXY_IPS.split(",") if ip.strip()]
+app.add_middleware(ProxyHeadersMiddleware, trusted_hosts=trusted_proxies or "127.0.0.1")
 register_error_handlers(app)
 
 # Static files
@@ -128,4 +129,5 @@ app.include_router(dns.router)       # Phase 3
 app.include_router(ssl.router)       # Phase 4
 app.include_router(proxy.router)     # Phase 5
 app.include_router(errors.router)    # Phase 6
-app.include_router(dev.router)       # Testing tools
+if getattr(config, "DEBUG", False):
+    app.include_router(dev.router)       # Testing tools (DEBUG mode only)

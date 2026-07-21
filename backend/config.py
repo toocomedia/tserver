@@ -40,6 +40,7 @@ def _env_bool(name: str, default: bool = False) -> bool:
 SERVER_IP: str = _env_str("SERVER_IP", "127.0.0.1")
 PANEL_DOMAIN: str = _env_str("PANEL_DOMAIN", "localhost")
 DEBUG: bool = _env_bool("DEBUG", False)
+TRUSTED_PROXY_IPS: str = _env_str("TRUSTED_PROXY_IPS", "127.0.0.1")
 
 # Public panel access (nginx). Uvicorn stays on 127.0.0.1:PANEL_APP_PORT.
 PANEL_APP_PORT: int = _env_int("PANEL_PORT", 8000)

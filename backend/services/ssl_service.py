@@ -21,6 +21,7 @@ from models.ssl_cert import SslCert
 from models.proxy import ReverseProxy
 from services import nginx_service, error_service
 from utils import shell
+from utils.validators import is_valid_domain
 import config
 
 logger = logging.getLogger(__name__)
@@ -227,6 +228,9 @@ async def issue_cert(
     domain_id may be None for external reverse-proxy hosts.
     """
     full_domain = full_domain.strip().lower()
+
+    if not is_valid_domain(full_domain):
+        raise HTTPException(status_code=400, detail=f"Invalid domain name: {full_domain!r}")
 
     # Guard: cert already exists
     existing = await db.scalar(

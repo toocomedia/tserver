@@ -51,8 +51,8 @@ async def errors_index(
         "filter_status": status,
         "filter_q": q or "",
         "open_count": open_count,
-        "flash_error": request.query_params.get("error"),
-        "flash_ok": request.query_params.get("ok"),
+        "flash_error": (request.query_params.get("error") or "")[:500] or None,
+        "flash_ok": (request.query_params.get("ok") or "")[:500] or None,
     })
 
 
