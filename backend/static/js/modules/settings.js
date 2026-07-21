@@ -395,7 +395,9 @@
             });
             const val = e.target.value;
             localStorage.setItem("theme", val);
-            if (val === "dark" || (val === "system" && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            if (val === "dark" || val === "amoled") {
+              document.documentElement.setAttribute("data-theme", val);
+            } else if (val === "system" && window.matchMedia('(prefers-color-scheme: dark)').matches) {
               document.documentElement.setAttribute("data-theme", "dark");
             } else {
               document.documentElement.removeAttribute("data-theme");
