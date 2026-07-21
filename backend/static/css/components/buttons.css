@@ -19,8 +19,8 @@
   text-decoration: none;
 }
 .btn:hover { background: var(--color-surface); }
-.btn--primary { background: var(--color-accent); color: var(--color-neutral); border-color: var(--color-accent); }
-.btn--primary:hover { background: var(--color-accent-2); border-color: var(--color-accent-2); }
+.btn--primary { background: var(--color-accent); color: var(--color-on-accent); border-color: var(--color-accent); }
+.btn--primary:hover { background: var(--color-accent-2); color: var(--color-on-accent); border-color: var(--color-accent-2); }
 .btn--secondary { background: var(--color-bg); color: var(--color-neutral); border-color: var(--color-neutral); }
 .btn--secondary:hover { background: var(--color-surface); }
 .btn--danger { background: var(--color-bg); color: var(--color-danger); border-color: var(--color-danger); }
