@@ -24,6 +24,7 @@ Thumbs.db
 # Local-only helpers (not for the public repo)
 push-to-github.bat
 docs/
+rules/
 
 # Install leftovers
 /opt/
