@@ -146,9 +146,6 @@ smtp tcp://0.0.0.0:25 {
 submission tls://0.0.0.0:465 tcp://0.0.0.0:587 {
     auth &local_authdb
     insecure_auth yes
-    bounce {
-        destination postmaster
-    }
 }
 
 imap tls://0.0.0.0:993 tcp://0.0.0.0:143 {
