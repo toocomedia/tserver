@@ -50,6 +50,21 @@ sudo bash /opt/srv-panel/scripts/create_admin.sh --user admin --force
 
 ---
 
+## ⚡ Low-RAM Optimization & Worker Control
+
+For 512 MB – 1 GB RAM servers, you can manage **Low-RAM Optimization Mode** and **Single Nginx Worker Mode** from the Web UI (Server Usage page) or CLI:
+
+```bash
+# Enable Low-RAM Optimization Mode
+sudo bash /opt/srv-panel/scripts/optimize.sh enable
+
+# Set Single Nginx Worker Mode (worker_processes 1)
+sudo bash /opt/srv-panel/scripts/optimize.sh nginx-worker-1
+```
+*(For detailed technical architecture, see [docs/low_ram_optimization_mode.md](file:///c:/Users/riadh/Desktop/srv-t/docs/low_ram_optimization_mode.md).)*
+
+---
+
 ## Security (lightweight)
 
 Built into the app (works with or without nginx, IP or domain):
