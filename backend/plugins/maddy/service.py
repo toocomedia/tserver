@@ -96,12 +96,12 @@ class MaddyService:
         # Execute CLI if installed
         if self.is_installed() and os.name != "nt":
             try:
-                cmd_creds = ["sudo", "-u", "maddy", "maddy", "creds", "create", email]
-                cmd_imap = ["sudo", "-u", "maddy", "maddy", "imap-acct", "create", email]
-                subprocess.run(cmd_creds, input=f"{password}\n{password}\n", text=True, check=False)
+                cmd_creds = ["sudo", "-n", "bash", "-c", f"maddy creds create {email} <<< '{password}\n{password}\n'"]
+                cmd_imap = ["sudo", "-n", "bash", "-c", f"maddy imap-acct create {email}"]
+                subprocess.run(cmd_creds, check=False)
                 subprocess.run(cmd_imap, check=False)
                 # Ensure permissions just in case
-                subprocess.run(["sudo", "chown", "-R", "maddy:maddy", "/var/lib/maddy/"], check=False)
+                subprocess.run(["sudo", "-n", "chown", "-R", "maddy:maddy", "/var/lib/maddy/"], check=False)
             except Exception as exc:
                 logger.warning("Maddy CLI account creation warning: %s", exc)
 
@@ -118,11 +118,11 @@ class MaddyService:
 
         if self.is_installed() and os.name != "nt":
             try:
-                cmd_creds = ["sudo", "-u", "maddy", "maddy", "creds", "remove", email]
-                cmd_imap = ["sudo", "-u", "maddy", "maddy", "imap-acct", "remove", email]
+                cmd_creds = ["sudo", "-n", "bash", "-c", f"maddy creds remove {email}"]
+                cmd_imap = ["sudo", "-n", "bash", "-c", f"maddy imap-acct remove {email}"]
                 subprocess.run(cmd_creds, check=False)
                 subprocess.run(cmd_imap, check=False)
-                subprocess.run(["sudo", "chown", "-R", "maddy:maddy", "/var/lib/maddy/"], check=False)
+                subprocess.run(["sudo", "-n", "chown", "-R", "maddy:maddy", "/var/lib/maddy/"], check=False)
             except Exception as exc:
                 logger.warning("Maddy CLI account deletion warning: %s", exc)
 

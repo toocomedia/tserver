@@ -158,7 +158,9 @@ async def issue_mail_ssl(
     try:
         logger.info(f"Setting up Nginx webroot for {mail_domain}")
         nginx_service.ensure_acme_root()
-        nginx_service.create_webroot(mail_domain, "<html><head><title>Mail Server</title></head><body style='font-family:sans-serif; text-align:center; padding:50px;'><h1>Mail Server is Active</h1><p>IMAP/SMTP services are running.</p></body></html>")
+        webroot_path = nginx_service.create_webroot(mail_domain, "<html><head><title>Mail Server</title></head><body style='font-family:sans-serif; text-align:center; padding:50px;'><h1>Mail Server is Active</h1><p>IMAP/SMTP services are running.</p></body></html>")
+        # Ensure Nginx can read the directory (fix 500 error)
+        await shell.run(["sudo", "-n", "chmod", "-R", "755", str(Path(webroot_path).parent)])
         await nginx_service.create_static_site(mail_domain)
         await nginx_service.reload()
 
