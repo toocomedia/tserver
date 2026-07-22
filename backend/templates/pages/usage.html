@@ -56,37 +56,39 @@
 
   .info-row__value .usage-bar-wrap { min-width: 200px; }
 
-  /* Rectangular Segmented Toggle Buttons */
+  /* Sharp Rectangular Segmented Toggle Buttons (Strict border-radius: 0 & System Theme Variables) */
   .rect-segmented {
     display: inline-flex;
     align-items: center;
-    background: var(--color-surface-2, #1e232a);
-    border: 1px solid var(--color-line, rgba(255,255,255,0.12));
-    border-radius: 6px;
-    padding: 3px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-line);
+    border-radius: 0 !important;
+    padding: 2px;
     gap: 2px;
   }
   .rect-segment {
-    border: none;
+    border: 1px solid transparent;
     background: transparent;
-    color: var(--color-muted, #888);
-    padding: 6px 14px;
-    font-size: 13px;
-    font-weight: 600;
-    border-radius: 4px;
+    color: var(--color-muted);
+    height: 30px;
+    padding: 0 12px;
+    font-size: var(--font-small);
+    font-weight: 700;
+    border-radius: 0 !important;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
   }
   .rect-segment:hover:not(:disabled) {
-    color: var(--color-text, #fff);
+    color: var(--color-text);
+    background: var(--color-bg);
   }
   .rect-segment--active {
-    background: var(--color-accent, #3b82f6);
-    color: #ffffff !important;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+    background: var(--color-accent) !important;
+    color: var(--color-on-accent) !important;
+    border-color: var(--color-accent) !important;
   }
   .rect-segment:disabled {
-    opacity: 0.6;
+    opacity: 0.45;
     cursor: not-allowed;
   }
 </style>
