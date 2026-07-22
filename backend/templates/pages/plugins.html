@@ -1,138 +1,100 @@
 {% extends "layout.html" %}
 
-{% block title %}Plugins Manager — SRV Panel{% endblock %}
+{% block title %}Plugins Manager — VPS Panel{% endblock %}
 
 {% block page_title %}System Plugins{% endblock %}
 
 {% block topbar_actions %}
-<button class="btn btn--primary" onclick="openModal('upload-plugin-modal')" style="display:inline-flex; align-items:center; gap:8px;">
-  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-    <polyline points="17 8 12 3 7 8"></polyline>
-    <line x1="12" y1="3" x2="12" y2="15"></line>
-  </svg>
+<button class="btn btn--primary btn--sm" onclick="openModal('upload-plugin-modal')">
   Upload Plugin (.zip)
 </button>
 {% endblock %}
 
 {% block content %}
-<!-- HEADER BANNER / INTRO BOX -->
-<div class="panel p-5 mb-5" style="border-radius:12px; background:var(--color-surface); border:1px solid var(--color-line);">
-  <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px;">
-    <div>
-      <h2 style="margin:0 0 6px 0; font-size:1.15rem; font-weight:700;">Extension System Plugins</h2>
-      <p class="text-muted" style="margin:0; font-size:0.9rem; max-width:650px;">
-        Plugins extend SRV-Panel with modular services. Each plugin runs isolated and can be installed on-demand, toggled, or cleanly uninstalled to release system memory.
-      </p>
-    </div>
-    <div style="font-size:0.85rem; font-weight:600; background:rgba(199,244,100,0.1); color:var(--color-accent-2); padding:6px 14px; border-radius:20px; border:1px solid rgba(199,244,100,0.2);">
-      Zero Core Code Changes
-    </div>
+<div class="section">
+  <div class="section__header">
+    <h3>Installed Extensions</h3>
+    <span class="text-small text-muted">Modular panel plugins</span>
   </div>
-</div>
-
-<hr style="border:0; border-top:1px solid var(--color-line); margin:0 0 28px 0;">
-
-<!-- PLUGINS GRID -->
-<div class="card-grid" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap:24px; margin-bottom:32px;">
-  {% for plugin in plugins %}
-  <div class="panel p-5" style="border-radius:12px; background:var(--color-surface); border:1px solid var(--color-line); display:flex; flex-direction:column; justify-content:space-between; transition:transform 0.2s ease, box-shadow 0.2s ease;">
-    
-    <div>
-      <!-- CARD TOP ROW -->
-      <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px;">
-        <div style="display:flex; align-items:center; gap:14px;">
-          <div style="width:44px; height:44px; border-radius:10px; background:var(--color-bg); border:1px solid var(--color-line); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-            {% if plugin.icon == 'mail' %}
-            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="var(--color-accent)" stroke-width="2">
-              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
-              <polyline points="22,6 12,13 2,6"></polyline>
-            </svg>
+  <div class="section__body">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Plugin</th>
+          <th>Description</th>
+          <th>Version</th>
+          <th>Status</th>
+          <th style="text-align:right;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for plugin in plugins %}
+        <tr>
+          <td>
+            <strong>{{ plugin.name }}</strong>
+          </td>
+          <td class="text-muted" style="max-width:380px;">
+            {{ plugin.description }}
+          </td>
+          <td class="text-small text-muted">v{{ plugin.version }}</td>
+          <td>
+            {% if not plugin.installed %}
+            <span class="badge badge--secondary">Not Installed</span>
+            {% elif plugin.enabled %}
+            <span class="badge badge--success">Active</span>
             {% else %}
-            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="var(--color-accent)" stroke-width="2">
-              <rect x="3" y="3" width="7" height="7"></rect>
-              <rect x="14" y="3" width="7" height="7"></rect>
-              <rect x="14" y="14" width="7" height="7"></rect>
-              <rect x="3" y="14" width="7" height="7"></rect>
-            </svg>
+            <span class="badge badge--warning">Disabled</span>
             {% endif %}
-          </div>
-          <div>
-            <h3 style="margin:0 0 3px 0; font-size:1.1rem; font-weight:700; text-transform:none; letter-spacing:0;">{{ plugin.name }}</h3>
-            <div class="text-muted" style="font-size:0.8rem;">v{{ plugin.version }} &bull; By {{ plugin.author }}</div>
-          </div>
-        </div>
+          </td>
+          <td style="text-align:right;">
+            {% if not plugin.installed %}
+            <form method="post" action="/plugins/api/install" style="display:inline;">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+              <input type="hidden" name="plugin_id" value="{{ plugin.id }}">
+              <button type="submit" class="btn btn--primary btn--sm">
+                Install
+              </button>
+            </form>
+            {% else %}
 
-        <div>
-          {% if not plugin.installed %}
-          <span class="badge badge--secondary" style="padding:4px 10px; font-size:0.75rem;">Not Installed</span>
-          {% elif plugin.enabled %}
-          <span class="badge badge--success" style="padding:4px 10px; font-size:0.75rem;">Active</span>
-          {% else %}
-          <span class="badge badge--warning" style="padding:4px 10px; font-size:0.75rem;">Disabled</span>
-          {% endif %}
-        </div>
-      </div>
+            {% if plugin.route_prefix and plugin.enabled %}
+            <a href="{{ plugin.route_prefix }}" class="btn btn--secondary btn--sm">Manage Page</a>
+            {% endif %}
 
-      <hr style="border:0; border-top:1px solid var(--color-line); margin:12px 0 16px 0;">
+            <form method="post" action="/plugins/api/toggle" style="display:inline;">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+              <input type="hidden" name="plugin_id" value="{{ plugin.id }}">
+              <input type="hidden" name="enabled" value="{% if plugin.enabled %}false{% else %}true{% endif %}">
+              <button type="submit" class="btn btn--ghost btn--sm">
+                {% if plugin.enabled %}Disable{% else %}Enable{% endif %}
+              </button>
+            </form>
 
-      <!-- CARD DESCRIPTION -->
-      <p style="font-size:0.88rem; color:var(--color-muted); line-height:1.5; margin:0 0 24px 0;">
-        {{ plugin.description }}
-      </p>
-    </div>
-
-    <!-- CARD ACTION FOOTER -->
-    <div style="border-top:1px solid var(--color-line); padding-top:16px; margin-top:auto; display:flex; gap:10px; justify-content:flex-end; align-items:center; flex-wrap:wrap;">
-      {% if not plugin.installed %}
-      <!-- INSTALL BUTTON -->
-      <form method="post" action="/plugins/api/install" style="width:100%;">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
-        <input type="hidden" name="plugin_id" value="{{ plugin.id }}">
-        <button type="submit" class="btn btn--primary" style="width:100%; justify-content:center; padding:10px;">
-          ⚡ Install Plugin
-        </button>
-      </form>
-      {% else %}
-
-      {% if plugin.route_prefix and plugin.enabled %}
-      <a href="{{ plugin.route_prefix }}" class="btn btn--secondary btn--sm" style="display:inline-flex; align-items:center; gap:6px;">
-        ⚙️ Manage Page
-      </a>
-      {% endif %}
-
-      <!-- TOGGLE ENABLE / DISABLE -->
-      <form method="post" action="/plugins/api/toggle" style="display:inline;">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
-        <input type="hidden" name="plugin_id" value="{{ plugin.id }}">
-        <input type="hidden" name="enabled" value="{% if plugin.enabled %}false{% else %}true{% endif %}">
-        <button type="submit" class="btn btn--ghost btn--sm">
-          {% if plugin.enabled %}Disable{% else %}Enable{% endif %}
-        </button>
-      </form>
-
-      <!-- UNINSTALL BUTTON -->
-      <form method="post" action="/plugins/api/uninstall" style="display:inline;">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
-        <input type="hidden" name="plugin_id" value="{{ plugin.id }}">
-        <button type="submit" class="btn btn--danger btn--sm" onclick="return confirm('Uninstall {{ plugin.name }}? This will release system resources.')">
-          Uninstall
-        </button>
-      </form>
-      {% endif %}
-    </div>
-
+            <form method="post" action="/plugins/api/uninstall" style="display:inline;">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+              <input type="hidden" name="plugin_id" value="{{ plugin.id }}">
+              <button type="submit" class="btn btn--danger btn--sm" onclick="return confirm('Uninstall {{ plugin.name }}?')">
+                Uninstall
+              </button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="5" class="text-center text-muted p-4">
+            No plugins available. Click "Upload Plugin (.zip)" to add a plugin.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
   </div>
-  {% else %}
-  <div class="panel p-6 text-center text-muted" style="grid-column:1 / -1; border-radius:12px; border:1px dashed var(--color-line);">
-    No plugins installed yet. Click "Upload Plugin (.zip)" to add a plugin.
-  </div>
-  {% endfor %}
 </div>
 
 <!-- UPLOAD PLUGIN MODAL -->
 <div id="upload-plugin-modal" class="modal-backdrop hidden" role="dialog">
-  <div class="modal">
+  <div class="modal" style="border-radius:0;">
     <div class="modal__header">
       <h2>Upload Plugin (.zip)</h2>
       <button class="btn btn--ghost btn--icon" onclick="closeModal('upload-plugin-modal')">✕</button>
@@ -143,7 +105,7 @@
         <div class="form-group mb-3">
           <label class="form-label">Plugin Archive (.zip)</label>
           <input type="file" name="plugin_file" accept=".zip" required class="form-input">
-          <div class="form-hint mt-2">Must contain a valid <code>plugin.json</code> manifest file.</div>
+          <div class="form-hint mt-1">Must contain a valid <code>plugin.json</code> manifest file.</div>
         </div>
       </div>
       <div class="modal__footer">

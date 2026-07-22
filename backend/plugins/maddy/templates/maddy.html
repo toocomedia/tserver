@@ -1,6 +1,6 @@
 {% extends "layout.html" %}
 
-{% block title %}Mail Server (Maddy) — SRV Panel{% endblock %}
+{% block title %}Mail Server (Maddy) — VPS Panel{% endblock %}
 
 {% block page_title %}Mail Server (Maddy){% endblock %}
 
@@ -8,23 +8,14 @@
 {% if status.installed %}
 <form method="post" action="/plugins/maddy/api/uninstall" style="display:inline;">
   <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
-  <button type="submit" class="btn btn--danger" onclick="return confirm('Are you sure you want to uninstall Maddy? This will release all RAM and stop mail services.')">
-    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px;">
-      <polyline points="3 6 5 6 21 6"></polyline>
-      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-    </svg>
+  <button type="submit" class="btn btn--danger btn--sm" onclick="return confirm('Uninstall Maddy Mail Server?')">
     Uninstall Mail Server
   </button>
 </form>
 {% else %}
 <form method="post" action="/plugins/maddy/api/install" style="display:inline;">
   <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
-  <button type="submit" class="btn btn--primary">
-    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px;">
-      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-      <polyline points="7 10 12 15 17 10"></polyline>
-      <line x1="12" y1="15" x2="12" y2="3"></line>
-    </svg>
+  <button type="submit" class="btn btn--primary btn--sm">
     Install Mail Server (~30MB RAM)
   </button>
 </form>
@@ -32,124 +23,114 @@
 {% endblock %}
 
 {% block content %}
-<!-- SERVER STATUS PANEL -->
-<div class="panel p-5 mb-5" style="border-radius:12px; background:var(--color-surface); border:1px solid var(--color-line);">
-  <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px;">
-    <div>
-      <h2 style="margin:0 0 6px 0; font-size:1.2rem; display:flex; align-items:center; gap:10px;">
-        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="var(--color-accent)" stroke-width="2">
-          <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
-          <polyline points="22,6 12,13 2,6"></polyline>
-        </svg>
-        Maddy Mail Engine
-        {% if status.running %}
-        <span class="badge badge--success" style="padding:4px 10px;">Active & Running</span>
-        {% elif status.installed %}
-        <span class="badge badge--warning" style="padding:4px 10px;">Installed (Stopped)</span>
-        {% else %}
-        <span class="badge badge--secondary" style="padding:4px 10px;">Not Installed</span>
-        {% endif %}
-      </h2>
-      <p class="text-muted" style="margin:0; font-size:0.88rem;">
-        Single-binary SMTP + IMAP server with built-in DKIM signing & SPF checks.
-      </p>
-    </div>
-
+<!-- SYSTEM STATUS SECTION -->
+<div class="section">
+  <div class="section__header">
+    <h3>Service Status</h3>
     {% if status.running %}
-    <div style="display:flex; gap:24px; text-align:right;">
-      <div style="padding:10px 16px; background:var(--color-bg); border-radius:8px; border:1px solid var(--color-line);">
-        <div class="text-muted" style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.05em;">RAM Usage</div>
-        <div style="font-size:1.2rem; font-weight:800; color:var(--color-accent-2);">{{ status.ram_mb }} MB</div>
-      </div>
-      <div style="padding:10px 16px; background:var(--color-bg); border-radius:8px; border:1px solid var(--color-line);">
-        <div class="text-muted" style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.05em;">Process PID</div>
-        <div style="font-size:1.2rem; font-weight:800;">{{ status.pid or 'N/A' }}</div>
+    <span class="badge badge--success">Active & Running</span>
+    {% elif status.installed %}
+    <span class="badge badge--warning">Installed (Stopped)</span>
+    {% else %}
+    <span class="badge badge--secondary">Not Installed</span>
+    {% endif %}
+  </div>
+
+  <div class="section__body">
+    <div class="info-row">
+      <div class="info-row__label">Engine</div>
+      <div class="info-row__value">Maddy Mail Server (SMTP + IMAP + DKIM + SPF)</div>
+    </div>
+    {% if status.running %}
+    <div class="info-row">
+      <div class="info-row__label">Memory (RAM)</div>
+      <div class="info-row__value"><strong>{{ status.ram_mb }} MB</strong></div>
+    </div>
+    <div class="info-row">
+      <div class="info-row__label">Process PID</div>
+      <div class="info-row__value">{{ status.pid or 'N/A' }}</div>
+    </div>
+    {% endif %}
+    {% if status.installed %}
+    <div class="info-row">
+      <div class="info-row__label">Port Listeners</div>
+      <div class="info-row__value" style="display:flex; gap:8px;">
+        <span class="badge {% if status.ports['25'] %}badge--success{% else %}badge--danger{% endif %}">25 (SMTP)</span>
+        <span class="badge {% if status.ports['587'] %}badge--success{% else %}badge--danger{% endif %}">587 (Submission)</span>
+        <span class="badge {% if status.ports['465'] %}badge--success{% else %}badge--danger{% endif %}">465 (SMTPS)</span>
+        <span class="badge {% if status.ports['993'] %}badge--success{% else %}badge--danger{% endif %}">993 (IMAPS)</span>
       </div>
     </div>
     {% endif %}
   </div>
-
-  {% if status.installed %}
-  <hr style="border:0; border-top:1px solid var(--color-line); margin:20px 0 16px 0;">
-  
-  <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; font-size:0.85rem;">
-    <span style="font-weight:600; color:var(--color-muted); margin-right:4px;">Port Listeners:</span>
-    <span class="badge {% if status.ports['25'] %}badge--success{% else %}badge--danger{% endif %}" style="padding:4px 10px;">25 (SMTP Inbound)</span>
-    <span class="badge {% if status.ports['587'] %}badge--success{% else %}badge--danger{% endif %}" style="padding:4px 10px;">587 (Submission)</span>
-    <span class="badge {% if status.ports['465'] %}badge--success{% else %}badge--danger{% endif %}" style="padding:4px 10px;">465 (SMTPS)</span>
-    <span class="badge {% if status.ports['993'] %}badge--success{% else %}badge--danger{% endif %}" style="padding:4px 10px;">993 (IMAPS)</span>
-  </div>
-  {% endif %}
 </div>
 
 {% if status.installed %}
-<!-- AUTOMATED DNS MANAGEMENT BOX -->
-<div class="panel p-5 mb-5" style="border-radius:12px; background:var(--color-surface); border:1px solid var(--color-line);">
-  <h3 style="margin:0 0 8px 0; font-size:1.1rem; text-transform:none; letter-spacing:0;">⚡ Automated PowerDNS Mail Setup</h3>
-  <p class="text-muted mb-4" style="font-size:0.88rem; margin-bottom:20px;">
-    Select a domain managed in SRV-Panel to automatically insert or remove standard mail DNS records (MX, A, SPF, DKIM, DMARC) in PowerDNS.
-  </p>
+<!-- POWERDNS AUTOMATED MAIL SETUP SECTION -->
+<div class="section">
+  <div class="section__header">
+    <h3>PowerDNS Mail Setup</h3>
+    <span class="text-small text-muted">Auto-create MX, A, SPF, DKIM, and DMARC records</span>
+  </div>
 
-  <form id="dns-setup-form" style="display:flex; gap:16px; align-items:flex-end; flex-wrap:wrap; background:var(--color-bg); padding:18px; border-radius:10px; border:1px solid var(--color-line);">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
-    <div style="flex:1; min-width:220px;">
-      <label class="form-label" style="font-size:0.82rem; font-weight:600;">Select Domain</label>
-      <select name="domain_name" id="dns-domain-select" class="form-input" required style="width:100%; padding:8px 12px;">
-        {% for d in domains %}
-        <option value="{{ d.name }}">{{ d.name }}</option>
-        {% else %}
-        <option value="">No domains created yet</option>
-        {% endfor %}
-      </select>
-    </div>
+  <div class="section__body">
+    <form id="dns-setup-form" style="display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap;">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+      
+      <div style="flex:1; min-width:200px;">
+        <label class="form-label">Domain</label>
+        <select name="domain_name" id="dns-domain-select" class="form-input" required>
+          {% for d in domains %}
+          <option value="{{ d.name }}">{{ d.name }}</option>
+          {% else %}
+          <option value="">No domains found</option>
+          {% endfor %}
+        </select>
+      </div>
 
-    <div style="flex:1; min-width:200px;">
-      <label class="form-label" style="font-size:0.82rem; font-weight:600;">Mail Server IPv4</label>
-      <input type="text" name="server_ip" value="{{ server_ip }}" class="form-input" required style="width:100%; padding:8px 12px;">
-    </div>
+      <div style="flex:1; min-width:180px;">
+        <label class="form-label">Mail IPv4 Address</label>
+        <input type="text" name="server_ip" value="{{ server_ip }}" class="form-input" required>
+      </div>
 
-    <div style="display:flex; gap:10px;">
-      <button type="button" onclick="handleDnsAction('/plugins/maddy/api/dns/auto-setup')" class="btn btn--primary" style="white-space:nowrap; padding:9px 16px;">
-        ⚡ Auto-Configure Mail DNS
-      </button>
-      <button type="button" onclick="handleDnsAction('/plugins/maddy/api/dns/remove')" class="btn btn--secondary" style="white-space:nowrap; padding:9px 16px;">
-        🗑️ Remove Mail DNS
-      </button>
-    </div>
-  </form>
+      <div style="display:flex; gap:8px;">
+        <button type="button" onclick="handleDnsAction('/plugins/maddy/api/dns/auto-setup')" class="btn btn--primary btn--sm">
+          Auto-Configure Mail DNS
+        </button>
+        <button type="button" onclick="handleDnsAction('/plugins/maddy/api/dns/remove')" class="btn btn--secondary btn--sm">
+          Remove Mail DNS
+        </button>
+      </div>
+    </form>
 
-  <div id="dns-result-message" class="mt-3" style="display:none; padding:12px; border-radius:8px;"></div>
+    <div id="dns-result-message" style="display:none; margin-top:12px;"></div>
+  </div>
 </div>
 
-<!-- MAILBOX ACCOUNTS PANEL -->
-<div class="panel p-5" style="border-radius:12px; background:var(--color-surface); border:1px solid var(--color-line);">
-  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:12px;">
-    <div>
-      <h3 style="margin:0 0 4px 0; font-size:1.1rem; text-transform:none; letter-spacing:0;">Mailbox Accounts</h3>
-      <p class="text-muted" style="margin:0; font-size:0.85rem;">Manage active email accounts for sending and receiving via IMAP/SMTP.</p>
-    </div>
-    <button class="btn btn--primary btn--sm" onclick="openModal('add-account-modal')" style="display:inline-flex; align-items:center; gap:6px; padding:8px 14px;">
+<!-- MAILBOX ACCOUNTS SECTION -->
+<div class="section">
+  <div class="section__header">
+    <h3>Mailbox Accounts</h3>
+    <button class="btn btn--primary btn--sm" onclick="openModal('add-account-modal')">
       + Add Mailbox
     </button>
   </div>
 
-  <hr style="border:0; border-top:1px solid var(--color-line); margin:0 0 20px 0;">
-
-  <div class="table-container" style="background:var(--color-bg); border-radius:8px; border:1px solid var(--color-line); overflow:hidden;">
-    <table class="table" style="width:100%; border-collapse:collapse;">
+  <div class="section__body">
+    <table class="table">
       <thead>
-        <tr style="border-bottom:1px solid var(--color-line); background:rgba(255,255,255,0.02);">
-          <th style="padding:12px 16px; text-align:left;">Email Address</th>
-          <th style="padding:12px 16px; text-align:left;">Status</th>
-          <th style="padding:12px 16px; text-align:right;">Actions</th>
+        <tr>
+          <th>Email Address</th>
+          <th>Status</th>
+          <th style="text-align:right;">Actions</th>
         </tr>
       </thead>
       <tbody>
         {% for acc in accounts %}
-        <tr style="border-bottom:1px solid var(--color-line);">
-          <td style="padding:12px 16px;"><strong>{{ acc.email }}</strong></td>
-          <td style="padding:12px 16px;"><span class="badge badge--success" style="padding:3px 8px; font-size:0.75rem;">Active</span></td>
-          <td style="padding:12px 16px; text-align:right;">
+        <tr>
+          <td><strong>{{ acc.email }}</strong></td>
+          <td><span class="badge badge--success">Active</span></td>
+          <td style="text-align:right;">
             <form method="post" action="/plugins/maddy/api/accounts/delete" style="display:inline;">
               <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
               <input type="hidden" name="email" value="{{ acc.email }}">
@@ -161,8 +142,8 @@
         </tr>
         {% else %}
         <tr>
-          <td colspan="3" class="text-center text-muted p-5" style="padding:32px; text-align:center;">
-            No mailboxes created yet. Click "+ Add Mailbox" to create your first email account.
+          <td colspan="3" class="text-center text-muted p-4">
+            No mailboxes created yet. Click "+ Add Mailbox" to create an account.
           </td>
         </tr>
         {% endfor %}
@@ -173,9 +154,9 @@
 
 <!-- ADD MAILBOX MODAL -->
 <div id="add-account-modal" class="modal-backdrop hidden" role="dialog">
-  <div class="modal">
+  <div class="modal" style="border-radius:0;">
     <div class="modal__header">
-      <h2>Add New Mailbox Account</h2>
+      <h2>Add Mailbox Account</h2>
       <button class="btn btn--ghost btn--icon" onclick="closeModal('add-account-modal')">✕</button>
     </div>
     <form method="post" action="/plugins/maddy/api/accounts/create">
@@ -183,11 +164,11 @@
         <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
         <div class="form-group mb-3">
           <label class="form-label">Email Address</label>
-          <input type="email" name="email" placeholder="user@yourdomain.com" required class="form-input" style="width:100%; padding:10px;">
+          <input type="email" name="email" placeholder="user@yourdomain.com" required class="form-input">
         </div>
         <div class="form-group mb-3">
           <label class="form-label">Password</label>
-          <input type="password" name="password" placeholder="Enter secure mailbox password" required class="form-input" style="width:100%; padding:10px;">
+          <input type="password" name="password" placeholder="Enter password" required class="form-input">
         </div>
       </div>
       <div class="modal__footer">
@@ -208,8 +189,8 @@ async function handleDnsAction(endpoint) {
   const resultDiv = document.getElementById('dns-result-message');
   
   resultDiv.style.display = 'block';
-  resultDiv.className = 'alert alert--info mt-3';
-  resultDiv.innerText = 'Processing PowerDNS records...';
+  resultDiv.className = 'text-small text-muted';
+  resultDiv.innerText = 'Updating PowerDNS records...';
 
   try {
     const res = await fetch(endpoint, {
@@ -221,14 +202,14 @@ async function handleDnsAction(endpoint) {
     });
     const data = await res.json();
     if (res.ok) {
-      resultDiv.className = 'alert alert--success mt-3';
+      resultDiv.className = 'text-small text-accent';
       resultDiv.innerText = data.message || 'DNS operation completed successfully!';
     } else {
-      resultDiv.className = 'alert alert--danger mt-3';
+      resultDiv.className = 'text-small text-danger';
       resultDiv.innerText = data.detail || 'DNS operation failed.';
     }
   } catch (err) {
-    resultDiv.className = 'alert alert--danger mt-3';
+    resultDiv.className = 'text-small text-danger';
     resultDiv.innerText = 'Network error: ' + err.message;
   }
 }
