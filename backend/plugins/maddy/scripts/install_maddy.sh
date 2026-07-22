@@ -8,6 +8,7 @@ set -euo pipefail
 INSTALL_DIR="/usr/local/bin"
 CONF_DIR="/etc/maddy"
 DATA_DIR="/var/lib/maddy"
+RUN_DIR="/run/maddy"
 CERTS_DIR="${CONF_DIR}/certs"
 
 echo "==> Installing Maddy Mail Server..."
@@ -19,10 +20,12 @@ if [ "$(id -u)" -ne 0 ]; then
 fi
 
 # 2. Create directories and maddy system user
-mkdir -p "${CONF_DIR}" "${DATA_DIR}" "${CERTS_DIR}"
+mkdir -p "${CONF_DIR}" "${DATA_DIR}" "${CERTS_DIR}" "${RUN_DIR}"
 if ! id -u maddy >/dev/null 2>&1; then
     useradd -r -M -d "${DATA_DIR}" -s /sbin/nologin maddy || true
 fi
+chown -R maddy:maddy "${RUN_DIR}" "${DATA_DIR}" "${CONF_DIR}"
+chmod 755 "${RUN_DIR}"
 
 # 3. Open Firewall Mail Ports (UFW)
 if command -v ufw &>/dev/null && ufw status 2>/dev/null | grep -qi "Status: active"; then
@@ -97,6 +100,11 @@ fi
 
 # 6. Create maddy.conf configuration
 SERVER_HOST=$(hostname -f 2>/dev/null || hostname)
+if [[ "${SERVER_HOST}" != *.* ]]; then
+    SERVER_HOST="${SERVER_HOST}.local"
+fi
+
+echo "Writing fresh /etc/maddy/maddy.conf..."
 cat <<EOF > "${CONF_DIR}/maddy.conf"
 # Maddy Mail Server Configuration
 \$(local_hostname) = ${SERVER_HOST}
@@ -132,9 +140,6 @@ smtp tcp://0.0.0.0:25 {
     limits {
         all rate 20 1s
     }
-    check {
-        require_matching_ehlo
-    }
     default_source {
         deliver_to &inline_checks
     }
@@ -168,6 +173,8 @@ After=network.target
 Type=simple
 User=maddy
 Group=maddy
+RuntimeDirectory=maddy
+RuntimeDirectoryMode=0755
 ExecStart=${INSTALL_DIR}/maddy --config ${CONF_DIR}/maddy.conf run
 Restart=on-failure
 RestartSec=5s
