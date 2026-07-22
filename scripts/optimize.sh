@@ -140,7 +140,7 @@ set_nginx_worker_1() {
   fi
   if [[ -f "$NGINX_CONF" ]]; then
     sed -i -E 's/worker_processes[[:space:]]+[^;]+;/worker_processes 1;/' "$NGINX_CONF"
-    nginx -t && systemctl restart nginx
+    nginx -t && systemctl reload nginx
     echo "==> Nginx worker_processes set to 1."
   else
     echo "ERROR: Nginx conf not found at $NGINX_CONF" >&2
@@ -155,7 +155,7 @@ set_nginx_worker_auto() {
   fi
   if [[ -f "$NGINX_CONF" ]]; then
     sed -i -E 's/worker_processes[[:space:]]+[^;]+;/worker_processes auto;/' "$NGINX_CONF"
-    nginx -t && systemctl restart nginx
+    nginx -t && systemctl reload nginx
     echo "==> Nginx worker_processes set to auto."
   else
     echo "ERROR: Nginx conf not found at $NGINX_CONF" >&2
