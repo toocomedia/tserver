@@ -129,26 +129,26 @@ class MaddyService:
         from services import dns_service
 
         records_to_create = [
-            {"name": f"mail.{domain_name}", "type": "A", "content": server_ip, "ttl": 3600},
-            {"name": domain_name, "type": "MX", "content": f"10 mail.{domain_name}.", "ttl": 3600},
-            {"name": domain_name, "type": "TXT", "content": f"\"v=spf1 mx ip4:{server_ip} ~all\"", "ttl": 3600},
-            {"name": f"_dmarc.{domain_name}", "type": "TXT", "content": "\"v=DMARC1; p=none;\"", "ttl": 3600},
-            {"name": f"default._domainkey.{domain_name}", "type": "TXT", "content": "\"v=DKIM1; k=rsa; p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDz...\"", "ttl": 3600},
+            {"name": "mail", "type": "A", "content": server_ip, "ttl": 3600},
+            {"name": "@", "type": "MX", "content": f"10 mail.{domain_name}.", "ttl": 3600},
+            {"name": "@", "type": "TXT", "content": f"v=spf1 mx ip4:{server_ip} ~all", "ttl": 3600},
+            {"name": "_dmarc", "type": "TXT", "content": "v=DMARC1; p=none;", "ttl": 3600},
+            {"name": "default._domainkey", "type": "TXT", "content": "v=DKIM1; k=rsa; p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDz...", "ttl": 3600},
         ]
 
         created_count = 0
         for rec in records_to_create:
             try:
-                await dns_service.create_record(
-                    domain_name=domain_name,
-                    record_name=rec["name"],
-                    record_type=rec["type"],
+                await dns_service.add_record(
+                    domain=domain_name,
+                    name=rec["name"],
+                    rtype=rec["type"],
                     content=rec["content"],
                     ttl=rec["ttl"],
                 )
                 created_count += 1
             except Exception as exc:
-                logger.warning("Failed creating record %s (%s): %s", rec["name"], rec["type"], exc)
+                logger.error("Failed creating mail record %s (%s) for %s: %s", rec["name"], rec["type"], domain_name, exc)
 
         return {"domain": domain_name, "created_records": created_count}
 
@@ -156,19 +156,25 @@ class MaddyService:
         """Clean up mail-related DNS records from PowerDNS."""
         from services import dns_service
 
-        target_names = [f"mail.{domain_name}", domain_name, f"_dmarc.{domain_name}", f"default._domainkey.{domain_name}"]
-        existing = await dns_service.list_records(domain_name)
+        target_records = [
+            {"name": "mail", "type": "A"},
+            {"name": "@", "type": "MX"},
+            {"name": "@", "type": "TXT"},
+            {"name": "_dmarc", "type": "TXT"},
+            {"name": "default._domainkey", "type": "TXT"},
+        ]
         deleted_count = 0
 
-        for rrset in existing:
-            rec_name = rrset["name"].rstrip(".")
-            rec_type = rrset["type"]
-            if rec_name in target_names and rec_type in ["MX", "TXT"] or (rec_name == f"mail.{domain_name}" and rec_type == "A"):
-                try:
-                    await dns_service.delete_rrset(domain_name, rec_name, rec_type)
-                    deleted_count += 1
-                except Exception as exc:
-                    logger.warning("Failed deleting record %s (%s): %s", rec_name, rec_type, exc)
+        for rec in target_records:
+            try:
+                await dns_service.delete_record(
+                    domain=domain_name,
+                    name=rec["name"],
+                    rtype=rec["type"],
+                )
+                deleted_count += 1
+            except Exception as exc:
+                logger.warning("Failed deleting record %s (%s) for %s: %s", rec["name"], rec["type"], domain_name, exc)
 
         return {"domain": domain_name, "deleted_records": deleted_count}
 
