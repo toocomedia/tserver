@@ -3,6 +3,9 @@
 {% block title %}Mail Server (Maddy) — VPS Panel{% endblock %}
 {% block content_class %}content--flush{% endblock %}
 
+{# Completely remove the default layout.html page header and its padding #}
+{% block page_header_wrapper %}{% endblock %}
+
 {% block content %}
 <div class="split-layout">
   <!-- Sidebar -->
@@ -21,14 +24,18 @@
     {% else %}
       <div class="split-sidebar__item active">Setup required</div>
     {% endif %}
+
+    <div style="flex-grow: 1;"></div>
+    
+    <div class="split-sidebar__footer" style="padding: 1rem; border-top: 1px solid var(--color-line); margin-top: auto; color: var(--color-muted);">
+      <h3 style="margin: 0; font-size: 1rem; color: var(--color-text);">Mail Server (Maddy)</h3>
+      <div style="font-size: 0.85rem; margin-top: 4px;">Version 0.7.1</div>
+    </div>
   </div>
 
   <!-- Content -->
   <div class="split-content">
-    
-    <div class="page-header" style="margin-top: 0; padding-bottom: 0;">
-      <h1 class="page-header__title" id="page-dynamic-title">Mail Server (Maddy)</h1>
-    </div>
+
 
     {% if status.installed %}
       {% include 'partials/_domains_tab.html' %}

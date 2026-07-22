@@ -87,7 +87,7 @@ def delete_account(email: str):
         if "does not exist" not in stderr1.lower():
             errors.append(f"imap-acct remove: {stderr1}")
 
-    res2 = run([MADDY_BIN, "creds", "remove", email], check=False)
+    res2 = run([MADDY_BIN, "creds", "remove", email], stdin_data="y\ny\n", check=False)
     if res2.returncode != 0:
         stderr2 = res2.stderr.strip()
         if "does not exist" not in stderr2.lower():
