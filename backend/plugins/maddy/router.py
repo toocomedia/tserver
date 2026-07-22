@@ -185,10 +185,18 @@ async def issue_mail_ssl(
         le_live_dir = Path(f"/etc/letsencrypt/live/{mail_domain}")
         maddy_certs_dir = Path("/etc/maddy/certs")
         
-        # Copy certs using openssl (which is allowed in sudoers without password)
-        res1 = await shell.run(["openssl", "x509", "-in", f"{le_live_dir}/fullchain.pem", "-out", f"{maddy_certs_dir}/fullchain.pem"])
+        import base64
+        
+        # OpenSSL x509 strips intermediate certs, so we use base64 to securely read the entire file
+        res1 = await shell.run(["openssl", "base64", "-in", f"{le_live_dir}/fullchain.pem"])
         if not res1.success:
-            raise Exception(f"Failed to copy SSL certificate: {res1.stderr}. It seems the Let's Encrypt certificate files are missing or broken.")
+            raise Exception(f"Failed to read SSL certificate: {res1.stderr}")
+            
+        try:
+            fullchain_content = base64.b64decode(res1.stdout).decode('utf-8')
+            subprocess.run(["sudo", "-n", "tee", f"{maddy_certs_dir}/fullchain.pem"], input=fullchain_content, text=True, stdout=subprocess.DEVNULL, check=True)
+        except Exception as e:
+            raise Exception(f"Failed to write SSL certificate via tee: {e}")
             
         res2 = await shell.run(["openssl", "pkey", "-in", f"{le_live_dir}/privkey.pem", "-out", f"{maddy_certs_dir}/privkey.pem"])
         if not res2.success:
