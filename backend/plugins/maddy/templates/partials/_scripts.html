@@ -8,7 +8,6 @@ const allAccounts = [
 let currentDomain = "";
 
 // Reads the CSRF token from any hidden csrf_token input present in the page.
-// This is always set by Jinja via {{ csrf_token(request) }} in forms.
 function getCsrfToken() {
   const el = document.querySelector('input[name="csrf_token"]');
   return el ? el.value : '';
@@ -19,54 +18,103 @@ document.querySelectorAll('.split-sidebar__item').forEach(item => {
   item.addEventListener('click', function() {
     document.querySelectorAll('.split-sidebar__item').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.split-tab').forEach(el => el.classList.remove('active'));
-    
+
     this.classList.add('active');
     const tabId = this.getAttribute('data-tab');
     document.getElementById(tabId).classList.add('active');
 
-    // Update main title
     const titleEl = document.getElementById('page-dynamic-title');
     if (tabId === 'tab-overview') titleEl.innerText = "Mail Server Overview";
-    if (tabId === 'tab-domains') titleEl.innerText = "Managed Domains";
+    if (tabId === 'tab-domains')  titleEl.innerText = "Mail Domains";
 
-    // If leaving domains tab, reset to master view
-    if (tabId !== 'tab-domains') {
-      closeDomainDetail();
-    }
+    if (tabId !== 'tab-domains') closeDomainDetail();
   });
 });
 
+// ---------------------------------------------------------------------------
+// Domain detail panel
+// ---------------------------------------------------------------------------
+
+// Auto-fill server IP when a domain is selected from the dropdown
+function onDomainSelect(selectEl) {
+  const ip = selectEl.selectedOptions[0]?.dataset?.ip || '';
+  const ipField = document.getElementById('add-domain-ip');
+  if (ipField && ip) ipField.value = ip;
+}
+
 function openDomainDetail(domain) {
   currentDomain = domain;
-  document.getElementById('domains-master-view').style.display = 'none';
   document.getElementById('domains-detail-view').style.display = 'block';
   document.getElementById('detail-domain-name').innerText = domain;
-  
-  // Fill inputs
   document.getElementById('dns-domain-input').value = domain;
   document.getElementById('ssl-domain-input').value = domain;
-  
-  // Update connection info previews
   document.getElementById('imap-host-preview').innerText = 'mail.' + domain;
   document.getElementById('smtp-host-preview').innerText = 'mail.' + domain;
   document.getElementById('username-example-preview').innerText = 'user@' + domain;
-
   renderAccountsList();
+  // Scroll to detail panel
+  document.getElementById('domains-detail-view').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function closeDomainDetail() {
   currentDomain = "";
-  document.getElementById('domains-master-view').style.display = 'block';
   document.getElementById('domains-detail-view').style.display = 'none';
 }
 
+// ---------------------------------------------------------------------------
+// Add domain
+// ---------------------------------------------------------------------------
+
+async function handleAddDomain() {
+  const form    = document.getElementById('add-domain-form');
+  const formData = new FormData(form);
+  const result  = document.getElementById('add-domain-result');
+
+  result.style.display = 'block';
+  result.className = 'text-small text-muted';
+  result.innerText = 'Adding domain and updating maddy.conf...';
+
+  try {
+    const res = await fetch('/plugins/maddy/api/domains/add', {
+      method: 'POST',
+      body: formData,
+    });
+    if (res.redirected || res.ok) {
+      result.className = 'text-small text-accent';
+      result.innerText = 'Domain added! Reloading...';
+      setTimeout(() => location.reload(), 800);
+    } else {
+      const data = await res.json().catch(() => ({}));
+      result.className = 'text-small text-danger';
+      result.innerText = data.detail || 'Failed to add domain.';
+    }
+  } catch (err) {
+    result.className = 'text-small text-danger';
+    result.innerText = 'Network error: ' + err.message;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Delete domain (nuclear confirm modal)
+// ---------------------------------------------------------------------------
+
+function confirmDeleteDomain(domain) {
+  document.getElementById('delete-domain-name').innerText = domain;
+  document.getElementById('delete-domain-input').value = domain;
+  openModal('delete-domain-modal');
+}
+
+// ---------------------------------------------------------------------------
+// Accounts list (filtered per domain)
+// ---------------------------------------------------------------------------
+
 function renderAccountsList() {
-  const tbody = document.getElementById('accounts-tbody');
+  const tbody    = document.getElementById('accounts-tbody');
   const emptyDiv = document.getElementById('accounts-empty');
   tbody.innerHTML = '';
-  
+
   const filtered = allAccounts.filter(acc => acc.email.endsWith('@' + currentDomain));
-  
+
   if (filtered.length === 0) {
     emptyDiv.style.display = 'block';
     document.getElementById('accounts-table').style.display = 'none';
@@ -83,7 +131,8 @@ function renderAccountsList() {
           <form method="post" action="/plugins/maddy/api/accounts/delete" style="display:inline;">
             <input type="hidden" name="csrf_token" value="${csrfToken}">
             <input type="hidden" name="email" value="${acc.email}">
-            <button type="submit" class="btn btn--danger btn--sm" onclick="return confirm('Delete mailbox ${acc.email}?')">Delete</button>
+            <button type="submit" class="btn btn--danger btn--sm"
+              onclick="return confirm('Delete mailbox ${acc.email}?')">Delete</button>
           </form>
         </td>
       `;
@@ -104,27 +153,24 @@ function updateDomainSuffix() {
   document.getElementById('full-email-preview').innerText = username + '@' + currentDomain;
 }
 
+// ---------------------------------------------------------------------------
+// DNS actions
+// ---------------------------------------------------------------------------
+
 async function handleDnsAction(endpoint) {
-  const form = document.getElementById('dns-setup-form');
-  const formData = new FormData(form);
+  const formData = new FormData(document.getElementById('dns-setup-form'));
   const resultDiv = document.getElementById('dns-result-message');
-  
+
   resultDiv.style.display = 'block';
   resultDiv.className = 'text-small text-muted';
   resultDiv.innerText = 'Updating PowerDNS records...';
 
   try {
-    const res = await fetch(endpoint, {
-      method: 'POST',
-      body: formData,
-      headers: {
-        'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
-      }
-    });
+    const res = await fetch(endpoint, { method: 'POST', body: formData });
     const data = await res.json();
     if (res.ok) {
       resultDiv.className = 'text-small text-accent';
-      resultDiv.innerText = data.message || 'DNS operation completed successfully!';
+      resultDiv.innerText = data.message || 'DNS operation completed!';
     } else {
       resultDiv.className = 'text-small text-danger';
       resultDiv.innerText = data.detail || 'DNS operation failed.';
@@ -135,23 +181,20 @@ async function handleDnsAction(endpoint) {
   }
 }
 
+// ---------------------------------------------------------------------------
+// SSL issue
+// ---------------------------------------------------------------------------
+
 async function issueMailSsl() {
-  const form = document.getElementById('ssl-setup-form');
-  const formData = new FormData(form);
+  const formData = new FormData(document.getElementById('ssl-setup-form'));
   const resultDiv = document.getElementById('ssl-result-message');
-  
+
   resultDiv.style.display = 'block';
   resultDiv.className = 'text-small text-muted';
-  resultDiv.innerText = "Requesting Let's Encrypt SSL... (This may take a moment)";
+  resultDiv.innerText = "Requesting Let's Encrypt SSL… (may take a moment)";
 
   try {
-    const res = await fetch('/plugins/maddy/api/ssl/issue', {
-      method: 'POST',
-      body: formData,
-      headers: {
-        'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
-      }
-    });
+    const res = await fetch('/plugins/maddy/api/ssl/issue', { method: 'POST', body: formData });
     const data = await res.json();
     if (res.ok) {
       resultDiv.className = 'text-small text-accent';

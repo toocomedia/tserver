@@ -11,6 +11,11 @@ DATA_DIR="/var/lib/maddy"
 RUN_DIR="/run/maddy"
 CERTS_DIR="${CONF_DIR}/certs"
 
+# Optional: set MAIL_DOMAIN to configure a real domain from the start.
+# If not set, maddy runs with the server hostname (you add domains via the panel UI later).
+MAIL_DOMAIN="${MAIL_DOMAIN:-}"
+PANEL_USER="${PANEL_USER:-panel}"
+
 echo "==> Installing Maddy Mail Server..."
 
 # 1. Ensure root permissions
@@ -105,12 +110,24 @@ if [[ "${SERVER_HOST}" != *.* ]]; then
 fi
 BASE_DOMAIN=$(echo "${SERVER_HOST}" | sed -E 's/^[^\.]+\.//')
 
+# If MAIL_DOMAIN is provided, use it as the primary mail domain.
+# This means the install is ready to receive mail for that domain immediately.
+if [ -n "${MAIL_DOMAIN}" ]; then
+    PRIMARY_DOMAIN="${MAIL_DOMAIN}"
+    LOCAL_DOMAINS="\$(primary_domain)"
+    echo "==> Using MAIL_DOMAIN=${MAIL_DOMAIN} as primary mail domain"
+else
+    PRIMARY_DOMAIN="${SERVER_HOST}"
+    LOCAL_DOMAINS="\$(primary_domain) ${BASE_DOMAIN}"
+    echo "==> No MAIL_DOMAIN set — using hostname ${SERVER_HOST}. Add your domain via the panel UI."
+fi
+
 echo "Writing fresh /etc/maddy/maddy.conf..."
 cat <<EOF > "${CONF_DIR}/maddy.conf"
 # Maddy Mail Server - default configuration file
 \$(hostname) = ${SERVER_HOST}
-\$(primary_domain) = ${SERVER_HOST}
-\$(local_domains) = \$(primary_domain) ${BASE_DOMAIN}
+\$(primary_domain) = ${PRIMARY_DOMAIN}
+\$(local_domains) = ${LOCAL_DOMAINS}
 
 tls file ${CERTS_DIR}/fullchain.pem ${CERTS_DIR}/privkey.pem
 

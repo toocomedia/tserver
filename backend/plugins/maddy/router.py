@@ -36,10 +36,19 @@ async def maddy_index(request: Request, db: AsyncSession = Depends(get_db)):
     """Render Maddy Mail Server Management Page."""
     status = maddy_service.get_status()
     accounts = maddy_service.list_accounts()
+    mail_domains = await maddy_service.list_mail_domains(db)
 
-    domains = (
-        await db.execute(select(Domain).order_by(Domain.name))
-    ).scalars().all()
+    # Panel domains available to configure for mail
+    # (exclude domains already added to mail)
+    configured_names = {d["domain"] for d in mail_domains}
+    all_panel_domains = (await db.execute(
+        select(Domain).order_by(Domain.name)
+    )).scalars().all()
+    panel_domains = [
+        {"name": d.name, "server_ip": d.server_ip}
+        for d in all_panel_domains
+        if d.name not in configured_names
+    ]
 
     server_ip = getattr(config, "SERVER_IP", "127.0.0.1")
 
@@ -48,7 +57,8 @@ async def maddy_index(request: Request, db: AsyncSession = Depends(get_db)):
         "active_page": "plugins",
         "status": status,
         "accounts": accounts,
-        "domains": domains,
+        "mail_domains": mail_domains,
+        "panel_domains": panel_domains,
         "server_ip": server_ip,
     })
 
@@ -179,6 +189,47 @@ async def remove_dns(
         })
     except Exception as exc:
         logger.error("Error removing mail DNS: %s", exc)
+        return JSONResponse({"detail": str(exc)}, status_code=500)
+
+
+# ---------------------------------------------------------------------------
+# Mail Domain Management (add / delete full domain)
+# ---------------------------------------------------------------------------
+
+@router.post("/api/domains/add")
+async def add_mail_domain(
+    request: Request,
+    domain: str = Form(...),
+    server_ip: str = Form(...),
+    db: AsyncSession = Depends(get_db),
+):
+    """Register a domain for mail delivery and update maddy.conf."""
+    try:
+        await maddy_service.add_mail_domain(db, domain.strip(), server_ip.strip())
+        return RedirectResponse("/plugins/maddy/", status_code=303)
+    except ValueError as exc:
+        return JSONResponse({"detail": str(exc)}, status_code=400)
+    except Exception as exc:
+        logger.error("Failed to add mail domain %s: %s", domain, exc)
+        return JSONResponse({"detail": str(exc)}, status_code=500)
+
+
+@router.post("/api/domains/delete")
+async def delete_mail_domain(
+    request: Request,
+    domain: str = Form(...),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Nuclear domain deletion:
+    Removes all accounts, DNS records, SSL cert, nginx config,
+    and the maddy.conf local_domains entry for this domain.
+    """
+    try:
+        results = await maddy_service.delete_mail_domain(db, domain.strip())
+        return JSONResponse({"status": "ok", "results": results})
+    except Exception as exc:
+        logger.error("Failed to delete mail domain %s: %s", domain, exc)
         return JSONResponse({"detail": str(exc)}, status_code=500)
 
 

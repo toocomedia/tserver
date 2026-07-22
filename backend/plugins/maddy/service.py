@@ -274,5 +274,149 @@ class MaddyService:
 
         return {"domain": domain_name, "deleted_records": deleted_count}
 
+    # ------------------------------------------------------------------
+    # Mail Domain Management (add / list / delete full domain)
+    # ------------------------------------------------------------------
+
+    async def list_mail_domains(self, db) -> List[Dict[str, Any]]:
+        """Return all configured mail domains from the panel DB."""
+        from models.mail_domain import MailDomain
+        from sqlalchemy import select
+        result = await db.execute(select(MailDomain).order_by(MailDomain.created_at))
+        domains = result.scalars().all()
+        return [
+            {
+                "id": d.id,
+                "domain": d.domain,
+                "server_ip": d.server_ip,
+                "dns_configured": d.dns_configured,
+                "ssl_configured": d.ssl_configured,
+            }
+            for d in domains
+        ]
+
+    async def add_mail_domain(self, db, domain: str, server_ip: str) -> Dict[str, Any]:
+        """
+        Register a domain for mail delivery:
+        1. Add to panel DB (MailDomain)
+        2. Update maddy.conf $(local_domains) via manage_maddy.py
+        3. Restart maddy
+        """
+        from models.mail_domain import MailDomain
+        from sqlalchemy import select
+
+        domain = domain.strip().lower()
+
+        # Duplicate guard
+        existing = await db.scalar(select(MailDomain).where(MailDomain.domain == domain))
+        if existing:
+            raise ValueError(f"Domain '{domain}' is already configured for mail.")
+
+        if os.name != "nt" and self.is_installed():
+            res = subprocess.run(
+                ["sudo", "-n", "python3", str(MANAGE_SCRIPT), "add-domain", domain],
+                capture_output=True, text=True,
+            )
+            if res.returncode != 0:
+                err = res.stderr.strip() or res.stdout.strip()
+                raise RuntimeError(f"Failed to add domain to maddy.conf: {err}")
+        else:
+            logger.info("[DEV] Mock add-domain: %s", domain)
+
+        mail_domain = MailDomain(domain=domain, server_ip=server_ip)
+        db.add(mail_domain)
+        await db.flush()
+        logger.info("Mail domain added: %s", domain)
+        return {"id": mail_domain.id, "domain": domain}
+
+    async def delete_mail_domain(self, db, domain: str) -> Dict[str, Any]:
+        """
+        Nuclear domain removal:
+        1. Delete all mail accounts for @domain
+        2. Remove mail DNS records
+        3. Remove SSL cert + nginx config for mail.domain
+        4. Remove domain from maddy.conf $(local_domains)
+        5. Delete MailDomain DB row
+        """
+        from models.mail_domain import MailDomain
+        from sqlalchemy import select
+
+        domain = domain.strip().lower()
+        results = {
+            "domain": domain,
+            "accounts_deleted": 0,
+            "dns_deleted": 0,
+            "ssl_removed": False,
+            "nginx_removed": False,
+        }
+
+        # 1. Delete all accounts belonging to this domain
+        accounts = [
+            a["email"] for a in self.list_accounts()
+            if a["email"].lower().endswith(f"@{domain}")
+        ]
+        for email in accounts:
+            try:
+                self.delete_account(email)
+                results["accounts_deleted"] += 1
+            except Exception as exc:
+                logger.warning("Failed deleting account %s during domain removal: %s", email, exc)
+
+        # 2. Remove PowerDNS mail records
+        try:
+            res = await self.remove_dns_records(domain)
+            results["dns_deleted"] = res["deleted_records"]
+        except Exception as exc:
+            logger.warning("DNS cleanup failed for %s: %s", domain, exc)
+
+        # 3. Remove nginx config and SSL for mail.domain
+        mail_subdomain = f"mail.{domain}"
+        try:
+            from services import nginx_service, ssl_service
+            from models.ssl_cert import SslCert
+
+            # Remove LE cert
+            cert = await db.scalar(select(SslCert).where(SslCert.full_domain == mail_subdomain))
+            if cert:
+                try:
+                    await ssl_service.revoke_cert(db, cert.id, delete_only=True)
+                    results["ssl_removed"] = True
+                except Exception as exc:
+                    logger.warning("SSL revoke for %s failed: %s", mail_subdomain, exc)
+
+            # Remove nginx config
+            try:
+                await nginx_service.remove_site(mail_subdomain)
+                await nginx_service.reload()
+                results["nginx_removed"] = True
+            except Exception as exc:
+                logger.warning("Nginx cleanup for %s failed: %s", mail_subdomain, exc)
+
+        except Exception as exc:
+            logger.warning("SSL/Nginx cleanup failed for %s: %s", mail_subdomain, exc)
+
+        # 4. Remove domain from maddy.conf $(local_domains)
+        if os.name != "nt" and self.is_installed():
+            res = subprocess.run(
+                ["sudo", "-n", "python3", str(MANAGE_SCRIPT), "remove-domain", domain],
+                capture_output=True, text=True,
+            )
+            if res.returncode != 0:
+                logger.warning(
+                    "Failed to remove %s from maddy.conf: %s",
+                    domain, res.stderr.strip(),
+                )
+        else:
+            logger.info("[DEV] Mock remove-domain: %s", domain)
+
+        # 5. Delete DB row
+        domain_obj = await db.scalar(select(MailDomain).where(MailDomain.domain == domain))
+        if domain_obj:
+            await db.delete(domain_obj)
+
+        logger.info("Mail domain deleted: %s — %s", domain, results)
+        return results
+
 
 maddy_service = MaddyService()
+
