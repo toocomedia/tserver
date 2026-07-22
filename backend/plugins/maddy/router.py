@@ -162,7 +162,14 @@ async def issue_mail_ssl(
         await nginx_service.reload()
 
         logger.info(f"Requesting Let's Encrypt SSL for {mail_domain}")
-        await ssl_service.issue_cert(db, None, mail_domain, include_www=False)
+        from fastapi import HTTPException
+        try:
+            await ssl_service.issue_cert(db, None, mail_domain, include_www=False)
+        except HTTPException as e:
+            if e.status_code == 409:
+                logger.info(f"Certificate already exists for {mail_domain}, proceeding to link it.")
+            else:
+                raise e
 
         # Copy certs to Maddy directory securely
         logger.info(f"Linking newly generated SSL certs to Maddy")
