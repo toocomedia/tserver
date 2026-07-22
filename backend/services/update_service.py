@@ -193,13 +193,11 @@ async def trigger_update() -> Dict[str, Any]:
                 f.write(f"=== Starting Panel Update [{time.strftime('%Y-%m-%d %H:%M:%S')}] ===\n")
                 f.flush()
 
-                # Determine best update command (use sudo -n to prevent password blocking)
-                cmd = ["sudo", "-n", "bash", "/opt/srv-panel/scripts/get-update.sh"]
-                if not Path("/opt/srv-panel/scripts/get-update.sh").exists():
-                    local_script = Path(__file__).parent.parent.parent / "scripts" / "get-update.sh"
-                    if local_script.exists():
-                        cmd = ["bash", str(local_script)]
+                script_path = Path("/opt/srv-panel/scripts/get-update.sh")
+                if not script_path.exists():
+                    script_path = Path(__file__).parent.parent.parent / "scripts" / "get-update.sh"
 
+                cmd = ["sudo", "-n", str(script_path)]
                 f.write(f"Executing: {' '.join(cmd)}\n")
                 f.flush()
 
