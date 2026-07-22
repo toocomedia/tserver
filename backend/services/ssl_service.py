@@ -404,24 +404,35 @@ async def renew_cert(db: AsyncSession, cert_id: int) -> SslCert:
 # ---------------------------------------------------------------
 # REVOKE CERT
 # ---------------------------------------------------------------
-async def revoke_cert(db: AsyncSession, cert_id: int) -> None:
-    """Revoke cert, revert nginx to HTTP-only, delete from DB."""
+async def revoke_cert(
+    db: AsyncSession, cert_id: int, delete_only: bool = False
+) -> None:
+    """Revoke/delete cert, revert nginx to HTTP-only, delete from DB."""
     cert = await db.scalar(select(SslCert).where(SslCert.id == cert_id))
     if not cert:
         raise HTTPException(status_code=404, detail="Cert not found")
 
     domain_name = cert.full_domain
 
-    # Revoke via certbot
-    cmd = [
-        "certbot", "revoke",
-        f"--cert-name={domain_name}",
-        "--non-interactive",
-        "--delete-after-revoke",
-    ]
-    result = await shell.run(cmd, timeout=60)
+    # Delete or revoke via certbot
+    if delete_only:
+        cmd = [
+            "certbot", "delete",
+            f"--cert-name={domain_name}",
+            "--non-interactive",
+        ]
+        timeout = 15
+    else:
+        cmd = [
+            "certbot", "revoke",
+            f"--cert-name={domain_name}",
+            "--non-interactive",
+            "--delete-after-revoke",
+        ]
+        timeout = 60
+    result = await shell.run(cmd, timeout=timeout)
     if not result.success:
-        logger.warning("Certbot revoke warning for %s: %s", domain_name, result.stderr)
+        logger.warning("Certbot cleanup warning for %s: %s", domain_name, result.stderr)
         # Non-fatal — continue to revert nginx
 
     # Revert nginx to HTTP-only

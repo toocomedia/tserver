@@ -213,9 +213,9 @@ async def delete_reverse_proxy_full(
 
     if cert_id:
         try:
-            await ssl_service.revoke_cert(db, cert_id)
+            await ssl_service.revoke_cert(db, cert_id, delete_only=True)
         except Exception as e:
-            logger.warning("SSL revoke during proxy delete failed: %s", e)
+            logger.warning("SSL cleanup during proxy delete failed: %s", e)
 
     # 2. Nginx config
     try:

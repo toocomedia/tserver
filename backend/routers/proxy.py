@@ -191,13 +191,25 @@ async def proxy_create_submit(
 # DELETE
 # ---------------------------------------------------------------
 @router.post("/{proxy_id}/delete")
-async def proxy_delete(proxy_id: int, db: AsyncSession = Depends(get_db)):
+async def proxy_delete(
+    proxy_id: int,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
     """Delete proxy with full cleanup cascade."""
+    is_ajax = (
+        request.headers.get("x-requested-with") == "XMLHttpRequest"
+        or "application/json" in request.headers.get("accept", "")
+    )
     try:
         await proxy_service.delete_proxy(db, proxy_id)
+        if is_ajax:
+            return JSONResponse({"success": True, "message": "Reverse proxy deleted."})
         return RedirectResponse("/proxy/?deleted=1", status_code=303)
     except Exception as exc:
         error = str(exc.detail) if hasattr(exc, "detail") else str(exc)
+        if is_ajax:
+            return JSONResponse({"success": False, "error": error}, status_code=400)
         return RedirectResponse(f"/proxy/?error={error}", status_code=303)
 
 

@@ -165,10 +165,51 @@ function initDeleteButtons() {
         `Delete reverse proxy "${name}"? This removes Nginx config and any linked SSL cert` +
         (btn.getAttribute("data-dns-managed") === "0" ? "." : ", and DNS."),
         async () => {
-          if (typeof window.submitPost === "function") {
-            window.submitPost(`/proxy/${id}/delete`);
-          } else {
-            toast("Refresh the page (Ctrl+F5) and try again.", "danger");
+          btn.disabled = true;
+          const origHtml = btn.innerHTML;
+          btn.innerHTML = `Deleting...`;
+          try {
+            const csrfToken = typeof getCsrfToken === "function" ? getCsrfToken() : "";
+            const response = await fetch(`/proxy/${id}/delete`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+                "X-Requested-With": "XMLHttpRequest",
+                "Accept": "application/json",
+              },
+              body: new URLSearchParams({ csrf_token: csrfToken }),
+            });
+
+            const data = await response.json();
+            if (response.ok && data.success) {
+              if (typeof toast === "function") {
+                toast(`Reverse proxy "${name}" deleted.`, "success");
+              }
+              const row = btn.closest("tr, .card, .table-row, [data-proxy-row]");
+              if (row) {
+                row.style.transition = "opacity 0.3s ease";
+                row.style.opacity = "0";
+                setTimeout(() => row.remove(), 300);
+              } else {
+                window.location.reload();
+              }
+            } else {
+              const errorMsg = data.error || "Failed to delete reverse proxy.";
+              if (typeof toast === "function") {
+                toast(errorMsg, "danger");
+              } else {
+                alert(errorMsg);
+              }
+              btn.disabled = false;
+              btn.innerHTML = origHtml;
+            }
+          } catch (err) {
+            console.error("Delete proxy error:", err);
+            if (typeof toast === "function") {
+              toast("Network error while deleting reverse proxy.", "danger");
+            }
+            btn.disabled = false;
+            btn.innerHTML = origHtml;
           }
         }
       );
