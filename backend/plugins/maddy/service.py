@@ -98,6 +98,7 @@ class MaddyService:
         # Execute CLI if installed
         if self.is_installed() and os.name != "nt":
             try:
+                subprocess.run(["sudo", "-n", "systemctl", "stop", "maddy"], check=False)
                 subprocess.run(["sudo", "-n", "chmod", "777", "/var/lib/maddy/"], check=False)
                 for f in os.listdir("/var/lib/maddy/"):
                     if f.endswith(".db") or f.endswith("-wal") or f.endswith("-shm"):
@@ -119,14 +120,16 @@ class MaddyService:
                 if res_imap.returncode != 0 and "already exists" not in res_imap.stderr:
                     raise Exception(f"Failed to create maddy imap-acct: {res_imap.stderr}")
 
+            except Exception as exc:
+                logger.warning("Maddy CLI account creation warning: %s", exc)
+                raise Exception(f"Failed to create Maddy account: {exc}")
+            finally:
                 for f in os.listdir("/var/lib/maddy/"):
                     if f.endswith(".db") or f.endswith("-wal") or f.endswith("-shm"):
                         subprocess.run(["sudo", "-n", "chmod", "600", f"/var/lib/maddy/{f}"], check=False)
                 subprocess.run(["sudo", "-n", "chmod", "700", "/var/lib/maddy/"], check=False)
                 subprocess.run(["sudo", "-n", "chown", "-R", "maddy:maddy", "/var/lib/maddy/"], check=False)
-            except Exception as exc:
-                logger.warning("Maddy CLI account creation warning: %s", exc)
-                raise Exception(f"Failed to create Maddy account: {exc}")
+                subprocess.run(["sudo", "-n", "systemctl", "start", "maddy"], check=False)
 
         accounts.append({"email": email, "created_at": "Active"})
         ACCOUNTS_FILE.parent.mkdir(parents=True, exist_ok=True)
@@ -141,6 +144,7 @@ class MaddyService:
 
         if self.is_installed() and os.name != "nt":
             try:
+                subprocess.run(["sudo", "-n", "systemctl", "stop", "maddy"], check=False)
                 subprocess.run(["sudo", "-n", "chmod", "777", "/var/lib/maddy/"], check=False)
                 for f in os.listdir("/var/lib/maddy/"):
                     if f.endswith(".db") or f.endswith("-wal") or f.endswith("-shm"):
@@ -162,14 +166,16 @@ class MaddyService:
                 cmd_imap = ["/usr/local/bin/maddy", "imap-acct", "remove", email]
                 res_imap = subprocess.run(cmd_imap, input="y\ny\n", text=True, capture_output=True)
 
+            except Exception as exc:
+                logger.warning("Maddy CLI account deletion warning: %s", exc)
+                raise Exception(f"Failed to delete Maddy account: {exc}")
+            finally:
                 for f in os.listdir("/var/lib/maddy/"):
                     if f.endswith(".db") or f.endswith("-wal") or f.endswith("-shm"):
                         subprocess.run(["sudo", "-n", "chmod", "600", f"/var/lib/maddy/{f}"], check=False)
                 subprocess.run(["sudo", "-n", "chmod", "700", "/var/lib/maddy/"], check=False)
                 subprocess.run(["sudo", "-n", "chown", "-R", "maddy:maddy", "/var/lib/maddy/"], check=False)
-            except Exception as exc:
-                logger.warning("Maddy CLI account deletion warning: %s", exc)
-                raise Exception(f"Failed to delete Maddy account: {exc}")
+                subprocess.run(["sudo", "-n", "systemctl", "start", "maddy"], check=False)
 
         with open(ACCOUNTS_FILE, "w", encoding="utf-8") as f:
             json.dump(filtered, f, indent=2)
