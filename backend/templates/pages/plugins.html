@@ -10,6 +10,64 @@
 </button>
 {% endblock %}
 
+{% block head %}
+<style>
+  .plugin-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+  }
+  .plugin-card {
+    width: 460px;
+    border: 1px solid var(--color-line);
+    background: transparent;
+    display: flex;
+    flex-direction: row;
+    position: relative;
+    align-items: stretch;
+  }
+  .plugin-card.is-active::before {
+    content: ''; position: absolute; top: -1px; left: -1px; right: -1px; height: 2px;
+    background: var(--color-accent); z-index: 10;
+  }
+  .plugin-card__cover {
+    width: 140px; flex-shrink: 0; border-right: 1px solid var(--color-line);
+    background: var(--color-bg); display: flex; align-items: center; justify-content: center; position: relative;
+  }
+  .plugin-card__cover img {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover;
+  }
+  .plugin-card__main {
+    flex: 1; display: flex; flex-direction: column;
+  }
+  .plugin-card__header {
+    padding: 16px 20px 8px; display: flex; justify-content: space-between; align-items: flex-start;
+  }
+  .plugin-card__title { font-size: 16px; font-weight: 800; margin: 0 0 4px 0; line-height: 1.2; color: var(--color-text); }
+  .plugin-card__version { font-size: 11px; color: var(--color-muted); font-family: monospace; letter-spacing: 0.05em; }
+  
+  .plugin-card__status { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; padding: 2px 6px; border: 1px solid var(--color-line); }
+  .plugin-card__status.active { color: var(--color-accent); border-color: rgba(199,244,100,0.3); }
+  .plugin-card__status.inactive { color: var(--color-muted); }
+  .plugin-card__status.missing { color: var(--color-danger); border-color: rgba(239,68,68,0.3); }
+
+  .plugin-card__body { padding: 0 20px 20px; font-size: 13px; color: var(--color-muted); line-height: 1.5; flex: 1; }
+  .plugin-card__footer { display: flex; border-top: 1px solid var(--color-line); margin-top: auto; }
+  
+  .plugin-card__btn {
+    flex: 1; background: transparent; border: none; border-right: 1px solid var(--color-line); color: var(--color-text);
+    padding: 12px; font-size: 11px; font-weight: 700; cursor: pointer; text-transform: uppercase; letter-spacing: 0.1em;
+    transition: background 0.1s, color 0.1s; outline: none; text-align: center; display: inline-flex; justify-content: center; align-items: center; text-decoration: none;
+  }
+  .plugin-card__btn:last-child { border-right: none; }
+  .plugin-card__btn:hover { background: var(--color-surface); }
+  .plugin-card__btn.primary { color: var(--color-bg); background: var(--color-accent); }
+  .plugin-card__btn.primary:hover { background: #A8E04A; }
+  .plugin-card__btn.danger { color: var(--color-muted); }
+  .plugin-card__btn.danger:hover { color: var(--color-danger); background: var(--color-surface); }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="section">
   <div class="section__header">
@@ -17,81 +75,67 @@
     <span class="text-small text-muted">Modular panel plugins</span>
   </div>
   <div class="section__body">
-    <div class="plugin-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.5rem;">
+    <div class="plugin-grid">
       {% for plugin in plugins %}
-      <div class="plugin-card" style="background: transparent; border: 1px solid var(--color-line); padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem;">
-        <div class="plugin-card__header" style="display: flex; align-items: flex-start; gap: 1rem;">
-          <div class="plugin-card__icon" style="flex-shrink: 0; width: 56px; height: 56px; background: var(--color-bg); border: 1px solid var(--color-line); display: flex; align-items: center; justify-content: center; overflow: hidden;">
-            <img src="/plugins/assets/{{ plugin.id }}/icon.png" alt="{{ plugin.name }} icon" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='block';">
-            <svg style="display: none; width: 28px; height: 28px; color: var(--color-accent);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M12 2l-5 5h10l-5-5z"></path>
-              <path d="M2 12l5-5v10l-5-5z"></path>
-              <path d="M22 12l-5 5V7l5 5z"></path>
-              <path d="M12 22l5-5H7l5 5z"></path>
-            </svg>
-          </div>
-          <div class="plugin-card__title" style="flex-grow: 1;">
-            <h4 style="margin: 0 0 0.25rem 0; font-size: 1.1rem; color: var(--text-color); display: flex; align-items: center; justify-content: space-between;">
-              {{ plugin.name }}
-              <span class="text-small text-muted" style="font-weight: normal; font-size: 0.85rem;">v{{ plugin.version }}</span>
-            </h4>
-            <div>
-              {% if not plugin.installed %}
-              <span class="badge badge--secondary">Not Installed</span>
-              {% elif plugin.enabled %}
-              <span class="badge badge--success">Active</span>
-              {% else %}
-              <span class="badge badge--warning">Disabled</span>
-              {% endif %}
-            </div>
-          </div>
+      <div class="plugin-card {% if plugin.enabled and plugin.installed %}is-active{% endif %}">
+        
+        <div class="plugin-card__cover">
+          <img src="/plugins/assets/{{ plugin.id }}/icon.png" alt="{{ plugin.name }} icon" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='block';">
+          <svg style="display: none; width:48px; color:var(--color-muted); position: relative; z-index: 1;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="1" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
         </div>
         
-        <div class="plugin-card__body" style="flex-grow: 1; color: var(--text-muted); font-size: 0.95rem; line-height: 1.5;">
-          {{ plugin.description }}
-        </div>
-
-        <div class="plugin-card__footer" style="display: flex; justify-content: space-between; align-items: center; padding-top: 1rem; border-top: 1px solid var(--color-line);">
-          <div class="plugin-card__actions" style="display: flex; gap: 0.5rem; width: 100%;">
-            {% if not plugin.installed %}
-            <form method="post" action="/plugins/api/install" style="width: 100%;">
-              <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
-              <input type="hidden" name="plugin_id" value="{{ plugin.id }}">
-              <button type="submit" class="btn btn--primary btn--sm" style="width: 100%;">
-                Install
-              </button>
-            </form>
-            {% else %}
+        <div class="plugin-card__main">
+          <div class="plugin-card__header">
+            <div>
+              <h3 class="plugin-card__title" {% if not plugin.installed %}style="color: var(--color-muted)"{% endif %}>{{ plugin.name }}</h3>
+              <div class="plugin-card__version">v{{ plugin.version }}</div>
+            </div>
             
-            <div style="display: flex; gap: 0.5rem; flex-grow: 1;">
+            {% if not plugin.installed %}
+              <div class="plugin-card__status missing">Missing</div>
+            {% elif plugin.enabled %}
+              <div class="plugin-card__status active">Active</div>
+            {% else %}
+              <div class="plugin-card__status inactive">Disabled</div>
+            {% endif %}
+          </div>
+          
+          <div class="plugin-card__body">
+            {{ plugin.description }}
+          </div>
+
+          <div class="plugin-card__footer">
+            {% if not plugin.installed %}
+              <form method="post" action="/plugins/api/install" style="flex:1; display:flex;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+                <input type="hidden" name="plugin_id" value="{{ plugin.id }}">
+                <button type="submit" class="plugin-card__btn primary" style="width:100%;">Install Plugin</button>
+              </form>
+            {% else %}
               {% if plugin.route_prefix and plugin.enabled %}
-              <a href="{{ plugin.route_prefix }}" class="btn btn--secondary btn--sm" style="flex-grow: 1; text-align: center; display: flex; align-items: center; justify-content: center;">Manage</a>
+                <a href="{{ plugin.route_prefix }}" class="plugin-card__btn">Manage</a>
               {% endif %}
               
-              <form method="post" action="/plugins/api/toggle" style="flex-grow: 1;">
+              <form method="post" action="/plugins/api/toggle" style="flex:1; display:flex;">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
                 <input type="hidden" name="plugin_id" value="{{ plugin.id }}">
                 <input type="hidden" name="enabled" value="{% if plugin.enabled %}false{% else %}true{% endif %}">
-                <button type="submit" class="btn btn--secondary btn--sm" style="width: 100%;">
-                  {% if plugin.enabled %}Disable{% else %}Enable{% endif %}
+                <button type="submit" class="plugin-card__btn" style="width:100%;">{% if plugin.enabled %}Disable{% else %}Enable{% endif %}</button>
+              </form>
+
+              <form method="post" action="/plugins/api/uninstall" style="display:flex;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+                <input type="hidden" name="plugin_id" value="{{ plugin.id }}">
+                <button type="submit" class="plugin-card__btn danger" style="width: 50px;" onclick="return confirm('Uninstall {{ plugin.name }}?')" title="Uninstall">
+                  <svg style="width:16px; height:16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                 </button>
               </form>
-            </div>
-
-            <form method="post" action="/plugins/api/uninstall">
-              <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
-              <input type="hidden" name="plugin_id" value="{{ plugin.id }}">
-              <button type="submit" class="btn btn--danger btn--sm btn--icon" onclick="return confirm('Uninstall {{ plugin.name }}?')" title="Uninstall">
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-              </button>
-            </form>
-            
             {% endif %}
           </div>
         </div>
       </div>
       {% else %}
-      <div class="empty-state" style="grid-column: 1 / -1; padding: 3rem; text-align: center; color: var(--color-muted); background: transparent; border: 1px dashed var(--color-line);">
+      <div class="empty-state" style="width: 100%; padding: 3rem; text-align: center; color: var(--color-muted); background: transparent; border: 1px dashed var(--color-line);">
         No plugins available. Click "Upload Plugin (.zip)" to add a plugin.
       </div>
       {% endfor %}
