@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
 # ==============================================================================
 # install_maddy.sh — Robust Ultra-light Maddy Mail Server Installer
-# Installs Maddy binary, creates maddy.conf and systemd service unit.
+# Installs Maddy binary, creates TLS certs, maddy.conf, UFW firewall rules, and systemd service.
 # ==============================================================================
 set -euo pipefail
 
 INSTALL_DIR="/usr/local/bin"
 CONF_DIR="/etc/maddy"
 DATA_DIR="/var/lib/maddy"
+CERTS_DIR="${CONF_DIR}/certs"
 
 echo "==> Installing Maddy Mail Server..."
 
@@ -18,17 +19,37 @@ if [ "$(id -u)" -ne 0 ]; then
 fi
 
 # 2. Create directories and maddy system user
-mkdir -p "${CONF_DIR}" "${DATA_DIR}" "${CONF_DIR}/certs"
+mkdir -p "${CONF_DIR}" "${DATA_DIR}" "${CERTS_DIR}"
 if ! id -u maddy >/dev/null 2>&1; then
     useradd -r -M -d "${DATA_DIR}" -s /sbin/nologin maddy || true
 fi
 
-# 3. Download Maddy pre-compiled binary if not present
+# 3. Open Firewall Mail Ports (UFW)
+if command -v ufw &>/dev/null && ufw status 2>/dev/null | grep -qi "Status: active"; then
+    echo "Opening mail ports (25, 587, 465, 993, 143) in UFW..."
+    ufw allow 25/tcp || true
+    ufw allow 587/tcp || true
+    ufw allow 465/tcp || true
+    ufw allow 993/tcp || true
+    ufw allow 143/tcp || true
+fi
+
+# 4. Generate Self-Signed TLS Certificate if missing
+if [ ! -f "${CERTS_DIR}/fullchain.pem" ] || [ ! -f "${CERTS_DIR}/privkey.pem" ]; then
+    echo "Generating default TLS certificate for Maddy..."
+    openssl req -x509 -newkey rsa:2048 -nodes \
+        -keyout "${CERTS_DIR}/privkey.pem" \
+        -out "${CERTS_DIR}/fullchain.pem" \
+        -days 3650 \
+        -subj "/CN=$(hostname)" 2>/dev/null || true
+    chmod 600 "${CERTS_DIR}/privkey.pem"
+fi
+
+# 5. Download Maddy pre-compiled binary if not present
 if [ ! -f "${INSTALL_DIR}/maddy" ]; then
     echo "Fetching latest Maddy binary release..."
     TMP_DIR=$(mktemp -d)
     
-    # Try fetching latest version tag or fallback to 0.7.1
     VERSION=$(curl -sf https://api.github.com/repos/foxcpp/maddy/releases/latest | grep '"tag_name"' | cut -d'"' -f4 || echo "v0.7.1")
     VERSION_NUM="${VERSION#v}"
     
@@ -39,7 +60,6 @@ if [ ! -f "${INSTALL_DIR}/maddy" ]; then
         *) MADDY_ARCH="x86_64" ;;
     esac
 
-    # Ensure zstd and curl are available
     if ! command -v zstd >/dev/null 2>&1; then
         apt-get update -qq && apt-get install -y -qq zstd curl || true
     fi
@@ -47,9 +67,7 @@ if [ ! -f "${INSTALL_DIR}/maddy" ]; then
     DOWNLOAD_URL="https://github.com/foxcpp/maddy/releases/download/${VERSION}/maddy-${VERSION_NUM}-${MADDY_ARCH}-linux-musl.tar.zst"
     TMP_FILE="${TMP_DIR}/maddy.tar.zst"
 
-    echo "Downloading ${DOWNLOAD_URL}..."
     if ! curl -fsSL "${DOWNLOAD_URL}" -o "${TMP_FILE}"; then
-        echo "Falling back to .tar.gz format..."
         DOWNLOAD_URL="https://github.com/foxcpp/maddy/releases/download/${VERSION}/maddy-${VERSION_NUM}-${MADDY_ARCH}-linux-musl.tar.gz"
         TMP_FILE="${TMP_DIR}/maddy.tar.gz"
         curl -fsSL "${DOWNLOAD_URL}" -o "${TMP_FILE}" || {
@@ -65,7 +83,6 @@ if [ ! -f "${INSTALL_DIR}/maddy" ]; then
         tar -xzf "${TMP_FILE}" -C "${TMP_DIR}"
     fi
 
-    # Locate and move binary
     FOUND_BIN=$(find "${TMP_DIR}" -type f -name "maddy" | head -n 1)
     if [ -n "${FOUND_BIN}" ]; then
         mv "${FOUND_BIN}" "${INSTALL_DIR}/maddy"
@@ -78,12 +95,12 @@ if [ ! -f "${INSTALL_DIR}/maddy" ]; then
     rm -rf "${TMP_DIR}"
 fi
 
-# 4. Create default maddy.conf if missing
-if [ ! -f "${CONF_DIR}/maddy.conf" ]; then
-    echo "Generating /etc/maddy/maddy.conf..."
-    cat <<'EOF' > "${CONF_DIR}/maddy.conf"
+# 6. Create maddy.conf configuration
+cat <<EOF > "${CONF_DIR}/maddy.conf"
 # Maddy Mail Server Configuration
-$(hostname) = $(local_hostname)
+\$(hostname) = $(hostname)
+
+tls file ${CERTS_DIR}/fullchain.pem ${CERTS_DIR}/privkey.pem
 
 auth.pass_table local_authdb {
     table sql_table {
@@ -98,7 +115,7 @@ storage.imapsql local_mailboxes {
     dsn /var/lib/maddy/imapsql.db
 }
 
-hostname $(local_hostname)
+hostname \$(local_hostname)
 
 msgpipeline inline_checks {
     dmarc
@@ -124,7 +141,7 @@ smtp tcp://0.0.0.0:25 {
 
 submission tls://0.0.0.0:465 tcp://0.0.0.0:587 {
     auth &local_authdb
-    insecure_auth no
+    insecure_auth yes
     bounce {
         destination postmaster
     }
@@ -133,13 +150,14 @@ submission tls://0.0.0.0:465 tcp://0.0.0.0:587 {
 imap tls://0.0.0.0:993 tcp://0.0.0.0:143 {
     auth &local_authdb
     storage &local_mailboxes
+    insecure_auth yes
 }
 EOF
-fi
 
 chown -R maddy:maddy "${CONF_DIR}" "${DATA_DIR}"
+chmod 775 "${DATA_DIR}"
 
-# 5. Create Systemd Service Unit
+# 7. Create Systemd Service Unit
 cat <<EOF > /etc/systemd/system/maddy.service
 [Unit]
 Description=Maddy Mail Server
@@ -161,5 +179,5 @@ WantedBy=multi-user.target
 EOF
 
 systemctl daemon-reload
-systemctl enable --now maddy || true
-echo "==> Maddy Mail Server installed successfully!"
+systemctl restart maddy || true
+echo "==> Maddy Mail Server installed & restarted successfully!"
