@@ -107,6 +107,8 @@ rsync -a --delete \
   --exclude 'panel.db' \
   --exclude 'panel.db-*' \
   --exclude '.env' \
+  --exclude 'accounts.json' \
+  --exclude 'maddy_accounts.json' \
   "$BACKEND_SRC/" "$PANEL_DIR/app/"
 
 # Record git commit hash if available

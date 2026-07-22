@@ -12,9 +12,15 @@ import socket
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 
-logger = logging.getLogger(__name__)
+def _get_accounts_file_path() -> Path:
+    if os.name != "nt":
+        opt_panel = Path("/opt/srv-panel")
+        if opt_panel.exists():
+            return opt_panel / "maddy_accounts.json"
+        return Path("/var/lib/maddy/accounts.json")
+    return Path(os.getenv("TEMP", "C:/tmp")) / "maddy_accounts.json"
 
-ACCOUNTS_FILE = Path(__file__).parent / "accounts.json"
+ACCOUNTS_FILE = _get_accounts_file_path()
 
 
 class MaddyService:
