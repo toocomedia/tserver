@@ -148,6 +148,7 @@ async def remove_dns(
 async def issue_mail_ssl(
     request: Request,
     domain: str = Form(...),
+    db: AsyncSession = Depends(get_db),
 ):
     """Request Let's Encrypt SSL for the mail domain and link to Maddy."""
     if os.name == "nt":
@@ -161,7 +162,7 @@ async def issue_mail_ssl(
         await nginx_service.reload()
 
         logger.info(f"Requesting Let's Encrypt SSL for {mail_domain}")
-        await ssl_service.issue_cert(mail_domain, include_www=False)
+        await ssl_service.issue_cert(db, None, mail_domain, include_www=False)
 
         # Copy certs to Maddy directory securely
         logger.info(f"Linking newly generated SSL certs to Maddy")
