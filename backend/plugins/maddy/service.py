@@ -109,8 +109,8 @@ class MaddyService:
                 # Directly write to SQLite to bypass Maddy CLI TTY password prompt limitations
                 hashed = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('ascii')
                 conn = sqlite3.connect('/var/lib/maddy/credentials.db')
-                conn.execute("CREATE TABLE IF NOT EXISTS credentials (account TEXT NOT NULL PRIMARY KEY, password TEXT NOT NULL)")
-                conn.execute("INSERT OR REPLACE INTO credentials (account, password) VALUES (?, ?)", (email, hashed))
+                conn.execute("CREATE TABLE IF NOT EXISTS credentials (key TEXT PRIMARY KEY NOT NULL, value TEXT NOT NULL)")
+                conn.execute("INSERT OR REPLACE INTO credentials (key, value) VALUES (?, ?)", (email, hashed))
                 conn.commit()
                 conn.close()
 
@@ -151,7 +151,7 @@ class MaddyService:
                 # Directly write to SQLite to bypass Maddy CLI interactive prompts
                 conn = sqlite3.connect('/var/lib/maddy/credentials.db')
                 try:
-                    conn.execute("DELETE FROM credentials WHERE account = ?", (email,))
+                    conn.execute("DELETE FROM credentials WHERE key = ?", (email,))
                     conn.commit()
                 except Exception as e:
                     schema = conn.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='credentials'").fetchone()
