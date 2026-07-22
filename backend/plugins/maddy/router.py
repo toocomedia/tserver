@@ -15,6 +15,8 @@ from database import get_db
 from models.domain import Domain
 from templating import templates
 from plugins.maddy.service import maddy_service
+from services import nginx_service, ssl_service
+from utils import shell
 import config
 
 logger = logging.getLogger(__name__)
@@ -147,11 +149,33 @@ async def issue_mail_ssl(
     request: Request,
     domain: str = Form(...),
 ):
-    """Request Let's Encrypt SSL for the mail domain. (Placeholder for now)"""
+    """Request Let's Encrypt SSL for the mail domain and link to Maddy."""
+    if os.name == "nt":
+        return JSONResponse({"status": "ok", "message": "Mock SSL generation on Windows."})
+
+    mail_domain = f"mail.{domain.strip()}"
     try:
-        # TODO: Implement actual certbot/acme.sh call or link global cert here
-        logger.info(f"Requested SSL generation for mail domain: {domain}")
-        return JSONResponse({"status": "ok", "message": f"Successfully linked SSL for mail.{domain}"})
+        logger.info(f"Setting up Nginx webroot for {mail_domain}")
+        nginx_service.ensure_acme_root()
+        await nginx_service.create_static_site(mail_domain)
+        await nginx_service.reload_nginx()
+
+        logger.info(f"Requesting Let's Encrypt SSL for {mail_domain}")
+        await ssl_service.issue_cert(mail_domain, include_www=False)
+
+        # Copy certs to Maddy directory securely
+        logger.info(f"Linking newly generated SSL certs to Maddy")
+        le_live_dir = Path(f"/etc/letsencrypt/live/{mail_domain}")
+        maddy_certs_dir = Path("/etc/maddy/certs")
+        
+        await shell.run(["cp", str(le_live_dir / "fullchain.pem"), str(maddy_certs_dir / "fullchain.pem")], check=True)
+        await shell.run(["cp", str(le_live_dir / "privkey.pem"), str(maddy_certs_dir / "privkey.pem")], check=True)
+        await shell.run(["chown", "maddy:maddy", str(maddy_certs_dir / "fullchain.pem"), str(maddy_certs_dir / "privkey.pem")], check=True)
+
+        logger.info("Restarting Maddy to apply new SSL")
+        await shell.run(["systemctl", "restart", "maddy"])
+
+        return JSONResponse({"status": "ok", "message": f"Successfully generated and linked SSL for {mail_domain}!"})
     except Exception as exc:
         logger.error("Error issuing mail SSL: %s", exc)
         return JSONResponse({"detail": str(exc)}, status_code=500)

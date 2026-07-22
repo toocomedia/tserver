@@ -267,6 +267,25 @@ AmbientCapabilities=CAP_NET_BIND_SERVICE
 WantedBy=multi-user.target
 EOF
 
+# 8. Create Certbot Renewal Hook for Maddy
+mkdir -p /etc/letsencrypt/renewal-hooks/deploy
+cat <<EOF > /etc/letsencrypt/renewal-hooks/deploy/maddy_sync.sh
+#!/bin/bash
+# Automatically deployed by srv-panel maddy plugin
+# This script runs whenever Certbot successfully renews a certificate.
+# If the renewed certificate is for a mail domain, it copies it to Maddy.
+
+if [[ "\$RENEWED_DOMAINS" == *"mail."* ]]; then
+    echo "Mail domain renewed: \$RENEWED_LINEAGE"
+    cp /etc/letsencrypt/live/\$RENEWED_LINEAGE/fullchain.pem /etc/maddy/certs/fullchain.pem
+    cp /etc/letsencrypt/live/\$RENEWED_LINEAGE/privkey.pem /etc/maddy/certs/privkey.pem
+    chown maddy:maddy /etc/maddy/certs/*.pem
+    systemctl restart maddy
+fi
+EOF
+chmod +x /etc/letsencrypt/renewal-hooks/deploy/maddy_sync.sh
+
 systemctl daemon-reload
+systemctl enable maddy
 systemctl restart maddy || true
 echo "==> Maddy Mail Server installed & restarted successfully!"
