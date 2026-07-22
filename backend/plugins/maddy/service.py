@@ -102,8 +102,13 @@ class MaddyService:
 
                 cmd_creds = ["/usr/local/bin/maddy", "creds", "create", email]
                 cmd_imap = ["/usr/local/bin/maddy", "imap-acct", "create", email]
-                subprocess.run(cmd_creds, input=f"{password}\n{password}\n", text=True, check=False)
-                subprocess.run(cmd_imap, check=False)
+                res_creds = subprocess.run(cmd_creds, input=f"{password}\n{password}\n", text=True, capture_output=True)
+                if res_creds.returncode != 0:
+                    raise Exception(f"Failed to create maddy creds: {res_creds.stderr}")
+                    
+                res_imap = subprocess.run(cmd_imap, capture_output=True, text=True)
+                if res_imap.returncode != 0 and "already exists" not in res_imap.stderr:
+                    raise Exception(f"Failed to create maddy imap-acct: {res_imap.stderr}")
 
                 subprocess.run(["sudo", "-n", "chmod", "700", "/var/lib/maddy/"], check=False)
                 subprocess.run(["sudo", "-n", "chmod", "600", "/var/lib/maddy/credentials.db"], check=False)
@@ -131,8 +136,8 @@ class MaddyService:
 
                 cmd_creds = ["/usr/local/bin/maddy", "creds", "remove", email]
                 cmd_imap = ["/usr/local/bin/maddy", "imap-acct", "remove", email]
-                subprocess.run(cmd_creds, check=False)
-                subprocess.run(cmd_imap, check=False)
+                res_creds = subprocess.run(cmd_creds, input="y\ny\n", text=True, capture_output=True)
+                res_imap = subprocess.run(cmd_imap, input="y\ny\n", text=True, capture_output=True)
 
                 subprocess.run(["sudo", "-n", "chmod", "700", "/var/lib/maddy/"], check=False)
                 subprocess.run(["sudo", "-n", "chmod", "600", "/var/lib/maddy/credentials.db"], check=False)
