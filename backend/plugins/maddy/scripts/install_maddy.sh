@@ -127,11 +127,13 @@ storage.imapsql local_mailboxes {
 hostname \$(local_hostname)
 
 msgpipeline inline_checks {
-    dmarc
-    spf
-    check.dnsbl {
-        reject_threshold 1
-        dnsbl zen.spamhaus.org
+    check {
+        dmarc
+        spf
+        dnsbl {
+            reject_threshold 1
+            dnsbl zen.spamhaus.org
+        }
     }
     deliver_to &local_mailboxes
 }
