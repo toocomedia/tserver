@@ -467,6 +467,7 @@
     const originalText = targetBtn.textContent;
 
     isActionPending = true;
+    if (pollTimer) clearTimeout(pollTimer);
     btnOff.disabled = true;
     btnOn.disabled = true;
     targetBtn.textContent = 'Applying...';
@@ -481,13 +482,14 @@
     } catch (e) {
       toast(e.message, 'danger');
     } finally {
+      // Wait 4 seconds for asynchronous service reload before resuming stats polling
       setTimeout(() => {
         btnOff.disabled = false;
         btnOn.disabled = false;
         targetBtn.textContent = originalText;
         isActionPending = false;
         fetchStats();
-      }, 2000);
+      }, 4000);
     }
   }
 
@@ -498,6 +500,7 @@
     const originalText = targetBtn.textContent;
 
     isActionPending = true;
+    if (pollTimer) clearTimeout(pollTimer);
     btnAuto.disabled = true;
     btnSingle.disabled = true;
     targetBtn.textContent = 'Applying...';
@@ -512,26 +515,31 @@
     } catch (e) {
       toast(e.message, 'danger');
     } finally {
+      // Wait 4 seconds for Nginx reload before resuming stats polling
       setTimeout(() => {
         btnAuto.disabled = false;
         btnSingle.disabled = false;
         targetBtn.textContent = originalText;
         isActionPending = false;
         fetchStats();
-      }, 2000);
+      }, 4000);
     }
   }
 
   // -- Polling ----------------------------------------------------------------
   async function fetchStats() {
+    if (isActionPending) {
+      if (polling) pollTimer = setTimeout(fetchStats, INTERVAL);
+      return;
+    }
+
     try {
       const data = await panel.get('/api/stats');
       render(data);
     } catch (e) {
-      if (!isActionPending) {
-        toast('Failed to fetch stats: ' + e.message, 'danger');
-      }
+      // Silently handle brief service restart gaps without throwing toasts
     }
+
     if (polling) {
       pollTimer = setTimeout(fetchStats, INTERVAL);
     }
