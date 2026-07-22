@@ -96,9 +96,10 @@ if [ ! -f "${INSTALL_DIR}/maddy" ]; then
 fi
 
 # 6. Create maddy.conf configuration
+SERVER_HOST=$(hostname -f 2>/dev/null || hostname)
 cat <<EOF > "${CONF_DIR}/maddy.conf"
 # Maddy Mail Server Configuration
-\$(hostname) = $(hostname)
+\$(local_hostname) = ${SERVER_HOST}
 
 tls file ${CERTS_DIR}/fullchain.pem ${CERTS_DIR}/privkey.pem
 

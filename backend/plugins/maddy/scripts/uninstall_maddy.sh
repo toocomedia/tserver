@@ -7,19 +7,13 @@ set -euo pipefail
 
 echo "==> Uninstalling Maddy Mail Server..."
 
-# 1. Stop and disable service
-if systemctl is-active --quiet maddy 2>/dev/null; then
-    systemctl stop maddy || true
-fi
+systemctl stop maddy 2>/dev/null || true
 systemctl disable maddy 2>/dev/null || true
 
-# 2. Remove files
-rm -f /usr/local/bin/maddy
-rm -f /etc/systemd/system/maddy.service
-rm -rf /etc/maddy
+rm -f /usr/local/bin/maddy 2>/dev/null || true
+rm -f /etc/systemd/system/maddy.service 2>/dev/null || true
+rm -rf /etc/maddy 2>/dev/null || true
 
-# Clean up data directory if requested or optional
-# rm -rf /var/lib/maddy
-
-systemctl daemon-reload
+systemctl daemon-reload 2>/dev/null || true
 echo "==> Maddy Mail Server uninstalled cleanly!"
+exit 0
