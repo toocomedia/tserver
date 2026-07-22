@@ -13,6 +13,11 @@ systemctl disable maddy 2>/dev/null || true
 rm -f /usr/local/bin/maddy 2>/dev/null || true
 rm -f /etc/systemd/system/maddy.service 2>/dev/null || true
 rm -rf /etc/maddy 2>/dev/null || true
+rm -rf /var/lib/maddy 2>/dev/null || true
+rm -rf /run/maddy 2>/dev/null || true
+
+userdel -f maddy 2>/dev/null || true
+groupdel maddy 2>/dev/null || true
 
 systemctl daemon-reload 2>/dev/null || true
 echo "==> Maddy Mail Server uninstalled cleanly!"

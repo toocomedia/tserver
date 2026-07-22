@@ -128,12 +128,8 @@ hostname \$(local_hostname)
 
 msgpipeline inline_checks {
     check {
-        dmarc
+        dkim
         spf
-        dnsbl {
-            reject_threshold 1
-            dnsbl zen.spamhaus.org
-        }
     }
     deliver_to &local_mailboxes
 }
