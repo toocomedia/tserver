@@ -132,8 +132,8 @@
   <div class="section__body">
 
     <!-- Notice banner for < 2GB RAM -->
-    <div id="usage-low-ram-alert" class="alert alert--warn mb-md" style="display:none; padding:12px 16px; margin-bottom:16px;">
-      💡 <strong>Notice:</strong> This server has <span id="usage-ram-val">0.9 GB</span> RAM (&lt; 2.0 GB). Activating Low-RAM Optimization Mode is recommended to enable zRAM and reduce system memory usage.
+    <div id="usage-low-ram-alert" style="display:none; padding:12px 16px; margin-bottom:20px; background: rgba(234, 179, 8, 0.1); border-left: 3px solid var(--color-warn); font-size: 13px; color: var(--color-text);">
+      <strong>Optimization Recommended:</strong> Your server has <span id="usage-ram-val">0.9 GB</span> RAM. Enable Low-RAM Optimization Mode for zRAM, kernel tuning, and lower memory footprint.
     </div>
 
     <div class="info-row">
@@ -171,57 +171,62 @@
       </span>
     </div>
 
-    <div class="info-row">
+    <div class="info-row" style="border-bottom: none;">
       <span class="info-row__label">Swap Detail</span>
       <span class="info-row__value text-muted" id="swap-detail">—</span>
     </div>
 
-    <!-- Control 1: Low-RAM Optimization Mode -->
-    <div class="info-row" style="align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-top: 16px;">
-      <div style="flex: 1; min-width: 240px;">
-        <div style="margin-bottom: 2px;">
-          <strong style="font-size: 14px;">Low-RAM Optimization Mode</strong>
-        </div>
-        <div class="text-small text-muted">zRAM compressed swap (500MB), swappiness (10), PowerDNS cache limits &amp; jemalloc.</div>
-      </div>
-      <div>
-        <div class="rect-segmented" id="group-opt-mode">
-          <button type="button" class="rect-segment rect-segment--active" id="btn-opt-off" onclick="setOptMode(false)">Inactive</button>
-          <button type="button" class="rect-segment" id="btn-opt-on" onclick="setOptMode(true)">Active</button>
-        </div>
-      </div>
-    </div>
+    <!-- Optimization Group Card -->
+    <div style="background: var(--color-bg); border: 1px solid var(--color-line); border-radius: 6px; padding: 20px; margin-top: 12px;">
+      <h3 style="font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--color-muted); margin-top: 0; margin-bottom: 20px;">Server Optimizations</h3>
 
-    <!-- Control 2: Single Nginx Worker Mode -->
-    <div class="info-row" style="align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-top: 12px;">
-      <div style="flex: 1; min-width: 240px;">
-        <div style="margin-bottom: 2px;">
-          <strong style="font-size: 14px;">Single Nginx Worker Mode</strong>
+      <!-- Control 1: Low-RAM Optimization Mode -->
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 20px;">
+        <div style="flex: 1; min-width: 240px;">
+          <div style="margin-bottom: 2px;">
+            <strong style="font-size: 14px;">Low-RAM Optimization Mode</strong>
+          </div>
+          <div class="text-small text-muted">zRAM compressed swap (500MB), swappiness (10), PowerDNS cache limits &amp; jemalloc.</div>
         </div>
-        <div class="text-small text-muted">Forces Nginx worker_processes to 1. Recommended for 1 CPU core VPS.</div>
-      </div>
-      <div>
-        <div class="rect-segmented" id="group-nginx-worker">
-          <button type="button" class="rect-segment rect-segment--active" id="btn-ngx-auto" onclick="setNginxWorker(false)">Auto</button>
-          <button type="button" class="rect-segment" id="btn-ngx-single" onclick="setNginxWorker(true)">1 Worker</button>
+        <div>
+          <div class="rect-segmented" id="group-opt-mode">
+            <button type="button" class="rect-segment rect-segment--active" id="btn-opt-off" onclick="setOptMode(false)">Inactive</button>
+            <button type="button" class="rect-segment" id="btn-opt-on" onclick="setOptMode(true)">Active</button>
+          </div>
         </div>
       </div>
-    </div>
 
-    <!-- Control 3: Advanced Server Tuning -->
-    <div class="info-row" style="align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-top: 12px;">
-      <div style="flex: 1; min-width: 240px;">
-        <div style="margin-bottom: 2px;">
-          <strong style="font-size: 14px;">Advanced Server Tuning</strong>
+      <!-- Control 2: Single Nginx Worker Mode -->
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 20px;">
+        <div style="flex: 1; min-width: 240px;">
+          <div style="margin-bottom: 2px;">
+            <strong style="font-size: 14px;">Single Nginx Worker Mode</strong>
+          </div>
+          <div class="text-small text-muted">Forces Nginx worker_processes to 1. Recommended for 1 CPU core VPS.</div>
         </div>
-        <div class="text-small text-muted mb-sm">Smart background service disabling, TCP BBR speed control, and journald log capping.</div>
-        <div class="text-small mt-sm" id="advanced-tuning-checks" style="display:none; line-height:1.4;">
+        <div>
+          <div class="rect-segmented" id="group-nginx-worker">
+            <button type="button" class="rect-segment rect-segment--active" id="btn-ngx-auto" onclick="setNginxWorker(false)">Auto</button>
+            <button type="button" class="rect-segment" id="btn-ngx-single" onclick="setNginxWorker(true)">1 Worker</button>
+          </div>
         </div>
       </div>
-      <div>
-        <div class="rect-segmented" id="group-advanced-tuning">
-          <button type="button" class="rect-segment rect-segment--active" id="btn-adv-off" onclick="setAdvancedTuning(false)">Inactive</button>
-          <button type="button" class="rect-segment" id="btn-adv-on" onclick="setAdvancedTuning(true)">Active</button>
+
+      <!-- Control 3: Advanced Server Tuning -->
+      <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap;">
+        <div style="flex: 1; min-width: 240px;">
+          <div style="margin-bottom: 2px;">
+            <strong style="font-size: 14px;">Advanced Server Tuning</strong>
+          </div>
+          <div class="text-small text-muted mb-sm">Smart background service disabling, TCP BBR speed control, and journald log capping.</div>
+          <div class="text-small mt-sm" id="advanced-tuning-checks" style="display:none; line-height:1.4;">
+          </div>
+        </div>
+        <div>
+          <div class="rect-segmented" id="group-advanced-tuning" style="margin-top: 2px;">
+            <button type="button" class="rect-segment rect-segment--active" id="btn-adv-off" onclick="setAdvancedTuning(false)">Inactive</button>
+            <button type="button" class="rect-segment" id="btn-adv-on" onclick="setAdvancedTuning(true)">Active</button>
+          </div>
         </div>
       </div>
     </div>
