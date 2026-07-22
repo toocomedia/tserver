@@ -66,6 +66,40 @@
 </div>
 
 {% if status.installed %}
+<!-- CLIENT CONNECTION INFO SECTION -->
+<div class="section">
+  <div class="section__header">
+    <h3>Mail Client Connection Info</h3>
+    <span class="text-small text-muted">IMAP & SMTP settings for Thunderbird, Outlook, or App backends</span>
+  </div>
+
+  <div class="section__body">
+    <div class="info-row">
+      <div class="info-row__label">Incoming (IMAP)</div>
+      <div class="info-row__value">
+        Hostname: <code>mail.yourdomain.com</code> (or <code>{{ server_ip }}</code>) &bull; Port: <code>993</code> (SSL/TLS) or <code>143</code> (STARTTLS)
+      </div>
+    </div>
+    <div class="info-row">
+      <div class="info-row__label">Outgoing (SMTP)</div>
+      <div class="info-row__value">
+        Hostname: <code>mail.yourdomain.com</code> (or <code>{{ server_ip }}</code>) &bull; Port: <code>587</code> (STARTTLS) or <code>465</code> (SSL/TLS)
+      </div>
+    </div>
+    <div class="info-row">
+      <div class="info-row__label">Authentication</div>
+      <div class="info-row__value">
+        Method: <strong>Normal Password</strong> &bull; Username: Full email address (e.g. <code>user@yourdomain.com</code>)
+      </div>
+    </div>
+    <div class="info-row">
+      <div class="info-row__label">TLS / SSL Notice</div>
+      <div class="info-row__value text-muted text-small">
+        In Thunderbird, select <strong>"Configure Manually"</strong> ➔ set Authentication to <strong>"Normal password"</strong> ➔ click <strong>"Confirm Security Exception"</strong> if prompted for TLS.
+      </div>
+    </div>
+  </div>
+</div>
 <!-- POWERDNS AUTOMATED MAIL SETUP SECTION -->
 <div class="section">
   <div class="section__header">
