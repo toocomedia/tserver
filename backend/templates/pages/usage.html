@@ -138,6 +138,49 @@
   </div>
 </div>
 
+<!-- SERVER OPTIMIZATION & WORKERS -->
+<div class="section-header">
+  <h2>Server Optimization &amp; Workers</h2>
+</div>
+<div class="section mb-xl">
+  <div class="section__body">
+
+    <!-- Notice banner for < 2GB RAM -->
+    <div id="usage-low-ram-alert" class="alert alert--warn mb-md" style="display:none; padding:10px 14px; margin-bottom:16px;">
+      💡 <strong>Notice:</strong> This server has <span id="usage-ram-val">0.9 GB</span> RAM (&lt; 2.0 GB). Activating Low-RAM Optimization Mode is recommended to enable zRAM and reduce system memory footprint.
+    </div>
+
+    <!-- Toggle 1: Low-RAM Optimization Mode -->
+    <div class="info-row" style="align-items: center; justify-content: space-between;">
+      <div>
+        <strong>Low-RAM Optimization Mode</strong>
+        <div class="text-small text-muted">Enables zRAM swap, sets low swappiness (10), caps PowerDNS caches, and optimizes Python memory allocator.</div>
+      </div>
+      <div>
+        <label style="cursor:pointer; display:inline-flex; align-items:center; gap:8px;">
+          <input type="checkbox" id="toggle-opt-mode" onchange="toggleOptMode(this.checked)">
+          <span class="badge badge--muted" id="badge-opt-mode">Inactive</span>
+        </label>
+      </div>
+    </div>
+
+    <!-- Toggle 2: Single Nginx Worker Mode -->
+    <div class="info-row" style="align-items: center; justify-content: space-between; border-top: 1px solid var(--color-line); padding-top: 12px; margin-top: 12px;">
+      <div>
+        <strong>Single Nginx Worker Mode (worker_processes 1)</strong>
+        <div class="text-small text-muted">Independent option: Forces Nginx to run 1 worker process instead of auto. Recommended for 1 CPU core VPS.</div>
+      </div>
+      <div>
+        <label style="cursor:pointer; display:inline-flex; align-items:center; gap:8px;">
+          <input type="checkbox" id="toggle-nginx-worker" onchange="toggleNginxWorker(this.checked)">
+          <span class="badge badge--muted" id="badge-nginx-worker">Auto</span>
+        </label>
+      </div>
+    </div>
+
+  </div>
+</div>
+
 <!-- DISK -->
 <div class="section-header">
   <h2>Disk</h2>
@@ -341,10 +384,78 @@
       </tr>
     `).join('') || '<tr><td colspan="5" class="text-muted">No processes</td></tr>';
 
+    // Optimization Controls Render
+    const lowRamAlert = document.getElementById('usage-low-ram-alert');
+    if (d.ram && d.ram.is_low_ram && d.optimization && !d.optimization.optimization_active) {
+      if (lowRamAlert) {
+        document.getElementById('usage-ram-val').textContent = d.ram.total_gb + ' GB';
+        lowRamAlert.style.display = 'block';
+      }
+    } else if (lowRamAlert) {
+      lowRamAlert.style.display = 'none';
+    }
+
+    if (d.optimization) {
+      const optChk = document.getElementById('toggle-opt-mode');
+      const optBadge = document.getElementById('badge-opt-mode');
+      if (optChk && !optChk.dataset.userInteracting) {
+        optChk.checked = !!d.optimization.optimization_active;
+        optBadge.textContent = d.optimization.optimization_active ? 'Active' : 'Inactive';
+        optBadge.className = 'badge ' + (d.optimization.optimization_active ? 'badge--ok' : 'badge--muted');
+      }
+
+      const ngxChk = document.getElementById('toggle-nginx-worker');
+      const ngxBadge = document.getElementById('badge-nginx-worker');
+      if (ngxChk && !ngxChk.dataset.userInteracting) {
+        ngxChk.checked = !!d.optimization.nginx_single_worker;
+        ngxBadge.textContent = d.optimization.nginx_single_worker ? '1 Worker' : 'Auto';
+        ngxBadge.className = 'badge ' + (d.optimization.nginx_single_worker ? 'badge--ok' : 'badge--muted');
+      }
+    }
+
     // Last updated
     const now = new Date();
     document.getElementById('usage-last-updated').textContent =
       'Updated ' + now.toLocaleTimeString();
+  }
+
+  // -- Optimization Handlers --------------------------------------------------
+  async function toggleOptMode(enabled) {
+    const chk = document.getElementById('toggle-opt-mode');
+    chk.dataset.userInteracting = 'true';
+    try {
+      const res = await panel.post('/api/system/optimization/toggle', { enabled });
+      if (res.success) {
+        toast(enabled ? 'Low-RAM Optimization Mode enabled' : 'Optimization Mode disabled', 'success');
+      } else {
+        toast('Failed: ' + (res.detail || 'Error'), 'danger');
+        chk.checked = !enabled;
+      }
+    } catch (e) {
+      toast(e.message, 'danger');
+      chk.checked = !enabled;
+    } finally {
+      delete chk.dataset.userInteracting;
+    }
+  }
+
+  async function toggleNginxWorker(singleWorker) {
+    const chk = document.getElementById('toggle-nginx-worker');
+    chk.dataset.userInteracting = 'true';
+    try {
+      const res = await panel.post('/api/system/nginx-worker/toggle', { single_worker: singleWorker });
+      if (res.success) {
+        toast(singleWorker ? 'Nginx set to 1 worker' : 'Nginx worker set to auto', 'success');
+      } else {
+        toast('Failed: ' + (res.detail || 'Error'), 'danger');
+        chk.checked = !singleWorker;
+      }
+    } catch (e) {
+      toast(e.message, 'danger');
+      chk.checked = !singleWorker;
+    } finally {
+      delete chk.dataset.userInteracting;
+    }
   }
 
   // -- Polling ----------------------------------------------------------------
@@ -371,3 +482,4 @@
   fetchStats();
 </script>
 {% endblock %}
+

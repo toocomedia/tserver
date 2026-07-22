@@ -13,11 +13,13 @@ except ImportError:
     _psutil = None  # type: ignore
     _PSUTIL_OK = False
 
-from fastapi import APIRouter, Request
+import json
+from pathlib import Path
+from pydantic import BaseModel
+from fastapi import APIRouter, Request, HTTPException, Depends
 from fastapi.responses import HTMLResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
-from fastapi import Depends
 
 from database import get_db
 from models.domain import Domain
@@ -78,6 +80,40 @@ def _uptime_human(seconds: float) -> str:
         parts.append(f"{hours}h")
     parts.append(f"{minutes}m")
     return " ".join(parts)
+
+
+async def _get_optimization_status() -> dict:
+    """Check optimization status via optimize.sh or fallback sysctl/nginx inspection."""
+    script_path = config.BASE_DIR / "scripts" / "optimize.sh"
+    if not script_path.exists():
+        script_path = Path("/opt/srv-panel/scripts/optimize.sh")
+
+    if script_path.exists():
+        res = await run(["bash", str(script_path), "status"])
+        if res.success:
+            try:
+                return json.loads(res.stdout)
+            except Exception:
+                pass
+
+    opt_active = Path("/etc/sysctl.d/99-srv-panel-optimize.conf").exists()
+    nginx_single = False
+    nginx_conf = Path("/etc/nginx/nginx.conf")
+    if nginx_conf.exists():
+        try:
+            content = nginx_conf.read_text()
+            if "worker_processes 1;" in content:
+                nginx_single = True
+        except Exception:
+            pass
+
+    return {
+        "optimization_active": opt_active,
+        "zram_active": False,
+        "nginx_single_worker": nginx_single,
+        "nginx_worker_setting": "1" if nginx_single else "auto",
+        "swappiness": 60,
+    }
 
 
 @router.get("/api/stats")
@@ -174,6 +210,9 @@ async def server_stats():
         for p in procs[:15]
     ]
 
+    opt_status = await _get_optimization_status()
+    is_low_ram = ram.total < (2.0 * 1024 ** 3)
+
     return {
         "cpu": {
             "percent": cpu_percent,
@@ -185,6 +224,7 @@ async def server_stats():
             "used_gb": round(ram.used / (1024 ** 3), 1),
             "available_gb": round(ram.available / (1024 ** 3), 1),
             "percent": ram.percent,
+            "is_low_ram": is_low_ram,
         },
         "swap": {
             "total_gb": round(swap.total / (1024 ** 3), 1),
@@ -202,7 +242,53 @@ async def server_stats():
         "uptime_human": _uptime_human(uptime_sec),
         "services": services,
         "processes": top_procs,
+        "optimization": opt_status,
     }
+
+
+class OptimizationToggleIn(BaseModel):
+    enabled: bool
+
+
+class NginxWorkerToggleIn(BaseModel):
+    single_worker: bool
+
+
+@router.post("/api/system/optimization/toggle")
+async def toggle_optimization(payload: OptimizationToggleIn):
+    """Enable or disable server Low-RAM optimization mode."""
+    script_path = config.BASE_DIR / "scripts" / "optimize.sh"
+    if not script_path.exists():
+        script_path = Path("/opt/srv-panel/scripts/optimize.sh")
+
+    if not script_path.exists():
+        return {"success": False, "detail": "optimize.sh script not found"}
+
+    action = "enable" if payload.enabled else "disable"
+    res = await run(["bash", str(script_path), action])
+    return {
+        "success": res.success,
+        "detail": res.stdout if res.success else res.stderr,
+    }
+
+
+@router.post("/api/system/nginx-worker/toggle")
+async def toggle_nginx_worker(payload: NginxWorkerToggleIn):
+    """Set Nginx worker_processes to 1 or auto independently."""
+    script_path = config.BASE_DIR / "scripts" / "optimize.sh"
+    if not script_path.exists():
+        script_path = Path("/opt/srv-panel/scripts/optimize.sh")
+
+    if not script_path.exists():
+        return {"success": False, "detail": "optimize.sh script not found"}
+
+    action = "nginx-worker-1" if payload.single_worker else "nginx-worker-auto"
+    res = await run(["bash", str(script_path), action])
+    return {
+        "success": res.success,
+        "detail": res.stdout if res.success else res.stderr,
+    }
+
 
 
 

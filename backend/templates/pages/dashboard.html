@@ -10,6 +10,14 @@
 
 {% block content %}
 
+<!-- LOW-RAM RECOMMENDATION NOTICE -->
+<div id="low-ram-notice" class="alert alert--warn mb-lg" style="display:none; align-items:center; justify-content:space-between; gap: 12px; padding: 12px 16px;">
+  <div>
+    <strong>💡 Optimization Recommended:</strong> Your server has <span id="low-ram-val">less than 2.0 GB</span> RAM. Enable Low-RAM Optimization Mode for zRAM, kernel tuning, and lower memory footprint.
+  </div>
+  <button class="btn btn--sm btn--primary" id="btn-quick-optimize" onclick="enableOptimizationQuick()">Enable Now</button>
+</div>
+
 <!-- STAT GRID -->
 <div class="stat-grid mb-xl">
 
@@ -129,5 +137,40 @@ async function refreshStatus() {
     btn.disabled = false;
   }
 }
+
+async function checkOptimizationBanner() {
+  try {
+    const d = await panel.get('/api/stats');
+    if (d.ram && d.ram.is_low_ram && d.optimization && !d.optimization.optimization_active) {
+      const notice = document.getElementById('low-ram-notice');
+      if (notice) {
+        document.getElementById('low-ram-val').textContent = d.ram.total_gb + ' GB';
+        notice.style.display = 'flex';
+      }
+    }
+  } catch (e) {}
+}
+
+async function enableOptimizationQuick() {
+  const btn = document.getElementById('btn-quick-optimize');
+  btn.disabled = true;
+  btn.textContent = 'Enabling...';
+  try {
+    const res = await panel.post('/api/system/optimization/toggle', { enabled: true });
+    if (res.success) {
+      toast('Low-RAM Optimization Mode enabled successfully!', 'success');
+      document.getElementById('low-ram-notice').style.display = 'none';
+    } else {
+      toast('Failed: ' + (res.detail || 'Error'), 'danger');
+    }
+  } catch (e) {
+    toast(e.message, 'danger');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Enable Now';
+  }
+}
+
+checkOptimizationBanner();
 </script>
 {% endblock %}

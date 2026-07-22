@@ -287,6 +287,7 @@ if [[ "$SKIP_APT" != "1" ]]; then
     pdns-server pdns-backend-sqlite3 \
     sqlite3 \
     curl wget git ufw openssl rsync sudo \
+    zram-tools libjemalloc2 \
     || true
 
   # Ensure critical packages are present even if apt returned non-zero from pdns restart
@@ -570,3 +571,14 @@ echo "    (password as entered — not shown again)"
 echo ""
 echo "    Reset admin: sudo bash $PANEL_DIR/scripts/create_admin.sh --force"
 echo "    Update:  curl -fsSL https://raw.githubusercontent.com/toocomedia/tserver/main/scripts/get-update.sh | sudo bash"
+
+TOTAL_MEM_KB="$(grep MemTotal /proc/meminfo 2>/dev/null | awk '{print $2}' || echo "0")"
+if [[ "$TOTAL_MEM_KB" -gt 0 && "$TOTAL_MEM_KB" -lt 2097152 ]]; then
+  TOTAL_MEM_GB="$(awk "BEGIN {printf \"%.1f\", $TOTAL_MEM_KB/1048576}")"
+  echo ""
+  echo -e "${YLW}[RECOMMENDATION NOTICE]${NC}"
+  echo "    Server RAM is ${TOTAL_MEM_GB} GB (< 2.0 GB)."
+  echo "    Low-RAM Optimization Mode is recommended for your server."
+  echo "    You can enable it in the Panel UI or run:"
+  echo "    sudo bash $PANEL_DIR/scripts/optimize.sh enable"
+fi
