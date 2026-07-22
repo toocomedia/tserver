@@ -27,6 +27,26 @@ function setSidebarActiveText(text) {
 }
 
 // ---------------------------------------------------------------------------
+// Add Domain UI Toggle
+// ---------------------------------------------------------------------------
+function toggleDomainInputType() {
+  const type = document.querySelector('input[name="domain_type"]:checked').value;
+  const selectWrapper = document.getElementById('domain-select-wrapper');
+  const inputWrapper  = document.getElementById('domain-input-wrapper');
+  const hintText      = document.getElementById('domain-hint-text');
+  
+  if (type === 'panel') {
+    selectWrapper.style.display = 'block';
+    inputWrapper.style.display  = 'none';
+    hintText.innerText = "Select a domain hosted on this panel — MX, A, SPF, and DMARC records will be created automatically in PowerDNS.";
+  } else {
+    selectWrapper.style.display = 'none';
+    inputWrapper.style.display  = 'block';
+    hintText.innerText = "Enter an external domain (e.g. from Cloudflare). Local PowerDNS records will be skipped.";
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Domain select → auto-fill hidden IP
 // ---------------------------------------------------------------------------
 function onDomainSelect(selectEl) {
@@ -46,20 +66,33 @@ async function handleAddDomain() {
   const formData = new FormData(form);
   const result   = document.getElementById('add-domain-result');
 
-  const domain = formData.get('domain');
-  if (!domain) {
+  const type = formData.get('domain_type');
+  let domain = "";
+  if (type === 'panel') {
+    domain = formData.get('domain_select');
+  } else {
+    domain = formData.get('domain_custom');
+  }
+
+  if (!domain || !domain.trim()) {
     result.style.display = 'block';
     result.className = 'text-small text-danger';
-    result.innerText = 'Please select a domain first.';
+    result.innerText = 'Please provide a domain name.';
     return;
   }
 
+  // The backend expects 'domain', so we construct a new FormData
+  const payload = new FormData();
+  payload.append('csrf_token', formData.get('csrf_token'));
+  payload.append('domain', domain.trim());
+  payload.append('server_ip', formData.get('server_ip'));
+
   result.style.display = 'block';
   result.className = 'text-small text-muted';
-  result.innerText = 'Adding domain and setting up DNS…';
+  result.innerText = 'Adding domain…';
 
   try {
-    const res  = await fetch('/plugins/maddy/api/domains/add', { method: 'POST', body: formData });
+    const res  = await fetch('/plugins/maddy/api/domains/add', { method: 'POST', body: payload });
     const data = await res.json();
     if (res.ok) {
       result.className = 'text-small text-accent';
@@ -131,6 +164,11 @@ function openDomainDetail(domain, serverIp) {
   document.getElementById('imap-host-preview').innerText         = 'mail.' + domain;
   document.getElementById('smtp-host-preview').innerText         = 'mail.' + domain;
   document.getElementById('username-example-preview').innerText  = 'user@' + domain;
+
+  // Fill DNS Cheat Sheet
+  document.getElementById('dns-table-a').innerText   = currentDomainIp;
+  document.getElementById('dns-table-mx').innerText  = 'mail.' + domain;
+  document.getElementById('dns-table-spf').innerText = 'v=spf1 mx ip4:' + currentDomainIp + ' ~all';
 
   renderAccountsList();
 }

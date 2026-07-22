@@ -41,16 +41,60 @@
   <div id="inner-tab-dns" class="inner-tab-content section mb-xl" style="display:none;">
     <div class="section__header"><h3>DNS Records</h3></div>
     <div class="section__body">
-      <p class="form-hint mb-md">Re-provision or remove PowerDNS mail records (MX, A, SPF, DKIM, DMARC).</p>
+      <p class="form-hint mb-md">
+        If this domain is managed externally (e.g., Cloudflare, Namecheap), copy and paste these records exactly into your DNS provider. 
+        If the domain is managed by this panel, these records are handled automatically by PowerDNS.
+      </p>
+
+      <table class="table mb-lg" style="font-family: monospace; font-size: 0.9em; width: 100%;">
+        <thead>
+          <tr>
+            <th>Type</th>
+            <th>Name</th>
+            <th>Value / Content</th>
+            <th>Priority</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>A</strong></td>
+            <td>mail</td>
+            <td id="dns-table-a"></td>
+            <td class="text-muted">—</td>
+          </tr>
+          <tr>
+            <td><strong>MX</strong></td>
+            <td>@</td>
+            <td id="dns-table-mx"></td>
+            <td>10</td>
+          </tr>
+          <tr>
+            <td><strong>TXT</strong></td>
+            <td>@</td>
+            <td id="dns-table-spf"></td>
+            <td class="text-muted">—</td>
+          </tr>
+          <tr>
+            <td><strong>TXT</strong></td>
+            <td>_dmarc</td>
+            <td>v=DMARC1; p=none;</td>
+            <td class="text-muted">—</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <hr class="mb-md">
+
+      <p class="form-hint mb-md"><strong>Local PowerDNS Management:</strong> Re-provision or remove local PowerDNS mail records (only required if domain's Nameservers point to this VPS).</p>
       <form id="dns-setup-form" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
         <input type="hidden" name="csrf_token"   value="{{ csrf_token(request) }}">
         <input type="hidden" name="domain_name"  id="dns-domain-input">
         <input type="hidden" name="server_ip"    id="dns-server-ip"    value="{{ server_ip }}">
         <button type="button" onclick="handleDnsAction('/plugins/maddy/api/dns/auto-setup')" class="btn btn--primary btn--sm">
-          ⚡ Setup DNS
+          ⚡ Auto-Setup Local DNS
         </button>
         <button type="button" onclick="handleDnsAction('/plugins/maddy/api/dns/remove')" class="btn btn--secondary btn--sm">
-          Remove DNS
+          Remove Local DNS
         </button>
       </form>
       <div id="dns-result-message" style="display:none; margin-top:12px;"></div>
@@ -97,34 +141,57 @@
   <div class="section mb-xl">
     <div class="section__header"><h3>Add Mail Domain</h3></div>
     <div class="section__body">
-      {% if panel_domains %}
-      <p class="form-hint mb-md">
-        Select a domain — MX, A, SPF, and DMARC records will be created automatically.
+      
+      <div class="mb-md" style="display:flex; gap:16px;">
+        <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+          <input type="radio" name="domain_type" value="panel" checked onchange="toggleDomainInputType()">
+          <span>Panel Domain</span>
+        </label>
+        <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+          <input type="radio" name="domain_type" value="external" onchange="toggleDomainInputType()">
+          <span>External Domain</span>
+        </label>
+      </div>
+
+      <p class="form-hint mb-md" id="domain-hint-text">
+        Select a domain hosted on this panel — MX, A, SPF, and DMARC records will be created automatically in PowerDNS.
       </p>
+
       <form id="add-domain-form" style="display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap;">
         <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
         <input type="hidden" name="server_ip"  id="add-domain-ip" value="{{ server_ip }}">
+        
         <div style="flex:2; min-width:200px;">
-          <label class="form-label">Domain</label>
-          <select name="domain" id="add-domain-input" class="form-input"
-                  onchange="onDomainSelect(this)" required>
-            <option value="">— Select a domain —</option>
-            {% for d in panel_domains %}
-            <option value="{{ d.name }}" data-ip="{{ d.server_ip }}">{{ d.name }}</option>
-            {% endfor %}
-          </select>
+          <label class="form-label">Domain Name</label>
+          
+          <!-- Panel domains select -->
+          <div id="domain-select-wrapper">
+            {% if panel_domains %}
+            <select name="domain_select" id="add-domain-select" class="form-input" onchange="onDomainSelect(this)">
+              <option value="">— Select a domain —</option>
+              {% for d in panel_domains %}
+              <option value="{{ d.name }}" data-ip="{{ d.server_ip }}">{{ d.name }}</option>
+              {% endfor %}
+            </select>
+            {% else %}
+            <select class="form-input" disabled>
+              <option>— No panel domains available —</option>
+            </select>
+            {% endif %}
+          </div>
+
+          <!-- External domain input -->
+          <div id="domain-input-wrapper" style="display:none;">
+            <input type="text" name="domain_custom" id="add-domain-custom" class="form-input" placeholder="e.g. outside-domain.com">
+          </div>
         </div>
+
         <button type="button" onclick="handleAddDomain()" class="btn btn--primary btn--sm">
           + Add Domain
         </button>
       </form>
       <div id="add-domain-result" style="display:none; margin-top:10px;"></div>
-      {% else %}
-      <p style="color:var(--color-warning, #d69e2e);">
-        ⚠ No domains found in the panel yet.
-        <a href="/domains/create">Add a domain to the panel first</a>, then return here to configure it for mail.
-      </p>
-      {% endif %}
+      
     </div>
   </div>
 </div>
