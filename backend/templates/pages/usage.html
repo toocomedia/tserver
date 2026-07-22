@@ -484,10 +484,35 @@
         advChecks.style.display = 'block';
         const hc = d.optimization.hardware_checks;
         advChecks.innerHTML = `
-          <div style="color:var(--color-text); margin-bottom:4px; font-weight:600;">Hardware Checks:</div>
-          <div>${hc.has_fibre ? '❌ Fibre Channel detected (multipathd kept active)' : '✅ No Fibre Channel (multipathd disabled)'}</div>
-          <div>${hc.has_snaps ? '❌ Custom Snaps found (snapd kept active)' : '✅ No Custom Snaps (snapd disabled)'}</div>
-          <div>${hc.has_modem ? '❌ Cellular Modem detected (ModemManager kept active)' : '✅ No Cellular Modem (ModemManager disabled)'}</div>
+          <div style="margin-top: 8px; border-top: 1px dashed var(--color-line); padding-top: 8px;">
+            <div style="font-size: 11px; font-weight: 700; color: var(--color-muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">Hardware Check Results</div>
+            <table style="width: 100%; font-size: 13px; line-height: 1.6; border-collapse: collapse;">
+              <tr>
+                <td style="color: var(--color-text); padding-right: 12px; white-space: nowrap; width: 120px;">Fibre Channel</td>
+                <td style="text-align: left;">
+                  ${hc.has_fibre 
+                    ? '<span style="color: var(--color-warn); font-weight: 600;">Detected</span> <span class="text-muted">— multipathd kept active</span>' 
+                    : '<span style="color: var(--color-accent-2); font-weight: 600;">None</span> <span class="text-muted">— multipathd disabled</span>'}
+                </td>
+              </tr>
+              <tr>
+                <td style="color: var(--color-text); padding-right: 12px; white-space: nowrap;">Custom Snaps</td>
+                <td style="text-align: left;">
+                  ${hc.has_snaps 
+                    ? '<span style="color: var(--color-warn); font-weight: 600;">Found</span> <span class="text-muted">— snapd kept active</span>' 
+                    : '<span style="color: var(--color-accent-2); font-weight: 600;">None</span> <span class="text-muted">— snapd disabled</span>'}
+                </td>
+              </tr>
+              <tr>
+                <td style="color: var(--color-text); padding-right: 12px; white-space: nowrap;">Cellular Modem</td>
+                <td style="text-align: left;">
+                  ${hc.has_modem 
+                    ? '<span style="color: var(--color-warn); font-weight: 600;">Detected</span> <span class="text-muted">— ModemManager kept active</span>' 
+                    : '<span style="color: var(--color-accent-2); font-weight: 600;">None</span> <span class="text-muted">— ModemManager disabled</span>'}
+                </td>
+              </tr>
+            </table>
+          </div>
         `;
       }
     }
