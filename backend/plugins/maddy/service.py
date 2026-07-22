@@ -97,8 +97,9 @@ class MaddyService:
         if self.is_installed() and os.name != "nt":
             try:
                 subprocess.run(["sudo", "-n", "chmod", "777", "/var/lib/maddy/"], check=False)
-                subprocess.run(["sudo", "-n", "chmod", "666", "/var/lib/maddy/credentials.db"], check=False)
-                subprocess.run(["sudo", "-n", "chmod", "666", "/var/lib/maddy/imapsql.db"], check=False)
+                for f in os.listdir("/var/lib/maddy/"):
+                    if f.endswith(".db") or f.endswith("-wal") or f.endswith("-shm"):
+                        subprocess.run(["sudo", "-n", "chmod", "666", f"/var/lib/maddy/{f}"], check=False)
 
                 cmd_creds = ["/usr/local/bin/maddy", "creds", "create", email]
                 cmd_imap = ["/usr/local/bin/maddy", "imap-acct", "create", email]
@@ -110,9 +111,10 @@ class MaddyService:
                 if res_imap.returncode != 0 and "already exists" not in res_imap.stderr:
                     raise Exception(f"Failed to create maddy imap-acct: {res_imap.stderr}")
 
+                for f in os.listdir("/var/lib/maddy/"):
+                    if f.endswith(".db") or f.endswith("-wal") or f.endswith("-shm"):
+                        subprocess.run(["sudo", "-n", "chmod", "600", f"/var/lib/maddy/{f}"], check=False)
                 subprocess.run(["sudo", "-n", "chmod", "700", "/var/lib/maddy/"], check=False)
-                subprocess.run(["sudo", "-n", "chmod", "600", "/var/lib/maddy/credentials.db"], check=False)
-                subprocess.run(["sudo", "-n", "chmod", "600", "/var/lib/maddy/imapsql.db"], check=False)
                 subprocess.run(["sudo", "-n", "chown", "-R", "maddy:maddy", "/var/lib/maddy/"], check=False)
             except Exception as exc:
                 logger.warning("Maddy CLI account creation warning: %s", exc)
@@ -131,17 +133,19 @@ class MaddyService:
         if self.is_installed() and os.name != "nt":
             try:
                 subprocess.run(["sudo", "-n", "chmod", "777", "/var/lib/maddy/"], check=False)
-                subprocess.run(["sudo", "-n", "chmod", "666", "/var/lib/maddy/credentials.db"], check=False)
-                subprocess.run(["sudo", "-n", "chmod", "666", "/var/lib/maddy/imapsql.db"], check=False)
+                for f in os.listdir("/var/lib/maddy/"):
+                    if f.endswith(".db") or f.endswith("-wal") or f.endswith("-shm"):
+                        subprocess.run(["sudo", "-n", "chmod", "666", f"/var/lib/maddy/{f}"], check=False)
 
                 cmd_creds = ["/usr/local/bin/maddy", "creds", "remove", email]
                 cmd_imap = ["/usr/local/bin/maddy", "imap-acct", "remove", email]
                 res_creds = subprocess.run(cmd_creds, input="y\ny\n", text=True, capture_output=True)
                 res_imap = subprocess.run(cmd_imap, input="y\ny\n", text=True, capture_output=True)
 
+                for f in os.listdir("/var/lib/maddy/"):
+                    if f.endswith(".db") or f.endswith("-wal") or f.endswith("-shm"):
+                        subprocess.run(["sudo", "-n", "chmod", "600", f"/var/lib/maddy/{f}"], check=False)
                 subprocess.run(["sudo", "-n", "chmod", "700", "/var/lib/maddy/"], check=False)
-                subprocess.run(["sudo", "-n", "chmod", "600", "/var/lib/maddy/credentials.db"], check=False)
-                subprocess.run(["sudo", "-n", "chmod", "600", "/var/lib/maddy/imapsql.db"], check=False)
                 subprocess.run(["sudo", "-n", "chown", "-R", "maddy:maddy", "/var/lib/maddy/"], check=False)
             except Exception as exc:
                 logger.warning("Maddy CLI account deletion warning: %s", exc)
