@@ -158,6 +158,7 @@ async def issue_mail_ssl(
     try:
         logger.info(f"Setting up Nginx webroot for {mail_domain}")
         nginx_service.ensure_acme_root()
+        nginx_service.create_webroot(mail_domain, "<html><head><title>Mail Server</title></head><body style='font-family:sans-serif; text-align:center; padding:50px;'><h1>Mail Server is Active</h1><p>IMAP/SMTP services are running.</p></body></html>")
         await nginx_service.create_static_site(mail_domain)
         await nginx_service.reload()
 
@@ -182,8 +183,8 @@ async def issue_mail_ssl(
         le_live_dir = Path(f"/etc/letsencrypt/live/{mail_domain}")
         maddy_certs_dir = Path("/etc/maddy/certs")
         
-        await shell.run(["cp", str(le_live_dir / "fullchain.pem"), str(maddy_certs_dir / "fullchain.pem")])
-        await shell.run(["cp", str(le_live_dir / "privkey.pem"), str(maddy_certs_dir / "privkey.pem")])
+        await shell.run(["bash", "-c", f"cp {str(le_live_dir)}/fullchain.pem {str(maddy_certs_dir)}/fullchain.pem"])
+        await shell.run(["bash", "-c", f"cp {str(le_live_dir)}/privkey.pem {str(maddy_certs_dir)}/privkey.pem"])
         await shell.run(["chown", "maddy:maddy", str(maddy_certs_dir / "fullchain.pem"), str(maddy_certs_dir / "privkey.pem")])
 
         logger.info("Restarting Maddy to apply new SSL")

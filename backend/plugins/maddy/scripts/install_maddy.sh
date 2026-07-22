@@ -103,13 +103,14 @@ SERVER_HOST=$(hostname -f 2>/dev/null || hostname)
 if [[ "${SERVER_HOST}" != *.* ]]; then
     SERVER_HOST="${SERVER_HOST}.local"
 fi
+BASE_DOMAIN=$(echo "${SERVER_HOST}" | sed -E 's/^[^\.]+\.//')
 
 echo "Writing fresh /etc/maddy/maddy.conf..."
 cat <<EOF > "${CONF_DIR}/maddy.conf"
 # Maddy Mail Server - default configuration file
 \$(hostname) = ${SERVER_HOST}
 \$(primary_domain) = ${SERVER_HOST}
-\$(local_domains) = \$(primary_domain)
+\$(local_domains) = \$(primary_domain) ${BASE_DOMAIN}
 
 tls file ${CERTS_DIR}/fullchain.pem ${CERTS_DIR}/privkey.pem
 
