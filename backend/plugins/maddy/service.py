@@ -12,6 +12,8 @@ import socket
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 
+logger = logging.getLogger(__name__)
+
 def _get_accounts_file_path() -> Path:
     if os.name != "nt":
         opt_panel = Path("/opt/srv-panel")
@@ -124,6 +126,7 @@ class MaddyService:
                 subprocess.run(["sudo", "-n", "chown", "-R", "maddy:maddy", "/var/lib/maddy/"], check=False)
             except Exception as exc:
                 logger.warning("Maddy CLI account creation warning: %s", exc)
+                raise Exception(f"Failed to create Maddy account: {exc}")
 
         accounts.append({"email": email, "created_at": "Active"})
         ACCOUNTS_FILE.parent.mkdir(parents=True, exist_ok=True)
@@ -161,6 +164,7 @@ class MaddyService:
                 subprocess.run(["sudo", "-n", "chown", "-R", "maddy:maddy", "/var/lib/maddy/"], check=False)
             except Exception as exc:
                 logger.warning("Maddy CLI account deletion warning: %s", exc)
+                raise Exception(f"Failed to delete Maddy account: {exc}")
 
         with open(ACCOUNTS_FILE, "w", encoding="utf-8") as f:
             json.dump(filtered, f, indent=2)
