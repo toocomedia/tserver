@@ -176,23 +176,25 @@ def _get_update_log_path() -> Path:
 
 async def trigger_update() -> Dict[str, Any]:
     """Start the background update process."""
-    global _is_updating
+    global _is_updating, _cache_data, _cache_timestamp
 
     if _is_updating:
         return {"status": "error", "message": "An update is already in progress."}
 
     _is_updating = True
+    _cache_data = None
+    _cache_timestamp = 0.0
     log_path = _get_update_log_path()
 
     async def _run_update_task():
-        global _is_updating
+        global _is_updating, _cache_data, _cache_timestamp
         try:
             with open(log_path, "w", encoding="utf-8") as f:
                 f.write(f"=== Starting Panel Update [{time.strftime('%Y-%m-%d %H:%M:%S')}] ===\n")
                 f.flush()
 
-                # Determine best update command
-                cmd = ["sudo", "bash", "/opt/srv-panel/scripts/get-update.sh"]
+                # Determine best update command (use sudo -n to prevent password blocking)
+                cmd = ["sudo", "-n", "bash", "/opt/srv-panel/scripts/get-update.sh"]
                 if not Path("/opt/srv-panel/scripts/get-update.sh").exists():
                     local_script = Path(__file__).parent.parent.parent / "scripts" / "get-update.sh"
                     if local_script.exists():
@@ -213,6 +215,8 @@ async def trigger_update() -> Dict[str, Any]:
                 f.write(f"\nUpdate failed with error: {exc}\n")
         finally:
             _is_updating = False
+            _cache_data = None
+            _cache_timestamp = 0.0
 
     asyncio.create_task(_run_update_task())
     return {"status": "ok", "message": "Update process started in background."}
