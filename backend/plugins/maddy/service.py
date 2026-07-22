@@ -97,25 +97,34 @@ class MaddyService:
 
         # Execute CLI if installed
         if self.is_installed() and os.name != "nt":
+            import bcrypt
+            import tempfile
+            
+            hashed = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('ascii')
+            script = """import sqlite3
+import sys
+try:
+    conn = sqlite3.connect('/var/lib/maddy/credentials.db')
+    conn.execute("CREATE TABLE IF NOT EXISTS credentials (key TEXT PRIMARY KEY NOT NULL, value TEXT NOT NULL)")
+    conn.execute("INSERT OR REPLACE INTO credentials (key, value) VALUES (?, ?)", (sys.argv[1], sys.argv[2]))
+    conn.commit()
+    conn.close()
+except Exception as e:
+    print(str(e))
+    sys.exit(1)
+"""
+            with tempfile.NamedTemporaryFile('w', delete=False, suffix='.py') as f:
+                f.write(script)
+                script_path = f.name
+
             try:
                 subprocess.run(["sudo", "-n", "systemctl", "stop", "maddy"], check=False)
-                subprocess.run(["sudo", "-n", "chmod", "777", "/var/lib/maddy/"], check=False)
-                for f in os.listdir("/var/lib/maddy/"):
-                    if f.endswith(".db") or f.endswith("-wal") or f.endswith("-shm"):
-                        subprocess.run(["sudo", "-n", "chmod", "666", f"/var/lib/maddy/{f}"], check=False)
 
-                import sqlite3
-                import bcrypt
-                
-                # Directly write to SQLite to bypass Maddy CLI TTY password prompt limitations
-                hashed = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('ascii')
-                conn = sqlite3.connect('/var/lib/maddy/credentials.db')
-                conn.execute("CREATE TABLE IF NOT EXISTS credentials (key TEXT PRIMARY KEY NOT NULL, value TEXT NOT NULL)")
-                conn.execute("INSERT OR REPLACE INTO credentials (key, value) VALUES (?, ?)", (email, hashed))
-                conn.commit()
-                conn.close()
+                res_db = subprocess.run(["sudo", "-n", "python3", script_path, email, hashed], capture_output=True, text=True)
+                if res_db.returncode != 0:
+                    raise Exception(f"Database error: {res_db.stderr} {res_db.stdout}")
 
-                cmd_imap = ["/usr/local/bin/maddy", "imap-acct", "create", email]
+                cmd_imap = ["sudo", "-n", "/usr/local/bin/maddy", "imap-acct", "create", email]
                 res_imap = subprocess.run(cmd_imap, capture_output=True, text=True)
                 if res_imap.returncode != 0 and "already exists" not in res_imap.stderr:
                     raise Exception(f"Failed to create maddy imap-acct: {res_imap.stderr}")
@@ -124,10 +133,8 @@ class MaddyService:
                 logger.warning("Maddy CLI account creation warning: %s", exc)
                 raise Exception(f"Failed to create Maddy account: {exc}")
             finally:
-                for f in os.listdir("/var/lib/maddy/"):
-                    if f.endswith(".db") or f.endswith("-wal") or f.endswith("-shm"):
-                        subprocess.run(["sudo", "-n", "chmod", "600", f"/var/lib/maddy/{f}"], check=False)
-                subprocess.run(["sudo", "-n", "chmod", "700", "/var/lib/maddy/"], check=False)
+                if os.path.exists(script_path):
+                    os.remove(script_path)
                 subprocess.run(["sudo", "-n", "chown", "-R", "maddy:maddy", "/var/lib/maddy/"], check=False)
                 subprocess.run(["sudo", "-n", "systemctl", "start", "maddy"], check=False)
 
@@ -143,37 +150,41 @@ class MaddyService:
         filtered = [a for a in accounts if a["email"].lower() != email.lower()]
 
         if self.is_installed() and os.name != "nt":
+            import tempfile
+            
+            script = """import sqlite3
+import sys
+try:
+    conn = sqlite3.connect('/var/lib/maddy/credentials.db')
+    conn.execute("DELETE FROM credentials WHERE key = ?", (sys.argv[1],))
+    conn.commit()
+    conn.close()
+except Exception as e:
+    print(str(e))
+    sys.exit(1)
+"""
+            with tempfile.NamedTemporaryFile('w', delete=False, suffix='.py') as f:
+                f.write(script)
+                script_path = f.name
+
             try:
                 subprocess.run(["sudo", "-n", "systemctl", "stop", "maddy"], check=False)
-                subprocess.run(["sudo", "-n", "chmod", "777", "/var/lib/maddy/"], check=False)
-                for f in os.listdir("/var/lib/maddy/"):
-                    if f.endswith(".db") or f.endswith("-wal") or f.endswith("-shm"):
-                        subprocess.run(["sudo", "-n", "chmod", "666", f"/var/lib/maddy/{f}"], check=False)
 
-                import sqlite3
-                
-                # Directly write to SQLite to bypass Maddy CLI interactive prompts
-                conn = sqlite3.connect('/var/lib/maddy/credentials.db')
-                try:
-                    conn.execute("DELETE FROM credentials WHERE key = ?", (email,))
-                    conn.commit()
-                except Exception as e:
-                    schema = conn.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='credentials'").fetchone()
-                    raise Exception(f"SQLite Error: {e}. Table Schema: {schema}")
-                finally:
-                    conn.close()
+                res_db = subprocess.run(["sudo", "-n", "python3", script_path, email], capture_output=True, text=True)
+                if res_db.returncode != 0:
+                    raise Exception(f"Database error: {res_db.stderr} {res_db.stdout}")
 
-                cmd_imap = ["/usr/local/bin/maddy", "imap-acct", "remove", email]
+                cmd_imap = ["sudo", "-n", "/usr/local/bin/maddy", "imap-acct", "remove", email]
                 res_imap = subprocess.run(cmd_imap, input="y\ny\n", text=True, capture_output=True)
+                if res_imap.returncode != 0:
+                    logger.warning("Maddy CLI account deletion warning: %s", res_imap.stderr)
 
             except Exception as exc:
                 logger.warning("Maddy CLI account deletion warning: %s", exc)
                 raise Exception(f"Failed to delete Maddy account: {exc}")
             finally:
-                for f in os.listdir("/var/lib/maddy/"):
-                    if f.endswith(".db") or f.endswith("-wal") or f.endswith("-shm"):
-                        subprocess.run(["sudo", "-n", "chmod", "600", f"/var/lib/maddy/{f}"], check=False)
-                subprocess.run(["sudo", "-n", "chmod", "700", "/var/lib/maddy/"], check=False)
+                if os.path.exists(script_path):
+                    os.remove(script_path)
                 subprocess.run(["sudo", "-n", "chown", "-R", "maddy:maddy", "/var/lib/maddy/"], check=False)
                 subprocess.run(["sudo", "-n", "systemctl", "start", "maddy"], check=False)
 
