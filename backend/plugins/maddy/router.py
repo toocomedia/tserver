@@ -125,7 +125,7 @@ async def create_account(
             return JSONResponse({"detail": "Username and domain are required."}, status_code=400)
 
         maddy_service.create_account(full_email, password.strip())
-        return RedirectResponse("/plugins/maddy/", status_code=303)
+        return JSONResponse({"status": "ok", "email": full_email})
     except PermissionError as exc:
         logger.error("Sudo permission error creating account: %s", exc)
         return JSONResponse({"detail": str(exc)}, status_code=403)
@@ -144,7 +144,7 @@ async def delete_account(
     """Delete an existing mailbox account."""
     try:
         maddy_service.delete_account(email.strip())
-        return RedirectResponse("/plugins/maddy/", status_code=303)
+        return JSONResponse({"status": "ok", "email": email.strip()})
     except PermissionError as exc:
         logger.error("Sudo permission error deleting account: %s", exc)
         return JSONResponse({"detail": str(exc)}, status_code=403)

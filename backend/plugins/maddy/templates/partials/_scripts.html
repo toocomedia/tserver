@@ -6,92 +6,70 @@ const allAccounts = [
   {% endfor %}
 ];
 let currentDomain = "";
+let currentDomainIp = "{{ server_ip }}";
 
-// Reads the CSRF token from any hidden csrf_token input present in the page.
 function getCsrfToken() {
   const el = document.querySelector('input[name="csrf_token"]');
   return el ? el.value : '';
 }
 
-// Handle split tabs
+// ---------------------------------------------------------------------------
+// Tab switching
+// ---------------------------------------------------------------------------
 document.querySelectorAll('.split-sidebar__item').forEach(item => {
   item.addEventListener('click', function() {
     document.querySelectorAll('.split-sidebar__item').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.split-tab').forEach(el => el.classList.remove('active'));
-
     this.classList.add('active');
     const tabId = this.getAttribute('data-tab');
     document.getElementById(tabId).classList.add('active');
-
     const titleEl = document.getElementById('page-dynamic-title');
     if (tabId === 'tab-overview') titleEl.innerText = "Mail Server Overview";
     if (tabId === 'tab-domains')  titleEl.innerText = "Mail Domains";
-
     if (tabId !== 'tab-domains') closeDomainDetail();
   });
 });
 
 // ---------------------------------------------------------------------------
-// Domain detail panel
+// Domain select → auto-fill hidden IP
 // ---------------------------------------------------------------------------
-
-// Auto-fill server IP when a domain is selected from the dropdown
 function onDomainSelect(selectEl) {
   const ip = selectEl.selectedOptions[0]?.dataset?.ip || '';
-  const ipField = document.getElementById('add-domain-ip');
-  if (ipField && ip) ipField.value = ip;
-}
-
-function openDomainDetail(domain) {
-  currentDomain = domain;
-  document.getElementById('domains-detail-view').style.display = 'block';
-  document.getElementById('detail-domain-name').innerText = domain;
-  document.getElementById('dns-domain-input').value = domain;
-  document.getElementById('ssl-domain-input').value = domain;
-
-  // Copy the stored server IP from the domain row's select option (if present)
-  const domainOption = document.querySelector(`#add-domain-input option[value="${domain}"]`);
-  if (domainOption && domainOption.dataset.ip) {
-    const dnsIpField = document.getElementById('dns-server-ip');
-    if (dnsIpField) dnsIpField.value = domainOption.dataset.ip;
+  if (ip) {
+    currentDomainIp = ip;
+    const ipField = document.getElementById('add-domain-ip');
+    if (ipField) ipField.value = ip;
   }
-
-  document.getElementById('imap-host-preview').innerText = 'mail.' + domain;
-  document.getElementById('smtp-host-preview').innerText = 'mail.' + domain;
-  document.getElementById('username-example-preview').innerText = 'user@' + domain;
-  renderAccountsList();
-  document.getElementById('domains-detail-view').scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
-
-function closeDomainDetail() {
-  currentDomain = "";
-  document.getElementById('domains-detail-view').style.display = 'none';
 }
 
 // ---------------------------------------------------------------------------
-// Add domain
+// Add domain (AJAX)
 // ---------------------------------------------------------------------------
-
 async function handleAddDomain() {
-  const form    = document.getElementById('add-domain-form');
+  const form     = document.getElementById('add-domain-form');
   const formData = new FormData(form);
-  const result  = document.getElementById('add-domain-result');
+  const result   = document.getElementById('add-domain-result');
+
+  const domain = formData.get('domain');
+  if (!domain) {
+    result.style.display = 'block';
+    result.className = 'text-small text-danger';
+    result.innerText = 'Please select a domain first.';
+    return;
+  }
 
   result.style.display = 'block';
   result.className = 'text-small text-muted';
-  result.innerText = 'Adding domain and updating maddy.conf...';
+  result.innerText = 'Adding domain and setting up DNS…';
 
   try {
-    const res = await fetch('/plugins/maddy/api/domains/add', {
-      method: 'POST',
-      body: formData,
-    });
-    if (res.redirected || res.ok) {
+    const res  = await fetch('/plugins/maddy/api/domains/add', { method: 'POST', body: formData });
+    const data = await res.json();
+    if (res.ok) {
       result.className = 'text-small text-accent';
-      result.innerText = 'Domain added! Reloading...';
-      setTimeout(() => location.reload(), 800);
+      result.innerText = data.message || '✅ Domain added successfully.';
+      setTimeout(() => location.reload(), 1200);
     } else {
-      const data = await res.json().catch(() => ({}));
       result.className = 'text-small text-danger';
       result.innerText = data.detail || 'Failed to add domain.';
     }
@@ -102,47 +80,112 @@ async function handleAddDomain() {
 }
 
 // ---------------------------------------------------------------------------
-// Delete domain (nuclear confirm modal)
+// Delete domain — AJAX (fixes [object Object] from plain form POST)
 // ---------------------------------------------------------------------------
-
 function confirmDeleteDomain(domain) {
   document.getElementById('delete-domain-name').innerText = domain;
-  document.getElementById('delete-domain-input').value = domain;
+  document.getElementById('delete-domain-input').value    = domain;
   openModal('delete-domain-modal');
 }
 
-// ---------------------------------------------------------------------------
-// Accounts list (filtered per domain)
-// ---------------------------------------------------------------------------
+async function executeDeleteDomain() {
+  const domain = document.getElementById('delete-domain-input').value;
+  const formData = new FormData();
+  formData.append('csrf_token', getCsrfToken());
+  formData.append('domain', domain);
 
+  // Show spinner in button
+  const btn = document.querySelector('#delete-domain-modal .btn--danger');
+  btn.disabled = true;
+  btn.innerText = 'Deleting…';
+
+  try {
+    const res  = await fetch('/plugins/maddy/api/domains/delete', { method: 'POST', body: formData });
+    const data = await res.json();
+    closeModal('delete-domain-modal');
+    if (res.ok) {
+      location.reload();
+    } else {
+      alert('Delete failed: ' + (data.detail || JSON.stringify(data)));
+    }
+  } catch (err) {
+    closeModal('delete-domain-modal');
+    alert('Network error: ' + err.message);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Domain detail panel
+// ---------------------------------------------------------------------------
+function openDomainDetail(domain, serverIp) {
+  currentDomain   = domain;
+  currentDomainIp = serverIp || currentDomainIp;
+
+  document.getElementById('domains-detail-view').style.display = 'block';
+  document.getElementById('detail-domain-name').innerText        = domain;
+  document.getElementById('dns-domain-input').value              = domain;
+  document.getElementById('ssl-domain-input').value              = domain;
+  document.getElementById('dns-server-ip').value                 = currentDomainIp;
+  document.getElementById('mail-subdomain-preview').innerText    = 'mail.' + domain;
+  document.getElementById('imap-host-preview').innerText         = 'mail.' + domain;
+  document.getElementById('smtp-host-preview').innerText         = 'mail.' + domain;
+  document.getElementById('username-example-preview').innerText  = 'user@' + domain;
+
+  renderAccountsList();
+  document.getElementById('domains-detail-view').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function closeDomainDetail() {
+  currentDomain = "";
+  document.getElementById('domains-detail-view').style.display = 'none';
+}
+
+// ---------------------------------------------------------------------------
+// Inner Tab Switching
+// ---------------------------------------------------------------------------
+function switchInnerTab(btnEl) {
+  // Reset buttons
+  document.querySelectorAll('.tabs-nav button').forEach(btn => btn.classList.remove('active'));
+  btnEl.classList.add('active');
+
+  // Hide all inner tab contents
+  document.querySelectorAll('.inner-tab-content').forEach(content => {
+    content.style.display = 'none';
+  });
+
+  // Show selected
+  const tabId = btnEl.getAttribute('data-inner-tab');
+  if (tabId) {
+    document.getElementById(tabId).style.display = 'block';
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Accounts list (filtered by currentDomain)
+// ---------------------------------------------------------------------------
 function renderAccountsList() {
   const tbody    = document.getElementById('accounts-tbody');
   const emptyDiv = document.getElementById('accounts-empty');
+  const table    = document.getElementById('accounts-table');
   tbody.innerHTML = '';
 
-  const filtered = allAccounts.filter(acc => acc.email.endsWith('@' + currentDomain));
+  const filtered = allAccounts.filter(a => a.email.endsWith('@' + currentDomain));
 
   if (filtered.length === 0) {
     emptyDiv.style.display = 'block';
-    document.getElementById('accounts-table').style.display = 'none';
+    table.style.display    = 'none';
   } else {
     emptyDiv.style.display = 'none';
-    document.getElementById('accounts-table').style.display = 'table';
-    const csrfToken = getCsrfToken();
+    table.style.display    = 'table';
     filtered.forEach(acc => {
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td><strong>${acc.email}</strong></td>
         <td><span class="badge badge--success">Active</span></td>
         <td style="text-align:right;">
-          <form method="post" action="/plugins/maddy/api/accounts/delete" style="display:inline;">
-            <input type="hidden" name="csrf_token" value="${csrfToken}">
-            <input type="hidden" name="email" value="${acc.email}">
-            <button type="submit" class="btn btn--danger btn--sm"
-              onclick="return confirm('Delete mailbox ${acc.email}?')">Delete</button>
-          </form>
-        </td>
-      `;
+          <button type="button" class="btn btn--danger btn--sm"
+            onclick="executeDeleteAccount('${acc.email}')">Delete</button>
+        </td>`;
       tbody.appendChild(tr);
     });
   }
@@ -151,6 +194,7 @@ function renderAccountsList() {
 function openAddAccountModal() {
   document.getElementById('modal-domain-input').value = currentDomain;
   document.getElementById('domain-suffix-preview').innerText = '@' + currentDomain;
+  document.getElementById('add-account-result').style.display = 'none';
   updateDomainSuffix();
   openModal('add-account-modal');
 }
@@ -161,23 +205,80 @@ function updateDomainSuffix() {
 }
 
 // ---------------------------------------------------------------------------
-// DNS actions
+// Accounts actions (AJAX)
 // ---------------------------------------------------------------------------
-
-async function handleDnsAction(endpoint) {
-  const formData = new FormData(document.getElementById('dns-setup-form'));
-  const resultDiv = document.getElementById('dns-result-message');
+async function executeAddAccount() {
+  const form = document.getElementById('add-account-form');
+  const formData = new FormData(form);
+  const resultDiv = document.getElementById('add-account-result');
 
   resultDiv.style.display = 'block';
   resultDiv.className = 'text-small text-muted';
-  resultDiv.innerText = 'Updating PowerDNS records...';
+  resultDiv.innerText = 'Creating mailbox…';
 
   try {
-    const res = await fetch(endpoint, { method: 'POST', body: formData });
+    const res = await fetch('/plugins/maddy/api/accounts/create', { method: 'POST', body: formData });
     const data = await res.json();
     if (res.ok) {
       resultDiv.className = 'text-small text-accent';
-      resultDiv.innerText = data.message || 'DNS operation completed!';
+      resultDiv.innerText = 'Mailbox created successfully!';
+      // Add to array and re-render
+      allAccounts.push({ email: data.email });
+      renderAccountsList();
+      setTimeout(() => closeModal('add-account-modal'), 800);
+      form.reset();
+    } else {
+      resultDiv.className = 'text-small text-danger';
+      resultDiv.innerText = data.detail || 'Failed to create mailbox.';
+    }
+  } catch (err) {
+    resultDiv.className = 'text-small text-danger';
+    resultDiv.innerText = 'Network error: ' + err.message;
+  }
+}
+
+async function executeDeleteAccount(email) {
+  if (!confirm(`Delete mailbox ${email}?`)) return;
+
+  const formData = new FormData();
+  formData.append('csrf_token', getCsrfToken());
+  formData.append('email', email);
+
+  try {
+    const res = await fetch('/plugins/maddy/api/accounts/delete', { method: 'POST', body: formData });
+    const data = await res.json();
+    if (res.ok) {
+      // Remove from array and re-render
+      const index = allAccounts.findIndex(a => a.email === email);
+      if (index > -1) {
+        allAccounts.splice(index, 1);
+      }
+      renderAccountsList();
+    } else {
+      alert('Delete failed: ' + (data.detail || 'Unknown error'));
+    }
+  } catch (err) {
+    alert('Network error: ' + err.message);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// DNS actions (AJAX)
+// ---------------------------------------------------------------------------
+async function handleDnsAction(endpoint) {
+  const formData  = new FormData(document.getElementById('dns-setup-form'));
+  const resultDiv = document.getElementById('dns-result-message');
+
+  resultDiv.style.display = 'block';
+  resultDiv.className     = 'text-small text-muted';
+  resultDiv.innerText     = 'Updating DNS records…';
+
+  try {
+    const res  = await fetch(endpoint, { method: 'POST', body: formData });
+    const data = await res.json();
+    if (res.ok) {
+      resultDiv.className = 'text-small text-accent';
+      resultDiv.innerText = data.message || '✅ DNS operation completed.';
     } else {
       resultDiv.className = 'text-small text-danger';
       resultDiv.innerText = data.detail || 'DNS operation failed.';
@@ -189,23 +290,22 @@ async function handleDnsAction(endpoint) {
 }
 
 // ---------------------------------------------------------------------------
-// SSL issue
+// SSL issue (AJAX)
 // ---------------------------------------------------------------------------
-
 async function issueMailSsl() {
-  const formData = new FormData(document.getElementById('ssl-setup-form'));
+  const formData  = new FormData(document.getElementById('ssl-setup-form'));
   const resultDiv = document.getElementById('ssl-result-message');
 
   resultDiv.style.display = 'block';
-  resultDiv.className = 'text-small text-muted';
-  resultDiv.innerText = "Requesting Let's Encrypt SSL… (may take a moment)";
+  resultDiv.className     = 'text-small text-muted';
+  resultDiv.innerText     = "Requesting Let's Encrypt SSL… (may take up to 30 s)";
 
   try {
-    const res = await fetch('/plugins/maddy/api/ssl/issue', { method: 'POST', body: formData });
+    const res  = await fetch('/plugins/maddy/api/ssl/issue', { method: 'POST', body: formData });
     const data = await res.json();
     if (res.ok) {
       resultDiv.className = 'text-small text-accent';
-      resultDiv.innerText = data.message || 'SSL requested successfully!';
+      resultDiv.innerText = data.message || '✅ SSL issued successfully.';
     } else {
       resultDiv.className = 'text-small text-danger';
       resultDiv.innerText = data.detail || 'SSL request failed.';

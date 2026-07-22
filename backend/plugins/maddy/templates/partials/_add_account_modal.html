@@ -5,7 +5,7 @@
       <h2>Add Mailbox Account</h2>
       <button class="btn btn--ghost btn--icon" onclick="closeModal('add-account-modal')">✕</button>
     </div>
-    <form method="post" action="/plugins/maddy/api/accounts/create">
+    <form id="add-account-form" onsubmit="event.preventDefault(); executeAddAccount();">
       <div class="modal__body">
         <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
 
@@ -49,6 +49,7 @@
           >
         </div>
       </div>
+      <div id="add-account-result" style="display:none; padding: 0 1.5rem 1rem 1.5rem;" class="text-small"></div>
       <div class="modal__footer">
         <button type="button" class="btn btn--secondary" onclick="closeModal('add-account-modal')">Cancel</button>
         <button type="submit" class="btn btn--primary">Create Mailbox</button>

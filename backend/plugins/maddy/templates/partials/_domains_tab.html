@@ -1,89 +1,43 @@
 <!-- TAB: DOMAINS -->
 <div id="tab-domains" class="split-tab">
 
-  <!-- Add Mail Domain -->
+  {# ── 1. Existing configured mail domains (primary content) ─────────── #}
+  {% if mail_domains %}
   <div class="section mb-xl">
-    <div class="section__header"><h3>Add Mail Domain</h3></div>
-    <div class="section__body">
-      <p class="form-hint mb-md">
-        Select one of your panel domains to configure for mail delivery.
-        DNS records (MX, A, SPF, DMARC) will be created automatically.
-      </p>
-      <form id="add-domain-form" style="display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap;">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
-        <input type="hidden" name="server_ip" id="add-domain-ip" value="{{ server_ip }}">
-
-        <div style="flex:2; min-width:200px;">
-          <label class="form-label">Domain</label>
-          {% if panel_domains %}
-          <select name="domain" id="add-domain-input" class="form-input" onchange="onDomainSelect(this)" required>
-            <option value="">— Select a domain —</option>
-            {% for d in panel_domains %}
-            <option value="{{ d.name }}" data-ip="{{ d.server_ip }}">{{ d.name }}</option>
-            {% endfor %}
-          </select>
-          {% else %}
-          <input type="text" name="domain" id="add-domain-input" placeholder="example.com" required class="form-input">
-          {% endif %}
-        </div>
-
-        <button type="button" onclick="handleAddDomain()" class="btn btn--primary btn--sm">
-          + Add Domain
-        </button>
-      </form>
-
-      {% if not panel_domains and not mail_domains %}
-      <p class="form-hint mt-md" style="color:var(--color-warning, #d69e2e);">
-        ⚠ No domains found in the panel yet.
-        <a href="/domains/create">Add a domain to the panel first</a>, then return here to configure it for mail.
-      </p>
-      {% elif not panel_domains %}
-      <p class="form-hint mt-md text-muted">All your panel domains are already configured for mail.</p>
-      {% endif %}
-
-      <div id="add-domain-result" style="display:none; margin-top:10px;"></div>
+    <div class="section__header">
+      <h3>Mail Domains</h3>
     </div>
-  </div>
-
-
-
-  <!-- Configured Mail Domains List -->
-  <div class="section mb-xl">
-    <div class="section__header"><h3>Configured Mail Domains</h3></div>
     <div class="section__body">
-      {% if mail_domains %}
       <table class="table" id="domains-table">
         <thead>
           <tr>
             <th>Domain</th>
-            <th>Server IP</th>
-            <th>DNS</th>
+            <th>DNS Records</th>
             <th>SSL</th>
             <th style="text-align:right;">Actions</th>
           </tr>
         </thead>
         <tbody>
           {% for d in mail_domains %}
-          <tr id="domain-row-{{ loop.index }}">
+          <tr>
             <td><strong>{{ d.domain }}</strong></td>
-            <td><code>{{ d.server_ip }}</code></td>
             <td>
               {% if d.dns_configured %}
-                <span class="badge badge--success">Configured</span>
+                <span class="badge badge--success">✓ Configured</span>
               {% else %}
                 <span class="badge badge--secondary">Not set</span>
               {% endif %}
             </td>
             <td>
               {% if d.ssl_configured %}
-                <span class="badge badge--success">Active</span>
+                <span class="badge badge--success">✓ Active</span>
               {% else %}
                 <span class="badge badge--secondary">Self-signed</span>
               {% endif %}
             </td>
             <td style="text-align:right; display:flex; gap:8px; justify-content:flex-end; align-items:center;">
               <button type="button" class="btn btn--secondary btn--sm"
-                onclick="openDomainDetail('{{ d.domain }}')">
+                onclick="openDomainDetail('{{ d.domain }}', '{{ d.server_ip }}')">
                 Manage
               </button>
               <button type="button" class="btn btn--danger btn--sm"
@@ -95,62 +49,74 @@
           {% endfor %}
         </tbody>
       </table>
-      {% else %}
-      <div class="text-center text-muted p-4">
-        No mail domains configured yet. Add one above.
-      </div>
-      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  {# ── 2. Add new domain (only if panel has unconfigured domains) ─────── #}
+  {% if panel_domains %}
+  <div class="section mb-xl">
+    <div class="section__header"><h3>Add Mail Domain</h3></div>
+    <div class="section__body">
+      <p class="form-hint mb-md">
+        Select a domain — MX, A, SPF, and DMARC records will be created automatically.
+      </p>
+      <form id="add-domain-form" style="display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+        <input type="hidden" name="server_ip"  id="add-domain-ip" value="{{ server_ip }}">
+        <div style="flex:2; min-width:200px;">
+          <label class="form-label">Domain</label>
+          <select name="domain" id="add-domain-input" class="form-input"
+                  onchange="onDomainSelect(this)" required>
+            <option value="">— Select a domain —</option>
+            {% for d in panel_domains %}
+            <option value="{{ d.name }}" data-ip="{{ d.server_ip }}">{{ d.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <button type="button" onclick="handleAddDomain()" class="btn btn--primary btn--sm">
+          + Add Domain
+        </button>
+      </form>
+      <div id="add-domain-result" style="display:none; margin-top:10px;"></div>
     </div>
   </div>
 
-  <!-- Domain Detail Panel (hidden until "Manage" clicked) -->
+  {% elif not mail_domains %}
+  {# No panel domains AND no mail domains → guide the user #}
+  <div class="section mb-xl">
+    <div class="section__body">
+      <p style="color:var(--color-warning, #d69e2e);">
+        ⚠ No domains found in the panel yet.
+        <a href="/domains/create">Add a domain to the panel first</a>, then return here to configure it for mail.
+      </p>
+    </div>
+  </div>
+  {% endif %}
+
+  {# ── 3. Domain detail panel (shown inline when "Manage" is clicked) ── #}
   <div id="domains-detail-view" style="display:none;">
     <div class="mb-lg" style="display:flex; align-items:center; gap:12px;">
       <button type="button" class="btn btn--ghost btn--icon" onclick="closeDomainDetail()">← Back</button>
       <h2 style="margin:0;" id="detail-domain-name"></h2>
     </div>
 
-    <div class="section mb-xl">
-      <div class="section__header"><h3>DNS Configuration</h3></div>
-      <div class="section__body">
-        <p class="form-hint mb-md">Auto-provision PowerDNS records (MX, A, SPF, DKIM, DMARC) for this domain.</p>
-        <form id="dns-setup-form" style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
-          <input type="hidden" name="domain_name" id="dns-domain-input">
-          <input type="hidden" name="server_ip" id="dns-server-ip" value="{{ server_ip }}">
-          <button type="button" onclick="handleDnsAction('/plugins/maddy/api/dns/auto-setup')" class="btn btn--primary btn--sm">
-            ⚡ Setup DNS
-          </button>
-          <button type="button" onclick="handleDnsAction('/plugins/maddy/api/dns/remove')" class="btn btn--danger btn--sm">
-            🗑 Remove DNS
-          </button>
-        </form>
-        <div id="dns-result-message" style="display:none; margin-top:12px;"></div>
-      </div>
+    <!-- Inner Tab Navigation -->
+    <div class="tabs-nav mb-md" style="display:flex; gap:16px; border-bottom:1px solid var(--color-line); padding-bottom:8px;">
+      <button type="button" class="btn btn--ghost active" data-inner-tab="inner-tab-mailboxes" onclick="switchInnerTab(this)">Mailboxes</button>
+      <button type="button" class="btn btn--ghost" data-inner-tab="inner-tab-dns" onclick="switchInnerTab(this)">DNS Records</button>
+      <button type="button" class="btn btn--ghost" data-inner-tab="inner-tab-ssl" onclick="switchInnerTab(this)">SSL Certificate</button>
+      <button type="button" class="btn btn--ghost" data-inner-tab="inner-tab-settings" onclick="switchInnerTab(this)">Client Settings</button>
     </div>
 
-    <div class="section mb-xl">
-      <div class="section__header"><h3>SSL Configuration</h3></div>
-      <div class="section__body">
-        <p class="form-hint mb-md">Maddy requires a valid TLS cert for IMAP/SMTP. Rate-limited — only request once DNS is working.</p>
-        <form id="ssl-setup-form" style="display:flex; gap:12px; align-items:flex-end;">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
-          <input type="hidden" name="domain" id="ssl-domain-input">
-          <button type="button" onclick="issueMailSsl()" class="btn btn--secondary btn--sm">
-            Request Let's Encrypt SSL
-          </button>
-        </form>
-        <div id="ssl-result-message" style="display:none; margin-top:12px;"></div>
-      </div>
-    </div>
-
-    <div class="section mb-xl">
+    <!-- Mailboxes for this domain -->
+    <div id="inner-tab-mailboxes" class="inner-tab-content section mb-xl">
       <div class="section__header">
-        <h3>Mail Accounts</h3>
+        <h3>Mailboxes</h3>
         <button class="btn btn--primary btn--sm" onclick="openAddAccountModal()">+ Add Mailbox</button>
       </div>
       <div class="section__body">
-        <table class="table" id="accounts-table">
+        <table class="table" id="accounts-table" style="display:none;">
           <thead>
             <tr>
               <th>Email Address</th>
@@ -161,31 +127,62 @@
           <tbody id="accounts-tbody"></tbody>
         </table>
         <div id="accounts-empty" class="text-center text-muted p-4" style="display:none;">
-          No mailboxes for this domain yet.
+          No mailboxes for this domain yet. Click "+ Add Mailbox" above.
         </div>
       </div>
     </div>
 
-    <div class="section mb-xl">
-      <div class="section__header"><h3>Client Connection Info</h3></div>
+    <!-- DNS -->
+    <div id="inner-tab-dns" class="inner-tab-content section mb-xl" style="display:none;">
+      <div class="section__header"><h3>DNS Records</h3></div>
+      <div class="section__body">
+        <p class="form-hint mb-md">Re-provision or remove PowerDNS mail records (MX, A, SPF, DKIM, DMARC).</p>
+        <form id="dns-setup-form" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <input type="hidden" name="csrf_token"   value="{{ csrf_token(request) }}">
+          <input type="hidden" name="domain_name"  id="dns-domain-input">
+          <input type="hidden" name="server_ip"    id="dns-server-ip"    value="{{ server_ip }}">
+          <button type="button" onclick="handleDnsAction('/plugins/maddy/api/dns/auto-setup')" class="btn btn--primary btn--sm">
+            ⚡ Setup DNS
+          </button>
+          <button type="button" onclick="handleDnsAction('/plugins/maddy/api/dns/remove')" class="btn btn--secondary btn--sm">
+            Remove DNS
+          </button>
+        </form>
+        <div id="dns-result-message" style="display:none; margin-top:12px;"></div>
+      </div>
+    </div>
+
+    <!-- SSL -->
+    <div id="inner-tab-ssl" class="inner-tab-content section mb-xl" style="display:none;">
+      <div class="section__header"><h3>SSL Certificate</h3></div>
+      <div class="section__body">
+        <p class="form-hint mb-md">Request a Let's Encrypt TLS cert for <code id="mail-subdomain-preview"></code>. DNS must be working first.</p>
+        <form id="ssl-setup-form" style="display:flex; gap:8px; align-items:center;">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+          <input type="hidden" name="domain"     id="ssl-domain-input">
+          <button type="button" onclick="issueMailSsl()" class="btn btn--secondary btn--sm">
+            Request Let's Encrypt SSL
+          </button>
+        </form>
+        <div id="ssl-result-message" style="display:none; margin-top:12px;"></div>
+      </div>
+    </div>
+
+    <!-- Connection settings -->
+    <div id="inner-tab-settings" class="inner-tab-content section mb-xl" style="display:none;">
+      <div class="section__header"><h3>Client Settings</h3></div>
       <div class="section__body">
         <div class="info-row">
-          <span class="info-row__label">Incoming (IMAP)</span>
-          <span class="info-row__value">
-            Host: <code id="imap-host-preview"></code> &bull; Port: <code>993</code> (SSL/TLS) or <code>143</code> (STARTTLS)
-          </span>
+          <span class="info-row__label">IMAP (incoming)</span>
+          <span class="info-row__value"><code id="imap-host-preview"></code> &bull; Port <code>993</code> (SSL) / <code>143</code> (STARTTLS)</span>
         </div>
         <div class="info-row">
-          <span class="info-row__label">Outgoing (SMTP)</span>
-          <span class="info-row__value">
-            Host: <code id="smtp-host-preview"></code> &bull; Port: <code>587</code> (STARTTLS) or <code>465</code> (SSL/TLS)
-          </span>
+          <span class="info-row__label">SMTP (outgoing)</span>
+          <span class="info-row__value"><code id="smtp-host-preview"></code> &bull; Port <code>587</code> (STARTTLS) / <code>465</code> (SSL)</span>
         </div>
         <div class="info-row">
-          <span class="info-row__label">Authentication</span>
-          <span class="info-row__value">
-            Method: <strong>Normal Password</strong> &bull; Username: <code id="username-example-preview"></code>
-          </span>
+          <span class="info-row__label">Username</span>
+          <span class="info-row__value"><code id="username-example-preview"></code></span>
         </div>
       </div>
     </div>
@@ -195,30 +192,25 @@
 
 <!-- DELETE DOMAIN CONFIRM MODAL -->
 <div id="delete-domain-modal" class="modal-backdrop hidden" role="dialog">
-  <div class="modal" style="border-radius:0; max-width:480px;">
+  <div class="modal" style="max-width:480px;">
     <div class="modal__header">
-      <h2 style="color:var(--color-danger, #e53e3e);">⚠ Delete Mail Domain</h2>
+      <h2 style="color:var(--color-danger,#e53e3e);">⚠ Delete Mail Domain</h2>
       <button class="btn btn--ghost btn--icon" onclick="closeModal('delete-domain-modal')">✕</button>
     </div>
     <div class="modal__body">
-      <p style="margin-bottom:12px;">
-        This will permanently delete <strong id="delete-domain-name"></strong> and all associated data:
-      </p>
-      <ul style="padding-left:1.4rem; line-height:2; color:var(--color-muted); font-size:0.9rem;">
-        <li>All mailbox accounts for this domain</li>
-        <li>All DNS records (MX, A, SPF, DKIM, DMARC)</li>
+      <p>This permanently deletes <strong id="delete-domain-name"></strong> and all its data:</p>
+      <ul style="padding-left:1.4rem; line-height:2.2; color:var(--color-muted); font-size:0.9rem; margin-top:8px;">
+        <li>All mailbox accounts</li>
+        <li>DNS records (MX, A, SPF, DKIM, DMARC)</li>
         <li>SSL certificate &amp; nginx config</li>
-        <li>Domain entry in maddy.conf</li>
+        <li>Entry in maddy.conf</li>
       </ul>
       <p style="margin-top:12px; font-weight:600;">This cannot be undone.</p>
     </div>
-    <form method="post" action="/plugins/maddy/api/domains/delete" id="delete-domain-form">
-      <div class="modal__footer">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
-        <input type="hidden" name="domain" id="delete-domain-input">
-        <button type="button" class="btn btn--secondary" onclick="closeModal('delete-domain-modal')">Cancel</button>
-        <button type="submit" class="btn btn--danger">Delete Everything</button>
-      </div>
-    </form>
+    <div class="modal__footer">
+      <input type="hidden" id="delete-domain-input">
+      <button type="button" class="btn btn--secondary" onclick="closeModal('delete-domain-modal')">Cancel</button>
+      <button type="button" class="btn btn--danger" onclick="executeDeleteDomain()">Delete Everything</button>
+    </div>
   </div>
 </div>
