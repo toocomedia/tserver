@@ -97,7 +97,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const id = e.target.getAttribute('data-id');
       const checked = e.target.checked;
       try {
-        await panel.post(`/api/${id}/auto-renew`, { auto_renew: checked });
+        await panel.post(`/ssl/api/${id}/auto-renew`, { auto_renew: checked });
         toast(checked ? "Auto-renew enabled" : "Auto-renew disabled", "success");
       } catch (err) {
         // Revert UI on failure

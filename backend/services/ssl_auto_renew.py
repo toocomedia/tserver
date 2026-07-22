@@ -42,13 +42,56 @@ async def run_scheduler():
                     select(SslCert).where(SslCert.auto_renew == True)
                 )).scalars().all()
                 
-                if not certs:
-                    await asyncio.sleep(MAX_SLEEP_SECONDS)
-                    continue
-                
                 now = datetime.now(timezone.utc)
                 sleep_times = []
                 processed_any = False
+                
+                from services import panel_settings_service
+                panel_status = await panel_settings_service.get_status()
+                
+                # Check Panel SSL
+                if panel_status.get("ssl_active") and panel_status.get("panel_ssl_auto_renew_enabled") and panel_status.get("ssl_expiry"):
+                    try:
+                        expiry_str = panel_status["ssl_expiry"]
+                        # format: Aug 20 14:03:02 2026 GMT
+                        from dateutil import parser
+                        expiry = parser.parse(expiry_str)
+                        if expiry.tzinfo is None:
+                            expiry = expiry.replace(tzinfo=timezone.utc)
+                            
+                        target_date = expiry - timedelta(days=RENEW_THRESHOLD_DAYS)
+                        if -1 in _next_retry: # use -1 as panel cert ID
+                            target_date = _next_retry[-1]
+                            
+                        if target_date <= now:
+                            logger.info("Auto-renewing Panel SSL certificate")
+                            try:
+                                await panel_settings_service.ssl_issue_cert()
+                                await _add_notification(db, "success", "Successfully auto-renewed Panel SSL certificate.")
+                                if -1 in _next_retry:
+                                    del _next_retry[-1]
+                                if -1 in _retry_count:
+                                    del _retry_count[-1]
+                            except Exception as e:
+                                count = _retry_count.get(-1, 0) + 1
+                                _retry_count[-1] = count
+                                if count >= MAX_RETRIES:
+                                    logger.error("Failed to auto-renew Panel SSL after %d attempts.", MAX_RETRIES)
+                                    await _add_notification(db, "error", f"Failed to auto-renew Panel SSL after {MAX_RETRIES} attempts. Error: {str(e)}")
+                                    _next_retry[-1] = now + timedelta(days=1)
+                                    _retry_count[-1] = 0
+                                else:
+                                    logger.warning("Failed to auto-renew Panel SSL. Attempt %d/%d. Retrying in 1 hour.", count, MAX_RETRIES)
+                                    _next_retry[-1] = now + timedelta(seconds=RETRY_DELAY_SECONDS)
+                            processed_any = True
+                        else:
+                            sleep_times.append((target_date - now).total_seconds())
+                    except Exception as e:
+                        logger.error("Error parsing Panel SSL expiry: %s", e)
+                
+                if processed_any:
+                    await asyncio.sleep(1)
+                    continue
                 
                 for cert in certs:
                     if not cert.expiry_date:

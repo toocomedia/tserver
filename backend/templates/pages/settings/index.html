@@ -163,6 +163,14 @@
             {% endif %}
           </p>
 
+          <label class="form-check mb-md" id="ssl-auto-renew-wrap" {% if not s.ssl_active %}hidden{% endif %}>
+            <input type="checkbox" id="panel_ssl_auto_renew_enabled" {% if s.panel_ssl_auto_renew_enabled %}checked{% endif %}>
+            <span>
+              <strong>Auto-Renew Panel SSL</strong>
+              <span class="form-hint d-block">Automatically renew the panel's certificate 30 days before expiry.</span>
+            </span>
+          </label>
+
           <div id="ssl-active-box" class="settings-mode-box mb-md" {% if not s.ssl_active %}hidden{% endif %}>
             <div class="info-row">
               <span class="info-row__label">Status</span>
