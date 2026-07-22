@@ -84,7 +84,7 @@ EOF
     if ! grep -q "libjemalloc.so.2" "$SERVICE_FILE"; then
       sed -i '/\[Service\]/a Environment="LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so.2"' "$SERVICE_FILE"
       systemctl daemon-reload 2>/dev/null || true
-      systemctl restart srv-panel 2>/dev/null || true
+      nohup bash -c 'sleep 1 && systemctl restart srv-panel' >/dev/null 2>&1 &
     fi
   fi
 
@@ -127,7 +127,7 @@ disable_optimization() {
   if [[ -f "$SERVICE_FILE" ]]; then
     sed -i '/libjemalloc.so.2/d' "$SERVICE_FILE"
     systemctl daemon-reload 2>/dev/null || true
-    systemctl restart srv-panel 2>/dev/null || true
+    nohup bash -c 'sleep 1 && systemctl restart srv-panel' >/dev/null 2>&1 &
   fi
 
   echo "==> Low-RAM Optimization Mode DEACTIVATED."

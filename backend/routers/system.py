@@ -180,12 +180,14 @@ async def server_stats():
                 svc = None
                 if "nginx" in name:
                     svc = "nginx"
+                    if "worker process" in cmdline:
+                        services["nginx"]["workers_only"] = services["nginx"].get("workers_only", 0) + 1
                 elif "pdns_server" in name:
                     svc = "powerdns"
                 elif "python" in name or "uvicorn" in name:
                     if "srv-panel" in cmdline or "main.py" in cmdline or "uvicorn" in cmdline:
                         svc = "panel"
-                        
+
                 if svc:
                     services[svc]["cpu"] += info["cpu_percent"] or 0.0
                     services[svc]["mem"] += info["memory_percent"] or 0.0
@@ -193,6 +195,9 @@ async def server_stats():
                     services[svc]["status"] = "running"
         except (_psutil.NoSuchProcess, _psutil.AccessDenied):
             pass
+
+    if services["nginx"].get("workers_only", 0) > 0:
+        services["nginx"]["count"] = services["nginx"]["workers_only"]
             
     for s in services.values():
         s["cpu"] = round(s["cpu"], 1)

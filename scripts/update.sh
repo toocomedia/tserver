@@ -204,42 +204,6 @@ if [[ "$REFRESH_PANEL_NGINX" == "1" ]]; then
   fi
 fi
 
-# ---------------------------------------------------------------
-# Restart + health
-# ---------------------------------------------------------------
-info "Restarting srv-panel..."
-systemctl restart srv-panel
-sleep 2
-
-if ! systemctl is-active --quiet srv-panel; then
-  warn "Service failed to start"
-  systemctl status srv-panel --no-pager || true
-  if [[ -f "$BACKUP_DIR/panel.db.bak.$TS" ]]; then
-    echo "    Rollback DB: cp $BACKUP_DIR/panel.db.bak.$TS $PANEL_DIR/app/panel.db"
-  fi
-  die "Update failed — see journalctl -u srv-panel -n 80"
-fi
-
-if curl -sf -o /dev/null -w "%{http_code}" "http://127.0.0.1:${PANEL_PORT}/" | grep -qE '^(200|302)'; then
-  info "Health check OK"
-else
-  warn "App not ready yet — check journalctl -u srv-panel"
-fi
-
-# After auth rollout: existing installs may have no panel admin yet
-if [[ -x "$PANEL_DIR/scripts/create_admin.sh" ]]; then
-  if ! bash "$PANEL_DIR/scripts/create_admin.sh" --check >/dev/null 2>&1; then
-    warn "No panel admin user found. Create one before opening the UI:"
-    echo "    sudo bash $PANEL_DIR/scripts/create_admin.sh"
-  fi
-elif [[ -f "$PANEL_DIR/app/cli_create_admin.py" ]]; then
-  if ! (cd "$PANEL_DIR/app" && sudo -u "$PANEL_USER" "$PANEL_DIR/venv/bin/python" \
-      cli_create_admin.py --check >/dev/null 2>&1); then
-    warn "No panel admin user found. Create one:"
-    echo "    cd $PANEL_DIR/app && sudo -u $PANEL_USER $PANEL_DIR/venv/bin/python cli_create_admin.py"
-  fi
-fi
-
 # Drop temp git clones (get-update.sh / manual /tmp sources)
 if [[ -n "${SOURCE_DIR:-}" && "$SOURCE_DIR" == /tmp/tserver-* && -d "$SOURCE_DIR" ]]; then
   info "Removing temp source $SOURCE_DIR"
@@ -250,4 +214,9 @@ rm -rf /tmp/tserver-install /tmp/tserver-update 2>/dev/null || true
 echo ""
 echo -e "${GRN}==> Update complete${NC}"
 echo "    Backup:  $BACKUP_DIR/*.$TS"
+
+# Restart srv-panel asynchronously so subshell completes cleanly
+info "Scheduling srv-panel service restart..."
+nohup bash -c 'sleep 1 && systemctl restart srv-panel' >/dev/null 2>&1 &
+
 echo "    Service: systemctl status srv-panel"
