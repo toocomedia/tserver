@@ -460,7 +460,20 @@
   // -- Optimization Button Handlers --------------------------------------------
   let isActionPending = false;
 
+  function setOptimizationButtonsDisabled(disabled) {
+    const btnOff = document.getElementById('btn-opt-off');
+    const btnOn = document.getElementById('btn-opt-on');
+    const btnAuto = document.getElementById('btn-ngx-auto');
+    const btnSingle = document.getElementById('btn-ngx-single');
+
+    if (btnOff) btnOff.disabled = disabled;
+    if (btnOn) btnOn.disabled = disabled;
+    if (btnAuto) btnAuto.disabled = disabled;
+    if (btnSingle) btnSingle.disabled = disabled;
+  }
+
   async function setOptMode(enabled) {
+    if (isActionPending) return;
     const btnOff = document.getElementById('btn-opt-off');
     const btnOn = document.getElementById('btn-opt-on');
     const targetBtn = enabled ? btnOn : btnOff;
@@ -468,8 +481,7 @@
 
     isActionPending = true;
     if (pollTimer) clearTimeout(pollTimer);
-    btnOff.disabled = true;
-    btnOn.disabled = true;
+    setOptimizationButtonsDisabled(true);
     targetBtn.textContent = 'Applying...';
 
     try {
@@ -484,9 +496,8 @@
     } finally {
       // Wait 4 seconds for asynchronous service reload before resuming stats polling
       setTimeout(() => {
-        btnOff.disabled = false;
-        btnOn.disabled = false;
         targetBtn.textContent = originalText;
+        setOptimizationButtonsDisabled(false);
         isActionPending = false;
         fetchStats();
       }, 4000);
@@ -494,6 +505,7 @@
   }
 
   async function setNginxWorker(singleWorker) {
+    if (isActionPending) return;
     const btnAuto = document.getElementById('btn-ngx-auto');
     const btnSingle = document.getElementById('btn-ngx-single');
     const targetBtn = singleWorker ? btnSingle : btnAuto;
@@ -501,8 +513,7 @@
 
     isActionPending = true;
     if (pollTimer) clearTimeout(pollTimer);
-    btnAuto.disabled = true;
-    btnSingle.disabled = true;
+    setOptimizationButtonsDisabled(true);
     targetBtn.textContent = 'Applying...';
 
     try {
@@ -517,9 +528,8 @@
     } finally {
       // Wait 4 seconds for Nginx reload before resuming stats polling
       setTimeout(() => {
-        btnAuto.disabled = false;
-        btnSingle.disabled = false;
         targetBtn.textContent = originalText;
+        setOptimizationButtonsDisabled(false);
         isActionPending = false;
         fetchStats();
       }, 4000);
