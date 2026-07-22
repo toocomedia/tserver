@@ -158,7 +158,7 @@ async def issue_mail_ssl(
         logger.info(f"Setting up Nginx webroot for {mail_domain}")
         nginx_service.ensure_acme_root()
         await nginx_service.create_static_site(mail_domain)
-        await nginx_service.reload_nginx()
+        await nginx_service.reload()
 
         logger.info(f"Requesting Let's Encrypt SSL for {mail_domain}")
         await ssl_service.issue_cert(mail_domain, include_www=False)
