@@ -150,9 +150,14 @@ class MaddyService:
                 
                 # Directly write to SQLite to bypass Maddy CLI interactive prompts
                 conn = sqlite3.connect('/var/lib/maddy/credentials.db')
-                conn.execute("DELETE FROM credentials WHERE account = ?", (email,))
-                conn.commit()
-                conn.close()
+                try:
+                    conn.execute("DELETE FROM credentials WHERE account = ?", (email,))
+                    conn.commit()
+                except Exception as e:
+                    schema = conn.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='credentials'").fetchone()
+                    raise Exception(f"SQLite Error: {e}. Table Schema: {schema}")
+                finally:
+                    conn.close()
 
                 cmd_imap = ["/usr/local/bin/maddy", "imap-acct", "remove", email]
                 res_imap = subprocess.run(cmd_imap, input="y\ny\n", text=True, capture_output=True)
