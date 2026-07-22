@@ -185,8 +185,14 @@ async def issue_mail_ssl(
         le_live_dir = Path(f"/etc/letsencrypt/live/{mail_domain}")
         maddy_certs_dir = Path("/etc/maddy/certs")
         
-        await shell.run(["bash", "-c", f"cp {str(le_live_dir)}/fullchain.pem {str(maddy_certs_dir)}/fullchain.pem"])
-        await shell.run(["bash", "-c", f"cp {str(le_live_dir)}/privkey.pem {str(maddy_certs_dir)}/privkey.pem"])
+        res1 = await shell.run(["bash", "-c", f"cp -fL {str(le_live_dir)}/fullchain.pem {str(maddy_certs_dir)}/fullchain.pem"])
+        if not res1.success:
+            raise Exception(f"Failed to copy SSL certificate: {res1.stderr}. It seems the Let's Encrypt certificate files are missing or broken.")
+            
+        res2 = await shell.run(["bash", "-c", f"cp -fL {str(le_live_dir)}/privkey.pem {str(maddy_certs_dir)}/privkey.pem"])
+        if not res2.success:
+            raise Exception(f"Failed to copy SSL private key: {res2.stderr}")
+            
         await shell.run(["chown", "maddy:maddy", str(maddy_certs_dir / "fullchain.pem"), str(maddy_certs_dir / "privkey.pem")])
 
         logger.info("Restarting Maddy to apply new SSL")
