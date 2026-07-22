@@ -203,14 +203,15 @@ async def issue_mail_ssl(
         # 1. Set up Nginx webroot so ACME http-01 challenge works
         logger.info("Setting up Nginx webroot for %s", mail_domain)
         nginx_service.ensure_acme_root()
-        nginx_service.create_webroot(
+        webroot_path = nginx_service.create_webroot(
             mail_domain,
             "<html><head><title>Mail Server</title></head>"
             "<body style='font-family:sans-serif;text-align:center;padding:50px;'>"
             "<h1>Mail Server is Active</h1><p>IMAP/SMTP services are running.</p>"
             "</body></html>",
         )
-        await shell.run(["sudo", "-n", "chmod", "-R", "755", str(nginx_service.WEBROOT_BASE / mail_domain)])
+        # chmod the parent of /public/ so nginx can serve the challenge files
+        await shell.run(["sudo", "-n", "chmod", "-R", "755", str(Path(webroot_path).parent)])
         await nginx_service.create_static_site(mail_domain)
         await nginx_service.reload()
 
