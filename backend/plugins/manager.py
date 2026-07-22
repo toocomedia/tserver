@@ -71,7 +71,7 @@ class PluginManager:
             router_file = plugin_dir / "router.py"
             if router_file.exists():
                 try:
-                    module_name = f"backend.plugins.{plugin_dir.name}.router"
+                    module_name = f"plugins.{plugin_dir.name}.router"
                     mod = importlib.import_module(module_name)
                     if hasattr(mod, "router") and plugin_id not in self.mounted_routers:
                         app.include_router(mod.router)

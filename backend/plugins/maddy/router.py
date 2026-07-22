@@ -14,7 +14,7 @@ from sqlalchemy import select
 from database import get_db
 from models.domain import Domain
 from templating import templates
-from backend.plugins.maddy.service import maddy_service
+from plugins.maddy.service import maddy_service
 import config
 
 logger = logging.getLogger(__name__)
