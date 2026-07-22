@@ -1,49 +1,50 @@
 {% extends "layout.html" %}
 
 {% block title %}Mail Server (Maddy) — VPS Panel{% endblock %}
-{% block page_title %}Mail Server (Maddy){% endblock %}
-
-{% block topbar_actions %}
-{% if status.installed %}
-<form method="post" action="/plugins/maddy/api/uninstall" style="display:inline;">
-  <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
-  <button type="submit" class="btn btn--danger btn--sm" onclick="return confirm('Uninstall Maddy Mail Server?')">
-    Uninstall Mail Server
-  </button>
-</form>
-{% else %}
-<form method="post" action="/plugins/maddy/api/install" style="display:inline;">
-  <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
-  <button type="submit" class="btn btn--primary btn--sm">
-    Install Mail Server (~30MB RAM)
-  </button>
-</form>
-{% endif %}
-{% endblock %}
-
 {% block content_class %}content--flush{% endblock %}
 
 {% block content %}
 <div class="split-layout">
   <!-- Sidebar -->
   <div class="split-sidebar">
-    <div class="split-sidebar__item active" data-tab="tab-overview">Overview</div>
     {% if status.installed %}
-    <div class="split-sidebar__item" data-tab="tab-domains">Domains</div>
+      {% if mail_domains %}
+        {% for d in mail_domains %}
+          <div class="split-sidebar__item {% if loop.index == 1 %}active{% endif %}" onclick="openDomainDetail('{{ d.domain }}', '{{ d.server_ip }}')">
+            {{ d.domain }}
+          </div>
+        {% endfor %}
+      {% endif %}
+      <div class="split-sidebar__item {% if not mail_domains %}active{% endif %}" onclick="openAddDomain()">
+        <strong>+ Add Domain</strong>
+      </div>
+    {% else %}
+      <div class="split-sidebar__item active">Setup required</div>
     {% endif %}
   </div>
 
   <!-- Content -->
   <div class="split-content">
     
-    <div class="page-header" style="margin-top: 0;">
-      <h1 class="page-header__title" id="page-dynamic-title">Mail Server Overview</h1>
+    <div class="page-header" style="margin-top: 0; padding-bottom: 0;">
+      <h1 class="page-header__title" id="page-dynamic-title">Mail Server (Maddy)</h1>
     </div>
-
-    {% include 'partials/_overview_tab.html' %}
 
     {% if status.installed %}
       {% include 'partials/_domains_tab.html' %}
+    {% else %}
+      <div class="section" style="margin-top: 2rem;">
+        <div class="section__body text-center p-4">
+          <h3 class="mb-md">Mail Server Not Installed</h3>
+          <p class="text-muted mb-lg">Maddy Mail Server is required to manage domains and mailboxes.</p>
+          <form method="post" action="/plugins/maddy/api/install">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+            <button type="submit" class="btn btn--primary">
+              Install Mail Server (~30MB RAM)
+            </button>
+          </form>
+        </div>
+      </div>
     {% endif %}
 
   </div>

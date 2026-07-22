@@ -222,6 +222,7 @@ async def server_stats():
         "nginx": {"cpu": 0.0, "mem": 0.0, "count": 0, "status": "stopped"},
         "powerdns": {"cpu": 0.0, "mem": 0.0, "count": 0, "status": "stopped"},
         "panel": {"cpu": 0.0, "mem": 0.0, "count": 0, "status": "stopped"},
+        "maddy": {"cpu": 0.0, "mem": 0.0, "count": 0, "status": "stopped"},
     }
     for p in _psutil.process_iter(["pid", "name", "cmdline", "cpu_percent", "memory_percent", "status"]):
         try:
@@ -239,6 +240,8 @@ async def server_stats():
                         services["nginx"]["workers_only"] = services["nginx"].get("workers_only", 0) + 1
                 elif "pdns_server" in name:
                     svc = "powerdns"
+                elif "maddy" in name:
+                    svc = "maddy"
                 elif "python" in name or "uvicorn" in name:
                     if "srv-panel" in cmdline or "main.py" in cmdline or "uvicorn" in cmdline:
                         svc = "panel"
