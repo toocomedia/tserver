@@ -245,6 +245,17 @@ EOF
 chown -R maddy:maddy "${CONF_DIR}" "${DATA_DIR}"
 chmod 775 "${DATA_DIR}"
 
+# Allow panel process to read maddy credentials DB (for account listing)
+# We use world-read (644) on the credentials DB only — not the mail data.
+# The DB is recreated by maddy on start so we touch it first to ensure it exists.
+touchdb() {
+    local db="${DATA_DIR}/credentials.db"
+    [ -f "${db}" ] || sqlite3 "${db}" "CREATE TABLE IF NOT EXISTS credentials (key TEXT PRIMARY KEY NOT NULL, value TEXT NOT NULL);" 2>/dev/null || true
+    chmod 644 "${db}" 2>/dev/null || true
+    chown maddy:maddy "${db}" 2>/dev/null || true
+}
+touchdb
+
 # 7. Create Systemd Service Unit
 cat <<EOF > /etc/systemd/system/maddy.service
 [Unit]
@@ -289,4 +300,26 @@ chmod +x /etc/letsencrypt/renewal-hooks/deploy/maddy_sync.sh
 systemctl daemon-reload
 systemctl enable maddy
 systemctl restart maddy || true
+
+# Wait briefly for maddy to create its DB, then set permissions
+sleep 2
+touchdb
+
+# 9. Install sudoers rule for manage_maddy.py (NOPASSWD for panel user)
+PANEL_USER="${PANEL_USER:-panel}"
+MANAGE_SCRIPT="$(find /opt/srv-panel -name 'manage_maddy.py' 2>/dev/null | head -1 || echo '/opt/srv-panel/backend/plugins/maddy/scripts/manage_maddy.py')"
+SUDOERS_FILE="/etc/sudoers.d/panel-maddy"
+
+if [ -n "${MANAGE_SCRIPT}" ] && [ -f "${MANAGE_SCRIPT}" ]; then
+    cat > "${SUDOERS_FILE}" <<SUDOEOF
+# Managed by srv-panel maddy plugin — do not edit manually
+${PANEL_USER} ALL=(root) NOPASSWD: /usr/bin/python3 ${MANAGE_SCRIPT} *
+SUDOEOF
+    chmod 440 "${SUDOERS_FILE}"
+    echo "==> Sudoers rule installed: ${SUDOERS_FILE}"
+else
+    echo "WARNING: Could not locate manage_maddy.py — sudoers rule skipped."
+    echo "         Manually add: ${PANEL_USER} ALL=(root) NOPASSWD: /usr/bin/python3 <path>/manage_maddy.py *"
+fi
+
 echo "==> Maddy Mail Server installed & restarted successfully!"

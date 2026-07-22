@@ -7,6 +7,13 @@ const allAccounts = [
 ];
 let currentDomain = "";
 
+// Reads the CSRF token from any hidden csrf_token input present in the page.
+// This is always set by Jinja via {{ csrf_token(request) }} in forms.
+function getCsrfToken() {
+  const el = document.querySelector('input[name="csrf_token"]');
+  return el ? el.value : '';
+}
+
 // Handle split tabs
 document.querySelectorAll('.split-sidebar__item').forEach(item => {
   item.addEventListener('click', function() {
@@ -66,7 +73,7 @@ function renderAccountsList() {
   } else {
     emptyDiv.style.display = 'none';
     document.getElementById('accounts-table').style.display = 'table';
-    const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+    const csrfToken = getCsrfToken();
     filtered.forEach(acc => {
       const tr = document.createElement('tr');
       tr.innerHTML = `
@@ -93,7 +100,7 @@ function openAddAccountModal() {
 }
 
 function updateDomainSuffix() {
-  const username = document.getElementById('username-input').value.replace(/@.*$/, '') || 'info';
+  const username = document.getElementById('modal-username-input').value.replace(/@.*$/, '') || 'info';
   document.getElementById('full-email-preview').innerText = username + '@' + currentDomain;
 }
 
