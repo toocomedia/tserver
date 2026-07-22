@@ -266,9 +266,12 @@ async def toggle_optimization(payload: OptimizationToggleIn):
 
     action = "enable" if payload.enabled else "disable"
     res = await run(["bash", str(script_path), action])
+    detail = res.stdout if res.success else res.stderr
+    if "password is required" in detail.lower():
+        detail = "Sudoers permissions need updating. Please run on server: sudo bash /opt/srv-panel/scripts/update.sh"
     return {
         "success": res.success,
-        "detail": res.stdout if res.success else res.stderr,
+        "detail": detail,
     }
 
 
@@ -284,9 +287,12 @@ async def toggle_nginx_worker(payload: NginxWorkerToggleIn):
 
     action = "nginx-worker-1" if payload.single_worker else "nginx-worker-auto"
     res = await run(["bash", str(script_path), action])
+    detail = res.stdout if res.success else res.stderr
+    if "password is required" in detail.lower():
+        detail = "Sudoers permissions need updating. Please run on server: sudo bash /opt/srv-panel/scripts/update.sh"
     return {
         "success": res.success,
-        "detail": res.stdout if res.success else res.stderr,
+        "detail": detail,
     }
 
 
