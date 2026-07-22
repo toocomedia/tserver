@@ -237,11 +237,14 @@ async def issue_cert(
         select(SslCert).where(SslCert.full_domain == full_domain)
     )
     if existing:
-        if existing.cert_path and not Path(existing.cert_path).exists():
-            logger.warning(f"Certificate for {full_domain} found in DB but missing on disk. Deleting stale record and regenerating.")
-            await db.delete(existing)
-            await db.flush()
-        else:
+        if existing.cert_path:
+            res = await shell.run(["sudo", "-n", "bash", "-c", f"[ -f {existing.cert_path} ]"])
+            if not res.success:
+                logger.warning(f"Certificate for {full_domain} found in DB but missing on disk. Deleting stale record and regenerating.")
+                await db.delete(existing)
+                await db.flush()
+                existing = None
+        if existing:
             raise HTTPException(status_code=409, detail=f"Cert already exists for: {full_domain}")
 
     # Guard: nginx must exist for this exact host (not parent domain)
