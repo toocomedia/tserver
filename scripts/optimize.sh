@@ -52,17 +52,31 @@ EOF
 
   # 3. PowerDNS Low-RAM cache limits
   if [[ -f "$PDNS_CONF" ]]; then
-    if ! grep -q "Managed by srv-panel optimize.sh" "$PDNS_CONF"; then
-      cat >> "$PDNS_CONF" <<'EOF'
+    # Clean any previous optimization lines
+    sed -i '/# Managed by srv-panel optimize.sh/d' "$PDNS_CONF"
+    sed -i '/cache-entries/d' "$PDNS_CONF"
+    sed -i '/max-cache-entries/d' "$PDNS_CONF"
+    sed -i '/packet-cache-entries/d' "$PDNS_CONF"
+    sed -i '/max-packet-cache-entries/d' "$PDNS_CONF"
+    sed -i '/negquery-cache-ttl/d' "$PDNS_CONF"
+    sed -i '/max-tcp-connections/d' "$PDNS_CONF"
+
+    cp "$PDNS_CONF" "${PDNS_CONF}.bak"
+    cat >> "$PDNS_CONF" <<'EOF'
 
 # Managed by srv-panel optimize.sh
-cache-entries=2000
-packet-cache-entries=2000
+max-cache-entries=2000
+max-packet-cache-entries=2000
 negquery-cache-ttl=60
 max-tcp-connections=20
 EOF
+
+    if ! systemctl restart pdns 2>/dev/null && ! systemctl restart powerdns 2>/dev/null; then
+      echo "WARNING: PowerDNS failed with optimization config — rolling back pdns.conf" >&2
+      cp "${PDNS_CONF}.bak" "$PDNS_CONF"
       systemctl restart pdns 2>/dev/null || systemctl restart powerdns 2>/dev/null || true
     fi
+    rm -f "${PDNS_CONF}.bak"
   fi
 
   # 4. Python jemalloc in service
@@ -100,10 +114,12 @@ disable_optimization() {
   # 3. Restore PowerDNS conf
   if [[ -f "$PDNS_CONF" ]]; then
     sed -i '/# Managed by srv-panel optimize.sh/d' "$PDNS_CONF"
-    sed -i '/cache-entries=2000/d' "$PDNS_CONF"
-    sed -i '/packet-cache-entries=2000/d' "$PDNS_CONF"
-    sed -i '/negquery-cache-ttl=60/d' "$PDNS_CONF"
-    sed -i '/max-tcp-connections=20/d' "$PDNS_CONF"
+    sed -i '/cache-entries/d' "$PDNS_CONF"
+    sed -i '/max-cache-entries/d' "$PDNS_CONF"
+    sed -i '/packet-cache-entries/d' "$PDNS_CONF"
+    sed -i '/max-packet-cache-entries/d' "$PDNS_CONF"
+    sed -i '/negquery-cache-ttl/d' "$PDNS_CONF"
+    sed -i '/max-tcp-connections/d' "$PDNS_CONF"
     systemctl restart pdns 2>/dev/null || systemctl restart powerdns 2>/dev/null || true
   fi
 
