@@ -14,7 +14,7 @@ from typing import Dict, Any, List, Optional
 
 logger = logging.getLogger(__name__)
 
-ACCOUNTS_FILE = Path("/var/lib/maddy/accounts.json") if os.name != "nt" else Path(os.getenv("TEMP", "C:/tmp")) / "maddy_accounts.json"
+ACCOUNTS_FILE = Path(__file__).parent / "accounts.json"
 
 
 class MaddyService:
@@ -90,12 +90,15 @@ class MaddyService:
         # Execute CLI if installed
         if self.is_installed() and os.name != "nt":
             try:
-                subprocess.run(["maddy", "creds", "create", email], input=f"{password}\n{password}\n", text=True, check=True)
-                subprocess.run(["maddy", "imap-acct", "create", email], check=True)
+                use_sudo = hasattr(os, "geteuid") and os.geteuid() != 0
+                cmd_creds = ["sudo", "maddy", "creds", "create", email] if use_sudo else ["maddy", "creds", "create", email]
+                cmd_imap = ["sudo", "maddy", "imap-acct", "create", email] if use_sudo else ["maddy", "imap-acct", "create", email]
+                subprocess.run(cmd_creds, input=f"{password}\n{password}\n", text=True, check=False)
+                subprocess.run(cmd_imap, check=False)
             except Exception as exc:
                 logger.warning("Maddy CLI account creation warning: %s", exc)
 
-        accounts.append({"email": email, "created_at": str(Path(__file__).stat().st_mtime)})
+        accounts.append({"email": email, "created_at": "Active"})
         ACCOUNTS_FILE.parent.mkdir(parents=True, exist_ok=True)
         with open(ACCOUNTS_FILE, "w", encoding="utf-8") as f:
             json.dump(accounts, f, indent=2)
@@ -108,8 +111,11 @@ class MaddyService:
 
         if self.is_installed() and os.name != "nt":
             try:
-                subprocess.run(["maddy", "creds", "remove", email], check=False)
-                subprocess.run(["maddy", "imap-acct", "remove", email], check=False)
+                use_sudo = hasattr(os, "geteuid") and os.geteuid() != 0
+                cmd_creds = ["sudo", "maddy", "creds", "remove", email] if use_sudo else ["maddy", "creds", "remove", email]
+                cmd_imap = ["sudo", "maddy", "imap-acct", "remove", email] if use_sudo else ["maddy", "imap-acct", "remove", email]
+                subprocess.run(cmd_creds, check=False)
+                subprocess.run(cmd_imap, check=False)
             except Exception as exc:
                 logger.warning("Maddy CLI account deletion warning: %s", exc)
 
