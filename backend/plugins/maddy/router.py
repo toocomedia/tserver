@@ -34,6 +34,10 @@ SCRIPT_DIR = Path(__file__).parent / "scripts"
 @router.get("/", response_class=HTMLResponse)
 async def maddy_index(request: Request, db: AsyncSession = Depends(get_db)):
     """Render Maddy Mail Server Management Page."""
+    from plugins.manager import plugin_manager
+    plugin_info = plugin_manager.get_plugin("maddy")
+    plugin_version = plugin_info["version"] if plugin_info else "1.0.0"
+
     status = maddy_service.get_status()
     accounts = maddy_service.list_accounts()
     mail_domains = await maddy_service.list_mail_domains(db)
@@ -55,6 +59,7 @@ async def maddy_index(request: Request, db: AsyncSession = Depends(get_db)):
     return templates.TemplateResponse("maddy.html", {
         "request": request,
         "active_page": "plugins",
+        "plugin_version": plugin_version,
         "status": status,
         "accounts": accounts,
         "mail_domains": mail_domains,

@@ -72,7 +72,7 @@
                 <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
                 <input type="hidden" name="plugin_id" value="{{ plugin.id }}">
                 <input type="hidden" name="enabled" value="{% if plugin.enabled %}false{% else %}true{% endif %}">
-                <button type="submit" class="btn btn--ghost btn--sm" style="width: 100%;">
+                <button type="submit" class="btn btn--secondary btn--sm" style="width: 100%;">
                   {% if plugin.enabled %}Disable{% else %}Enable{% endif %}
                 </button>
               </form>

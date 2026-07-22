@@ -329,7 +329,7 @@
   border-left-color: var(--color-accent);
 }
 .split-sidebar__item.active:hover {
-  background: var(--color-surface);
+  background: var(--color-line);
 }
 .split-content {
   flex: 1;
