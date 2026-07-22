@@ -122,7 +122,10 @@ except Exception as e:
 
                 res_db = subprocess.run(["sudo", "-n", "python3", script_path, email, hashed], capture_output=True, text=True)
                 if res_db.returncode != 0:
-                    raise Exception(f"Database error: {res_db.stderr} {res_db.stdout}")
+                    err_msg = res_db.stderr.strip() or res_db.stdout.strip()
+                    if "a password is required" in err_msg:
+                        raise Exception("Permission denied: The panel must be running as 'root' (or have NOPASSWD sudo access) to manage Maddy accounts.")
+                    raise Exception(f"Database error: {err_msg}")
 
                 cmd_imap = ["sudo", "-n", "/usr/local/bin/maddy", "imap-acct", "create", email]
                 res_imap = subprocess.run(cmd_imap, capture_output=True, text=True)
@@ -172,7 +175,10 @@ except Exception as e:
 
                 res_db = subprocess.run(["sudo", "-n", "python3", script_path, email], capture_output=True, text=True)
                 if res_db.returncode != 0:
-                    raise Exception(f"Database error: {res_db.stderr} {res_db.stdout}")
+                    err_msg = res_db.stderr.strip() or res_db.stdout.strip()
+                    if "a password is required" in err_msg:
+                        raise Exception("Permission denied: The panel must be running as 'root' (or have NOPASSWD sudo access) to manage Maddy accounts.")
+                    raise Exception(f"Database error: {err_msg}")
 
                 cmd_imap = ["sudo", "-n", "/usr/local/bin/maddy", "imap-acct", "remove", email]
                 res_imap = subprocess.run(cmd_imap, input="y\ny\n", text=True, capture_output=True)
