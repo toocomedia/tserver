@@ -27,6 +27,27 @@ async def plugins_index(request: Request):
     })
 
 
+@router.get("/assets/{plugin_id}/{filename}")
+async def plugin_asset(plugin_id: str, filename: str):
+    """Serve plugin static assets like icons."""
+    import config
+    from fastapi import HTTPException
+    from fastapi.responses import FileResponse
+    plugin_dir = config.BASE_DIR / "plugins" / plugin_id
+    # Prevent path traversal
+    if ".." in filename or "/" in filename or "\\" in filename:
+        raise HTTPException(status_code=400, detail="Invalid filename")
+    
+    file_path = plugin_dir / filename
+    if not file_path.exists() or not file_path.is_file():
+        if filename == "icon.png":
+            fallback_path = config.BASE_DIR / "static" / "NOIMG.png"
+            if fallback_path.exists():
+                return FileResponse(fallback_path)
+        raise HTTPException(status_code=404, detail="Asset not found")
+    return FileResponse(file_path)
+
+
 @router.post("/api/install")
 async def install_plugin_api(request: Request, plugin_id: str = Form(...)):
     """Run installation script for a plugin."""
