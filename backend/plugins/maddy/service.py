@@ -101,12 +101,18 @@ class MaddyService:
                     if f.endswith(".db") or f.endswith("-wal") or f.endswith("-shm"):
                         subprocess.run(["sudo", "-n", "chmod", "666", f"/var/lib/maddy/{f}"], check=False)
 
-                cmd_creds = ["/usr/local/bin/maddy", "creds", "create", email]
+                import sqlite3
+                import bcrypt
+                
+                # Directly write to SQLite to bypass Maddy CLI TTY password prompt limitations
+                hashed = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('ascii')
+                conn = sqlite3.connect('/var/lib/maddy/credentials.db')
+                conn.execute("CREATE TABLE IF NOT EXISTS credentials (username TEXT NOT NULL PRIMARY KEY, password TEXT NOT NULL)")
+                conn.execute("INSERT OR REPLACE INTO credentials (username, password) VALUES (?, ?)", (email, hashed))
+                conn.commit()
+                conn.close()
+
                 cmd_imap = ["/usr/local/bin/maddy", "imap-acct", "create", email]
-                res_creds = subprocess.run(cmd_creds, input=f"{password}\n{password}\n", text=True, capture_output=True)
-                if res_creds.returncode != 0:
-                    raise Exception(f"Failed to create maddy creds: {res_creds.stderr}")
-                    
                 res_imap = subprocess.run(cmd_imap, capture_output=True, text=True)
                 if res_imap.returncode != 0 and "already exists" not in res_imap.stderr:
                     raise Exception(f"Failed to create maddy imap-acct: {res_imap.stderr}")
@@ -137,9 +143,15 @@ class MaddyService:
                     if f.endswith(".db") or f.endswith("-wal") or f.endswith("-shm"):
                         subprocess.run(["sudo", "-n", "chmod", "666", f"/var/lib/maddy/{f}"], check=False)
 
-                cmd_creds = ["/usr/local/bin/maddy", "creds", "remove", email]
+                import sqlite3
+                
+                # Directly write to SQLite to bypass Maddy CLI interactive prompts
+                conn = sqlite3.connect('/var/lib/maddy/credentials.db')
+                conn.execute("DELETE FROM credentials WHERE username = ?", (email,))
+                conn.commit()
+                conn.close()
+
                 cmd_imap = ["/usr/local/bin/maddy", "imap-acct", "remove", email]
-                res_creds = subprocess.run(cmd_creds, input="y\ny\n", text=True, capture_output=True)
                 res_imap = subprocess.run(cmd_imap, input="y\ny\n", text=True, capture_output=True)
 
                 for f in os.listdir("/var/lib/maddy/"):
