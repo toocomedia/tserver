@@ -170,7 +170,16 @@ class PluginManager:
             return True
 
         try:
-            subprocess.run(["bash", str(script_path)], check=True)
+            cmd = ["sudo", "bash", str(script_path)] if hasattr(os, "geteuid") and os.geteuid() != 0 else ["bash", str(script_path)]
+            res = subprocess.run(cmd, capture_output=True, text=True)
+            if res.returncode != 0:
+                logger.error("Script %s failed (code %d):\nSTDOUT: %s\nSTDERR: %s", script_path, res.returncode, res.stdout, res.stderr)
+                # Fallback to non-sudo bash
+                res_fb = subprocess.run(["bash", str(script_path)], capture_output=True, text=True)
+                if res_fb.returncode != 0:
+                    logger.error("Fallback script %s failed:\nSTDOUT: %s\nSTDERR: %s", script_path, res_fb.stdout, res_fb.stderr)
+                    return False
+
             self.discover_plugins()
             return True
         except Exception as exc:

@@ -1,51 +1,89 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# install_maddy.sh — Ultra-light Maddy Mail Server Installer
+# install_maddy.sh — Robust Ultra-light Maddy Mail Server Installer
 # Installs Maddy binary, creates maddy.conf and systemd service unit.
 # ==============================================================================
 set -euo pipefail
 
-MADDY_VERSION="0.7.1"
 INSTALL_DIR="/usr/local/bin"
 CONF_DIR="/etc/maddy"
 DATA_DIR="/var/lib/maddy"
 
-echo "==> Installing Maddy Mail Server v${MADDY_VERSION}..."
+echo "==> Installing Maddy Mail Server..."
 
-# 1. Create directories and maddy user
-mkdir -p "${CONF_DIR}" "${DATA_DIR}"
+# 1. Ensure root permissions
+if [ "$(id -u)" -ne 0 ]; then
+    echo "This script must be run as root (or via sudo)."
+    exit 1
+fi
+
+# 2. Create directories and maddy system user
+mkdir -p "${CONF_DIR}" "${DATA_DIR}" "${CONF_DIR}/certs"
 if ! id -u maddy >/dev/null 2>&1; then
     useradd -r -M -d "${DATA_DIR}" -s /sbin/nologin maddy || true
 fi
 
-# 2. Download Maddy pre-compiled binary if not present
+# 3. Download Maddy pre-compiled binary if not present
 if [ ! -f "${INSTALL_DIR}/maddy" ]; then
-    echo "Downloading Maddy binary..."
-    TMP_TAR="/tmp/maddy.tar.gz"
+    echo "Fetching latest Maddy binary release..."
+    TMP_DIR=$(mktemp -d)
+    
+    # Try fetching latest version tag or fallback to 0.7.1
+    VERSION=$(curl -sf https://api.github.com/repos/foxcpp/maddy/releases/latest | grep '"tag_name"' | cut -d'"' -f4 || echo "v0.7.1")
+    VERSION_NUM="${VERSION#v}"
+    
     ARCH=$(uname -m)
     case "${ARCH}" in
-        x86_64) MADDY_ARCH="amd64" ;;
+        x86_64) MADDY_ARCH="x86_64" ;;
         aarch64) MADDY_ARCH="arm64" ;;
-        *) MADDY_ARCH="amd64" ;;
+        *) MADDY_ARCH="x86_64" ;;
     esac
 
-    curl -fsSL "https://github.com/foxcpp/maddy/releases/download/v${MADDY_VERSION}/maddy-${MADDY_VERSION}-x86_64-linux-musl.tar.gz" -o "${TMP_TAR}" || {
-        echo "Failed to download Maddy release binary."
+    # Ensure zstd and curl are available
+    if ! command -v zstd >/dev/null 2>&1; then
+        apt-get update -qq && apt-get install -y -qq zstd curl || true
+    fi
+
+    DOWNLOAD_URL="https://github.com/foxcpp/maddy/releases/download/${VERSION}/maddy-${VERSION_NUM}-${MADDY_ARCH}-linux-musl.tar.zst"
+    TMP_FILE="${TMP_DIR}/maddy.tar.zst"
+
+    echo "Downloading ${DOWNLOAD_URL}..."
+    if ! curl -fsSL "${DOWNLOAD_URL}" -o "${TMP_FILE}"; then
+        echo "Falling back to .tar.gz format..."
+        DOWNLOAD_URL="https://github.com/foxcpp/maddy/releases/download/${VERSION}/maddy-${VERSION_NUM}-${MADDY_ARCH}-linux-musl.tar.gz"
+        TMP_FILE="${TMP_DIR}/maddy.tar.gz"
+        curl -fsSL "${DOWNLOAD_URL}" -o "${TMP_FILE}" || {
+            echo "Failed to download Maddy release archive."
+            rm -rf "${TMP_DIR}"
+            exit 1
+        }
+    fi
+
+    if [[ "${TMP_FILE}" == *.tar.zst ]]; then
+        tar -I zstd -xf "${TMP_FILE}" -C "${TMP_DIR}"
+    else
+        tar -xzf "${TMP_FILE}" -C "${TMP_DIR}"
+    fi
+
+    # Locate and move binary
+    FOUND_BIN=$(find "${TMP_DIR}" -type f -name "maddy" | head -n 1)
+    if [ -n "${FOUND_BIN}" ]; then
+        mv "${FOUND_BIN}" "${INSTALL_DIR}/maddy"
+        chmod +x "${INSTALL_DIR}/maddy"
+    else
+        echo "Could not locate maddy binary in downloaded archive."
+        rm -rf "${TMP_DIR}"
         exit 1
-    }
-    tar -xzf "${TMP_TAR}" -C /tmp
-    mv "/tmp/maddy-${MADDY_VERSION}-x86_64-linux-musl/maddy" "${INSTALL_DIR}/maddy"
-    chmod +x "${INSTALL_DIR}/maddy"
-    rm -rf "${TMP_TAR}" "/tmp/maddy-${MADDY_VERSION}-x86_64-linux-musl"
+    fi
+    rm -rf "${TMP_DIR}"
 fi
 
-# 3. Create default maddy.conf if missing
+# 4. Create default maddy.conf if missing
 if [ ! -f "${CONF_DIR}/maddy.conf" ]; then
     echo "Generating /etc/maddy/maddy.conf..."
     cat <<'EOF' > "${CONF_DIR}/maddy.conf"
 # Maddy Mail Server Configuration
 $(hostname) = $(local_hostname)
-tls file /etc/maddy/certs/fullchain.pem /etc/maddy/certs/privkey.pem
 
 auth.pass_table local_authdb {
     table sql_table {
@@ -101,7 +139,7 @@ fi
 
 chown -R maddy:maddy "${CONF_DIR}" "${DATA_DIR}"
 
-# 4. Create Systemd Service Unit
+# 5. Create Systemd Service Unit
 cat <<EOF > /etc/systemd/system/maddy.service
 [Unit]
 Description=Maddy Mail Server
@@ -123,5 +161,5 @@ WantedBy=multi-user.target
 EOF
 
 systemctl daemon-reload
-systemctl enable --now maddy
-echo "==> Maddy Mail Server installed & started successfully!"
+systemctl enable --now maddy || true
+echo "==> Maddy Mail Server installed successfully!"
