@@ -96,9 +96,9 @@ class MaddyService:
         # Execute CLI if installed
         if self.is_installed() and os.name != "nt":
             try:
-                cmd_creds = ["sudo", "-n", "bash", "-c", f"printf '%s\\n%s\\n' '{password}' '{password}' | maddy creds create {email}"]
+                cmd_creds = ["sudo", "-n", "bash", "-c", f"maddy creds create {email}"]
                 cmd_imap = ["sudo", "-n", "bash", "-c", f"maddy imap-acct create {email}"]
-                subprocess.run(cmd_creds, check=False)
+                subprocess.run(cmd_creds, input=f"{password}\n{password}\n", text=True, check=False)
                 subprocess.run(cmd_imap, check=False)
                 # Ensure permissions just in case
                 subprocess.run(["sudo", "-n", "chown", "-R", "maddy:maddy", "/var/lib/maddy/"], check=False)
