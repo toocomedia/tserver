@@ -17,50 +17,72 @@
 
 {% block content %}
 <div class="section-desc mb-4">
-  Manage panel extension plugins. Plugins run modularly and can be enabled or uninstalled on-demand.
+  Manage panel extensions. Plugins can be installed on-demand and enabled or cleanly uninstalled to release system memory.
 </div>
 
-<div class="card-grid">
+<div class="card-grid" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap:20px;">
   {% for plugin in plugins %}
-  <div class="card p-4">
-    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
-      <div>
-        <h3 style="margin:0 0 4px 0; font-size:1.1rem; display:flex; align-items:center; gap:8px;">
-          {% if plugin.icon == 'mail' %}
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="var(--color-accent)" stroke-width="2">
-            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
-            <polyline points="22,6 12,13 2,6"></polyline>
-          </svg>
+  <div class="card p-5" style="display:flex; flex-direction:column; justify-content:space-between; height:100%;">
+    <div>
+      <!-- CARD HEADER -->
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <div style="width:40px; height:40px; border-radius:10px; background:var(--color-bg-subtle, rgba(255,255,255,0.05)); display:flex; align-items:center; justify-content:center;">
+            {% if plugin.icon == 'mail' %}
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="var(--color-accent)" stroke-width="2">
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+              <polyline points="22,6 12,13 2,6"></polyline>
+            </svg>
+            {% else %}
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="var(--color-accent)" stroke-width="2">
+              <rect x="3" y="3" width="7" height="7"></rect>
+              <rect x="14" y="3" width="7" height="7"></rect>
+              <rect x="14" y="14" width="7" height="7"></rect>
+              <rect x="3" y="14" width="7" height="7"></rect>
+            </svg>
+            {% endif %}
+          </div>
+          <div>
+            <h3 style="margin:0 0 2px 0; font-size:1.1rem;">{{ plugin.name }}</h3>
+            <div class="text-muted" style="font-size:0.8rem;">v{{ plugin.version }} &bull; By {{ plugin.author }}</div>
+          </div>
+        </div>
+
+        <div>
+          {% if not plugin.installed %}
+          <span class="badge badge--secondary">Not Installed</span>
+          {% elif plugin.enabled %}
+          <span class="badge badge--success">Active</span>
           {% else %}
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="var(--color-accent)" stroke-width="2">
-            <rect x="3" y="3" width="7" height="7"></rect>
-            <rect x="14" y="3" width="7" height="7"></rect>
-            <rect x="14" y="14" width="7" height="7"></rect>
-            <rect x="3" y="14" width="7" height="7"></rect>
-          </svg>
+          <span class="badge badge--warning">Disabled</span>
           {% endif %}
-          {{ plugin.name }}
-        </h3>
-        <div class="text-muted" style="font-size:0.85rem;">Version {{ plugin.version }} &bull; By {{ plugin.author }}</div>
+        </div>
       </div>
-      <div>
-        {% if plugin.enabled %}
-        <span class="badge badge--success">Enabled</span>
-        {% else %}
-        <span class="badge badge--secondary">Disabled</span>
-        {% endif %}
-      </div>
+
+      <!-- CARD DESCRIPTION -->
+      <p style="font-size:0.88rem; color:var(--color-text-secondary); line-height:1.4; margin-bottom:20px;">
+        {{ plugin.description }}
+      </p>
     </div>
 
-    <p style="font-size:0.9rem; color:var(--color-text-secondary); margin-bottom:16px;">
-      {{ plugin.description }}
-    </p>
+    <!-- CARD FOOTER ACTIONS -->
+    <div style="border-top:1px solid var(--color-border); padding-top:14px; display:flex; gap:8px; justify-content:flex-end; align-items:center; flex-wrap:wrap;">
+      {% if not plugin.installed %}
+      <!-- INSTALL BUTTON -->
+      <form method="post" action="/plugins/api/install" style="width:100%;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+        <input type="hidden" name="plugin_id" value="{{ plugin.id }}">
+        <button type="submit" class="btn btn--primary" style="width:100%;">
+          ⚡ Install Plugin
+        </button>
+      </form>
+      {% else %}
 
-    <div style="display:flex; gap:8px; justify-content:flex-end;">
-      {% if plugin.route_prefix %}
-      <a href="{{ plugin.route_prefix }}" class="btn btn--secondary btn--sm">Manage Page</a>
+      {% if plugin.route_prefix and plugin.enabled %}
+      <a href="{{ plugin.route_prefix }}" class="btn btn--secondary btn--sm">⚙️ Manage Page</a>
       {% endif %}
 
+      <!-- TOGGLE ENABLE / DISABLE -->
       <form method="post" action="/plugins/api/toggle" style="display:inline;">
         <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
         <input type="hidden" name="plugin_id" value="{{ plugin.id }}">
@@ -69,10 +91,20 @@
           {% if plugin.enabled %}Disable{% else %}Enable{% endif %}
         </button>
       </form>
+
+      <!-- UNINSTALL BUTTON -->
+      <form method="post" action="/plugins/api/uninstall" style="display:inline;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+        <input type="hidden" name="plugin_id" value="{{ plugin.id }}">
+        <button type="submit" class="btn btn--danger btn--sm" onclick="return confirm('Uninstall {{ plugin.name }}? This will release system resources.')">
+          Uninstall
+        </button>
+      </form>
+      {% endif %}
     </div>
   </div>
   {% else %}
-  <div class="card p-6 text-center text-muted">
+  <div class="card p-6 text-center text-muted" style="grid-column: 1 / -1;">
     No plugins installed yet. Click "Upload Plugin (.zip)" to add a plugin.
   </div>
   {% endfor %}
@@ -91,7 +123,7 @@
         <div class="form-group">
           <label class="form-label">Plugin Archive (.zip)</label>
           <input type="file" name="plugin_file" accept=".zip" required class="form-input">
-          <div class="form-hint">Must contain a valid <code>plugin.json</code> file.</div>
+          <div class="form-hint">Must contain a valid <code>plugin.json</code> manifest.</div>
         </div>
       </div>
       <div class="modal__footer">

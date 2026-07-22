@@ -1,6 +1,6 @@
 """
 routers/plugins.py — System Plugin Manager routes.
-Handles viewing installed plugins, toggling plugins, and uploading plugin zip archives.
+Handles viewing installed plugins, toggling plugins, running install/uninstall scripts, and uploading plugin zip archives.
 """
 import os
 import shutil
@@ -27,13 +27,31 @@ async def plugins_index(request: Request):
     })
 
 
+@router.post("/api/install")
+async def install_plugin_api(request: Request, plugin_id: str = Form(...)):
+    """Run installation script for a plugin."""
+    success = plugin_manager.run_plugin_script(plugin_id, "install")
+    if success:
+        return RedirectResponse("/plugins/", status_code=303)
+    return JSONResponse({"detail": f"Failed to install plugin '{plugin_id}'."}, status_code=400)
+
+
+@router.post("/api/uninstall")
+async def uninstall_plugin_api(request: Request, plugin_id: str = Form(...)):
+    """Run uninstallation script for a plugin."""
+    success = plugin_manager.run_plugin_script(plugin_id, "uninstall")
+    if success:
+        return RedirectResponse("/plugins/", status_code=303)
+    return JSONResponse({"detail": f"Failed to uninstall plugin '{plugin_id}'."}, status_code=400)
+
+
 @router.post("/api/toggle")
 async def toggle_plugin(request: Request, plugin_id: str = Form(...), enabled: bool = Form(...)):
     """Enable or disable a plugin."""
     success = plugin_manager.toggle_plugin(plugin_id, enabled)
     if success:
-        return JSONResponse({"status": "ok", "message": f"Plugin '{plugin_id}' status updated."})
-    return JSONResponse({"detail": "Failed to update plugin status."}, status_code=400)
+        return RedirectResponse("/plugins/", status_code=303)
+    return JSONResponse({"detail": "Cannot enable plugin before it is installed."}, status_code=400)
 
 
 @router.post("/api/upload")

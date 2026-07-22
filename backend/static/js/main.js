@@ -280,15 +280,26 @@ document.addEventListener("DOMContentLoaded", () => {
   guardFormSubmitButtons();
 
   const current = window.location.pathname;
+  let bestMatch = null;
+  let maxLen = -1;
+
   document.querySelectorAll(".sidebar__item[data-path]").forEach((item) => {
+    item.classList.remove("sidebar__item--active");
     const itemPath = item.getAttribute("data-path") || "";
     // Normalize: /domains and /domains/ both match
     const a = current.replace(/\/+$/, "") || "/";
     const b = itemPath.replace(/\/+$/, "") || "/";
     if (a === b || (b !== "/" && a.startsWith(b + "/"))) {
-      item.classList.add("sidebar__item--active");
+      if (b.length > maxLen) {
+        maxLen = b.length;
+        bestMatch = item;
+      }
     }
   });
+
+  if (bestMatch) {
+    bestMatch.classList.add("sidebar__item--active");
+  }
 
   // Mobile menu toggle
   const mobileToggle = document.getElementById("mobile-menu-toggle");

@@ -10,6 +10,7 @@ import json
 import logging
 import importlib
 import shutil
+import subprocess
 import zipfile
 from pathlib import Path
 from typing import Dict, Any, List, Optional
@@ -26,8 +27,25 @@ class PluginManager:
         self.plugins: Dict[str, Dict[str, Any]] = {}
         self.mounted_routers: set[str] = set()
 
+    def _check_plugin_installed(self, plugin_dir: Path, plugin_id: str) -> bool:
+        """Check if plugin's service reports that it is installed on system."""
+        service_file = plugin_dir / "service.py"
+        if not service_file.exists():
+            return True  # Pure UI plugins are considered installed
+
+        try:
+            mod = importlib.import_module(f"plugins.{plugin_dir.name}.service")
+            for attr in ["maddy_service", "service", f"{plugin_id}_service"]:
+                svc = getattr(mod, attr, None)
+                if svc and hasattr(svc, "is_installed"):
+                    return svc.is_installed()
+        except Exception as exc:
+            logger.warning("Could not check installation status for plugin %s: %s", plugin_id, exc)
+
+        return True
+
     def discover_plugins(self) -> List[Dict[str, Any]]:
-        """Scan backend/plugins/ for plugin.json manifests."""
+        """Scan backend/plugins/ for plugin.json manifests and check installation status."""
         self.plugins.clear()
         if not PLUGINS_DIR.exists():
             return []
@@ -43,6 +61,7 @@ class PluginManager:
                             data["id"] = plugin_id
                             data["dir_path"] = str(item)
                             data["enabled"] = data.get("enabled", True)
+                            data["installed"] = self._check_plugin_installed(item, plugin_id)
                             self.plugins[plugin_id] = data
                     except Exception as exc:
                         logger.error("Error reading manifest for plugin %s: %s", item.name, exc)
@@ -57,8 +76,6 @@ class PluginManager:
         template_dirs = [str(templates.env.loader.searchpath[0])] if templates.env.loader else []
 
         for plugin_id, plugin in self.plugins.items():
-            if not plugin.get("enabled", True):
-                continue
 
             plugin_dir = Path(plugin["dir_path"])
 
@@ -86,16 +103,20 @@ class PluginManager:
             templates.env.loader = ChoiceLoader(loaders)
 
     def get_sidebar_items(self) -> List[Dict[str, Any]]:
-        """Return list of enabled plugins configured for sidebar display."""
+        """Return list of enabled & installed plugins configured for sidebar display."""
         items = []
         for plugin_id, plugin in self.plugins.items():
             if plugin.get("enabled", True) and plugin.get("sidebar", False):
-                items.append({
-                    "id": plugin_id,
-                    "label": plugin.get("sidebar_label", plugin.get("name")),
-                    "route": plugin.get("route_prefix", f"/plugins/{plugin_id}"),
-                    "icon": plugin.get("icon", "grid"),
-                })
+                plugin_dir = Path(plugin["dir_path"])
+                is_installed = self._check_plugin_installed(plugin_dir, plugin_id)
+
+                if is_installed:
+                    items.append({
+                        "id": plugin_id,
+                        "label": plugin.get("sidebar_label", plugin.get("name")),
+                        "route": plugin.get("route_prefix", f"/plugins/{plugin_id}"),
+                        "icon": plugin.get("icon", "grid"),
+                    })
         return items
 
     def get_plugin(self, plugin_id: str) -> Optional[Dict[str, Any]]:
@@ -108,6 +129,10 @@ class PluginManager:
         """Enable or disable a plugin in its plugin.json manifest."""
         plugin = self.get_plugin(plugin_id)
         if not plugin:
+            return False
+
+        if not plugin.get("installed", False) and enabled:
+            logger.warning("Cannot enable plugin %s because it is not installed.", plugin_id)
             return False
 
         manifest_path = Path(plugin["dir_path"]) / "plugin.json"
@@ -125,17 +150,42 @@ class PluginManager:
             logger.error("Failed to toggle plugin %s: %s", plugin_id, exc)
             return False
 
+    def run_plugin_script(self, plugin_id: str, action: str) -> bool:
+        """Run install or uninstall script for a plugin."""
+        plugin = self.get_plugin(plugin_id)
+        if not plugin:
+            return False
+
+        script_rel = plugin.get(f"{action}_script")
+        if not script_rel:
+            return True
+
+        script_path = Path(plugin["dir_path"]) / script_rel
+        if not script_path.exists():
+            logger.error("Script %s does not exist for plugin %s", script_path, plugin_id)
+            return False
+
+        if os.name == "nt":
+            logger.info("Windows detected — skipping bash script %s for %s", script_path, action)
+            return True
+
+        try:
+            subprocess.run(["bash", str(script_path)], check=True)
+            self.discover_plugins()
+            return True
+        except Exception as exc:
+            logger.error("Error executing %s script for plugin %s: %s", action, plugin_id, exc)
+            return False
+
     def upload_plugin_zip(self, zip_filepath: str) -> Optional[Dict[str, Any]]:
         """Extract uploaded .zip archive into backend/plugins/."""
         try:
             with zipfile.ZipFile(zip_filepath, 'r') as zip_ref:
-                # Security check: inspect manifest
                 manifest_file = [f for f in zip_ref.namelist() if f.endswith("plugin.json")]
                 if not manifest_file:
                     logger.error("Uploaded zip has no plugin.json manifest")
                     return None
 
-                # Extract to PLUGINS_DIR
                 zip_ref.extractall(PLUGINS_DIR)
 
             self.discover_plugins()
