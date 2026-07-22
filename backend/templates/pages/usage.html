@@ -55,6 +55,40 @@
   .proc-status--zombie   { color: var(--color-danger); }
 
   .info-row__value .usage-bar-wrap { min-width: 200px; }
+
+  /* Rectangular Segmented Toggle Buttons */
+  .rect-segmented {
+    display: inline-flex;
+    align-items: center;
+    background: var(--color-surface-2, #1e232a);
+    border: 1px solid var(--color-line, rgba(255,255,255,0.12));
+    border-radius: 6px;
+    padding: 3px;
+    gap: 2px;
+  }
+  .rect-segment {
+    border: none;
+    background: transparent;
+    color: var(--color-muted, #888);
+    padding: 6px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .rect-segment:hover:not(:disabled) {
+    color: var(--color-text, #fff);
+  }
+  .rect-segment--active {
+    background: var(--color-accent, #3b82f6);
+    color: #ffffff !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+  }
+  .rect-segment:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
 </style>
 {% endblock %}
 
@@ -103,30 +137,32 @@
     <!-- Control 1: Low-RAM Optimization Mode -->
     <div class="info-row" style="align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;">
       <div style="flex: 1; min-width: 260px;">
-        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px;">
+        <div style="margin-bottom: 4px;">
           <strong style="font-size: 15px;">Low-RAM Optimization Mode</strong>
-          <span class="badge badge--muted" id="badge-opt-mode">Inactive</span>
         </div>
         <div class="text-small text-muted">Enables zRAM compressed swap (500MB pool), sets swappiness (10), caps PowerDNS caches, and optimizes Python memory allocator.</div>
       </div>
-      <div style="display: flex; align-items: center; gap: 8px;">
-        <button class="btn btn--secondary btn--sm" id="btn-opt-disable" onclick="setOptMode(false)" style="display:none;">Disable Mode</button>
-        <button class="btn btn--primary btn--sm" id="btn-opt-enable" onclick="setOptMode(true)">Enable Mode</button>
+      <div>
+        <div class="rect-segmented" id="group-opt-mode">
+          <button type="button" class="rect-segment rect-segment--active" id="btn-opt-off" onclick="setOptMode(false)">Inactive</button>
+          <button type="button" class="rect-segment" id="btn-opt-on" onclick="setOptMode(true)">Active</button>
+        </div>
       </div>
     </div>
 
     <!-- Control 2: Single Nginx Worker Mode -->
     <div class="info-row" style="align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; border-top: 1px solid var(--color-line); padding-top: 14px; margin-top: 14px;">
       <div style="flex: 1; min-width: 260px;">
-        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px;">
+        <div style="margin-bottom: 4px;">
           <strong style="font-size: 15px;">Single Nginx Worker Mode (worker_processes 1)</strong>
-          <span class="badge badge--muted" id="badge-nginx-worker">Auto</span>
         </div>
         <div class="text-small text-muted">Forces Nginx to run 1 worker process instead of auto. Recommended for 1 CPU core VPS.</div>
       </div>
-      <div style="display: flex; align-items: center; gap: 8px;">
-        <button class="btn btn--secondary btn--sm" id="btn-ngx-auto" onclick="setNginxWorker(false)" style="display:none;">Set to Auto</button>
-        <button class="btn btn--primary btn--sm" id="btn-ngx-single" onclick="setNginxWorker(true)">Use 1 Worker</button>
+      <div>
+        <div class="rect-segmented" id="group-nginx-worker">
+          <button type="button" class="rect-segment rect-segment--active" id="btn-ngx-auto" onclick="setNginxWorker(false)">Auto</button>
+          <button type="button" class="rect-segment" id="btn-ngx-single" onclick="setNginxWorker(true)">1 Worker</button>
+        </div>
       </div>
     </div>
 
@@ -398,24 +434,28 @@
     }
 
     if (d.optimization) {
-      const optBadge = document.getElementById('badge-opt-mode');
-      const btnOptEnable = document.getElementById('btn-opt-enable');
-      const btnOptDisable = document.getElementById('btn-opt-disable');
-      if (optBadge && !isActionPending) {
-        optBadge.textContent = d.optimization.optimization_active ? 'Active' : 'Inactive';
-        optBadge.className = 'badge ' + (d.optimization.optimization_active ? 'badge--ok' : 'badge--muted');
-        btnOptEnable.style.display = d.optimization.optimization_active ? 'none' : 'inline-block';
-        btnOptDisable.style.display = d.optimization.optimization_active ? 'inline-block' : 'none';
+      const btnOptOff = document.getElementById('btn-opt-off');
+      const btnOptOn = document.getElementById('btn-opt-on');
+      if (btnOptOff && btnOptOn && !isActionPending) {
+        if (d.optimization.optimization_active) {
+          btnOptOff.className = 'rect-segment';
+          btnOptOn.className = 'rect-segment rect-segment--active';
+        } else {
+          btnOptOff.className = 'rect-segment rect-segment--active';
+          btnOptOn.className = 'rect-segment';
+        }
       }
 
-      const ngxBadge = document.getElementById('badge-nginx-worker');
-      const btnNgxSingle = document.getElementById('btn-ngx-single');
       const btnNgxAuto = document.getElementById('btn-ngx-auto');
-      if (ngxBadge && !isActionPending) {
-        ngxBadge.textContent = d.optimization.nginx_single_worker ? '1 Worker' : 'Auto';
-        ngxBadge.className = 'badge ' + (d.optimization.nginx_single_worker ? 'badge--ok' : 'badge--muted');
-        btnNgxSingle.style.display = d.optimization.nginx_single_worker ? 'none' : 'inline-block';
-        btnNgxAuto.style.display = d.optimization.nginx_single_worker ? 'inline-block' : 'none';
+      const btnNgxSingle = document.getElementById('btn-ngx-single');
+      if (btnNgxAuto && btnNgxSingle && !isActionPending) {
+        if (d.optimization.nginx_single_worker) {
+          btnNgxAuto.className = 'rect-segment';
+          btnNgxSingle.className = 'rect-segment rect-segment--active';
+        } else {
+          btnNgxAuto.className = 'rect-segment rect-segment--active';
+          btnNgxSingle.className = 'rect-segment';
+        }
       }
     }
 
@@ -429,20 +469,20 @@
   let isActionPending = false;
 
   async function setOptMode(enabled) {
-    const btnEnable = document.getElementById('btn-opt-enable');
-    const btnDisable = document.getElementById('btn-opt-disable');
-    const targetBtn = enabled ? btnEnable : btnDisable;
+    const btnOff = document.getElementById('btn-opt-off');
+    const btnOn = document.getElementById('btn-opt-on');
+    const targetBtn = enabled ? btnOn : btnOff;
     const originalText = targetBtn.textContent;
 
     isActionPending = true;
-    btnEnable.disabled = true;
-    btnDisable.disabled = true;
-    targetBtn.textContent = enabled ? 'Enabling...' : 'Disabling...';
+    btnOff.disabled = true;
+    btnOn.disabled = true;
+    targetBtn.textContent = 'Applying...';
 
     try {
       const res = await panel.post('/api/system/optimization/toggle', { enabled });
       if (res.success) {
-        toast(enabled ? 'Low-RAM Optimization Mode enabled' : 'Optimization Mode disabled', 'success');
+        toast(enabled ? 'Low-RAM Optimization Mode activated' : 'Optimization Mode deactivated', 'success');
       } else {
         toast('Failed: ' + (res.detail || 'Error'), 'danger');
       }
@@ -450,8 +490,8 @@
       toast(e.message, 'danger');
     } finally {
       setTimeout(() => {
-        btnEnable.disabled = false;
-        btnDisable.disabled = false;
+        btnOff.disabled = false;
+        btnOn.disabled = false;
         targetBtn.textContent = originalText;
         isActionPending = false;
         fetchStats();
@@ -460,15 +500,15 @@
   }
 
   async function setNginxWorker(singleWorker) {
-    const btnSingle = document.getElementById('btn-ngx-single');
     const btnAuto = document.getElementById('btn-ngx-auto');
+    const btnSingle = document.getElementById('btn-ngx-single');
     const targetBtn = singleWorker ? btnSingle : btnAuto;
     const originalText = targetBtn.textContent;
 
     isActionPending = true;
-    btnSingle.disabled = true;
     btnAuto.disabled = true;
-    targetBtn.textContent = 'Updating...';
+    btnSingle.disabled = true;
+    targetBtn.textContent = 'Applying...';
 
     try {
       const res = await panel.post('/api/system/nginx-worker/toggle', { single_worker: singleWorker });
@@ -481,12 +521,10 @@
       toast(e.message, 'danger');
     } finally {
       setTimeout(() => {
-        btnSingle.disabled = false;
         btnAuto.disabled = false;
+        btnSingle.disabled = false;
         targetBtn.textContent = originalText;
         isActionPending = false;
-        fetchStats();
-      }, 2000);
     }
   }
 
