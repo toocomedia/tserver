@@ -171,6 +171,12 @@ async def issue_mail_ssl(
             else:
                 raise e
 
+        # Ensure Nginx serves HTTPS (in case the user visits https://mail.domain.com in browser)
+        cert_path = f"/etc/letsencrypt/live/{mail_domain}/fullchain.pem"
+        key_path = f"/etc/letsencrypt/live/{mail_domain}/privkey.pem"
+        await nginx_service.update_static_site_ssl(mail_domain, cert_path, key_path)
+        await nginx_service.reload()
+
         # Copy certs to Maddy directory securely
         logger.info(f"Linking newly generated SSL certs to Maddy")
         le_live_dir = Path(f"/etc/letsencrypt/live/{mail_domain}")
