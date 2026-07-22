@@ -324,10 +324,8 @@ async def issue_cert(
             )
             domain_obj.nginx_config_path = new_config
         else:
-            raise HTTPException(
-                status_code=400,
-                detail=f"No domain or reverse proxy found for {full_domain}",
-            )
+            logger.info("Unmanaged domain %s, generating default static SSL config", full_domain)
+            await nginx_service.update_static_site_ssl(full_domain, cert_path, key_path)
         await nginx_service.reload()
     except HTTPException:
         raise
