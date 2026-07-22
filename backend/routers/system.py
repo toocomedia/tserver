@@ -83,36 +83,49 @@ def _uptime_human(seconds: float) -> str:
 
 
 async def _get_optimization_status() -> dict:
-    """Check optimization status via optimize.sh or fallback sysctl/nginx inspection."""
-    script_path = config.BASE_DIR / "scripts" / "optimize.sh"
-    if not script_path.exists():
-        script_path = Path("/opt/srv-panel/scripts/optimize.sh")
-
-    if script_path.exists():
-        res = await run(["bash", str(script_path), "status"])
-        if res.success:
-            try:
-                return json.loads(res.stdout)
-            except Exception:
-                pass
-
+    """Inspect system optimization state in pure Python for high reliability."""
+    import re
+    
+    # 1. Swappiness / sysctl inspection
     opt_active = Path("/etc/sysctl.d/99-srv-panel-optimize.conf").exists()
+    if not opt_active and Path("/proc/sys/vm/swappiness").exists():
+        try:
+            val = Path("/proc/sys/vm/swappiness").read_text().strip()
+            if val == "10":
+                opt_active = True
+        except Exception:
+            pass
+
+    # 2. zRAM inspection
+    zram_active = False
+    try:
+        res = await run(["systemctl", "is-active", "zramswap"])
+        if res.success and "active" in res.stdout.strip():
+            zram_active = True
+            opt_active = True
+    except Exception:
+        pass
+
+    # 3. Nginx worker_processes inspection
     nginx_single = False
+    worker_setting = "auto"
     nginx_conf = Path("/etc/nginx/nginx.conf")
     if nginx_conf.exists():
         try:
             content = nginx_conf.read_text()
-            if "worker_processes 1;" in content:
-                nginx_single = True
+            match = re.search(r'worker_processes\s+([^;]+);', content)
+            if match:
+                worker_setting = match.group(1).strip()
+                if worker_setting == "1":
+                    nginx_single = True
         except Exception:
             pass
 
     return {
         "optimization_active": opt_active,
-        "zram_active": False,
+        "zram_active": zram_active,
         "nginx_single_worker": nginx_single,
-        "nginx_worker_setting": "1" if nginx_single else "auto",
-        "swappiness": 60,
+        "nginx_worker_setting": worker_setting,
     }
 
 
