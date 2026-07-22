@@ -90,3 +90,20 @@ document.addEventListener("DOMContentLoaded", () => {
   // Trigger initial sync if a value is already selected (e.g. preselect_id)
   if (select.value) updateForm();
 });
+
+document.addEventListener("DOMContentLoaded", () => {
+  document.querySelectorAll('.auto-renew-toggle').forEach(checkbox => {
+    checkbox.addEventListener('change', async (e) => {
+      const id = e.target.getAttribute('data-id');
+      const checked = e.target.checked;
+      try {
+        await panel.post(`/api/${id}/auto-renew`, { auto_renew: checked });
+        toast(checked ? "Auto-renew enabled" : "Auto-renew disabled", "success");
+      } catch (err) {
+        // Revert UI on failure
+        e.target.checked = !checked;
+        toast(err.message || "Failed to update auto-renew", "danger");
+      }
+    });
+  });
+});

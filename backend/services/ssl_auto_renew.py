@@ -37,10 +37,6 @@ async def run_scheduler():
     
     while True:
         try:
-            if not config.SSL_AUTO_RENEW_ENABLED:
-                await asyncio.sleep(MAX_SLEEP_SECONDS)
-                continue
-                
             async with AsyncSessionLocal() as db:
                 certs = (await db.execute(
                     select(SslCert).where(SslCert.auto_renew == True)

@@ -38,6 +38,7 @@
       <col style="width:18%">
       <col style="width:12%">
       <col style="width:14%">
+      <col style="width:12%">
       <col style="width:26%">
     </colgroup>
     <thead>
@@ -46,6 +47,7 @@
         <th>Expiry Date</th>
         <th>Days Left</th>
         <th>Status</th>
+        <th>Auto-Renew</th>
         <th class="col-actions" style="width:26%;">Actions</th>
       </tr>
     </thead>
@@ -94,6 +96,13 @@
           {% endif %}
         </td>
 
+        <td>
+          <label class="form-check" style="margin:0;">
+            <input type="checkbox" class="auto-renew-toggle" data-id="{{ cert.id }}" {% if cert.auto_renew %}checked{% endif %}>
+            <span style="display:none;">Auto-Renew</span>
+          </label>
+        </td>
+
         <td class="col-actions" style="width:26%;">
           <div class="d-flex gap-xs justify-end">
             <form method="post" action="/ssl/{{ cert.id }}/renew" style="display:inline;">
@@ -120,7 +129,7 @@
 
 <!-- Auto-renew info -->
 <p class="text-small text-muted" style="margin-top:var(--space-lg);">
-  All certificates are set to auto-renew. Certbot runs renewal checks via system timer.
+  Toggle the auto-renew switch to enable or disable automatic renewal checks for each certificate.
 </p>
 
 {% else %}

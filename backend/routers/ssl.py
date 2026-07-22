@@ -184,3 +184,16 @@ async def ssl_revoke(cert_id: int, db: AsyncSession = Depends(get_db)):
     except Exception as exc:
         error = str(exc.detail) if hasattr(exc, "detail") else str(exc)
         return RedirectResponse(f"/ssl/?error={error}", status_code=303)
+
+from pydantic import BaseModel
+class AutoRenewPayload(BaseModel):
+    auto_renew: bool
+
+@router.post("/api/{cert_id}/auto-renew")
+async def ssl_auto_renew_toggle(cert_id: int, payload: AutoRenewPayload, db: AsyncSession = Depends(get_db)):
+    """Toggle auto_renew for a certificate."""
+    cert = await db.scalar(select(SslCert).where(SslCert.id == cert_id))
+    if cert:
+        cert.auto_renew = payload.auto_renew
+        await db.commit()
+    return {"status": "ok", "auto_renew": payload.auto_renew}
