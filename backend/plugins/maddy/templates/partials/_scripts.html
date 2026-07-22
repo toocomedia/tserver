@@ -48,11 +48,18 @@ function openDomainDetail(domain) {
   document.getElementById('detail-domain-name').innerText = domain;
   document.getElementById('dns-domain-input').value = domain;
   document.getElementById('ssl-domain-input').value = domain;
+
+  // Copy the stored server IP from the domain row's select option (if present)
+  const domainOption = document.querySelector(`#add-domain-input option[value="${domain}"]`);
+  if (domainOption && domainOption.dataset.ip) {
+    const dnsIpField = document.getElementById('dns-server-ip');
+    if (dnsIpField) dnsIpField.value = domainOption.dataset.ip;
+  }
+
   document.getElementById('imap-host-preview').innerText = 'mail.' + domain;
   document.getElementById('smtp-host-preview').innerText = 'mail.' + domain;
   document.getElementById('username-example-preview').innerText = 'user@' + domain;
   renderAccountsList();
-  // Scroll to detail panel
   document.getElementById('domains-detail-view').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 

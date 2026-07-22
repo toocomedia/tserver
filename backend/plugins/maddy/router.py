@@ -203,10 +203,19 @@ async def add_mail_domain(
     server_ip: str = Form(...),
     db: AsyncSession = Depends(get_db),
 ):
-    """Register a domain for mail delivery and update maddy.conf."""
+    """Register a domain for mail delivery, update maddy.conf, and auto-setup DNS."""
     try:
-        await maddy_service.add_mail_domain(db, domain.strip(), server_ip.strip())
-        return RedirectResponse("/plugins/maddy/", status_code=303)
+        result = await maddy_service.add_mail_domain(db, domain.strip(), server_ip.strip())
+        dns_msg = (
+            "DNS records (MX, A, SPF, DMARC, DKIM) created automatically."
+            if result.get("dns_configured")
+            else "Domain added to maddy — DNS setup may need a manual retry."
+        )
+        return JSONResponse({
+            "status": "ok",
+            "message": f"✅ {domain} added for mail. {dns_msg}",
+            "dns_configured": result.get("dns_configured", False),
+        })
     except ValueError as exc:
         return JSONResponse({"detail": str(exc)}, status_code=400)
     except Exception as exc:

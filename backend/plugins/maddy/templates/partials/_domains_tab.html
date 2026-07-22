@@ -7,12 +7,13 @@
     <div class="section__body">
       <p class="form-hint mb-md">
         Select one of your panel domains to configure for mail delivery.
-        This updates <code>maddy.conf</code> and restarts maddy automatically.
+        DNS records (MX, A, SPF, DMARC) will be created automatically.
       </p>
       <form id="add-domain-form" style="display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap;">
         <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+        <input type="hidden" name="server_ip" id="add-domain-ip" value="{{ server_ip }}">
 
-        <div style="flex:2; min-width:180px;">
+        <div style="flex:2; min-width:200px;">
           <label class="form-label">Domain</label>
           {% if panel_domains %}
           <select name="domain" id="add-domain-input" class="form-input" onchange="onDomainSelect(this)" required>
@@ -22,14 +23,8 @@
             {% endfor %}
           </select>
           {% else %}
-          {# No panel domains available — allow manual entry #}
           <input type="text" name="domain" id="add-domain-input" placeholder="example.com" required class="form-input">
           {% endif %}
-        </div>
-
-        <div style="flex:1; min-width:140px;">
-          <label class="form-label">Server IP</label>
-          <input type="text" name="server_ip" id="add-domain-ip" value="{{ server_ip }}" class="form-input" required>
         </div>
 
         <button type="button" onclick="handleAddDomain()" class="btn btn--primary btn--sm">
@@ -49,6 +44,7 @@
       <div id="add-domain-result" style="display:none; margin-top:10px;"></div>
     </div>
   </div>
+
 
 
   <!-- Configured Mail Domains List -->
@@ -118,21 +114,16 @@
       <div class="section__header"><h3>DNS Configuration</h3></div>
       <div class="section__body">
         <p class="form-hint mb-md">Auto-provision PowerDNS records (MX, A, SPF, DKIM, DMARC) for this domain.</p>
-        <form id="dns-setup-form" style="display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap;">
+        <form id="dns-setup-form" style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
           <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
           <input type="hidden" name="domain_name" id="dns-domain-input">
-          <div style="flex:1; min-width:180px;">
-            <label class="form-label">Mail Server IPv4 Address</label>
-            <input type="text" name="server_ip" value="{{ server_ip }}" class="form-input" required>
-          </div>
-          <div style="display:flex; gap:8px;">
-            <button type="button" onclick="handleDnsAction('/plugins/maddy/api/dns/auto-setup')" class="btn btn--primary btn--sm">
-              ⚡ Setup DNS
-            </button>
-            <button type="button" onclick="handleDnsAction('/plugins/maddy/api/dns/remove')" class="btn btn--danger btn--sm">
-              🗑 Remove DNS
-            </button>
-          </div>
+          <input type="hidden" name="server_ip" id="dns-server-ip" value="{{ server_ip }}">
+          <button type="button" onclick="handleDnsAction('/plugins/maddy/api/dns/auto-setup')" class="btn btn--primary btn--sm">
+            ⚡ Setup DNS
+          </button>
+          <button type="button" onclick="handleDnsAction('/plugins/maddy/api/dns/remove')" class="btn btn--danger btn--sm">
+            🗑 Remove DNS
+          </button>
         </form>
         <div id="dns-result-message" style="display:none; margin-top:12px;"></div>
       </div>

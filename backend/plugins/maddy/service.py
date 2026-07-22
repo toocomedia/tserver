@@ -299,8 +299,9 @@ class MaddyService:
         """
         Register a domain for mail delivery:
         1. Add to panel DB (MailDomain)
-        2. Update maddy.conf $(local_domains) via manage_maddy.py
-        3. Restart maddy
+        2. Update maddy.conf $(local_domains) via manage_maddy.py + restart maddy
+        3. Auto-setup PowerDNS mail records (MX, A, SPF, DMARC, DKIM placeholder)
+        DNS errors are non-fatal — domain is saved even if DNS partially fails.
         """
         from models.mail_domain import MailDomain
         from sqlalchemy import select
@@ -312,6 +313,7 @@ class MaddyService:
         if existing:
             raise ValueError(f"Domain '{domain}' is already configured for mail.")
 
+        # 1. Update maddy.conf and restart maddy
         if os.name != "nt" and self.is_installed():
             res = subprocess.run(
                 ["sudo", "-n", "python3", str(MANAGE_SCRIPT), "add-domain", domain],
@@ -323,11 +325,26 @@ class MaddyService:
         else:
             logger.info("[DEV] Mock add-domain: %s", domain)
 
+        # 2. Save to DB (before DNS so we have an ID)
         mail_domain = MailDomain(domain=domain, server_ip=server_ip)
         db.add(mail_domain)
         await db.flush()
-        logger.info("Mail domain added: %s", domain)
-        return {"id": mail_domain.id, "domain": domain}
+
+        # 3. Auto-setup DNS records
+        dns_ok = False
+        try:
+            dns_res = await self.auto_setup_dns_records(domain, server_ip)
+            dns_ok = dns_res["created_records"] == 5  # all 5 records created
+            mail_domain.dns_configured = dns_ok
+            logger.info(
+                "Mail domain DNS auto-setup: %s — %d/5 records created",
+                domain, dns_res["created_records"],
+            )
+        except Exception as exc:
+            logger.warning("DNS auto-setup failed for %s (non-fatal): %s", domain, exc)
+
+        logger.info("Mail domain added: %s (dns_configured=%s)", domain, dns_ok)
+        return {"id": mail_domain.id, "domain": domain, "dns_configured": dns_ok}
 
     async def delete_mail_domain(self, db, domain: str) -> Dict[str, Any]:
         """
