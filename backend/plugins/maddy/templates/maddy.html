@@ -70,28 +70,44 @@
 <div class="section">
   <div class="section__header">
     <h3>Mail Client Connection Info</h3>
-    <span class="text-small text-muted">IMAP & SMTP settings for Thunderbird, Outlook, or App backends</span>
+    <span class="text-small text-muted">Select domain to view ready IMAP & SMTP client parameters</span>
   </div>
 
   <div class="section__body">
     <div class="info-row">
-      <div class="info-row__label">Incoming (IMAP)</div>
-      <div class="info-row__value">
-        Hostname: <code>mail.yourdomain.com</code> (or <code>{{ server_ip }}</code>) &bull; Port: <code>993</code> (SSL/TLS) or <code>143</code> (STARTTLS)
+      <div class="info-row__label">Select Domain</div>
+      <div class="info-row__value" style="max-width:300px;">
+        <select id="conn-domain-select" class="form-input" onchange="updateClientConnInfo()">
+          {% for d in domains %}
+          <option value="{{ d.name }}">{{ d.name }}</option>
+          {% else %}
+          <option value="yourdomain.com">yourdomain.com</option>
+          {% endfor %}
+        </select>
       </div>
     </div>
+
+    <div class="info-row">
+      <div class="info-row__label">Incoming (IMAP)</div>
+      <div class="info-row__value">
+        Hostname: <code id="imap-host-preview">mail.{% if domains %}{{ domains[0].name }}{% else %}yourdomain.com{% endif %}</code> (or <code>{{ server_ip }}</code>) &bull; Port: <code>993</code> (SSL/TLS) or <code>143</code> (STARTTLS)
+      </div>
+    </div>
+
     <div class="info-row">
       <div class="info-row__label">Outgoing (SMTP)</div>
       <div class="info-row__value">
-        Hostname: <code>mail.yourdomain.com</code> (or <code>{{ server_ip }}</code>) &bull; Port: <code>587</code> (STARTTLS) or <code>465</code> (SSL/TLS)
+        Hostname: <code id="smtp-host-preview">mail.{% if domains %}{{ domains[0].name }}{% else %}yourdomain.com{% endif %}</code> (or <code>{{ server_ip }}</code>) &bull; Port: <code>587</code> (STARTTLS) or <code>465</code> (SSL/TLS)
       </div>
     </div>
+
     <div class="info-row">
       <div class="info-row__label">Authentication</div>
       <div class="info-row__value">
-        Method: <strong>Normal Password</strong> &bull; Username: Full email address (e.g. <code>user@yourdomain.com</code>)
+        Method: <strong>Normal Password</strong> &bull; Username: <code id="username-example-preview">user@{% if domains %}{{ domains[0].name }}{% else %}yourdomain.com{% endif %}</code>
       </div>
     </div>
+
     <div class="info-row">
       <div class="info-row__label">TLS / SSL Notice</div>
       <div class="info-row__value text-muted text-small">
@@ -100,11 +116,12 @@
     </div>
   </div>
 </div>
-<!-- POWERDNS AUTOMATED MAIL SETUP SECTION -->
+
+<!-- DOMAIN MAIL SETUP SECTION -->
 <div class="section">
   <div class="section__header">
-    <h3>PowerDNS Mail Setup</h3>
-    <span class="text-small text-muted">Auto-create MX, A, SPF, DKIM, and DMARC records</span>
+    <h3>Domain Mail Hosting Setup</h3>
+    <span class="text-small text-muted">Enable or disable mail hosting & PowerDNS records for a domain</span>
   </div>
 
   <div class="section__body">
@@ -113,7 +130,7 @@
       
       <div style="flex:1; min-width:200px;">
         <label class="form-label">Domain</label>
-        <select name="domain_name" id="dns-domain-select" class="form-input" required>
+        <select name="domain_name" id="dns-domain-select" class="form-input" onchange="syncDomainSelect(this.value)" required>
           {% for d in domains %}
           <option value="{{ d.name }}">{{ d.name }}</option>
           {% else %}
@@ -129,10 +146,10 @@
 
       <div style="display:flex; gap:8px;">
         <button type="button" onclick="handleDnsAction('/plugins/maddy/api/dns/auto-setup')" class="btn btn--primary btn--sm">
-          Auto-Configure Mail DNS
+          ⚡ Enable Mail for Domain
         </button>
         <button type="button" onclick="handleDnsAction('/plugins/maddy/api/dns/remove')" class="btn btn--secondary btn--sm">
-          Remove Mail DNS
+          🗑️ Disable Mail for Domain
         </button>
       </div>
     </form>
@@ -238,6 +255,27 @@
 
 {% block scripts %}
 <script>
+function updateClientConnInfo() {
+  const domainSelect = document.getElementById('conn-domain-select');
+  const domain = domainSelect ? domainSelect.value : 'yourdomain.com';
+
+  const imapPreview = document.getElementById('imap-host-preview');
+  const smtpPreview = document.getElementById('smtp-host-preview');
+  const userPreview = document.getElementById('username-example-preview');
+
+  if (imapPreview) imapPreview.innerText = 'mail.' + domain;
+  if (smtpPreview) smtpPreview.innerText = 'mail.' + domain;
+  if (userPreview) userPreview.innerText = 'user@' + domain;
+}
+
+function syncDomainSelect(val) {
+  const connSelect = document.getElementById('conn-domain-select');
+  if (connSelect) {
+    connSelect.value = val;
+    updateClientConnInfo();
+  }
+}
+
 function updateDomainSuffix() {
   const domainSelect = document.getElementById('account-domain-select');
   const usernameInput = document.getElementById('username-input');
