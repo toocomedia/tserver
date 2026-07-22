@@ -78,12 +78,21 @@ async def uninstall_maddy(request: Request):
 @router.post("/api/accounts/create")
 async def create_account(
     request: Request,
-    email: str = Form(...),
     password: str = Form(...),
+    username: str = Form(None),
+    domain: str = Form(None),
+    email: str = Form(None),
 ):
     """Create a new mailbox account."""
     try:
-        maddy_service.create_account(email.strip(), password.strip())
+        if username and domain:
+            full_email = f"{username.strip().rstrip('@')}@{domain.strip()}"
+        elif email:
+            full_email = email.strip()
+        else:
+            return JSONResponse({"detail": "Username and domain are required."}, status_code=400)
+
+        maddy_service.create_account(full_email, password.strip())
         return RedirectResponse("/plugins/maddy/", status_code=303)
     except Exception as exc:
         logger.error("Failed creating account: %s", exc)
