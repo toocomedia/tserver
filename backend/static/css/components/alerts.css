@@ -6,7 +6,6 @@
   display: flex;
   align-items: flex-start;
   gap: var(--space-sm);
-  border-radius: 6px;
 }
 .alert--info {
   border-color: var(--color-line);
@@ -42,20 +41,18 @@
   font-size: var(--font-body);
   font-weight: 600;
   min-width: 240px;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   animation: toast-in 0.15s ease;
 }
 
 .toast--success {
   border-color: var(--color-accent-2);
-  background: var(--color-alert-success-bg);
+  background: var(--color-surface);
   color: var(--color-text);
 }
 
 .toast--danger {
   border-color: var(--color-danger);
-  background: var(--color-alert-danger-bg);
+  background: var(--color-surface);
   color: var(--color-danger);
 }
 
