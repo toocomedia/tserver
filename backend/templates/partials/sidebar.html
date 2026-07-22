@@ -74,6 +74,40 @@
     <li class="sidebar__section-label">Admin</li>
 
     <li>
+      <a href="{{ path('plugins') }}" class="sidebar__item" data-path="{{ path('plugins') }}" aria-label="Plugins">
+        <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="7" height="7"></rect>
+          <rect x="14" y="3" width="7" height="7"></rect>
+          <rect x="14" y="14" width="7" height="7"></rect>
+          <rect x="3" y="14" width="7" height="7"></rect>
+        </svg>
+        Plugins
+      </a>
+    </li>
+
+    {% set plugin_items = get_plugin_sidebar_items() %}
+    {% if plugin_items %}
+    <li class="sidebar__section-label">Plugins Services</li>
+    {% for item in plugin_items %}
+    <li>
+      <a href="{{ item.route }}" class="sidebar__item" data-path="{{ item.route }}" aria-label="{{ item.label }}">
+        <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          {% if item.icon == 'mail' %}
+          <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+          <polyline points="22,6 12,13 2,6"></polyline>
+          {% else %}
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="8" x2="12" y2="12"></line>
+          <line x1="12" y1="16" x2="12.01" y2="16"></line>
+          {% endif %}
+        </svg>
+        {{ item.label }}
+      </a>
+    </li>
+    {% endfor %}
+    {% endif %}
+
+    <li>
       <a href="{{ path('settings') }}" class="sidebar__item" data-path="{{ path('settings') }}" aria-label="Settings">
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <circle cx="12" cy="12" r="3"></circle>

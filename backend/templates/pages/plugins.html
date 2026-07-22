@@ -1,0 +1,104 @@
+{% extends "layout.html" %}
+
+{% block title %}Plugins Manager — SRV Panel{% endblock %}
+
+{% block page_title %}System Plugins{% endblock %}
+
+{% block topbar_actions %}
+<button class="btn btn--primary" onclick="openModal('upload-plugin-modal')">
+  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px;">
+    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+    <polyline points="17 8 12 3 7 8"></polyline>
+    <line x1="12" y1="3" x2="12" y2="15"></line>
+  </svg>
+  Upload Plugin (.zip)
+</button>
+{% endblock %}
+
+{% block content %}
+<div class="section-desc mb-4">
+  Manage panel extension plugins. Plugins run modularly and can be enabled or uninstalled on-demand.
+</div>
+
+<div class="card-grid">
+  {% for plugin in plugins %}
+  <div class="card p-4">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
+      <div>
+        <h3 style="margin:0 0 4px 0; font-size:1.1rem; display:flex; align-items:center; gap:8px;">
+          {% if plugin.icon == 'mail' %}
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="var(--color-accent)" stroke-width="2">
+            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+            <polyline points="22,6 12,13 2,6"></polyline>
+          </svg>
+          {% else %}
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="var(--color-accent)" stroke-width="2">
+            <rect x="3" y="3" width="7" height="7"></rect>
+            <rect x="14" y="3" width="7" height="7"></rect>
+            <rect x="14" y="14" width="7" height="7"></rect>
+            <rect x="3" y="14" width="7" height="7"></rect>
+          </svg>
+          {% endif %}
+          {{ plugin.name }}
+        </h3>
+        <div class="text-muted" style="font-size:0.85rem;">Version {{ plugin.version }} &bull; By {{ plugin.author }}</div>
+      </div>
+      <div>
+        {% if plugin.enabled %}
+        <span class="badge badge--success">Enabled</span>
+        {% else %}
+        <span class="badge badge--secondary">Disabled</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <p style="font-size:0.9rem; color:var(--color-text-secondary); margin-bottom:16px;">
+      {{ plugin.description }}
+    </p>
+
+    <div style="display:flex; gap:8px; justify-content:flex-end;">
+      {% if plugin.route_prefix %}
+      <a href="{{ plugin.route_prefix }}" class="btn btn--secondary btn--sm">Manage Page</a>
+      {% endif %}
+
+      <form method="post" action="/plugins/api/toggle" style="display:inline;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+        <input type="hidden" name="plugin_id" value="{{ plugin.id }}">
+        <input type="hidden" name="enabled" value="{% if plugin.enabled %}false{% else %}true{% endif %}">
+        <button type="submit" class="btn btn--ghost btn--sm">
+          {% if plugin.enabled %}Disable{% else %}Enable{% endif %}
+        </button>
+      </form>
+    </div>
+  </div>
+  {% else %}
+  <div class="card p-6 text-center text-muted">
+    No plugins installed yet. Click "Upload Plugin (.zip)" to add a plugin.
+  </div>
+  {% endfor %}
+</div>
+
+<!-- UPLOAD PLUGIN MODAL -->
+<div id="upload-plugin-modal" class="modal-backdrop hidden" role="dialog">
+  <div class="modal">
+    <div class="modal__header">
+      <h2>Upload Plugin (.zip)</h2>
+      <button class="btn btn--ghost btn--icon" onclick="closeModal('upload-plugin-modal')">✕</button>
+    </div>
+    <form method="post" action="/plugins/api/upload" enctype="multipart/form-data">
+      <div class="modal__body">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+        <div class="form-group">
+          <label class="form-label">Plugin Archive (.zip)</label>
+          <input type="file" name="plugin_file" accept=".zip" required class="form-input">
+          <div class="form-hint">Must contain a valid <code>plugin.json</code> file.</div>
+        </div>
+      </div>
+      <div class="modal__footer">
+        <button type="button" class="btn btn--secondary" onclick="closeModal('upload-plugin-modal')">Cancel</button>
+        <button type="submit" class="btn btn--primary">Install Plugin</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

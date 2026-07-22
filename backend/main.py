@@ -15,7 +15,8 @@ from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
 import config
 from database import init_db
-from routers import system, domains, dns, ssl, proxy, errors, auth, settings, updates, dev, notifications
+from routers import system, domains, dns, ssl, proxy, errors, auth, settings, updates, dev, notifications, plugins
+from plugins import plugin_manager
 from middleware.error_capture import RequestIdMiddleware, register_error_handlers
 from middleware.auth import AuthMiddleware
 from middleware.csrf import CSRFMiddleware
@@ -136,5 +137,7 @@ app.include_router(ssl.router)       # Phase 4
 app.include_router(proxy.router)     # Phase 5
 app.include_router(errors.router)    # Phase 6
 app.include_router(notifications.router)
+app.include_router(plugins.router)
+plugin_manager.init_app(app)
 if getattr(config, "DEBUG", False):
     app.include_router(dev.router)       # Testing tools (DEBUG mode only)

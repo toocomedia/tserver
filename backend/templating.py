@@ -32,7 +32,14 @@ PATHS: dict[str, str] = {
     "usage": "/usage",
     "health": "/api/health",
     "api_settings": "/api/settings",
+    "plugins": "/plugins/",
 }
+
+
+def get_plugin_sidebar_items():
+    """Jinja helper to list active plugin sidebar links."""
+    from plugins import plugin_manager
+    return plugin_manager.get_sidebar_items()
 
 
 def app_path(name: str, *parts: str | int, query: str | None = None) -> str:
@@ -95,6 +102,7 @@ templates.env.globals["path"] = app_path
 templates.env.globals["PATHS"] = PATHS
 templates.env.globals["public_url"] = public_url
 templates.env.globals["csrf_token"] = csrf_token
+templates.env.globals["get_plugin_sidebar_items"] = get_plugin_sidebar_items
 
 # Aliases for Python imports
 path = app_path
