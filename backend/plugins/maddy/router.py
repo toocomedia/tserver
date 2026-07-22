@@ -169,9 +169,9 @@ async def issue_mail_ssl(
         le_live_dir = Path(f"/etc/letsencrypt/live/{mail_domain}")
         maddy_certs_dir = Path("/etc/maddy/certs")
         
-        await shell.run(["cp", str(le_live_dir / "fullchain.pem"), str(maddy_certs_dir / "fullchain.pem")], check=True)
-        await shell.run(["cp", str(le_live_dir / "privkey.pem"), str(maddy_certs_dir / "privkey.pem")], check=True)
-        await shell.run(["chown", "maddy:maddy", str(maddy_certs_dir / "fullchain.pem"), str(maddy_certs_dir / "privkey.pem")], check=True)
+        await shell.run(["cp", str(le_live_dir / "fullchain.pem"), str(maddy_certs_dir / "fullchain.pem")])
+        await shell.run(["cp", str(le_live_dir / "privkey.pem"), str(maddy_certs_dir / "privkey.pem")])
+        await shell.run(["chown", "maddy:maddy", str(maddy_certs_dir / "fullchain.pem"), str(maddy_certs_dir / "privkey.pem")])
 
         logger.info("Restarting Maddy to apply new SSL")
         await shell.run(["systemctl", "restart", "maddy"])
