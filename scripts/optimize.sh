@@ -38,7 +38,7 @@ enable_optimization() {
 ALGO=zstd
 PERCENT=50
 EOF
-    systemctl restart zramswap 2>/dev/null || true
+    systemctl enable --now zramswap 2>/dev/null || systemctl restart zramswap 2>/dev/null || true
   fi
 
   # 2. Kernel sysctl tuning
@@ -140,7 +140,7 @@ set_nginx_worker_1() {
   fi
   if [[ -f "$NGINX_CONF" ]]; then
     sed -i -E 's/worker_processes[[:space:]]+[^;]+;/worker_processes 1;/' "$NGINX_CONF"
-    nginx -t && systemctl reload nginx
+    nginx -t && systemctl restart nginx
     echo "==> Nginx worker_processes set to 1."
   else
     echo "ERROR: Nginx conf not found at $NGINX_CONF" >&2
@@ -155,7 +155,7 @@ set_nginx_worker_auto() {
   fi
   if [[ -f "$NGINX_CONF" ]]; then
     sed -i -E 's/worker_processes[[:space:]]+[^;]+;/worker_processes auto;/' "$NGINX_CONF"
-    nginx -t && systemctl reload nginx
+    nginx -t && systemctl restart nginx
     echo "==> Nginx worker_processes set to auto."
   else
     echo "ERROR: Nginx conf not found at $NGINX_CONF" >&2
