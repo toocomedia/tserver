@@ -104,11 +104,27 @@ async def get_remote_commit() -> Dict[str, Any]:
     }
 
 
+async def _check_and_trigger_auto_update() -> None:
+    """Helper to check for updates and trigger background deployment if available."""
+    try:
+        info = await check_updates(force=True)
+        if info.get("has_update"):
+            logger.info("Auto-update detected available update! Triggering deployment...")
+            await trigger_update()
+    except Exception as exc:
+        logger.warning("Auto-update trigger error: %s", exc)
+
+
 async def set_auto_update(enabled: bool) -> Dict[str, Any]:
     """Enable or disable automatic daily updates in .env."""
     config.AUTO_UPDATE_ENABLED = enabled
     val_str = "true" if enabled else "false"
     await set_env_values({"AUTO_UPDATE_ENABLED": val_str})
+    
+    # If auto-update was just enabled, immediately check and update if a new version is available!
+    if enabled:
+        asyncio.create_task(_check_and_trigger_auto_update())
+
     return {"status": "ok", "auto_update_enabled": config.AUTO_UPDATE_ENABLED}
 
 
@@ -220,15 +236,13 @@ async def get_update_status() -> Dict[str, Any]:
 
 
 async def run_auto_update_loop() -> None:
-    """Background task: checks for updates daily and applies if auto_update is enabled."""
+    """Background task: checks for updates periodically and applies if auto_update is enabled."""
+    await asyncio.sleep(60)  # Initial 1-minute warm-up delay on startup
     while True:
-        await asyncio.sleep(86400)  # Run once every 24 hours
         try:
             if config.AUTO_UPDATE_ENABLED:
-                logger.info("Auto-update check starting...")
-                info = await check_updates(force=True)
-                if info.get("has_update"):
-                    logger.info("Auto-update triggering update deployment...")
-                    await trigger_update()
+                logger.info("Auto-update periodic check starting...")
+                await _check_and_trigger_auto_update()
         except Exception as exc:
             logger.warning("Auto-update background loop error: %s", exc)
+        await asyncio.sleep(86400)  # Sleep 24 hours between checks
