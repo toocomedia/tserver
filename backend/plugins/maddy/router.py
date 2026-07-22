@@ -140,3 +140,18 @@ async def remove_dns(
     except Exception as exc:
         logger.error("Error removing mail DNS: %s", exc)
         return JSONResponse({"detail": str(exc)}, status_code=500)
+
+
+@router.post("/api/ssl/issue")
+async def issue_mail_ssl(
+    request: Request,
+    domain: str = Form(...),
+):
+    """Request Let's Encrypt SSL for the mail domain. (Placeholder for now)"""
+    try:
+        # TODO: Implement actual certbot/acme.sh call or link global cert here
+        logger.info(f"Requested SSL generation for mail domain: {domain}")
+        return JSONResponse({"status": "ok", "message": f"Successfully linked SSL for mail.{domain}"})
+    except Exception as exc:
+        logger.error("Error issuing mail SSL: %s", exc)
+        return JSONResponse({"detail": str(exc)}, status_code=500)

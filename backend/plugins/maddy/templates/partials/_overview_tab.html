@@ -1,0 +1,42 @@
+<!-- TAB: OVERVIEW -->
+<div id="tab-overview" class="split-tab active">
+  <div class="section mb-xl">
+    <div class="section__header">
+      <h3>Service Status</h3>
+      {% if status.running %}
+      <span class="badge badge--success">Active & Running</span>
+      {% elif status.installed %}
+      <span class="badge badge--warning">Installed (Stopped)</span>
+      {% else %}
+      <span class="badge badge--secondary">Not Installed</span>
+      {% endif %}
+    </div>
+    <div class="section__body">
+      <div class="info-row">
+        <span class="info-row__label">Engine</span>
+        <span class="info-row__value">Maddy Mail Server (SMTP + IMAP + DKIM + SPF)</span>
+      </div>
+      {% if status.running %}
+      <div class="info-row">
+        <span class="info-row__label">Memory (RAM)</span>
+        <span class="info-row__value"><strong>{{ status.ram_mb }} MB</strong></span>
+      </div>
+      <div class="info-row">
+        <span class="info-row__label">Process PID</span>
+        <span class="info-row__value">{{ status.pid or 'N/A' }}</span>
+      </div>
+      {% endif %}
+      {% if status.installed %}
+      <div class="info-row">
+        <span class="info-row__label">Port Listeners</span>
+        <span class="info-row__value" style="display:flex; gap:8px;">
+          <span class="badge {% if status.ports['25'] %}badge--success{% else %}badge--danger{% endif %}">25 (SMTP)</span>
+          <span class="badge {% if status.ports['587'] %}badge--success{% else %}badge--danger{% endif %}">587 (Submission)</span>
+          <span class="badge {% if status.ports['465'] %}badge--success{% else %}badge--danger{% endif %}">465 (SMTPS)</span>
+          <span class="badge {% if status.ports['993'] %}badge--success{% else %}badge--danger{% endif %}">993 (IMAPS)</span>
+        </span>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>

@@ -1,7 +1,6 @@
 {% extends "layout.html" %}
 
 {% block title %}Mail Server (Maddy) — VPS Panel{% endblock %}
-
 {% block page_title %}Mail Server (Maddy){% endblock %}
 
 {% block topbar_actions %}
@@ -22,302 +21,40 @@
 {% endif %}
 {% endblock %}
 
+{% block content_class %}content--flush{% endblock %}
+
 {% block content %}
-<!-- SYSTEM STATUS SECTION -->
-<div class="section">
-  <div class="section__header">
-    <h3>Service Status</h3>
-    {% if status.running %}
-    <span class="badge badge--success">Active & Running</span>
-    {% elif status.installed %}
-    <span class="badge badge--warning">Installed (Stopped)</span>
-    {% else %}
-    <span class="badge badge--secondary">Not Installed</span>
+<div class="split-layout">
+  <!-- Sidebar -->
+  <div class="split-sidebar">
+    <div class="split-sidebar__item active" data-tab="tab-overview">Overview</div>
+    {% if status.installed %}
+    <div class="split-sidebar__item" data-tab="tab-domains">Domains</div>
     {% endif %}
   </div>
 
-  <div class="section__body">
-    <div class="info-row">
-      <div class="info-row__label">Engine</div>
-      <div class="info-row__value">Maddy Mail Server (SMTP + IMAP + DKIM + SPF)</div>
+  <!-- Content -->
+  <div class="split-content">
+    
+    <div class="page-header" style="margin-top: 0;">
+      <h1 class="page-header__title" id="page-dynamic-title">Mail Server Overview</h1>
     </div>
-    {% if status.running %}
-    <div class="info-row">
-      <div class="info-row__label">Memory (RAM)</div>
-      <div class="info-row__value"><strong>{{ status.ram_mb }} MB</strong></div>
-    </div>
-    <div class="info-row">
-      <div class="info-row__label">Process PID</div>
-      <div class="info-row__value">{{ status.pid or 'N/A' }}</div>
-    </div>
-    {% endif %}
+
+    {% include 'partials/_overview_tab.html' %}
+
     {% if status.installed %}
-    <div class="info-row">
-      <div class="info-row__label">Port Listeners</div>
-      <div class="info-row__value" style="display:flex; gap:8px;">
-        <span class="badge {% if status.ports['25'] %}badge--success{% else %}badge--danger{% endif %}">25 (SMTP)</span>
-        <span class="badge {% if status.ports['587'] %}badge--success{% else %}badge--danger{% endif %}">587 (Submission)</span>
-        <span class="badge {% if status.ports['465'] %}badge--success{% else %}badge--danger{% endif %}">465 (SMTPS)</span>
-        <span class="badge {% if status.ports['993'] %}badge--success{% else %}badge--danger{% endif %}">993 (IMAPS)</span>
-      </div>
-    </div>
+      {% include 'partials/_domains_tab.html' %}
     {% endif %}
+
   </div>
 </div>
 
 {% if status.installed %}
-<!-- CLIENT CONNECTION INFO SECTION -->
-<div class="section">
-  <div class="section__header">
-    <h3>Mail Client Connection Info</h3>
-    <span class="text-small text-muted">Select domain to view ready IMAP & SMTP client parameters</span>
-  </div>
-
-  <div class="section__body">
-    <div class="info-row">
-      <div class="info-row__label">Select Domain</div>
-      <div class="info-row__value" style="max-width:300px;">
-        <select id="conn-domain-select" class="form-input" onchange="updateClientConnInfo()">
-          {% for d in domains %}
-          <option value="{{ d.name }}">{{ d.name }}</option>
-          {% else %}
-          <option value="yourdomain.com">yourdomain.com</option>
-          {% endfor %}
-        </select>
-      </div>
-    </div>
-
-    <div class="info-row">
-      <div class="info-row__label">Incoming (IMAP)</div>
-      <div class="info-row__value">
-        Hostname: <code id="imap-host-preview">mail.{% if domains %}{{ domains[0].name }}{% else %}yourdomain.com{% endif %}</code> (or <code>{{ server_ip }}</code>) &bull; Port: <code>993</code> (SSL/TLS) or <code>143</code> (STARTTLS)
-      </div>
-    </div>
-
-    <div class="info-row">
-      <div class="info-row__label">Outgoing (SMTP)</div>
-      <div class="info-row__value">
-        Hostname: <code id="smtp-host-preview">mail.{% if domains %}{{ domains[0].name }}{% else %}yourdomain.com{% endif %}</code> (or <code>{{ server_ip }}</code>) &bull; Port: <code>587</code> (STARTTLS) or <code>465</code> (SSL/TLS)
-      </div>
-    </div>
-
-    <div class="info-row">
-      <div class="info-row__label">Authentication</div>
-      <div class="info-row__value">
-        Method: <strong>Normal Password</strong> &bull; Username: <code id="username-example-preview">user@{% if domains %}{{ domains[0].name }}{% else %}yourdomain.com{% endif %}</code>
-      </div>
-    </div>
-
-    <div class="info-row">
-      <div class="info-row__label">TLS / SSL Notice</div>
-      <div class="info-row__value text-muted text-small">
-        In Thunderbird, select <strong>"Configure Manually"</strong> ➔ set Authentication to <strong>"Normal password"</strong> ➔ click <strong>"Confirm Security Exception"</strong> if prompted for TLS.
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- DOMAIN MAIL SETUP SECTION -->
-<div class="section">
-  <div class="section__header">
-    <h3>Domain Mail Hosting Setup</h3>
-    <span class="text-small text-muted">Enable or disable mail hosting & PowerDNS records for a domain</span>
-  </div>
-
-  <div class="section__body">
-    <form id="dns-setup-form" style="display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap;">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
-      
-      <div style="flex:1; min-width:200px;">
-        <label class="form-label">Domain</label>
-        <select name="domain_name" id="dns-domain-select" class="form-input" onchange="syncDomainSelect(this.value)" required>
-          {% for d in domains %}
-          <option value="{{ d.name }}">{{ d.name }}</option>
-          {% else %}
-          <option value="">No domains found</option>
-          {% endfor %}
-        </select>
-      </div>
-
-      <div style="flex:1; min-width:180px;">
-        <label class="form-label">Mail IPv4 Address</label>
-        <input type="text" name="server_ip" value="{{ server_ip }}" class="form-input" required>
-      </div>
-
-      <div style="display:flex; gap:8px;">
-        <button type="button" onclick="handleDnsAction('/plugins/maddy/api/dns/auto-setup')" class="btn btn--primary btn--sm">
-          ⚡ Enable Mail for Domain
-        </button>
-        <button type="button" onclick="handleDnsAction('/plugins/maddy/api/dns/remove')" class="btn btn--secondary btn--sm">
-          🗑️ Disable Mail for Domain
-        </button>
-      </div>
-    </form>
-
-    <div id="dns-result-message" style="display:none; margin-top:12px;"></div>
-  </div>
-</div>
-
-<!-- MAILBOX ACCOUNTS SECTION -->
-<div class="section">
-  <div class="section__header">
-    <h3>Mailbox Accounts</h3>
-    <button class="btn btn--primary btn--sm" onclick="openModal('add-account-modal')">
-      + Add Mailbox
-    </button>
-  </div>
-
-  <div class="section__body">
-    <table class="table">
-      <thead>
-        <tr>
-          <th>Email Address</th>
-          <th>Status</th>
-          <th style="text-align:right;">Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for acc in accounts %}
-        <tr>
-          <td><strong>{{ acc.email }}</strong></td>
-          <td><span class="badge badge--success">Active</span></td>
-          <td style="text-align:right;">
-            <form method="post" action="/plugins/maddy/api/accounts/delete" style="display:inline;">
-              <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
-              <input type="hidden" name="email" value="{{ acc.email }}">
-              <button type="submit" class="btn btn--danger btn--sm" onclick="return confirm('Delete mailbox {{ acc.email }}?')">
-                Delete
-              </button>
-            </form>
-          </td>
-        </tr>
-        {% else %}
-        <tr>
-          <td colspan="3" class="text-center text-muted p-4">
-            No mailboxes created yet. Click "+ Add Mailbox" to create an account.
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-</div>
-
-<!-- ADD MAILBOX MODAL -->
-<div id="add-account-modal" class="modal-backdrop hidden" role="dialog">
-  <div class="modal" style="border-radius:0;">
-    <div class="modal__header">
-      <h2>Add Mailbox Account</h2>
-      <button class="btn btn--ghost btn--icon" onclick="closeModal('add-account-modal')">✕</button>
-    </div>
-    <form method="post" action="/plugins/maddy/api/accounts/create">
-      <div class="modal__body">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
-
-        <div class="form-group mb-3">
-          <label class="form-label">Select Domain</label>
-          <select name="domain" id="account-domain-select" class="form-input" onchange="updateDomainSuffix()" required style="width:100%;">
-            {% for d in domains %}
-            <option value="{{ d.name }}">{{ d.name }}</option>
-            {% else %}
-            <option value="">No domains created yet</option>
-            {% endfor %}
-          </select>
-        </div>
-
-        <div class="form-group mb-3">
-          <label class="form-label">Mailbox Username</label>
-          <div style="display:flex; align-items:center; border:1px solid var(--color-line); background:var(--color-bg);">
-            <input type="text" name="username" id="username-input" placeholder="info" required class="form-input" style="border:none; flex:1; outline:none;" oninput="updateDomainSuffix()">
-            <span id="domain-suffix-preview" style="padding:0 12px; font-weight:700; color:var(--color-muted); font-size:0.88rem; border-left:1px solid var(--color-line); background:var(--color-surface); height:36px; display:flex; align-items:center;">
-              @{% if domains %}{{ domains[0].name }}{% else %}domain.com{% endif %}
-            </span>
-          </div>
-          <div class="form-hint mt-1">
-            Full Address: <strong id="full-email-preview" class="text-accent">info@{% if domains %}{{ domains[0].name }}{% else %}domain.com{% endif %}</strong>
-          </div>
-        </div>
-
-        <div class="form-group mb-3">
-          <label class="form-label">Password</label>
-          <input type="password" name="password" placeholder="Enter mailbox password" required class="form-input" style="width:100%;">
-        </div>
-      </div>
-      <div class="modal__footer">
-        <button type="button" class="btn btn--secondary" onclick="closeModal('add-account-modal')">Cancel</button>
-        <button type="submit" class="btn btn--primary">Create Mailbox</button>
-      </div>
-    </form>
-  </div>
-</div>
+  {% include 'partials/_add_account_modal.html' %}
 {% endif %}
+
 {% endblock %}
 
 {% block scripts %}
-<script>
-function updateClientConnInfo() {
-  const domainSelect = document.getElementById('conn-domain-select');
-  const domain = domainSelect ? domainSelect.value : 'yourdomain.com';
-
-  const imapPreview = document.getElementById('imap-host-preview');
-  const smtpPreview = document.getElementById('smtp-host-preview');
-  const userPreview = document.getElementById('username-example-preview');
-
-  if (imapPreview) imapPreview.innerText = 'mail.' + domain;
-  if (smtpPreview) smtpPreview.innerText = 'mail.' + domain;
-  if (userPreview) userPreview.innerText = 'user@' + domain;
-}
-
-function syncDomainSelect(val) {
-  const connSelect = document.getElementById('conn-domain-select');
-  if (connSelect) {
-    connSelect.value = val;
-    updateClientConnInfo();
-  }
-}
-
-function updateDomainSuffix() {
-  const domainSelect = document.getElementById('account-domain-select');
-  const usernameInput = document.getElementById('username-input');
-  const suffixSpan = document.getElementById('domain-suffix-preview');
-  const previewStrong = document.getElementById('full-email-preview');
-
-  const domain = domainSelect ? domainSelect.value : 'domain.com';
-  const username = usernameInput && usernameInput.value ? usernameInput.value.replace(/@.*$/, '') : 'info';
-
-  if (suffixSpan) suffixSpan.innerText = '@' + domain;
-  if (previewStrong) previewStrong.innerText = username + '@' + domain;
-}
-
-async function handleDnsAction(endpoint) {
-  const form = document.getElementById('dns-setup-form');
-  const formData = new FormData(form);
-  const resultDiv = document.getElementById('dns-result-message');
-  
-  resultDiv.style.display = 'block';
-  resultDiv.className = 'text-small text-muted';
-  resultDiv.innerText = 'Updating PowerDNS records...';
-
-  try {
-    const res = await fetch(endpoint, {
-      method: 'POST',
-      body: formData,
-      headers: {
-        'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
-      }
-    });
-    const data = await res.json();
-    if (res.ok) {
-      resultDiv.className = 'text-small text-accent';
-      resultDiv.innerText = data.message || 'DNS operation completed successfully!';
-    } else {
-      resultDiv.className = 'text-small text-danger';
-      resultDiv.innerText = data.detail || 'DNS operation failed.';
-    }
-  } catch (err) {
-    resultDiv.className = 'text-small text-danger';
-    resultDiv.innerText = 'Network error: ' + err.message;
-  }
-}
-</script>
+  {% include 'partials/_scripts.html' %}
 {% endblock %}

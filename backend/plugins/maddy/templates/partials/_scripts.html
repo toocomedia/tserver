@@ -1,0 +1,161 @@
+<script>
+// Parse accounts from Jinja into JS for easy filtering
+const allAccounts = [
+  {% for acc in accounts %}
+  { email: "{{ acc.email }}" },
+  {% endfor %}
+];
+let currentDomain = "";
+
+// Handle split tabs
+document.querySelectorAll('.split-sidebar__item').forEach(item => {
+  item.addEventListener('click', function() {
+    document.querySelectorAll('.split-sidebar__item').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.split-tab').forEach(el => el.classList.remove('active'));
+    
+    this.classList.add('active');
+    const tabId = this.getAttribute('data-tab');
+    document.getElementById(tabId).classList.add('active');
+
+    // Update main title
+    const titleEl = document.getElementById('page-dynamic-title');
+    if (tabId === 'tab-overview') titleEl.innerText = "Mail Server Overview";
+    if (tabId === 'tab-domains') titleEl.innerText = "Managed Domains";
+
+    // If leaving domains tab, reset to master view
+    if (tabId !== 'tab-domains') {
+      closeDomainDetail();
+    }
+  });
+});
+
+function openDomainDetail(domain) {
+  currentDomain = domain;
+  document.getElementById('domains-master-view').style.display = 'none';
+  document.getElementById('domains-detail-view').style.display = 'block';
+  document.getElementById('detail-domain-name').innerText = domain;
+  
+  // Fill inputs
+  document.getElementById('dns-domain-input').value = domain;
+  document.getElementById('ssl-domain-input').value = domain;
+  
+  // Update connection info previews
+  document.getElementById('imap-host-preview').innerText = 'mail.' + domain;
+  document.getElementById('smtp-host-preview').innerText = 'mail.' + domain;
+  document.getElementById('username-example-preview').innerText = 'user@' + domain;
+
+  renderAccountsList();
+}
+
+function closeDomainDetail() {
+  currentDomain = "";
+  document.getElementById('domains-master-view').style.display = 'block';
+  document.getElementById('domains-detail-view').style.display = 'none';
+}
+
+function renderAccountsList() {
+  const tbody = document.getElementById('accounts-tbody');
+  const emptyDiv = document.getElementById('accounts-empty');
+  tbody.innerHTML = '';
+  
+  const filtered = allAccounts.filter(acc => acc.email.endsWith('@' + currentDomain));
+  
+  if (filtered.length === 0) {
+    emptyDiv.style.display = 'block';
+    document.getElementById('accounts-table').style.display = 'none';
+  } else {
+    emptyDiv.style.display = 'none';
+    document.getElementById('accounts-table').style.display = 'table';
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+    filtered.forEach(acc => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><strong>${acc.email}</strong></td>
+        <td><span class="badge badge--success">Active</span></td>
+        <td style="text-align:right;">
+          <form method="post" action="/plugins/maddy/api/accounts/delete" style="display:inline;">
+            <input type="hidden" name="csrf_token" value="${csrfToken}">
+            <input type="hidden" name="email" value="${acc.email}">
+            <button type="submit" class="btn btn--danger btn--sm" onclick="return confirm('Delete mailbox ${acc.email}?')">Delete</button>
+          </form>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+}
+
+function openAddAccountModal() {
+  document.getElementById('modal-domain-input').value = currentDomain;
+  document.getElementById('domain-suffix-preview').innerText = '@' + currentDomain;
+  updateDomainSuffix();
+  openModal('add-account-modal');
+}
+
+function updateDomainSuffix() {
+  const username = document.getElementById('username-input').value.replace(/@.*$/, '') || 'info';
+  document.getElementById('full-email-preview').innerText = username + '@' + currentDomain;
+}
+
+async function handleDnsAction(endpoint) {
+  const form = document.getElementById('dns-setup-form');
+  const formData = new FormData(form);
+  const resultDiv = document.getElementById('dns-result-message');
+  
+  resultDiv.style.display = 'block';
+  resultDiv.className = 'text-small text-muted';
+  resultDiv.innerText = 'Updating PowerDNS records...';
+
+  try {
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      body: formData,
+      headers: {
+        'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+      }
+    });
+    const data = await res.json();
+    if (res.ok) {
+      resultDiv.className = 'text-small text-accent';
+      resultDiv.innerText = data.message || 'DNS operation completed successfully!';
+    } else {
+      resultDiv.className = 'text-small text-danger';
+      resultDiv.innerText = data.detail || 'DNS operation failed.';
+    }
+  } catch (err) {
+    resultDiv.className = 'text-small text-danger';
+    resultDiv.innerText = 'Network error: ' + err.message;
+  }
+}
+
+async function issueMailSsl() {
+  const form = document.getElementById('ssl-setup-form');
+  const formData = new FormData(form);
+  const resultDiv = document.getElementById('ssl-result-message');
+  
+  resultDiv.style.display = 'block';
+  resultDiv.className = 'text-small text-muted';
+  resultDiv.innerText = "Requesting Let's Encrypt SSL... (This may take a moment)";
+
+  try {
+    const res = await fetch('/plugins/maddy/api/ssl/issue', {
+      method: 'POST',
+      body: formData,
+      headers: {
+        'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+      }
+    });
+    const data = await res.json();
+    if (res.ok) {
+      resultDiv.className = 'text-small text-accent';
+      resultDiv.innerText = data.message || 'SSL requested successfully!';
+    } else {
+      resultDiv.className = 'text-small text-danger';
+      resultDiv.innerText = data.detail || 'SSL request failed.';
+    }
+  } catch (err) {
+    resultDiv.className = 'text-small text-danger';
+    resultDiv.innerText = 'Network error: ' + err.message;
+  }
+}
+</script>
