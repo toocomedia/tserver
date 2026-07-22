@@ -190,7 +190,7 @@ async def issue_mail_ssl(
         if not res1.success:
             raise Exception(f"Failed to copy SSL certificate: {res1.stderr}. It seems the Let's Encrypt certificate files are missing or broken.")
             
-        res2 = await shell.run(["openssl", "rsa", "-in", f"{le_live_dir}/privkey.pem", "-out", f"{maddy_certs_dir}/privkey.pem"])
+        res2 = await shell.run(["openssl", "pkey", "-in", f"{le_live_dir}/privkey.pem", "-out", f"{maddy_certs_dir}/privkey.pem"])
         if not res2.success:
             raise Exception(f"Failed to copy SSL private key: {res2.stderr}")
             
