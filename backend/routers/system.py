@@ -82,6 +82,8 @@ def _uptime_human(seconds: float) -> str:
     return " ".join(parts)
 
 
+_HARDWARE_CACHE = None
+
 async def _get_optimization_status() -> dict:
     """Inspect system optimization state in pure Python for high reliability."""
     import re
@@ -121,11 +123,51 @@ async def _get_optimization_status() -> dict:
         except Exception:
             pass
 
+    # 4. Advanced Server Tuning Inspection
+    advanced_active = Path("/etc/systemd/journald.conf.d/99-srv-panel.conf").exists()
+
+    # Hardware Caching
+    global _HARDWARE_CACHE
+    if _HARDWARE_CACHE is None:
+        has_fibre = Path("/sys/class/fc_host").exists()
+        
+        has_modem = False
+        try:
+            net_dir = Path("/sys/class/net")
+            if net_dir.exists():
+                for p in net_dir.iterdir():
+                    if p.name.startswith("wwan"):
+                        has_modem = True
+                        break
+        except Exception:
+            pass
+
+        has_snaps = False
+        if Path("/usr/bin/snap").exists():
+            snap_res = await run(["snap", "list"])
+            if snap_res.success:
+                lines = snap_res.stdout.strip().split("\n")[1:]
+                for line in lines:
+                    parts = line.split()
+                    if parts:
+                        name = parts[0]
+                        if name not in ["core", "core18", "core20", "core22", "bare", "snapd", "lxd"]:
+                            has_snaps = True
+                            break
+        
+        _HARDWARE_CACHE = {
+            "has_fibre": has_fibre,
+            "has_modem": has_modem,
+            "has_snaps": has_snaps
+        }
+
     return {
         "optimization_active": opt_active,
         "zram_active": zram_active,
         "nginx_single_worker": nginx_single,
         "nginx_worker_setting": worker_setting,
+        "advanced_active": advanced_active,
+        "hardware_checks": _HARDWARE_CACHE,
     }
 
 
@@ -272,6 +314,10 @@ class NginxWorkerToggleIn(BaseModel):
     single_worker: bool
 
 
+class AdvancedTuningToggleIn(BaseModel):
+    enabled: bool
+
+
 @router.post("/api/system/optimization/toggle")
 async def toggle_optimization(payload: OptimizationToggleIn):
     """Enable or disable server Low-RAM optimization mode."""
@@ -304,6 +350,27 @@ async def toggle_nginx_worker(payload: NginxWorkerToggleIn):
         return {"success": False, "detail": "optimize.sh script not found"}
 
     action = "nginx-worker-1" if payload.single_worker else "nginx-worker-auto"
+    res = await run(["bash", str(script_path), action])
+    detail = res.stdout if res.success else res.stderr
+    if "password is required" in detail.lower():
+        detail = "Sudoers permissions need updating. Please run on server: sudo bash /opt/srv-panel/scripts/update.sh"
+    return {
+        "success": res.success,
+        "detail": detail,
+    }
+
+
+@router.post("/api/system/advanced/toggle")
+async def toggle_advanced_tuning(payload: AdvancedTuningToggleIn):
+    """Enable or disable Advanced Server Tuning."""
+    script_path = config.BASE_DIR / "scripts" / "optimize.sh"
+    if not script_path.exists():
+        script_path = Path("/opt/srv-panel/scripts/optimize.sh")
+
+    if not script_path.exists():
+        return {"success": False, "detail": "optimize.sh script not found"}
+
+    action = "advanced-enable" if payload.enabled else "advanced-disable"
     res = await run(["bash", str(script_path), action])
     detail = res.stdout if res.success else res.stderr
     if "password is required" in detail.lower():

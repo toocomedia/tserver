@@ -133,6 +133,114 @@ disable_optimization() {
   echo "==> Low-RAM Optimization Mode DEACTIVATED."
 }
 
+enable_advanced() {
+  if ! is_root; then
+    echo "ERROR: Must run as root (sudo bash scripts/optimize.sh advanced-enable)" >&2
+    exit 1
+  fi
+  echo "==> Enabling Advanced Server Tuning..."
+
+  # Smart Hardware Checks
+  has_fibre="false"
+  if [[ -d "/sys/class/fc_host" ]]; then
+    has_fibre="true"
+  fi
+
+  has_modem="false"
+  if [[ -d "/sys/class/net" ]]; then
+    for net in /sys/class/net/wwan*; do
+      if [[ -e "$net" ]]; then
+        has_modem="true"
+        break
+      fi
+    done
+  fi
+
+  has_snaps="false"
+  if command -v snap &>/dev/null; then
+    # Skip header and check for custom snaps
+    while read -r name _rest; do
+      if [[ -n "$name" && "$name" != "Name" && "$name" != "core"* && "$name" != "bare" && "$name" != "snapd" && "$name" != "lxd" ]]; then
+        has_snaps="true"
+        break
+      fi
+    done < <(snap list 2>/dev/null || true)
+  fi
+
+  # 1. Disable unused services safely
+  if [[ "$has_fibre" == "false" ]] && systemctl is-active --quiet multipathd 2>/dev/null; then
+    systemctl stop multipathd 2>/dev/null || true
+    systemctl disable multipathd 2>/dev/null || true
+  fi
+
+  if [[ "$has_modem" == "false" ]] && systemctl is-active --quiet ModemManager 2>/dev/null; then
+    systemctl stop ModemManager 2>/dev/null || true
+    systemctl disable ModemManager 2>/dev/null || true
+  fi
+
+  if [[ "$has_snaps" == "false" ]] && systemctl is-active --quiet snapd 2>/dev/null; then
+    systemctl stop snapd 2>/dev/null || true
+    systemctl disable snapd 2>/dev/null || true
+  fi
+
+  if systemctl is-active --quiet packagekit 2>/dev/null; then
+    systemctl stop packagekit 2>/dev/null || true
+    systemctl disable packagekit 2>/dev/null || true
+  fi
+
+  # 2. TCP BBR
+  if modprobe tcp_bbr 2>/dev/null; then
+    cat > /etc/sysctl.d/99-srv-panel-bbr.conf <<'EOF'
+# Managed by srv-panel optimize.sh
+net.core.default_qdisc = fq
+net.ipv4.tcp_congestion_control = bbr
+EOF
+    sysctl -p /etc/sysctl.d/99-srv-panel-bbr.conf 2>/dev/null || true
+  fi
+
+  # 3. Journald capping
+  mkdir -p /etc/systemd/journald.conf.d
+  cat > /etc/systemd/journald.conf.d/99-srv-panel.conf <<'EOF'
+[Journal]
+SystemMaxUse=50M
+SystemKeepFree=1G
+EOF
+  systemctl restart systemd-journald 2>/dev/null || true
+
+  echo "==> Advanced Server Tuning ACTIVE."
+}
+
+disable_advanced() {
+  if ! is_root; then
+    echo "ERROR: Must run as root (sudo bash scripts/optimize.sh advanced-disable)" >&2
+    exit 1
+  fi
+  echo "==> Disabling Advanced Server Tuning..."
+
+  # 1. Re-enable services if they exist
+  for svc in multipathd ModemManager snapd packagekit; do
+    if systemctl list-unit-files "$svc.service" >/dev/null 2>&1; then
+      systemctl enable "$svc" 2>/dev/null || true
+      systemctl start "$svc" 2>/dev/null || true
+    fi
+  done
+
+  # 2. Remove TCP BBR
+  if [[ -f /etc/sysctl.d/99-srv-panel-bbr.conf ]]; then
+    rm -f /etc/sysctl.d/99-srv-panel-bbr.conf
+    sysctl -w net.core.default_qdisc=pfifo_fast 2>/dev/null || true
+    sysctl -w net.ipv4.tcp_congestion_control=cubic 2>/dev/null || true
+  fi
+
+  # 3. Remove Journald capping
+  if [[ -f /etc/systemd/journald.conf.d/99-srv-panel.conf ]]; then
+    rm -f /etc/systemd/journald.conf.d/99-srv-panel.conf
+    systemctl restart systemd-journald 2>/dev/null || true
+  fi
+
+  echo "==> Advanced Server Tuning DEACTIVATED."
+}
+
 set_nginx_worker_1() {
   if ! is_root; then
     echo "ERROR: Must run as root (sudo bash scripts/optimize.sh nginx-worker-1)" >&2
@@ -169,6 +277,11 @@ get_status() {
   local nginx_single="false"
   local swappiness="60"
   local worker_setting="auto"
+  local advanced_active="false"
+
+  if [[ -f /etc/systemd/journald.conf.d/99-srv-panel.conf ]]; then
+    advanced_active="true"
+  fi
 
   if [[ -f "$SYSCTL_CONF" ]] || systemctl is-active --quiet zramswap 2>/dev/null; then
     opt_active="true"
@@ -197,7 +310,8 @@ get_status() {
   "zram_active": $zram_active,
   "nginx_single_worker": $nginx_single,
   "nginx_worker_setting": "$worker_setting",
-  "swappiness": $swappiness
+  "swappiness": $swappiness,
+  "advanced_active": $advanced_active
 }
 EOF
 }
@@ -207,11 +321,13 @@ ACTION="${1:-status}"
 case "$ACTION" in
   enable)              enable_optimization ;;
   disable)             disable_optimization ;;
+  advanced-enable)     enable_advanced ;;
+  advanced-disable)    disable_advanced ;;
   nginx-worker-1)      set_nginx_worker_1 ;;
   nginx-worker-auto)   set_nginx_worker_auto ;;
   status)              get_status ;;
   *)
-    echo "Usage: $0 {enable|disable|nginx-worker-1|nginx-worker-auto|status}" >&2
+    echo "Usage: $0 {enable|disable|advanced-enable|advanced-disable|nginx-worker-1|nginx-worker-auto|status}" >&2
     exit 1
     ;;
 esac

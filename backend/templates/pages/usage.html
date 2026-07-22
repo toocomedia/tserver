@@ -208,6 +208,24 @@
       </div>
     </div>
 
+    <!-- Control 3: Advanced Server Tuning -->
+    <div class="info-row" style="align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-top: 12px;">
+      <div style="flex: 1; min-width: 240px;">
+        <div style="margin-bottom: 2px;">
+          <strong style="font-size: 14px;">Advanced Server Tuning</strong>
+        </div>
+        <div class="text-small text-muted mb-sm">Smart background service disabling, TCP BBR speed control, and journald log capping.</div>
+        <div class="text-small mt-sm" id="advanced-tuning-checks" style="display:none; line-height:1.4;">
+        </div>
+      </div>
+      <div>
+        <div class="rect-segmented" id="group-advanced-tuning">
+          <button type="button" class="rect-segment rect-segment--active" id="btn-adv-off" onclick="setAdvancedTuning(false)">Inactive</button>
+          <button type="button" class="rect-segment" id="btn-adv-on" onclick="setAdvancedTuning(true)">Active</button>
+        </div>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -449,6 +467,29 @@
           btnNgxSingle.className = 'rect-segment';
         }
       }
+      const btnAdvOff = document.getElementById('btn-adv-off');
+      const btnAdvOn = document.getElementById('btn-adv-on');
+      if (btnAdvOff && btnAdvOn && !isActionPending) {
+        if (d.optimization.advanced_active) {
+          btnAdvOff.className = 'rect-segment';
+          btnAdvOn.className = 'rect-segment rect-segment--active';
+        } else {
+          btnAdvOff.className = 'rect-segment rect-segment--active';
+          btnAdvOn.className = 'rect-segment';
+        }
+      }
+
+      const advChecks = document.getElementById('advanced-tuning-checks');
+      if (advChecks && d.optimization.hardware_checks) {
+        advChecks.style.display = 'block';
+        const hc = d.optimization.hardware_checks;
+        advChecks.innerHTML = `
+          <div style="color:var(--color-text); margin-bottom:4px; font-weight:600;">Hardware Checks:</div>
+          <div>${hc.has_fibre ? '❌ Fibre Channel detected (multipathd kept active)' : '✅ No Fibre Channel (multipathd disabled)'}</div>
+          <div>${hc.has_snaps ? '❌ Custom Snaps found (snapd kept active)' : '✅ No Custom Snaps (snapd disabled)'}</div>
+          <div>${hc.has_modem ? '❌ Cellular Modem detected (ModemManager kept active)' : '✅ No Cellular Modem (ModemManager disabled)'}</div>
+        `;
+      }
     }
 
     // Last updated
@@ -465,11 +506,15 @@
     const btnOn = document.getElementById('btn-opt-on');
     const btnAuto = document.getElementById('btn-ngx-auto');
     const btnSingle = document.getElementById('btn-ngx-single');
+    const btnAdvOff = document.getElementById('btn-adv-off');
+    const btnAdvOn = document.getElementById('btn-adv-on');
 
     if (btnOff) btnOff.disabled = disabled;
     if (btnOn) btnOn.disabled = disabled;
     if (btnAuto) btnAuto.disabled = disabled;
     if (btnSingle) btnSingle.disabled = disabled;
+    if (btnAdvOff) btnAdvOff.disabled = disabled;
+    if (btnAdvOn) btnAdvOn.disabled = disabled;
   }
 
   async function setOptMode(enabled) {
@@ -527,6 +572,37 @@
       toast(e.message, 'danger');
     } finally {
       // Wait 4 seconds for Nginx reload before resuming stats polling
+      setTimeout(() => {
+        targetBtn.textContent = originalText;
+        setOptimizationButtonsDisabled(false);
+        isActionPending = false;
+        fetchStats();
+      }, 4000);
+    }
+  }
+
+  async function setAdvancedTuning(enabled) {
+    if (isActionPending) return;
+    const btnOff = document.getElementById('btn-adv-off');
+    const btnOn = document.getElementById('btn-adv-on');
+    const targetBtn = enabled ? btnOn : btnOff;
+    const originalText = targetBtn.textContent;
+
+    isActionPending = true;
+    if (pollTimer) clearTimeout(pollTimer);
+    setOptimizationButtonsDisabled(true);
+    targetBtn.textContent = 'Applying...';
+
+    try {
+      const res = await panel.post('/api/system/advanced/toggle', { enabled });
+      if (res.success) {
+        toast(enabled ? 'Advanced Tuning activated' : 'Advanced Tuning deactivated', 'success');
+      } else {
+        toast('Failed: ' + (res.detail || 'Error'), 'danger');
+      }
+    } catch (e) {
+      toast(e.message, 'danger');
+    } finally {
       setTimeout(() => {
         targetBtn.textContent = originalText;
         setOptimizationButtonsDisabled(false);
