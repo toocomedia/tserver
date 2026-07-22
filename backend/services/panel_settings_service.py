@@ -64,6 +64,7 @@ def _apply_runtime(updates: dict[str, str]) -> None:
         "SESSION_MAX_AGE": int,
         "SECURITY_HEADERS": lambda v: str(v).lower() in ("1", "true", "yes", "on"),
         "HSTS_ENABLED": lambda v: str(v).lower() in ("1", "true", "yes", "on"),
+        "SSL_AUTO_RENEW_ENABLED": lambda v: str(v).lower() in ("1", "true", "yes", "on"),
     }
     for key, raw in updates.items():
         if key not in casts:
@@ -282,6 +283,7 @@ async def get_status() -> dict:
         "urls": _open_urls(domain, allow_ip, ip_port, ssl_active),
         "perf_gzip": bool(config.NGINX_PERF_GZIP),
         "perf_static_cache": bool(config.NGINX_PERF_STATIC_CACHE),
+        "ssl_auto_renew_enabled": bool(config.SSL_AUTO_RENEW_ENABLED),
     }
 
 
@@ -471,6 +473,7 @@ async def save_settings(payload: dict) -> dict:
         "SESSION_MAX_AGE": str(days * 86400),
         "SECURITY_HEADERS": _bool_env(bool(payload.get("security_headers", True))),
         "HSTS_ENABLED": _bool_env(bool(payload.get("hsts_enabled", False))),
+        "SSL_AUTO_RENEW_ENABLED": _bool_env(bool(payload.get("ssl_auto_renew_enabled", True))),
     }
     await env_file.set_env_values(env)
     _apply_runtime(env)

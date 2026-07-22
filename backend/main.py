@@ -15,7 +15,7 @@ from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
 import config
 from database import init_db
-from routers import system, domains, dns, ssl, proxy, errors, auth, settings, updates, dev
+from routers import system, domains, dns, ssl, proxy, errors, auth, settings, updates, dev, notifications
 from middleware.error_capture import RequestIdMiddleware, register_error_handlers
 from middleware.auth import AuthMiddleware
 from middleware.csrf import CSRFMiddleware
@@ -58,13 +58,15 @@ async def lifespan(app: FastAPI):
         )
     logger.info("Initializing database...")
     await init_db()
-    from services import update_service
+    from services import update_service, ssl_auto_renew
     purge_task = asyncio.create_task(_auto_purge_loop())
     update_task = asyncio.create_task(update_service.run_auto_update_loop())
+    ssl_renew_task = asyncio.create_task(ssl_auto_renew.run_scheduler())
     logger.info("Panel ready.")
     yield
     purge_task.cancel()
     update_task.cancel()
+    ssl_renew_task.cancel()
     logger.info("Panel shutting down.")
 
 
@@ -133,5 +135,6 @@ app.include_router(dns.router)       # Phase 3
 app.include_router(ssl.router)       # Phase 4
 app.include_router(proxy.router)     # Phase 5
 app.include_router(errors.router)    # Phase 6
+app.include_router(notifications.router)
 if getattr(config, "DEBUG", False):
     app.include_router(dev.router)       # Testing tools (DEBUG mode only)

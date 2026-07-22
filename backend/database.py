@@ -178,6 +178,7 @@ async def init_db():
     import models.proxy        # noqa: F401
     import models.error_event  # noqa: F401
     import models.user         # noqa: F401
+    import models.notification # noqa: F401
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)

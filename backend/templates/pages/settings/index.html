@@ -163,6 +163,14 @@
             {% endif %}
           </p>
 
+          <label class="form-check mb-md" id="ssl-auto-renew-wrap">
+            <input type="checkbox" id="ssl_auto_renew_enabled" {% if s.ssl_auto_renew_enabled %}checked{% endif %}>
+            <span>
+              <strong>Enable SSL Auto-Renewal</strong>
+              <span class="form-hint d-block">Automatically checks and renews certificates approaching expiry. Failures will be reported to the Notification Center.</span>
+            </span>
+          </label>
+
           <div id="ssl-active-box" class="settings-mode-box mb-md" {% if not s.ssl_active %}hidden{% endif %}>
             <div class="info-row">
               <span class="info-row__label">Status</span>

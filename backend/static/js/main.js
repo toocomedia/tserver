@@ -308,6 +308,28 @@ document.addEventListener("DOMContentLoaded", () => {
     mobileToggle.addEventListener("click", toggleMenu);
     backdrop.addEventListener("click", closeMenu);
   }
+
+  async function fetchNotificationCount() {
+    try {
+      const data = await panel.get("/api/notifications");
+      const badge = document.getElementById("nav-notif-badge");
+      if (badge && data.unread_count !== undefined) {
+        if (data.unread_count > 0) {
+          badge.textContent = data.unread_count;
+          badge.style.display = "inline-block";
+        } else {
+          badge.style.display = "none";
+        }
+      }
+    } catch (e) {
+      console.error("Failed to fetch notification count", e);
+    }
+  }
+
+  if (document.getElementById("nav-notif-badge")) {
+    fetchNotificationCount();
+    setInterval(fetchNotificationCount, 60000);
+  }
 });
 
 window.PATHS = PATHS;

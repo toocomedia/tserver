@@ -72,6 +72,7 @@
       security_headers: !!$("security_headers")?.checked,
       hsts_enabled: !!$("hsts_enabled")?.checked,
       session_max_age_days: parseInt($("session_max_age_days")?.value || "7", 10),
+      ssl_auto_renew_enabled: !!$("ssl_auto_renew_enabled")?.checked,
     };
   }
 
@@ -139,6 +140,7 @@
     if ($("session_https_only")) $("session_https_only").checked = !!s.session_https_only;
     if ($("security_headers")) $("security_headers").checked = !!s.security_headers;
     if ($("hsts_enabled")) $("hsts_enabled").checked = !!s.hsts_enabled;
+    if ($("ssl_auto_renew_enabled")) $("ssl_auto_renew_enabled").checked = !!s.ssl_auto_renew_enabled;
     if ($("session_max_age_days")) $("session_max_age_days").value = s.session_max_age_days || 7;
     if ($("stat-server-ip")) $("stat-server-ip").textContent = s.server_ip || "";
     if ($("stat-hostname")) {
