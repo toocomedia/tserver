@@ -34,6 +34,19 @@ class DockerDependencyServiceTests(unittest.TestCase):
         self.assertEqual(status["state"], "stopped")
         self.assertIn("timed out", status["error"])
 
+    @patch("dependencies.docker.service.shutil.which", return_value="/usr/bin/docker")
+    def test_health_checks_use_privileged_docker_access(self, _which):
+        service = DockerDependencyService()
+        service._run = Mock(
+            side_effect=[
+                subprocess.CompletedProcess([], 0, "Docker version", ""),
+                subprocess.CompletedProcess([], 0, '"29.0.0"', ""),
+            ]
+        )
+        status = service.get_status(force=True)
+        self.assertTrue(status["healthy"])
+        self.assertTrue(all(call.kwargs.get("privileged") for call in service._run.call_args_list))
+
     def test_service_control_is_not_mocked_on_windows(self):
         service = DockerDependencyService()
         service._is_linux = Mock(return_value=False)
@@ -96,6 +109,15 @@ class DockerDependencyServiceTests(unittest.TestCase):
             )
             self.assertIn('DOCKER_INSTALL_SH="$PANEL_DIR/scripts/install_docker.sh"', sudoers_content)
             self.assertIn("/bin/bash $DOCKER_INSTALL_SH", sudoers_content)
+            self.assertIn('DOCKER_BIN="$(command -v docker || echo /usr/bin/docker)"', sudoers_content)
+            self.assertIn("$DOCKER_BIN", sudoers_content)
+
+        template = (BACKEND / "templates" / "pages" / "dependencies.html").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("data-dependency-install-form", template)
+        self.assertIn("await fetch(form.action", template)
+        self.assertNotIn("window.location.reload", template)
 
 
 if __name__ == "__main__":

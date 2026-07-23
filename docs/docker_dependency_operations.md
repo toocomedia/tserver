@@ -26,6 +26,14 @@ Disable shows affected plugins, requires confirmation, disables and stops `docke
 
 If an action fails, the previous desired state is retained and the error appears on the dependency card. Correct sudo/systemd permissions or the daemon failure, then retry. An operation interrupted by a panel restart is reset to idle with a recovery warning.
 
+If the page reports permission denied for `/var/run/docker.sock`, refresh the panel's fixed sudo policy and restart through the normal updater:
+
+```bash
+sudo bash /opt/srv-panel/scripts/update.sh
+```
+
+The panel uses `sudo -n docker` for daemon checks and owned-resource operations instead of adding the panel service user to the root-equivalent `docker` group.
+
 ## Troubleshooting Commands
 
 ```bash

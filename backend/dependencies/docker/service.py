@@ -65,12 +65,13 @@ class DockerDependencyService:
 
         if installed:
             try:
-                version_result = self._run(["docker", "--version"])
+                version_result = self._run(["docker", "--version"], privileged=True)
                 if version_result.returncode == 0:
                     version = version_result.stdout.strip()
 
                 info_result = self._run(
-                    ["docker", "info", "--format", "{{json .ServerVersion}}"]
+                    ["docker", "info", "--format", "{{json .ServerVersion}}"],
+                    privileged=True,
                 )
                 running = info_result.returncode == 0
                 if not running:
@@ -232,7 +233,10 @@ class DockerDependencyService:
         if not self.get_status()["healthy"]:
             return []
         try:
-            result = self._run(["docker", "ps", "-a", "--format", "{{json .}}"])
+            result = self._run(
+                ["docker", "ps", "-a", "--format", "{{json .}}"],
+                privileged=True,
+            )
         except (OSError, subprocess.TimeoutExpired):
             return []
         if result.returncode != 0:
@@ -291,7 +295,7 @@ class DockerDependencyService:
         removed: dict[str, int] = {}
         for list_command, remove_command, resource_type in resource_commands:
             try:
-                listed = self._run(list_command, timeout=10)
+                listed = self._run(list_command, timeout=10, privileged=True)
             except subprocess.TimeoutExpired:
                 return False, f"Listing owned Docker {resource_type} timed out."
             if listed.returncode != 0:
@@ -304,7 +308,9 @@ class DockerDependencyService:
                 removed[resource_type] = 0
                 continue
             try:
-                result = self._run([*remove_command, *resource_ids], timeout=60)
+                result = self._run(
+                    [*remove_command, *resource_ids], timeout=60, privileged=True
+                )
             except subprocess.TimeoutExpired:
                 return False, f"Removing owned Docker {resource_type} timed out."
             if result.returncode != 0:

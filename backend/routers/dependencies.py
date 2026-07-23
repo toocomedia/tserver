@@ -75,11 +75,22 @@ async def dependency_install(dependency_id: str):
     if current is None:
         raise HTTPException(status_code=404, detail="Unknown dependency.")
     if current["healthy"]:
-        return RedirectResponse("/dependencies", status_code=303)
+        return {
+            "success": True,
+            "message": "Dependency is already installed and healthy.",
+            "status": current,
+        }
     success, message = await dependency_manager.install(dependency_id)
     if not success:
-        return JSONResponse({"detail": message}, status_code=409)
-    return RedirectResponse("/dependencies", status_code=303)
+        return JSONResponse(
+            {"success": False, "detail": message},
+            status_code=409,
+        )
+    return {
+        "success": True,
+        "message": message,
+        "status": dependency_manager.get_status(dependency_id, force=True),
+    }
 
 
 @router.get("/api/dependencies/{dependency_id}/install-guide")

@@ -59,7 +59,9 @@ class DependencyManager:
             if status.get("installed") and state.install_origin == "bundled"
             else state.install_origin
         )
-        status["last_error"] = state.last_error or status.get("error")
+        status["last_error"] = (
+            None if status.get("healthy") else (state.last_error or status.get("error"))
+        )
         status["effective_state"] = (
             state.operation
             if state.operation != "idle"
