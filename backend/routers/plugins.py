@@ -9,7 +9,7 @@ from pathlib import Path
 from fastapi import APIRouter, Request, UploadFile, File, Form, Depends
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 
-from plugins.manager import plugin_manager
+from plugins.manager import PLUGIN_ID_RE, plugin_manager
 from templating import templates
 
 logger = logging.getLogger(__name__)
@@ -33,6 +33,8 @@ async def plugin_asset(plugin_id: str, filename: str):
     import config
     from fastapi import HTTPException
     from fastapi.responses import FileResponse
+    if not PLUGIN_ID_RE.fullmatch(plugin_id):
+        raise HTTPException(status_code=400, detail="Invalid plugin ID")
     plugin_dir = config.BASE_DIR / "plugins" / plugin_id
     # Prevent path traversal
     if ".." in filename or "/" in filename or "\\" in filename:
@@ -51,28 +53,28 @@ async def plugin_asset(plugin_id: str, filename: str):
 @router.post("/api/install")
 async def install_plugin_api(request: Request, plugin_id: str = Form(...)):
     """Run installation script for a plugin."""
-    success = plugin_manager.run_plugin_script(plugin_id, "install")
+    success, message = await plugin_manager.run_plugin_script(plugin_id, "install")
     if success:
         return RedirectResponse("/plugins/", status_code=303)
-    return JSONResponse({"detail": f"Failed to install plugin '{plugin_id}'."}, status_code=400)
+    return JSONResponse({"detail": message}, status_code=400)
 
 
 @router.post("/api/uninstall")
 async def uninstall_plugin_api(request: Request, plugin_id: str = Form(...)):
     """Run uninstallation script for a plugin."""
-    success = plugin_manager.run_plugin_script(plugin_id, "uninstall")
+    success, message = await plugin_manager.run_plugin_script(plugin_id, "uninstall")
     if success:
         return RedirectResponse("/plugins/", status_code=303)
-    return JSONResponse({"detail": f"Failed to uninstall plugin '{plugin_id}'."}, status_code=400)
+    return JSONResponse({"detail": message}, status_code=400)
 
 
 @router.post("/api/toggle")
 async def toggle_plugin(request: Request, plugin_id: str = Form(...), enabled: bool = Form(...)):
     """Enable or disable a plugin."""
-    success = plugin_manager.toggle_plugin(plugin_id, enabled)
+    success, message = await plugin_manager.toggle_plugin(plugin_id, enabled)
     if success:
         return RedirectResponse("/plugins/", status_code=303)
-    return JSONResponse({"detail": "Cannot enable plugin before it is installed."}, status_code=400)
+    return JSONResponse({"detail": message}, status_code=400)
 
 
 @router.post("/api/upload")
@@ -88,10 +90,10 @@ async def upload_plugin(request: Request, plugin_file: UploadFile = File(...)):
         with open(temp_path, "wb") as buffer:
             shutil.copyfileobj(plugin_file.file, buffer)
 
-        res = plugin_manager.upload_plugin_zip(str(temp_path))
-        if res:
+        success, message = plugin_manager.upload_plugin_zip(str(temp_path))
+        if success:
             return RedirectResponse("/plugins/", status_code=303)
-        return JSONResponse({"detail": "Invalid plugin zip structure."}, status_code=400)
+        return JSONResponse({"detail": message}, status_code=400)
     except Exception as exc:
         logger.error("Plugin upload error: %s", exc)
         return JSONResponse({"detail": str(exc)}, status_code=500)

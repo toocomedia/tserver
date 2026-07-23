@@ -1,207 +1,498 @@
-"""
-backend/plugins/manager.py — SRV-Panel Dynamic Plugin Architecture Manager.
+"""SRV Panel plugin discovery, lifecycle, dependency, and upload manager."""
+from __future__ import annotations
 
-Scans backend/plugins/ for subdirectories containing plugin.json.
-Auto-mounts plugin routers, exposes Jinja template paths, and handles plugin lifecycle.
-No core code modifications required when adding or uploading plugins!
-"""
-import os
+import asyncio
+import importlib
 import json
 import logging
-import importlib
+import os
+import re
 import shutil
+import stat
 import subprocess
+import tempfile
+import threading
 import zipfile
-from pathlib import Path
-from typing import Dict, Any, List, Optional
-from fastapi import FastAPI
-from jinja2 import FileSystemLoader, ChoiceLoader
+from pathlib import Path, PurePosixPath
+from typing import Any, Dict, List, Optional
+
+from fastapi import Depends, FastAPI
+from jinja2 import ChoiceLoader, FileSystemLoader
+
+import config
+from dependencies.registry import CORE_DEPENDENCY_IDS
+from services.component_state import component_state_store
 
 logger = logging.getLogger(__name__)
 
 PLUGINS_DIR = Path(__file__).parent.resolve()
+PLUGIN_ID_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}$")
+RESERVED_PLUGIN_IDS = frozenset({"manager", *CORE_DEPENDENCY_IDS})
+
+
+class PluginUnavailableError(Exception):
+    def __init__(self, plugin_id: str, code: str, message: str, status_code: int):
+        super().__init__(message)
+        self.plugin_id = plugin_id
+        self.code = code
+        self.message = message
+        self.status_code = status_code
 
 
 class PluginManager:
+    MAX_ARCHIVE_FILES = 512
+    MAX_EXTRACTED_BYTES = 100 * 1024 * 1024
+    SCRIPT_TIMEOUT_SECONDS = 900
+
     def __init__(self):
         self.plugins: Dict[str, Dict[str, Any]] = {}
         self.mounted_routers: set[str] = set()
+        self._operation_locks: dict[str, threading.Lock] = {}
+        self._app: FastAPI | None = None
 
-    def _check_plugin_installed(self, plugin_dir: Path, plugin_id: str) -> bool:
-        """Check if plugin's service reports that it is installed on system."""
+    @staticmethod
+    def _service_module(plugin_dir: Path):
         service_file = plugin_dir / "service.py"
         if not service_file.exists():
-            return True  # Pure UI plugins are considered installed
+            return None
+        return importlib.import_module(f"plugins.{plugin_dir.name}.service")
 
+    def _find_service(self, plugin_dir: Path, plugin_id: str):
+        module = self._service_module(plugin_dir)
+        if module is None:
+            return None
+        for attr in [f"{plugin_id}_service", "service", "maddy_service"]:
+            service = getattr(module, attr, None)
+            if service is not None:
+                return service
+        return None
+
+    def _check_plugin_installed(self, plugin_dir: Path, plugin_id: str) -> bool:
         try:
-            mod = importlib.import_module(f"plugins.{plugin_dir.name}.service")
-            for attr in ["maddy_service", "service", f"{plugin_id}_service"]:
-                svc = getattr(mod, attr, None)
-                if svc and hasattr(svc, "is_installed"):
-                    return svc.is_installed()
+            service = self._find_service(plugin_dir, plugin_id)
+            if service is not None and hasattr(service, "is_installed"):
+                return bool(service.is_installed())
+            return True
         except Exception as exc:
-            logger.warning("Could not check installation status for plugin %s: %s", plugin_id, exc)
+            logger.warning("Could not check installation status for %s: %s", plugin_id, exc)
+            return False
 
-        return True
+    @staticmethod
+    def _required_dependencies(data: dict[str, Any]) -> list[str]:
+        requires = data.get("requires") or {}
+        dependencies = requires.get("dependencies", []) if isinstance(requires, dict) else []
+        return dependencies if isinstance(dependencies, list) else []
+
+    def _validate_manifest(self, data: dict[str, Any], plugin_dir: Path) -> str | None:
+        plugin_id = data.get("id")
+        if not isinstance(plugin_id, str) or not PLUGIN_ID_RE.fullmatch(plugin_id):
+            return "Plugin ID must use lowercase letters, numbers, underscores, or hyphens."
+        if plugin_id != plugin_dir.name:
+            return "Plugin ID must match its folder name."
+        if not isinstance(data.get("name"), str) or not data["name"].strip():
+            return "Plugin name is required."
+
+        requires = data.get("requires")
+        if requires is not None and not isinstance(requires, dict):
+            return "requires must be an object."
+        dependencies = self._required_dependencies(data)
+        if any(not isinstance(item, str) for item in dependencies):
+            return "requires.dependencies must contain dependency IDs."
+        unknown = sorted(set(dependencies) - CORE_DEPENDENCY_IDS)
+        if unknown:
+            return f"Unknown dependencies: {', '.join(unknown)}."
+        return None
+
+    def _effective(self, plugin: dict[str, Any]) -> dict[str, Any]:
+        from dependencies import dependency_manager
+
+        result = dict(plugin)
+        plugin_id = result["id"]
+        default_enabled = bool(result.get("manifest_enabled", True))
+        state = component_state_store.get(
+            "plugin", plugin_id, default_enabled=default_enabled
+        )
+        result["enabled"] = state.desired_enabled
+        result["operation"] = state.operation
+        result["last_error"] = state.last_error
+
+        requirements = []
+        paused_by = []
+        for dependency_id in self._required_dependencies(result):
+            healthy = dependency_manager.is_healthy(dependency_id)
+            requirements.append({"id": dependency_id, "healthy": healthy})
+            if not healthy:
+                paused_by.append(dependency_id)
+        result["dependency_status"] = requirements
+        result["paused_by"] = paused_by
+
+        if result.get("manifest_error"):
+            effective_status = "invalid"
+        elif not result.get("installed", False):
+            effective_status = "missing"
+        elif state.operation != "idle":
+            effective_status = state.operation
+        elif not state.desired_enabled:
+            effective_status = "disabled"
+        elif paused_by:
+            effective_status = "paused"
+        else:
+            effective_status = "active"
+        result["effective_status"] = effective_status
+        return result
 
     def discover_plugins(self) -> List[Dict[str, Any]]:
-        """Scan backend/plugins/ for plugin.json manifests and check installation status."""
         self.plugins.clear()
         if not PLUGINS_DIR.exists():
             return []
 
-        for item in PLUGINS_DIR.iterdir():
-            if item.is_dir():
-                manifest_path = item / "plugin.json"
-                if manifest_path.exists():
-                    try:
-                        with open(manifest_path, "r", encoding="utf-8") as f:
-                            data = json.load(f)
-                            plugin_id = data.get("id", item.name)
-                            data["id"] = plugin_id
-                            data["dir_path"] = str(item)
-                            data["enabled"] = data.get("enabled", True)
-                            data["installed"] = self._check_plugin_installed(item, plugin_id)
-                            self.plugins[plugin_id] = data
-                    except Exception as exc:
-                        logger.error("Error reading manifest for plugin %s: %s", item.name, exc)
+        for item in sorted(PLUGINS_DIR.iterdir(), key=lambda path: path.name):
+            manifest_path = item / "plugin.json"
+            if not item.is_dir() or not manifest_path.exists():
+                continue
+            try:
+                data = json.loads(manifest_path.read_text(encoding="utf-8"))
+                plugin_id = data.get("id", item.name)
+                data["id"] = plugin_id
+                data["dir_path"] = str(item)
+                data["manifest_enabled"] = bool(data.get("enabled", True))
+                data["installed"] = self._check_plugin_installed(item, plugin_id)
+                data["manifest_error"] = self._validate_manifest(data, item)
+                self.plugins[plugin_id] = data
+                self._operation_locks.setdefault(plugin_id, threading.Lock())
+            except Exception as exc:
+                logger.error("Error reading manifest for plugin %s: %s", item.name, exc)
+        return [self._effective(plugin) for plugin in self.plugins.values()]
 
-        return list(self.plugins.values())
+    def state_components(self) -> list[tuple[str, str, bool, str]]:
+        if not self.plugins:
+            self.discover_plugins()
+        return [
+            (
+                "plugin",
+                plugin_id,
+                bool(plugin.get("manifest_enabled", True)),
+                (
+                    "uploaded"
+                    if (Path(plugin["dir_path"]) / ".srv-panel-uploaded").exists()
+                    else "bundled"
+                ),
+            )
+            for plugin_id, plugin in self.plugins.items()
+        ]
+
+    def availability_dependency(self, plugin_id: str):
+        def require_available() -> None:
+            plugin = self.get_plugin(plugin_id)
+            if plugin is None:
+                raise PluginUnavailableError(
+                    plugin_id, "plugin_missing", "Plugin is not registered.", 404
+                )
+            status = plugin["effective_status"]
+            if status == "active":
+                return
+            if status == "paused":
+                dependencies = ", ".join(plugin["paused_by"])
+                raise PluginUnavailableError(
+                    plugin_id,
+                    "dependency_unavailable",
+                    f"Required dependency is unavailable: {dependencies}.",
+                    503,
+                )
+            if status == "disabled":
+                raise PluginUnavailableError(
+                    plugin_id, "plugin_disabled", "Plugin is disabled.", 409
+                )
+            if status == "missing":
+                raise PluginUnavailableError(
+                    plugin_id, "plugin_not_installed", "Plugin is not installed.", 409
+                )
+            raise PluginUnavailableError(
+                plugin_id,
+                "plugin_unavailable",
+                plugin.get("manifest_error") or plugin.get("last_error") or "Plugin is unavailable.",
+                409,
+            )
+
+        return require_available
 
     def init_app(self, app: FastAPI):
-        """Mount all discovered & enabled plugin routers and register template paths."""
+        self._app = app
         self.discover_plugins()
         from templating import templates
 
-        template_dirs = [str(templates.env.loader.searchpath[0])] if templates.env.loader else []
-
+        template_dirs = [str((config.BASE_DIR / "templates").resolve())]
         for plugin_id, plugin in self.plugins.items():
-
             plugin_dir = Path(plugin["dir_path"])
+            templates_dir = plugin_dir / "templates"
+            if templates_dir.exists():
+                template_dirs.append(str(templates_dir))
 
-            # 1. Register plugin template path if exists
-            plugin_templates_dir = plugin_dir / "templates"
-            if plugin_templates_dir.exists():
-                template_dirs.append(str(plugin_templates_dir))
-
-            # 2. Dynamically import and mount router.py if present
             router_file = plugin_dir / "router.py"
-            if router_file.exists():
-                try:
-                    module_name = f"plugins.{plugin_dir.name}.router"
-                    mod = importlib.import_module(module_name)
-                    if hasattr(mod, "router") and plugin_id not in self.mounted_routers:
-                        app.include_router(mod.router)
-                        self.mounted_routers.add(plugin_id)
-                        logger.info("Successfully mounted router for plugin: %s", plugin_id)
-                except Exception as exc:
-                    logger.error("Failed to load router for plugin %s: %s", plugin_id, exc)
+            if not router_file.exists() or plugin.get("manifest_error"):
+                continue
+            try:
+                module = importlib.import_module(f"plugins.{plugin_dir.name}.router")
+                if hasattr(module, "router") and plugin_id not in self.mounted_routers:
+                    app.include_router(
+                        module.router,
+                        dependencies=[Depends(self.availability_dependency(plugin_id))],
+                    )
+                    self.mounted_routers.add(plugin_id)
+                    logger.info("Mounted guarded plugin router: %s", plugin_id)
+            except Exception as exc:
+                logger.error("Failed to load router for plugin %s: %s", plugin_id, exc)
 
-        # Update Jinja ChoiceLoader to search core templates first, then plugin templates
         if template_dirs:
-            loaders = [FileSystemLoader(d) for d in template_dirs]
-            templates.env.loader = ChoiceLoader(loaders)
+            templates.env.loader = ChoiceLoader([FileSystemLoader(path) for path in template_dirs])
 
     def get_sidebar_items(self) -> List[Dict[str, Any]]:
-        """Return list of enabled & installed plugins configured for sidebar display."""
         items = []
-        for plugin_id, plugin in self.plugins.items():
-            if plugin.get("enabled", True) and plugin.get("sidebar", False):
-                plugin_dir = Path(plugin["dir_path"])
-                is_installed = self._check_plugin_installed(plugin_dir, plugin_id)
-
-                if is_installed:
-                    items.append({
-                        "id": plugin_id,
-                        "label": plugin.get("sidebar_label", plugin.get("name")),
-                        "route": plugin.get("route_prefix", f"/plugins/{plugin_id}"),
-                        "icon": plugin.get("icon", "grid"),
-                    })
+        for plugin_id in self.plugins:
+            plugin = self.get_plugin(plugin_id)
+            if not plugin or not plugin.get("sidebar", False):
+                continue
+            if plugin["effective_status"] not in {"active", "paused"}:
+                continue
+            items.append(
+                {
+                    "id": plugin_id,
+                    "label": plugin.get("sidebar_label", plugin.get("name")),
+                    "route": plugin.get("route_prefix", f"/plugins/{plugin_id}"),
+                    "icon": plugin.get("icon", "grid"),
+                    "paused": plugin["effective_status"] == "paused",
+                }
+            )
         return items
 
     def get_plugin(self, plugin_id: str) -> Optional[Dict[str, Any]]:
-        """Get plugin metadata by ID."""
         if not self.plugins:
             self.discover_plugins()
-        return self.plugins.get(plugin_id)
+        plugin = self.plugins.get(plugin_id)
+        return self._effective(plugin) if plugin else None
 
-    def toggle_plugin(self, plugin_id: str, enabled: bool) -> bool:
-        """Enable or disable a plugin in its plugin.json manifest."""
+    def get_dependents(self, dependency_id: str) -> list[dict[str, Any]]:
+        dependents = []
+        for plugin_id in self.plugins:
+            plugin = self.get_plugin(plugin_id)
+            if not plugin or dependency_id not in self._required_dependencies(plugin):
+                continue
+            if not plugin.get("installed", False):
+                continue
+            dependents.append(
+                {
+                    "id": plugin_id,
+                    "name": plugin.get("name", plugin_id),
+                    "enabled": plugin["enabled"],
+                    "status": plugin["effective_status"],
+                }
+            )
+        return dependents
+
+    async def _run_lifecycle_hook(self, plugin: dict[str, Any], enabled: bool) -> None:
+        service = self._find_service(Path(plugin["dir_path"]), plugin["id"])
+        if service is None:
+            return
+        hook = getattr(service, "resume" if enabled else "pause", None)
+        if hook is not None:
+            await asyncio.wait_for(asyncio.to_thread(hook), timeout=60)
+
+    async def toggle_plugin(self, plugin_id: str, enabled: bool) -> tuple[bool, str]:
         plugin = self.get_plugin(plugin_id)
         if not plugin:
-            return False
+            return False, "Plugin not found."
+        if enabled and not plugin.get("installed", False):
+            return False, "Cannot enable plugin before it is installed."
 
-        if not plugin.get("installed", False) and enabled:
-            logger.warning("Cannot enable plugin %s because it is not installed.", plugin_id)
-            return False
-
-        manifest_path = Path(plugin["dir_path"]) / "plugin.json"
+        lock = self._operation_locks.setdefault(plugin_id, threading.Lock())
+        if not lock.acquire(blocking=False):
+            return False, "Another plugin operation is already running."
+        previous = component_state_store.get(
+            "plugin", plugin_id, default_enabled=plugin["enabled"]
+        )
+        operation = "enabling" if enabled else "disabling"
         try:
-            with open(manifest_path, "r", encoding="utf-8") as f:
-                data = json.load(f)
+            await component_state_store.set(
+                "plugin", plugin_id, operation=operation, clear_error=True
+            )
+            try:
+                if not plugin.get("paused_by"):
+                    await self._run_lifecycle_hook(plugin, enabled)
+            except Exception as exc:
+                message = f"Plugin lifecycle hook failed: {exc}"
+                await component_state_store.set(
+                    "plugin",
+                    plugin_id,
+                    desired_enabled=previous.desired_enabled,
+                operation="idle",
+                    last_error=message,
+                )
+                return False, message
+            await component_state_store.set(
+                "plugin",
+                plugin_id,
+                desired_enabled=enabled,
+                operation="idle",
+                clear_error=True,
+            )
+            return True, "Plugin enabled." if enabled else "Plugin disabled."
+        finally:
+            lock.release()
 
-            data["enabled"] = enabled
-            with open(manifest_path, "w", encoding="utf-8") as f:
-                json.dump(data, f, indent=2)
-
-            plugin["enabled"] = enabled
-            return True
-        except Exception as exc:
-            logger.error("Failed to toggle plugin %s: %s", plugin_id, exc)
-            return False
-
-    def run_plugin_script(self, plugin_id: str, action: str) -> bool:
-        """Run install or uninstall script for a plugin."""
+    async def run_plugin_script(self, plugin_id: str, action: str) -> tuple[bool, str]:
+        if action not in {"install", "uninstall"}:
+            return False, "Unsupported plugin action."
         plugin = self.get_plugin(plugin_id)
         if not plugin:
-            return False
-
+            return False, "Plugin not found."
         script_rel = plugin.get(f"{action}_script")
         if not script_rel:
-            return True
+            return False, f"Plugin has no {action} script."
 
-        script_path = Path(plugin["dir_path"]) / script_rel
-        if not script_path.exists():
-            logger.error("Script %s does not exist for plugin %s", script_path, plugin_id)
-            return False
-
+        plugin_dir = Path(plugin["dir_path"]).resolve()
+        script_path = (plugin_dir / str(script_rel)).resolve()
+        if plugin_dir not in script_path.parents or not script_path.is_file():
+            return False, "Plugin script path is invalid."
         if os.name == "nt":
-            logger.info("Windows detected — skipping bash script %s for %s", script_path, action)
-            return True
+            return False, "Plugin scripts can only run on Linux."
 
+        lock = self._operation_locks.setdefault(plugin_id, threading.Lock())
+        if not lock.acquire(blocking=False):
+            return False, "Another plugin operation is already running."
         try:
-            cmd = ["sudo", "bash", str(script_path)] if hasattr(os, "geteuid") and os.geteuid() != 0 else ["bash", str(script_path)]
-            res = subprocess.run(cmd, capture_output=True, text=True)
-            if res.returncode != 0:
-                logger.error("Script %s failed (code %d):\nSTDOUT: %s\nSTDERR: %s", script_path, res.returncode, res.stdout, res.stderr)
-                # Fallback to non-sudo bash
-                res_fb = subprocess.run(["bash", str(script_path)], capture_output=True, text=True)
-                if res_fb.returncode != 0:
-                    logger.error("Fallback script %s failed:\nSTDOUT: %s\nSTDERR: %s", script_path, res_fb.stdout, res_fb.stderr)
-                    return False
+            await component_state_store.set(
+                "plugin", plugin_id, operation=f"{action}ing", clear_error=True
+            )
+            if action == "uninstall" and "docker" in self._required_dependencies(plugin):
+                from dependencies import dependency_manager
+
+                docker_service = dependency_manager.get_service("docker")
+                cleanup_ok, cleanup_message = await asyncio.to_thread(
+                    docker_service.cleanup_plugin_resources,
+                    plugin_id,
+                    purge_data=False,
+                )
+                if not cleanup_ok:
+                    await component_state_store.set(
+                        "plugin",
+                        plugin_id,
+                        operation="idle",
+                        last_error=cleanup_message,
+                    )
+                    return False, cleanup_message
+            command = ["bash", str(script_path)]
+            if hasattr(os, "geteuid") and os.geteuid() != 0 and config.PRIVILEGED_SUDO:
+                command = ["sudo", "-n", *command]
+            try:
+                result = await asyncio.to_thread(
+                    subprocess.run,
+                    command,
+                    capture_output=True,
+                    text=True,
+                    timeout=self.SCRIPT_TIMEOUT_SECONDS,
+                    check=False,
+                    shell=False,
+                )
+            except subprocess.TimeoutExpired:
+                message = f"Plugin {action} timed out."
+                await component_state_store.set(
+                    "plugin", plugin_id, operation="idle", last_error=message
+                )
+                return False, message
+            if result.returncode != 0:
+                message = (result.stderr or result.stdout or f"Plugin {action} failed.").strip()
+                await component_state_store.set(
+                    "plugin", plugin_id, operation="idle", last_error=message
+                )
+                return False, message
+
+            await component_state_store.set(
+                "plugin",
+                plugin_id,
+                desired_enabled=action == "install",
+                operation="idle",
+                clear_error=True,
+            )
+            self.discover_plugins()
+            return True, f"Plugin {action} completed."
+        finally:
+            lock.release()
+
+    @staticmethod
+    def _safe_archive_path(name: str) -> PurePosixPath:
+        normalized = name.replace("\\", "/")
+        path = PurePosixPath(normalized)
+        if path.is_absolute() or not path.parts or ".." in path.parts:
+            raise ValueError("Archive contains an unsafe path.")
+        return path
+
+    def upload_plugin_zip(self, zip_filepath: str) -> tuple[bool, str]:
+        try:
+            with zipfile.ZipFile(zip_filepath, "r") as archive:
+                infos = archive.infolist()
+                if len(infos) > self.MAX_ARCHIVE_FILES:
+                    return False, "Plugin archive contains too many files."
+                if sum(info.file_size for info in infos) > self.MAX_EXTRACTED_BYTES:
+                    return False, "Plugin archive is too large after extraction."
+
+                paths: list[tuple[zipfile.ZipInfo, PurePosixPath]] = []
+                manifests: list[PurePosixPath] = []
+                for info in infos:
+                    path = self._safe_archive_path(info.filename)
+                    mode = (info.external_attr >> 16) & 0xFFFF
+                    if stat.S_ISLNK(mode):
+                        return False, "Plugin archives cannot contain symbolic links."
+                    if path.name.lower() == "dependency.json":
+                        return False, "Dependency drivers cannot be uploaded as plugins."
+                    paths.append((info, path))
+                    if path.name == "plugin.json" and not info.is_dir():
+                        manifests.append(path)
+
+                if len(manifests) != 1 or len(manifests[0].parts) != 2:
+                    return False, "Archive must contain one <plugin-id>/plugin.json manifest."
+                plugin_folder = manifests[0].parts[0]
+                if any(path.parts[0] != plugin_folder for _, path in paths):
+                    return False, "All plugin files must be inside one plugin folder."
+
+                with tempfile.TemporaryDirectory(prefix=".upload-", dir=PLUGINS_DIR) as temp:
+                    stage = Path(temp)
+                    for info, path in paths:
+                        destination = (stage / Path(*path.parts)).resolve()
+                        if stage.resolve() not in destination.parents and destination != stage.resolve():
+                            return False, "Archive path escaped the staging directory."
+                        if info.is_dir():
+                            destination.mkdir(parents=True, exist_ok=True)
+                            continue
+                        destination.parent.mkdir(parents=True, exist_ok=True)
+                        with archive.open(info) as source, destination.open("wb") as target:
+                            shutil.copyfileobj(source, target)
+
+                    root = stage / plugin_folder
+                    data = json.loads((root / "plugin.json").read_text(encoding="utf-8"))
+                    plugin_id = data.get("id")
+                    if plugin_id in RESERVED_PLUGIN_IDS:
+                        return False, "Plugin ID is reserved by the panel core."
+                    if any(key in data for key in ("dependency", "system_dependency")):
+                        return False, "Uploaded plugins cannot declare system-driver metadata."
+                    if str(data.get("type", "")).lower() in {"system", "dependency"}:
+                        return False, "Uploaded plugins cannot claim a system type."
+                    error = self._validate_manifest(data, root)
+                    if error:
+                        return False, error
+
+                    destination = PLUGINS_DIR / plugin_id
+                    if destination.exists():
+                        return False, "A plugin with this ID already exists."
+                    (root / ".srv-panel-uploaded").write_text("", encoding="utf-8")
+                    shutil.move(str(root), str(destination))
 
             self.discover_plugins()
-            return True
-        except Exception as exc:
-            logger.error("Error executing %s script for plugin %s: %s", action, plugin_id, exc)
-            return False
-
-    def upload_plugin_zip(self, zip_filepath: str) -> Optional[Dict[str, Any]]:
-        """Extract uploaded .zip archive into backend/plugins/."""
-        try:
-            with zipfile.ZipFile(zip_filepath, 'r') as zip_ref:
-                manifest_file = [f for f in zip_ref.namelist() if f.endswith("plugin.json")]
-                if not manifest_file:
-                    logger.error("Uploaded zip has no plugin.json manifest")
-                    return None
-
-                zip_ref.extractall(PLUGINS_DIR)
-
-            self.discover_plugins()
-            return {"status": "success"}
-        except Exception as exc:
-            logger.error("Failed to extract plugin zip: %s", exc)
-            return None
+            if self._app is not None:
+                self.init_app(self._app)
+            return True, "Plugin uploaded successfully."
+        except (OSError, ValueError, zipfile.BadZipFile, json.JSONDecodeError) as exc:
+            logger.error("Failed to upload plugin zip: %s", exc)
+            return False, str(exc)
 
 
 plugin_manager = PluginManager()

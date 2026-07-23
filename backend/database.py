@@ -180,6 +180,7 @@ async def init_db():
     import models.user         # noqa: F401
     import models.notification # noqa: F401
     import models.mail_domain  # noqa: F401
+    import models.component_state  # noqa: F401
 
 
     async with engine.begin() as conn:

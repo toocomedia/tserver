@@ -85,6 +85,16 @@
       </a>
     </li>
 
+    <li>
+      <a href="{{ path('dependencies') }}" class="sidebar__item" data-path="{{ path('dependencies') }}" aria-label="Dependencies">
+        <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 12l2 2 4-4"></path>
+          <path d="M12 3l7 4v5c0 5-3 8-7 9-4-1-7-4-7-9V7l7-4z"></path>
+        </svg>
+        Dependencies
+      </a>
+    </li>
+
     {% set plugin_items = get_plugin_sidebar_items() %}
     {% if plugin_items %}
     <li class="sidebar__section-label">Plugins Services</li>
@@ -101,7 +111,7 @@
           <line x1="12" y1="16" x2="12.01" y2="16"></line>
           {% endif %}
         </svg>
-        {{ item.label }}
+        {{ item.label }}{% if item.paused %} <span style="color:var(--color-danger); margin-left:auto;">● Paused</span>{% endif %}
       </a>
     </li>
     {% endfor %}

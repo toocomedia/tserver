@@ -75,3 +75,11 @@ Built into the app (works with or without nginx, IP or domain):
 - **Session cookie** — `SameSite=lax`; set `SESSION_HTTPS_ONLY=true` only when the panel is always HTTPS (leave false for plain `http://IP` login)
 
 Limits are in-memory (per process) and reset on restart.
+
+---
+
+## Plugin & Dependency Development
+
+- [Plugin development guide](docs/plugin_development_guide.md)
+- [System dependency development guide](docs/dependency_development_guide.md)
+- [Docker dependency operations](docs/docker_dependency_operations.md)

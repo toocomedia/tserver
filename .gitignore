@@ -23,7 +23,10 @@ Thumbs.db
 
 # Local-only helpers (not for the public repo)
 push-to-github.bat
-docs/
+docs/*
+!docs/plugin_development_guide.md
+!docs/dependency_development_guide.md
+!docs/docker_dependency_operations.md
 rules/
 
 # Install leftovers

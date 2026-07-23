@@ -1,0 +1,16 @@
+{% extends "layout.html" %}
+
+{% block title %}Plugin Unavailable — SRV Panel{% endblock %}
+{% block page_title %}Plugin Unavailable{% endblock %}
+
+{% block content %}
+<div class="alert alert--warning">
+  <strong>{{ plugin_id }}</strong>
+  <p>{{ message }}</p>
+  {% if code == 'dependency_unavailable' %}
+  <a class="btn btn--primary" href="/dependencies">Open Dependencies</a>
+  {% else %}
+  <a class="btn btn--secondary" href="/plugins/">Open Plugins</a>
+  {% endif %}
+</div>
+{% endblock %}

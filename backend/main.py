@@ -15,15 +15,19 @@ from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
 import config
 from database import init_db
-from routers import system, domains, dns, ssl, proxy, errors, auth, settings, updates, dev, notifications, plugins
+from routers import system, domains, dns, ssl, proxy, errors, auth, settings, updates, dev, notifications, plugins, dependencies
+from dependencies import dependency_manager
 from plugins import plugin_manager
+from plugins.manager import PluginUnavailableError
 from middleware.error_capture import RequestIdMiddleware, register_error_handlers
 from middleware.auth import AuthMiddleware
 from middleware.csrf import CSRFMiddleware
 from middleware.limiter import limiter
 from middleware.security_headers import SecurityHeadersMiddleware
 from services import login_guard
+from services.component_state import component_state_store
 from templating import templates
+from middleware.auth import wants_json
 
 logging.basicConfig(
     level=logging.INFO,
@@ -59,6 +63,11 @@ async def lifespan(app: FastAPI):
         )
     logger.info("Initializing database...")
     await init_db()
+    plugin_manager.discover_plugins()
+    await component_state_store.initialize(
+        plugin_manager.state_components() + dependency_manager.state_components()
+    )
+    await asyncio.to_thread(dependency_manager.get_all_statuses, force=True)
     from services import update_service, ssl_auto_renew
     purge_task = asyncio.create_task(_auto_purge_loop())
     update_task = asyncio.create_task(update_service.run_auto_update_loop())
@@ -102,6 +111,30 @@ app = FastAPI(
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
+
+@app.exception_handler(PluginUnavailableError)
+async def _plugin_unavailable_handler(request: Request, exc: PluginUnavailableError):
+    if wants_json(request):
+        return JSONResponse(
+            {
+                "detail": exc.message,
+                "code": exc.code,
+                "plugin_id": exc.plugin_id,
+            },
+            status_code=exc.status_code,
+        )
+    return templates.TemplateResponse(
+        "pages/plugin_unavailable.html",
+        {
+            "request": request,
+            "active_page": "plugins",
+            "plugin_id": exc.plugin_id,
+            "code": exc.code,
+            "message": exc.message,
+        },
+        status_code=exc.status_code,
+    )
+
 # Middleware order: last added runs first on the request.
 # ProxyHeaders → Session → SecurityHeaders → RequestId → CSRF → Auth → app
 # ProxyHeaders: honor X-Forwarded-* so redirects keep :8080 when behind nginx
@@ -138,6 +171,7 @@ app.include_router(proxy.router)     # Phase 5
 app.include_router(errors.router)    # Phase 6
 app.include_router(notifications.router)
 app.include_router(plugins.router)
+app.include_router(dependencies.router)
 plugin_manager.init_app(app)
 if getattr(config, "DEBUG", False):
     app.include_router(dev.router)       # Testing tools (DEBUG mode only)

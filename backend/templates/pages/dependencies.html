@@ -1,0 +1,94 @@
+{% extends "layout.html" %}
+
+{% block title %}System Dependencies — SRV Panel{% endblock %}
+{% block page_title %}System Dependencies{% endblock %}
+
+{% block head %}
+<style>
+  .dependency-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(360px,1fr)); gap:1.5rem; }
+  .dependency-card { border:1px solid var(--color-line); background:transparent; }
+  .dependency-card__header { display:flex; justify-content:space-between; gap:1rem; padding:1.25rem; border-bottom:1px solid var(--color-line); }
+  .dependency-card__title { margin:0 0 .35rem; font-size:1.05rem; }
+  .dependency-card__body { padding:1.25rem; }
+  .dependency-card__footer { display:flex; gap:.75rem; padding:1rem 1.25rem; border-top:1px solid var(--color-line); }
+  .dependency-status { padding:.2rem .5rem; border:1px solid var(--color-line); text-transform:uppercase; font-size:.7rem; font-weight:800; height:max-content; }
+  .dependency-status.healthy { color:var(--color-accent); border-color:var(--color-accent); }
+  .dependency-status.stopped, .dependency-status.disabled { color:var(--color-danger); border-color:var(--color-danger); }
+  .dependency-meta { display:grid; grid-template-columns:120px 1fr; gap:.55rem; font-size:.85rem; }
+  .dependency-code { white-space:pre-wrap; overflow:auto; padding:1rem; border:1px solid var(--color-line); background:var(--color-bg); font-size:.78rem; }
+  .dependency-warning { color:var(--color-danger); margin-top:1rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="section">
+  <div class="section__header">
+    <h3>Trusted Core Dependencies</h3>
+    <span class="text-small text-muted">Only dependencies shipped by SRV Panel can appear here.</span>
+  </div>
+  <div class="section__body">
+    <div class="dependency-grid">
+      {% for dependency in dependencies %}
+      <article class="dependency-card">
+        <header class="dependency-card__header">
+          <div>
+            <h3 class="dependency-card__title">{{ dependency.name }}</h3>
+            <span class="text-small text-muted">Driver v{{ dependency.version }}</span>
+          </div>
+          <span class="dependency-status {{ dependency.effective_state }}">{{ dependency.effective_state | replace('_', ' ') }}</span>
+        </header>
+        <div class="dependency-card__body">
+          <p class="text-muted">{{ dependency.description }}</p>
+          <div class="dependency-meta">
+            <strong>Installed</strong><span>{{ 'Yes' if dependency.installed else 'No' }}</span>
+            <strong>Daemon</strong><span>{{ 'Running' if dependency.running else 'Stopped' }}</span>
+            <strong>Version</strong><span>{{ dependency.detected_version if dependency.detected_version else 'Not detected' }}</span>
+            <strong>Dependents</strong>
+            <span>
+              {% if dependency.dependents %}
+                {{ dependency.dependents | map(attribute='name') | join(', ') }}
+              {% else %}
+                None
+              {% endif %}
+            </span>
+          </div>
+          {% if dependency.last_error %}
+          <p class="dependency-warning">{{ dependency.last_error }}</p>
+          {% endif %}
+
+          {% if not dependency.installed %}
+          <h4>Guided installation</h4>
+          <p class="text-small text-muted">{{ dependency.install_guide.platform }}{% if not dependency.install_guide.supported %} — unsupported automatic guide target{% endif %}</p>
+          <pre class="dependency-code">{{ dependency.install_guide.command }}</pre>
+          {% endif %}
+
+          <details style="margin-top:1rem;">
+            <summary>Safe uninstall guide</summary>
+            {% if dependency.dependents %}
+            <p class="dependency-warning">Uninstall is blocked until dependent plugins are removed.</p>
+            {% endif %}
+            <pre class="dependency-code">{{ dependency.uninstall_guide.command }}</pre>
+            <p class="text-small text-muted">{{ dependency.uninstall_guide.warning }}</p>
+          </details>
+        </div>
+        {% if dependency.installed %}
+        <footer class="dependency-card__footer">
+          <form method="post" action="/api/dependencies/{{ dependency.id }}/toggle">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+            {% if dependency.running %}
+            <input type="hidden" name="enabled" value="false">
+            <input type="hidden" name="confirmed" value="true">
+            <button class="btn btn--danger" type="submit" onclick="return confirm('Disable {{ dependency.name }}? Dependent plugins will be paused.')">Disable</button>
+            {% else %}
+            <input type="hidden" name="enabled" value="true">
+            <button class="btn btn--primary" type="submit">Enable</button>
+            {% endif %}
+          </form>
+        </footer>
+        {% endif %}
+      </article>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}
