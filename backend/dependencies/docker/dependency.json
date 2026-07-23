@@ -2,6 +2,6 @@
   "id": "docker",
   "name": "Docker Engine",
   "description": "Container runtime required by plugins that run containerized services.",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "author": "SRV Panel Core"
 }

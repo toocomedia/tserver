@@ -19,7 +19,7 @@ Keep feature plugins under `/plugins` and trusted host dependencies under `/depe
 - Dependency loss never changes a plugin's desired state. Recovery resumes only plugins still desired-enabled.
 - Enable/disable and install/uninstall operations are locked per component, run once with timeouts, verify results, and retain the previous desired state on failure.
 - Docker disable repeats its precheck server-side, requires confirmation, disables/stops both the socket and service, and verifies daemon shutdown.
-- Docker package installation/removal remains guided in Phase 1. `/var/lib/docker` is never removed by the panel.
+- Docker installation uses a fixed core-owned, sudoers-allowlisted Ubuntu script and verifies daemon health. Package removal remains guided. `/var/lib/docker` is never removed by the panel.
 - Docker plugins label resources `srv-panel.plugin=<plugin-id>`. Uninstall removes only owned runtime resources and preserves volumes/data unless a separate purge is explicitly confirmed.
 
 ## Security
@@ -34,6 +34,7 @@ Keep feature plugins under `/plugins` and trusted host dependencies under `/depe
 - `GET /api/dependencies/status`
 - `GET /api/dependencies/{id}/precheck?action=disable|uninstall`
 - `POST /api/dependencies/{id}/toggle`
+- `POST /api/dependencies/{id}/install`
 - `GET /api/dependencies/{id}/install-guide`
 - `GET /api/dependencies/{id}/uninstall-guide`
 

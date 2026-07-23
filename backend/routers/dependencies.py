@@ -69,6 +69,19 @@ async def dependency_toggle(
     return RedirectResponse("/dependencies", status_code=303)
 
 
+@router.post("/api/dependencies/{dependency_id}/install")
+async def dependency_install(dependency_id: str):
+    current = dependency_manager.get_status(dependency_id, force=True)
+    if current is None:
+        raise HTTPException(status_code=404, detail="Unknown dependency.")
+    if current["healthy"]:
+        return RedirectResponse("/dependencies", status_code=303)
+    success, message = await dependency_manager.install(dependency_id)
+    if not success:
+        return JSONResponse({"detail": message}, status_code=409)
+    return RedirectResponse("/dependencies", status_code=303)
+
+
 @router.get("/api/dependencies/{dependency_id}/install-guide")
 async def dependency_install_guide(dependency_id: str):
     service = dependency_manager.get_service(dependency_id)

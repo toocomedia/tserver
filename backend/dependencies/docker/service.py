@@ -26,6 +26,10 @@ class DockerDependencyService:
         self._cache_lock = threading.Lock()
 
     @staticmethod
+    def _is_linux() -> bool:
+        return os.name != "nt"
+
+    @staticmethod
     def _command_prefix() -> list[str]:
         if os.name == "nt":
             return []
@@ -111,7 +115,7 @@ class DockerDependencyService:
             self._cache_at = 0.0
 
     def toggle(self, enable: bool) -> tuple[bool, str]:
-        if os.name == "nt":
+        if not self._is_linux():
             return False, "Docker service control is only available on Linux."
 
         commands = (
@@ -149,6 +153,43 @@ class DockerDependencyService:
         return True, "Docker enabled." if enable else "Docker disabled."
 
     @staticmethod
+    def _installer_path() -> Path:
+        deployed = Path("/opt/srv-panel/scripts/install_docker.sh")
+        if deployed.is_file():
+            return deployed
+        return Path(__file__).resolve().parents[3] / "scripts" / "install_docker.sh"
+
+    def install(self) -> tuple[bool, str]:
+        if not self._is_linux():
+            return False, "Docker installation is only available on supported Ubuntu servers."
+        installer = self._installer_path().resolve()
+        if not installer.is_file():
+            return False, "Docker installer script is missing. Run the panel updater first."
+
+        try:
+            result = self._run(
+                ["bash", str(installer)],
+                timeout=900,
+                privileged=True,
+            )
+        except subprocess.TimeoutExpired:
+            return False, "Docker installation timed out after 15 minutes."
+        if result.returncode != 0:
+            message = result.stderr.strip() or result.stdout.strip() or "Docker installation failed."
+            if "password is required" in message.lower():
+                message = (
+                    "Docker installer permission is missing. Run: "
+                    "sudo bash /opt/srv-panel/scripts/update.sh"
+                )
+            return False, message[-2000:]
+
+        self.invalidate()
+        status = self.get_status(force=True)
+        if not status["healthy"]:
+            return False, status["error"] or "Docker installed but the daemon is not healthy."
+        return True, result.stdout.strip()[-2000:] or "Docker installed successfully."
+
+    @staticmethod
     def _os_release() -> dict[str, str]:
         values: dict[str, str] = {}
         path = Path("/etc/os-release")
@@ -169,12 +210,8 @@ class DockerDependencyService:
         return {
             "supported": supported,
             "platform": release.get("PRETTY_NAME") or platform.platform(),
-            "command": (
-                "curl -fsSL https://get.docker.com -o /tmp/get-docker.sh\n"
-                "sudo sh /tmp/get-docker.sh\n"
-                "sudo systemctl enable --now docker"
-            ),
-            "warning": "Review the official Docker installation instructions before running.",
+            "command": "sudo bash /opt/srv-panel/scripts/install_docker.sh",
+            "warning": "The panel installer uses Docker's official Ubuntu apt repository.",
         }
 
     def get_uninstall_guide(self) -> dict[str, Any]:

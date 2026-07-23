@@ -49,6 +49,25 @@ class DependencyManagerTests(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(success)
         self.assertIn("already running", message)
 
+    async def test_successful_install_is_marked_panel_managed(self):
+        manager = DependencyManager()
+        service = Mock()
+        service.install.return_value = (True, "installed")
+        manager._services["docker"] = service
+        state_set = AsyncMock()
+        with patch(
+            "dependencies.manager.component_state_store.get",
+            return_value=ComponentStateValue(desired_enabled=True),
+        ), patch(
+            "dependencies.manager.component_state_store.set", state_set
+        ):
+            success, _ = await manager.install("docker")
+
+        self.assertTrue(success)
+        final = state_set.await_args_list[-1].kwargs
+        self.assertEqual("panel_managed", final["install_origin"])
+        self.assertTrue(final["desired_enabled"])
+
     def test_uninstall_precheck_reports_unmanaged_containers(self):
         manager = DependencyManager()
         service = Mock()

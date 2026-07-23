@@ -12,9 +12,11 @@ Docker Engine is a trusted SRV Panel dependency. Its card is available at `/depe
 
 The panel refreshes cached health after lifecycle actions. If Docker is stopped or removed outside the panel, the next health refresh pauses dependent plugins automatically.
 
-## Guided Install and Uninstall
+## Install and Guided Uninstall
 
-Phase 1 does not execute host package installation or removal. The page displays guided commands for supported Ubuntu 22.04 and 24.04 servers. Review the current official Docker documentation before running them.
+The **Install Docker** card action supports Ubuntu 22.04 and 24.04. It runs the fixed core installer, configures Docker's official apt repository, installs Engine/CLI/containerd/Buildx/Compose, enables the service, and verifies daemon health. It refuses unsupported systems and conflicting packages rather than removing software automatically. The steps follow the [official Docker Ubuntu installation documentation](https://docs.docker.com/engine/install/ubuntu/).
+
+Docker package removal remains guided and is never executed by the panel.
 
 Before uninstalling, check the API/page precheck for dependent plugins and unmanaged containers. Remove or migrate dependents first. SRV Panel never deletes `/var/lib/docker`; deleting it is a separate permanent administrator action.
 

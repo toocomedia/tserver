@@ -54,6 +54,11 @@ class DependencyManager:
         status.update(self._metadata[dependency_id])
         status["desired_enabled"] = state.desired_enabled
         status["operation"] = state.operation
+        status["install_origin"] = (
+            "external"
+            if status.get("installed") and state.install_origin == "bundled"
+            else state.install_origin
+        )
         status["last_error"] = state.last_error or status.get("error")
         status["effective_state"] = (
             state.operation
@@ -131,6 +136,44 @@ class DependencyManager:
                 dependency_id,
                 desired_enabled=enabled,
                 operation="idle",
+                clear_error=True,
+            )
+            return True, message
+        finally:
+            lock.release()
+
+    async def install(self, dependency_id: str) -> tuple[bool, str]:
+        service = self.get_service(dependency_id)
+        lock = self._operation_locks.get(dependency_id)
+        if service is None or lock is None:
+            return False, "Unknown dependency."
+        if not hasattr(service, "install"):
+            return False, "This dependency does not support panel installation."
+        if not lock.acquire(blocking=False):
+            return False, "Another dependency operation is already running."
+
+        current = component_state_store.get("dependency", dependency_id)
+        try:
+            await component_state_store.set(
+                "dependency", dependency_id, operation="installing", clear_error=True
+            )
+            success, message = await asyncio.to_thread(service.install)
+            if not success:
+                await component_state_store.set(
+                    "dependency",
+                    dependency_id,
+                    desired_enabled=current.desired_enabled,
+                    operation="idle",
+                    last_error=message,
+                )
+                return False, message
+
+            await component_state_store.set(
+                "dependency",
+                dependency_id,
+                desired_enabled=True,
+                operation="idle",
+                install_origin="panel_managed",
                 clear_error=True,
             )
             return True, message

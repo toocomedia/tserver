@@ -441,12 +441,13 @@ BASH_BIN="$(command -v bash || echo /bin/bash)"
 OPTIMIZE_SH="$PANEL_DIR/scripts/optimize.sh"
 UPDATE_SH="$PANEL_DIR/scripts/update.sh"
 GET_UPDATE_SH="$PANEL_DIR/scripts/get-update.sh"
+DOCKER_INSTALL_SH="$PANEL_DIR/scripts/install_docker.sh"
 
 cat > "$SUDOERS_FILE" <<EOF
 # srv-panel — allow panel user to manage nginx + certbot + site files + optimization
 # Installed by scripts/install.sh — validate: visudo -cf $SUDOERS_FILE
 Defaults:$PANEL_USER !requiretty
-Cmnd_Alias SRV_PANEL_CMDS = $NGINX_BIN, $CERTBOT_BIN, $OPENSSL_BIN, $TEE_BIN, $LN_BIN, $RM_BIN, $MKDIR_BIN, $SYSTEMCTL_BIN, $SYSCTL_BIN, /bin/bash $OPTIMIZE_SH *, /usr/bin/bash $OPTIMIZE_SH *, $OPTIMIZE_SH *, /bin/bash $UPDATE_SH *, /usr/bin/bash $UPDATE_SH *, /bin/bash $GET_UPDATE_SH *, /usr/bin/bash $GET_UPDATE_SH *, $UPDATE_SH *, $GET_UPDATE_SH *, /bin/bash $PANEL_DIR/app/plugins/*, /usr/bin/bash $PANEL_DIR/app/plugins/*
+Cmnd_Alias SRV_PANEL_CMDS = $NGINX_BIN, $CERTBOT_BIN, $OPENSSL_BIN, $TEE_BIN, $LN_BIN, $RM_BIN, $MKDIR_BIN, $SYSTEMCTL_BIN, $SYSCTL_BIN, /bin/bash $OPTIMIZE_SH *, /usr/bin/bash $OPTIMIZE_SH *, $OPTIMIZE_SH *, /bin/bash $UPDATE_SH *, /usr/bin/bash $UPDATE_SH *, /bin/bash $GET_UPDATE_SH *, /usr/bin/bash $GET_UPDATE_SH *, $UPDATE_SH *, $GET_UPDATE_SH *, /bin/bash $DOCKER_INSTALL_SH, /usr/bin/bash $DOCKER_INSTALL_SH, /bin/bash $PANEL_DIR/app/plugins/*, /usr/bin/bash $PANEL_DIR/app/plugins/*
 $PANEL_USER ALL=(root) NOPASSWD: SRV_PANEL_CMDS
 EOF
 chmod 440 "$SUDOERS_FILE"

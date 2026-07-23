@@ -41,6 +41,7 @@
           <p class="text-muted">{{ dependency.description }}</p>
           <div class="dependency-meta">
             <strong>Installed</strong><span>{{ 'Yes' if dependency.installed else 'No' }}</span>
+            <strong>Install source</strong><span>{{ dependency.install_origin | replace('_', ' ') }}</span>
             <strong>Daemon</strong><span>{{ 'Running' if dependency.running else 'Stopped' }}</span>
             <strong>Version</strong><span>{{ dependency.detected_version if dependency.detected_version else 'Not detected' }}</span>
             <strong>Dependents</strong>
@@ -57,8 +58,9 @@
           {% endif %}
 
           {% if not dependency.installed %}
-          <h4>Guided installation</h4>
+          <h4>Installation</h4>
           <p class="text-small text-muted">{{ dependency.install_guide.platform }}{% if not dependency.install_guide.supported %} — unsupported automatic guide target{% endif %}</p>
+          <p class="text-small text-muted">The panel uses Docker's official Ubuntu apt repository. Manual fallback:</p>
           <pre class="dependency-code">{{ dependency.install_guide.command }}</pre>
           {% endif %}
 
@@ -71,8 +73,8 @@
             <p class="text-small text-muted">{{ dependency.uninstall_guide.warning }}</p>
           </details>
         </div>
-        {% if dependency.installed %}
         <footer class="dependency-card__footer">
+          {% if dependency.installed %}
           <form method="post" action="/api/dependencies/{{ dependency.id }}/toggle">
             <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
             {% if dependency.running %}
@@ -84,8 +86,13 @@
             <button class="btn btn--primary" type="submit">Enable</button>
             {% endif %}
           </form>
+          {% else %}
+          <form method="post" action="/api/dependencies/{{ dependency.id }}/install" onsubmit="var button=this.querySelector('button'); button.disabled=true; button.textContent='Installing…';">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+            <button class="btn btn--primary" type="submit" {% if not dependency.install_guide.supported %}disabled title="Unsupported operating system"{% endif %}>Install Docker</button>
+          </form>
+          {% endif %}
         </footer>
-        {% endif %}
       </article>
       {% endfor %}
     </div>

@@ -20,7 +20,7 @@ Dependency IDs use lowercase letters/numbers with optional underscores or hyphen
 - Enable/disable must verify the observed result before reporting success.
 - The manager serializes operations per dependency and rolls desired state back on failure.
 - Mutable desired state and last errors live in `component_states`; manifests remain declarative.
-- Package installation and removal stay guided until a dedicated, allowlisted privileged helper is designed.
+- Installation may be automated only through a fixed core-owned script with an exact sudoers entry, no request-controlled arguments, operation locking, timeouts, and post-install health verification. Package removal remains guided.
 
 ## UI and API Contract
 
