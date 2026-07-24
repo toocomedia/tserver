@@ -365,7 +365,6 @@
 .tabs-nav {
   display: flex;
   gap: 12px;
-  border-bottom: 1px solid var(--color-line);
   padding-bottom: 8px;
   overflow-x: auto;
   white-space: nowrap;
@@ -378,13 +377,13 @@
 .tabs-nav .btn--ghost {
   flex-shrink: 0;
   border-bottom: 2px solid transparent;
-  border-radius: 4px 4px 0 0;
-  transition: color 0.15s ease, border-color 0.15s ease, background-0.15s ease;
+  border-radius: 0;
+  transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
 }
 .tabs-nav .btn--ghost.active {
   color: var(--color-text);
   border-bottom-color: var(--color-accent);
-  background: var(--color-surface);
+  background: transparent;
 }
 
 .grid-responsive-cards {
