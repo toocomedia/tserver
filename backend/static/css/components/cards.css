@@ -255,27 +255,77 @@
   transform: rotate(180deg);
 }
 
-/* EXPANDABLE DETAILS TRAY */
+/* ABSOLUTE POPUP OVERLAY TRAY (ZERO CARD RESIZING) */
 .card-details-tray {
-  border-top: 1px solid var(--color-line);
-  background: var(--color-surface);
-  padding: 16px 24px;
-  animation: slideDown 0.2s ease-out forwards;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 30;
+  background: var(--color-sidebar);
+  color: #FFFFFF;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.22s ease;
+  transform: translateY(0);
+  opacity: 1;
 }
 
 .card-details-tray.is-hidden {
-  display: none !important;
+  display: flex !important;
+  transform: translateY(100%);
+  opacity: 0;
+  pointer-events: none;
 }
 
-@keyframes slideDown {
-  from { opacity: 0; transform: translateY(-4px); }
-  to { opacity: 1; transform: translateY(0); }
+.tray-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  padding-bottom: 8px;
+  margin-bottom: 10px;
+}
+
+.tray-title {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-accent);
+}
+
+.tray-close-btn {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+}
+
+.tray-close-btn:hover {
+  color: #FFFFFF;
+}
+
+.tray-close-btn svg {
+  width: 14px;
+  height: 14px;
+  stroke: currentColor;
+  stroke-width: 2;
 }
 
 .tray-content {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  flex: 1;
+  justify-content: center;
 }
 
 .tray-section {
@@ -289,7 +339,7 @@
   font-size: 11px;
   font-weight: 800;
   text-transform: uppercase;
-  color: var(--color-muted);
+  color: rgba(255, 255, 255, 0.6);
   letter-spacing: 0.04em;
 }
 
@@ -299,7 +349,7 @@
   gap: 8px;
   font-size: 12px;
   font-weight: 700;
-  color: var(--color-text);
+  color: #FFFFFF;
 }
 
 .tray-badge {
@@ -322,12 +372,18 @@
 
 .tray-error-box {
   font-size: 12px;
-  color: var(--color-danger);
-  background: rgba(220, 38, 38, 0.08);
-  border: 1px solid rgba(220, 38, 38, 0.2);
+  color: #FF8080;
+  background: rgba(220, 38, 38, 0.15);
+  border: 1px solid rgba(220, 38, 38, 0.3);
   padding: 10px 12px;
   line-height: 1.4;
   font-weight: 600;
+}
+
+.info-toggle-btn.is-expanded {
+  background: var(--color-accent) !important;
+  color: var(--color-neutral) !important;
+  border-color: var(--color-accent) !important;
 }
 
 /* Icon Buttons Toolbar */

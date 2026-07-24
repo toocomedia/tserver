@@ -1,4 +1,4 @@
-<!-- plugin_card.html partial (Strict 180px Layout + Icon Buttons + Expandable Details Tray) -->
+<!-- plugin_card.html partial (Strict 180px Layout + Icon Buttons + Absolute Overlay Info Popover) -->
 <div class="plugin-card">
   <div class="plugin-card__top">
     <div class="plugin-card__cover">
@@ -31,9 +31,11 @@
           </div>
 
           {% if plugin.dependency_status or plugin.manifest_error or (action_error and action_error_plugin_id == plugin.id) %}
-            <button type="button" class="expand-toggle-btn {% if plugin.effective_status in ['paused', 'invalid'] %}is-expanded{% endif %}" onclick="const tray=this.closest('.plugin-card').querySelector('.card-details-tray'); this.classList.toggle('is-expanded'); tray.classList.toggle('is-hidden');">
-              <span>{% if plugin.dependency_status %}Requirements{% else %}Details{% endif %}</span>
-              <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            <!-- Info Icon Button -->
+            <button type="button" class="icon-btn info-toggle-btn {% if plugin.effective_status in ['paused', 'invalid'] %}is-expanded{% endif %}"
+              title="View Requirements & Information"
+              onclick="const card=this.closest('.plugin-card'); const tray=card.querySelector('.card-details-tray'); this.classList.toggle('is-expanded'); tray.classList.toggle('is-hidden');">
+              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
             </button>
           {% endif %}
         </div>
@@ -94,9 +96,16 @@
     </div>
   </div>
 
-  <!-- COLLAPSIBLE DETAILS TRAY FOR REQUIREMENTS & ERRORS -->
+  <!-- ABSOLUTE OVERLAY POPUP TRAY (ZERO CARD RESIZING) -->
   {% if plugin.dependency_status or plugin.manifest_error or (action_error and action_error_plugin_id == plugin.id) %}
   <div class="card-details-tray {% if plugin.effective_status not in ['paused', 'invalid'] %}is-hidden{% endif %}">
+    <div class="tray-header">
+      <span class="tray-title">Requirements & Information</span>
+      <button type="button" class="tray-close-btn" title="Close"
+        onclick="const card=this.closest('.plugin-card'); card.querySelector('.card-details-tray').classList.add('is-hidden'); card.querySelector('.info-toggle-btn')?.classList.remove('is-expanded');">
+        <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
+    </div>
     <div class="tray-content">
       {% if plugin.dependency_status %}
         {% for dependency in plugin.dependency_status %}
