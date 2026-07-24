@@ -5,92 +5,42 @@
 {% block page_title %}Plugins{% endblock %}
 
 {% block topbar_actions %}
-<button class="btn btn--primary btn--sm" onclick="openModal('upload-plugin-modal')">
-  Upload Plugin (.zip)
-</button>
-{% endblock %}
+<div style="display: flex; align-items: center; gap: 12px;">
+  <!-- CARDS / LIST VIEW SWITCHER -->
+  <div id="plugin-switcher" class="view-switcher" role="radiogroup" aria-label="Layout view switcher">
+    <button type="button" class="view-switcher__btn is-active" id="btn-plugins-cards" onclick="setPluginsLayout('cards')">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+      Cards View
+    </button>
+    <button type="button" class="view-switcher__btn" id="btn-plugins-list" onclick="setPluginsLayout('list')">
+      <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+      List View
+    </button>
+  </div>
 
-{% block head %}
-<style>
-  .plugin-grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 1.5rem;
-  }
-  .plugin-card {
-    width: 460px;
-    height: 160px; /* STRICT height */
-    border: 1px solid var(--color-line);
-    background: transparent;
-    display: flex;
-    flex-direction: row;
-    position: relative;
-    align-items: stretch;
-    overflow: hidden;
-  }
-  .plugin-card.is-active::before {
-    content: ''; position: absolute; top: -1px; left: -1px; right: -1px; height: 2px;
-    background: var(--color-accent); z-index: 10;
-  }
-  .plugin-card__cover {
-    width: 160px; /* Exact match to card height for perfect 1:1 */
-    flex-shrink: 0; border-right: 1px solid var(--color-line);
-    background: var(--color-bg); display: block;
-  }
-  .plugin-card__cover img {
-    display: block; width: 100%; height: 100%; object-fit: cover;
-  }
-  .plugin-card__main {
-    flex: 1; display: flex; flex-direction: column; min-width: 0;
-  }
-  .plugin-card__header {
-    padding: 16px 20px 8px; display: flex; justify-content: space-between; align-items: flex-start;
-  }
-  .plugin-card__title { 
-    font-size: 16px; font-weight: 800; margin: 0 0 4px 0; line-height: 1.2; color: var(--color-text);
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  }
-  .plugin-card__version { font-size: 11px; color: var(--color-muted); font-family: monospace; letter-spacing: 0.05em; }
-  
-  .plugin-card__status { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; padding: 2px 6px; border: 1px solid var(--color-line); flex-shrink: 0; }
-  .plugin-card__status.active { background: var(--color-accent); color: var(--color-bg); border-color: var(--color-accent); }
-  .plugin-card__status.inactive { color: var(--color-muted); }
-  .plugin-card__status.missing { color: var(--color-danger); border-color: rgba(239,68,68,0.3); }
-
-  .plugin-card__body { 
-    padding: 0 20px; font-size: 12px; color: var(--color-muted); line-height: 1.5; flex: 1; 
-    overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
-  }
-  .plugin-card__footer { display: flex; border-top: 1px solid var(--color-line); margin-top: auto; }
-  
-  .plugin-card__btn {
-    flex: 1; background: transparent; border: none; border-right: 1px solid var(--color-line); color: var(--color-text);
-    padding: 12px; font-size: 11px; font-weight: 700; cursor: pointer; text-transform: uppercase; letter-spacing: 0.1em;
-    transition: background 0.1s, color 0.1s; outline: none; text-align: center; display: inline-flex; justify-content: center; align-items: center; text-decoration: none;
-  }
-  .plugin-card__btn:last-child { border-right: none; }
-  .plugin-card__btn:hover { background: var(--color-surface); }
-  .plugin-card__btn.primary { color: var(--color-bg); background: var(--color-accent); }
-  .plugin-card__btn.primary:hover { background: #A8E04A; }
-  .plugin-card__btn.danger { color: var(--color-muted); }
-  .plugin-card__btn.danger:hover { color: var(--color-danger); background: var(--color-surface); }
-</style>
+  <button class="btn btn--primary btn--sm" onclick="openModal('upload-plugin-modal')">
+    + Upload Plugin (.zip)
+  </button>
+</div>
 {% endblock %}
 
 {% block content %}
 <div class="section">
-  <div class="section__header">
+  <div class="section__header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
     <h3>Installed Extensions</h3>
     <span class="text-small text-muted">Modular panel plugins</span>
   </div>
+  
   <div class="section__body">
-    <div class="plugin-grid">
+    
+    <!-- 1. CARDS VIEW -->
+    <div id="plugins-cards-container" class="plugin-grid">
       {% for plugin in plugins %}
-      <div class="plugin-card {% if plugin.effective_status == 'active' %}is-active{% endif %}">
+      <div class="plugin-card">
         
         <div class="plugin-card__cover">
           <img src="/plugins/assets/{{ plugin.id }}/icon.png" alt="{{ plugin.name }} icon" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='block';">
-          <svg style="display: none; width:48px; color:var(--color-muted); position: relative; z-index: 1;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="1" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+          <svg style="display: none; width:48px; height:48px; stroke:var(--color-text);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="1.5" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
         </div>
         
         <div class="plugin-card__main">
@@ -101,56 +51,56 @@
             </div>
             
             {% if plugin.effective_status == 'missing' %}
-              <div class="plugin-card__status missing">Missing</div>
+              <div class="badge badge--missing"><span class="badge-dot"></span> Missing</div>
             {% elif plugin.effective_status == 'active' %}
-              <div class="plugin-card__status active">Active</div>
+              <div class="badge badge--active"><span class="badge-dot"></span> Active</div>
             {% elif plugin.effective_status == 'paused' %}
-              <div class="plugin-card__status missing">Paused</div>
+              <div class="badge badge--inactive"><span class="badge-dot"></span> Paused</div>
             {% elif plugin.effective_status == 'invalid' %}
-              <div class="plugin-card__status missing">Blocked</div>
+              <div class="badge badge--danger"><span class="badge-dot"></span> Blocked</div>
             {% else %}
-              <div class="plugin-card__status inactive">{{ plugin.effective_status | replace('_', ' ') }}</div>
+              <div class="badge badge--inactive"><span class="badge-dot"></span> {{ plugin.effective_status | replace('_', ' ') }}</div>
             {% endif %}
           </div>
           
           <div class="plugin-card__body">
             {{ plugin.description }}
             {% if plugin.dependency_status %}
-              <div style="margin-top:4px;">
+              <div style="margin-top:4px; font-size:11px;">
               {% for dependency in plugin.dependency_status %}
-                <span style="color:{% if dependency.healthy %}var(--color-accent){% else %}var(--color-danger){% endif %};">Requires {{ dependency.id }}</span>{% if not loop.last %}, {% endif %}
+                <span style="color:{% if dependency.healthy %}var(--color-text){% else %}var(--color-danger){% endif %};">Requires {{ dependency.id }}</span>{% if not loop.last %}, {% endif %}
               {% endfor %}
               </div>
             {% endif %}
-            {% if plugin.manifest_error %}<div style="color:var(--color-danger);">{{ plugin.manifest_error }}</div>{% endif %}
+            {% if plugin.manifest_error %}<div style="color:var(--color-danger); font-size:11px;">{{ plugin.manifest_error }}</div>{% endif %}
           </div>
 
           <div class="plugin-card__footer">
             {% if not plugin.installed %}
-              <form method="post" action="/plugins/api/install" style="flex:1; display:flex;">
+              <form method="post" action="/plugins/api/install" style="display:inline-flex;">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
                 <input type="hidden" name="plugin_id" value="{{ plugin.id }}">
-                <button type="submit" class="plugin-card__btn primary" style="width:100%;">Install Plugin</button>
+                <button type="submit" class="btn btn--primary btn--sm">Install Plugin</button>
               </form>
             {% else %}
               {% if plugin.route_prefix and plugin.effective_status == 'active' %}
-                <a href="{{ plugin.route_prefix }}" class="plugin-card__btn">Manage</a>
+                <a href="{{ plugin.route_prefix }}" class="btn btn--secondary btn--sm">Manage</a>
               {% endif %}
 
               {% if plugin.effective_status != 'invalid' %}
-              <form method="post" action="/plugins/api/toggle" style="flex:1; display:flex;">
+              <form method="post" action="/plugins/api/toggle" style="display:inline-flex;">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
                 <input type="hidden" name="plugin_id" value="{{ plugin.id }}">
                 <input type="hidden" name="enabled" value="{% if plugin.enabled %}false{% else %}true{% endif %}">
-                <button type="submit" class="plugin-card__btn" style="width:100%;">{% if plugin.enabled %}Disable{% else %}Enable{% endif %}</button>
+                <button type="submit" class="btn btn--ghost btn--sm">{% if plugin.enabled %}Disable{% else %}Enable{% endif %}</button>
               </form>
               {% endif %}
 
-              <form method="post" action="/plugins/api/uninstall" style="display:flex;">
+              <form method="post" action="/plugins/api/uninstall" style="display:inline-flex;">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
                 <input type="hidden" name="plugin_id" value="{{ plugin.id }}">
-                <button type="submit" class="plugin-card__btn danger" style="width: 50px;" onclick="return confirm('Uninstall {{ plugin.name }}?')" title="Uninstall">
-                  <svg style="width:16px; height:16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                <button type="submit" class="btn btn--ghost btn--sm" style="color:var(--color-danger);" onclick="return confirm('Uninstall {{ plugin.name }}?')" title="Uninstall">
+                  Uninstall
                 </button>
               </form>
             {% endif %}
@@ -158,11 +108,57 @@
         </div>
       </div>
       {% else %}
-      <div class="empty-state" style="width: 100%; padding: 3rem; text-align: center; color: var(--color-muted); background: transparent; border: 1px dashed var(--color-line);">
-        No plugins available. Click "Upload Plugin (.zip)" to add a plugin.
+      <div class="empty-state" style="grid-column: 1 / -1; padding: 3rem; text-align: center; color: var(--color-muted); background: var(--color-surface); border: 1px solid var(--color-line);">
+        No plugins available. Click "+ Upload Plugin (.zip)" to add a plugin.
       </div>
       {% endfor %}
     </div>
+
+    <!-- 2. LIST VIEW -->
+    <div id="plugins-list-container" class="view-list-container is-hidden">
+      <div class="list-header-row">
+        <div>Extension / Plugin</div>
+        <div>Version</div>
+        <div>Status</div>
+        <div>Description</div>
+        <div style="text-align: right;">Actions</div>
+      </div>
+
+      {% for plugin in plugins %}
+      <div class="list-item-row">
+        <div class="list-col-main">
+          <div class="list-col-thumb">
+            <img src="/plugins/assets/{{ plugin.id }}/icon.png" alt="{{ plugin.name }} icon" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='block';">
+            <svg style="display: none; width:28px; height:28px; stroke:var(--color-text);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="1.5" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+          </div>
+          <span class="list-col-name">{{ plugin.name }}</span>
+        </div>
+        <div class="list-col-version">v{{ plugin.version }}</div>
+        <div>
+          {% if plugin.effective_status == 'active' %}
+            <span class="badge badge--active"><span class="badge-dot"></span> Active</span>
+          {% else %}
+            <span class="badge badge--inactive"><span class="badge-dot"></span> {{ plugin.effective_status }}</span>
+          {% endif %}
+        </div>
+        <div class="list-col-desc">{{ plugin.description }}</div>
+        <div class="list-col-actions">
+          {% if plugin.route_prefix and plugin.effective_status == 'active' %}
+            <a href="{{ plugin.route_prefix }}" class="btn btn--secondary btn--sm">Manage</a>
+          {% endif %}
+          <form method="post" action="/plugins/api/toggle" style="display:inline-flex;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+            <input type="hidden" name="plugin_id" value="{{ plugin.id }}">
+            <input type="hidden" name="enabled" value="{% if plugin.enabled %}false{% else %}true{% endif %}">
+            <button type="submit" class="btn btn--ghost btn--sm">{% if plugin.enabled %}Disable{% else %}Enable{% endif %}</button>
+          </form>
+        </div>
+      </div>
+      {% else %}
+      <div style="padding: 2rem; text-align: center; color: var(--color-muted);">No plugins available.</div>
+      {% endfor %}
+    </div>
+
   </div>
 </div>
 
@@ -189,4 +185,25 @@
     </form>
   </div>
 </div>
+
+<script>
+  function setPluginsLayout(mode) {
+    const cardsBtn = document.getElementById('btn-plugins-cards');
+    const listBtn = document.getElementById('btn-plugins-list');
+    const cardsContainer = document.getElementById('plugins-cards-container');
+    const listContainer = document.getElementById('plugins-list-container');
+
+    if (mode === 'cards') {
+      cardsBtn.classList.add('is-active');
+      listBtn.classList.remove('is-active');
+      cardsContainer.classList.remove('is-hidden');
+      listContainer.classList.add('is-hidden');
+    } else {
+      listBtn.classList.add('is-active');
+      cardsBtn.classList.remove('is-active');
+      listContainer.classList.remove('is-hidden');
+      cardsContainer.classList.add('is-hidden');
+    }
+  }
+</script>
 {% endblock %}

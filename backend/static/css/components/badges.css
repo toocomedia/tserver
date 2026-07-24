@@ -1,6 +1,57 @@
 /* badges.css */
-.badge { display: inline-flex; align-items: center; gap: 4px; font-size: var(--font-small); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; padding: 2px var(--space-xs); border: 1px solid currentColor; line-height: normal; }
-.badge--ok { color: var(--color-accent-2); }
-.badge--error { color: var(--color-danger); }
-.badge--neutral { color: var(--color-muted); }
-.badge--dot::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2px 6px;
+  line-height: 1;
+  white-space: nowrap;
+  color: var(--color-muted);
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+.badge--active,
+.badge--healthy,
+.badge--ok {
+  color: var(--color-text);
+}
+.badge--active .badge-dot,
+.badge--healthy .badge-dot,
+.badge--ok .badge-dot {
+  background-color: var(--color-status-green, #10B981);
+}
+
+.badge--inactive,
+.badge--stopped,
+.badge--neutral {
+  color: var(--color-muted);
+}
+.badge--inactive .badge-dot,
+.badge--stopped .badge-dot,
+.badge--neutral .badge-dot {
+  background-color: var(--color-muted);
+}
+
+.badge--missing,
+.badge--danger,
+.badge--error,
+.badge--problem {
+  color: var(--color-danger);
+}
+.badge--missing .badge-dot,
+.badge--danger .badge-dot,
+.badge--error .badge-dot,
+.badge--problem .badge-dot {
+  background-color: var(--color-danger);
+}
+
+.badge-dot {
+  width: 6px;
+  height: 6px;
+  flex-shrink: 0;
+}

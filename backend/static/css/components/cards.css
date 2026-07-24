@@ -1,0 +1,318 @@
+/* ============================================================
+   CARDS COMPONENT SYSTEM
+   Cards, List Row Views & View Switcher Toolbar
+   ============================================================ */
+
+/* Segmented View Switcher (Cards / List Toggle) */
+.view-switcher {
+  display: inline-flex;
+  background: var(--color-surface);
+  padding: 3px;
+  gap: 3px;
+  border: 1px solid var(--color-line);
+}
+
+.view-switcher__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  transition: all 0.15s ease;
+}
+
+.view-switcher__btn:hover {
+  color: var(--color-text);
+}
+
+.view-switcher__btn.is-active {
+  color: var(--color-text);
+  background: var(--color-bg);
+}
+
+.view-switcher__btn svg {
+  width: 14px;
+  height: 14px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2;
+}
+
+/* ============================================================
+   CARDS GRID VIEW
+   ============================================================ */
+.view-cards-container,
+.plugin-grid,
+.dependency-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(520px, 1fr));
+  gap: 20px;
+}
+
+.item-card,
+.plugin-card,
+.dependency-card {
+  border: 1px solid var(--color-line);
+  background: var(--color-bg);
+  display: flex;
+  flex-direction: row;
+  position: relative;
+  align-items: stretch;
+  overflow: hidden;
+  min-height: 165px;
+  transition: border-color 0.15s ease;
+}
+
+.item-card:hover,
+.plugin-card:hover,
+.dependency-card:hover {
+  border-color: var(--color-text);
+}
+
+/* 1:1 Square Image Container on Left (165px x 165px) */
+.item-card__img-box,
+.plugin-card__cover,
+.dependency-card__cover {
+  width: 165px;
+  height: 100%;
+  aspect-ratio: 1 / 1;
+  flex-shrink: 0;
+  background: var(--color-surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  border-right: 1px solid var(--color-line);
+}
+
+.item-card__img-box svg,
+.item-card__img-box img,
+.plugin-card__cover svg,
+.plugin-card__cover img,
+.dependency-card__cover svg,
+.dependency-card__cover img {
+  width: 64px;
+  height: 64px;
+  aspect-ratio: 1 / 1;
+  object-fit: contain;
+  stroke: var(--color-text);
+  fill: none;
+  stroke-width: 1.5;
+}
+
+.item-card__content,
+.plugin-card__main,
+.dependency-card__main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.item-card__header,
+.plugin-card__header,
+.dependency-card__header {
+  padding: 16px 20px 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.item-card__title,
+.plugin-card__title,
+.dependency-card__title {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--color-text);
+  line-height: 1.2;
+  margin: 0 0 2px 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.item-card__version,
+.plugin-card__version,
+.dependency-card__version {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-muted);
+}
+
+.item-card__body,
+.plugin-card__body,
+.dependency-card__body {
+  padding: 0 20px 14px;
+  font-size: 12.5px;
+  color: var(--color-muted);
+  line-height: 1.5;
+  flex: 1;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.item-card__actions,
+.plugin-card__footer,
+.dependency-card__footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 20px;
+  border-top: 1px solid var(--color-line);
+  background: var(--color-surface);
+  margin-top: auto;
+}
+
+/* ============================================================
+   LIST VIEW
+   ============================================================ */
+.view-list-container {
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg);
+  border: 1px solid var(--color-line);
+}
+
+.list-header-row {
+  display: grid;
+  grid-template-columns: 2.5fr 110px 140px 3fr 180px;
+  padding: 12px 20px;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-muted);
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-line);
+}
+
+.list-item-row {
+  display: grid;
+  grid-template-columns: 2.5fr 110px 140px 3fr 180px;
+  align-items: center;
+  padding: 0 20px 0 0;
+  background: var(--color-bg);
+  border-bottom: 1px solid var(--color-line);
+  transition: background 0.15s ease;
+  position: relative;
+  min-height: 64px;
+}
+
+.list-item-row:last-child {
+  border-bottom: none;
+}
+
+.list-item-row:hover {
+  background: var(--color-surface);
+}
+
+.list-col-main {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  padding-right: 12px;
+  height: 100%;
+}
+
+.list-col-thumb {
+  width: 64px;
+  height: 64px;
+  aspect-ratio: 1 / 1;
+  align-self: stretch;
+  flex-shrink: 0;
+  background: var(--color-surface);
+  border-right: 1px solid var(--color-line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+}
+
+.list-col-thumb svg,
+.list-col-thumb img {
+  width: 28px;
+  height: 28px;
+  aspect-ratio: 1 / 1;
+  object-fit: contain;
+  stroke: var(--color-text);
+  fill: none;
+}
+
+.list-col-name {
+  font-weight: 800;
+  font-size: 14px;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.list-col-version {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-muted);
+}
+
+.list-col-desc {
+  font-size: 12.5px;
+  color: var(--color-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-right: 16px;
+}
+
+.list-col-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 10px 0;
+}
+
+.is-hidden {
+  display: none !important;
+}
+
+@media (max-width: 900px) {
+  .view-cards-container,
+  .plugin-grid,
+  .dependency-grid {
+    grid-template-columns: 1fr;
+  }
+  .item-card,
+  .plugin-card,
+  .dependency-card {
+    flex-direction: column;
+  }
+  .item-card__img-box,
+  .plugin-card__cover,
+  .dependency-card__cover {
+    width: 100%;
+    height: 165px;
+    border-right: none;
+    border-bottom: 1px solid var(--color-line);
+  }
+  .list-header-row {
+    display: none;
+  }
+  .list-item-row {
+    grid-template-columns: 1fr auto;
+    padding: 0 14px 0 0;
+  }
+  .list-col-version,
+  .list-col-desc {
+    display: none;
+  }
+}

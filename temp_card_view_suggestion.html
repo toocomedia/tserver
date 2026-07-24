@@ -1,0 +1,1146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SRV Panel — Plugins & Dependencies Catalog + Store-Style Info Sub-Page</title>
+  
+  <!-- Single Unified Font: Manrope -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <style>
+    /* ============================================================
+       DESIGN SYSTEM TOKENS (Tasteful Accent, Zero Radius/Shadow)
+       ============================================================ */
+    :root {
+      --color-bg:             #FFFFFF;
+      --color-surface:        #F8F9F8;
+      --color-surface-hover:  #F0F1F0;
+      --color-text:           #0F1720;
+      --color-muted:          #6B6F6A;
+      --color-line:           #EAEAEA;
+      --color-accent:         #C7F464; /* Tasteful lime green accent */
+      --color-accent-hover:   #B5EB43;
+      --color-status-green:   #10B981;
+      --color-neutral:        #0F1720;
+      --color-on-neutral:     #FFFFFF;
+      --color-danger:         #DC2626;
+      --color-danger-bg:      #FFF5F5;
+      
+      --font-body: 14px;
+      --font-small: 12px;
+      --font-family: 'Manrope', system-ui, -apple-system, sans-serif;
+    }
+
+    [data-theme="dark"] {
+      --color-bg:             #0F1720;
+      --color-surface:        #16202B;
+      --color-surface-hover:  #1E2A38;
+      --color-text:           #EAECEF;
+      --color-muted:          #9AA0A6;
+      --color-line:           #222C38;
+      --color-accent:         #C7F464;
+      --color-accent-hover:   #B5EB43;
+      --color-status-green:   #34D399;
+      --color-neutral:        #EAECEF;
+      --color-on-neutral:     #0F1720;
+      --color-danger:         #EF4444;
+      --color-danger-bg:      #2A1416;
+    }
+
+    /* GLOBAL ZERO RADIUS & NO SHADOW RESET */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      border-radius: 0 !important;
+      box-shadow: none !important;
+    }
+
+    body, button, input, select, textarea, pre, code {
+      font-family: var(--font-family);
+    }
+
+    body {
+      font-size: var(--font-body);
+      color: var(--color-text);
+      background-color: var(--color-bg);
+      line-height: 1.5;
+      padding: 2rem 1.5rem;
+      max-width: 1280px;
+      margin: 0 auto;
+      transition: background-color 0.2s, color 0.2s;
+    }
+
+    /* Top Notice Banner */
+    .temp-notice {
+      background: var(--color-surface);
+      padding: 10px 16px;
+      margin-bottom: 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+    .temp-notice__text {
+      font-size: 13px;
+      color: var(--color-text);
+    }
+    .temp-notice__badge {
+      background: var(--color-accent);
+      color: var(--color-on-accent);
+      font-weight: 800;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 3px 10px;
+    }
+
+    /* Navigation Bar / Page Switcher */
+    .nav-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 32px;
+      flex-wrap: wrap;
+    }
+
+    .nav-tabs {
+      display: flex;
+      gap: 8px;
+    }
+
+    .nav-tab {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 18px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--color-muted);
+      background: transparent;
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .nav-tab:hover {
+      color: var(--color-text);
+    }
+
+    .nav-tab.is-active {
+      color: var(--color-text);
+      background: var(--color-surface);
+      border-color: var(--color-line);
+      border-bottom: 3px solid var(--color-accent);
+    }
+
+    .nav-tab svg {
+      width: 16px;
+      height: 16px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
+    }
+
+    .toolbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    /* Minimal Segmented View Switcher */
+    .view-switcher {
+      display: inline-flex;
+      background: var(--color-surface);
+      padding: 3px;
+      gap: 3px;
+    }
+
+    .view-switcher__btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--color-muted);
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      transition: all 0.15s ease;
+    }
+
+    .view-switcher__btn:hover {
+      color: var(--color-text);
+    }
+
+    .view-switcher__btn.is-active {
+      color: var(--color-text);
+      background: var(--color-bg);
+    }
+
+    .view-switcher__btn svg {
+      width: 14px;
+      height: 14px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
+    }
+
+    /* BUTTONS */
+    .btn-theme-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      height: 38px;
+      padding: 0 14px;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--color-text);
+      background: var(--color-surface);
+      border: none;
+      cursor: pointer;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      height: 38px;
+      padding: 0 18px;
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      border: 1px solid var(--color-line);
+      background: var(--color-bg);
+      color: var(--color-text);
+      cursor: pointer;
+      transition: all 0.15s ease;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+    .btn:hover {
+      background: var(--color-surface);
+      border-color: var(--color-text);
+    }
+    .btn--primary {
+      background: var(--color-accent);
+      color: var(--color-on-accent);
+      border-color: var(--color-accent);
+    }
+    .btn--primary:hover {
+      background: var(--color-accent-hover);
+      border-color: var(--color-accent-hover);
+    }
+    .btn--secondary {
+      background: var(--color-surface);
+      color: var(--color-text);
+      border-color: var(--color-line);
+    }
+    .btn--secondary:hover {
+      background: var(--color-surface-hover);
+      border-color: var(--color-text);
+    }
+    .btn--ghost {
+      background: transparent;
+      border-color: transparent;
+      color: var(--color-muted);
+    }
+    .btn--ghost:hover {
+      color: var(--color-text);
+      background: var(--color-surface);
+    }
+    .btn--danger {
+      background: transparent;
+      color: var(--color-danger);
+      border-color: var(--color-danger);
+    }
+    .btn--danger:hover {
+      background: var(--color-danger);
+      color: #FFFFFF;
+    }
+    .btn--sm {
+      height: 32px;
+      padding: 0 14px;
+      font-size: 11px;
+    }
+
+    /* BADGES */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 2px 6px;
+      line-height: 1;
+      white-space: nowrap;
+      color: var(--color-muted);
+    }
+    .badge--active, .badge--healthy {
+      color: var(--color-text);
+    }
+    .badge--active .badge-dot, .badge--healthy .badge-dot {
+      background-color: var(--color-status-green);
+    }
+    .badge--inactive .badge-dot, .badge--stopped .badge-dot {
+      background-color: var(--color-muted);
+    }
+    .badge--missing .badge-dot, .badge--danger .badge-dot {
+      background-color: var(--color-danger);
+    }
+    .badge-dot {
+      width: 6px;
+      height: 6px;
+      flex-shrink: 0;
+    }
+
+    /* Section Titles */
+    .catalog-section {
+      margin-bottom: 48px;
+    }
+
+    .catalog-section__header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .catalog-section__title {
+      font-size: 18px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      letter-spacing: -0.01em;
+    }
+
+    .catalog-section__count {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--color-muted);
+      background: var(--color-surface);
+      padding: 2px 8px;
+    }
+
+    /* ============================================================
+       CARD LAYOUT (STRICT 1:1 SQUARE IMAGE BOX)
+       ============================================================ */
+    .view-cards-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(520px, 1fr));
+      gap: 20px;
+    }
+
+    .item-card {
+      border: 1px solid var(--color-line);
+      background: var(--color-bg);
+      display: flex;
+      flex-direction: row;
+      position: relative;
+      align-items: stretch;
+      overflow: hidden;
+      min-height: 165px;
+      transition: border-color 0.15s ease;
+    }
+
+    .item-card:hover {
+      border-color: var(--color-text);
+    }
+
+    .item-card__img-box {
+      width: 165px;
+      height: 100%;
+      aspect-ratio: 1 / 1;
+      flex-shrink: 0;
+      background: var(--color-surface);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      border-right: 1px solid var(--color-line);
+    }
+
+    .item-card__img-box svg,
+    .item-card__img-box img {
+      width: 64px;
+      height: 64px;
+      aspect-ratio: 1 / 1;
+      object-fit: contain;
+      stroke: var(--color-text);
+      fill: none;
+      stroke-width: 1.5;
+    }
+
+    .item-card__content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .item-card__header {
+      padding: 16px 20px 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
+    }
+
+    .item-card__title {
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--color-text);
+      line-height: 1.2;
+      margin-bottom: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .item-card__version {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--color-muted);
+    }
+
+    .item-card__body {
+      padding: 0 20px 14px;
+      font-size: 12.5px;
+      color: var(--color-muted);
+      line-height: 1.5;
+      flex: 1;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .item-card__actions {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 20px;
+      border-top: 1px solid var(--color-line);
+      background: var(--color-surface);
+      margin-top: auto;
+    }
+
+    /* ============================================================
+       LIST VIEW (STRICT 1:1 SQUARE THUMBNAIL)
+       ============================================================ */
+    .view-list-container {
+      display: flex;
+      flex-direction: column;
+      background: var(--color-bg);
+      border: 1px solid var(--color-line);
+    }
+
+    .list-header-row {
+      display: grid;
+      grid-template-columns: 2.5fr 110px 140px 3fr 180px;
+      padding: 12px 20px;
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--color-muted);
+      background: var(--color-surface);
+      border-bottom: 1px solid var(--color-line);
+    }
+
+    .list-item-row {
+      display: grid;
+      grid-template-columns: 2.5fr 110px 140px 3fr 180px;
+      align-items: center;
+      padding: 0 20px 0 0;
+      background: var(--color-bg);
+      border-bottom: 1px solid var(--color-line);
+      transition: background 0.15s ease;
+      position: relative;
+      min-height: 64px;
+    }
+
+    .list-item-row:last-child {
+      border-bottom: none;
+    }
+
+    .list-item-row:hover {
+      background: var(--color-surface);
+    }
+
+    .list-col-main {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      min-width: 0;
+      padding-right: 12px;
+      height: 100%;
+    }
+
+    .list-col-thumb {
+      width: 64px;
+      height: 64px;
+      aspect-ratio: 1 / 1;
+      align-self: stretch;
+      flex-shrink: 0;
+      background: var(--color-surface);
+      border-right: 1px solid var(--color-line);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 8px;
+    }
+
+    .list-col-thumb svg,
+    .list-col-thumb img {
+      width: 28px;
+      height: 28px;
+      aspect-ratio: 1 / 1;
+      object-fit: contain;
+      stroke: var(--color-text);
+      fill: none;
+    }
+
+    .list-col-name {
+      font-weight: 800;
+      font-size: 14px;
+      color: var(--color-text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .list-col-version {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--color-muted);
+    }
+
+    .list-col-desc {
+      font-size: 12.5px;
+      color: var(--color-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      padding-right: 16px;
+    }
+
+    .list-col-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      padding: 10px 0;
+    }
+
+    /* ============================================================
+       STRICT, ULTRA-CLEAN & UNCLUTTERED INFO SUB-PAGE
+       ============================================================ */
+    .info-clean-page {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 12px 0;
+    }
+
+    .info-nav-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+
+    .info-nav-header__back {
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* Strict Vertical Header Stack (Perfect Alignment & Less Info) */
+    .info-hero-clean {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      padding-bottom: 24px;
+      margin-bottom: 24px;
+      border-bottom: 1px solid var(--color-line);
+    }
+
+    .info-hero-clean__icon {
+      width: 72px;
+      height: 72px;
+      aspect-ratio: 1 / 1;
+      flex-shrink: 0;
+      background: var(--color-surface);
+      border: 1px solid var(--color-line);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .info-hero-clean__icon svg {
+      width: 40px;
+      height: 40px;
+      stroke: var(--color-text);
+      fill: none;
+      stroke-width: 1.8;
+    }
+
+    .info-hero-clean__details {
+      flex: 1;
+    }
+
+    .info-hero-clean__title {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--color-text);
+      line-height: 1.2;
+      margin-bottom: 4px;
+    }
+
+    .info-hero-clean__sub {
+      font-size: 12.5px;
+      color: var(--color-muted);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .info-hero-clean__actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    /* Concise Parameters Table with Exact 200px Fixed Label Column */
+    .info-table-section {
+      margin-bottom: 32px;
+    }
+
+    .info-table-title {
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--color-muted);
+      margin-bottom: 12px;
+    }
+
+    .strict-table {
+      display: flex;
+      flex-direction: column;
+      border-top: 1px solid var(--color-line);
+    }
+
+    .strict-table__row {
+      display: grid;
+      grid-template-columns: 200px 1fr;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--color-line);
+      font-size: 13px;
+    }
+
+    .strict-table__key {
+      font-weight: 700;
+      color: var(--color-muted);
+    }
+
+    .strict-table__val {
+      font-weight: 600;
+      color: var(--color-text);
+    }
+
+    /* Minimal Single-Line Terminal Box */
+    .single-cmd-box {
+      background: var(--color-surface);
+      border-left: 3px solid var(--color-accent);
+      padding: 14px 18px;
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--color-text);
+    }
+
+    .is-hidden {
+      display: none !important;
+    }
+
+    @media (max-width: 768px) {
+      .info-hero-clean { flex-direction: column; align-items: flex-start; }
+      .strict-table__row { grid-template-columns: 140px 1fr; }
+      .view-cards-container { grid-template-columns: 1fr; }
+      .item-card { flex-direction: column; }
+      .item-card__img-box { width: 100%; height: 165px; border-right: none; border-bottom: 1px solid var(--color-line); }
+      .list-header-row { display: none; }
+      .list-item-row { grid-template-columns: 1fr auto; padding: 0 14px 0 0; }
+      .list-col-version, .list-col-desc { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- PROTOTYPE BANNER -->
+  <div class="temp-notice">
+    <div class="temp-notice__text">
+      <strong>UI Design Suggestion Prototype</strong> — Strict Aligned Info Structure & Concise Essential Parameters.
+    </div>
+    <span class="temp-notice__badge">Strict Aligned</span>
+  </div>
+
+  <!-- NAVIGATION TABS & TOOLBAR -->
+  <div class="nav-bar">
+    <div class="nav-tabs" role="tablist">
+      <button class="nav-tab is-active" id="tab-catalog" onclick="switchMainView('catalog')">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+        Main Catalog View
+      </button>
+      <button class="nav-tab" id="tab-subpage" onclick="switchMainView('subpage')">
+        <svg viewBox="0 0 24 24"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>
+        Dependency Info Sub-Page
+      </button>
+    </div>
+
+    <div class="toolbar-actions">
+      <!-- CARDS / LIST TOGGLE (For Catalog View) -->
+      <div id="catalog-switcher" class="view-switcher" role="radiogroup" aria-label="Layout view switcher">
+        <button type="button" class="view-switcher__btn is-active" id="btn-view-cards" onclick="setCardListMode('cards')">
+          <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+          Cards View
+        </button>
+        <button type="button" class="view-switcher__btn" id="btn-view-list" onclick="setCardListMode('list')">
+          <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+          List View
+        </button>
+      </div>
+
+      <!-- THEME TOGGLE -->
+      <button type="button" class="btn-theme-toggle" onclick="toggleDemoTheme()">
+        <span id="theme-toggle-icon">🌙</span> <span id="theme-toggle-label">Dark Mode</span>
+      </button>
+    </div>
+  </div>
+
+
+  <!-- ============================================================
+       VIEW 1: MAIN CATALOG (PLUGINS & DEPENDENCIES)
+       ============================================================ -->
+  <main id="view-catalog-container">
+    
+    <!-- SECTION 1: INSTALLED PLUGINS -->
+    <section class="catalog-section">
+      <div class="catalog-section__header">
+        <h2 class="catalog-section__title">
+          Installed Extensions & Plugins
+          <span class="catalog-section__count">3 Plugins</span>
+        </h2>
+        <button class="btn btn--primary" onclick="alert('Upload Modal')">+ Upload Plugin (.zip)</button>
+      </div>
+
+      <!-- PLUGINS - CARDS VIEW -->
+      <div id="plugins-cards-view" class="view-cards-container">
+
+        <!-- Plugin Card 1 -->
+        <article class="item-card">
+          <div class="item-card__img-box">
+            <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+          </div>
+          <div class="item-card__content">
+            <div class="item-card__header">
+              <div>
+                <h3 class="item-card__title">Media Node NSFW Check</h3>
+                <div class="item-card__version">v1.4.2</div>
+              </div>
+              <span class="badge badge--active"><span class="badge-dot"></span> Active</span>
+            </div>
+            <p class="item-card__body">
+              Delegates adult content and safety checks (OpenNSFW2 & NudeNet) to external worker media nodes.
+            </p>
+            <div class="item-card__actions">
+              <button class="btn btn--ghost" onclick="alert('Disable')">Disable</button>
+              <button class="btn btn--secondary" onclick="alert('Settings')">Settings</button>
+            </div>
+          </div>
+        </article>
+
+        <!-- Plugin Card 2 -->
+        <article class="item-card">
+          <div class="item-card__img-box">
+            <svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg>
+          </div>
+          <div class="item-card__content">
+            <div class="item-card__header">
+              <div>
+                <h3 class="item-card__title">Auto SSL Manager</h3>
+                <div class="item-card__version">v2.1.0</div>
+              </div>
+              <span class="badge badge--active"><span class="badge-dot"></span> Active</span>
+            </div>
+            <p class="item-card__body">
+              Automated Let's Encrypt certificate issuance and DNS-01 verification renewals for reverse proxy hosts.
+            </p>
+            <div class="item-card__actions">
+              <button class="btn btn--ghost" onclick="alert('Disable')">Disable</button>
+              <button class="btn btn--secondary" onclick="alert('Configure SSL')">Configure</button>
+            </div>
+          </div>
+        </article>
+
+        <!-- Plugin Card 3 -->
+        <article class="item-card">
+          <div class="item-card__img-box">
+            <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+          </div>
+          <div class="item-card__content">
+            <div class="item-card__header">
+              <div>
+                <h3 class="item-card__title">Docker App Launcher</h3>
+                <div class="item-card__version">v0.9.5</div>
+              </div>
+              <span class="badge badge--inactive"><span class="badge-dot"></span> Disabled</span>
+            </div>
+            <p class="item-card__body">
+              Deploy containerized application stacks (WordPress, Nextcloud) directly from pre-configured blueprints.
+            </p>
+            <div class="item-card__actions">
+              <button class="btn btn--primary" onclick="alert('Enable Plugin')">Enable Plugin</button>
+            </div>
+          </div>
+        </article>
+
+      </div>
+
+      <!-- PLUGINS - LIST VIEW -->
+      <div id="plugins-list-view" class="view-list-container is-hidden">
+        <div class="list-header-row">
+          <div>Extension / Plugin</div>
+          <div>Version</div>
+          <div>Status</div>
+          <div>Description</div>
+          <div style="text-align: right;">Actions</div>
+        </div>
+
+        <div class="list-item-row">
+          <div class="list-col-main">
+            <div class="list-col-thumb">
+              <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+            </div>
+            <span class="list-col-name">Media Node NSFW Check</span>
+          </div>
+          <div class="list-col-version">v1.4.2</div>
+          <div><span class="badge badge--active"><span class="badge-dot"></span> Active</span></div>
+          <div class="list-col-desc">Delegates adult content and safety checks to external worker media nodes.</div>
+          <div class="list-col-actions">
+            <button class="btn btn--ghost btn--sm" onclick="alert('Disable')">Disable</button>
+            <button class="btn btn--secondary btn--sm" onclick="alert('Settings')">Settings</button>
+          </div>
+        </div>
+
+        <div class="list-item-row">
+          <div class="list-col-main">
+            <div class="list-col-thumb">
+              <svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg>
+            </div>
+            <span class="list-col-name">Auto SSL Manager</span>
+          </div>
+          <div class="list-col-version">v2.1.0</div>
+          <div><span class="badge badge--active"><span class="badge-dot"></span> Active</span></div>
+          <div class="list-col-desc">Automated Let's Encrypt certificate issuance and renewals.</div>
+          <div class="list-col-actions">
+            <button class="btn btn--ghost btn--sm" onclick="alert('Disable')">Disable</button>
+            <button class="btn btn--secondary btn--sm" onclick="alert('Configure')">Configure</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 2: SYSTEM DEPENDENCIES -->
+    <section class="catalog-section">
+      <div class="catalog-section__header">
+        <h2 class="catalog-section__title">
+          System Dependencies
+          <span class="catalog-section__count">3 Services</span>
+        </h2>
+        <span style="font-size:12.5px; color:var(--color-muted);">Core host-level daemons powering panel extensions</span>
+      </div>
+
+      <!-- DEPENDENCIES - CARDS VIEW -->
+      <div id="deps-cards-view" class="view-cards-container">
+
+        <!-- Dependency Card 1 -->
+        <article class="item-card">
+          <div class="item-card__img-box">
+            <svg viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="8"></rect><rect x="2" y="14" width="20" height="8"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>
+          </div>
+          <div class="item-card__content">
+            <div class="item-card__header">
+              <div>
+                <h3 class="item-card__title">Nginx Proxy Core</h3>
+                <div class="item-card__version">driver v1.24.0</div>
+              </div>
+              <span class="badge badge--healthy"><span class="badge-dot"></span> Healthy</span>
+            </div>
+            <p class="item-card__body">
+              High-performance HTTP server & reverse proxy engine driving domain routing and SSL termination.
+            </p>
+            <div class="item-card__actions">
+              <button class="btn btn--secondary" onclick="openDependencySubpage('Nginx Proxy Core')">View Details →</button>
+            </div>
+          </div>
+        </article>
+
+        <!-- Dependency Card 2 -->
+        <article class="item-card">
+          <div class="item-card__img-box">
+            <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
+          </div>
+          <div class="item-card__content">
+            <div class="item-card__header">
+              <div>
+                <h3 class="item-card__title">Redis Cache Service</h3>
+                <div class="item-card__version">driver v7.0</div>
+              </div>
+              <span class="badge badge--healthy"><span class="badge-dot"></span> Healthy</span>
+            </div>
+            <p class="item-card__body">
+              In-memory data structure store leveraged for high-speed background job queues and session caching.
+            </p>
+            <div class="item-card__actions">
+              <button class="btn btn--secondary" onclick="openDependencySubpage('Redis Cache Service')">View Details →</button>
+            </div>
+          </div>
+        </article>
+
+        <!-- Dependency Card 3 -->
+        <article class="item-card">
+          <div class="item-card__img-box">
+            <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          </div>
+          <div class="item-card__content">
+            <div class="item-card__header">
+              <div>
+                <h3 class="item-card__title">FFmpeg Media Engine</h3>
+                <div class="item-card__version">driver v5.1</div>
+              </div>
+              <span class="badge badge--missing"><span class="badge-dot"></span> Missing</span>
+            </div>
+            <p class="item-card__body">
+              Multimedia frame extraction & video decoding engine required for media preview generation before NSFW scanning.
+            </p>
+            <div class="item-card__actions">
+              <button class="btn btn--primary" onclick="openDependencySubpage('FFmpeg Media Engine')">Install Service →</button>
+            </div>
+          </div>
+        </article>
+
+      </div>
+
+      <!-- DEPENDENCIES - LIST VIEW -->
+      <div id="deps-list-view" class="view-list-container is-hidden">
+        <div class="list-header-row">
+          <div>System Dependency</div>
+          <div>Driver</div>
+          <div>Status</div>
+          <div>Description</div>
+          <div style="text-align: right;">Actions</div>
+        </div>
+
+        <div class="list-item-row">
+          <div class="list-col-main">
+            <div class="list-col-thumb">
+              <svg viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="8"></rect><rect x="2" y="14" width="20" height="8"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>
+            </div>
+            <span class="list-col-name">Nginx Proxy Core</span>
+          </div>
+          <div class="list-col-version">driver v1.24.0</div>
+          <div><span class="badge badge--healthy"><span class="badge-dot"></span> Healthy</span></div>
+          <div class="list-col-desc">High-performance HTTP server & reverse proxy engine driving domain routing.</div>
+          <div class="list-col-actions">
+            <button class="btn btn--secondary btn--sm" onclick="openDependencySubpage('Nginx Proxy Core')">View Info</button>
+          </div>
+        </div>
+
+        <div class="list-item-row">
+          <div class="list-col-main">
+            <div class="list-col-thumb">
+              <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
+            </div>
+            <span class="list-col-name">Redis Cache Service</span>
+          </div>
+          <div class="list-col-version">driver v7.0</div>
+          <div><span class="badge badge--healthy"><span class="badge-dot"></span> Healthy</span></div>
+          <div class="list-col-desc">In-memory data structure store leveraged for background job queues.</div>
+          <div class="list-col-actions">
+            <button class="btn btn--secondary btn--sm" onclick="openDependencySubpage('Redis Cache Service')">View Info</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+
+  <!-- ============================================================
+       VIEW 2: STRICT ALIGNED & UNCLUTTERED INFO SUB-PAGE
+       ============================================================ -->
+  <main id="view-subpage-container" class="is-hidden">
+    <div class="info-clean-page">
+      
+      <!-- TOP NAV -->
+      <div class="info-nav-header">
+        <button class="btn btn--secondary btn--sm" onclick="switchMainView('catalog')">← Back to Catalog</button>
+      </div>
+
+      <!-- HERO HEADER: STRICT ALIGNMENT & ESSENTIAL INFO ONLY -->
+      <header class="info-hero-clean">
+        <div class="info-hero-clean__icon">
+          <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
+        </div>
+        <div class="info-hero-clean__details">
+          <h1 class="info-hero-clean__title" id="subpage-target-name">Redis Cache Service</h1>
+          <div class="info-hero-clean__sub">
+            <span>System dependency</span>
+            <span>·</span>
+            <span>Driver v7.0</span>
+            <span>·</span>
+            <span class="badge badge--healthy"><span class="badge-dot"></span> Healthy</span>
+          </div>
+        </div>
+        <div class="info-hero-clean__actions">
+          <button class="btn btn--primary btn--sm" onclick="alert('Enable')">Enable Service</button>
+          <button class="btn btn--secondary btn--sm" onclick="alert('Restart')">Restart</button>
+        </div>
+      </header>
+
+      <!-- CONCISE PARAMETERS TABLE WITH STRICT 200px ALIGNMENT -->
+      <section class="info-table-section">
+        <h2 class="info-table-title">System Parameters</h2>
+        
+        <div class="strict-table">
+          <div class="strict-table__row">
+            <div class="strict-table__key">Installed Status</div>
+            <div class="strict-table__val">Installed (Systemd Service)</div>
+          </div>
+          <div class="strict-table__row">
+            <div class="strict-table__key">Install Source</div>
+            <div class="strict-table__val">Official OS Repository (apt)</div>
+          </div>
+          <div class="strict-table__row">
+            <div class="strict-table__key">Daemon Process</div>
+            <div class="strict-table__val">Running (PID 4192, Port 6379)</div>
+          </div>
+          <div class="strict-table__row">
+            <div class="strict-table__row-key strict-table__key">Version Detected</div>
+            <div class="strict-table__val">v7.0.12 (x86_64 Linux)</div>
+          </div>
+          <div class="strict-table__row">
+            <div class="strict-table__key">Used by Plugins</div>
+            <div class="strict-table__val">Media Node NSFW Check</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- MANUAL TERMINAL COMMAND -->
+      <section class="info-table-section">
+        <h2 class="info-table-title">Manual Terminal Command</h2>
+        <pre class="single-cmd-box">sudo apt-get update && sudo apt-get install -y redis-server</pre>
+      </section>
+
+    </div>
+  </main>
+
+
+  <!-- INTERACTIVE TOGGLE JAVASCRIPT -->
+  <script>
+    // Switch between Main Catalog View and Dependency Info Sub-Page View
+    function switchMainView(target) {
+      const catalogBtn = document.getElementById('tab-catalog');
+      const subpageBtn = document.getElementById('tab-subpage');
+      
+      const catalogContainer = document.getElementById('view-catalog-container');
+      const subpageContainer = document.getElementById('view-subpage-container');
+      const switcherBar = document.getElementById('catalog-switcher');
+
+      if (target === 'catalog') {
+        catalogBtn.classList.add('is-active');
+        subpageBtn.classList.remove('is-active');
+        
+        catalogContainer.classList.remove('is-hidden');
+        subpageContainer.classList.add('is-hidden');
+        switcherBar.style.display = 'inline-flex';
+      } else {
+        subpageBtn.classList.add('is-active');
+        catalogBtn.classList.remove('is-active');
+        
+        subpageContainer.classList.remove('is-hidden');
+        catalogContainer.classList.add('is-hidden');
+        switcherBar.style.display = 'none';
+      }
+    }
+
+    // Open Dependency Info Sub-Page with custom name
+    function openDependencySubpage(name) {
+      document.getElementById('subpage-target-name').textContent = name;
+      switchMainView('subpage');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // Switch between Cards View and List View in Catalog
+    function setCardListMode(mode) {
+      const cardsBtn = document.getElementById('btn-view-cards');
+      const listBtn = document.getElementById('btn-view-list');
+      
+      const pluginsCards = document.getElementById('plugins-cards-view');
+      const pluginsList = document.getElementById('plugins-list-view');
+      const depsCards = document.getElementById('deps-cards-view');
+      const depsList = document.getElementById('deps-list-view');
+
+      if (mode === 'cards') {
+        cardsBtn.classList.add('is-active');
+        listBtn.classList.remove('is-active');
+
+        pluginsCards.classList.remove('is-hidden');
+        pluginsList.classList.add('is-hidden');
+        depsCards.classList.remove('is-hidden');
+        depsList.classList.add('is-hidden');
+      } else {
+        listBtn.classList.add('is-active');
+        cardsBtn.classList.remove('is-active');
+
+        pluginsCards.classList.add('is-hidden');
+        pluginsList.classList.remove('is-hidden');
+        depsCards.classList.add('is-hidden');
+        depsList.classList.remove('is-hidden');
+      }
+    }
+
+    // Light/Dark Theme Switcher for Prototype testing
+    function toggleDemoTheme() {
+      const html = document.documentElement;
+      const isDark = html.getAttribute('data-theme') === 'dark';
+      const icon = document.getElementById('theme-toggle-icon');
+      const label = document.getElementById('theme-toggle-label');
+
+      if (isDark) {
+        html.removeAttribute('data-theme');
+        icon.textContent = '🌙';
+        label.textContent = 'Dark Mode';
+      } else {
+        html.setAttribute('data-theme', 'dark');
+        icon.textContent = '☀️';
+        label.textContent = 'Light Mode';
+      }
+    }
+  </script>
+</body>
+</html>
