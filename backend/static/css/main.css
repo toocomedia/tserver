@@ -1,6 +1,9 @@
 /* main.css — Design tokens, reset, and base styles
    All values come from DESIGN.md — do not add colors or sizes outside :root */
 
+@import "components/cards.css";
+@import "components/info.css";
+
 @font-face {
   font-family: 'Inter';
   font-style: normal;
@@ -8,8 +11,6 @@
   font-display: swap;
   src: url('/static/fonts/InterVariable.woff2') format('woff2');
 }
-@import "components/cards.css";
-@import "components/info.css";
 
 /* ============================================================
    DESIGN TOKENS
