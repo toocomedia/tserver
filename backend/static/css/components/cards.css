@@ -6,19 +6,22 @@
 /* Segmented View Switcher (Cards / List Toggle) */
 .view-switcher {
   display: inline-flex;
+  align-items: center;
   background: var(--color-surface);
-  padding: 3px;
-  gap: 3px;
   border: 1px solid var(--color-line);
+  padding: 2px;
+  height: 38px;
 }
 
 .view-switcher__btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
-  padding: 6px 14px;
-  font-size: 12px;
-  font-weight: 700;
+  height: 32px;
+  padding: 0 12px;
+  font-size: 11px;
+  font-weight: 800;
   color: var(--color-muted);
   background: transparent;
   border: none;
@@ -46,7 +49,7 @@
 }
 
 /* ============================================================
-   CARDS GRID VIEW
+   CARDS GRID VIEW (Full Image Cover Fit & Fewer Inner Dividers)
    ============================================================ */
 .view-cards-container,
 .plugin-grid,
@@ -76,7 +79,7 @@
   border-color: var(--color-text);
 }
 
-/* 1:1 Square Image Container on Left (165px x 165px) */
+/* 1:1 Square Image Cover Box (165px x 165px, Full 100% Fit) */
 .item-card__img-box,
 .plugin-card__cover,
 .dependency-card__cover {
@@ -88,20 +91,25 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
+  padding: 0;
   border-right: 1px solid var(--color-line);
+  overflow: hidden;
+}
+
+.item-card__img-box img,
+.plugin-card__cover img,
+.dependency-card__cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .item-card__img-box svg,
-.item-card__img-box img,
 .plugin-card__cover svg,
-.plugin-card__cover img,
-.dependency-card__cover svg,
-.dependency-card__cover img {
-  width: 64px;
-  height: 64px;
-  aspect-ratio: 1 / 1;
-  object-fit: contain;
+.dependency-card__cover svg {
+  width: 56px;
+  height: 56px;
   stroke: var(--color-text);
   fill: none;
   stroke-width: 1.5;
@@ -150,7 +158,7 @@
 .item-card__body,
 .plugin-card__body,
 .dependency-card__body {
-  padding: 0 20px 14px;
+  padding: 0 20px 12px;
   font-size: 12.5px;
   color: var(--color-muted);
   line-height: 1.5;
@@ -161,6 +169,7 @@
   overflow: hidden;
 }
 
+/* Simplified Action Footer (No inner top border line) */
 .item-card__actions,
 .plugin-card__footer,
 .dependency-card__footer {
@@ -169,31 +178,34 @@
   align-items: center;
   gap: 10px;
   padding: 12px 20px;
-  border-top: 1px solid var(--color-line);
-  background: var(--color-surface);
+  border-top: none;
+  background: transparent;
   margin-top: auto;
 }
 
 /* ============================================================
-   LIST VIEW
+   ULTRA-SIMPLE MINIMAL LIST VIEW (NO INNER VERTICAL DIVIDERS)
    ============================================================ */
 .view-list-container {
   display: flex;
   flex-direction: column;
-  background: var(--color-bg);
-  border: 1px solid var(--color-line);
+  background: transparent;
+  border-top: 1px solid var(--color-line);
+  border-bottom: 1px solid var(--color-line);
+  border-left: none;
+  border-right: none;
 }
 
 .list-header-row {
   display: grid;
   grid-template-columns: 2.5fr 110px 140px 3fr 180px;
-  padding: 12px 20px;
+  padding: 10px 0;
   font-size: 11px;
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--color-muted);
-  background: var(--color-surface);
+  background: transparent;
   border-bottom: 1px solid var(--color-line);
 }
 
@@ -201,12 +213,11 @@
   display: grid;
   grid-template-columns: 2.5fr 110px 140px 3fr 180px;
   align-items: center;
-  padding: 0 20px 0 0;
-  background: var(--color-bg);
+  padding: 10px 0;
+  background: transparent;
   border-bottom: 1px solid var(--color-line);
   transition: background 0.15s ease;
   position: relative;
-  min-height: 64px;
 }
 
 .list-item-row:last-child {
@@ -223,29 +234,32 @@
   gap: 14px;
   min-width: 0;
   padding-right: 12px;
-  height: 100%;
 }
 
 .list-col-thumb {
-  width: 64px;
-  height: 64px;
+  width: 44px;
+  height: 44px;
   aspect-ratio: 1 / 1;
-  align-self: stretch;
   flex-shrink: 0;
   background: var(--color-surface);
-  border-right: 1px solid var(--color-line);
+  border: none;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 8px;
+  padding: 0;
+  overflow: hidden;
 }
 
-.list-col-thumb svg,
 .list-col-thumb img {
-  width: 28px;
-  height: 28px;
-  aspect-ratio: 1 / 1;
-  object-fit: contain;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.list-col-thumb svg {
+  width: 24px;
+  height: 24px;
   stroke: var(--color-text);
   fill: none;
 }
@@ -278,7 +292,6 @@
   display: flex;
   justify-content: flex-end;
   gap: 8px;
-  padding: 10px 0;
 }
 
 .is-hidden {

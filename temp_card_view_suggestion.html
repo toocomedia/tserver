@@ -12,7 +12,7 @@
   
   <style>
     /* ============================================================
-       DESIGN SYSTEM TOKENS (Tasteful Accent, Zero Radius/Shadow)
+       DESIGN SYSTEM TOKENS (Minimal Dividers, Clean Card Layout)
        ============================================================ */
     :root {
       --color-bg:             #FFFFFF;
@@ -21,7 +21,7 @@
       --color-text:           #0F1720;
       --color-muted:          #6B6F6A;
       --color-line:           #EAEAEA;
-      --color-accent:         #C7F464; /* Tasteful lime green accent */
+      --color-accent:         #C7F464;
       --color-accent-hover:   #B5EB43;
       --color-status-green:   #10B981;
       --color-neutral:        #0F1720;
@@ -152,21 +152,25 @@
       gap: 12px;
     }
 
-    /* Minimal Segmented View Switcher */
+    /* MINIMAL & SIMPLE CARDS / LIST VIEW SWITCHER */
     .view-switcher {
       display: inline-flex;
+      align-items: center;
       background: var(--color-surface);
-      padding: 3px;
-      gap: 3px;
+      border: 1px solid var(--color-line);
+      padding: 2px;
+      height: 38px;
     }
 
     .view-switcher__btn {
       display: inline-flex;
       align-items: center;
+      justify-content: center;
       gap: 6px;
-      padding: 6px 14px;
-      font-size: 12px;
-      font-weight: 700;
+      height: 32px;
+      padding: 0 12px;
+      font-size: 11px;
+      font-weight: 800;
       color: var(--color-muted);
       background: transparent;
       border: none;
@@ -204,7 +208,7 @@
       font-weight: 700;
       color: var(--color-text);
       background: var(--color-surface);
-      border: none;
+      border: 1px solid var(--color-line);
       cursor: pointer;
     }
 
@@ -293,8 +297,14 @@
     .badge--active .badge-dot, .badge--healthy .badge-dot {
       background-color: var(--color-status-green);
     }
+    .badge--inactive, .badge--stopped {
+      color: var(--color-muted);
+    }
     .badge--inactive .badge-dot, .badge--stopped .badge-dot {
       background-color: var(--color-muted);
+    }
+    .badge--missing, .badge--danger {
+      color: var(--color-danger);
     }
     .badge--missing .badge-dot, .badge--danger .badge-dot {
       background-color: var(--color-danger);
@@ -305,7 +315,7 @@
       flex-shrink: 0;
     }
 
-    /* Section Titles */
+    /* Section Header Row */
     .catalog-section {
       margin-bottom: 48px;
     }
@@ -315,6 +325,7 @@
       justify-content: space-between;
       align-items: center;
       margin-bottom: 20px;
+      gap: 16px;
     }
 
     .catalog-section__title {
@@ -334,8 +345,14 @@
       padding: 2px 8px;
     }
 
+    .catalog-section__toolbar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
     /* ============================================================
-       CARD LAYOUT (STRICT 1:1 SQUARE IMAGE BOX)
+       SIMPLIFIED CARD LAYOUT
        ============================================================ */
     .view-cards-container {
       display: grid;
@@ -368,16 +385,21 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 20px;
+      padding: 0;
       border-right: 1px solid var(--color-line);
+      overflow: hidden;
     }
 
-    .item-card__img-box svg,
     .item-card__img-box img {
-      width: 64px;
-      height: 64px;
-      aspect-ratio: 1 / 1;
-      object-fit: contain;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .item-card__img-box svg {
+      width: 56px;
+      height: 56px;
       stroke: var(--color-text);
       fill: none;
       stroke-width: 1.5;
@@ -416,7 +438,7 @@
     }
 
     .item-card__body {
-      padding: 0 20px 14px;
+      padding: 0 20px 12px;
       font-size: 12.5px;
       color: var(--color-muted);
       line-height: 1.5;
@@ -433,31 +455,31 @@
       align-items: center;
       gap: 10px;
       padding: 12px 20px;
-      border-top: 1px solid var(--color-line);
-      background: var(--color-surface);
+      border-top: none;
+      background: transparent;
       margin-top: auto;
     }
 
     /* ============================================================
-       LIST VIEW (STRICT 1:1 SQUARE THUMBNAIL)
+       ULTRA-SIMPLE MINIMAL LIST VIEW
        ============================================================ */
     .view-list-container {
       display: flex;
       flex-direction: column;
-      background: var(--color-bg);
-      border: 1px solid var(--color-line);
+      background: transparent;
+      border-top: 1px solid var(--color-line);
+      border-bottom: 1px solid var(--color-line);
     }
 
     .list-header-row {
       display: grid;
       grid-template-columns: 2.5fr 110px 140px 3fr 180px;
-      padding: 12px 20px;
+      padding: 10px 0;
       font-size: 11px;
       font-weight: 800;
       text-transform: uppercase;
       letter-spacing: 0.06em;
       color: var(--color-muted);
-      background: var(--color-surface);
       border-bottom: 1px solid var(--color-line);
     }
 
@@ -465,12 +487,11 @@
       display: grid;
       grid-template-columns: 2.5fr 110px 140px 3fr 180px;
       align-items: center;
-      padding: 0 20px 0 0;
-      background: var(--color-bg);
+      padding: 10px 0;
+      background: transparent;
       border-bottom: 1px solid var(--color-line);
       transition: background 0.15s ease;
       position: relative;
-      min-height: 64px;
     }
 
     .list-item-row:last-child {
@@ -487,29 +508,32 @@
       gap: 14px;
       min-width: 0;
       padding-right: 12px;
-      height: 100%;
     }
 
     .list-col-thumb {
-      width: 64px;
-      height: 64px;
+      width: 44px;
+      height: 44px;
       aspect-ratio: 1 / 1;
-      align-self: stretch;
       flex-shrink: 0;
       background: var(--color-surface);
-      border-right: 1px solid var(--color-line);
+      border: none;
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 8px;
+      padding: 0;
+      overflow: hidden;
     }
 
-    .list-col-thumb svg,
     .list-col-thumb img {
-      width: 28px;
-      height: 28px;
-      aspect-ratio: 1 / 1;
-      object-fit: contain;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .list-col-thumb svg {
+      width: 24px;
+      height: 24px;
       stroke: var(--color-text);
       fill: none;
     }
@@ -542,16 +566,14 @@
       display: flex;
       justify-content: flex-end;
       gap: 8px;
-      padding: 10px 0;
     }
 
     /* ============================================================
-       STRICT, ULTRA-CLEAN & UNCLUTTERED INFO SUB-PAGE
+       STRICT ALIGNED & UNCLUTTERED INFO SUB-PAGE (FULL 100% CONTAINER FIT)
        ============================================================ */
     .info-clean-page {
-      max-width: 860px;
-      margin: 0 auto;
-      padding: 12px 0;
+      width: 100%;
+      padding: 0;
     }
 
     .info-nav-header {
@@ -561,14 +583,6 @@
       margin-bottom: 24px;
     }
 
-    .info-nav-header__back {
-      font-size: 12px;
-      font-weight: 800;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-
-    /* Strict Vertical Header Stack (Perfect Alignment & Less Info) */
     .info-hero-clean {
       display: flex;
       align-items: center;
@@ -576,6 +590,7 @@
       padding-bottom: 24px;
       margin-bottom: 24px;
       border-bottom: 1px solid var(--color-line);
+      width: 100%;
     }
 
     .info-hero-clean__icon {
@@ -588,6 +603,15 @@
       display: flex;
       align-items: center;
       justify-content: center;
+      padding: 0;
+      overflow: hidden;
+    }
+
+    .info-hero-clean__icon img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
     }
 
     .info-hero-clean__icon svg {
@@ -623,9 +647,9 @@
       gap: 10px;
     }
 
-    /* Concise Parameters Table with Exact 200px Fixed Label Column */
     .info-table-section {
       margin-bottom: 32px;
+      width: 100%;
     }
 
     .info-table-title {
@@ -641,11 +665,12 @@
       display: flex;
       flex-direction: column;
       border-top: 1px solid var(--color-line);
+      width: 100%;
     }
 
     .strict-table__row {
       display: grid;
-      grid-template-columns: 200px 1fr;
+      grid-template-columns: 240px 1fr;
       align-items: center;
       padding: 12px 0;
       border-bottom: 1px solid var(--color-line);
@@ -662,7 +687,6 @@
       color: var(--color-text);
     }
 
-    /* Minimal Single-Line Terminal Box */
     .single-cmd-box {
       background: var(--color-surface);
       border-left: 3px solid var(--color-accent);
@@ -670,6 +694,7 @@
       font-size: 12.5px;
       font-weight: 600;
       color: var(--color-text);
+      width: 100%;
     }
 
     .is-hidden {
@@ -693,9 +718,9 @@
   <!-- PROTOTYPE BANNER -->
   <div class="temp-notice">
     <div class="temp-notice__text">
-      <strong>UI Design Suggestion Prototype</strong> — Strict Aligned Info Structure & Concise Essential Parameters.
+      <strong>UI Design Suggestion Prototype</strong> — Info Sub-Page Full Width Container Fit (100% Layout Match).
     </div>
-    <span class="temp-notice__badge">Strict Aligned</span>
+    <span class="temp-notice__badge">Full Width</span>
   </div>
 
   <!-- NAVIGATION TABS & TOOLBAR -->
@@ -712,18 +737,6 @@
     </div>
 
     <div class="toolbar-actions">
-      <!-- CARDS / LIST TOGGLE (For Catalog View) -->
-      <div id="catalog-switcher" class="view-switcher" role="radiogroup" aria-label="Layout view switcher">
-        <button type="button" class="view-switcher__btn is-active" id="btn-view-cards" onclick="setCardListMode('cards')">
-          <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
-          Cards View
-        </button>
-        <button type="button" class="view-switcher__btn" id="btn-view-list" onclick="setCardListMode('list')">
-          <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
-          List View
-        </button>
-      </div>
-
       <!-- THEME TOGGLE -->
       <button type="button" class="btn-theme-toggle" onclick="toggleDemoTheme()">
         <span id="theme-toggle-icon">🌙</span> <span id="theme-toggle-label">Dark Mode</span>
@@ -744,7 +757,21 @@
           Installed Extensions & Plugins
           <span class="catalog-section__count">3 Plugins</span>
         </h2>
-        <button class="btn btn--primary" onclick="alert('Upload Modal')">+ Upload Plugin (.zip)</button>
+        
+        <div class="catalog-section__toolbar">
+          <div id="plugin-switcher" class="view-switcher" role="radiogroup">
+            <button type="button" class="view-switcher__btn is-active" id="btn-plugins-cards" onclick="setPluginsMode('cards')">
+              <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+              Cards
+            </button>
+            <button type="button" class="view-switcher__btn" id="btn-plugins-list" onclick="setPluginsMode('list')">
+              <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+              List
+            </button>
+          </div>
+          
+          <button class="btn btn--primary" onclick="alert('Upload Modal')">+ Upload Plugin (.zip)</button>
+        </div>
       </div>
 
       <!-- PLUGINS - CARDS VIEW -->
@@ -871,7 +898,19 @@
           System Dependencies
           <span class="catalog-section__count">3 Services</span>
         </h2>
-        <span style="font-size:12.5px; color:var(--color-muted);">Core host-level daemons powering panel extensions</span>
+        
+        <div class="catalog-section__toolbar">
+          <div id="deps-switcher" class="view-switcher" role="radiogroup">
+            <button type="button" class="view-switcher__btn is-active" id="btn-deps-cards" onclick="setDepsMode('cards')">
+              <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+              Cards
+            </button>
+            <button type="button" class="view-switcher__btn" id="btn-deps-list" onclick="setDepsMode('list')">
+              <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+              List
+            </button>
+          </div>
+        </div>
       </div>
 
       <!-- DEPENDENCIES - CARDS VIEW -->
@@ -973,7 +1012,7 @@
         <div class="list-item-row">
           <div class="list-col-main">
             <div class="list-col-thumb">
-              <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
+              <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
             </div>
             <span class="list-col-name">Redis Cache Service</span>
           </div>
@@ -991,7 +1030,7 @@
 
 
   <!-- ============================================================
-       VIEW 2: STRICT ALIGNED & UNCLUTTERED INFO SUB-PAGE
+       VIEW 2: STRICT ALIGNED & UNCLUTTERED INFO SUB-PAGE (FULL CONTAINER FIT)
        ============================================================ -->
   <main id="view-subpage-container" class="is-hidden">
     <div class="info-clean-page">
@@ -1001,7 +1040,7 @@
         <button class="btn btn--secondary btn--sm" onclick="switchMainView('catalog')">← Back to Catalog</button>
       </div>
 
-      <!-- HERO HEADER: STRICT ALIGNMENT & ESSENTIAL INFO ONLY -->
+      <!-- HERO HEADER -->
       <header class="info-hero-clean">
         <div class="info-hero-clean__icon">
           <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
@@ -1022,7 +1061,7 @@
         </div>
       </header>
 
-      <!-- CONCISE PARAMETERS TABLE WITH STRICT 200px ALIGNMENT -->
+      <!-- CONCISE PARAMETERS TABLE -->
       <section class="info-table-section">
         <h2 class="info-table-title">System Parameters</h2>
         
@@ -1040,7 +1079,7 @@
             <div class="strict-table__val">Running (PID 4192, Port 6379)</div>
           </div>
           <div class="strict-table__row">
-            <div class="strict-table__row-key strict-table__key">Version Detected</div>
+            <div class="strict-table__key">Version Detected</div>
             <div class="strict-table__val">v7.0.12 (x86_64 Linux)</div>
           </div>
           <div class="strict-table__row">
@@ -1069,7 +1108,6 @@
       
       const catalogContainer = document.getElementById('view-catalog-container');
       const subpageContainer = document.getElementById('view-subpage-container');
-      const switcherBar = document.getElementById('catalog-switcher');
 
       if (target === 'catalog') {
         catalogBtn.classList.add('is-active');
@@ -1077,14 +1115,12 @@
         
         catalogContainer.classList.remove('is-hidden');
         subpageContainer.classList.add('is-hidden');
-        switcherBar.style.display = 'inline-flex';
       } else {
         subpageBtn.classList.add('is-active');
         catalogBtn.classList.remove('is-active');
         
         subpageContainer.classList.remove('is-hidden');
         catalogContainer.classList.add('is-hidden');
-        switcherBar.style.display = 'none';
       }
     }
 
@@ -1095,32 +1131,43 @@
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    // Switch between Cards View and List View in Catalog
-    function setCardListMode(mode) {
-      const cardsBtn = document.getElementById('btn-view-cards');
-      const listBtn = document.getElementById('btn-view-list');
-      
-      const pluginsCards = document.getElementById('plugins-cards-view');
-      const pluginsList = document.getElementById('plugins-list-view');
-      const depsCards = document.getElementById('deps-cards-view');
-      const depsList = document.getElementById('deps-list-view');
+    // Plugins Cards / List Switcher
+    function setPluginsMode(mode) {
+      const cardsBtn = document.getElementById('btn-plugins-cards');
+      const listBtn = document.getElementById('btn-plugins-list');
+      const cardsView = document.getElementById('plugins-cards-view');
+      const listView = document.getElementById('plugins-list-view');
 
       if (mode === 'cards') {
         cardsBtn.classList.add('is-active');
         listBtn.classList.remove('is-active');
-
-        pluginsCards.classList.remove('is-hidden');
-        pluginsList.classList.add('is-hidden');
-        depsCards.classList.remove('is-hidden');
-        depsList.classList.add('is-hidden');
+        cardsView.classList.remove('is-hidden');
+        listView.classList.add('is-hidden');
       } else {
         listBtn.classList.add('is-active');
         cardsBtn.classList.remove('is-active');
+        listView.classList.remove('is-hidden');
+        cardsView.classList.add('is-hidden');
+      }
+    }
 
-        pluginsCards.classList.add('is-hidden');
-        pluginsList.classList.remove('is-hidden');
-        depsCards.classList.add('is-hidden');
-        depsList.classList.remove('is-hidden');
+    // Dependencies Cards / List Switcher
+    function setDepsMode(mode) {
+      const cardsBtn = document.getElementById('btn-deps-cards');
+      const listBtn = document.getElementById('btn-deps-list');
+      const cardsView = document.getElementById('deps-cards-view');
+      const listView = document.getElementById('deps-list-view');
+
+      if (mode === 'cards') {
+        cardsBtn.classList.add('is-active');
+        listBtn.classList.remove('is-active');
+        cardsView.classList.remove('is-hidden');
+        listView.classList.add('is-hidden');
+      } else {
+        listBtn.classList.add('is-active');
+        cardsBtn.classList.remove('is-active');
+        listView.classList.remove('is-hidden');
+        cardsView.classList.add('is-hidden');
       }
     }
 

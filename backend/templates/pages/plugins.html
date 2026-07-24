@@ -4,31 +4,31 @@
 
 {% block page_title %}Plugins{% endblock %}
 
-{% block topbar_actions %}
-<div style="display: flex; align-items: center; gap: 12px;">
-  <!-- CARDS / LIST VIEW SWITCHER -->
-  <div id="plugin-switcher" class="view-switcher" role="radiogroup" aria-label="Layout view switcher">
-    <button type="button" class="view-switcher__btn is-active" id="btn-plugins-cards" onclick="setPluginsLayout('cards')">
-      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
-      Cards View
-    </button>
-    <button type="button" class="view-switcher__btn" id="btn-plugins-list" onclick="setPluginsLayout('list')">
-      <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
-      List View
-    </button>
-  </div>
-
-  <button class="btn btn--primary btn--sm" onclick="openModal('upload-plugin-modal')">
-    + Upload Plugin (.zip)
-  </button>
-</div>
-{% endblock %}
-
 {% block content %}
 <div class="section">
-  <div class="section__header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-    <h3>Installed Extensions</h3>
-    <span class="text-small text-muted">Modular panel plugins</span>
+  <div class="section__header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; gap:16px;">
+    <div>
+      <h3 style="margin:0;">Installed Extensions</h3>
+      <span class="text-small text-muted">Modular panel plugins</span>
+    </div>
+
+    <!-- PERFECTLY ALIGNED TOOLBAR WITH MINIMAL VIEW SWITCHER & UPLOAD BUTTON -->
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <div id="plugin-switcher" class="view-switcher" role="radiogroup" aria-label="Layout view switcher">
+        <button type="button" class="view-switcher__btn is-active" id="btn-plugins-cards" onclick="setPluginsLayout('cards')">
+          <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+          Cards
+        </button>
+        <button type="button" class="view-switcher__btn" id="btn-plugins-list" onclick="setPluginsLayout('list')">
+          <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+          List
+        </button>
+      </div>
+
+      <button class="btn btn--primary" onclick="openModal('upload-plugin-modal')">
+        + Upload Plugin (.zip)
+      </button>
+    </div>
   </div>
   
   <div class="section__body">
