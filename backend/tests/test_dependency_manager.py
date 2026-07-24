@@ -21,6 +21,48 @@ class _FakeDockerService:
 
 
 class DependencyManagerTests(unittest.IsolatedAsyncioTestCase):
+    def test_intentionally_disabled_dependency_hides_expected_daemon_error(self):
+        manager = DependencyManager()
+        service = Mock()
+        service.get_status.return_value = {
+            "installed": True,
+            "running": False,
+            "healthy": False,
+            "state": "stopped",
+            "error": "Cannot connect to the Docker daemon.",
+        }
+        manager._services["docker"] = service
+
+        with patch(
+            "dependencies.manager.component_state_store.get",
+            return_value=ComponentStateValue(desired_enabled=False),
+        ):
+            status = manager.get_status("docker")
+
+        self.assertEqual("disabled", status["effective_state"])
+        self.assertIsNone(status["last_error"])
+
+    def test_enabled_dependency_keeps_unexpected_daemon_error(self):
+        manager = DependencyManager()
+        service = Mock()
+        service.get_status.return_value = {
+            "installed": True,
+            "running": False,
+            "healthy": False,
+            "state": "stopped",
+            "error": "Cannot connect to the Docker daemon.",
+        }
+        manager._services["docker"] = service
+
+        with patch(
+            "dependencies.manager.component_state_store.get",
+            return_value=ComponentStateValue(desired_enabled=True),
+        ):
+            status = manager.get_status("docker")
+
+        self.assertEqual("stopped", status["effective_state"])
+        self.assertEqual("Cannot connect to the Docker daemon.", status["last_error"])
+
     async def test_failed_toggle_rolls_operation_back_to_idle(self):
         manager = DependencyManager()
         manager._services["docker"] = _FakeDockerService((False, "systemctl failed"))
