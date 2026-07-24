@@ -25,7 +25,31 @@ if [[ -z "$PRIMARY_DOMAIN" ]]; then
     echo "Could not determine Maddy primary domain." >&2
     exit 1
 fi
-MAIL_HOST="mail.${PRIMARY_DOMAIN}"
+
+# A fresh Maddy install may use the machine hostname as primary_domain and add
+# real hosted domains later. Prefer the first real local domain so Roundcube
+# never targets mail.<random-vps-host>.local.
+LOCAL_DOMAIN_VALUES="$(sed -nE 's/^[[:space:]]*\$\(local_domains\)[[:space:]]*=[[:space:]]*(.*)$/\1/p' "$MADDY_CONF" | head -n1)"
+MAIL_DOMAIN="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("mail_domain",""))' "${DATA_DIR}/state.json" 2>/dev/null || true)"
+if [[ ! "$MAIL_DOMAIN" =~ ^[A-Za-z0-9.-]+\.[A-Za-z]{2,}$ || "$MAIL_DOMAIN" == *.local ]]; then
+    MAIL_DOMAIN=""
+fi
+for DOMAIN in $LOCAL_DOMAIN_VALUES; do
+    [[ -n "$MAIL_DOMAIN" ]] && break
+    [[ "$DOMAIN" == '$('* ]] && continue
+    [[ "$DOMAIN" =~ ^[A-Za-z0-9.-]+\.[A-Za-z]{2,}$ ]] || continue
+    [[ "$DOMAIN" == *.local ]] && continue
+    MAIL_DOMAIN="$DOMAIN"
+    break
+done
+if [[ -z "$MAIL_DOMAIN" && "$PRIMARY_DOMAIN" != *.local ]]; then
+    MAIL_DOMAIN="$PRIMARY_DOMAIN"
+fi
+if [[ -z "$MAIL_DOMAIN" ]]; then
+    echo "Add a real Maddy mail domain before installing Roundcube." >&2
+    exit 1
+fi
+MAIL_HOST="mail.${MAIL_DOMAIN}"
 MAIL_TRANSPORT="local"
 
 # Maddy has one active TLS certificate. Prefer its valid mail hostname when the
