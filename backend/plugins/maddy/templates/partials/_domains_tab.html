@@ -1,5 +1,5 @@
 <div id="domain-detail-view" style="display:none;">
-  <div class="mb-lg" style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+  <div class="mb-xl" style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
     <h2 style="margin:0;" id="detail-domain-name"></h2>
     <button type="button" class="btn btn--danger btn--sm" id="btn-delete-domain" onclick="confirmDeleteDomain()">
       🗑 Delete Domain
@@ -7,7 +7,7 @@
   </div>
 
   <!-- Inner Tab Navigation -->
-  <div class="tabs-nav mb-md" style="display:flex; gap:16px; border-bottom:1px solid var(--color-line); padding-bottom:8px;">
+  <div class="tabs-nav mb-lg" style="display:flex; gap:16px;">
     <button type="button" class="btn btn--ghost active" data-inner-tab="inner-tab-mailboxes" onclick="switchInnerTab(this)">Mailboxes</button>
     <button type="button" class="btn btn--ghost" data-inner-tab="inner-tab-dns" onclick="switchInnerTab(this)">DNS Records</button>
     <button type="button" class="btn btn--ghost" data-inner-tab="inner-tab-ssl" onclick="switchInnerTab(this)">SSL Certificate</button>
@@ -15,12 +15,12 @@
   </div>
 
   <!-- Mailboxes for this domain -->
-  <div id="inner-tab-mailboxes" class="inner-tab-content section mb-xl">
-    <div class="section__header">
-      <h3>Mailboxes</h3>
+  <div id="inner-tab-mailboxes" class="inner-tab-content mb-xl">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1.5rem;">
+      <h3 style="margin:0;">Mailboxes</h3>
       <button class="btn btn--primary btn--sm" onclick="openAddAccountModal()">+ Add Mailbox</button>
     </div>
-    <div class="section__body">
+    <div>
       <div class="table-responsive" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
         <table class="table" id="accounts-table" style="display:none;">
           <thead>
@@ -40,9 +40,9 @@
   </div>
 
   <!-- DNS -->
-  <div id="inner-tab-dns" class="inner-tab-content section mb-xl" style="display:none;">
-    <div class="section__header"><h3>DNS Records</h3></div>
-    <div class="section__body">
+  <div id="inner-tab-dns" class="inner-tab-content mb-xl" style="display:none;">
+    <h3 style="margin-top:0; margin-bottom:1.5rem;">DNS Records</h3>
+    <div>
       <p class="form-hint mb-md">
         If this domain is managed externally (e.g., Cloudflare, Namecheap), copy and paste these records exactly into your DNS provider. 
         If the domain is managed by this panel, these records are handled automatically by PowerDNS.
@@ -106,9 +106,9 @@
   </div>
 
   <!-- SSL -->
-  <div id="inner-tab-ssl" class="inner-tab-content section mb-xl" style="display:none;">
-    <div class="section__header"><h3>SSL Certificate</h3></div>
-    <div class="section__body">
+  <div id="inner-tab-ssl" class="inner-tab-content mb-xl" style="display:none;">
+    <h3 style="margin-top:0; margin-bottom:1.5rem;">SSL Certificate</h3>
+    <div>
       <p class="form-hint mb-md">Request a Let's Encrypt TLS cert for <code id="mail-subdomain-preview"></code>. DNS must be working first.</p>
       <form id="ssl-setup-form" style="display:flex; gap:8px; align-items:center;">
         <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
@@ -122,9 +122,9 @@
   </div>
 
   <!-- Connection settings -->
-  <div id="inner-tab-settings" class="inner-tab-content section mb-xl" style="display:none;">
-    <div class="section__header"><h3>Client Settings</h3></div>
-    <div class="section__body">
+  <div id="inner-tab-settings" class="inner-tab-content mb-xl" style="display:none;">
+    <h3 style="margin-top:0; margin-bottom:1.5rem;">Client Settings</h3>
+    <div>
       <div class="info-row">
         <span class="info-row__label">IMAP (incoming)</span>
         <span class="info-row__value"><code id="imap-host-preview"></code> &bull; Port <code>993</code> (SSL) / <code>143</code> (STARTTLS)</span>
@@ -142,9 +142,9 @@
 </div>
 
 <div id="add-domain-view" style="display:none;">
-  <div class="section mb-xl">
-    <div class="section__header"><h3>Add Mail Domain</h3></div>
-    <div class="section__body">
+  <div class="mb-xl">
+    <h3 style="margin-top:0; margin-bottom:1.5rem;">Add Mail Domain</h3>
+    <div>
       
       <div class="mb-md" style="display:flex; gap:16px;">
         <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
