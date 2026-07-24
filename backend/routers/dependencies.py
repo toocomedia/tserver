@@ -11,19 +11,32 @@ router = APIRouter(tags=["dependencies"])
 @router.get("/dependencies", response_class=HTMLResponse)
 async def dependencies_index(request: Request):
     dependencies = dependency_manager.get_all_statuses()
-    for dependency in dependencies:
-        dependency["dependents"] = dependency_manager.get_dependent_plugins(
-            dependency["id"]
-        )
-        service = dependency_manager.get_service(dependency["id"])
-        dependency["install_guide"] = service.get_install_guide()
-        dependency["uninstall_guide"] = service.get_uninstall_guide()
     return templates.TemplateResponse(
         "pages/dependencies.html",
         {
             "request": request,
             "active_page": "dependencies",
             "dependencies": dependencies,
+        },
+    )
+
+
+@router.get("/dependencies/{dependency_id}", response_class=HTMLResponse)
+async def dependency_detail(request: Request, dependency_id: str):
+    dependency = dependency_manager.get_status(dependency_id)
+    service = dependency_manager.get_service(dependency_id)
+    if dependency is None or service is None:
+        raise HTTPException(status_code=404, detail="Unknown dependency.")
+
+    dependency["dependents"] = dependency_manager.get_dependent_plugins(dependency_id)
+    dependency["install_guide"] = service.get_install_guide()
+    dependency["uninstall_guide"] = service.get_uninstall_guide()
+    return templates.TemplateResponse(
+        "pages/dependency_detail.html",
+        {
+            "request": request,
+            "active_page": "dependencies",
+            "dependency": dependency,
         },
     )
 
@@ -66,7 +79,7 @@ async def dependency_toggle(
     success, message = await dependency_manager.toggle(dependency_id, enabled)
     if not success:
         return JSONResponse({"detail": message}, status_code=409)
-    return RedirectResponse("/dependencies", status_code=303)
+    return RedirectResponse(f"/dependencies/{dependency_id}", status_code=303)
 
 
 @router.post("/api/dependencies/{dependency_id}/install")

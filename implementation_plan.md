@@ -31,6 +31,7 @@ Keep feature plugins under `/plugins` and trusted host dependencies under `/depe
 ## Public Interfaces
 
 - `GET /dependencies`
+- `GET /dependencies/{id}`
 - `GET /api/dependencies/status`
 - `GET /api/dependencies/{id}/precheck?action=disable|uninstall`
 - `POST /api/dependencies/{id}/toggle`

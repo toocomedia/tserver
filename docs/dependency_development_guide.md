@@ -24,7 +24,9 @@ Dependency IDs use lowercase letters/numbers with optional underscores or hyphen
 
 ## UI and API Contract
 
-Every dependency appears on `/dependencies`. Generic APIs provide status, prechecks, toggle, and install/uninstall guides. POST operations are authenticated, CSRF-protected, and repeat prechecks server-side. A disable operation requires explicit confirmation even when no dependent plugin is currently active.
+Every dependency appears as a compact catalog card on `/dependencies`. Clicking the card opens the generic `/dependencies/{id}` detail page, which owns status metadata, dependents, install progress, enable/disable controls, errors, and safe uninstall guidance. Generic APIs provide status, prechecks, toggle, and install/uninstall guides. POST operations are authenticated, CSRF-protected, and repeat prechecks server-side. A disable operation requires explicit confirmation even when no dependent plugin is currently active.
+
+Dependency metadata may provide an `icon` URL. If it does not, the manager supplies `/static/images/dependency-placeholder.svg`; this keeps future dependency cards complete without requiring a custom asset.
 
 The dependency manager queries plugin manifests to list dependents. Dependency loss pauses them without changing their desired state. Recovery makes them active again only when their own desired state remains enabled.
 

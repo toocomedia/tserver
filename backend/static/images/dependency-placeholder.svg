@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" role="img" aria-labelledby="title desc">
+  <title id="title">System dependency</title>
+  <desc id="desc">A general placeholder for a service used by panel plugins.</desc>
+  <rect width="160" height="160" fill="#111318"/>
+  <path d="M0 40h160M0 80h160M0 120h160M40 0v160M80 0v160M120 0v160" stroke="#252933" stroke-width="1"/>
+  <path d="M55 51h50v35H55z" fill="#171a21" stroke="#a8e04a" stroke-width="3"/>
+  <path d="M67 86v15m26-15v15M58 101h44M70 66h20" fill="none" stroke="#a8e04a" stroke-width="3" stroke-linecap="square"/>
+  <circle cx="46" cy="51" r="6" fill="#111318" stroke="#a8e04a" stroke-width="3"/>
+  <circle cx="114" cy="51" r="6" fill="#111318" stroke="#a8e04a" stroke-width="3"/>
+  <path d="M52 51h3m50 0h3" stroke="#a8e04a" stroke-width="3"/>
+  <path d="M48 126h64" stroke="#575d69" stroke-width="2"/>
+  <path d="M65 134h30" stroke="#a8e04a" stroke-width="2"/>
+</svg>

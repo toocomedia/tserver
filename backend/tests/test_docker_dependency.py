@@ -112,12 +112,29 @@ class DockerDependencyServiceTests(unittest.TestCase):
             self.assertIn('DOCKER_BIN="$(command -v docker || echo /usr/bin/docker)"', sudoers_content)
             self.assertIn("$DOCKER_BIN", sudoers_content)
 
-        template = (BACKEND / "templates" / "pages" / "dependencies.html").read_text(
+        template = (BACKEND / "templates" / "pages" / "dependency_detail.html").read_text(
             encoding="utf-8"
         )
         self.assertIn("data-dependency-install-form", template)
         self.assertIn("await fetch(form.action", template)
         self.assertNotIn("window.location.reload", template)
+
+    def test_dependency_catalog_links_to_generic_detail_page_and_uses_placeholder(self):
+        catalog = (BACKEND / "templates" / "pages" / "dependencies.html").read_text(
+            encoding="utf-8"
+        )
+        detail = (BACKEND / "templates" / "pages" / "dependency_detail.html").read_text(
+            encoding="utf-8"
+        )
+        router = (BACKEND / "routers" / "dependencies.py").read_text(encoding="utf-8")
+        placeholder = BACKEND / "static" / "images" / "dependency-placeholder.svg"
+
+        self.assertIn('href="/dependencies/{{ dependency.id }}"', catalog)
+        self.assertIn("width:460px; height:160px", catalog)
+        self.assertIn('@router.get("/dependencies/{dependency_id}"', router)
+        self.assertIn("dependency.install_guide", detail)
+        self.assertIn("dependency.uninstall_guide", detail)
+        self.assertTrue(placeholder.is_file())
 
 
 if __name__ == "__main__":

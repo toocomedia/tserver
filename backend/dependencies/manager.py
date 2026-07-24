@@ -52,6 +52,7 @@ class DependencyManager:
         status = service.get_status(force=force)
         state = component_state_store.get("dependency", dependency_id)
         status.update(self._metadata[dependency_id])
+        status["icon"] = status.get("icon") or "/static/images/dependency-placeholder.svg"
         status["desired_enabled"] = state.desired_enabled
         status["operation"] = state.operation
         status["install_origin"] = (

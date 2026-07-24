@@ -1,0 +1,219 @@
+{% extends "layout.html" %}
+
+{% block title %}{{ dependency.name }} — Dependencies — SRV Panel{% endblock %}
+{% block page_title %}{{ dependency.name }}{% endblock %}
+
+{% block topbar_actions %}
+<a class="btn btn--secondary btn--sm" href="/dependencies">Back to Dependencies</a>
+{% endblock %}
+
+{% block head %}
+<style>
+  .dependency-detail { border:1px solid var(--color-line); background:transparent; }
+  .dependency-detail__hero { display:flex; align-items:stretch; border-bottom:1px solid var(--color-line); min-height:160px; }
+  .dependency-detail__cover { width:160px; flex-shrink:0; border-right:1px solid var(--color-line); background:var(--color-bg); }
+  .dependency-detail__cover img { display:block; width:100%; height:160px; object-fit:cover; }
+  .dependency-detail__summary { flex:1; padding:1.5rem; display:flex; justify-content:space-between; gap:1.5rem; }
+  .dependency-detail__title { margin:0 0 .35rem; font-size:1.35rem; }
+  .dependency-detail__description { max-width:720px; margin:.8rem 0 0; color:var(--color-muted); }
+  .dependency-detail__body { padding:1.5rem; }
+  .dependency-detail__footer { display:flex; gap:.75rem; padding:1rem 1.5rem; border-top:1px solid var(--color-line); }
+  .dependency-status { padding:.2rem .5rem; border:1px solid var(--color-line); text-transform:uppercase; font-size:.7rem; font-weight:800; height:max-content; }
+  .dependency-status.healthy { color:var(--color-accent); border-color:var(--color-accent); }
+  .dependency-status.stopped, .dependency-status.disabled, .dependency-status.missing { color:var(--color-danger); border-color:var(--color-danger); }
+  .dependency-meta { display:grid; grid-template-columns:140px minmax(0,1fr); gap:.65rem 1rem; max-width:720px; font-size:.85rem; }
+  .dependency-code { white-space:pre-wrap; overflow:auto; padding:1rem; border:1px solid var(--color-line); background:var(--color-bg); font-size:.78rem; }
+  .dependency-warning { color:var(--color-danger); margin-top:1rem; }
+  .dependency-install-state { margin-top:1rem; padding:1rem; border:1px solid var(--color-line); background:var(--color-surface); max-width:720px; }
+  .dependency-install-state__header { display:flex; align-items:center; gap:.65rem; font-size:.85rem; font-weight:700; }
+  .dependency-install-state__spinner { width:14px; height:14px; border:2px solid var(--color-line); border-top-color:var(--color-accent); animation:dependency-spin .8s linear infinite; }
+  .dependency-install-state__track { height:3px; margin:.8rem 0; overflow:hidden; background:var(--color-line); }
+  .dependency-install-state__bar { display:block; width:36%; height:100%; background:var(--color-accent); animation:dependency-progress 1.5s ease-in-out infinite; }
+  .dependency-install-state.is-success { border-color:var(--color-accent); }
+  .dependency-install-state.is-success .dependency-install-state__spinner { animation:none; border-color:var(--color-accent); background:var(--color-accent); }
+  .dependency-install-state.is-success .dependency-install-state__bar { width:100%; animation:none; }
+  .dependency-install-state.is-error { border-color:var(--color-danger); }
+  .dependency-install-state.is-error .dependency-install-state__spinner { animation:none; border-color:var(--color-danger); }
+  .dependency-install-state.is-error .dependency-install-state__bar { width:100%; animation:none; background:var(--color-danger); }
+  @keyframes dependency-spin { to { transform:rotate(360deg); } }
+  @keyframes dependency-progress { from { transform:translateX(-120%); } to { transform:translateX(320%); } }
+  @media (max-width:700px) {
+    .dependency-detail__hero { display:block; }
+    .dependency-detail__cover { width:100%; border-right:0; border-bottom:1px solid var(--color-line); }
+    .dependency-detail__cover img { width:160px; }
+    .dependency-detail__summary { padding:1.25rem; }
+    .dependency-meta { grid-template-columns:1fr; }
+  }
+  @media (prefers-reduced-motion:reduce) {
+    .dependency-install-state__spinner, .dependency-install-state__bar { animation-duration:3s; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<article class="dependency-detail" data-dependency-id="{{ dependency.id }}">
+  <header class="dependency-detail__hero">
+    <div class="dependency-detail__cover">
+      <img src="{{ dependency.icon }}" alt="{{ dependency.name }} dependency icon">
+    </div>
+    <div class="dependency-detail__summary">
+      <div>
+        <h2 class="dependency-detail__title">{{ dependency.name }}</h2>
+        <span class="text-small text-muted">System dependency · Driver v{{ dependency.version }}</span>
+        <p class="dependency-detail__description">{{ dependency.description }}</p>
+      </div>
+      <span class="dependency-status {{ dependency.effective_state }}" data-role="dependency-status">{{ dependency.effective_state | replace('_', ' ') }}</span>
+    </div>
+  </header>
+
+  <div class="dependency-detail__body">
+    <div class="dependency-meta">
+      <strong>Installed</strong><span data-role="installed-value">{{ 'Yes' if dependency.installed else 'No' }}</span>
+      <strong>Install source</strong><span data-role="install-source">{{ dependency.install_origin | replace('_', ' ') }}</span>
+      <strong>Daemon</strong><span data-role="daemon-value">{{ 'Running' if dependency.running else 'Stopped' }}</span>
+      <strong>Version</strong><span data-role="version-value">{{ dependency.detected_version if dependency.detected_version else 'Not detected' }}</span>
+      <strong>Used by plugins</strong>
+      <span>
+        {% if dependency.dependents %}
+          {{ dependency.dependents | map(attribute='name') | join(', ') }}
+        {% else %}
+          No plugins currently depend on this service.
+        {% endif %}
+      </span>
+    </div>
+
+    {% if dependency.last_error %}
+    <p class="dependency-warning" data-role="dependency-error">{{ dependency.last_error }}</p>
+    {% else %}
+    <p class="dependency-warning hidden" data-role="dependency-error"></p>
+    {% endif %}
+
+    {% if not dependency.installed %}
+    <section data-role="installation-guide" style="margin-top:1.5rem; max-width:900px;">
+      <h3>Installation</h3>
+      <p class="text-small text-muted">{{ dependency.install_guide.platform }}{% if not dependency.install_guide.supported %} — automatic installation is not supported on this operating system{% endif %}</p>
+      <p class="text-small text-muted">The panel uses the dependency's trusted bundled installer. Manual fallback:</p>
+      <pre class="dependency-code">{{ dependency.install_guide.command }}</pre>
+    </section>
+    <div class="dependency-install-state hidden" data-role="install-state" aria-live="polite">
+      <div class="dependency-install-state__header">
+        <span class="dependency-install-state__spinner" aria-hidden="true"></span>
+        <span data-role="install-state-title">Installing {{ dependency.name }}</span>
+      </div>
+      <div class="dependency-install-state__track"><span class="dependency-install-state__bar"></span></div>
+      <p class="text-small text-muted" data-role="install-state-detail">Installation is running on the server. Keep this page open.</p>
+      <span class="text-small text-muted" data-role="install-elapsed">Elapsed: 0s</span>
+    </div>
+    {% endif %}
+
+    <details style="margin-top:1.5rem; max-width:900px;">
+      <summary>Safe uninstall guide</summary>
+      {% if dependency.dependents %}
+      <p class="dependency-warning">Uninstall is blocked until dependent plugins are removed.</p>
+      {% endif %}
+      <pre class="dependency-code">{{ dependency.uninstall_guide.command }}</pre>
+      <p class="text-small text-muted">{{ dependency.uninstall_guide.warning }}</p>
+    </details>
+  </div>
+
+  <footer class="dependency-detail__footer" data-role="dependency-footer">
+    {% if dependency.installed %}
+    <form method="post" action="/api/dependencies/{{ dependency.id }}/toggle">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+      {% if dependency.running %}
+      <input type="hidden" name="enabled" value="false">
+      <input type="hidden" name="confirmed" value="true">
+      <button class="btn btn--danger" type="submit" onclick="return confirm('Disable {{ dependency.name }}? Dependent plugins will be paused.')">Disable</button>
+      {% else %}
+      <input type="hidden" name="enabled" value="true">
+      <button class="btn btn--primary" type="submit">Enable</button>
+      {% endif %}
+    </form>
+    {% else %}
+    <form method="post" action="/api/dependencies/{{ dependency.id }}/install" data-dependency-install-form>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+      <button class="btn btn--primary" type="submit" data-role="install-button" {% if not dependency.install_guide.supported %}disabled title="Unsupported operating system"{% endif %}>Install {{ dependency.name }}</button>
+    </form>
+    {% endif %}
+  </footer>
+</article>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  document.querySelectorAll('[data-dependency-install-form]').forEach(function (form) {
+    form.addEventListener('submit', async function (event) {
+      event.preventDefault();
+
+      var card = form.closest('[data-dependency-id]');
+      var button = form.querySelector('[data-role="install-button"]');
+      var stateBox = card.querySelector('[data-role="install-state"]');
+      var stateTitle = card.querySelector('[data-role="install-state-title"]');
+      var stateDetail = card.querySelector('[data-role="install-state-detail"]');
+      var elapsed = card.querySelector('[data-role="install-elapsed"]');
+      var errorBox = card.querySelector('[data-role="dependency-error"]');
+      var dependencyName = {{ dependency.name | tojson }};
+      var startedAt = Date.now();
+
+      button.disabled = true;
+      button.textContent = 'Installing…';
+      stateBox.classList.remove('hidden', 'is-success', 'is-error');
+      stateTitle.textContent = 'Installing ' + dependencyName;
+      stateDetail.textContent = 'Installation is running on the server. This can take several minutes; keep this page open.';
+      errorBox.classList.add('hidden');
+      errorBox.textContent = '';
+
+      var timer = window.setInterval(function () {
+        elapsed.textContent = 'Elapsed: ' + Math.floor((Date.now() - startedAt) / 1000) + 's';
+      }, 1000);
+
+      try {
+        var token = form.querySelector('input[name="csrf_token"]').value;
+        var response = await fetch(form.action, {
+          method: 'POST',
+          body: new FormData(form),
+          headers: { 'Accept': 'application/json', 'X-CSRF-Token': token }
+        });
+        var payload = await response.json();
+        if (!response.ok || !payload.success) {
+          throw new Error(payload.detail || dependencyName + ' installation failed.');
+        }
+
+        var status = payload.status || {};
+        var statusBadge = card.querySelector('[data-role="dependency-status"]');
+        statusBadge.className = 'dependency-status healthy';
+        statusBadge.textContent = 'healthy';
+        card.querySelector('[data-role="installed-value"]').textContent = 'Yes';
+        card.querySelector('[data-role="install-source"]').textContent = 'panel managed';
+        card.querySelector('[data-role="daemon-value"]').textContent = 'Running';
+        card.querySelector('[data-role="version-value"]').textContent = status.detected_version || 'Installed';
+        card.querySelector('[data-role="installation-guide"]').classList.add('hidden');
+
+        stateBox.classList.add('is-success');
+        stateTitle.textContent = dependencyName + ' installed successfully';
+        stateDetail.textContent = dependencyName + ' is installed, enabled, and responding to the panel.';
+        button.textContent = 'Installed';
+        form.closest('[data-role="dependency-footer"]').insertAdjacentHTML(
+          'beforeend',
+          '<a class="btn btn--secondary" href="' + window.location.pathname + '">Refresh controls</a>'
+        );
+        if (window.toast) window.toast(dependencyName + ' installed successfully.', 'success');
+      } catch (error) {
+        stateBox.classList.add('is-error');
+        stateTitle.textContent = 'Installation failed';
+        stateDetail.textContent = error.message;
+        errorBox.textContent = error.message;
+        errorBox.classList.remove('hidden');
+        button.disabled = false;
+        button.textContent = 'Retry Install';
+        if (window.toast) window.toast(error.message, 'error');
+      } finally {
+        window.clearInterval(timer);
+        elapsed.textContent = 'Elapsed: ' + Math.floor((Date.now() - startedAt) / 1000) + 's';
+      }
+    });
+  });
+})();
+</script>
+{% endblock %}

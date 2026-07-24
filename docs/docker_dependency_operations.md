@@ -1,6 +1,6 @@
 # Docker Dependency Operations
 
-Docker Engine is a trusted SRV Panel dependency. Its card is available at `/dependencies` and reports whether the CLI is installed, whether the daemon answers, detected version, dependent plugins, and the last lifecycle error.
+Docker Engine is a trusted SRV Panel dependency. Its summary card is available at `/dependencies`; click it to open `/dependencies/docker`, where the panel reports whether the CLI is installed, whether the daemon answers, detected version, dependent plugins, and the last lifecycle error.
 
 ## States
 
@@ -14,7 +14,7 @@ The panel refreshes cached health after lifecycle actions. If Docker is stopped 
 
 ## Install and Guided Uninstall
 
-The **Install Docker** card action supports Ubuntu 22.04 and 24.04. It runs the fixed core installer, configures Docker's official apt repository, installs Engine/CLI/containerd/Buildx/Compose, enables the service, and verifies daemon health. It refuses unsupported systems and conflicting packages rather than removing software automatically. The steps follow the [official Docker Ubuntu installation documentation](https://docs.docker.com/engine/install/ubuntu/).
+The **Install Docker** detail-page action supports Ubuntu 22.04 and 24.04. It runs the fixed core installer, configures Docker's official apt repository, installs Engine/CLI/containerd/Buildx/Compose, enables the service, and verifies daemon health. It refuses unsupported systems and conflicting packages rather than removing software automatically. The steps follow the [official Docker Ubuntu installation documentation](https://docs.docker.com/engine/install/ubuntu/).
 
 Docker package removal remains guided and is never executed by the panel.
 
