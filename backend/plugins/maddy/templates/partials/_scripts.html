@@ -1,7 +1,7 @@
 <script>
 // Parse accounts from Jinja into JS for easy filtering
 const allAccounts = {{ accounts | tojson }};
-const webmailAvailable = {{ webmail_available | tojson }};
+const webmailSites = {{ webmail_sites | tojson }};
 let currentDomain = "";
 let currentDomainIp = "{{ server_ip }}";
 
@@ -225,7 +225,8 @@ function renderAccountsList() {
 
       const actionsCell = document.createElement('td');
       actionsCell.style.textAlign = 'right';
-      if (webmailAvailable) {
+      const webmail = webmailSites[currentDomain] || {};
+      if (webmail.ready) {
         const openButton = document.createElement('button');
         openButton.type = 'button';
         openButton.className = 'btn btn--secondary btn--sm';
@@ -233,6 +234,14 @@ function renderAccountsList() {
         openButton.style.marginRight = '0.5rem';
         openButton.addEventListener('click', () => openWebmail(acc.email));
         actionsCell.appendChild(openButton);
+      } else {
+        const setupLink = document.createElement('a');
+        setupLink.className = 'btn btn--secondary btn--sm';
+        setupLink.textContent = 'Set up Webmail';
+        setupLink.href = webmail.setup_url || '/plugins/roundcube_webmail/';
+        setupLink.title = webmail.reason || 'Webmail is not ready.';
+        setupLink.style.marginRight = '0.5rem';
+        actionsCell.appendChild(setupLink);
       }
       const deleteButton = document.createElement('button');
       deleteButton.type = 'button';
@@ -263,25 +272,30 @@ function updateDomainSuffix() {
 // ---------------------------------------------------------------------------
 // Accounts actions (AJAX)
 // ---------------------------------------------------------------------------
-function openWebmail(email) {
-  const form = document.createElement('form');
-  form.method = 'post';
-  form.action = '/plugins/roundcube_webmail/api/launch';
-  form.target = '_blank';
-  form.style.display = 'none';
-
-  const fields = { csrf_token: getCsrfToken(), email };
-  Object.entries(fields).forEach(([name, value]) => {
-    const input = document.createElement('input');
-    input.type = 'hidden';
-    input.name = name;
-    input.value = value;
-    form.appendChild(input);
-  });
-
-  document.body.appendChild(form);
-  form.submit();
-  form.remove();
+async function openWebmail(email) {
+  const target = window.open('about:blank', '_blank');
+  if (!target) {
+    alert('Allow popups for the panel, then try again.');
+    return;
+  }
+  const payload = new FormData();
+  payload.append('csrf_token', getCsrfToken());
+  payload.append('email', email);
+  try {
+    const response = await fetch('/plugins/roundcube_webmail/api/launch', {
+      method: 'POST',
+      body: payload,
+      headers: { Accept: 'application/json' }
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data.launch_url) {
+      throw new Error(data.detail || 'Webmail launch failed.');
+    }
+    target.location.replace(data.launch_url);
+  } catch (error) {
+    target.close();
+    alert(error.message);
+  }
 }
 
 async function executeAddAccount() {
@@ -372,17 +386,18 @@ async function handleDnsAction(endpoint) {
 async function issueMailSsl() {
   const formData  = new FormData(document.getElementById('ssl-setup-form'));
   const resultDiv = document.getElementById('ssl-result-message');
+  const domain = String(formData.get('domain') || '');
 
   resultDiv.style.display = 'block';
   resultDiv.className     = 'text-small text-muted';
-  resultDiv.innerText     = "Requesting Let's Encrypt SSL… (may take up to 30 s)";
+  resultDiv.innerText     = "Starting Let's Encrypt SSL…";
 
   try {
     const res  = await fetch('/plugins/maddy/api/ssl/issue', { method: 'POST', body: formData });
     const data = await res.json();
     if (res.ok) {
-      resultDiv.className = 'text-small text-accent';
-      resultDiv.innerText = data.message || '✅ SSL issued successfully.';
+      resultDiv.innerText = data.message || 'SSL setup is running…';
+      pollMailSsl(domain, resultDiv);
     } else {
       resultDiv.className = 'text-small text-danger';
       resultDiv.innerText = data.detail || 'SSL request failed.';
@@ -390,6 +405,27 @@ async function issueMailSsl() {
   } catch (err) {
     resultDiv.className = 'text-small text-danger';
     resultDiv.innerText = 'Network error: ' + err.message;
+  }
+}
+
+async function pollMailSsl(domain, resultDiv) {
+  try {
+    const res = await fetch('/plugins/maddy/api/ssl/status?domain=' + encodeURIComponent(domain));
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Could not read SSL status.');
+    resultDiv.innerText = data.message || 'SSL status updated.';
+    if (data.status === 'ready') {
+      resultDiv.className = 'text-small text-accent';
+      return;
+    }
+    if (data.status === 'error') {
+      resultDiv.className = 'text-small text-danger';
+      return;
+    }
+    setTimeout(() => pollMailSsl(domain, resultDiv), 2000);
+  } catch (err) {
+    resultDiv.className = 'text-small text-danger';
+    resultDiv.innerText = err.message;
   }
 }
 

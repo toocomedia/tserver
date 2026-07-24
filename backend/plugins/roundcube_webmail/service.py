@@ -8,6 +8,7 @@ import json
 import os
 import re
 import subprocess
+import threading
 import time
 from pathlib import Path
 from typing import Any
@@ -16,10 +17,13 @@ from typing import Any
 class RoundcubeWebmailService:
     plugin_id = "roundcube_webmail"
     container_name = "srv-panel-roundcube-webmail"
-    config_version = "2"
+    config_version = "3"
     host_port = 8088
     launch_ttl_seconds = 60
     command_timeout = 15
+
+    def __init__(self) -> None:
+        self._state_lock = threading.RLock()
 
     @property
     def data_dir(self) -> Path:
@@ -245,44 +249,121 @@ echo json_encode([
         return data if isinstance(data, dict) else {"ok": False}
 
     def read_state(self) -> dict[str, Any]:
-        try:
-            data = json.loads(self.state_path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
-            return {}
-        return data if isinstance(data, dict) else {}
+        with self._state_lock:
+            try:
+                data = json.loads(self.state_path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                return {"schema_version": 2, "sites": {}}
+            if not isinstance(data, dict):
+                return {"schema_version": 2, "sites": {}}
+            if data.get("schema_version") == 2 and isinstance(data.get("sites"), dict):
+                return data
+
+            migrated: dict[str, Any] = {
+                "schema_version": 2,
+                "sites": {},
+            }
+            domain = data.get("mail_domain")
+            host = data.get("public_host")
+            if isinstance(domain, str) and domain and isinstance(host, str) and host:
+                migrated["sites"][domain] = {
+                    "public_host": host,
+                    "dns_managed": bool(data.get("dns_managed")),
+                    "ssl_status": data.get("ssl_status", "not_configured"),
+                    "ssl_started_at": data.get("ssl_started_at"),
+                    "ssl_error": data.get("ssl_error"),
+                    "ssl_error_detail": data.get("ssl_error_detail"),
+                    "dns_error": data.get("dns_error"),
+                }
+            for key in ("rebuild_status", "rebuild_error"):
+                if key in data:
+                    migrated[key] = data[key]
+            self.write_state(migrated)
+            return migrated
 
     def write_state(self, state: dict[str, Any]) -> None:
-        self.data_dir.mkdir(parents=True, exist_ok=True)
-        temp = self.state_path.with_suffix(".tmp")
-        temp.write_text(json.dumps(state, indent=2), encoding="utf-8")
-        temp.replace(self.state_path)
+        with self._state_lock:
+            normalized = dict(state)
+            normalized["schema_version"] = 2
+            if not isinstance(normalized.get("sites"), dict):
+                normalized["sites"] = {}
+            self.data_dir.mkdir(parents=True, exist_ok=True)
+            temp = self.state_path.with_suffix(".tmp")
+            temp.write_text(json.dumps(normalized, indent=2), encoding="utf-8")
+            temp.replace(self.state_path)
 
     def update_state(self, **changes: Any) -> dict[str, Any]:
-        state = self.read_state()
-        state.update(changes)
-        self.write_state(state)
-        return state
+        with self._state_lock:
+            state = self.read_state()
+            state.update(changes)
+            self.write_state(state)
+            return state
 
-    def get_public_url(self) -> str | None:
-        state = self.read_state()
-        host = state.get("public_host")
+    def get_sites(self) -> dict[str, dict[str, Any]]:
+        sites = self.read_state().get("sites", {})
+        return {
+            str(domain): dict(site)
+            for domain, site in sites.items()
+            if isinstance(domain, str) and isinstance(site, dict)
+        }
+
+    def get_site(self, domain: str) -> dict[str, Any] | None:
+        site = self.get_sites().get(domain.strip().lower())
+        return dict(site) if site else None
+
+    def save_site(self, domain: str, site: dict[str, Any]) -> dict[str, Any]:
+        domain = domain.strip().lower()
+        with self._state_lock:
+            state = self.read_state()
+            sites = dict(state.get("sites", {}))
+            sites[domain] = dict(site)
+            state["sites"] = sites
+            self.write_state(state)
+        return dict(site)
+
+    def update_site(self, domain: str, **changes: Any) -> dict[str, Any]:
+        current = self.get_site(domain)
+        if current is None:
+            raise KeyError(domain)
+        current.update(changes)
+        return self.save_site(domain, current)
+
+    def delete_site(self, domain: str) -> dict[str, Any] | None:
+        domain = domain.strip().lower()
+        with self._state_lock:
+            state = self.read_state()
+            sites = dict(state.get("sites", {}))
+            removed = sites.pop(domain, None)
+            state["sites"] = sites
+            self.write_state(state)
+        return dict(removed) if isinstance(removed, dict) else None
+
+    def get_public_url(self, domain: str | None = None) -> str | None:
+        if domain is not None:
+            site = self.get_site(domain)
+            if not site or site.get("ssl_status") != "ready":
+                return None
+            host = site.get("public_host")
+            return f"https://{host}/" if isinstance(host, str) and host else None
+        for site_domain in self.get_sites():
+            url = self.get_public_url(site_domain)
+            if url:
+                return url
+        return None
+
+    def get_configured_url(self, domain: str) -> str | None:
+        site = self.get_site(domain)
+        if not site:
+            return None
+        host = site.get("public_host")
         if not isinstance(host, str) or not host:
             return None
-        if state.get("ssl_status") != "ready":
-            return None
-        return f"https://{host}/"
-
-    def get_configured_url(self) -> str | None:
-        state = self.read_state()
-        host = state.get("public_host")
-        if not isinstance(host, str) or not host:
-            return None
-        scheme = "https" if state.get("ssl_status") == "ready" else "http"
+        scheme = "https" if site.get("ssl_status") == "ready" else "http"
         return f"{scheme}://{host}/"
 
     def get_default_domain(self) -> str | None:
-        domain = self.read_state().get("mail_domain")
-        return domain if isinstance(domain, str) and domain else None
+        sites = self.get_sites()
+        return next(iter(sites), None)
 
     @staticmethod
     def _b64encode(value: bytes) -> str:

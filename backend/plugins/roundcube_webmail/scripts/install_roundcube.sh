@@ -2,7 +2,7 @@
 set -euo pipefail
 
 PLUGIN_ID="roundcube_webmail"
-CONFIG_VERSION="2"
+CONFIG_VERSION="3"
 CONTAINER="srv-panel-roundcube-webmail"
 VOLUME="srv-panel-roundcube-data"
 NETWORK="srv-panel-roundcube-network"
@@ -31,7 +31,7 @@ fi
 # real hosted domains later. Prefer the first real local domain so Roundcube
 # never targets mail.<random-vps-host>.local.
 LOCAL_DOMAIN_VALUES="$(sed -nE 's/^[[:space:]]*\$\(local_domains\)[[:space:]]*=[[:space:]]*(.*)$/\1/p' "$MADDY_CONF" | head -n1)"
-MAIL_DOMAIN="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("mail_domain",""))' "${DATA_DIR}/state.json" 2>/dev/null || true)"
+MAIL_DOMAIN="$(python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); print(next(iter(d.get("sites",{})), d.get("mail_domain","")))' "${DATA_DIR}/state.json" 2>/dev/null || true)"
 if [[ ! "$MAIL_DOMAIN" =~ ^[A-Za-z0-9.-]+\.[A-Za-z]{2,}$ || "$MAIL_DOMAIN" == *.local ]]; then
     MAIL_DOMAIN=""
 fi
@@ -55,14 +55,14 @@ MAIL_TRANSPORT="local"
 
 # Maddy has one active TLS certificate. Prefer its valid mail hostname when the
 # live IMAPS listener presents a publicly trusted, hostname-matching cert.
-MADDY_CERT="/etc/maddy/certs/fullchain.pem"
 TLS_CANDIDATES="$MAIL_HOST"
-if [[ -f "$MADDY_CERT" ]]; then
+for MADDY_CERT in /etc/maddy/certs/fullchain.pem /etc/maddy/certs/*/fullchain.pem; do
+    [[ -f "$MADDY_CERT" ]] || continue
     CERT_HOSTS="$(openssl x509 -in "$MADDY_CERT" -noout -ext subjectAltName 2>/dev/null \
         | tr ',' '\n' \
         | sed -nE 's/.*DNS:([^[:space:]]+).*/\1/p' || true)"
     TLS_CANDIDATES="${CERT_HOSTS} ${TLS_CANDIDATES}"
-fi
+done
 for CANDIDATE in $TLS_CANDIDATES; do
     [[ "$CANDIDATE" =~ ^[A-Za-z0-9.-]+$ ]] || continue
     [[ "$CANDIDATE" == mail.* ]] || continue

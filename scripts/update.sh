@@ -196,6 +196,32 @@ else
   info "    sudoers OK ($SUDOERS_FILE)"
 fi
 
+MADDY_MANAGE_SCRIPT="$PANEL_DIR/app/plugins/maddy/scripts/manage_maddy.py"
+if [[ -f "$MADDY_MANAGE_SCRIPT" ]]; then
+  MADDY_SUDOERS_FILE="/etc/sudoers.d/panel-maddy"
+  cat > "$MADDY_SUDOERS_FILE" <<EOF
+# Managed by srv-panel updater — narrow Maddy helper access only
+$PANEL_USER ALL=(root) NOPASSWD: /usr/bin/python3 $MADDY_MANAGE_SCRIPT *
+EOF
+  chmod 440 "$MADDY_SUDOERS_FILE"
+  visudo -cf "$MADDY_SUDOERS_FILE" >/dev/null || die "Maddy sudoers validation failed"
+  info "    Maddy helper sudoers OK ($MADDY_SUDOERS_FILE)"
+  if [[ -d /etc/maddy ]]; then
+    MADDY_RENEW_HOOK="/etc/letsencrypt/renewal-hooks/deploy/maddy_sync.sh"
+    mkdir -p "$(dirname "$MADDY_RENEW_HOOK")"
+    cat > "$MADDY_RENEW_HOOK" <<EOF
+#!/bin/bash
+set -euo pipefail
+for host in \$RENEWED_DOMAINS; do
+  [[ "\$host" == mail.* ]] || continue
+  /usr/bin/python3 "$MADDY_MANAGE_SCRIPT" sync-cert "\$host"
+done
+EOF
+    chmod 755 "$MADDY_RENEW_HOOK"
+    info "    Maddy renewal hook refreshed"
+  fi
+fi
+
 # ---------------------------------------------------------------
 # Optional panel nginx refresh (does not touch domain site configs)
 # ---------------------------------------------------------------

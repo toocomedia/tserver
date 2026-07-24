@@ -238,7 +238,10 @@ async def issue_cert(
     )
     if existing:
         if existing.cert_path:
-            res = await shell.run(["sudo", "-n", "bash", "-c", f"[ -f {existing.cert_path} ]"])
+            res = await shell.run(
+                ["openssl", "x509", "-in", existing.cert_path, "-noout"],
+                timeout=10,
+            )
             if not res.success:
                 logger.warning(f"Certificate for {full_domain} found in DB but missing on disk. Deleting stale record and regenerating.")
                 await db.delete(existing)

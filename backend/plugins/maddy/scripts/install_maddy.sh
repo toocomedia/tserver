@@ -297,20 +297,17 @@ WantedBy=multi-user.target
 EOF
 
 # 8. Create Certbot Renewal Hook for Maddy
+PANEL_USER="${PANEL_USER:-panel}"
+MANAGE_SCRIPT="$(find /opt/srv-panel -name 'manage_maddy.py' 2>/dev/null | head -1 || echo '/opt/srv-panel/backend/plugins/maddy/scripts/manage_maddy.py')"
 mkdir -p /etc/letsencrypt/renewal-hooks/deploy
 cat <<EOF > /etc/letsencrypt/renewal-hooks/deploy/maddy_sync.sh
 #!/bin/bash
 # Automatically deployed by srv-panel maddy plugin
-# This script runs whenever Certbot successfully renews a certificate.
-# If the renewed certificate is for a mail domain, it copies it to Maddy.
-
-if [[ "\$RENEWED_DOMAINS" == *"mail."* ]]; then
-    echo "Mail domain renewed: \$RENEWED_LINEAGE"
-    cp /etc/letsencrypt/live/\$RENEWED_LINEAGE/fullchain.pem /etc/maddy/certs/fullchain.pem
-    cp /etc/letsencrypt/live/\$RENEWED_LINEAGE/privkey.pem /etc/maddy/certs/privkey.pem
-    chown maddy:maddy /etc/maddy/certs/*.pem
-    systemctl restart maddy
-fi
+set -euo pipefail
+for host in \$RENEWED_DOMAINS; do
+    [[ "\$host" == mail.* ]] || continue
+    /usr/bin/python3 "${MANAGE_SCRIPT}" sync-cert "\$host"
+done
 EOF
 chmod +x /etc/letsencrypt/renewal-hooks/deploy/maddy_sync.sh
 
@@ -323,8 +320,6 @@ sleep 2
 touchdb
 
 # 9. Install sudoers rule for manage_maddy.py (NOPASSWD for panel user)
-PANEL_USER="${PANEL_USER:-panel}"
-MANAGE_SCRIPT="$(find /opt/srv-panel -name 'manage_maddy.py' 2>/dev/null | head -1 || echo '/opt/srv-panel/backend/plugins/maddy/scripts/manage_maddy.py')"
 SUDOERS_FILE="/etc/sudoers.d/panel-maddy"
 
 if [ -n "${MANAGE_SCRIPT}" ] && [ -f "${MANAGE_SCRIPT}" ]; then

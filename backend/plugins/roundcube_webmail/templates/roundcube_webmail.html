@@ -1,473 +1,197 @@
 {% extends "layout.html" %}
 
 {% block title %}Roundcube Webmail — VPS Panel{% endblock %}
+{% block content_class %}content--flush{% endblock %}
+{% block page_header_wrapper %}{% endblock %}
 
 {% block content %}
-<div class="page-header">
-  <div>
-    <h1>Roundcube Webmail</h1>
-    <p class="text-muted">One webmail URL for every mailbox and Maddy domain on this server.</p>
-  </div>
-  <div style="display:flex; gap:8px;">
-    <a class="btn btn--secondary" href="/plugins/">Plugin Controls</a>
-    <a class="btn btn--primary" id="open-webmail-button" href="{{ public_url or '#' }}"
-      target="_blank" rel="noopener" {% if not public_url or not status.healthy %}style="display:none;"{% endif %}>
-      Open Webmail
-    </a>
-  </div>
-</div>
+<div class="split-layout" id="roundcube-page"
+  data-domain="{{ selected_domain or '' }}"
+  data-site-configured="{{ 'true' if selected_site else 'false' }}">
+  <aside class="split-sidebar">
+    {% for item in domain_rows %}
+      <a class="split-sidebar__item {% if item.domain == selected_domain %}active{% endif %}"
+        href="/plugins/roundcube_webmail/?domain={{ item.domain }}">
+        <span style="overflow:hidden;text-overflow:ellipsis;">{{ item.domain }}</span>
+        {% if item.public_url %}
+          <span class="badge badge--success" style="margin-left:auto;">Ready</span>
+        {% elif item.site %}
+          <span class="badge badge--inactive" style="margin-left:auto;">Setup</span>
+        {% else %}
+          <span class="text-small text-muted" style="margin-left:auto;">Add</span>
+        {% endif %}
+      </a>
+    {% else %}
+      <div class="split-sidebar__item active">No mail domains</div>
+    {% endfor %}
 
-<div class="section mb-lg">
-  <div class="section__header">
-    <h3>Overview</h3>
-  </div>
-  <div class="section__body">
-    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:16px;">
-      <div>
-        <div class="text-small text-muted">Container</div>
-        <div id="container-status">
-          {% if status.healthy %}
-            <span class="badge badge--success">Healthy</span>
-          {% elif status.running %}
-            <span class="badge badge--inactive">{{ status.state }}</span>
+    {% set addable = domain_rows | selectattr('site', 'none') | list %}
+    {% if addable %}
+      <a class="split-sidebar__item" href="/plugins/roundcube_webmail/?domain={{ addable[0].domain }}">
+        <strong>+ Add Webmail Domain</strong>
+      </a>
+    {% endif %}
+
+    <div style="flex-grow:1;"></div>
+    <div class="split-sidebar__footer"
+      style="padding:1rem;border-top:1px solid var(--color-line);margin-top:auto;color:var(--color-muted);">
+      <h3 style="margin:0;font-size:1rem;color:var(--color-text);">Roundcube Webmail</h3>
+      <div style="font-size:.85rem;margin-top:4px;">Version {{ plugin_version }}</div>
+      <div style="font-size:.85rem;margin-top:4px;">One shared container</div>
+    </div>
+  </aside>
+
+  <main class="split-content">
+    {% if not selected_domain %}
+      <div class="section">
+        <div class="section__body text-center p-4">
+          <h2>Add a Maddy domain first</h2>
+          <p class="text-muted">Roundcube webmail access is configured from existing Maddy mail domains.</p>
+          <a class="btn btn--primary" href="/plugins/maddy/">Open Maddy</a>
+        </div>
+      </div>
+    {% else %}
+      <div class="page-header">
+        <div>
+          <h1 style="margin-bottom:4px;">{{ selected_domain }}</h1>
+          <p class="text-muted">Webmail access for {{ selected_domain_data.mailbox_count or 0 }} mailbox(es).</p>
+        </div>
+        <div class="page-header__actions">
+          {% if selected_site and selected_site.ssl_status == 'ready' and status.healthy %}
+            <a class="btn btn--primary" id="open-webmail-button"
+              href="https://{{ selected_site.public_host }}/" target="_blank" rel="noopener">Open Webmail</a>
           {% else %}
-            <span class="badge badge--inactive">Stopped</span>
+            <button class="btn btn--primary" id="open-webmail-button" type="button" disabled
+              title="Finish DNS and HTTPS setup first.">Open Webmail</button>
           {% endif %}
         </div>
       </div>
-      <div>
-        <div class="text-small text-muted">DNS</div>
-        <div id="dns-status"><span class="badge badge--inactive">Checking…</span></div>
-      </div>
-      <div>
-        <div class="text-small text-muted">SSL</div>
-        <div id="ssl-status">
-          <span class="badge badge--inactive">{{ webmail_state.ssl_status or "Not configured" }}</span>
+
+      <div class="section mb-lg">
+        <div class="section__header"><h3>Status</h3></div>
+        <div class="section__body">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:16px;">
+            <div>
+              <div class="text-small text-muted">Container</div>
+              <div id="container-status">
+                <span class="badge {% if status.healthy %}badge--success{% else %}badge--inactive{% endif %}">
+                  {{ "Healthy" if status.healthy else status.state }}
+                </span>
+              </div>
+            </div>
+            <div>
+              <div class="text-small text-muted">DNS</div>
+              <div id="dns-status"><span class="badge badge--inactive">{{ "Checking…" if selected_site else "Not configured" }}</span></div>
+            </div>
+            <div>
+              <div class="text-small text-muted">HTTPS</div>
+              <div id="ssl-status">
+                <span class="badge {% if selected_site and selected_site.ssl_status == 'ready' %}badge--success{% else %}badge--inactive{% endif %}">
+                  {{ selected_site.ssl_status if selected_site else "Not configured" }}
+                </span>
+              </div>
+            </div>
+            <div>
+              <div class="text-small text-muted">Mailboxes</div>
+              <strong>{{ selected_domain_data.mailbox_count or 0 }}</strong>
+            </div>
+          </div>
+          <div id="status-message" class="text-small text-muted" style="margin-top:14px;"></div>
         </div>
       </div>
-      <div>
-        <div class="text-small text-muted">Mailbox coverage</div>
-        <strong>{{ mailbox_count }} mailboxes · {{ mail_domains | length }} domains</strong>
+
+      <div class="section mb-lg">
+        <div class="section__header">
+          <div>
+            <h3>Access URL and DNS</h3>
+            <p class="text-small text-muted" style="margin:4px 0 0;">Only the webmail hostname and DNS provider are needed.</p>
+          </div>
+        </div>
+        <div class="section__body">
+          <form id="webmail-site-form"
+            action="/plugins/roundcube_webmail/api/sites/{{ 'update' if selected_site else 'add' }}"
+            method="post">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+            <input type="hidden" name="mail_domain" value="{{ selected_domain }}">
+            <div class="form-group">
+              <label class="form-label" for="public-host">Webmail hostname</label>
+              <input class="form-input" id="public-host" name="public_host" type="text"
+                value="{{ selected_site.public_host if selected_site else default_host }}"
+                placeholder="webmail.{{ selected_domain }}" required>
+            </div>
+            <label style="display:flex;align-items:flex-start;gap:10px;margin:8px 0 16px;">
+              <input type="checkbox" id="manage-dns" name="manage_dns" value="true"
+                {% if not selected_site or selected_site.dns_managed %}checked{% endif %}>
+              <span>
+                <strong>Manage DNS with this panel</strong>
+                <span class="text-small text-muted" style="display:block;">Turn off for Cloudflare or another DNS provider.</span>
+              </span>
+            </label>
+
+            <div class="alert" id="external-dns-record" style="display:none;margin-bottom:16px;">
+              Add this A record at your DNS provider:
+              <strong><span id="dns-host-preview">{{ selected_site.public_host if selected_site else default_host }}</span>
+                → <span id="dns-target">{{ expected_ip }}</span></strong>
+              <button class="btn btn--ghost btn--sm" id="copy-dns-button" type="button">Copy</button>
+            </div>
+
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <button class="btn btn--primary" id="save-site-button" type="submit">
+                {{ "Save Changes" if selected_site else "Add Webmail Access" }}
+              </button>
+              {% if selected_site %}
+                <button class="btn btn--secondary" id="refresh-status-button" type="button">Check DNS</button>
+              {% endif %}
+            </div>
+            <div id="site-result" class="text-small" style="display:none;margin-top:12px;"></div>
+          </form>
+        </div>
       </div>
-      <div>
-        <div class="text-small text-muted">Maddy transport</div>
-        <div id="mail-transport-status"><span class="badge badge--inactive">Auto-detect</span></div>
-      </div>
-    </div>
-    <div style="margin-top:16px;">
-      <span class="text-small text-muted">Secure public URL</span>
-      <div id="public-url"><strong>{{ public_url or "Waiting for SSL" }}</strong></div>
-    </div>
-    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:16px;">
-      <button class="btn btn--secondary btn--sm" id="test-mail-button" type="button">Test Maddy Connection</button>
-      <button class="btn btn--secondary btn--sm" id="reload-roundcube-button" type="button">Detect Mail Security</button>
-    </div>
-    <div id="mail-test-result" class="text-small" style="display:none; margin-top:12px;"></div>
-  </div>
-</div>
 
-<div class="section mb-lg">
-  <div class="section__header">
-    <div>
-      <h3>1. Access URL and DNS</h3>
-      <p class="text-small text-muted" style="margin:4px 0 0;">
-        Choose where Roundcube opens. This URL accepts full email addresses from every domain listed below.
-      </p>
-    </div>
-  </div>
-  <div class="section__body">
-    {% if mail_domains %}
-      <form id="webmail-config-form" method="post" action="/plugins/roundcube_webmail/api/configure">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
-        <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:16px;">
-          <div class="form-group">
-            <label class="form-label" for="mail-domain">DNS zone</label>
-            <select class="form-input" id="mail-domain" name="mail_domain" required>
-              {% for item in mail_domains %}
-                <option value="{{ item.domain }}" data-ip="{{ item.server_ip or server_ip }}"
-                  {% if item.domain == selected_domain %}selected{% endif %}>{{ item.domain }}</option>
-              {% endfor %}
-            </select>
-            <p class="form-hint">This only chooses the webmail URL. It does not limit mailbox domains.</p>
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="public-host">Webmail hostname</label>
-            <input class="form-input" id="public-host" name="public_host" type="text"
-              value="{{ selected_public_host }}" placeholder="webmail.example.com" required>
-            <p class="form-hint">Must be a subdomain of the selected DNS zone.</p>
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="server-ip">Public server IPv4</label>
-            <input class="form-input" id="server-ip" name="expected_ip" type="text"
-              value="{{ webmail_state.expected_ip or selected_server_ip or server_ip }}"
-              placeholder="203.0.113.10" required>
-            <p class="form-hint">The A record must resolve to this server.</p>
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="dns-ttl">DNS TTL</label>
-            <select class="form-input" id="dns-ttl" name="dns_ttl">
-              <option value="300" {% if webmail_state.dns_ttl in [none, 300] %}selected{% endif %}>5 minutes</option>
-              <option value="900" {% if webmail_state.dns_ttl == 900 %}selected{% endif %}>15 minutes</option>
-              <option value="3600" {% if webmail_state.dns_ttl == 3600 %}selected{% endif %}>1 hour</option>
-            </select>
-            <p class="form-hint">A short TTL makes initial setup and corrections faster.</p>
+      {% if selected_site %}
+        <div class="section mb-lg">
+          <div class="section__header"><h3>HTTPS Certificate</h3></div>
+          <div class="section__body">
+            <p class="text-muted">HTTPS starts only after the A record resolves to this server.</p>
+            <button class="btn btn--primary" id="issue-ssl-button" type="button">Issue / Retry HTTPS</button>
+            <details id="ssl-error-details" style="display:none;margin-top:14px;">
+              <summary>Technical details</summary>
+              <pre id="ssl-error-detail" style="white-space:pre-wrap;"></pre>
+            </details>
           </div>
         </div>
 
-        <label style="display:flex; align-items:flex-start; gap:10px; margin:4px 0 16px;">
-          <input type="checkbox" id="manage-dns" name="manage_dns" value="true"
-            {% if webmail_state.dns_managed is not defined or webmail_state.dns_managed %}checked{% endif %}>
-          <span>
-            <strong>Manage the A record with panel DNS</strong>
-            <span class="text-small text-muted" style="display:block;">
-              Turn this off when the domain uses Cloudflare or another external DNS provider.
-            </span>
-          </span>
-        </label>
-
-        <div class="alert" style="margin-bottom:16px;">
-          Required record:
-          <strong><span id="dns-record-host">{{ selected_public_host }}</span> → <span id="dns-record-ip">{{ server_ip }}</span></strong>
+        <div class="section mb-lg">
+          <div class="section__header"><h3>Mail Connection</h3></div>
+          <div class="section__body">
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <button class="btn btn--secondary btn--sm" id="test-mail-button" type="button">Test Maddy Connection</button>
+              <button class="btn btn--secondary btn--sm" id="reload-roundcube-button" type="button">Detect Mail Security</button>
+            </div>
+            <div id="mail-test-result" class="text-small" style="display:none;margin-top:12px;"></div>
+          </div>
         </div>
 
-        <div style="display:flex; gap:8px; flex-wrap:wrap;">
-          <button class="btn btn--primary" id="save-config-button" type="submit">Save DNS &amp; Proxy</button>
-          <button class="btn btn--secondary" id="check-dns-button" type="button">Check DNS</button>
+        <div class="section">
+          <div class="section__header"><h3>Remove Webmail Access</h3></div>
+          <div class="section__body">
+            <p class="text-muted">This removes only this webmail URL, managed A record, proxy, and certificate. Maddy mailboxes remain.</p>
+            <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;">
+              <div class="form-group" style="margin:0;">
+                <label class="form-label" for="delete-confirmation">Type {{ selected_domain }}</label>
+                <input class="form-input" id="delete-confirmation" type="text" autocomplete="off">
+              </div>
+              <button class="btn btn--danger" id="delete-site-button" type="button">Delete Webmail Access</button>
+            </div>
+            <div id="delete-result" class="text-small text-danger" style="display:none;margin-top:12px;"></div>
+          </div>
         </div>
-        <div id="config-result" class="text-small" style="display:none; margin-top:12px;"></div>
-      </form>
-    {% else %}
-      <div class="alert alert--warning">Add at least one Maddy mail domain before configuring webmail.</div>
+      {% endif %}
     {% endif %}
-  </div>
+  </main>
 </div>
+{% endblock %}
 
-<div class="section mb-lg">
-  <div class="section__header">
-    <div>
-      <h3>2. HTTPS certificate</h3>
-      <p class="text-small text-muted" style="margin:4px 0 0;">
-        SSL is issued only after DNS resolves correctly. It runs in the background, so this page never waits for Certbot.
-      </p>
-    </div>
-  </div>
-  <div class="section__body">
-    <div id="ssl-message" class="alert" style="margin-bottom:16px;">
-      Save the access URL, check DNS, then issue SSL.
-    </div>
-    <details id="ssl-error-details" style="display:none; margin-bottom:16px;">
-      <summary>Technical Certbot details</summary>
-      <pre id="ssl-error-detail" style="white-space:pre-wrap; margin-top:8px;"></pre>
-    </details>
-    <div style="display:flex; gap:8px; flex-wrap:wrap;">
-      <button class="btn btn--primary" id="issue-ssl-button" type="button">Issue / Retry SSL</button>
-      <button class="btn btn--secondary" id="refresh-status-button" type="button">Refresh Status</button>
-    </div>
-  </div>
-</div>
-
-<div class="section">
-  <div class="section__header">
-    <div>
-      <h3>Mailbox domains</h3>
-      <p class="text-small text-muted" style="margin:4px 0 0;">
-        All domains below use the same Roundcube URL. Users sign in with their complete mailbox address and password.
-      </p>
-    </div>
-  </div>
-  <div class="section__body">
-    <div style="overflow-x:auto;">
-      <table class="table">
-        <thead>
-          <tr>
-            <th>Mail domain</th>
-            <th>Mailboxes</th>
-            <th>Login format</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for item in mail_domains %}
-          <tr>
-            <td><strong>{{ item.domain }}</strong></td>
-            <td>{{ item.mailbox_count }}</td>
-            <td>user@{{ item.domain }}</td>
-          </tr>
-          {% else %}
-          <tr><td colspan="3" class="text-muted">No Maddy domains configured.</td></tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </div>
-</div>
-
-<script>
-(function () {
-  const form = document.getElementById('webmail-config-form');
-  const domainSelect = document.getElementById('mail-domain');
-  const hostInput = document.getElementById('public-host');
-  const serverIpInput = document.getElementById('server-ip');
-  const saveButton = document.getElementById('save-config-button');
-  const configResult = document.getElementById('config-result');
-  const issueSslButton = document.getElementById('issue-ssl-button');
-  let pollTimer = null;
-
-  function csrfToken() {
-    return document.querySelector('meta[name="csrf-token"]')?.content || '';
-  }
-
-  function setBadge(id, text, success) {
-    const element = document.getElementById(id);
-    if (!element) return;
-    element.innerHTML = '';
-    const badge = document.createElement('span');
-    badge.className = success ? 'badge badge--success' : 'badge badge--inactive';
-    badge.textContent = text;
-    element.appendChild(badge);
-  }
-
-  function updateRecordPreview(resetHost, resetIp) {
-    if (!domainSelect) return;
-    const option = domainSelect.selectedOptions[0];
-    const defaultIp = option?.dataset.ip || '';
-    if (resetIp && serverIpInput) serverIpInput.value = defaultIp;
-    const ip = serverIpInput?.value || defaultIp;
-    if (resetHost && hostInput) hostInput.value = 'webmail.' + domainSelect.value;
-    const hostPreview = document.getElementById('dns-record-host');
-    const ipPreview = document.getElementById('dns-record-ip');
-    if (hostPreview) hostPreview.textContent = hostInput?.value || '';
-    if (ipPreview) ipPreview.textContent = ip;
-  }
-
-  async function readJson(response) {
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.detail || 'Request failed.');
-    return data;
-  }
-
-  function renderStatus(data) {
-    const container = data.container || {};
-    setBadge('container-status', container.healthy ? 'Healthy' : (container.state || 'Stopped'), container.healthy);
-
-    const dns = data.dns || {};
-    const dnsText = dns.status === 'ready'
-      ? 'Ready'
-      : dns.status === 'mismatch'
-        ? 'Wrong IP'
-        : dns.status === 'pending'
-          ? 'Not resolved'
-          : 'Not configured';
-    setBadge('dns-status', dnsText, dns.status === 'ready');
-
-    const sslReady = data.ssl_status === 'ready';
-    const sslText = sslReady ? 'Active' : data.ssl_status === 'pending' ? 'Issuing…'
-      : data.ssl_status === 'error' ? 'Failed' : 'Not configured';
-    setBadge('ssl-status', sslText, sslReady);
-
-    document.getElementById('public-url').textContent =
-      data.public_url || (data.configured ? 'Waiting for SSL' : 'Not configured');
-
-    const openButton = document.getElementById('open-webmail-button');
-    if (data.public_url && container.healthy) {
-      openButton.href = data.public_url;
-      openButton.style.display = '';
-    } else {
-      openButton.style.display = 'none';
-    }
-
-    const sslMessage = document.getElementById('ssl-message');
-    const detailBox = document.getElementById('ssl-error-details');
-    const detail = document.getElementById('ssl-error-detail');
-    if (data.ssl_error) {
-      sslMessage.textContent = data.ssl_error;
-      sslMessage.className = 'alert alert--warning';
-      detail.textContent = data.ssl_error_detail || '';
-      detailBox.style.display = data.ssl_error_detail ? '' : 'none';
-    } else if (sslReady) {
-      sslMessage.textContent = 'HTTPS is active. Webmail is ready for secure login.';
-      sslMessage.className = 'alert alert--success';
-      detailBox.style.display = 'none';
-    } else if (data.ssl_status === 'pending') {
-      sslMessage.textContent = 'Certbot is running in the background. You can leave this page.';
-      sslMessage.className = 'alert';
-      detailBox.style.display = 'none';
-    } else if (dns.status === 'ready') {
-      sslMessage.textContent = 'DNS is ready. You can issue the HTTPS certificate now.';
-      sslMessage.className = 'alert alert--success';
-      detailBox.style.display = 'none';
-    } else if (data.configured) {
-      const found = dns.ips?.length ? dns.ips.join(', ') : 'no public A record';
-      sslMessage.textContent = 'DNS must resolve to ' + (dns.expected_ip || 'this server') + '. Current result: ' + found + '.';
-      sslMessage.className = 'alert alert--warning';
-      detailBox.style.display = 'none';
-    }
-
-    issueSslButton.disabled = !data.configured || data.ssl_status === 'pending';
-    const reloadButton = document.getElementById('reload-roundcube-button');
-    if (reloadButton) {
-      reloadButton.disabled = data.rebuild_status === 'pending';
-      reloadButton.textContent = data.rebuild_status === 'pending'
-        ? 'Detecting…'
-        : 'Detect Mail Security';
-    }
-    const mailResult = document.getElementById('mail-test-result');
-    if (mailResult && data.rebuild_status === 'error') {
-      mailResult.style.display = 'block';
-      mailResult.className = 'text-small text-danger';
-      mailResult.textContent = data.rebuild_error || 'Mail transport detection failed.';
-    } else if (mailResult && data.rebuild_status === 'ready'
-      && mailResult.textContent.includes('detecting')) {
-      mailResult.style.display = 'block';
-      mailResult.className = 'text-small text-accent';
-      mailResult.textContent = 'Mail security detected and Roundcube rebuilt. Run the connection test.';
-    }
-    if (configResult && data.dns_error) {
-      configResult.style.display = 'block';
-      configResult.className = 'text-small text-danger';
-      configResult.textContent = 'Panel DNS update failed: ' + data.dns_error
-        + '. Add the A record manually or correct the DNS service.';
-    } else if (configResult && data.configured && !data.dns_managed
-      && configResult.style.display === 'none') {
-      configResult.style.display = 'block';
-      configResult.className = 'text-small text-muted';
-      configResult.textContent = 'External DNS mode: manage the displayed A record at your DNS provider.';
-    }
-    if (pollTimer) clearTimeout(pollTimer);
-    if (data.ssl_status === 'pending' || data.rebuild_status === 'pending') {
-      pollTimer = setTimeout(refreshStatus, 2500);
-    }
-  }
-
-  async function refreshStatus() {
-    try {
-      const response = await fetch('/plugins/roundcube_webmail/api/status', {
-        headers: { Accept: 'application/json' }
-      });
-      renderStatus(await readJson(response));
-    } catch (error) {
-      setBadge('dns-status', 'Check failed', false);
-      const reloadButton = document.getElementById('reload-roundcube-button');
-      if (reloadButton?.disabled) {
-        pollTimer = setTimeout(refreshStatus, 2500);
-      }
-    }
-  }
-
-  domainSelect?.addEventListener('change', () => updateRecordPreview(true, true));
-  hostInput?.addEventListener('input', () => updateRecordPreview(false, false));
-  serverIpInput?.addEventListener('input', () => updateRecordPreview(false, false));
-
-  form?.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    saveButton.disabled = true;
-    saveButton.textContent = 'Saving…';
-    configResult.style.display = 'block';
-    configResult.className = 'text-small text-muted';
-    configResult.textContent = 'Creating DNS and Nginx proxy configuration…';
-    try {
-      const response = await fetch(form.action, { method: 'POST', body: new FormData(form) });
-      const data = await readJson(response);
-      configResult.className = 'text-small text-accent';
-      configResult.textContent = data.message;
-      await refreshStatus();
-    } catch (error) {
-      configResult.className = 'text-small text-danger';
-      configResult.textContent = error.message;
-    } finally {
-      saveButton.disabled = false;
-      saveButton.textContent = 'Save DNS & Proxy';
-    }
-  });
-
-  document.getElementById('check-dns-button')?.addEventListener('click', refreshStatus);
-  document.getElementById('refresh-status-button')?.addEventListener('click', refreshStatus);
-  issueSslButton?.addEventListener('click', async () => {
-    issueSslButton.disabled = true;
-    try {
-      const response = await fetch('/plugins/roundcube_webmail/api/ssl', {
-        method: 'POST',
-        headers: { 'X-CSRF-Token': csrfToken(), Accept: 'application/json' }
-      });
-      await readJson(response);
-      await refreshStatus();
-    } catch (error) {
-      const sslMessage = document.getElementById('ssl-message');
-      sslMessage.textContent = error.message;
-      sslMessage.className = 'alert alert--warning';
-      issueSslButton.disabled = false;
-    }
-  });
-
-  document.getElementById('test-mail-button')?.addEventListener('click', async (event) => {
-    const button = event.currentTarget;
-    const result = document.getElementById('mail-test-result');
-    button.disabled = true;
-    button.textContent = 'Testing…';
-    result.style.display = 'block';
-    result.className = 'text-small text-muted';
-    result.textContent = 'Testing IMAP 143 and SMTP 587 from inside Roundcube…';
-    try {
-      const response = await fetch('/plugins/roundcube_webmail/api/mail-diagnostics', {
-        headers: { Accept: 'application/json' }
-      });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        const imapError = data.imap?.error ? ' IMAP: ' + data.imap.error : '';
-        const smtpError = data.smtp?.error ? ' SMTP: ' + data.smtp.error : '';
-        throw new Error(data.error || (imapError + smtpError).trim() || 'Connection test failed.');
-      }
-      result.className = 'text-small text-accent';
-      const secure = data.transport === 'tls' || data.transport === 'tls_unverified';
-      const verified = data.transport === 'tls';
-      setBadge(
-        'mail-transport-status',
-        verified ? 'TLS verified · ' + data.imap.host
-          : secure ? 'TLS local cert · ' + data.imap.host
-            : 'Local · no TLS',
-        secure
-      );
-      result.textContent = 'Connected: IMAP ' + data.imap.host + ':' + data.imap.port
-        + ' and SMTP ' + data.smtp.host + ':' + data.smtp.port + '. '
-        + (verified ? 'Maddy TLS is verified.'
-          : secure ? 'Maddy TLS is encrypted; local certificate verification is skipped.'
-            : 'Using the local Docker gateway.');
-    } catch (error) {
-      result.className = 'text-small text-danger';
-      result.textContent = error.message;
-    } finally {
-      button.disabled = false;
-      button.textContent = 'Test Maddy Connection';
-    }
-  });
-
-  document.getElementById('reload-roundcube-button')?.addEventListener('click', async (event) => {
-    const button = event.currentTarget;
-    const result = document.getElementById('mail-test-result');
-    button.disabled = true;
-    button.textContent = 'Detecting…';
-    result.style.display = 'block';
-    result.className = 'text-small text-muted';
-    result.textContent = 'Rebuilding Roundcube and detecting Maddy TLS support…';
-    try {
-      const response = await fetch('/plugins/roundcube_webmail/api/reload', {
-        method: 'POST',
-        headers: { 'X-CSRF-Token': csrfToken(), Accept: 'application/json' }
-      });
-      const data = await readJson(response);
-      result.className = 'text-small text-muted';
-      result.textContent = data.message;
-      await refreshStatus();
-    } catch (error) {
-      result.className = 'text-small text-danger';
-      result.textContent = error.message;
-    } finally {
-      button.disabled = false;
-      if (!button.disabled) button.textContent = 'Detect Mail Security';
-    }
-  });
-
-  updateRecordPreview(false, false);
-  refreshStatus();
-})();
-</script>
+{% block scripts %}
+<script src="/static/js/features/roundcube-webmail.js"></script>
 {% endblock %}

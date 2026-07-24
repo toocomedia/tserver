@@ -70,7 +70,20 @@
             <span class="badge badge--inactive"><span class="badge-dot"></span> {{ plugin.effective_status }}</span>
           {% endif %}
         </div>
-        <div class="list-col-desc">{{ plugin.description }}</div>
+        <div class="list-col-desc">
+          <div>{{ plugin.description }}</div>
+          {% if plugin.dependency_status %}
+            <div class="plugin-list-requirements">
+              Requires
+              {% for dependency in plugin.dependency_status %}
+                <a href="/dependencies/{{ dependency.id }}"
+                  class="{% if not dependency.healthy %}is-unavailable{% endif %}">
+                  {{ dependency.id | title }} · {{ "Available" if dependency.healthy else "Unavailable" }}
+                </a>{% if not loop.last %}, {% endif %}
+              {% endfor %}
+            </div>
+          {% endif %}
+        </div>
         <div class="list-col-actions">
           {% if plugin.route_prefix and plugin.effective_status == 'active' %}
             <a href="{{ plugin.route_prefix }}" class="btn btn--secondary btn--sm">Manage</a>

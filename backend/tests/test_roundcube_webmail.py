@@ -1,4 +1,5 @@
 import os
+import json
 import subprocess
 import sys
 import tempfile
@@ -119,22 +120,76 @@ class RoundcubeLifecycleTests(unittest.TestCase):
             os.environ, {"ROUNDCUBE_WEBMAIL_DATA_DIR": temp}
         ):
             service = RoundcubeWebmailService()
-            service.write_state(
+            service.save_site(
+                "example.com",
                 {
                     "public_host": "webmail.example.com",
                     "ssl_status": "not_configured",
-                }
+                },
             )
-            self.assertIsNone(service.get_public_url())
+            self.assertIsNone(service.get_public_url("example.com"))
             self.assertEqual(
-                service.get_configured_url(),
+                service.get_configured_url("example.com"),
                 "http://webmail.example.com/",
             )
 
-            service.update_state(ssl_status="ready")
+            service.update_site("example.com", ssl_status="ready")
             self.assertEqual(
-                service.get_public_url(),
+                service.get_public_url("example.com"),
                 "https://webmail.example.com/",
+            )
+
+    def test_legacy_single_site_state_migrates_without_losing_settings(self):
+        with tempfile.TemporaryDirectory() as temp, patch.dict(
+            os.environ, {"ROUNDCUBE_WEBMAIL_DATA_DIR": temp}
+        ):
+            service = RoundcubeWebmailService()
+            service.data_dir.mkdir(parents=True)
+            service.state_path.write_text(
+                json.dumps(
+                    {
+                        "mail_domain": "example.com",
+                        "public_host": "webmail.example.com",
+                        "dns_managed": True,
+                        "ssl_status": "ready",
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            state = service.read_state()
+
+            self.assertEqual(state["schema_version"], 2)
+            self.assertEqual(
+                state["sites"]["example.com"]["public_host"],
+                "webmail.example.com",
+            )
+            self.assertEqual(
+                service.get_public_url("example.com"),
+                "https://webmail.example.com/",
+            )
+
+    def test_each_mail_domain_resolves_to_its_own_https_site(self):
+        with tempfile.TemporaryDirectory() as temp, patch.dict(
+            os.environ, {"ROUNDCUBE_WEBMAIL_DATA_DIR": temp}
+        ):
+            service = RoundcubeWebmailService()
+            service.save_site(
+                "example.com",
+                {"public_host": "webmail.example.com", "ssl_status": "ready"},
+            )
+            service.save_site(
+                "example.net",
+                {"public_host": "mailbox.example.net", "ssl_status": "ready"},
+            )
+
+            self.assertEqual(
+                service.get_public_url("example.com"),
+                "https://webmail.example.com/",
+            )
+            self.assertEqual(
+                service.get_public_url("example.net"),
+                "https://mailbox.example.net/",
             )
 
 
@@ -194,6 +249,9 @@ class RoundcubePackagingTests(unittest.TestCase):
         template = (plugin / "templates" / "roundcube_webmail.html").read_text(
             encoding="utf-8"
         )
+        javascript = (
+            BACKEND / "static" / "js" / "features" / "roundcube-webmail.js"
+        ).read_text(encoding="utf-8")
         roundcube_config = (
             plugin / "scripts" / "roundcube-config.inc.php"
         ).read_text(encoding="utf-8")
@@ -204,21 +262,26 @@ class RoundcubePackagingTests(unittest.TestCase):
         self.assertIn("input[name=_user]", hook)
         self.assertIn("input[name=_pass]", hook)
         self.assertNotIn("password", hook.lower())
-        self.assertIn("if (webmailAvailable)", maddy_ui)
-        self.assertIn("csrf_token: getCsrfToken()", maddy_ui)
+        self.assertIn("const webmailSites =", maddy_ui)
+        self.assertIn("window.open('about:blank'", maddy_ui)
+        self.assertIn("headers: { Accept: 'application/json' }", maddy_ui)
         self.assertIn(
             'router = APIRouter(prefix="/plugins/roundcube_webmail"',
             router,
         )
         self.assertIn('@router.post("/api/launch")', router)
-        configure_block = router.split('@router.post("/api/configure")', 1)[1].split(
-            '@router.post("/api/ssl")', 1
-        )[0]
-        self.assertNotIn("issue_cert", configure_block)
-        self.assertIn("asyncio.create_task(_issue_ssl_task(host))", router)
-        self.assertIn("event.preventDefault()", template)
-        self.assertIn("Manage the A record with panel DNS", template)
-        self.assertIn("All domains below use the same Roundcube URL", template)
+        self.assertIn('domain = normalized.rsplit("@", 1)[-1]', router)
+        self.assertIn('@router.post("/api/sites/add")', router)
+        self.assertIn('@router.post("/api/sites/update")', router)
+        self.assertIn('@router.post("/api/sites/delete")', router)
+        self.assertIn("asyncio.create_task(_issue_ssl_task(domain, host))", router)
+        self.assertIn("event.preventDefault()", javascript)
+        self.assertIn("Manage DNS with this panel", template)
+        self.assertIn("split-layout", template)
+        self.assertIn("+ Add Webmail Domain", template)
+        self.assertNotIn('id="server-ip"', template)
+        self.assertNotIn('id="dns-ttl"', template)
+        self.assertIn("DNS_TTL = 300", router)
         self.assertIn("$config['imap_host']", roundcube_config)
         self.assertIn("$config['smtp_host']", roundcube_config)
         self.assertIn("':993'", roundcube_config)

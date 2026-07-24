@@ -3,28 +3,31 @@ backend/plugins/maddy/router.py — APIRouter for Maddy Mail Server plugin.
 Exposes Mail Management UI and endpoints for accounts CRUD, DNS records,
 and SSL certificate provisioning.
 """
+import asyncio
 import os
 import logging
 import subprocess
 from pathlib import Path
 
-from fastapi import APIRouter, Request, Form, Depends
+from fastapi import APIRouter, Request, Form, Depends, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-from database import get_db
+from database import AsyncSessionLocal, get_db
 from models.domain import Domain
+from models.mail_domain import MailDomain
 from templating import templates
 from plugins.maddy.service import maddy_service
 from services import nginx_service, ssl_service
-from utils import shell
 import config
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/plugins/maddy", tags=["maddy_mail"])
 
 SCRIPT_DIR = Path(__file__).parent / "scripts"
+_mail_ssl_tasks: dict[str, asyncio.Task] = {}
+_mail_ssl_status: dict[str, dict] = {}
 
 
 # ---------------------------------------------------------------------------
@@ -55,18 +58,47 @@ async def maddy_index(request: Request, db: AsyncSession = Depends(get_db)):
     ]
 
     server_ip = getattr(config, "SERVER_IP", "127.0.0.1")
-    webmail_available = False
+    webmail_sites = {}
     webmail_plugin = plugin_manager.get_plugin("roundcube_webmail")
     if webmail_plugin and webmail_plugin["effective_status"] == "active":
         try:
             from plugins.roundcube_webmail.service import roundcube_webmail_service
 
-            webmail_available = bool(
-                roundcube_webmail_service.get_status()["healthy"]
-                and roundcube_webmail_service.get_public_url()
-            )
+            container_healthy = roundcube_webmail_service.get_status()["healthy"]
+            for item in mail_domains:
+                domain = item["domain"].lower()
+                site = roundcube_webmail_service.get_site(domain)
+                public_url = roundcube_webmail_service.get_public_url(domain)
+                if not site:
+                    reason = "Set up webmail for this domain."
+                elif not container_healthy:
+                    reason = "Roundcube container is not healthy."
+                elif not public_url:
+                    reason = "Finish DNS and HTTPS setup."
+                else:
+                    reason = None
+                webmail_sites[domain] = {
+                    "ready": bool(container_healthy and public_url),
+                    "reason": reason,
+                    "setup_url": f"/plugins/roundcube_webmail/?domain={domain}",
+                }
         except Exception:
             logger.exception("Could not determine Roundcube webmail availability.")
+            for item in mail_domains:
+                domain = item["domain"].lower()
+                webmail_sites[domain] = {
+                    "ready": False,
+                    "reason": "Could not read Roundcube status.",
+                    "setup_url": f"/plugins/roundcube_webmail/?domain={domain}",
+                }
+    else:
+        for item in mail_domains:
+            domain = item["domain"].lower()
+            webmail_sites[domain] = {
+                "ready": False,
+                "reason": "Roundcube webmail is disabled or not installed.",
+                "setup_url": "/plugins/",
+            }
 
     return templates.TemplateResponse("maddy.html", {
         "request": request,
@@ -77,7 +109,7 @@ async def maddy_index(request: Request, db: AsyncSession = Depends(get_db)):
         "mail_domains": mail_domains,
         "panel_domains": panel_domains,
         "server_ip": server_ip,
-        "webmail_available": webmail_available,
+        "webmail_sites": webmail_sites,
     })
 
 
@@ -252,8 +284,15 @@ async def delete_mail_domain(
     Removes all accounts, DNS records, SSL cert, nginx config,
     and the maddy.conf local_domains entry for this domain.
     """
+    normalized = domain.strip().lower()
+    task = _mail_ssl_tasks.get(normalized)
+    if task and not task.done():
+        return JSONResponse(
+            {"detail": "Wait for the current mail SSL operation to finish."},
+            status_code=409,
+        )
     try:
-        results = await maddy_service.delete_mail_domain(db, domain.strip())
+        results = await maddy_service.delete_mail_domain(db, normalized)
         return JSONResponse({"status": "ok", "results": results})
     except Exception as exc:
         logger.error("Failed to delete mail domain %s: %s", domain, exc)
@@ -264,76 +303,118 @@ async def delete_mail_domain(
 # SSL Certificate Provisioning
 # ---------------------------------------------------------------------------
 
+async def _issue_mail_ssl_task(domain: str) -> None:
+    mail_host = f"mail.{domain}"
+    _mail_ssl_status[domain] = {
+        "status": "pending",
+        "message": f"Issuing TLS for {mail_host}.",
+    }
+    try:
+        async with AsyncSessionLocal() as db:
+            nginx_service.ensure_acme_root()
+            nginx_service.create_webroot(
+                mail_host,
+                "<html><head><title>Mail Server</title></head>"
+                "<body><h1>Mail Server is Active</h1></body></html>",
+            )
+            await nginx_service.create_static_site(mail_host)
+            await nginx_service.reload()
+            try:
+                await ssl_service.issue_cert(
+                    db, None, mail_host, include_www=False
+                )
+            except HTTPException as exc:
+                if exc.status_code != 409:
+                    raise
+
+            cert_path = f"/etc/letsencrypt/live/{mail_host}/fullchain.pem"
+            key_path = f"/etc/letsencrypt/live/{mail_host}/privkey.pem"
+            await nginx_service.update_static_site_ssl(
+                mail_host, cert_path, key_path
+            )
+            await nginx_service.reload()
+            await asyncio.to_thread(maddy_service.sync_certificate, mail_host)
+
+            record = await db.scalar(
+                select(MailDomain).where(MailDomain.domain == domain)
+            )
+            if record:
+                record.ssl_configured = True
+            await db.commit()
+        _mail_ssl_status[domain] = {
+            "status": "ready",
+            "message": f"TLS is active for {mail_host}.",
+        }
+    except Exception as exc:
+        logger.exception("Maddy SSL setup failed for %s", mail_host)
+        _mail_ssl_status[domain] = {
+            "status": "error",
+            "message": str(exc),
+        }
+    finally:
+        _mail_ssl_tasks.pop(domain, None)
+
+
 @router.post("/api/ssl/issue")
 async def issue_mail_ssl(
     request: Request,
     domain: str = Form(...),
     db: AsyncSession = Depends(get_db),
 ):
-    """Request Let's Encrypt SSL for the mail subdomain and link to Maddy."""
-    if os.name == "nt":
-        return JSONResponse({"status": "ok", "message": "Mock SSL generation on Windows."})
-
-    mail_domain = f"mail.{domain.strip()}"
-    maddy_certs_dir = Path("/etc/maddy/certs")
-
-    try:
-        # 1. Set up Nginx webroot so ACME http-01 challenge works
-        logger.info("Setting up Nginx webroot for %s", mail_domain)
-        nginx_service.ensure_acme_root()
-        webroot_path = nginx_service.create_webroot(
-            mail_domain,
-            "<html><head><title>Mail Server</title></head>"
-            "<body style='font-family:sans-serif;text-align:center;padding:50px;'>"
-            "<h1>Mail Server is Active</h1><p>IMAP/SMTP services are running.</p>"
-            "</body></html>",
+    """Start Maddy TLS provisioning without holding the browser request open."""
+    domain = domain.strip().lower()
+    configured = await db.scalar(
+        select(MailDomain).where(MailDomain.domain == domain)
+    )
+    if configured is None:
+        return JSONResponse(
+            {"detail": "Select a configured Maddy domain."},
+            status_code=404,
         )
-        # chmod the parent of /public/ so nginx can serve the challenge files
-        await shell.run(["sudo", "-n", "chmod", "-R", "755", str(Path(webroot_path).parent)])
-        await nginx_service.create_static_site(mail_domain)
-        await nginx_service.reload()
+    if os.name == "nt":
+        _mail_ssl_status[domain] = {
+            "status": "ready",
+            "message": "Mock SSL generation on Windows.",
+        }
+        return JSONResponse(_mail_ssl_status[domain])
+    task = _mail_ssl_tasks.get(domain)
+    if task and not task.done():
+        return JSONResponse(_mail_ssl_status[domain], status_code=202)
+    if any(not running.done() for running in _mail_ssl_tasks.values()):
+        return JSONResponse(
+            {"detail": "Wait for the current mail SSL operation to finish."},
+            status_code=409,
+        )
 
-        # 2. Issue or re-use existing Let's Encrypt certificate
-        logger.info("Requesting Let's Encrypt SSL for %s", mail_domain)
-        from fastapi import HTTPException
-        try:
-            await ssl_service.issue_cert(db, None, mail_domain, include_www=False)
-        except HTTPException as exc:
-            if exc.status_code == 409:
-                logger.info("Certificate already exists for %s — reusing it.", mail_domain)
-            else:
-                raise
+    _mail_ssl_status[domain] = {
+        "status": "pending",
+        "message": f"TLS setup started for mail.{domain}.",
+    }
+    _mail_ssl_tasks[domain] = asyncio.create_task(_issue_mail_ssl_task(domain))
+    return JSONResponse(_mail_ssl_status[domain], status_code=202)
 
-        # 3. Update Nginx vhost to serve HTTPS
-        cert_path = f"/etc/letsencrypt/live/{mail_domain}/fullchain.pem"
-        key_path  = f"/etc/letsencrypt/live/{mail_domain}/privkey.pem"
-        await nginx_service.update_static_site_ssl(mail_domain, cert_path, key_path)
-        await nginx_service.reload()
 
-        # 4. Copy certs to Maddy's cert directory
-        #    Use sudo cp — clean, reliable, no encoding tricks.
-        logger.info("Copying SSL certs to Maddy cert directory")
-        le_live = Path(f"/etc/letsencrypt/live/{mail_domain}")
-
-        copy_res = await shell.run([
-            "sudo", "-n", "bash", "-c",
-            f"cp '{le_live}/fullchain.pem' '{maddy_certs_dir}/fullchain.pem' && "
-            f"cp '{le_live}/privkey.pem'   '{maddy_certs_dir}/privkey.pem'   && "
-            f"chown maddy:maddy '{maddy_certs_dir}/fullchain.pem' '{maddy_certs_dir}/privkey.pem' && "
-            f"chmod 640 '{maddy_certs_dir}/privkey.pem'"
-        ])
-        if not copy_res.success:
-            raise RuntimeError(f"Failed to copy SSL certs to Maddy: {copy_res.stderr}")
-
-        # 5. Restart Maddy to apply new TLS certificate
-        logger.info("Restarting Maddy to apply new SSL")
-        await shell.run(["sudo", "-n", "systemctl", "restart", "maddy"])
-
-        return JSONResponse({
-            "status": "ok",
-            "message": f"SSL issued and linked to Maddy for {mail_domain}!",
-        })
-
-    except Exception as exc:
-        logger.error("Error issuing mail SSL: %s", exc)
-        return JSONResponse({"detail": str(exc)}, status_code=500)
+@router.get("/api/ssl/status")
+async def mail_ssl_status(
+    domain: str,
+    db: AsyncSession = Depends(get_db),
+):
+    domain = domain.strip().lower()
+    status = _mail_ssl_status.get(domain)
+    if status:
+        return JSONResponse(status)
+    configured = await db.scalar(
+        select(MailDomain).where(MailDomain.domain == domain)
+    )
+    if configured is None:
+        return JSONResponse({"detail": "Mail domain not found."}, status_code=404)
+    return JSONResponse(
+        {
+            "status": "ready" if configured.ssl_configured else "not_configured",
+            "message": (
+                f"TLS is active for mail.{domain}."
+                if configured.ssl_configured
+                else "TLS is not configured."
+            ),
+        }
+    )

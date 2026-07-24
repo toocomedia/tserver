@@ -203,6 +203,55 @@ class MaddyService:
         logger.info("Deleted mail account: %s", email)
         return True
 
+    def sync_certificate(self, mail_host: str) -> None:
+        """Install one validated Let's Encrypt pair through the root helper."""
+        if os.name == "nt":
+            logger.info("[DEV] Mock Maddy certificate sync: %s", mail_host)
+            return
+        result = subprocess.run(
+            [
+                "sudo",
+                "-n",
+                "python3",
+                str(MANAGE_SCRIPT),
+                "sync-cert",
+                mail_host,
+            ],
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+        if result.returncode != 0:
+            error = result.stderr.strip() or result.stdout.strip()
+            if "a password is required" in error.lower():
+                raise PermissionError(
+                    "Maddy certificate permissions are outdated. Run the panel update "
+                    "script once as root to refresh the helper rule."
+                )
+            raise RuntimeError(f"Failed to install Maddy TLS certificate: {error}")
+
+    def remove_certificate(self, mail_host: str) -> None:
+        if os.name == "nt":
+            return
+        result = subprocess.run(
+            [
+                "sudo",
+                "-n",
+                "python3",
+                str(MANAGE_SCRIPT),
+                "remove-cert",
+                mail_host,
+            ],
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+        if result.returncode != 0:
+            error = result.stderr.strip() or result.stdout.strip()
+            raise RuntimeError(f"Failed to remove Maddy TLS certificate: {error}")
+
     # ------------------------------------------------------------------
     # DNS record provisioning
     # ------------------------------------------------------------------
@@ -412,7 +461,13 @@ class MaddyService:
         except Exception as exc:
             logger.warning("SSL/Nginx cleanup failed for %s: %s", mail_subdomain, exc)
 
-        # 4. Remove domain from maddy.conf $(local_domains)
+        # 4. Remove this domain's copied Maddy SNI certificate
+        try:
+            self.remove_certificate(mail_subdomain)
+        except Exception as exc:
+            logger.warning("Maddy TLS cleanup failed for %s: %s", mail_subdomain, exc)
+
+        # 5. Remove domain from maddy.conf $(local_domains)
         if os.name != "nt" and self.is_installed():
             res = subprocess.run(
                 ["sudo", "-n", "python3", str(MANAGE_SCRIPT), "remove-domain", domain],
@@ -426,7 +481,7 @@ class MaddyService:
         else:
             logger.info("[DEV] Mock remove-domain: %s", domain)
 
-        # 5. Delete DB row
+        # 6. Delete DB row
         domain_obj = await db.scalar(select(MailDomain).where(MailDomain.domain == domain))
         if domain_obj:
             await db.delete(domain_obj)
@@ -436,4 +491,3 @@ class MaddyService:
 
 
 maddy_service = MaddyService()
-

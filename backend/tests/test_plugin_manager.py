@@ -123,6 +123,17 @@ class PluginManagerTests(unittest.TestCase):
                 self.assertTrue(success)
                 self.assertTrue((root / "sample" / "plugin.json").is_file())
 
+    def test_plugin_card_has_explicit_dependency_structure(self):
+        template = (
+            BACKEND / "templates" / "partials" / "plugin_card.html"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("plugin-card__requirements-label", template)
+        self.assertIn("Requires", template)
+        self.assertIn('href="/dependencies/{{ dependency.id }}"', template)
+        self.assertIn("Available", template)
+        self.assertIn("Unavailable", template)
+
 
 if __name__ == "__main__":
     unittest.main()
