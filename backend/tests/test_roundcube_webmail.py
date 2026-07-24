@@ -100,6 +100,29 @@ class RoundcubeLifecycleTests(unittest.TestCase):
             self.assertFalse(service.secret_path.exists())
             self.assertFalse(service.state_path.exists())
 
+    def test_public_launch_url_requires_ready_ssl(self):
+        with tempfile.TemporaryDirectory() as temp, patch.dict(
+            os.environ, {"ROUNDCUBE_WEBMAIL_DATA_DIR": temp}
+        ):
+            service = RoundcubeWebmailService()
+            service.write_state(
+                {
+                    "public_host": "webmail.example.com",
+                    "ssl_status": "not_configured",
+                }
+            )
+            self.assertIsNone(service.get_public_url())
+            self.assertEqual(
+                service.get_configured_url(),
+                "http://webmail.example.com/",
+            )
+
+            service.update_state(ssl_status="ready")
+            self.assertEqual(
+                service.get_public_url(),
+                "https://webmail.example.com/",
+            )
+
 
 class RoundcubePackagingTests(unittest.TestCase):
     def test_installer_uses_labeled_limited_digest_pinned_resources(self):
@@ -142,6 +165,9 @@ class RoundcubePackagingTests(unittest.TestCase):
             BACKEND / "plugins" / "maddy" / "templates" / "partials" / "_scripts.html"
         ).read_text(encoding="utf-8")
         router = (plugin / "router.py").read_text(encoding="utf-8")
+        template = (plugin / "templates" / "roundcube_webmail.html").read_text(
+            encoding="utf-8"
+        )
 
         self.assertIn("hash_equals", hook)
         self.assertIn("FILTER_VALIDATE_EMAIL", hook)
@@ -156,6 +182,14 @@ class RoundcubePackagingTests(unittest.TestCase):
             router,
         )
         self.assertIn('@router.post("/api/launch")', router)
+        configure_block = router.split('@router.post("/api/configure")', 1)[1].split(
+            '@router.post("/api/ssl")', 1
+        )[0]
+        self.assertNotIn("issue_cert", configure_block)
+        self.assertIn("asyncio.create_task(_issue_ssl_task(host))", router)
+        self.assertIn("event.preventDefault()", template)
+        self.assertIn("Manage the A record with panel DNS", template)
+        self.assertIn("All domains below use the same Roundcube URL", template)
 
 
 class RoundcubeDataPurgeTests(unittest.IsolatedAsyncioTestCase):

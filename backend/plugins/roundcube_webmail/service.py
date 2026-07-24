@@ -158,11 +158,28 @@ class RoundcubeWebmailService:
         temp.write_text(json.dumps(state, indent=2), encoding="utf-8")
         temp.replace(self.state_path)
 
+    def update_state(self, **changes: Any) -> dict[str, Any]:
+        state = self.read_state()
+        state.update(changes)
+        self.write_state(state)
+        return state
+
     def get_public_url(self) -> str | None:
-        host = self.read_state().get("public_host")
+        state = self.read_state()
+        host = state.get("public_host")
         if not isinstance(host, str) or not host:
             return None
+        if state.get("ssl_status") != "ready":
+            return None
         return f"https://{host}/"
+
+    def get_configured_url(self) -> str | None:
+        state = self.read_state()
+        host = state.get("public_host")
+        if not isinstance(host, str) or not host:
+            return None
+        scheme = "https" if state.get("ssl_status") == "ready" else "http"
+        return f"{scheme}://{host}/"
 
     def get_default_domain(self) -> str | None:
         domain = self.read_state().get("mail_domain")
