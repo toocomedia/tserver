@@ -295,13 +295,36 @@
       <thead>
         <tr>
           <th>Service</th>
-          <th>Workers</th>
+          <th>Processes</th>
           <th>CPU %</th>
-          <th>MEM %</th>
+          <th>Memory</th>
           <th>Status</th>
         </tr>
       </thead>
       <tbody id="svc-tbody">
+        <tr><td colspan="5" class="text-muted">Loading…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- PLUGINS -->
+<div class="section-header">
+  <h2>Plugins</h2>
+</div>
+<div class="section">
+  <div class="section__body" style="overflow-x:auto;">
+    <table class="table" id="plugin-usage-table" style="min-width:560px;">
+      <thead>
+        <tr>
+          <th>Plugin</th>
+          <th>Processes</th>
+          <th>CPU %</th>
+          <th>Memory</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="plugin-usage-tbody">
         <tr><td colspan="5" class="text-muted">Loading…</td></tr>
       </tbody>
     </table>
@@ -361,10 +384,20 @@
   }
 
   function procStatusClass(s) {
-    if (s === 'running')  return 'proc-status--running';
+    if (['running', 'active', 'healthy'].includes(s)) return 'proc-status--running';
     if (s === 'zombie')   return 'proc-status--zombie';
-    if (['stopped', 'unhealthy', 'disabled'].includes(s)) return 'proc-status--stopped';
+    if (['stopped', 'unhealthy', 'disabled', 'missing', 'paused', 'invalid'].includes(s)) return 'proc-status--stopped';
     return 'proc-status--sleeping';
+  }
+
+  function usageMemory(item, plugin = false) {
+    const used = Number(item.memory_mb || 0);
+    const limit = Number(item.memory_limit_mb || 0);
+    if (limit > 0) {
+      return `${fmtMb(used)} / ${fmtMb(limit)} <span class="text-small text-muted">(${Number(item.mem || 0).toFixed(1)}% of limit)</span>`;
+    }
+    const scope = plugin ? 'of server' : 'of server';
+    return `${fmtMb(used)} <span class="text-small text-muted">(${Number(item.mem || 0).toFixed(1)}% ${scope})</span>`;
   }
 
   // -- Render -----------------------------------------------------------------
@@ -425,19 +458,33 @@
       const svcNames = {
         'nginx': 'Nginx',
         'powerdns': 'PowerDNS',
-        'maddy': 'Mail Server (Maddy)',
         'panel': 'Panel (FastAPI)',
-        'roundcube_webmail': 'Webmail (Roundcube)'
+        'docker': 'Docker Engine'
       };
       svcTbody.innerHTML = Object.entries(d.services).map(([key, svc]) => `
         <tr>
           <td><strong>${svc.label || svcNames[key] || key}</strong></td>
           <td>${svc.count}</td>
           <td>${svc.cpu.toFixed(1)}%</td>
-          <td>${svc.mem.toFixed(1)}%</td>
+          <td>${usageMemory(svc)}</td>
           <td><span class="${procStatusClass(svc.status)}">${svc.status}</span></td>
         </tr>
       `).join('');
+    }
+
+    // Plugins
+    const pluginTbody = document.getElementById('plugin-usage-tbody');
+    if (pluginTbody) {
+      const pluginRows = Object.entries(d.plugins || {});
+      pluginTbody.innerHTML = pluginRows.map(([key, plugin]) => `
+        <tr>
+          <td><strong>${plugin.label || key}</strong></td>
+          <td>${plugin.count}</td>
+          <td>${plugin.cpu.toFixed(1)}%</td>
+          <td>${usageMemory(plugin, true)}</td>
+          <td><span class="${procStatusClass(plugin.status)}">${plugin.status}</span></td>
+        </tr>
+      `).join('') || '<tr><td colspan="5" class="text-muted">No installed plugins</td></tr>';
     }
 
     // Processes

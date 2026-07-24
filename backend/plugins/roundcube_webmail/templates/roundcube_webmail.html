@@ -74,10 +74,10 @@
         <div>
           {% if selected_site and selected_site.ssl_status == 'ready' and status.healthy %}
             <a class="btn btn--primary" id="open-webmail-button"
-              href="https://{{ selected_site.public_host }}/" target="_blank" rel="noopener">🌐 Open Webmail</a>
+              href="https://{{ selected_site.public_host }}/" target="_blank" rel="noopener">Open Webmail</a>
           {% else %}
             <button class="btn btn--primary" id="open-webmail-button" type="button" disabled
-              title="Finish DNS and HTTPS setup first.">🌐 Open Webmail</button>
+              title="Finish DNS and HTTPS setup first.">Open Webmail</button>
           {% endif %}
         </div>
       </div>

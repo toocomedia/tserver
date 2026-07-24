@@ -10,6 +10,9 @@
   "sidebar_label": "Webmail",
   "enabled": true,
   "data_purge": true,
+  "usage": {
+    "source": "docker"
+  },
   "requires": {
     "dependencies": ["docker"]
   },

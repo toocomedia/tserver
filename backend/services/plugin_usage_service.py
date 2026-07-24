@@ -1,88 +1,129 @@
-"""Resource usage rows for installed panel plugins."""
+"""Manifest-driven resource usage rows for installed panel plugins."""
 from __future__ import annotations
 
 import asyncio
 from typing import Any
 
-try:
-    import psutil
-except ImportError:
-    psutil = None  # type: ignore[assignment]
-
 from plugins import plugin_manager
-from plugins.roundcube_webmail.service import roundcube_webmail_service
-
-_PROCESS_CACHE: dict[int, Any] = {}
 
 
-def _empty_row(label: str, status: str) -> dict[str, Any]:
+def _empty_row(plugin: dict[str, Any]) -> dict[str, Any]:
     return {
-        "label": label,
+        "label": plugin.get("name", plugin["id"]),
         "cpu": 0.0,
         "mem": 0.0,
+        "memory_mb": 0.0,
+        "memory_limit_mb": None,
         "count": 0,
-        "status": status,
+        "status": plugin.get("effective_status", "disabled"),
     }
 
 
-def _container_processes(root_pid: int) -> list[Any]:
-    if psutil is None or root_pid <= 0:
-        return []
-    try:
-        root = psutil.Process(root_pid)
-        pids = {root_pid}
-        pids.update(child.pid for child in root.children(recursive=True))
-    except (psutil.NoSuchProcess, psutil.AccessDenied):
-        return []
-    for pid in set(_PROCESS_CACHE) - pids:
-        _PROCESS_CACHE.pop(pid, None)
-    for pid in pids:
-        try:
-            if pid not in _PROCESS_CACHE:
-                _PROCESS_CACHE[pid] = psutil.Process(pid)
-        except (psutil.NoSuchProcess, psutil.AccessDenied):
-            continue
-    return list(_PROCESS_CACHE.values())
-
-
-def _process_totals(processes: list[Any]) -> tuple[float, float, int]:
+def _process_totals(
+    processes: list[dict[str, Any]],
+    process_names: set[str],
+    total_memory: int,
+) -> tuple[float, float, float, int]:
     cpu = 0.0
-    memory = 0.0
+    memory_bytes = 0
     count = 0
     for process in processes:
-        try:
-            cpu += process.cpu_percent(interval=None)
-            memory += process.memory_percent()
-            count += 1
-        except (psutil.NoSuchProcess, psutil.AccessDenied):
+        name = str(process.get("name") or "").lower()
+        if name not in process_names:
             continue
-    return round(cpu, 1), round(memory, 1), count
-
-
-async def get_plugin_usage() -> dict[str, dict[str, Any]]:
-    """Return lightweight live metrics for installed plugins."""
-    plugin = await asyncio.to_thread(
-        plugin_manager.get_plugin, "roundcube_webmail"
+        cpu += float(process.get("cpu_percent") or 0.0)
+        memory_info = process.get("memory_info")
+        memory_bytes += int(getattr(memory_info, "rss", 0) or 0)
+        count += 1
+    memory_percent = (
+        (memory_bytes / total_memory) * 100 if total_memory > 0 else 0.0
     )
-    if not plugin or not plugin.get("installed"):
-        return {}
-
-    label = plugin.get("name", "Webmail (Roundcube)")
-    effective_status = plugin.get("effective_status", "disabled")
-    row = _empty_row(label, effective_status)
-    if effective_status != "active":
-        return {"roundcube_webmail": row}
-
-    runtime = await asyncio.to_thread(roundcube_webmail_service.get_status)
-    if not runtime.get("running"):
-        row["status"] = "stopped"
-        return {"roundcube_webmail": row}
-    if not runtime.get("healthy"):
-        row["status"] = "unhealthy"
-        return {"roundcube_webmail": row}
-
-    cpu, memory, count = _process_totals(
-        _container_processes(int(runtime.get("pid") or 0))
+    return (
+        round(cpu, 1),
+        round(memory_percent, 1),
+        round(memory_bytes / (1024 ** 2), 1),
+        count,
     )
-    row.update(cpu=cpu, mem=memory, count=count, status="running")
-    return {"roundcube_webmail": row}
+
+
+async def get_plugin_usage(
+    processes: list[dict[str, Any]],
+    total_memory: int,
+) -> dict[str, dict[str, Any]]:
+    """Return live metrics for every installed plugin from its usage contract."""
+    if not plugin_manager.plugins:
+        await asyncio.to_thread(plugin_manager.discover_plugins)
+
+    installed_plugins = []
+    for plugin_id in list(plugin_manager.plugins):
+        plugin = plugin_manager.get_plugin(plugin_id)
+        if plugin and plugin.get("installed"):
+            installed_plugins.append(plugin)
+
+    active_docker_ids = [
+        plugin["id"]
+        for plugin in installed_plugins
+        if plugin.get("effective_status") == "active"
+        and (plugin.get("usage") or {}).get("source") == "docker"
+    ]
+    docker_rows: dict[str, dict[str, Any]] = {}
+    if active_docker_ids:
+        from dependencies import dependency_manager
+
+        docker_service = dependency_manager.get_service("docker")
+        if docker_service is not None:
+            docker_rows = await asyncio.to_thread(
+                docker_service.get_plugin_usage, active_docker_ids
+            )
+
+    rows: dict[str, dict[str, Any]] = {}
+    for plugin in installed_plugins:
+        plugin_id = plugin["id"]
+        row = _empty_row(plugin)
+        rows[plugin_id] = row
+        if plugin.get("effective_status") != "active":
+            continue
+
+        usage = plugin.get("usage") or {}
+        source = usage.get("source")
+        if source == "none":
+            continue
+        if source == "process":
+            cpu, memory_percent, memory_mb, count = _process_totals(
+                processes,
+                {str(name).lower() for name in usage.get("process_names", [])},
+                total_memory,
+            )
+            row.update(
+                cpu=cpu,
+                mem=memory_percent,
+                memory_mb=memory_mb,
+                count=count,
+                status="running" if count else "stopped",
+            )
+            continue
+        if source == "docker":
+            runtime = docker_rows.get(plugin_id)
+            if runtime is None:
+                row["status"] = "stopped"
+                continue
+            memory_bytes = int(runtime.get("memory_bytes") or 0)
+            memory_limit_bytes = int(runtime.get("memory_limit_bytes") or 0)
+            memory_percent = (
+                (memory_bytes / memory_limit_bytes) * 100
+                if memory_limit_bytes > 0
+                else 0.0
+            )
+            row.update(
+                cpu=round(float(runtime.get("cpu") or 0.0), 1),
+                mem=round(memory_percent, 1),
+                memory_mb=round(memory_bytes / (1024 ** 2), 1),
+                memory_limit_mb=(
+                    round(memory_limit_bytes / (1024 ** 2), 1)
+                    if memory_limit_bytes > 0
+                    else None
+                ),
+                count=int(runtime.get("count") or 0),
+                status=runtime.get("status", "stopped"),
+            )
+    return rows

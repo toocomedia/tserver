@@ -22,6 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 
 from database import get_db
+from dependencies import dependency_manager
 from models.domain import Domain
 from models.ssl_cert import SslCert
 from models.proxy import ReverseProxy
@@ -220,49 +221,103 @@ async def server_stats():
     # Top 15 processes by CPU usage & Stack Services
     procs = []
     services = {
-        "nginx": {"cpu": 0.0, "mem": 0.0, "count": 0, "status": "stopped"},
-        "powerdns": {"cpu": 0.0, "mem": 0.0, "count": 0, "status": "stopped"},
-        "panel": {"cpu": 0.0, "mem": 0.0, "count": 0, "status": "stopped"},
-        "maddy": {"cpu": 0.0, "mem": 0.0, "count": 0, "status": "stopped"},
+        "nginx": {
+            "label": "Nginx",
+            "cpu": 0.0,
+            "mem": 0.0,
+            "memory_mb": 0.0,
+            "count": 0,
+            "status": "stopped",
+            "_memory_bytes": 0,
+        },
+        "powerdns": {
+            "label": "PowerDNS",
+            "cpu": 0.0,
+            "mem": 0.0,
+            "memory_mb": 0.0,
+            "count": 0,
+            "status": "stopped",
+            "_memory_bytes": 0,
+        },
+        "panel": {
+            "label": "Panel (FastAPI)",
+            "cpu": 0.0,
+            "mem": 0.0,
+            "memory_mb": 0.0,
+            "count": 0,
+            "status": "stopped",
+            "_memory_bytes": 0,
+        },
+        "docker": {
+            "label": "Docker Engine",
+            "cpu": 0.0,
+            "mem": 0.0,
+            "memory_mb": 0.0,
+            "count": 0,
+            "status": "stopped",
+            "_memory_bytes": 0,
+        },
     }
-    for p in _psutil.process_iter(["pid", "name", "cmdline", "cpu_percent", "memory_percent", "status"]):
+    for p in _psutil.process_iter(
+        [
+            "pid",
+            "name",
+            "cmdline",
+            "cpu_percent",
+            "memory_percent",
+            "memory_info",
+            "status",
+        ]
+    ):
         try:
             info = p.info
             if info["cpu_percent"] is not None:
                 procs.append(info)
-                
+
                 name = info.get("name", "").lower() if info.get("name") else ""
                 cmdline = " ".join(info.get("cmdline") or []).lower()
-                
+
                 svc = None
                 if "nginx" in name:
                     svc = "nginx"
-                    if "worker process" in cmdline:
-                        services["nginx"]["workers_only"] = services["nginx"].get("workers_only", 0) + 1
                 elif "pdns_server" in name:
                     svc = "powerdns"
-                elif "maddy" in name:
-                    svc = "maddy"
                 elif "python" in name or "uvicorn" in name:
                     if "srv-panel" in cmdline or "main.py" in cmdline or "uvicorn" in cmdline:
                         svc = "panel"
+                elif name in {"dockerd", "containerd", "docker-proxy"}:
+                    svc = "docker"
 
                 if svc:
                     services[svc]["cpu"] += info["cpu_percent"] or 0.0
-                    services[svc]["mem"] += info["memory_percent"] or 0.0
+                    services[svc]["_memory_bytes"] += int(
+                        getattr(info.get("memory_info"), "rss", 0) or 0
+                    )
                     services[svc]["count"] += 1
                     services[svc]["status"] = "running"
         except (_psutil.NoSuchProcess, _psutil.AccessDenied):
             pass
 
-    if services["nginx"].get("workers_only", 0) > 0:
-        services["nginx"]["count"] = services["nginx"]["workers_only"]
-            
+    docker_status = await asyncio.to_thread(
+        dependency_manager.get_status, "docker"
+    )
+    if docker_status:
+        if docker_status.get("healthy"):
+            services["docker"]["status"] = "running"
+        elif not docker_status.get("installed"):
+            services["docker"]["status"] = "missing"
+        elif not docker_status.get("desired_enabled", True):
+            services["docker"]["status"] = "disabled"
+        else:
+            services["docker"]["status"] = "stopped"
+
     for s in services.values():
         s["cpu"] = round(s["cpu"], 1)
-        s["mem"] = round(s["mem"], 1)
+        memory_bytes = int(s.pop("_memory_bytes"))
+        s["memory_mb"] = round(memory_bytes / (1024 ** 2), 1)
+        s["mem"] = round((memory_bytes / ram.total) * 100, 1)
 
-    services.update(await plugin_usage_service.get_plugin_usage())
+    plugins = await plugin_usage_service.get_plugin_usage(procs, ram.total)
 
     procs.sort(key=lambda x: x["cpu_percent"] or 0, reverse=True)
     top_procs = [
@@ -307,6 +362,7 @@ async def server_stats():
         "uptime_seconds": int(uptime_sec),
         "uptime_human": _uptime_human(uptime_sec),
         "services": services,
+        "plugins": plugins,
         "processes": top_procs,
         "optimization": opt_status,
     }

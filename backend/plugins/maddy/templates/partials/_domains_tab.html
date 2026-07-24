@@ -2,7 +2,7 @@
   <div class="mb-xl" style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
     <h2 style="margin:0;" id="detail-domain-name"></h2>
     <button type="button" class="btn btn--danger btn--sm" id="btn-delete-domain" onclick="confirmDeleteDomain()">
-      🗑 Delete Domain
+      Delete Domain
     </button>
   </div>
 
@@ -95,7 +95,7 @@
         <input type="hidden" name="domain_name"  id="dns-domain-input">
         <input type="hidden" name="server_ip"    id="dns-server-ip"    value="{{ server_ip }}">
         <button type="button" onclick="handleDnsAction('/plugins/maddy/api/dns/auto-setup')" class="btn btn--primary btn--sm">
-          ⚡ Auto-Setup Local DNS
+          Auto-Setup Local DNS
         </button>
         <button type="button" onclick="handleDnsAction('/plugins/maddy/api/dns/remove')" class="btn btn--secondary btn--sm">
           Remove Local DNS
@@ -204,7 +204,7 @@
 <div id="delete-domain-modal" class="modal-backdrop hidden" role="dialog">
   <div class="modal" style="max-width:480px;">
     <div class="modal__header">
-      <h2 style="color:var(--color-danger,#e53e3e);">⚠ Delete Mail Domain</h2>
+      <h2 style="color:var(--color-danger,#e53e3e);">Delete Mail Domain</h2>
       <button class="btn btn--ghost btn--icon" onclick="closeModal('delete-domain-modal')">✕</button>
     </div>
     <div class="modal__body">

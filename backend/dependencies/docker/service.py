@@ -258,6 +258,180 @@ class DockerDependencyService:
             )
         return containers
 
+    @staticmethod
+    def _parse_size_bytes(value: str) -> int:
+        match = re.fullmatch(
+            r"\s*([0-9]+(?:\.[0-9]+)?)\s*([kmgt]?i?b)\s*",
+            value,
+            re.IGNORECASE,
+        )
+        if not match:
+            return 0
+        amount = float(match.group(1))
+        unit = match.group(2).lower()
+        powers = {
+            "b": 0,
+            "kb": 1,
+            "kib": 1,
+            "mb": 2,
+            "mib": 2,
+            "gb": 3,
+            "gib": 3,
+            "tb": 4,
+            "tib": 4,
+        }
+        base = 1024 if "i" in unit else 1000
+        return int(amount * (base ** powers[unit]))
+
+    @staticmethod
+    def _parse_percent(value: str) -> float:
+        try:
+            return float(value.strip().removesuffix("%"))
+        except (AttributeError, ValueError):
+            return 0.0
+
+    @staticmethod
+    def _plugin_label(labels: str) -> str | None:
+        for item in labels.split(","):
+            key, separator, value = item.strip().partition("=")
+            if separator and key == "srv-panel.plugin":
+                return value
+        return None
+
+    def get_plugin_usage(
+        self, plugin_ids: list[str]
+    ) -> dict[str, dict[str, Any]]:
+        """Aggregate live Docker stats by the required plugin ownership label."""
+        requested = {
+            plugin_id
+            for plugin_id in plugin_ids
+            if re.fullmatch(r"[a-z0-9][a-z0-9_-]{0,63}", plugin_id)
+        }
+        if not requested or not self.get_status()["healthy"]:
+            return {}
+
+        try:
+            listed = self._run(
+                [
+                    "docker",
+                    "ps",
+                    "-a",
+                    "--filter",
+                    "label=srv-panel.plugin",
+                    "--format",
+                    "{{json .}}",
+                ],
+                timeout=10,
+                privileged=True,
+            )
+        except (OSError, subprocess.TimeoutExpired):
+            return {}
+        if listed.returncode != 0:
+            return {}
+
+        rows: dict[str, dict[str, Any]] = {}
+        container_plugins: dict[str, str] = {}
+        running_ids: list[str] = []
+        for line in listed.stdout.splitlines():
+            try:
+                data = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            plugin_id = self._plugin_label(str(data.get("Labels", "")))
+            container_id = str(data.get("ID", ""))
+            if (
+                plugin_id not in requested
+                or not re.fullmatch(r"[a-f0-9]{6,64}", container_id)
+            ):
+                continue
+
+            row = rows.setdefault(
+                plugin_id,
+                {
+                    "cpu": 0.0,
+                    "memory_bytes": 0,
+                    "memory_limit_bytes": 0,
+                    "count": 0,
+                    "containers": 0,
+                    "running_containers": 0,
+                    "status": "stopped",
+                },
+            )
+            row["containers"] += 1
+            state = str(data.get("State", "")).lower()
+            container_status = str(data.get("Status", "")).lower()
+            if state != "running":
+                continue
+
+            row["running_containers"] += 1
+            row["status"] = (
+                "unhealthy"
+                if "(unhealthy)" in container_status
+                else (
+                    "starting"
+                    if "health: starting" in container_status
+                    else "running"
+                )
+            )
+            container_plugins[container_id] = plugin_id
+            running_ids.append(container_id)
+
+        if not running_ids:
+            return rows
+
+        try:
+            stats = self._run(
+                [
+                    "docker",
+                    "stats",
+                    "--no-stream",
+                    "--format",
+                    "{{json .}}",
+                    *running_ids,
+                ],
+                timeout=15,
+                privileged=True,
+            )
+        except (OSError, subprocess.TimeoutExpired):
+            return rows
+        if stats.returncode != 0:
+            return rows
+
+        for line in stats.stdout.splitlines():
+            try:
+                data = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            container_id = str(data.get("ID") or data.get("Container") or "")
+            plugin_id = next(
+                (
+                    owner
+                    for known_id, owner in container_plugins.items()
+                    if known_id.startswith(container_id)
+                    or container_id.startswith(known_id)
+                ),
+                None,
+            )
+            if plugin_id is None:
+                continue
+
+            used_text, separator, limit_text = str(
+                data.get("MemUsage", "")
+            ).partition("/")
+            row = rows[plugin_id]
+            row["cpu"] += self._parse_percent(str(data.get("CPUPerc", "")))
+            row["memory_bytes"] += self._parse_size_bytes(used_text)
+            if separator:
+                row["memory_limit_bytes"] += self._parse_size_bytes(limit_text)
+            try:
+                row["count"] += int(data.get("PIDs") or 0)
+            except (TypeError, ValueError):
+                pass
+
+        for row in rows.values():
+            row["cpu"] = round(row["cpu"], 1)
+        return rows
+
     def cleanup_plugin_resources(
         self,
         plugin_id: str,
