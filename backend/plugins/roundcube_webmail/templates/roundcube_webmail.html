@@ -1,0 +1,70 @@
+{% extends "layout.html" %}
+
+{% block title %}Roundcube Webmail — VPS Panel{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>Roundcube Webmail</h1>
+    <p class="text-muted">Docker webmail connected to your Maddy mail server.</p>
+  </div>
+  {% if public_url and status.healthy %}
+    <a class="btn btn--primary" href="{{ public_url }}" target="_blank" rel="noopener">Open Webmail</a>
+  {% endif %}
+</div>
+
+<div class="section mb-lg">
+  <div class="section__header"><h3>Runtime</h3></div>
+  <div class="section__body">
+    <div class="info-row">
+      <span class="info-row__label">Container</span>
+      <span class="info-row__value">
+        {% if status.healthy %}
+          <span class="badge badge--success">Healthy</span>
+        {% elif status.running %}
+          <span class="badge badge--inactive">{{ status.state }}</span>
+        {% else %}
+          <span class="badge badge--inactive">Stopped</span>
+        {% endif %}
+      </span>
+    </div>
+    <div class="info-row">
+      <span class="info-row__label">Resource limit</span>
+      <span class="info-row__value">256 MB RAM · 0.5 CPU</span>
+    </div>
+    <div class="info-row">
+      <span class="info-row__label">Public URL</span>
+      <span class="info-row__value">{{ public_url or "Not configured" }}</span>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section__header"><h3>Webmail Domain</h3></div>
+  <div class="section__body">
+    {% if mail_domains %}
+      <form method="post" action="/plugins/roundcube_webmail/api/configure">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+        <div class="form-group">
+          <label class="form-label" for="mail-domain">Maddy domain</label>
+          <select class="form-input" id="mail-domain" name="mail_domain" required
+            onchange="document.getElementById('public-host').value='webmail.'+this.value">
+            {% for item in mail_domains %}
+              <option value="{{ item.domain }}" {% if item.domain == selected_domain %}selected{% endif %}>{{ item.domain }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="public-host">Webmail hostname</label>
+          <input class="form-input" id="public-host" name="public_host" type="text"
+            value="{{ selected_public_host }}" required>
+          <p class="form-hint">Must be a subdomain of the selected Maddy domain. The panel creates DNS, Nginx, and SSL configuration.</p>
+        </div>
+        <button class="btn btn--primary" type="submit">Configure Webmail</button>
+      </form>
+    {% else %}
+      <div class="alert alert--warning">Configure at least one Maddy mail domain first.</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

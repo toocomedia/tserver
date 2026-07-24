@@ -26,9 +26,22 @@
     </header>
     <div class="dependency-card__body">{{ dependency.description }}</div>
     <div class="dependency-card__footer">
-      <a href="/dependencies/{{ dependency.id }}" class="btn {% if not dependency.installed %}btn--primary{% else %}btn--secondary{% endif %} btn--sm">
-        {% if not dependency.installed %}Install Service →{% else %}View Details →{% endif %}
-      </a>
+      {% if dependency.installed %}
+        <form method="post" action="/api/dependencies/{{ dependency.id }}/toggle" style="display:inline-flex;">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+          {% if dependency.running %}
+            <input type="hidden" name="enabled" value="false">
+            <input type="hidden" name="confirmed" value="true">
+            <button class="btn btn--ghost btn--sm" type="submit" onclick="return confirm('Disable {{ dependency.name }}? Dependent plugins will be paused.')">Disable</button>
+          {% else %}
+            <input type="hidden" name="enabled" value="true">
+            <button class="btn btn--primary btn--sm" type="submit">Enable</button>
+          {% endif %}
+        </form>
+        <a href="/dependencies/{{ dependency.id }}" class="btn btn--secondary btn--sm">View Details →</a>
+      {% else %}
+        <a href="/dependencies/{{ dependency.id }}" class="btn btn--primary btn--sm">Install Service →</a>
+      {% endif %}
     </div>
   </div>
 </div>

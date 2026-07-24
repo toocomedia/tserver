@@ -1,10 +1,7 @@
 <script>
 // Parse accounts from Jinja into JS for easy filtering
-const allAccounts = [
-  {% for acc in accounts %}
-  { email: "{{ acc.email }}" },
-  {% endfor %}
-];
+const allAccounts = {{ accounts | tojson }};
+const webmailAvailable = {{ webmail_available | tojson }};
 let currentDomain = "";
 let currentDomainIp = "{{ server_ip }}";
 
@@ -218,13 +215,33 @@ function renderAccountsList() {
     table.style.display    = 'table';
     filtered.forEach(acc => {
       const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td><strong>${acc.email}</strong></td>
-        <td><span class="badge badge--success">Active</span></td>
-        <td style="text-align:right;">
-          <button type="button" class="btn btn--danger btn--sm"
-            onclick="executeDeleteAccount('${acc.email}')">Delete</button>
-        </td>`;
+      const addressCell = document.createElement('td');
+      const address = document.createElement('strong');
+      address.textContent = acc.email;
+      addressCell.appendChild(address);
+
+      const statusCell = document.createElement('td');
+      statusCell.innerHTML = '<span class="badge badge--success">Active</span>';
+
+      const actionsCell = document.createElement('td');
+      actionsCell.style.textAlign = 'right';
+      if (webmailAvailable) {
+        const openButton = document.createElement('button');
+        openButton.type = 'button';
+        openButton.className = 'btn btn--secondary btn--sm';
+        openButton.textContent = 'Open Webmail';
+        openButton.style.marginRight = '0.5rem';
+        openButton.addEventListener('click', () => openWebmail(acc.email));
+        actionsCell.appendChild(openButton);
+      }
+      const deleteButton = document.createElement('button');
+      deleteButton.type = 'button';
+      deleteButton.className = 'btn btn--danger btn--sm';
+      deleteButton.textContent = 'Delete';
+      deleteButton.addEventListener('click', () => executeDeleteAccount(acc.email));
+      actionsCell.appendChild(deleteButton);
+
+      tr.append(addressCell, statusCell, actionsCell);
       tbody.appendChild(tr);
     });
   }
@@ -246,6 +263,27 @@ function updateDomainSuffix() {
 // ---------------------------------------------------------------------------
 // Accounts actions (AJAX)
 // ---------------------------------------------------------------------------
+function openWebmail(email) {
+  const form = document.createElement('form');
+  form.method = 'post';
+  form.action = '/plugins/roundcube_webmail/api/launch';
+  form.target = '_blank';
+  form.style.display = 'none';
+
+  const fields = { csrf_token: getCsrfToken(), email };
+  Object.entries(fields).forEach(([name, value]) => {
+    const input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = name;
+    input.value = value;
+    form.appendChild(input);
+  });
+
+  document.body.appendChild(form);
+  form.submit();
+  form.remove();
+}
+
 async function executeAddAccount() {
   const form = document.getElementById('add-account-form');
   const formData = new FormData(form);

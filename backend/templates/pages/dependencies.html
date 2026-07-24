@@ -8,7 +8,7 @@
   <!-- CARDS / LIST VIEW SWITCHER -->
   <div id="deps-switcher" class="view-switcher" role="radiogroup" aria-label="Layout view switcher">
     <button type="button" class="view-switcher__btn is-active" id="btn-deps-cards" onclick="setDepsLayout('cards')">
-      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="3" width="7" height="7"></rect></svg>
       Cards
     </button>
     <button type="button" class="view-switcher__btn" id="btn-deps-list" onclick="setDepsLayout('list')">
@@ -71,6 +71,19 @@
         </div>
         <div class="list-col-desc">{{ dependency.description }}</div>
         <div class="list-col-actions">
+          {% if dependency.installed %}
+            <form method="post" action="/api/dependencies/{{ dependency.id }}/toggle" style="display:inline-flex;">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+              {% if dependency.running %}
+                <input type="hidden" name="enabled" value="false">
+                <input type="hidden" name="confirmed" value="true">
+                <button class="btn btn--ghost btn--sm" type="submit" onclick="return confirm('Disable {{ dependency.name }}? Dependent plugins will be paused.')">Disable</button>
+              {% else %}
+                <input type="hidden" name="enabled" value="true">
+                <button class="btn btn--primary btn--sm" type="submit">Enable</button>
+              {% endif %}
+            </form>
+          {% endif %}
           <a href="/dependencies/{{ dependency.id }}" class="btn btn--secondary btn--sm">View Info</a>
         </div>
       </div>

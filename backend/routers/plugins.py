@@ -68,6 +68,19 @@ async def uninstall_plugin_api(request: Request, plugin_id: str = Form(...)):
     return JSONResponse({"detail": message}, status_code=400)
 
 
+@router.post("/api/purge-data")
+async def purge_plugin_data_api(
+    request: Request,
+    plugin_id: str = Form(...),
+    confirmation: str = Form(...),
+):
+    """Permanently remove preserved plugin volumes after explicit confirmation."""
+    success, message = await plugin_manager.purge_plugin_data(plugin_id, confirmation)
+    if success:
+        return RedirectResponse("/plugins/", status_code=303)
+    return JSONResponse({"detail": message}, status_code=400)
+
+
 @router.post("/api/toggle")
 async def toggle_plugin(request: Request, plugin_id: str = Form(...), enabled: bool = Form(...)):
     """Enable or disable a plugin."""

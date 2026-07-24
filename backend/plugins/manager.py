@@ -418,6 +418,45 @@ class PluginManager:
         finally:
             lock.release()
 
+    async def purge_plugin_data(
+        self, plugin_id: str, confirmation: str
+    ) -> tuple[bool, str]:
+        """Purge labeled plugin volumes only after uninstall and typed confirmation."""
+        plugin = self.get_plugin(plugin_id)
+        if not plugin:
+            return False, "Plugin not found."
+        if not plugin.get("data_purge"):
+            return False, "This plugin does not expose a data purge action."
+        if plugin.get("installed"):
+            return False, "Uninstall the plugin before purging its data."
+        if confirmation != f"PURGE {plugin_id}":
+            return False, f"Type PURGE {plugin_id} to confirm."
+
+        lock = self._operation_locks.setdefault(plugin_id, threading.Lock())
+        if not lock.acquire(blocking=False):
+            return False, "Another plugin operation is already running."
+        try:
+            from dependencies import dependency_manager
+
+            docker_service = dependency_manager.get_service("docker")
+            cleanup_ok, cleanup_message = await asyncio.to_thread(
+                docker_service.cleanup_plugin_resources,
+                plugin_id,
+                purge_data=True,
+            )
+            if not cleanup_ok:
+                return False, cleanup_message
+
+            service = self._find_service(Path(plugin["dir_path"]), plugin_id)
+            hook = getattr(service, "purge_data", None) if service is not None else None
+            if hook is not None:
+                await asyncio.to_thread(hook)
+            return True, f"Plugin data purged: {cleanup_message}."
+        except Exception as exc:
+            return False, f"Plugin data purge failed: {exc}"
+        finally:
+            lock.release()
+
     @staticmethod
     def _safe_archive_path(name: str) -> PurePosixPath:
         normalized = name.replace("\\", "/")

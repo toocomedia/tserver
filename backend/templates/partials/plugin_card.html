@@ -44,6 +44,17 @@
           <input type="hidden" name="plugin_id" value="{{ plugin.id }}">
           <button type="submit" class="btn btn--primary btn--sm">Install Plugin</button>
         </form>
+        {% if plugin.data_purge %}
+        <form method="post" action="/plugins/api/purge-data" style="display:inline-flex;">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+          <input type="hidden" name="plugin_id" value="{{ plugin.id }}">
+          <input type="hidden" name="confirmation" value="">
+          <button type="submit" class="btn btn--ghost btn--sm" style="color:var(--color-danger);"
+            onclick="const value=prompt('Type PURGE {{ plugin.id }} to permanently delete preserved data.'); if(value===null)return false; this.form.elements.confirmation.value=value; return true;">
+            Purge Data
+          </button>
+        </form>
+        {% endif %}
       {% else %}
         {% if plugin.route_prefix and plugin.effective_status == 'active' %}
           <a href="{{ plugin.route_prefix }}" class="btn btn--secondary btn--sm">Manage</a>

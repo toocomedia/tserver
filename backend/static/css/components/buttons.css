@@ -1,4 +1,4 @@
-/* buttons.css */
+/* buttons.css — Crisp Borders for All Buttons */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -29,7 +29,7 @@
 .btn--primary {
   background: var(--color-accent);
   color: var(--color-on-accent);
-  border-color: var(--color-accent);
+  border: 1px solid var(--color-accent);
 }
 .btn--primary:hover {
   background: var(--color-accent-hover, #B5EB43);
@@ -39,7 +39,7 @@
 .btn--secondary {
   background: var(--color-surface);
   color: var(--color-text);
-  border-color: var(--color-line);
+  border: 1px solid var(--color-line);
 }
 .btn--secondary:hover {
   background: var(--color-surface-hover);
@@ -48,33 +48,35 @@
 
 .btn--ghost {
   background: transparent;
-  border-color: transparent;
   color: var(--color-muted);
+  border: 1px solid var(--color-line);
 }
 .btn--ghost:hover, .btn--ghost.active {
   color: var(--color-text);
   background: var(--color-surface);
-  border-color: transparent;
+  border-color: var(--color-text);
 }
 
 .btn--danger {
   background: transparent;
   color: var(--color-danger);
-  border-color: var(--color-danger);
+  border: 1px solid var(--color-danger);
 }
 .btn--danger:hover {
   background: var(--color-danger);
   color: #FFFFFF;
+  border-color: var(--color-danger);
 }
 
 .btn--warning {
   background: var(--color-bg);
   color: var(--color-warn);
-  border-color: var(--color-warn);
+  border: 1px solid var(--color-warn);
 }
 .btn--warning:hover {
   background: var(--color-warn);
   color: #FFFFFF;
+  border-color: var(--color-warn);
 }
 
 .btn:disabled, .btn--disabled {

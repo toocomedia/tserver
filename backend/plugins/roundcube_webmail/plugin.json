@@ -1,0 +1,18 @@
+{
+  "id": "roundcube_webmail",
+  "name": "Webmail (Roundcube)",
+  "description": "Lightweight Docker webmail for Maddy mailboxes using IMAP and SMTP.",
+  "version": "1.0.0",
+  "author": "tooco.",
+  "icon": "mail",
+  "route_prefix": "/plugins/roundcube_webmail",
+  "sidebar": true,
+  "sidebar_label": "Webmail",
+  "enabled": true,
+  "data_purge": true,
+  "requires": {
+    "dependencies": ["docker"]
+  },
+  "install_script": "scripts/install_roundcube.sh",
+  "uninstall_script": "scripts/uninstall_roundcube.sh"
+}

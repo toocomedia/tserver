@@ -55,6 +55,18 @@ async def maddy_index(request: Request, db: AsyncSession = Depends(get_db)):
     ]
 
     server_ip = getattr(config, "SERVER_IP", "127.0.0.1")
+    webmail_available = False
+    webmail_plugin = plugin_manager.get_plugin("roundcube_webmail")
+    if webmail_plugin and webmail_plugin["effective_status"] == "active":
+        try:
+            from plugins.roundcube_webmail.service import roundcube_webmail_service
+
+            webmail_available = bool(
+                roundcube_webmail_service.get_status()["healthy"]
+                and roundcube_webmail_service.get_public_url()
+            )
+        except Exception:
+            logger.exception("Could not determine Roundcube webmail availability.")
 
     return templates.TemplateResponse("maddy.html", {
         "request": request,
@@ -65,6 +77,7 @@ async def maddy_index(request: Request, db: AsyncSession = Depends(get_db)):
         "mail_domains": mail_domains,
         "panel_domains": panel_domains,
         "server_ip": server_ip,
+        "webmail_available": webmail_available,
     })
 
 
