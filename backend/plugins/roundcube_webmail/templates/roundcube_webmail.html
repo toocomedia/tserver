@@ -98,10 +98,10 @@
       <!-- Overview Tab -->
       <div class="roundcube-tab-panel mb-xl {% if selected_site %}active{% endif %}" data-panel="overview" role="tabpanel">
         <h3 style="margin-top:0; margin-bottom:1.5rem;">Overview</h3>
-        <div>
-          <p class="form-hint mb-md">Current webmail availability and status for <strong>{{ selected_domain }}</strong>.</p>
+        <div style="margin-top: 1.5rem;">
+          <p class="form-hint mb-lg">Current webmail availability and status for <strong>{{ selected_domain }}</strong>.</p>
           
-          <div class="grid-responsive-cards mb-lg">
+          <div class="grid-responsive-cards mb-xl" style="gap: 1.5rem;">
             <div class="card p-4">
               <span class="text-small text-muted" style="display:block; margin-bottom:8px;">Container Status</span>
               <div id="container-status">
@@ -140,12 +140,12 @@
       <!-- Domain & DNS Tab -->
       <div class="roundcube-tab-panel mb-xl {% if not selected_site %}active{% endif %}" data-panel="domain" role="tabpanel">
         <h3 style="margin-top:0; margin-bottom:1.5rem;">Domain &amp; DNS Configuration</h3>
-        <div>
-          <p class="form-hint mb-md">Choose the public hostname used to access Roundcube Webmail for this domain.</p>
+        <div style="margin-top: 1.5rem;">
+          <p class="form-hint mb-lg">Choose the public hostname used to access Roundcube Webmail for this domain.</p>
 
           <form id="webmail-site-form"
             action="/plugins/roundcube_webmail/api/sites/{{ 'update' if selected_site else 'add' }}"
-            method="post">
+            method="post" style="display: flex; flex-direction: column; gap: 1.5rem;">
             <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
             <input type="hidden" name="mail_domain" value="{{ selected_domain }}">
 
@@ -155,7 +155,7 @@
               <div class="roundcube-inline-note">Fixed for this entry. Select another mail domain from the sidebar to configure it separately.</div>
             </div>
 
-            <div class="form-group mb-md">
+            <div class="form-group mb-0">
               <label class="form-label" for="public-host">Webmail hostname</label>
               <input class="form-input" id="public-host" name="public_host" type="text"
                 value="{{ selected_site.public_host if selected_site else default_host }}"
@@ -166,7 +166,7 @@
               </div>
             </div>
 
-            <div class="form-group mb-lg">
+            <div class="form-group mb-0">
               <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;">
                 <input type="checkbox" id="manage-dns" name="manage_dns" value="true"
                   {% if not selected_site or selected_site.dns_managed %}checked{% endif %}>
@@ -184,7 +184,7 @@
               <button class="btn btn--ghost btn--sm" id="copy-dns-button" type="button" style="margin-left:8px;">Copy</button>
             </div>
 
-            <div class="roundcube-form-actions">
+            <div class="roundcube-form-actions mt-sm">
               <button class="btn btn--primary btn--sm" id="save-site-button" type="submit">
                 {{ "Save Changes" if selected_site else "Add Webmail Access" }}
               </button>
@@ -200,10 +200,10 @@
       <!-- HTTPS Tab -->
       <div class="roundcube-tab-panel mb-xl" data-panel="https" role="tabpanel">
         <h3 style="margin-top:0; margin-bottom:1.5rem;">HTTPS SSL Certificate</h3>
-        <div>
-          <p class="form-hint mb-md">Issue a Let's Encrypt TLS certificate after the webmail hostname resolves to this server IP.</p>
+        <div style="margin-top: 1.5rem;">
+          <p class="form-hint mb-lg">Issue a Let's Encrypt TLS certificate after the webmail hostname resolves to this server IP.</p>
           {% if selected_site %}
-            <div class="mb-md">
+            <div class="mb-lg">
               <span class="text-muted">Target Hostname:</span> <code>{{ selected_site.public_host }}</code>
             </div>
             <button class="btn btn--primary btn--sm" id="issue-ssl-button" type="button">Issue / Retry HTTPS</button>
@@ -221,8 +221,8 @@
       <!-- Mail Server Tab -->
       <div class="roundcube-tab-panel mb-xl" data-panel="mail" role="tabpanel">
         <h3 style="margin-top:0; margin-bottom:1.5rem;">Mail Server Connection</h3>
-        <div>
-          <p class="form-hint mb-md">Test Roundcube's IMAP and SMTP connectivity to the Maddy mail server.</p>
+        <div style="margin-top: 1.5rem;">
+          <p class="form-hint mb-lg">Test Roundcube's IMAP and SMTP connectivity to the Maddy mail server.</p>
           {% if selected_site %}
             <div class="roundcube-form-actions mb-md">
               <button class="btn btn--secondary btn--sm" id="test-mail-button" type="button">Test Maddy Connection</button>
@@ -238,8 +238,8 @@
       {% if selected_site %}
         <div class="roundcube-tab-panel mb-xl" data-panel="remove" role="tabpanel">
           <h3 style="color:var(--color-danger, #e53e3e); margin-top:0; margin-bottom:1.5rem;">Remove Webmail Access</h3>
-          <div>
-            <p class="text-muted mb-md">
+        <div style="margin-top: 1.5rem;">
+          <p class="text-muted mb-lg" style="line-height: 1.6;">
               This action removes the webmail URL <strong>https://{{ selected_site.public_host }}/</strong>, its proxy configuration, panel-managed DNS A record, and SSL certificate.
               Maddy mailboxes and emails are <strong>preserved</strong>.
             </p>
