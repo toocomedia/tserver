@@ -1,98 +1,132 @@
-<!-- plugin_card.html partial -->
+<!-- plugin_card.html partial (Strict 180px Layout + Icon Buttons + Expandable Details Tray) -->
 <div class="plugin-card">
-  <div class="plugin-card__cover">
-    <img src="/plugins/assets/{{ plugin.id }}/icon.png" alt="{{ plugin.name }} icon" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='block';">
-    <svg style="display: none; width:56px; height:56px; stroke:var(--color-text);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="1.5" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-  </div>
+  <div class="plugin-card__top">
+    <div class="plugin-card__cover">
+      <img src="/plugins/assets/{{ plugin.id }}/icon.png" alt="{{ plugin.name }} icon" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='block';">
+      <svg style="display: none; width:64px; height:64px; stroke:var(--color-text);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="1.5" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+    </div>
 
-  <div class="plugin-card__main">
-    <div class="plugin-card__content">
+    <div class="plugin-card__main">
       <div class="plugin-card__header-row">
         <h3 class="plugin-card__title" {% if plugin.effective_status in ['missing', 'invalid'] %}style="color: var(--color-muted)"{% endif %}>{{ plugin.name }}</h3>
         <span class="plugin-card__meta">v{{ plugin.version }}</span>
       </div>
 
-      <div class="plugin-card__status">
-        {% if plugin.effective_status == 'missing' %}
-          <span style="color: var(--color-danger); font-weight:700;">Missing</span>
-        {% elif plugin.effective_status == 'active' %}
-          <span style="color: var(--color-text); font-weight:700;">Active</span>
-        {% elif plugin.effective_status == 'paused' %}
-          <span style="color: var(--color-warn); font-weight:700;">Paused</span>
-        {% elif plugin.effective_status == 'invalid' %}
-          <span style="color: var(--color-danger); font-weight:700;">Blocked</span>
-        {% else %}
-          <span>{{ plugin.effective_status | replace('_', ' ') | upper }}</span>
-        {% endif %}
-      </div>
-
       <div class="plugin-card__description">{{ plugin.description }}</div>
 
-      {% if plugin.dependency_status %}
-        <div class="plugin-card__requirements">
-          {% for dependency in plugin.dependency_status %}
-            <span>Requires {{ dependency.id | title }}</span>
-          {% endfor %}
-        </div>
-      {% endif %}
+      <div class="plugin-card__footer-row">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <div class="plugin-card__status">
+            {% if plugin.effective_status == 'missing' %}
+              <span style="color: var(--color-danger);">Missing</span>
+            {% elif plugin.effective_status == 'active' %}
+              <span style="color: var(--color-text);">Active</span>
+            {% elif plugin.effective_status == 'paused' %}
+              <span style="color: var(--color-warn);">Paused</span>
+            {% elif plugin.effective_status == 'invalid' %}
+              <span style="color: var(--color-danger);">Blocked</span>
+            {% else %}
+              <span>{{ plugin.effective_status | replace('_', ' ') | upper }}</span>
+            {% endif %}
+          </div>
 
-      {% for dependency in plugin.dependency_status %}
-        {% if dependency.healthy is sameas false %}
-          <a class="plugin-card__dependency-error" href="/dependencies/{{ dependency.id }}">
-            {% if dependency.id == "docker" %}⚠️ Docker daemon is not available.{% else %}⚠️ {{ dependency.id | title }} is not available.{% endif %}
-          </a>
-        {% endif %}
-      {% endfor %}
+          {% if plugin.dependency_status or plugin.manifest_error or (action_error and action_error_plugin_id == plugin.id) %}
+            <button type="button" class="expand-toggle-btn {% if plugin.effective_status in ['paused', 'invalid'] %}is-expanded{% endif %}" onclick="const tray=this.closest('.plugin-card').querySelector('.card-details-tray'); this.classList.toggle('is-expanded'); tray.classList.toggle('is-hidden');">
+              <span>{% if plugin.dependency_status %}Requirements{% else %}Details{% endif %}</span>
+              <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+          {% endif %}
+        </div>
+
+        <div class="plugin-card__actions">
+          {% if not plugin.installed %}
+            <form method="post" action="/plugins/api/install" style="display:inline-flex;">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+              <input type="hidden" name="plugin_id" value="{{ plugin.id }}">
+              <button type="submit" class="icon-btn icon-btn--primary" title="Install {{ plugin.name }}"
+                {% if plugin.paused_by %}disabled style="opacity:0.5;" title="Install required system dependency first"{% endif %}>
+                <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+              </button>
+            </form>
+            {% if plugin.data_purge %}
+            <form method="post" action="/plugins/api/purge-data" style="display:inline-flex;">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+              <input type="hidden" name="plugin_id" value="{{ plugin.id }}">
+              <input type="hidden" name="confirmation" value="">
+              <button type="submit" class="icon-btn icon-btn--danger" title="Purge Data"
+                onclick="const value=prompt('Type PURGE {{ plugin.id }} to permanently delete preserved data.'); if(value===null)return false; this.form.elements.confirmation.value=value; return true;">
+                <svg viewBox="0 0 24 24"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+              </button>
+            </form>
+            {% endif %}
+          {% else %}
+            {% if plugin.route_prefix and plugin.effective_status == 'active' %}
+              <a href="{{ plugin.route_prefix }}" class="icon-btn icon-btn--primary" title="Manage {{ plugin.name }}">
+                <svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+              </a>
+            {% endif %}
+
+            {% if plugin.effective_status != 'invalid' %}
+            <form method="post" action="/plugins/api/toggle" style="display:inline-flex;">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+              <input type="hidden" name="plugin_id" value="{{ plugin.id }}">
+              <input type="hidden" name="enabled" value="{% if plugin.enabled %}false{% else %}true{% endif %}">
+              <button type="submit" class="icon-btn" title="{% if plugin.enabled %}Disable{% else %}Enable{% endif %} {{ plugin.name }}">
+                {% if plugin.enabled %}
+                  <svg viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
+                {% else %}
+                  <svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                {% endif %}
+              </button>
+            </form>
+            {% endif %}
+
+            <form method="post" action="/plugins/api/uninstall" style="display:inline-flex;">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+              <input type="hidden" name="plugin_id" value="{{ plugin.id }}">
+              <button type="submit" class="icon-btn icon-btn--danger" title="Uninstall {{ plugin.name }}" onclick="return confirm('Uninstall {{ plugin.name }}?')">
+                <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path></svg>
+              </button>
+            </form>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- COLLAPSIBLE DETAILS TRAY FOR REQUIREMENTS & ERRORS -->
+  {% if plugin.dependency_status or plugin.manifest_error or (action_error and action_error_plugin_id == plugin.id) %}
+  <div class="card-details-tray {% if plugin.effective_status not in ['paused', 'invalid'] %}is-hidden{% endif %}">
+    <div class="tray-content">
+      {% if plugin.dependency_status %}
+        {% for dependency in plugin.dependency_status %}
+          <div class="tray-section">
+            <span class="tray-label">Required Dependency:</span>
+            <div class="tray-req-item">
+              <span>{{ dependency.id | title }}</span>
+              {% if dependency.healthy %}
+                <span class="tray-badge tray-badge--success">Healthy</span>
+              {% else %}
+                <span class="tray-badge tray-badge--danger">Missing / Unhealthy</span>
+              {% endif %}
+            </div>
+          </div>
+          {% if dependency.healthy is sameas false %}
+            <div class="tray-error-box">
+              ⚠️ {% if dependency.id == "docker" %}Docker daemon is not available.{% else %}{{ dependency.id | title }} is not available.{% endif %}
+              <a href="/dependencies/{{ dependency.id }}" style="color:inherit; text-decoration:underline; margin-left:6px;">View Dependency</a>
+            </div>
+          {% endif %}
+        {% endfor %}
+      {% endif %}
 
       {% if action_error and action_error_plugin_id == plugin.id and not plugin.paused_by %}
-        <div class="plugin-card__dependency-error">⚠️ {{ action_error }}</div>
+        <div class="tray-error-box">⚠️ {{ action_error }}</div>
       {% endif %}
-      {% if plugin.manifest_error %}<div style="color:var(--color-danger); font-size:11px;">{{ plugin.manifest_error }}</div>{% endif %}
-    </div>
-
-    <div class="plugin-card__actions">
-      {% if not plugin.installed %}
-        <form method="post" action="/plugins/api/install">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
-          <input type="hidden" name="plugin_id" value="{{ plugin.id }}">
-          <button type="submit" class="btn btn--primary"
-            {% if plugin.paused_by %}disabled title="Install the required system dependency first"{% endif %}>
-            Install
-          </button>
-        </form>
-        {% if plugin.data_purge %}
-        <form method="post" action="/plugins/api/purge-data">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
-          <input type="hidden" name="plugin_id" value="{{ plugin.id }}">
-          <input type="hidden" name="confirmation" value="">
-          <button type="submit" class="btn btn--ghost btn--danger"
-            onclick="const value=prompt('Type PURGE {{ plugin.id }} to permanently delete preserved data.'); if(value===null)return false; this.form.elements.confirmation.value=value; return true;">
-            Purge
-          </button>
-        </form>
-        {% endif %}
-      {% else %}
-        {% if plugin.route_prefix and plugin.effective_status == 'active' %}
-          <a href="{{ plugin.route_prefix }}" class="btn btn--secondary">Manage</a>
-        {% endif %}
-
-        {% if plugin.effective_status != 'invalid' %}
-        <form method="post" action="/plugins/api/toggle">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
-          <input type="hidden" name="plugin_id" value="{{ plugin.id }}">
-          <input type="hidden" name="enabled" value="{% if plugin.enabled %}false{% else %}true{% endif %}">
-          <button type="submit" class="btn btn--ghost">{% if plugin.enabled %}Disable{% else %}Enable{% endif %}</button>
-        </form>
-        {% endif %}
-
-        <form method="post" action="/plugins/api/uninstall">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
-          <input type="hidden" name="plugin_id" value="{{ plugin.id }}">
-          <button type="submit" class="btn btn--ghost btn--danger" onclick="return confirm('Uninstall {{ plugin.name }}?')" title="Uninstall">
-            Uninstall
-          </button>
-        </form>
+      {% if plugin.manifest_error %}
+        <div class="tray-error-box">⚠️ {{ plugin.manifest_error }}</div>
       {% endif %}
     </div>
   </div>
+  {% endif %}
 </div>

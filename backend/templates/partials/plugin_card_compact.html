@@ -1,4 +1,4 @@
-<!-- plugin_card_compact.html partial (Compact 230px 1:1 Overlay Box) -->
+<!-- plugin_card_compact.html partial (Compact 230px 1:1 Overlay Box with Icon Buttons) -->
 <div class="compact-card-1x1">
   <div class="compact-card-1x1__icon">
     <img src="/plugins/assets/{{ plugin.id }}/icon.png" alt="{{ plugin.name }} icon" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='block';">
@@ -20,22 +20,32 @@
     <div class="compact-card-1x1__bottom">
       <div class="compact-card-1x1__title">{{ plugin.name }}</div>
       <div class="compact-card-1x1__meta">v{{ plugin.version }}</div>
-      <div class="compact-card-1x1__actions">
+      <div class="compact-card-1x1__actions" style="display:flex; gap:6px; margin-top:6px;">
         {% if plugin.route_prefix and plugin.effective_status == 'active' %}
-          <a href="{{ plugin.route_prefix }}" class="btn btn--primary btn--sm" style="height:26px; font-size:11px; padding:0 8px;">Manage</a>
+          <a href="{{ plugin.route_prefix }}" class="icon-btn icon-btn--primary" title="Manage {{ plugin.name }}">
+            <svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+          </a>
         {% endif %}
         {% if plugin.installed %}
           <form method="post" action="/plugins/api/toggle" style="display:inline-flex;">
             <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
             <input type="hidden" name="plugin_id" value="{{ plugin.id }}">
             <input type="hidden" name="enabled" value="{% if plugin.enabled %}false{% else %}true{% endif %}">
-            <button type="submit" class="btn btn--ghost btn--sm" style="color:#FFF; height:26px; font-size:11px; padding:0 6px;">{% if plugin.enabled %}Disable{% else %}Enable{% endif %}</button>
+            <button type="submit" class="icon-btn" style="color:#FFF;" title="{% if plugin.enabled %}Disable{% else %}Enable{% endif %} {{ plugin.name }}">
+              {% if plugin.enabled %}
+                <svg viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
+              {% else %}
+                <svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+              {% endif %}
+            </button>
           </form>
         {% else %}
           <form method="post" action="/plugins/api/install" style="display:inline-flex;">
             <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
             <input type="hidden" name="plugin_id" value="{{ plugin.id }}">
-            <button type="submit" class="btn btn--primary btn--sm" style="height:26px; font-size:11px; padding:0 8px;">Install</button>
+            <button type="submit" class="icon-btn icon-btn--primary" title="Install {{ plugin.name }}">
+              <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            </button>
           </form>
         {% endif %}
       </div>

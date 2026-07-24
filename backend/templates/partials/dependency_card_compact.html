@@ -1,4 +1,4 @@
-<!-- dependency_card_compact.html partial (Compact 230px 1:1 Overlay Box) -->
+<!-- dependency_card_compact.html partial (Compact 230px 1:1 Overlay Box with Icon Buttons) -->
 <div class="compact-card-1x1">
   <div class="compact-card-1x1__icon">
     {% if dependency.icon %}
@@ -22,8 +22,10 @@
     <div class="compact-card-1x1__bottom">
       <div class="compact-card-1x1__title">{{ dependency.name }}</div>
       <div class="compact-card-1x1__meta">v{{ dependency.version }}</div>
-      <div class="compact-card-1x1__actions">
-        <a href="/dependencies/{{ dependency.id }}" class="btn btn--secondary btn--sm" style="height:26px; font-size:11px; padding:0 8px;">View Info</a>
+      <div class="compact-card-1x1__actions" style="display:flex; gap:6px; margin-top:6px;">
+        <a href="/dependencies/{{ dependency.id }}" class="icon-btn" style="color:#FFF;" title="View Info">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+        </a>
       </div>
     </div>
   </div>
