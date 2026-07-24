@@ -23,11 +23,9 @@ $maddy_host = preg_replace(
     '',
     getenv('ROUNDCUBEMAIL_DEFAULT_HOST') ?: 'localhost'
 );
-$config['default_host'] = $maddy_transport === 'tls'
-    ? 'ssl://' . $maddy_host
-    : $maddy_host;
-$config['default_port'] = $maddy_transport === 'tls' ? 993 : 143;
-$config['smtp_server'] = $maddy_transport === 'tls'
-    ? 'tls://' . $maddy_host
-    : $maddy_host;
-$config['smtp_port'] = 587;
+$config['imap_host'] = $maddy_transport === 'tls'
+    ? 'ssl://' . $maddy_host . ':993'
+    : $maddy_host . ':143';
+$config['smtp_host'] = $maddy_transport === 'tls'
+    ? 'tls://' . $maddy_host . ':587'
+    : $maddy_host . ':587';
