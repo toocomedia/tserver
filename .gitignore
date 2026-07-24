@@ -1,5 +1,6 @@
 # Secrets & local state
 .env
+.env.local
 *.db
 *.db-*
 *.sqlite3
@@ -20,15 +21,28 @@ Thumbs.db
 .idea/
 .vscode/
 *.log
+*.swp
+*.swo
+*~
 
-# Local-only helpers (not for the public repo)
-push-to-github.bat
-docs/*
-!docs/plugin_development_guide.md
-!docs/dependency_development_guide.md
-!docs/docker_dependency_operations.md
+# Agent & Planning Artifacts
+implementation_plan.md
+walkthrough.md
+*.preview.html
+temp_preview.html
+temp_*.html
+.agents/
+
+# Documentation & Local Helpers
+docs/
 rules/
+push-to-github.bat
+
+# Node / Build artifacts
+node_modules/
+dist/
 
 # Install leftovers
 /opt/
 backups/
+
