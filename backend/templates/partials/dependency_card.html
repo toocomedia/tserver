@@ -1,4 +1,4 @@
-<!-- dependency_card.html partial -->
+<!-- dependency_card.html partial (Structure C: Split Content Area) -->
 <div class="dependency-card">
   <div class="dependency-card__cover">
     {% if dependency.icon %}
@@ -9,23 +9,23 @@
     {% endif %}
   </div>
   <div class="dependency-card__main">
-    <header class="dependency-card__header">
-      <div style="min-width:0;">
-        <h3 class="dependency-card__title">{{ dependency.name }}</h3>
-        <div class="dependency-card__version">driver v{{ dependency.version }}</div>
+    <div class="dependency-card__content">
+      <h3 class="dependency-card__title">{{ dependency.name }}</h3>
+      <div class="status-inline">
+        {% if dependency.healthy and dependency.desired_enabled %}
+          <span class="status-dot status-dot--active"></span> driver v{{ dependency.version }} • Healthy
+        {% elif not dependency.installed %}
+          <span class="status-dot status-dot--danger"></span> driver v{{ dependency.version }} • Missing
+        {% elif dependency.effective_state in ['stopped', 'disabled'] %}
+          <span class="status-dot status-dot--danger"></span> driver v{{ dependency.version }} • {{ dependency.effective_state }}
+        {% else %}
+          <span class="status-dot status-dot--paused"></span> driver v{{ dependency.version }} • {{ dependency.effective_state | replace('_', ' ') }}
+        {% endif %}
       </div>
-      {% if dependency.healthy and dependency.desired_enabled %}
-        <span class="badge badge--healthy"><span class="badge-dot"></span> Healthy</span>
-      {% elif not dependency.installed %}
-        <span class="badge badge--missing"><span class="badge-dot"></span> Missing</span>
-      {% elif dependency.effective_state in ['stopped', 'disabled'] %}
-        <span class="badge badge--danger"><span class="badge-dot"></span> {{ dependency.effective_state }}</span>
-      {% else %}
-        <span class="badge badge--inactive"><span class="badge-dot"></span> {{ dependency.effective_state | replace('_', ' ') }}</span>
-      {% endif %}
-    </header>
-    <div class="dependency-card__body">{{ dependency.description }}</div>
-    <div class="dependency-card__footer">
+      <div class="dependency-card__body">{{ dependency.description }}</div>
+    </div>
+
+    <div class="dependency-card__actions">
       {% if dependency.installed %}
         <form method="post" action="/api/dependencies/{{ dependency.id }}/toggle" style="display:inline-flex;">
           <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
@@ -38,9 +38,9 @@
             <button class="btn btn--primary btn--sm" type="submit">Enable</button>
           {% endif %}
         </form>
-        <a href="/dependencies/{{ dependency.id }}" class="btn btn--secondary btn--sm">View Details →</a>
+        <a href="/dependencies/{{ dependency.id }}" class="btn btn--secondary btn--sm">View Info</a>
       {% else %}
-        <a href="/dependencies/{{ dependency.id }}" class="btn btn--primary btn--sm">Install Service →</a>
+        <a href="/dependencies/{{ dependency.id }}" class="btn btn--primary btn--sm">Install</a>
       {% endif %}
     </div>
   </div>

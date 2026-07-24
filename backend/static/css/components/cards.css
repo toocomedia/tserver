@@ -48,8 +48,31 @@
   stroke-width: 2;
 }
 
+/* Minimal Status Indicators */
+.status-dot {
+  width: 7px;
+  height: 7px;
+  display: inline-block;
+  flex-shrink: 0;
+  border-radius: 0;
+}
+.status-dot--active { background: #10B981; }
+.status-dot--paused { background: #F59E0B; }
+.status-dot--danger { background: #DC2626; }
+
+.status-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-muted);
+}
+
 /* ============================================================
-   CARDS GRID VIEW (Full Image Cover Fit & Fewer Inner Dividers)
+   CARDS GRID VIEW (Structure C: Split Main & Right Actions)
    ============================================================ */
 .view-cards-container,
 .plugin-grid,
@@ -79,19 +102,19 @@
   border-color: var(--color-text);
 }
 
-/* 1:1 Square Image Cover Box (165px x 165px, Full 100% Fit) */
+/* 1:1 Square Image Cover Box (165px x 165px, Full 100% Fit, 0 Padding) */
 .item-card__img-box,
 .plugin-card__cover,
 .dependency-card__cover {
   width: 165px;
-  height: 100%;
+  min-height: 165px;
   aspect-ratio: 1 / 1;
   flex-shrink: 0;
   background: var(--color-surface);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0;
+  padding: 0 !important;
   border-right: 1px solid var(--color-line);
   overflow: hidden;
 }
@@ -115,23 +138,26 @@
   stroke-width: 1.5;
 }
 
+/* Structure C: Split Main Container */
 .item-card__content,
 .plugin-card__main,
 .dependency-card__main {
   flex: 1;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  padding: 16px 20px;
+  gap: 16px;
   min-width: 0;
+  align-items: center;
 }
 
-.item-card__header,
-.plugin-card__header,
-.dependency-card__header {
-  padding: 16px 20px 8px;
+.plugin-card__content,
+.dependency-card__content {
+  flex: 1;
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 10px;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
 }
 
 .item-card__title,
@@ -141,57 +167,17 @@
   font-weight: 800;
   color: var(--color-text);
   line-height: 1.2;
-  margin: 0 0 2px 0;
+  margin: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.item-card__version,
-.plugin-card__version,
-.dependency-card__version {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--color-muted);
-}
-
-.item-card__body,
+.plugin-card__description,
 .dependency-card__body {
-  padding: 0 20px 12px;
-  font-size: 12.5px;
-  color: var(--color-muted);
-  line-height: 1.5;
-  flex: 1;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.plugin-card__body {
-  padding: 0 16px 4px;
   font-size: 12.5px;
   color: var(--color-muted);
   line-height: 1.4;
-  flex: 1;
-  overflow: hidden;
-}
-
-.plugin-card {
-  height: 165px;
-  min-height: 165px;
-}
-
-.plugin-card__cover {
-  width: 165px;
-  height: 165px;
-}
-
-.plugin-card__header {
-  padding: 12px 16px 6px;
-}
-
-.plugin-card__description {
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -199,42 +185,137 @@
 }
 
 .plugin-card__requirements {
-  margin-top: 4px;
+  margin-top: 2px;
   font-size: 11px;
   font-weight: 700;
   color: var(--color-text);
-}
-
-.plugin-card__body.has-dependency-error .plugin-card__description {
-  -webkit-line-clamp: 1;
 }
 
 .plugin-card__dependency-error {
   display: block;
   margin-top: 2px;
   color: var(--color-danger);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   line-height: 1.2;
   text-decoration: none;
 }
 
-/* Simplified Action Footer (No inner top border line) */
+/* Structure C: Right Stacked Action Column */
 .item-card__actions,
-.plugin-card__footer,
-.dependency-card__footer {
+.plugin-card__actions,
+.dependency-card__actions {
   display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 20px;
-  border-top: none;
-  background: transparent;
-  margin-top: auto;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+  border-left: 1px solid var(--color-line);
+  padding-left: 16px;
+  flex-shrink: 0;
 }
 
-.plugin-card__footer {
-  padding: 6px 16px 10px;
+/* ============================================================
+   COMPACT 1:1 OVERLAY GRID VIEW (230px Square Size)
+   ============================================================ */
+.view-compact-container,
+.plugin-compact-grid,
+.dependency-compact-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 16px;
+}
+
+.compact-card-1x1 {
+  border: 1px solid var(--color-line);
+  background: var(--color-surface);
+  aspect-ratio: 1 / 1;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: border-color 0.15s ease;
+}
+
+.compact-card-1x1:hover {
+  border-color: var(--color-text);
+}
+
+.compact-card-1x1__icon {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+}
+
+.compact-card-1x1__icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.compact-card-1x1__icon svg {
+  width: 64px;
+  height: 64px;
+  stroke: var(--color-muted);
+  opacity: 0.25;
+  fill: none;
+}
+
+.compact-card-1x1__overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(180deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.85) 100%);
+  z-index: 2;
+}
+
+.compact-card-1x1__content {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 14px;
+  color: #FFFFFF;
+}
+
+.compact-card-1x1__top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.compact-card-1x1__bottom {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.compact-card-1x1__title {
+  font-size: 15px;
+  font-weight: 800;
+  color: #FFFFFF;
+  line-height: 1.2;
+}
+
+.compact-card-1x1__meta {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.compact-card-1x1__actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
 }
 
 /* ============================================================

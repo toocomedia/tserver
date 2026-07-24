@@ -5,11 +5,15 @@
 
 {% block topbar_actions %}
 <div style="display: flex; align-items: center; gap: 12px;">
-  <!-- CARDS / LIST VIEW SWITCHER -->
+  <!-- CARDS / COMPACT 1:1 GRID / LIST VIEW SWITCHER -->
   <div id="deps-switcher" class="view-switcher" role="radiogroup" aria-label="Layout view switcher">
     <button type="button" class="view-switcher__btn is-active" id="btn-deps-cards" onclick="setDepsLayout('cards')">
-      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="3" width="7" height="7"></rect></svg>
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
       Cards
+    </button>
+    <button type="button" class="view-switcher__btn" id="btn-deps-compact" onclick="setDepsLayout('compact')">
+      <svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"></rect></svg>
+      Compact 1:1
     </button>
     <button type="button" class="view-switcher__btn" id="btn-deps-list" onclick="setDepsLayout('list')">
       <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
@@ -38,7 +42,18 @@
       {% endfor %}
     </div>
 
-    <!-- 2. LIST VIEW -->
+    <!-- 2. COMPACT 1:1 OVERLAY GRID VIEW -->
+    <div id="deps-compact-container" class="dependency-compact-grid is-hidden">
+      {% for dependency in dependencies %}
+        {% include "partials/dependency_card_compact.html" %}
+      {% else %}
+        <div class="empty-state" style="grid-column: 1 / -1; padding: 3rem; text-align: center; color: var(--color-muted); background: var(--color-surface); border: 1px solid var(--color-line);">
+          No system dependencies are registered.
+        </div>
+      {% endfor %}
+    </div>
+
+    <!-- 3. LIST VIEW -->
     <div id="deps-list-container" class="view-list-container is-hidden">
       <div class="list-header-row">
         <div>System Dependency</div>
@@ -98,20 +113,30 @@
 <script>
   function setDepsLayout(mode) {
     const cardsBtn = document.getElementById('btn-deps-cards');
+    const compactBtn = document.getElementById('btn-deps-compact');
     const listBtn = document.getElementById('btn-deps-list');
+
     const cardsContainer = document.getElementById('deps-cards-container');
+    const compactContainer = document.getElementById('deps-compact-container');
     const listContainer = document.getElementById('deps-list-container');
 
+    cardsBtn?.classList.remove('is-active');
+    compactBtn?.classList.remove('is-active');
+    listBtn?.classList.remove('is-active');
+
+    cardsContainer?.classList.add('is-hidden');
+    compactContainer?.classList.add('is-hidden');
+    listContainer?.classList.add('is-hidden');
+
     if (mode === 'cards') {
-      cardsBtn.classList.add('is-active');
-      listBtn.classList.remove('is-active');
-      cardsContainer.classList.remove('is-hidden');
-      listContainer.classList.add('is-hidden');
+      cardsBtn?.classList.add('is-active');
+      cardsContainer?.classList.remove('is-hidden');
+    } else if (mode === 'compact') {
+      compactBtn?.classList.add('is-active');
+      compactContainer?.classList.remove('is-hidden');
     } else {
-      listBtn.classList.add('is-active');
-      cardsBtn.classList.remove('is-active');
-      listContainer.classList.remove('is-hidden');
-      cardsContainer.classList.add('is-hidden');
+      listBtn?.classList.add('is-active');
+      listContainer?.classList.remove('is-hidden');
     }
   }
 </script>

@@ -1,4 +1,4 @@
-<!-- plugin_card.html partial -->
+<!-- plugin_card.html partial (Structure C: Split Content Area with Right-Stacked Actions) -->
 <div class="plugin-card">
   <div class="plugin-card__cover">
     <img src="/plugins/assets/{{ plugin.id }}/icon.png" alt="{{ plugin.name }} icon" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='block';">
@@ -6,27 +6,25 @@
   </div>
 
   <div class="plugin-card__main">
-    <div class="plugin-card__header">
-      <div>
-        <h3 class="plugin-card__title" {% if plugin.effective_status in ['missing', 'invalid'] %}style="color: var(--color-muted)"{% endif %}>{{ plugin.name }}</h3>
-        <div class="plugin-card__version">v{{ plugin.version }}</div>
+    <div class="plugin-card__content">
+      <h3 class="plugin-card__title" {% if plugin.effective_status in ['missing', 'invalid'] %}style="color: var(--color-muted)"{% endif %}>{{ plugin.name }}</h3>
+      
+      <div class="status-inline">
+        {% if plugin.effective_status == 'missing' %}
+          <span class="status-dot status-dot--danger"></span> v{{ plugin.version }} • Missing
+        {% elif plugin.effective_status == 'active' %}
+          <span class="status-dot status-dot--active"></span> v{{ plugin.version }} • Active
+        {% elif plugin.effective_status == 'paused' %}
+          <span class="status-dot status-dot--paused"></span> v{{ plugin.version }} • Paused
+        {% elif plugin.effective_status == 'invalid' %}
+          <span class="status-dot status-dot--danger"></span> v{{ plugin.version }} • Blocked
+        {% else %}
+          <span class="status-dot status-dot--paused"></span> v{{ plugin.version }} • {{ plugin.effective_status | replace('_', ' ') }}
+        {% endif %}
       </div>
 
-      {% if plugin.effective_status == 'missing' %}
-        <div class="badge badge--missing"><span class="badge-dot"></span> Missing</div>
-      {% elif plugin.effective_status == 'active' %}
-        <div class="badge badge--active"><span class="badge-dot"></span> Active</div>
-      {% elif plugin.effective_status == 'paused' %}
-        <div class="badge badge--inactive"><span class="badge-dot"></span> Paused</div>
-      {% elif plugin.effective_status == 'invalid' %}
-        <div class="badge badge--danger"><span class="badge-dot"></span> Blocked</div>
-      {% else %}
-        <div class="badge badge--inactive"><span class="badge-dot"></span> {{ plugin.effective_status | replace('_', ' ') }}</div>
-      {% endif %}
-    </div>
-
-    <div class="plugin-card__body{% if plugin.paused_by or (action_error and action_error_plugin_id == plugin.id) %} has-dependency-error{% endif %}">
       <div class="plugin-card__description">{{ plugin.description }}</div>
+
       {% if plugin.dependency_status %}
         <div class="plugin-card__requirements">
           {% for dependency in plugin.dependency_status %}
@@ -34,27 +32,29 @@
           {% endfor %}
         </div>
       {% endif %}
+
       {% for dependency in plugin.dependency_status %}
         {% if dependency.healthy is sameas false %}
           <a class="plugin-card__dependency-error" href="/dependencies/{{ dependency.id }}">
-            {% if dependency.id == "docker" %}Docker daemon is not available.{% else %}{{ dependency.id | title }} is not available.{% endif %}
+            {% if dependency.id == "docker" %}⚠️ Docker daemon is not available.{% else %}⚠️ {{ dependency.id | title }} is not available.{% endif %}
           </a>
         {% endif %}
       {% endfor %}
+
       {% if action_error and action_error_plugin_id == plugin.id and not plugin.paused_by %}
-        <div class="plugin-card__dependency-error">{{ action_error }}</div>
+        <div class="plugin-card__dependency-error">⚠️ {{ action_error }}</div>
       {% endif %}
       {% if plugin.manifest_error %}<div style="color:var(--color-danger); font-size:11px;">{{ plugin.manifest_error }}</div>{% endif %}
     </div>
 
-    <div class="plugin-card__footer">
+    <div class="plugin-card__actions">
       {% if not plugin.installed %}
         <form method="post" action="/plugins/api/install" style="display:inline-flex;">
           <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
           <input type="hidden" name="plugin_id" value="{{ plugin.id }}">
           <button type="submit" class="btn btn--primary btn--sm"
             {% if plugin.paused_by %}disabled title="Install the required system dependency first"{% endif %}>
-            Install Plugin
+            Install
           </button>
         </form>
         {% if plugin.data_purge %}
@@ -64,7 +64,7 @@
           <input type="hidden" name="confirmation" value="">
           <button type="submit" class="btn btn--ghost btn--sm" style="color:var(--color-danger);"
             onclick="const value=prompt('Type PURGE {{ plugin.id }} to permanently delete preserved data.'); if(value===null)return false; this.form.elements.confirmation.value=value; return true;">
-            Purge Data
+            Purge
           </button>
         </form>
         {% endif %}
