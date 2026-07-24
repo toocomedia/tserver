@@ -1,4 +1,4 @@
-<!-- dependency_card.html partial (Structure C: Split Content Area) -->
+<!-- dependency_card.html partial -->
 <div class="dependency-card">
   <div class="dependency-card__cover">
     {% if dependency.icon %}
@@ -10,16 +10,17 @@
   </div>
   <div class="dependency-card__main">
     <div class="dependency-card__content">
-      <h3 class="dependency-card__title">{{ dependency.name }}</h3>
-      <div class="status-inline">
+      <div class="plugin-card__header-row">
+        <h3 class="dependency-card__title">{{ dependency.name }}</h3>
+        <span class="dependency-card__meta">driver v{{ dependency.version }}</span>
+      </div>
+      <div class="dependency-card__status">
         {% if dependency.healthy and dependency.desired_enabled %}
-          <span class="status-dot status-dot--active"></span> driver v{{ dependency.version }} • Healthy
+          <span style="color: var(--color-text); font-weight:700;">Healthy</span>
         {% elif not dependency.installed %}
-          <span class="status-dot status-dot--danger"></span> driver v{{ dependency.version }} • Missing
-        {% elif dependency.effective_state in ['stopped', 'disabled'] %}
-          <span class="status-dot status-dot--danger"></span> driver v{{ dependency.version }} • {{ dependency.effective_state }}
+          <span style="color: var(--color-danger); font-weight:700;">Missing</span>
         {% else %}
-          <span class="status-dot status-dot--paused"></span> driver v{{ dependency.version }} • {{ dependency.effective_state | replace('_', ' ') }}
+          <span>{{ dependency.effective_state | replace('_', ' ') | upper }}</span>
         {% endif %}
       </div>
       <div class="dependency-card__body">{{ dependency.description }}</div>
@@ -27,20 +28,20 @@
 
     <div class="dependency-card__actions">
       {% if dependency.installed %}
-        <form method="post" action="/api/dependencies/{{ dependency.id }}/toggle" style="display:inline-flex;">
+        <form method="post" action="/api/dependencies/{{ dependency.id }}/toggle">
           <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
           {% if dependency.running %}
             <input type="hidden" name="enabled" value="false">
             <input type="hidden" name="confirmed" value="true">
-            <button class="btn btn--ghost btn--sm" type="submit" onclick="return confirm('Disable {{ dependency.name }}? Dependent plugins will be paused.')">Disable</button>
+            <button class="btn btn--ghost" type="submit" onclick="return confirm('Disable {{ dependency.name }}? Dependent plugins will be paused.')">Disable</button>
           {% else %}
             <input type="hidden" name="enabled" value="true">
-            <button class="btn btn--primary btn--sm" type="submit">Enable</button>
+            <button class="btn btn--primary" type="submit">Enable</button>
           {% endif %}
         </form>
-        <a href="/dependencies/{{ dependency.id }}" class="btn btn--secondary btn--sm">View Info</a>
+        <a href="/dependencies/{{ dependency.id }}" class="btn btn--secondary">View Info</a>
       {% else %}
-        <a href="/dependencies/{{ dependency.id }}" class="btn btn--primary btn--sm">Install</a>
+        <a href="/dependencies/{{ dependency.id }}" class="btn btn--primary">Install</a>
       {% endif %}
     </div>
   </div>

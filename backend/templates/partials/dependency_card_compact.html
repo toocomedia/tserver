@@ -11,11 +11,11 @@
   <div class="compact-card-1x1__overlay"></div>
   <div class="compact-card-1x1__content">
     <div class="compact-card-1x1__top">
-      <div class="status-inline" style="color:#FFF;">
+      <div class="dependency-card__status" style="color:#FFF;">
         {% if dependency.healthy and dependency.desired_enabled %}
-          <span class="status-dot status-dot--active"></span> Healthy
+          Healthy
         {% else %}
-          <span class="status-dot status-dot--danger"></span> {{ dependency.effective_state }}
+          {{ dependency.effective_state | upper }}
         {% endif %}
       </div>
     </div>

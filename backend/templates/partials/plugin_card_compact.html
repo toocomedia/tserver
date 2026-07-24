@@ -7,13 +7,13 @@
   <div class="compact-card-1x1__overlay"></div>
   <div class="compact-card-1x1__content">
     <div class="compact-card-1x1__top">
-      <div class="status-inline" style="color:#FFF;">
+      <div class="plugin-card__status" style="color:#FFF;">
         {% if plugin.effective_status == 'active' %}
-          <span class="status-dot status-dot--active"></span> Active
+          Active
         {% elif plugin.effective_status == 'paused' %}
-          <span class="status-dot status-dot--paused"></span> Paused
+          Paused
         {% else %}
-          <span class="status-dot status-dot--danger"></span> {{ plugin.effective_status | replace('_', ' ') }}
+          {{ plugin.effective_status | replace('_', ' ') | upper }}
         {% endif %}
       </div>
     </div>

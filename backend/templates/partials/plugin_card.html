@@ -1,4 +1,4 @@
-<!-- plugin_card.html partial (Structure C: Split Content Area with Right-Stacked Actions) -->
+<!-- plugin_card.html partial -->
 <div class="plugin-card">
   <div class="plugin-card__cover">
     <img src="/plugins/assets/{{ plugin.id }}/icon.png" alt="{{ plugin.name }} icon" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='block';">
@@ -7,19 +7,22 @@
 
   <div class="plugin-card__main">
     <div class="plugin-card__content">
-      <h3 class="plugin-card__title" {% if plugin.effective_status in ['missing', 'invalid'] %}style="color: var(--color-muted)"{% endif %}>{{ plugin.name }}</h3>
-      
-      <div class="status-inline">
+      <div class="plugin-card__header-row">
+        <h3 class="plugin-card__title" {% if plugin.effective_status in ['missing', 'invalid'] %}style="color: var(--color-muted)"{% endif %}>{{ plugin.name }}</h3>
+        <span class="plugin-card__meta">v{{ plugin.version }}</span>
+      </div>
+
+      <div class="plugin-card__status">
         {% if plugin.effective_status == 'missing' %}
-          <span class="status-dot status-dot--danger"></span> v{{ plugin.version }} • Missing
+          <span style="color: var(--color-danger); font-weight:700;">Missing</span>
         {% elif plugin.effective_status == 'active' %}
-          <span class="status-dot status-dot--active"></span> v{{ plugin.version }} • Active
+          <span style="color: var(--color-text); font-weight:700;">Active</span>
         {% elif plugin.effective_status == 'paused' %}
-          <span class="status-dot status-dot--paused"></span> v{{ plugin.version }} • Paused
+          <span style="color: var(--color-warn); font-weight:700;">Paused</span>
         {% elif plugin.effective_status == 'invalid' %}
-          <span class="status-dot status-dot--danger"></span> v{{ plugin.version }} • Blocked
+          <span style="color: var(--color-danger); font-weight:700;">Blocked</span>
         {% else %}
-          <span class="status-dot status-dot--paused"></span> v{{ plugin.version }} • {{ plugin.effective_status | replace('_', ' ') }}
+          <span>{{ plugin.effective_status | replace('_', ' ') | upper }}</span>
         {% endif %}
       </div>
 
@@ -49,20 +52,20 @@
 
     <div class="plugin-card__actions">
       {% if not plugin.installed %}
-        <form method="post" action="/plugins/api/install" style="display:inline-flex;">
+        <form method="post" action="/plugins/api/install">
           <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
           <input type="hidden" name="plugin_id" value="{{ plugin.id }}">
-          <button type="submit" class="btn btn--primary btn--sm"
+          <button type="submit" class="btn btn--primary"
             {% if plugin.paused_by %}disabled title="Install the required system dependency first"{% endif %}>
             Install
           </button>
         </form>
         {% if plugin.data_purge %}
-        <form method="post" action="/plugins/api/purge-data" style="display:inline-flex;">
+        <form method="post" action="/plugins/api/purge-data">
           <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
           <input type="hidden" name="plugin_id" value="{{ plugin.id }}">
           <input type="hidden" name="confirmation" value="">
-          <button type="submit" class="btn btn--ghost btn--sm" style="color:var(--color-danger);"
+          <button type="submit" class="btn btn--ghost btn--danger"
             onclick="const value=prompt('Type PURGE {{ plugin.id }} to permanently delete preserved data.'); if(value===null)return false; this.form.elements.confirmation.value=value; return true;">
             Purge
           </button>
@@ -70,22 +73,22 @@
         {% endif %}
       {% else %}
         {% if plugin.route_prefix and plugin.effective_status == 'active' %}
-          <a href="{{ plugin.route_prefix }}" class="btn btn--secondary btn--sm">Manage</a>
+          <a href="{{ plugin.route_prefix }}" class="btn btn--secondary">Manage</a>
         {% endif %}
 
         {% if plugin.effective_status != 'invalid' %}
-        <form method="post" action="/plugins/api/toggle" style="display:inline-flex;">
+        <form method="post" action="/plugins/api/toggle">
           <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
           <input type="hidden" name="plugin_id" value="{{ plugin.id }}">
           <input type="hidden" name="enabled" value="{% if plugin.enabled %}false{% else %}true{% endif %}">
-          <button type="submit" class="btn btn--ghost btn--sm">{% if plugin.enabled %}Disable{% else %}Enable{% endif %}</button>
+          <button type="submit" class="btn btn--ghost">{% if plugin.enabled %}Disable{% else %}Enable{% endif %}</button>
         </form>
         {% endif %}
 
-        <form method="post" action="/plugins/api/uninstall" style="display:inline-flex;">
+        <form method="post" action="/plugins/api/uninstall">
           <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
           <input type="hidden" name="plugin_id" value="{{ plugin.id }}">
-          <button type="submit" class="btn btn--ghost btn--sm" style="color:var(--color-danger);" onclick="return confirm('Uninstall {{ plugin.name }}?')" title="Uninstall">
+          <button type="submit" class="btn btn--ghost btn--danger" onclick="return confirm('Uninstall {{ plugin.name }}?')" title="Uninstall">
             Uninstall
           </button>
         </form>
