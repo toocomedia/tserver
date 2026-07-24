@@ -1,15 +1,47 @@
 /* main.css — Design tokens, reset, and base styles
    All values come from DESIGN.md — do not add colors or sizes outside :root */
 
-@import "components/cards.css";
-@import "components/info.css";
-
 @font-face {
-  font-family: 'Inter';
+  font-family: 'Be Vietnam Pro';
   font-style: normal;
-  font-weight: 100 900;
+  font-weight: 400;
   font-display: swap;
-  src: url('/static/fonts/InterVariable.woff2') format('woff2');
+  src: url('/static/fonts/BeVietnamPro-Regular.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Be Vietnam Pro';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/static/fonts/BeVietnamPro-Medium.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Be Vietnam Pro';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/static/fonts/BeVietnamPro-SemiBold.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Be Vietnam Pro';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/static/fonts/BeVietnamPro-Bold.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Be Vietnam Pro';
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url('/static/fonts/BeVietnamPro-ExtraBold.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Zalando Sans Expanded';
+  font-style: normal;
+  font-weight: 200 900;
+  font-display: swap;
+  src: url('/static/fonts/ZalandoSansExpanded.woff2') format('woff2');
 }
 
 /* ============================================================
@@ -76,7 +108,7 @@
 
 html, body {
   height: 100%;
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: 'Be Vietnam Pro', system-ui, sans-serif;
   font-size: var(--font-body);
   color: var(--color-text);
   background: var(--color-bg);

@@ -45,11 +45,17 @@ class DependencyManager:
         dependency_id: str,
         *,
         force: bool = False,
+        cached: bool = False,
     ) -> dict[str, Any] | None:
         service = self.get_service(dependency_id)
         if service is None:
             return None
-        status = service.get_status(force=force)
+        cached_status = getattr(service, "get_cached_status", None)
+        status = (
+            cached_status()
+            if cached and cached_status is not None
+            else service.get_status(force=force)
+        )
         state = component_state_store.get("dependency", dependency_id)
         status.update(self._metadata[dependency_id])
         status["icon"] = status.get("icon") or "/static/images/dependency-placeholder.svg"
@@ -73,9 +79,14 @@ class DependencyManager:
         )
         return status
 
-    def get_all_statuses(self, *, force: bool = False) -> list[dict[str, Any]]:
+    def get_all_statuses(
+        self,
+        *,
+        force: bool = False,
+        cached: bool = False,
+    ) -> list[dict[str, Any]]:
         return [
-            self.get_status(dep_id, force=force)
+            self.get_status(dep_id, force=force, cached=cached)
             for dep_id in self._services
         ]
 

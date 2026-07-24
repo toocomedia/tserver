@@ -10,7 +10,7 @@ router = APIRouter(tags=["dependencies"])
 
 @router.get("/dependencies", response_class=HTMLResponse)
 async def dependencies_index(request: Request):
-    dependencies = dependency_manager.get_all_statuses()
+    dependencies = dependency_manager.get_all_statuses(cached=True)
     return templates.TemplateResponse(
         "pages/dependencies.html",
         {

@@ -110,6 +110,23 @@ class DockerDependencyService:
             self._cache_at = now
             return dict(self._cache)
 
+    def get_cached_status(self) -> dict[str, Any]:
+        """Return the last health result without running Docker commands."""
+        with self._cache_lock:
+            if self._cache is not None:
+                return dict(self._cache)
+        installed = self.is_installed()
+        return {
+            "id": self.dependency_id,
+            "installed": installed,
+            "running": False,
+            "healthy": False,
+            "state": "unknown" if installed else "not_installed",
+            "detected_version": None,
+            "error": None,
+            "checked_at": None,
+        }
+
     def invalidate(self) -> None:
         with self._cache_lock:
             self._cache = None
