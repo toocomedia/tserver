@@ -2,46 +2,11 @@
    All values come from DESIGN.md — do not add colors or sizes outside :root */
 
 @font-face {
-  font-family: 'Be Vietnam Pro';
+  font-family: 'Onest';
   font-style: normal;
-  font-weight: 400;
+  font-weight: 100 900;
   font-display: swap;
-  src: url('/static/fonts/BeVietnamPro-Regular.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Be Vietnam Pro';
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-  src: url('/static/fonts/BeVietnamPro-Medium.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Be Vietnam Pro';
-  font-style: normal;
-  font-weight: 600;
-  font-display: swap;
-  src: url('/static/fonts/BeVietnamPro-SemiBold.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Be Vietnam Pro';
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-  src: url('/static/fonts/BeVietnamPro-Bold.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Be Vietnam Pro';
-  font-style: normal;
-  font-weight: 800;
-  font-display: swap;
-  src: url('/static/fonts/BeVietnamPro-ExtraBold.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Zalando Sans Expanded';
-  font-style: normal;
-  font-weight: 200 900;
-  font-display: swap;
-  src: url('/static/fonts/ZalandoSansExpanded.woff2') format('woff2');
+  src: url('/static/fonts/Onest-Variable.woff2') format('woff2');
 }
 
 /* ============================================================
@@ -108,7 +73,7 @@
 
 html, body {
   height: 100%;
-  font-family: 'Be Vietnam Pro', system-ui, sans-serif;
+  font-family: 'Onest', system-ui, sans-serif;
   font-size: var(--font-body);
   color: var(--color-text);
   background: var(--color-bg);

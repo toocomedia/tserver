@@ -13,7 +13,6 @@
    SIDEBAR
    ============================================================ */
 .sidebar {
-  font-family: 'Zalando Sans Expanded', 'Be Vietnam Pro', system-ui, sans-serif;
   width: var(--sidebar-width);
   min-width: var(--sidebar-width);
   background: var(--color-sidebar);
