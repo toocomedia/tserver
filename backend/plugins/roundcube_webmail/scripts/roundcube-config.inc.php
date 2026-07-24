@@ -15,7 +15,7 @@ $config['remote_resources'] = false;
 // host-gateway without depending on external DNS or a self-signed certificate.
 $maddy_transport = getenv('SRV_MADDY_TRANSPORT') ?: (
     preg_match('#^(ssl|tls)://#i', getenv('ROUNDCUBEMAIL_DEFAULT_HOST') ?: '')
-        ? 'tls'
+        ? 'tls_unverified'
         : 'local'
 );
 $maddy_host = preg_replace(
@@ -23,9 +23,19 @@ $maddy_host = preg_replace(
     '',
     getenv('ROUNDCUBEMAIL_DEFAULT_HOST') ?: 'localhost'
 );
-$config['imap_host'] = $maddy_transport === 'tls'
+$maddy_uses_tls = $maddy_transport !== 'local';
+$config['imap_host'] = $maddy_uses_tls
     ? 'ssl://' . $maddy_host . ':993'
     : $maddy_host . ':143';
-$config['smtp_host'] = $maddy_transport === 'tls'
+$config['smtp_host'] = $maddy_uses_tls
     ? 'tls://' . $maddy_host . ':587'
     : $maddy_host . ':587';
+if ($maddy_transport === 'tls_unverified') {
+    $local_tls = [
+        'verify_peer' => false,
+        'verify_peer_name' => false,
+        'allow_self_signed' => true,
+    ];
+    $config['imap_conn_options'] = ['ssl' => $local_tls];
+    $config['smtp_conn_options'] = ['ssl' => $local_tls];
+}

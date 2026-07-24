@@ -52,6 +52,11 @@ for CANDIDATE in $TLS_CANDIDATES; do
         break
     fi
 done
+if [[ "$MAIL_TRANSPORT" == "local" ]] && timeout 5 openssl s_client \
+    -connect 127.0.0.1:993 \
+    -servername "$MAIL_HOST" </dev/null >/dev/null 2>&1; then
+    MAIL_TRANSPORT="tls_unverified"
+fi
 
 mkdir -p "$DATA_DIR"
 if [[ ! -s "$DATA_DIR/launch.secret" ]]; then
@@ -76,7 +81,7 @@ docker network inspect "$NETWORK" >/dev/null 2>&1 || \
     docker network create --label "srv-panel.plugin=${PLUGIN_ID}" "$NETWORK" >/dev/null
 
 docker rm -f "$CONTAINER" >/dev/null 2>&1 || true
-if [[ "$MAIL_TRANSPORT" == "tls" ]]; then
+if [[ "$MAIL_TRANSPORT" != "local" ]]; then
     IMAP_HOST="ssl://${MAIL_HOST}"
     IMAP_PORT="993"
     SMTP_HOST="tls://${MAIL_HOST}"

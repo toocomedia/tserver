@@ -417,15 +417,20 @@
         throw new Error(data.error || (imapError + smtpError).trim() || 'Connection test failed.');
       }
       result.className = 'text-small text-accent';
-      const secure = data.transport === 'tls';
+      const secure = data.transport === 'tls' || data.transport === 'tls_unverified';
+      const verified = data.transport === 'tls';
       setBadge(
         'mail-transport-status',
-        secure ? 'TLS · ' + data.imap.host : 'Local · no TLS',
+        verified ? 'TLS verified · ' + data.imap.host
+          : secure ? 'TLS local cert · ' + data.imap.host
+            : 'Local · no TLS',
         secure
       );
       result.textContent = 'Connected: IMAP ' + data.imap.host + ':' + data.imap.port
         + ' and SMTP ' + data.smtp.host + ':' + data.smtp.port + '. '
-        + (secure ? 'Maddy TLS is active.' : 'Using the local Docker gateway.');
+        + (verified ? 'Maddy TLS is verified.'
+          : secure ? 'Maddy TLS is encrypted; local certificate verification is skipped.'
+            : 'Using the local Docker gateway.');
     } catch (error) {
       result.className = 'text-small text-danger';
       result.textContent = error.message;

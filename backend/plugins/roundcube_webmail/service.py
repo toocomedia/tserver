@@ -181,17 +181,18 @@ function srv_probe($host, $port, $tls) {
 }
 $rawImap = getenv('ROUNDCUBEMAIL_DEFAULT_HOST') ?: '';
 $mode = getenv('SRV_MADDY_TRANSPORT') ?: (
-    preg_match('#^(ssl|tls)://#i', $rawImap) ? 'tls' : 'local'
+    preg_match('#^(ssl|tls)://#i', $rawImap) ? 'tls_unverified' : 'local'
 );
-$imapPort = $mode === 'tls' ? 993 : 143;
-$imap = srv_probe(srv_host('ROUNDCUBEMAIL_DEFAULT_HOST'), $imapPort, $mode === 'tls');
+$usesTls = $mode !== 'local';
+$imapPort = $usesTls ? 993 : 143;
+$imap = srv_probe(srv_host('ROUNDCUBEMAIL_DEFAULT_HOST'), $imapPort, $usesTls);
 $smtp = srv_probe(srv_host('ROUNDCUBEMAIL_SMTP_SERVER'), 587, false);
 echo json_encode([
     'ok' => $imap['ok'] && $smtp['ok'],
     'imap' => $imap,
     'smtp' => $smtp,
     'transport' => $mode,
-    'smtp_security' => $mode === 'tls' ? 'STARTTLS' : 'local',
+    'smtp_security' => $usesTls ? 'STARTTLS' : 'local',
 ]);
 """
         try:
