@@ -83,7 +83,7 @@
       </div>
 
       <!-- Inner Tab Navigation -->
-      <div class="tabs-nav mb-lg" role="tablist" aria-label="Roundcube settings" style="display:flex; gap:16px;">
+      <div class="tabs-nav mb-md" role="tablist" aria-label="Roundcube settings">
         <button class="btn btn--ghost roundcube-tab-button {% if selected_site %}active{% endif %}" type="button"
           role="tab" data-tab="overview" aria-selected="{{ 'true' if selected_site else 'false' }}">Overview</button>
         <button class="btn btn--ghost roundcube-tab-button {% if not selected_site %}active{% endif %}" type="button"
@@ -101,8 +101,8 @@
         <div>
           <p class="form-hint mb-md">Current webmail availability and status for <strong>{{ selected_domain }}</strong>.</p>
           
-          <div class="grid-responsive-cards mb-lg" style="gap:16px;">
-            <div class="card p-4" style="border-radius: 8px; background: var(--color-surface);">
+          <div class="grid-responsive-cards mb-lg">
+            <div class="card p-4">
               <span class="text-small text-muted" style="display:block; margin-bottom:8px;">Container Status</span>
               <div id="container-status">
                 <span class="badge {% if status.healthy %}badge--success{% else %}badge--inactive{% endif %}">
@@ -111,14 +111,14 @@
               </div>
             </div>
             
-            <div class="card p-4" style="border-radius: 8px; background: var(--color-surface);">
+            <div class="card p-4">
               <span class="text-small text-muted" style="display:block; margin-bottom:8px;">DNS Resolution</span>
               <div id="dns-status">
                 <span class="badge badge--inactive">{{ "Checking…" if selected_site else "Not configured" }}</span>
               </div>
             </div>
 
-            <div class="card p-4" style="border-radius: 8px; background: var(--color-surface);">
+            <div class="card p-4">
               <span class="text-small text-muted" style="display:block; margin-bottom:8px;">HTTPS Certificate</span>
               <div id="ssl-status">
                 <span class="badge {% if selected_site and selected_site.ssl_status == 'ready' %}badge--success{% else %}badge--inactive{% endif %}">
@@ -127,7 +127,7 @@
               </div>
             </div>
 
-            <div class="card p-4" style="border-radius: 8px; background: var(--color-surface);">
+            <div class="card p-4">
               <span class="text-small text-muted" style="display:block; margin-bottom:8px;">Mailboxes</span>
               <strong style="font-size:1.25rem;">{{ selected_domain_data.mailbox_count or 0 }}</strong>
             </div>
