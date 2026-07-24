@@ -9,11 +9,11 @@
   <div id="deps-switcher" class="view-switcher" role="radiogroup" aria-label="Layout view switcher">
     <button type="button" class="view-switcher__btn is-active" id="btn-deps-cards" onclick="setDepsLayout('cards')">
       <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
-      Cards View
+      Cards
     </button>
     <button type="button" class="view-switcher__btn" id="btn-deps-list" onclick="setDepsLayout('list')">
       <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
-      List View
+      List
     </button>
   </div>
 </div>
@@ -21,9 +21,8 @@
 
 {% block content %}
 <div class="section">
-  <div class="section__header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-    <h3>System Dependencies</h3>
-    <span class="text-small text-muted">Trusted services used by panel plugins</span>
+  <div class="section__header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
+    <h3 style="margin:0; font-size:18px; font-weight:800;">System Dependencies</h3>
   </div>
   
   <div class="section__body">
@@ -31,39 +30,11 @@
     <!-- 1. CARDS VIEW -->
     <div id="deps-cards-container" class="dependency-grid">
       {% for dependency in dependencies %}
-      <div class="dependency-card">
-        <div class="dependency-card__cover">
-          <img src="{{ dependency.icon }}" alt="{{ dependency.name }} dependency icon" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='block';">
-          <svg style="display: none; width:48px; height:48px; stroke:var(--color-text);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="1.5" d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
-        </div>
-        <div class="dependency-card__main">
-          <header class="dependency-card__header">
-            <div style="min-width:0;">
-              <h3 class="dependency-card__title">{{ dependency.name }}</h3>
-              <div class="dependency-card__version">driver v{{ dependency.version }}</div>
-            </div>
-            {% if dependency.healthy and dependency.desired_enabled %}
-              <span class="badge badge--healthy"><span class="badge-dot"></span> Healthy</span>
-            {% elif not dependency.installed %}
-              <span class="badge badge--missing"><span class="badge-dot"></span> Missing</span>
-            {% elif dependency.effective_state in ['stopped', 'disabled'] %}
-              <span class="badge badge--danger"><span class="badge-dot"></span> {{ dependency.effective_state }}</span>
-            {% else %}
-              <span class="badge badge--inactive"><span class="badge-dot"></span> {{ dependency.effective_state | replace('_', ' ') }}</span>
-            {% endif %}
-          </header>
-          <div class="dependency-card__body">{{ dependency.description }}</div>
-          <div class="dependency-card__footer">
-            <a href="/dependencies/{{ dependency.id }}" class="btn {% if not dependency.installed %}btn--primary{% else %}btn--secondary{% endif %} btn--sm">
-              {% if not dependency.installed %}Install Service →{% else %}View Details →{% endif %}
-            </a>
-          </div>
-        </div>
-      </div>
+        {% include "partials/dependency_card.html" %}
       {% else %}
-      <div class="empty-state" style="grid-column: 1 / -1; padding: 3rem; text-align: center; color: var(--color-muted); background: var(--color-surface); border: 1px solid var(--color-line);">
-        No system dependencies are registered.
-      </div>
+        <div class="empty-state" style="grid-column: 1 / -1; padding: 3rem; text-align: center; color: var(--color-muted); background: var(--color-surface); border: 1px solid var(--color-line);">
+          No system dependencies are registered.
+        </div>
       {% endfor %}
     </div>
 
@@ -81,8 +52,12 @@
       <div class="list-item-row">
         <div class="list-col-main">
           <div class="list-col-thumb">
-            <img src="{{ dependency.icon }}" alt="{{ dependency.name }} icon" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='block';">
-            <svg style="display: none; width:28px; height:28px; stroke:var(--color-text);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="1.5" d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
+            {% if dependency.icon %}
+              <img src="{{ dependency.icon }}" alt="{{ dependency.name }} icon" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='block';">
+              <svg style="display: none; width:24px; height:24px; stroke:var(--color-text);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="1.5" d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
+            {% else %}
+              <svg style="width:24px; height:24px; stroke:var(--color-text);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="1.5" d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
+            {% endif %}
           </div>
           <span class="list-col-name">{{ dependency.name }}</span>
         </div>

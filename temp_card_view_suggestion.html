@@ -12,7 +12,7 @@
   
   <style>
     /* ============================================================
-       DESIGN SYSTEM TOKENS (Minimal Dividers, Clean Card Layout)
+       DESIGN SYSTEM TOKENS (Strict Alignment, Zero Line Dividers)
        ============================================================ */
     :root {
       --color-bg:             #FFFFFF;
@@ -569,33 +569,31 @@
     }
 
     /* ============================================================
-       STRICT ALIGNED & UNCLUTTERED INFO SUB-PAGE (FULL 100% CONTAINER FIT)
+       ZERO-DIVIDER STRICT ALIGNED INFO PAGE
        ============================================================ */
-    .info-clean-page {
+    .info-subpage-wrap {
       width: 100%;
-      padding: 0;
-    }
-
-    .info-nav-header {
       display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 24px;
+      flex-direction: column;
+      gap: 32px;
     }
 
-    .info-hero-clean {
+    /* Top Back Navigation */
+    .info-back-nav {
+      margin-bottom: 8px;
+    }
+
+    /* Strict Hero Row (Icon 64px + Title/Badge + Actions on far right) */
+    .info-hero-row {
       display: flex;
       align-items: center;
       gap: 20px;
-      padding-bottom: 24px;
-      margin-bottom: 24px;
-      border-bottom: 1px solid var(--color-line);
       width: 100%;
     }
 
-    .info-hero-clean__icon {
-      width: 72px;
-      height: 72px;
+    .info-hero-row__icon {
+      width: 64px;
+      height: 64px;
       aspect-ratio: 1 / 1;
       flex-shrink: 0;
       background: var(--color-surface);
@@ -607,93 +605,89 @@
       overflow: hidden;
     }
 
-    .info-hero-clean__icon img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: block;
-    }
-
-    .info-hero-clean__icon svg {
-      width: 40px;
-      height: 40px;
+    .info-hero-row__icon svg {
+      width: 36px;
+      height: 36px;
       stroke: var(--color-text);
       fill: none;
-      stroke-width: 1.8;
+      stroke-width: 1.5;
     }
 
-    .info-hero-clean__details {
+    .info-hero-row__main {
       flex: 1;
+      min-width: 0;
     }
 
-    .info-hero-clean__title {
-      font-size: 22px;
+    .info-hero-row__title-line {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .info-hero-row__title {
+      font-size: 20px;
       font-weight: 800;
       color: var(--color-text);
       line-height: 1.2;
-      margin-bottom: 4px;
     }
 
-    .info-hero-clean__sub {
+    .info-hero-row__meta {
       font-size: 12.5px;
       color: var(--color-muted);
+      margin-top: 4px;
+    }
+
+    .info-hero-row__actions {
       display: flex;
       align-items: center;
-      gap: 8px;
-    }
-
-    .info-hero-clean__actions {
-      display: flex;
       gap: 10px;
+      flex-shrink: 0;
     }
 
-    .info-table-section {
-      margin-bottom: 32px;
-      width: 100%;
-    }
-
-    .info-table-title {
+    /* Section Group Title (No Line Dividers!) */
+    .info-group-title {
       font-size: 12px;
       font-weight: 800;
       text-transform: uppercase;
       letter-spacing: 0.08em;
       color: var(--color-muted);
-      margin-bottom: 12px;
+      margin-bottom: 14px;
     }
 
-    .strict-table {
+    /* Strict Specs Grid (Fixed 180px Label Width, Zero Line Dividers!) */
+    .clean-specs-grid {
       display: flex;
       flex-direction: column;
-      border-top: 1px solid var(--color-line);
-      width: 100%;
+      gap: 12px;
     }
 
-    .strict-table__row {
+    .clean-specs-item {
       display: grid;
-      grid-template-columns: 240px 1fr;
+      grid-template-columns: 180px 1fr;
       align-items: center;
-      padding: 12px 0;
-      border-bottom: 1px solid var(--color-line);
       font-size: 13px;
     }
 
-    .strict-table__key {
+    .clean-specs-item__key {
       font-weight: 700;
       color: var(--color-muted);
     }
 
-    .strict-table__val {
+    .clean-specs-item__val {
       font-weight: 600;
       color: var(--color-text);
     }
 
-    .single-cmd-box {
+    /* Terminal Command Container */
+    .clean-cmd-box {
       background: var(--color-surface);
       border-left: 3px solid var(--color-accent);
-      padding: 14px 18px;
+      padding: 16px 20px;
       font-size: 12.5px;
       font-weight: 600;
       color: var(--color-text);
+      line-height: 1.6;
+      white-space: pre-wrap;
       width: 100%;
     }
 
@@ -702,8 +696,9 @@
     }
 
     @media (max-width: 768px) {
-      .info-hero-clean { flex-direction: column; align-items: flex-start; }
-      .strict-table__row { grid-template-columns: 140px 1fr; }
+      .info-hero-row { flex-direction: column; align-items: flex-start; }
+      .info-hero-row__actions { margin-top: 12px; }
+      .clean-specs-item { grid-template-columns: 140px 1fr; }
       .view-cards-container { grid-template-columns: 1fr; }
       .item-card { flex-direction: column; }
       .item-card__img-box { width: 100%; height: 165px; border-right: none; border-bottom: 1px solid var(--color-line); }
@@ -718,9 +713,9 @@
   <!-- PROTOTYPE BANNER -->
   <div class="temp-notice">
     <div class="temp-notice__text">
-      <strong>UI Design Suggestion Prototype</strong> — Info Sub-Page Full Width Container Fit (100% Layout Match).
+      <strong>UI Design Suggestion Prototype</strong> — Zero Line Dividers & Strict 64px/180px Grid Alignment.
     </div>
-    <span class="temp-notice__badge">Full Width</span>
+    <span class="temp-notice__badge">Zero Dividers</span>
   </div>
 
   <!-- NAVIGATION TABS & TOOLBAR -->
@@ -1012,7 +1007,7 @@
         <div class="list-item-row">
           <div class="list-col-main">
             <div class="list-col-thumb">
-              <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
+              <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
             </div>
             <span class="list-col-name">Redis Cache Service</span>
           </div>
@@ -1030,70 +1025,78 @@
 
 
   <!-- ============================================================
-       VIEW 2: STRICT ALIGNED & UNCLUTTERED INFO SUB-PAGE (FULL CONTAINER FIT)
+       VIEW 2: ZERO-DIVIDER STRICT ALIGNED INFO SUB-PAGE
        ============================================================ -->
   <main id="view-subpage-container" class="is-hidden">
-    <div class="info-clean-page">
+    <div class="info-subpage-wrap">
       
-      <!-- TOP NAV -->
-      <div class="info-nav-header">
+      <!-- BACK NAVIGATION LINK -->
+      <div class="info-back-nav">
         <button class="btn btn--secondary btn--sm" onclick="switchMainView('catalog')">← Back to Catalog</button>
       </div>
 
-      <!-- HERO HEADER -->
-      <header class="info-hero-clean">
-        <div class="info-hero-clean__icon">
+      <!-- HERO HEADER ROW (Icon 64px + Title/Badge + Action Row on Right) -->
+      <header class="info-hero-row">
+        <div class="info-hero-row__icon">
           <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
         </div>
-        <div class="info-hero-clean__details">
-          <h1 class="info-hero-clean__title" id="subpage-target-name">Redis Cache Service</h1>
-          <div class="info-hero-clean__sub">
-            <span>System dependency</span>
-            <span>·</span>
-            <span>Driver v7.0</span>
-            <span>·</span>
+
+        <div class="info-hero-row__main">
+          <div class="info-hero-row__title-line">
+            <h1 class="info-hero-row__title" id="subpage-target-name">Redis Cache Service</h1>
             <span class="badge badge--healthy"><span class="badge-dot"></span> Healthy</span>
           </div>
+          <div class="info-hero-row__meta">System dependency · Driver v7.0 · Port 6379</div>
         </div>
-        <div class="info-hero-clean__actions">
+
+        <div class="info-hero-row__actions">
           <button class="btn btn--primary btn--sm" onclick="alert('Enable')">Enable Service</button>
           <button class="btn btn--secondary btn--sm" onclick="alert('Restart')">Restart</button>
+          <button class="btn btn--danger btn--sm" onclick="alert('Uninstall')">Disable</button>
         </div>
       </header>
 
-      <!-- CONCISE PARAMETERS TABLE -->
-      <section class="info-table-section">
-        <h2 class="info-table-title">System Parameters</h2>
+      <!-- DESCRIPTION BLOCK -->
+      <div>
+        <h2 class="info-group-title">Description</h2>
+        <p style="font-size: 13px; color: var(--color-text); line-height: 1.55;">
+          In-memory data structure store leveraged for high-speed background job queues, rate limiting, and session caching.
+        </p>
+      </div>
+
+      <!-- SYSTEM SPECIFICATIONS (FIXED 180px LABEL ALIGNMENT, ZERO LINE DIVIDERS!) -->
+      <div>
+        <h2 class="info-group-title">System Specifications</h2>
         
-        <div class="strict-table">
-          <div class="strict-table__row">
-            <div class="strict-table__key">Installed Status</div>
-            <div class="strict-table__val">Installed (Systemd Service)</div>
+        <div class="clean-specs-grid">
+          <div class="clean-specs-item">
+            <div class="clean-specs-item__key">Installed Status</div>
+            <div class="clean-specs-item__val">Installed (Systemd Service)</div>
           </div>
-          <div class="strict-table__row">
-            <div class="strict-table__key">Install Source</div>
-            <div class="strict-table__val">Official OS Repository (apt)</div>
+          <div class="clean-specs-item">
+            <div class="clean-specs-item__key">Install Source</div>
+            <div class="clean-specs-item__val">Official OS Repository (apt)</div>
           </div>
-          <div class="strict-table__row">
-            <div class="strict-table__key">Daemon Process</div>
-            <div class="strict-table__val">Running (PID 4192, Port 6379)</div>
+          <div class="clean-specs-item">
+            <div class="clean-specs-item__key">Daemon Process</div>
+            <div class="clean-specs-item__val">Running (PID 4192, Port 6379)</div>
           </div>
-          <div class="strict-table__row">
-            <div class="strict-table__key">Version Detected</div>
-            <div class="strict-table__val">v7.0.12 (x86_64 Linux)</div>
+          <div class="clean-specs-item">
+            <div class="clean-specs-item__key">Version Detected</div>
+            <div class="clean-specs-item__val">v7.0.12 (x86_64 Linux)</div>
           </div>
-          <div class="strict-table__row">
-            <div class="strict-table__key">Used by Plugins</div>
-            <div class="strict-table__val">Media Node NSFW Check</div>
+          <div class="clean-specs-item">
+            <div class="clean-specs-item__key">Used by Plugins</div>
+            <div class="clean-specs-item__val">Media Node NSFW Check</div>
           </div>
         </div>
-      </section>
+      </div>
 
-      <!-- MANUAL TERMINAL COMMAND -->
-      <section class="info-table-section">
-        <h2 class="info-table-title">Manual Terminal Command</h2>
-        <pre class="single-cmd-box">sudo apt-get update && sudo apt-get install -y redis-server</pre>
-      </section>
+      <!-- MANUAL TERMINAL COMMAND CONTAINER -->
+      <div>
+        <h2 class="info-group-title">Manual Terminal Installation Command</h2>
+        <pre class="clean-cmd-box">sudo apt-get update && sudo apt-get install -y redis-server</pre>
+      </div>
 
     </div>
   </main>

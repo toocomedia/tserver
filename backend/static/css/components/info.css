@@ -1,0 +1,138 @@
+/* ============================================================
+   INFO SUBPAGE COMPONENT SYSTEM
+   Zero-Divider Strict Aligned Detail Page Layout
+   ============================================================ */
+
+.info-subpage-wrap {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+/* Strict Hero Row (Icon 64px + Title/Badge + Action Buttons on Right) */
+.info-hero-row {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  width: 100%;
+}
+
+.info-hero-row__icon {
+  width: 64px;
+  height: 64px;
+  aspect-ratio: 1 / 1;
+  flex-shrink: 0;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  overflow: hidden;
+}
+
+.info-hero-row__icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.info-hero-row__icon svg {
+  width: 36px;
+  height: 36px;
+  stroke: var(--color-text);
+  fill: none;
+  stroke-width: 1.5;
+}
+
+.info-hero-row__main {
+  flex: 1;
+  min-width: 0;
+}
+
+.info-hero-row__title-line {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.info-hero-row__title {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--color-text);
+  line-height: 1.2;
+  margin: 0;
+}
+
+.info-hero-row__meta {
+  font-size: 12.5px;
+  color: var(--color-muted);
+  margin-top: 4px;
+}
+
+.info-hero-row__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.info-group-title {
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-muted);
+  margin-bottom: 12px;
+}
+
+/* Specifications Grid (Fixed 180px Label Offset, Zero Line Dividers) */
+.clean-specs-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.clean-specs-item {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  align-items: center;
+  font-size: 13px;
+}
+
+.clean-specs-item__key {
+  font-weight: 700;
+  color: var(--color-muted);
+}
+
+.clean-specs-item__val {
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.clean-cmd-box {
+  background: var(--color-surface);
+  border-left: 3px solid var(--color-accent);
+  padding: 16px 20px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--color-text);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .info-hero-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .info-hero-row__actions {
+    margin-top: 12px;
+  }
+  .clean-specs-item {
+    grid-template-columns: 140px 1fr;
+  }
+}

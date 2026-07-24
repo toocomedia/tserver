@@ -7,79 +7,33 @@
 <a class="btn btn--secondary btn--sm" href="/dependencies">← Back to Dependencies</a>
 {% endblock %}
 
-{% block head %}
-<style>
-  .info-clean-page { width: 100%; padding: 0; }
-  
-  .info-hero-clean {
-    display: flex; align-items: center; gap: 20px; padding-bottom: 24px; margin-bottom: 24px; border-bottom: 1px solid var(--color-line); width: 100%;
-  }
-  .info-hero-clean__icon {
-    width: 72px; height: 72px; aspect-ratio: 1 / 1; flex-shrink: 0; background: var(--color-surface); border: 1px solid var(--color-line); display: flex; align-items: center; justify-content: center; padding: 0; overflow: hidden;
-  }
-  .info-hero-clean__icon img { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .info-hero-clean__icon svg { width: 40px; height: 40px; stroke: var(--color-text); fill: none; stroke-width: 1.8; }
-  .info-hero-clean__details { flex: 1; }
-  .info-hero-clean__title { font-size: 22px; font-weight: 800; color: var(--color-text); line-height: 1.2; margin: 0 0 4px 0; }
-  .info-hero-clean__sub { font-size: 12.5px; color: var(--color-muted); display: flex; align-items: center; gap: 8px; }
-  .info-hero-clean__actions { display: flex; gap: 10px; }
-
-  .info-table-section { margin-bottom: 32px; width: 100%; }
-  .info-table-title { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-muted); margin-bottom: 12px; }
-  
-  .strict-table { display: flex; flex-direction: column; border-top: 1px solid var(--color-line); width: 100%; }
-  .strict-table__row { display: grid; grid-template-columns: 240px 1fr; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--color-line); font-size: 13px; }
-  .strict-table__key { font-weight: 700; color: var(--color-muted); }
-  .strict-table__val { font-weight: 600; color: var(--color-text); }
-
-  .single-cmd-box { background: var(--color-surface); border-left: 3px solid var(--color-accent); padding: 14px 18px; font-size: 12.5px; font-weight: 600; color: var(--color-text); white-space: pre-wrap; width: 100%; }
-
-  .dependency-install-state { margin-top:1rem; padding:1rem; border:1px solid var(--color-line); background:var(--color-surface); width:100%; }
-  .dependency-install-state__header { display:flex; align-items:center; gap:.65rem; font-size:.85rem; font-weight:700; }
-  .dependency-install-state__spinner { width:14px; height:14px; border:2px solid var(--color-line); border-top-color:var(--color-accent); animation:dependency-spin .8s linear infinite; }
-  .dependency-install-state__track { height:3px; margin:.8rem 0; overflow:hidden; background:var(--color-line); }
-  .dependency-install-state__bar { display:block; width:36%; height:100%; background:var(--color-accent); animation:dependency-progress 1.5s ease-in-out infinite; }
-  .dependency-install-state.is-success { border-color:var(--color-accent); }
-  .dependency-install-state.is-success .dependency-install-state__spinner { animation:none; border-color:var(--color-accent); background:var(--color-accent); }
-  .dependency-install-state.is-success .dependency-install-state__bar { width:100%; animation:none; }
-  .dependency-install-state.is-error { border-color:var(--color-danger); }
-  .dependency-install-state.is-error .dependency-install-state__spinner { animation:none; border-color:var(--color-danger); }
-  .dependency-install-state.is-error .dependency-install-state__bar { width:100%; animation:none; background:var(--color-danger); }
-  @keyframes dependency-spin { to { transform:rotate(360deg); } }
-  @keyframes dependency-progress { from { transform:translateX(-120%); } to { transform:translateX(320%); } }
-  @media (max-width:768px) {
-    .info-hero-clean { flex-direction: column; align-items: flex-start; }
-    .strict-table__row { grid-template-columns: 140px 1fr; }
-  }
-</style>
-{% endblock %}
-
 {% block content %}
-<article class="info-clean-page" data-dependency-id="{{ dependency.id }}">
+<article class="info-subpage-wrap" data-dependency-id="{{ dependency.id }}">
   
-  <!-- HERO HEADER -->
-  <header class="info-hero-clean">
-    <div class="info-hero-clean__icon">
-      <img src="{{ dependency.icon }}" alt="{{ dependency.name }} icon" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='block';">
-      <svg style="display: none;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="1.8" d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
+  <!-- HERO HEADER ROW -->
+  <header class="info-hero-row">
+    <div class="info-hero-row__icon">
+      {% if dependency.icon %}
+        <img src="{{ dependency.icon }}" alt="{{ dependency.name }} icon" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='block';">
+        <svg style="display: none;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="1.5" d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
+      {% else %}
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="1.5" d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
+      {% endif %}
     </div>
-    
-    <div class="info-hero-clean__details">
-      <h1 class="info-hero-clean__title">{{ dependency.name }}</h1>
-      <div class="info-hero-clean__sub">
-        <span>System dependency</span>
-        <span>·</span>
-        <span>Driver v{{ dependency.version }}</span>
-        <span>·</span>
+
+    <div class="info-hero-row__main">
+      <div class="info-hero-row__title-line">
+        <h1 class="info-hero-row__title">{{ dependency.name }}</h1>
         {% if dependency.healthy and dependency.desired_enabled %}
           <span class="badge badge--healthy" data-role="dependency-status"><span class="badge-dot"></span> Healthy</span>
         {% else %}
           <span class="badge badge--danger" data-role="dependency-status"><span class="badge-dot"></span> {{ dependency.effective_state }}</span>
         {% endif %}
       </div>
+      <div class="info-hero-row__meta">System dependency · Driver v{{ dependency.version }}</div>
     </div>
 
-    <div class="info-hero-clean__actions" data-role="dependency-footer">
+    <div class="info-hero-row__actions" data-role="dependency-footer">
       {% if dependency.installed %}
       <form method="post" action="/api/dependencies/{{ dependency.id }}/toggle">
         <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
@@ -101,30 +55,40 @@
     </div>
   </header>
 
-  <!-- PARAMETERS TABLE -->
-  <section class="info-table-section">
-    <h2 class="info-table-title">System Parameters</h2>
+  <!-- DESCRIPTION -->
+  {% if dependency.description %}
+  <div>
+    <h2 class="info-group-title">Description</h2>
+    <p style="font-size: 13px; color: var(--color-text); line-height: 1.55;">
+      {{ dependency.description }}
+    </p>
+  </div>
+  {% endif %}
+
+  <!-- SYSTEM SPECIFICATIONS -->
+  <div>
+    <h2 class="info-group-title">System Specifications</h2>
     
-    <div class="strict-table">
-      <div class="strict-table__row">
-        <div class="strict-table__key">Installed Status</div>
-        <div class="strict-table__val" data-role="installed-value">{{ 'Yes' if dependency.installed else 'No' }}</div>
+    <div class="clean-specs-grid">
+      <div class="clean-specs-item">
+        <div class="clean-specs-item__key">Installed Status</div>
+        <div class="clean-specs-item__val" data-role="installed-value">{{ 'Yes' if dependency.installed else 'No' }}</div>
       </div>
-      <div class="strict-table__row">
-        <div class="strict-table__key">Install Source</div>
-        <div class="strict-table__val" data-role="install-source">{{ dependency.install_origin | replace('_', ' ') }}</div>
+      <div class="clean-specs-item">
+        <div class="clean-specs-item__key">Install Source</div>
+        <div class="clean-specs-item__val" data-role="install-source">{{ dependency.install_origin | replace('_', ' ') }}</div>
       </div>
-      <div class="strict-table__row">
-        <div class="strict-table__key">Daemon State</div>
-        <div class="strict-table__val" data-role="daemon-value">{{ 'Running' if dependency.running else 'Stopped' }}</div>
+      <div class="clean-specs-item">
+        <div class="clean-specs-item__key">Daemon State</div>
+        <div class="clean-specs-item__val" data-role="daemon-value">{{ 'Running' if dependency.running else 'Stopped' }}</div>
       </div>
-      <div class="strict-table__row">
-        <div class="strict-table__key">Version Detected</div>
-        <div class="strict-table__val" data-role="version-value">{{ dependency.detected_version if dependency.detected_version else 'Not detected' }}</div>
+      <div class="clean-specs-item">
+        <div class="clean-specs-item__key">Version Detected</div>
+        <div class="clean-specs-item__val" data-role="version-value">{{ dependency.detected_version if dependency.detected_version else 'Not detected' }}</div>
       </div>
-      <div class="strict-table__row">
-        <div class="strict-table__key">Used by Plugins</div>
-        <div class="strict-table__val">
+      <div class="clean-specs-item">
+        <div class="clean-specs-item__key">Used by Plugins</div>
+        <div class="clean-specs-item__val">
           {% if dependency.dependents %}
             {{ dependency.dependents | map(attribute='name') | join(', ') }}
           {% else %}
@@ -133,7 +97,7 @@
         </div>
       </div>
     </div>
-  </section>
+  </div>
 
   {% if dependency.last_error %}
   <p class="text-danger" style="margin-bottom: 1rem;" data-role="dependency-error">{{ dependency.last_error }}</p>
@@ -141,12 +105,12 @@
   <p class="text-danger hidden" style="margin-bottom: 1rem;" data-role="dependency-error"></p>
   {% endif %}
 
-  <!-- INSTALLATION / COMMAND GUIDE -->
+  <!-- MANUAL TERMINAL INSTALLATION COMMAND / UNINSTALL GUIDE -->
   {% if not dependency.installed %}
-  <section class="info-table-section" data-role="installation-guide">
-    <h2 class="info-table-title">Manual Terminal Installation Command</h2>
-    <pre class="single-cmd-box">{{ dependency.install_guide.command }}</pre>
-  </section>
+  <div data-role="installation-guide">
+    <h2 class="info-group-title">Manual Terminal Installation Command</h2>
+    <pre class="clean-cmd-box">{{ dependency.install_guide.command }}</pre>
+  </div>
   <div class="dependency-install-state hidden" data-role="install-state" aria-live="polite">
     <div class="dependency-install-state__header">
       <span class="dependency-install-state__spinner" aria-hidden="true"></span>
@@ -157,10 +121,10 @@
     <span class="text-small text-muted" data-role="install-elapsed">Elapsed: 0s</span>
   </div>
   {% else %}
-  <section class="info-table-section">
-    <h2 class="info-table-title">Uninstall Guide</h2>
-    <pre class="single-cmd-box">{{ dependency.uninstall_guide.command }}</pre>
-  </section>
+  <div>
+    <h2 class="info-group-title">Uninstall Guide</h2>
+    <pre class="clean-cmd-box">{{ dependency.uninstall_guide.command }}</pre>
+  </div>
   {% endif %}
 
 </article>
