@@ -53,6 +53,20 @@ class RoundcubeLaunchTokenTests(unittest.TestCase):
 
 
 class RoundcubeLifecycleTests(unittest.TestCase):
+    def test_old_container_config_is_detected_for_automatic_refresh(self):
+        service = RoundcubeWebmailService()
+        service.is_installed = Mock(return_value=True)
+        service._run = Mock(
+            return_value=subprocess.CompletedProcess([], 0, "\n", "")
+        )
+
+        self.assertTrue(service.needs_reconcile())
+
+        service._run.return_value = subprocess.CompletedProcess(
+            [], 0, f"{service.config_version}\n", ""
+        )
+        self.assertFalse(service.needs_reconcile())
+
     def test_disable_stops_and_verifies_container(self):
         service = RoundcubeWebmailService()
         service.is_installed = Mock(return_value=True)
@@ -138,6 +152,10 @@ class RoundcubePackagingTests(unittest.TestCase):
         self.assertIn("RepoDigests", install)
         self.assertIn('"$IMAGE_REF"', install)
         self.assertIn("--label \"srv-panel.plugin=${PLUGIN_ID}\"", install)
+        self.assertIn(
+            '--label "srv-panel.config-version=${CONFIG_VERSION}"',
+            install,
+        )
         self.assertIn("docker network create --label", install)
         self.assertIn('--network "$NETWORK"', install)
         self.assertIn("--memory 256m", install)

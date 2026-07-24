@@ -418,6 +418,34 @@ class PluginManager:
         finally:
             lock.release()
 
+    async def reconcile_plugins(self) -> None:
+        """Refresh active plugin runtimes whose bundled configuration changed."""
+        for plugin_id in list(self.plugins):
+            plugin = self.get_plugin(plugin_id)
+            if not plugin or plugin.get("effective_status") != "active":
+                continue
+            try:
+                service = self._find_service(Path(plugin["dir_path"]), plugin_id)
+                check = getattr(service, "needs_reconcile", None)
+                if check is None or not await asyncio.to_thread(check):
+                    continue
+                logger.info("Refreshing outdated plugin runtime: %s", plugin_id)
+                success, message = await self.run_plugin_script(plugin_id, "install")
+                if success:
+                    logger.info("Plugin runtime refreshed: %s", plugin_id)
+                else:
+                    logger.warning(
+                        "Could not refresh plugin runtime %s: %s",
+                        plugin_id,
+                        message,
+                    )
+            except Exception as exc:
+                logger.warning(
+                    "Plugin runtime reconciliation failed for %s: %s",
+                    plugin_id,
+                    exc,
+                )
+
     async def purge_plugin_data(
         self, plugin_id: str, confirmation: str
     ) -> tuple[bool, str]:

@@ -2,6 +2,7 @@
 set -euo pipefail
 
 PLUGIN_ID="roundcube_webmail"
+CONFIG_VERSION="2"
 CONTAINER="srv-panel-roundcube-webmail"
 VOLUME="srv-panel-roundcube-data"
 NETWORK="srv-panel-roundcube-network"
@@ -117,6 +118,7 @@ fi
 docker run -d \
     --name "$CONTAINER" \
     --label "srv-panel.plugin=${PLUGIN_ID}" \
+    --label "srv-panel.config-version=${CONFIG_VERSION}" \
     --restart unless-stopped \
     --memory 256m \
     --memory-swap 256m \

@@ -16,6 +16,7 @@ from typing import Any
 class RoundcubeWebmailService:
     plugin_id = "roundcube_webmail"
     container_name = "srv-panel-roundcube-webmail"
+    config_version = "2"
     host_port = 8088
     launch_ttl_seconds = 60
     command_timeout = 15
@@ -70,6 +71,29 @@ class RoundcubeWebmailService:
             return result.returncode == 0
         except (OSError, subprocess.TimeoutExpired):
             return False
+
+    def needs_reconcile(self) -> bool:
+        """Return true when an installed container was built by older plugin code."""
+        if os.name == "nt" or not self.is_installed():
+            return False
+        try:
+            result = self._run(
+                [
+                    "docker",
+                    "container",
+                    "inspect",
+                    "--format",
+                    '{{ index .Config.Labels "srv-panel.config-version" }}',
+                    self.container_name,
+                ],
+                timeout=5,
+            )
+        except (OSError, subprocess.TimeoutExpired):
+            return False
+        return (
+            result.returncode == 0
+            and result.stdout.strip() != self.config_version
+        )
 
     def get_status(self) -> dict[str, Any]:
         status = {

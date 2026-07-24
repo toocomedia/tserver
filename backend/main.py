@@ -72,11 +72,13 @@ async def lifespan(app: FastAPI):
     purge_task = asyncio.create_task(_auto_purge_loop())
     update_task = asyncio.create_task(update_service.run_auto_update_loop())
     ssl_renew_task = asyncio.create_task(ssl_auto_renew.run_scheduler())
+    plugin_reconcile_task = asyncio.create_task(plugin_manager.reconcile_plugins())
     logger.info("Panel ready.")
     yield
     purge_task.cancel()
     update_task.cancel()
     ssl_renew_task.cancel()
+    plugin_reconcile_task.cancel()
     logger.info("Panel shutting down.")
 
 
