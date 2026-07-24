@@ -15,12 +15,12 @@
   </div>
 
   <!-- Mailboxes for this domain -->
-  <div id="inner-tab-mailboxes" class="inner-tab-content mb-xl">
-    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1.5rem;">
-      <h3 style="margin:0;">Mailboxes</h3>
-      <button class="btn btn--primary btn--sm" onclick="openAddAccountModal()">+ Add Mailbox</button>
-    </div>
-    <div>
+  <div id="inner-tab-mailboxes" class="inner-tab-content section mb-xl">
+    <div class="section__body">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1.5rem;">
+        <p class="form-hint" style="margin:0;">Manage email accounts for this domain.</p>
+        <button class="btn btn--primary btn--sm" onclick="openAddAccountModal()">+ Add Mailbox</button>
+      </div>
       <div class="table-responsive" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
         <table class="table" id="accounts-table" style="display:none;">
           <thead>
@@ -40,9 +40,8 @@
   </div>
 
   <!-- DNS -->
-  <div id="inner-tab-dns" class="inner-tab-content mb-xl" style="display:none;">
-    <h3 style="margin-top:0; margin-bottom:1.5rem;">DNS Records</h3>
-    <div>
+  <div id="inner-tab-dns" class="inner-tab-content section mb-xl" style="display:none;">
+    <div class="section__body">
       <p class="form-hint mb-md">
         If this domain is managed externally (e.g., Cloudflare, Namecheap), copy and paste these records exactly into your DNS provider. 
         If the domain is managed by this panel, these records are handled automatically by PowerDNS.
@@ -106,9 +105,8 @@
   </div>
 
   <!-- SSL -->
-  <div id="inner-tab-ssl" class="inner-tab-content mb-xl" style="display:none;">
-    <h3 style="margin-top:0; margin-bottom:1.5rem;">SSL Certificate</h3>
-    <div>
+  <div id="inner-tab-ssl" class="inner-tab-content section mb-xl" style="display:none;">
+    <div class="section__body">
       <p class="form-hint mb-md">Request a Let's Encrypt TLS cert for <code id="mail-subdomain-preview"></code>. DNS must be working first.</p>
       <form id="ssl-setup-form" style="display:flex; gap:8px; align-items:center;">
         <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
@@ -122,9 +120,8 @@
   </div>
 
   <!-- Connection settings -->
-  <div id="inner-tab-settings" class="inner-tab-content mb-xl" style="display:none;">
-    <h3 style="margin-top:0; margin-bottom:1.5rem;">Client Settings</h3>
-    <div>
+  <div id="inner-tab-settings" class="inner-tab-content section mb-xl" style="display:none;">
+    <div class="section__body">
       <div class="info-row">
         <span class="info-row__label">IMAP (incoming)</span>
         <span class="info-row__value"><code id="imap-host-preview"></code> &bull; Port <code>993</code> (SSL) / <code>143</code> (STARTTLS)</span>

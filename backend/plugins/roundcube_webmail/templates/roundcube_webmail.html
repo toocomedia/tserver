@@ -96,9 +96,8 @@
       </div>
 
       <!-- Overview Tab -->
-      <div class="roundcube-tab-panel mb-xl {% if selected_site %}active{% endif %}" data-panel="overview" role="tabpanel">
-        <h3 style="margin-top:0; margin-bottom:1.5rem;">Overview</h3>
-        <div style="margin-top: 1.5rem;">
+      <div class="roundcube-tab-panel section mb-xl {% if selected_site %}active{% endif %}" data-panel="overview" role="tabpanel">
+        <div class="section__body">
           <p class="form-hint mb-lg">Current webmail availability and status for <strong>{{ selected_domain }}</strong>.</p>
           
           <div class="grid-responsive-cards mb-xl" style="gap: 1.5rem;">
@@ -138,9 +137,8 @@
       </div>
 
       <!-- Domain & DNS Tab -->
-      <div class="roundcube-tab-panel mb-xl {% if not selected_site %}active{% endif %}" data-panel="domain" role="tabpanel">
-        <h3 style="margin-top:0; margin-bottom:1.5rem;">Domain &amp; DNS Configuration</h3>
-        <div style="margin-top: 1.5rem;">
+      <div class="roundcube-tab-panel section mb-xl {% if not selected_site %}active{% endif %}" data-panel="domain" role="tabpanel">
+        <div class="section__body">
           <p class="form-hint mb-lg">Choose the public hostname used to access Roundcube Webmail for this domain.</p>
 
           <form id="webmail-site-form"
@@ -198,9 +196,8 @@
       </div>
 
       <!-- HTTPS Tab -->
-      <div class="roundcube-tab-panel mb-xl" data-panel="https" role="tabpanel">
-        <h3 style="margin-top:0; margin-bottom:1.5rem;">HTTPS SSL Certificate</h3>
-        <div style="margin-top: 1.5rem;">
+      <div class="roundcube-tab-panel section mb-xl" data-panel="https" role="tabpanel">
+        <div class="section__body">
           <p class="form-hint mb-lg">Issue a Let's Encrypt TLS certificate after the webmail hostname resolves to this server IP.</p>
           {% if selected_site %}
             <div class="mb-lg">
@@ -219,9 +216,8 @@
       </div>
 
       <!-- Mail Server Tab -->
-      <div class="roundcube-tab-panel mb-xl" data-panel="mail" role="tabpanel">
-        <h3 style="margin-top:0; margin-bottom:1.5rem;">Mail Server Connection</h3>
-        <div style="margin-top: 1.5rem;">
+      <div class="roundcube-tab-panel section mb-xl" data-panel="mail" role="tabpanel">
+        <div class="section__body">
           <p class="form-hint mb-lg">Test Roundcube's IMAP and SMTP connectivity to the Maddy mail server.</p>
           {% if selected_site %}
             <div class="roundcube-form-actions mb-md">
@@ -236,9 +232,8 @@
 
       <!-- Remove Tab -->
       {% if selected_site %}
-        <div class="roundcube-tab-panel mb-xl" data-panel="remove" role="tabpanel">
-          <h3 style="color:var(--color-danger, #e53e3e); margin-top:0; margin-bottom:1.5rem;">Remove Webmail Access</h3>
-        <div style="margin-top: 1.5rem;">
+        <div class="roundcube-tab-panel section mb-xl" data-panel="remove" role="tabpanel" style="border-color: var(--color-danger, #e53e3e);">
+          <div class="section__body">
           <p class="text-muted mb-lg" style="line-height: 1.6;">
               This action removes the webmail URL <strong>https://{{ selected_site.public_host }}/</strong>, its proxy configuration, panel-managed DNS A record, and SSL certificate.
               Maddy mailboxes and emails are <strong>preserved</strong>.
