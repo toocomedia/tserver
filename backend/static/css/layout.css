@@ -364,26 +364,46 @@
 /* Inner Tab Navigation */
 .tabs-nav {
   display: flex;
-  gap: 12px;
-  padding-bottom: 8px;
+  gap: 16px;
+  padding-bottom: 0;
+  margin-bottom: var(--space-md);
   overflow-x: auto;
   white-space: nowrap;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
+  border-bottom: 1px solid var(--color-line);
 }
 .tabs-nav::-webkit-scrollbar {
   display: none;
 }
 .tabs-nav .btn--ghost {
   flex-shrink: 0;
-  border-bottom: 2px solid transparent;
+  border: none;
   border-radius: 0;
-  transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+  padding: 8px 12px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--color-muted);
+  background: transparent;
+  position: relative;
+  transition: color 0.15s ease;
+}
+.tabs-nav .btn--ghost:hover {
+  color: var(--color-text);
+  background: transparent;
 }
 .tabs-nav .btn--ghost.active {
   color: var(--color-text);
-  border-bottom-color: var(--color-accent);
-  background: transparent;
+  font-weight: 700;
+}
+.tabs-nav .btn--ghost.active::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background-color: var(--color-text);
 }
 
 .grid-responsive-cards {
