@@ -26,6 +26,32 @@ if [[ -z "$PRIMARY_DOMAIN" ]]; then
     exit 1
 fi
 MAIL_HOST="mail.${PRIMARY_DOMAIN}"
+MAIL_TRANSPORT="local"
+
+# Maddy has one active TLS certificate. Prefer its valid mail hostname when the
+# live IMAPS listener presents a publicly trusted, hostname-matching cert.
+MADDY_CERT="/etc/maddy/certs/fullchain.pem"
+TLS_CANDIDATES="$MAIL_HOST"
+if [[ -f "$MADDY_CERT" ]]; then
+    CERT_HOSTS="$(openssl x509 -in "$MADDY_CERT" -noout -ext subjectAltName 2>/dev/null \
+        | tr ',' '\n' \
+        | sed -nE 's/.*DNS:([^[:space:]]+).*/\1/p' || true)"
+    TLS_CANDIDATES="${CERT_HOSTS} ${TLS_CANDIDATES}"
+fi
+for CANDIDATE in $TLS_CANDIDATES; do
+    [[ "$CANDIDATE" =~ ^[A-Za-z0-9.-]+$ ]] || continue
+    [[ "$CANDIDATE" == mail.* ]] || continue
+    if timeout 5 openssl s_client \
+        -connect 127.0.0.1:993 \
+        -servername "$CANDIDATE" \
+        -verify_hostname "$CANDIDATE" \
+        -verify_return_error \
+        -CApath /etc/ssl/certs </dev/null >/dev/null 2>&1; then
+        MAIL_HOST="$CANDIDATE"
+        MAIL_TRANSPORT="tls"
+        break
+    fi
+done
 
 mkdir -p "$DATA_DIR"
 if [[ ! -s "$DATA_DIR/launch.secret" ]]; then
@@ -50,6 +76,15 @@ docker network inspect "$NETWORK" >/dev/null 2>&1 || \
     docker network create --label "srv-panel.plugin=${PLUGIN_ID}" "$NETWORK" >/dev/null
 
 docker rm -f "$CONTAINER" >/dev/null 2>&1 || true
+if [[ "$MAIL_TRANSPORT" == "tls" ]]; then
+    IMAP_HOST="ssl://${MAIL_HOST}"
+    IMAP_PORT="993"
+    SMTP_HOST="tls://${MAIL_HOST}"
+else
+    IMAP_HOST="${MAIL_HOST}"
+    IMAP_PORT="143"
+    SMTP_HOST="${MAIL_HOST}"
+fi
 docker run -d \
     --name "$CONTAINER" \
     --label "srv-panel.plugin=${PLUGIN_ID}" \
@@ -62,10 +97,11 @@ docker run -d \
     --add-host "${MAIL_HOST}:host-gateway" \
     -p "127.0.0.1:${HOST_PORT}:80" \
     -e "ROUNDCUBEMAIL_DB_TYPE=sqlite" \
-    -e "ROUNDCUBEMAIL_DEFAULT_HOST=ssl://${MAIL_HOST}" \
-    -e "ROUNDCUBEMAIL_DEFAULT_PORT=993" \
-    -e "ROUNDCUBEMAIL_SMTP_SERVER=tls://${MAIL_HOST}" \
+    -e "ROUNDCUBEMAIL_DEFAULT_HOST=${IMAP_HOST}" \
+    -e "ROUNDCUBEMAIL_DEFAULT_PORT=${IMAP_PORT}" \
+    -e "ROUNDCUBEMAIL_SMTP_SERVER=${SMTP_HOST}" \
     -e "ROUNDCUBEMAIL_SMTP_PORT=587" \
+    -e "SRV_MADDY_TRANSPORT=${MAIL_TRANSPORT}" \
     -e "ROUNDCUBEMAIL_PLUGINS=archive,zipdownload,srvpanel_launch" \
     -v "${VOLUME}:/var/roundcube/db" \
     -v "${SCRIPT_DIR}/roundcube-config.inc.php:/var/roundcube/config/srv-panel.inc.php:ro" \

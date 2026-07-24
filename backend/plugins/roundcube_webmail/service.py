@@ -145,6 +145,80 @@ class RoundcubeWebmailService:
             time.sleep(1)
         raise RuntimeError(last.get("error") or "Roundcube failed its health check.")
 
+    def diagnose_mail_connection(self) -> dict[str, Any]:
+        """Probe Maddy from inside the exact Roundcube network namespace."""
+        status = self.get_status()
+        if not status["healthy"]:
+            return {
+                "ok": False,
+                "error": "Roundcube container is not healthy.",
+                "imap": None,
+                "smtp": None,
+            }
+        php = r"""
+function srv_host($name) {
+    $value = getenv($name) ?: '';
+    return preg_replace('#^[a-z]+://#i', '', $value);
+}
+function srv_probe($host, $port, $tls) {
+    $context = stream_context_create(['ssl' => [
+        'verify_peer' => false,
+        'verify_peer_name' => false,
+        'allow_self_signed' => true,
+    ]]);
+    $target = ($tls ? 'ssl://' : 'tcp://') . $host . ':' . $port;
+    $socket = @stream_socket_client(
+        $target, $errno, $error, 5, STREAM_CLIENT_CONNECT, $context
+    );
+    if (!$socket) {
+        return ['ok' => false, 'host' => $host, 'port' => $port,
+            'error' => trim($errno . ' ' . $error)];
+    }
+    stream_set_timeout($socket, 2);
+    $banner = trim((string) fgets($socket, 512));
+    fclose($socket);
+    return ['ok' => true, 'host' => $host, 'port' => $port, 'banner' => $banner];
+}
+$rawImap = getenv('ROUNDCUBEMAIL_DEFAULT_HOST') ?: '';
+$mode = getenv('SRV_MADDY_TRANSPORT') ?: (
+    preg_match('#^(ssl|tls)://#i', $rawImap) ? 'tls' : 'local'
+);
+$imapPort = $mode === 'tls' ? 993 : 143;
+$imap = srv_probe(srv_host('ROUNDCUBEMAIL_DEFAULT_HOST'), $imapPort, $mode === 'tls');
+$smtp = srv_probe(srv_host('ROUNDCUBEMAIL_SMTP_SERVER'), 587, false);
+echo json_encode([
+    'ok' => $imap['ok'] && $smtp['ok'],
+    'imap' => $imap,
+    'smtp' => $smtp,
+    'transport' => $mode,
+    'smtp_security' => $mode === 'tls' ? 'STARTTLS' : 'local',
+]);
+"""
+        try:
+            result = self._run(
+                ["docker", "exec", self.container_name, "php", "-r", php],
+                timeout=15,
+            )
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            return {"ok": False, "error": str(exc), "imap": None, "smtp": None}
+        if result.returncode != 0:
+            return {
+                "ok": False,
+                "error": result.stderr.strip() or "Mail connection test failed.",
+                "imap": None,
+                "smtp": None,
+            }
+        try:
+            data = json.loads(result.stdout)
+        except json.JSONDecodeError:
+            return {
+                "ok": False,
+                "error": "Roundcube returned an invalid diagnostic response.",
+                "imap": None,
+                "smtp": None,
+            }
+        return data if isinstance(data, dict) else {"ok": False}
+
     def read_state(self) -> dict[str, Any]:
         try:
             data = json.loads(self.state_path.read_text(encoding="utf-8"))

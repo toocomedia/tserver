@@ -24,6 +24,7 @@ from templating import templates
 router = APIRouter(prefix="/plugins/roundcube_webmail", tags=["roundcube_webmail"])
 logger = logging.getLogger(__name__)
 _ssl_tasks: dict[str, asyncio.Task] = {}
+_rebuild_task: asyncio.Task | None = None
 
 
 async def _dns_status(state: dict[str, Any]) -> dict[str, Any]:
@@ -71,6 +72,8 @@ async def _status_payload() -> dict[str, Any]:
         "dns_error": state.get("dns_error"),
         "dns": dns,
         "container": container,
+        "rebuild_status": state.get("rebuild_status", "idle"),
+        "rebuild_error": state.get("rebuild_error"),
     }
 
 
@@ -134,6 +137,30 @@ async def _issue_ssl_task(host: str) -> None:
         _ssl_tasks.pop(host, None)
 
 
+async def _rebuild_roundcube_task() -> None:
+    global _rebuild_task
+    try:
+        from plugins.manager import plugin_manager
+
+        success, message = await plugin_manager.run_plugin_script(
+            "roundcube_webmail", "install"
+        )
+        if not success:
+            raise RuntimeError(message)
+        roundcube_webmail_service.update_state(
+            rebuild_status="ready",
+            rebuild_error=None,
+        )
+    except Exception as exc:
+        logger.exception("Roundcube transport rebuild failed")
+        roundcube_webmail_service.update_state(
+            rebuild_status="error",
+            rebuild_error=str(exc),
+        )
+    finally:
+        _rebuild_task = None
+
+
 @router.get("/", response_class=HTMLResponse)
 async def index(request: Request, db: AsyncSession = Depends(get_db)):
     mail_domains = await maddy_service.list_mail_domains(db)
@@ -181,6 +208,36 @@ async def index(request: Request, db: AsyncSession = Depends(get_db)):
 @router.get("/api/status")
 async def webmail_status():
     return JSONResponse(await _status_payload())
+
+
+@router.get("/api/mail-diagnostics")
+async def mail_diagnostics():
+    result = await asyncio.to_thread(
+        roundcube_webmail_service.diagnose_mail_connection
+    )
+    return JSONResponse(result, status_code=200 if result.get("ok") else 503)
+
+
+@router.post("/api/reload")
+async def reload_roundcube(request: Request):
+    global _rebuild_task
+    if _rebuild_task and not _rebuild_task.done():
+        return JSONResponse(
+            {"status": "pending", "message": "Mail transport detection is already running."},
+            status_code=202,
+        )
+    roundcube_webmail_service.update_state(
+        rebuild_status="pending",
+        rebuild_error=None,
+    )
+    _rebuild_task = asyncio.create_task(_rebuild_roundcube_task())
+    return JSONResponse(
+        {
+            "status": "pending",
+            "message": "Roundcube is rebuilding and detecting Maddy mail security.",
+        },
+        status_code=202,
+    )
 
 
 @router.post("/api/configure")

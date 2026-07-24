@@ -49,11 +49,20 @@
         <div class="text-small text-muted">Mailbox coverage</div>
         <strong>{{ mailbox_count }} mailboxes · {{ mail_domains | length }} domains</strong>
       </div>
+      <div>
+        <div class="text-small text-muted">Maddy transport</div>
+        <div id="mail-transport-status"><span class="badge badge--inactive">Auto-detect</span></div>
+      </div>
     </div>
     <div style="margin-top:16px;">
       <span class="text-small text-muted">Secure public URL</span>
       <div id="public-url"><strong>{{ public_url or "Waiting for SSL" }}</strong></div>
     </div>
+    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:16px;">
+      <button class="btn btn--secondary btn--sm" id="test-mail-button" type="button">Test Maddy Connection</button>
+      <button class="btn btn--secondary btn--sm" id="reload-roundcube-button" type="button">Detect Mail Security</button>
+    </div>
+    <div id="mail-test-result" class="text-small" style="display:none; margin-top:12px;"></div>
   </div>
 </div>
 
@@ -294,6 +303,24 @@
     }
 
     issueSslButton.disabled = !data.configured || data.ssl_status === 'pending';
+    const reloadButton = document.getElementById('reload-roundcube-button');
+    if (reloadButton) {
+      reloadButton.disabled = data.rebuild_status === 'pending';
+      reloadButton.textContent = data.rebuild_status === 'pending'
+        ? 'Detecting…'
+        : 'Detect Mail Security';
+    }
+    const mailResult = document.getElementById('mail-test-result');
+    if (mailResult && data.rebuild_status === 'error') {
+      mailResult.style.display = 'block';
+      mailResult.className = 'text-small text-danger';
+      mailResult.textContent = data.rebuild_error || 'Mail transport detection failed.';
+    } else if (mailResult && data.rebuild_status === 'ready'
+      && mailResult.textContent.includes('detecting')) {
+      mailResult.style.display = 'block';
+      mailResult.className = 'text-small text-accent';
+      mailResult.textContent = 'Mail security detected and Roundcube rebuilt. Run the connection test.';
+    }
     if (configResult && data.dns_error) {
       configResult.style.display = 'block';
       configResult.className = 'text-small text-danger';
@@ -306,7 +333,7 @@
       configResult.textContent = 'External DNS mode: manage the displayed A record at your DNS provider.';
     }
     if (pollTimer) clearTimeout(pollTimer);
-    if (data.ssl_status === 'pending') {
+    if (data.ssl_status === 'pending' || data.rebuild_status === 'pending') {
       pollTimer = setTimeout(refreshStatus, 2500);
     }
   }
@@ -319,6 +346,10 @@
       renderStatus(await readJson(response));
     } catch (error) {
       setBadge('dns-status', 'Check failed', false);
+      const reloadButton = document.getElementById('reload-roundcube-button');
+      if (reloadButton?.disabled) {
+        pollTimer = setTimeout(refreshStatus, 2500);
+      }
     }
   }
 
@@ -364,6 +395,69 @@
       sslMessage.textContent = error.message;
       sslMessage.className = 'alert alert--warning';
       issueSslButton.disabled = false;
+    }
+  });
+
+  document.getElementById('test-mail-button')?.addEventListener('click', async (event) => {
+    const button = event.currentTarget;
+    const result = document.getElementById('mail-test-result');
+    button.disabled = true;
+    button.textContent = 'Testing…';
+    result.style.display = 'block';
+    result.className = 'text-small text-muted';
+    result.textContent = 'Testing IMAP 143 and SMTP 587 from inside Roundcube…';
+    try {
+      const response = await fetch('/plugins/roundcube_webmail/api/mail-diagnostics', {
+        headers: { Accept: 'application/json' }
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        const imapError = data.imap?.error ? ' IMAP: ' + data.imap.error : '';
+        const smtpError = data.smtp?.error ? ' SMTP: ' + data.smtp.error : '';
+        throw new Error(data.error || (imapError + smtpError).trim() || 'Connection test failed.');
+      }
+      result.className = 'text-small text-accent';
+      const secure = data.transport === 'tls';
+      setBadge(
+        'mail-transport-status',
+        secure ? 'TLS · ' + data.imap.host : 'Local · no TLS',
+        secure
+      );
+      result.textContent = 'Connected: IMAP ' + data.imap.host + ':' + data.imap.port
+        + ' and SMTP ' + data.smtp.host + ':' + data.smtp.port + '. '
+        + (secure ? 'Maddy TLS is active.' : 'Using the local Docker gateway.');
+    } catch (error) {
+      result.className = 'text-small text-danger';
+      result.textContent = error.message;
+    } finally {
+      button.disabled = false;
+      button.textContent = 'Test Maddy Connection';
+    }
+  });
+
+  document.getElementById('reload-roundcube-button')?.addEventListener('click', async (event) => {
+    const button = event.currentTarget;
+    const result = document.getElementById('mail-test-result');
+    button.disabled = true;
+    button.textContent = 'Detecting…';
+    result.style.display = 'block';
+    result.className = 'text-small text-muted';
+    result.textContent = 'Rebuilding Roundcube and detecting Maddy TLS support…';
+    try {
+      const response = await fetch('/plugins/roundcube_webmail/api/reload', {
+        method: 'POST',
+        headers: { 'X-CSRF-Token': csrfToken(), Accept: 'application/json' }
+      });
+      const data = await readJson(response);
+      result.className = 'text-small text-muted';
+      result.textContent = data.message;
+      await refreshStatus();
+    } catch (error) {
+      result.className = 'text-small text-danger';
+      result.textContent = error.message;
+    } finally {
+      button.disabled = false;
+      if (!button.disabled) button.textContent = 'Detect Mail Security';
     }
   });
 

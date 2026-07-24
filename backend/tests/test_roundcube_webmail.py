@@ -145,10 +145,14 @@ class RoundcubePackagingTests(unittest.TestCase):
         self.assertIn("--cpus 0.50", install)
         self.assertIn('-p "127.0.0.1:${HOST_PORT}:80"', install)
         self.assertIn("ROUNDCUBEMAIL_DB_TYPE=sqlite", install)
-        self.assertIn("DEFAULT_HOST=ssl://", install)
-        self.assertIn("DEFAULT_PORT=993", install)
-        self.assertIn("SMTP_SERVER=tls://", install)
+        self.assertIn('MAIL_TRANSPORT="local"', install)
+        self.assertIn('MAIL_TRANSPORT="tls"', install)
+        self.assertIn('IMAP_PORT="993"', install)
+        self.assertIn('IMAP_PORT="143"', install)
+        self.assertIn("ROUNDCUBEMAIL_DEFAULT_HOST=${IMAP_HOST}", install)
+        self.assertIn("ROUNDCUBEMAIL_SMTP_SERVER=${SMTP_HOST}", install)
         self.assertIn("SMTP_PORT=587", install)
+        self.assertIn("SRV_MADDY_TRANSPORT=${MAIL_TRANSPORT}", install)
         self.assertNotIn("volume rm", uninstall)
         self.assertIn('rm -f "$STATE_FILE"', uninstall)
         self.assertIn("intentionally preserved", uninstall)
@@ -168,6 +172,9 @@ class RoundcubePackagingTests(unittest.TestCase):
         template = (plugin / "templates" / "roundcube_webmail.html").read_text(
             encoding="utf-8"
         )
+        roundcube_config = (
+            plugin / "scripts" / "roundcube-config.inc.php"
+        ).read_text(encoding="utf-8")
 
         self.assertIn("hash_equals", hook)
         self.assertIn("FILTER_VALIDATE_EMAIL", hook)
@@ -190,6 +197,12 @@ class RoundcubePackagingTests(unittest.TestCase):
         self.assertIn("event.preventDefault()", template)
         self.assertIn("Manage the A record with panel DNS", template)
         self.assertIn("All domains below use the same Roundcube URL", template)
+        self.assertIn("? 993 : 143", roundcube_config)
+        self.assertIn("$config['smtp_port'] = 587", roundcube_config)
+        self.assertNotIn("verify_peer", roundcube_config)
+        self.assertIn("Test Maddy Connection", template)
+        self.assertIn("Detect Mail Security", template)
+        self.assertIn('@router.get("/api/mail-diagnostics")', router)
 
 
 class RoundcubeDataPurgeTests(unittest.IsolatedAsyncioTestCase):
