@@ -10,7 +10,7 @@
 <div class="split-layout">
   <!-- Sidebar -->
   <div class="split-sidebar">
-    {% if status.installed %}
+    {% if plugin_installed %}
       {% if mail_domains %}
         {% for d in mail_domains %}
           <div class="split-sidebar__item {% if loop.index == 1 %}active{% endif %}" onclick="openDomainDetail('{{ d.domain }}', '{{ d.server_ip }}')">
@@ -37,7 +37,7 @@
   <div class="split-content">
 
 
-    {% if status.installed %}
+    {% if plugin_installed %}
       {% include 'partials/_domains_tab.html' %}
     {% else %}
       <div style="margin-top: 2rem;">
@@ -57,7 +57,7 @@
   </div>
 </div>
 
-{% if status.installed %}
+{% if plugin_installed %}
   {% include 'partials/_add_account_modal.html' %}
 {% endif %}
 

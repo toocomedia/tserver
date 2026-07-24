@@ -114,7 +114,12 @@ class PluginManager:
             return "usage.process_names must contain safe process names."
         return None
 
-    def _effective(self, plugin: dict[str, Any]) -> dict[str, Any]:
+    def _effective(
+        self,
+        plugin: dict[str, Any],
+        *,
+        check_dependencies: bool = True,
+    ) -> dict[str, Any]:
         from dependencies import dependency_manager
 
         result = dict(plugin)
@@ -130,9 +135,13 @@ class PluginManager:
         requirements = []
         paused_by = []
         for dependency_id in self._required_dependencies(result):
-            healthy = dependency_manager.is_healthy(dependency_id)
+            healthy = (
+                dependency_manager.is_healthy(dependency_id)
+                if check_dependencies
+                else None
+            )
             requirements.append({"id": dependency_id, "healthy": healthy})
-            if not healthy:
+            if healthy is False:
                 paused_by.append(dependency_id)
         result["dependency_status"] = requirements
         result["paused_by"] = paused_by
@@ -190,6 +199,13 @@ class PluginManager:
                 ),
             )
             for plugin_id, plugin in self.plugins.items()
+        ]
+
+    def list_plugins(self) -> List[Dict[str, Any]]:
+        """Return registered plugins without file or dependency health probes."""
+        return [
+            self._effective(plugin, check_dependencies=False)
+            for plugin in self.plugins.values()
         ]
 
     def availability_dependency(self, plugin_id: str):
@@ -259,11 +275,19 @@ class PluginManager:
 
     def get_sidebar_items(self) -> List[Dict[str, Any]]:
         items = []
-        for plugin_id in self.plugins:
-            plugin = self.get_plugin(plugin_id)
-            if not plugin or not plugin.get("sidebar", False):
+        for plugin_id, plugin in self.plugins.items():
+            if (
+                not plugin.get("sidebar", False)
+                or plugin.get("manifest_error")
+                or not plugin.get("installed", False)
+            ):
                 continue
-            if plugin["effective_status"] not in {"active", "paused"}:
+            state = component_state_store.get(
+                "plugin",
+                plugin_id,
+                default_enabled=bool(plugin.get("manifest_enabled", True)),
+            )
+            if not state.desired_enabled:
                 continue
             items.append(
                 {
@@ -271,7 +295,6 @@ class PluginManager:
                     "label": plugin.get("sidebar_label", plugin.get("name")),
                     "route": plugin.get("route_prefix", f"/plugins/{plugin_id}"),
                     "icon": plugin.get("icon", "grid"),
-                    "paused": plugin["effective_status"] == "paused",
                 }
             )
         return items

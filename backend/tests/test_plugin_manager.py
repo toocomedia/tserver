@@ -71,6 +71,56 @@ class PluginManagerTests(unittest.TestCase):
                 plugin = manager.discover_plugins()[0]
                 self.assertEqual(plugin["effective_status"], "disabled")
 
+    def test_sidebar_uses_stored_enabled_state_without_dependency_probe(self):
+        manager = PluginManager()
+        manager.plugins = {
+            "container_mail": {
+                "id": "container_mail",
+                "name": "Container Mail",
+                "manifest_enabled": True,
+                "manifest_error": None,
+                "installed": True,
+                "sidebar": True,
+                "sidebar_label": "Mail",
+                "route_prefix": "/plugins/container_mail",
+                "icon": "mail",
+                "requires": {"dependencies": ["docker"]},
+            }
+        }
+
+        with patch("dependencies.dependency_manager.is_healthy") as is_healthy:
+            items = manager.get_sidebar_items()
+
+        self.assertEqual(items[0]["id"], "container_mail")
+        self.assertNotIn("paused", items[0])
+        is_healthy.assert_not_called()
+
+        component_state_store._cache[("plugin", "container_mail")] = (
+            ComponentStateValue(desired_enabled=False)
+        )
+        self.assertEqual(manager.get_sidebar_items(), [])
+
+    def test_plugin_list_does_not_probe_dependency_health(self):
+        manager = PluginManager()
+        manager.plugins = {
+            "container_mail": {
+                "id": "container_mail",
+                "name": "Container Mail",
+                "manifest_enabled": True,
+                "manifest_error": None,
+                "installed": True,
+                "usage": {},
+                "requires": {"dependencies": ["docker"]},
+            }
+        }
+
+        with patch("dependencies.dependency_manager.is_healthy") as is_healthy:
+            plugins = manager.list_plugins()
+
+        self.assertEqual(plugins[0]["effective_status"], "active")
+        self.assertIsNone(plugins[0]["dependency_status"][0]["healthy"])
+        is_healthy.assert_not_called()
+
     def test_unknown_dependency_is_visible_but_blocked(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)

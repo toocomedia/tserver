@@ -40,8 +40,8 @@ async def maddy_index(request: Request, db: AsyncSession = Depends(get_db)):
     from plugins.manager import plugin_manager
     plugin_info = plugin_manager.get_plugin("maddy")
     plugin_version = plugin_info["version"] if plugin_info else "1.0.0"
+    plugin_installed = bool(plugin_info and plugin_info.get("installed"))
 
-    status = maddy_service.get_status()
     accounts = maddy_service.list_accounts()
     mail_domains = await maddy_service.list_mail_domains(db)
 
@@ -59,26 +59,33 @@ async def maddy_index(request: Request, db: AsyncSession = Depends(get_db)):
 
     server_ip = getattr(config, "SERVER_IP", "127.0.0.1")
     webmail_sites = {}
-    webmail_plugin = plugin_manager.get_plugin("roundcube_webmail")
-    if webmail_plugin and webmail_plugin["effective_status"] == "active":
+    webmail_plugin = plugin_manager.plugins.get("roundcube_webmail")
+    from services.component_state import component_state_store
+
+    webmail_enabled = bool(
+        webmail_plugin
+        and component_state_store.get(
+            "plugin",
+            "roundcube_webmail",
+            default_enabled=bool(webmail_plugin.get("manifest_enabled", True)),
+        ).desired_enabled
+    )
+    if webmail_enabled and webmail_plugin.get("installed"):
         try:
             from plugins.roundcube_webmail.service import roundcube_webmail_service
 
-            container_healthy = roundcube_webmail_service.get_status()["healthy"]
             for item in mail_domains:
                 domain = item["domain"].lower()
                 site = roundcube_webmail_service.get_site(domain)
                 public_url = roundcube_webmail_service.get_public_url(domain)
                 if not site:
                     reason = "Set up webmail for this domain."
-                elif not container_healthy:
-                    reason = "Roundcube container is not healthy."
                 elif not public_url:
                     reason = "Finish DNS and HTTPS setup."
                 else:
                     reason = None
                 webmail_sites[domain] = {
-                    "ready": bool(container_healthy and public_url),
+                    "ready": bool(public_url),
                     "reason": reason,
                     "setup_url": f"/plugins/roundcube_webmail/?domain={domain}",
                 }
@@ -104,7 +111,7 @@ async def maddy_index(request: Request, db: AsyncSession = Depends(get_db)):
         "request": request,
         "active_page": "plugins",
         "plugin_version": plugin_version,
-        "status": status,
+        "plugin_installed": plugin_installed,
         "accounts": accounts,
         "mail_domains": mail_domains,
         "panel_domains": panel_domains,

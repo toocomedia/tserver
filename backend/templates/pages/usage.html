@@ -299,10 +299,11 @@
           <th>CPU %</th>
           <th>Memory</th>
           <th>Status</th>
+          <th>Details</th>
         </tr>
       </thead>
       <tbody id="svc-tbody">
-        <tr><td colspan="5" class="text-muted">Loading…</td></tr>
+        <tr><td colspan="6" class="text-muted">Loading…</td></tr>
       </tbody>
     </table>
   </div>
@@ -473,8 +474,9 @@
           <td>${plugin.cpu.toFixed(1)}%</td>
           <td>${plugin.memory}</td>
           <td><span class="${procStatusClass(plugin.status)}">${plugin.status}</span></td>
+          <td>${plugin.details || '—'}</td>
         </tr>
-      `).join('') || '<tr><td colspan="5" class="text-muted">No installed plugins</td></tr>';
+      `).join('') || '<tr><td colspan="6" class="text-muted">No installed plugins</td></tr>';
     }
 
     // Processes

@@ -15,6 +15,7 @@ def _empty_row(plugin: dict[str, Any]) -> dict[str, Any]:
         "memory": "0 MB",
         "count": 0,
         "status": plugin.get("effective_status", "disabled"),
+        "details": "—",
     }
 
 
@@ -45,6 +46,15 @@ def _process_usage(
     }
 
 
+def _installed_plugins() -> list[dict[str, Any]]:
+    installed = []
+    for plugin_id in list(plugin_manager.plugins):
+        plugin = plugin_manager.get_plugin(plugin_id)
+        if plugin and plugin.get("installed"):
+            installed.append(plugin)
+    return installed
+
+
 async def get_plugin_usage(
     processes: list[dict[str, Any]],
     total_memory: int,
@@ -53,11 +63,7 @@ async def get_plugin_usage(
     if not plugin_manager.plugins:
         await asyncio.to_thread(plugin_manager.discover_plugins)
 
-    installed_plugins = []
-    for plugin_id in list(plugin_manager.plugins):
-        plugin = plugin_manager.get_plugin(plugin_id)
-        if plugin and plugin.get("installed"):
-            installed_plugins.append(plugin)
+    installed_plugins = await asyncio.to_thread(_installed_plugins)
 
     rows: dict[str, dict[str, Any]] = {}
     for plugin in installed_plugins:
@@ -67,21 +73,27 @@ async def get_plugin_usage(
         if plugin.get("effective_status") != "active":
             continue
 
-        service = plugin_manager.get_service(plugin_id)
+        service = await asyncio.to_thread(plugin_manager.get_service, plugin_id)
         usage_hook = getattr(service, "get_usage", None)
         if usage_hook:
             try:
                 row.update(await asyncio.to_thread(usage_hook))
             except Exception:
                 row["status"] = "unhealthy"
-            continue
+        else:
+            process_names = {
+                str(name).lower()
+                for name in (plugin.get("usage") or {}).get("process_names", [])
+            }
+            if process_names:
+                row.update(
+                    _process_usage(processes, process_names, total_memory)
+                )
 
-        process_names = {
-            str(name).lower()
-            for name in (plugin.get("usage") or {}).get("process_names", [])
-        }
-        if process_names:
-            row.update(
-                _process_usage(processes, process_names, total_memory)
-            )
+        details_hook = getattr(service, "get_usage_details", None)
+        if details_hook:
+            try:
+                row.update(await asyncio.to_thread(details_hook))
+            except Exception:
+                row["details"] = "Unavailable"
     return rows

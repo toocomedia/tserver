@@ -173,17 +173,8 @@ async def _get_optimization_status() -> dict:
     }
 
 
-@router.get("/api/stats")
-async def server_stats():
-    """Live server resource stats via psutil — CPU, RAM, disk, network, processes."""
-    from fastapi import HTTPException
-    if not _PSUTIL_OK:
-        raise HTTPException(
-            status_code=503,
-            detail="psutil not installed. Run: pip install psutil==6.0.0",
-        )
-
-    # CPU (non-blocking: interval=None returns cached value since last call)
+def _collect_usage_snapshot() -> dict:
+    """Collect synchronous psutil data away from the async request loop."""
     cpu_percent = _psutil.cpu_percent(interval=None)
     cpu_count = _psutil.cpu_count(logical=True)
     cpu_freq = _psutil.cpu_freq()
@@ -270,6 +261,42 @@ async def server_stats():
                     services[svc]["status"] = "running"
         except (_psutil.NoSuchProcess, _psutil.AccessDenied):
             pass
+
+    return {
+        "cpu_percent": cpu_percent,
+        "cpu_count": cpu_count,
+        "freq_mhz": freq_mhz,
+        "ram": ram,
+        "swap": swap,
+        "disks": disks,
+        "net": net,
+        "uptime_sec": uptime_sec,
+        "procs": procs,
+        "services": services,
+    }
+
+
+@router.get("/api/stats")
+async def server_stats():
+    """Live server resource stats via psutil — CPU, RAM, disk, network, processes."""
+    from fastapi import HTTPException
+    if not _PSUTIL_OK:
+        raise HTTPException(
+            status_code=503,
+            detail="psutil not installed. Run: pip install psutil==6.0.0",
+        )
+
+    snapshot = await asyncio.to_thread(_collect_usage_snapshot)
+    cpu_percent = snapshot["cpu_percent"]
+    cpu_count = snapshot["cpu_count"]
+    freq_mhz = snapshot["freq_mhz"]
+    ram = snapshot["ram"]
+    swap = snapshot["swap"]
+    disks = snapshot["disks"]
+    net = snapshot["net"]
+    uptime_sec = snapshot["uptime_sec"]
+    procs = snapshot["procs"]
+    services = snapshot["services"]
 
     docker_status = await asyncio.to_thread(
         dependency_manager.get_status, "docker"

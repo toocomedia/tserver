@@ -51,9 +51,7 @@
   };
 
   const renderStatus = (data) => {
-    const container = data.container || {};
     const site = data.site;
-    setBadge('container-status', container.healthy ? 'Healthy' : (container.state || 'Stopped'), container.healthy);
     if (!site) return;
     const dns = site.dns || {};
     const dnsText = dns.status === 'ready' ? 'Ready'
@@ -80,7 +78,7 @@
       detailBox.style.display = site.ssl_error_detail ? '' : 'none';
     }
     const open = document.getElementById('open-webmail-button');
-    if (open && site.public_url && container.healthy) {
+    if (open && site.public_url) {
       if (open.tagName === 'A') {
         open.href = site.public_url;
       } else {
@@ -225,6 +223,4 @@
       button.textContent = 'Delete Webmail Access';
     }
   });
-
-  refreshStatus();
 })();

@@ -1,0 +1,1012 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" data-style="subtle-surface">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>App System Design — 4 Minimal Panel Component Style Suggestions</title>
+  
+  <!-- App Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <!-- Backend CSS Links -->
+  <link rel="stylesheet" href="backend/static/css/main.css">
+  <link rel="stylesheet" href="backend/static/css/layout.css">
+
+  <style>
+    /* ============================================================
+       BASE SETUP & THEME TOKENS
+       ============================================================ */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      box-shadow: none !important;
+    }
+
+    :root {
+      --color-bg: #FFFFFF;
+      --color-surface: #F8F9FA;
+      --color-surface-hover: #F1F3F5;
+      --color-text: #0F1720;
+      --color-muted: #64748B;
+      --color-line: #E2E8F0;
+      --color-neutral: #0F1720;
+      
+      /* Subtle Accent Green (Used Sparingly) */
+      --color-accent: #C7F464;
+      --color-accent-dark: #7CB342;
+      --color-success: #10B981;
+      --color-danger: #EF4444;
+      --font-mono: 'JetBrains Mono', monospace;
+
+      --radius-val: 4px;
+      --border-val: none;
+      --card-bg: var(--color-surface);
+      --ctrl-height: 38px;
+      --ctrl-height-sm: 32px;
+    }
+
+    [data-theme="dark"] {
+      --color-bg: #0F1720;
+      --color-surface: #17212B;
+      --color-surface-hover: #1F2A37;
+      --color-text: #EAECEF;
+      --color-muted: #9AA0A6;
+      --color-line: #2A3441;
+      --color-neutral: #FFFFFF;
+      --color-accent: #C7F464;
+      --color-accent-dark: #C7F464;
+      --color-success: #10B981;
+      --color-danger: #EF4444;
+    }
+
+    [data-theme="amoled"] {
+      --color-bg: #000000;
+      --color-surface: #111111;
+      --color-surface-hover: #1A1A1A;
+      --color-text: #FFFFFF;
+      --color-muted: #8E8E93;
+      --color-line: #262626;
+      --color-neutral: #FFFFFF;
+      --color-accent: #C7F464;
+      --color-accent-dark: #C7F464;
+      --color-success: #10B981;
+      --color-danger: #EF4444;
+    }
+
+    /* ============================================================
+       STYLE PRESET 1: SUBTLE SURFACE (Linear / Vercel Minimal)
+       - Borderless floating surface, 4px radius, soft contrast
+       ============================================================ */
+    [data-style="subtle-surface"] {
+      --radius-val: 4px;
+      --border-val: none;
+      --card-bg: var(--color-surface);
+    }
+
+    /* ============================================================
+       STYLE PRESET 2: HAIRLINE GRID (GitHub Next / Tech Minimal)
+       - 1px thin hairline borders, pure background card, 2px radius
+       ============================================================ */
+    [data-style="hairline-grid"] {
+      --radius-val: 2px;
+      --border-val: 1px solid var(--color-line);
+      --card-bg: var(--color-bg);
+    }
+
+    /* ============================================================
+       STYLE PRESET 3: FLUSH ZERO-BORDER (Stripe / Plain Minimal)
+       - 0px sharp corners, borderless surface, zero radius
+       ============================================================ */
+    [data-style="flush-borderless"] {
+      --radius-val: 0px;
+      --border-val: none;
+      --card-bg: var(--color-surface);
+    }
+
+    /* ============================================================
+       STYLE PRESET 4: SOFT CONTRAST (Modern Slate Panel)
+       - Soft grey background (#F4F5F7), crisp white cards, 6px radius
+       ============================================================ */
+    [data-style="soft-contrast"] {
+      --radius-val: 6px;
+      --border-val: 1px solid rgba(0,0,0,0.04);
+      --card-bg: #FFFFFF;
+    }
+    [data-style="soft-contrast"][data-theme="light"] body {
+      background-color: #F4F5F7;
+    }
+
+    body {
+      background-color: var(--color-bg);
+      color: var(--color-text);
+      font-family: 'Manrope', system-ui, -apple-system, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      line-height: 1.5;
+    }
+
+    /* Viewport Container */
+    .app-viewport {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 32px 20px 80px;
+    }
+
+    /* Floating Style Switcher Header Bar */
+    .top-bar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: var(--color-bg);
+      border-bottom: 1px solid var(--color-line);
+      padding: 12px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .top-bar__row1 {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .brand-mark {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-mark__sq {
+      width: 10px;
+      height: 10px;
+      background: var(--color-neutral);
+      border-radius: 2px;
+    }
+
+    .brand-mark__title {
+      font-size: 14px;
+      font-weight: 800;
+      letter-spacing: -0.01em;
+      color: var(--color-text);
+    }
+
+    /* Style Suggestion Selector Bar */
+    .style-picker {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--color-surface);
+      padding: 4px;
+      border-radius: 6px;
+      overflow-x: auto;
+    }
+
+    .style-picker__label {
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--color-muted);
+      padding: 0 8px;
+      white-space: nowrap;
+    }
+
+    .style-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      height: 30px;
+      padding: 0 12px;
+      font-size: 11.5px;
+      font-weight: 700;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--color-muted);
+      cursor: pointer;
+      border-radius: 4px;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+
+    .style-btn:hover {
+      color: var(--color-text);
+    }
+
+    .style-btn.active {
+      background: var(--color-bg);
+      color: var(--color-text);
+      border-color: var(--color-line);
+      font-weight: 800;
+    }
+
+    .theme-selector {
+      display: flex;
+      align-items: center;
+      background: var(--color-surface);
+      border: 1px solid var(--color-line);
+      padding: 2px;
+      border-radius: 4px;
+    }
+
+    .theme-opt {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      height: 24px;
+      padding: 0 10px;
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border: none;
+      background: transparent;
+      color: var(--color-muted);
+      cursor: pointer;
+      border-radius: 3px;
+      transition: all 0.15s ease;
+    }
+
+    .theme-opt.active {
+      background: var(--color-bg);
+      color: var(--color-text);
+    }
+
+    /* Section Layout */
+    .pro-section {
+      margin-top: 40px;
+    }
+
+    .pro-section__head {
+      margin-bottom: 20px;
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+    }
+
+    .pro-section__title {
+      font-size: 13.5px;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--color-text);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .pro-section__title::before {
+      content: '';
+      width: 4px;
+      height: 14px;
+      background: var(--color-neutral);
+      border-radius: 2px;
+    }
+
+    .pro-section__desc {
+      font-size: 12.5px;
+      color: var(--color-muted);
+      font-weight: 500;
+    }
+
+    /* Grid Layouts */
+    .pro-grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+    }
+
+    .pro-grid-4 {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+    }
+
+    @media (max-width: 900px) {
+      .pro-grid-2, .pro-grid-4 {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* ============================================================
+       DYNAMIC STYLE-COMPLIANT COMPONENTS
+       ============================================================ */
+    .pro-card {
+      background: var(--card-bg);
+      border: var(--border-val) !important;
+      border-radius: var(--radius-val);
+      padding: 24px 28px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 16px;
+      transition: all 0.15s ease;
+    }
+
+    .pro-card:hover {
+      background: var(--color-surface-hover);
+    }
+
+    /* Service / Plugin Card */
+    .pro-card--plugin {
+      flex-direction: row;
+      align-items: center;
+      gap: 20px;
+      padding: 24px 28px;
+    }
+
+    .pro-card__icon {
+      width: 44px;
+      height: 44px;
+      border-radius: var(--radius-val);
+      background: var(--color-bg);
+      border: 1px solid var(--color-line);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      color: var(--color-text);
+    }
+
+    .pro-card__body {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .pro-card__title {
+      font-size: 14.5px;
+      font-weight: 800;
+      color: var(--color-text);
+      margin-bottom: 3px;
+      line-height: 1.2;
+    }
+
+    .pro-card__sub {
+      font-size: 13px;
+      color: var(--color-muted);
+      line-height: 1.3;
+    }
+
+    .pro-card__actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    /* Metric Card */
+    .pro-metric {
+      background: var(--card-bg);
+      border: var(--border-val) !important;
+      border-radius: var(--radius-val);
+      padding: 20px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      transition: all 0.15s ease;
+    }
+
+    .pro-metric:hover {
+      background: var(--color-surface-hover);
+    }
+
+    .pro-metric__header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--color-muted);
+    }
+
+    .pro-metric__value {
+      font-size: 26px;
+      font-weight: 800;
+      color: var(--color-text);
+      letter-spacing: -0.02em;
+      line-height: 1;
+    }
+
+    .pro-metric__footer {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--color-muted);
+      font-weight: 500;
+    }
+
+    /* Banner Card */
+    .pro-banner {
+      background: var(--card-bg);
+      border: var(--border-val) !important;
+      border-left: 3px solid var(--color-neutral) !important;
+      border-radius: var(--radius-val);
+      padding: 20px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+    }
+
+    /* Lists & Rows */
+    .pro-list {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .pro-list-row {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr 90px;
+      align-items: center;
+      gap: 20px;
+      padding: 14px 24px;
+      min-height: 52px;
+      background: var(--card-bg);
+      border: var(--border-val) !important;
+      border-radius: var(--radius-val);
+      transition: all 0.15s ease;
+      font-size: 13.5px;
+    }
+
+    .pro-list-row:hover {
+      background: var(--color-surface-hover);
+    }
+
+    .pro-list-row__title {
+      font-weight: 700;
+      color: var(--color-text);
+    }
+
+    .pro-list-row__meta {
+      font-size: 12px;
+      color: var(--color-muted);
+      margin-top: 2px;
+    }
+
+    /* Specs Grid */
+    .pro-specs-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      background: var(--card-bg);
+      border: var(--border-val) !important;
+      border-radius: var(--radius-val);
+      padding: 20px 24px;
+    }
+
+    .pro-specs-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 13px;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--color-line);
+    }
+
+    .pro-specs-row:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+
+    .pro-specs-row__key {
+      color: var(--color-muted);
+      font-weight: 600;
+    }
+
+    .pro-specs-row__val {
+      color: var(--color-text);
+      font-weight: 700;
+      font-family: var(--font-mono);
+      font-size: 12.5px;
+    }
+
+    /* Timeline Activity */
+    .pro-timeline {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      background: var(--card-bg);
+      border: var(--border-val) !important;
+      border-radius: var(--radius-val);
+      padding: 20px 24px;
+    }
+
+    .pro-timeline-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      font-size: 13px;
+    }
+
+    .pro-timeline-item__dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--color-neutral);
+      margin-top: 6px;
+      flex-shrink: 0;
+    }
+
+    /* Dividers */
+    .pro-divider-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      padding: 20px 24px;
+      background: var(--card-bg);
+      border: var(--border-val) !important;
+      border-radius: var(--radius-val);
+    }
+
+    .min-divider {
+      border: 0;
+      height: 1px;
+      background: var(--color-line);
+      margin: 0;
+    }
+
+    .min-divider--dashed {
+      border: 0;
+      border-top: 1px dashed var(--color-line);
+      background: transparent;
+      margin: 0;
+    }
+
+    .min-divider--accent {
+      border: 0;
+      height: 1px;
+      background: linear-gradient(90deg, var(--color-neutral) 0%, transparent 100%);
+      margin: 0;
+    }
+
+    .min-divider--text {
+      display: flex;
+      align-items: center;
+      color: var(--color-muted);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      gap: 14px;
+    }
+
+    .min-divider--text::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--color-line);
+    }
+
+    /* Action Buttons */
+    .pro-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      height: var(--ctrl-height);
+      padding: 0 16px;
+      font-size: 12px;
+      font-weight: 700;
+      border-radius: var(--radius-val);
+      border: 1px solid var(--color-line);
+      background: var(--color-bg);
+      color: var(--color-text);
+      cursor: pointer;
+      transition: all 0.15s ease;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+
+    .pro-btn:hover {
+      background: var(--color-surface);
+      border-color: #CBD5E1;
+    }
+
+    .pro-btn--dark {
+      background: var(--color-neutral);
+      color: var(--color-bg);
+      border-color: var(--color-neutral);
+    }
+    .pro-btn--dark:hover {
+      opacity: 0.9;
+    }
+
+    .pro-btn--accent {
+      background: var(--color-accent);
+      color: #0F1720;
+      border-color: var(--color-accent);
+    }
+    .pro-btn--accent:hover {
+      background: #B5EB43;
+    }
+
+    .pro-btn--danger {
+      background: transparent;
+      color: var(--color-danger);
+      border-color: var(--color-danger);
+    }
+    .pro-btn--danger:hover {
+      background: var(--color-danger);
+      color: #FFFFFF;
+    }
+
+    .pro-btn--sm {
+      height: var(--ctrl-height-sm);
+      padding: 0 12px;
+      font-size: 11.5px;
+    }
+
+    .pro-input {
+      width: 100%;
+      height: var(--ctrl-height);
+      padding: 0 14px;
+      background: var(--color-bg);
+      border: 1px solid var(--color-line);
+      border-radius: var(--radius-val);
+      color: var(--color-text);
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.15s ease;
+    }
+
+    .pro-input:focus {
+      border-color: var(--color-neutral);
+    }
+
+    .pro-terminal {
+      background: #0F1720;
+      color: #EAECEF;
+      border-radius: var(--radius-val);
+      border: none !important;
+      padding: 20px 24px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      line-height: 1.6;
+      overflow-x: auto;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Selector Bar -->
+  <header class="top-bar">
+    <div class="top-bar__row1">
+      <div class="brand-mark">
+        <div class="brand-mark__sq"></div>
+        <span class="brand-mark__title">srv-t Design System</span>
+        <span style="font-size: 11.5px; color: var(--color-muted); font-weight: 600; margin-left: 4px;">Select Style Suggestion Below</span>
+      </div>
+
+      <div class="theme-selector">
+        <button class="theme-opt active" onclick="setTheme('light')">Light</button>
+        <button class="theme-opt" onclick="setTheme('dark')">Dark</button>
+        <button class="theme-opt" onclick="setTheme('amoled')">AMOLED</button>
+      </div>
+    </div>
+
+    <!-- Style Preset Selector -->
+    <div class="style-picker">
+      <span class="style-picker__label">Preset Styles:</span>
+      <button class="style-btn active" onclick="setStyle('subtle-surface')">1. Subtle Surface (Vercel/Linear)</button>
+      <button class="style-btn" onclick="setStyle('hairline-grid')">2. Hairline Grid (GitHub Next)</button>
+      <button class="style-btn" onclick="setStyle('flush-borderless')">3. Flush Zero-Border (Plain Mono)</button>
+      <button class="style-btn" onclick="setStyle('soft-contrast')">4. Soft Contrast (Slate Panel)</button>
+    </div>
+  </header>
+
+  <main class="app-viewport">
+
+    <!-- ============================================================ -->
+    <!-- 1. CARDS & METRICS                                           -->
+    <!-- ============================================================ -->
+    <section id="cards" class="pro-section">
+      <div class="pro-section__head">
+        <div>
+          <div class="pro-section__title">1. Service Cards & Telemetry Metrics</div>
+          <div class="pro-section__desc">Minimal, low-accent cards with clean typography.</div>
+        </div>
+      </div>
+
+      <!-- Service & Plugin Cards Grid -->
+      <div class="pro-grid-2" style="margin-bottom: 20px;">
+        
+        <div class="pro-card pro-card--plugin">
+          <div class="pro-card__icon">
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+          </div>
+          <div class="pro-card__body">
+            <h4 class="pro-card__title">Roundcube Webmail Core</h4>
+            <p class="pro-card__sub">Core webmail daemon plugin mounted on /webmail route.</p>
+          </div>
+          <div class="pro-card__actions">
+            <button class="pro-btn pro-btn--sm">Config</button>
+            <button class="pro-btn pro-btn--sm pro-btn--dark">Launch</button>
+          </div>
+        </div>
+
+        <div class="pro-card pro-card--plugin">
+          <div class="pro-card__icon">
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          </div>
+          <div class="pro-card__body">
+            <h4 class="pro-card__title">Media Node NSFW Check</h4>
+            <p class="pro-card__sub">NudeNet & OpenNSFW2 offloaded worker pool.</p>
+          </div>
+          <div class="pro-card__actions">
+            <button class="pro-btn pro-btn--sm">Nodes (2)</button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Metrics Grid -->
+      <div class="pro-grid-4" style="margin-bottom: 20px;">
+
+        <div class="pro-metric">
+          <div class="pro-metric__header">
+            <span>CPU Utilization</span>
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/></svg>
+          </div>
+          <div class="pro-metric__value">18.4%</div>
+          <div class="pro-metric__footer">
+            <span style="font-weight: 700;">&darr; 2.1%</span>
+            <span>4 Cores Active</span>
+          </div>
+        </div>
+
+        <div class="pro-metric">
+          <div class="pro-metric__header">
+            <span>RAM Allocation</span>
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 19v-3a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v3"/><path d="M6 5v3a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V5"/></svg>
+          </div>
+          <div class="pro-metric__value">1.2 GB</div>
+          <div class="pro-metric__footer">
+            <span>Low RAM Mode</span>
+          </div>
+        </div>
+
+        <div class="pro-metric">
+          <div class="pro-metric__header">
+            <span>System Health</span>
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          </div>
+          <div class="pro-metric__value">99.9%</div>
+          <div class="pro-metric__footer">
+            <span style="font-weight: 700;">Operational</span>
+          </div>
+        </div>
+
+        <div class="pro-metric">
+          <div class="pro-metric__header">
+            <span>SSL Expiry</span>
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          </div>
+          <div class="pro-metric__value">84 Days</div>
+          <div class="pro-metric__footer">
+            <span>Certbot Auto-Renew</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Banner Card -->
+      <div class="pro-banner">
+        <div>
+          <div style="font-weight: 800; font-size: 14px; color: var(--color-text);">Low RAM Optimization Active</div>
+          <div style="font-size: 12.5px; color: var(--color-muted); margin-top: 2px;">Worker threads locked to 2 instances to maximize host stability.</div>
+        </div>
+        <button class="pro-btn pro-btn--sm pro-btn--dark">View Settings</button>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <!-- 2. TABULAR LISTS & ROWS                                      -->
+    <!-- ============================================================ -->
+    <section id="lists" class="pro-section">
+      <div class="pro-section__head">
+        <div>
+          <div class="pro-section__title">2. Structured Tabular Lists</div>
+          <div class="pro-section__desc">Clean row hierarchy with 52px height & subtle hover.</div>
+        </div>
+      </div>
+
+      <div class="pro-list" style="margin-bottom: 20px;">
+        
+        <div class="pro-list-row">
+          <div>
+            <div class="pro-list-row__title">nginx-ssl-renewal.service</div>
+            <div class="pro-list-row__meta">Automated SSL cert renewal daemon</div>
+          </div>
+          <div style="font-size: 12px; color: var(--color-muted); font-weight: 600;">Cron: Every 12 hrs</div>
+          <div style="font-size: 12px; font-weight: 700; color: var(--color-text);">Healthy</div>
+          <div style="text-align: right;"><button class="pro-btn pro-btn--sm">Logs</button></div>
+        </div>
+
+        <div class="pro-list-row">
+          <div>
+            <div class="pro-list-row__title">fastapi-backend-daemon</div>
+            <div class="pro-list-row__meta">ASGI master process on port 8000</div>
+          </div>
+          <div style="font-size: 12px; color: var(--color-muted); font-weight: 600;">PID: 4920</div>
+          <div style="font-size: 12px; font-weight: 700; color: var(--color-text);">Running</div>
+          <div style="text-align: right;"><button class="pro-btn pro-btn--sm">Restart</button></div>
+        </div>
+
+        <div class="pro-list-row">
+          <div>
+            <div class="pro-list-row__title">nsfw-inference-node-02</div>
+            <div class="pro-list-row__meta">Secondary GPU worker node pool</div>
+          </div>
+          <div style="font-size: 12px; color: var(--color-muted); font-weight: 600;">Standby</div>
+          <div style="font-size: 12px; font-weight: 600; color: var(--color-muted);">Idle</div>
+          <div style="text-align: right;"><button class="pro-btn pro-btn--sm">Activate</button></div>
+        </div>
+
+      </div>
+
+      <div class="pro-grid-2">
+        
+        <!-- Specs List -->
+        <div>
+          <div style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: var(--color-muted); letter-spacing: 0.06em; margin-bottom: 8px;">
+            System Specifications
+          </div>
+          <div class="pro-specs-list">
+            <div class="pro-specs-row">
+              <span class="pro-specs-row__key">App Version</span>
+              <span class="pro-specs-row__val">v3.4.2-prod</span>
+            </div>
+            <div class="pro-specs-row">
+              <span class="pro-specs-row__key">Host Kernel</span>
+              <span class="pro-specs-row__val">Linux 5.15.0-x86_64</span>
+            </div>
+            <div class="pro-specs-row">
+              <span class="pro-specs-row__key">Database Storage</span>
+              <span class="pro-specs-row__val">SQLite3 (panel.db)</span>
+            </div>
+            <div class="pro-specs-row">
+              <span class="pro-specs-row__key">SSL Authority</span>
+              <span class="pro-specs-row__val">Let's Encrypt X3</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Event Activity List -->
+        <div>
+          <div style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: var(--color-muted); letter-spacing: 0.06em; margin-bottom: 8px;">
+            Recent System Events
+          </div>
+          <div class="pro-timeline">
+            <div class="pro-timeline-item">
+              <div class="pro-timeline-item__dot"></div>
+              <div>
+                <div style="font-weight: 700; color: var(--color-text); line-height: 1.2;">Roundcube Webmail plugin initialized</div>
+                <div style="font-size: 11.5px; color: var(--color-muted); margin-top: 2px;">2 minutes ago &bull; /webmail mounted</div>
+              </div>
+            </div>
+
+            <div class="pro-timeline-item">
+              <div class="pro-timeline-item__dot" style="background: var(--color-muted);"></div>
+              <div>
+                <div style="font-weight: 700; color: var(--color-text); line-height: 1.2;">SSL renewal cron executed successfully</div>
+                <div style="font-size: 11.5px; color: var(--color-muted); margin-top: 2px;">1 hour ago &bull; Certs valid for 84 days</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <!-- 3. DIVIDERS                                                  -->
+    <!-- ============================================================ -->
+    <section id="dividers" class="pro-section">
+      <div class="pro-section__head">
+        <div>
+          <div class="pro-section__title">3. Line Separators</div>
+          <div class="pro-section__desc">Clean line separators for section hierarchy.</div>
+        </div>
+      </div>
+
+      <div class="pro-divider-stack">
+        <div>
+          <div style="font-size: 11px; font-weight: 800; color: var(--color-muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em;">Standard App Line Separator</div>
+          <hr class="min-divider">
+        </div>
+
+        <div>
+          <div style="font-size: 11px; font-weight: 800; color: var(--color-muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em;">Dashed Technical Separator</div>
+          <hr class="min-divider--dashed">
+        </div>
+
+        <div>
+          <div style="font-size: 11px; font-weight: 800; color: var(--color-muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em;">Accent Line Separator</div>
+          <hr class="min-divider--accent">
+        </div>
+
+        <div>
+          <div style="font-size: 11px; font-weight: 800; color: var(--color-muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em;">Labelled Section Separator</div>
+          <div class="min-divider--text">System Configuration & Security</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <!-- 4. ACTION BUTTONS                                            -->
+    <!-- ============================================================ -->
+    <section id="actions" class="pro-section">
+      <div class="pro-section__head">
+        <div>
+          <div class="pro-section__title">4. Action Buttons</div>
+          <div class="pro-section__desc">Sleek solid neutral, outline, and minimal danger buttons.</div>
+        </div>
+      </div>
+
+      <div class="pro-card">
+        <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
+          <button class="pro-btn pro-btn--dark">Primary Solid</button>
+          <button class="pro-btn">Secondary Outline</button>
+          <button class="pro-btn pro-btn--accent">Lime Accent</button>
+          <button class="pro-btn pro-btn--danger">Danger Action</button>
+          <button class="pro-btn pro-btn--sm">Small Button</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <!-- 5. FORM INPUTS & LOG TERMINAL                                -->
+    <!-- ============================================================ -->
+    <section id="inputs" class="pro-section">
+      <div class="pro-section__head">
+        <div>
+          <div class="pro-section__title">5. Form Inputs & Code Terminal</div>
+          <div class="pro-section__desc">Clean 38px inputs & monospace log output.</div>
+        </div>
+      </div>
+
+      <div class="pro-grid-2" style="margin-bottom: 20px;">
+        <div class="pro-card">
+          <label style="display: block; font-size: 11px; font-weight: 800; color: var(--color-muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.05em;">Search Filter Input</label>
+          <input type="text" class="pro-input" placeholder="Search services, nodes, logs...">
+        </div>
+
+        <div class="pro-card">
+          <label style="display: block; font-size: 11px; font-weight: 800; color: var(--color-muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.05em;">Environment Parameter</label>
+          <input type="text" class="pro-input" value="NSFW_CHECK_OFFLOAD_URL=http://node1:8008" style="font-family: var(--font-mono);">
+        </div>
+      </div>
+
+      <div class="pro-terminal">
+2026-07-24 19:11:50 [INFO] srv-t: Interactive 4-Style Suggestion Switcher active
+2026-07-24 19:11:51 [INFO] layout: Select between Preset 1 (Subtle Surface), Preset 2 (Hairline Grid), Preset 3 (Flush Zero-Border), or Preset 4 (Soft Contrast)
+2026-07-24 19:11:51 [INFO] uvicorn: Ready for user style selection
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    function setTheme(theme) {
+      document.documentElement.setAttribute('data-theme', theme);
+      document.querySelectorAll('.theme-opt').forEach(btn => {
+        btn.classList.toggle('active', btn.textContent.toLowerCase() === theme);
+      });
+    }
+
+    function setStyle(styleName) {
+      document.documentElement.setAttribute('data-style', styleName);
+      document.querySelectorAll('.style-btn').forEach(btn => {
+        const onclickAttr = btn.getAttribute('onclick');
+        btn.classList.toggle('active', onclickAttr.includes(styleName));
+      });
+    }
+  </script>
+</body>
+</html>

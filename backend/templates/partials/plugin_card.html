@@ -35,7 +35,7 @@
         </div>
       {% endif %}
       {% for dependency in plugin.dependency_status %}
-        {% if not dependency.healthy %}
+        {% if dependency.healthy is sameas false %}
           <a class="plugin-card__dependency-error" href="/dependencies/{{ dependency.id }}">
             {% if dependency.id == "docker" %}Docker daemon is not available.{% else %}{{ dependency.id | title }} is not available.{% endif %}
           </a>

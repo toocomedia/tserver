@@ -91,6 +91,18 @@ class MaddyService:
         except Exception:
             return False
 
+    def get_usage_details(self) -> Dict[str, str]:
+        """Return mail port details for the Usage page."""
+        ports = (25, 587, 465, 993)
+        open_ports = [str(port) for port in ports if self._check_port(port)]
+        return {
+            "details": (
+                f"Open ports: {', '.join(open_ports)}"
+                if open_ports
+                else "No mail ports listening"
+            )
+        }
+
     # ------------------------------------------------------------------
     # Account Management
     # ------------------------------------------------------------------

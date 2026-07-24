@@ -112,11 +112,9 @@ async def _status_payload(
     site_payload = None
     if selected and selected in domains:
         site_payload = await _site_payload(selected, sites[selected], domains[selected])
-    container = await asyncio.to_thread(roundcube_webmail_service.get_status)
     return {
         "selected_domain": selected,
         "site": site_payload,
-        "container": container,
     }
 
 
@@ -214,14 +212,13 @@ async def index(request: Request, db: AsyncSession = Depends(get_db)):
         (selected_domain_data or {}).get("server_ip")
         or getattr(config, "SERVER_IP", "")
     )
-    plugin = plugin_manager.get_plugin("roundcube_webmail")
+    plugin = plugin_manager.plugins.get("roundcube_webmail")
     return templates.TemplateResponse(
         "roundcube_webmail.html",
         {
             "request": request,
             "active_page": "plugins",
             "plugin_version": (plugin or {}).get("version", "1.0.0"),
-            "status": roundcube_webmail_service.get_status(),
             "domain_rows": site_rows,
             "selected_domain": selected,
             "selected_site": selected_site,

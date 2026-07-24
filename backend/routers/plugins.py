@@ -20,7 +20,7 @@ router = APIRouter(prefix="/plugins", tags=["plugins"])
 @router.get("/", response_class=HTMLResponse)
 async def plugins_index(request: Request):
     """Plugins Management UI page."""
-    plugins_list = plugin_manager.discover_plugins()
+    plugins_list = plugin_manager.list_plugins()
     return templates.TemplateResponse("pages/plugins.html", {
         "request": request,
         "active_page": "plugins",

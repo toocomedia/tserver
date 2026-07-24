@@ -72,7 +72,7 @@
           <span class="text-muted" style="font-size:0.9rem;">{{ selected_domain_data.mailbox_count or 0 }} mailbox(es) configured for this domain</span>
         </div>
         <div>
-          {% if selected_site and selected_site.ssl_status == 'ready' and status.healthy %}
+          {% if selected_site and selected_site.ssl_status == 'ready' %}
             <a class="btn btn--primary" id="open-webmail-button"
               href="https://{{ selected_site.public_host }}/" target="_blank" rel="noopener">Open Webmail</a>
           {% else %}
@@ -101,15 +101,6 @@
           <p class="form-hint mb-lg">Current webmail availability and status for <strong>{{ selected_domain }}</strong>.</p>
           
           <div class="grid-responsive-cards mb-xl" style="gap: 1.5rem;">
-            <div class="card p-4">
-              <span class="text-small text-muted" style="display:block; margin-bottom:8px;">Container Status</span>
-              <div id="container-status">
-                <span class="badge {% if status.healthy %}badge--success{% else %}badge--inactive{% endif %}">
-                  {{ "Healthy" if status.healthy else status.state }}
-                </span>
-              </div>
-            </div>
-            
             <div class="card p-4">
               <span class="text-small text-muted" style="display:block; margin-bottom:8px;">DNS Resolution</span>
               <div id="dns-status">
