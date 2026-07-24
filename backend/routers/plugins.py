@@ -6,6 +6,7 @@ import os
 import shutil
 import logging
 from pathlib import Path
+from urllib.parse import urlencode
 from fastapi import APIRouter, Request, UploadFile, File, Form, Depends
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 
@@ -24,6 +25,8 @@ async def plugins_index(request: Request):
         "request": request,
         "active_page": "plugins",
         "plugins": plugins_list,
+        "action_error": request.query_params.get("error"),
+        "action_error_plugin_id": request.query_params.get("plugin_id"),
     })
 
 
@@ -56,7 +59,8 @@ async def install_plugin_api(request: Request, plugin_id: str = Form(...)):
     success, message = await plugin_manager.run_plugin_script(plugin_id, "install")
     if success:
         return RedirectResponse("/plugins/", status_code=303)
-    return JSONResponse({"detail": message}, status_code=400)
+    query = urlencode({"plugin_id": plugin_id, "error": message[:240]})
+    return RedirectResponse(f"/plugins/?{query}", status_code=303)
 
 
 @router.post("/api/uninstall")

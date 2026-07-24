@@ -25,18 +25,24 @@
       {% endif %}
     </div>
 
-    <div class="plugin-card__body">
+    <div class="plugin-card__body{% if plugin.paused_by or (action_error and action_error_plugin_id == plugin.id) %} has-dependency-error{% endif %}">
       <div class="plugin-card__description">{{ plugin.description }}</div>
       {% if plugin.dependency_status %}
         <div class="plugin-card__requirements">
-          <span>Requires</span>
           {% for dependency in plugin.dependency_status %}
-            <a href="/dependencies/{{ dependency.id }}"
-              class="plugin-card__dependency {% if not dependency.healthy %}is-unavailable{% endif %}">
-              {{ dependency.id | title }} · {{ "Available" if dependency.healthy else "Unavailable" }}
-            </a>
+            <span>Requires {{ dependency.id | title }}</span>
           {% endfor %}
         </div>
+      {% endif %}
+      {% for dependency in plugin.dependency_status %}
+        {% if not dependency.healthy %}
+          <a class="plugin-card__dependency-error" href="/dependencies/{{ dependency.id }}">
+            {% if dependency.id == "docker" %}Docker daemon is not available.{% else %}{{ dependency.id | title }} is not available.{% endif %}
+          </a>
+        {% endif %}
+      {% endfor %}
+      {% if action_error and action_error_plugin_id == plugin.id and not plugin.paused_by %}
+        <div class="plugin-card__dependency-error">{{ action_error }}</div>
       {% endif %}
       {% if plugin.manifest_error %}<div style="color:var(--color-danger); font-size:11px;">{{ plugin.manifest_error }}</div>{% endif %}
     </div>
@@ -46,7 +52,10 @@
         <form method="post" action="/plugins/api/install" style="display:inline-flex;">
           <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
           <input type="hidden" name="plugin_id" value="{{ plugin.id }}">
-          <button type="submit" class="btn btn--primary btn--sm">Install Plugin</button>
+          <button type="submit" class="btn btn--primary btn--sm"
+            {% if plugin.paused_by %}disabled title="Install the required system dependency first"{% endif %}>
+            Install Plugin
+          </button>
         </form>
         {% if plugin.data_purge %}
         <form method="post" action="/plugins/api/purge-data" style="display:inline-flex;">

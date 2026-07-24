@@ -301,6 +301,7 @@ async def _save_site(
     domain: str,
     public_host: str,
     manage_dns: bool,
+    confirm_host_change: bool,
     *,
     creating: bool,
 ) -> JSONResponse:
@@ -329,6 +330,17 @@ async def _save_site(
 
     expected_ip = domains[domain].get("server_ip") or getattr(config, "SERVER_IP", "")
     previous_host = current.get("public_host") if current else None
+    host_changed = bool(current and previous_host and previous_host != public_host)
+    if host_changed and not confirm_host_change:
+        return JSONResponse(
+            {
+                "detail": (
+                    "Confirm the hostname change. Its existing SSL certificate, "
+                    "proxy, and panel-managed DNS record will be removed."
+                )
+            },
+            status_code=409,
+        )
     keep_ssl = bool(
         current
         and previous_host == public_host
@@ -364,20 +376,17 @@ async def _save_site(
             )
         await nginx_service.reload()
 
-        if current and previous_host and previous_host != public_host:
-            await nginx_service.remove_site(previous_host)
+        if host_changed:
             if current.get("dns_managed"):
-                try:
-                    await dns_service.delete_record(
-                        domain, _record_name(previous_host, domain), "A"
-                    )
-                except Exception as exc:
-                    logger.warning("Old webmail DNS cleanup failed: %s", exc)
+                await dns_service.delete_record(
+                    domain, _record_name(previous_host, domain), "A"
+                )
             old_cert = await db.scalar(
                 select(SslCert).where(SslCert.full_domain == previous_host)
             )
             if old_cert:
                 await ssl_service.revoke_cert(db, old_cert.id, delete_only=True)
+            await nginx_service.remove_site(previous_host)
             await nginx_service.reload()
         elif (
             current
@@ -385,12 +394,9 @@ async def _save_site(
             and current.get("dns_managed")
             and not manage_dns
         ):
-            try:
-                await dns_service.delete_record(
-                    domain, _record_name(public_host, domain), "A"
-                )
-            except Exception as exc:
-                logger.warning("Managed webmail DNS cleanup failed: %s", exc)
+            await dns_service.delete_record(
+                domain, _record_name(public_host, domain), "A"
+            )
 
         saved = {
             "public_host": public_host,
@@ -406,15 +412,25 @@ async def _save_site(
     except Exception as exc:
         await db.rollback()
         return JSONResponse({"detail": str(exc)}, status_code=500)
+    if dns_error:
+        message = (
+            "Hostname changed and old managed resources were removed. "
+            "Automatic DNS for the new hostname failed; add the displayed A record."
+            if host_changed
+            else "Webmail saved; automatic DNS failed. Add the displayed A record."
+        )
+    elif host_changed:
+        message = (
+            "Hostname changed. The old SSL certificate, proxy, and any "
+            "panel-managed DNS record were removed."
+        )
+    else:
+        message = "Webmail access saved."
     payload = await _site_payload(domain, saved, domains[domain])
     return JSONResponse(
         {
             "status": "ok",
-            "message": (
-                "Webmail access saved."
-                if not dns_error
-                else "Webmail saved; automatic DNS failed. Add the displayed A record."
-            ),
+            "message": message,
             "site": payload,
         }
     )
@@ -426,10 +442,11 @@ async def add_site(
     mail_domain: str = Form(...),
     public_host: str = Form(...),
     manage_dns: bool = Form(False),
+    confirm_host_change: bool = Form(False),
     db: AsyncSession = Depends(get_db),
 ):
     return await _save_site(
-        db, mail_domain, public_host, manage_dns, creating=True
+        db, mail_domain, public_host, manage_dns, confirm_host_change, creating=True
     )
 
 
@@ -439,10 +456,11 @@ async def update_site(
     mail_domain: str = Form(...),
     public_host: str = Form(...),
     manage_dns: bool = Form(False),
+    confirm_host_change: bool = Form(False),
     db: AsyncSession = Depends(get_db),
 ):
     return await _save_site(
-        db, mail_domain, public_host, manage_dns, creating=False
+        db, mail_domain, public_host, manage_dns, confirm_host_change, creating=False
     )
 
 
@@ -471,19 +489,16 @@ async def delete_site(
     host = site.get("public_host")
     try:
         if isinstance(host, str) and host:
-            await nginx_service.remove_site(host)
             if site.get("dns_managed"):
-                try:
-                    await dns_service.delete_record(
-                        domain, _record_name(host, domain), "A"
-                    )
-                except Exception as exc:
-                    logger.warning("Webmail DNS cleanup failed: %s", exc)
+                await dns_service.delete_record(
+                    domain, _record_name(host, domain), "A"
+                )
             cert = await db.scalar(
                 select(SslCert).where(SslCert.full_domain == host)
             )
             if cert:
                 await ssl_service.revoke_cert(db, cert.id, delete_only=True)
+            await nginx_service.remove_site(host)
             await nginx_service.reload()
         roundcube_webmail_service.delete_site(domain)
         await db.commit()

@@ -279,6 +279,29 @@ class RoundcubePackagingTests(unittest.TestCase):
         self.assertIn("Manage DNS with this panel", template)
         self.assertIn("split-layout", template)
         self.assertIn("+ Add Webmail Domain", template)
+        self.assertIn('class="roundcube-tabs"', template)
+        self.assertIn('data-tab="domain"', template)
+        self.assertIn('data-tab="https"', template)
+        self.assertIn('data-tab="mail"', template)
+        self.assertNotIn('class="section', template)
+        self.assertIn("confirm_host_change", javascript)
+        self.assertIn("Change webmail hostname?", javascript)
+        self.assertIn(
+            "if host_changed and not confirm_host_change:",
+            router,
+        )
+        cleanup = router[
+            router.index("        if host_changed:")
+            : router.index("        elif (", router.index("        if host_changed:"))
+        ]
+        self.assertLess(
+            cleanup.index("await dns_service.delete_record"),
+            cleanup.index("await ssl_service.revoke_cert"),
+        )
+        self.assertLess(
+            cleanup.index("await ssl_service.revoke_cert"),
+            cleanup.index("await nginx_service.remove_site"),
+        )
         self.assertNotIn('id="server-ip"', template)
         self.assertNotIn('id="dns-ttl"', template)
         self.assertIn("DNS_TTL = 300", router)

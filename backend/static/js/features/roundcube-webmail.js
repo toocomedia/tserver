@@ -5,6 +5,28 @@
   const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
   let pollTimer = null;
 
+  const activateTab = (name, updateUrl = true) => {
+    const target = Array.from(document.querySelectorAll('.roundcube-tab-panel'))
+      .find((panel) => panel.dataset.panel === name);
+    if (!target) return;
+    document.querySelectorAll('.roundcube-tab-button').forEach((button) => {
+      const active = button.dataset.tab === name;
+      button.classList.toggle('active', active);
+      button.setAttribute('aria-selected', active ? 'true' : 'false');
+    });
+    document.querySelectorAll('.roundcube-tab-panel').forEach((panel) => {
+      panel.classList.toggle('active', panel === target);
+    });
+    if (updateUrl) {
+      history.replaceState(null, '', `${location.pathname}${location.search}#${name}`);
+    }
+  };
+
+  document.querySelectorAll('.roundcube-tab-button').forEach((button) => {
+    button.addEventListener('click', () => activateTab(button.dataset.tab));
+  });
+  if (location.hash) activateTab(location.hash.slice(1), false);
+
   const readJson = async (response) => {
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.detail || data.error || 'Request failed.');
@@ -108,14 +130,14 @@
     await navigator.clipboard.writeText(`A ${host} ${target}`);
   });
 
-  document.getElementById('webmail-site-form')?.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    const form = event.currentTarget;
+  const saveSite = async (form, confirmedHostChange = false) => {
     const button = document.getElementById('save-site-button');
     button.disabled = true;
     button.textContent = 'Saving…';
     try {
-      const response = await fetch(form.action, { method: 'POST', body: new FormData(form) });
+      const body = new FormData(form);
+      if (confirmedHostChange) body.set('confirm_host_change', 'true');
+      const response = await fetch(form.action, { method: 'POST', body });
       const data = await readJson(response);
       showResult('site-result', data.message, true);
       window.location.assign(`/plugins/roundcube_webmail/?domain=${encodeURIComponent(domain)}`);
@@ -123,6 +145,29 @@
       showResult('site-result', error.message);
       button.disabled = false;
       button.textContent = page.dataset.siteConfigured === 'true' ? 'Save Changes' : 'Add Webmail Access';
+    }
+  };
+
+  document.getElementById('webmail-site-form')?.addEventListener('submit', (event) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const oldHost = (page.dataset.publicHost || '').trim().toLowerCase();
+    const newHost = (hostInput?.value || '').trim().toLowerCase();
+    const changed = page.dataset.siteConfigured === 'true' && oldHost && oldHost !== newHost;
+    if (!changed) {
+      saveSite(form);
+      return;
+    }
+    const message = `Change ${oldHost} to ${newHost}? The SSL certificate and proxy for ${oldHost} will be removed. Its A record will also be deleted when DNS is managed by this panel.`;
+    const proceed = () => saveSite(form, true);
+    if (typeof confirmAction === 'function') {
+      confirmAction(message, proceed, {
+        title: 'Change webmail hostname?',
+        okLabel: 'Change hostname',
+        danger: true
+      });
+    } else if (window.confirm(message)) {
+      proceed();
     }
   });
 
@@ -137,11 +182,10 @@
       body.append('mail_domain', domain);
       const response = await fetch('/plugins/roundcube_webmail/api/sites/ssl', { method: 'POST', body });
       const data = await readJson(response);
-      const message = document.getElementById('status-message');
-      if (message) message.textContent = data.message;
+      showResult('ssl-result', data.message, true);
       await refreshStatus();
     } catch (error) {
-      showResult('site-result', error.message);
+      showResult('ssl-result', error.message);
       button.disabled = false;
     }
   });

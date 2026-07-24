@@ -345,6 +345,10 @@ class PluginManager:
         plugin = self.get_plugin(plugin_id)
         if not plugin:
             return False, "Plugin not found."
+        if action == "install" and plugin.get("paused_by"):
+            if "docker" in plugin["paused_by"]:
+                return False, "Docker daemon is not available."
+            return False, "A required system dependency is not available."
         script_rel = plugin.get(f"{action}_script")
         if not script_rel:
             return False, f"Plugin has no {action} script."
