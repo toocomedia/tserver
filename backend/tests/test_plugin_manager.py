@@ -30,6 +30,7 @@ class PluginManagerTests(unittest.TestCase):
             "name": plugin_id.title(),
             "version": "1.0.0",
             "enabled": True,
+            "usage": {},
             **extra,
         }
         (plugin_dir / "plugin.json").write_text(json.dumps(data), encoding="utf-8")
@@ -84,6 +85,16 @@ class PluginManagerTests(unittest.TestCase):
             self.assertEqual(plugin["effective_status"], "invalid")
             self.assertIn("Unknown dependencies", plugin["manifest_error"])
 
+    def test_usage_contract_is_required_and_validated(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            self._write_manifest(root, "missing_usage", usage=None)
+            manager = PluginManager()
+            with patch("plugins.manager.PLUGINS_DIR", root):
+                plugin = manager.discover_plugins()[0]
+            self.assertEqual(plugin["effective_status"], "invalid")
+            self.assertIn("usage is required", plugin["manifest_error"])
+
     def test_upload_rejects_traversal_and_reserved_dependency_id(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp) / "plugins"
@@ -115,7 +126,13 @@ class PluginManagerTests(unittest.TestCase):
             with zipfile.ZipFile(archive_path, "w") as archive:
                 archive.writestr(
                     "sample/plugin.json",
-                    json.dumps({"id": "sample", "name": "Sample"}),
+                    json.dumps(
+                        {
+                            "id": "sample",
+                            "name": "Sample",
+                            "usage": {},
+                        }
+                    ),
                 )
             manager = PluginManager()
             with patch("plugins.manager.PLUGINS_DIR", root):

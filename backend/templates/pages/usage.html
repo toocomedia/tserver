@@ -390,16 +390,6 @@
     return 'proc-status--sleeping';
   }
 
-  function usageMemory(item, plugin = false) {
-    const used = Number(item.memory_mb || 0);
-    const limit = Number(item.memory_limit_mb || 0);
-    if (limit > 0) {
-      return `${fmtMb(used)} / ${fmtMb(limit)} <span class="text-small text-muted">(${Number(item.mem || 0).toFixed(1)}% of limit)</span>`;
-    }
-    const scope = plugin ? 'of server' : 'of server';
-    return `${fmtMb(used)} <span class="text-small text-muted">(${Number(item.mem || 0).toFixed(1)}% ${scope})</span>`;
-  }
-
   // -- Render -----------------------------------------------------------------
   function render(d) {
     // Overview cards
@@ -466,7 +456,7 @@
           <td><strong>${svc.label || svcNames[key] || key}</strong></td>
           <td>${svc.count}</td>
           <td>${svc.cpu.toFixed(1)}%</td>
-          <td>${usageMemory(svc)}</td>
+          <td>${svc.memory}</td>
           <td><span class="${procStatusClass(svc.status)}">${svc.status}</span></td>
         </tr>
       `).join('');
@@ -481,7 +471,7 @@
           <td><strong>${plugin.label || key}</strong></td>
           <td>${plugin.count}</td>
           <td>${plugin.cpu.toFixed(1)}%</td>
-          <td>${usageMemory(plugin, true)}</td>
+          <td>${plugin.memory}</td>
           <td><span class="${procStatusClass(plugin.status)}">${plugin.status}</span></td>
         </tr>
       `).join('') || '<tr><td colspan="5" class="text-muted">No installed plugins</td></tr>';

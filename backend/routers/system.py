@@ -220,43 +220,16 @@ async def server_stats():
 
     # Top 15 processes by CPU usage & Stack Services
     procs = []
+    service_labels = {
+        "nginx": "Nginx",
+        "powerdns": "PowerDNS",
+        "panel": "Panel (FastAPI)",
+        "docker": "Docker Engine",
+    }
     services = {
-        "nginx": {
-            "label": "Nginx",
-            "cpu": 0.0,
-            "mem": 0.0,
-            "memory_mb": 0.0,
-            "count": 0,
-            "status": "stopped",
-            "_memory_bytes": 0,
-        },
-        "powerdns": {
-            "label": "PowerDNS",
-            "cpu": 0.0,
-            "mem": 0.0,
-            "memory_mb": 0.0,
-            "count": 0,
-            "status": "stopped",
-            "_memory_bytes": 0,
-        },
-        "panel": {
-            "label": "Panel (FastAPI)",
-            "cpu": 0.0,
-            "mem": 0.0,
-            "memory_mb": 0.0,
-            "count": 0,
-            "status": "stopped",
-            "_memory_bytes": 0,
-        },
-        "docker": {
-            "label": "Docker Engine",
-            "cpu": 0.0,
-            "mem": 0.0,
-            "memory_mb": 0.0,
-            "count": 0,
-            "status": "stopped",
-            "_memory_bytes": 0,
-        },
+        key: dict(label=label, cpu=0.0, mem=0.0, memory="0 MB",
+                  count=0, status="stopped", _memory_bytes=0)
+        for key, label in service_labels.items()
     }
     for p in _psutil.process_iter(
         [
@@ -314,8 +287,11 @@ async def server_stats():
     for s in services.values():
         s["cpu"] = round(s["cpu"], 1)
         memory_bytes = int(s.pop("_memory_bytes"))
-        s["memory_mb"] = round(memory_bytes / (1024 ** 2), 1)
         s["mem"] = round((memory_bytes / ram.total) * 100, 1)
+        s["memory"] = (
+            f"{memory_bytes / (1024 ** 2):.0f} MB "
+            f"({s['mem']:.1f}% of server)"
+        )
 
     plugins = await plugin_usage_service.get_plugin_usage(procs, ram.total)
 

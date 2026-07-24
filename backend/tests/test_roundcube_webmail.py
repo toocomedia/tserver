@@ -102,6 +102,22 @@ class RoundcubeLifecycleTests(unittest.TestCase):
             ["docker", "start", service.container_name],
         )
 
+    def test_usage_reads_the_container_limit_and_process_count(self):
+        service = RoundcubeWebmailService()
+        service.get_status = Mock(
+            return_value={"healthy": True, "state": "healthy"}
+        )
+        service._run = Mock(
+            return_value=subprocess.CompletedProcess(
+                [], 0, "0.2%|25.0%|7|64MiB / 256MiB\n", ""
+            )
+        )
+
+        usage = service.get_usage()
+
+        self.assertEqual(usage["count"], 7)
+        self.assertEqual(usage["memory"], "64MiB / 256MiB (25.0% of limit)")
+
     def test_local_state_purge_requires_uninstalled_container(self):
         with tempfile.TemporaryDirectory() as temp, patch.dict(
             os.environ, {"ROUNDCUBE_WEBMAIL_DATA_DIR": temp}
@@ -197,6 +213,7 @@ class RoundcubeLifecycleTests(unittest.TestCase):
 class RoundcubePackagingTests(unittest.TestCase):
     def test_installer_uses_labeled_limited_digest_pinned_resources(self):
         plugin = BACKEND / "plugins" / "roundcube_webmail"
+        manifest = json.loads((plugin / "plugin.json").read_text(encoding="utf-8"))
         install = (plugin / "scripts" / "install_roundcube.sh").read_text(
             encoding="utf-8"
         )
@@ -205,6 +222,7 @@ class RoundcubePackagingTests(unittest.TestCase):
         )
 
         self.assertIn("roundcube/roundcubemail:1.7.2-apache", install)
+        self.assertEqual(manifest["usage"], {})
         self.assertIn("RepoDigests", install)
         self.assertIn('"$IMAGE_REF"', install)
         self.assertIn("--label \"srv-panel.plugin=${PLUGIN_ID}\"", install)

@@ -40,6 +40,7 @@ Every plugin **must** include a `plugin.json` file in its root directory:
   "sidebar": true,
   "sidebar_label": "Custom Plugin",
   "enabled": true,
+  "usage": {},
   "requires": {
     "dependencies": ["docker"]
   },
@@ -60,6 +61,7 @@ Every plugin **must** include a `plugin.json` file in its root directory:
 * `install_script` *(string)*: Path to bash script executed when installing the plugin.
 * `uninstall_script` *(string)*: Path to bash script executed when uninstalling the plugin.
 * `requires.dependencies` *(list[string], optional)*: Trusted system dependencies required at runtime. Currently the only accepted ID is `docker`.
+* `usage` *(object, required)*: Declares how the Usage page automatically collects this plugin's runtime metrics.
 
 `enabled` supplies the default only when the plugin is first discovered. After that, the administrator's desired state is stored in the panel database and is not rewritten into the manifest.
 
@@ -67,7 +69,27 @@ Unknown dependency IDs block the plugin and appear as a clear manifest error. Th
 
 ---
 
-## 3. Creating Plugin Routes (`router.py`)
+## 3. Usage Page Contract
+
+Every plugin must include `usage` so it appears automatically in the
+**Plugins** section of `/usage`. Native services list their process names:
+
+```json
+{
+  "usage": {
+    "process_names": ["my-custom-service"]
+  }
+}
+```
+
+Plugins needing custom metrics, including Docker plugins, implement
+`get_usage()` on their service object and return `cpu`, `mem`, `memory`,
+`count`, and `status`. The page calls that hook
+automatically. UI-only plugins use `"usage": {}`.
+
+---
+
+## 4. Creating Plugin Routes (`router.py`)
 
 Create a standard FastAPI `APIRouter` in `router.py`. The `PluginManager` will auto-mount `router` onto the main application on startup:
 
@@ -89,7 +111,7 @@ async def index(request: Request):
 
 ---
 
-## 4. Custom Jinja Templates (`templates/`)
+## 5. Custom Jinja Templates (`templates/`)
 
 Place any HTML templates inside `templates/`. The `PluginManager` automatically appends this directory to Jinja's template search path.
 
@@ -111,7 +133,7 @@ Templates can extend the panel's global base layout:
 
 ---
 
-## 5. Packaging & Distributing Plugins
+## 6. Packaging & Distributing Plugins
 
 To distribute your plugin to other SRV-Panel users:
 
@@ -124,7 +146,7 @@ To distribute your plugin to other SRV-Panel users:
 
 ---
 
-## 6. One-Click Clean Uninstallation Best Practices
+## 7. One-Click Clean Uninstallation Best Practices
 
 To adhere to SRV-Panel's low-RAM philosophy, ensure your `uninstall.sh` script cleanly stops background processes, deletes installed binaries, and releases system memory:
 
@@ -146,7 +168,7 @@ echo "==> Uninstalled cleanly!"
 
 The panel runs each lifecycle script once with a timeout. It does not retry a failed script automatically. Scripts must therefore be idempotent and return non-zero when cleanup is incomplete.
 
-## 7. Runtime Pause and Resume Contract
+## 8. Runtime Pause and Resume Contract
 
 All plugin routes are protected by the core availability guard. A plugin is unavailable when it is manually disabled, not installed, invalid, or missing a required dependency. Direct URLs and API calls cannot bypass this check.
 
@@ -167,7 +189,7 @@ Hooks must finish within 60 seconds and raise an exception on failure. Dependenc
 
 Background jobs do not pass through a web route. Before doing work they must call `plugin_manager.get_plugin(plugin_id)` and continue only when `effective_status == "active"`.
 
-## 8. Docker Resource Ownership
+## 9. Docker Resource Ownership
 
 Every Docker resource created by a plugin must include this label:
 
@@ -177,13 +199,13 @@ srv-panel.plugin=<plugin-id>
 
 Use a stable Compose project name derived from the plugin ID. Disable stops only owned containers. Before a Docker plugin's uninstall script runs, the core removes containers and networks carrying its ownership label. Volumes and application data are preserved unless a separate purge is explicitly implemented and confirmed. Never use broad commands such as `docker system prune` from a plugin.
 
-## 9. Packaging Security Rules
+## 10. Packaging Security Rules
 
 An uploaded archive must contain exactly one `<plugin-id>/plugin.json` and all files must stay under that folder. Uploads are rejected for unsafe paths, symlinks, excessive size/count, reserved IDs, dependency manifests, system-type claims, unknown dependencies, or attempts to overwrite an installed/core plugin.
 
 Uploaded Python routers and lifecycle scripts execute as trusted administrator-installed code. Only install plugins from trusted sources.
 
-## 10. Python-Only Tests
+## 11. Python-Only Tests
 
 Tests must mock Docker, systemd, subprocess, and network access. Do not require a running panel stack. Run the repository suite with:
 

@@ -1,4 +1,4 @@
-"""Manifest-driven resource usage rows for installed panel plugins."""
+"""Automatic resource usage rows for installed panel plugins."""
 from __future__ import annotations
 
 import asyncio
@@ -12,38 +12,37 @@ def _empty_row(plugin: dict[str, Any]) -> dict[str, Any]:
         "label": plugin.get("name", plugin["id"]),
         "cpu": 0.0,
         "mem": 0.0,
-        "memory_mb": 0.0,
-        "memory_limit_mb": None,
+        "memory": "0 MB",
         "count": 0,
         "status": plugin.get("effective_status", "disabled"),
     }
 
 
-def _process_totals(
+def _process_usage(
     processes: list[dict[str, Any]],
     process_names: set[str],
     total_memory: int,
-) -> tuple[float, float, float, int]:
-    cpu = 0.0
-    memory_bytes = 0
-    count = 0
-    for process in processes:
-        name = str(process.get("name") or "").lower()
-        if name not in process_names:
-            continue
-        cpu += float(process.get("cpu_percent") or 0.0)
-        memory_info = process.get("memory_info")
-        memory_bytes += int(getattr(memory_info, "rss", 0) or 0)
-        count += 1
-    memory_percent = (
-        (memory_bytes / total_memory) * 100 if total_memory > 0 else 0.0
+) -> dict[str, Any]:
+    matches = [
+        process
+        for process in processes
+        if str(process.get("name") or "").lower() in process_names
+    ]
+    memory_bytes = sum(
+        int(getattr(process.get("memory_info"), "rss", 0) or 0)
+        for process in matches
     )
-    return (
-        round(cpu, 1),
-        round(memory_percent, 1),
-        round(memory_bytes / (1024 ** 2), 1),
-        count,
-    )
+    return {
+        "cpu": round(sum(float(p.get("cpu_percent") or 0) for p in matches), 1),
+        "mem": round(memory_bytes / total_memory * 100, 1) if total_memory else 0,
+        "memory": (
+            f"{memory_bytes / (1024 ** 2):.0f} MB "
+            f"({memory_bytes / total_memory * 100:.1f}% of server)"
+            if total_memory else "0 MB"
+        ),
+        "count": len(matches),
+        "status": "running" if matches else "stopped",
+    }
 
 
 async def get_plugin_usage(
@@ -60,22 +59,6 @@ async def get_plugin_usage(
         if plugin and plugin.get("installed"):
             installed_plugins.append(plugin)
 
-    active_docker_ids = [
-        plugin["id"]
-        for plugin in installed_plugins
-        if plugin.get("effective_status") == "active"
-        and (plugin.get("usage") or {}).get("source") == "docker"
-    ]
-    docker_rows: dict[str, dict[str, Any]] = {}
-    if active_docker_ids:
-        from dependencies import dependency_manager
-
-        docker_service = dependency_manager.get_service("docker")
-        if docker_service is not None:
-            docker_rows = await asyncio.to_thread(
-                docker_service.get_plugin_usage, active_docker_ids
-            )
-
     rows: dict[str, dict[str, Any]] = {}
     for plugin in installed_plugins:
         plugin_id = plugin["id"]
@@ -84,46 +67,21 @@ async def get_plugin_usage(
         if plugin.get("effective_status") != "active":
             continue
 
-        usage = plugin.get("usage") or {}
-        source = usage.get("source")
-        if source == "none":
+        service = plugin_manager.get_service(plugin_id)
+        usage_hook = getattr(service, "get_usage", None)
+        if usage_hook:
+            try:
+                row.update(await asyncio.to_thread(usage_hook))
+            except Exception:
+                row["status"] = "unhealthy"
             continue
-        if source == "process":
-            cpu, memory_percent, memory_mb, count = _process_totals(
-                processes,
-                {str(name).lower() for name in usage.get("process_names", [])},
-                total_memory,
-            )
+
+        process_names = {
+            str(name).lower()
+            for name in (plugin.get("usage") or {}).get("process_names", [])
+        }
+        if process_names:
             row.update(
-                cpu=cpu,
-                mem=memory_percent,
-                memory_mb=memory_mb,
-                count=count,
-                status="running" if count else "stopped",
-            )
-            continue
-        if source == "docker":
-            runtime = docker_rows.get(plugin_id)
-            if runtime is None:
-                row["status"] = "stopped"
-                continue
-            memory_bytes = int(runtime.get("memory_bytes") or 0)
-            memory_limit_bytes = int(runtime.get("memory_limit_bytes") or 0)
-            memory_percent = (
-                (memory_bytes / memory_limit_bytes) * 100
-                if memory_limit_bytes > 0
-                else 0.0
-            )
-            row.update(
-                cpu=round(float(runtime.get("cpu") or 0.0), 1),
-                mem=round(memory_percent, 1),
-                memory_mb=round(memory_bytes / (1024 ** 2), 1),
-                memory_limit_mb=(
-                    round(memory_limit_bytes / (1024 ** 2), 1)
-                    if memory_limit_bytes > 0
-                    else None
-                ),
-                count=int(runtime.get("count") or 0),
-                status=runtime.get("status", "stopped"),
+                _process_usage(processes, process_names, total_memory)
             )
     return rows

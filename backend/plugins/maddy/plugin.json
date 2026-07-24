@@ -10,7 +10,6 @@
   "sidebar_label": "Mail (Maddy)",
   "enabled": true,
   "usage": {
-    "source": "process",
     "process_names": ["maddy"]
   },
   "install_script": "scripts/install_maddy.sh",

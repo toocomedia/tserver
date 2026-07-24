@@ -29,7 +29,6 @@ PLUGINS_DIR = Path(__file__).parent.resolve()
 PLUGIN_ID_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}$")
 PROCESS_NAME_RE = re.compile(r"^[A-Za-z0-9_.+-]{1,64}$")
 RESERVED_PLUGIN_IDS = frozenset({"manager", *CORE_DEPENDENCY_IDS})
-USAGE_SOURCES = frozenset({"none", "process", "docker"})
 
 
 class PluginUnavailableError(Exception):
@@ -107,25 +106,12 @@ class PluginManager:
         usage = data.get("usage")
         if not isinstance(usage, dict):
             return "usage is required and must be an object."
-        usage_source = usage.get("source")
-        if usage_source not in USAGE_SOURCES:
-            return "usage.source must be one of: none, process, docker."
-        if usage_source == "process":
-            process_names = usage.get("process_names")
-            if (
-                not isinstance(process_names, list)
-                or not process_names
-                or any(
-                    not isinstance(name, str)
-                    or not PROCESS_NAME_RE.fullmatch(name)
-                    for name in process_names
-                )
-            ):
-                return (
-                    "usage.process_names must contain one or more safe process names."
-                )
-        if usage_source == "docker" and "docker" not in dependencies:
-            return "Docker usage requires requires.dependencies to include docker."
+        process_names = usage.get("process_names", [])
+        if not isinstance(process_names, list) or any(
+            not isinstance(name, str) or not PROCESS_NAME_RE.fullmatch(name)
+            for name in process_names
+        ):
+            return "usage.process_names must contain safe process names."
         return None
 
     def _effective(self, plugin: dict[str, Any]) -> dict[str, Any]:
@@ -295,6 +281,12 @@ class PluginManager:
             self.discover_plugins()
         plugin = self.plugins.get(plugin_id)
         return self._effective(plugin) if plugin else None
+
+    def get_service(self, plugin_id: str):
+        plugin = self.get_plugin(plugin_id)
+        if not plugin:
+            return None
+        return self._find_service(Path(plugin["dir_path"]), plugin_id)
 
     def get_dependents(self, dependency_id: str) -> list[dict[str, Any]]:
         dependents = []

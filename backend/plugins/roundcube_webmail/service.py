@@ -155,6 +155,46 @@ class RoundcubeWebmailService:
         )
         return status
 
+    def get_usage(self) -> dict[str, Any]:
+        """Return the one Roundcube container's live Docker statistics."""
+        status = self.get_status()
+        row = {
+            "cpu": 0.0,
+            "mem": 0.0,
+            "memory": "0 MB",
+            "count": 0,
+            "status": status["state"],
+        }
+        if not status["healthy"]:
+            return row
+        try:
+            result = self._run(
+                [
+                    "docker",
+                    "stats",
+                    "--no-stream",
+                    "--format",
+                    "{{.CPUPerc}}|{{.MemPerc}}|{{.PIDs}}|{{.MemUsage}}",
+                    self.container_name,
+                ],
+                timeout=5,
+            )
+            cpu, memory, pids, memory_usage = result.stdout.strip().split("|", 3)
+            used, _, limit = memory_usage.partition("/")
+            row.update(
+                cpu=round(float(cpu.rstrip("%")), 1),
+                mem=round(float(memory.rstrip("%")), 1),
+                memory=(
+                    f"{used.strip()} / {limit.strip()} "
+                    f"({float(memory.rstrip('%')):.1f}% of limit)"
+                ),
+                count=int(pids),
+                status="running",
+            )
+        except (OSError, subprocess.TimeoutExpired, TypeError, ValueError):
+            row["status"] = "unhealthy"
+        return row
+
     def pause(self) -> None:
         if not self.is_installed():
             return
