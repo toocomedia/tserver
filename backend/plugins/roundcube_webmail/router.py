@@ -31,7 +31,6 @@ HOST_RE = re.compile(
 )
 DNS_TTL = 300
 _ssl_tasks: dict[str, asyncio.Task] = {}
-_rebuild_task: asyncio.Task | None = None
 
 
 async def _mail_domains(db: AsyncSession) -> dict[str, dict[str, Any]]:
@@ -113,14 +112,11 @@ async def _status_payload(
     site_payload = None
     if selected and selected in domains:
         site_payload = await _site_payload(selected, sites[selected], domains[selected])
-    state = roundcube_webmail_service.read_state()
     container = await asyncio.to_thread(roundcube_webmail_service.get_status)
     return {
         "selected_domain": selected,
         "site": site_payload,
         "container": container,
-        "rebuild_status": state.get("rebuild_status", "idle"),
-        "rebuild_error": state.get("rebuild_error"),
     }
 
 
@@ -179,30 +175,6 @@ async def _issue_ssl_task(domain: str, host: str) -> None:
             )
     finally:
         _ssl_tasks.pop(domain, None)
-
-
-async def _rebuild_roundcube_task() -> None:
-    global _rebuild_task
-    try:
-        from plugins.manager import plugin_manager
-
-        success, message = await plugin_manager.run_plugin_script(
-            "roundcube_webmail", "install"
-        )
-        if not success:
-            raise RuntimeError(message)
-        roundcube_webmail_service.update_state(
-            rebuild_status="ready",
-            rebuild_error=None,
-        )
-    except Exception as exc:
-        logger.exception("Roundcube transport rebuild failed")
-        roundcube_webmail_service.update_state(
-            rebuild_status="error",
-            rebuild_error=str(exc),
-        )
-    finally:
-        _rebuild_task = None
 
 
 @router.get("/", response_class=HTMLResponse)
@@ -275,25 +247,6 @@ async def mail_diagnostics():
         roundcube_webmail_service.diagnose_mail_connection
     )
     return JSONResponse(result, status_code=200 if result.get("ok") else 503)
-
-
-@router.post("/api/reload")
-async def reload_roundcube(request: Request):
-    global _rebuild_task
-    if _rebuild_task and not _rebuild_task.done():
-        return JSONResponse(
-            {"status": "pending", "message": "Mail detection is already running."},
-            status_code=202,
-        )
-    roundcube_webmail_service.update_state(
-        rebuild_status="pending",
-        rebuild_error=None,
-    )
-    _rebuild_task = asyncio.create_task(_rebuild_roundcube_task())
-    return JSONResponse(
-        {"status": "pending", "message": "Roundcube is rebuilding in the background."},
-        status_code=202,
-    )
 
 
 async def _save_site(

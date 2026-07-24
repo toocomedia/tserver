@@ -26,6 +26,7 @@ from models.domain import Domain
 from models.ssl_cert import SslCert
 from models.proxy import ReverseProxy
 from services import error_service
+from services import plugin_usage_service
 from templating import templates
 from utils.shell import run
 import config
@@ -260,6 +261,8 @@ async def server_stats():
     for s in services.values():
         s["cpu"] = round(s["cpu"], 1)
         s["mem"] = round(s["mem"], 1)
+
+    services.update(await plugin_usage_service.get_plugin_usage())
 
     procs.sort(key=lambda x: x["cpu_percent"] or 0, reverse=True)
     top_procs = [

@@ -53,6 +53,7 @@
   .proc-status--sleeping { color: var(--color-muted); }
   .proc-status--running  { color: var(--color-accent-2); font-weight: 700; }
   .proc-status--zombie   { color: var(--color-danger); }
+  .proc-status--stopped  { color: var(--color-danger); }
 
   .info-row__value .usage-bar-wrap { min-width: 200px; }
 
@@ -362,6 +363,7 @@
   function procStatusClass(s) {
     if (s === 'running')  return 'proc-status--running';
     if (s === 'zombie')   return 'proc-status--zombie';
+    if (['stopped', 'unhealthy', 'disabled'].includes(s)) return 'proc-status--stopped';
     return 'proc-status--sleeping';
   }
 
@@ -424,11 +426,12 @@
         'nginx': 'Nginx',
         'powerdns': 'PowerDNS',
         'maddy': 'Mail Server (Maddy)',
-        'panel': 'Panel (FastAPI)'
+        'panel': 'Panel (FastAPI)',
+        'roundcube_webmail': 'Webmail (Roundcube)'
       };
       svcTbody.innerHTML = Object.entries(d.services).map(([key, svc]) => `
         <tr>
-          <td><strong>${svcNames[key] || key}</strong></td>
+          <td><strong>${svc.label || svcNames[key] || key}</strong></td>
           <td>${svc.count}</td>
           <td>${svc.cpu.toFixed(1)}%</td>
           <td>${svc.mem.toFixed(1)}%</td>
@@ -684,4 +687,3 @@
   fetchStats();
 </script>
 {% endblock %}
-

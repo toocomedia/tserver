@@ -91,13 +91,8 @@
     }
     const sslButton = document.getElementById('issue-ssl-button');
     if (sslButton) sslButton.disabled = site.ssl_status === 'pending';
-    const reload = document.getElementById('reload-roundcube-button');
-    if (reload) {
-      reload.disabled = data.rebuild_status === 'pending';
-      reload.textContent = data.rebuild_status === 'pending' ? 'Detecting…' : 'Detect Mail Security';
-    }
     if (pollTimer) clearTimeout(pollTimer);
-    if (site.ssl_status === 'pending' || data.rebuild_status === 'pending') {
+    if (site.ssl_status === 'pending') {
       pollTimer = setTimeout(refreshStatus, 2000);
     }
   };
@@ -208,25 +203,6 @@
     } finally {
       button.disabled = false;
       button.textContent = 'Test Maddy Connection';
-    }
-  });
-
-  document.getElementById('reload-roundcube-button')?.addEventListener('click', async (event) => {
-    const button = event.currentTarget;
-    button.disabled = true;
-    button.textContent = 'Detecting…';
-    try {
-      const response = await fetch('/plugins/roundcube_webmail/api/reload', {
-        method: 'POST',
-        headers: { 'X-CSRF-Token': csrf, Accept: 'application/json' }
-      });
-      const data = await readJson(response);
-      showResult('mail-test-result', data.message, true);
-      await refreshStatus();
-    } catch (error) {
-      showResult('mail-test-result', error.message);
-      button.disabled = false;
-      button.textContent = 'Detect Mail Security';
     }
   });
 

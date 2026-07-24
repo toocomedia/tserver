@@ -5,6 +5,7 @@ import base64
 import hashlib
 import hmac
 import json
+import logging
 import os
 import re
 import subprocess
@@ -12,6 +13,9 @@ import threading
 import time
 from pathlib import Path
 from typing import Any
+
+
+logger = logging.getLogger(__name__)
 
 
 class RoundcubeWebmailService:
@@ -55,8 +59,10 @@ class RoundcubeWebmailService:
     def _run(
         self, command: list[str], *, timeout: int | None = None
     ) -> subprocess.CompletedProcess[str]:
+        full_command = [*self._docker_command_prefix(), *command]
+        logger.info("Shell: %s", " ".join(full_command))
         return subprocess.run(
-            [*self._docker_command_prefix(), *command],
+            full_command,
             capture_output=True,
             text=True,
             timeout=timeout or self.command_timeout,
@@ -106,6 +112,7 @@ class RoundcubeWebmailService:
             "healthy": False,
             "state": "missing",
             "error": None,
+            "pid": None,
         }
         if os.name == "nt":
             return status
@@ -143,6 +150,7 @@ class RoundcubeWebmailService:
                 "healthy": healthy,
                 "state": health or ("running" if running else "stopped"),
                 "error": state.get("Error") or None,
+                "pid": state.get("Pid"),
             }
         )
         return status
@@ -275,9 +283,6 @@ echo json_encode([
                     "ssl_error_detail": data.get("ssl_error_detail"),
                     "dns_error": data.get("dns_error"),
                 }
-            for key in ("rebuild_status", "rebuild_error"):
-                if key in data:
-                    migrated[key] = data[key]
             self.write_state(migrated)
             return migrated
 

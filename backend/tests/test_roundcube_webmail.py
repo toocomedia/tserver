@@ -23,7 +23,7 @@ class RoundcubeLaunchTokenTests(unittest.TestCase):
         )
         self.env.start()
         self.service = RoundcubeWebmailService()
-        self.service.data_dir.mkdir(parents=True)
+        self.service.data_dir.mkdir(parents=True, exist_ok=True)
         self.service.secret_path.write_bytes(b"a" * 64)
 
     def tearDown(self):
@@ -54,6 +54,7 @@ class RoundcubeLaunchTokenTests(unittest.TestCase):
 
 
 class RoundcubeLifecycleTests(unittest.TestCase):
+    @patch("os.name", "posix")
     def test_old_container_config_is_detected_for_automatic_refresh(self):
         service = RoundcubeWebmailService()
         service.is_installed = Mock(return_value=True)
@@ -144,7 +145,7 @@ class RoundcubeLifecycleTests(unittest.TestCase):
             os.environ, {"ROUNDCUBE_WEBMAIL_DATA_DIR": temp}
         ):
             service = RoundcubeWebmailService()
-            service.data_dir.mkdir(parents=True)
+            service.data_dir.mkdir(parents=True, exist_ok=True)
             service.state_path.write_text(
                 json.dumps(
                     {
@@ -279,11 +280,11 @@ class RoundcubePackagingTests(unittest.TestCase):
         self.assertIn("Manage DNS with this panel", template)
         self.assertIn("split-layout", template)
         self.assertIn("+ Add Webmail Domain", template)
-        self.assertIn('class="roundcube-tabs"', template)
+        self.assertIn('tabs-nav', template)
         self.assertIn('data-tab="domain"', template)
         self.assertIn('data-tab="https"', template)
         self.assertIn('data-tab="mail"', template)
-        self.assertNotIn('class="section', template)
+        self.assertIn('roundcube-tab-panel section', template)
         self.assertIn("confirm_host_change", javascript)
         self.assertIn("Change webmail hostname?", javascript)
         self.assertIn(

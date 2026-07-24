@@ -21,16 +21,18 @@
       <button class="btn btn--primary btn--sm" onclick="openAddAccountModal()">+ Add Mailbox</button>
     </div>
     <div class="section__body">
-      <table class="table" id="accounts-table" style="display:none;">
-        <thead>
-          <tr>
-            <th>Email Address</th>
-            <th>Status</th>
-            <th style="text-align:right;">Actions</th>
-          </tr>
-        </thead>
-        <tbody id="accounts-tbody"></tbody>
-      </table>
+      <div class="table-responsive" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+        <table class="table" id="accounts-table" style="display:none;">
+          <thead>
+            <tr>
+              <th>Email Address</th>
+              <th>Status</th>
+              <th style="text-align:right;">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="accounts-tbody"></tbody>
+        </table>
+      </div>
       <div id="accounts-empty" class="text-center text-muted p-4" style="display:none;">
         No mailboxes for this domain yet. Click "+ Add Mailbox" above.
       </div>
@@ -46,46 +48,48 @@
         If the domain is managed by this panel, these records are handled automatically by PowerDNS.
       </p>
 
-      <table class="table mb-lg" style="font-family: monospace; font-size: 0.9em; width: 100%;">
-        <thead>
-          <tr>
-            <th>Type</th>
-            <th>Name</th>
-            <th>Value / Content</th>
-            <th>Priority</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><strong>A</strong></td>
-            <td>mail</td>
-            <td id="dns-table-a"></td>
-            <td class="text-muted">—</td>
-          </tr>
-          <tr>
-            <td><strong>MX</strong></td>
-            <td>@</td>
-            <td id="dns-table-mx"></td>
-            <td>10</td>
-          </tr>
-          <tr>
-            <td><strong>TXT</strong></td>
-            <td>@</td>
-            <td id="dns-table-spf"></td>
-            <td class="text-muted">—</td>
-          </tr>
-          <tr>
-            <td><strong>TXT</strong></td>
-            <td>_dmarc</td>
-            <td>v=DMARC1; p=none;</td>
-            <td class="text-muted">—</td>
-          </tr>
-        </tbody>
-      </table>
+      <div class="table-responsive" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+        <table class="table mb-lg" style="font-family: monospace; font-size: 0.9em; width: 100%;">
+          <thead>
+            <tr>
+              <th>Type</th>
+              <th>Name</th>
+              <th>Value / Content</th>
+              <th>Priority</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>A</strong></td>
+              <td>mail</td>
+              <td id="dns-table-a"></td>
+              <td class="text-muted">—</td>
+            </tr>
+            <tr>
+              <td><strong>MX</strong></td>
+              <td>@</td>
+              <td id="dns-table-mx"></td>
+              <td>10</td>
+            </tr>
+            <tr>
+              <td><strong>TXT</strong></td>
+              <td>@</td>
+              <td id="dns-table-spf"></td>
+              <td class="text-muted">—</td>
+            </tr>
+            <tr>
+              <td><strong>TXT</strong></td>
+              <td>_dmarc</td>
+              <td>v=DMARC1; p=none;</td>
+              <td class="text-muted">—</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
-      <hr class="mb-md">
-
-      <p class="form-hint mb-md"><strong>Local PowerDNS Management:</strong> Re-provision or remove local PowerDNS mail records (only required if domain's Nameservers point to this VPS).</p>
+      <div class="mt-lg">
+        <p class="form-hint mb-md"><strong>Local PowerDNS Management:</strong> Re-provision or remove local PowerDNS mail records (only required if domain's Nameservers point to this VPS).</p>
+      </div>
       <form id="dns-setup-form" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
         <input type="hidden" name="csrf_token"   value="{{ csrf_token(request) }}">
         <input type="hidden" name="domain_name"  id="dns-domain-input">
