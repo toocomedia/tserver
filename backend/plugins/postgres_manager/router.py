@@ -19,12 +19,11 @@ from sqlalchemy import select
 
 import config
 from database import get_db
-from models.domain import Domain
 from templating import templates
 from plugins.postgres_manager.service import postgres_service
 from plugins.postgres_manager import queries as pg
 from plugins.postgres_manager.schemas import (
-    DatabaseCreate, UserCreate, PasswordChange, QueryRequest, RemoteConfigRequest,
+    DatabaseCreate, UserCreate, PasswordChange, QueryRequest,
 )
 
 logger = logging.getLogger(__name__)
@@ -44,7 +43,7 @@ def _sudo_cmd(script_path: Path) -> list[str]:
 # ---------------------------------------------------------------------------
 
 @router.get("/", response_class=HTMLResponse)
-async def pg_index(request: Request, db: AsyncSession = Depends(get_db)):
+async def pg_index(request: Request):
     """Render the PostgreSQL Manager main page."""
     from plugins.manager import plugin_manager
     info = plugin_manager.get_plugin("postgres_manager")
@@ -56,10 +55,6 @@ async def pg_index(request: Request, db: AsyncSession = Depends(get_db)):
     users = pg.list_users() if status["running"] else []
     system_roles = pg.list_system_roles() if status["running"] else []
 
-    domains_res = await db.scalars(select(Domain).order_by(Domain.name))
-    domains = list(domains_res.all())
-    remote_domains = await postgres_service.list_remote_domains(db)
-
     return templates.TemplateResponse("postgres.html", {
 
         "request": request,
@@ -70,8 +65,6 @@ async def pg_index(request: Request, db: AsyncSession = Depends(get_db)):
         "databases": databases,
         "users": users,
         "system_roles": system_roles,
-        "domains": domains,
-        "remote_domains": remote_domains,
     })
 
 
@@ -246,63 +239,3 @@ async def api_query(body: QueryRequest):
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
-
-# ---------------------------------------------------------------------------
-# Remote Access & SSL Proxy (Multi-Domain)
-# ---------------------------------------------------------------------------
-
-@router.get("/api/remote/domains")
-async def api_list_remote_domains(db: AsyncSession = Depends(get_db)):
-    return JSONResponse(await postgres_service.list_remote_domains(db))
-
-
-@router.post("/api/remote/domains")
-async def api_add_remote_domain(body: RemoteConfigRequest, db: AsyncSession = Depends(get_db)):
-    try:
-        entry = await postgres_service.add_remote_domain(
-            db=db,
-            mode=body.mode,
-            domain=body.domain,
-            subdomain=body.subdomain,
-            hostname=body.hostname,
-            issue_ssl=body.issue_ssl,
-            allowed_cidrs=body.allowed_cidrs,
-        )
-        return JSONResponse({"status": "ok", "entry": entry})
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
-
-
-@router.post("/api/remote/domains/{domain}/ssl")
-async def api_reissue_remote_ssl(domain: str, db: AsyncSession = Depends(get_db)):
-    try:
-        entry = await postgres_service.reissue_remote_ssl(db, domain)
-        return JSONResponse({"status": "ok", "entry": entry})
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
-
-
-@router.post("/api/remote/domains/{domain}/test")
-async def api_test_remote_domain(domain: str, db: AsyncSession = Depends(get_db)):
-    try:
-        entry = await postgres_service.test_remote_domain(db, domain)
-        return JSONResponse({"status": "ok", "entry": entry})
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
-
-
-@router.delete("/api/remote/domains/{domain}")
-async def api_delete_remote_domain(domain: str, db: AsyncSession = Depends(get_db)):
-    try:
-        await postgres_service.delete_remote_domain(db, domain)
-        return JSONResponse({"status": "ok", "domain": domain})
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))

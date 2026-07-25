@@ -1,7 +1,7 @@
 {
   "id": "postgres_manager",
   "name": "PostgreSQL Manager",
-  "description": "Lightweight PostgreSQL manager with native TLS remote endpoints, CIDR access control, databases, users, and safe queries.",
+  "description": "Lightweight PostgreSQL manager with databases, users, and safe queries.",
   "version": "1.0.0",
   "author": "tooco.",
   "icon": "database",

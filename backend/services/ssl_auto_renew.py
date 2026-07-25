@@ -11,7 +11,6 @@ import config
 from database import AsyncSessionLocal
 from models.ssl_cert import SslCert
 from models.notification import Notification
-from models.postgres_remote import PostgresRemoteDomain
 from services import ssl_service
 
 logger = logging.getLogger(__name__)
@@ -94,29 +93,6 @@ async def run_scheduler():
                     await asyncio.sleep(1)
                     continue
 
-                # Native PostgreSQL TLS uses one shared Let’s Encrypt certificate
-                # for all configured endpoint hostnames. Renew it once when the
-                # earliest active endpoint reaches the renewal window.
-                remote_rows = (await db.execute(
-                    select(PostgresRemoteDomain)
-                    .where(PostgresRemoteDomain.enabled == True)
-                    .where(PostgresRemoteDomain.certificate_expiry.is_not(None))
-                    .order_by(PostgresRemoteDomain.certificate_expiry.asc())
-                )).scalars().all()
-                if remote_rows:
-                    remote_expiry = remote_rows[0].certificate_expiry
-                    if remote_expiry.tzinfo is None:
-                        remote_expiry = remote_expiry.replace(tzinfo=timezone.utc)
-                    if remote_expiry - timedelta(days=RENEW_THRESHOLD_DAYS) <= now:
-                        try:
-                            from plugins.postgres_manager.service import postgres_service
-                            await postgres_service.reissue_remote_ssl(db, remote_rows[0].full_domain)
-                            await _add_notification(db, "success", "Successfully auto-renewed PostgreSQL remote TLS.")
-                        except Exception as exc:
-                            logger.error("Failed to auto-renew PostgreSQL remote TLS: %s", exc)
-                        await asyncio.sleep(1)
-                        continue
-                
                 for cert in certs:
                     if not cert.expiry_date:
                         continue

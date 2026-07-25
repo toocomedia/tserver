@@ -1,7 +1,7 @@
 """
 schemas.py — Pydantic request / response models for the PostgreSQL Manager plugin.
 """
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, field_validator
 
 
 # ------------------------------------------------------------------
@@ -121,51 +121,3 @@ class ServiceActionResponse(BaseModel):
     status: str
     action: str
 
-
-# ------------------------------------------------------------------
-# Remote Access & SSL
-# ------------------------------------------------------------------
-
-class RemoteConfigRequest(BaseModel):
-    mode: str = "managed"  # "managed" or "external"
-    domain: str | None = None
-    subdomain: str | None = None
-    hostname: str | None = None
-    issue_ssl: bool = True
-    allowed_cidrs: list[str] = Field(default_factory=list)
-
-    @field_validator("mode")
-    @classmethod
-    def mode_must_be_valid(cls, v: str) -> str:
-        if v not in ("managed", "external"):
-            raise ValueError("Mode must be 'managed' or 'external'.")
-        return v
-
-    @field_validator("allowed_cidrs")
-    @classmethod
-    def cidrs_must_be_valid(cls, values: list[str]) -> list[str]:
-        import ipaddress
-        normalized: list[str] = []
-        for value in values:
-            try:
-                network = ipaddress.ip_network(value.strip(), strict=False)
-            except ValueError as exc:
-                raise ValueError(f"Invalid client IP/CIDR: {value}") from exc
-            rendered = str(network)
-            if rendered not in normalized:
-                normalized.append(rendered)
-        return normalized
-
-
-class RemoteStatusResponse(BaseModel):
-    enabled: bool
-    domain: str | None
-    ssl_active: bool
-    nginx_stream: bool
-
-
-class RemoteDomainResponse(BaseModel):
-    domain: str
-    mode: str
-    ssl_active: bool
-    nginx_stream: bool
