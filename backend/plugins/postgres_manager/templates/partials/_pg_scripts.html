@@ -1,0 +1,275 @@
+<script type="module">
+/**
+ * _pg_scripts.html — PostgreSQL Manager vanilla JS module.
+ * Handles: tab switching, modals, API fetch calls, result rendering.
+ * No jQuery. No global variables. ES6 module scope.
+ */
+
+const BASE = "/plugins/postgres_manager/api";
+const csrfMeta = document.querySelector("meta[name='csrf-token']");
+const CSRF = csrfMeta ? csrfMeta.content : "";
+
+// ── Helpers ───────────────────────────────────────────────────────────────
+
+async function apiFetch(path, opts = {}) {
+  const headers = { "Content-Type": "application/json", "X-CSRF-Token": CSRF, ...(opts.headers || {}) };
+  const res = await fetch(BASE + path, { ...opts, headers });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(json.detail || `HTTP ${res.status}`);
+  return json;
+}
+
+function showToast(msg, isError = false) {
+  // Re-uses the panel's global showToast if available, else console.
+  if (window.showToast) { window.showToast(msg, isError ? "error" : "success"); return; }
+  console[isError ? "error" : "log"](msg);
+}
+
+function openModal(id) {
+  const el = document.getElementById(id);
+  if (el) el.style.display = "flex";
+}
+
+function closeModal(id) {
+  const el = document.getElementById(id);
+  if (el) el.style.display = "none";
+}
+
+function setLoading(btn, loading) {
+  btn.disabled = loading;
+  btn.classList.toggle("is-loading", loading);
+}
+
+// ── Tab switching ─────────────────────────────────────────────────────────
+
+const TABS = ["databases", "users", "query"];
+
+function switchTab(tabId) {
+  TABS.forEach(t => {
+    const panel = document.getElementById("pg-panel-" + t);
+    const tab = document.getElementById("pg-tab-" + t);
+    if (panel) panel.style.display = t === tabId ? "" : "none";
+    if (tab) tab.classList.toggle("active", t === tabId);
+  });
+}
+
+document.querySelectorAll("[data-pg-tab]").forEach(btn => {
+  btn.addEventListener("click", () => switchTab(btn.dataset.pgTab));
+});
+
+// ── Modal open/close (data-action) ────────────────────────────────────────
+
+document.addEventListener("click", e => {
+  const btn = e.target.closest("[data-action]");
+  if (!btn) return;
+  const action = btn.dataset.action;
+  const modal  = btn.dataset.modal;
+  if (action === "open-modal" && modal) openModal(modal);
+  if (action === "close-modal" && modal) closeModal(modal);
+});
+
+// Close modal on backdrop click
+document.querySelectorAll(".modal-backdrop").forEach(backdrop => {
+  backdrop.addEventListener("click", e => {
+    if (e.target === backdrop) backdrop.style.display = "none";
+  });
+});
+
+// ── Service controls ──────────────────────────────────────────────────────
+
+document.querySelectorAll("[data-pg-action]").forEach(btn => {
+  btn.addEventListener("click", async () => {
+    const action = btn.dataset.pgAction;
+    setLoading(btn, true);
+    try {
+      await apiFetch(`/service/${action}`, { method: "POST" });
+      showToast(`PostgreSQL ${action} executed.`);
+      setTimeout(() => location.reload(), 1500);
+    } catch (err) {
+      showToast(err.message, true);
+    } finally {
+      setLoading(btn, false);
+    }
+  });
+});
+
+// ── Databases CRUD ────────────────────────────────────────────────────────
+
+const dbSubmit = document.getElementById("pg-db-create-submit");
+if (dbSubmit) {
+  dbSubmit.addEventListener("click", async () => {
+    const name  = document.getElementById("pg-new-db-name").value.trim();
+    const owner = document.getElementById("pg-new-db-owner").value.trim() || "postgres";
+    const errEl = document.getElementById("pg-db-error");
+    errEl.style.display = "none";
+    if (!name) { errEl.textContent = "Database name is required."; errEl.style.display = ""; return; }
+    setLoading(dbSubmit, true);
+    try {
+      await apiFetch("/databases", { method: "POST", body: JSON.stringify({ name, owner }) });
+      showToast(`Database '${name}' created.`);
+      closeModal("pg-modal-create-db");
+      location.reload();
+    } catch (err) {
+      errEl.textContent = err.message; errEl.style.display = "";
+    } finally {
+      setLoading(dbSubmit, false);
+    }
+  });
+}
+
+document.addEventListener("click", async e => {
+  const btn = e.target.closest("[data-action='delete-db']");
+  if (!btn) return;
+  const db = btn.dataset.db;
+  if (!confirm(`Drop database '${db}'? This cannot be undone.`)) return;
+  setLoading(btn, true);
+  try {
+    await apiFetch(`/databases/${encodeURIComponent(db)}`, { method: "DELETE" });
+    showToast(`Database '${db}' dropped.`);
+    location.reload();
+  } catch (err) {
+    showToast(err.message, true);
+    setLoading(btn, false);
+  }
+});
+
+document.addEventListener("click", async e => {
+  const btn = e.target.closest("[data-action='view-tables']");
+  if (!btn) return;
+  const db = btn.dataset.db;
+  const drawer = document.getElementById("pg-tables-drawer");
+  const tbody  = document.getElementById("pg-tables-tbody");
+  const nameEl = document.getElementById("pg-tables-db-name");
+  nameEl.textContent = db;
+  drawer.style.display = "";
+  tbody.innerHTML = "<tr><td colspan='3' style='color:var(--color-muted);'>Loading…</td></tr>";
+  try {
+    const tables = await apiFetch(`/databases/${encodeURIComponent(db)}/tables`);
+    tbody.innerHTML = tables.length
+      ? tables.map(t => `<tr><td>${t.name}</td><td style='color:var(--color-muted);'>${t.row_count}</td>
+          <td style='color:var(--color-muted);'>${t.size}</td></tr>`).join("")
+      : "<tr><td colspan='3' style='color:var(--color-muted);'>No user tables found.</td></tr>";
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan='3' style='color:var(--color-danger);'>${err.message}</td></tr>`;
+  }
+});
+
+// ── Users CRUD ────────────────────────────────────────────────────────────
+
+const userSubmit = document.getElementById("pg-user-create-submit");
+if (userSubmit) {
+  userSubmit.addEventListener("click", async () => {
+    const name     = document.getElementById("pg-new-user-name").value.trim();
+    const password = document.getElementById("pg-new-user-pw").value;
+    const errEl    = document.getElementById("pg-user-error");
+    errEl.style.display = "none";
+    if (!name || !password) { errEl.textContent = "Username and password are required."; errEl.style.display = ""; return; }
+    setLoading(userSubmit, true);
+    try {
+      await apiFetch("/users", { method: "POST", body: JSON.stringify({ name, password }) });
+      showToast(`User '${name}' created.`);
+      closeModal("pg-modal-create-user");
+      location.reload();
+    } catch (err) {
+      errEl.textContent = err.message; errEl.style.display = "";
+    } finally {
+      setLoading(userSubmit, false);
+    }
+  });
+}
+
+document.addEventListener("click", e => {
+  const btn = e.target.closest("[data-action='change-password']");
+  if (!btn) return;
+  const user = btn.dataset.user;
+  document.getElementById("pg-pw-username").textContent = user;
+  document.getElementById("pg-change-pw-input").dataset.user = user;
+  openModal("pg-modal-change-pw");
+});
+
+const pwSubmit = document.getElementById("pg-pw-submit");
+if (pwSubmit) {
+  pwSubmit.addEventListener("click", async () => {
+    const input    = document.getElementById("pg-change-pw-input");
+    const name     = input.dataset.user;
+    const password = input.value;
+    const errEl    = document.getElementById("pg-pw-error");
+    errEl.style.display = "none";
+    if (!password) { errEl.textContent = "Password is required."; errEl.style.display = ""; return; }
+    setLoading(pwSubmit, true);
+    try {
+      await apiFetch(`/users/${encodeURIComponent(name)}/password`, { method: "POST", body: JSON.stringify({ password }) });
+      showToast(`Password updated for '${name}'.`);
+      closeModal("pg-modal-change-pw");
+    } catch (err) {
+      errEl.textContent = err.message; errEl.style.display = "";
+    } finally {
+      setLoading(pwSubmit, false);
+    }
+  });
+}
+
+document.addEventListener("click", async e => {
+  const btn = e.target.closest("[data-action='delete-user']");
+  if (!btn) return;
+  const user = btn.dataset.user;
+  if (!confirm(`Drop role '${user}'? This cannot be undone.`)) return;
+  setLoading(btn, true);
+  try {
+    await apiFetch(`/users/${encodeURIComponent(user)}`, { method: "DELETE" });
+    showToast(`User '${user}' dropped.`);
+    location.reload();
+  } catch (err) {
+    showToast(err.message, true);
+    setLoading(btn, false);
+  }
+});
+
+// ── Query runner ──────────────────────────────────────────────────────────
+
+const runBtn = document.getElementById("pg-query-run");
+if (runBtn) {
+  runBtn.addEventListener("click", async () => {
+    const db  = document.getElementById("pg-query-db").value;
+    const sql = document.getElementById("pg-query-sql").value.trim();
+    const errEl     = document.getElementById("pg-query-error");
+    const resultsEl = document.getElementById("pg-query-results");
+    const emptyEl   = document.getElementById("pg-query-empty");
+    const tbody     = document.getElementById("pg-query-tbody");
+    const countEl   = document.getElementById("pg-query-count");
+    errEl.style.display = resultsEl.style.display = emptyEl.style.display = "none";
+    if (!sql) { errEl.textContent = "Enter a SELECT query."; errEl.style.display = ""; return; }
+    setLoading(runBtn, true);
+    try {
+      const data = await apiFetch("/query", { method: "POST", body: JSON.stringify({ db, sql }) });
+      if (!data.rows || data.rows.length === 0) { emptyEl.style.display = ""; return; }
+      // Render rows — each row has a pipe-delimited "row" field
+      const firstRow  = data.rows[0].row || "";
+      const colCount  = firstRow.split("|").length;
+      tbody.innerHTML = data.rows.map(r => {
+        const cols = r.row.split("|");
+        return "<tr>" + cols.map(c => `<td>${c}</td>`).join("") + "</tr>";
+      }).join("");
+      countEl.textContent = `${data.count} row${data.count !== 1 ? "s" : ""}`;
+      resultsEl.style.display = "";
+    } catch (err) {
+      errEl.textContent = err.message; errEl.style.display = "";
+    } finally {
+      setLoading(runBtn, false);
+    }
+  });
+}
+
+const clearBtn = document.getElementById("pg-query-clear");
+if (clearBtn) {
+  clearBtn.addEventListener("click", () => {
+    document.getElementById("pg-query-sql").value = "";
+    document.getElementById("pg-query-results").style.display = "none";
+    document.getElementById("pg-query-empty").style.display = "none";
+    document.getElementById("pg-query-error").style.display = "none";
+  });
+}
+
+// ── Init — show first tab ─────────────────────────────────────────────────
+switchTab("databases");
+</script>
