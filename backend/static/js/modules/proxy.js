@@ -38,6 +38,50 @@ function initCreateForm() {
   const hintDomain   = document.getElementById("hint-domain");
   const submitBtn    = document.getElementById("btn-submit");
 
+  // Wizard Step Navigation
+  const step1 = document.getElementById("proxy-step-1");
+  const step2 = document.getElementById("proxy-step-2");
+  const nextBtn1 = document.getElementById("btn-next-step-1");
+  const backBtn2 = document.getElementById("btn-back-step-2");
+  const stepErr1 = document.getElementById("step-1-error");
+  const pill1    = document.getElementById("proxy-step-pill-1");
+  const pill2    = document.getElementById("proxy-step-pill-2");
+
+  if (nextBtn1) {
+    nextBtn1.addEventListener("click", () => {
+      if (stepErr1) stepErr1.style.display = "none";
+      const external = isExternal();
+      if (external) {
+        if (!hostnameIn || !hostnameIn.value.trim()) {
+          if (stepErr1) { stepErr1.textContent = "Please enter an external hostname."; stepErr1.style.display = "block"; }
+          return;
+        }
+      } else {
+        if (!domainSelect || !domainSelect.value) {
+          if (stepErr1) { stepErr1.textContent = "Please select a parent domain."; stepErr1.style.display = "block"; }
+          return;
+        }
+        if (!subdomainIn || !subdomainIn.value.trim()) {
+          if (stepErr1) { stepErr1.textContent = "Please enter a subdomain prefix."; stepErr1.style.display = "block"; }
+          return;
+        }
+      }
+      if (step1) step1.style.display = "none";
+      if (step2) step2.style.display = "flex";
+      if (pill1) pill1.className = "status-badge muted";
+      if (pill2) pill2.className = "status-badge success";
+    });
+  }
+
+  if (backBtn2) {
+    backBtn2.addEventListener("click", () => {
+      if (step2) step2.style.display = "none";
+      if (step1) step1.style.display = "flex";
+      if (pill1) pill1.className = "status-badge success";
+      if (pill2) pill2.className = "status-badge muted";
+    });
+  }
+
   // Cache section toggle
   const cacheLabel  = document.getElementById("cache-toggle-label");
   const cacheFields = document.getElementById("cache-fields");
@@ -49,6 +93,7 @@ function initCreateForm() {
       if (cacheIcon) cacheIcon.textContent = open ? "▶" : "▼";
     });
   }
+
 
   function isExternal() {
     return modeExternal && modeExternal.checked;

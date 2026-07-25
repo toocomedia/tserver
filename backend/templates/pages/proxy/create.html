@@ -4,15 +4,23 @@
 {% block page_title %}Create Reverse Proxy{% endblock %}
 
 {% block topbar_actions %}
-  <a href="/proxy/" class="btn btn--secondary" id="btn-back">← Back</a>
+  <a href="/proxy/" class="btn btn--secondary" id="btn-back">← Back to Proxies</a>
 {% endblock %}
 
 {% block content %}
 
-<div class="section" style="max-width:780px;" id="create-proxy-panel">
-  <div class="section__header">
-    <h3>New Reverse Proxy</h3>
+<div class="section" id="create-proxy-panel">
+  <div class="section__header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:var(--space-md);">
+    <h3>New Reverse Proxy Wizard</h3>
+    
+    <!-- Step Progress Indicator -->
+    <div style="display:flex;align-items:center;gap:var(--space-sm);font-size:var(--font-small);">
+      <span id="proxy-step-pill-1" class="status-badge success" style="padding:4px 12px;font-weight:700;">1. Hostname Setup</span>
+      <span style="color:var(--color-muted);">→</span>
+      <span id="proxy-step-pill-2" class="status-badge muted" style="padding:4px 12px;">2. Target &amp; SSL</span>
+    </div>
   </div>
+
   <div class="section__body">
 
     {% if error %}
@@ -21,16 +29,12 @@
 
     {% set mode = form.get('mode', 'managed') %}
 
-    <form method="post" action="/proxy/create" class="form" id="create-proxy-form" style="display:flex;flex-direction:column;gap:var(--space-lg);">
+    <form method="post" action="/proxy/create" class="form" id="create-proxy-form">
       {% include "partials/csrf_field.html" %}
 
       <!-- Step 1: Hostname Setup -->
-      <div style="padding:var(--space-md) var(--space-lg);background:var(--color-surface);border:1px solid var(--color-line);display:flex;flex-direction:column;gap:var(--space-md);">
-        <h4 style="margin:0;font-size:var(--font-body);color:var(--color-text);display:flex;align-items:center;gap:var(--space-xs);">
-          <span class="status-badge success" style="padding:2px 8px;border-radius:12px;">Step 1</span>
-          Hostname &amp; Domain Setup
-        </h4>
-
+      <div id="proxy-step-1" style="display:flex;flex-direction:column;gap:var(--space-md);">
+        
         <!-- Mode: managed vs external -->
         <div class="form-group">
           <label class="form-label">Hostname source</label>
@@ -51,199 +55,211 @@
           </span>
         </div>
 
+        <div class="alert alert--info mb-lg" id="info-block-managed"
+             style="{% if mode == 'external' %}display:none;{% endif %}">
+          Creating a managed proxy will automatically:<br>
+          <strong>1.</strong> Add an A record for the subdomain → <strong>{{ server_ip }}</strong><br>
+          <strong>2.</strong> Configure Nginx to forward traffic to the target<br>
+          <strong>3.</strong> Optionally issue an SSL certificate for the subdomain<br><br>
+          Traffic hits this server first; Nginx proxies to the target IP:port.
+        </div>
 
-      <div class="alert alert--info mb-lg" id="info-block-managed"
-           style="{% if mode == 'external' %}display:none;{% endif %}">
-        Creating a managed proxy will automatically:<br>
-        <strong>1.</strong> Add an A record for the subdomain → <strong>{{ server_ip }}</strong><br>
-        <strong>2.</strong> Configure Nginx to forward traffic to the target<br>
-        <strong>3.</strong> Optionally issue an SSL certificate for the subdomain<br><br>
-        Traffic hits this server first; Nginx proxies to the target IP:port.
-      </div>
+        <div class="alert alert--info mb-lg" id="info-block-external"
+             style="{% if mode != 'external' %}display:none;{% endif %}">
+          External mode does <strong>not</strong> change DNS.<br>
+          Ensure an A/CNAME for the hostname already points to
+          <strong>{{ server_ip }}</strong> before enabling SSL.<br>
+          Nginx will reverse-proxy the hostname to your target IP:port.
+        </div>
 
-      <div class="alert alert--info mb-lg" id="info-block-external"
-           style="{% if mode != 'external' %}display:none;{% endif %}">
-        External mode does <strong>not</strong> change DNS.<br>
-        Ensure an A/CNAME for the hostname already points to
-        <strong>{{ server_ip }}</strong> before enabling SSL.<br>
-        Nginx will reverse-proxy the hostname to your target IP:port.
-      </div>
-
-      <!-- Managed: domain + subdomain -->
-      <div id="managed-fields" style="{% if mode == 'external' %}display:none;{% endif %}">
-        {% if domains %}
-        <div class="form-group">
-          <label class="form-label" for="domain_id">Parent Domain</label>
-          <div class="form-select-wrap">
-            <select id="domain_id" name="domain_id" class="form-select">
-              <option value="" disabled {% if not form.get('domain_id') %}selected{% endif %}>
-                Select a domain…
-              </option>
-              {% for d in domains %}
-              <option value="{{ d.id }}"
-                      data-name="{{ d.name }}"
-                      {% if form.get('domain_id') == d.id %}selected{% endif %}>
-                {{ d.name }}
-              </option>
-              {% endfor %}
-            </select>
+        <!-- Managed: domain + subdomain -->
+        <div id="managed-fields" style="{% if mode == 'external' %}display:none;{% endif %}">
+          {% if domains %}
+          <div class="form-group">
+            <label class="form-label" for="domain_id">Parent Domain</label>
+            <div class="form-select-wrap">
+              <select id="domain_id" name="domain_id" class="form-select">
+                <option value="" disabled {% if not form.get('domain_id') %}selected{% endif %}>
+                  Select a domain…
+                </option>
+                {% for d in domains %}
+                <option value="{{ d.id }}"
+                        data-name="{{ d.name }}"
+                        {% if form.get('domain_id') == d.id %}selected{% endif %}>
+                  {{ d.name }}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+            <span class="form-hint">Domain must already be managed by the panel.</span>
           </div>
-          <span class="form-hint">Domain must already be managed by the panel.</span>
+
+          <div class="form-group">
+            <label class="form-label" for="subdomain">Subdomain</label>
+            <input
+              class="form-input"
+              type="text"
+              id="subdomain"
+              name="subdomain"
+              value="{{ form.get('subdomain', '') }}"
+              placeholder="app"
+              autocomplete="off"
+              autocapitalize="none"
+              spellcheck="false"
+            >
+            <span class="form-hint">
+              Prefix only — full host will be
+              <strong id="subdomain-hint">app.<span id="hint-domain">domain.com</span></strong>
+            </span>
+          </div>
+          {% else %}
+          <div class="alert alert--info" id="no-domains">
+            No managed domains found. Use <strong>External hostname</strong>, or
+            <a href="/domains/create">add a domain</a> first.
+          </div>
+          {% endif %}
         </div>
 
-        <div class="form-group">
-          <label class="form-label" for="subdomain">Subdomain</label>
-          <input
-            class="form-input"
-            type="text"
-            id="subdomain"
-            name="subdomain"
-            value="{{ form.get('subdomain', '') }}"
-            placeholder="app"
-            autocomplete="off"
-            autocapitalize="none"
-            spellcheck="false"
-          >
-          <span class="form-hint">
-            Prefix only — full host will be
-            <strong id="subdomain-hint">app.<span id="hint-domain">domain.com</span></strong>
-          </span>
+        <!-- External: full hostname -->
+        <div id="external-fields" style="{% if mode != 'external' %}display:none;{% endif %}">
+          <div class="form-group">
+            <label class="form-label" for="hostname">Hostname</label>
+            <input
+              class="form-input"
+              type="text"
+              id="hostname"
+              name="hostname"
+              value="{{ form.get('hostname', '') }}"
+              placeholder="app.other-domain.com"
+              autocomplete="off"
+              autocapitalize="none"
+              spellcheck="false"
+            >
+            <span class="form-hint">
+              Full domain or subdomain already pointing to <strong>{{ server_ip }}</strong>.
+            </span>
+          </div>
         </div>
-        {% else %}
-        <div class="alert alert--info" id="no-domains">
-          No managed domains found. Use <strong>External hostname</strong>, or
-          <a href="/domains/create">add a domain</a> first.
-        </div>
-        {% endif %}
-      </div>
 
-      <!-- External: full hostname -->
-      <div id="external-fields" style="{% if mode != 'external' %}display:none;{% endif %}">
-        <div class="form-group">
-          <label class="form-label" for="hostname">Hostname</label>
-          <input
-            class="form-input"
-            type="text"
-            id="hostname"
-            name="hostname"
-            value="{{ form.get('hostname', '') }}"
-            placeholder="app.other-domain.com"
-            autocomplete="off"
-            autocapitalize="none"
-            spellcheck="false"
-          >
-          <span class="form-hint">
-            Full domain or subdomain already pointing to <strong>{{ server_ip }}</strong>.
-          </span>
+        <div id="step-1-error" class="form-error" style="display:none;"></div>
+
+        <div class="form-actions" style="margin-top:var(--space-md);">
+          <button type="button" class="btn btn--primary" id="btn-next-step-1">
+            Next: Target &amp; SSL Configuration →
+          </button>
         </div>
+
       </div>
 
       <!-- Step 2: Target & SSL Configuration -->
-      <div style="padding:var(--space-md) var(--space-lg);background:var(--color-surface);border:1px solid var(--color-line);display:flex;flex-direction:column;gap:var(--space-md);">
-        <h4 style="margin:0;font-size:var(--font-body);color:var(--color-text);display:flex;align-items:center;gap:var(--space-xs);">
-          <span class="status-badge success" style="padding:2px 8px;border-radius:12px;">Step 2</span>
-          Target Backend &amp; SSL Configuration
-        </h4>
+      <div id="proxy-step-2" style="display:none;flex-direction:column;gap:var(--space-md);">
 
-      <div class="form-group">
-        <label class="form-label" for="target_ip">Target IP</label>
-        <input
-          class="form-input"
-          type="text"
-          id="target_ip"
-          name="target_ip"
-          value="{{ form.get('target_ip', '') }}"
-          placeholder="1.2.3.4"
-          autocomplete="off"
-          required
-        >
-      </div>
-
-      <!-- Target Port -->
-      <div class="form-group">
-        <label class="form-label" for="target_port">Target Port</label>
-        <input
-          class="form-input"
-          type="number"
-          id="target_port"
-          name="target_port"
-          value="{{ form.get('target_port', '') }}"
-          placeholder="9000"
-          min="1"
-          max="65535"
-          required
-        >
-      </div>
-
-      <!-- Protocol to backend -->
-      <div class="form-group">
-        <label class="form-label" for="protocol">Backend Protocol</label>
-        <div class="form-select-wrap">
-          <select id="protocol" name="protocol" class="form-select">
-            <option value="http"  {% if form.get('protocol', 'http') == 'http' %}selected{% endif %}>HTTP</option>
-            <option value="https" {% if form.get('protocol') == 'https' %}selected{% endif %}>HTTPS</option>
-          </select>
+        <!-- Target IP -->
+        <div class="form-group">
+          <label class="form-label" for="target_ip">Target IP</label>
+          <input
+            class="form-input"
+            type="text"
+            id="target_ip"
+            name="target_ip"
+            value="{{ form.get('target_ip', '') }}"
+            placeholder="1.2.3.4"
+            autocomplete="off"
+          >
         </div>
-        <span class="form-hint">Protocol used between Nginx and the target backend.</span>
-      </div>
 
-      <!-- Enable SSL -->
-      <div class="form-group">
-        <label class="form-check">
-          <input type="checkbox" name="enable_ssl" id="enable_ssl" value="true"
-                 {% if form.get('enable_ssl') %}checked{% endif %}>
-          <span>Enable SSL (Let's Encrypt)</span>
-        </label>
-        <div class="alert alert--info mt-sm" id="ssl-info" style="display:none;">
-          Will issue a certificate after the proxy is created.
-          DNS must resolve to this server first.
+        <!-- Target Port -->
+        <div class="form-group">
+          <label class="form-label" for="target_port">Target Port</label>
+          <input
+            class="form-input"
+            type="number"
+            id="target_port"
+            name="target_port"
+            value="{{ form.get('target_port', '') }}"
+            placeholder="9000"
+            min="1"
+            max="65535"
+          >
         </div>
-      </div>
 
-      <!-- Proxy Cache (optional) -->
-      <div class="form-group" id="cache-section">
-        <label class="form-label" style="cursor:pointer;" id="cache-toggle-label">
-          <span id="cache-toggle-icon">▶</span>
-          <span style="margin-left:6px;">Proxy cache <span class="text-muted text-small">(optional)</span></span>
-        </label>
-        <div id="cache-fields" style="display:none; margin-top:10px;">
-          <div class="alert alert--info mb-sm" style="font-size:var(--font-small);">
-            Caches upstream responses on disk. Good for static or slow-changing pages.
-            <strong>Do not enable for APIs or user-specific pages.</strong>
+        <!-- Protocol to backend -->
+        <div class="form-group">
+          <label class="form-label" for="protocol">Backend Protocol</label>
+          <div class="form-select-wrap">
+            <select id="protocol" name="protocol" class="form-select">
+              <option value="http"  {% if form.get('protocol', 'http') == 'http' %}selected{% endif %}>HTTP</option>
+              <option value="https" {% if form.get('protocol') == 'https' %}selected{% endif %}>HTTPS</option>
+            </select>
           </div>
-          <label class="form-check mb-sm">
-            <input type="checkbox" name="cache_enabled" id="cache_enabled" value="true"
-                   {% if form.get('cache_enabled') %}checked{% endif %}>
-            <span>Enable proxy cache</span>
+          <span class="form-hint">Protocol used between Nginx and the target backend.</span>
+        </div>
+
+        <!-- Enable SSL -->
+        <div class="form-group">
+          <label class="form-check">
+            <input type="checkbox" name="enable_ssl" id="enable_ssl" value="true"
+                   {% if form.get('enable_ssl') %}checked{% endif %}>
+            <span>Enable SSL (Let's Encrypt)</span>
           </label>
-          <div class="d-flex gap-md" style="flex-wrap:wrap;">
-            <div class="form-group" style="margin:0;">
-              <label class="form-label" for="cache_ttl_minutes">Cache TTL (minutes)</label>
-              <input class="form-input" type="number" id="cache_ttl_minutes"
-                     name="cache_ttl_minutes" value="{{ form.get('cache_ttl_minutes', 10) }}"
-                     min="1" max="10080" style="max-width:110px;">
-              <span class="form-hint">How long to keep cached responses</span>
+          <div class="alert alert--info mt-sm" id="ssl-info" style="display:none;">
+            Will issue a certificate after the proxy is created.
+            DNS must resolve to this server first.
+          </div>
+        </div>
+
+        <!-- Proxy Cache (optional) -->
+        <div class="form-group" id="cache-section">
+          <label class="form-label" style="cursor:pointer;" id="cache-toggle-label">
+            <span id="cache-toggle-icon">▶</span>
+            <span style="margin-left:6px;">Proxy cache <span class="text-muted text-small">(optional)</span></span>
+          </label>
+          <div id="cache-fields" style="display:none; margin-top:10px;">
+            <div class="alert alert--info mb-sm" style="font-size:var(--font-small);">
+              Caches upstream responses on disk. Good for static or slow-changing pages.
+              <strong>Do not enable for APIs or user-specific pages.</strong>
             </div>
-            <div class="form-group" style="margin:0;">
-              <label class="form-label" for="cache_auto_clear_hours">Auto-clear (hours)</label>
-              <input class="form-input" type="number" id="cache_auto_clear_hours"
-                     name="cache_auto_clear_hours" value="{{ form.get('cache_auto_clear_hours', 0) }}"
-                     min="0" max="8760" style="max-width:110px;">
-              <span class="form-hint">0 = disabled (manual only)</span>
+            <label class="form-check mb-sm">
+              <input type="checkbox" name="cache_enabled" id="cache_enabled" value="true"
+                     {% if form.get('cache_enabled') %}checked{% endif %}>
+              <span>Enable proxy cache</span>
+            </label>
+            <div class="d-flex gap-md" style="flex-wrap:wrap;">
+              <div class="form-group" style="margin:0;">
+                <label class="form-label" for="cache_ttl_minutes">Cache TTL (minutes)</label>
+                <input class="form-input" type="number" id="cache_ttl_minutes"
+                       name="cache_ttl_minutes" value="{{ form.get('cache_ttl_minutes', 10) }}"
+                       min="1" max="10080" style="max-width:110px;">
+                <span class="form-hint">How long to keep cached responses</span>
+              </div>
+              <div class="form-group" style="margin:0;">
+                <label class="form-label" for="cache_auto_clear_hours">Auto-clear (hours)</label>
+                <input class="form-input" type="number" id="cache_auto_clear_hours"
+                       name="cache_auto_clear_hours" value="{{ form.get('cache_auto_clear_hours', 0) }}"
+                       min="0" max="8760" style="max-width:110px;">
+                <span class="form-hint">0 = disabled (manual only)</span>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      </div>
-      </div>
+        <!-- Live preview -->
+        <div class="section" id="proxy-preview" style="display:none; background:var(--color-surface);">
+          <div class="section__body" style="padding:var(--space-md);">
+            <span class="text-small text-muted">Preview Routing Rule</span><br>
+            <span style="font-weight:700; font-size:var(--font-body);" id="preview-line">—</span>
+          </div>
+        </div>
 
-      <div class="form-actions">
+        <div class="form-actions" style="display:flex;justify-content:space-between;margin-top:var(--space-md);">
+          <button type="button" class="btn btn--secondary" id="btn-back-step-2">
+            ← Back to Hostname Setup
+          </button>
+          <button type="submit" class="btn btn--primary" id="btn-submit">
+            Create Reverse Proxy
+          </button>
+        </div>
 
-        <button type="submit" class="btn btn--primary" id="btn-submit">
-          Create Reverse Proxy
-        </button>
-        <a href="/proxy/" class="btn btn--secondary">Cancel</a>
       </div>
 
     </form>
@@ -256,4 +272,3 @@
 {% block scripts %}
 <script src="/static/js/modules/proxy.js"></script>
 {% endblock %}
-
