@@ -448,15 +448,32 @@ server {{
         stream_dir = Path("/etc/nginx/streams.d")
         try:
             subprocess.run(["sudo", "-n", "mkdir", "-p", str(stream_dir)], check=True, timeout=10)
+
+            # Check if certificate exists safely before enabling ssl in Nginx stream
+            has_ssl = False
+            try:
+                chk = subprocess.run(
+                    ["sudo", "-n", "test", "-f", f"/etc/letsencrypt/live/{full_host}/fullchain.pem"],
+                    check=False, timeout=5, shell=False,
+                )
+                has_ssl = (chk.returncode == 0)
+            except Exception:
+                has_ssl = False
+
+            if has_ssl:
+                ssl_block = f"""        listen 5432 ssl;
+        ssl_certificate /etc/letsencrypt/live/{full_host}/fullchain.pem;
+        ssl_certificate_key /etc/letsencrypt/live/{full_host}/privkey.pem;"""
+            else:
+                ssl_block = "        listen 5432;"
+
             conf_content = f"""# Managed by srv-panel postgres_manager plugin
 stream {{
     upstream postgres_backend_{full_host.replace('.', '_')} {{
         server 127.0.0.1:5432;
     }}
     server {{
-        listen 5432 ssl;
-        ssl_certificate /etc/letsencrypt/live/{full_host}/fullchain.pem;
-        ssl_certificate_key /etc/letsencrypt/live/{full_host}/privkey.pem;
+{ssl_block}
         proxy_pass postgres_backend_{full_host.replace('.', '_')};
     }}
 }}
@@ -472,6 +489,7 @@ stream {{
         except Exception as exc:
             logger.warning("Nginx stream config creation failed for %s: %s", full_host, exc)
         return False
+
 
     def enable_remote(
         self,
