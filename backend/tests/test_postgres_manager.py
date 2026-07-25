@@ -305,7 +305,9 @@ class TestPostgresRemoteService(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(reissued["domain"], "db1.example.com")
 
             # Delete domain
-            deleted = await self.svc.delete_remote_domain(db, "db1.example.com")
+            with patch("plugins.postgres_manager.native_tls.firewall_remove", new=AsyncMock()), \
+                 patch("plugins.postgres_manager.native_tls.configure_postgres", new=AsyncMock()):
+                deleted = await self.svc.delete_remote_domain(db, "db1.example.com")
             self.assertTrue(deleted)
 
             domains_after = await self.svc.list_remote_domains(db)

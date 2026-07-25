@@ -1,0 +1,22 @@
+{% extends "layout.html" %}
+{% block title %}Add Remote Endpoint — PostgreSQL Manager{% endblock %}
+{% block content %}
+<div class="page-header"><div><a href="/plugins/postgres_manager/remote" class="text-muted">← Back to Remote Access</a><h1>Add Remote Endpoint</h1><p class="text-muted">Choose how external clients will reach PostgreSQL.</p></div></div>
+<form id="remote-form" class="card" style="max-width:760px;padding:var(--space-xl)">
+<h3>1. Connection hostname</h3>
+<label><input type="radio" name="mode" value="managed" checked> Managed Subdomain</label> <label><input type="radio" name="mode" value="external"> External Hostname</label>
+<div id="managed" style="margin-top:var(--space-md)"><label>Parent domain</label><select class="input" id="domain">{% for domain in domains %}<option value="{{ domain.name }}">{{ domain.name }}</option>{% endfor %}</select><label>Subdomain</label><input class="input" id="subdomain" value="db"><p class="text-muted">Preview: <span id="preview">db.example.com</span>. The panel creates the DNS A record automatically.</p></div>
+<div id="external" style="display:none;margin-top:var(--space-md)"><label>Full hostname</label><input class="input" id="hostname" placeholder="postgres.example.com"><p class="text-muted">Point this hostname to this server before enabling encrypted access.</p></div>
+<hr><h3>2. Connection security</h3>
+<label class="card" style="display:block;padding:var(--space-md)"><input type="radio" name="encryption" value="true" checked> <strong>Encrypted (SSL) — Recommended</strong><br><span class="text-muted">Uses a trusted Let's Encrypt certificate and sslmode=verify-full.</span></label>
+<label class="card" style="display:block;padding:var(--space-md)"><input type="radio" name="encryption" value="false"> <strong>Not encrypted</strong><br><span class="text-muted">Uses sslmode=disable. Passwords and database data travel without encryption.</span></label>
+<hr><h3>3. Allowed connections</h3><label>Allowed IP ranges (CIDR)</label><input class="input" id="cidrs" value="0.0.0.0/0" placeholder="203.0.113.10/32, 198.51.100.0/24"><p class="text-muted">Use /32 for one IP address.</p><button type="button" class="btn btn--sm" id="allow-all">Allow All</button><p id="all-warning" class="text-muted">Anyone on the internet can attempt to connect. Password authentication still applies.</p>
+<hr><button class="btn btn--primary" id="submit">Enable Remote Access</button><p id="error" class="text-muted"></p></form>
+{% endblock %}
+{% block scripts %}<script>
+const modeEls=document.querySelectorAll('input[name="mode"]'),managed=document.getElementById('managed'),external=document.getElementById('external');
+function syncMode(){const m=document.querySelector('input[name="mode"]:checked').value;managed.style.display=m==='managed'?'block':'none';external.style.display=m==='external'?'block':'none';}
+function preview(){document.getElementById('preview').textContent=`${document.getElementById('subdomain').value||'db'}.${document.getElementById('domain').value||'example.com'}`;}
+modeEls.forEach(x=>x.addEventListener('change',syncMode));document.getElementById('subdomain').addEventListener('input',preview);document.getElementById('domain').addEventListener('change',preview);document.getElementById('allow-all').onclick=()=>document.getElementById('cidrs').value='0.0.0.0/0';preview();
+document.getElementById('remote-form').onsubmit=async e=>{e.preventDefault();const b=document.getElementById('submit'),mode=document.querySelector('input[name="mode"]:checked').value;b.disabled=true;const body={mode,domain:mode==='managed'?document.getElementById('domain').value:null,subdomain:mode==='managed'?document.getElementById('subdomain').value:null,hostname:mode==='external'?document.getElementById('hostname').value:null,encryption_enabled:document.querySelector('input[name="encryption"]:checked').value==='true',allowed_cidrs:document.getElementById('cidrs').value.split(',').map(x=>x.trim()).filter(Boolean)};const r=await fetch('/plugins/postgres_manager/api/remote/domains',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':document.querySelector('meta[name="csrf-token"]')?.content},body:JSON.stringify(body)});if(r.ok){location.href='/plugins/postgres_manager/remote';return;}document.getElementById('error').textContent=(await r.json()).detail||'Could not enable remote access.';b.disabled=false;};
+</script>{% endblock %}

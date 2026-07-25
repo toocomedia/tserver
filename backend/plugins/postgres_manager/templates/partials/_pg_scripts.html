@@ -71,7 +71,8 @@ function updateConnectionUrls() {
 
   if (hostVal && hostVal !== "127.0.0.1" && hostVal !== "local") {
     host = hostVal;
-    sslParam = "?sslmode=verify-full";
+    const selected = modeSelect.options[modeSelect.selectedIndex];
+    sslParam = `?sslmode=${selected.dataset.sslmode || "verify-full"}`;
   }
 
   const uri = `postgresql://${encodeURIComponent(user)}:${encodeURIComponent(password)}@${host}:5432/${db}${sslParam}`;

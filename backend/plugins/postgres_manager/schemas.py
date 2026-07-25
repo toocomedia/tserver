@@ -1,7 +1,9 @@
 """
 schemas.py — Pydantic request / response models for the PostgreSQL Manager plugin.
 """
-from pydantic import BaseModel, field_validator
+from typing import Literal
+import ipaddress
+from pydantic import BaseModel, field_validator, model_validator
 
 
 # ------------------------------------------------------------------
@@ -121,3 +123,32 @@ class ServiceActionResponse(BaseModel):
     status: str
     action: str
 
+
+class RemoteConfigRequest(BaseModel):
+    mode: Literal["managed", "external"]
+    domain: str | None = None
+    subdomain: str | None = None
+    hostname: str | None = None
+    encryption_enabled: bool = True
+    # Compatibility with the existing UI payload while it migrates.
+    issue_ssl: bool | None = None
+    allowed_cidrs: list[str] = ["0.0.0.0/0"]
+
+    @model_validator(mode="after")
+    def valid_mode_fields(self):
+        if self.mode == "managed" and not (self.domain and self.subdomain):
+            raise ValueError("Managed mode requires a domain and subdomain.")
+        if self.mode == "external" and not self.hostname:
+            raise ValueError("External mode requires a hostname.")
+        if self.issue_ssl is not None:
+            self.encryption_enabled = self.issue_ssl
+        return self
+
+    @field_validator("allowed_cidrs")
+    @classmethod
+    def valid_cidrs(cls, values: list[str]) -> list[str]:
+        if not values:
+            raise ValueError("Add at least one allowed IP range.")
+        for value in values:
+            ipaddress.ip_network(value, strict=False)
+        return values

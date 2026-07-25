@@ -23,7 +23,7 @@ from templating import templates
 from plugins.postgres_manager.service import postgres_service
 from plugins.postgres_manager import queries as pg
 from plugins.postgres_manager.schemas import (
-    DatabaseCreate, UserCreate, PasswordChange, QueryRequest,
+    DatabaseCreate, UserCreate, PasswordChange, QueryRequest, RemoteConfigRequest,
 )
 
 logger = logging.getLogger(__name__)
@@ -43,7 +43,7 @@ def _sudo_cmd(script_path: Path) -> list[str]:
 # ---------------------------------------------------------------------------
 
 @router.get("/", response_class=HTMLResponse)
-async def pg_index(request: Request):
+async def pg_index(request: Request, db: AsyncSession = Depends(get_db)):
     """Render the PostgreSQL Manager main page."""
     from plugins.manager import plugin_manager
     info = plugin_manager.get_plugin("postgres_manager")
@@ -65,13 +65,25 @@ async def pg_index(request: Request):
         "databases": databases,
         "users": users,
         "system_roles": system_roles,
+        "remote_domains": await postgres_service.list_remote_domains(db),
+    })
+
+
+@router.get("/remote", response_class=HTMLResponse)
+async def pg_remote_list(request: Request, db: AsyncSession = Depends(get_db)):
+    return templates.TemplateResponse("partials/_pg_remote_list.html", {
+        "request": request, "active_page": "plugins",
+        "endpoints": await postgres_service.list_remote_domains(db),
     })
 
 
 @router.get("/remote/new", response_class=HTMLResponse)
-async def pg_remote_new():
-    """Keep old links working after endpoint creation moved into the plugin tab."""
-    return RedirectResponse("/plugins/postgres_manager/", status_code=303)
+async def pg_remote_new(request: Request, db: AsyncSession = Depends(get_db)):
+    from models.domain import Domain
+    domains = list((await db.scalars(select(Domain).order_by(Domain.name))).all())
+    return templates.TemplateResponse("partials/_pg_remote_add.html", {
+        "request": request, "active_page": "plugins", "domains": domains,
+    })
 
 
 
@@ -239,3 +251,48 @@ async def api_query(body: QueryRequest):
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
+
+# ---------------------------------------------------------------------------
+# Remote access
+# ---------------------------------------------------------------------------
+
+@router.get("/api/remote/domains")
+async def api_remote_domains(db: AsyncSession = Depends(get_db)):
+    return JSONResponse(await postgres_service.list_remote_domains(db))
+
+
+@router.post("/api/remote/domains")
+async def api_add_remote_domain(body: RemoteConfigRequest, db: AsyncSession = Depends(get_db)):
+    try:
+        result = await postgres_service.add_remote_domain(
+            db, body.mode, body.domain, body.subdomain, body.hostname,
+            allowed_cidrs=body.allowed_cidrs, encryption_enabled=body.encryption_enabled,
+        )
+        return JSONResponse(result, status_code=201)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@router.delete("/api/remote/domains/{domain}")
+async def api_delete_remote_domain(domain: str, db: AsyncSession = Depends(get_db)):
+    try:
+        await postgres_service.delete_remote_domain(db, domain)
+        return JSONResponse({"status": "ok"})
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+
+
+@router.post("/api/remote/domains/{domain}/ssl")
+async def api_reissue_remote_ssl(domain: str, db: AsyncSession = Depends(get_db)):
+    try:
+        return JSONResponse(await postgres_service.reissue_remote_ssl(db, domain))
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@router.post("/api/remote/domains/{domain}/test")
+async def api_test_remote_domain(domain: str, db: AsyncSession = Depends(get_db)):
+    try:
+        return JSONResponse(await postgres_service.test_remote_domain(db, domain))
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))

@@ -566,5 +566,122 @@ class PostgresService:
 
 
 # Module-level singleton — imported by router.py and other plugins
+    async def list_remote_domains(self, db: AsyncSession | None = None) -> list[dict[str, Any]]:
+        if db is None:
+            return []
+        from sqlalchemy import select
+        from models.postgres_remote import PostgresRemoteDomain
+        from plugins.postgres_manager.native_tls import endpoint_state
+        rows = list((await db.scalars(select(PostgresRemoteDomain).order_by(PostgresRemoteDomain.created_at.desc()))).all())
+        return [endpoint_state(row) for row in rows]
+
+    async def add_remote_domain(self, db: AsyncSession, mode: str, domain: str | None,
+                                subdomain: str | None, hostname: str | None,
+                                issue_ssl: bool | None = None, allowed_cidrs: list[str] | None = None,
+                                encryption_enabled: bool | None = None) -> dict[str, Any]:
+        from sqlalchemy import select
+        from models.domain import Domain
+        from models.postgres_remote import PostgresRemoteDomain
+        from plugins.postgres_manager import native_tls
+        encrypted = encryption_enabled if encryption_enabled is not None else (True if issue_ssl is None else issue_ssl)
+        host, managed = native_tls.build_hostname(mode, domain, subdomain, hostname)
+        cidrs = native_tls.normalize_cidrs(allowed_cidrs or ["0.0.0.0/0"])
+        domain_id = None
+        if managed:
+            parent = await db.scalar(select(Domain).where(Domain.name == domain.strip().lower()))
+            if not parent:
+                raise ValueError("Managed parent domain is not registered.")
+            domain_id = parent.id
+            from services import dns_service
+            import config
+            await dns_service.add_a_record(parent.name, subdomain.strip().lower(), config.SERVER_IP, 300)
+        if encrypted:
+            addresses = await native_tls.resolve_host(host)
+            import config
+            if config.SERVER_IP not in ("127.0.0.1", "localhost") and config.SERVER_IP not in addresses:
+                raise ValueError("Hostname must point to this server before SSL is enabled.")
+        existing = await db.scalar(select(PostgresRemoteDomain).where(PostgresRemoteDomain.full_domain == host))
+        if existing:
+            raise ValueError("This hostname is already configured.")
+        record = PostgresRemoteDomain(domain_id=domain_id, mode=mode, subdomain=subdomain if managed else None,
+            full_domain=host, encryption_enabled=encrypted, allowed_cidrs=",".join(cidrs),
+            dns_status="ready", tls_status="pending" if encrypted else "disabled", postgres_status="pending")
+        db.add(record)
+        await db.flush()
+        try:
+            rows = list((await db.scalars(select(PostgresRemoteDomain))).all())
+            active = [row for row in rows if row.enabled]
+            encrypted_hosts = [row.full_domain for row in active if row.encryption_enabled]
+            if encrypted:
+                encrypted_hosts.append(host)
+            if encrypted_hosts:
+                cert_name, expiry = await native_tls.issue_shared_certificate(encrypted_hosts)
+                for row in active:
+                    if row.encryption_enabled:
+                        row.certificate_name, row.certificate_expiry, row.ssl_active = cert_name, expiry, True
+                record.certificate_name, record.certificate_expiry, record.ssl_active = cert_name, expiry, True
+            enabled_rows = active + [record]
+            await native_tls.configure_postgres(enabled_rows)
+            await native_tls.firewall_allow(sorted({cidr for row in enabled_rows for cidr in row.allowed_cidrs.split(',') if cidr}))
+            record.enabled, record.postgres_status, record.tls_status, record.last_error = True, "ready", "ready" if encrypted else "disabled", None
+            await db.commit()
+        except Exception as exc:
+            record.last_error, record.postgres_status, record.tls_status = str(exc), "error", "error" if encrypted else "disabled"
+            await db.commit()
+            raise ValueError(str(exc)) from exc
+        return native_tls.endpoint_state(record)
+
+    async def reissue_remote_ssl(self, db: AsyncSession, full_host: str) -> dict[str, Any]:
+        from sqlalchemy import select
+        from models.postgres_remote import PostgresRemoteDomain
+        from plugins.postgres_manager import native_tls
+        record = await db.scalar(select(PostgresRemoteDomain).where(PostgresRemoteDomain.full_domain == full_host))
+        if not record or not record.encryption_enabled:
+            raise ValueError("Encrypted endpoint not found.")
+        rows = list((await db.scalars(select(PostgresRemoteDomain).where(PostgresRemoteDomain.enabled.is_(True)))).all())
+        hosts = [row.full_domain for row in rows if row.encryption_enabled]
+        cert_name, expiry = await native_tls.issue_shared_certificate(hosts)
+        for row in rows:
+            if row.encryption_enabled:
+                row.certificate_name, row.certificate_expiry, row.ssl_active, row.tls_status = cert_name, expiry, True, "ready"
+        await db.commit()
+        return native_tls.endpoint_state(record)
+
+    async def test_remote_domain(self, db: AsyncSession, full_host: str) -> dict[str, Any]:
+        from sqlalchemy import select
+        from models.postgres_remote import PostgresRemoteDomain
+        from plugins.postgres_manager import native_tls
+        record = await db.scalar(select(PostgresRemoteDomain).where(PostgresRemoteDomain.full_domain == full_host))
+        if not record:
+            raise ValueError("Endpoint not found.")
+        if record.encryption_enabled:
+            await native_tls.resolve_host(record.full_domain)
+        return native_tls.endpoint_state(record)
+
+    async def delete_remote_domain(self, db: AsyncSession, full_host: str) -> bool:
+        from sqlalchemy import select
+        from models.domain import Domain
+        from models.postgres_remote import PostgresRemoteDomain
+        from plugins.postgres_manager import native_tls
+        record = await db.scalar(select(PostgresRemoteDomain).where(PostgresRemoteDomain.full_domain == full_host))
+        if not record:
+            raise ValueError("Endpoint not found.")
+        old_cidrs = set(record.allowed_cidrs.split(','))
+        if record.mode == "managed" and record.domain_id and record.subdomain:
+            parent = await db.get(Domain, record.domain_id)
+            if parent:
+                from services import dns_service
+                await dns_service.delete_record(parent.name, record.subdomain, "A")
+        await db.delete(record)
+        await db.commit()
+        rows = list((await db.scalars(select(PostgresRemoteDomain).where(PostgresRemoteDomain.enabled.is_(True)))).all())
+        retained = {cidr for row in rows for cidr in row.allowed_cidrs.split(',') if cidr}
+        await native_tls.firewall_remove(sorted(old_cidrs - retained))
+        if rows:
+            await native_tls.configure_postgres(rows)
+        else:
+            await native_tls.disable_remote_postgres()
+        return True
+
 postgres_service = PostgresService()
 postgres_manager_service = postgres_service
