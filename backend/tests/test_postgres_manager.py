@@ -224,6 +224,41 @@ class TestSchemas(unittest.TestCase):
         q = self.QueryRequest(db="mydb", sql="SELECT * FROM users;")
         self.assertEqual(q.db, "mydb")
 
+    def test_remote_config_request_valid(self):
+        from plugins.postgres_manager.schemas import RemoteConfigRequest
+        req = RemoteConfigRequest(mode="managed", domain="example.com", subdomain="db")
+        self.assertEqual(req.mode, "managed")
+
+    def test_remote_config_request_invalid_mode(self):
+        from plugins.postgres_manager.schemas import RemoteConfigRequest
+        from pydantic import ValidationError
+        with self.assertRaises(ValidationError):
+            RemoteConfigRequest(mode="invalid_mode")
+
+
+
+class TestPostgresRemoteService(unittest.TestCase):
+
+    def setUp(self):
+        from plugins.postgres_manager.service import PostgresService
+        self.svc = PostgresService()
+
+    def test_enable_and_disable_remote(self):
+        # Enable remote in mock mode
+        state = self.svc.enable_remote(mode="managed", domain="example.com", subdomain="db", hostname=None, issue_ssl=False)
+        self.assertTrue(state["enabled"])
+        self.assertEqual(state["domain"], "db.example.com")
+
+        status = self.svc.get_remote_status()
+        self.assertTrue(status["enabled"])
+        self.assertEqual(status["domain"], "db.example.com")
+
+        # Disable remote
+        disabled_state = self.svc.disable_remote()
+        self.assertFalse(disabled_state["enabled"])
+        self.assertIsNone(disabled_state["domain"])
+
 
 if __name__ == "__main__":
     unittest.main()
+

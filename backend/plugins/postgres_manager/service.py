@@ -12,7 +12,9 @@ import shutil
 import socket
 import subprocess
 import time
+from pathlib import Path
 from typing import Any
+
 
 try:
     import psutil as _psutil
@@ -207,7 +209,129 @@ class PostgresService:
             return ""
 
 
+    # ------------------------------------------------------------------
+    # Remote Access & SSL Stream Proxy
+    # ------------------------------------------------------------------
+
+    @property
+    def _remote_json_path(self) -> Path:
+        return Path(__file__).parent / "remote.json"
+
+    def get_remote_status(self) -> dict[str, Any]:
+        """Return remote access & SSL proxy configuration state."""
+        if not self._remote_json_path.exists():
+            return {"enabled": False, "domain": None, "ssl_active": False, "nginx_stream": False}
+        try:
+            import json
+            data = json.loads(self._remote_json_path.read_text())
+            return {
+                "enabled": bool(data.get("enabled", False)),
+                "domain": data.get("domain"),
+                "ssl_active": bool(data.get("ssl_active", False)),
+                "nginx_stream": bool(data.get("nginx_stream", False)),
+            }
+        except Exception:
+            return {"enabled": False, "domain": None, "ssl_active": False, "nginx_stream": False}
+
+    def enable_remote(
+        self,
+        mode: str,
+        domain: str | None,
+        subdomain: str | None,
+        hostname: str | None,
+        issue_ssl: bool = True,
+    ) -> dict[str, Any]:
+        """Configure remote domain, issue SSL, and write Nginx stream proxy."""
+        import json
+        if mode == "managed":
+            if not domain or not subdomain:
+                raise ValueError("Parent domain and subdomain prefix are required.")
+            full_host = f"{subdomain.strip().rstrip('.')}.{domain.strip().lstrip('.')}"
+        else:
+            if not hostname:
+                raise ValueError("External hostname is required.")
+            full_host = hostname.strip()
+
+        # Validate domain format
+        import re
+        if not re.match(r"^[a-zA-Z0-9.\-]{3,253}$", full_host):
+            raise ValueError(f"Invalid hostname format: {full_host}")
+
+        ssl_active = False
+        if issue_ssl and os.name != "nt":
+            # Attempt certbot issue via acme-challenge
+            try:
+                subprocess.run(
+                    ["sudo", "-n", "certbot", "certonly", "--webroot", "-w", "/var/www/acme-challenge",
+                     "-d", full_host, "--non-interactive", "--agree-tos", "--register-unsafely-without-email"],
+                    capture_output=True, text=True, timeout=90, shell=False,
+                )
+            except Exception as exc:
+                logger.warning("Certbot issue attempt for %s: %s", full_host, exc)
+
+            cert_path = Path(f"/etc/letsencrypt/live/{full_host}/fullchain.pem")
+            ssl_active = cert_path.exists()
+
+        # Write Nginx Stream configuration if on Linux
+        stream_written = False
+        if os.name != "nt":
+            stream_dir = Path("/etc/nginx/streams.d")
+            try:
+                subprocess.run(["sudo", "-n", "mkdir", "-p", str(stream_dir)], check=True, timeout=10)
+                conf_content = f"""# Managed by srv-panel postgres_manager plugin
+stream {{
+    upstream postgres_backend {{
+        server 127.0.0.1:5432;
+    }}
+    server {{
+        listen 5432 ssl;
+        ssl_certificate /etc/letsencrypt/live/{full_host}/fullchain.pem;
+        ssl_certificate_key /etc/letsencrypt/live/{full_host}/privkey.pem;
+        proxy_pass postgres_backend;
+    }}
+}}
+"""
+                conf_path = stream_dir / f"postgres_{full_host}.conf"
+                proc = subprocess.run(
+                    ["sudo", "-n", "tee", str(conf_path)],
+                    input=conf_content, text=True, capture_output=True, timeout=10,
+                )
+                if proc.returncode == 0:
+                    subprocess.run(["sudo", "-n", "systemctl", "reload", "nginx"], check=False, timeout=15)
+                    stream_written = True
+            except Exception as exc:
+                logger.warning("Nginx stream config creation failed: %s", exc)
+
+        state = {
+            "enabled": True,
+            "domain": full_host,
+            "ssl_active": ssl_active,
+            "nginx_stream": stream_written or os.name == "nt",
+            "mode": mode,
+        }
+        self._remote_json_path.write_text(json.dumps(state, indent=2))
+        return state
+
+    def disable_remote(self) -> dict[str, Any]:
+        """Disable remote access and remove Nginx stream proxy config."""
+        import json
+        status = self.get_remote_status()
+        domain = status.get("domain")
+        if domain and os.name != "nt":
+            conf_path = Path(f"/etc/nginx/streams.d/postgres_{domain}.conf")
+            try:
+                subprocess.run(["sudo", "-n", "rm", "-f", str(conf_path)], check=False, timeout=10)
+                subprocess.run(["sudo", "-n", "systemctl", "reload", "nginx"], check=False, timeout=15)
+            except Exception as exc:
+                logger.warning("Failed to remove Nginx stream config: %s", exc)
+
+        state = {"enabled": False, "domain": None, "ssl_active": False, "nginx_stream": False}
+        self._remote_json_path.write_text(json.dumps(state, indent=2))
+        return state
+
+
 # Module-level singleton — imported by router.py and other plugins
 postgres_service = PostgresService()
 postgres_manager_service = postgres_service
+
 

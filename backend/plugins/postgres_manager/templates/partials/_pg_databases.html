@@ -36,7 +36,15 @@
           <td style="color:var(--color-muted);">{{ db.encoding }}</td>
           <td style="color:var(--color-muted);">{{ db.size }}</td>
           <td id="pg-db-tables-{{ db.name }}" style="color:var(--color-muted);">—</td>
-          <td style="text-align:right;">
+          <td style="text-align:right;display:flex;gap:var(--space-xs);justify-content:flex-end;">
+            <button class="btn btn--sm btn--secondary" data-action="open-connection-modal" data-db="{{ db.name }}" data-owner="{{ db.owner }}"
+                    id="pg-db-conn-{{ db.name }}" title="Generate Connection URL &amp; credentials for {{ db.name }}">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+              </svg>
+              Connection Info
+            </button>
             <button class="btn btn--icon btn--sm" data-action="delete-db" data-db="{{ db.name }}"
                     id="pg-db-del-{{ db.name }}" title="Drop database {{ db.name }}"
                     aria-label="Drop database {{ db.name }}">
@@ -47,6 +55,7 @@
               </svg>
             </button>
           </td>
+
         </tr>
         {% endfor %}
       </tbody>

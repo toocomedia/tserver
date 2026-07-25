@@ -42,8 +42,7 @@ function setLoading(btn, loading) {
 
 // ── Tab switching ─────────────────────────────────────────────────────────
 
-const TABS = ["databases", "users", "system-roles", "query"];
-
+const TABS = ["databases", "users", "system-roles", "remote", "query"];
 
 function switchTab(tabId) {
   TABS.forEach(t => {
@@ -57,6 +56,168 @@ function switchTab(tabId) {
 document.querySelectorAll("[data-pg-tab]").forEach(btn => {
   btn.addEventListener("click", () => switchTab(btn.dataset.pgTab));
 });
+
+// ── Connection URL & Credentials Generator Modal ─────────────────────────
+
+const activeRemoteDomain = "{{ remote_status.domain if remote_status and remote_status.enabled else '' }}";
+
+function updateConnectionUrls() {
+  const db       = document.getElementById("pg-conn-db-name").value || "my_db";
+  const user     = document.getElementById("pg-conn-user-select").value || "postgres";
+  const mode     = document.getElementById("pg-conn-mode-select").value;
+  const password = document.getElementById("pg-conn-password-input").value || "YOUR_PASSWORD";
+
+  let host = "127.0.0.1";
+  let sslParam = "";
+
+  if (mode === "remote") {
+    host = activeRemoteDomain || window.location.hostname;
+    sslParam = "?sslmode=require";
+  }
+
+  const uri = `postgresql://${encodeURIComponent(user)}:${encodeURIComponent(password)}@${host}:5432/${db}${sslParam}`;
+  const env = `DATABASE_URL="${uri}"`;
+
+  document.getElementById("pg-conn-uri").value = uri;
+  document.getElementById("pg-conn-env").value = env;
+
+  document.getElementById("pg-conn-host-val").textContent = host;
+  document.getElementById("pg-conn-port-val").textContent = "5432";
+  document.getElementById("pg-conn-db-val").textContent   = db;
+  document.getElementById("pg-conn-user-val").textContent = user;
+}
+
+document.addEventListener("click", e => {
+  const btn = e.target.closest("[data-action='open-connection-modal']");
+  if (!btn) return;
+  const db    = btn.dataset.db;
+  const owner = btn.dataset.owner;
+  document.getElementById("pg-conn-db-name").value = db || "";
+  const userSelect = document.getElementById("pg-conn-user-select");
+  if (userSelect && owner) userSelect.value = owner;
+  updateConnectionUrls();
+  openModal("pg-modal-connection");
+});
+
+["pg-conn-user-select", "pg-conn-mode-select", "pg-conn-password-input"].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) {
+    el.addEventListener("input", updateConnectionUrls);
+    el.addEventListener("change", updateConnectionUrls);
+  }
+});
+
+const togglePwBtn = document.getElementById("pg-conn-toggle-pw-btn");
+if (togglePwBtn) {
+  togglePwBtn.addEventListener("click", () => {
+    const pwInput = document.getElementById("pg-conn-password-input");
+    if (pwInput.type === "password") {
+      pwInput.type = "text";
+      togglePwBtn.textContent = "Hide";
+    } else {
+      pwInput.type = "password";
+      togglePwBtn.textContent = "Show";
+    }
+  });
+}
+
+// 1-Click Copy target helper
+document.addEventListener("click", async e => {
+  const copyBtn = e.target.closest("[data-copy-target]");
+  if (!copyBtn) return;
+  const targetId = copyBtn.dataset.copyTarget;
+  const targetEl = document.getElementById(targetId);
+  if (!targetEl) return;
+  try {
+    await navigator.clipboard.writeText(targetEl.value);
+    const origText = copyBtn.textContent;
+    copyBtn.textContent = "Copied!";
+    setTimeout(() => { copyBtn.textContent = origText; }, 1800);
+  } catch (err) {
+    showToast("Failed to copy to clipboard.", true);
+  }
+});
+
+// ── Remote Access & SSL Tab Logic ─────────────────────────────────────────
+
+const remoteModeManaged  = document.getElementById("pg-remote-mode-managed");
+const remoteModeExternal = document.getElementById("pg-remote-mode-external");
+const remoteManagedWrap  = document.getElementById("pg-remote-managed-fields");
+const remoteExternalWrap = document.getElementById("pg-remote-external-fields");
+const remoteDomainSelect = document.getElementById("pg-remote-domain-select");
+const remoteSubdomainInp = document.getElementById("pg-remote-subdomain-input");
+const remoteFullHint     = document.getElementById("pg-remote-full-hint");
+
+if (remoteModeManaged && remoteModeExternal) {
+  const toggleRemoteMode = () => {
+    if (remoteModeExternal.checked) {
+      if (remoteManagedWrap) remoteManagedWrap.style.display = "none";
+      if (remoteExternalWrap) remoteExternalWrap.style.display = "flex";
+    } else {
+      if (remoteManagedWrap) remoteManagedWrap.style.display = "flex";
+      if (remoteExternalWrap) remoteExternalWrap.style.display = "none";
+    }
+  };
+  remoteModeManaged.addEventListener("change", toggleRemoteMode);
+  remoteModeExternal.addEventListener("change", toggleRemoteMode);
+}
+
+function updateRemoteHint() {
+  if (!remoteFullHint) return;
+  const sub  = (remoteSubdomainInp ? remoteSubdomainInp.value.trim() : "") || "db";
+  const dom  = (remoteDomainSelect ? remoteDomainSelect.value : "") || "example.com";
+  remoteFullHint.textContent = `${sub}.${dom}`;
+}
+
+if (remoteDomainSelect) remoteDomainSelect.addEventListener("change", updateRemoteHint);
+if (remoteSubdomainInp) remoteSubdomainInp.addEventListener("input", updateRemoteHint);
+
+const remoteSaveBtn = document.getElementById("pg-remote-btn-save");
+if (remoteSaveBtn) {
+  remoteSaveBtn.addEventListener("click", async () => {
+    const isManaged = remoteModeManaged ? remoteModeManaged.checked : true;
+    const mode      = isManaged ? "managed" : "external";
+    const domain    = remoteDomainSelect ? remoteDomainSelect.value : null;
+    const subdomain = remoteSubdomainInp ? remoteSubdomainInp.value.trim() : null;
+    const hostname  = document.getElementById("pg-remote-external-input") ? document.getElementById("pg-remote-external-input").value.trim() : null;
+    const issue_ssl = document.getElementById("pg-remote-issue-ssl") ? document.getElementById("pg-remote-issue-ssl").checked : true;
+    const errEl     = document.getElementById("pg-remote-error");
+
+    if (errEl) errEl.style.display = "none";
+
+    setLoading(remoteSaveBtn, true);
+    try {
+      const res = await apiFetch("/remote/enable", {
+        method: "POST",
+        body: JSON.stringify({ mode, domain, subdomain, hostname, issue_ssl }),
+      });
+      showToast(`Remote access enabled for ${res.state.domain}`);
+      setTimeout(() => location.reload(), 1500);
+    } catch (err) {
+      if (errEl) { errEl.textContent = err.message; errEl.style.display = ""; }
+      else { showToast(err.message, true); }
+    } finally {
+      setLoading(remoteSaveBtn, false);
+    }
+  });
+}
+
+const remoteDisableBtn = document.getElementById("pg-remote-btn-disable");
+if (remoteDisableBtn) {
+  remoteDisableBtn.addEventListener("click", async () => {
+    if (!confirm("Disable remote access for PostgreSQL? Port 5432 remote access will be closed.")) return;
+    setLoading(remoteDisableBtn, true);
+    try {
+      await apiFetch("/remote/disable", { method: "POST" });
+      showToast("Remote access disabled.");
+      setTimeout(() => location.reload(), 1200);
+    } catch (err) {
+      showToast(err.message, true);
+      setLoading(remoteDisableBtn, false);
+    }
+  });
+}
+
 
 // ── Modal open/close (data-action) ────────────────────────────────────────
 

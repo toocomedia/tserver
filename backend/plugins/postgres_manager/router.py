@@ -12,15 +12,19 @@ import os
 import subprocess
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 
 import config
+from database import get_db
+from models.domain import Domain
 from templating import templates
 from plugins.postgres_manager.service import postgres_service
 from plugins.postgres_manager import queries as pg
 from plugins.postgres_manager.schemas import (
-    DatabaseCreate, UserCreate, PasswordChange, QueryRequest,
+    DatabaseCreate, UserCreate, PasswordChange, QueryRequest, RemoteConfigRequest,
 )
 
 logger = logging.getLogger(__name__)
@@ -40,7 +44,7 @@ def _sudo_cmd(script_path: Path) -> list[str]:
 # ---------------------------------------------------------------------------
 
 @router.get("/", response_class=HTMLResponse)
-async def pg_index(request: Request):
+async def pg_index(request: Request, db: AsyncSession = Depends(get_db)):
     """Render the PostgreSQL Manager main page."""
     from plugins.manager import plugin_manager
     info = plugin_manager.get_plugin("postgres_manager")
@@ -52,6 +56,10 @@ async def pg_index(request: Request):
     users = pg.list_users() if status["running"] else []
     system_roles = pg.list_system_roles() if status["running"] else []
 
+    domains_res = await db.scalars(select(Domain).order_by(Domain.name))
+    domains = list(domains_res.all())
+    remote_status = postgres_service.get_remote_status()
+
     return templates.TemplateResponse("postgres.html", {
         "request": request,
         "active_page": "plugins",
@@ -61,7 +69,10 @@ async def pg_index(request: Request):
         "databases": databases,
         "users": users,
         "system_roles": system_roles,
+        "domains": domains,
+        "remote_status": remote_status,
     })
+
 
 
 
@@ -227,5 +238,41 @@ async def api_query(body: QueryRequest):
         return JSONResponse({"rows": rows, "count": len(rows)})
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
+
+
+# ---------------------------------------------------------------------------
+# Remote Access & SSL Proxy
+# ---------------------------------------------------------------------------
+
+@router.get("/api/remote/status")
+async def api_get_remote_status():
+    return JSONResponse(postgres_service.get_remote_status())
+
+
+@router.post("/api/remote/enable")
+async def api_enable_remote(body: RemoteConfigRequest):
+    try:
+        state = postgres_service.enable_remote(
+            mode=body.mode,
+            domain=body.domain,
+            subdomain=body.subdomain,
+            hostname=body.hostname,
+            issue_ssl=body.issue_ssl,
+        )
+        return JSONResponse({"status": "ok", "state": state})
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@router.post("/api/remote/disable")
+async def api_disable_remote():
+    try:
+        state = postgres_service.disable_remote()
+        return JSONResponse({"status": "ok", "state": state})
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
     except RuntimeError as exc:
         raise HTTPException(status_code=500, detail=str(exc))

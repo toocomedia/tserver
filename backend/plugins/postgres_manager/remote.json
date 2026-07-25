@@ -1,0 +1,6 @@
+{
+  "enabled": false,
+  "domain": null,
+  "ssl_active": false,
+  "nginx_stream": false
+}

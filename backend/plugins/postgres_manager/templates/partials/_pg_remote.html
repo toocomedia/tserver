@@ -1,0 +1,120 @@
+{# _pg_remote.html — Remote Access & SSL tab panel #}
+<div id="pg-panel-remote" class="pg-panel" style="display:none;">
+
+  <div class="action-toolbar">
+    <h2 style="font-size:var(--font-h2);margin:0;">Remote Access &amp; SSL</h2>
+  </div>
+
+  {# Architecture Explanation Notice #}
+  <div style="display:flex;align-items:center;gap:var(--space-sm);
+              margin-bottom:var(--space-lg);padding:var(--space-sm) var(--space-md);
+              background:var(--color-surface);border-left:3px solid var(--color-accent);border-top:1px solid var(--color-line);border-right:1px solid var(--color-line);border-bottom:1px solid var(--color-line);">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+         stroke="var(--color-accent-2)" stroke-width="2" aria-hidden="true">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+    </svg>
+    <span style="font-size:var(--font-small);color:var(--color-muted);">
+      <strong>Secure TCP Stream Proxy:</strong> External traffic connects via Nginx TLS/SSL on your custom domain. PostgreSQL stays bound strictly to <code>127.0.0.1</code> for max security.
+    </span>
+  </div>
+
+  <div style="max-width:580px;display:flex;flex-direction:column;gap:var(--space-lg);">
+
+    {# Status Summary Card #}
+    <div style="padding:var(--space-md) var(--space-lg);background:var(--color-surface);border:1px solid var(--color-line);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:var(--space-md);">
+      <div>
+        <div style="font-size:var(--font-small);color:var(--color-muted);margin-bottom:2px;">Remote Access Status</div>
+        <div style="display:flex;align-items:center;gap:var(--space-sm);">
+          <span class="status-badge {% if remote_status.enabled %}success{% else %}muted{% endif %}" id="pg-remote-status-badge">
+            {{ 'Active' if remote_status.enabled else 'Disabled' }}
+          </span>
+          <strong id="pg-remote-domain-display" style="font-size:var(--font-body);">
+            {{ remote_status.domain or 'No domain configured' }}
+          </strong>
+        </div>
+      </div>
+      {% if remote_status.enabled %}
+      <button class="btn btn--danger btn--sm" id="pg-remote-btn-disable">Disable Remote Access</button>
+      {% endif %}
+    </div>
+
+    {# Configuration Form #}
+    <div style="display:flex;flex-direction:column;gap:var(--space-md);">
+      
+      {# Hostname Mode Radio Selection #}
+      <div class="form-group">
+        <label class="form-label">Hostname Source</label>
+        <div style="display:flex;gap:var(--space-lg);margin-top:var(--space-xs);">
+          <label class="form-check">
+            <input type="radio" name="pg-remote-mode" value="managed" id="pg-remote-mode-managed" checked>
+            <span>Managed Domain (Subdomain)</span>
+          </label>
+          <label class="form-check">
+            <input type="radio" name="pg-remote-mode" value="external" id="pg-remote-mode-external">
+            <span>External Hostname</span>
+          </label>
+        </div>
+        <span class="form-hint">Choose how the database domain is routed to this server.</span>
+      </div>
+
+      {# Option 1: Managed Domain + Subdomain #}
+      <div id="pg-remote-managed-fields" style="display:flex;flex-direction:column;gap:var(--space-md);">
+        {% if domains %}
+        <div class="form-group">
+          <label class="form-label" for="pg-remote-domain-select">Parent Domain</label>
+          <div class="form-select-wrap">
+            <select id="pg-remote-domain-select" class="form-select">
+              <option value="" disabled selected>Select a domain…</option>
+              {% for d in domains %}
+                <option value="{{ d.name }}">{{ d.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <span class="form-hint">Domain must be managed by the panel (A record created automatically).</span>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="pg-remote-subdomain-input">Subdomain</label>
+          <input type="text" id="pg-remote-subdomain-input" class="form-input" placeholder="db" autocomplete="off" spellcheck="false">
+          <span class="form-hint">
+            Prefix only — full domain will be: <strong id="pg-remote-full-hint">db.example.com</strong>
+          </span>
+        </div>
+        {% else %}
+        <div style="padding:var(--space-md);background:var(--color-surface);border:1px solid var(--color-line);font-size:var(--font-small);color:var(--color-muted);">
+          No managed domains found. Use <strong>External Hostname</strong>, or add a domain in the panel first.
+        </div>
+        {% endif %}
+      </div>
+
+      {# Option 2: External Hostname #}
+      <div id="pg-remote-external-fields" style="display:none;flex-direction:column;gap:var(--space-md);">
+        <div class="form-group">
+          <label class="form-label" for="pg-remote-external-input">External Hostname</label>
+          <input type="text" id="pg-remote-external-input" class="form-input" placeholder="pg.myotherdomain.com" autocomplete="off" spellcheck="false">
+          <span class="form-hint">Full domain or subdomain whose DNS A record already points to this server IP.</span>
+        </div>
+      </div>
+
+      {# SSL Certificate Checkbox #}
+      <div class="form-group" style="margin-top:var(--space-xs);">
+        <label class="form-check">
+          <input type="checkbox" id="pg-remote-issue-ssl" checked>
+          <span><strong>Issue Let's Encrypt SSL Certificate</strong> (recommended)</span>
+        </label>
+        <span class="form-hint" style="margin-left:24px;">Uses Certbot HTTP-01 webroot challenge for official trusted SSL.</span>
+      </div>
+
+      <div id="pg-remote-error" class="form-error" style="display:none;"></div>
+
+      <div class="form-actions">
+        <button class="btn btn--primary" id="pg-remote-btn-save">
+          Enable Remote Access &amp; SSL
+        </button>
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
