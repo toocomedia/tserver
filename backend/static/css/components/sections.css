@@ -23,7 +23,7 @@
   flex-direction: column;
   border-bottom: none !important; 
   padding: 0;
-  margin-bottom: 24px;
+  margin-bottom: 28px;
   width: 100%;
 }
 .section:last-child {
@@ -34,11 +34,17 @@
   align-items: center; 
   justify-content: space-between; 
   background: var(--color-header-bg-bar);
+  height: 38px;
   min-height: 38px;
-  padding: 0 12px;
-  margin-bottom: 0;
+  padding: 0 16px;
+  margin-bottom: 16px;
   border-bottom: 1px solid var(--color-line);
   width: 100%;
+}
+/* When section header is directly followed by a table or list title bar, remove bottom margin */
+.section__header:has(+ .table-wrap),
+.section__header:has(+ .section__body > .table-wrap) {
+  margin-bottom: 0;
 }
 .section__header h3, .section__header h2 { 
   font-size: 13px; 
@@ -59,14 +65,15 @@
 .section__body { 
   display: flex;
   flex-direction: column;
-  gap: 0;
+  gap: 16px;
   width: 100%;
 }
-/* List Header Title Bar (Full 100% Width, 13px Title Font Size & 1px Line Divider) */
+/* List Header Title Bar (Full 100% Width, 16px Padding & 1px Line Divider) */
 .list-title-bar {
   background: var(--color-header-bg-bar);
+  height: 38px;
   min-height: 38px;
-  padding: 0 12px;
+  padding: 0 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -99,10 +106,10 @@
   justify-content: space-between;
   gap: 12px;
   background: var(--color-surface);
-  padding: 8px 12px;
+  padding: 10px 16px;
   flex-wrap: wrap;
   border-bottom: 1px solid var(--color-line);
-  margin-bottom: 12px;
+  margin-bottom: 16px;
 }
 .action-toolbar__search {
   display: flex;
@@ -118,12 +125,12 @@
   gap: 8px;
 }
 
-/* Stat Box Grid (Spacious 36px Outside Margin) */
+/* Stat Box Grid (Clean 28px Outside Margin) */
 .stat-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 16px;
-  margin-bottom: 36px;
+  margin-bottom: 28px;
 }
 .stat-card-box {
   background: var(--color-bg);
@@ -160,8 +167,8 @@
   color: var(--color-muted);
 }
 
-/* Info row (Clean 13px Font Size & 100% Vertical Centering) */
-.info-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 36px; padding: 6px 0; border-bottom: 1px solid var(--color-line); }
+/* Info row (16px Horizontal Padding Alignment & Dead-Center Height) */
+.info-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 38px; padding: 0 16px; border-bottom: 1px solid var(--color-line); }
 .info-row:last-child { border-bottom: none; }
 .info-row__label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-muted); min-width: 140px; flex-shrink: 0; display: flex; align-items: center; }
 .info-row__value { font-size: 13px; color: var(--color-text); font-weight: 500; display: flex; align-items: center; gap: 8px; }
