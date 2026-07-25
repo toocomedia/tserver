@@ -14,6 +14,8 @@ import subprocess
 import time
 from pathlib import Path
 from typing import Any
+from sqlalchemy.ext.asyncio import AsyncSession
+
 
 
 try:
@@ -210,70 +212,53 @@ class PostgresService:
 
 
     # ------------------------------------------------------------------
-    # Remote Access & SSL Stream Proxy (Multi-Domain)
+    # Remote Access & SSL Stream Proxy (SQLite DB Persistence)
     # ------------------------------------------------------------------
 
-    @property
-    def _remote_domains_json_path(self) -> Path:
-        return Path(__file__).parent / "remote_domains.json"
-
-    def list_remote_domains(self) -> list[dict[str, Any]]:
-        """Return list of configured remote access domains."""
-        if not self._remote_domains_json_path.exists():
-            # Check legacy remote.json for single domain migration
-            legacy_path = Path(__file__).parent / "remote.json"
-            if legacy_path.exists():
-                try:
-                    import json
-                    old = json.loads(legacy_path.read_text())
-                    if old.get("enabled") and old.get("domain"):
-                        return [{
-                            "domain": old["domain"],
-                            "mode": old.get("mode", "managed"),
-                            "ssl_active": bool(old.get("ssl_active", False)),
-                            "nginx_stream": bool(old.get("nginx_stream", False)),
-                        }]
-                except Exception:
-                    pass
+    async def list_remote_domains(self, db: AsyncSession | None = None) -> list[dict[str, Any]]:
+        """Return list of configured remote access domains from SQLite DB."""
+        if db is None:
             return []
-
         try:
-            import json
-            data = json.loads(self._remote_domains_json_path.read_text())
-            return data if isinstance(data, list) else []
-        except Exception:
+            from sqlalchemy import select
+            from models.postgres_remote import PostgresRemoteDomain
+            res = await db.scalars(select(PostgresRemoteDomain).order_by(PostgresRemoteDomain.created_at.desc()))
+            records = list(res.all())
+            return [
+                {
+                    "domain": r.full_domain,
+                    "mode": r.mode,
+                    "ssl_active": r.ssl_active,
+                    "nginx_stream": r.nginx_stream,
+                }
+                for r in records
+            ]
+        except Exception as exc:
+            logger.warning("Failed to list remote domains from DB: %s", exc)
             return []
 
-    def _save_remote_domains(self, domains: list[dict[str, Any]]) -> None:
-        import json
-        self._remote_domains_json_path.write_text(json.dumps(domains, indent=2))
-
-    def get_remote_status(self) -> dict[str, Any]:
-        """Backward-compatible remote status helper."""
-        domains = self.list_remote_domains()
-        if not domains:
-            return {"enabled": False, "domain": None, "ssl_active": False, "nginx_stream": False}
-        first = domains[0]
-        return {
-            "enabled": True,
-            "domain": first.get("domain"),
-            "ssl_active": first.get("ssl_active", False),
-            "nginx_stream": first.get("nginx_stream", False),
-        }
-
-    def add_remote_domain(
+    async def add_remote_domain(
         self,
+        db: AsyncSession,
         mode: str,
         domain: str | None,
         subdomain: str | None,
         hostname: str | None,
         issue_ssl: bool = True,
     ) -> dict[str, Any]:
-        """Add a new remote domain endpoint, issue SSL, and write Nginx stream proxy."""
+        """Add a new remote domain endpoint to SQLite DB, issue SSL, and write Nginx stream proxy."""
+        from sqlalchemy import select
+        from models.postgres_remote import PostgresRemoteDomain
+        from models.domain import Domain
+
+        domain_id = None
         if mode == "managed":
             if not domain or not subdomain:
                 raise ValueError("Parent domain and subdomain prefix are required.")
             full_host = f"{subdomain.strip().rstrip('.')}.{domain.strip().lstrip('.')}"
+            parent = await db.scalar(select(Domain).where(Domain.name == domain.strip()))
+            if parent:
+                domain_id = parent.id
         else:
             if not hostname:
                 raise ValueError("External hostname is required.")
@@ -284,8 +269,8 @@ class PostgresService:
         if not re.match(r"^[a-zA-Z0-9.\-]{3,253}$", full_host):
             raise ValueError(f"Invalid hostname format: {full_host}")
 
-        domains = self.list_remote_domains()
-        if any(d.get("domain") == full_host for d in domains):
+        existing = await db.scalar(select(PostgresRemoteDomain).where(PostgresRemoteDomain.full_domain == full_host))
+        if existing:
             raise ValueError(f"Domain '{full_host}' is already configured for remote access.")
 
         ssl_active = False
@@ -294,41 +279,60 @@ class PostgresService:
 
         stream_written = self._write_nginx_stream_conf(full_host)
 
-        entry = {
-            "domain": full_host,
-            "mode": mode,
-            "ssl_active": ssl_active,
-            "nginx_stream": stream_written or os.name == "nt",
-        }
-        domains.append(entry)
-        self._save_remote_domains(domains)
-        return entry
+        record = PostgresRemoteDomain(
+            domain_id=domain_id,
+            mode=mode,
+            subdomain=subdomain or "",
+            full_domain=full_host,
+            ssl_active=ssl_active,
+            nginx_stream=stream_written or os.name == "nt",
+        )
+        db.add(record)
+        await db.commit()
+        await db.refresh(record)
 
-    def reissue_remote_ssl(self, full_host: str) -> dict[str, Any]:
-        """Re-issue Let's Encrypt SSL certificate for a specific domain endpoint."""
-        domains = self.list_remote_domains()
-        target = next((d for d in domains if d.get("domain") == full_host), None)
+        return {
+            "domain": record.full_domain,
+            "mode": record.mode,
+            "ssl_active": record.ssl_active,
+            "nginx_stream": record.nginx_stream,
+        }
+
+    async def reissue_remote_ssl(self, db: AsyncSession, full_host: str) -> dict[str, Any]:
+        """Re-issue Let's Encrypt SSL certificate for a specific domain endpoint in SQLite DB."""
+        from sqlalchemy import select
+        from models.postgres_remote import PostgresRemoteDomain
+
+        target = await db.scalar(select(PostgresRemoteDomain).where(PostgresRemoteDomain.full_domain == full_host))
         if not target:
             raise ValueError(f"Domain '{full_host}' not found in remote access list.")
 
         ssl_active = False
         if os.name != "nt":
             ssl_active = self._issue_certbot_ssl(full_host)
-            # Re-write Nginx stream config to bind ssl
             self._write_nginx_stream_conf(full_host)
         else:
             ssl_active = True
 
-        target["ssl_active"] = ssl_active
-        target["nginx_stream"] = True
-        self._save_remote_domains(domains)
-        return target
+        target.ssl_active = ssl_active
+        target.nginx_stream = True
+        await db.commit()
+        await db.refresh(target)
 
-    def delete_remote_domain(self, full_host: str) -> bool:
-        """Remove a remote access domain and remove its Nginx stream config."""
-        domains = self.list_remote_domains()
-        filtered = [d for d in domains if d.get("domain") != full_host]
-        if len(filtered) == len(domains):
+        return {
+            "domain": target.full_domain,
+            "mode": target.mode,
+            "ssl_active": target.ssl_active,
+            "nginx_stream": target.nginx_stream,
+        }
+
+    async def delete_remote_domain(self, db: AsyncSession, full_host: str) -> bool:
+        """Remove a remote access domain from SQLite DB and remove its Nginx stream config."""
+        from sqlalchemy import select
+        from models.postgres_remote import PostgresRemoteDomain
+
+        target = await db.scalar(select(PostgresRemoteDomain).where(PostgresRemoteDomain.full_domain == full_host))
+        if not target:
             raise ValueError(f"Domain '{full_host}' not found.")
 
         if os.name != "nt":
@@ -339,8 +343,14 @@ class PostgresService:
             except Exception as exc:
                 logger.warning("Failed to remove Nginx stream config for %s: %s", full_host, exc)
 
-        self._save_remote_domains(filtered)
+        await db.delete(target)
+        await db.commit()
         return True
+
+    def get_remote_status(self) -> dict[str, Any]:
+        """Backward-compatible remote status helper."""
+        return {"enabled": False, "domain": None, "ssl_active": False, "nginx_stream": False}
+
 
     def _issue_certbot_ssl(self, full_host: str) -> bool:
         """Helper to run Certbot webroot challenge and check cert existence via sudo safely."""

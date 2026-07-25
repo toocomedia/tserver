@@ -235,54 +235,57 @@ class TestSchemas(unittest.TestCase):
         with self.assertRaises(ValidationError):
             RemoteConfigRequest(mode="invalid_mode")
 
+class TestPostgresRemoteService(unittest.IsolatedAsyncioTestCase):
 
-
-class TestPostgresRemoteService(unittest.TestCase):
-
-    def setUp(self):
-        import tempfile
-        from pathlib import Path
+    async def asyncSetUp(self):
+        from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+        from database import Base
+        import models  # loads all models including PostgresRemoteDomain
         from plugins.postgres_manager.service import PostgresService
+
+        self.engine = create_async_engine("sqlite+aiosqlite:///:memory:", echo=False)
+        async with self.engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+
+        self.async_session = async_sessionmaker(self.engine, expire_on_commit=False, class_=AsyncSession)
         self.svc = PostgresService()
-        self.temp_dir = tempfile.TemporaryDirectory()
-        self.svc._test_path = Path(self.temp_dir.name) / "test_remote_domains.json"
 
-        # Monkeypatch property for test instance
-        type(self.svc)._remote_domains_json_path = property(lambda s: getattr(s, "_test_path", Path(s._test_path)))
+    async def asyncTearDown(self):
+        await self.engine.dispose()
 
-    def tearDown(self):
-        self.temp_dir.cleanup()
+    async def test_multi_domain_remote_lifecycle(self):
+        async with self.async_session() as db:
+            # Add first domain
+            entry1 = await self.svc.add_remote_domain(db, mode="managed", domain="example.com", subdomain="db1", hostname=None, issue_ssl=False)
+            self.assertEqual(entry1["domain"], "db1.example.com")
 
-    def test_multi_domain_remote_lifecycle(self):
-        # Add first domain
-        entry1 = self.svc.add_remote_domain(mode="managed", domain="example.com", subdomain="db1", hostname=None, issue_ssl=False)
-        self.assertEqual(entry1["domain"], "db1.example.com")
+            # Add second domain
+            entry2 = await self.svc.add_remote_domain(db, mode="external", domain=None, subdomain=None, hostname="pg.otherdomain.com", issue_ssl=False)
+            self.assertEqual(entry2["domain"], "pg.otherdomain.com")
 
-        # Add second domain
-        entry2 = self.svc.add_remote_domain(mode="external", domain=None, subdomain=None, hostname="pg.otherdomain.com", issue_ssl=False)
-        self.assertEqual(entry2["domain"], "pg.otherdomain.com")
+            # List domains
+            domains = await self.svc.list_remote_domains(db)
+            self.assertEqual(len(domains), 2)
+            domain_names = [d["domain"] for d in domains]
+            self.assertIn("db1.example.com", domain_names)
+            self.assertIn("pg.otherdomain.com", domain_names)
 
-        # List domains
-        domains = self.svc.list_remote_domains()
-        self.assertEqual(len(domains), 2)
-        self.assertEqual(domains[0]["domain"], "db1.example.com")
-        self.assertEqual(domains[1]["domain"], "pg.otherdomain.com")
+            # Re-issue SSL
+            reissued = await self.svc.reissue_remote_ssl(db, "db1.example.com")
+            self.assertEqual(reissued["domain"], "db1.example.com")
 
-        # Re-issue SSL
-        reissued = self.svc.reissue_remote_ssl("db1.example.com")
-        self.assertEqual(reissued["domain"], "db1.example.com")
+            # Delete domain
+            deleted = await self.svc.delete_remote_domain(db, "db1.example.com")
+            self.assertTrue(deleted)
 
-        # Delete domain
-        deleted = self.svc.delete_remote_domain("db1.example.com")
-        self.assertTrue(deleted)
-
-        domains_after = self.svc.list_remote_domains()
-        self.assertEqual(len(domains_after), 1)
-        self.assertEqual(domains_after[0]["domain"], "pg.otherdomain.com")
+            domains_after = await self.svc.list_remote_domains(db)
+            self.assertEqual(len(domains_after), 1)
+            self.assertEqual(domains_after[0]["domain"], "pg.otherdomain.com")
 
 
 
 if __name__ == "__main__":
     unittest.main()
+()
 
 
