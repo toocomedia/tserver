@@ -1,8 +1,0 @@
-[
-  {
-    "domain": "pg.otherdomain.com",
-    "mode": "external",
-    "ssl_active": false,
-    "nginx_stream": true
-  }
-]

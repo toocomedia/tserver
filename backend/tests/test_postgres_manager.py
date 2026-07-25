@@ -240,14 +240,18 @@ class TestSchemas(unittest.TestCase):
 class TestPostgresRemoteService(unittest.TestCase):
 
     def setUp(self):
+        import tempfile
+        from pathlib import Path
         from plugins.postgres_manager.service import PostgresService
         self.svc = PostgresService()
-        # Clean test json if exists
-        if self.svc._remote_domains_json_path.exists():
-            try:
-                self.svc._remote_domains_json_path.unlink()
-            except Exception:
-                pass
+        self.temp_dir = tempfile.TemporaryDirectory()
+        self.svc._test_path = Path(self.temp_dir.name) / "test_remote_domains.json"
+
+        # Monkeypatch property for test instance
+        type(self.svc)._remote_domains_json_path = property(lambda s: getattr(s, "_test_path", Path(s._test_path)))
+
+    def tearDown(self):
+        self.temp_dir.cleanup()
 
     def test_multi_domain_remote_lifecycle(self):
         # Add first domain
@@ -275,6 +279,7 @@ class TestPostgresRemoteService(unittest.TestCase):
         domains_after = self.svc.list_remote_domains()
         self.assertEqual(len(domains_after), 1)
         self.assertEqual(domains_after[0]["domain"], "pg.otherdomain.com")
+
 
 
 if __name__ == "__main__":

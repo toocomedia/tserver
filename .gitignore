@@ -46,3 +46,9 @@ dist/
 /opt/
 backups/
 
+# Plugin runtime state
+remote.json
+remote_domains.json
+**/remote*.json
+
+
