@@ -40,19 +40,21 @@ async def get_by_name(db: AsyncSession, name: str) -> Domain | None:
 # ---------------------------------------------------------------
 # CREATE
 # ---------------------------------------------------------------
-async def create(db: AsyncSession, name: str) -> Domain:
+async def create(db: AsyncSession, name: str, project_type: str = "static") -> Domain:
     """
     Full domain creation:
     1. Validate name
     2. Check DB + nginx for duplicates
     3. Create DNS zone + A record
-    4. Create webroot + default index.html
-    5. Create nginx config (HTTP static site)
+    4. Create webroot + default index.html (if static)
+    5. Create nginx config (HTTP static site, if static)
     6. nginx -t → rollback all if fails
-    7. nginx reload
+    7. nginx reload (if static)
     8. Save to DB
     """
     name = sanitize_domain(name)
+    if project_type not in ("static", "dns"):
+        project_type = "static"
 
     # Guard: already in DB
     existing = await get_by_name(db, name)
@@ -80,16 +82,22 @@ async def create(db: AsyncSession, name: str) -> Domain:
         await dns_service.add_a_record(name, "@", config.SERVER_IP)
         steps_done.append("dns_record")
 
-        # 4. Webroot + default page
-        webroot = nginx_service.create_webroot(name)
-        steps_done.append("webroot")
+        webroot = None
+        nginx_config_path = None
+        nginx_active = False
 
-        # 5. Nginx config (writes + nginx -t inside; raises if fails)
-        nginx_config_path = await nginx_service.create_static_site(name)
-        steps_done.append("nginx_config")
+        if project_type == "static":
+            # 4. Webroot + default page
+            webroot = nginx_service.create_webroot(name)
+            steps_done.append("webroot")
 
-        # 6. Reload nginx
-        await nginx_service.reload()
+            # 5. Nginx config (writes + nginx -t inside; raises if fails)
+            nginx_config_path = await nginx_service.create_static_site(name)
+            steps_done.append("nginx_config")
+
+            # 6. Reload nginx
+            await nginx_service.reload()
+            nginx_active = True
 
         # 7. Save to DB
         domain = Domain(
@@ -98,11 +106,12 @@ async def create(db: AsyncSession, name: str) -> Domain:
             nginx_config_path=nginx_config_path,
             webroot_path=webroot,
             dns_zone_created=True,
-            nginx_active=True,
+            nginx_active=nginx_active,
+            project_type=project_type,
         )
         db.add(domain)
         await db.flush()
-        logger.info("Domain created: %s", name)
+        logger.info("Domain created: %s (type=%s)", name, project_type)
         return domain
 
     except Exception as exc:
@@ -207,3 +216,26 @@ async def update_index_html(db: AsyncSession, domain_id: int, content: str) -> N
     domain = await get_by_id(db, domain_id)
     nginx_service.write_index_html(domain.name, content)
     logger.info("index.html updated for: %s", domain.name)
+
+
+# ---------------------------------------------------------------
+# ENABLE STATIC SITE (UPGRADE FROM DNS ONLY)
+# ---------------------------------------------------------------
+async def enable_static_site(db: AsyncSession, domain_id: int) -> Domain:
+    """Convert a DNS-only domain to a static HTML site with Nginx vhost & webroot."""
+    domain = await get_by_id(db, domain_id)
+    if domain.nginx_active:
+        return domain
+
+    nginx_service.ensure_acme_root()
+    webroot = nginx_service.create_webroot(domain.name)
+    nginx_config_path = await nginx_service.create_static_site(domain.name)
+    await nginx_service.reload()
+
+    domain.project_type = "static"
+    domain.nginx_active = True
+    domain.webroot_path = webroot
+    domain.nginx_config_path = nginx_config_path
+    await db.flush()
+    logger.info("Enabled static site for domain: %s", domain.name)
+    return domain

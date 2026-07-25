@@ -17,6 +17,7 @@ class Domain(Base):
     webroot_path: Mapped[str | None] = mapped_column(String(512), nullable=True)
     dns_zone_created: Mapped[bool] = mapped_column(Boolean, default=False)
     nginx_active: Mapped[bool] = mapped_column(Boolean, default=False)
+    project_type: Mapped[str] = mapped_column(String(32), default="static", nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), nullable=False
     )

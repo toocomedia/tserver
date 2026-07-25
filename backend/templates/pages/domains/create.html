@@ -9,9 +9,72 @@
 
 {% block content %}
 
-<div class="section" style="max-width:560px;">
+<style>
+.project-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: var(--space-md);
+  margin-bottom: var(--space-lg);
+}
+.project-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border, #2a2a2a);
+  border-radius: 8px;
+  padding: var(--space-md);
+  transition: all 0.2s ease;
+  cursor: pointer;
+  user-select: none;
+}
+.project-card:hover:not(.project-card--disabled) {
+  border-color: var(--color-primary, #C7F464);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+.project-card--selected {
+  border-color: var(--color-primary, #C7F464) !important;
+  background: rgba(199, 244, 100, 0.05);
+  box-shadow: 0 0 0 1px var(--color-primary, #C7F464), 0 4px 16px rgba(199, 244, 100, 0.1);
+}
+.project-card--disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: rgba(255, 255, 255, 0.01);
+}
+.project-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-sm);
+}
+.project-card__icon {
+  font-size: 24px;
+  line-height: 1;
+}
+.project-card__title {
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--color-text, #E6E6DF);
+  margin-bottom: var(--space-xs);
+}
+.project-card__desc {
+  font-size: 12px;
+  color: var(--color-muted, #6B6F6A);
+  line-height: 1.5;
+  flex-grow: 1;
+}
+.project-card input[type="radio"] {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+</style>
+
+<div class="section" style="max-width:880px;">
   <div class="section__header">
-    <h3>New Domain</h3>
+    <h3>New Domain & Project Setup</h3>
   </div>
   <div class="section__body">
 
@@ -19,19 +82,11 @@
     <div class="alert alert--danger mb-lg" id="form-error" role="alert">{{ error }}</div>
     {% endif %}
 
-    <div class="alert alert--info mb-lg">
-      Adding a domain will automatically:<br>
-      <strong>1.</strong> Create a DNS zone in PowerDNS<br>
-      <strong>2.</strong> Add an A record pointing to <strong>{{ server_ip }}</strong><br>
-      <strong>3.</strong> Create a webroot and default HTML page<br>
-      <strong>4.</strong> Configure Nginx to serve the domain over HTTP
-    </div>
-
     <form method="post" action="/domains/create" class="form" id="create-domain-form">
       {% include "partials/csrf_field.html" %}
 
-      <div class="form-group">
-        <label class="form-label" for="name">Domain Name</label>
+      <div class="form-group mb-lg">
+        <label class="form-label" for="name" style="font-size:16px; font-weight:700;">1. Enter Domain Name</label>
         <input
           class="form-input{% if error %} form-input--error{% endif %}"
           type="text"
@@ -44,23 +99,114 @@
           spellcheck="false"
           required
           autofocus
+          style="font-size:16px; padding: var(--space-md);"
         >
         <span class="form-hint">Enter the root domain only (e.g. example.com — not www.example.com)</span>
         <span class="form-error" id="name-error" style="display:none;"></span>
       </div>
 
       <!-- Live preview -->
-      <div class="section" id="preview-panel" style="display:none; background:var(--color-surface);">
-        <div class="section__body" style="padding:var(--space-md);">
-          <span class="text-small text-muted">Preview</span><br>
-          <span style="font-size:var(--font-body); font-weight:700;" id="preview-domain"></span>
-          <span class="text-muted"> → </span>
-          <span class="text-small" id="preview-ip">{{ server_ip }}</span>
+      <div class="section mb-lg" id="preview-panel" style="display:none; background:var(--color-surface); border-color:var(--color-primary, #C7F464);">
+        <div class="section__body" style="padding:var(--space-md); display:flex; align-items:center; justify-content:space-between;">
+          <div>
+            <span class="text-small text-muted">Target Hostname</span><br>
+            <span style="font-size:16px; font-weight:700; color:var(--color-primary, #C7F464);" id="preview-domain"></span>
+          </div>
+          <div style="text-align:right;">
+            <span class="text-small text-muted">Resolving Server IP</span><br>
+            <span style="font-size:15px; font-weight:600;" id="preview-ip">{{ server_ip }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group mb-lg">
+        <label class="form-label" style="font-size:16px; font-weight:700; margin-bottom:var(--space-md);">2. Select Project Type</label>
+        
+        <div class="project-card-grid">
+          <!-- Card 1: Static HTML -->
+          <label class="project-card{% if project_type != 'dns' %} project-card--selected{% endif %}" id="card-static">
+            <input type="radio" name="project_type" value="static" {% if project_type != 'dns' %}checked{% endif %} onchange="selectCard('static')">
+            <div class="project-card__header">
+              <span class="project-card__icon">📄</span>
+              <span class="badge badge--ok badge--dot">Ready</span>
+            </div>
+            <div class="project-card__title">Static Site / HTML Template</div>
+            <div class="project-card__desc">Full web hosting setup. Creates DNS zone, A record, Nginx HTTP vhost, and a starter webroot directory with a default landing page.</div>
+          </label>
+
+          <!-- Card 2: DNS Only -->
+          <label class="project-card{% if project_type == 'dns' %} project-card--selected{% endif %}" id="card-dns">
+            <input type="radio" name="project_type" value="dns" {% if project_type == 'dns' %}checked{% endif %} onchange="selectCard('dns')">
+            <div class="project-card__header">
+              <span class="project-card__icon">🌐</span>
+              <span class="badge badge--ok badge--dot">Ready</span>
+            </div>
+            <div class="project-card__title">DNS Manager (DNS Only)</div>
+            <div class="project-card__desc">Create DNS zone & A records in PowerDNS only. No web server, Nginx vhost, or webroot directory is created. Perfect for custom DNS management.</div>
+          </label>
+
+          <!-- Card 3: Python App -->
+          <div class="project-card project-card--disabled">
+            <div class="project-card__header">
+              <span class="project-card__icon">🐍</span>
+              <span class="badge badge--neutral">Coming Soon</span>
+            </div>
+            <div class="project-card__title">Python App (WSGI / ASGI)</div>
+            <div class="project-card__desc">Host Python applications (FastAPI, Django, Flask) with automated Uvicorn/Gunicorn process management and Nginx reverse proxy.</div>
+          </div>
+
+          <!-- Card 4: PHP App -->
+          <div class="project-card project-card--disabled">
+            <div class="project-card__header">
+              <span class="project-card__icon">🐘</span>
+              <span class="badge badge--neutral">Coming Soon</span>
+            </div>
+            <div class="project-card__title">PHP App (FastCGI)</div>
+            <div class="project-card__desc">Host PHP applications (WordPress, Laravel) with PHP-FPM integration and optimized Nginx FastCGI configuration.</div>
+          </div>
+
+          <!-- Card 5: Node.js App -->
+          <div class="project-card project-card--disabled">
+            <div class="project-card__header">
+              <span class="project-card__icon">🟢</span>
+              <span class="badge badge--neutral">Coming Soon</span>
+            </div>
+            <div class="project-card__title">Node.js App (Express / Next)</div>
+            <div class="project-card__desc">Deploy Node.js applications with PM2 process manager and automatic WebSocket/HTTP proxying.</div>
+          </div>
+
+          <!-- Card 6: Docker Container -->
+          <div class="project-card project-card--disabled">
+            <div class="project-card__header">
+              <span class="project-card__icon">🐳</span>
+              <span class="badge badge--neutral">Coming Soon</span>
+            </div>
+            <div class="project-card__title">Docker Container</div>
+            <div class="project-card__desc">Route domain traffic directly to a running Docker container with automatic port mapping and SSL termination.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dynamic Workflow Explanation -->
+      <div class="alert alert--info mb-lg" id="workflow-steps-static" {% if project_type == 'dns' %}style="display:none;"{% endif %}>
+        <div style="font-weight:700; margin-bottom:6px; color:var(--color-primary, #C7F464);">✨ Static Site Setup Workflow:</div>
+        <strong>1.</strong> Create DNS zone in PowerDNS<br>
+        <strong>2.</strong> Add an A record pointing to <strong>{{ server_ip }}</strong><br>
+        <strong>3.</strong> Create webroot directory and default HTML landing page<br>
+        <strong>4.</strong> Configure Nginx HTTP vhost (ready for immediate Let's Encrypt SSL issuance)
+      </div>
+
+      <div class="alert alert--info mb-lg" id="workflow-steps-dns" {% if project_type != 'dns' %}style="display:none;"{% endif %} style="border-color: #f59e0b; background: rgba(245, 158, 11, 0.05);">
+        <div style="font-weight:700; margin-bottom:6px; color:#f59e0b;">🌐 DNS Manager (DNS Only) Workflow:</div>
+        <strong>1.</strong> Create DNS zone in PowerDNS<br>
+        <strong>2.</strong> Add an A record pointing to <strong>{{ server_ip }}</strong><br>
+        <div style="margin-top:8px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.1); font-size:13px;">
+          ⚠️ <strong>Note:</strong> No Nginx web server or webroot folder will be created. Let's Encrypt SSL issuance is disabled until a web server (Static Site or Reverse Proxy) is activated for this domain.
         </div>
       </div>
 
       <div class="form-actions">
-        <button type="submit" class="btn btn--primary" id="btn-submit">Create Domain</button>
+        <button type="submit" class="btn btn--primary" id="btn-submit" style="font-size:15px; padding: 10px 24px;">Create Domain</button>
         <a href="/domains/" class="btn btn--secondary" id="btn-cancel">Cancel</a>
       </div>
 
@@ -101,6 +247,25 @@ input.addEventListener('input', () => {
     input.classList.remove('form-input--error');
   }
 });
+
+function selectCard(type) {
+  const cardStatic = document.getElementById('card-static');
+  const cardDns = document.getElementById('card-dns');
+  const stepsStatic = document.getElementById('workflow-steps-static');
+  const stepsDns = document.getElementById('workflow-steps-dns');
+
+  if (type === 'static') {
+    cardStatic.classList.add('project-card--selected');
+    cardDns.classList.remove('project-card--selected');
+    stepsStatic.style.display = 'block';
+    stepsDns.style.display = 'none';
+  } else if (type === 'dns') {
+    cardDns.classList.add('project-card--selected');
+    cardStatic.classList.remove('project-card--selected');
+    stepsDns.style.display = 'block';
+    stepsStatic.style.display = 'none';
+  }
+}
 
 form.addEventListener('submit', (e) => {
   const val = input.value.trim();

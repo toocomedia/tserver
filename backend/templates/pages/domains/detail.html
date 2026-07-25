@@ -6,12 +6,20 @@
 {% block topbar_actions %}
   <a href="/dns/{{ domain.name }}/records" class="btn btn--secondary" id="btn-dns">DNS</a>
   {% if not cert %}
+    {% if nginx_active %}
     <a href="/ssl/issue?full_domain={{ domain.name }}"
        class="btn btn--primary"
-       id="btn-issue-ssl"
-       title="{% if not nginx_active %}Nginx should be active for Let's Encrypt{% endif %}">
+       id="btn-issue-ssl">
       + Issue SSL
     </a>
+    {% else %}
+    <button type="button" class="btn btn--primary" disabled
+            id="btn-issue-ssl"
+            title="SSL issuance requires an active Nginx web server (Static Site or Reverse Proxy)"
+            style="opacity:0.5; cursor:not-allowed;">
+      + Issue SSL
+    </button>
+    {% endif %}
   {% endif %}
   <button type="button" class="btn btn--danger" id="btn-delete"
           onclick="deleteDomain({{ domain.id }}, '{{ domain.name }}')">Delete</button>
@@ -21,6 +29,9 @@
 
 {% if request.query_params.get('saved') %}
 <div class="alert alert--success mb-lg" id="saved-alert">Default page saved successfully.</div>
+{% endif %}
+{% if request.query_params.get('enabled_static') %}
+<div class="alert alert--success mb-lg" id="enabled-alert">Static HTML site and webroot enabled successfully! Let's Encrypt SSL is now ready.</div>
 {% endif %}
 
 {% if error %}
@@ -36,6 +47,16 @@
     <div class="info-row">
       <span class="info-row__label">Domain</span>
       <span class="info-row__value" style="font-weight:700;">{{ domain.name }}</span>
+    </div>
+    <div class="info-row">
+      <span class="info-row__label">Project Type</span>
+      <span class="info-row__value" style="font-weight:700;">
+        {% if domain.project_type == 'dns' %}
+          <span class="badge badge--neutral badge--dot">DNS Only</span>
+        {% else %}
+          <span class="badge badge--ok badge--dot">Static Site</span>
+        {% endif %}
+      </span>
     </div>
     <div class="info-row">
       <span class="info-row__label">Server IP</span>
@@ -95,14 +116,21 @@
           {% if cert.expiry_date %}Expires {{ cert.expiry_date.strftime('%Y-%m-%d') }}{% else %}Certificate active{% endif %}
         </span>
       {% else %}
+        {% if nginx_active %}
         <a href="/ssl/issue?full_domain={{ domain.name }}"
            class="btn btn--primary btn--sm"
            id="btn-issue-ssl-card">
           + Issue SSL
         </a>
-        {% if not nginx_active %}
-        <div class="text-small text-muted" style="margin-top:var(--space-xs);">
-          Nginx is inactive — fix nginx before certbot can succeed.
+        {% else %}
+        <button type="button" class="btn btn--primary btn--sm" disabled
+                id="btn-issue-ssl-card"
+                title="SSL issuance requires an active Nginx web server"
+                style="opacity:0.5; cursor:not-allowed;">
+          + Issue SSL
+        </button>
+        <div class="text-small text-muted" style="margin-top:var(--space-xs); line-height:1.4;">
+          Nginx web server is inactive. Activate a Static Site or Reverse Proxy before issuing SSL.
         </div>
         {% endif %}
       {% endif %}
@@ -173,6 +201,24 @@
 </div>
 {% endif %}
 
+{% if domain.project_type == 'dns' %}
+<!-- DNS ONLY / NO WEBROOT BANNER -->
+<div class="section-header mb-md" id="edit-page-section">
+  <h2>Web Server & Landing Page</h2>
+</div>
+<div class="alert alert--info mb-lg" style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:var(--space-md); border-color:#f59e0b; background:rgba(245, 158, 11, 0.05);">
+  <div>
+    <div style="font-weight:700; font-size:15px; margin-bottom:6px; color:#f59e0b;">🌐 DNS Manager (DNS Only) Active</div>
+    <div class="text-small text-muted" style="line-height:1.5;">This domain is configured for DNS management only. No Nginx web server or static HTML webroot exists.<br>Enabling a static webroot will generate an HTTP virtual host and unlock Let's Encrypt SSL certificate issuance.</div>
+  </div>
+  <div>
+    <form method="post" action="/domains/{{ domain.id }}/enable-static" style="margin:0;">
+      {% include "partials/csrf_field.html" %}
+      <button type="submit" class="btn btn--primary" style="white-space:nowrap; font-size:14px;">+ Enable Static Site & Webroot</button>
+    </form>
+  </div>
+</div>
+{% else %}
 <!-- EDIT DEFAULT PAGE -->
 <div class="section-header mb-md" id="edit-page-section">
   <h2>Default Page</h2>
@@ -213,6 +259,7 @@
     </button>
   </span>
 </div>
+{% endif %}
 
 {% endblock %}
 

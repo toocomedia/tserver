@@ -50,6 +50,11 @@
             <span class="domain-name-txt table-title">{{ item.domain.name }}</span>
             <br>
             <span class="text-small text-muted">{{ item.domain.server_ip }}</span>
+            {% if item.domain.project_type == 'dns' %}
+              <span class="badge-minimal badge-minimal--neutral" style="margin-left:6px; font-size:10px;">DNS ONLY</span>
+            {% else %}
+              <span class="badge-minimal badge-minimal--active" style="margin-left:6px; font-size:10px;">STATIC SITE</span>
+            {% endif %}
           </td>
 
           <td>
@@ -79,12 +84,20 @@
           <td class="col-actions">
             <div class="d-flex gap-xs justify-end" style="flex-wrap:nowrap;">
               {% if not item.ssl_active %}
-              <a href="/ssl/issue?full_domain={{ item.domain.name }}"
-                 class="btn btn--secondary btn--sm"
-                 title="Issue SSL Certificate"
-                 id="btn-ssl-{{ item.domain.id }}">
-                + SSL
-              </a>
+                {% if item.nginx_active %}
+                <a href="/ssl/issue?full_domain={{ item.domain.name }}"
+                   class="btn btn--secondary btn--sm"
+                   title="Issue SSL Certificate"
+                   id="btn-ssl-{{ item.domain.id }}">
+                  + SSL
+                </a>
+                {% else %}
+                <button type="button" class="btn btn--secondary btn--sm" disabled
+                        title="Nginx web server required for Let's Encrypt SSL verification"
+                        style="opacity:0.5; cursor:not-allowed;">
+                  + SSL
+                </button>
+                {% endif %}
               {% endif %}
               <a href="/domains/{{ item.domain.id }}"
                  class="btn btn--secondary btn--sm"

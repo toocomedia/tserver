@@ -63,6 +63,15 @@ def _migrate_sync(sync_conn) -> None:
     """Idempotent SQLite migrations for existing panel DBs."""
     tables = set(inspect(sync_conn).get_table_names())
 
+    # --- domains: project_type ---
+    if "domains" in tables:
+        cols = _column_names(sync_conn, "domains")
+        if "project_type" not in cols:
+            logger.info("Migrating domains: add project_type")
+            sync_conn.execute(text(
+                "ALTER TABLE domains ADD COLUMN project_type VARCHAR(32) DEFAULT 'static' NOT NULL"
+            ))
+
     # --- postgres_remote_domains: v2 remote-access fields ---
     # This table existed before the v2 model. create_all() never adds columns
     # to an existing SQLite table, so upgrade each field explicitly.

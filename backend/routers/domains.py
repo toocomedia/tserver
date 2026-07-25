@@ -62,6 +62,7 @@ async def domains_list(request: Request, db: AsyncSession = Depends(get_db)):
 
 
 # ---------------------------------------------------------------
+# ---------------------------------------------------------------
 # CREATE — form page
 # ---------------------------------------------------------------
 @router.get("/create", response_class=HTMLResponse)
@@ -72,6 +73,7 @@ async def domains_create_page(request: Request):
         "server_ip": config.SERVER_IP,
         "error": None,
         "name": "",
+        "project_type": "static",
     })
 
 
@@ -82,10 +84,11 @@ async def domains_create_page(request: Request):
 async def domains_create(
     request: Request,
     name: str = Form(...),
+    project_type: str = Form("static"),
     db: AsyncSession = Depends(get_db),
 ):
     try:
-        domain = await domain_service.create(db, name)
+        domain = await domain_service.create(db, name, project_type=project_type)
         return RedirectResponse(f"/domains/{domain.id}", status_code=303)
     except Exception as exc:
         error_msg = str(exc.detail) if hasattr(exc, "detail") else str(exc)
@@ -95,6 +98,7 @@ async def domains_create(
             "server_ip": config.SERVER_IP,
             "error": error_msg,
             "name": name,
+            "project_type": project_type,
         }, status_code=400)
 
 
@@ -166,3 +170,15 @@ async def domains_delete(
 ):
     await domain_service.delete(db, domain_id)
     return RedirectResponse("/domains/", status_code=303)
+
+
+# ---------------------------------------------------------------
+# ENABLE STATIC SITE
+# ---------------------------------------------------------------
+@router.post("/{domain_id}/enable-static")
+async def domains_enable_static(
+    domain_id: int,
+    db: AsyncSession = Depends(get_db),
+):
+    await domain_service.enable_static_site(db, domain_id)
+    return RedirectResponse(f"/domains/{domain_id}?enabled_static=1", status_code=303)
