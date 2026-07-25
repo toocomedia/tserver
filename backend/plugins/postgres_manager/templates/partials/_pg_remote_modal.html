@@ -1,0 +1,112 @@
+{# _pg_remote_modal.html — Step-by-step wizard modal for adding a new remote domain #}
+<div class="modal-backdrop" id="pg-modal-add-remote" style="display:none;" aria-modal="true" role="dialog">
+  <div class="modal" style="max-width:620px;">
+    <div class="modal__header">
+      <h2 style="font-size:var(--font-h2);margin:0;">Add Remote Domain &amp; SSL Endpoint</h2>
+      <button class="btn btn--icon btn--sm btn--ghost" data-action="close-modal" data-modal="pg-modal-add-remote" aria-label="Close">✕</button>
+    </div>
+
+    <!-- Step Progress Indicator -->
+    <div style="display:flex;align-items:center;border-bottom:1px solid var(--color-line);background:var(--color-surface);padding:var(--space-sm) var(--space-lg);gap:var(--space-md);font-size:var(--font-small);">
+      <div id="pg-remote-step-pill-1" class="status-badge success">1. Hostname</div>
+      <span style="color:var(--color-muted);">→</span>
+      <div id="pg-remote-step-pill-2" class="status-badge muted">2. SSL Option</div>
+      <span style="color:var(--color-muted);">→</span>
+      <div id="pg-remote-step-pill-3" class="status-badge muted">3. Review &amp; Activate</div>
+    </div>
+
+    <div class="modal__body" style="display:flex;flex-direction:column;gap:var(--space-md);">
+
+      <!-- Step 1: Hostname Source -->
+      <div id="pg-remote-wiz-step-1" style="display:flex;flex-direction:column;gap:var(--space-md);">
+        <div class="form-group">
+          <label class="form-label">Hostname Source</label>
+          <div style="display:flex;gap:var(--space-lg);margin-top:var(--space-xs);">
+            <label class="form-check">
+              <input type="radio" name="pg-remote-wiz-mode" value="managed" id="pg-remote-wiz-mode-managed" checked>
+              <span>Managed Domain (Subdomain)</span>
+            </label>
+            <label class="form-check">
+              <input type="radio" name="pg-remote-wiz-mode" value="external" id="pg-remote-wiz-mode-external">
+              <span>External Hostname</span>
+            </label>
+          </div>
+          <span class="form-hint">Managed mode uses domains pointing to this panel. External mode uses any pre-pointed DNS hostname.</span>
+        </div>
+
+        <!-- Managed Fields -->
+        <div id="pg-remote-wiz-managed-wrap" style="display:flex;flex-direction:column;gap:var(--space-md);">
+          {% if domains %}
+          <div class="form-group">
+            <label class="form-label" for="pg-remote-wiz-domain-select">Parent Domain</label>
+            <div class="form-select-wrap">
+              <select id="pg-remote-wiz-domain-select" class="form-select">
+                <option value="" disabled selected>Select a domain…</option>
+                {% for d in domains %}
+                  <option value="{{ d.name }}">{{ d.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="pg-remote-wiz-subdomain">Subdomain Prefix</label>
+            <input type="text" id="pg-remote-wiz-subdomain" class="form-input" placeholder="db" autocomplete="off" spellcheck="false">
+            <span class="form-hint">Target endpoint: <strong id="pg-remote-wiz-full-hint">db.example.com</strong></span>
+          </div>
+          {% else %}
+          <div style="padding:var(--space-md);background:var(--color-surface);border:1px solid var(--color-line);font-size:var(--font-small);color:var(--color-muted);">
+            No managed domains available. Switch to <strong>External Hostname</strong>, or add a domain in the panel first.
+          </div>
+          {% endif %}
+        </div>
+
+        <!-- External Fields -->
+        <div id="pg-remote-wiz-external-wrap" style="display:none;flex-direction:column;gap:var(--space-md);">
+          <div class="form-group">
+            <label class="form-label" for="pg-remote-wiz-external">External Hostname</label>
+            <input type="text" id="pg-remote-wiz-external" class="form-input" placeholder="pg.myotherdomain.com" autocomplete="off" spellcheck="false">
+            <span class="form-hint">Ensure DNS A record for this hostname points to your VPS IP before enabling.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 2: SSL Certificate Option -->
+      <div id="pg-remote-wiz-step-2" style="display:none;flex-direction:column;gap:var(--space-md);">
+        <div style="padding:var(--space-md);background:var(--color-surface);border:1px solid var(--color-line);">
+          <div class="form-group">
+            <label class="form-check">
+              <input type="checkbox" id="pg-remote-wiz-ssl" checked>
+              <span><strong>Issue Let's Encrypt SSL Certificate</strong></span>
+            </label>
+            <span class="form-hint" style="margin-left:24px;">
+              Certbot will run HTTP-01 webroot validation and issue an official SSL cert for your remote domain.
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 3: Review & Activate -->
+      <div id="pg-remote-wiz-step-3" style="display:none;flex-direction:column;gap:var(--space-md);">
+        <div style="padding:var(--space-md);background:var(--color-surface);border:1px solid var(--color-line);display:flex;flex-direction:column;gap:var(--space-sm);">
+          <div><strong style="color:var(--color-muted);">Configured Endpoint:</strong> <span id="pg-remote-wiz-review-host" style="font-weight:700;">—</span></div>
+          <div><strong style="color:var(--color-muted);">Source Type:</strong> <span id="pg-remote-wiz-review-mode">—</span></div>
+          <div><strong style="color:var(--color-muted);">SSL Encryption:</strong> <span id="pg-remote-wiz-review-ssl">Enabled (Let's Encrypt)</span></div>
+          <div><strong style="color:var(--color-muted);">Proxy Target:</strong> <code>127.0.0.1:5432</code> via Nginx TCP Stream</div>
+        </div>
+      </div>
+
+      <div id="pg-remote-wiz-error" class="form-error" style="display:none;"></div>
+
+    </div>
+
+    <div class="modal__footer" style="justify-content:space-between;">
+      <button class="btn btn--secondary" id="pg-remote-wiz-btn-back" style="display:none;">← Back</button>
+      <div style="margin-left:auto;display:flex;gap:var(--space-sm);">
+        <button class="btn btn--secondary" data-action="close-modal" data-modal="pg-modal-add-remote">Cancel</button>
+        <button class="btn btn--primary" id="pg-remote-wiz-btn-next">Next →</button>
+        <button class="btn btn--primary" id="pg-remote-wiz-btn-submit" style="display:none;">Activate Endpoint</button>
+      </div>
+    </div>
+  </div>
+</div>

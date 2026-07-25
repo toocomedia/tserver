@@ -147,3 +147,11 @@ class RemoteStatusResponse(BaseModel):
     ssl_active: bool
     nginx_stream: bool
 
+
+class RemoteDomainResponse(BaseModel):
+    domain: str
+    mode: str
+    ssl_active: bool
+    nginx_stream: bool
+
+

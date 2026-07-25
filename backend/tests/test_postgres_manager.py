@@ -242,23 +242,42 @@ class TestPostgresRemoteService(unittest.TestCase):
     def setUp(self):
         from plugins.postgres_manager.service import PostgresService
         self.svc = PostgresService()
+        # Clean test json if exists
+        if self.svc._remote_domains_json_path.exists():
+            try:
+                self.svc._remote_domains_json_path.unlink()
+            except Exception:
+                pass
 
-    def test_enable_and_disable_remote(self):
-        # Enable remote in mock mode
-        state = self.svc.enable_remote(mode="managed", domain="example.com", subdomain="db", hostname=None, issue_ssl=False)
-        self.assertTrue(state["enabled"])
-        self.assertEqual(state["domain"], "db.example.com")
+    def test_multi_domain_remote_lifecycle(self):
+        # Add first domain
+        entry1 = self.svc.add_remote_domain(mode="managed", domain="example.com", subdomain="db1", hostname=None, issue_ssl=False)
+        self.assertEqual(entry1["domain"], "db1.example.com")
 
-        status = self.svc.get_remote_status()
-        self.assertTrue(status["enabled"])
-        self.assertEqual(status["domain"], "db.example.com")
+        # Add second domain
+        entry2 = self.svc.add_remote_domain(mode="external", domain=None, subdomain=None, hostname="pg.otherdomain.com", issue_ssl=False)
+        self.assertEqual(entry2["domain"], "pg.otherdomain.com")
 
-        # Disable remote
-        disabled_state = self.svc.disable_remote()
-        self.assertFalse(disabled_state["enabled"])
-        self.assertIsNone(disabled_state["domain"])
+        # List domains
+        domains = self.svc.list_remote_domains()
+        self.assertEqual(len(domains), 2)
+        self.assertEqual(domains[0]["domain"], "db1.example.com")
+        self.assertEqual(domains[1]["domain"], "pg.otherdomain.com")
+
+        # Re-issue SSL
+        reissued = self.svc.reissue_remote_ssl("db1.example.com")
+        self.assertEqual(reissued["domain"], "db1.example.com")
+
+        # Delete domain
+        deleted = self.svc.delete_remote_domain("db1.example.com")
+        self.assertTrue(deleted)
+
+        domains_after = self.svc.list_remote_domains()
+        self.assertEqual(len(domains_after), 1)
+        self.assertEqual(domains_after[0]["domain"], "pg.otherdomain.com")
 
 
 if __name__ == "__main__":
     unittest.main()
+
 

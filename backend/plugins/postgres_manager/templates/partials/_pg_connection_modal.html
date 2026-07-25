@@ -33,11 +33,17 @@
           <label class="form-label" for="pg-conn-mode-select">Connection Mode</label>
           <div class="form-select-wrap">
             <select id="pg-conn-mode-select" class="form-select">
-              <option value="local">Local VPS (127.0.0.1)</option>
-              <option value="remote" id="pg-conn-mode-remote-opt">Remote SSL (Domain)</option>
+              <option value="127.0.0.1">Local VPS (127.0.0.1)</option>
+              {% for rd in remote_domains %}
+                <option value="{{ rd.domain }}">Remote SSL ({{ rd.domain }})</option>
+              {% endfor %}
+              {% if not remote_domains %}
+                <option value="remote" id="pg-conn-mode-remote-opt">Remote SSL (Domain)</option>
+              {% endif %}
             </select>
           </div>
         </div>
+
       </div>
 
       <!-- Password Input -->

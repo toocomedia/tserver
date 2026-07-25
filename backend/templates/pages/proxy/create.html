@@ -9,7 +9,7 @@
 
 {% block content %}
 
-<div class="section" style="max-width:560px;" id="create-proxy-panel">
+<div class="section" style="max-width:780px;" id="create-proxy-panel">
   <div class="section__header">
     <h3>New Reverse Proxy</h3>
   </div>
@@ -21,28 +21,36 @@
 
     {% set mode = form.get('mode', 'managed') %}
 
-    <form method="post" action="/proxy/create" class="form" id="create-proxy-form">
+    <form method="post" action="/proxy/create" class="form" id="create-proxy-form" style="display:flex;flex-direction:column;gap:var(--space-lg);">
       {% include "partials/csrf_field.html" %}
 
-      <!-- Mode: managed vs external -->
-      <div class="form-group">
-        <label class="form-label">Hostname source</label>
-        <div class="d-flex gap-md" style="flex-wrap:wrap;">
-          <label class="form-check">
-            <input type="radio" name="mode" id="mode-managed" value="managed"
-                   {% if mode != 'external' %}checked{% endif %}>
-            <span>Managed domain</span>
-          </label>
-          <label class="form-check">
-            <input type="radio" name="mode" id="mode-external" value="external"
-                   {% if mode == 'external' %}checked{% endif %}>
-            <span>External hostname</span>
-          </label>
+      <!-- Step 1: Hostname Setup -->
+      <div style="padding:var(--space-md) var(--space-lg);background:var(--color-surface);border:1px solid var(--color-line);display:flex;flex-direction:column;gap:var(--space-md);">
+        <h4 style="margin:0;font-size:var(--font-body);color:var(--color-text);display:flex;align-items:center;gap:var(--space-xs);">
+          <span class="status-badge success" style="padding:2px 8px;border-radius:12px;">Step 1</span>
+          Hostname &amp; Domain Setup
+        </h4>
+
+        <!-- Mode: managed vs external -->
+        <div class="form-group">
+          <label class="form-label">Hostname source</label>
+          <div class="d-flex gap-md" style="flex-wrap:wrap;">
+            <label class="form-check">
+              <input type="radio" name="mode" id="mode-managed" value="managed"
+                     {% if mode != 'external' %}checked{% endif %}>
+              <span>Managed domain</span>
+            </label>
+            <label class="form-check">
+              <input type="radio" name="mode" id="mode-external" value="external"
+                     {% if mode == 'external' %}checked{% endif %}>
+              <span>External hostname</span>
+            </label>
+          </div>
+          <span class="form-hint">
+            External: domain/subdomain DNS already points to this server (registrar, Cloudflare, etc.).
+          </span>
         </div>
-        <span class="form-hint">
-          External: domain/subdomain DNS already points to this server (registrar, Cloudflare, etc.).
-        </span>
-      </div>
+
 
       <div class="alert alert--info mb-lg" id="info-block-managed"
            style="{% if mode == 'external' %}display:none;{% endif %}">
@@ -130,7 +138,13 @@
         </div>
       </div>
 
-      <!-- Target IP -->
+      <!-- Step 2: Target & SSL Configuration -->
+      <div style="padding:var(--space-md) var(--space-lg);background:var(--color-surface);border:1px solid var(--color-line);display:flex;flex-direction:column;gap:var(--space-md);">
+        <h4 style="margin:0;font-size:var(--font-body);color:var(--color-text);display:flex;align-items:center;gap:var(--space-xs);">
+          <span class="status-badge success" style="padding:2px 8px;border-radius:12px;">Step 2</span>
+          Target Backend &amp; SSL Configuration
+        </h4>
+
       <div class="form-group">
         <label class="form-label" for="target_ip">Target IP</label>
         <input
@@ -221,15 +235,11 @@
         </div>
       </div>
 
-      <!-- Live preview -->
-      <div class="section" id="proxy-preview" style="display:none; background:var(--color-surface);">
-        <div class="section__body" style="padding:var(--space-md);">
-          <span class="text-small text-muted">Preview</span><br>
-          <span style="font-weight:700; font-size:var(--font-body);" id="preview-line">—</span>
-        </div>
+      </div>
       </div>
 
       <div class="form-actions">
+
         <button type="submit" class="btn btn--primary" id="btn-submit">
           Create Reverse Proxy
         </button>

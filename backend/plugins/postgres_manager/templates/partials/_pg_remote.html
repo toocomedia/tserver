@@ -1,120 +1,118 @@
-{# _pg_remote.html — Remote Access & SSL tab panel #}
+{# _pg_remote.html — Remote Access & SSL tab panel (Multi-Domain List View) #}
 <div id="pg-panel-remote" class="pg-panel" style="display:none;">
 
-  <div class="action-toolbar">
-    <h2 style="font-size:var(--font-h2);margin:0;">Remote Access &amp; SSL</h2>
+  <div class="action-toolbar" style="margin-bottom:var(--space-lg);display:flex;align-items:center;justify-content:space-between;">
+    <div>
+      <h2 style="font-size:var(--font-h2);margin:0;">Remote Access &amp; SSL Endpoints</h2>
+      <div style="font-size:var(--font-small);color:var(--color-muted);margin-top:2px;">
+        Expose PostgreSQL externally over Nginx TCP Stream Proxy with Let's Encrypt TLS/SSL certificates.
+      </div>
+    </div>
+    <button class="btn btn--primary" data-action="open-modal" data-modal="pg-modal-add-remote" id="pg-remote-btn-open-modal">
+      + Add Remote Domain
+    </button>
   </div>
 
   {# Architecture Explanation Notice #}
   <div style="display:flex;align-items:center;gap:var(--space-sm);
-              margin-bottom:var(--space-lg);padding:var(--space-sm) var(--space-md);
+              margin-bottom:var(--space-lg);padding:var(--space-md);
               background:var(--color-surface);border-left:3px solid var(--color-accent);border-top:1px solid var(--color-line);border-right:1px solid var(--color-line);border-bottom:1px solid var(--color-line);">
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
          stroke="var(--color-accent-2)" stroke-width="2" aria-hidden="true">
       <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
     </svg>
     <span style="font-size:var(--font-small);color:var(--color-muted);">
-      <strong>Secure TCP Stream Proxy:</strong> External traffic connects via Nginx TLS/SSL on your custom domain. PostgreSQL stays bound strictly to <code>127.0.0.1</code> for max security.
+      <strong>Security Guarantee:</strong> PostgreSQL remains strictly bound to <code>127.0.0.1:5432</code> locally. Nginx handles secure TLS/SSL termination and proxies traffic internally.
     </span>
   </div>
 
-  <div style="max-width:580px;display:flex;flex-direction:column;gap:var(--space-lg);">
-
-    {# Status Summary Card #}
-    <div style="padding:var(--space-md) var(--space-lg);background:var(--color-surface);border:1px solid var(--color-line);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:var(--space-md);">
-      <div>
-        <div style="font-size:var(--font-small);color:var(--color-muted);margin-bottom:2px;">Remote Access Status</div>
-        <div style="display:flex;align-items:center;gap:var(--space-sm);">
-          <span class="status-badge {% if remote_status.enabled %}success{% else %}muted{% endif %}" id="pg-remote-status-badge">
-            {{ 'Active' if remote_status.enabled else 'Disabled' }}
-          </span>
-          <strong id="pg-remote-domain-display" style="font-size:var(--font-body);">
-            {{ remote_status.domain or 'No domain configured' }}
-          </strong>
-        </div>
-      </div>
-      {% if remote_status.enabled %}
-      <button class="btn btn--danger btn--sm" id="pg-remote-btn-disable">Disable Remote Access</button>
-      {% endif %}
-    </div>
-
-    {# Configuration Form #}
-    <div style="display:flex;flex-direction:column;gap:var(--space-md);">
-      
-      {# Hostname Mode Radio Selection #}
-      <div class="form-group">
-        <label class="form-label">Hostname Source</label>
-        <div style="display:flex;gap:var(--space-lg);margin-top:var(--space-xs);">
-          <label class="form-check">
-            <input type="radio" name="pg-remote-mode" value="managed" id="pg-remote-mode-managed" checked>
-            <span>Managed Domain (Subdomain)</span>
-          </label>
-          <label class="form-check">
-            <input type="radio" name="pg-remote-mode" value="external" id="pg-remote-mode-external">
-            <span>External Hostname</span>
-          </label>
-        </div>
-        <span class="form-hint">Choose how the database domain is routed to this server.</span>
-      </div>
-
-      {# Option 1: Managed Domain + Subdomain #}
-      <div id="pg-remote-managed-fields" style="display:flex;flex-direction:column;gap:var(--space-md);">
-        {% if domains %}
-        <div class="form-group">
-          <label class="form-label" for="pg-remote-domain-select">Parent Domain</label>
-          <div class="form-select-wrap">
-            <select id="pg-remote-domain-select" class="form-select">
-              <option value="" disabled selected>Select a domain…</option>
-              {% for d in domains %}
-                <option value="{{ d.name }}">{{ d.name }}</option>
-              {% endfor %}
-            </select>
-          </div>
-          <span class="form-hint">Domain must be managed by the panel (A record created automatically).</span>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="pg-remote-subdomain-input">Subdomain</label>
-          <input type="text" id="pg-remote-subdomain-input" class="form-input" placeholder="db" autocomplete="off" spellcheck="false">
-          <span class="form-hint">
-            Prefix only — full domain will be: <strong id="pg-remote-full-hint">db.example.com</strong>
-          </span>
-        </div>
-        {% else %}
-        <div style="padding:var(--space-md);background:var(--color-surface);border:1px solid var(--color-line);font-size:var(--font-small);color:var(--color-muted);">
-          No managed domains found. Use <strong>External Hostname</strong>, or add a domain in the panel first.
-        </div>
-        {% endif %}
-      </div>
-
-      {# Option 2: External Hostname #}
-      <div id="pg-remote-external-fields" style="display:none;flex-direction:column;gap:var(--space-md);">
-        <div class="form-group">
-          <label class="form-label" for="pg-remote-external-input">External Hostname</label>
-          <input type="text" id="pg-remote-external-input" class="form-input" placeholder="pg.myotherdomain.com" autocomplete="off" spellcheck="false">
-          <span class="form-hint">Full domain or subdomain whose DNS A record already points to this server IP.</span>
-        </div>
-      </div>
-
-      {# SSL Certificate Checkbox #}
-      <div class="form-group" style="margin-top:var(--space-xs);">
-        <label class="form-check">
-          <input type="checkbox" id="pg-remote-issue-ssl" checked>
-          <span><strong>Issue Let's Encrypt SSL Certificate</strong> (recommended)</span>
-        </label>
-        <span class="form-hint" style="margin-left:24px;">Uses Certbot HTTP-01 webroot challenge for official trusted SSL.</span>
-      </div>
-
-      <div id="pg-remote-error" class="form-error" style="display:none;"></div>
-
-      <div class="form-actions">
-        <button class="btn btn--primary" id="pg-remote-btn-save">
-          Enable Remote Access &amp; SSL
-        </button>
-      </div>
-
-    </div>
-
+  {# Multi-Domain Table View #}
+  {% if remote_domains %}
+  <div class="table-wrap">
+    <table class="table" style="width:100%;">
+      <thead>
+        <tr>
+          <th>Domain Endpoint</th>
+          <th>Source Type</th>
+          <th>SSL Status</th>
+          <th>Stream Proxy</th>
+          <th style="text-align:right;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for rd in remote_domains %}
+        <tr data-remote-domain="{{ rd.domain }}">
+          <td style="font-weight:700;">
+            <span style="display:flex;align-items:center;gap:var(--space-xs);">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" stroke-width="2" aria-hidden="true">
+                <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/>
+                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+              </svg>
+              {{ rd.domain }}
+            </span>
+          </td>
+          <td>
+            <span class="status-badge muted" style="text-transform:capitalize;">
+              {{ rd.mode }}
+            </span>
+          </td>
+          <td>
+            {% if rd.ssl_active %}
+            <span class="status-badge success">Active SSL</span>
+            {% else %}
+            <span class="status-badge muted" style="color:var(--color-danger);border-color:var(--color-danger);">No SSL / Failed</span>
+            {% endif %}
+          </td>
+          <td>
+            <span class="status-badge {% if rd.nginx_stream %}success{% else %}muted{% endif %}">
+              {{ 'Active' if rd.nginx_stream else 'Inactive' }}
+            </span>
+          </td>
+          <td style="text-align:right;">
+            <div style="display:flex;gap:var(--space-xs);justify-content:flex-end;align-items:center;">
+              {% if not rd.ssl_active %}
+              <button class="btn btn--sm btn--secondary" data-action="reissue-remote-ssl" data-domain="{{ rd.domain }}"
+                      title="Run Certbot webroot challenge to issue or renew SSL certificate">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+                </svg>
+                Re-issue SSL
+              </button>
+              {% endif %}
+              <button class="btn btn--sm btn--secondary" data-action="open-connection-modal" data-domain="{{ rd.domain }}"
+                      title="Copy connection string for {{ rd.domain }}">
+                Connection Info
+              </button>
+              <button class="btn btn--icon btn--sm btn--danger" data-action="delete-remote-domain" data-domain="{{ rd.domain }}"
+                      title="Remove endpoint {{ rd.domain }}" aria-label="Remove {{ rd.domain }}">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/>
+                </svg>
+              </button>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
   </div>
+  {% else %}
+  <div style="padding:var(--space-xl);background:var(--color-surface);border:1px solid var(--color-line);text-align:center;color:var(--color-muted);">
+    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--color-muted)" stroke-width="1.5" style="margin-bottom:var(--space-sm);" aria-hidden="true">
+      <rect x="2" y="2" width="20" height="8" rx="2" ry="2"/>
+      <rect x="2" y="14" width="20" height="8" rx="2" ry="2"/>
+      <line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/>
+    </svg>
+    <div style="font-weight:700;font-size:var(--font-body);color:var(--color-text);margin-bottom:var(--space-xs);">
+      No Remote Endpoints Configured
+    </div>
+    <div style="font-size:var(--font-small);max-width:440px;margin:0 auto var(--space-md);">
+      Create your first SSL domain endpoint to safely connect remote desktop apps (TablePlus, DBeaver) or external web apps to PostgreSQL.
+    </div>
+    <button class="btn btn--primary" data-action="open-modal" data-modal="pg-modal-add-remote">
+      + Add Remote Domain
+    </button>
+  </div>
+  {% endif %}
 
 </div>
