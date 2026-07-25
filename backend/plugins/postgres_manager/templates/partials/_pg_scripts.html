@@ -96,27 +96,76 @@ document.querySelectorAll("[data-pg-action]").forEach(btn => {
 
 // ── Databases CRUD ────────────────────────────────────────────────────────
 
+// Toggle between Existing User vs Create New User in Create Database modal
+const ownerModeExisting = document.getElementById("pg-owner-mode-existing");
+const ownerModeNew      = document.getElementById("pg-owner-mode-new");
+const existingWrap      = document.getElementById("pg-owner-existing-wrap");
+const newWrap           = document.getElementById("pg-owner-new-wrap");
+
+if (ownerModeExisting && ownerModeNew) {
+  const toggleOwnerMode = () => {
+    if (ownerModeNew.checked) {
+      existingWrap.style.display = "none";
+      newWrap.style.display = "flex";
+    } else {
+      existingWrap.style.display = "";
+      newWrap.style.display = "none";
+    }
+  };
+  ownerModeExisting.addEventListener("change", toggleOwnerMode);
+  ownerModeNew.addEventListener("change", toggleOwnerMode);
+}
+
 const dbSubmit = document.getElementById("pg-db-create-submit");
 if (dbSubmit) {
   dbSubmit.addEventListener("click", async () => {
     const name  = document.getElementById("pg-new-db-name").value.trim();
-    const owner = document.getElementById("pg-new-db-owner").value.trim() || "postgres";
     const errEl = document.getElementById("pg-db-error");
     errEl.style.display = "none";
     if (!name) { errEl.textContent = "Database name is required."; errEl.style.display = ""; return; }
+
+    const isNewUser = ownerModeNew && ownerModeNew.checked;
+    let owner = "postgres";
+
     setLoading(dbSubmit, true);
     try {
+      if (isNewUser) {
+        const username = document.getElementById("pg-new-owner-username").value.trim();
+        const password = document.getElementById("pg-new-owner-password").value;
+        if (!username || !password) {
+          errEl.textContent = "New username and password are required.";
+          errEl.style.display = "";
+          setLoading(dbSubmit, false);
+          return;
+        }
+        if (password.length < 8) {
+          errEl.textContent = "Password must be at least 8 characters.";
+          errEl.style.display = "";
+          setLoading(dbSubmit, false);
+          return;
+        }
+        // 1. Create the new user first
+        await apiFetch("/users", { method: "POST", body: JSON.stringify({ name: username, password }) });
+        owner = username;
+      } else {
+        const select = document.getElementById("pg-new-db-owner-select");
+        owner = select ? select.value : "postgres";
+      }
+
+      // 2. Create the database owned by that user
       await apiFetch("/databases", { method: "POST", body: JSON.stringify({ name, owner }) });
-      showToast(`Database '${name}' created.`);
+      showToast(`Database '${name}' created (owner: ${owner}).`);
       closeModal("pg-modal-create-db");
       location.reload();
     } catch (err) {
-      errEl.textContent = err.message; errEl.style.display = "";
+      errEl.textContent = err.message;
+      errEl.style.display = "";
     } finally {
       setLoading(dbSubmit, false);
     }
   });
 }
+
 
 document.addEventListener("click", async e => {
   const btn = e.target.closest("[data-action='delete-db']");

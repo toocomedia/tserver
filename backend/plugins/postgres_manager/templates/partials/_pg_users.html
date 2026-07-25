@@ -70,22 +70,25 @@
 <div class="modal-backdrop" id="pg-modal-create-user" style="display:none;" aria-modal="true" role="dialog">
   <div class="modal">
     <div class="modal__header">
-      <h3>Create User</h3>
-      <button class="btn btn--icon btn--sm" data-action="close-modal" data-modal="pg-modal-create-user"
-              aria-label="Close">✕</button>
+      <h2 style="font-size:var(--font-h2);margin:0;">Create User</h2>
+      <button class="btn btn--icon btn--sm btn--ghost" data-action="close-modal" data-modal="pg-modal-create-user" aria-label="Close">✕</button>
     </div>
-    <div class="modal__body">
-      <label for="pg-new-user-name">Username</label>
-      <input type="text" id="pg-new-user-name" class="input" placeholder="myuser"
-             autocomplete="off" spellcheck="false">
-      <label for="pg-new-user-pw" style="margin-top:var(--space-md);">Password (min 8 chars)</label>
-      <input type="password" id="pg-new-user-pw" class="input" placeholder="••••••••">
-      <div id="pg-user-error" style="color:var(--color-danger);font-size:var(--font-small);
-                                     margin-top:var(--space-sm);display:none;"></div>
+    <div class="modal__body" style="display:flex;flex-direction:column;gap:var(--space-md);">
+      <div class="form-group">
+        <label class="form-label" for="pg-new-user-name">Username</label>
+        <input type="text" id="pg-new-user-name" class="form-input" placeholder="app_user" autocomplete="off" spellcheck="false">
+        <span class="form-hint">Use letters, digits, underscores or hyphens.</span>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="pg-new-user-pw">Password</label>
+        <input type="password" id="pg-new-user-pw" class="form-input" placeholder="••••••••">
+        <span class="form-hint">Must be at least 8 characters.</span>
+      </div>
+      <div id="pg-user-error" class="form-error" style="display:none;"></div>
     </div>
     <div class="modal__footer">
       <button class="btn btn--secondary" data-action="close-modal" data-modal="pg-modal-create-user">Cancel</button>
-      <button class="btn btn--primary" id="pg-user-create-submit">Create</button>
+      <button class="btn btn--primary" id="pg-user-create-submit">Create User</button>
     </div>
   </div>
 </div>
@@ -94,15 +97,16 @@
 <div class="modal-backdrop" id="pg-modal-change-pw" style="display:none;" aria-modal="true" role="dialog">
   <div class="modal">
     <div class="modal__header">
-      <h3>Change Password — <span id="pg-pw-username"></span></h3>
-      <button class="btn btn--icon btn--sm" data-action="close-modal" data-modal="pg-modal-change-pw"
-              aria-label="Close">✕</button>
+      <h2 style="font-size:var(--font-h2);margin:0;">Change Password — <span id="pg-pw-username"></span></h2>
+      <button class="btn btn--icon btn--sm btn--ghost" data-action="close-modal" data-modal="pg-modal-change-pw" aria-label="Close">✕</button>
     </div>
-    <div class="modal__body">
-      <label for="pg-change-pw-input">New Password (min 8 chars)</label>
-      <input type="password" id="pg-change-pw-input" class="input" placeholder="••••••••">
-      <div id="pg-pw-error" style="color:var(--color-danger);font-size:var(--font-small);
-                                   margin-top:var(--space-sm);display:none;"></div>
+    <div class="modal__body" style="display:flex;flex-direction:column;gap:var(--space-md);">
+      <div class="form-group">
+        <label class="form-label" for="pg-change-pw-input">New Password</label>
+        <input type="password" id="pg-change-pw-input" class="form-input" placeholder="••••••••">
+        <span class="form-hint">Must be at least 8 characters.</span>
+      </div>
+      <div id="pg-pw-error" class="form-error" style="display:none;"></div>
     </div>
     <div class="modal__footer">
       <button class="btn btn--secondary" data-action="close-modal" data-modal="pg-modal-change-pw">Cancel</button>
@@ -110,3 +114,4 @@
     </div>
   </div>
 </div>
+
