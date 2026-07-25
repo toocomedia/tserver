@@ -615,6 +615,12 @@ class PostgresService:
             if encrypted:
                 encrypted_hosts.append(host)
             if encrypted_hosts:
+                from services import nginx_service
+                nginx_service.ensure_acme_root()
+                for certificate_host in encrypted_hosts:
+                    nginx_service.create_webroot(certificate_host)
+                    await nginx_service.create_static_site(certificate_host)
+                await nginx_service.reload()
                 cert_name, expiry = await native_tls.issue_shared_certificate(encrypted_hosts)
                 for row in active:
                     if row.encryption_enabled:
@@ -636,15 +642,32 @@ class PostgresService:
         from models.postgres_remote import PostgresRemoteDomain
         from plugins.postgres_manager import native_tls
         record = await db.scalar(select(PostgresRemoteDomain).where(PostgresRemoteDomain.full_domain == full_host))
-        if not record or not record.encryption_enabled:
-            raise ValueError("Encrypted endpoint not found.")
+        if not record:
+            raise ValueError("Endpoint not found.")
+        if not record.encryption_enabled:
+            await native_tls.resolve_host(record.full_domain)
+            record.encryption_enabled = True
         rows = list((await db.scalars(select(PostgresRemoteDomain).where(PostgresRemoteDomain.enabled.is_(True)))).all())
+        if record not in rows:
+            rows.append(record)
         hosts = [row.full_domain for row in rows if row.encryption_enabled]
-        cert_name, expiry = await native_tls.issue_shared_certificate(hosts)
-        for row in rows:
-            if row.encryption_enabled:
-                row.certificate_name, row.certificate_expiry, row.ssl_active, row.tls_status = cert_name, expiry, True, "ready"
-        await db.commit()
+        try:
+            from services import nginx_service
+            nginx_service.ensure_acme_root()
+            for certificate_host in hosts:
+                nginx_service.create_webroot(certificate_host)
+                await nginx_service.create_static_site(certificate_host)
+            await nginx_service.reload()
+            cert_name, expiry = await native_tls.issue_shared_certificate(hosts)
+            await native_tls.configure_postgres(rows)
+            for row in rows:
+                if row.encryption_enabled:
+                    row.certificate_name, row.certificate_expiry, row.ssl_active, row.tls_status = cert_name, expiry, True, "ready"
+            await db.commit()
+        except Exception as exc:
+            record.encryption_enabled, record.ssl_active, record.tls_status, record.last_error = False, False, "error", str(exc)
+            await db.commit()
+            raise ValueError(str(exc)) from exc
         return native_tls.endpoint_state(record)
 
     async def test_remote_domain(self, db: AsyncSession, full_host: str) -> dict[str, Any]:
@@ -654,6 +677,11 @@ class PostgresService:
         record = await db.scalar(select(PostgresRemoteDomain).where(PostgresRemoteDomain.full_domain == full_host))
         if not record:
             raise ValueError("Endpoint not found.")
+        if not record.enabled:
+            raise ValueError("Endpoint is not active yet.")
+        status = self.get_status()
+        if not status["running"] or not status["port_open"]:
+            raise ValueError("PostgreSQL is not running or port 5432 is not available locally.")
         if record.encryption_enabled:
             await native_tls.resolve_host(record.full_domain)
         return native_tls.endpoint_state(record)

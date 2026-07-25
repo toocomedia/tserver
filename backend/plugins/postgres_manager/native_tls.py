@@ -7,6 +7,7 @@ import re
 import socket
 import subprocess
 from typing import Any
+import config
 
 _HOST = re.compile(r"^(?=.{3,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$", re.I)
 
@@ -56,7 +57,12 @@ async def _run(*args: str) -> str:
 async def issue_shared_certificate(hosts: list[str]) -> tuple[str, None]:
     if not hosts:
         raise ValueError("No encrypted hostname is configured.")
-    args = ["sudo", "-n", "certbot", "certonly", "--webroot", "-w", "/var/www/html", "--non-interactive", "--agree-tos"]
+    args = [
+        "sudo", "-n", "certbot", "certonly", "--webroot",
+        f"--webroot-path={config.NGINX_WEBROOT}/acme-challenge",
+        "--non-interactive", "--agree-tos", f"--email={config.CERTBOT_EMAIL}",
+        f"--cert-name={hosts[0]}",
+    ]
     for host in hosts:
         args.extend(["-d", host])
     await _run(*args)

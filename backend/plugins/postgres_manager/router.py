@@ -71,9 +71,12 @@ async def pg_index(request: Request, db: AsyncSession = Depends(get_db)):
 
 @router.get("/remote", response_class=HTMLResponse)
 async def pg_remote_list(request: Request, db: AsyncSession = Depends(get_db)):
+    status = postgres_service.get_status()
     return templates.TemplateResponse("partials/_pg_remote_list.html", {
         "request": request, "active_page": "plugins",
         "endpoints": await postgres_service.list_remote_domains(db),
+        "databases": pg.list_databases() if status["running"] else [],
+        "users": pg.list_users() if status["running"] else [],
     })
 
 

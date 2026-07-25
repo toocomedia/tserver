@@ -37,6 +37,9 @@
 .remote-warning { color: var(--color-warn); font-size: var(--font-small); }
 .remote-submit { align-items: center; display: flex; gap: 16px; padding-top: 4px; }
 .remote-submit .remote-error { margin: 0; }
+.remote-feedback { color: var(--color-muted); min-height: 20px; margin: 0 0 16px; }
+.remote-copy { display: flex; gap: 8px; }
+.remote-copy .form-input { min-width: 0; }
 @media (max-width: 700px) { .remote-choice-row, .remote-grid { grid-template-columns: 1fr; } .remote-actions { justify-content: flex-start; } .remote-inline, .remote-submit { align-items: flex-start; flex-direction: column; } }
 
 /* ============================================================
