@@ -75,11 +75,7 @@
 </div>
 
 <!-- SERVICE STATUS WITH BACKGROUND TITLE BAR -->
-<div style="border: 1px solid var(--color-line); margin-bottom: var(--space-xl);">
-  {% include "partials/list_title_bar.html" with context %}
-  {% set title = "Core Server Services" %}
-  {% set item_count = None %}
-
+<div class="mb-xl">
   <div class="list-title-bar">
     <h3>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px; height:14px;"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/></svg>
@@ -88,7 +84,7 @@
     <button class="btn btn--secondary btn--sm" id="btn-refresh-status" onclick="refreshStatus()">Refresh</button>
   </div>
 
-  <div class="section__body" style="padding: 16px;">
+  <div class="section__body">
     <div class="info-row">
       <span class="info-row__label">Hostname</span>
       <span class="info-row__value">{{ hostname }}</span>

@@ -24,12 +24,18 @@
 {% endblock %}
 
 {% block content %}
-<div class="section">
-  <div class="section__header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
-    <h3 style="margin:0; font-size:18px; font-weight:800;">System Dependencies</h3>
+<div class="mb-xl">
+  <div class="list-title-bar">
+    <h3>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px; height:14px;"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/></svg>
+      System Dependencies Catalog
+    </h3>
+    <span style="font-size: 11px; color: var(--color-muted); font-weight: 700;">
+      {{ dependencies | length }} Total
+    </span>
   </div>
   
-  <div class="section__body">
+  <div style="padding-top: 16px;">
     
     <!-- 1. CARDS VIEW -->
     <div id="deps-cards-container" class="dependency-grid">
