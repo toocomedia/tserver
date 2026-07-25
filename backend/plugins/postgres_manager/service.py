@@ -259,6 +259,13 @@ class PostgresService:
             parent = await db.scalar(select(Domain).where(Domain.name == domain.strip()))
             if parent:
                 domain_id = parent.id
+                # Auto-create DNS A record for subdomain in PowerDNS
+                try:
+                    from services import dns_service
+                    import config
+                    await dns_service.add_a_record(parent.name, subdomain.strip(), getattr(config, "SERVER_IP", "127.0.0.1"), 300)
+                except Exception as exc:
+                    logger.warning("Auto DNS A record creation for %s.%s failed: %s", subdomain, parent.name, exc)
         else:
             if not hostname:
                 raise ValueError("External hostname is required.")
@@ -327,13 +334,23 @@ class PostgresService:
         }
 
     async def delete_remote_domain(self, db: AsyncSession, full_host: str) -> bool:
-        """Remove a remote access domain from SQLite DB and remove its Nginx stream config."""
+        """Remove a remote access domain from SQLite DB, delete PowerDNS A record, and remove Nginx stream config."""
         from sqlalchemy import select
         from models.postgres_remote import PostgresRemoteDomain
 
         target = await db.scalar(select(PostgresRemoteDomain).where(PostgresRemoteDomain.full_domain == full_host))
         if not target:
             raise ValueError(f"Domain '{full_host}' not found.")
+
+        if target.mode == "managed" and target.subdomain and target.domain_id:
+            try:
+                from services import dns_service
+                from models.domain import Domain
+                parent = await db.scalar(select(Domain).where(Domain.id == target.domain_id))
+                if parent:
+                    await dns_service.delete_record(parent.name, target.subdomain, "A")
+            except Exception as exc:
+                logger.warning("DNS A record deletion failed for %s: %s", full_host, exc)
 
         if os.name != "nt":
             conf_path = Path(f"/etc/nginx/streams.d/postgres_{full_host}.conf")
@@ -346,6 +363,7 @@ class PostgresService:
         await db.delete(target)
         await db.commit()
         return True
+
 
     def get_remote_status(self) -> dict[str, Any]:
         """Backward-compatible remote status helper."""

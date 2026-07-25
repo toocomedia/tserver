@@ -245,8 +245,22 @@ if (wizBackBtn) {
   wizBackBtn.addEventListener("click", () => setWizStep(currentWizStep - 1));
 }
 
+// Close modal on backdrop click (EXCEPT wizard and connection modals)
+document.querySelectorAll(".modal-backdrop").forEach(backdrop => {
+  backdrop.addEventListener("click", e => {
+    if (e.target === backdrop && backdrop.id !== "pg-modal-add-remote" && backdrop.id !== "pg-modal-connection") {
+      backdrop.style.display = "none";
+    }
+  });
+});
+
 if (wizSubmitBtn) {
   wizSubmitBtn.addEventListener("click", async () => {
+    if (wizSubmitBtn.getAttribute("data-mode") === "done") {
+      closeModal("pg-modal-add-remote");
+      location.reload();
+      return;
+    }
     const isManaged = wizModeManaged ? wizModeManaged.checked : true;
     const mode      = isManaged ? "managed" : "external";
     const domain    = wizDomainSelect ? wizDomainSelect.value : null;
@@ -261,12 +275,28 @@ if (wizSubmitBtn) {
         method: "POST",
         body: JSON.stringify({ mode, domain, subdomain, hostname, issue_ssl }),
       });
-      showToast(`Remote endpoint '${res.entry.domain}' added successfully!`);
-      closeModal("pg-modal-add-remote");
-      setTimeout(() => location.reload(), 1200);
+      if (res.entry && res.entry.ssl_active) {
+        showToast(`Remote endpoint '${res.entry.domain}' added with active SSL!`);
+        closeModal("pg-modal-add-remote");
+        setTimeout(() => location.reload(), 1000);
+      } else {
+        if (wizErrEl) {
+          wizErrEl.className = "alert alert--info mb-md";
+          wizErrEl.innerHTML = `<strong>Endpoint Created:</strong> Hostname <code>${res.entry.domain}</code> was configured, but Let's Encrypt SSL certificate could not be issued yet.<br>Ensure DNS A record points to this server IP, then click <strong>Re-issue SSL</strong>.`;
+          wizErrEl.style.display = "block";
+        }
+        wizSubmitBtn.textContent = "Done / View Endpoints";
+        wizSubmitBtn.setAttribute("data-mode", "done");
+        if (wizBackBtn) wizBackBtn.style.display = "none";
+      }
     } catch (err) {
-      if (wizErrEl) { wizErrEl.textContent = err.message; wizErrEl.style.display = ""; }
-      else { showToast(err.message, true); }
+      if (wizErrEl) {
+        wizErrEl.className = "form-error";
+        wizErrEl.textContent = err.message;
+        wizErrEl.style.display = "block";
+      } else {
+        showToast(err.message, true);
+      }
     } finally {
       setLoading(wizSubmitBtn, false);
     }
@@ -283,16 +313,18 @@ document.addEventListener("click", async e => {
   try {
     const res = await apiFetch(`/remote/domains/${encodeURIComponent(domain)}/ssl`, { method: "POST" });
     if (res.entry && res.entry.ssl_active) {
-      showToast(`SSL certificate issued for ${domain}!`);
+      showToast(`SSL certificate successfully issued for ${domain}!`);
+      setTimeout(() => location.reload(), 1000);
     } else {
-      showToast(`Certbot attempt completed for ${domain}. Check domain DNS.`, true);
+      showToast(`Certbot SSL challenge failed for ${domain}. Verify DNS A record points to server IP.`, true);
+      setLoading(btn, false);
     }
-    setTimeout(() => location.reload(), 1200);
   } catch (err) {
     showToast(err.message, true);
     setLoading(btn, false);
   }
 });
+
 
 // Delete Remote Domain action button
 document.addEventListener("click", async e => {
