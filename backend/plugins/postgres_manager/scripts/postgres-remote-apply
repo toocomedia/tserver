@@ -24,8 +24,25 @@ else
 fi
 if grep -q '^hostssl' "$tmp"; then
   first_host="$(printf '%s\n' "$payload" | awk -F'|' '$2=="hostssl"{print $1; exit}')"
-  sed -i "s|^#\?ssl_cert_file.*|ssl_cert_file = '/etc/letsencrypt/live/$first_host/fullchain.pem'|" "$conf"
-  sed -i "s|^#\?ssl_key_file.*|ssl_key_file = '/etc/letsencrypt/live/$first_host/privkey.pem'|" "$conf"
-  sed -i 's/^#\?ssl.*/ssl = on/' "$conf"
+  cert_dir="/etc/letsencrypt/live/$first_host"
+  [[ -f "$cert_dir/fullchain.pem" && -f "$cert_dir/privkey.pem" ]] || {
+    echo "SSL certificate for $first_host is missing; refusing to enable PostgreSQL SSL" >&2
+    exit 1
+  }
+  # Certbot private keys are root-only. PostgreSQL runs as `postgres`, so copy
+  # the active key into the cluster configuration directory with safe ownership.
+  cert_target="$(dirname "$conf")/srv-panel-postgres.crt"
+  key_target="$(dirname "$conf")/srv-panel-postgres.key"
+  install -o postgres -g postgres -m 644 "$cert_dir/fullchain.pem" "$cert_target"
+  install -o postgres -g postgres -m 600 "$cert_dir/privkey.pem" "$key_target"
+  sed -i -E "s|^[[:space:]]*#?[[:space:]]*ssl_cert_file[[:space:]]*=.*|ssl_cert_file = '$cert_target'|" "$conf"
+  sed -i -E "s|^[[:space:]]*#?[[:space:]]*ssl_key_file[[:space:]]*=.*|ssl_key_file = '$key_target'|" "$conf"
+  grep -Eq '^[[:space:]]*#?[[:space:]]*ssl_cert_file[[:space:]]*=' "$conf" || printf "ssl_cert_file = '%s'\n" "$cert_target" >> "$conf"
+  grep -Eq '^[[:space:]]*#?[[:space:]]*ssl_key_file[[:space:]]*=' "$conf" || printf "ssl_key_file = '%s'\n" "$key_target" >> "$conf"
+  if grep -Eq '^[[:space:]]*#?[[:space:]]*ssl[[:space:]]*=' "$conf"; then
+    sed -i -E "s|^[[:space:]]*#?[[:space:]]*ssl[[:space:]]*=.*|ssl = on|" "$conf"
+  else
+    printf "ssl = on\n" >> "$conf"
+  fi
 fi
 systemctl reload postgresql
