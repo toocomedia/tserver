@@ -356,11 +356,6 @@ class PostgresService:
         return True
 
 
-    def get_remote_status(self) -> dict[str, Any]:
-        """Backward-compatible remote status helper."""
-        return {"enabled": False, "domain": None, "ssl_active": False, "nginx_stream": False}
-
-
     def _issue_certbot_ssl(self, full_host: str) -> bool:
         """Deprecated compatibility shim; use native_tls.issue_shared_certificate."""
         logger.warning("Ignoring deprecated PostgreSQL certificate request for %s", full_host)
@@ -429,16 +424,28 @@ class PostgresService:
         await native_tls.resolve_host(full_host)
 
         existing = await db.scalar(select(PostgresRemoteDomain).where(PostgresRemoteDomain.full_domain == full_host))
-        if existing:
+        if existing and existing.enabled:
             raise ValueError(f"Domain '{full_host}' is already configured for remote access.")
-
-        record = PostgresRemoteDomain(
-            domain_id=domain_id, mode=mode, subdomain=(subdomain or "").strip().lower(),
-            full_domain=full_host, allowed_cidrs=",".join(cidrs), dns_status="ready",
-            tls_status="pending" if issue_ssl else "disabled", postgres_status="pending",
-            enabled=False, ssl_active=False, nginx_stream=False,
-        )
-        db.add(record)
+        if existing:
+            record = existing
+            record.domain_id = domain_id
+            record.mode = mode
+            record.subdomain = (subdomain or "").strip().lower()
+            record.allowed_cidrs = ",".join(cidrs)
+            record.dns_status = "ready"
+            record.tls_status = "pending" if issue_ssl else "disabled"
+            record.postgres_status = "pending"
+            record.enabled = False
+            record.ssl_active = False
+            record.last_error = None
+        else:
+            record = PostgresRemoteDomain(
+                domain_id=domain_id, mode=mode, subdomain=(subdomain or "").strip().lower(),
+                full_domain=full_host, allowed_cidrs=",".join(cidrs), dns_status="ready",
+                tls_status="pending" if issue_ssl else "disabled", postgres_status="pending",
+                enabled=False, ssl_active=False, nginx_stream=False,
+            )
+            db.add(record)
         await db.commit()
 
         try:
@@ -451,7 +458,7 @@ class PostgresService:
             cert_name, expiry = await native_tls.issue_shared_certificate(hosts)
             await native_tls.configure_postgres(hosts, all_cidrs)
             await native_tls.firewall_allow(all_cidrs)
-            for row in rows:
+            for row in active_rows + [record]:
                 row.certificate_name = cert_name
                 row.certificate_expiry = expiry
                 row.tls_status = "ready"
@@ -489,7 +496,7 @@ class PostgresService:
             cert_name, expiry = await native_tls.issue_shared_certificate(hosts)
             await native_tls.configure_postgres(hosts, cidrs)
             await native_tls.firewall_allow(cidrs)
-            for row in rows:
+            for row in active_rows:
                 row.certificate_name = cert_name
                 row.certificate_expiry = expiry
                 row.tls_status = "ready"

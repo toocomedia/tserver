@@ -35,10 +35,10 @@
           <div class="form-select-wrap">
             <select id="pg-conn-mode-select" class="form-select">
               <option value="127.0.0.1">Local VPS (127.0.0.1)</option>
-              {% for rd in remote_domains %}
-                <option value="{{ rd.domain }}">Remote SSL ({{ rd.domain }})</option>
+              {% for rd in remote_domains if rd.enabled %}
+                <option value="{{ rd.domain }}">Remote TLS ({{ rd.domain }})</option>
               {% endfor %}
-              {% if not remote_domains %}
+              {% if not (remote_domains | selectattr('enabled') | list) %}
                 <option value="" disabled>No remote TLS endpoint configured</option>
               {% endif %}
             </select>

@@ -142,7 +142,7 @@ document.addEventListener("click", async e => {
 
 // Test native PostgreSQL endpoint readiness
 document.addEventListener("click", async e => {
-  const btn = e.target.closest("[data-action='test-remote-domain']");
+  const btn = e.target.closest("[data-action='legacy-test-remote-domain']");
   if (!btn) return;
   setLoading(btn, true);
   try {
@@ -320,7 +320,7 @@ if (wizSubmitBtn) {
 
 // Re-issue SSL action button
 document.addEventListener("click", async e => {
-  const btn = e.target.closest("[data-action='reissue-remote-ssl']");
+  const btn = e.target.closest("[data-action='legacy-reissue-remote-ssl']");
   if (!btn) return;
   const domain = btn.dataset.domain;
   if (!domain) return;
@@ -343,7 +343,7 @@ document.addEventListener("click", async e => {
 
 // Delete Remote Domain action button
 document.addEventListener("click", async e => {
-  const btn = e.target.closest("[data-action='delete-remote-domain']");
+  const btn = e.target.closest("[data-action='legacy-delete-remote-domain']");
   if (!btn) return;
   const domain = btn.dataset.domain;
   if (!domain) return;

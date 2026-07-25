@@ -146,9 +146,11 @@ async def issue_shared_certificate(hosts: list[str]) -> tuple[str, datetime | No
             missing.append(cert_path)
         if not key_check.success:
             missing.append(key_path)
+        details = (result.stdout or result.stderr or "no Certbot output").strip()[-500:]
         raise RuntimeError(
-            "Let’s Encrypt completed but the certificate material is missing: "
+            "Certbot did not create the PostgreSQL certificate files at "
             + ", ".join(missing)
+            + f". Certbot output: {details}"
         )
     ownership = await shell.run(["chown", "postgres:postgres", cert_path, key_path])
     if not ownership.success:

@@ -162,20 +162,133 @@ function closeModal(id) {
   if (el) el.classList.add("hidden");
 }
 
+function updateSidebarActiveLink(pathname) {
+  const current = pathname || window.location.pathname;
+  let bestMatch = null;
+  let maxLen = -1;
+
+  document.querySelectorAll(".sidebar__item[data-path]").forEach((item) => {
+    item.classList.remove("sidebar__item--active");
+    const itemPath = item.getAttribute("data-path") || "";
+    const a = current.replace(/\/+$/, "") || "/";
+    const b = itemPath.replace(/\/+$/, "") || "/";
+    if (a === b || (b !== "/" && a.startsWith(b + "/"))) {
+      if (b.length > maxLen) {
+        maxLen = b.length;
+        bestMatch = item;
+      }
+    }
+  });
+
+  if (bestMatch) {
+    bestMatch.classList.add("sidebar__item--active");
+  }
+}
+
+function getPageTitleFromUrl(url) {
+  const clean = String(url || "").split("?")[0].replace(/\/+$/, "");
+  if (!clean || clean === "/") return "Dashboard";
+  const parts = clean.split("/");
+  const last = parts[parts.length - 1];
+  return last.charAt(0).toUpperCase() + last.slice(1).replace(/_/g, " ");
+}
+
+function getInstantShellHTML(title) {
+  return `
+    <div class="content__inner">
+      <div class="page-header">
+        <h1 class="page-header__title">${title}</h1>
+        <div class="page-header__actions">
+          <div class="skeleton" style="width: 100px; height: 32px; border-radius: 4px;"></div>
+        </div>
+      </div>
+      <div class="card p-lg mb-xl">
+        <div class="d-flex justify-between align-center mb-md">
+          <div class="skeleton" style="width: 180px; height: 20px; border-radius: 4px;"></div>
+          <div class="skeleton" style="width: 80px; height: 32px; border-radius: 4px;"></div>
+        </div>
+        <div class="skeleton-table">
+          <div class="skeleton mb-sm" style="width: 100%; height: 38px; border-radius: 4px;"></div>
+          <div class="skeleton mb-sm" style="width: 100%; height: 38px; border-radius: 4px;"></div>
+          <div class="skeleton mb-sm" style="width: 100%; height: 38px; border-radius: 4px;"></div>
+          <div class="skeleton mb-sm" style="width: 100%; height: 38px; border-radius: 4px;"></div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+async function navigateTo(url, pushState = true) {
+  topProgressBar.start();
+  
+  const currentMain = document.querySelector("#main-content");
+  const title = getPageTitleFromUrl(url);
+
+  // 1. INSTANT 0ms UI SHELL RENDER
+  if (currentMain) {
+    currentMain.innerHTML = getInstantShellHTML(title);
+    if (pushState) {
+      history.pushState({ url }, "", url);
+    }
+    document.title = `${title} — VPS Panel`;
+    updateSidebarActiveLink(url);
+    window.scrollTo(0, 0);
+  }
+
+  // 2. BACKGROUND DATA FETCH
+  try {
+    const res = await fetch(url, {
+      headers: { "X-Requested-With": "XMLHttpRequest" }
+    });
+    if (!res.ok) {
+      window.location.href = url;
+      return;
+    }
+    const htmlText = await res.text();
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(htmlText, "text/html");
+
+    const newMain = doc.querySelector("#main-content");
+    if (newMain && currentMain) {
+      currentMain.innerHTML = newMain.innerHTML;
+      if (doc.title) document.title = doc.title;
+
+      newMain.querySelectorAll("script").forEach((oldScript) => {
+        const newScript = document.createElement("script");
+        Array.from(oldScript.attributes).forEach((attr) =>
+          newScript.setAttribute(attr.name, attr.value)
+        );
+        newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+        oldScript.parentNode.replaceChild(newScript, oldScript);
+      });
+    }
+  } catch (err) {
+    console.error("Navigation error:", err);
+  } finally {
+    topProgressBar.done();
+  }
+}
+
+window.addEventListener("popstate", (e) => {
+  const url = (e.state && e.state.url) ? e.state.url : window.location.pathname;
+  navigateTo(url, false);
+});
+
 document.addEventListener("click", (e) => {
   if (e.target.classList.contains("modal-backdrop")) {
     if (e.target.dataset.noBackdropClose === "true") return;
     e.target.classList.add("hidden");
   }
 
-  // Top progress bar on internal navigation clicks
+  // Instant PJAX Navigation with Top Progress Bar
   const link = e.target.closest("a[href]");
-  if (link && !link.target && !link.hasAttribute("download")) {
+  if (link && !link.target && !link.hasAttribute("download") && !link.hasAttribute("data-no-pjax")) {
     const href = link.getAttribute("href") || "";
     if (href && !href.startsWith("#") && !href.startsWith("javascript:")) {
       const isInternal = href.startsWith("/") || href.startsWith(window.location.origin);
       if (isInternal && href !== window.location.pathname) {
-        topProgressBar.start();
+        e.preventDefault();
+        navigateTo(href);
       }
     }
   }

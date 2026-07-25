@@ -1,0 +1,26 @@
+{% if remote_domains %}
+<div class="table-wrap">
+  <table class="table">
+    <thead><tr><th>Hostname</th><th>Source</th><th>DNS</th><th>TLS</th><th>PostgreSQL</th><th>Allowed clients</th><th>Port</th><th>Actions</th></tr></thead>
+    <tbody>
+      {% for rd in remote_domains %}
+      <tr>
+        <td><strong>{{ rd.domain }}</strong>{% if rd.last_error %}<span class="pg-remote-error">{{ rd.last_error }}</span>{% endif %}</td>
+        <td><span class="status-badge muted">{{ rd.mode|capitalize }}</span></td>
+        <td><span class="status-badge {% if rd.dns_status == 'ready' %}success{% else %}warning{% endif %}">{{ rd.dns_status|capitalize }}</span></td>
+        <td><span class="status-badge {% if rd.tls_status == 'ready' %}success{% elif rd.tls_status == 'error' %}danger{% else %}warning{% endif %}">{{ rd.tls_status|capitalize }}</span></td>
+        <td><span class="status-badge {% if rd.postgres_status == 'ready' %}success{% elif rd.postgres_status == 'error' %}danger{% else %}warning{% endif %}">{{ rd.postgres_status|capitalize }}</span></td>
+        <td class="text-small">{{ rd.allowed_cidrs|join(', ') }}</td><td><code>{{ rd.port }}</code></td>
+        <td><div class="pg-remote-actions">
+          {% if rd.tls_status != 'ready' %}<button class="btn btn--sm btn--secondary" type="button" data-action="reissue-remote-ssl" data-domain="{{ rd.domain }}">Retry TLS</button>{% endif %}
+          {% if rd.enabled %}<button class="btn btn--sm btn--secondary" type="button" data-action="test-remote-domain" data-domain="{{ rd.domain }}">Test</button><button class="btn btn--sm btn--secondary" type="button" data-action="open-connection-modal" data-domain="{{ rd.domain }}">Connection</button>{% endif %}
+          <button class="btn btn--icon btn--sm btn--danger" type="button" data-action="delete-remote-domain" data-domain="{{ rd.domain }}" title="Delete {{ rd.domain }}" aria-label="Delete {{ rd.domain }}">×</button>
+        </div></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="empty-state resource-empty-state"><span>No remote endpoints configured.</span><button class="btn btn--primary" type="button" data-action="open-remote-create">+ Add Remote Endpoint</button></div>
+{% endif %}

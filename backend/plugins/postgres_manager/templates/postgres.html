@@ -2,6 +2,7 @@
 
 {% block title %}PostgreSQL Manager — VPS Panel{% endblock %}
 {% block content_class %}content--flush{% endblock %}
+{% block head %}<link rel="stylesheet" href="/static/css/features/postgres-remote.css">{% endblock %}
 
 {# Remove the default page header so the split layout fills the full height #}
 {% block page_header_wrapper %}{% endblock %}
@@ -124,4 +125,5 @@
 
 {% block scripts %}
   {% include 'partials/_pg_scripts.html' %}
+  <script type="module" src="/static/js/features/postgres-remote.js"></script>
 {% endblock %}

@@ -13,7 +13,7 @@ import subprocess
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
@@ -76,14 +76,9 @@ async def pg_index(request: Request, db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/remote/new", response_class=HTMLResponse)
-async def pg_remote_new(request: Request, db: AsyncSession = Depends(get_db)):
-    """Render the dedicated remote endpoint creation page."""
-    domains_res = await db.scalars(select(Domain).order_by(Domain.name))
-    return templates.TemplateResponse("pages/postgres_remote_new.html", {
-        "request": request,
-        "active_page": "plugins",
-        "domains": list(domains_res.all()),
-    })
+async def pg_remote_new():
+    """Keep old links working after endpoint creation moved into the plugin tab."""
+    return RedirectResponse("/plugins/postgres_manager/", status_code=303)
 
 
 
@@ -255,11 +250,6 @@ async def api_query(body: QueryRequest):
 # ---------------------------------------------------------------------------
 # Remote Access & SSL Proxy (Multi-Domain)
 # ---------------------------------------------------------------------------
-
-@router.get("/api/remote/status")
-async def api_get_remote_status():
-    return JSONResponse(postgres_service.get_remote_status())
-
 
 @router.get("/api/remote/domains")
 async def api_list_remote_domains(db: AsyncSession = Depends(get_db)):
