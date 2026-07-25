@@ -1,0 +1,306 @@
+{% extends "layout.html" %}
+
+{% block title %}Usage — VPS Panel{% endblock %}
+{% block page_title %}Server Usage Diagnostics{% endblock %}
+
+{% block topbar_actions %}
+  <span id="usage-last-updated" class="text-small text-muted" style="margin-right: 8px;"></span>
+  <button class="btn btn--secondary btn--sm" id="btn-pause-poll" onclick="togglePoll()">Pause</button>
+{% endblock %}
+
+{% block head %}
+<style>
+  .usage-bar-wrap {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    flex: 1;
+  }
+  .usage-bar {
+    flex: 1;
+    height: 6px;
+    background: var(--color-line);
+    border-radius: 0 !important;
+    overflow: hidden;
+  }
+  .usage-bar__fill {
+    height: 100%;
+    transition: width 0.5s ease, background 0.3s;
+    background: var(--color-accent-dark);
+  }
+  .usage-bar__fill--warn   { background: var(--color-warn); }
+  .usage-bar__fill--danger { background: var(--color-danger); }
+  .usage-bar__pct {
+    font-size: var(--font-small);
+    font-weight: 800;
+    min-width: 38px;
+    text-align: right;
+    color: var(--color-text);
+  }
+
+  .proc-status--sleeping { color: var(--color-muted); }
+  .proc-status--running  { color: var(--color-accent-dark); font-weight: 800; }
+  .proc-status--zombie   { color: var(--color-danger); }
+  .proc-status--stopped  { color: var(--color-danger); }
+
+  .info-row__value .usage-bar-wrap { min-width: 200px; }
+
+  .rect-segmented {
+    display: inline-flex;
+    align-items: center;
+    background: var(--color-surface);
+    border: none !important;
+    padding: 2px;
+    gap: 2px;
+  }
+  .rect-segment {
+    border: none !important;
+    background: transparent;
+    color: var(--color-muted);
+    height: 32px;
+    padding: 0 14px;
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+  }
+  .rect-segment:hover:not(:disabled) {
+    color: var(--color-text);
+    background: var(--color-secondary-btn);
+  }
+  .rect-segment--active {
+    background: var(--color-accent) !important;
+    color: #111111 !important;
+  }
+  .rect-segment:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- 1. OVERVIEW STAT CARDS -->
+{% include "pages/usage/partials/overview_stats.html" %}
+
+<!-- 2. CPU & MEMORY DIAGNOSTICS -->
+{% include "pages/usage/partials/cpu_memory.html" %}
+
+<!-- 3. SERVER OPTIMIZATIONS CONTROL -->
+{% include "pages/usage/partials/optimizations.html" %}
+
+<!-- 4. DISK STORAGE & NETWORK METRICS -->
+{% include "pages/usage/partials/disk_network.html" %}
+
+<!-- 5. STACK SERVICES & TOP PROCESSES TABLES -->
+{% include "pages/usage/partials/services_processes.html" %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  let polling = true;
+  let pollTimer = null;
+  const INTERVAL = 3000;
+  let isActionPending = false;
+
+  function barClass(pct) {
+    if (pct >= 85) return 'usage-bar__fill--danger';
+    if (pct >= 60) return 'usage-bar__fill--warn';
+    return '';
+  }
+
+  function setBar(barId, pctId, pct) {
+    const fill = document.getElementById(barId);
+    const label = document.getElementById(pctId);
+    if (fill && label) {
+      fill.style.width = pct + '%';
+      fill.className = 'usage-bar__fill ' + barClass(pct);
+      label.textContent = pct.toFixed(1) + '%';
+    }
+  }
+
+  function fmtMb(mb) {
+    return mb >= 1024
+      ? (mb / 1024).toFixed(1) + ' GB'
+      : mb.toFixed(0) + ' MB';
+  }
+
+  function procStatusClass(s) {
+    if (['running', 'active', 'healthy'].includes(s)) return 'proc-status--running';
+    if (s === 'zombie')   return 'proc-status--zombie';
+    if (['stopped', 'unhealthy', 'disabled', 'missing', 'paused', 'invalid'].includes(s)) return 'proc-status--stopped';
+    return 'proc-status--sleeping';
+  }
+
+  function render(d) {
+    // Overview cards
+    document.getElementById('ov-cpu').textContent    = d.cpu.percent.toFixed(1) + '%';
+    document.getElementById('ov-ram').textContent    = d.ram.used_gb + ' GB';
+    document.getElementById('ov-cores').textContent  = d.cpu.count;
+    document.getElementById('ov-freq').textContent   = d.cpu.freq_mhz ? d.cpu.freq_mhz + ' MHz' : '—';
+    document.getElementById('ov-uptime').textContent = d.uptime_human;
+
+    const root = d.disk.find(dk => dk.mount === '/' || dk.mount === 'C:\\') || d.disk[0];
+    document.getElementById('ov-disk').textContent = root
+      ? root.percent.toFixed(0) + '%'
+      : '—';
+
+    // CPU bar
+    setBar('bar-cpu', 'pct-cpu', d.cpu.percent);
+
+    // RAM bars
+    setBar('bar-ram', 'pct-ram', d.ram.percent);
+    document.getElementById('ram-detail').textContent =
+      `${d.ram.used_gb} GB used / ${d.ram.total_gb} GB total  (${d.ram.available_gb} GB free)`;
+
+    // Swap
+    setBar('bar-swap', 'pct-swap', d.swap.percent);
+    document.getElementById('swap-detail').textContent = d.swap.total_gb > 0
+      ? `${d.swap.used_gb} GB used / ${d.swap.total_gb} GB total`
+      : 'No swap configured';
+
+    // Disk rows
+    const diskSection = document.getElementById('disk-section');
+    if (diskSection) {
+      diskSection.innerHTML = d.disk.map(dk => `
+        <div class="info-row">
+          <span class="info-row__label">${dk.mount}</span>
+          <span class="info-row__value">
+            <div class="usage-bar-wrap">
+              <div class="usage-bar">
+                <div class="usage-bar__fill ${barClass(dk.percent)}" style="width:${dk.percent}%"></div>
+              </div>
+              <span class="usage-bar__pct">${dk.percent.toFixed(1)}%</span>
+            </div>
+            <span class="text-small text-muted" style="margin-left:8px;">${dk.used_gb} / ${dk.total_gb} GB</span>
+          </span>
+        </div>
+      `).join('') || '<div class="info-row"><span class="info-row__label text-muted">No disks found</span></div>';
+    }
+
+    // Network
+    document.getElementById('net-sent').textContent      = fmtMb(d.net.bytes_sent_mb);
+    document.getElementById('net-recv').textContent      = fmtMb(d.net.bytes_recv_mb);
+    document.getElementById('net-pkts-sent').textContent = d.net.packets_sent.toLocaleString();
+    document.getElementById('net-pkts-recv').textContent = d.net.packets_recv.toLocaleString();
+
+    // Services
+    if (d.services) {
+      const svcTbody = document.getElementById('svc-tbody');
+      const svcNames = {
+        'nginx': 'Nginx',
+        'powerdns': 'PowerDNS',
+        'panel': 'Panel (FastAPI)',
+        'docker': 'Docker Engine'
+      };
+      svcTbody.innerHTML = Object.entries(d.services).map(([key, svc]) => `
+        <tr>
+          <td><strong style="font-size:14px;">${svc.label || svcNames[key] || key}</strong></td>
+          <td>${svc.count}</td>
+          <td>${svc.cpu.toFixed(1)}%</td>
+          <td>${svc.memory}</td>
+          <td><span class="${procStatusClass(svc.status)}">${svc.status}</span></td>
+        </tr>
+      `).join('');
+    }
+
+    // Plugins
+    const pluginTbody = document.getElementById('plugin-usage-tbody');
+    if (pluginTbody) {
+      const pluginRows = Object.entries(d.plugins || {});
+      pluginTbody.innerHTML = pluginRows.length ? pluginRows.map(([key, plugin]) => `
+        <tr>
+          <td><strong style="font-size:14px;">${plugin.label || key}</strong></td>
+          <td>${plugin.count}</td>
+          <td>${plugin.cpu.toFixed(1)}%</td>
+          <td>${plugin.memory}</td>
+          <td><span class="${procStatusClass(plugin.status)}">${plugin.status}</span></td>
+        </tr>
+      `).join('') : '<tr><td colspan="5" class="text-muted">No active plugins running.</td></tr>';
+    }
+
+    // Top processes
+    if (d.top_processes) {
+      const procTbody = document.getElementById('proc-tbody');
+      procTbody.innerHTML = d.top_processes.map(p => `
+        <tr>
+          <td><span class="text-small text-muted">${p.pid}</span></td>
+          <td><strong style="font-size:13px;">${p.name}</strong></td>
+          <td>${p.cpu_percent.toFixed(1)}%</td>
+          <td>${p.memory_percent.toFixed(1)}%</td>
+          <td><span class="${procStatusClass(p.status)}">${p.status}</span></td>
+        </tr>
+      `).join('');
+    }
+
+    // Optimization state sync
+    if (d.optimization) {
+      updateOptimizationUI(d.optimization);
+    }
+  }
+
+  function updateOptimizationUI(opt) {
+    const isOptActive = !!opt.optimization_active;
+    const isSingleNginx = !!opt.nginx_single_worker;
+    const isAdvTuning = !!opt.advanced_tuning_active;
+
+    const optAlert = document.getElementById('usage-low-ram-alert');
+    if (optAlert) {
+      if (opt.is_low_ram && !isOptActive) {
+        optAlert.style.display = 'flex';
+      } else {
+        optAlert.style.display = 'none';
+      }
+    }
+
+    const btnOff = document.getElementById('btn-opt-off');
+    const btnOn = document.getElementById('btn-opt-on');
+    if (btnOff && btnOn) {
+      btnOff.classList.toggle('rect-segment--active', !isOptActive);
+      btnOn.classList.toggle('rect-segment--active', isOptActive);
+    }
+
+    const btnNgxAuto = document.getElementById('btn-ngx-auto');
+    const btnNgxSingle = document.getElementById('btn-ngx-single');
+    if (btnNgxAuto && btnNgxSingle) {
+      btnNgxAuto.classList.toggle('rect-segment--active', !isSingleNginx);
+      btnNgxSingle.classList.toggle('rect-segment--active', isSingleNginx);
+    }
+
+    const btnAdvOff = document.getElementById('btn-adv-off');
+    const btnAdvOn = document.getElementById('btn-adv-on');
+    if (btnAdvOff && btnAdvOn) {
+      btnAdvOff.classList.toggle('rect-segment--active', !isAdvTuning);
+      btnAdvOn.classList.toggle('rect-segment--active', isAdvTuning);
+    }
+  }
+
+  async function fetchStats() {
+    if (isActionPending) {
+      if (polling) pollTimer = setTimeout(fetchStats, INTERVAL);
+      return;
+    }
+
+    try {
+      const data = await panel.get('/api/stats');
+      render(data);
+    } catch (e) {}
+
+    if (polling) {
+      pollTimer = setTimeout(fetchStats, INTERVAL);
+    }
+  }
+
+  function togglePoll() {
+    const btn = document.getElementById('btn-pause-poll');
+    polling = !polling;
+    btn.textContent = polling ? 'Pause' : 'Resume';
+    if (polling) fetchStats();
+  }
+
+  fetchStats();
+</script>
+{% endblock %}

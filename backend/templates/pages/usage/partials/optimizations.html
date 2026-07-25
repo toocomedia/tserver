@@ -1,0 +1,65 @@
+<!-- SERVER OPTIMIZATIONS -->
+<div class="section mb-xl">
+  <div class="section__header">
+    <h3 style="display:flex; align-items:center; gap:8px;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px; height:15px;"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+      Server Optimizations
+    </h3>
+  </div>
+  <div class="section__body">
+    <div style="display: flex; flex-direction: column; gap: 24px; padding-top: 8px;">
+
+      <!-- Control 1: Low-RAM Optimization Mode -->
+      <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap;">
+        <div style="flex: 1; min-width: 240px;">
+          <div style="margin-bottom: 2px;">
+            <strong style="font-size: 14px;">Low-RAM Optimization Mode</strong>
+          </div>
+          <div class="text-small text-muted">zRAM compressed swap (500MB), swappiness (10), PowerDNS cache limits &amp; jemalloc.</div>
+        </div>
+        <div>
+          <div class="rect-segmented" id="group-opt-mode">
+            <button type="button" class="rect-segment rect-segment--active" id="btn-opt-off" onclick="setOptMode(false)">Inactive</button>
+            <button type="button" class="rect-segment" id="btn-opt-on" onclick="setOptMode(true)">Active</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Control 2: Single Nginx Worker Mode -->
+      <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap;">
+        <div style="flex: 1; min-width: 240px;">
+          <div style="margin-bottom: 2px;">
+            <strong style="font-size: 14px;">Single Nginx Worker Mode</strong>
+          </div>
+          <div class="text-small text-muted">Forces Nginx worker_processes to 1. Recommended for 1 CPU core VPS.</div>
+        </div>
+        <div>
+          <div class="rect-segmented" id="group-nginx-worker">
+            <button type="button" class="rect-segment rect-segment--active" id="btn-ngx-auto" onclick="setNginxWorker(false)">Auto</button>
+            <button type="button" class="rect-segment" id="btn-ngx-single" onclick="setNginxWorker(true)">1 Worker</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Control 3: Advanced Server Tuning -->
+      <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap;">
+        <div style="flex: 1; min-width: 240px;">
+          <div style="margin-bottom: 2px;">
+            <strong style="font-size: 14px;">Advanced Server Tuning</strong>
+          </div>
+          <div class="text-small text-muted mb-sm">Smart background service disabling, TCP BBR speed control, and journald log capping.</div>
+          <div class="text-small mt-sm" id="advanced-tuning-checks" style="display:none; line-height:1.4;">
+          </div>
+        </div>
+        <div>
+          <div class="rect-segmented" id="group-advanced-tuning">
+            <button type="button" class="rect-segment rect-segment--active" id="btn-adv-off" onclick="setAdvancedTuning(false)">Inactive</button>
+            <button type="button" class="rect-segment" id="btn-adv-on" onclick="setAdvancedTuning(true)">Active</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</div>

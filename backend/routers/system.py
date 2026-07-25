@@ -451,7 +451,7 @@ async def toggle_advanced_tuning(payload: AdvancedTuningToggleIn):
 @router.get("/usage", response_class=HTMLResponse)
 async def usage_page(request: Request):
     """Render the server usage stats page."""
-    return templates.TemplateResponse("pages/usage.html", {
+    return templates.TemplateResponse("pages/usage/index.html", {
         "request": request,
         "active_page": "usage",
     })

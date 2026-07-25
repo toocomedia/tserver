@@ -47,16 +47,19 @@
             {% endif %}
           </td>
           <td class="col-actions">
-            <div class="d-flex gap-xs justify-end" style="flex-wrap:wrap;">
+            <div class="d-flex gap-xs justify-end" style="flex-wrap:nowrap;">
               <a href="/dns/{{ z.domain.name }}/records?add=1"
                  class="btn btn--primary btn--sm"
+                 title="Add DNS Record"
                  id="btn-add-{{ z.domain.name }}">
-                + Record
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+                Record
               </a>
               <a href="/dns/{{ z.domain.name }}/records"
-                 class="btn btn--dark btn--sm"
+                 class="btn btn--dark btn--sm btn--icon"
+                 title="Manage DNS Zone"
                  id="btn-view-{{ z.domain.name }}">
-                Manage
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
               </a>
             </div>
           </td>

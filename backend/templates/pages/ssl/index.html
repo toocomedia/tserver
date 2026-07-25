@@ -118,19 +118,22 @@
         </td>
 
         <td class="col-actions" style="width:26%;">
-          <div class="d-flex gap-xs justify-end">
+          <div class="d-flex gap-xs justify-end" style="flex-wrap:nowrap;">
             <form method="post" action="/ssl/{{ cert.id }}/renew" style="display:inline;">
               {% include "partials/csrf_field.html" %}
-              <button type="submit" class="btn btn--secondary btn--sm"
+              <button type="submit" class="btn btn--dark btn--sm"
                       id="btn-renew-{{ cert.id }}"
-                      onclick="this.textContent='Renewing…'; this.disabled=true;">
+                      title="Renew Certificate"
+                      onclick="this.disabled=true;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
                 Renew
               </button>
             </form>
-            <button class="btn btn--danger btn--sm"
+            <button class="btn btn--danger btn--sm btn--icon"
                     id="btn-revoke-{{ cert.id }}"
+                    title="Revoke Certificate"
                     onclick="revokeCert({{ cert.id }}, '{{ cert.full_domain }}')">
-              Revoke
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
             </button>
           </div>
         </td>

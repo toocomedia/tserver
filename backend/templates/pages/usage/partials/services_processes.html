@@ -1,0 +1,98 @@
+<!-- STACK SERVICES -->
+<div class="section mb-xl">
+  <div class="section__header">
+    <h3 style="display:flex; align-items:center; gap:8px;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px; height:15px;"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/></svg>
+      Stack Services Resource Consumption
+    </h3>
+  </div>
+  <div class="section__body" style="overflow-x:auto;">
+    <table class="table" id="svc-table" style="min-width:480px;">
+      <colgroup>
+        <col style="width:25%">
+        <col style="width:15%">
+        <col style="width:15%">
+        <col style="width:20%">
+        <col style="width:25%">
+      </colgroup>
+      <thead>
+        <tr>
+          <th>Service</th>
+          <th>Processes</th>
+          <th>CPU %</th>
+          <th>Memory</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="svc-tbody">
+        <tr><td colspan="5" class="text-muted">Loading services diagnostics…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- PLUGINS USAGE -->
+<div class="section mb-xl">
+  <div class="section__header">
+    <h3 style="display:flex; align-items:center; gap:8px;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px; height:15px;"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+      Plugins Resource Consumption
+    </h3>
+  </div>
+  <div class="section__body" style="overflow-x:auto;">
+    <table class="table" id="plugin-usage-table" style="min-width:560px;">
+      <colgroup>
+        <col style="width:30%">
+        <col style="width:15%">
+        <col style="width:15%">
+        <col style="width:20%">
+        <col style="width:20%">
+      </colgroup>
+      <thead>
+        <tr>
+          <th>Plugin</th>
+          <th>Processes</th>
+          <th>CPU %</th>
+          <th>Memory</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="plugin-usage-tbody">
+        <tr><td colspan="5" class="text-muted">Loading plugin metrics…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- TOP PROCESSES -->
+<div class="section mb-xl">
+  <div class="section__header">
+    <h3 style="display:flex; align-items:center; gap:8px;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px; height:15px;"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+      Top Active System Processes
+    </h3>
+  </div>
+  <div class="section__body" style="overflow-x:auto;">
+    <table class="table" id="proc-table" style="min-width:480px;">
+      <colgroup>
+        <col style="width:15%">
+        <col style="width:35%">
+        <col style="width:15%">
+        <col style="width:15%">
+        <col style="width:20%">
+      </colgroup>
+      <thead>
+        <tr>
+          <th>PID</th>
+          <th>Name / Command</th>
+          <th>CPU %</th>
+          <th>MEM %</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="proc-tbody">
+        <tr><td colspan="5" class="text-muted">Loading process table…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
