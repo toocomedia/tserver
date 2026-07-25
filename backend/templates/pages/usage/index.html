@@ -289,64 +289,60 @@
     });
   }
 
-  async function setOptMode(enable) {
+  function performToggle(endpoint, payload, uiUpdateFn, successMsg) {
     if (isActionPending) return;
     isActionPending = true;
     setOptimizationButtonsDisabled(true);
-    try {
-      const res = await panel.post('/api/system/optimization/toggle', { enabled: enable });
-      if (res.success) {
-        toast(`Low-RAM Optimization Mode ${enable ? 'enabled' : 'disabled'}`, 'success');
-      } else {
-        toast(res.detail || 'Failed to toggle optimization mode', 'danger');
+    
+    if (uiUpdateFn) uiUpdateFn();
+    toast('Applying changes... this may take a moment.', 'info');
+    
+    panel.post(endpoint, payload).then(res => {
+      if (res && res.success) {
+        toast(successMsg, 'success');
+      } else if (res && !res.success) {
+        toast(res.detail || 'Failed to apply changes', 'danger');
       }
-    } catch (e) {
-      toast('Server connection failed', 'danger');
-    } finally {
-      isActionPending = false;
-      setOptimizationButtonsDisabled(false);
-      fetchStats();
-    }
+    }).catch(e => {
+      // 502 Bad Gateway / Network Error expected if backend restarts
+      console.log('Connection dropped during toggle (expected if server restarts).');
+    }).finally(() => {
+      // Poll for backend to come back online
+      function checkBackend() {
+        setTimeout(async () => {
+          try {
+            const data = await panel.get('/api/stats');
+            isActionPending = false;
+            setOptimizationButtonsDisabled(false);
+            render(data);
+          } catch (err) {
+            checkBackend();
+          }
+        }, 2000);
+      }
+      checkBackend();
+    });
   }
 
-  async function setNginxWorker(single) {
-    if (isActionPending) return;
-    isActionPending = true;
-    setOptimizationButtonsDisabled(true);
-    try {
-      const res = await panel.post('/api/system/nginx-worker/toggle', { single_worker: single });
-      if (res.success) {
-        toast(`Nginx worker mode set to ${single ? '1 Worker' : 'Auto'}`, 'success');
-      } else {
-        toast(res.detail || 'Failed to update Nginx worker setting', 'danger');
-      }
-    } catch (e) {
-      toast('Server connection failed', 'danger');
-    } finally {
-      isActionPending = false;
-      setOptimizationButtonsDisabled(false);
-      fetchStats();
-    }
+  function setOptMode(enable) {
+    performToggle('/api/system/optimization/toggle', { enabled: enable }, () => {
+      document.getElementById('btn-opt-off').classList.toggle('is-active', !enable);
+      document.getElementById('btn-opt-on').classList.toggle('is-active', enable);
+    }, `Low-RAM Optimization Mode ${enable ? 'enabled' : 'disabled'}`);
   }
 
-  async function setAdvancedTuning(enable) {
-    if (isActionPending) return;
-    isActionPending = true;
-    setOptimizationButtonsDisabled(true);
-    try {
-      const res = await panel.post('/api/system/advanced/toggle', { enabled: enable });
-      if (res.success) {
-        toast(`Advanced Server Tuning ${enable ? 'enabled' : 'disabled'}`, 'success');
-      } else {
-        toast(res.detail || 'Failed to toggle advanced tuning', 'danger');
-      }
-    } catch (e) {
-      toast('Server connection failed', 'danger');
-    } finally {
-      isActionPending = false;
-      setOptimizationButtonsDisabled(false);
-      fetchStats();
-    }
+  function setNginxWorker(single) {
+    performToggle('/api/system/nginx-worker/toggle', { single_worker: single }, () => {
+      document.getElementById('btn-ngx-auto').classList.toggle('is-active', !single);
+      document.getElementById('btn-ngx-single').classList.toggle('is-active', single);
+    }, `Nginx worker mode set to ${single ? '1 Worker' : 'Auto'}`);
+  }
+
+  function setAdvancedTuning(enable) {
+    performToggle('/api/system/advanced/toggle', { enabled: enable }, () => {
+      document.getElementById('btn-adv-off').classList.toggle('is-active', !enable);
+      document.getElementById('btn-adv-on').classList.toggle('is-active', enable);
+    }, `Advanced Server Tuning ${enable ? 'enabled' : 'disabled'}`);
   }
 
   function togglePoll() {
