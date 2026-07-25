@@ -5,12 +5,14 @@ Handles viewing installed plugins, toggling plugins, running install/uninstall s
 import os
 import shutil
 import logging
+import asyncio
 from pathlib import Path
 from urllib.parse import urlencode
 from fastapi import APIRouter, Request, UploadFile, File, Form, Depends
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 
 from plugins.manager import PLUGIN_ID_RE, plugin_manager
+from dependencies import dependency_manager
 from templating import templates
 
 logger = logging.getLogger(__name__)
@@ -20,7 +22,10 @@ router = APIRouter(prefix="/plugins", tags=["plugins"])
 @router.get("/", response_class=HTMLResponse)
 async def plugins_index(request: Request):
     """Plugins Management UI page."""
-    plugins_list = plugin_manager.list_plugins()
+    # Refresh dependency health only for this page. Docker status is cached by
+    # the driver for five seconds, so multiple plugin rows share one fast probe.
+    await asyncio.to_thread(dependency_manager.get_all_statuses)
+    plugins_list = plugin_manager.list_plugins(check_dependencies=True)
     return templates.TemplateResponse("pages/plugins.html", {
         "request": request,
         "active_page": "plugins",

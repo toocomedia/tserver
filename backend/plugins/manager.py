@@ -201,10 +201,14 @@ class PluginManager:
             for plugin_id, plugin in self.plugins.items()
         ]
 
-    def list_plugins(self) -> List[Dict[str, Any]]:
-        """Return registered plugins without file or dependency health probes."""
+    def list_plugins(
+        self,
+        *,
+        check_dependencies: bool = False,
+    ) -> List[Dict[str, Any]]:
+        """Return registered plugins, optionally checking live dependencies."""
         return [
-            self._effective(plugin, check_dependencies=False)
+            self._effective(plugin, check_dependencies=check_dependencies)
             for plugin in self.plugins.values()
         ]
 
@@ -299,11 +303,20 @@ class PluginManager:
             )
         return items
 
-    def get_plugin(self, plugin_id: str) -> Optional[Dict[str, Any]]:
+    def get_plugin(
+        self,
+        plugin_id: str,
+        *,
+        check_dependencies: bool = True,
+    ) -> Optional[Dict[str, Any]]:
         if not self.plugins:
             self.discover_plugins()
         plugin = self.plugins.get(plugin_id)
-        return self._effective(plugin) if plugin else None
+        return (
+            self._effective(plugin, check_dependencies=check_dependencies)
+            if plugin
+            else None
+        )
 
     def get_service(self, plugin_id: str):
         plugin = self.get_plugin(plugin_id)
@@ -465,7 +478,7 @@ class PluginManager:
     async def reconcile_plugins(self) -> None:
         """Refresh active plugin runtimes whose bundled configuration changed."""
         for plugin_id in list(self.plugins):
-            plugin = self.get_plugin(plugin_id)
+            plugin = self.get_plugin(plugin_id, check_dependencies=False)
             if not plugin or plugin.get("effective_status") != "active":
                 continue
             try:

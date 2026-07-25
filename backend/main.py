@@ -67,7 +67,6 @@ async def lifespan(app: FastAPI):
     await component_state_store.initialize(
         plugin_manager.state_components() + dependency_manager.state_components()
     )
-    await asyncio.to_thread(dependency_manager.get_all_statuses, force=True)
     from services import update_service, ssl_auto_renew
     purge_task = asyncio.create_task(_auto_purge_loop())
     update_task = asyncio.create_task(update_service.run_auto_update_loop())
