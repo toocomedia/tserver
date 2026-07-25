@@ -32,8 +32,8 @@
 
           {% if plugin.dependency_status or plugin.manifest_error or (action_error and action_error_plugin_id == plugin.id) %}
             <!-- Info Icon Button -->
-            <button type="button" class="icon-btn info-toggle-btn {% if plugin.effective_status in ['paused', 'invalid'] %}is-expanded{% endif %}"
-              title="View Requirements & Information"
+            <button type="button" class="icon-btn info-toggle-btn {% if plugin.paused_by %}info-toggle-btn--danger{% endif %} {% if plugin.effective_status in ['paused', 'invalid'] %}is-expanded{% endif %}"
+              title="{% if plugin.paused_by %}Missing Requirements — View details{% else %}View Requirements & Information{% endif %}"
               onclick="const card=this.closest('.plugin-card'); const tray=card.querySelector('.card-details-tray'); this.classList.toggle('is-expanded'); tray.classList.toggle('is-hidden');">
               <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
             </button>
@@ -113,10 +113,12 @@
             <span class="tray-label">Required Dependency:</span>
             <div class="tray-req-item">
               <span>{{ dependency.id | title }}</span>
-              {% if dependency.healthy %}
+              {% if dependency.healthy is sameas true %}
                 <span class="tray-badge tray-badge--success">Healthy</span>
-              {% else %}
+              {% elif dependency.healthy is sameas false %}
                 <span class="tray-badge tray-badge--danger">Missing / Unhealthy</span>
+              {% else %}
+                <span class="tray-badge tray-badge--muted">Not checked</span>
               {% endif %}
             </div>
           </div>

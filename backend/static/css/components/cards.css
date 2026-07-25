@@ -380,6 +380,11 @@
   color: #FFFFFF;
 }
 
+.tray-badge--muted {
+  background: var(--color-muted);
+  color: #FFFFFF;
+}
+
 .tray-error-box {
   font-size: 12px;
   color: #FF8080;
@@ -394,6 +399,16 @@
   background: var(--color-accent) !important;
   color: var(--color-neutral) !important;
   border-color: var(--color-accent) !important;
+}
+
+.info-toggle-btn--danger {
+  background: var(--color-danger-btn) !important;
+  color: var(--color-danger-text) !important;
+}
+
+.info-toggle-btn--danger:hover {
+  background: var(--color-danger) !important;
+  color: var(--color-on-solid) !important;
 }
 
 /* Icon Buttons Toolbar */
