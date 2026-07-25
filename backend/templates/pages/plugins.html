@@ -51,7 +51,7 @@
       <div class="list-header-row">
         <div>Extension / Plugin</div><div>Version</div><div>Status</div><div>Description</div><div>Actions</div>
       </div>
-      {% from "partials/resource_list_row.html" import render as render_resource_row %}
+      {% from "partials/resource_list_row.html" import render as render_resource_row with context %}
       {% for plugin in plugins %}
         {% if plugin.effective_status == 'active' %}
           {% set plugin_status_label = 'Active' %}{% set plugin_status_tone = 'success' %}

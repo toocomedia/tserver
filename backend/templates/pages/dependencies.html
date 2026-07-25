@@ -46,7 +46,7 @@
       <div class="list-header-row">
         <div>System Dependency</div><div>Driver</div><div>Status</div><div>Description</div><div>Actions</div>
       </div>
-      {% from "partials/resource_list_row.html" import render as render_resource_row %}
+      {% from "partials/resource_list_row.html" import render as render_resource_row with context %}
       {% for dependency in dependencies %}
         {% if dependency.healthy and dependency.desired_enabled %}
           {% set dependency_status_label = 'Healthy' %}{% set dependency_status_tone = 'success' %}
