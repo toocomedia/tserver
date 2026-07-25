@@ -36,7 +36,7 @@
   background: var(--color-header-bg-bar);
   height: 38px;
   padding: 0 16px;
-  margin-bottom: 0;
+  margin-bottom: 16px;
 }
 .section__header h3, .section__header h2 { 
   font-size: 11px; 
@@ -57,9 +57,9 @@
 .section__body { 
   display: flex;
   flex-direction: column;
-  gap: 0;
+  gap: 16px;
 }
-/* List Header Title Bar (Background Fill Bar - Strict 38px Height) */
+/* List Header Title Bar (Background Fill Bar - Strict 38px Height with 16px Bottom Margin) */
 .list-title-bar {
   background: var(--color-header-bg-bar);
   height: 38px;
@@ -68,6 +68,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  margin-bottom: 16px;
 }
 .list-title-bar h3 {
   font-size: 11px;
