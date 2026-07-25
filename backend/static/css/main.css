@@ -11,6 +11,12 @@
 
 /* PostgreSQL remote access */
 .remote-page, .remote-form { max-width: 1120px; }
+.pg-remote-panel { padding: 32px 40px; }
+.pg-remote-head, .pg-remote-form-head { align-items: flex-start; display: flex; gap: 16px; justify-content: space-between; }
+.pg-remote-head { margin-bottom: 28px; }
+.pg-remote-head h2, .pg-remote-form-head h3 { margin: 0; }
+.pg-remote-head p { color: var(--color-muted); margin: 8px 0 0; }
+.pg-remote-add { max-width: 760px; }
 .remote-split .split-content { min-width: 0; padding: 32px 40px; }
 .remote-content { margin: 0; max-width: 1120px; }
 .remote-title-row { align-items: flex-start; display: flex; gap: 20px; justify-content: space-between; margin-bottom: 36px; }
@@ -48,7 +54,7 @@
 .remote-notice { background: var(--color-surface); color: var(--color-text); margin: 0 0 16px; padding: 12px 14px; }
 .remote-copy { display: flex; gap: 8px; }
 .remote-copy .form-input { min-width: 0; }
-@media (max-width: 700px) { .remote-split .split-content { padding: 24px 16px; } .remote-title-row { align-items: stretch; flex-direction: column; } .remote-choice-row, .remote-grid { grid-template-columns: 1fr; } .remote-actions { justify-content: flex-start; } .remote-inline, .remote-submit { align-items: flex-start; flex-direction: column; } }
+@media (max-width: 700px) { .pg-remote-panel, .remote-split .split-content { padding: 24px 16px; } .pg-remote-head, .pg-remote-form-head, .remote-title-row { align-items: stretch; flex-direction: column; } .remote-choice-row, .remote-grid { grid-template-columns: 1fr; } .remote-actions { justify-content: flex-start; } .remote-inline, .remote-submit { align-items: flex-start; flex-direction: column; } }
 
 /* ============================================================
    DESIGN TOKENS

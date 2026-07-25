@@ -57,6 +57,10 @@ document.querySelectorAll("[data-pg-tab]").forEach(btn => {
   btn.addEventListener("click", () => switchTab(btn.dataset.pgTab));
 });
 
+if (new URLSearchParams(window.location.search).get("tab") === "remote") {
+  switchTab("remote");
+}
+
 // ── Connection URL & Credentials Generator Modal ─────────────────────────
 
 function updateConnectionUrls() {

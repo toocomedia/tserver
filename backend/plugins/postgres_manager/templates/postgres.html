@@ -44,9 +44,9 @@
         Query Runner
       </div>
 
-      <a class="split-sidebar__item" href="/plugins/postgres_manager/remote" style="text-decoration:none;color:inherit;">
+      <div class="split-sidebar__item" data-pg-tab="remote" id="pg-tab-remote">
         Remote Access
-      </a>
+      </div>
     {% else %}
       <div class="split-sidebar__item active">Setup required</div>
     {% endif %}
@@ -93,6 +93,7 @@
       {% include 'partials/_pg_users.html' %}
       {% include 'partials/_pg_system_roles.html' %}
       {% include 'partials/_pg_query.html' %}
+      {% include 'partials/_pg_remote_panel.html' %}
       {% include 'partials/_pg_connection_modal.html' %}
 
 

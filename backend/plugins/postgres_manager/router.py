@@ -54,6 +54,8 @@ async def pg_index(request: Request, db: AsyncSession = Depends(get_db)):
     databases: list[dict] = []
     users: list[dict] = []
     system_roles: list[dict] = []
+    from models.domain import Domain
+    domains = list((await db.scalars(select(Domain).order_by(Domain.name))).all())
     if status["running"]:
         try:
             databases = pg.list_databases()
@@ -74,35 +76,18 @@ async def pg_index(request: Request, db: AsyncSession = Depends(get_db)):
         "users": users,
         "system_roles": system_roles,
         "remote_domains": await postgres_service.list_remote_domains(db),
+        "domains": domains,
     })
 
 
 @router.get("/remote", response_class=HTMLResponse)
 async def pg_remote_list(request: Request, db: AsyncSession = Depends(get_db)):
-    status = postgres_service.get_status()
-    databases: list[dict] = []
-    users: list[dict] = []
-    if status["running"]:
-        try:
-            databases = pg.list_databases()
-            users = pg.list_users()
-        except RuntimeError as exc:
-            logger.warning("PostgreSQL stopped while loading remote access: %s", exc)
-    return templates.TemplateResponse("partials/_pg_remote_list.html", {
-        "request": request, "active_page": "plugins",
-        "endpoints": await postgres_service.list_remote_domains(db),
-        "databases": databases,
-        "users": users,
-    })
+    return RedirectResponse("/plugins/postgres_manager/?tab=remote", status_code=303)
 
 
 @router.get("/remote/new", response_class=HTMLResponse)
 async def pg_remote_new(request: Request, db: AsyncSession = Depends(get_db)):
-    from models.domain import Domain
-    domains = list((await db.scalars(select(Domain).order_by(Domain.name))).all())
-    return templates.TemplateResponse("partials/_pg_remote_add.html", {
-        "request": request, "active_page": "plugins", "domains": domains,
-    })
+    return RedirectResponse("/plugins/postgres_manager/?tab=remote", status_code=303)
 
 
 
