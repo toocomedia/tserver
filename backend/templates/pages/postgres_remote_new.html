@@ -1,14 +1,21 @@
 {% extends "layout.html" %}
 
 {% block title %}Add Remote PostgreSQL Endpoint{% endblock %}
+{% block content_class %}content--flush{% endblock %}
+{% block page_header_wrapper %}{% endblock %}
 {% block page_title %}Add Remote PostgreSQL Endpoint{% endblock %}
 
-{% block topbar_actions %}
-<a href="/plugins/postgres_manager/" class="btn btn--secondary">← Back to PostgreSQL</a>
-{% endblock %}
-
 {% block content %}
-<div class="section" style="max-width:760px;">
+<div style="max-width:920px;padding:var(--space-xl);">
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:var(--space-md);margin-bottom:var(--space-xl);">
+    <div>
+      <div class="text-small text-muted">PostgreSQL Manager / Remote Access</div>
+      <h1 style="margin:var(--space-xs) 0 0;">Add Remote Endpoint</h1>
+    </div>
+    <a href="/plugins/postgres_manager/" class="btn btn--secondary">← Back to PostgreSQL</a>
+  </div>
+
+<div class="section">
   <div class="section__header">
     <div>
       <h2>Add Remote Endpoint</h2>
@@ -56,12 +63,22 @@
       <span class="form-hint">One address or CIDR per line. No public access is enabled without this list.</span>
     </div>
 
-    <div class="alert alert--info mb-lg">Let’s Encrypt HTTP validation requires the hostname to resolve here and port 80 to be reachable.</div>
+    <div class="section" style="margin-top:var(--space-md);">
+      <div class="section__header"><strong>Connection security</strong></div>
+      <div class="section__body" style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-sm) var(--space-lg);">
+        <div><span class="text-muted">PostgreSQL TLS</span><br><strong>Required</strong></div>
+        <div><span class="text-muted">Client SSL mode</span><br><code>verify-full</code></div>
+        <div><span class="text-muted">Certificate</span><br><strong>Let’s Encrypt</strong></div>
+        <div><span class="text-muted">PostgreSQL port</span><br><code>5432</code></div>
+      </div>
+    </div>
+    <div class="alert alert--info mb-lg">The domain is used for the PostgreSQL hostname. Port 80 is only used to issue or renew the Let’s Encrypt certificate; PostgreSQL remains on port 5432.</div>
     <div style="display:flex;gap:var(--space-sm);">
       <button class="btn btn--primary" type="submit" id="remote-submit">Create and Enable Endpoint</button>
       <a class="btn btn--secondary" href="/plugins/postgres_manager/">Cancel</a>
     </div>
   </form>
+</div>
 </div>
 {% endblock %}
 

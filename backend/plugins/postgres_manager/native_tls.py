@@ -138,13 +138,26 @@ async def issue_shared_certificate(hosts: list[str]) -> tuple[str, datetime | No
         raise RuntimeError(f"Let’s Encrypt failed: {result.stderr[-600:]}")
     cert_path = str(CERT_DIR / "fullchain.pem")
     key_path = str(CERT_DIR / "privkey.pem")
-    check = await shell.run(["test", "-f", cert_path])
-    if not check.success:
-        raise RuntimeError("Let’s Encrypt completed but the certificate file is missing.")
-    await shell.run(["chown", "postgres:postgres", cert_path, key_path])
+    cert_check = await shell.run(["test", "-s", cert_path])
+    key_check = await shell.run(["test", "-s", key_path])
+    if not cert_check.success or not key_check.success:
+        missing = []
+        if not cert_check.success:
+            missing.append(cert_path)
+        if not key_check.success:
+            missing.append(key_path)
+        raise RuntimeError(
+            "Let’s Encrypt completed but the certificate material is missing: "
+            + ", ".join(missing)
+        )
+    ownership = await shell.run(["chown", "postgres:postgres", cert_path, key_path])
+    if not ownership.success:
+        raise RuntimeError(f"Could not assign the PostgreSQL certificate files: {ownership.stderr}")
     await shell.run(["chmod", "640", cert_path])
     await shell.run(["chmod", "600", key_path])
     expiry_result = await shell.run(["openssl", "x509", "-enddate", "-noout", "-in", cert_path])
+    if not expiry_result.success:
+        raise RuntimeError("The issued certificate could not be read by OpenSSL.")
     expiry = None
     match = re.search(r"notAfter=(.+)", expiry_result.stdout)
     if match:
