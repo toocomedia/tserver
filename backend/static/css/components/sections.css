@@ -23,7 +23,7 @@
   flex-direction: column;
   border-bottom: none !important; 
   padding: 0;
-  margin-bottom: 36px;
+  margin-bottom: 24px;
   width: 100%;
 }
 .section:last-child {
@@ -34,9 +34,9 @@
   align-items: center; 
   justify-content: space-between; 
   background: var(--color-header-bg-bar);
-  height: 38px;
-  padding: 0 16px;
-  margin-bottom: 16px;
+  min-height: 34px;
+  padding: 6px 12px;
+  margin-bottom: 12px;
 }
 .section__header h3, .section__header h2 { 
   font-size: 11px; 
@@ -47,7 +47,7 @@
   margin: 0;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 .section__header h3 svg, .section__header h2 svg {
   width: 14px;
@@ -57,18 +57,19 @@
 .section__body { 
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
+  padding: 0 12px;
 }
-/* List Header Title Bar (Background Fill Bar - Strict 38px Height with 16px Bottom Margin) */
+/* List Header Title Bar (Background Fill Bar - Matching 12px Padding & 12px Margin) */
 .list-title-bar {
   background: var(--color-header-bg-bar);
-  height: 38px;
-  padding: 0 16px;
+  min-height: 34px;
+  padding: 6px 12px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 .list-title-bar h3 {
   font-size: 11px;
@@ -79,7 +80,7 @@
   margin: 0;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 .list-title-bar h3 svg {
   width: 14px;
@@ -94,10 +95,10 @@
   justify-content: space-between;
   gap: 12px;
   background: var(--color-surface);
-  padding: 10px 14px;
+  padding: 8px 12px;
   flex-wrap: wrap;
   border-bottom: 1px solid var(--color-line);
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 .action-toolbar__search {
   display: flex;
