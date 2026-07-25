@@ -4,21 +4,22 @@
 .form-label { font-size: var(--font-body); font-weight: 700; color: var(--color-text); }
 .form-hint { font-size: var(--font-small); color: var(--color-muted); margin-top: 2px; }
 .form-input, .form-select, .form-control { 
-  height: var(--button-height, 38px); 
-  padding: 0 14px; 
-  border: none !important; 
+  height: 34px; 
+  padding: 0 10px; 
+  border: 1px solid var(--color-line) !important; 
   border-radius: 0 !important; 
-  background: var(--color-surface); 
+  background: var(--color-bg); 
   color: var(--color-text); 
-  font-size: var(--font-body); 
+  font-size: 13px; 
   width: 100%; 
   appearance: none; 
-  transition: background 0.15s ease;
+  transition: border-color 0.15s ease, background 0.15s ease;
   outline: none;
 }
 .form-input:focus, .form-select:focus, .form-control:focus { 
   background: var(--color-bg); 
-  outline: 2px solid var(--color-text) !important; 
+  border-color: var(--color-text) !important;
+  outline: none !important; 
 }
 .form-input--error { outline: 2px solid var(--color-danger) !important; }
 .form-error { font-size: var(--font-small); color: var(--color-danger); font-weight: 600; }
