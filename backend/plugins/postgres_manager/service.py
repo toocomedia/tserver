@@ -343,7 +343,7 @@ class PostgresService:
         return True
 
     def _issue_certbot_ssl(self, full_host: str) -> bool:
-        """Helper to run Certbot webroot challenge."""
+        """Helper to run Certbot webroot challenge and check cert existence via sudo safely."""
         try:
             subprocess.run(
                 ["sudo", "-n", "certbot", "certonly", "--webroot", "-w", "/var/www/acme-challenge",
@@ -353,8 +353,18 @@ class PostgresService:
         except Exception as exc:
             logger.warning("Certbot issue attempt for %s: %s", full_host, exc)
 
-        cert_path = Path(f"/etc/letsencrypt/live/{full_host}/fullchain.pem")
-        return cert_path.exists()
+        if os.name == "nt":
+            return True
+
+        try:
+            res = subprocess.run(
+                ["sudo", "-n", "test", "-f", f"/etc/letsencrypt/live/{full_host}/fullchain.pem"],
+                check=False, timeout=5, shell=False,
+            )
+            return res.returncode == 0
+        except Exception:
+            return False
+
 
     def _write_nginx_stream_conf(self, full_host: str) -> bool:
         """Helper to write Nginx TCP stream proxy configuration file."""
