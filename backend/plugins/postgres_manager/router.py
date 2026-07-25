@@ -250,8 +250,6 @@ async def api_query(body: QueryRequest):
         return JSONResponse({"rows": rows, "count": len(rows)})
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
-
-
 # ---------------------------------------------------------------------------
 # Remote access
 # ---------------------------------------------------------------------------
@@ -271,6 +269,9 @@ async def api_add_remote_domain(body: RemoteConfigRequest, db: AsyncSession = De
         return JSONResponse(result, status_code=201)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
+    except Exception:
+        logger.exception("Could not create PostgreSQL remote endpoint")
+        raise HTTPException(status_code=500, detail="Could not save the remote endpoint. Check panel logs.")
 
 
 @router.delete("/api/remote/domains/{domain}")

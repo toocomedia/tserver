@@ -9,6 +9,36 @@
   src: url('/static/fonts/Onest-Variable.woff2') format('woff2');
 }
 
+/* PostgreSQL remote access */
+.remote-page, .remote-form { max-width: 1120px; }
+.remote-intro { margin-bottom: 36px; }
+.remote-intro p { color: var(--color-muted); margin: 8px 0 0; }
+.remote-back { color: var(--color-muted); font-size: var(--font-small); font-weight: 600; text-decoration: none; }
+.remote-back:hover { color: var(--color-text); }
+.remote-table td { vertical-align: middle; }
+.remote-meta, .remote-error { display: block; color: var(--color-muted); font-size: var(--font-small); margin-top: 4px; }
+.remote-error { color: var(--color-danger); }
+.remote-actions { display: flex; justify-content: flex-end; gap: 8px; white-space: nowrap; }
+.remote-empty { max-width: 520px; padding: 28px 0; }
+.remote-empty h2, .remote-section h2 { font-size: var(--font-h2); margin: 0 0 8px; }
+.remote-empty p { color: var(--color-muted); margin: 0 0 20px; }
+.remote-section { border-top: 1px solid var(--color-line); padding: 28px 0; }
+.remote-section:first-of-type { border-top: 0; padding-top: 0; }
+.remote-choice-row, .remote-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.remote-choice { align-items: flex-start; background: var(--color-surface); cursor: pointer; display: flex; gap: 10px; min-height: 72px; padding: 14px; }
+.remote-choice input { margin-top: 3px; }
+.remote-choice strong, .remote-choice small { display: block; }
+.remote-choice small { color: var(--color-muted); line-height: 1.45; margin-top: 4px; }
+.remote-choice em { color: var(--color-muted); font-size: var(--font-small); font-style: normal; font-weight: 600; }
+.remote-choice--wide { margin-top: 10px; }
+.remote-grid { margin-top: 16px; }
+.remote-grid .form-group, .remote-section > .form-group { margin: 0; }
+.remote-inline { align-items: center; display: flex; gap: 12px; margin-top: 12px; }
+.remote-warning { color: var(--color-warn); font-size: var(--font-small); }
+.remote-submit { align-items: center; display: flex; gap: 16px; padding-top: 4px; }
+.remote-submit .remote-error { margin: 0; }
+@media (max-width: 700px) { .remote-choice-row, .remote-grid { grid-template-columns: 1fr; } .remote-actions { justify-content: flex-start; } .remote-inline, .remote-submit { align-items: flex-start; flex-direction: column; } }
+
 /* ============================================================
    DESIGN TOKENS
    ============================================================ */

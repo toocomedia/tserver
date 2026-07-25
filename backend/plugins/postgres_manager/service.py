@@ -605,7 +605,7 @@ class PostgresService:
             raise ValueError("This hostname is already configured.")
         record = PostgresRemoteDomain(domain_id=domain_id, mode=mode, subdomain=subdomain if managed else None,
             full_domain=host, encryption_enabled=encrypted, allowed_cidrs=",".join(cidrs),
-            dns_status="ready", tls_status="pending" if encrypted else "disabled", postgres_status="pending")
+            nginx_stream=False, dns_status="ready", tls_status="pending" if encrypted else "disabled", postgres_status="pending")
         db.add(record)
         await db.flush()
         try:

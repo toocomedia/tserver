@@ -13,6 +13,9 @@ class PostgresRemoteDomain(Base):
     mode: Mapped[str] = mapped_column(String(16), nullable=False)
     subdomain: Mapped[str | None] = mapped_column(String(63), nullable=True)
     full_domain: Mapped[str] = mapped_column(String(253), unique=True, nullable=False)
+    # Kept for compatibility with v1 endpoint rows. Native PostgreSQL now
+    # owns TLS, but older SQLite tables still require this non-null column.
+    nginx_stream: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     encryption_enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     ssl_active: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     certificate_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
