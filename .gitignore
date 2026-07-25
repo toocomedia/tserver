@@ -34,8 +34,8 @@ temp_*.html
 .agents/
 
 # Documentation & Local Helpers
-docs/
-rules/
+/docs/
+/rules/
 push-to-github.bat
 
 # Node / Build artifacts

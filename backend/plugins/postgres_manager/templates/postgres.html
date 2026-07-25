@@ -58,12 +58,10 @@
         <button class="btn btn--sm" id="pg-btn-restart" data-pg-action="restart"
                 title="Restart PostgreSQL service">Restart</button>
         {% if status.running %}
-        <button class="btn btn--sm" id="pg-btn-stop" data-pg-action="stop"
-                style="background:var(--color-danger-btn);color:var(--color-danger-text);"
+        <button class="btn btn--sm btn--danger" id="pg-btn-stop" data-pg-action="stop"
                 title="Stop PostgreSQL service">Stop</button>
         {% else %}
-        <button class="btn btn--sm" id="pg-btn-start" data-pg-action="start"
-                style="background:var(--color-accent);"
+        <button class="btn btn--sm btn--primary" id="pg-btn-start" data-pg-action="start"
                 title="Start PostgreSQL service">Start</button>
         {% endif %}
       </div>
@@ -91,8 +89,7 @@
           </p>
           <form method="post" action="/plugins/postgres_manager/api/install" id="pg-install-form">
             {% include "partials/csrf_field.html" %}
-            <button type="submit" class="btn" id="pg-install-btn"
-                    style="background:var(--color-accent);color:var(--color-neutral);">
+            <button type="submit" class="btn btn--primary" id="pg-install-btn">
               Install PostgreSQL (~30–60 MB RAM)
             </button>
           </form>

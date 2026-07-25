@@ -4,8 +4,7 @@
   {# Toolbar #}
   <div class="action-toolbar" style="display:flex;align-items:center;justify-content:space-between;">
     <h2 style="font-size:var(--font-h2);margin:0;">Users &amp; Roles</h2>
-    <button class="btn" id="pg-user-create-open" data-action="open-modal" data-modal="pg-modal-create-user"
-            style="background:var(--color-accent);color:var(--color-neutral);">
+    <button class="btn btn--primary" id="pg-user-create-open" data-action="open-modal" data-modal="pg-modal-create-user">
       + Create User
     </button>
   </div>
@@ -85,9 +84,8 @@
                                      margin-top:var(--space-sm);display:none;"></div>
     </div>
     <div class="modal__footer">
-      <button class="btn" data-action="close-modal" data-modal="pg-modal-create-user">Cancel</button>
-      <button class="btn" id="pg-user-create-submit"
-              style="background:var(--color-accent);color:var(--color-neutral);">Create</button>
+      <button class="btn btn--secondary" data-action="close-modal" data-modal="pg-modal-create-user">Cancel</button>
+      <button class="btn btn--primary" id="pg-user-create-submit">Create</button>
     </div>
   </div>
 </div>
@@ -107,11 +105,8 @@
                                    margin-top:var(--space-sm);display:none;"></div>
     </div>
     <div class="modal__footer">
-      <button class="btn" data-action="close-modal" data-modal="pg-modal-change-pw">Cancel</button>
-      <button class="btn" id="pg-pw-submit"
-              style="background:var(--color-neutral-btn);color:var(--color-neutral-text);">
-        Update Password
-      </button>
+      <button class="btn btn--secondary" data-action="close-modal" data-modal="pg-modal-change-pw">Cancel</button>
+      <button class="btn btn--dark" id="pg-pw-submit">Update Password</button>
     </div>
   </div>
 </div>

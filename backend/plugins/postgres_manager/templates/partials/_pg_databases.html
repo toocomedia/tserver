@@ -4,8 +4,7 @@
   {# Toolbar #}
   <div class="action-toolbar" style="display:flex;align-items:center;justify-content:space-between;">
     <h2 style="font-size:var(--font-h2);margin:0;">Databases</h2>
-    <button class="btn" id="pg-db-create-open" data-action="open-modal" data-modal="pg-modal-create-db"
-            style="background:var(--color-accent);color:var(--color-neutral);">
+    <button class="btn btn--primary" id="pg-db-create-open" data-action="open-modal" data-modal="pg-modal-create-db">
       + Create Database
     </button>
   </div>
@@ -93,9 +92,8 @@
                                    margin-top:var(--space-sm);display:none;"></div>
     </div>
     <div class="modal__footer">
-      <button class="btn" data-action="close-modal" data-modal="pg-modal-create-db">Cancel</button>
-      <button class="btn" id="pg-db-create-submit"
-              style="background:var(--color-accent);color:var(--color-neutral);">Create</button>
+      <button class="btn btn--secondary" data-action="close-modal" data-modal="pg-modal-create-db">Cancel</button>
+      <button class="btn btn--primary" id="pg-db-create-submit">Create</button>
     </div>
   </div>
 </div>
