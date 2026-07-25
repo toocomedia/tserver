@@ -3,9 +3,24 @@
 .form-group { display: flex; flex-direction: column; gap: var(--space-xs); }
 .form-label { font-size: var(--font-body); font-weight: 700; color: var(--color-text); }
 .form-hint { font-size: var(--font-small); color: var(--color-muted); margin-top: 2px; }
-.form-input, .form-select { height: var(--button-height); padding: 0 var(--space-sm); border: 1px solid var(--color-line); border-radius: 0; background: var(--color-bg); color: var(--color-text); font-size: var(--font-body); width: 100%; appearance: none; transition: border-color 0.1s; }
-.form-input:focus, .form-select:focus { outline: none; border-color: var(--color-neutral); }
-.form-input--error { border-color: var(--color-danger); }
+.form-input, .form-select, .form-control { 
+  height: var(--button-height, 38px); 
+  padding: 0 14px; 
+  border: none !important; 
+  border-radius: 0 !important; 
+  background: var(--color-surface); 
+  color: var(--color-text); 
+  font-size: var(--font-body); 
+  width: 100%; 
+  appearance: none; 
+  transition: background 0.15s ease;
+  outline: none;
+}
+.form-input:focus, .form-select:focus, .form-control:focus { 
+  background: var(--color-bg); 
+  outline: 2px solid var(--color-text) !important; 
+}
+.form-input--error { outline: 2px solid var(--color-danger) !important; }
 .form-error { font-size: var(--font-small); color: var(--color-danger); font-weight: 600; }
 .form-select-wrap { position: relative; }
 .form-select-wrap::after { content: '▾'; position: absolute; right: var(--space-sm); top: 50%; transform: translateY(-50%); pointer-events: none; color: var(--color-muted); font-size: 12px; }

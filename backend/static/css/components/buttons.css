@@ -1,82 +1,91 @@
-/* buttons.css — Crisp Borders for All Buttons */
+/* buttons.css — Borderless, High-Contrast Alignable Buttons */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  height: 38px;
-  padding: 0 18px;
+  height: var(--button-height, 38px);
+  padding: 0 16px;
+  min-width: var(--button-min-width, 90px);
   font-size: 12px;
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   line-height: normal;
-  border: 1px solid var(--color-line);
+  border: none !important;
+  outline: none;
   border-radius: 0 !important;
   box-shadow: none !important;
-  background: var(--color-bg);
+  background: var(--color-secondary-btn);
   color: var(--color-text);
   cursor: pointer;
   white-space: nowrap;
-  transition: all 0.15s ease;
+  transition: background 0.15s ease, opacity 0.15s ease;
   text-decoration: none;
 }
 .btn:hover {
-  background: var(--color-surface);
-  border-color: var(--color-text);
+  background: var(--color-secondary-hover);
+}
+
+.btn svg {
+  width: 15px;
+  height: 15px;
+  stroke-width: 2.2;
+  flex-shrink: 0;
+  stroke: currentColor;
+  fill: none;
 }
 
 .btn--primary {
-  background: var(--color-accent);
-  color: var(--color-on-accent);
-  border: 1px solid var(--color-accent);
+  background: var(--color-accent) !important;
+  color: #111111 !important;
 }
 .btn--primary:hover {
-  background: var(--color-accent-hover, #B5EB43);
-  border-color: var(--color-accent-hover, #B5EB43);
+  opacity: 0.9;
+}
+
+.btn--dark {
+  background: var(--color-neutral-btn) !important;
+  color: var(--color-neutral-text) !important;
+}
+.btn--dark:hover {
+  opacity: 0.85;
 }
 
 .btn--secondary {
-  background: var(--color-surface);
-  color: var(--color-text);
-  border: 1px solid var(--color-line);
+  background: var(--color-secondary-btn) !important;
+  color: var(--color-text) !important;
 }
 .btn--secondary:hover {
-  background: var(--color-surface-hover);
-  border-color: var(--color-text);
+  background: var(--color-secondary-hover) !important;
 }
 
 .btn--ghost {
-  background: transparent;
-  color: var(--color-muted);
-  border: 1px solid var(--color-line);
+  background: transparent !important;
+  color: var(--color-muted) !important;
+  min-width: auto;
 }
 .btn--ghost:hover, .btn--ghost.active {
-  color: var(--color-text);
-  background: var(--color-surface);
-  border-color: var(--color-text);
+  color: var(--color-text) !important;
+  background: var(--color-surface) !important;
 }
 
 .btn--danger {
-  background: transparent;
-  color: var(--color-danger);
-  border: 1px solid var(--color-danger);
+  background: var(--color-danger-btn) !important;
+  color: var(--color-danger-text) !important;
 }
 .btn--danger:hover {
-  background: var(--color-danger);
-  color: #FFFFFF;
-  border-color: var(--color-danger);
+  background: var(--color-danger) !important;
+  color: #FFFFFF !important;
 }
 
 .btn--warning {
-  background: var(--color-bg);
-  color: var(--color-warn);
-  border: 1px solid var(--color-warn);
+  background: var(--color-surface) !important;
+  color: var(--color-warn) !important;
 }
 .btn--warning:hover {
-  background: var(--color-warn);
-  color: #FFFFFF;
-  border-color: var(--color-warn);
+  background: var(--color-warn) !important;
+  color: #FFFFFF !important;
 }
 
 .btn:disabled, .btn--disabled {
@@ -86,12 +95,24 @@
 }
 
 .btn--sm {
-  height: 32px;
-  padding: 0 14px;
+  height: var(--button-height-sm, 32px);
+  padding: 0 12px;
+  min-width: var(--button-min-width-sm, 70px);
   font-size: 11px;
+}
+.btn--sm svg {
+  width: 13px;
+  height: 13px;
 }
 
 .btn--icon {
-  width: 38px;
+  width: var(--button-height, 38px);
+  min-width: var(--button-height, 38px);
   padding: 0;
 }
+.btn--icon.btn--sm {
+  width: var(--button-height-sm, 32px);
+  min-width: var(--button-height-sm, 32px);
+  padding: 0;
+}
+

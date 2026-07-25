@@ -1,0 +1,21 @@
+{#
+  stat_cards.html — Reusable Dashboard / Overview Stat Card Grid
+  Parameters passed:
+    - stats: List of dicts [{'label': 'CPU', 'value': '14%', 'meta': '4 Cores'}]
+#}
+<div class="stat-grid">
+  {% for s in stats %}
+  <div class="stat-card-box">
+    <div class="stat-card-box__label">
+      <span>{{ s.label }}</span>
+      {% if s.icon %}
+      <span style="display: flex; align-items: center;">{{ s.icon | safe }}</span>
+      {% endif %}
+    </div>
+    <div class="stat-card-box__val">{{ s.value }}</div>
+    {% if s.meta %}
+    <div class="stat-card-box__meta">{{ s.meta }}</div>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>

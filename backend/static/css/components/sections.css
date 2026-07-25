@@ -46,6 +46,98 @@
   flex-direction: column;
   gap: var(--space-md);
 }
+/* List Header Title Bar (Background Fill Bar - No Underline Divider) */
+.list-title-bar {
+  background: var(--color-header-bg-bar);
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.list-title-bar h3 {
+  font-size: var(--font-h3);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.list-title-bar h3 svg {
+  width: 14px;
+  height: 14px;
+  stroke: var(--color-muted);
+}
+
+/* Action Toolbar (Search + Filters + Buttons) */
+.action-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--color-surface);
+  padding: 8px 12px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--color-line);
+}
+.action-toolbar__search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 240px;
+  max-width: 420px;
+}
+.action-toolbar__group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Stat Box Grid (1px Border Box Cards) */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-lg);
+  margin-bottom: var(--space-xl);
+}
+.stat-card-box {
+  background: var(--color-bg);
+  border: 1px solid var(--color-line);
+  padding: var(--space-md) var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.stat-card-box__label {
+  font-size: var(--font-small);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-muted);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.stat-card-box__label svg {
+  width: 14px;
+  height: 14px;
+  stroke: var(--color-muted);
+}
+.stat-card-box__val {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--color-text);
+  line-height: 1;
+}
+.stat-card-box__meta {
+  font-size: var(--font-small);
+  color: var(--color-muted);
+}
+
 /* Info row */
 .info-row { display: flex; align-items: baseline; gap: var(--space-md); padding: var(--space-sm) 0; border-bottom: 1px solid var(--color-line); }
 .info-row:last-child { border-bottom: none; }
@@ -60,3 +152,4 @@
 .ssl-step--run { color: var(--color-text); font-weight: 700; }
 .ssl-step--ok { color: var(--color-accent-2); }
 .ssl-step--fail { color: var(--color-danger); font-weight: 700; }
+

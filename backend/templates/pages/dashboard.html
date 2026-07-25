@@ -18,86 +18,111 @@
   <button class="btn btn--sm btn--primary" id="btn-quick-optimize" onclick="enableOptimizationQuick()" style="white-space: nowrap;">Enable</button>
 </div>
 
-<!-- STAT GRID -->
+<!-- STAT GRID (1px Border Box Cards) -->
 <div class="stat-grid mb-xl">
 
-  <div class="stat-card">
-    <div class="stat-card__label">Domains</div>
-    <div class="stat-card__value" id="stat-domains">{{ domain_count }}</div>
+  <div class="stat-card-box">
+    <div class="stat-card-box__label">
+      <span>Domains</span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zM2 12h20"/></svg>
+    </div>
+    <div class="stat-card-box__val" id="stat-domains">{{ domain_count }}</div>
+    <div class="stat-card-box__meta">Virtual Hosts Configured</div>
   </div>
 
-  <div class="stat-card">
-    <div class="stat-card__label">SSL Certs</div>
-    <div class="stat-card__value" id="stat-certs">{{ cert_count }}</div>
+  <div class="stat-card-box">
+    <div class="stat-card-box__label">
+      <span>SSL Certificates</span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+    </div>
+    <div class="stat-card-box__val" id="stat-certs">{{ cert_count }}</div>
+    <div class="stat-card-box__meta">Let's Encrypt Active</div>
   </div>
 
-  <div class="stat-card">
-    <div class="stat-card__label">Reverse Proxies</div>
-    <div class="stat-card__value" id="stat-proxies">{{ proxy_count }}</div>
+  <div class="stat-card-box">
+    <div class="stat-card-box__label">
+      <span>Reverse Proxies</span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1zM4 22v-7"/></svg>
+    </div>
+    <div class="stat-card-box__val" id="stat-proxies">{{ proxy_count }}</div>
+    <div class="stat-card-box__meta">Active Routing Rules</div>
   </div>
 
-  <div class="stat-card">
-    <div class="stat-card__label">Server IP</div>
-    <div class="stat-card__value" style="font-size:16px; font-weight:700;" id="stat-ip">{{ server_ip }}</div>
+  <div class="stat-card-box">
+    <div class="stat-card-box__label">
+      <span>Server IP</span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+    </div>
+    <div class="stat-card-box__val" style="font-size:16px; font-weight:800;" id="stat-ip">{{ server_ip }}</div>
+    <div class="stat-card-box__meta">Public IP Address</div>
   </div>
 
-  <div class="stat-card">
-    <div class="stat-card__label">Open Errors</div>
-    <div class="stat-card__value" id="stat-errors">
+  <div class="stat-card-box">
+    <div class="stat-card-box__label">
+      <span>Open Errors</span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0zM12 9v4M12 17h.01"/></svg>
+    </div>
+    <div class="stat-card-box__val" id="stat-errors">
       {% if open_errors %}
         <a href="/admin/errors/" style="color:var(--color-danger); text-decoration:none;">{{ open_errors }}</a>
       {% else %}
         0
       {% endif %}
     </div>
+    <div class="stat-card-box__meta">System Log Traps</div>
   </div>
 
 </div>
 
-<!-- SERVICE STATUS -->
-<div class="section-header">
-  <h2>Service Status</h2>
-  <button class="btn btn--ghost btn--sm" id="btn-refresh-status" onclick="refreshStatus()">Refresh</button>
-</div>
+<!-- SERVICE STATUS WITH BACKGROUND TITLE BAR -->
+<div style="border: 1px solid var(--color-line); margin-bottom: var(--space-xl);">
+  {% include "partials/list_title_bar.html" with context %}
+  {% set title = "Core Server Services" %}
+  {% set item_count = None %}
 
-<div class="section mb-xl" id="status-panel">
-  <div class="section__body">
+  <div class="list-title-bar">
+    <h3>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px; height:14px;"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/></svg>
+      Core Server Services
+    </h3>
+    <button class="btn btn--secondary btn--sm" id="btn-refresh-status" onclick="refreshStatus()">Refresh</button>
+  </div>
 
+  <div class="section__body" style="padding: 16px;">
     <div class="info-row">
       <span class="info-row__label">Hostname</span>
       <span class="info-row__value">{{ hostname }}</span>
     </div>
 
     <div class="info-row">
-      <span class="info-row__label">Nginx</span>
+      <span class="info-row__label">Nginx Web Engine</span>
       <span class="info-row__value" id="nginx-status">
         {% if nginx.ok %}
-          <span class="badge badge--ok badge--dot">OK</span>
+          <span class="status-badge-after status-badge-after--active" style="color:var(--color-accent-2); font-weight:800;">ACTIVE</span>
         {% else %}
-          <span class="badge badge--error badge--dot">ERROR</span>
+          <span class="status-badge-after" style="color:var(--color-danger); font-weight:800;">ERROR</span>
           <span class="text-small text-muted" style="margin-left:8px;">{{ nginx.detail }}</span>
         {% endif %}
       </span>
     </div>
 
     <div class="info-row">
-      <span class="info-row__label">PowerDNS</span>
+      <span class="info-row__label">PowerDNS Name Server</span>
       <span class="info-row__value" id="pdns-status">
         {% if powerdns.ok %}
-          <span class="badge badge--ok badge--dot">OK</span>
+          <span class="status-badge-after status-badge-after--active" style="color:var(--color-accent-2); font-weight:800;">ACTIVE</span>
         {% else %}
-          <span class="badge badge--error badge--dot">ERROR</span>
+          <span class="status-badge-after" style="color:var(--color-danger); font-weight:800;">ERROR</span>
           <span class="text-small text-muted" style="margin-left:8px;">{{ powerdns.detail }}</span>
         {% endif %}
       </span>
     </div>
-
   </div>
 </div>
 
-<!-- QUICK LINKS -->
-<div class="section-header">
-  <h2>Quick Actions</h2>
+<!-- QUICK ACTIONS -->
+<div class="list-title-bar" style="margin-bottom: 12px;">
+  <h3>Quick Actions</h3>
 </div>
 
 <div class="d-flex gap-sm flex-wrap">

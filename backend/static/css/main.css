@@ -15,7 +15,8 @@
 :root {
   /* Colors */
   --color-bg:         #FFFFFF;
-  --color-surface:    #F5F6F5;
+  --color-surface:    #F4F5F2;
+  --color-header-bg-bar: #E8EAE4;
   --color-sidebar:    #0B0C0B;
   --color-sidebar-text: #FFFFFF;
   --color-sidebar-hover: #FFFFFF;
@@ -23,13 +24,21 @@
   --color-sidebar-bg-hover: rgba(255,255,255,0.05);
   --color-text:       #0F1720;
   --color-muted:      #6B6F6A;
-  --color-line:       #E6E6DF;
+  --color-line:       #E2E4DC;
   --color-accent:     #C7F464;
   --color-accent-2:   #A8E04A;
   --color-neutral:    #111111;
   --color-danger:     #DC2626;
   --color-warn:       #F59E0B;
   --color-icon:       #DDEDE0;
+
+  /* Button Fills (No Borders, High Contrast) */
+  --color-neutral-btn:   #111111;
+  --color-neutral-text:  #FFFFFF;
+  --color-secondary-btn: #E4E6E0;
+  --color-secondary-hover:#D6D9D0;
+  --color-danger-btn:    #FEE2E2;
+  --color-danger-text:   #991B1B;
   
   /* Components */
   --color-on-solid:   #FFFFFF;
@@ -48,15 +57,18 @@
   /* Typography */
   --font-h1:    24px;
   --font-h2:    20px;
-  --font-h3:    16px;
+  --font-h3:    12px;
   --font-body:  14px;
-  --font-small: 12px;
+  --font-small: 11px;
 
   /* Sizes */
   --sidebar-width:     260px;
   --sidebar-collapsed: 72px;
   --topbar-height:     56px;
-  --button-height:     36px;
+  --button-height:     38px;
+  --button-height-sm:  32px;
+  --button-min-width:  90px;
+  --button-min-width-sm: 70px;
   --page-gutter:       16px;
   --content-gap:       16px;
   --max-content-width: 1200px;
@@ -69,6 +81,8 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+  border-radius: 0 !important;
+  box-shadow: none !important;
 }
 
 html, body {
@@ -107,16 +121,16 @@ h1 {
 
 h2 {
   font-size: var(--font-h2);
-  font-weight: 700;
+  font-weight: 800;
   line-height: 1.1;
   color: var(--color-text);
 }
 
 h3 {
   font-size: var(--font-h3);
-  font-weight: 700;
+  font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   color: var(--color-text);
 }
 
@@ -155,7 +169,8 @@ p {
    ============================================================ */
 [data-theme="dark"] {
   --color-bg:         #0F1720;
-  --color-surface:    #1A2430;
+  --color-surface:    #141D27;
+  --color-header-bg-bar: #1C2735;
   --color-sidebar:    var(--color-bg); /* Match page background in dark mode */
   --color-sidebar-text: var(--color-muted);
   --color-sidebar-hover: var(--color-text);
@@ -163,15 +178,23 @@ p {
   --color-sidebar-bg-hover: var(--color-surface);
   --color-text:       #EAECEF;
   --color-muted:      #9AA0A6;
-  --color-line:       #2A3441;
+  --color-line:       #273240;
   
   /* Keep accents the same, or dim slightly */
   --color-accent:     #C7F464; 
   --color-accent-2:   #A8E04A;
   --color-neutral:    #EAECEF; 
   --color-danger:     #EF4444; 
-  --color-warn:       #FBBF24; /* Slightly lighter orange for dark mode */
+  --color-warn:       #FBBF24; 
   --color-icon:       #6B7280; 
+
+  /* Button Fills (Dark Mode) */
+  --color-neutral-btn:   #EAECEF;
+  --color-neutral-text:  #0F1720;
+  --color-secondary-btn: #222E3C;
+  --color-secondary-hover:#2B3B4E;
+  --color-danger-btn:    #450A0A;
+  --color-danger-text:   #FCA5A5;
 
   /* Components */
   --color-on-solid:   #FFFFFF; 
@@ -183,15 +206,16 @@ p {
 
 [data-theme="amoled"] {
   --color-bg:         #000000;
-  --color-surface:    #111111;
+  --color-surface:    #0A0A0A;
+  --color-header-bg-bar: #161616;
   --color-sidebar:    #000000;
   --color-sidebar-text: var(--color-muted);
   --color-sidebar-hover: var(--color-text);
   --color-sidebar-border: var(--color-line);
   --color-sidebar-bg-hover: var(--color-surface);
   --color-text:       #EAECEF;
-  --color-muted:      #9AA0A6;
-  --color-line:       #333333;
+  --color-muted:      #888888;
+  --color-line:       #222222;
   
   /* Keep accents the same */
   --color-accent:     #C7F464; 
@@ -200,6 +224,14 @@ p {
   --color-danger:     #EF4444; 
   --color-warn:       #FBBF24;
   --color-icon:       #6B7280; 
+
+  /* Button Fills (AMOLED) */
+  --color-neutral-btn:   #EAECEF;
+  --color-neutral-text:  #000000;
+  --color-secondary-btn: #1E1E1E;
+  --color-secondary-hover:#2A2A2A;
+  --color-danger-btn:    #350A0A;
+  --color-danger-text:   #FCA5A5;
 
   /* Components */
   --color-on-solid:   #FFFFFF; 
