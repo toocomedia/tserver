@@ -115,31 +115,30 @@
           <div class="d-flex gap-xs justify-end" style="flex-wrap:nowrap;">
             {% if not p.ssl_enabled %}
             <a href="/ssl/issue?full_domain={{ p.full_domain }}"
-               class="btn btn--primary btn--sm"
+               class="btn btn--secondary btn--sm"
                title="Issue SSL"
                id="btn-ssl-{{ p.id }}">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
               + SSL
             </a>
             {% endif %}
 
-            <button class="btn btn--dark btn--sm btn--icon"
+            <button class="btn btn--secondary btn--sm"
                     id="btn-cache-{{ p.id }}"
                     data-proxy-id="{{ p.id }}"
                     data-cache-enabled="{{ '1' if item.cache_enabled else '0' }}"
                     data-cache-ttl="{{ p.cache_ttl_minutes }}"
                     data-cache-auto="{{ p.cache_auto_clear_hours }}"
                     title="Cache Settings">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+              Cache
             </button>
 
-            <button class="btn btn--danger btn--sm btn--icon"
+            <button class="btn btn--danger btn--sm"
                     id="btn-del-{{ p.id }}"
                     data-proxy-id="{{ p.id }}"
                     data-full-domain="{{ p.full_domain }}"
                     data-dns-managed="{{ '1' if item.dns_managed else '0' }}"
                     title="Delete Proxy">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+              Delete
             </button>
           </div>
         </td>

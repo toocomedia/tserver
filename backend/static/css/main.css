@@ -56,10 +56,10 @@
 
   /* Typography */
   --font-h1:    24px;
-  --font-h2:    20px;
-  --font-h3:    12px;
+  --font-h2:    18px;
+  --font-h3:    11px;
   --font-body:  14px;
-  --font-small: 11px;
+  --font-small: 12px;
 
   /* Sizes */
   --sidebar-width:     260px;
@@ -92,7 +92,7 @@ html, body {
   color: var(--color-text);
   background: var(--color-bg);
   -webkit-font-smoothing: antialiased;
-  line-height: 1.4;
+  line-height: 1.5;
 }
 
 a {
@@ -114,30 +114,30 @@ button, input, select, textarea {
    ============================================================ */
 h1 {
   font-size: var(--font-h1);
-  font-weight: 600;
-  line-height: 1.1;
+  font-weight: 700;
+  line-height: 1.2;
   color: var(--color-text);
 }
 
 h2 {
   font-size: var(--font-h2);
-  font-weight: 600;
-  line-height: 1.1;
+  font-weight: 700;
+  line-height: 1.2;
   color: var(--color-text);
 }
 
 h3 {
   font-size: var(--font-h3);
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
   color: var(--color-text);
 }
 
 p {
   font-size: var(--font-body);
   color: var(--color-text);
-  line-height: 1.4;
+  line-height: 1.5;
 }
 
 .text-muted {
@@ -146,6 +146,7 @@ p {
 
 .text-small {
   font-size: var(--font-small);
+  font-weight: 600;
 }
 
 .text-danger {
