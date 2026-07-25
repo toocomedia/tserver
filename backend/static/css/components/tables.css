@@ -10,7 +10,7 @@
 .table .col-cb { width: 40px; text-align: center; }
 .table .col-actions { width: 150px; text-align: right; }
 .table .col-status { width: 120px; }
-.table-title { font-size: 13px; font-weight: 600; color: var(--color-text); }
+.table-title { font-size: 14px; font-weight: 700; color: var(--color-text); }
 .justify-end { justify-content: flex-end; }
 /* Cache Settings Row */
 .cache-settings-row td { padding: 0; background: var(--color-surface); border-bottom: 1px solid var(--color-line); }

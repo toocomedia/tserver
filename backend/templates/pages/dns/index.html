@@ -9,9 +9,18 @@
 
 {% block content %}
 
-<div class="alert alert--info mb-lg" id="dns-help">
-  Pick a zone, then add <strong>custom DNS records</strong> (A, CNAME, TXT, NS, …) or apply a template.
-  Each zone is created when you add a domain.
+<!-- Action Toolbar (Search & Filter) -->
+<div class="action-toolbar mb-md">
+  <div class="action-toolbar__search">
+    <input type="text" id="dns-search-input" class="form-control" placeholder="Search DNS zones..." onkeyup="filterDnsTable()">
+  </div>
+  <div class="action-toolbar__group">
+    <select id="dns-status-filter" class="form-control" style="width: 140px;" onchange="filterDnsTable()">
+      <option value="all">All Zones</option>
+      <option value="active">Active Zones</option>
+      <option value="missing">Missing Zones</option>
+    </select>
+  </div>
 </div>
 
 {% if zones %}
@@ -33,7 +42,7 @@
       </thead>
       <tbody>
         {% for z in zones %}
-        <tr>
+        <tr class="dns-row-item">
           <td class="table-title">{{ z.domain.name }}</td>
           <td>
             <span style="font-weight:700;">{{ z.record_count }}</span>
@@ -75,4 +84,32 @@
 </div>
 {% endif %}
 
+{% endblock %}
+
+{% block scripts %}
+<script>
+function filterDnsTable() {
+  const query = document.getElementById('dns-search-input').value.toLowerCase().trim();
+  const filter = document.getElementById('dns-status-filter').value;
+  const rows = document.querySelectorAll('.dns-row-item');
+
+  rows.forEach(row => {
+    const text = row.textContent.toLowerCase();
+    const matchesSearch = !query || text.includes(query);
+    
+    let matchesFilter = true;
+    if (filter === 'active') {
+      matchesFilter = row.innerText.includes('ACTIVE');
+    } else if (filter === 'missing') {
+      matchesFilter = row.innerText.includes('MISSING');
+    }
+
+    if (matchesSearch && matchesFilter) {
+      row.style.display = '';
+    } else {
+      row.style.display = 'none';
+    }
+  });
+}
+</script>
 {% endblock %}
