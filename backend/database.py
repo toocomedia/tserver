@@ -63,6 +63,29 @@ def _migrate_sync(sync_conn) -> None:
     """Idempotent SQLite migrations for existing panel DBs."""
     tables = set(inspect(sync_conn).get_table_names())
 
+    # --- postgres_remote_domains: v2 remote-access fields ---
+    # This table existed before the v2 model. create_all() never adds columns
+    # to an existing SQLite table, so upgrade each field explicitly.
+    if "postgres_remote_domains" in tables:
+        cols = _column_names(sync_conn, "postgres_remote_domains")
+        remote_columns = {
+            "encryption_enabled": "BOOLEAN DEFAULT 1 NOT NULL",
+            "certificate_name": "VARCHAR(255)",
+            "certificate_expiry": "DATETIME",
+            "allowed_cidrs": "TEXT DEFAULT '0.0.0.0/0' NOT NULL",
+            "dns_status": "VARCHAR(16) DEFAULT 'ready' NOT NULL",
+            "tls_status": "VARCHAR(16) DEFAULT 'pending' NOT NULL",
+            "postgres_status": "VARCHAR(16) DEFAULT 'pending' NOT NULL",
+            "enabled": "BOOLEAN DEFAULT 0 NOT NULL",
+            "last_error": "TEXT",
+        }
+        for col, ddl in remote_columns.items():
+            if col not in cols:
+                logger.info("Migrating postgres_remote_domains: add %s", col)
+                sync_conn.execute(text(
+                    f"ALTER TABLE postgres_remote_domains ADD COLUMN {col} {ddl}"
+                ))
+
     # --- reverse_proxies: dns_managed + nullable domain_id ---
     if "reverse_proxies" in tables:
         cols = _column_names(sync_conn, "reverse_proxies")
