@@ -34,40 +34,51 @@
   align-items: center; 
   justify-content: space-between; 
   background: var(--color-header-bg-bar);
-  padding: 10px 14px;
-  margin-bottom: var(--space-md);
+  height: 38px;
+  padding: 0 16px;
+  margin-bottom: 0;
 }
 .section__header h3, .section__header h2 { 
-  font-size: var(--font-h3); 
-  font-weight: 800; 
+  font-size: 11px; 
+  font-weight: 700; 
   text-transform: uppercase; 
-  letter-spacing: 0.08em; 
+  letter-spacing: 0.06em; 
+  color: var(--color-muted);
   margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.section__header h3 svg, .section__header h2 svg {
+  width: 14px;
+  height: 14px;
+  stroke: var(--color-muted);
 }
 .section__body { 
   display: flex;
   flex-direction: column;
-  gap: var(--space-xs);
+  gap: 0;
 }
-/* List Header Title Bar (Background Fill Bar - No Underline Divider) */
+/* List Header Title Bar (Background Fill Bar - Strict 38px Height) */
 .list-title-bar {
   background: var(--color-header-bg-bar);
-  padding: 10px 16px;
+  height: 38px;
+  padding: 0 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
 }
 .list-title-bar h3 {
-  font-size: var(--font-h3);
-  font-weight: 800;
+  font-size: 11px;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--color-text);
+  letter-spacing: 0.06em;
+  color: var(--color-muted);
   margin: 0;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 .list-title-bar h3 svg {
   width: 14px;

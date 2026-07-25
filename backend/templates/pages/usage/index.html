@@ -294,6 +294,60 @@
     }
   }
 
+  async function setOptMode(enable) {
+    if (isActionPending) return;
+    isActionPending = true;
+    try {
+      const res = await panel.post('/api/system/optimization/toggle', { enabled: enable });
+      if (res.success) {
+        toast(`Low-RAM Optimization Mode ${enable ? 'enabled' : 'disabled'}`, 'success');
+      } else {
+        toast(res.detail || 'Failed to toggle optimization mode', 'danger');
+      }
+    } catch (e) {
+      toast('Server connection failed', 'danger');
+    } finally {
+      isActionPending = false;
+      fetchStats();
+    }
+  }
+
+  async function setNginxWorker(single) {
+    if (isActionPending) return;
+    isActionPending = true;
+    try {
+      const res = await panel.post('/api/system/nginx-worker/toggle', { single_worker: single });
+      if (res.success) {
+        toast(`Nginx worker mode set to ${single ? '1 Worker' : 'Auto'}`, 'success');
+      } else {
+        toast(res.detail || 'Failed to update Nginx worker setting', 'danger');
+      }
+    } catch (e) {
+      toast('Server connection failed', 'danger');
+    } finally {
+      isActionPending = false;
+      fetchStats();
+    }
+  }
+
+  async function setAdvancedTuning(enable) {
+    if (isActionPending) return;
+    isActionPending = true;
+    try {
+      const res = await panel.post('/api/system/advanced/toggle', { enabled: enable });
+      if (res.success) {
+        toast(`Advanced Server Tuning ${enable ? 'enabled' : 'disabled'}`, 'success');
+      } else {
+        toast(res.detail || 'Failed to toggle advanced tuning', 'danger');
+      }
+    } catch (e) {
+      toast('Server connection failed', 'danger');
+    } finally {
+      isActionPending = false;
+      fetchStats();
+    }
+  }
+
   function togglePoll() {
     const btn = document.getElementById('btn-pause-poll');
     polling = !polling;

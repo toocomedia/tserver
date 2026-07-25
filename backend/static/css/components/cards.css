@@ -88,6 +88,7 @@
 .dependency-card {
   border: 1px solid var(--color-line);
   background: var(--color-bg);
+  box-shadow: none !important;
   display: flex;
   flex-direction: column;
   position: relative;
