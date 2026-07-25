@@ -222,18 +222,20 @@
       `).join('') : '<tr><td colspan="5" class="text-muted">No active plugins running.</td></tr>';
     }
 
-    // Top processes
-    if (d.top_processes) {
+    // Top processes table
+    if (d.processes) {
       const procTbody = document.getElementById('proc-tbody');
-      procTbody.innerHTML = d.top_processes.map(p => `
-        <tr>
-          <td><span class="text-small text-muted">${p.pid}</span></td>
-          <td><strong style="font-size:13px;">${p.name}</strong></td>
-          <td>${p.cpu_percent.toFixed(1)}%</td>
-          <td>${p.memory_percent.toFixed(1)}%</td>
-          <td><span class="${procStatusClass(p.status)}">${p.status}</span></td>
-        </tr>
-      `).join('');
+      if (procTbody) {
+        procTbody.innerHTML = d.processes.map(p => `
+          <tr>
+            <td><span class="text-small text-muted">${p.pid}</span></td>
+            <td><strong style="font-size:13px; color:var(--color-text);">${p.name}</strong></td>
+            <td>${typeof p.cpu === 'number' ? p.cpu.toFixed(1) : p.cpu}%</td>
+            <td>${typeof p.mem === 'number' ? p.mem.toFixed(1) : p.mem}%</td>
+            <td><span class="${procStatusClass(p.status)}">${p.status}</span></td>
+          </tr>
+        `).join('');
+      }
     }
 
     // Optimization state sync
