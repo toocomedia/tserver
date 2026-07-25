@@ -1,12 +1,12 @@
 {# _pg_connection_modal.html — Connection URL & Credentials Generator Modal #}
 <div class="modal-backdrop" id="pg-modal-connection" data-no-backdrop-close="true" style="display:none;" aria-modal="true" role="dialog">
 
-  <div class="modal" style="max-width:560px;">
+  <div class="modal" style="max-width:580px;">
     <div class="modal__header">
-      <h2 style="font-size:var(--font-h2);margin:0;">Connection Info &amp; URLs</h2>
+      <h2 style="font-size:var(--font-h2);margin:0;font-weight:700;">Connection Info &amp; URLs</h2>
       <button class="btn btn--icon btn--sm btn--ghost" data-action="close-modal" data-modal="pg-modal-connection" aria-label="Close">✕</button>
     </div>
-    <div class="modal__body" style="display:flex;flex-direction:column;gap:var(--space-md);">
+    <div class="modal__body" style="display:flex;flex-direction:column;gap:16px;">
       
       <!-- Target Database (Readonly) -->
       <div class="form-group">
@@ -15,7 +15,7 @@
       </div>
 
       <!-- Controls Row: User + Mode -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-md);">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
         <div class="form-group">
           <label class="form-label" for="pg-conn-user-select">Username</label>
           <div class="form-select-wrap">
@@ -36,33 +36,34 @@
             <select id="pg-conn-mode-select" class="form-select">
               <option value="127.0.0.1">Local VPS (127.0.0.1)</option>
               {% for rd in remote_domains if rd.enabled %}
-                <option value="{{ rd.domain }}" data-sslmode="{{ 'verify-full' if rd.encryption_enabled else 'disable' }}">Remote {{ 'SSL' if rd.encryption_enabled else 'plain' }} ({{ rd.domain }})</option>
+                <option value="{{ rd.domain }}" data-sslmode="{{ 'verify-full' if rd.encryption_enabled else 'disable' }}">
+                  Remote {{ 'SSL' if rd.encryption_enabled else 'Plain' }} ({{ rd.domain }})
+                </option>
               {% endfor %}
               {% if not (remote_domains | selectattr('enabled') | list) %}
-                <option value="" disabled>No remote endpoint configured</option>
+                <option value="" disabled>No active remote endpoint</option>
               {% endif %}
             </select>
           </div>
         </div>
-
       </div>
 
       <!-- Password Input -->
       <div class="form-group">
         <label class="form-label" for="pg-conn-password-input">Password</label>
-        <div style="display:flex;gap:var(--space-xs);">
-          <input type="password" id="pg-conn-password-input" class="form-input" placeholder="Enter password to reveal complete URLs" style="flex:1;">
+        <div style="display:flex;gap:6px;">
+          <input type="password" id="pg-conn-password-input" class="form-input" placeholder="Enter password to generate full connection string" style="flex:1;">
           <button class="btn btn--secondary btn--sm" id="pg-conn-toggle-pw-btn" type="button">Show</button>
         </div>
       </div>
 
-      <div style="border-top:1px solid var(--color-line);margin:var(--space-xs) 0;"></div>
+      <div style="border-top:1px solid var(--color-line);margin:4px 0;"></div>
 
       <!-- Format 1: Standard Connection URI -->
       <div class="form-group">
         <label class="form-label" for="pg-conn-uri">Standard Connection URI</label>
-        <div style="display:flex;gap:var(--space-xs);">
-          <input type="text" id="pg-conn-uri" class="form-input" readonly style="font-family:monospace;font-size:12px;background:var(--color-surface);flex:1;">
+        <div style="display:flex;gap:6px;">
+          <input type="text" id="pg-conn-uri" class="form-input" readonly style="font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:12px;background:var(--color-surface);flex:1;">
           <button class="btn btn--secondary btn--sm" data-copy-target="pg-conn-uri">Copy</button>
         </div>
       </div>
@@ -70,18 +71,18 @@
       <!-- Format 2: Environment Variable (.env) -->
       <div class="form-group">
         <label class="form-label" for="pg-conn-env">Environment Variable (.env / Prisma / Drizzle)</label>
-        <div style="display:flex;gap:var(--space-xs);">
-          <input type="text" id="pg-conn-env" class="form-input" readonly style="font-family:monospace;font-size:12px;background:var(--color-surface);flex:1;">
+        <div style="display:flex;gap:6px;">
+          <input type="text" id="pg-conn-env" class="form-input" readonly style="font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:12px;background:var(--color-surface);flex:1;">
           <button class="btn btn--secondary btn--sm" data-copy-target="pg-conn-env">Copy</button>
         </div>
       </div>
 
       <!-- Format 3: Individual Credential Breakdown -->
-      <div style="padding:var(--space-md);background:var(--color-surface);border:1px solid var(--color-line);display:grid;grid-template-columns:1fr 1fr;gap:var(--space-xs) var(--space-md);font-size:var(--font-small);">
-        <div><strong style="color:var(--color-muted);">Host:</strong> <span id="pg-conn-host-val">127.0.0.1</span></div>
-        <div><strong style="color:var(--color-muted);">Port:</strong> <span id="pg-conn-port-val">5432</span></div>
-        <div><strong style="color:var(--color-muted);">Database:</strong> <span id="pg-conn-db-val">—</span></div>
-        <div><strong style="color:var(--color-muted);">User:</strong> <span id="pg-conn-user-val">—</span></div>
+      <div style="padding:14px;background:var(--color-surface);border:1px solid var(--color-line);display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;font-size:13px;">
+        <div><strong style="color:var(--color-muted);">Host:</strong> <span id="pg-conn-host-val" class="remote-chip">127.0.0.1</span></div>
+        <div><strong style="color:var(--color-muted);">Port:</strong> <span id="pg-conn-port-val" class="remote-chip">5432</span></div>
+        <div><strong style="color:var(--color-muted);">Database:</strong> <span id="pg-conn-db-val" class="remote-chip">—</span></div>
+        <div><strong style="color:var(--color-muted);">User:</strong> <span id="pg-conn-user-val" class="remote-chip">—</span></div>
       </div>
 
     </div>

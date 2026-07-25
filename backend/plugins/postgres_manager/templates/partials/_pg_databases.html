@@ -1,11 +1,20 @@
-{# _pg_databases.html — Databases tab panel #}
+{# _pg_databases.html — Databases Tab Panel #}
 <div id="pg-panel-databases" class="pg-panel">
 
   {# Toolbar #}
-  <div class="action-toolbar" style="display:flex;align-items:center;justify-content:space-between;">
-    <h2 style="font-size:var(--font-h2);margin:0;">Databases</h2>
+  <div class="action-toolbar">
+    <div style="display:flex;align-items:center;gap:12px;">
+      <h2 style="font-size:var(--font-h2);margin:0;font-weight:700;">Databases</h2>
+      {% if databases %}
+      <span class="status-badge status-badge--muted">{{ databases|length }} total</span>
+      {% endif %}
+    </div>
     <button class="btn btn--primary" id="pg-db-create-open" data-action="open-modal" data-modal="pg-modal-create-db">
-      + Create Database
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+        <line x1="12" y1="5" x2="12" y2="19"></line>
+        <line x1="5" y1="12" x2="19" y2="12"></line>
+      </svg>
+      Create Database
     </button>
   </div>
 
@@ -15,47 +24,52 @@
     <table class="table" id="pg-db-table">
       <thead>
         <tr>
-          <th>Name</th>
+          <th>Database Name</th>
           <th>Owner</th>
           <th>Encoding</th>
           <th>Size</th>
           <th>Tables</th>
-          <th></th>
+          <th style="text-align:right;">Actions</th>
         </tr>
       </thead>
       <tbody id="pg-db-tbody">
         {% for db in databases %}
         <tr data-db="{{ db.name }}">
           <td>
-            <button class="btn btn--sm" data-action="view-tables" data-db="{{ db.name }}"
-                    id="pg-db-view-{{ db.name }}" title="Browse tables in {{ db.name }}">
+            <button class="btn btn--sm btn--ghost" data-action="view-tables" data-db="{{ db.name }}"
+                    id="pg-db-view-{{ db.name }}" title="Browse tables in {{ db.name }}"
+                    style="font-weight:700;color:var(--color-text);padding:0 4px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" style="margin-right:4px;">
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+              </svg>
               {{ db.name }}
             </button>
           </td>
           <td style="color:var(--color-muted);">{{ db.owner }}</td>
-          <td style="color:var(--color-muted);">{{ db.encoding }}</td>
-          <td style="color:var(--color-muted);">{{ db.size }}</td>
+          <td><span class="remote-chip" style="font-size:11px;">{{ db.encoding }}</span></td>
+          <td><span class="status-badge status-badge--muted">{{ db.size }}</span></td>
           <td id="pg-db-tables-{{ db.name }}" style="color:var(--color-muted);">—</td>
-          <td style="text-align:right;display:flex;gap:var(--space-xs);justify-content:flex-end;">
-            <button class="btn btn--sm btn--secondary" data-action="open-connection-modal" data-db="{{ db.name }}" data-owner="{{ db.owner }}"
-                    id="pg-db-conn-{{ db.name }}" title="Generate Connection URL &amp; credentials for {{ db.name }}">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
-                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
-              </svg>
-              Connection Info
-            </button>
-            <button class="btn btn--icon btn--sm" data-action="delete-db" data-db="{{ db.name }}"
-                    id="pg-db-del-{{ db.name }}" title="Drop database {{ db.name }}"
-                    aria-label="Drop database {{ db.name }}">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-                   stroke="currentColor" stroke-width="2" aria-hidden="true">
-                <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>
-                <path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/>
-              </svg>
-            </button>
+          <td style="text-align:right;">
+            <div style="display:flex;gap:6px;justify-content:flex-end;align-items:center;">
+              <button class="btn btn--sm btn--secondary" data-action="open-connection-modal" data-db="{{ db.name }}" data-owner="{{ db.owner }}"
+                      id="pg-db-conn-{{ db.name }}" title="Connection URL &amp; credentials for {{ db.name }}">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                  <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+                </svg>
+                Connection Info
+              </button>
+              <button class="btn btn--icon btn--sm btn--danger" data-action="delete-db" data-db="{{ db.name }}"
+                      id="pg-db-del-{{ db.name }}" title="Drop database {{ db.name }}"
+                      aria-label="Drop database {{ db.name }}">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>
+                  <path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/>
+                </svg>
+              </button>
+            </div>
           </td>
-
         </tr>
         {% endfor %}
       </tbody>
@@ -68,14 +82,16 @@
   {% endif %}
 
   {# Tables drawer (shown when a DB row is clicked) #}
-  <div id="pg-tables-drawer" style="display:none;margin-top:var(--space-xl);">
-    <h3 style="font-size:var(--font-h3);text-transform:uppercase;
-               letter-spacing:.06em;margin-bottom:var(--space-md);">
-      Tables in <span id="pg-tables-db-name"></span>
-    </h3>
-    <div class="table-wrap">
+  <div id="pg-tables-drawer" class="panel" style="display:none;margin-top:24px;">
+    <div class="panel__header" style="display:flex;align-items:center;justify-content:space-between;">
+      <h3 style="font-size:var(--font-h3);margin:0;">
+        Tables in <span id="pg-tables-db-name" style="color:var(--color-accent-2);"></span>
+      </h3>
+      <button type="button" class="btn btn--icon btn--sm btn--ghost" id="pg-tables-close-btn" aria-label="Close drawer">✕</button>
+    </div>
+    <div class="table-wrap" style="margin-bottom:0;border:none;">
       <table class="table">
-        <thead><tr><th>Table</th><th>Rows (est.)</th><th>Size</th></tr></thead>
+        <thead><tr><th>Table Name</th><th>Rows (est.)</th><th>Size</th></tr></thead>
         <tbody id="pg-tables-tbody"></tbody>
       </table>
     </div>
@@ -86,10 +102,10 @@
 <div class="modal-backdrop" id="pg-modal-create-db" style="display:none;" aria-modal="true" role="dialog">
   <div class="modal">
     <div class="modal__header">
-      <h2 style="font-size:var(--font-h2);margin:0;">Create Database</h2>
+      <h2>Create Database</h2>
       <button class="btn btn--icon btn--sm btn--ghost" data-action="close-modal" data-modal="pg-modal-create-db" aria-label="Close">✕</button>
     </div>
-    <div class="modal__body" style="display:flex;flex-direction:column;gap:var(--space-md);">
+    <div class="modal__body" style="display:flex;flex-direction:column;gap:16px;">
       
       <div class="form-group">
         <label class="form-label" for="pg-new-db-name">Database Name</label>
@@ -99,14 +115,14 @@
 
       <div class="form-group">
         <label class="form-label">Database Owner</label>
-        <div style="display:flex;gap:var(--space-lg);margin-top:var(--space-xs);">
-          <label class="form-check" style="font-size:var(--font-body);">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px;">
+          <label class="remote-choice" style="padding:10px 12px;min-height:auto;">
             <input type="radio" name="pg-owner-mode" value="existing" id="pg-owner-mode-existing" checked>
-            <span>Use Existing User</span>
+            <span style="font-size:13px;font-weight:600;">Existing User</span>
           </label>
-          <label class="form-check" style="font-size:var(--font-body);">
+          <label class="remote-choice" style="padding:10px 12px;min-height:auto;">
             <input type="radio" name="pg-owner-mode" value="new" id="pg-owner-mode-new">
-            <span>+ Create New User</span>
+            <span style="font-size:13px;font-weight:600;">+ Create New User</span>
           </label>
         </div>
       </div>
@@ -126,8 +142,8 @@
         </div>
       </div>
 
-      <!-- Option 2: New User Form (shown when "+ Create New User" is selected) -->
-      <div id="pg-owner-new-wrap" style="display:none;flex-direction:column;gap:var(--space-md);padding:var(--space-md);background:var(--color-surface);border:1px solid var(--color-line);">
+      <!-- Option 2: New User Form -->
+      <div id="pg-owner-new-wrap" style="display:none;flex-direction:column;gap:14px;padding:16px;background:var(--color-surface);border:1px solid var(--color-line);">
         <div class="form-group">
           <label class="form-label" for="pg-new-owner-username">New Username</label>
           <input type="text" id="pg-new-owner-username" class="form-input" placeholder="app_user" autocomplete="off" spellcheck="false">
@@ -141,7 +157,6 @@
           <label class="form-label" for="pg-new-owner-password-confirm">Confirm New User Password</label>
           <input type="password" id="pg-new-owner-password-confirm" class="form-input" placeholder="••••••••">
         </div>
-
       </div>
 
       <div id="pg-db-error" class="form-error" style="display:none;"></div>
@@ -152,4 +167,3 @@
     </div>
   </div>
 </div>
-
