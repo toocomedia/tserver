@@ -170,12 +170,23 @@ class PostgresService:
             return None
 
     def _get_ram_mb(self, pid: int | None) -> float:
-        if pid is None or not _PSUTIL:
+        if pid is None:
             return 0.0
+        if _PSUTIL and _psutil is not None:
+            try:
+                return round(_psutil.Process(pid).memory_info().rss / 1_048_576, 1)
+            except Exception:
+                pass
         try:
-            return round(_psutil.Process(pid).memory_info().rss / 1_048_576, 1)
+            res = subprocess.run(
+                ["ps", "-o", "rss=", "-p", str(pid)],
+                capture_output=True, text=True, timeout=5, shell=False,
+            )
+            rss_kb = float(res.stdout.strip() or 0)
+            return round(rss_kb / 1024.0, 1)
         except Exception:
             return 0.0
+
 
     def _get_cpu_percent(self, pid: int | None) -> float:
         if pid is None or not _PSUTIL:

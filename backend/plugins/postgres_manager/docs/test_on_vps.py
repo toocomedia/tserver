@@ -91,11 +91,13 @@ def check_psutil():
         import psutil
         return True, f"psutil {psutil.__version__}"
     except ImportError:
-        return False, "psutil not installed (pip install psutil)"
+        ps_path = shutil.which("ps")
+        if ps_path:
+            return True, "psutil not in system python (using ps fallback)"
+        return False, "psutil and ps CLI both missing"
 
 
 def check_ram():
-    import psutil
     res = subprocess.run(
         ["pgrep", "-x", "postgres"], capture_output=True, text=True, timeout=5,
     )
@@ -103,8 +105,19 @@ def check_ram():
     if not pids:
         return False, "postgres process not found"
     pid = int(pids[0])
-    mb = round(psutil.Process(pid).memory_info().rss / 1_048_576, 1)
-    return True, f"{mb} MB (PID {pid})"
+    try:
+        import psutil
+        mb = round(psutil.Process(pid).memory_info().rss / 1_048_576, 1)
+        return True, f"{mb} MB (PID {pid} via psutil)"
+    except ImportError:
+        ps_res = subprocess.run(
+            ["ps", "-o", "rss=", "-p", str(pid)],
+            capture_output=True, text=True, timeout=5,
+        )
+        rss_kb = float(ps_res.stdout.strip() or 0)
+        mb = round(rss_kb / 1024.0, 1)
+        return True, f"{mb} MB (PID {pid} via ps CLI)"
+
 
 
 def check_plugin_json():
