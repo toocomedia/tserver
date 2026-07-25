@@ -1,5 +1,5 @@
 <!-- plugin_card.html partial (Strict 180px Layout + Icon Buttons + Absolute Overlay Info Popover) -->
-<div class="plugin-card">
+<div class="plugin-card plugin-requirements-host">
   <div class="plugin-card__top">
     <div class="plugin-card__cover">
       <img src="/plugins/assets/{{ plugin.id }}/icon.png" alt="{{ plugin.name }} icon" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='block';">
@@ -31,11 +31,10 @@
           </div>
 
           {% if plugin.dependency_status or plugin.manifest_error or (action_error and action_error_plugin_id == plugin.id) %}
-            <!-- Info Icon Button -->
-            <button type="button" class="icon-btn info-toggle-btn {% if plugin.paused_by %}info-toggle-btn--danger{% endif %} {% if plugin.effective_status in ['paused', 'invalid'] %}is-expanded{% endif %}"
+            <button type="button" class="btn btn--secondary btn--sm requirements-info-btn {% if plugin.paused_by %}requirements-info-btn--danger{% endif %}"
               title="{% if plugin.paused_by %}Missing Requirements — View details{% else %}View Requirements & Information{% endif %}"
               onclick="const card=this.closest('.plugin-card'); const tray=card.querySelector('.card-details-tray'); this.classList.toggle('is-expanded'); tray.classList.toggle('is-hidden');">
-              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+              More info
             </button>
           {% endif %}
         </div>
@@ -98,46 +97,6 @@
 
   <!-- ABSOLUTE OVERLAY POPUP TRAY (ZERO CARD RESIZING) -->
   {% if plugin.dependency_status or plugin.manifest_error or (action_error and action_error_plugin_id == plugin.id) %}
-  <div class="card-details-tray {% if plugin.effective_status not in ['paused', 'invalid'] %}is-hidden{% endif %}">
-    <div class="tray-header">
-      <span class="tray-title">Requirements & Information</span>
-      <button type="button" class="tray-close-btn" title="Close"
-        onclick="const card=this.closest('.plugin-card'); card.querySelector('.card-details-tray').classList.add('is-hidden'); card.querySelector('.info-toggle-btn')?.classList.remove('is-expanded');">
-        <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-      </button>
-    </div>
-    <div class="tray-content">
-      {% if plugin.dependency_status %}
-        {% for dependency in plugin.dependency_status %}
-          <div class="tray-section">
-            <span class="tray-label">Required Dependency:</span>
-            <div class="tray-req-item">
-              <span>{{ dependency.id | title }}</span>
-              {% if dependency.healthy is sameas true %}
-                <span class="tray-badge tray-badge--success">Healthy</span>
-              {% elif dependency.healthy is sameas false %}
-                <span class="tray-badge tray-badge--danger">Missing / Unhealthy</span>
-              {% else %}
-                <span class="tray-badge tray-badge--muted">Not checked</span>
-              {% endif %}
-            </div>
-          </div>
-          {% if dependency.healthy is sameas false %}
-            <div class="tray-error-box">
-              ⚠️ {% if dependency.id == "docker" %}Docker daemon is not available.{% else %}{{ dependency.id | title }} is not available.{% endif %}
-              <a href="/dependencies/{{ dependency.id }}" style="color:inherit; text-decoration:underline; margin-left:6px;">View Dependency</a>
-            </div>
-          {% endif %}
-        {% endfor %}
-      {% endif %}
-
-      {% if action_error and action_error_plugin_id == plugin.id and not plugin.paused_by %}
-        <div class="tray-error-box">⚠️ {{ action_error }}</div>
-      {% endif %}
-      {% if plugin.manifest_error %}
-        <div class="tray-error-box">⚠️ {{ plugin.manifest_error }}</div>
-      {% endif %}
-    </div>
-  </div>
+  {% include "partials/plugin_requirements_overlay.html" %}
   {% endif %}
 </div>

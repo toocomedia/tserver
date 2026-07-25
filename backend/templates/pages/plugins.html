@@ -14,7 +14,7 @@
     </button>
     <button type="button" class="layout-switcher__btn" id="btn-plugins-compact" onclick="setPluginsLayout('compact')">
       <svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"></rect></svg>
-      Compact 1:1
+      Compact
     </button>
     <button type="button" class="layout-switcher__btn" id="btn-plugins-list" onclick="setPluginsLayout('list')">
       <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
@@ -22,7 +22,7 @@
     </button>
   </div>
 
-  <button class="btn btn--primary btn--sm" onclick="openModal('upload-plugin-modal')">
+  <button class="btn btn--primary" onclick="openModal('upload-plugin-modal')">
     + Upload Plugin (.zip)
   </button>
 </div>
@@ -75,7 +75,7 @@
       </div>
 
       {% for plugin in plugins %}
-      <div class="list-item-row">
+      <div class="list-item-row plugin-requirements-host">
         <div class="list-col-main">
           <div class="list-col-thumb">
             <img src="/plugins/assets/{{ plugin.id }}/icon.png" alt="{{ plugin.name }} icon" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='block';">
@@ -97,6 +97,13 @@
         </div>
         <div class="list-col-desc">{{ plugin.description }}</div>
         <div class="list-col-actions">
+          {% if plugin.dependency_status or plugin.manifest_error or (action_error and action_error_plugin_id == plugin.id) %}
+            <button type="button" class="btn btn--secondary btn--sm requirements-info-btn {% if plugin.paused_by %}requirements-info-btn--danger{% endif %}"
+              title="{% if plugin.paused_by %}Missing Requirements — View details{% else %}View Requirements & Information{% endif %}"
+              onclick="const host=this.closest('.plugin-requirements-host'); this.classList.toggle('is-expanded'); host.querySelector('.card-details-tray').classList.toggle('is-hidden');">
+              More info
+            </button>
+          {% endif %}
           {% if plugin.route_prefix and plugin.effective_status == 'active' %}
             <a href="{{ plugin.route_prefix }}" class="btn btn--secondary btn--sm">Manage</a>
           {% endif %}
@@ -107,6 +114,9 @@
             <button type="submit" class="btn btn--ghost btn--sm">{% if plugin.enabled %}Disable{% else %}Enable{% endif %}</button>
           </form>
         </div>
+        {% if plugin.dependency_status or plugin.manifest_error or (action_error and action_error_plugin_id == plugin.id) %}
+          {% include "partials/plugin_requirements_overlay.html" %}
+        {% endif %}
       </div>
       {% else %}
       <div style="padding: 2rem; text-align: center; color: var(--color-muted);">No plugins available.</div>

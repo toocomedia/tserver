@@ -93,6 +93,32 @@
   cursor: not-allowed;
 }
 
+@keyframes button-spinner {
+  to { transform: rotate(360deg); }
+}
+
+.btn.is-loading,
+.icon-btn.is-loading {
+  pointer-events: none;
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.btn.is-loading::before,
+.icon-btn.is-loading::before {
+  content: "";
+  width: 13px;
+  height: 13px;
+  flex: 0 0 13px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50% !important;
+  animation: button-spinner 0.7s linear infinite;
+}
+
+.btn.is-loading > svg,
+.icon-btn.is-loading > svg { display: none; }
+
 .btn--sm {
   height: var(--button-height-sm, 30px);
   padding: 0 10px;

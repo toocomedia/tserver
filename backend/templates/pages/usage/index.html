@@ -289,7 +289,10 @@
     ids.forEach(id => {
       const group = document.getElementById(id);
       if (group) {
-        group.querySelectorAll('button').forEach(b => b.disabled = disabled);
+        group.querySelectorAll('button').forEach(b => {
+          b.disabled = disabled;
+          if (!disabled) b.classList.remove('is-loading');
+        });
       }
     });
   }
@@ -356,7 +359,9 @@
   }
 
   document.addEventListener('click', (event) => {
-    const action = event.target.closest('[data-optimization-action]')?.dataset.optimizationAction;
+    const button = event.target.closest('[data-optimization-action]');
+    const action = button?.dataset.optimizationAction;
+    if (button) button.classList.add('is-loading');
     if (action === 'ram-off') setOptMode(false);
     if (action === 'ram-on') setOptMode(true);
     if (action === 'nginx-auto') setNginxWorker(false);

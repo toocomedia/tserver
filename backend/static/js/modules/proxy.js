@@ -166,6 +166,7 @@ function initDeleteButtons() {
         (btn.getAttribute("data-dns-managed") === "0" ? "." : ", and DNS."),
         async () => {
           btn.disabled = true;
+          btn.classList.add("is-loading");
           const origHtml = btn.innerHTML;
           btn.innerHTML = `Deleting...`;
           try {
@@ -201,6 +202,7 @@ function initDeleteButtons() {
                 alert(errorMsg);
               }
               btn.disabled = false;
+              btn.classList.remove("is-loading");
               btn.innerHTML = origHtml;
             }
           } catch (err) {
@@ -209,6 +211,7 @@ function initDeleteButtons() {
               toast("Network error while deleting reverse proxy.", "danger");
             }
             btn.disabled = false;
+            btn.classList.remove("is-loading");
             btn.innerHTML = origHtml;
           }
         }
@@ -278,6 +281,7 @@ async function saveCacheSettings(proxyId, btn) {
 
   btn.textContent = "Saving…";
   btn.disabled = true;
+  btn.classList.add("is-loading");
 
   try {
     const body = new URLSearchParams({
@@ -319,6 +323,7 @@ async function saveCacheSettings(proxyId, btn) {
   } finally {
     btn.textContent = "Save";
     btn.disabled = false;
+    btn.classList.remove("is-loading");
   }
 }
 
@@ -328,6 +333,7 @@ async function purgeCache(proxyId, btn) {
 
   btn.textContent = "Purging…";
   btn.disabled = true;
+  btn.classList.add("is-loading");
 
   try {
     const headers =
@@ -352,6 +358,7 @@ async function purgeCache(proxyId, btn) {
   } finally {
     btn.textContent = "Purge Cache";
     btn.disabled = false;
+    btn.classList.remove("is-loading");
   }
 }
 

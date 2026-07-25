@@ -268,17 +268,20 @@
 /* ABSOLUTE POPUP OVERLAY TRAY (ZERO CARD RESIZING) */
 .card-details-tray {
   position: absolute;
-  top: 0;
+  top: auto;
   left: 0;
   right: 0;
   bottom: 0;
+  max-height: 78%;
   z-index: 30;
   background: var(--color-sidebar);
   color: #FFFFFF;
   padding: 16px 20px;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: flex-start;
+  gap: 8px;
+  overflow-y: auto;
   transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.22s ease;
   transform: translateY(0);
   opacity: 1;
@@ -289,6 +292,30 @@
   transform: translateY(100%);
   opacity: 0;
   pointer-events: none;
+}
+
+.list-item-row .card-details-tray {
+  top: 0;
+  bottom: 0;
+  max-height: none;
+  padding: var(--space-sm) var(--space-lg);
+  flex-direction: row;
+  align-items: center;
+}
+
+.list-item-row .card-details-tray .tray-header {
+  min-width: 180px;
+  margin: 0 var(--space-lg) 0 0;
+  padding: 0 var(--space-lg) 0 0;
+  border-bottom: none;
+  border-right: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.list-item-row .card-details-tray .tray-content {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-lg);
+  overflow: auto;
 }
 
 .tray-header {
@@ -395,20 +422,26 @@
   font-weight: 600;
 }
 
-.info-toggle-btn.is-expanded {
+.requirements-info-btn.is-expanded {
   background: var(--color-accent) !important;
   color: var(--color-neutral) !important;
   border-color: var(--color-accent) !important;
 }
 
-.info-toggle-btn--danger {
+.requirements-info-btn--danger {
   background: var(--color-danger-btn) !important;
   color: var(--color-danger-text) !important;
 }
 
-.info-toggle-btn--danger:hover {
+.requirements-info-btn--danger:hover {
   background: var(--color-danger) !important;
   color: var(--color-on-solid) !important;
+}
+
+.requirements-info-btn.is-expanded,
+.requirements-info-btn--danger.is-expanded {
+  background: var(--color-neutral-btn) !important;
+  color: var(--color-neutral-text) !important;
 }
 
 /* Icon Buttons Toolbar */

@@ -1,0 +1,35 @@
+<div class="card-details-tray is-hidden">
+  <div class="tray-header">
+    <span class="tray-title">Requirements &amp; Information</span>
+    <button type="button" class="tray-close-btn" title="Close"
+      onclick="const host=this.closest('.plugin-requirements-host'); host.querySelector('.card-details-tray').classList.add('is-hidden'); host.querySelector('.requirements-info-btn')?.classList.remove('is-expanded');">
+      <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+    </button>
+  </div>
+  <div class="tray-content">
+    {% if plugin.dependency_status %}
+      {% for dependency in plugin.dependency_status %}
+        <div class="tray-section">
+          <span class="tray-label">Required Dependency:</span>
+          <div class="tray-req-item">
+            <span>{{ dependency.id | title }}</span>
+            {% if dependency.healthy is sameas true %}
+              <span class="tray-badge tray-badge--success">Healthy</span>
+            {% elif dependency.healthy is sameas false %}
+              <span class="tray-badge tray-badge--danger">Missing / Unhealthy</span>
+            {% else %}
+              <span class="tray-badge tray-badge--muted">Not checked</span>
+            {% endif %}
+          </div>
+        </div>
+      {% endfor %}
+    {% endif %}
+
+    {% if action_error and action_error_plugin_id == plugin.id and not plugin.paused_by %}
+      <div class="tray-error-box">⚠️ {{ action_error }}</div>
+    {% endif %}
+    {% if plugin.manifest_error %}
+      <div class="tray-error-box">⚠️ {{ plugin.manifest_error }}</div>
+    {% endif %}
+  </div>
+</div>

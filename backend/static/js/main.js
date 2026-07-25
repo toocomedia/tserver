@@ -168,6 +168,14 @@ document.addEventListener("click", (e) => {
   }
 });
 
+document.addEventListener("submit", (e) => {
+  const button = e.submitter;
+  if (!button || button.dataset.noLoading === "true") return;
+  button.classList.add("is-loading");
+  button.setAttribute("aria-busy", "true");
+  button.disabled = true;
+});
+
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") {
     document.querySelectorAll(".modal-backdrop:not(.hidden)").forEach((m) =>
