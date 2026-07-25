@@ -5,58 +5,59 @@
     <h2 style="font-size:var(--font-h2);margin:0;">Query Runner</h2>
   </div>
 
-  {# SELECT-only warning #}
+  {# SELECT-only warning alert #}
   <div style="display:flex;align-items:center;gap:var(--space-sm);
               margin-bottom:var(--space-lg);padding:var(--space-sm) var(--space-md);
-              background:var(--color-surface);border-left:3px solid var(--color-warn);">
+              background:var(--color-surface);border-left:3px solid var(--color-warn);border-top:1px solid var(--color-line);border-right:1px solid var(--color-line);border-bottom:1px solid var(--color-line);">
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
          stroke="var(--color-warn)" stroke-width="2" aria-hidden="true">
       <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
       <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
     </svg>
     <span style="font-size:var(--font-small);color:var(--color-muted);">
-      Only <strong>SELECT</strong> statements are permitted. Queries run inside a read-only transaction.
+      Only <strong>SELECT</strong> statements are permitted. Queries execute in a safe read-only transaction.
     </span>
   </div>
 
-  {# Controls row #}
-  <div style="display:flex;gap:var(--space-md);align-items:flex-end;margin-bottom:var(--space-md);">
-    <div style="flex:0 0 220px;">
-      <label for="pg-query-db">Database</label>
-      <select id="pg-query-db" class="input">
-        {% for db in databases %}
-          <option value="{{ db.name }}">{{ db.name }}</option>
-        {% endfor %}
-        {% if not databases %}
-          <option value="" disabled>No databases available</option>
-        {% endif %}
-      </select>
+  {# Form controls grid #}
+  <div style="display:flex;flex-direction:column;gap:var(--space-md);margin-bottom:var(--space-lg);">
+    <div style="display:flex;gap:var(--space-md);align-items:flex-end;flex-wrap:wrap;">
+      <div class="form-group" style="flex:0 0 240px;">
+        <label class="form-label" for="pg-query-db">Target Database</label>
+        <div class="form-select-wrap">
+          <select id="pg-query-db" class="form-select">
+            {% for db in databases %}
+              <option value="{{ db.name }}">{{ db.name }}</option>
+            {% endfor %}
+            {% if not databases %}
+              <option value="" disabled>No databases available</option>
+            {% endif %}
+          </select>
+        </div>
+      </div>
+      <div class="form-actions" style="padding-top:0;">
+        <button class="btn btn--primary" id="pg-query-run">Run Query</button>
+        <button class="btn btn--secondary" id="pg-query-clear">Clear</button>
+      </div>
     </div>
-    <button class="btn btn--primary" id="pg-query-run">
-      Run Query
-    </button>
-    <button class="btn btn--secondary" id="pg-query-clear">
-      Clear
-    </button>
+
+    <div class="form-group">
+      <label class="form-label" for="pg-query-sql">SQL Statement</label>
+      <textarea id="pg-query-sql" class="form-input" rows="6"
+                style="font-family:monospace,Consolas,Courier,monospace;font-size:var(--font-small);height:auto;padding:var(--space-sm);resize:vertical;"
+                placeholder="SELECT * FROM my_table LIMIT 50;"></textarea>
+      <span class="form-hint">Enter your SQL query (max 4 000 characters).</span>
+    </div>
   </div>
 
-  {# SQL textarea #}
-  <label for="pg-query-sql">SQL</label>
-  <textarea id="pg-query-sql" class="input" rows="6"
-            style="font-family:monospace;font-size:var(--font-small);
-                   resize:vertical;width:100%;box-sizing:border-box;"
-            placeholder="SELECT * FROM my_table LIMIT 50;"></textarea>
+  {# Error display #}
+  <div id="pg-query-error" class="form-error" style="display:none;margin-bottom:var(--space-md);"></div>
 
-  {# Error / loading state #}
-  <div id="pg-query-error" style="color:var(--color-danger);font-size:var(--font-small);
-                                  margin-top:var(--space-sm);display:none;"></div>
-
-  {# Results #}
-  <div id="pg-query-results" style="margin-top:var(--space-xl);display:none;">
-    <div style="display:flex;align-items:center;justify-content:space-between;
-                margin-bottom:var(--space-md);">
+  {# Results section #}
+  <div id="pg-query-results" style="display:none;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-md);">
       <h3 style="font-size:var(--font-h3);text-transform:uppercase;letter-spacing:.06em;margin:0;">
-        Results
+        Query Results
       </h3>
       <span id="pg-query-count" style="font-size:var(--font-small);color:var(--color-muted);"></span>
     </div>
@@ -69,8 +70,7 @@
   </div>
 
   {# Empty state when query returns no rows #}
-  <div id="pg-query-empty" style="display:none;padding:var(--space-xl);
-                                  text-align:center;color:var(--color-muted);">
-    Query returned 0 rows.
+  <div id="pg-query-empty" style="display:none;padding:var(--space-xl);text-align:center;color:var(--color-muted);">
+    Query executed successfully (0 rows returned).
   </div>
 </div>

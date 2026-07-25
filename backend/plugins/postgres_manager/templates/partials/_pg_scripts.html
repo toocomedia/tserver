@@ -130,10 +130,18 @@ if (dbSubmit) {
     setLoading(dbSubmit, true);
     try {
       if (isNewUser) {
-        const username = document.getElementById("pg-new-owner-username").value.trim();
-        const password = document.getElementById("pg-new-owner-password").value;
+        const username  = document.getElementById("pg-new-owner-username").value.trim();
+        const password  = document.getElementById("pg-new-owner-password").value;
+        const confirmEl = document.getElementById("pg-new-owner-password-confirm");
+        const confirmPw = confirmEl ? confirmEl.value : "";
         if (!username || !password) {
           errEl.textContent = "New username and password are required.";
+          errEl.style.display = "";
+          setLoading(dbSubmit, false);
+          return;
+        }
+        if (password !== confirmPw) {
+          errEl.textContent = "Passwords do not match.";
           errEl.style.display = "";
           setLoading(dbSubmit, false);
           return;
@@ -209,15 +217,20 @@ document.addEventListener("click", async e => {
 const userSubmit = document.getElementById("pg-user-create-submit");
 if (userSubmit) {
   userSubmit.addEventListener("click", async () => {
-    const name     = document.getElementById("pg-new-user-name").value.trim();
-    const password = document.getElementById("pg-new-user-pw").value;
-    const errEl    = document.getElementById("pg-user-error");
+    const name      = document.getElementById("pg-new-user-name").value.trim();
+    const password  = document.getElementById("pg-new-user-pw").value;
+    const confirmEl = document.getElementById("pg-new-user-pw-confirm");
+    const confirmPw = confirmEl ? confirmEl.value : "";
+    const errEl     = document.getElementById("pg-user-error");
     errEl.style.display = "none";
     if (!name || !password) { errEl.textContent = "Username and password are required."; errEl.style.display = ""; return; }
+    if (password !== confirmPw) { errEl.textContent = "Passwords do not match."; errEl.style.display = ""; return; }
+    if (password.length < 8) { errEl.textContent = "Password must be at least 8 characters."; errEl.style.display = ""; return; }
     setLoading(userSubmit, true);
     try {
       await apiFetch("/users", { method: "POST", body: JSON.stringify({ name, password }) });
       showToast(`User '${name}' created.`);
+
       closeModal("pg-modal-create-user");
       location.reload();
     } catch (err) {
