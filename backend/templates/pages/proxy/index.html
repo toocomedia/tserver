@@ -80,34 +80,34 @@
         </td>
 
         <td>
-          <span class="badge badge--neutral">{{ p.protocol | upper }}</span>
+          <span class="status-badge status-badge--muted">{{ p.protocol | upper }}</span>
         </td>
 
         <td>
           {% if p.ssl_enabled %}
-            <span class="badge badge--ok badge--dot">SSL</span>
+            <span class="status-badge status-badge--success">SSL</span>
           {% else %}
-            <span class="badge badge--neutral badge--dot">HTTP</span>
+            <span class="status-badge status-badge--muted">HTTP</span>
           {% endif %}
         </td>
 
         <td>
           {% if item.dns_status == 'external' %}
-            <span class="badge badge--neutral badge--dot">External</span>
+            <span class="status-badge status-badge--muted">External</span>
           {% elif item.dns_ok %}
-            <span class="badge badge--ok badge--dot">Active</span>
+            <span class="status-badge status-badge--success">Active</span>
           {% else %}
-            <span class="badge badge--error badge--dot">Missing</span>
+            <span class="status-badge status-badge--danger">Missing</span>
           {% endif %}
         </td>
 
         <td>
           {% if item.cache_enabled %}
-            <span class="badge badge--ok badge--dot" id="cache-badge-{{ p.id }}">
+            <span class="status-badge status-badge--success" id="cache-badge-{{ p.id }}">
               ON{% if item.cache_size_mb > 0 %} · {{ item.cache_size_mb }}MB{% endif %}
             </span>
           {% else %}
-            <span class="badge badge--neutral badge--dot" id="cache-badge-{{ p.id }}">OFF</span>
+            <span class="status-badge status-badge--muted" id="cache-badge-{{ p.id }}">OFF</span>
           {% endif %}
         </td>
 

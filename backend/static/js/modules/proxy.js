@@ -304,8 +304,8 @@ async function saveCacheSettings(proxyId, btn) {
       if (msg) msg.textContent = "✓ Saved";
       if (badge) {
         badge.className = enabled
-          ? "badge badge--ok badge--dot"
-          : "badge badge--neutral badge--dot";
+          ? "status-badge status-badge--success"
+          : "status-badge status-badge--muted";
         badge.textContent = enabled
           ? `ON${data.cache_size_mb > 0 ? " · " + data.cache_size_mb + "MB" : ""}`
           : "OFF";
@@ -340,7 +340,7 @@ async function purgeCache(proxyId, btn) {
 
     if (data.ok) {
       if (msg) msg.textContent = data.message;
-      if (badge && badge.classList.contains("badge--ok")) {
+      if (badge && badge.classList.contains("status-badge--success")) {
         // Update size display
         badge.textContent = "ON · 0MB";
       }

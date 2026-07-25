@@ -217,18 +217,18 @@
 
     // Optimization state sync
     if (d.optimization) {
-      updateOptimizationUI(d.optimization);
+      updateOptimizationUI(d.optimization, d.ram);
     }
   }
 
-  function updateOptimizationUI(opt) {
+  function updateOptimizationUI(opt, ram) {
     const isOptActive = !!opt.optimization_active;
     const isSingleNginx = !!opt.nginx_single_worker;
     const isAdvTuning = !!(opt.advanced_active ?? opt.advanced_tuning_active);
 
     const optAlert = document.getElementById('usage-low-ram-alert');
-    if (optAlert) {
-      if (opt.is_low_ram && !isOptActive) {
+    if (optAlert && ram) {
+      if (ram.is_low_ram && !isOptActive) {
         optAlert.style.display = 'flex';
       } else {
         optAlert.style.display = 'none';
@@ -266,10 +266,21 @@
     try {
       const data = await panel.get('/api/stats');
       render(data);
-    } catch (e) {}
+    } catch (e) {
+      fetchOptimizationStatus();
+    }
 
     if (polling) {
       pollTimer = setTimeout(fetchStats, INTERVAL);
+    }
+  }
+
+  async function fetchOptimizationStatus() {
+    try {
+      const status = await panel.get('/api/system/optimization/status');
+      updateOptimizationUI(status);
+    } catch (e) {
+      // The status endpoint may also be briefly unavailable during a restart.
     }
   }
 
@@ -361,6 +372,7 @@
     if (polling) fetchStats();
   }
 
+  fetchOptimizationStatus();
   fetchStats();
 </script>
 {% endblock %}

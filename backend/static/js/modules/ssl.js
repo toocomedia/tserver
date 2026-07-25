@@ -96,6 +96,7 @@ document.addEventListener("DOMContentLoaded", () => {
     checkbox.addEventListener('change', async (e) => {
       const id = e.target.getAttribute('data-id');
       const checked = e.target.checked;
+      e.target.disabled = true;
       try {
         await panel.post(`/ssl/api/${id}/auto-renew`, { auto_renew: checked });
         toast(checked ? "Auto-renew enabled" : "Auto-renew disabled", "success");
@@ -103,6 +104,8 @@ document.addEventListener("DOMContentLoaded", () => {
         // Revert UI on failure
         e.target.checked = !checked;
         toast(err.message || "Failed to update auto-renew", "danger");
+      } finally {
+        e.target.disabled = false;
       }
     });
   });

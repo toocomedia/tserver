@@ -352,7 +352,9 @@ async def server_stats():
         },
         "ram": {
             "total_gb": round(ram.total / (1024 ** 3), 1),
-            "used_gb": round(ram.used / (1024 ** 3), 1),
+            # Keep the displayed GB value aligned with psutil's percent
+            # calculation, which is based on total minus available memory.
+            "used_gb": round((ram.total - ram.available) / (1024 ** 3), 1),
             "available_gb": round(ram.available / (1024 ** 3), 1),
             "percent": ram.percent,
             "is_low_ram": is_low_ram,

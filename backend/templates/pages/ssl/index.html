@@ -95,18 +95,15 @@
 
         <td>
           {% if item.status == 'ok' %}
-            <span class="badge badge--ok badge--dot">Valid</span>
+            <span class="status-badge status-badge--success">Valid</span>
           {% elif item.status == 'warning' %}
-            <span class="badge" style="color:var(--color-warn); border-color:var(--color-warn);">
-              <span class="badge--dot" style="background:var(--color-warn);"></span>
-              Expiring
-            </span>
+            <span class="status-badge status-badge--warning">Expiring</span>
           {% elif item.status == 'expired' %}
-            <span class="badge badge--error badge--dot">Expired</span>
+            <span class="status-badge status-badge--danger">Expired</span>
           {% elif item.status == 'issued' %}
-            <span class="badge badge--ok badge--dot">Issued</span>
+            <span class="status-badge status-badge--success">Issued</span>
           {% else %}
-            <span class="badge badge--ok badge--dot">Issued</span>
+            <span class="status-badge status-badge--success">Issued</span>
           {% endif %}
         </td>
 
