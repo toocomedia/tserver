@@ -51,9 +51,9 @@
             <br>
             <span class="text-small text-muted">{{ item.domain.server_ip }}</span>
             {% if item.domain.project_type == 'dns' %}
-              <span class="badge-minimal badge-minimal--neutral" style="margin-left:6px; font-size:10px;">DNS ONLY</span>
+              <span class="badge-minimal badge-minimal--neutral">DNS ONLY</span>
             {% else %}
-              <span class="badge-minimal badge-minimal--active" style="margin-left:6px; font-size:10px;">STATIC SITE</span>
+              <span class="badge-minimal badge-minimal--active">STATIC SITE</span>
             {% endif %}
           </td>
 
@@ -93,8 +93,7 @@
                 </a>
                 {% else %}
                 <button type="button" class="btn btn--secondary btn--sm" disabled
-                        title="Nginx web server required for Let's Encrypt SSL verification"
-                        style="opacity:0.5; cursor:not-allowed;">
+                        title="Nginx web server required for Let's Encrypt SSL verification">
                   + SSL
                 </button>
                 {% endif %}

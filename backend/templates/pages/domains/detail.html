@@ -15,8 +15,7 @@
     {% else %}
     <button type="button" class="btn btn--primary" disabled
             id="btn-issue-ssl"
-            title="SSL issuance requires an active Nginx web server (Static Site or Reverse Proxy)"
-            style="opacity:0.5; cursor:not-allowed;">
+            title="SSL issuance requires an active Nginx web server (Static Site or Reverse Proxy)">
       + Issue SSL
     </button>
     {% endif %}
@@ -81,7 +80,7 @@
 <div class="stat-grid mb-lg" id="status-grid">
   <div class="stat-card">
     <div class="stat-card__label">DNS Zone</div>
-    <div style="margin-top:var(--space-xs);">
+    <div class="mt-sm">
       {% if domain.dns_zone_created %}
         <span class="badge badge--ok badge--dot">Active</span>
       {% else %}
@@ -92,7 +91,7 @@
 
   <div class="stat-card">
     <div class="stat-card__label">Nginx</div>
-    <div style="margin-top:var(--space-xs);">
+    <div class="mt-sm">
       {% if nginx_active %}
         <span class="badge badge--ok badge--dot">Active</span>
       {% else %}
@@ -103,14 +102,14 @@
 
   <div class="stat-card">
     <div class="stat-card__label">SSL</div>
-    <div style="margin-top:var(--space-xs);">
+    <div class="mt-sm">
       {% if cert %}
         <span class="badge badge--ok badge--dot">Issued</span>
       {% else %}
         <span class="badge badge--neutral badge--dot">None</span>
       {% endif %}
     </div>
-    <div style="margin-top:var(--space-sm);">
+    <div class="mt-sm">
       {% if cert %}
         <span class="text-small text-muted">
           {% if cert.expiry_date %}Expires {{ cert.expiry_date.strftime('%Y-%m-%d') }}{% else %}Certificate active{% endif %}
@@ -125,11 +124,10 @@
         {% else %}
         <button type="button" class="btn btn--primary btn--sm" disabled
                 id="btn-issue-ssl-card"
-                title="SSL issuance requires an active Nginx web server"
-                style="opacity:0.5; cursor:not-allowed;">
+                title="SSL issuance requires an active Nginx web server">
           + Issue SSL
         </button>
-        <div class="text-small text-muted" style="margin-top:var(--space-xs); line-height:1.4;">
+        <div class="text-small text-muted mt-sm">
           Nginx web server is inactive. Activate a Static Site or Reverse Proxy before issuing SSL.
         </div>
         {% endif %}
@@ -202,19 +200,17 @@
 {% endif %}
 
 {% if domain.project_type == 'dns' %}
-<!-- DNS ONLY / NO WEBROOT BANNER -->
-<div class="section-header mb-md" id="edit-page-section">
-  <h2>Web Server & Landing Page</h2>
-</div>
-<div class="alert alert--info mb-lg" style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:var(--space-md); border-color:#f59e0b; background:rgba(245, 158, 11, 0.05);">
-  <div>
-    <div style="font-weight:700; font-size:15px; margin-bottom:6px; color:#f59e0b;">🌐 DNS Manager (DNS Only) Active</div>
-    <div class="text-small text-muted" style="line-height:1.5;">This domain is configured for DNS management only. No Nginx web server or static HTML webroot exists.<br>Enabling a static webroot will generate an HTTP virtual host and unlock Let's Encrypt SSL certificate issuance.</div>
+<div class="section mb-lg">
+  <div class="section__header">
+    <h3>Web Server & Landing Page</h3>
   </div>
-  <div>
-    <form method="post" action="/domains/{{ domain.id }}/enable-static" style="margin:0;">
+  <div class="section__body">
+    <div class="alert alert--info mb-md">
+      <strong>DNS Only Mode:</strong> This domain is configured for DNS management only. No Nginx web server or static HTML webroot exists.
+    </div>
+    <form method="post" action="/domains/{{ domain.id }}/enable-static" class="m-0">
       {% include "partials/csrf_field.html" %}
-      <button type="submit" class="btn btn--primary" style="white-space:nowrap; font-size:14px;">+ Enable Static Site & Webroot</button>
+      <button type="submit" class="btn btn--primary">+ Enable Static Site & Webroot</button>
     </form>
   </div>
 </div>
@@ -233,8 +229,8 @@
       <textarea
         name="content"
         id="page-content"
-        class="form-input"
-        style="height:320px; resize:vertical; font-family:monospace; font-size:12px; padding:var(--space-md);"
+        class="form-textarea"
+        style="height:320px;"
         spellcheck="false"
       >{{ current_html }}</textarea>
     </div>
@@ -245,7 +241,7 @@
   </form>
 </div>
 
-<div id="page-preview" style="border:1px solid var(--color-line); padding:var(--space-md);">
+<div id="page-preview" class="settings-mode-box">
   <span class="text-small text-muted">
     Served at:
     {% if cert %}
@@ -254,7 +250,7 @@
       <strong>http://{{ domain.name }}</strong>
     {% endif %}
     &nbsp;·&nbsp;
-    <button type="button" class="btn btn--ghost btn--sm" onclick="toggleEditor()" style="height:auto; padding:2px 0;">
+    <button type="button" class="btn btn--ghost btn--sm p-0" onclick="toggleEditor()">
       Edit page HTML
     </button>
   </span>
