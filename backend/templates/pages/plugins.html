@@ -5,18 +5,18 @@
 {% block page_title %}Plugins{% endblock %}
 
 {% block topbar_actions %}
-<div style="display: flex; align-items: center; gap: 12px;">
+<div class="layout-switcher-wrap">
   <!-- CARDS / COMPACT 1:1 GRID / LIST VIEW SWITCHER -->
-  <div id="plugin-switcher" class="view-switcher" role="radiogroup" aria-label="Layout view switcher">
-    <button type="button" class="view-switcher__btn is-active" id="btn-plugins-cards" onclick="setPluginsLayout('cards')">
+  <div id="plugin-switcher" class="layout-switcher layout-switcher--three" role="radiogroup" aria-label="Layout view switcher">
+    <button type="button" class="layout-switcher__btn is-active" id="btn-plugins-cards" onclick="setPluginsLayout('cards')">
       <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
       Cards
     </button>
-    <button type="button" class="view-switcher__btn" id="btn-plugins-compact" onclick="setPluginsLayout('compact')">
+    <button type="button" class="layout-switcher__btn" id="btn-plugins-compact" onclick="setPluginsLayout('compact')">
       <svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"></rect></svg>
       Compact 1:1
     </button>
-    <button type="button" class="view-switcher__btn" id="btn-plugins-list" onclick="setPluginsLayout('list')">
+    <button type="button" class="layout-switcher__btn" id="btn-plugins-list" onclick="setPluginsLayout('list')">
       <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
       List
     </button>
@@ -86,9 +86,13 @@
         <div class="list-col-version">v{{ plugin.version }}</div>
         <div>
           {% if plugin.effective_status == 'active' %}
-            <span class="badge badge--active"><span class="badge-dot"></span> Active</span>
+            <span class="status-badge status-badge--success">Active</span>
+          {% elif plugin.effective_status in ['missing', 'invalid', 'error', 'unhealthy'] %}
+            <span class="status-badge status-badge--danger">{{ plugin.effective_status | replace('_', ' ') | title }}</span>
+          {% elif plugin.effective_status in ['paused', 'disabled', 'stopped'] %}
+            <span class="status-badge status-badge--warning">{{ plugin.effective_status | replace('_', ' ') | title }}</span>
           {% else %}
-            <span class="badge badge--inactive"><span class="badge-dot"></span> {{ plugin.effective_status }}</span>
+            <span class="status-badge status-badge--muted">{{ plugin.effective_status | replace('_', ' ') | title }}</span>
           {% endif %}
         </div>
         <div class="list-col-desc">{{ plugin.description }}</div>

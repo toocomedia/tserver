@@ -4,18 +4,18 @@
 {% block page_title %}Dependencies{% endblock %}
 
 {% block topbar_actions %}
-<div style="display: flex; align-items: center; gap: 12px;">
+<div class="layout-switcher-wrap">
   <!-- CARDS / COMPACT 1:1 GRID / LIST VIEW SWITCHER -->
-  <div id="deps-switcher" class="view-switcher" role="radiogroup" aria-label="Layout view switcher">
-    <button type="button" class="view-switcher__btn is-active" id="btn-deps-cards" onclick="setDepsLayout('cards')">
+  <div id="deps-switcher" class="layout-switcher layout-switcher--three" role="radiogroup" aria-label="Layout view switcher">
+    <button type="button" class="layout-switcher__btn is-active" id="btn-deps-cards" onclick="setDepsLayout('cards')">
       <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
       Cards
     </button>
-    <button type="button" class="view-switcher__btn" id="btn-deps-compact" onclick="setDepsLayout('compact')">
+    <button type="button" class="layout-switcher__btn" id="btn-deps-compact" onclick="setDepsLayout('compact')">
       <svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"></rect></svg>
       Compact 1:1
     </button>
-    <button type="button" class="view-switcher__btn" id="btn-deps-list" onclick="setDepsLayout('list')">
+    <button type="button" class="layout-switcher__btn" id="btn-deps-list" onclick="setDepsLayout('list')">
       <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
       List
     </button>
@@ -85,9 +85,13 @@
         <div class="list-col-version">v{{ dependency.version }}</div>
         <div>
           {% if dependency.healthy and dependency.desired_enabled %}
-            <span class="badge badge--healthy"><span class="badge-dot"></span> Healthy</span>
+            <span class="status-badge status-badge--success">Healthy</span>
+          {% elif dependency.effective_state in ['missing', 'unhealthy', 'invalid', 'error'] %}
+            <span class="status-badge status-badge--danger">{{ dependency.effective_state | replace('_', ' ') | title }}</span>
+          {% elif dependency.effective_state in ['paused', 'disabled', 'stopped'] %}
+            <span class="status-badge status-badge--warning">{{ dependency.effective_state | replace('_', ' ') | title }}</span>
           {% else %}
-            <span class="badge badge--inactive"><span class="badge-dot"></span> {{ dependency.effective_state }}</span>
+            <span class="status-badge status-badge--muted">{{ dependency.effective_state | replace('_', ' ') | title }}</span>
           {% endif %}
         </div>
         <div class="list-col-desc">{{ dependency.description }}</div>

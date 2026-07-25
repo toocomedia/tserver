@@ -3,44 +3,45 @@
    Cards, List Row Views & View Switcher Toolbar
    ============================================================ */
 
-/* Segmented View Switcher (Cards / List Toggle) */
-.view-switcher {
-  display: inline-flex;
-  align-items: center;
+/* Shared borderless layout switcher for Usage, Dependencies, and Plugins. */
+.layout-switcher-wrap { display: flex; align-items: center; gap: var(--space-md); }
+.layout-switcher {
+  display: grid;
+  grid-template-columns: repeat(var(--switcher-columns, 3), minmax(0, 1fr));
+  width: calc(var(--button-min-width) * var(--switcher-columns, 3));
   background: var(--color-surface);
-  border: 1px solid var(--color-line);
-  padding: 2px;
-  height: 38px;
 }
-
-.view-switcher__btn {
+.layout-switcher--two { --switcher-columns: 2; }
+.layout-switcher--three { --switcher-columns: 3; width: calc(var(--button-min-width) * 3 + var(--space-md)); }
+.layout-switcher__btn {
+  width: 100%;
+  min-width: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  height: 32px;
-  padding: 0 12px;
-  font-size: 11px;
-  font-weight: 800;
+  gap: var(--space-sm);
+  height: var(--button-height);
+  padding: 0 var(--space-md);
+  font-size: var(--font-small);
+  font-weight: 600;
   color: var(--color-muted);
-  background: transparent;
+  background: var(--color-secondary-btn);
   border: none;
   cursor: pointer;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  transition: all 0.15s ease;
+  transition: background 0.15s ease, color 0.15s ease;
 }
 
-.view-switcher__btn:hover {
+.layout-switcher__btn:hover {
+  background: var(--color-secondary-hover);
   color: var(--color-text);
 }
 
-.view-switcher__btn.is-active {
-  color: var(--color-text);
-  background: var(--color-bg);
+.layout-switcher__btn.is-active {
+  color: var(--color-on-accent);
+  background: var(--color-accent);
 }
 
-.view-switcher__btn svg {
+.layout-switcher__btn svg {
   width: 14px;
   height: 14px;
   stroke: currentColor;
@@ -54,11 +55,7 @@
 .optimization-row__copy { flex: 1; min-width: 240px; }
 .optimization-row__title { margin-bottom: 2px; font-size: var(--font-body); }
 .optimization-row__control { width: calc(var(--button-min-width) * 2); flex: 0 0 calc(var(--button-min-width) * 2); }
-.optimization-toggle { display: grid; grid-template-columns: 1fr 1fr; width: 100%; background: var(--color-surface); }
-.optimization-toggle__btn { width: 100%; min-width: 0; height: var(--button-height); padding: 0 var(--space-md); border: none; background: var(--color-secondary-btn); color: var(--color-muted); cursor: pointer; font-size: var(--font-small); font-weight: 600; }
-.optimization-toggle__btn:hover { background: var(--color-secondary-hover); color: var(--color-text); }
-.optimization-toggle__btn.is-active { background: var(--color-accent); color: var(--color-on-accent); }
-.optimization-toggle__btn:disabled { opacity: .45; cursor: wait; pointer-events: none; }
+.layout-switcher__btn:disabled { opacity: .45; cursor: wait; pointer-events: none; }
 .optimization-checks { display: none; line-height: 1.4; }
 
 /* Minimal Status Indicators (No Dots) */
