@@ -3,6 +3,8 @@
 .modal-backdrop.hidden { display: none; }
 .modal { background: var(--color-bg); border: 1px solid var(--color-neutral); width: 100%; max-width: 480px; }
 .modal__header { padding: var(--space-md) var(--space-lg); border-bottom: 1px solid var(--color-line); display: flex; align-items: center; justify-content: space-between; }
-.modal__header h2 { font-size: var(--font-h3); font-weight: 700; }
+.modal__header h2, .modal__header h3 { font-size: var(--font-h2); font-weight: 700; margin: 0; }
 .modal__body { padding: var(--space-lg); }
 .modal__footer { padding: var(--space-md) var(--space-lg); border-top: 1px solid var(--color-line); display: flex; justify-content: flex-end; gap: var(--space-sm); }
+.modal--wide { max-width: 580px; }
+

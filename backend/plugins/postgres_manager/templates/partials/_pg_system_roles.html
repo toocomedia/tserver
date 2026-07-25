@@ -2,19 +2,11 @@
 <div id="pg-panel-system-roles" class="pg-panel" style="display:none;">
 
   <div class="action-toolbar">
-    <h2 style="font-size:var(--font-h2);margin:0;">System Roles</h2>
+    <h2>System Roles</h2>
   </div>
 
-  <div style="display:flex;align-items:center;gap:var(--space-sm);
-              margin-bottom:var(--space-lg);padding:var(--space-sm) var(--space-md);
-              background:var(--color-surface);border-left:3px solid var(--color-muted);">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-         stroke="var(--color-muted)" stroke-width="2" aria-hidden="true">
-      <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
-    </svg>
-    <span style="font-size:var(--font-small);color:var(--color-muted);">
-      Built-in PostgreSQL internal roles (<code>pg_*</code>). Managed by PostgreSQL engine; cannot log in directly.
-    </span>
+  <div class="alert alert--info mb-lg">
+    Built-in PostgreSQL internal roles (<code>pg_*</code>). Managed by PostgreSQL engine; cannot log in directly.
   </div>
 
   {% if system_roles %}

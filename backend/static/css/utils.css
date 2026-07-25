@@ -56,3 +56,16 @@
   border-top: 1px solid var(--color-line);
   margin: var(--space-lg) 0;
 }
+
+/* Additional Layout & Spacing Utilities */
+.flex-column    { flex-direction: column; }
+.align-end      { align-items: flex-end; }
+.grid-2         { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-md); }
+@media (max-width: 600px) { .grid-2 { grid-template-columns: 1fr; } }
+.pt-0           { padding-top: 0 !important; }
+.ml-auto        { margin-left: auto; }
+.mt-auto        { margin-top: auto; }
+.mt-xs          { margin-top: var(--space-xs); }
+.mt-xl          { margin-top: var(--space-xl); }
+.p-xl           { padding: var(--space-xl); }
+

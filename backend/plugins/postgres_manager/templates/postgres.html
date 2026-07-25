@@ -16,27 +16,21 @@
            data-pg-tab="databases" id="pg-tab-databases">
         Databases
         {% if databases %}
-          <span style="margin-left:auto;font-size:var(--font-small);color:var(--color-muted);">
-            {{ databases|length }}
-          </span>
+          <span class="split-sidebar__count">{{ databases|length }}</span>
         {% endif %}
       </div>
 
       <div class="split-sidebar__item" data-pg-tab="users" id="pg-tab-users">
         Users &amp; Roles
         {% if users %}
-          <span style="margin-left:auto;font-size:var(--font-small);color:var(--color-muted);">
-            {{ users|length }}
-          </span>
+          <span class="split-sidebar__count">{{ users|length }}</span>
         {% endif %}
       </div>
 
       <div class="split-sidebar__item" data-pg-tab="system-roles" id="pg-tab-system-roles">
         System Roles
         {% if system_roles %}
-          <span style="margin-left:auto;font-size:var(--font-small);color:var(--color-muted);">
-            {{ system_roles|length }}
-          </span>
+          <span class="split-sidebar__count">{{ system_roles|length }}</span>
         {% endif %}
       </div>
 
@@ -51,22 +45,22 @@
       <div class="split-sidebar__item active">Setup required</div>
     {% endif %}
 
-    <div style="flex-grow:1;"></div>
+    <div class="flex-1"></div>
 
     {# ── Service status indicator ── #}
     {% if plugin_installed %}
-    <div style="padding:var(--space-lg);border-top:1px solid var(--color-sidebar-border);">
-      <div style="display:flex;align-items:center;gap:var(--space-sm);margin-bottom:var(--space-sm);">
+    <div class="split-sidebar__status">
+      <div class="d-flex align-center gap-sm mb-sm">
         <span id="pg-status-dot" class="status-badge {% if status.running %}success{% else %}muted{% endif %}">
           {{ 'Running' if status.running else 'Stopped' }}
         </span>
       </div>
       {% if status.ram_mb %}
-      <div style="font-size:var(--font-small);color:var(--color-muted);margin-bottom:var(--space-sm);">
+      <div class="text-small text-muted mb-sm">
         RAM: {{ status.ram_mb }} MB
       </div>
       {% endif %}
-      <div style="display:flex;gap:var(--space-sm);">
+      <div class="d-flex gap-sm">
         <button class="btn btn--sm" id="pg-btn-restart" data-pg-action="restart"
                 title="Restart PostgreSQL service">Restart</button>
         {% if status.running %}
@@ -80,9 +74,9 @@
     </div>
     {% endif %}
 
-    <div class="split-sidebar__footer" style="padding:var(--space-lg);color:var(--color-muted);">
-      <div style="font-size:var(--font-small);">PostgreSQL Manager</div>
-      <div style="font-size:var(--font-small);">v{{ plugin_version }}</div>
+    <div class="split-sidebar__footer">
+      <div class="text-small">PostgreSQL Manager</div>
+      <div class="text-small">v{{ plugin_version }}</div>
     </div>
   </div>
 
@@ -99,10 +93,10 @@
 
 
     {% else %}
-      <div style="padding:var(--space-xl);">
-        <div class="text-center" style="padding:var(--space-xl);">
-          <h3 style="margin-bottom:var(--space-md);">PostgreSQL Not Installed</h3>
-          <p style="color:var(--color-muted);margin-bottom:var(--space-xl);">
+      <div class="p-xl">
+        <div class="text-center p-xl">
+          <h3 class="mb-md">PostgreSQL Not Installed</h3>
+          <p class="text-muted mb-xl">
             Install PostgreSQL to manage databases and users from this panel.
           </p>
           <form method="post" action="/plugins/postgres_manager/api/install" id="pg-install-form">

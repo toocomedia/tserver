@@ -134,237 +134,126 @@ document.addEventListener("click", async e => {
   if (!copyBtn) return;
   const targetId = copyBtn.dataset.copyTarget;
   const targetEl = document.getElementById(targetId);
-  if (!targetEl) return;
-  try {
-    await navigator.clipboard.writeText(targetEl.value);
-    const origText = copyBtn.textContent;
-    copyBtn.textContent = "Copied!";
-    setTimeout(() => { copyBtn.textContent = origText; }, 1800);
-  } catch (err) {
-    showToast("Failed to copy to clipboard.", true);
-  }
+  if (!tar// ── Remote Access Endpoint Management ─────────────────────────────────────
+
+const remoteFeedback = document.getElementById("pg-remote-feedback");
+const managedWrap    = document.getElementById("pg-remote-managed-wrap");
+const externalWrap   = document.getElementById("pg-remote-external-wrap");
+
+const updateRemoteMode = () => {
+  const checked = document.querySelector('input[name="pg-remote-mode"]:checked');
+  if (!checked) return;
+  const isManaged = checked.value === "managed";
+  if (managedWrap) managedWrap.style.display = isManaged ? "grid" : "none";
+  if (externalWrap) externalWrap.style.display = isManaged ? "none" : "block";
+  
+  document.querySelectorAll('input[name="pg-remote-mode"]').forEach(r => {
+    const label = r.closest(".settings-choice");
+    if (label) label.classList.toggle("settings-choice--active", r.checked);
+  });
+};
+
+const updateRemoteEnc = () => {
+  document.querySelectorAll('input[name="pg-remote-encryption"]').forEach(r => {
+    const label = r.closest(".settings-choice");
+    if (label) label.classList.toggle("settings-choice--active", r.checked);
+  });
+};
+
+const updateRemotePreview = () => {
+  const preview = document.getElementById("pg-remote-preview");
+  if (!preview) return;
+  const sub = (document.getElementById("pg-remote-subdomain")?.value || "db").trim();
+  const dom = (document.getElementById("pg-remote-domain")?.value || "example.com").trim();
+  preview.textContent = `${sub}.${dom}`;
+};
+
+document.querySelectorAll('input[name="pg-remote-mode"]').forEach(r => r.addEventListener("change", updateRemoteMode));
+document.querySelectorAll('input[name="pg-remote-encryption"]').forEach(r => r.addEventListener("change", updateRemoteEnc));
+document.getElementById("pg-remote-subdomain")?.addEventListener("input", updateRemotePreview);
+document.getElementById("pg-remote-domain")?.addEventListener("change", updateRemotePreview);
+document.getElementById("pg-remote-allow-all")?.addEventListener("click", () => {
+  const inp = document.getElementById("pg-remote-cidrs");
+  if (inp) inp.value = "0.0.0.0/0";
 });
 
-// Test native PostgreSQL endpoint readiness
-document.addEventListener("click", async e => {
-  const btn = e.target.closest("[data-action='legacy-test-remote-domain']");
-  if (!btn) return;
+document.getElementById("pg-remote-submit-btn")?.addEventListener("click", async (e) => {
+  const btn = e.currentTarget;
+  const activeMode = document.querySelector('input[name="pg-remote-mode"]:checked')?.value || "managed";
+  const errEl = document.getElementById("pg-remote-error");
+  if (errEl) errEl.style.display = "none";
+  
   setLoading(btn, true);
+  const body = {
+    mode: activeMode,
+    domain: activeMode === "managed" ? document.getElementById("pg-remote-domain")?.value : null,
+    subdomain: activeMode === "managed" ? document.getElementById("pg-remote-subdomain")?.value?.trim() : null,
+    hostname: activeMode === "external" ? document.getElementById("pg-remote-hostname")?.value?.trim() : null,
+    encryption_enabled: document.querySelector('input[name="pg-remote-encryption"]:checked')?.value === "true",
+    allowed_cidrs: (document.getElementById("pg-remote-cidrs")?.value || "0.0.0.0/0").split(',').map(x => x.trim()).filter(Boolean)
+  };
+  
   try {
-    await apiFetch(`/remote/domains/${encodeURIComponent(btn.dataset.domain)}/test`, { method: "POST" });
-    showToast(`Endpoint '${btn.dataset.domain}' is ready.`);
+    const res = await apiFetch("/remote/domains", {
+      method: "POST",
+      body: JSON.stringify(body)
+    });
+    showToast("Remote endpoint configured successfully!");
+    closeModal("pg-modal-add-remote");
+    setTimeout(() => location.reload(), 1000);
   } catch (err) {
-    showToast(err.message, true);
+    if (errEl) {
+      errEl.textContent = err.message || "Could not enable remote access.";
+      errEl.style.display = "block";
+    } else {
+      showToast(err.message, true);
+    }
   } finally {
     setLoading(btn, false);
   }
 });
 
-// ── Step-by-Step Remote Domain Wizard Logic ───────────────────────────────
-
-let currentWizStep = 1;
-
-const wizStep1 = document.getElementById("pg-remote-wiz-step-1");
-const wizStep2 = document.getElementById("pg-remote-wiz-step-2");
-const wizStep3 = document.getElementById("pg-remote-wiz-step-3");
-const wizNextBtn   = document.getElementById("pg-remote-wiz-btn-next");
-const wizBackBtn   = document.getElementById("pg-remote-wiz-btn-back");
-const wizSubmitBtn = document.getElementById("pg-remote-wiz-btn-submit");
-const wizErrEl     = document.getElementById("pg-remote-wiz-error");
-
-const wizModeManaged  = document.getElementById("pg-remote-wiz-mode-managed");
-const wizModeExternal = document.getElementById("pg-remote-wiz-mode-external");
-const wizManagedWrap  = document.getElementById("pg-remote-wiz-managed-wrap");
-const wizExternalWrap = document.getElementById("pg-remote-wiz-external-wrap");
-const wizDomainSelect = document.getElementById("pg-remote-wiz-domain-select");
-const wizSubdomainInp = document.getElementById("pg-remote-wiz-subdomain");
-const wizFullHint     = document.getElementById("pg-remote-wiz-full-hint");
-
-if (wizModeManaged && wizModeExternal) {
-  const toggleWizMode = () => {
-    if (wizModeExternal.checked) {
-      if (wizManagedWrap) wizManagedWrap.style.display = "none";
-      if (wizExternalWrap) wizExternalWrap.style.display = "flex";
-    } else {
-      if (wizManagedWrap) wizManagedWrap.style.display = "flex";
-      if (wizExternalWrap) wizExternalWrap.style.display = "none";
-    }
-  };
-  wizModeManaged.addEventListener("change", toggleWizMode);
-  wizModeExternal.addEventListener("change", toggleWizMode);
-}
-
-function updateWizHint() {
-  if (!wizFullHint) return;
-  const sub = (wizSubdomainInp ? wizSubdomainInp.value.trim() : "") || "db";
-  const dom = (wizDomainSelect ? wizDomainSelect.value : "") || "example.com";
-  wizFullHint.textContent = `${sub}.${dom}`;
-}
-
-if (wizDomainSelect) wizDomainSelect.addEventListener("change", updateWizHint);
-if (wizSubdomainInp) wizSubdomainInp.addEventListener("input", updateWizHint);
-
-function getWizHost() {
-  const isManaged = wizModeManaged ? wizModeManaged.checked : true;
-  if (isManaged) {
-    const dom = wizDomainSelect ? wizDomainSelect.value : "";
-    const sub = wizSubdomainInp ? wizSubdomainInp.value.trim() : "";
-    if (!dom || !sub) return null;
-    return `${sub}.${dom}`;
-  } else {
-    const ext = document.getElementById("pg-remote-wiz-external");
-    return ext ? ext.value.trim() : null;
-  }
-}
-
-function setWizStep(step) {
-  currentWizStep = step;
-  if (wizErrEl) wizErrEl.style.display = "none";
-
-  if (wizStep1) wizStep1.style.display = step === 1 ? "flex" : "none";
-  if (wizStep2) wizStep2.style.display = step === 2 ? "flex" : "none";
-  if (wizStep3) wizStep3.style.display = step === 3 ? "flex" : "none";
-
-  const pill1 = document.getElementById("pg-remote-step-pill-1");
-  const pill2 = document.getElementById("pg-remote-step-pill-2");
-  const pill3 = document.getElementById("pg-remote-step-pill-3");
-
-  if (pill1) pill1.className = step >= 1 ? "status-badge success" : "status-badge muted";
-  if (pill2) pill2.className = step >= 2 ? "status-badge success" : "status-badge muted";
-  if (pill3) pill3.className = step >= 3 ? "status-badge success" : "status-badge muted";
-
-  if (wizBackBtn) wizBackBtn.style.display = step > 1 ? "" : "none";
-  if (wizNextBtn) wizNextBtn.style.display = step < 3 ? "" : "none";
-  if (wizSubmitBtn) wizSubmitBtn.style.display = step === 3 ? "" : "none";
-
-  if (step === 3) {
-    const host = getWizHost();
-    const isManaged = wizModeManaged ? wizModeManaged.checked : true;
-    const issueSsl = document.getElementById("pg-remote-wiz-ssl") ? document.getElementById("pg-remote-wiz-ssl").checked : true;
-
-    document.getElementById("pg-remote-wiz-review-host").textContent = host || "Invalid Hostname";
-    document.getElementById("pg-remote-wiz-review-mode").textContent = isManaged ? "Managed Domain (Subdomain)" : "External Hostname";
-    document.getElementById("pg-remote-wiz-review-ssl").textContent  = issueSsl ? "Enabled (Let's Encrypt)" : "Disabled (No SSL)";
-  }
-}
-
-if (wizNextBtn) {
-  wizNextBtn.addEventListener("click", () => {
-    if (currentWizStep === 1) {
-      const host = getWizHost();
-      if (!host) {
-        if (wizErrEl) { wizErrEl.textContent = "Enter a valid hostname / subdomain."; wizErrEl.style.display = ""; }
-        return;
+// Remote table row actions (Test, SSL Renew/Enable, Delete)
+document.addEventListener("click", async (e) => {
+  const btn = e.target.closest("[data-pg-remote-action]");
+  if (!btn) return;
+  const action = btn.dataset.pgRemoteAction;
+  const domain = btn.dataset.domain;
+  if (!domain) return;
+  
+  if (action === "delete" && !confirm(`Delete remote endpoint ${domain}?`)) return;
+  
+  setLoading(btn, true);
+  const suffix = action === "delete" ? "" : `/${action}`;
+  const method = action === "delete" ? "DELETE" : "POST";
+  
+  try {
+    const res = await apiFetch(`/remote/domains/${encodeURIComponent(domain)}${suffix}`, { method });
+    if (action === "test") {
+      if (remoteFeedback) {
+        remoteFeedback.textContent = `${domain} is configured and ready to accept connections.`;
+        remoteFeedback.className = "text-accent mb-md";
+      } else {
+        showToast(`${domain} is ready!`);
       }
-    }
-    setWizStep(currentWizStep + 1);
-  });
-}
-
-if (wizBackBtn) {
-  wizBackBtn.addEventListener("click", () => setWizStep(currentWizStep - 1));
-}
-
-// Close modal on backdrop click (EXCEPT wizard and connection modals)
-document.querySelectorAll(".modal-backdrop").forEach(backdrop => {
-  backdrop.addEventListener("click", e => {
-    if (e.target === backdrop && backdrop.id !== "pg-modal-add-remote" && backdrop.id !== "pg-modal-connection") {
-      backdrop.style.display = "none";
-    }
-  });
-});
-
-if (wizSubmitBtn) {
-  wizSubmitBtn.addEventListener("click", async () => {
-    if (wizSubmitBtn.getAttribute("data-mode") === "done") {
-      closeModal("pg-modal-add-remote");
-      location.reload();
+      setLoading(btn, false);
       return;
     }
-    const isManaged = wizModeManaged ? wizModeManaged.checked : true;
-    const mode      = isManaged ? "managed" : "external";
-    const domain    = wizDomainSelect ? wizDomainSelect.value : null;
-    const subdomain = wizSubdomainInp ? wizSubdomainInp.value.trim() : null;
-    const hostname  = document.getElementById("pg-remote-wiz-external") ? document.getElementById("pg-remote-wiz-external").value.trim() : null;
-    const issue_ssl = document.getElementById("pg-remote-wiz-ssl") ? document.getElementById("pg-remote-wiz-ssl").checked : true;
-
-    if (wizErrEl) wizErrEl.style.display = "none";
-    setLoading(wizSubmitBtn, true);
-    try {
-      const res = await apiFetch("/remote/domains", {
-        method: "POST",
-        body: JSON.stringify({ mode, domain, subdomain, hostname, issue_ssl }),
-      });
-      if (res.entry && res.entry.ssl_active) {
-        showToast(`Remote endpoint '${res.entry.domain}' added with active SSL!`);
-        closeModal("pg-modal-add-remote");
-        setTimeout(() => location.reload(), 1000);
-      } else {
-        if (wizErrEl) {
-          wizErrEl.className = "alert alert--info mb-md";
-          wizErrEl.innerHTML = `<strong>Endpoint Created:</strong> Hostname <code>${res.entry.domain}</code> was configured, but Let's Encrypt SSL certificate could not be issued yet.<br>Ensure DNS A record points to this server IP, then click <strong>Re-issue SSL</strong>.`;
-          wizErrEl.style.display = "block";
-        }
-        wizSubmitBtn.textContent = "Done / View Endpoints";
-        wizSubmitBtn.setAttribute("data-mode", "done");
-        if (wizBackBtn) wizBackBtn.style.display = "none";
-      }
-    } catch (err) {
-      if (wizErrEl) {
-        wizErrEl.className = "form-error";
-        wizErrEl.textContent = err.message;
-        wizErrEl.style.display = "block";
-      } else {
-        showToast(err.message, true);
-      }
-    } finally {
-      setLoading(wizSubmitBtn, false);
-    }
-  });
-}
-
-// Re-issue SSL action button
-document.addEventListener("click", async e => {
-  const btn = e.target.closest("[data-action='legacy-reissue-remote-ssl']");
-  if (!btn) return;
-  const domain = btn.dataset.domain;
-  if (!domain) return;
-  setLoading(btn, true);
-  try {
-    const res = await apiFetch(`/remote/domains/${encodeURIComponent(domain)}/ssl`, { method: "POST" });
-    if (res.entry && res.entry.ssl_active) {
-      showToast(`SSL certificate successfully issued for ${domain}!`);
-      setTimeout(() => location.reload(), 1000);
-    } else {
-      showToast(`Certbot SSL challenge failed for ${domain}. Verify DNS A record points to server IP.`, true);
-      setLoading(btn, false);
-    }
-  } catch (err) {
-    showToast(err.message, true);
-    setLoading(btn, false);
-  }
-});
-
-
-// Delete Remote Domain action button
-document.addEventListener("click", async e => {
-  const btn = e.target.closest("[data-action='legacy-delete-remote-domain']");
-  if (!btn) return;
-  const domain = btn.dataset.domain;
-  if (!domain) return;
-  if (!confirm(`Delete remote endpoint '${domain}'? Nginx stream proxy config will be removed.`)) return;
-  setLoading(btn, true);
-  try {
-    await apiFetch(`/remote/domains/${encodeURIComponent(domain)}`, { method: "DELETE" });
-    showToast(`Remote endpoint '${domain}' deleted.`);
+    showToast(`Action '${action}' completed for ${domain}.`);
     location.reload();
   } catch (err) {
-    showToast(err.message, true);
+    if (remoteFeedback) {
+      remoteFeedback.textContent = err.message || "Action failed.";
+      remoteFeedback.className = "text-danger mb-md";
+    } else {
+      showToast(err.message, true);
+    }
     setLoading(btn, false);
   }
 });
 
-
+updateRemoteMode();
+updateRemotePreview();
 
 // ── Modal open/close (data-action) ────────────────────────────────────────
 
@@ -508,15 +397,15 @@ document.addEventListener("click", async e => {
   const nameEl = document.getElementById("pg-tables-db-name");
   nameEl.textContent = db;
   drawer.style.display = "";
-  tbody.innerHTML = "<tr><td colspan='3' style='color:var(--color-muted);'>Loading…</td></tr>";
+  tbody.innerHTML = "<tr><td colspan='3' class='text-muted'>Loading…</td></tr>";
   try {
     const tables = await apiFetch(`/databases/${encodeURIComponent(db)}/tables`);
     tbody.innerHTML = tables.length
-      ? tables.map(t => `<tr><td>${t.name}</td><td style='color:var(--color-muted);'>${t.row_count}</td>
-          <td style='color:var(--color-muted);'>${t.size}</td></tr>`).join("")
-      : "<tr><td colspan='3' style='color:var(--color-muted);'>No user tables found.</td></tr>";
+      ? tables.map(t => `<tr><td>${t.name}</td><td class='text-muted'>${t.row_count}</td>
+          <td class='text-muted'>${t.size}</td></tr>`).join("")
+      : "<tr><td colspan='3' class='text-muted'>No user tables found.</td></tr>";
   } catch (err) {
-    tbody.innerHTML = `<tr><td colspan='3' style='color:var(--color-danger);'>${err.message}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan='3' class='text-danger'>${err.message}</td></tr>`;
   }
 });
 

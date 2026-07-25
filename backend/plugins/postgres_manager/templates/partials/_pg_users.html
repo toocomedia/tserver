@@ -2,8 +2,8 @@
 <div id="pg-panel-users" class="pg-panel" style="display:none;">
 
   {# Toolbar #}
-  <div class="action-toolbar" style="display:flex;align-items:center;justify-content:space-between;">
-    <h2 style="font-size:var(--font-h2);margin:0;">Users &amp; Roles</h2>
+  <div class="action-toolbar">
+    <h2>Users &amp; Roles</h2>
     <button class="btn btn--primary" id="pg-user-create-open" data-action="open-modal" data-modal="pg-modal-create-user">
       + Create User
     </button>
@@ -39,7 +39,7 @@
               <span class="status-badge muted">No</span>
             {% endif %}
           </td>
-          <td style="text-align:right;display:flex;gap:var(--space-sm);justify-content:flex-end;">
+          <td class="text-right d-flex gap-sm justify-end">
             <button class="btn btn--sm" data-action="change-password" data-user="{{ user.name }}"
                     id="pg-user-pw-{{ user.name }}" title="Change password for {{ user.name }}">
               Change Password
@@ -70,10 +70,10 @@
 <div class="modal-backdrop" id="pg-modal-create-user" style="display:none;" aria-modal="true" role="dialog">
   <div class="modal">
     <div class="modal__header">
-      <h2 style="font-size:var(--font-h2);margin:0;">Create User</h2>
+      <h2>Create User</h2>
       <button class="btn btn--icon btn--sm btn--ghost" data-action="close-modal" data-modal="pg-modal-create-user" aria-label="Close">✕</button>
     </div>
-    <div class="modal__body" style="display:flex;flex-direction:column;gap:var(--space-md);">
+    <div class="modal__body d-flex flex-column gap-md">
       <div class="form-group">
         <label class="form-label" for="pg-new-user-name">Username</label>
         <input type="text" id="pg-new-user-name" class="form-input" placeholder="app_user" autocomplete="off" spellcheck="false">
@@ -102,10 +102,10 @@
 <div class="modal-backdrop" id="pg-modal-change-pw" style="display:none;" aria-modal="true" role="dialog">
   <div class="modal">
     <div class="modal__header">
-      <h2 style="font-size:var(--font-h2);margin:0;">Change Password — <span id="pg-pw-username"></span></h2>
+      <h2>Change Password — <span id="pg-pw-username"></span></h2>
       <button class="btn btn--icon btn--sm btn--ghost" data-action="close-modal" data-modal="pg-modal-change-pw" aria-label="Close">✕</button>
     </div>
-    <div class="modal__body" style="display:flex;flex-direction:column;gap:var(--space-md);">
+    <div class="modal__body d-flex flex-column gap-md">
       <div class="form-group">
         <label class="form-label" for="pg-change-pw-input">New Password</label>
         <input type="password" id="pg-change-pw-input" class="form-input" placeholder="••••••••">
