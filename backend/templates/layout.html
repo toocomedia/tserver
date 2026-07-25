@@ -118,18 +118,34 @@ document.addEventListener("DOMContentLoaded", function() {
   
   // 1. Navigation Progress Bar
   document.addEventListener("click", function(e) {
+    if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
     var link = e.target.closest("a");
-    if (link && link.href && link.href.startsWith(window.location.origin) && !link.target && !link.hasAttribute("download") && !link.getAttribute("href").startsWith("#")) {
-      if (bar) {
-        bar.className = "top-progress-bar active";
-      }
+    if (!link) return;
+    
+    var href = link.getAttribute("href");
+    if (!href || href === "#" || href.startsWith("#") || href.startsWith("javascript:")) return;
+    if (link.target && link.target !== "_self") return;
+    if (link.hasAttribute("download") || link.hasAttribute("data-no-progress")) return;
+
+    try {
+      var targetUrl = new URL(link.href, window.location.href);
+      if (targetUrl.origin !== window.location.origin) return;
+      if (targetUrl.pathname === window.location.pathname && targetUrl.search === window.location.search) return;
+    } catch(err) {
+      return;
+    }
+
+    if (bar) {
+      bar.className = "top-progress-bar active";
     }
   });
 
-  window.addEventListener("pageshow", function() {
-    if (bar) {
-      bar.className = "top-progress-bar done";
-      setTimeout(function() { bar.className = "top-progress-bar"; }, 300);
+  window.addEventListener("pageshow", function(e) {
+    if (bar && (e.persisted || bar.classList.contains("active"))) {
+      bar.style.transition = "none";
+      bar.className = "top-progress-bar";
+      void bar.offsetWidth;
+      bar.style.transition = "";
     }
   });
 

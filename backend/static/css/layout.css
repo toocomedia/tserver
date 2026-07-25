@@ -558,18 +558,21 @@
   background: linear-gradient(90deg, var(--color-accent), #818cf8);
   z-index: 99999;
   width: 0%;
+  opacity: 0;
   transition: width 0.3s ease, opacity 0.3s ease;
   pointer-events: none;
 }
 
 .top-progress-bar.active {
   width: 80%;
+  opacity: 1;
   animation: progressPulse 1.5s infinite ease-in-out;
 }
 
 .top-progress-bar.done {
   width: 100%;
   opacity: 0;
+  transition: width 0.2s ease, opacity 0.4s ease;
 }
 
 @keyframes progressPulse {
