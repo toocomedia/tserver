@@ -25,19 +25,7 @@
   </div>
 </div>
 
-<!-- List Title Bar with Background Fill -->
-<div>
-  <div class="list-title-bar">
-    <h3>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px; height:14px;"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/></svg>
-      Virtual Hosts & Domains
-    </h3>
-    <span style="font-size: 11px; color: var(--color-muted); font-weight: 700;" id="domain-count-label">
-      {{ domain_statuses | length }} Configured
-    </span>
-  </div>
-
-  <div class="table-wrap">
+<div class="table-wrap">
     <table class="table" id="domains-table">
       <colgroup>
         <col style="width:34%">

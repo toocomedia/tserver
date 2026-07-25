@@ -21,9 +21,9 @@
 .section { 
   display: flex;
   flex-direction: column;
-  border-bottom: 1px solid var(--color-line); 
-  padding: var(--space-xl) 0 var(--space-lg);
-  margin-bottom: var(--space-lg);
+  border-bottom: none !important; 
+  padding: 0;
+  margin-bottom: var(--space-xl);
   width: 100%;
 }
 .section:last-child {
@@ -33,18 +33,21 @@
   display: flex; 
   align-items: center; 
   justify-content: space-between; 
+  background: var(--color-header-bg-bar);
+  padding: 10px 14px;
   margin-bottom: var(--space-md);
 }
-.section__header h3 { 
+.section__header h3, .section__header h2 { 
   font-size: var(--font-h3); 
-  font-weight: 700; 
-  text-transform: none; 
-  letter-spacing: 0; 
+  font-weight: 800; 
+  text-transform: uppercase; 
+  letter-spacing: 0.08em; 
+  margin: 0;
 }
 .section__body { 
   display: flex;
   flex-direction: column;
-  gap: var(--space-md);
+  gap: var(--space-xs);
 }
 /* List Header Title Bar (Background Fill Bar - No Underline Divider) */
 .list-title-bar {

@@ -15,18 +15,7 @@
 </div>
 
 {% if zones %}
-<div>
-  <div class="list-title-bar">
-    <h3>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px; height:14px;"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
-      DNS Zones & Managed Records
-    </h3>
-    <span style="font-size: 11px; color: var(--color-muted); font-weight: 700;">
-      {{ zones | length }} Zones
-    </span>
-  </div>
-
-  <div class="table-wrap">
+<div class="table-wrap">
     <table class="table" id="dns-zones-table">
       <colgroup>
         <col style="width:36%">

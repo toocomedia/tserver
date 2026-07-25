@@ -98,38 +98,62 @@
 {% block content %}
 
 <!-- OVERVIEW STAT CARDS -->
-<div class="usage-overview" id="usage-overview">
-  <div class="stat-card">
-    <div class="stat-card__label">CPU</div>
-    <div class="stat-card__value" id="ov-cpu">—</div>
+<div class="stat-grid mb-xl" id="usage-overview">
+  <div class="stat-card-box">
+    <div class="stat-card-box__label">
+      <span>CPU Usage</span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px; height:14px;"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
+    </div>
+    <div class="stat-card-box__val" id="ov-cpu">—</div>
+    <div class="stat-card-box__meta">Processor Load</div>
   </div>
-  <div class="stat-card">
-    <div class="stat-card__label">RAM Used</div>
-    <div class="stat-card__value" id="ov-ram">—</div>
+  <div class="stat-card-box">
+    <div class="stat-card-box__label">
+      <span>RAM Used</span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px; height:14px;"><rect x="2" y="2" width="20" height="8" rx="2"/></svg>
+    </div>
+    <div class="stat-card-box__val" id="ov-ram">—</div>
+    <div class="stat-card-box__meta">Memory Allocation</div>
   </div>
-  <div class="stat-card">
-    <div class="stat-card__label">Disk (root)</div>
-    <div class="stat-card__value" id="ov-disk">—</div>
+  <div class="stat-card-box">
+    <div class="stat-card-box__label">
+      <span>Disk (root)</span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px; height:14px;"><ellipse cx="12" cy="5" rx="9" ry="3"/></svg>
+    </div>
+    <div class="stat-card-box__val" id="ov-disk">—</div>
+    <div class="stat-card-box__meta">Storage Capacity</div>
   </div>
-  <div class="stat-card">
-    <div class="stat-card__label">Uptime</div>
-    <div class="stat-card__value" style="font-size:18px;font-weight:800;" id="ov-uptime">—</div>
+  <div class="stat-card-box">
+    <div class="stat-card-box__label">
+      <span>Uptime</span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px; height:14px;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    </div>
+    <div class="stat-card-box__val" style="font-size:18px;font-weight:800;" id="ov-uptime">—</div>
+    <div class="stat-card-box__meta">Server Runtime</div>
   </div>
-  <div class="stat-card">
-    <div class="stat-card__label">CPU Cores</div>
-    <div class="stat-card__value" id="ov-cores">—</div>
+  <div class="stat-card-box">
+    <div class="stat-card-box__label">
+      <span>CPU Cores</span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px; height:14px;"><rect x="2" y="2" width="20" height="20" rx="2"/></svg>
+    </div>
+    <div class="stat-card-box__val" id="ov-cores">—</div>
+    <div class="stat-card-box__meta">Cores Available</div>
   </div>
-  <div class="stat-card">
-    <div class="stat-card__label">CPU Freq</div>
-    <div class="stat-card__value" style="font-size:18px;font-weight:800;" id="ov-freq">—</div>
+  <div class="stat-card-box">
+    <div class="stat-card-box__label">
+      <span>CPU Freq</span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px; height:14px;"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    </div>
+    <div class="stat-card-box__val" style="font-size:18px;font-weight:800;" id="ov-freq">—</div>
+    <div class="stat-card-box__meta">Frequency Speed</div>
   </div>
 </div>
 
 <!-- CPU & MEMORY -->
-<div class="section-header">
-  <h2>CPU &amp; Memory</h2>
-</div>
 <div class="section mb-xl">
+  <div class="section__header">
+    <h2>CPU &amp; Memory Realtime Diagnostics</h2>
+  </div>
   <div class="section__body">
 
     <!-- Notice banner for < 2GB RAM -->

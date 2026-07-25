@@ -31,18 +31,7 @@
 {% endif %}
 
 {% if cert_list %}
-<div>
-  <div class="list-title-bar">
-    <h3>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px; height:14px;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-      Managed SSL Certificates (Let's Encrypt)
-    </h3>
-    <span style="font-size: 11px; color: var(--color-muted); font-weight: 700;">
-      {{ cert_list | length }} Active Certificates
-    </span>
-  </div>
-
-  <div class="table-wrap">
+<div class="table-wrap">
   <table class="table" id="ssl-table">
     <colgroup>
       <col style="width:30%">
