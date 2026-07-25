@@ -15,6 +15,7 @@ from pathlib import Path
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 
+import config
 from templating import templates
 from plugins.postgres_manager.service import postgres_service
 from plugins.postgres_manager import queries as pg
@@ -27,6 +28,13 @@ router = APIRouter(prefix="/plugins/postgres_manager", tags=["postgres_manager"]
 SCRIPT_DIR = Path(__file__).parent / "scripts"
 
 
+def _sudo_cmd(script_path: Path) -> list[str]:
+    cmd = ["bash", str(script_path)]
+    if hasattr(os, "geteuid") and os.geteuid() != 0 and getattr(config, "PRIVILEGED_SUDO", True):
+        cmd = ["sudo", "-n", *cmd]
+    return cmd
+
+
 # ---------------------------------------------------------------------------
 # UI
 # ---------------------------------------------------------------------------
@@ -37,9 +45,9 @@ async def pg_index(request: Request):
     from plugins.manager import plugin_manager
     info = plugin_manager.get_plugin("postgres_manager")
     plugin_version = info["version"] if info else "1.0.0"
-    plugin_installed = bool(info and info.get("installed"))
 
     status = postgres_service.get_status()
+    plugin_installed = status["installed"]
     databases = pg.list_databases() if status["running"] else []
     users = pg.list_users() if status["running"] else []
 
@@ -66,10 +74,10 @@ async def install_postgres(request: Request):
         return JSONResponse({"status": "ok", "message": "Mock install on Windows."})
     try:
         res = subprocess.run(
-            ["bash", str(script)], capture_output=True, text=True, timeout=120,
+            _sudo_cmd(script), capture_output=True, text=True, timeout=180,
         )
         if res.returncode != 0:
-            logger.error("PostgreSQL install failed: %s", res.stderr)
+            logger.error("PostgreSQL install failed: %s", res.stderr or res.stdout)
             raise HTTPException(status_code=500, detail=res.stderr or res.stdout)
         postgres_service.pause()  # invalidate any stale cache
         return JSONResponse({"status": "ok", "message": "PostgreSQL installed."})
@@ -89,7 +97,7 @@ async def uninstall_postgres(request: Request):
         return JSONResponse({"status": "ok", "message": "Mock uninstall on Windows."})
     try:
         res = subprocess.run(
-            ["bash", str(script)], capture_output=True, text=True, timeout=60,
+            _sudo_cmd(script), capture_output=True, text=True, timeout=60,
         )
         if res.returncode != 0:
             raise HTTPException(status_code=500, detail=res.stderr or res.stdout)
@@ -99,6 +107,7 @@ async def uninstall_postgres(request: Request):
         raise
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
+
 
 
 # ---------------------------------------------------------------------------

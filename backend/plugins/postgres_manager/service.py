@@ -198,3 +198,5 @@ class PostgresService:
 
 # Module-level singleton — imported by router.py and other plugins
 postgres_service = PostgresService()
+postgres_manager_service = postgres_service
+

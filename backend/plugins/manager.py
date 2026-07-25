@@ -62,11 +62,19 @@ class PluginManager:
         module = self._service_module(plugin_dir)
         if module is None:
             return None
-        for attr in [f"{plugin_id}_service", "service", "maddy_service"]:
+        short_id = plugin_id.replace("_manager", "")
+        candidates = [f"{plugin_id}_service", f"{short_id}_service", "service", "maddy_service"]
+        for attr in candidates:
             service = getattr(module, attr, None)
             if service is not None:
                 return service
+        for name in dir(module):
+            if name.endswith("_service"):
+                val = getattr(module, name, None)
+                if val is not None and hasattr(val, "is_installed"):
+                    return val
         return None
+
 
     def _check_plugin_installed(self, plugin_dir: Path, plugin_id: str) -> bool:
         try:
