@@ -84,7 +84,7 @@
           <span class="list-col-name">{{ plugin.name }}</span>
         </div>
         <div class="list-col-version">v{{ plugin.version }}</div>
-        <div>
+        <div class="list-col-status">
           {% if plugin.effective_status == 'active' %}
             <span class="status-badge status-badge--success">Active</span>
           {% elif plugin.effective_status in ['missing', 'invalid', 'error', 'unhealthy'] %}

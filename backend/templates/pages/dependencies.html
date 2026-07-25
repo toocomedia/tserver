@@ -83,7 +83,7 @@
           <span class="list-col-name">{{ dependency.name }}</span>
         </div>
         <div class="list-col-version">v{{ dependency.version }}</div>
-        <div>
+        <div class="list-col-status">
           {% if dependency.healthy and dependency.desired_enabled %}
             <span class="status-badge status-badge--success">Healthy</span>
           {% elif dependency.effective_state in ['missing', 'unhealthy', 'invalid', 'error'] %}
