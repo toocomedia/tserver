@@ -169,6 +169,7 @@
 
 /* Info row (16px Horizontal Padding Alignment & Dead-Center Height) */
 .info-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 38px; padding: 0 16px; border-bottom: 1px solid var(--color-line); }
+.info-row + .info-row { margin-top: -16px; }
 .info-row:last-child { border-bottom: none; }
 .info-row__label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-muted); min-width: 140px; flex-shrink: 0; display: flex; align-items: center; }
 .info-row__value { font-size: 13px; color: var(--color-text); font-weight: 500; display: flex; align-items: center; gap: 8px; }

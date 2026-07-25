@@ -168,8 +168,6 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-md);
-  padding-bottom: var(--space-md);
-  border-bottom: 1px solid var(--color-line);
   margin-bottom: var(--space-lg);
   flex-wrap: wrap;
 }
