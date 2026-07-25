@@ -133,10 +133,10 @@ def list_tables(db_name: str) -> list[dict[str, Any]]:
 # ------------------------------------------------------------------
 
 def list_users() -> list[dict[str, Any]]:
-    """Return all PostgreSQL roles with login and superuser flags."""
+    """Return application/human PostgreSQL roles (excluding built-in pg_* system roles)."""
     sql = (
         "SELECT rolname, rolsuper::text, rolcanlogin::text "
-        "FROM pg_catalog.pg_roles ORDER BY rolname;"
+        "FROM pg_catalog.pg_roles WHERE rolname NOT LIKE 'pg_%' ORDER BY rolname;"
     )
     out = _run_psql(["-c", sql])
     results: list[dict[str, Any]] = []
@@ -149,6 +149,26 @@ def list_users() -> list[dict[str, Any]]:
                 "can_login": parts[2] == "t",
             })
     return results
+
+
+def list_system_roles() -> list[dict[str, Any]]:
+    """Return built-in PostgreSQL system roles (rolname LIKE 'pg_%')."""
+    sql = (
+        "SELECT rolname, rolsuper::text, rolcanlogin::text "
+        "FROM pg_catalog.pg_roles WHERE rolname LIKE 'pg_%' ORDER BY rolname;"
+    )
+    out = _run_psql(["-c", sql])
+    results: list[dict[str, Any]] = []
+    for line in out.strip().splitlines():
+        parts = line.split("|")
+        if len(parts) >= 3:
+            results.append({
+                "name": parts[0],
+                "superuser": parts[1] == "t",
+                "can_login": parts[2] == "t",
+            })
+    return results
+
 
 
 def create_user(name: str, password: str) -> bool:

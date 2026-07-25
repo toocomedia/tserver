@@ -50,6 +50,7 @@ async def pg_index(request: Request):
     plugin_installed = status["installed"]
     databases = pg.list_databases() if status["running"] else []
     users = pg.list_users() if status["running"] else []
+    system_roles = pg.list_system_roles() if status["running"] else []
 
     return templates.TemplateResponse("postgres.html", {
         "request": request,
@@ -59,7 +60,9 @@ async def pg_index(request: Request):
         "status": status,
         "databases": databases,
         "users": users,
+        "system_roles": system_roles,
     })
+
 
 
 # ---------------------------------------------------------------------------
@@ -178,6 +181,12 @@ async def api_list_tables(name: str):
 @router.get("/api/users")
 async def api_list_users():
     return JSONResponse(pg.list_users())
+
+
+@router.get("/api/system-roles")
+async def api_list_system_roles():
+    return JSONResponse(pg.list_system_roles())
+
 
 
 @router.post("/api/users")

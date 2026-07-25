@@ -32,6 +32,15 @@
         {% endif %}
       </div>
 
+      <div class="split-sidebar__item" data-pg-tab="system-roles" id="pg-tab-system-roles">
+        System Roles
+        {% if system_roles %}
+          <span style="margin-left:auto;font-size:var(--font-small);color:var(--color-muted);">
+            {{ system_roles|length }}
+          </span>
+        {% endif %}
+      </div>
+
       <div class="split-sidebar__item" data-pg-tab="query" id="pg-tab-query">
         Query Runner
       </div>
@@ -79,7 +88,9 @@
     {% if plugin_installed %}
       {% include 'partials/_pg_databases.html' %}
       {% include 'partials/_pg_users.html' %}
+      {% include 'partials/_pg_system_roles.html' %}
       {% include 'partials/_pg_query.html' %}
+
     {% else %}
       <div style="padding:var(--space-xl);">
         <div class="text-center" style="padding:var(--space-xl);">

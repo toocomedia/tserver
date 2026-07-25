@@ -174,7 +174,15 @@ class TestPostgresQueries(unittest.TestCase):
         self.assertEqual(dbs[0]["name"], "mydb")
         self.assertEqual(dbs[1]["owner"], "appuser")
 
+    def test_list_system_roles(self):
+        fake_out = "pg_monitor|f|f\npg_read_all_data|f|f\n"
+        with patch.object(self.q, "_run_psql", return_value=fake_out):
+            roles = self.q.list_system_roles()
+        self.assertEqual(len(roles), 2)
+        self.assertEqual(roles[0]["name"], "pg_monitor")
+
     def test_escape_literal_escapes_single_quote(self):
+
         result = self.q._escape_literal("pass'word")
         self.assertEqual(result, "pass''word")
 
