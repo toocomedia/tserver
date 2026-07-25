@@ -3,6 +3,7 @@ routers/domains.py — Domain CRUD routes.
 Routes call services only — no direct DB or nginx calls here.
 """
 import logging
+import os
 from fastapi import APIRouter, Depends, Request, Form
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -37,15 +38,18 @@ async def domains_bulk_action(payload: BulkActionRequest, db: AsyncSession = Dep
 async def domains_list(request: Request, db: AsyncSession = Depends(get_db)):
     domains = await domain_service.get_all(db)
 
+    # Batch fetch all SSL certs in a single query
+    all_certs = {c.full_domain: c for c in (await db.execute(select(SslCert))).scalars().all()}
+    # Batch check enabled nginx site configs in memory
+    enabled_sites = set(os.listdir(config.NGINX_SITES_ENABLED)) if os.path.exists(config.NGINX_SITES_ENABLED) else set()
+
     # Attach live status to each domain (apex SSL only — not proxy subdomains)
     domain_statuses = []
     for d in domains:
-        cert = await db.scalar(
-            select(SslCert).where(SslCert.full_domain == d.name)
-        )
+        cert = all_certs.get(d.name)
         domain_statuses.append({
             "domain": d,
-            "nginx_active": nginx_service.config_exists(d.name),
+            "nginx_active": f"{d.name}.conf" in enabled_sites,
             "ssl_active": cert is not None,
             "cert": cert,
         })

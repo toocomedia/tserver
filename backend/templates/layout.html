@@ -36,6 +36,7 @@
   {% block head %}{% endblock %}
 </head>
 <body>
+<div id="top-progress-bar" class="top-progress-bar"></div>
 
 <div class="app">
 
@@ -111,6 +112,54 @@
 <!-- JS -->
 <script src="/static/js/main.js"></script>
 <script src="/static/js/resource-views.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  var bar = document.getElementById("top-progress-bar");
+  
+  // 1. Navigation Progress Bar
+  document.addEventListener("click", function(e) {
+    var link = e.target.closest("a");
+    if (link && link.href && link.href.startsWith(window.location.origin) && !link.target && !link.hasAttribute("download") && !link.getAttribute("href").startsWith("#")) {
+      if (bar) {
+        bar.className = "top-progress-bar active";
+      }
+    }
+  });
+
+  window.addEventListener("pageshow", function() {
+    if (bar) {
+      bar.className = "top-progress-bar done";
+      setTimeout(function() { bar.className = "top-progress-bar"; }, 300);
+    }
+  });
+
+  // 2. Universal Async Loader (data-async-load)
+  var asyncContainers = document.querySelectorAll("[data-async-load]");
+  asyncContainers.forEach(function(container) {
+    var url = container.getAttribute("data-async-load");
+    if (!url) return;
+    
+    // Insert skeleton shimmer
+    container.innerHTML = '<div class="skeleton-shimmer"></div>';
+    
+    fetch(url, {
+      headers: { "X-Requested-With": "XMLHttpRequest", "Accept": "text/html" }
+    })
+    .then(function(res) {
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      return res.text();
+    })
+    .then(function(html) {
+      container.innerHTML = html;
+      var evt = new CustomEvent("asyncLoaded", { detail: { container: container } });
+      document.dispatchEvent(evt);
+    })
+    .catch(function(err) {
+      container.innerHTML = '<div class="alert alert--danger">Failed to load content: ' + err.message + '</div>';
+    });
+  });
+});
+</script>
 {% block scripts %}{% endblock %}
 
 </body>

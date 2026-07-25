@@ -3,6 +3,8 @@ routers/proxy.py — Reverse Proxy Manager routes.
 Routes call proxy_service only — no direct nginx/DNS/SSL calls here.
 """
 import logging
+import asyncio
+import os
 from fastapi import APIRouter, Depends, Request, Form, Query
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -38,10 +40,15 @@ async def proxy_index(request: Request, db: AsyncSession = Depends(get_db)):
     proxies = await proxy_service.get_all(db)
     rows = []
 
+    # Batch fetch all domains in a single query
+    domain_map = {d.id: d for d in (await db.execute(select(Domain))).scalars().all()}
+    # Batch check enabled nginx site configs in memory
+    enabled_sites = set(os.listdir(config.NGINX_SITES_ENABLED)) if os.path.exists(config.NGINX_SITES_ENABLED) else set()
+    # Request-scoped DNS record cache to avoid calling DNS service repeatedly for same domain
+    dns_cache = {}
+
     for p in proxies:
-        domain = None
-        if p.domain_id is not None:
-            domain = await db.scalar(select(Domain).where(Domain.id == p.domain_id))
+        domain = domain_map.get(p.domain_id) if p.domain_id is not None else None
 
         dns_managed = getattr(p, "dns_managed", True)
         dns_ok = False
@@ -53,7 +60,9 @@ async def proxy_index(request: Request, db: AsyncSession = Depends(get_db)):
         elif domain:
             dns_status = "missing"
             try:
-                rrsets = await dns_service.list_records(domain.name)
+                if domain.name not in dns_cache:
+                    dns_cache[domain.name] = await dns_service.list_records(domain.name)
+                rrsets = dns_cache[domain.name]
                 fqdn = f"{p.subdomain}.{domain.name}."
                 for rr in rrsets:
                     if rr.get("type") == "A" and rr.get("name", "").rstrip(".") == fqdn.rstrip("."):
@@ -62,18 +71,24 @@ async def proxy_index(request: Request, db: AsyncSession = Depends(get_db)):
                         break
             except Exception as e:
                 logger.warning("DNS status check failed for %s: %s", p.full_domain, e)
+                dns_cache[domain.name] = []
         else:
             dns_status = "missing"
+
+        cache_enabled = getattr(p, "cache_enabled", False)
+        cache_size_mb = 0.0
+        if cache_enabled:
+            cache_size_mb = await asyncio.to_thread(cache_service.get_cache_size_mb, p.full_domain)
 
         rows.append({
             "proxy": p,
             "domain_name": domain.name if domain else "External",
-            "nginx_active": nginx_service.config_exists(p.full_domain),
+            "nginx_active": f"{p.full_domain}.conf" in enabled_sites,
             "dns_ok": dns_ok,
             "dns_status": dns_status,
             "dns_managed": dns_managed,
-            "cache_enabled": getattr(p, "cache_enabled", False),
-            "cache_size_mb": cache_service.get_cache_size_mb(p.full_domain),
+            "cache_enabled": cache_enabled,
+            "cache_size_mb": cache_size_mb,
             "last_cache_cleared": getattr(p, "last_cache_cleared", None),
         })
 

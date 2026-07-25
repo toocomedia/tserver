@@ -546,3 +546,49 @@
     width: 100%;
   }
 }
+
+/* ============================================================
+   UNIVERSAL UI LOADER & PROGRESS BAR
+   ============================================================ */
+.top-progress-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--color-accent), #818cf8);
+  z-index: 99999;
+  width: 0%;
+  transition: width 0.3s ease, opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.top-progress-bar.active {
+  width: 80%;
+  animation: progressPulse 1.5s infinite ease-in-out;
+}
+
+.top-progress-bar.done {
+  width: 100%;
+  opacity: 0;
+}
+
+@keyframes progressPulse {
+  0% { opacity: 0.8; }
+  50% { opacity: 1; }
+  100% { opacity: 0.8; }
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(90deg, var(--color-bg-alt) 25%, var(--color-border) 50%, var(--color-bg-alt) 75%);
+  background-size: 200% 100%;
+  animation: shimmerAnimation 1.5s infinite linear;
+  border-radius: var(--radius-md);
+  min-height: 80px;
+  width: 100%;
+  margin: var(--space-md) 0;
+}
+
+@keyframes shimmerAnimation {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}

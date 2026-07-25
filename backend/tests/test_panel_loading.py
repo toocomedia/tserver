@@ -74,6 +74,36 @@ class PanelLoadingRegressionTests(unittest.TestCase):
         ).read_text(encoding="utf-8")
         self.assertIn("def get_usage_details(self)", maddy_service)
 
+    def test_hosting_routers_use_batched_queries(self):
+        domains_router = (
+            BACKEND / "routers" / "domains.py"
+        ).read_text(encoding="utf-8")
+        domains_list = domains_router[
+            domains_router.index('@router.get("/", response_class=HTMLResponse)')
+            : domains_router.index('@router.get("/create", response_class=HTMLResponse)')
+        ]
+        self.assertIn("all_certs = {c.full_domain: c for c in", domains_list)
+        self.assertNotIn("select(SslCert).where(", domains_list)
+
+        proxy_router = (
+            BACKEND / "routers" / "proxy.py"
+        ).read_text(encoding="utf-8")
+        self.assertIn("domain_map = {d.id: d for d in", proxy_router)
+        self.assertIn("dns_cache = {}", proxy_router)
+
+    def test_base_layout_includes_universal_loader(self):
+        layout_html = (
+            BACKEND / "templates" / "layout.html"
+        ).read_text(encoding="utf-8")
+        self.assertIn('id="top-progress-bar"', layout_html)
+        self.assertIn("data-async-load", layout_html)
+
+        layout_css = (
+            BACKEND / "static" / "css" / "layout.css"
+        ).read_text(encoding="utf-8")
+        self.assertIn(".top-progress-bar", layout_css)
+        self.assertIn(".skeleton-shimmer", layout_css)
+
 
 if __name__ == "__main__":
     unittest.main()
