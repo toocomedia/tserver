@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-hba="$(find /etc/postgresql -name pg_hba.conf -type f | head -n1)"
-[[ -n "$hba" ]] || exit 0
+hba="$(runuser -u postgres -- psql -tAc 'SHOW hba_file;' | xargs)"
+[[ -f "$hba" ]] || exit 0
 sed -i '/# BEGIN srv-panel postgres remote/,/# END srv-panel postgres remote/d' "$hba"
 systemctl reload postgresql
