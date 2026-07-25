@@ -112,12 +112,13 @@ def list_tables(db_name: str) -> list[dict[str, Any]]:
     """Return user tables in a database with size and estimated row counts."""
     _validate_ident(db_name, "database name")
     sql = (
-        "SELECT tablename, "
-        "pg_size_pretty(pg_total_relation_size(quote_ident(tablename))), "
+        "SELECT relname, "
+        "pg_size_pretty(pg_total_relation_size(relid)), "
         "n_live_tup "
-        "FROM pg_stat_user_tables ORDER BY tablename;"
+        "FROM pg_stat_user_tables ORDER BY relname;"
     )
     out = _run_psql(["-d", db_name, "-c", sql])
+
     results: list[dict[str, Any]] = []
     for line in out.strip().splitlines():
         parts = line.split("|")
