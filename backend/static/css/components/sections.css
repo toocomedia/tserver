@@ -40,9 +40,9 @@
 }
 .section__header h3, .section__header h2 { 
   font-size: 11px; 
-  font-weight: 700; 
+  font-weight: 600; 
   text-transform: uppercase; 
-  letter-spacing: 0.06em; 
+  letter-spacing: 0.05em; 
   color: var(--color-muted);
   margin: 0;
   display: flex;
@@ -73,9 +73,9 @@
 }
 .list-title-bar h3 {
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.05em;
   color: var(--color-muted);
   margin: 0;
   display: flex;
@@ -132,9 +132,9 @@
 }
 .stat-card-box__label {
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.05em;
   color: var(--color-muted);
   display: flex;
   align-items: center;
@@ -147,7 +147,7 @@
 }
 .stat-card-box__val {
   font-size: 22px;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--color-text);
   line-height: 1.1;
 }
@@ -156,11 +156,11 @@
   color: var(--color-muted);
 }
 
-/* Info row (Clean Compact Inside Padding) */
-.info-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 10px 0; border-bottom: 1px solid var(--color-line); }
+/* Info row (Clean 13px Font Size & 100% Vertical Centering) */
+.info-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 36px; padding: 6px 0; border-bottom: 1px solid var(--color-line); }
 .info-row:last-child { border-bottom: none; }
-.info-row__label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-muted); min-width: 140px; flex-shrink: 0; }
-.info-row__value { font-size: 13px; color: var(--color-text); font-weight: 500; }
+.info-row__label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-muted); min-width: 140px; flex-shrink: 0; display: flex; align-items: center; }
+.info-row__value { font-size: 13px; color: var(--color-text); font-weight: 500; display: flex; align-items: center; gap: 8px; }
 /* Monospace block */
 .code-block { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: var(--font-small); line-height: 1.5; background: var(--color-surface); border: 1px solid var(--color-line); padding: var(--space-md); margin: 0; white-space: pre-wrap; word-break: break-word; max-height: 360px; overflow: auto; color: var(--color-text); }
 /* SSL Progress */
