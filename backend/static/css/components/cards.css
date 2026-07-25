@@ -48,6 +48,19 @@
   stroke-width: 2;
 }
 
+/* Server optimization controls: equal-width, filled, borderless actions. */
+.optimization-list { display: flex; flex-direction: column; gap: var(--space-xl); padding-top: var(--space-sm); }
+.optimization-row { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-lg); flex-wrap: wrap; }
+.optimization-row__copy { flex: 1; min-width: 240px; }
+.optimization-row__title { margin-bottom: 2px; font-size: var(--font-body); }
+.optimization-row__control { width: calc(var(--button-min-width) * 2); flex: 0 0 calc(var(--button-min-width) * 2); }
+.optimization-toggle { display: grid; grid-template-columns: 1fr 1fr; width: 100%; background: var(--color-surface); }
+.optimization-toggle__btn { width: 100%; min-width: 0; height: var(--button-height); padding: 0 var(--space-md); border: none; background: var(--color-secondary-btn); color: var(--color-muted); cursor: pointer; font-size: var(--font-small); font-weight: 600; }
+.optimization-toggle__btn:hover { background: var(--color-secondary-hover); color: var(--color-text); }
+.optimization-toggle__btn.is-active { background: var(--color-accent); color: var(--color-on-accent); }
+.optimization-toggle__btn:disabled { opacity: .45; cursor: wait; pointer-events: none; }
+.optimization-checks { display: none; line-height: 1.4; }
+
 /* Minimal Status Indicators (No Dots) */
 .plugin-card__status,
 .dependency-card__status {

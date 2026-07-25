@@ -7,54 +7,54 @@
     </h3>
   </div>
   <div class="section__body">
-    <div style="display: flex; flex-direction: column; gap: 24px; padding-top: 8px;">
+    <div class="optimization-list">
 
       <!-- Control 1: Low-RAM Optimization Mode -->
-      <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap;">
-        <div style="flex: 1; min-width: 240px;">
-          <div style="margin-bottom: 2px;">
-            <strong style="font-size: 14px;">Low-RAM Optimization Mode</strong>
+      <div class="optimization-row">
+        <div class="optimization-row__copy">
+          <div class="optimization-row__title">
+            <strong>Low-RAM Optimization Mode</strong>
           </div>
           <div class="text-small text-muted">zRAM compressed swap (500MB), swappiness (10), PowerDNS cache limits &amp; jemalloc.</div>
         </div>
-        <div>
-          <div class="view-switcher" id="group-opt-mode">
-            <button type="button" class="view-switcher__btn is-active" id="btn-opt-off" onclick="setOptMode(false)">Inactive</button>
-            <button type="button" class="view-switcher__btn" id="btn-opt-on" onclick="setOptMode(true)">Active</button>
+        <div class="optimization-row__control">
+          <div class="optimization-toggle" id="group-opt-mode" role="group" aria-label="Low-RAM Optimization Mode">
+            <button type="button" class="optimization-toggle__btn is-active" id="btn-opt-off" data-optimization-action="ram-off">Inactive</button>
+            <button type="button" class="optimization-toggle__btn" id="btn-opt-on" data-optimization-action="ram-on">Active</button>
           </div>
         </div>
       </div>
 
       <!-- Control 2: Single Nginx Worker Mode -->
-      <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap;">
-        <div style="flex: 1; min-width: 240px;">
-          <div style="margin-bottom: 2px;">
-            <strong style="font-size: 14px;">Single Nginx Worker Mode</strong>
+      <div class="optimization-row">
+        <div class="optimization-row__copy">
+          <div class="optimization-row__title">
+            <strong>Single Nginx Worker Mode</strong>
           </div>
           <div class="text-small text-muted">Forces Nginx worker_processes to 1. Recommended for 1 CPU core VPS.</div>
         </div>
-        <div>
-          <div class="view-switcher" id="group-nginx-worker">
-            <button type="button" class="view-switcher__btn is-active" id="btn-ngx-auto" onclick="setNginxWorker(false)">Auto</button>
-            <button type="button" class="view-switcher__btn" id="btn-ngx-single" onclick="setNginxWorker(true)">1 Worker</button>
+        <div class="optimization-row__control">
+          <div class="optimization-toggle" id="group-nginx-worker" role="group" aria-label="Single Nginx Worker Mode">
+            <button type="button" class="optimization-toggle__btn is-active" id="btn-ngx-auto" data-optimization-action="nginx-auto">Auto</button>
+            <button type="button" class="optimization-toggle__btn" id="btn-ngx-single" data-optimization-action="nginx-single">1 Worker</button>
           </div>
         </div>
       </div>
 
       <!-- Control 3: Advanced Server Tuning -->
-      <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap;">
-        <div style="flex: 1; min-width: 240px;">
-          <div style="margin-bottom: 2px;">
-            <strong style="font-size: 14px;">Advanced Server Tuning</strong>
+      <div class="optimization-row">
+        <div class="optimization-row__copy">
+          <div class="optimization-row__title">
+            <strong>Advanced Server Tuning</strong>
           </div>
           <div class="text-small text-muted mb-sm">Smart background service disabling, TCP BBR speed control, and journald log capping.</div>
-          <div class="text-small mt-sm" id="advanced-tuning-checks" style="display:none; line-height:1.4;">
+          <div class="text-small mt-sm optimization-checks" id="advanced-tuning-checks">
           </div>
         </div>
-        <div>
-          <div class="view-switcher" id="group-advanced-tuning">
-            <button type="button" class="view-switcher__btn is-active" id="btn-adv-off" onclick="setAdvancedTuning(false)">Inactive</button>
-            <button type="button" class="view-switcher__btn" id="btn-adv-on" onclick="setAdvancedTuning(true)">Active</button>
+        <div class="optimization-row__control">
+          <div class="optimization-toggle" id="group-advanced-tuning" role="group" aria-label="Advanced Server Tuning">
+            <button type="button" class="optimization-toggle__btn is-active" id="btn-adv-off" data-optimization-action="advanced-off">Inactive</button>
+            <button type="button" class="optimization-toggle__btn" id="btn-adv-on" data-optimization-action="advanced-on">Active</button>
           </div>
         </div>
       </div>

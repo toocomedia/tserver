@@ -6,7 +6,7 @@
   gap: 6px;
   height: var(--button-height, 36px);
   padding: 0 14px;
-  min-width: auto;
+  min-width: var(--button-min-width, 90px);
   font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.02em;
@@ -62,7 +62,7 @@
 .btn--ghost {
   background: transparent !important;
   color: var(--color-muted) !important;
-  min-width: auto;
+  min-width: var(--button-min-width-sm, 70px);
 }
 .btn--ghost:hover, .btn--ghost.active {
   color: var(--color-text) !important;
@@ -115,4 +115,3 @@
   min-width: var(--button-height-sm, 32px);
   padding: 0;
 }
-

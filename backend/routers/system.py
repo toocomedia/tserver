@@ -169,8 +169,15 @@ async def _get_optimization_status() -> dict:
         "nginx_single_worker": nginx_single,
         "nginx_worker_setting": worker_setting,
         "advanced_active": advanced_active,
+        "advanced_tuning_active": advanced_active,
         "hardware_checks": _HARDWARE_CACHE,
     }
+
+
+@router.get("/api/system/optimization/status")
+async def optimization_status():
+    """Return only optimization state so the UI can confirm a slow apply."""
+    return await _get_optimization_status()
 
 
 def _collect_usage_snapshot() -> dict:
