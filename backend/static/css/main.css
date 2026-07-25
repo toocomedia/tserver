@@ -15,8 +15,8 @@
 .pg-remote-head, .pg-remote-form-head { align-items: flex-start; display: flex; gap: 16px; justify-content: space-between; flex-wrap: wrap; margin-bottom: 24px; }
 .pg-remote-head h2, .pg-remote-form-head h3 { margin: 0; font-size: var(--font-h2); font-weight: 700; color: var(--color-text); }
 .pg-remote-head p, .pg-remote-form-head p { color: var(--color-muted); margin: 4px 0 0; font-size: var(--font-body); }
-.pg-remote-add { max-width: 820px; background: var(--color-bg); border: 1px solid var(--color-line); padding: 24px 28px; }
-.pg-remote-panel .table-wrap { max-width: 100%; border: 1px solid var(--color-line); }
+.pg-remote-add { max-width: 640px; margin-bottom: 32px; }
+.pg-remote-panel .table-wrap { max-width: 100%; border: none; }
 .pg-remote-panel .remote-table { min-width: 960px; }
 .pg-remote-panel .remote-actions { display: flex; justify-content: flex-end; align-items: center; gap: 8px; flex-wrap: nowrap; white-space: nowrap; }
 .remote-split .split-content { min-width: 0; padding: 28px 32px; }
@@ -29,36 +29,25 @@
 .remote-table td { vertical-align: middle !important; }
 .remote-meta { display: block; color: var(--color-muted); font-size: 11px; margin-top: 3px; font-weight: 500; }
 .remote-error { display: block; color: var(--color-danger); font-size: var(--font-small); margin-top: 4px; font-weight: 600; }
-.remote-empty-card { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 48px 24px; text-align: center; background: var(--color-surface); border: 1px solid var(--color-line); }
-.remote-empty-card h3 { font-size: 18px; font-weight: 700; margin: 12px 0 6px; color: var(--color-text); }
-.remote-empty-card p { color: var(--color-muted); max-width: 440px; margin: 0 0 20px; font-size: var(--font-body); }
 .remote-section { border-top: 1px solid var(--color-line); padding: 20px 0; }
 .remote-section:first-of-type { border-top: 0; padding-top: 0; }
-.remote-section-title { font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text); margin: 0 0 14px; }
-.remote-choice-row, .remote-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
-.remote-choice { align-items: flex-start; background: var(--color-bg); border: 1px solid var(--color-line); cursor: pointer; display: flex; gap: 12px; padding: 16px; transition: border-color 0.15s ease, background 0.15s ease; position: relative; }
-.remote-choice:hover { border-color: var(--color-text); }
-.remote-choice:has(input:checked), .remote-choice.is-selected { border-color: var(--color-accent); background: var(--color-surface); }
-.remote-choice input[type="radio"] { margin-top: 3px; cursor: pointer; accent-color: var(--color-accent); flex-shrink: 0; }
-.remote-choice strong { display: block; font-size: 14px; font-weight: 700; color: var(--color-text); }
-.remote-choice small { display: block; color: var(--color-muted); font-size: 12px; line-height: 1.4; margin-top: 4px; }
-.remote-choice em { color: var(--color-accent-2, var(--color-muted)); font-size: 11px; font-weight: 700; font-style: normal; text-transform: uppercase; letter-spacing: 0.04em; margin-left: 6px; }
-.remote-choice--wide { grid-column: 1 / -1; }
-.remote-preview-box { display: inline-flex; align-items: center; gap: 8px; background: var(--color-surface); border: 1px dashed var(--color-line); padding: 8px 12px; margin-top: 8px; font-size: 12px; }
-.remote-chip { display: inline-flex; align-items: center; padding: 2px 8px; font-family: monospace; font-size: 12px; background: var(--color-surface); border: 1px solid var(--color-line); color: var(--color-text); font-weight: 600; }
+.remote-section-title { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-muted); margin: 0 0 14px; }
+.remote-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.remote-preview-box { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: var(--color-muted); margin-top: 4px; }
+.remote-chip { display: inline-flex; align-items: center; padding: 2px 6px; font-family: monospace; font-size: 12px; color: var(--color-text); font-weight: 600; background: var(--color-surface); }
 .remote-inline { align-items: center; display: flex; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
 .remote-warning-text { color: var(--color-warn); font-size: 12px; font-weight: 500; display: flex; align-items: center; gap: 6px; }
-.remote-submit-row { align-items: center; display: flex; justify-content: space-between; gap: 16px; padding-top: 16px; border-top: 1px solid var(--color-line); margin-top: 20px; }
+.remote-submit-row { align-items: center; display: flex; gap: 12px; padding-top: 20px; border-top: 1px solid var(--color-line); margin-top: 20px; }
 .remote-feedback { color: var(--color-text); font-weight: 500; font-size: 13px; padding: 10px 14px; background: var(--color-surface); border-left: 3px solid var(--color-accent); margin-bottom: 20px; display: none; }
-.remote-notice { background: var(--color-surface); border: 1px solid var(--color-line); color: var(--color-text); margin: 0 0 20px; padding: 12px 16px; font-size: 13px; font-weight: 500; }
+.remote-notice { background: var(--color-surface); border-left: 3px solid var(--color-accent); color: var(--color-text); margin: 0 0 20px; padding: 12px 16px; font-size: 13px; font-weight: 500; }
 .remote-copy { display: flex; gap: 8px; }
 .remote-copy .form-input { min-width: 0; }
 @media (max-width: 768px) {
   .pg-remote-panel, .remote-split .split-content { padding: 20px 16px; }
   .pg-remote-head, .pg-remote-form-head, .remote-title-row { align-items: stretch; flex-direction: column; }
-  .remote-choice-row, .remote-grid { grid-template-columns: 1fr; }
+  .remote-grid { grid-template-columns: 1fr; }
   .pg-remote-panel .remote-actions { flex-wrap: wrap; justify-content: flex-start; }
-  .remote-submit-row { align-items: stretch; flex-direction: column; }
+  .remote-submit-row { flex-direction: column-reverse; align-items: stretch; }
 }
 
 /* ============================================================

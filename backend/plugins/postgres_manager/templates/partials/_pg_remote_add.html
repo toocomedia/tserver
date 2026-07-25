@@ -13,10 +13,10 @@
   </aside>
 
   <main class="split-content">
-    <form id="remote-form" class="pg-remote-add remote-content" style="max-width:820px;">
+    <form id="remote-form" class="pg-remote-add remote-content" style="max-width:640px;">
       <div class="pg-remote-form-head">
         <div>
-          <h1>Add Remote Endpoint</h1>
+          <h2>Add Remote Endpoint</h2>
           <p>Set a connection hostname, security mode, and firewall access rules.</p>
         </div>
         <a class="btn btn--secondary btn--sm" href="/plugins/postgres_manager/remote">Cancel</a>
@@ -24,20 +24,20 @@
 
       {# Section 1: Hostname #}
       <section class="remote-section">
-        <h4 class="remote-section-title">1. Connection Hostname</h4>
-        <div class="remote-choice-row">
-          <label class="remote-choice">
+        <h3 class="remote-section-title">1. Connection Hostname</h3>
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <label class="form-check">
             <input type="radio" name="mode" value="managed" checked>
             <div>
-              <strong>Managed Subdomain</strong>
-              <small>The panel creates its DNS record automatically.</small>
+              <span style="font-weight:700;color:var(--color-text);">Managed Subdomain</span>
+              <div class="form-hint">The panel manages DNS and creates an A record automatically.</div>
             </div>
           </label>
-          <label class="remote-choice">
+          <label class="form-check">
             <input type="radio" name="mode" value="external">
             <div>
-              <strong>External Hostname</strong>
-              <small>You manage its DNS record with a custom provider.</small>
+              <span style="font-weight:700;color:var(--color-text);">External Hostname</span>
+              <div class="form-hint">Use a custom domain managed by your own external DNS provider.</div>
             </div>
           </label>
         </div>
@@ -59,7 +59,7 @@
           </div>
           <div style="grid-column: 1 / -1;">
             <div class="remote-preview-box">
-              <span style="color:var(--color-muted);">Endpoint Hostname Preview:</span>
+              <span>Preview:</span>
               <strong id="preview" class="remote-chip">db.example.com</strong>
             </div>
           </div>
@@ -68,26 +68,26 @@
         <div id="external-fields" class="form-group is-hidden" style="margin-top:16px;">
           <label class="form-label" for="hostname">Full Hostname</label>
           <input class="form-input" id="hostname" placeholder="postgres.example.com" autocomplete="off" spellcheck="false">
-          <span class="form-hint">Point an A record to this VPS server IP before enabling SSL.</span>
+          <span class="form-hint">Point an A record to this VPS IP before enabling SSL.</span>
         </div>
       </section>
 
       {# Section 2: Connection Security #}
       <section class="remote-section">
-        <h4 class="remote-section-title">2. Connection Security</h4>
-        <div class="remote-choice-row">
-          <label class="remote-choice remote-choice--wide">
+        <h3 class="remote-section-title">2. Connection Security</h3>
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <label class="form-check">
             <input type="radio" name="encryption" value="true" checked>
             <div>
-              <strong>Encrypted with SSL <em>Recommended</em></strong>
-              <small>Let’s Encrypt certificate with <code>sslmode=verify-full</code>.</small>
+              <span style="font-weight:700;color:var(--color-text);">Encrypted with SSL <em style="font-size:11px;color:var(--color-accent-2);font-style:normal;font-weight:700;text-transform:uppercase;">Recommended</em></span>
+              <div class="form-hint">Let’s Encrypt certificate with <code>sslmode=verify-full</code>.</div>
             </div>
           </label>
-          <label class="remote-choice remote-choice--wide">
+          <label class="form-check">
             <input type="radio" name="encryption" value="false">
             <div>
-              <strong>Unencrypted (Plain TCP)</strong>
-              <small>Uses <code>sslmode=disable</code>. Password authentication still required.</small>
+              <span style="font-weight:700;color:var(--color-text);">Unencrypted (Plain TCP)</span>
+              <div class="form-hint">Uses <code>sslmode=disable</code>. Password authentication still required.</div>
             </div>
           </label>
         </div>
@@ -95,7 +95,7 @@
 
       {# Section 3: Allowed Connections #}
       <section class="remote-section">
-        <h4 class="remote-section-title">3. Access Control</h4>
+        <h3 class="remote-section-title">3. Allowed IP Ranges</h3>
         <div class="form-group">
           <label class="form-label" for="cidrs">Allowed IP Ranges (CIDR)</label>
           <input class="form-input" id="cidrs" value="0.0.0.0/0" placeholder="203.0.113.10/32, 198.51.100.0/24">
@@ -117,8 +117,8 @@
       <div id="remote-error" class="form-error" style="display:none;margin-top:16px;"></div>
 
       <div class="remote-submit-row">
-        <a class="btn btn--secondary" href="/plugins/postgres_manager/remote">Cancel</a>
         <button class="btn btn--primary" id="submit" type="submit">Enable Remote Access</button>
+        <a class="btn btn--secondary" href="/plugins/postgres_manager/remote">Cancel</a>
       </div>
     </form>
   </main>

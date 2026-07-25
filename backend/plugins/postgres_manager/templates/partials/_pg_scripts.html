@@ -1,7 +1,7 @@
 <script type="module">
 /**
  * _pg_scripts.html — PostgreSQL Manager vanilla JS module.
- * Handles: tab switching, modals, API fetch calls, result rendering, remote access form.
+ * Handles: tab switching, modals, API fetch calls, result rendering, remote access form UX.
  */
 
 const BASE = "/plugins/postgres_manager/api";
@@ -163,11 +163,12 @@ document.addEventListener("click", async e => {
 
 // ── Remote Access Panel Interactive Logic ──────────────────────────────────
 
-const remoteForm     = document.getElementById("pg-remote-add-form");
-const remoteList     = document.getElementById("pg-remote-list");
-const remoteFeedback = document.getElementById("pg-remote-feedback");
-const remoteManaged  = document.getElementById("pg-remote-managed");
-const remoteExternal = document.getElementById("pg-remote-external");
+const remoteForm       = document.getElementById("pg-remote-add-form");
+const remoteList       = document.getElementById("pg-remote-list");
+const remoteHeaderList = document.getElementById("pg-remote-header-list");
+const remoteFeedback   = document.getElementById("pg-remote-feedback");
+const remoteManaged    = document.getElementById("pg-remote-managed");
+const remoteExternal   = document.getElementById("pg-remote-external");
 
 function updateRemoteMode() {
   const selectedModeInput = document.querySelector('input[name="pg-remote-mode"]:checked');
@@ -195,11 +196,13 @@ const cancelAddFooterBtn = document.getElementById("pg-remote-cancel-add-footer"
 function openAddRemoteForm() {
   if (remoteForm) remoteForm.classList.remove("is-hidden");
   if (remoteList) remoteList.classList.add("is-hidden");
+  if (remoteHeaderList) remoteHeaderList.classList.add("is-hidden");
 }
 
 function closeAddRemoteForm() {
   if (remoteForm) remoteForm.classList.add("is-hidden");
   if (remoteList) remoteList.classList.remove("is-hidden");
+  if (remoteHeaderList) remoteHeaderList.classList.remove("is-hidden");
 }
 
 if (showAddBtn) showAddBtn.addEventListener("click", openAddRemoteForm);
