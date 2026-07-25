@@ -29,10 +29,23 @@ def build_hostname(mode: str, domain: str | None, subdomain: str | None, hostnam
 def normalize_cidrs(cidrs: list[str]) -> list[str]:
     if not cidrs:
         raise ValueError("Add at least one allowed IP range.")
+    tokens = []
+    for item in cidrs:
+        if item and isinstance(item, str):
+            for part in re.split(r'[,;\s]+', item.strip()):
+                if part:
+                    tokens.append(part)
+    if not tokens:
+        raise ValueError("Add at least one allowed IP range.")
+    result = []
     try:
-        return [str(ipaddress.ip_network(value.strip(), strict=False)) for value in cidrs if value.strip()]
+        for value in tokens:
+            net = str(ipaddress.ip_network(value, strict=False))
+            if net not in result:
+                result.append(net)
+        return result
     except ValueError as exc:
-        raise ValueError("Allowed IPs must use CIDR notation, for example 203.0.113.10/32.") from exc
+        raise ValueError(f"Invalid IP address or CIDR range: '{value}'") from exc
 
 
 async def resolve_host(host: str) -> list[str]:

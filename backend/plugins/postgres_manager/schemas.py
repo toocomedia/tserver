@@ -1,8 +1,9 @@
 """
 schemas.py — Pydantic request / response models for the PostgreSQL Manager plugin.
 """
-from typing import Literal
+from typing import Any, Literal
 import ipaddress
+import re
 from pydantic import BaseModel, field_validator, model_validator
 
 
@@ -144,11 +145,27 @@ class RemoteConfigRequest(BaseModel):
             self.encryption_enabled = self.issue_ssl
         return self
 
-    @field_validator("allowed_cidrs")
+    @field_validator("allowed_cidrs", mode="before")
     @classmethod
-    def valid_cidrs(cls, values: list[str]) -> list[str]:
-        if not values:
+    def valid_cidrs(cls, values: Any) -> list[str]:
+        if isinstance(values, str):
+            values = [values]
+        if not values or not isinstance(values, list):
             raise ValueError("Add at least one allowed IP range.")
-        for value in values:
-            ipaddress.ip_network(value, strict=False)
-        return values
+        tokens = []
+        for val in values:
+            if val and isinstance(val, str):
+                for part in re.split(r'[,;\s]+', val.strip()):
+                    if part:
+                        tokens.append(part)
+        if not tokens:
+            raise ValueError("Add at least one allowed IP range.")
+        res = []
+        for value in tokens:
+            try:
+                net = str(ipaddress.ip_network(value, strict=False))
+                if net not in res:
+                    res.append(net)
+            except ValueError:
+                raise ValueError(f"Invalid IP address or CIDR range: '{value}'")
+        return res

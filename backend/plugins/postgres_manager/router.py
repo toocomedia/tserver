@@ -273,9 +273,9 @@ async def api_add_remote_domain(body: RemoteConfigRequest, db: AsyncSession = De
         return JSONResponse(result, status_code=201)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
-    except Exception:
+    except Exception as exc:
         logger.exception("Could not create PostgreSQL remote endpoint")
-        raise HTTPException(status_code=500, detail="Could not save the remote endpoint. Check panel logs.")
+        raise HTTPException(status_code=400, detail=str(exc) or "Could not save the remote endpoint.")
 
 
 @router.delete("/api/remote/domains/{domain}")
@@ -285,6 +285,9 @@ async def api_delete_remote_domain(domain: str, db: AsyncSession = Depends(get_d
         return JSONResponse({"status": "ok"})
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
+    except Exception as exc:
+        logger.exception("Could not delete PostgreSQL remote endpoint %s", domain)
+        raise HTTPException(status_code=400, detail=str(exc) or "Could not delete remote endpoint.")
 
 
 @router.post("/api/remote/domains/{domain}/ssl")
@@ -293,6 +296,9 @@ async def api_reissue_remote_ssl(domain: str, db: AsyncSession = Depends(get_db)
         return JSONResponse(await postgres_service.reissue_remote_ssl(db, domain))
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
+    except Exception as exc:
+        logger.exception("Could not reissue SSL for %s", domain)
+        raise HTTPException(status_code=400, detail=str(exc) or "SSL reissue failed.")
 
 
 @router.post("/api/remote/domains/{domain}/test")
@@ -301,3 +307,6 @@ async def api_test_remote_domain(domain: str, db: AsyncSession = Depends(get_db)
         return JSONResponse(await postgres_service.test_remote_domain(db, domain))
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
+    except Exception as exc:
+        logger.exception("Could not test PostgreSQL remote endpoint %s", domain)
+        raise HTTPException(status_code=400, detail=str(exc) or "Connection test failed.")

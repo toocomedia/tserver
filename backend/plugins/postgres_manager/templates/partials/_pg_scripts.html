@@ -201,7 +201,7 @@ document.getElementById("pg-remote-submit-btn")?.addEventListener("click", async
     subdomain: activeMode === "managed" ? document.getElementById("pg-remote-subdomain")?.value?.trim() : null,
     hostname: activeMode === "external" ? document.getElementById("pg-remote-hostname")?.value?.trim() : null,
     encryption_enabled: document.querySelector('input[name="pg-remote-encryption"]:checked')?.value === "true",
-    allowed_cidrs: (document.getElementById("pg-remote-cidrs")?.value || "0.0.0.0/0").split(',').map(x => x.trim()).filter(Boolean)
+    allowed_cidrs: (document.getElementById("pg-remote-cidrs")?.value || "0.0.0.0/0").split(/[,;\s]+/).map(x => x.trim()).filter(Boolean)
   };
   
   try {

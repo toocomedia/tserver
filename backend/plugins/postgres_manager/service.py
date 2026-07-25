@@ -694,21 +694,30 @@ class PostgresService:
         record = await db.scalar(select(PostgresRemoteDomain).where(PostgresRemoteDomain.full_domain == full_host))
         if not record:
             raise ValueError("Endpoint not found.")
-        old_cidrs = set(record.allowed_cidrs.split(','))
+        old_cidrs = set((record.allowed_cidrs or "").split(',')) if record.allowed_cidrs else set()
         if record.mode == "managed" and record.domain_id and record.subdomain:
             parent = await db.get(Domain, record.domain_id)
             if parent:
                 from services import dns_service
-                await dns_service.delete_record(parent.name, record.subdomain, "A")
+                try:
+                    await dns_service.delete_record(parent.name, record.subdomain, "A")
+                except Exception as exc:
+                    logger.warning("Could not delete DNS record for %s: %s", full_host, exc)
         await db.delete(record)
         await db.commit()
         rows = list((await db.scalars(select(PostgresRemoteDomain).where(PostgresRemoteDomain.enabled.is_(True)))).all())
-        retained = {cidr for row in rows for cidr in row.allowed_cidrs.split(',') if cidr}
-        await native_tls.firewall_remove(sorted(old_cidrs - retained))
-        if rows:
-            await native_tls.configure_postgres(rows)
-        else:
-            await native_tls.disable_remote_postgres()
+        retained = {cidr for row in rows for cidr in (row.allowed_cidrs or "").split(',') if cidr}
+        try:
+            await native_tls.firewall_remove(sorted(old_cidrs - retained))
+        except Exception as exc:
+            logger.warning("Could not update firewall rules during deletion: %s", exc)
+        try:
+            if rows:
+                await native_tls.configure_postgres(rows)
+            else:
+                await native_tls.disable_remote_postgres()
+        except Exception as exc:
+            logger.warning("Could not update postgres config during deletion: %s", exc)
         return True
 
 postgres_service = PostgresService()
