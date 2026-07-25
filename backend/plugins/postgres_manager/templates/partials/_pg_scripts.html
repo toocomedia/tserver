@@ -1,7 +1,8 @@
 <script type="module">
 /**
  * _pg_scripts.html — PostgreSQL Manager vanilla JS module.
- * Handles: tab switching, modals, API fetch calls, result rendering, remote access form UX.
+ * Handles: tab switching, modals, API fetch calls, result rendering.
+ * No jQuery. No global variables. ES6 module scope.
  */
 
 const BASE = "/plugins/postgres_manager/api";
@@ -19,6 +20,7 @@ async function apiFetch(path, opts = {}) {
 }
 
 function showToast(msg, isError = false) {
+  // Re-uses the panel's global showToast if available, else console.
   if (window.showToast) { window.showToast(msg, isError ? "error" : "success"); return; }
   console[isError ? "error" : "log"](msg);
 }
@@ -34,7 +36,6 @@ function closeModal(id) {
 }
 
 function setLoading(btn, loading) {
-  if (!btn) return;
   btn.disabled = loading;
   btn.classList.toggle("is-loading", loading);
 }
@@ -63,43 +64,31 @@ if (new URLSearchParams(window.location.search).get("tab") === "remote") {
 // ── Connection URL & Credentials Generator Modal ─────────────────────────
 
 function updateConnectionUrls() {
-  const dbEl       = document.getElementById("pg-conn-db-name");
-  const userSelect = document.getElementById("pg-conn-user-select");
+  const db         = document.getElementById("pg-conn-db-name").value || "my_db";
+  const user       = document.getElementById("pg-conn-user-select").value || "postgres";
   const modeSelect = document.getElementById("pg-conn-mode-select");
-  const pwInput    = document.getElementById("pg-conn-password-input");
-
-  const db       = (dbEl ? dbEl.value : "") || "my_db";
-  const user     = (userSelect ? userSelect.value : "") || "postgres";
-  const hostVal  = modeSelect ? modeSelect.value : "127.0.0.1";
-  const password = (pwInput ? pwInput.value : "") || "YOUR_PASSWORD";
+  const hostVal    = modeSelect ? modeSelect.value : "127.0.0.1";
+  const password   = document.getElementById("pg-conn-password-input").value || "YOUR_PASSWORD";
 
   let host = "127.0.0.1";
   let sslParam = "";
 
   if (hostVal && hostVal !== "127.0.0.1" && hostVal !== "local") {
     host = hostVal;
-    if (modeSelect && modeSelect.selectedIndex >= 0) {
-      const selected = modeSelect.options[modeSelect.selectedIndex];
-      sslParam = `?sslmode=${selected.dataset.sslmode || "verify-full"}`;
-    }
+    const selected = modeSelect.options[modeSelect.selectedIndex];
+    sslParam = `?sslmode=${selected.dataset.sslmode || "verify-full"}`;
   }
 
   const uri = `postgresql://${encodeURIComponent(user)}:${encodeURIComponent(password)}@${host}:5432/${db}${sslParam}`;
   const env = `DATABASE_URL="${uri}"`;
 
-  const uriEl  = document.getElementById("pg-conn-uri");
-  const envEl  = document.getElementById("pg-conn-env");
-  const hostEl = document.getElementById("pg-conn-host-val");
-  const portEl = document.getElementById("pg-conn-port-val");
-  const dbVal  = document.getElementById("pg-conn-db-val");
-  const usrVal = document.getElementById("pg-conn-user-val");
+  document.getElementById("pg-conn-uri").value = uri;
+  document.getElementById("pg-conn-env").value = env;
 
-  if (uriEl) uriEl.value = uri;
-  if (envEl) envEl.value = env;
-  if (hostEl) hostEl.textContent = host;
-  if (portEl) portEl.textContent = "5432";
-  if (dbVal) dbVal.textContent   = db;
-  if (usrVal) usrVal.textContent = user;
+  document.getElementById("pg-conn-host-val").textContent = host;
+  document.getElementById("pg-conn-port-val").textContent = "5432";
+  document.getElementById("pg-conn-db-val").textContent   = db;
+  document.getElementById("pg-conn-user-val").textContent = user;
 }
 
 document.addEventListener("click", e => {
@@ -108,15 +97,11 @@ document.addEventListener("click", e => {
   const db     = btn.dataset.db;
   const owner  = btn.dataset.owner;
   const domain = btn.dataset.domain;
-
-  if (db && document.getElementById("pg-conn-db-name")) {
-    document.getElementById("pg-conn-db-name").value = db;
-  }
+  if (db) document.getElementById("pg-conn-db-name").value = db;
   const userSelect = document.getElementById("pg-conn-user-select");
   if (userSelect && owner) userSelect.value = owner;
   const modeSelect = document.getElementById("pg-conn-mode-select");
   if (modeSelect && domain) modeSelect.value = domain;
-
   updateConnectionUrls();
   openModal("pg-modal-connection");
 });
@@ -133,7 +118,6 @@ const togglePwBtn = document.getElementById("pg-conn-toggle-pw-btn");
 if (togglePwBtn) {
   togglePwBtn.addEventListener("click", () => {
     const pwInput = document.getElementById("pg-conn-password-input");
-    if (!pwInput) return;
     if (pwInput.type === "password") {
       pwInput.type = "text";
       togglePwBtn.textContent = "Hide";
@@ -161,173 +145,226 @@ document.addEventListener("click", async e => {
   }
 });
 
-// ── Remote Access Panel Interactive Logic ──────────────────────────────────
-
-const remoteForm       = document.getElementById("pg-remote-add-form");
-const remoteList       = document.getElementById("pg-remote-list");
-const remoteHeaderList = document.getElementById("pg-remote-header-list");
-const remoteFeedback   = document.getElementById("pg-remote-feedback");
-const remoteManaged    = document.getElementById("pg-remote-managed");
-const remoteExternal   = document.getElementById("pg-remote-external");
-
-function updateRemoteMode() {
-  const selectedModeInput = document.querySelector('input[name="pg-remote-mode"]:checked');
-  if (!selectedModeInput) return;
-  const isManaged = selectedModeInput.value === "managed";
-  if (remoteManaged) remoteManaged.classList.toggle("is-hidden", !isManaged);
-  if (remoteExternal) remoteExternal.classList.toggle("is-hidden", isManaged);
-}
-
-function updateRemotePreview() {
-  const previewEl   = document.getElementById("pg-remote-preview");
-  const subdomainEl = document.getElementById("pg-remote-subdomain");
-  const domainEl    = document.getElementById("pg-remote-domain");
-  if (!previewEl) return;
-  const sub = (subdomainEl ? subdomainEl.value.trim() : "") || "db";
-  const dom = (domainEl ? domainEl.value : "") || "example.com";
-  previewEl.textContent = `${sub}.${dom}`;
-}
-
-const showAddBtn  = document.getElementById("pg-remote-show-add");
-const emptyAddBtn = document.getElementById("pg-remote-empty-add");
-const cancelAddBtn = document.getElementById("pg-remote-cancel-add");
-const cancelAddFooterBtn = document.getElementById("pg-remote-cancel-add-footer");
-
-function openAddRemoteForm() {
-  if (remoteForm) remoteForm.classList.remove("is-hidden");
-  if (remoteList) remoteList.classList.add("is-hidden");
-  if (remoteHeaderList) remoteHeaderList.classList.add("is-hidden");
-}
-
-function closeAddRemoteForm() {
-  if (remoteForm) remoteForm.classList.add("is-hidden");
-  if (remoteList) remoteList.classList.remove("is-hidden");
-  if (remoteHeaderList) remoteHeaderList.classList.remove("is-hidden");
-}
-
-if (showAddBtn) showAddBtn.addEventListener("click", openAddRemoteForm);
-if (emptyAddBtn) emptyAddBtn.addEventListener("click", openAddRemoteForm);
-if (cancelAddBtn) cancelAddBtn.addEventListener("click", closeAddRemoteForm);
-if (cancelAddFooterBtn) cancelAddFooterBtn.addEventListener("click", closeAddRemoteForm);
-
-document.querySelectorAll('input[name="pg-remote-mode"]').forEach(radio => {
-  radio.addEventListener("change", updateRemoteMode);
+// Test native PostgreSQL endpoint readiness
+document.addEventListener("click", async e => {
+  const btn = e.target.closest("[data-action='legacy-test-remote-domain']");
+  if (!btn) return;
+  setLoading(btn, true);
+  try {
+    await apiFetch(`/remote/domains/${encodeURIComponent(btn.dataset.domain)}/test`, { method: "POST" });
+    showToast(`Endpoint '${btn.dataset.domain}' is ready.`);
+  } catch (err) {
+    showToast(err.message, true);
+  } finally {
+    setLoading(btn, false);
+  }
 });
 
-const subInput = document.getElementById("pg-remote-subdomain");
-const domSelect = document.getElementById("pg-remote-domain");
-if (subInput) subInput.addEventListener("input", updateRemotePreview);
-if (domSelect) domSelect.addEventListener("change", updateRemotePreview);
+// ── Step-by-Step Remote Domain Wizard Logic ───────────────────────────────
 
-const allowAllBtn = document.getElementById("pg-remote-allow-all");
-if (allowAllBtn) {
-  allowAllBtn.addEventListener("click", () => {
-    const cidrsInput = document.getElementById("pg-remote-cidrs");
-    if (cidrsInput) cidrsInput.value = "0.0.0.0/0";
+let currentWizStep = 1;
+
+const wizStep1 = document.getElementById("pg-remote-wiz-step-1");
+const wizStep2 = document.getElementById("pg-remote-wiz-step-2");
+const wizStep3 = document.getElementById("pg-remote-wiz-step-3");
+const wizNextBtn   = document.getElementById("pg-remote-wiz-btn-next");
+const wizBackBtn   = document.getElementById("pg-remote-wiz-btn-back");
+const wizSubmitBtn = document.getElementById("pg-remote-wiz-btn-submit");
+const wizErrEl     = document.getElementById("pg-remote-wiz-error");
+
+const wizModeManaged  = document.getElementById("pg-remote-wiz-mode-managed");
+const wizModeExternal = document.getElementById("pg-remote-wiz-mode-external");
+const wizManagedWrap  = document.getElementById("pg-remote-wiz-managed-wrap");
+const wizExternalWrap = document.getElementById("pg-remote-wiz-external-wrap");
+const wizDomainSelect = document.getElementById("pg-remote-wiz-domain-select");
+const wizSubdomainInp = document.getElementById("pg-remote-wiz-subdomain");
+const wizFullHint     = document.getElementById("pg-remote-wiz-full-hint");
+
+if (wizModeManaged && wizModeExternal) {
+  const toggleWizMode = () => {
+    if (wizModeExternal.checked) {
+      if (wizManagedWrap) wizManagedWrap.style.display = "none";
+      if (wizExternalWrap) wizExternalWrap.style.display = "flex";
+    } else {
+      if (wizManagedWrap) wizManagedWrap.style.display = "flex";
+      if (wizExternalWrap) wizExternalWrap.style.display = "none";
+    }
+  };
+  wizModeManaged.addEventListener("change", toggleWizMode);
+  wizModeExternal.addEventListener("change", toggleWizMode);
+}
+
+function updateWizHint() {
+  if (!wizFullHint) return;
+  const sub = (wizSubdomainInp ? wizSubdomainInp.value.trim() : "") || "db";
+  const dom = (wizDomainSelect ? wizDomainSelect.value : "") || "example.com";
+  wizFullHint.textContent = `${sub}.${dom}`;
+}
+
+if (wizDomainSelect) wizDomainSelect.addEventListener("change", updateWizHint);
+if (wizSubdomainInp) wizSubdomainInp.addEventListener("input", updateWizHint);
+
+function getWizHost() {
+  const isManaged = wizModeManaged ? wizModeManaged.checked : true;
+  if (isManaged) {
+    const dom = wizDomainSelect ? wizDomainSelect.value : "";
+    const sub = wizSubdomainInp ? wizSubdomainInp.value.trim() : "";
+    if (!dom || !sub) return null;
+    return `${sub}.${dom}`;
+  } else {
+    const ext = document.getElementById("pg-remote-wiz-external");
+    return ext ? ext.value.trim() : null;
+  }
+}
+
+function setWizStep(step) {
+  currentWizStep = step;
+  if (wizErrEl) wizErrEl.style.display = "none";
+
+  if (wizStep1) wizStep1.style.display = step === 1 ? "flex" : "none";
+  if (wizStep2) wizStep2.style.display = step === 2 ? "flex" : "none";
+  if (wizStep3) wizStep3.style.display = step === 3 ? "flex" : "none";
+
+  const pill1 = document.getElementById("pg-remote-step-pill-1");
+  const pill2 = document.getElementById("pg-remote-step-pill-2");
+  const pill3 = document.getElementById("pg-remote-step-pill-3");
+
+  if (pill1) pill1.className = step >= 1 ? "status-badge success" : "status-badge muted";
+  if (pill2) pill2.className = step >= 2 ? "status-badge success" : "status-badge muted";
+  if (pill3) pill3.className = step >= 3 ? "status-badge success" : "status-badge muted";
+
+  if (wizBackBtn) wizBackBtn.style.display = step > 1 ? "" : "none";
+  if (wizNextBtn) wizNextBtn.style.display = step < 3 ? "" : "none";
+  if (wizSubmitBtn) wizSubmitBtn.style.display = step === 3 ? "" : "none";
+
+  if (step === 3) {
+    const host = getWizHost();
+    const isManaged = wizModeManaged ? wizModeManaged.checked : true;
+    const issueSsl = document.getElementById("pg-remote-wiz-ssl") ? document.getElementById("pg-remote-wiz-ssl").checked : true;
+
+    document.getElementById("pg-remote-wiz-review-host").textContent = host || "Invalid Hostname";
+    document.getElementById("pg-remote-wiz-review-mode").textContent = isManaged ? "Managed Domain (Subdomain)" : "External Hostname";
+    document.getElementById("pg-remote-wiz-review-ssl").textContent  = issueSsl ? "Enabled (Let's Encrypt)" : "Disabled (No SSL)";
+  }
+}
+
+if (wizNextBtn) {
+  wizNextBtn.addEventListener("click", () => {
+    if (currentWizStep === 1) {
+      const host = getWizHost();
+      if (!host) {
+        if (wizErrEl) { wizErrEl.textContent = "Enter a valid hostname / subdomain."; wizErrEl.style.display = ""; }
+        return;
+      }
+    }
+    setWizStep(currentWizStep + 1);
   });
 }
 
-if (remoteForm) {
-  remoteForm.addEventListener("submit", async e => {
-    e.preventDefault();
-    const submitBtn  = remoteForm.querySelector('[type="submit"]');
-    const errEl      = document.getElementById("pg-remote-error");
-    const modeRadio  = document.querySelector('input[name="pg-remote-mode"]:checked');
-    const encRadio   = document.querySelector('input[name="pg-remote-encryption"]:checked');
-    const cidrInput  = document.getElementById("pg-remote-cidrs");
-    const activeMode = modeRadio ? modeRadio.value : "managed";
+if (wizBackBtn) {
+  wizBackBtn.addEventListener("click", () => setWizStep(currentWizStep - 1));
+}
 
-    if (errEl) { errEl.textContent = ""; errEl.style.display = "none"; }
-    setLoading(submitBtn, true);
+// Close modal on backdrop click (EXCEPT wizard and connection modals)
+document.querySelectorAll(".modal-backdrop").forEach(backdrop => {
+  backdrop.addEventListener("click", e => {
+    if (e.target === backdrop && backdrop.id !== "pg-modal-add-remote" && backdrop.id !== "pg-modal-connection") {
+      backdrop.style.display = "none";
+    }
+  });
+});
 
-    const body = {
-      mode: activeMode,
-      domain: activeMode === "managed" ? (domSelect ? domSelect.value : null) : null,
-      subdomain: activeMode === "managed" ? (subInput ? subInput.value.trim() : null) : null,
-      hostname: activeMode === "external" ? (document.getElementById("pg-remote-hostname")?.value.trim() || null) : null,
-      encryption_enabled: encRadio ? encRadio.value === "true" : true,
-      allowed_cidrs: cidrInput ? cidrInput.value.split(",").map(x => x.trim()).filter(Boolean) : ["0.0.0.0/0"],
-    };
+if (wizSubmitBtn) {
+  wizSubmitBtn.addEventListener("click", async () => {
+    if (wizSubmitBtn.getAttribute("data-mode") === "done") {
+      closeModal("pg-modal-add-remote");
+      location.reload();
+      return;
+    }
+    const isManaged = wizModeManaged ? wizModeManaged.checked : true;
+    const mode      = isManaged ? "managed" : "external";
+    const domain    = wizDomainSelect ? wizDomainSelect.value : null;
+    const subdomain = wizSubdomainInp ? wizSubdomainInp.value.trim() : null;
+    const hostname  = document.getElementById("pg-remote-wiz-external") ? document.getElementById("pg-remote-wiz-external").value.trim() : null;
+    const issue_ssl = document.getElementById("pg-remote-wiz-ssl") ? document.getElementById("pg-remote-wiz-ssl").checked : true;
 
+    if (wizErrEl) wizErrEl.style.display = "none";
+    setLoading(wizSubmitBtn, true);
     try {
-      await apiFetch("/remote/domains", {
+      const res = await apiFetch("/remote/domains", {
         method: "POST",
-        body: JSON.stringify(body),
+        body: JSON.stringify({ mode, domain, subdomain, hostname, issue_ssl }),
       });
-      showToast("Remote endpoint enabled.");
-      window.location.href = "/plugins/postgres_manager/?tab=remote";
+      if (res.entry && res.entry.ssl_active) {
+        showToast(`Remote endpoint '${res.entry.domain}' added with active SSL!`);
+        closeModal("pg-modal-add-remote");
+        setTimeout(() => location.reload(), 1000);
+      } else {
+        if (wizErrEl) {
+          wizErrEl.className = "alert alert--info mb-md";
+          wizErrEl.innerHTML = `<strong>Endpoint Created:</strong> Hostname <code>${res.entry.domain}</code> was configured, but Let's Encrypt SSL certificate could not be issued yet.<br>Ensure DNS A record points to this server IP, then click <strong>Re-issue SSL</strong>.`;
+          wizErrEl.style.display = "block";
+        }
+        wizSubmitBtn.textContent = "Done / View Endpoints";
+        wizSubmitBtn.setAttribute("data-mode", "done");
+        if (wizBackBtn) wizBackBtn.style.display = "none";
+      }
     } catch (err) {
-      if (errEl) {
-        errEl.textContent = err.message || "Could not enable remote access.";
-        errEl.style.display = "block";
+      if (wizErrEl) {
+        wizErrEl.className = "form-error";
+        wizErrEl.textContent = err.message;
+        wizErrEl.style.display = "block";
       } else {
         showToast(err.message, true);
       }
-      setLoading(submitBtn, false);
+    } finally {
+      setLoading(wizSubmitBtn, false);
     }
   });
 }
 
-// Remote Table Actions (Connection URL, Test, Renew SSL, Delete)
+// Re-issue SSL action button
 document.addEventListener("click", async e => {
-  const connBtn = e.target.closest("[data-pg-connection-host]");
-  if (connBtn) {
-    const host   = connBtn.dataset.pgConnectionHost;
-    const modeSel = document.getElementById("pg-conn-mode-select");
-    if (modeSel && host) {
-      modeSel.value = host;
-      modeSel.dispatchEvent(new Event("change"));
-    }
-    updateConnectionUrls();
-    openModal("pg-modal-connection");
-    return;
-  }
-
-  const actionBtn = e.target.closest("[data-pg-remote-action]");
-  if (!actionBtn) return;
-
-  const action = actionBtn.dataset.pgRemoteAction;
-  const domain = actionBtn.dataset.domain;
-  if (!action || !domain) return;
-
-  if (action === "delete" && !confirm(`Delete remote endpoint '${domain}'?`)) return;
-
-  setLoading(actionBtn, true);
-  if (remoteFeedback) {
-    remoteFeedback.style.display = "block";
-    remoteFeedback.textContent = action === "test" ? `Testing connection to ${domain}…` : action === "ssl" ? `Issuing SSL certificate for ${domain}…` : `Deleting ${domain}…`;
-  }
-
+  const btn = e.target.closest("[data-action='legacy-reissue-remote-ssl']");
+  if (!btn) return;
+  const domain = btn.dataset.domain;
+  if (!domain) return;
+  setLoading(btn, true);
   try {
-    const suffix = action === "delete" ? "" : `/${action}`;
-    const res = await apiFetch(`/remote/domains/${encodeURIComponent(domain)}${suffix}`, {
-      method: action === "delete" ? "DELETE" : "POST",
-    });
-
-    if (action === "test") {
-      const msg = res.message || `${domain} is configured and ready for connections.`;
-      if (remoteFeedback) remoteFeedback.textContent = msg;
-      showToast(msg);
-      setLoading(actionBtn, false);
-      return;
+    const res = await apiFetch(`/remote/domains/${encodeURIComponent(domain)}/ssl`, { method: "POST" });
+    if (res.entry && res.entry.ssl_active) {
+      showToast(`SSL certificate successfully issued for ${domain}!`);
+      setTimeout(() => location.reload(), 1000);
+    } else {
+      showToast(`Certbot SSL challenge failed for ${domain}. Verify DNS A record points to server IP.`, true);
+      setLoading(btn, false);
     }
-
-    if (action === "ssl") {
-      showToast(`SSL configured for ${domain}.`);
-    } else if (action === "delete") {
-      showToast(`Remote endpoint '${domain}' deleted.`);
-    }
-
-    window.location.href = "/plugins/postgres_manager/?tab=remote";
   } catch (err) {
-    if (remoteFeedback) remoteFeedback.textContent = err.message;
     showToast(err.message, true);
-    setLoading(actionBtn, false);
+    setLoading(btn, false);
   }
 });
 
-updateRemoteMode();
-updateRemotePreview();
+
+// Delete Remote Domain action button
+document.addEventListener("click", async e => {
+  const btn = e.target.closest("[data-action='legacy-delete-remote-domain']");
+  if (!btn) return;
+  const domain = btn.dataset.domain;
+  if (!domain) return;
+  if (!confirm(`Delete remote endpoint '${domain}'? Nginx stream proxy config will be removed.`)) return;
+  setLoading(btn, true);
+  try {
+    await apiFetch(`/remote/domains/${encodeURIComponent(domain)}`, { method: "DELETE" });
+    showToast(`Remote endpoint '${domain}' deleted.`);
+    location.reload();
+  } catch (err) {
+    showToast(err.message, true);
+    setLoading(btn, false);
+  }
+});
+
+
 
 // ── Modal open/close (data-action) ────────────────────────────────────────
 
@@ -356,7 +393,7 @@ document.querySelectorAll("[data-pg-action]").forEach(btn => {
     try {
       await apiFetch(`/service/${action}`, { method: "POST" });
       showToast(`PostgreSQL ${action} executed.`);
-      setTimeout(() => location.reload(), 1200);
+      setTimeout(() => location.reload(), 1500);
     } catch (err) {
       showToast(err.message, true);
     } finally {
@@ -367,6 +404,7 @@ document.querySelectorAll("[data-pg-action]").forEach(btn => {
 
 // ── Databases CRUD ────────────────────────────────────────────────────────
 
+// Toggle between Existing User vs Create New User in Create Database modal
 const ownerModeExisting = document.getElementById("pg-owner-mode-existing");
 const ownerModeNew      = document.getElementById("pg-owner-mode-new");
 const existingWrap      = document.getElementById("pg-owner-existing-wrap");
@@ -375,11 +413,11 @@ const newWrap           = document.getElementById("pg-owner-new-wrap");
 if (ownerModeExisting && ownerModeNew) {
   const toggleOwnerMode = () => {
     if (ownerModeNew.checked) {
-      if (existingWrap) existingWrap.style.display = "none";
-      if (newWrap) newWrap.style.display = "flex";
+      existingWrap.style.display = "none";
+      newWrap.style.display = "flex";
     } else {
-      if (existingWrap) existingWrap.style.display = "";
-      if (newWrap) newWrap.style.display = "none";
+      existingWrap.style.display = "";
+      newWrap.style.display = "none";
     }
   };
   ownerModeExisting.addEventListener("change", toggleOwnerMode);
@@ -389,13 +427,10 @@ if (ownerModeExisting && ownerModeNew) {
 const dbSubmit = document.getElementById("pg-db-create-submit");
 if (dbSubmit) {
   dbSubmit.addEventListener("click", async () => {
-    const name  = document.getElementById("pg-new-db-name")?.value.trim();
+    const name  = document.getElementById("pg-new-db-name").value.trim();
     const errEl = document.getElementById("pg-db-error");
-    if (errEl) errEl.style.display = "none";
-    if (!name) {
-      if (errEl) { errEl.textContent = "Database name is required."; errEl.style.display = ""; }
-      return;
-    }
+    errEl.style.display = "none";
+    if (!name) { errEl.textContent = "Database name is required."; errEl.style.display = ""; return; }
 
     const isNewUser = ownerModeNew && ownerModeNew.checked;
     let owner = "postgres";
@@ -403,25 +438,29 @@ if (dbSubmit) {
     setLoading(dbSubmit, true);
     try {
       if (isNewUser) {
-        const username  = document.getElementById("pg-new-owner-username")?.value.trim();
-        const password  = document.getElementById("pg-new-owner-password")?.value;
+        const username  = document.getElementById("pg-new-owner-username").value.trim();
+        const password  = document.getElementById("pg-new-owner-password").value;
         const confirmEl = document.getElementById("pg-new-owner-password-confirm");
         const confirmPw = confirmEl ? confirmEl.value : "";
         if (!username || !password) {
-          if (errEl) { errEl.textContent = "New username and password are required."; errEl.style.display = ""; }
+          errEl.textContent = "New username and password are required.";
+          errEl.style.display = "";
           setLoading(dbSubmit, false);
           return;
         }
         if (password !== confirmPw) {
-          if (errEl) { errEl.textContent = "Passwords do not match."; errEl.style.display = ""; }
+          errEl.textContent = "Passwords do not match.";
+          errEl.style.display = "";
           setLoading(dbSubmit, false);
           return;
         }
         if (password.length < 8) {
-          if (errEl) { errEl.textContent = "Password must be at least 8 characters."; errEl.style.display = ""; }
+          errEl.textContent = "Password must be at least 8 characters.";
+          errEl.style.display = "";
           setLoading(dbSubmit, false);
           return;
         }
+        // 1. Create the new user first
         await apiFetch("/users", { method: "POST", body: JSON.stringify({ name: username, password }) });
         owner = username;
       } else {
@@ -429,17 +468,20 @@ if (dbSubmit) {
         owner = select ? select.value : "postgres";
       }
 
+      // 2. Create the database owned by that user
       await apiFetch("/databases", { method: "POST", body: JSON.stringify({ name, owner }) });
-      showToast(`Database '${name}' created.`);
+      showToast(`Database '${name}' created (owner: ${owner}).`);
       closeModal("pg-modal-create-db");
       location.reload();
     } catch (err) {
-      if (errEl) { errEl.textContent = err.message; errEl.style.display = ""; }
+      errEl.textContent = err.message;
+      errEl.style.display = "";
     } finally {
       setLoading(dbSubmit, false);
     }
   });
 }
+
 
 document.addEventListener("click", async e => {
   const btn = e.target.closest("[data-action='delete-db']");
@@ -464,61 +506,43 @@ document.addEventListener("click", async e => {
   const drawer = document.getElementById("pg-tables-drawer");
   const tbody  = document.getElementById("pg-tables-tbody");
   const nameEl = document.getElementById("pg-tables-db-name");
-  if (!drawer || !tbody) return;
-  if (nameEl) nameEl.textContent = db;
+  nameEl.textContent = db;
   drawer.style.display = "";
-  tbody.innerHTML = "<tr><td colspan='3' style='color:var(--color-muted);padding:14px;'>Loading tables…</td></tr>";
+  tbody.innerHTML = "<tr><td colspan='3' style='color:var(--color-muted);'>Loading…</td></tr>";
   try {
     const tables = await apiFetch(`/databases/${encodeURIComponent(db)}/tables`);
     tbody.innerHTML = tables.length
-      ? tables.map(t => `<tr><td><strong style='color:var(--color-text);'>${t.name}</strong></td><td style='color:var(--color-muted);'>${t.row_count}</td><td style='color:var(--color-muted);'>${t.size}</td></tr>`).join("")
-      : "<tr><td colspan='3' style='color:var(--color-muted);padding:14px;'>No user tables found.</td></tr>";
+      ? tables.map(t => `<tr><td>${t.name}</td><td style='color:var(--color-muted);'>${t.row_count}</td>
+          <td style='color:var(--color-muted);'>${t.size}</td></tr>`).join("")
+      : "<tr><td colspan='3' style='color:var(--color-muted);'>No user tables found.</td></tr>";
   } catch (err) {
-    tbody.innerHTML = `<tr><td colspan='3' style='color:var(--color-danger);padding:14px;'>${err.message}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan='3' style='color:var(--color-danger);'>${err.message}</td></tr>`;
   }
 });
-
-const closeTablesBtn = document.getElementById("pg-tables-close-btn");
-if (closeTablesBtn) {
-  closeTablesBtn.addEventListener("click", () => {
-    const drawer = document.getElementById("pg-tables-drawer");
-    if (drawer) drawer.style.display = "none";
-  });
-}
 
 // ── Users CRUD ────────────────────────────────────────────────────────────
 
 const userSubmit = document.getElementById("pg-user-create-submit");
 if (userSubmit) {
   userSubmit.addEventListener("click", async () => {
-    const name      = document.getElementById("pg-new-user-name")?.value.trim();
-    const password  = document.getElementById("pg-new-user-pw")?.value;
+    const name      = document.getElementById("pg-new-user-name").value.trim();
+    const password  = document.getElementById("pg-new-user-pw").value;
     const confirmEl = document.getElementById("pg-new-user-pw-confirm");
     const confirmPw = confirmEl ? confirmEl.value : "";
     const errEl     = document.getElementById("pg-user-error");
-    if (errEl) errEl.style.display = "none";
-
-    if (!name || !password) {
-      if (errEl) { errEl.textContent = "Username and password are required."; errEl.style.display = ""; }
-      return;
-    }
-    if (password !== confirmPw) {
-      if (errEl) { errEl.textContent = "Passwords do not match."; errEl.style.display = ""; }
-      return;
-    }
-    if (password.length < 8) {
-      if (errEl) { errEl.textContent = "Password must be at least 8 characters."; errEl.style.display = ""; }
-      return;
-    }
-
+    errEl.style.display = "none";
+    if (!name || !password) { errEl.textContent = "Username and password are required."; errEl.style.display = ""; return; }
+    if (password !== confirmPw) { errEl.textContent = "Passwords do not match."; errEl.style.display = ""; return; }
+    if (password.length < 8) { errEl.textContent = "Password must be at least 8 characters."; errEl.style.display = ""; return; }
     setLoading(userSubmit, true);
     try {
       await apiFetch("/users", { method: "POST", body: JSON.stringify({ name, password }) });
       showToast(`User '${name}' created.`);
+
       closeModal("pg-modal-create-user");
       location.reload();
     } catch (err) {
-      if (errEl) { errEl.textContent = err.message; errEl.style.display = ""; }
+      errEl.textContent = err.message; errEl.style.display = "";
     } finally {
       setLoading(userSubmit, false);
     }
@@ -529,10 +553,8 @@ document.addEventListener("click", e => {
   const btn = e.target.closest("[data-action='change-password']");
   if (!btn) return;
   const user = btn.dataset.user;
-  const usernameEl = document.getElementById("pg-pw-username");
-  const inputEl    = document.getElementById("pg-change-pw-input");
-  if (usernameEl) usernameEl.textContent = user;
-  if (inputEl) inputEl.dataset.user = user;
+  document.getElementById("pg-pw-username").textContent = user;
+  document.getElementById("pg-change-pw-input").dataset.user = user;
   openModal("pg-modal-change-pw");
 });
 
@@ -540,23 +562,18 @@ const pwSubmit = document.getElementById("pg-pw-submit");
 if (pwSubmit) {
   pwSubmit.addEventListener("click", async () => {
     const input    = document.getElementById("pg-change-pw-input");
-    const name     = input ? input.dataset.user : "";
-    const password = input ? input.value : "";
+    const name     = input.dataset.user;
+    const password = input.value;
     const errEl    = document.getElementById("pg-pw-error");
-    if (errEl) errEl.style.display = "none";
-
-    if (!password) {
-      if (errEl) { errEl.textContent = "Password is required."; errEl.style.display = ""; }
-      return;
-    }
-
+    errEl.style.display = "none";
+    if (!password) { errEl.textContent = "Password is required."; errEl.style.display = ""; return; }
     setLoading(pwSubmit, true);
     try {
       await apiFetch(`/users/${encodeURIComponent(name)}/password`, { method: "POST", body: JSON.stringify({ password }) });
       showToast(`Password updated for '${name}'.`);
       closeModal("pg-modal-change-pw");
     } catch (err) {
-      if (errEl) { errEl.textContent = err.message; errEl.style.display = ""; }
+      errEl.textContent = err.message; errEl.style.display = "";
     } finally {
       setLoading(pwSubmit, false);
     }
@@ -579,50 +596,35 @@ document.addEventListener("click", async e => {
   }
 });
 
-// ── Query Runner ──────────────────────────────────────────────────────────
+// ── Query runner ──────────────────────────────────────────────────────────
 
 const runBtn = document.getElementById("pg-query-run");
 if (runBtn) {
   runBtn.addEventListener("click", async () => {
-    const dbSelect = document.getElementById("pg-query-db");
-    const sqlInput = document.getElementById("pg-query-sql");
-    const db  = dbSelect ? dbSelect.value : "";
-    const sql = sqlInput ? sqlInput.value.trim() : "";
-
+    const db  = document.getElementById("pg-query-db").value;
+    const sql = document.getElementById("pg-query-sql").value.trim();
     const errEl     = document.getElementById("pg-query-error");
     const resultsEl = document.getElementById("pg-query-results");
     const emptyEl   = document.getElementById("pg-query-empty");
     const tbody     = document.getElementById("pg-query-tbody");
     const countEl   = document.getElementById("pg-query-count");
-
-    if (errEl) errEl.style.display = "none";
-    if (resultsEl) resultsEl.style.display = "none";
-    if (emptyEl) emptyEl.style.display = "none";
-
-    if (!sql) {
-      if (errEl) { errEl.textContent = "Enter a SELECT query."; errEl.style.display = "block"; }
-      return;
-    }
-
+    errEl.style.display = resultsEl.style.display = emptyEl.style.display = "none";
+    if (!sql) { errEl.textContent = "Enter a SELECT query."; errEl.style.display = ""; return; }
     setLoading(runBtn, true);
     try {
       const data = await apiFetch("/query", { method: "POST", body: JSON.stringify({ db, sql }) });
-      if (!data.rows || data.rows.length === 0) {
-        if (emptyEl) emptyEl.style.display = "block";
-        return;
-      }
-
-      if (tbody) {
-        tbody.innerHTML = data.rows.map(r => {
-          const cols = (r.row || "").split("|");
-          return "<tr>" + cols.map(c => `<td>${c}</td>`).join("") + "</tr>";
-        }).join("");
-      }
-
-      if (countEl) countEl.textContent = `${data.count} row${data.count !== 1 ? "s" : ""}`;
-      if (resultsEl) resultsEl.style.display = "block";
+      if (!data.rows || data.rows.length === 0) { emptyEl.style.display = ""; return; }
+      // Render rows — each row has a pipe-delimited "row" field
+      const firstRow  = data.rows[0].row || "";
+      const colCount  = firstRow.split("|").length;
+      tbody.innerHTML = data.rows.map(r => {
+        const cols = r.row.split("|");
+        return "<tr>" + cols.map(c => `<td>${c}</td>`).join("") + "</tr>";
+      }).join("");
+      countEl.textContent = `${data.count} row${data.count !== 1 ? "s" : ""}`;
+      resultsEl.style.display = "";
     } catch (err) {
-      if (errEl) { errEl.textContent = err.message; errEl.style.display = "block"; }
+      errEl.textContent = err.message; errEl.style.display = "";
     } finally {
       setLoading(runBtn, false);
     }
@@ -632,14 +634,13 @@ if (runBtn) {
 const clearBtn = document.getElementById("pg-query-clear");
 if (clearBtn) {
   clearBtn.addEventListener("click", () => {
-    const sqlInput = document.getElementById("pg-query-sql");
-    if (sqlInput) sqlInput.value = "";
-    if (document.getElementById("pg-query-results")) document.getElementById("pg-query-results").style.display = "none";
-    if (document.getElementById("pg-query-empty")) document.getElementById("pg-query-empty").style.display = "none";
-    if (document.getElementById("pg-query-error")) document.getElementById("pg-query-error").style.display = "none";
+    document.getElementById("pg-query-sql").value = "";
+    document.getElementById("pg-query-results").style.display = "none";
+    document.getElementById("pg-query-empty").style.display = "none";
+    document.getElementById("pg-query-error").style.display = "none";
   });
 }
 
-// Default tab selection fallback
+// ── Init — show first tab ─────────────────────────────────────────────────
 switchTab("databases");
 </script>

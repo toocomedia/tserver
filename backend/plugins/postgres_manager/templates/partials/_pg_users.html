@@ -1,20 +1,11 @@
-{# _pg_users.html — Users / Roles Tab Panel #}
+{# _pg_users.html — Users / Roles tab panel #}
 <div id="pg-panel-users" class="pg-panel" style="display:none;">
 
   {# Toolbar #}
-  <div class="action-toolbar">
-    <div style="display:flex;align-items:center;gap:12px;">
-      <h2 style="font-size:var(--font-h2);margin:0;font-weight:700;">Users &amp; Roles</h2>
-      {% if users %}
-      <span class="status-badge status-badge--muted">{{ users|length }} total</span>
-      {% endif %}
-    </div>
+  <div class="action-toolbar" style="display:flex;align-items:center;justify-content:space-between;">
+    <h2 style="font-size:var(--font-h2);margin:0;">Users &amp; Roles</h2>
     <button class="btn btn--primary" id="pg-user-create-open" data-action="open-modal" data-modal="pg-modal-create-user">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
-        <line x1="12" y1="5" x2="12" y2="19"></line>
-        <line x1="5" y1="12" x2="19" y2="12"></line>
-      </svg>
-      Create User
+      + Create User
     </button>
   </div>
 
@@ -27,43 +18,41 @@
           <th>Username</th>
           <th>Superuser</th>
           <th>Can Login</th>
-          <th style="text-align:right;">Actions</th>
+          <th></th>
         </tr>
       </thead>
       <tbody id="pg-user-tbody">
         {% for user in users %}
         <tr data-user="{{ user.name }}">
-          <td><strong style="font-size:14px;color:var(--color-text);">{{ user.name }}</strong></td>
+          <td>{{ user.name }}</td>
           <td>
             {% if user.superuser %}
-              <span class="status-badge status-badge--warning">Yes</span>
+              <span class="status-badge warning">Yes</span>
             {% else %}
-              <span class="status-badge status-badge--muted">No</span>
+              <span class="status-badge muted">No</span>
             {% endif %}
           </td>
           <td>
             {% if user.can_login %}
-              <span class="status-badge status-badge--success">Yes</span>
+              <span class="status-badge success">Yes</span>
             {% else %}
-              <span class="status-badge status-badge--muted">No</span>
+              <span class="status-badge muted">No</span>
             {% endif %}
           </td>
-          <td style="text-align:right;">
-            <div style="display:flex;gap:6px;justify-content:flex-end;align-items:center;">
-              <button class="btn btn--sm btn--secondary" data-action="change-password" data-user="{{ user.name }}"
-                      id="pg-user-pw-{{ user.name }}" title="Change password for {{ user.name }}">
-                Change Password
-              </button>
-              <button class="btn btn--icon btn--sm btn--danger" data-action="delete-user" data-user="{{ user.name }}"
-                      id="pg-user-del-{{ user.name }}" title="Drop role {{ user.name }}"
-                      aria-label="Drop role {{ user.name }}">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-                     stroke="currentColor" stroke-width="2" aria-hidden="true">
-                  <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>
-                  <path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/>
-                </svg>
-              </button>
-            </div>
+          <td style="text-align:right;display:flex;gap:var(--space-sm);justify-content:flex-end;">
+            <button class="btn btn--sm" data-action="change-password" data-user="{{ user.name }}"
+                    id="pg-user-pw-{{ user.name }}" title="Change password for {{ user.name }}">
+              Change Password
+            </button>
+            <button class="btn btn--icon btn--sm" data-action="delete-user" data-user="{{ user.name }}"
+                    id="pg-user-del-{{ user.name }}" title="Drop role {{ user.name }}"
+                    aria-label="Drop role {{ user.name }}">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>
+                <path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/>
+              </svg>
+            </button>
           </td>
         </tr>
         {% endfor %}
@@ -81,10 +70,10 @@
 <div class="modal-backdrop" id="pg-modal-create-user" style="display:none;" aria-modal="true" role="dialog">
   <div class="modal">
     <div class="modal__header">
-      <h2>Create User</h2>
+      <h2 style="font-size:var(--font-h2);margin:0;">Create User</h2>
       <button class="btn btn--icon btn--sm btn--ghost" data-action="close-modal" data-modal="pg-modal-create-user" aria-label="Close">✕</button>
     </div>
-    <div class="modal__body" style="display:flex;flex-direction:column;gap:16px;">
+    <div class="modal__body" style="display:flex;flex-direction:column;gap:var(--space-md);">
       <div class="form-group">
         <label class="form-label" for="pg-new-user-name">Username</label>
         <input type="text" id="pg-new-user-name" class="form-input" placeholder="app_user" autocomplete="off" spellcheck="false">
@@ -100,6 +89,7 @@
         <input type="password" id="pg-new-user-pw-confirm" class="form-input" placeholder="••••••••">
       </div>
       <div id="pg-user-error" class="form-error" style="display:none;"></div>
+
     </div>
     <div class="modal__footer">
       <button class="btn btn--secondary" data-action="close-modal" data-modal="pg-modal-create-user">Cancel</button>
@@ -112,10 +102,10 @@
 <div class="modal-backdrop" id="pg-modal-change-pw" style="display:none;" aria-modal="true" role="dialog">
   <div class="modal">
     <div class="modal__header">
-      <h2>Change Password — <span id="pg-pw-username" style="color:var(--color-accent-2);"></span></h2>
+      <h2 style="font-size:var(--font-h2);margin:0;">Change Password — <span id="pg-pw-username"></span></h2>
       <button class="btn btn--icon btn--sm btn--ghost" data-action="close-modal" data-modal="pg-modal-change-pw" aria-label="Close">✕</button>
     </div>
-    <div class="modal__body" style="display:flex;flex-direction:column;gap:16px;">
+    <div class="modal__body" style="display:flex;flex-direction:column;gap:var(--space-md);">
       <div class="form-group">
         <label class="form-label" for="pg-change-pw-input">New Password</label>
         <input type="password" id="pg-change-pw-input" class="form-input" placeholder="••••••••">
@@ -125,7 +115,8 @@
     </div>
     <div class="modal__footer">
       <button class="btn btn--secondary" data-action="close-modal" data-modal="pg-modal-change-pw">Cancel</button>
-      <button class="btn btn--primary" id="pg-pw-submit">Update Password</button>
+      <button class="btn btn--dark" id="pg-pw-submit">Update Password</button>
     </div>
   </div>
 </div>
+
