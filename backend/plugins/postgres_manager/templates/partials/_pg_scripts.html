@@ -134,7 +134,18 @@ document.addEventListener("click", async e => {
   if (!copyBtn) return;
   const targetId = copyBtn.dataset.copyTarget;
   const targetEl = document.getElementById(targetId);
-  if (!tar// ── Remote Access Endpoint Management ─────────────────────────────────────
+  if (!targetEl) return;
+  try {
+    await navigator.clipboard.writeText(targetEl.value || targetEl.textContent);
+    const origText = copyBtn.textContent;
+    copyBtn.textContent = "Copied!";
+    setTimeout(() => copyBtn.textContent = origText, 1500);
+  } catch (err) {
+    console.error("Failed to copy:", err);
+  }
+});
+
+// ── Remote Access Endpoint Management ─────────────────────────────────────
 
 const remoteFeedback = document.getElementById("pg-remote-feedback");
 const managedWrap    = document.getElementById("pg-remote-managed-wrap");
