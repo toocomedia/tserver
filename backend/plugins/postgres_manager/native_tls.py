@@ -28,6 +28,14 @@ ACME_CONF_NAME = "00-postgres-acme"
 HBA_MARKER = "# srv-panel: postgres remote TLS"
 
 
+def should_recover_missing_certificate(
+    cert_exists: bool, key_exists: bool, stdout: str, stderr: str,
+) -> bool:
+    """Retry only when Certbot retained a broken, not-yet-due lineage."""
+    output = f"{stdout}\n{stderr}".lower()
+    return (not cert_exists or not key_exists) and "not yet due for renewal" in output
+
+
 def normalize_cidrs(values: list[str]) -> list[str]:
     result: list[str] = []
     for value in values:
@@ -140,6 +148,15 @@ async def issue_shared_certificate(hosts: list[str]) -> tuple[str, datetime | No
     key_path = str(CERT_DIR / "privkey.pem")
     cert_check = await shell.run(["test", "-s", cert_path])
     key_check = await shell.run(["test", "-s", key_path])
+    if should_recover_missing_certificate(
+        cert_check.success, key_check.success, result.stdout, result.stderr,
+    ):
+        recovery = await shell.run([*command, "--force-renewal"], timeout=180)
+        if not recovery.success:
+            raise RuntimeError(f"Let’s Encrypt recovery failed: {recovery.stderr[-600:]}")
+        result = recovery
+        cert_check = await shell.run(["test", "-s", cert_path])
+        key_check = await shell.run(["test", "-s", key_path])
     if not cert_check.success or not key_check.success:
         missing = []
         if not cert_check.success:

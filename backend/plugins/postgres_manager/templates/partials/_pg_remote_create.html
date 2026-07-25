@@ -2,84 +2,50 @@
   <header class="pg-remote__header">
     <div>
       <h2 class="pg-remote__title">Add Remote Endpoint</h2>
-      <p class="pg-remote__intro">Create a secure PostgreSQL TLS endpoint without leaving this tab.</p>
+      <p class="pg-remote__intro">Choose a hostname and the client IPs allowed to reach PostgreSQL.</p>
     </div>
     <button class="btn btn--secondary" type="button" data-action="close-remote-create">Back to endpoints</button>
   </header>
 
-  <ol class="pg-remote-steps" aria-label="Endpoint setup steps">
-    <li class="pg-remote-steps__item is-active" data-remote-step-indicator="1"><span>1</span> Hostname</li>
-    <li class="pg-remote-steps__item" data-remote-step-indicator="2"><span>2</span> Access</li>
-    <li class="pg-remote-steps__item" data-remote-step-indicator="3"><span>3</span> Review</li>
-  </ol>
-
   <div id="pg-remote-create-error" class="alert alert--danger" role="alert" hidden></div>
   <form id="pg-remote-create-form" class="form pg-remote-form" novalidate>
-    <fieldset class="pg-remote-step" data-remote-step="1">
-      <legend class="pg-remote-step__title">Choose hostname source</legend>
-      <p class="form-hint">A managed source creates the DNS A record automatically. External hostnames must already resolve to this VPS.</p>
+    <div class="form-group">
+      <label class="form-label">Hostname source</label>
       <div class="pg-remote-source" role="radiogroup" aria-label="Hostname source">
         <input class="pg-remote-source__input" id="pg-remote-source-managed" type="radio" name="remote-source" value="managed" checked>
         <label class="btn btn--secondary pg-remote-source__button" for="pg-remote-source-managed">Managed subdomain</label>
         <input class="pg-remote-source__input" id="pg-remote-source-external" type="radio" name="remote-source" value="external">
         <label class="btn btn--secondary pg-remote-source__button" for="pg-remote-source-external">External hostname</label>
       </div>
-
-      <div id="pg-remote-managed-fields" class="pg-remote-fields">
-        <div class="form-group">
-          <label class="form-label" for="pg-remote-domain">Parent domain</label>
-          <div class="form-select-wrap">
-            <select class="form-select" id="pg-remote-domain">
-              <option value="">Select a managed domain</option>
-              {% for domain in domains %}<option value="{{ domain.name }}">{{ domain.name }}</option>{% endfor %}
-            </select>
-          </div>
-          {% if not domains %}<span class="form-hint">No managed domains are available. Choose External hostname instead.</span>{% endif %}
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="pg-remote-subdomain">Subdomain label</label>
-          <input class="form-input" id="pg-remote-subdomain" autocomplete="off" placeholder="db">
-          <span class="form-hint">Endpoint: <strong id="pg-remote-host-preview">db.example.com</strong></span>
-        </div>
-      </div>
-
-      <div id="pg-remote-external-fields" class="pg-remote-fields" hidden>
-        <div class="form-group">
-          <label class="form-label" for="pg-remote-hostname">External hostname</label>
-          <input class="form-input" id="pg-remote-hostname" autocomplete="off" placeholder="db.example.com">
-          <span class="form-hint">Create its A or AAAA record before continuing.</span>
-        </div>
-      </div>
-    </fieldset>
-
-    <fieldset class="pg-remote-step" data-remote-step="2" hidden>
-      <legend class="pg-remote-step__title">Choose allowed clients</legend>
-      <div class="form-group">
-        <label class="form-label" for="pg-remote-cidrs">Client IP addresses or CIDR ranges</label>
-        <textarea class="form-input" id="pg-remote-cidrs" rows="4" placeholder="203.0.113.10/32&#10;2001:db8::/64"></textarea>
-        <span class="form-hint">One address or range per line. The endpoint has no public access outside this list.</span>
-      </div>
-      <div class="pg-remote-security">
-        <strong>Secure connection</strong>
-        <span>PostgreSQL TLS with a Let’s Encrypt certificate. Clients use <code>sslmode=verify-full</code>.</span>
-      </div>
-    </fieldset>
-
-    <fieldset class="pg-remote-step" data-remote-step="3" hidden>
-      <legend class="pg-remote-step__title">Review and enable</legend>
-      <dl class="pg-remote-review">
-        <div><dt>Hostname</dt><dd id="pg-remote-review-host">—</dd></div>
-        <div><dt>Source</dt><dd id="pg-remote-review-source">—</dd></div>
-        <div><dt>Allowed clients</dt><dd id="pg-remote-review-cidrs">—</dd></div>
-        <div><dt>Connection</dt><dd>Port 5432 · TLS · verify-full</dd></div>
-      </dl>
-      <p class="form-hint">The endpoint activates only after DNS, the certificate, PostgreSQL TLS, and firewall rules succeed.</p>
-    </fieldset>
-
-    <div class="form-actions pg-remote-form__actions">
-      <button class="btn btn--secondary" type="button" data-action="remote-previous" hidden>Back</button>
-      <button class="btn btn--primary" type="button" data-action="remote-next">Continue</button>
-      <button class="btn btn--primary" id="pg-remote-enable" type="submit" hidden>Create and enable endpoint</button>
     </div>
+
+    <div id="pg-remote-managed-fields" class="pg-remote-fields">
+      <div class="form-group">
+        <label class="form-label" for="pg-remote-domain">Parent domain</label>
+        <div class="form-select-wrap"><select class="form-select" id="pg-remote-domain"><option value="">Select a managed domain</option>{% for domain in domains %}<option value="{{ domain.name }}">{{ domain.name }}</option>{% endfor %}</select></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="pg-remote-subdomain">Subdomain label</label>
+        <input class="form-input" id="pg-remote-subdomain" autocomplete="off" placeholder="db">
+        <span class="form-hint">Endpoint: <strong id="pg-remote-host-preview">db.example.com</strong></span>
+      </div>
+    </div>
+
+    <div id="pg-remote-external-fields" class="pg-remote-fields" hidden>
+      <div class="form-group">
+        <label class="form-label" for="pg-remote-hostname">External hostname</label>
+        <input class="form-input" id="pg-remote-hostname" autocomplete="off" placeholder="db.example.com">
+        <span class="form-hint">Its A or AAAA record must already point to this VPS.</span>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="pg-remote-cidrs">Allowed client IPs or CIDRs</label>
+      <textarea class="form-input" id="pg-remote-cidrs" rows="4" placeholder="203.0.113.10/32&#10;2001:db8::/64"></textarea>
+      <span class="form-hint">One IP address or range per line. Everyone else is blocked.</span>
+    </div>
+
+    <div class="pg-remote-security"><strong>Secure connection</strong><span>Let’s Encrypt TLS · PostgreSQL port <code>5432</code> · client connection <code>sslmode=verify-full</code></span></div>
+    <div class="form-actions pg-remote-form__actions"><button class="btn btn--primary" id="pg-remote-enable" type="submit">Enable endpoint</button><button class="btn btn--secondary" type="button" data-action="close-remote-create">Cancel</button></div>
   </form>
 </section>
