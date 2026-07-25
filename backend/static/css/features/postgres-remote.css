@@ -14,6 +14,7 @@
 .pg-remote-source__input { position: absolute; opacity: 0; pointer-events: none; }
 .pg-remote-source__input:checked + .pg-remote-source__button { background: var(--color-accent); color: var(--color-text); }
 .pg-remote-fields { display: grid; gap: var(--space-md); }
+.pg-remote-fields[hidden], .pg-remote-step[hidden], .pg-remote[hidden] { display: none !important; }
 .pg-remote-security { display: grid; gap: var(--space-xs); padding: var(--space-lg); background: var(--color-surface); color: var(--color-muted); font-size: var(--font-small); }
 .pg-remote-security strong { color: var(--color-text); }
 .pg-remote-review { display: grid; margin: 0; }

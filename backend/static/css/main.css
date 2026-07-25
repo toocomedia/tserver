@@ -47,10 +47,6 @@
   --color-alert-danger-bg: #fff5f5;
   --color-row-active: #F7F8F3;
 
-  /* Skeleton Animation Tokens */
-  --color-skeleton-bg:       #E4E6E0;
-  --color-skeleton-shimmer:  #F4F5F2;
-
   /* Spacing */
   --space-xs: 4px;
   --space-sm: 8px;
@@ -207,10 +203,6 @@ p {
   --color-alert-success-bg: #1A2E22;
   --color-alert-danger-bg:  #3A1A1A;
   --color-row-active: #1E293B;
-
-  /* Skeleton Animation Tokens (Dark) */
-  --color-skeleton-bg:       #1C2735;
-  --color-skeleton-shimmer:  #2A384B;
 }
 
 [data-theme="amoled"] {
@@ -248,29 +240,4 @@ p {
   --color-alert-success-bg: #111A11;
   --color-alert-danger-bg:  #1A1111;
   --color-row-active: #111111;
-
-  /* Skeleton Animation Tokens (AMOLED) */
-  --color-skeleton-bg:       #161616;
-  --color-skeleton-shimmer:  #262626;
-}
-
-/* ============================================================
-   TOP PROGRESS BAR (YouTube / GitHub Style Loading Bar)
-   ============================================================ */
-#top-progress-bar {
-  position: fixed;
-  top: 0;
-  left: 0;
-  height: 3px;
-  width: 0%;
-  background: var(--color-accent, #C7F464);
-  box-shadow: 0 0 10px var(--color-accent, #C7F464);
-  z-index: 999999;
-  opacity: 0;
-  transition: width 0.2s ease, opacity 0.3s ease;
-  pointer-events: none;
-}
-
-#top-progress-bar.is-loading {
-  opacity: 1;
 }

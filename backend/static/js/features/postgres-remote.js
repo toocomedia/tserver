@@ -56,10 +56,13 @@ if (form) {
 
   function validateCurrentStep() {
     if (currentStep === 1) {
-      const missing = source() === "managed"
+      const managed = source() === "managed";
+      const missing = managed
         ? !field("pg-remote-domain").value || !field("pg-remote-subdomain").value.trim()
         : !field("pg-remote-hostname").value.trim();
-      if (missing) showError("Enter a hostname before continuing.");
+      if (missing) showError(managed
+        ? "Select a parent domain and enter a subdomain label."
+        : "Enter the external hostname that resolves to this VPS.");
       return !missing;
     }
     if (currentStep === 2 && !allowedCidrs().length) {

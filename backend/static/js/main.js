@@ -167,35 +167,6 @@ document.addEventListener("click", (e) => {
     if (e.target.dataset.noBackdropClose === "true") return;
     e.target.classList.add("hidden");
   }
-
-  // Trigger top progress bar on internal navigation link click
-  const link = e.target.closest("a[href]");
-  if (link && !link.target && !link.hasAttribute("download")) {
-    const href = link.getAttribute("href") || "";
-    if (href && !href.startsWith("#") && !href.startsWith("javascript:")) {
-      const isInternal = href.startsWith("/") || href.startsWith(window.location.origin);
-      if (isInternal && href !== window.location.pathname) {
-        topProgressBar.start();
-      }
-    }
-  }
-});
-
-// Automatic Hover Link Prefetcher for 0ms navigation
-document.addEventListener("mouseover", (e) => {
-  const link = e.target.closest("a[href]");
-  if (!link || link.dataset.prefetched === "1" || link.target === "_blank") return;
-  const href = link.getAttribute("href") || "";
-  if (!href || href.startsWith("#") || href.startsWith("javascript:")) return;
-  const isInternal = href.startsWith("/") || href.startsWith(window.location.origin);
-  if (isInternal && href !== window.location.pathname) {
-    link.dataset.prefetched = "1";
-    const prefetchEl = document.createElement("link");
-    prefetchEl.rel = "prefetch";
-    prefetchEl.href = href;
-    prefetchEl.as = "document";
-    document.head.appendChild(prefetchEl);
-  }
 });
 
 
@@ -389,7 +360,6 @@ window.panel = panel;
 window.submitPost = submitPost;
 window.getCsrfToken = getCsrfToken;
 window.csrfHeaders = csrfHeaders;
-window.topProgressBar = topProgressBar;
 window.toast = toast;
 window.openModal = openModal;
 window.closeModal = closeModal;
