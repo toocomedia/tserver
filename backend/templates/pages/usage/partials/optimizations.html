@@ -18,9 +18,9 @@
           <div class="text-small text-muted">zRAM compressed swap (500MB), swappiness (10), PowerDNS cache limits &amp; jemalloc.</div>
         </div>
         <div>
-          <div class="rect-segmented" id="group-opt-mode">
-            <button type="button" class="rect-segment rect-segment--active" id="btn-opt-off" onclick="setOptMode(false)">Inactive</button>
-            <button type="button" class="rect-segment" id="btn-opt-on" onclick="setOptMode(true)">Active</button>
+          <div class="view-switcher" id="group-opt-mode">
+            <button type="button" class="view-switcher__btn is-active" id="btn-opt-off" onclick="setOptMode(false)">Inactive</button>
+            <button type="button" class="view-switcher__btn" id="btn-opt-on" onclick="setOptMode(true)">Active</button>
           </div>
         </div>
       </div>
@@ -34,9 +34,9 @@
           <div class="text-small text-muted">Forces Nginx worker_processes to 1. Recommended for 1 CPU core VPS.</div>
         </div>
         <div>
-          <div class="rect-segmented" id="group-nginx-worker">
-            <button type="button" class="rect-segment rect-segment--active" id="btn-ngx-auto" onclick="setNginxWorker(false)">Auto</button>
-            <button type="button" class="rect-segment" id="btn-ngx-single" onclick="setNginxWorker(true)">1 Worker</button>
+          <div class="view-switcher" id="group-nginx-worker">
+            <button type="button" class="view-switcher__btn is-active" id="btn-ngx-auto" onclick="setNginxWorker(false)">Auto</button>
+            <button type="button" class="view-switcher__btn" id="btn-ngx-single" onclick="setNginxWorker(true)">1 Worker</button>
           </div>
         </div>
       </div>
@@ -52,9 +52,9 @@
           </div>
         </div>
         <div>
-          <div class="rect-segmented" id="group-advanced-tuning">
-            <button type="button" class="rect-segment rect-segment--active" id="btn-adv-off" onclick="setAdvancedTuning(false)">Inactive</button>
-            <button type="button" class="rect-segment" id="btn-adv-on" onclick="setAdvancedTuning(true)">Active</button>
+          <div class="view-switcher" id="group-advanced-tuning">
+            <button type="button" class="view-switcher__btn is-active" id="btn-adv-off" onclick="setAdvancedTuning(false)">Inactive</button>
+            <button type="button" class="view-switcher__btn" id="btn-adv-on" onclick="setAdvancedTuning(true)">Active</button>
           </div>
         </div>
       </div>

@@ -45,38 +45,6 @@
 
   .info-row__value .usage-bar-wrap { min-width: 200px; }
 
-  .rect-segmented {
-    display: inline-flex;
-    align-items: center;
-    background: var(--color-surface);
-    border: none !important;
-    padding: 2px;
-    gap: 2px;
-  }
-  .rect-segment {
-    border: none !important;
-    background: transparent;
-    color: var(--color-muted);
-    height: 32px;
-    padding: 0 14px;
-    font-size: 11px;
-    font-weight: 800;
-    text-transform: uppercase;
-    cursor: pointer;
-    transition: background 0.15s, color 0.15s;
-  }
-  .rect-segment:hover:not(:disabled) {
-    color: var(--color-text);
-    background: var(--color-secondary-btn);
-  }
-  .rect-segment--active {
-    background: var(--color-accent) !important;
-    color: #111111 !important;
-  }
-  .rect-segment:disabled {
-    opacity: 0.45;
-    cursor: not-allowed;
-  }
 </style>
 {% endblock %}
 
@@ -261,22 +229,22 @@
     const btnOff = document.getElementById('btn-opt-off');
     const btnOn = document.getElementById('btn-opt-on');
     if (btnOff && btnOn) {
-      btnOff.classList.toggle('rect-segment--active', !isOptActive);
-      btnOn.classList.toggle('rect-segment--active', isOptActive);
+      btnOff.classList.toggle('is-active', !isOptActive);
+      btnOn.classList.toggle('is-active', isOptActive);
     }
 
     const btnNgxAuto = document.getElementById('btn-ngx-auto');
     const btnNgxSingle = document.getElementById('btn-ngx-single');
     if (btnNgxAuto && btnNgxSingle) {
-      btnNgxAuto.classList.toggle('rect-segment--active', !isSingleNginx);
-      btnNgxSingle.classList.toggle('rect-segment--active', isSingleNginx);
+      btnNgxAuto.classList.toggle('is-active', !isSingleNginx);
+      btnNgxSingle.classList.toggle('is-active', isSingleNginx);
     }
 
     const btnAdvOff = document.getElementById('btn-adv-off');
     const btnAdvOn = document.getElementById('btn-adv-on');
     if (btnAdvOff && btnAdvOn) {
-      btnAdvOff.classList.toggle('rect-segment--active', !isAdvTuning);
-      btnAdvOn.classList.toggle('rect-segment--active', isAdvTuning);
+      btnAdvOff.classList.toggle('is-active', !isAdvTuning);
+      btnAdvOn.classList.toggle('is-active', isAdvTuning);
     }
   }
 
