@@ -56,3 +56,50 @@
   border-top: 1px solid var(--color-line);
   margin: var(--space-lg) 0;
 }
+
+/* ============================================================
+   UNIVERSAL SKELETON UTILITY
+   Apply class="skeleton" to any element (cards, table rows, text, buttons)
+   ============================================================ */
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--color-skeleton-bg, #E4E6E0) 25%,
+    var(--color-skeleton-shimmer, #F4F5F2) 37%,
+    var(--color-skeleton-bg, #E4E6E0) 63%
+  ) !important;
+  background-size: 200% 100% !important;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite !important;
+  color: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  pointer-events: none !important;
+  user-select: none !important;
+}
+
+/* Hide children visibility when container has .skeleton class */
+.skeleton * {
+  visibility: hidden !important;
+}
+
+/* Optional inline skeleton dimension helpers */
+.skeleton-text {
+  display: inline-block;
+  height: 1em;
+  width: 80%;
+  border-radius: 4px;
+}
+
+.skeleton-circle {
+  border-radius: 50% !important;
+}
+
