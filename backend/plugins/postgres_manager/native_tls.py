@@ -42,7 +42,13 @@ async def _run(*args: str) -> str:
     def call() -> str:
         result = subprocess.run(args, capture_output=True, text=True, timeout=90, check=False)
         if result.returncode:
-            raise RuntimeError((result.stderr or result.stdout or "Command failed").strip())
+            message = (result.stderr or result.stdout or "Command failed").strip()
+            if "password is required" in message.lower() or "a terminal is required" in message.lower():
+                raise RuntimeError(
+                    "Remote access permissions are not installed. Run the root-only "
+                    "postgres_manager/scripts/install_remote_access.sh script once."
+                )
+            raise RuntimeError(message)
         return result.stdout
     return await asyncio.to_thread(call)
 
