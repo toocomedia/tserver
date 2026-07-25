@@ -38,10 +38,19 @@
     color: var(--color-text);
   }
 
-  .proc-status--sleeping { color: var(--color-muted); }
-  .proc-status--running  { color: var(--color-accent-2); font-weight: 700; }
-  .proc-status--zombie   { color: var(--color-danger); }
-  .proc-status--stopped  { color: var(--color-danger); }
+  .proc-status--sleeping, .proc-status--running, .proc-status--zombie, .proc-status--stopped {
+    display: inline-block;
+    padding: 3px 6px;
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    border-radius: 4px;
+    line-height: 1;
+  }
+  .proc-status--sleeping { background: var(--color-header-bg-bar); color: var(--color-muted); }
+  .proc-status--running  { background: var(--color-alert-success-bg); color: #3b5e13; }
+  .proc-status--zombie   { background: var(--color-alert-danger-bg); color: var(--color-danger); }
+  .proc-status--stopped  { background: var(--color-alert-danger-bg); color: var(--color-danger); }
 
   /* Accent highlight for active view-switcher buttons */
   .view-switcher__btn.is-active {

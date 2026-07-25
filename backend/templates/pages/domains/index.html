@@ -54,25 +54,25 @@
 
           <td>
             {% if item.domain.dns_zone_created %}
-              <span class="status-badge-after status-badge-after--active" style="color:var(--color-accent-2); font-weight:700;">ACTIVE</span>
+              <span class="badge-minimal badge-minimal--active">ACTIVE</span>
             {% else %}
-              <span class="status-badge-after" style="color:var(--color-muted); font-weight:700;">NONE</span>
+              <span class="badge-minimal badge-minimal--neutral">NONE</span>
             {% endif %}
           </td>
 
           <td>
             {% if item.nginx_active %}
-              <span class="status-badge-after status-badge-after--active" style="color:var(--color-accent-2); font-weight:700;">ACTIVE</span>
+              <span class="badge-minimal badge-minimal--active">ACTIVE</span>
             {% else %}
-              <span class="status-badge-after" style="color:var(--color-muted); font-weight:700;">NONE</span>
+              <span class="badge-minimal badge-minimal--neutral">NONE</span>
             {% endif %}
           </td>
 
           <td>
             {% if item.ssl_active %}
-              <span class="status-badge-after status-badge-after--active" style="color:var(--color-accent-2); font-weight:700;">ISSUED</span>
+              <span class="badge-minimal badge-minimal--active">ISSUED</span>
             {% else %}
-              <span class="status-badge-after" style="color:var(--color-muted); font-weight:700;">NONE</span>
+              <span class="badge-minimal badge-minimal--neutral">NONE</span>
             {% endif %}
           </td>
 
