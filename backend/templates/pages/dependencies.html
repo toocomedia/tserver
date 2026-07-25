@@ -7,7 +7,6 @@
 {% set resource_id = 'dependencies' %}
 {% set resource_label = 'Dependencies' %}
 {% set active_view = 'cards' %}
-{% set compact_label = 'Compact 1:1' %}
 {% include "partials/resource_view_switcher.html" with context %}
 {% endblock %}
 
@@ -31,7 +30,7 @@
       {% endfor %}
     </div>
 
-    <!-- 2. COMPACT 1:1 OVERLAY GRID VIEW -->
+    <!-- 2. COMPACT GRID VIEW -->
     <div data-resource-container="dependencies" data-resource-view="compact" class="dependency-compact-grid is-hidden">
       {% for dependency in dependencies %}
         {% include "partials/dependency_card_compact.html" %}
