@@ -354,11 +354,13 @@ class PostgresService:
 
         if os.name != "nt":
             conf_path = Path(f"/etc/nginx/streams.d/postgres_{full_host}.conf")
+            acme_conf_path = Path(f"/etc/nginx/sites-enabled/postgres_acme_{full_host}.conf")
             try:
-                subprocess.run(["sudo", "-n", "rm", "-f", str(conf_path)], check=False, timeout=10)
+                subprocess.run(["sudo", "-n", "rm", "-f", str(conf_path), str(acme_conf_path)], check=False, timeout=10)
                 subprocess.run(["sudo", "-n", "systemctl", "reload", "nginx"], check=False, timeout=15)
             except Exception as exc:
-                logger.warning("Failed to remove Nginx stream config for %s: %s", full_host, exc)
+                logger.warning("Failed to remove Nginx stream & ACME configs for %s: %s", full_host, exc)
+
 
         await db.delete(target)
         await db.commit()
@@ -371,27 +373,72 @@ class PostgresService:
 
 
     def _issue_certbot_ssl(self, full_host: str) -> bool:
-        """Helper to run Certbot webroot challenge and check cert existence via sudo safely."""
+        """Helper to provision HTTP port 80 ACME challenge and run Certbot webroot challenge."""
+        if os.name == "nt":
+            return True
+
+        # 1. Ensure shared webroot directory exists
         try:
             subprocess.run(
+                ["sudo", "-n", "mkdir", "-p", "/var/www/acme-challenge/.well-known/acme-challenge"],
+                check=False, timeout=10,
+            )
+            subprocess.run(
+                ["sudo", "-n", "chmod", "-R", "755", "/var/www/acme-challenge"],
+                check=False, timeout=10,
+            )
+        except Exception as exc:
+            logger.warning("Failed to prepare acme-challenge dir: %s", exc)
+
+        # 2. Write Nginx HTTP port 80 ACME challenge listener
+        acme_conf = f"""# Managed by srv-panel postgres_manager plugin for HTTP-01 ACME
+server {{
+    listen 80;
+    listen [::]:80;
+    server_name {full_host};
+
+    location ^~ /.well-known/acme-challenge/ {{
+        root /var/www/acme-challenge;
+        default_type "text/plain";
+    }}
+
+    location / {{
+        return 404;
+    }}
+}}
+"""
+        acme_path = Path(f"/etc/nginx/sites-enabled/postgres_acme_{full_host}.conf")
+        try:
+            subprocess.run(
+                ["sudo", "-n", "tee", str(acme_path)],
+                input=acme_conf, text=True, capture_output=True, timeout=10,
+            )
+            subprocess.run(["sudo", "-n", "systemctl", "reload", "nginx"], check=False, timeout=15)
+        except Exception as exc:
+            logger.warning("Failed to write Nginx ACME port 80 config for %s: %s", full_host, exc)
+
+        # 3. Run Certbot HTTP-01 webroot challenge
+        try:
+            res = subprocess.run(
                 ["sudo", "-n", "certbot", "certonly", "--webroot", "-w", "/var/www/acme-challenge",
                  "-d", full_host, "--non-interactive", "--agree-tos", "--register-unsafely-without-email"],
                 capture_output=True, text=True, timeout=90, shell=False,
             )
+            if res.returncode != 0:
+                logger.warning("Certbot stdout/stderr for %s:\nSTDOUT: %s\nSTDERR: %s", full_host, res.stdout, res.stderr)
         except Exception as exc:
             logger.warning("Certbot issue attempt for %s: %s", full_host, exc)
 
-        if os.name == "nt":
-            return True
-
+        # 4. Check if certificate was generated safely via sudo test
         try:
-            res = subprocess.run(
+            check = subprocess.run(
                 ["sudo", "-n", "test", "-f", f"/etc/letsencrypt/live/{full_host}/fullchain.pem"],
                 check=False, timeout=5, shell=False,
             )
-            return res.returncode == 0
+            return check.returncode == 0
         except Exception:
             return False
+
 
 
     def _write_nginx_stream_conf(self, full_host: str) -> bool:

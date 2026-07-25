@@ -164,9 +164,11 @@ function closeModal(id) {
 
 document.addEventListener("click", (e) => {
   if (e.target.classList.contains("modal-backdrop")) {
+    if (e.target.dataset.noBackdropClose === "true") return;
     e.target.classList.add("hidden");
   }
 });
+
 
 document.addEventListener("submit", (e) => {
   const button = e.submitter;
