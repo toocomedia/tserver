@@ -11,12 +11,14 @@
 
 /* PostgreSQL remote access */
 .remote-page, .remote-form { max-width: 1120px; }
-.pg-remote-panel { padding: 32px 40px; }
+.pg-remote-panel { margin: 0 auto; max-width: 1080px; padding: 32px 40px; width: 100%; }
 .pg-remote-head, .pg-remote-form-head { align-items: flex-start; display: flex; gap: 16px; justify-content: space-between; }
 .pg-remote-head { margin-bottom: 28px; }
 .pg-remote-head h2, .pg-remote-form-head h3 { margin: 0; }
 .pg-remote-head p { color: var(--color-muted); margin: 8px 0 0; }
 .pg-remote-add { max-width: 760px; }
+.pg-remote-panel .table-wrap { max-width: 100%; }
+.pg-remote-panel .remote-table th:last-child { width: 1%; }
 .remote-split .split-content { min-width: 0; padding: 32px 40px; }
 .remote-content { margin: 0; max-width: 1120px; }
 .remote-title-row { align-items: flex-start; display: flex; gap: 20px; justify-content: space-between; margin-bottom: 36px; }
