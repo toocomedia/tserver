@@ -61,7 +61,9 @@
     </table>
   </div>
   {% else %}
-  {% include "empty_state.html" %}
+  {%- set empty_message = "No users found. Create one to get started." %}
+  {%- set empty_icon = none %}
+  {% include "partials/empty_state.html" %}
   {% endif %}
 </div>
 

@@ -54,7 +54,9 @@
     </table>
   </div>
   {% else %}
-  {% include "empty_state.html" %}
+  {%- set empty_message = "No databases found. Create one to get started." %}
+  {%- set empty_icon = none %}
+  {% include "partials/empty_state.html" %}
   {% endif %}
 
   {# Tables drawer (shown when a DB row is clicked) #}
