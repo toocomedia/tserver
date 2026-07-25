@@ -94,9 +94,9 @@
       <span class="info-row__label">Nginx Web Engine</span>
       <span class="info-row__value" id="nginx-status">
         {% if nginx.ok %}
-          <span class="status-badge-after status-badge-after--active" style="color:var(--color-accent-2); font-weight:800;">ACTIVE</span>
+          <span class="status-badge-after status-badge-after--active" style="color:var(--color-accent-2); font-weight:700;">ACTIVE</span>
         {% else %}
-          <span class="status-badge-after" style="color:var(--color-danger); font-weight:800;">ERROR</span>
+          <span class="status-badge-after" style="color:var(--color-danger); font-weight:700;">ERROR</span>
           <span class="text-small text-muted" style="margin-left:8px;">{{ nginx.detail }}</span>
         {% endif %}
       </span>
@@ -106,9 +106,9 @@
       <span class="info-row__label">PowerDNS Name Server</span>
       <span class="info-row__value" id="pdns-status">
         {% if powerdns.ok %}
-          <span class="status-badge-after status-badge-after--active" style="color:var(--color-accent-2); font-weight:800;">ACTIVE</span>
+          <span class="status-badge-after status-badge-after--active" style="color:var(--color-accent-2); font-weight:700;">ACTIVE</span>
         {% else %}
-          <span class="status-badge-after" style="color:var(--color-danger); font-weight:800;">ERROR</span>
+          <span class="status-badge-after" style="color:var(--color-danger); font-weight:700;">ERROR</span>
           <span class="text-small text-muted" style="margin-left:8px;">{{ powerdns.detail }}</span>
         {% endif %}
       </span>

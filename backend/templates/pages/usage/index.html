@@ -26,7 +26,7 @@
   .usage-bar__fill {
     height: 100%;
     transition: width 0.5s ease, background 0.3s;
-    background: var(--color-accent-dark);
+    background: var(--color-accent);
   }
   .usage-bar__fill--warn   { background: var(--color-warn); }
   .usage-bar__fill--danger { background: var(--color-danger); }
@@ -39,9 +39,15 @@
   }
 
   .proc-status--sleeping { color: var(--color-muted); }
-  .proc-status--running  { color: var(--color-accent-dark); font-weight: 800; }
+  .proc-status--running  { color: var(--color-accent-2); font-weight: 700; }
   .proc-status--zombie   { color: var(--color-danger); }
   .proc-status--stopped  { color: var(--color-danger); }
+
+  /* Accent highlight for active view-switcher buttons */
+  .view-switcher__btn.is-active {
+    background: var(--color-accent) !important;
+    color: var(--color-on-accent) !important;
+  }
 
   .info-row__value .usage-bar-wrap { min-width: 200px; }
 
@@ -166,7 +172,7 @@
       };
       svcTbody.innerHTML = Object.entries(d.services).map(([key, svc]) => `
         <tr>
-          <td><strong style="font-size:14px;">${svc.label || svcNames[key] || key}</strong></td>
+          <td class="table-title">${svc.label || svcNames[key] || key}</td>
           <td>${svc.count}</td>
           <td>${svc.cpu.toFixed(1)}%</td>
           <td>${svc.memory}</td>
@@ -181,7 +187,7 @@
       const pluginRows = Object.entries(d.plugins || {});
       pluginTbody.innerHTML = pluginRows.length ? pluginRows.map(([key, plugin]) => `
         <tr>
-          <td><strong style="font-size:14px;">${plugin.label || key}</strong></td>
+          <td class="table-title">${plugin.label || key}</td>
           <td>${plugin.count}</td>
           <td>${plugin.cpu.toFixed(1)}%</td>
           <td>${plugin.memory}</td>
@@ -197,7 +203,7 @@
         procTbody.innerHTML = d.processes.map(p => `
           <tr>
             <td><span class="text-small text-muted">${p.pid}</span></td>
-            <td><strong style="font-size:13px; color:var(--color-text);">${p.name}</strong></td>
+            <td class="table-title">${p.name}</td>
             <td>${typeof p.cpu === 'number' ? p.cpu.toFixed(1) : p.cpu}%</td>
             <td>${typeof p.mem === 'number' ? p.mem.toFixed(1) : p.mem}%</td>
             <td><span class="${procStatusClass(p.status)}">${p.status}</span></td>
@@ -264,9 +270,20 @@
     }
   }
 
+  function setOptimizationButtonsDisabled(disabled) {
+    const ids = ['group-opt-mode', 'group-nginx-worker', 'group-advanced-tuning'];
+    ids.forEach(id => {
+      const group = document.getElementById(id);
+      if (group) {
+        group.querySelectorAll('button').forEach(b => b.disabled = disabled);
+      }
+    });
+  }
+
   async function setOptMode(enable) {
     if (isActionPending) return;
     isActionPending = true;
+    setOptimizationButtonsDisabled(true);
     try {
       const res = await panel.post('/api/system/optimization/toggle', { enabled: enable });
       if (res.success) {
@@ -278,6 +295,7 @@
       toast('Server connection failed', 'danger');
     } finally {
       isActionPending = false;
+      setOptimizationButtonsDisabled(false);
       fetchStats();
     }
   }
@@ -285,6 +303,7 @@
   async function setNginxWorker(single) {
     if (isActionPending) return;
     isActionPending = true;
+    setOptimizationButtonsDisabled(true);
     try {
       const res = await panel.post('/api/system/nginx-worker/toggle', { single_worker: single });
       if (res.success) {
@@ -296,6 +315,7 @@
       toast('Server connection failed', 'danger');
     } finally {
       isActionPending = false;
+      setOptimizationButtonsDisabled(false);
       fetchStats();
     }
   }
@@ -303,6 +323,7 @@
   async function setAdvancedTuning(enable) {
     if (isActionPending) return;
     isActionPending = true;
+    setOptimizationButtonsDisabled(true);
     try {
       const res = await panel.post('/api/system/advanced/toggle', { enabled: enable });
       if (res.success) {
@@ -314,6 +335,7 @@
       toast('Server connection failed', 'danger');
     } finally {
       isActionPending = false;
+      setOptimizationButtonsDisabled(false);
       fetchStats();
     }
   }

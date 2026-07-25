@@ -47,32 +47,32 @@
         {% for item in domain_statuses %}
         <tr data-domain-id="{{ item.domain.id }}" class="domain-row-item">
           <td>
-            <span class="domain-name-txt" style="font-weight:800; font-size: 14px;">{{ item.domain.name }}</span>
+            <span class="domain-name-txt table-title">{{ item.domain.name }}</span>
             <br>
             <span class="text-small text-muted">{{ item.domain.server_ip }}</span>
           </td>
 
           <td>
             {% if item.domain.dns_zone_created %}
-              <span class="status-badge-after status-badge-after--active" style="color:var(--color-accent-2); font-weight:800;">ACTIVE</span>
+              <span class="status-badge-after status-badge-after--active" style="color:var(--color-accent-2); font-weight:700;">ACTIVE</span>
             {% else %}
-              <span class="status-badge-after" style="color:var(--color-muted); font-weight:800;">NONE</span>
+              <span class="status-badge-after" style="color:var(--color-muted); font-weight:700;">NONE</span>
             {% endif %}
           </td>
 
           <td>
             {% if item.nginx_active %}
-              <span class="status-badge-after status-badge-after--active" style="color:var(--color-accent-2); font-weight:800;">ACTIVE</span>
+              <span class="status-badge-after status-badge-after--active" style="color:var(--color-accent-2); font-weight:700;">ACTIVE</span>
             {% else %}
-              <span class="status-badge-after" style="color:var(--color-muted); font-weight:800;">NONE</span>
+              <span class="status-badge-after" style="color:var(--color-muted); font-weight:700;">NONE</span>
             {% endif %}
           </td>
 
           <td>
             {% if item.ssl_active %}
-              <span class="status-badge-after status-badge-after--active" style="color:var(--color-accent-2); font-weight:800;">ISSUED</span>
+              <span class="status-badge-after status-badge-after--active" style="color:var(--color-accent-2); font-weight:700;">ISSUED</span>
             {% else %}
-              <span class="status-badge-after" style="color:var(--color-muted); font-weight:800;">NONE</span>
+              <span class="status-badge-after" style="color:var(--color-muted); font-weight:700;">NONE</span>
             {% endif %}
           </td>
 
