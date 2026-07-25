@@ -15,8 +15,19 @@ from sqlalchemy import select
 from templating import templates
 import config
 
+from utils.search_and_bulk import execute_bulk_action, BulkActionRequest
+from models.domain import Domain
+
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/domains", tags=["domains"])
+
+
+@router.post("/api/bulk")
+async def domains_bulk_action(payload: BulkActionRequest, db: AsyncSession = Depends(get_db)):
+    """Generic endpoint for bulk operations on domains (e.g. bulk delete)."""
+    result = await execute_bulk_action(db, Domain, payload.action, payload.item_ids)
+    return result
+
 
 
 # ---------------------------------------------------------------

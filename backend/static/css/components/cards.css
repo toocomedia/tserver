@@ -225,15 +225,14 @@
   font-size: 11px;
   font-weight: 700;
   color: var(--color-text);
-  background: var(--color-surface);
-  border: 1px solid var(--color-line);
+  background: var(--color-secondary-btn);
+  border: none !important;
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .expand-toggle-btn:hover {
-  border-color: var(--color-text);
-  background: var(--color-bg);
+  background: var(--color-secondary-hover);
 }
 
 .expand-toggle-btn.is-expanded {
@@ -401,8 +400,8 @@
   justify-content: center;
   width: 32px;
   height: 32px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-line);
+  background: var(--color-secondary-btn);
+  border: none !important;
   color: var(--color-text);
   cursor: pointer;
   transition: all 0.15s ease;
@@ -410,24 +409,22 @@
 }
 
 .icon-btn:hover {
-  background: var(--color-text);
-  color: var(--color-bg);
-  border-color: var(--color-text);
+  background: var(--color-secondary-hover);
+  color: var(--color-text);
 }
 
 .icon-btn--primary {
   background: var(--color-accent) !important;
-  color: var(--color-neutral) !important;
-  border-color: var(--color-accent) !important;
+  color: #111111 !important;
 }
 
 .icon-btn--danger {
-  color: var(--color-danger);
+  background: var(--color-danger-btn) !important;
+  color: var(--color-danger-text) !important;
 }
 .icon-btn--danger:hover {
   background: var(--color-danger) !important;
   color: #FFFFFF !important;
-  border-color: var(--color-danger) !important;
 }
 
 .icon-btn svg {

@@ -31,6 +31,20 @@
 {% endif %}
 
 {% if cert_list %}
+<!-- Action Toolbar (Search & Filter) -->
+<div class="action-toolbar mb-md">
+  <div class="action-toolbar__search">
+    <input type="text" id="ssl-search-input" class="form-control" placeholder="Search certificates by domain name..." onkeyup="filterSSLTable()">
+  </div>
+  <div class="action-toolbar__group">
+    <select id="ssl-status-filter" class="form-control" style="width: 140px;" onchange="filterSSLTable()">
+      <option value="all">All Certificates</option>
+      <option value="valid">Valid Only</option>
+      <option value="expiring">Expiring Soon</option>
+    </select>
+  </div>
+</div>
+
 <div class="table-wrap">
   <table class="table" id="ssl-table">
     <colgroup>
@@ -144,6 +158,30 @@
 {% block scripts %}
 <script src="/static/js/modules/ssl.js"></script>
 <script>
+function filterSSLTable() {
+  const query = document.getElementById('ssl-search-input').value.toLowerCase().trim();
+  const filter = document.getElementById('ssl-status-filter').value;
+  const rows = document.querySelectorAll('#ssl-table tbody tr[id^="cert-row-"]');
+
+  rows.forEach(row => {
+    const text = row.textContent.toLowerCase();
+    const matchesSearch = !query || text.includes(query);
+    
+    let matchesFilter = true;
+    if (filter === 'valid') {
+      matchesFilter = row.innerText.includes('Valid') || row.innerText.includes('Issued');
+    } else if (filter === 'expiring') {
+      matchesFilter = row.innerText.includes('Expiring') || row.innerText.includes('Expired');
+    }
+
+    if (matchesSearch && matchesFilter) {
+      row.style.display = '';
+    } else {
+      row.style.display = 'none';
+    }
+  });
+}
+
 function revokeCert(id, domain) {
   confirmAction(
     `Revoke SSL certificate for "${domain}"? The domain will revert to HTTP only.`,

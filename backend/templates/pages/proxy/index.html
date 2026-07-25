@@ -27,6 +27,20 @@
 {% endif %}
 
 {% if rows %}
+<!-- Action Toolbar (Search & Filter) -->
+<div class="action-toolbar mb-md">
+  <div class="action-toolbar__search">
+    <input type="text" id="proxy-search-input" class="form-control" placeholder="Search proxies by domain, target IP or port..." onkeyup="filterProxyTable()">
+  </div>
+  <div class="action-toolbar__group">
+    <select id="proxy-status-filter" class="form-control" style="width: 140px;" onchange="filterProxyTable()">
+      <option value="all">All Proxies</option>
+      <option value="ssl">SSL Enabled</option>
+      <option value="cache">Cache Enabled</option>
+    </select>
+  </div>
+</div>
+
 <div class="table-wrap">
   <table class="table" id="proxy-table">
     <colgroup>
@@ -194,4 +208,29 @@
 
 {% block scripts %}
 <script src="/static/js/modules/proxy.js"></script>
+<script>
+function filterProxyTable() {
+  const query = document.getElementById('proxy-search-input').value.toLowerCase().trim();
+  const filter = document.getElementById('proxy-status-filter').value;
+  const rows = document.querySelectorAll('#proxy-table tbody tr[data-proxy-id]');
+
+  rows.forEach(row => {
+    const text = row.textContent.toLowerCase();
+    const matchesSearch = !query || text.includes(query);
+    
+    let matchesFilter = true;
+    if (filter === 'ssl') {
+      matchesFilter = row.innerText.includes('SSL');
+    } else if (filter === 'cache') {
+      matchesFilter = row.innerText.includes('ON');
+    }
+
+    if (matchesSearch && matchesFilter) {
+      row.style.display = '';
+    } else {
+      row.style.display = 'none';
+    }
+  });
+}
+</script>
 {% endblock %}

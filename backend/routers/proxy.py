@@ -14,8 +14,19 @@ from services import proxy_service, dns_service, nginx_service, cache_service
 from templating import templates
 import config
 
+from utils.search_and_bulk import execute_bulk_action, BulkActionRequest
+from models.proxy import ReverseProxy
+
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/proxy", tags=["proxy"])
+
+
+@router.post("/api/bulk")
+async def proxy_bulk_action(payload: BulkActionRequest, db: AsyncSession = Depends(get_db)):
+    """Generic endpoint for bulk operations on reverse proxies."""
+    result = await execute_bulk_action(db, ReverseProxy, payload.action, payload.item_ids)
+    return result
+
 
 
 # ---------------------------------------------------------------
