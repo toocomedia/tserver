@@ -1,0 +1,16 @@
+{% if plugin.dependency_status or plugin.manifest_error or (action_error and action_error_plugin_id == plugin.id) %}
+  <button type="button" class="btn btn--secondary btn--sm requirements-info-btn {% if plugin.paused_by %}requirements-info-btn--danger{% endif %}"
+          title="{% if plugin.paused_by %}Missing Requirements — View details{% else %}View Requirements & Information{% endif %}"
+          onclick="const host=this.closest('.plugin-requirements-host'); this.classList.toggle('is-expanded'); host.querySelector('.card-details-tray').classList.toggle('is-hidden');">
+    More info
+  </button>
+{% endif %}
+{% if plugin.route_prefix and plugin.effective_status == 'active' %}
+  <a href="{{ plugin.route_prefix }}" class="btn btn--secondary btn--sm">Manage</a>
+{% endif %}
+<form method="post" action="/plugins/api/toggle" class="inline-form">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+  <input type="hidden" name="plugin_id" value="{{ plugin.id }}">
+  <input type="hidden" name="enabled" value="{% if plugin.enabled %}false{% else %}true{% endif %}">
+  <button type="submit" class="btn btn--ghost btn--sm">{% if plugin.enabled %}Disable{% else %}Enable{% endif %}</button>
+</form>

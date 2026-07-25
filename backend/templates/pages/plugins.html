@@ -5,23 +5,11 @@
 {% block page_title %}Plugins{% endblock %}
 
 {% block topbar_actions %}
+{% set resource_id = 'plugins' %}
+{% set resource_label = 'Plugins' %}
+{% set active_view = 'cards' %}
+{% include "partials/resource_view_switcher.html" with context %}
 <div class="layout-switcher-wrap">
-  <!-- CARDS / COMPACT 1:1 GRID / LIST VIEW SWITCHER -->
-  <div id="plugin-switcher" class="layout-switcher layout-switcher--three" role="radiogroup" aria-label="Layout view switcher">
-    <button type="button" class="layout-switcher__btn is-active" id="btn-plugins-cards" onclick="setPluginsLayout('cards')">
-      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
-      Cards
-    </button>
-    <button type="button" class="layout-switcher__btn" id="btn-plugins-compact" onclick="setPluginsLayout('compact')">
-      <svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"></rect></svg>
-      Compact
-    </button>
-    <button type="button" class="layout-switcher__btn" id="btn-plugins-list" onclick="setPluginsLayout('list')">
-      <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
-      List
-    </button>
-  </div>
-
   <button class="btn btn--primary" onclick="openModal('upload-plugin-modal')">
     + Upload Plugin (.zip)
   </button>
@@ -30,96 +18,54 @@
 
 {% block content %}
 <div class="mb-xl">
-  <div class="list-title-bar">
-    <h3>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px; height:14px;"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-      Installed Extensions & Plugins
-    </h3>
-    <span style="font-size: 11px; color: var(--color-muted); font-weight: 700;">
-      {{ plugins | length }} Total
-    </span>
-  </div>
-  
-  <div style="padding-top: 16px;">
+  {% set plugin_title_icon %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>{% endset %}
+  {% set title = 'Installed Extensions & Plugins' %}
+  {% set item_count = plugins | length %}
+  {% set icon_svg = plugin_title_icon %}
+  {% include "partials/resource_title_bar.html" %}
+
+  <div class="resource-views">
     
     <!-- 1. CARDS VIEW -->
-    <div id="plugins-cards-container" class="plugin-grid">
+    <div data-resource-container="plugins" data-resource-view="cards" class="plugin-grid">
       {% for plugin in plugins %}
         {% include "partials/plugin_card.html" %}
       {% else %}
-        <div class="empty-state" style="grid-column: 1 / -1; padding: 3rem; text-align: center; color: var(--color-muted); background: var(--color-surface); border: 1px solid var(--color-line);">
-          No plugins available. Click "+ Upload Plugin (.zip)" to add a plugin.
-        </div>
+        {% set empty_message = 'No plugins available. Click “+ Upload Plugin (.zip)” to add a plugin.' %}
+        {% include "partials/empty_state.html" %}
       {% endfor %}
     </div>
 
     <!-- 2. COMPACT 1:1 OVERLAY GRID VIEW -->
-    <div id="plugins-compact-container" class="plugin-compact-grid is-hidden">
+    <div data-resource-container="plugins" data-resource-view="compact" class="plugin-compact-grid is-hidden">
       {% for plugin in plugins %}
         {% include "partials/plugin_card_compact.html" %}
       {% else %}
-        <div class="empty-state" style="grid-column: 1 / -1; padding: 3rem; text-align: center; color: var(--color-muted); background: var(--color-surface); border: 1px solid var(--color-line);">
-          No plugins available.
-        </div>
+        {% set empty_message = 'No plugins available.' %}
+        {% include "partials/empty_state.html" %}
       {% endfor %}
     </div>
 
     <!-- 3. LIST VIEW -->
-    <div id="plugins-list-container" class="view-list-container is-hidden">
+    <div data-resource-container="plugins" data-resource-view="list" class="view-list-container is-hidden">
       <div class="list-header-row">
-        <div>Extension / Plugin</div>
-        <div>Version</div>
-        <div>Status</div>
-        <div>Description</div>
-        <div style="text-align: right;">Actions</div>
+        <div>Extension / Plugin</div><div>Version</div><div>Status</div><div>Description</div><div>Actions</div>
       </div>
-
+      {% from "partials/resource_list_row.html" import render as render_resource_row %}
       {% for plugin in plugins %}
-      <div class="list-item-row plugin-requirements-host">
-        <div class="list-col-main">
-          <div class="list-col-thumb">
-            <img src="/plugins/assets/{{ plugin.id }}/icon.png" alt="{{ plugin.name }} icon" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='block';">
-            <svg style="display: none; width:24px; height:24px; stroke:var(--color-text);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="1.5" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-          </div>
-          <span class="list-col-name">{{ plugin.name }}</span>
-        </div>
-        <div class="list-col-version">v{{ plugin.version }}</div>
-        <div class="list-col-status">
-          {% if plugin.effective_status == 'active' %}
-            <span class="status-badge status-badge--success">Active</span>
-          {% elif plugin.effective_status in ['missing', 'invalid', 'error', 'unhealthy'] %}
-            <span class="status-badge status-badge--danger">{{ plugin.effective_status | replace('_', ' ') | title }}</span>
-          {% elif plugin.effective_status in ['paused', 'disabled', 'stopped'] %}
-            <span class="status-badge status-badge--warning">{{ plugin.effective_status | replace('_', ' ') | title }}</span>
-          {% else %}
-            <span class="status-badge status-badge--muted">{{ plugin.effective_status | replace('_', ' ') | title }}</span>
-          {% endif %}
-        </div>
-        <div class="list-col-desc">{{ plugin.description }}</div>
-        <div class="list-col-actions">
-          {% if plugin.dependency_status or plugin.manifest_error or (action_error and action_error_plugin_id == plugin.id) %}
-            <button type="button" class="btn btn--secondary btn--sm requirements-info-btn {% if plugin.paused_by %}requirements-info-btn--danger{% endif %}"
-              title="{% if plugin.paused_by %}Missing Requirements — View details{% else %}View Requirements & Information{% endif %}"
-              onclick="const host=this.closest('.plugin-requirements-host'); this.classList.toggle('is-expanded'); host.querySelector('.card-details-tray').classList.toggle('is-hidden');">
-              More info
-            </button>
-          {% endif %}
-          {% if plugin.route_prefix and plugin.effective_status == 'active' %}
-            <a href="{{ plugin.route_prefix }}" class="btn btn--secondary btn--sm">Manage</a>
-          {% endif %}
-          <form method="post" action="/plugins/api/toggle" style="display:inline-flex;">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
-            <input type="hidden" name="plugin_id" value="{{ plugin.id }}">
-            <input type="hidden" name="enabled" value="{% if plugin.enabled %}false{% else %}true{% endif %}">
-            <button type="submit" class="btn btn--ghost btn--sm">{% if plugin.enabled %}Disable{% else %}Enable{% endif %}</button>
-          </form>
-        </div>
-        {% if plugin.dependency_status or plugin.manifest_error or (action_error and action_error_plugin_id == plugin.id) %}
-          {% include "partials/plugin_requirements_overlay.html" %}
+        {% if plugin.effective_status == 'active' %}
+          {% set plugin_status_label = 'Active' %}{% set plugin_status_tone = 'success' %}
+        {% elif plugin.effective_status in ['missing', 'invalid', 'error', 'unhealthy'] %}
+          {% set plugin_status_label = plugin.effective_status | replace('_', ' ') | title %}{% set plugin_status_tone = 'danger' %}
+        {% elif plugin.effective_status in ['paused', 'disabled', 'stopped'] %}
+          {% set plugin_status_label = plugin.effective_status | replace('_', ' ') | title %}{% set plugin_status_tone = 'warning' %}
+        {% else %}
+          {% set plugin_status_label = plugin.effective_status | replace('_', ' ') | title %}{% set plugin_status_tone = 'muted' %}
         {% endif %}
-      </div>
+        {{ render_resource_row(plugin, 'plugin', plugin.name, 'v' ~ plugin.version, plugin.description, '/plugins/assets/' ~ plugin.id ~ '/icon.png', plugin.name ~ ' icon', plugin_status_label, plugin_status_tone, 'partials/plugin_list_actions.html', 'partials/plugin_requirements_overlay.html', plugin.dependency_status or plugin.manifest_error or (action_error and action_error_plugin_id == plugin.id)) }}
       {% else %}
-      <div style="padding: 2rem; text-align: center; color: var(--color-muted);">No plugins available.</div>
+        {% set empty_message = 'No plugins available.' %}
+        {% include "partials/empty_state.html" %}
       {% endfor %}
     </div>
 
@@ -150,34 +96,4 @@
   </div>
 </div>
 
-<script>
-  function setPluginsLayout(mode) {
-    const cardsBtn = document.getElementById('btn-plugins-cards');
-    const compactBtn = document.getElementById('btn-plugins-compact');
-    const listBtn = document.getElementById('btn-plugins-list');
-
-    const cardsContainer = document.getElementById('plugins-cards-container');
-    const compactContainer = document.getElementById('plugins-compact-container');
-    const listContainer = document.getElementById('plugins-list-container');
-
-    cardsBtn?.classList.remove('is-active');
-    compactBtn?.classList.remove('is-active');
-    listBtn?.classList.remove('is-active');
-
-    cardsContainer?.classList.add('is-hidden');
-    compactContainer?.classList.add('is-hidden');
-    listContainer?.classList.add('is-hidden');
-
-    if (mode === 'cards') {
-      cardsBtn?.classList.add('is-active');
-      cardsContainer?.classList.remove('is-hidden');
-    } else if (mode === 'compact') {
-      compactBtn?.classList.add('is-active');
-      compactContainer?.classList.remove('is-hidden');
-    } else {
-      listBtn?.classList.add('is-active');
-      listContainer?.classList.remove('is-hidden');
-    }
-  }
-</script>
 {% endblock %}

@@ -1,0 +1,10 @@
+{# Shared resource title/count bar. #}
+<div class="list-title-bar resource-title-bar">
+  <h3>
+    {% if icon_svg %}{{ icon_svg | safe }}{% endif %}
+    {{ title }}
+  </h3>
+  {% if item_count is defined and item_count is not none %}
+    <span class="resource-title-bar__count">{{ item_count }} Total</span>
+  {% endif %}
+</div>

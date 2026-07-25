@@ -89,6 +89,25 @@
   height: 15px;
   stroke: var(--color-text);
 }
+.resource-title-bar__count {
+  font-size: var(--font-small);
+  color: var(--color-muted);
+  font-weight: 700;
+  white-space: nowrap;
+}
+.resource-views {
+  padding-top: var(--space-lg);
+}
+.resource-empty-state {
+  grid-column: 1 / -1;
+  padding: var(--space-xl);
+  text-align: center;
+  color: var(--color-muted);
+  background: var(--color-surface);
+}
+.inline-form {
+  display: inline-flex;
+}
 
 /* Action Toolbar (Search + Filters + Buttons) */
 .action-toolbar {
@@ -172,4 +191,3 @@
 .ssl-step--run { color: var(--color-text); font-weight: 700; }
 .ssl-step--ok { color: var(--color-accent-2); }
 .ssl-step--fail { color: var(--color-danger); font-weight: 700; }
-

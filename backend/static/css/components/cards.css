@@ -678,6 +678,11 @@
   stroke: var(--color-text);
   fill: none;
 }
+.list-col-thumb-fallback {
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
 
 .list-col-name {
   font-weight: 800;

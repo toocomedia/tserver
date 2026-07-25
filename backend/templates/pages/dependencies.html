@@ -4,150 +4,67 @@
 {% block page_title %}Dependencies{% endblock %}
 
 {% block topbar_actions %}
-<div class="layout-switcher-wrap">
-  <!-- CARDS / COMPACT 1:1 GRID / LIST VIEW SWITCHER -->
-  <div id="deps-switcher" class="layout-switcher layout-switcher--three" role="radiogroup" aria-label="Layout view switcher">
-    <button type="button" class="layout-switcher__btn is-active" id="btn-deps-cards" onclick="setDepsLayout('cards')">
-      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
-      Cards
-    </button>
-    <button type="button" class="layout-switcher__btn" id="btn-deps-compact" onclick="setDepsLayout('compact')">
-      <svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"></rect></svg>
-      Compact 1:1
-    </button>
-    <button type="button" class="layout-switcher__btn" id="btn-deps-list" onclick="setDepsLayout('list')">
-      <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
-      List
-    </button>
-  </div>
-</div>
+{% set resource_id = 'dependencies' %}
+{% set resource_label = 'Dependencies' %}
+{% set active_view = 'cards' %}
+{% set compact_label = 'Compact 1:1' %}
+{% include "partials/resource_view_switcher.html" with context %}
 {% endblock %}
 
 {% block content %}
 <div class="mb-xl">
-  <div class="list-title-bar">
-    <h3>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px; height:14px;"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/></svg>
-      System Dependencies Catalog
-    </h3>
-    <span style="font-size: 11px; color: var(--color-muted); font-weight: 700;">
-      {{ dependencies | length }} Total
-    </span>
-  </div>
-  
-  <div style="padding-top: 16px;">
+  {% set dependency_title_icon %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/></svg>{% endset %}
+  {% set title = 'System Dependencies Catalog' %}
+  {% set item_count = dependencies | length %}
+  {% set icon_svg = dependency_title_icon %}
+  {% include "partials/resource_title_bar.html" %}
+
+  <div class="resource-views">
     
     <!-- 1. CARDS VIEW -->
-    <div id="deps-cards-container" class="dependency-grid">
+    <div data-resource-container="dependencies" data-resource-view="cards" class="dependency-grid">
       {% for dependency in dependencies %}
         {% include "partials/dependency_card.html" %}
       {% else %}
-        <div class="empty-state" style="grid-column: 1 / -1; padding: 3rem; text-align: center; color: var(--color-muted); background: var(--color-surface); border: 1px solid var(--color-line);">
-          No system dependencies are registered.
-        </div>
+        {% set empty_message = 'No system dependencies are registered.' %}
+        {% include "partials/empty_state.html" %}
       {% endfor %}
     </div>
 
     <!-- 2. COMPACT 1:1 OVERLAY GRID VIEW -->
-    <div id="deps-compact-container" class="dependency-compact-grid is-hidden">
+    <div data-resource-container="dependencies" data-resource-view="compact" class="dependency-compact-grid is-hidden">
       {% for dependency in dependencies %}
         {% include "partials/dependency_card_compact.html" %}
       {% else %}
-        <div class="empty-state" style="grid-column: 1 / -1; padding: 3rem; text-align: center; color: var(--color-muted); background: var(--color-surface); border: 1px solid var(--color-line);">
-          No system dependencies are registered.
-        </div>
+        {% set empty_message = 'No system dependencies are registered.' %}
+        {% include "partials/empty_state.html" %}
       {% endfor %}
     </div>
 
     <!-- 3. LIST VIEW -->
-    <div id="deps-list-container" class="view-list-container is-hidden">
+    <div data-resource-container="dependencies" data-resource-view="list" class="view-list-container is-hidden">
       <div class="list-header-row">
-        <div>System Dependency</div>
-        <div>Driver</div>
-        <div>Status</div>
-        <div>Description</div>
-        <div style="text-align: right;">Actions</div>
+        <div>System Dependency</div><div>Driver</div><div>Status</div><div>Description</div><div>Actions</div>
       </div>
-
+      {% from "partials/resource_list_row.html" import render as render_resource_row %}
       {% for dependency in dependencies %}
-      <div class="list-item-row">
-        <div class="list-col-main">
-          <div class="list-col-thumb">
-            {% if dependency.icon %}
-              <img src="{{ dependency.icon }}" alt="{{ dependency.name }} icon" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='block';">
-              <svg style="display: none; width:24px; height:24px; stroke:var(--color-text);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="1.5" d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
-            {% else %}
-              <svg style="width:24px; height:24px; stroke:var(--color-text);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="1.5" d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
-            {% endif %}
-          </div>
-          <span class="list-col-name">{{ dependency.name }}</span>
-        </div>
-        <div class="list-col-version">v{{ dependency.version }}</div>
-        <div class="list-col-status">
-          {% if dependency.healthy and dependency.desired_enabled %}
-            <span class="status-badge status-badge--success">Healthy</span>
-          {% elif dependency.effective_state in ['missing', 'unhealthy', 'invalid', 'error'] %}
-            <span class="status-badge status-badge--danger">{{ dependency.effective_state | replace('_', ' ') | title }}</span>
-          {% elif dependency.effective_state in ['paused', 'disabled', 'stopped'] %}
-            <span class="status-badge status-badge--warning">{{ dependency.effective_state | replace('_', ' ') | title }}</span>
-          {% else %}
-            <span class="status-badge status-badge--muted">{{ dependency.effective_state | replace('_', ' ') | title }}</span>
-          {% endif %}
-        </div>
-        <div class="list-col-desc">{{ dependency.description }}</div>
-        <div class="list-col-actions">
-          {% if dependency.installed %}
-            <form method="post" action="/api/dependencies/{{ dependency.id }}/toggle" style="display:inline-flex;">
-              <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
-              {% if dependency.running %}
-                <input type="hidden" name="enabled" value="false">
-                <input type="hidden" name="confirmed" value="true">
-                <button class="btn btn--ghost btn--sm" type="submit" onclick="return confirm('Disable {{ dependency.name }}? Dependent plugins will be paused.')">Disable</button>
-              {% else %}
-                <input type="hidden" name="enabled" value="true">
-                <button class="btn btn--primary btn--sm" type="submit">Enable</button>
-              {% endif %}
-            </form>
-          {% endif %}
-          <a href="/dependencies/{{ dependency.id }}" class="btn btn--secondary btn--sm">View Info</a>
-        </div>
-      </div>
+        {% if dependency.healthy and dependency.desired_enabled %}
+          {% set dependency_status_label = 'Healthy' %}{% set dependency_status_tone = 'success' %}
+        {% elif dependency.effective_state in ['missing', 'unhealthy', 'invalid', 'error'] %}
+          {% set dependency_status_label = dependency.effective_state | replace('_', ' ') | title %}{% set dependency_status_tone = 'danger' %}
+        {% elif dependency.effective_state in ['paused', 'disabled', 'stopped'] %}
+          {% set dependency_status_label = dependency.effective_state | replace('_', ' ') | title %}{% set dependency_status_tone = 'warning' %}
+        {% else %}
+          {% set dependency_status_label = dependency.effective_state | replace('_', ' ') | title %}{% set dependency_status_tone = 'muted' %}
+        {% endif %}
+        {{ render_resource_row(dependency, 'dependency', dependency.name, 'v' ~ dependency.version, dependency.description, dependency.icon, dependency.name ~ ' icon', dependency_status_label, dependency_status_tone, 'partials/dependency_list_actions.html') }}
       {% else %}
-      <div style="padding: 2rem; text-align: center; color: var(--color-muted);">No dependencies registered.</div>
+        {% set empty_message = 'No dependencies registered.' %}
+        {% include "partials/empty_state.html" %}
       {% endfor %}
     </div>
 
   </div>
 </div>
 
-<script>
-  function setDepsLayout(mode) {
-    const cardsBtn = document.getElementById('btn-deps-cards');
-    const compactBtn = document.getElementById('btn-deps-compact');
-    const listBtn = document.getElementById('btn-deps-list');
-
-    const cardsContainer = document.getElementById('deps-cards-container');
-    const compactContainer = document.getElementById('deps-compact-container');
-    const listContainer = document.getElementById('deps-list-container');
-
-    cardsBtn?.classList.remove('is-active');
-    compactBtn?.classList.remove('is-active');
-    listBtn?.classList.remove('is-active');
-
-    cardsContainer?.classList.add('is-hidden');
-    compactContainer?.classList.add('is-hidden');
-    listContainer?.classList.add('is-hidden');
-
-    if (mode === 'cards') {
-      cardsBtn?.classList.add('is-active');
-      cardsContainer?.classList.remove('is-hidden');
-    } else if (mode === 'compact') {
-      compactBtn?.classList.add('is-active');
-      compactContainer?.classList.remove('is-hidden');
-    } else {
-      listBtn?.classList.add('is-active');
-      listContainer?.classList.remove('is-hidden');
-    }
-  }
-</script>
 {% endblock %}
