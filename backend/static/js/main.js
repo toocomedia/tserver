@@ -168,17 +168,14 @@ document.addEventListener("click", (e) => {
     e.target.classList.add("hidden");
   }
 
-  // Instant skeleton animation on internal navigation clicks
+  // Top progress bar on internal navigation clicks
   const link = e.target.closest("a[href]");
   if (link && !link.target && !link.hasAttribute("download")) {
     const href = link.getAttribute("href") || "";
     if (href && !href.startsWith("#") && !href.startsWith("javascript:")) {
       const isInternal = href.startsWith("/") || href.startsWith(window.location.origin);
       if (isInternal && href !== window.location.pathname) {
-        const mainContent = document.getElementById("main-content");
-        if (mainContent) {
-          mainContent.classList.add("skeleton");
-        }
+        topProgressBar.start();
       }
     }
   }
@@ -392,6 +389,7 @@ window.panel = panel;
 window.submitPost = submitPost;
 window.getCsrfToken = getCsrfToken;
 window.csrfHeaders = csrfHeaders;
+window.topProgressBar = topProgressBar;
 window.toast = toast;
 window.openModal = openModal;
 window.closeModal = closeModal;
