@@ -168,6 +168,27 @@ def _migrate_sync(sync_conn) -> None:
             sync_conn.execute(text("DROP TABLE ssl_certs"))
             sync_conn.execute(text("ALTER TABLE ssl_certs_new RENAME TO ssl_certs"))
 
+    # --- postgres_remote_domains: native PostgreSQL TLS endpoint state ---
+    if "postgres_remote_domains" in tables:
+        cols = _column_names(sync_conn, "postgres_remote_domains")
+        migrations = {
+            "port": "INTEGER DEFAULT 5432 NOT NULL",
+            "allowed_cidrs": "TEXT DEFAULT '' NOT NULL",
+            "dns_status": "VARCHAR(32) DEFAULT 'pending' NOT NULL",
+            "tls_status": "VARCHAR(32) DEFAULT 'pending' NOT NULL",
+            "postgres_status": "VARCHAR(32) DEFAULT 'pending' NOT NULL",
+            "certificate_name": "VARCHAR(255)",
+            "certificate_expiry": "DATETIME",
+            "last_error": "TEXT",
+            "enabled": "BOOLEAN DEFAULT 0 NOT NULL",
+        }
+        for col, ddl in migrations.items():
+            if col not in cols:
+                logger.info("Migrating postgres_remote_domains: add %s", col)
+                sync_conn.execute(text(
+                    f"ALTER TABLE postgres_remote_domains ADD COLUMN {col} {ddl}"
+                ))
+
 
 async def init_db():
     """Create all tables on startup if they do not exist, then migrate."""
@@ -181,6 +202,7 @@ async def init_db():
     import models.notification # noqa: F401
     import models.mail_domain  # noqa: F401
     import models.component_state  # noqa: F401
+    import models.postgres_remote  # noqa: F401
 
 
     async with engine.begin() as conn:

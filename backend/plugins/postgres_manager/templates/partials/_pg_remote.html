@@ -5,12 +5,10 @@
     <div>
       <h2 style="font-size:var(--font-h2);margin:0;">Remote Access &amp; SSL Endpoints</h2>
       <div style="font-size:var(--font-small);color:var(--color-muted);margin-top:2px;">
-        Expose PostgreSQL externally over Nginx TCP Stream Proxy with Let's Encrypt TLS/SSL certificates.
+        Connect external PostgreSQL clients with native PostgreSQL TLS and a Let’s Encrypt certificate.
       </div>
     </div>
-    <button class="btn btn--primary" data-action="open-modal" data-modal="pg-modal-add-remote" id="pg-remote-btn-open-modal">
-      + Add Remote Domain
-    </button>
+    <a class="btn btn--primary" href="/plugins/postgres_manager/remote/new" id="pg-remote-btn-open-page">+ Add Remote Endpoint</a>
   </div>
 
   {# Architecture Explanation Notice #}
@@ -22,7 +20,7 @@
       <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
     </svg>
     <span style="font-size:var(--font-small);color:var(--color-muted);">
-      <strong>Security Guarantee:</strong> PostgreSQL remains strictly bound to <code>127.0.0.1:5432</code> locally. Nginx handles secure TLS/SSL termination and proxies traffic internally.
+      <strong>Security:</strong> PostgreSQL owns the TLS connection on port <code>5432</code>. Only the configured client IP/CIDR ranges are allowed.
     </span>
   </div>
 
@@ -34,8 +32,11 @@
         <tr>
           <th>Domain Endpoint</th>
           <th>Source Type</th>
-          <th>SSL Status</th>
-          <th>Stream Proxy</th>
+          <th>DNS</th>
+          <th>TLS</th>
+          <th>PostgreSQL</th>
+          <th>Allowed Clients</th>
+          <th>Port</th>
           <th style="text-align:right;">Actions</th>
         </tr>
       </thead>
@@ -56,29 +57,23 @@
               {{ rd.mode }}
             </span>
           </td>
-          <td>
-            {% if rd.ssl_active %}
-            <span class="status-badge success">Active SSL</span>
-            {% else %}
-            <span class="status-badge muted" style="color:var(--color-danger);border-color:var(--color-danger);">No SSL / Failed</span>
-            {% endif %}
-          </td>
-          <td>
-            <span class="status-badge {% if rd.nginx_stream %}success{% else %}muted{% endif %}">
-              {{ 'Active' if rd.nginx_stream else 'Inactive' }}
-            </span>
-          </td>
+          <td><span class="status-badge {% if rd.dns_status == 'ready' %}success{% else %}muted{% endif %}">{{ rd.dns_status|capitalize }}</span></td>
+          <td><span class="status-badge {% if rd.tls_status == 'ready' %}success{% elif rd.tls_status == 'error' %}muted{% else %}muted{% endif %}">{{ rd.tls_status|capitalize }}</span></td>
+          <td><span class="status-badge {% if rd.postgres_status == 'ready' %}success{% else %}muted{% endif %}">{{ rd.postgres_status|capitalize }}</span></td>
+          <td class="text-small">{{ rd.allowed_cidrs|join(', ') }}</td>
+          <td><code>{{ rd.port }}</code></td>
           <td style="text-align:right;">
             <div style="display:flex;gap:var(--space-xs);justify-content:flex-end;align-items:center;">
-              {% if not rd.ssl_active %}
+              {% if rd.tls_status != 'ready' %}
               <button class="btn btn--sm btn--secondary" data-action="reissue-remote-ssl" data-domain="{{ rd.domain }}"
-                      title="Run Certbot webroot challenge to issue or renew SSL certificate">
+                      title="Issue or renew the PostgreSQL certificate">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                   <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
                 </svg>
                 Re-issue SSL
               </button>
               {% endif %}
+              <button class="btn btn--sm btn--secondary" data-action="test-remote-domain" data-domain="{{ rd.domain }}">Test Connection</button>
               <button class="btn btn--sm btn--secondary" data-action="open-connection-modal" data-domain="{{ rd.domain }}"
                       title="Copy connection string for {{ rd.domain }}">
                 Connection Info
@@ -109,9 +104,7 @@
     <div style="font-size:var(--font-small);max-width:440px;margin:0 auto var(--space-md);">
       Create your first SSL domain endpoint to safely connect remote desktop apps (TablePlus, DBeaver) or external web apps to PostgreSQL.
     </div>
-    <button class="btn btn--primary" data-action="open-modal" data-modal="pg-modal-add-remote">
-      + Add Remote Domain
-    </button>
+    <a class="btn btn--primary" href="/plugins/postgres_manager/remote/new">+ Add Remote Endpoint</a>
   </div>
   {% endif %}
 

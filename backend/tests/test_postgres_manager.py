@@ -235,6 +235,12 @@ class TestSchemas(unittest.TestCase):
         with self.assertRaises(ValidationError):
             RemoteConfigRequest(mode="invalid_mode")
 
+    def test_remote_config_request_rejects_invalid_client_cidr(self):
+        from plugins.postgres_manager.schemas import RemoteConfigRequest
+        from pydantic import ValidationError
+        with self.assertRaises(ValidationError):
+            RemoteConfigRequest(mode="external", hostname="db.example.com", allowed_cidrs=["not-an-ip"])
+
 class TestPostgresRemoteService(unittest.IsolatedAsyncioTestCase):
 
     async def asyncSetUp(self):
@@ -255,12 +261,32 @@ class TestPostgresRemoteService(unittest.IsolatedAsyncioTestCase):
 
     async def test_multi_domain_remote_lifecycle(self):
         async with self.async_session() as db:
+            from unittest.mock import AsyncMock, patch
+            from models.domain import Domain
+            db.add(Domain(name="example.com", server_ip="203.0.113.10"))
+            await db.commit()
             # Add first domain
-            entry1 = await self.svc.add_remote_domain(db, mode="managed", domain="example.com", subdomain="db1", hostname=None, issue_ssl=False)
+            with patch("plugins.postgres_manager.native_tls.resolve_host", new=AsyncMock(return_value=["203.0.113.10"])), \
+                 patch("plugins.postgres_manager.native_tls.issue_shared_certificate", new=AsyncMock(return_value=("postgres-remote", None))), \
+                 patch("plugins.postgres_manager.native_tls.configure_postgres", new=AsyncMock()), \
+                 patch("plugins.postgres_manager.native_tls.firewall_allow", new=AsyncMock()), \
+                 patch("services.dns_service.add_a_record", new=AsyncMock()):
+                entry1 = await self.svc.add_remote_domain(
+                    db, mode="managed", domain="example.com", subdomain="db1",
+                    hostname=None, issue_ssl=True, allowed_cidrs=["203.0.113.10/32"]
+                )
             self.assertEqual(entry1["domain"], "db1.example.com")
 
             # Add second domain
-            entry2 = await self.svc.add_remote_domain(db, mode="external", domain=None, subdomain=None, hostname="pg.otherdomain.com", issue_ssl=False)
+            with patch("plugins.postgres_manager.native_tls.resolve_host", new=AsyncMock(return_value=["203.0.113.10"])), \
+                 patch("plugins.postgres_manager.native_tls.issue_shared_certificate", new=AsyncMock(return_value=("postgres-remote", None))), \
+                 patch("plugins.postgres_manager.native_tls.configure_postgres", new=AsyncMock()), \
+                 patch("plugins.postgres_manager.native_tls.firewall_allow", new=AsyncMock()):
+                entry2 = await self.svc.add_remote_domain(
+                    db, mode="external", domain=None, subdomain=None,
+                    hostname="pg.otherdomain.com", issue_ssl=True,
+                    allowed_cidrs=["203.0.113.10/32"]
+                )
             self.assertEqual(entry2["domain"], "pg.otherdomain.com")
 
             # List domains
@@ -271,7 +297,11 @@ class TestPostgresRemoteService(unittest.IsolatedAsyncioTestCase):
             self.assertIn("pg.otherdomain.com", domain_names)
 
             # Re-issue SSL
-            reissued = await self.svc.reissue_remote_ssl(db, "db1.example.com")
+            with patch("plugins.postgres_manager.native_tls.resolve_host", new=AsyncMock(return_value=["203.0.113.10"])), \
+                 patch("plugins.postgres_manager.native_tls.issue_shared_certificate", new=AsyncMock(return_value=("postgres-remote", None))), \
+                 patch("plugins.postgres_manager.native_tls.configure_postgres", new=AsyncMock()), \
+                 patch("plugins.postgres_manager.native_tls.firewall_allow", new=AsyncMock()):
+                reissued = await self.svc.reissue_remote_ssl(db, "db1.example.com")
             self.assertEqual(reissued["domain"], "db1.example.com")
 
             # Delete domain
@@ -287,5 +317,3 @@ class TestPostgresRemoteService(unittest.IsolatedAsyncioTestCase):
 if __name__ == "__main__":
     unittest.main()
 ()
-
-

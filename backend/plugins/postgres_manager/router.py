@@ -58,7 +58,6 @@ async def pg_index(request: Request, db: AsyncSession = Depends(get_db)):
 
     domains_res = await db.scalars(select(Domain).order_by(Domain.name))
     domains = list(domains_res.all())
-    remote_status = postgres_service.get_remote_status()
     remote_domains = await postgres_service.list_remote_domains(db)
 
     return templates.TemplateResponse("postgres.html", {
@@ -72,8 +71,18 @@ async def pg_index(request: Request, db: AsyncSession = Depends(get_db)):
         "users": users,
         "system_roles": system_roles,
         "domains": domains,
-        "remote_status": remote_status,
         "remote_domains": remote_domains,
+    })
+
+
+@router.get("/remote/new", response_class=HTMLResponse)
+async def pg_remote_new(request: Request, db: AsyncSession = Depends(get_db)):
+    """Render the dedicated remote endpoint creation page."""
+    domains_res = await db.scalars(select(Domain).order_by(Domain.name))
+    return templates.TemplateResponse("pages/postgres_remote_new.html", {
+        "request": request,
+        "active_page": "plugins",
+        "domains": list(domains_res.all()),
     })
 
 
@@ -125,7 +134,6 @@ async def uninstall_postgres(request: Request):
         raise
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
-
 
 
 # ---------------------------------------------------------------------------
@@ -268,6 +276,7 @@ async def api_add_remote_domain(body: RemoteConfigRequest, db: AsyncSession = De
             subdomain=body.subdomain,
             hostname=body.hostname,
             issue_ssl=body.issue_ssl,
+            allowed_cidrs=body.allowed_cidrs,
         )
         return JSONResponse({"status": "ok", "entry": entry})
     except ValueError as exc:
@@ -287,6 +296,17 @@ async def api_reissue_remote_ssl(domain: str, db: AsyncSession = Depends(get_db)
         raise HTTPException(status_code=500, detail=str(exc))
 
 
+@router.post("/api/remote/domains/{domain}/test")
+async def api_test_remote_domain(domain: str, db: AsyncSession = Depends(get_db)):
+    try:
+        entry = await postgres_service.test_remote_domain(db, domain)
+        return JSONResponse({"status": "ok", "entry": entry})
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
 @router.delete("/api/remote/domains/{domain}")
 async def api_delete_remote_domain(domain: str, db: AsyncSession = Depends(get_db)):
     try:
@@ -295,35 +315,4 @@ async def api_delete_remote_domain(domain: str, db: AsyncSession = Depends(get_d
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
-
-
-
-@router.post("/api/remote/enable")
-async def api_enable_remote(body: RemoteConfigRequest):
-    try:
-        state = postgres_service.enable_remote(
-            mode=body.mode,
-            domain=body.domain,
-            subdomain=body.subdomain,
-            hostname=body.hostname,
-            issue_ssl=body.issue_ssl,
-        )
-        return JSONResponse({"status": "ok", "state": state})
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
-
-
-@router.post("/api/remote/disable")
-async def api_disable_remote():
-    try:
-        state = postgres_service.disable_remote()
-        return JSONResponse({"status": "ok", "state": state})
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
-
-
-    except RuntimeError as exc:
         raise HTTPException(status_code=500, detail=str(exc))

@@ -39,7 +39,7 @@
                 <option value="{{ rd.domain }}">Remote SSL ({{ rd.domain }})</option>
               {% endfor %}
               {% if not remote_domains %}
-                <option value="remote" id="pg-conn-mode-remote-opt">Remote SSL (Domain)</option>
+                <option value="" disabled>No remote TLS endpoint configured</option>
               {% endif %}
             </select>
           </div>

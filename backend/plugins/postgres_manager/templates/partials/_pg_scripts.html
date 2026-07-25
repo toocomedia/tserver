@@ -69,9 +69,9 @@ function updateConnectionUrls() {
   let host = "127.0.0.1";
   let sslParam = "";
 
-  if (hostVal !== "127.0.0.1" && hostVal !== "local") {
+  if (hostVal && hostVal !== "127.0.0.1" && hostVal !== "local") {
     host = hostVal;
-    sslParam = "?sslmode=require";
+    sslParam = "?sslmode=verify-full";
   }
 
   const uri = `postgresql://${encodeURIComponent(user)}:${encodeURIComponent(password)}@${host}:5432/${db}${sslParam}`;
@@ -137,6 +137,21 @@ document.addEventListener("click", async e => {
     setTimeout(() => { copyBtn.textContent = origText; }, 1800);
   } catch (err) {
     showToast("Failed to copy to clipboard.", true);
+  }
+});
+
+// Test native PostgreSQL endpoint readiness
+document.addEventListener("click", async e => {
+  const btn = e.target.closest("[data-action='test-remote-domain']");
+  if (!btn) return;
+  setLoading(btn, true);
+  try {
+    await apiFetch(`/remote/domains/${encodeURIComponent(btn.dataset.domain)}/test`, { method: "POST" });
+    showToast(`Endpoint '${btn.dataset.domain}' is ready.`);
+  } catch (err) {
+    showToast(err.message, true);
+  } finally {
+    setLoading(btn, false);
   }
 });
 

@@ -1,7 +1,7 @@
 {
   "id": "postgres_manager",
   "name": "PostgreSQL Manager",
-  "description": "Lightweight local PostgreSQL database manager. Install, control, and manage databases, users, and run safe queries directly from the panel.",
+  "description": "Lightweight PostgreSQL manager with native TLS remote endpoints, CIDR access control, databases, users, and safe queries.",
   "version": "1.0.0",
   "author": "tooco.",
   "icon": "database",

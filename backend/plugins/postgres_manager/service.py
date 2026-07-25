@@ -12,7 +12,6 @@ import shutil
 import socket
 import subprocess
 import time
-from pathlib import Path
 from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -352,16 +351,6 @@ class PostgresService:
             except Exception as exc:
                 logger.warning("DNS A record deletion failed for %s: %s", full_host, exc)
 
-        if os.name != "nt":
-            conf_path = Path(f"/etc/nginx/streams.d/postgres_{full_host}.conf")
-            acme_conf_path = Path(f"/etc/nginx/sites-enabled/postgres_acme_{full_host}.conf")
-            try:
-                subprocess.run(["sudo", "-n", "rm", "-f", str(conf_path), str(acme_conf_path)], check=False, timeout=10)
-                subprocess.run(["sudo", "-n", "systemctl", "reload", "nginx"], check=False, timeout=15)
-            except Exception as exc:
-                logger.warning("Failed to remove Nginx stream & ACME configs for %s: %s", full_host, exc)
-
-
         await db.delete(target)
         await db.commit()
         return True
@@ -373,121 +362,15 @@ class PostgresService:
 
 
     def _issue_certbot_ssl(self, full_host: str) -> bool:
-        """Helper to provision HTTP port 80 ACME challenge and run Certbot webroot challenge."""
-        if os.name == "nt":
-            return True
-
-        # 1. Ensure shared webroot directory exists
-        try:
-            subprocess.run(
-                ["sudo", "-n", "mkdir", "-p", "/var/www/acme-challenge/.well-known/acme-challenge"],
-                check=False, timeout=10,
-            )
-            subprocess.run(
-                ["sudo", "-n", "chmod", "-R", "755", "/var/www/acme-challenge"],
-                check=False, timeout=10,
-            )
-        except Exception as exc:
-            logger.warning("Failed to prepare acme-challenge dir: %s", exc)
-
-        # 2. Write Nginx HTTP port 80 ACME challenge listener
-        acme_conf = f"""# Managed by srv-panel postgres_manager plugin for HTTP-01 ACME
-server {{
-    listen 80;
-    listen [::]:80;
-    server_name {full_host};
-
-    location ^~ /.well-known/acme-challenge/ {{
-        root /var/www/acme-challenge;
-        default_type "text/plain";
-    }}
-
-    location / {{
-        return 404;
-    }}
-}}
-"""
-        acme_path = Path(f"/etc/nginx/sites-enabled/postgres_acme_{full_host}.conf")
-        try:
-            subprocess.run(
-                ["sudo", "-n", "tee", str(acme_path)],
-                input=acme_conf, text=True, capture_output=True, timeout=10,
-            )
-            subprocess.run(["sudo", "-n", "systemctl", "reload", "nginx"], check=False, timeout=15)
-        except Exception as exc:
-            logger.warning("Failed to write Nginx ACME port 80 config for %s: %s", full_host, exc)
-
-        # 3. Run Certbot HTTP-01 webroot challenge
-        try:
-            res = subprocess.run(
-                ["sudo", "-n", "certbot", "certonly", "--webroot", "-w", "/var/www/acme-challenge",
-                 "-d", full_host, "--non-interactive", "--agree-tos", "--register-unsafely-without-email"],
-                capture_output=True, text=True, timeout=90, shell=False,
-            )
-            if res.returncode != 0:
-                logger.warning("Certbot stdout/stderr for %s:\nSTDOUT: %s\nSTDERR: %s", full_host, res.stdout, res.stderr)
-        except Exception as exc:
-            logger.warning("Certbot issue attempt for %s: %s", full_host, exc)
-
-        # 4. Check if certificate was generated safely via sudo test
-        try:
-            check = subprocess.run(
-                ["sudo", "-n", "test", "-f", f"/etc/letsencrypt/live/{full_host}/fullchain.pem"],
-                check=False, timeout=5, shell=False,
-            )
-            return check.returncode == 0
-        except Exception:
-            return False
+        """Deprecated compatibility shim; use native_tls.issue_shared_certificate."""
+        logger.warning("Ignoring deprecated PostgreSQL certificate request for %s", full_host)
+        return False
 
 
 
     def _write_nginx_stream_conf(self, full_host: str) -> bool:
-        """Helper to write Nginx TCP stream proxy configuration file."""
-        if os.name == "nt":
-            return True
-        stream_dir = Path("/etc/nginx/streams.d")
-        try:
-            subprocess.run(["sudo", "-n", "mkdir", "-p", str(stream_dir)], check=True, timeout=10)
-
-            # Check if certificate exists safely before enabling ssl in Nginx stream
-            has_ssl = False
-            try:
-                chk = subprocess.run(
-                    ["sudo", "-n", "test", "-f", f"/etc/letsencrypt/live/{full_host}/fullchain.pem"],
-                    check=False, timeout=5, shell=False,
-                )
-                has_ssl = (chk.returncode == 0)
-            except Exception:
-                has_ssl = False
-
-            if has_ssl:
-                ssl_block = f"""        listen 5432 ssl;
-        ssl_certificate /etc/letsencrypt/live/{full_host}/fullchain.pem;
-        ssl_certificate_key /etc/letsencrypt/live/{full_host}/privkey.pem;"""
-            else:
-                ssl_block = "        listen 5432;"
-
-            conf_content = f"""# Managed by srv-panel postgres_manager plugin
-stream {{
-    upstream postgres_backend_{full_host.replace('.', '_')} {{
-        server 127.0.0.1:5432;
-    }}
-    server {{
-{ssl_block}
-        proxy_pass postgres_backend_{full_host.replace('.', '_')};
-    }}
-}}
-"""
-            conf_path = stream_dir / f"postgres_{full_host}.conf"
-            proc = subprocess.run(
-                ["sudo", "-n", "tee", str(conf_path)],
-                input=conf_content, text=True, capture_output=True, timeout=10,
-            )
-            if proc.returncode == 0:
-                subprocess.run(["sudo", "-n", "systemctl", "reload", "nginx"], check=False, timeout=15)
-                return True
-        except Exception as exc:
-            logger.warning("Nginx stream config creation failed for %s: %s", full_host, exc)
+        """Deprecated: PostgreSQL now owns TLS and listens directly."""
+        logger.warning("Ignoring deprecated Nginx PostgreSQL stream request for %s", full_host)
         return False
 
 
@@ -510,10 +393,171 @@ stream {{
                 self.delete_remote_domain(d["domain"])
         return {"enabled": False, "domain": None, "ssl_active": False, "nginx_stream": False}
 
+    # ------------------------------------------------------------------
+    # Native TLS overrides. These definitions intentionally come after the
+    # legacy methods above so old imports remain compatible while all current
+    # routes use the PostgreSQL-owned TLS implementation.
+    # ------------------------------------------------------------------
+
+    async def list_remote_domains(self, db: AsyncSession | None = None) -> list[dict[str, Any]]:
+        if db is None:
+            return []
+        from plugins.postgres_manager.native_tls import list_states
+        return await list_states(db)
+
+    async def add_remote_domain(
+        self, db: AsyncSession, mode: str, domain: str | None,
+        subdomain: str | None, hostname: str | None, issue_ssl: bool = True,
+        allowed_cidrs: list[str] | None = None,
+    ) -> dict[str, Any]:
+        from sqlalchemy import select
+        from models.domain import Domain
+        from models.postgres_remote import PostgresRemoteDomain
+        from plugins.postgres_manager import native_tls
+
+        full_host, _ = native_tls.build_hostname(mode, domain, subdomain, hostname)
+        cidrs = native_tls.normalize_cidrs(allowed_cidrs or [])
+        domain_id = None
+        if mode == "managed":
+            parent = await db.scalar(select(Domain).where(Domain.name == (domain or "").strip().lower()))
+            if not parent:
+                raise ValueError(f"Managed parent domain is not registered: {domain}")
+            domain_id = parent.id
+            from services import dns_service
+            import config
+            await dns_service.add_a_record(parent.name, (subdomain or "").strip().lower(), config.SERVER_IP, 300)
+        await native_tls.resolve_host(full_host)
+
+        existing = await db.scalar(select(PostgresRemoteDomain).where(PostgresRemoteDomain.full_domain == full_host))
+        if existing:
+            raise ValueError(f"Domain '{full_host}' is already configured for remote access.")
+
+        record = PostgresRemoteDomain(
+            domain_id=domain_id, mode=mode, subdomain=(subdomain or "").strip().lower(),
+            full_domain=full_host, allowed_cidrs=",".join(cidrs), dns_status="ready",
+            tls_status="pending" if issue_ssl else "disabled", postgres_status="pending",
+            enabled=False, ssl_active=False, nginx_stream=False,
+        )
+        db.add(record)
+        await db.commit()
+
+        try:
+            rows = list((await db.scalars(select(PostgresRemoteDomain))).all())
+            active_rows = [row for row in rows if row.enabled and row.id != record.id]
+            hosts = [row.full_domain for row in active_rows] + [record.full_domain]
+            all_cidrs = sorted({cidr for row in active_rows + [record] for cidr in row.allowed_cidrs.split(",") if cidr})
+            if not issue_ssl:
+                raise ValueError("TLS must be enabled before a public PostgreSQL endpoint can be activated.")
+            cert_name, expiry = await native_tls.issue_shared_certificate(hosts)
+            await native_tls.configure_postgres(hosts, all_cidrs)
+            await native_tls.firewall_allow(all_cidrs)
+            for row in rows:
+                row.certificate_name = cert_name
+                row.certificate_expiry = expiry
+                row.tls_status = "ready"
+                row.postgres_status = "ready"
+                row.ssl_active = True
+                row.enabled = True
+                row.last_error = None
+            await db.commit()
+        except Exception as exc:
+            record.last_error = str(exc)
+            record.tls_status = "error"
+            record.postgres_status = "error"
+            record.enabled = False
+            record.ssl_active = False
+            await db.commit()
+            raise ValueError(str(exc)) from exc
+        await db.refresh(record)
+        return await native_tls.endpoint_state(db, record)
+
+    async def reissue_remote_ssl(self, db: AsyncSession, full_host: str) -> dict[str, Any]:
+        from sqlalchemy import select
+        from models.postgres_remote import PostgresRemoteDomain
+        from plugins.postgres_manager import native_tls
+
+        target = await db.scalar(select(PostgresRemoteDomain).where(PostgresRemoteDomain.full_domain == full_host))
+        if not target:
+            raise ValueError(f"Domain '{full_host}' not found in remote access list.")
+        rows = list((await db.scalars(select(PostgresRemoteDomain))).all())
+        active_rows = [row for row in rows if row.enabled or row.id == target.id]
+        hosts = [row.full_domain for row in active_rows]
+        cidrs = sorted({cidr for row in active_rows for cidr in row.allowed_cidrs.split(",") if cidr})
+        try:
+            for host in hosts:
+                await native_tls.resolve_host(host)
+            cert_name, expiry = await native_tls.issue_shared_certificate(hosts)
+            await native_tls.configure_postgres(hosts, cidrs)
+            await native_tls.firewall_allow(cidrs)
+            for row in rows:
+                row.certificate_name = cert_name
+                row.certificate_expiry = expiry
+                row.tls_status = "ready"
+                row.postgres_status = "ready"
+                row.ssl_active = True
+                row.enabled = True
+                row.last_error = None
+            await db.commit()
+        except Exception as exc:
+            target.last_error = str(exc)
+            target.tls_status = "error"
+            target.postgres_status = "error"
+            target.enabled = False
+            target.ssl_active = False
+            await db.commit()
+            raise ValueError(str(exc)) from exc
+        await db.refresh(target)
+        return await native_tls.endpoint_state(db, target)
+
+    async def test_remote_domain(self, db: AsyncSession, full_host: str) -> dict[str, Any]:
+        from sqlalchemy import select
+        from models.postgres_remote import PostgresRemoteDomain
+        from plugins.postgres_manager import native_tls
+        target = await db.scalar(select(PostgresRemoteDomain).where(PostgresRemoteDomain.full_domain == full_host))
+        if not target:
+            raise ValueError(f"Domain '{full_host}' not found in remote access list.")
+        await native_tls.resolve_host(full_host)
+        if not target.enabled or target.tls_status != "ready":
+            raise ValueError("Endpoint is not active with native PostgreSQL TLS.")
+        return await native_tls.endpoint_state(db, target)
+
+    async def delete_remote_domain(self, db: AsyncSession, full_host: str) -> bool:
+        from sqlalchemy import select
+        from models.postgres_remote import PostgresRemoteDomain
+        from plugins.postgres_manager import native_tls
+        target = await db.scalar(select(PostgresRemoteDomain).where(PostgresRemoteDomain.full_domain == full_host))
+        if not target:
+            raise ValueError(f"Domain '{full_host}' not found.")
+        cidrs = {value for value in target.allowed_cidrs.split(",") if value}
+        if target.mode == "managed" and target.subdomain and target.domain_id:
+            try:
+                from services import dns_service
+                from models.domain import Domain
+                parent = await db.scalar(select(Domain).where(Domain.id == target.domain_id))
+                if parent:
+                    await dns_service.delete_record(parent.name, target.subdomain, "A")
+            except Exception as exc:
+                logger.warning("DNS record deletion failed for %s: %s", full_host, exc)
+        await db.delete(target)
+        await db.commit()
+        remaining = list((await db.scalars(select(PostgresRemoteDomain))).all())
+        retained = {cidr for row in remaining for cidr in row.allowed_cidrs.split(",") if cidr}
+        await native_tls.firewall_remove(sorted(cidrs - retained))
+        if remaining:
+            active = [row for row in remaining if row.enabled]
+            if active:
+                hosts = [row.full_domain for row in active]
+                active_cidrs = sorted({value for row in active for value in row.allowed_cidrs.split(",") if value})
+                await native_tls.issue_shared_certificate(hosts)
+                await native_tls.configure_postgres(hosts, active_cidrs)
+            else:
+                await native_tls.disable_remote_postgres()
+        else:
+            await native_tls.disable_remote_postgres()
+        return True
+
 
 
 # Module-level singleton — imported by router.py and other plugins
 postgres_service = PostgresService()
 postgres_manager_service = postgres_service
-
-
