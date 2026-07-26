@@ -84,65 +84,85 @@
       border-top: 1px solid var(--color-line, #222422);
     }
 
-    /* STEP HEADER */
+    /* STEP HEADER (COMPACT APP TYPOGRAPHY & ACTIVE ACCENT BAR) */
     .step-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 24px 0;
+      padding: 16px 16px;
       cursor: pointer;
       background: transparent;
-      transition: color 0.15s ease;
+      transition: background 0.15s ease, color 0.15s ease, padding 0.15s ease;
     }
-    .step-header:hover .step-title {
+    .step-header:hover:not(.step-header--active) {
+      background: rgba(128, 128, 128, 0.05);
+    }
+    .step-header:hover:not(.step-header--active) .step-title {
       color: var(--color-accent, #C7F464);
+    }
+    .step-header--active {
+      background: var(--color-accent, #C7F464) !important;
+      color: #000000 !important;
+      padding: 16px 20px !important;
     }
     .step-title-wrap {
       display: flex;
       align-items: center;
-      gap: 20px;
+      gap: 16px;
     }
     .step-num {
-      font-family: monospace !important;
-      font-size: 13px;
+      font-family: monospace, system-ui !important;
+      font-size: 12px;
       font-weight: 700;
       color: var(--color-muted, #888A85);
       letter-spacing: 1px;
     }
     .step-header--active .step-num {
-      color: var(--color-accent, #C7F464);
+      color: #000000 !important;
+      opacity: 0.75;
     }
     .step-title {
-      font-size: 20px;
-      font-weight: 700;
+      font-size: 16px;
+      font-weight: 600;
       color: var(--color-text, #F0F0EC);
-      letter-spacing: -0.4px;
+      letter-spacing: -0.3px;
       transition: color 0.15s ease;
     }
     .step-header--active .step-title {
-      color: var(--color-text, #F0F0EC);
+      color: #000000 !important;
+      font-weight: 700;
     }
     .step-summary {
-      font-size: 15px;
+      font-size: 14px;
       color: var(--color-muted, #888A85);
       display: flex;
       align-items: center;
-      gap: 16px;
+      gap: 14px;
+    }
+    .step-header--active .step-summary {
+      color: #000000 !important;
+    }
+    .step-header--active .step-summary strong,
+    .step-header--active .step-summary span,
+    .step-header--active .step-summary .badge {
+      color: #000000 !important;
+      background: transparent !important;
+      border-color: #000000 !important;
     }
     .step-toggle-icon {
       color: var(--color-muted, #888A85);
-      transition: transform 0.15s ease;
+      transition: transform 0.15s ease, color 0.15s ease;
     }
     .step-header--active .step-toggle-icon {
       transform: rotate(180deg);
-      color: var(--color-accent, #C7F464);
+      color: #000000 !important;
     }
 
     /* STEP CONTENT */
     .step-body {
       display: none;
       opacity: 0;
-      padding: 8px 0 40px 0;
+      padding: 16px 8px 32px 8px;
       transition: opacity 0.15s ease;
     }
     .step-body--open {
