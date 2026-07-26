@@ -54,8 +54,11 @@ async def deploy(app_id: int, db: AsyncSession = Depends(get_db)):
 
 @router.post("/{app_id}/uninstall")
 async def uninstall(app_id: int, db: AsyncSession = Depends(get_db)):
-    app = await db.get(HostedApp, app_id); domain = await db.get(Domain, app.domain_id)
-    await apps.uninstall(app, domain.name); await db.delete(app)
+    app = await db.get(HostedApp, app_id)
+    if app is None:
+        raise HTTPException(404, "Python app not found.")
+    domain = await db.get(Domain, app.domain_id)
+    await apps.uninstall(app, domain.name if domain else None); await db.delete(app)
     return RedirectResponse("/apps/", status_code=303)
 
 @router.post("/{app_id}/{action}")

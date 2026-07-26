@@ -57,7 +57,7 @@ def _normalise_paths(app: HostedApp) -> None:
 async def _systemctl(*args: str, allow_missing: bool = False) -> bool:
     result = await shell.run(["systemctl", *args], timeout=30)
     message = result.stderr or result.stdout
-    if allow_missing and ("not loaded" in message.lower() or "not found" in message.lower()):
+    if allow_missing and any(text in message.lower() for text in ("not loaded", "not found", "does not exist")):
         return False
     if not result.success:
         raise HTTPException(500, message or "System service action failed.")
@@ -181,12 +181,14 @@ async def control(app: HostedApp, action: str) -> None:
     await _systemctl(action, app.service_name, allow_missing=action == "stop")
     app.status = "stopped" if action == "stop" else "running"
 
-async def uninstall(app: HostedApp, domain_name: str) -> None:
+async def uninstall(app: HostedApp, domain_name: str | None) -> None:
     # Strict cleanup always stops first; pending deployments have no unit to stop.
     await _systemctl("stop", app.service_name, allow_missing=True)
     app.status = "stopped"
     await _systemctl("disable", "--now", app.service_name, allow_missing=True)
     await shell.remove_path(_service_unit(app))
     await _systemctl("daemon-reload")
-    await nginx_service.remove_site(domain_name); await nginx_service.reload()
+    if domain_name:
+        await nginx_service.remove_site(domain_name)
+        await nginx_service.reload()
     shutil.rmtree(_app_dir(app.id), ignore_errors=True); Path(app.env_path).unlink(missing_ok=True)
