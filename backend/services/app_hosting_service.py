@@ -16,7 +16,7 @@ from utils import shell
 
 ROOT = Path(config.APP_HOSTING_ROOT)
 ENV_ROOT = Path(config.APP_HOSTING_ENV_ROOT)
-GIT_URL_RE = re.compile(r"^(https://[^\s]+\.git|git@[A-Za-z0-9.-]+:[A-Za-z0-9._/-]+\.git)$")
+GIT_URL_RE = re.compile(r"^(https://[A-Za-z0-9.-]+/[A-Za-z0-9._/-]+|git@[A-Za-z0-9.-]+:[A-Za-z0-9._/-]+)$")
 BRANCH_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._/-]{0,127}$")
 
 def _app_dir(app_id: int) -> Path: return ROOT / str(app_id)
@@ -24,7 +24,7 @@ def _service_unit(app: HostedApp) -> Path: return Path("/etc/systemd/system") / 
 def suggest_project(path: Path) -> dict[str, object]: return app_project_detector.detect_project(path)
 
 def _github_https_url(repository_url: str) -> str | None:
-    match = re.fullmatch(r"git@github\.com:([A-Za-z0-9._/-]+\.git)", repository_url)
+    match = re.fullmatch(r"git@github\.com:([A-Za-z0-9._/-]+)", repository_url)
     return f"https://github.com/{match.group(1)}" if match else None
 
 def _clone_error(result: subprocess.CompletedProcess[str]) -> str:
