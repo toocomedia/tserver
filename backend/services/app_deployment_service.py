@@ -13,7 +13,7 @@ from models.app_deployment import AppDeployment
 from models.domain import Domain
 from models.hosted_app import HostedApp
 from services import app_hosting_service
-from services import nginx_service, ssl_service
+from services import ssl_service
 
 
 async def start(db: AsyncSession, app: HostedApp) -> AppDeployment:
@@ -77,12 +77,7 @@ async def _run_after_commit(deployment_id: int) -> None:
                 deployment.stage = "ssl"
                 deployment.output = (deployment.output + "[ssl] Issuing certificate.\n")[-80_000:]
                 await db.commit()
-                cert = await ssl_service.issue_cert(db, domain.id, domain.name)
-                domain.nginx_config_path = await nginx_service.update_proxy_ssl(
-                    domain.name, "127.0.0.1", app.port, "http", cert.cert_path,
-                    f"/etc/letsencrypt/live/{domain.name}/privkey.pem",
-                )
-                await nginx_service.reload()
+                await ssl_service.configure_hosted_app_ssl(db, app, domain)
             app.status = "running"
             await _finish(db, deployment, "success", "complete", None)
         except Exception as exc:

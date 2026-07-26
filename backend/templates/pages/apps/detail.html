@@ -2,18 +2,68 @@
 {% block title %}{{ app.service_name }} — {{ PANEL_NAME }}{% endblock %}
 {% block page_title %}Python App{% endblock %}
 {% block content %}
-<section class="section"><div class="section__header"><h3>{{ domain.name if domain else app.service_name }}</h3></div><div class="section__body"><p><span class="text-muted">Status</span> <span class="status-badge {% if app.status == 'running' %}status-badge--success{% elif app.status in ('failed','stopped') %}status-badge--warning{% else %}status-badge--muted{% endif %}">{{ app.status }}</span></p><p><span class="text-muted">Public URL</span> {% if domain %}<a href="{{ public_url(domain.name, https=app.ssl_requested) }}" target="_blank" rel="noopener">{{ domain.name }}</a>{% else %}Domain removed{% endif %}</p><p><span class="text-muted">Private address</span> <code>127.0.0.1:{{ app.port }}</code></p></div></section>
+<section class="section">
+  <div class="section__header"><h3>{{ domain.name if domain else app.service_name }}</h3></div>
+  <div class="section__body">
+    <p><span class="text-muted">Status</span> <span class="status-badge {% if app.status == 'running' %}status-badge--success{% elif app.status in ('failed', 'stopped') %}status-badge--warning{% else %}status-badge--muted{% endif %}">{{ app.status }}</span></p>
+    {% if domain %}<p><span class="text-muted">Public URL</span> <a href="{{ public_url(domain.name, https=app.ssl_requested) }}" target="_blank" rel="noopener">{{ domain.name }}</a></p>{% endif %}
+    <p><span class="text-muted">Private address</span> <code>127.0.0.1:{{ app.port }}</code></p>
+    <div class="form-actions">
+      <form method="post" action="/apps/{{ app.id }}/deploy">{% include "partials/csrf_field.html" %}<button class="btn btn--primary">Deploy update</button></form>
+      <a class="btn btn--secondary" href="/apps/{{ app.id }}/logs">Service logs</a>
+      <form method="post" action="/apps/{{ app.id }}/restart">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary">Restart</button></form>
+      <form method="post" action="/apps/{{ app.id }}/stop">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary">Stop</button></form>
+    </div>
+  </div>
+</section>
 
-<section class="section" id="deployment"><div class="section__header"><h3>Deployment</h3></div><div class="section__body">{% if deployment %}<p id="deployment-state"><strong>{{ deployment.status | upper }}</strong> · {{ deployment.stage }}</p><pre class="clean-cmd-box" id="deployment-output">{{ deployment.output }}{{ deployment.error or '' }}</pre>{% else %}<p class="text-muted">No deployment has been started.</p>{% endif %}<div class="form-actions"><form method="post" action="/apps/{{ app.id }}/deploy">{% include "partials/csrf_field.html" %}<button class="btn btn--primary">Deploy</button></form><a class="btn btn--secondary" href="/apps/{{ app.id }}/logs">Service logs</a></div></div></section>
+<section class="section" id="deployment">
+  <div class="section__header"><h3>Last deployment</h3></div>
+  <div class="section__body">
+    {% if deployment %}
+      <p id="deployment-state"><strong>{{ deployment.status | upper }}</strong> · {{ deployment.stage }}</p>
+      <details id="deployment-details" {% if deployment.status in ('queued', 'running', 'failed') %}open{% endif %}>
+        <summary>Show deployment output</summary>
+        <pre class="clean-cmd-box" id="deployment-output">{{ deployment.output }}{{ deployment.error or '' }}</pre>
+      </details>
+    {% else %}<p class="text-muted">No deployment has been started.</p>{% endif %}
+  </div>
+</section>
 
-<section class="section"><div class="section__header"><h3>Source</h3></div><div class="section__body"><p><span class="text-muted">Type</span> {{ app.source_type | upper }}</p>{% if app.repository_url %}<p><span class="text-muted">Repository</span> {{ app.repository_url }} · {{ app.branch }}</p>{% endif %}<div class="form-actions"><form method="post" action="/apps/{{ app.id }}/detect">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary">Detect setup again</button></form>{% if app.source_type == 'zip' %}<form method="post" action="/apps/{{ app.id }}/upload" enctype="multipart/form-data" class="form-actions">{% include "partials/csrf_field.html" %}<input class="form-input" type="file" name="archive" accept=".zip" required><button class="btn btn--secondary">Replace ZIP</button></form>{% endif %}</div></div></section>
+<details class="section">
+  <summary class="section__header"><h3>Source and runtime</h3></summary>
+  <div class="section__body">
+    <p><span class="text-muted">Source</span> {{ app.source_type | upper }}{% if app.repository_url %} · {{ app.repository_url }} · {{ app.branch }}{% endif %}</p>
+    <div class="form-actions">
+      <form method="post" action="/apps/{{ app.id }}/detect">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary">Detect setup again</button></form>
+      {% if app.source_type == 'zip' %}<form method="post" action="/apps/{{ app.id }}/upload" enctype="multipart/form-data" class="form-actions">{% include "partials/csrf_field.html" %}<input class="form-input" type="file" name="archive" accept=".zip" required><button class="btn btn--secondary">Replace ZIP</button></form>{% endif %}
+    </div>
+    <form class="form" method="post" action="/apps/{{ app.id }}/settings">
+      {% include "partials/csrf_field.html" %}
+      <div class="form-group"><label class="form-label" for="build_command">Build command</label><input class="form-input form-input--code" id="build_command" name="build_command" value="{{ app.build_command }}" required></div>
+      <div class="form-group"><label class="form-label" for="start_command">Start command</label><input class="form-input form-input--code" id="start_command" name="start_command" value="{{ app.start_command }}" required></div>
+      <button class="btn btn--secondary">Save commands</button>
+    </form>
+  </div>
+</details>
 
-<section class="section"><div class="section__header"><h3>Runtime configuration</h3></div><div class="section__body"><form class="form" method="post" action="/apps/{{ app.id }}/settings">{% include "partials/csrf_field.html" %}<div class="form-group"><label class="form-label" for="build_command">Build command</label><input class="form-input form-input--code" id="build_command" name="build_command" value="{{ app.build_command }}" required></div><div class="form-group"><label class="form-label" for="start_command">Start command</label><input class="form-input form-input--code" id="start_command" name="start_command" value="{{ app.start_command }}" required></div><button class="btn btn--secondary">Save commands</button></form></div></section>
+<details class="section" id="environment">
+  <summary class="section__header"><h3>Environment variables</h3></summary>
+  <div class="section__body">
+    <p class="text-muted">Values are protected and never shown again after saving.</p>
+    {% if environment_keys %}<div class="form-actions">{% for key in environment_keys %}<form method="post" action="/apps/{{ app.id }}/environment/{{ key }}/delete">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary" title="Delete {{ key }}">{{ key }} ×</button></form>{% endfor %}</div>{% endif %}
+    <form method="post" action="/apps/{{ app.id }}/environment" class="form-actions">
+      {% include "partials/csrf_field.html" %}<input class="form-input" name="key" placeholder="VARIABLE_NAME" required><input class="form-input" name="value" type="password" placeholder="Value" required><button class="btn btn--secondary">Save variable</button>
+    </form>
+  </div>
+</details>
 
-<section class="section" id="environment"><div class="section__header"><h3>Environment</h3></div><div class="section__body"><p class="text-muted">Values are protected and never shown again after saving.</p>{% if environment_keys %}<div class="form-actions">{% for key in environment_keys %}<form method="post" action="/apps/{{ app.id }}/environment/{{ key }}/delete">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary" title="Delete {{ key }}">{{ key }} ×</button></form>{% endfor %}</div>{% endif %}<form method="post" action="/apps/{{ app.id }}/environment" class="form-actions">{% include "partials/csrf_field.html" %}<input class="form-input" name="key" placeholder="VARIABLE_NAME" required><input class="form-input" name="value" type="password" placeholder="Value" required><button class="btn btn--secondary">Save variable</button></form></div></section>
-
-<section class="section"><div class="section__header"><h3>Controls</h3></div><div class="section__body"><div class="form-actions"><form method="post" action="/apps/{{ app.id }}/restart">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary">Restart</button></form><form method="post" action="/apps/{{ app.id }}/stop">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary">Stop</button></form></div></div></section>
-
-<section class="section"><div class="section__header"><h3>Danger zone</h3></div><div class="section__body"><p class="text-muted">Stops the app and removes its service, files, environment file, and proxy. PostgreSQL data is preserved.</p><form method="post" action="/apps/{{ app.id }}/uninstall" onsubmit="return confirm('Strictly delete this Python app? PostgreSQL data is preserved.');">{% include "partials/csrf_field.html" %}<button class="btn btn--danger">Strictly Delete Python App</button></form></div></section>
+<details class="section">
+  <summary class="section__header"><h3>Danger zone</h3></summary>
+  <div class="section__body">
+    <p class="text-muted">Stops the app and removes its service, files, environment file, and proxy. PostgreSQL data is preserved.</p>
+    <form method="post" action="/apps/{{ app.id }}/uninstall" onsubmit="return confirm('Strictly delete this Python app? PostgreSQL data is preserved.');">{% include "partials/csrf_field.html" %}<button class="btn btn--danger">Strictly Delete Python App</button></form>
+  </div>
+</details>
 {% endblock %}
-{% block scripts %}{% if deployment and deployment.status in ('queued','running') %}<script>const id={{ deployment.id }};const output=document.getElementById('deployment-output');const state=document.getElementById('deployment-state');const poll=async()=>{const response=await fetch(`/apps/{{ app.id }}/deployments/${id}`);if(!response.ok)return;const data=await response.json();state.textContent=`${data.status.toUpperCase()} · ${data.stage}`;output.textContent=(data.output||'')+(data.error||'');if(['queued','running'].includes(data.status))setTimeout(poll,2000);};setTimeout(poll,1200);</script>{% endif %}{% endblock %}
+{% block scripts %}{% if deployment and deployment.status in ('queued', 'running') %}<script>const id={{ deployment.id }};const output=document.getElementById('deployment-output');const state=document.getElementById('deployment-state');const details=document.getElementById('deployment-details');const poll=async()=>{const response=await fetch(`/apps/{{ app.id }}/deployments/${id}`);if(!response.ok)return;const data=await response.json();state.textContent=`${data.status.toUpperCase()} · ${data.stage}`;output.textContent=(data.output||'')+(data.error||'');if(['queued','running'].includes(data.status)){details.open=true;setTimeout(poll,2000);}};setTimeout(poll,1200);</script>{% endif %}{% endblock %}
