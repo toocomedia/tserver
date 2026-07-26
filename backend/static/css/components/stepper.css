@@ -28,6 +28,65 @@
 }
 
 /* ==========================================================================
+   PURE STUDIO BUTTONS (Self-contained, immune to global buttons.css)
+   ========================================================================== */
+.pure-btn--primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: var(--color-text, #FFFFFF) !important;
+  color: var(--color-bg, #0F1720) !important;
+  font-weight: 600 !important;
+  border: none !important;
+  padding: 12px 32px !important;
+  font-size: 14px !important;
+  cursor: pointer;
+  transition: opacity 0.15s ease !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  line-height: normal;
+  white-space: nowrap;
+}
+.pure-btn--primary:hover {
+  opacity: 0.85 !important;
+}
+
+.pure-btn--back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent !important;
+  color: var(--color-muted, #707885) !important;
+  font-weight: 500 !important;
+  border: none !important;
+  padding: 12px 0 !important;
+  font-size: 14px !important;
+  cursor: pointer;
+  transition: color 0.15s ease !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  line-height: normal;
+}
+.pure-btn--back:hover {
+  color: var(--color-text, #FFFFFF) !important;
+}
+
+/* WIZARD ACTION BAR: Back on Left, Next on Right */
+.wizard-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 48px;
+  padding-top: 24px;
+  border-top: 1px solid var(--color-line, #273240);
+  width: 100%;
+}
+.wizard-actions--end {
+  justify-content: flex-end;
+}
+
+/* ==========================================================================
    4-STEP ZERO-BOX TOP STEP INDICATOR (PURE TYPOGRAPHY / NO BORDERS!)
    ========================================================================== */
 .pure-nav {
@@ -95,27 +154,30 @@
 }
 
 /* ==========================================================================
-   BORDERLESS UNDERLINE INPUT (ZERO BOXES!)
+   BORDERLESS UNDERLINE INPUT (Self-contained, immune to forms.css)
    ========================================================================== */
 .input-borderless-wrap {
-  margin-bottom: 48px;
+  margin-bottom: 24px;
 }
 .input-borderless {
   width: 100%;
   font-size: 26px;
   font-weight: 600;
-  padding: 12px 0;
+  padding: 12px 0 !important;
   background: transparent !important;
   border: none !important;
   border-bottom: 2px solid #2A3440 !important;
-  color: var(--color-text, #FFFFFF);
+  color: var(--color-text, #FFFFFF) !important;
   transition: border-color 0.15s ease;
   border-radius: 0 !important;
   box-shadow: none !important;
+  outline: none !important;
+  appearance: none !important;
+  height: auto !important;
 }
 .input-borderless:focus {
   border-bottom-color: var(--color-text, #FFFFFF) !important;
-  outline: none;
+  outline: none !important;
 }
 .input-borderless::placeholder { color: #3A4450; font-weight: 400; }
 
@@ -128,7 +190,7 @@
   align-items: center;
   width: 100%;
   height: 104px;
-  margin: 12px 0 40px 0;
+  margin: 12px 0 24px 0;
   overflow: hidden;
 }
 .carousel-track {
@@ -229,7 +291,7 @@
   display: flex;
   flex-direction: column;
   gap: 28px;
-  margin-bottom: 48px;
+  margin-bottom: 24px;
 }
 .ssl-pure-opt {
   display: flex;
@@ -279,7 +341,7 @@
   display: flex;
   flex-direction: column;
   gap: 22px;
-  margin-bottom: 56px;
+  margin-bottom: 24px;
 }
 .review-pure-row {
   display: flex;

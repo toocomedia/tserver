@@ -76,8 +76,9 @@
         <span class="form-error mt-xs text-danger" id="name-error" style="display:none; font-weight:600; font-size:12px;"></span>
       </div>
 
-      <div>
-        <button type="button" class="btn--primary" onclick="nextFromStep1()">Continue to Runtime →</button>
+      <!-- WIZARD ACTIONS: Next on Right -->
+      <div class="wizard-actions wizard-actions--end">
+        <button type="button" class="pure-btn--primary" onclick="nextFromStep1()">Continue to Runtime →</button>
       </div>
     </div>
 
@@ -142,15 +143,16 @@
         </div>
       </div>
 
-      <div style="font-size: 14px; color: #707885; margin-bottom: 48px;" id="desc-text">
+      <div style="font-size: 14px; color: #707885; margin-bottom: 24px;" id="desc-text">
         {% if project_type == 'dns' %}DNS zone & A record only. No Nginx vhost.{% else %}Nginx HTTP vhost & webroot directory created.{% endif %}
       </div>
 
-      <div style="display: flex; align-items: center; gap: 32px;">
-        <button type="button" class="btn--primary" onclick="goToStep(3)">Continue to SSL →</button>
-        <button type="button" class="btn--text" onclick="goToStep(1)">
+      <!-- WIZARD ACTIONS: Back on Left, Next on Right -->
+      <div class="wizard-actions">
+        <button type="button" class="pure-btn--back" onclick="goToStep(1)">
           <i data-lucide="arrow-left" style="width:16px;height:16px;"></i> Back to Hostname
         </button>
+        <button type="button" class="pure-btn--primary" onclick="goToStep(3)">Continue to SSL →</button>
       </div>
     </div>
 
@@ -181,20 +183,21 @@
         </div>
       </div>
 
-      <div style="{% if project_type != 'dns' %}display: none;{% endif %} font-size: 14px; color: #707885; margin-bottom: 48px;" id="ssl-dns-msg">
+      <div style="{% if project_type != 'dns' %}display: none;{% endif %} font-size: 14px; color: #707885; margin-bottom: 24px;" id="ssl-dns-msg">
         SSL certificates are not applicable for DNS-only domain management.
       </div>
 
-      <div style="display: flex; align-items: center; gap: 32px;">
-        <button type="button" class="btn--primary" onclick="goToStep(4)">Review & Provision →</button>
-        <button type="button" class="btn--text" onclick="goToStep(2)">
+      <!-- WIZARD ACTIONS: Back on Left, Next on Right -->
+      <div class="wizard-actions">
+        <button type="button" class="pure-btn--back" onclick="goToStep(2)">
           <i data-lucide="arrow-left" style="width:16px;height:16px;"></i> Back to Runtime
         </button>
+        <button type="button" class="pure-btn--primary" onclick="goToStep(4)">Review & Provision →</button>
       </div>
     </div>
 
     <!-- =========================================================================
-         STEP 4: REVIEW & DEPLOY (ZERO BOXES / PURE TYPOGRAPHY)
+         STEP 4: REVIEW & DEPLOY (ZERO BOXES / PURE TYPOGRAPHY / ZERO EMOJI)
          ========================================================================= -->
     <div class="step-panel" id="panel-4">
       <h1 class="panel-heading">Review & Deploy</h1>
@@ -228,11 +231,12 @@
         </div>
       </div>
 
-      <div style="display: flex; align-items: center; gap: 32px;">
-        <button type="submit" class="btn--primary" id="btn-submit" style="padding: 14px 40px !important; font-size: 15px !important;">🚀 Deploy Domain Now →</button>
-        <button type="button" class="btn--text" onclick="goToStep(3)">
+      <!-- WIZARD ACTIONS: Back on Left, Deploy on Right (ZERO EMOJI!) -->
+      <div class="wizard-actions">
+        <button type="button" class="pure-btn--back" onclick="goToStep(3)">
           <i data-lucide="arrow-left" style="width:16px;height:16px;"></i> Back to SSL
         </button>
+        <button type="submit" class="pure-btn--primary" id="btn-submit" style="padding: 14px 40px !important; font-size: 15px !important;">Deploy Domain Now →</button>
       </div>
     </div>
   </form>
