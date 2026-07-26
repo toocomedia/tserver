@@ -37,6 +37,13 @@
 <div class="alert alert--danger mb-lg" id="error-alert">{{ error }}</div>
 {% endif %}
 
+{% if domain.project_type == 'python' %}
+<div class="section mb-lg"><div class="section__header"><h3>Python Application</h3></div><div class="section__body">
+  {% if app %}<p class="text-muted">Setup status: <strong>{{ app.status }}</strong></p><a class="btn btn--primary" href="/apps/{{ app.id }}">Open Python App</a>
+  {% else %}<p class="text-muted">This domain has DNS configured, but no Python source or service yet.</p><a class="btn btn--primary" href="/apps/create?domain_id={{ domain.id }}">Complete Python App Setup</a>{% endif %}
+</div></div>
+{% endif %}
+
 <!-- INFO ROW -->
 <div class="section mb-lg" id="domain-info">
   <div class="section__header">
@@ -52,6 +59,8 @@
       <span class="info-row__value" style="font-weight:700;">
         {% if domain.project_type == 'dns' %}
           <span class="badge badge--neutral badge--dot">DNS Only</span>
+        {% elif domain.project_type == 'python' %}
+          <span class="badge badge--neutral badge--dot">Python App</span>
         {% else %}
           <span class="badge badge--ok badge--dot">Static Site</span>
         {% endif %}
@@ -199,7 +208,8 @@
 </div>
 {% endif %}
 
-{% if domain.project_type == 'dns' %}
+{% if domain.project_type == 'python' %}
+{% elif domain.project_type == 'dns' %}
 <div class="section mb-lg">
   <div class="section__header">
     <h3>Web Server & Landing Page</h3>

@@ -18,6 +18,7 @@ import config
 
 from utils.search_and_bulk import execute_bulk_action, BulkActionRequest
 from models.domain import Domain
+from models.hosted_app import HostedApp
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/domains", tags=["domains"])
@@ -124,6 +125,7 @@ async def domains_detail(
     proxies = (await db.execute(
         select(ReverseProxy).where(ReverseProxy.domain_id == domain_id)
     )).scalars().all()
+    app = await db.scalar(select(HostedApp).where(HostedApp.domain_id == domain_id))
 
     nginx_active = nginx_service.config_exists(domain.name)
     current_html = nginx_service.read_index_html(domain.name)
@@ -134,6 +136,7 @@ async def domains_detail(
         "domain": domain,
         "cert": cert,
         "proxies": proxies,
+        "app": app,
         "nginx_active": nginx_active,
         "current_html": current_html or "",
         # Always allow showing Issue SSL when apex has no cert (button in page body)

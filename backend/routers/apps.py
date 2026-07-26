@@ -21,8 +21,12 @@ async def create_page(request: Request, domain_id: int, ssl: int = 0, db: AsyncS
     return templates.TemplateResponse("pages/apps/create.html", {"request":request,"active_page":"apps","domain":domain,"ssl":bool(ssl)})
 
 @router.post("/create")
-async def create(domain_id: int = Form(...), source_type: str = Form(...), repository_url: str = Form(""), branch: str = Form("main"), build_command: str = Form("pip install -r requirements.txt"), start_command: str = Form("uvicorn main:app --host $HOST --port $PORT"), ssl: bool = Form(False), postgres_mode: str = Form("none"), database_url: str = Form(""), db: AsyncSession = Depends(get_db)):
+async def create(domain_id: int = Form(...), source_type: str = Form(...), repository_url: str = Form(""), branch: str = Form("main"), build_command: str = Form("pip install -r requirements.txt"), start_command: str = Form("uvicorn main:app --host $HOST --port $PORT"), ssl: bool = Form(False), postgres_mode: str = Form("none"), database_url: str = Form(""), archive: UploadFile | None = File(None), db: AsyncSession = Depends(get_db)):
     app = await apps.create_app(db, domain_id, source_type, repository_url or None, branch, build_command, start_command, ssl, postgres_mode, database_url or None)
+    if source_type == "zip":
+        if archive is None:
+            raise ValueError("Choose a ZIP application archive.")
+        await apps.extract_zip(archive, app)
     return RedirectResponse(f"/apps/{app.id}", status_code=303)
 
 @router.get("/{app_id}", response_class=HTMLResponse)

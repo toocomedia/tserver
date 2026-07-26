@@ -2,11 +2,18 @@
 {% block title %}Create Python App — SRV Panel{% endblock %}
 {% block page_title %}Python App — {{ domain.name }}{% endblock %}
 {% block content %}
-<form class="card p-5" method="post" action="/apps/create"><input type="hidden" name="domain_id" value="{{ domain.id }}"><input type="hidden" name="ssl" value="{{ 'true' if ssl else 'false' }}">{% include "partials/csrf_field.html" %}
-<h2>Deploy Python application</h2><p class="text-muted">Detected commands are suggestions. Confirm or edit before deployment.</p>
-<label>Source</label><select class="form-select" name="source_type"><option value="git">Git repository</option><option value="zip">ZIP upload</option></select>
-<label>Repository URL (Git only)</label><input class="form-input" name="repository_url" placeholder="git@github.com:owner/project.git"><label>Branch</label><input class="form-input" name="branch" value="main">
-<label>Build command</label><input class="form-input" name="build_command" value="pip install -r requirements.txt"><label>Start command</label><input class="form-input" name="start_command" value="uvicorn main:app --host $HOST --port $PORT">
-<label>PostgreSQL</label><select class="form-select" name="postgres_mode"><option value="none">No database</option><option value="create">Create local PostgreSQL database</option><option value="external">External DATABASE_URL</option></select><label>External DATABASE_URL</label><input class="form-input" name="database_url" type="password">
-<button class="btn btn--primary" type="submit">Create App</button></form>
+<form class="form" method="post" action="/apps/create" enctype="multipart/form-data"><input type="hidden" name="domain_id" value="{{ domain.id }}"><input type="hidden" name="ssl" value="{{ 'true' if ssl else 'false' }}">{% include "partials/csrf_field.html" %}
+<div class="section"><div class="section__header"><h3>Complete Python App Setup</h3></div><div class="section__body"><p class="text-muted">{{ domain.name }} is ready. Add source files, confirm the runtime command, then deploy.</p></div></div>
+<div class="form-group"><label class="form-label" for="source_type">Application source</label><div class="form-select-wrap"><select class="form-select" id="source_type" name="source_type"><option value="git">Git repository</option><option value="zip">ZIP upload</option></select></div></div>
+<div class="form-subbox" id="git-source"><div class="form-group"><label class="form-label" for="repository_url">Repository URL</label><input class="form-input" id="repository_url" name="repository_url" placeholder="git@github.com:owner/project.git"></div><div class="form-group"><label class="form-label" for="branch">Branch</label><input class="form-input" id="branch" name="branch" value="main"></div></div>
+<div class="form-subbox" id="zip-source" hidden><div class="form-group"><label class="form-label" for="archive">Python project ZIP</label><input class="form-input" id="archive" name="archive" type="file" accept=".zip"></div><p class="form-hint">Upload the project ZIP. It is checked before extraction.</p></div>
+<div class="form-group"><label class="form-label" for="build_command">Build command</label><input class="form-input form-input--code" id="build_command" name="build_command" value="pip install -r requirements.txt"></div><div class="form-group"><label class="form-label" for="start_command">Start command</label><input class="form-input form-input--code" id="start_command" name="start_command" value="uvicorn main:app --host $HOST --port $PORT"></div>
+<div class="form-group"><label class="form-label" for="postgres_mode">PostgreSQL</label><div class="form-select-wrap"><select class="form-select" id="postgres_mode" name="postgres_mode"><option value="none">No database</option><option value="create">Create a local database</option><option value="external">Use external DATABASE_URL</option></select></div></div><div class="form-group" id="external-db" hidden><label class="form-label" for="database_url">DATABASE_URL</label><input class="form-input form-input--code" id="database_url" name="database_url" type="password"></div>
+<div class="form-actions"><button class="btn btn--primary" type="submit">Create App Setup</button><a class="btn btn--secondary" href="/domains/{{ domain.id }}">Back to Domain</a></div></form>
 {% endblock %}
+{% block scripts %}<script>
+const source = document.getElementById('source_type'); const git = document.getElementById('git-source'); const zip = document.getElementById('zip-source'); const archive = document.getElementById('archive'); const dbMode = document.getElementById('postgres_mode'); const external = document.getElementById('external-db');
+function syncSource(){const isZip=source.value==='zip'; git.hidden=isZip; zip.hidden=!isZip; archive.required=isZip; document.getElementById('repository_url').required=!isZip;}
+function syncDb(){external.hidden=dbMode.value!=='external'; document.getElementById('database_url').required=dbMode.value==='external';}
+source.addEventListener('change',syncSource); dbMode.addEventListener('change',syncDb); syncSource(); syncDb();
+</script>{% endblock %}
