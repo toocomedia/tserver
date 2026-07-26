@@ -1,1 +1,1 @@
-{"id":"git","name":"Git & SSH","description":"Git and OpenSSH tools for application repository deployments.","icon":"/dependencies/assets/git.png","version":"1.0.0","author":"SRV Panel Core"}
+{"id":"git","name":"Git & SSH","description":"Git and OpenSSH tools for application repository deployments.","icon":"icon.png","version":"1.0.0","author":"SRV Panel Core"}

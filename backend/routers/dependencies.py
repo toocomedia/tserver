@@ -8,16 +8,17 @@ from templating import templates
 
 router = APIRouter(tags=["dependencies"])
 
-_DEPENDENCY_ASSETS = {
-    "git.png": Path("dependencies/git.png"),
-    "pytohn.png": Path("dependencies/pytohn.png"),
-}
-
-
-@router.get("/dependencies/assets/{filename}", include_in_schema=False)
-async def dependency_asset(filename: str):
-    path = _DEPENDENCY_ASSETS.get(filename)
-    if path is None or not path.is_file():
+@router.get("/dependencies/assets/{dependency_id}", include_in_schema=False)
+async def dependency_asset(dependency_id: str):
+    service = dependency_manager.get_service(dependency_id)
+    if service is None:
+        raise HTTPException(status_code=404, detail="Dependency asset not found.")
+    metadata = dependency_manager._metadata.get(dependency_id, {})
+    filename = str(metadata.get("icon") or "")
+    if not filename or "/" in filename or "\\" in filename:
+        raise HTTPException(status_code=404, detail="Dependency asset not found.")
+    path = Path("dependencies") / dependency_id / filename
+    if not path.is_file():
         raise HTTPException(status_code=404, detail="Dependency asset not found.")
     return FileResponse(path, media_type="image/png")
 

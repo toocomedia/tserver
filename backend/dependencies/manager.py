@@ -58,7 +58,12 @@ class DependencyManager:
         )
         state = component_state_store.get("dependency", dependency_id)
         status.update(self._metadata[dependency_id])
-        status["icon"] = status.get("icon") or "/static/images/dependency-placeholder.svg"
+        icon = str(status.get("icon") or "")
+        status["icon"] = (
+            f"/dependencies/assets/{dependency_id}"
+            if icon and "/" not in icon and "\\" not in icon
+            else "/static/images/dependency-placeholder.svg"
+        )
         # Docker remains the existing controllable daemon; Git/Python are core tools.
         status.setdefault("can_toggle", dependency_id == "docker")
         status["desired_enabled"] = state.desired_enabled
