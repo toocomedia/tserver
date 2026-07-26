@@ -47,7 +47,7 @@ async def quick_deploy(domain_id: int = Form(...), source_type: str = Form(...),
         reason = "; ".join(detection["warnings"]) or "Project configuration needs review."
         query = urlencode({"domain_id": domain_id, "ssl": int(ssl), "notice": reason})
         return RedirectResponse(f"/apps/create?{query}", status_code=303)
-    app = await apps.create_app(db, domain_id, source_type, detection.get("repository_url") or repository_url or None, branch, str(detection["build_command"]), str(detection["start_command"]), ssl, "none", None)
+    app = await apps.create_app(db, domain_id, source_type, detection.get("repository_url") or repository_url or None, str(detection.get("branch") or branch), str(detection["build_command"]), str(detection["start_command"]), ssl, "none", None)
     if source_type == "zip" and archive is not None: await apps.extract_zip(archive, app)
     deployment = await app_deployment_service.start(db, app)
     return RedirectResponse(f"/apps/{app.id}?deployment={deployment.id}", status_code=303)
@@ -56,6 +56,9 @@ async def quick_deploy(domain_id: int = Form(...), source_type: str = Form(...),
 @router.post("/create")
 async def create(domain_id: int = Form(...), source_type: str = Form(...), repository_url: str = Form(""), branch: str = Form("main"), build_command: str = Form(...), start_command: str = Form(...), ssl: bool = Form(False), postgres_mode: str = Form("none"), database_url: str = Form(""), archive: UploadFile | None = File(None), db: AsyncSession = Depends(get_db)):
     await _domain(db, domain_id)
+    if source_type == "git":
+        detected = apps.inspect_repository(repository_url.strip(), branch.strip())
+        repository_url, branch = str(detected["repository_url"]), str(detected["branch"])
     app = await apps.create_app(db, domain_id, source_type, repository_url or None, branch, build_command, start_command, ssl, postgres_mode, database_url or None)
     if source_type == "zip":
         if archive is None: raise HTTPException(400, "Choose a ZIP project first.")
@@ -87,6 +90,7 @@ async def detect_again(app_id: int, db: AsyncSession = Depends(get_db)):
     detected = apps.inspect_repository(app.repository_url or "", app.branch or "main") if app.source_type == "git" else apps.suggest_project(Path(app.work_dir) / "source")
     app.build_command, app.start_command = str(detected["build_command"]), str(detected["start_command"])
     if detected.get("repository_url"): app.repository_url = str(detected["repository_url"])
+    if detected.get("branch"): app.branch = str(detected["branch"])
     return RedirectResponse(f"/apps/{app_id}", status_code=303)
 
 

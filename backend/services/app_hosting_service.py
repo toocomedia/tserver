@@ -13,7 +13,6 @@ from services import nginx_service
 from services import app_hosting_health_service
 from services import app_project_detector
 from utils import shell
-
 ROOT = Path(config.APP_HOSTING_ROOT)
 ENV_ROOT = Path(config.APP_HOSTING_ENV_ROOT)
 GIT_URL_RE = re.compile(r"^(https://[A-Za-z0-9.-]+/[A-Za-z0-9._/-]+|git@[A-Za-z0-9.-]+:[A-Za-z0-9._/-]+)$")
@@ -26,12 +25,10 @@ def suggest_project(path: Path) -> dict[str, object]: return app_project_detecto
 def _github_https_url(repository_url: str) -> str | None:
     match = re.fullmatch(r"git@github\.com:([A-Za-z0-9._/-]+)", repository_url)
     return f"https://github.com/{match.group(1)}" if match else None
-
 def _clone_error(result: subprocess.CompletedProcess[str]) -> str:
     output = (result.stderr or result.stdout or "Git clone failed.").strip()
     lines = [line.strip() for line in output.splitlines() if line.strip()]
     return " ".join(lines[-3:])[:500] if lines else "Git clone failed without an error message."
-
 def _ensure_runtime_dirs() -> None:
     try:
         ROOT.mkdir(parents=True, exist_ok=True)
@@ -68,6 +65,7 @@ def inspect_repository(repository_url: str, branch: str) -> dict[str, object]:
         raise HTTPException(409, "Git & SSH dependency is required.")
     with tempfile.TemporaryDirectory(prefix="srv-panel-inspect-") as temp_dir:
         source_dir = Path(temp_dir) / "source"
+        source_url = repository_url
         clone_command = ["git", "clone", "--depth", "1", "--branch", branch, repository_url, str(source_dir)]
         result = subprocess.run(
             clone_command,
@@ -77,20 +75,21 @@ def inspect_repository(repository_url: str, branch: str) -> dict[str, object]:
             fallback_url = _github_https_url(repository_url)
             if fallback_url:
                 shutil.rmtree(source_dir, ignore_errors=True)
+                source_url = fallback_url
                 result = subprocess.run(
                     ["git", "clone", "--depth", "1", "--branch", branch, fallback_url, str(source_dir)],
                     capture_output=True, text=True, timeout=90, check=False,
                 )
+            if result.returncode and branch == "main":
+                shutil.rmtree(source_dir, ignore_errors=True)
+                result = subprocess.run(["git", "clone", "--depth", "1", source_url, str(source_dir)], capture_output=True, text=True, timeout=90, check=False)
                 if not result.returncode:
-                    project = suggest_project(source_dir)
-                    project["repository_url"] = fallback_url
-                    project["transport_note"] = "SSH was unavailable, so this public GitHub repository will use HTTPS."
-                    return project
-            raise HTTPException(400, f"Repository check failed: {_clone_error(result)}")
+                    branch = subprocess.run(["git", "-C", str(source_dir), "branch", "--show-current"], capture_output=True, text=True, timeout=10, check=False).stdout.strip() or branch
+            if result.returncode: raise HTTPException(400, f"Repository check failed: {_clone_error(result)}")
         project = suggest_project(source_dir)
-        project["repository_url"] = repository_url
+        project["repository_url"], project["branch"] = source_url, branch
+        if source_url != repository_url: project["transport_note"] = "SSH was unavailable, so this public GitHub repository will use HTTPS."
         return project
-
 async def next_port(db: AsyncSession) -> int:
     used = set((await db.scalars(select(HostedApp.port))).all())
     return next(port for port in range(config.APP_HOSTING_PORT_START, 65536) if port not in used)
@@ -157,12 +156,15 @@ async def deploy(app: HostedApp, domain_name: str, reporter=None) -> None:
     ENV_ROOT.mkdir(parents=True, exist_ok=True)
     existing = Path(app.env_path).read_text(encoding="utf-8") if Path(app.env_path).exists() else ""
     existing = "".join(f"{line}\n" for line in existing.splitlines() if not line.startswith(("HOST=", "PORT=", "APP_DATA_DIR=")))
-    if app.postgres_mode == "create" and not app.database_name:
+    if app.postgres_mode == "create":
         from plugins.postgres_manager import queries as pg
-        app.database_name, app.database_user = f"app{app.id}", f"app{app.id}"
-        password = secrets.token_urlsafe(24)
-        pg.create_user(app.database_user, password); pg.create_database(app.database_name, app.database_user)
-        existing += f"DATABASE_URL=postgresql://{app.database_user}:{password}@127.0.0.1:5432/{app.database_name}\n"
+        scheme = str(suggest_project(source).get("database_url_scheme", "postgresql"))
+        if not app.database_name:
+            app.database_name, app.database_user = f"app{app.id}", f"app{app.id}"
+            password = secrets.token_urlsafe(24)
+            pg.create_user(app.database_user, password); pg.create_database(app.database_name, app.database_user)
+            existing += f"DATABASE_URL={scheme}://{app.database_user}:{password}@127.0.0.1:5432/{app.database_name}\n"
+        else: existing = re.sub(r"(?m)^DATABASE_URL=postgresql(?:\+[A-Za-z0-9_]+)?://", f"DATABASE_URL={scheme}://", existing)
     data_dir = _app_dir(app.id) / "data"; data_dir.mkdir(parents=True, exist_ok=True)
     env = existing + f"HOST=127.0.0.1\nPORT={app.port}\nAPP_DATA_DIR={data_dir}\n"
     Path(app.env_path).write_text(env, encoding="utf-8"); os.chmod(app.env_path, 0o600)

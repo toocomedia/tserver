@@ -23,6 +23,7 @@ def detect_project(root: Path) -> dict[str, object]:
     env_names, required_env = _environment_names(root, files)
     text = "\n".join(_read(file) for file in files)
     postgres = any(token in text.lower() for token in ("postgres", "asyncpg", "psycopg", "database_url"))
+    database_url_scheme = "postgresql+asyncpg" if "create_async_engine" in text else "postgresql"
     sqlite = any(token in text.lower() for token in ("sqlite", "sqlite3"))
     conda = (root / "environment.yml").exists() or (root / "environment.yaml").exists()
     warnings = []
@@ -37,6 +38,7 @@ def detect_project(root: Path) -> dict[str, object]:
         "build_command": build, "start_command": start or "",
         "entrypoints": entrypoints, "environment_names": sorted(env_names),
         "required_environment_names": sorted(required_env), "postgres_suspected": postgres,
+        "database_url_scheme": database_url_scheme,
         "sqlite_suspected": sqlite, "can_quick_deploy": can_quick,
         "warnings": warnings,
     }
