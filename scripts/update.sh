@@ -123,6 +123,10 @@ if [[ -d "$SCRIPTS_SRC" ]]; then
 fi
 
 chown -R "$PANEL_USER":"$PANEL_USER" "$PANEL_DIR/app" "$PANEL_DIR/scripts"
+# Keep hosted applications outside /opt source code and writable by the panel service.
+mkdir -p /var/lib/srv-panel/apps /var/lib/srv-panel/app-env
+chown -R "$PANEL_USER":"$PANEL_USER" /var/lib/srv-panel
+chmod 700 /var/lib/srv-panel /var/lib/srv-panel/apps /var/lib/srv-panel/app-env
 
 # ---------------------------------------------------------------
 # Python deps

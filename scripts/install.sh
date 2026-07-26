@@ -418,6 +418,10 @@ bash "$PANEL_DIR/scripts/setup_nginx.sh"
 info "Setting ownership..."
 chown -R "$PANEL_USER":"$PANEL_USER" "$PANEL_DIR/app" "$PANEL_DIR/venv" "$PANEL_DIR/scripts" "$PANEL_DIR/backups"
 chown root:"$PANEL_USER" "$PANEL_ENV"
+# Python apps are runtime data, never panel source code.  The panel user owns it.
+mkdir -p /var/lib/srv-panel/apps /var/lib/srv-panel/app-env
+chown -R "$PANEL_USER":"$PANEL_USER" /var/lib/srv-panel
+chmod 700 /var/lib/srv-panel /var/lib/srv-panel/apps /var/lib/srv-panel/app-env
 # webroot writable by panel
 chown -R "$PANEL_USER":www-data /var/www 2>/dev/null || chown -R "$PANEL_USER":"$PANEL_USER" /var/www
 chmod -R u+rwX,g+rX /var/www

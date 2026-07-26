@@ -9,6 +9,7 @@ import config
 from dependencies import dependency_manager
 from models.hosted_app import HostedApp
 from services import nginx_service
+from utils import shell
 
 ROOT = Path(config.APP_HOSTING_ROOT)
 ENV_ROOT = Path(config.APP_HOSTING_ENV_ROOT)
@@ -17,6 +18,7 @@ GIT_URL_RE = re.compile(r"^(https://[^\s]+\.git|git@[A-Za-z0-9.-]+:[A-Za-z0-9._/
 BRANCH_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._/-]{0,127}$")
 
 def _app_dir(app_id: int) -> Path: return ROOT / str(app_id)
+def _service_unit(app: HostedApp) -> Path: return Path("/etc/systemd/system") / f"{app.service_name}.service"
 def _safe_name(value: str) -> str:
     return re.sub(r"[^a-z0-9]", "", value.lower())[:40] or "app"
 def suggest_project(path: Path) -> dict[str, str]:
@@ -37,6 +39,25 @@ def _clone_error(result: subprocess.CompletedProcess[str]) -> str:
     output = (result.stderr or result.stdout or "Git clone failed.").strip()
     lines = [line.strip() for line in output.splitlines() if line.strip()]
     return " ".join(lines[-3:])[:500] if lines else "Git clone failed without an error message."
+
+def _ensure_runtime_dirs() -> None:
+    try:
+        ROOT.mkdir(parents=True, exist_ok=True)
+        ENV_ROOT.mkdir(parents=True, exist_ok=True)
+        ROOT.chmod(0o700)
+        ENV_ROOT.chmod(0o700)
+    except PermissionError as exc:
+        raise HTTPException(500, "Python app storage is not ready. Run the panel update on the VPS.") from exc
+
+def _normalise_paths(app: HostedApp) -> None:
+    app.work_dir = str(_app_dir(app.id))
+    if app.env_path.startswith("/etc/srv-panel/"):
+        app.env_path = str(ENV_ROOT / f"{app.id}.env")
+
+async def _systemctl(*args: str) -> None:
+    result = await shell.run(["systemctl", *args], timeout=30)
+    if not result.success:
+        raise HTTPException(500, result.stderr or "System service action failed.")
 
 def inspect_repository(repository_url: str, branch: str) -> dict[str, str]:
     """Read project files from a temporary shallow clone; never run app code."""
@@ -79,6 +100,7 @@ async def create_app(db: AsyncSession, domain_id: int, source_type: str, reposit
     if source_type not in {"git", "zip"} or postgres_mode not in {"none", "create", "external"}: raise HTTPException(400, "Invalid app setup.")
     if source_type == "git" and (not repository_url or not dependency_manager.is_healthy("git")): raise HTTPException(409, "Git & SSH dependency is required.")
     if not dependency_manager.is_healthy("python"): raise HTTPException(409, "Python Runtime dependency is required.")
+    _ensure_runtime_dirs()
     port = await next_port(db); service_name = f"srv-python-{domain_id}"
     app = HostedApp(domain_id=domain_id, source_type=source_type, repository_url=repository_url, branch=branch or "main", build_command=build, start_command=start, port=port, service_name=service_name, work_dir=str(_app_dir(domain_id)), env_path=str(ENV_ROOT / f"{domain_id}.env"), ssl_requested=ssl, postgres_mode=postgres_mode)
     if postgres_mode == "external" and not external_url: raise HTTPException(400, "DATABASE_URL is required for an external database.")
@@ -93,6 +115,7 @@ async def extract_zip(upload: UploadFile, app: HostedApp) -> Path:
     if not upload.filename or not upload.filename.lower().endswith(".zip"): raise HTTPException(400, "Upload a ZIP file.")
     data = await upload.read()
     if len(data) > 100 * 1024 * 1024: raise HTTPException(400, "ZIP is larger than 100 MB.")
+    _ensure_runtime_dirs()
     archive = _app_dir(app.id) / "upload.zip"; archive.parent.mkdir(parents=True, exist_ok=True); archive.write_bytes(data)
     target = _app_dir(app.id) / "source"; shutil.rmtree(target, ignore_errors=True); target.mkdir(parents=True)
     with zipfile.ZipFile(archive) as z:
@@ -112,6 +135,8 @@ async def clone_repo(app: HostedApp) -> Path:
     return target
 
 async def deploy(app: HostedApp, domain_name: str) -> None:
+    _ensure_runtime_dirs()
+    _normalise_paths(app)
     source = await clone_repo(app) if app.source_type == "git" else _app_dir(app.id) / "source"
     if not source.exists(): raise HTTPException(400, "Upload application ZIP before deployment.")
     venv = _app_dir(app.id) / ".venv"; result = subprocess.run(["python3", "-m", "venv", str(venv)], capture_output=True, text=True, timeout=60)
@@ -128,22 +153,22 @@ async def deploy(app: HostedApp, domain_name: str) -> None:
     Path(app.env_path).write_text(env, encoding="utf-8"); os.chmod(app.env_path, 0o600)
     build = subprocess.run(["bash", "-lc", f"cd {source} && {venv}/bin/{app.build_command}"], capture_output=True, text=True, timeout=600)
     if build.returncode: raise HTTPException(400, (build.stderr or build.stdout)[-1000:])
-    unit = f"[Service]\nWorkingDirectory={source}\nEnvironmentFile={app.env_path}\nExecStart=/bin/bash -lc '{venv}/bin/{app.start_command}'\nRestart=on-failure\n"
-    Path(f"/etc/systemd/system/{app.service_name}.service").write_text(unit)
-    subprocess.run(["systemctl", "daemon-reload"], check=True, timeout=30); subprocess.run(["systemctl", "restart", app.service_name], check=True, timeout=30)
+    unit = f"[Unit]\nDescription=SRV Panel Python app {app.id}\nAfter=network.target\n\n[Service]\nType=simple\nUser={config.APP_HOSTING_USER}\nGroup={config.APP_HOSTING_USER}\nWorkingDirectory={source}\nEnvironmentFile={app.env_path}\nExecStart=/bin/bash -lc '{venv}/bin/{app.start_command}'\nRestart=on-failure\n\n[Install]\nWantedBy=multi-user.target\n"
+    await shell.write_file(_service_unit(app), unit)
+    await _systemctl("daemon-reload")
+    await _systemctl("enable", "--now", app.service_name)
     await nginx_service.create_proxy(domain_name, "127.0.0.1", app.port, "http")
     await nginx_service.reload()
 
 async def control(app: HostedApp, action: str) -> None:
     if action not in {"start", "stop", "restart"}: raise HTTPException(400, "Invalid app action.")
-    result = subprocess.run(["systemctl", action, app.service_name], capture_output=True, text=True, timeout=30)
-    if result.returncode: raise HTTPException(500, (result.stderr or "Service action failed.")[-500:])
+    await _systemctl(action, app.service_name)
     app.status = "stopped" if action == "stop" else "running"
 
 async def uninstall(app: HostedApp, domain_name: str) -> None:
     if app.status != "stopped": raise HTTPException(409, "Stop the app before uninstalling it.")
-    subprocess.run(["systemctl", "disable", "--now", app.service_name], capture_output=True, timeout=30)
-    Path(f"/etc/systemd/system/{app.service_name}.service").unlink(missing_ok=True)
-    subprocess.run(["systemctl", "daemon-reload"], capture_output=True, timeout=30)
+    await _systemctl("disable", "--now", app.service_name)
+    await shell.remove_path(_service_unit(app))
+    await _systemctl("daemon-reload")
     await nginx_service.remove_site(domain_name); await nginx_service.reload()
     shutil.rmtree(_app_dir(app.id), ignore_errors=True); Path(app.env_path).unlink(missing_ok=True)
