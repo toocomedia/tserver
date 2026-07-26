@@ -12,6 +12,7 @@ from database import AsyncSessionLocal
 from models.app_deployment import AppDeployment
 from models.domain import Domain
 from models.hosted_app import HostedApp
+from models.ssl_cert import SslCert
 from services import app_hosting_service
 from services import ssl_service
 
@@ -73,9 +74,12 @@ async def _run_after_commit(deployment_id: int) -> None:
         await db.commit()
         try:
             await app_hosting_service.deploy(app, domain.name, _reporter(db, deployment))
-            if app.ssl_requested:
+            existing_cert = await db.scalar(
+                select(SslCert.id).where(SslCert.full_domain == domain.name)
+            )
+            if app.ssl_requested or existing_cert:
                 deployment.stage = "ssl"
-                deployment.output = (deployment.output + "[ssl] Issuing certificate.\n")[-80_000:]
+                deployment.output = (deployment.output + "[ssl] Configuring HTTPS proxy.\n")[-80_000:]
                 await db.commit()
                 await ssl_service.configure_hosted_app_ssl(db, app, domain)
             app.status = "running"
