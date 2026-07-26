@@ -1,6 +1,6 @@
 """Trusted administrator Python-app deployment orchestration."""
 from __future__ import annotations
-import os, re, secrets, shutil, subprocess, zipfile
+import os, re, secrets, shutil, subprocess, tempfile, zipfile
 from pathlib import Path, PurePosixPath
 from fastapi import HTTPException, UploadFile
 from sqlalchemy import select
@@ -13,6 +13,8 @@ from services import nginx_service
 ROOT = Path(config.APP_HOSTING_ROOT)
 ENV_ROOT = Path(config.APP_HOSTING_ENV_ROOT)
 PORT_RE = re.compile(r"^[1-9][0-9]{0,4}$")
+GIT_URL_RE = re.compile(r"^(https://[^\s]+\.git|git@[A-Za-z0-9.-]+:[A-Za-z0-9._/-]+\.git)$")
+BRANCH_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._/-]{0,127}$")
 
 def _app_dir(app_id: int) -> Path: return ROOT / str(app_id)
 def _safe_name(value: str) -> str:
@@ -26,6 +28,24 @@ def suggest_project(path: Path) -> dict[str, str]:
     elif "flask" in text.lower(): start, kind = "gunicorn --bind $HOST:$PORT app:app", "Flask"
     else: start, kind = "python main.py", "Python"
     return {"build_command": build, "start_command": start, "framework": kind, "postgres": "postgres" in text.lower() or "database_url" in text.lower()}
+
+def inspect_repository(repository_url: str, branch: str) -> dict[str, str]:
+    """Read project files from a temporary shallow clone; never run app code."""
+    if not GIT_URL_RE.fullmatch(repository_url):
+        raise HTTPException(400, "Enter a valid HTTPS or SSH Git repository URL.")
+    if not BRANCH_RE.fullmatch(branch):
+        raise HTTPException(400, "Enter a valid branch name.")
+    if not dependency_manager.is_healthy("git"):
+        raise HTTPException(409, "Git & SSH dependency is required.")
+    with tempfile.TemporaryDirectory(prefix="srv-panel-inspect-") as temp_dir:
+        result = subprocess.run(
+            ["git", "clone", "--depth", "1", "--branch", branch, repository_url, temp_dir],
+            capture_output=True, text=True, timeout=90, check=False,
+        )
+        if result.returncode:
+            message = (result.stderr or result.stdout or "Git clone failed.").strip().splitlines()[-1]
+            raise HTTPException(400, f"Repository check failed: {message[:300]}")
+        return suggest_project(Path(temp_dir))
 
 async def next_port(db: AsyncSession) -> int:
     used = set((await db.scalars(select(HostedApp.port))).all())
@@ -60,6 +80,8 @@ async def extract_zip(upload: UploadFile, app: HostedApp) -> Path:
     return target
 
 async def clone_repo(app: HostedApp) -> Path:
+    if not GIT_URL_RE.fullmatch(app.repository_url or "") or not BRANCH_RE.fullmatch(app.branch or ""):
+        raise HTTPException(400, "The saved repository URL or branch is invalid.")
     target = _app_dir(app.id) / "source"; shutil.rmtree(target, ignore_errors=True); target.parent.mkdir(parents=True, exist_ok=True)
     result = subprocess.run(["git", "clone", "--depth", "1", "--branch", app.branch or "main", app.repository_url or "", str(target)], capture_output=True, text=True, timeout=180, shell=False)
     if result.returncode: raise HTTPException(400, (result.stderr or "Git clone failed.")[-500:])

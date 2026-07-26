@@ -1,6 +1,6 @@
 """Python application hosting routes."""
-from fastapi import APIRouter, Depends, File, Form, Request, UploadFile
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from database import get_db
@@ -25,9 +25,13 @@ async def create(domain_id: int = Form(...), source_type: str = Form(...), repos
     app = await apps.create_app(db, domain_id, source_type, repository_url or None, branch, build_command, start_command, ssl, postgres_mode, database_url or None)
     if source_type == "zip":
         if archive is None:
-            raise ValueError("Choose a ZIP application archive.")
+            raise HTTPException(400, "Choose a ZIP application archive.")
         await apps.extract_zip(archive, app)
     return RedirectResponse(f"/apps/{app.id}", status_code=303)
+
+@router.post("/inspect")
+async def inspect_project(repository_url: str = Form(...), branch: str = Form("main")):
+    return JSONResponse(apps.inspect_repository(repository_url.strip(), branch.strip()))
 
 @router.get("/{app_id}", response_class=HTMLResponse)
 async def detail(app_id: int, request: Request, db: AsyncSession = Depends(get_db)):
