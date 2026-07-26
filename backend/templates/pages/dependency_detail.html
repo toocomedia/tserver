@@ -34,7 +34,7 @@
     </div>
 
     <div class="info-hero-row__actions" data-role="dependency-footer">
-      {% if dependency.installed %}
+      {% if dependency.installed and dependency.can_toggle %}
       <form method="post" action="/api/dependencies/{{ dependency.id }}/toggle">
         <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
         {% if dependency.running %}
@@ -46,7 +46,7 @@
         <button class="btn btn--primary btn--sm" type="submit">Enable Service</button>
         {% endif %}
       </form>
-      {% else %}
+      {% elif not dependency.installed %}
       <form method="post" action="/api/dependencies/{{ dependency.id }}/install" data-dependency-install-form>
         <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
         <button class="btn btn--primary btn--sm" type="submit" data-role="install-button" {% if not dependency.install_guide.supported %}disabled title="Unsupported operating system"{% endif %}>Install {{ dependency.name }}</button>
@@ -79,8 +79,8 @@
         <div class="clean-specs-item__val" data-role="install-source">{{ dependency.install_origin | replace('_', ' ') }}</div>
       </div>
       <div class="clean-specs-item">
-        <div class="clean-specs-item__key">Daemon State</div>
-        <div class="clean-specs-item__val" data-role="daemon-value">{{ 'Running' if dependency.running else 'Stopped' }}</div>
+        <div class="clean-specs-item__key">Service State</div>
+        <div class="clean-specs-item__val" data-role="daemon-value">{{ ('Running' if dependency.running else 'Stopped') if dependency.can_toggle else 'Core runtime' }}</div>
       </div>
       <div class="clean-specs-item">
         <div class="clean-specs-item__key">Version Detected</div>

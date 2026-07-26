@@ -53,7 +53,7 @@ async def create(db: AsyncSession, name: str, project_type: str = "static") -> D
     8. Save to DB
     """
     name = sanitize_domain(name)
-    if project_type not in ("static", "dns"):
+    if project_type not in ("static", "dns", "python"):
         project_type = "static"
 
     # Guard: already in DB

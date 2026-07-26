@@ -1,0 +1,12 @@
+{% extends "layout.html" %}
+{% block title %}Create Python App — SRV Panel{% endblock %}
+{% block page_title %}Python App — {{ domain.name }}{% endblock %}
+{% block content %}
+<form class="card p-5" method="post" action="/apps/create"><input type="hidden" name="domain_id" value="{{ domain.id }}"><input type="hidden" name="ssl" value="{{ 'true' if ssl else 'false' }}">{% include "partials/csrf_field.html" %}
+<h2>Deploy Python application</h2><p class="text-muted">Detected commands are suggestions. Confirm or edit before deployment.</p>
+<label>Source</label><select class="form-select" name="source_type"><option value="git">Git repository</option><option value="zip">ZIP upload</option></select>
+<label>Repository URL (Git only)</label><input class="form-input" name="repository_url" placeholder="git@github.com:owner/project.git"><label>Branch</label><input class="form-input" name="branch" value="main">
+<label>Build command</label><input class="form-input" name="build_command" value="pip install -r requirements.txt"><label>Start command</label><input class="form-input" name="start_command" value="uvicorn main:app --host $HOST --port $PORT">
+<label>PostgreSQL</label><select class="form-select" name="postgres_mode"><option value="none">No database</option><option value="create">Create local PostgreSQL database</option><option value="external">External DATABASE_URL</option></select><label>External DATABASE_URL</label><input class="form-input" name="database_url" type="password">
+<button class="btn btn--primary" type="submit">Create App</button></form>
+{% endblock %}

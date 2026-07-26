@@ -1,11 +1,25 @@
 """System dependency management page and APIs."""
 from fastapi import APIRouter, Form, HTTPException, Query, Request
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
+from pathlib import Path
 
 from dependencies import dependency_manager
 from templating import templates
 
 router = APIRouter(tags=["dependencies"])
+
+_DEPENDENCY_ASSETS = {
+    "git.png": Path("dependencies/git.png"),
+    "pytohn.png": Path("dependencies/pytohn.png"),
+}
+
+
+@router.get("/dependencies/assets/{filename}", include_in_schema=False)
+async def dependency_asset(filename: str):
+    path = _DEPENDENCY_ASSETS.get(filename)
+    if path is None or not path.is_file():
+        raise HTTPException(status_code=404, detail="Dependency asset not found.")
+    return FileResponse(path, media_type="image/png")
 
 
 @router.get("/dependencies", response_class=HTMLResponse)

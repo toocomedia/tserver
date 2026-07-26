@@ -111,10 +111,11 @@
         </label>
 
         <!-- Option 3 -->
-        <div class="stack-pure-item stack-pure-item--disabled">
+        <label class="stack-pure-item opt-item" onclick="selectStack('python', 'Python App', this)">
+          <input type="radio" name="project_type" value="python" style="position:absolute;opacity:0;pointer-events:none;">
           <span class="pure-tech-icon"><i class="devicon-python-plain"></i></span>
           <span class="stack-title-text">Python (Uvicorn)</span>
-        </div>
+        </label>
 
         <!-- Option 4 -->
         <div class="stack-pure-item stack-pure-item--disabled">
@@ -349,6 +350,12 @@ function selectStack(type, title, el) {
     if (sslDnsMsg) sslDnsMsg.style.display = 'block';
     document.getElementById('rev-ssl').textContent = 'Not Applicable (DNS Only)';
     document.getElementById('rev-ssl').style.color = '#707885';
+  } else if (type === 'python') {
+    if (descText) descText.textContent = 'DNS domain created first. Continue to Python app source and deployment setup.';
+    if (nginxRow) nginxRow.style.display = 'flex';
+    if (sslContainer) sslContainer.style.display = 'flex';
+    if (sslDnsMsg) sslDnsMsg.style.display = 'none';
+    selectSsl(currentSslEnabled);
   } else {
     if (descText) descText.textContent = 'Nginx HTTP vhost & webroot directory created.';
     if (nginxRow) nginxRow.style.display = 'flex';

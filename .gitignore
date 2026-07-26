@@ -35,6 +35,7 @@ temp_*.html
 
 # Documentation & Local Helpers
 /docs/
+!/docs/git_dependency_internal_api.md
 /rules/
 push-to-github.bat
 
@@ -50,5 +51,4 @@ backups/
 remote.json
 remote_domains.json
 **/remote*.json
-
 

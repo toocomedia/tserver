@@ -34,6 +34,7 @@ PATHS: dict[str, str] = {
     "api_settings": "/api/settings",
     "plugins": "/plugins/",
     "dependencies": "/dependencies",
+    "apps": "/apps/",
 }
 
 

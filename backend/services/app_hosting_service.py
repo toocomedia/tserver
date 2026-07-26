@@ -1,0 +1,103 @@
+"""Trusted administrator Python-app deployment orchestration."""
+from __future__ import annotations
+import os, re, secrets, shutil, subprocess, zipfile
+from pathlib import Path, PurePosixPath
+from fastapi import HTTPException, UploadFile
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+import config
+from dependencies import dependency_manager
+from models.hosted_app import HostedApp
+from services import nginx_service
+
+ROOT = Path(config.APP_HOSTING_ROOT)
+ENV_ROOT = Path(config.APP_HOSTING_ENV_ROOT)
+PORT_RE = re.compile(r"^[1-9][0-9]{0,4}$")
+
+def _app_dir(app_id: int) -> Path: return ROOT / str(app_id)
+def _safe_name(value: str) -> str:
+    return re.sub(r"[^a-z0-9]", "", value.lower())[:40] or "app"
+def suggest_project(path: Path) -> dict[str, str]:
+    req, pyproject = path / "requirements.txt", path / "pyproject.toml"
+    text = (req.read_text(errors="ignore") if req.exists() else "") + (pyproject.read_text(errors="ignore") if pyproject.exists() else "")
+    build = "pip install -r requirements.txt" if req.exists() else "pip install ."
+    if (path / "manage.py").exists(): start, kind = "python manage.py runserver $HOST:$PORT", "Django"
+    elif "fastapi" in text.lower(): start, kind = "uvicorn main:app --host $HOST --port $PORT", "FastAPI"
+    elif "flask" in text.lower(): start, kind = "gunicorn --bind $HOST:$PORT app:app", "Flask"
+    else: start, kind = "python main.py", "Python"
+    return {"build_command": build, "start_command": start, "framework": kind, "postgres": "postgres" in text.lower() or "database_url" in text.lower()}
+
+async def next_port(db: AsyncSession) -> int:
+    used = set((await db.scalars(select(HostedApp.port))).all())
+    return next(port for port in range(config.APP_HOSTING_PORT_START, 65536) if port not in used)
+
+async def create_app(db: AsyncSession, domain_id: int, source_type: str, repository_url: str | None, branch: str, build: str, start: str, ssl: bool, postgres_mode: str, external_url: str | None) -> HostedApp:
+    if source_type not in {"git", "zip"} or postgres_mode not in {"none", "create", "external"}: raise HTTPException(400, "Invalid app setup.")
+    if source_type == "git" and (not repository_url or not dependency_manager.is_healthy("git")): raise HTTPException(409, "Git & SSH dependency is required.")
+    if not dependency_manager.is_healthy("python"): raise HTTPException(409, "Python Runtime dependency is required.")
+    port = await next_port(db); service_name = f"srv-python-{domain_id}"
+    app = HostedApp(domain_id=domain_id, source_type=source_type, repository_url=repository_url, branch=branch or "main", build_command=build, start_command=start, port=port, service_name=service_name, work_dir=str(_app_dir(domain_id)), env_path=str(ENV_ROOT / f"{domain_id}.env"), ssl_requested=ssl, postgres_mode=postgres_mode)
+    if postgres_mode == "external" and not external_url: raise HTTPException(400, "DATABASE_URL is required for an external database.")
+    db.add(app); await db.flush()
+    if postgres_mode == "external":
+        ENV_ROOT.mkdir(parents=True, exist_ok=True)
+        Path(app.env_path).write_text(f"DATABASE_URL={external_url}\n", encoding="utf-8")
+        os.chmod(app.env_path, 0o600)
+    return app
+
+async def extract_zip(upload: UploadFile, app: HostedApp) -> Path:
+    if not upload.filename or not upload.filename.lower().endswith(".zip"): raise HTTPException(400, "Upload a ZIP file.")
+    data = await upload.read()
+    if len(data) > 100 * 1024 * 1024: raise HTTPException(400, "ZIP is larger than 100 MB.")
+    archive = _app_dir(app.id) / "upload.zip"; archive.parent.mkdir(parents=True, exist_ok=True); archive.write_bytes(data)
+    target = _app_dir(app.id) / "source"; shutil.rmtree(target, ignore_errors=True); target.mkdir(parents=True)
+    with zipfile.ZipFile(archive) as z:
+        if len(z.infolist()) > 1000: raise HTTPException(400, "ZIP has too many files.")
+        for item in z.infolist():
+            path = PurePosixPath(item.filename)
+            if path.is_absolute() or ".." in path.parts or (item.external_attr >> 16) & 0o170000 == 0o120000: raise HTTPException(400, "ZIP contains an unsafe path.")
+        z.extractall(target)
+    return target
+
+async def clone_repo(app: HostedApp) -> Path:
+    target = _app_dir(app.id) / "source"; shutil.rmtree(target, ignore_errors=True); target.parent.mkdir(parents=True, exist_ok=True)
+    result = subprocess.run(["git", "clone", "--depth", "1", "--branch", app.branch or "main", app.repository_url or "", str(target)], capture_output=True, text=True, timeout=180, shell=False)
+    if result.returncode: raise HTTPException(400, (result.stderr or "Git clone failed.")[-500:])
+    return target
+
+async def deploy(app: HostedApp, domain_name: str) -> None:
+    source = await clone_repo(app) if app.source_type == "git" else _app_dir(app.id) / "source"
+    if not source.exists(): raise HTTPException(400, "Upload application ZIP before deployment.")
+    venv = _app_dir(app.id) / ".venv"; result = subprocess.run(["python3", "-m", "venv", str(venv)], capture_output=True, text=True, timeout=60)
+    if result.returncode: raise HTTPException(500, result.stderr[-500:])
+    ENV_ROOT.mkdir(parents=True, exist_ok=True)
+    existing = Path(app.env_path).read_text(encoding="utf-8") if Path(app.env_path).exists() else ""
+    if app.postgres_mode == "create" and not app.database_name:
+        from plugins.postgres_manager import queries as pg
+        app.database_name, app.database_user = f"app{app.id}", f"app{app.id}"
+        password = secrets.token_urlsafe(24)
+        pg.create_user(app.database_user, password); pg.create_database(app.database_name, app.database_user)
+        existing += f"DATABASE_URL=postgresql://{app.database_user}:{password}@127.0.0.1:5432/{app.database_name}\n"
+    env = existing + f"HOST=127.0.0.1\nPORT={app.port}\n"
+    Path(app.env_path).write_text(env, encoding="utf-8"); os.chmod(app.env_path, 0o600)
+    build = subprocess.run(["bash", "-lc", f"cd {source} && {venv}/bin/{app.build_command}"], capture_output=True, text=True, timeout=600)
+    if build.returncode: raise HTTPException(400, (build.stderr or build.stdout)[-1000:])
+    unit = f"[Service]\nWorkingDirectory={source}\nEnvironmentFile={app.env_path}\nExecStart=/bin/bash -lc '{venv}/bin/{app.start_command}'\nRestart=on-failure\n"
+    Path(f"/etc/systemd/system/{app.service_name}.service").write_text(unit)
+    subprocess.run(["systemctl", "daemon-reload"], check=True, timeout=30); subprocess.run(["systemctl", "restart", app.service_name], check=True, timeout=30)
+    await nginx_service.create_proxy(domain_name, "127.0.0.1", app.port, "http")
+    await nginx_service.reload()
+
+async def control(app: HostedApp, action: str) -> None:
+    if action not in {"start", "stop", "restart"}: raise HTTPException(400, "Invalid app action.")
+    result = subprocess.run(["systemctl", action, app.service_name], capture_output=True, text=True, timeout=30)
+    if result.returncode: raise HTTPException(500, (result.stderr or "Service action failed.")[-500:])
+    app.status = "stopped" if action == "stop" else "running"
+
+async def uninstall(app: HostedApp, domain_name: str) -> None:
+    if app.status != "stopped": raise HTTPException(409, "Stop the app before uninstalling it.")
+    subprocess.run(["systemctl", "disable", "--now", app.service_name], capture_output=True, timeout=30)
+    Path(f"/etc/systemd/system/{app.service_name}.service").unlink(missing_ok=True)
+    subprocess.run(["systemctl", "daemon-reload"], capture_output=True, timeout=30)
+    await nginx_service.remove_site(domain_name); await nginx_service.reload()
+    shutil.rmtree(_app_dir(app.id), ignore_errors=True); Path(app.env_path).unlink(missing_ok=True)

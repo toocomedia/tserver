@@ -59,6 +59,8 @@ class DependencyManager:
         state = component_state_store.get("dependency", dependency_id)
         status.update(self._metadata[dependency_id])
         status["icon"] = status.get("icon") or "/static/images/dependency-placeholder.svg"
+        # Docker remains the existing controllable daemon; Git/Python are core tools.
+        status.setdefault("can_toggle", dependency_id == "docker")
         status["desired_enabled"] = state.desired_enabled
         status["operation"] = state.operation
         status["install_origin"] = (
@@ -125,6 +127,8 @@ class DependencyManager:
         lock = self._operation_locks.get(dependency_id)
         if service is None or lock is None:
             return False, "Unknown dependency."
+        if not self.get_status(dependency_id, force=True).get("can_toggle"):
+            return False, "This core runtime cannot be started or stopped from the panel."
         if not lock.acquire(blocking=False):
             return False, "Another dependency operation is already running."
 

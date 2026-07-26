@@ -90,6 +90,8 @@ async def domains_create(
 ):
     try:
         domain = await domain_service.create(db, name, project_type=project_type)
+        if project_type == "python":
+            return RedirectResponse(f"/apps/create?domain_id={domain.id}&ssl={'1' if ssl_enabled == 'yes' else '0'}", status_code=303)
         if ssl_enabled == "yes" and project_type != "dns":
             return RedirectResponse(f"/ssl/issue?domain_id={domain.id}&full_domain={domain.name}", status_code=303)
         return RedirectResponse(f"/domains/{domain.id}", status_code=303)

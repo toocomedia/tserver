@@ -1,4 +1,4 @@
-{% if dependency.installed %}
+{% if dependency.installed and dependency.can_toggle %}
   <form method="post" action="/api/dependencies/{{ dependency.id }}/toggle" class="inline-form">
     <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
     {% if dependency.running %}

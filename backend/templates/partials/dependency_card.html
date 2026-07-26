@@ -29,7 +29,7 @@
         </div>
 
         <div class="dependency-card__actions">
-          {% if dependency.installed %}
+          {% if dependency.installed and dependency.can_toggle %}
             <form method="post" action="/api/dependencies/{{ dependency.id }}/toggle" style="display:inline-flex;">
               <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
               {% if dependency.running %}
@@ -48,7 +48,7 @@
             <a href="/dependencies/{{ dependency.id }}" class="icon-btn" title="View Info">
               <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
             </a>
-          {% else %}
+          {% elif not dependency.installed %}
             <a href="/dependencies/{{ dependency.id }}" class="icon-btn icon-btn--primary" title="Install {{ dependency.name }}">
               <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
             </a>

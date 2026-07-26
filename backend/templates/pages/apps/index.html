@@ -1,0 +1,7 @@
+{% extends "layout.html" %}
+{% block title %}Apps — SRV Panel{% endblock %}
+{% block page_title %}Python Apps{% endblock %}
+{% block content %}
+<div class="card p-5"><h2>Python Applications</h2><p class="text-muted">Create a Python App from the Domains page.</p>
+{% for app in apps %}<p><a href="/apps/{{ app.id }}">{{ app.service_name }}</a> — {{ app.status }}</p>{% else %}<p>No Python applications yet.</p>{% endfor %}</div>
+{% endblock %}
