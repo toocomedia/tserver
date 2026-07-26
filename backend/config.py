@@ -39,6 +39,9 @@ def _env_bool(name: str, default: bool = False) -> bool:
 # ---------------------------------------------------------
 SERVER_IP: str = _env_str("SERVER_IP", "127.0.0.1")
 PANEL_DOMAIN: str = _env_str("PANEL_DOMAIN", "localhost")
+PANEL_NAME: str = _env_str("PANEL_NAME", "Barq Panel")
+PANEL_SHORT_NAME: str = _env_str("PANEL_SHORT_NAME", "Barq")
+PANEL_LOGO_PATH: str = _env_str("PANEL_LOGO_PATH", "/static/images/logo.svg")
 DEBUG: bool = _env_bool("DEBUG", False)
 TRUSTED_PROXY_IPS: str = _env_str("TRUSTED_PROXY_IPS", "127.0.0.1")
 

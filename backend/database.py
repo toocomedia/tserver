@@ -214,6 +214,8 @@ async def init_db():
     import models.component_state  # noqa: F401
     import models.postgres_remote  # noqa: F401
     import models.hosted_app       # noqa: F401
+    import models.app_deployment   # noqa: F401
+    import models.app_environment  # noqa: F401
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
         await conn.run_sync(_migrate_sync)

@@ -1,5 +1,5 @@
 {% extends "layout.html" %}
-{% block title %}App Logs — SRV Panel{% endblock %}
+{% block title %}App Logs — {{ PANEL_NAME }}{% endblock %}
 {% block page_title %}Python App Logs{% endblock %}
 {% block content %}
 <section class="section"><div class="section__header"><h3>{{ app.service_name }}</h3><a class="btn btn--secondary" href="/apps/{{ app.id }}">Back to App</a></div><div class="section__body"><p class="text-muted">Latest 200 lines from the system service journal.</p><pre class="clean-cmd-box">{{ logs }}</pre></div></section>

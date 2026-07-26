@@ -1,6 +1,6 @@
-# SRV-Panel
+# Barq Panel
 
-A simple, lightweight control panel for your VPS.
+A fast, lightweight, and modern control panel for your VPS.
 
 ## 🚀 One-Click Install
 

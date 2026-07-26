@@ -6,3 +6,5 @@ from models.proxy import ReverseProxy
 from models.ssl_cert import SslCert
 from models.postgres_remote import PostgresRemoteDomain
 from models.hosted_app import HostedApp
+from models.app_deployment import AppDeployment
+from models.app_environment import AppEnvironmentVariable

@@ -1,5 +1,6 @@
 """Trusted administrator Python-app deployment orchestration."""
 from __future__ import annotations
+import asyncio
 import os, re, secrets, shutil, subprocess, tempfile, zipfile
 from pathlib import Path, PurePosixPath
 from fastapi import HTTPException, UploadFile
@@ -10,27 +11,17 @@ from dependencies import dependency_manager
 from models.hosted_app import HostedApp
 from services import nginx_service
 from services import app_hosting_health_service
+from services import app_project_detector
 from utils import shell
 
 ROOT = Path(config.APP_HOSTING_ROOT)
 ENV_ROOT = Path(config.APP_HOSTING_ENV_ROOT)
-PORT_RE = re.compile(r"^[1-9][0-9]{0,4}$")
 GIT_URL_RE = re.compile(r"^(https://[^\s]+\.git|git@[A-Za-z0-9.-]+:[A-Za-z0-9._/-]+\.git)$")
 BRANCH_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._/-]{0,127}$")
 
 def _app_dir(app_id: int) -> Path: return ROOT / str(app_id)
 def _service_unit(app: HostedApp) -> Path: return Path("/etc/systemd/system") / f"{app.service_name}.service"
-def _safe_name(value: str) -> str:
-    return re.sub(r"[^a-z0-9]", "", value.lower())[:40] or "app"
-def suggest_project(path: Path) -> dict[str, str]:
-    req, pyproject = path / "requirements.txt", path / "pyproject.toml"
-    text = (req.read_text(errors="ignore") if req.exists() else "") + (pyproject.read_text(errors="ignore") if pyproject.exists() else "")
-    build = "pip install -r requirements.txt" if req.exists() else "pip install ."
-    if (path / "manage.py").exists(): start, kind = "python manage.py runserver $HOST:$PORT", "Django"
-    elif "fastapi" in text.lower(): start, kind = "uvicorn main:app --host $HOST --port $PORT", "FastAPI"
-    elif "flask" in text.lower(): start, kind = "gunicorn --bind $HOST:$PORT app:app", "Flask"
-    else: start, kind = "python main.py", "Python"
-    return {"build_command": build, "start_command": start, "framework": kind, "postgres": "postgres" in text.lower() or "database_url" in text.lower()}
+def suggest_project(path: Path) -> dict[str, object]: return app_project_detector.detect_project(path)
 
 def _github_https_url(repository_url: str) -> str | None:
     match = re.fullmatch(r"git@github\.com:([A-Za-z0-9._/-]+\.git)", repository_url)
@@ -64,7 +55,10 @@ async def _systemctl(*args: str, allow_missing: bool = False) -> bool:
         raise HTTPException(500, message or "System service action failed.")
     return True
 
-def inspect_repository(repository_url: str, branch: str) -> dict[str, str]:
+async def _progress(reporter, stage: str, message: str) -> None:
+    if reporter: await reporter(stage, message)
+
+def inspect_repository(repository_url: str, branch: str) -> dict[str, object]:
     """Read project files from a temporary shallow clone; never run app code."""
     if not GIT_URL_RE.fullmatch(repository_url):
         raise HTTPException(400, "Enter a valid HTTPS or SSH Git repository URL.")
@@ -147,34 +141,42 @@ async def clone_repo(app: HostedApp) -> Path:
     if not GIT_URL_RE.fullmatch(app.repository_url or "") or not BRANCH_RE.fullmatch(app.branch or ""):
         raise HTTPException(400, "The saved repository URL or branch is invalid.")
     target = _app_dir(app.id) / "source"; shutil.rmtree(target, ignore_errors=True); target.parent.mkdir(parents=True, exist_ok=True)
-    result = subprocess.run(["git", "clone", "--depth", "1", "--branch", app.branch or "main", app.repository_url or "", str(target)], capture_output=True, text=True, timeout=180, shell=False)
+    result = await asyncio.to_thread(subprocess.run, ["git", "clone", "--depth", "1", "--branch", app.branch or "main", app.repository_url or "", str(target)], capture_output=True, text=True, timeout=180, shell=False)
     if result.returncode: raise HTTPException(400, (result.stderr or "Git clone failed.")[-500:])
     return target
 
-async def deploy(app: HostedApp, domain_name: str) -> None:
+async def deploy(app: HostedApp, domain_name: str, reporter=None) -> None:
     _ensure_runtime_dirs()
     _normalise_paths(app)
+    await _progress(reporter, "source", "Preparing application source.")
     source = await clone_repo(app) if app.source_type == "git" else _app_dir(app.id) / "source"
     if not source.exists(): raise HTTPException(400, "Upload application ZIP before deployment.")
-    venv = _app_dir(app.id) / ".venv"; result = subprocess.run(["python3", "-m", "venv", str(venv)], capture_output=True, text=True, timeout=60)
+    await _progress(reporter, "venv", "Creating isolated Python environment.")
+    venv = _app_dir(app.id) / ".venv"; result = await asyncio.to_thread(subprocess.run, ["python3", "-m", "venv", str(venv)], capture_output=True, text=True, timeout=60)
     if result.returncode: raise HTTPException(500, result.stderr[-500:])
     ENV_ROOT.mkdir(parents=True, exist_ok=True)
     existing = Path(app.env_path).read_text(encoding="utf-8") if Path(app.env_path).exists() else ""
+    existing = "".join(f"{line}\n" for line in existing.splitlines() if not line.startswith(("HOST=", "PORT=", "APP_DATA_DIR=")))
     if app.postgres_mode == "create" and not app.database_name:
         from plugins.postgres_manager import queries as pg
         app.database_name, app.database_user = f"app{app.id}", f"app{app.id}"
         password = secrets.token_urlsafe(24)
         pg.create_user(app.database_user, password); pg.create_database(app.database_name, app.database_user)
         existing += f"DATABASE_URL=postgresql://{app.database_user}:{password}@127.0.0.1:5432/{app.database_name}\n"
-    env = existing + f"HOST=127.0.0.1\nPORT={app.port}\n"
+    data_dir = _app_dir(app.id) / "data"; data_dir.mkdir(parents=True, exist_ok=True)
+    env = existing + f"HOST=127.0.0.1\nPORT={app.port}\nAPP_DATA_DIR={data_dir}\n"
     Path(app.env_path).write_text(env, encoding="utf-8"); os.chmod(app.env_path, 0o600)
-    build = subprocess.run(["bash", "-lc", f"cd {source} && {venv}/bin/{app.build_command}"], capture_output=True, text=True, timeout=600)
+    await _progress(reporter, "dependencies", "Installing project dependencies.")
+    build = await asyncio.to_thread(subprocess.run, ["bash", "-lc", f"cd {source} && PATH={venv}/bin:$PATH {app.build_command}"], capture_output=True, text=True, timeout=600)
     if build.returncode: raise HTTPException(400, (build.stderr or build.stdout)[-1000:])
+    await _progress(reporter, "service", "Creating and starting application service.")
     unit = f"[Unit]\nDescription=SRV Panel Python app {app.id}\nAfter=network.target\n\n[Service]\nType=simple\nUser={config.APP_HOSTING_USER}\nGroup={config.APP_HOSTING_USER}\nWorkingDirectory={source}\nEnvironmentFile={app.env_path}\nExecStart=/bin/bash -lc '{venv}/bin/{app.start_command}'\nRestart=on-failure\n\n[Install]\nWantedBy=multi-user.target\n"
     await shell.write_file(_service_unit(app), unit)
     await _systemctl("daemon-reload")
     await _systemctl("enable", "--now", app.service_name)
+    await _progress(reporter, "listener", "Checking the private application port.")
     await app_hosting_health_service.wait_for_listener(app.port)
+    await _progress(reporter, "nginx", "Enabling the Nginx proxy.")
     await nginx_service.create_proxy(domain_name, "127.0.0.1", app.port, "http")
     await nginx_service.reload()
 

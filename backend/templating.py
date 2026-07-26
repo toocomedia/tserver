@@ -97,6 +97,7 @@ def csrf_token(request: Request) -> str:
 
 
 from jinja2 import select_autoescape
+import config
 
 templates = Jinja2Templates(directory="templates")
 templates.env.autoescape = select_autoescape(["html", "xml"])
@@ -105,6 +106,9 @@ templates.env.globals["PATHS"] = PATHS
 templates.env.globals["public_url"] = public_url
 templates.env.globals["csrf_token"] = csrf_token
 templates.env.globals["get_plugin_sidebar_items"] = get_plugin_sidebar_items
+templates.env.globals["PANEL_NAME"] = config.PANEL_NAME
+templates.env.globals["PANEL_SHORT_NAME"] = config.PANEL_SHORT_NAME
+templates.env.globals["PANEL_LOGO_PATH"] = config.PANEL_LOGO_PATH
 
 # Aliases for Python imports
 path = app_path
