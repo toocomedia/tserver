@@ -29,6 +29,15 @@ def suggest_project(path: Path) -> dict[str, str]:
     else: start, kind = "python main.py", "Python"
     return {"build_command": build, "start_command": start, "framework": kind, "postgres": "postgres" in text.lower() or "database_url" in text.lower()}
 
+def _github_https_url(repository_url: str) -> str | None:
+    match = re.fullmatch(r"git@github\.com:([A-Za-z0-9._/-]+\.git)", repository_url)
+    return f"https://github.com/{match.group(1)}" if match else None
+
+def _clone_error(result: subprocess.CompletedProcess[str]) -> str:
+    output = (result.stderr or result.stdout or "Git clone failed.").strip()
+    lines = [line.strip() for line in output.splitlines() if line.strip()]
+    return " ".join(lines[-3:])[:500] if lines else "Git clone failed without an error message."
+
 def inspect_repository(repository_url: str, branch: str) -> dict[str, str]:
     """Read project files from a temporary shallow clone; never run app code."""
     if not GIT_URL_RE.fullmatch(repository_url):
@@ -38,14 +47,29 @@ def inspect_repository(repository_url: str, branch: str) -> dict[str, str]:
     if not dependency_manager.is_healthy("git"):
         raise HTTPException(409, "Git & SSH dependency is required.")
     with tempfile.TemporaryDirectory(prefix="srv-panel-inspect-") as temp_dir:
+        source_dir = Path(temp_dir) / "source"
+        clone_command = ["git", "clone", "--depth", "1", "--branch", branch, repository_url, str(source_dir)]
         result = subprocess.run(
-            ["git", "clone", "--depth", "1", "--branch", branch, repository_url, temp_dir],
+            clone_command,
             capture_output=True, text=True, timeout=90, check=False,
         )
         if result.returncode:
-            message = (result.stderr or result.stdout or "Git clone failed.").strip().splitlines()[-1]
-            raise HTTPException(400, f"Repository check failed: {message[:300]}")
-        return suggest_project(Path(temp_dir))
+            fallback_url = _github_https_url(repository_url)
+            if fallback_url:
+                shutil.rmtree(source_dir, ignore_errors=True)
+                result = subprocess.run(
+                    ["git", "clone", "--depth", "1", "--branch", branch, fallback_url, str(source_dir)],
+                    capture_output=True, text=True, timeout=90, check=False,
+                )
+                if not result.returncode:
+                    project = suggest_project(source_dir)
+                    project["repository_url"] = fallback_url
+                    project["transport_note"] = "SSH was unavailable, so this public GitHub repository will use HTTPS."
+                    return project
+            raise HTTPException(400, f"Repository check failed: {_clone_error(result)}")
+        project = suggest_project(source_dir)
+        project["repository_url"] = repository_url
+        return project
 
 async def next_port(db: AsyncSession) -> int:
     used = set((await db.scalars(select(HostedApp.port))).all())
