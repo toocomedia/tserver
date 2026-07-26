@@ -85,10 +85,13 @@ async def domains_create(
     request: Request,
     name: str = Form(...),
     project_type: str = Form("static"),
+    ssl_enabled: str = Form("no"),
     db: AsyncSession = Depends(get_db),
 ):
     try:
         domain = await domain_service.create(db, name, project_type=project_type)
+        if ssl_enabled == "yes" and project_type != "dns":
+            return RedirectResponse(f"/ssl/issue?domain_id={domain.id}&full_domain={domain.name}", status_code=303)
         return RedirectResponse(f"/domains/{domain.id}", status_code=303)
     except Exception as exc:
         error_msg = str(exc.detail) if hasattr(exc, "detail") else str(exc)

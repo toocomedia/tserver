@@ -1,292 +1,291 @@
 /* ==========================================================================
    STEPPER & CAROUSEL COMPONENT (stepper.css)
-   Strict minimal architecture: 0px radius, 0px blur, 0px shadow, pure alpha masking
-   Native app sizing & accent background for selected tab
+   Zero-Box, Zero-Border, Zero Strong Color Studio Architecture
+   Strict minimal design: 0% boxes, 0% cards, pure typography & whitespace
    ========================================================================== */
 
-/* Monochrome stack icon style */
-.mono-icon {
-  font-size: 24px;
-  line-height: 1;
+/* ==========================================================================
+   TOP HEADER ACTION BAR & BACK LINK
+   ========================================================================== */
+.top-action-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 48px;
+}
+.back-arrow-link {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  color: var(--color-text, #F0F0EC);
-  opacity: 0.75;
-  transition: opacity 0.15s ease, color 0.15s ease, transform 0.15s ease;
-}
-
-/* =========================================================
-   VERTICAL STEPPER (STRICT MUTUALLY EXCLUSIVE ACCORDIONS)
-   ========================================================= */
-.v-step {
-  border-bottom: 1px solid var(--color-line, #222422);
-  user-select: none;
-}
-.v-step:first-child {
-  border-top: 1px solid var(--color-line, #222422);
-}
-
-/* STEP HEADER (COMPACT APP TYPOGRAPHY & ACTIVE ACCENT BAR) */
-.step-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 16px;
-  cursor: pointer;
-  background: transparent;
-  transition: background 0.15s ease, color 0.15s ease, padding 0.15s ease;
-}
-.step-header:hover:not(.step-header--active) {
-  background: rgba(128, 128, 128, 0.05);
-}
-.step-header:hover:not(.step-header--active) .step-title {
-  color: var(--color-accent, #C7F464);
-}
-
-/* ACTIVE STEP HEADER GETS VIBRANT ACCENT BACKGROUND & BLACK TEXT! */
-.step-header--active {
-  background: var(--color-accent, #C7F464) !important;
-  color: #000000 !important;
-  padding: 16px 20px !important;
-}
-.step-title-wrap {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-.step-num {
-  font-family: monospace, system-ui !important;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--color-muted, #888A85);
-  letter-spacing: 1px;
-}
-.step-header--active .step-num {
-  color: #000000 !important;
-  opacity: 0.75;
-}
-.step-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--color-text, #F0F0EC);
-  letter-spacing: -0.3px;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-muted, #707885);
+  text-decoration: none;
   transition: color 0.15s ease;
 }
-.step-header--active .step-title {
-  color: #000000 !important;
-  font-weight: 700;
+.back-arrow-link:hover {
+  color: var(--color-text, #FFFFFF);
 }
-.step-summary {
-  font-size: 14px;
-  color: var(--color-muted, #888A85);
+
+/* ==========================================================================
+   4-STEP ZERO-BOX TOP STEP INDICATOR (PURE TYPOGRAPHY / NO BORDERS!)
+   ========================================================================== */
+.pure-nav {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 24px;
+  margin-bottom: 56px;
+  flex-wrap: wrap;
+  user-select: none;
 }
-.step-header--active .step-summary {
-  color: #000000 !important;
+.pure-step-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  color: var(--color-muted, #555E68);
+  cursor: pointer;
+  transition: color 0.15s ease;
 }
-.step-header--active .step-summary strong,
-.step-header--active .step-summary span,
-.step-header--active .step-summary .badge {
-  color: #000000 !important;
-  background: transparent !important;
-  border-color: #000000 !important;
+.pure-step-item:hover { color: #889098; }
+
+.pure-step-item--active {
+  color: var(--color-text, #FFFFFF);
+  font-weight: 600;
 }
-.step-toggle-icon {
-  color: var(--color-muted, #888A85);
-  transition: transform 0.15s ease, color 0.15s ease;
-}
-.step-header--active .step-toggle-icon {
-  transform: rotate(180deg);
-  color: #000000 !important;
+.pure-step-item--done {
+  color: #9AA0A6;
 }
 
-/* STEP CONTENT */
-.step-body {
-  display: none;
-  opacity: 0;
-  padding: 16px 8px 32px 8px;
-  transition: opacity 0.15s ease;
+.step-number {
+  font-family: 'JetBrains Mono', monospace, system-ui;
+  font-size: 12px;
+  opacity: 0.6;
 }
-.step-body--open {
-  display: block;
+.pure-step-item--active .step-number {
   opacity: 1;
+  font-weight: 700;
+  color: var(--color-text, #FFFFFF);
 }
 
-/* =========================================================
-   100% FULL WIDTH FORM STRUCTURE IN STEP 1 (NATIVE APP SIZING)
-   ========================================================= */
-.form-fullwidth {
-  width: 100%;
+.nav-divider { font-size: 14px; color: #333C48; font-family: monospace; }
+
+/* ==========================================================================
+   STEP PANELS (PURE OPEN CANVAS / ZERO BOXES AROUND CONTAINERS)
+   ========================================================================== */
+.step-panel { display: none; }
+.step-panel--active { display: block; animation: fadeIn 0.15s ease; }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
 }
-.form-fullwidth input[type="text"] {
-  width: 100% !important;
-  font-size: 15px;
-  padding: 12px 16px;
+
+.panel-heading {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--color-text, #FFFFFF);
+  margin: 0 0 8px 0;
+  letter-spacing: -0.5px;
+}
+.panel-subheading {
+  font-size: 14px;
+  color: var(--color-muted, #707885);
+  margin: 0 0 40px 0;
+}
+
+/* ==========================================================================
+   BORDERLESS UNDERLINE INPUT (ZERO BOXES!)
+   ========================================================================== */
+.input-borderless-wrap {
+  margin-bottom: 48px;
+}
+.input-borderless {
+  width: 100%;
+  font-size: 26px;
+  font-weight: 600;
+  padding: 12px 0;
   background: transparent !important;
-  border: 1px solid var(--color-line, #333533) !important;
-  color: var(--color-text, #F0F0EC);
+  border: none !important;
+  border-bottom: 2px solid #2A3440 !important;
+  color: var(--color-text, #FFFFFF);
   transition: border-color 0.15s ease;
   border-radius: 0 !important;
+  box-shadow: none !important;
 }
-.form-fullwidth input[type="text"]:focus {
-  border-color: var(--color-accent, #C7F464) !important;
+.input-borderless:focus {
+  border-bottom-color: var(--color-text, #FFFFFF) !important;
   outline: none;
 }
+.input-borderless::placeholder { color: #3A4450; font-weight: 400; }
 
-/* =========================================================
-   CAROUSEL WITH PURE CSS ALPHA MASK FADE (ZERO COLOR MISMATCH!)
-   ========================================================= */
+/* ==========================================================================
+   STEP 2: RUNTIME STACK CAROUSEL WITH SIDE ARROWS (ZERO BOXES!)
+   ========================================================================== */
 .carousel-wrapper {
   position: relative;
   display: flex;
   align-items: center;
   width: 100%;
-  height: 120px;
-  margin: 12px 0;
+  height: 104px;
+  margin: 12px 0 40px 0;
   overflow: hidden;
 }
 .carousel-track {
   display: flex;
-  gap: 32px;
+  gap: 36px;
   overflow-x: auto;
   scroll-behavior: smooth;
-  padding: 0 80px; /* Space for the 80px side arrow zones */
+  padding: 0 70px;
   height: 100%;
   align-items: center;
   scrollbar-width: none;
   -ms-overflow-style: none;
   width: 100%;
-  /* ALPHA MASK: Fades out the opacity of scrolling items at the left 80px and right 80px edges! */
-  -webkit-mask-image: linear-gradient(
-    to right,
-    transparent 0%,
-    black 80px,
-    black calc(100% - 80px),
-    transparent 100%
-  );
-  mask-image: linear-gradient(
-    to right,
-    transparent 0%,
-    black 80px,
-    black calc(100% - 80px),
-    transparent 100%
-  );
+  /* PURE ALPHA MASK: Fades out items seamlessly at left and right edges! */
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, black 70px, black calc(100% - 70px), transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0%, black 70px, black calc(100% - 70px), transparent 100%);
 }
 .carousel-track::-webkit-scrollbar { display: none; }
 
-/* ARROW ZONES: Pure transparent background! Zero color mismatch! */
+/* SIDE ARROW ZONES: Pure transparent background! Zero boxes! */
 .arrow-side-zone {
   position: absolute;
   top: 0;
   bottom: 0;
   z-index: 20;
-  width: 80px;
+  width: 70px;
   display: flex;
   align-items: center;
   cursor: pointer;
   background: transparent !important;
   transition: padding 0.15s ease;
 }
-.arrow-side-zone--left {
-  left: 0;
-  justify-content: flex-start;
-  padding-left: 12px;
-}
-.arrow-side-zone--right {
-  right: 0;
-  justify-content: flex-end;
-  padding-right: 12px;
-}
-.arrow-side-zone--left:hover { padding-left: 6px; }
-.arrow-side-zone--right:hover { padding-right: 6px; }
+.arrow-side-zone--left { left: 0; justify-content: flex-start; padding-left: 6px; }
+.arrow-side-zone--right { right: 0; justify-content: flex-end; padding-right: 6px; }
+.arrow-side-zone--left:hover { padding-left: 2px; }
+.arrow-side-zone--right:hover { padding-right: 2px; }
 
-/* Pure vector arrow icon */
 .pure-arrow-icon {
-  color: var(--color-text, #F0F0EC);
-  opacity: 0.85;
-  transition: color 0.15s ease, opacity 0.15s ease, transform 0.15s ease;
+  color: var(--color-muted, #707885);
+  opacity: 0.7;
+  transition: all 0.15s ease;
 }
 .arrow-side-zone:hover .pure-arrow-icon {
-  color: var(--color-accent, #C7F464);
+  color: var(--color-text, #FFFFFF);
   opacity: 1;
   transform: scale(1.15);
 }
 
-/* BOXLESS STACK ITEMS WITH ACCENT BACKGROUND FOR SELECTED TAB! */
-.stack-item {
+/* BOXLESS STACK ITEMS IN CAROUSEL */
+.stack-pure-item {
   flex: 0 0 auto;
   display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 10px;
-  height: 96px;
-  padding: 10px 16px;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 0;
   cursor: pointer;
   user-select: none;
-  border-bottom: 2px solid transparent;
-  transition: border-color 0.15s ease, opacity 0.15s ease, background 0.15s ease, color 0.15s ease;
+  background: transparent !important;
+  border: none !important;
+  border-bottom: 2px solid transparent !important;
+  transition: all 0.15s ease;
+  color: #66707C;
 }
-.stack-item:hover:not(.stack-item--disabled) {
-  opacity: 1;
-  background: rgba(128, 128, 128, 0.04);
+.stack-pure-item:hover:not(.stack-pure-item--disabled) {
+  color: #A0A8B4;
 }
-/* SELECTED TAB USES VIBRANT ACCENT BACKGROUND AND HIGH-CONTRAST TEXT! */
-.stack-item--active {
-  background: var(--color-accent, #C7F464) !important;
-  border-bottom-color: var(--color-accent, #C7F464) !important;
-  color: #000000 !important;
-}
-.stack-item--active .mono-icon {
-  color: #000000 !important;
-  opacity: 1;
-}
-.stack-item--active .stack-item__title {
-  color: #000000 !important;
-  font-weight: 700;
-}
-.stack-item--active .badge {
-  background: #000000 !important;
-  color: var(--color-accent, #C7F464) !important;
-  border-color: #000000 !important;
-}
-.stack-item--disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-}
-.stack-item__title {
-  font-size: 13px;
+
+.stack-pure-item--active {
+  color: var(--color-text, #FFFFFF) !important;
+  border-bottom-color: var(--color-text, #FFFFFF) !important;
   font-weight: 600;
-  color: var(--color-muted, #888A85);
-  white-space: nowrap;
-  transition: color 0.15s ease;
 }
-.stack-item input[type="radio"] { position: absolute; opacity: 0; pointer-events: none; }
+.stack-pure-item--active .pure-tech-icon {
+  color: var(--color-text, #FFFFFF) !important;
+  opacity: 1 !important;
+}
 
-/* STEP 3 REVIEW: COMPACT 100% FULL WIDTH TABLE */
-.summary-table-fullwidth {
-  width: 100%;
-  margin-bottom: 28px;
-  border-top: 1px solid var(--color-line, #222422);
-}
-.summary-row {
-  display: flex;
-  justify-content: space-between;
+.stack-pure-item--disabled { opacity: 0.25; cursor: not-allowed; }
+
+.pure-tech-icon {
+  font-size: 26px;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
   align-items: center;
-  padding: 12px 0;
-  font-size: 14px;
-  border-bottom: 1px solid var(--color-line, #222422);
+  justify-content: center;
+  color: #66707C;
+  opacity: 0.7;
+  transition: all 0.15s ease;
 }
 
-@media (max-width: 700px) {
-  .carousel-track {
-    padding: 0 40px;
-    -webkit-mask-image: linear-gradient(to right, transparent 0%, black 40px, black calc(100% - 40px), transparent 100%);
-    mask-image: linear-gradient(to right, transparent 0%, black 40px, black calc(100% - 40px), transparent 100%);
-  }
-  .arrow-side-zone { width: 40px; }
+.stack-title-text { font-size: 15px; white-space: nowrap; }
+
+/* ==========================================================================
+   STEP 3: BOXLESS SSL CERTIFICATE STEP (NOT PRE-ACTIVE BY DEFAULT!)
+   ========================================================================== */
+.ssl-pure-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  margin-bottom: 48px;
 }
+.ssl-pure-opt {
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+  padding: 16px 0;
+  cursor: pointer;
+  user-select: none;
+  color: #66707C;
+  border-bottom: 2px solid transparent;
+  transition: all 0.15s ease;
+}
+.ssl-pure-opt:hover { color: #A0A8B4; }
+
+.ssl-pure-opt--active {
+  color: var(--color-text, #FFFFFF) !important;
+  border-bottom-color: var(--color-text, #FFFFFF) !important;
+}
+.ssl-pure-opt--active .ssl-icon {
+  color: var(--color-text, #FFFFFF);
+  opacity: 1;
+}
+.ssl-pure-opt--active .ssl-opt-title {
+  font-weight: 600;
+  color: var(--color-text, #FFFFFF);
+}
+
+.ssl-icon {
+  font-size: 24px;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.6;
+  transition: all 0.15s ease;
+  margin-top: 2px;
+}
+
+.ssl-opt-title { font-size: 16px; margin-bottom: 4px; transition: color 0.15s ease; }
+.ssl-opt-desc { font-size: 13px; color: #66707C; line-height: 1.5; }
+
+/* ==========================================================================
+   STEP 4: BOXLESS REVIEW SECTION (PURE TYPOGRAPHY)
+   ========================================================================== */
+.review-pure-list {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  margin-bottom: 56px;
+}
+.review-pure-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font-size: 15px;
+}
+.review-label { color: var(--color-muted, #707885); }
+.review-value { color: var(--color-text, #FFFFFF); font-weight: 600; }
