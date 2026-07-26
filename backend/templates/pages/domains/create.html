@@ -4,114 +4,231 @@
 {% block page_title %}Add Domain{% endblock %}
 
 {% block topbar_actions %}
-  <a href="/domains/" class="btn btn--secondary" id="btn-back">← Back</a>
+  <a href="/domains/" class="btn btn--secondary" id="btn-back">← Back to Domains</a>
 {% endblock %}
 
 {% block content %}
 
-<div class="section">
-  <div class="section__header">
-    <h3>New Domain & Project Setup</h3>
+<div class="fullwidth-container">
+  
+  <div class="preview-header mb-xl">
+    <div>
+      <h1 style="margin: 0 0 4px 0; font-size: 28px; font-weight: 700; letter-spacing: -0.5px;">New Domain Setup</h1>
+      <div class="text-small text-muted" style="font-size: 14px;">Configure virtual host routing, DNS zones, and runtime environment.</div>
+    </div>
   </div>
-  <div class="section__body">
 
-    {% if error %}
-    <div class="alert alert--danger mb-lg" id="form-error" role="alert">{{ error }}</div>
-    {% endif %}
+  {% if error %}
+  <div class="alert alert--danger mb-lg" id="form-error" role="alert">{{ error }}</div>
+  {% endif %}
 
-    <form method="post" action="/domains/create" class="form" style="max-width:none;" id="create-domain-form">
-      {% include "partials/csrf_field.html" %}
+  <form method="post" action="/domains/create" id="create-domain-form" class="form-fullwidth">
+    {% include "partials/csrf_field.html" %}
 
-      <div class="form-group mb-lg">
-        <label class="form-label" for="name">Domain Name</label>
-        <input
-          class="form-input{% if error %} form-input--error{% endif %}"
-          type="text"
-          id="name"
-          name="name"
-          value="{{ name or '' }}"
-          placeholder="example.com"
-          autocomplete="off"
-          autocapitalize="none"
-          spellcheck="false"
-          required
-          autofocus
-        >
-        <span class="form-hint">Enter the root domain only (e.g. example.com — not www.example.com)</span>
-        <span class="form-error" id="name-error" style="display:none;"></span>
-      </div>
+    <!-- VERTICAL STEPPER (STRICT MUTUALLY EXCLUSIVE ACCORDIONS) -->
+    <div>
 
-      <!-- Live preview -->
-      <div class="section mb-lg" id="preview-panel" style="display:none;">
-        <div class="section__body d-flex justify-between align-center">
-          <div>
-            <span class="text-small text-muted">Target Hostname</span><br>
-            <strong id="preview-domain"></strong>
+      <!-- STEP 1: DOMAIN HOSTNAME -->
+      <div class="v-step" id="step-wrap-1">
+        <div class="step-header step-header--active" id="head-1" onclick="toggleStep(1)">
+          <div class="step-title-wrap">
+            <span class="step-num">01</span>
+            <span class="step-title">Domain Hostname</span>
           </div>
-          <div class="text-right">
-            <span class="text-small text-muted">Resolving Server IP</span><br>
-            <strong id="preview-ip">{{ server_ip }}</strong>
+          <div class="step-summary">
+            <strong id="sum-val-1" style="color:var(--color-text);">{{ name or 'example.com' }}</strong>
+            <i data-lucide="chevron-down" class="step-toggle-icon" style="width:20px;height:20px;"></i>
+          </div>
+        </div>
+
+        <div class="step-body step-body--open" id="body-1">
+          <div class="form-fullwidth">
+            <div class="form-group mb-xl">
+              <label class="form-label mb-xs" for="name" style="font-weight: 600; font-size: 13px; color: var(--color-muted);">TARGET HOSTNAME</label>
+              <input
+                class="form-input{% if error %} form-input--error{% endif %}"
+                type="text"
+                id="name"
+                name="name"
+                value="{{ name or '' }}"
+                placeholder="example.com (e.g. app.domain.com)"
+                autocomplete="off"
+                autocapitalize="none"
+                spellcheck="false"
+                required
+                autofocus
+                oninput="updateDomainSummary()"
+              >
+              <span class="form-hint mt-xs" style="color: var(--color-muted);">Enter root domain or subdomain without http:// or https:// prefix.</span>
+              <span class="form-error mt-xs text-danger" id="name-error" style="display:none; font-weight:600; font-size:13px;"></span>
+            </div>
+
+            <div class="d-flex justify-end pt-sm">
+              <button type="button" class="btn btn--primary" onclick="openStep(2)" style="padding: 14px 36px; font-weight: 700; font-size: 15px; background: var(--color-accent); color: #000;">Next: Runtime Stack →</button>
+            </div>
           </div>
         </div>
       </div>
 
-      <div class="form-group mb-lg">
-        <label class="form-label">Project Type</label>
-        <div class="settings-choice-grid">
-          <label class="settings-choice {% if project_type != 'dns' %}settings-choice--active{% endif %}" id="choice-static">
-            <input type="radio" name="project_type" value="static" {% if project_type != 'dns' %}checked{% endif %} onchange="updateChoices('static')">
-            <span class="settings-choice__title">Static Site / Template <span class="badge badge--ok">Ready</span></span>
-            <span class="settings-choice__desc">Full web hosting. Creates DNS zone, A record, Nginx vhost, and HTML webroot.</span>
-          </label>
-
-          <label class="settings-choice {% if project_type == 'dns' %}settings-choice--active{% endif %}" id="choice-dns">
-            <input type="radio" name="project_type" value="dns" {% if project_type == 'dns' %}checked{% endif %} onchange="updateChoices('dns')">
-            <span class="settings-choice__title">DNS Manager (DNS Only) <span class="badge badge--ok">Ready</span></span>
-            <span class="settings-choice__desc">DNS zone and A record only. No web server or webroot directory created.</span>
-          </label>
-
-          <div class="settings-choice">
-            <input type="radio" disabled>
-            <span class="settings-choice__title">Python App <span class="badge badge--neutral">Soon</span></span>
-            <span class="settings-choice__desc">WSGI / ASGI apps with automated Uvicorn process management.</span>
+      <!-- STEP 2: RUNTIME STACK (BOXLESS CAROUSEL WITH ALPHA MASK) -->
+      <div class="v-step" id="step-wrap-2">
+        <div class="step-header" id="head-2" onclick="toggleStep(2)">
+          <div class="step-title-wrap">
+            <span class="step-num">02</span>
+            <span class="step-title">Runtime Stack</span>
           </div>
-
-          <div class="settings-choice">
-            <input type="radio" disabled>
-            <span class="settings-choice__title">PHP App <span class="badge badge--neutral">Soon</span></span>
-            <span class="settings-choice__desc">Host WordPress or Laravel with PHP-FPM and FastCGI.</span>
+          <div class="step-summary">
+            <strong id="sum-val-2" style="color:var(--color-accent);">{% if project_type == 'dns' %}DNS Manager Only{% else %}Static Site / HTML{% endif %}</strong>
+            <i data-lucide="chevron-down" class="step-toggle-icon" style="width:20px;height:20px;"></i>
           </div>
+        </div>
 
-          <div class="settings-choice">
-            <input type="radio" disabled>
-            <span class="settings-choice__title">Node.js App <span class="badge badge--neutral">Soon</span></span>
-            <span class="settings-choice__desc">Deploy Express or Next apps with PM2 process manager.</span>
-          </div>
+        <div class="step-body" id="body-2">
+          <div class="form-fullwidth">
+            <div class="d-flex justify-end mb-xs">
+              <span class="badge badge--ok" id="badge-selected" style="font-size: 12px; padding: 4px 12px;">Selected: {% if project_type == 'dns' %}DNS Manager{% else %}Static Site{% endif %}</span>
+            </div>
 
-          <div class="settings-choice">
-            <input type="radio" disabled>
-            <span class="settings-choice__title">Docker Container <span class="badge badge--neutral">Soon</span></span>
-            <span class="settings-choice__desc">Route domain traffic directly to a running Docker container.</span>
+            <!-- CAROUSEL WITH ALPHA MASK FADE AND TRANSPARENT ARROWS -->
+            <div class="carousel-wrapper">
+              
+              <!-- LEFT ARROW ZONE -->
+              <div class="arrow-side-zone arrow-side-zone--left" onclick="scrollTrack(-320)">
+                <i data-lucide="arrow-left" class="pure-arrow-icon" style="width: 26px; height: 26px;"></i>
+              </div>
+
+              <div class="carousel-track" id="track-stack">
+                <!-- Option 1: Static Site -->
+                <label class="stack-item {% if project_type != 'dns' %}stack-item--active{% endif %}" onclick="pickStack('static', 'Static Site / HTML')">
+                  <input type="radio" name="project_type" value="static" {% if project_type != 'dns' %}checked{% endif %}>
+                  <div class="d-flex justify-between align-center" style="width: 100%; gap: 16px;">
+                    <span class="mono-icon"><i class="devicon-html5-plain"></i></span>
+                    <span class="badge badge--ok badge--dot" style="font-size: 11px;">Ready</span>
+                  </div>
+                  <span class="stack-item__title">Static Site / HTML</span>
+                </label>
+
+                <!-- Option 2: DNS Only -->
+                <label class="stack-item {% if project_type == 'dns' %}stack-item--active{% endif %}" onclick="pickStack('dns', 'DNS Manager Only')">
+                  <input type="radio" name="project_type" value="dns" {% if project_type == 'dns' %}checked{% endif %}>
+                  <div class="d-flex justify-between align-center" style="width: 100%; gap: 16px;">
+                    <span class="mono-icon"><i data-lucide="globe"></i></span>
+                    <span class="badge badge--ok badge--dot" style="font-size: 11px;">Ready</span>
+                  </div>
+                  <span class="stack-item__title">DNS Manager Only</span>
+                </label>
+
+                <!-- Option 3: Python App -->
+                <div class="stack-item stack-item--disabled">
+                  <input type="radio" disabled>
+                  <div class="d-flex justify-between align-center" style="width: 100%; gap: 16px;">
+                    <span class="mono-icon"><i class="devicon-python-plain"></i></span>
+                    <span class="badge badge--neutral" style="font-size: 11px;">Soon</span>
+                  </div>
+                  <span class="stack-item__title">Python App (Uvicorn)</span>
+                </div>
+
+                <!-- Option 4: PHP App -->
+                <div class="stack-item stack-item--disabled">
+                  <input type="radio" disabled>
+                  <div class="d-flex justify-between align-center" style="width: 100%; gap: 16px;">
+                    <span class="mono-icon"><i class="devicon-php-plain"></i></span>
+                    <span class="badge badge--neutral" style="font-size: 11px;">Soon</span>
+                  </div>
+                  <span class="stack-item__title">PHP App (FastCGI)</span>
+                </div>
+
+                <!-- Option 5: Node.js App -->
+                <div class="stack-item stack-item--disabled">
+                  <input type="radio" disabled>
+                  <div class="d-flex justify-between align-center" style="width: 100%; gap: 16px;">
+                    <span class="mono-icon"><i class="devicon-nodejs-plain"></i></span>
+                    <span class="badge badge--neutral" style="font-size: 11px;">Soon</span>
+                  </div>
+                  <span class="stack-item__title">Node.js App (PM2)</span>
+                </div>
+
+                <!-- Option 6: Docker Container -->
+                <div class="stack-item stack-item--disabled">
+                  <input type="radio" disabled>
+                  <div class="d-flex justify-between align-center" style="width: 100%; gap: 16px;">
+                    <span class="mono-icon"><i class="devicon-docker-plain"></i></span>
+                    <span class="badge badge--neutral" style="font-size: 11px;">Soon</span>
+                  </div>
+                  <span class="stack-item__title">Docker Container</span>
+                </div>
+              </div>
+
+              <!-- RIGHT ARROW ZONE -->
+              <div class="arrow-side-zone arrow-side-zone--right" onclick="scrollTrack(320)">
+                <i data-lucide="arrow-right" class="pure-arrow-icon" style="width: 26px; height: 26px;"></i>
+              </div>
+
+            </div>
+
+            <!-- Dynamic stack description -->
+            <div class="mb-xl text-muted" id="stack-desc" style="font-size: 14px;">
+              {% if project_type == 'dns' %}DNS zone & A record only. No Nginx vhost.{% else %}Nginx HTTP vhost & webroot directory created.{% endif %}
+            </div>
+
+            <div class="d-flex justify-between align-center pt-sm">
+              <button type="button" class="btn btn--secondary" onclick="openStep(1)" style="padding: 14px 28px;">← Hostname</button>
+              <button type="button" class="btn btn--primary" onclick="openStep(3)" style="padding: 14px 36px; font-weight: 700; font-size: 15px; background: var(--color-accent); color: #000;">Next: Review & Deploy →</button>
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- Dynamic Workflow Explanation -->
-      <div class="alert alert--info mb-lg" id="step-info-static" {% if project_type == 'dns' %}style="display:none;"{% endif %}>
-        <strong>Static Site Workflow:</strong> Creates DNS zone, A record pointing to <strong>{{ server_ip }}</strong>, webroot directory, and Nginx HTTP vhost.
+      <!-- STEP 3: REVIEW & PROVISION (100% FULL WIDTH TABLE) -->
+      <div class="v-step" id="step-wrap-3">
+        <div class="step-header" id="head-3" onclick="toggleStep(3)">
+          <div class="step-title-wrap">
+            <span class="step-num">03</span>
+            <span class="step-title">Review & Provision</span>
+          </div>
+          <div class="step-summary">
+            <span class="badge badge--neutral" id="sum-val-3" style="font-size: 12px;">Pending Deployment</span>
+            <i data-lucide="chevron-down" class="step-toggle-icon" style="width:20px;height:20px;"></i>
+          </div>
+        </div>
+
+        <div class="step-body" id="body-3">
+          <div class="form-fullwidth">
+            
+            <div class="summary-table-fullwidth">
+              <div class="summary-row">
+                <span class="text-muted">Hostname</span>
+                <strong id="rev-domain" style="color:var(--color-text);">{{ name or 'example.com' }}</strong>
+              </div>
+              <div class="summary-row">
+                <span class="text-muted">Runtime</span>
+                <strong id="rev-stack" style="color:var(--color-accent);">{% if project_type == 'dns' %}DNS Manager Only{% else %}Static Site / HTML{% endif %}</strong>
+              </div>
+              <div class="summary-row">
+                <span class="text-muted">IP Address</span>
+                <span>{{ server_ip or 'Resolving...' }} (A Record)</span>
+              </div>
+              <div class="summary-row" id="rev-nginx-row" {% if project_type == 'dns' %}style="display:none;"{% endif %}>
+                <span class="text-muted">Web Server</span>
+                <span>Nginx Enabled</span>
+              </div>
+              <div class="summary-row">
+                <span class="text-muted">SSL Certificate</span>
+                <span id="rev-ssl-status" style="color:var(--color-text);">{% if project_type == 'dns' %}Disabled (DNS Only){% else %}Let's Encrypt Ready{% endif %}</span>
+              </div>
+            </div>
+
+            <div class="d-flex justify-between align-center pt-sm">
+              <button type="button" class="btn btn--secondary" onclick="openStep(2)" style="padding: 14px 28px;">← Runtime</button>
+              <button type="submit" class="btn btn--primary" id="btn-submit" style="padding: 16px 44px; font-weight: 700; font-size: 16px; background: var(--color-accent); color: #000;">🚀 Deploy Domain Now</button>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div class="alert alert--info mb-lg" id="step-info-dns" {% if project_type != 'dns' %}style="display:none;"{% endif %}>
-        <strong>DNS Only Workflow:</strong> Creates DNS zone and A record pointing to <strong>{{ server_ip }}</strong>. No web server or webroot is created.
-      </div>
+    </div>
+  </form>
 
-      <div class="form-actions">
-        <button type="submit" class="btn btn--primary" id="btn-submit">Create Domain</button>
-        <a href="/domains/" class="btn btn--secondary" id="btn-cancel">Cancel</a>
-      </div>
-
-    </form>
-  </div>
 </div>
 
 {% endblock %}
@@ -119,50 +236,109 @@
 {% block scripts %}
 <script>
 const input = document.getElementById('name');
-const preview = document.getElementById('preview-panel');
-const previewDomain = document.getElementById('preview-domain');
 const nameError = document.getElementById('name-error');
 const form = document.getElementById('create-domain-form');
 const submitBtn = document.getElementById('btn-submit');
 
 const domainRe = /^(?!-)([A-Za-z0-9-]{1,63}\.)+[A-Za-z]{2,}$/;
 
-input.addEventListener('input', () => {
-  const val = input.value.trim().toLowerCase();
-  if (val.length > 2) {
-    preview.style.display = 'block';
-    previewDomain.textContent = val;
-  } else {
-    preview.style.display = 'none';
-  }
+const stackDescs = {
+  'static': 'Nginx HTTP vhost & webroot directory created.',
+  'dns': 'DNS zone & A record only. No Nginx vhost.'
+};
 
-  if (val.length > 0 && !domainRe.test(val)) {
-    nameError.textContent = 'Invalid domain format';
+function scrollTrack(amount) {
+  const track = document.getElementById('track-stack');
+  if (track) track.scrollBy({ left: amount, behavior: 'smooth' });
+}
+
+function updateDomainSummary() {
+  const val = input.value.trim().toLowerCase() || 'example.com';
+  document.getElementById('sum-val-1').innerText = val;
+  document.getElementById('rev-domain').innerText = val;
+
+  if (val.length > 0 && !domainRe.test(val) && val !== 'example.com') {
+    nameError.textContent = 'Invalid domain format (e.g. example.com or app.domain.com)';
     nameError.style.display = 'block';
     input.classList.add('form-input--error');
   } else {
     nameError.style.display = 'none';
     input.classList.remove('form-input--error');
   }
-});
+}
 
-function updateChoices(type) {
-  document.getElementById('choice-static').classList.toggle('settings-choice--active', type === 'static');
-  document.getElementById('choice-dns').classList.toggle('settings-choice--active', type === 'dns');
-  document.getElementById('step-info-static').style.display = type === 'static' ? 'block' : 'none';
-  document.getElementById('step-info-dns').style.display = type === 'dns' ? 'block' : 'none';
+function pickStack(type, title) {
+  document.getElementById('badge-selected').innerText = 'Selected: ' + (type === 'dns' ? 'DNS Manager' : 'Static Site');
+  document.getElementById('sum-val-2').innerText = title;
+  document.getElementById('rev-stack').innerText = title;
+  document.getElementById('stack-desc').innerText = stackDescs[type] || 'Runtime configured.';
+
+  if (type === 'dns') {
+    document.getElementById('rev-nginx-row').style.display = 'none';
+    document.getElementById('rev-ssl-status').innerText = 'Disabled (DNS Only)';
+    document.getElementById('rev-ssl-status').style.color = 'var(--color-muted)';
+  } else {
+    document.getElementById('rev-nginx-row').style.display = 'flex';
+    document.getElementById('rev-ssl-status').innerText = "Let's Encrypt Ready";
+    document.getElementById('rev-ssl-status').style.color = 'var(--color-text)';
+  }
+
+  const items = document.querySelectorAll('#track-stack .stack-item');
+  items.forEach(c => c.classList.remove('stack-item--active'));
+  if (event && event.currentTarget) {
+    event.currentTarget.classList.add('stack-item--active');
+    const radio = event.currentTarget.querySelector('input[type="radio"]');
+    if (radio) radio.checked = true;
+  }
+}
+
+/* STRICT MUTUALLY EXCLUSIVE ACCORDIONS (ONLY 1 OPEN AT A TIME) */
+function openStep(stepNum) {
+  for (let i = 1; i <= 3; i++) {
+    const head = document.getElementById('head-' + i);
+    const body = document.getElementById('body-' + i);
+    if (!head || !body) continue;
+    if (i === stepNum) {
+      head.classList.add('step-header--active');
+      body.classList.add('step-body--open');
+    } else {
+      head.classList.remove('step-header--active');
+      body.classList.remove('step-body--open');
+    }
+  }
+}
+
+function toggleStep(stepNum) {
+  const body = document.getElementById('body-' + stepNum);
+  if (!body) return;
+  const isOpen = body.classList.contains('step-body--open');
+
+  if (isOpen) {
+    document.getElementById('head-' + stepNum).classList.remove('step-header--active');
+    body.classList.remove('step-body--open');
+  } else {
+    openStep(stepNum);
+  }
 }
 
 form.addEventListener('submit', (e) => {
-  const val = input.value.trim();
+  const val = input.value.trim().toLowerCase();
   if (!domainRe.test(val)) {
     e.preventDefault();
-    nameError.textContent = 'Invalid domain format';
+    openStep(1);
+    nameError.textContent = 'Please enter a valid domain format (e.g. example.com)';
     nameError.style.display = 'block';
+    input.focus();
     return;
   }
-  submitBtn.textContent = 'Creating...';
+  submitBtn.textContent = 'Deploying Domain...';
   submitBtn.disabled = true;
+});
+
+// Initialize icons and initial summary on load
+document.addEventListener('DOMContentLoaded', () => {
+  updateDomainSummary();
+  if (typeof lucide !== 'undefined') lucide.createIcons();
 });
 </script>
 {% endblock %}

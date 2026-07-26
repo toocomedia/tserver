@@ -1,0 +1,263 @@
+/* ==========================================================================
+   STEPPER & CAROUSEL COMPONENT (stepper.css)
+   Strict minimal architecture: 0px radius, 0px blur, 0px shadow, pure alpha masking
+   ========================================================================== */
+
+/* Monochrome stack icon style */
+.mono-icon {
+  font-size: 28px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  color: var(--color-text, #F0F0EC);
+  opacity: 0.75;
+  transition: opacity 0.15s ease, color 0.15s ease, transform 0.15s ease;
+}
+
+/* =========================================================
+   VERTICAL STEPPER (STRICT MUTUALLY EXCLUSIVE ACCORDIONS)
+   ========================================================= */
+.v-step {
+  border-bottom: 1px solid var(--color-line, #222422);
+  user-select: none;
+}
+.v-step:first-child {
+  border-top: 1px solid var(--color-line, #222422);
+}
+
+/* STEP HEADER */
+.step-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px 0;
+  cursor: pointer;
+  background: transparent;
+  transition: color 0.15s ease;
+}
+.step-header:hover .step-title {
+  color: var(--color-accent, #C7F464);
+}
+.step-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+.step-num {
+  font-family: monospace, system-ui !important;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-muted, #888A85);
+  letter-spacing: 1px;
+}
+.step-header--active .step-num {
+  color: var(--color-accent, #C7F464);
+}
+.step-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--color-text, #F0F0EC);
+  letter-spacing: -0.4px;
+  transition: color 0.15s ease;
+}
+.step-header--active .step-title {
+  color: var(--color-text, #F0F0EC);
+}
+.step-summary {
+  font-size: 15px;
+  color: var(--color-muted, #888A85);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.step-toggle-icon {
+  color: var(--color-muted, #888A85);
+  transition: transform 0.15s ease;
+}
+.step-header--active .step-toggle-icon {
+  transform: rotate(180deg);
+  color: var(--color-accent, #C7F464);
+}
+
+/* STEP CONTENT */
+.step-body {
+  display: none;
+  opacity: 0;
+  padding: 8px 0 40px 0;
+  transition: opacity 0.15s ease;
+}
+.step-body--open {
+  display: block;
+  opacity: 1;
+}
+
+/* =========================================================
+   100% FULL WIDTH FORM STRUCTURE IN STEP 1
+   ========================================================= */
+.form-fullwidth {
+  width: 100%;
+}
+.form-fullwidth input[type="text"] {
+  width: 100% !important;
+  font-size: 18px;
+  padding: 16px 20px;
+  background: transparent !important;
+  border: 1px solid var(--color-line, #333533) !important;
+  color: var(--color-text, #F0F0EC);
+  transition: border-color 0.15s ease;
+  border-radius: 0 !important;
+}
+.form-fullwidth input[type="text"]:focus {
+  border-color: var(--color-accent, #C7F464) !important;
+  outline: none;
+}
+
+/* =========================================================
+   CAROUSEL WITH PURE CSS ALPHA MASK FADE (ZERO COLOR MISMATCH!)
+   ========================================================= */
+.carousel-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 140px;
+  margin: 16px 0;
+  overflow: hidden;
+}
+.carousel-track {
+  display: flex;
+  gap: 40px;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  padding: 0 90px; /* Space for the 90px side arrow zones */
+  height: 100%;
+  align-items: center;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  width: 100%;
+  /* ALPHA MASK: Fades out the opacity of scrolling items at the left 90px and right 90px edges! */
+  /* This guarantees 100% identical background match in EVERY color theme without painting any color! */
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    black 90px,
+    black calc(100% - 90px),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    black 90px,
+    black calc(100% - 90px),
+    transparent 100%
+  );
+}
+.carousel-track::-webkit-scrollbar { display: none; }
+
+/* ARROW ZONES: Pure transparent background! Zero color mismatch! */
+.arrow-side-zone {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 20;
+  width: 90px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  background: transparent !important; /* NO COLORED GRADIENT AT ALL! Uses exact underlying background! */
+  transition: padding 0.15s ease;
+}
+.arrow-side-zone--left {
+  left: 0;
+  justify-content: flex-start;
+  padding-left: 12px;
+}
+.arrow-side-zone--right {
+  right: 0;
+  justify-content: flex-end;
+  padding-right: 12px;
+}
+.arrow-side-zone--left:hover { padding-left: 6px; }
+.arrow-side-zone--right:hover { padding-right: 6px; }
+
+/* Pure vector arrow icon */
+.pure-arrow-icon {
+  color: var(--color-text, #F0F0EC);
+  opacity: 0.85;
+  transition: color 0.15s ease, opacity 0.15s ease, transform 0.15s ease;
+}
+.arrow-side-zone:hover .pure-arrow-icon {
+  color: var(--color-accent, #C7F464);
+  opacity: 1;
+  transform: scale(1.18);
+}
+
+/* BOXLESS STACK ITEMS */
+.stack-item {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 12px;
+  height: 110px;
+  padding: 12px 20px;
+  cursor: pointer;
+  user-select: none;
+  border-bottom: 2px solid transparent;
+  transition: border-color 0.15s ease, opacity 0.15s ease, background 0.15s ease;
+}
+.stack-item:hover:not(.stack-item--disabled) {
+  opacity: 1;
+  background: rgba(128, 128, 128, 0.03);
+}
+.stack-item--active {
+  border-bottom-color: var(--color-accent, #C7F464) !important;
+  background: transparent !important;
+}
+.stack-item--active .mono-icon {
+  color: var(--color-accent, #C7F464);
+  opacity: 1;
+}
+.stack-item--active .stack-item__title {
+  color: var(--color-text, #F0F0EC);
+  font-weight: 700;
+}
+.stack-item--disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+.stack-item__title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-muted, #888A85);
+  white-space: nowrap;
+  transition: color 0.15s ease;
+}
+.stack-item input[type="radio"] { position: absolute; opacity: 0; pointer-events: none; }
+
+/* STEP 3 REVIEW: 100% FULL WIDTH WITH CLEAN DIVIDER LINES */
+.summary-table-fullwidth {
+  width: 100%;
+  margin-bottom: 36px;
+  border-top: 1px solid var(--color-line, #222422);
+}
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 0;
+  font-size: 16px;
+  border-bottom: 1px solid var(--color-line, #222422);
+}
+
+@media (max-width: 700px) {
+  .carousel-track {
+    padding: 0 50px;
+    -webkit-mask-image: linear-gradient(to right, transparent 0%, black 50px, black calc(100% - 50px), transparent 100%);
+    mask-image: linear-gradient(to right, transparent 0%, black 50px, black calc(100% - 50px), transparent 100%);
+  }
+  .arrow-side-zone { width: 50px; }
+}

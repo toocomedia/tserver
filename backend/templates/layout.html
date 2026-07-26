@@ -23,7 +23,11 @@
   <link rel="stylesheet" href="/static/css/components/sections.css">
   <link rel="stylesheet" href="/static/css/components/modals.css">
   <link rel="stylesheet" href="/static/css/components/alerts.css">
+  <link rel="stylesheet" href="/static/css/components/stepper.css">
   <link rel="stylesheet" href="/static/css/utils.css">
+  <!-- Devicon & Lucide Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/devicon.min.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
 
   <script>
     var theme = localStorage.getItem('theme') || 'system';
@@ -175,6 +179,13 @@ document.addEventListener("DOMContentLoaded", function() {
     });
   });
 });
+</script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    if (typeof lucide !== 'undefined') {
+      lucide.createIcons();
+    }
+  });
 </script>
 {% block scripts %}{% endblock %}
 

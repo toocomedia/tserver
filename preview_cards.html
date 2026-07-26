@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Alpha Mask Side Fade Carousel — SRV Panel</title>
+
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- CSS (Relative paths to backend/static/css) -->
+  <link rel="stylesheet" href="backend/static/css/main.css">
+  <link rel="stylesheet" href="backend/static/css/layout.css">
+  <link rel="stylesheet" href="backend/static/css/components/cards.css">
+  <link rel="stylesheet" href="backend/static/css/components/info.css">
+  <link rel="stylesheet" href="backend/static/css/components/buttons.css">
+  <link rel="stylesheet" href="backend/static/css/components/tables.css">
+  <link rel="stylesheet" href="backend/static/css/components/badges.css">
+  <link rel="stylesheet" href="backend/static/css/components/forms.css">
+  <link rel="stylesheet" href="backend/static/css/components/sections.css">
+  <link rel="stylesheet" href="backend/static/css/components/modals.css">
+  <link rel="stylesheet" href="backend/static/css/components/alerts.css">
+  <link rel="stylesheet" href="backend/static/css/utils.css">
+
+  <!-- Devicon CDN for tech logos -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/devicon.min.css">
+  <!-- Lucide vector icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    /* STRICT RULES: ZERO RADIUS, ZERO BLUR, ZERO SHADOWS, INTER FONT */
+    * {
+      border-radius: 0 !important;
+      box-shadow: none !important;
+      backdrop-filter: none !important;
+      font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+    }
+
+    body {
+      background: var(--color-bg, #0B0C0B);
+      color: var(--color-text, #F0F0EC);
+      padding: 48px 32px;
+    }
+
+    .fullwidth-container {
+      width: 100%;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .preview-header {
+      margin-bottom: 36px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--color-line, #222422);
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+    }
+
+    /* Monochrome stack icon style */
+    .mono-icon {
+      font-size: 28px;
+      line-height: 1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      color: var(--color-text, #F0F0EC);
+      opacity: 0.75;
+      transition: opacity 0.15s ease, color 0.15s ease, transform 0.15s ease;
+    }
+
+    /* =========================================================
+       VERTICAL STEPPER (STRICT MUTUALLY EXCLUSIVE ACCORDIONS)
+       ========================================================= */
+    .v-step {
+      border-bottom: 1px solid var(--color-line, #222422);
+      user-select: none;
+    }
+    .v-step:first-child {
+      border-top: 1px solid var(--color-line, #222422);
+    }
+
+    /* STEP HEADER */
+    .step-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 24px 0;
+      cursor: pointer;
+      background: transparent;
+      transition: color 0.15s ease;
+    }
+    .step-header:hover .step-title {
+      color: var(--color-accent, #C7F464);
+    }
+    .step-title-wrap {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+    .step-num {
+      font-family: monospace !important;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--color-muted, #888A85);
+      letter-spacing: 1px;
+    }
+    .step-header--active .step-num {
+      color: var(--color-accent, #C7F464);
+    }
+    .step-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--color-text, #F0F0EC);
+      letter-spacing: -0.4px;
+      transition: color 0.15s ease;
+    }
+    .step-header--active .step-title {
+      color: var(--color-text, #F0F0EC);
+    }
+    .step-summary {
+      font-size: 15px;
+      color: var(--color-muted, #888A85);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .step-toggle-icon {
+      color: var(--color-muted, #888A85);
+      transition: transform 0.15s ease;
+    }
+    .step-header--active .step-toggle-icon {
+      transform: rotate(180deg);
+      color: var(--color-accent, #C7F464);
+    }
+
+    /* STEP CONTENT */
+    .step-body {
+      display: none;
+      opacity: 0;
+      padding: 8px 0 40px 0;
+      transition: opacity 0.15s ease;
+    }
+    .step-body--open {
+      display: block;
+      opacity: 1;
+    }
+
+    /* =========================================================
+       100% FULL WIDTH FORM STRUCTURE IN STEP 1
+       ========================================================= */
+    .form-fullwidth {
+      width: 100%;
+    }
+    .form-fullwidth input[type="text"] {
+      width: 100% !important;
+      font-size: 18px;
+      padding: 16px 20px;
+      background: transparent !important;
+      border: 1px solid var(--color-line, #333533) !important;
+      color: var(--color-text, #F0F0EC);
+      transition: border-color 0.15s ease;
+    }
+    .form-fullwidth input[type="text"]:focus {
+      border-color: var(--color-accent, #C7F464) !important;
+      outline: none;
+    }
+
+    /* =========================================================
+       CAROUSEL WITH PURE CSS ALPHA MASK FADE (ZERO COLOR MISMATCH!)
+       ========================================================= */
+    .carousel-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+      width: 100%;
+      height: 140px;
+      margin: 16px 0;
+      overflow: hidden;
+    }
+    .carousel-track {
+      display: flex;
+      gap: 40px;
+      overflow-x: auto;
+      scroll-behavior: smooth;
+      padding: 0 90px; /* Space for the 90px side arrow zones */
+      height: 100%;
+      align-items: center;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+      width: 100%;
+      /* ALPHA MASK: Fades out the opacity of scrolling items at the left 90px and right 90px edges! */
+      /* This guarantees 100% identical background match in EVERY color theme without painting any color! */
+      -webkit-mask-image: linear-gradient(
+        to right,
+        transparent 0%,
+        black 90px,
+        black calc(100% - 90px),
+        transparent 100%
+      );
+      mask-image: linear-gradient(
+        to right,
+        transparent 0%,
+        black 90px,
+        black calc(100% - 90px),
+        transparent 100%
+      );
+    }
+    .carousel-track::-webkit-scrollbar { display: none; }
+
+    /* ARROW ZONES: Pure transparent background! Zero color mismatch! */
+    .arrow-side-zone {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      z-index: 20;
+      width: 90px;
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+      background: transparent !important; /* NO COLORED GRADIENT AT ALL! Uses exact underlying background! */
+      transition: padding 0.15s ease;
+    }
+    .arrow-side-zone--left {
+      left: 0;
+      justify-content: flex-start;
+      padding-left: 12px;
+    }
+    .arrow-side-zone--right {
+      right: 0;
+      justify-content: flex-end;
+      padding-right: 12px;
+    }
+    .arrow-side-zone--left:hover { padding-left: 6px; }
+    .arrow-side-zone--right:hover { padding-right: 6px; }
+
+    /* Pure vector arrow icon */
+    .pure-arrow-icon {
+      color: var(--color-text, #F0F0EC);
+      opacity: 0.85;
+      transition: color 0.15s ease, opacity 0.15s ease, transform 0.15s ease;
+    }
+    .arrow-side-zone:hover .pure-arrow-icon {
+      color: var(--color-accent, #C7F464);
+      opacity: 1;
+      transform: scale(1.18);
+    }
+
+    /* BOXLESS STACK ITEMS */
+    .stack-item {
+      flex: 0 0 auto;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 12px;
+      height: 110px;
+      padding: 12px 20px;
+      cursor: pointer;
+      user-select: none;
+      border-bottom: 2px solid transparent;
+      transition: border-color 0.15s ease, opacity 0.15s ease, background 0.15s ease;
+    }
+    .stack-item:hover:not(.stack-item--disabled) {
+      opacity: 1;
+      background: rgba(128, 128, 128, 0.03);
+    }
+    .stack-item--active {
+      border-bottom-color: var(--color-accent, #C7F464) !important;
+      background: transparent !important;
+    }
+    .stack-item--active .mono-icon {
+      color: var(--color-accent, #C7F464);
+      opacity: 1;
+    }
+    .stack-item--active .stack-item__title {
+      color: var(--color-text, #F0F0EC);
+      font-weight: 700;
+    }
+    .stack-item--disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+    .stack-item__title {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--color-muted, #888A85);
+      white-space: nowrap;
+      transition: color 0.15s ease;
+    }
+    .stack-item input[type="radio"] { position: absolute; opacity: 0; pointer-events: none; }
+
+    /* STEP 3 REVIEW: 100% FULL WIDTH WITH CLEAN DIVIDER LINES */
+    .summary-table-fullwidth {
+      width: 100%;
+      margin-bottom: 36px;
+      border-top: 1px solid var(--color-line, #222422);
+    }
+    .summary-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 0;
+      font-size: 16px;
+      border-bottom: 1px solid var(--color-line, #222422);
+    }
+  </style>
+</head>
+<body>
+
+<div class="fullwidth-container">
+
+  <div class="preview-header">
+    <div>
+      <h1 style="margin: 0 0 4px 0; font-size: 28px; font-weight: 700; letter-spacing: -0.5px;">Add Domain</h1>
+      <div class="text-small text-muted" style="font-size: 14px;">Pure CSS Alpha Masking (-webkit-mask-image). 0% Color mismatch in any theme. Strict mutually exclusive toggles.</div>
+    </div>
+    <button type="button" class="btn btn--secondary btn--sm" onclick="toggleTheme()">Toggle Theme</button>
+  </div>
+
+  <!-- VERTICAL STEPPER -->
+  <div>
+
+    <!-- STEP 1 ACCORDION -->
+    <div class="v-step" id="step-wrap-1">
+      <div class="step-header step-header--active" id="head-1" onclick="toggleStep(1)">
+        <div class="step-title-wrap">
+          <span class="step-num">01</span>
+          <span class="step-title">Domain Hostname</span>
+        </div>
+        <div class="step-summary">
+          <strong id="sum-val-1" style="color:var(--color-text);">example.com</strong>
+          <i data-lucide="chevron-down" class="step-toggle-icon" style="width:20px;height:20px;"></i>
+        </div>
+      </div>
+
+      <div class="step-body step-body--open" id="body-1">
+        <div class="form-fullwidth">
+          <div class="form-group mb-xl">
+            <label class="form-label mb-xs" style="font-weight: 600; font-size: 13px; color: var(--color-muted, #888A85);">TARGET HOSTNAME</label>
+            <input type="text" class="form-input" id="input-domain" value="example.com" placeholder="example.com (e.g. app.domain.com)" oninput="updateDomainSummary()">
+          </div>
+
+          <div class="d-flex justify-end pt-sm">
+            <button type="button" class="btn btn--primary" onclick="openStep(2)" style="padding: 14px 36px; font-weight: 700; font-size: 15px; background: var(--color-accent, #C7F464); color: #000;">Next: Runtime Stack →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2 ACCORDION (ALPHA MASK SIDE FADE WITH PURE TRANSPARENT ARROW ZONES!) -->
+    <div class="v-step" id="step-wrap-2">
+      <div class="step-header" id="head-2" onclick="toggleStep(2)">
+        <div class="step-title-wrap">
+          <span class="step-num">02</span>
+          <span class="step-title">Runtime Stack</span>
+        </div>
+        <div class="step-summary">
+          <strong id="sum-val-2" style="color:var(--color-accent, #C7F464);">Static Site / HTML</strong>
+          <i data-lucide="chevron-down" class="step-toggle-icon" style="width:20px;height:20px;"></i>
+        </div>
+      </div>
+
+      <div class="step-body" id="body-2">
+        <div class="form-fullwidth">
+          <div class="d-flex justify-end mb-xs">
+            <span class="badge badge--ok" id="badge-selected" style="font-size: 12px; padding: 4px 12px;">Selected: Static Site</span>
+          </div>
+
+          <!-- CAROUSEL WITH ALPHA MASK (ZERO COLOR OVERLAY!) -->
+          <div class="carousel-wrapper">
+            
+            <!-- LEFT 90px ARROW ZONE (PURE TRANSPARENT!) -->
+            <div class="arrow-side-zone arrow-side-zone--left" onclick="scrollTrack(-320)">
+              <i data-lucide="arrow-left" class="pure-arrow-icon" style="width: 26px; height: 26px;"></i>
+            </div>
+
+            <div class="carousel-track" id="track-stack">
+              <!-- Item 1 -->
+              <label class="stack-item stack-item--active" onclick="pickStack('static', 'Static Site / HTML')">
+                <input type="radio" name="st" checked>
+                <div class="d-flex justify-between align-center" style="width: 100%; gap: 16px;">
+                  <span class="mono-icon"><i class="devicon-html5-plain"></i></span>
+                  <span class="badge badge--ok badge--dot" style="font-size: 11px;">Ready</span>
+                </div>
+                <span class="stack-item__title">Static Site / HTML</span>
+              </label>
+
+              <!-- Item 2 -->
+              <label class="stack-item" onclick="pickStack('dns', 'DNS Manager Only')">
+                <input type="radio" name="st">
+                <div class="d-flex justify-between align-center" style="width: 100%; gap: 16px;">
+                  <span class="mono-icon"><i data-lucide="globe"></i></span>
+                  <span class="badge badge--ok badge--dot" style="font-size: 11px;">Ready</span>
+                </div>
+                <span class="stack-item__title">DNS Manager Only</span>
+              </label>
+
+              <!-- Item 3 -->
+              <div class="stack-item stack-item--disabled">
+                <input type="radio" disabled>
+                <div class="d-flex justify-between align-center" style="width: 100%; gap: 16px;">
+                  <span class="mono-icon"><i class="devicon-python-plain"></i></span>
+                  <span class="badge badge--neutral" style="font-size: 11px;">Soon</span>
+                </div>
+                <span class="stack-item__title">Python App (Uvicorn)</span>
+              </div>
+
+              <!-- Item 4 -->
+              <div class="stack-item stack-item--disabled">
+                <input type="radio" disabled>
+                <div class="d-flex justify-between align-center" style="width: 100%; gap: 16px;">
+                  <span class="mono-icon"><i class="devicon-php-plain"></i></span>
+                  <span class="badge badge--neutral" style="font-size: 11px;">Soon</span>
+                </div>
+                <span class="stack-item__title">PHP App (FastCGI)</span>
+              </div>
+
+              <!-- Item 5 -->
+              <div class="stack-item stack-item--disabled">
+                <input type="radio" disabled>
+                <div class="d-flex justify-between align-center" style="width: 100%; gap: 16px;">
+                  <span class="mono-icon"><i class="devicon-nodejs-plain"></i></span>
+                  <span class="badge badge--neutral" style="font-size: 11px;">Soon</span>
+                </div>
+                <span class="stack-item__title">Node.js App (PM2)</span>
+              </div>
+
+              <!-- Item 6 -->
+              <div class="stack-item stack-item--disabled">
+                <input type="radio" disabled>
+                <div class="d-flex justify-between align-center" style="width: 100%; gap: 16px;">
+                  <span class="mono-icon"><i class="devicon-docker-plain"></i></span>
+                  <span class="badge badge--neutral" style="font-size: 11px;">Soon</span>
+                </div>
+                <span class="stack-item__title">Docker Container</span>
+              </div>
+            </div>
+
+            <!-- RIGHT 90px ARROW ZONE (PURE TRANSPARENT!) -->
+            <div class="arrow-side-zone arrow-side-zone--right" onclick="scrollTrack(320)">
+              <i data-lucide="arrow-right" class="pure-arrow-icon" style="width: 26px; height: 26px;"></i>
+            </div>
+
+          </div>
+
+          <div class="mb-xl text-muted" id="stack-desc" style="font-size: 14px;">
+            Nginx HTTP vhost & webroot directory created.
+          </div>
+
+          <div class="d-flex justify-between align-center pt-sm">
+            <button type="button" class="btn btn--secondary" onclick="openStep(1)" style="padding: 14px 28px;">← Hostname</button>
+            <button type="button" class="btn btn--primary" onclick="openStep(3)" style="padding: 14px 36px; font-weight: 700; font-size: 15px; background: var(--color-accent, #C7F464); color: #000;">Next: Review & Deploy →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3 ACCORDION (100% FULL WIDTH WITH CLEAN DIVIDER LINES) -->
+    <div class="v-step" id="step-wrap-3">
+      <div class="step-header" id="head-3" onclick="toggleStep(3)">
+        <div class="step-title-wrap">
+          <span class="step-num">03</span>
+          <span class="step-title">Review & Provision</span>
+        </div>
+        <div class="step-summary">
+          <span class="badge badge--neutral" id="sum-val-3" style="font-size: 12px;">Pending Deployment</span>
+          <i data-lucide="chevron-down" class="step-toggle-icon" style="width:20px;height:20px;"></i>
+        </div>
+      </div>
+
+      <div class="step-body" id="body-3">
+        <div class="form-fullwidth">
+          
+          <!-- 100% FULL WIDTH SUMMARY TABLE -->
+          <div class="summary-table-fullwidth">
+            <div class="summary-row">
+              <span class="text-muted">Hostname</span>
+              <strong id="rev-domain" style="color:var(--color-text, #F0F0EC);">example.com</strong>
+            </div>
+            <div class="summary-row">
+              <span class="text-muted">Runtime</span>
+              <strong id="rev-stack" style="color:var(--color-accent, #C7F464);">Static Site / HTML</strong>
+            </div>
+            <div class="summary-row">
+              <span class="text-muted">IP Address</span>
+              <span>192.168.1.50 (A Record)</span>
+            </div>
+            <div class="summary-row" id="rev-nginx-row">
+              <span class="text-muted">Web Server</span>
+              <span>Nginx Enabled</span>
+            </div>
+            <div class="summary-row">
+              <span class="text-muted">SSL Certificate</span>
+              <span id="rev-ssl-status" style="color:var(--color-text, #F0F0EC);">Let's Encrypt Ready</span>
+            </div>
+          </div>
+
+          <div class="d-flex justify-between align-center pt-sm">
+            <button type="button" class="btn btn--secondary" onclick="openStep(2)" style="padding: 14px 28px;">← Runtime</button>
+            <button type="button" class="btn btn--primary" onclick="alert('🚀 Provisioning Complete! Domain deployed.');" style="padding: 16px 44px; font-weight: 700; font-size: 16px; background: var(--color-accent, #C7F464); color: #000;">🚀 Deploy Domain Now</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+lucide.createIcons();
+
+let currentStackType = 'static';
+let currentStackTitle = 'Static Site / HTML';
+
+const stackDescs = {
+  'static': 'Nginx HTTP vhost & webroot directory created.',
+  'dns': 'DNS zone & A record only. No Nginx vhost.'
+};
+
+function scrollTrack(amount) {
+  document.getElementById('track-stack').scrollBy({ left: amount, behavior: 'smooth' });
+}
+
+function updateDomainSummary() {
+  const val = document.getElementById('input-domain').value || 'example.com';
+  document.getElementById('sum-val-1').innerText = val;
+  document.getElementById('lbl-domain-2').innerText = val;
+  document.getElementById('rev-domain').innerText = val;
+}
+
+function pickStack(type, title) {
+  currentStackType = type;
+  currentStackTitle = title;
+  document.getElementById('badge-selected').innerText = 'Selected: ' + title;
+  document.getElementById('sum-val-2').innerText = title;
+  document.getElementById('rev-stack').innerText = title;
+  document.getElementById('stack-desc').innerText = stackDescs[type] || 'Runtime configured.';
+
+  if (type === 'dns') {
+    document.getElementById('rev-nginx-row').style.display = 'none';
+    document.getElementById('rev-ssl-status').innerText = 'Disabled (DNS Only)';
+    document.getElementById('rev-ssl-status').style.color = 'var(--color-muted, #888A85)';
+  } else {
+    document.getElementById('rev-nginx-row').style.display = 'flex';
+    document.getElementById('rev-ssl-status').innerText = "Let's Encrypt Ready";
+    document.getElementById('rev-ssl-status').style.color = 'var(--color-text, #F0F0EC)';
+  }
+
+  const items = document.querySelectorAll('#track-stack .stack-item');
+  items.forEach(c => c.classList.remove('stack-item--active'));
+  event.currentTarget.classList.add('stack-item--active');
+  event.currentTarget.querySelector('input[type="radio"]').checked = true;
+}
+
+/* STRICT MUTUALLY EXCLUSIVE ACCORDIONS */
+function openStep(stepNum) {
+  for (let i = 1; i <= 3; i++) {
+    const head = document.getElementById('head-' + i);
+    const body = document.getElementById('body-' + i);
+    if (i === stepNum) {
+      head.classList.add('step-header--active');
+      body.classList.add('step-body--open');
+    } else {
+      head.classList.remove('step-header--active');
+      body.classList.remove('step-body--open');
+    }
+  }
+}
+
+function toggleStep(stepNum) {
+  const body = document.getElementById('body-' + stepNum);
+  const isOpen = body.classList.contains('step-body--open');
+
+  if (isOpen) {
+    document.getElementById('head-' + stepNum).classList.remove('step-header--active');
+    body.classList.remove('step-body--open');
+  } else {
+    openStep(stepNum);
+  }
+}
+
+function toggleTheme() {
+  const current = document.documentElement.getAttribute('data-theme') || 'dark';
+  const next = current === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+}
+</script>
+
+</body>
+</html>
