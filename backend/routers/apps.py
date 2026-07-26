@@ -7,6 +7,7 @@ from database import get_db
 from models.domain import Domain
 from models.hosted_app import HostedApp
 from services import app_hosting_service as apps
+from services import app_hosting_logs_service as app_logs
 from templating import templates
 
 router = APIRouter(prefix="/apps", tags=["apps"])
@@ -32,6 +33,19 @@ async def create(domain_id: int = Form(...), source_type: str = Form(...), repos
 @router.post("/inspect")
 async def inspect_project(repository_url: str = Form(...), branch: str = Form("main")):
     return JSONResponse(apps.inspect_repository(repository_url.strip(), branch.strip()))
+
+@router.get("/{app_id}/logs", response_class=HTMLResponse)
+async def logs(app_id: int, request: Request, db: AsyncSession = Depends(get_db)):
+    app = await db.get(HostedApp, app_id)
+    if app is None: raise HTTPException(404, "Python app not found.")
+    return templates.TemplateResponse("pages/apps/logs.html", {"request":request,"active_page":"apps","app":app,"logs":await app_logs.get_logs(app)})
+
+@router.post("/{app_id}/settings")
+async def settings(app_id: int, build_command: str = Form(...), start_command: str = Form(...), db: AsyncSession = Depends(get_db)):
+    app = await db.get(HostedApp, app_id)
+    if app is None: raise HTTPException(404, "Python app not found.")
+    app_logs.update_commands(app, build_command, start_command)
+    return RedirectResponse(f"/apps/{app_id}", status_code=303)
 
 @router.get("/{app_id}", response_class=HTMLResponse)
 async def detail(app_id: int, request: Request, db: AsyncSession = Depends(get_db)):

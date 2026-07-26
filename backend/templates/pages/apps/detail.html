@@ -15,10 +15,13 @@
 <section class="section"><div class="section__header"><h3>Project files</h3></div><div class="section__body"><form method="post" action="/apps/{{ app.id }}/upload" enctype="multipart/form-data" class="form-actions">{% include "partials/csrf_field.html" %}<input class="form-input" type="file" name="archive" accept=".zip" required><button class="btn btn--secondary">Upload ZIP</button></form></div></section>
 {% endif %}
 
+<section class="section"><div class="section__header"><h3>Runtime configuration</h3></div><div class="section__body"><form class="form" method="post" action="/apps/{{ app.id }}/settings">{% include "partials/csrf_field.html" %}<div class="form-group"><label class="form-label" for="build_command">Build command</label><input class="form-input form-input--code" id="build_command" name="build_command" value="{{ app.build_command }}" required></div><div class="form-group"><label class="form-label" for="start_command">Start command</label><input class="form-input form-input--code" id="start_command" name="start_command" value="{{ app.start_command }}" required></div><button class="btn btn--secondary">Save commands</button></form></div></section>
+
 <section class="section"><div class="section__header"><h3>Application controls</h3></div><div class="section__body"><div class="form-actions">
   <form method="post" action="/apps/{{ app.id }}/deploy">{% include "partials/csrf_field.html" %}<button class="btn btn--primary">Deploy</button></form>
   <form method="post" action="/apps/{{ app.id }}/restart">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary">Restart</button></form>
   <form method="post" action="/apps/{{ app.id }}/stop">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary">Stop</button></form>
+  <a class="btn btn--secondary" href="/apps/{{ app.id }}/logs">View logs</a>
 </div></div></section>
 
 <section class="section"><div class="section__header"><h3>Danger zone</h3></div><div class="section__body"><p class="text-muted">Strict cleanup stops the app, removes its service, source files, virtual environment, environment file, and Nginx proxy. The PostgreSQL database is preserved.</p><form method="post" action="/apps/{{ app.id }}/uninstall" onsubmit="return confirm('Strictly delete this Python app? App files, service, environment file, and proxy will be removed. The database is preserved.');">{% include "partials/csrf_field.html" %}<button class="btn btn--danger">Strictly Delete Python App</button></form></div></section>

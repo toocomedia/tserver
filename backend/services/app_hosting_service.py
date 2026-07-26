@@ -9,6 +9,7 @@ import config
 from dependencies import dependency_manager
 from models.hosted_app import HostedApp
 from services import nginx_service
+from services import app_hosting_health_service
 from utils import shell
 
 ROOT = Path(config.APP_HOSTING_ROOT)
@@ -173,6 +174,7 @@ async def deploy(app: HostedApp, domain_name: str) -> None:
     await shell.write_file(_service_unit(app), unit)
     await _systemctl("daemon-reload")
     await _systemctl("enable", "--now", app.service_name)
+    await app_hosting_health_service.wait_for_listener(app.port)
     await nginx_service.create_proxy(domain_name, "127.0.0.1", app.port, "http")
     await nginx_service.reload()
 
