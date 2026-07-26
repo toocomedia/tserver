@@ -4,22 +4,15 @@
 {% block page_title %}Add Domain{% endblock %}
 
 {% block topbar_actions %}
-  <a href="/domains/" class="btn btn--secondary" id="btn-back">← Back to Domains</a>
+  <a href="/domains/" class="btn btn--secondary btn--sm" id="btn-back">← Back to Domains</a>
 {% endblock %}
 
 {% block content %}
 
 <div class="fullwidth-container">
   
-  <div class="preview-header mb-xl">
-    <div>
-      <h1 style="margin: 0 0 4px 0; font-size: 28px; font-weight: 700; letter-spacing: -0.5px;">New Domain Setup</h1>
-      <div class="text-small text-muted" style="font-size: 14px;">Configure virtual host routing, DNS zones, and runtime environment.</div>
-    </div>
-  </div>
-
   {% if error %}
-  <div class="alert alert--danger mb-lg" id="form-error" role="alert">{{ error }}</div>
+  <div class="alert alert--danger mb-lg" id="form-error" role="alert" style="font-size: 13px;">{{ error }}</div>
   {% endif %}
 
   <form method="post" action="/domains/create" id="create-domain-form" class="form-fullwidth">
@@ -36,15 +29,15 @@
             <span class="step-title">Domain Hostname</span>
           </div>
           <div class="step-summary">
-            <strong id="sum-val-1" style="color:var(--color-text);">{{ name or 'example.com' }}</strong>
-            <i data-lucide="chevron-down" class="step-toggle-icon" style="width:20px;height:20px;"></i>
+            <span id="sum-val-1">{% if name %}<strong style="color:var(--color-text);">{{ name }}</strong>{% else %}<span class="text-muted">No domain specified</span>{% endif %}</span>
+            <i data-lucide="chevron-down" class="step-toggle-icon" style="width:18px;height:18px;"></i>
           </div>
         </div>
 
         <div class="step-body step-body--open" id="body-1">
           <div class="form-fullwidth">
-            <div class="form-group mb-xl">
-              <label class="form-label mb-xs" for="name" style="font-weight: 600; font-size: 13px; color: var(--color-muted);">TARGET HOSTNAME</label>
+            <div class="form-group mb-lg">
+              <label class="form-label mb-xs" for="name" style="font-weight: 600; font-size: 11px; letter-spacing: 0.5px; color: var(--color-muted);">TARGET HOSTNAME</label>
               <input
                 class="form-input{% if error %} form-input--error{% endif %}"
                 type="text"
@@ -59,12 +52,11 @@
                 autofocus
                 oninput="updateDomainSummary()"
               >
-              <span class="form-hint mt-xs" style="color: var(--color-muted);">Enter root domain or subdomain without http:// or https:// prefix.</span>
-              <span class="form-error mt-xs text-danger" id="name-error" style="display:none; font-weight:600; font-size:13px;"></span>
+              <span class="form-error mt-xs text-danger" id="name-error" style="display:none; font-weight:600; font-size:12px;"></span>
             </div>
 
             <div class="d-flex justify-end pt-sm">
-              <button type="button" class="btn btn--primary" onclick="openStep(2)" style="padding: 14px 36px; font-weight: 700; font-size: 15px; background: var(--color-accent); color: #000;">Next: Runtime Stack →</button>
+              <button type="button" class="btn btn--primary" onclick="nextFromStep1()" style="padding: 10px 24px; font-weight: 600; font-size: 13px; background: var(--color-accent); color: #000;">Next: Runtime Stack →</button>
             </div>
           </div>
         </div>
@@ -79,31 +71,31 @@
           </div>
           <div class="step-summary">
             <strong id="sum-val-2" style="color:var(--color-accent);">{% if project_type == 'dns' %}DNS Manager Only{% else %}Static Site / HTML{% endif %}</strong>
-            <i data-lucide="chevron-down" class="step-toggle-icon" style="width:20px;height:20px;"></i>
+            <i data-lucide="chevron-down" class="step-toggle-icon" style="width:18px;height:18px;"></i>
           </div>
         </div>
 
         <div class="step-body" id="body-2">
           <div class="form-fullwidth">
             <div class="d-flex justify-end mb-xs">
-              <span class="badge badge--ok" id="badge-selected" style="font-size: 12px; padding: 4px 12px;">Selected: {% if project_type == 'dns' %}DNS Manager{% else %}Static Site{% endif %}</span>
+              <span class="badge badge--ok" id="badge-selected" style="font-size: 11px; padding: 2px 8px;">Selected: {% if project_type == 'dns' %}DNS Manager{% else %}Static Site{% endif %}</span>
             </div>
 
             <!-- CAROUSEL WITH ALPHA MASK FADE AND TRANSPARENT ARROWS -->
             <div class="carousel-wrapper">
               
               <!-- LEFT ARROW ZONE -->
-              <div class="arrow-side-zone arrow-side-zone--left" onclick="scrollTrack(-320)">
-                <i data-lucide="arrow-left" class="pure-arrow-icon" style="width: 26px; height: 26px;"></i>
+              <div class="arrow-side-zone arrow-side-zone--left" onclick="scrollTrack(-280)">
+                <i data-lucide="arrow-left" class="pure-arrow-icon" style="width: 22px; height: 22px;"></i>
               </div>
 
               <div class="carousel-track" id="track-stack">
                 <!-- Option 1: Static Site -->
                 <label class="stack-item {% if project_type != 'dns' %}stack-item--active{% endif %}" onclick="pickStack('static', 'Static Site / HTML')">
                   <input type="radio" name="project_type" value="static" {% if project_type != 'dns' %}checked{% endif %}>
-                  <div class="d-flex justify-between align-center" style="width: 100%; gap: 16px;">
+                  <div class="d-flex justify-between align-center" style="width: 100%; gap: 12px;">
                     <span class="mono-icon"><i class="devicon-html5-plain"></i></span>
-                    <span class="badge badge--ok badge--dot" style="font-size: 11px;">Ready</span>
+                    <span class="badge badge--ok badge--dot" style="font-size: 10px;">Ready</span>
                   </div>
                   <span class="stack-item__title">Static Site / HTML</span>
                 </label>
@@ -111,9 +103,9 @@
                 <!-- Option 2: DNS Only -->
                 <label class="stack-item {% if project_type == 'dns' %}stack-item--active{% endif %}" onclick="pickStack('dns', 'DNS Manager Only')">
                   <input type="radio" name="project_type" value="dns" {% if project_type == 'dns' %}checked{% endif %}>
-                  <div class="d-flex justify-between align-center" style="width: 100%; gap: 16px;">
+                  <div class="d-flex justify-between align-center" style="width: 100%; gap: 12px;">
                     <span class="mono-icon"><i data-lucide="globe"></i></span>
-                    <span class="badge badge--ok badge--dot" style="font-size: 11px;">Ready</span>
+                    <span class="badge badge--ok badge--dot" style="font-size: 10px;">Ready</span>
                   </div>
                   <span class="stack-item__title">DNS Manager Only</span>
                 </label>
@@ -121,9 +113,9 @@
                 <!-- Option 3: Python App -->
                 <div class="stack-item stack-item--disabled">
                   <input type="radio" disabled>
-                  <div class="d-flex justify-between align-center" style="width: 100%; gap: 16px;">
+                  <div class="d-flex justify-between align-center" style="width: 100%; gap: 12px;">
                     <span class="mono-icon"><i class="devicon-python-plain"></i></span>
-                    <span class="badge badge--neutral" style="font-size: 11px;">Soon</span>
+                    <span class="badge badge--neutral" style="font-size: 10px;">Soon</span>
                   </div>
                   <span class="stack-item__title">Python App (Uvicorn)</span>
                 </div>
@@ -131,9 +123,9 @@
                 <!-- Option 4: PHP App -->
                 <div class="stack-item stack-item--disabled">
                   <input type="radio" disabled>
-                  <div class="d-flex justify-between align-center" style="width: 100%; gap: 16px;">
+                  <div class="d-flex justify-between align-center" style="width: 100%; gap: 12px;">
                     <span class="mono-icon"><i class="devicon-php-plain"></i></span>
-                    <span class="badge badge--neutral" style="font-size: 11px;">Soon</span>
+                    <span class="badge badge--neutral" style="font-size: 10px;">Soon</span>
                   </div>
                   <span class="stack-item__title">PHP App (FastCGI)</span>
                 </div>
@@ -141,9 +133,9 @@
                 <!-- Option 5: Node.js App -->
                 <div class="stack-item stack-item--disabled">
                   <input type="radio" disabled>
-                  <div class="d-flex justify-between align-center" style="width: 100%; gap: 16px;">
+                  <div class="d-flex justify-between align-center" style="width: 100%; gap: 12px;">
                     <span class="mono-icon"><i class="devicon-nodejs-plain"></i></span>
-                    <span class="badge badge--neutral" style="font-size: 11px;">Soon</span>
+                    <span class="badge badge--neutral" style="font-size: 10px;">Soon</span>
                   </div>
                   <span class="stack-item__title">Node.js App (PM2)</span>
                 </div>
@@ -151,29 +143,29 @@
                 <!-- Option 6: Docker Container -->
                 <div class="stack-item stack-item--disabled">
                   <input type="radio" disabled>
-                  <div class="d-flex justify-between align-center" style="width: 100%; gap: 16px;">
+                  <div class="d-flex justify-between align-center" style="width: 100%; gap: 12px;">
                     <span class="mono-icon"><i class="devicon-docker-plain"></i></span>
-                    <span class="badge badge--neutral" style="font-size: 11px;">Soon</span>
+                    <span class="badge badge--neutral" style="font-size: 10px;">Soon</span>
                   </div>
                   <span class="stack-item__title">Docker Container</span>
                 </div>
               </div>
 
               <!-- RIGHT ARROW ZONE -->
-              <div class="arrow-side-zone arrow-side-zone--right" onclick="scrollTrack(320)">
-                <i data-lucide="arrow-right" class="pure-arrow-icon" style="width: 26px; height: 26px;"></i>
+              <div class="arrow-side-zone arrow-side-zone--right" onclick="scrollTrack(280)">
+                <i data-lucide="arrow-right" class="pure-arrow-icon" style="width: 22px; height: 22px;"></i>
               </div>
 
             </div>
 
             <!-- Dynamic stack description -->
-            <div class="mb-xl text-muted" id="stack-desc" style="font-size: 14px;">
+            <div class="mb-lg text-muted" id="stack-desc" style="font-size: 13px;">
               {% if project_type == 'dns' %}DNS zone & A record only. No Nginx vhost.{% else %}Nginx HTTP vhost & webroot directory created.{% endif %}
             </div>
 
             <div class="d-flex justify-between align-center pt-sm">
-              <button type="button" class="btn btn--secondary" onclick="openStep(1)" style="padding: 14px 28px;">← Hostname</button>
-              <button type="button" class="btn btn--primary" onclick="openStep(3)" style="padding: 14px 36px; font-weight: 700; font-size: 15px; background: var(--color-accent); color: #000;">Next: Review & Deploy →</button>
+              <button type="button" class="btn btn--secondary" onclick="openStep(1)" style="padding: 10px 20px; font-size: 13px;">← Hostname</button>
+              <button type="button" class="btn btn--primary" onclick="openStep(3)" style="padding: 10px 24px; font-weight: 600; font-size: 13px; background: var(--color-accent); color: #000;">Next: Review & Deploy →</button>
             </div>
           </div>
         </div>
@@ -187,8 +179,8 @@
             <span class="step-title">Review & Provision</span>
           </div>
           <div class="step-summary">
-            <span class="badge badge--neutral" id="sum-val-3" style="font-size: 12px;">Pending Deployment</span>
-            <i data-lucide="chevron-down" class="step-toggle-icon" style="width:20px;height:20px;"></i>
+            <span class="badge badge--neutral" id="sum-val-3" style="font-size: 11px;">Pending Deployment</span>
+            <i data-lucide="chevron-down" class="step-toggle-icon" style="width:18px;height:18px;"></i>
           </div>
         </div>
 
@@ -198,7 +190,7 @@
             <div class="summary-table-fullwidth">
               <div class="summary-row">
                 <span class="text-muted">Hostname</span>
-                <strong id="rev-domain" style="color:var(--color-text);">{{ name or 'example.com' }}</strong>
+                <span id="rev-domain">{% if name %}<strong style="color:var(--color-text);">{{ name }}</strong>{% else %}<span class="text-muted">No domain specified</span>{% endif %}</span>
               </div>
               <div class="summary-row">
                 <span class="text-muted">Runtime</span>
@@ -219,8 +211,8 @@
             </div>
 
             <div class="d-flex justify-between align-center pt-sm">
-              <button type="button" class="btn btn--secondary" onclick="openStep(2)" style="padding: 14px 28px;">← Runtime</button>
-              <button type="submit" class="btn btn--primary" id="btn-submit" style="padding: 16px 44px; font-weight: 700; font-size: 16px; background: var(--color-accent); color: #000;">🚀 Deploy Domain Now</button>
+              <button type="button" class="btn btn--secondary" onclick="openStep(2)" style="padding: 10px 20px; font-size: 13px;">← Runtime</button>
+              <button type="submit" class="btn btn--primary" id="btn-submit" style="padding: 12px 32px; font-weight: 700; font-size: 14px; background: var(--color-accent); color: #000;">🚀 Deploy Domain Now</button>
             </div>
           </div>
         </div>
@@ -253,11 +245,19 @@ function scrollTrack(amount) {
 }
 
 function updateDomainSummary() {
-  const val = input.value.trim().toLowerCase() || 'example.com';
-  document.getElementById('sum-val-1').innerText = val;
-  document.getElementById('rev-domain').innerText = val;
+  const val = input.value.trim().toLowerCase();
+  const sum1 = document.getElementById('sum-val-1');
+  const revDomain = document.getElementById('rev-domain');
 
-  if (val.length > 0 && !domainRe.test(val) && val !== 'example.com') {
+  if (val) {
+    sum1.innerHTML = '<strong style="color:var(--color-text);">' + val + '</strong>';
+    revDomain.innerHTML = '<strong style="color:var(--color-text);">' + val + '</strong>';
+  } else {
+    sum1.innerHTML = '<span class="text-muted">No domain specified</span>';
+    revDomain.innerHTML = '<span class="text-muted">No domain specified</span>';
+  }
+
+  if (val.length > 0 && !domainRe.test(val)) {
     nameError.textContent = 'Invalid domain format (e.g. example.com or app.domain.com)';
     nameError.style.display = 'block';
     input.classList.add('form-input--error');
@@ -265,6 +265,21 @@ function updateDomainSummary() {
     nameError.style.display = 'none';
     input.classList.remove('form-input--error');
   }
+}
+
+/* MANDATORY DOMAIN VALIDATION BEFORE LEAVING STEP 1 */
+function nextFromStep1() {
+  const val = input.value.trim().toLowerCase();
+  if (!val || !domainRe.test(val)) {
+    nameError.textContent = 'A valid domain hostname is required (e.g. example.com) to proceed.';
+    nameError.style.display = 'block';
+    input.classList.add('form-input--error');
+    input.focus();
+    return; // Block opening Step 2!
+  }
+  nameError.style.display = 'none';
+  input.classList.remove('form-input--error');
+  openStep(2);
 }
 
 function pickStack(type, title) {
@@ -294,6 +309,19 @@ function pickStack(type, title) {
 
 /* STRICT MUTUALLY EXCLUSIVE ACCORDIONS (ONLY 1 OPEN AT A TIME) */
 function openStep(stepNum) {
+  if (stepNum > 1) {
+    // Validate domain before jumping to step 2 or 3!
+    const val = input.value.trim().toLowerCase();
+    if (!val || !domainRe.test(val)) {
+      openStep(1);
+      nameError.textContent = 'A valid domain hostname is required (e.g. example.com) to proceed.';
+      nameError.style.display = 'block';
+      input.classList.add('form-input--error');
+      input.focus();
+      return;
+    }
+  }
+
   for (let i = 1; i <= 3; i++) {
     const head = document.getElementById('head-' + i);
     const body = document.getElementById('body-' + i);
@@ -323,7 +351,7 @@ function toggleStep(stepNum) {
 
 form.addEventListener('submit', (e) => {
   const val = input.value.trim().toLowerCase();
-  if (!domainRe.test(val)) {
+  if (!val || !domainRe.test(val)) {
     e.preventDefault();
     openStep(1);
     nameError.textContent = 'Please enter a valid domain format (e.g. example.com)';
@@ -335,7 +363,7 @@ form.addEventListener('submit', (e) => {
   submitBtn.disabled = true;
 });
 
-// Initialize icons and initial summary on load
+// Initialize icons on load
 document.addEventListener('DOMContentLoaded', () => {
   updateDomainSummary();
   if (typeof lucide !== 'undefined') lucide.createIcons();

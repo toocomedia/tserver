@@ -269,16 +269,22 @@
       background: rgba(128, 128, 128, 0.03);
     }
     .stack-item--active {
+      background: var(--color-accent, #C7F464) !important;
       border-bottom-color: var(--color-accent, #C7F464) !important;
-      background: transparent !important;
+      color: #000000 !important;
     }
     .stack-item--active .mono-icon {
-      color: var(--color-accent, #C7F464);
+      color: #000000 !important;
       opacity: 1;
     }
     .stack-item--active .stack-item__title {
-      color: var(--color-text, #F0F0EC);
+      color: #000000 !important;
       font-weight: 700;
+    }
+    .stack-item--active .badge {
+      background: #000000 !important;
+      color: var(--color-accent, #C7F464) !important;
+      border-color: #000000 !important;
     }
     .stack-item--disabled {
       opacity: 0.3;
@@ -313,12 +319,8 @@
 
 <div class="fullwidth-container">
 
-  <div class="preview-header">
-    <div>
-      <h1 style="margin: 0 0 4px 0; font-size: 28px; font-weight: 700; letter-spacing: -0.5px;">Add Domain</h1>
-      <div class="text-small text-muted" style="font-size: 14px;">Pure CSS Alpha Masking (-webkit-mask-image). 0% Color mismatch in any theme. Strict mutually exclusive toggles.</div>
-    </div>
-    <button type="button" class="btn btn--secondary btn--sm" onclick="toggleTheme()">Toggle Theme</button>
+  <div style="display: flex; justify-content: flex-end; margin-bottom: 16px;">
+    <button type="button" class="btn btn--secondary btn--sm" onclick="toggleTheme()" style="font-size: 12px; padding: 4px 12px;">Toggle Theme</button>
   </div>
 
   <!-- VERTICAL STEPPER -->
