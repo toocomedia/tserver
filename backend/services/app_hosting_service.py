@@ -54,10 +54,14 @@ def _normalise_paths(app: HostedApp) -> None:
     if app.env_path.startswith("/etc/srv-panel/"):
         app.env_path = str(ENV_ROOT / f"{app.id}.env")
 
-async def _systemctl(*args: str) -> None:
+async def _systemctl(*args: str, allow_missing: bool = False) -> bool:
     result = await shell.run(["systemctl", *args], timeout=30)
+    message = result.stderr or result.stdout
+    if allow_missing and ("not loaded" in message.lower() or "not found" in message.lower()):
+        return False
     if not result.success:
-        raise HTTPException(500, result.stderr or "System service action failed.")
+        raise HTTPException(500, message or "System service action failed.")
+    return True
 
 def inspect_repository(repository_url: str, branch: str) -> dict[str, str]:
     """Read project files from a temporary shallow clone; never run app code."""
@@ -96,12 +100,24 @@ async def next_port(db: AsyncSession) -> int:
     used = set((await db.scalars(select(HostedApp.port))).all())
     return next(port for port in range(config.APP_HOSTING_PORT_START, 65536) if port not in used)
 
+async def next_service_name(db: AsyncSession, domain_id: int) -> str:
+    names = set((await db.scalars(select(HostedApp.service_name))).all())
+    base = f"srv-python-{domain_id}"
+    if base not in names:
+        return base
+    while True:
+        candidate = f"{base}-{secrets.token_hex(3)}"
+        if candidate not in names:
+            return candidate
+
 async def create_app(db: AsyncSession, domain_id: int, source_type: str, repository_url: str | None, branch: str, build: str, start: str, ssl: bool, postgres_mode: str, external_url: str | None) -> HostedApp:
     if source_type not in {"git", "zip"} or postgres_mode not in {"none", "create", "external"}: raise HTTPException(400, "Invalid app setup.")
     if source_type == "git" and (not repository_url or not dependency_manager.is_healthy("git")): raise HTTPException(409, "Git & SSH dependency is required.")
     if not dependency_manager.is_healthy("python"): raise HTTPException(409, "Python Runtime dependency is required.")
+    if await db.scalar(select(HostedApp.id).where(HostedApp.domain_id == domain_id)):
+        raise HTTPException(409, "This domain already has Python app setup. Open it from the domain page.")
     _ensure_runtime_dirs()
-    port = await next_port(db); service_name = f"srv-python-{domain_id}"
+    port = await next_port(db); service_name = await next_service_name(db, domain_id)
     app = HostedApp(domain_id=domain_id, source_type=source_type, repository_url=repository_url, branch=branch or "main", build_command=build, start_command=start, port=port, service_name=service_name, work_dir=str(_app_dir(domain_id)), env_path=str(ENV_ROOT / f"{domain_id}.env"), ssl_requested=ssl, postgres_mode=postgres_mode)
     if postgres_mode == "external" and not external_url: raise HTTPException(400, "DATABASE_URL is required for an external database.")
     db.add(app); await db.flush()
@@ -162,12 +178,14 @@ async def deploy(app: HostedApp, domain_name: str) -> None:
 
 async def control(app: HostedApp, action: str) -> None:
     if action not in {"start", "stop", "restart"}: raise HTTPException(400, "Invalid app action.")
-    await _systemctl(action, app.service_name)
+    await _systemctl(action, app.service_name, allow_missing=action == "stop")
     app.status = "stopped" if action == "stop" else "running"
 
 async def uninstall(app: HostedApp, domain_name: str) -> None:
-    if app.status != "stopped": raise HTTPException(409, "Stop the app before uninstalling it.")
-    await _systemctl("disable", "--now", app.service_name)
+    # Strict cleanup always stops first; pending deployments have no unit to stop.
+    await _systemctl("stop", app.service_name, allow_missing=True)
+    app.status = "stopped"
+    await _systemctl("disable", "--now", app.service_name, allow_missing=True)
     await shell.remove_path(_service_unit(app))
     await _systemctl("daemon-reload")
     await nginx_service.remove_site(domain_name); await nginx_service.reload()

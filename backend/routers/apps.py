@@ -52,13 +52,13 @@ async def deploy(app_id: int, db: AsyncSession = Depends(get_db)):
         await nginx_service.reload()
     return RedirectResponse(f"/apps/{app_id}", status_code=303)
 
-@router.post("/{app_id}/{action}")
-async def control(app_id: int, action: str, db: AsyncSession = Depends(get_db)):
-    app = await db.get(HostedApp, app_id); await apps.control(app, action)
-    return RedirectResponse(f"/apps/{app_id}", status_code=303)
-
 @router.post("/{app_id}/uninstall")
 async def uninstall(app_id: int, db: AsyncSession = Depends(get_db)):
     app = await db.get(HostedApp, app_id); domain = await db.get(Domain, app.domain_id)
     await apps.uninstall(app, domain.name); await db.delete(app)
     return RedirectResponse("/apps/", status_code=303)
+
+@router.post("/{app_id}/{action}")
+async def control(app_id: int, action: str, db: AsyncSession = Depends(get_db)):
+    app = await db.get(HostedApp, app_id); await apps.control(app, action)
+    return RedirectResponse(f"/apps/{app_id}", status_code=303)

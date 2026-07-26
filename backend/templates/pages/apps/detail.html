@@ -1,10 +1,25 @@
 {% extends "layout.html" %}
 {% block title %}{{ app.service_name }} — SRV Panel{% endblock %}
 {% block page_title %}Python App{% endblock %}
-{% block content %}<div class="card p-5"><h2>{{ app.service_name }}</h2><p>Status: {{ app.status }}</p><p>Private address: 127.0.0.1:{{ app.port }}</p><p>Source: {{ app.source_type }}</p>
-{% if app.source_type == 'zip' %}<form method="post" action="/apps/{{ app.id }}/upload" enctype="multipart/form-data">{% include "partials/csrf_field.html" %}<input type="file" name="archive" accept=".zip" required><button class="btn btn--secondary">Upload ZIP</button></form>{% endif %}
-<form method="post" action="/apps/{{ app.id }}/deploy">{% include "partials/csrf_field.html" %}<button class="btn btn--primary">Deploy</button></form>
-<form method="post" action="/apps/{{ app.id }}/restart">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary">Restart</button></form>
-<form method="post" action="/apps/{{ app.id }}/stop">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary">Stop</button></form>
-{% if app.status == 'stopped' %}<form method="post" action="/apps/{{ app.id }}/uninstall" onsubmit="return confirm('Remove this app files and service? Database is preserved.');">{% include "partials/csrf_field.html" %}<button class="btn btn--danger">Uninstall</button></form>{% endif %}
-</div>{% endblock %}
+{% block content %}
+<section class="section">
+  <div class="section__header"><h3>{{ app.service_name }}</h3></div>
+  <div class="section__body">
+    <p><span class="text-muted">Status</span> <span class="status-badge {% if app.status == 'running' %}status-badge--success{% elif app.status == 'pending' %}status-badge--warning{% else %}status-badge--muted{% endif %}">{{ app.status }}</span></p>
+    <p><span class="text-muted">Private address</span> <code>127.0.0.1:{{ app.port }}</code></p>
+    <p><span class="text-muted">Source</span> {{ app.source_type | upper }}</p>
+  </div>
+</section>
+
+{% if app.source_type == 'zip' %}
+<section class="section"><div class="section__header"><h3>Project files</h3></div><div class="section__body"><form method="post" action="/apps/{{ app.id }}/upload" enctype="multipart/form-data" class="form-actions">{% include "partials/csrf_field.html" %}<input class="form-input" type="file" name="archive" accept=".zip" required><button class="btn btn--secondary">Upload ZIP</button></form></div></section>
+{% endif %}
+
+<section class="section"><div class="section__header"><h3>Application controls</h3></div><div class="section__body"><div class="form-actions">
+  <form method="post" action="/apps/{{ app.id }}/deploy">{% include "partials/csrf_field.html" %}<button class="btn btn--primary">Deploy</button></form>
+  <form method="post" action="/apps/{{ app.id }}/restart">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary">Restart</button></form>
+  <form method="post" action="/apps/{{ app.id }}/stop">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary">Stop</button></form>
+</div></div></section>
+
+<section class="section"><div class="section__header"><h3>Danger zone</h3></div><div class="section__body"><p class="text-muted">Strict cleanup stops the app, removes its service, source files, virtual environment, environment file, and Nginx proxy. The PostgreSQL database is preserved.</p><form method="post" action="/apps/{{ app.id }}/uninstall" onsubmit="return confirm('Strictly delete this Python app? App files, service, environment file, and proxy will be removed. The database is preserved.');">{% include "partials/csrf_field.html" %}<button class="btn btn--danger">Strictly Delete Python App</button></form></div></section>
+{% endblock %}
