@@ -19,7 +19,7 @@
   gap: 8px;
   font-size: 13px;
   font-weight: 500;
-  color: var(--color-muted, #707885);
+  color: var(--color-muted, #9AA0A6);
   text-decoration: none;
   transition: color 0.15s ease;
 }
@@ -57,7 +57,7 @@
   align-items: center;
   gap: 8px;
   background: transparent !important;
-  color: var(--color-muted, #707885) !important;
+  color: var(--color-muted, #9AA0A6) !important;
   font-weight: 500 !important;
   border: none !important;
   padding: 12px 0 !important;
@@ -72,14 +72,14 @@
   color: var(--color-text, #FFFFFF) !important;
 }
 
-/* WIZARD ACTION BAR: Back on Left, Next on Right */
+/* WIZARD ACTION BAR: Back on Left, Next on Right (ZERO BOTTOM DIVIDER!) */
 .wizard-actions {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-top: 48px;
-  padding-top: 24px;
-  border-top: 1px solid var(--color-line, #273240);
+  margin-top: 40px;
+  padding-top: 0;
+  border: none !important;
   width: 100%;
 }
 .wizard-actions--end {
@@ -102,24 +102,24 @@
   align-items: center;
   gap: 10px;
   font-size: 14px;
-  color: var(--color-muted, #555E68);
+  color: var(--color-muted, #6B7280);
   cursor: pointer;
   transition: color 0.15s ease;
 }
-.pure-step-item:hover { color: #889098; }
+.pure-step-item:hover { color: #A0A8B4; }
 
 .pure-step-item--active {
   color: var(--color-text, #FFFFFF);
   font-weight: 600;
 }
 .pure-step-item--done {
-  color: #9AA0A6;
+  color: #A0A8B4;
 }
 
 .step-number {
   font-family: 'JetBrains Mono', monospace, system-ui;
   font-size: 12px;
-  opacity: 0.6;
+  opacity: 0.75;
 }
 .pure-step-item--active .step-number {
   opacity: 1;
@@ -130,7 +130,7 @@
 .nav-divider { font-size: 14px; color: #333C48; font-family: monospace; }
 
 /* ==========================================================================
-   STEP PANELS (PURE OPEN CANVAS / ZERO BOXES AROUND CONTAINERS)
+   STEP PANELS
    ========================================================================== */
 .step-panel { display: none; }
 .step-panel--active { display: block; animation: fadeIn 0.15s ease; }
@@ -149,12 +149,12 @@
 }
 .panel-subheading {
   font-size: 14px;
-  color: var(--color-muted, #707885);
+  color: var(--color-muted, #9AA0A6);
   margin: 0 0 40px 0;
 }
 
 /* ==========================================================================
-   BORDERLESS UNDERLINE INPUT (Self-contained, immune to forms.css)
+   BORDERLESS UNDERLINE INPUT
    ========================================================================== */
 .input-borderless-wrap {
   margin-bottom: 24px;
@@ -179,10 +179,10 @@
   border-bottom-color: var(--color-text, #FFFFFF) !important;
   outline: none !important;
 }
-.input-borderless::placeholder { color: #3A4450; font-weight: 400; }
+.input-borderless::placeholder { color: #4A5568; font-weight: 400; }
 
 /* ==========================================================================
-   STEP 2: RUNTIME STACK CAROUSEL WITH SIDE ARROWS (ZERO BOXES!)
+   STEP 2: RUNTIME STACK CAROUSEL (CLEAR & CRISP IN DEEP DARK / AMOLED!)
    ========================================================================== */
 .carousel-wrapper {
   position: relative;
@@ -204,13 +204,12 @@
   scrollbar-width: none;
   -ms-overflow-style: none;
   width: 100%;
-  /* PURE ALPHA MASK: Fades out items seamlessly at left and right edges! */
+  /* PURE ALPHA MASK */
   -webkit-mask-image: linear-gradient(to right, transparent 0%, black 70px, black calc(100% - 70px), transparent 100%);
   mask-image: linear-gradient(to right, transparent 0%, black 70px, black calc(100% - 70px), transparent 100%);
 }
 .carousel-track::-webkit-scrollbar { display: none; }
 
-/* SIDE ARROW ZONES: Pure transparent background! Zero boxes! */
 .arrow-side-zone {
   position: absolute;
   top: 0;
@@ -229,8 +228,8 @@
 .arrow-side-zone--right:hover { padding-right: 2px; }
 
 .pure-arrow-icon {
-  color: var(--color-muted, #707885);
-  opacity: 0.7;
+  color: var(--color-muted, #9AA0A6);
+  opacity: 0.85;
   transition: all 0.15s ease;
 }
 .arrow-side-zone:hover .pure-arrow-icon {
@@ -239,7 +238,7 @@
   transform: scale(1.15);
 }
 
-/* BOXLESS STACK ITEMS IN CAROUSEL */
+/* BOXLESS STACK ITEMS: HIGH CONTRAST & CLEAR IN DEEP DARK MODE */
 .stack-pure-item {
   flex: 0 0 auto;
   display: flex;
@@ -252,10 +251,10 @@
   border: none !important;
   border-bottom: 2px solid transparent !important;
   transition: all 0.15s ease;
-  color: #66707C;
+  color: var(--color-muted, #A0A8B4);
 }
 .stack-pure-item:hover:not(.stack-pure-item--disabled) {
-  color: #A0A8B4;
+  color: var(--color-text, #FFFFFF);
 }
 
 .stack-pure-item--active {
@@ -268,7 +267,7 @@
   opacity: 1 !important;
 }
 
-.stack-pure-item--disabled { opacity: 0.25; cursor: not-allowed; }
+.stack-pure-item--disabled { opacity: 0.35; cursor: not-allowed; }
 
 .pure-tech-icon {
   font-size: 26px;
@@ -277,15 +276,15 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: #66707C;
-  opacity: 0.7;
+  color: var(--color-muted, #A0A8B4);
+  opacity: 0.9;
   transition: all 0.15s ease;
 }
 
 .stack-title-text { font-size: 15px; white-space: nowrap; }
 
 /* ==========================================================================
-   STEP 3: BOXLESS SSL CERTIFICATE STEP (NOT PRE-ACTIVE BY DEFAULT!)
+   STEP 3: BOXLESS SSL CERTIFICATE STEP
    ========================================================================== */
 .ssl-pure-grid {
   display: flex;
@@ -300,11 +299,11 @@
   padding: 16px 0;
   cursor: pointer;
   user-select: none;
-  color: #66707C;
+  color: var(--color-muted, #A0A8B4);
   border-bottom: 2px solid transparent;
   transition: all 0.15s ease;
 }
-.ssl-pure-opt:hover { color: #A0A8B4; }
+.ssl-pure-opt:hover { color: var(--color-text, #FFFFFF); }
 
 .ssl-pure-opt--active {
   color: var(--color-text, #FFFFFF) !important;
@@ -326,13 +325,13 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  opacity: 0.6;
+  opacity: 0.9;
   transition: all 0.15s ease;
   margin-top: 2px;
 }
 
 .ssl-opt-title { font-size: 16px; margin-bottom: 4px; transition: color 0.15s ease; }
-.ssl-opt-desc { font-size: 13px; color: #66707C; line-height: 1.5; }
+.ssl-opt-desc { font-size: 13px; color: var(--color-muted, #9AA0A6); line-height: 1.5; }
 
 /* ==========================================================================
    STEP 4: BOXLESS REVIEW SECTION (PURE TYPOGRAPHY)
@@ -349,5 +348,5 @@
   justify-content: space-between;
   font-size: 15px;
 }
-.review-label { color: var(--color-muted, #707885); }
+.review-label { color: var(--color-muted, #9AA0A6); }
 .review-value { color: var(--color-text, #FFFFFF); font-weight: 600; }
