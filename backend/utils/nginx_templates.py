@@ -136,6 +136,21 @@ def _proxy_common_headers() -> str:
         proxy_socket_keepalive on;"""
 
 
+def _error_pages_location() -> str:
+    return f'''    location = /_srv-errors/error.css {{
+        alias {config.APP_ERROR_PAGES_ROOT}/error.css;
+    }}
+    location ^~ /_srv-errors/ {{
+        internal;
+        alias {config.APP_ERROR_PAGES_ROOT}/;
+    }}'''
+
+
+def _proxy_error_pages() -> str:
+    return '''        proxy_intercept_errors on;
+        error_page 502 503 504 /_srv-errors/502.html;'''
+
+
 def _static_cache_location(static_cache: bool, proxy_pass_url: str) -> str:
     """
     Extra location block for browser-caching static file types through the proxy.
@@ -178,9 +193,11 @@ server {{
         try_files $uri =404;
     }}
 
+    error_page 404 /_srv-errors/404.html;
     location / {{
         try_files $uri $uri/ /index.html;
     }}
+{_error_pages_location()}
 }}
 """
 
@@ -227,9 +244,11 @@ server {{
         try_files $uri =404;
     }}
 
+    error_page 404 /_srv-errors/404.html;
     location / {{
         try_files $uri $uri/ /index.html;
     }}
+{_error_pages_location()}
 }}
 """
 
@@ -274,7 +293,9 @@ server {{
         proxy_pass         {pass_url};
 {_proxy_common_headers()}
 {cache_directives}
+{_proxy_error_pages()}
     }}{static_loc}
+{_error_pages_location()}
 }}
 """
 
@@ -344,17 +365,19 @@ server {{
         proxy_pass         {pass_url};
 {_proxy_common_headers()}
 {cache_directives}
+{_proxy_error_pages()}
     }}{static_loc}
+{_error_pages_location()}
 }}
 """
 
 
 def _offline_location() -> str:
-    return '''    location / {
-        default_type text/html;
+    return '''    error_page 503 /_srv-errors/503.html;
+    location / {
         add_header Cache-Control "no-store" always;
         add_header Retry-After "300" always;
-        return 503 "<!doctype html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>Temporarily offline</title></head><body><h1>Website temporarily offline</h1><p>Please try again shortly.</p></body></html>";
+        return 503;
     }'''
 
 
@@ -371,6 +394,7 @@ server {{
     }}
 
 {_offline_location()}
+{_error_pages_location()}
 }}
 """
 
@@ -406,6 +430,7 @@ server {{
     }}
 
 {_offline_location()}
+{_error_pages_location()}
 }}
 """
 

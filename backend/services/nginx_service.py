@@ -17,6 +17,7 @@ PERFORMANCE_CONF_NAME = "performance"
 # Always-present http maps (WebSocket Connection + keepalive). Must not be removed
 # when optional gzip/static-cache toggles are turned off.
 HTTP_MAPS_CONF_NAME = "00-srv-maps"
+ERROR_PAGES_SOURCE = Path(__file__).resolve().parents[1] / "app_hosting" / "error_pages"
 
 
 def _available_path(name: str) -> Path:
@@ -135,6 +136,7 @@ async def create_static_site(domain: str) -> str:
     Write HTTP static site nginx config.
     Returns path to config file. Raises on nginx -t failure.
     """
+    await ensure_error_pages()
     webroot = _webroot_path(domain)
     name = _conf_name(domain)
     content = nginx_templates.static_site_config(domain, webroot)
@@ -155,6 +157,7 @@ async def update_static_site_ssl(
     Replace HTTP config with HTTP+HTTPS config after SSL cert is issued.
     Returns new config path.
     """
+    await ensure_error_pages()
     webroot = _webroot_path(domain)
     name = _conf_name(domain)
     content = nginx_templates.static_site_ssl_config(domain, webroot, cert_path, key_path)
@@ -179,6 +182,16 @@ async def ensure_http_maps() -> None:
     logger.info("HTTP maps conf written: %s", conf_path)
 
 
+async def ensure_error_pages() -> None:
+    """Publish tracked static error pages for Nginx without inline HTML."""
+    target = Path(config.APP_ERROR_PAGES_ROOT)
+    for source in ERROR_PAGES_SOURCE.rglob("*"):
+        if source.is_file():
+            relative = source.relative_to(ERROR_PAGES_SOURCE)
+            await shell.write_file(target / relative, source.read_text(encoding="utf-8"))
+    logger.info("Nginx error pages written: %s", target)
+
+
 async def create_proxy(
     full_domain: str,
     target_ip: str,
@@ -190,6 +203,7 @@ async def create_proxy(
 ) -> str:
     """Write HTTP reverse proxy nginx config. Returns config path."""
     await ensure_http_maps()
+    await ensure_error_pages()
     name = _conf_name(full_domain)
     content = nginx_templates.reverse_proxy_config(
         full_domain, target_ip, target_port, protocol,
@@ -220,6 +234,7 @@ async def update_proxy_ssl(
 ) -> str:
     """Replace proxy HTTP config with SSL config."""
     await ensure_http_maps()
+    await ensure_error_pages()
     name = _conf_name(full_domain)
     content = nginx_templates.reverse_proxy_ssl_config(
         full_domain, target_ip, target_port, protocol, cert_path, key_path,
@@ -240,6 +255,7 @@ async def set_hosted_app_offline(
     domain: str, *, cert_path: str | None = None, key_path: str | None = None,
 ) -> str:
     """Replace a hosted-app proxy with its intentional 503 page."""
+    await ensure_error_pages()
     content = (
         nginx_templates.hosted_app_offline_ssl_config(domain, cert_path, key_path)
         if cert_path and key_path

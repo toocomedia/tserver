@@ -111,6 +111,7 @@ NGINX_WEBROOT: str = os.getenv("NGINX_WEBROOT", "/var/www")
 NGINX_CACHE_DIR: str = os.getenv("NGINX_CACHE_DIR", "/var/cache/nginx")
 APP_HOSTING_ROOT: str = os.getenv("APP_HOSTING_ROOT", "/var/lib/srv-panel/apps")
 APP_HOSTING_ENV_ROOT: str = os.getenv("APP_HOSTING_ENV_ROOT", "/var/lib/srv-panel/app-env")
+APP_ERROR_PAGES_ROOT: str = os.getenv("APP_ERROR_PAGES_ROOT", "/var/lib/srv-panel/error-pages")
 APP_HOSTING_USER: str = os.getenv("APP_HOSTING_USER", "panel")
 APP_HOSTING_PORT_START: int = _env_int("APP_HOSTING_PORT_START", 9100)
 
