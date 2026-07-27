@@ -34,8 +34,9 @@ temp_*.html
 .agents/
 
 # Documentation & Local Helpers
-/docs/
+/docs/*
 !/docs/git_dependency_internal_api.md
+!/docs/python_app_hosting.md
 /rules/
 push-to-github.bat
 
@@ -51,4 +52,3 @@ backups/
 remote.json
 remote_domains.json
 **/remote*.json
-

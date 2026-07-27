@@ -1,0 +1,29 @@
+<section class="section" id="updates">
+  <div class="section__header"><h3>Source update</h3></div>
+  <div class="section__body">
+    <div class="info-row">
+      <span class="info-row__label">Deployed revision</span>
+      <span class="info-row__value"><code>{{ app.deployed_revision[:12] if app.deployed_revision else 'Legacy / not deployed' }}</code></span>
+    </div>
+    {% if app.source_type == 'git' %}
+      <div class="info-row"><span class="info-row__label">Repository</span><span class="info-row__value">{{ app.repository_url }}</span></div>
+      <div class="info-row"><span class="info-row__label">Branch</span><span class="info-row__value">{{ app.branch }}</span></div>
+      <div class="info-row">
+        <span class="info-row__label">Remote revision</span>
+        <span class="info-row__value">
+          {% if app.available_revision %}<code>{{ app.available_revision[:12] }}</code>{% else %}Not checked{% endif %}
+          {% if app.available_revision_message %} · {{ app.available_revision_message }}{% endif %}
+        </span>
+      </div>
+      <div class="info-row"><span class="info-row__label">Last checked</span><span class="info-row__value">{{ app.source_checked_at or 'Never' }}</span></div>
+      {% if app.available_revision_at %}<div class="info-row"><span class="info-row__label">Remote commit time</span><span class="info-row__value">{{ app.available_revision_at }}</span></div>{% endif %}
+      <div class="form-actions">
+        <form method="post" action="/apps/{{ app.id }}/updates/check">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary">Check for updates</button></form>
+        {% if update_ready %}<form method="post" action="/apps/{{ app.id }}/updates/apply">{% include "partials/csrf_field.html" %}<button class="btn btn--primary">Apply update</button></form>{% endif %}
+      </div>
+    {% else %}
+      <div class="alert alert--warning">ZIP updates are coming soon. This existing app can continue running or redeploy its current installed source.</div>
+    {% endif %}
+    <p class="form-hint">Updates preserve the domain, private port, environment, database, persistent data, Nginx, and SSL.</p>
+  </div>
+</section>

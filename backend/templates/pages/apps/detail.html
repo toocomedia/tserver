@@ -2,84 +2,35 @@
 {% block title %}{{ app.service_name }} — {{ PANEL_NAME }}{% endblock %}
 {% block page_title %}Python App{% endblock %}
 {% block topbar_actions %}
-  <form method="post" action="/apps/{{ app.id }}/deploy">{% include "partials/csrf_field.html" %}<button class="btn btn--primary">Deploy update</button></form>
   <a class="btn btn--secondary" href="/apps/{{ app.id }}/logs">Service logs</a>
 {% endblock %}
 {% block content %}
+{% if notice %}<div class="alert alert--success section">{{ notice }}</div>{% endif %}
 <div class="stat-grid">
-  <div class="stat-card-box"><span class="stat-card-box__label">Status</span><strong class="stat-card-box__val"><span class="status-badge {% if app.status == 'running' %}status-badge--success{% elif app.status in ('failed', 'stopped') %}status-badge--warning{% else %}status-badge--muted{% endif %}">{{ app.status }}</span></strong><span class="stat-card-box__meta">Python service</span></div>
-  <div class="stat-card-box"><span class="stat-card-box__label">Public URL</span><strong class="stat-card-box__val">{% if domain %}<a href="{{ public_url(domain.name, https=app.ssl_requested) }}" target="_blank" rel="noopener">{{ domain.name }}</a>{% else %}Domain removed{% endif %}</strong><span class="stat-card-box__meta">{{ 'HTTPS enabled' if app.ssl_requested else 'HTTP only' }}</span></div>
-  <div class="stat-card-box"><span class="stat-card-box__label">Private address</span><strong class="stat-card-box__val"><code>127.0.0.1:{{ app.port }}</code></strong><span class="stat-card-box__meta">Not public directly</span></div>
+  <div class="stat-card-box">
+    <span class="stat-card-box__label">Status</span>
+    <strong class="stat-card-box__val"><span class="status-badge {% if app.status == 'running' %}status-badge--success{% elif app.status in ('failed', 'stopped') %}status-badge--warning{% else %}status-badge--muted{% endif %}">{{ app.status | title }}</span></strong>
+    <span class="stat-card-box__meta">Python service</span>
+  </div>
+  <div class="stat-card-box">
+    <span class="stat-card-box__label">Public URL</span>
+    <strong class="stat-card-box__val">{% if domain %}<a href="{{ public_url(domain.name, https=app.ssl_requested) }}" target="_blank" rel="noopener">{{ domain.name }}</a>{% else %}Domain removed{% endif %}</strong>
+    <span class="stat-card-box__meta">{{ 'HTTPS enabled' if app.ssl_requested else 'HTTP only' }}</span>
+  </div>
+  <div class="stat-card-box">
+    <span class="stat-card-box__label">Private address</span>
+    <strong class="stat-card-box__val"><code>127.0.0.1:{{ app.port }}</code></strong>
+    <span class="stat-card-box__meta">Not public directly</span>
+  </div>
 </div>
 
-<section class="section" id="deployment">
-  <div class="section__header"><h3>Deployment</h3></div>
-  <div class="section__body">
-    {% if deployment %}
-      <div class="info-row"><span class="info-row__label">Last deployment</span><span class="info-row__value" id="deployment-state">{{ deployment.status | upper }} · {{ deployment.stage }}</span></div>
-      <details class="panel" id="deployment-details" {% if deployment.status in ('queued', 'running', 'failed', 'cancelled') %}open{% endif %}>
-        <summary class="panel__header"><strong>Deployment output</strong></summary>
-        <pre class="code-block panel__body" id="deployment-output">{{ deployment.output }}{{ deployment.error or '' }}</pre>
-      </details>
-    {% else %}
-      <div class="info-row"><span class="info-row__label">Last deployment</span><span class="info-row__value">Not deployed yet</span></div>
-    {% endif %}
-  </div>
-</section>
-
-<section class="section" id="configuration">
-  <div class="section__header"><h3>Configuration</h3></div>
-  <div class="section__body grid-2">
-    <details class="panel">
-      <summary class="panel__header"><strong>Source and runtime</strong></summary>
-      <div class="panel__body">
-        <div class="info-row"><span class="info-row__label">Source</span><span class="info-row__value">{{ app.source_type | upper }}</span></div>
-        {% if app.repository_url %}<div class="info-row"><span class="info-row__label">Repository</span><span class="info-row__value">{{ app.repository_url }} · {{ app.branch }}</span></div>{% endif %}
-        <div class="form-actions">
-          <form method="post" action="/apps/{{ app.id }}/detect">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary">Detect again</button></form>
-          {% if app.source_type == 'zip' %}<form method="post" action="/apps/{{ app.id }}/upload" enctype="multipart/form-data" class="form-actions">{% include "partials/csrf_field.html" %}<input class="form-input" type="file" name="archive" accept=".zip" required><button class="btn btn--secondary">Replace ZIP</button></form>{% endif %}
-        </div>
-        <form class="form" method="post" action="/apps/{{ app.id }}/settings">
-          {% include "partials/csrf_field.html" %}
-          <div class="form-group"><label class="form-label" for="build_command">Build command</label><input class="form-input form-input--code" id="build_command" name="build_command" value="{{ app.build_command }}" required></div>
-          <div class="form-group"><label class="form-label" for="start_command">Start command</label><input class="form-input form-input--code" id="start_command" name="start_command" value="{{ app.start_command }}" required></div>
-          <button class="btn btn--secondary">Save commands</button>
-        </form>
-      </div>
-    </details>
-
-    <details class="panel" id="environment">
-      <summary class="panel__header"><strong>Environment and storage</strong></summary>
-      <div class="panel__body">
-        <div class="info-row"><span class="info-row__label">Database</span><span class="info-row__value">{% if app.postgres_mode == 'create' %}Managed PostgreSQL{% elif app.postgres_mode == 'external' %}External DATABASE_URL{% else %}No managed database{% endif %}</span></div>
-        <p class="text-muted">Environment values are protected and never shown after saving.</p>
-        {% if environment_keys %}<div class="form-actions">{% for key in environment_keys %}<form method="post" action="/apps/{{ app.id }}/environment/{{ key }}/delete">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary" title="Delete {{ key }}">{{ key }} ×</button></form>{% endfor %}</div>{% endif %}
-        <form method="post" action="/apps/{{ app.id }}/environment" class="form-actions">
-          {% include "partials/csrf_field.html" %}<input class="form-input" name="key" placeholder="VARIABLE_NAME" required><input class="form-input" name="value" type="password" placeholder="Value" required><button class="btn btn--secondary">Save variable</button>
-        </form>
-      </div>
-    </details>
-  </div>
-</section>
-
-<section class="section">
-  <div class="section__header"><h3>Service controls</h3></div>
-  <div class="section__body"><div class="form-actions">
-    {% if app.status == 'stopped' %}
-      <form method="post" action="/apps/{{ app.id }}/start">{% include "partials/csrf_field.html" %}<button class="btn btn--primary">Start</button></form>
-    {% else %}
-      <form method="post" action="/apps/{{ app.id }}/restart">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary">Restart</button></form>
-      <form method="post" action="/apps/{{ app.id }}/stop">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary">Stop</button></form>
-    {% endif %}
-  </div></div>
-</section>
-
-<details class="panel">
-  <summary class="panel__header"><strong>Danger zone</strong></summary>
-  <div class="panel__body">
-    <p class="text-muted">This stops the app and removes its service, files, environment file, and proxy. PostgreSQL data is preserved.</p>
-    <form method="post" action="/apps/{{ app.id }}/uninstall" onsubmit="return confirm('Strictly delete this Python app? PostgreSQL data is preserved.');">{% include "partials/csrf_field.html" %}<button class="btn btn--danger">Strictly Delete Python App</button></form>
-  </div>
-</details>
+{% include "pages/apps/partials/update.html" %}
+{% include "pages/apps/partials/deployment.html" %}
+{% include "pages/apps/partials/configuration.html" %}
+{% include "pages/apps/partials/controls.html" %}
 {% endblock %}
-{% block scripts %}{% if deployment and deployment.status in ('queued', 'running') %}<script>const id={{ deployment.id }};const output=document.getElementById('deployment-output');const state=document.getElementById('deployment-state');const details=document.getElementById('deployment-details');const poll=async()=>{const response=await fetch(`/apps/{{ app.id }}/deployments/${id}`);if(!response.ok)return;const data=await response.json();state.textContent=`${data.status.toUpperCase()} · ${data.stage}`;output.textContent=(data.output||'')+(data.error||'');if(['queued','running'].includes(data.status)){details.open=true;setTimeout(poll,2000);}};setTimeout(poll,1200);</script>{% endif %}{% endblock %}
+{% block scripts %}
+{% if deployment and deployment.status in ('queued', 'running') %}
+<script src="/static/js/modules/app-deployment.js"></script>
+{% endif %}
+{% endblock %}

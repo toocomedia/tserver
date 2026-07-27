@@ -17,14 +17,27 @@ from services import app_hosting_service
 from services import ssl_service
 
 
-async def start(db: AsyncSession, app: HostedApp) -> AppDeployment:
+async def start(
+    db: AsyncSession,
+    app: HostedApp,
+    *,
+    action: str = "deploy",
+    source_revision: str | None = None,
+) -> AppDeployment:
+    if action not in {"deploy", "update", "redeploy"}:
+        raise HTTPException(400, "Invalid deployment action.")
     active = await db.scalar(select(AppDeployment.id).where(
         AppDeployment.app_id == app.id,
         AppDeployment.status.in_(("queued", "running")),
     ))
     if active:
         raise HTTPException(409, "A deployment is already running for this app.")
-    deployment = AppDeployment(app_id=app.id)
+    deployment = AppDeployment(
+        app_id=app.id,
+        action=action,
+        source_revision=source_revision,
+        previous_revision=app.deployed_revision,
+    )
     db.add(deployment)
     await db.flush()
     asyncio.create_task(_run_after_commit(deployment.id))
@@ -83,19 +96,32 @@ async def _run_after_commit(deployment_id: int) -> None:
             return
         deployment.status, deployment.started_at = "running", datetime.utcnow()
         deployment.stage = "deploy"
-        deployment.output = "[deploy] Preparing source, dependencies, service, and health check.\n"
+        deployment.output = (
+            f"[deploy] Preparing {deployment.action} release, dependencies, "
+            "service, and health check.\n"
+        )
         await db.commit()
+        was_running = app.status == "running"
         try:
-            await app_hosting_service.deploy(app, domain.name, _reporter(db, deployment))
+            result = await app_hosting_service.deploy(
+                app,
+                domain.name,
+                deployment.id,
+                deployment.action,
+                deployment.source_revision,
+                _reporter(db, deployment),
+            )
+            deployment.source_revision = result["revision"]
+            deployment.rollback_status = result["rollback_status"]
             existing_cert = await db.scalar(
                 select(SslCert.id).where(SslCert.full_domain == domain.name)
             )
-            if app.ssl_requested or existing_cert:
+            if deployment.action == "deploy" and (app.ssl_requested or existing_cert):
                 deployment.stage = "ssl"
                 deployment.output = (deployment.output + "[ssl] Configuring HTTPS proxy.\n")[-80_000:]
                 await db.commit()
                 await ssl_service.configure_hosted_app_ssl(db, app, domain)
-            app.status = "running"
+            app.status, app.last_error = "running", None
             await _finish(db, deployment, "success", "complete", None)
         except Exception as exc:
             await db.refresh(deployment)
@@ -103,7 +129,19 @@ async def _run_after_commit(deployment_id: int) -> None:
                 app.status = "stopped"
                 await db.commit()
                 return
-            app.status, app.last_error = "failed", str(exc)[:1000]
+            rollback = getattr(exc, "rollback_status", None)
+            if rollback:
+                deployment.rollback_status = rollback
+                deployment.output = (
+                    deployment.output
+                    + f"[rollback] Automatic rollback: {rollback}.\n"
+                )[-80_000:]
+            app.status = (
+                "running"
+                if was_running and rollback in (None, "not_needed", "succeeded")
+                else "failed"
+            )
+            app.last_error = str(exc)[:1000]
             await _finish(db, deployment, "failed", deployment.stage, str(exc))
 
 

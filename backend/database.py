@@ -200,6 +200,40 @@ def _migrate_sync(sync_conn) -> None:
             sync_conn.execute(text("DROP TABLE ssl_certs"))
             sync_conn.execute(text("ALTER TABLE ssl_certs_new RENAME TO ssl_certs"))
 
+    if "hosted_apps" in tables:
+        cols = _column_names(sync_conn, "hosted_apps")
+        app_columns = {
+            "deployed_revision": "VARCHAR(64)",
+            "deployed_at": "DATETIME",
+            "available_revision": "VARCHAR(64)",
+            "available_revision_message": "VARCHAR(512)",
+            "available_revision_at": "DATETIME",
+            "source_checked_at": "DATETIME",
+            "active_release": "VARCHAR(128)",
+            "previous_release": "VARCHAR(128)",
+        }
+        for col, ddl in app_columns.items():
+            if col not in cols:
+                logger.info("Migrating hosted_apps: add %s", col)
+                sync_conn.execute(text(
+                    f"ALTER TABLE hosted_apps ADD COLUMN {col} {ddl}"
+                ))
+
+    if "app_deployments" in tables:
+        cols = _column_names(sync_conn, "app_deployments")
+        deployment_columns = {
+            "action": "VARCHAR(16) DEFAULT 'deploy' NOT NULL",
+            "source_revision": "VARCHAR(64)",
+            "previous_revision": "VARCHAR(64)",
+            "rollback_status": "VARCHAR(24)",
+        }
+        for col, ddl in deployment_columns.items():
+            if col not in cols:
+                logger.info("Migrating app_deployments: add %s", col)
+                sync_conn.execute(text(
+                    f"ALTER TABLE app_deployments ADD COLUMN {col} {ddl}"
+                ))
+
 async def init_db():
     """Create all tables on startup if they do not exist, then migrate."""
     # Import all models so Base knows about them

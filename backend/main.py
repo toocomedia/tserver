@@ -15,7 +15,7 @@ from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
 import config
 from database import init_db
-from routers import system, domains, dns, ssl, proxy, errors, auth, settings, updates, dev, notifications, plugins, dependencies, apps
+from routers import system, domains, dns, ssl, proxy, errors, auth, settings, updates, dev, notifications, plugins, dependencies, app_updates, apps
 from dependencies import dependency_manager
 from plugins import plugin_manager
 from plugins.manager import PluginUnavailableError
@@ -174,6 +174,7 @@ app.include_router(errors.router)    # Phase 6
 app.include_router(notifications.router)
 app.include_router(plugins.router)
 app.include_router(dependencies.router)
+app.include_router(app_updates.router)
 app.include_router(apps.router)
 plugin_manager.init_app(app)
 if getattr(config, "DEBUG", False):

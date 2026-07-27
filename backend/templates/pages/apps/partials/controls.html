@@ -1,0 +1,24 @@
+<section class="section">
+  <div class="section__header"><h3>Service controls</h3></div>
+  <div class="section__body">
+    <div class="form-actions">
+      {% if app.status == 'stopped' %}
+        <form method="post" action="/apps/{{ app.id }}/start">{% include "partials/csrf_field.html" %}<button class="btn btn--primary">Start</button></form>
+      {% else %}
+        <form method="post" action="/apps/{{ app.id }}/restart">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary">Restart</button></form>
+        <form method="post" action="/apps/{{ app.id }}/stop">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary">Stop</button></form>
+      {% endif %}
+      <form method="post" action="/apps/{{ app.id }}/deploy">{% include "partials/csrf_field.html" %}<button class="btn {% if app.status == 'pending' and not app.deployed_revision %}btn--primary{% else %}btn--secondary{% endif %}">{% if app.status == 'pending' and not app.deployed_revision %}Deploy app{% else %}Redeploy current version{% endif %}</button></form>
+    </div>
+  </div>
+</section>
+<details class="panel">
+  <summary class="panel__header"><strong>Danger zone</strong></summary>
+  <div class="panel__body">
+    <p class="text-muted">This stops the app and removes its service, releases, pending uploads, environment file, and proxy. PostgreSQL data is preserved.</p>
+    <form method="post" action="/apps/{{ app.id }}/uninstall" data-confirm="Strictly delete this Python app? PostgreSQL data is preserved.">
+      {% include "partials/csrf_field.html" %}
+      <button class="btn btn--danger">Strictly Delete Python App</button>
+    </form>
+  </div>
+</details>

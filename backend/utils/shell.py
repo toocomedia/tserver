@@ -59,7 +59,18 @@ async def run(command: str | list[str], timeout: int = 30) -> ShellResult:
     else:
         args = list(command)
 
-    args = _maybe_sudo(args)
+    return await _run_args(_maybe_sudo(args), timeout)
+
+
+async def run_unprivileged(
+    command: str | list[str], timeout: int = 30
+) -> ShellResult:
+    """Run a command without automatic sudo, for app-owned build processes."""
+    args = shlex.split(command) if isinstance(command, str) else list(command)
+    return await _run_args(args, timeout)
+
+
+async def _run_args(args: list[str], timeout: int) -> ShellResult:
     logger.info("Shell: %s", " ".join(args))
 
     try:

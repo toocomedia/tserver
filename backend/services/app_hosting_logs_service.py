@@ -2,6 +2,7 @@
 from fastapi import HTTPException
 
 from models.hosted_app import HostedApp
+from services import app_runtime_service
 from utils import shell
 
 
@@ -17,9 +18,6 @@ async def get_logs(app: HostedApp) -> str:
 
 def update_commands(app: HostedApp, build_command: str, start_command: str) -> None:
     build_command, start_command = build_command.strip(), start_command.strip()
-    if not build_command or not start_command:
-        raise HTTPException(400, "Build and start commands are required.")
-    if len(build_command) > 1000 or len(start_command) > 1000:
-        raise HTTPException(400, "Commands must be 1000 characters or fewer.")
+    app_runtime_service.validate_commands(build_command, start_command)
     app.build_command = build_command
     app.start_command = start_command

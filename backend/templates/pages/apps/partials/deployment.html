@@ -1,0 +1,17 @@
+<section class="section" id="deployment">
+  <div class="section__header"><h3>Deployment</h3></div>
+  <div class="section__body" {% if deployment %}data-deployment-url="/apps/{{ app.id }}/deployments/{{ deployment.id }}"{% endif %}>
+    {% if deployment %}
+      <div class="info-row"><span class="info-row__label">Action</span><span class="info-row__value">{{ deployment.action | title }}</span></div>
+      <div class="info-row"><span class="info-row__label">State</span><span class="info-row__value" data-deployment-state>{{ deployment.status | upper }} · {{ deployment.stage }}</span></div>
+      {% if deployment.source_revision %}<div class="info-row"><span class="info-row__label">Source revision</span><span class="info-row__value"><code>{{ deployment.source_revision[:12] }}</code></span></div>{% endif %}
+      <div class="info-row" data-rollback-row {% if not deployment.rollback_status %}hidden{% endif %}><span class="info-row__label">Automatic rollback</span><span class="info-row__value" data-rollback-state>{{ deployment.rollback_status or '' }}</span></div>
+      <details class="panel" data-deployment-details {% if deployment.status in ('queued', 'running', 'failed', 'cancelled') %}open{% endif %}>
+        <summary class="panel__header"><strong>Deployment output</strong></summary>
+        <pre class="code-block panel__body" data-deployment-output>{{ deployment.output }}{{ deployment.error or '' }}</pre>
+      </details>
+    {% else %}
+      <div class="info-row"><span class="info-row__label">Last deployment</span><span class="info-row__value">Not deployed yet</span></div>
+    {% endif %}
+  </div>
+</section>
