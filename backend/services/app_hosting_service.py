@@ -1,6 +1,6 @@
 """Trusted administrator Python-app deployment orchestration."""
 from __future__ import annotations
-import os, secrets, shutil
+import os, shutil
 from pathlib import Path
 from fastapi import HTTPException
 from sqlalchemy import select
@@ -13,6 +13,7 @@ from services import nginx_service
 from services import app_project_detector
 from services import app_release_service
 from services import app_runtime_service
+from services import app_ownership_service
 ROOT = Path(config.APP_HOSTING_ROOT)
 ENV_ROOT = Path(config.APP_HOSTING_ENV_ROOT)
 GIT_URL_RE = repository_service.GIT_URL_RE
@@ -35,11 +36,6 @@ def _ensure_runtime_dirs() -> None:
         ENV_ROOT.chmod(0o700)
     except PermissionError as exc:
         raise HTTPException(500, "Python app storage is not ready. Run the panel update on the VPS.") from exc
-
-def _normalise_paths(app: HostedApp) -> None:
-    app.work_dir = str(_app_dir(app.id))
-    if app.env_path.startswith("/etc/srv-panel/"):
-        app.env_path = str(ENV_ROOT / f"{app.id}.env")
 
 async def _progress(reporter, stage: str, message: str) -> None:
     if reporter: await reporter(stage, message)
@@ -65,16 +61,6 @@ async def next_port(db: AsyncSession) -> int:
     used = set((await db.scalars(select(HostedApp.port))).all())
     return next(port for port in range(config.APP_HOSTING_PORT_START, 65536) if port not in used)
 
-async def next_service_name(db: AsyncSession, domain_id: int) -> str:
-    names = set((await db.scalars(select(HostedApp.service_name))).all())
-    base = f"srv-python-{domain_id}"
-    if base not in names:
-        return base
-    while True:
-        candidate = f"{base}-{secrets.token_hex(3)}"
-        if candidate not in names:
-            return candidate
-
 async def create_app(db: AsyncSession, domain_id: int, source_type: str, repository_url: str | None, branch: str, build: str, start: str, ssl: bool, postgres_mode: str, external_url: str | None) -> HostedApp:
     if source_type != "git": raise HTTPException(409, "ZIP source is coming soon.")
     if postgres_mode not in {"none", "create", "external"}: raise HTTPException(400, "Invalid app setup.")
@@ -84,12 +70,11 @@ async def create_app(db: AsyncSession, domain_id: int, source_type: str, reposit
         raise HTTPException(409, "This domain already has Python app setup. Open it from the domain page.")
     app_runtime_service.validate_commands(build, start)
     _ensure_runtime_dirs()
-    port = await next_port(db); service_name = await next_service_name(db, domain_id)
-    app = HostedApp(domain_id=domain_id, source_type=source_type, repository_url=repository_url, branch=branch or "main", build_command=build, start_command=start, port=port, service_name=service_name, work_dir=str(_app_dir(domain_id)), env_path=str(ENV_ROOT / f"{domain_id}.env"), ssl_requested=ssl, postgres_mode=postgres_mode)
+    port = await next_port(db)
+    app = HostedApp(domain_id=domain_id, source_type=source_type, repository_url=repository_url, branch=branch or "main", build_command=build, start_command=start, port=port, service_name="pending", work_dir="pending", env_path="pending", ssl_requested=ssl, postgres_mode=postgres_mode)
     if postgres_mode == "external" and not external_url: raise HTTPException(400, "DATABASE_URL is required for an external database.")
     db.add(app); await db.flush()
-    app.work_dir = str(_app_dir(app.id))
-    app.env_path = str(ENV_ROOT / f"{app.id}.env")
+    app_ownership_service.apply_identity(app)
     if postgres_mode == "external":
         ENV_ROOT.mkdir(parents=True, exist_ok=True)
         Path(app.env_path).write_text(f"DATABASE_URL={external_url}\n", encoding="utf-8")
@@ -105,7 +90,8 @@ async def deploy(
     reporter=None,
 ) -> dict[str, str]:
     _ensure_runtime_dirs()
-    _normalise_paths(app)
+    app_ownership_service.apply_identity(app)
+    app_ownership_service.assert_unit_owner(app)
     await _progress(reporter, "source", "Preparing application source.")
     prepared = await app_release_service.prepare(
         app, deployment_id, action, target_revision

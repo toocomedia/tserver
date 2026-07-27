@@ -11,6 +11,7 @@ from fastapi import HTTPException
 import config
 from models.hosted_app import HostedApp
 from services import app_project_detector
+from services import app_ownership_service
 from utils import shell
 
 
@@ -50,6 +51,7 @@ async def prepare_environment(app: HostedApp, source: Path) -> None:
 
 
 async def install_unit(app: HostedApp, _release: Path) -> None:
+    app_ownership_service.assert_unit_owner(app)
     current = Path(app.work_dir) / "current"
     source, venv = current / "source", current / ".venv"
     start = f"{venv}/bin/{app.start_command}".replace("'", "'\"'\"'")
@@ -83,6 +85,8 @@ def restore_environment(app: HostedApp, snapshot: bytes | None) -> None:
 
 
 async def start(app: HostedApp) -> None:
+    app_ownership_service.require_environment(app)
+    app_ownership_service.require_port_free(app.port)
     await systemctl("enable", "--now", app.service_name)
 
 
@@ -128,14 +132,22 @@ def _managed_database(app: HostedApp, source: Path, existing: str) -> str:
         password = secrets.token_urlsafe(24)
         pg.create_user(app.database_user, password)
         pg.create_database(app.database_name, app.database_user)
-        return existing + (
-            f"DATABASE_URL={scheme}://{app.database_user}:{password}"
-            f"@127.0.0.1:5432/{app.database_name}\n"
-        )
+        return existing + _database_url(scheme, app, password)
+    if "DATABASE_URL=" not in existing:
+        password = secrets.token_urlsafe(24)
+        pg.change_password(app.database_user, password)
+        return existing + _database_url(scheme, app, password)
     return re.sub(
         r"(?m)^DATABASE_URL=postgresql(?:\+[A-Za-z0-9_]+)?://",
         f"DATABASE_URL={scheme}://",
         existing,
+    )
+
+
+def _database_url(scheme: str, app: HostedApp, password: str) -> str:
+    return (
+        f"DATABASE_URL={scheme}://{app.database_user}:{password}"
+        f"@127.0.0.1:5432/{app.database_name}\n"
     )
 
 

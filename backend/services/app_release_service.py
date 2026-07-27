@@ -14,6 +14,7 @@ from dependencies.git import repository_service
 from models.hosted_app import HostedApp
 from services import app_runtime_service
 from services import app_hosting_health_service
+from services import app_ownership_service
 class ReleaseFailure(Exception):
     def __init__(self, message: str, rollback_status: str = "not_needed"):
         super().__init__(message)
@@ -57,6 +58,7 @@ async def cutover(app: HostedApp, prepared: PreparedRelease, reporter=None) -> s
         raise
     if was_running:
         await app_runtime_service.stop(app)
+    app_ownership_service.require_port_free(app.port)
     if old_release is None:
         old_release = _move_legacy_release(app)
     _switch_current(app, prepared.path)

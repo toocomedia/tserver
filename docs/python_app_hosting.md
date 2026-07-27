@@ -152,7 +152,7 @@ For hosted app ID `<id>`, the runtime layout is:
 └── data/                   persistent local application data
 
 /var/lib/srv-panel/apps-env/<id>.env
-/etc/systemd/system/srv-python-<domain-id>.service
+/etc/systemd/system/srv-python-<app-id>.service
 ```
 
 The shared `apps/` and `apps-env/` roots are protected with mode `0700`. The
@@ -184,6 +184,10 @@ The generated systemd unit uses the selected release:
 - the protected environment file as `EnvironmentFile`;
 - the app virtual environment to run the confirmed start command;
 - `Restart=on-failure` for crash recovery.
+
+The app ID permanently owns its service, port, app folder, environment file,
+and virtual environments. System Python is shared, but installed requirements
+are never shared between apps.
 
 The panel does not claim a fixed CPU, RAM, or process quota for a Python app.
 The application owner is responsible for efficient code and dependency choices.
@@ -306,6 +310,10 @@ Use **Restart** or **Redeploy current version** after changing a value.
 Start enables and starts the systemd unit, then verifies that it becomes active.
 It makes a manually stopped app available again after reboot.
 
+If the protected environment file is missing, Start refuses before systemd can
+enter a restart loop. Redeploy or run the ownership repair command first. For
+an external database, save `DATABASE_URL` again before repair.
+
 ### Restart
 
 Restart restarts the existing unit and verifies that it becomes active. It does
@@ -354,6 +362,19 @@ Common failures:
 | SQLAlchemy async/psycopg2 error | Use an async driver and matching URL dialect. |
 | Git shows no update | Check the configured branch and compare the displayed SHAs. |
 | Updated app fails health check | Review rollback state, deployment output, then service logs. |
+| Service ownership conflict or missing env file | Run the ownership audit below; do not start another app on that port. |
+
+### Ownership repair
+
+Use this once after upgrading from old domain-based service naming. It is
+read-only by default; `--apply` repairs records and units but leaves apps
+stopped for explicit user start.
+
+```text
+cd /opt/srv-panel/app/backend
+python3 app_hosting/docs/repair_app_ownership_on_vps.py
+python3 app_hosting/docs/repair_app_ownership_on_vps.py --apply
+```
 
 ## Usage metrics
 

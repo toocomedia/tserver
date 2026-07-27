@@ -13,7 +13,7 @@ def check(label, command=None, ok=None):
     print(("PASS" if passed else "FAIL") + " " + label)
     return passed
 
-p = argparse.ArgumentParser(); p.add_argument("--service", required=True); p.add_argument("--port", type=int, required=True); p.add_argument("--domain"); p.add_argument("--env"); p.add_argument("--app-root"); p.add_argument("--previous-release")
+p = argparse.ArgumentParser(); p.add_argument("--service", required=True); p.add_argument("--port", type=int, required=True); p.add_argument("--domain"); p.add_argument("--env"); p.add_argument("--app-root"); p.add_argument("--previous-release"); p.add_argument("--app-id", type=int)
 a = p.parse_args(); results = []
 results += [check("Git", ["git", "--version"]), check("SSH", ["ssh", "-V"]), check("Python", ["python3", "-c", "import venv,pip"])]
 results += [check("systemd service", ["systemctl", "is-active", "--quiet", a.service]), check("nginx config", ["nginx", "-t"])]
@@ -27,4 +27,11 @@ if a.app_root:
     results += [check("release retention", ok=lambda: releases.is_dir() and len([p for p in releases.iterdir() if p.is_dir()]) <= 2)]
 if a.previous_release:
     results += [check("rollback release", ok=lambda: Path(a.previous_release).is_dir() and (Path(a.previous_release) / "source").is_dir())]
+if a.app_id is not None:
+    def owned_unit():
+        unit = subprocess.run(["systemctl", "cat", a.service], capture_output=True, text=True, timeout=15)
+        return unit.returncode == 0 and a.service == f"srv-python-{a.app_id}" and f"Description=SRV Panel Python app {a.app_id}" in unit.stdout and (not a.env or f"EnvironmentFile={a.env}" in unit.stdout)
+    results += [check("app-owned service", ok=owned_unit)]
+    if a.env: results += [check("app-owned environment", ok=lambda: Path(a.env).name == f"{a.app_id}.env")]
+    if a.app_root: results += [check("app-owned work directory", ok=lambda: Path(a.app_root).name == str(a.app_id))]
 sys.exit(0 if all(results) else 1)
