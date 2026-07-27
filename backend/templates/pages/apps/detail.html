@@ -17,7 +17,7 @@
   <div class="section__body">
     {% if deployment %}
       <div class="info-row"><span class="info-row__label">Last deployment</span><span class="info-row__value" id="deployment-state">{{ deployment.status | upper }} · {{ deployment.stage }}</span></div>
-      <details class="panel" id="deployment-details" {% if deployment.status in ('queued', 'running', 'failed') %}open{% endif %}>
+      <details class="panel" id="deployment-details" {% if deployment.status in ('queued', 'running', 'failed', 'cancelled') %}open{% endif %}>
         <summary class="panel__header"><strong>Deployment output</strong></summary>
         <pre class="code-block panel__body" id="deployment-output">{{ deployment.output }}{{ deployment.error or '' }}</pre>
       </details>
@@ -65,8 +65,12 @@
 <section class="section">
   <div class="section__header"><h3>Service controls</h3></div>
   <div class="section__body"><div class="form-actions">
-    <form method="post" action="/apps/{{ app.id }}/restart">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary">Restart</button></form>
-    <form method="post" action="/apps/{{ app.id }}/stop">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary">Stop</button></form>
+    {% if app.status == 'stopped' %}
+      <form method="post" action="/apps/{{ app.id }}/start">{% include "partials/csrf_field.html" %}<button class="btn btn--primary">Start</button></form>
+    {% else %}
+      <form method="post" action="/apps/{{ app.id }}/restart">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary">Restart</button></form>
+      <form method="post" action="/apps/{{ app.id }}/stop">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary">Stop</button></form>
+    {% endif %}
   </div></div>
 </section>
 

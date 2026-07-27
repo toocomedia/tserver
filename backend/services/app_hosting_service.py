@@ -182,11 +182,6 @@ async def deploy(app: HostedApp, domain_name: str, reporter=None) -> None:
     await nginx_service.create_proxy(domain_name, "127.0.0.1", app.port, "http")
     await nginx_service.reload()
 
-async def control(app: HostedApp, action: str) -> None:
-    if action not in {"start", "stop", "restart"}: raise HTTPException(400, "Invalid app action.")
-    await _systemctl(action, app.service_name, allow_missing=action == "stop")
-    app.status = "stopped" if action == "stop" else "running"
-
 async def uninstall(app: HostedApp, domain_name: str | None) -> None:
     # Strict cleanup always stops first; pending deployments have no unit to stop.
     await _systemctl("stop", app.service_name, allow_missing=True)

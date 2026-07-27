@@ -44,6 +44,19 @@ async def get(db: AsyncSession, app_id: int, deployment_id: int) -> AppDeploymen
     return deployment
 
 
+async def cancel(db: AsyncSession, app: HostedApp) -> None:
+    active = (await db.scalars(select(AppDeployment).where(
+        AppDeployment.app_id == app.id,
+        AppDeployment.status.in_(("queued", "running")),
+    ))).all()
+    for deployment in active:
+        deployment.status, deployment.stage = "cancelled", "cancelled"
+        deployment.error = "Stopped by the user."
+        deployment.output = (deployment.output + "[cancelled] Stop requested by the user.\n")[-80_000:]
+        deployment.finished_at = datetime.utcnow()
+    await db.commit()
+
+
 async def recover_interrupted() -> None:
     async with AsyncSessionLocal() as db:
         stale = (await db.scalars(select(AppDeployment).where(
@@ -61,7 +74,7 @@ async def _run_after_commit(deployment_id: int) -> None:
     await asyncio.sleep(0.5)
     async with AsyncSessionLocal() as db:
         deployment = await db.get(AppDeployment, deployment_id)
-        if deployment is None:
+        if deployment is None or deployment.status != "queued":
             return
         app = await db.get(HostedApp, deployment.app_id)
         domain = await db.get(Domain, app.domain_id) if app else None
@@ -85,12 +98,20 @@ async def _run_after_commit(deployment_id: int) -> None:
             app.status = "running"
             await _finish(db, deployment, "success", "complete", None)
         except Exception as exc:
+            await db.refresh(deployment)
+            if deployment.status == "cancelled":
+                app.status = "stopped"
+                await db.commit()
+                return
             app.status, app.last_error = "failed", str(exc)[:1000]
             await _finish(db, deployment, "failed", deployment.stage, str(exc))
 
 
 def _reporter(db: AsyncSession, deployment: AppDeployment):
     async def report(stage: str, message: str) -> None:
+        await db.refresh(deployment)
+        if deployment.status == "cancelled":
+            raise HTTPException(409, "Deployment was stopped by the user.")
         deployment.stage = stage
         deployment.output = (deployment.output + f"[{stage}] {message}\n")[-80_000:]
         await db.commit()

@@ -12,6 +12,7 @@ from models.app_deployment import AppDeployment
 from models.app_environment import AppEnvironmentVariable
 from models.hosted_app import HostedApp
 from services import app_deployment_service, app_environment_service, app_hosting_logs_service
+from services import hosted_app_control_service
 from services import app_hosting_service as apps
 from services import app_source_inspection_service
 from templating import templates
@@ -140,7 +141,9 @@ async def uninstall(app_id: int, db: AsyncSession = Depends(get_db)):
 
 @router.post("/{app_id}/{action}")
 async def control(app_id: int, action: str, db: AsyncSession = Depends(get_db)):
-    await apps.control(await _app(db, app_id), action)
+    app = await _app(db, app_id)
+    if action == "stop": await app_deployment_service.cancel(db, app)
+    await hosted_app_control_service.control(app, action)
     return RedirectResponse(f"/apps/{app_id}", status_code=303)
 
 

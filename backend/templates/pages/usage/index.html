@@ -199,6 +199,22 @@
       `).join('') : '<tr><td colspan="5" class="text-muted">No active plugins running.</td></tr>';
     }
 
+    const hostedAppTbody = document.getElementById('hosted-app-usage-tbody');
+    if (hostedAppTbody) {
+      const apps = d.hosted_apps || [];
+      hostedAppTbody.innerHTML = apps.length ? apps.map(app => `
+        <tr><td class="table-title">${app.label}</td><td>${app.count}</td><td>${app.cpu.toFixed(1)}%</td><td>${app.memory}</td><td><span class="${procStatusClass(app.status)}">${app.status}</span></td></tr>
+      `).join('') : '<tr><td colspan="5" class="text-muted">No hosted Python apps yet.</td></tr>';
+    }
+
+    const dependencyTbody = document.getElementById('dependency-usage-tbody');
+    if (dependencyTbody) {
+      const dependencies = d.dependencies || [];
+      dependencyTbody.innerHTML = dependencies.map(dep => `
+        <tr><td class="table-title">${dep.label}</td><td>${dep.version}</td><td>${dep.details}</td><td><span class="${procStatusClass(dep.status)}">${dep.status}</span></td></tr>
+      `).join('') || '<tr><td colspan="4" class="text-muted">No runtime dependencies found.</td></tr>';
+    }
+
     // Top processes table
     if (d.processes) {
       const procTbody = document.getElementById('proc-tbody');

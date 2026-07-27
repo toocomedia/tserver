@@ -27,6 +27,7 @@ from models.domain import Domain
 from models.ssl_cert import SslCert
 from models.proxy import ReverseProxy
 from services import error_service
+from services import hosted_app_usage_service
 from services import plugin_usage_service
 from templating import templates
 from utils.shell import run
@@ -254,7 +255,7 @@ def _collect_usage_snapshot() -> dict:
                 elif "pdns_server" in name:
                     svc = "powerdns"
                 elif "python" in name or "uvicorn" in name:
-                    if "srv-panel" in cmdline or "main.py" in cmdline or "uvicorn" in cmdline:
+                    if "srv-panel" in cmdline:
                         svc = "panel"
                 elif name in {"dockerd", "containerd", "docker-proxy"}:
                     svc = "docker"
@@ -284,7 +285,7 @@ def _collect_usage_snapshot() -> dict:
 
 
 @router.get("/api/stats")
-async def server_stats():
+async def server_stats(db: AsyncSession = Depends(get_db)):
     """Live server resource stats via psutil — CPU, RAM, disk, network, processes."""
     from fastapi import HTTPException
     if not _PSUTIL_OK:
@@ -328,6 +329,17 @@ async def server_stats():
         )
 
     plugins = await plugin_usage_service.get_plugin_usage(procs, ram.total)
+    hosted_apps = await hosted_app_usage_service.get_usage(db, procs, ram.total)
+    dependencies = [
+        {
+            "label": status.get("name", status["id"]),
+            "version": status.get("detected_version") or "—",
+            "status": status.get("effective_state", "unknown"),
+            "details": "On demand; no resident process." if status["id"] == "git" else "Shared runtime; per-app usage is listed below.",
+        }
+        for status in await asyncio.to_thread(dependency_manager.get_all_statuses, cached=True)
+        if status["id"] in {"git", "python"}
+    ]
 
     procs.sort(key=lambda x: x["cpu_percent"] or 0, reverse=True)
     top_procs = [
@@ -375,6 +387,8 @@ async def server_stats():
         "uptime_human": _uptime_human(uptime_sec),
         "services": services,
         "plugins": plugins,
+        "dependencies": dependencies,
+        "hosted_apps": hosted_apps,
         "processes": top_procs,
         "optimization": opt_status,
     }
