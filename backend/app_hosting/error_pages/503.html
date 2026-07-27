@@ -3,28 +3,18 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>503 — Website Temporarily Offline</title>
+  <title>Website temporarily offline</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Onest:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/_srv-errors/error.css">
 </head>
-<body class="error-page error-page--danger">
-  <header class="error-header">
-    <a class="error-brand" href="/" aria-label="SRV Panel home">
-      <img src="/_srv-errors/logobarq.png" alt="SRV Panel" class="error-brand__logo">
-    </a>
-    <span class="error-header__label">Service response</span>
-  </header>
-  <main class="error-main">
-    <section class="error-panel" aria-labelledby="error-title">
-      <span class="error-status">HTTP 503</span>
-      <div class="error-code">503</div>
-      <h1 id="error-title">Website temporarily offline</h1>
-      <p>This site is undergoing maintenance or is temporarily suspended. Please try again shortly.</p>
-      <div class="error-actions">
-        <a href="javascript:location.reload()" class="error-button error-button--primary">Reload page</a>
-        <a href="/" class="error-button error-button--secondary">Return home</a>
-      </div>
-      <div class="error-meta"><span>Response code</span><strong>503 SERVICE UNAVAILABLE</strong></div>
-    </section>
+<body>
+  <main class="error-page">
+    <p class="error-page__eyebrow">Error 503</p>
+    <h1>Website temporarily offline</h1>
+    <p>Please try again shortly.</p>
+    <a href="javascript:location.reload()" class="btn">↻ Reload page</a>
   </main>
 </body>
 </html>

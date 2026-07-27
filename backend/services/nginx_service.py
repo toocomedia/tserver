@@ -186,7 +186,11 @@ async def ensure_error_pages() -> None:
     for source in ERROR_PAGES_SOURCE.rglob("*"):
         if source.is_file():
             relative = source.relative_to(ERROR_PAGES_SOURCE)
-            await shell.write_file(target / relative, source.read_bytes())
+            try:
+                content = source.read_text(encoding="utf-8")
+                await shell.write_file(target / relative, content)
+            except UnicodeDecodeError:
+                logger.warning("Skipping binary file in error pages: %s", relative)
     logger.info("Nginx error pages written: %s", target)
 
 

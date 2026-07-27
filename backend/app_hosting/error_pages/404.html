@@ -3,28 +3,18 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>404 — Page Not Found</title>
+  <title>Page not found</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Onest:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/_srv-errors/error.css">
 </head>
-<body class="error-page error-page--not-found">
-  <header class="error-header">
-    <a class="error-brand" href="/" aria-label="SRV Panel home">
-      <img src="/_srv-errors/logobarq.png" alt="SRV Panel" class="error-brand__logo">
-    </a>
-    <span class="error-header__label">Page response</span>
-  </header>
-  <main class="error-main">
-    <section class="error-panel" aria-labelledby="error-title">
-      <span class="error-status">HTTP 404</span>
-      <div class="error-code">404</div>
-      <h1 id="error-title">Page not found</h1>
-      <p>The requested page could not be found. Check the address or return to the home page.</p>
-      <div class="error-actions">
-        <a href="/" class="error-button error-button--primary">Return home</a>
-        <a href="javascript:history.back()" class="error-button error-button--secondary">Go back</a>
-      </div>
-      <div class="error-meta"><span>Response code</span><strong>404 NOT FOUND</strong></div>
-    </section>
+<body>
+  <main class="error-page">
+    <p class="error-page__eyebrow">Error 404</p>
+    <h1>Page not found</h1>
+    <p>The page you requested does not exist or has moved.</p>
+    <a href="javascript:history.back()" class="btn">← Go back</a>
   </main>
 </body>
 </html>

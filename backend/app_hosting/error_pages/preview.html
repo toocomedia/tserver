@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SRV Panel — Ultra Clean Error Page Preview</title>
+
+  <!-- Google Fonts: Onest & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Onest:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --color-bg:            #FFFFFF;
+      --color-surface:       #F4F5F2;
+      --color-text:          #0F1720;
+      --color-muted:         #6B6F6A;
+      --color-line:          #E2E4DC;
+      --color-accent:        #C7F464;
+      --color-accent-dark:   #A8E04A;
+      --color-sidebar:       #0B0C0B;
+
+      --font-family: 'Onest', 'Inter', system-ui, sans-serif;
+    }
+
+    /* DESIGN.md Reset: ZERO border-radius, ZERO shadows, ZERO outer box borders */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      border-radius: 0 !important;
+      box-shadow: none !important;
+    }
+
+    html, body {
+      height: 100%;
+      background-color: var(--color-bg);
+      color: var(--color-text);
+      font-family: var(--font-family);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 24px;
+      
+      /* Clean Technical Grid Pattern Background */
+      background-image: 
+        linear-gradient(to right, rgba(226, 228, 220, 0.45) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(226, 228, 220, 0.45) 1px, transparent 1px);
+      background-size: 24px 24px;
+    }
+
+    /* Ultra-Clean Minimal Content Block with Spacious Internal Padding */
+    .error-page {
+      width: min(100%, 560px);
+      padding: 40px;
+      border-top: 8px solid var(--color-accent);
+      background: var(--color-bg);
+    }
+
+    .error-code {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--color-muted);
+      margin-bottom: 12px;
+    }
+
+    h1 {
+      font-size: 24px;
+      font-weight: 700;
+      line-height: 1.2;
+      letter-spacing: -0.02em;
+      color: var(--color-text);
+      margin-bottom: 12px;
+    }
+
+    p {
+      font-size: 14px;
+      line-height: 1.5;
+      color: var(--color-muted);
+      margin-bottom: 28px;
+    }
+
+    /* Action Button — Flat Pistachio Fill per DESIGN.md */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      height: 36px;
+      padding: 0 18px;
+      font-family: var(--font-family);
+      font-weight: 600;
+      font-size: 13px;
+      border: none !important;
+      outline: none;
+      cursor: pointer;
+      text-decoration: none;
+      background: var(--color-accent);
+      color: #111111;
+      transition: background 0.15s ease;
+    }
+
+    .btn:hover {
+      background: var(--color-accent-dark);
+    }
+
+    /* Floating Switcher Toolbar for Previewing States */
+    .preview-switcher {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--color-sidebar);
+      padding: 6px 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      z-index: 1000;
+    }
+
+    .preview-switcher__title {
+      color: #FFFFFF;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      margin-right: 4px;
+    }
+
+    .preview-btn {
+      background: rgba(255, 255, 255, 0.1);
+      color: #FFFFFF;
+      border: none;
+      padding: 4px 10px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .preview-btn.active {
+      background: var(--color-accent);
+      color: #111111;
+    }
+
+    @media (max-width: 580px) {
+      .error-page {
+        padding: 28px 24px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Ultra Clean Minimal Block with Spacious Padding (40px) -->
+  <main class="error-page">
+    <div class="error-code" id="error-code">ERROR 404</div>
+    <h1 id="error-title">Page not found</h1>
+    <p id="error-desc">The requested page does not exist or has moved.</p>
+
+    <a href="javascript:history.back()" class="btn" id="btn-action">
+      ← Go back
+    </a>
+  </main>
+
+  <!-- Interactive State Switcher (Preview Only) -->
+  <div class="preview-switcher">
+    <span class="preview-switcher__title">Preview:</span>
+    <button class="preview-btn active" onclick="switchState('404')">404</button>
+    <button class="preview-btn" onclick="switchState('502')">502</button>
+    <button class="preview-btn" onclick="switchState('503')">503</button>
+  </div>
+
+  <script>
+    const states = {
+      '404': {
+        code: 'ERROR 404',
+        title: 'Page not found',
+        desc: 'The requested page does not exist or has moved.',
+        btnText: '← Go back',
+        btnHref: 'javascript:history.back()'
+      },
+      '502': {
+        code: 'ERROR 502',
+        title: 'Service unavailable',
+        desc: 'The website is starting or temporarily unavailable.',
+        btnText: '↻ Retry connection',
+        btnHref: 'javascript:location.reload()'
+      },
+      '503': {
+        code: 'ERROR 503',
+        title: 'Website temporarily offline',
+        desc: 'The website is undergoing maintenance. Please try again shortly.',
+        btnText: '↻ Reload page',
+        btnHref: 'javascript:location.reload()'
+      }
+    };
+
+    function switchState(key) {
+      const data = states[key];
+      if (!data) return;
+
+      document.querySelectorAll('.preview-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.textContent.trim() === key);
+      });
+
+      document.getElementById('error-code').textContent = data.code;
+      document.getElementById('error-title').textContent = data.title;
+      document.getElementById('error-desc').textContent = data.desc;
+
+      const btn = document.getElementById('btn-action');
+      btn.textContent = data.btnText;
+      btn.setAttribute('href', data.btnHref);
+    }
+  </script>
+</body>
+</html>
