@@ -28,6 +28,7 @@ from models.ssl_cert import SslCert
 from models.proxy import ReverseProxy
 from services import error_service
 from services import hosted_app_usage_service
+from services import process_usage_classifier
 from services import plugin_usage_service
 from templating import templates
 from utils.shell import run
@@ -249,16 +250,7 @@ def _collect_usage_snapshot() -> dict:
                 name = info.get("name", "").lower() if info.get("name") else ""
                 cmdline = " ".join(info.get("cmdline") or []).lower()
 
-                svc = None
-                if "nginx" in name:
-                    svc = "nginx"
-                elif "pdns_server" in name:
-                    svc = "powerdns"
-                elif "python" in name or "uvicorn" in name:
-                    if "srv-panel" in cmdline:
-                        svc = "panel"
-                elif name in {"dockerd", "containerd", "docker-proxy"}:
-                    svc = "docker"
+                svc = process_usage_classifier.stack_service(name, cmdline)
 
                 if svc:
                     services[svc]["cpu"] += info["cpu_percent"] or 0.0
