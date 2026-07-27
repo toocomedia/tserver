@@ -41,9 +41,15 @@ async def repair(apply: bool) -> int:
         expected_services = {app.id: app_ownership_service.service_name(app.id) for app in apps}
         env_owners = _path_owners(apps, "env_path")
         root_owners = _path_owners(apps, "work_dir")
+        original = {app.id: (app.service_name, app.env_path, app.work_dir) for app in apps}
+        if apply:
+            for app in apps:
+                if app.service_name != expected_services[app.id]:
+                    app.service_name = f"__srv_repair_{app.id}__"
+            await db.flush()
         failures = 0
         for app in apps:
-            old_service, old_env, old_root = app.service_name, app.env_path, app.work_dir
+            old_service, old_env, old_root = original[app.id]
             expected_service = app_ownership_service.service_name(app.id)
             expected_env = app_ownership_service.env_path(app.id)
             expected_root = app_ownership_service.work_dir(app.id)
