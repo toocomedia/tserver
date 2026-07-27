@@ -52,6 +52,8 @@
             <span class="text-small text-muted">{{ item.domain.server_ip }}</span>
             {% if item.domain.project_type == 'dns' %}
               <span class="badge-minimal badge-minimal--neutral">DNS ONLY</span>
+            {% elif item.domain.project_type == 'python' %}
+              <span class="badge-minimal badge-minimal--active">PYTHON APP</span>
             {% else %}
               <span class="badge-minimal badge-minimal--active">STATIC SITE</span>
             {% endif %}
@@ -160,7 +162,7 @@ function filterDomainsTable() {
 }
 
 function deleteDomain(id, name) {
-  confirmAction(`Delete domain "${name}"? This will remove the DNS zone, nginx config and webroot.`, async () => {
+  confirmAction(`Delete domain "${name}"? This will remove the DNS zone, Nginx config, webroot, and linked SSL certificate.`, async () => {
     try {
       if (typeof window.submitPost === 'function') {
         window.submitPost(`/domains/${id}/delete`);

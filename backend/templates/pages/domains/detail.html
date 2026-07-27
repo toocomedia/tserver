@@ -282,7 +282,7 @@ function toggleEditor() {
 
 function deleteDomain(id, name) {
   confirmAction(
-    `Delete "${name}"? This removes the DNS zone, nginx config, webroot, and SSL cert.`,
+    `Delete "${name}"? This removes the DNS zone, Nginx config, webroot, and linked SSL certificate.`,
     async () => {
       if (typeof window.submitPost === 'function') {
         window.submitPost(`/domains/${id}/delete`);

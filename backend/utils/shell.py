@@ -8,6 +8,7 @@ import asyncio
 import logging
 import os
 import shlex
+import signal
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -73,18 +74,25 @@ async def run_unprivileged(
 async def _run_args(args: list[str], timeout: int) -> ShellResult:
     logger.info("Shell: %s", " ".join(args))
 
+    proc = None
     try:
+        session_args = {"start_new_session": True} if os.name != "nt" else {}
         proc = await asyncio.create_subprocess_exec(
             *args,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
+            **session_args,
         )
         stdout_bytes, stderr_bytes = await asyncio.wait_for(
             proc.communicate(), timeout=timeout
         )
     except asyncio.TimeoutError:
         logger.error("Shell timeout: %s", " ".join(args))
+        await _stop_process(proc)
         return ShellResult(success=False, stdout="", stderr="Timeout", returncode=-1)
+    except asyncio.CancelledError:
+        await _stop_process(proc)
+        raise
     except FileNotFoundError as exc:
         logger.error("Shell command not found: %s — %s", args[0], exc)
         return ShellResult(success=False, stdout="", stderr=str(exc), returncode=-1)
@@ -107,6 +115,26 @@ async def _run_args(args: list[str], timeout: int) -> ShellResult:
         stderr=stderr,
         returncode=proc.returncode,
     )
+
+
+async def _stop_process(proc) -> None:
+    if proc is None or proc.returncode is not None:
+        return
+    try:
+        if os.name != "nt":
+            os.killpg(proc.pid, signal.SIGTERM)
+        else:
+            proc.terminate()
+        await asyncio.wait_for(proc.wait(), timeout=5)
+    except (asyncio.TimeoutError, ProcessLookupError):
+        try:
+            if os.name != "nt":
+                os.killpg(proc.pid, signal.SIGKILL)
+            else:
+                proc.kill()
+            await proc.wait()
+        except ProcessLookupError:
+            pass
 
 
 async def write_file(path: str | Path, content: str) -> None:

@@ -104,6 +104,21 @@ def drop_database(name: str) -> bool:
     return True
 
 
+def drop_app_database_and_user(database_name: str, user_name: str) -> bool:
+    """Remove a panel-managed database and its login role idempotently."""
+    _validate_ident(database_name, "database name")
+    _validate_ident(user_name, "username")
+    literal = _escape_literal(database_name)
+    _run_psql(["-c", (
+        "SELECT pg_terminate_backend(pid) FROM pg_stat_activity "
+        f"WHERE datname = '{literal}' AND pid <> pg_backend_pid();"
+    )])
+    _run_psql(["-c", f'DROP DATABASE IF EXISTS "{database_name}";'])
+    _run_psql(["-c", f'DROP ROLE IF EXISTS "{user_name}";'])
+    logger.info("Panel app database and role removed: %s / %s", database_name, user_name)
+    return True
+
+
 # ------------------------------------------------------------------
 # Tables
 # ------------------------------------------------------------------

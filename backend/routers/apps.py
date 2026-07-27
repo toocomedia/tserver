@@ -1,5 +1,4 @@
 """Hosted Python application pages and small control endpoints."""
-from pathlib import Path
 from urllib.parse import urlencode
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
@@ -11,7 +10,10 @@ from models.domain import Domain
 from models.app_deployment import AppDeployment
 from models.app_environment import AppEnvironmentVariable
 from models.hosted_app import HostedApp
-from services import app_deployment_service, app_environment_service, app_hosting_logs_service
+from routers.apps_support import get_app as _app, get_domain as _domain
+from services import app_cleanup_service, app_deployment_service
+from services import app_environment_service, app_hosting_logs_service
+from services import app_lifecycle_service
 from services import hosted_app_control_service
 from services import app_hosting_service as apps
 from services import app_update_service
@@ -44,7 +46,7 @@ async def quick_deploy(domain_id: int = Form(...), source_type: str = Form(...),
     if source_type != "git":
         raise HTTPException(409, "ZIP source is coming soon.")
     await _domain(db, domain_id)
-    detection = await _inspect_source(source_type, repository_url, branch)
+    detection = apps.inspect_repository(repository_url.strip(), branch.strip())
     if not detection["can_quick_deploy"]:
         reason = "; ".join(detection["warnings"]) or "Project configuration needs review."
         query = urlencode({"domain_id": domain_id, "ssl": int(ssl), "notice": reason})
@@ -93,7 +95,6 @@ async def settings(app_id: int, build_command: str = Form(...), start_command: s
     app_hosting_logs_service.update_commands(await _app(db, app_id), build_command, start_command)
     return RedirectResponse(f"/apps/{app_id}", status_code=303)
 
-
 @router.post("/{app_id}/detect")
 async def detect_again(app_id: int, db: AsyncSession = Depends(get_db)):
     app = await _app(db, app_id)
@@ -130,6 +131,7 @@ async def detail(app_id: int, request: Request, deployment: int | None = None, d
         "environment_keys": await app_environment_service.keys(db, app.id),
         "update_ready": app_update_service.has_update(app),
         "notice": request.query_params.get("notice"),
+        "error": request.query_params.get("error"),
     })
 
 
@@ -148,10 +150,31 @@ async def deploy(app_id: int, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/{app_id}/uninstall")
-async def uninstall(app_id: int, db: AsyncSession = Depends(get_db)):
+async def uninstall(app_id: int, delete_scope: str = Form("app_only"), db: AsyncSession = Depends(get_db)):
     app = await _app(db, app_id)
+    if delete_scope not in {"app_only", "app_and_database"}:
+        raise HTTPException(400, "Invalid delete option.")
+    if delete_scope == "app_and_database" and app.postgres_mode != "create":
+        raise HTTPException(400, "Only a panel-managed database can be deleted here.")
+    if app.status == "deleting":
+        raise HTTPException(409, "Deletion is already running for this app.")
     domain = await db.get(Domain, app.domain_id)
-    await apps.uninstall(app, domain.name if domain else None)
+    app.status, app.last_error = "deleting", None
+    await app_deployment_service.cancel(db, app)
+    await app_lifecycle_service.cancel_deployment(app.id)
+    try:
+        await app_lifecycle_service.run(
+            app.id,
+            lambda: app_cleanup_service.uninstall(
+                app, domain.name if domain else None,
+                delete_database=delete_scope == "app_and_database",
+            ),
+            wait=True,
+        )
+    except HTTPException as exc:
+        app.status, app.last_error = "delete_failed", str(exc.detail)[:1000]
+        await db.commit()
+        return RedirectResponse(f"/apps/{app.id}?error=Delete+failed.+Retry+cleanup+from+this+page.", status_code=303)
     await db.execute(delete(AppDeployment).where(AppDeployment.app_id == app.id))
     await db.execute(delete(AppEnvironmentVariable).where(AppEnvironmentVariable.app_id == app.id))
     await db.delete(app)
@@ -161,24 +184,14 @@ async def uninstall(app_id: int, db: AsyncSession = Depends(get_db)):
 @router.post("/{app_id}/{action}")
 async def control(app_id: int, action: str, db: AsyncSession = Depends(get_db)):
     app = await _app(db, app_id)
-    if action == "stop": await app_deployment_service.cancel(db, app)
-    await hosted_app_control_service.control(app, action)
+    if app.status in {"deleting", "delete_failed"}:
+        raise HTTPException(409, "Finish or retry deletion before controlling this app.")
+    if action == "stop":
+        await app_deployment_service.cancel(db, app)
+        await app_lifecycle_service.cancel_deployment(app.id)
+    else:
+        await app_deployment_service.ensure_idle(db, app.id)
+    await app_lifecycle_service.run(
+        app.id, lambda: hosted_app_control_service.control(app, action)
+    )
     return RedirectResponse(f"/apps/{app_id}", status_code=303)
-
-
-async def _app(db: AsyncSession, app_id: int) -> HostedApp:
-    app = await db.get(HostedApp, app_id)
-    if app is None: raise HTTPException(404, "Python app not found.")
-    return app
-
-
-async def _domain(db: AsyncSession, domain_id: int) -> Domain:
-    domain = await db.get(Domain, domain_id)
-    if domain is None: raise HTTPException(404, "Domain not found.")
-    return domain
-
-
-async def _inspect_source(source_type: str, repository_url: str, branch: str) -> dict[str, object]:
-    if source_type == "zip":
-        raise HTTPException(409, "ZIP source is coming soon.")
-    return apps.inspect_repository(repository_url.strip(), branch.strip())

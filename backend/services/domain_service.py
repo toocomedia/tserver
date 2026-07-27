@@ -9,7 +9,7 @@ from sqlalchemy import select
 from fastapi import HTTPException
 
 from models.domain import Domain
-from services import dns_service, nginx_service, error_service
+from services import dns_service, error_service, nginx_service, ssl_service
 from utils.validators import sanitize_domain
 import config
 
@@ -175,15 +175,11 @@ async def delete(db: AsyncSession, domain_id: int, force: bool = False) -> None:
             detail="Domain has active reverse proxies. Remove them first."
         )
 
-    # Guard: active SSL certs (warn, but allow with force)
-    cert = await db.scalar(
+    certs = (await db.scalars(
         select(SslCert).where(SslCert.domain_id == domain_id)
-    )
-    if cert and not force:
-        raise HTTPException(
-            status_code=409,
-            detail="Domain has an active SSL cert. Revoke it first or use force delete."
-        )
+    )).all()
+    for cert in certs:
+        await ssl_service.revoke_cert(db, cert.id, delete_only=True)
 
     # Remove nginx config
     try:

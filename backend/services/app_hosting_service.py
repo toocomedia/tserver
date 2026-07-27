@@ -13,7 +13,6 @@ from services import nginx_service
 from services import app_project_detector
 from services import app_release_service
 from services import app_runtime_service
-from utils import shell
 ROOT = Path(config.APP_HOSTING_ROOT)
 ENV_ROOT = Path(config.APP_HOSTING_ENV_ROOT)
 GIT_URL_RE = repository_service.GIT_URL_RE
@@ -127,17 +126,3 @@ async def deploy(
         "revision": prepared.revision,
         "rollback_status": rollback_status,
     }
-
-async def uninstall(app: HostedApp, domain_name: str | None) -> None:
-    # Strict cleanup always stops first; pending deployments have no unit to stop.
-    await app_runtime_service.stop(app, allow_missing=True)
-    app.status = "stopped"
-    await app_runtime_service.systemctl(
-        "disable", "--now", app.service_name, allow_missing=True
-    )
-    await shell.remove_path(app_runtime_service.service_unit(app))
-    await app_runtime_service.systemctl("daemon-reload")
-    if domain_name:
-        await nginx_service.remove_site(domain_name)
-        await nginx_service.reload()
-    shutil.rmtree(_app_dir(app.id), ignore_errors=True); Path(app.env_path).unlink(missing_ok=True)

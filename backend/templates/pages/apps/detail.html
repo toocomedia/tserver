@@ -6,6 +6,7 @@
 {% endblock %}
 {% block content %}
 {% if notice %}<div class="alert alert--success section">{{ notice }}</div>{% endif %}
+{% if error %}<div class="alert alert--danger section">{{ error }}</div>{% endif %}
 <div class="stat-grid">
   <div class="stat-card-box">
     <span class="stat-card-box__label">Status</span>
@@ -33,4 +34,5 @@
 {% if deployment and deployment.status in ('queued', 'running') %}
 <script src="/static/js/modules/app-deployment.js"></script>
 {% endif %}
+<script type="module" src="/static/js/modules/app-delete.js"></script>
 {% endblock %}
