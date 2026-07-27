@@ -189,6 +189,9 @@ async def ensure_error_pages() -> None:
         if source.is_file():
             relative = source.relative_to(ERROR_PAGES_SOURCE)
             await shell.write_file(target / relative, source.read_text(encoding="utf-8"))
+    readable = await shell.run(["chmod", "-R", "a+rX", str(target)], timeout=15)
+    if not readable.success:
+        raise ValueError(f"Could not make Nginx error pages readable: {readable.stderr}")
     logger.info("Nginx error pages written: %s", target)
 
 
