@@ -189,6 +189,8 @@ async def uninstall(app_id: int, delete_scope: str = Form("app_only"), db: Async
 @router.post("/{app_id}/{action}")
 async def control(app_id: int, action: str, db: AsyncSession = Depends(get_db)):
     app = await _app(db, app_id)
+    if action not in {"start", "stop", "restart"}:
+        raise HTTPException(400, "Invalid app action.")
     if app.status in {"deleting", "delete_failed"}:
         raise HTTPException(409, "Finish or retry deletion before controlling this app.")
     if action == "stop":
@@ -199,13 +201,12 @@ async def control(app_id: int, action: str, db: AsyncSession = Depends(get_db)):
     domain = await db.get(Domain, app.domain_id)
     if domain is None:
         raise HTTPException(409, "App domain is missing.")
-    operation = (
-        lambda: app_dependency_service.stop_app(db, app, domain)
-        if action == "stop"
-        else lambda: app_dependency_service.start_app(db, app, domain)
-        if action == "start"
-        else lambda: _restart_app(db, app, domain)
-    )
+    if action == "stop":
+        operation = lambda: app_dependency_service.stop_app(db, app, domain)
+    elif action == "start":
+        operation = lambda: app_dependency_service.start_app(db, app, domain)
+    else:
+        operation = lambda: _restart_app(db, app, domain)
     await app_lifecycle_service.run(app.id, operation)
     return RedirectResponse(f"/apps/{app_id}", status_code=303)
 
