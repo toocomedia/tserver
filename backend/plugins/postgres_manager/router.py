@@ -8,20 +8,15 @@ All business logic is delegated to service.py and queries.py.
 No direct subprocess or DB calls here.
 """
 import logging
-import os
-import subprocess
-from pathlib import Path
-
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-import config
 from database import get_db
 from templating import templates
 from plugins.postgres_manager.service import postgres_service
-from services import app_dependency_service
+from dependencies import dependency_manager
 from plugins.postgres_manager import queries as pg
 from plugins.postgres_manager.schemas import (
     DatabaseCreate, UserCreate, PasswordChange, QueryRequest, RemoteConfigRequest,
@@ -29,16 +24,6 @@ from plugins.postgres_manager.schemas import (
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/plugins/postgres_manager", tags=["postgres_manager"])
-SCRIPT_DIR = Path(__file__).parent / "scripts"
-
-
-def _sudo_cmd(script_path: Path) -> list[str]:
-    cmd = ["bash", str(script_path)]
-    if hasattr(os, "geteuid") and os.geteuid() != 0 and getattr(config, "PRIVILEGED_SUDO", True):
-        cmd = ["sudo", "-n", *cmd]
-    return cmd
-
-
 # ---------------------------------------------------------------------------
 # UI
 # ---------------------------------------------------------------------------
@@ -50,29 +35,24 @@ async def pg_index(request: Request, db: AsyncSession = Depends(get_db)):
     info = plugin_manager.get_plugin("postgres_manager")
     plugin_version = info["version"] if info else "1.0.0"
 
-    status = postgres_service.get_status()
-    plugin_installed = status["installed"]
     databases: list[dict] = []
     users: list[dict] = []
     system_roles: list[dict] = []
     from models.domain import Domain
     domains = list((await db.scalars(select(Domain).order_by(Domain.name))).all())
-    if status["running"]:
+    if dependency_manager.is_healthy("postgresql"):
         try:
             databases = pg.list_databases()
             users = pg.list_users()
             system_roles = pg.list_system_roles()
         except RuntimeError as exc:
             logger.warning("PostgreSQL stopped while loading manager: %s", exc)
-            status = {**status, "running": False, "port_open": False}
 
     return templates.TemplateResponse("postgres.html", {
 
         "request": request,
         "active_page": "plugins",
         "plugin_version": plugin_version,
-        "plugin_installed": plugin_installed,
-        "status": status,
         "databases": databases,
         "users": users,
         "system_roles": system_roles,
@@ -92,85 +72,6 @@ async def pg_remote_new(request: Request, db: AsyncSession = Depends(get_db)):
 
 
 
-
-
-# ---------------------------------------------------------------------------
-# Install / Uninstall
-# ---------------------------------------------------------------------------
-
-@router.post("/api/install")
-async def install_postgres(request: Request):
-    """Trigger the install.sh script to install PostgreSQL."""
-    script = SCRIPT_DIR / "install.sh"
-    if os.name == "nt":
-        return JSONResponse({"status": "ok", "message": "Mock install on Windows."})
-    try:
-        res = subprocess.run(
-            _sudo_cmd(script), capture_output=True, text=True, timeout=180,
-        )
-        if res.returncode != 0:
-            logger.error("PostgreSQL install failed: %s", res.stderr or res.stdout)
-            raise HTTPException(status_code=500, detail=res.stderr or res.stdout)
-        postgres_service.pause()  # invalidate any stale cache
-        return JSONResponse({"status": "ok", "message": "PostgreSQL installed."})
-    except subprocess.TimeoutExpired:
-        raise HTTPException(status_code=500, detail="Install script timed out.")
-    except HTTPException:
-        raise
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
-
-
-@router.post("/api/uninstall")
-async def uninstall_postgres(request: Request):
-    """Trigger the uninstall.sh script. Data is preserved."""
-    script = SCRIPT_DIR / "uninstall.sh"
-    if os.name == "nt":
-        return JSONResponse({"status": "ok", "message": "Mock uninstall on Windows."})
-    try:
-        res = subprocess.run(
-            _sudo_cmd(script), capture_output=True, text=True, timeout=60,
-        )
-        if res.returncode != 0:
-            raise HTTPException(status_code=500, detail=res.stderr or res.stdout)
-        postgres_service.pause()
-        return JSONResponse({"status": "ok", "message": "PostgreSQL uninstalled. Data preserved."})
-    except HTTPException:
-        raise
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
-
-
-# ---------------------------------------------------------------------------
-# Status
-# ---------------------------------------------------------------------------
-
-@router.get("/api/status")
-async def api_status():
-    """Return current service status. Cached for 30 seconds."""
-    return JSONResponse(postgres_service.get_status())
-
-
-# ---------------------------------------------------------------------------
-# Service control
-# ---------------------------------------------------------------------------
-
-@router.post("/api/service/{action}")
-async def service_action(action: str, db: AsyncSession = Depends(get_db)):
-    """Start, stop, or restart the PostgreSQL service."""
-    if action not in ("start", "stop", "restart"):
-        raise HTTPException(status_code=400, detail="Action must be start, stop, or restart.")
-    paused = []
-    if action == "stop":
-        await app_dependency_service.ensure_dependents_idle(db, "postgres_manager")
-        paused = await app_dependency_service.pause_dependents(db, "postgres_manager")
-    try:
-        getattr(postgres_service, action)()
-        return JSONResponse({"status": "ok", "action": action})
-    except Exception as exc:
-        if paused:
-            await app_dependency_service.restore_apps(db, paused)
-        raise HTTPException(status_code=500, detail=str(exc))
 
 
 # ---------------------------------------------------------------------------

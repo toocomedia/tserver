@@ -19,6 +19,10 @@ class _FakeDockerService:
     def toggle(self, enabled):
         return self.result
 
+    @staticmethod
+    def get_status(*, force=False):
+        return {"can_toggle": True, "state": "healthy"}
+
 
 class DependencyManagerTests(unittest.IsolatedAsyncioTestCase):
     def test_intentionally_disabled_dependency_hides_expected_daemon_error(self):
@@ -90,6 +94,34 @@ class DependencyManagerTests(unittest.IsolatedAsyncioTestCase):
             manager._operation_locks["docker"].release()
         self.assertFalse(success)
         self.assertIn("already running", message)
+
+    async def test_postgresql_stop_pauses_apps_before_service_stop(self):
+        manager = DependencyManager()
+        manager._services["postgresql"] = _FakeDockerService((True, "stopped"))
+        state_set = AsyncMock()
+        with patch.object(manager, "get_status", return_value={"can_toggle": True}), patch(
+            "dependencies.manager.component_state_store.get",
+            return_value=ComponentStateValue(desired_enabled=True),
+        ), patch("dependencies.manager.component_state_store.set", state_set), patch.object(
+            manager, "_pause_postgresql_apps", AsyncMock()
+        ) as pause_apps:
+            success, _ = await manager.toggle("postgresql", False)
+        self.assertTrue(success)
+        pause_apps.assert_awaited_once()
+
+    async def test_postgresql_start_resumes_paused_apps(self):
+        manager = DependencyManager()
+        manager._services["postgresql"] = _FakeDockerService((True, "started"))
+        state_set = AsyncMock()
+        with patch.object(manager, "get_status", return_value={"can_toggle": True}), patch(
+            "dependencies.manager.component_state_store.get",
+            return_value=ComponentStateValue(desired_enabled=False),
+        ), patch("dependencies.manager.component_state_store.set", state_set), patch.object(
+            manager, "_resume_postgresql_apps", AsyncMock()
+        ) as resume_apps:
+            success, _ = await manager.toggle("postgresql", True)
+        self.assertTrue(success)
+        resume_apps.assert_awaited_once()
 
     async def test_successful_install_is_marked_panel_managed(self):
         manager = DependencyManager()

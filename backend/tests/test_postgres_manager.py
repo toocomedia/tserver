@@ -8,101 +8,8 @@ Run:
     python -m unittest backend/tests/test_postgres_manager.py -v
 """
 import re
-import time
 import unittest
-from unittest.mock import MagicMock, patch, PropertyMock
-
-
-# ---------------------------------------------------------------------------
-# Helper: build a fake subprocess result
-# ---------------------------------------------------------------------------
-def _proc(returncode=0, stdout="", stderr=""):
-    m = MagicMock()
-    m.returncode = returncode
-    m.stdout = stdout
-    m.stderr = stderr
-    return m
-
-
-# ---------------------------------------------------------------------------
-# service.py tests
-# ---------------------------------------------------------------------------
-class TestPostgresService(unittest.TestCase):
-
-    def setUp(self):
-        # Re-import fresh for each test to reset the singleton state
-        import importlib
-        import plugins.postgres_manager.service as svc_mod
-        importlib.reload(svc_mod)
-        self.svc_mod = svc_mod
-        self.svc = svc_mod.PostgresService()
-
-    @patch("shutil.which", return_value="/usr/bin/psql")
-    def test_is_installed_true(self, _):
-        self.assertTrue(self.svc.is_installed())
-
-    @patch("shutil.which", return_value=None)
-    @patch("os.path.exists", return_value=False)
-    def test_is_installed_false(self, _, __):
-        self.assertFalse(self.svc.is_installed())
-
-    @patch("subprocess.run")
-    @patch("shutil.which", return_value="/usr/bin/psql")
-    def test_get_status_returns_dict(self, _, mock_run):
-        mock_run.side_effect = [
-            _proc(stdout="active\n"),           # systemctl is-active
-            _proc(stdout="1234\n"),              # pgrep
-            _proc(stdout="psql 15.6\n"),         # psql --version
-        ]
-        with patch("os.name", "posix"), \
-             patch.object(self.svc, "_get_ram_mb", return_value=42.0), \
-             patch.object(self.svc, "_check_port", return_value=True):
-            status = self.svc.get_status()
-        self.assertTrue(status["running"])
-        self.assertEqual(status["mode"], "local")
-        self.assertEqual(status["ram_mb"], 42.0)
-
-    @patch("subprocess.run")
-    @patch("shutil.which", return_value="/usr/bin/psql")
-    def test_status_cache_ttl(self, _, mock_run):
-        """get_status() must not call subprocess twice within 30 seconds."""
-        mock_run.side_effect = [_proc(stdout="active\n"), _proc(stdout="1234\n"), _proc(stdout="psql 15\n")]
-        with patch("os.name", "posix"), \
-             patch.object(self.svc, "_get_ram_mb", return_value=10.0), \
-             patch.object(self.svc, "_check_port", return_value=True):
-            self.svc.get_status()
-            call_count_after_first = mock_run.call_count
-            self.svc.get_status()  # should hit cache
-        self.assertEqual(mock_run.call_count, call_count_after_first, "Cache not used on second call")
-
-    def test_pause_clears_cache(self):
-        self.svc._status_cache = {"running": True}
-        self.svc._cache_ts = time.monotonic()
-        self.svc.pause()
-        self.assertEqual(self.svc._status_cache, {})
-        self.assertEqual(self.svc._cache_ts, 0.0)
-
-    @patch("subprocess.run")
-    @patch("shutil.which", return_value="/usr/bin/psql")
-    def test_resume_invalidates_cache(self, _, mock_run):
-        """resume() must force a fresh fetch on next get_status() call."""
-        self.svc._status_cache = {"running": True}
-        self.svc._cache_ts = time.monotonic()
-        self.svc.resume()
-        self.assertEqual(self.svc._cache_ts, 0.0)
-
-    def test_get_usage_shape(self):
-        with patch.object(self.svc, "get_status", return_value={
-            "running": True, "ram_mb": 55.3, "pid": 999
-        }), patch.object(self.svc, "_get_cpu_percent", return_value=1.2):
-            usage = self.svc.get_usage()
-        self.assertIn("cpu", usage)
-        self.assertIn("mem", usage)
-        self.assertIn("memory", usage)
-        self.assertIn("count", usage)
-        self.assertIn("status", usage)
-        self.assertEqual(usage["status"], "active")
-        self.assertEqual(usage["count"], 1)
+from unittest.mock import AsyncMock, patch
 
 
 # ---------------------------------------------------------------------------
@@ -255,13 +162,23 @@ class TestPostgresRemoteService(unittest.IsolatedAsyncioTestCase):
 
         self.async_session = async_sessionmaker(self.engine, expire_on_commit=False, class_=AsyncSession)
         self.svc = PostgresService()
+        from services import nginx_service
+        self.nginx_patches = [
+            patch.object(nginx_service, "ensure_acme_root"),
+            patch.object(nginx_service, "create_webroot"),
+            patch.object(nginx_service, "create_static_site", new=AsyncMock()),
+            patch.object(nginx_service, "reload", new=AsyncMock()),
+        ]
+        for nginx_patch in self.nginx_patches:
+            nginx_patch.start()
 
     async def asyncTearDown(self):
+        for nginx_patch in self.nginx_patches:
+            nginx_patch.stop()
         await self.engine.dispose()
 
     async def test_multi_domain_remote_lifecycle(self):
         async with self.async_session() as db:
-            from unittest.mock import AsyncMock, patch
             from models.domain import Domain
             db.add(Domain(name="example.com", server_ip="203.0.113.10"))
             await db.commit()

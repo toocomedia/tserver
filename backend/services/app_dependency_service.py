@@ -14,7 +14,7 @@ from services import hosted_app_control_service, nginx_service
 
 
 def requirement_ids(app: HostedApp) -> list[str]:
-    return ["postgres_manager"] if app.postgres_mode == "create" else []
+    return ["postgresql"] if app.postgres_mode == "create" else []
 
 
 def missing_ids(app: HostedApp) -> list[str]:
@@ -24,19 +24,16 @@ def missing_ids(app: HostedApp) -> list[str]:
 def require_available(app: HostedApp) -> None:
     missing = missing_ids(app)
     if missing:
-        raise HTTPException(409, "Start PostgreSQL from PostgreSQL Manager before running this app.")
+        raise HTTPException(409, "Start PostgreSQL from Dependencies before running this app.")
 
 
 def requirement_url(requirement_id: str) -> str:
-    return "/plugins/postgres_manager/" if requirement_id == "postgres_manager" else "/plugins/"
+    return "/dependencies/postgresql" if requirement_id == "postgresql" else "/plugins/"
 
 
 def _healthy(requirement_id: str) -> bool:
-    if requirement_id != "postgres_manager":
-        return False
-    from plugins.postgres_manager.service import postgres_service
-    status = postgres_service.get_status()
-    return bool(status.get("installed") and status.get("running") and status.get("port_open"))
+    from dependencies import dependency_manager
+    return dependency_manager.is_healthy(requirement_id)
 
 
 async def dependent_apps(
@@ -111,6 +108,15 @@ async def restore_apps(db: AsyncSession, apps: list[tuple[HostedApp, Domain]]) -
             await start_app(db, app, domain)
         except Exception:
             app.status = "paused"
+
+
+async def resume_paused_dependents(db: AsyncSession, dependency_id: str) -> None:
+    apps = [
+        (app, domain)
+        for app, domain in await dependent_apps(db, dependency_id)
+        if app.status == "paused" and app.paused_by_dependency == dependency_id
+    ]
+    await restore_apps(db, apps)
 
 
 async def publish_app(db: AsyncSession, app: HostedApp, domain: Domain) -> None:

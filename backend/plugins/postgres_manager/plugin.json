@@ -9,9 +9,10 @@
   "sidebar": true,
   "sidebar_label": "PostgreSQL",
   "enabled": true,
-  "usage": {
-    "process_names": ["postgres"]
+  "requires": {
+    "dependencies": ["postgresql"]
   },
-  "install_script": "scripts/install.sh",
-  "uninstall_script": "scripts/uninstall.sh"
+  "usage": {
+    "process_names": []
+  }
 }

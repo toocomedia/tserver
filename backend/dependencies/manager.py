@@ -139,6 +139,7 @@ class DependencyManager:
 
         operation = "enabling" if enabled else "disabling"
         current = component_state_store.get("dependency", dependency_id)
+        paused_apps = False
         try:
             await component_state_store.set(
                 "dependency",
@@ -146,6 +147,9 @@ class DependencyManager:
                 operation=operation,
                 clear_error=True,
             )
+            if dependency_id == "postgresql" and not enabled:
+                await self._pause_postgresql_apps()
+                paused_apps = True
             success, message = await asyncio.to_thread(service.toggle, enabled)
             if not success:
                 await component_state_store.set(
@@ -155,6 +159,8 @@ class DependencyManager:
                     operation="idle",
                     last_error=message,
                 )
+                if paused_apps:
+                    await self._resume_postgresql_apps()
                 return False, message
 
             await component_state_store.set(
@@ -164,9 +170,41 @@ class DependencyManager:
                 operation="idle",
                 clear_error=True,
             )
+            if dependency_id == "postgresql" and enabled:
+                await self._resume_postgresql_apps()
             return True, message
+        except Exception as exc:
+            await component_state_store.set(
+                "dependency",
+                dependency_id,
+                desired_enabled=current.desired_enabled,
+                operation="idle",
+                last_error=str(exc),
+            )
+            if paused_apps:
+                await self._resume_postgresql_apps()
+            return False, str(exc)
         finally:
             lock.release()
+
+    @staticmethod
+    async def _pause_postgresql_apps() -> None:
+        from database import AsyncSessionLocal
+        from services import app_dependency_service
+
+        async with AsyncSessionLocal() as db:
+            await app_dependency_service.ensure_dependents_idle(db, "postgresql")
+            await app_dependency_service.pause_dependents(db, "postgresql")
+            await db.commit()
+
+    @staticmethod
+    async def _resume_postgresql_apps() -> None:
+        from database import AsyncSessionLocal
+        from services import app_dependency_service
+
+        async with AsyncSessionLocal() as db:
+            await app_dependency_service.resume_paused_dependents(db, "postgresql")
+            await db.commit()
 
     async def install(self, dependency_id: str) -> tuple[bool, str]:
         service = self.get_service(dependency_id)

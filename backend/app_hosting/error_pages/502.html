@@ -3,15 +3,45 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Service unavailable</title>
+  <title>502 — Service Unavailable</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/_srv-errors/error.css">
 </head>
 <body>
-  <header class="error-header"><span>SRV PANEL</span><span>Website response</span></header>
-  <main class="error-page">
-    <p class="error-page__eyebrow">Error 502</p>
-    <h1>Service unavailable</h1>
-    <p>The website is starting or temporarily unavailable. Please try again shortly.</p>
+  <header class="error-header">
+    <div class="error-header__brand">
+      <img src="/_srv-errors/logobarq.png" alt="SRV Panel Logo" class="error-header__logo">
+      <span class="error-header__title">SRV Panel</span>
+    </div>
+    <div class="error-header__status">
+      <span class="pulse-dot pulse-dot--warning"></span>
+      Backend Offline
+    </div>
+  </header>
+
+  <main class="error-container">
+    <div class="error-card">
+      <div class="error-card__badge" style="background: rgba(255, 183, 77, 0.12); color: #ffb74d; border-color: rgba(255, 183, 77, 0.2);">HTTP 502</div>
+      <div class="error-code" style="color: #ffb74d; text-shadow: 0 0 30px rgba(255, 183, 77, 0.15);">502</div>
+      <h1>Service Unavailable</h1>
+      <p>The backend application service is starting up, restarting, or temporarily unreachable. Please try again in a moment.</p>
+      <div class="error-actions">
+        <a href="javascript:location.reload()" class="btn btn--primary">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+          Retry Connection
+        </a>
+        <a href="javascript:history.back()" class="btn btn--secondary">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          Go Back
+        </a>
+      </div>
+      <div class="error-info">
+        <span class="error-info__label">Response Code</span>
+        <span class="error-info__val">502 BAD GATEWAY</span>
+      </div>
+    </div>
   </main>
 </body>
 </html>

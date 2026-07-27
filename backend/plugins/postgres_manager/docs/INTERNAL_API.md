@@ -193,13 +193,8 @@ Run a read-only SELECT query.
 
 ---
 
-### POST `/api/service/{action}`
-
-Control the PostgreSQL service. `action` must be `start`, `stop`, or `restart`.
-
-```json
-{"status": "ok", "action": "restart"}
-```
+PostgreSQL installation and service controls are provided by the `postgresql`
+system dependency at `/dependencies/postgresql`.
 
 ---
 

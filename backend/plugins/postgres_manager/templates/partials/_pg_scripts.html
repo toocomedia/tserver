@@ -284,24 +284,6 @@ document.querySelectorAll(".modal-backdrop").forEach(backdrop => {
   });
 });
 
-// ── Service controls ──────────────────────────────────────────────────────
-
-document.querySelectorAll("[data-pg-action]").forEach(btn => {
-  btn.addEventListener("click", async () => {
-    const action = btn.dataset.pgAction;
-    setLoading(btn, true);
-    try {
-      await apiFetch(`/service/${action}`, { method: "POST" });
-      showToast(`PostgreSQL ${action} executed.`);
-      setTimeout(() => location.reload(), 1500);
-    } catch (err) {
-      showToast(err.message, true);
-    } finally {
-      setLoading(btn, false);
-    }
-  });
-});
-
 // ── Databases CRUD ────────────────────────────────────────────────────────
 
 // Toggle between Existing User vs Create New User in Create Database modal
