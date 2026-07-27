@@ -71,7 +71,7 @@
   --color-sidebar:    #0B0C0B;
   --color-sidebar-text: #FFFFFF;
   --color-sidebar-hover: #FFFFFF;
-  --color-sidebar-border: rgba(255,255,255,0.07);
+  --color-sidebar-border: rgba(255,255,255,0.18);
   --color-sidebar-bg-hover: rgba(255,255,255,0.05);
   --color-text:       #0F1720;
   --color-muted:      #6B6F6A;
@@ -224,13 +224,13 @@ p {
   --color-surface:    #141D27;
   --color-header-bg-bar: #1C2735;
   --color-sidebar:    var(--color-bg); /* Match page background in dark mode */
-  --color-sidebar-text: #C8D2DC;
+  --color-sidebar-text: #D1D5DB;
   --color-sidebar-hover: var(--color-text);
-  --color-sidebar-border: var(--color-line);
+  --color-sidebar-border: rgba(255, 255, 255, 0.22);
   --color-sidebar-bg-hover: var(--color-surface);
   --color-text:       #FFFFFF;
-  --color-muted:      #C8D2DC;
-  --color-line:       #3E4E62;
+  --color-muted:      #D1D5DB;
+  --color-line:       rgba(255, 255, 255, 0.22);
   
   /* Keep accents the same, or dim slightly */
   --color-accent:     #C7F464; 
@@ -261,13 +261,13 @@ p {
   --color-surface:    #0A0A0A;
   --color-header-bg-bar: #161616;
   --color-sidebar:    #000000;
-  --color-sidebar-text: #C0C0C0;
+  --color-sidebar-text: #D4D4D8;
   --color-sidebar-hover: var(--color-text);
-  --color-sidebar-border: var(--color-line);
+  --color-sidebar-border: rgba(255, 255, 255, 0.25);
   --color-sidebar-bg-hover: var(--color-surface);
   --color-text:       #FFFFFF;
-  --color-muted:      #C0C0C0;
-  --color-line:       #3A3A3A;
+  --color-muted:      #D4D4D8;
+  --color-line:       rgba(255, 255, 255, 0.25);
   
   /* Keep accents the same */
   --color-accent:     #C7F464; 
