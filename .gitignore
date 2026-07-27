@@ -32,6 +32,7 @@ walkthrough.md
 temp_preview.html
 temp_*.html
 .agents/
+/todo/
 
 # Documentation & Local Helpers
 /docs/*

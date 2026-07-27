@@ -393,6 +393,9 @@ status. Hosted Uvicorn processes are not counted as the SRV Panel process.
 - Git & SSH is on-demand and has no resident process while idle.
 - Python Runtime is shared; its actual CPU/RAM is assigned to hosted apps
   instead of being reported as misleading global Python usage.
+- PostgreSQL and every future dependency registered by SRV Panel are listed
+  automatically. Docker remains in **Stack Services** because that row reports
+  the Docker daemon's live process use.
 
 ## VPS validation
 

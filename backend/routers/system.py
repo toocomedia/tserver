@@ -27,6 +27,7 @@ from models.domain import Domain
 from models.ssl_cert import SslCert
 from models.proxy import ReverseProxy
 from services import error_service
+from services import dependency_usage_service
 from services import hosted_app_usage_service
 from services import process_usage_classifier
 from services import plugin_usage_service
@@ -322,16 +323,7 @@ async def server_stats(db: AsyncSession = Depends(get_db)):
 
     plugins = await plugin_usage_service.get_plugin_usage(procs, ram.total)
     hosted_apps = await hosted_app_usage_service.get_usage(db, procs, ram.total)
-    dependencies = [
-        {
-            "label": status.get("name", status["id"]),
-            "version": status.get("detected_version") or "—",
-            "status": status.get("effective_state", "unknown"),
-            "details": "On demand; no resident process." if status["id"] == "git" else "Shared runtime; per-app usage is listed below.",
-        }
-        for status in await asyncio.to_thread(dependency_manager.get_all_statuses, cached=True)
-        if status["id"] in {"git", "python"}
-    ]
+    dependencies = await dependency_usage_service.get_runtime_usage()
 
     procs.sort(key=lambda x: x["cpu_percent"] or 0, reverse=True)
     top_procs = [
