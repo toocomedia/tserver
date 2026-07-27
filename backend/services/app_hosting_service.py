@@ -78,6 +78,8 @@ async def next_service_name(db: AsyncSession, domain_id: int) -> str:
 async def create_app(db: AsyncSession, domain_id: int, source_type: str, repository_url: str | None, branch: str, build: str, start: str, ssl: bool, postgres_mode: str, external_url: str | None) -> HostedApp:
     if source_type != "git": raise HTTPException(409, "ZIP source is coming soon.")
     if postgres_mode not in {"none", "create", "external"}: raise HTTPException(400, "Invalid app setup.")
+    if postgres_mode == "create" and not dependency_manager.is_healthy("postgresql"):
+        raise HTTPException(409, "Activate PostgreSQL before creating a managed database app.")
     if source_type == "git" and (not repository_url or not dependency_manager.is_healthy("git")): raise HTTPException(409, "Git & SSH dependency is required.")
     if not dependency_manager.is_healthy("python"): raise HTTPException(409, "Python Runtime dependency is required.")
     if await db.scalar(select(HostedApp.id).where(HostedApp.domain_id == domain_id)):

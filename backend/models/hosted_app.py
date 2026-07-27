@@ -19,6 +19,7 @@ class HostedApp(Base):
     work_dir: Mapped[str] = mapped_column(String(512), nullable=False)
     env_path: Mapped[str] = mapped_column(String(512), nullable=False)
     status: Mapped[str] = mapped_column(String(24), default="pending", nullable=False)
+    paused_by_dependency: Mapped[str | None] = mapped_column(String(64))
     postgres_mode: Mapped[str] = mapped_column(String(16), default="none", nullable=False)
     database_name: Mapped[str | None] = mapped_column(String(63))
     database_user: Mapped[str | None] = mapped_column(String(63))

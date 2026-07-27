@@ -12,7 +12,14 @@
     {% else %}
       {% if deployment_active %}<p class="text-muted">Deployment is {{ deployment.status }} at {{ deployment.stage }}. Stop is the only available action.</p>{% endif %}
       <div class="form-actions">
-        {% if app.status == 'stopped' %}
+        {% if app.status == 'paused' %}
+          <p class="text-muted">Paused by {{ app.paused_by_dependency or 'a required dependency' }}.</p>
+          {% if missing_dependencies %}
+            <a class="btn btn--primary" href="/dependencies/{{ missing_dependencies[0] }}">Activate {{ missing_dependencies[0] }}</a>
+          {% else %}
+            <form method="post" action="/apps/{{ app.id }}/start">{% include "partials/csrf_field.html" %}<button class="btn btn--primary">Resume</button></form>
+          {% endif %}
+        {% elif app.status == 'stopped' %}
           <form method="post" action="/apps/{{ app.id }}/start">{% include "partials/csrf_field.html" %}<button class="btn btn--primary"{% if deployment_active %} disabled{% endif %}>Start</button></form>
         {% else %}
           <form method="post" action="/apps/{{ app.id }}/restart">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary"{% if deployment_active %} disabled{% endif %}>Restart</button></form>

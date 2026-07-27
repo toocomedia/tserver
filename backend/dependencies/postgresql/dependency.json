@@ -1,0 +1,8 @@
+{
+  "id": "postgresql",
+  "name": "PostgreSQL",
+  "description": "Database service used by panel-managed Python app databases.",
+  "icon": "",
+  "version": "1.0.0",
+  "author": "SRV Panel Core"
+}

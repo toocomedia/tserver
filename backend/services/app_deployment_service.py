@@ -14,6 +14,7 @@ from models.domain import Domain
 from models.hosted_app import HostedApp
 from models.ssl_cert import SslCert
 from services import app_hosting_service
+from services import app_dependency_service
 from services import app_lifecycle_service
 from services import ssl_service
 
@@ -28,6 +29,7 @@ async def start(
         raise HTTPException(400, "Invalid deployment action.")
     if app.status in {"deleting", "delete_failed"}:
         raise HTTPException(409, "Finish or retry deletion before deploying this app.")
+    app_dependency_service.require_available(app)
     app_lifecycle_service.ensure_available(app.id)
     await ensure_idle(db, app.id)
     deployment = AppDeployment(
@@ -146,7 +148,9 @@ async def _run_deployment(
             deployment.output = (deployment.output + "[ssl] Configuring HTTPS proxy.\n")[-80_000:]
             await db.commit()
             await ssl_service.configure_hosted_app_ssl(db, app, domain)
+        await app_dependency_service.publish_app(db, app, domain)
         app.status, app.last_error = "running", None
+        app.paused_by_dependency = None
         await _finish(db, deployment, "success", "complete", None)
     except Exception as exc:
         await db.refresh(deployment)

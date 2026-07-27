@@ -13,6 +13,7 @@ from models.hosted_app import HostedApp
 from routers.apps_support import get_app as _app, get_domain as _domain
 from services import app_cleanup_service, app_deployment_service
 from services import app_environment_service, app_hosting_logs_service
+from services import app_dependency_service, app_hosting_health_service
 from services import app_lifecycle_service
 from services import hosted_app_control_service
 from services import app_hosting_service as apps
@@ -132,6 +133,7 @@ async def detail(app_id: int, request: Request, deployment: int | None = None, d
         "update_ready": app_update_service.has_update(app),
         "notice": request.query_params.get("notice"),
         "error": request.query_params.get("error"),
+        "missing_dependencies": app_dependency_service.missing_ids(app),
     })
 
 
@@ -191,7 +193,22 @@ async def control(app_id: int, action: str, db: AsyncSession = Depends(get_db)):
         await app_lifecycle_service.cancel_deployment(app.id)
     else:
         await app_deployment_service.ensure_idle(db, app.id)
-    await app_lifecycle_service.run(
-        app.id, lambda: hosted_app_control_service.control(app, action)
+    domain = await db.get(Domain, app.domain_id)
+    if domain is None:
+        raise HTTPException(409, "App domain is missing.")
+    operation = (
+        lambda: app_dependency_service.stop_app(db, app, domain)
+        if action == "stop"
+        else lambda: app_dependency_service.start_app(db, app, domain)
+        if action == "start"
+        else lambda: _restart_app(db, app, domain)
     )
+    await app_lifecycle_service.run(app.id, operation)
     return RedirectResponse(f"/apps/{app_id}", status_code=303)
+
+
+async def _restart_app(db: AsyncSession, app: HostedApp, domain: Domain) -> None:
+    app_dependency_service.require_available(app)
+    await hosted_app_control_service.control(app, "restart")
+    await app_hosting_health_service.wait_for_listener(app.port)
+    await app_dependency_service.publish_app(db, app, domain)

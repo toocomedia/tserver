@@ -9,6 +9,9 @@
   "sidebar": true,
   "sidebar_label": "PostgreSQL",
   "enabled": true,
+  "requires": {
+    "dependencies": ["postgresql"]
+  },
   "usage": {
     "process_names": ["postgres"]
   },

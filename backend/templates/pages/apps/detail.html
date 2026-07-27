@@ -10,7 +10,7 @@
 <div class="stat-grid">
   <div class="stat-card-box">
     <span class="stat-card-box__label">Status</span>
-    <strong class="stat-card-box__val"><span class="status-badge {% if app.status == 'running' %}status-badge--success{% elif app.status in ('failed', 'stopped') %}status-badge--warning{% else %}status-badge--muted{% endif %}">{{ app.status | title }}</span></strong>
+    <strong class="stat-card-box__val"><span class="status-badge {% if app.status == 'running' %}status-badge--success{% elif app.status in ('failed', 'stopped', 'paused') %}status-badge--warning{% else %}status-badge--muted{% endif %}">{{ app.status | title }}</span></strong>
     <span class="stat-card-box__meta">Python service</span>
   </div>
   <div class="stat-card-box">

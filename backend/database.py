@@ -203,6 +203,7 @@ def _migrate_sync(sync_conn) -> None:
     if "hosted_apps" in tables:
         cols = _column_names(sync_conn, "hosted_apps")
         app_columns = {
+            "paused_by_dependency": "VARCHAR(64)",
             "deployed_revision": "VARCHAR(64)",
             "deployed_at": "DATETIME",
             "available_revision": "VARCHAR(64)",

@@ -236,6 +236,22 @@ async def update_proxy_ssl(
     return config_path
 
 
+async def set_hosted_app_offline(
+    domain: str, *, cert_path: str | None = None, key_path: str | None = None,
+) -> str:
+    """Replace a hosted-app proxy with its intentional 503 page."""
+    content = (
+        nginx_templates.hosted_app_offline_ssl_config(domain, cert_path, key_path)
+        if cert_path and key_path
+        else nginx_templates.hosted_app_offline_config(domain)
+    )
+    config_path = str(await _write_config(_conf_name(domain), content))
+    result = await shell.nginx_test()
+    if not result.success:
+        raise ValueError(f"Nginx config test failed: {result.stderr}")
+    return config_path
+
+
 async def remove_site(domain: str) -> None:
     """Remove nginx config for a domain."""
     await _remove_config(_conf_name(domain))

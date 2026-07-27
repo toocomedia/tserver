@@ -317,6 +317,19 @@ Stop first cancels a queued or running deployment so a background deployment
 cannot relaunch the app. It then disables and stops the systemd unit and checks
 that it is no longer active. The stopped state persists across reboot.
 
+### Runtime dependencies and pause
+
+Hosted apps use the shared dependency contract in
+`services/app_dependency_service.py`. Every runtime requirement is checked
+before create, start, restart, deploy, and update. Disabling a dependency pauses
+its running apps, serves their Nginx offline page with HTTP `503`, and never
+deletes their files or data. When the dependency returns, apps remain paused
+until the user explicitly resumes them.
+
+`postgres_mode=create` requires the core `postgresql` dependency. External
+`DATABASE_URL` and SQLite/no-database apps do not. Future dependencies add a
+trusted core driver, then declare their app rule in `requirement_ids(app)`.
+
 ### Strict Delete
 
 Strict Delete stops and disables the unit, removes its unit file, reloads
@@ -365,3 +378,11 @@ The Python-hosting VPS diagnostic is read-only. It checks Git and SSH, Python
 and venv, service state, loopback binding, Nginx syntax/proxy response, SSL,
 PostgreSQL presence/connectivity, and environment-file permissions. It never
 installs, restarts, deploys, deletes, or changes VPS state.
+
+For dependency pause verification, run the read-only checker once while the app
+is running and again after disabling its dependency:
+
+```text
+python3 backend/app_hosting/docs/test_dependency_pause_on_vps.py --service srv-python-42 --port 9101 --domain app.example.com --expect running
+python3 backend/app_hosting/docs/test_dependency_pause_on_vps.py --service srv-python-42 --port 9101 --domain app.example.com --expect paused
+```

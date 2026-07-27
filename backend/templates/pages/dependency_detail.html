@@ -40,7 +40,7 @@
         {% if dependency.running %}
         <input type="hidden" name="enabled" value="false">
         <input type="hidden" name="confirmed" value="true">
-        <button class="btn btn--danger btn--sm" type="submit" onclick="return confirm('Disable {{ dependency.name }}? Dependent plugins will be paused.')">Disable Service</button>
+        <button class="btn btn--danger btn--sm" type="submit" onclick="return confirm('Disable {{ dependency.name }}? Dependent plugins and apps will be paused.')">Disable Service</button>
         {% else %}
         <input type="hidden" name="enabled" value="true">
         <button class="btn btn--primary btn--sm" type="submit">Enable Service</button>
@@ -93,6 +93,16 @@
             {{ dependency.dependents | map(attribute='name') | join(', ') }}
           {% else %}
             No plugins currently depend on this service.
+          {% endif %}
+        </div>
+      </div>
+      <div class="clean-specs-item">
+        <div class="clean-specs-item__key">Used by Python Apps</div>
+        <div class="clean-specs-item__val">
+          {% if dependency.dependent_apps %}
+            {{ dependency.dependent_apps | map(attribute='name') | join(', ') }}
+          {% else %}
+            No Python apps currently depend on this service.
           {% endif %}
         </div>
       </div>
