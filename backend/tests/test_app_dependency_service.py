@@ -36,6 +36,7 @@ class AppDependencyTests(unittest.TestCase):
     def test_proxy_template_uses_static_502_page(self):
         config = nginx_templates.reverse_proxy_config("app.example.com", "127.0.0.1", 9101, "http")
         self.assertIn("proxy_intercept_errors on", config)
+        self.assertIn("/_srv-errors/404.html", config)
         self.assertIn("/_srv-errors/502.html", config)
 
 

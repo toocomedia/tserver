@@ -13,7 +13,7 @@ async def control(app: HostedApp, action: str) -> None:
         app_ownership_service.apply_identity(app)
         app_ownership_service.assert_unit_owner(app)
         app_ownership_service.require_environment(app)
-        if action == "start":
+        if action == "start" and not await _is_active(app.service_name):
             app_ownership_service.require_port_free(app.port)
     command = ["systemctl", "disable", "--now", app.service_name] if action == "stop" else ["systemctl", "enable", "--now", app.service_name] if action == "start" else ["systemctl", "restart", app.service_name]
     result = await shell.run(command, timeout=30)
@@ -26,3 +26,8 @@ async def control(app: HostedApp, action: str) -> None:
     if action != "stop" and not active:
         raise HTTPException(500, "The app service did not become active. Open Service logs.")
     app.status = "stopped" if action == "stop" else "running"
+
+
+async def _is_active(service_name: str) -> bool:
+    result = await shell.run(["systemctl", "is-active", service_name], timeout=15)
+    return result.stdout.strip() in {"active", "activating", "reloading"}

@@ -189,9 +189,6 @@ async def ensure_error_pages() -> None:
         if source.is_file():
             relative = source.relative_to(ERROR_PAGES_SOURCE)
             await shell.write_file(target / relative, source.read_text(encoding="utf-8"))
-    readable = await shell.run(["chmod", "-R", "a+rX", str(target)], timeout=15)
-    if not readable.success:
-        raise ValueError(f"Could not make Nginx error pages readable: {readable.stderr}")
     logger.info("Nginx error pages written: %s", target)
 
 
@@ -393,6 +390,7 @@ async def apply_panel_config(
             logger.warning("Could not remove legacy panel conf %s: %s", legacy, exc)
 
     await ensure_http_maps()
+    await ensure_error_pages()
     config_path = str(await _write_config(name, content))
     result = await shell.nginx_test()
     if not result.success:

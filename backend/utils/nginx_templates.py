@@ -148,6 +148,7 @@ def _error_pages_location() -> str:
 
 def _proxy_error_pages() -> str:
     return '''        proxy_intercept_errors on;
+        error_page 404 /_srv-errors/404.html;
         error_page 502 503 504 /_srv-errors/502.html;'''
 
 
@@ -451,6 +452,9 @@ def _panel_proxy_location(app_port: int) -> str:
         proxy_read_timeout 60s;
         proxy_connect_timeout 10s;
         proxy_socket_keepalive on;
+        proxy_intercept_errors on;
+        error_page 404 /_srv-errors/404.html;
+        error_page 502 503 504 /_srv-errors/502.html;
     }}"""
 
 
@@ -528,6 +532,7 @@ server {{
 {_panel_acme_location()}
 
 {_panel_proxy_location(app_port)}
+{_error_pages_location()}
 }}
 """.strip())
         else:
@@ -542,6 +547,7 @@ server {{
 {_panel_acme_location()}
 
 {_panel_proxy_location(app_port)}
+{_error_pages_location()}
 }}
 """.strip())
 
@@ -561,6 +567,7 @@ server {{
 {acme}
 
 {_panel_proxy_location(app_port)}
+{_error_pages_location()}
 }}
 """.strip())
 
@@ -575,6 +582,7 @@ server {{
 {_panel_acme_location()}
 
 {_panel_proxy_location(app_port)}
+{_error_pages_location()}
 }}
 """.strip())
 
