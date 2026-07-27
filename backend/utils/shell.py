@@ -137,12 +137,13 @@ async def _stop_process(proc) -> None:
             pass
 
 
-async def write_file(path: str | Path, content: str) -> None:
+async def write_file(path: str | Path, content: str | bytes) -> None:
     """Write a file; uses sudo tee when PRIVILEGED_SUDO and not root."""
     path = str(path)
+    data = content.encode("utf-8") if isinstance(content, str) else content
     if not _use_sudo():
         Path(path).parent.mkdir(parents=True, exist_ok=True)
-        Path(path).write_text(content, encoding="utf-8")
+        Path(path).write_bytes(data)
         return
 
     # Ensure parent exists
@@ -157,7 +158,7 @@ async def write_file(path: str | Path, content: str) -> None:
         stderr=asyncio.subprocess.PIPE,
     )
     stdout_b, stderr_b = await asyncio.wait_for(
-        proc.communicate(input=content.encode("utf-8")),
+        proc.communicate(input=data),
         timeout=15,
     )
     if proc.returncode != 0:

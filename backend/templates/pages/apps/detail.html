@@ -7,6 +7,12 @@
 {% block content %}
 {% if notice %}<div class="alert alert--success section">{{ notice }}</div>{% endif %}
 {% if error %}<div class="alert alert--danger section">{{ error }}</div>{% endif %}
+{% if missing_dependencies %}
+<div class="alert alert--danger section">
+  PostgreSQL is stopped. Start it before running this app.
+  <a class="btn btn--primary btn--sm" href="{{ missing_dependency_url }}">Open PostgreSQL</a>
+</div>
+{% endif %}
 <div class="stat-grid">
   <div class="stat-card-box">
     <span class="stat-card-box__label">Status</span>

@@ -150,7 +150,12 @@ async def deploy(app_id: int, db: AsyncSession = Depends(get_db)):
         and not app.deployed_revision
         else "redeploy"
     )
-    deployment = await app_deployment_service.start(db, app, action=action)
+    try:
+        deployment = await app_deployment_service.start(db, app, action=action)
+    except HTTPException as exc:
+        return RedirectResponse(
+            f"/apps/{app_id}?{urlencode({'error': str(exc.detail)})}", status_code=303
+        )
     return RedirectResponse(f"/apps/{app_id}?deployment={deployment.id}", status_code=303)
 
 
@@ -207,7 +212,12 @@ async def control(app_id: int, action: str, db: AsyncSession = Depends(get_db)):
         operation = lambda: app_dependency_service.start_app(db, app, domain)
     else:
         operation = lambda: _restart_app(db, app, domain)
-    await app_lifecycle_service.run(app.id, operation)
+    try:
+        await app_lifecycle_service.run(app.id, operation)
+    except HTTPException as exc:
+        return RedirectResponse(
+            f"/apps/{app_id}?{urlencode({'error': str(exc.detail)})}", status_code=303
+        )
     return RedirectResponse(f"/apps/{app_id}", status_code=303)
 
 

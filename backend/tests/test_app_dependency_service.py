@@ -38,6 +38,11 @@ class AppDependencyTests(unittest.TestCase):
         self.assertNotIn("proxy_intercept_errors", config)
         self.assertNotIn("/_srv-errors/", config)
 
+    def test_app_controls_link_to_postgresql_dependency_when_missing(self):
+        controls = (BACKEND / "templates" / "pages" / "apps" / "partials" / "controls.html").read_text(encoding="utf-8")
+        self.assertIn("{% if missing_dependencies %}", controls)
+        self.assertIn('href="{{ missing_dependency_url }}"', controls)
+
 
 if __name__ == "__main__":
     unittest.main()
