@@ -33,11 +33,10 @@ class AppDependencyTests(unittest.TestCase):
         self.assertIn(".well-known/acme-challenge", config)
         self.assertIn("/_srv-errors/503.html", config)
 
-    def test_proxy_template_uses_static_502_page(self):
+    def test_proxy_template_does_not_replace_app_errors(self):
         config = nginx_templates.reverse_proxy_config("app.example.com", "127.0.0.1", 9101, "http")
-        self.assertIn("proxy_intercept_errors on", config)
-        self.assertIn("/_srv-errors/404.html", config)
-        self.assertIn("/_srv-errors/502.html", config)
+        self.assertNotIn("proxy_intercept_errors", config)
+        self.assertNotIn("/_srv-errors/", config)
 
 
 if __name__ == "__main__":

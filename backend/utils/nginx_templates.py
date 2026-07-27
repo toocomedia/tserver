@@ -146,12 +146,6 @@ def _error_pages_location() -> str:
     }}'''
 
 
-def _proxy_error_pages() -> str:
-    return '''        proxy_intercept_errors on;
-        error_page 404 /_srv-errors/404.html;
-        error_page 502 503 504 /_srv-errors/502.html;'''
-
-
 def _static_cache_location(static_cache: bool, proxy_pass_url: str) -> str:
     """
     Extra location block for browser-caching static file types through the proxy.
@@ -194,11 +188,9 @@ server {{
         try_files $uri =404;
     }}
 
-    error_page 404 /_srv-errors/404.html;
     location / {{
         try_files $uri $uri/ /index.html;
     }}
-{_error_pages_location()}
 }}
 """
 
@@ -245,11 +237,9 @@ server {{
         try_files $uri =404;
     }}
 
-    error_page 404 /_srv-errors/404.html;
     location / {{
         try_files $uri $uri/ /index.html;
     }}
-{_error_pages_location()}
 }}
 """
 
@@ -294,9 +284,7 @@ server {{
         proxy_pass         {pass_url};
 {_proxy_common_headers()}
 {cache_directives}
-{_proxy_error_pages()}
     }}{static_loc}
-{_error_pages_location()}
 }}
 """
 
@@ -366,9 +354,7 @@ server {{
         proxy_pass         {pass_url};
 {_proxy_common_headers()}
 {cache_directives}
-{_proxy_error_pages()}
     }}{static_loc}
-{_error_pages_location()}
 }}
 """
 
@@ -452,9 +438,6 @@ def _panel_proxy_location(app_port: int) -> str:
         proxy_read_timeout 60s;
         proxy_connect_timeout 10s;
         proxy_socket_keepalive on;
-        proxy_intercept_errors on;
-        error_page 404 /_srv-errors/404.html;
-        error_page 502 503 504 /_srv-errors/502.html;
     }}"""
 
 
@@ -532,7 +515,6 @@ server {{
 {_panel_acme_location()}
 
 {_panel_proxy_location(app_port)}
-{_error_pages_location()}
 }}
 """.strip())
         else:
@@ -547,7 +529,6 @@ server {{
 {_panel_acme_location()}
 
 {_panel_proxy_location(app_port)}
-{_error_pages_location()}
 }}
 """.strip())
 
@@ -567,7 +548,6 @@ server {{
 {acme}
 
 {_panel_proxy_location(app_port)}
-{_error_pages_location()}
 }}
 """.strip())
 
@@ -582,7 +562,6 @@ server {{
 {_panel_acme_location()}
 
 {_panel_proxy_location(app_port)}
-{_error_pages_location()}
 }}
 """.strip())
 

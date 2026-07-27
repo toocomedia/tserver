@@ -136,7 +136,6 @@ async def create_static_site(domain: str) -> str:
     Write HTTP static site nginx config.
     Returns path to config file. Raises on nginx -t failure.
     """
-    await ensure_error_pages()
     webroot = _webroot_path(domain)
     name = _conf_name(domain)
     content = nginx_templates.static_site_config(domain, webroot)
@@ -157,7 +156,6 @@ async def update_static_site_ssl(
     Replace HTTP config with HTTP+HTTPS config after SSL cert is issued.
     Returns new config path.
     """
-    await ensure_error_pages()
     webroot = _webroot_path(domain)
     name = _conf_name(domain)
     content = nginx_templates.static_site_ssl_config(domain, webroot, cert_path, key_path)
@@ -203,7 +201,6 @@ async def create_proxy(
 ) -> str:
     """Write HTTP reverse proxy nginx config. Returns config path."""
     await ensure_http_maps()
-    await ensure_error_pages()
     name = _conf_name(full_domain)
     content = nginx_templates.reverse_proxy_config(
         full_domain, target_ip, target_port, protocol,
@@ -234,7 +231,6 @@ async def update_proxy_ssl(
 ) -> str:
     """Replace proxy HTTP config with SSL config."""
     await ensure_http_maps()
-    await ensure_error_pages()
     name = _conf_name(full_domain)
     content = nginx_templates.reverse_proxy_ssl_config(
         full_domain, target_ip, target_port, protocol, cert_path, key_path,
@@ -390,7 +386,6 @@ async def apply_panel_config(
             logger.warning("Could not remove legacy panel conf %s: %s", legacy, exc)
 
     await ensure_http_maps()
-    await ensure_error_pages()
     config_path = str(await _write_config(name, content))
     result = await shell.nginx_test()
     if not result.success:
