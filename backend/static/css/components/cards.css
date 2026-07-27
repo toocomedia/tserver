@@ -398,28 +398,25 @@
 }
 
 .tray-badge--danger {
-  background: var(--color-alert-danger-bg, var(--color-danger));
-  color: var(--color-alert-danger-text, #FFFFFF);
-  border: 1px solid var(--color-alert-danger-text, var(--color-danger));
+  background: var(--color-danger);
+  color: #FFFFFF;
 }
 
 .tray-badge--success {
-  background: var(--color-alert-success-bg, #10B981);
-  color: var(--color-alert-success-text, #FFFFFF);
-  border: 1px solid var(--color-alert-success-text, #10B981);
+  background: #10B981;
+  color: #FFFFFF;
 }
 
 .tray-badge--muted {
-  background: var(--color-badge-neutral-bg, var(--color-muted));
-  color: var(--color-badge-neutral-text, #FFFFFF);
-  border: 1px solid var(--color-line);
+  background: var(--color-muted);
+  color: #FFFFFF;
 }
 
 .tray-error-box {
   font-size: 12px;
-  color: var(--color-alert-danger-text, #FF8080);
-  background: var(--color-alert-danger-bg, rgba(220, 38, 38, 0.15));
-  border: 1px solid var(--color-alert-danger-text, rgba(220, 38, 38, 0.3));
+  color: #FF8080;
+  background: rgba(220, 38, 38, 0.15);
+  border: 1px solid rgba(220, 38, 38, 0.3);
   padding: 10px 12px;
   line-height: 1.4;
   font-weight: 600;
@@ -427,7 +424,7 @@
 
 .requirements-info-btn.is-expanded {
   background: var(--color-accent) !important;
-  color: var(--color-on-accent, #000000) !important;
+  color: var(--color-neutral) !important;
   border-color: var(--color-accent) !important;
 }
 

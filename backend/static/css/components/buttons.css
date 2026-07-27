@@ -37,7 +37,7 @@
 
 .btn--primary {
   background: var(--color-accent) !important;
-  color: var(--color-on-accent, #111111) !important;
+  color: #111111 !important;
 }
 .btn--primary:hover {
   opacity: 0.9;

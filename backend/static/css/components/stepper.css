@@ -102,19 +102,18 @@
   align-items: center;
   gap: 10px;
   font-size: 14px;
-  color: var(--color-muted);
+  color: var(--color-muted, #6B7280);
   cursor: pointer;
   transition: color 0.15s ease;
 }
-.pure-step-item:hover { color: var(--color-text); }
+.pure-step-item:hover { color: #A0A8B4; }
 
 .pure-step-item--active {
-  color: var(--color-text);
+  color: var(--color-text, #FFFFFF);
   font-weight: 600;
 }
 .pure-step-item--done {
-  color: var(--color-muted);
-  opacity: 0.8;
+  color: #A0A8B4;
 }
 
 .step-number {
@@ -125,10 +124,10 @@
 .pure-step-item--active .step-number {
   opacity: 1;
   font-weight: 700;
-  color: var(--color-text);
+  color: var(--color-text, #FFFFFF);
 }
 
-.nav-divider { font-size: 14px; color: var(--color-line); font-family: monospace; }
+.nav-divider { font-size: 14px; color: #333C48; font-family: monospace; }
 
 /* ==========================================================================
    STEP PANELS
@@ -144,13 +143,13 @@
 .panel-heading {
   font-size: 24px;
   font-weight: 700;
-  color: var(--color-text);
+  color: var(--color-text, #FFFFFF);
   margin: 0 0 8px 0;
   letter-spacing: -0.5px;
 }
 .panel-subheading {
   font-size: 14px;
-  color: var(--color-muted);
+  color: var(--color-muted, #9AA0A6);
   margin: 0 0 40px 0;
 }
 
@@ -167,8 +166,8 @@
   padding: 12px 0 !important;
   background: transparent !important;
   border: none !important;
-  border-bottom: 2px solid var(--color-line) !important;
-  color: var(--color-text) !important;
+  border-bottom: 2px solid #2A3440 !important;
+  color: var(--color-text, #FFFFFF) !important;
   transition: border-color 0.15s ease;
   border-radius: 0 !important;
   box-shadow: none !important;
@@ -177,10 +176,10 @@
   height: auto !important;
 }
 .input-borderless:focus {
-  border-bottom-color: var(--color-text) !important;
+  border-bottom-color: var(--color-text, #FFFFFF) !important;
   outline: none !important;
 }
-.input-borderless::placeholder { color: var(--color-muted); font-weight: 400; opacity: 0.65; }
+.input-borderless::placeholder { color: #4A5568; font-weight: 400; }
 
 /* ==========================================================================
    STEP 2: RUNTIME STACK CAROUSEL (CLEAR & CRISP IN DEEP DARK / AMOLED!)
@@ -229,12 +228,12 @@
 .arrow-side-zone--right:hover { padding-right: 2px; }
 
 .pure-arrow-icon {
-  color: var(--color-muted);
+  color: var(--color-muted, #9AA0A6);
   opacity: 0.85;
   transition: all 0.15s ease;
 }
 .arrow-side-zone:hover .pure-arrow-icon {
-  color: var(--color-text);
+  color: var(--color-text, #FFFFFF);
   opacity: 1;
   transform: scale(1.15);
 }
@@ -252,19 +251,19 @@
   border: none !important;
   border-bottom: 2px solid transparent !important;
   transition: all 0.15s ease;
-  color: var(--color-muted);
+  color: var(--color-muted, #A0A8B4);
 }
 .stack-pure-item:hover:not(.stack-pure-item--disabled) {
-  color: var(--color-text);
+  color: var(--color-text, #FFFFFF);
 }
 
 .stack-pure-item--active {
-  color: var(--color-text) !important;
-  border-bottom-color: var(--color-text) !important;
+  color: var(--color-text, #FFFFFF) !important;
+  border-bottom-color: var(--color-text, #FFFFFF) !important;
   font-weight: 600;
 }
 .stack-pure-item--active .pure-tech-icon {
-  color: var(--color-text) !important;
+  color: var(--color-text, #FFFFFF) !important;
   opacity: 1 !important;
 }
 
@@ -277,7 +276,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: var(--color-muted);
+  color: var(--color-muted, #A0A8B4);
   opacity: 0.9;
   transition: all 0.15s ease;
 }
@@ -300,23 +299,23 @@
   padding: 16px 0;
   cursor: pointer;
   user-select: none;
-  color: var(--color-muted);
+  color: var(--color-muted, #A0A8B4);
   border-bottom: 2px solid transparent;
   transition: all 0.15s ease;
 }
-.ssl-pure-opt:hover { color: var(--color-text); }
+.ssl-pure-opt:hover { color: var(--color-text, #FFFFFF); }
 
 .ssl-pure-opt--active {
-  color: var(--color-text) !important;
-  border-bottom-color: var(--color-text) !important;
+  color: var(--color-text, #FFFFFF) !important;
+  border-bottom-color: var(--color-text, #FFFFFF) !important;
 }
 .ssl-pure-opt--active .ssl-icon {
-  color: var(--color-text);
+  color: var(--color-text, #FFFFFF);
   opacity: 1;
 }
 .ssl-pure-opt--active .ssl-opt-title {
   font-weight: 600;
-  color: var(--color-text);
+  color: var(--color-text, #FFFFFF);
 }
 
 .ssl-icon {
@@ -332,7 +331,7 @@
 }
 
 .ssl-opt-title { font-size: 16px; margin-bottom: 4px; transition: color 0.15s ease; }
-.ssl-opt-desc { font-size: 13px; color: var(--color-muted); line-height: 1.5; }
+.ssl-opt-desc { font-size: 13px; color: var(--color-muted, #9AA0A6); line-height: 1.5; }
 
 /* ==========================================================================
    STEP 4: BOXLESS REVIEW SECTION (PURE TYPOGRAPHY)
@@ -349,5 +348,5 @@
   justify-content: space-between;
   font-size: 15px;
 }
-.review-label { color: var(--color-muted); }
-.review-value { color: var(--color-text); font-weight: 600; }
+.review-label { color: var(--color-muted, #9AA0A6); }
+.review-value { color: var(--color-text, #FFFFFF); font-weight: 600; }

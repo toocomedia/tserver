@@ -10,7 +10,7 @@
   padding: 2px 6px;
   line-height: 1;
   white-space: nowrap;
-  color: var(--color-badge-neutral-text, var(--color-muted));
+  color: var(--color-muted);
   border-radius: 0 !important;
   box-shadow: none !important;
 }
@@ -18,38 +18,36 @@
 .badge--active,
 .badge--healthy,
 .badge--ok {
-  color: var(--color-alert-success-text, var(--color-text));
+  color: var(--color-text);
 }
 .badge--active .badge-dot,
 .badge--healthy .badge-dot,
 .badge--ok .badge-dot {
-  background-color: var(--color-alert-success-text, #10B981);
-  box-shadow: 0 0 6px rgba(74, 222, 128, 0.45);
+  background-color: var(--color-status-green, #10B981);
 }
 
 .badge--inactive,
 .badge--stopped,
 .badge--neutral {
-  color: var(--color-badge-neutral-text, var(--color-muted));
+  color: var(--color-muted);
 }
 .badge--inactive .badge-dot,
 .badge--stopped .badge-dot,
 .badge--neutral .badge-dot {
-  background-color: var(--color-badge-neutral-text, var(--color-muted));
+  background-color: var(--color-muted);
 }
 
 .badge--missing,
 .badge--danger,
 .badge--error,
 .badge--problem {
-  color: var(--color-alert-danger-text, var(--color-danger));
+  color: var(--color-danger);
 }
 .badge--missing .badge-dot,
 .badge--danger .badge-dot,
 .badge--error .badge-dot,
 .badge--problem .badge-dot {
-  background-color: var(--color-alert-danger-text, var(--color-danger));
-  box-shadow: 0 0 6px rgba(248, 113, 113, 0.45);
+  background-color: var(--color-danger);
 }
 
 .badge-dot {
@@ -71,10 +69,10 @@
   border: none;
   border-radius: 0;
 }
-.status-badge--success { background: var(--color-alert-success-bg); color: var(--color-alert-success-text, #3b5e13); }
-.status-badge--muted { background: var(--color-badge-neutral-bg, var(--color-header-bg-bar)); color: var(--color-badge-neutral-text, var(--color-muted)); }
-.status-badge--warning { background: var(--color-alert-warn-bg, var(--color-surface)); color: var(--color-alert-warn-text, var(--color-warn)); }
-.status-badge--danger { background: var(--color-alert-danger-bg); color: var(--color-alert-danger-text, var(--color-danger)); }
+.status-badge--success { background: var(--color-alert-success-bg); color: #3b5e13; }
+.status-badge--muted { background: var(--color-header-bg-bar); color: var(--color-muted); }
+.status-badge--warning { background: var(--color-surface); color: var(--color-warn); }
+.status-badge--danger { background: var(--color-alert-danger-bg); color: var(--color-danger); }
 
 /* Minimal Rounded Badges for Statuses */
 .badge-minimal {
@@ -89,13 +87,13 @@
 }
 .badge-minimal--active {
   background: var(--color-alert-success-bg);
-  color: var(--color-alert-success-text, #3b5e13);
+  color: #3b5e13;
 }
 .badge-minimal--danger {
   background: var(--color-alert-danger-bg);
-  color: var(--color-alert-danger-text, var(--color-danger));
+  color: var(--color-danger);
 }
 .badge-minimal--neutral {
-  background: var(--color-badge-neutral-bg, var(--color-header-bg-bar));
-  color: var(--color-badge-neutral-text, var(--color-muted));
+  background: var(--color-header-bg-bar);
+  color: var(--color-muted);
 }
