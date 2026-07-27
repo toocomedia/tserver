@@ -98,7 +98,7 @@
   color: var(--color-muted);
 }
 
-/* Ensure all status badges and active labels are bright and super clear in Dark and AMOLED modes */
+/* Ensure all status badges and active labels use the app's exact green (#9FD640), made bright and clear for Dark and AMOLED modes */
 [data-theme="dark"] .status-badge--success,
 [data-theme="amoled"] .status-badge--success,
 [data-theme="dark"] .badge-minimal--active,
@@ -109,7 +109,7 @@
 [data-theme="amoled"] .badge--healthy,
 [data-theme="dark"] .badge--ok,
 [data-theme="amoled"] .badge--ok {
-  color: #4ADE80 !important;
+  color: #9FD640 !important;
 }
 
 [data-theme="dark"] .status-badge--danger,
@@ -124,7 +124,7 @@
 [data-theme="amoled"] .badge--missing,
 [data-theme="dark"] .badge--problem,
 [data-theme="amoled"] .badge--problem {
-  color: #F87171 !important;
+  color: #FCA5A5 !important;
 }
 
 [data-theme="dark"] .status-badge--warning,
@@ -142,5 +142,5 @@
 [data-theme="amoled"] .badge--stopped,
 [data-theme="dark"] .badge--neutral,
 [data-theme="amoled"] .badge--neutral {
-  color: #E2E8F0 !important;
+  color: #D1D5DB !important;
 }
