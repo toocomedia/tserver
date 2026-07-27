@@ -2,7 +2,7 @@
   "id": "postgresql",
   "name": "PostgreSQL",
   "description": "Local PostgreSQL server used by PostgreSQL Manager and panel-created databases.",
-  "icon": "",
+  "icon": "icon.png",
   "version": "1.0.0",
   "author": "SRV Panel Core"
 }
