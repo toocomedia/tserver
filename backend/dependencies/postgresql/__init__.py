@@ -1,1 +1,0 @@
-"""PostgreSQL system dependency driver."""

@@ -5,7 +5,6 @@ from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from dependencies import dependency_manager
 from models.app_deployment import AppDeployment
 from models.domain import Domain
 from models.hosted_app import HostedApp
@@ -15,17 +14,29 @@ from services import hosted_app_control_service, nginx_service
 
 
 def requirement_ids(app: HostedApp) -> list[str]:
-    return ["postgresql"] if app.postgres_mode == "create" else []
+    return ["postgres_manager"] if app.postgres_mode == "create" else []
 
 
 def missing_ids(app: HostedApp) -> list[str]:
-    return [item for item in requirement_ids(app) if not dependency_manager.is_healthy(item)]
+    return [item for item in requirement_ids(app) if not _healthy(item)]
 
 
 def require_available(app: HostedApp) -> None:
     missing = missing_ids(app)
     if missing:
-        raise HTTPException(409, f"Activate {', '.join(missing)} before running this app.")
+        raise HTTPException(409, "Start PostgreSQL from PostgreSQL Manager before running this app.")
+
+
+def requirement_url(requirement_id: str) -> str:
+    return "/plugins/postgres_manager/" if requirement_id == "postgres_manager" else "/plugins/"
+
+
+def _healthy(requirement_id: str) -> bool:
+    if requirement_id != "postgres_manager":
+        return False
+    from plugins.postgres_manager.service import postgres_service
+    status = postgres_service.get_status()
+    return bool(status.get("installed") and status.get("running") and status.get("port_open"))
 
 
 async def dependent_apps(

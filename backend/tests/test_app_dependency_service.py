@@ -14,14 +14,14 @@ from utils import nginx_templates
 
 
 class AppDependencyTests(unittest.TestCase):
-    def test_only_panel_managed_postgres_requires_postgresql(self):
-        self.assertEqual(["postgresql"], app_dependency_service.requirement_ids(HostedApp(postgres_mode="create")))
+    def test_only_panel_managed_postgres_requires_manager(self):
+        self.assertEqual(["postgres_manager"], app_dependency_service.requirement_ids(HostedApp(postgres_mode="create")))
         self.assertEqual([], app_dependency_service.requirement_ids(HostedApp(postgres_mode="external")))
         self.assertEqual([], app_dependency_service.requirement_ids(HostedApp(postgres_mode="none")))
 
     def test_runtime_actions_are_blocked_when_postgresql_is_down(self):
         app = HostedApp(postgres_mode="create")
-        with patch("services.app_dependency_service.dependency_manager.is_healthy", return_value=False):
+        with patch("plugins.postgres_manager.service.postgres_service.get_status", return_value={"installed": True, "running": False, "port_open": False}):
             with self.assertRaises(HTTPException) as error:
                 app_dependency_service.require_available(app)
         self.assertEqual(409, error.exception.status_code)

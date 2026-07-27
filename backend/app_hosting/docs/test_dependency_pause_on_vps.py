@@ -10,9 +10,15 @@ def command_ok(command: list[str]) -> bool:
     return subprocess.run(command, capture_output=True, timeout=15).returncode == 0
 
 
-def http_status(domain: str) -> int | None:
+def http_status(domain: str, *, https: bool = False) -> int | None:
+    target = f"https://{domain}/" if https else "http://127.0.0.1/"
+    command = ["curl", "-sS", "-o", "/dev/null", "-w", "%{http_code}"]
+    if https:
+        command += ["-k", "--resolve", f"{domain}:443:127.0.0.1"]
+    else:
+        command += ["-H", f"Host: {domain}"]
     result = subprocess.run(
-        ["curl", "-sS", "-o", "/dev/null", "-w", "%{http_code}", "-H", f"Host: {domain}", "http://127.0.0.1/"],
+        [*command, target],
         capture_output=True, text=True, timeout=15,
     )
     try:
@@ -38,13 +44,15 @@ args = parser.parse_args()
 
 active = command_ok(["systemctl", "is-active", "--quiet", args.service])
 bound = listener(args.port)
-status = http_status(args.domain)
+http = http_status(args.domain)
+https = http_status(args.domain, https=True)
 if args.expect == "running":
-    checks = {"service": active, "loopback": bound, "public proxy": status not in {None, 502, 503}}
+    checks = {"service": active, "loopback": bound, "public proxy": any(code not in {None, 502, 503} for code in (http, https))}
 else:
-    checks = {"service stopped": not active, "loopback closed": not bound, "offline page": status == 503}
+    checks = {"service stopped": not active, "loopback closed": not bound, "offline page": 503 in (http, https)}
 
 for name, passed in checks.items():
     print(f"{'PASS' if passed else 'FAIL'} {name}")
-print(f"HTTP status: {status if status is not None else 'unavailable'}")
+print(f"HTTP status: {http if http is not None else 'unavailable'}")
+print(f"HTTPS status: {https if https is not None else 'unavailable'}")
 sys.exit(0 if all(checks.values()) else 1)

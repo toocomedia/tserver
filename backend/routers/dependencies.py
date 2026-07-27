@@ -1,12 +1,9 @@
 """System dependency management page and APIs."""
-from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request
+from fastapi import APIRouter, Form, HTTPException, Query, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from pathlib import Path
 
 from dependencies import dependency_manager
-from database import get_db
-from services import app_dependency_service
-from sqlalchemy.ext.asyncio import AsyncSession
 from templating import templates
 
 router = APIRouter(tags=["dependencies"])
@@ -40,14 +37,13 @@ async def dependencies_index(request: Request):
 
 
 @router.get("/dependencies/{dependency_id}", response_class=HTMLResponse)
-async def dependency_detail(request: Request, dependency_id: str, db: AsyncSession = Depends(get_db)):
+async def dependency_detail(request: Request, dependency_id: str):
     dependency = dependency_manager.get_status(dependency_id)
     service = dependency_manager.get_service(dependency_id)
     if dependency is None or service is None:
         raise HTTPException(status_code=404, detail="Unknown dependency.")
 
     dependency["dependents"] = dependency_manager.get_dependent_plugins(dependency_id)
-    dependency["dependent_apps"] = await app_dependency_service.dependent_summaries(db, dependency_id)
     dependency["install_guide"] = service.get_install_guide()
     dependency["uninstall_guide"] = service.get_uninstall_guide()
     return templates.TemplateResponse(
@@ -69,10 +65,8 @@ async def dependency_status():
 async def dependency_precheck(
     dependency_id: str,
     action: str = Query(..., pattern="^(disable|uninstall)$"),
-    db: AsyncSession = Depends(get_db),
 ):
-    apps = await app_dependency_service.dependent_summaries(db, dependency_id)
-    result = dependency_manager.precheck(dependency_id, action, dependent_apps=apps)
+    result = dependency_manager.precheck(dependency_id, action)
     if result is None:
         raise HTTPException(status_code=404, detail="Unknown dependency.")
     return result
@@ -83,12 +77,9 @@ async def dependency_toggle(
     dependency_id: str,
     enabled: bool = Form(...),
     confirmed: bool = Form(False),
-    db: AsyncSession = Depends(get_db),
 ):
-    paused = []
     if not enabled:
-        apps = await app_dependency_service.dependent_summaries(db, dependency_id)
-        precheck = dependency_manager.precheck(dependency_id, "disable", dependent_apps=apps)
+        precheck = dependency_manager.precheck(dependency_id, "disable")
         if precheck is None:
             raise HTTPException(status_code=404, detail="Unknown dependency.")
         if not confirmed:
@@ -99,12 +90,8 @@ async def dependency_toggle(
                 },
                 status_code=409,
             )
-        await app_dependency_service.ensure_dependents_idle(db, dependency_id)
-        paused = await app_dependency_service.pause_dependents(db, dependency_id)
 
     success, message = await dependency_manager.toggle(dependency_id, enabled)
-    if not success and paused:
-        await app_dependency_service.restore_apps(db, paused)
     if not success:
         return JSONResponse({"detail": message}, status_code=409)
     return RedirectResponse(f"/dependencies/{dependency_id}", status_code=303)

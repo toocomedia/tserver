@@ -21,6 +21,7 @@ import config
 from database import get_db
 from templating import templates
 from plugins.postgres_manager.service import postgres_service
+from services import app_dependency_service
 from plugins.postgres_manager import queries as pg
 from plugins.postgres_manager.schemas import (
     DatabaseCreate, UserCreate, PasswordChange, QueryRequest, RemoteConfigRequest,
@@ -155,14 +156,20 @@ async def api_status():
 # ---------------------------------------------------------------------------
 
 @router.post("/api/service/{action}")
-async def service_action(action: str):
+async def service_action(action: str, db: AsyncSession = Depends(get_db)):
     """Start, stop, or restart the PostgreSQL service."""
     if action not in ("start", "stop", "restart"):
         raise HTTPException(status_code=400, detail="Action must be start, stop, or restart.")
+    paused = []
+    if action == "stop":
+        await app_dependency_service.ensure_dependents_idle(db, "postgres_manager")
+        paused = await app_dependency_service.pause_dependents(db, "postgres_manager")
     try:
         getattr(postgres_service, action)()
         return JSONResponse({"status": "ok", "action": action})
     except Exception as exc:
+        if paused:
+            await app_dependency_service.restore_apps(db, paused)
         raise HTTPException(status_code=500, detail=str(exc))
 
 

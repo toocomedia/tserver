@@ -134,6 +134,9 @@ async def detail(app_id: int, request: Request, deployment: int | None = None, d
         "notice": request.query_params.get("notice"),
         "error": request.query_params.get("error"),
         "missing_dependencies": app_dependency_service.missing_ids(app),
+        "missing_dependency_url": app_dependency_service.requirement_url(
+            app_dependency_service.missing_ids(app)[0]
+        ) if app_dependency_service.missing_ids(app) else None,
     })
 
 

@@ -326,9 +326,10 @@ its running apps, serves their Nginx offline page with HTTP `503`, and never
 deletes their files or data. When the dependency returns, apps remain paused
 until the user explicitly resumes them.
 
-`postgres_mode=create` requires the core `postgresql` dependency. External
-`DATABASE_URL` and SQLite/no-database apps do not. Future dependencies add a
-trusted core driver, then declare their app rule in `requirement_ids(app)`.
+`postgres_mode=create` requires the existing PostgreSQL Manager service.
+External `DATABASE_URL` and SQLite/no-database apps do not. Future dependencies
+declare their app rule in `requirement_ids(app)` without duplicating an existing
+plugin as a second Dependencies card.
 
 ### Strict Delete
 
@@ -380,7 +381,7 @@ PostgreSQL presence/connectivity, and environment-file permissions. It never
 installs, restarts, deploys, deletes, or changes VPS state.
 
 For dependency pause verification, run the read-only checker once while the app
-is running and again after disabling its dependency:
+is running and again after stopping PostgreSQL from PostgreSQL Manager:
 
 ```text
 python3 backend/app_hosting/docs/test_dependency_pause_on_vps.py --service srv-python-42 --port 9101 --domain app.example.com --expect running

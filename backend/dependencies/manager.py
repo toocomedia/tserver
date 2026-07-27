@@ -111,24 +111,20 @@ class DependencyManager:
 
         return plugin_manager.get_dependents(dependency_id)
 
-    def precheck(
-        self, dependency_id: str, action: str, *, dependent_apps: list[dict[str, Any]] | None = None,
-    ) -> dict[str, Any] | None:
+    def precheck(self, dependency_id: str, action: str) -> dict[str, Any] | None:
         service = self.get_service(dependency_id)
         if service is None:
             return None
         dependents = self.get_dependent_plugins(dependency_id)
-        containers = service.list_containers() if action == "uninstall" and hasattr(service, "list_containers") else []
-        apps = dependent_apps or []
+        containers = service.list_containers() if action == "uninstall" else []
         return {
             "dependency_id": dependency_id,
             "action": action,
             "dependents": dependents,
-            "dependent_apps": apps,
             "unmanaged_containers": [
                 item for item in containers if not item["panel_managed"]
             ],
-            "blocked": action == "uninstall" and bool(dependents or apps),
+            "blocked": action == "uninstall" and bool(dependents),
         }
 
     async def toggle(self, dependency_id: str, enabled: bool) -> tuple[bool, str]:

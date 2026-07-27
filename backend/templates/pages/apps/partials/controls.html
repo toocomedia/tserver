@@ -15,7 +15,7 @@
         {% if app.status == 'paused' %}
           <p class="text-muted">Paused by {{ app.paused_by_dependency or 'a required dependency' }}.</p>
           {% if missing_dependencies %}
-            <a class="btn btn--primary" href="/dependencies/{{ missing_dependencies[0] }}">Activate {{ missing_dependencies[0] }}</a>
+            <a class="btn btn--primary" href="{{ missing_dependency_url }}">Start PostgreSQL</a>
           {% else %}
             <form method="post" action="/apps/{{ app.id }}/start">{% include "partials/csrf_field.html" %}<button class="btn btn--primary">Resume</button></form>
           {% endif %}
