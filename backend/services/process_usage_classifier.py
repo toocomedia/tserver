@@ -19,3 +19,8 @@ def stack_service(name: str, cmdline: str) -> str | None:
     if app_root and f"{app_root}/" in command:
         return None
     return "panel" if "srv-panel" in command else None
+
+
+def is_nginx_worker(cmdline: str) -> bool:
+    """Identify an Nginx worker from its Linux process title."""
+    return "nginx: worker process" in (cmdline or "").lower()

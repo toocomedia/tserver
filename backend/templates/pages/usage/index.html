@@ -176,7 +176,7 @@
       svcTbody.innerHTML = Object.entries(d.services).map(([key, svc]) => `
         <tr>
           <td class="table-title">${svc.label || svcNames[key] || key}</td>
-          <td>${svc.count}</td>
+          <td>${key === 'nginx' ? `${svc.worker_count} worker / ${svc.count} total` : svc.count}</td>
           <td>${svc.cpu.toFixed(1)}%</td>
           <td>${svc.memory}</td>
           <td><span class="${procStatusClass(svc.status)}">${svc.status}</span></td>
@@ -211,8 +211,8 @@
     if (dependencyTbody) {
       const dependencies = d.dependencies || [];
       dependencyTbody.innerHTML = dependencies.map(dep => `
-        <tr><td class="table-title">${dep.label}</td><td>${dep.version}</td><td>${dep.details}</td><td><span class="${procStatusClass(dep.status)}">${dep.status}</span></td></tr>
-      `).join('') || '<tr><td colspan="4" class="text-muted">No runtime dependencies found.</td></tr>';
+        <tr><td class="table-title">${dep.label}</td><td>${dep.version}</td><td>${dep.count}</td><td>${dep.cpu.toFixed(1)}%</td><td>${dep.memory}</td><td><span class="${procStatusClass(dep.status)}">${dep.status}</span></td></tr>
+      `).join('') || '<tr><td colspan="6" class="text-muted">No runtime dependencies found.</td></tr>';
     }
 
     // Top processes table

@@ -28,3 +28,7 @@ class ProcessUsageClassifierTests(unittest.TestCase):
             "/opt/srv-panel/venv/bin/uvicorn main:app",
         )
         self.assertEqual(service, "panel")
+
+    def test_nginx_worker_is_distinguished_from_master(self):
+        self.assertTrue(process_usage_classifier.is_nginx_worker("nginx: worker process"))
+        self.assertFalse(process_usage_classifier.is_nginx_worker("nginx: master process"))

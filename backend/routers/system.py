@@ -229,7 +229,7 @@ def _collect_usage_snapshot() -> dict:
     }
     services = {
         key: dict(label=label, cpu=0.0, mem=0.0, memory="0 MB",
-                  count=0, status="stopped", _memory_bytes=0)
+                  count=0, worker_count=0, status="stopped", _memory_bytes=0)
         for key, label in service_labels.items()
     }
     for p in _psutil.process_iter(
@@ -260,6 +260,8 @@ def _collect_usage_snapshot() -> dict:
                     )
                     services[svc]["count"] += 1
                     services[svc]["status"] = "running"
+                    if svc == "nginx" and process_usage_classifier.is_nginx_worker(cmdline):
+                        services[svc]["worker_count"] += 1
         except (_psutil.NoSuchProcess, _psutil.AccessDenied):
             pass
 
@@ -323,7 +325,7 @@ async def server_stats(db: AsyncSession = Depends(get_db)):
 
     plugins = await plugin_usage_service.get_plugin_usage(procs, ram.total)
     hosted_apps = await hosted_app_usage_service.get_usage(db, procs, ram.total)
-    dependencies = await dependency_usage_service.get_runtime_usage()
+    dependencies = await dependency_usage_service.get_runtime_usage(procs, ram.total)
 
     procs.sort(key=lambda x: x["cpu_percent"] or 0, reverse=True)
     top_procs = [

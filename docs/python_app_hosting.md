@@ -396,6 +396,9 @@ status. Hosted Uvicorn processes are not counted as the SRV Panel process.
 - PostgreSQL and every future dependency registered by SRV Panel are listed
   automatically. Docker remains in **Stack Services** because that row reports
   the Docker daemon's live process use.
+- A dependency that owns a background process declares its process names in
+  `dependency.json` under `usage.process_names`; the Usage page then reports
+  its process count, CPU, and memory without a page-specific change.
 
 ## VPS validation
 
