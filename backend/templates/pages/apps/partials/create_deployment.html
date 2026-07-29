@@ -3,12 +3,10 @@
     <span>Step 4: Deployment Stream</span>
     <span class="badge-pill badge-pill--accent">Live Status</span>
   </div>
-  <p class="form-hint" data-deployment-summary>Creating the deployment.</p>
-  <div class="info-row"><span class="info-row__label">Current stage</span><span class="info-row__value" data-deployment-stage>Queued</span></div>
-  <div class="terminal-fluid" data-deployment-output aria-live="polite"></div>
-  <div class="alert alert--danger" data-deployment-error hidden>
-    <span data-deployment-error-text></span>
-    <a class="btn btn--danger btn--sm" data-deployment-details>Open app details</a>
+  <p class="form-hint" data-deployment-summary>Waiting for deployment to start.</p>
+  <div class="step4-transparent-section">
+    <div class="scroll-loader-viewport">
+      <div class="clean-step-list" data-deployment-steps></div>
+    </div>
   </div>
-  <a class="btn btn--primary" data-deployment-dashboard hidden>Open App Dashboard</a>
 </section>

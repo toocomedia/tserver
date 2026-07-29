@@ -430,6 +430,10 @@
   width: 100%;
 }
 
+.wizard-form [hidden] {
+  display: none !important;
+}
+
 .unboxed-step-container {
   padding: 8px 0 24px;
   width: 100%;
@@ -499,5 +503,4 @@
     grid-template-columns: 1fr;
   }
 }
-
 

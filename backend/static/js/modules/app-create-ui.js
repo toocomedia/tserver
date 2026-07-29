@@ -71,3 +71,26 @@ export function environmentValues(root) {
     .filter((input) => input.value)
     .map((input) => [input.dataset.environmentKey, input.value]));
 }
+
+export function renderDeploymentSteps(container, stage) {
+  const stages = [
+    ['source', 'Preparing Git source'], ['venv', 'Creating isolated virtualenv'],
+    ['dependencies', 'Installing project dependencies'], ['service', 'Switching application service'],
+    ['nginx', 'Configuring Nginx proxy'], ['ssl', 'Configuring HTTPS'], ['complete', 'Verifying deployment'],
+  ];
+  const current = Math.max(0, stages.findIndex(([name]) => name === stage));
+  container.replaceChildren(...stages.map(([name, label], index) => {
+    const row = document.createElement('div');
+    const icon = document.createElement('div');
+    const text = document.createElement('span');
+    row.className = `scroll-step-item ${index < current ? 'completed' : index === current ? 'active' : 'pending'}`;
+    icon.className = 'step-icon-wrap';
+    text.className = 'step-text';
+    text.textContent = label;
+    if (index < current) icon.textContent = '✓';
+    else if (index === current) icon.append(Object.assign(document.createElement('div'), { className: 'step-spinner' }));
+    else icon.append(Object.assign(document.createElement('div'), { className: 'step-dot' }));
+    row.append(icon, text);
+    return row;
+  }));
+}

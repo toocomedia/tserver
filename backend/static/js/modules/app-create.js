@@ -1,5 +1,5 @@
 import {
-  csrfHeaders, environmentValues, fetchJson, renderBranches, renderDetection,
+  csrfHeaders, environmentValues, fetchJson, renderBranches, renderDeploymentSteps, renderDetection,
   renderEnvironmentFields, setHidden, setText,
 } from './app-create-ui.js';
 
@@ -24,20 +24,20 @@ if (root) {
 
   function renderStep(step) {
     state.step = step;
-    for (let index = 1; index <= 4; index += 1) {
+    for (let index = 1; index <= 5; index += 1) {
       setHidden(panel(index), index !== step);
       nav(index).classList.toggle('is-active', index === step);
       nav(index).classList.toggle('active', index === step);
       nav(index).classList.toggle('disabled', index > state.unlocked);
     }
-    back.hidden = step === 1 || step === 4;
-    cancel.hidden = step === 4;
-    next.hidden = step === 4;
+    back.hidden = step === 1 || step >= 4;
+    cancel.hidden = step >= 4;
+    next.hidden = step >= 4;
     next.disabled = step === 2 && !state.detected;
     if (step === 1) next.textContent = 'Continue to Detection';
     if (step === 2) next.textContent = 'Continue to Configuration';
     if (step === 3) next.textContent = 'Deploy App';
-    setText(root.querySelector('[data-wizard-hint]'), `Step ${step} of 4`);
+    setText(root.querySelector('[data-wizard-hint]'), `Step ${step} of 5`);
   }
 
   function setNextLoading(loading, label) {
@@ -160,26 +160,30 @@ if (root) {
   async function pollDeployment() {
     try {
       const data = await fetchJson(`/apps/${state.appId}/deployments/${state.deploymentId}`, { headers: csrfHeaders() });
-      setText(root.querySelector('[data-deployment-stage]'), `${data.status} · ${data.stage}`);
+      root.querySelectorAll('[data-deployment-stage]').forEach((item) => setText(item, `${data.status} · ${data.stage}`));
       setText(root.querySelector('[data-deployment-summary]'), data.status === 'success' ? 'Deployment completed successfully.' : 'Deployment is running on the server.');
       setText(root.querySelector('[data-deployment-output]'), `${data.output || ''}${data.error || ''}`);
+      renderDeploymentSteps(root.querySelector('[data-deployment-steps]'), data.stage);
       if (['queued', 'running'].includes(data.status)) return window.setTimeout(pollDeployment, 1200);
       if (data.status === 'success') {
+        state.unlocked = 5;
         const dashboard = root.querySelector('[data-deployment-dashboard]');
         dashboard.href = `/apps/${state.appId}`;
         setHidden(dashboard, false);
+        renderStep(5);
         return;
       }
+      state.unlocked = 5;
       setText(root.querySelector('[data-deployment-summary]'), 'Deployment failed. Review the output, then retry from app details.');
       setText(root.querySelector('[data-deployment-error-text]'), data.error || 'Deployment failed.');
       root.querySelector('[data-deployment-details]').href = `/apps/${state.appId}`;
       setHidden(root.querySelector('[data-deployment-error]'), false);
+      renderStep(5);
     } catch (error) {
       setText(root.querySelector('[data-deployment-error-text]'), error.message || 'Could not read deployment status.');
       setHidden(root.querySelector('[data-deployment-error]'), false);
     }
   }
-
   repo.addEventListener('input', () => {
     window.clearTimeout(branchTimer);
     resetBranches();
@@ -187,15 +191,10 @@ if (root) {
   });
   databaseMode.addEventListener('change', syncDatabaseMode);
   root.querySelector('[data-detection-retry]').addEventListener('click', detect);
-  next.addEventListener('click', () => {
-    if (state.step === 1) detect();
-    else if (state.step === 2) renderStep(3);
-    else if (state.step === 3) startDeployment();
-  });
+  next.addEventListener('click', () => [detect, () => renderStep(3), startDeployment][state.step - 1]?.());
   back.addEventListener('click', () => renderStep(Math.max(1, state.step - 1)));
   root.querySelectorAll('[data-wizard-nav]').forEach((button) => button.addEventListener('click', () => {
-    const step = Number(button.dataset.wizardNav);
-    if (step <= state.unlocked) renderStep(step);
+    if (Number(button.dataset.wizardNav) <= state.unlocked) renderStep(Number(button.dataset.wizardNav));
   }));
   renderStep(1);
 }
