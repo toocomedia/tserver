@@ -98,11 +98,11 @@ class PanelLoadingRegressionTests(unittest.TestCase):
         self.assertIn('id="top-progress-bar"', layout_html)
         self.assertIn("data-async-load", layout_html)
 
-        layout_css = (
-            BACKEND / "static" / "css" / "layout.css"
+        loading_css = (
+            BACKEND / "static" / "css" / "components" / "loading.css"
         ).read_text(encoding="utf-8")
-        self.assertIn(".top-progress-bar", layout_css)
-        self.assertIn(".skeleton-shimmer", layout_css)
+        self.assertIn(".top-progress-bar", loading_css)
+        self.assertIn(".skeleton-shimmer", loading_css)
 
 
 if __name__ == "__main__":

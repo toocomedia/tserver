@@ -1,0 +1,170 @@
+/* Shared opt-in skeletons for live API regions. */
+.top-progress-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 99999;
+  width: 0;
+  height: 3px;
+  background: var(--color-accent);
+  opacity: 0;
+  pointer-events: none;
+  transition: width 0.3s ease, opacity 0.3s ease;
+}
+
+.top-progress-bar.active {
+  width: 80%;
+  opacity: 1;
+  animation: progress-pulse 1.5s infinite ease-in-out;
+}
+
+.top-progress-bar.done {
+  width: 100%;
+  opacity: 0;
+  transition: width 0.2s ease, opacity 0.4s ease;
+}
+
+@keyframes progress-pulse {
+  0%, 100% { opacity: 0.8; }
+  50% { opacity: 1; }
+}
+
+@keyframes skeleton-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.skeleton-shimmer,
+.is-data-loading .usage-bar__fill,
+.is-data-loading .data-skeleton-line::after,
+.is-data-loading .data-skeleton-table td::after {
+  background: linear-gradient(90deg, var(--color-surface) 25%, var(--color-header-bg-bar) 50%, var(--color-surface) 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s infinite linear;
+}
+
+.skeleton-shimmer {
+  width: 100%;
+  min-height: 80px;
+  margin: var(--space-md) 0;
+}
+
+.is-data-loading .data-skeleton-line {
+  position: relative;
+  color: transparent;
+}
+
+.is-data-loading .data-skeleton-line::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: 0;
+  width: min(64%, 320px);
+  height: 0.9em;
+  transform: translateY(-50%);
+}
+
+.is-data-loading .stat-card-box__val.data-skeleton-line::after {
+  right: auto;
+  left: 0;
+  width: min(62%, 9ch);
+}
+
+.is-data-loading .data-skeleton-table td {
+  position: relative;
+  color: transparent;
+}
+
+.is-data-loading .data-skeleton-table td::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: var(--space-lg);
+  left: var(--space-lg);
+  height: 0.9em;
+  transform: translateY(-50%);
+}
+
+.is-data-loading .usage-bar__fill {
+  width: 100% !important;
+}
+
+[data-usage-page].is-data-loading .stat-card-box__val,
+[data-usage-page].is-data-loading .info-row__value,
+[data-update-skeleton].is-data-loading .info-row__value,
+[data-usage-page].is-data-loading .table tbody td {
+  position: relative;
+  color: transparent;
+}
+
+[data-usage-page].is-data-loading .stat-card-box__val::after,
+[data-usage-page].is-data-loading .info-row__value::after,
+[data-update-skeleton].is-data-loading .info-row__value::after,
+[data-usage-page].is-data-loading .table tbody td::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  height: 0.9em;
+  transform: translateY(-50%);
+  background: linear-gradient(90deg, var(--color-surface) 25%, var(--color-header-bg-bar) 50%, var(--color-surface) 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s infinite linear;
+}
+
+[data-usage-page].is-data-loading .stat-card-box__val::after {
+  left: 0;
+  width: min(72%, 9ch);
+}
+
+[data-usage-page].is-data-loading .info-row__value::after,
+[data-update-skeleton].is-data-loading .info-row__value::after {
+  right: 0;
+  width: min(64%, 320px);
+}
+
+[data-usage-page].is-data-loading .table tbody td::after {
+  right: var(--space-lg);
+  left: var(--space-lg);
+}
+
+.is-data-loading .data-skeleton-details {
+  position: relative;
+  min-height: 112px;
+}
+
+.is-data-loading .data-skeleton-details > * {
+  visibility: hidden;
+}
+
+.is-data-loading .data-skeleton-details::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-repeat: no-repeat;
+  background-image:
+    linear-gradient(90deg, var(--color-surface), var(--color-header-bg-bar), var(--color-surface)),
+    linear-gradient(90deg, var(--color-surface), var(--color-header-bg-bar), var(--color-surface)),
+    linear-gradient(90deg, var(--color-surface), var(--color-header-bg-bar), var(--color-surface)),
+    linear-gradient(90deg, var(--color-surface), var(--color-header-bg-bar), var(--color-surface)),
+    linear-gradient(90deg, var(--color-surface), var(--color-header-bg-bar), var(--color-surface)),
+    linear-gradient(90deg, var(--color-surface), var(--color-header-bg-bar), var(--color-surface));
+  background-position:
+    left 0 top 12px, right 0 top 12px,
+    left 0 top 50px, right 0 top 50px,
+    left 0 top 88px, right 0 top 88px;
+  background-size:
+    30% 12px, 52% 12px,
+    30% 12px, 52% 12px,
+    30% 12px, 52% 12px;
+}
+
+@media (max-width: 480px) {
+  .is-data-loading .data-skeleton-line::after { width: 52%; }
+
+  .is-data-loading .data-skeleton-details::after {
+    background-size:
+      38% 12px, 48% 12px,
+      38% 12px, 48% 12px,
+      38% 12px, 48% 12px;
+  }
+}

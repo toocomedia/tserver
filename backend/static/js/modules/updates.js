@@ -12,6 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const elCommitMsg = document.getElementById('update-commit-msg');
   const elLastChecked = document.getElementById('update-last-checked');
   const elStatusBadge = document.getElementById('update-status-badge');
+  const updateSkeleton = document.querySelector('[data-update-skeleton]');
 
   if (!btnCheck) return; // Not on settings page
 
@@ -52,12 +53,16 @@ document.addEventListener('DOMContentLoaded', () => {
           btnApply.textContent = 'Already Up to Date';
         }
       }
+      updateSkeleton?.classList.remove('is-data-loading');
+      updateSkeleton?.setAttribute('aria-busy', 'false');
     } catch (err) {
       console.error('Update check failed:', err);
       if (elStatusBadge) {
         elStatusBadge.className = 'badge badge--error';
         elStatusBadge.textContent = 'Check Failed';
       }
+      updateSkeleton?.classList.remove('is-data-loading');
+      updateSkeleton?.setAttribute('aria-busy', 'false');
       if (elStatusMsg) elStatusMsg.textContent = `Could not verify updates: ${err.message}`;
     } finally {
       if (btnCheckText) btnCheckText.textContent = 'Check for Updates';

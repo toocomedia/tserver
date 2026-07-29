@@ -1,17 +1,10 @@
-/* layout.css — Sidebar, topbar, and content area structure */
-
-/* ============================================================
-   APP SHELL — full viewport layout
-   ============================================================ */
+/* App shell, sidebar, and standard content layout. */
 .app {
   display: flex;
   height: 100vh;
   overflow: hidden;
 }
 
-/* ============================================================
-   SIDEBAR
-   ============================================================ */
 .sidebar {
   width: var(--sidebar-width);
   min-width: var(--sidebar-width);
@@ -74,15 +67,14 @@
   color: var(--color-sidebar-hover);
 }
 
-.sidebar__item--active {
-  background: var(--color-accent);
-  color: var(--color-on-accent);
-  border-left-color: var(--color-accent-2);
-}
-
+.sidebar__item--active,
 .sidebar__item--active:hover {
   background: var(--color-accent);
   color: var(--color-on-accent);
+}
+
+.sidebar__item--active {
+  border-left-color: var(--color-accent-2);
 }
 
 .sidebar__item svg {
@@ -149,9 +141,6 @@
   color: var(--color-muted);
 }
 
-/* ============================================================
-   MAIN AREA
-   ============================================================ */
 .main {
   flex: 1;
   display: flex;
@@ -160,9 +149,6 @@
   background: var(--color-bg);
 }
 
-/* ============================================================
-   HEADER / TOPBAR
-   ============================================================ */
 .page-header {
   display: flex;
   align-items: center;
@@ -191,9 +177,6 @@
   flex-wrap: wrap;
 }
 
-/* ============================================================
-   CONTENT AREA
-   ============================================================ */
 .content {
   flex: 1;
   overflow-y: auto;
@@ -220,9 +203,6 @@
   margin-inline: 0;
 }
 
-/* ============================================================
-   SECTION HEADER (within content)
-   ============================================================ */
 .section-header {
   display: flex;
   align-items: center;
@@ -236,9 +216,6 @@
   font-size: var(--font-h2);
 }
 
-/* ============================================================
-   STAT GRID (dashboard)
-   ============================================================ */
 .stat-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
@@ -271,362 +248,4 @@
 
 .stat-card__value--accent {
   color: var(--color-accent-2);
-}
-
-/* ============================================================
-   SPLIT LAYOUT
-   ============================================================ */
-.split-layout {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-}
-@media (min-width: 768px) {
-  .split-layout {
-    flex-direction: row;
-    align-items: stretch;
-  }
-}
-.split-sidebar {
-  width: 100%;
-  border-right: none;
-  display: flex;
-  flex-direction: row;
-  overflow-x: auto;
-  padding-bottom: 0;
-  border-bottom: 1px solid var(--color-line);
-}
-@media (min-width: 768px) {
-  .split-sidebar {
-    width: 260px;
-    flex-shrink: 0;
-    flex-direction: column;
-    border-right: 1px solid var(--color-line);
-    border-bottom: none;
-    padding: var(--space-lg) 0;
-    background: transparent;
-  }
-}
-.split-sidebar__item {
-  display: flex;
-  align-items: center;
-  height: auto;
-  min-height: 50px;
-  padding: var(--space-sm) var(--space-lg);
-  font-size: var(--font-body);
-  font-weight: 600;
-  color: var(--color-muted);
-  background: transparent;
-  border-radius: 0;
-  border-left: 3px solid transparent;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background 0.1s, color 0.1s, border-color 0.1s;
-}
-.split-sidebar__item:hover {
-  background: var(--color-surface);
-  color: var(--color-text);
-}
-.split-sidebar__item.active {
-  background: var(--color-surface);
-  color: var(--color-text);
-  border-left-color: var(--color-accent);
-}
-.split-sidebar__item.active:hover {
-  background: var(--color-line);
-}
-.split-sidebar__status {
-  padding: var(--space-lg);
-  border-top: 1px solid var(--color-line);
-}
-.split-sidebar__count {
-  margin-left: auto;
-  font-size: var(--font-small);
-  color: var(--color-muted);
-}
-.split-sidebar__footer {
-  padding: var(--space-lg);
-  border-top: 1px solid var(--color-line);
-  margin-top: auto;
-  color: var(--color-muted);
-}
-@media (max-width: 767px) {
-  .split-sidebar {
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-  }
-  .split-sidebar::-webkit-scrollbar {
-    display: none;
-  }
-  .split-sidebar__footer {
-    display: none;
-  }
-}
-.split-content {
-  flex: 1;
-  width: 100%;
-  max-width: var(--max-content-width);
-  margin-inline: auto;
-  padding: var(--page-gutter);
-  min-width: 0;
-  overflow-x: hidden;
-}
-.split-tab {
-  display: none;
-}
-.split-tab.active {
-  display: block;
-}
-
-/* Inner Tab Navigation */
-.tabs-nav {
-  display: flex;
-  gap: 16px;
-  padding-bottom: 0;
-  margin-bottom: var(--space-xl);
-  overflow-x: auto;
-  white-space: nowrap;
-  scrollbar-width: none;
-  -webkit-overflow-scrolling: touch;
-  border-bottom: 1px solid var(--color-line);
-}
-.tabs-nav::-webkit-scrollbar {
-  display: none;
-}
-.tabs-nav .btn--ghost {
-  flex-shrink: 0;
-  border: none;
-  border-radius: 0;
-  padding: 8px 12px;
-  font-size: 0.95rem;
-  font-weight: 500;
-  color: var(--color-muted);
-  background: transparent;
-  position: relative;
-  transition: color 0.15s ease;
-}
-.tabs-nav .btn--ghost:hover {
-  color: var(--color-text);
-  background: transparent;
-}
-.tabs-nav .btn--ghost.active {
-  color: var(--color-text);
-  font-weight: 700;
-}
-.tabs-nav .btn--ghost.active::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 2px;
-  background-color: var(--color-text);
-}
-
-.grid-responsive-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 1rem;
-}
-
-/* ============================================================
-   MOBILE NAVIGATION (Hidden by default)
-   ============================================================ */
-.mobile-header {
-  display: none;
-  align-items: center;
-  justify-content: space-between;
-  height: var(--topbar-height);
-  background: var(--color-sidebar);
-  padding: 0 var(--page-gutter);
-  flex-shrink: 0;
-}
-
-.sidebar-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.5);
-  z-index: 90;
-  opacity: 0;
-  visibility: hidden;
-  transition: opacity 0.3s ease, visibility 0.3s ease;
-}
-
-.sidebar-backdrop--visible {
-  opacity: 1;
-  visibility: visible;
-}
-
-/* ============================================================
-   RESPONSIVE
-   ============================================================ */
-@media (max-width: 768px) {
-  .app {
-    flex-direction: column;
-    height: 100vh;
-  }
-
-  .mobile-header {
-    display: flex;
-  }
-
-  .mobile-header .sidebar__logo {
-    padding: 0;
-    border: none;
-  }
-  
-  .mobile-header .btn {
-    color: var(--color-text);
-  }
-
-  .sidebar {
-    position: fixed;
-    top: 0;
-    left: 0;
-    bottom: 0;
-    width: 280px;
-    z-index: 100;
-    transform: translateX(-100%);
-    transition: transform 0.3s ease;
-  }
-
-  .sidebar--open {
-    transform: translateX(0);
-  }
-
-  /* hide the original logo in sidebar on mobile */
-  .sidebar > .sidebar__logo {
-    display: none;
-  }
-
-  .main {
-    flex: 1;
-    overflow: hidden;
-  }
-
-  .content {
-    overflow-y: auto;
-  }
-
-  .page-header {
-    flex-wrap: wrap;
-    gap: var(--space-md);
-  }
-
-  .page-header__title {
-    white-space: normal;
-    overflow-wrap: anywhere;
-  }
-
-  .page-header__actions {
-    width: 100%;
-  }
-
-  .page-header__actions .btn {
-    flex: 1;
-    min-width: 0;
-  }
-
-  .split-content {
-    padding: var(--space-lg);
-  }
-}
-
-@media (max-width: 480px) {
-  .split-content {
-    padding: var(--space-md);
-  }
-
-  .page-header__actions {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .page-header__actions .btn {
-    width: 100%;
-  }
-}
-
-/* ============================================================
-   UNIVERSAL UI LOADER & PROGRESS BAR
-   ============================================================ */
-.top-progress-bar {
-  position: fixed;
-  top: 0;
-  left: 0;
-  height: 3px;
-  background: linear-gradient(90deg, var(--color-accent), #818cf8);
-  z-index: 99999;
-  width: 0%;
-  opacity: 0;
-  transition: width 0.3s ease, opacity 0.3s ease;
-  pointer-events: none;
-}
-
-.top-progress-bar.active {
-  width: 80%;
-  opacity: 1;
-  animation: progressPulse 1.5s infinite ease-in-out;
-}
-
-.top-progress-bar.done {
-  width: 100%;
-  opacity: 0;
-  transition: width 0.2s ease, opacity 0.4s ease;
-}
-
-@keyframes progressPulse {
-  0% { opacity: 0.8; }
-  50% { opacity: 1; }
-  100% { opacity: 0.8; }
-}
-
-.skeleton-shimmer {
-  background: linear-gradient(90deg, var(--color-bg-alt) 25%, var(--color-border) 50%, var(--color-bg-alt) 75%);
-  background-size: 200% 100%;
-  animation: shimmerAnimation 1.5s infinite linear;
-  border-radius: var(--radius-md);
-  min-height: 80px;
-  width: 100%;
-  margin: var(--space-md) 0;
-}
-
-@keyframes shimmerAnimation {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
-}
-
-/* Opt-in data skeletons. Pages activate this with .is-data-loading only. */
-.is-data-loading .stat-card-box__val,
-.is-data-loading .info-row__value,
-.is-data-loading .table tbody td {
-  color: transparent;
-  position: relative;
-}
-
-.is-data-loading .stat-card-box__val::after,
-.is-data-loading .info-row__value::after,
-.is-data-loading .table tbody td::after {
-  content: "";
-  position: absolute;
-  top: 50%;
-  left: 0;
-  width: 72%;
-  height: 0.9em;
-  transform: translateY(-50%);
-  background: linear-gradient(90deg, var(--color-surface) 25%, var(--color-header-bg-bar) 50%, var(--color-surface) 75%);
-  background-size: 200% 100%;
-  animation: shimmerAnimation 1.5s infinite linear;
-}
-
-.is-data-loading .table tbody td::after {
-  left: 14px;
-  width: calc(100% - 28px);
-}
-
-.is-data-loading .usage-bar__fill {
-  width: 100% !important;
-  background: linear-gradient(90deg, var(--color-surface) 25%, var(--color-header-bg-bar) 50%, var(--color-surface) 75%);
-  background-size: 200% 100%;
-  animation: shimmerAnimation 1.5s infinite linear;
 }

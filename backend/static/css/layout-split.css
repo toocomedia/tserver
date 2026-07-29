@@ -1,0 +1,58 @@
+/* Split views, tab bars, and responsive shell behavior. */
+.split-layout { display: flex; flex: 1; flex-direction: column; }
+.split-sidebar { width: 100%; display: flex; flex-direction: row; overflow-x: auto; padding-bottom: 0; border-right: none; border-bottom: 1px solid var(--color-line); }
+.split-sidebar__item { display: flex; align-items: center; min-height: 50px; padding: var(--space-sm) var(--space-lg); font-size: var(--font-body); font-weight: 600; color: var(--color-muted); background: transparent; border-left: 3px solid transparent; cursor: pointer; white-space: nowrap; transition: background 0.1s, color 0.1s, border-color 0.1s; }
+.split-sidebar__item:hover { background: var(--color-surface); color: var(--color-text); }
+.split-sidebar__item.active { background: var(--color-surface); color: var(--color-text); border-left-color: var(--color-accent); }
+.split-sidebar__item.active:hover { background: var(--color-line); }
+.split-sidebar__status, .split-sidebar__footer { padding: var(--space-lg); border-top: 1px solid var(--color-line); }
+.split-sidebar__count { margin-left: auto; font-size: var(--font-small); color: var(--color-muted); }
+.split-sidebar__footer { margin-top: auto; color: var(--color-muted); }
+.split-content { flex: 1; width: 100%; max-width: var(--max-content-width); min-width: 0; margin-inline: auto; padding: var(--page-gutter); overflow-x: hidden; }
+.split-tab { display: none; }
+.split-tab.active { display: block; }
+
+.tabs-nav { display: flex; gap: var(--space-lg); padding-bottom: 0; margin-bottom: var(--space-xl); overflow-x: auto; white-space: nowrap; scrollbar-width: none; -webkit-overflow-scrolling: touch; border-bottom: 1px solid var(--color-line); }
+.tabs-nav::-webkit-scrollbar { display: none; }
+.tabs-nav .btn--ghost { position: relative; flex-shrink: 0; padding: var(--space-sm) var(--space-md); font-size: var(--font-body); font-weight: 500; color: var(--color-muted); background: transparent; border: none; border-radius: 0; transition: color 0.15s ease; }
+.tabs-nav .btn--ghost:hover { color: var(--color-text); background: transparent; }
+.tabs-nav .btn--ghost.active { color: var(--color-text); font-weight: 700; }
+.tabs-nav .btn--ghost.active::after { content: ""; position: absolute; right: 0; bottom: 0; left: 0; height: 2px; background-color: var(--color-text); }
+.grid-responsive-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: var(--space-lg); }
+
+.mobile-header { display: none; align-items: center; justify-content: space-between; height: var(--topbar-height); padding: 0 var(--page-gutter); background: var(--color-sidebar); flex-shrink: 0; }
+.sidebar-backdrop { position: fixed; inset: 0; z-index: 90; background: rgba(0, 0, 0, 0.5); opacity: 0; visibility: hidden; transition: opacity 0.3s ease, visibility 0.3s ease; }
+.sidebar-backdrop--visible { opacity: 1; visibility: visible; }
+
+@media (min-width: 768px) {
+  .split-layout { flex-direction: row; align-items: stretch; }
+  .split-sidebar { width: 260px; flex-shrink: 0; flex-direction: column; padding: var(--space-lg) 0; background: transparent; border-right: 1px solid var(--color-line); border-bottom: none; }
+}
+
+@media (max-width: 767px) {
+  .split-sidebar { -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .split-sidebar::-webkit-scrollbar, .split-sidebar__footer { display: none; }
+}
+
+@media (max-width: 768px) {
+  .app { flex-direction: column; height: 100vh; }
+  .mobile-header { display: flex; }
+  .mobile-header .sidebar__logo { padding: 0; border: none; }
+  .mobile-header .btn { color: var(--color-text); }
+  .sidebar { position: fixed; top: 0; bottom: 0; left: 0; z-index: 100; width: 280px; transform: translateX(-100%); transition: transform 0.3s ease; }
+  .sidebar--open { transform: translateX(0); }
+  .sidebar > .sidebar__logo { display: none; }
+  .main { flex: 1; overflow: hidden; }
+  .content { overflow-y: auto; }
+  .page-header { gap: var(--space-md); }
+  .page-header__title { white-space: normal; overflow-wrap: anywhere; }
+  .page-header__actions { width: 100%; }
+  .page-header__actions .btn { flex: 1; min-width: 0; }
+  .split-content { padding: var(--space-lg); }
+}
+
+@media (max-width: 480px) {
+  .split-content { padding: var(--space-md); }
+  .page-header__actions { flex-direction: column; align-items: stretch; }
+  .page-header__actions .btn { width: 100%; }
+}
