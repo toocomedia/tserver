@@ -13,30 +13,30 @@
 {% endif %}
 
 <!-- 5-STEP PROGRESS BAR (UN-BOXED & NO DIVIDER) -->
-<div class="step-bar">
+<div class="step-bar" id="wizard-step-bar">
   <div class="step-item active" id="step-btn-1" onclick="jumpToStep(1)">
     <span class="step-num">01</span>
     <span>1. Git Source</span>
   </div>
-  <div class="step-item" id="step-btn-2" onclick="jumpToStep(2)">
+  <div class="step-item disabled" id="step-btn-2" onclick="jumpToStep(2)">
     <span class="step-num">02</span>
     <span>2. Auto-Detection</span>
   </div>
-  <div class="step-item" id="step-btn-3" onclick="jumpToStep(3)">
+  <div class="step-item disabled" id="step-btn-3" onclick="jumpToStep(3)">
     <span class="step-num">03</span>
     <span>3. Configuration & DB</span>
   </div>
-  <div class="step-item" id="step-btn-4" onclick="jumpToStep(4)">
+  <div class="step-item disabled" id="step-btn-4" onclick="jumpToStep(4)">
     <span class="step-num">04</span>
     <span>4. Deployment Steps</span>
   </div>
-  <div class="step-item" id="step-btn-5" onclick="jumpToStep(5)">
+  <div class="step-item disabled" id="step-btn-5" onclick="jumpToStep(5)">
     <span class="step-num">05</span>
     <span>5. Terminal Stream</span>
   </div>
 </div>
 
-<form class="form" id="app-setup-form" method="post" enctype="multipart/form-data">
+<form class="form" id="app-setup-form" method="post" action="/apps/create">
   <input type="hidden" name="domain_id" value="{{ domain.id }}">
   <input type="hidden" name="ssl" value="{{ 'true' if ssl else 'false' }}">
   {% include "partials/csrf_field.html" %}
@@ -75,12 +75,12 @@
           <button class="btn btn--secondary" id="inspect-repository" type="button">
             <i data-lucide="search" style="width:16px;height:16px;"></i> Detect Project Files
           </button>
-          <span class="form-hint" id="inspect-message" style="margin: 0;">The panel reads files safely. It never executes source code during detection.</span>
+          <span class="form-hint" id="inspect-message" style="margin: 0; color: var(--color-muted);">The panel reads files safely. It never executes source code during detection.</span>
         </div>
       </div>
     </div>
 
-    <!-- STEP 2: AUTO-DETECTION SUMMARY (UN-BOXED - NO ICON & NO DIVIDER) -->
+    <!-- STEP 2: AUTO-DETECTION SUMMARY (UN-BOXED) -->
     <div id="wizard-step-2" class="is-hidden">
       <div class="unboxed-step-container">
         <div class="unboxed-step-header">
@@ -88,9 +88,28 @@
           <span class="badge-pill badge-pill--accent" id="detection-badge"><i data-lucide="check" style="width:14px;height:14px;"></i> 1-Click Deploy Ready</span>
         </div>
 
-        <p class="text-muted" id="detection-result" style="font-size: 14px; line-height: 1.6;">
-          Run <strong style="color:var(--color-text);">Detect project files</strong> to inspect framework, entrypoint, dependencies, and database settings.
-        </p>
+        <div id="detection-details">
+          <div class="info-row">
+            <span class="info-row__label">Detected Framework</span>
+            <span class="info-row__value" id="det-framework" style="font-size:16px;">-</span>
+          </div>
+          <div class="info-row">
+            <span class="info-row__label">Detected Entrypoint</span>
+            <span class="info-row__value mono" id="det-entrypoint" style="font-size:15px;">-</span>
+          </div>
+          <div class="info-row">
+            <span class="info-row__label">Package Manager</span>
+            <span class="info-row__value" id="det-pkg">-</span>
+          </div>
+          <div class="info-row">
+            <span class="info-row__label">Storage Hint</span>
+            <span class="info-row__value" id="det-storage">-</span>
+          </div>
+          <div class="info-row" id="det-warnings-row" style="display:none;">
+            <span class="info-row__label">Detection Notes</span>
+            <span class="info-row__value" id="det-warnings" style="color:var(--color-warning, #eab308);">-</span>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -153,27 +172,18 @@
       <div class="unboxed-step-container">
         <div class="unboxed-step-header">
           <span>Step 5: Live Terminal Stream Output</span>
-          <span class="badge-pill badge-pill--accent">Deployment Complete</span>
+          <span class="badge-pill badge-pill--accent" id="step5-badge">Deployment Complete</span>
         </div>
 
         <span class="form-label" style="margin-bottom:12px;">Server Execution Journal Stream</span>
-        <div class="terminal-fluid" id="live-deploy-terminal">
-[10:14:01] Preparing Nginx virtual host...
-[10:14:02] Initializing isolated Python virtualenv...
-[10:14:03] Fetching repository origin/main...
-[10:14:05] Checked out commit...
-[10:14:06] Executing build command: pip install -r requirements.txt
-[10:14:12] Provisioning systemd service unit...
-[10:14:14] Reloading system daemon...
-<span class="term-accent">[10:14:15] Application started successfully!</span>
-        </div>
+        <div class="terminal-fluid" id="live-deploy-terminal">Initializing terminal execution log stream...</div>
 
         <div style="display: flex; gap: 12px; margin-top: 24px;">
-          <button class="btn btn--accent" formaction="/apps/quick-deploy" type="submit" id="btn-quick-deploy">
-            <i data-lucide="rocket" style="width:16px;height:16px;"></i> One-Click Deploy Now
-          </button>
-          <button class="btn btn--secondary" formaction="/apps/create" type="submit">
-            Custom Create Setup
+          <a class="btn btn--accent" id="btn-open-dashboard" href="#">
+            <i data-lucide="layout-dashboard" style="width:16px;height:16px;"></i> Open App Dashboard
+          </a>
+          <button class="btn btn--secondary" type="button" onclick="jumpToStep(1)">
+            Deploy Another App
           </button>
         </div>
       </div>
@@ -204,11 +214,16 @@
 {% block scripts %}
 <script>
 let currentWizardStep = 1;
+let maxUnlockedStep = 1;
+let createdAppId = null;
+let createdDeploymentId = null;
+let deploymentPollInterval = null;
+
 const form = document.getElementById('app-setup-form');
 const repo = document.getElementById('repository_url');
+const branch = document.getElementById('branch');
 const inspect = document.getElementById('inspect-repository');
 const message = document.getElementById('inspect-message');
-const result = document.getElementById('detection-result');
 const dbMode = document.getElementById('postgres_mode');
 const external = document.getElementById('external-db');
 
@@ -224,7 +239,26 @@ const deploymentSteps = [
 ];
 
 let currentInlineLoaderIndex = 0;
-let inlineLoaderInterval = null;
+
+function updateStepBarUI() {
+  for (let i = 1; i <= 5; i++) {
+    const btn = document.getElementById('step-btn-' + i);
+    if (!btn) continue;
+    if (i <= maxUnlockedStep) {
+      btn.classList.remove('disabled');
+    } else {
+      btn.classList.add('disabled');
+    }
+  }
+}
+
+function syncDb() {
+  external.classList.toggle('is-hidden', dbMode.value !== 'external');
+  document.getElementById('database_url').required = dbMode.value === 'external';
+}
+repo.required = true;
+dbMode.addEventListener('change', syncDb);
+syncDb();
 
 function renderScrollSteps() {
   const container = document.getElementById('scroll-steps-container');
@@ -274,41 +308,10 @@ function renderScrollSteps() {
   }
 }
 
-function runStep4ScrollLoader() {
-  currentInlineLoaderIndex = 0;
-  const badge = document.getElementById('step4-status-badge');
-  if (badge) {
-    badge.textContent = 'Provisioning Active';
-    badge.classList.add('badge-pill--accent');
-  }
-  renderScrollSteps();
-
-  if (inlineLoaderInterval) clearInterval(inlineLoaderInterval);
-
-  inlineLoaderInterval = setInterval(() => {
-    currentInlineLoaderIndex++;
-    if (currentInlineLoaderIndex >= deploymentSteps.length) {
-      clearInterval(inlineLoaderInterval);
-      if (badge) {
-        badge.textContent = 'Provisioning Complete';
-      }
-      renderScrollSteps();
-    } else {
-      renderScrollSteps();
-    }
-  }, 1200);
-}
-
-function syncDb() {
-  external.classList.toggle('is-hidden', dbMode.value !== 'external');
-  document.getElementById('database_url').required = dbMode.value === 'external';
-}
-repo.required = true;
-dbMode.addEventListener('change', syncDb);
-syncDb();
-
 function jumpToStep(stepNum) {
+  if (stepNum > maxUnlockedStep) return;
   currentWizardStep = stepNum;
+
   for (let i = 1; i <= 5; i++) {
     const stepPanel = document.getElementById('wizard-step-' + i);
     const stepBtn = document.getElementById('step-btn-' + i);
@@ -331,9 +334,9 @@ function jumpToStep(stepNum) {
 
   if (hint) {
     if (stepNum === 1) hint.textContent = 'Step 1 of 5: Git Source';
-    else if (stepNum === 2) hint.textContent = 'Step 2 of 5: Auto-Detection';
-    else if (stepNum === 3) hint.textContent = 'Step 3 of 5: Configuration & DB';
-    else if (stepNum === 4) hint.textContent = 'Step 4 of 5: Deployment Steps Sequence';
+    else if (stepNum === 2) hint.textContent = 'Step 2 of 5: Auto-Detection Summary';
+    else if (stepNum === 3) hint.textContent = 'Step 3 of 5: Configuration & Database';
+    else if (stepNum === 4) hint.textContent = 'Step 4 of 5: Provisioning Sequence';
     else if (stepNum === 5) hint.textContent = 'Step 5 of 5: Terminal Stream Output';
   }
 
@@ -342,37 +345,26 @@ function jumpToStep(stepNum) {
     else if (stepNum === 2) btnNext.innerHTML = 'Continue to Config <i data-lucide="arrow-right" style="width:16px;height:16px;"></i>';
     else if (stepNum === 3) btnNext.innerHTML = '<i data-lucide="rocket" style="width:16px;height:16px;"></i> One-Click Deploy Now';
     else if (stepNum === 4) btnNext.innerHTML = 'View Terminal Stream <i data-lucide="arrow-right" style="width:16px;height:16px;"></i>';
-    else if (stepNum === 5) btnNext.innerHTML = '<i data-lucide="rocket" style="width:16px;height:16px;"></i> Deploy Now';
+    else if (stepNum === 5) btnNext.innerHTML = 'Open Dashboard <i data-lucide="arrow-right" style="width:16px;height:16px;"></i>';
   }
 
   if (stepNum === 4) {
-    runStep4ScrollLoader();
+    renderScrollSteps();
   }
 
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
-function nextStep() {
-  if (currentWizardStep < 5) {
-    jumpToStep(currentWizardStep + 1);
-  } else {
-    document.getElementById('btn-quick-deploy').click();
-  }
-}
-
-function prevStep() {
-  if (currentWizardStep > 1) {
-    jumpToStep(currentWizardStep - 1);
-  }
-}
-
-inspect.addEventListener('click', async () => {
+async function performInspection() {
   if (!repo.value.trim()) {
-    message.textContent = 'Enter a repository URL first.';
-    return;
+    message.style.color = '#DC2626';
+    message.textContent = 'Please enter a valid Git Repository URL first.';
+    return false;
   }
   inspect.disabled = true;
-  message.textContent = 'Detecting project files...';
+  message.style.color = 'var(--color-muted)';
+  message.textContent = 'Detecting project files safely...';
+
   try {
     const data = new FormData(form);
     const response = await fetch('/apps/inspect', {
@@ -382,28 +374,150 @@ inspect.addEventListener('click', async () => {
     });
     const detected = await response.json();
     if (!response.ok) throw new Error(detected.detail || 'Detection failed.');
+
     if (detected.repository_url) repo.value = detected.repository_url;
-    if (detected.branch) document.getElementById('branch').value = detected.branch;
-    document.getElementById('build_command').value = detected.build_command || '';
-    document.getElementById('start_command').value = detected.start_command || '';
-    const notes = [
-      `Detected ${detected.framework} with ${detected.package_manager}.`,
-      detected.entrypoints.length ? `Entrypoint: ${detected.entrypoints.join(', ')}.` : '',
-      detected.environment_names.length ? `Environment names: ${detected.environment_names.join(', ')}.` : '',
-      detected.sqlite_suspected ? 'SQLite detected; keep database files in APP_DATA_DIR.' : '',
-      detected.warnings.join(' ')
-    ].filter(Boolean);
-    result.textContent = notes.join(' ');
-    message.textContent = detected.can_quick_deploy ? 'Ready for One-Click Deploy.' : 'Review needed: check configuration in Step 3.';
+    if (detected.branch) branch.value = detected.branch;
+    if (detected.build_command) document.getElementById('build_command').value = detected.build_command;
+    if (detected.start_command) document.getElementById('start_command').value = detected.start_command;
+
+    document.getElementById('det-framework').textContent = detected.framework || 'Python App';
+    document.getElementById('det-entrypoint').textContent = (detected.entrypoints && detected.entrypoints.length) ? detected.entrypoints.join(', ') : 'Default entrypoint';
+    document.getElementById('det-pkg').textContent = detected.package_manager || 'requirements.txt';
+    document.getElementById('det-storage').textContent = detected.sqlite_suspected ? 'SQLite detected (in APP_DATA_DIR)' : 'Standard filesystem / PostgreSQL';
+
+    const badge = document.getElementById('detection-badge');
+    if (badge) {
+      badge.innerHTML = detected.can_quick_deploy ?
+        '<i data-lucide="check" style="width:14px;height:14px;"></i> 1-Click Deploy Ready' :
+        '<i data-lucide="alert-triangle" style="width:14px;height:14px;"></i> Review Config Needed';
+    }
+
+    if (detected.warnings && detected.warnings.length) {
+      document.getElementById('det-warnings-row').style.display = 'flex';
+      document.getElementById('det-warnings').textContent = detected.warnings.join(' ');
+    } else {
+      document.getElementById('det-warnings-row').style.display = 'none';
+    }
+
+    message.style.color = 'var(--color-accent-dark, #9EE01A)';
+    message.textContent = 'Project files detected successfully.';
+
+    maxUnlockedStep = Math.max(maxUnlockedStep, 3);
+    updateStepBarUI();
     jumpToStep(2);
-  } catch (error) {
-    message.textContent = error.message || 'Detection failed.';
+    return true;
+  } catch (err) {
+    message.style.color = '#DC2626';
+    message.textContent = err.message || 'Inspection failed.';
+    return false;
   } finally {
     inspect.disabled = false;
   }
-});
+}
+
+inspect.addEventListener('click', performInspection);
+
+async function performDeploySubmit() {
+  const btnNext = document.getElementById('btn-next-step');
+  btnNext.disabled = true;
+  btnNext.innerHTML = 'Starting Provisioning...';
+
+  try {
+    const data = new FormData(form);
+    const response = await fetch('/apps/create', {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'X-CSRF-Token': document.querySelector('[name="csrf_token"]').value
+      },
+      body: data
+    });
+
+    const res = await response.json();
+    if (!response.ok) throw new Error(res.detail || 'App creation failed.');
+
+    createdAppId = res.app_id;
+    createdDeploymentId = res.deployment_id;
+
+    document.getElementById('btn-open-dashboard').href = `/apps/${createdAppId}`;
+    maxUnlockedStep = Math.max(maxUnlockedStep, 5);
+    updateStepBarUI();
+    jumpToStep(4);
+
+    startDeploymentPolling();
+  } catch (err) {
+    alert(err.message || 'Deployment initialization failed.');
+  } finally {
+    btnNext.disabled = false;
+  }
+}
+
+function startDeploymentPolling() {
+  if (!createdAppId || !createdDeploymentId) {
+    currentInlineLoaderIndex = deploymentSteps.length;
+    renderScrollSteps();
+    return;
+  }
+
+  currentInlineLoaderIndex = 0;
+  renderScrollSteps();
+
+  if (deploymentPollInterval) clearInterval(deploymentPollInterval);
+
+  deploymentPollInterval = setInterval(async () => {
+    try {
+      const resp = await fetch(`/apps/${createdAppId}/deployments/${createdDeploymentId}`);
+      if (!resp.ok) return;
+      const data = await resp.json();
+
+      if (data.output || data.error) {
+        document.getElementById('live-deploy-terminal').innerHTML = (data.output || '') + (data.error || '');
+      }
+
+      if (data.status === 'running' || data.status === 'queued') {
+        currentInlineLoaderIndex = Math.min(currentInlineLoaderIndex + 1, deploymentSteps.length - 1);
+        renderScrollSteps();
+      } else {
+        clearInterval(deploymentPollInterval);
+        currentInlineLoaderIndex = deploymentSteps.length;
+        renderScrollSteps();
+        const badge = document.getElementById('step4-status-badge');
+        if (badge) badge.textContent = data.status === 'success' ? 'Provisioning Complete' : 'Provisioning ' + data.status;
+      }
+    } catch (e) {
+      console.error('Polling deployment:', e);
+    }
+  }, 1200);
+}
+
+function nextStep() {
+  if (currentWizardStep === 1) {
+    if (maxUnlockedStep >= 2) {
+      jumpToStep(2);
+    } else {
+      performInspection();
+    }
+  } else if (currentWizardStep === 2) {
+    jumpToStep(3);
+  } else if (currentWizardStep === 3) {
+    performDeploySubmit();
+  } else if (currentWizardStep === 4) {
+    jumpToStep(5);
+  } else if (currentWizardStep === 5) {
+    if (createdAppId) {
+      window.location.href = `/apps/${createdAppId}`;
+    }
+  }
+}
+
+function prevStep() {
+  if (currentWizardStep > 1) {
+    jumpToStep(currentWizardStep - 1);
+  }
+}
 
 document.addEventListener('DOMContentLoaded', () => {
+  updateStepBarUI();
   jumpToStep(1);
   if (typeof lucide !== 'undefined') lucide.createIcons();
 });

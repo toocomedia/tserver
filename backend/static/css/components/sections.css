@@ -415,4 +415,20 @@
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+.step-item.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.layout-2col {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 36px;
+}
+@media (max-width: 900px) {
+  .layout-2col {
+    grid-template-columns: 1fr;
+  }
+}
+
 

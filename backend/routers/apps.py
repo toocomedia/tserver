@@ -43,22 +43,26 @@ async def inspect_project(source_type: str = Form("git"), repository_url: str = 
 
 
 @router.post("/quick-deploy")
-async def quick_deploy(domain_id: int = Form(...), source_type: str = Form(...), repository_url: str = Form(""), branch: str = Form("main"), ssl: bool = Form(False), db: AsyncSession = Depends(get_db)):
+async def quick_deploy(request: Request, domain_id: int = Form(...), source_type: str = Form(...), repository_url: str = Form(""), branch: str = Form("main"), ssl: bool = Form(False), db: AsyncSession = Depends(get_db)):
     if source_type != "git":
         raise HTTPException(409, "ZIP source is coming soon.")
     await _domain(db, domain_id)
     detection = apps.inspect_repository(repository_url.strip(), branch.strip())
     if not detection["can_quick_deploy"]:
         reason = "; ".join(detection["warnings"]) or "Project configuration needs review."
+        if "application/json" in request.headers.get("accept", ""):
+            raise HTTPException(400, reason)
         query = urlencode({"domain_id": domain_id, "ssl": int(ssl), "notice": reason})
         return RedirectResponse(f"/apps/create?{query}", status_code=303)
     app = await apps.create_app(db, domain_id, source_type, detection.get("repository_url") or repository_url or None, str(detection.get("branch") or branch), str(detection["build_command"]), str(detection["start_command"]), ssl, "none", None)
     deployment = await app_deployment_service.start(db, app)
+    if "application/json" in request.headers.get("accept", ""):
+        return JSONResponse({"app_id": app.id, "deployment_id": deployment.id, "redirect": f"/apps/{app.id}?deployment={deployment.id}"})
     return RedirectResponse(f"/apps/{app.id}?deployment={deployment.id}", status_code=303)
 
 
 @router.post("/create")
-async def create(domain_id: int = Form(...), source_type: str = Form(...), repository_url: str = Form(""), branch: str = Form("main"), build_command: str = Form(...), start_command: str = Form(...), ssl: bool = Form(False), postgres_mode: str = Form("none"), database_url: str = Form(""), db: AsyncSession = Depends(get_db)):
+async def create(request: Request, domain_id: int = Form(...), source_type: str = Form(...), repository_url: str = Form(""), branch: str = Form("main"), build_command: str = Form(...), start_command: str = Form(...), ssl: bool = Form(False), postgres_mode: str = Form("none"), database_url: str = Form(""), db: AsyncSession = Depends(get_db)):
     await _domain(db, domain_id)
     if source_type != "git":
         raise HTTPException(409, "ZIP source is coming soon.")
@@ -66,6 +70,9 @@ async def create(domain_id: int = Form(...), source_type: str = Form(...), repos
         detected = apps.inspect_repository(repository_url.strip(), branch.strip())
         repository_url, branch = str(detected["repository_url"]), str(detected["branch"])
     app = await apps.create_app(db, domain_id, source_type, repository_url or None, branch, build_command, start_command, ssl, postgres_mode, database_url or None)
+    deployment = await app_deployment_service.start(db, app)
+    if "application/json" in request.headers.get("accept", ""):
+        return JSONResponse({"app_id": app.id, "deployment_id": deployment.id if deployment else None, "redirect": f"/apps/{app.id}"})
     return RedirectResponse(f"/apps/{app.id}", status_code=303)
 
 
