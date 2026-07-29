@@ -1,5 +1,5 @@
 <!-- CPU & MEMORY DIAGNOSTICS -->
-<div class="section mb-xl">
+<div class="section mb-xl" data-live-section="metrics">
   <div class="section__header">
     <h3 style="display:flex; align-items:center; gap:8px;">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px; height:15px;"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9h6v6H9z"/></svg>
@@ -7,6 +7,13 @@
     </h3>
   </div>
   <div class="section__body">
+    <div class="live-section-skeleton live-section-skeleton--metrics" aria-hidden="true">
+      <div class="metric-skeleton-row"><span></span><span></span><span></span></div>
+      <div class="metric-skeleton-row"><span></span><span></span><span></span></div>
+      <div class="metric-skeleton-row"><span></span><span></span><span></span></div>
+    </div>
+
+    <div class="live-section-content">
 
     <!-- Notice banner for < 2GB RAM -->
     <div id="usage-low-ram-alert" class="alert alert--warn mb-md" style="display:none; align-items:center; justify-content:space-between; gap: 12px; padding: 12px 16px;">
@@ -56,5 +63,6 @@
       <span class="info-row__value text-muted" id="swap-detail">—</span>
     </div>
 
+    </div>
   </div>
 </div>
