@@ -47,13 +47,13 @@
 
 /* Per-section & per-list skeleton loading states */
 .live-section-skeleton {
-  display: none;
+  display: none !important;
   width: 100%;
 }
 
 .is-data-loading > .live-section-skeleton,
 [data-live-section].is-data-loading > .live-section-skeleton {
-  display: block;
+  display: block !important;
 }
 
 .is-data-loading > .live-section-content,
@@ -62,13 +62,9 @@
 }
 
 /* Stat Grid Skeletons (Overview cards exact size and cover) */
-[data-live-section].is-data-loading > .live-section-skeleton.skeleton-stat-grid,
-.live-section-skeleton.skeleton-stat-grid {
-  display: none;
-}
-.is-data-loading > .skeleton-stat-grid,
-[data-live-section].is-data-loading > .skeleton-stat-grid {
-  display: grid;
+.is-data-loading > .live-section-skeleton.skeleton-stat-grid,
+[data-live-section].is-data-loading > .live-section-skeleton.skeleton-stat-grid {
+  display: grid !important;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 16px;
   margin-bottom: 28px;
@@ -140,4 +136,5 @@
   margin: 0;
   border-radius: 4px;
 }
+
 
