@@ -1,3 +1,4 @@
+{% import 'partials/skeletons.html' as skeleton %}
 <!-- SERVER OPTIMIZATIONS -->
 <div class="section mb-xl">
   <div class="section__header">
@@ -6,8 +7,10 @@
       Server Optimizations
     </h3>
   </div>
-  <div class="section__body">
-    <div class="optimization-list">
+  <div class="section__body is-data-loading" data-live-section="optimizations">
+    {{ skeleton.info_rows(3) }}
+    <div class="live-section-content">
+      <div class="optimization-list">
 
       <!-- Control 1: Low-RAM Optimization Mode -->
       <div class="optimization-row">
@@ -59,9 +62,11 @@
         </div>
       </div>
 
+      </div>
     </div>
   </div>
 </div>
+
 
 
 

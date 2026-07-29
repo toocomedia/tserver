@@ -1,12 +1,14 @@
+{% import 'partials/skeletons.html' as skeleton %}
 <!-- STACK SERVICES -->
-<div class="section mb-xl">
+<div class="section mb-xl is-data-loading" data-live-section="table">
   <div class="section__header">
     <h3 style="display:flex; align-items:center; gap:8px;">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px; height:15px;"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/></svg>
       Stack Services Resource Consumption
     </h3>
   </div>
-  <div class="table-wrap">
+  {{ skeleton.table(3, 5) }}
+  <div class="live-section-content table-wrap">
     <table class="table" id="svc-table" style="min-width:480px;">
       <colgroup>
         <col style="width:25%">
@@ -32,14 +34,15 @@
 </div>
 
 <!-- PLUGINS USAGE -->
-<div class="section mb-xl">
+<div class="section mb-xl is-data-loading" data-live-section="table">
   <div class="section__header">
     <h3 style="display:flex; align-items:center; gap:8px;">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px; height:15px;"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
       Plugins Resource Consumption
     </h3>
   </div>
-  <div class="table-wrap">
+  {{ skeleton.table(2, 5) }}
+  <div class="live-section-content table-wrap">
     <table class="table" id="plugin-usage-table" style="min-width:560px;">
       <colgroup>
         <col style="width:30%">
@@ -65,26 +68,29 @@
 </div>
 
 <!-- HOSTED PYTHON APPS -->
-<div class="section mb-xl">
+<div class="section mb-xl is-data-loading" data-live-section="table">
   <div class="section__header"><h3>Hosted Python Apps</h3></div>
-  <div class="table-wrap"><table class="table"><thead><tr><th>Domain</th><th>Processes</th><th>CPU %</th><th>Memory</th><th>Status</th></tr></thead><tbody id="hosted-app-usage-tbody"><tr><td colspan="5" class="text-muted">Loading hosted app metrics…</td></tr></tbody></table></div>
+  {{ skeleton.table(3, 5) }}
+  <div class="live-section-content table-wrap"><table class="table"><thead><tr><th>Domain</th><th>Processes</th><th>CPU %</th><th>Memory</th><th>Status</th></tr></thead><tbody id="hosted-app-usage-tbody"><tr><td colspan="5" class="text-muted">Loading hosted app metrics…</td></tr></tbody></table></div>
 </div>
 
 <!-- RUNTIME DEPENDENCIES -->
-<div class="section mb-xl">
+<div class="section mb-xl is-data-loading" data-live-section="table">
   <div class="section__header"><h3>Runtime Dependencies</h3></div>
-  <div class="table-wrap"><table class="table"><thead><tr><th>Dependency</th><th>Version</th><th>Processes</th><th>CPU %</th><th>Memory</th><th>Status</th></tr></thead><tbody id="dependency-usage-tbody"><tr><td colspan="6" class="text-muted">Loading dependency usage…</td></tr></tbody></table></div>
+  {{ skeleton.table(3, 6) }}
+  <div class="live-section-content table-wrap"><table class="table"><thead><tr><th>Dependency</th><th>Version</th><th>Processes</th><th>CPU %</th><th>Memory</th><th>Status</th></tr></thead><tbody id="dependency-usage-tbody"><tr><td colspan="6" class="text-muted">Loading dependency usage…</td></tr></tbody></table></div>
 </div>
 
 <!-- TOP PROCESSES -->
-<div class="section mb-xl">
+<div class="section mb-xl is-data-loading" data-live-section="table">
   <div class="section__header">
     <h3 style="display:flex; align-items:center; gap:8px;">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px; height:15px;"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
       Top Active System Processes
     </h3>
   </div>
-  <div class="table-wrap">
+  {{ skeleton.table(4, 5) }}
+  <div class="live-section-content table-wrap">
     <table class="table" id="proc-table" style="min-width:480px;">
       <colgroup>
         <col style="width:15%">
@@ -108,6 +114,7 @@
     </table>
   </div>
 </div>
+
 
 
 
