@@ -25,6 +25,14 @@ class AppProjectDetectorTests(unittest.TestCase):
         self.assertIn("uvicorn app.main:app", result["start_command"])
         self.assertTrue(result["can_quick_deploy"])
 
+    def test_flask_entrypoint_is_not_misidentified_as_fastapi(self):
+        result = self.detect({
+            "requirements.txt": "flask\ngunicorn\n",
+            "app.py": "from flask import Flask\napp = Flask(__name__)\n",
+        })
+        self.assertEqual(result["framework"], "Flask")
+        self.assertIn("gunicorn --bind", result["start_command"])
+
     def test_multiple_entrypoints_need_review(self):
         result = self.detect({
             "requirements.txt": "fastapi\n",
@@ -57,6 +65,15 @@ class AppProjectDetectorTests(unittest.TestCase):
             with self.subTest(marker=marker):
                 result = self.detect({marker: "", "main.py": "from fastapi import FastAPI\napp = FastAPI()\n"})
                 self.assertEqual(result["package_manager"], expected)
+
+    def test_pipenv_uses_module_install_and_direct_runtime_command(self):
+        result = self.detect({
+            "Pipfile": "[packages]\nflask = '*'\ngunicorn = '*'\n",
+            "app.py": "from flask import Flask\napp = Flask(__name__)\n",
+        })
+        self.assertIn("python -m pipenv sync", result["build_command"])
+        self.assertIn("python -m pip install gunicorn", result["build_command"])
+        self.assertNotIn("pipenv run", result["start_command"])
 
     def test_django_uses_detected_asgi_module(self):
         result = self.detect({

@@ -20,6 +20,7 @@ def detect_project(root: Path) -> dict[str, object]:
     entrypoints = ([explicit] if explicit else []) + candidates
     entrypoints = list(dict.fromkeys(entrypoints))
     framework = _framework(root, files, entrypoints)
+    build = _runtime_build_command(build, framework)
     start = _start_command(framework, entrypoints, procfile, package_manager)
     env_names, required_env = _environment_names(root, files)
     text = _project_text(root, files)
@@ -59,7 +60,7 @@ def _package_manager(root: Path) -> tuple[str, str]:
     if (root / "requirements.txt").exists(): return "pip", "pip install -r requirements.txt"
     if (root / "poetry.lock").exists(): return "poetry", "pip install poetry && poetry install --only main --no-interaction"
     if (root / "uv.lock").exists(): return "uv", "pip install uv && uv sync --active --no-dev"
-    if (root / "Pipfile").exists(): return "pipenv", "pip install pipenv && pipenv sync --system"
+    if (root / "Pipfile").exists(): return "pipenv", "python -m pip install pipenv && python -m pipenv sync --system"
     if (root / "pyproject.toml").exists(): return "pyproject", "pip install ."
     return "unknown", ""
 
@@ -97,7 +98,7 @@ def _candidates(root: Path, files: list[Path]) -> list[str]:
 def _framework(root: Path, files: list[Path], entrypoints: list[str]) -> str:
     if (root / "manage.py").exists(): return "Django"
     text = "\n".join(_read(file).lower() for file in files)
-    if "fastapi" in text or entrypoints: return "FastAPI"
+    if "fastapi" in text: return "FastAPI"
     if "flask" in text: return "Flask"
     return "Python"
 
@@ -109,9 +110,15 @@ def _start_command(framework: str, entries: list[str], procfile: str | None, man
         return f"uvicorn {entry} --host $HOST --port $PORT" if entry else None
     if not entries: return None
     command = "uvicorn" if framework == "FastAPI" else "gunicorn"
-    prefix = "uv run " if manager == "uv" else "pipenv run " if manager == "pipenv" else ""
+    prefix = "uv run " if manager == "uv" else ""
     if framework == "Flask": return f"{prefix}{command} --bind $HOST:$PORT {entries[0]}"
     return f"{prefix}{command} {entries[0]} --host $HOST --port $PORT"
+
+
+def _runtime_build_command(build: str, framework: str) -> str:
+    if build and framework == "Flask":
+        return f"{build} && python -m pip install gunicorn"
+    return build
 
 
 def _environment_names(root: Path, files: list[Path]) -> tuple[set[str], set[str]]:
