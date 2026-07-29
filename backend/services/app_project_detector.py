@@ -9,6 +9,7 @@ from pathlib import Path
 ENV_RE = re.compile(r"\b(?:getenv|environ\.get)\(\s*['\"]([A-Za-z_][A-Za-z0-9_]*)")
 ENV_INDEX_RE = re.compile(r"environ\s*\[\s*['\"]([A-Za-z_][A-Za-z0-9_]*)")
 SKIP_DIRS = {".git", ".venv", "venv", "__pycache__", "node_modules"}
+SAMPLE_ENV_FILES = (".env.example", ".env.sample", ".env.template", "example.env")
 
 
 def detect_project(root: Path) -> dict[str, object]:
@@ -21,8 +22,8 @@ def detect_project(root: Path) -> dict[str, object]:
     framework = _framework(root, files, entrypoints)
     start = _start_command(framework, entrypoints, procfile, package_manager)
     env_names, required_env = _environment_names(root, files)
-    text = "\n".join(_read(file) for file in files)
-    postgres = any(token in text.lower() for token in ("postgres", "asyncpg", "psycopg", "database_url"))
+    text = _project_text(root, files)
+    database_evidence, postgres = _database_evidence(text)
     database_url_scheme = "postgresql+asyncpg" if "create_async_engine" in text else "postgresql"
     sqlite = any(token in text.lower() for token in ("sqlite", "sqlite3"))
     conda = (root / "environment.yml").exists() or (root / "environment.yaml").exists()
@@ -31,13 +32,19 @@ def detect_project(root: Path) -> dict[str, object]:
     if not entrypoints and not procfile: warnings.append("No supported web entrypoint was found.")
     if len(entrypoints) > 1: warnings.append("More than one web entrypoint was found.")
     if required_env: warnings.append("Project environment values need review.")
-    if postgres: warnings.append("PostgreSQL configuration needs review.")
+    if database_evidence: warnings.append("Database configuration needs review.")
     can_quick = bool(build and start and len(entrypoints) <= 1 and not conda and not required_env and not postgres)
     return {
         "framework": framework, "package_manager": package_manager,
         "build_command": build, "start_command": start or "",
         "entrypoints": entrypoints, "environment_names": sorted(env_names),
         "required_environment_names": sorted(required_env), "postgres_suspected": postgres,
+        "environment_keys": [
+            {"name": name, "required": name in required_env}
+            for name in sorted(env_names)
+        ],
+        "database_evidence": database_evidence,
+        "managed_postgres_recommended": postgres,
         "database_url_scheme": database_url_scheme,
         "sqlite_suspected": sqlite, "can_quick_deploy": can_quick,
         "warnings": warnings,
@@ -109,14 +116,49 @@ def _start_command(framework: str, entries: list[str], procfile: str | None, man
 
 def _environment_names(root: Path, files: list[Path]) -> tuple[set[str], set[str]]:
     names, required = set(), set()
-    for sample in (root / ".env.example", root / ".env.sample"):
+    for sample_name in SAMPLE_ENV_FILES:
+        sample = root / sample_name
         if sample.exists():
             for line in _read(sample).splitlines():
-                key = line.split("=", 1)[0].strip()
-                if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", key): names.add(key); required.add(key)
+                value = line.split("#", 1)[0].strip()
+                if not value or "=" not in value: continue
+                key, sample_value = (part.strip() for part in value.split("=", 1))
+                if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", key):
+                    names.add(key)
+                    if not sample_value: required.add(key)
     for path in files:
-        text = _read(path); names.update(ENV_RE.findall(text)); names.update(ENV_INDEX_RE.findall(text))
+        text = _read(path)
+        names.update(ENV_RE.findall(text))
+        indexed = ENV_INDEX_RE.findall(text)
+        names.update(indexed)
+        required.update(indexed)
     return names, required
+
+
+def _project_text(root: Path, files: list[Path]) -> str:
+    extras = [root / name for name in (
+        "requirements.txt", "pyproject.toml", "Pipfile", *SAMPLE_ENV_FILES,
+    )]
+    return "\n".join(_read(path) for path in [*files, *extras] if path.is_file())
+
+
+def _database_evidence(text: str) -> tuple[list[str], bool]:
+    lower = text.lower()
+    evidence = []
+    postgres_tokens = {
+        "asyncpg": "asyncpg PostgreSQL driver",
+        "psycopg": "psycopg PostgreSQL driver",
+        "postgresql": "PostgreSQL configuration",
+        "postgres": "PostgreSQL configuration",
+    }
+    for token, label in postgres_tokens.items():
+        if token in lower and label not in evidence:
+            evidence.append(label)
+    if "database_url" in lower:
+        evidence.append("DATABASE_URL configuration")
+    if "sqlite" in lower or "sqlite3" in lower:
+        evidence.append("SQLite configuration")
+    return evidence, any("PostgreSQL" in item for item in evidence)
 
 
 def _module(root: Path, path: Path) -> str:

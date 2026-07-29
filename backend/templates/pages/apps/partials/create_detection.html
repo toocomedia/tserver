@@ -1,0 +1,25 @@
+<section class="app-wizard__panel" data-wizard-panel="2" hidden>
+  <header class="app-wizard__panel-header">
+    <h2>Project detection</h2>
+    <p data-detection-summary>Inspecting the selected Git branch safely.</p>
+  </header>
+
+  <div class="app-wizard__loading" data-detection-loading>
+    <span class="app-wizard__spinner" aria-hidden="true"></span>
+    <span>Reading project files…</span>
+  </div>
+
+  <div class="alert alert--danger" data-detection-error hidden>
+    <span data-detection-error-text></span>
+    <button class="btn btn--danger btn--sm" type="button" data-detection-retry>Retry detection</button>
+  </div>
+
+  <div data-detection-results hidden>
+    <div class="info-row"><span class="info-row__label">Framework</span><span class="info-row__value" data-detection-framework></span></div>
+    <div class="info-row"><span class="info-row__label">Entrypoint</span><span class="info-row__value mono" data-detection-entrypoint></span></div>
+    <div class="info-row"><span class="info-row__label">Package manager</span><span class="info-row__value" data-detection-package></span></div>
+    <div class="info-row"><span class="info-row__label">Environment keys</span><span class="info-row__value" data-detection-environment></span></div>
+    <div class="info-row"><span class="info-row__label">Database evidence</span><span class="info-row__value" data-detection-database></span></div>
+    <div class="alert alert--warning" data-detection-warnings hidden><span data-detection-warnings-text></span></div>
+  </div>
+</section>

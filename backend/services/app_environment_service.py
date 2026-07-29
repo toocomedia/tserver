@@ -22,20 +22,28 @@ async def keys(db: AsyncSession, app_id: int) -> list[str]:
 
 
 async def set_value(db: AsyncSession, app: HostedApp, key: str, value: str) -> None:
-    key = key.strip().upper()
-    if not KEY_RE.fullmatch(key) or key in RESERVED:
-        raise HTTPException(400, "Use a valid environment name other than HOST or PORT.")
-    if "\n" in value or "\r" in value:
-        raise HTTPException(400, "Environment values cannot contain new lines.")
+    await set_values(db, app, {key: value})
+
+
+async def set_values(db: AsyncSession, app: HostedApp, values: dict[str, str]) -> None:
+    normalized: dict[str, str] = {}
+    for key, value in values.items():
+        key = key.strip().upper()
+        if not KEY_RE.fullmatch(key) or key in RESERVED or key == "DATABASE_URL":
+            raise HTTPException(400, "Use a valid environment name that is not panel-managed.")
+        if not isinstance(value, str) or "\n" in value or "\r" in value:
+            raise HTTPException(400, "Environment values cannot contain new lines.")
+        if value:
+            normalized[key] = value
+    if not normalized:
+        return
     values = _read_values(Path(app.env_path))
-    values[key] = value
+    values.update(normalized)
     _write_values(Path(app.env_path), values)
-    row = await db.scalar(select(AppEnvironmentVariable).where(
-        AppEnvironmentVariable.app_id == app.id,
-        AppEnvironmentVariable.key == key,
-    ))
-    if row is None:
-        db.add(AppEnvironmentVariable(app_id=app.id, key=key))
+    existing = set(await keys(db, app.id))
+    for key in normalized:
+        if key not in existing:
+            db.add(AppEnvironmentVariable(app_id=app.id, key=key))
 
 
 async def remove(db: AsyncSession, app: HostedApp, key: str) -> None:

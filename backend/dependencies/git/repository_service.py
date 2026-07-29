@@ -34,11 +34,41 @@ class GitCheckout:
     revision: GitRevision
 
 
+@dataclass(frozen=True)
+class GitBranches:
+    repository_url: str
+    default_branch: str | None
+    branches: list[str]
+
+
 def validate_source(repository_url: str, branch: str) -> None:
-    if not GIT_URL_RE.fullmatch(repository_url):
-        raise HTTPException(400, "Enter a valid HTTPS or SSH Git repository URL.")
+    _validate_repository_url(repository_url)
     if not BRANCH_RE.fullmatch(branch):
         raise HTTPException(400, "Enter a valid branch name.")
+
+
+def list_branches(repository_url: str) -> GitBranches:
+    """List remote branches without cloning or executing repository code."""
+    _validate_repository_url(repository_url)
+    source_url, head = _remote_with_fallback(
+        ["git", "ls-remote", "--symref", repository_url, "HEAD"],
+        repository_url,
+        45,
+    )
+    default_branch = _default_branch(head.stdout)
+    source_url, refs = _remote_with_fallback(
+        ["git", "ls-remote", "--heads", source_url], source_url, 45
+    )
+    branches = sorted({
+        line.split("refs/heads/", 1)[1]
+        for line in refs.stdout.splitlines()
+        if "refs/heads/" in line
+    })
+    if not branches:
+        raise HTTPException(400, "Repository has no selectable branches.")
+    if default_branch not in branches:
+        default_branch = branches[0]
+    return GitBranches(source_url, default_branch, branches)
 
 
 def clone(
@@ -104,6 +134,31 @@ def _clone_branch(url: str, branch: str, target: Path):
         ["git", "clone", "--depth", "1", "--branch", branch, url, str(target)],
         180,
     )
+
+
+def _validate_repository_url(repository_url: str) -> None:
+    if not GIT_URL_RE.fullmatch(repository_url):
+        raise HTTPException(400, "Enter a valid HTTPS or SSH Git repository URL.")
+
+
+def _remote_with_fallback(args: list[str], repository_url: str, timeout: int):
+    result = _run(args, timeout)
+    source_url = repository_url
+    fallback = _github_https_url(repository_url)
+    if result.returncode and fallback:
+        source_url = fallback
+        fallback_args = [fallback if item == repository_url else item for item in args]
+        result = _run(fallback_args, timeout)
+    if result.returncode:
+        raise HTTPException(400, f"Repository check failed: {_safe_error(result)}")
+    return source_url, result
+
+
+def _default_branch(output: str) -> str | None:
+    for line in output.splitlines():
+        if line.startswith("ref: refs/heads/") and line.endswith("\tHEAD"):
+            return line.removeprefix("ref: refs/heads/").removesuffix("\tHEAD")
+    return None
 
 
 def _revision(source: Path) -> GitRevision:

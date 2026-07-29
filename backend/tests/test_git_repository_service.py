@@ -1,4 +1,6 @@
 import unittest
+from types import SimpleNamespace
+from unittest.mock import patch
 
 from fastapi import HTTPException
 
@@ -28,3 +30,13 @@ class GitRepositoryValidationTests(unittest.TestCase):
             repository_service.validate_source(
                 "https://github.com/example/project", "../main"
             )
+
+    def test_lists_default_and_selectable_branches(self):
+        results = [
+            SimpleNamespace(returncode=0, stdout="ref: refs/heads/trunk\tHEAD\nabc\tHEAD\n", stderr=""),
+            SimpleNamespace(returncode=0, stdout="abc\trefs/heads/trunk\ndef\trefs/heads/release/v1\n", stderr=""),
+        ]
+        with patch.object(repository_service, "_run", side_effect=results):
+            branches = repository_service.list_branches("https://github.com/example/project")
+        self.assertEqual(branches.default_branch, "trunk")
+        self.assertEqual(branches.branches, ["release/v1", "trunk"])

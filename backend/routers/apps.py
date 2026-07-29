@@ -1,4 +1,5 @@
 """Hosted Python application pages and small control endpoints."""
+import json
 from urllib.parse import urlencode
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
@@ -18,6 +19,7 @@ from services import app_lifecycle_service
 from services import hosted_app_control_service
 from services import app_hosting_service as apps
 from services import app_update_service
+from dependencies.git import repository_service
 from templating import templates
 
 router = APIRouter(prefix="/apps", tags=["apps"])
@@ -52,6 +54,16 @@ async def inspect_project(source_type: str = Form("git"), repository_url: str = 
     return JSONResponse(apps.inspect_repository(repository_url.strip(), branch.strip()))
 
 
+@router.post("/branches")
+async def repository_branches(repository_url: str = Form("")):
+    branches = repository_service.list_branches(repository_url.strip())
+    return JSONResponse({
+        "repository_url": branches.repository_url,
+        "default_branch": branches.default_branch,
+        "branches": branches.branches,
+    })
+
+
 @router.post("/quick-deploy")
 async def quick_deploy(request: Request, domain_id: int = Form(...), source_type: str = Form(...), repository_url: str = Form(""), branch: str = Form("main"), ssl: bool = Form(False), db: AsyncSession = Depends(get_db)):
     if source_type != "git":
@@ -72,7 +84,7 @@ async def quick_deploy(request: Request, domain_id: int = Form(...), source_type
 
 
 @router.post("/create")
-async def create(request: Request, domain_id: int = Form(...), source_type: str = Form(...), repository_url: str = Form(""), branch: str = Form("main"), build_command: str = Form(...), start_command: str = Form(...), ssl: bool = Form(False), postgres_mode: str = Form("none"), database_url: str = Form(""), db: AsyncSession = Depends(get_db)):
+async def create(request: Request, domain_id: int = Form(...), source_type: str = Form(...), repository_url: str = Form(""), branch: str = Form("main"), build_command: str = Form(...), start_command: str = Form(...), ssl: bool = Form(False), postgres_mode: str = Form("none"), database_url: str = Form(""), environment_values: str = Form("{}"), db: AsyncSession = Depends(get_db)):
     await _domain(db, domain_id)
     if source_type != "git":
         raise HTTPException(409, "ZIP source is coming soon.")
@@ -80,6 +92,7 @@ async def create(request: Request, domain_id: int = Form(...), source_type: str 
         detected = apps.inspect_repository(repository_url.strip(), branch.strip())
         repository_url, branch = str(detected["repository_url"]), str(detected["branch"])
     app = await apps.create_app(db, domain_id, source_type, repository_url or None, branch, build_command, start_command, ssl, postgres_mode, database_url or None)
+    await app_environment_service.set_values(db, app, _environment_values(environment_values))
     deployment = await app_deployment_service.start(db, app)
     if "application/json" in request.headers.get("accept", ""):
         return JSONResponse({"app_id": app.id, "deployment_id": deployment.id if deployment else None, "redirect": f"/apps/{app.id}"})
@@ -243,3 +256,15 @@ async def _restart_app(db: AsyncSession, app: HostedApp, domain: Domain) -> None
     await hosted_app_control_service.control(app, "restart")
     await app_hosting_health_service.wait_for_listener(app.port)
     await app_dependency_service.publish_app(db, app, domain)
+
+
+def _environment_values(raw: str) -> dict[str, str]:
+    try:
+        values = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise HTTPException(400, "Environment values are invalid.") from exc
+    if not isinstance(values, dict) or len(values) > 128:
+        raise HTTPException(400, "Environment values are invalid.")
+    if not all(isinstance(key, str) and isinstance(value, str) for key, value in values.items()):
+        raise HTTPException(400, "Environment values are invalid.")
+    return values

@@ -1,7 +1,7 @@
 <div class="master-card" id="updates">
   <div class="master-card__header">
     <span>Source Synchronization</span>
-    {% if app.available_revision %}
+    {% if update_ready %}
       <span class="badge-pill badge-pill--accent">Update Available</span>
     {% else %}
       <span class="badge-pill">Up to Date</span>
@@ -26,7 +26,7 @@
       </div>
 
       <div class="info-row">
-        <span class="info-row__label">Remote Revision</span>
+        <span class="info-row__label">Checked Revision</span>
         <span class="info-row__value mono">
           {% if app.available_revision %}{{ app.available_revision[:12] }}{% else %}Not checked{% endif %}
           {% if app.available_revision_message %} · {{ app.available_revision_message }}{% endif %}

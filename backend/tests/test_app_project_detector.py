@@ -66,3 +66,16 @@ class AppProjectDetectorTests(unittest.TestCase):
         })
         self.assertEqual(result["framework"], "Django")
         self.assertIn("site.asgi:application", result["start_command"])
+
+    def test_database_and_environment_evidence_is_structured(self):
+        result = self.detect({
+            "requirements.txt": "fastapi\nasyncpg\n",
+            "main.py": "from fastapi import FastAPI\nimport os\napp = FastAPI()\nsecret = os.environ['SECRET_KEY']\n",
+            ".env.template": "OPTIONAL_VALUE=default\n",
+        })
+        self.assertTrue(result["managed_postgres_recommended"])
+        self.assertIn("asyncpg PostgreSQL driver", result["database_evidence"])
+        self.assertEqual(result["environment_keys"], [
+            {"name": "OPTIONAL_VALUE", "required": False},
+            {"name": "SECRET_KEY", "required": True},
+        ])

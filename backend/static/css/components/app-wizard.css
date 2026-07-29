@@ -1,0 +1,118 @@
+.app-wizard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xl);
+  max-width: 720px;
+  padding-bottom: calc(var(--space-xl) * 3);
+}
+
+.app-wizard__target {
+  margin: 0;
+  color: var(--color-muted);
+}
+
+.app-wizard__target .mono {
+  color: var(--color-text);
+  font-weight: 700;
+}
+
+.app-wizard__steps,
+.app-wizard__actions,
+.app-wizard__environment-list {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.app-wizard__steps {
+  flex-wrap: wrap;
+}
+
+.app-wizard__step {
+  border: 0;
+  border-radius: 0;
+  background: var(--color-surface);
+  color: var(--color-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--font-small);
+  font-weight: 700;
+  padding: var(--space-sm) var(--space-md);
+}
+
+.app-wizard__step.is-active {
+  background: var(--color-accent);
+  color: var(--color-text);
+}
+
+.app-wizard__step:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.app-wizard__panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.app-wizard__panel-header h2 {
+  font-size: var(--font-h2);
+  margin: 0;
+}
+
+.app-wizard__panel-header p {
+  color: var(--color-muted);
+  margin: var(--space-xs) 0 0;
+}
+
+.app-wizard__loading {
+  align-items: center;
+  color: var(--color-muted);
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.app-wizard__spinner {
+  animation: app-wizard-spin 0.75s linear infinite;
+  border: 2px solid var(--color-line);
+  border-radius: 50%;
+  border-top-color: var(--color-text);
+  height: var(--space-lg);
+  width: var(--space-lg);
+}
+
+.app-wizard__environment-list {
+  align-items: stretch;
+  flex-direction: column;
+}
+
+.app-wizard__environment-field {
+  display: grid;
+  gap: var(--space-sm);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+}
+
+.app-wizard__environment-field label {
+  align-self: center;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: var(--font-small);
+  font-weight: 700;
+}
+
+.app-wizard__actions {
+  justify-content: space-between;
+}
+
+.app-wizard__actions .btn--primary {
+  margin-left: auto;
+}
+
+@keyframes app-wizard-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 640px) {
+  .app-wizard__environment-field { grid-template-columns: 1fr; }
+  .app-wizard__actions { flex-wrap: wrap; }
+}

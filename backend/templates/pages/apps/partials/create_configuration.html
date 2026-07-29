@@ -1,0 +1,36 @@
+<section class="app-wizard__panel" data-wizard-panel="3" hidden>
+  <header class="app-wizard__panel-header">
+    <h2>Runtime configuration</h2>
+    <p>Review the detected commands and enter only the secrets this project requires.</p>
+  </header>
+
+  <div class="form-group">
+    <label class="form-label" for="build_command">Build command</label>
+    <input class="form-input form-input--code" id="build_command" name="build_command" required>
+  </div>
+  <div class="form-group">
+    <label class="form-label" for="start_command">Start command</label>
+    <input class="form-input form-input--code" id="start_command" name="start_command" required>
+  </div>
+  <div class="form-group">
+    <label class="form-label" for="postgres_mode">PostgreSQL database</label>
+    <div class="form-select-wrap">
+      <select class="form-select" id="postgres_mode" name="postgres_mode" data-postgres-mode>
+        <option value="none" selected>No managed database</option>
+        <option value="create">Create managed PostgreSQL database</option>
+        <option value="external">Use external DATABASE_URL</option>
+      </select>
+    </div>
+    <p class="form-hint" data-database-hint>No database was detected.</p>
+  </div>
+  <div class="form-group" data-external-database hidden>
+    <label class="form-label" for="database_url">External DATABASE_URL</label>
+    <input class="form-input form-input--code" id="database_url" name="database_url" type="password" autocomplete="off">
+  </div>
+  <div class="form-group" data-environment-fields hidden>
+    <span class="form-label">Detected environment values</span>
+    <p class="form-hint">Values are entered once and stored only in this app’s protected environment file.</p>
+    <div class="app-wizard__environment-list" data-environment-list></div>
+  </div>
+  <div class="alert alert--danger" data-configuration-error hidden></div>
+</section>
