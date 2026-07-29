@@ -101,19 +101,19 @@
 .icon-btn.is-loading {
   pointer-events: none;
   cursor: wait;
-  opacity: 0.65;
+  opacity: 0.75;
 }
 
 .btn.is-loading::before,
 .icon-btn.is-loading::before {
   content: "";
-  width: 13px;
-  height: 13px;
-  flex: 0 0 13px;
-  border: 2px solid currentColor;
-  border-right-color: transparent;
+  width: 14px;
+  height: 14px;
+  flex: 0 0 14px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: currentColor;
   border-radius: 50% !important;
-  animation: button-spinner 0.7s linear infinite;
+  animation: app-spin 0.65s linear infinite;
 }
 
 .btn.is-loading > svg,

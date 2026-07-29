@@ -97,9 +97,16 @@
   resize: vertical;
 }
 .form-input--code {
-  font-family: ui-monospace, Consolas, monospace;
-  font-size: 12px;
-  background: var(--color-surface);
+  font-family: 'JetBrains Mono', ui-monospace, Consolas, monospace;
+  font-size: 13px;
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+.form-input:disabled, .form-select:disabled, .form-control:disabled {
+  background: var(--color-surface) !important;
+  color: var(--color-muted) !important;
+  opacity: 0.65;
+  cursor: not-allowed;
 }
 .form-subbox {
   display: flex;

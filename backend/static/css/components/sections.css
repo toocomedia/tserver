@@ -458,6 +458,14 @@
   height: 42px;
   padding: 10px 14px;
   font-size: 14px;
+  background: var(--color-bg);
+  color: var(--color-text);
+  border: 1px solid var(--color-line);
+}
+.unboxed-step-container .form-input:focus,
+.unboxed-step-container .form-select:focus {
+  background: var(--color-bg);
+  border-color: var(--color-text);
 }
 
 .wizard-grid-2-1 {
