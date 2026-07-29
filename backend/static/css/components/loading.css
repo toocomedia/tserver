@@ -35,9 +35,12 @@
 }
 
 .skeleton-shimmer,
-.is-data-loading .usage-bar__fill,
-.is-data-loading .data-skeleton-line::after,
-.is-data-loading .data-skeleton-table td::after {
+.is-data-loading .usage-bar,
+[data-usage-page].is-data-loading .stat-card-box__val::after,
+[data-usage-page].is-data-loading .info-row:not(.data-skeleton-metric) .info-row__value::after,
+[data-update-skeleton].is-data-loading .info-row__value::after,
+[data-usage-page].is-data-loading .table tbody td::after,
+[data-usage-page].is-data-loading .data-skeleton-metric .usage-bar-wrap::after {
   background: linear-gradient(90deg, var(--color-surface) 25%, var(--color-header-bg-bar) 50%, var(--color-surface) 75%);
   background-size: 200% 100%;
   animation: skeleton-shimmer 1.5s infinite linear;
@@ -49,48 +52,8 @@
   margin: var(--space-md) 0;
 }
 
-.is-data-loading .data-skeleton-line {
-  position: relative;
-  color: transparent;
-}
-
-.is-data-loading .data-skeleton-line::after {
-  content: "";
-  position: absolute;
-  top: 50%;
-  right: 0;
-  width: min(64%, 320px);
-  height: 0.9em;
-  transform: translateY(-50%);
-}
-
-.is-data-loading .stat-card-box__val.data-skeleton-line::after {
-  right: auto;
-  left: 0;
-  width: min(62%, 9ch);
-}
-
-.is-data-loading .data-skeleton-table td {
-  position: relative;
-  color: transparent;
-}
-
-.is-data-loading .data-skeleton-table td::after {
-  content: "";
-  position: absolute;
-  top: 50%;
-  right: var(--space-lg);
-  left: var(--space-lg);
-  height: 0.9em;
-  transform: translateY(-50%);
-}
-
-.is-data-loading .usage-bar__fill {
-  width: 100% !important;
-}
-
 [data-usage-page].is-data-loading .stat-card-box__val,
-[data-usage-page].is-data-loading .info-row__value,
+[data-usage-page].is-data-loading .info-row:not(.data-skeleton-metric) .info-row__value,
 [data-update-skeleton].is-data-loading .info-row__value,
 [data-usage-page].is-data-loading .table tbody td {
   position: relative;
@@ -98,7 +61,7 @@
 }
 
 [data-usage-page].is-data-loading .stat-card-box__val::after,
-[data-usage-page].is-data-loading .info-row__value::after,
+[data-usage-page].is-data-loading .info-row:not(.data-skeleton-metric) .info-row__value::after,
 [data-update-skeleton].is-data-loading .info-row__value::after,
 [data-usage-page].is-data-loading .table tbody td::after {
   content: "";
@@ -106,9 +69,6 @@
   top: 50%;
   height: 0.9em;
   transform: translateY(-50%);
-  background: linear-gradient(90deg, var(--color-surface) 25%, var(--color-header-bg-bar) 50%, var(--color-surface) 75%);
-  background-size: 200% 100%;
-  animation: skeleton-shimmer 1.5s infinite linear;
 }
 
 [data-usage-page].is-data-loading .stat-card-box__val::after {
@@ -116,15 +76,46 @@
   width: min(72%, 9ch);
 }
 
-[data-usage-page].is-data-loading .info-row__value::after,
+[data-usage-page].is-data-loading .info-row:not(.data-skeleton-metric) .info-row__value,
+[data-update-skeleton].is-data-loading .info-row__value {
+  flex: 1;
+  min-width: 0;
+  justify-content: flex-end;
+}
+
+[data-usage-page].is-data-loading .info-row:not(.data-skeleton-metric) .info-row__value::after,
 [data-update-skeleton].is-data-loading .info-row__value::after {
   right: 0;
-  width: min(64%, 320px);
+  width: min(52%, 320px);
 }
 
 [data-usage-page].is-data-loading .table tbody td::after {
   right: var(--space-lg);
   left: var(--space-lg);
+}
+
+[data-usage-page].is-data-loading .data-skeleton-metric .info-row__value {
+  flex: 1;
+  min-width: 0;
+  justify-content: flex-end;
+}
+
+[data-usage-page].is-data-loading .data-skeleton-metric .usage-bar-wrap {
+  width: min(64%, 420px);
+  min-width: 220px;
+  flex: 0 1 420px;
+}
+
+[data-usage-page].is-data-loading .data-skeleton-metric .usage-bar__fill,
+[data-usage-page].is-data-loading .data-skeleton-metric .usage-bar__pct {
+  visibility: hidden;
+}
+
+[data-usage-page].is-data-loading .data-skeleton-metric .usage-bar-wrap::after {
+  content: "";
+  width: 38px;
+  height: 0.9em;
+  flex: 0 0 38px;
 }
 
 .is-data-loading .data-skeleton-details {
@@ -159,7 +150,10 @@
 }
 
 @media (max-width: 480px) {
-  .is-data-loading .data-skeleton-line::after { width: 52%; }
+  [data-usage-page].is-data-loading .data-skeleton-metric .usage-bar-wrap {
+    width: 100%;
+    min-width: 0;
+  }
 
   .is-data-loading .data-skeleton-details::after {
     background-size:
