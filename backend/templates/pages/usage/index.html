@@ -59,6 +59,8 @@
 
 {% block content %}
 
+<div class="usage-page is-data-loading" data-usage-page aria-busy="true">
+
 <!-- 1. OVERVIEW STAT CARDS -->
 {% include "pages/usage/partials/overview_stats.html" %}
 
@@ -74,6 +76,8 @@
 <!-- 5. STACK SERVICES & TOP PROCESSES TABLES -->
 {% include "pages/usage/partials/services_processes.html" %}
 
+</div>
+
 {% endblock %}
 
 {% block scripts %}
@@ -82,6 +86,18 @@
   let pollTimer = null;
   const INTERVAL = 3000;
   let isActionPending = false;
+
+  function setUsageLoading(loading) {
+    const root = document.querySelector('[data-usage-page]');
+    if (!root) return;
+    root.classList.toggle('is-data-loading', loading);
+    root.setAttribute('aria-busy', String(loading));
+  }
+
+  function markUsageUpdated(message = '') {
+    const label = document.getElementById('usage-last-updated');
+    if (label) label.textContent = message || `Updated ${new Date().toLocaleTimeString()}`;
+  }
 
   function barClass(pct) {
     if (pct >= 85) return 'usage-bar__fill--danger';
@@ -271,6 +287,8 @@
       btnAdvOff.classList.toggle('is-active', !isAdvTuning);
       btnAdvOn.classList.toggle('is-active', isAdvTuning);
     }
+
+    if (!isActionPending) setOptimizationButtonsDisabled(false);
   }
 
   async function fetchStats() {
@@ -282,7 +300,10 @@
     try {
       const data = await panel.get('/api/stats');
       render(data);
+      setUsageLoading(false);
+      markUsageUpdated();
     } catch (e) {
+      markUsageUpdated('Waiting for server data…');
       fetchOptimizationStatus();
     }
 
@@ -393,6 +414,7 @@
     if (polling) fetchStats();
   }
 
+  setOptimizationButtonsDisabled(true);
   fetchOptimizationStatus();
   fetchStats();
 </script>

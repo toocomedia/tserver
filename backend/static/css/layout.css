@@ -595,3 +595,38 @@
   0% { background-position: 200% 0; }
   100% { background-position: -200% 0; }
 }
+
+/* Opt-in data skeletons. Pages activate this with .is-data-loading only. */
+.is-data-loading .stat-card-box__val,
+.is-data-loading .info-row__value,
+.is-data-loading .table tbody td {
+  color: transparent;
+  position: relative;
+}
+
+.is-data-loading .stat-card-box__val::after,
+.is-data-loading .info-row__value::after,
+.is-data-loading .table tbody td::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 72%;
+  height: 0.9em;
+  transform: translateY(-50%);
+  background: linear-gradient(90deg, var(--color-surface) 25%, var(--color-header-bg-bar) 50%, var(--color-surface) 75%);
+  background-size: 200% 100%;
+  animation: shimmerAnimation 1.5s infinite linear;
+}
+
+.is-data-loading .table tbody td::after {
+  left: 14px;
+  width: calc(100% - 28px);
+}
+
+.is-data-loading .usage-bar__fill {
+  width: 100% !important;
+  background: linear-gradient(90deg, var(--color-surface) 25%, var(--color-header-bg-bar) 50%, var(--color-surface) 75%);
+  background-size: 200% 100%;
+  animation: shimmerAnimation 1.5s infinite linear;
+}
