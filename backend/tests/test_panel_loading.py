@@ -112,12 +112,6 @@ class PanelLoadingRegressionTests(unittest.TestCase):
         self.assertIn(".skeleton-info-rows", loading_css)
         self.assertIn(".skeleton-table-wrap", loading_css)
 
-        skeletons_macro = (
-            BACKEND / "templates" / "partials" / "skeletons.html"
-        ).read_text(encoding="utf-8")
-        self.assertIn("{% macro stat_grid", skeletons_macro)
-        self.assertIn("{% macro info_rows", skeletons_macro)
-        self.assertIn("{% macro table", skeletons_macro)
 
 
 

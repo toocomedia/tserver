@@ -1,4 +1,3 @@
-{% import 'partials/skeletons.html' as skeleton %}
 <!-- DISK MOUNTS & STORAGE -->
 <div class="section mb-xl">
   <div class="section__header">
@@ -7,12 +6,9 @@
       Disk Storage &amp; Mount Points
     </h3>
   </div>
-  <div class="section__body is-data-loading" data-live-section="disk">
-    {{ skeleton.info_rows(2) }}
-    <div class="live-section-content" id="disk-section">
-      <div class="info-row">
-        <span class="info-row__label text-muted">Loading storage diagnostics…</span>
-      </div>
+  <div class="section__body" id="disk-section" data-live-section="disk">
+    <div class="info-row">
+      <span class="info-row__label text-muted">Loading storage diagnostics…</span>
     </div>
   </div>
 </div>
@@ -25,28 +21,26 @@
       Network Interfaces &amp; Bandwidth I/O
     </h3>
   </div>
-  <div class="section__body is-data-loading" data-live-section="net">
-    {{ skeleton.info_rows(4) }}
-    <div class="live-section-content">
-      <div class="info-row">
-        <span class="info-row__label">Total Sent</span>
-        <span class="info-row__value" id="net-sent">—</span>
-      </div>
-      <div class="info-row">
-        <span class="info-row__label">Total Received</span>
-        <span class="info-row__value" id="net-recv">—</span>
-      </div>
-      <div class="info-row">
-        <span class="info-row__label">Packets Sent</span>
-        <span class="info-row__value text-muted" id="net-pkts-sent">—</span>
-      </div>
-      <div class="info-row">
-        <span class="info-row__label">Packets Recv</span>
-        <span class="info-row__value text-muted" id="net-pkts-recv">—</span>
-      </div>
+  <div class="section__body" data-live-section="net">
+    <div class="info-row">
+      <span class="info-row__label">Total Sent</span>
+      <span class="info-row__value" id="net-sent">—</span>
+    </div>
+    <div class="info-row">
+      <span class="info-row__label">Total Received</span>
+      <span class="info-row__value" id="net-recv">—</span>
+    </div>
+    <div class="info-row">
+      <span class="info-row__label">Packets Sent</span>
+      <span class="info-row__value text-muted" id="net-pkts-sent">—</span>
+    </div>
+    <div class="info-row">
+      <span class="info-row__label">Packets Recv</span>
+      <span class="info-row__value text-muted" id="net-pkts-recv">—</span>
     </div>
   </div>
 </div>
+
 
 
 

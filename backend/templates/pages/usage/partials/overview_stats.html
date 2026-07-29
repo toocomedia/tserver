@@ -1,9 +1,5 @@
-{% import 'partials/skeletons.html' as skeleton %}
 <!-- OVERVIEW STAT CARDS -->
-<div class="mb-xl is-data-loading" data-live-section="stats">
-  {{ skeleton.stat_grid(6) }}
-
-  <div class="live-section-content stat-grid" id="usage-overview">
+<div class="stat-grid mb-xl" id="usage-overview" data-live-section="stats">
   <div class="stat-card-box">
     <div class="stat-card-box__label">
       <span>CPU Usage</span>
@@ -57,8 +53,8 @@
     <div class="stat-card-box__val" style="font-size:18px;font-weight:800;" id="ov-freq">—</div>
     <div class="stat-card-box__meta">Frequency Speed</div>
   </div>
-  </div>
 </div>
+
 
 
 
