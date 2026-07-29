@@ -26,7 +26,17 @@ router = APIRouter(prefix="/apps", tags=["apps"])
 @router.get("/", response_class=HTMLResponse)
 async def index(request: Request, db: AsyncSession = Depends(get_db)):
     hosted = (await db.scalars(select(HostedApp).order_by(HostedApp.id.desc()))).all()
-    return templates.TemplateResponse("pages/apps/index.html", {"request": request, "active_page": "apps", "apps": hosted})
+    domain_ids = [app.domain_id for app in hosted]
+    domains_by_id = {}
+    if domain_ids:
+        domains = (await db.scalars(select(Domain).where(Domain.id.in_(domain_ids)))).all()
+        domains_by_id = {d.id: d for d in domains}
+    return templates.TemplateResponse("pages/apps/index.html", {
+        "request": request,
+        "active_page": "apps",
+        "apps": hosted,
+        "domains_by_id": domains_by_id
+    })
 
 
 @router.get("/create", response_class=HTMLResponse)

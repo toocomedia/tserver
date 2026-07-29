@@ -1,4 +1,61 @@
 {% extends "layout.html" %}
-{% block title %}Apps — {{ PANEL_NAME }}{% endblock %}
+
+{% block title %}Python Apps — {{ PANEL_NAME }}{% endblock %}
 {% block page_title %}Python Apps{% endblock %}
-{% block content %}<section class="section"><div class="section__header"><h3>Python applications</h3></div><div class="section__body">{% if apps %}<table class="table"><thead><tr><th>Service</th><th>Status</th><th>Private port</th><th></th></tr></thead><tbody>{% for app in apps %}<tr><td>{{ app.service_name }}</td><td>{{ app.status }}</td><td><code>127.0.0.1:{{ app.port }}</code></td><td><a class="btn btn--secondary" href="/apps/{{ app.id }}">Manage</a></td></tr>{% endfor %}</tbody></table>{% else %}<p class="text-muted">Create a Python App from a domain page.</p>{% endif %}</div></section>{% endblock %}
+
+{% block topbar_actions %}
+  <a href="/domains" class="btn btn--primary">+ Deploy Python App</a>
+{% endblock %}
+
+{% block content %}
+<section class="section">
+  <div class="section__header">
+    <h3>Python Applications</h3>
+    {% if apps %}<span class="badge-pill">{{ apps | length }} Apps</span>{% endif %}
+  </div>
+
+  <div class="section__body">
+    {% if apps %}
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Service Name</th>
+            <th>Linked Domain</th>
+            <th>Port</th>
+            <th>Status</th>
+            <th class="col-actions">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for app in apps %}
+          {% set domain = domains_by_id.get(app.domain_id) if domains_by_id else None %}
+          <tr>
+            <td>
+              <a class="table-title" href="/apps/{{ app.id }}" style="font-weight:700;">{{ app.service_name }}</a>
+            </td>
+            <td>
+              {% if domain %}
+                <a href="/domains/{{ domain.id }}" style="font-weight:700;">{{ domain.name }}</a>
+              {% else %}
+                <span class="text-muted">Unlinked</span>
+              {% endif %}
+            </td>
+            <td><code>127.0.0.1:{{ app.port }}</code></td>
+            <td>
+              <span class="badge-minimal {% if app.status == 'running' %}badge-minimal--active{% else %}badge-minimal--neutral{% endif %}">{{ app.status | upper }}</span>
+            </td>
+            <td class="col-actions">
+              <a class="btn btn--secondary btn--sm" href="/apps/{{ app.id }}">Manage</a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="text-muted" style="padding: 16px 0;">No Python applications deployed yet. Select a domain from <a href="/domains" style="font-weight:700;">Domains</a> to deploy your first Python app.</p>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}
