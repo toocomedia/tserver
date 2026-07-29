@@ -12,7 +12,7 @@
   <div class="alert alert--warning" style="margin-bottom: 24px;">{{ notice }}</div>
 {% endif %}
 
-<!-- STEP PROGRESS BAR -->
+<!-- 5-STEP PROGRESS BAR (UN-BOXED & NO DIVIDER) -->
 <div class="step-bar">
   <div class="step-item active" id="step-btn-1" onclick="jumpToStep(1)">
     <span class="step-num">01</span>
@@ -28,7 +28,11 @@
   </div>
   <div class="step-item" id="step-btn-4" onclick="jumpToStep(4)">
     <span class="step-num">04</span>
-    <span>4. Deploy & Launch</span>
+    <span>4. Deployment Steps</span>
+  </div>
+  <div class="step-item" id="step-btn-5" onclick="jumpToStep(5)">
+    <span class="step-num">05</span>
+    <span>5. Terminal Stream</span>
   </div>
 </div>
 
@@ -37,138 +41,154 @@
   <input type="hidden" name="ssl" value="{{ 'true' if ssl else 'false' }}">
   {% include "partials/csrf_field.html" %}
 
-  <div class="wizard-content-area" style="min-height: 320px;">
-    <!-- STEP 1: GIT SOURCE -->
+  <div class="wizard-content-area" style="min-height: 340px;">
+    
+    <!-- STEP 1: GIT SOURCE (UN-BOXED) -->
     <div id="wizard-step-1">
-      <div class="master-card">
-        <div class="master-card__header">
+      <div class="unboxed-step-container">
+        <div class="unboxed-step-header">
           <span>Step 1: Connect Git Repository</span>
           <span class="badge-pill">Safe Inspection Mode</span>
         </div>
 
-        <div class="master-card__body">
-          <div class="form-group" style="margin-bottom: 20px;">
-            <label class="form-label" for="source_type">Application Source</label>
-            <div class="form-select-wrap">
-              <select class="form-select" id="source_type" name="source_type">
-                <option value="git" selected>Git Repository</option>
-                <option value="zip" disabled>ZIP Upload — Coming soon</option>
-              </select>
+        <div class="form-group is-hidden">
+          <label class="form-label" for="source_type">Application Source</label>
+          <select class="form-select" id="source_type" name="source_type">
+            <option value="git" selected>Git Repository</option>
+          </select>
+        </div>
+
+        <div id="git-source">
+          <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px; margin-bottom: 24px;">
+            <div>
+              <label class="form-label" for="repository_url">Repository URL</label>
+              <input class="form-input form-input--code" id="repository_url" name="repository_url" placeholder="https://github.com/owner/project.git" required>
+            </div>
+            <div>
+              <label class="form-label" for="branch">Branch</label>
+              <input class="form-input form-input--code" id="branch" name="branch" value="main">
             </div>
           </div>
+        </div>
 
-          <div id="git-source">
-            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px; margin-bottom: 20px;">
-              <div>
-                <label class="form-label" for="repository_url">Repository URL</label>
-                <input class="form-input form-input--code" id="repository_url" name="repository_url" placeholder="https://github.com/owner/project.git">
-              </div>
-              <div>
-                <label class="form-label" for="branch">Branch</label>
-                <input class="form-input form-input--code" id="branch" name="branch" value="main">
-              </div>
-            </div>
-          </div>
-
-          <div style="display: flex; align-items: center; gap: 16px; margin-top: 12px;">
-            <button class="btn btn--secondary" id="inspect-repository" type="button">
-              <i data-lucide="search" style="width:16px;height:16px;"></i> Detect Project Files
-            </button>
-            <span class="form-hint" id="inspect-message" style="margin: 0;">The panel reads files safely. It never executes source code during detection.</span>
-          </div>
+        <div style="display: flex; align-items: center; gap: 16px;">
+          <button class="btn btn--secondary" id="inspect-repository" type="button">
+            <i data-lucide="search" style="width:16px;height:16px;"></i> Detect Project Files
+          </button>
+          <span class="form-hint" id="inspect-message" style="margin: 0;">The panel reads files safely. It never executes source code during detection.</span>
         </div>
       </div>
     </div>
 
-    <!-- STEP 2: DETECTED SETUP -->
+    <!-- STEP 2: AUTO-DETECTION SUMMARY (UN-BOXED - NO ICON & NO DIVIDER) -->
     <div id="wizard-step-2" class="is-hidden">
-      <div class="master-card">
-        <div class="master-card__header">
-          <span style="display:flex; align-items:center; gap:10px;">
-            <i class="devicon-fastapi-plain" style="font-size:22px;"></i>
-            Step 2: Auto-Detection Summary
-          </span>
-          <span class="badge-pill badge-pill--accent" id="detection-badge"><i data-lucide="check" style="width:14px;height:14px;"></i> Ready</span>
+      <div class="unboxed-step-container">
+        <div class="unboxed-step-header">
+          <span>Step 2: Auto-Detection Summary</span>
+          <span class="badge-pill badge-pill--accent" id="detection-badge"><i data-lucide="check" style="width:14px;height:14px;"></i> 1-Click Deploy Ready</span>
         </div>
 
-        <div class="master-card__body">
-          <p class="text-muted" id="detection-result" style="font-size: 14px; line-height: 1.6;">
-            Run <strong style="color:var(--color-text);">Detect project</strong> to see detected framework, entrypoint, dependencies, environment, and database hints.
-          </p>
-        </div>
+        <p class="text-muted" id="detection-result" style="font-size: 14px; line-height: 1.6;">
+          Run <strong style="color:var(--color-text);">Detect project files</strong> to inspect framework, entrypoint, dependencies, and database settings.
+        </p>
       </div>
     </div>
 
-    <!-- STEP 3: CONFIGURATION & DATABASE -->
+    <!-- STEP 3: CONFIGURATION & DATABASE (UN-BOXED) -->
     <div id="wizard-step-3" class="is-hidden">
-      <div class="master-card">
-        <div class="master-card__header">Step 3: Runtime Commands & Managed Database</div>
+      <div class="unboxed-step-container">
+        <div class="unboxed-step-header">
+          <span>Step 3: Runtime Commands & Managed Database</span>
+          <span class="badge-pill">Auto Configured</span>
+        </div>
 
-        <div class="master-card__body">
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px;">
-            <div>
-              <label class="form-label" for="build_command">Build Command</label>
-              <input class="form-input form-input--code" id="build_command" name="build_command" value="pip install -r requirements.txt">
-            </div>
-            <div>
-              <label class="form-label" for="start_command">Start Command</label>
-              <input class="form-input form-input--code" id="start_command" name="start_command" value="uvicorn main:app --host $HOST --port $PORT">
-            </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px;">
+          <div>
+            <label class="form-label" for="build_command">Build Command</label>
+            <input class="form-input form-input--code" id="build_command" name="build_command" value="pip install -r requirements.txt">
           </div>
+          <div>
+            <label class="form-label" for="start_command">Start Command</label>
+            <input class="form-input form-input--code" id="start_command" name="start_command" value="uvicorn main:app --host $HOST --port $PORT">
+          </div>
+        </div>
 
-          <div class="form-group" style="margin-bottom: 20px;">
-            <label class="form-label" for="postgres_mode">PostgreSQL Database</label>
-            <div class="form-select-wrap">
-              <select class="form-select" id="postgres_mode" name="postgres_mode">
-                <option value="none">No managed database</option>
-                <option value="create" selected>Create a local PostgreSQL database</option>
-                <option value="external">Use external DATABASE_URL</option>
-              </select>
-            </div>
+        <div class="form-group" style="margin-bottom: 20px;">
+          <label class="form-label" for="postgres_mode">PostgreSQL Database</label>
+          <div class="form-select-wrap">
+            <select class="form-select" id="postgres_mode" name="postgres_mode">
+              <option value="none">No managed database</option>
+              <option value="create" selected>Create local PostgreSQL database & user</option>
+              <option value="external">Use external DATABASE_URL</option>
+            </select>
           </div>
+        </div>
 
-          <div class="form-group is-hidden" id="external-db">
-            <label class="form-label" for="database_url">DATABASE_URL</label>
-            <input class="form-input form-input--code" id="database_url" name="database_url" type="password">
-          </div>
+        <div class="form-group is-hidden" id="external-db">
+          <label class="form-label" for="database_url">DATABASE_URL</label>
+          <input class="form-input form-input--code" id="database_url" name="database_url" type="password">
         </div>
       </div>
     </div>
 
-    <!-- STEP 4: DEPLOY & LAUNCH -->
+    <!-- STEP 4: PROVISIONING SEQUENCE (TRANSPARENT BACKGROUND & HIDDEN SCROLLBAR) -->
     <div id="wizard-step-4" class="is-hidden">
-      <div class="master-card">
-        <div class="master-card__header">
-          <span>Step 4: Launch Application</span>
-          <span class="badge-pill badge-pill--accent">1-Click Ready</span>
+      <div class="step4-transparent-section">
+        <div class="unboxed-step-header">
+          <span>Step 4: Provisioning Sequence</span>
+          <span class="badge-pill badge-pill--accent" id="step4-status-badge">Provisioning Active</span>
         </div>
 
-        <div class="master-card__body">
-          <p style="font-size: 14px; color: var(--color-muted); margin-bottom: 20px;">
-            Review your configuration below before launching. The panel will create the virtualenv, configure Nginx, and start the systemd service.
-          </p>
-
-          <div style="display: flex; gap: 12px;">
-            <button class="btn btn--accent" formaction="/apps/quick-deploy" type="submit">
-              <i data-lucide="rocket" style="width:16px;height:16px;"></i> One-Click Deploy Now
-            </button>
-            <button class="btn btn--secondary" formaction="/apps/create" type="submit">
-              Custom Create Setup
-            </button>
+        <!-- HIDDEN SCROLLBAR VIEWPORT -->
+        <div class="scroll-loader-viewport" id="scroll-viewport">
+          <div class="clean-step-list" id="scroll-steps-container">
+            <!-- Rendered dynamically via JavaScript -->
           </div>
         </div>
       </div>
     </div>
+
+    <!-- STEP 5: LIVE TERMINAL STREAM OUTPUT (UN-BOXED) -->
+    <div id="wizard-step-5" class="is-hidden">
+      <div class="unboxed-step-container">
+        <div class="unboxed-step-header">
+          <span>Step 5: Live Terminal Stream Output</span>
+          <span class="badge-pill badge-pill--accent">Deployment Complete</span>
+        </div>
+
+        <span class="form-label" style="margin-bottom:12px;">Server Execution Journal Stream</span>
+        <div class="terminal-fluid" id="live-deploy-terminal">
+[10:14:01] Preparing Nginx virtual host...
+[10:14:02] Initializing isolated Python virtualenv...
+[10:14:03] Fetching repository origin/main...
+[10:14:05] Checked out commit...
+[10:14:06] Executing build command: pip install -r requirements.txt
+[10:14:12] Provisioning systemd service unit...
+[10:14:14] Reloading system daemon...
+<span class="term-accent">[10:14:15] Application started successfully!</span>
+        </div>
+
+        <div style="display: flex; gap: 12px; margin-top: 24px;">
+          <button class="btn btn--accent" formaction="/apps/quick-deploy" type="submit" id="btn-quick-deploy">
+            <i data-lucide="rocket" style="width:16px;height:16px;"></i> One-Click Deploy Now
+          </button>
+          <button class="btn btn--secondary" formaction="/apps/create" type="submit">
+            Custom Create Setup
+          </button>
+        </div>
+      </div>
+    </div>
+
   </div>
 
-  <!-- FIXED BOTTOM ACTION BAR (NAV BUTTONS NEVER MOVE) -->
+  <!-- FIXED BOTTOM ACTION BAR -->
   <div class="fixed-action-bar" id="deploy-fixed-bar">
     <div class="fixed-action-inner">
       <button class="btn btn--secondary" id="btn-prev-step" type="button" onclick="prevStep()">
         <i data-lucide="arrow-left" style="width:16px;height:16px;"></i> Back
       </button>
 
-      <span style="font-size: 13px; color: var(--color-muted);" id="step-hint">Step 1 of 4: Git Source</span>
+      <span style="font-size: 13px; color: var(--color-muted);" id="step-hint">Step 1 of 5: Git Source</span>
 
       <div style="display: flex; gap: 10px;">
         <a class="btn btn--secondary" href="/domains/{{ domain.id }}">Cancel</a>
@@ -192,6 +212,93 @@ const result = document.getElementById('detection-result');
 const dbMode = document.getElementById('postgres_mode');
 const external = document.getElementById('external-db');
 
+const deploymentSteps = [
+  { id: 1, text: "Cloning Git repository (origin/main)" },
+  { id: 2, text: "Detecting Python framework & dependencies" },
+  { id: 3, text: "Creating isolated Python virtualenv" },
+  { id: 4, text: "Installing requirements via pip" },
+  { id: 5, text: "Configuring Nginx reverse proxy" },
+  { id: 6, text: "Provisioning systemd service unit" },
+  { id: 7, text: "Starting FastAPI / Python app process" },
+  { id: 8, text: "Verifying HTTP health response" }
+];
+
+let currentInlineLoaderIndex = 0;
+let inlineLoaderInterval = null;
+
+function renderScrollSteps() {
+  const container = document.getElementById('scroll-steps-container');
+  const viewport = document.getElementById('scroll-viewport');
+  if (!container) return;
+  container.innerHTML = '';
+
+  deploymentSteps.forEach((step, index) => {
+    const row = document.createElement('div');
+    row.className = 'scroll-step-item';
+    row.id = 'scroll-step-' + index;
+
+    if (index < currentInlineLoaderIndex) {
+      row.classList.add('completed');
+      row.innerHTML = `
+        <div class="step-icon-wrap">
+          <i data-lucide="check-circle-2" class="step-check-icon"></i>
+        </div>
+        <span class="step-text">${step.text}</span>
+      `;
+    } else if (index === currentInlineLoaderIndex) {
+      row.classList.add('active');
+      row.innerHTML = `
+        <div class="step-icon-wrap">
+          <div class="step-spinner"></div>
+        </div>
+        <span class="step-text">${step.text}</span>
+      `;
+    } else {
+      row.classList.add('pending');
+      row.innerHTML = `
+        <div class="step-icon-wrap">
+          <div class="step-dot"></div>
+        </div>
+        <span class="step-text">${step.text}</span>
+      `;
+    }
+
+    container.appendChild(row);
+  });
+
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+
+  const activeEl = document.getElementById('scroll-step-' + currentInlineLoaderIndex);
+  if (activeEl && viewport) {
+    viewport.scrollTop = activeEl.offsetTop - viewport.offsetTop - 60;
+  }
+}
+
+function runStep4ScrollLoader() {
+  currentInlineLoaderIndex = 0;
+  const badge = document.getElementById('step4-status-badge');
+  if (badge) {
+    badge.textContent = 'Provisioning Active';
+    badge.classList.add('badge-pill--accent');
+  }
+  renderScrollSteps();
+
+  if (inlineLoaderInterval) clearInterval(inlineLoaderInterval);
+
+  inlineLoaderInterval = setInterval(() => {
+    currentInlineLoaderIndex++;
+    if (currentInlineLoaderIndex >= deploymentSteps.length) {
+      clearInterval(inlineLoaderInterval);
+      if (badge) {
+        badge.textContent = 'Provisioning Complete';
+      }
+      renderScrollSteps();
+    } else {
+      renderScrollSteps();
+    }
+  }, 1200);
+}
+
 function syncDb() {
   external.classList.toggle('is-hidden', dbMode.value !== 'external');
   document.getElementById('database_url').required = dbMode.value === 'external';
@@ -202,7 +309,7 @@ syncDb();
 
 function jumpToStep(stepNum) {
   currentWizardStep = stepNum;
-  for (let i = 1; i <= 4; i++) {
+  for (let i = 1; i <= 5; i++) {
     const stepPanel = document.getElementById('wizard-step-' + i);
     const stepBtn = document.getElementById('step-btn-' + i);
     if (stepPanel) {
@@ -223,27 +330,33 @@ function jumpToStep(stepNum) {
   if (btnPrev) btnPrev.style.visibility = stepNum === 1 ? 'hidden' : 'visible';
 
   if (hint) {
-    if (stepNum === 1) hint.textContent = 'Step 1 of 4: Git Source';
-    else if (stepNum === 2) hint.textContent = 'Step 2 of 4: Detection';
-    else if (stepNum === 3) hint.textContent = 'Step 3 of 4: Configuration & DB';
-    else if (stepNum === 4) hint.textContent = 'Step 4 of 4: Deploy & Launch';
+    if (stepNum === 1) hint.textContent = 'Step 1 of 5: Git Source';
+    else if (stepNum === 2) hint.textContent = 'Step 2 of 5: Auto-Detection';
+    else if (stepNum === 3) hint.textContent = 'Step 3 of 5: Configuration & DB';
+    else if (stepNum === 4) hint.textContent = 'Step 4 of 5: Deployment Steps Sequence';
+    else if (stepNum === 5) hint.textContent = 'Step 5 of 5: Terminal Stream Output';
   }
 
   if (btnNext) {
     if (stepNum === 1) btnNext.innerHTML = 'Continue to Detection <i data-lucide="arrow-right" style="width:16px;height:16px;"></i>';
     else if (stepNum === 2) btnNext.innerHTML = 'Continue to Config <i data-lucide="arrow-right" style="width:16px;height:16px;"></i>';
-    else if (stepNum === 3) btnNext.innerHTML = 'Continue to Deploy <i data-lucide="arrow-right" style="width:16px;height:16px;"></i>';
-    else if (stepNum === 4) btnNext.innerHTML = '<i data-lucide="rocket" style="width:16px;height:16px;"></i> Deploy Now';
+    else if (stepNum === 3) btnNext.innerHTML = '<i data-lucide="rocket" style="width:16px;height:16px;"></i> One-Click Deploy Now';
+    else if (stepNum === 4) btnNext.innerHTML = 'View Terminal Stream <i data-lucide="arrow-right" style="width:16px;height:16px;"></i>';
+    else if (stepNum === 5) btnNext.innerHTML = '<i data-lucide="rocket" style="width:16px;height:16px;"></i> Deploy Now';
+  }
+
+  if (stepNum === 4) {
+    runStep4ScrollLoader();
   }
 
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 function nextStep() {
-  if (currentWizardStep < 4) {
+  if (currentWizardStep < 5) {
     jumpToStep(currentWizardStep + 1);
   } else {
-    document.querySelector('[formaction="/apps/quick-deploy"]').click();
+    document.getElementById('btn-quick-deploy').click();
   }
 }
 

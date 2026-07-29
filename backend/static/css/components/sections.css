@@ -267,22 +267,23 @@
 .step-bar {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
   margin-bottom: 36px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid var(--color-line);
-  flex-wrap: wrap;
+  padding-bottom: 8px;
+  border-bottom: none !important;
+  overflow-x: auto;
 }
 .step-item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-size: 14px;
+  gap: 8px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--color-muted);
   cursor: pointer;
-  padding: 8px 16px;
+  padding: 8px 14px;
   transition: all 0.15s;
+  white-space: nowrap;
 }
 .step-item.active {
   color: var(--color-on-accent, #0F1720);
@@ -308,4 +309,110 @@
   background: var(--color-accent);
   color: var(--color-on-accent, #0F1720);
 }
+
+/* UN-BOXED WIZARD STEP HEADER & TRANSPARENT STEP 4 LOADER */
+.unboxed-step-container {
+  padding: 8px 0 24px;
+}
+.unboxed-step-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  font-size: 16px;
+  font-weight: 700;
+  border-bottom: none !important;
+}
+
+.step4-transparent-section {
+  padding: 8px 0 24px;
+  background: transparent !important;
+  border: none !important;
+}
+
+.scroll-loader-viewport {
+  height: 240px;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+  padding: 8px 0;
+  margin-top: 16px;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+.scroll-loader-viewport::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+.clean-step-list {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.scroll-step-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  transition: all 0.3s ease;
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+}
+.scroll-step-item.pending {
+  opacity: 0.3;
+}
+.scroll-step-item.pending .step-text {
+  color: var(--color-muted);
+  font-weight: 500;
+  font-size: 14px;
+}
+.scroll-step-item.pending .step-dot {
+  width: 8px;
+  height: 8px;
+  border: 2px solid var(--color-muted);
+}
+.scroll-step-item.active {
+  opacity: 1;
+  transform: translateX(6px);
+}
+.scroll-step-item.active .step-text {
+  color: var(--color-text);
+  font-weight: 700;
+  font-size: 16px;
+}
+.scroll-step-item.completed {
+  opacity: 0.8;
+}
+.scroll-step-item.completed .step-text {
+  color: var(--color-text);
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.step-icon-wrap {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.step-check-icon {
+  color: var(--color-accent-dark, #9EE01A);
+  width: 18px;
+  height: 18px;
+}
+.step-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(15, 23, 32, 0.25);
+  border-top-color: var(--color-text);
+  animation: spin 0.8s linear infinite;
+}
+[data-theme="dark"] .step-spinner {
+  border-color: rgba(255, 255, 255, 0.25);
+  border-top-color: var(--color-accent);
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
 

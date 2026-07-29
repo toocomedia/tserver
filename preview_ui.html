@@ -3,38 +3,37 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Python App UI — Real Glassmorphism Blur Multi-Step Sequence</title>
+  <title>Python App UI — Clean Headers (No Icon & No Dividers)</title>
   
   <!-- Google Fonts: Onest & JetBrains Mono -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   
-  <!-- Devicon & Lucide Icons -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/devicon.min.css">
+  <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
 
   <style>
     /* ============================================================
-       SMART DESIGN TOKENS WITH REAL GLASS BLUR & LIME ACCENT (#C7F464)
+       SMART DESIGN TOKENS WITH ACCENT (#C7F464)
        ============================================================ */
     :root {
-      --color-bg: #F4F5F0;
-      --color-surface: #FFFFFF;
+      --color-bg: #FFFFFF;
+      --color-surface: #F5F6F4;
       --color-text: #0F1720;
       --color-muted: #6B7280;
       --color-line: #E2E4DC;
       --color-accent: #C7F464;
       --color-accent-dark: #9EE01A;
       --color-accent-text: #0F1720;
-      --color-secondary-btn: #E8EAE2;
-      --color-secondary-hover: #DCDFD5;
+      --color-secondary-btn: #E4E6E0;
+      --color-secondary-hover: #D6D9D0;
       --font-body: 'Onest', sans-serif;
       --font-mono: 'JetBrains Mono', monospace;
     }
 
     [data-theme="dark"] {
-      --color-bg: #0B0F17;
+      --color-bg: #0F1720;
       --color-surface: #141D27;
       --color-text: #FFFFFF;
       --color-muted: #9CA3AF;
@@ -42,7 +41,7 @@
       --color-accent: #C7F464;
       --color-accent-dark: #A8E04A;
       --color-accent-text: #0F1720;
-      --color-secondary-btn: #1E293B;
+      --color-secondary-btn: #222E3C;
       --color-secondary-hover: #2B3B4E;
     }
 
@@ -202,16 +201,31 @@
       font-size: 13px;
     }
 
-    /* MASTER CARDS */
+    /* STANDARDIZED UN-BOXED STEP HEADER (NO DIVIDERS / NO BORDER BOTTOM) */
+    .unboxed-step-container {
+      padding: 8px 0 24px;
+    }
+
+    .unboxed-step-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+      font-size: 16px;
+      font-weight: 700;
+      border-bottom: none !important; /* REMOVED DIVIDER UNDER STEP TITLES */
+    }
+
+    /* MASTER CARD (USED ON CONTROL DASHBOARD) */
     .master-card {
       border: 1px solid var(--color-line);
-      background: var(--color-surface);
+      background: var(--color-bg);
       margin-bottom: 28px;
     }
 
     .master-card__header {
       padding: 14px 24px;
-      background: var(--color-bg);
+      background: var(--color-surface);
       border-bottom: 1px solid var(--color-line);
       font-size: 14px;
       font-weight: 700;
@@ -247,7 +261,7 @@
       align-items: center;
       justify-content: space-between;
       gap: 16px;
-      padding: 12px 0;
+      padding: 14px 0;
       border-bottom: 1px solid var(--color-line);
       font-size: 14px;
     }
@@ -268,14 +282,14 @@
       font-weight: 600;
     }
 
-    /* 5-STEP PROGRESS BAR */
+    /* 5-STEP PROGRESS BAR (NO DIVIDER / NO BORDER BOTTOM) */
     .step-bar {
       display: flex;
       align-items: center;
       gap: 12px;
       margin-bottom: 36px;
-      padding-bottom: 16px;
-      border-bottom: 1px solid var(--color-line);
+      padding-bottom: 8px;
+      border-bottom: none !important; /* REMOVED DIVIDER UNDER STEPS PROGRESS BAR */
       overflow-x: auto;
     }
 
@@ -313,13 +327,13 @@
       min-height: 340px;
     }
 
-    /* FIXED BOTTOM ACTION BAR THAT NEVER MOVES */
+    /* FIXED BOTTOM ACTION BAR */
     .fixed-action-bar {
       position: fixed;
       bottom: 0;
       left: 0;
       right: 0;
-      background: var(--color-surface);
+      background: var(--color-bg);
       border-top: 1px solid var(--color-line);
       padding: 16px 0;
       z-index: 90;
@@ -383,7 +397,7 @@
       font-size: 12px;
       font-weight: 700;
       padding: 4px 12px;
-      background: var(--color-bg);
+      background: var(--color-surface);
       color: var(--color-text);
       display: inline-flex;
       align-items: center;
@@ -396,42 +410,37 @@
     }
 
     /* ============================================================
-       STEP 04: REAL GLASS BLUR BACKGROUND WITH UN-BOXED LOADER
+       STEP 4: TRANSPARENT BACKGROUND WITH NO BOX CARDS & NO DIVIDERS
        ============================================================ */
-    .step4-glass-wrapper {
-      position: relative;
-      padding: 36px;
-      border: 1px solid var(--color-line);
-      /* DYNAMIC GRADIENT BACKDROP TO MAKE BACKDROP BLUR VISIBLE */
-      background: radial-gradient(circle at 10% 20%, rgba(199, 244, 100, 0.25), transparent 40%),
-                  radial-gradient(circle at 90% 80%, rgba(59, 130, 246, 0.2), transparent 40%),
-                  var(--color-surface);
-      overflow: hidden;
+    .step4-transparent-section {
+      padding: 8px 0 24px;
+      background: transparent !important;
+      border: none !important;
     }
 
-    /* THE GLASS BLUR PANEL ON TOP */
-    .step4-glass-panel {
-      background: rgba(255, 255, 255, 0.45);
-      backdrop-filter: blur(24px);
-      -webkit-backdrop-filter: blur(24px);
-      border: 1px solid rgba(255, 255, 255, 0.6);
-      padding: 32px;
+    /* HIDDEN SCROLLBAR VIEWPORT */
+    .scroll-loader-viewport {
+      height: 240px;
+      overflow-y: auto;
+      scroll-behavior: smooth;
+      padding: 8px 0;
+      margin-top: 16px;
+      scrollbar-width: none; /* Firefox */
+      -ms-overflow-style: none; /* IE/Edge */
     }
 
-    [data-theme="dark"] .step4-glass-panel {
-      background: rgba(15, 23, 32, 0.55);
-      border-color: rgba(255, 255, 255, 0.12);
+    .scroll-loader-viewport::-webkit-scrollbar {
+      display: none; /* Chrome, Safari, Opera */
     }
 
     .clean-step-list {
       display: flex;
       flex-direction: column;
       gap: 22px;
-      margin-top: 24px;
     }
 
-    /* UN-BOXED BORDERLESS STEP ROW */
-    .clean-step-item {
+    /* UN-BOXED BORDERLESS STEP ITEM */
+    .scroll-step-item {
       display: flex;
       align-items: center;
       gap: 16px;
@@ -441,46 +450,46 @@
       padding: 0 !important;
     }
 
-    .clean-step-item.pending {
-      opacity: 0.35;
+    .scroll-step-item.pending {
+      opacity: 0.3;
     }
 
-    .clean-step-item.pending .step-text {
+    .scroll-step-item.pending .step-text {
       color: var(--color-muted);
       font-weight: 500;
       font-size: 14px;
     }
 
-    .clean-step-item.pending .step-dot {
+    .scroll-step-item.pending .step-dot {
       width: 8px;
       height: 8px;
       border: 2px solid var(--color-muted);
     }
 
-    .clean-step-item.active {
+    .scroll-step-item.active {
       opacity: 1;
       transform: translateX(6px);
     }
 
-    .clean-step-item.active .step-text {
+    .scroll-step-item.active .step-text {
       color: var(--color-text);
       font-weight: 700;
       font-size: 16px;
     }
 
-    .clean-step-item.completed {
-      opacity: 0.85;
+    .scroll-step-item.completed {
+      opacity: 0.8;
     }
 
-    .clean-step-item.completed .step-text {
+    .scroll-step-item.completed .step-text {
       color: var(--color-text);
       font-weight: 600;
       font-size: 14px;
     }
 
     .step-icon-wrap {
-      width: 26px;
-      height: 26px;
+      width: 24px;
+      height: 24px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -489,13 +498,13 @@
 
     .step-check-icon {
       color: var(--color-accent-dark);
-      width: 20px;
-      height: 20px;
+      width: 18px;
+      height: 18px;
     }
 
     .step-spinner {
-      width: 18px;
-      height: 18px;
+      width: 16px;
+      height: 16px;
       border: 2px solid rgba(15, 23, 32, 0.25);
       border-top-color: var(--color-text);
       animation: spin 0.8s linear infinite;
@@ -515,7 +524,7 @@
   <header class="preview-bar">
     <div class="preview-title">
       <i data-lucide="sparkles" style="width:18px;height:18px; color:var(--color-accent);"></i>
-      <span>Visible Glassmorphism Blur Multi-Step Sequence</span>
+      <span>Clean Step Headers (No Icons & No Dividers)</span>
     </div>
 
     <div class="preview-controls">
@@ -538,7 +547,7 @@
   <main class="container">
 
     <!-- =========================================================================
-         PAGE 1: DEPLOY PYTHON APP 5-STEP WIZARD
+         PAGE 1: DEPLOY PYTHON APP 5-STEP UN-BOXED WIZARD
          ========================================================================= -->
     <section id="deploy-page">
       <div style="margin-bottom: 28px;">
@@ -546,7 +555,7 @@
         <p class="panel-subheading">Target Hostname: <span class="mono" style="color:var(--color-text); font-weight:700;">my-fastapi.com</span></p>
       </div>
 
-      <!-- 5-STEP PROGRESS BAR -->
+      <!-- 5-STEP PROGRESS BAR (NO DIVIDER BOTTOM) -->
       <div class="step-bar">
         <div class="step-item active" id="step-btn-1" onclick="jumpToStep(1)">
           <span class="step-num">01</span>
@@ -570,112 +579,103 @@
         </div>
       </div>
 
-      <!-- WIZARD CONTENT AREA -->
+      <!-- WIZARD CONTENT AREA (UN-BOXED - NO CARD CONTAINERS) -->
       <div class="wizard-content-area">
         
         <!-- STEP 1: GIT SOURCE -->
         <div id="wizard-step-1">
-          <div class="master-card">
-            <div class="master-card__header">
+          <div class="unboxed-step-container">
+            <div class="unboxed-step-header">
               <span>Step 1: Connect Git Repository</span>
               <span class="badge-pill">Safe Inspection Mode</span>
             </div>
 
-            <div class="master-card__body">
-              <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px; margin-bottom: 20px;">
-                <div>
-                  <label class="form-label">Repository URL</label>
-                  <input type="text" class="form-input form-input--code" value="https://github.com/fastapi/demo-app.git">
-                </div>
-                <div>
-                  <label class="form-label">Branch</label>
-                  <input type="text" class="form-input form-input--code" value="main">
-                </div>
+            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px; margin-bottom: 24px;">
+              <div>
+                <label class="form-label">Repository URL</label>
+                <input type="text" class="form-input form-input--code" value="https://github.com/fastapi/demo-app.git">
               </div>
-
-              <button class="btn btn--secondary" onclick="jumpToStep(2)">
-                <i data-lucide="search" style="width:16px;height:16px;"></i> Detect Project Files
-              </button>
+              <div>
+                <label class="form-label">Branch</label>
+                <input type="text" class="form-input form-input--code" value="main">
+              </div>
             </div>
+
+            <button class="btn btn--secondary" onclick="jumpToStep(2)">
+              <i data-lucide="search" style="width:16px;height:16px;"></i> Detect Project Files
+            </button>
           </div>
         </div>
 
-        <!-- STEP 2: AUTO-DETECTION -->
+        <!-- STEP 2: AUTO-DETECTION (ICON REMOVED) -->
         <div id="wizard-step-2" class="hidden">
-          <div class="master-card">
-            <div class="master-card__header">
-              <span style="display:flex; align-items:center; gap:10px;">
-                <i class="devicon-fastapi-plain" style="font-size:22px;"></i>
-                Step 2: Auto-Detection Summary
-              </span>
+          <div class="unboxed-step-container">
+            <div class="unboxed-step-header">
+              <span>Step 2: Auto-Detection Summary</span>
               <span class="badge-pill badge-pill--accent"><i data-lucide="check" style="width:14px;height:14px;"></i> 1-Click Deploy Ready</span>
             </div>
 
-            <div class="master-card__body">
-              <div class="info-row">
-                <span class="info-row__label">Detected Framework</span>
-                <span class="info-row__value" style="font-size:16px;">FastAPI</span>
-              </div>
-              <div class="info-row">
-                <span class="info-row__label">Detected Entrypoint</span>
-                <span class="info-row__value mono" style="font-size:15px;">main.py:app</span>
-              </div>
-              <div class="info-row">
-                <span class="info-row__label">Package Manager</span>
-                <span class="info-row__value">requirements.txt</span>
-              </div>
-              <div class="info-row">
-                <span class="info-row__label">Storage Hint</span>
-                <span class="info-row__value">Local PostgreSQL or SQLite in <code class="mono">APP_DATA_DIR</code></span>
-              </div>
+            <div class="info-row">
+              <span class="info-row__label">Detected Framework</span>
+              <span class="info-row__value" style="font-size:16px;">FastAPI</span>
+            </div>
+            <div class="info-row">
+              <span class="info-row__label">Detected Entrypoint</span>
+              <span class="info-row__value mono" style="font-size:15px;">main.py:app</span>
+            </div>
+            <div class="info-row">
+              <span class="info-row__label">Package Manager</span>
+              <span class="info-row__value">requirements.txt</span>
+            </div>
+            <div class="info-row">
+              <span class="info-row__label">Storage Hint</span>
+              <span class="info-row__value">Local PostgreSQL or SQLite in <code class="mono">APP_DATA_DIR</code></span>
             </div>
           </div>
         </div>
 
         <!-- STEP 3: CONFIGURATION & DB -->
         <div id="wizard-step-3" class="hidden">
-          <div class="master-card">
-            <div class="master-card__header">Step 3: Runtime Commands & Managed Database</div>
+          <div class="unboxed-step-container">
+            <div class="unboxed-step-header">
+              <span>Step 3: Runtime Commands & Managed Database</span>
+              <span class="badge-pill">Auto Configured</span>
+            </div>
 
-            <div class="master-card__body">
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px;">
-                <div>
-                  <label class="form-label">Build Command</label>
-                  <input type="text" class="form-input form-input--code" value="pip install -r requirements.txt">
-                </div>
-                <div>
-                  <label class="form-label">Start Command</label>
-                  <input type="text" class="form-input form-input--code" value="uvicorn main:app --host $HOST --port $PORT">
-                </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px;">
+              <div>
+                <label class="form-label">Build Command</label>
+                <input type="text" class="form-input form-input--code" value="pip install -r requirements.txt">
               </div>
+              <div>
+                <label class="form-label">Start Command</label>
+                <input type="text" class="form-input form-input--code" value="uvicorn main:app --host $HOST --port $PORT">
+              </div>
+            </div>
 
-              <div class="form-group" style="margin-bottom:0;">
-                <label class="form-label">PostgreSQL Database</label>
-                <select class="form-select">
-                  <option value="none">No managed database</option>
-                  <option value="create" selected>Create local PostgreSQL database & user</option>
-                  <option value="external">Use external DATABASE_URL</option>
-                </select>
-              </div>
+            <div class="form-group" style="margin-bottom:0;">
+              <label class="form-label">PostgreSQL Database</label>
+              <select class="form-select">
+                <option value="none">No managed database</option>
+                <option value="create" selected>Create local PostgreSQL database & user</option>
+                <option value="external">Use external DATABASE_URL</option>
+              </select>
             </div>
           </div>
         </div>
 
-        <!-- STEP 4: VISIBLE GLASS BLUR MULTI-STEP LOADER (UN-BOXED) -->
+        <!-- STEP 4: TRANSPARENT BACKGROUND WITH NO DIVIDER -->
         <div id="wizard-step-4" class="hidden">
-          <div class="step4-glass-wrapper">
-            <div class="step4-glass-panel">
-              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 6px;">
-                <span style="font-size: 18px; font-weight:700;">Step 4: Provisioning Sequence</span>
-                <span class="badge-pill badge-pill--accent" id="step4-status-badge">Provisioning Active</span>
-              </div>
-              <p style="font-size: 13px; color: var(--color-muted);">
-                Server execution steps progressing in sequence without individual sub-boxes.
-              </p>
+          <div class="step4-transparent-section">
+            <div class="unboxed-step-header">
+              <span>Step 4: Provisioning Sequence</span>
+              <span class="badge-pill badge-pill--accent" id="step4-status-badge">Provisioning Active</span>
+            </div>
 
-              <!-- UN-BOXED BORDERLESS STEP LIST -->
-              <div class="clean-step-list" id="clean-steps-container">
-                <!-- Rendered dynamically without sub-boxes -->
+            <!-- HIDDEN SCROLLBAR VIEWPORT -->
+            <div class="scroll-loader-viewport" id="scroll-viewport">
+              <div class="clean-step-list" id="scroll-steps-container">
+                <!-- Rendered dynamically -->
               </div>
             </div>
           </div>
@@ -683,15 +683,14 @@
 
         <!-- STEP 5: TERMINAL STREAM OUTPUT -->
         <div id="wizard-step-5" class="hidden">
-          <div class="master-card">
-            <div class="master-card__header">
+          <div class="unboxed-step-container">
+            <div class="unboxed-step-header">
               <span>Step 5: Live Terminal Stream Output</span>
               <span class="badge-pill badge-pill--accent">Deployment Complete</span>
             </div>
 
-            <div class="master-card__body">
-              <span class="form-label" style="margin-bottom:12px;">Server Execution Journal Stream</span>
-              <div class="terminal-fluid">
+            <span class="form-label" style="margin-bottom:12px;">Server Execution Journal Stream</span>
+            <div class="terminal-fluid">
 [10:14:01] Preparing Nginx virtual host for my-fastapi.com...
 [10:14:02] Initializing isolated Python virtualenv at /var/www/my-fastapi/venv
 [10:14:03] Fetching repository origin/main...
@@ -701,7 +700,6 @@ Successfully installed fastapi-0.111.0 uvicorn-0.30.1 pydantic-2.7.4
 [10:14:12] Provisioning systemd service unit app-my-fastapi.service...
 [10:14:14] Reloading system daemon...
 <span class="term-accent">[10:14:15] Application started successfully and listening on 127.0.0.1:8004!</span>
-              </div>
             </div>
           </div>
         </div>
@@ -859,14 +857,16 @@ Successfully installed fastapi-0.111.0 uvicorn-0.30.1 pydantic-2.7.4
     let currentInlineLoaderIndex = 0;
     let inlineLoaderInterval = null;
 
-    function renderCleanSteps() {
-      const container = document.getElementById('clean-steps-container');
+    function renderScrollSteps() {
+      const container = document.getElementById('scroll-steps-container');
+      const viewport = document.getElementById('scroll-viewport');
       if (!container) return;
       container.innerHTML = '';
 
       deploymentSteps.forEach((step, index) => {
         const row = document.createElement('div');
-        row.className = 'clean-step-item';
+        row.className = 'scroll-step-item';
+        row.id = 'scroll-step-' + index;
 
         if (index < currentInlineLoaderIndex) {
           row.classList.add('completed');
@@ -898,16 +898,22 @@ Successfully installed fastapi-0.111.0 uvicorn-0.30.1 pydantic-2.7.4
       });
 
       if (typeof lucide !== 'undefined') lucide.createIcons();
+
+      // Smooth scroll viewport to focus active step!
+      const activeEl = document.getElementById('scroll-step-' + currentInlineLoaderIndex);
+      if (activeEl && viewport) {
+        viewport.scrollTop = activeEl.offsetTop - viewport.offsetTop - 60;
+      }
     }
 
-    function runStep4InlineLoader() {
+    function runStep4ScrollLoader() {
       currentInlineLoaderIndex = 0;
       const badge = document.getElementById('step4-status-badge');
       if (badge) {
         badge.textContent = 'Provisioning Active';
         badge.classList.add('badge-pill--accent');
       }
-      renderCleanSteps();
+      renderScrollSteps();
 
       if (inlineLoaderInterval) clearInterval(inlineLoaderInterval);
 
@@ -918,11 +924,11 @@ Successfully installed fastapi-0.111.0 uvicorn-0.30.1 pydantic-2.7.4
           if (badge) {
             badge.textContent = 'Provisioning Complete';
           }
-          renderCleanSteps();
+          renderScrollSteps();
         } else {
-          renderCleanSteps();
+          renderScrollSteps();
         }
-      }, 1000);
+      }, 1200);
     }
 
     function jumpToStep(stepNum) {
@@ -964,7 +970,7 @@ Successfully installed fastapi-0.111.0 uvicorn-0.30.1 pydantic-2.7.4
       }
 
       if (stepNum === 4) {
-        runStep4InlineLoader();
+        runStep4ScrollLoader();
       }
 
       if (typeof lucide !== 'undefined') lucide.createIcons();
