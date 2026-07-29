@@ -88,19 +88,12 @@
   let isActionPending = false;
 
   function setUsageLoading(loading, target = null) {
-    if (target) {
-      const el = typeof target === 'string' ? document.querySelector(target) : target;
-      if (el) {
-        el.classList.toggle('is-data-loading', loading);
-        el.setAttribute('aria-busy', String(loading));
-      }
-      return;
+    if (!target) return;
+    const el = typeof target === 'string' ? document.querySelector(target) : target;
+    if (el) {
+      el.classList.toggle('is-data-loading', loading);
+      el.setAttribute('aria-busy', String(loading));
     }
-    const sections = document.querySelectorAll('[data-live-section]');
-    sections.forEach(sec => {
-      sec.classList.toggle('is-data-loading', loading);
-      sec.setAttribute('aria-busy', String(loading));
-    });
   }
 
   function markUsageUpdated(message = '') {

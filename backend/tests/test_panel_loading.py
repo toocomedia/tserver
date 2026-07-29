@@ -111,19 +111,6 @@ class PanelLoadingRegressionTests(unittest.TestCase):
         self.assertIn(".skeleton-stat-grid", loading_css)
         self.assertIn(".skeleton-info-rows", loading_css)
         self.assertIn(".skeleton-table-wrap", loading_css)
-        self.assertIn("[data-live-section].is-data-loading > .live-section-skeleton", loading_css)
-
-        overview_html = (
-            BACKEND / "templates" / "pages" / "usage" / "partials" / "overview_stats.html"
-        ).read_text(encoding="utf-8")
-        self.assertIn('data-live-section="stats"', overview_html)
-        self.assertIn('class="skeleton-stat-card"', overview_html)
-
-        services_html = (
-            BACKEND / "templates" / "pages" / "usage" / "partials" / "services_processes.html"
-        ).read_text(encoding="utf-8")
-        self.assertIn('data-live-section="table"', services_html)
-        self.assertIn('class="skeleton-table-row"', services_html)
 
 
 if __name__ == "__main__":
