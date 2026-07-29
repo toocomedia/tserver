@@ -45,96 +45,40 @@
   display: block;
 }
 
-/* Per-section & per-list skeleton loading states */
-.live-section-skeleton {
-  display: none !important;
-  width: 100%;
+/* Shared Pure CSS Skeleton Component Overlays (Zero Template HTML Bloat) */
+.is-data-loading,
+.is-loading-skeleton {
+  position: relative;
 }
 
-.is-data-loading > .live-section-skeleton,
-[data-live-section].is-data-loading > .live-section-skeleton {
-  display: block !important;
-}
-
-.is-data-loading > .live-section-content,
-[data-live-section].is-data-loading > .live-section-content {
-  display: none !important;
-}
-
-/* Stat Grid Skeletons (Overview cards exact size and cover) */
-.is-data-loading > .live-section-skeleton.skeleton-stat-grid,
-[data-live-section].is-data-loading > .live-section-skeleton.skeleton-stat-grid {
-  display: grid !important;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 16px;
-  margin-bottom: 28px;
-}
-
-.skeleton-stat-card {
-  background: var(--color-bg);
-  border: 1px solid var(--color-line);
-  padding: 14px 18px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-height: 86px;
-}
-
-/* Info Rows Skeletons (Exact row height 38px, 16px padding) */
-.skeleton-info-rows {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-}
-
-.skeleton-info-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
+.is-data-loading::before,
+.is-loading-skeleton::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10;
+  background: linear-gradient(90deg, var(--color-surface) 25%, var(--color-header-bg-bar) 50%, var(--color-surface) 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s infinite linear;
+  border-radius: inherit;
   min-height: 38px;
-  padding: 0 16px;
-  border-bottom: 1px solid var(--color-line);
-}
-.skeleton-info-row:last-child {
-  border-bottom: none;
 }
 
-.skeleton-info-label {
-  width: 120px;
-  height: 12px;
-  flex-shrink: 0;
-}
-
-.skeleton-info-val {
-  flex: 1;
-  max-width: 260px;
-  height: 12px;
-  margin-left: auto;
-}
-
-/* Table Skeletons (Exact column cover & row heights matching .table) */
-.skeleton-table-wrap {
-  width: 100%;
-  overflow-x: auto;
-}
-
-.skeleton-table-row {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 10px 16px;
-  min-height: 42px;
-  border-bottom: 1px solid var(--color-line);
-}
-
-/* Fallback for containers using data-async-load or generic data-live-skeleton */
-[data-live-skeleton].is-data-loading > .skeleton-shimmer,
+/* Skeleton Utility Helpers */
+.skeleton-stat-grid,
+.skeleton-info-rows,
+.skeleton-table-wrap,
 .skeleton-shimmer-box {
   width: 100%;
-  min-height: 80px;
-  margin: 0;
+  min-height: 42px;
+  background: linear-gradient(90deg, var(--color-surface) 25%, var(--color-header-bg-bar) 50%, var(--color-surface) 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s infinite linear;
   border-radius: 4px;
 }
+
 
 
