@@ -27,7 +27,8 @@ if (root) {
     for (let index = 1; index <= 4; index += 1) {
       setHidden(panel(index), index !== step);
       nav(index).classList.toggle('is-active', index === step);
-      nav(index).disabled = index > state.unlocked;
+      nav(index).classList.toggle('active', index === step);
+      nav(index).classList.toggle('disabled', index > state.unlocked);
     }
     back.hidden = step === 1 || step === 4;
     cancel.hidden = step === 4;
@@ -36,6 +37,7 @@ if (root) {
     if (step === 1) next.textContent = 'Continue to Detection';
     if (step === 2) next.textContent = 'Continue to Configuration';
     if (step === 3) next.textContent = 'Deploy App';
+    setText(root.querySelector('[data-wizard-hint]'), `Step ${step} of 4`);
   }
 
   function setNextLoading(loading, label) {

@@ -2,37 +2,42 @@
 {% block title %}Deploy Python App — {{ PANEL_NAME }}{% endblock %}
 {% block page_title %}Deploy Python App{% endblock %}
 
-{% block head %}
-<link rel="stylesheet" href="/static/css/components/app-wizard.css">
-{% endblock %}
-
 {% block content %}
-<form class="app-wizard" id="app-setup-form" data-app-wizard method="post" action="/apps/create">
+<form class="wizard-form" id="app-setup-form" data-app-wizard method="post" action="/apps/create">
   {% include "partials/csrf_field.html" %}
   <input type="hidden" name="domain_id" value="{{ domain.id }}">
   <input type="hidden" name="ssl" value="{{ 'true' if ssl else 'false' }}">
   <input type="hidden" name="source_type" value="git">
   <input type="hidden" name="environment_values" value="{}" data-environment-values>
 
-  <p class="app-wizard__target">Deploying to <span class="mono">{{ domain.name }}</span></p>
+  <div class="unboxed-step-container">
+    <p class="text-muted">Target Hostname: <span class="mono">{{ domain.name }}</span></p>
+  </div>
   {% if notice %}<div class="alert alert--warning">{{ notice }}</div>{% endif %}
 
-  <nav class="app-wizard__steps" aria-label="Deployment steps">
-    <button class="app-wizard__step is-active" type="button" data-wizard-nav="1">1. Git source</button>
-    <button class="app-wizard__step" type="button" data-wizard-nav="2" disabled>2. Detection</button>
-    <button class="app-wizard__step" type="button" data-wizard-nav="3" disabled>3. Configuration</button>
-    <button class="app-wizard__step" type="button" data-wizard-nav="4" disabled>4. Deploy</button>
+  <nav class="step-bar" aria-label="Deployment steps">
+    <div class="step-item active" role="button" tabindex="0" data-wizard-nav="1"><span class="step-num">01</span><span>1. Git Source</span></div>
+    <div class="step-item disabled" role="button" tabindex="0" data-wizard-nav="2"><span class="step-num">02</span><span>2. Auto-Detection</span></div>
+    <div class="step-item disabled" role="button" tabindex="0" data-wizard-nav="3"><span class="step-num">03</span><span>3. Configuration & DB</span></div>
+    <div class="step-item disabled" role="button" tabindex="0" data-wizard-nav="4"><span class="step-num">04</span><span>4. Deployment</span></div>
   </nav>
 
-  {% include "pages/apps/partials/create_source.html" %}
-  {% include "pages/apps/partials/create_detection.html" %}
-  {% include "pages/apps/partials/create_configuration.html" %}
-  {% include "pages/apps/partials/create_deployment.html" %}
+  <div class="wizard-content-area">
+    {% include "pages/apps/partials/create_source.html" %}
+    {% include "pages/apps/partials/create_detection.html" %}
+    {% include "pages/apps/partials/create_configuration.html" %}
+    {% include "pages/apps/partials/create_deployment.html" %}
+  </div>
 
-  <div class="app-wizard__actions" data-wizard-actions>
-    <button class="btn btn--secondary" type="button" data-wizard-back hidden>Back</button>
-    <a class="btn btn--secondary" href="/domains/{{ domain.id }}" data-wizard-cancel>Cancel</a>
-    <button class="btn btn--primary" type="button" data-wizard-next>Continue to Detection</button>
+  <div class="fixed-action-bar" data-wizard-actions>
+    <div class="fixed-action-inner">
+      <button class="btn btn--secondary" type="button" data-wizard-back hidden>Back</button>
+      <span class="text-muted" data-wizard-hint>Step 1 of 4: Git Source</span>
+      <div class="d-flex gap-sm">
+        <a class="btn btn--secondary" href="/domains/{{ domain.id }}" data-wizard-cancel>Cancel</a>
+        <button class="btn btn--primary" type="button" data-wizard-next>Continue to Detection</button>
+      </div>
+    </div>
   </div>
 </form>
 {% endblock %}

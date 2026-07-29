@@ -48,7 +48,7 @@ export function renderEnvironmentFields(container, keys) {
   container.replaceChildren();
   keys.filter((item) => item.name !== 'DATABASE_URL').forEach((item) => {
     const row = document.createElement('div');
-    row.className = 'app-wizard__environment-field';
+    row.className = 'form-group';
     const label = document.createElement('label');
     const input = document.createElement('input');
     const id = `environment-${item.name.toLowerCase()}`;

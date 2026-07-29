@@ -1,8 +1,9 @@
-<section class="app-wizard__panel" data-wizard-panel="3" hidden>
-  <header class="app-wizard__panel-header">
-    <h2>Runtime configuration</h2>
-    <p>Review the detected commands and enter only the secrets this project requires.</p>
-  </header>
+<section class="unboxed-step-container" data-wizard-panel="3" hidden>
+  <div class="unboxed-step-header">
+    <span>Step 3: Runtime Commands & Managed Database</span>
+    <span class="badge-pill">Review Required</span>
+  </div>
+  <p class="form-hint">Review the detected commands and enter only the secrets this project requires.</p>
 
   <div class="form-group">
     <label class="form-label" for="build_command">Build command</label>
@@ -30,7 +31,7 @@
   <div class="form-group" data-environment-fields hidden>
     <span class="form-label">Detected environment values</span>
     <p class="form-hint">Values are entered once and stored only in this app’s protected environment file.</p>
-    <div class="app-wizard__environment-list" data-environment-list></div>
+    <div data-environment-list></div>
   </div>
   <div class="alert alert--danger" data-configuration-error hidden></div>
 </section>
