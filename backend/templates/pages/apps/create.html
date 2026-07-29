@@ -37,7 +37,7 @@
   </div>
 </div>
 
-<form class="form" id="app-setup-form" method="post" action="/apps/create">
+<form class="wizard-form" id="app-setup-form" method="post" action="/apps/create">
   <input type="hidden" name="domain_id" value="{{ domain.id }}">
   <input type="hidden" name="ssl" value="{{ 'true' if ssl else 'false' }}">
   {% include "partials/csrf_field.html" %}
@@ -60,7 +60,7 @@
         </div>
 
         <div id="git-source">
-          <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px; margin-bottom: 24px;">
+          <div class="wizard-grid-2-1">
             <div>
               <label class="form-label" for="repository_url">Repository URL</label>
               <input class="form-input form-input--code" id="repository_url" name="repository_url" placeholder="https://github.com/owner/project.git" required>
@@ -122,7 +122,7 @@
           <span class="badge-pill">Auto Configured</span>
         </div>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px;">
+        <div class="wizard-grid-2col">
           <div>
             <label class="form-label" for="build_command">Build Command</label>
             <input class="form-input form-input--code" id="build_command" name="build_command" value="pip install -r requirements.txt">
