@@ -60,6 +60,14 @@
 {% block content %}
 
 <div class="usage-page is-data-loading" data-usage-page aria-busy="true">
+  <div class="live-skeleton-stack" aria-hidden="true">
+    <div class="live-skeleton"></div>
+    <div class="live-skeleton live-skeleton--block"></div>
+    <div class="live-skeleton"></div>
+    <div class="live-skeleton live-skeleton--block"></div>
+  </div>
+
+  <div class="usage-live-content">
 
 <!-- 1. OVERVIEW STAT CARDS -->
 {% include "pages/usage/partials/overview_stats.html" %}
@@ -76,6 +84,7 @@
 <!-- 5. STACK SERVICES & TOP PROCESSES TABLES -->
 {% include "pages/usage/partials/services_processes.html" %}
 
+  </div>
 </div>
 
 {% endblock %}

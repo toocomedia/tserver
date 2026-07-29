@@ -1,4 +1,4 @@
-/* Shared opt-in skeletons for live API regions. */
+/* Shared loading states and simple structural skeletons. */
 .top-progress-bar {
   position: fixed;
   top: 0;
@@ -21,7 +21,6 @@
 .top-progress-bar.done {
   width: 100%;
   opacity: 0;
-  transition: width 0.2s ease, opacity 0.4s ease;
 }
 
 @keyframes progress-pulse {
@@ -35,12 +34,7 @@
 }
 
 .skeleton-shimmer,
-.is-data-loading .usage-bar,
-[data-usage-page].is-data-loading .stat-card-box__val::after,
-[data-usage-page].is-data-loading .info-row:not(.data-skeleton-metric) .info-row__value::after,
-[data-update-skeleton].is-data-loading .info-row__value::after,
-[data-usage-page].is-data-loading .table tbody td::after,
-[data-usage-page].is-data-loading .data-skeleton-metric .usage-bar-wrap::after {
+.live-skeleton {
   background: linear-gradient(90deg, var(--color-surface) 25%, var(--color-header-bg-bar) 50%, var(--color-surface) 75%);
   background-size: 200% 100%;
   animation: skeleton-shimmer 1.5s infinite linear;
@@ -52,113 +46,29 @@
   margin: var(--space-md) 0;
 }
 
-[data-usage-page].is-data-loading .stat-card-box__val,
-[data-usage-page].is-data-loading .info-row:not(.data-skeleton-metric) .info-row__value,
-[data-update-skeleton].is-data-loading .info-row__value,
-[data-usage-page].is-data-loading .table tbody td {
-  position: relative;
-  color: transparent;
+.live-skeleton-stack {
+  display: none;
+  flex-direction: column;
+  gap: var(--space-xl);
 }
 
-[data-usage-page].is-data-loading .stat-card-box__val::after,
-[data-usage-page].is-data-loading .info-row:not(.data-skeleton-metric) .info-row__value::after,
-[data-update-skeleton].is-data-loading .info-row__value::after,
-[data-usage-page].is-data-loading .table tbody td::after {
-  content: "";
-  position: absolute;
-  top: 50%;
-  height: 0.9em;
-  transform: translateY(-50%);
+.live-skeleton {
+  width: 100%;
+  height: 38px;
 }
 
-[data-usage-page].is-data-loading .stat-card-box__val::after {
-  left: 0;
-  width: min(72%, 9ch);
+.live-skeleton--block {
+  height: 112px;
 }
 
-[data-usage-page].is-data-loading .info-row:not(.data-skeleton-metric) .info-row__value,
+.is-data-loading > .live-skeleton-stack {
+  display: flex;
+}
+
+.is-data-loading > .usage-live-content {
+  display: none;
+}
+
 [data-update-skeleton].is-data-loading .info-row__value {
-  flex: 1;
-  min-width: 0;
-  justify-content: flex-end;
-}
-
-[data-usage-page].is-data-loading .info-row:not(.data-skeleton-metric) .info-row__value::after,
-[data-update-skeleton].is-data-loading .info-row__value::after {
-  right: 0;
-  width: min(52%, 320px);
-}
-
-[data-usage-page].is-data-loading .table tbody td::after {
-  right: var(--space-lg);
-  left: var(--space-lg);
-}
-
-[data-usage-page].is-data-loading .data-skeleton-metric .info-row__value {
-  flex: 1;
-  min-width: 0;
-  justify-content: flex-end;
-}
-
-[data-usage-page].is-data-loading .data-skeleton-metric .usage-bar-wrap {
-  width: min(64%, 420px);
-  min-width: 220px;
-  flex: 0 1 420px;
-}
-
-[data-usage-page].is-data-loading .data-skeleton-metric .usage-bar__fill,
-[data-usage-page].is-data-loading .data-skeleton-metric .usage-bar__pct {
-  visibility: hidden;
-}
-
-[data-usage-page].is-data-loading .data-skeleton-metric .usage-bar-wrap::after {
-  content: "";
-  width: 38px;
-  height: 0.9em;
-  flex: 0 0 38px;
-}
-
-.is-data-loading .data-skeleton-details {
-  position: relative;
-  min-height: 112px;
-}
-
-.is-data-loading .data-skeleton-details > * {
-  visibility: hidden;
-}
-
-.is-data-loading .data-skeleton-details::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background-repeat: no-repeat;
-  background-image:
-    linear-gradient(90deg, var(--color-surface), var(--color-header-bg-bar), var(--color-surface)),
-    linear-gradient(90deg, var(--color-surface), var(--color-header-bg-bar), var(--color-surface)),
-    linear-gradient(90deg, var(--color-surface), var(--color-header-bg-bar), var(--color-surface)),
-    linear-gradient(90deg, var(--color-surface), var(--color-header-bg-bar), var(--color-surface)),
-    linear-gradient(90deg, var(--color-surface), var(--color-header-bg-bar), var(--color-surface)),
-    linear-gradient(90deg, var(--color-surface), var(--color-header-bg-bar), var(--color-surface));
-  background-position:
-    left 0 top 12px, right 0 top 12px,
-    left 0 top 50px, right 0 top 50px,
-    left 0 top 88px, right 0 top 88px;
-  background-size:
-    30% 12px, 52% 12px,
-    30% 12px, 52% 12px,
-    30% 12px, 52% 12px;
-}
-
-@media (max-width: 480px) {
-  [data-usage-page].is-data-loading .data-skeleton-metric .usage-bar-wrap {
-    width: 100%;
-    min-width: 0;
-  }
-
-  .is-data-loading .data-skeleton-details::after {
-    background-size:
-      38% 12px, 48% 12px,
-      38% 12px, 48% 12px,
-      38% 12px, 48% 12px;
-  }
+  color: transparent;
 }
