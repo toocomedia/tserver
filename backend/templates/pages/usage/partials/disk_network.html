@@ -6,9 +6,15 @@
       Disk Storage &amp; Mount Points
     </h3>
   </div>
-  <div class="section__body" id="disk-section">
-    <div class="info-row">
-      <span class="info-row__label text-muted">Loading storage diagnostics…</span>
+  <div class="section__body is-data-loading" data-live-section="disk">
+    <div class="live-section-skeleton skeleton-info-rows" aria-hidden="true">
+      <div class="skeleton-info-row"><div class="skeleton-info-label skeleton-line"></div><div class="skeleton-info-val skeleton-line"></div></div>
+      <div class="skeleton-info-row"><div class="skeleton-info-label skeleton-line"></div><div class="skeleton-info-val skeleton-line"></div></div>
+    </div>
+    <div class="live-section-content" id="disk-section">
+      <div class="info-row">
+        <span class="info-row__label text-muted">Loading storage diagnostics…</span>
+      </div>
     </div>
   </div>
 </div>
@@ -21,22 +27,31 @@
       Network Interfaces &amp; Bandwidth I/O
     </h3>
   </div>
-  <div class="section__body">
-    <div class="info-row">
-      <span class="info-row__label">Total Sent</span>
-      <span class="info-row__value" id="net-sent">—</span>
+  <div class="section__body is-data-loading" data-live-section="net">
+    <div class="live-section-skeleton skeleton-info-rows" aria-hidden="true">
+      <div class="skeleton-info-row"><div class="skeleton-info-label skeleton-line"></div><div class="skeleton-info-val skeleton-line"></div></div>
+      <div class="skeleton-info-row"><div class="skeleton-info-label skeleton-line"></div><div class="skeleton-info-val skeleton-line"></div></div>
+      <div class="skeleton-info-row"><div class="skeleton-info-label skeleton-line"></div><div class="skeleton-info-val skeleton-line"></div></div>
+      <div class="skeleton-info-row"><div class="skeleton-info-label skeleton-line"></div><div class="skeleton-info-val skeleton-line"></div></div>
     </div>
-    <div class="info-row">
-      <span class="info-row__label">Total Received</span>
-      <span class="info-row__value" id="net-recv">—</span>
-    </div>
-    <div class="info-row">
-      <span class="info-row__label">Packets Sent</span>
-      <span class="info-row__value text-muted" id="net-pkts-sent">—</span>
-    </div>
-    <div class="info-row">
-      <span class="info-row__label">Packets Recv</span>
-      <span class="info-row__value text-muted" id="net-pkts-recv">—</span>
+    <div class="live-section-content">
+      <div class="info-row">
+        <span class="info-row__label">Total Sent</span>
+        <span class="info-row__value" id="net-sent">—</span>
+      </div>
+      <div class="info-row">
+        <span class="info-row__label">Total Received</span>
+        <span class="info-row__value" id="net-recv">—</span>
+      </div>
+      <div class="info-row">
+        <span class="info-row__label">Packets Sent</span>
+        <span class="info-row__value text-muted" id="net-pkts-sent">—</span>
+      </div>
+      <div class="info-row">
+        <span class="info-row__label">Packets Recv</span>
+        <span class="info-row__value text-muted" id="net-pkts-recv">—</span>
+      </div>
     </div>
   </div>
 </div>
+

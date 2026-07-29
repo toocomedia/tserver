@@ -59,7 +59,7 @@
 
 {% block content %}
 
-<div class="usage-page is-data-loading" data-usage-page data-live-skeleton aria-busy="true">
+<div class="usage-page" data-usage-page>
 
 <!-- 1. OVERVIEW STAT CARDS -->
 {% include "pages/usage/partials/overview_stats.html" %}
@@ -87,11 +87,20 @@
   const INTERVAL = 3000;
   let isActionPending = false;
 
-  function setUsageLoading(loading) {
-    const root = document.querySelector('[data-usage-page]');
-    if (!root) return;
-    root.classList.toggle('is-data-loading', loading);
-    root.setAttribute('aria-busy', String(loading));
+  function setUsageLoading(loading, target = null) {
+    if (target) {
+      const el = typeof target === 'string' ? document.querySelector(target) : target;
+      if (el) {
+        el.classList.toggle('is-data-loading', loading);
+        el.setAttribute('aria-busy', String(loading));
+      }
+      return;
+    }
+    const sections = document.querySelectorAll('[data-live-section]');
+    sections.forEach(sec => {
+      sec.classList.toggle('is-data-loading', loading);
+      sec.setAttribute('aria-busy', String(loading));
+    });
   }
 
   function markUsageUpdated(message = '') {

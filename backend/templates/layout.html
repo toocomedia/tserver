@@ -158,7 +158,7 @@ document.addEventListener("DOMContentLoaded", function() {
     if (!url) return;
     
     // Insert skeleton shimmer
-    container.innerHTML = '<div class="skeleton-shimmer"></div>';
+    container.innerHTML = '<div class="skeleton-shimmer skeleton-shimmer-box"></div>';
     
     fetch(url, {
       headers: { "X-Requested-With": "XMLHttpRequest", "Accept": "text/html" }
