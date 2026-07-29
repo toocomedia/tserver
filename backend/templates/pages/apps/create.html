@@ -3,10 +3,11 @@
 {% block page_title %}Deploy Python App{% endblock %}
 
 {% block content %}
-<div style="margin-bottom: 28px;">
-  <h1 class="panel-heading">Deploy Python Application</h1>
-  <p class="panel-subheading">Target Hostname: <span class="mono" style="color:var(--color-text); font-weight:700;">{{ domain.name }}</span></p>
+<div style="margin-bottom: 24px; margin-top: -8px;">
+  <p class="text-muted" style="font-size: 14px;">Target Hostname: <span class="mono" style="color:var(--color-text); font-weight:700;">{{ domain.name }}</span></p>
 </div>
+
+<div style="padding-bottom: 90px;">
 
 {% if notice %}
   <div class="alert alert--warning" style="margin-bottom: 24px;">{{ notice }}</div>
@@ -209,6 +210,7 @@
     </div>
   </div>
 </form>
+</div>
 {% endblock %}
 
 {% block scripts %}
