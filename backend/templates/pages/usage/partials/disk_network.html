@@ -1,25 +1,20 @@
 <!-- DISK MOUNTS & STORAGE -->
-<div class="section mb-xl" data-live-section="rows">
+<div class="section mb-xl">
   <div class="section__header">
     <h3 style="display:flex; align-items:center; gap:8px;">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px; height:15px;"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
       Disk Storage &amp; Mount Points
     </h3>
   </div>
-  <div class="section__body">
-    <div class="live-section-skeleton" aria-hidden="true">
-      <div class="live-skeleton-line"></div>
-    </div>
-    <div class="live-section-content" id="disk-section">
-      <div class="info-row">
-        <span class="info-row__label text-muted">No storage diagnostics available.</span>
-      </div>
+  <div class="section__body" id="disk-section">
+    <div class="info-row">
+      <span class="info-row__label text-muted">Loading storage diagnostics…</span>
     </div>
   </div>
 </div>
 
 <!-- NETWORK I/O METRICS -->
-<div class="section mb-xl" data-live-section="rows">
+<div class="section mb-xl">
   <div class="section__header">
     <h3 style="display:flex; align-items:center; gap:8px;">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px; height:15px;"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
@@ -27,11 +22,6 @@
     </h3>
   </div>
   <div class="section__body">
-    <div class="live-section-skeleton" aria-hidden="true">
-      <div class="live-skeleton-line"></div>
-    </div>
-    <div class="live-section-content">
-
     <div class="info-row">
       <span class="info-row__label">Total Sent</span>
       <span class="info-row__value" id="net-sent">—</span>
@@ -47,8 +37,6 @@
     <div class="info-row">
       <span class="info-row__label">Packets Recv</span>
       <span class="info-row__value text-muted" id="net-pkts-recv">—</span>
-    </div>
-
     </div>
   </div>
 </div>
