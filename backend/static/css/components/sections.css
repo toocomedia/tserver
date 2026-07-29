@@ -191,3 +191,121 @@
 .ssl-step--run { color: var(--color-text); font-weight: 700; }
 .ssl-step--ok { color: var(--color-accent-2); }
 .ssl-step--fail { color: var(--color-danger); font-weight: 700; }
+
+/* Smart Master Card & Hero App Box Components */
+.master-card {
+  border: 1px solid var(--color-line);
+  background: var(--color-bg);
+  margin-bottom: 28px;
+}
+.master-card__header {
+  padding: 14px 24px;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-line);
+  font-size: 14px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.master-card__body {
+  padding: 24px;
+}
+
+.hero-app-box {
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  padding: 24px;
+  margin-bottom: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+.hero-stats {
+  display: flex;
+  gap: 28px;
+  margin-top: 10px;
+  font-size: 14px;
+  color: var(--color-muted);
+  flex-wrap: wrap;
+}
+
+.fixed-action-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--color-bg);
+  border-top: 1px solid var(--color-line);
+  padding: 16px 0;
+  z-index: 90;
+}
+.fixed-action-inner {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 0 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.terminal-fluid {
+  background: #0B0F17;
+  border: 1px solid var(--color-line);
+  padding: 20px 24px;
+  font-family: var(--font-mono, monospace);
+  font-size: 13px;
+  color: #E5E7EB;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+.term-accent { color: var(--color-accent); font-weight: 600; }
+
+.step-bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 36px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--color-line);
+  flex-wrap: wrap;
+}
+.step-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-muted);
+  cursor: pointer;
+  padding: 8px 16px;
+  transition: all 0.15s;
+}
+.step-item.active {
+  color: var(--color-on-accent, #0F1720);
+  background: var(--color-accent);
+  font-weight: 700;
+}
+.step-item.completed {
+  color: var(--color-text);
+  background: var(--color-surface);
+}
+
+.badge-pill {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 12px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.badge-pill--accent {
+  background: var(--color-accent);
+  color: var(--color-on-accent, #0F1720);
+}
+

@@ -1,34 +1,60 @@
-<section class="section" id="configuration">
-  <div class="section__header"><h3>Configuration</h3></div>
-  <div class="section__body grid-2">
-    <details class="panel">
-      <summary class="panel__header"><strong>Runtime configuration</strong></summary>
-      <div class="panel__body">
-        <div class="info-row"><span class="info-row__label">Source</span><span class="info-row__value">{{ app.source_type | upper }}</span></div>
-        <form class="form" method="post" action="/apps/{{ app.id }}/settings">
-          {% include "partials/csrf_field.html" %}
-          <div class="form-group"><label class="form-label" for="build_command">Build command</label><input class="form-input form-input--code" id="build_command" name="build_command" value="{{ app.build_command }}" required></div>
-          <div class="form-group"><label class="form-label" for="start_command">Start command</label><input class="form-input form-input--code" id="start_command" name="start_command" value="{{ app.start_command }}" required></div>
-          <div class="form-actions">
-            <button class="btn btn--secondary">Save commands</button>
-            <button class="btn btn--secondary" formmethod="post" formaction="/apps/{{ app.id }}/detect">Detect again</button>
-          </div>
-        </form>
-      </div>
-    </details>
-    <details class="panel" id="environment">
-      <summary class="panel__header"><strong>Environment and storage</strong></summary>
-      <div class="panel__body">
-        <div class="info-row"><span class="info-row__label">Database</span><span class="info-row__value">{% if app.postgres_mode == 'create' %}Managed PostgreSQL{% elif app.postgres_mode == 'external' %}External DATABASE_URL{% else %}No managed database{% endif %}</span></div>
-        <p class="text-muted">Environment values are protected and never shown after saving.</p>
-        {% if environment_keys %}<div class="form-actions">{% for key in environment_keys %}<form method="post" action="/apps/{{ app.id }}/environment/{{ key }}/delete">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary" title="Delete {{ key }}">{{ key }} ×</button></form>{% endfor %}</div>{% endif %}
-        <form method="post" action="/apps/{{ app.id }}/environment" class="form-actions">
-          {% include "partials/csrf_field.html" %}
-          <input class="form-input" name="key" placeholder="VARIABLE_NAME" aria-label="Environment variable name" required>
-          <input class="form-input" name="value" type="password" placeholder="Value" aria-label="Environment variable value" required>
-          <button class="btn btn--secondary">Save variable</button>
-        </form>
-      </div>
-    </details>
+<div class="master-card" id="configuration">
+  <div class="master-card__header">
+    <span>Runtime & Environment Settings</span>
+    <span class="badge-pill">{{ app.source_type | upper }}</span>
   </div>
-</section>
+
+  <div class="master-card__body">
+    <!-- RUNTIME COMMANDS -->
+    <form class="form" method="post" action="/apps/{{ app.id }}/settings">
+      {% include "partials/csrf_field.html" %}
+      
+      <div class="form-group">
+        <label class="form-label" for="build_command">Build Command</label>
+        <input class="form-input form-input--code" id="build_command" name="build_command" value="{{ app.build_command }}" required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="start_command">Start Command</label>
+        <input class="form-input form-input--code" id="start_command" name="start_command" value="{{ app.start_command }}" required>
+      </div>
+
+      <div style="display: flex; gap: 10px; margin-bottom: 24px;">
+        <button class="btn btn--secondary btn--sm" style="flex:1;">Save Commands</button>
+        <button class="btn btn--secondary btn--sm" formmethod="post" formaction="/apps/{{ app.id }}/detect">Detect Again</button>
+      </div>
+    </form>
+
+    <!-- ENVIRONMENT VARIABLES -->
+    <div style="border-top: 1px solid var(--color-line); padding-top: 20px;" id="environment">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+        <strong style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-muted);">Environment Keys</strong>
+        <span class="badge-pill">{% if environment_keys %}{{ environment_keys | length }} Keys{% else %}0 Keys{% endif %}</span>
+      </div>
+
+      <div class="info-row">
+        <span class="info-row__label">Managed Database</span>
+        <span class="info-row__value">{% if app.postgres_mode == 'create' %}Managed PostgreSQL{% elif app.postgres_mode == 'external' %}External DATABASE_URL{% else %}None{% endif %}</span>
+      </div>
+
+      {% if environment_keys %}
+        {% for key in environment_keys %}
+        <div class="info-row">
+          <span class="info-row__value mono">{{ key }}</span>
+          <form method="post" action="/apps/{{ app.id }}/environment/{{ key }}/delete" style="display:inline;">
+            {% include "partials/csrf_field.html" %}
+            <button class="btn btn--danger btn--sm" style="padding:2px 8px; font-size:11px;" title="Delete {{ key }}">Delete</button>
+          </form>
+        </div>
+        {% endfor %}
+      {% endif %}
+
+      <form method="post" action="/apps/{{ app.id }}/environment" style="display: flex; gap: 8px; margin-top: 16px;">
+        {% include "partials/csrf_field.html" %}
+        <input class="form-input" name="key" placeholder="VARIABLE_NAME" aria-label="Environment variable name" required style="padding: 8px 10px; font-size: 12px;">
+        <input class="form-input" name="value" type="password" placeholder="Value" aria-label="Environment variable value" required style="padding: 8px 10px; font-size: 12px;">
+        <button class="btn btn--secondary btn--sm">Add</button>
+      </form>
+    </div>
+  </div>
+</div>

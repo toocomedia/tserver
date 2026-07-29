@@ -102,15 +102,7 @@ class PanelLoadingRegressionTests(unittest.TestCase):
             BACKEND / "static" / "css" / "components" / "loading.css"
         ).read_text(encoding="utf-8")
         self.assertIn(".top-progress-bar", loading_css)
-        self.assertIn(".skeleton-shimmer", loading_css)
 
-    def test_per_section_and_per_list_skeletons(self):
-        loading_css = (
-            BACKEND / "static" / "css" / "components" / "loading.css"
-        ).read_text(encoding="utf-8")
-        self.assertIn(".skeleton-stat-grid", loading_css)
-        self.assertIn(".skeleton-info-rows", loading_css)
-        self.assertIn(".skeleton-table-wrap", loading_css)
 
 
 

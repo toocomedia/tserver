@@ -1,44 +1,86 @@
 {% extends "layout.html" %}
 {% block title %}{{ app.service_name }} — {{ PANEL_NAME }}{% endblock %}
 {% block page_title %}Python App{% endblock %}
+
 {% block topbar_actions %}
-  <a class="btn btn--secondary" href="/apps/{{ app.id }}/logs">Service logs</a>
+  <a class="btn btn--secondary" href="/apps/{{ app.id }}/logs">
+    <i data-lucide="terminal" style="width:14px;height:14px;"></i> Service Journal Logs
+  </a>
 {% endblock %}
+
 {% block content %}
-{% if notice %}<div class="alert alert--success section">{{ notice }}</div>{% endif %}
-{% if error %}<div class="alert alert--danger section">{{ error }}</div>{% endif %}
+{% if notice %}<div class="alert alert--success" style="margin-bottom: 20px;">{{ notice }}</div>{% endif %}
+{% if error %}<div class="alert alert--danger" style="margin-bottom: 20px;">{{ error }}</div>{% endif %}
 {% if missing_dependencies %}
-<div class="alert alert--danger section">
-  PostgreSQL is stopped. Start it before running this app.
+<div class="alert alert--danger" style="margin-bottom: 20px; display:flex; align-items:center; justify-content:space-between;">
+  <span>PostgreSQL is stopped. Start it before running this app.</span>
   <a class="btn btn--primary btn--sm" href="{{ missing_dependency_url }}">Open PostgreSQL</a>
 </div>
 {% endif %}
-<div class="stat-grid">
-  <div class="stat-card-box">
-    <span class="stat-card-box__label">Status</span>
-    <strong class="stat-card-box__val"><span class="status-badge {% if app.status == 'running' %}status-badge--success{% elif app.status in ('failed', 'stopped', 'paused') %}status-badge--warning{% else %}status-badge--muted{% endif %}">{{ app.status | title }}</span></strong>
-    <span class="stat-card-box__meta">Python service</span>
+
+<!-- HERO APP BANNER BOX -->
+<div class="hero-app-box">
+  <div>
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <h1 style="font-size: 24px; font-weight: 700; margin: 0;">{{ app.service_name }}</h1>
+      <span class="badge-pill {% if app.status == 'running' %}badge-pill--accent{% else %}badge-pill{% endif %}">
+        <i data-lucide="{% if app.status == 'running' %}check-circle{% else %}activity{% endif %}" style="width:14px;height:14px;"></i>
+        {{ app.status | title }}
+      </span>
+    </div>
+
+    <div class="hero-stats">
+      <span>URL: {% if domain %}<a href="{{ public_url(domain.name, https=app.ssl_requested) }}" target="_blank" rel="noopener" style="color:var(--color-text); font-weight:700;">{{ domain.name }}</a>{% else %}<span class="text-muted">Domain removed</span>{% endif %}</span>
+      <span>Port: <span class="mono" style="color:var(--color-text); font-weight:600;">127.0.0.1:{{ app.port }}</span></span>
+      <span>SSL: <span style="color:var(--color-text); font-weight:600;">{{ 'HTTPS active' if app.ssl_requested else 'HTTP only' }}</span></span>
+    </div>
   </div>
-  <div class="stat-card-box">
-    <span class="stat-card-box__label">Public URL</span>
-    <strong class="stat-card-box__val">{% if domain %}<a href="{{ public_url(domain.name, https=app.ssl_requested) }}" target="_blank" rel="noopener">{{ domain.name }}</a>{% else %}Domain removed{% endif %}</strong>
-    <span class="stat-card-box__meta">{{ 'HTTPS enabled' if app.ssl_requested else 'HTTP only' }}</span>
+
+  <!-- SERVICE CONTROL QUICK ACTIONS -->
+  {% set deployment_active = deployment and deployment.status in ('queued', 'running') %}
+  {% set deletion_active = app.status == 'deleting' %}
+  {% set deletion_failed = app.status == 'delete_failed' %}
+  {% if not deletion_active and not deletion_failed %}
+  <div style="display: flex; gap: 8px;">
+    {% if missing_dependencies %}
+      <a class="btn btn--primary btn--sm" href="{{ missing_dependency_url }}">Start PostgreSQL</a>
+    {% elif app.status == 'paused' %}
+      <form method="post" action="/apps/{{ app.id }}/start">{% include "partials/csrf_field.html" %}<button class="btn btn--accent btn--sm">Resume</button></form>
+    {% elif app.status == 'stopped' %}
+      <form method="post" action="/apps/{{ app.id }}/start">{% include "partials/csrf_field.html" %}<button class="btn btn--accent btn--sm"{% if deployment_active %} disabled{% endif %}>Start</button></form>
+    {% else %}
+      <form method="post" action="/apps/{{ app.id }}/restart">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary btn--sm"{% if deployment_active %} disabled{% endif %}><i data-lucide="rotate-cw" style="width:13px;height:13px;"></i> Restart</button></form>
+      <form method="post" action="/apps/{{ app.id }}/stop">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary btn--sm"><i data-lucide="square" style="width:13px;height:13px;"></i> Stop</button></form>
+    {% endif %}
+    <form method="post" action="/apps/{{ app.id }}/deploy">{% include "partials/csrf_field.html" %}<button class="btn {% if app.status == 'pending' and not app.deployed_revision %}btn--accent{% else %}btn--secondary{% endif %} btn--sm"{% if deployment_active %} disabled{% endif %}><i data-lucide="refresh-cw" style="width:13px;height:13px;"></i> {% if app.status == 'pending' and not app.deployed_revision %}Deploy App{% else %}Redeploy{% endif %}</button></form>
   </div>
-  <div class="stat-card-box">
-    <span class="stat-card-box__label">Private address</span>
-    <strong class="stat-card-box__val"><code>127.0.0.1:{{ app.port }}</code></strong>
-    <span class="stat-card-box__meta">Not public directly</span>
-  </div>
+  {% endif %}
 </div>
 
-{% include "pages/apps/partials/update.html" %}
-{% include "pages/apps/partials/deployment.html" %}
-{% include "pages/apps/partials/configuration.html" %}
-{% include "pages/apps/partials/controls.html" %}
+<!-- 2-COLUMN LAYOUT WITH SMART MASTER CARDS -->
+<div class="layout-2col">
+  <!-- LEFT COLUMN: DEPLOYMENT STREAM & GIT SOURCE SYNC -->
+  <div>
+    {% include "pages/apps/partials/deployment.html" %}
+    {% include "pages/apps/partials/update.html" %}
+  </div>
+
+  <!-- RIGHT COLUMN: RUNTIME SETTINGS & ENV VARS & DANGER ZONE -->
+  <div>
+    {% include "pages/apps/partials/configuration.html" %}
+    {% include "pages/apps/partials/controls.html" %}
+  </div>
+</div>
 {% endblock %}
+
 {% block scripts %}
 {% if deployment and deployment.status in ('queued', 'running') %}
 <script src="/static/js/modules/app-deployment.js"></script>
 {% endif %}
 <script type="module" src="/static/js/modules/app-delete.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+});
+</script>
 {% endblock %}

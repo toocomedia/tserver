@@ -1,33 +1,298 @@
 {% extends "layout.html" %}
 {% block title %}Deploy Python App — {{ PANEL_NAME }}{% endblock %}
 {% block page_title %}Deploy Python App{% endblock %}
+
 {% block content %}
-<section class="section"><div class="section__header"><h3>{{ domain.name }}</h3></div><div class="section__body"><p class="text-muted">Choose a source. One-click deploy is used when the panel can safely detect everything; otherwise use Advanced Setup.</p>{% if notice %}<p class="alert alert--warning">{{ notice }}</p>{% endif %}</div></section>
+<div style="margin-bottom: 28px;">
+  <h1 class="panel-heading">Deploy Python Application</h1>
+  <p class="panel-subheading">Target Hostname: <span class="mono" style="color:var(--color-text); font-weight:700;">{{ domain.name }}</span></p>
+</div>
 
-<form class="form" id="app-setup-form" method="post" enctype="multipart/form-data"><input type="hidden" name="domain_id" value="{{ domain.id }}"><input type="hidden" name="ssl" value="{{ 'true' if ssl else 'false' }}">{% include "partials/csrf_field.html" %}
-<section class="section"><div class="section__header"><h3>1. Source</h3></div><div class="section__body">
-  <div class="form-group"><label class="form-label" for="source_type">Application source</label><div class="form-select-wrap"><select class="form-select" id="source_type" name="source_type"><option value="git">Git repository</option><option value="zip" disabled>ZIP upload — Coming soon</option></select></div></div>
-  <div id="git-source"><div class="form-group"><label class="form-label" for="repository_url">Repository URL</label><input class="form-input" id="repository_url" name="repository_url" placeholder="https://github.com/owner/project.git"></div><div class="form-group"><label class="form-label" for="branch">Branch</label><input class="form-input" id="branch" name="branch" value="main"></div></div>
-  <div class="form-actions"><button class="btn btn--secondary" id="inspect-repository" type="button">Detect project</button><span class="form-hint" id="inspect-message">The panel reads files only. It never runs source code during detection.</span></div>
-</div></section>
+{% if notice %}
+  <div class="alert alert--warning" style="margin-bottom: 24px;">{{ notice }}</div>
+{% endif %}
 
-<section class="section" id="detection-section"><div class="section__header"><h3>2. Detected setup</h3></div><div class="section__body"><p class="text-muted" id="detection-result">Run Detect project to see the framework, entrypoint, dependencies, environment, and storage hints.</p></div></section>
+<!-- STEP PROGRESS BAR -->
+<div class="step-bar">
+  <div class="step-item active" id="step-btn-1" onclick="jumpToStep(1)">
+    <span class="step-num">01</span>
+    <span>1. Git Source</span>
+  </div>
+  <div class="step-item" id="step-btn-2" onclick="jumpToStep(2)">
+    <span class="step-num">02</span>
+    <span>2. Auto-Detection</span>
+  </div>
+  <div class="step-item" id="step-btn-3" onclick="jumpToStep(3)">
+    <span class="step-num">03</span>
+    <span>3. Configuration & DB</span>
+  </div>
+  <div class="step-item" id="step-btn-4" onclick="jumpToStep(4)">
+    <span class="step-num">04</span>
+    <span>4. Deploy & Launch</span>
+  </div>
+</div>
 
-<section class="section"><div class="section__header"><h3>3. Deploy</h3></div><div class="section__body"><div class="form-actions"><button class="btn btn--primary" formaction="/apps/quick-deploy" type="submit">One-Click Deploy</button><button class="btn btn--secondary" id="advanced-toggle" type="button">Advanced Setup</button><a class="btn btn--secondary" href="/domains/{{ domain.id }}">Back to Domain</a></div><p class="form-hint">One-click deploy uses the detected configuration only when it is safe. It opens Advanced Setup when review is needed.</p></div></section>
+<form class="form" id="app-setup-form" method="post" enctype="multipart/form-data">
+  <input type="hidden" name="domain_id" value="{{ domain.id }}">
+  <input type="hidden" name="ssl" value="{{ 'true' if ssl else 'false' }}">
+  {% include "partials/csrf_field.html" %}
 
-<section class="section is-hidden" id="advanced-setup"><div class="section__header"><h3>4. Advanced setup</h3></div><div class="section__body">
-  <div class="form-group"><label class="form-label" for="build_command">Build command</label><input class="form-input form-input--code" id="build_command" name="build_command" value="pip install -r requirements.txt"></div>
-  <div class="form-group"><label class="form-label" for="start_command">Start command</label><input class="form-input form-input--code" id="start_command" name="start_command" value="uvicorn main:app --host $HOST --port $PORT"></div>
-  <div class="form-group"><label class="form-label" for="postgres_mode">PostgreSQL</label><div class="form-select-wrap"><select class="form-select" id="postgres_mode" name="postgres_mode"><option value="none">No managed database</option><option value="create">Create a local PostgreSQL database</option><option value="external">Use external DATABASE_URL</option></select></div></div>
-  <div class="form-group is-hidden" id="external-db"><label class="form-label" for="database_url">DATABASE_URL</label><input class="form-input form-input--code" id="database_url" name="database_url" type="password"></div>
-  <button class="btn btn--primary" formaction="/apps/create" type="submit">Create App Setup</button>
-</div></section>
+  <div class="wizard-content-area" style="min-height: 320px;">
+    <!-- STEP 1: GIT SOURCE -->
+    <div id="wizard-step-1">
+      <div class="master-card">
+        <div class="master-card__header">
+          <span>Step 1: Connect Git Repository</span>
+          <span class="badge-pill">Safe Inspection Mode</span>
+        </div>
+
+        <div class="master-card__body">
+          <div class="form-group" style="margin-bottom: 20px;">
+            <label class="form-label" for="source_type">Application Source</label>
+            <div class="form-select-wrap">
+              <select class="form-select" id="source_type" name="source_type">
+                <option value="git" selected>Git Repository</option>
+                <option value="zip" disabled>ZIP Upload — Coming soon</option>
+              </select>
+            </div>
+          </div>
+
+          <div id="git-source">
+            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px; margin-bottom: 20px;">
+              <div>
+                <label class="form-label" for="repository_url">Repository URL</label>
+                <input class="form-input form-input--code" id="repository_url" name="repository_url" placeholder="https://github.com/owner/project.git">
+              </div>
+              <div>
+                <label class="form-label" for="branch">Branch</label>
+                <input class="form-input form-input--code" id="branch" name="branch" value="main">
+              </div>
+            </div>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 16px; margin-top: 12px;">
+            <button class="btn btn--secondary" id="inspect-repository" type="button">
+              <i data-lucide="search" style="width:16px;height:16px;"></i> Detect Project Files
+            </button>
+            <span class="form-hint" id="inspect-message" style="margin: 0;">The panel reads files safely. It never executes source code during detection.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2: DETECTED SETUP -->
+    <div id="wizard-step-2" class="is-hidden">
+      <div class="master-card">
+        <div class="master-card__header">
+          <span style="display:flex; align-items:center; gap:10px;">
+            <i class="devicon-fastapi-plain" style="font-size:22px;"></i>
+            Step 2: Auto-Detection Summary
+          </span>
+          <span class="badge-pill badge-pill--accent" id="detection-badge"><i data-lucide="check" style="width:14px;height:14px;"></i> Ready</span>
+        </div>
+
+        <div class="master-card__body">
+          <p class="text-muted" id="detection-result" style="font-size: 14px; line-height: 1.6;">
+            Run <strong style="color:var(--color-text);">Detect project</strong> to see detected framework, entrypoint, dependencies, environment, and database hints.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3: CONFIGURATION & DATABASE -->
+    <div id="wizard-step-3" class="is-hidden">
+      <div class="master-card">
+        <div class="master-card__header">Step 3: Runtime Commands & Managed Database</div>
+
+        <div class="master-card__body">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px;">
+            <div>
+              <label class="form-label" for="build_command">Build Command</label>
+              <input class="form-input form-input--code" id="build_command" name="build_command" value="pip install -r requirements.txt">
+            </div>
+            <div>
+              <label class="form-label" for="start_command">Start Command</label>
+              <input class="form-input form-input--code" id="start_command" name="start_command" value="uvicorn main:app --host $HOST --port $PORT">
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 20px;">
+            <label class="form-label" for="postgres_mode">PostgreSQL Database</label>
+            <div class="form-select-wrap">
+              <select class="form-select" id="postgres_mode" name="postgres_mode">
+                <option value="none">No managed database</option>
+                <option value="create" selected>Create a local PostgreSQL database</option>
+                <option value="external">Use external DATABASE_URL</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group is-hidden" id="external-db">
+            <label class="form-label" for="database_url">DATABASE_URL</label>
+            <input class="form-input form-input--code" id="database_url" name="database_url" type="password">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 4: DEPLOY & LAUNCH -->
+    <div id="wizard-step-4" class="is-hidden">
+      <div class="master-card">
+        <div class="master-card__header">
+          <span>Step 4: Launch Application</span>
+          <span class="badge-pill badge-pill--accent">1-Click Ready</span>
+        </div>
+
+        <div class="master-card__body">
+          <p style="font-size: 14px; color: var(--color-muted); margin-bottom: 20px;">
+            Review your configuration below before launching. The panel will create the virtualenv, configure Nginx, and start the systemd service.
+          </p>
+
+          <div style="display: flex; gap: 12px;">
+            <button class="btn btn--accent" formaction="/apps/quick-deploy" type="submit">
+              <i data-lucide="rocket" style="width:16px;height:16px;"></i> One-Click Deploy Now
+            </button>
+            <button class="btn btn--secondary" formaction="/apps/create" type="submit">
+              Custom Create Setup
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FIXED BOTTOM ACTION BAR (NAV BUTTONS NEVER MOVE) -->
+  <div class="fixed-action-bar" id="deploy-fixed-bar">
+    <div class="fixed-action-inner">
+      <button class="btn btn--secondary" id="btn-prev-step" type="button" onclick="prevStep()">
+        <i data-lucide="arrow-left" style="width:16px;height:16px;"></i> Back
+      </button>
+
+      <span style="font-size: 13px; color: var(--color-muted);" id="step-hint">Step 1 of 4: Git Source</span>
+
+      <div style="display: flex; gap: 10px;">
+        <a class="btn btn--secondary" href="/domains/{{ domain.id }}">Cancel</a>
+        <button class="btn btn--accent" id="btn-next-step" type="button" onclick="nextStep()">
+          Continue to Detection <i data-lucide="arrow-right" style="width:16px;height:16px;"></i>
+        </button>
+      </div>
+    </div>
+  </div>
 </form>
 {% endblock %}
-{% block scripts %}<script>
-const form=document.getElementById('app-setup-form'), repo=document.getElementById('repository_url'), inspect=document.getElementById('inspect-repository'), message=document.getElementById('inspect-message'), result=document.getElementById('detection-result'), advanced=document.getElementById('advanced-setup'), dbMode=document.getElementById('postgres_mode'), external=document.getElementById('external-db');
-function syncDb(){external.classList.toggle('is-hidden',dbMode.value!=='external');document.getElementById('database_url').required=dbMode.value==='external';}
-repo.required=true;dbMode.addEventListener('change',syncDb);syncDb();
-document.getElementById('advanced-toggle').addEventListener('click',()=>advanced.classList.toggle('is-hidden'));
-inspect.addEventListener('click',async()=>{if(!repo.value.trim()){message.textContent='Enter a repository URL first.';return;}inspect.disabled=true;message.textContent='Detecting project files...';try{const data=new FormData(form);const response=await fetch('/apps/inspect',{method:'POST',headers:{'X-CSRF-Token':document.querySelector('[name="csrf_token"]').value},body:data});const detected=await response.json();if(!response.ok)throw new Error(detected.detail||'Detection failed.');if(detected.repository_url)repo.value=detected.repository_url;if(detected.branch)document.getElementById('branch').value=detected.branch;document.getElementById('build_command').value=detected.build_command||'';document.getElementById('start_command').value=detected.start_command||'';const notes=[`Detected ${detected.framework} with ${detected.package_manager}.`,detected.entrypoints.length?`Entrypoint: ${detected.entrypoints.join(', ')}.`:'',detected.environment_names.length?`Environment names: ${detected.environment_names.join(', ')}.`:'',detected.sqlite_suspected?'SQLite detected; keep database files in APP_DATA_DIR.':'',detected.warnings.join(' ')].filter(Boolean);result.textContent=notes.join(' ');message.textContent=detected.can_quick_deploy?'Ready for One-Click Deploy.':'Review needed: open Advanced Setup.';}catch(error){message.textContent=error.message||'Detection failed.';}finally{inspect.disabled=false;}});
-</script>{% endblock %}
+
+{% block scripts %}
+<script>
+let currentWizardStep = 1;
+const form = document.getElementById('app-setup-form');
+const repo = document.getElementById('repository_url');
+const inspect = document.getElementById('inspect-repository');
+const message = document.getElementById('inspect-message');
+const result = document.getElementById('detection-result');
+const dbMode = document.getElementById('postgres_mode');
+const external = document.getElementById('external-db');
+
+function syncDb() {
+  external.classList.toggle('is-hidden', dbMode.value !== 'external');
+  document.getElementById('database_url').required = dbMode.value === 'external';
+}
+repo.required = true;
+dbMode.addEventListener('change', syncDb);
+syncDb();
+
+function jumpToStep(stepNum) {
+  currentWizardStep = stepNum;
+  for (let i = 1; i <= 4; i++) {
+    const stepPanel = document.getElementById('wizard-step-' + i);
+    const stepBtn = document.getElementById('step-btn-' + i);
+    if (stepPanel) {
+      if (i === stepNum) stepPanel.classList.remove('is-hidden');
+      else stepPanel.classList.add('is-hidden');
+    }
+    if (stepBtn) {
+      stepBtn.classList.remove('active', 'completed');
+      if (i === stepNum) stepBtn.classList.add('active');
+      else if (i < stepNum) stepBtn.classList.add('completed');
+    }
+  }
+
+  const btnPrev = document.getElementById('btn-prev-step');
+  const btnNext = document.getElementById('btn-next-step');
+  const hint = document.getElementById('step-hint');
+
+  if (btnPrev) btnPrev.style.visibility = stepNum === 1 ? 'hidden' : 'visible';
+
+  if (hint) {
+    if (stepNum === 1) hint.textContent = 'Step 1 of 4: Git Source';
+    else if (stepNum === 2) hint.textContent = 'Step 2 of 4: Detection';
+    else if (stepNum === 3) hint.textContent = 'Step 3 of 4: Configuration & DB';
+    else if (stepNum === 4) hint.textContent = 'Step 4 of 4: Deploy & Launch';
+  }
+
+  if (btnNext) {
+    if (stepNum === 1) btnNext.innerHTML = 'Continue to Detection <i data-lucide="arrow-right" style="width:16px;height:16px;"></i>';
+    else if (stepNum === 2) btnNext.innerHTML = 'Continue to Config <i data-lucide="arrow-right" style="width:16px;height:16px;"></i>';
+    else if (stepNum === 3) btnNext.innerHTML = 'Continue to Deploy <i data-lucide="arrow-right" style="width:16px;height:16px;"></i>';
+    else if (stepNum === 4) btnNext.innerHTML = '<i data-lucide="rocket" style="width:16px;height:16px;"></i> Deploy Now';
+  }
+
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function nextStep() {
+  if (currentWizardStep < 4) {
+    jumpToStep(currentWizardStep + 1);
+  } else {
+    document.querySelector('[formaction="/apps/quick-deploy"]').click();
+  }
+}
+
+function prevStep() {
+  if (currentWizardStep > 1) {
+    jumpToStep(currentWizardStep - 1);
+  }
+}
+
+inspect.addEventListener('click', async () => {
+  if (!repo.value.trim()) {
+    message.textContent = 'Enter a repository URL first.';
+    return;
+  }
+  inspect.disabled = true;
+  message.textContent = 'Detecting project files...';
+  try {
+    const data = new FormData(form);
+    const response = await fetch('/apps/inspect', {
+      method: 'POST',
+      headers: { 'X-CSRF-Token': document.querySelector('[name="csrf_token"]').value },
+      body: data
+    });
+    const detected = await response.json();
+    if (!response.ok) throw new Error(detected.detail || 'Detection failed.');
+    if (detected.repository_url) repo.value = detected.repository_url;
+    if (detected.branch) document.getElementById('branch').value = detected.branch;
+    document.getElementById('build_command').value = detected.build_command || '';
+    document.getElementById('start_command').value = detected.start_command || '';
+    const notes = [
+      `Detected ${detected.framework} with ${detected.package_manager}.`,
+      detected.entrypoints.length ? `Entrypoint: ${detected.entrypoints.join(', ')}.` : '',
+      detected.environment_names.length ? `Environment names: ${detected.environment_names.join(', ')}.` : '',
+      detected.sqlite_suspected ? 'SQLite detected; keep database files in APP_DATA_DIR.' : '',
+      detected.warnings.join(' ')
+    ].filter(Boolean);
+    result.textContent = notes.join(' ');
+    message.textContent = detected.can_quick_deploy ? 'Ready for One-Click Deploy.' : 'Review needed: check configuration in Step 3.';
+    jumpToStep(2);
+  } catch (error) {
+    message.textContent = error.message || 'Detection failed.';
+  } finally {
+    inspect.disabled = false;
+  }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+  jumpToStep(1);
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+});
+</script>
+{% endblock %}

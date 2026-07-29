@@ -1,17 +1,35 @@
-<section class="section" id="deployment">
-  <div class="section__header"><h3>Deployment</h3></div>
-  <div class="section__body" {% if deployment %}data-deployment-url="/apps/{{ app.id }}/deployments/{{ deployment.id }}"{% endif %}>
+<div class="master-card" id="deployment">
+  <div class="master-card__header">
+    <span>Live Deployment Stream</span>
     {% if deployment %}
-      <div class="info-row"><span class="info-row__label">Action</span><span class="info-row__value">{{ deployment.action | title }}</span></div>
-      <div class="info-row"><span class="info-row__label">State</span><span class="info-row__value" data-deployment-state>{{ deployment.status | upper }} · {{ deployment.stage }}</span></div>
-      {% if deployment.source_revision %}<div class="info-row"><span class="info-row__label">Source revision</span><span class="info-row__value"><code>{{ deployment.source_revision[:12] }}</code></span></div>{% endif %}
-      <div class="info-row" data-rollback-row {% if not deployment.rollback_status %}hidden{% endif %}><span class="info-row__label">Automatic rollback</span><span class="info-row__value" data-rollback-state>{{ deployment.rollback_status or '' }}</span></div>
-      <details class="panel" data-deployment-details {% if deployment.status in ('queued', 'running', 'failed', 'cancelled') %}open{% endif %}>
-        <summary class="panel__header"><strong>Deployment output</strong></summary>
-        <pre class="code-block panel__body" data-deployment-output>{{ deployment.output }}{{ deployment.error or '' }}</pre>
-      </details>
+      <span class="badge-pill" data-deployment-state>{{ deployment.status | upper }} · {{ deployment.stage }}</span>
     {% else %}
-      <div class="info-row"><span class="info-row__label">Last deployment</span><span class="info-row__value">Not deployed yet</span></div>
+      <span class="badge-pill">Not Deployed Yet</span>
     {% endif %}
   </div>
-</section>
+
+  <div class="master-card__body" {% if deployment %}data-deployment-url="/apps/{{ app.id }}/deployments/{{ deployment.id }}"{% endif %}>
+    {% if deployment %}
+      <div class="terminal-fluid" data-deployment-output style="margin-bottom: 16px;">{{ deployment.output }}{{ deployment.error or '' }}</div>
+
+      <div class="info-row">
+        <span class="info-row__label">Deployment Action</span>
+        <span class="info-row__value">{{ deployment.action | title }}</span>
+      </div>
+
+      {% if deployment.source_revision %}
+      <div class="info-row">
+        <span class="info-row__label">Source Revision</span>
+        <span class="info-row__value mono">{{ deployment.source_revision[:12] }}</span>
+      </div>
+      {% endif %}
+
+      <div class="info-row" data-rollback-row {% if not deployment.rollback_status %}hidden{% endif %}>
+        <span class="info-row__label">Automatic Rollback</span>
+        <span class="info-row__value" data-rollback-state>{{ deployment.rollback_status or '' }}</span>
+      </div>
+    {% else %}
+      <p class="text-muted" style="font-size: 14px;">No active deployment output stream recorded yet.</p>
+    {% endif %}
+  </div>
+</div>

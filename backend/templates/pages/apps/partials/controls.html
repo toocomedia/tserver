@@ -1,46 +1,31 @@
 {% set deployment_active = deployment and deployment.status in ('queued', 'running') %}
 {% set deletion_active = app.status == 'deleting' %}
 {% set deletion_failed = app.status == 'delete_failed' %}
-<section class="section">
-  <div class="section__header"><h3>Service controls</h3></div>
-  <div class="section__body">
-    {% if deletion_active %}
-      <p class="text-muted">Deleting app resources. Controls are unavailable until cleanup finishes.</p>
-    {% elif deletion_failed %}
-      <div class="alert alert--danger">{{ app.last_error or 'Deletion cleanup did not finish.' }}</div>
-      <button class="btn btn--danger" type="button" data-app-delete-open>Retry delete</button>
-    {% else %}
-      {% if deployment_active %}<p class="text-muted">Deployment is {{ deployment.status }} at {{ deployment.stage }}. Stop is the only available action.</p>{% endif %}
-      <div class="form-actions">
-        {% if missing_dependencies %}
-          <a class="btn btn--primary" href="{{ missing_dependency_url }}">Start PostgreSQL</a>
-        {% elif app.status == 'paused' %}
-          <p class="text-muted">Paused by {{ app.paused_by_dependency or 'a required dependency' }}.</p>
-          <form method="post" action="/apps/{{ app.id }}/start">{% include "partials/csrf_field.html" %}<button class="btn btn--primary">Resume</button></form>
-        {% elif app.status == 'stopped' %}
-          <form method="post" action="/apps/{{ app.id }}/start">{% include "partials/csrf_field.html" %}<button class="btn btn--primary"{% if deployment_active %} disabled{% endif %}>Start</button></form>
-        {% else %}
-          <form method="post" action="/apps/{{ app.id }}/restart">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary"{% if deployment_active %} disabled{% endif %}>Restart</button></form>
-          <form method="post" action="/apps/{{ app.id }}/stop">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary">Stop</button></form>
-        {% endif %}
-        <form method="post" action="/apps/{{ app.id }}/deploy">{% include "partials/csrf_field.html" %}<button class="btn {% if app.status == 'pending' and not app.deployed_revision %}btn--primary{% else %}btn--secondary{% endif %}"{% if deployment_active %} disabled{% endif %}>{% if app.status == 'pending' and not app.deployed_revision %}Deploy app{% else %}Redeploy current version{% endif %}</button></form>
-      </div>
-    {% endif %}
-  </div>
-</section>
-{% if not deletion_active %}
-<details class="panel">
-  <summary class="panel__header"><strong>Danger zone</strong></summary>
-  <div class="panel__body">
-    <p class="text-muted">Delete removes the service, systemd unit, Nginx proxy, releases, venv, app data, pending files, and environment file.</p>
-    {% if deployment_active %}
-      <p class="text-muted">Stop the active deployment before deleting this app.</p>
-    {% elif not deletion_failed %}
-      <button class="btn btn--danger" type="button" data-app-delete-open>Delete Python App</button>
-    {% endif %}
-  </div>
-</details>
 
+<!-- DANGER ZONE CARD CONTAINER -->
+<div class="master-card" style="border-color: rgba(220, 38, 38, 0.3);">
+  <div class="master-card__header" style="color: #DC2626;">Danger Zone</div>
+
+  <div class="master-card__body">
+    <p style="font-size: 13px; color: var(--color-muted); margin-bottom: 14px; line-height: 1.5;">
+      Delete removes the service, systemd unit, Nginx proxy, releases, venv, app data, pending files, and environment file.
+    </p>
+
+    {% if deletion_active %}
+      <p class="text-muted" style="font-size: 13px;">Deleting app resources... Cleanup in progress.</p>
+    {% elif deletion_failed %}
+      <div class="alert alert--danger" style="margin-bottom: 12px; font-size: 13px;">{{ app.last_error or 'Deletion cleanup did not finish.' }}</div>
+      <button class="btn btn--danger btn--sm" type="button" data-app-delete-open style="width: 100%;">Retry Delete</button>
+    {% elif deployment_active %}
+      <p class="text-muted" style="font-size: 13px;">Stop the active deployment before deleting this app.</p>
+    {% else %}
+      <button class="btn btn--danger btn--sm" type="button" data-app-delete-open style="width: 100%;">Delete Python App</button>
+    {% endif %}
+  </div>
+</div>
+
+{% if not deletion_active %}
+<!-- DELETE CONFIRMATION MODAL -->
 <div class="modal-backdrop hidden" data-app-delete-modal role="dialog" aria-modal="true" aria-labelledby="app-delete-title">
   <div class="modal">
     <div class="modal__header">
@@ -49,16 +34,18 @@
     </div>
     <form method="post" action="/apps/{{ app.id }}/uninstall">
       <div class="modal__body">
-        <p>App files, service, systemd unit, Nginx proxy, releases, venv, pending files, persistent data, and environment file will be removed.</p>
+        <p style="font-size: 14px; margin-bottom: 16px;">App files, service, systemd unit, Nginx proxy, releases, venv, pending files, persistent data, and environment file will be permanently removed.</p>
         {% if app.postgres_mode == 'create' %}
           <div class="form-group">
-            <label class="form-label" for="delete_scope">Database cleanup</label>
-            <div class="form-select-wrap"><select class="form-select" id="delete_scope" name="delete_scope" required><option value="app_only">Delete app, keep managed database</option><option value="app_and_database">Delete app and managed PostgreSQL database/user</option></select></div>
-            <p class="form-hint">Keeping the database preserves it but does not attach it to a later reinstall.</p>
+            <label class="form-label" for="delete_scope">Database Cleanup</label>
+            <div class="form-select-wrap">
+              <select class="form-select" id="delete_scope" name="delete_scope" required>
+                <option value="app_only">Delete app, keep managed database</option>
+                <option value="app_and_database">Delete app and managed PostgreSQL database/user</option>
+              </select>
+            </div>
+            <p class="form-hint" style="margin-top:6px;">Keeping the database preserves data but unlinks it from this app.</p>
           </div>
-        {% elif app.postgres_mode == 'external' %}
-          <input type="hidden" name="delete_scope" value="app_only">
-          <p class="form-hint">This app uses an external DATABASE_URL. Its external database will never be deleted.</p>
         {% else %}
           <input type="hidden" name="delete_scope" value="app_only">
         {% endif %}
@@ -66,7 +53,7 @@
       </div>
       <div class="modal__footer">
         <button class="btn btn--secondary" type="button" data-app-delete-close>Cancel</button>
-        <button class="btn btn--danger" type="submit">Delete app</button>
+        <button class="btn btn--danger" type="submit">Delete App</button>
       </div>
     </form>
   </div>
