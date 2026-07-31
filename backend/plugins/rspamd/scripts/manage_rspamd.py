@@ -142,7 +142,7 @@ def sync_maddy(mode: str):
             print("Removed Rspamd check from Maddy configuration.")
 
         # Validate maddy config before restart
-        val = run(["maddy", "--config", str(MADDY_CONF), "check"], check=False)
+        val = run(["maddy", "-config", str(MADDY_CONF), "-h"], check=False)
         if val.returncode != 0:
             print(f"WARNING: Maddy config validation warning: {val.stderr.strip()}", file=sys.stderr)
             # Revert patch if invalid

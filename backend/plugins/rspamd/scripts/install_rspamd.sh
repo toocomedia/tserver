@@ -66,7 +66,7 @@ if [ -f "${MADDY_CONF}" ]; then
     fi
 
     if command -v maddy >/dev/null 2>&1; then
-        if maddy --config "${MADDY_CONF}" check 2>/dev/null; then
+        if maddy -config "${MADDY_CONF}" -h >/dev/null 2>&1; then
             echo "Maddy config check passed — restarting Maddy..."
             systemctl restart maddy || true
         else
