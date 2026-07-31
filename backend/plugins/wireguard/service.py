@@ -253,8 +253,12 @@ class WireguardService:
 
     def remove_peer(self, pubkey: str) -> bool:
         """Remove the [Peer] block matching pubkey from wg0.conf, then syncconf."""
-        if not WG_CONF.exists():
-            return False
+        # exists() raises PermissionError on Python 3.12+ for root-owned dirs
+        try:
+            if not WG_CONF.exists():
+                return False
+        except PermissionError:
+            pass  # /etc/wireguard is root-only; proceed and try reading via sudo
 
         try:
             raw = WG_CONF.read_text(encoding="utf-8")
@@ -267,6 +271,7 @@ class WireguardService:
         # Two-pass: split into blocks, filter the matching one
         blocks = re.split(r"(?=^\[)", raw, flags=re.MULTILINE)
         filtered = []
+        removed = False  # initialise before loop to prevent UnboundLocalError
         for block in blocks:
             if block.startswith("[Peer]") and pubkey in block:
                 removed = True
