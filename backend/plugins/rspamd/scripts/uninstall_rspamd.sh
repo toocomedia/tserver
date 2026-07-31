@@ -19,8 +19,9 @@ fi
 # 2. Revert Maddy configuration patch
 if [ -f "${MADDY_CONF}" ]; then
     echo "Removing Rspamd integration from Maddy configuration..."
-    sed -i '/rspamd http:\/\/127.0.0.1:11333/,+2d' "${MADDY_CONF}" || true
+    sed -i '/rspamd http:\/\/127.0.0.1:11333/d' "${MADDY_CONF}" || true
     sed -i '/check\.rspamd/d' "${MADDY_CONF}" || true
+    sed -i '/fail_open/d' "${MADDY_CONF}" || true
 
     if command -v maddy >/dev/null 2>&1; then
         systemctl restart maddy || true

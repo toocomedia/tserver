@@ -60,8 +60,9 @@ MANAGE_SCRIPT="$(find /opt/srv-panel -name 'manage_rspamd.py' 2>/dev/null | head
 
 if [ -f "${MADDY_CONF}" ]; then
     echo "Patching Maddy mail server configuration for Rspamd..."
+    sed -i '/fail_open/d' "${MADDY_CONF}" || true
     if ! grep -q "rspamd http://127.0.0.1:11333" "${MADDY_CONF}"; then
-        sed -i '/check {/a \        rspamd http://127.0.0.1:11333 {\n            fail_open true\n        }' "${MADDY_CONF}" || true
+        sed -i '/check {/a \        rspamd http://127.0.0.1:11333' "${MADDY_CONF}" || true
     fi
 
     if command -v maddy >/dev/null 2>&1; then
@@ -70,8 +71,12 @@ if [ -f "${MADDY_CONF}" ]; then
             systemctl restart maddy || true
         else
             echo "WARNING: Maddy config validation failed after Rspamd patch. Reverting."
-            sed -i '/rspamd http:\/\/127.0.0.1:11333/,+2d' "${MADDY_CONF}" || true
+            sed -i '/rspamd http:\/\/127.0.0.1:11333/d' "${MADDY_CONF}" || true
+            sed -i '/fail_open/d' "${MADDY_CONF}" || true
+            systemctl restart maddy || true
         fi
+    else
+        systemctl restart maddy || true
     fi
 fi
 

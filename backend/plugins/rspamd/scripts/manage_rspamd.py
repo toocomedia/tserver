@@ -117,48 +117,45 @@ def sync_maddy(mode: str):
 
         if mode == "enable":
             if not has_rspamd:
-                if "check {" in content:
-                    lines = content.splitlines()
-                    new_lines = []
-                    inserted = False
-                    for line in lines:
-                        new_lines.append(line)
-                        if "check {" in line and not inserted:
-                            new_lines.append("        rspamd http://127.0.0.1:11333 {")
-                            new_lines.append("            fail_open true")
-                            new_lines.append("        }")
-                            inserted = True
-                    content = "\n".join(new_lines) + "\n"
-                    MADDY_CONF.write_text(content, encoding="utf-8")
-                    print("Injected Rspamd check into Maddy configuration.")
-        else: # disable
-            if has_rspamd:
                 lines = content.splitlines()
                 new_lines = []
-                skip = 0
+                inserted = False
                 for line in lines:
-                    if "rspamd http://127.0.0.1:11333" in line or "check.rspamd" in line:
-                        if "{" in line:
-                            skip = 3  # skip the 3-line block
-                        else:
-                            skip = 1
-                        continue
-                    if skip > 0:
-                        skip -= 1
+                    if "fail_open" in line:
                         continue
                     new_lines.append(line)
+                    if "check {" in line and not inserted:
+                        new_lines.append("        rspamd http://127.0.0.1:11333")
+                        inserted = True
                 content = "\n".join(new_lines) + "\n"
                 MADDY_CONF.write_text(content, encoding="utf-8")
-                print("Removed Rspamd check from Maddy configuration.")
+                print("Injected Rspamd check into Maddy configuration.")
+        else: # disable
+            lines = [
+                line for line in content.splitlines()
+                if "rspamd http://127.0.0.1:11333" not in line
+                and "check.rspamd" not in line
+                and "fail_open" not in line
+            ]
+            content = "\n".join(lines) + "\n"
+            MADDY_CONF.write_text(content, encoding="utf-8")
+            print("Removed Rspamd check from Maddy configuration.")
 
         # Validate maddy config before restart
         val = run(["maddy", "--config", str(MADDY_CONF), "check"], check=False)
-        if val.returncode == 0:
-            run(["systemctl", "restart", "maddy"], check=False)
-            print("Maddy configuration revalidated and service restarted.")
-        else:
+        if val.returncode != 0:
             print(f"WARNING: Maddy config validation warning: {val.stderr.strip()}", file=sys.stderr)
-            run(["systemctl", "restart", "maddy"], check=False)
+            # Revert patch if invalid
+            lines = [
+                line for line in MADDY_CONF.read_text(encoding="utf-8").splitlines()
+                if "rspamd http://127.0.0.1:11333" not in line
+                and "check.rspamd" not in line
+                and "fail_open" not in line
+            ]
+            MADDY_CONF.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+        run(["systemctl", "restart", "maddy"], check=False)
+        print("Maddy service restarted cleanly.")
 
     except Exception as exc:
         print(f"ERROR: Syncing Maddy configuration failed: {exc}", file=sys.stderr)
