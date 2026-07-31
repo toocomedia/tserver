@@ -1,4 +1,4 @@
-<div class="card-details-tray is-hidden">
+<div class="card-details-tray{% if not (action_error and action_error_plugin_id == plugin.id) %} is-hidden{% endif %}">
   <div class="tray-header">
     <span class="tray-title">Requirements &amp; Information</span>
     <button type="button" class="tray-close-btn" title="Close"

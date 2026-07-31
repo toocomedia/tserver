@@ -94,7 +94,8 @@ async def toggle_plugin(request: Request, plugin_id: str = Form(...), enabled: b
     success, message = await plugin_manager.toggle_plugin(plugin_id, enabled)
     if success:
         return RedirectResponse("/plugins/", status_code=303)
-    return JSONResponse({"detail": message}, status_code=400)
+    query = urlencode({"plugin_id": plugin_id, "error": message[:240]})
+    return RedirectResponse(f"/plugins/?{query}", status_code=303)
 
 
 @router.post("/api/upload")
