@@ -1,221 +1,206 @@
 {% extends "layout.html" %}
 
 {% block title %}Spam Filter (Rspamd) — VPS Panel{% endblock %}
-{% block page_title %}Spam Filter (Rspamd){% endblock %}
+{% block content_class %}content--flush{% endblock %}
+{% block page_header_wrapper %}{% endblock %}
 
 {% block head %}
 <style>
-  .rspamd-grid {
+  .rspamd-stats-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 1.25rem;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
     margin-bottom: 1.5rem;
   }
-  .rspamd-card {
+  .rspamd-stat-card {
     background: var(--color-bg-surface, #1e293b);
     border: 1px solid var(--color-border, #334155);
-    border-radius: 12px;
+    border-radius: var(--radius-md, 8px);
     padding: 1.25rem;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   }
-  .rspamd-metric {
-    font-size: 1.85rem;
+  .rspamd-stat-val {
+    font-size: 1.75rem;
     font-weight: 700;
     line-height: 1.2;
-    color: var(--color-text-heading, #f8fafc);
-    margin-top: 0.5rem;
+    color: var(--color-text, #f8fafc);
+    margin-top: 0.25rem;
   }
-  .rspamd-metric-label {
-    font-size: 0.85rem;
-    color: var(--color-text-muted, #94a3b8);
+  .rspamd-stat-lbl {
+    font-size: 0.8rem;
     text-transform: uppercase;
     letter-spacing: 0.05em;
+    color: var(--color-muted, #94a3b8);
     font-weight: 600;
   }
-  .rspamd-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-    padding: 0.25rem 0.65rem;
-    border-radius: 9999px;
-    font-size: 0.8rem;
-    font-weight: 600;
-  }
-  .rspamd-badge--success {
-    background: rgba(16, 185, 129, 0.15);
-    color: #34d399;
-    border: 1px solid rgba(52, 211, 153, 0.3);
-  }
-  .rspamd-badge--danger {
-    background: rgba(239, 68, 68, 0.15);
-    color: #f87171;
-    border: 1px solid rgba(248, 113, 113, 0.3);
-  }
-  .rspamd-badge--warning {
-    background: rgba(245, 158, 11, 0.15);
-    color: #fbbf24;
-    border: 1px solid rgba(251, 191, 36, 0.3);
-  }
-  .rspamd-section {
-    background: var(--color-bg-surface, #1e293b);
-    border: 1px solid var(--color-border, #334155);
-    border-radius: 12px;
-    padding: 1.5rem;
-    margin-bottom: 1.5rem;
-  }
-  .rspamd-form-group {
-    margin-bottom: 1.25rem;
-  }
-  .rspamd-form-group label {
-    display: block;
-    font-weight: 600;
-    margin-bottom: 0.4rem;
-    font-size: 0.9rem;
-  }
-  .rspamd-form-group input {
-    width: 100%;
-    max-width: 320px;
-    padding: 0.6rem 0.8rem;
-    background: var(--color-bg-input, #0f172a);
-    border: 1px solid var(--color-border, #334155);
-    border-radius: 8px;
-    color: var(--color-text, #f8fafc);
-  }
-  .rspamd-flex-actions {
+  .rspamd-flex-row {
     display: flex;
+    align-items: center;
     gap: 0.75rem;
     flex-wrap: wrap;
-    align-items: center;
   }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid p-4">
-  <!-- Page Header -->
-  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
-    <div>
-      <h1 class="h3 mb-1" style="display:flex; align-items:center; gap:0.5rem;">
-        🛡️ Spam Filter (Rspamd)
-      </h1>
-      <p class="text-muted mb-0">High-performance mail content anti-spam engine integrated with Maddy.</p>
-    </div>
-    <div class="d-flex align-items-center gap-2">
-      {% if status.running %}
-        <span class="rspamd-badge rspamd-badge--success">🟢 Service Active</span>
+<div class="split-layout">
+  <!-- Sidebar -->
+  <aside class="split-sidebar">
+    <div class="split-sidebar__item active">
+      <span>Spam Filter Overview</span>
+      {% if not status.installed %}
+        <span class="badge badge--inactive" style="margin-left:auto;">Setup</span>
+      {% elif status.running %}
+        <span class="badge badge--success" style="margin-left:auto;">Active</span>
       {% else %}
-        <span class="rspamd-badge rspamd-badge--danger">🔴 Service Stopped</span>
-      {% endif %}
-
-      {% if status.maddy_integrated %}
-        <span class="rspamd-badge rspamd-badge--success">⚡ Maddy Protected</span>
-      {% else %}
-        <span class="rspamd-badge rspamd-badge--warning">⚠️ Not Injected in Maddy</span>
+        <span class="badge badge--danger" style="margin-left:auto;">Stopped</span>
       {% endif %}
     </div>
-  </div>
 
-  <!-- Metric Cards -->
-  <div class="rspamd-grid">
-    <div class="rspamd-card">
-      <div class="rspamd-metric-label">Total Scanned</div>
-      <div class="rspamd-metric" id="metric-scanned">{{ stats.scanned }}</div>
-      <div class="text-muted text-small mt-1">Processed messages</div>
+    <div style="flex-grow: 1;"></div>
+
+    <div class="split-sidebar__footer" style="padding: 1rem; margin-top: auto; color: var(--color-muted);">
+      <h3 style="margin: 0; font-size: 1rem; color: var(--color-text);">Rspamd Spam Filter</h3>
+      <div style="font-size: 0.85rem; margin-top: 4px;">Version {{ plugin_version }}</div>
     </div>
-    <div class="rspamd-card">
-      <div class="rspamd-metric-label">Clean (Ham)</div>
-      <div class="rspamd-metric text-success" id="metric-clean">{{ stats.clean }}</div>
-      <div class="text-muted text-small mt-1">Passed content check</div>
-    </div>
-    <div class="rspamd-card">
-      <div class="rspamd-metric-label">Blocked Spam</div>
-      <div class="rspamd-metric text-danger" id="metric-spam">{{ stats.spam }}</div>
-      <div class="text-muted text-small mt-1">Junk header + Rejected</div>
-    </div>
-    <div class="rspamd-card">
-      <div class="rspamd-metric-label">Spam Ratio</div>
-      <div class="rspamd-metric text-warning" id="metric-ratio">{{ stats.spam_percentage }}%</div>
-      <div class="text-muted text-small mt-1">Percentage of incoming spam</div>
-    </div>
-  </div>
+  </aside>
 
-  <!-- Controls Section -->
-  <div class="row g-4">
-    <!-- Service & Integration Controls -->
-    <div class="col-lg-6">
-      <div class="rspamd-section h-100">
-        <h3 class="h5 mb-3">Service & Integration Control</h3>
-        <p class="text-muted text-small mb-4">
-          Control the Rspamd daemon process and manage automatic mail inspection across all Maddy domains.
-        </p>
-
-        <div class="rspamd-form-group">
-          <label>Rspamd Service Status:</label>
-          <div class="rspamd-flex-actions">
-            {% if status.running %}
-              <button type="button" class="btn btn-outline-danger" onclick="rspamdAction('stop')">Stop Rspamd</button>
-              <button type="button" class="btn btn-outline-secondary" onclick="rspamdAction('restart')">Restart Service</button>
-            {% else %}
-              <button type="button" class="btn btn-success" onclick="rspamdAction('start')">Start Rspamd</button>
-            {% endif %}
-          </div>
-        </div>
-
-        <hr class="my-4" style="border-color: var(--color-border, #334155);" />
-
-        <div class="rspamd-form-group">
-          <label>Maddy Mail Server Routing:</label>
-          <p class="text-muted text-small mb-2">
-            When enabled, Maddy passes all incoming messages through Rspamd via <code>http://127.0.0.1:11333</code>.
+  <!-- Main Content Area -->
+  <main class="split-content">
+    {% if not status.installed %}
+      <!-- State 1: Rspamd Not Installed -->
+      <div style="margin-top: 3rem;">
+        <div class="card p-6 text-center" style="max-width: 560px; margin: 0 auto;">
+          <h3 class="mb-md">Spam Filter (Rspamd) Not Installed</h3>
+          <p class="text-muted mb-lg">
+            Install the Rspamd content scanning engine to protect your Maddy mail server. 
+            It inspects email body text, checks links against phishing databases, and filters spam before reaching user inboxes.
           </p>
-          <div class="rspamd-flex-actions">
-            {% if status.maddy_integrated %}
-              <button type="button" class="btn btn-outline-warning" onclick="toggleMaddy(false)">Disable Maddy Integration</button>
-            {% else %}
-              <button type="button" class="btn btn-primary" onclick="toggleMaddy(true)">Enable Maddy Integration</button>
-            {% endif %}
-          </div>
-        </div>
-
-        <div class="mt-4 pt-2 text-small text-muted">
-          <strong>System Footprint:</strong> ~{{ status.ram_mb }} MB RAM used &bull; Listening on 127.0.0.1:11333
+          <form method="post" action="/plugins/rspamd/api/install">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+            <button type="submit" class="btn btn--primary">
+              Install Spam Filter (~100MB RAM)
+            </button>
+          </form>
         </div>
       </div>
-    </div>
 
-    <!-- Threshold Settings -->
-    <div class="col-lg-6">
-      <div class="rspamd-section h-100">
-        <h3 class="h5 mb-3">Spam Score Thresholds</h3>
-        <p class="text-muted text-small mb-4">
-          Configure action trigger scores. Messages with scores higher than threshold will be tagged or rejected.
-        </p>
+    {% else %}
+      <!-- State 2: Rspamd Installed Dashboard -->
+      <div class="mb-xl" style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+        <div>
+          <h2 style="margin:0; display:flex; align-items:center; gap:0.5rem;">
+            🛡️ Spam Filter (Rspamd)
+          </h2>
+          <p class="text-muted" style="margin: 0.25rem 0 0 0; font-size:0.9rem;">
+            Integrated mail content scanner for all Maddy domains.
+          </p>
+        </div>
+        <div class="rspamd-flex-row">
+          {% if status.running %}
+            <span class="badge badge--success">Daemon Running</span>
+          {% else %}
+            <span class="badge badge--danger">Daemon Stopped</span>
+          {% endif %}
 
-        <form id="threshold-form" onsubmit="saveThresholds(event)">
-          <div class="rspamd-form-group">
-            <label for="junk-score">Junk / Add Header Score:</label>
-            <input type="number" step="0.5" min="1" max="50" id="junk-score" value="{{ thresholds.add_header }}" required />
-            <div class="text-muted text-small mt-1">Scores above this value get tagged with <code>X-Spam-Score</code> header.</div>
-          </div>
+          {% if status.maddy_integrated %}
+            <span class="badge badge--success">Maddy Protected</span>
+          {% else %}
+            <span class="badge badge--warning">Not Injected in Maddy</span>
+          {% endif %}
 
-          <div class="rspamd-form-group">
-            <label for="reject-score">Hard Reject Score:</label>
-            <input type="number" step="0.5" min="2" max="100" id="reject-score" value="{{ thresholds.reject }}" required />
-            <div class="text-muted text-small mt-1">Scores above this value are rejected at SMTP level.</div>
-          </div>
-
-          <div class="rspamd-flex-actions mt-4">
-            <button type="submit" class="btn btn-primary" id="save-thresholds-btn">Save Thresholds</button>
-          </div>
-        </form>
+          <form method="post" action="/plugins/rspamd/api/uninstall" style="margin:0;" onsubmit="return confirm('Uninstall Rspamd and revert Maddy configuration?');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+            <button type="submit" class="btn btn--danger btn--sm">Uninstall</button>
+          </form>
+        </div>
       </div>
-    </div>
-  </div>
+
+      <!-- Real-Time Metrics Cards -->
+      <div class="rspamd-stats-grid">
+        <div class="rspamd-stat-card">
+          <div class="rspamd-stat-lbl">Total Scanned</div>
+          <div class="rspamd-stat-val">{{ stats.scanned }}</div>
+        </div>
+        <div class="rspamd-stat-card">
+          <div class="rspamd-stat-lbl">Clean (Ham)</div>
+          <div class="rspamd-stat-val" style="color: var(--color-success, #34d399);">{{ stats.clean }}</div>
+        </div>
+        <div class="rspamd-stat-card">
+          <div class="rspamd-stat-lbl">Blocked Spam</div>
+          <div class="rspamd-stat-val" style="color: var(--color-danger, #f87171);">{{ stats.spam }}</div>
+        </div>
+        <div class="rspamd-stat-card">
+          <div class="rspamd-stat-lbl">Spam Ratio</div>
+          <div class="rspamd-stat-val" style="color: var(--color-warning, #fbbf24);">{{ stats.spam_percentage }}%</div>
+        </div>
+      </div>
+
+      <!-- Control Sections -->
+      <div class="section mb-xl">
+        <div class="section__body">
+          <h3 class="h4 mb-md">Daemon & Mail Integration Control</h3>
+          
+          <div class="form-group mb-lg">
+            <label class="form-label">Rspamd Service Status:</label>
+            <div class="rspamd-flex-row">
+              {% if status.running %}
+                <button type="button" class="btn btn--danger btn--sm" onclick="rspamdAction('stop')">Stop Service</button>
+                <button type="button" class="btn btn--ghost btn--sm" onclick="rspamdAction('restart')">Restart Service</button>
+              {% else %}
+                <button type="button" class="btn btn--primary btn--sm" onclick="rspamdAction('start')">Start Service</button>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Maddy Integration Status:</label>
+            <p class="form-hint mb-xs">
+              Controls whether Maddy routes incoming mail through Rspamd (<code>127.0.0.1:11333</code>) for all configured domains.
+            </p>
+            <div class="rspamd-flex-row">
+              {% if status.maddy_integrated %}
+                <button type="button" class="btn btn--secondary btn--sm" onclick="toggleMaddy(false)">Disable Maddy Protection</button>
+              {% else %}
+                <button type="button" class="btn btn--primary btn--sm" onclick="toggleMaddy(true)">Enable Maddy Protection</button>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Score Thresholds Form -->
+      <div class="section">
+        <div class="section__body">
+          <h3 class="h4 mb-md">Spam Score Thresholds</h3>
+          <p class="form-hint mb-md">
+            Configure action trigger scores. Scores are assigned to messages after scanning headers, body text, and links.
+          </p>
+
+          <form id="threshold-form" onsubmit="saveThresholds(event)" style="max-width:480px;">
+            <div class="form-group mb-md">
+              <label class="form-label" for="junk-score">Junk / Add Header Score:</label>
+              <input type="number" step="0.5" min="1" max="50" class="form-control" id="junk-score" value="{{ thresholds.add_header }}" required />
+              <div class="form-hint mt-xs">Messages scoring above this value are tagged with <code>X-Spam-Score</code> header.</div>
+            </div>
+
+            <div class="form-group mb-lg">
+              <label class="form-label" for="reject-score">Hard Reject Score:</label>
+              <input type="number" step="0.5" min="2" max="100" class="form-control" id="reject-score" value="{{ thresholds.reject }}" required />
+              <div class="form-hint mt-xs">Messages scoring above this value are rejected during SMTP delivery.</div>
+            </div>
+
+            <button type="submit" class="btn btn--primary" id="save-thresholds-btn">Save Thresholds</button>
+          </form>
+        </div>
+      </div>
+
+    {% endif %}
+  </main>
 </div>
 
 <script>
 async function rspamdAction(action) {
-  if (!confirm(`Are you sure you want to ${action} the Rspamd service?`)) return;
+  if (!confirm(`Are you sure you want to ${action} Rspamd?`)) return;
   try {
     const resp = await fetch('/plugins/rspamd/api/action', {
       method: 'POST',

@@ -8,7 +8,7 @@
   "route_prefix": "/plugins/rspamd",
   "sidebar": true,
   "sidebar_label": "Spam Filter",
-  "enabled": true,
+  "enabled": false,
   "usage": {
     "process_names": ["rspamd", "redis-server"]
   },

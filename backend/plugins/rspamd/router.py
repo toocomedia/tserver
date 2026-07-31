@@ -1,12 +1,14 @@
 """
 backend/plugins/rspamd/router.py — APIRouter for Rspamd Spam Filter plugin.
 Exposes Spam Filter dashboard UI and management APIs for action thresholds,
-service controls, and Maddy Mail Server integration.
+service controls, installation, and Maddy Mail Server integration.
 """
+import os
 import logging
-from typing import Optional
-from fastapi import APIRouter, Request, Form, HTTPException, Depends
-from fastapi.responses import HTMLResponse, JSONResponse
+import subprocess
+from pathlib import Path
+from fastapi import APIRouter, Request, HTTPException
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from pydantic import BaseModel, Field
 
 from templating import templates
@@ -16,6 +18,7 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/plugins/rspamd", tags=["rspamd"])
 rspamd_service = RspamdService()
+SCRIPT_DIR = Path(__file__).parent / "scripts"
 
 
 class ThresholdRequest(BaseModel):
@@ -60,7 +63,47 @@ async def index(request: Request):
 
 
 # ---------------------------------------------------------------------------
-# API Endpoints
+# Install / Uninstall Endpoints
+# ---------------------------------------------------------------------------
+
+@router.post("/api/install")
+async def install_rspamd(request: Request):
+    """Trigger Rspamd installation script."""
+    script_path = SCRIPT_DIR / "install_rspamd.sh"
+    if os.name == "nt":
+        return JSONResponse({"status": "ok", "message": "Mock install on Windows."})
+
+    try:
+        res = subprocess.run(["bash", str(script_path)], capture_output=True, text=True)
+        if res.returncode != 0:
+            logger.error("Rspamd install failed:\nSTDOUT: %s\nSTDERR: %s", res.stdout, res.stderr)
+            return JSONResponse({"detail": res.stderr or res.stdout}, status_code=500)
+        return RedirectResponse("/plugins/rspamd/", status_code=303)
+    except Exception as exc:
+        logger.error("Error executing Rspamd installer: %s", exc)
+        return JSONResponse({"detail": str(exc)}, status_code=500)
+
+
+@router.post("/api/uninstall")
+async def uninstall_rspamd(request: Request):
+    """Trigger Rspamd uninstallation script."""
+    script_path = SCRIPT_DIR / "uninstall_rspamd.sh"
+    if os.name == "nt":
+        return JSONResponse({"status": "ok", "message": "Mock uninstall on Windows."})
+
+    try:
+        res = subprocess.run(["bash", str(script_path)], capture_output=True, text=True)
+        if res.returncode != 0:
+            logger.error("Rspamd uninstall failed:\nSTDOUT: %s\nSTDERR: %s", res.stdout, res.stderr)
+            return JSONResponse({"detail": res.stderr or res.stdout}, status_code=500)
+        return RedirectResponse("/plugins/rspamd/", status_code=303)
+    except Exception as exc:
+        logger.error("Error executing Rspamd uninstaller: %s", exc)
+        return JSONResponse({"detail": str(exc)}, status_code=500)
+
+
+# ---------------------------------------------------------------------------
+# API Management Endpoints
 # ---------------------------------------------------------------------------
 
 @router.get("/api/status", response_class=JSONResponse)
