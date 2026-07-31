@@ -2,8 +2,6 @@
 
 {% block title %}Mail Server (Maddy) — VPS Panel{% endblock %}
 {% block content_class %}content--flush{% endblock %}
-
-{# Completely remove the default layout.html page header and its padding #}
 {% block page_header_wrapper %}{% endblock %}
 
 {% block content %}
@@ -29,14 +27,18 @@
     
     <div class="split-sidebar__footer" style="padding: 1rem; margin-top: auto; color: var(--color-muted);">
       <h3 style="margin: 0; font-size: 1rem; color: var(--color-text);">Mail Server (Maddy)</h3>
-      <div style="font-size: 0.85rem; margin-top: 4px;">Version {{ plugin_version }}</div>
+      <div style="font-size: 0.85rem; margin-top: 4px; margin-bottom: 12px;">Version {{ plugin_version }}</div>
+      {% if plugin_installed %}
+        <div style="display:flex; flex-direction:column; gap:6px;">
+          <button type="button" class="btn btn--secondary btn--sm" style="width:100%;" onclick="openMaddyDiagnostics()">🔍 Service Diagnostics</button>
+          <button type="button" class="btn btn--ghost btn--sm" style="width:100%;" id="btn-repair-maddy" onclick="repairMaddyConfig()">🔧 Repair Config</button>
+        </div>
+      {% endif %}
     </div>
   </div>
 
   <!-- Content -->
   <div class="split-content">
-
-
     {% if plugin_installed %}
       {% include 'partials/_domains_tab.html' %}
     {% else %}
@@ -53,12 +55,28 @@
         </div>
       </div>
     {% endif %}
-
   </div>
 </div>
 
 {% if plugin_installed %}
   {% include 'partials/_add_account_modal.html' %}
+
+  <!-- Maddy Diagnostics Modal -->
+  <div id="maddy-diagnostics-modal" class="modal-backdrop" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.6); align-items:center; justify-content:center; z-index:9999;">
+    <div class="card p-4" style="max-width:700px; width:90%; max-height:85vh; display:flex; flex-direction:column;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+        <h3 style="margin:0;">🔍 Maddy Service Diagnostics & Logs</h3>
+        <button type="button" class="btn btn--ghost btn--sm" onclick="document.getElementById('maddy-diagnostics-modal').style.display='none'">✕ Close</button>
+      </div>
+      <div style="flex-grow:1; overflow-y:auto; background:var(--color-bg-input, #0f172a); border-radius:6px; padding:1rem; font-family:monospace; font-size:0.85rem; white-space:pre-wrap; color:var(--color-text, #f8fafc);" id="maddy-diagnostic-logs">
+        Loading diagnostic logs...
+      </div>
+      <div style="margin-top:1rem; display:flex; justify-content:space-between; align-items:center;">
+        <button type="button" class="btn btn--ghost btn--sm" onclick="openMaddyDiagnostics()">🔄 Refresh Logs</button>
+        <button type="button" class="btn btn--primary btn--sm" onclick="repairMaddyConfig()">🔧 Repair & Rebuild Config</button>
+      </div>
+    </div>
+  </div>
 {% endif %}
 
 {% endblock %}

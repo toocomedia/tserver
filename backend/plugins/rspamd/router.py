@@ -12,12 +12,11 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from pydantic import BaseModel, Field
 
 from templating import templates
-from plugins.rspamd.service import RspamdService
+from plugins.rspamd.service import rspamd_service
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/plugins/rspamd", tags=["rspamd"])
-rspamd_service = RspamdService()
 SCRIPT_DIR = Path(__file__).parent / "scripts"
 
 

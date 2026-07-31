@@ -160,6 +160,21 @@ async def uninstall_maddy(request: Request):
         return JSONResponse({"detail": str(exc)}, status_code=500)
 
 
+@router.post("/api/repair", response_class=JSONResponse)
+async def repair_maddy_api(request: Request):
+    """Repair and rebuild clean Maddy configuration file."""
+    res = maddy_service.repair_config()
+    if not res.get("success"):
+        raise HTTPException(status_code=500, detail=res.get("error", "Configuration repair failed"))
+    return res
+
+
+@router.get("/api/diagnose", response_class=JSONResponse)
+async def diagnose_maddy_api(request: Request):
+    """Get Maddy service status, port availability, and diagnostic logs."""
+    return maddy_service.diagnose()
+
+
 # ---------------------------------------------------------------------------
 # Account CRUD
 # ---------------------------------------------------------------------------

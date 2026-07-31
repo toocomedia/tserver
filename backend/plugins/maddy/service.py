@@ -103,6 +103,29 @@ class MaddyService:
             )
         }
 
+    def repair_config(self) -> Dict[str, Any]:
+        """Repair and rebuild clean maddy.conf via privileged helper."""
+        try:
+            cmd = ["sudo", "-n", "python3", str(MANAGE_SCRIPT), "repair-config"] if os.name != "nt" else ["python", str(MANAGE_SCRIPT), "repair-config"]
+            res = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+            if res.returncode == 0:
+                return {"success": True, "message": "Maddy configuration repaired and service restarted."}
+            return {"success": False, "error": res.stderr.strip() or res.stdout.strip() or "Repair failed"}
+        except Exception as exc:
+            logger.error("Error executing Maddy config repair: %s", exc)
+            return {"success": False, "error": str(exc)}
+
+    def diagnose(self) -> Dict[str, Any]:
+        """Run diagnostics and fetch system log output for Maddy."""
+        try:
+            cmd = ["sudo", "-n", "python3", str(MANAGE_SCRIPT), "diagnose"] if os.name != "nt" else ["python", str(MANAGE_SCRIPT), "diagnose"]
+            res = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
+            logs = res.stdout.strip() or res.stderr.strip() or "No log output available."
+            return {"success": True, "logs": logs, "status": self.get_status()}
+        except Exception as exc:
+            logger.error("Error executing Maddy diagnostics: %s", exc)
+            return {"success": False, "error": str(exc), "logs": f"Error running diagnostics: {exc}"}
+
     # ------------------------------------------------------------------
     # Account Management
     # ------------------------------------------------------------------

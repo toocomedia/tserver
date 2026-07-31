@@ -429,9 +429,55 @@ async function pollMailSsl(domain, resultDiv) {
   }
 }
 
+
 // ---------------------------------------------------------------------------
-// Auto-Init on Load
+// Service Diagnostics & Config Repair
 // ---------------------------------------------------------------------------
+async function openMaddyDiagnostics() {
+  const modal = document.getElementById('maddy-diagnostics-modal');
+  const logsEl = document.getElementById('maddy-diagnostic-logs');
+  if (modal) modal.style.display = 'flex';
+  if (logsEl) logsEl.textContent = 'Running diagnostics...';
+
+  try {
+    const resp = await fetch('/plugins/maddy/api/diagnose');
+    const data = await resp.json();
+    if (logsEl) {
+      logsEl.textContent = data.logs || 'No diagnostic output returned.';
+    }
+  } catch (err) {
+    if (logsEl) logsEl.textContent = 'Diagnostic error: ' + err.message;
+  }
+}
+
+async function repairMaddyConfig() {
+  if (!confirm('Repair and rebuild Maddy configuration file (/etc/maddy/maddy.conf)? This will clean corrupted directives and restart the service.')) return;
+  const btn = document.getElementById('btn-repair-maddy');
+  if (btn) { btn.disabled = true; btn.textContent = 'Repairing...'; }
+
+  try {
+    const token = getCsrfToken();
+    const resp = await fetch('/plugins/maddy/api/repair', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': token
+      }
+    });
+    const data = await resp.json();
+    if (resp.ok) {
+      alert('Maddy configuration repaired successfully!');
+      location.reload();
+    } else {
+      alert('Repair error: ' + (data.detail || data.error || 'Failed to repair config'));
+    }
+  } catch (err) {
+    alert('Request error: ' + err.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '🔧 Repair Config'; }
+  }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   const activeSidebarItem = document.querySelector('.split-sidebar__item.active');
   if (activeSidebarItem && activeSidebarItem.onclick) {
