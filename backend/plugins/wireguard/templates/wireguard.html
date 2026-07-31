@@ -120,32 +120,34 @@
       {% endif %}
 
       {# ── Server Configuration ─────────────────────────────────────── #}
-      <div class="section-header" style="margin-bottom:1.5rem;">
-        <h2 style="font-size:var(--font-h2); font-weight:600; margin:0;">Server Configuration</h2>
-      </div>
-      <div class="stat-grid" style="margin-bottom:2.5rem; background:var(--color-surface); border:1px solid var(--color-line); border-radius:8px; padding:1.5rem;">
-        <div class="stat-card" style="border:none; padding:0;">
-          <div class="stat-card__label">Interface & Port</div>
-          <div class="stat-card__value" style="font-size:var(--font-body); font-weight:500;">{{ status.interface }} / UDP {{ status.listen_port }}</div>
+      <div class="info-group-title">Server Configuration</div>
+      <div class="clean-specs-grid" style="margin-bottom: 2rem;">
+        <div class="clean-specs-item">
+          <div class="clean-specs-item__key">Interface</div>
+          <div class="clean-specs-item__val">{{ status.interface }}</div>
         </div>
-        <div class="stat-card" style="border:none; padding:0;">
-          <div class="stat-card__label">Subnet</div>
-          <div class="stat-card__value" style="font-size:var(--font-body); font-weight:500;">10.8.0.0/24</div>
+        <div class="clean-specs-item">
+          <div class="clean-specs-item__key">Listen Port</div>
+          <div class="clean-specs-item__val">UDP {{ status.listen_port }}</div>
         </div>
-        <div class="stat-card" style="border:none; padding:0;">
-          <div class="stat-card__label">Endpoint</div>
-          <div class="stat-card__value" style="font-size:var(--font-body); font-weight:500;">
+        <div class="clean-specs-item">
+          <div class="clean-specs-item__key">Subnet</div>
+          <div class="clean-specs-item__val">10.8.0.0/24</div>
+        </div>
+        <div class="clean-specs-item">
+          <div class="clean-specs-item__key">Endpoint</div>
+          <div class="clean-specs-item__val">
             {% if server_endpoint %}
               {{ server_endpoint }}:{{ status.listen_port }}
             {% else %}
-              <span style="color:var(--color-warning);">Unconfigured</span>
+              <span class="badge-minimal badge-minimal--neutral">Unconfigured</span>
             {% endif %}
           </div>
         </div>
         {% if status.server_pubkey %}
-        <div class="stat-card" style="border:none; padding:0; grid-column: 1 / -1; margin-top:0.5rem; padding-top:1rem; border-top:1px solid var(--color-line);">
-          <div class="stat-card__label">Public Key</div>
-          <div class="stat-card__value" style="font-size:var(--font-body); font-weight:500; word-break:break-all;">{{ status.server_pubkey }}</div>
+        <div class="clean-specs-item">
+          <div class="clean-specs-item__key">Public Key</div>
+          <div class="clean-specs-item__val" style="word-break:break-all; opacity:0.8;">{{ status.server_pubkey }}</div>
         </div>
         {% endif %}
       </div>
