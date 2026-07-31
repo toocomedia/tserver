@@ -32,10 +32,28 @@ class WireguardService:
     # ------------------------------------------------------------------
 
     def is_installed(self) -> bool:
-        """True when wg binary exists and wg0.conf is present."""
-        has_wg  = shutil.which("wg") is not None or os.path.exists("/usr/bin/wg")
-        has_conf = WG_CONF.exists()
-        return has_wg and has_conf
+        """True when wg binary exists and the wg0.conf is present.
+        Falls back to systemctl check when /etc/wireguard is root-only.
+        """
+        has_wg = shutil.which("wg") is not None or os.path.exists("/usr/bin/wg")
+        if not has_wg:
+            return False
+        try:
+            has_conf = WG_CONF.exists()
+            return has_conf
+        except PermissionError:
+            # /etc/wireguard is root-only (chmod 700). Check via systemctl instead:
+            # returncode 0 = active, 3 = inactive but the unit/service file exists
+            if os.name == "nt":
+                return True
+            try:
+                res = subprocess.run(
+                    ["systemctl", "status", f"wg-quick@{WG_IFACE}"],
+                    capture_output=True, text=True,
+                )
+                return res.returncode in (0, 3)
+            except Exception:
+                return True  # wg binary exists, assume installed
 
     def get_status(self) -> Dict[str, Any]:
         """Return tunnel active state, peer count, server pubkey, and port."""
@@ -64,11 +82,28 @@ class WireguardService:
             "interface":   WG_IFACE,
         }
 
+    def _sudo_read(self, path: Path) -> str | None:
+        """Read a root-only file via `sudo -n cat`. Returns None on failure."""
+        if os.name == "nt":
+            return None
+        try:
+            res = subprocess.run(
+                ["sudo", "-n", "cat", str(path)],
+                capture_output=True, text=True,
+            )
+            return res.stdout if res.returncode == 0 else None
+        except Exception as exc:
+            logger.warning("sudo read %s failed: %s", path, exc)
+            return None
+
     def get_server_pubkey(self) -> str:
         """Read the server public key from disk."""
         try:
             if SERVER_PUBKEY.exists():
                 return SERVER_PUBKEY.read_text(encoding="utf-8").strip()
+        except PermissionError:
+            content = self._sudo_read(SERVER_PUBKEY)
+            return content.strip() if content else ""
         except Exception:
             pass
         return ""
@@ -79,10 +114,22 @@ class WireguardService:
 
     def list_peers(self) -> List[Dict[str, Any]]:
         """Parse wg0.conf and return all [Peer] blocks."""
-        if not WG_CONF.exists():
-            return []
+        # Check existence — may raise PermissionError on Python 3.12+ with root-owned dir
+        try:
+            if not WG_CONF.exists():
+                return []
+        except PermissionError:
+            pass  # directory is root-only; proceed and try reading via sudo
+
+        # Try direct read first, fall back to sudo
         try:
             raw = WG_CONF.read_text(encoding="utf-8")
+        except PermissionError:
+            content = self._sudo_read(WG_CONF)
+            if content is None:
+                logger.error("Could not read wg0.conf even via sudo — no peers returned.")
+                return []
+            raw = content
         except Exception as exc:
             logger.error("Could not read wg0.conf: %s", exc)
             return []
@@ -186,9 +233,8 @@ class WireguardService:
         try:
             with WG_CONF.open("a", encoding="utf-8") as f:
                 f.write(peer_block)
-        except PermissionError:
-            # Try writing via sudo tee
-            block_bytes = peer_block.encode()
+        except (PermissionError, OSError):
+            # /etc/wireguard is root-only — write via sudo tee
             subprocess.run(
                 ["sudo", "-n", "tee", "-a", str(WG_CONF)],
                 input=peer_block, text=True, check=True, capture_output=True,
@@ -210,18 +256,13 @@ class WireguardService:
         if not WG_CONF.exists():
             return False
 
-        raw = WG_CONF.read_text(encoding="utf-8")
-        new_lines: List[str] = []
-        in_target = False
-        removed = False
-
-        for line in raw.splitlines(keepends=True):
-            stripped = line.strip()
-            if stripped == "[Peer]":
-                # Peek: look ahead is not possible line-by-line, so we buffer
-                # We handle this with a two-pass approach
-                in_target = False
-            new_lines.append(line)
+        try:
+            raw = WG_CONF.read_text(encoding="utf-8")
+        except PermissionError:
+            content = self._sudo_read(WG_CONF)
+            if content is None:
+                return False
+            raw = content
 
         # Two-pass: split into blocks, filter the matching one
         blocks = re.split(r"(?=^\[)", raw, flags=re.MULTILINE)
@@ -238,7 +279,7 @@ class WireguardService:
         new_conf = "".join(filtered)
         try:
             WG_CONF.write_text(new_conf, encoding="utf-8")
-        except PermissionError:
+        except (PermissionError, OSError):
             subprocess.run(
                 ["sudo", "-n", "tee", str(WG_CONF)],
                 input=new_conf, text=True, check=True, capture_output=True,
