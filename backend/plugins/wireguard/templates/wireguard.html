@@ -43,6 +43,20 @@
         <span style="font-size:0.9rem; font-weight:700;">{{ status.peers }}</span>
       </div>
 
+      <div>
+        <div style="font-size:0.72rem; color:var(--color-muted); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:3px;">Subnet</div>
+        <code style="font-size:0.85rem;">10.8.0.0/24</code>
+      </div>
+
+      <div>
+        <div style="font-size:0.72rem; color:var(--color-muted); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:3px;">Server Endpoint</div>
+        {% if server_endpoint %}
+          <code style="font-size:0.85rem;">{{ server_endpoint }}:{{ status.listen_port }}</code>
+        {% else %}
+          <span style="font-size:0.8rem; color:var(--color-warning);">Unconfigured (Set SERVER_IP in .env)</span>
+        {% endif %}
+      </div>
+
       {% if status.server_pubkey %}
       <div>
         <div style="font-size:0.72rem; color:var(--color-muted); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:3px;">Server Public Key</div>
@@ -58,6 +72,11 @@
     <div class="split-sidebar__footer" style="padding:1rem; color:var(--color-muted);">
       <h3 style="margin:0; font-size:1rem; color:var(--color-text);">WireGuard VPN</h3>
       <div style="font-size:0.85rem; margin-top:4px;">Version {{ plugin_version }}</div>
+      {% if status.installed %}
+      <div style="margin-top:1rem;">
+        <button class="btn btn--danger btn--sm" style="width:100%;" onclick="openModal('uninstall-modal')">Uninstall Plugin</button>
+      </div>
+      {% endif %}
     </div>
 
   </div>{# /split-sidebar #}
@@ -182,10 +201,10 @@
           <div class="table-wrap">
             <table class="table" id="wg-peers-table">
               <colgroup>
-                <col style="width:22%">
-                <col style="width:18%">
-                <col style="width:36%">
-                <col style="width:24%">
+                <col style="width:25%">
+                <col style="width:20%">
+                <col style="width:30%">
+                <col style="width:25%">
               </colgroup>
               <thead>
                 <tr>
@@ -204,8 +223,8 @@
                   <td>
                     <code>{{ peer.allowed_ips }}</code>
                   </td>
-                  <td style="font-family:monospace; font-size:0.8rem; word-break:break-all; color:var(--color-muted);">
-                    {{ peer.pubkey[:32] }}…
+                  <td style="font-family:monospace; font-size:0.8rem; color:var(--color-muted);">
+                    {{ peer.pubkey[:12] }}…
                   </td>
                   <td class="col-actions" style="display:flex; gap:6px; align-items:center;">
 
@@ -246,94 +265,7 @@
       </div>{# /section peers #}
 
 
-      {# ── Server info section ────────────────────────────────────────── #}
-      <div class="section" id="server-info-section">
-        <div class="section__header">
-          <h3>
-            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <rect x="2" y="2" width="20" height="8" rx="0"></rect>
-              <rect x="2" y="14" width="20" height="8" rx="0"></rect>
-              <line x1="6" y1="6" x2="6.01" y2="6"></line>
-              <line x1="6" y1="18" x2="6.01" y2="18"></line>
-            </svg>
-            Server Info
-          </h3>
-        </div>
-        <div class="section__body" style="padding:1rem;">
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
-
-            <div class="panel">
-              <div class="panel__body" style="padding:0.75rem 1rem;">
-                <div style="font-size:0.72rem; color:var(--color-muted); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px;">Interface</div>
-                <code>{{ status.interface }}</code>
-              </div>
-            </div>
-
-            <div class="panel">
-              <div class="panel__body" style="padding:0.75rem 1rem;">
-                <div style="font-size:0.72rem; color:var(--color-muted); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px;">Listen Port</div>
-                <code>UDP {{ status.listen_port }}</code>
-              </div>
-            </div>
-
-            <div class="panel">
-              <div class="panel__body" style="padding:0.75rem 1rem;">
-                <div style="font-size:0.72rem; color:var(--color-muted); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px;">Subnet</div>
-                <code>10.8.0.0/24</code>
-              </div>
-            </div>
-
-            <div class="panel">
-              <div class="panel__body" style="padding:0.75rem 1rem;">
-                <div style="font-size:0.72rem; color:var(--color-muted); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px;">Server Endpoint</div>
-                <code>{{ server_endpoint or "—" }}:{{ status.listen_port }}</code>
-              </div>
-            </div>
-
-          </div>
-
-          {% if status.server_pubkey %}
-          <div class="panel" style="margin-top:1rem;">
-            <div class="panel__body" style="padding:0.75rem 1rem;">
-              <div style="font-size:0.72rem; color:var(--color-muted); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px;">Server Public Key</div>
-              <code style="word-break:break-all; font-size:0.85rem;">{{ status.server_pubkey }}</code>
-            </div>
-          </div>
-          {% endif %}
-
-          {% if not server_endpoint %}
-          <div class="alert alert--warning" style="margin-top:1rem;">
-            <strong>Server IP not configured.</strong>
-            Set <code>SERVER_IP</code> in your panel's <code>.env</code> so generated client configs
-            have the correct endpoint.
-          </div>
-          {% endif %}
-        </div>
-      </div>{# /section server-info #}
-
-
-      {# ── Danger zone — Uninstall ────────────────────────────────────── #}
-      <div class="section" id="uninstall-section">
-        <div class="section__header">
-          <h3>Danger Zone</h3>
-        </div>
-        <div class="section__body" style="padding:1rem;">
-          <div class="panel" style="border-color:var(--color-danger, #e53935);">
-            <div class="panel__body" style="display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap;">
-              <div>
-                <strong>Uninstall WireGuard</strong>
-                <p class="text-muted" style="margin:4px 0 0; font-size:0.875rem;">
-                  Stops the tunnel, removes all keys and peer configs from <code>/etc/wireguard</code>,
-                  and closes UDP 51820. This cannot be undone.
-                </p>
-              </div>
-              <button class="btn btn--danger btn--sm" onclick="openModal('uninstall-modal')" id="btn-open-uninstall">
-                Uninstall
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+      </div>{# /section peers #}
 
     </div>{# /padding wrapper #}
     {% endif %}{# installed #}
