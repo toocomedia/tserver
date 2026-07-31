@@ -68,38 +68,26 @@ async def index(request: Request):
 
 @router.post("/api/install")
 async def install_rspamd(request: Request):
-    """Trigger Rspamd installation script."""
-    script_path = SCRIPT_DIR / "install_rspamd.sh"
+    """Trigger Rspamd installation script via privileged helper."""
     if os.name == "nt":
         return JSONResponse({"status": "ok", "message": "Mock install on Windows."})
 
-    try:
-        res = subprocess.run(["bash", str(script_path)], capture_output=True, text=True)
-        if res.returncode != 0:
-            logger.error("Rspamd install failed:\nSTDOUT: %s\nSTDERR: %s", res.stdout, res.stderr)
-            return JSONResponse({"detail": res.stderr or res.stdout}, status_code=500)
-        return RedirectResponse("/plugins/rspamd/", status_code=303)
-    except Exception as exc:
-        logger.error("Error executing Rspamd installer: %s", exc)
-        return JSONResponse({"detail": str(exc)}, status_code=500)
+    res = rspamd_service.install()
+    if not res.get("success"):
+        raise HTTPException(status_code=500, detail=res.get("error", "Installation failed"))
+    return RedirectResponse("/plugins/rspamd/", status_code=303)
 
 
 @router.post("/api/uninstall")
 async def uninstall_rspamd(request: Request):
-    """Trigger Rspamd uninstallation script."""
-    script_path = SCRIPT_DIR / "uninstall_rspamd.sh"
+    """Trigger Rspamd uninstallation script via privileged helper."""
     if os.name == "nt":
         return JSONResponse({"status": "ok", "message": "Mock uninstall on Windows."})
 
-    try:
-        res = subprocess.run(["bash", str(script_path)], capture_output=True, text=True)
-        if res.returncode != 0:
-            logger.error("Rspamd uninstall failed:\nSTDOUT: %s\nSTDERR: %s", res.stdout, res.stderr)
-            return JSONResponse({"detail": res.stderr or res.stdout}, status_code=500)
-        return RedirectResponse("/plugins/rspamd/", status_code=303)
-    except Exception as exc:
-        logger.error("Error executing Rspamd uninstaller: %s", exc)
-        return JSONResponse({"detail": str(exc)}, status_code=500)
+    res = rspamd_service.uninstall()
+    if not res.get("success"):
+        raise HTTPException(status_code=500, detail=res.get("error", "Uninstallation failed"))
+    return RedirectResponse("/plugins/rspamd/", status_code=303)
 
 
 # ---------------------------------------------------------------------------

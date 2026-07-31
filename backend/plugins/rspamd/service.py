@@ -217,6 +217,30 @@ class RspamdService:
             logger.error("Error syncing Maddy integration (%s): %s", mode, exc)
             return {"success": False, "error": str(exc)}
 
+    def install(self) -> Dict[str, Any]:
+        """Trigger Rspamd installer script via privileged helper."""
+        try:
+            cmd = self._get_manage_cmd("install")
+            res = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+            if res.returncode == 0:
+                return {"success": True, "message": "Rspamd installed successfully"}
+            return {"success": False, "error": res.stderr.strip() or res.stdout.strip() or "Installation failed"}
+        except Exception as exc:
+            logger.error("Error executing installer script: %s", exc)
+            return {"success": False, "error": str(exc)}
+
+    def uninstall(self) -> Dict[str, Any]:
+        """Trigger Rspamd uninstaller script via privileged helper."""
+        try:
+            cmd = self._get_manage_cmd("uninstall")
+            res = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+            if res.returncode == 0:
+                return {"success": True, "message": "Rspamd uninstalled successfully"}
+            return {"success": False, "error": res.stderr.strip() or res.stdout.strip() or "Uninstallation failed"}
+        except Exception as exc:
+            logger.error("Error executing uninstaller script: %s", exc)
+            return {"success": False, "error": str(exc)}
+
     # ------------------------------------------------------------------
     # Helper & Lifecycle Contracts
     # ------------------------------------------------------------------

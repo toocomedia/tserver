@@ -3,9 +3,12 @@
 backend/plugins/rspamd/scripts/manage_rspamd.py — Privileged Rspamd Helper.
 
 Run as root via sudoers (NOPASSWD).
-Manages systemctl for rspamd, patches /etc/maddy/maddy.conf, and updates action score thresholds.
+Manages systemctl for rspamd, patches /etc/maddy/maddy.conf, updates action score thresholds,
+and executes installer/uninstaller lifecycle scripts safely as root.
 
 Usage:
+    python3 manage_rspamd.py install
+    python3 manage_rspamd.py uninstall
     python3 manage_rspamd.py service-control <start|stop|restart>
     python3 manage_rspamd.py update-thresholds <reject_score> <add_header_score>
     python3 manage_rspamd.py sync-maddy <enable|disable>
@@ -18,6 +21,7 @@ from pathlib import Path
 
 MADDY_CONF = Path("/etc/maddy/maddy.conf")
 RSPAMD_ACTIONS_CONF = Path("/etc/rspamd/local.d/actions.conf")
+SCRIPT_DIR = Path(__file__).resolve().parent
 
 
 def run(cmd: list, check: bool = True) -> subprocess.CompletedProcess:
@@ -27,6 +31,32 @@ def run(cmd: list, check: bool = True) -> subprocess.CompletedProcess:
         text=True,
         check=check,
     )
+
+
+def install_plugin():
+    install_script = SCRIPT_DIR / "install_rspamd.sh"
+    if not install_script.exists():
+        print(f"ERROR: Installer script {install_script} missing.", file=sys.stderr)
+        sys.exit(1)
+
+    res = run(["bash", str(install_script)], check=False)
+    if res.returncode != 0:
+        print(f"ERROR: Installation failed:\n{res.stderr or res.stdout}", file=sys.stderr)
+        sys.exit(1)
+    print("Rspamd plugin installed successfully.")
+
+
+def uninstall_plugin():
+    uninstall_script = SCRIPT_DIR / "uninstall_rspamd.sh"
+    if not uninstall_script.exists():
+        print(f"ERROR: Uninstaller script {uninstall_script} missing.", file=sys.stderr)
+        sys.exit(1)
+
+    res = run(["bash", str(uninstall_script)], check=False)
+    if res.returncode != 0:
+        print(f"ERROR: Uninstallation failed:\n{res.stderr or res.stdout}", file=sys.stderr)
+        sys.exit(1)
+    print("Rspamd plugin uninstalled successfully.")
 
 
 def service_control(action: str):
@@ -137,11 +167,15 @@ def sync_maddy(mode: str):
 
 def main():
     if len(sys.argv) < 2:
-        print("Usage: manage_rspamd.py <service-control|update-thresholds|sync-maddy> [args...]")
+        print("Usage: manage_rspamd.py <install|uninstall|service-control|update-thresholds|sync-maddy> [args...]")
         sys.exit(1)
 
     cmd = sys.argv[1]
-    if cmd == "service-control" and len(sys.argv) >= 3:
+    if cmd == "install":
+        install_plugin()
+    elif cmd == "uninstall":
+        uninstall_plugin()
+    elif cmd == "service-control" and len(sys.argv) >= 3:
         service_control(sys.argv[2])
     elif cmd == "update-thresholds" and len(sys.argv) >= 4:
         update_thresholds(sys.argv[2], sys.argv[3])
