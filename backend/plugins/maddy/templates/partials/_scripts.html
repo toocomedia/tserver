@@ -434,9 +434,13 @@ async function pollMailSsl(domain, resultDiv) {
 // Service Diagnostics & Config Repair
 // ---------------------------------------------------------------------------
 async function openMaddyDiagnostics() {
-  const modal = document.getElementById('maddy-diagnostics-modal');
+  if (typeof openModal === 'function') {
+    openModal('maddy-diagnostics-modal');
+  } else {
+    const el = document.getElementById('maddy-diagnostics-modal');
+    if (el) el.classList.remove('hidden');
+  }
   const logsEl = document.getElementById('maddy-diagnostic-logs');
-  if (modal) modal.style.display = 'flex';
   if (logsEl) logsEl.textContent = 'Running diagnostics...';
 
   try {
@@ -474,7 +478,7 @@ async function repairMaddyConfig() {
   } catch (err) {
     alert('Request error: ' + err.message);
   } finally {
-    if (btn) { btn.disabled = false; btn.textContent = '🔧 Repair Config'; }
+    if (btn) { btn.disabled = false; btn.textContent = 'Repair Config'; }
   }
 }
 
