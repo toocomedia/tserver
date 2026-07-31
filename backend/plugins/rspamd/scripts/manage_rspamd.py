@@ -1,0 +1,156 @@
+#!/usr/bin/env python3
+"""
+backend/plugins/rspamd/scripts/manage_rspamd.py — Privileged Rspamd Helper.
+
+Run as root via sudoers (NOPASSWD).
+Manages systemctl for rspamd, patches /etc/maddy/maddy.conf, and updates action score thresholds.
+
+Usage:
+    python3 manage_rspamd.py service-control <start|stop|restart>
+    python3 manage_rspamd.py update-thresholds <reject_score> <add_header_score>
+    python3 manage_rspamd.py sync-maddy <enable|disable>
+"""
+import sys
+import os
+import re
+import subprocess
+from pathlib import Path
+
+MADDY_CONF = Path("/etc/maddy/maddy.conf")
+RSPAMD_ACTIONS_CONF = Path("/etc/rspamd/local.d/actions.conf")
+
+
+def run(cmd: list, check: bool = True) -> subprocess.CompletedProcess:
+    return subprocess.run(
+        cmd,
+        capture_output=True,
+        text=True,
+        check=check,
+    )
+
+
+def service_control(action: str):
+    if action not in ("start", "stop", "restart"):
+        print(f"ERROR: Invalid action '{action}'", file=sys.stderr)
+        sys.exit(1)
+
+    res = run(["systemctl", action, "rspamd"], check=False)
+    if res.returncode != 0:
+        print(f"ERROR: systemctl {action} rspamd failed: {res.stderr.strip()}", file=sys.stderr)
+        sys.exit(1)
+
+    print(f"Rspamd service {action}ed successfully.")
+
+
+def update_thresholds(reject_str: str, add_header_str: str):
+    try:
+        reject = float(reject_str)
+        add_header = float(add_header_str)
+    except ValueError:
+        print("ERROR: Thresholds must be numeric values.", file=sys.stderr)
+        sys.exit(1)
+
+    if add_header >= reject:
+        print("ERROR: add_header threshold must be smaller than reject threshold.", file=sys.stderr)
+        sys.exit(1)
+
+    RSPAMD_ACTIONS_CONF.parent.mkdir(parents=True, exist_ok=True)
+    content = (
+        "# Managed by srv-panel Rspamd plugin\n"
+        f"reject = {reject};\n"
+        f"add_header = {add_header};\n"
+    )
+
+    try:
+        RSPAMD_ACTIONS_CONF.write_text(content, encoding="utf-8")
+    except Exception as exc:
+        print(f"ERROR: Writing actions.conf failed: {exc}", file=sys.stderr)
+        sys.exit(1)
+
+    # Reload rspamd configuration
+    run(["systemctl", "reload", "rspamd"], check=False)
+    print("Rspamd thresholds updated and service reloaded.")
+
+
+def sync_maddy(mode: str):
+    if mode not in ("enable", "disable"):
+        print("ERROR: mode must be 'enable' or 'disable'", file=sys.stderr)
+        sys.exit(1)
+
+    if not MADDY_CONF.exists():
+        print(f"WARNING: Maddy configuration file {MADDY_CONF} does not exist.", file=sys.stderr)
+        sys.exit(0)
+
+    try:
+        content = MADDY_CONF.read_text(encoding="utf-8")
+        has_rspamd = "rspamd http://127.0.0.1:11333" in content or "check.rspamd" in content
+
+        if mode == "enable":
+            if not has_rspamd:
+                if "check {" in content:
+                    lines = content.splitlines()
+                    new_lines = []
+                    inserted = False
+                    for line in lines:
+                        new_lines.append(line)
+                        if "check {" in line and not inserted:
+                            new_lines.append("        rspamd http://127.0.0.1:11333 {")
+                            new_lines.append("            fail_open true")
+                            new_lines.append("        }")
+                            inserted = True
+                    content = "\n".join(new_lines) + "\n"
+                    MADDY_CONF.write_text(content, encoding="utf-8")
+                    print("Injected Rspamd check into Maddy configuration.")
+        else: # disable
+            if has_rspamd:
+                lines = content.splitlines()
+                new_lines = []
+                skip = 0
+                for line in lines:
+                    if "rspamd http://127.0.0.1:11333" in line or "check.rspamd" in line:
+                        if "{" in line:
+                            skip = 3  # skip the 3-line block
+                        else:
+                            skip = 1
+                        continue
+                    if skip > 0:
+                        skip -= 1
+                        continue
+                    new_lines.append(line)
+                content = "\n".join(new_lines) + "\n"
+                MADDY_CONF.write_text(content, encoding="utf-8")
+                print("Removed Rspamd check from Maddy configuration.")
+
+        # Validate maddy config before restart
+        val = run(["maddy", "--config", str(MADDY_CONF), "check"], check=False)
+        if val.returncode == 0:
+            run(["systemctl", "restart", "maddy"], check=False)
+            print("Maddy configuration revalidated and service restarted.")
+        else:
+            print(f"WARNING: Maddy config validation warning: {val.stderr.strip()}", file=sys.stderr)
+            run(["systemctl", "restart", "maddy"], check=False)
+
+    except Exception as exc:
+        print(f"ERROR: Syncing Maddy configuration failed: {exc}", file=sys.stderr)
+        sys.exit(1)
+
+
+def main():
+    if len(sys.argv) < 2:
+        print("Usage: manage_rspamd.py <service-control|update-thresholds|sync-maddy> [args...]")
+        sys.exit(1)
+
+    cmd = sys.argv[1]
+    if cmd == "service-control" and len(sys.argv) >= 3:
+        service_control(sys.argv[2])
+    elif cmd == "update-thresholds" and len(sys.argv) >= 4:
+        update_thresholds(sys.argv[2], sys.argv[3])
+    elif cmd == "sync-maddy" and len(sys.argv) >= 3:
+        sync_maddy(sys.argv[2])
+    else:
+        print(f"ERROR: Unknown or incomplete command '{cmd}'", file=sys.stderr)
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

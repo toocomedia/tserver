@@ -1,0 +1,17 @@
+{
+  "id": "rspamd",
+  "name": "Spam Filter (Rspamd)",
+  "description": "Ultra-fast content anti-spam filter for Maddy Mail Server with real-time statistics.",
+  "version": "1.0.0",
+  "author": "tooco.",
+  "icon": "shield",
+  "route_prefix": "/plugins/rspamd",
+  "sidebar": true,
+  "sidebar_label": "Spam Filter",
+  "enabled": true,
+  "usage": {
+    "process_names": ["rspamd", "redis-server"]
+  },
+  "install_script": "scripts/install_rspamd.sh",
+  "uninstall_script": "scripts/uninstall_rspamd.sh"
+}

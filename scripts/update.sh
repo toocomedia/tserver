@@ -241,6 +241,18 @@ EOF
   fi
 fi
 
+RSPAMD_MANAGE_SCRIPT="$PANEL_DIR/app/plugins/rspamd/scripts/manage_rspamd.py"
+if [[ -f "$RSPAMD_MANAGE_SCRIPT" ]]; then
+  RSPAMD_SUDOERS_FILE="/etc/sudoers.d/panel-rspamd"
+  cat > "$RSPAMD_SUDOERS_FILE" <<EOF
+# Managed by srv-panel updater — narrow Rspamd helper access only
+$PANEL_USER ALL=(root) NOPASSWD: /usr/bin/python3 $RSPAMD_MANAGE_SCRIPT *
+EOF
+  chmod 440 "$RSPAMD_SUDOERS_FILE"
+  visudo -cf "$RSPAMD_SUDOERS_FILE" >/dev/null || die "Rspamd sudoers validation failed"
+  info "    Rspamd helper sudoers OK ($RSPAMD_SUDOERS_FILE)"
+fi
+
 # ---------------------------------------------------------------
 # Optional panel nginx refresh (does not touch domain site configs)
 # ---------------------------------------------------------------
