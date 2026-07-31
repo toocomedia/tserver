@@ -16,18 +16,18 @@
           {{ plugin.effective_status | replace('_', ' ') | upper }}
         {% endif %}
       </div>
-      {% if plugin.dependency_status or plugin.manifest_error or (action_error and action_error_plugin_id == plugin.id) %}
-        <button type="button" class="btn btn--secondary btn--sm requirements-info-btn {% if plugin.paused_by %}requirements-info-btn--danger{% endif %}"
-          title="{% if plugin.paused_by %}Missing Requirements — View details{% else %}View Requirements & Information{% endif %}"
-          onclick="const host=this.closest('.plugin-requirements-host'); this.classList.toggle('is-expanded'); host.querySelector('.card-details-tray').classList.toggle('is-hidden');">
-          More info
-        </button>
-      {% endif %}
     </div>
     <div class="compact-card-1x1__bottom">
       <div class="compact-card-1x1__title">{{ plugin.name }}</div>
       <div class="compact-card-1x1__meta">v{{ plugin.version }}</div>
       <div class="compact-card-1x1__actions" style="display:flex; gap:6px; margin-top:6px;">
+        {% if plugin.dependency_status or plugin.manifest_error or (action_error and action_error_plugin_id == plugin.id) %}
+          <button type="button" class="icon-btn requirements-info-btn {% if plugin.paused_by %}requirements-info-btn--danger{% endif %}"
+            style="color:#FFF;" title="{% if plugin.paused_by %}Missing Requirements — View details{% else %}View Requirements & Information{% endif %}"
+            onclick="const host=this.closest('.plugin-requirements-host'); this.classList.toggle('is-expanded'); host.querySelector('.card-details-tray').classList.toggle('is-hidden');">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+          </button>
+        {% endif %}
         {% if plugin.route_prefix and plugin.effective_status == 'active' %}
           <a href="{{ plugin.route_prefix }}" class="icon-btn icon-btn--primary" title="Manage {{ plugin.name }}">
             <svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>

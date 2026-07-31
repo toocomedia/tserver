@@ -1,3 +1,4 @@
+import asyncio
 import json
 import sys
 import tempfile
@@ -120,6 +121,21 @@ class PluginManagerTests(unittest.TestCase):
         self.assertEqual(plugins[0]["effective_status"], "active")
         self.assertIsNone(plugins[0]["dependency_status"][0]["healthy"])
         is_healthy.assert_not_called()
+
+    def test_enable_checks_and_blocks_unhealthy_dependency(self):
+        manager = PluginManager()
+        plugin = {"installed": True, "paused_by": ["postgresql"]}
+
+        with patch.object(manager, "get_plugin", return_value=plugin) as get_plugin:
+            success, message = asyncio.run(
+                manager.toggle_plugin("postgres_manager", True)
+            )
+
+        self.assertFalse(success)
+        self.assertEqual(message, "Required dependency is unavailable: postgresql.")
+        get_plugin.assert_called_once_with(
+            "postgres_manager", check_dependencies=True
+        )
 
     def test_unknown_dependency_is_visible_but_blocked(self):
         with tempfile.TemporaryDirectory() as temp:

@@ -359,11 +359,16 @@ class PluginManager:
             await asyncio.wait_for(asyncio.to_thread(hook), timeout=60)
 
     async def toggle_plugin(self, plugin_id: str, enabled: bool) -> tuple[bool, str]:
-        plugin = self.get_plugin(plugin_id)
+        # Enabling is the deliberate point where we check this plugin's own
+        # dependencies. Disabling must remain immediate and never probe them.
+        plugin = self.get_plugin(plugin_id, check_dependencies=enabled)
         if not plugin:
             return False, "Plugin not found."
         if enabled and not plugin.get("installed", False):
             return False, "Cannot enable plugin before it is installed."
+        if enabled and plugin.get("paused_by"):
+            dependencies = ", ".join(plugin["paused_by"])
+            return False, f"Required dependency is unavailable: {dependencies}."
 
         lock = self._operation_locks.setdefault(plugin_id, threading.Lock())
         if not lock.acquire(blocking=False):
@@ -377,8 +382,7 @@ class PluginManager:
                 "plugin", plugin_id, operation=operation, clear_error=True
             )
             try:
-                if not plugin.get("paused_by"):
-                    await self._run_lifecycle_hook(plugin, enabled)
+                await self._run_lifecycle_hook(plugin, enabled)
             except Exception as exc:
                 message = f"Plugin lifecycle hook failed: {exc}"
                 await component_state_store.set(

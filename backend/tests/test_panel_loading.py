@@ -42,7 +42,8 @@ class PanelLoadingRegressionTests(unittest.TestCase):
             plugins_router.index('@router.get("/", response_class=HTMLResponse)')
             : plugins_router.index('@router.get("/assets/{plugin_id}/{filename}")')
         ]
-        self.assertIn("plugin_manager.list_plugins(check_dependencies=True)", index_route)
+        self.assertIn("plugin_manager.list_plugins(check_dependencies=False)", index_route)
+        self.assertNotIn("dependency_manager.get_all_statuses", index_route)
         self.assertNotIn("discover_plugins()", index_route)
 
     def test_roundcube_page_does_not_start_live_status_polling(self):
@@ -109,4 +110,3 @@ class PanelLoadingRegressionTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-
