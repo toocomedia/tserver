@@ -19,7 +19,7 @@ fi
 
 # 2. Install Rspamd and Redis packages
 export DEBIAN_FRONTEND=noninteractive
-apt-get update -qq
+apt-get update -qq || true
 apt-get install -y -qq rspamd redis-server curl || {
     echo "Failed to install Rspamd/Redis packages via apt."
     exit 1
