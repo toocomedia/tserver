@@ -24,37 +24,6 @@
       {% endif %}
     </div>
 
-    {% if status.installed %}
-    {# Server info #}
-    <div style="padding: 1.5rem; display:flex; flex-direction:column; gap:1.25rem;">
-      <div>
-        <div style="font-size:var(--font-small); color:var(--color-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px;">Peers</div>
-        <div style="font-size:1.1rem; font-weight:700; color:var(--color-text);">{{ status.peers }}</div>
-      </div>
-      <div>
-        <div style="font-size:var(--font-small); color:var(--color-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px;">Interface & Port</div>
-        <div style="font-size:var(--font-body); font-family:monospace;">{{ status.interface }} / UDP {{ status.listen_port }}</div>
-      </div>
-      <div>
-        <div style="font-size:var(--font-small); color:var(--color-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px;">Subnet</div>
-        <div style="font-size:var(--font-body); font-family:monospace;">10.8.0.0/24</div>
-      </div>
-      <div>
-        <div style="font-size:var(--font-small); color:var(--color-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px;">Endpoint</div>
-        {% if server_endpoint %}
-          <div style="font-size:var(--font-body); font-family:monospace; word-break:break-all;">{{ server_endpoint }}:{{ status.listen_port }}</div>
-        {% else %}
-          <div style="font-size:var(--font-small); color:var(--color-warning);">Unconfigured</div>
-        {% endif %}
-      </div>
-      {% if status.server_pubkey %}
-      <div>
-        <div style="font-size:var(--font-small); color:var(--color-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px;">Public Key</div>
-        <div style="font-size:0.75rem; font-family:monospace; color:var(--color-muted); word-break:break-all;">{{ status.server_pubkey }}</div>
-      </div>
-      {% endif %}
-    </div>
-    {% endif %}
 
     <div style="flex-grow:1;"></div>
 
@@ -150,6 +119,37 @@
       </div>
       {% endif %}
 
+      {# ── Server Configuration ─────────────────────────────────────── #}
+      <div class="section-header" style="margin-bottom:1.5rem;">
+        <h2 style="font-size:var(--font-h2); font-weight:600; margin:0;">Server Configuration</h2>
+      </div>
+      <div class="stat-grid" style="margin-bottom:2.5rem; background:var(--color-surface); border:1px solid var(--color-line); border-radius:8px; padding:1.5rem;">
+        <div class="stat-card" style="border:none; padding:0;">
+          <div class="stat-card__label">Interface & Port</div>
+          <div class="stat-card__value" style="font-size:var(--font-body); font-weight:500;">{{ status.interface }} / UDP {{ status.listen_port }}</div>
+        </div>
+        <div class="stat-card" style="border:none; padding:0;">
+          <div class="stat-card__label">Subnet</div>
+          <div class="stat-card__value" style="font-size:var(--font-body); font-weight:500;">10.8.0.0/24</div>
+        </div>
+        <div class="stat-card" style="border:none; padding:0;">
+          <div class="stat-card__label">Endpoint</div>
+          <div class="stat-card__value" style="font-size:var(--font-body); font-weight:500;">
+            {% if server_endpoint %}
+              {{ server_endpoint }}:{{ status.listen_port }}
+            {% else %}
+              <span style="color:var(--color-warning);">Unconfigured</span>
+            {% endif %}
+          </div>
+        </div>
+        {% if status.server_pubkey %}
+        <div class="stat-card" style="border:none; padding:0; grid-column: 1 / -1; margin-top:0.5rem; padding-top:1rem; border-top:1px solid var(--color-line);">
+          <div class="stat-card__label">Public Key</div>
+          <div class="stat-card__value" style="font-size:var(--font-body); font-weight:500; word-break:break-all;">{{ status.server_pubkey }}</div>
+        </div>
+        {% endif %}
+      </div>
+
       {# ── Peers section ──────────────────────────────────────────────── #}
       <div class="section-header" style="margin-bottom:1.5rem;">
         <h2 style="font-size:var(--font-h2); font-weight:600; margin:0;">VPN Peers</h2>
@@ -173,8 +173,8 @@
             {% for peer in peers %}
             <tr>
               <td><span class="table-title">{{ peer.name or "—" }}</span></td>
-              <td style="font-family:monospace;">{{ peer.allowed_ips }}</td>
-              <td style="font-family:monospace; opacity:0.8;">{{ peer.pubkey }}</td>
+              <td>{{ peer.allowed_ips }}</td>
+              <td style="opacity:0.8;">{{ peer.pubkey }}</td>
               <td class="col-actions">
                 <div style="display:flex; gap:0.5rem; justify-content:flex-end;">
                   {% if peer.has_download %}

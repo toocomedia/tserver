@@ -57,6 +57,9 @@ write_release_info() {
   if command -v git >/dev/null 2>&1 && git -C "$SOURCE_DIR" rev-parse HEAD >/dev/null 2>&1; then
     commit="$(git -C "$SOURCE_DIR" rev-parse HEAD)"
   fi
+  # The Update page reads this file from the deployed app. Updates already
+  # create it; fresh installs must do the same before the first page load.
+  printf '%s\n' "$commit" > "$PANEL_DIR/app/COMMIT_HASH"
   umask 022
   printf 'commit=%s\nref=%s\ninstalled_at=%s\n' "$commit" "$ref" "$(date -u +%FT%TZ)" > "$PANEL_DIR/RELEASE_INFO"
   chown root:"$PANEL_USER" "$PANEL_DIR/RELEASE_INFO"
