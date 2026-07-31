@@ -41,8 +41,14 @@ _peer_download_cache: dict[str, dict] = {}
 async def wireguard_index(request: Request):
     """Render the WireGuard VPN management page."""
     from plugins.manager import plugin_manager
+    from services.component_state import component_state_store
+
     plugin_info    = plugin_manager.get_plugin("wireguard")
     plugin_version = plugin_info["version"] if plugin_info else "1.0.0"
+
+    # Read operation + last_error from persistent state store
+    state = component_state_store.get("plugin", "wireguard")
+    is_installing = state.operation in ("installing", "uninstalling")
 
     status = wireguard_service.get_status()
     peers  = wireguard_service.list_peers() if status["installed"] else []
@@ -53,6 +59,10 @@ async def wireguard_index(request: Request):
 
     server_endpoint = getattr(panel_config, "SERVER_IP", "") or ""
 
+    # install_error: prefer ?error from URL, fall back to stored last_error
+    url_error = request.query_params.get("error")
+    install_error = url_error or (state.last_error if not status["installed"] else None)
+
     return templates.TemplateResponse("wireguard.html", {
         "request":         request,
         "active_page":     "plugins",
@@ -60,8 +70,28 @@ async def wireguard_index(request: Request):
         "status":          status,
         "peers":           peers,
         "server_endpoint": server_endpoint,
+        "is_installing":   is_installing,
+        "install_error":   install_error,
         "notice":          request.query_params.get("notice"),
         "error":           request.query_params.get("error"),
+    })
+
+
+# ---------------------------------------------------------------------------
+# Status API — used by the install progress poller
+# ---------------------------------------------------------------------------
+
+@router.get("/api/status")
+async def wireguard_status():
+    """Return lightweight JSON status for the install progress poller."""
+    from services.component_state import component_state_store
+    state  = component_state_store.get("plugin", "wireguard")
+    status = wireguard_service.get_status()
+    return JSONResponse({
+        "installed":    status["installed"],
+        "active":       status["active"],
+        "operation":    state.operation,
+        "last_error":   state.last_error,
     })
 
 
