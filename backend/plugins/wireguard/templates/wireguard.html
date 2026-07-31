@@ -638,31 +638,4 @@ function pollInstallStatus() {
 pollInstallStatus();
 {% endif %}
 </script>
-{% endblock %}+
-        '</div>';
-    }
-    pollInstallStatus();
-  }, 600);
-}
-
-function pollInstallStatus() {
-  var poller = setInterval(function() {
-    fetch('/plugins/wireguard/api/status')
-      .then(function(r) { return r.json(); })
-      .then(function(data) {
-        // Done when operation is idle (success or failure)
-        if (data.operation === 'idle') {
-          clearInterval(poller);
-          window.location.reload();
-        }
-      })
-      .catch(function() { /* network hiccup — keep polling */ });
-  }, 3000);
-}
-
-// If page loaded while already installing, start polling immediately
-{% if is_installing %}
-pollInstallStatus();
-{% endif %}
-</script>
 {% endblock %}

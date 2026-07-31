@@ -27,6 +27,19 @@ info()  { echo -e "${GRN}==>${NC} $*"; }
 warn()  { echo -e "${YLW}WARNING:${NC} $*"; }
 die()   { echo -e "${RED}ERROR:${NC} $*" >&2; exit 1; }
 
+write_release_info() {
+  local commit="${UPDATE_SOURCE_COMMIT:-unknown}"
+  local ref="${UPDATE_SOURCE_REF:-local-source}"
+  if command -v git >/dev/null 2>&1 && git -C "$SOURCE_DIR" rev-parse HEAD >/dev/null 2>&1; then
+    commit="$(git -C "$SOURCE_DIR" rev-parse HEAD)"
+  fi
+  umask 022
+  printf 'commit=%s\nref=%s\nupdated_at=%s\n' "$commit" "$ref" "$(date -u +%FT%TZ)" > "$PANEL_DIR/RELEASE_INFO"
+  chown root:"$PANEL_USER" "$PANEL_DIR/RELEASE_INFO"
+  chmod 640 "$PANEL_DIR/RELEASE_INFO"
+  info "Deployed release: $commit"
+}
+
 for arg in "$@"; do
   case "$arg" in
     --no-pip) NO_PIP=1 ;;
@@ -115,6 +128,7 @@ rsync -a --delete \
 if command -v git &>/dev/null && git -C "$SOURCE_DIR" rev-parse HEAD &>/dev/null; then
   git -C "$SOURCE_DIR" rev-parse HEAD > "$PANEL_DIR/app/COMMIT_HASH" 2>/dev/null || true
 fi
+write_release_info
 
 if [[ -d "$SCRIPTS_SRC" ]]; then
   info "Syncing scripts..."

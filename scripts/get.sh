@@ -6,6 +6,10 @@
 #   sudo bash /tmp/tserver-get.sh
 #   rm -f /tmp/tserver-get.sh
 #
+# Install a specific branch, tag, or commit:
+#   sudo REPO_REF=v1.4.0 bash /tmp/tserver-get.sh
+#   sudo REPO_REF=<full-commit-sha> bash /tmp/tserver-get.sh
+#
 # Also works as pipe (do NOT exec-replace stdin):
 #   curl -fsSL .../get.sh | sudo bash
 #
@@ -15,7 +19,9 @@ set -euo pipefail
 echo "==> tserver installer starting..."
 
 REPO_URL="${REPO_URL:-https://github.com/toocomedia/tserver.git}"
-REPO_BRANCH="${REPO_BRANCH:-main}"
+# A branch, tag, or immutable commit SHA.  REPO_BRANCH remains accepted for
+# existing one-line commands, but new automation should use REPO_REF.
+REPO_REF="${REPO_REF:-${REPO_BRANCH:-main}}"
 CLONE_DIR="${CLONE_DIR:-/tmp/tserver-install}"
 
 RED='\033[0;31m'; GRN='\033[0;32m'; NC='\033[0m'
@@ -45,12 +51,23 @@ if ! command -v git &>/dev/null; then
   apt-get install -y git
 fi
 
-info "Cloning ${REPO_URL} (${REPO_BRANCH})..."
+info "Cloning ${REPO_URL} (${REPO_REF})..."
 rm -rf "$CLONE_DIR"
-git clone --depth 1 --branch "$REPO_BRANCH" "$REPO_URL" "$CLONE_DIR"
+# Do not assume the selected version is a branch: releases and exact commits
+# must be installable too.  Fetching the requested ref then detaching records
+# the exact source that was actually deployed.
+git init -q "$CLONE_DIR"
+git -C "$CLONE_DIR" remote add origin "$REPO_URL"
+git -C "$CLONE_DIR" fetch --depth 1 origin "$REPO_REF"
+git -C "$CLONE_DIR" checkout -q --detach FETCH_HEAD
+
+SOURCE_COMMIT="$(git -C "$CLONE_DIR" rev-parse HEAD)"
+info "Resolved source commit: ${SOURCE_COMMIT}"
 
 export SOURCE_DIR="$CLONE_DIR"
 export CLEANUP_SOURCE_DIR="$CLONE_DIR"
+export INSTALL_SOURCE_REF="$REPO_REF"
+export INSTALL_SOURCE_COMMIT="$SOURCE_COMMIT"
 chmod +x "$CLONE_DIR/scripts/"*.sh
 
 info "Starting install.sh (prompts use /dev/tty)..."

@@ -27,6 +27,43 @@ info()  { echo -e "${GRN}==>${NC} $*"; }
 warn()  { echo -e "${YLW}WARNING:${NC} $*"; }
 die()   { echo -e "${RED}ERROR:${NC} $*" >&2; exit 1; }
 
+# A failed lookup makes pip misleadingly report that a valid package has no
+# matching version. Check DNS before apt and again before pip, while printing
+# enough state to repair the VPS rather than continuing with a half-install.
+require_dns() {
+  local host attempts=15
+  for host in github.com pypi.org; do
+    local ok=0
+    for _ in $(seq 1 "$attempts"); do
+      if getent ahostsv4 "$host" >/dev/null 2>&1 || getent hosts "$host" >/dev/null 2>&1; then
+        ok=1
+        break
+      fi
+      sleep 2
+    done
+    if [[ "$ok" -ne 1 ]]; then
+      echo "---- DNS diagnostics ----" >&2
+      echo "Could not resolve $host after $((attempts * 2)) seconds." >&2
+      cat /etc/resolv.conf 2>/dev/null || true
+      resolvectl status 2>/dev/null || systemd-resolve --status 2>/dev/null || true
+      die "DNS resolution is unavailable. Repair the VPS resolver, then rerun this installer."
+    fi
+  done
+}
+
+write_release_info() {
+  local commit="${INSTALL_SOURCE_COMMIT:-unknown}"
+  local ref="${INSTALL_SOURCE_REF:-local-source}"
+  if command -v git >/dev/null 2>&1 && git -C "$SOURCE_DIR" rev-parse HEAD >/dev/null 2>&1; then
+    commit="$(git -C "$SOURCE_DIR" rev-parse HEAD)"
+  fi
+  umask 022
+  printf 'commit=%s\nref=%s\ninstalled_at=%s\n' "$commit" "$ref" "$(date -u +%FT%TZ)" > "$PANEL_DIR/RELEASE_INFO"
+  chown root:"$PANEL_USER" "$PANEL_DIR/RELEASE_INFO"
+  chmod 640 "$PANEL_DIR/RELEASE_INFO"
+  info "Installed release: $commit"
+}
+
 # ---------------------------------------------------------------
 # Preflight
 # ---------------------------------------------------------------
@@ -270,6 +307,8 @@ echo "    ADMIN_USER    = $ADMIN_USER"
 # Packages
 # ---------------------------------------------------------------
 if [[ "$SKIP_APT" != "1" ]]; then
+  info "Checking DNS resolution for package downloads..."
+  require_dns
   info "Updating apt indexes..."
   apt-get update -y
   if [[ "$DO_UPGRADE" == "1" ]]; then
@@ -277,18 +316,34 @@ if [[ "$SKIP_APT" != "1" ]]; then
     DEBIAN_FRONTEND=noninteractive apt-get upgrade -y
   fi
 
-  info "Installing packages..."
-  # pdns postinst often fails on first install (port 53 / no config yet) — ignore,
-  # setup_powerdns.sh configures and starts it correctly afterwards.
+  info "Installing core packages..."
+  # Do not let a PowerDNS post-install restart hide an unrelated failed package.
+  # PowerDNS is installed separately below and starts only after its managed
+  # config and database are written by setup_powerdns.sh.
   DEBIAN_FRONTEND=noninteractive apt-get install -y \
     python3 python3-venv python3-dev python3-pip \
     nginx \
     certbot \
-    pdns-server pdns-backend-sqlite3 \
     sqlite3 \
     curl wget git ufw openssl rsync sudo \
-    zram-tools libjemalloc2 \
-    || true
+    zram-tools libjemalloc2
+
+  POLICY_RC_CREATED=0
+  if [[ ! -e /usr/sbin/policy-rc.d ]]; then
+    cat > /usr/sbin/policy-rc.d <<'EOF'
+#!/bin/sh
+# Prevent daemon starts while srv-panel prepares PowerDNS configuration.
+exit 101
+EOF
+    chmod 755 /usr/sbin/policy-rc.d
+    POLICY_RC_CREATED=1
+  fi
+  info "Installing PowerDNS packages (service start deferred)..."
+  if ! DEBIAN_FRONTEND=noninteractive apt-get install -y pdns-server pdns-backend-sqlite3; then
+    [[ "$POLICY_RC_CREATED" == "1" ]] && rm -f /usr/sbin/policy-rc.d
+    die "PowerDNS package installation failed"
+  fi
+  [[ "$POLICY_RC_CREATED" == "1" ]] && rm -f /usr/sbin/policy-rc.d
 
   # Ensure critical packages are present even if apt returned non-zero from pdns restart
   for pkg in python3 nginx certbot pdns-server pdns-backend-sqlite3 sqlite3; do
@@ -325,6 +380,8 @@ info "Creating virtualenv..."
 if [[ ! -d "$PANEL_DIR/venv" ]]; then
   "$PYTHON_BIN" -m venv "$PANEL_DIR/venv"
 fi
+info "Checking DNS resolution for Python dependencies..."
+require_dns
 "$PANEL_DIR/venv/bin/pip" install --upgrade pip
 info "Installing Python requirements..."
 "$PANEL_DIR/venv/bin/pip" install -r "$SOURCE_DIR/backend/requirements.txt"
@@ -340,6 +397,7 @@ rsync -a --delete \
   --exclude 'panel.db-*' \
   --exclude '.env' \
   "$SOURCE_DIR/backend/" "$PANEL_DIR/app/"
+write_release_info
 
 info "Installing scripts to $PANEL_DIR/scripts ..."
 rsync -a "$SOURCE_DIR/scripts/" "$PANEL_DIR/scripts/"
