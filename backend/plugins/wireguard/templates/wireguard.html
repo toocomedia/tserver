@@ -1,0 +1,429 @@
+{% extends "layout.html" %}
+
+{% block title %}WireGuard VPN — {{ PANEL_NAME }}{% endblock %}
+{% block content_class %}content--flush{% endblock %}
+{% block page_header_wrapper %}{% endblock %}
+
+{% block content %}
+<div class="split-layout">
+
+  {# ── Left sidebar ─────────────────────────────────────────────────────── #}
+  <div class="split-sidebar">
+
+    {# Tunnel status item #}
+    <div class="split-sidebar__item active">
+      <span>Tunnel Status</span>
+      {% if status.installed %}
+        {% if status.active %}
+          <span class="badge-minimal badge-minimal--active" style="margin-left:auto;">ACTIVE</span>
+        {% else %}
+          <span class="badge-minimal badge-minimal--neutral" style="margin-left:auto;">DOWN</span>
+        {% endif %}
+      {% else %}
+        <span class="badge-minimal badge-minimal--neutral" style="margin-left:auto;">NOT INSTALLED</span>
+      {% endif %}
+    </div>
+
+    {% if status.installed %}
+    {# Server info #}
+    <div style="padding: 1rem 1rem 0; display:flex; flex-direction:column; gap:10px;">
+
+      <div>
+        <div style="font-size:0.72rem; color:var(--color-muted); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:3px;">Interface</div>
+        <code style="font-size:0.85rem;">{{ status.interface }}</code>
+      </div>
+
+      <div>
+        <div style="font-size:0.72rem; color:var(--color-muted); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:3px;">Listen Port</div>
+        <code style="font-size:0.85rem;">UDP {{ status.listen_port }}</code>
+      </div>
+
+      <div>
+        <div style="font-size:0.72rem; color:var(--color-muted); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:3px;">Peers</div>
+        <span style="font-size:0.9rem; font-weight:700;">{{ status.peers }}</span>
+      </div>
+
+      {% if status.server_pubkey %}
+      <div>
+        <div style="font-size:0.72rem; color:var(--color-muted); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:3px;">Server Public Key</div>
+        <code style="font-size:0.7rem; word-break:break-all; line-height:1.4;">{{ status.server_pubkey }}</code>
+      </div>
+      {% endif %}
+
+    </div>
+    {% endif %}
+
+    <div style="flex-grow:1;"></div>
+
+    <div class="split-sidebar__footer" style="padding:1rem; color:var(--color-muted);">
+      <h3 style="margin:0; font-size:1rem; color:var(--color-text);">WireGuard VPN</h3>
+      <div style="font-size:0.85rem; margin-top:4px;">Version {{ plugin_version }}</div>
+    </div>
+
+  </div>{# /split-sidebar #}
+
+
+  {# ── Right content ────────────────────────────────────────────────────── #}
+  <div class="split-content">
+
+    {# Notices #}
+    {% if notice %}
+    <div class="alert alert--success" style="margin:1.5rem 1.5rem 0;" id="wg-notice">{{ notice }}</div>
+    {% endif %}
+    {% if error %}
+    <div class="alert alert--danger" style="margin:1.5rem 1.5rem 0;" id="wg-error">{{ error }}</div>
+    {% endif %}
+
+
+    {# ── STATE 1: Not installed ─────────────────────────────────────────── #}
+    {% if not status.installed %}
+    <div style="display:flex; align-items:center; justify-content:center; min-height:400px; padding:2rem;">
+      <div class="panel" style="max-width:480px; width:100%;">
+        <div class="panel__header">
+          <h3 style="display:flex; align-items:center; gap:8px;">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+            </svg>
+            WireGuard Not Installed
+          </h3>
+        </div>
+        <div class="panel__body">
+          <p class="text-muted" style="margin-bottom:1.5rem;">
+            WireGuard will be installed as a kernel module on your VPS. It uses
+            <strong>~0 MB RAM</strong> and routes traffic at kernel speed.
+            UDP port 51820 will be opened automatically.
+          </p>
+          <ul style="margin:0 0 1.5rem 1.2rem; color:var(--color-muted); font-size:0.9rem; line-height:2;">
+            <li>Installs <code>wireguard-tools</code> via apt/dnf</li>
+            <li>Generates server key pair</li>
+            <li>Creates <code>wg0</code> tunnel (10.8.0.1/24)</li>
+            <li>Enables systemd service + NAT</li>
+            <li>Opens UDP 51820 in UFW</li>
+          </ul>
+          <form method="post" action="/plugins/wireguard/api/install" id="wg-install-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+            <button type="submit" class="btn btn--primary" style="width:100%;" id="btn-wg-install"
+                    onclick="this.disabled=true; this.textContent='Installing…';">
+              Install WireGuard
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+
+    {# ── STATE 2 & 3: Installed ─────────────────────────────────────────── #}
+    {% else %}
+
+    <div style="padding:1.5rem;">
+
+      {# Tunnel down warning + restart #}
+      {% if not status.active %}
+      <div class="alert alert--warning" style="margin-bottom:1.5rem; display:flex; align-items:center; justify-content:space-between; gap:1rem;">
+        <span>
+          <strong>Tunnel is down.</strong>
+          <code>wg-quick@wg0</code> is not running.
+        </span>
+        <form method="post" action="/plugins/wireguard/api/restart" style="flex-shrink:0;">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+          <button type="submit" class="btn btn--secondary btn--sm" id="btn-wg-restart">Restart Tunnel</button>
+        </form>
+      </div>
+      {% endif %}
+
+      {# ── Peers section ──────────────────────────────────────────────── #}
+      <div class="section" id="peers-section">
+        <div class="section__header">
+          <h3>
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+              <circle cx="9" cy="7" r="4"></circle>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </svg>
+            Peers
+          </h3>
+          <button class="btn btn--primary btn--sm" onclick="openModal('add-peer-modal')" id="btn-open-add-peer">
+            + Add Peer
+          </button>
+        </div>
+
+        <div class="section__body">
+          {% if peers %}
+          <div class="table-wrap">
+            <table class="table" id="wg-peers-table">
+              <colgroup>
+                <col style="width:22%">
+                <col style="width:18%">
+                <col style="width:36%">
+                <col style="width:24%">
+              </colgroup>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Tunnel IP</th>
+                  <th>Public Key</th>
+                  <th class="col-actions">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for peer in peers %}
+                <tr id="peer-row-{{ loop.index }}" {% if request.query_params.get('highlight') and peer.pubkey in request.query_params.get('highlight', '') %}style="background:var(--color-accent-alpha, rgba(199,244,100,0.07));"{% endif %}>
+                  <td class="table-title">
+                    <strong>{{ peer.name or "—" }}</strong>
+                  </td>
+                  <td>
+                    <code>{{ peer.allowed_ips }}</code>
+                  </td>
+                  <td style="font-family:monospace; font-size:0.8rem; word-break:break-all; color:var(--color-muted);">
+                    {{ peer.pubkey[:32] }}…
+                  </td>
+                  <td class="col-actions" style="display:flex; gap:6px; align-items:center;">
+
+                    {# Download config — only available right after creation #}
+                    {% if peer.has_download %}
+                    <a class="btn btn--primary btn--sm"
+                       href="/plugins/wireguard/api/peers/{{ peer.pubkey | urlencode }}/config"
+                       id="btn-download-{{ loop.index }}"
+                       title="Download .conf — only available once!">
+                      ↓ Config
+                    </a>
+                    {% else %}
+                    <span class="btn btn--secondary btn--sm" style="opacity:0.35; cursor:not-allowed;" title="Config already downloaded or not available">
+                      ↓ Config
+                    </span>
+                    {% endif %}
+
+                    <button class="btn btn--danger btn--sm"
+                            id="btn-delete-{{ loop.index }}"
+                            onclick="openDeleteModal('{{ peer.pubkey | urlencode }}', '{{ peer.name | default('this peer', true) }}')">
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+
+          {% else %}
+          <div class="alert alert--info" id="peers-empty-state">
+            No peers configured yet. Click <strong>+ Add Peer</strong> to create your first VPN profile.
+          </div>
+          {% endif %}
+        </div>
+      </div>{# /section peers #}
+
+
+      {# ── Server info section ────────────────────────────────────────── #}
+      <div class="section" id="server-info-section">
+        <div class="section__header">
+          <h3>
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="2" y="2" width="20" height="8" rx="0"></rect>
+              <rect x="2" y="14" width="20" height="8" rx="0"></rect>
+              <line x1="6" y1="6" x2="6.01" y2="6"></line>
+              <line x1="6" y1="18" x2="6.01" y2="18"></line>
+            </svg>
+            Server Info
+          </h3>
+        </div>
+        <div class="section__body" style="padding:1rem;">
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+
+            <div class="panel">
+              <div class="panel__body" style="padding:0.75rem 1rem;">
+                <div style="font-size:0.72rem; color:var(--color-muted); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px;">Interface</div>
+                <code>{{ status.interface }}</code>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel__body" style="padding:0.75rem 1rem;">
+                <div style="font-size:0.72rem; color:var(--color-muted); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px;">Listen Port</div>
+                <code>UDP {{ status.listen_port }}</code>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel__body" style="padding:0.75rem 1rem;">
+                <div style="font-size:0.72rem; color:var(--color-muted); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px;">Subnet</div>
+                <code>10.8.0.0/24</code>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel__body" style="padding:0.75rem 1rem;">
+                <div style="font-size:0.72rem; color:var(--color-muted); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px;">Server Endpoint</div>
+                <code>{{ server_endpoint or "—" }}:{{ status.listen_port }}</code>
+              </div>
+            </div>
+
+          </div>
+
+          {% if status.server_pubkey %}
+          <div class="panel" style="margin-top:1rem;">
+            <div class="panel__body" style="padding:0.75rem 1rem;">
+              <div style="font-size:0.72rem; color:var(--color-muted); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px;">Server Public Key</div>
+              <code style="word-break:break-all; font-size:0.85rem;">{{ status.server_pubkey }}</code>
+            </div>
+          </div>
+          {% endif %}
+
+          {% if not server_endpoint %}
+          <div class="alert alert--warning" style="margin-top:1rem;">
+            <strong>Server IP not configured.</strong>
+            Set <code>SERVER_IP</code> in your panel's <code>.env</code> so generated client configs
+            have the correct endpoint.
+          </div>
+          {% endif %}
+        </div>
+      </div>{# /section server-info #}
+
+
+      {# ── Danger zone — Uninstall ────────────────────────────────────── #}
+      <div class="section" id="uninstall-section">
+        <div class="section__header">
+          <h3>Danger Zone</h3>
+        </div>
+        <div class="section__body" style="padding:1rem;">
+          <div class="panel" style="border-color:var(--color-danger, #e53935);">
+            <div class="panel__body" style="display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap;">
+              <div>
+                <strong>Uninstall WireGuard</strong>
+                <p class="text-muted" style="margin:4px 0 0; font-size:0.875rem;">
+                  Stops the tunnel, removes all keys and peer configs from <code>/etc/wireguard</code>,
+                  and closes UDP 51820. This cannot be undone.
+                </p>
+              </div>
+              <button class="btn btn--danger btn--sm" onclick="openModal('uninstall-modal')" id="btn-open-uninstall">
+                Uninstall
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>{# /padding wrapper #}
+    {% endif %}{# installed #}
+
+  </div>{# /split-content #}
+</div>{# /split-layout #}
+
+
+{# ── Modals ──────────────────────────────────────────────────────────────── #}
+
+{# Add Peer Modal #}
+<div id="add-peer-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="add-peer-title">
+  <div class="modal">
+    <div class="modal__header">
+      <h2 id="add-peer-title">Add VPN Peer</h2>
+      <button class="btn btn--ghost btn--icon" onclick="closeModal('add-peer-modal')" aria-label="Close">✕</button>
+    </div>
+    <form method="post" action="/plugins/wireguard/api/peers" id="add-peer-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+      <div class="modal__body">
+        <div class="form-group">
+          <label class="form-label" for="peer-name-input">Peer Name</label>
+          <input type="text" id="peer-name-input" name="name" class="form-input"
+                 placeholder="e.g. my-laptop, iphone, home-pc"
+                 maxlength="64" required autocomplete="off">
+          <div class="form-hint mt-1">
+            A label so you can identify this device. A unique tunnel IP and key pair will be generated automatically.
+          </div>
+        </div>
+        <div class="alert alert--info" style="margin-top:1rem;">
+          <strong>Download your config immediately.</strong>
+          The private key is shown only once — if you miss the download, delete this peer and create a new one.
+        </div>
+      </div>
+      <div class="modal__footer">
+        <button type="button" class="btn btn--secondary" onclick="closeModal('add-peer-modal')">Cancel</button>
+        <button type="submit" class="btn btn--primary" id="btn-add-peer-submit"
+                onclick="this.disabled=true; this.textContent='Creating…';">
+          Create Peer
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+
+{# Delete Peer Modal #}
+<div id="delete-peer-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="delete-peer-title">
+  <div class="modal">
+    <div class="modal__header">
+      <h2 id="delete-peer-title">Delete Peer</h2>
+      <button class="btn btn--ghost btn--icon" onclick="closeModal('delete-peer-modal')" aria-label="Close">✕</button>
+    </div>
+    <div class="modal__body">
+      <p>Are you sure you want to delete peer <strong id="delete-peer-name-label"></strong>?</p>
+      <p class="text-muted" style="font-size:0.875rem; margin-top:8px;">
+        This will remove the peer from <code>wg0.conf</code> and disconnect the device immediately.
+        The action cannot be undone.
+      </p>
+    </div>
+    <div class="modal__footer">
+      <button type="button" class="btn btn--secondary" onclick="closeModal('delete-peer-modal')">Cancel</button>
+      <form id="delete-peer-form" method="post" action="" style="display:inline;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+        <button type="submit" class="btn btn--danger" id="btn-confirm-delete">Delete Peer</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+
+{# Uninstall Modal #}
+<div id="uninstall-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="uninstall-title">
+  <div class="modal">
+    <div class="modal__header">
+      <h2 id="uninstall-title">Uninstall WireGuard</h2>
+      <button class="btn btn--ghost btn--icon" onclick="closeModal('uninstall-modal')" aria-label="Close">✕</button>
+    </div>
+    <div class="modal__body">
+      <div class="alert alert--danger">
+        <strong>This will permanently remove WireGuard from your server.</strong>
+      </div>
+      <ul style="margin:1rem 0 0 1.2rem; color:var(--color-muted); font-size:0.9rem; line-height:2;">
+        <li>Stops and disables <code>wg-quick@wg0</code></li>
+        <li>Deletes <code>/etc/wireguard/</code> (all keys and peer configs)</li>
+        <li>Closes UDP 51820 in the firewall</li>
+        <li>Disables IP forwarding</li>
+      </ul>
+      <p style="margin-top:1rem;" class="text-muted">All VPN peers will lose connectivity immediately.</p>
+    </div>
+    <div class="modal__footer">
+      <button type="button" class="btn btn--secondary" onclick="closeModal('uninstall-modal')">Cancel</button>
+      <form method="post" action="/plugins/wireguard/api/uninstall" style="display:inline;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+        <button type="submit" class="btn btn--danger" id="btn-confirm-uninstall"
+                onclick="this.disabled=true; this.textContent='Uninstalling…';">
+          Uninstall
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+
+{% block scripts %}
+<script>
+function openDeleteModal(encodedPubkey, peerName) {
+  document.getElementById('delete-peer-name-label').textContent = peerName;
+  document.getElementById('delete-peer-form').action =
+    '/plugins/wireguard/api/peers/' + encodedPubkey + '/delete';
+  openModal('delete-peer-modal');
+}
+
+// Auto-dismiss notices after 8 s
+(function() {
+  ['wg-notice', 'wg-error'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) setTimeout(function() { el.style.display = 'none'; }, 8000);
+  });
+})();
+</script>
+{% endblock %}

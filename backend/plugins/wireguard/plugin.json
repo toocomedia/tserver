@@ -1,0 +1,17 @@
+{
+  "id": "wireguard",
+  "name": "WireGuard VPN",
+  "description": "Kernel-level WireGuard VPN server. Create peers, download .conf profiles, and use your VPS as a personal VPN.",
+  "version": "1.0.0",
+  "author": "panel",
+  "icon": "shield",
+  "route_prefix": "/plugins/wireguard",
+  "sidebar": true,
+  "sidebar_label": "WireGuard VPN",
+  "enabled": true,
+  "usage": {
+    "process_names": ["wg"]
+  },
+  "install_script": "scripts/install_wireguard.sh",
+  "uninstall_script": "scripts/uninstall_wireguard.sh"
+}
