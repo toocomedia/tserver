@@ -4,7 +4,13 @@
     <img src="/static/images/logobarq.png" alt="{{ PANEL_NAME }}" class="sidebar__logo-img" style="height: 28px; width: auto; object-fit: contain;">
   </div>
 
-  <ul class="sidebar__nav" role="list">
+  <div class="sidebar__nav-wrapper">
+    <div class="sidebar__scroll-arrow sidebar__scroll-arrow--up" id="sidebar-scroll-up" aria-label="Scroll up">
+      <svg viewBox="0 0 24 24">
+        <polyline points="18 15 12 9 6 15"></polyline>
+      </svg>
+    </div>
+    <ul class="sidebar__nav" id="sidebar-nav" role="list">
 
     <li>
       <a href="{{ path('home') }}" class="sidebar__item" data-path="{{ path('home') }}" aria-label="Dashboard">
@@ -166,7 +172,13 @@
       </a>
     </li>
 
-  </ul>
+    </ul>
+    <div class="sidebar__scroll-arrow sidebar__scroll-arrow--down" id="sidebar-scroll-down" aria-label="Scroll down">
+      <svg viewBox="0 0 24 24">
+        <polyline points="6 9 12 15 18 9"></polyline>
+      </svg>
+    </div>
+  </div>
 
   {% if request.session.get("username") %}
   <div class="sidebar__user">

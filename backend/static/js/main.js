@@ -351,6 +351,42 @@ document.addEventListener("DOMContentLoaded", () => {
     fetchNotificationCount();
     setInterval(fetchNotificationCount, 60000);
   }
+
+  // Sidebar custom scroll logic
+  const sidebarNav = document.getElementById("sidebar-nav");
+  const scrollUpBtn = document.getElementById("sidebar-scroll-up");
+  const scrollDownBtn = document.getElementById("sidebar-scroll-down");
+
+  if (sidebarNav && scrollUpBtn && scrollDownBtn) {
+    const updateScrollArrows = () => {
+      const { scrollTop, scrollHeight, clientHeight } = sidebarNav;
+      
+      if (scrollTop > 0) {
+        scrollUpBtn.classList.add("visible");
+      } else {
+        scrollUpBtn.classList.remove("visible");
+      }
+      
+      if (Math.ceil(scrollTop + clientHeight) < scrollHeight) {
+        scrollDownBtn.classList.add("visible");
+      } else {
+        scrollDownBtn.classList.remove("visible");
+      }
+    };
+
+    sidebarNav.addEventListener("scroll", updateScrollArrows);
+    window.addEventListener("resize", updateScrollArrows);
+    // Initial check (delay slightly to ensure render)
+    setTimeout(updateScrollArrows, 100);
+
+    scrollUpBtn.addEventListener("click", () => {
+      sidebarNav.scrollBy({ top: -200, behavior: "smooth" });
+    });
+
+    scrollDownBtn.addEventListener("click", () => {
+      sidebarNav.scrollBy({ top: 200, behavior: "smooth" });
+    });
+  }
 });
 
 window.PATHS = PATHS;
