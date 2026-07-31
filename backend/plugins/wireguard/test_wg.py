@@ -1,33 +1,33 @@
 #!/usr/bin/env python3
 """
-WireGuard Plugin — VPS Diagnostic & Test Script
-Run as the panel user on the VPS:
+WireGuard Plugin — Full Service + System Diagnostic Script
+Tests every function the router calls, exactly as the panel does.
 
+Run on the VPS as the panel user:
     python3 /opt/srv-panel/app/plugins/wireguard/test_wg.py
-
-Or as root to also test root-mode paths:
-
-    python3 /opt/srv-panel/app/plugins/wireguard/test_wg.py --as-root
 """
 import os
 import sys
+import re
 import subprocess
 import shutil
-import re
-import argparse
 from pathlib import Path
 
 # ---------------------------------------------------------------------------
-# Config — match service.py constants
+# Bootstrap — add panel app to path so we can import the real service
 # ---------------------------------------------------------------------------
-WG_DIR        = Path("/etc/wireguard")
-WG_IFACE      = "wg0"
-WG_CONF       = WG_DIR / f"{WG_IFACE}.conf"
-SERVER_KEY    = WG_DIR / "server.key"
-SERVER_PUBKEY = WG_DIR / "server.pub"
-WG_PORT       = 51820
-TEST_PEER_NAME = "test-diagnostic-peer"
+PANEL_APP = Path(__file__).parent.parent.parent  # .../plugins/wireguard/../../.. = app/
+sys.path.insert(0, str(PANEL_APP))
 
+# Also try common install locations if the relative path doesn't work
+for candidate in [PANEL_APP, Path("/opt/srv-panel/app"), Path("/home/panel/srv-t/backend")]:
+    if (candidate / "plugins" / "wireguard" / "service.py").exists():
+        sys.path.insert(0, str(candidate))
+        break
+
+# ---------------------------------------------------------------------------
+# Colours
+# ---------------------------------------------------------------------------
 PASS  = "\033[92m  PASS\033[0m"
 FAIL  = "\033[91m  FAIL\033[0m"
 WARN  = "\033[93m  WARN\033[0m"
@@ -41,7 +41,7 @@ def check(label, passed, detail=""):
     tag = PASS if passed else FAIL
     print(f"{tag}  {label}")
     if detail:
-        for line in detail.strip().splitlines():
+        for line in str(detail).strip().splitlines():
             print(f"       {line}")
     results.append((label, passed))
     return passed
@@ -49,273 +49,253 @@ def check(label, passed, detail=""):
 def warn(label, detail=""):
     print(f"{WARN}  {label}")
     if detail:
-        for line in detail.strip().splitlines():
+        for line in str(detail).strip().splitlines():
             print(f"       {line}")
 
 def info(label, detail=""):
     print(f"{INFO}  {label}")
     if detail:
-        for line in detail.strip().splitlines():
+        for line in str(detail).strip().splitlines():
             print(f"       {line}")
 
-def run(cmd, input=None, check_rc=False):
+def run(cmd, input=None):
     try:
-        r = subprocess.run(cmd, capture_output=True, text=True, input=input, timeout=15)
-        return r
+        return subprocess.run(cmd, capture_output=True, text=True, input=input, timeout=15)
     except Exception as e:
-        class FakeResult:
-            returncode = -1
-            stdout = ""
-            stderr = str(e)
-        return FakeResult()
+        class Fake:
+            returncode = -1; stdout = ""; stderr = str(e)
+        return Fake()
 
 def sudo(*args, input=None):
-    cmd = ["sudo", "-n", *args]
-    return run(cmd, input=input)
+    return run(["sudo", "-n", *args], input=input)
 
-# ---------------------------------------------------------------------------
-# Section 1 — System prerequisites
-# ---------------------------------------------------------------------------
+WG_DIR    = Path("/etc/wireguard")
+WG_IFACE  = "wg0"
+WG_CONF   = WG_DIR / f"{WG_IFACE}.conf"
+SERVER_PUB = WG_DIR / "server.pub"
+
+
+# ===========================================================================
 print(f"\n{TITLE}══════════════════════════════════════════{RESET}")
-print(f"{TITLE}  WireGuard Plugin — VPS Diagnostics       {RESET}")
+print(f"{TITLE}  WireGuard Plugin — Full Diagnostics      {RESET}")
 print(f"{TITLE}══════════════════════════════════════════{RESET}\n")
 
+# ---------------------------------------------------------------------------
+# [1] System prerequisites
+# ---------------------------------------------------------------------------
 print(f"{TITLE}[1] System Prerequisites{RESET}")
+info(f"Running as: {run(['whoami']).stdout.strip()}")
+info(f"Panel app path: {PANEL_APP}")
 
-# OS
-r = run(["cat", "/etc/os-release"])
-os_name = ""
-for line in r.stdout.splitlines():
-    if line.startswith("PRETTY_NAME="):
-        os_name = line.split("=", 1)[1].strip('"')
-info(f"OS: {os_name or 'unknown'}")
+wg_ok  = bool(shutil.which("wg"))
+wgq_ok = bool(shutil.which("wg-quick"))
+check("wg binary in PATH",       wg_ok,  shutil.which("wg") or "not found")
+check("wg-quick binary in PATH", wgq_ok, shutil.which("wg-quick") or "not found")
 
-# Whoami
-whoami = run(["whoami"]).stdout.strip()
-info(f"Running as: {whoami}")
-
-# wg binary
-wg_path = shutil.which("wg") or ""
-check("wg binary found", bool(wg_path), wg_path or "wg not in PATH")
-
-# wg-quick binary
-wgq_path = shutil.which("wg-quick") or ""
-check("wg-quick binary found", bool(wgq_path), wgq_path or "wg-quick not in PATH")
-
-# wg version
-r = run(["wg", "--version"])
-info(f"wg version: {r.stdout.strip() or r.stderr.strip()}")
+r = run(["systemctl", "is-active", "wg-quick@wg0"])
+check("wg-quick@wg0 service active", r.stdout.strip() == "active", r.stdout.strip())
 
 # ---------------------------------------------------------------------------
-# Section 2 — /etc/wireguard directory & files
+# [2] Sudo permissions
 # ---------------------------------------------------------------------------
-print(f"\n{TITLE}[2] /etc/wireguard Files & Permissions{RESET}")
+print(f"\n{TITLE}[2] Sudo Permissions (panel user){RESET}")
 
-# Directory exists
-dir_exists = WG_DIR.exists()
-check("/etc/wireguard/ exists", dir_exists)
-
-if dir_exists:
-    # Directory permissions
-    r = run(["stat", "-c", "%a %U %G", str(WG_DIR)])
-    stat_out = r.stdout.strip()
-    info(f"/etc/wireguard permissions: {stat_out}")
-
-    # wg0.conf via sudo
-    r = sudo("cat", str(WG_CONF))
-    can_read_conf = r.returncode == 0
-    check("sudo -n cat wg0.conf works", can_read_conf,
-          r.stderr.strip() if not can_read_conf else f"{len(r.stdout.splitlines())} lines read")
-
-    if can_read_conf:
-        conf_text = r.stdout
-        has_interface = "[Interface]" in conf_text
-        has_privatekey = "PrivateKey" in conf_text
-        has_address = "Address" in conf_text
-        check("wg0.conf has [Interface] block", has_interface)
-        check("wg0.conf has PrivateKey", has_privatekey)
-        check("wg0.conf has Address", has_address)
-
-        # Count peers
-        peer_count = conf_text.count("[Peer]")
-        info(f"Peer blocks in wg0.conf: {peer_count}")
-
-    # server.pub via sudo
-    r = sudo("cat", str(SERVER_PUBKEY))
-    can_read_pub = r.returncode == 0
-    check("sudo -n cat server.pub works", can_read_pub,
-          r.stderr.strip() if not can_read_pub else f"pubkey: {r.stdout.strip()[:32]}…")
+checks = [
+    (["cat", str(WG_CONF)],          "sudo cat wg0.conf"),
+    (["cat", str(SERVER_PUB)],       "sudo cat server.pub"),
+    (["wg", "show", WG_IFACE],       "sudo wg show wg0"),
+    (["wg-quick", "strip", WG_IFACE],"sudo wg-quick strip wg0"),
+]
+for cmd, label in checks:
+    r = sudo(*cmd)
+    check(label, r.returncode == 0,
+          r.stderr.strip() if r.returncode != 0 else (r.stdout.strip()[:80] or "ok"))
 
 # ---------------------------------------------------------------------------
-# Section 3 — Sudo permissions
+# [3] Import real service module
 # ---------------------------------------------------------------------------
-print(f"\n{TITLE}[3] Sudo Permissions{RESET}")
-
-# tee (needed for writing conf)
-r = run(["bash", "-c", "echo test | sudo -n tee /tmp/srv-wg-test.txt > /dev/null && echo ok"])
-check("sudo -n tee works", "ok" in r.stdout,
-      r.stderr.strip() if "ok" not in r.stdout else "")
-
-# cat /etc/wireguard/*
-r = sudo("cat", str(WG_CONF))
-check("sudo -n cat /etc/wireguard/* works", r.returncode == 0,
-      r.stderr.strip() if r.returncode != 0 else "")
-
-# wg (needed for syncconf, peer remove)
-r = sudo("wg", "show", WG_IFACE)
-check("sudo -n wg show wg0 works", r.returncode == 0,
-      (r.stderr or r.stdout).strip() if r.returncode != 0 else r.stdout.strip()[:120])
-
-# wg-quick strip (needed for syncconf)
-r = sudo("wg-quick", "strip", WG_IFACE)
-check("sudo -n wg-quick strip wg0 works", r.returncode == 0,
-      (r.stderr or r.stdout).strip() if r.returncode != 0 else "ok")
-
-# systemctl status
-r = sudo("systemctl", "is-active", f"wg-quick@{WG_IFACE}")
-svc_active = r.stdout.strip() == "active"
-check(f"wg-quick@{WG_IFACE} systemd service is active", svc_active,
-      f"status: {r.stdout.strip()}")
+print(f"\n{TITLE}[3] Import Service Module{RESET}")
+try:
+    from plugins.wireguard.service import wireguard_service, WireguardService
+    check("Import plugins.wireguard.service", True)
+except Exception as e:
+    check("Import plugins.wireguard.service", False, str(e))
+    print(f"\n{FAIL}  Cannot import service — remaining tests skipped.\n")
+    sys.exit(1)
 
 # ---------------------------------------------------------------------------
-# Section 4 — Key generation (no sudo needed)
+# [4] is_installed()
 # ---------------------------------------------------------------------------
-print(f"\n{TITLE}[4] Key Generation (no sudo){RESET}")
-
-r = run(["wg", "genkey"])
-has_privkey = r.returncode == 0 and len(r.stdout.strip()) > 20
-check("wg genkey works without sudo", has_privkey,
-      r.stderr.strip() if not has_privkey else f"key length: {len(r.stdout.strip())} chars")
-
-if has_privkey:
-    privkey = r.stdout.strip()
-    r2 = run(["wg", "pubkey"], input=privkey)
-    has_pubkey = r2.returncode == 0 and len(r2.stdout.strip()) > 20
-    check("wg pubkey (derive public key) works", has_pubkey,
-          r2.stderr.strip() if not has_pubkey else f"pubkey: {r2.stdout.strip()[:32]}…")
+print(f"\n{TITLE}[4] service.is_installed(){RESET}")
+try:
+    installed = wireguard_service.is_installed()
+    check("is_installed() returns True", installed, f"returned: {installed}")
+except Exception as e:
+    check("is_installed() no exception", False, str(e))
 
 # ---------------------------------------------------------------------------
-# Section 5 — Peer add simulation
+# [5] get_status()
 # ---------------------------------------------------------------------------
-print(f"\n{TITLE}[5] Peer Add Simulation{RESET}")
-
-# Generate test key pair
-r = run(["wg", "genkey"])
-test_privkey = r.stdout.strip()
-r2 = run(["wg", "pubkey"], input=test_privkey)
-test_pubkey = r2.stdout.strip()
-check("Generated test key pair", bool(test_privkey and test_pubkey))
-
-# Find next free IP
-next_ip = "10.8.0.2"
-r = sudo("cat", str(WG_CONF))
-if r.returncode == 0:
-    used = set()
-    for m in re.finditer(r"10\.8\.0\.(\d+)", r.stdout):
-        used.add(int(m.group(1)))
-    used.add(1)
-    for i in range(2, 255):
-        if i not in used:
-            next_ip = f"10.8.0.{i}"
-            break
-info(f"Next available peer IP: {next_ip}")
-
-# Write peer block via sudo tee -a
-peer_block = (
-    f"\n# Name: {TEST_PEER_NAME}\n"
-    f"[Peer]\n"
-    f"PublicKey  = {test_pubkey}\n"
-    f"AllowedIPs = {next_ip}/32\n"
-)
-r = sudo("tee", "-a", str(WG_CONF), input=peer_block)
-wrote_peer = r.returncode == 0
-check("Write peer block to wg0.conf via sudo tee", wrote_peer,
-      r.stderr.strip() if not wrote_peer else f"wrote {len(peer_block)} bytes")
-
-# Hot-reload via wg syncconf
-if wrote_peer:
-    r_strip = sudo("wg-quick", "strip", WG_IFACE)
-    if r_strip.returncode == 0:
-        r_sync = sudo("wg", "syncconf", WG_IFACE, "/dev/stdin", input=r_strip.stdout)
-        check("wg syncconf (live reload) works", r_sync.returncode == 0,
-              r_sync.stderr.strip() if r_sync.returncode != 0 else "peers updated in kernel")
-    else:
-        warn("wg-quick strip failed — syncconf skipped", r_strip.stderr.strip())
-
-# Read back conf and verify peer is there
-r = sudo("cat", str(WG_CONF))
-peer_visible = test_pubkey in r.stdout if r.returncode == 0 else False
-check("Peer visible in wg0.conf after write", peer_visible)
+print(f"\n{TITLE}[5] service.get_status(){RESET}")
+try:
+    status = wireguard_service.get_status()
+    check("get_status() no exception", True)
+    check("status['installed'] is True",  status.get("installed") is True,  str(status.get("installed")))
+    check("status['active'] is True",     status.get("active") is True,     str(status.get("active")))
+    check("status['listen_port'] == 51820", status.get("listen_port") == 51820, str(status.get("listen_port")))
+    check("status['interface'] == 'wg0'", status.get("interface") == "wg0", str(status.get("interface")))
+    info(f"Peers reported: {status.get('peers')}")
+    info(f"Server pubkey:  {str(status.get('server_pubkey',''))[:32]}…")
+except Exception as e:
+    check("get_status() no exception", False, str(e))
 
 # ---------------------------------------------------------------------------
-# Section 6 — Peer remove simulation
+# [6] get_server_pubkey()
 # ---------------------------------------------------------------------------
-print(f"\n{TITLE}[6] Peer Remove Simulation{RESET}")
+print(f"\n{TITLE}[6] service.get_server_pubkey(){RESET}")
+try:
+    pubkey = wireguard_service.get_server_pubkey()
+    check("get_server_pubkey() returns non-empty string", bool(pubkey), pubkey[:32] + "…" if pubkey else "empty")
+except Exception as e:
+    check("get_server_pubkey() no exception", False, str(e))
 
-if r.returncode == 0 and peer_visible:
-    conf_text = r.stdout
-    # Two-pass remove
-    blocks = re.split(r"(?=^\[)", conf_text, flags=re.MULTILINE)
-    filtered = [b for b in blocks if not (b.startswith("[Peer]") and test_pubkey in b)]
-    removed = len(filtered) < len(blocks)
-    check("Identified peer block for removal", removed)
+# ---------------------------------------------------------------------------
+# [7] list_peers()
+# ---------------------------------------------------------------------------
+print(f"\n{TITLE}[7] service.list_peers(){RESET}")
+try:
+    peers_before = wireguard_service.list_peers()
+    check("list_peers() no exception", True)
+    check("list_peers() returns a list", isinstance(peers_before, list), type(peers_before).__name__)
+    info(f"Existing peers: {len(peers_before)}")
+    for i, p in enumerate(peers_before, 1):
+        info(f"  Peer {i}: name={p.get('name','(none)')!r}  ip={p.get('allowed_ips')}  key={p.get('pubkey','')[:20]}…")
+except Exception as e:
+    check("list_peers() no exception", False, str(e))
+    peers_before = []
 
-    if removed:
-        new_conf = "".join(filtered)
-        r2 = sudo("tee", str(WG_CONF), input=new_conf)
-        check("Rewrote wg0.conf without test peer", r2.returncode == 0,
-              r2.stderr.strip() if r2.returncode != 0 else "")
+# ---------------------------------------------------------------------------
+# [8] add_peer()  ← the core UI action
+# ---------------------------------------------------------------------------
+print(f"\n{TITLE}[8] service.add_peer('ui-test-peer'){RESET}")
+test_peer = None
+try:
+    test_peer = wireguard_service.add_peer("ui-test-peer")
+    check("add_peer() no exception", True)
+    check("add_peer() returns dict",           isinstance(test_peer, dict),    type(test_peer).__name__)
+    check("add_peer() has 'pubkey'",           bool(test_peer.get("pubkey")),  test_peer.get("pubkey","")[:32])
+    check("add_peer() has 'private_key'",      bool(test_peer.get("private_key")), "present (not shown)")
+    check("add_peer() has 'peer_ip'",          bool(test_peer.get("peer_ip")), test_peer.get("peer_ip",""))
+    check("add_peer() has 'allowed_ips'",      bool(test_peer.get("allowed_ips")), test_peer.get("allowed_ips",""))
 
-        # Remove from kernel
-        r3 = sudo("wg", "set", WG_IFACE, "peer", test_pubkey, "remove")
-        check("wg set peer remove (kernel)", r3.returncode == 0,
-              r3.stderr.strip() if r3.returncode != 0 else "peer removed from kernel")
+    # Verify peer appears in list_peers()
+    peers_after = wireguard_service.list_peers()
+    pubkeys_after = [p.get("pubkey") for p in peers_after]
+    check("Peer appears in list_peers() after add", test_peer["pubkey"] in pubkeys_after)
 
-        # Verify gone
-        r4 = sudo("cat", str(WG_CONF))
-        check("Peer no longer in wg0.conf", test_pubkey not in r4.stdout)
+    # Verify peer appears in live kernel state
+    r = sudo("wg", "show", WG_IFACE)
+    check("Peer visible in live wg show", test_peer["pubkey"][:20] in r.stdout,
+          r.stdout.strip()[:120] if r.returncode == 0 else r.stderr.strip())
+
+except Exception as e:
+    check("add_peer() no exception", False, str(e))
+
+# ---------------------------------------------------------------------------
+# [9] get_peer_config()  ← config download action
+# ---------------------------------------------------------------------------
+print(f"\n{TITLE}[9] service.get_peer_config() — config file generation{RESET}")
+if test_peer:
+    try:
+        conf = wireguard_service.get_peer_config(
+            peer_name        = test_peer["name"],
+            peer_private_key = test_peer["private_key"],
+            peer_ip          = test_peer["peer_ip"],
+            server_pubkey    = wireguard_service.get_server_pubkey(),
+            server_endpoint  = "1.2.3.4",  # mock server IP
+        )
+        check("get_peer_config() no exception", True)
+        check("Config contains [Interface]",     "[Interface]" in conf)
+        check("Config contains [Peer]",          "[Peer]" in conf)
+        check("Config contains PrivateKey",       "PrivateKey" in conf)
+        check("Config contains peer IP",          test_peer["peer_ip"] in conf)
+        check("Config contains server pubkey",    wireguard_service.get_server_pubkey()[:10] in conf)
+        check("Config contains AllowedIPs = 0.0.0.0/0", "0.0.0.0/0" in conf)
+        check("Config contains DNS",              "DNS" in conf)
+        print()
+        info("Generated .conf preview:")
+        for line in conf.splitlines():
+            if "PrivateKey" not in line:  # don't print the key
+                info(f"  {line}")
+    except Exception as e:
+        check("get_peer_config() no exception", False, str(e))
 else:
-    warn("Skipping peer remove — peer was not written successfully")
+    warn("Skipping — no test peer was created in section 8")
 
 # ---------------------------------------------------------------------------
-# Section 7 — Uninstall script check
+# [10] remove_peer()  ← delete UI action
 # ---------------------------------------------------------------------------
-print(f"\n{TITLE}[7] Uninstall Script Check{RESET}")
+print(f"\n{TITLE}[10] service.remove_peer() — delete peer{RESET}")
+if test_peer:
+    try:
+        removed = wireguard_service.remove_peer(test_peer["pubkey"])
+        check("remove_peer() returns True", removed is True, str(removed))
 
-script_dir = Path(__file__).parent / "scripts"
-uninstall_sh = script_dir / "uninstall_wireguard.sh"
-check("uninstall_wireguard.sh exists", uninstall_sh.exists(), str(uninstall_sh))
-if uninstall_sh.exists():
-    r = run(["bash", "-n", str(uninstall_sh)])  # syntax check only, don't run
-    check("uninstall script syntax valid", r.returncode == 0,
-          r.stderr.strip() if r.returncode != 0 else "")
-    warn("NOT running uninstall — this would remove WireGuard. Run manually if needed.")
+        # Verify gone from list_peers()
+        peers_final = wireguard_service.list_peers()
+        pubkeys_final = [p.get("pubkey") for p in peers_final]
+        check("Peer gone from list_peers() after remove", test_peer["pubkey"] not in pubkeys_final)
+
+        # Verify gone from kernel
+        r = sudo("wg", "show", WG_IFACE)
+        check("Peer gone from live wg show", test_peer["pubkey"][:20] not in r.stdout)
+
+    except Exception as e:
+        check("remove_peer() no exception", False, str(e))
+        warn(f"Test peer may still be in wg0.conf — clean up manually: sudo wg set wg0 peer {test_peer.get('pubkey','')} remove")
+else:
+    warn("Skipping — no test peer was created in section 8")
 
 # ---------------------------------------------------------------------------
-# Section 8 — Current wg show output
+# [11] tunnel_restart()  ← restart UI action
 # ---------------------------------------------------------------------------
-print(f"\n{TITLE}[8] Live wg show{RESET}")
+print(f"\n{TITLE}[11] service.tunnel_restart(){RESET}")
+try:
+    ok = wireguard_service.tunnel_restart()
+    check("tunnel_restart() returns True", ok is True, str(ok))
+
+    # Verify still active after restart
+    import time; time.sleep(2)
+    r = run(["systemctl", "is-active", "wg-quick@wg0"])
+    check("Tunnel still active after restart", r.stdout.strip() == "active", r.stdout.strip())
+except Exception as e:
+    check("tunnel_restart() no exception", False, str(e))
+
+# ---------------------------------------------------------------------------
+# [12] Final wg show state
+# ---------------------------------------------------------------------------
+print(f"\n{TITLE}[12] Final Live State — wg show{RESET}")
 r = sudo("wg", "show", WG_IFACE)
 if r.returncode == 0:
     for line in r.stdout.strip().splitlines():
         info(line)
 else:
-    warn(f"wg show failed: {(r.stderr or r.stdout).strip()}")
+    warn(f"wg show failed: {r.stderr.strip()}")
 
 # ---------------------------------------------------------------------------
 # Summary
 # ---------------------------------------------------------------------------
 print(f"\n{TITLE}══════════════════════════════════════════{RESET}")
 print(f"{TITLE}  SUMMARY{RESET}")
-total   = len(results)
-passed  = sum(1 for _, ok in results if ok)
-failed  = total - passed
+total  = len(results)
+passed = sum(1 for _, ok in results if ok)
+failed = total - passed
 print(f"  Passed : {passed}/{total}")
 if failed:
-    print(f"\n  {FAIL} Failed checks:")
+    print(f"\n  Failed checks:")
     for label, ok in results:
         if not ok:
-            print(f"    • {label}")
+            print(f"    {FAIL}  {label}{RESET}")
 else:
-    print(f"\n  {PASS} All checks passed!")
+    print(f"\n  {PASS} All {total} checks passed — plugin is fully functional!")
 print(f"{TITLE}══════════════════════════════════════════{RESET}\n")
