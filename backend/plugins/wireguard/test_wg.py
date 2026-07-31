@@ -14,15 +14,13 @@ import shutil
 from pathlib import Path
 
 # ---------------------------------------------------------------------------
-# Bootstrap — add panel app to path so we can import the real service
+# Bootstrap — locate panel app root
 # ---------------------------------------------------------------------------
-PANEL_APP = Path(__file__).parent.parent.parent  # .../plugins/wireguard/../../.. = app/
-sys.path.insert(0, str(PANEL_APP))
-
-# Also try common install locations if the relative path doesn't work
+PANEL_APP = Path(__file__).parent.parent.parent  # plugins/wireguard/../../.. = app/
+# Try common install locations
 for candidate in [PANEL_APP, Path("/opt/srv-panel/app"), Path("/home/panel/srv-t/backend")]:
     if (candidate / "plugins" / "wireguard" / "service.py").exists():
-        sys.path.insert(0, str(candidate))
+        PANEL_APP = candidate
         break
 
 # ---------------------------------------------------------------------------
@@ -112,14 +110,21 @@ for cmd, label in checks:
           r.stderr.strip() if r.returncode != 0 else (r.stdout.strip()[:80] or "ok"))
 
 # ---------------------------------------------------------------------------
-# [3] Import real service module
+# [3] Import real service module (via importlib to avoid FastAPI chain)
 # ---------------------------------------------------------------------------
 print(f"\n{TITLE}[3] Import Service Module{RESET}")
+import importlib.util as _ilu
+
+_svc_path = PANEL_APP / "plugins" / "wireguard" / "service.py"
 try:
-    from plugins.wireguard.service import wireguard_service, WireguardService
-    check("Import plugins.wireguard.service", True)
+    _spec = _ilu.spec_from_file_location("wireguard_service_mod", _svc_path)
+    _mod  = _ilu.module_from_spec(_spec)
+    _spec.loader.exec_module(_mod)
+    wireguard_service = _mod.wireguard_service
+    WireguardService  = _mod.WireguardService
+    check("Import wireguard service module", True, str(_svc_path))
 except Exception as e:
-    check("Import plugins.wireguard.service", False, str(e))
+    check("Import wireguard service module", False, str(e))
     print(f"\n{FAIL}  Cannot import service — remaining tests skipped.\n")
     sys.exit(1)
 
