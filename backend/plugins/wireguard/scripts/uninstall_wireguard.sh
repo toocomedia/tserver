@@ -47,5 +47,12 @@ fi
 # 7. Reload systemd
 systemctl daemon-reload 2>/dev/null || true
 
+# 8. Remove dedicated WireGuard sudoers file
+WG_SUDOERS="/etc/sudoers.d/srv-panel-wireguard"
+if [ -f "${WG_SUDOERS}" ]; then
+    rm -f "${WG_SUDOERS}"
+    echo "==> Removed ${WG_SUDOERS}."
+fi
+
 echo "==> WireGuard VPN uninstalled cleanly!"
 exit 0

@@ -88,20 +88,19 @@ systemctl enable wg-quick@${WG_IFACE} 2>/dev/null || true
 systemctl start  wg-quick@${WG_IFACE} 2>/dev/null || true
 echo "==> wg-quick@${WG_IFACE} started and enabled."
 
-# 9. Add WireGuard commands to the panel sudoers (idempotent)
-SUDOERS_FILE="/etc/sudoers.d/srv-panel"
-WG_SUDOERS_MARKER="# WireGuard VPN plugin"
-if [ -f "${SUDOERS_FILE}" ] && ! grep -q "${WG_SUDOERS_MARKER}" "${SUDOERS_FILE}"; then
-    cat >> "${SUDOERS_FILE}" << 'SUDOERS_EOF'
-
-# WireGuard VPN plugin
+# 9. Write WireGuard sudoers to a dedicated file (survives panel updates)
+#    update.sh only regenerates /etc/sudoers.d/srv-panel — it never touches this file.
+WG_SUDOERS="/etc/sudoers.d/srv-panel-wireguard"
+cat > "${WG_SUDOERS}" << 'SUDOERS_EOF'
+# WireGuard VPN plugin — managed by install_wireguard.sh
+# Do NOT edit manually; re-run install to regenerate.
 Cmnd_Alias WG_CMDS = /usr/bin/cat /etc/wireguard/*, /usr/bin/wg *, /usr/bin/wg-quick *
 panel ALL=(root) NOPASSWD: WG_CMDS
 SUDOERS_EOF
-    visudo -cf "${SUDOERS_FILE}" && echo "==> sudoers updated for WireGuard." || echo "WARNING: sudoers syntax error — check ${SUDOERS_FILE}"
-else
-    echo "==> sudoers already contains WireGuard entries, skipping."
-fi
+chmod 0440 "${WG_SUDOERS}"
+visudo -cf "${WG_SUDOERS}" \
+    && echo "==> WireGuard sudoers written: ${WG_SUDOERS}" \
+    || { echo "ERROR: sudoers syntax check failed — removing bad file"; rm -f "${WG_SUDOERS}"; }
 
 # 10. Open firewall port (UFW)
 if command -v ufw &>/dev/null && ufw status 2>/dev/null | grep -qi "Status: active"; then
