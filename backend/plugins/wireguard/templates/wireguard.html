@@ -212,7 +212,7 @@
                     {# Download config — only available right after creation #}
                     {% if peer.has_download %}
                     <a class="btn btn--primary btn--sm"
-                       href="/plugins/wireguard/api/peers/{{ peer.pubkey | urlencode }}/config"
+                       href="/plugins/wireguard/api/peers/config?pubkey={{ peer.pubkey | urlencode }}"
                        id="btn-download-{{ loop.index }}"
                        title="Download .conf — only available once!">
                       ↓ Config
@@ -225,7 +225,9 @@
 
                     <button class="btn btn--danger btn--sm"
                             id="btn-delete-{{ loop.index }}"
-                            onclick="openDeleteModal('{{ peer.pubkey | urlencode }}', '{{ peer.name | default('this peer', true) }}')">
+                            data-pubkey="{{ peer.pubkey }}"
+                            data-name="{{ peer.name | default('this peer', true) }}"
+                            onclick="openDeleteModal(this.dataset.pubkey, this.dataset.name)">
                       Delete
                     </button>
                   </td>
@@ -394,8 +396,9 @@
     </div>
     <div class="modal__footer">
       <button type="button" class="btn btn--secondary" onclick="closeModal('delete-peer-modal')">Cancel</button>
-      <form id="delete-peer-form" method="post" action="" style="display:inline;">
+      <form id="delete-peer-form" method="post" action="/plugins/wireguard/api/peers/delete" style="display:inline;">
         <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+        <input type="hidden" id="delete-peer-pubkey" name="pubkey" value="">
         <button type="submit" class="btn btn--danger" id="btn-confirm-delete">Delete Peer</button>
       </form>
     </div>

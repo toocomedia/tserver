@@ -5,8 +5,8 @@ Routes:
   GET  /plugins/wireguard/              → Main UI page
   POST /plugins/wireguard/api/install   → Run install script
   POST /plugins/wireguard/api/peers     → Add a new peer
-  POST /plugins/wireguard/api/peers/{pubkey}/delete  → Remove a peer
-  GET  /plugins/wireguard/api/peers/{pubkey}/config  → Download .conf file
+  POST /plugins/wireguard/api/peers/delete  → Remove a peer
+  GET  /plugins/wireguard/api/peers/config  → Download .conf file
   POST /plugins/wireguard/api/restart   → Restart wg-quick tunnel
 """
 import logging
@@ -147,13 +147,10 @@ async def add_peer(request: Request, name: str = Form(...)):
 # Peers — Delete
 # ---------------------------------------------------------------------------
 
-@router.post("/api/peers/{pubkey}/delete")
-async def delete_peer(pubkey: str):
-    """Remove a peer by public key."""
-    # Decode URL-encoded pubkey
-    from urllib.parse import unquote
-    pubkey = unquote(pubkey)
-
+@router.post("/api/peers/delete")
+async def delete_peer(pubkey: str = Form(...)):
+    """Remove a peer by public key (pubkey passed as form field to avoid
+    URL-routing issues with base64 characters like '/' and '+')."""
     removed = wireguard_service.remove_peer(pubkey)
     _peer_download_cache.pop(pubkey, None)
 
@@ -166,10 +163,12 @@ async def delete_peer(pubkey: str):
 # Peers — Download Config
 # ---------------------------------------------------------------------------
 
-@router.get("/api/peers/{pubkey}/config")
+@router.get("/api/peers/config")
 async def download_peer_config(pubkey: str):
     """
     Generate and serve a WireGuard .conf file for the given peer.
+    Pubkey is passed as ?pubkey=... query param to avoid URL routing
+    issues with base64 characters ('/' and '+') in path segments.
     Private key is only available immediately after peer creation.
     """
     from urllib.parse import unquote
@@ -183,15 +182,15 @@ async def download_peer_config(pubkey: str):
             "The private key is not stored — delete and recreate the peer to get a new config."
         )
 
-    server_pubkey  = wireguard_service.get_server_pubkey()
+    server_pubkey   = wireguard_service.get_server_pubkey()
     server_endpoint = getattr(panel_config, "SERVER_IP", "") or "YOUR_SERVER_IP"
 
     conf_text = wireguard_service.get_peer_config(
-        peer_name      = cached["name"],
+        peer_name        = cached["name"],
         peer_private_key = cached["private_key"],
-        peer_ip        = cached["peer_ip"],
-        server_pubkey  = server_pubkey,
-        server_endpoint = server_endpoint,
+        peer_ip          = cached["peer_ip"],
+        server_pubkey    = server_pubkey,
+        server_endpoint  = server_endpoint,
     )
 
     safe_name = "".join(c if c.isalnum() or c in "-_" else "_" for c in cached["name"])
