@@ -363,5 +363,21 @@ class WireguardService:
             logger.error("Tunnel restart failed: %s", exc)
             return False
 
+    def pause(self) -> None:
+        """Lifecycle hook called by plugin manager when disabled."""
+        if os.name == "nt": return
+        cmd = ["systemctl", "stop", f"wg-quick@{WG_IFACE}"]
+        if hasattr(os, "geteuid") and os.geteuid() != 0:
+            cmd = ["sudo", "-n"] + cmd
+        subprocess.run(cmd, capture_output=True)
+
+    def resume(self) -> None:
+        """Lifecycle hook called by plugin manager when enabled."""
+        if os.name == "nt": return
+        cmd = ["systemctl", "start", f"wg-quick@{WG_IFACE}"]
+        if hasattr(os, "geteuid") and os.geteuid() != 0:
+            cmd = ["sudo", "-n"] + cmd
+        subprocess.run(cmd, capture_output=True)
+
 
 wireguard_service = WireguardService()
