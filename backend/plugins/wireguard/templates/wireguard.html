@@ -137,7 +137,7 @@
 
     {# ── STATE 2 & 3: Installed ─────────────────────────────────────────── #}
     {% else %}
-    <div style="max-width: 900px;">
+    <div>
 
       {# Tunnel down warning + restart #}
       {% if not status.active %}
@@ -159,48 +159,44 @@
       </div>
 
       {% if peers %}
-      <table class="table" style="width:100%; border-collapse:collapse;">
-        <thead>
-          <tr style="border-bottom:1px solid var(--color-line); color:var(--color-muted); font-size:var(--font-small); text-transform:uppercase; letter-spacing:0.05em; text-align:left;">
-            <th style="padding:1rem 0; font-weight:600; width:30%;">Name</th>
-            <th style="padding:1rem 0; font-weight:600; width:20%;">IP Address</th>
-            <th style="padding:1rem 0; font-weight:600; width:30%;">Public Key</th>
-            <th style="padding:1rem 0; font-weight:600; text-align:right;">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for peer in peers %}
-          <tr style="border-bottom:1px solid var(--color-line);">
-            <td style="padding:1rem 0; font-weight:600; color:var(--color-text);">
-              {{ peer.name or "—" }}
-            </td>
-            <td style="padding:1rem 0; font-family:monospace; color:var(--color-text);">
-              {{ peer.allowed_ips }}
-            </td>
-            <td style="padding:1rem 0; font-family:monospace; color:var(--color-muted); font-size:0.85rem;">
-              {{ peer.pubkey[:16] }}...
-            </td>
-            <td style="padding:1rem 0; text-align:right;">
-              <div style="display:flex; gap:0.5rem; justify-content:flex-end;">
-                {% if peer.has_download %}
-                <a class="btn btn--ghost btn--sm" href="/plugins/wireguard/api/peers/config?pubkey={{ peer.pubkey | urlencode }}" title="Download Config">
-                  Download
-                </a>
-                {% else %}
-                <span class="btn btn--ghost btn--sm" style="opacity:0.3; cursor:not-allowed;" title="Config unavailable">
-                  Download
-                </span>
-                {% endif %}
-                <button class="btn btn--ghost btn--sm" style="color:var(--color-danger);"
-                        onclick="openDeleteModal('{{ peer.pubkey }}', '{{ peer.name | default('this peer', true) }}')">
-                  Delete
-                </button>
-              </div>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th style="width:25%;">Name</th>
+              <th style="width:20%;">IP Address</th>
+              <th style="width:35%;">Public Key</th>
+              <th class="col-actions">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for peer in peers %}
+            <tr>
+              <td><span class="table-title">{{ peer.name or "—" }}</span></td>
+              <td style="font-family:monospace;">{{ peer.allowed_ips }}</td>
+              <td style="font-family:monospace; opacity:0.8;">{{ peer.pubkey }}</td>
+              <td class="col-actions">
+                <div style="display:flex; gap:0.5rem; justify-content:flex-end;">
+                  {% if peer.has_download %}
+                  <a class="btn btn--ghost btn--sm" href="/plugins/wireguard/api/peers/config?pubkey={{ peer.pubkey | urlencode }}" title="Download Config">
+                    Download
+                  </a>
+                  {% else %}
+                  <span class="btn btn--ghost btn--sm" style="opacity:0.3; cursor:not-allowed;" title="Config unavailable">
+                    Download
+                  </span>
+                  {% endif %}
+                  <button class="btn btn--ghost btn--sm" style="color:var(--color-danger);"
+                          onclick="openDeleteModal('{{ peer.pubkey }}', '{{ peer.name | default('this peer', true) }}')">
+                    Delete
+                  </button>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
       {% else %}
       <div style="padding:3rem 0; text-align:center; border:1px dashed var(--color-line); border-radius:8px; color:var(--color-muted);">
         <p style="margin:0 0 1rem 0;">No peers configured yet.</p>
@@ -233,7 +229,8 @@
           <div class="form-hint" style="margin-top:0.5rem;">IP address and keys will be generated automatically.</div>
         </div>
         <div class="alert alert--warning" style="margin-top:1.5rem;">
-          <strong>Download immediately:</strong> The private key is only shown once upon creation.
+          <strong style="display:block; margin-bottom:4px;">Download config immediately</strong>
+          The private key is shown only once. If you miss the download, you must recreate the peer.
         </div>
       </div>
       <div class="modal__footer">
