@@ -24,6 +24,13 @@ _next_retry: dict[int, datetime] = {}
 _retry_count: dict[int, int] = {}
 
 
+def _parse_panel_ssl_expiry(value: str) -> datetime:
+    """Parse OpenSSL's stable `notAfter` value as a UTC timestamp."""
+    return datetime.strptime(value.strip(), "%b %d %H:%M:%S %Y %Z").replace(
+        tzinfo=timezone.utc
+    )
+
+
 async def _add_notification(db: AsyncSession, type_: str, message: str):
     notif = Notification(type=type_, message=message)
     db.add(notif)
@@ -54,10 +61,7 @@ async def run_scheduler():
                     try:
                         expiry_str = panel_status["ssl_expiry"]
                         # format: Aug 20 14:03:02 2026 GMT
-                        from dateutil import parser
-                        expiry = parser.parse(expiry_str)
-                        if expiry.tzinfo is None:
-                            expiry = expiry.replace(tzinfo=timezone.utc)
+                        expiry = _parse_panel_ssl_expiry(expiry_str)
                             
                         target_date = expiry - timedelta(days=RENEW_THRESHOLD_DAYS)
                         if -1 in _next_retry: # use -1 as panel cert ID
