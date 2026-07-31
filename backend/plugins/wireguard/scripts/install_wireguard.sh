@@ -88,7 +88,22 @@ systemctl enable wg-quick@${WG_IFACE} 2>/dev/null || true
 systemctl start  wg-quick@${WG_IFACE} 2>/dev/null || true
 echo "==> wg-quick@${WG_IFACE} started and enabled."
 
-# 9. Open firewall port (UFW)
+# 9. Add WireGuard commands to the panel sudoers (idempotent)
+SUDOERS_FILE="/etc/sudoers.d/srv-panel"
+WG_SUDOERS_MARKER="# WireGuard VPN plugin"
+if [ -f "${SUDOERS_FILE}" ] && ! grep -q "${WG_SUDOERS_MARKER}" "${SUDOERS_FILE}"; then
+    cat >> "${SUDOERS_FILE}" << 'SUDOERS_EOF'
+
+# WireGuard VPN plugin
+Cmnd_Alias WG_CMDS = /usr/bin/cat /etc/wireguard/*, /usr/bin/wg *, /usr/bin/wg-quick *
+panel ALL=(root) NOPASSWD: WG_CMDS
+SUDOERS_EOF
+    visudo -cf "${SUDOERS_FILE}" && echo "==> sudoers updated for WireGuard." || echo "WARNING: sudoers syntax error — check ${SUDOERS_FILE}"
+else
+    echo "==> sudoers already contains WireGuard entries, skipping."
+fi
+
+# 10. Open firewall port (UFW)
 if command -v ufw &>/dev/null && ufw status 2>/dev/null | grep -qi "Status: active"; then
     ufw allow ${WG_PORT}/udp || true
     echo "==> UFW: opened UDP ${WG_PORT}."

@@ -286,20 +286,30 @@ class WireguardService:
             )
 
         # Remove from running kernel state immediately
-        self._run_wg("set", WG_IFACE, "peer", pubkey, "remove")
+        if os.name != "nt":
+            sudo = ["sudo", "-n"] if (hasattr(os, "geteuid") and os.geteuid() != 0) else []
+            subprocess.run(
+                [*sudo, "wg", "set", WG_IFACE, "peer", pubkey, "remove"],
+                capture_output=True, text=True,
+            )
         return True
 
     def _syncconf(self) -> None:
         """Hot-reload wg0 config without bouncing the interface."""
+        if os.name == "nt":
+            return
         try:
+            sudo = ["sudo", "-n"] if (hasattr(os, "geteuid") and os.geteuid() != 0) else []
+            # wg-quick strip needs root to read wg0.conf
             strip = subprocess.run(
-                ["wg-quick", "strip", WG_IFACE],
+                [*sudo, "wg-quick", "strip", WG_IFACE],
                 capture_output=True, text=True, check=True,
             )
-            sync_cmd = ["wg", "syncconf", WG_IFACE, "/dev/stdin"]
-            if hasattr(os, "geteuid") and os.geteuid() != 0:
-                sync_cmd = ["sudo", "-n"] + sync_cmd
-            subprocess.run(sync_cmd, input=strip.stdout, text=True, check=True, capture_output=True)
+            # wg syncconf needs root to update the running interface
+            subprocess.run(
+                [*sudo, "wg", "syncconf", WG_IFACE, "/dev/stdin"],
+                input=strip.stdout, text=True, check=True, capture_output=True,
+            )
         except Exception as exc:
             logger.warning("wg syncconf failed (interface may be down): %s", exc)
 
