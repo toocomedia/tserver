@@ -42,16 +42,16 @@ class WireguardService:
             has_conf = WG_CONF.exists()
             return has_conf
         except PermissionError:
-            # /etc/wireguard is root-only (chmod 700). Check via systemctl instead:
-            # returncode 0 = active, 3 = inactive but the unit/service file exists
+            # /etc/wireguard is root-only (chmod 700). We can reliably check if wg0.conf
+            # exists by trying to read it via sudo, since we have that in sudoers.
             if os.name == "nt":
                 return True
             try:
                 res = subprocess.run(
-                    ["systemctl", "status", f"wg-quick@{WG_IFACE}"],
-                    capture_output=True, text=True,
+                    ["sudo", "-n", "cat", str(WG_CONF)],
+                    capture_output=True,
                 )
-                return res.returncode in (0, 3)
+                return res.returncode == 0
             except Exception:
                 return True  # wg binary exists, assume installed
 

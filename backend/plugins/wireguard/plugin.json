@@ -9,6 +9,7 @@
   "sidebar": true,
   "sidebar_label": "WireGuard VPN",
   "enabled": true,
+  "usage": {},
   "install_script": "scripts/install_wireguard.sh",
   "uninstall_script": "scripts/uninstall_wireguard.sh"
 }
