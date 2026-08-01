@@ -62,7 +62,7 @@
         {% else %}
           {% set plugin_status_label = plugin.effective_status | replace('_', ' ') | title %}{% set plugin_status_tone = 'muted' %}
         {% endif %}
-        {{ render_resource_row(plugin, 'plugin', plugin.name, 'v' ~ plugin.version, plugin.description, '/plugins/assets/' ~ plugin.id ~ '/icon.png', plugin.name ~ ' icon', plugin_status_label, plugin_status_tone, 'partials/plugin_list_actions.html', 'partials/plugin_requirements_overlay.html', plugin.dependency_status or plugin.manifest_error or (action_error and action_error_plugin_id == plugin.id)) }}
+        {{ render_resource_row(plugin, 'plugin', plugin.name, 'v' ~ plugin.version, plugin.description, '/plugins/assets/' ~ plugin.id ~ '/icon.png', plugin.name ~ ' icon', plugin_status_label, plugin_status_tone, 'partials/plugin_list_actions.html', 'partials/plugin_requirements_overlay.html', True) }}
       {% else %}
         {% set empty_message = 'No plugins available.' %}
         {% include "partials/empty_state.html" %}

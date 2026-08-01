@@ -1,28 +1,61 @@
 <div class="card-details-tray{% if not (action_error and action_error_plugin_id == plugin.id) %} is-hidden{% endif %}">
   <div class="tray-header">
-    <span class="tray-title">Requirements &amp; Information</span>
+    <div class="tray-header-info">
+      <span class="tray-title">System Check &amp; Details</span>
+      <span class="tray-subtitle">{{ plugin.name }} <span class="tray-version">v{{ plugin.version }}</span></span>
+    </div>
     <button type="button" class="tray-close-btn" title="Close"
-      onclick="const host=this.closest('.plugin-requirements-host'); host.querySelector('.card-details-tray').classList.add('is-hidden'); host.querySelector('.requirements-info-btn')?.classList.remove('is-expanded');">
-      <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      onclick="const host=this.closest('.plugin-requirements-host'); host.querySelector('.card-details-tray').classList.add('is-hidden'); host.querySelectorAll('.requirements-info-btn').forEach(btn => btn.classList.remove('is-expanded'));">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
     </button>
   </div>
   <div class="tray-content">
-    {% if plugin.dependency_status %}
-      {% for dependency in plugin.dependency_status %}
-        <div class="tray-section">
-          <span class="tray-label">Required Dependency:</span>
-          <div class="tray-req-item">
+    <div class="tray-section">
+      <span class="tray-label">Plugin Status:</span>
+      <div class="tray-req-item">
+        {% if plugin.effective_status == 'active' %}
+          <span class="tray-badge tray-badge--success">Active</span>
+        {% elif plugin.effective_status == 'paused' %}
+          <span class="tray-badge tray-badge--warning">Paused (Missing Dependency)</span>
+        {% elif plugin.effective_status == 'disabled' %}
+          <span class="tray-badge tray-badge--muted">Disabled</span>
+        {% elif plugin.effective_status == 'missing' %}
+          <span class="tray-badge tray-badge--muted">Not Installed</span>
+        {% elif plugin.effective_status == 'invalid' %}
+          <span class="tray-badge tray-badge--danger">Invalid Manifest</span>
+        {% else %}
+          <span class="tray-badge tray-badge--muted">{{ plugin.effective_status | upper }}</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="tray-section tray-section--stack">
+      <span class="tray-label">System Dependencies:</span>
+      {% if plugin.dependency_status and plugin.dependency_status | length > 0 %}
+        {% for dependency in plugin.dependency_status %}
+          <div class="tray-req-item tray-req-item--row">
             <span>{{ dependency.id | title }}</span>
             {% if dependency.healthy is sameas true %}
-              <span class="tray-badge tray-badge--success">Healthy</span>
+              <span class="tray-badge tray-badge--success">✓ Healthy</span>
             {% elif dependency.healthy is sameas false %}
-              <span class="tray-badge tray-badge--danger">Missing / Unhealthy</span>
+              <span class="tray-badge tray-badge--danger">✕ Missing / Unhealthy</span>
             {% else %}
               <span class="tray-badge tray-badge--muted">Not checked</span>
             {% endif %}
           </div>
+        {% endfor %}
+      {% else %}
+        <div class="tray-req-item">
+          <span class="tray-badge tray-badge--success">✓ No external dependencies required</span>
         </div>
-      {% endfor %}
+      {% endif %}
+    </div>
+
+    {% if plugin.description %}
+      <div class="tray-section tray-section--stack">
+        <span class="tray-label">Description:</span>
+        <div class="tray-desc-text">{{ plugin.description }}</div>
+      </div>
     {% endif %}
 
     {% if action_error and action_error_plugin_id == plugin.id and not plugin.paused_by %}
