@@ -183,13 +183,9 @@
   {% if request.session.get("username") %}
   <div class="sidebar__user">
     <div class="sidebar__user-avatar" title="{{ request.session.get('username') }}">
-      <span>{{ request.session.get("username")[:1] | upper }}</span>
-      <span class="sidebar__user-status" title="Online"></span>
+      {{ request.session.get("username")[:1] | upper }}
     </div>
-    <div class="sidebar__user-info">
-      <div class="sidebar__user-name">{{ request.session.get("username") }}</div>
-      <div class="sidebar__user-role">Administrator</div>
-    </div>
+    <div class="sidebar__user-name">{{ request.session.get("username") }}</div>
     <form method="post" action="/logout" class="sidebar__logout">
       {% include "partials/csrf_field.html" %}
       <button type="submit" class="sidebar__logout-btn" aria-label="Logout" title="Logout">
