@@ -18,6 +18,7 @@ router = APIRouter(prefix="/plugins", tags=["plugins"])
 
 
 @router.get("/", response_class=HTMLResponse)
+@router.get("", response_class=HTMLResponse)
 async def plugins_index(request: Request):
     """Plugins Management UI page."""
     # Do not run system commands while rendering the plugin list. Health is
@@ -33,7 +34,7 @@ async def plugins_index(request: Request):
     })
 
 
-@router.get("/{plugin_id}", response_class=HTMLResponse)
+@router.get("/info/{plugin_id}", response_class=HTMLResponse)
 async def plugin_detail(request: Request, plugin_id: str):
     """Plugin Details Sub-page."""
     from fastapi import HTTPException

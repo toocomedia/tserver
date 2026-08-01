@@ -13,7 +13,7 @@
       {% endif %}
     </div>
     {% if resource_type == 'plugin' %}
-      <a href="/plugins/{{ item.id }}" style="text-decoration:none; color:inherit;"><span class="list-col-name">{{ name }}</span></a>
+      <a href="/plugins/info/{{ item.id }}" style="text-decoration:none; color:inherit;"><span class="list-col-name">{{ name }}</span></a>
     {% else %}
       <span class="list-col-name">{{ name }}</span>
     {% endif %}

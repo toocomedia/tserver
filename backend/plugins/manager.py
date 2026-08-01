@@ -305,7 +305,7 @@ class PluginManager:
                 {
                     "id": plugin_id,
                     "label": plugin.get("sidebar_label", plugin.get("name")),
-                    "route": plugin.get("route_prefix", f"/plugins/{plugin_id}"),
+                    "route": plugin.get("route_prefix", f"/plugins/info/{plugin_id}"),
                     "icon": plugin.get("icon", "grid"),
                 }
             )

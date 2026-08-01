@@ -172,10 +172,10 @@ app.include_router(ssl.router)       # Phase 4
 app.include_router(proxy.router)     # Phase 5
 app.include_router(errors.router)    # Phase 6
 app.include_router(notifications.router)
+plugin_manager.init_app(app)
 app.include_router(plugins.router)
 app.include_router(dependencies.router)
 app.include_router(app_updates.router)
 app.include_router(apps.router)
-plugin_manager.init_app(app)
 if getattr(config, "DEBUG", False):
     app.include_router(dev.router)       # Testing tools (DEBUG mode only)
