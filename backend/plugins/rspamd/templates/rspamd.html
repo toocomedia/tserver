@@ -79,19 +79,19 @@
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1.5rem;">
             <div>
               <div style="font-size: var(--font-small); color: var(--color-muted);">Scanned</div>
-              <div style="font-size: 1.5rem; font-weight: 600; margin-top: 4px;">{{ stats.scanned }}</div>
+              <div data-rspamd-stat="scanned" style="font-size: 1.5rem; font-weight: 600; margin-top: 4px;">{{ stats.scanned }}</div>
             </div>
             <div>
               <div style="font-size: var(--font-small); color: var(--color-muted);">Clean</div>
-              <div style="font-size: 1.5rem; font-weight: 600; margin-top: 4px;">{{ stats.clean }}</div>
+              <div data-rspamd-stat="clean" style="font-size: 1.5rem; font-weight: 600; margin-top: 4px;">{{ stats.clean }}</div>
             </div>
             <div>
               <div style="font-size: var(--font-small); color: var(--color-muted);">Blocked Spam</div>
-              <div style="font-size: 1.5rem; font-weight: 600; margin-top: 4px;">{{ stats.spam }}</div>
+              <div data-rspamd-stat="spam" style="font-size: 1.5rem; font-weight: 600; margin-top: 4px;">{{ stats.spam }}</div>
             </div>
             <div>
               <div style="font-size: var(--font-small); color: var(--color-muted);">Spam Ratio</div>
-              <div style="font-size: 1.5rem; font-weight: 600; margin-top: 4px;">{{ stats.spam_percentage }}%</div>
+              <div data-rspamd-stat="spam_percentage" style="font-size: 1.5rem; font-weight: 600; margin-top: 4px;">{{ stats.spam_percentage }}%</div>
             </div>
           </div>
         </div>
@@ -223,5 +223,21 @@ async function saveThresholds(evt) {
     btn.disabled = false;
   }
 }
+
+async function refreshRspamdStats() {
+  try {
+    const response = await fetch('/plugins/rspamd/api/status', { headers: { Accept: 'application/json' } });
+    if (!response.ok) return;
+    const { stats } = await response.json();
+    for (const [name, value] of Object.entries(stats || {})) {
+      const stat = document.querySelector(`[data-rspamd-stat="${name}"]`);
+      if (stat) stat.textContent = name === 'spam_percentage' ? `${value}%` : value;
+    }
+  } catch (_) {
+    // Leave the most recently rendered values visible when the service is restarting.
+  }
+}
+
+setInterval(refreshRspamdStats, 10000);
 </script>
 {% endblock %}
