@@ -264,7 +264,7 @@
   transform: rotate(180deg);
 }
 
-/* UNIVERSAL CLEAN PLUGIN CHECK WINDOW OVERLAY (Black Theme + Smooth Slideup/Slidedown) */
+/* UNIVERSAL CLEAN PLUGIN CHECK WINDOW OVERLAY (Theme-Adaptive Finish) */
 .plugin-check-window {
   position: absolute;
   top: 0;
@@ -272,8 +272,8 @@
   right: 0;
   bottom: 0;
   z-index: 50;
-  background: #0B0C0B;
-  color: #FFFFFF;
+  background: var(--color-surface);
+  color: var(--color-text);
   padding: 14px 16px;
   display: flex;
   flex-direction: column;
@@ -285,7 +285,7 @@
   transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
   pointer-events: auto;
   will-change: transform, opacity;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid var(--color-line);
   box-sizing: border-box;
 }
 
@@ -301,7 +301,7 @@
   align-items: center;
   justify-content: space-between;
   padding-bottom: 8px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  border-bottom: 1px solid var(--color-line);
 }
 
 .plugin-check-window__title {
@@ -309,16 +309,21 @@
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: #C7F464;
+  color: var(--color-text);
   display: flex;
   align-items: center;
   gap: 6px;
 }
 
+[data-theme="dark"] .plugin-check-window__title,
+[data-theme="amoled"] .plugin-check-window__title {
+  color: var(--color-accent);
+}
+
 .plugin-check-window__close {
   background: transparent;
   border: none;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--color-muted);
   font-size: 15px;
   font-weight: 700;
   cursor: pointer;
@@ -328,7 +333,7 @@
 }
 
 .plugin-check-window__close:hover {
-  color: #FFFFFF;
+  color: var(--color-text);
 }
 
 .plugin-check-window__body {
@@ -348,7 +353,7 @@
   font-size: 10px;
   font-weight: 800;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--color-muted);
   letter-spacing: 0.05em;
 }
 
@@ -367,22 +372,22 @@
   font-size: 12px;
   font-weight: 600;
   padding: 6px 10px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #FFFFFF;
+  background: var(--color-bg);
+  border: 1px solid var(--color-line);
+  color: var(--color-text);
 }
 
 .plugin-check-window__item-name {
-  color: #FFFFFF;
+  color: var(--color-text);
   font-weight: 600;
 }
 
 .plugin-check-window__error {
   font-size: 11px;
   font-weight: 600;
-  color: #FCA5A5;
-  background: rgba(220, 38, 38, 0.2);
-  border-left: 3px solid #EF4444;
+  color: var(--color-danger);
+  background: var(--color-alert-danger-bg);
+  border-left: 3px solid var(--color-danger);
   padding: 6px 10px;
   line-height: 1.35;
 }
@@ -402,15 +407,15 @@
   gap: 16px;
   overflow: hidden;
   box-sizing: border-box;
-  background: #0B0C0B;
-  color: #FFFFFF;
+  background: var(--color-surface);
+  color: var(--color-text);
   border: none;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  border-bottom: 1px solid var(--color-line);
 }
 
 .list-item-row .plugin-check-window__header {
   border-bottom: none;
-  border-right: 1px solid rgba(255, 255, 255, 0.15);
+  border-right: 1px solid var(--color-line);
   padding-bottom: 0;
   padding-right: 14px;
   margin-bottom: 0;
@@ -443,7 +448,7 @@
   margin: 0;
   font-size: 10px;
   white-space: nowrap;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--color-muted);
 }
 
 .list-item-row .plugin-check-window__list {
