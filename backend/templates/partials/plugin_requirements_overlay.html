@@ -1,7 +1,7 @@
-<div class="card-details-tray{% if not (action_error and action_error_plugin_id == plugin.id) %} is-hidden{% endif %}">
+<div class="card-details-tray{% if not (action_error and action_error_plugin_id == plugin.id) %} is-hidden{% endif %}" data-plugin-id="{{ plugin.id }}">
   <div class="tray-header">
     <div class="tray-header-info">
-      <span class="tray-title">System Check &amp; Details</span>
+      <span class="tray-title">System Check</span>
       <span class="tray-subtitle">{{ plugin.name }} <span class="tray-version">v{{ plugin.version }}</span></span>
     </div>
     <button type="button" class="tray-close-btn" title="Close"
@@ -10,53 +10,29 @@
     </button>
   </div>
   <div class="tray-content">
-    <div class="tray-section">
-      <span class="tray-label">Plugin Status:</span>
-      <div class="tray-req-item">
-        {% if plugin.effective_status == 'active' %}
-          <span class="tray-badge tray-badge--success">Active</span>
-        {% elif plugin.effective_status == 'paused' %}
-          <span class="tray-badge tray-badge--warning">Paused (Missing Dependency)</span>
-        {% elif plugin.effective_status == 'disabled' %}
-          <span class="tray-badge tray-badge--muted">Disabled</span>
-        {% elif plugin.effective_status == 'missing' %}
-          <span class="tray-badge tray-badge--muted">Not Installed</span>
-        {% elif plugin.effective_status == 'invalid' %}
-          <span class="tray-badge tray-badge--danger">Invalid Manifest</span>
+    <div class="tray-section tray-section--stack">
+      <span class="tray-label">Requirements Check:</span>
+      <div class="tray-deps-list" style="width: 100%;">
+        {% if plugin.dependency_status and plugin.dependency_status | length > 0 %}
+          {% for dependency in plugin.dependency_status %}
+            <div class="tray-req-item tray-req-item--row">
+              <span>{{ dependency.id | title }}</span>
+              {% if dependency.healthy is sameas true %}
+                <span class="tray-badge tray-badge--success">✓ Healthy</span>
+              {% elif dependency.healthy is sameas false %}
+                <span class="tray-badge tray-badge--danger">✕ Missing / Unhealthy</span>
+              {% else %}
+                <span class="tray-badge tray-badge--muted">Checking...</span>
+              {% endif %}
+            </div>
+          {% endfor %}
         {% else %}
-          <span class="tray-badge tray-badge--muted">{{ plugin.effective_status | upper }}</span>
+          <div class="tray-req-item">
+            <span class="tray-badge tray-badge--success">✓ No external system dependencies required</span>
+          </div>
         {% endif %}
       </div>
     </div>
-
-    <div class="tray-section tray-section--stack">
-      <span class="tray-label">System Dependencies:</span>
-      {% if plugin.dependency_status and plugin.dependency_status | length > 0 %}
-        {% for dependency in plugin.dependency_status %}
-          <div class="tray-req-item tray-req-item--row">
-            <span>{{ dependency.id | title }}</span>
-            {% if dependency.healthy is sameas true %}
-              <span class="tray-badge tray-badge--success">✓ Healthy</span>
-            {% elif dependency.healthy is sameas false %}
-              <span class="tray-badge tray-badge--danger">✕ Missing / Unhealthy</span>
-            {% else %}
-              <span class="tray-badge tray-badge--muted">Not checked</span>
-            {% endif %}
-          </div>
-        {% endfor %}
-      {% else %}
-        <div class="tray-req-item">
-          <span class="tray-badge tray-badge--success">✓ No external dependencies required</span>
-        </div>
-      {% endif %}
-    </div>
-
-    {% if plugin.description %}
-      <div class="tray-section tray-section--stack">
-        <span class="tray-label">Description:</span>
-        <div class="tray-desc-text">{{ plugin.description }}</div>
-      </div>
-    {% endif %}
 
     {% if action_error and action_error_plugin_id == plugin.id and not plugin.paused_by %}
       <div class="tray-error-box">⚠️ {{ action_error }}</div>

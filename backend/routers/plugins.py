@@ -33,6 +33,17 @@ async def plugins_index(request: Request):
     })
 
 
+@router.get("/api/check/{plugin_id}")
+async def check_plugin_api(plugin_id: str):
+    """Run live dependency health check for a plugin."""
+    from fastapi import HTTPException
+    plugin = plugin_manager.get_plugin(plugin_id)
+    if plugin is None:
+        raise HTTPException(status_code=404, detail="Plugin not found")
+    effective_plugin = plugin_manager._effective(plugin, check_dependencies=True)
+    return JSONResponse(effective_plugin)
+
+
 @router.get("/assets/{plugin_id}/{filename}")
 async def plugin_asset(plugin_id: str, filename: str):
     """Serve plugin static assets like icons."""

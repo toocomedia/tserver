@@ -8,7 +8,12 @@
 
     <div class="plugin-card__main">
       <div class="plugin-card__header-row">
-        <h3 class="plugin-card__title" {% if plugin.effective_status in ['missing', 'invalid'] %}style="color: var(--color-muted)"{% endif %}>{{ plugin.name }}</h3>
+        <h3 class="plugin-card__title"
+          {% if plugin.dependency_status or plugin.manifest_error or (action_error and action_error_plugin_id == plugin.id) %}
+          style="cursor:pointer;" title="Click to view System Check" onclick="toggleAndCheckPlugin(this);"
+          {% elif plugin.effective_status in ['missing', 'invalid'] %}
+          style="color: var(--color-muted)"
+          {% endif %}>{{ plugin.name }}</h3>
         <span class="plugin-card__meta">v{{ plugin.version }}</span>
       </div>
 
@@ -29,15 +34,16 @@
               <span>{{ plugin.effective_status | replace('_', ' ') | upper }}</span>
             {% endif %}
           </div>
-
         </div>
 
         <div class="plugin-card__actions">
-          <button type="button" class="icon-btn requirements-info-btn {% if plugin.paused_by %}requirements-info-btn--danger{% endif %}"
-            title="{% if plugin.paused_by %}Missing Requirements — Click to Check Details{% else %}System Check & Details{% endif %}"
-            onclick="const host=this.closest('.plugin-requirements-host'); const tray=host.querySelector('.card-details-tray'); this.classList.toggle('is-expanded'); tray.classList.toggle('is-hidden');">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
-          </button>
+          {% if plugin.dependency_status or plugin.manifest_error or (action_error and action_error_plugin_id == plugin.id) %}
+            <button type="button" class="icon-btn requirements-info-btn {% if plugin.paused_by %}requirements-info-btn--danger{% endif %}"
+              title="{% if plugin.paused_by %}Missing Requirements — Click to Check Details{% else %}System Check & Details{% endif %}"
+              onclick="toggleAndCheckPlugin(this);">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+            </button>
+          {% endif %}
           {% if not plugin.installed %}
             <form method="post" action="/plugins/api/install" style="display:inline-flex;">
               <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
@@ -94,5 +100,7 @@
   </div>
 
   <!-- ABSOLUTE OVERLAY POPUP TRAY (ZERO CARD RESIZING) -->
+  {% if plugin.dependency_status or plugin.manifest_error or (action_error and action_error_plugin_id == plugin.id) %}
   {% include "partials/plugin_requirements_overlay.html" %}
+  {% endif %}
 </div>
