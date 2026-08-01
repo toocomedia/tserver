@@ -27,6 +27,7 @@ MADDY_BIN  = "/usr/local/bin/maddy"
 MADDY_CONF = "/etc/maddy/maddy.conf"
 MADDY_CERTS_DIR = Path("/etc/maddy/certs")
 LE_LIVE_DIR = Path("/etc/letsencrypt/live")
+RSPAMD_MARKER = Path("/etc/srv-panel/maddy-rspamd.enabled")
 HOST_RE = re.compile(
     r"^mail\.([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?"
     r"(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+)$"
@@ -244,6 +245,59 @@ def _restore_letsencrypt_certificates(domains: list[str]) -> None:
             _atomic_copy(key, target / "privkey.pem", uid, gid, 0o640)
 
 
+def _configured_mail_domains() -> list[str]:
+    """Read the real mail domains from a working Maddy configuration."""
+    content = _read_conf()
+    primary = re.search(
+        r"^\$\(primary_domain\)\s*=\s*([^\s#]+)", content, re.MULTILINE
+    )
+    local = re.search(
+        r"^\$\(local_domains\)\s*=\s*(.+)$", content, re.MULTILINE
+    )
+    if not primary or not local:
+        raise RuntimeError("Maddy primary/local domain configuration is missing.")
+    domains = [primary.group(1)]
+    domains.extend(
+        primary.group(1) if item == "$(primary_domain)" else item
+        for item in local.group(1).split()
+    )
+    return _mail_domains(domains)
+
+
+def _rspamd_check() -> str:
+    if not RSPAMD_MARKER.is_file():
+        return ""
+    return """        rspamd {
+            api_path http://127.0.0.1:11333
+            io_error_action ignore
+            error_resp_action ignore
+        }
+"""
+
+
+def set_rspamd(enabled: bool) -> None:
+    """Persist Rspamd integration and rebuild only from existing mail domains."""
+    previous = RSPAMD_MARKER.is_file()
+    try:
+        if enabled:
+            RSPAMD_MARKER.parent.mkdir(parents=True, exist_ok=True)
+            RSPAMD_MARKER.touch(mode=0o600, exist_ok=True)
+        else:
+            RSPAMD_MARKER.unlink(missing_ok=True)
+        if not Path(MADDY_CONF).is_file():
+            print("OK: Rspamd integration preference saved for the next Maddy install")
+            return
+        repair_config(_configured_mail_domains())
+    except BaseException:
+        if previous:
+            RSPAMD_MARKER.parent.mkdir(parents=True, exist_ok=True)
+            RSPAMD_MARKER.touch(mode=0o600, exist_ok=True)
+        else:
+            RSPAMD_MARKER.unlink(missing_ok=True)
+        raise
+    print(f"OK: Rspamd integration {'enabled' if enabled else 'disabled'}")
+
+
 def sync_certificate(mail_host: str):
     """Install a Let's Encrypt pair and retain all existing SNI certificates."""
     mail_host = mail_host.strip().lower()
@@ -447,6 +501,7 @@ def repair_config(domains: list[str]):
     primary_domain_val = mail_domains[0]
     hostname_val = f"mail.{primary_domain_val}"
     local_domains_val = " ".join(mail_domains)
+    rspamd_check = _rspamd_check()
     try:
         _restore_letsencrypt_certificates(mail_domains)
         tls_line = _tls_line(_certificate_pairs())
@@ -506,6 +561,7 @@ smtp tcp://0.0.0.0:25 {{
         require_mx_record
         dkim
         spf
+{rspamd_check}
     }}
 
     source $(local_domains) {{
@@ -588,14 +644,24 @@ imap tls://0.0.0.0:993 tcp://0.0.0.0:143 {{
     insecure_auth yes
 }}
 """
+    old_conf = _read_conf()
     backup_path = Path(MADDY_CONF).with_suffix(".conf.bak")
     try:
         shutil.copy2(MADDY_CONF, backup_path)
     except Exception:
         pass
 
-    Path(MADDY_CONF).write_text(fresh_conf, encoding="utf-8")
-    restart_maddy()
+    _write_conf(fresh_conf)
+    restart = run(["systemctl", "restart", "maddy"], check=False)
+    active = run(["systemctl", "is-active", "--quiet", "maddy"], check=False)
+    if restart.returncode != 0 or active.returncode != 0:
+        _write_conf(old_conf)
+        restart_maddy()
+        print(
+            restart.stderr.strip() or "Maddy rejected the rebuilt configuration.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
     print("Maddy configuration repaired and service restarted.")
 
 
@@ -617,6 +683,7 @@ def main():
             "  manage_maddy.py sync-cert <mail.domain>\n"
             "  manage_maddy.py remove-cert <mail.domain>\n"
             "  manage_maddy.py repair-config <domain> [domain ...]\n"
+            "  manage_maddy.py rspamd <enable|disable>\n"
             "  manage_maddy.py diagnose",
             file=sys.stderr,
         )
@@ -626,6 +693,12 @@ def main():
     
     if action == "repair-config":
         repair_config(sys.argv[2:])
+        return
+    if action == "rspamd":
+        if len(sys.argv) != 3 or sys.argv[2] not in {"enable", "disable"}:
+            print("Error: rspamd requires enable or disable", file=sys.stderr)
+            sys.exit(1)
+        set_rspamd(sys.argv[2] == "enable")
         return
     elif action == "diagnose":
         diagnose_maddy()

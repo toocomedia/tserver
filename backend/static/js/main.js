@@ -309,6 +309,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (bestMatch) {
     bestMatch.classList.add("sidebar__item--active");
+    try {
+      bestMatch.scrollIntoView({ block: "nearest", inline: "nearest" });
+    } catch (e) {
+      // Fallback if scrollIntoView options not supported
+      bestMatch.scrollIntoView(false);
+    }
   }
 
   // Mobile menu toggle

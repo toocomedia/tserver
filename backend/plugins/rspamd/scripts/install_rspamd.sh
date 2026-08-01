@@ -7,7 +7,6 @@ set -euo pipefail
 
 PANEL_USER="${PANEL_USER:-panel}"
 CONF_DIR="/etc/rspamd"
-MADDY_CONF="/etc/maddy/maddy.conf"
 
 echo "==> Installing Rspamd Spam Filter..."
 
@@ -53,31 +52,21 @@ EOF
 # 5. Enable and start Rspamd
 systemctl daemon-reload
 systemctl enable rspamd
-systemctl restart rspamd || true
+systemctl restart rspamd
+systemctl is-active --quiet rspamd || {
+    echo "Rspamd did not become active."
+    exit 1
+}
 
-# 6. Automatically inject Rspamd check into Maddy configuration if present
+# 6. Enable durable Maddy integration through its own config helper.
 MANAGE_SCRIPT="$(find /opt/srv-panel -name 'manage_rspamd.py' 2>/dev/null | head -1 || echo '/opt/srv-panel/backend/plugins/rspamd/scripts/manage_rspamd.py')"
 
-if [ -f "${MADDY_CONF}" ]; then
-    echo "Patching Maddy mail server configuration for Rspamd..."
-    sed -i '/fail_open/d' "${MADDY_CONF}" || true
-    if ! grep -q "rspamd http://127.0.0.1:11333" "${MADDY_CONF}"; then
-        sed -i '/check {/a \        rspamd http://127.0.0.1:11333' "${MADDY_CONF}" || true
-    fi
-
-    if command -v maddy >/dev/null 2>&1; then
-        if maddy -config "${MADDY_CONF}" -h >/dev/null 2>&1; then
-            echo "Maddy config check passed — restarting Maddy..."
-            systemctl restart maddy || true
-        else
-            echo "WARNING: Maddy config validation failed after Rspamd patch. Reverting."
-            sed -i '/rspamd http:\/\/127.0.0.1:11333/d' "${MADDY_CONF}" || true
-            sed -i '/fail_open/d' "${MADDY_CONF}" || true
-            systemctl restart maddy || true
-        fi
-    else
-        systemctl restart maddy || true
-    fi
+if [ -f "${MANAGE_SCRIPT}" ]; then
+    echo "Enabling Rspamd for inbound Maddy mail..."
+    python3 "${MANAGE_SCRIPT}" sync-maddy enable
+else
+    echo "Maddy integration helper is missing: ${MANAGE_SCRIPT}"
+    exit 1
 fi
 
 # 7. Install sudoers rule for manage_rspamd.py

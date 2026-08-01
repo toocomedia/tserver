@@ -5,8 +5,8 @@
 # ==============================================================================
 set -euo pipefail
 
-MADDY_CONF="/etc/maddy/maddy.conf"
 SUDOERS_FILE="/etc/sudoers.d/panel-rspamd"
+MANAGE_SCRIPT="$(find /opt/srv-panel -name 'manage_rspamd.py' 2>/dev/null | head -1 || echo '/opt/srv-panel/backend/plugins/rspamd/scripts/manage_rspamd.py')"
 
 echo "==> Uninstalling Rspamd Spam Filter..."
 
@@ -16,16 +16,10 @@ if [ "$(id -u)" -ne 0 ]; then
     exit 1
 fi
 
-# 2. Revert Maddy configuration patch
-if [ -f "${MADDY_CONF}" ]; then
-    echo "Removing Rspamd integration from Maddy configuration..."
-    sed -i '/rspamd http:\/\/127.0.0.1:11333/d' "${MADDY_CONF}" || true
-    sed -i '/check\.rspamd/d' "${MADDY_CONF}" || true
-    sed -i '/fail_open/d' "${MADDY_CONF}" || true
-
-    if command -v maddy >/dev/null 2>&1; then
-        systemctl restart maddy || true
-    fi
+# 2. Disable the durable Maddy integration before removing Rspamd.
+if [ -f "${MANAGE_SCRIPT}" ]; then
+    echo "Removing Rspamd integration from Maddy..."
+    python3 "${MANAGE_SCRIPT}" sync-maddy disable || true
 fi
 
 # 3. Stop and disable Rspamd service

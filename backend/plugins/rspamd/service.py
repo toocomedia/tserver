@@ -29,7 +29,11 @@ class RspamdService:
             return False
         try:
             content = MADDY_CONF.read_text(encoding="utf-8")
-            return "rspamd http://127.0.0.1:11333" in content or "check.rspamd" in content
+            return (
+                "rspamd http://127.0.0.1:11333" in content
+                or "rspamd {" in content
+                or "check.rspamd" in content
+            )
         except Exception as exc:
             logger.warning("Error reading maddy.conf for Rspamd check: %s", exc)
             return False

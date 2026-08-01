@@ -49,7 +49,8 @@ class RspamdPluginTests(unittest.TestCase):
         install_text = installer.read_text(encoding="utf-8")
         self.assertIn("apt-get install -y -qq rspamd redis-server", install_text)
         self.assertIn("maxmemory 32mb", install_text)
-        self.assertIn("rspamd http://127.0.0.1:11333", install_text)
+        self.assertIn("sync-maddy enable", install_text)
+        self.assertNotIn("sed -i", install_text)
 
         uninstall_text = uninstaller.read_text(encoding="utf-8")
         self.assertIn("apt-get purge -y -qq rspamd", uninstall_text)
@@ -59,6 +60,7 @@ class RspamdPluginTests(unittest.TestCase):
         self.assertIn("service-control", manage)
         self.assertIn("update-thresholds", manage)
         self.assertIn("sync-maddy", manage)
+        self.assertIn("MADDY_MANAGE_SCRIPT", manage)
 
 
 if __name__ == "__main__":

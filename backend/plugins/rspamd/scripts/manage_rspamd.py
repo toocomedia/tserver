@@ -19,9 +19,9 @@ import re
 import subprocess
 from pathlib import Path
 
-MADDY_CONF = Path("/etc/maddy/maddy.conf")
 RSPAMD_ACTIONS_CONF = Path("/etc/rspamd/local.d/actions.conf")
 SCRIPT_DIR = Path(__file__).resolve().parent
+MADDY_MANAGE_SCRIPT = SCRIPT_DIR.parent.parent / "maddy" / "scripts" / "manage_maddy.py"
 
 
 def run(cmd: list, check: bool = True) -> subprocess.CompletedProcess:
@@ -107,59 +107,17 @@ def sync_maddy(mode: str):
         print("ERROR: mode must be 'enable' or 'disable'", file=sys.stderr)
         sys.exit(1)
 
-    if not MADDY_CONF.exists():
-        print(f"WARNING: Maddy configuration file {MADDY_CONF} does not exist.", file=sys.stderr)
-        sys.exit(0)
-
-    try:
-        content = MADDY_CONF.read_text(encoding="utf-8")
-        has_rspamd = "rspamd http://127.0.0.1:11333" in content or "check.rspamd" in content
-
-        if mode == "enable":
-            if not has_rspamd:
-                lines = content.splitlines()
-                new_lines = []
-                inserted = False
-                for line in lines:
-                    if "fail_open" in line:
-                        continue
-                    new_lines.append(line)
-                    if "check {" in line and not inserted:
-                        new_lines.append("        rspamd http://127.0.0.1:11333")
-                        inserted = True
-                content = "\n".join(new_lines) + "\n"
-                MADDY_CONF.write_text(content, encoding="utf-8")
-                print("Injected Rspamd check into Maddy configuration.")
-        else: # disable
-            lines = [
-                line for line in content.splitlines()
-                if "rspamd http://127.0.0.1:11333" not in line
-                and "check.rspamd" not in line
-                and "fail_open" not in line
-            ]
-            content = "\n".join(lines) + "\n"
-            MADDY_CONF.write_text(content, encoding="utf-8")
-            print("Removed Rspamd check from Maddy configuration.")
-
-        # Validate maddy config before restart
-        val = run(["maddy", "-config", str(MADDY_CONF), "-h"], check=False)
-        if val.returncode != 0:
-            print(f"WARNING: Maddy config validation warning: {val.stderr.strip()}", file=sys.stderr)
-            # Revert patch if invalid
-            lines = [
-                line for line in MADDY_CONF.read_text(encoding="utf-8").splitlines()
-                if "rspamd http://127.0.0.1:11333" not in line
-                and "check.rspamd" not in line
-                and "fail_open" not in line
-            ]
-            MADDY_CONF.write_text("\n".join(lines) + "\n", encoding="utf-8")
-
-        run(["systemctl", "restart", "maddy"], check=False)
-        print("Maddy service restarted cleanly.")
-
-    except Exception as exc:
-        print(f"ERROR: Syncing Maddy configuration failed: {exc}", file=sys.stderr)
+    if not MADDY_MANAGE_SCRIPT.is_file():
+        print(f"ERROR: Maddy helper {MADDY_MANAGE_SCRIPT} is missing.", file=sys.stderr)
         sys.exit(1)
+    result = run(["python3", str(MADDY_MANAGE_SCRIPT), "rspamd", mode], check=False)
+    if result.returncode != 0:
+        print(
+            f"ERROR: Syncing Maddy configuration failed: {result.stderr or result.stdout}",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    print(result.stdout.strip() or f"Rspamd integration {mode}d.")
 
 
 def main():
