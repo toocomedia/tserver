@@ -124,12 +124,17 @@ async function toggleAndCheckPlugin(triggerEl) {
     const pluginId = win.getAttribute('data-plugin-id');
     if (!pluginId) return;
     const depsList = win.querySelector('.tray-deps-list');
+    const overallStatusEl = win.querySelector('.tray-overall-status');
     try {
       const res = await fetch('/plugins/api/check/' + pluginId);
       if (!res.ok) return;
       const data = await res.json();
       if (data && data.dependency_status && depsList) {
+        let hasMissing = false;
+        let allHealthy = true;
+
         if (data.dependency_status.length === 0) {
+          if (overallStatusEl) overallStatusEl.innerHTML = '<span class="badge badge--healthy">✓ No Requirements Needed</span>';
           depsList.innerHTML = '<div class="plugin-check-window__item"><span class="badge badge--healthy">✓ No external dependencies required</span></div>';
         } else {
           depsList.innerHTML = data.dependency_status.map(dep => {
@@ -139,9 +144,24 @@ async function toggleAndCheckPlugin(triggerEl) {
               badge = '<span class="badge badge--healthy">✓ Healthy</span>';
             } else if (dep.healthy === false) {
               badge = '<span class="badge badge--danger">✕ Missing</span>';
+              hasMissing = true;
+              allHealthy = false;
+            } else {
+              allHealthy = false;
             }
             return `<div class="plugin-check-window__item"><span class="plugin-check-window__item-name">${label}</span>${badge}</div>`;
           }).join('');
+
+          if (overallStatusEl) {
+            if (hasMissing || data.paused_by) {
+              const missingName = data.paused_by ? (data.paused_by.charAt(0).toUpperCase() + data.paused_by.slice(1)) : 'Dependency';
+              overallStatusEl.innerHTML = `<span class="badge badge--danger">✕ Unmet (${missingName})</span>`;
+            } else if (allHealthy) {
+              overallStatusEl.innerHTML = '<span class="badge badge--healthy">✓ All Requirements Met</span>';
+            } else {
+              overallStatusEl.innerHTML = '<span class="badge badge--warning">Checking...</span>';
+            }
+          }
         }
       }
     } catch (e) {

@@ -6,7 +6,27 @@
   
   <div class="plugin-check-window__body">
     <div class="plugin-check-window__section">
-      <span class="plugin-check-window__label">Requirements Status:</span>
+      <div class="plugin-check-window__status-header" style="display:flex; align-items:center; justify-content:space-between; width:100%; margin-bottom:4px;">
+        <span class="plugin-check-window__label">Requirements Status:</span>
+        <span class="tray-overall-status">
+          {% if plugin.paused_by %}
+            <span class="badge badge--danger">✕ Unmet (Missing {{ plugin.paused_by | title }})</span>
+          {% elif plugin.dependency_status and plugin.dependency_status | length > 0 %}
+            {% set all_healthy = true %}
+            {% for dep in plugin.dependency_status %}
+              {% if dep.healthy is not sameas true %}{% set all_healthy = false %}{% endif %}
+            {% endfor %}
+            {% if all_healthy %}
+              <span class="badge badge--healthy">✓ All Requirements Met</span>
+            {% else %}
+              <span class="badge badge--warning">Checking...</span>
+            {% endif %}
+          {% else %}
+            <span class="badge badge--healthy">✓ No Requirements Needed</span>
+          {% endif %}
+        </span>
+      </div>
+
       <div class="plugin-check-window__list tray-deps-list">
         {% if plugin.dependency_status and plugin.dependency_status | length > 0 %}
           {% for dependency in plugin.dependency_status %}
@@ -15,7 +35,7 @@
               {% if dependency.healthy is sameas true %}
                 <span class="badge badge--healthy">✓ Healthy</span>
               {% elif dependency.healthy is sameas false %}
-                <span class="badge badge--danger">✕ Missing</span>
+                <span class="badge badge--danger">✕ Missing / Unhealthy</span>
               {% else %}
                 <span class="badge badge--muted">Checking...</span>
               {% endif %}
