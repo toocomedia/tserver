@@ -15,6 +15,8 @@ logger = logging.getLogger(__name__)
 
 MADDY_CONF = Path("/etc/maddy/maddy.conf")
 MANAGE_SCRIPT = Path(__file__).parent / "scripts" / "manage_rspamd.py"
+RSPAMD_SCAN_PORT = 11333
+RSPAMD_CONTROLLER_PORT = 11334
 
 
 class RspamdService:
@@ -64,7 +66,7 @@ class RspamdService:
         return {
             "installed": installed,
             "running": active,
-            "port_listening": self._check_port(11333),
+            "port_listening": self._check_port(RSPAMD_SCAN_PORT),
             "maddy_integrated": self.is_maddy_integrated(),
             "ram_mb": ram_mb if active else 0,
             "pid": pid,
@@ -79,13 +81,16 @@ class RspamdService:
             return False
 
     def get_stats(self) -> Dict[str, Any]:
-        """Query statistics directly from Rspamd HTTP API (127.0.0.1:11333/stat)."""
+        """Query Rspamd statistics from its loopback-only controller API."""
         defaults = {"scanned": 0, "clean": 0, "spam": 0, "junk": 0, "rejected": 0, "learned": 0, "spam_percentage": 0.0}
-        if not self._check_port(11333):
+        if not self._check_port(RSPAMD_CONTROLLER_PORT):
             return defaults
 
         try:
-            req = urllib.request.Request("http://127.0.0.1:11333/stat", headers={"Accept": "application/json"})
+            req = urllib.request.Request(
+                f"http://127.0.0.1:{RSPAMD_CONTROLLER_PORT}/stat",
+                headers={"Accept": "application/json"},
+            )
             with urllib.request.urlopen(req, timeout=2.0) as resp:
                 if resp.status == 200:
                     data = json.loads(resp.read().decode("utf-8"))

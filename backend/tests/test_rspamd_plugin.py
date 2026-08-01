@@ -61,6 +61,13 @@ class RspamdPluginTests(unittest.TestCase):
         self.assertIn("update-thresholds", manage)
         self.assertIn("sync-maddy", manage)
         self.assertIn("MADDY_MANAGE_SCRIPT", manage)
+        self.assertIn("worker-controller.inc", manage)
+
+    def test_stats_use_the_controller_not_the_scanner_port(self):
+        service = (self.plugin_dir / "service.py").read_text(encoding="utf-8")
+
+        self.assertIn("RSPAMD_CONTROLLER_PORT = 11334", service)
+        self.assertIn("/stat", service)
 
 
 if __name__ == "__main__":

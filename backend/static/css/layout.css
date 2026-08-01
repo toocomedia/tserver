@@ -44,7 +44,9 @@
 
 .sidebar__nav {
   flex: 1;
-  padding: var(--space-sm) 0;
+  padding: var(--space-sm) 0 var(--space-xl) 0;
+  scroll-padding-top: 40px;
+  scroll-padding-bottom: 40px;
   overflow-y: auto;
   scrollbar-width: none; /* Firefox */
   -ms-overflow-style: none; /* IE/Edge */
@@ -56,22 +58,32 @@
 
 .sidebar__scroll-arrow {
   position: absolute;
-  left: 0;
-  right: 0;
-  height: 48px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--color-sidebar-hover);
+  color: var(--color-sidebar-text);
+  background: rgba(22, 25, 22, 0.92);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--color-sidebar-border);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
   cursor: pointer;
   z-index: 10;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.3s ease, color 0.2s ease;
+  transition: opacity 0.25s ease, transform 0.2s ease, background 0.2s ease, color 0.2s ease;
 }
 
 .sidebar__scroll-arrow:hover {
-  color: var(--color-accent);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  border-color: var(--color-accent);
+  transform: translateX(-50%) scale(1.1);
 }
 
 .sidebar__scroll-arrow.visible {
@@ -80,23 +92,21 @@
 }
 
 .sidebar__scroll-arrow svg {
-  width: 20px;
-  height: 20px;
+  width: 16px;
+  height: 16px;
   stroke: currentColor;
   fill: none;
-  stroke-width: 2;
+  stroke-width: 2.2;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
 
 .sidebar__scroll-arrow--up {
-  top: 0;
-  background: linear-gradient(to bottom, var(--color-sidebar) 60%, transparent);
+  top: 10px;
 }
 
 .sidebar__scroll-arrow--down {
-  bottom: 0;
-  background: linear-gradient(to top, var(--color-sidebar) 60%, transparent);
+  bottom: 10px;
 }
 
 .sidebar__section-label {

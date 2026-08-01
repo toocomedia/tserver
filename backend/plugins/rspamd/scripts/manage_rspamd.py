@@ -20,6 +20,7 @@ import subprocess
 from pathlib import Path
 
 RSPAMD_ACTIONS_CONF = Path("/etc/rspamd/local.d/actions.conf")
+RSPAMD_CONTROLLER_CONF = Path("/etc/rspamd/local.d/worker-controller.inc")
 SCRIPT_DIR = Path(__file__).resolve().parent
 MADDY_MANAGE_SCRIPT = SCRIPT_DIR.parent.parent / "maddy" / "scripts" / "manage_maddy.py"
 
@@ -102,11 +103,32 @@ def update_thresholds(reject_str: str, add_header_str: str):
     print("Rspamd thresholds updated and service reloaded.")
 
 
+def ensure_controller_stats_access():
+    """Expose Rspamd statistics to the local panel, never to the internet."""
+    RSPAMD_CONTROLLER_CONF.parent.mkdir(parents=True, exist_ok=True)
+    RSPAMD_CONTROLLER_CONF.write_text(
+        "# Managed by srv-panel Rspamd plugin\n"
+        'bind_socket = "127.0.0.1:11334";\n'
+        'secure_ip = "127.0.0.1";\n',
+        encoding="utf-8",
+    )
+    reload_result = run(["systemctl", "reload", "rspamd"], check=False)
+    active = run(["systemctl", "is-active", "--quiet", "rspamd"], check=False)
+    if reload_result.returncode != 0 or active.returncode != 0:
+        raise RuntimeError("Rspamd did not reload its local controller configuration.")
+
+
 def sync_maddy(mode: str):
     if mode not in ("enable", "disable"):
         print("ERROR: mode must be 'enable' or 'disable'", file=sys.stderr)
         sys.exit(1)
 
+    if mode == "enable":
+        try:
+            ensure_controller_stats_access()
+        except (OSError, RuntimeError) as exc:
+            print(f"ERROR: Configuring Rspamd controller failed: {exc}", file=sys.stderr)
+            sys.exit(1)
     if not MADDY_MANAGE_SCRIPT.is_file():
         print(f"ERROR: Maddy helper {MADDY_MANAGE_SCRIPT} is missing.", file=sys.stderr)
         sys.exit(1)
