@@ -51,6 +51,7 @@ class MaddySslPackagingTests(unittest.TestCase):
         self.assertIn('hostname_val = f"mail.{primary_domain_val}"', helper)
         self.assertIn("RSPAMD_MARKER", helper)
         self.assertIn("io_error_action ignore", helper)
+        self.assertIn("real_domains = [", helper)
         self.assertIn("repair-config", service)
         self.assertIn("select(MailDomain.domain).order_by(MailDomain.created_at)", router)
 

@@ -261,7 +261,11 @@ def _configured_mail_domains() -> list[str]:
         primary.group(1) if item == "$(primary_domain)" else item
         for item in local.group(1).split()
     )
-    return _mail_domains(domains)
+    real_domains = [
+        domain for domain in domains
+        if DOMAIN_RE.fullmatch(domain) and not domain.endswith(".local")
+    ]
+    return _mail_domains(real_domains)
 
 
 def _rspamd_check() -> str:
