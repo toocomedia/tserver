@@ -100,44 +100,52 @@
 
 {% block scripts %}
 <script>
+function closePluginCheckWindow(btn) {
+  const host = btn.closest('.plugin-requirements-host');
+  if (!host) return;
+  const win = host.querySelector('.plugin-check-window');
+  if (win) win.classList.add('is-hidden');
+  host.querySelectorAll('.requirements-info-btn').forEach(b => b.classList.remove('is-expanded'));
+}
+
 async function toggleAndCheckPlugin(triggerEl) {
   const host = triggerEl.closest('.plugin-requirements-host');
   if (!host) return;
-  const tray = host.querySelector('.card-details-tray');
-  if (!tray) return;
+  const win = host.querySelector('.plugin-check-window');
+  if (!win) return;
 
   const infoBtn = host.querySelector('.requirements-info-btn');
-  const willExpand = tray.classList.contains('is-hidden');
+  const willExpand = win.classList.contains('is-hidden');
   
   if (infoBtn) infoBtn.classList.toggle('is-expanded', willExpand);
-  tray.classList.toggle('is-hidden', !willExpand);
+  win.classList.toggle('is-hidden', !willExpand);
 
   if (willExpand) {
-    const pluginId = tray.getAttribute('data-plugin-id');
+    const pluginId = win.getAttribute('data-plugin-id');
     if (!pluginId) return;
-    const depsList = tray.querySelector('.tray-deps-list');
+    const depsList = win.querySelector('.tray-deps-list');
     try {
       const res = await fetch('/plugins/api/check/' + pluginId);
       if (!res.ok) return;
       const data = await res.json();
       if (data && data.dependency_status && depsList) {
         if (data.dependency_status.length === 0) {
-          depsList.innerHTML = '<div class="tray-req-item"><span class="tray-badge tray-badge--success">✓ No external system dependencies required</span></div>';
+          depsList.innerHTML = '<div class="plugin-check-window__item"><span class="badge badge--healthy">✓ No external dependencies required</span></div>';
         } else {
           depsList.innerHTML = data.dependency_status.map(dep => {
             const label = dep.id.charAt(0).toUpperCase() + dep.id.slice(1);
-            let badge = '<span class="tray-badge tray-badge--muted">Not checked</span>';
+            let badge = '<span class="badge badge--muted">Not checked</span>';
             if (dep.healthy === true) {
-              badge = '<span class="tray-badge tray-badge--success">✓ Healthy</span>';
+              badge = '<span class="badge badge--healthy">✓ Healthy</span>';
             } else if (dep.healthy === false) {
-              badge = '<span class="tray-badge tray-badge--danger">✕ Missing / Unhealthy</span>';
+              badge = '<span class="badge badge--danger">✕ Missing</span>';
             }
-            return `<div class="tray-req-item tray-req-item--row"><span>${label}</span>${badge}</div>`;
+            return `<div class="plugin-check-window__item"><span class="plugin-check-window__item-name">${label}</span>${badge}</div>`;
           }).join('');
         }
       }
     } catch (e) {
-      console.error('Plugin live check error:', e);
+      console.error('Plugin check error:', e);
     }
   }
 }

@@ -265,6 +265,159 @@
   transform: rotate(180deg);
 }
 
+/* UNIVERSAL CLEAN PLUGIN CHECK WINDOW OVERLAY */
+.plugin-check-window {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 50;
+  background: var(--color-sidebar, #14171A);
+  color: #FFFFFF;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 8px;
+  overflow-y: auto;
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 0.18s ease, transform 0.18s ease;
+  pointer-events: auto;
+}
+
+.plugin-check-window.is-hidden {
+  display: none !important;
+  opacity: 0;
+  transform: translateY(6px);
+  pointer-events: none;
+}
+
+.plugin-check-window__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.plugin-check-window__title {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-accent, #F59E0B);
+}
+
+.plugin-check-window__close {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+  transition: color 0.15s ease;
+}
+
+.plugin-check-window__close:hover {
+  color: #FFFFFF;
+}
+
+.plugin-check-window__body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
+.plugin-check-window__section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.plugin-check-window__label {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.5);
+  letter-spacing: 0.04em;
+}
+
+.plugin-check-window__list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+}
+
+.plugin-check-window__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 0;
+}
+
+.plugin-check-window__item-name {
+  color: #FFFFFF;
+}
+
+.plugin-check-window__error {
+  font-size: 11px;
+  font-weight: 600;
+  color: #FF8080;
+  background: rgba(220, 38, 38, 0.18);
+  border-left: 3px solid #EF4444;
+  padding: 6px 8px;
+  line-height: 1.3;
+}
+
+/* LIST ROW ADAPTATION */
+.list-item-row .plugin-check-window {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 16px;
+  overflow: hidden;
+}
+
+.list-item-row .plugin-check-window__header {
+  border-bottom: none;
+  border-right: 1px solid rgba(255, 255, 255, 0.12);
+  padding-bottom: 0;
+  padding-right: 12px;
+  gap: 12px;
+}
+
+.list-item-row .plugin-check-window__body {
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+}
+
+.list-item-row .plugin-check-window__section {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+.list-item-row .plugin-check-window__list {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+.list-item-row .plugin-check-window__item {
+  border-bottom: none;
+  padding: 0;
+}
+
 /* ABSOLUTE POPUP OVERLAY TRAY (ZERO CARD RESIZING) */
 .card-details-tray {
   position: absolute;
