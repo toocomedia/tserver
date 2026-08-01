@@ -12,7 +12,11 @@
         <svg class="list-col-thumb-fallback{% if icon_url %} is-hidden{% endif %}" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
       {% endif %}
     </div>
-    <span class="list-col-name">{{ name }}</span>
+    {% if resource_type == 'plugin' %}
+      <a href="/plugins/{{ item.id }}" style="text-decoration:none; color:inherit;"><span class="list-col-name">{{ name }}</span></a>
+    {% else %}
+      <span class="list-col-name">{{ name }}</span>
+    {% endif %}
   </div>
   <div class="list-col-version">{{ version }}</div>
   <div class="list-col-status">

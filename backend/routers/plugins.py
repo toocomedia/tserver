@@ -33,6 +33,29 @@ async def plugins_index(request: Request):
     })
 
 
+@router.get("/{plugin_id}", response_class=HTMLResponse)
+async def plugin_detail(request: Request, plugin_id: str):
+    """Plugin Details Sub-page."""
+    from fastapi import HTTPException
+    if not PLUGIN_ID_RE.fullmatch(plugin_id):
+        raise HTTPException(status_code=400, detail="Invalid plugin ID")
+    
+    plugin = plugin_manager.get_plugin(plugin_id)
+    if plugin is None:
+        raise HTTPException(status_code=404, detail="Plugin not found")
+    
+    effective_plugin = plugin_manager._effective(plugin, check_dependencies=True)
+    return templates.TemplateResponse(
+        "pages/plugin_detail.html",
+        {
+            "request": request,
+            "active_page": "plugins",
+            "plugin": effective_plugin,
+            "action_error": request.query_params.get("error"),
+        },
+    )
+
+
 @router.get("/api/check/{plugin_id}")
 async def check_plugin_api(plugin_id: str):
     """Run live dependency health check for a plugin."""

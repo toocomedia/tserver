@@ -8,12 +8,9 @@
 
     <div class="plugin-card__main">
       <div class="plugin-card__header-row">
-        <h3 class="plugin-card__title"
-          {% if plugin.dependency_status or plugin.manifest_error or (action_error and action_error_plugin_id == plugin.id) %}
-          style="cursor:pointer;" title="Click to view System Check" onclick="toggleAndCheckPlugin(this);"
-          {% elif plugin.effective_status in ['missing', 'invalid'] %}
-          style="color: var(--color-muted)"
-          {% endif %}>{{ plugin.name }}</h3>
+        <a href="/plugins/{{ plugin.id }}" style="text-decoration:none; color:inherit;">
+          <h3 class="plugin-card__title" {% if plugin.effective_status in ['missing', 'invalid'] %}style="color: var(--color-muted)"{% endif %}>{{ plugin.name }}</h3>
+        </a>
         <span class="plugin-card__meta">v{{ plugin.version }}</span>
       </div>
 

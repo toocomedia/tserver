@@ -18,10 +18,9 @@
       </div>
     </div>
     <div class="compact-card-1x1__bottom">
-      <div class="compact-card-1x1__title"
-        {% if plugin.dependency_status or plugin.manifest_error or (action_error and action_error_plugin_id == plugin.id) %}
-        style="cursor:pointer;" title="Click to view System Check" onclick="toggleAndCheckPlugin(this);"
-        {% endif %}>{{ plugin.name }}</div>
+      <a href="/plugins/{{ plugin.id }}" style="text-decoration:none; color:inherit;">
+        <div class="compact-card-1x1__title">{{ plugin.name }}</div>
+      </a>
       <div class="compact-card-1x1__meta">v{{ plugin.version }}</div>
       <div class="compact-card-1x1__actions" style="display:flex; gap:6px; margin-top:6px; flex-wrap:wrap;">
         {% if plugin.dependency_status or plugin.manifest_error or (action_error and action_error_plugin_id == plugin.id) %}
