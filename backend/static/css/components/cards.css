@@ -380,40 +380,7 @@
   line-height: 1.3;
 }
 
-.plugin-check-window .badge--healthy {
-  background: #059669 !important;
-  color: #FFFFFF !important;
-  font-weight: 700;
-}
 
-.plugin-check-window .badge--danger {
-  background: #DC2626 !important;
-  color: #FFFFFF !important;
-  font-weight: 700;
-}
-
-.plugin-check-window .badge--warning {
-  background: #D97706 !important;
-  color: #FFFFFF !important;
-  font-weight: 700;
-}
-
-.plugin-check-window .badge--muted {
-  background: #4B5563 !important;
-  color: #FFFFFF !important;
-  font-weight: 700;
-}
-
-.plugin-check-window__error {
-  font-size: 11px;
-  font-weight: 600;
-  color: #FCA5A5 !important;
-  background: rgba(220, 38, 38, 0.25);
-  border-left: 3px solid #EF4444;
-  padding: 6px 8px;
-  line-height: 1.3;
-  border-radius: 2px;
-}
 
 /* LIST ROW FIXED ELEMENT POSITIONING */
 .list-item-row {
