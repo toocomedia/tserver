@@ -125,17 +125,29 @@ async def maddy_index(request: Request, db: AsyncSession = Depends(get_db)):
 # ---------------------------------------------------------------------------
 
 @router.post("/api/install")
-async def install_maddy(request: Request):
-    """Trigger Maddy installation script."""
+async def install_maddy(request: Request, db: AsyncSession = Depends(get_db)):
+    """Install Maddy, then restore its configuration from panel mail domains."""
     script_path = SCRIPT_DIR / "install_maddy.sh"
     if os.name == "nt":
         return JSONResponse({"status": "ok", "message": "Mock install on Windows."})
 
     try:
-        res = subprocess.run(["bash", str(script_path)], capture_output=True, text=True)
+        domains = list((await db.execute(
+            select(MailDomain.domain).order_by(MailDomain.created_at)
+        )).scalars())
+        environment = os.environ.copy()
+        if domains:
+            environment["MAIL_DOMAIN"] = domains[0]
+        res = subprocess.run(
+            ["bash", str(script_path)], capture_output=True, text=True, env=environment,
+        )
         if res.returncode != 0:
             logger.error("Maddy install failed:\nSTDOUT: %s\nSTDERR: %s", res.stdout, res.stderr)
             return JSONResponse({"detail": res.stderr or res.stdout}, status_code=500)
+        if domains:
+            repair = maddy_service.repair_config(domains)
+            if not repair["success"]:
+                return JSONResponse({"detail": repair["error"]}, status_code=500)
         return RedirectResponse("/plugins/maddy/", status_code=303)
     except Exception as exc:
         logger.error("Error executing Maddy installer: %s", exc)
@@ -161,9 +173,12 @@ async def uninstall_maddy(request: Request):
 
 
 @router.post("/api/repair", response_class=JSONResponse)
-async def repair_maddy_api(request: Request):
-    """Repair and rebuild clean Maddy configuration file."""
-    res = maddy_service.repair_config()
+async def repair_maddy_api(request: Request, db: AsyncSession = Depends(get_db)):
+    """Rebuild Maddy from every mail domain currently configured in the panel."""
+    domains = list((await db.execute(
+        select(MailDomain.domain).order_by(MailDomain.created_at)
+    )).scalars())
+    res = maddy_service.repair_config(domains)
     if not res.get("success"):
         raise HTTPException(status_code=500, detail=res.get("error", "Configuration repair failed"))
     return res

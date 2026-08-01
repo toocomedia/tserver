@@ -455,7 +455,7 @@ async function openMaddyDiagnostics() {
 }
 
 async function repairMaddyConfig() {
-  if (!confirm('Repair and rebuild Maddy configuration file (/etc/maddy/maddy.conf)? This will clean corrupted directives and restart the service.')) return;
+  if (!confirm('Rebuild Maddy from all mail domains configured in the panel? Existing mail.<domain> certificates will be restored and Maddy will restart.')) return;
   const btn = document.getElementById('btn-repair-maddy');
   if (btn) { btn.disabled = true; btn.textContent = 'Repairing...'; }
 

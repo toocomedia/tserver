@@ -40,6 +40,18 @@ class MaddySslPackagingTests(unittest.TestCase):
             installer,
         )
 
+    def test_rebuild_uses_panel_domains_and_restores_existing_certificates(self):
+        plugin = BACKEND / "plugins" / "maddy"
+        helper = (plugin / "scripts" / "manage_maddy.py").read_text(encoding="utf-8")
+        service = (plugin / "service.py").read_text(encoding="utf-8")
+        router = (plugin / "router.py").read_text(encoding="utf-8")
+
+        self.assertIn("def repair_config(domains: list[str])", helper)
+        self.assertIn("_restore_letsencrypt_certificates(mail_domains)", helper)
+        self.assertIn('hostname_val = f"mail.{primary_domain_val}"', helper)
+        self.assertIn("repair-config", service)
+        self.assertIn("select(MailDomain.domain).order_by(MailDomain.created_at)", router)
+
 
 if __name__ == "__main__":
     unittest.main()

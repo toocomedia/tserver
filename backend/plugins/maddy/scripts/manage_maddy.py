@@ -31,6 +31,10 @@ HOST_RE = re.compile(
     r"^mail\.([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?"
     r"(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+)$"
 )
+DOMAIN_RE = re.compile(
+    r"^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?"
+    r"(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$"
+)
 
 
 # ---------------------------------------------------------------------------
@@ -209,6 +213,35 @@ def _tls_line(pairs: list[tuple[Path, Path]]) -> str:
         raise RuntimeError("No readable Maddy TLS certificate pair was found.")
     values = " ".join(f"{cert} {key}" for cert, key in pairs)
     return f"tls file {values}"
+
+
+def _mail_domains(domains: list[str]) -> list[str]:
+    """Normalize the panel-owned domains used in a generated Maddy config."""
+    normalized = []
+    for domain in domains:
+        domain = domain.strip().lower()
+        if not DOMAIN_RE.fullmatch(domain) or domain.endswith(".local"):
+            raise ValueError(f"Invalid mail domain: {domain}")
+        if domain not in normalized:
+            normalized.append(domain)
+    if not normalized:
+        raise ValueError("Add a mail domain in the panel before rebuilding Maddy.")
+    return normalized
+
+
+def _restore_letsencrypt_certificates(domains: list[str]) -> None:
+    """Restore copied Maddy SNI certificates after a Maddy reinstall."""
+    uid = pwd.getpwnam("maddy").pw_uid
+    gid = grp.getgrnam("maddy").gr_gid
+    for domain in domains:
+        mail_host = f"mail.{domain}"
+        source = LE_LIVE_DIR / mail_host
+        cert = source / "fullchain.pem"
+        key = source / "privkey.pem"
+        if cert.is_file() and key.is_file():
+            target = MADDY_CERTS_DIR / mail_host
+            _atomic_copy(cert, target / "fullchain.pem", uid, gid, 0o644)
+            _atomic_copy(key, target / "privkey.pem", uid, gid, 0o640)
 
 
 def sync_certificate(mail_host: str):
@@ -399,37 +432,34 @@ def main():
         print("Error: must run as root", file=sys.stderr)
         sys.exit(1)
 
-def repair_config():
-    """Repair and regenerate clean maddy.conf while preserving local_domains."""
+def repair_config(domains: list[str]):
+    """Rebuild Maddy from the panel's configured mail domains."""
     if not os.path.exists(MADDY_CONF):
         print("ERROR: maddy.conf does not exist", file=sys.stderr)
         sys.exit(1)
 
-    local_domains_val = "$(primary_domain)"
     try:
-        content = Path(MADDY_CONF).read_text(encoding="utf-8")
-        for line in content.splitlines():
-            if line.startswith("$(local_domains) ="):
-                local_domains_val = line.split("=", 1)[1].strip()
-                break
-    except Exception:
-        pass
+        mail_domains = _mail_domains(domains)
+    except ValueError as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        sys.exit(1)
 
-    hostname_val = run(["hostname", "-f"], check=False).stdout.strip() or run(["hostname"], check=False).stdout.strip() or "localhost"
-    if "." not in hostname_val:
-        hostname_val += ".local"
-    primary_domain_val = hostname_val
-
-    certs_dir = Path(MADDY_CONF).parent / "certs"
-    fullchain = certs_dir / "fullchain.pem"
-    privkey = certs_dir / "privkey.pem"
+    primary_domain_val = mail_domains[0]
+    hostname_val = f"mail.{primary_domain_val}"
+    local_domains_val = " ".join(mail_domains)
+    try:
+        _restore_letsencrypt_certificates(mail_domains)
+        tls_line = _tls_line(_certificate_pairs())
+    except (KeyError, OSError, RuntimeError) as exc:
+        print(f"ERROR: unable to restore Maddy TLS certificates: {exc}", file=sys.stderr)
+        sys.exit(1)
 
     fresh_conf = f"""# Maddy Mail Server - default configuration file
 $(hostname) = {hostname_val}
 $(primary_domain) = {primary_domain_val}
 $(local_domains) = {local_domains_val}
 
-tls file {fullchain} {privkey}
+{tls_line}
 
 auth.pass_table local_authdb {{
     table sql_table {{
@@ -586,7 +616,7 @@ def main():
             "  manage_maddy.py remove-domain <domain>\n"
             "  manage_maddy.py sync-cert <mail.domain>\n"
             "  manage_maddy.py remove-cert <mail.domain>\n"
-            "  manage_maddy.py repair-config\n"
+            "  manage_maddy.py repair-config <domain> [domain ...]\n"
             "  manage_maddy.py diagnose",
             file=sys.stderr,
         )
@@ -595,7 +625,7 @@ def main():
     action = sys.argv[1]
     
     if action == "repair-config":
-        repair_config()
+        repair_config(sys.argv[2:])
         return
     elif action == "diagnose":
         diagnose_maddy()

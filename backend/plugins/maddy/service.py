@@ -103,10 +103,14 @@ class MaddyService:
             )
         }
 
-    def repair_config(self) -> Dict[str, Any]:
-        """Repair and rebuild clean maddy.conf via privileged helper."""
+    def repair_config(self, domains: List[str]) -> Dict[str, Any]:
+        """Rebuild Maddy from the panel's configured mail domains."""
         try:
-            cmd = ["sudo", "-n", "python3", str(MANAGE_SCRIPT), "repair-config"] if os.name != "nt" else ["python", str(MANAGE_SCRIPT), "repair-config"]
+            cmd = (
+                ["sudo", "-n", "python3", str(MANAGE_SCRIPT), "repair-config", *domains]
+                if os.name != "nt"
+                else ["python", str(MANAGE_SCRIPT), "repair-config", *domains]
+            )
             res = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
             if res.returncode == 0:
                 return {"success": True, "message": "Maddy configuration repaired and service restarted."}
@@ -383,7 +387,7 @@ class MaddyService:
         """
         Register a domain for mail delivery:
         1. Add to panel DB (MailDomain)
-        2. Update maddy.conf $(local_domains) via manage_maddy.py + restart maddy
+        2. Rebuild maddy.conf from every panel mail domain + restart Maddy
         3. Auto-setup PowerDNS mail records (MX, A, SPF, DMARC, DKIM placeholder)
         DNS errors are non-fatal — domain is saved even if DNS partially fails.
         """
@@ -397,22 +401,21 @@ class MaddyService:
         if existing:
             raise ValueError(f"Domain '{domain}' is already configured for mail.")
 
-        # 1. Update maddy.conf and restart maddy
-        if os.name != "nt" and self.is_installed():
-            res = subprocess.run(
-                ["sudo", "-n", "python3", str(MANAGE_SCRIPT), "add-domain", domain],
-                capture_output=True, text=True,
-            )
-            if res.returncode != 0:
-                err = res.stderr.strip() or res.stdout.strip()
-                raise RuntimeError(f"Failed to add domain to maddy.conf: {err}")
-        else:
-            logger.info("[DEV] Mock add-domain: %s", domain)
-
-        # 2. Save to DB (before DNS so we have an ID)
+        # 1. Save before rebuilding so the config has the complete domain list.
         mail_domain = MailDomain(domain=domain, server_ip=server_ip)
         db.add(mail_domain)
         await db.flush()
+
+        # 2. Maddy must never be based on the panel/server hostname.
+        config_domains = list((await db.execute(
+            select(MailDomain.domain).order_by(MailDomain.created_at)
+        )).scalars())
+        if os.name != "nt" and self.is_installed():
+            repair = self.repair_config(config_domains)
+            if not repair["success"]:
+                raise RuntimeError(f"Failed to rebuild Maddy config: {repair['error']}")
+        else:
+            logger.info("[DEV] Mock Maddy rebuild for domains: %s", config_domains)
 
         # 3. Auto-setup DNS records
         dns_ok = False
