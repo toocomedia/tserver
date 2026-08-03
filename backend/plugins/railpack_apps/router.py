@@ -91,24 +91,25 @@ async def deploy(app_id: int, db: AsyncSession = Depends(get_db)):
 
 @router.post("/{app_id}/uninstall")
 async def uninstall(
-    app_id: int, confirmation: str = Form(""), data_confirmation: str = Form(""),
-    delete_database_ids: list[int] = Form([]), delete_app_volume: bool = Form(False),
-    delete_wordpress_files: bool = Form(False), delete_saved_backups: bool = Form(False),
+    app_id: int, confirmation: str = Form(""),
+    keep_database_ids: list[int] = Form([]), keep_app_volume: bool = Form(False),
+    keep_wordpress_files: bool = Form(False), keep_saved_backups: bool = Form(False),
     db: AsyncSession = Depends(get_db),
 ):
-    if confirmation != "DELETE":
-        raise HTTPException(400, "Type DELETE to remove this app.")
     app = await _app(db, app_id)
     domain = await db.get(Domain, app.domain_id)
     if domain is None:
         raise HTTPException(409, "App domain is missing.")
     attachments = await container_app_database_service.attachments_for(db, app.id)
     managed_ids = {item.id for item in attachments if item.provider == "docker"}
-    if set(delete_database_ids) - managed_ids:
-        raise HTTPException(400, "Only this app's Docker-managed services can be deleted here.")
-    delete_data = bool(delete_database_ids or delete_app_volume or delete_wordpress_files or delete_saved_backups)
-    if delete_data and data_confirmation != "DELETE DATA":
-        raise HTTPException(400, "Type DELETE DATA to remove selected persistent data.")
+    if set(keep_database_ids) - managed_ids:
+        raise HTTPException(400, "Only this app's Docker-managed services can be kept here.")
+    if confirmation != "DELETE ALL":
+        raise HTTPException(400, "Type DELETE ALL to confirm this removal.")
+    delete_database_ids = list(managed_ids - set(keep_database_ids))
+    delete_app_volume = bool(app.data_volume) and not keep_app_volume
+    delete_wordpress_files = bool(app.wordpress_content_volume) and not keep_wordpress_files
+    delete_saved_backups = not keep_saved_backups
     app.status, app.last_error = "deleting", None
     try:
         await container_app_cleanup_service.uninstall(db, app, domain, remove_network=False)

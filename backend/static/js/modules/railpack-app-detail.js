@@ -1,4 +1,5 @@
 const deployment = document.querySelector('[data-railpack-deployment]');
+const deleteModal = document.querySelector('[data-railpack-delete-modal]');
 
 async function poll() {
   try {
@@ -13,3 +14,8 @@ async function poll() {
 }
 
 if (deployment?.dataset.deploymentActive === 'true') setTimeout(poll, 800);
+
+if (deleteModal) {
+  document.querySelector('[data-railpack-delete-open]')?.addEventListener('click', () => deleteModal.classList.remove('hidden'));
+  deleteModal.querySelectorAll('[data-railpack-delete-close]').forEach((button) => button.addEventListener('click', () => deleteModal.classList.add('hidden')));
+}
