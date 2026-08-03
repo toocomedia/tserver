@@ -12,8 +12,9 @@ from database import get_db
 from models.container_app import ContainerApp
 from models.container_app_deployment import ContainerAppDeployment
 from models.domain import Domain
+from models.hosted_app import HostedApp
 from services import container_app_cleanup_service, container_app_control_service
-from services import container_app_deployment_service, container_app_service
+from services import container_app_deployment_service, container_app_inspection_service, container_app_service
 from templating import templates
 
 router = APIRouter(prefix="/plugins/railpack_apps", tags=["railpack-apps"])
@@ -43,10 +44,16 @@ async def index(request: Request, db: AsyncSession = Depends(get_db)):
 @router.get("/create", response_class=HTMLResponse)
 async def create_page(request: Request, db: AsyncSession = Depends(get_db)):
     used = set((await db.scalars(select(ContainerApp.domain_id))).all())
-    domains = (await db.scalars(select(Domain).where(Domain.project_type == "static").order_by(Domain.name))).all()
+    used.update((await db.scalars(select(HostedApp.domain_id))).all())
+    domains = (await db.scalars(select(Domain).order_by(Domain.name))).all()
     return templates.TemplateResponse("railpack_apps_create.html", {
-        "request": request, "active_page": "railpack_apps", "domains": [d for d in domains if d.id not in used],
+        "request": request, "active_page": "railpack_apps", "domains": domains, "used_domain_ids": used,
     })
+
+
+@router.post("/inspect")
+async def inspect(repository_url: str = Form(...), branch: str = Form("main")):
+    return JSONResponse(container_app_inspection_service.inspect_repository(repository_url.strip(), branch.strip() or "main"))
 
 
 @router.post("/create")

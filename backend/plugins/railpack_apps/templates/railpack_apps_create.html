@@ -2,19 +2,41 @@
 {% block title %}Deploy App — {{ PANEL_NAME }}{% endblock %}
 {% block page_title %}Deploy App{% endblock %}
 {% block content %}
-<form class="form-card" method="post" action="/plugins/railpack_apps/create">
+<form class="wizard-form" method="post" action="/plugins/railpack_apps/create" data-railpack-builder>
   {% include "partials/csrf_field.html" %}
-  <div class="form-group"><label>Domain</label><select name="domain_id" required>{% for domain in domains %}<option value="{{ domain.id }}">{{ domain.name }}</option>{% endfor %}</select></div>
-  <div class="form-group"><label>Source type</label><select name="source_type"><option value="git">Git repository</option><option value="image">Container image</option></select></div>
-  <div class="form-group"><label>Build mode</label><select name="build_mode"><option value="railpack">Automatic Railpack</option><option value="dockerfile">Dockerfile</option></select></div>
-  <div class="form-group"><label>Repository URL</label><input name="repository_url" placeholder="https://github.com/org/app"></div>
-  <div class="form-group"><label>Branch</label><input name="branch" value="main"></div>
-  <div class="form-group"><label>Registry image</label><input name="image_reference" placeholder="ghcr.io/org/app:1.0"></div>
-  <div class="form-group"><label>App HTTP port</label><input name="internal_port" type="number" min="1" max="65535" value="3000" required><small>Private inside Docker. The panel sets PORT to this value and proxies the domain through Nginx.</small></div>
-  <div class="form-group"><label>Database</label><select name="database_mode"><option value="none">No database</option><option value="panel_postgres">Create with panel PostgreSQL Manager</option><option value="external">Use existing database URL</option></select><small>Panel PostgreSQL creates a dedicated user and database. It must be active in Dependencies.</small></div>
-  <div class="form-group"><label>DATABASE_URL</label><input name="database_url" type="password" placeholder="postgresql://user:password@host:5432/database"><small>Stored only in this app's private environment file.</small></div>
-  <label class="checkbox-row"><input type="checkbox" name="ssl" value="true"> Issue HTTPS certificate after deployment</label>
   <input type="hidden" name="environment_values" value="{}">
-  <div class="form-actions"><a class="btn btn--secondary" href="/plugins/railpack_apps/">Cancel</a><button class="btn btn--primary" type="submit">Deploy</button></div>
+  <section class="unboxed-step-container">
+    <div class="unboxed-step-header"><span>1. Choose target</span><span class="badge-pill">Web apps only</span></div>
+    <p class="form-hint">All panel domains are shown. Domains already used by another app cannot be selected.</p>
+    <div class="form-group">
+      <label class="form-label" for="domain_id">Domain</label>
+      <div class="form-select-wrap"><select class="form-select" id="domain_id" name="domain_id" required>
+        {% for domain in domains %}<option value="{{ domain.id }}" {% if domain.id in used_domain_ids or domain.project_type != 'static' %}disabled{% endif %}>{{ domain.name }}{% if domain.id in used_domain_ids %} — already in use{% elif domain.project_type != 'static' %} — unavailable{% endif %}</option>{% endfor %}
+      </select></div>
+    </div>
+  </section>
+  <section class="unboxed-step-container">
+    <div class="unboxed-step-header"><span>2. App source</span><span class="badge-pill">Safe inspection</span></div>
+    <div class="form-group">
+      <label class="form-label" for="source_type">Source type</label>
+      <div class="form-select-wrap"><select class="form-select" id="source_type" name="source_type" data-source-type><option value="git">Git repository</option><option value="image">Container image</option></select></div>
+    </div>
+    <div data-git-fields>
+      <div class="form-group"><label class="form-label" for="repository_url">Repository URL</label><input class="form-input form-input--code" id="repository_url" name="repository_url" placeholder="https://github.com/owner/project.git" data-repository-url><p class="form-hint">Inspect to suggest the runtime, build method, and HTTP port. You can edit all suggestions.</p></div>
+      <div class="form-group"><label class="form-label" for="branch">Branch</label><input class="form-input" id="branch" name="branch" value="main" data-branch></div>
+      <button class="btn btn--secondary" type="button" data-inspect>Inspect repository</button><p class="form-hint" data-inspect-result></p>
+    </div>
+    <div class="form-group" data-image-field hidden><label class="form-label" for="image_reference">Registry image</label><input class="form-input form-input--code" id="image_reference" name="image_reference" placeholder="ghcr.io/org/app:1.0"></div>
+  </section>
+  <section class="unboxed-step-container">
+    <div class="unboxed-step-header"><span>3. Runtime and database</span><span class="badge-pill">Editable</span></div>
+    <div class="form-group"><label class="form-label" for="build_mode">Build method</label><div class="form-select-wrap"><select class="form-select" id="build_mode" name="build_mode"><option value="railpack">Automatic Railpack</option><option value="dockerfile">Dockerfile</option></select></div></div>
+    <div class="form-group"><label class="form-label" for="internal_port">App HTTP port</label><input class="form-input" id="internal_port" name="internal_port" type="number" min="1" max="65535" value="3000" required><p class="form-hint">Private inside Docker. Nginx publishes the selected domain only.</p></div>
+    <div class="form-group"><label class="form-label" for="database_mode">Database</label><div class="form-select-wrap"><select class="form-select" id="database_mode" name="database_mode"><option value="none">No database</option><option value="panel_postgres" data-panel-postgres>Create with panel PostgreSQL Manager</option><option value="external">Use existing database connection</option></select></div><p class="form-hint" data-database-detection>No database detected yet. You can still choose one manually.</p></div>
+    <div class="form-group" data-database-url><label class="form-label" for="database_url" data-database-url-label>Connection URL</label><input class="form-input form-input--code" id="database_url" name="database_url" type="password" autocomplete="off" placeholder="Enter a database connection URL" data-database-url-input><p class="form-hint">Stored only in this app's protected environment file.</p></div>
+    <label class="form-check"><input type="checkbox" name="ssl" value="true"> Issue HTTPS certificate after deployment</label>
+  </section>
+  <div class="fixed-action-bar"><div class="fixed-action-inner"><span class="text-muted">Review detected values before deploying.</span><div class="d-flex gap-sm"><a class="btn btn--secondary" href="/plugins/railpack_apps/">Cancel</a><button class="btn btn--primary" type="submit">Deploy app</button></div></div></div>
 </form>
 {% endblock %}
+{% block scripts %}<script type="module" src="/static/js/modules/railpack-app-create.js"></script>{% endblock %}
