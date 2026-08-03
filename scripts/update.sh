@@ -9,7 +9,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Prefer repo when run from clone; fall back to installed copy's parent layout
-if [[ -d "$SCRIPT_DIR/../backend" ]]; then
+if [[ -d "$SCRIPT_DIR/../backend" || -d "$SCRIPT_DIR/../app" ]]; then
   DEFAULT_SOURCE="$(cd "$SCRIPT_DIR/.." && pwd)"
 else
   DEFAULT_SOURCE="${PANEL_DIR:-/opt/srv-panel}"
@@ -84,6 +84,10 @@ fi
 if [[ -d "$SOURCE_DIR/backend" ]]; then
   BACKEND_SRC="$SOURCE_DIR/backend"
   SCRIPTS_SRC="$SOURCE_DIR/scripts"
+elif [[ -f "$SOURCE_DIR/app/main.py" ]]; then
+  # Installed VPS layout: /opt/srv-panel/app is the backend itself.
+  BACKEND_SRC="$SOURCE_DIR/app"
+  SCRIPTS_SRC="$SOURCE_DIR/scripts"
 elif [[ -f "$SOURCE_DIR/main.py" ]]; then
   # SOURCE_DIR points at app already (unusual)
   BACKEND_SRC="$SOURCE_DIR"
@@ -114,15 +118,19 @@ fi
 # Deploy code (preserve DB)
 # ---------------------------------------------------------------
 info "Syncing application files..."
-rsync -a --delete \
-  --exclude '__pycache__' \
-  --exclude '*.pyc' \
-  --exclude 'panel.db' \
-  --exclude 'panel.db-*' \
-  --exclude '.env' \
-  --exclude 'accounts.json' \
-  --exclude 'maddy_accounts.json' \
-  "$BACKEND_SRC/" "$PANEL_DIR/app/"
+if [[ "$BACKEND_SRC" != "$PANEL_DIR/app" ]]; then
+  rsync -a --delete \
+    --exclude '__pycache__' \
+    --exclude '*.pyc' \
+    --exclude 'panel.db' \
+    --exclude 'panel.db-*' \
+    --exclude '.env' \
+    --exclude 'accounts.json' \
+    --exclude 'maddy_accounts.json' \
+    "$BACKEND_SRC/" "$PANEL_DIR/app/"
+else
+  info "    Backend is already the installed app directory."
+fi
 
 # Record git commit hash if available
 if command -v git &>/dev/null && git -C "$SOURCE_DIR" rev-parse HEAD &>/dev/null; then
@@ -130,7 +138,7 @@ if command -v git &>/dev/null && git -C "$SOURCE_DIR" rev-parse HEAD &>/dev/null
 fi
 write_release_info
 
-if [[ -d "$SCRIPTS_SRC" ]]; then
+if [[ -d "$SCRIPTS_SRC" && "$SCRIPTS_SRC" != "$PANEL_DIR/scripts" ]]; then
   info "Syncing scripts..."
   rsync -a "$SCRIPTS_SRC/" "$PANEL_DIR/scripts/"
   chmod +x "$PANEL_DIR/scripts/"*.sh 2>/dev/null || true
