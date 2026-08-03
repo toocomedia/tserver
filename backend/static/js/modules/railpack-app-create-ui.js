@@ -56,11 +56,11 @@ export function renderInspection(form, data) {
 
 export function renderDeployment(form, data) {
   const state = `${data.status || 'queued'} · ${data.stage || 'waiting'}`;
-  const labels = { prepare: 'Preparing deployment', source: 'Cloning Git source', build: 'Building application image', pull: 'Pulling registry image', rollback: 'Restoring previous image', complete: 'Deployment complete' };
+  const labels = stageLabels();
   setText(form.querySelector('[data-deployment-state]'), state);
   setText(form.querySelector('[data-deployment-summary]'), labels[data.stage] || 'Deployment is running on the server.');
   setText(form.querySelector('[data-deployment-output]'), `${data.output || ''}${data.error ? `\n[error] ${data.error}` : ''}`);
-  renderDeploymentSteps(form.querySelector('[data-deployment-steps]'), data.stage, data.status);
+  renderDeploymentSteps(form.querySelector('[data-deployment-steps]'), data, labels);
 }
 
 function environmentField(labelText, id, placeholder, value, type) {
@@ -83,20 +83,25 @@ function environmentField(labelText, id, placeholder, value, type) {
   return group;
 }
 
-function renderDeploymentSteps(container, stage, status) {
-  const stages = [['prepare', 'Preparing deployment'], ['source', 'Cloning Git source'], ['build', 'Building application image'], ['pull', 'Pulling registry image'], ['rollback', 'Restoring previous image'], ['complete', 'Deployment complete']];
-  container.replaceChildren(...stages.map(([name, label]) => deploymentStep(name, label, stage, status)));
+function renderDeploymentSteps(container, data, labels) {
+  const lines = (data.output || '').split('\n').filter((line) => /^\[(prepare|source|build|pull|start|health|routing|wordpress|ssl|rollback|complete)\]/.test(line));
+  const actual = lines.length ? lines : [`[${data.stage || 'queued'}] ${labels[data.stage] || 'Waiting for deployment.'}`];
+  container.replaceChildren(...actual.map((line, index) => deploymentStep(line, index === actual.length - 1, data.status)));
 }
 
-function deploymentStep(name, label, stage, status) {
+function deploymentStep(line, current, status) {
   const row = document.createElement('div');
-  row.className = `scroll-step-item ${name === stage ? 'active' : status === 'success' && name === 'complete' ? 'completed' : 'pending'}`;
+  row.className = `scroll-step-item ${current && status !== 'success' ? 'active' : 'completed'}`;
   const icon = document.createElement('span');
   const text = document.createElement('span');
   icon.className = 'step-icon-wrap';
   text.className = 'step-text';
-  text.textContent = label;
-  icon.textContent = name === stage && status === 'running' ? '…' : name === 'complete' && status === 'success' ? '✓' : '○';
+  text.textContent = line.replace(/^\[[^\]]+\]\s*/, '');
+  icon.textContent = current && status !== 'success' ? '…' : '✓';
   row.append(icon, text);
   return row;
+}
+
+function stageLabels() {
+  return { prepare: 'Preparing deployment', source: 'Cloning Git source', build: 'Building application image', pull: 'Pulling registry image', start: 'Starting application container', health: 'Checking private HTTP endpoint', routing: 'Publishing application route', wordpress: 'Finishing WordPress setup', ssl: 'Configuring HTTPS', rollback: 'Restoring previous image', complete: 'Deployment complete' };
 }

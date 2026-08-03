@@ -60,25 +60,17 @@ if (form) {
     const required = row.dataset.sourceRequired === 'true';
     const enabled = row.querySelector('[data-database-enabled]').checked;
     const provider = row.querySelector('[data-database-provider]');
-    const card = query(`[data-database-card][data-kind="${row.dataset.kind}"]`);
-    row.hidden = !enabled;
-    card.setAttribute('aria-pressed', String(enabled));
-    card.disabled = required;
+    const options = row.querySelector('[data-database-options]');
+    options.hidden = !enabled;
+    row.classList.toggle('settings-choice--active', enabled);
+    row.querySelector('[data-database-enabled]').disabled = required;
     provider.disabled = required || !enabled;
     const url = row.querySelector('[data-database-url]');
     const external = provider.value === 'external';
-    url.hidden = !enabled || !external;
+    row.querySelector('[data-database-external]').hidden = !enabled || !external;
     url.required = enabled && external;
     setHidden(row.querySelector('[data-database-requirement]'), !required);
     setText(row.querySelector('[data-database-requirement]'), required ? 'Required by WordPress. The private MariaDB service is created with this app.' : '');
-  }
-
-  function toggleDatabase(kind) {
-    const row = query(`[data-database-row][data-kind="${kind}"]`);
-    if (row.dataset.sourceRequired === 'true') return;
-    const input = row.querySelector('[data-database-enabled]');
-    input.checked = !input.checked;
-    attachmentState(row);
   }
 
   function applyInspection(data) {
@@ -181,10 +173,10 @@ if (form) {
   query('[data-domain-select]').addEventListener('change', () => setText(query('[data-wizard-domain-name]'), query('[data-domain-select]').selectedOptions[0].dataset.domainName));
   query('[data-inspect-retry]').addEventListener('click', inspectSource);
   query('[data-add-environment]').addEventListener('click', () => addEnvironmentRow(form));
-  query('[data-database-scroll-back]').addEventListener('click', () => query('[data-database-gallery]').scrollBy({ left: -query('[data-database-gallery]').clientWidth, behavior: 'smooth' }));
-  query('[data-database-scroll-forward]').addEventListener('click', () => query('[data-database-gallery]').scrollBy({ left: query('[data-database-gallery]').clientWidth, behavior: 'smooth' }));
-  form.querySelectorAll('[data-database-card]').forEach((card) => card.addEventListener('click', () => toggleDatabase(card.dataset.kind)));
-  form.querySelectorAll('[data-database-row]').forEach((row) => row.querySelector('[data-database-provider]').addEventListener('change', () => attachmentState(row)));
+  form.querySelectorAll('[data-database-row]').forEach((row) => {
+    row.querySelector('[data-database-enabled]').addEventListener('change', () => attachmentState(row));
+    row.querySelector('[data-database-provider]').addEventListener('change', () => attachmentState(row));
+  });
   query('[data-wizard-next]').addEventListener('click', () => [inspectSource, () => { state.unlocked = 3; renderStep(3); }, startDeployment][state.step - 1]?.());
   query('[data-wizard-back]').addEventListener('click', () => renderStep(Math.max(1, state.step - 1)));
   form.addEventListener('submit', (event) => { event.preventDefault(); if (state.step === 3) startDeployment(); });

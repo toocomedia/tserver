@@ -53,7 +53,7 @@ class RailpackAppsUiTests(unittest.TestCase):
         panels = "".join((BACKEND / "plugins" / "railpack_apps" / "templates" / "railpack_apps" / "partials" / f"create_{name}.html").read_text(encoding="utf-8") for name in ("source", "inspection", "configuration", "deployment", "result"))
         for step in range(1, 6):
             self.assertIn(f'data-wizard-panel="{step}"', panels)
-        self.assertIn("data-database-gallery", configuration)
+        self.assertIn("settings-choice-grid", configuration)
         self.assertIn("database-postgresql.svg", configuration)
         self.assertIn("data-environment-list", configuration)
         for name in ("database-mariadb.svg", "database-postgresql.svg", "database-redis.svg", "database-mongodb.svg"):
@@ -61,9 +61,12 @@ class RailpackAppsUiTests(unittest.TestCase):
 
     def test_wizard_polls_real_deployment_status(self):
         script = (BACKEND / "static" / "js" / "modules" / "railpack-app-create.js").read_text(encoding="utf-8")
+        ui_script = (BACKEND / "static" / "js" / "modules" / "railpack-app-create-ui.js").read_text(encoding="utf-8")
         self.assertIn("/deployments/${state.deploymentId}", script)
         self.assertIn("['queued', 'running']", script)
         self.assertIn("finishDeployment(data)", script)
+        self.assertIn("actual = lines.length", ui_script)
+        self.assertIn("start: 'Starting application container'", ui_script)
 
     def test_inspection_detects_runtime_port_and_database(self):
         self.assertEqual(inspection._port("EXPOSE 8080", "Node.js"), 8080)
@@ -88,6 +91,8 @@ class RailpackAppsUiTests(unittest.TestCase):
 
     def test_detail_includes_safe_database_actions(self):
         markup = (BACKEND / "plugins" / "railpack_apps" / "templates" / "railpack_apps_detail.html").read_text(encoding="utf-8")
+        for component in ("hero-app-box", "layout-2col", "master-card", "Live deployment stream", "Danger zone"):
+            self.assertIn(component, markup)
         for value in ("Rotate credentials", "Create backup", "RESTORE", "Delete service and data", "Update WordPress", "Delete WordPress files", "delete_database_ids", "delete_app_volume", "delete_saved_backups", "DELETE DATA"):
             self.assertIn(value, markup)
 

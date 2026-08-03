@@ -15,6 +15,7 @@ from models.container_app import ContainerApp
 from models.container_app_deployment import ContainerAppDeployment
 from models.domain import Domain
 from services import container_app_service as apps
+from services import container_app_deployment_progress_service as progress
 
 _build_lock = asyncio.Lock()
 
@@ -79,27 +80,32 @@ async def _deploy_after_commit(deployment_id: int) -> None:
         domain = await db.get(Domain, app.domain_id) if app else None
         if deployment is None or deployment.status != "queued" or app is None or domain is None:
             return
-        deployment.status, deployment.started_at, deployment.stage = "running", datetime.utcnow(), "prepare"
-        await db.commit()
+        deployment.status, deployment.started_at = "running", datetime.utcnow()
+        await progress.stage(db, deployment, "prepare", "Preparing deployment.")
         running_image, replacement_started = app.image_digest or app.image_reference, False
         try:
-            async with _build_lock:
-                image = await asyncio.to_thread(_build_or_pull, app, deployment)
+            image = await _prepare_image(db, app, deployment)
+            await progress.stage(db, deployment, "start", "Starting application container.")
             await asyncio.to_thread(_replace_container, app, image)
             replacement_started = True
-            await wait_for_http(app.host_port)
+            await progress.stage(db, deployment, "health", "Checking the private HTTP endpoint.")
+            await progress.wait_for_http(app.host_port)
             from services import container_app_control_service
+            await progress.stage(db, deployment, "routing", "Publishing the application route.")
             await container_app_control_service.publish(db, app, domain)
             if app.preset == "wordpress":
                 from services import container_app_wordpress_service
+                await progress.stage(db, deployment, "wordpress", "Finishing WordPress setup.")
                 await asyncio.to_thread(container_app_wordpress_service.install_if_pending, app, domain)
             if app.ssl_requested:
                 from services import ssl_service
+                await progress.stage(db, deployment, "ssl", "Configuring HTTPS.")
                 await ssl_service.configure_container_app_ssl(db, app, domain)
             app.status, app.last_error, app.deployed_at = "running", None, datetime.utcnow()
-            deployment.status, deployment.stage = "success", "complete"
+            deployment.status = "success"
+            await progress.stage(db, deployment, "complete", "Deployment complete.")
         except Exception as exc:
-            deployment.output = (deployment.output + await asyncio.to_thread(_container_logs, app))[-80_000:]
+            deployment.output = (deployment.output + await asyncio.to_thread(progress.container_logs, app))[-80_000:]
             restored = await _restore_previous(app, domain, db, running_image, replacement_started, deployment)
             app.status, app.last_error = ("running", None) if restored else ("failed", str(exc)[:1000])
             deployment.status, deployment.error = "failed", str(exc)[:2000]
@@ -115,21 +121,21 @@ async def _restore_previous(
     if not replacement_started or not image:
         return False
     try:
-        _log(deployment, "rollback", "Restoring the previous image.")
+        await progress.stage(db, deployment, "rollback", "Restoring the previous image.")
         await asyncio.to_thread(_replace_container, app, image)
-        await wait_for_http(app.host_port)
+        await progress.wait_for_http(app.host_port)
         from services import container_app_control_service
         await container_app_control_service.publish(db, app, domain)
         app.image_digest = image
         return True
     except Exception as exc:
-        _log(deployment, "rollback", f"Rollback failed: {exc}")
+        progress.append_log(deployment, "rollback", f"Rollback failed: {exc}")
         return False
 
 
 def _build_or_pull(app: ContainerApp, deployment: ContainerAppDeployment) -> str:
     if app.source_type == "image":
-        _log(deployment, "pull", f"Pulling {app.image_reference}.")
+        progress.append_log(deployment, "pull", f"Pulling {app.image_reference}.")
         result = apps._run(["docker", "pull", app.image_reference or ""], timeout=config.CONTAINER_APP_BUILD_TIMEOUT)
         if result.returncode:
             raise RuntimeError((result.stderr or result.stdout or "Image pull failed.")[-1500:])
@@ -139,18 +145,26 @@ def _build_or_pull(app: ContainerApp, deployment: ContainerAppDeployment) -> str
     source = apps.root(app.id) / "build" / str(deployment.id) / "source"
     if source.exists():
         shutil.rmtree(source)
-    _log(deployment, "source", "Cloning selected Git revision.")
+    progress.append_log(deployment, "source", "Cloning selected Git revision.")
     checkout = repository_service.clone(app.repository_url or "", app.branch or "main", source)
     app.deployed_revision = checkout.revision.sha
     image = f"srv-panel/railpack-app:{app.id}-{deployment.id}"
     command = ["docker", "build", "--tag", image, str(source)] if app.build_mode == "dockerfile" else ["railpack", "build", "--name", image, str(source)]
-    _log(deployment, "build", "Building application image.")
+    progress.append_log(deployment, "build", "Building application image.")
     result = apps._run(command, timeout=config.CONTAINER_APP_BUILD_TIMEOUT)
     deployment.output = (deployment.output + result.stdout + result.stderr)[-80_000:]
     if result.returncode:
         raise RuntimeError("Build failed. See deployment output.")
     app.image_digest = image
     return image
+
+
+async def _prepare_image(db: AsyncSession, app: ContainerApp, deployment: ContainerAppDeployment) -> str:
+    stage = "pull" if app.source_type == "image" else "build"
+    message = "Pulling registry image." if stage == "pull" else "Preparing Git source and building application image."
+    await progress.stage(db, deployment, stage, message)
+    async with _build_lock:
+        return await asyncio.to_thread(_build_or_pull, app, deployment)
 
 
 def _replace_container(app: ContainerApp, image: str) -> None:
@@ -193,33 +207,3 @@ def _container_running(app: ContainerApp) -> bool:
 def _require(result, message: str) -> None:
     if result.returncode:
         raise RuntimeError((result.stderr or result.stdout or message)[-1500:])
-
-
-def _container_logs(app: ContainerApp) -> str:
-    result = apps._run(["docker", "logs", "--tail", "120", app.container_name], timeout=20)
-    if result.returncode:
-        return ""
-    output = (result.stdout + result.stderr).strip()
-    return f"\n[runtime logs]\n{output}\n" if output else ""
-
-
-async def wait_for_http(port: int) -> None:
-    for _ in range(20):
-        try:
-            reader, writer = await asyncio.wait_for(asyncio.open_connection("127.0.0.1", port), timeout=1)
-            writer.write(b"GET / HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n")
-            await writer.drain()
-            line = await asyncio.wait_for(reader.readline(), timeout=3)
-            writer.close()
-            await writer.wait_closed()
-            if line.startswith(b"HTTP/") and int(line.split()[1]) < 500:
-                return
-        except (OSError, asyncio.TimeoutError, ValueError, IndexError):
-            pass
-        await asyncio.sleep(1)
-    raise RuntimeError("Container did not return a healthy HTTP response on its private port.")
-
-
-def _log(deployment: ContainerAppDeployment, stage: str, message: str) -> None:
-    deployment.stage = stage
-    deployment.output = (deployment.output + f"[{stage}] {message}\n")[-80_000:]
