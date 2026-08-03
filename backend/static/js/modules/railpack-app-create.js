@@ -1,115 +1,195 @@
+import { addEnvironmentRow, csrfHeaders, environmentValues, fetchJson, renderDeployment, renderInspection, setHidden, setText } from './railpack-app-create-ui.js';
+
 const form = document.querySelector('[data-railpack-builder]');
-
-function sourceState() {
-  const type = form.querySelector('[data-source-type]').value;
-  const wordpress = type === 'wordpress';
-  form.querySelector('[data-preset]').value = wordpress ? 'wordpress' : '';
-  form.querySelector('[data-git-fields]').hidden = type !== 'git';
-  form.querySelector('[data-image-field]').hidden = type !== 'image';
-  form.querySelector('[data-wordpress-fields]').hidden = !wordpress;
-  form.querySelector('#build_mode').closest('.form-group').hidden = wordpress;
-  form.querySelector('#internal_port').closest('.form-group').hidden = wordpress;
-  if (wordpress) form.querySelector('#internal_port').value = '80';
-  wordpressDatabaseState(wordpress);
-}
-
-function wordpressDatabaseState(required) {
-  const row = form.querySelector('[data-kind="mariadb"]');
-  const enabled = row.querySelector('[data-database-enabled]');
-  const provider = row.querySelector('[data-database-provider]');
-  if (required) {
-    enabled.checked = true;
-    provider.value = 'docker';
-  }
-  row.dataset.sourceRequired = required ? 'true' : '';
-  attachmentState(row);
-}
-
-function attachmentState(row) {
-  const required = row.dataset.sourceRequired === 'true';
-  const enabled = row.querySelector('[data-database-enabled]').checked;
-  const external = row.querySelector('[data-database-provider]').value === 'external';
-  const requirement = row.querySelector('[data-database-requirement]');
-  row.querySelector('[data-database-enabled]').disabled = required;
-  row.querySelector('[data-database-provider]').disabled = required || !enabled;
-  requirement.hidden = !required;
-  requirement.textContent = required ? 'Required by WordPress. The private MariaDB service is created with this app.' : '';
-  const url = row.querySelector('[data-database-url]');
-  url.hidden = !enabled || !external;
-  url.required = enabled && external;
-}
-
-function addEnvironmentRow(key = '', value = '') {
-  const list = form.querySelector('[data-environment-list]');
-  const row = document.createElement('div');
-  row.className = 'form-group';
-  row.dataset.environmentRow = '';
-  row.innerHTML = '<input class="form-input form-input--code" data-environment-key placeholder="VARIABLE_NAME" aria-label="Variable name"> <input class="form-input form-input--code" data-environment-value type="password" autocomplete="off" placeholder="Value" aria-label="Variable value"> <button class="btn btn--secondary" type="button" data-remove-environment>Remove</button>';
-  row.querySelector('[data-environment-key]').value = key;
-  row.querySelector('[data-environment-value]').value = value;
-  row.querySelector('[data-remove-environment]').addEventListener('click', () => row.remove());
-  list.append(row);
-}
-
-function environmentValues() {
-  const values = {};
-  const validKey = /^[A-Z_][A-Z0-9_]{0,127}$/;
-  form.querySelectorAll('[data-environment-row]').forEach((row) => {
-    const key = row.querySelector('[data-environment-key]').value.trim();
-    const value = row.querySelector('[data-environment-value]').value;
-    if (!key && !value) return;
-    if (!validKey.test(key) || /[\r\n]/.test(value)) throw new Error('Environment variables need an uppercase name and a one-line value.');
-    values[key] = value;
-  });
-  return values;
-}
-
-function attachments() {
-  return [...form.querySelectorAll('[data-database-row]')].flatMap((row) => {
-    if (!row.querySelector('[data-database-enabled]').checked) return [];
-    return [{
-      kind: row.dataset.kind,
-      provider: row.querySelector('[data-database-provider]').value,
-      environment_key: row.querySelector('[data-database-key]').value,
-      external_url: row.querySelector('[data-database-url]').value,
-    }];
-  });
-}
-
-async function inspect() {
-  const result = form.querySelector('[data-inspect-result]');
-  const body = new FormData();
-  body.set('repository_url', form.querySelector('[data-repository-url]').value);
-  body.set('branch', form.querySelector('[data-branch]').value || 'main');
-  try {
-    result.textContent = 'Inspecting repository…';
-    const response = await fetch('/plugins/railpack_apps/inspect', { method: 'POST', headers: { 'X-CSRF-Token': document.querySelector('[name="csrf_token"]').value }, body });
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.detail || 'Inspection failed.');
-    form.querySelector('[data-repository-url]').value = data.repository_url;
-    form.querySelector('[data-branch]').value = data.branch;
-    form.querySelector('#build_mode').value = data.build_mode;
-    form.querySelector('#internal_port').value = data.internal_port;
-    const types = data.database_types || [];
-    form.querySelector('[data-database-detection]').textContent = types.length ? `Detected: ${types.join(', ')}. Review the selected services.` : 'No database detected. You can still choose services manually.';
-    types.forEach((kind) => { const row = form.querySelector(`[data-kind="${kind === 'mariadb/mysql' ? 'mariadb' : kind}"]`); if (row) { row.querySelector('[data-database-enabled]').checked = true; attachmentState(row); } });
-    result.textContent = `${data.runtime} detected. Suggested port ${data.internal_port}; all suggestions remain editable.`;
-  } catch (error) { result.textContent = error.message; }
-}
-
 if (form) {
-  form.querySelector('[data-source-type]').addEventListener('change', sourceState);
-  form.querySelector('[data-inspect]').addEventListener('click', inspect);
-  form.querySelector('[data-add-environment]').addEventListener('click', () => addEnvironmentRow());
-  form.querySelectorAll('[data-database-row]').forEach((row) => row.addEventListener('change', () => attachmentState(row)));
-  form.addEventListener('submit', (event) => {
-    const error = form.querySelector('[data-environment-error]');
+  const state = { step: 1, unlocked: 1, appId: null, deploymentId: null };
+  const query = (selector) => form.querySelector(selector);
+  const panel = (step) => query(`[data-wizard-panel="${step}"]`);
+
+  function renderStep(step) {
+    state.step = step;
+    for (let index = 1; index <= 5; index += 1) {
+      setHidden(panel(index), index !== step);
+      const nav = query(`[data-wizard-nav="${index}"]`);
+      nav.classList.toggle('active', index === step);
+      nav.classList.toggle('disabled', index > state.unlocked);
+    }
+    setHidden(query('[data-wizard-back]'), step === 1 || step >= 4);
+    setHidden(query('[data-wizard-cancel]'), step >= 4);
+    setHidden(query('[data-wizard-next]'), step >= 4);
+    setText(query('[data-wizard-hint]'), `Step ${step} of 5: ${['Source', 'Inspection', 'Configuration', 'Install', 'Result'][step - 1]}`);
+    if (step === 1) setText(query('[data-wizard-next]'), query('[data-source-type]').value === 'git' ? 'Inspect repository' : 'Review configuration');
+    if (step === 2) setText(query('[data-wizard-next]'), 'Continue to configuration');
+    if (step === 3) setText(query('[data-wizard-next]'), 'Deploy app');
+  }
+
+  function sourceState() {
+    const type = query('[data-source-type]').value;
+    const wordpress = type === 'wordpress';
+    state.unlocked = 1;
+    setHidden(query('[data-git-fields]'), type !== 'git');
+    setHidden(query('[data-image-field]'), type !== 'image');
+    setHidden(query('[data-wordpress-fields]'), !wordpress);
+    setHidden(query('[data-build-mode-group]'), wordpress);
+    setHidden(query('[data-port-group]'), wordpress);
+    toggleSourceInputs(type);
+    query('[data-preset]').value = wordpress ? 'wordpress' : '';
+    if (wordpress) query('#internal_port').value = '80';
+    wordpressDatabaseState(wordpress);
+    renderStep(1);
+  }
+
+  function toggleSourceInputs(type) {
+    const git = type === 'git';
+    query('[data-repository-url]').disabled = !git;
+    query('[data-repository-url]').required = git;
+    query('[data-branch]').disabled = !git;
+    query('[data-image-reference]').disabled = type !== 'image';
+    query('[data-image-reference]').required = type === 'image';
+    form.querySelectorAll('[data-wordpress-fields] input').forEach((input) => { input.disabled = type !== 'wordpress'; input.required = type === 'wordpress'; });
+  }
+
+  function wordpressDatabaseState(required) {
+    const row = query('[data-kind="mariadb"]');
+    if (required) { row.querySelector('[data-database-enabled]').checked = true; row.querySelector('[data-database-provider]').value = 'docker'; }
+    row.dataset.sourceRequired = required ? 'true' : '';
+    attachmentState(row);
+  }
+
+  function attachmentState(row) {
+    const required = row.dataset.sourceRequired === 'true';
+    const enabled = row.querySelector('[data-database-enabled]').checked;
+    const provider = row.querySelector('[data-database-provider]');
+    const card = query(`[data-database-card][data-kind="${row.dataset.kind}"]`);
+    row.hidden = !enabled;
+    card.setAttribute('aria-pressed', String(enabled));
+    card.disabled = required;
+    provider.disabled = required || !enabled;
+    const url = row.querySelector('[data-database-url]');
+    const external = provider.value === 'external';
+    url.hidden = !enabled || !external;
+    url.required = enabled && external;
+    setHidden(row.querySelector('[data-database-requirement]'), !required);
+    setText(row.querySelector('[data-database-requirement]'), required ? 'Required by WordPress. The private MariaDB service is created with this app.' : '');
+  }
+
+  function toggleDatabase(kind) {
+    const row = query(`[data-database-row][data-kind="${kind}"]`);
+    if (row.dataset.sourceRequired === 'true') return;
+    const input = row.querySelector('[data-database-enabled]');
+    input.checked = !input.checked;
+    attachmentState(row);
+  }
+
+  function applyInspection(data) {
+    if (['railpack', 'dockerfile'].includes(data.build_mode)) query('#build_mode').value = data.build_mode;
+    const port = Number(data.internal_port);
+    if (Number.isInteger(port) && port > 0 && port <= 65535) query('#internal_port').value = port;
+    (data.database_types || []).forEach((kind) => {
+      const normalized = kind === 'mariadb/mysql' ? 'mariadb' : kind;
+      const row = query(`[data-database-row][data-kind="${normalized}"]`);
+      if (row) { row.querySelector('[data-database-enabled]').checked = true; attachmentState(row); }
+    });
+    setText(query('[data-database-detection]'), data.database_types?.length ? `Detected: ${data.database_types.join(', ')}. Review the selected services.` : 'No database detected. You can still choose services manually.');
+    renderInspection(form, data);
+  }
+
+  async function inspectSource() {
+    const type = query('[data-source-type]').value;
+    if (type !== 'git') return showNonGitInspection(type);
+    if (!query('[data-repository-url]').reportValidity()) return;
+    setHidden(query('[data-inspect-error]'), true);
+    setHidden(query('[data-inspect-results]'), true);
+    setHidden(query('[data-inspect-loading]'), false);
     try {
-      form.querySelector('[data-environment-values]').value = JSON.stringify(environmentValues());
-      form.querySelector('[data-database-attachments]').value = JSON.stringify(attachments());
-      error.hidden = true;
-    } catch (reason) { event.preventDefault(); error.textContent = reason.message; error.hidden = false; }
-  });
+      const body = new FormData();
+      body.set('repository_url', query('[data-repository-url]').value);
+      body.set('branch', query('[data-branch]').value || 'main');
+      const data = await fetchJson('/plugins/railpack_apps/inspect', { method: 'POST', headers: csrfHeaders(), body });
+      query('[data-repository-url]').value = data.repository_url;
+      query('[data-branch]').value = data.branch;
+      applyInspection(data);
+      state.unlocked = 2;
+      renderStep(2);
+      setHidden(query('[data-inspect-results]'), false);
+    } catch (error) { showInspectionError(error); } finally { setHidden(query('[data-inspect-loading]'), true); }
+  }
+
+  function showNonGitInspection(type) {
+    const image = type === 'image';
+    if (image && !query('[data-image-reference]').reportValidity()) return;
+    applyInspection(image ? { runtime: 'Registry image', build_mode: 'image', internal_port: query('#internal_port').value, summary: 'The image will be pulled during installation.' } : { runtime: 'WordPress preset', build_mode: 'image', internal_port: 80, database_types: ['mariadb'], summary: 'WordPress will install with its private MariaDB service.' });
+    state.unlocked = 2;
+    renderStep(2);
+    setHidden(query('[data-inspect-results]'), false);
+  }
+
+  function showInspectionError(error) {
+    setText(query('[data-inspect-error-text]'), error.message || 'Inspection failed.');
+    setHidden(query('[data-inspect-error]'), false);
+  }
+
+  function submitValues() {
+    const error = query('[data-environment-error]');
+    try {
+      query('[data-environment-values]').value = JSON.stringify(environmentValues(form));
+      query('[data-database-attachments]').value = JSON.stringify(attachments());
+      setHidden(error, true);
+      return true;
+    } catch (reason) { setText(error, reason.message); setHidden(error, false); return false; }
+  }
+
+  function attachments() {
+    return [...form.querySelectorAll('[data-database-row]')].flatMap((row) => row.querySelector('[data-database-enabled]').checked ? [{ kind: row.dataset.kind, provider: row.querySelector('[data-database-provider]').value, environment_key: row.querySelector('[data-database-key]').value, external_url: row.querySelector('[data-database-url]').value }] : []);
+  }
+
+  async function startDeployment() {
+    if (!submitValues() || !form.reportValidity()) return;
+    try {
+      const data = await fetchJson(form.action, { method: 'POST', headers: { ...csrfHeaders(), Accept: 'application/json' }, body: new FormData(form) });
+      state.appId = data.app_id;
+      state.deploymentId = data.deployment_id;
+      state.unlocked = 4;
+      renderStep(4);
+      pollDeployment();
+    } catch (error) { setText(query('[data-environment-error]'), error.message); setHidden(query('[data-environment-error]'), false); }
+  }
+
+  async function pollDeployment() {
+    try {
+      const data = await fetchJson(`/plugins/railpack_apps/${state.appId}/deployments/${state.deploymentId}`, { headers: csrfHeaders() });
+      renderDeployment(form, data);
+      if (['queued', 'running'].includes(data.status)) return window.setTimeout(pollDeployment, 1200);
+      finishDeployment(data);
+    } catch (error) { finishDeployment({ status: 'failed', stage: 'complete', error: error.message }); }
+  }
+
+  function finishDeployment(data) {
+    state.unlocked = 5;
+    setText(query('[data-result-state]'), data.status === 'success' ? 'Complete' : 'Failed');
+    setText(query('[data-result-summary]'), data.status === 'success' ? 'Deployment completed successfully.' : 'Deployment failed. Review the output and manage the app for recovery.');
+    setText(query('[data-deployment-error-text]'), data.error || 'Deployment failed.');
+    setHidden(query('[data-deployment-error]'), data.status === 'success');
+    const url = `/plugins/railpack_apps/${state.appId}`;
+    query('[data-deployment-dashboard]').href = url;
+    query('[data-deployment-details]').href = url;
+    setHidden(query(data.status === 'success' ? '[data-deployment-dashboard]' : '[data-deployment-details]'), false);
+    renderStep(5);
+  }
+
+  query('[data-source-type]').addEventListener('change', sourceState);
+  query('[data-domain-select]').addEventListener('change', () => setText(query('[data-wizard-domain-name]'), query('[data-domain-select]').selectedOptions[0].dataset.domainName));
+  query('[data-inspect-retry]').addEventListener('click', inspectSource);
+  query('[data-add-environment]').addEventListener('click', () => addEnvironmentRow(form));
+  query('[data-database-scroll-back]').addEventListener('click', () => query('[data-database-gallery]').scrollBy({ left: -query('[data-database-gallery]').clientWidth, behavior: 'smooth' }));
+  query('[data-database-scroll-forward]').addEventListener('click', () => query('[data-database-gallery]').scrollBy({ left: query('[data-database-gallery]').clientWidth, behavior: 'smooth' }));
+  form.querySelectorAll('[data-database-card]').forEach((card) => card.addEventListener('click', () => toggleDatabase(card.dataset.kind)));
+  form.querySelectorAll('[data-database-row]').forEach((row) => row.querySelector('[data-database-provider]').addEventListener('change', () => attachmentState(row)));
+  query('[data-wizard-next]').addEventListener('click', () => [inspectSource, () => { state.unlocked = 3; renderStep(3); }, startDeployment][state.step - 1]?.());
+  query('[data-wizard-back]').addEventListener('click', () => renderStep(Math.max(1, state.step - 1)));
+  form.addEventListener('submit', (event) => { event.preventDefault(); if (state.step === 3) startDeployment(); });
+  form.querySelectorAll('[data-wizard-nav]').forEach((item) => item.addEventListener('click', () => { const step = Number(item.dataset.wizardNav); if (step <= state.unlocked) renderStep(step); }));
   form.querySelectorAll('[data-database-row]').forEach(attachmentState);
+  setText(query('[data-wizard-domain-name]'), query('[data-domain-select]').selectedOptions[0]?.dataset.domainName || 'the selected domain');
   sourceState();
 }

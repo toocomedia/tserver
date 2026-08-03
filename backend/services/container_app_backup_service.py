@@ -75,6 +75,16 @@ async def restore_wordpress_backup(db: AsyncSession, app: ContainerApp, item: Co
     await asyncio.to_thread(_restore_volume, app.wordpress_content_volume or "", Path(backup.path))
 
 
+async def delete_backups(db: AsyncSession, backups: list[ContainerAppBackup]) -> None:
+    for backup in backups:
+        try:
+            await asyncio.to_thread(Path(backup.path).unlink, missing_ok=True)
+        except OSError as exc:
+            raise HTTPException(502, f"Could not remove backup {backup.id}: {exc}") from exc
+    for backup in backups:
+        await db.delete(backup)
+
+
 def _path(app_id: int, backup_id: int, kind: str) -> Path:
     root = Path(config.CONTAINER_APP_BACKUP_ROOT) / str(app_id)
     root.mkdir(parents=True, exist_ok=True)

@@ -17,11 +17,13 @@ from models.ssl_cert import SslCert
 from services import container_app_service, nginx_service
 
 
-async def uninstall(db: AsyncSession, app: ContainerApp, domain: Domain) -> None:
+async def uninstall(db: AsyncSession, app: ContainerApp, domain: Domain, *, remove_network: bool = True) -> None:
     errors: list[str] = []
     await _step(errors, "remove app container", lambda: _remove_container(app))
-    has_databases = bool(await db.scalar(select(ContainerAppDatabase.id).where(ContainerAppDatabase.app_id == app.id)))
-    if not has_databases:
+    has_docker_databases = bool(await db.scalar(select(ContainerAppDatabase.id).where(
+        ContainerAppDatabase.app_id == app.id, ContainerAppDatabase.provider == "docker",
+    )))
+    if remove_network and not has_docker_databases:
         await _step(errors, "remove private app network", lambda: _remove_network(app))
     await _step(errors, "restore domain site", lambda: _restore_domain_site(db, domain))
     await _step(errors, "remove build files", lambda: asyncio.to_thread(_remove_path, container_app_service._root(app.id)))
@@ -45,6 +47,16 @@ async def _remove_network(app: ContainerApp) -> None:
     )
     if result.returncode and not _missing(result.stderr):
         raise RuntimeError(result.stderr or result.stdout or "Could not remove app network.")
+
+
+async def remove_private_network(app: ContainerApp) -> None:
+    await _remove_network(app)
+
+
+async def remove_volume(volume: str) -> None:
+    result = await asyncio.to_thread(container_app_service._run, ["docker", "volume", "rm", volume], timeout=45)
+    if result.returncode and not _missing(result.stderr):
+        raise HTTPException(502, (result.stderr or result.stdout or "Could not remove data volume.")[-1000:])
 
 
 async def _restore_domain_site(db: AsyncSession, domain: Domain) -> None:

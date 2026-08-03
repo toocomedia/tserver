@@ -68,7 +68,14 @@
 
 <section class="section">
   <div class="section__header"><h2>Remove application</h2></div>
-  <div class="section__body"><p class="form-hint">Removes the app container, build files, and environment file. The domain, certificate, app data volume, and database are kept.</p><form method="post" action="/plugins/railpack_apps/{{ app.id }}/uninstall"><div class="form-group"><label class="form-label" for="confirmation">Type DELETE to confirm</label><input class="form-input" id="confirmation" name="confirmation" required></div>{% include "partials/csrf_field.html" %}<button class="btn btn--danger" type="submit">Remove application</button></form></div>
+  <div class="section__body"><p class="form-hint">The application container, build files, and environment file are always removed. All persistent data is kept unless you select it below.</p><form method="post" action="/plugins/railpack_apps/{{ app.id }}/uninstall">
+    {% if databases or app.data_volume or app.wordpress_content_volume or backups %}<fieldset class="form-group"><legend class="form-label">Also permanently delete selected data</legend>
+      {% for item in databases %}{% if item.provider == 'docker' %}<label class="form-check"><input type="checkbox" name="delete_database_ids" value="{{ item.id }}"> Delete {{ item.kind | title }} service and its data volume</label>{% else %}<p class="form-hint">{{ item.kind | title }} ({{ item.provider }}) is preserved and must be removed by its own provider.</p>{% endif %}{% endfor %}
+      {% if app.data_volume %}<label class="form-check"><input type="checkbox" name="delete_app_volume" value="true"> Delete application data volume</label>{% endif %}
+      {% if app.wordpress_content_volume %}<label class="form-check"><input type="checkbox" name="delete_wordpress_files" value="true"> Delete WordPress uploads, plugins, and themes</label>{% endif %}
+      {% if backups %}<label class="form-check"><input type="checkbox" name="delete_saved_backups" value="true"> Delete {{ backups | length }} local backup{{ '' if backups | length == 1 else 's' }}</label>{% endif %}
+    </fieldset><div class="form-group"><label class="form-label" for="data-confirmation">If you selected data above, type DELETE DATA</label><input class="form-input" id="data-confirmation" name="data_confirmation"></div>{% endif %}
+    <div class="form-group"><label class="form-label" for="confirmation">Type DELETE to remove the application</label><input class="form-input" id="confirmation" name="confirmation" required></div>{% include "partials/csrf_field.html" %}<button class="btn btn--danger" type="submit">Remove selected resources</button></form></div>
 </section>
 {% endblock %}
 {% block scripts %}<script type="module" src="/static/js/modules/railpack-app-detail.js"></script>{% endblock %}

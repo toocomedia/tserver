@@ -1,0 +1,12 @@
+<section class="unboxed-step-container" data-wizard-panel="2" hidden>
+  <div class="unboxed-step-header"><span>2. Source inspection</span><span class="badge-pill badge-pill--accent">Editable suggestions</span></div>
+  <p class="form-hint" data-inspect-summary>Review the source summary before configuring the app.</p>
+  <div class="d-flex gap-sm align-center" data-inspect-loading hidden><span class="step-spinner" aria-hidden="true"></span><span>Inspecting source files…</span></div>
+  <div class="alert alert--danger" data-inspect-error hidden><span data-inspect-error-text></span><button class="btn btn--danger btn--sm" type="button" data-inspect-retry>Retry inspection</button></div>
+  <div class="apps-engine-inspection" data-inspect-results hidden>
+    <div class="info-row"><span class="info-row__label">Runtime</span><span class="info-row__value" data-inspection-runtime></span></div>
+    <div class="info-row"><span class="info-row__label">Build method</span><span class="info-row__value" data-inspection-build></span></div>
+    <div class="info-row"><span class="info-row__label">Private HTTP port</span><span class="info-row__value mono" data-inspection-port></span></div>
+    <div class="info-row"><span class="info-row__label">Database services</span><span class="info-row__value" data-inspection-databases></span></div>
+  </div>
+</section>

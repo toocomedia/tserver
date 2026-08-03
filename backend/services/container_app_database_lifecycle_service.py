@@ -49,6 +49,12 @@ def delete_managed(item: ContainerAppDatabase, confirmation: str) -> None:
         raise HTTPException(400, f"Type {expected} to permanently delete this data.")
     if item.provider != "docker":
         raise HTTPException(400, "Panel PostgreSQL and external databases are not deleted here.")
+    purge_managed(item)
+
+
+def purge_managed(item: ContainerAppDatabase) -> None:
+    if item.provider != "docker":
+        raise HTTPException(400, "Only Docker-managed databases can be deleted here.")
     databases._require(container_app_service._run(["docker", "rm", "-f", item.container_name or ""], timeout=45), "Could not remove database container.")
     databases._require(container_app_service._run(["docker", "volume", "rm", item.volume_name or ""], timeout=45), "Could not remove database volume.")
     Path(item.credentials_path or "").unlink(missing_ok=True)
