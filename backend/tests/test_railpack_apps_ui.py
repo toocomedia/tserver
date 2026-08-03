@@ -26,17 +26,29 @@ class RailpackAppsUiTests(unittest.TestCase):
 
     def test_builder_has_editable_detected_controls(self):
         markup = (BACKEND / "plugins" / "railpack_apps" / "templates" / "railpack_apps_create.html").read_text(encoding="utf-8")
-        for control in ("domain_id", "repository_url", "build_mode", "internal_port", "database_attachments", "wordpress_site_title"):
+        for control in ("domain_id", "repository_url", "build_mode", "internal_port", "database_attachments", "environment_values", "wordpress_site_title"):
             self.assertIn(f'name="{control}"', markup)
         self.assertIn("data-inspect", markup)
         self.assertNotIn("readonly", markup)
         self.assertIn("data-database-row", markup)
+        self.assertIn("data-database-requirement", markup)
+        self.assertIn("data-environment-list", markup)
+        self.assertIn("data-add-environment", markup)
         self.assertIn("WordPress preset", markup)
+
+    def test_builder_script_auto_selects_required_and_detected_services(self):
+        script = (BACKEND / "static" / "js" / "modules" / "railpack-app-create.js").read_text(encoding="utf-8")
+        self.assertIn("wordpressDatabaseState(wordpress)", script)
+        self.assertIn("provider.value = 'docker'", script)
+        self.assertIn("sourceRequired", script)
+        self.assertIn("types.forEach", script)
+        self.assertIn("environmentValues()", script)
 
     def test_inspection_detects_runtime_port_and_database(self):
         self.assertEqual(inspection._port("EXPOSE 8080", "Node.js"), 8080)
         self.assertEqual(inspection._databases("import psycopg and redis"), ["postgresql", "redis"])
         self.assertEqual(inspection._databases("from pymongo import MongoClient"), ["mongodb"])
+        self.assertEqual(inspection._databases("mysql2 pgx go-redis mongo-driver"), ["postgresql", "mariadb/mysql", "mongodb", "redis"])
         self.assertEqual(inspection._runtime({"Gemfile"}), "Ruby")
         self.assertEqual(inspection._runtime({"pom.xml"}), "Java")
         self.assertEqual(inspection._runtime({"index.html"}), "Static site")

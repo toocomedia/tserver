@@ -58,17 +58,22 @@ def _port(text: str, runtime: str) -> int:
 def _databases(text: str) -> list[str]:
     lower = text.lower()
     markers = {
-        "postgresql": ("postgres", "psycopg", "asyncpg", "pg8000"),
-        "mariadb/mysql": ("mariadb", "mysql", "pymysql", "mysqlclient"),
-        "mongodb": ("mongodb", "mongoose", "pymongo"),
-        "redis": ("redis", "ioredis"),
+        "postgresql": ("postgres", "psycopg", "asyncpg", "pg8000", "pgx", "postgresql.jdbc"),
+        "mariadb/mysql": ("mariadb", "mysql", "mysql2", "pymysql", "mysqlclient", "mysql-connector"),
+        "mongodb": ("mongodb", "mongoose", "pymongo", "mongo-driver"),
+        "redis": ("redis", "ioredis", "go-redis"),
         "sqlite": ("sqlite", "sqlite3"),
     }
     return [name for name, values in markers.items() if any(value in lower for value in values)]
 
 
 def _read_sources(root: Path) -> str:
-    names = ("Dockerfile", "Procfile", "package.json", "railpack.json", "nixpacks.toml", "Gemfile", "pom.xml", "build.gradle", "composer.json")
+    names = (
+        "Dockerfile", "Procfile", "package.json", "package-lock.json", "yarn.lock", "pnpm-lock.yaml",
+        "railpack.json", "nixpacks.toml", "requirements.txt", "pyproject.toml", "Pipfile", "poetry.lock",
+        "Gemfile", "go.mod", "pom.xml", "build.gradle", "build.gradle.kts", "composer.json",
+        "config/database.yml", "config/database.php",
+    )
     texts = []
     for name in names:
         path = root / name
