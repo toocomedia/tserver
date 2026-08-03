@@ -1,0 +1,19 @@
+{% extends "layout.html" %}
+{% block title %}{{ app.container_name }} — {{ PANEL_NAME }}{% endblock %}
+{% block page_title %}{{ domain.name if domain else app.container_name }}{% endblock %}
+{% block content %}
+{% if request.query_params.get('error') %}<div class="alert alert--error">{{ request.query_params.get('error') }}</div>{% endif %}
+<div class="section-card"><dl class="details-list"><dt>Source</dt><dd>{{ app.source_type }} / {{ app.build_mode }}</dd><dt>Private route</dt><dd><code>127.0.0.1:{{ app.host_port }} → {{ app.internal_port }}</code></dd><dt>Image</dt><dd class="mono">{{ app.image_digest or app.image_reference or 'Building' }}</dd><dt>Database</dt><dd>{{ app.database_provider or app.database_mode }}{% if app.database_name %} · {{ app.database_name }}{% endif %}</dd><dt>Status</dt><dd>{{ app.status }}</dd></dl>
+  <div class="form-actions">
+    <form method="post" action="/plugins/railpack_apps/{{ app.id }}/deploy">{% include "partials/csrf_field.html" %}<button class="btn btn--primary" type="submit">Redeploy</button></form>
+    {% for action in ['start', 'restart', 'stop'] %}<form method="post" action="/plugins/railpack_apps/{{ app.id }}/{{ action }}">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary" type="submit">{{ action|capitalize }}</button></form>{% endfor %}
+  </div>
+</div>
+{% if deployment %}<div class="section-card"><h2>Deployment output</h2><pre id="deployment-output" class="terminal-output">{{ deployment.output }}{% if deployment.error %}\n[error] {{ deployment.error }}{% endif %}</pre></div>
+<script>
+(() => { const active = {{ 'true' if deployment.status in ['queued', 'running'] else 'false' }}; if (!active) return;
+  const poll = async () => { const res = await fetch('/plugins/railpack_apps/{{ app.id }}/deployments/{{ deployment.id }}'); if (!res.ok) return; const item = await res.json(); document.querySelector('#deployment-output').textContent = item.output + (item.error ? '\n[error] ' + item.error : ''); if (['queued', 'running'].includes(item.status)) setTimeout(poll, 1500); else location.reload(); }; setTimeout(poll, 700);
+})();
+</script>{% endif %}
+<div class="section-card"><h2>Remove app</h2><p>This removes the app container, build files, and environment file. It keeps the domain, HTTPS certificate, app data volume, and any database.</p><form method="post" action="/plugins/railpack_apps/{{ app.id }}/uninstall">{% include "partials/csrf_field.html" %}<div class="form-group"><label>Type DELETE to confirm</label><input name="confirmation" required></div><button class="btn btn--danger" type="submit">Remove app</button></form></div>
+{% endblock %}

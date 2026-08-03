@@ -1,0 +1,17 @@
+{
+  "id": "railpack_apps",
+  "name": "Railpack Apps",
+  "description": "Deploy Git repositories and container images as isolated web applications.",
+  "version": "0.1.0",
+  "author": "SRV Panel Core",
+  "icon": "grid",
+  "route_prefix": "/plugins/railpack_apps",
+  "sidebar": true,
+  "sidebar_label": "Apps Engine",
+  "enabled": true,
+  "usage": {},
+  "requires": {"dependencies": ["docker"]},
+  "install_script": "scripts/install_railpack_apps.sh",
+  "uninstall_script": "scripts/uninstall_railpack_apps.sh",
+  "uninstall_resource_policy": "block_if_present"
+}

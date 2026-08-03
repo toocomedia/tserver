@@ -18,6 +18,7 @@ from sqlalchemy import select
 
 from models.domain import Domain
 from models.hosted_app import HostedApp
+from models.container_app import ContainerApp
 from models.ssl_cert import SslCert
 from models.proxy import ReverseProxy
 from services import nginx_service, error_service
@@ -53,6 +54,22 @@ async def configure_hosted_app_ssl(
         return
     domain.nginx_config_path = await nginx_service.update_proxy_ssl(
         domain.name, "127.0.0.1", app.port, "http",
+        cert.cert_path or _cert_path(domain.name), _key_path(domain.name),
+    )
+    app.ssl_requested = True
+    await nginx_service.reload()
+
+
+async def configure_container_app_ssl(
+    db: AsyncSession, app: ContainerApp, domain: Domain,
+) -> None:
+    """Attach an existing or new certificate to a private container-app proxy."""
+    cert = await db.scalar(select(SslCert).where(SslCert.full_domain == domain.name))
+    if cert is None:
+        await issue_cert(db, domain.id, domain.name)
+        return
+    domain.nginx_config_path = await nginx_service.update_proxy_ssl(
+        domain.name, "127.0.0.1", app.host_port, "http",
         cert.cert_path or _cert_path(domain.name), _key_path(domain.name),
     )
     app.ssl_requested = True
@@ -336,9 +353,13 @@ async def issue_cert(
         select(ReverseProxy).where(ReverseProxy.full_domain == full_domain)
     )
     hosted_app = None
+    container_app = None
     if domain_obj:
         hosted_app = await db.scalar(
             select(HostedApp).where(HostedApp.domain_id == domain_obj.id)
+        )
+        container_app = await db.scalar(
+            select(ContainerApp).where(ContainerApp.domain_id == domain_obj.id)
         )
 
     try:
@@ -358,6 +379,12 @@ async def issue_cert(
                 full_domain, "127.0.0.1", hosted_app.port, "http", cert_path, key_path,
             )
             hosted_app.ssl_requested = True
+            domain_obj.nginx_config_path = new_config
+        elif container_app:
+            new_config = await nginx_service.update_proxy_ssl(
+                full_domain, "127.0.0.1", container_app.host_port, "http", cert_path, key_path,
+            )
+            container_app.ssl_requested = True
             domain_obj.nginx_config_path = new_config
         elif domain_obj and domain_obj.name == full_domain:
             new_config = await nginx_service.update_static_site_ssl(
@@ -480,9 +507,13 @@ async def revoke_cert(
         select(ReverseProxy).where(ReverseProxy.full_domain == domain_name)
     )
     hosted_app = None
+    container_app = None
     if domain_obj:
         hosted_app = await db.scalar(
             select(HostedApp).where(HostedApp.domain_id == domain_obj.id)
+        )
+        container_app = await db.scalar(
+            select(ContainerApp).where(ContainerApp.domain_id == domain_obj.id)
         )
     try:
         if proxy_obj:
@@ -500,6 +531,12 @@ async def revoke_cert(
                 domain_name, "127.0.0.1", hosted_app.port, "http",
             )
             hosted_app.ssl_requested = False
+            domain_obj.nginx_config_path = new_config
+        elif container_app:
+            new_config = await nginx_service.create_proxy(
+                domain_name, "127.0.0.1", container_app.host_port, "http",
+            )
+            container_app.ssl_requested = False
             domain_obj.nginx_config_path = new_config
         elif domain_obj:
             from utils.nginx_templates import static_site_config

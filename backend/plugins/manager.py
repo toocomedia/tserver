@@ -436,11 +436,33 @@ class PluginManager:
                 from dependencies import dependency_manager
 
                 docker_service = dependency_manager.get_service("docker")
-                cleanup_ok, cleanup_message = await asyncio.to_thread(
-                    docker_service.cleanup_plugin_resources,
-                    plugin_id,
-                    purge_data=False,
-                )
+                if plugin.get("uninstall_resource_policy") == "block_if_present":
+                    resources = await asyncio.to_thread(
+                        docker_service.plugin_resource_summary, plugin_id
+                    )
+                    if resources is None:
+                        message = "Docker must be healthy before this plugin can be uninstalled safely."
+                        await component_state_store.set(
+                            "plugin", plugin_id, operation="idle", last_error=message
+                        )
+                        return False, message
+                    remaining = sum(resources.values())
+                    if remaining:
+                        detail = ", ".join(
+                            f"{count} {kind}" for kind, count in resources.items() if count
+                        )
+                        message = f"Remove or migrate this plugin's managed resources before uninstalling ({detail})."
+                        await component_state_store.set(
+                            "plugin", plugin_id, operation="idle", last_error=message
+                        )
+                        return False, message
+                    cleanup_ok, cleanup_message = True, "No owned Docker resources."
+                else:
+                    cleanup_ok, cleanup_message = await asyncio.to_thread(
+                        docker_service.cleanup_plugin_resources,
+                        plugin_id,
+                        purge_data=False,
+                    )
                 if not cleanup_ok:
                     await component_state_store.set(
                         "plugin",

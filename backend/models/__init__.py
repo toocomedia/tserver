@@ -8,3 +8,5 @@ from models.postgres_remote import PostgresRemoteDomain
 from models.hosted_app import HostedApp
 from models.app_deployment import AppDeployment
 from models.app_environment import AppEnvironmentVariable
+from models.container_app import ContainerApp
+from models.container_app_deployment import ContainerAppDeployment

@@ -1,0 +1,20 @@
+{% extends "layout.html" %}
+{% block title %}Deploy App — {{ PANEL_NAME }}{% endblock %}
+{% block page_title %}Deploy App{% endblock %}
+{% block content %}
+<form class="form-card" method="post" action="/plugins/railpack_apps/create">
+  {% include "partials/csrf_field.html" %}
+  <div class="form-group"><label>Domain</label><select name="domain_id" required>{% for domain in domains %}<option value="{{ domain.id }}">{{ domain.name }}</option>{% endfor %}</select></div>
+  <div class="form-group"><label>Source type</label><select name="source_type"><option value="git">Git repository</option><option value="image">Container image</option></select></div>
+  <div class="form-group"><label>Build mode</label><select name="build_mode"><option value="railpack">Automatic Railpack</option><option value="dockerfile">Dockerfile</option></select></div>
+  <div class="form-group"><label>Repository URL</label><input name="repository_url" placeholder="https://github.com/org/app"></div>
+  <div class="form-group"><label>Branch</label><input name="branch" value="main"></div>
+  <div class="form-group"><label>Registry image</label><input name="image_reference" placeholder="ghcr.io/org/app:1.0"></div>
+  <div class="form-group"><label>App HTTP port</label><input name="internal_port" type="number" min="1" max="65535" value="3000" required><small>Private inside Docker. The panel sets PORT to this value and proxies the domain through Nginx.</small></div>
+  <div class="form-group"><label>Database</label><select name="database_mode"><option value="none">No database</option><option value="panel_postgres">Create with panel PostgreSQL Manager</option><option value="external">Use existing database URL</option></select><small>Panel PostgreSQL creates a dedicated user and database. It must be active in Dependencies.</small></div>
+  <div class="form-group"><label>DATABASE_URL</label><input name="database_url" type="password" placeholder="postgresql://user:password@host:5432/database"><small>Stored only in this app's private environment file.</small></div>
+  <label class="checkbox-row"><input type="checkbox" name="ssl" value="true"> Issue HTTPS certificate after deployment</label>
+  <input type="hidden" name="environment_values" value="{}">
+  <div class="form-actions"><a class="btn btn--secondary" href="/plugins/railpack_apps/">Cancel</a><button class="btn btn--primary" type="submit">Deploy</button></div>
+</form>
+{% endblock %}

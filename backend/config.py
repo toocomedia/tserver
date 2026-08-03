@@ -114,6 +114,10 @@ APP_HOSTING_ENV_ROOT: str = os.getenv("APP_HOSTING_ENV_ROOT", "/var/lib/srv-pane
 APP_ERROR_PAGES_ROOT: str = os.getenv("APP_ERROR_PAGES_ROOT", str(Path(NGINX_WEBROOT) / "srv-error-pages"))
 APP_HOSTING_USER: str = os.getenv("APP_HOSTING_USER", "panel")
 APP_HOSTING_PORT_START: int = _env_int("APP_HOSTING_PORT_START", 9100)
+CONTAINER_APP_ROOT: str = os.getenv("CONTAINER_APP_ROOT", "/var/lib/srv-panel/container-apps")
+CONTAINER_APP_ENV_ROOT: str = os.getenv("CONTAINER_APP_ENV_ROOT", "/var/lib/srv-panel/container-app-env")
+CONTAINER_APP_PORT_START: int = _env_int("CONTAINER_APP_PORT_START", 31000)
+CONTAINER_APP_BUILD_TIMEOUT: int = _env_int("CONTAINER_APP_BUILD_TIMEOUT", 1200)
 
 # ---------------------------------------------------------
 # Performance (nginx optimizations)

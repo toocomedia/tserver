@@ -341,3 +341,25 @@ class DockerDependencyService:
         if not purge_data:
             detail = f"{detail}; volumes preserved"
         return True, detail
+
+    def plugin_resource_summary(self, plugin_id: str) -> dict[str, int] | None:
+        """Read-only count of Docker resources owned by one plugin."""
+        if not re.fullmatch(r"[a-z0-9][a-z0-9_-]{0,63}", plugin_id):
+            return None
+        if not self.get_status(force=True)["healthy"]:
+            return None
+        label = f"srv-panel.plugin={plugin_id}"
+        summary: dict[str, int] = {}
+        for kind, command in {
+            "containers": ["docker", "ps", "-aq", "--filter", f"label={label}"],
+            "networks": ["docker", "network", "ls", "-q", "--filter", f"label={label}"],
+            "volumes": ["docker", "volume", "ls", "-q", "--filter", f"label={label}"],
+        }.items():
+            try:
+                result = self._run(command, timeout=10, privileged=True)
+            except (OSError, subprocess.TimeoutExpired):
+                return None
+            if result.returncode != 0:
+                return None
+            summary[kind] = len([item for item in result.stdout.split() if item])
+        return summary
