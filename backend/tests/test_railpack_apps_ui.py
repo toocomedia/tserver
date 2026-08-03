@@ -46,6 +46,8 @@ class RailpackAppsUiTests(unittest.TestCase):
         self.assertIn("sourceRequired", script)
         self.assertIn("database_types || []).forEach", script)
         self.assertIn("environmentValues(form)", script)
+        self.assertIn("function domainState()", script)
+        self.assertIn("HTTPS is already active for this domain", script)
 
     def test_builder_has_five_steps_and_local_database_artwork(self):
         markup = (BACKEND / "plugins" / "railpack_apps" / "templates" / "railpack_apps_create.html").read_text(encoding="utf-8")
@@ -95,6 +97,13 @@ class RailpackAppsUiTests(unittest.TestCase):
             self.assertIn(component, markup)
         for value in ("Rotate credentials", "Create backup", "RESTORE", "Delete service and data", "Update WordPress", "Delete WordPress files", "delete_database_ids", "delete_app_volume", "delete_saved_backups", "DELETE DATA"):
             self.assertIn(value, markup)
+
+    def test_ssl_uses_the_domain_certificate_not_the_original_request(self):
+        detail = (BACKEND / "plugins" / "railpack_apps" / "templates" / "railpack_apps_detail.html").read_text(encoding="utf-8")
+        source = (BACKEND / "plugins" / "railpack_apps" / "templates" / "railpack_apps" / "partials" / "create_source.html").read_text(encoding="utf-8")
+        self.assertIn("https=ssl_active", detail)
+        self.assertIn("'HTTPS active' if ssl_active", detail)
+        self.assertIn("data-domain-ssl", source)
 
     def test_uninstall_requires_separate_confirmation_for_selected_data(self):
         source = (BACKEND / "plugins" / "railpack_apps" / "router.py").read_text(encoding="utf-8")

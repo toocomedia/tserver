@@ -36,7 +36,17 @@ if (form) {
     query('[data-preset]').value = wordpress ? 'wordpress' : '';
     if (wordpress) query('#internal_port').value = '80';
     wordpressDatabaseState(wordpress);
+    domainState();
     renderStep(1);
+  }
+
+  function domainState() {
+    const selected = query('[data-domain-select]').selectedOptions[0];
+    const ssl = query('[data-ssl-request]');
+    const hasSsl = selected?.dataset.domainSsl === 'true';
+    ssl.checked = false;
+    ssl.disabled = hasSsl;
+    setText(query('[data-ssl-hint]'), hasSsl ? 'HTTPS is already active for this domain. The existing certificate will be used.' : 'No certificate is attached to this domain. Select this option to issue HTTPS after deployment.');
   }
 
   function toggleSourceInputs(type) {
@@ -170,7 +180,7 @@ if (form) {
   }
 
   query('[data-source-type]').addEventListener('change', sourceState);
-  query('[data-domain-select]').addEventListener('change', () => setText(query('[data-wizard-domain-name]'), query('[data-domain-select]').selectedOptions[0].dataset.domainName));
+  query('[data-domain-select]').addEventListener('change', () => { const selected = query('[data-domain-select]').selectedOptions[0]; setText(query('[data-wizard-domain-name]'), selected.dataset.domainName); domainState(); });
   query('[data-inspect-retry]').addEventListener('click', inspectSource);
   query('[data-add-environment]').addEventListener('click', () => addEnvironmentRow(form));
   form.querySelectorAll('[data-database-row]').forEach((row) => {

@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from models.container_app import ContainerApp
 from models.domain import Domain
 from models.ssl_cert import SslCert
-from services import container_app_deployment_service, container_app_service, nginx_service
+from services import container_app_deployment_progress_service, container_app_service, nginx_service
 
 
 async def control(db: AsyncSession, app: ContainerApp, domain: Domain, action: str) -> None:
@@ -22,7 +22,7 @@ async def control(db: AsyncSession, app: ContainerApp, domain: Domain, action: s
         app.status, app.last_error = "stopped", None
         return
     await _docker(["docker", action, app.container_name])
-    await container_app_deployment_service.wait_for_http(app.host_port)
+    await container_app_deployment_progress_service.wait_for_http(app.host_port)
     await publish(db, app, domain)
     app.status, app.last_error = "running", None
 

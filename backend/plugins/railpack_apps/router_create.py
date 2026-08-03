@@ -12,6 +12,7 @@ from database import get_db
 from models.container_app import ContainerApp
 from models.domain import Domain
 from models.hosted_app import HostedApp
+from models.ssl_cert import SslCert
 from services import container_app_database_service, container_app_deployment_service
 from services import container_app_inspection_service, container_app_service, container_app_wordpress_service
 from templating import templates
@@ -24,8 +25,10 @@ async def create_page(request: Request, db: AsyncSession = Depends(get_db)):
     used = set((await db.scalars(select(ContainerApp.domain_id))).all())
     used.update((await db.scalars(select(HostedApp.domain_id))).all())
     domains = (await db.scalars(select(Domain).order_by(Domain.name))).all()
+    ssl_domain_names = set((await db.scalars(select(SslCert.full_domain))).all())
     return templates.TemplateResponse("railpack_apps_create.html", {
         "request": request, "active_page": "railpack_apps", "domains": domains, "used_domain_ids": used,
+        "ssl_domain_names": ssl_domain_names,
     })
 
 
@@ -46,6 +49,7 @@ async def create(
     domain = await db.get(Domain, domain_id)
     if domain is None:
         raise HTTPException(404, "Domain not found.")
+    has_certificate = await db.scalar(select(SslCert.id).where(SslCert.full_domain == domain.name)) is not None
     attachments = _attachments(database_attachments)
     if preset == "wordpress":
         attachments = _prepare_wordpress(attachments, wordpress_site_title, wordpress_admin_user, wordpress_admin_email, wordpress_admin_password)
@@ -53,7 +57,7 @@ async def create(
     app = await container_app_service.create_app(
         db, domain=domain, source_type=source_type, build_mode=build_mode, repository_url=repository_url.strip() or None,
         branch=branch.strip() or "main", image_reference=image_reference.strip() or None, internal_port=internal_port,
-        ssl_requested=ssl, environment_values=_environment_values(environment_values), database_mode=database_mode,
+        ssl_requested=ssl and not has_certificate, environment_values=_environment_values(environment_values), database_mode=database_mode,
         database_url=database_url.strip() or None, database_attachments=attachments,
     )
     if preset == "wordpress":
