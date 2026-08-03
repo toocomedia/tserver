@@ -235,6 +235,40 @@ def _migrate_sync(sync_conn) -> None:
                     f"ALTER TABLE app_deployments ADD COLUMN {col} {ddl}"
                 ))
 
+    if "container_apps" in tables:
+        cols = _column_names(sync_conn, "container_apps")
+        container_columns = {
+            "preset": "VARCHAR(24)",
+            "wordpress_content_volume": "VARCHAR(128)",
+            "wordpress_site_title": "VARCHAR(255)",
+            "wordpress_admin_user": "VARCHAR(64)",
+            "wordpress_admin_email": "VARCHAR(255)",
+            "wordpress_pending_secret_path": "VARCHAR(512)",
+        }
+        for col, ddl in container_columns.items():
+            if col not in cols:
+                logger.info("Migrating container_apps: add %s", col)
+                sync_conn.execute(text(f"ALTER TABLE container_apps ADD COLUMN {col} {ddl}"))
+
+    if "container_apps" in tables and "container_app_databases" in tables:
+        existing = sync_conn.execute(text("SELECT COUNT(*) FROM container_app_databases")).scalar() or 0
+        if not existing:
+            rows = sync_conn.execute(text(
+                "SELECT id, database_mode, database_provider, database_name, database_user "
+                "FROM container_apps WHERE database_mode != 'none'"
+            )).mappings()
+            for row in rows:
+                provider = "panel_postgres" if row["database_mode"] == "panel_postgres" else "external"
+                sync_conn.execute(text(
+                    "INSERT INTO container_app_databases "
+                    "(app_id, kind, provider, environment_key, database_name, username, status) "
+                    "VALUES (:app_id, 'postgresql', :provider, 'DATABASE_URL', :database_name, :username, 'ready')"
+                ), {"app_id": row["id"], "provider": provider,
+                    "database_name": row["database_name"], "username": row["database_user"]})
+
+    if "container_app_backups" in tables and "database_backup_id" not in _column_names(sync_conn, "container_app_backups"):
+        sync_conn.execute(text("ALTER TABLE container_app_backups ADD COLUMN database_backup_id INTEGER"))
+
 async def init_db():
     """Create all tables on startup if they do not exist, then migrate."""
     # Import all models so Base knows about them
@@ -253,6 +287,8 @@ async def init_db():
     import models.app_environment  # noqa: F401
     import models.container_app  # noqa: F401
     import models.container_app_deployment  # noqa: F401
+    import models.container_app_database  # noqa: F401
+    import models.container_app_backup  # noqa: F401
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
         await conn.run_sync(_migrate_sync)

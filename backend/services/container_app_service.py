@@ -63,13 +63,22 @@ async def create_app(
     repository_url: str | None, branch: str | None, image_reference: str | None,
     internal_port: int, ssl_requested: bool, environment_values: dict[str, str],
     database_mode: str = "none", database_url: str | None = None,
+    database_attachments: list[dict[str, str]] | None = None,
 ) -> ContainerApp:
     _validate_source(domain, source_type, build_mode, repository_url, branch, image_reference)
     if await db.scalar(select(ContainerApp.id).where(ContainerApp.domain_id == domain.id)):
         raise HTTPException(409, "This domain already has a container app.")
     is_image = source_type == "image"
     port = validate_port(internal_port)
-    database_values = database_environment(database_mode, database_url, environment_values)
+    database_values = dict(environment_values)
+    attachment_specs = database_attachments
+    if attachment_specs is None:
+        attachment_specs = _legacy_attachment_specs(database_mode, database_url)
+    from services import container_app_database_service as databases
+    attachment_specs = databases.parse_specs(attachment_specs)
+    for spec in attachment_specs:
+        if spec["provider"] == "external":
+            database_values[spec["environment_key"]] = spec["external_url"]
     app = ContainerApp(
         domain_id=domain.id, source_type=source_type,
         build_mode="image" if is_image else build_mode,
@@ -78,15 +87,13 @@ async def create_app(
         image_reference=validate_image_reference(image_reference or "") if is_image else None,
         container_name="pending", internal_port=port,
         host_port=await next_host_port(db), env_path="pending", ssl_requested=ssl_requested,
-        database_mode=database_mode, database_provider="external" if database_mode == "external" else None,
+        database_mode="none", database_provider=None,
     )
     db.add(app)
     await db.flush()
     app.container_name, app.env_path = f"srv-container-app-{app.id}", str(env_path(app.id))
-    if database_mode == "panel_postgres":
-        from services import container_app_database_service
-        database_values = container_app_database_service.provision_panel_postgres(app, database_values)
-    write_env(Path(app.env_path), environment_for_port(database_values, port))
+    attachments = await databases.create_attachments(db, app, attachment_specs)
+    databases.rebuild_environment(app, attachments, database_values)
     return app
 
 
@@ -144,6 +151,16 @@ def database_environment(mode: str, database_url: str | None, values: dict[str, 
     if existing is not None and existing != database_url:
         raise HTTPException(400, "DATABASE_URL must match the selected database URL.")
     return {"DATABASE_URL": database_url, **values}
+
+
+def _legacy_attachment_specs(mode: str, database_url: str | None) -> list[dict[str, str]]:
+    if mode == "none":
+        return []
+    if mode == "panel_postgres":
+        return [{"kind": "postgresql", "provider": "panel_postgres", "environment_key": "DATABASE_URL"}]
+    if mode == "external" and database_url:
+        return [{"kind": "postgresql", "provider": "external", "environment_key": "DATABASE_URL", "external_url": database_url}]
+    raise HTTPException(400, "Choose no database or provide an external DATABASE_URL.")
 
 
 # Backwards-compatible private aliases used by cleanup and focused tests.

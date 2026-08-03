@@ -11,6 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.container_app import ContainerApp
+from models.container_app_database import ContainerAppDatabase
 from models.domain import Domain
 from models.ssl_cert import SslCert
 from services import container_app_service, nginx_service
@@ -19,7 +20,9 @@ from services import container_app_service, nginx_service
 async def uninstall(db: AsyncSession, app: ContainerApp, domain: Domain) -> None:
     errors: list[str] = []
     await _step(errors, "remove app container", lambda: _remove_container(app))
-    await _step(errors, "remove private app network", lambda: _remove_network(app))
+    has_databases = bool(await db.scalar(select(ContainerAppDatabase.id).where(ContainerAppDatabase.app_id == app.id)))
+    if not has_databases:
+        await _step(errors, "remove private app network", lambda: _remove_network(app))
     await _step(errors, "restore domain site", lambda: _restore_domain_site(db, domain))
     await _step(errors, "remove build files", lambda: asyncio.to_thread(_remove_path, container_app_service._root(app.id)))
     await _step(errors, "remove environment file", lambda: asyncio.to_thread(_remove_path, Path(app.env_path)))

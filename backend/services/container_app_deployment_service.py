@@ -26,14 +26,23 @@ async def recover_interrupted() -> None:
         deployments = (await db.scalars(select(ContainerAppDeployment).where(
             ContainerAppDeployment.status.in_(("queued", "running")),
         ))).all()
-        if not deployments:
-            return
         now = datetime.utcnow()
         for deployment in deployments:
             deployment.status = "failed"
             deployment.stage = "interrupted"
             deployment.error = "Panel restarted before this deployment completed. Redeploy to try again."
             deployment.finished_at = now
+        apps = list((await db.scalars(select(ContainerApp).where(
+            ContainerApp.status.in_(("pending", "deleting", "running")),
+        ))).all())
+        for app in apps:
+            live = await asyncio.to_thread(_container_running, app)
+            if live:
+                app.status, app.last_error = "running", None
+            elif app.status == "deleting":
+                app.status, app.last_error = "delete_failed", "Panel restarted while removal was in progress. Retry removal."
+            elif app.status == "pending":
+                app.status, app.last_error = "failed", "No running container was found after panel restart. Redeploy to recover."
         await db.commit()
 
 
@@ -81,6 +90,9 @@ async def _deploy_after_commit(deployment_id: int) -> None:
             await wait_for_http(app.host_port)
             from services import container_app_control_service
             await container_app_control_service.publish(db, app, domain)
+            if app.preset == "wordpress":
+                from services import container_app_wordpress_service
+                await asyncio.to_thread(container_app_wordpress_service.install_if_pending, app, domain)
             if app.ssl_requested:
                 from services import ssl_service
                 await ssl_service.configure_container_app_ssl(db, app, domain)
@@ -155,10 +167,11 @@ def _replace_container(app: ContainerApp, image: str) -> None:
         "--network", apps.network_name(app.id), "-p", f"127.0.0.1:{app.host_port}:{app.internal_port}",
         "--env-file", app.env_path,
     ]
-    if app.database_mode == "panel_postgres":
-        command.extend(["--add-host", "host.docker.internal:host-gateway"])
+    command.extend(["--add-host", "host.docker.internal:host-gateway"])
     if app.data_volume and app.data_mount_path:
         command.extend(["-v", f"{app.data_volume}:{app.data_mount_path}"])
+    if app.preset == "wordpress" and app.wordpress_content_volume:
+        command.extend(["-v", f"{app.wordpress_content_volume}:/var/www/html/wp-content"])
     _require(apps._run([*command, image], timeout=60), "Container did not start.")
 
 
@@ -170,6 +183,11 @@ def _ensure_network(app: ContainerApp) -> None:
             "docker", "network", "create", "--driver", "bridge", "--label", "srv-panel.plugin=railpack_apps",
             "--label", f"srv-panel.app-id={app.id}", name,
         ], timeout=30), "Could not create the private app network.")
+
+
+def _container_running(app: ContainerApp) -> bool:
+    result = apps._run(["docker", "inspect", "--format", "{{.State.Running}}", app.container_name], timeout=15)
+    return result.returncode == 0 and result.stdout.strip() == "true"
 
 
 def _require(result, message: str) -> None:

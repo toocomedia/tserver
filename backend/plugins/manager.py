@@ -220,9 +220,17 @@ class PluginManager:
             for plugin in self.plugins.values()
         ]
 
-    def availability_dependency(self, plugin_id: str):
+    def availability_dependency(
+        self,
+        plugin_id: str,
+        *,
+        check_dependencies: bool = True,
+    ):
         def require_available() -> None:
-            plugin = self.get_plugin(plugin_id)
+            plugin = self.get_plugin(
+                plugin_id,
+                check_dependencies=check_dependencies,
+            )
             if plugin is None:
                 raise PluginUnavailableError(
                     plugin_id, "plugin_missing", "Plugin is not registered.", 404
@@ -273,9 +281,17 @@ class PluginManager:
             try:
                 module = importlib.import_module(f"plugins.{plugin_dir.name}.router")
                 if hasattr(module, "router") and plugin_id not in self.mounted_routers:
+                    # Pages with database-backed shells must not wait for a
+                    # synchronous runtime probe before they can render.
+                    check_dependencies = bool(
+                        plugin.get("route_dependency_checks", False)
+                    )
                     app.include_router(
                         module.router,
-                        dependencies=[Depends(self.availability_dependency(plugin_id))],
+                        dependencies=[Depends(self.availability_dependency(
+                            plugin_id,
+                            check_dependencies=check_dependencies,
+                        ))],
                     )
                     self.mounted_routers.add(plugin_id)
                     logger.info("Mounted guarded plugin router: %s", plugin_id)

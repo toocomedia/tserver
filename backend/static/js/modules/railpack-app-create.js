@@ -1,29 +1,36 @@
 const form = document.querySelector('[data-railpack-builder]');
 
-function toggleSource() {
-  const image = form.querySelector('[data-source-type]').value === 'image';
-  form.querySelector('[data-git-fields]').hidden = image;
-  form.querySelector('[data-image-field]').hidden = !image;
+function sourceState() {
+  const type = form.querySelector('[data-source-type]').value;
+  const wordpress = type === 'wordpress';
+  form.querySelector('[data-preset]').value = wordpress ? 'wordpress' : '';
+  form.querySelector('[data-git-fields]').hidden = type !== 'git';
+  form.querySelector('[data-image-field]').hidden = type !== 'image';
+  form.querySelector('[data-wordpress-fields]').hidden = !wordpress;
+  form.querySelector('#build_mode').closest('.form-group').hidden = wordpress;
+  form.querySelector('#internal_port').closest('.form-group').hidden = wordpress;
+  if (wordpress) form.querySelector('#internal_port').value = '80';
 }
 
-function toggleDatabase() {
-  const external = form.querySelector('#database_mode').value === 'external';
-  form.querySelector('[data-database-url]').hidden = !external;
-  form.querySelector('#database_url').required = external;
+function attachmentState(row) {
+  const enabled = row.querySelector('[data-database-enabled]').checked;
+  const external = row.querySelector('[data-database-provider]').value === 'external';
+  row.querySelector('[data-database-provider]').disabled = !enabled;
+  const url = row.querySelector('[data-database-url]');
+  url.hidden = !enabled || !external;
+  url.required = enabled && external;
 }
 
-function databaseUi(types) {
-  const primary = types[0] || '';
-  const panel = form.querySelector('[data-panel-postgres]');
-  const hint = form.querySelector('[data-database-detection]');
-  const label = form.querySelector('[data-database-url-label]');
-  const input = form.querySelector('[data-database-url-input]');
-  panel.hidden = primary !== 'postgresql';
-  if (primary !== 'postgresql' && form.querySelector('#database_mode').value === 'panel_postgres') form.querySelector('#database_mode').value = 'none';
-  const examples = { postgresql: 'postgresql://user:password@host:5432/database', 'mariadb/mysql': 'mysql://user:password@host:3306/database', mongodb: 'mongodb://user:password@host:27017/database', redis: 'redis://:password@host:6379/0', sqlite: 'sqlite:////data/app.db' };
-  label.textContent = primary ? `${primary} connection URL` : 'Connection URL';
-  input.placeholder = examples[primary] || 'Enter a database connection URL';
-  hint.textContent = types.length ? `Detected: ${types.join(', ')}. Choose the matching connection method; you can change it.` : 'No database detected. You can still choose one manually.';
+function attachments() {
+  return [...form.querySelectorAll('[data-database-row]')].flatMap((row) => {
+    if (!row.querySelector('[data-database-enabled]').checked) return [];
+    return [{
+      kind: row.dataset.kind,
+      provider: row.querySelector('[data-database-provider]').value,
+      environment_key: row.querySelector('[data-database-key]').value,
+      external_url: row.querySelector('[data-database-url]').value,
+    }];
+  });
 }
 
 async function inspect() {
@@ -40,14 +47,18 @@ async function inspect() {
     form.querySelector('[data-branch]').value = data.branch;
     form.querySelector('#build_mode').value = data.build_mode;
     form.querySelector('#internal_port').value = data.internal_port;
-    databaseUi(data.database_types || []);
+    const types = data.database_types || [];
+    form.querySelector('[data-database-detection]').textContent = types.length ? `Detected: ${types.join(', ')}. Review the selected services.` : 'No database detected. You can still choose services manually.';
+    types.forEach((kind) => { const row = form.querySelector(`[data-kind="${kind === 'mariadb/mysql' ? 'mariadb' : kind}"]`); if (row) { row.querySelector('[data-database-enabled]').checked = true; attachmentState(row); } });
     result.textContent = `${data.runtime} detected. Suggested port ${data.internal_port}; all suggestions remain editable.`;
   } catch (error) { result.textContent = error.message; }
 }
 
 if (form) {
-  form.querySelector('[data-source-type]').addEventListener('change', toggleSource);
-  form.querySelector('#database_mode').addEventListener('change', toggleDatabase);
+  form.querySelector('[data-source-type]').addEventListener('change', sourceState);
   form.querySelector('[data-inspect]').addEventListener('click', inspect);
-  toggleSource(); toggleDatabase(); databaseUi([]);
+  form.querySelectorAll('[data-database-row]').forEach((row) => row.addEventListener('change', () => attachmentState(row)));
+  form.addEventListener('submit', () => { form.querySelector('[data-database-attachments]').value = JSON.stringify(attachments()); });
+  form.querySelectorAll('[data-database-row]').forEach(attachmentState);
+  sourceState();
 }

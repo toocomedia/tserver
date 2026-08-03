@@ -5,6 +5,8 @@
 <form class="wizard-form" method="post" action="/plugins/railpack_apps/create" data-railpack-builder>
   {% include "partials/csrf_field.html" %}
   <input type="hidden" name="environment_values" value="{}">
+  <input type="hidden" name="database_attachments" value="[]" data-database-attachments>
+  <input type="hidden" name="preset" value="" data-preset>
   <section class="unboxed-step-container">
     <div class="unboxed-step-header"><span>1. Choose target</span><span class="badge-pill">Web apps only</span></div>
     <p class="form-hint">All panel domains are shown. Domains already used by another app cannot be selected.</p>
@@ -19,7 +21,7 @@
     <div class="unboxed-step-header"><span>2. App source</span><span class="badge-pill">Safe inspection</span></div>
     <div class="form-group">
       <label class="form-label" for="source_type">Source type</label>
-      <div class="form-select-wrap"><select class="form-select" id="source_type" name="source_type" data-source-type><option value="git">Git repository</option><option value="image">Container image</option></select></div>
+      <div class="form-select-wrap"><select class="form-select" id="source_type" name="source_type" data-source-type><option value="git">Git repository</option><option value="image">Container image</option><option value="wordpress">WordPress preset</option></select></div>
     </div>
     <div data-git-fields>
       <div class="form-group"><label class="form-label" for="repository_url">Repository URL</label><input class="form-input form-input--code" id="repository_url" name="repository_url" placeholder="https://github.com/owner/project.git" data-repository-url><p class="form-hint">Inspect to suggest the runtime, build method, and HTTP port. You can edit all suggestions.</p></div>
@@ -32,8 +34,12 @@
     <div class="unboxed-step-header"><span>3. Runtime and database</span><span class="badge-pill">Editable</span></div>
     <div class="form-group"><label class="form-label" for="build_mode">Build method</label><div class="form-select-wrap"><select class="form-select" id="build_mode" name="build_mode"><option value="railpack">Automatic Railpack</option><option value="dockerfile">Dockerfile</option></select></div></div>
     <div class="form-group"><label class="form-label" for="internal_port">App HTTP port</label><input class="form-input" id="internal_port" name="internal_port" type="number" min="1" max="65535" value="3000" required><p class="form-hint">Private inside Docker. Nginx publishes the selected domain only.</p></div>
-    <div class="form-group"><label class="form-label" for="database_mode">Database</label><div class="form-select-wrap"><select class="form-select" id="database_mode" name="database_mode"><option value="none">No database</option><option value="panel_postgres" data-panel-postgres>Create with panel PostgreSQL Manager</option><option value="external">Use existing database connection</option></select></div><p class="form-hint" data-database-detection>No database detected yet. You can still choose one manually.</p></div>
-    <div class="form-group" data-database-url><label class="form-label" for="database_url" data-database-url-label>Connection URL</label><input class="form-input form-input--code" id="database_url" name="database_url" type="password" autocomplete="off" placeholder="Enter a database connection URL" data-database-url-input><p class="form-hint">Stored only in this app's protected environment file.</p></div>
+    <fieldset class="form-group"><legend class="form-label">Private database services</legend><p class="form-hint" data-database-detection>Select every service this app needs. Docker services stay on the app network and never expose a public port.</p>
+      {% for kind, label, key in [('mariadb', 'MariaDB / MySQL', 'MYSQL_URL'), ('postgresql', 'PostgreSQL', 'DATABASE_URL'), ('redis', 'Redis', 'REDIS_URL'), ('mongodb', 'MongoDB', 'MONGODB_URI')] %}
+      <div class="form-group" data-database-row data-kind="{{ kind }}"><label class="form-check"><input type="checkbox" data-database-enabled> {{ label }}</label><div class="form-select-wrap"><select class="form-select" data-database-provider><option value="docker">Panel-managed Docker</option>{% if kind == 'postgresql' %}<option value="panel_postgres">Panel PostgreSQL Manager</option>{% endif %}<option value="external">External connection</option></select></div><input class="form-input form-input--code" data-database-url type="password" autocomplete="off" placeholder="External connection URL" hidden><input data-database-key value="{{ key }}" type="hidden"></div>
+      {% endfor %}
+    </fieldset>
+    <section class="form-group" data-wordpress-fields hidden><h2 class="form-label">WordPress setup</h2><label class="form-label" for="wordpress_site_title">Site title</label><input class="form-input" id="wordpress_site_title" name="wordpress_site_title"><label class="form-label" for="wordpress_admin_user">Administrator username</label><input class="form-input" id="wordpress_admin_user" name="wordpress_admin_user"><label class="form-label" for="wordpress_admin_email">Administrator email</label><input class="form-input" id="wordpress_admin_email" name="wordpress_admin_email" type="email"><label class="form-label" for="wordpress_admin_password">Administrator password</label><input class="form-input" id="wordpress_admin_password" name="wordpress_admin_password" type="password" autocomplete="new-password"><p class="form-hint">The password is used once for installation and is then removed from panel storage.</p></section>
     <label class="form-check"><input type="checkbox" name="ssl" value="true"> Issue HTTPS certificate after deployment</label>
   </section>
   <div class="fixed-action-bar"><div class="fixed-action-inner"><span class="text-muted">Review detected values before deploying.</span><div class="d-flex gap-sm"><a class="btn btn--secondary" href="/plugins/railpack_apps/">Cancel</a><button class="btn btn--primary" type="submit">Deploy app</button></div></div></div>

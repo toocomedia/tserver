@@ -34,8 +34,14 @@ def _runtime(files: set[str]) -> str:
         return "PHP"
     if "go.mod" in files:
         return "Go"
+    if "Gemfile" in files:
+        return "Ruby"
+    if files & {"pom.xml", "build.gradle", "build.gradle.kts"}:
+        return "Java"
     if "Cargo.toml" in files:
         return "Rust"
+    if "index.html" in files:
+        return "Static site"
     return "Detected by Railpack"
 
 
@@ -46,7 +52,7 @@ def _port(text: str, runtime: str) -> int:
             value = int(match.group(1))
             if 1 <= value <= 65535:
                 return value
-    return {"Python": 8000, "PHP": 8080, "Go": 8080}.get(runtime, 3000)
+    return {"Python": 8000, "PHP": 8080, "Go": 8080, "Java": 8080, "Static site": 80}.get(runtime, 3000)
 
 
 def _databases(text: str) -> list[str]:
@@ -62,7 +68,7 @@ def _databases(text: str) -> list[str]:
 
 
 def _read_sources(root: Path) -> str:
-    names = ("Dockerfile", "Procfile", "package.json", "railpack.json", "nixpacks.toml")
+    names = ("Dockerfile", "Procfile", "package.json", "railpack.json", "nixpacks.toml", "Gemfile", "pom.xml", "build.gradle", "composer.json")
     texts = []
     for name in names:
         path = root / name

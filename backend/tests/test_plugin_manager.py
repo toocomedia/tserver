@@ -206,5 +206,27 @@ class PluginManagerTests(unittest.TestCase):
                 self.assertTrue(success)
                 self.assertTrue((root / "sample" / "plugin.json").is_file())
 
+    def test_route_can_skip_dependency_probe_for_an_instant_page_shell(self):
+        manager = PluginManager()
+        manager.plugins = {
+            "container_apps": {
+                "id": "container_apps",
+                "name": "Container Apps",
+                "manifest_enabled": True,
+                "manifest_error": None,
+                "installed": True,
+                "usage": {},
+                "requires": {"dependencies": ["docker"]},
+            }
+        }
+
+        with patch("dependencies.dependency_manager.is_healthy") as is_healthy:
+            manager.availability_dependency(
+                "container_apps",
+                check_dependencies=False,
+            )()
+
+        is_healthy.assert_not_called()
+
 if __name__ == "__main__":
     unittest.main()

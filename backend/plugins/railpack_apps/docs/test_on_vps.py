@@ -42,9 +42,13 @@ def check_plugin_code() -> bool:
     try:
         from plugins.railpack_apps import router
         from services import container_app_service
+        from services import container_app_database_service
 
         assert container_app_service.validate_port(3000) == 3000
         assert container_app_service.validate_image_reference("ghcr.io/example/app:1")
+        assert container_app_database_service.parse_specs([
+            {"kind": "redis", "provider": "docker", "environment_key": "REDIS_URL"}
+        ])[0]["kind"] == "redis"
         paths = [route.path for route in router.router.routes]
         uninstall = next(index for index, path in enumerate(paths) if path.endswith("/{app_id}/uninstall"))
         control = next(index for index, path in enumerate(paths) if path.endswith("/{app_id}/{action}"))

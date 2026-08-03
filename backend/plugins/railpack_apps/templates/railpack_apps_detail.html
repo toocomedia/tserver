@@ -4,7 +4,7 @@
 {% block topbar_actions %}<a class="btn btn--secondary" href="/plugins/railpack_apps/">All apps</a>{% endblock %}
 {% block content %}
 {% set deployment_active = deployment and deployment.status in ['queued', 'running'] %}
-{% if request.query_params.get('error') %}<div class="alert alert--error">{{ request.query_params.get('error') }}</div>{% elif app.status == 'delete_failed' %}<div class="alert alert--error">Removal did not finish. Retry the removal below. Runtime controls are disabled until cleanup completes.</div>{% endif %}
+{% if request.query_params.get('error') %}<div class="alert alert--error">{{ request.query_params.get('error') }}</div>{% elif app.status == 'delete_failed' %}<div class="alert alert--error">Removal did not finish. Retry the removal below. Runtime controls are disabled until cleanup completes.</div>{% elif app.status == 'data_preserved' %}<div class="alert alert--info">The application runtime was removed. Its managed data remains available below until you explicitly delete it.</div>{% endif %}
 
 <section class="section">
   <div class="section__header"><h2>Application</h2><span class="badge-pill">{{ app.status | title }}</span></div>
@@ -12,7 +12,32 @@
     <div class="info-row"><span class="info-row__label">Source</span><span class="info-row__value">{{ app.source_type | title }} · {{ app.build_mode | title }}</span></div>
     <div class="info-row"><span class="info-row__label">Domain</span><span class="info-row__value">{{ domain.name if domain else 'Domain missing' }}</span></div>
     <div class="info-row"><span class="info-row__label">Private route</span><span class="info-row__value mono">127.0.0.1:{{ app.host_port }} → {{ app.internal_port }}</span></div>
-    <div class="info-row"><span class="info-row__label">Database</span><span class="info-row__value">{{ app.database_provider or app.database_mode }}{% if app.database_name %} · {{ app.database_name }}{% endif %}</span></div>
+    <div class="info-row"><span class="info-row__label">Database services</span><span class="info-row__value">{{ databases | length }} attached</span></div>
+  </div>
+</section>
+
+<section class="section" id="databases">
+  <div class="section__header"><h2>Managed services</h2><span class="resource-title-bar__count">{{ databases | length }}</span></div>
+  <div class="section__body">
+    {% if databases %}
+      {% for item in databases %}
+      {% set live = database_statuses.get(item.id, {}) %}
+      <div class="info-row"><span class="info-row__label">{{ item.kind | title }}</span><span class="info-row__value">{{ item.provider }} · {{ item.environment_key }} · {{ live.get('status', item.status) }}</span></div>
+      <div class="form-actions">
+        {% if item.provider == 'docker' %}
+        <form method="post" action="/plugins/railpack_apps/{{ app.id }}/databases/{{ item.id }}/reconnect">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary btn--sm">Reconnect</button></form>
+        <form method="post" action="/plugins/railpack_apps/{{ app.id }}/databases/{{ item.id }}/backup">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary btn--sm">Create backup</button></form>
+        {% endif %}
+        {% if item.provider != 'external' %}<form method="post" action="/plugins/railpack_apps/{{ app.id }}/databases/{{ item.id }}/rotate">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary btn--sm">Rotate credentials</button></form>{% endif %}
+      </div>
+      {% for backup in backups if backup.database_id == item.id and backup.status == 'complete' %}
+      <form class="form-actions" method="post" action="/plugins/railpack_apps/{{ app.id }}/databases/{{ item.id }}/restore/{{ backup.id }}"><label class="form-label" for="restore-{{ backup.id }}">Backup #{{ backup.id }}: type RESTORE {{ backup.id }}</label><input class="form-input" id="restore-{{ backup.id }}" name="confirmation" required><button class="btn btn--secondary btn--sm">Restore</button>{% include "partials/csrf_field.html" %}</form>
+      {% endfor %}
+      {% if item.provider == 'docker' %}<form class="form-actions" method="post" action="/plugins/railpack_apps/{{ app.id }}/databases/{{ item.id }}/delete"><label class="form-label" for="delete-db-{{ item.id }}">Type DELETE {{ item.kind | upper }} {{ item.id }} to erase its data</label><input class="form-input" id="delete-db-{{ item.id }}" name="confirmation" required><button class="btn btn--danger btn--sm">Delete service and data</button>{% include "partials/csrf_field.html" %}</form>{% endif %}
+      {% endfor %}
+    {% else %}<div class="alert alert--info">This app has no managed database services.</div>{% endif %}
+    {% if app.preset == 'wordpress' %}{% for backup in backups if backup.kind == 'wordpress' and backup.status == 'complete' %}<form class="form-actions" method="post" action="/plugins/railpack_apps/{{ app.id }}/wordpress/restore/{{ backup.id }}"><label class="form-label" for="restore-wp-{{ backup.id }}">WordPress backup #{{ backup.id }}: type RESTORE {{ backup.id }}</label><input class="form-input" id="restore-wp-{{ backup.id }}" name="confirmation" required><button class="btn btn--secondary btn--sm">Restore WordPress</button>{% include "partials/csrf_field.html" %}</form>{% endfor %}{% endif %}
+    {% if app.preset == 'wordpress' and app.wordpress_content_volume %}<form class="form-actions" method="post" action="/plugins/railpack_apps/{{ app.id }}/wordpress/purge"><label class="form-label" for="purge-wp">Type DELETE WORDPRESS {{ app.id }} to erase uploads and extensions</label><input class="form-input" id="purge-wp" name="confirmation" required><button class="btn btn--danger btn--sm">Delete WordPress files</button>{% include "partials/csrf_field.html" %}</form>{% endif %}
   </div>
 </section>
 
@@ -25,6 +50,7 @@
       {% if app.status == 'stopped' %}<form method="post" action="/plugins/railpack_apps/{{ app.id }}/start">{% include "partials/csrf_field.html" %}<button class="btn btn--primary" type="submit">Start</button></form>{% endif %}
     {% endif %}
     {% if deployment_active %}<a class="btn btn--secondary" href="#deployment">View live deployment</a>{% endif %}
+    {% if app.preset == 'wordpress' and app.status == 'running' %}<form method="post" action="/plugins/railpack_apps/{{ app.id }}/wordpress/update">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary" type="submit">Update WordPress</button></form><form method="post" action="/plugins/railpack_apps/{{ app.id }}/wordpress/backup">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary" type="submit">Back up WordPress</button></form>{% endif %}
   </div></div>
 </section>
 

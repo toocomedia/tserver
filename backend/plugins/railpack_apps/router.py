@@ -12,10 +12,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from database import get_db
 from models.container_app import ContainerApp
 from models.container_app_deployment import ContainerAppDeployment
+from models.container_app_database import ContainerAppDatabase
+from models.container_app_backup import ContainerAppBackup
 from models.domain import Domain
 from models.hosted_app import HostedApp
 from services import container_app_cleanup_service, container_app_control_service
-from services import container_app_deployment_service, container_app_inspection_service, container_app_service
+from services import container_app_backup_service, container_app_database_service
+from services import container_app_database_lifecycle_service
+from services import container_app_deployment_service, container_app_inspection_service, container_app_service, container_app_wordpress_service
+from plugins.railpack_apps.router_resources import router as resource_router
 from templating import templates
 
 router = APIRouter(prefix="/plugins/railpack_apps", tags=["railpack-apps"])
@@ -63,18 +68,35 @@ async def create(
     repository_url: str = Form(""), branch: str = Form("main"), image_reference: str = Form(""),
     internal_port: int = Form(3000), ssl: bool = Form(False), environment_values: str = Form("{}"),
     database_mode: str = Form("none"), database_url: str = Form(""),
+    database_attachments: str = Form(""), preset: str = Form(""), wordpress_site_title: str = Form(""),
+    wordpress_admin_user: str = Form(""), wordpress_admin_email: str = Form(""), wordpress_admin_password: str = Form(""),
     db: AsyncSession = Depends(get_db),
 ):
     domain = await db.get(Domain, domain_id)
     if domain is None:
         raise HTTPException(404, "Domain not found.")
+    try:
+        attachments = json.loads(database_attachments) if database_attachments else None
+    except json.JSONDecodeError as exc:
+        raise HTTPException(400, "Database attachments are invalid.") from exc
+    if preset == "wordpress":
+        container_app_wordpress_service.validate_setup(wordpress_site_title, wordpress_admin_user, wordpress_admin_email, wordpress_admin_password)
+        attachments = attachments or []
+        if not any(item.get("kind") == "mariadb" for item in attachments if isinstance(item, dict)):
+            attachments.append({"kind": "mariadb", "provider": "docker", "environment_key": "MYSQL_URL"})
+        source_type, build_mode, image_reference, internal_port = "image", "image", container_app_wordpress_service.WP_IMAGE, 80
     app = await container_app_service.create_app(
         db, domain=domain, source_type=source_type, build_mode=build_mode,
         repository_url=repository_url.strip() or None, branch=branch.strip() or "main",
         image_reference=image_reference.strip() or None, internal_port=internal_port,
         ssl_requested=ssl, environment_values=_environment_values(environment_values),
         database_mode=database_mode, database_url=database_url.strip() or None,
+        database_attachments=attachments,
     )
+    if preset == "wordpress":
+        container_app_wordpress_service.prepare(app, wordpress_site_title, wordpress_admin_user, wordpress_admin_email, wordpress_admin_password)
+        items = await container_app_database_service.attachments_for(db, app.id)
+        container_app_database_service.rebuild_environment(app, items, container_app_database_service.read_app_environment(app))
     domain.project_type = "container"
     deployment = await container_app_deployment_service.queue_deployment(db, app)
     await db.commit()
@@ -91,8 +113,11 @@ async def detail(app_id: int, request: Request, db: AsyncSession = Depends(get_d
         ContainerAppDeployment.app_id == app.id,
     ).order_by(ContainerAppDeployment.id.desc()).limit(8))).all()
     deployment = next((item for item in deployments if item.id == request.query_params.get("deployment", type=int)), deployments[0] if deployments else None)
+    databases = await container_app_database_service.attachments_for(db, app.id)
+    backups = list((await db.scalars(select(ContainerAppBackup).where(ContainerAppBackup.app_id == app.id).order_by(ContainerAppBackup.id.desc()).limit(12))).all())
     return templates.TemplateResponse("railpack_apps_detail.html", {
         "request": request, "active_page": "railpack_apps", "app": app, "domain": domain, "deployment": deployment, "deployments": deployments,
+        "databases": databases, "database_statuses": {item.id: container_app_database_lifecycle_service.status(item) for item in databases}, "backups": backups,
     })
 
 
@@ -137,24 +162,16 @@ async def uninstall(app_id: int, confirmation: str = Form(""), db: AsyncSession 
         app.status, app.last_error = "delete_failed", str(exc.detail)[:1000]
         await db.commit()
         return RedirectResponse(f"/plugins/railpack_apps/{app.id}?error=Delete+failed", status_code=303)
+    attachments = await container_app_database_service.attachments_for(db, app.id)
+    if attachments or app.wordpress_content_volume:
+        await db.execute(delete(ContainerAppDeployment).where(ContainerAppDeployment.app_id == app.id))
+        app.status = "data_preserved"
+        await db.commit()
+        return RedirectResponse(f"/plugins/railpack_apps/{app.id}?notice=Application+removed;+managed+data+is+preserved", status_code=303)
     await db.execute(delete(ContainerAppDeployment).where(ContainerAppDeployment.app_id == app.id))
+    await db.execute(delete(ContainerAppBackup).where(ContainerAppBackup.app_id == app.id))
     await db.delete(app)
     return RedirectResponse("/plugins/railpack_apps/", status_code=303)
-
-
-@router.post("/{app_id}/{action}")
-async def control(app_id: int, action: str, db: AsyncSession = Depends(get_db)):
-    app = await _app(db, app_id)
-    domain = await db.get(Domain, app.domain_id)
-    if domain is None:
-        raise HTTPException(409, "App domain is missing.")
-    if app.status in {"deleting", "delete_failed"}:
-        raise HTTPException(409, "Finish deletion before controlling this app.")
-    try:
-        await container_app_control_service.control(db, app, domain, action)
-    except HTTPException as exc:
-        return RedirectResponse(f"/plugins/railpack_apps/{app.id}?{urlencode({'error': str(exc.detail)})}", status_code=303)
-    return RedirectResponse(f"/plugins/railpack_apps/{app.id}", status_code=303)
 
 
 async def _app(db: AsyncSession, app_id: int) -> ContainerApp:
@@ -162,3 +179,6 @@ async def _app(db: AsyncSession, app_id: int) -> ContainerApp:
     if app is None:
         raise HTTPException(404, "Container app not found.")
     return app
+
+
+router.include_router(resource_router)

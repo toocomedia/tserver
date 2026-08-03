@@ -118,6 +118,7 @@ CONTAINER_APP_ROOT: str = os.getenv("CONTAINER_APP_ROOT", "/var/lib/srv-panel/co
 CONTAINER_APP_ENV_ROOT: str = os.getenv("CONTAINER_APP_ENV_ROOT", "/var/lib/srv-panel/container-app-env")
 CONTAINER_APP_PORT_START: int = _env_int("CONTAINER_APP_PORT_START", 31000)
 CONTAINER_APP_BUILD_TIMEOUT: int = _env_int("CONTAINER_APP_BUILD_TIMEOUT", 1200)
+CONTAINER_APP_BACKUP_ROOT: str = os.getenv("CONTAINER_APP_BACKUP_ROOT", "/var/lib/srv-panel/container-app-backups")
 
 # ---------------------------------------------------------
 # Performance (nginx optimizations)

@@ -12,7 +12,7 @@ if str(BACKEND) not in sys.path:
 from fastapi import HTTPException
 from dependencies.docker.service import DockerDependencyService
 from plugins.railpack_apps.service import RailpackAppsService
-from services import container_app_deployment_service, container_app_service
+from services import container_app_database_service, container_app_deployment_service, container_app_service
 
 
 class RailpackAppsValidationTests(unittest.TestCase):
@@ -44,6 +44,36 @@ class RailpackAppsValidationTests(unittest.TestCase):
         self.assertEqual(values["DATABASE_URL"], "postgresql://app:secret@db.example:5432/app")
         with self.assertRaises(HTTPException):
             container_app_service.database_environment("external", "not a URL", {})
+
+    def test_multiple_attachment_specs_are_validated(self):
+        specs = container_app_database_service.parse_specs([
+            {"kind": "postgresql", "provider": "docker", "environment_key": "DATABASE_URL"},
+            {"kind": "redis", "provider": "external", "environment_key": "REDIS_URL", "external_url": "redis://cache.example/0"},
+        ])
+        self.assertEqual([item["kind"] for item in specs], ["postgresql", "redis"])
+        with self.assertRaises(HTTPException):
+            container_app_database_service.parse_specs([
+                {"kind": "redis", "provider": "panel_postgres", "environment_key": "REDIS_URL"},
+            ])
+        with self.assertRaises(HTTPException):
+            container_app_database_service.parse_specs([
+                {"kind": "mariadb", "provider": "docker", "environment_key": "MYSQL_URL"},
+                {"kind": "mariadb", "provider": "docker", "environment_key": "SECOND_URL"},
+            ])
+
+    def test_external_attachment_keeps_its_environment_value(self):
+        values = {"DATABASE_URL": "postgresql://remote.example/app"}
+        item = Mock(provider="external", environment_key="DATABASE_URL")
+        app = Mock(env_path="/tmp/ignored.env", internal_port=3000, preset=None)
+        with patch.object(container_app_service, "write_env") as write_env:
+            container_app_database_service.rebuild_environment(app, [item], values)
+        self.assertEqual(values["DATABASE_URL"], "postgresql://remote.example/app")
+        write_env.assert_called_once()
+
+    def test_panel_postgres_bridge_uses_the_plugin_helper(self):
+        with patch.object(container_app_service, "_run", return_value=Mock(returncode=0, stdout="", stderr="")) as run:
+            container_app_database_service._allow_panel_postgres_network()
+        self.assertIn("allow-container-apps", run.call_args.args[0][-1])
 
     def test_environment_file_is_private_and_rejects_bad_values(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -90,6 +120,7 @@ class RailpackAppsLifecycleTests(unittest.TestCase):
         self.assertIn("no-new-privileges", command)
         self.assertIn("srv-container-net-7", command)
         self.assertNotIn("0.0.0.0:31007:3000", command)
+        self.assertIn("host.docker.internal:host-gateway", command)
 
 
 class DockerPluginResourceTests(unittest.TestCase):

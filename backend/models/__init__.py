@@ -10,3 +10,5 @@ from models.app_deployment import AppDeployment
 from models.app_environment import AppEnvironmentVariable
 from models.container_app import ContainerApp
 from models.container_app_deployment import ContainerAppDeployment
+from models.container_app_database import ContainerAppDatabase
+from models.container_app_backup import ContainerAppBackup
