@@ -112,7 +112,11 @@ async def detail(app_id: int, request: Request, db: AsyncSession = Depends(get_d
     deployments = (await db.scalars(select(ContainerAppDeployment).where(
         ContainerAppDeployment.app_id == app.id,
     ).order_by(ContainerAppDeployment.id.desc()).limit(8))).all()
-    deployment = next((item for item in deployments if item.id == request.query_params.get("deployment", type=int)), deployments[0] if deployments else None)
+    requested_deployment = _optional_deployment_id(request.query_params.get("deployment"))
+    deployment = next(
+        (item for item in deployments if item.id == requested_deployment),
+        deployments[0] if deployments else None,
+    )
     databases = await container_app_database_service.attachments_for(db, app.id)
     backups = list((await db.scalars(select(ContainerAppBackup).where(ContainerAppBackup.app_id == app.id).order_by(ContainerAppBackup.id.desc()).limit(12))).all())
     return templates.TemplateResponse("railpack_apps_detail.html", {
@@ -179,6 +183,13 @@ async def _app(db: AsyncSession, app_id: int) -> ContainerApp:
     if app is None:
         raise HTTPException(404, "Container app not found.")
     return app
+
+
+def _optional_deployment_id(value: str | None) -> int | None:
+    try:
+        return int(value) if value else None
+    except ValueError:
+        return None
 
 
 router.include_router(resource_router)

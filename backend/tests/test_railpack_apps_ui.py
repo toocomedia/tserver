@@ -47,6 +47,12 @@ class RailpackAppsUiTests(unittest.TestCase):
         control = next(i for i, path in enumerate(paths) if path.endswith("/{app_id}/{action}"))
         self.assertLess(uninstall, control)
 
+    def test_detail_query_id_uses_mapping_compatible_parsing(self):
+        self.assertEqual(router._optional_deployment_id("42"), 42)
+        self.assertIsNone(router._optional_deployment_id("not-a-number"))
+        source = (BACKEND / "plugins" / "railpack_apps" / "router.py").read_text(encoding="utf-8")
+        self.assertNotIn('query_params.get("deployment", type=', source)
+
     def test_detail_includes_safe_database_actions(self):
         markup = (BACKEND / "plugins" / "railpack_apps" / "templates" / "railpack_apps_detail.html").read_text(encoding="utf-8")
         for value in ("Rotate credentials", "Create backup", "RESTORE", "Delete service and data", "Update WordPress", "Delete WordPress files"):
