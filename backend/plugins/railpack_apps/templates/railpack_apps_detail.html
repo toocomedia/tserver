@@ -2,12 +2,13 @@
 {% block title %}{{ app.container_name }} — {{ PANEL_NAME }}{% endblock %}
 {% block page_title %}{{ domain.name if domain else app.container_name }}{% endblock %}
 {% block content %}
-{% if request.query_params.get('error') %}<div class="alert alert--error">{{ request.query_params.get('error') }}</div>{% endif %}
+{% if request.query_params.get('error') %}<div class="alert alert--error">{{ request.query_params.get('error') }}</div>{% elif app.status == 'delete_failed' %}<div class="alert alert--error">Deletion did not finish. Retry Remove app; runtime controls are unavailable until it is removed.</div>{% endif %}
 <div class="section-card"><dl class="details-list"><dt>Source</dt><dd>{{ app.source_type }} / {{ app.build_mode }}</dd><dt>Private route</dt><dd><code>127.0.0.1:{{ app.host_port }} → {{ app.internal_port }}</code></dd><dt>Image</dt><dd class="mono">{{ app.image_digest or app.image_reference or 'Building' }}</dd><dt>Database</dt><dd>{{ app.database_provider or app.database_mode }}{% if app.database_name %} · {{ app.database_name }}{% endif %}</dd><dt>Status</dt><dd>{{ app.status }}</dd></dl>
-  <div class="form-actions">
-    <form method="post" action="/plugins/railpack_apps/{{ app.id }}/deploy">{% include "partials/csrf_field.html" %}<button class="btn btn--primary" type="submit">Redeploy</button></form>
-    {% for action in ['start', 'restart', 'stop'] %}<form method="post" action="/plugins/railpack_apps/{{ app.id }}/{{ action }}">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary" type="submit">{{ action|capitalize }}</button></form>{% endfor %}
-  </div>
+  {% if app.status not in ['deleting', 'delete_failed'] %}<div class="form-actions">
+    {% if app.status in ['pending', 'failed', 'stopped'] %}<form method="post" action="/plugins/railpack_apps/{{ app.id }}/deploy">{% include "partials/csrf_field.html" %}<button class="btn btn--primary" type="submit">{{ 'Deploy' if app.status in ['pending', 'failed'] else 'Redeploy' }}</button></form>{% endif %}
+    {% if app.status == 'running' %}<form method="post" action="/plugins/railpack_apps/{{ app.id }}/deploy">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary" type="submit">Redeploy</button></form><form method="post" action="/plugins/railpack_apps/{{ app.id }}/restart">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary" type="submit">Restart</button></form><form method="post" action="/plugins/railpack_apps/{{ app.id }}/stop">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary" type="submit">Stop</button></form>{% endif %}
+    {% if app.status == 'stopped' %}<form method="post" action="/plugins/railpack_apps/{{ app.id }}/start">{% include "partials/csrf_field.html" %}<button class="btn btn--primary" type="submit">Start</button></form>{% endif %}
+  </div>{% endif %}
 </div>
 {% if deployment %}<div class="section-card"><h2>Deployment output</h2><pre id="deployment-output" class="terminal-output">{{ deployment.output }}{% if deployment.error %}\n[error] {{ deployment.error }}{% endif %}</pre></div>
 <script>

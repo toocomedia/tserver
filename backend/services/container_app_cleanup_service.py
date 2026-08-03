@@ -31,7 +31,7 @@ async def _remove_container(app: ContainerApp) -> None:
     result = await asyncio.to_thread(
         container_app_service._run, ["docker", "rm", "-f", app.container_name], timeout=45,
     )
-    if result.returncode and "No such container" not in (result.stderr or ""):
+    if result.returncode and not _missing(result.stderr):
         raise RuntimeError(result.stderr or result.stdout or "Could not remove app container.")
 
 
@@ -40,7 +40,7 @@ async def _remove_network(app: ContainerApp) -> None:
         container_app_service._run,
         ["docker", "network", "rm", container_app_service.network_name(app.id)], timeout=30,
     )
-    if result.returncode and "No such network" not in (result.stderr or ""):
+    if result.returncode and not _missing(result.stderr):
         raise RuntimeError(result.stderr or result.stdout or "Could not remove app network.")
 
 
@@ -70,3 +70,7 @@ def _remove_path(path: Path) -> None:
         shutil.rmtree(path)
     else:
         path.unlink(missing_ok=True)
+
+
+def _missing(message: str) -> bool:
+    return "no such" in message.lower() or "not found" in message.lower()

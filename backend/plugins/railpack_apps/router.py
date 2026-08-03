@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+from urllib.parse import urlencode
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
@@ -106,9 +107,12 @@ async def deployment_status(app_id: int, deployment_id: int, db: AsyncSession = 
 @router.post("/{app_id}/deploy")
 async def deploy(app_id: int, db: AsyncSession = Depends(get_db)):
     app = await _app(db, app_id)
-    deployment = await container_app_deployment_service.queue_deployment(
-        db, app, action="deploy" if app.status in {"pending", "failed"} else "redeploy",
-    )
+    try:
+        deployment = await container_app_deployment_service.queue_deployment(
+            db, app, action="deploy" if app.status in {"pending", "failed"} else "redeploy",
+        )
+    except HTTPException as exc:
+        return RedirectResponse(f"/plugins/railpack_apps/{app.id}?{urlencode({'error': str(exc.detail)})}", status_code=303)
     return RedirectResponse(f"/plugins/railpack_apps/{app.id}?deployment={deployment.id}", status_code=303)
 
 
@@ -140,7 +144,10 @@ async def control(app_id: int, action: str, db: AsyncSession = Depends(get_db)):
         raise HTTPException(409, "App domain is missing.")
     if app.status in {"deleting", "delete_failed"}:
         raise HTTPException(409, "Finish deletion before controlling this app.")
-    await container_app_control_service.control(db, app, domain, action)
+    try:
+        await container_app_control_service.control(db, app, domain, action)
+    except HTTPException as exc:
+        return RedirectResponse(f"/plugins/railpack_apps/{app.id}?{urlencode({'error': str(exc.detail)})}", status_code=303)
     return RedirectResponse(f"/plugins/railpack_apps/{app.id}", status_code=303)
 
 
