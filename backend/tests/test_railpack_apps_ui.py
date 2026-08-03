@@ -95,7 +95,7 @@ class RailpackAppsUiTests(unittest.TestCase):
         markup = (BACKEND / "plugins" / "railpack_apps" / "templates" / "railpack_apps_detail.html").read_text(encoding="utf-8")
         for component in ("hero-app-box", "layout-2col", "master-card", "Live deployment stream", "Danger zone"):
             self.assertIn(component, markup)
-        for value in ("Rotate credentials", "Create backup", "RESTORE", "Update WordPress", "keep_database_ids", "keep_app_volume", "keep_saved_backups", "DELETE ALL", "data-railpack-delete-modal"):
+        for value in ("Rotate credentials", "Create backup", "RESTORE", "Update WordPress", "keep_database_ids", "keep_app_volume", "keep_saved_backups", "DELETE ALL", "railpack-delete-disclosure"):
             self.assertIn(value, markup)
 
     def test_ssl_uses_the_domain_certificate_not_the_original_request(self):
