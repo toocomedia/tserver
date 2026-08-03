@@ -1,20 +1,48 @@
 {% extends "layout.html" %}
-{% block title %}{{ app.container_name }} — {{ PANEL_NAME }}{% endblock %}
+{% block title %}{{ domain.name if domain else app.container_name }} — {{ PANEL_NAME }}{% endblock %}
 {% block page_title %}{{ domain.name if domain else app.container_name }}{% endblock %}
+{% block topbar_actions %}<a class="btn btn--secondary" href="/plugins/railpack_apps/">All apps</a>{% endblock %}
 {% block content %}
-{% if request.query_params.get('error') %}<div class="alert alert--error">{{ request.query_params.get('error') }}</div>{% elif app.status == 'delete_failed' %}<div class="alert alert--error">Deletion did not finish. Retry Remove app; runtime controls are unavailable until it is removed.</div>{% endif %}
-<div class="section-card"><dl class="details-list"><dt>Source</dt><dd>{{ app.source_type }} / {{ app.build_mode }}</dd><dt>Private route</dt><dd><code>127.0.0.1:{{ app.host_port }} → {{ app.internal_port }}</code></dd><dt>Image</dt><dd class="mono">{{ app.image_digest or app.image_reference or 'Building' }}</dd><dt>Database</dt><dd>{{ app.database_provider or app.database_mode }}{% if app.database_name %} · {{ app.database_name }}{% endif %}</dd><dt>Status</dt><dd>{{ app.status }}</dd></dl>
-  {% if app.status not in ['deleting', 'delete_failed'] %}<div class="form-actions">
-    {% if app.status in ['pending', 'failed', 'stopped'] %}<form method="post" action="/plugins/railpack_apps/{{ app.id }}/deploy">{% include "partials/csrf_field.html" %}<button class="btn btn--primary" type="submit">{{ 'Deploy' if app.status in ['pending', 'failed'] else 'Redeploy' }}</button></form>{% endif %}
-    {% if app.status == 'running' %}<form method="post" action="/plugins/railpack_apps/{{ app.id }}/deploy">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary" type="submit">Redeploy</button></form><form method="post" action="/plugins/railpack_apps/{{ app.id }}/restart">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary" type="submit">Restart</button></form><form method="post" action="/plugins/railpack_apps/{{ app.id }}/stop">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary" type="submit">Stop</button></form>{% endif %}
-    {% if app.status == 'stopped' %}<form method="post" action="/plugins/railpack_apps/{{ app.id }}/start">{% include "partials/csrf_field.html" %}<button class="btn btn--primary" type="submit">Start</button></form>{% endif %}
-  </div>{% endif %}
-</div>
-{% if deployment %}<div class="section-card"><h2>Deployment output</h2><pre id="deployment-output" class="terminal-output">{{ deployment.output }}{% if deployment.error %}\n[error] {{ deployment.error }}{% endif %}</pre></div>
-<script>
-(() => { const active = {{ 'true' if deployment.status in ['queued', 'running'] else 'false' }}; if (!active) return;
-  const poll = async () => { const res = await fetch('/plugins/railpack_apps/{{ app.id }}/deployments/{{ deployment.id }}'); if (!res.ok) return; const item = await res.json(); document.querySelector('#deployment-output').textContent = item.output + (item.error ? '\n[error] ' + item.error : ''); if (['queued', 'running'].includes(item.status)) setTimeout(poll, 1500); else location.reload(); }; setTimeout(poll, 700);
-})();
-</script>{% endif %}
-<div class="section-card"><h2>Remove app</h2><p>This removes the app container, build files, and environment file. It keeps the domain, HTTPS certificate, app data volume, and any database.</p><form method="post" action="/plugins/railpack_apps/{{ app.id }}/uninstall">{% include "partials/csrf_field.html" %}<div class="form-group"><label>Type DELETE to confirm</label><input name="confirmation" required></div><button class="btn btn--danger" type="submit">Remove app</button></form></div>
+{% set deployment_active = deployment and deployment.status in ['queued', 'running'] %}
+{% if request.query_params.get('error') %}<div class="alert alert--error">{{ request.query_params.get('error') }}</div>{% elif app.status == 'delete_failed' %}<div class="alert alert--error">Removal did not finish. Retry the removal below. Runtime controls are disabled until cleanup completes.</div>{% endif %}
+
+<section class="section">
+  <div class="section__header"><h2>Application</h2><span class="badge-pill">{{ app.status | title }}</span></div>
+  <div class="section__body">
+    <div class="info-row"><span class="info-row__label">Source</span><span class="info-row__value">{{ app.source_type | title }} · {{ app.build_mode | title }}</span></div>
+    <div class="info-row"><span class="info-row__label">Domain</span><span class="info-row__value">{{ domain.name if domain else 'Domain missing' }}</span></div>
+    <div class="info-row"><span class="info-row__label">Private route</span><span class="info-row__value mono">127.0.0.1:{{ app.host_port }} → {{ app.internal_port }}</span></div>
+    <div class="info-row"><span class="info-row__label">Database</span><span class="info-row__value">{{ app.database_provider or app.database_mode }}{% if app.database_name %} · {{ app.database_name }}{% endif %}</span></div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="section__header"><h2>Actions</h2>{% if deployment_active %}<span class="resource-title-bar__count">Deployment in progress</span>{% endif %}</div>
+  <div class="section__body"><div class="form-actions">
+    {% if app.status not in ['deleting', 'delete_failed'] and not deployment_active %}
+      {% if app.status in ['pending', 'failed', 'stopped'] %}<form method="post" action="/plugins/railpack_apps/{{ app.id }}/deploy">{% include "partials/csrf_field.html" %}<button class="btn btn--primary" type="submit">{{ 'Deploy' if app.status in ['pending', 'failed'] else 'Redeploy' }}</button></form>{% endif %}
+      {% if app.status == 'running' %}<form method="post" action="/plugins/railpack_apps/{{ app.id }}/deploy">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary" type="submit">Redeploy</button></form><form method="post" action="/plugins/railpack_apps/{{ app.id }}/restart">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary" type="submit">Restart</button></form><form method="post" action="/plugins/railpack_apps/{{ app.id }}/stop">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary" type="submit">Stop</button></form>{% endif %}
+      {% if app.status == 'stopped' %}<form method="post" action="/plugins/railpack_apps/{{ app.id }}/start">{% include "partials/csrf_field.html" %}<button class="btn btn--primary" type="submit">Start</button></form>{% endif %}
+    {% endif %}
+    {% if deployment_active %}<a class="btn btn--secondary" href="#deployment">View live deployment</a>{% endif %}
+  </div></div>
+</section>
+
+<section class="section" id="deployment"{% if deployment %} data-railpack-deployment data-deployment-url="/plugins/railpack_apps/{{ app.id }}/deployments/{{ deployment.id }}" data-deployment-active="{{ 'true' if deployment_active else 'false' }}"{% endif %}>
+  <div class="section__header"><h2>Deployment</h2>{% if deployment %}<span class="resource-title-bar__count" data-deployment-state>{{ deployment.status | title }} · {{ deployment.stage | title }}</span>{% endif %}</div>
+  <div class="section__body">
+    {% if deployment %}
+      <div class="info-row"><span class="info-row__label">Action</span><span class="info-row__value">{{ deployment.action | title }}</span></div>
+      <pre class="terminal-fluid" data-deployment-output>{{ deployment.output }}{% if deployment.error %}
+[error] {{ deployment.error }}{% endif %}</pre>
+      {% if deployments|length > 1 %}<div class="form-actions">{% for item in deployments %}<a class="btn btn--secondary btn--sm" href="/plugins/railpack_apps/{{ app.id }}?deployment={{ item.id }}">#{{ item.id }} · {{ item.status | title }}</a>{% endfor %}</div>{% endif %}
+    {% else %}<div class="alert alert--info">No deployment has been recorded yet.</div>{% endif %}
+  </div>
+</section>
+
+<section class="section">
+  <div class="section__header"><h2>Remove application</h2></div>
+  <div class="section__body"><p class="form-hint">Removes the app container, build files, and environment file. The domain, certificate, app data volume, and database are kept.</p><form method="post" action="/plugins/railpack_apps/{{ app.id }}/uninstall"><div class="form-group"><label class="form-label" for="confirmation">Type DELETE to confirm</label><input class="form-input" id="confirmation" name="confirmation" required></div>{% include "partials/csrf_field.html" %}<button class="btn btn--danger" type="submit">Remove application</button></form></div>
+</section>
 {% endblock %}
+{% block scripts %}<script type="module" src="/static/js/modules/railpack-app-detail.js"></script>{% endblock %}

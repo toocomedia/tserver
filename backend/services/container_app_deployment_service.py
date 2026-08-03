@@ -19,6 +19,31 @@ from services import container_app_service as apps
 _build_lock = asyncio.Lock()
 
 
+async def recover_interrupted() -> None:
+    """Do not leave a deployment permanently busy after a panel restart."""
+    from database import AsyncSessionLocal
+    async with AsyncSessionLocal() as db:
+        deployments = (await db.scalars(select(ContainerAppDeployment).where(
+            ContainerAppDeployment.status.in_(("queued", "running")),
+        ))).all()
+        if not deployments:
+            return
+        now = datetime.utcnow()
+        for deployment in deployments:
+            deployment.status = "failed"
+            deployment.stage = "interrupted"
+            deployment.error = "Panel restarted before this deployment completed. Redeploy to try again."
+            deployment.finished_at = now
+        await db.commit()
+
+
+async def active_deployment(db: AsyncSession, app_id: int) -> ContainerAppDeployment | None:
+    return await db.scalar(select(ContainerAppDeployment).where(
+        ContainerAppDeployment.app_id == app_id,
+        ContainerAppDeployment.status.in_(("queued", "running")),
+    ).order_by(ContainerAppDeployment.id.desc()))
+
+
 async def queue_deployment(db: AsyncSession, app: ContainerApp, action: str = "deploy") -> ContainerAppDeployment:
     if action not in {"deploy", "redeploy"}:
         raise HTTPException(400, "Unsupported deployment action.")
@@ -62,6 +87,7 @@ async def _deploy_after_commit(deployment_id: int) -> None:
             app.status, app.last_error, app.deployed_at = "running", None, datetime.utcnow()
             deployment.status, deployment.stage = "success", "complete"
         except Exception as exc:
+            deployment.output = (deployment.output + await asyncio.to_thread(_container_logs, app))[-80_000:]
             restored = await _restore_previous(app, domain, db, running_image, replacement_started, deployment)
             app.status, app.last_error = ("running", None) if restored else ("failed", str(exc)[:1000])
             deployment.status, deployment.error = "failed", str(exc)[:2000]
@@ -149,6 +175,14 @@ def _ensure_network(app: ContainerApp) -> None:
 def _require(result, message: str) -> None:
     if result.returncode:
         raise RuntimeError((result.stderr or result.stdout or message)[-1500:])
+
+
+def _container_logs(app: ContainerApp) -> str:
+    result = apps._run(["docker", "logs", "--tail", "120", app.container_name], timeout=20)
+    if result.returncode:
+        return ""
+    output = (result.stdout + result.stderr).strip()
+    return f"\n[runtime logs]\n{output}\n" if output else ""
 
 
 async def wait_for_http(port: int) -> None:

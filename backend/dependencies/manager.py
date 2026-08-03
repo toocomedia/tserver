@@ -79,10 +79,17 @@ class DependencyManager:
             if status.get("healthy") or expected_offline
             else (state.last_error or status.get("error"))
         )
+        # The service's live health is authoritative.  Docker may be started
+        # by systemd or directly by an administrator after the panel saved an
+        # older "disabled" preference.
         status["effective_state"] = (
             state.operation
             if state.operation != "idle"
-            else ("disabled" if not state.desired_enabled else status["state"])
+            else (
+                status["state"]
+                if status["healthy"]
+                else ("disabled" if not state.desired_enabled else status["state"])
+            )
         )
         return status
 
@@ -99,12 +106,10 @@ class DependencyManager:
 
     def is_healthy(self, dependency_id: str) -> bool:
         status = self.get_status(dependency_id)
-        return bool(
-            status
-            and status["desired_enabled"]
-            and status["operation"] == "idle"
-            and status["healthy"]
-        )
+        # The desired-state flag controls the panel toggle only.  It can be
+        # stale after a reboot or manual systemctl action and must not block a
+        # plugin when its actual dependency is healthy.
+        return bool(status and status["operation"] == "idle" and status["healthy"])
 
     def get_dependent_plugins(self, dependency_id: str) -> list[dict[str, Any]]:
         from plugins.manager import plugin_manager

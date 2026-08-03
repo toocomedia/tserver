@@ -87,9 +87,12 @@ async def detail(app_id: int, request: Request, db: AsyncSession = Depends(get_d
     if app is None:
         raise HTTPException(404, "Container app not found.")
     domain = await db.get(Domain, app.domain_id)
-    deployment = await db.scalar(select(ContainerAppDeployment).where(ContainerAppDeployment.app_id == app.id).order_by(ContainerAppDeployment.id.desc()))
+    deployments = (await db.scalars(select(ContainerAppDeployment).where(
+        ContainerAppDeployment.app_id == app.id,
+    ).order_by(ContainerAppDeployment.id.desc()).limit(8))).all()
+    deployment = next((item for item in deployments if item.id == request.query_params.get("deployment", type=int)), deployments[0] if deployments else None)
     return templates.TemplateResponse("railpack_apps_detail.html", {
-        "request": request, "active_page": "railpack_apps", "app": app, "domain": domain, "deployment": deployment,
+        "request": request, "active_page": "railpack_apps", "app": app, "domain": domain, "deployment": deployment, "deployments": deployments,
     })
 
 
@@ -112,6 +115,9 @@ async def deploy(app_id: int, db: AsyncSession = Depends(get_db)):
             db, app, action="deploy" if app.status in {"pending", "failed"} else "redeploy",
         )
     except HTTPException as exc:
+        active = await container_app_deployment_service.active_deployment(db, app.id)
+        if active:
+            return RedirectResponse(f"/plugins/railpack_apps/{app.id}?deployment={active.id}", status_code=303)
         return RedirectResponse(f"/plugins/railpack_apps/{app.id}?{urlencode({'error': str(exc.detail)})}", status_code=303)
     return RedirectResponse(f"/plugins/railpack_apps/{app.id}?deployment={deployment.id}", status_code=303)
 
