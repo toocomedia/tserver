@@ -57,6 +57,11 @@ def check_plugin_code() -> bool:
     return ok
 
 
+def check_ui_regressions() -> bool:
+    test = Path(__file__).resolve().parents[3] / "tests" / "test_railpack_apps_ui.py"
+    return check("Railpack Apps Jinja and UI regression", [sys.executable, str(test)])
+
+
 def main() -> int:
     checks = [
         ("Docker CLI", ["docker", "--version"]),
@@ -70,6 +75,7 @@ def main() -> int:
     passed = [check(label, command) for label, command in checks]
     passed.append(check_buildkit())
     passed.append(check_plugin_code())
+    passed.append(check_ui_regressions())
     return 0 if all(passed) else 1
 
 
