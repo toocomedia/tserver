@@ -46,8 +46,9 @@ def check_plugin_code() -> bool:
         assert container_app_service.validate_port(3000) == 3000
         assert container_app_service.validate_image_reference("ghcr.io/example/app:1")
         paths = [route.path for route in router.router.routes]
-        assert "/{app_id}/uninstall" in paths
-        assert paths.index("/{app_id}/uninstall") < paths.index("/{app_id}/{action}")
+        uninstall = next(index for index, path in enumerate(paths) if path.endswith("/{app_id}/uninstall"))
+        control = next(index for index, path in enumerate(paths) if path.endswith("/{app_id}/{action}"))
+        assert uninstall < control
         ok = True
     except Exception as exc:
         print(f"DETAIL plugin code: {exc}")
