@@ -120,6 +120,27 @@ class PluginManager:
             for name in process_names
         ):
             return "usage.process_names must contain safe process names."
+
+        # Validate optional resource_guard section
+        rg = data.get("resource_guard")
+        if rg is not None:
+            if not isinstance(rg, dict):
+                return "resource_guard must be an object."
+            safe_stop = rg.get("safe_temporary_stop", False)
+            adapter = rg.get("lifecycle_adapter", "")
+            if safe_stop and not adapter:
+                return "resource_guard.safe_temporary_stop requires lifecycle_adapter to be set."
+            ops = rg.get("operations", {})
+            if not isinstance(ops, dict):
+                return "resource_guard.operations must be an object."
+            from services.resource_guard_profiles import PROFILES
+            for op_name, op_cfg in ops.items():
+                if not isinstance(op_cfg, dict):
+                    return f"resource_guard.operations.{op_name} must be an object."
+                profile = op_cfg.get("profile", "native_light")
+                if profile not in PROFILES:
+                    return f"resource_guard.operations.{op_name}.profile '{profile}' is not a known profile."
+
         return None
 
     def _effective(
@@ -385,14 +406,19 @@ class PluginManager:
         if enabled and plugin.get("paused_by"):
             dependencies = ", ".join(plugin["paused_by"])
             return False, f"Required dependency is unavailable: {dependencies}."
+        token = None
         if enabled:
             from database import AsyncSessionLocal
             from services.resource_guard_service import resource_guard_service
             async with AsyncSessionLocal() as db:
-                try:
-                    await resource_guard_service.allow_start(db)
-                except RuntimeError as exc:
-                    return False, str(exc)
+                result = await resource_guard_service.preflight(db, "native_light")
+                if not result["ok"]:
+                    return False, f"Resource Guard blocked plugin enable: {result['reason']}"
+                token = resource_guard_service.register(
+                    "plugin", plugin_id, "normal",
+                    f"Enable plugin: {plugin.get('name', plugin_id)}",
+                    profile="native_light",
+                )
 
         lock = self._operation_locks.setdefault(plugin_id, threading.Lock())
         if not lock.acquire(blocking=False):
@@ -427,6 +453,9 @@ class PluginManager:
             return True, "Plugin enabled." if enabled else "Plugin disabled."
         finally:
             lock.release()
+            if token is not None:
+                from services.resource_guard_service import resource_guard_service
+                resource_guard_service.unregister(token)
 
     async def run_plugin_script(self, plugin_id: str, action: str) -> tuple[bool, str]:
         if action not in {"install", "uninstall"}:
@@ -442,10 +471,16 @@ class PluginManager:
             from database import AsyncSessionLocal
             from services.resource_guard_service import resource_guard_service
             async with AsyncSessionLocal() as db:
-                try:
-                    await resource_guard_service.allow_start(db)
-                except RuntimeError as exc:
-                    return False, str(exc)
+                result = await resource_guard_service.preflight(db, "plugin_install")
+                if not result["ok"]:
+                    return False, f"Resource Guard blocked plugin install: {result['reason']}"
+            guard_token = resource_guard_service.register(
+                "plugin", plugin_id, "normal",
+                f"Install plugin: {plugin.get('name', plugin_id)}",
+                profile="plugin_install",
+            )
+        else:
+            guard_token = None
         script_rel = plugin.get(f"{action}_script")
         if not script_rel:
             return False, f"Plugin has no {action} script."
@@ -540,6 +575,9 @@ class PluginManager:
             return True, f"Plugin {action} completed."
         finally:
             lock.release()
+            if guard_token is not None:
+                from services.resource_guard_service import resource_guard_service
+                resource_guard_service.unregister(guard_token)
 
     async def reconcile_plugins(self) -> None:
         """Refresh active plugin runtimes whose bundled configuration changed."""

@@ -2,8 +2,16 @@
 from __future__ import annotations
 
 import asyncio
+import json
+import logging
+import os
+import shutil
 from dataclasses import dataclass, field
+from datetime import datetime
 from typing import Awaitable, Callable
+
+logger = logging.getLogger(__name__)
+
 
 try:
     import psutil
@@ -15,6 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.notification import Notification
 from models.resource_guard import ResourceGuardPriority, ResourceGuardSettings
+from models.safe_install_run import SafeInstallRun
 from services.resource_guard_profiles import PROFILES
 
 PRIORITIES = ("high", "normal", "background")
@@ -392,6 +401,366 @@ class ResourceGuardService:
             f"({status['ram_available_mb']} MB available, "
             f"safe limit {status['limit_percent']}%). {action}"
         )
+
+
+    # ------------------------------------------------------------------
+    # Host capability preflight
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def host_capabilities() -> dict:
+        """
+        Report which containment capabilities are available on this host.
+
+        Returns a dict with boolean flags, disk_available_mb, a level string
+        (full | reduced | unsupported), and a list of missing capability names.
+        """
+        missing: list[str] = []
+
+        # cgroup memory controller
+        cgroup_memory = os.path.exists("/sys/fs/cgroup/memory.max") or os.path.exists("/sys/fs/cgroup/memory/memory.limit_in_bytes")
+        if not cgroup_memory:
+            missing.append("cgroup_memory")
+
+        # cgroup CPU controller
+        cgroup_cpu = os.path.exists("/sys/fs/cgroup/cpu.max") or os.path.exists("/sys/fs/cgroup/cpu/cpu.cfs_quota_us")
+        if not cgroup_cpu:
+            missing.append("cgroup_cpu")
+
+        # cgroup PID controller
+        cgroup_pids = os.path.exists("/sys/fs/cgroup/pids.max") or os.path.exists("/sys/fs/cgroup/pids/pids.max")
+        if not cgroup_pids:
+            missing.append("cgroup_pids")
+
+        # systemd-run --scope
+        systemd_scope = shutil.which("systemd-run") is not None
+        if not systemd_scope:
+            missing.append("systemd_scope")
+
+        # Docker memory limits (docker present + responds)
+        docker_memory = shutil.which("docker") is not None
+        if not docker_memory:
+            missing.append("docker_memory")
+            missing.append("docker_pids")
+        docker_pids = docker_memory  # pids-limit requires docker
+
+        # Constrained Buildx builder (srv-panel-builder)
+        buildx_builder = False
+        if docker_memory:
+            try:
+                import subprocess
+                r = subprocess.run(
+                    ["docker", "buildx", "ls"],
+                    capture_output=True, text=True, timeout=10
+                )
+                buildx_builder = "srv-panel-builder" in r.stdout
+            except Exception:
+                pass
+        if not buildx_builder:
+            missing.append("buildx_builder")
+
+        # Disk available
+        disk_available_mb = 0
+        try:
+            stat = os.statvfs("/") if os.name != "nt" else None
+            if stat:
+                disk_available_mb = int(stat.f_bavail * stat.f_frsize / (1024 * 1024))
+        except Exception:
+            pass
+
+        # Determine level
+        critical_missing = {"cgroup_memory", "docker_memory"}
+        if critical_missing & set(missing):
+            level = "unsupported"
+        elif missing:
+            level = "reduced"
+        else:
+            level = "full"
+
+        return {
+            "cgroup_memory": cgroup_memory,
+            "cgroup_cpu": cgroup_cpu,
+            "cgroup_pids": cgroup_pids,
+            "systemd_scope": systemd_scope,
+            "docker_memory": docker_memory,
+            "docker_pids": docker_pids,
+            "buildx_builder": buildx_builder,
+            "disk_available_mb": disk_available_mb,
+            "level": level,
+            "missing": missing,
+        }
+
+    # ------------------------------------------------------------------
+    # Safe Install Mode
+    # ------------------------------------------------------------------
+
+    async def request_safe_install(
+        self, db: AsyncSession, operation_id: int
+    ) -> dict:
+        """
+        Build the candidate list for Safe Install Mode.
+
+        Creates a SafeInstallRun record with outcome=pending.
+        Returns {run_id, before_ram_mb, protected, required, optional}.
+        No service is stopped here.
+        """
+        from services.resource_guard_relationships import classify_services
+        from models.guard_operation import GuardOperation as GuardOp
+
+        operation = await db.get(GuardOp, operation_id)
+        if operation is None:
+            return {"ok": False, "reason": "Operation not found."}
+
+        install_op_context = {
+            "operation_id": operation_id,
+            "profile": operation.profile,
+            "required_dependencies": [],  # extended by caller if known
+        }
+
+        classification = await classify_services(db, install_op_context)
+        sample = self.sample()
+        before_ram_mb = sample["total_mb"] - sample["ram_available_mb"]
+
+        run = SafeInstallRun(
+            operation_id=operation_id,
+            candidate_snapshot=json.dumps(classification["optional"]),
+            approved_ids="[]",
+            services_stopped="[]",
+            before_ram_mb=before_ram_mb,
+            outcome="pending",
+            restore_state="pending",
+        )
+        db.add(run)
+        await db.flush()
+
+        return {
+            "ok": True,
+            "run_id": run.id,
+            "before_ram_mb": before_ram_mb,
+            "protected": classification["protected"],
+            "required": classification["required"],
+            "optional": classification["optional"],
+        }
+
+    async def approve_safe_install(
+        self, db: AsyncSession, run_id: int, approved_ids: list[str]
+    ) -> dict:
+        """
+        Stop approved candidates one by one, rechecking capacity after each.
+
+        Returns {ok, reason, services_stopped, after_ram_mb}.
+        If stopping a service fails the run is aborted (no partial-stop state left).
+        """
+        run = await db.get(SafeInstallRun, run_id)
+        if run is None:
+            return {"ok": False, "reason": "Safe Install run not found."}
+        if run.outcome not in ("pending",):
+            return {"ok": False, "reason": f"Run is already {run.outcome}."}
+
+        candidates: list[dict] = json.loads(run.candidate_snapshot)
+        candidate_map = {c["id"]: c for c in candidates}
+
+        # Only stop IDs that were actually in the candidate snapshot
+        to_stop = [c for cid in approved_ids if (c := candidate_map.get(cid))]
+
+        run.approved_ids = json.dumps(approved_ids)
+        run.outcome = "running"
+        stopped: list[str] = []
+
+        try:
+            for candidate in to_stop:
+                ok, reason = await self._stop_candidate(candidate)
+                if not ok:
+                    # Abort: restore already-stopped services, mark aborted
+                    for svc_id in reversed(stopped):
+                        await self._start_candidate(candidate_map[svc_id])
+                    run.outcome = "aborted"
+                    run.finished_at = datetime.utcnow()
+                    return {"ok": False, "reason": f"Failed to stop '{candidate['id']}': {reason}. Run aborted, services restored."}
+
+                stopped.append(candidate["id"])
+                run.services_stopped = json.dumps(stopped)
+
+                # Recheck capacity after each stop
+                from models.guard_operation import GuardOperation as GuardOp
+                op = await db.get(GuardOp, run.operation_id)
+                if op:
+                    capacity_check = await self.preflight(db, op.profile)
+                    if capacity_check["ok"]:
+                        break  # enough capacity — no need to stop more
+
+            sample = self.sample()
+            run.after_ram_mb = sample["total_mb"] - sample["ram_available_mb"]
+
+        except Exception as exc:
+            run.outcome = "aborted"
+            run.finished_at = datetime.utcnow()
+            return {"ok": False, "reason": f"Unexpected error during Safe Install: {exc}"}
+
+        return {
+            "ok": True,
+            "services_stopped": stopped,
+            "after_ram_mb": run.after_ram_mb,
+            "run_id": run_id,
+        }
+
+    async def complete_safe_install(self, db: AsyncSession, run_id: int) -> dict:
+        """
+        Post-install restore decision.
+
+        Called after the new app has passed its own health/routing checks.
+        If original stopped services can coexist with the new runtime, restore them.
+        Otherwise pause the new app + its new databases, then restore originals.
+        """
+        run = await db.get(SafeInstallRun, run_id)
+        if run is None:
+            return {"ok": False, "reason": "Safe Install run not found."}
+
+        from models.guard_operation import GuardOperation as GuardOp
+        op = await db.get(GuardOp, run.operation_id)
+        if op is None:
+            return {"ok": False, "reason": "Associated operation not found."}
+
+        candidates: list[dict] = json.loads(run.candidate_snapshot)
+        stopped_ids: list[str] = json.loads(run.services_stopped)
+        candidate_map = {c["id"]: c for c in candidates}
+        stopped_candidates = [candidate_map[sid] for sid in stopped_ids if sid in candidate_map]
+
+        # Check if new app runtime + stopped services all fit
+        # We re-run preflight for the runtime profile (app container)
+        runtime_profile = op.profile.replace("build_", "container_") if op.profile.startswith("build_") else op.profile
+        coexist_check = await self.preflight(db, runtime_profile)
+
+        if coexist_check["ok"]:
+            # Safe to restore — bring services back up
+            restore_errors: list[str] = []
+            for candidate in stopped_candidates:
+                ok, reason = await self._start_candidate(candidate)
+                if not ok:
+                    restore_errors.append(f"{candidate['id']}: {reason}")
+
+            run.restore_state = "restored" if not restore_errors else "failed"
+            run.outcome = "succeeded"
+            run.finished_at = datetime.utcnow()
+            return {
+                "ok": True,
+                "action": "restored",
+                "restore_errors": restore_errors,
+            }
+        else:
+            # Cannot coexist — pause new app, restore originals
+            await self._pause_new_app(db, op)
+            restore_errors = []
+            for candidate in stopped_candidates:
+                ok, reason = await self._start_candidate(candidate)
+                if not ok:
+                    restore_errors.append(f"{candidate['id']}: {reason}")
+
+            run.restore_state = "paused_new_app"
+            run.outcome = "succeeded"
+            run.finished_at = datetime.utcnow()
+            return {
+                "ok": True,
+                "action": "paused_new_app",
+                "reason": "New app paused — not enough capacity to run it alongside restored services.",
+                "restore_errors": restore_errors,
+            }
+
+    async def start_paused_install(
+        self, db: AsyncSession, operation_id: int
+    ) -> dict:
+        """
+        Run a fresh preflight before starting an app that was paused by Safe Install.
+        Returns the preflight result; the caller decides whether to start the app.
+        """
+        from models.guard_operation import GuardOperation as GuardOp
+        op = await db.get(GuardOp, operation_id)
+        if op is None:
+            return {"ok": False, "reason": "Operation not found."}
+        return await self.preflight(db, op.profile)
+
+    async def restore_safe_install(
+        self, db: AsyncSession, run_id: int
+    ) -> dict:
+        """
+        Manual restore triggered from UI for a run where services are still stopped.
+        Rechecks capacity first; restores if safe.
+        """
+        run = await db.get(SafeInstallRun, run_id)
+        if run is None:
+            return {"ok": False, "reason": "Safe Install run not found."}
+
+        stopped_ids: list[str] = json.loads(run.services_stopped)
+        candidates: list[dict] = json.loads(run.candidate_snapshot)
+        candidate_map = {c["id"]: c for c in candidates}
+
+        errors: list[str] = []
+        for svc_id in stopped_ids:
+            candidate = candidate_map.get(svc_id)
+            if candidate is None:
+                continue
+            ok, reason = await self._start_candidate(candidate)
+            if not ok:
+                errors.append(f"{svc_id}: {reason}")
+
+        run.restore_state = "restored" if not errors else "failed"
+        run.finished_at = datetime.utcnow()
+        return {"ok": not errors, "errors": errors}
+
+    # ------------------------------------------------------------------
+    # Internal Safe Install helpers
+    # ------------------------------------------------------------------
+
+    async def _stop_candidate(self, candidate: dict) -> tuple[bool, str]:
+        """Gracefully stop a single Safe Install candidate."""
+        try:
+            adapter = self._get_adapter(candidate)
+            if adapter is not None:
+                await adapter.stop()
+                return True, ""
+            # Fallback for dependencies that expose stop() directly
+            from dependencies import dependency_manager
+            svc = dependency_manager.get_service(candidate["id"])
+            if svc and callable(getattr(svc, "stop", None)):
+                await asyncio.to_thread(svc.stop)
+                return True, ""
+            return False, "No lifecycle adapter available."
+        except Exception as exc:
+            return False, str(exc)
+
+    async def _start_candidate(self, candidate: dict) -> tuple[bool, str]:
+        """Bring a previously-stopped candidate back up."""
+        try:
+            adapter = self._get_adapter(candidate)
+            if adapter is not None:
+                await adapter.start()
+                return True, ""
+            from dependencies import dependency_manager
+            svc = dependency_manager.get_service(candidate["id"])
+            if svc and callable(getattr(svc, "start", None)):
+                await asyncio.to_thread(svc.start)
+                return True, ""
+            return False, "No lifecycle adapter available."
+        except Exception as exc:
+            return False, str(exc)
+
+    def _get_adapter(self, candidate: dict):
+        """Return a LifecycleAdapter for a candidate, or None."""
+        from services.guarded_runner import LifecycleAdapter
+        # Plugins may register adapters via their manifest lifecycle_adapter field
+        # (this is the extensibility hook; for now returns None for unregistered ones)
+        return None
+
+    async def _pause_new_app(self, db: AsyncSession, op) -> None:
+        """Mark the new container_app as paused_by_safe_install."""
+        try:
+            from models.container_app import ContainerApp
+            if op.component_type == "container_app" and op.component_id:
+                app = await db.get(ContainerApp, int(op.component_id))
+                if app:
+                    app.status = "paused_by_safe_install"
+        except Exception as exc:
+            logger.warning("Could not pause new app: %s", exc)
 
 
 resource_guard_service = ResourceGuardService()

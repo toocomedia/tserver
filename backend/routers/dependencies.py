@@ -1,10 +1,12 @@
 """System dependency management page and APIs."""
-from fastapi import APIRouter, Form, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from pathlib import Path
 
+from database import get_db
 from dependencies import dependency_manager
 from templating import templates
+from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(tags=["dependencies"])
 
@@ -77,6 +79,7 @@ async def dependency_toggle(
     dependency_id: str,
     enabled: bool = Form(...),
     confirmed: bool = Form(False),
+    db: AsyncSession = Depends(get_db),
 ):
     if not enabled:
         precheck = dependency_manager.precheck(dependency_id, "disable")
@@ -90,6 +93,15 @@ async def dependency_toggle(
                 },
                 status_code=409,
             )
+    else:
+        # Guard preflight for enabling (may involve Docker pull)
+        from services.resource_guard_service import resource_guard_service
+        result = await resource_guard_service.preflight(db, "native_light")
+        if not result["ok"]:
+            return JSONResponse(
+                {"detail": f"Resource Guard blocked dependency enable: {result['reason']}", "resource_guard": result},
+                status_code=409,
+            )
 
     success, message = await dependency_manager.toggle(dependency_id, enabled)
     if not success:
@@ -98,7 +110,7 @@ async def dependency_toggle(
 
 
 @router.post("/api/dependencies/{dependency_id}/install")
-async def dependency_install(dependency_id: str):
+async def dependency_install(dependency_id: str, db: AsyncSession = Depends(get_db)):
     current = dependency_manager.get_status(dependency_id, force=True)
     if current is None:
         raise HTTPException(status_code=404, detail="Unknown dependency.")
@@ -108,7 +120,23 @@ async def dependency_install(dependency_id: str):
             "message": "Dependency is already installed and healthy.",
             "status": current,
         }
-    success, message = await dependency_manager.install(dependency_id)
+    # Guard preflight for install (may be a Docker pull or heavy setup)
+    from services.resource_guard_service import resource_guard_service
+    result = await resource_guard_service.preflight(db, "plugin_install")
+    if not result["ok"]:
+        return JSONResponse(
+            {"success": False, "detail": f"Resource Guard blocked dependency install: {result['reason']}", "resource_guard": result},
+            status_code=409,
+        )
+    guard_token = resource_guard_service.register(
+        "dependency", dependency_id, "normal",
+        f"Install dependency: {dependency_id}",
+        profile="plugin_install",
+    )
+    try:
+        success, message = await dependency_manager.install(dependency_id)
+    finally:
+        resource_guard_service.unregister(guard_token)
     if not success:
         return JSONResponse(
             {"success": False, "detail": message},

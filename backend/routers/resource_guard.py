@@ -123,3 +123,114 @@ async def _row(db: AsyncSession, kind: str, item_id: str, label: str) -> dict:
         "priority": await resource_guard_service.priority(db, kind, str(item_id)),
         "priorities": PRIORITIES,
     }
+
+
+# ── Slice 3: Safe Install Mode ─────────────────────────────────────────────
+
+class SafeInstallRequestIn(BaseModel):
+    operation_id: int
+
+
+class SafeInstallApproveIn(BaseModel):
+    approved_ids: list[str]
+
+
+@router.get("/api/resource-guard/host-capabilities")
+async def host_capabilities():
+    """Return host cgroup/Docker/Buildx capability report."""
+    return resource_guard_service.host_capabilities()
+
+
+@router.post("/api/resource-guard/safe-install/request")
+async def safe_install_request(
+    payload: SafeInstallRequestIn,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Build the Safe Install candidate list for an operation.
+    Creates a SafeInstallRun record and returns candidates.
+    No service is stopped yet.
+    """
+    result = await resource_guard_service.request_safe_install(db, payload.operation_id)
+    if not result.get("ok"):
+        raise HTTPException(409, result.get("reason", "Could not build Safe Install candidates."))
+    return result
+
+
+@router.post("/api/resource-guard/safe-install/{run_id}/approve")
+async def safe_install_approve(
+    run_id: int,
+    payload: SafeInstallApproveIn,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Submit approved candidate IDs. Stops them one-by-one and rechecks
+    capacity after each. Returns services_stopped and after_ram_mb.
+    """
+    result = await resource_guard_service.approve_safe_install(db, run_id, payload.approved_ids)
+    if not result.get("ok"):
+        raise HTTPException(409, result.get("reason", "Safe Install approval failed."))
+    return result
+
+
+@router.post("/api/resource-guard/safe-install/{run_id}/complete")
+async def safe_install_complete(
+    run_id: int,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Post-install restore decision. Call after the new app passes health checks.
+    Restores stopped services if safe; otherwise pauses the new app and restores originals.
+    """
+    result = await resource_guard_service.complete_safe_install(db, run_id)
+    if not result.get("ok"):
+        raise HTTPException(409, result.get("reason", "Safe Install complete failed."))
+    return result
+
+
+@router.post("/api/resource-guard/safe-install/{run_id}/restore")
+async def safe_install_restore(
+    run_id: int,
+    db: AsyncSession = Depends(get_db),
+):
+    """Manually restore stopped services for a Safe Install run."""
+    result = await resource_guard_service.restore_safe_install(db, run_id)
+    if not result.get("ok"):
+        raise HTTPException(409, {"reason": "Restore failed.", "errors": result.get("errors", [])})
+    return result
+
+
+@router.get("/api/resource-guard/safe-install/{run_id}")
+async def safe_install_status(
+    run_id: int,
+    db: AsyncSession = Depends(get_db),
+):
+    """Return current state of a Safe Install run."""
+    from models.safe_install_run import SafeInstallRun
+    run = await db.get(SafeInstallRun, run_id)
+    if run is None:
+        raise HTTPException(404, "Safe Install run not found.")
+    return {
+        "id": run.id,
+        "operation_id": run.operation_id,
+        "outcome": run.outcome,
+        "restore_state": run.restore_state,
+        "before_ram_mb": run.before_ram_mb,
+        "after_ram_mb": run.after_ram_mb,
+        "services_stopped": run.services_stopped,
+        "approved_ids": run.approved_ids,
+        "created_at": run.created_at,
+        "finished_at": run.finished_at,
+    }
+
+
+@router.post("/api/resource-guard/safe-install/{operation_id}/start-paused")
+async def start_paused_install(
+    operation_id: int,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Run a fresh preflight before starting an app paused by Safe Install.
+    Returns the preflight result so the caller can decide whether to proceed.
+    """
+    return await resource_guard_service.start_paused_install(db, operation_id)

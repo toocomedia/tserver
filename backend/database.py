@@ -310,6 +310,27 @@ def _migrate_sync(sync_conn) -> None:
             logger.info("Migrating container_apps: add pending_database_specs")
             sync_conn.execute(text("ALTER TABLE container_apps ADD COLUMN pending_database_specs TEXT"))
 
+    # --- safe_install_runs: Slice 3 ---
+    if "safe_install_runs" not in tables:
+        logger.info("Creating safe_install_runs table")
+        sync_conn.execute(text("""
+            CREATE TABLE safe_install_runs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                operation_id INTEGER NOT NULL REFERENCES guard_operations(id),
+                candidate_snapshot TEXT NOT NULL DEFAULT '[]',
+                approved_ids TEXT NOT NULL DEFAULT '[]',
+                services_stopped TEXT NOT NULL DEFAULT '[]',
+                before_ram_mb INTEGER,
+                after_ram_mb INTEGER,
+                outcome VARCHAR(16) NOT NULL DEFAULT 'pending',
+                restore_state VARCHAR(24) NOT NULL DEFAULT 'pending',
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+                finished_at DATETIME
+            )
+        """))
+        sync_conn.execute(text("CREATE INDEX ix_safe_install_runs_operation_id ON safe_install_runs (operation_id)"))
+        sync_conn.execute(text("CREATE INDEX ix_safe_install_runs_outcome ON safe_install_runs (outcome)"))
+
 
 async def init_db():
     """Create all tables on startup if they do not exist, then migrate."""
@@ -333,6 +354,7 @@ async def init_db():
     import models.container_app_backup  # noqa: F401
     import models.resource_guard  # noqa: F401
     import models.guard_operation  # noqa: F401
+    import models.safe_install_run  # noqa: F401
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
         await conn.run_sync(_migrate_sync)

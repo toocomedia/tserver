@@ -20,6 +20,17 @@ from services import container_app_service
 async def create_database_backup(db: AsyncSession, app: ContainerApp, item: ContainerAppDatabase) -> ContainerAppBackup:
     if item.provider != "docker":
         raise HTTPException(400, "Only Docker-managed databases have local backups here.")
+
+    from services.resource_guard_service import resource_guard_service
+    preflight = await resource_guard_service.preflight(db, "native_light")
+    if not preflight["ok"]:
+        raise HTTPException(409, f"Resource Guard blocked backup: {preflight['reason']}")
+    guard_token = resource_guard_service.register(
+        "container_app", str(app.id), "normal",
+        f"Backup {item.kind} database for app {app.id}",
+        profile="native_light",
+    )
+
     backup = ContainerAppBackup(app_id=app.id, database_id=item.id, kind=item.kind, path="pending", status="running")
     db.add(backup)
     await db.flush()
@@ -31,6 +42,8 @@ async def create_database_backup(db: AsyncSession, app: ContainerApp, item: Cont
     except Exception as exc:
         backup.status = "failed"
         raise HTTPException(502, f"Backup failed: {exc}") from exc
+    finally:
+        resource_guard_service.unregister(guard_token)
     return backup
 
 
@@ -39,11 +52,25 @@ async def restore_database_backup(db: AsyncSession, app: ContainerApp, item: Con
         raise HTTPException(404, "Backup not found.")
     if confirmation != f"RESTORE {backup.id}":
         raise HTTPException(400, f"Type RESTORE {backup.id} to overwrite this database.")
+
+    from services.resource_guard_service import resource_guard_service
+    preflight = await resource_guard_service.preflight(db, "native_light")
+    if not preflight["ok"]:
+        raise HTTPException(409, f"Resource Guard blocked restore: {preflight['reason']}")
+    guard_token = resource_guard_service.register(
+        "container_app", str(app.id), "normal",
+        f"Restore {item.kind} database for app {app.id}",
+        profile="native_light",
+    )
+
+    # Safety pre-backup before overwriting
     await create_database_backup(db, app, item)
     try:
         await asyncio.to_thread(_restore, item, Path(backup.path))
     except Exception as exc:
         raise HTTPException(502, f"Restore failed: {exc}") from exc
+    finally:
+        resource_guard_service.unregister(guard_token)
 
 
 async def create_wordpress_backup(db: AsyncSession, app: ContainerApp, item: ContainerAppDatabase) -> ContainerAppBackup:
