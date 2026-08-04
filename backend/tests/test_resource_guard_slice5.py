@@ -209,6 +209,18 @@ class ImageInspectionTests(unittest.TestCase):
         self.assertEqual(result["exposed_ports"], ["80"])
         self.assertAlmostEqual(result["size_mb"], 50.0, places=0)
 
+    def test_umami_image_recommends_postgresql_and_port(self):
+        from services.container_app_image_inspect_service import _recommendations
+        result = _recommendations("docker.umami.is/umami-software/umami:latest", ["3000"], [], None)
+        self.assertEqual(result["internal_port"], 3000)
+        self.assertEqual(result["database_types"], ["postgresql"])
+        self.assertEqual(result["required_environment_names"], ["DATABASE_URL"])
+
+    def test_database_environment_names_are_generic_recommendations(self):
+        from services.container_app_image_inspect_service import _recommendations
+        result = _recommendations("example.org/team/app:1", ["8080"], ["DATABASE_URL", "REDIS_URL"], None)
+        self.assertEqual(result["database_types"], ["postgresql", "redis"])
+
     def test_invalid_image_reference_raises_value_error(self):
         """Non-valid image reference raises ValueError."""
         from services.container_app_image_inspect_service import validate_image_reference

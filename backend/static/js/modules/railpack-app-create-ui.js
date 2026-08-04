@@ -15,6 +15,12 @@ export async function fetchJson(url, options) {
   return data;
 }
 
+export async function inspectRegistryImage(reference) {
+  const body = new FormData();
+  body.set('image_reference', reference);
+  return fetchJson('/plugins/railpack_apps/inspect-image', { method: 'POST', headers: csrfHeaders(), body });
+}
+
 export function addEnvironmentRow(form, key = '', value = '') {
   const list = form.querySelector('[data-environment-list]');
   const row = document.createElement('div');
@@ -51,7 +57,7 @@ export function renderInspection(form, data) {
   setText(form.querySelector('[data-inspection-port]'), data.internal_port || 'Configured on the image');
   const databases = data.database_types || [];
   setText(form.querySelector('[data-inspection-databases]'), databases.length ? databases.join(', ') : 'No database detected');
-  setText(form.querySelector('[data-inspect-summary]'), data.summary || 'Review these editable source suggestions.');
+  setText(form.querySelector('[data-inspect-summary]'), [data.summary, data.inspection_note].filter(Boolean).join(' ') || 'Review these editable source suggestions.');
 }
 
 export function renderDeployment(form, data) {

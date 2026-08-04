@@ -14,7 +14,7 @@ from models.domain import Domain
 from models.hosted_app import HostedApp
 from models.ssl_cert import SslCert
 from services import container_app_database_service, container_app_deployment_service
-from services import container_app_inspection_service, container_app_service, container_app_wordpress_service
+from services import container_app_image_inspect_service, container_app_inspection_service, container_app_service, container_app_wordpress_service
 from templating import templates
 
 router = APIRouter()
@@ -35,6 +35,14 @@ async def create_page(request: Request, db: AsyncSession = Depends(get_db)):
 @router.post("/inspect")
 async def inspect(repository_url: str = Form(...), branch: str = Form("main")):
     return JSONResponse(container_app_inspection_service.inspect_repository(repository_url.strip(), branch.strip() or "main"))
+
+
+@router.post("/inspect-image")
+async def inspect_image(image_reference: str = Form(...)):
+    try:
+        return JSONResponse(await container_app_image_inspect_service.inspect_image(image_reference.strip()))
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
 
 
 @router.post("/create")

@@ -1,11 +1,9 @@
-import { addEnvironmentRow, csrfHeaders, environmentValues, fetchJson, renderDeployment, renderInspection, setHidden, setText } from './railpack-app-create-ui.js';
-
+import { addEnvironmentRow, csrfHeaders, environmentValues, fetchJson, inspectRegistryImage, renderDeployment, renderInspection, setHidden, setText } from './railpack-app-create-ui.js';
 const form = document.querySelector('[data-railpack-builder]');
 if (form) {
   const state = { step: 1, unlocked: 1, appId: null, deploymentId: null };
   const query = (selector) => form.querySelector(selector);
   const panel = (step) => query(`[data-wizard-panel="${step}"]`);
-
   function renderStep(step) {
     state.step = step;
     for (let index = 1; index <= 5; index += 1) {
@@ -22,7 +20,6 @@ if (form) {
     if (step === 2) setText(query('[data-wizard-next]'), 'Continue to configuration');
     if (step === 3) setText(query('[data-wizard-next]'), 'Deploy app');
   }
-
   function sourceState() {
     const type = query('[data-source-type]').value;
     const wordpress = type === 'wordpress';
@@ -39,7 +36,6 @@ if (form) {
     domainState();
     renderStep(1);
   }
-
   function domainState() {
     const selected = query('[data-domain-select]').selectedOptions[0];
     const ssl = query('[data-ssl-request]');
@@ -48,7 +44,6 @@ if (form) {
     ssl.disabled = hasSsl;
     setText(query('[data-ssl-hint]'), hasSsl ? 'HTTPS is already active for this domain. The existing certificate will be used.' : 'No certificate is attached to this domain. Select this option to issue HTTPS after deployment.');
   }
-
   function toggleSourceInputs(type) {
     const git = type === 'git';
     query('[data-repository-url]').disabled = !git;
@@ -58,14 +53,12 @@ if (form) {
     query('[data-image-reference]').required = type === 'image';
     form.querySelectorAll('[data-wordpress-fields] input').forEach((input) => { input.disabled = type !== 'wordpress'; input.required = type === 'wordpress'; });
   }
-
   function wordpressDatabaseState(required) {
     const row = query('[data-kind="mariadb"]');
     if (required) { row.querySelector('[data-database-enabled]').checked = true; row.querySelector('[data-database-provider]').value = 'docker'; }
     row.dataset.sourceRequired = required ? 'true' : '';
     attachmentState(row);
   }
-
   function attachmentState(row) {
     const required = row.dataset.sourceRequired === 'true';
     const enabled = row.querySelector('[data-database-enabled]').checked;
@@ -82,7 +75,6 @@ if (form) {
     setHidden(row.querySelector('[data-database-requirement]'), !required);
     setText(row.querySelector('[data-database-requirement]'), required ? 'Required by WordPress. The private MariaDB service is created with this app.' : '');
   }
-
   function applyInspection(data) {
     if (['railpack', 'dockerfile'].includes(data.build_mode)) query('#build_mode').value = data.build_mode;
     const port = Number(data.internal_port);
@@ -95,7 +87,6 @@ if (form) {
     setText(query('[data-database-detection]'), data.database_types?.length ? `Detected: ${data.database_types.join(', ')}. Review the selected services.` : 'No database detected. You can still choose services manually.');
     renderInspection(form, data);
   }
-
   async function inspectSource() {
     const type = query('[data-source-type]').value;
     if (type !== 'git') return showNonGitInspection(type);
@@ -116,11 +107,22 @@ if (form) {
       setHidden(query('[data-inspect-results]'), false);
     } catch (error) { showInspectionError(error); } finally { setHidden(query('[data-inspect-loading]'), true); }
   }
-
-  function showNonGitInspection(type) {
+  async function showNonGitInspection(type) {
     const image = type === 'image';
     if (image && !query('[data-image-reference]').reportValidity()) return;
-    applyInspection(image ? { runtime: 'Registry image', build_mode: 'image', internal_port: query('#internal_port').value, summary: 'The image will be pulled during installation.' } : { runtime: 'WordPress preset', build_mode: 'image', internal_port: 80, database_types: ['mariadb'], summary: 'WordPress will install with its private MariaDB service.' });
+    if (image) return inspectImageSource();
+    finishNonGitInspection({ runtime: 'WordPress preset', build_mode: 'image', internal_port: 80, database_types: ['mariadb'], summary: 'WordPress will install with its private MariaDB service.' });
+  }
+  async function inspectImageSource() {
+    setHidden(query('[data-inspect-error]'), true);
+    setHidden(query('[data-inspect-results]'), true);
+    setHidden(query('[data-inspect-loading]'), false);
+    try { finishNonGitInspection(await inspectRegistryImage(query('[data-image-reference]').value)); }
+    catch (error) { showInspectionError(error); }
+    finally { setHidden(query('[data-inspect-loading]'), true); }
+  }
+  function finishNonGitInspection(data) {
+    applyInspection(data);
     state.unlocked = 2;
     renderStep(2);
     setHidden(query('[data-inspect-results]'), false);

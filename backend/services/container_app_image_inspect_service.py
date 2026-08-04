@@ -22,6 +22,17 @@ _IMAGE_RE = re.compile(
     r"^[a-z0-9][a-z0-9._/\-]*(?::[A-Za-z0-9][A-Za-z0-9._.\-]*)?(?:@[A-Za-z0-9:+._\-]+)?$"
 )
 
+_DATABASE_ENVIRONMENTS = {
+    "DATABASE_URL": "postgresql", "POSTGRES_URL": "postgresql", "POSTGRESQL_URL": "postgresql",
+    "MYSQL_URL": "mariadb", "REDIS_URL": "redis", "MONGODB_URI": "mongodb", "MONGO_URL": "mongodb",
+}
+_IMAGE_PROFILES = {
+    "docker.umami.is/umami-software/umami": {
+        "runtime": "Umami", "internal_port": 3000, "database_types": ["postgresql"],
+        "required_environment_names": ["DATABASE_URL"],
+    },
+}
+
 
 def validate_image_reference(reference: str) -> str:
     ref = reference.strip().lower()
@@ -95,11 +106,12 @@ def _pull_and_inspect(reference: str) -> dict[str, Any]:
 
     # Labels
     labels: dict[str, str] = cfg.get("Labels") or {}
+    environment_names = _environment_names(cfg.get("Env") or [])
 
     # Remove the pulled image to reclaim disk immediately
     _run(["docker", "rmi", reference], timeout=60)
 
-    return {
+    result = {
         "reference": reference,
         "digest": digest,
         "size_mb": size_mb,
@@ -108,4 +120,45 @@ def _pull_and_inspect(reference: str) -> dict[str, Any]:
         "cmd": cmd,
         "healthcheck": healthcheck,
         "labels": labels,
+        "environment_names": environment_names,
     }
+    result.update(_recommendations(reference, exposed_ports, environment_names, healthcheck))
+    return result
+
+
+def _environment_names(values: list[str]) -> list[str]:
+    names = {value.split("=", 1)[0] for value in values if "=" in value}
+    return sorted(name for name in names if re.fullmatch(r"[A-Z_][A-Z0-9_]*", name))
+
+
+def _recommendations(
+    reference: str, exposed_ports: list[str], environment_names: list[str], healthcheck: str | None,
+) -> dict[str, Any]:
+    profile = _IMAGE_PROFILES.get(_without_tag(reference), {})
+    databases = set(profile.get("database_types", []))
+    databases.update(_DATABASE_ENVIRONMENTS[name] for name in environment_names if name in _DATABASE_ENVIRONMENTS)
+    port = profile.get("internal_port") or _http_healthcheck_port(healthcheck)
+    return {
+        "runtime": profile.get("runtime", "Registry image"), "build_mode": "image", "internal_port": port,
+        "database_types": sorted(databases), "required_environment_names": profile.get("required_environment_names", []),
+        "summary": "Registry metadata inspected. Review every suggested setting before deployment.",
+        "inspection_note": _inspection_note(exposed_ports, port),
+    }
+
+
+def _without_tag(reference: str) -> str:
+    head, slash, tail = reference.lower().split("@", 1)[0].rpartition("/")
+    return f"{head}{slash}{tail.split(':', 1)[0]}" if slash else tail.split(":", 1)[0]
+
+
+def _http_healthcheck_port(healthcheck: str | None) -> int | None:
+    match = re.search(r"https?://(?:localhost|127\.0\.0\.1)(?::(\d+))?", healthcheck or "", re.I)
+    return int(match.group(1) or 80) if match else None
+
+
+def _inspection_note(exposed_ports: list[str], port: int | None) -> str:
+    if port:
+        return f"Private HTTP port {port} is recommended from image metadata."
+    if exposed_ports:
+        return f"Image exposes {', '.join(exposed_ports)}. No HTTP port could be safely confirmed."
+    return "Image does not declare an HTTP port. Enter the app HTTP port manually."
