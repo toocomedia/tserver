@@ -14,6 +14,10 @@
       </div>
       <button class="btn btn--sm btn--primary" id="btn-quick-optimize-usage" onclick="setOptMode(true)" style="white-space: nowrap;">Enable</button>
     </div>
+    <div id="usage-resource-guard-alert" class="alert alert--warn mb-md" hidden>
+      <div><strong>Resource Guard Recommended:</strong> This server has less than 2.0 GB RAM. Enable Resource Guard to stop a heavy panel action from exhausting the VPS.</div>
+      <a class="btn btn--sm btn--primary" href="/settings/">Open Settings</a>
+    </div>
 
     <div class="info-row">
       <span class="info-row__label">CPU Usage</span>
@@ -56,7 +60,6 @@
     </div>
   </div>
 </div>
-
 
 
 

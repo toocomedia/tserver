@@ -32,6 +32,7 @@ from services import hosted_app_usage_service
 from services import process_usage_classifier
 from services import plugin_usage_service
 from services import container_app_usage_service
+from services.resource_guard_service import resource_guard_service
 from templating import templates
 from utils.shell import run
 import config
@@ -328,6 +329,7 @@ async def server_stats(db: AsyncSession = Depends(get_db)):
     hosted_apps = await hosted_app_usage_service.get_usage(db, procs, ram.total)
     container_apps = await container_app_usage_service.get_usage(db, ram.total)
     dependencies = await dependency_usage_service.get_runtime_usage(procs, ram.total)
+    resource_guard = await resource_guard_service.status(db)
     if "railpack_apps" in plugins:
         plugins["railpack_apps"].update(container_apps["total"])
 
@@ -380,6 +382,7 @@ async def server_stats(db: AsyncSession = Depends(get_db)):
         "dependencies": dependencies,
         "hosted_apps": hosted_apps,
         "container_apps": container_apps,
+        "resource_guard": resource_guard,
         "processes": top_procs,
         "optimization": opt_status,
     }
