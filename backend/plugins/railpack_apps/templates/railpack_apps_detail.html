@@ -20,7 +20,8 @@
   </div>
   <div style="display:flex;gap:8px;flex-wrap:wrap;">
     {% if app.status not in ['deleting', 'delete_failed'] and not deployment_active %}
-      {% if app.status in ['pending', 'failed'] %}<form method="post" action="/plugins/railpack_apps/{{ app.id }}/deploy">{% include "partials/csrf_field.html" %}<button class="btn btn--accent btn--sm">Deploy app</button></form>{% endif %}
+      {% if app.status == 'pending' %}<form method="post" action="/plugins/railpack_apps/{{ app.id }}/deploy">{% include "partials/csrf_field.html" %}<button class="btn btn--accent btn--sm">Deploy app</button></form>{% endif %}
+      {% if app.status in ['failed', 'stopped'] %}<form method="post" action="/plugins/railpack_apps/{{ app.id }}/deploy">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary btn--sm">Redeploy</button></form>{% endif %}
       {% if app.status == 'running' %}<form method="post" action="/plugins/railpack_apps/{{ app.id }}/deploy">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary btn--sm">Redeploy</button></form><form method="post" action="/plugins/railpack_apps/{{ app.id }}/restart">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary btn--sm">Restart</button></form><form method="post" action="/plugins/railpack_apps/{{ app.id }}/stop">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary btn--sm">Stop</button></form>{% endif %}
       {% if app.status == 'stopped' %}<form method="post" action="/plugins/railpack_apps/{{ app.id }}/start">{% include "partials/csrf_field.html" %}<button class="btn btn--accent btn--sm">Start</button></form>{% endif %}
     {% endif %}

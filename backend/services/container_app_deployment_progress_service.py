@@ -31,7 +31,7 @@ def container_logs(app: ContainerApp) -> str:
 def runtime_error_summary(app: ContainerApp) -> str:
     logs = container_logs(app).lower()
     if "password authentication failed" in logs:
-        return "Database password rejected. Rotate credentials, then deploy app."
+        return "Database password rejected. Rotate credentials, then use Redeploy."
     return "App did not start its private HTTP service. Check runtime logs."
 
 

@@ -94,7 +94,7 @@ class RailpackAppsLifecycleTests(unittest.TestCase):
         with patch.object(container_app_deployment_progress_service, "container_logs", return_value="password authentication failed"):
             self.assertEqual(
                 container_app_deployment_progress_service.runtime_error_summary(Mock()),
-                "Database password rejected. Rotate credentials, then deploy app.",
+                "Database password rejected. Rotate credentials, then use Redeploy.",
             )
 
     def test_disabling_plugin_leaves_deployments_running(self):

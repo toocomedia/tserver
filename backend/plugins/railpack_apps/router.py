@@ -79,7 +79,7 @@ async def deploy(app_id: int, db: AsyncSession = Depends(get_db)):
     app = await _app(db, app_id)
     try:
         deployment = await container_app_deployment_service.queue_deployment(
-            db, app, action="deploy" if app.status in {"pending", "failed"} else "redeploy",
+            db, app, action="deploy" if app.status == "pending" else "redeploy",
         )
     except HTTPException as exc:
         active = await container_app_deployment_service.active_deployment(db, app.id)
