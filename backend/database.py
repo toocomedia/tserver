@@ -269,6 +269,17 @@ def _migrate_sync(sync_conn) -> None:
     if "container_app_backups" in tables and "database_backup_id" not in _column_names(sync_conn, "container_app_backups"):
         sync_conn.execute(text("ALTER TABLE container_app_backups ADD COLUMN database_backup_id INTEGER"))
 
+    if "users" in tables:
+        cols = _column_names(sync_conn, "users")
+        user_columns = {
+            "totp_secret": "VARCHAR(32)",
+            "is_2fa_enabled": "BOOLEAN DEFAULT 0 NOT NULL",
+        }
+        for col, ddl in user_columns.items():
+            if col not in cols:
+                logger.info("Migrating users: add %s", col)
+                sync_conn.execute(text(f"ALTER TABLE users ADD COLUMN {col} {ddl}"))
+
 async def init_db():
     """Create all tables on startup if they do not exist, then migrate."""
     # Import all models so Base knows about them

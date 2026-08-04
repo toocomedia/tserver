@@ -127,9 +127,69 @@ async def login_submit(
         )
 
     login_guard.clear_failures(ip=ip, username=user.username)
+    
+    if user.is_2fa_enabled:
+        request.session["pending_2fa_user_id"] = user.id
+        request.session["pending_2fa_next"] = next_url
+        return RedirectResponse("/login/2fa", status_code=303)
+        
     request.session["user_id"] = user.id
     request.session["username"] = user.username
     logger.info("User '%s' logged in from %s", user.username, ip)
+    return RedirectResponse(next_url, status_code=303)
+
+
+@router.get("/login/2fa", response_class=HTMLResponse)
+async def login_2fa_page(request: Request):
+    if not request.session.get("pending_2fa_user_id"):
+        return RedirectResponse("/login", status_code=302)
+    return templates.TemplateResponse(
+        "pages/auth/login_2fa.html",
+        {"request": request, "error": None},
+    )
+
+
+@router.post("/login/2fa", response_class=HTMLResponse)
+@limiter.limit(config.LOGIN_RATE_LIMIT)
+async def login_2fa_submit(
+    request: Request,
+    code: str = Form(...),
+    db: AsyncSession = Depends(get_db),
+):
+    user_id = request.session.get("pending_2fa_user_id")
+    if not user_id:
+        return RedirectResponse("/login", status_code=303)
+        
+    ip = login_guard.client_ip(request)
+    user = await auth_service.get_by_id(db, user_id)
+    if not user or not user.is_2fa_enabled:
+        request.session.pop("pending_2fa_user_id", None)
+        return RedirectResponse("/login", status_code=303)
+        
+    if login_guard.is_locked(ip=ip, username=user.username):
+        return templates.TemplateResponse(
+            "pages/auth/login_2fa.html",
+            {"request": request, "error": login_guard.LOCKOUT_MESSAGE, "locked": True},
+            status_code=429
+        )
+        
+    if not auth_service.verify_totp_code(user.totp_secret, code):
+        login_guard.record_failure(ip=ip, username=user.username)
+        locked = login_guard.is_locked(ip=ip, username=user.username)
+        return templates.TemplateResponse(
+            "pages/auth/login_2fa.html",
+            {"request": request, "error": "Invalid 2FA code", "locked": locked},
+            status_code=429 if locked else 401
+        )
+        
+    login_guard.clear_failures(ip=ip, username=user.username)
+    request.session.pop("pending_2fa_user_id", None)
+    next_url = request.session.pop("pending_2fa_next", "/")
+    
+    request.session["user_id"] = user.id
+    request.session["username"] = user.username
+    logger.info("User '%s' logged in from %s (2FA verified)", user.username, ip)
+    
     return RedirectResponse(next_url, status_code=303)
 
 

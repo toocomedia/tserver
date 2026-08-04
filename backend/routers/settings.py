@@ -40,7 +40,7 @@ async def settings_redirect():
 
 
 @router.get("/settings/", response_class=HTMLResponse)
-async def settings_page(request: Request):
+async def settings_page(request: Request, db: AsyncSession = Depends(get_db)):
     try:
         status = await panel_settings_service.get_status()
     except Exception as exc:
@@ -64,9 +64,14 @@ async def settings_page(request: Request):
             "urls": {},
             "load_error": str(exc),
         }
+        
+    user_id = request.session.get("user_id")
+    user = await auth_service.get_by_id(db, user_id)
+    is_2fa_enabled = user.is_2fa_enabled if user else False
+    
     return templates.TemplateResponse(
         "pages/settings/index.html",
-        {"request": request, "active_page": "settings", "s": status},
+        {"request": request, "active_page": "settings", "s": status, "is_2fa_enabled": is_2fa_enabled},
     )
 
 
@@ -113,3 +118,66 @@ class PerformanceSettingsIn(BaseModel):
 async def api_save_performance(body: PerformanceSettingsIn):
     """Save global nginx performance settings (gzip, static asset cache)."""
     return await panel_settings_service.save_performance_settings(body.model_dump())
+
+
+from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import Depends
+from database import get_db
+from services import auth_service
+
+@router.post("/api/settings/2fa/setup")
+async def api_2fa_setup(request: Request, db: AsyncSession = Depends(get_db)):
+    """Generate a new TOTP secret for the user."""
+    user_id = request.session.get("user_id")
+    user = await auth_service.get_by_id(db, user_id)
+    if not user:
+        return {"error": "User not found"}
+    
+    secret, qr_uri = auth_service.generate_totp_secret(user.username)
+    # Store secret temporarily in session until verified
+    request.session["pending_totp_secret"] = secret
+    return {"secret": secret, "qr_uri": qr_uri}
+
+
+class Verify2FAIn(BaseModel):
+    code: str
+
+
+@router.post("/api/settings/2fa/verify")
+async def api_2fa_verify(body: Verify2FAIn, request: Request, db: AsyncSession = Depends(get_db)):
+    """Verify the 6-digit code and enable 2FA."""
+    secret = request.session.get("pending_totp_secret")
+    if not secret:
+        return {"error": "No pending 2FA setup found"}
+        
+    if not auth_service.verify_totp_code(secret, body.code):
+        return {"error": "Invalid code"}
+        
+    user_id = request.session.get("user_id")
+    user = await auth_service.get_by_id(db, user_id)
+    if not user:
+        return {"error": "User not found"}
+        
+    user.totp_secret = secret
+    user.is_2fa_enabled = True
+    await db.flush()
+    
+    # Clear pending secret
+    request.session.pop("pending_totp_secret", None)
+    
+    return {"success": True}
+
+
+@router.post("/api/settings/2fa/disable")
+async def api_2fa_disable(request: Request, db: AsyncSession = Depends(get_db)):
+    """Disable 2FA for the user."""
+    user_id = request.session.get("user_id")
+    user = await auth_service.get_by_id(db, user_id)
+    if not user:
+        return {"error": "User not found"}
+        
+    user.totp_secret = None
+    user.is_2fa_enabled = False
+    await db.flush()
+    
+    return {"success": True}

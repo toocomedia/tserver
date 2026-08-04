@@ -264,6 +264,49 @@
           </div>
         </div>
       </div>
+
+      <div class="section mb-xl">
+        <div class="section__header"><h3>Two-Factor Authentication (2FA)</h3></div>
+        <div class="section__body">
+          <p class="form-hint mb-md">
+            Protect your account with an additional layer of security using a TOTP authenticator app.
+          </p>
+          
+          <div id="2fa-status-box" class="info-row mb-md">
+            <span class="info-row__label">Status</span>
+            <span class="info-row__value">
+              {% if is_2fa_enabled %}
+                <span class="badge badge--ok">Enabled</span>
+              {% else %}
+                <span class="badge badge--neutral">Disabled</span>
+              {% endif %}
+            </span>
+          </div>
+          
+          <div id="2fa-setup-box" class="settings-mode-box mb-md" style="display:none;">
+            <p class="mb-md">Scan this QR code with your authenticator app:</p>
+            <div class="mb-md">
+              <img id="2fa-qr-img" src="" alt="2FA QR Code" style="max-width:200px; border-radius:4px; border:1px solid var(--border-color);">
+            </div>
+            <p class="form-hint mb-md">Or enter this secret manually: <code id="2fa-secret-text"></code></p>
+            
+            <div class="form-group mb-md">
+              <label class="form-label" for="2fa-verify-code">Verification Code</label>
+              <input class="form-input" type="text" id="2fa-verify-code" placeholder="123456" style="max-width:140px;">
+            </div>
+            <button type="button" class="btn btn--primary" id="btn-verify-2fa">Verify & Enable</button>
+            <button type="button" class="btn btn--secondary" id="btn-cancel-2fa">Cancel</button>
+          </div>
+          
+          <div class="form-actions" id="2fa-actions">
+            {% if is_2fa_enabled %}
+              <button type="button" class="btn btn--danger" id="btn-disable-2fa">Disable 2FA</button>
+            {% else %}
+              <button type="button" class="btn btn--primary" id="btn-setup-2fa">Setup 2FA</button>
+            {% endif %}
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- TAB: APPEARANCE -->
@@ -408,4 +451,5 @@
 <script src="/static/js/modules/settings.js"></script>
 <script src="/static/js/modules/resource-guard-settings.js"></script>
 <script src="/static/js/modules/updates.js"></script>
+<script src="/static/js/modules/2fa.js"></script>
 {% endblock %}

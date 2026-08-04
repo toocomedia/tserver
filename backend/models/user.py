@@ -17,3 +17,5 @@ class User(Base):
         DateTime, server_default=func.now(), nullable=False
     )
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    totp_secret: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    is_2fa_enabled: Mapped[bool] = mapped_column(default=False)
