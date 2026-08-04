@@ -144,7 +144,12 @@ def _build_docker_env_file(item: ContainerAppDatabase) -> None:
     # redis uses PASSWORD directly from the base credentials file
     if extra:
         merged = {**creds, **extra}
-        _write_credentials(item, merged)
+        # Write directly to the path Docker will use (item.credentials_path).
+        # Do NOT call _write_credentials() here — it recomputes the path from
+        # item.id which may differ from item.credentials_path at this stage.
+        path = Path(item.credentials_path or "")
+        path.parent.mkdir(parents=True, exist_ok=True)
+        container_app_service.write_env(path, merged)
 
 
 def _provision_docker(app: ContainerApp, item: ContainerAppDatabase) -> None:
