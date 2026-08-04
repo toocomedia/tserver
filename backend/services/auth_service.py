@@ -8,6 +8,7 @@ from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 import pyotp
 import qrcode
+import qrcode.image.pure
 import io
 import base64
 
@@ -129,10 +130,10 @@ def generate_totp_secret(username: str, issuer_name: str = "Panel") -> tuple[str
     qr = qrcode.QRCode(version=1, box_size=10, border=4)
     qr.add_data(provisioning_uri)
     qr.make(fit=True)
-    img = qr.make_image(fill_color="black", back_color="white")
+    img = qr.make_image(image_factory=qrcode.image.pure.PyPNGImage, fill_color="black", back_color="white")
     
     buf = io.BytesIO()
-    img.save(buf, format="PNG")
+    img.save(buf)
     img_b64 = base64.b64encode(buf.getvalue()).decode('utf-8')
     qr_data_uri = f"data:image/png;base64,{img_b64}"
     
