@@ -50,9 +50,10 @@
 }
 .recommendation-card--floating {
   bottom: var(--space-xl);
-  left: calc(var(--sidebar-width) + var(--space-xl));
+  left: calc(var(--sidebar-width) + 2%);
   position: fixed;
-  right: var(--space-xl);
+  right: auto;
+  width: calc(100% - var(--sidebar-width) - 4%);
   z-index: 100;
 }
 @media (max-width: 480px) {
@@ -62,9 +63,9 @@
     flex-direction: column;
   }
   .recommendation-card--floating {
-    left: var(--space-md);
-    right: var(--space-md);
-    width: auto;
+    left: 3%;
+    right: auto;
+    width: 94%;
   }
 }
 
