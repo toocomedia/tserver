@@ -200,7 +200,10 @@
             <div class="ssl-step" data-step="2"><span class="ssl-step__icon">○</span> Prepare nginx</div>
             <div class="ssl-step" data-step="3"><span class="ssl-step__icon">○</span> Request certificate <span class="text-muted">(1–2 min)</span></div>
             <div class="ssl-step" data-step="4"><span class="ssl-step__icon">○</span> Enable HTTPS</div>
-            <p class="form-hint" id="ssl-progress-msg" style="margin-top:12p          <div class="form-actions">
+            <p class="form-hint" id="ssl-progress-msg" style="margin-top:12px;"></p>
+          </div>
+
+          <div class="form-actions">
             <button type="button" class="btn btn--primary" id="btn-issue-ssl" {% if not s.panel_domain %}disabled{% endif %}>
               {% if s.ssl_active %}Renew SSL{% else %}Issue SSL{% endif %}
             </button>
@@ -233,11 +236,6 @@
         </div>
       </div>
     </div>
-ton>
-          </div>
-        </div>
-      </div>
-    </div>
 
     <!-- TAB: SECURITY -->
     <div id="tab-security" class="split-tab">
@@ -261,17 +259,9 @@ ton>
             <input class="form-input" type="number" id="session_max_age_days" min="1" max="365"
                    value="{{ s.session_max_age_days or 7 }}" style="max-width:140px;">
           </div>
-          <div class="form-actions mb-xl">
+          <div class="form-actions">
             <button type="button" class="btn btn--primary" id="btn-save-security">Save security</button>
           </div>
-
-          <hr class="settings-divider">
-
-          <h3 class="settings-subhead">Two-Factor Authentication (2FA)</h3>
-          <p class="form-hint mb-md">
-            Protect your admin account with TOTP 2FA (Google Authenticator, Authy, 1Password).
-          </p>
-          <a href="/settings/2fa" class="btn btn--secondary">Manage 2FA Settings</a>
         </div>
       </div>
     </div>
@@ -311,7 +301,6 @@ ton>
     <div id="tab-perf" class="split-tab">
       <div class="section mb-xl">
         <div class="section__header"><h3>Performance</h3></div>
-
         <div class="section__body">
           <p class="form-hint mb-md">
             Global Nginx optimizations applied to all proxies and sites.

@@ -15,7 +15,7 @@ from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
 import config
 from database import init_db
-from routers import system, domains, dns, ssl, proxy, errors, auth, settings, updates, dev, notifications, plugins, dependencies, app_updates, apps, resource_guard, two_factor
+from routers import system, domains, dns, ssl, proxy, errors, auth, settings, updates, dev, notifications, plugins, dependencies, app_updates, apps, resource_guard
 from dependencies import dependency_manager
 from plugins import plugin_manager
 from plugins.manager import PluginUnavailableError
@@ -167,8 +167,6 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Routers
 app.include_router(auth.router)
-app.include_router(two_factor.router)
-
 app.include_router(system.router)
 app.include_router(settings.router)
 app.include_router(resource_guard.router)

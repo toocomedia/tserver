@@ -14,7 +14,7 @@ _PUBLIC_EXACT = frozenset()
 def is_public_path(path: str) -> bool:
     if path in _PUBLIC_EXACT:
         return True
-    if path in ("/login", "/login/2fa", "/logout", "/api/health"):
+    if path in ("/login", "/logout", "/api/health"):
         return True
     if path.startswith("/static"):
         return True
@@ -39,23 +39,11 @@ class AuthMiddleware(BaseHTTPMiddleware):
 
         try:
             user_id = request.session.get("user_id")
-            partial_user_id = request.session.get("partial_user_id")
         except AssertionError:
             # SessionMiddleware not installed — treat as logged out
             user_id = None
-            partial_user_id = None
-
         if user_id:
             return await call_next(request)
-
-        if partial_user_id:
-            # User is in 2FA verification stage
-            if wants_json(request):
-                return JSONResponse(
-                    {"detail": "2FA authentication required"},
-                    status_code=401,
-                )
-            return RedirectResponse(url="/login/2fa", status_code=302)
 
         if wants_json(request):
             return JSONResponse(
@@ -73,4 +61,3 @@ class AuthMiddleware(BaseHTTPMiddleware):
             url=f"/login?next={quote(next_path, safe='/?&=')}",
             status_code=302,
         )
-
