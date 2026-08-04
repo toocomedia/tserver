@@ -1,0 +1,8 @@
+.apps-engine-recovery { margin-bottom: var(--space-xl); }
+.apps-engine-recovery__items { border-top: 1px solid var(--color-line); }
+.apps-engine-recovery__row { align-items: center; border-bottom: 1px solid var(--color-line); display: flex; gap: var(--space-lg); justify-content: space-between; padding: var(--space-lg) 0; }
+.apps-engine-recovery__row p { margin: var(--space-xs) 0 0; }
+@media (max-width: 480px) {
+  .apps-engine-recovery__row { align-items: stretch; flex-direction: column; }
+  .apps-engine-recovery__row .btn { width: 100%; }
+}

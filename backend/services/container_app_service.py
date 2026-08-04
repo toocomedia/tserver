@@ -68,6 +68,14 @@ async def create_app(
     _validate_source(domain, source_type, build_mode, repository_url, branch, image_reference)
     if await db.scalar(select(ContainerApp.id).where(ContainerApp.domain_id == domain.id)):
         raise HTTPException(409, "This domain already has a container app.")
+    # Docker resources cannot participate in the database transaction below.
+    # Refuse an unsafe deployment before creating managed services, so a guard
+    # rejection cannot leave a container whose app row was rolled back.
+    from services.resource_guard_service import resource_guard_service
+    profile = "image_pull" if source_type == "image" else "build_large"
+    preflight = await resource_guard_service.preflight(db, profile)
+    if not preflight["ok"] and "build is already running" not in preflight["reason"].lower():
+        raise HTTPException(409, f"Resource Guard blocked deployment before creating resources: {preflight['reason']}")
     is_image = source_type == "image"
     port = validate_port(internal_port)
     database_values = dict(environment_values)

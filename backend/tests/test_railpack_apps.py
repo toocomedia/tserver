@@ -1,9 +1,10 @@
+import asyncio
 import os
 import sys
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 BACKEND = Path(__file__).resolve().parents[1]
 if str(BACKEND) not in sys.path:
@@ -12,10 +13,40 @@ if str(BACKEND) not in sys.path:
 from fastapi import HTTPException
 from dependencies.docker.service import DockerDependencyService
 from plugins.railpack_apps.service import RailpackAppsService
-from services import container_app_database_service, container_app_deployment_progress_service, container_app_deployment_service, container_app_service
+from services import container_app_database_service, container_app_deployment_progress_service, container_app_deployment_service, container_app_orphan_recovery_service, container_app_service
 
 
 class RailpackAppsValidationTests(unittest.TestCase):
+
+    def test_resource_guard_rejects_before_creating_database_resources(self):
+        async def run():
+            db = AsyncMock()
+            db.scalar.return_value = None
+            domain = Mock(id=1, name="example.test")
+            with patch.object(container_app_service, "_validate_source"), \
+                 patch("services.resource_guard_service.resource_guard_service.preflight", new=AsyncMock(return_value={"ok": False, "reason": "Memory is above the safe limit."})), \
+                 patch.object(container_app_database_service, "create_attachments") as create_attachments:
+                with self.assertRaises(HTTPException):
+                    await container_app_service.create_app(
+                        db, domain=domain, source_type="git", build_mode="railpack",
+                        repository_url="https://github.com/acme/project.git", branch="main", image_reference=None,
+                        internal_port=3000, ssl_requested=False, environment_values={},
+                        database_attachments=[{"kind": "postgresql", "provider": "docker", "environment_key": "DATABASE_URL"}],
+                    )
+            create_attachments.assert_not_called()
+        asyncio.run(run())
+
+    def test_orphan_scan_only_accepts_labeled_managed_database_names(self):
+        with patch.object(container_app_service, "_run") as run:
+            run.side_effect = [
+                Mock(returncode=0, stdout="srv-container-db-2-postgresql\t2\trunning\nother-container\t2\trunning\nsrv-container-db-3-redis\twrong\trunning\n", stderr=""),
+                Mock(returncode=0, stdout="srv-container-db-data-2 ", stderr=""),
+            ]
+            self.assertEqual(container_app_orphan_recovery_service._docker_databases(), [{
+                "app_id": 2, "name": "srv-container-db-2-postgresql", "kind": "postgresql",
+                "state": "running", "volumes": ["srv-container-db-data-2"],
+            }])
+
     def test_registry_image_validation_rejects_unsafe_values(self):
         self.assertEqual(
             container_app_service.validate_image_reference("ghcr.io/acme/app:1.2.3"),

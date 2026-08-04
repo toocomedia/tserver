@@ -20,6 +20,7 @@ from services import container_app_database_lifecycle_service
 from services import container_app_deployment_service
 from services import container_app_removal_service
 from plugins.railpack_apps.router_create import router as create_router
+from plugins.railpack_apps.router_recovery import router as recovery_router
 from plugins.railpack_apps.router_resources import router as resource_router
 from templating import templates
 
@@ -38,6 +39,7 @@ async def index(request: Request, db: AsyncSession = Depends(get_db)):
 
 
 router.include_router(create_router)
+router.include_router(recovery_router)
 
 
 @router.get("/{app_id}", response_class=HTMLResponse)
