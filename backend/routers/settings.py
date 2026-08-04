@@ -5,11 +5,13 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, Depends
 from fastapi.responses import HTMLResponse, RedirectResponse
 from pydantic import BaseModel, Field
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from services import panel_settings_service
+from database import get_db
+from services import panel_settings_service, auth_service
 from templating import templates
 
 logger = logging.getLogger(__name__)
