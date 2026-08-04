@@ -14,10 +14,12 @@ document.addEventListener('DOMContentLoaded', () => {
     btnSetup.addEventListener('click', async () => {
       try {
         btnSetup.disabled = true;
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
         const res = await fetch('/api/settings/2fa/setup', {
           method: 'POST',
           headers: {
-            'Accept': 'application/json'
+            'Accept': 'application/json',
+            'X-CSRFToken': csrfToken
           }
         });
         
@@ -54,11 +56,13 @@ document.addEventListener('DOMContentLoaded', () => {
       
       try {
         btnVerify.disabled = true;
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
         const res = await fetch('/api/settings/2fa/verify', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Accept': 'application/json'
+            'Accept': 'application/json',
+            'X-CSRFToken': csrfToken
           },
           body: JSON.stringify({ code })
         });
@@ -83,10 +87,12 @@ document.addEventListener('DOMContentLoaded', () => {
       
       try {
         btnDisable.disabled = true;
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
         const res = await fetch('/api/settings/2fa/disable', {
           method: 'POST',
           headers: {
-            'Accept': 'application/json'
+            'Accept': 'application/json',
+            'X-CSRFToken': csrfToken
           }
         });
         
