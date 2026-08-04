@@ -199,11 +199,14 @@ class SafeInstallRunModelTests(unittest.TestCase):
         self.assertTrue(expected.issubset(cols), f"Missing columns: {expected - cols}")
 
     def test_default_outcome_is_pending(self):
-        """SafeInstallRun default outcome is pending."""
+        """SafeInstallRun column defaults are 'pending' (checked from table definition)."""
         from models.safe_install_run import SafeInstallRun
-        run = SafeInstallRun(operation_id=1)
-        self.assertEqual(run.outcome, "pending")
-        self.assertEqual(run.restore_state, "pending")
+        table = SafeInstallRun.__table__
+        outcome_col = table.c["outcome"]
+        restore_col = table.c["restore_state"]
+        # SQLAlchemy stores the default as a ColumnDefault with .arg
+        self.assertEqual(outcome_col.default.arg, "pending")
+        self.assertEqual(restore_col.default.arg, "pending")
 
 
 # ── Guarded Runner ────────────────────────────────────────────────────────────
