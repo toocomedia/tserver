@@ -13,6 +13,11 @@
         <input class="form-input" id="resource_guard_limit" type="number" min="75" max="95" value="90">
         <p class="form-hint">Heavy work is protected at this total VPS RAM percentage. Swap is shown as a warning only.</p>
       </div>
+      <div class="form-group mb-md">
+        <label class="form-label" for="resource_guard_reserve">Protected RAM reserve (MB)</label>
+        <input class="form-input" id="resource_guard_reserve" type="number" min="100" max="2048" value="400">
+        <p class="form-hint">RAM kept off-limits at all times to protect the OS. Lower this on smaller VPS (e.g. 150 MB on 1 GB, 300 MB on 2 GB).</p>
+      </div>
       <div class="form-actions"><button type="button" class="btn btn--primary" id="btn-save-resource-guard">Save Resource Guard</button></div>
     </div>
   </div>

@@ -8,6 +8,7 @@
     row.lastElementChild.textContent = `${status.state.replace("_", " ")} · ${status.ram_percent}% RAM · ${status.swap_percent}% swap`;
     $("resource_guard_mode").value = status.mode;
     $("resource_guard_limit").value = status.limit_percent;
+    if ($("resource_guard_reserve")) $("resource_guard_reserve").value = status.protected_reserve_mb;
   }
 
   function renderPriorities(resources) {
@@ -30,7 +31,12 @@
 
   async function save() {
     const button = $("btn-save-resource-guard");
-    const payload = {mode: $("resource_guard_mode").value, memory_limit_percent: Number($("resource_guard_limit").value)};
+    const reserveEl = $("resource_guard_reserve");
+    const payload = {
+      mode: $("resource_guard_mode").value,
+      memory_limit_percent: Number($("resource_guard_limit").value),
+      protected_reserve_mb: reserveEl ? Number(reserveEl.value) : undefined,
+    };
     button.disabled = true;
     try {
       const status = await panel.post("/api/settings/resource-guard", payload);

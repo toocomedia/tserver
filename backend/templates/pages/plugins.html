@@ -169,5 +169,37 @@ async function toggleAndCheckPlugin(triggerEl) {
     }
   }
 }
+// Auto-open plugin check window + toast when ?error=... is in the URL
+(function autoOpenGuardError() {
+  const params = new URLSearchParams(window.location.search);
+  const errorMsg = params.get('error');
+  const pluginId = params.get('plugin_id');
+  if (!errorMsg) return;
+
+  // Show a toast alert immediately
+  if (typeof toast === 'function') {
+    toast(decodeURIComponent(errorMsg), 'danger');
+  }
+
+  // Auto-open the plugin-check-window for the affected plugin
+  if (pluginId) {
+    const win = document.querySelector(`.plugin-check-window[data-plugin-id="${pluginId}"]`);
+    if (win) {
+      win.classList.remove('is-hidden');
+      const host = win.closest('.plugin-requirements-host');
+      if (host) {
+        const infoBtn = host.querySelector('.requirements-info-btn');
+        if (infoBtn) infoBtn.classList.add('is-expanded');
+        win.scrollIntoView({behavior: 'smooth', block: 'center'});
+      }
+    }
+  }
+
+  // Clean the URL so refresh doesn't re-trigger the error
+  const clean = new URL(window.location.href);
+  clean.searchParams.delete('error');
+  clean.searchParams.delete('plugin_id');
+  history.replaceState(null, '', clean.toString());
+})();
 </script>
 {% endblock %}
