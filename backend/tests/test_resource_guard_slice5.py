@@ -178,7 +178,7 @@ class ImageInspectionTests(unittest.TestCase):
         """Image inspection result must include digest, size_mb, exposed_ports, entrypoint."""
         from services.container_app_image_inspect_service import _pull_and_inspect
 
-        fake_inspect_output = json.dumps([{
+        fake_inspect_output = json.dumps({
             "RepoDigests": ["nginx@sha256:abc123"],
             "Size": 50 * 1024 * 1024,
             "VirtualSize": 50 * 1024 * 1024,
@@ -189,7 +189,7 @@ class ImageInspectionTests(unittest.TestCase):
                 "Healthcheck": {"Test": ["CMD-SHELL", "curl -f http://localhost/ || exit 1"]},
                 "Labels": {},
             },
-        }])
+        })
 
         def fake_run(cmd, *, timeout):
             if "pull" in cmd:

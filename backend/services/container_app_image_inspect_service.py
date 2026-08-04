@@ -74,10 +74,12 @@ def _pull_and_inspect(reference: str) -> dict[str, Any]:
         raise ValueError("docker inspect failed after successful pull.")
 
     try:
-        raw: list[dict] = json.loads(inspect.stdout)
-        meta = raw[0] if raw else {}
-    except (json.JSONDecodeError, IndexError) as exc:
+        raw = json.loads(inspect.stdout)
+        meta = raw[0] if isinstance(raw, list) and raw else raw if isinstance(raw, dict) else {}
+    except (json.JSONDecodeError, IndexError, TypeError) as exc:
         raise ValueError(f"Could not parse docker inspect output: {exc}") from exc
+    if not meta:
+        raise ValueError("Could not parse docker inspect output.")
 
     # Digest
     digest: str = meta.get("RepoDigests", [""])[0] or meta.get("Id", "")
