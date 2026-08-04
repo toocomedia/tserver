@@ -16,6 +16,8 @@ from plugins import plugin_manager
 from services.resource_guard_service import PRIORITIES, resource_guard_service
 from services.resource_guard_operation_service import resource_guard_operation_service
 from services.resource_guard_profiles import PROFILES
+from services import container_app_image_inspect_service as image_inspect_svc
+from services import disk_cleanup_service
 
 router = APIRouter(tags=["resource-guard"])
 
@@ -234,3 +236,65 @@ async def start_paused_install(
     Returns the preflight result so the caller can decide whether to proceed.
     """
     return await resource_guard_service.start_paused_install(db, operation_id)
+
+
+# ── Slice 5: Source Intelligence & Disk Cleanup ────────────────────────────
+
+class InspectImageIn(BaseModel):
+    reference: str
+
+
+class DiskCleanupIn(BaseModel):
+    include_ids: list[str]
+
+
+@router.post("/api/resource-guard/inspect-image")
+async def inspect_image(payload: InspectImageIn):
+    """Pull a registry image, extract metadata, then remove the pulled image."""
+    try:
+        image_inspect_svc.validate_image_reference(payload.reference)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    try:
+        return await image_inspect_svc.inspect_image(payload.reference)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@router.get("/api/resource-guard/disk-inventory")
+async def disk_inventory(db: AsyncSession = Depends(get_db)):
+    """Return a dry-run inventory of disk space that can be freed."""
+    active_digests, rollback_images = await _collect_image_digests(db)
+    items = await disk_cleanup_service.inventory(active_digests, rollback_images)
+    deletable = [i for i in items if not i["protected"]]
+    protected = [i for i in items if i["protected"]]
+    total_mb = round(sum(i["size_mb"] for i in deletable), 1)
+    return {
+        "deletable": deletable,
+        "protected": protected,
+        "total_recoverable_mb": total_mb,
+    }
+
+
+@router.post("/api/resource-guard/disk-cleanup")
+async def disk_cleanup(payload: DiskCleanupIn, db: AsyncSession = Depends(get_db)):
+    """Execute cleanup for the selected item IDs."""
+    if not payload.include_ids:
+        raise HTTPException(400, "include_ids must not be empty.")
+    active_digests, rollback_images = await _collect_image_digests(db)
+    return await disk_cleanup_service.run_cleanup(
+        payload.include_ids, active_digests, rollback_images
+    )
+
+
+async def _collect_image_digests(db: AsyncSession) -> tuple[set[str], set[str]]:
+    """Return (active_digests, rollback_images) sets from all container apps."""
+    apps = (await db.scalars(select(ContainerApp))).all()
+    active: set[str] = set()
+    rollback: set[str] = set()
+    for app in apps:
+        if app.image_digest:
+            active.add(app.image_digest)
+        if app.previous_image:
+            rollback.add(app.previous_image)
+    return active, rollback

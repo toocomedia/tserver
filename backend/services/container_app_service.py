@@ -163,6 +163,43 @@ def _legacy_attachment_specs(mode: str, database_url: str | None) -> list[dict[s
     raise HTTPException(400, "Choose no database or provide an external DATABASE_URL.")
 
 
+def clear_auto_detected_fields(
+    app: "ContainerApp",
+    new_repository_url: str | None,
+    new_branch: str | None,
+) -> None:
+    """Clear auto-detected fields when the source URL or branch changes.
+
+    Fields set explicitly by the user (tracked externally) are NOT cleared.
+    Low-confidence database specs in pending_database_specs are removed.
+    """
+    import json as _json
+
+    source_changed = (new_repository_url and new_repository_url != app.repository_url)
+    branch_changed = (new_branch and new_branch != app.branch)
+
+    if not source_changed and not branch_changed:
+        return
+
+    # Clear fields that were populated by auto-detection
+    if source_changed:
+        # Build mode should be re-detected from the new source
+        app.build_mode = "railpack"
+
+    # Clear any pending database specs with LOW confidence (source-change invalidates them)
+    if app.pending_database_specs:
+        try:
+            specs = _json.loads(app.pending_database_specs)
+            if isinstance(specs, list):
+                high_specs = [
+                    s for s in specs
+                    if isinstance(s, dict) and s.get("confidence", "HIGH") in ("HIGH", "MEDIUM")
+                ]
+                app.pending_database_specs = _json.dumps(high_specs) if high_specs else None
+        except (ValueError, TypeError):
+            app.pending_database_specs = None
+
+
 # Backwards-compatible private aliases used by cleanup and focused tests.
 _root = root
 _env_path = env_path
