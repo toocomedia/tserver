@@ -78,7 +78,6 @@ async def cancel(db: AsyncSession, app: HostedApp) -> None:
         deployment.output = (deployment.output + "[cancelled] Stop requested by the user.\n")[-80_000:]
         deployment.finished_at = datetime.utcnow()
     await db.commit()
-
 async def recover_interrupted() -> None:
     async with AsyncSessionLocal() as db:
         stale = (await db.scalars(select(AppDeployment).where(
@@ -100,7 +99,7 @@ async def recover_interrupted() -> None:
 async def _run_after_commit(deployment_id: int) -> None:
     task = asyncio.current_task()
     app_id: int | None = None
-    guard_operation_id: int | None = None
+    guard_token: int | None = None
     try:
         await asyncio.sleep(0.5)
         async with AsyncSessionLocal() as db:
@@ -114,18 +113,10 @@ async def _run_after_commit(deployment_id: int) -> None:
                 return
             app_id = app.id
             priority = await resource_guard_service.priority(db, "hosted_app", str(app.id))
-            guard_operation = await resource_guard_service.create_operation(
-                db,
-                component_type="hosted_app",
-                component_id=str(app.id),
-                operation_type=deployment.action,
-                priority=priority,
-                label=f"Python app: {domain.name}",
-                profile="native_light",
-                status="running",
-                cancel=lambda: asyncio.create_task(app_lifecycle_service.cancel_deployment(app.id)),
+            guard_token = resource_guard_service.register(
+                "hosted_app", str(app.id), priority, f"Python app: {domain.name}",
+                lambda: asyncio.create_task(app_lifecycle_service.cancel_deployment(app.id)),
             )
-            guard_operation_id = guard_operation.id
             if task:
                 app_lifecycle_service.register_deployment(app_id, task)
             await app_lifecycle_service.run(
@@ -135,12 +126,8 @@ async def _run_after_commit(deployment_id: int) -> None:
         await _mark_cancelled(deployment_id)
         raise
     finally:
-        if guard_operation_id is not None:
-            async with AsyncSessionLocal() as guard_db:
-                deployment = await guard_db.get(AppDeployment, deployment_id)
-                state = "succeeded" if deployment and deployment.status == "success" else "cancelled" if deployment and deployment.status == "cancelled" else "failed"
-                await resource_guard_service.finish_operation(guard_db, guard_operation_id, state)
-                await guard_db.commit()
+        if guard_token is not None:
+            resource_guard_service.unregister(guard_token)
         if app_id is not None and task:
             app_lifecycle_service.unregister_deployment(app_id, task)
 

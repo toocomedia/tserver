@@ -69,9 +69,10 @@ async def lifespan(app: FastAPI):
     )
     from services import app_deployment_service, container_app_deployment_service, update_service, ssl_auto_renew
     from database import AsyncSessionLocal
+    from services.resource_guard_operation_service import resource_guard_operation_service
     from services.resource_guard_service import resource_guard_service
     async with AsyncSessionLocal() as db:
-        await resource_guard_service.recover_interrupted(db)
+        await resource_guard_operation_service.recover(db)
         await db.commit()
     await app_deployment_service.recover_interrupted()
     await container_app_deployment_service.recover_interrupted()

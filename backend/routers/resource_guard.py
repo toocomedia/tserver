@@ -14,6 +14,7 @@ from models.hosted_app import HostedApp
 from models.guard_operation import GuardOperation
 from plugins import plugin_manager
 from services.resource_guard_service import PRIORITIES, resource_guard_service
+from services.resource_guard_operation_service import resource_guard_operation_service
 from services.resource_guard_profiles import PROFILES
 
 router = APIRouter(tags=["resource-guard"])
@@ -55,10 +56,8 @@ async def preflight(profile: str, db: AsyncSession = Depends(get_db)):
 
 @router.get("/api/resource-guard/operations")
 async def list_operations(db: AsyncSession = Depends(get_db)):
-    rows = list((await db.scalars(select(GuardOperation).order_by(
-        GuardOperation.created_at.desc(), GuardOperation.id.desc()
-    ).limit(100))).all())
-    return {"operations": [resource_guard_service.operation_data(row) for row in rows]}
+    operations = await resource_guard_operation_service.list(db)
+    return {"operations": [resource_guard_operation_service.data(item) for item in operations]}
 
 
 @router.get("/api/resource-guard/operations/{operation_id}")
@@ -66,15 +65,15 @@ async def operation_detail(operation_id: int, db: AsyncSession = Depends(get_db)
     operation = await db.get(GuardOperation, operation_id)
     if operation is None:
         raise HTTPException(404, "Operation not found.")
-    return resource_guard_service.operation_data(operation)
+    return resource_guard_operation_service.data(operation)
 
 
 @router.post("/api/resource-guard/operations/{operation_id}/cancel")
 async def cancel_operation(operation_id: int, db: AsyncSession = Depends(get_db)):
-    operation = await resource_guard_service.cancel_operation(db, operation_id)
+    operation = await resource_guard_operation_service.cancel(db, operation_id)
     if operation is None:
         raise HTTPException(404, "Operation not found.")
-    return resource_guard_service.operation_data(operation)
+    return resource_guard_operation_service.data(operation)
 
 
 @router.get("/api/settings/resource-guard")

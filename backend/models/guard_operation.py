@@ -1,7 +1,7 @@
 """Persistent Resource Guard operation records."""
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, func
+from sqlalchemy import DateTime, Integer, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from database import Base
@@ -25,9 +25,7 @@ class GuardOperation(Base):
     current_ram_mb: Mapped[int | None] = mapped_column(Integer)
     peak_ram_mb: Mapped[int | None] = mapped_column(Integer)
     current_cpu: Mapped[float | None] = mapped_column()
-    deployment_id: Mapped[int | None] = mapped_column(
-        ForeignKey("container_app_deployments.id"), index=True
-    )
+    deployment_id: Mapped[int | None] = mapped_column(Integer, index=True)
     started_at: Mapped[datetime | None] = mapped_column(DateTime)
     finished_at: Mapped[datetime | None] = mapped_column(DateTime)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
