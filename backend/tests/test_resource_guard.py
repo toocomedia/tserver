@@ -10,8 +10,10 @@ if str(BACKEND) not in sys.path:
     sys.path.insert(0, str(BACKEND))
 
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy import select
 
 from database import Base
+from models.notification import Notification
 from models.resource_guard import ResourceGuardPriority, ResourceGuardSettings  # noqa: F401
 from services import container_app_usage_service
 from services.resource_guard_service import ResourceGuardService
@@ -57,6 +59,23 @@ class ResourceGuardTests(unittest.IsolatedAsyncioTestCase):
         async with self.sessions() as db:
             with self.assertRaises(ValueError):
                 await self.guard.save_settings(db, "enabled", 96)
+
+    async def test_monitor_cancels_on_high_ram_then_reports_recovery(self):
+        samples = [
+            SimpleNamespace(percent=91.0, total=1024 ** 3),
+            SimpleNamespace(percent=50.0, total=1024 ** 3),
+        ]
+        cancelled = []
+        self.guard.register("container_app", "7", "high", "Apps Engine: example.test", lambda: cancelled.append(True))
+        memory = SimpleNamespace(virtual_memory=lambda: samples.pop(0), swap_memory=lambda: SimpleNamespace(percent=0.0))
+        with patch("services.resource_guard_service.psutil", memory), patch("database.AsyncSessionLocal", self.sessions):
+            await self.guard._check_once()
+            await self.guard._check_once()
+
+        self.assertEqual([True], cancelled)
+        async with self.sessions() as db:
+            notifications = (await db.scalars(select(Notification).order_by(Notification.id))).all()
+        self.assertEqual(["warning", "success"], [item.type for item in notifications])
 
 
 class ContainerAppUsageTests(unittest.TestCase):
