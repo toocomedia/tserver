@@ -149,33 +149,59 @@
       background-color: var(--color-box-bg);
       border: 1px solid var(--color-box-border) !important;
       border-radius: 18px !important;
-      padding: 52px 32px 56px;
+      padding: 36px 32px 48px; /* Balanced card padding */
+      min-height: 480px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
       box-shadow: none !important;
     }
 
-    /* Logo & Header */
+    /* Brand Header with Increased Bottom Spacing */
     .brand-section {
       text-align: center;
-      margin-bottom: 32px;
+      margin-bottom: 48px; /* Expanded bottom margin below logo */
+      cursor: pointer;
     }
     .brand-logo-img {
-      height: 58px;
+      height: 44px;
       width: auto;
       object-fit: contain;
-      margin-bottom: 12px;
+      margin-bottom: 4px;
+      transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .brand-section:hover .brand-logo-img {
+      transform: scale(1.05);
     }
     .brand-title {
       font-size: 18px;
       font-weight: 700;
       color: var(--color-text);
-      margin: 0 0 6px 0;
+      margin: 0 0 4px 0;
     }
+    
+    /* Animated Hover Subtitle */
     .brand-subtitle {
-      font-size: 13px;
+      font-size: 12px;
       color: var(--color-muted);
       font-weight: 400;
       line-height: 1.4;
       margin: 0;
+      max-height: 0;
+      opacity: 0;
+      transform: translateY(-8px);
+      overflow: hidden;
+      pointer-events: none;
+      transition: max-height 0.35s cubic-bezier(0.16, 1, 0.3, 1), 
+                  opacity 0.3s ease, 
+                  transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+                  margin-top 0.3s ease;
+    }
+    .brand-section:hover .brand-subtitle {
+      max-height: 40px;
+      opacity: 1;
+      transform: translateY(0);
+      margin-top: 6px;
     }
 
     /* Form Fields & Spacing */
@@ -183,6 +209,8 @@
       display: flex;
       flex-direction: column;
       gap: 20px;
+      flex: 1;
+      justify-content: center;
     }
     .form-group {
       display: flex;
@@ -292,7 +320,7 @@
   <div class="login-container">
     <div class="login-card">
       
-      <!-- Brand Header -->
+      <!-- Brand Header with Animated Subtitle & 48px Bottom Margin -->
       <div class="brand-section">
         <img src="/static/images/logobarq.png" alt="{{ PANEL_NAME }}" class="brand-logo-img">
         <h2 class="brand-title">Two-Factor Authentication</h2>
