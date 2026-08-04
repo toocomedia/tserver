@@ -63,6 +63,18 @@
   flex-direction: column;
   width: 100%;
 }
+.resource-guard-settings-group + .resource-guard-settings-group {
+  border-top: 1px solid var(--color-line);
+  margin-top: var(--space-lg);
+  padding-top: var(--space-lg);
+}
+.resource-guard-settings-group__title {
+  color: var(--color-text);
+  font-size: var(--font-h3);
+  letter-spacing: 0.06em;
+  margin: 0 0 var(--space-md);
+  text-transform: uppercase;
+}
 /* List Header Title Bar (Full 100% Width, 16px Padding & 1px Line Divider) */
 .list-title-bar {
   background: var(--color-header-bg-bar);
@@ -503,4 +515,3 @@
     grid-template-columns: 1fr;
   }
 }
-

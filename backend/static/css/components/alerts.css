@@ -25,6 +25,11 @@
   background: var(--color-alert-danger-bg);
   color: var(--color-danger);
 }
+.alert--warning {
+  border-color: var(--color-warn);
+  background: var(--color-surface);
+  color: var(--color-warn);
+}
 
 .recommendation-card {
   align-items: center;
@@ -100,6 +105,11 @@
   border-color: var(--color-danger);
   background: var(--color-surface);
   color: var(--color-danger);
+}
+.toast--warning {
+  border-color: var(--color-warn);
+  background: var(--color-surface);
+  color: var(--color-warn);
 }
 
 @keyframes toast-in {

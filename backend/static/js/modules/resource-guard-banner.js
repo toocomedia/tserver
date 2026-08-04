@@ -14,7 +14,11 @@
       const status = await panel.get("/api/resource-guard/status");
       const active = status.state !== "normal";
       banner.hidden = !active;
-      if (active) banner.textContent = `Resource Guard: ${status.ram_percent}% RAM used (safe limit ${status.limit_percent}%). ${status.state === "active" ? "Heavy panel actions are paused." : "Unmanaged host usage detected."}`;
+      if (active) {
+        banner.textContent = status.state === "unmanaged_warning"
+          ? `VPS RAM usage is high (${status.ram_percent}%). Monitor your running apps.`
+          : `VPS RAM usage is high (${status.ram_percent}%). New heavy operations may be blocked until memory is freed.`;
+      }
       updateRecommendation(status);
     } catch (_) {
       banner.hidden = true;

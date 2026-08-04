@@ -1,31 +1,6 @@
 <div id="tab-resource-guard" class="split-tab">
-  <div class="section mb-xl">
-    <div class="section__header"><h3>Resource Guard</h3></div>
-    <div class="section__body">
-      <p class="form-hint mb-md">Protects the VPS by blocking or cancelling panel-managed heavy work when RAM reaches the safe limit.</p>
-      <div id="resource-guard-status" class="info-row mb-md"><span class="info-row__label">Status</span><span class="info-row__value">Loading…</span></div>
-      <div class="form-group mb-md">
-        <label class="form-label" for="resource_guard_mode">Mode</label>
-        <div class="form-select-wrap"><select class="form-select" id="resource_guard_mode"><option value="auto">Automatic below 2 GB</option><option value="enabled">Always enabled</option><option value="disabled">Disabled</option></select></div>
-      </div>
-      <div class="form-group mb-md">
-        <label class="form-label" for="resource_guard_limit">Safe RAM limit (%)</label>
-        <input class="form-input" id="resource_guard_limit" type="number" min="75" max="95" value="90">
-        <p class="form-hint">Heavy work is protected at this total VPS RAM percentage. Swap is shown as a warning only.</p>
-      </div>
-      <div class="form-group mb-md">
-        <label class="form-label" for="resource_guard_reserve">Protected RAM reserve (MB)</label>
-        <input class="form-input" id="resource_guard_reserve" type="number" min="100" max="2048" value="400">
-        <p class="form-hint">RAM kept off-limits at all times to protect the OS. Lower this on smaller VPS (e.g. 150 MB on 1 GB, 300 MB on 2 GB).</p>
-      </div>
-      <div class="form-actions"><button type="button" class="btn btn--primary" id="btn-save-resource-guard">Save Resource Guard</button></div>
-    </div>
-  </div>
-  <div class="section mb-xl">
-    <div class="section__header"><h3>Operation priorities</h3></div>
-    <div class="section__body">
-      <p class="form-hint mb-md">Protected panel services and active app runtimes cannot be changed. These priorities decide which panel jobs the guard cancels first.</p>
-      <div class="table-wrap"><table class="table"><thead><tr><th>Resource</th><th>Type</th><th>Priority</th></tr></thead><tbody id="resource-guard-priorities"><tr><td colspan="3" class="text-muted">Loading priorities…</td></tr></tbody></table></div>
-    </div>
-  </div>
+  {% include "pages/settings/resource_guard/settings.html" %}
+  {% include "pages/settings/resource_guard/operations.html" %}
+  {% include "pages/settings/resource_guard/disk_cleanup.html" %}
+  {% include "pages/settings/resource_guard/priorities.html" %}
 </div>

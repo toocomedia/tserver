@@ -76,6 +76,12 @@ function csrfHeaders(extra = {}) {
   return headers;
 }
 
+function reportSwapWarning(response) {
+  if (response?.ok === true && response.swap_warning) {
+    toast(response.swap_warning, "warning");
+  }
+}
+
 const panel = {
   async post(url, data = {}) {
     const res = await fetch(url, {
@@ -87,6 +93,7 @@ const panel = {
     if (!res.ok) {
       throw new Error(formatDetail(json.detail) || `Request failed (${res.status})`);
     }
+    reportSwapWarning(json);
     return json;
   },
 
@@ -96,6 +103,7 @@ const panel = {
     if (!res.ok) {
       throw new Error(formatDetail(json.detail) || `Request failed (${res.status})`);
     }
+    reportSwapWarning(json);
     return json;
   },
 

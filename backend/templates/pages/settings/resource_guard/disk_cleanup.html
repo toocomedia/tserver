@@ -1,0 +1,20 @@
+<section class="section mb-xl" aria-labelledby="resource-guard-disk-cleanup-title">
+  <div class="section__header"><h3 id="resource-guard-disk-cleanup-title">Disk Cleanup</h3></div>
+  <div class="section__body">
+    <p class="form-hint mb-md">Find stale build directories, dangling images, and old panel logs. Active images, rollback images, volumes, and backups stay protected.</p>
+    <div class="form-actions mb-md"><button type="button" class="btn btn--secondary" id="btn-scan-resource-guard-disk">Scan for reclaimable space</button></div>
+    <div id="resource-guard-disk-results" hidden>
+      <div class="table-wrap">
+        <table class="table">
+          <thead><tr><th>Type</th><th>Description</th><th>Size</th><th>Age</th><th>Protected</th><th><label class="form-check"><input type="checkbox" id="resource-guard-disk-select-all"> Select all</label></th></tr></thead>
+          <tbody id="resource-guard-disk-items"></tbody>
+        </table>
+      </div>
+      <div class="form-actions mt-md">
+        <span id="resource-guard-disk-total" class="form-hint">0 MB selected</span>
+        <button type="button" class="btn btn--danger" id="btn-clean-resource-guard-disk" disabled>Free selected space</button>
+      </div>
+      <p id="resource-guard-disk-result" class="form-hint mt-md" role="status"></p>
+    </div>
+  </div>
+</section>
