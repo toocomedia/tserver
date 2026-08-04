@@ -12,7 +12,7 @@ if str(BACKEND) not in sys.path:
 from fastapi import HTTPException
 from dependencies.docker.service import DockerDependencyService
 from plugins.railpack_apps.service import RailpackAppsService
-from services import container_app_database_service, container_app_deployment_service, container_app_service
+from services import container_app_database_service, container_app_deployment_progress_service, container_app_deployment_service, container_app_service
 
 
 class RailpackAppsValidationTests(unittest.TestCase):
@@ -89,6 +89,14 @@ class RailpackAppsValidationTests(unittest.TestCase):
 
 
 class RailpackAppsLifecycleTests(unittest.TestCase):
+
+    def test_runtime_error_summary_names_database_credential_failure(self):
+        with patch.object(container_app_deployment_progress_service, "container_logs", return_value="password authentication failed"):
+            self.assertEqual(
+                container_app_deployment_progress_service.runtime_error_summary(Mock()),
+                "Database password rejected. Rotate credentials, then deploy app.",
+            )
+
     def test_disabling_plugin_leaves_deployments_running(self):
         service = RailpackAppsService()
         self.assertIsNone(service.pause())

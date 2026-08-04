@@ -115,7 +115,13 @@ async def control(app_id: int, action: str, db: AsyncSession = Depends(get_db)):
             await resource_guard_service.allow_start(db)
         except RuntimeError as exc:
             raise HTTPException(409, str(exc)) from exc
-    await container_app_control_service.control(db, app, domain, action)
+    try:
+        await container_app_control_service.control(db, app, domain, action)
+    except HTTPException as exc:
+        if action != "stop":
+            app.status, app.last_error = "failed", str(exc.detail)[:240]
+            await db.commit()
+        return RedirectResponse(f"/plugins/railpack_apps/{app.id}", status_code=303)
     return RedirectResponse(f"/plugins/railpack_apps/{app.id}", status_code=303)
 
 

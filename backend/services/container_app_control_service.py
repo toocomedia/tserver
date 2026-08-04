@@ -21,8 +21,13 @@ async def control(db: AsyncSession, app: ContainerApp, domain: Domain, action: s
         await _docker(["docker", "stop", "--time", "20", app.container_name])
         app.status, app.last_error = "stopped", None
         return
-    await _docker(["docker", action, app.container_name])
-    await container_app_deployment_progress_service.wait_for_http(app.host_port)
+    try:
+        await _docker(["docker", action, app.container_name])
+        await container_app_deployment_progress_service.wait_for_http(app.host_port)
+    except RuntimeError as exc:
+        raise HTTPException(
+            409, container_app_deployment_progress_service.runtime_error_summary(app)
+        ) from exc
     await publish(db, app, domain)
     app.status, app.last_error = "running", None
 

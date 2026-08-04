@@ -4,7 +4,7 @@
 {% block topbar_actions %}<a class="btn btn--secondary" href="/plugins/railpack_apps/">All apps</a>{% endblock %}
 {% block content %}
 {% set deployment_active = deployment and deployment.status in ['queued', 'running'] %}
-{% if request.query_params.get('error') %}<div class="alert alert--error">{{ request.query_params.get('error') }}</div>{% elif app.status == 'delete_failed' %}<div class="alert alert--error">Removal did not finish. Retry the removal below. Runtime controls are disabled until cleanup completes.</div>{% elif app.status == 'data_preserved' %}<div class="alert alert--info">The application runtime was removed. Its managed data remains available below until you explicitly delete it.</div>{% endif %}
+{% if request.query_params.get('error') %}<div class="alert alert--error">{{ request.query_params.get('error') }}</div>{% elif app.status == 'delete_failed' %}<div class="alert alert--error">Removal did not finish. Retry the removal below. Runtime controls are disabled until cleanup completes.</div>{% elif app.status == 'data_preserved' %}<div class="alert alert--info">The application runtime was removed. Its managed data remains available below until you explicitly delete it.</div>{% elif app.last_error %}<div class="alert alert--error">{{ app.last_error }}</div>{% endif %}
 
 <div class="hero-app-box">
   <div>

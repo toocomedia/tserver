@@ -28,6 +28,13 @@ def container_logs(app: ContainerApp) -> str:
     return f"\n[runtime logs]\n{output}\n" if output else ""
 
 
+def runtime_error_summary(app: ContainerApp) -> str:
+    logs = container_logs(app).lower()
+    if "password authentication failed" in logs:
+        return "Database password rejected. Rotate credentials, then deploy app."
+    return "App did not start its private HTTP service. Check runtime logs."
+
+
 async def wait_for_http(port: int) -> None:
     for _ in range(20):
         try:
