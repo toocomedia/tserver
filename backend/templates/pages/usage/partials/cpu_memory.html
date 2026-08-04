@@ -8,15 +8,11 @@
   </div>
   <div class="section__body" data-live-section="cpumem">
     <!-- Notice banner for < 2GB RAM -->
-    <div id="usage-low-ram-alert" class="alert alert--warn mb-md" style="display:none; align-items:center; justify-content:space-between; gap: 12px; padding: 12px 16px;">
-      <div style="font-size: 13px; line-height: 1.5;">
+    <div id="usage-low-ram-alert" class="recommendation-card mb-md" hidden>
+      <div class="recommendation-card__copy">
         <strong>Optimization Recommended:</strong> Your server has <span id="usage-ram-val">less than 2.0 GB</span> RAM. Enable Low-RAM Optimization Mode to activate zRAM, tune the kernel, and lower the memory footprint.
       </div>
-      <button class="btn btn--sm btn--primary" id="btn-quick-optimize-usage" onclick="setOptMode(true)" style="white-space: nowrap;">Enable</button>
-    </div>
-    <div id="usage-resource-guard-alert" class="alert alert--warn mb-md" hidden>
-      <div><strong>Resource Guard Recommended:</strong> This server has less than 2.0 GB RAM. Enable Resource Guard to stop a heavy panel action from exhausting the VPS.</div>
-      <a class="btn btn--sm btn--primary" href="/settings/">Open Settings</a>
+      <div class="recommendation-card__actions"><button class="btn btn--sm btn--primary" id="btn-quick-optimize-usage" data-optimization-action="ram-on">Enable</button></div>
     </div>
 
     <div class="info-row">
@@ -61,6 +57,14 @@
   </div>
 </div>
 
+<aside id="usage-resource-guard-alert" class="recommendation-card recommendation-card--floating" role="status" hidden>
+  <div class="recommendation-card__copy" id="usage-resource-guard-copy"></div>
+  <div class="recommendation-card__actions">
+    <a class="btn btn--sm btn--primary" href="/settings/">Open Settings</a>
+    <button type="button" class="btn btn--sm btn--secondary" data-resource-guard-dismiss="forever">Don’t show again</button>
+    <button type="button" class="btn btn--ghost btn--sm" data-resource-guard-dismiss="close" aria-label="Close Resource Guard notice">×</button>
+  </div>
+</aside>
 
 
 

@@ -26,6 +26,48 @@
   color: var(--color-danger);
 }
 
+.recommendation-card {
+  align-items: center;
+  background: var(--color-surface);
+  display: flex;
+  gap: var(--space-lg);
+  justify-content: space-between;
+  padding: var(--space-lg);
+  width: 100%;
+}
+.recommendation-card[hidden] {
+  display: none;
+}
+.recommendation-card__copy {
+  color: var(--color-text);
+  line-height: 1.5;
+}
+.recommendation-card__actions {
+  align-items: center;
+  display: flex;
+  flex-shrink: 0;
+  gap: var(--space-sm);
+}
+.recommendation-card--floating {
+  bottom: var(--space-xl);
+  max-width: 560px;
+  position: fixed;
+  right: var(--space-xl);
+  z-index: 100;
+}
+@media (max-width: 480px) {
+  .recommendation-card,
+  .recommendation-card__actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .recommendation-card--floating {
+    left: var(--space-md);
+    right: var(--space-md);
+    width: auto;
+  }
+}
+
 #toast-container {
   position: fixed;
   bottom: var(--space-xl);

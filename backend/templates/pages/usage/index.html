@@ -82,6 +82,7 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="/static/js/modules/usage-resource-guard-notice.js"></script>
 <script>
   let polling = true;
   let pollTimer = null;
@@ -268,12 +269,7 @@
     if (d.optimization) {
       updateOptimizationUI(d.optimization, d.ram);
     }
-    updateGuardRecommendation(d.ram, d.resource_guard);
-  }
-
-  function updateGuardRecommendation(ram, guard) {
-    const alert = document.getElementById('usage-resource-guard-alert');
-    if (alert) alert.hidden = !(ram?.is_low_ram && guard && !guard.enabled);
+    window.dispatchEvent(new CustomEvent('usage:resource-state', { detail: { ram: d.ram, guard: d.resource_guard } }));
   }
 
   function updateOptimizationUI(opt, ram) {
@@ -284,9 +280,9 @@
     const optAlert = document.getElementById('usage-low-ram-alert');
     if (optAlert && ram) {
       if (ram.is_low_ram && !isOptActive) {
-        optAlert.style.display = 'flex';
+        optAlert.hidden = false;
       } else {
-        optAlert.style.display = 'none';
+        optAlert.hidden = true;
       }
     }
 
