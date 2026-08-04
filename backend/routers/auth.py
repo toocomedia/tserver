@@ -127,9 +127,80 @@ async def login_submit(
         )
 
     login_guard.clear_failures(ip=ip, username=user.username)
+
+    if user.totp_enabled:
+        request.session["partial_user_id"] = user.id
+        request.session["partial_next_url"] = next_url
+        logger.info("User '%s' credentials verified, awaiting 2FA code from %s", user.username, ip)
+        return RedirectResponse("/login/2fa", status_code=303)
+
     request.session["user_id"] = user.id
     request.session["username"] = user.username
     logger.info("User '%s' logged in from %s", user.username, ip)
+    return RedirectResponse(next_url, status_code=303)
+
+
+@router.get("/login/2fa", response_class=HTMLResponse)
+async def login_2fa_page(request: Request, db: AsyncSession = Depends(get_db)):
+    if request.session.get("user_id"):
+        return RedirectResponse("/", status_code=302)
+    
+    partial_user_id = request.session.get("partial_user_id")
+    if not partial_user_id:
+        return RedirectResponse("/login", status_code=302)
+        
+    user = await auth_service.get_by_id(db, partial_user_id)
+    if not user or not user.totp_enabled:
+        request.session.pop("partial_user_id", None)
+        return RedirectResponse("/login", status_code=302)
+
+    return templates.TemplateResponse(
+        "pages/auth/2fa_verify.html",
+        {
+            "request": request,
+            "error": None,
+            "username": user.username,
+        },
+    )
+
+
+@router.post("/login/2fa", response_class=HTMLResponse)
+@limiter.limit(config.LOGIN_RATE_LIMIT)
+async def login_2fa_submit(
+    request: Request,
+    code: str = Form(...),
+    db: AsyncSession = Depends(get_db),
+):
+    partial_user_id = request.session.get("partial_user_id")
+    if not partial_user_id:
+        return RedirectResponse("/login", status_code=302)
+
+    user = await auth_service.get_by_id(db, partial_user_id)
+    if not user or not user.totp_enabled:
+        request.session.pop("partial_user_id", None)
+        return RedirectResponse("/login", status_code=302)
+
+    ip = login_guard.client_ip(request)
+    valid = await auth_service.verify_user_2fa(db, user, code)
+    if not valid:
+        logger.warning("2FA verification failed for user '%s' from %s", user.username, ip)
+        return templates.TemplateResponse(
+            "pages/auth/2fa_verify.html",
+            {
+                "request": request,
+                "error": "Invalid verification code or recovery key",
+                "username": user.username,
+            },
+            status_code=401,
+        )
+
+    # 2FA succeeded! Complete authentication
+    request.session.pop("partial_user_id", None)
+    next_url = _safe_next(request.session.pop("partial_next_url", "/"))
+    
+    request.session["user_id"] = user.id
+    request.session["username"] = user.username
+    logger.info("User '%s' completed 2FA login from %s", user.username, ip)
     return RedirectResponse(next_url, status_code=303)
 
 
@@ -137,3 +208,4 @@ async def login_submit(
 async def logout(request: Request):
     request.session.clear()
     return RedirectResponse("/login", status_code=303)
+

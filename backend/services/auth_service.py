@@ -114,3 +114,54 @@ async def create_or_reset_admin(
         )
     user = await set_password(db, username, password)
     return user, "reset"
+
+
+async def enable_2fa(
+    db: AsyncSession, user: User, secret: str, recovery_codes_json: str
+) -> User:
+    """Enable TOTP 2FA for a user with given secret and recovery codes."""
+    user.totp_secret = secret
+    user.totp_enabled = True
+    user.recovery_codes = recovery_codes_json
+    await db.flush()
+    await db.refresh(user)
+    return user
+
+
+async def disable_2fa(db: AsyncSession, user: User) -> User:
+    """Disable TOTP 2FA for a user and clear secret & recovery codes."""
+    user.totp_secret = None
+    user.totp_enabled = False
+    user.recovery_codes = None
+    await db.flush()
+    await db.refresh(user)
+    return user
+
+
+async def verify_user_2fa(
+    db: AsyncSession, user: User, code: str
+) -> bool:
+    """
+    Verify a 6-digit TOTP code or an 8-character recovery code.
+    If a valid recovery code is used, it will be consumed and removed.
+    """
+    from services import totp_service
+
+    if not user.totp_enabled:
+        return True
+
+    # 1. Try TOTP code first
+    if user.totp_secret and totp_service.verify_totp(user.totp_secret, code):
+        return True
+
+    # 2. Try recovery code
+    valid_recovery, updated_codes_json = totp_service.verify_and_consume_recovery_code(
+        user.recovery_codes, code
+    )
+    if valid_recovery:
+        user.recovery_codes = updated_codes_json
+        await db.flush()
+        return True
+
+    return False
+

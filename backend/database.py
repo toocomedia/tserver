@@ -72,6 +72,20 @@ def _migrate_sync(sync_conn) -> None:
                 "ALTER TABLE domains ADD COLUMN project_type VARCHAR(32) DEFAULT 'static' NOT NULL"
             ))
 
+    # --- users: 2FA TOTP columns ---
+    if "users" in tables:
+        cols = _column_names(sync_conn, "users")
+        user_totp_columns = {
+            "totp_secret": "VARCHAR(64)",
+            "totp_enabled": "BOOLEAN DEFAULT 0 NOT NULL",
+            "recovery_codes": "TEXT",
+        }
+        for col, ddl in user_totp_columns.items():
+            if col not in cols:
+                logger.info("Migrating users: add %s", col)
+                sync_conn.execute(text(f"ALTER TABLE users ADD COLUMN {col} {ddl}"))
+
+
     # --- postgres_remote_domains: v2 remote-access fields ---
     # This table existed before the v2 model. create_all() never adds columns
     # to an existing SQLite table, so upgrade each field explicitly.
