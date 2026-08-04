@@ -68,7 +68,11 @@ async def lifespan(app: FastAPI):
         plugin_manager.state_components() + dependency_manager.state_components()
     )
     from services import app_deployment_service, container_app_deployment_service, update_service, ssl_auto_renew
+    from database import AsyncSessionLocal
     from services.resource_guard_service import resource_guard_service
+    async with AsyncSessionLocal() as db:
+        await resource_guard_service.recover_interrupted(db)
+        await db.commit()
     await app_deployment_service.recover_interrupted()
     await container_app_deployment_service.recover_interrupted()
     purge_task = asyncio.create_task(_auto_purge_loop())

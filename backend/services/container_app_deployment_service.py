@@ -28,7 +28,7 @@ async def recover_interrupted() -> None:
     from database import AsyncSessionLocal
     async with AsyncSessionLocal() as db:
         deployments = (await db.scalars(select(ContainerAppDeployment).where(
-            ContainerAppDeployment.status.in_(("queued", "running")),
+            ContainerAppDeployment.status == "running",
         ))).all()
         now = datetime.utcnow()
         for deployment in deployments:
@@ -40,6 +40,12 @@ async def recover_interrupted() -> None:
             ContainerApp.status.in_(("pending", "deleting", "running")),
         ))).all())
         for app in apps:
+            queued = await db.scalar(select(ContainerAppDeployment.id).where(
+                ContainerAppDeployment.app_id == app.id,
+                ContainerAppDeployment.status == "queued",
+            ))
+            if queued:
+                continue
             live = await asyncio.to_thread(_container_running, app)
             if live:
                 app.status, app.last_error = "running", None
@@ -48,6 +54,7 @@ async def recover_interrupted() -> None:
             elif app.status == "pending":
                 app.status, app.last_error = "failed", "No running container was found after panel restart. Redeploy to recover."
         await db.commit()
+    await advance_queue()
 
 
 async def active_deployment(db: AsyncSession, app_id: int) -> ContainerAppDeployment | None:
@@ -68,16 +75,36 @@ async def queue_deployment(db: AsyncSession, app: ContainerApp, action: str = "d
         raise HTTPException(409, "A deployment is already running for this app.")
     profile = classify_deployment(app)
     preflight = await resource_guard_service.preflight(db, profile)
-    if not preflight["ok"]:
+    if not preflight["ok"] and not preflight.get("queueable"):
         raise HTTPException(409, preflight["reason"])
     deployment = ContainerAppDeployment(app_id=app.id, action=action, profile=profile)
     db.add(deployment)
     await db.flush()
-    asyncio.create_task(_deploy_after_commit(deployment.id))
+    domain = await db.get(Domain, app.domain_id)
+    priority = await resource_guard_service.priority(db, "container_app", str(app.id))
+    def cancel() -> None:
+        build_process.cancel(deployment.id)
+        asyncio.create_task(_cancel_deployment(deployment.id))
+
+    operation = await resource_guard_service.create_operation(
+        db,
+        component_type="container_app",
+        component_id=str(app.id),
+        operation_type=action,
+        priority=priority,
+        label=f"Apps Engine: {domain.name if domain else app.id}",
+        profile=profile,
+        status="running" if preflight["ok"] else "queued",
+        deployment_id=deployment.id,
+        preflight=preflight,
+        cancel=cancel,
+    )
+    if operation.status == "running":
+        asyncio.create_task(_deploy_after_commit(deployment.id, operation.id))
     return deployment
 
 
-async def _deploy_after_commit(deployment_id: int) -> None:
+async def _deploy_after_commit(deployment_id: int, operation_id: int) -> None:
     from database import AsyncSessionLocal
 
     await asyncio.sleep(0.3)
@@ -86,16 +113,12 @@ async def _deploy_after_commit(deployment_id: int) -> None:
         app = await db.get(ContainerApp, deployment.app_id) if deployment else None
         domain = await db.get(Domain, app.domain_id) if app else None
         if deployment is None or deployment.status != "queued" or app is None or domain is None:
+            outcome = "cancelled" if deployment and deployment.status == "cancelled" else "failed"
+            await resource_guard_service.finish_operation(db, operation_id, outcome)
+            await db.commit()
+            await advance_queue()
             return
         deployment.status, deployment.started_at = "running", datetime.utcnow()
-        priority = await resource_guard_service.priority(db, "container_app", str(app.id))
-        profile = deployment.profile or "build_large"
-        token = resource_guard_service.register(
-            "container_app", str(app.id), priority,
-            f"Apps Engine: {domain.name}",
-            lambda: build_process.cancel(deployment.id),
-            profile=profile,
-        )
         await progress.stage(db, deployment, "prepare", "Preparing deployment.")
         running_image, replacement_started = app.image_digest or app.image_reference, False
         try:
@@ -130,8 +153,47 @@ async def _deploy_after_commit(deployment_id: int) -> None:
             deployment.status, deployment.error = "failed", str(exc)[:2000]
             deployment.output = (deployment.output + f"[error] {exc}\n")[-80_000:]
         deployment.finished_at = datetime.utcnow()
+        result = {"success": "succeeded", "cancelled": "cancelled"}.get(deployment.status, "failed")
+        await resource_guard_service.finish_operation(db, operation_id, result)
         await db.commit()
-        resource_guard_service.unregister(token)
+    await advance_queue()
+
+
+async def _cancel_deployment(deployment_id: int) -> None:
+    from database import AsyncSessionLocal
+
+    async with AsyncSessionLocal() as db:
+        deployment = await db.get(ContainerAppDeployment, deployment_id)
+        if deployment and deployment.status == "queued":
+            deployment.status, deployment.stage = "cancelled", "cancelled"
+            deployment.error, deployment.finished_at = "Stopped by the user.", datetime.utcnow()
+            await db.commit()
+
+
+async def advance_queue() -> None:
+    """Start the next persisted build only after capacity is available."""
+    from database import AsyncSessionLocal
+
+    async with AsyncSessionLocal() as db:
+        queued = await resource_guard_service.queued_operations(db)
+        if not queued:
+            return
+        operation = queued[0]
+        preflight = await resource_guard_service.preflight(db, operation.profile)
+        if not preflight["ok"]:
+            if not preflight.get("queueable"):
+                operation.status, operation.finished_at = "blocked", datetime.utcnow()
+                operation.preflight_result = str(preflight)
+                await db.commit()
+            return
+        deployment = await db.get(ContainerAppDeployment, operation.deployment_id)
+        if deployment is None or deployment.status != "queued":
+            await resource_guard_service.finish_operation(db, operation.id, "cancelled")
+            await db.commit()
+            return
+        operation.status, operation.started_at, operation.queue_position = "running", datetime.utcnow(), None
+        await db.commit()
+        asyncio.create_task(_deploy_after_commit(deployment.id, operation.id))
 
 
 async def _restore_previous(

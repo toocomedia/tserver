@@ -332,6 +332,7 @@ async def init_db():
     import models.container_app_database  # noqa: F401
     import models.container_app_backup  # noqa: F401
     import models.resource_guard  # noqa: F401
+    import models.guard_operation  # noqa: F401
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
         await conn.run_sync(_migrate_sync)
