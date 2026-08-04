@@ -1,7 +1,7 @@
 """
-services/login_guard.py — In-memory login lockout by IP and username.
+services/login_guard.py — In-memory login lockout and concurrency protection by IP and username.
 
-Lightweight: process-local dicts, no Redis/DB. Resets on restart.
+Lightweight: process-local dicts & sets, no Redis/DB. Resets on restart.
 """
 from __future__ import annotations
 
@@ -21,6 +21,8 @@ _user_fails: dict[str, list[float]] = {}
 # key -> lockout_until unix
 _ip_locked_until: dict[str, float] = {}
 _user_locked_until: dict[str, float] = {}
+# Active in-flight requests set
+_in_flight: set[str] = set()
 
 LOCKOUT_MESSAGE = "Too many attempts. Try again later."
 
@@ -99,3 +101,22 @@ def clear_failures(*, ip: str, username: str) -> None:
         if user_key:
             _user_fails.pop(user_key, None)
             _user_locked_until.pop(user_key, None)
+
+
+class InFlightGuard:
+    """Context manager preventing multiple concurrent authentication POST requests from the same IP/username."""
+    def __init__(self, *, ip: str, username: str = ""):
+        self.ip = ip
+        self.username = normalize_username(username)
+        self.key = f"{self.ip}:{self.username}" if self.username else self.ip
+
+    def __enter__(self) -> bool:
+        with _lock:
+            if self.key in _in_flight:
+                return False
+            _in_flight.add(self.key)
+            return True
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        with _lock:
+            _in_flight.discard(self.key)

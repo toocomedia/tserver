@@ -149,7 +149,7 @@
       background-color: var(--color-box-bg);
       border: 1px solid var(--color-box-border) !important;
       border-radius: 18px !important;
-      padding: 36px 32px 48px; /* Balanced card padding */
+      padding: 36px 32px 48px;
       min-height: 480px;
       display: flex;
       flex-direction: column;
@@ -157,10 +157,10 @@
       box-shadow: none !important;
     }
 
-    /* Brand Header with Increased Bottom Spacing */
+    /* Brand Header */
     .brand-section {
       text-align: center;
-      margin-bottom: 48px; /* Expanded bottom margin below logo */
+      margin-bottom: 48px;
       cursor: pointer;
     }
     .brand-logo-img {
@@ -284,6 +284,16 @@
       border-bottom-width: 1px !important;
     }
 
+    /* Disabled button state */
+    .btn-3d-primary:disabled,
+    .btn-3d-primary[disabled] {
+      opacity: 0.65;
+      cursor: not-allowed !important;
+      pointer-events: none !important;
+      top: 0 !important;
+      border-bottom-width: 4px !important;
+    }
+
     .back-link-wrap {
       text-align: center;
       margin-top: 14px;
@@ -320,7 +330,7 @@
   <div class="login-container">
     <div class="login-card">
       
-      <!-- Brand Header with Animated Subtitle & 48px Bottom Margin -->
+      <!-- Brand Header -->
       <div class="brand-section">
         <img src="/static/images/logobarq.png" alt="{{ PANEL_NAME }}" class="brand-logo-img">
         <h2 class="brand-title">Two-Factor Authentication</h2>
@@ -424,9 +434,21 @@
           return false;
         }
         form.setAttribute("data-submitting", "1");
-        btn.disabled = true;
-        btn.setAttribute("aria-disabled", "true");
-        btn.textContent = "Verifying…";
+        
+        // Asynchronously disable button so POST submit event queues cleanly
+        setTimeout(function() {
+          btn.disabled = true;
+          btn.setAttribute("aria-disabled", "true");
+          btn.textContent = "Verifying…";
+        }, 0);
+      });
+
+      btn.addEventListener("click", function (e) {
+        if (form.getAttribute("data-submitting") === "1" || btn.disabled) {
+          e.preventDefault();
+          e.stopPropagation();
+          return false;
+        }
       });
     })();
   </script>

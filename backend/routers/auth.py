@@ -90,53 +90,66 @@ async def login_submit(
     ip = login_guard.client_ip(request)
     uname = username.strip()
 
-    if login_guard.is_locked(ip=ip, username=uname):
-        logger.warning("Login blocked (lockout) ip=%s user=%s", ip, uname)
-        return _login_page(
-            request,
-            error=login_guard.LOCKOUT_MESSAGE,
-            username=uname,
-            next_url=next_url,
-            status_code=429,
-            locked=True,
-        )
+    # Enforce server-side concurrency lock to reject duplicate/flooded requests
+    with login_guard.InFlightGuard(ip=ip, username=uname) as acquired:
+        if not acquired:
+            logger.warning("Concurrent login request rejected ip=%s user=%s", ip, uname)
+            return _login_page(
+                request,
+                error="An authentication request is already in progress.",
+                username=uname,
+                next_url=next_url,
+                status_code=429,
+                locked=True,
+            )
 
-    user = await auth_service.authenticate(db, username, password)
-    if user is None:
-        triggered = login_guard.record_failure(ip=ip, username=uname)
-        logger.warning(
-            "Login failed ip=%s user=%s lockout=%s",
-            ip,
-            uname,
-            triggered,
-        )
-        locked = login_guard.is_locked(ip=ip, username=uname)
-        err = (
-            login_guard.LOCKOUT_MESSAGE
-            if locked
-            else "Invalid username or password"
-        )
-        code = 429 if locked else 401
-        return _login_page(
-            request,
-            error=err,
-            username=uname,
-            next_url=next_url,
-            status_code=code,
-            locked=locked,
-        )
+        if login_guard.is_locked(ip=ip, username=uname):
+            logger.warning("Login blocked (lockout) ip=%s user=%s", ip, uname)
+            return _login_page(
+                request,
+                error=login_guard.LOCKOUT_MESSAGE,
+                username=uname,
+                next_url=next_url,
+                status_code=429,
+                locked=True,
+            )
 
-    login_guard.clear_failures(ip=ip, username=user.username)
-    
-    if user.is_2fa_enabled:
-        request.session["pending_2fa_user_id"] = user.id
-        request.session["pending_2fa_next"] = next_url
-        return RedirectResponse("/login/2fa", status_code=303)
+        user = await auth_service.authenticate(db, username, password)
+        if user is None:
+            triggered = login_guard.record_failure(ip=ip, username=uname)
+            logger.warning(
+                "Login failed ip=%s user=%s lockout=%s",
+                ip,
+                uname,
+                triggered,
+            )
+            locked = login_guard.is_locked(ip=ip, username=uname)
+            err = (
+                login_guard.LOCKOUT_MESSAGE
+                if locked
+                else "Invalid username or password"
+            )
+            code = 429 if locked else 401
+            return _login_page(
+                request,
+                error=err,
+                username=uname,
+                next_url=next_url,
+                status_code=code,
+                locked=locked,
+            )
+
+        login_guard.clear_failures(ip=ip, username=user.username)
         
-    request.session["user_id"] = user.id
-    request.session["username"] = user.username
-    logger.info("User '%s' logged in from %s", user.username, ip)
-    return RedirectResponse(next_url, status_code=303)
+        if user.is_2fa_enabled:
+            request.session["pending_2fa_user_id"] = user.id
+            request.session["pending_2fa_next"] = next_url
+            return RedirectResponse("/login/2fa", status_code=303)
+            
+        request.session["user_id"] = user.id
+        request.session["username"] = user.username
+        logger.info("User '%s' logged in from %s", user.username, ip)
+        return RedirectResponse(next_url, status_code=303)
 
 
 @router.get("/login/2fa", response_class=HTMLResponse)
@@ -165,32 +178,42 @@ async def login_2fa_submit(
     if not user or not user.is_2fa_enabled:
         request.session.pop("pending_2fa_user_id", None)
         return RedirectResponse("/login", status_code=303)
+
+    # Enforce server-side concurrency lock for 2FA submit
+    with login_guard.InFlightGuard(ip=ip, username=user.username) as acquired:
+        if not acquired:
+            logger.warning("Concurrent 2FA verification request rejected ip=%s user=%s", ip, user.username)
+            return templates.TemplateResponse(
+                "pages/auth/login_2fa.html",
+                {"request": request, "error": "An authentication request is already in progress.", "locked": True},
+                status_code=429
+            )
+            
+        if login_guard.is_locked(ip=ip, username=user.username):
+            return templates.TemplateResponse(
+                "pages/auth/login_2fa.html",
+                {"request": request, "error": login_guard.LOCKOUT_MESSAGE, "locked": True},
+                status_code=429
+            )
+            
+        if not auth_service.verify_totp_code(user.totp_secret, code):
+            login_guard.record_failure(ip=ip, username=user.username)
+            locked = login_guard.is_locked(ip=ip, username=user.username)
+            return templates.TemplateResponse(
+                "pages/auth/login_2fa.html",
+                {"request": request, "error": "Invalid 2FA code", "locked": locked},
+                status_code=429 if locked else 401
+            )
+            
+        login_guard.clear_failures(ip=ip, username=user.username)
+        request.session.pop("pending_2fa_user_id", None)
+        next_url = request.session.pop("pending_2fa_next", "/")
         
-    if login_guard.is_locked(ip=ip, username=user.username):
-        return templates.TemplateResponse(
-            "pages/auth/login_2fa.html",
-            {"request": request, "error": login_guard.LOCKOUT_MESSAGE, "locked": True},
-            status_code=429
-        )
+        request.session["user_id"] = user.id
+        request.session["username"] = user.username
+        logger.info("User '%s' logged in from %s (2FA verified)", user.username, ip)
         
-    if not auth_service.verify_totp_code(user.totp_secret, code):
-        login_guard.record_failure(ip=ip, username=user.username)
-        locked = login_guard.is_locked(ip=ip, username=user.username)
-        return templates.TemplateResponse(
-            "pages/auth/login_2fa.html",
-            {"request": request, "error": "Invalid 2FA code", "locked": locked},
-            status_code=429 if locked else 401
-        )
-        
-    login_guard.clear_failures(ip=ip, username=user.username)
-    request.session.pop("pending_2fa_user_id", None)
-    next_url = request.session.pop("pending_2fa_next", "/")
-    
-    request.session["user_id"] = user.id
-    request.session["username"] = user.username
-    logger.info("User '%s' logged in from %s (2FA verified)", user.username, ip)
-    
-    return RedirectResponse(next_url, status_code=303)
+        return RedirectResponse(next_url, status_code=303)
 
 
 @router.post("/logout")
