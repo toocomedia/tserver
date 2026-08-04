@@ -82,7 +82,6 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="/static/js/modules/usage-resource-guard-notice.js"></script>
 <script>
   let polling = true;
   let pollTimer = null;
@@ -269,7 +268,6 @@
     if (d.optimization) {
       updateOptimizationUI(d.optimization, d.ram);
     }
-    window.dispatchEvent(new CustomEvent('usage:resource-state', { detail: { ram: d.ram, guard: d.resource_guard } }));
   }
 
   function updateOptimizationUI(opt, ram) {

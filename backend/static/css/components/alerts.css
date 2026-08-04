@@ -50,7 +50,7 @@
 }
 .recommendation-card--floating {
   bottom: var(--space-xl);
-  max-width: 560px;
+  left: calc(var(--sidebar-width) + var(--space-xl));
   position: fixed;
   right: var(--space-xl);
   z-index: 100;

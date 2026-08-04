@@ -59,7 +59,7 @@ class ResourceGuardService:
         enabled = settings.mode == "enabled" or (settings.mode == "auto" and sample["total_bytes"] < 2 * 1024 ** 3)
         active = enabled and sample["ram_percent"] >= settings.memory_limit_percent
         state = "active" if active and self._operations else ("unmanaged_warning" if active else "normal")
-        return {"mode": settings.mode, "enabled": enabled, "limit_percent": settings.memory_limit_percent, "state": state, "ram_percent": sample["ram_percent"], "swap_percent": sample["swap_percent"], "operations": [self._operation_data(item) for item in self._operations.values()]}
+        return {"mode": settings.mode, "enabled": enabled, "is_low_ram": sample["total_bytes"] < 2 * 1024 ** 3, "limit_percent": settings.memory_limit_percent, "state": state, "ram_percent": sample["ram_percent"], "swap_percent": sample["swap_percent"], "operations": [self._operation_data(item) for item in self._operations.values()]}
 
     async def save_settings(self, db: AsyncSession, mode: str, limit_percent: int) -> dict:
         if mode not in {"auto", "enabled", "disabled"}:
