@@ -12,7 +12,7 @@ import tempfile
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 BACKEND = Path(__file__).resolve().parents[1]
 if str(BACKEND) not in sys.path:
@@ -317,6 +317,7 @@ class CredentialSafetyTests(unittest.TestCase):
             encoding="utf-8",
         )
         return SimpleNamespace(
+            id=1,          # required by _write_credentials -> credentials_path(item.id)
             kind=kind,
             credentials_path=str(cred_path),
         )
@@ -388,6 +389,7 @@ class CredentialSafetyTests(unittest.TestCase):
         item.database_name = None
         item.username = None
         item.app_id = 1
+        # id is already set by _make_db_item (=1)
 
         app = SimpleNamespace(id=1)
 
@@ -486,8 +488,9 @@ class BuildxRoutingTests(unittest.TestCase):
         self.assertIn("build",  cmd_str)
         self.assertIn("--builder", cmd_str, "Must specify the panel-owned builder")
         self.assertIn("--load",    cmd_str, "Must use --load to export to local images")
-        self.assertNotIn("docker build", " ".join(build_cmd[:3]),
-                         "Must not use plain 'docker build'")
+        # Must NOT be a plain 'docker build' (i.e., no 'buildx' token)
+        self.assertNotEqual(["docker", "build"], build_cmd[:2],
+                            "Must not use plain 'docker build' without buildx")
 
     def test_railpack_build_does_not_use_buildx_flag(self):
         """Railpack uses its own CLI with BUILDKIT_HOST — no --builder flag."""
@@ -575,8 +578,14 @@ class SourceCleanupTests(unittest.IsolatedAsyncioTestCase):
             cfg.BUILDX_BUILDER_NAME = "srv-panel-builder"
 
             async with asyncio.Lock() as _lock:
-                # Call _prepare_image logic manually via thread
-                with patch.object(deploy_svc, "_build_lock", asyncio.Lock()):
+                # Use AsyncMock for progress.stage so await works
+                mock_progress = MagicMock()
+                mock_progress.stage = AsyncMock()
+                mock_progress.append_log = MagicMock()
+                with (
+                    patch.object(deploy_svc, "_build_lock", asyncio.Lock()),
+                    patch.object(deploy_svc, "progress", mock_progress),
+                ):
                     await deploy_svc._prepare_image(None, app, deployment)
 
         # Source dir must be gone after build
