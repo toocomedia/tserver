@@ -7,6 +7,9 @@
   align-items: flex-start;
   gap: var(--space-sm);
 }
+.alert[hidden] {
+  display: none;
+}
 .alert--info {
   border-color: var(--color-line);
   background: var(--color-surface);
