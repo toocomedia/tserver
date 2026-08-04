@@ -127,11 +127,17 @@ class AcceptanceScenarioMathTests(unittest.IsolatedAsyncioTestCase):
 
     # A8 — Umami scenario: image_pull + postgresql on 1 GB VPS
     async def test_a8_umami_image_pull_and_postgresql_on_1gb(self):
-        """A8: image_pull after postgresql reservation should pass on 1 GB VPS."""
+        """A8: image_pull after postgresql reservation should pass on 1 GB VPS.
+
+        Math: available=800MB, reserve=400MB → safe=400MB.
+              postgresql reservation=256MB + image_pull=100MB = 356MB required.
+              400 >= 356 → admitted. ✅
+        (700 MB was too tight: safe=300 < required=356)
+        """
         # Simulate postgresql already running (reserved)
         self.guard.register("container_app", "db-1", "high", "PostgreSQL",
                             profile="database_postgresql")
-        result = await self._preflight("image_pull", available_mb=700, total_gb=1.0)
+        result = await self._preflight("image_pull", available_mb=800, total_gb=1.0)
         self.assertTrue(result["ok"],
             f"Umami image_pull blocked after PostgreSQL reservation: {result['reason']} "
             f"(safe={result['safe_capacity_mb']}MB, required={result['required_mb']}MB)")
