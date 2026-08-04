@@ -35,6 +35,7 @@ class ContainerApp(Base):
     wordpress_admin_user: Mapped[str | None] = mapped_column(String(64))
     wordpress_admin_email: Mapped[str | None] = mapped_column(String(255))
     wordpress_pending_secret_path: Mapped[str | None] = mapped_column(String(512))
+    pending_database_specs: Mapped[str | None] = mapped_column(Text)
     cpu_limit: Mapped[str] = mapped_column(String(16), default="1.0", nullable=False)
     memory_limit_mb: Mapped[int] = mapped_column(Integer, default=512, nullable=False)
     pid_limit: Mapped[int] = mapped_column(Integer, default=256, nullable=False)

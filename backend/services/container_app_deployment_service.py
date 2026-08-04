@@ -18,6 +18,7 @@ from services import container_app_service as apps
 from services import container_app_deployment_progress_service as progress
 from services import container_app_build_process_service as build_process
 from services.resource_guard_service import resource_guard_service
+from services.resource_guard_profiles import classify_deployment
 
 _build_lock = asyncio.Lock()
 
@@ -65,11 +66,11 @@ async def queue_deployment(db: AsyncSession, app: ContainerApp, action: str = "d
     ))
     if active:
         raise HTTPException(409, "A deployment is already running for this app.")
-    try:
-        await resource_guard_service.allow_start(db)
-    except RuntimeError as exc:
-        raise HTTPException(409, str(exc)) from exc
-    deployment = ContainerAppDeployment(app_id=app.id, action=action)
+    profile = classify_deployment(app)
+    preflight = await resource_guard_service.preflight(db, profile)
+    if not preflight["ok"]:
+        raise HTTPException(409, preflight["reason"])
+    deployment = ContainerAppDeployment(app_id=app.id, action=action, profile=profile)
     db.add(deployment)
     await db.flush()
     asyncio.create_task(_deploy_after_commit(deployment.id))
@@ -88,7 +89,13 @@ async def _deploy_after_commit(deployment_id: int) -> None:
             return
         deployment.status, deployment.started_at = "running", datetime.utcnow()
         priority = await resource_guard_service.priority(db, "container_app", str(app.id))
-        token = resource_guard_service.register("container_app", str(app.id), priority, f"Apps Engine: {domain.name}", lambda: build_process.cancel(deployment.id))
+        profile = deployment.profile or "build_large"
+        token = resource_guard_service.register(
+            "container_app", str(app.id), priority,
+            f"Apps Engine: {domain.name}",
+            lambda: build_process.cancel(deployment.id),
+            profile=profile,
+        )
         await progress.stage(db, deployment, "prepare", "Preparing deployment.")
         running_image, replacement_started = app.image_digest or app.image_reference, False
         try:
@@ -162,7 +169,19 @@ def _build_or_pull(app: ContainerApp, deployment: ContainerAppDeployment) -> str
     checkout = repository_service.clone(app.repository_url or "", app.branch or "main", source)
     app.deployed_revision = checkout.revision.sha
     image = f"srv-panel/railpack-app:{app.id}-{deployment.id}"
-    command = ["docker", "build", "--tag", image, str(source)] if app.build_mode == "dockerfile" else ["railpack", "build", "--name", image, str(source)]
+    if app.build_mode == "dockerfile":
+        # Route Dockerfile builds through the panel-owned constrained Buildx builder.
+        builder = config.BUILDX_BUILDER_NAME
+        command = [
+            "docker", "buildx", "build",
+            "--builder", builder,
+            "--tag", image,
+            "--load",  # export result to local Docker images
+            str(source),
+        ]
+    else:
+        # Railpack — BUILDKIT_HOST is set inside build_process.run() already
+        command = ["railpack", "build", "--name", image, str(source)]
     progress.append_log(deployment, "build", "Building application image.")
     result = build_process.run(deployment.id, command, config.CONTAINER_APP_BUILD_TIMEOUT)
     deployment.output = (deployment.output + result.stdout + result.stderr)[-80_000:]
@@ -177,7 +196,16 @@ async def _prepare_image(db: AsyncSession, app: ContainerApp, deployment: Contai
     message = "Pulling registry image." if stage == "pull" else "Preparing Git source and building application image."
     await progress.stage(db, deployment, stage, message)
     async with _build_lock:
-        return await asyncio.to_thread(_build_or_pull, app, deployment)
+        try:
+            return await asyncio.to_thread(_build_or_pull, app, deployment)
+        finally:
+            # Always clean up the temporary source checkout.
+            source = apps.root(app.id) / "build" / str(deployment.id) / "source"
+            if source.exists():
+                try:
+                    await asyncio.to_thread(shutil.rmtree, source, ignore_errors=True)
+                except Exception:
+                    pass
 
 
 def _replace_container(app: ContainerApp, image: str) -> None:

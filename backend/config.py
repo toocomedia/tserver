@@ -119,6 +119,8 @@ CONTAINER_APP_ENV_ROOT: str = os.getenv("CONTAINER_APP_ENV_ROOT", "/var/lib/srv-
 CONTAINER_APP_PORT_START: int = _env_int("CONTAINER_APP_PORT_START", 31000)
 CONTAINER_APP_BUILD_TIMEOUT: int = _env_int("CONTAINER_APP_BUILD_TIMEOUT", 1200)
 CONTAINER_APP_BACKUP_ROOT: str = os.getenv("CONTAINER_APP_BACKUP_ROOT", "/var/lib/srv-panel/container-app-backups")
+BUILDX_BUILDER_NAME: str = _env_str("BUILDX_BUILDER_NAME", "srv-panel-builder")
+GUARD_PROTECTED_RESERVE_MB: int = _env_int("GUARD_PROTECTED_RESERVE_MB", 400)
 
 # ---------------------------------------------------------
 # Performance (nginx optimizations)

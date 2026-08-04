@@ -112,6 +112,41 @@ def _new_credentials(item: ContainerAppDatabase) -> dict[str, str]:
     return {"PASSWORD": token, "ROOT_PASSWORD": secrets.token_urlsafe(30), "USERNAME": name, "DATABASE": name}
 
 
+def _build_docker_env_file(item: ContainerAppDatabase) -> None:
+    """Write a second env file with DB-engine-specific variable names.
+
+    Credentials are never passed as -e CLI arguments to avoid leaking them
+    in 'docker inspect', process listings, or audit/sudo logs.
+    The credentials_path file already stores PASSWORD / ROOT_PASSWORD /
+    USERNAME / DATABASE.  This function writes engine-native names into the
+    same file so the container picks them up automatically via --env-file.
+    """
+    creds = _read_credentials(item)
+    extra: dict[str, str] = {}
+    if item.kind == "mariadb":
+        extra = {
+            "MYSQL_DATABASE": creds["DATABASE"],
+            "MYSQL_USER": creds["USERNAME"],
+            "MYSQL_PASSWORD": creds["PASSWORD"],
+            "MYSQL_ROOT_PASSWORD": creds["ROOT_PASSWORD"],
+        }
+    elif item.kind == "postgresql":
+        extra = {
+            "POSTGRES_DB": creds["DATABASE"],
+            "POSTGRES_USER": creds["USERNAME"],
+            "POSTGRES_PASSWORD": creds["PASSWORD"],
+        }
+    elif item.kind == "mongodb":
+        extra = {
+            "MONGO_INITDB_ROOT_USERNAME": creds["USERNAME"],
+            "MONGO_INITDB_ROOT_PASSWORD": creds["PASSWORD"],
+        }
+    # redis uses PASSWORD directly from the base credentials file
+    if extra:
+        merged = {**creds, **extra}
+        _write_credentials(item, merged)
+
+
 def _provision_docker(app: ContainerApp, item: ContainerAppDatabase) -> None:
     if not dependency_manager.is_healthy("docker"):
         raise HTTPException(409, "Docker daemon is not available.")
@@ -119,20 +154,47 @@ def _provision_docker(app: ContainerApp, item: ContainerAppDatabase) -> None:
     item.volume_name, item.network_alias = f"srv-container-db-data-{item.id}", f"db-{item.kind}"
     creds = _read_credentials(item)
     item.database_name, item.username = creds["DATABASE"], creds["USERNAME"]
+    _build_docker_env_file(item)  # merge engine-native names into the env file
     _network(app)
-    _require(container_app_service._run(["docker", "volume", "create", "--label", "srv-panel.plugin=railpack_apps", "--label", f"srv-panel.app-id={app.id}", item.volume_name], timeout=30), "Could not create database volume.")
-    command = ["docker", "run", "-d", "--name", item.container_name, "--restart", "unless-stopped", "--label", "srv-panel.plugin=railpack_apps", "--label", f"srv-panel.app-id={app.id}", "--network", container_app_service.network_name(app.id), "--network-alias", item.network_alias, "--env-file", item.credentials_path or ""]
+    _require(
+        container_app_service._run(
+            ["docker", "volume", "create",
+             "--label", "srv-panel.plugin=railpack_apps",
+             "--label", f"srv-panel.app-id={app.id}",
+             item.volume_name],
+            timeout=30,
+        ),
+        "Could not create database volume.",
+    )
+    # Base command — credentials only via --env-file, never -e
+    command = [
+        "docker", "run", "-d",
+        "--name", item.container_name,
+        "--restart", "unless-stopped",
+        "--label", "srv-panel.plugin=railpack_apps",
+        "--label", f"srv-panel.app-id={app.id}",
+        "--network", container_app_service.network_name(app.id),
+        "--network-alias", item.network_alias,
+        "--env-file", item.credentials_path or "",
+    ]
     if item.kind == "mariadb":
-        command += ["-e", f"MYSQL_DATABASE={creds['DATABASE']}", "-e", f"MYSQL_USER={creds['USERNAME']}", "-e", f"MYSQL_PASSWORD={creds['PASSWORD']}", "-e", f"MYSQL_ROOT_PASSWORD={creds['ROOT_PASSWORD']}", "-v", f"{item.volume_name}:/var/lib/mysql"]
+        command += ["-v", f"{item.volume_name}:/var/lib/mysql"]
     elif item.kind == "postgresql":
-        command += ["-e", f"POSTGRES_DB={creds['DATABASE']}", "-e", f"POSTGRES_USER={creds['USERNAME']}", "-e", f"POSTGRES_PASSWORD={creds['PASSWORD']}", "-v", f"{item.volume_name}:/var/lib/postgresql/data"]
+        command += ["-v", f"{item.volume_name}:/var/lib/postgresql/data"]
     elif item.kind == "redis":
-        command += ["-v", f"{item.volume_name}:/data", IMAGES[item.kind], "sh", "-c", "exec redis-server --appendonly yes --requirepass \"$PASSWORD\""]
+        command += [
+            "-v", f"{item.volume_name}:/data",
+            IMAGES[item.kind], "sh", "-c",
+            'exec redis-server --appendonly yes --requirepass "$PASSWORD"',
+        ]
         _require(container_app_service._run(command, timeout=60), "Could not start database container.")
         return
-    else:
-        command += ["-e", f"MONGO_INITDB_ROOT_USERNAME={creds['USERNAME']}", "-e", f"MONGO_INITDB_ROOT_PASSWORD={creds['PASSWORD']}", "-v", f"{item.volume_name}:/data/db"]
-    _require(container_app_service._run([*command, IMAGES[item.kind]], timeout=60), "Could not start database container.")
+    else:  # mongodb
+        command += ["-v", f"{item.volume_name}:/data/db"]
+    _require(
+        container_app_service._run([*command, IMAGES[item.kind]], timeout=60),
+        "Could not start database container.",
+    )
 
 
 def _provision_panel_postgres(app: ContainerApp, item: ContainerAppDatabase) -> None:

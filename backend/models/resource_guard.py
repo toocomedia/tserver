@@ -13,6 +13,8 @@ class ResourceGuardSettings(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, default=1)
     mode: Mapped[str] = mapped_column(String(16), default="auto", nullable=False)
     memory_limit_percent: Mapped[int] = mapped_column(Integer, default=90, nullable=False)
+    protected_reserve_mb: Mapped[int] = mapped_column(Integer, default=400, nullable=False)
+    build_concurrency: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), onupdate=func.now(), nullable=False
     )

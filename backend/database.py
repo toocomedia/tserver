@@ -280,6 +280,37 @@ def _migrate_sync(sync_conn) -> None:
                 logger.info("Migrating users: add %s", col)
                 sync_conn.execute(text(f"ALTER TABLE users ADD COLUMN {col} {ddl}"))
 
+    # --- resource_guard_settings: Slice 1 additions ---
+    if "resource_guard_settings" in tables:
+        cols = _column_names(sync_conn, "resource_guard_settings")
+        for col, ddl in {
+            "protected_reserve_mb": "INTEGER DEFAULT 400 NOT NULL",
+            "build_concurrency":    "INTEGER DEFAULT 1 NOT NULL",
+        }.items():
+            if col not in cols:
+                logger.info("Migrating resource_guard_settings: add %s", col)
+                sync_conn.execute(text(f"ALTER TABLE resource_guard_settings ADD COLUMN {col} {ddl}"))
+
+    # --- container_app_deployments: Slice 1 additions ---
+    if "container_app_deployments" in tables:
+        cols = _column_names(sync_conn, "container_app_deployments")
+        for col, ddl in {
+            "profile":              "VARCHAR(32)",
+            "peak_ram_mb":          "INTEGER",
+            "guard_blocked_reason": "TEXT",
+        }.items():
+            if col not in cols:
+                logger.info("Migrating container_app_deployments: add %s", col)
+                sync_conn.execute(text(f"ALTER TABLE container_app_deployments ADD COLUMN {col} {ddl}"))
+
+    # --- container_apps: Slice 1 additions ---
+    if "container_apps" in tables:
+        cols = _column_names(sync_conn, "container_apps")
+        if "pending_database_specs" not in cols:
+            logger.info("Migrating container_apps: add pending_database_specs")
+            sync_conn.execute(text("ALTER TABLE container_apps ADD COLUMN pending_database_specs TEXT"))
+
+
 async def init_db():
     """Create all tables on startup if they do not exist, then migrate."""
     # Import all models so Base knows about them

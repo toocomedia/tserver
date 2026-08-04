@@ -13,6 +13,7 @@ from models.domain import Domain
 from models.hosted_app import HostedApp
 from plugins import plugin_manager
 from services.resource_guard_service import PRIORITIES, resource_guard_service
+from services.resource_guard_profiles import PROFILES
 
 router = APIRouter(tags=["resource-guard"])
 
@@ -20,6 +21,7 @@ router = APIRouter(tags=["resource-guard"])
 class ResourceGuardSettingsIn(BaseModel):
     mode: str
     memory_limit_percent: int = Field(ge=75, le=95)
+    protected_reserve_mb: int | None = Field(default=None, ge=100, le=2048)
 
 
 class PriorityOverrideIn(BaseModel):
@@ -33,6 +35,23 @@ async def status(db: AsyncSession = Depends(get_db)):
     return await resource_guard_service.status(db)
 
 
+@router.get("/api/resource-guard/profiles")
+async def list_profiles():
+    """Return all known resource profiles (for UI display)."""
+    return {
+        name: {**prof, "name": name}
+        for name, prof in PROFILES.items()
+    }
+
+
+@router.get("/api/resource-guard/preflight")
+async def preflight(profile: str, db: AsyncSession = Depends(get_db)):
+    """Run the admission test for *profile* and return the result."""
+    if profile not in PROFILES:
+        raise HTTPException(400, f"Unknown profile '{profile}'. Valid: {', '.join(PROFILES)}")
+    return await resource_guard_service.preflight(db, profile)
+
+
 @router.get("/api/settings/resource-guard")
 async def get_settings(db: AsyncSession = Depends(get_db)):
     return {"status": await resource_guard_service.status(db), "resources": await _resources(db)}
@@ -41,7 +60,9 @@ async def get_settings(db: AsyncSession = Depends(get_db)):
 @router.post("/api/settings/resource-guard")
 async def save_settings(payload: ResourceGuardSettingsIn, db: AsyncSession = Depends(get_db)):
     try:
-        return await resource_guard_service.save_settings(db, payload.mode, payload.memory_limit_percent)
+        return await resource_guard_service.save_settings(
+            db, payload.mode, payload.memory_limit_percent, payload.protected_reserve_mb
+        )
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from exc
 
@@ -71,4 +92,10 @@ async def _resources(db: AsyncSession) -> list[dict]:
 
 
 async def _row(db: AsyncSession, kind: str, item_id: str, label: str) -> dict:
-    return {"type": kind, "id": str(item_id), "label": label, "priority": await resource_guard_service.priority(db, kind, str(item_id)), "priorities": PRIORITIES}
+    return {
+        "type": kind,
+        "id": str(item_id),
+        "label": label,
+        "priority": await resource_guard_service.priority(db, kind, str(item_id)),
+        "priorities": PRIORITIES,
+    }
