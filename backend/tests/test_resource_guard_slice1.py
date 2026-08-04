@@ -186,15 +186,41 @@ class PreflightTests(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(result["ok"])
         self.assertIn("short", result["reason"])
 
-    # --- Swap pressure ---
+    # --- Swap pressure (per-profile threshold) ---
 
-    async def test_preflight_blocks_on_critical_swap_pressure(self):
-        result = await self._preflight("image_pull", available_mb=2000, swap_percent=85.0)
+    async def test_preflight_blocks_build_on_critical_swap(self):
+        """build_large threshold=80%: blocked at 82% swap."""
+        result = await self._preflight("build_large", available_mb=2000, swap_percent=82.0)
         self.assertFalse(result["ok"])
         self.assertIn("Swap pressure", result["reason"])
 
+    async def test_preflight_allows_plugin_install_on_moderate_swap(self):
+        """plugin_install threshold=90%: passes at 82% swap, returns swap_warning."""
+        result = await self._preflight("plugin_install", available_mb=2000, swap_percent=82.0)
+        self.assertTrue(result["ok"])
+        self.assertIsNotNone(result.get("swap_warning"),
+            "swap_warning must be present when swap >= 60% but below threshold")
+
+    async def test_preflight_allows_image_pull_on_high_swap(self):
+        """image_pull threshold=95%: passes at 85% swap (was previously blocked at 80%)."""
+        result = await self._preflight("image_pull", available_mb=2000, swap_percent=85.0)
+        self.assertTrue(result["ok"])
+
+    async def test_preflight_blocks_image_pull_above_its_threshold(self):
+        """image_pull threshold=95%: blocked at 96% swap."""
+        result = await self._preflight("image_pull", available_mb=2000, swap_percent=96.0)
+        self.assertFalse(result["ok"])
+        self.assertIn("Swap pressure", result["reason"])
+
+    async def test_preflight_no_swap_warning_below_60(self):
+        """swap_warning is None when swap < 60%."""
+        result = await self._preflight("plugin_install", available_mb=2000, swap_percent=55.0)
+        self.assertTrue(result["ok"])
+        self.assertIsNone(result.get("swap_warning"))
+
     async def test_preflight_allows_high_but_not_critical_swap(self):
-        result = await self._preflight("image_pull", available_mb=2000, swap_percent=70.0)
+        """build_large passes at 70% swap (below its 80% threshold)."""
+        result = await self._preflight("build_large", available_mb=2000, swap_percent=70.0)
         self.assertTrue(result["ok"])
 
     # --- Build concurrency ---

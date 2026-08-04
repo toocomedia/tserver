@@ -20,24 +20,24 @@ from models.container_app import ContainerApp
 PROFILES: dict[str, dict] = {
     # Git/Dockerfile source build — uses BuildKit with --memory limit
     # Measured: node build peaks ~700 MB RSS; Python ~400 MB. Set 800 MB to cover Next.js.
-    "build_large":         {"ram_mb": 800,  "cpu": "1.0",  "timeout": 1200, "label": "Large Git/Dockerfile build"},
+    "build_large":         {"ram_mb": 800,  "cpu": "1.0",  "timeout": 1200, "swap_threshold": 80,  "label": "Large Git/Dockerfile build"},
     # Small pure-Python or Go builds
-    "build_small":         {"ram_mb": 400,  "cpu": "0.5",  "timeout": 600,  "label": "Small Git build"},
-    # docker pull — mainly disk I/O, minimal RAM usage (~80 MB peak)
-    "image_pull":          {"ram_mb": 100,  "cpu": "0.5",  "timeout": 300,  "label": "Registry image pull"},
+    "build_small":         {"ram_mb": 400,  "cpu": "0.5",  "timeout": 600,  "swap_threshold": 80,  "label": "Small Git build"},
+    # docker pull — mainly disk I/O, negligible swap impact
+    "image_pull":          {"ram_mb": 100,  "cpu": "0.5",  "timeout": 300,  "swap_threshold": 95,  "label": "Registry image pull"},
     # Running containers — sized by memory_limit_mb set on the app
-    "container_large":     {"ram_mb": 384,  "cpu": "0.5",  "timeout": None, "label": "Large app runtime"},
-    "container_standard":  {"ram_mb": 256,  "cpu": "0.5",  "timeout": None, "label": "Standard app runtime"},
-    "container_small":     {"ram_mb": 128,  "cpu": "0.25", "timeout": None, "label": "Small app runtime"},
+    "container_large":     {"ram_mb": 384,  "cpu": "0.5",  "timeout": None, "swap_threshold": 95,  "label": "Large app runtime"},
+    "container_standard":  {"ram_mb": 256,  "cpu": "0.5",  "timeout": None, "swap_threshold": 95,  "label": "Standard app runtime"},
+    "container_small":     {"ram_mb": 128,  "cpu": "0.25", "timeout": None, "swap_threshold": 95,  "label": "Small app runtime"},
     # Databases — measured steady-state RSS with no load
-    "database_postgresql": {"ram_mb": 256,  "cpu": "0.5",  "timeout": None, "label": "PostgreSQL database"},
-    "database_mariadb":    {"ram_mb": 256,  "cpu": "0.5",  "timeout": None, "label": "MariaDB database"},
-    "database_redis":      {"ram_mb": 64,   "cpu": "0.25", "timeout": None, "label": "Redis cache"},
-    "database_mongodb":    {"ram_mb": 384,  "cpu": "0.5",  "timeout": None, "label": "MongoDB database"},
+    "database_postgresql": {"ram_mb": 256,  "cpu": "0.5",  "timeout": None, "swap_threshold": 95,  "label": "PostgreSQL database"},
+    "database_mariadb":    {"ram_mb": 256,  "cpu": "0.5",  "timeout": None, "swap_threshold": 95,  "label": "MariaDB database"},
+    "database_redis":      {"ram_mb": 64,   "cpu": "0.25", "timeout": None, "swap_threshold": 95,  "label": "Redis cache"},
+    "database_mongodb":    {"ram_mb": 384,  "cpu": "0.5",  "timeout": None, "swap_threshold": 95,  "label": "MongoDB database"},
     # Panel host command (e.g. git clone, plugin script) — no Docker involved
-    "native_light":        {"ram_mb": 50,   "cpu": "0.25", "timeout": 120,  "label": "Panel host command"},
-    # Plugin or system dependency install (apt/pip/npm in a container or host)
-    "plugin_install":      {"ram_mb": 200,  "cpu": "0.5",  "timeout": 600,  "label": "Plugin/dependency install"},
+    "native_light":        {"ram_mb": 50,   "cpu": "0.25", "timeout": 120,  "swap_threshold": 95,  "label": "Panel host command"},
+    # Plugin or system dependency install — some caution, but not as strict as builds
+    "plugin_install":      {"ram_mb": 200,  "cpu": "0.5",  "timeout": 600,  "swap_threshold": 90,  "label": "Plugin/dependency install"},
 }
 
 

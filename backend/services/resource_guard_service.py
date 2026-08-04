@@ -254,8 +254,10 @@ class ResourceGuardService:
                 "profile": profile_name,
             }
 
-        # Swap pressure guard
-        if sample["swap_percent"] >= 80:
+        # Swap pressure guard — threshold is per-profile (builds: 80%, others: 90-95%)
+        swap_threshold = prof.get("swap_threshold", 80)
+        swap_warning: str | None = None
+        if sample["swap_percent"] >= swap_threshold:
             return {
                 "ok": False,
                 "reason": (
@@ -267,7 +269,13 @@ class ResourceGuardService:
                 "ram_available_mb": sample["ram_available_mb"],
                 "protected_reserve_mb": cfg.protected_reserve_mb,
                 "profile": profile_name,
+                "swap_warning": None,
             }
+        elif sample["swap_percent"] >= 60:
+            swap_warning = (
+                f"Swap pressure is elevated ({sample['swap_percent']}%). "
+                "Monitor usage after starting this operation."
+            )
 
         if safe_capacity_mb < required_mb:
             missing = required_mb - safe_capacity_mb
@@ -286,6 +294,7 @@ class ResourceGuardService:
                 "ram_available_mb": sample["ram_available_mb"],
                 "protected_reserve_mb": cfg.protected_reserve_mb,
                 "profile": profile_name,
+                "swap_warning": swap_warning,
             }
 
         return {
@@ -296,6 +305,7 @@ class ResourceGuardService:
             "ram_available_mb": sample["ram_available_mb"],
             "protected_reserve_mb": cfg.protected_reserve_mb,
             "profile": profile_name,
+            "swap_warning": swap_warning,
         }
 
     # Keep legacy allow_start for any callers not yet migrated.
