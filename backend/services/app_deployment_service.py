@@ -17,6 +17,7 @@ from services import app_hosting_service
 from services import app_dependency_service
 from services import app_lifecycle_service
 from services import ssl_service
+from services.resource_guard_service import resource_guard_service
 
 async def start(
     db: AsyncSession,
@@ -30,6 +31,10 @@ async def start(
     if app.status in {"deleting", "delete_failed"}:
         raise HTTPException(409, "Finish or retry deletion before deploying this app.")
     app_dependency_service.require_available(app)
+    try:
+        await resource_guard_service.allow_start(db)
+    except RuntimeError as exc:
+        raise HTTPException(409, str(exc)) from exc
     app_lifecycle_service.ensure_available(app.id)
     await ensure_idle(db, app.id)
     deployment = AppDeployment(
@@ -95,6 +100,7 @@ async def recover_interrupted() -> None:
 async def _run_after_commit(deployment_id: int) -> None:
     task = asyncio.current_task()
     app_id: int | None = None
+    guard_token: int | None = None
     try:
         await asyncio.sleep(0.5)
         async with AsyncSessionLocal() as db:
@@ -107,6 +113,11 @@ async def _run_after_commit(deployment_id: int) -> None:
                 await _finish(db, deployment, "failed", "setup", "App domain no longer exists.")
                 return
             app_id = app.id
+            priority = await resource_guard_service.priority(db, "hosted_app", str(app.id))
+            guard_token = resource_guard_service.register(
+                "hosted_app", str(app.id), priority, f"Python app: {domain.name}",
+                lambda: asyncio.create_task(app_lifecycle_service.cancel_deployment(app.id)),
+            )
             if task:
                 app_lifecycle_service.register_deployment(app_id, task)
             await app_lifecycle_service.run(
@@ -116,6 +127,8 @@ async def _run_after_commit(deployment_id: int) -> None:
         await _mark_cancelled(deployment_id)
         raise
     finally:
+        if guard_token is not None:
+            resource_guard_service.unregister(guard_token)
         if app_id is not None and task:
             app_lifecycle_service.unregister_deployment(app_id, task)
 

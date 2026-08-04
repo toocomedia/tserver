@@ -83,6 +83,7 @@
         {% endblock %}
 
         {# Flash-style messages come from query params / page templates (no Flask) #}
+        <div id="resource-guard-banner" class="alert alert--danger mb-lg" role="status" hidden></div>
         {% block content %}{% endblock %}
       </div>
     </main>
@@ -113,6 +114,7 @@
 
 <!-- JS -->
 <script src="/static/js/main.js"></script>
+<script src="/static/js/modules/resource-guard-banner.js"></script>
 <script src="/static/js/resource-views.js"></script>
 <script>
 document.addEventListener("DOMContentLoaded", function() {

@@ -31,6 +31,7 @@ from services import dependency_usage_service
 from services import hosted_app_usage_service
 from services import process_usage_classifier
 from services import plugin_usage_service
+from services import container_app_usage_service
 from templating import templates
 from utils.shell import run
 import config
@@ -325,7 +326,10 @@ async def server_stats(db: AsyncSession = Depends(get_db)):
 
     plugins = await plugin_usage_service.get_plugin_usage(procs, ram.total)
     hosted_apps = await hosted_app_usage_service.get_usage(db, procs, ram.total)
+    container_apps = await container_app_usage_service.get_usage(db, ram.total)
     dependencies = await dependency_usage_service.get_runtime_usage(procs, ram.total)
+    if "railpack_apps" in plugins:
+        plugins["railpack_apps"].update(container_apps["total"])
 
     procs.sort(key=lambda x: x["cpu_percent"] or 0, reverse=True)
     top_procs = [
@@ -375,6 +379,7 @@ async def server_stats(db: AsyncSession = Depends(get_db)):
         "plugins": plugins,
         "dependencies": dependencies,
         "hosted_apps": hosted_apps,
+        "container_apps": container_apps,
         "processes": top_procs,
         "optimization": opt_status,
     }

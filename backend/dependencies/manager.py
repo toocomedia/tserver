@@ -137,6 +137,14 @@ class DependencyManager:
         lock = self._operation_locks.get(dependency_id)
         if service is None or lock is None:
             return False, "Unknown dependency."
+        if enabled:
+            from database import AsyncSessionLocal
+            from services.resource_guard_service import resource_guard_service
+            async with AsyncSessionLocal() as db:
+                try:
+                    await resource_guard_service.allow_start(db)
+                except RuntimeError as exc:
+                    return False, str(exc)
         if not self.get_status(dependency_id, force=True).get("can_toggle"):
             return False, "This core runtime cannot be started or stopped from the panel."
         if not lock.acquire(blocking=False):
@@ -216,6 +224,13 @@ class DependencyManager:
         lock = self._operation_locks.get(dependency_id)
         if service is None or lock is None:
             return False, "Unknown dependency."
+        from database import AsyncSessionLocal
+        from services.resource_guard_service import resource_guard_service
+        async with AsyncSessionLocal() as db:
+            try:
+                await resource_guard_service.allow_start(db)
+            except RuntimeError as exc:
+                return False, str(exc)
         if not hasattr(service, "install"):
             return False, "This dependency does not support panel installation."
         if not lock.acquire(blocking=False):

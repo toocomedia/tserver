@@ -23,6 +23,7 @@
     <div class="split-sidebar__item" data-tab="tab-ip">IP Access</div>
     <div class="split-sidebar__item" data-tab="tab-security">Security</div>
     <div class="split-sidebar__item" data-tab="tab-perf">Performance</div>
+    <div class="split-sidebar__item" data-tab="tab-resource-guard">Resource Guard</div>
     <div class="split-sidebar__item" data-tab="tab-appearance">Appearance</div>
     <div class="split-sidebar__item" data-tab="tab-updates">System Updates</div>
   </div>
@@ -329,6 +330,8 @@
       </div>
     </div>
 
+    {% include "pages/settings/resource_guard.html" %}
+
     <!-- TAB: UPDATES -->
     <div id="tab-updates" class="split-tab">
       <div class="section mb-xl">
@@ -403,5 +406,6 @@
   });
 </script>
 <script src="/static/js/modules/settings.js"></script>
+<script src="/static/js/modules/resource-guard-settings.js"></script>
 <script src="/static/js/modules/updates.js"></script>
 {% endblock %}

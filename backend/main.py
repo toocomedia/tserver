@@ -15,7 +15,7 @@ from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
 import config
 from database import init_db
-from routers import system, domains, dns, ssl, proxy, errors, auth, settings, updates, dev, notifications, plugins, dependencies, app_updates, apps
+from routers import system, domains, dns, ssl, proxy, errors, auth, settings, updates, dev, notifications, plugins, dependencies, app_updates, apps, resource_guard
 from dependencies import dependency_manager
 from plugins import plugin_manager
 from plugins.manager import PluginUnavailableError
@@ -68,18 +68,21 @@ async def lifespan(app: FastAPI):
         plugin_manager.state_components() + dependency_manager.state_components()
     )
     from services import app_deployment_service, container_app_deployment_service, update_service, ssl_auto_renew
+    from services.resource_guard_service import resource_guard_service
     await app_deployment_service.recover_interrupted()
     await container_app_deployment_service.recover_interrupted()
     purge_task = asyncio.create_task(_auto_purge_loop())
     update_task = asyncio.create_task(update_service.run_auto_update_loop())
     ssl_renew_task = asyncio.create_task(ssl_auto_renew.run_scheduler())
     plugin_reconcile_task = asyncio.create_task(plugin_manager.reconcile_plugins())
+    resource_guard_task = asyncio.create_task(resource_guard_service.monitor())
     logger.info("Panel ready.")
     yield
     purge_task.cancel()
     update_task.cancel()
     ssl_renew_task.cancel()
     plugin_reconcile_task.cancel()
+    resource_guard_task.cancel()
     logger.info("Panel shutting down.")
 
 
@@ -166,6 +169,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 app.include_router(auth.router)
 app.include_router(system.router)
 app.include_router(settings.router)
+app.include_router(resource_guard.router)
 app.include_router(updates.router)
 app.include_router(domains.router)   # Phase 2
 app.include_router(dns.router)       # Phase 3

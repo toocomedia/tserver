@@ -75,6 +75,7 @@
 
 <!-- 5. STACK SERVICES & TOP PROCESSES TABLES -->
 {% include "pages/usage/partials/services_processes.html" %}
+{% include "pages/usage/partials/apps_engine.html" %}
 
 </div>
 
@@ -230,6 +231,13 @@
       hostedAppTbody.innerHTML = apps.length ? apps.map(app => `
         <tr><td class="table-title">${app.label}</td><td>${app.count}</td><td>${app.cpu.toFixed(1)}%</td><td>${app.memory}</td><td><span class="${procStatusClass(app.status)}">${app.status}</span></td></tr>
       `).join('') : '<tr><td colspan="5" class="text-muted">No hosted Python apps yet.</td></tr>';
+    }
+
+    const containerAppTbody = document.getElementById('container-app-usage-tbody');
+    if (containerAppTbody) {
+      const engine = d.container_apps || {};
+      const rows = [...(engine.apps || []), ...(engine.build ? [engine.build] : []), ...(engine.total ? [engine.total] : [])];
+      containerAppTbody.innerHTML = rows.length ? rows.map(app => `<tr><td class="table-title">${app.label}</td><td>${app.count}</td><td>${app.cpu.toFixed(1)}%</td><td>${app.memory}</td><td><span class="${procStatusClass(app.status)}">${app.status}</span></td></tr>`).join('') : '<tr><td colspan="5" class="text-muted">No Apps Engine apps yet.</td></tr>';
     }
 
     const dependencyTbody = document.getElementById('dependency-usage-tbody');

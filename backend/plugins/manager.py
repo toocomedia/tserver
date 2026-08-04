@@ -385,6 +385,14 @@ class PluginManager:
         if enabled and plugin.get("paused_by"):
             dependencies = ", ".join(plugin["paused_by"])
             return False, f"Required dependency is unavailable: {dependencies}."
+        if enabled:
+            from database import AsyncSessionLocal
+            from services.resource_guard_service import resource_guard_service
+            async with AsyncSessionLocal() as db:
+                try:
+                    await resource_guard_service.allow_start(db)
+                except RuntimeError as exc:
+                    return False, str(exc)
 
         lock = self._operation_locks.setdefault(plugin_id, threading.Lock())
         if not lock.acquire(blocking=False):
@@ -430,6 +438,14 @@ class PluginManager:
             if "docker" in plugin["paused_by"]:
                 return False, "Docker daemon is not available."
             return False, "A required system dependency is not available."
+        if action == "install":
+            from database import AsyncSessionLocal
+            from services.resource_guard_service import resource_guard_service
+            async with AsyncSessionLocal() as db:
+                try:
+                    await resource_guard_service.allow_start(db)
+                except RuntimeError as exc:
+                    return False, str(exc)
         script_rel = plugin.get(f"{action}_script")
         if not script_rel:
             return False, f"Plugin has no {action} script."

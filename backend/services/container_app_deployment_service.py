@@ -16,6 +16,8 @@ from models.container_app_deployment import ContainerAppDeployment
 from models.domain import Domain
 from services import container_app_service as apps
 from services import container_app_deployment_progress_service as progress
+from services import container_app_build_process_service as build_process
+from services.resource_guard_service import resource_guard_service
 
 _build_lock = asyncio.Lock()
 
@@ -63,6 +65,10 @@ async def queue_deployment(db: AsyncSession, app: ContainerApp, action: str = "d
     ))
     if active:
         raise HTTPException(409, "A deployment is already running for this app.")
+    try:
+        await resource_guard_service.allow_start(db)
+    except RuntimeError as exc:
+        raise HTTPException(409, str(exc)) from exc
     deployment = ContainerAppDeployment(app_id=app.id, action=action)
     db.add(deployment)
     await db.flush()
@@ -81,6 +87,8 @@ async def _deploy_after_commit(deployment_id: int) -> None:
         if deployment is None or deployment.status != "queued" or app is None or domain is None:
             return
         deployment.status, deployment.started_at = "running", datetime.utcnow()
+        priority = await resource_guard_service.priority(db, "container_app", str(app.id))
+        token = resource_guard_service.register("container_app", str(app.id), priority, f"Apps Engine: {domain.name}", lambda: build_process.cancel(deployment.id))
         await progress.stage(db, deployment, "prepare", "Preparing deployment.")
         running_image, replacement_started = app.image_digest or app.image_reference, False
         try:
@@ -104,6 +112,10 @@ async def _deploy_after_commit(deployment_id: int) -> None:
             app.status, app.last_error, app.deployed_at = "running", None, datetime.utcnow()
             deployment.status = "success"
             await progress.stage(db, deployment, "complete", "Deployment complete.")
+        except build_process.BuildCancelled as exc:
+            deployment.status, deployment.stage, deployment.error = "cancelled", "cancelled", str(exc)
+            progress.append_log(deployment, "cancelled", str(exc))
+            app.status, app.last_error = ("running", None) if await asyncio.to_thread(_container_running, app) else ("failed", str(exc))
         except Exception as exc:
             deployment.output = (deployment.output + await asyncio.to_thread(progress.container_logs, app))[-80_000:]
             restored = await _restore_previous(app, domain, db, running_image, replacement_started, deployment)
@@ -112,6 +124,7 @@ async def _deploy_after_commit(deployment_id: int) -> None:
             deployment.output = (deployment.output + f"[error] {exc}\n")[-80_000:]
         deployment.finished_at = datetime.utcnow()
         await db.commit()
+        resource_guard_service.unregister(token)
 
 
 async def _restore_previous(
@@ -136,7 +149,7 @@ async def _restore_previous(
 def _build_or_pull(app: ContainerApp, deployment: ContainerAppDeployment) -> str:
     if app.source_type == "image":
         progress.append_log(deployment, "pull", f"Pulling {app.image_reference}.")
-        result = apps._run(["docker", "pull", app.image_reference or ""], timeout=config.CONTAINER_APP_BUILD_TIMEOUT)
+        result = build_process.run(deployment.id, ["docker", "pull", app.image_reference or ""], config.CONTAINER_APP_BUILD_TIMEOUT)
         if result.returncode:
             raise RuntimeError((result.stderr or result.stdout or "Image pull failed.")[-1500:])
         digest = apps._run(["docker", "image", "inspect", "--format", "{{index .RepoDigests 0}}", app.image_reference or ""], timeout=20)
@@ -151,7 +164,7 @@ def _build_or_pull(app: ContainerApp, deployment: ContainerAppDeployment) -> str
     image = f"srv-panel/railpack-app:{app.id}-{deployment.id}"
     command = ["docker", "build", "--tag", image, str(source)] if app.build_mode == "dockerfile" else ["railpack", "build", "--name", image, str(source)]
     progress.append_log(deployment, "build", "Building application image.")
-    result = apps._run(command, timeout=config.CONTAINER_APP_BUILD_TIMEOUT)
+    result = build_process.run(deployment.id, command, config.CONTAINER_APP_BUILD_TIMEOUT)
     deployment.output = (deployment.output + result.stdout + result.stderr)[-80_000:]
     if result.returncode:
         raise RuntimeError("Build failed. See deployment output.")

@@ -12,6 +12,7 @@ from models.domain import Domain
 from services import container_app_backup_service, container_app_control_service
 from services import container_app_database_service, container_app_service, container_app_wordpress_service
 from services import container_app_database_lifecycle_service as database_lifecycle
+from services.resource_guard_service import resource_guard_service
 
 router = APIRouter()
 
@@ -109,6 +110,11 @@ async def control(app_id: int, action: str, db: AsyncSession = Depends(get_db)):
     domain = await db.get(Domain, app.domain_id)
     if domain is None or app.status in {"deleting", "delete_failed", "data_preserved"}:
         raise HTTPException(409, "This application cannot be controlled now.")
+    if action != "stop":
+        try:
+            await resource_guard_service.allow_start(db)
+        except RuntimeError as exc:
+            raise HTTPException(409, str(exc)) from exc
     await container_app_control_service.control(db, app, domain, action)
     return RedirectResponse(f"/plugins/railpack_apps/{app.id}", status_code=303)
 
