@@ -76,7 +76,7 @@ async def fetch_account_projects(pat: str) -> list[dict[str, Any]]:
         if r.status_code == 401:
             from fastapi import HTTPException
             raise HTTPException(401, "Invalid Personal Access Token.")
-        if not r.ok:
+        if not r.is_success:
             from fastapi import HTTPException
             raise HTTPException(502, f"Supabase API error {r.status_code}: {r.text[:200]}")
         raw = r.json()
