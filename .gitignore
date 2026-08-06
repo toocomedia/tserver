@@ -33,7 +33,7 @@ temp_preview.html
 temp_*.html
 .agents/
 /todo/
-/caveman/
+/caveman
 
 # Documentation & Local Helpers
 /docs/*
