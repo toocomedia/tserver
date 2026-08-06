@@ -44,11 +44,16 @@ def _decrypt_pat(project: SupabaseProject) -> str | None:
     return decrypt(project.pat_enc, _secret())
 
 
+from urllib.parse import quote
+
+
 def _dsn(project: SupabaseProject, db_name: str | None = None) -> str:
     password = _decrypt_password(project)
     db = db_name or project.db_name
+    user_enc = quote(project.db_user or "postgres", safe="")
+    pass_enc = quote(password or "", safe="")
     return (
-        f"postgresql://{project.db_user}:{password}"
+        f"postgresql://{user_enc}:{pass_enc}"
         f"@{project.db_host}:{project.db_port}/{db}"
     )
 

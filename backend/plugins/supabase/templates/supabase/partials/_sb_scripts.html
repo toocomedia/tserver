@@ -163,6 +163,8 @@ async function handleTest() {
   if (!btn || !currentProjectId) return;
   btn.dataset.origLabel = btn.textContent;
   setLoading(btn, true, "Testing…");
+  const errBanner = document.getElementById("sb-status-error");
+  if (errBanner) errBanner.style.display = "none";
   try {
     const r = await apiFetch("POST", `/projects/${currentProjectId}/test`);
     const badge = document.getElementById("sb-status-badge");
@@ -170,8 +172,16 @@ async function handleTest() {
       badge.textContent = r.status;
       badge.className   = `status-badge ${r.status === "ok" ? "success" : "danger"}`;
     }
+    if (r.status === "error" && errBanner) {
+      errBanner.textContent = `Connection Error: ${r.detail || "Connection failed"}`;
+      errBanner.style.display = "";
+    }
     toast(r.status === "ok" ? "Connection OK" : `Connection failed: ${r.detail}`, r.status !== "ok");
   } catch (err) {
+    if (errBanner) {
+      errBanner.textContent = `Connection Error: ${err.message}`;
+      errBanner.style.display = "";
+    }
     toast(err.message, true);
   } finally {
     setLoading(btn, false, "Test Connection");
