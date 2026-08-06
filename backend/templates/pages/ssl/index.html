@@ -136,7 +136,6 @@
         <td colspan="6" style="padding:0; border-bottom:1px solid var(--color-line);">
           <div class="list-row-subactions">
             <div class="list-row-subactions__inner">
-              <span class="list-row-subactions__label">Actions for {{ cert.full_domain }}:</span>
               <div class="list-row-subactions__btns">
                 <form method="post" action="/ssl/{{ cert.id }}/renew" style="display:inline;">
                   {% include "partials/csrf_field.html" %}

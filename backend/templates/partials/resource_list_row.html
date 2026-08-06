@@ -33,7 +33,6 @@
   </div>
   <div class="list-row-subactions is-hidden">
     <div class="list-row-subactions__inner">
-      <span class="list-row-subactions__label">Actions for {{ name }}:</span>
       <div class="list-row-subactions__btns">
         {% if resource_type == 'plugin' %}{% set plugin = item %}{% else %}{% set dependency = item %}{% endif %}
         {% include actions_template %}

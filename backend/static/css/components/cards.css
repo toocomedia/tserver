@@ -945,7 +945,7 @@
 }
 
 /* ============================================================
-   EXPANDABLE ACTION SUB-LIST TRAY (LIST CARD BOX UNDER-RECORD)
+   SEAMLESS EXPANDED ACTION SUB-LIST (SIMPLE & BORDERLESS)
    ============================================================ */
 .list-actions-toggle-btn {
   display: inline-flex;
@@ -953,18 +953,15 @@
   gap: 6px;
   font-weight: 700;
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.18s ease;
 }
 
 .list-actions-toggle-btn .chevron-icon {
-  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .list-actions-toggle-btn.is-active {
-  background-color: var(--color-accent, #3b82f6);
-  color: #ffffff;
-  border-color: var(--color-accent, #3b82f6);
-  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+  color: var(--color-accent, #3b82f6);
 }
 
 .list-actions-toggle-btn.is-active .chevron-icon {
@@ -974,20 +971,19 @@
 .list-row-subactions {
   grid-column: 1 / -1;
   width: 100%;
-  padding: 12px 18px;
-  margin: 8px 0 4px 0;
-  background: var(--color-surface, rgba(255, 255, 255, 0.03));
-  border: 1px solid var(--color-line, rgba(255, 255, 255, 0.1));
-  border-left: 3px solid var(--color-accent, #3b82f6);
-  border-radius: var(--radius-md, 6px);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
-  animation: slideDownSubactions 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  padding: 10px 16px 14px 16px;
+  margin: 0;
+  background: var(--color-surface, rgba(255, 255, 255, 0.02));
+  border: none !important;
+  border-radius: 0;
+  box-shadow: none !important;
+  animation: slideDownSubactions 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 @keyframes slideDownSubactions {
   from {
     opacity: 0;
-    transform: translateY(-8px);
+    transform: translateY(-4px);
   }
   to {
     opacity: 1;
@@ -1005,17 +1001,20 @@
 
 .list-row-subactions__label {
   font-size: 11.5px;
-  font-weight: 800;
+  font-weight: 700;
   color: var(--color-muted, #94a3b8);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
 }
 
 .list-row-subactions__btns {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   flex-wrap: wrap;
+}
+
+.table-row-subactions-tr > td {
+  border: none !important;
+  padding: 0 !important;
 }
 
 .is-hidden {
