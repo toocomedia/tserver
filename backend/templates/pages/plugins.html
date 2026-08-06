@@ -1,5 +1,7 @@
 {% extends "layout.html" %}
 
+{% from "partials/skeleton_overlay.html" import skeleton_overlay %}
+
 {% block title %}Plugins Manager — {{ PANEL_NAME }}{% endblock %}
 
 {% block page_title %}Plugins{% endblock %}
@@ -17,6 +19,12 @@
 {% endblock %}
 
 {% block content %}
+<div class="plugins-page" style="position:relative;">
+
+<!-- SKELETON LOADING OVERLAY -->
+{{ skeleton_overlay('plugins-skeleton', cards=6) }}
+<!-- END SKELETON OVERLAY -->
+
 <div class="mb-xl">
   {% set plugin_title_icon %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>{% endset %}
   {% set title = 'Installed Extensions & Plugins' %}
@@ -96,10 +104,17 @@
   </div>
 </div>
 
+</div><!-- /.plugins-page -->
+
 {% endblock %}
 
 {% block scripts %}
 <script>
+// Hide the skeleton once the server-rendered DOM is ready.
+document.addEventListener('DOMContentLoaded', function() {
+  hideSkeleton('plugins-skeleton');
+});
+
 function closePluginCheckWindow(btn) {
   const host = btn.closest('.plugin-requirements-host');
   if (!host) return;

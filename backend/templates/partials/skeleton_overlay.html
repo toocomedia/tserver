@@ -17,7 +17,7 @@
      rows        — default row count when a table omits 'rows'
    Fade-out is handled by the shared JS helper: hideSkeleton('my-skeleton');
 #}
-{% macro skeleton_overlay(id, stat_cards=0, sections=[], controls=0, tables=[], rows=3) %}
+{% macro skeleton_overlay(id, stat_cards=0, sections=[], controls=0, tables=[], rows=3, cards=0) %}
 <div id="{{ id }}" class="skeleton-overlay" aria-hidden="true">
   {% if stat_cards %}
   <div class="skeleton-stat-grid">
@@ -58,5 +58,21 @@
     {% endfor %}
   </div>
   {% endfor %}
+
+  {% if cards %}
+  <div class="skeleton-card-grid">
+    {% for _ in range(cards) %}
+    <div class="skeleton-plugin-card skeleton-box">
+      <div class="sk-cover"></div>
+      <div class="sk-body">
+        <div class="sk-label"></div>
+        <div class="sk-value"></div>
+        <div class="sk-meta"></div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
 </div>
 {% endmacro %}
