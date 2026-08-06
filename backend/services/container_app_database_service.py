@@ -17,7 +17,7 @@ from models.container_app_database import ContainerAppDatabase
 from services import container_app_service
 
 KINDS = {"mariadb", "postgresql", "redis", "mongodb"}
-PROVIDERS = {"docker", "panel_postgres", "external"}
+PROVIDERS = {"docker", "panel_postgres", "supabase", "external"}
 DEFAULT_KEYS = {"mariadb": "MYSQL_URL", "postgresql": "DATABASE_URL", "redis": "REDIS_URL", "mongodb": "MONGODB_URI"}
 IMAGES = {"mariadb": "mariadb:11", "postgresql": "postgres:16-alpine", "redis": "redis:7-alpine", "mongodb": "mongo:7"}
 
@@ -41,10 +41,16 @@ def parse_specs(raw: object) -> list[dict[str, str]]:
             raise HTTPException(400, "Database attachment values are invalid.")
         if provider == "panel_postgres" and kind != "postgresql":
             raise HTTPException(400, "Panel PostgreSQL is only available for PostgreSQL attachments.")
+        if provider == "supabase" and kind != "postgresql":
+            raise HTTPException(400, "Supabase is only available for PostgreSQL attachments.")
+        supabase_project_id = str(item.get("supabase_project_id", ""))
+        if provider == "supabase" and not supabase_project_id.isdigit():
+            raise HTTPException(400, "Select a Supabase project for the Supabase provider.")
         external_url = str(item.get("external_url", ""))
         if provider == "external" and (not external_url or not urlsplit(external_url).scheme):
             raise HTTPException(400, "Each external database needs a connection URL.")
-        result.append({"kind": kind, "provider": provider, "environment_key": key, "external_url": external_url})
+        result.append({"kind": kind, "provider": provider, "environment_key": key, "external_url": external_url,
+                       "supabase_project_id": supabase_project_id})
         seen.add(kind)
     return result
 
@@ -62,6 +68,8 @@ async def create_attachments(db: AsyncSession, app: ContainerApp, specs: list[di
         _write_credentials(item, _new_credentials(item))
         if item.provider == "panel_postgres":
             _provision_panel_postgres(app, item)
+        elif item.provider == "supabase":
+            await _provision_supabase(app, item, spec.get("supabase_project_id", ""), db)
         else:
             _provision_docker(app, item)
         item.status, item.last_error = "ready", None
@@ -96,6 +104,9 @@ def read_app_environment(app: ContainerApp) -> dict[str, str]:
 
 def connection_url(item: ContainerAppDatabase) -> str:
     creds = _read_credentials(item)
+    # Supabase stores the full remote URL directly
+    if item.provider == "supabase":
+        return creds.get("SUPABASE_URL", "")
     password = quote(creds["PASSWORD"], safe="")
     if item.kind == "mariadb":
         return f"mysql://{quote(item.username or '', safe='')}:{password}@{item.network_alias}:3306/{item.database_name}"
@@ -104,6 +115,7 @@ def connection_url(item: ContainerAppDatabase) -> str:
     if item.kind == "redis":
         return f"redis://:{password}@{item.network_alias}:6379/0"
     return f"mongodb://{quote(item.username or '', safe='')}:{password}@{item.network_alias}:27017/{item.database_name}?authSource=admin"
+
 
 
 def _new_credentials(item: ContainerAppDatabase) -> dict[str, str]:
@@ -217,10 +229,36 @@ def _provision_panel_postgres(app: ContainerApp, item: ContainerAppDatabase) -> 
         raise
 
 
+async def _provision_supabase(
+    app: ContainerApp,
+    item: ContainerAppDatabase,
+    supabase_project_id: str,
+    db,
+) -> None:
+    """Create a user + database on a remote Supabase project for a hosted app."""
+    if not supabase_project_id or not str(supabase_project_id).isdigit():
+        raise HTTPException(400, "A Supabase project must be selected.")
+    from plugins.supabase import service as sb_svc
+    creds = _read_credentials(item)
+    item.database_name = creds["DATABASE"]
+    item.username = creds["USERNAME"]
+    item.network_alias = None  # Remote — no Docker network
+    database_url = await sb_svc.provision_app_database(
+        project_id=int(supabase_project_id),
+        database_name=item.database_name,
+        username=item.username,
+        password=creds["PASSWORD"],
+        db=db,
+    )
+    # Store the computed DATABASE_URL directly in the credentials file
+    _write_credentials(item, {**creds, "SUPABASE_URL": database_url})
+
+
 def _allow_panel_postgres_network() -> None:
     script = Path(__file__).resolve().parents[1] / "plugins" / "postgres_manager" / "scripts" / "allow-container-apps"
     result = container_app_service._run(["bash", str(script)], timeout=45)
     _require(result, "Could not configure the PostgreSQL container bridge.")
+
 
 
 def _network(app: ContainerApp) -> None:

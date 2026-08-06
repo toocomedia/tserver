@@ -70,11 +70,18 @@ if (form) {
     provider.disabled = required || !enabled;
     const url = row.querySelector('[data-database-url]');
     const external = provider.value === 'external';
+    const supabase = provider.value === 'supabase';
     row.querySelector('[data-database-external]').hidden = !enabled || !external;
-    url.required = enabled && external;
+    if (url) url.required = enabled && external;
+    // Supabase project picker
+    const supabasePicker = row.querySelector('[data-database-supabase-picker]');
+    if (supabasePicker) supabasePicker.hidden = !enabled || !supabase;
+    const supabaseSelect = row.querySelector('[data-database-supabase-project]');
+    if (supabaseSelect) supabaseSelect.required = enabled && supabase;
     setHidden(row.querySelector('[data-database-requirement]'), !required);
     setText(row.querySelector('[data-database-requirement]'), required ? 'Required by WordPress. The private MariaDB service is created with this app.' : '');
   }
+
   function applyInspection(data) {
     if (['railpack', 'dockerfile'].includes(data.build_mode)) query('#build_mode').value = data.build_mode;
     const port = Number(data.internal_port);
@@ -144,7 +151,16 @@ if (form) {
   }
 
   function attachments() {
-    return [...form.querySelectorAll('[data-database-row]')].flatMap((row) => row.querySelector('[data-database-enabled]').checked ? [{ kind: row.dataset.kind, provider: row.querySelector('[data-database-provider]').value, environment_key: row.querySelector('[data-database-key]').value, external_url: row.querySelector('[data-database-url]').value }] : []);
+    return [...form.querySelectorAll('[data-database-row]')].flatMap((row) => {
+      if (!row.querySelector('[data-database-enabled]').checked) return [];
+      const provider = row.querySelector('[data-database-provider]').value;
+      const supabasePicker = row.querySelector('[data-database-supabase-project]');
+      const supabase_project_id = supabasePicker ? supabasePicker.value : '';
+      if (provider === 'supabase' && !supabase_project_id) {
+        throw new Error('Select a Supabase project for the PostgreSQL attachment.');
+      }
+      return [{ kind: row.dataset.kind, provider, environment_key: row.querySelector('[data-database-key]').value, external_url: row.querySelector('[data-database-url]') ? row.querySelector('[data-database-url]').value : '', supabase_project_id }];
+    });
   }
 
   async function startDeployment() {

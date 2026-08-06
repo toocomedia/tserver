@@ -1,0 +1,15 @@
+{% extends "layout.html" %}
+{% block title %}{{ project.name }} — Supabase — VPS Panel{% endblock %}
+{% block content_class %}content--flush{% endblock %}
+{% block page_header_wrapper %}{% endblock %}
+
+{% block content %}
+<div id="sb-project-panel">
+  {% set databases = databases %}
+  {% include 'supabase/partials/_sb_project_panel.html' %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% include 'supabase/partials/_sb_scripts.html' %}
+{% endblock %}

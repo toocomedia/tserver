@@ -1,0 +1,120 @@
+{# _sb_project_panel.html — rendered into #sb-project-panel via JS fetch #}
+<div class="sb-project-header">
+  <div class="sb-project-header__info">
+    <h2 class="sb-project-header__name">{{ project.name }}</h2>
+    <span class="text-muted text-small">{{ project.db_host }}</span>
+    {% if project.region %}<span class="badge badge--muted">{{ project.region }}</span>{% endif %}
+    <span class="badge {% if project.connection_status == 'ok' %}badge--success{% elif project.connection_status == 'error' %}badge--danger{% else %}badge--muted{% endif %}">
+      {{ project.connection_status }}
+    </span>
+  </div>
+  <div class="sb-project-header__actions">
+    <button class="btn btn--sm btn--secondary" id="sb-btn-test" data-project-id="{{ project.id }}">Test Connection</button>
+    <button class="btn btn--sm btn--secondary" id="sb-btn-stats" data-project-id="{{ project.id }}">Stats</button>
+    <button class="btn btn--sm btn--secondary" id="sb-btn-pause" data-project-id="{{ project.id }}">Pause</button>
+    <button class="btn btn--sm btn--danger" id="sb-btn-delete" data-project-id="{{ project.id }}">Delete</button>
+  </div>
+</div>
+
+{# Tabs #}
+<div class="tabs" id="sb-tabs">
+  <button class="tab active" data-tab="databases">Databases</button>
+  <button class="tab" data-tab="roles">Users &amp; Roles</button>
+  <button class="tab" data-tab="query">Query Runner</button>
+  <button class="tab" data-tab="stats">Stats</button>
+</div>
+
+{# Databases tab #}
+<div id="sb-tab-databases" class="sb-tab-panel">
+  <div class="action-toolbar">
+    <h3>Databases</h3>
+  </div>
+  {% if databases %}
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr><th>Name</th><th>Encoding</th><th>Size</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for db in databases %}
+        <tr>
+          <td><button class="btn btn--sm" data-action="view-tables" data-db="{{ db.name }}" data-project-id="{{ project.id }}">{{ db.name }}</button></td>
+          <td class="text-muted">{{ db.encoding }}</td>
+          <td class="text-muted">{{ db.size }}</td>
+          <td class="text-right">
+            <button class="btn btn--sm btn--secondary" data-action="query-db" data-db="{{ db.name }}" data-project-id="{{ project.id }}">Query</button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="text-muted">Could not load databases. Check connection.</p>
+  {% endif %}
+
+  {# Tables sub-panel (loaded dynamically) #}
+  <div id="sb-tables-panel" hidden>
+    <div class="action-toolbar">
+      <h3 id="sb-tables-title">Tables</h3>
+      <button class="btn btn--sm btn--ghost" id="sb-tables-back">← Back to Databases</button>
+    </div>
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>Schema</th><th>Table</th><th>Size</th></tr></thead>
+        <tbody id="sb-tables-body"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+{# Roles tab #}
+<div id="sb-tab-roles" class="sb-tab-panel" hidden>
+  <div class="action-toolbar"><h3>Users &amp; Roles</h3></div>
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>Name</th><th>Superuser</th><th>Login</th><th>Create DB</th></tr></thead>
+      <tbody id="sb-roles-body">
+        <tr><td colspan="4" class="text-muted">Loading…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{# Query runner tab #}
+<div id="sb-tab-query" class="sb-tab-panel" hidden>
+  <div class="action-toolbar">
+    <h3>Query Runner</h3>
+    <div class="d-flex gap-sm align-center">
+      <div class="form-select-wrap">
+        <select class="form-select" id="sb-query-db">
+          {% for db in databases %}
+          <option value="{{ db.name }}">{{ db.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <button class="btn btn--primary" id="sb-query-run">Run</button>
+    </div>
+  </div>
+  <textarea class="form-input form-input--code sb-query-editor" id="sb-query-sql"
+            placeholder="SELECT * FROM your_table LIMIT 50;" rows="6" spellcheck="false"></textarea>
+  <p class="form-hint">Read-only. Only SELECT statements are allowed.</p>
+  <div id="sb-query-result" class="sb-query-result" hidden>
+    <div class="table-wrap">
+      <table class="table">
+        <thead id="sb-query-thead"></thead>
+        <tbody id="sb-query-tbody"></tbody>
+      </table>
+    </div>
+    <p class="text-muted text-small" id="sb-query-count"></p>
+  </div>
+  <p class="form-error" id="sb-query-error" hidden></p>
+</div>
+
+{# Stats tab #}
+<div id="sb-tab-stats" class="sb-tab-panel" hidden>
+  <div class="action-toolbar"><h3>Project Stats</h3></div>
+  <div id="sb-stats-content">
+    <p class="text-muted">Click "Stats" to load project information from the Supabase Management API.</p>
+  </div>
+</div>

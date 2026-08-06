@@ -13,6 +13,8 @@ from services import container_app_service
 def status(item: ContainerAppDatabase) -> dict[str, str]:
     if item.provider == "external":
         return {"status": "external", "detail": "The panel does not probe external databases."}
+    if item.provider == "supabase":
+        return {"status": item.status or "remote", "detail": "Remote Supabase database — no local container."}
     result = container_app_service._run(["docker", "inspect", "--format", "{{.State.Status}}", item.container_name or ""], timeout=15)
     return {"status": result.stdout.strip() if result.returncode == 0 else "missing", "detail": (result.stderr or "").strip()[-300:]}
 
@@ -47,6 +49,8 @@ def delete_managed(item: ContainerAppDatabase, confirmation: str) -> None:
     expected = f"DELETE {item.kind.upper()} {item.id}"
     if confirmation != expected:
         raise HTTPException(400, f"Type {expected} to permanently delete this data.")
+    if item.provider == "supabase":
+        raise HTTPException(400, "Supabase databases are not deleted here — use the Supabase plugin or dashboard.")
     if item.provider != "docker":
         raise HTTPException(400, "Panel PostgreSQL and external databases are not deleted here.")
     purge_managed(item)

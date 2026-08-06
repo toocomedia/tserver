@@ -26,10 +26,20 @@ async def create_page(request: Request, db: AsyncSession = Depends(get_db)):
     used.update((await db.scalars(select(HostedApp.domain_id))).all())
     domains = (await db.scalars(select(Domain).order_by(Domain.name))).all()
     ssl_domain_names = set((await db.scalars(select(SslCert.full_domain))).all())
+    # Load Supabase projects for the provider picker
+    supabase_projects = []
+    try:
+        from models.supabase_project import SupabaseProject
+        supabase_projects = list((await db.scalars(
+            select(SupabaseProject).order_by(SupabaseProject.name)
+        )).all())
+    except Exception:
+        pass
     return templates.TemplateResponse("railpack_apps_create.html", {
         "request": request, "active_page": "railpack_apps", "domains": domains, "used_domain_ids": used,
-        "ssl_domain_names": ssl_domain_names,
+        "ssl_domain_names": ssl_domain_names, "supabase_projects": supabase_projects,
     })
+
 
 
 @router.post("/inspect")

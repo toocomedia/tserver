@@ -1,0 +1,71 @@
+{% extends "layout.html" %}
+
+{% block title %}Supabase — VPS Panel{% endblock %}
+{% block content_class %}content--flush{% endblock %}
+{% block page_header_wrapper %}{% endblock %}
+
+{% block content %}
+<div class="split-layout">
+
+  {# ── Left sidebar: project list ── #}
+  <div class="split-sidebar">
+    <div class="split-sidebar__header">
+      <span class="split-sidebar__title">Projects</span>
+      <button class="btn btn--sm btn--primary" id="sb-add-project-btn"
+              data-action="open-modal" data-modal="sb-modal-add-project">
+        + Add
+      </button>
+    </div>
+
+    {% if projects %}
+      {% for p in projects %}
+      <a class="split-sidebar__item {% if loop.first %}active{% endif %}"
+         id="sb-proj-{{ p.id }}"
+         href="#"
+         data-action="select-project"
+         data-project-id="{{ p.id }}">
+        <span class="split-sidebar__item-name">{{ p.name }}</span>
+        {% if p.connection_status == 'ok' %}
+          <span class="badge badge--success badge--xs">●</span>
+        {% elif p.connection_status == 'error' %}
+          <span class="badge badge--danger badge--xs">●</span>
+        {% else %}
+          <span class="badge badge--muted badge--xs">●</span>
+        {% endif %}
+      </a>
+      {% endfor %}
+    {% else %}
+      <div class="split-sidebar__empty">
+        <p class="text-muted text-small">No projects yet.<br>Add your first Supabase project.</p>
+      </div>
+    {% endif %}
+
+    <div class="flex-1"></div>
+    <div class="split-sidebar__footer">
+      <div class="text-small">Supabase Plugin</div>
+      <div class="text-small">v1.0.0</div>
+    </div>
+  </div>
+
+  {# ── Right content ── #}
+  <div class="split-content" id="sb-main-content">
+    {% if projects %}
+      {# Load first project detail via HTMX or inline #}
+      <div id="sb-project-panel" class="sb-project-panel">
+        {% include 'supabase/partials/_sb_empty.html' %}
+      </div>
+    {% else %}
+      {% include 'supabase/partials/_sb_empty.html' %}
+    {% endif %}
+  </div>
+
+</div>
+
+{# Add project modal #}
+{% include 'supabase/partials/_sb_add_project_modal.html' %}
+
+{% endblock %}
+
+{% block scripts %}
+{% include 'supabase/partials/_sb_scripts.html' %}
+{% endblock %}
