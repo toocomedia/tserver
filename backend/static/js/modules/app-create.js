@@ -16,6 +16,8 @@ if (root) {
   const databaseMode = root.querySelector('[data-postgres-mode]');
   const externalDatabase = root.querySelector('[data-external-database]');
   const databaseUrl = root.querySelector('#database_url');
+  const supabasePicker = root.querySelector('[data-supabase-picker]');
+  const supabaseProject = root.querySelector('[data-supabase-project]');
   const state = { step: 1, unlocked: 1, detected: null, appId: null, deploymentId: null };
   let branchTimer;
 
@@ -24,20 +26,21 @@ if (root) {
 
   function renderStep(step) {
     state.step = step;
-    for (let index = 1; index <= 5; index += 1) {
+    for (let index = 1; index <= 6; index += 1) {
       setHidden(panel(index), index !== step);
       nav(index).classList.toggle('is-active', index === step);
       nav(index).classList.toggle('active', index === step);
       nav(index).classList.toggle('disabled', index > state.unlocked);
     }
-    back.hidden = step === 1 || step >= 4;
-    cancel.hidden = step >= 4;
-    next.hidden = step >= 4;
+    back.hidden = step === 1 || step >= 5;
+    cancel.hidden = step >= 5;
+    next.hidden = step >= 5;
     next.disabled = step === 2 && !state.detected;
     if (step === 1) next.textContent = 'Continue to Detection';
     if (step === 2) next.textContent = 'Continue to Configuration';
-    if (step === 3) next.textContent = 'Deploy App';
-    setText(root.querySelector('[data-wizard-hint]'), `Step ${step} of 5`);
+    if (step === 3) next.textContent = 'Continue to Environment';
+    if (step === 4) next.textContent = 'Deploy App';
+    setText(root.querySelector('[data-wizard-hint]'), `Step ${step} of 6`);
   }
 
   function setNextLoading(loading, label) {
@@ -79,10 +82,13 @@ if (root) {
   function configureDetectedProject(detected) {
     root.querySelector('#build_command').value = detected.build_command || '';
     root.querySelector('#start_command').value = detected.start_command || '';
-    renderEnvironmentFields(root.querySelector('[data-environment-list]'), detected.environment_keys || []);
-    setHidden(root.querySelector('[data-environment-fields]'), !(detected.environment_keys || []).some((item) => item.name !== 'DATABASE_URL'));
+    const environmentKeys = (detected.environment_keys || []).filter((item) => item.name !== 'DATABASE_URL');
+    renderEnvironmentFields(root.querySelector('[data-environment-list]'), environmentKeys);
+    setHidden(root.querySelector('[data-environment-empty]'), Boolean(environmentKeys.length));
     const evidence = detected.database_evidence || [];
     setText(root.querySelector('[data-database-hint]'), evidence.length ? evidence.join(' · ') : 'No database was detected.');
+    const supabaseOption = root.querySelector('[data-supabase-option]');
+    if (supabaseOption) supabaseOption.hidden = !detected.postgres_suspected;
     databaseMode.value = detected.managed_postgres_recommended ? 'create' : 'none';
     syncDatabaseMode();
   }
@@ -115,30 +121,46 @@ if (root) {
 
   function syncDatabaseMode() {
     const external = databaseMode.value === 'external';
+    const supabase = databaseMode.value === 'supabase';
     setHidden(externalDatabase, !external);
     databaseUrl.required = external;
+    if (supabasePicker) setHidden(supabasePicker, !supabase);
+    if (supabaseProject) supabaseProject.required = supabase;
   }
 
   function configurationError(message) {
-    const alert = root.querySelector('[data-configuration-error]');
+    const alert = panel(state.step).querySelector('[data-configuration-error]');
     setText(alert, message);
     setHidden(alert, false);
   }
 
   function validConfiguration() {
-    setHidden(root.querySelector('[data-configuration-error]'), true);
-    if (!form.reportValidity()) return false;
+    root.querySelectorAll('[data-configuration-error]').forEach((alert) => setHidden(alert, true));
+    const fields = [root.querySelector('#build_command'), root.querySelector('#start_command')];
+    if (databaseMode.value === 'external') fields.push(databaseUrl);
+    if (databaseMode.value === 'supabase' && supabaseProject) fields.push(supabaseProject);
+    if (!fields.every((field) => field.reportValidity())) return false;
     const databaseRequired = state.detected?.environment_keys?.some((item) => item.name === 'DATABASE_URL' && item.required);
     if (databaseRequired && databaseMode.value === 'none') {
       configurationError('DATABASE_URL is required. Select managed PostgreSQL or provide an external URL.');
       return false;
     }
+    return true;
+  }
+
+  function validEnvironment() {
+    if (!validConfiguration()) {
+      renderStep(3);
+      return false;
+    }
+    const inputs = [...root.querySelectorAll('[data-environment-key]')];
+    if (!inputs.every((input) => input.reportValidity())) return false;
     root.querySelector('[data-environment-values]').value = JSON.stringify(environmentValues(root));
     return true;
   }
 
   async function startDeployment() {
-    if (!validConfiguration()) return;
+    if (!validEnvironment()) return;
     setNextLoading(true, 'Deploying');
     try {
       const result = await fetchJson('/apps/create', {
@@ -146,8 +168,8 @@ if (root) {
       });
       state.appId = result.app_id;
       state.deploymentId = result.deployment_id;
-      state.unlocked = 4;
-      renderStep(4);
+      state.unlocked = 5;
+      renderStep(5);
       setHidden(actions, true);
       pollDeployment();
     } catch (error) {
@@ -166,19 +188,19 @@ if (root) {
       renderDeploymentSteps(root.querySelector('[data-deployment-steps]'), data.stage);
       if (['queued', 'running'].includes(data.status)) return window.setTimeout(pollDeployment, 1200);
       if (data.status === 'success') {
-        state.unlocked = 5;
+        state.unlocked = 6;
         const dashboard = root.querySelector('[data-deployment-dashboard]');
         dashboard.href = `/apps/${state.appId}`;
         setHidden(dashboard, false);
-        renderStep(5);
+        renderStep(6);
         return;
       }
-      state.unlocked = 5;
+      state.unlocked = 6;
       setText(root.querySelector('[data-deployment-summary]'), 'Deployment failed. Review the output, then retry from app details.');
       setText(root.querySelector('[data-deployment-error-text]'), data.error || 'Deployment failed.');
       root.querySelector('[data-deployment-details]').href = `/apps/${state.appId}`;
       setHidden(root.querySelector('[data-deployment-error]'), false);
-      renderStep(5);
+      renderStep(6);
     } catch (error) {
       setText(root.querySelector('[data-deployment-error-text]'), error.message || 'Could not read deployment status.');
       setHidden(root.querySelector('[data-deployment-error]'), false);
@@ -191,7 +213,7 @@ if (root) {
   });
   databaseMode.addEventListener('change', syncDatabaseMode);
   root.querySelector('[data-detection-retry]').addEventListener('click', detect);
-  next.addEventListener('click', () => [detect, () => renderStep(3), startDeployment][state.step - 1]?.());
+  next.addEventListener('click', () => [detect, () => renderStep(3), () => { if (validConfiguration()) renderStep(4); }, startDeployment][state.step - 1]?.());
   back.addEventListener('click', () => renderStep(Math.max(1, state.step - 1)));
   root.querySelectorAll('[data-wizard-nav]').forEach((button) => button.addEventListener('click', () => {
     if (Number(button.dataset.wizardNav) <= state.unlocked) renderStep(Number(button.dataset.wizardNav));

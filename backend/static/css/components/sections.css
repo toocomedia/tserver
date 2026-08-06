@@ -448,6 +448,7 @@
 .wizard-form, form.wizard-form {
   max-width: 100% !important;
   width: 100%;
+  padding-bottom: calc(var(--button-height) + var(--space-xl) + var(--space-xl));
 }
 
 .wizard-form [hidden] {
@@ -490,6 +491,23 @@
 .unboxed-step-container .form-select:focus {
   background: var(--color-bg);
   border-color: var(--color-text);
+}
+
+.wizard-environment-list {
+  max-height: calc(100vh - 320px);
+  overflow-y: auto;
+  padding-right: var(--space-sm);
+}
+
+.wizard-environment-list .form-group:last-child {
+  margin-bottom: 0;
+}
+
+@media (max-width: 640px) {
+  .wizard-environment-list {
+    max-height: none;
+    overflow-y: visible;
+  }
 }
 
 .wizard-grid-2-1 {
@@ -693,4 +711,3 @@
   gap: 12px;
   margin-top: 16px;
 }
-

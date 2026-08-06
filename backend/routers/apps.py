@@ -11,6 +11,7 @@ from models.domain import Domain
 from models.app_deployment import AppDeployment
 from models.app_environment import AppEnvironmentVariable
 from models.hosted_app import HostedApp
+from models.supabase_project import SupabaseProject
 from routers.apps_support import get_app as _app, get_domain as _domain
 from services import app_cleanup_service, app_deployment_service
 from services import app_environment_service, app_hosting_logs_service
@@ -44,7 +45,10 @@ async def index(request: Request, db: AsyncSession = Depends(get_db)):
 @router.get("/create", response_class=HTMLResponse)
 async def create_page(request: Request, domain_id: int, ssl: int = 0, db: AsyncSession = Depends(get_db)):
     domain = await _domain(db, domain_id)
-    return templates.TemplateResponse("pages/apps/create.html", {"request": request, "active_page": "apps", "domain": domain, "ssl": bool(ssl), "notice": request.query_params.get("notice")})
+    supabase_projects = (await db.scalars(
+        select(SupabaseProject).order_by(SupabaseProject.name)
+    )).all()
+    return templates.TemplateResponse("pages/apps/create.html", {"request": request, "active_page": "apps", "domain": domain, "ssl": bool(ssl), "notice": request.query_params.get("notice"), "supabase_projects": supabase_projects})
 
 
 @router.post("/inspect")
@@ -84,14 +88,14 @@ async def quick_deploy(request: Request, domain_id: int = Form(...), source_type
 
 
 @router.post("/create")
-async def create(request: Request, domain_id: int = Form(...), source_type: str = Form(...), repository_url: str = Form(""), branch: str = Form("main"), build_command: str = Form(...), start_command: str = Form(...), ssl: bool = Form(False), postgres_mode: str = Form("none"), database_url: str = Form(""), environment_values: str = Form("{}"), db: AsyncSession = Depends(get_db)):
+async def create(request: Request, domain_id: int = Form(...), source_type: str = Form(...), repository_url: str = Form(""), branch: str = Form("main"), build_command: str = Form(...), start_command: str = Form(...), ssl: bool = Form(False), postgres_mode: str = Form("none"), database_url: str = Form(""), supabase_project_id: int | None = Form(None), environment_values: str = Form("{}"), db: AsyncSession = Depends(get_db)):
     await _domain(db, domain_id)
     if source_type != "git":
         raise HTTPException(409, "ZIP source is coming soon.")
     if source_type == "git":
         detected = apps.inspect_repository(repository_url.strip(), branch.strip())
         repository_url, branch = str(detected["repository_url"]), str(detected["branch"])
-    app = await apps.create_app(db, domain_id, source_type, repository_url or None, branch, build_command, start_command, ssl, postgres_mode, database_url or None)
+    app = await apps.create_app(db, domain_id, source_type, repository_url or None, branch, build_command, start_command, ssl, postgres_mode, database_url or None, supabase_project_id)
     await app_environment_service.set_values(db, app, _environment_values(environment_values))
     deployment = await app_deployment_service.start(db, app)
     if "application/json" in request.headers.get("accept", ""):

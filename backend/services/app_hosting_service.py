@@ -1,6 +1,6 @@
 """Trusted administrator Python-app deployment orchestration."""
 from __future__ import annotations
-import os, shutil
+import os, secrets, shutil
 from pathlib import Path
 from fastapi import HTTPException
 from sqlalchemy import select
@@ -61,9 +61,9 @@ async def next_port(db: AsyncSession) -> int:
     used = set((await db.scalars(select(HostedApp.port))).all())
     return next(port for port in range(config.APP_HOSTING_PORT_START, 65536) if port not in used)
 
-async def create_app(db: AsyncSession, domain_id: int, source_type: str, repository_url: str | None, branch: str, build: str, start: str, ssl: bool, postgres_mode: str, external_url: str | None) -> HostedApp:
+async def create_app(db: AsyncSession, domain_id: int, source_type: str, repository_url: str | None, branch: str, build: str, start: str, ssl: bool, postgres_mode: str, external_url: str | None, supabase_project_id: int | None = None) -> HostedApp:
     if source_type != "git": raise HTTPException(409, "ZIP source is coming soon.")
-    if postgres_mode not in {"none", "create", "external"}: raise HTTPException(400, "Invalid app setup.")
+    if postgres_mode not in {"none", "create", "external", "supabase"}: raise HTTPException(400, "Invalid app setup.")
     if source_type == "git" and (not repository_url or not dependency_manager.is_healthy("git")): raise HTTPException(409, "Git & SSH dependency is required.")
     if not dependency_manager.is_healthy("python"): raise HTTPException(409, "Python Runtime dependency is required.")
     if await db.scalar(select(HostedApp.id).where(HostedApp.domain_id == domain_id)):
@@ -73,9 +73,18 @@ async def create_app(db: AsyncSession, domain_id: int, source_type: str, reposit
     port = await next_port(db)
     app = HostedApp(domain_id=domain_id, source_type=source_type, repository_url=repository_url, branch=branch or "main", build_command=build, start_command=start, port=port, service_name="pending", work_dir="pending", env_path="pending", ssl_requested=ssl, postgres_mode=postgres_mode)
     if postgres_mode == "external" and not external_url: raise HTTPException(400, "DATABASE_URL is required for an external database.")
+    if postgres_mode == "supabase" and not supabase_project_id: raise HTTPException(400, "Select a Supabase project.")
     db.add(app); await db.flush()
     app_ownership_service.apply_identity(app)
-    if postgres_mode == "external":
+    if postgres_mode == "supabase":
+        from plugins.supabase import service as supabase_service
+        app.supabase_project_id = supabase_project_id
+        app.database_name = app.database_user = f"app{app.id}"
+        external_url = await supabase_service.provision_app_database(
+            supabase_project_id, app.database_name, app.database_user,
+            secrets.token_urlsafe(24), db,
+        )
+    if postgres_mode in {"external", "supabase"}:
         ENV_ROOT.mkdir(parents=True, exist_ok=True)
         Path(app.env_path).write_text(f"DATABASE_URL={external_url}\n", encoding="utf-8")
         os.chmod(app.env_path, 0o600)

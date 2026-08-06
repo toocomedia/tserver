@@ -21,6 +21,7 @@ class HostedApp(Base):
     status: Mapped[str] = mapped_column(String(24), default="pending", nullable=False)
     paused_by_dependency: Mapped[str | None] = mapped_column(String(64))
     postgres_mode: Mapped[str] = mapped_column(String(16), default="none", nullable=False)
+    supabase_project_id: Mapped[int | None] = mapped_column(Integer)
     database_name: Mapped[str | None] = mapped_column(String(63))
     database_user: Mapped[str | None] = mapped_column(String(63))
     ssl_requested: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)

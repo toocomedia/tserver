@@ -34,7 +34,7 @@
 
       <div class="info-row">
         <span class="info-row__label">Managed Database</span>
-        <span class="info-row__value">{% if app.postgres_mode == 'create' %}Managed PostgreSQL{% elif app.postgres_mode == 'external' %}External DATABASE_URL{% else %}None{% endif %}</span>
+        <span class="info-row__value">{% if app.postgres_mode == 'create' %}Managed PostgreSQL{% elif app.postgres_mode == 'supabase' %}Supabase PostgreSQL{% elif app.postgres_mode == 'external' %}External DATABASE_URL{% else %}None{% endif %}</span>
       </div>
 
       {% if environment_keys %}

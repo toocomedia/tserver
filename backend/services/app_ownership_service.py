@@ -38,7 +38,7 @@ def apply_identity(app: HostedApp) -> None:
 def require_environment(app: HostedApp) -> None:
     if not Path(app.env_path).is_file():
         detail = "Configuration file is missing. Redeploy or run the hosting repair command."
-        if app.postgres_mode == "external":
+        if app.postgres_mode in {"external", "supabase"}:
             detail += " Re-save DATABASE_URL before repairing."
         raise HTTPException(409, detail)
 

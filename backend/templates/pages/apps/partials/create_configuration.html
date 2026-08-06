@@ -3,7 +3,7 @@
     <span>Step 3: Runtime Commands & Managed Database</span>
     <span class="badge-pill">Review Required</span>
   </div>
-  <p class="form-hint">Review the detected commands and enter only the secrets this project requires.</p>
+  <p class="form-hint">Review detected commands and database connection.</p>
 
   <div class="form-group">
     <label class="form-label" for="build_command">Build command</label>
@@ -19,6 +19,7 @@
       <select class="form-select" id="postgres_mode" name="postgres_mode" data-postgres-mode>
         <option value="none" selected>No managed database</option>
         <option value="create">Create managed PostgreSQL database</option>
+        {% if supabase_projects %}<option value="supabase" data-supabase-option hidden>Use Supabase PostgreSQL</option>{% endif %}
         <option value="external">Use external DATABASE_URL</option>
       </select>
     </div>
@@ -28,10 +29,16 @@
     <label class="form-label" for="database_url">External DATABASE_URL</label>
     <input class="form-input form-input--code" id="database_url" name="database_url" type="password" autocomplete="off">
   </div>
-  <div class="form-group" data-environment-fields hidden>
-    <span class="form-label">Detected environment values</span>
-    <p class="form-hint">Values are entered once and stored only in this app’s protected environment file.</p>
-    <div data-environment-list></div>
+  {% if supabase_projects %}<div class="form-group" data-supabase-picker hidden>
+    <label class="form-label" for="supabase_project_id">Supabase project</label>
+    <div class="form-select-wrap">
+      <select class="form-select" id="supabase_project_id" name="supabase_project_id" data-supabase-project>
+        <option value="">Select Supabase project</option>
+        {% for project in supabase_projects %}<option value="{{ project.id }}">{{ project.name }} ({{ project.db_host }})</option>{% endfor %}
+      </select>
+    </div>
+    <p class="form-hint">Panel creates a dedicated database and user, then adds its DATABASE_URL.</p>
   </div>
+  {% endif %}
   <div class="alert alert--danger" data-configuration-error hidden></div>
 </section>

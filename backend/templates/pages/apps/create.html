@@ -19,14 +19,16 @@
     <div class="step-item active" role="button" tabindex="0" data-wizard-nav="1"><span class="step-num">01</span><span>1. Git Source</span></div>
     <div class="step-item disabled" role="button" tabindex="0" data-wizard-nav="2"><span class="step-num">02</span><span>2. Auto-Detection</span></div>
     <div class="step-item disabled" role="button" tabindex="0" data-wizard-nav="3"><span class="step-num">03</span><span>3. Configuration & DB</span></div>
-    <div class="step-item disabled" role="button" tabindex="0" data-wizard-nav="4"><span class="step-num">04</span><span>4. Deployment Steps</span></div>
-    <div class="step-item disabled" role="button" tabindex="0" data-wizard-nav="5"><span class="step-num">05</span><span>5. Terminal Stream</span></div>
+    <div class="step-item disabled" role="button" tabindex="0" data-wizard-nav="4"><span class="step-num">04</span><span>4. Environment</span></div>
+    <div class="step-item disabled" role="button" tabindex="0" data-wizard-nav="5"><span class="step-num">05</span><span>5. Deployment Steps</span></div>
+    <div class="step-item disabled" role="button" tabindex="0" data-wizard-nav="6"><span class="step-num">06</span><span>6. Terminal Stream</span></div>
   </nav>
 
   <div class="wizard-content-area">
     {% include "pages/apps/partials/create_source.html" %}
     {% include "pages/apps/partials/create_detection.html" %}
     {% include "pages/apps/partials/create_configuration.html" %}
+    {% include "pages/apps/partials/create_environment.html" %}
     {% include "pages/apps/partials/create_deployment.html" %}
     {% include "pages/apps/partials/create_terminal.html" %}
   </div>
