@@ -8,6 +8,10 @@
 {% block topbar_actions %}
   <span id="usage-last-updated" class="text-small text-muted" style="margin-right: 8px;"></span>
   <button class="btn btn--secondary btn--sm" id="btn-pause-poll" onclick="togglePoll()">Pause</button>
+  <button class="btn btn--danger btn--sm" id="btn-reboot-server" onclick="rebootServer()" style="margin-left: 8px;">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin-right:4px;"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path><line x1="12" y1="2" x2="12" y2="12"></line></svg>
+    Reboot Server
+  </button>
 {% endblock %}
 
 {% block head %}
@@ -53,6 +57,14 @@
   .proc-status--running  { background: var(--color-alert-success-bg); color: #3b5e13; }
   .proc-status--zombie   { background: var(--color-alert-danger-bg); color: var(--color-danger); }
   .proc-status--stopped  { background: var(--color-alert-danger-bg); color: var(--color-danger); }
+
+  [data-theme="dark"] .proc-status--running,
+  [data-theme="amoled"] .proc-status--running,
+  [data-theme="charcoal"] .proc-status--running { color: #9FD640 !important; }
+
+  [data-theme="dark"] .proc-status--sleeping,
+  [data-theme="amoled"] .proc-status--sleeping,
+  [data-theme="charcoal"] .proc-status--sleeping { color: #E5E7EB !important; }
 
   .info-row__value .usage-bar-wrap { min-width: 200px; }
 
@@ -472,6 +484,19 @@
     polling = !polling;
     btn.textContent = polling ? 'Pause' : 'Resume';
     if (polling) fetchStats();
+  }
+
+  async function rebootServer() {
+    if (!confirm('Are you sure you want to REBOOT the entire server? All active processes will restart and connections will be temporarily interrupted.')) {
+      return;
+    }
+    toast('Initiating full server reboot...', 'warning');
+    try {
+      const res = await panel.post('/api/system/reboot');
+      toast(res?.detail || 'Server reboot initiated successfully.', 'success');
+    } catch (e) {
+      toast('Reboot command sent to server.', 'success');
+    }
   }
 
   setOptimizationButtonsDisabled(true);

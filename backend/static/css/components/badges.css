@@ -98,49 +98,66 @@
   color: var(--color-muted);
 }
 
-/* Ensure all status badges and active labels use the app's exact green (#9FD640), made bright and clear for Dark and AMOLED modes */
+/* Ensure all status badges and active labels use the app's exact green (#9FD640), made bright and clear for Dark, AMOLED, and Charcoal modes */
 [data-theme="dark"] .status-badge--success,
 [data-theme="amoled"] .status-badge--success,
+[data-theme="charcoal"] .status-badge--success,
 [data-theme="dark"] .badge-minimal--active,
 [data-theme="amoled"] .badge-minimal--active,
+[data-theme="charcoal"] .badge-minimal--active,
 [data-theme="dark"] .badge--active,
 [data-theme="amoled"] .badge--active,
+[data-theme="charcoal"] .badge--active,
 [data-theme="dark"] .badge--healthy,
 [data-theme="amoled"] .badge--healthy,
+[data-theme="charcoal"] .badge--healthy,
 [data-theme="dark"] .badge--ok,
-[data-theme="amoled"] .badge--ok {
+[data-theme="amoled"] .badge--ok,
+[data-theme="charcoal"] .badge--ok {
   color: #9FD640 !important;
 }
 
 [data-theme="dark"] .status-badge--danger,
 [data-theme="amoled"] .status-badge--danger,
+[data-theme="charcoal"] .status-badge--danger,
 [data-theme="dark"] .badge-minimal--danger,
 [data-theme="amoled"] .badge-minimal--danger,
+[data-theme="charcoal"] .badge-minimal--danger,
 [data-theme="dark"] .badge--danger,
 [data-theme="amoled"] .badge--danger,
+[data-theme="charcoal"] .badge--danger,
 [data-theme="dark"] .badge--error,
 [data-theme="amoled"] .badge--error,
+[data-theme="charcoal"] .badge--error,
 [data-theme="dark"] .badge--missing,
 [data-theme="amoled"] .badge--missing,
+[data-theme="charcoal"] .badge--missing,
 [data-theme="dark"] .badge--problem,
-[data-theme="amoled"] .badge--problem {
+[data-theme="amoled"] .badge--problem,
+[data-theme="charcoal"] .badge--problem {
   color: #FCA5A5 !important;
 }
 
 [data-theme="dark"] .status-badge--warning,
-[data-theme="amoled"] .status-badge--warning {
+[data-theme="amoled"] .status-badge--warning,
+[data-theme="charcoal"] .status-badge--warning {
   color: #FBBF24 !important;
 }
 
 [data-theme="dark"] .status-badge--muted,
 [data-theme="amoled"] .status-badge--muted,
+[data-theme="charcoal"] .status-badge--muted,
 [data-theme="dark"] .badge-minimal--neutral,
 [data-theme="amoled"] .badge-minimal--neutral,
+[data-theme="charcoal"] .badge-minimal--neutral,
 [data-theme="dark"] .badge--inactive,
 [data-theme="amoled"] .badge--inactive,
+[data-theme="charcoal"] .badge--inactive,
 [data-theme="dark"] .badge--stopped,
 [data-theme="amoled"] .badge--stopped,
+[data-theme="charcoal"] .badge--stopped,
 [data-theme="dark"] .badge--neutral,
-[data-theme="amoled"] .badge--neutral {
+[data-theme="amoled"] .badge--neutral,
+[data-theme="charcoal"] .badge--neutral {
   color: #D1D5DB !important;
 }

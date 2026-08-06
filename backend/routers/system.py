@@ -463,6 +463,17 @@ async def toggle_advanced_tuning(payload: AdvancedTuningToggleIn):
     }
 
 
+@router.post("/api/system/reboot")
+async def reboot_server():
+    """Reboot the entire server/VPS."""
+    async def _do_reboot():
+        await asyncio.sleep(1)
+        await run(["sudo", "reboot"])
+
+    asyncio.create_task(_do_reboot())
+    return {"success": True, "detail": "Server reboot initiated. The system will restart in a moment."}
+
+
 
 
 @router.get("/usage", response_class=HTMLResponse)
