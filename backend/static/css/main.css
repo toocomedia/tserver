@@ -123,6 +123,10 @@
   --page-gutter:       16px;
   --content-gap:       16px;
   --max-content-width: 1120px;
+
+  /* Skeleton / loading timing (see components/loading.css) */
+  --skeleton-shimmer-duration: 1.6s;
+  --skeleton-fade-duration: 0.4s;
 }
 
 /* ============================================================

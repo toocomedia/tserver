@@ -98,8 +98,11 @@
   40% { opacity: 1; transform: translateY(-4px); }
 }
 
-/* Skeleton Shimmer Loading Box */
-.skeleton-box {
+/* Skeleton Shimmer Loading Box.
+   Shimmer gradient + animation are shared by every skeleton shape. */
+.skeleton-box,
+.skeleton-shimmer,
+.skeleton-shimmer-box {
   background: linear-gradient(
     100deg,
     var(--color-surface) 0%,
@@ -109,14 +112,33 @@
     var(--color-surface) 100%
   );
   background-size: 300% 100%;
-  animation: skeleton-shimmer 2.5s infinite ease-in-out;
+  animation: skeleton-shimmer var(--skeleton-shimmer-duration) infinite ease-in-out;
   border-radius: 4px;
 }
+
+/* Async loader placeholder (data-async-load) — fills its container */
+.skeleton-shimmer,
+.skeleton-shimmer-box {
+  display: block;
+  width: 100%;
+  min-height: 140px;
+}
+
 .sk-label, .sk-value, .sk-meta, .sk-th, .sk-td, .sk-text, .sk-btn {
   background: var(--color-line);
   opacity: 0.5;
   border-radius: 3px;
 }
+
+/* Skeleton cell width helpers — keeps templates free of inline styles.
+   Must match the real <colgroup> / <th> widths of the rendered table. */
+.sk-w-10 { width: 10%; }
+.sk-w-12 { width: 12%; }
+.sk-w-15 { width: 15%; }
+.sk-w-25 { width: 25%; }
+.sk-w-30 { width: 30%; }
+.sk-w-35 { width: 35%; }
+
 @keyframes skeleton-shimmer {
   0% { background-position: 200% 0; }
   100% { background-position: -200% 0; }
@@ -131,11 +153,27 @@
   z-index: 10;
   background: var(--color-bg);
   padding: 0;
-  transition: opacity 0.5s ease;
+  transition: opacity var(--skeleton-fade-duration) ease;
 }
 .skeleton-overlay.is-hidden {
   opacity: 0;
   pointer-events: none;
+}
+
+/* Section-level loading dim (is-data-loading) — used for inline/partial loads
+   (e.g. Settings → Updates). Shares the same smooth fade as the overlay. */
+.is-data-loading {
+  opacity: 0.45;
+  pointer-events: none;
+  transition: opacity var(--skeleton-fade-duration) ease;
+}
+
+/* Async-loaded content fades in over the same duration as the overlay fade. */
+[data-async-load] {
+  transition: opacity var(--skeleton-fade-duration) ease;
+}
+.skeleton-content--enter {
+  opacity: 0;
 }
 
 /* Stat grid skeleton: 6 shimmer boxes in auto-fit grid */
@@ -199,6 +237,13 @@
 .skeleton-table-wrap {
   margin-bottom: 24px;
   width: 100%;
+}
+/* Header spacing differs by context — no inline styles needed */
+.skeleton-table-wrap .skeleton-section-header {
+  margin-bottom: 12px;
+}
+.skeleton-controls .skeleton-section-header {
+  margin-bottom: 16px;
 }
 .skeleton-table-header {
   display: flex;

@@ -170,6 +170,23 @@ function closeModal(id) {
   if (el) el.classList.add("hidden");
 }
 
+/**
+ * Skeleton helpers — shared for all pages.
+ * hideSkeleton(id): fades out a .skeleton-overlay after the first successful load.
+ *   A short delay lets real content render before the fade starts.
+ * showSkeleton(id): re-shows an overlay (e.g. for a full page reload).
+ */
+function hideSkeleton(id, delay = 80) {
+  const el = document.getElementById(id);
+  if (!el || el.classList.contains("is-hidden")) return;
+  setTimeout(() => el.classList.add("is-hidden"), delay);
+}
+
+function showSkeleton(id) {
+  const el = document.getElementById(id);
+  if (el) el.classList.remove("is-hidden");
+}
+
 document.addEventListener("click", (e) => {
   if (e.target.classList.contains("modal-backdrop")) {
     if (e.target.dataset.noBackdropClose === "true") return;
@@ -412,4 +429,6 @@ window.csrfHeaders = csrfHeaders;
 window.toast = toast;
 window.openModal = openModal;
 window.closeModal = closeModal;
+window.hideSkeleton = hideSkeleton;
+window.showSkeleton = showSkeleton;
 window.confirmAction = confirmAction;

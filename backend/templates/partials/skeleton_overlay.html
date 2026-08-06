@@ -1,0 +1,62 @@
+{# skeleton_overlay.html — shared page-level skeleton overlay.
+   Usage (inside a `position: relative` content container):
+     {% from "partials/skeleton_overlay.html" import skeleton_overlay %}
+     {{ skeleton_overlay(
+          'my-skeleton',
+          stat_cards=6,
+          sections=[5, 4],
+          controls=3,
+          tables=[{ 'cols': [30, 15, 12, 15, 12], 'rows': 4 }]
+       ) }}
+   Params:
+     id          — element id, used by hideSkeleton(id) in main.js
+     stat_cards  — number of stat-card boxes (default 0)
+     sections    — list of row counts, one entry per section block
+     controls    — number of toggle-row strips (default 0)
+     tables      — list of { 'cols': [widths], 'rows': n } to mirror real tables
+     rows        — default row count when a table omits 'rows'
+   Fade-out is handled by the shared JS helper: hideSkeleton('my-skeleton');
+#}
+{% macro skeleton_overlay(id, stat_cards=0, sections=[], controls=0, tables=[], rows=3) %}
+<div id="{{ id }}" class="skeleton-overlay" aria-hidden="true">
+  {% if stat_cards %}
+  <div class="skeleton-stat-grid">
+    {% for _ in range(stat_cards) %}
+    <div class="skeleton-stat-card skeleton-box"><div class="sk-label"></div><div class="sk-value"></div><div class="sk-meta"></div></div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% for _rows in sections %}
+  <div class="skeleton-section">
+    <div class="skeleton-section-header skeleton-box"></div>
+    {% for _ in range(_rows) %}
+    <div class="skeleton-row"><div class="sk-label"></div><div class="sk-value"></div></div>
+    {% endfor %}
+  </div>
+  {% endfor %}
+
+  {% if controls %}
+  <div class="skeleton-controls">
+    <div class="skeleton-section-header skeleton-box"></div>
+    {% for _ in range(controls) %}
+    <div class="skeleton-control-row"><div class="sk-text"></div><div class="sk-buttons"><div class="sk-btn"></div><div class="sk-btn"></div></div></div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% for _table in tables %}
+  <div class="skeleton-table-wrap">
+    <div class="skeleton-section-header skeleton-box"></div>
+    <div class="skeleton-table-header">
+      {% for _w in _table.cols %}<div class="sk-th sk-w-{{ _w }}"></div>{% endfor %}
+    </div>
+    {% for _ in range(_table.rows or rows) %}
+    <div class="skeleton-table-row">
+      {% for _w in _table.cols %}<div class="sk-td sk-w-{{ _w }}"></div>{% endfor %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endfor %}
+</div>
+{% endmacro %}

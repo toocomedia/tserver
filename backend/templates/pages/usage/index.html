@@ -1,5 +1,7 @@
 {% extends "layout.html" %}
 
+{% from "partials/skeleton_overlay.html" import skeleton_overlay %}
+
 {% block title %}Usage — {{ PANEL_NAME }}{% endblock %}
 {% block page_title %}Server Usage Diagnostics{% endblock %}
 
@@ -62,89 +64,19 @@
 <div class="usage-page" data-usage-page style="position:relative;">
 
 <!-- SKELETON LOADING OVERLAY -->
-<div id="usage-skeleton" class="skeleton-overlay">
-  <!-- Stat cards -->
-  <div class="skeleton-stat-grid">
-    <div class="skeleton-stat-card skeleton-box"><div class="sk-label"></div><div class="sk-value"></div><div class="sk-meta"></div></div>
-    <div class="skeleton-stat-card skeleton-box"><div class="sk-label"></div><div class="sk-value"></div><div class="sk-meta"></div></div>
-    <div class="skeleton-stat-card skeleton-box"><div class="sk-label"></div><div class="sk-value"></div><div class="sk-meta"></div></div>
-    <div class="skeleton-stat-card skeleton-box"><div class="sk-label"></div><div class="sk-value"></div><div class="sk-meta"></div></div>
-    <div class="skeleton-stat-card skeleton-box"><div class="sk-label"></div><div class="sk-value"></div><div class="sk-meta"></div></div>
-    <div class="skeleton-stat-card skeleton-box"><div class="sk-label"></div><div class="sk-value"></div><div class="sk-meta"></div></div>
-  </div>
-  <!-- Section: CPU & Memory -->
-  <div class="skeleton-section">
-    <div class="skeleton-section-header skeleton-box"></div>
-    <div class="skeleton-row"><div class="sk-label"></div><div class="sk-value"></div></div>
-    <div class="skeleton-row"><div class="sk-label"></div><div class="sk-value"></div></div>
-    <div class="skeleton-row"><div class="sk-label"></div><div class="sk-value"></div></div>
-    <div class="skeleton-row"><div class="sk-label"></div><div class="sk-value"></div></div>
-    <div class="skeleton-row"><div class="sk-label"></div><div class="sk-value"></div></div>
-  </div>
-  <!-- Section: Optimizations -->
-  <div class="skeleton-controls">
-    <div class="skeleton-section-header skeleton-box" style="margin-bottom:16px;"></div>
-    <div class="skeleton-control-row"><div class="sk-text"></div><div class="sk-buttons"><div class="sk-btn"></div><div class="sk-btn"></div></div></div>
-    <div class="skeleton-control-row"><div class="sk-text"></div><div class="sk-buttons"><div class="sk-btn"></div><div class="sk-btn"></div></div></div>
-    <div class="skeleton-control-row"><div class="sk-text"></div><div class="sk-buttons"><div class="sk-btn"></div><div class="sk-btn"></div></div></div>
-  </div>
-  <!-- Table: Services -->
-  <div class="skeleton-table-wrap">
-    <div class="skeleton-section-header skeleton-box" style="margin-bottom:12px;"></div>
-    <div class="skeleton-table-header"><div class="sk-th" style="width:30%"></div><div class="sk-th" style="width:15%"></div><div class="sk-th" style="width:12%"></div><div class="sk-th" style="width:15%"></div><div class="sk-th" style="width:12%"></div></div>
-    <div class="skeleton-table-row"><div class="sk-td" style="width:30%"></div><div class="sk-td" style="width:15%"></div><div class="sk-td" style="width:12%"></div><div class="sk-td" style="width:15%"></div><div class="sk-td" style="width:12%"></div></div>
-    <div class="skeleton-table-row"><div class="sk-td" style="width:30%"></div><div class="sk-td" style="width:15%"></div><div class="sk-td" style="width:12%"></div><div class="sk-td" style="width:15%"></div><div class="sk-td" style="width:12%"></div></div>
-    <div class="skeleton-table-row"><div class="sk-td" style="width:30%"></div><div class="sk-td" style="width:15%"></div><div class="sk-td" style="width:12%"></div><div class="sk-td" style="width:15%"></div><div class="sk-td" style="width:12%"></div></div>
-    <div class="skeleton-table-row"><div class="sk-td" style="width:30%"></div><div class="sk-td" style="width:15%"></div><div class="sk-td" style="width:12%"></div><div class="sk-td" style="width:15%"></div><div class="sk-td" style="width:12%"></div></div>
-  </div>
-  <!-- Table: Plugins -->
-  <div class="skeleton-table-wrap">
-    <div class="skeleton-section-header skeleton-box" style="margin-bottom:12px;"></div>
-    <div class="skeleton-table-header"><div class="sk-th" style="width:30%"></div><div class="sk-th" style="width:15%"></div><div class="sk-th" style="width:12%"></div><div class="sk-th" style="width:15%"></div><div class="sk-th" style="width:12%"></div></div>
-    <div class="skeleton-table-row"><div class="sk-td" style="width:30%"></div><div class="sk-td" style="width:15%"></div><div class="sk-td" style="width:12%"></div><div class="sk-td" style="width:15%"></div><div class="sk-td" style="width:12%"></div></div>
-    <div class="skeleton-table-row"><div class="sk-td" style="width:30%"></div><div class="sk-td" style="width:15%"></div><div class="sk-td" style="width:12%"></div><div class="sk-td" style="width:15%"></div><div class="sk-td" style="width:12%"></div></div>
-    <div class="skeleton-table-row"><div class="sk-td" style="width:30%"></div><div class="sk-td" style="width:15%"></div><div class="sk-td" style="width:12%"></div><div class="sk-td" style="width:15%"></div><div class="sk-td" style="width:12%"></div></div>
-  </div>
-  <!-- Table: Hosted Python Apps -->
-  <div class="skeleton-table-wrap">
-    <div class="skeleton-section-header skeleton-box" style="margin-bottom:12px;"></div>
-    <div class="skeleton-table-header"><div class="sk-th" style="width:30%"></div><div class="sk-th" style="width:15%"></div><div class="sk-th" style="width:12%"></div><div class="sk-th" style="width:15%"></div><div class="sk-th" style="width:12%"></div></div>
-    <div class="skeleton-table-row"><div class="sk-td" style="width:30%"></div><div class="sk-td" style="width:15%"></div><div class="sk-td" style="width:12%"></div><div class="sk-td" style="width:15%"></div><div class="sk-td" style="width:12%"></div></div>
-    <div class="skeleton-table-row"><div class="sk-td" style="width:30%"></div><div class="sk-td" style="width:15%"></div><div class="sk-td" style="width:12%"></div><div class="sk-td" style="width:15%"></div><div class="sk-td" style="width:12%"></div></div>
-  </div>
-  <!-- Table: Runtime Dependencies -->
-  <div class="skeleton-table-wrap">
-    <div class="skeleton-section-header skeleton-box" style="margin-bottom:12px;"></div>
-    <div class="skeleton-table-header"><div class="sk-th" style="width:25%"></div><div class="sk-th" style="width:12%"></div><div class="sk-th" style="width:12%"></div><div class="sk-th" style="width:12%"></div><div class="sk-th" style="width:15%"></div><div class="sk-th" style="width:12%"></div></div>
-    <div class="skeleton-table-row"><div class="sk-td" style="width:25%"></div><div class="sk-td" style="width:12%"></div><div class="sk-td" style="width:12%"></div><div class="sk-td" style="width:12%"></div><div class="sk-td" style="width:15%"></div><div class="sk-td" style="width:12%"></div></div>
-    <div class="skeleton-table-row"><div class="sk-td" style="width:25%"></div><div class="sk-td" style="width:12%"></div><div class="sk-td" style="width:12%"></div><div class="sk-td" style="width:12%"></div><div class="sk-td" style="width:15%"></div><div class="sk-td" style="width:12%"></div></div>
-  </div>
-  <!-- Table: Top Processes -->
-  <div class="skeleton-table-wrap">
-    <div class="skeleton-section-header skeleton-box" style="margin-bottom:12px;"></div>
-    <div class="skeleton-table-header"><div class="sk-th" style="width:10%"></div><div class="sk-th" style="width:35%"></div><div class="sk-th" style="width:12%"></div><div class="sk-th" style="width:12%"></div><div class="sk-th" style="width:12%"></div></div>
-    <div class="skeleton-table-row"><div class="sk-td" style="width:10%"></div><div class="sk-td" style="width:35%"></div><div class="sk-td" style="width:12%"></div><div class="sk-td" style="width:12%"></div><div class="sk-td" style="width:12%"></div></div>
-    <div class="skeleton-table-row"><div class="sk-td" style="width:10%"></div><div class="sk-td" style="width:35%"></div><div class="sk-td" style="width:12%"></div><div class="sk-td" style="width:12%"></div><div class="sk-td" style="width:12%"></div></div>
-    <div class="skeleton-table-row"><div class="sk-td" style="width:10%"></div><div class="sk-td" style="width:35%"></div><div class="sk-td" style="width:12%"></div><div class="sk-td" style="width:12%"></div><div class="sk-td" style="width:12%"></div></div>
-    <div class="skeleton-table-row"><div class="sk-td" style="width:10%"></div><div class="sk-td" style="width:35%"></div><div class="sk-td" style="width:12%"></div><div class="sk-td" style="width:12%"></div><div class="sk-td" style="width:12%"></div></div>
-    <div class="skeleton-table-row"><div class="sk-td" style="width:10%"></div><div class="sk-td" style="width:35%"></div><div class="sk-td" style="width:12%"></div><div class="sk-td" style="width:12%"></div><div class="sk-td" style="width:12%"></div></div>
-  </div>
-  <!-- Table: Apps Engine -->
-  <div class="skeleton-table-wrap">
-    <div class="skeleton-section-header skeleton-box" style="margin-bottom:12px;"></div>
-    <div class="skeleton-table-header"><div class="sk-th" style="width:30%"></div><div class="sk-th" style="width:15%"></div><div class="sk-th" style="width:12%"></div><div class="sk-th" style="width:15%"></div><div class="sk-th" style="width:12%"></div></div>
-    <div class="skeleton-table-row"><div class="sk-td" style="width:30%"></div><div class="sk-td" style="width:15%"></div><div class="sk-td" style="width:12%"></div><div class="sk-td" style="width:15%"></div><div class="sk-td" style="width:12%"></div></div>
-    <div class="skeleton-table-row"><div class="sk-td" style="width:30%"></div><div class="sk-td" style="width:15%"></div><div class="sk-td" style="width:12%"></div><div class="sk-td" style="width:15%"></div><div class="sk-td" style="width:12%"></div></div>
-  </div>
-  <!-- Section: Disk & Network -->
-  <div class="skeleton-section">
-    <div class="skeleton-section-header skeleton-box"></div>
-    <div class="skeleton-row"><div class="sk-label"></div><div class="sk-value"></div></div>
-    <div class="skeleton-row"><div class="sk-label"></div><div class="sk-value"></div></div>
-    <div class="skeleton-row"><div class="sk-label"></div><div class="sk-value"></div></div>
-    <div class="skeleton-row"><div class="sk-label"></div><div class="sk-value"></div></div>
-  </div>
-</div>
+{{ skeleton_overlay('usage-skeleton',
+  stat_cards=6,
+  sections=[5, 4],
+  controls=3,
+  tables=[
+    { 'cols': [30, 15, 12, 15, 12], 'rows': 4 },
+    { 'cols': [30, 15, 12, 15, 12], 'rows': 3 },
+    { 'cols': [30, 15, 12, 15, 12], 'rows': 2 },
+    { 'cols': [25, 12, 12, 12, 15, 12], 'rows': 2 },
+    { 'cols': [10, 35, 12, 12, 12], 'rows': 5 },
+    { 'cols': [30, 15, 12, 15, 12], 'rows': 2 },
+  ]
+) }}
 <!-- END SKELETON OVERLAY -->
 
 <!-- 1. OVERVIEW STAT CARDS -->
@@ -173,7 +105,6 @@
   let pollTimer = null;
   const INTERVAL = 3000;
   let isActionPending = false;
-  let skeletonHidden = false;
 
   function setUsageLoading(loading, target = null) {
     if (target) {
@@ -406,13 +337,7 @@
       render(data);
       setUsageLoading(false);
       markUsageUpdated();
-      if (!skeletonHidden) {
-        skeletonHidden = true;
-        var sk = document.getElementById('usage-skeleton');
-        if (sk) {
-          setTimeout(function() { sk.classList.add('is-hidden'); }, 80);
-        }
-      }
+      hideSkeleton('usage-skeleton');
     } catch (e) {
       markUsageUpdated('Waiting for server data…');
       fetchOptimizationStatus();
