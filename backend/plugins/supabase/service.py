@@ -106,6 +106,13 @@ def _should_use_pooler(project: SupabaseProject, exc: Exception) -> bool:
     )
 
 
+def _connect_options(project: SupabaseProject, use_pooler: bool = False) -> dict[str, Any]:
+    options: dict[str, Any] = {"ssl": "require"}
+    if use_pooler or "pooler.supabase.com" in project.db_host:
+        options["statement_cache_size"] = 0
+    return options
+
+
 async def _refresh_project_region(project: SupabaseProject) -> None:
     """Refresh region before using Supavisor so imported projects self-correct."""
     pat = _decrypt_pat(project)
@@ -181,7 +188,7 @@ async def _pg_connect(project: SupabaseProject, db_name: str | None = None):
     """Return a single asyncpg connection (caller must close). Auto-tries IPv4 Pooler if direct IPv6 is unreachable."""
     try:
         return await asyncio.wait_for(
-            asyncpg.connect(_dsn(project, db_name), ssl="require"),
+            asyncpg.connect(_dsn(project, db_name), **_connect_options(project)),
             timeout=_CONNECT_TIMEOUT,
         )
     except (OSError, asyncpg.exceptions.CannotConnectNowError, asyncio.TimeoutError) as exc:
@@ -193,7 +200,10 @@ async def _pg_connect(project: SupabaseProject, db_name: str | None = None):
             await _refresh_project_region(project)
         try:
             return await asyncio.wait_for(
-                asyncpg.connect(_dsn(project, db_name, use_pooler=True), ssl="require"),
+                asyncpg.connect(
+                    _dsn(project, db_name, use_pooler=True),
+                    **_connect_options(project, use_pooler=True),
+                ),
                 timeout=_CONNECT_TIMEOUT,
             )
         except Exception as pooler_exc:

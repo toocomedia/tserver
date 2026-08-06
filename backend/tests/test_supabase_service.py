@@ -70,6 +70,11 @@ class SupabaseConnectionTests(unittest.TestCase):
         error = OSError(101, "Network is unreachable")
         self.assertFalse(service._should_use_pooler(project, error))
 
+    def test_pooler_connections_disable_asyncpg_statement_cache(self):
+        project = _project()
+        project.db_host = "aws-1-eu-west-1.pooler.supabase.com"
+        self.assertEqual(service._connect_options(project)["statement_cache_size"], 0)
+
 
 if __name__ == "__main__":
     unittest.main()
