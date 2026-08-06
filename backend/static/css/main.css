@@ -298,10 +298,10 @@ p {
 }
 
 [data-theme="charcoal"] {
-  --color-bg:         #1C1E21;
-  --color-surface:    #24272C;
-  --color-header-bg-bar: #2B2F36;
-  --color-sidebar:    #1F1F22;
+  --color-bg:         #1F1F22;
+  --color-surface:    #26262B;
+  --color-header-bg-bar: #2B2B30;
+  --color-sidebar:    #111112;
   --color-sidebar-text: #D1D5DB;
   --color-sidebar-hover: #FFFFFF;
   --color-sidebar-border: rgba(255, 255, 255, 0.18);
@@ -319,9 +319,9 @@ p {
 
   /* Button Fills (Charcoal) */
   --color-neutral-btn:   #EAECEF;
-  --color-neutral-text:  #1C1E21;
-  --color-secondary-btn: #2B2F36;
-  --color-secondary-hover:#353A42;
+  --color-neutral-text:  #1F1F22;
+  --color-secondary-btn: #2B2B30;
+  --color-secondary-hover:#35353C;
   --color-danger-btn:    #450A0A;
   --color-danger-text:   #FCA5A5;
 
