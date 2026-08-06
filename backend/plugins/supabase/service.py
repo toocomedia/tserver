@@ -313,6 +313,8 @@ async def pause_project(project_id: int, db: AsyncSession) -> dict[str, Any]:
             f"{_MGMT_BASE}/projects/{proj.project_ref}/pause",
             headers=_mgmt_headers(pat),
         )
+        if r.status_code == 400 and "already" in r.text.lower():
+            return {"status": "paused", "detail": "Project is already paused."}
         if r.status_code not in (200, 201, 204):
             from fastapi import HTTPException
             raise HTTPException(502, f"Supabase API error {r.status_code}: {r.text[:200]}")
@@ -330,6 +332,8 @@ async def restore_project(project_id: int, db: AsyncSession) -> dict[str, Any]:
             f"{_MGMT_BASE}/projects/{proj.project_ref}/restore",
             headers=_mgmt_headers(pat),
         )
+        if r.status_code == 400 and ("active" in r.text.lower() or "paused" in r.text.lower()):
+            return {"status": "active", "detail": "Project is already active."}
         if r.status_code not in (200, 201, 204):
             from fastapi import HTTPException
             raise HTTPException(502, f"Supabase API error {r.status_code}: {r.text[:200]}")

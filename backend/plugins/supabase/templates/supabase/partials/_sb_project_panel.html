@@ -19,15 +19,12 @@
     <button type="button" class="btn btn--secondary btn--sm" id="sb-btn-test" data-project-id="{{ project.id }}">
       Test Connection
     </button>
-    {% if project.connection_status != 'ok' %}
-    <button type="button" class="btn btn--secondary btn--sm" id="sb-btn-restore" data-project-id="{{ project.id }}">
-      Restore
-    </button>
-    {% else %}
     <button type="button" class="btn btn--secondary btn--sm" id="sb-btn-pause" data-project-id="{{ project.id }}">
       Pause
     </button>
-    {% endif %}
+    <button type="button" class="btn btn--secondary btn--sm" id="sb-btn-restore" data-project-id="{{ project.id }}">
+      Restore
+    </button>
     <button type="button" class="btn btn--icon btn--sm btn--ghost" id="sb-btn-remove"
             data-project-id="{{ project.id }}" data-project-name="{{ project.name }}"
             data-action="open-delete" aria-label="Remove project" title="Remove project">
