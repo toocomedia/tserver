@@ -21,8 +21,6 @@
     align-items: center;
     gap: var(--space-md);
     flex: 1;
-    width: 100%;
-    min-width: 180px;
   }
   .usage-bar {
     flex: 1;
@@ -41,10 +39,9 @@
   .usage-bar__pct {
     font-size: var(--font-small);
     font-weight: 800;
-    min-width: 48px;
+    min-width: 38px;
     text-align: right;
     color: var(--color-text);
-    flex-shrink: 0;
   }
 
   .proc-status--sleeping, .proc-status--running, .proc-status--zombie, .proc-status--stopped {
@@ -64,7 +61,7 @@
   :is([data-theme="dark"], [data-theme="amoled"], [data-theme="charcoal"]) .proc-status--running { color: #9FD640 !important; }
   :is([data-theme="dark"], [data-theme="amoled"], [data-theme="charcoal"]) .proc-status--sleeping { color: #E5E7EB !important; }
 
-  .info-row__value .usage-bar-wrap { min-width: 180px; flex: 1; }
+  .info-row__value .usage-bar-wrap { min-width: 200px; }
 
 </style>
 {% endblock %}
@@ -278,8 +275,8 @@
     if (dependencyTbody) {
       const dependencies = d.dependencies || [];
       dependencyTbody.innerHTML = dependencies.map(dep => `
-        <tr><td class="table-title">${dep.label}</td><td>${dep.version}</td><td>${dep.count}</td><td>${dep.cpu.toFixed(1)}%</td><td>${dep.memory}</td><td><span class="${procStatusClass(dep.status)}">${dep.status}</span></td></tr>
-      `).join('') || '<tr><td colspan="6" class="text-muted">No runtime dependencies found.</td></tr>';
+        <tr><td class="table-title">${dep.label}${dep.version ? ` <span class="text-small text-muted" style="font-weight:400; margin-left:6px;">(${dep.version})</span>` : ''}</td><td>${dep.count}</td><td>${dep.cpu.toFixed(1)}%</td><td>${dep.memory}</td><td><span class="${procStatusClass(dep.status)}">${dep.status}</span></td></tr>
+      `).join('') || '<tr><td colspan="5" class="text-muted">No runtime dependencies found.</td></tr>';
     }
 
     // Top processes table
@@ -288,8 +285,8 @@
       if (procTbody) {
         procTbody.innerHTML = d.processes.map(p => `
           <tr>
-            <td><span class="text-small text-muted">${p.pid}</span></td>
-            <td class="table-title">${p.name}</td>
+            <td class="table-title">${p.name} <span class="text-small text-muted" style="font-weight:400; margin-left:6px;">(PID ${p.pid})</span></td>
+            <td>1</td>
             <td>${typeof p.cpu === 'number' ? p.cpu.toFixed(1) : p.cpu}%</td>
             <td>${typeof p.mem === 'number' ? p.mem.toFixed(1) : p.mem}%</td>
             <td><span class="${procStatusClass(p.status)}">${p.status}</span></td>
