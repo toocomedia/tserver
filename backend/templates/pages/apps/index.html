@@ -10,14 +10,13 @@
 {% endblock %}
 
 {% block content %}
-<div class="apps-page" style="position:relative;">
-
-<!-- SKELETON LOADING OVERLAY -->
-{{ skeleton_overlay('apps-skeleton', tables=[{ 'cols': [30, 30, 16, 14, 10], 'rows': 4 }]) }}
-<!-- END SKELETON OVERLAY -->
+<div class="apps-page">
 
 {% if apps %}
-<div class="table-wrap">
+<div class="table-wrap" style="position:relative;">
+  <!-- SKELETON LOADING OVERLAY -->
+  {{ skeleton_overlay('apps-skeleton', tables=[{ 'rows': 4 }]) }}
+  <!-- END SKELETON OVERLAY -->
   <table class="table" id="apps-table">
     <colgroup>
       <col style="width:30%">

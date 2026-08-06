@@ -10,11 +10,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="ssl-page" style="position:relative;">
-
-<!-- SKELETON LOADING OVERLAY -->
-{{ skeleton_overlay('ssl-skeleton', tables=[{ 'cols': [30, 18, 12, 14, 12, 26], 'rows': 4 }]) }}
-<!-- END SKELETON OVERLAY -->
+<div class="ssl-page">
 
 {# Status messages from redirect params #}
 {% set issued  = request.query_params.get('issued') %}
@@ -52,7 +48,10 @@
   </div>
 </div>
 
-<div class="table-wrap">
+<div class="table-wrap" style="position:relative;">
+  <!-- SKELETON LOADING OVERLAY -->
+  {{ skeleton_overlay('ssl-skeleton', tables=[{ 'rows': 4 }]) }}
+  <!-- END SKELETON OVERLAY -->
   <table class="table" id="ssl-table">
     <colgroup>
       <col style="width:30%">

@@ -10,11 +10,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="dns-page" style="position:relative;">
-
-<!-- SKELETON LOADING OVERLAY -->
-{{ skeleton_overlay('dns-skeleton', tables=[{ 'cols': [36, 14, 14, 36], 'rows': 4 }]) }}
-<!-- END SKELETON OVERLAY -->
+<div class="dns-page">
 
 <!-- Action Toolbar (Search & Filter) -->
 <div class="action-toolbar mb-md">
@@ -31,7 +27,10 @@
 </div>
 
 {% if zones %}
-<div class="table-wrap">
+<div class="table-wrap" style="position:relative;">
+  <!-- SKELETON LOADING OVERLAY -->
+  {{ skeleton_overlay('dns-skeleton', tables=[{ 'rows': 4 }]) }}
+  <!-- END SKELETON OVERLAY -->
     <table class="table" id="dns-zones-table">
       <colgroup>
         <col style="width:36%">
