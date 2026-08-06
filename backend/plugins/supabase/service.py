@@ -47,21 +47,40 @@ def _decrypt_pat(project: SupabaseProject) -> str | None:
 from urllib.parse import quote
 
 
+def _project_ref(project: SupabaseProject) -> str:
+    if project.project_ref:
+        return project.project_ref
+    parts = project.db_host.split(".")
+    return parts[1] if len(parts) >= 2 and parts[0] == "db" else ""
+
+
+def _pooler_host(region: str | None) -> str:
+    """Build the shared Supavisor hostname from Management API metadata."""
+    value = (region or "").strip().removesuffix(".")
+    if not value:
+        raise ValueError("Supabase project region is unavailable.")
+    if value.endswith(".pooler.supabase.com"):
+        return value
+    if value.startswith("aws-"):
+        return f"{value}.pooler.supabase.com"
+    return f"aws-0-{value}.pooler.supabase.com"
+
+
 def _dsn(project: SupabaseProject, db_name: str | None = None, use_pooler: bool = False) -> str:
     password = _decrypt_password(project)
     db = db_name or project.db_name
     pass_enc = quote(password or "", safe="")
 
     if use_pooler or "pooler.supabase.com" in project.db_host:
-        ref = project.project_ref or ""
+        ref = _project_ref(project)
         if "pooler.supabase.com" in project.db_host:
             host = project.db_host
             port = project.db_port
             user = project.db_user
         else:
-            region = project.region or "eu-west-1"
-            host = f"aws-0-{region}.pooler.supabase.com"
-            port = 6543
+            host = _pooler_host(project.region)
+            # Session mode supports the persistent connections this manager uses.
+            port = 5432
             user_base = project.db_user or "postgres"
             user = f"{user_base}.{ref}" if ref and not user_base.endswith(f".{ref}") else user_base
 
@@ -72,6 +91,38 @@ def _dsn(project: SupabaseProject, db_name: str | None = None, use_pooler: bool 
     return f"postgresql://{user_enc}:{pass_enc}@{project.db_host}:{project.db_port}/{db}"
 
 
+def _should_use_pooler(project: SupabaseProject, exc: Exception) -> bool:
+    if "pooler.supabase.com" in project.db_host:
+        return False
+    if isinstance(exc, asyncio.TimeoutError):
+        return True
+    error = str(exc).lower()
+    markers = (
+        "101", "unreachable", "timeout", "timed out", "cannot connect",
+        "name or service not known", "temporary failure", "no address associated", "no route",
+    )
+    return isinstance(exc, (OSError, asyncpg.exceptions.CannotConnectNowError)) and any(
+        marker in error for marker in markers
+    )
+
+
+async def _refresh_project_region(project: SupabaseProject) -> None:
+    """Refresh region before using Supavisor so imported projects self-correct."""
+    pat = _decrypt_pat(project)
+    ref = _project_ref(project)
+    if not pat or not ref:
+        return
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            response = await client.get(
+                f"{_MGMT_BASE}/projects/{ref}", headers=_mgmt_headers(pat)
+            )
+        if response.is_success and response.json().get("region"):
+            project.region = response.json()["region"]
+    except (httpx.HTTPError, ValueError):
+        logger.info("Could not refresh Supabase region for project %s", ref)
+
+
 async def _pg_connect(project: SupabaseProject, db_name: str | None = None):
     """Return a single asyncpg connection (caller must close). Auto-tries IPv4 Pooler if direct IPv6 is unreachable."""
     try:
@@ -80,14 +131,14 @@ async def _pg_connect(project: SupabaseProject, db_name: str | None = None):
             timeout=_CONNECT_TIMEOUT,
         )
     except (OSError, asyncpg.exceptions.CannotConnectNowError, asyncio.TimeoutError) as exc:
-        err_str = str(exc).lower()
-        if "101" in err_str or "unreachable" in err_str or "timeout" in err_str or "cannot connect" in err_str:
-            logger.info("Direct IPv6 Supabase connection failed (%s), trying IPv4 Pooler fallback...", exc)
-            return await asyncio.wait_for(
-                asyncpg.connect(_dsn(project, db_name, use_pooler=True), ssl="require"),
-                timeout=_CONNECT_TIMEOUT,
-            )
-        raise
+        if not _should_use_pooler(project, exc):
+            raise
+        logger.info("Direct Supabase connection failed (%s), trying IPv4 Session Pooler...", exc)
+        await _refresh_project_region(project)
+        return await asyncio.wait_for(
+            asyncpg.connect(_dsn(project, db_name, use_pooler=True), ssl="require"),
+            timeout=_CONNECT_TIMEOUT,
+        )
 
 
 def _mgmt_headers(pat: str) -> dict[str, str]:
