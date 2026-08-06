@@ -182,7 +182,7 @@
   position: absolute;
   inset: 0;
   z-index: 10;
-  background: transparent;
+  background: var(--color-bg);
   padding: 0;
   overflow: hidden;
   max-width: 100%;
@@ -198,10 +198,8 @@
   visibility: hidden;
 }
 
-[data-theme="dark"] .skeleton-overlay,
-[data-theme="dark"] .skeleton-section,
-[data-theme="dark"] .skeleton-table-wrap {
-  background: transparent !important;
+[data-theme="dark"] .skeleton-overlay {
+  background: var(--color-bg);
 }
 
 /* Section-level loading dim (is-data-loading) — used for inline/partial loads
