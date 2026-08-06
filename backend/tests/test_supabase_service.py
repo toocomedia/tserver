@@ -36,6 +36,17 @@ class SupabaseConnectionTests(unittest.TestCase):
         self.assertIn("postgres.uwhexjgccucvvqcwixrh:secret@", dsn)
         self.assertIn("aws-0-eu-central-1.pooler.supabase.com:5432", dsn)
 
+    def test_pooler_settings_use_assigned_aws_one_host(self):
+        settings = service._pooler_settings([{
+            "connectionString": (
+                "postgresql://postgres.uwhexjgccucvvqcwixrh:[PASSWORD]"
+                "@aws-1-us-east-2.pooler.supabase.com:5432/postgres"
+            ),
+        }])
+        self.assertEqual(settings["host"], "aws-1-us-east-2.pooler.supabase.com")
+        self.assertEqual(settings["port"], 5432)
+        self.assertEqual(settings["user"], "postgres.uwhexjgccucvvqcwixrh")
+
     def test_direct_network_failure_uses_pooler(self):
         error = OSError(101, "Network is unreachable")
         self.assertTrue(service._should_use_pooler(_project(), error))

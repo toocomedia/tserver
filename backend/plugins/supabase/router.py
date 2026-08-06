@@ -241,10 +241,12 @@ async def api_connect_import(payload: _ImportRequest, db: AsyncSession = Depends
             pat=payload.pat,
             region=entry.region,
         )
-        # Test connection silently — don't fail import if test fails
-        try:
-            await svc.test_connection(db, proj.id)
-        except Exception:
-            pass
-        saved.append({"id": proj.id, "name": proj.name, "skipped": False})
+        result = await svc.test_connection(db, proj.id)
+        saved.append({
+            "id": proj.id,
+            "name": proj.name,
+            "skipped": False,
+            "connection_status": result["status"],
+            "connection_error": result.get("detail"),
+        })
     return {"imported": saved}

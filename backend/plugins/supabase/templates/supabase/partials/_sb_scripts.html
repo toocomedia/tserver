@@ -449,8 +449,19 @@ if (step3Import) {
       const res = await apiFetch("POST", "/connect/import", { pat: wizardPat, projects });
       const count  = res.imported.filter(i => !i.skipped).length;
       const skipped = res.imported.filter(i => i.skipped).length;
-      document.getElementById("sb-done-title").textContent    = `${count} project${count !== 1 ? "s" : ""} imported`;
-      document.getElementById("sb-done-subtitle").textContent = skipped ? `${skipped} already existed and were skipped.` : "All projects connected successfully.";
+      const failed = res.imported.filter(i => !i.skipped && i.connection_status !== "ok");
+      const doneTitle = document.getElementById("sb-done-title");
+      const doneSubtitle = document.getElementById("sb-done-subtitle");
+      const doneError = document.getElementById("sb-done-error");
+      document.getElementById("sb-done-icon").hidden = failed.length > 0;
+      doneTitle.textContent = failed.length
+        ? "Import needs attention"
+        : `${count} project${count !== 1 ? "s" : ""} imported`;
+      doneSubtitle.textContent = failed.length
+        ? `${count} project${count !== 1 ? "s were" : " was"} saved, but ${failed.length} connection${failed.length !== 1 ? "s need" : " needs"} attention.`
+        : skipped ? `${skipped} already existed and were skipped.` : "All projects connected successfully.";
+      doneError.textContent = failed.length ? failed[0].connection_error || "Connection failed." : "";
+      doneError.hidden = !failed.length;
       showWizardStep(4);
     } catch (err) {
       showErr("sb-step3-error", err.message);

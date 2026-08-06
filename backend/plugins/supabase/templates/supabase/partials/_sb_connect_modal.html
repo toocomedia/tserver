@@ -85,13 +85,14 @@
         <h2>Import Complete</h2>
       </div>
       <div class="modal__body d-flex flex-column gap-md align-center" style="text-align:center; padding: 32px 24px;">
-        <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="var(--color-success)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <svg id="sb-done-icon" viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="var(--color-success)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
           <polyline points="22 4 12 14.01 9 11.01"/>
         </svg>
         <div>
           <h3 style="margin:0 0 8px;" id="sb-done-title">Projects imported</h3>
           <p class="text-muted" id="sb-done-subtitle" style="margin:0;"></p>
+          <p class="form-error" id="sb-done-error" hidden></p>
         </div>
       </div>
       <div class="modal__footer" style="justify-content:center;">

@@ -44,7 +44,7 @@ def _decrypt_pat(project: SupabaseProject) -> str | None:
     return decrypt(project.pat_enc, _secret())
 
 
-from urllib.parse import quote
+from urllib.parse import quote, unquote, urlsplit
 
 
 def _project_ref(project: SupabaseProject) -> str:
@@ -123,6 +123,55 @@ async def _refresh_project_region(project: SupabaseProject) -> None:
         logger.info("Could not refresh Supabase region for project %s", ref)
 
 
+def _pooler_settings(payload: Any) -> dict[str, Any] | None:
+    if isinstance(payload, list):
+        entries = payload
+    elif isinstance(payload, dict):
+        entries = payload.get("data", [payload])
+    else:
+        return None
+    settings = []
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        connection = entry.get("connectionString") or entry.get("connection_string")
+        parsed = urlsplit(connection) if isinstance(connection, str) else None
+        host = entry.get("db_host") or (parsed.hostname if parsed else None)
+        port = entry.get("db_port") or (parsed.port if parsed else None)
+        user = entry.get("db_user") or (unquote(parsed.username) if parsed and parsed.username else None)
+        database = entry.get("db_name") or (parsed.path.lstrip("/") if parsed else None)
+        if host and port and user and database:
+            settings.append({"host": host, "port": int(port), "user": user, "database": database})
+    return next((item for item in settings if item["port"] == 5432), settings[0] if settings else None)
+
+
+async def _refresh_pooler_connection(project: SupabaseProject) -> bool:
+    """Read Supabase's assigned pooler hostname instead of guessing aws-0/1."""
+    pat = _decrypt_pat(project)
+    ref = _project_ref(project)
+    if not pat or not ref:
+        return False
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            response = await client.get(
+                f"{_MGMT_BASE}/projects/{ref}/config/database/pooler",
+                headers=_mgmt_headers(pat),
+            )
+        if not response.is_success:
+            return False
+        settings = _pooler_settings(response.json())
+        if not settings:
+            return False
+        project.db_host = settings["host"]
+        project.db_port = settings["port"]
+        project.db_user = settings["user"]
+        project.db_name = settings["database"]
+        return True
+    except (httpx.HTTPError, ValueError):
+        logger.info("Could not refresh Supabase pooler connection for project %s", ref)
+        return False
+
+
 async def _pg_connect(project: SupabaseProject, db_name: str | None = None):
     """Return a single asyncpg connection (caller must close). Auto-tries IPv4 Pooler if direct IPv6 is unreachable."""
     try:
@@ -134,7 +183,8 @@ async def _pg_connect(project: SupabaseProject, db_name: str | None = None):
         if not _should_use_pooler(project, exc):
             raise
         logger.info("Direct Supabase connection failed (%s), trying IPv4 Session Pooler...", exc)
-        await _refresh_project_region(project)
+        if not await _refresh_pooler_connection(project):
+            await _refresh_project_region(project)
         return await asyncio.wait_for(
             asyncpg.connect(_dsn(project, db_name, use_pooler=True), ssl="require"),
             timeout=_CONNECT_TIMEOUT,
