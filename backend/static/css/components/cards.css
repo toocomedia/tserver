@@ -945,7 +945,7 @@
 }
 
 /* ============================================================
-   SEAMLESS EXPANDED ACTION SUB-LIST (SIMPLE & BORDERLESS)
+   SEAMLESS EXPANDED ACTION SUB-LIST (NO DIVIDER + LINKED HOVER)
    ============================================================ */
 .list-actions-toggle-btn {
   display: inline-flex;
@@ -971,13 +971,13 @@
 .list-row-subactions {
   grid-column: 1 / -1;
   width: 100%;
-  padding: 10px 16px 14px 16px;
+  padding: 4px 16px 12px 16px;
   margin: 0;
-  background: var(--color-surface, rgba(255, 255, 255, 0.02));
+  background: transparent !important;
   border: none !important;
   border-radius: 0;
   box-shadow: none !important;
-  animation: slideDownSubactions 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: slideDownSubactions 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 @keyframes slideDownSubactions {
@@ -994,15 +994,9 @@
 .list-row-subactions__inner {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 16px;
   flex-wrap: wrap;
-}
-
-.list-row-subactions__label {
-  font-size: 11.5px;
-  font-weight: 700;
-  color: var(--color-muted, #94a3b8);
 }
 
 .list-row-subactions__btns {
@@ -1012,9 +1006,23 @@
   flex-wrap: wrap;
 }
 
+/* Remove divider between main row and expanded subactions row */
+.table tr.is-expanded > td {
+  border-bottom: none !important;
+}
+
 .table-row-subactions-tr > td {
-  border: none !important;
+  border-top: none !important;
+  border-bottom: 1px solid var(--color-line) !important;
   padding: 0 !important;
+  background: transparent;
+}
+
+/* Synchronized hover state for main row and subactions row */
+.table tr.is-hovered,
+.table tr.is-hovered > td,
+.table-row-subactions-tr.is-hovered > td {
+  background: var(--color-surface, rgba(255, 255, 255, 0.04)) !important;
 }
 
 .is-hidden {

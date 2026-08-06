@@ -47,6 +47,7 @@ function toggleListRowActions(triggerEl) {
         if (otherTr !== subactionsTr) {
           otherTr.classList.add('is-hidden');
           const prevTr = otherTr.previousElementSibling;
+          if (prevTr) prevTr.classList.remove('is-expanded');
           const btn = prevTr?.querySelector('.list-actions-toggle-btn');
           if (btn) {
             btn.classList.remove('is-active');
@@ -57,6 +58,7 @@ function toggleListRowActions(triggerEl) {
     }
 
     subactionsTr.classList.toggle('is-hidden', !willExpand);
+    tr.classList.toggle('is-expanded', willExpand);
     triggerEl.classList.toggle('is-active', willExpand);
     triggerEl.setAttribute('aria-expanded', String(willExpand));
     return;
@@ -92,4 +94,39 @@ function toggleListRowActions(triggerEl) {
   triggerEl.setAttribute('aria-expanded', String(willExpand));
 }
 window.toggleListRowActions = toggleListRowActions;
+
+// Hover synchronization for table rows and their expanded subactions
+document.addEventListener('mouseover', (e) => {
+  const tr = e.target.closest('tr');
+  if (!tr) return;
+  
+  if (tr.classList.contains('table-row-subactions-tr')) {
+    tr.classList.add('is-hovered');
+    const prev = tr.previousElementSibling;
+    if (prev) prev.classList.add('is-hovered');
+  } else {
+    tr.classList.add('is-hovered');
+    const next = tr.nextElementSibling;
+    if (next && next.classList.contains('table-row-subactions-tr') && !next.classList.contains('is-hidden')) {
+      next.classList.add('is-hovered');
+    }
+  }
+});
+
+document.addEventListener('mouseout', (e) => {
+  const tr = e.target.closest('tr');
+  if (!tr) return;
+  
+  if (tr.classList.contains('table-row-subactions-tr')) {
+    tr.classList.remove('is-hovered');
+    const prev = tr.previousElementSibling;
+    if (prev) prev.classList.remove('is-hovered');
+  } else {
+    tr.classList.remove('is-hovered');
+    const next = tr.nextElementSibling;
+    if (next && next.classList.contains('table-row-subactions-tr')) {
+      next.classList.remove('is-hovered');
+    }
+  }
+});
 
