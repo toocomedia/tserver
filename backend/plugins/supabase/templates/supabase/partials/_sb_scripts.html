@@ -83,6 +83,13 @@ document.addEventListener("click", async e => {
   const projSel = e.target.closest("[data-action='select-project']");
   if (projSel) { loadProject(parseInt(projSel.dataset.projectId, 10)); return; }
 
+  const loadMore = e.target.closest("[data-action='load-more-projects']");
+  if (loadMore) {
+    document.querySelectorAll("[data-sb-hidden-project]").forEach(el => el.hidden = false);
+    loadMore.parentElement.hidden = true;
+    return;
+  }
+
   // DB → tables
   const viewTables = e.target.closest("[data-action='view-tables']");
   if (viewTables) { loadTables(viewTables.dataset.projectId, viewTables.dataset.db); return; }
@@ -197,8 +204,17 @@ async function handlePause() {
   setLoading(btn, true, "Pausing…");
   try {
     await apiFetch("POST", `/projects/${currentProjectId}/pause`);
-    toast("Project paused.");
-    setTimeout(() => window.location.reload(), 800);
+    const notice = document.getElementById("sb-project-notice");
+    const noticeText = document.getElementById("sb-project-notice-text");
+    if (notice && noticeText) {
+      noticeText.textContent = "Project paused. Reactivate it in Supabase, then refresh this page.";
+      notice.hidden = false;
+    }
+    const badge = document.getElementById("sb-status-badge");
+    if (badge) { badge.textContent = "paused"; badge.className = "status-badge warning"; }
+    setLoading(btn, false, "Pause");
+    btn.hidden = true;
+    toast("Project paused. Reactivate it in Supabase.");
   } catch (err) { toast(err.message, true); setLoading(btn, false, "Pause"); }
 }
 

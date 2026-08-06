@@ -23,7 +23,7 @@
       Pause
     </button>
     <button type="button" class="btn btn--secondary btn--sm" id="sb-btn-restore" data-project-id="{{ project.id }}">
-      Restore
+      Reactivate
     </button>
     <button type="button" class="btn btn--icon btn--sm btn--ghost" id="sb-btn-remove"
             data-project-id="{{ project.id }}" data-project-name="{{ project.name }}"
@@ -36,6 +36,12 @@
   </div>
 </div>
 <div id="sb-status-error" class="alert alert--danger mb-lg" style="display:none;"></div>
+<div id="sb-project-notice" class="alert alert--warning mb-lg" hidden>
+  <span id="sb-project-notice-text"></span>
+  {% if project.project_ref %}
+  <a href="https://supabase.com/dashboard/project/{{ project.project_ref }}" target="_blank" rel="noopener noreferrer" class="alert__link">Open Supabase project</a>
+  {% endif %}
+</div>
 
 {# ── Tabs ── #}
 <nav class="tabs-nav mb-lg">

@@ -27,6 +27,10 @@
 @media (min-width: 768px) {
   .split-layout { flex-direction: row; align-items: stretch; }
   .split-sidebar { width: 260px; flex-shrink: 0; flex-direction: column; padding: var(--space-lg) 0; background: transparent; border-right: 1px solid var(--color-line); border-bottom: none; }
+  .supabase-split { min-height: 0; }
+  .supabase-sidebar { align-self: stretch; height: calc(100vh - var(--topbar-height)); position: sticky; top: 0; }
+  .supabase-project-list { flex: 1; min-height: 0; overflow-y: auto; }
+  .supabase-load-more-wrap { padding: var(--space-sm) var(--space-lg); }
 }
 
 @media (max-width: 767px) {

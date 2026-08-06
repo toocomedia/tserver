@@ -4,20 +4,22 @@
 {% block page_header_wrapper %}{% endblock %}
 
 {% block content %}
-<div class="split-layout">
+<div class="split-layout supabase-split">
 
   {# ── Left sidebar ── #}
-  <div class="split-sidebar">
+  <aside class="split-sidebar supabase-sidebar">
     <div style="padding: 0 var(--space-lg) var(--space-sm); font-size: var(--font-small); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-muted);">
       Projects
     </div>
 
+    <div class="supabase-project-list">
     {% if projects %}
       {% for p in projects %}
       <div class="split-sidebar__item {% if loop.first %}active{% endif %}"
            id="sb-proj-{{ p.id }}"
            data-action="select-project"
            data-project-id="{{ p.id }}"
+           {% if loop.index > 8 %}data-sb-hidden-project hidden{% endif %}
            style="cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
         <span class="split-sidebar__item-name" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ p.name }}</span>
         <span class="status-badge {% if p.connection_status == 'ok' %}success{% elif p.connection_status == 'error' %}danger{% else %}muted{% endif %}" style="margin-left:8px; flex-shrink:0;">
@@ -26,8 +28,13 @@
       </div>
       {% endfor %}
     {% endif %}
+    </div>
 
-    <div class="flex-1"></div>
+    {% if projects|length > 8 %}
+    <div class="supabase-load-more-wrap">
+      <button type="button" class="btn btn--ghost btn--sm" data-action="load-more-projects">Load more</button>
+    </div>
+    {% endif %}
 
     <div style="padding: var(--space-md) var(--space-lg); border-top: 1px solid var(--color-line);">
       <button type="button" class="btn btn--primary btn--sm w-100" data-action="open-modal" data-modal="sb-modal-connect">
@@ -39,7 +46,7 @@
       <div class="text-small">Supabase Plugin</div>
       <div class="text-small text-muted">v1.0.0</div>
     </div>
-  </div>
+  </aside>
 
   {# ── Right content ── #}
   <div class="split-content" id="sb-main-content">
