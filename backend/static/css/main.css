@@ -296,3 +296,66 @@ p {
   --color-alert-danger-bg:  #1A1111;
   --color-row-active: #111111;
 }
+
+[data-theme="charcoal"] {
+  --color-bg:         #1C1E21;
+  --color-surface:    #24272C;
+  --color-header-bg-bar: #2B2F36;
+  --color-sidebar:    #1F1F22;
+  --color-sidebar-text: #D1D5DB;
+  --color-sidebar-hover: #FFFFFF;
+  --color-sidebar-border: rgba(255, 255, 255, 0.18);
+  --color-sidebar-bg-hover: rgba(255, 255, 255, 0.05);
+  --color-text:       #FFFFFF;
+  --color-muted:      #9CA3AF;
+  --color-line:       rgba(255, 255, 255, 0.15);
+  
+  --color-accent:     #C7F464; 
+  --color-accent-2:   #A8E04A;
+  --color-neutral:    #EAECEF; 
+  --color-danger:     #EF4444; 
+  --color-warn:       #FBBF24; 
+  --color-icon:       #6B7280; 
+
+  /* Button Fills (Charcoal) */
+  --color-neutral-btn:   #EAECEF;
+  --color-neutral-text:  #1C1E21;
+  --color-secondary-btn: #2B2F36;
+  --color-secondary-hover:#353A42;
+  --color-danger-btn:    #450A0A;
+  --color-danger-text:   #FCA5A5;
+
+  /* Components */
+  --color-on-solid:   #FFFFFF; 
+  --color-on-accent:  #111111;
+  --color-alert-success-bg: #1B2E21;
+  --color-alert-danger-bg:  #381B1B;
+  --color-row-active: #272B31;
+}
+
+/* ============================================================
+   SELECTION CARD COLOR PALETTE SWATCHES
+   ============================================================ */
+.settings-choice__palette {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--color-line);
+}
+
+.palette-swatch {
+  width: 18px;
+  height: 18px;
+  border-radius: 50% !important;
+  border: 1px solid rgba(128, 128, 128, 0.3) !important;
+  display: inline-block;
+  flex-shrink: 0;
+  transition: transform 0.15s ease;
+}
+
+.settings-choice:hover .palette-swatch {
+  transform: scale(1.1);
+}
+
