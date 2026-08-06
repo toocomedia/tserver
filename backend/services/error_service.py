@@ -156,24 +156,33 @@ async def list_errors(
     resolved: bool | None = None,
     source: str | None = None,
     q: str | None = None,
-    limit: int = 100,
-) -> list[ErrorEvent]:
+    limit: int = 3,
+    offset: int = 0,
+) -> tuple[list[ErrorEvent], int]:
     stmt = select(ErrorEvent).order_by(ErrorEvent.created_at.desc())
+    count_stmt = select(func.count(ErrorEvent.id))
     if resolved is not None:
         stmt = stmt.where(ErrorEvent.resolved == resolved)
+        count_stmt = count_stmt.where(ErrorEvent.resolved == resolved)
     if source:
         stmt = stmt.where(ErrorEvent.source == source)
+        count_stmt = count_stmt.where(ErrorEvent.source == source)
     if q:
         like = f"%{q.strip()}%"
-        stmt = stmt.where(
-            or_(
-                ErrorEvent.message.ilike(like),
-                ErrorEvent.operation.ilike(like),
-                ErrorEvent.detail.ilike(like),
-            )
+        cond = or_(
+            ErrorEvent.message.ilike(like),
+            ErrorEvent.operation.ilike(like),
+            ErrorEvent.detail.ilike(like),
         )
-    stmt = stmt.limit(min(max(limit, 1), 500))
-    return list((await db.execute(stmt)).scalars().all())
+        stmt = stmt.where(cond)
+        count_stmt = count_stmt.where(cond)
+    
+    total_res = await db.execute(count_stmt)
+    total = total_res.scalar_one_or_none() or 0
+
+    stmt = stmt.offset(offset).limit(limit)
+    errors = list((await db.execute(stmt)).scalars().all())
+    return errors, total
 
 
 async def get(db: AsyncSession, error_id: int) -> ErrorEvent:

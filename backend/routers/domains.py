@@ -33,18 +33,23 @@ async def domains_bulk_action(payload: BulkActionRequest, db: AsyncSession = Dep
 
 
 # ---------------------------------------------------------------
-# LIST
+# LIST (DB LIMIT + OFFSET PAGINATED)
 # ---------------------------------------------------------------
 @router.get("/", response_class=HTMLResponse)
-async def domains_list(request: Request, db: AsyncSession = Depends(get_db)):
-    domains = await domain_service.get_all(db)
+async def domains_list(
+    request: Request,
+    offset: int = 0,
+    limit: int = 3,
+    db: AsyncSession = Depends(get_db)
+):
+    domains, total = await domain_service.get_paginated(db, limit=limit, offset=offset)
 
     # Batch fetch all SSL certs in a single query
     all_certs = {c.full_domain: c for c in (await db.execute(select(SslCert))).scalars().all()}
     # Batch check enabled nginx site configs in memory
     enabled_sites = set(os.listdir(config.NGINX_SITES_ENABLED)) if os.path.exists(config.NGINX_SITES_ENABLED) else set()
 
-    # Attach live status to each domain (apex SSL only — not proxy subdomains)
+    # Attach live status to each domain
     domain_statuses = []
     for d in domains:
         cert = all_certs.get(d.name)
@@ -59,7 +64,43 @@ async def domains_list(request: Request, db: AsyncSession = Depends(get_db)):
         "request": request,
         "active_page": "domains",
         "domain_statuses": domain_statuses,
+        "total_count": total,
+        "current_offset": offset,
+        "current_limit": limit,
     })
+
+
+@router.get("/api/items")
+async def domains_api_items(
+    offset: int = 0,
+    limit: int = 3,
+    db: AsyncSession = Depends(get_db)
+):
+    """DB-backed paginated items endpoint for Load More button."""
+    domains, total = await domain_service.get_paginated(db, limit=limit, offset=offset)
+    all_certs = {c.full_domain: c for c in (await db.execute(select(SslCert))).scalars().all()}
+    enabled_sites = set(os.listdir(config.NGINX_SITES_ENABLED)) if os.path.exists(config.NGINX_SITES_ENABLED) else set()
+
+    items = []
+    for d in domains:
+        cert = all_certs.get(d.name)
+        items.append({
+            "id": d.id,
+            "name": d.name,
+            "server_ip": d.server_ip,
+            "project_type": d.project_type,
+            "dns_zone_created": d.dns_zone_created,
+            "nginx_active": f"{d.name}.conf" in enabled_sites,
+            "ssl_active": cert is not None,
+        })
+
+    return {
+        "items": items,
+        "total": total,
+        "offset": offset,
+        "limit": limit,
+        "has_more": (offset + len(domains)) < total
+    }
 
 
 # ---------------------------------------------------------------

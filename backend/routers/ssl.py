@@ -58,16 +58,24 @@ async def _build_eligible(db: AsyncSession) -> list[dict]:
 
 
 # ---------------------------------------------------------------
-# CERTS LIST
+# CERTS LIST (DB LIMIT + OFFSET PAGINATED)
 # ---------------------------------------------------------------
 @router.get("/", response_class=HTMLResponse)
-async def ssl_index(request: Request, db: AsyncSession = Depends(get_db)):
-    """Show all issued SSL certs with live expiry status."""
-    cert_list = await ssl_service.list_certs(db)
+async def ssl_index(
+    request: Request,
+    offset: int = 0,
+    limit: int = 3,
+    db: AsyncSession = Depends(get_db)
+):
+    """Show issued SSL certs with live expiry status using DB LIMIT and OFFSET."""
+    cert_list, total = await ssl_service.list_certs_paginated(db, limit=limit, offset=offset)
     return templates.TemplateResponse("pages/ssl/index.html", {
         "request": request,
         "active_page": "ssl",
         "cert_list": cert_list,
+        "total_count": total,
+        "current_offset": offset,
+        "current_limit": limit,
     })
 
 

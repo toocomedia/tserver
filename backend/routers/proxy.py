@@ -32,12 +32,17 @@ async def proxy_bulk_action(payload: BulkActionRequest, db: AsyncSession = Depen
 
 
 # ---------------------------------------------------------------
-# LIST
+# LIST (DB LIMIT + OFFSET PAGINATED)
 # ---------------------------------------------------------------
 @router.get("/", response_class=HTMLResponse)
-async def proxy_index(request: Request, db: AsyncSession = Depends(get_db)):
-    """Show all reverse proxies with live nginx/DNS status."""
-    proxies = await proxy_service.get_all(db)
+async def proxy_index(
+    request: Request,
+    offset: int = 0,
+    limit: int = 3,
+    db: AsyncSession = Depends(get_db)
+):
+    """Show reverse proxies with live nginx/DNS status using DB LIMIT and OFFSET."""
+    proxies, total = await proxy_service.get_paginated(db, limit=limit, offset=offset)
     rows = []
 
     # Batch fetch all domains in a single query

@@ -20,6 +20,8 @@ from utils.validators import (
 logger = logging.getLogger(__name__)
 
 
+from sqlalchemy import select, func
+
 # ---------------------------------------------------------------
 # QUERIES
 # ---------------------------------------------------------------
@@ -28,6 +30,16 @@ async def get_all(db: AsyncSession) -> list[ReverseProxy]:
         select(ReverseProxy).order_by(ReverseProxy.created_at.desc())
     )
     return list(result.scalars().all())
+
+
+async def get_paginated(db: AsyncSession, limit: int = 3, offset: int = 0) -> tuple[list[ReverseProxy], int]:
+    """Retrieve a page of reverse proxies using DB LIMIT and OFFSET to minimize DB load."""
+    total_res = await db.execute(select(func.count(ReverseProxy.id)))
+    total = total_res.scalar_one_or_none() or 0
+    query = select(ReverseProxy).order_by(ReverseProxy.created_at.desc()).offset(offset).limit(limit)
+    res = await db.execute(query)
+    proxies = list(res.scalars().all())
+    return proxies, total
 
 
 async def get_by_id(db: AsyncSession, proxy_id: int) -> ReverseProxy:

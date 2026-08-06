@@ -16,12 +16,24 @@ import config
 logger = logging.getLogger(__name__)
 
 
+from sqlalchemy import select, func
+
 # ---------------------------------------------------------------
 # QUERIES
 # ---------------------------------------------------------------
 async def get_all(db: AsyncSession) -> list[Domain]:
     result = await db.execute(select(Domain).order_by(Domain.created_at.desc()))
     return result.scalars().all()
+
+
+async def get_paginated(db: AsyncSession, limit: int = 3, offset: int = 0) -> tuple[list[Domain], int]:
+    """Retrieve a page of domains using DB LIMIT and OFFSET to minimize DB load."""
+    total_res = await db.execute(select(func.count(Domain.id)))
+    total = total_res.scalar_one_or_none() or 0
+    query = select(Domain).order_by(Domain.created_at.desc()).offset(offset).limit(limit)
+    res = await db.execute(query)
+    domains = list(res.scalars().all())
+    return domains, total
 
 
 async def get_by_id(db: AsyncSession, domain_id: int) -> Domain:

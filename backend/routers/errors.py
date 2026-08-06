@@ -23,22 +23,23 @@ SOURCES = ["domain", "dns", "ssl", "proxy", "nginx", "powerdns", "system", "http
 @router.get("/", response_class=HTMLResponse)
 async def errors_index(
     request: Request,
+    status: str = Query(default="unresolved"),
     source: str | None = Query(default=None),
-    status: str = Query(default="open"),  # open | resolved | all
     q: str | None = Query(default=None),
+    offset: int = Query(default=0),
+    limit: int = Query(default=3),
     db: AsyncSession = Depends(get_db),
 ):
-    resolved: bool | None
-    if status == "open":
+    """List error log events with DB LIMIT + OFFSET pagination."""
+    resolved = None
+    if status == "unresolved":
         resolved = False
     elif status == "resolved":
         resolved = True
-    else:
-        resolved = None
 
-    src = source if source in SOURCES else None
-    events = await error_service.list_errors(
-        db, resolved=resolved, source=src, q=q, limit=100
+    src = source.strip().lower() if source and source.strip() else None
+    events, total = await error_service.list_errors(
+        db, resolved=resolved, source=src, q=q, limit=limit, offset=offset
     )
     open_count = await error_service.unresolved_count(db)
 
@@ -46,6 +47,9 @@ async def errors_index(
         "request": request,
         "active_page": "errors",
         "events": events,
+        "total_count": total,
+        "current_offset": offset,
+        "current_limit": limit,
         "sources": SOURCES,
         "filter_source": src or "",
         "filter_status": status,

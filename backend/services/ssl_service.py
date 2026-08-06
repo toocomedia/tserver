@@ -174,25 +174,18 @@ async def _read_expiry_from_cert(cert_path: str) -> datetime | None:
 # ---------------------------------------------------------------
 # LIST CERTS (from certbot + DB)
 # ---------------------------------------------------------------
-async def list_certs(db: AsyncSession) -> list[dict]:
-    """
-    Return all certs from DB enriched with live expiry status.
-    Never reads /etc/letsencrypt as the panel user (PermissionError).
-    Expiry from DB, else sudo certbot certificates, else optional sudo openssl.
-    Always returns a list — never raises (SSL page must always load).
-    """
-    result: list[dict] = []
+async def list_certs_paginated(db: AsyncSession, limit: int = 3, offset: int = 0) -> tuple[list[dict], int]:
+    """Return a page of certs from DB using LIMIT and OFFSET."""
     now = datetime.now(timezone.utc)
-
     try:
-        certs = (await db.execute(select(SslCert))).scalars().all()
+        total_res = await db.execute(select(func.count(SslCert.id)))
+        total = total_res.scalar_one_or_none() or 0
+        certs = (await db.execute(select(SslCert).order_by(SslCert.created_at.desc()).offset(offset).limit(limit))).scalars().all()
     except Exception as e:
-        logger.error("list_certs DB failed: %s", e)
-        return []
+        logger.error("list_certs_paginated DB failed: %s", e)
+        return [], 0
 
     live_map: dict[str, datetime] = {}
-    
-    # Running `certbot certificates` is slow. Only do it if a cert in the DB is missing its expiry date.
     needs_live_check = any(not cert.expiry_date for cert in certs)
     if needs_live_check:
         try:
@@ -200,35 +193,25 @@ async def list_certs(db: AsyncSession) -> list[dict]:
         except Exception as e:
             logger.warning("list_certs certbot map failed: %s", e)
 
+    result = []
     for cert in certs:
         try:
             days_left = None
-            status = "issued"
-
-            if not cert.expiry_date:
-                filled = live_map.get(cert.full_domain) or live_map.get(
-                    cert.full_domain.lower()
-                )
-                if not filled:
-                    # Optional: sudo openssl (if sudoers allows openssl)
-                    path = cert.cert_path or _cert_path(cert.full_domain)
-                    filled = await _read_expiry_from_cert(path)
-                if filled:
-                    cert.expiry_date = filled
-                    logger.info("Backfilled expiry for %s → %s", cert.full_domain, filled)
-
-            if cert.expiry_date:
-                expiry = cert.expiry_date
+            expiry = cert.expiry_date
+            if not expiry:
+                expiry = live_map.get(cert.full_domain)
+            if expiry:
                 if expiry.tzinfo is None:
                     expiry = expiry.replace(tzinfo=timezone.utc)
                 days_left = (expiry - now).days
-                if days_left > 30:
-                    status = "ok"
-                elif days_left > 0:
-                    status = "warning"
-                else:
-                    status = "expired"
-            elif cert.full_domain in live_map or cert.full_domain.lower() in live_map:
+
+            if days_left is None:
+                status = "unknown"
+            elif days_left <= 0:
+                status = "expired"
+            elif days_left <= 15:
+                status = "warning"
+            else:
                 status = "ok"
 
             result.append({
@@ -236,16 +219,15 @@ async def list_certs(db: AsyncSession) -> list[dict]:
                 "days_left": days_left,
                 "status": status,
             })
-        except Exception as e:
-            # One bad row must not break the whole SSL page
-            logger.warning("list_certs row failed for %s: %s", getattr(cert, "full_domain", "?"), e)
-            result.append({
-                "cert": cert,
-                "days_left": None,
-                "status": "issued",
-            })
+        except Exception as err:
+            logger.error("Error processing cert %s: %s", getattr(cert, "id", "unknown"), err)
 
-    return result
+    return result, total
+
+
+async def list_certs(db: AsyncSession) -> list[dict]:
+    items, _ = await list_certs_paginated(db, limit=1000, offset=0)
+    return items
 
 
 # ---------------------------------------------------------------

@@ -16,6 +16,10 @@ document.addEventListener("click", (event) => {
   document.querySelectorAll(`[data-resource-container="${resourceId}"]`).forEach((container) => {
     const isVisible = container.dataset.resourceView === view;
     container.classList.toggle("is-hidden", !isVisible);
+    const wrap = container.nextElementSibling;
+    if (wrap && wrap.classList.contains('load-more-wrap')) {
+      wrap.style.display = isVisible ? 'flex' : 'none';
+    }
     if (isVisible && typeof applyListPagination === 'function') {
       applyListPagination(container);
     }
@@ -179,26 +183,35 @@ function applyListPagination(container, limit = DEFAULT_PAGE_LIMIT) {
 
   const remainingCount = Math.max(0, visibleMatching.length - currentLimit);
 
-  // Parent wrapper or next sibling
-  let wrap = container.nextElementSibling;
-  if (!wrap || !wrap.classList.contains('load-more-wrap')) {
-    const parent = container.closest('.table-wrap') || container.parentElement;
-    if (parent) wrap = parent.querySelector('.load-more-wrap');
+  // Bind single load-more-wrap per specific container view
+  const viewId = container.id || container.dataset.resourceView || 'default';
+  const parent = container.parentElement;
+  let wrap = parent ? parent.querySelector(`.load-more-wrap[data-for-view="${viewId}"]`) : null;
+
+  if (!wrap) {
+    // Check direct sibling
+    const sibling = container.nextElementSibling;
+    if (sibling && sibling.classList.contains('load-more-wrap')) {
+      wrap = sibling;
+      wrap.dataset.forView = viewId;
+    }
   }
 
   if (!wrap) {
     wrap = document.createElement('div');
     wrap.className = 'load-more-wrap';
-    const targetParent = container.closest('.table-wrap') || container.parentElement;
-    targetParent.after(wrap);
+    wrap.dataset.forView = viewId;
+    container.after(wrap);
   }
 
-  if (remainingCount > 0) {
+  const isContainerHidden = container.classList.contains('is-hidden') || (parent && parent.classList.contains('is-hidden'));
+
+  if (remainingCount > 0 && !isContainerHidden) {
     wrap.style.display = 'flex';
     wrap.innerHTML = `
       <button type="button" class="btn btn--secondary btn--sm load-more-btn">
         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
-        <span>Load More (${remainingCount} remaining)</span>
+        <span>Load More</span>
       </button>
     `;
     const btn = wrap.querySelector('.load-more-btn');
