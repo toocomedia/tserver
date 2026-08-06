@@ -30,24 +30,26 @@
 {% endif %}
 
 {% if rows %}
-<!-- Action Toolbar (Search & Filter) -->
-<div class="action-toolbar mb-md">
-  <div class="action-toolbar__search">
-    <input type="text" id="proxy-search-input" class="form-control" placeholder="Search proxies by domain, target IP or port..." onkeyup="filterProxyTable()">
-  </div>
-  <div class="action-toolbar__group">
-    <select id="proxy-status-filter" class="form-control" style="width: 140px;" onchange="filterProxyTable()">
-      <option value="all">All Proxies</option>
-      <option value="ssl">SSL Enabled</option>
-      <option value="cache">Cache Enabled</option>
-    </select>
-  </div>
-</div>
-
-<div class="table-wrap" style="position:relative;">
+<div class="proxy-list-wrapper" style="position:relative;">
   <!-- SKELETON LOADING OVERLAY -->
-  {{ skeleton_overlay('proxy-skeleton', tables=[{ 'rows': 4 }]) }}
+  {{ skeleton_overlay('proxy-skeleton', controls=1, tables=[{ 'rows': 4 }]) }}
   <!-- END SKELETON OVERLAY -->
+
+  <!-- Action Toolbar (Search & Filter) -->
+  <div class="action-toolbar mb-md">
+    <div class="action-toolbar__search">
+      <input type="text" id="proxy-search-input" class="form-control" placeholder="Search proxies by domain, target IP or port..." onkeyup="filterProxyTable()">
+    </div>
+    <div class="action-toolbar__group">
+      <select id="proxy-status-filter" class="form-control" style="width: 140px;" onchange="filterProxyTable()">
+        <option value="all">All Proxies</option>
+        <option value="ssl">SSL Enabled</option>
+        <option value="cache">Cache Enabled</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="table-wrap">
   <table class="table" id="proxy-table">
     <colgroup>
       <col style="width:22%">
@@ -206,6 +208,7 @@
       {% endfor %}
     </tbody>
   </table>
+</div>
 </div>
 {% else %}
 <div class="alert alert--info" id="empty-state">

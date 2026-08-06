@@ -170,7 +170,10 @@
   z-index: 10;
   background: var(--color-bg);
   padding: 0;
-  transition: opacity var(--skeleton-fade-duration) ease;
+  overflow: hidden;
+  max-width: 100%;
+  box-sizing: border-box;
+  transition: opacity var(--skeleton-fade-duration) ease, visibility var(--skeleton-fade-duration) ease;
 }
 .resource-views > .skeleton-overlay {
   padding-top: var(--space-lg);
@@ -178,6 +181,7 @@
 .skeleton-overlay.is-hidden {
   opacity: 0;
   pointer-events: none;
+  visibility: hidden;
 }
 
 /* Section-level loading dim (is-data-loading) — used for inline/partial loads

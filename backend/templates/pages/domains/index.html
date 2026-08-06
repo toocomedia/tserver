@@ -14,24 +14,26 @@
 
 {% if domain_statuses %}
 
-<!-- Action Toolbar (Search & Filter) -->
-<div class="action-toolbar mb-md">
-  <div class="action-toolbar__search">
-    <input type="text" id="domain-search-input" class="form-control" placeholder="Search domains by name or IP..." onkeyup="filterDomainsTable()">
-  </div>
-  <div class="action-toolbar__group">
-    <select id="domain-status-filter" class="form-control" style="width: 140px;" onchange="filterDomainsTable()">
-      <option value="all">All Domains</option>
-      <option value="active">Active Nginx</option>
-      <option value="ssl">SSL Issued</option>
-    </select>
-  </div>
-</div>
-
-<div class="table-wrap" style="position:relative;">
+<div class="domains-list-wrapper" style="position:relative;">
   <!-- SKELETON LOADING OVERLAY -->
-  {{ skeleton_overlay('domains-skeleton', tables=[{ 'rows': 4 }]) }}
+  {{ skeleton_overlay('domains-skeleton', controls=1, tables=[{ 'rows': 4 }]) }}
   <!-- END SKELETON OVERLAY -->
+
+  <!-- Action Toolbar (Search & Filter) -->
+  <div class="action-toolbar mb-md">
+    <div class="action-toolbar__search">
+      <input type="text" id="domain-search-input" class="form-control" placeholder="Search domains by name or IP..." onkeyup="filterDomainsTable()">
+    </div>
+    <div class="action-toolbar__group">
+      <select id="domain-status-filter" class="form-control" style="width: 140px;" onchange="filterDomainsTable()">
+        <option value="all">All Domains</option>
+        <option value="active">Active Nginx</option>
+        <option value="ssl">SSL Issued</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="table-wrap">
     <table class="table" id="domains-table">
       <colgroup>
         <col style="width:34%">

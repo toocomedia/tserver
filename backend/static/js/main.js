@@ -179,7 +179,14 @@ function closeModal(id) {
 function hideSkeleton(id, delay = 1000) {
   const el = document.getElementById(id);
   if (!el || el.classList.contains("is-hidden")) return;
-  setTimeout(() => el.classList.add("is-hidden"), delay);
+  setTimeout(() => {
+    el.classList.add("is-hidden");
+    setTimeout(() => {
+      if (el.classList.contains("is-hidden")) {
+        el.style.display = "none";
+      }
+    }, 400);
+  }, delay);
 }
 window.hideSkeleton = hideSkeleton;
 

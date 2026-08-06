@@ -12,25 +12,27 @@
 {% block content %}
 <div class="dns-page">
 
-<!-- Action Toolbar (Search & Filter) -->
-<div class="action-toolbar mb-md">
-  <div class="action-toolbar__search">
-    <input type="text" id="dns-search-input" class="form-control" placeholder="Search DNS zones..." onkeyup="filterDnsTable()">
-  </div>
-  <div class="action-toolbar__group">
-    <select id="dns-status-filter" class="form-control" style="width: 140px;" onchange="filterDnsTable()">
-      <option value="all">All Zones</option>
-      <option value="active">Active Zones</option>
-      <option value="missing">Missing Zones</option>
-    </select>
-  </div>
-</div>
-
-{% if zones %}
-<div class="table-wrap" style="position:relative;">
+<div class="dns-list-wrapper" style="position:relative;">
   <!-- SKELETON LOADING OVERLAY -->
-  {{ skeleton_overlay('dns-skeleton', tables=[{ 'rows': 4 }]) }}
+  {{ skeleton_overlay('dns-skeleton', controls=1, tables=[{ 'rows': 4 }]) }}
   <!-- END SKELETON OVERLAY -->
+
+  <!-- Action Toolbar (Search & Filter) -->
+  <div class="action-toolbar mb-md">
+    <div class="action-toolbar__search">
+      <input type="text" id="dns-search-input" class="form-control" placeholder="Search DNS zones..." onkeyup="filterDnsTable()">
+    </div>
+    <div class="action-toolbar__group">
+      <select id="dns-status-filter" class="form-control" style="width: 140px;" onchange="filterDnsTable()">
+        <option value="all">All Zones</option>
+        <option value="active">Active Zones</option>
+        <option value="missing">Missing Zones</option>
+      </select>
+    </div>
+  </div>
+
+  {% if zones %}
+  <div class="table-wrap">
     <table class="table" id="dns-zones-table">
       <colgroup>
         <col style="width:36%">
@@ -83,6 +85,7 @@
       </tbody>
     </table>
   </div>
+</div>
 </div>
 {% else %}
 <div class="alert alert--info" id="empty-state">

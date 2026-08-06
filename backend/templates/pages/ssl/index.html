@@ -34,24 +34,26 @@
 {% endif %}
 
 {% if cert_list %}
-<!-- Action Toolbar (Search & Filter) -->
-<div class="action-toolbar mb-md">
-  <div class="action-toolbar__search">
-    <input type="text" id="ssl-search-input" class="form-control" placeholder="Search certificates by domain name..." onkeyup="filterSSLTable()">
-  </div>
-  <div class="action-toolbar__group">
-    <select id="ssl-status-filter" class="form-control" style="width: 140px;" onchange="filterSSLTable()">
-      <option value="all">All Certificates</option>
-      <option value="valid">Valid Only</option>
-      <option value="expiring">Expiring Soon</option>
-    </select>
-  </div>
-</div>
-
-<div class="table-wrap" style="position:relative;">
+<div class="ssl-list-wrapper" style="position:relative;">
   <!-- SKELETON LOADING OVERLAY -->
-  {{ skeleton_overlay('ssl-skeleton', tables=[{ 'rows': 4 }]) }}
+  {{ skeleton_overlay('ssl-skeleton', controls=1, tables=[{ 'rows': 4 }]) }}
   <!-- END SKELETON OVERLAY -->
+
+  <!-- Action Toolbar (Search & Filter) -->
+  <div class="action-toolbar mb-md">
+    <div class="action-toolbar__search">
+      <input type="text" id="ssl-search-input" class="form-control" placeholder="Search certificates by domain name..." onkeyup="filterSSLTable()">
+    </div>
+    <div class="action-toolbar__group">
+      <select id="ssl-status-filter" class="form-control" style="width: 140px;" onchange="filterSSLTable()">
+        <option value="all">All Certificates</option>
+        <option value="valid">Valid Only</option>
+        <option value="expiring">Expiring Soon</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="table-wrap">
   <table class="table" id="ssl-table">
     <colgroup>
       <col style="width:30%">
@@ -150,7 +152,7 @@
 <p class="text-small text-muted" style="margin-top:var(--space-lg);">
   Toggle the auto-renew switch to enable or disable automatic renewal checks for each certificate.
 </p>
-
+</div>
 {% else %}
 <div class="alert alert--info" id="empty-state">
   No SSL certificates yet.
