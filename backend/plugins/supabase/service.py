@@ -53,12 +53,22 @@ def _dsn(project: SupabaseProject, db_name: str | None = None, use_pooler: bool 
     pass_enc = quote(password or "", safe="")
 
     if use_pooler or "pooler.supabase.com" in project.db_host:
-        region = project.region or "eu-west-1"
-        host = project.db_host if "pooler" in project.db_host else f"aws-0-{region}.pooler.supabase.com"
-        port = project.db_port if "pooler" in project.db_host else 6543
-        user_base = project.db_user or "postgres"
         ref = project.project_ref or ""
-        user = f"{user_base}.{ref}" if ref and not user_base.endswith(f".{ref}") else user_base
+        if "pooler.supabase.com" in project.db_host:
+            host = project.db_host
+            port = project.db_port
+            user = project.db_user
+        elif ref:
+            # Dedicated project pooler endpoint (supports IPv4, port 5432/6543)
+            host = f"{ref}.pooler.supabase.com"
+            port = 5432
+            user = project.db_user or "postgres"
+        else:
+            region = project.region or "eu-west-1"
+            host = f"aws-0-{region}.pooler.supabase.com"
+            port = 6543
+            user = f"{project.db_user or 'postgres'}.{ref}" if ref else (project.db_user or "postgres")
+
         user_enc = quote(user, safe="")
         return f"postgresql://{user_enc}:{pass_enc}@{host}:{port}/{db}"
 
