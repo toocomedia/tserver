@@ -1031,6 +1031,42 @@
   display: none !important;
 }
 
+.is-page-hidden {
+  display: none !important;
+}
+
+/* ============================================================
+   CLIENT-SIDE LIST PAGINATION (LOAD MORE BUTTON)
+   ============================================================ */
+.load-more-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 16px 0;
+  margin-top: 8px;
+}
+
+.load-more-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  padding: 8px 22px;
+  border-radius: var(--radius-md, 6px);
+  background: var(--color-surface, rgba(255, 255, 255, 0.05));
+  border: 1px solid var(--color-line, rgba(255, 255, 255, 0.15));
+  color: var(--color-text, #ffffff);
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.load-more-btn:hover {
+  background: var(--color-accent, #3b82f6) !important;
+  color: #ffffff !important;
+  border-color: var(--color-accent, #3b82f6) !important;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
+}
+
 @media (max-width: 900px) {
   .view-cards-container,
   .plugin-grid,
