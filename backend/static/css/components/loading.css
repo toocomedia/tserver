@@ -98,21 +98,13 @@
   40% { opacity: 1; transform: translateY(-4px); }
 }
 
-/* Skeleton Shimmer Loading Box.
-   Shimmer gradient + animation are shared by every skeleton shape. */
+/* Skeleton pulse — a single opacity blink shared by every skeleton shape.
+   Size-independent: looks identical on a 200px card or a 12px chip. */
 .skeleton-box,
 .skeleton-shimmer,
 .skeleton-shimmer-box {
-  background: linear-gradient(
-    100deg,
-    var(--color-surface) 0%,
-    var(--color-surface) 40%,
-    var(--color-line) 50%,
-    var(--color-surface) 60%,
-    var(--color-surface) 100%
-  );
-  background-size: 300% 100%;
-  animation: skeleton-shimmer var(--skeleton-shimmer-duration) infinite ease-in-out;
+  background: var(--color-surface);
+  animation: skeleton-pulse var(--skeleton-shimmer-duration) infinite ease-in-out;
   border-radius: 4px;
 }
 
@@ -124,62 +116,11 @@
   min-height: 140px;
 }
 
-/* Inner skeleton chips — two modes:
-   Mode 2 (generic): standalone chip in rows/tables → shimmer on the chip.
-   Mode 1 (override): chip inside .skeleton-box → static fill, outer card shimmers. */
-
-/* Mode 2: standalone chip (row / table / control) — shimmer on the chip */
+/* Inner skeleton chips — same pulse as the outer boxes, solid background.
+   No gradient needed: pulse is opacity-only so size doesn't affect speed. */
 .sk-label, .sk-value, .sk-meta, .sk-th, .sk-td, .sk-text, .sk-btn {
-  background: linear-gradient(
-    100deg,
-    var(--color-line) 0%,
-    var(--color-line) 40%,
-    rgba(255, 255, 255, 0.35) 50%,
-    var(--color-line) 60%,
-    var(--color-line) 100%
-  );
-  background-size: 300% 100%;
-  animation: skeleton-shimmer var(--skeleton-shimmer-duration) infinite ease-in-out;
-  opacity: 1;
-  border-radius: 3px;
-}
-[data-theme="dark"] .sk-label,
-[data-theme="dark"] .sk-value,
-[data-theme="dark"] .sk-meta,
-[data-theme="dark"] .sk-th,
-[data-theme="dark"] .sk-td,
-[data-theme="dark"] .sk-text,
-[data-theme="dark"] .sk-btn,
-[data-theme="amoled"] .sk-label,
-[data-theme="amoled"] .sk-value,
-[data-theme="amoled"] .sk-meta,
-[data-theme="amoled"] .sk-th,
-[data-theme="amoled"] .sk-td,
-[data-theme="amoled"] .sk-text,
-[data-theme="amoled"] .sk-btn {
-  background: linear-gradient(
-    100deg,
-    var(--color-line) 0%,
-    var(--color-line) 40%,
-    rgba(255, 255, 255, 0.10) 50%,
-    var(--color-line) 60%,
-    var(--color-line) 100%
-  );
-  background-size: 300% 100%;
-}
-
-/* Mode 1: static chip inside a .skeleton-box card — suppresses the chip shimmer
-   so only the outer card background animates (avoids dual-speed flicker). */
-.skeleton-box .sk-label,
-.skeleton-box .sk-value,
-.skeleton-box .sk-meta,
-.skeleton-box .sk-th,
-.skeleton-box .sk-td,
-.skeleton-box .sk-text,
-.skeleton-box .sk-btn {
   background: var(--color-line);
-  animation: none;
-  opacity: 0.5;
+  animation: skeleton-pulse var(--skeleton-shimmer-duration) infinite ease-in-out;
   border-radius: 3px;
 }
 
@@ -192,9 +133,9 @@
 .sk-w-30 { width: 30%; }
 .sk-w-35 { width: 35%; }
 
-@keyframes skeleton-shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
 }
 
 /* ==========================================================================
