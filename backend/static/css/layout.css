@@ -292,9 +292,9 @@
 }
 
 .stat-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: var(--space-xl);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
   margin-bottom: var(--space-xl);
 }
 

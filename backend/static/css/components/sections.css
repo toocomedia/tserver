@@ -147,19 +147,16 @@
   gap: 8px;
 }
 
-/* Stat Box Grid (Clean 28px Outside Margin) */
+/* Stat Box Grid (Responsive Flexbox - Cards auto-fit & fill full row width on wrap) */
 .stat-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 16px;
   margin-bottom: 28px;
 }
-@media (min-width: 1024px) {
-  .stat-grid {
-    grid-template-columns: repeat(6, 1fr);
-  }
-}
 .stat-card-box {
+  flex: 1 1 180px;
+  min-width: 160px;
   background: var(--color-bg);
   border: 1px solid var(--color-line);
   box-shadow: none !important;

@@ -218,14 +218,16 @@
   opacity: 0;
 }
 
-/* Stat grid skeleton: 6 shimmer boxes in auto-fit grid */
+/* Stat grid skeleton: 6 shimmer boxes in flex wrap layout */
 .skeleton-stat-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 16px;
   margin-bottom: 28px;
 }
 .skeleton-stat-card {
+  flex: 1 1 180px;
+  min-width: 160px;
   background: var(--color-bg);
   border: 1px solid var(--color-line);
   padding: 14px 18px;
