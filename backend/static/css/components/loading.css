@@ -108,3 +108,129 @@
   0% { background-position: 200% 0; }
   100% { background-position: -200% 0; }
 }
+
+/* ==========================================================================
+   SKELETON OVERLAY — covers page content until first data load
+   ========================================================================== */
+.skeleton-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  background: var(--color-bg);
+  padding: 0;
+  transition: opacity 0.35s ease;
+}
+.skeleton-overlay.is-hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Stat grid skeleton: 6 shimmer boxes in auto-fit grid */
+.skeleton-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 28px;
+}
+.skeleton-stat-card {
+  border: 1px solid var(--color-line);
+  background: var(--color-bg);
+  padding: 14px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.skeleton-stat-card .sk-label {
+  width: 60%;
+  height: 10px;
+}
+.skeleton-stat-card .sk-value {
+  width: 45%;
+  height: 20px;
+}
+.skeleton-stat-card .sk-meta {
+  width: 75%;
+  height: 8px;
+}
+
+/* Section skeleton: header bar + N rows */
+.skeleton-section {
+  margin-bottom: 28px;
+  width: 100%;
+}
+.skeleton-section-header {
+  height: 38px;
+  margin-bottom: 16px;
+  width: 100%;
+}
+.skeleton-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 38px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--color-line);
+}
+.skeleton-row .sk-label {
+  width: 140px;
+  height: 10px;
+  flex-shrink: 0;
+}
+.skeleton-row .sk-value {
+  width: 200px;
+  height: 14px;
+}
+
+/* Table skeleton: header row + N body rows */
+.skeleton-table-wrap {
+  margin-bottom: 24px;
+  width: 100%;
+}
+.skeleton-table-header {
+  display: flex;
+  height: 36px;
+  background: var(--color-header-bg-bar);
+  padding: 0 14px;
+  gap: 16px;
+  align-items: center;
+}
+.skeleton-table-header .sk-th {
+  height: 8px;
+}
+.skeleton-table-row {
+  display: flex;
+  height: 38px;
+  padding: 0 14px;
+  gap: 16px;
+  align-items: center;
+  border-bottom: 1px solid var(--color-line);
+}
+.skeleton-table-row .sk-td {
+  height: 12px;
+}
+
+/* Controls skeleton: toggle row strips */
+.skeleton-controls {
+  margin-bottom: 28px;
+  width: 100%;
+}
+.skeleton-control-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 48px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--color-line);
+}
+.skeleton-control-row .sk-text {
+  width: 220px;
+  height: 12px;
+}
+.skeleton-control-row .sk-buttons {
+  display: flex;
+  gap: 8px;
+}
+.skeleton-control-row .sk-btn {
+  width: 72px;
+  height: 28px;
+}
