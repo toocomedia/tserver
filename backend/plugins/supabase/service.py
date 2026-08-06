@@ -534,13 +534,14 @@ async def provision_app_database(
     proj = await get_project(db, project_id)
     conn = await _pg_connect(proj)
     try:
-        # Create user
+        # PostgreSQL utility commands cannot use asyncpg $1 parameters.
         await conn.execute(
-            f"CREATE USER {username} WITH PASSWORD $1 LOGIN",
-            password,
+            f"CREATE USER {_identifier(username)} WITH PASSWORD {_literal(password)} LOGIN"
         )
         # Create database owned by that user
-        await conn.execute(f"CREATE DATABASE {database_name} OWNER {username}")
+        await conn.execute(
+            f"CREATE DATABASE {_identifier(database_name)} OWNER {_identifier(username)}"
+        )
     finally:
         await conn.close()
 
@@ -568,7 +569,15 @@ async def deprovision_app_database(
             f"SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = $1",
             database_name,
         )
-        await conn.execute(f"DROP DATABASE IF EXISTS {database_name}")
-        await conn.execute(f"DROP USER IF EXISTS {username}")
+        await conn.execute(f"DROP DATABASE IF EXISTS {_identifier(database_name)}")
+        await conn.execute(f"DROP USER IF EXISTS {_identifier(username)}")
     finally:
         await conn.close()
+
+
+def _identifier(value: str) -> str:
+    return '"' + value.replace('"', '""') + '"'
+
+
+def _literal(value: str) -> str:
+    return "'" + value.replace("'", "''") + "'"

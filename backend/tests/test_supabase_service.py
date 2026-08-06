@@ -1,7 +1,7 @@
 import sys
 import unittest
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 BACKEND = Path(__file__).resolve().parents[1]
 if str(BACKEND) not in sys.path:
@@ -74,6 +74,27 @@ class SupabaseConnectionTests(unittest.TestCase):
         project = _project()
         project.db_host = "aws-1-eu-west-1.pooler.supabase.com"
         self.assertEqual(service._connect_options(project)["statement_cache_size"], 0)
+
+
+class SupabaseProvisionTests(unittest.IsolatedAsyncioTestCase):
+    async def test_provision_uses_escaped_literals_for_ddl(self):
+        connection = AsyncMock()
+        with (
+            patch.object(service, "get_project", new=AsyncMock(return_value=_project())),
+            patch.object(service, "_pg_connect", new=AsyncMock(return_value=connection)),
+        ):
+            await service.provision_app_database(
+                1, "app1", "app1", "pass'word", None
+            )
+        self.assertEqual(
+            'CREATE USER "app1" WITH PASSWORD \'pass\'\'word\' LOGIN',
+            connection.execute.await_args_list[0].args[0],
+        )
+        self.assertEqual(
+            'CREATE DATABASE "app1" OWNER "app1"',
+            connection.execute.await_args_list[1].args[0],
+        )
+        connection.close.assert_awaited_once()
 
 
 if __name__ == "__main__":
