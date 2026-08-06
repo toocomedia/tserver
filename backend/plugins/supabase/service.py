@@ -188,8 +188,18 @@ async def test_connection(db: AsyncSession, project_id: int) -> dict[str, Any]:
         return {"status": "ok", "version": version}
     except Exception as exc:
         proj.connection_status = "error"
-        logger.warning("Supabase connection test failed for project %s: %s", project_id, exc)
+        logger.exception("Supabase connection test failed for project %s (%s)", project_id, proj.db_host)
         return {"status": "error", "detail": str(exc)}
+
+
+async def _safe_pg_connect(project: SupabaseProject, db_name: str | None = None):
+    """Return a single asyncpg connection or raise clean HTTPException(400) on error."""
+    try:
+        return await _pg_connect(project, db_name)
+    except Exception as exc:
+        from fastapi import HTTPException
+        logger.warning("Database connection failed for project %s (%s): %s", project.id, project.db_host, exc)
+        raise HTTPException(400, f"Database connection error: {exc}") from exc
 
 
 # ──────────────────────────────────────────────
@@ -198,7 +208,7 @@ async def test_connection(db: AsyncSession, project_id: int) -> dict[str, Any]:
 
 async def list_databases(project_id: int, db: AsyncSession) -> list[dict[str, Any]]:
     proj = await get_project(db, project_id)
-    conn = await _pg_connect(proj)
+    conn = await _safe_pg_connect(proj)
     try:
         rows = await conn.fetch(
             """
@@ -219,7 +229,7 @@ async def list_tables(
     project_id: int, database: str, db: AsyncSession
 ) -> list[dict[str, Any]]:
     proj = await get_project(db, project_id)
-    conn = await _pg_connect(proj, db_name=database)
+    conn = await _safe_pg_connect(proj, db_name=database)
     try:
         rows = await conn.fetch(
             """
@@ -240,7 +250,7 @@ async def list_tables(
 
 async def list_roles(project_id: int, db: AsyncSession) -> list[dict[str, Any]]:
     proj = await get_project(db, project_id)
-    conn = await _pg_connect(proj)
+    conn = await _safe_pg_connect(proj)
     try:
         rows = await conn.fetch(
             """
@@ -265,7 +275,7 @@ async def run_query(
     project_id: int, database: str, sql: str, db: AsyncSession
 ) -> dict[str, Any]:
     proj = await get_project(db, project_id)
-    conn = await _pg_connect(proj, db_name=database)
+    conn = await _safe_pg_connect(proj, db_name=database)
     try:
         rows = await conn.fetch(sql)
         data = [dict(r) for r in rows]
