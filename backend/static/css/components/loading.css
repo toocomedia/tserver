@@ -172,6 +172,9 @@
   padding: 0;
   transition: opacity var(--skeleton-fade-duration) ease;
 }
+.resource-views > .skeleton-overlay {
+  padding-top: var(--space-lg);
+}
 .skeleton-overlay.is-hidden {
   opacity: 0;
   pointer-events: none;
