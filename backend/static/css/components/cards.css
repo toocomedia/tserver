@@ -961,11 +961,8 @@
 }
 
 .list-actions-toggle-btn.is-active {
-  color: var(--color-accent, #3b82f6);
-}
-
-.list-actions-toggle-btn.is-active .chevron-icon {
-  transform: rotate(180deg);
+  background: var(--color-accent, #3b82f6) !important;
+  color: #ffffff !important;
 }
 
 .list-row-subactions {
@@ -1018,11 +1015,16 @@
   background: transparent;
 }
 
-/* Synchronized hover state for main row and subactions row */
+/* Synchronized hover state & persistent active background when row is expanded */
+.table tr.is-expanded,
+.table tr.is-expanded > td,
+.table tr.is-expanded + .table-row-subactions-tr > td,
 .table tr.is-hovered,
 .table tr.is-hovered > td,
-.table-row-subactions-tr.is-hovered > td {
-  background: var(--color-surface, rgba(255, 255, 255, 0.04)) !important;
+.table-row-subactions-tr.is-hovered > td,
+.list-item-row.is-expanded,
+.list-item-row.is-hovered {
+  background: var(--color-surface, rgba(255, 255, 255, 0.05)) !important;
 }
 
 .is-hidden {
