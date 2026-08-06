@@ -478,7 +478,6 @@ if (doneClose) doneClose.addEventListener("click", () => window.location.reload(
 // ── Auto-load first project on page load ──────────────────────────────────
 const firstProj = document.querySelector("[data-action='select-project']");
 if (firstProj) {
-  currentProjectId = parseInt(firstProj.dataset.projectId, 10);
-  initProjectPanel();
+  loadProject(parseInt(firstProj.dataset.projectId, 10));
 }
 </script>
