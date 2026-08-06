@@ -19,11 +19,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="plugins-page" style="position:relative;">
-
-<!-- SKELETON LOADING OVERLAY -->
-{{ skeleton_overlay('plugins-skeleton', cards=6) }}
-<!-- END SKELETON OVERLAY -->
+<div class="plugins-page">
 
 <div class="mb-xl">
   {% set plugin_title_icon %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>{% endset %}
@@ -32,7 +28,11 @@
   {% set icon_svg = plugin_title_icon %}
   {% include "partials/resource_title_bar.html" %}
 
-  <div class="resource-views">
+  <div class="resource-views" style="position:relative;">
+    
+    <!-- SKELETON LOADING OVERLAY -->
+    {{ skeleton_overlay('plugins-skeleton', cards=6) }}
+    <!-- END SKELETON OVERLAY -->
     
     <!-- 1. CARDS VIEW -->
     <div data-resource-container="plugins" data-resource-view="cards" class="plugin-grid">

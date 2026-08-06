@@ -63,10 +63,22 @@
     {% for _ in range(cards) %}
     <div class="skeleton-plugin-card skeleton-box">
       <div class="sk-cover"></div>
-      <div class="sk-body">
-        <div class="sk-label"></div>
-        <div class="sk-value"></div>
-        <div class="sk-meta"></div>
+      <div class="sk-main">
+        <div class="sk-header-row">
+          <div class="sk-title"></div>
+          <div class="sk-badge"></div>
+        </div>
+        <div class="sk-desc-wrap">
+          <div class="sk-line sk-w-85"></div>
+          <div class="sk-line sk-w-60"></div>
+        </div>
+        <div class="sk-footer-row">
+          <div class="sk-status"></div>
+          <div class="sk-actions">
+            <div class="sk-icon-btn"></div>
+            <div class="sk-icon-btn"></div>
+          </div>
+        </div>
       </div>
     </div>
     {% endfor %}

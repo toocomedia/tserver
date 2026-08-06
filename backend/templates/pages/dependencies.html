@@ -13,11 +13,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="dependencies-page" style="position:relative;">
-
-<!-- SKELETON LOADING OVERLAY -->
-{{ skeleton_overlay('dependencies-skeleton', cards=6) }}
-<!-- END SKELETON OVERLAY -->
+<div class="dependencies-page">
 <div class="mb-xl">
   {% set dependency_title_icon %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/></svg>{% endset %}
   {% set title = 'System Dependencies Catalog' %}
@@ -25,7 +21,11 @@
   {% set icon_svg = dependency_title_icon %}
   {% include "partials/resource_title_bar.html" %}
 
-  <div class="resource-views">
+  <div class="resource-views" style="position:relative;">
+    
+    <!-- SKELETON LOADING OVERLAY -->
+    {{ skeleton_overlay('dependencies-skeleton', cards=6) }}
+    <!-- END SKELETON OVERLAY -->
     
     <!-- 1. CARDS VIEW -->
     <div data-resource-container="dependencies" data-resource-view="cards" class="dependency-grid">
