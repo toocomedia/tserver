@@ -100,9 +100,17 @@
 
 /* Skeleton Shimmer Loading Box */
 .skeleton-box {
-  background: linear-gradient(90deg, var(--color-surface) 25%, var(--color-line) 50%, var(--color-surface) 75%);
-  background-size: 200% 100%;
-  animation: skeleton-shimmer 1.5s infinite ease-in-out;
+  background: linear-gradient(
+    100deg,
+    var(--color-surface) 0%,
+    var(--color-surface) 35%,
+    var(--color-line) 50%,
+    var(--color-surface) 65%,
+    var(--color-surface) 100%
+  );
+  background-size: 300% 100%;
+  animation: skeleton-shimmer 2.5s infinite ease-in-out;
+  border-radius: 4px;
 }
 @keyframes skeleton-shimmer {
   0% { background-position: 200% 0; }
@@ -118,7 +126,7 @@
   z-index: 10;
   background: var(--color-bg);
   padding: 0;
-  transition: opacity 0.35s ease;
+  transition: opacity 0.5s ease;
 }
 .skeleton-overlay.is-hidden {
   opacity: 0;
@@ -139,6 +147,7 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+  border-radius: 4px;
 }
 .skeleton-stat-card .sk-label {
   width: 60%;

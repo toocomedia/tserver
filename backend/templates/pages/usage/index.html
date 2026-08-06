@@ -362,7 +362,9 @@
       if (!skeletonHidden) {
         skeletonHidden = true;
         var sk = document.getElementById('usage-skeleton');
-        if (sk) sk.classList.add('is-hidden');
+        if (sk) {
+          setTimeout(function() { sk.classList.add('is-hidden'); }, 80);
+        }
       }
     } catch (e) {
       markUsageUpdated('Waiting for server data…');
