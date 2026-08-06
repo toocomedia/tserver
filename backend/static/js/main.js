@@ -176,7 +176,7 @@ function closeModal(id) {
  *   A short delay lets real content render before the fade starts.
  * showSkeleton(id): re-shows an overlay (e.g. for a full page reload).
  */
-function hideSkeleton(id, delay = 80) {
+function hideSkeleton(id, delay = 1000) {
   const el = document.getElementById(id);
   if (!el || el.classList.contains("is-hidden")) return;
   setTimeout(() => el.classList.add("is-hidden"), delay);
