@@ -58,16 +58,12 @@ def _dsn(project: SupabaseProject, db_name: str | None = None, use_pooler: bool 
             host = project.db_host
             port = project.db_port
             user = project.db_user
-        elif ref:
-            # Dedicated project pooler endpoint (supports IPv4, port 5432/6543)
-            host = f"{ref}.pooler.supabase.com"
-            port = 5432
-            user = project.db_user or "postgres"
         else:
             region = project.region or "eu-west-1"
             host = f"aws-0-{region}.pooler.supabase.com"
             port = 6543
-            user = f"{project.db_user or 'postgres'}.{ref}" if ref else (project.db_user or "postgres")
+            user_base = project.db_user or "postgres"
+            user = f"{user_base}.{ref}" if ref and not user_base.endswith(f".{ref}") else user_base
 
         user_enc = quote(user, safe="")
         return f"postgresql://{user_enc}:{pass_enc}@{host}:{port}/{db}"
@@ -188,6 +184,9 @@ async def update_project(
     db: AsyncSession,
     project_id: int,
     name: str | None = None,
+    db_host: str | None = None,
+    db_port: int | None = None,
+    db_user: str | None = None,
     db_password: str | None = None,
     pat: str | None = None,
     region: str | None = None,
@@ -196,6 +195,12 @@ async def update_project(
     secret = _secret()
     if name is not None:
         proj.name = name
+    if db_host is not None:
+        proj.db_host = db_host
+    if db_port is not None:
+        proj.db_port = db_port
+    if db_user is not None:
+        proj.db_user = db_user
     if db_password is not None:
         proj.db_password_enc = encrypt(db_password, secret)
     if pat is not None:
