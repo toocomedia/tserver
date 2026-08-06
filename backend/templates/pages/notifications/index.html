@@ -11,7 +11,12 @@
 {% endblock %}
 
 {% block content %}
-<div class="notifications-page">
+<div class="notifications-page" style="position:relative;">
+
+<!-- SKELETON LOADING OVERLAY -->
+{{ skeleton_overlay('notifications-skeleton', tables=[{ 'rows': 4 }]) }}
+<!-- END SKELETON OVERLAY -->
+
 <div class="section">
   <div class="section__body" style="padding: 0;">
     {% if not notifications %}
@@ -23,10 +28,7 @@
         <p>No notifications yet.</p>
       </div>
     {% else %}
-      <div class="table-responsive" style="position:relative;">
-        <!-- SKELETON LOADING OVERLAY -->
-        {{ skeleton_overlay('notifications-skeleton', tables=[{ 'rows': 4 }]) }}
-        <!-- END SKELETON OVERLAY -->
+      <div class="table-responsive">
         <table class="table" id="notifications-table">
           <thead>
             <tr>

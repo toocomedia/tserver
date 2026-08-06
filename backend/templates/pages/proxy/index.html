@@ -10,7 +10,11 @@
 {% endblock %}
 
 {% block content %}
-<div class="proxy-page">
+<div class="proxy-page" style="position:relative;">
+
+<!-- SKELETON LOADING OVERLAY -->
+{{ skeleton_overlay('proxy-skeleton', controls=1, tables=[{ 'rows': 4 }]) }}
+<!-- END SKELETON OVERLAY -->
 
 {% set created = request.query_params.get('created') %}
 {% set deleted = request.query_params.get('deleted') %}
@@ -30,10 +34,6 @@
 {% endif %}
 
 {% if rows %}
-<div class="proxy-list-wrapper" style="position:relative;">
-  <!-- SKELETON LOADING OVERLAY -->
-  {{ skeleton_overlay('proxy-skeleton', controls=1, tables=[{ 'rows': 4 }]) }}
-  <!-- END SKELETON OVERLAY -->
 
   <!-- Action Toolbar (Search & Filter) -->
   <div class="action-toolbar mb-md">

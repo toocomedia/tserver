@@ -10,7 +10,11 @@
 {% endblock %}
 
 {% block content %}
-<div class="ssl-page">
+<div class="ssl-page" style="position:relative;">
+
+<!-- SKELETON LOADING OVERLAY -->
+{{ skeleton_overlay('ssl-skeleton', controls=1, tables=[{ 'rows': 4 }]) }}
+<!-- END SKELETON OVERLAY -->
 
 {# Status messages from redirect params #}
 {% set issued  = request.query_params.get('issued') %}
@@ -34,10 +38,6 @@
 {% endif %}
 
 {% if cert_list %}
-<div class="ssl-list-wrapper" style="position:relative;">
-  <!-- SKELETON LOADING OVERLAY -->
-  {{ skeleton_overlay('ssl-skeleton', controls=1, tables=[{ 'rows': 4 }]) }}
-  <!-- END SKELETON OVERLAY -->
 
   <!-- Action Toolbar (Search & Filter) -->
   <div class="action-toolbar mb-md">

@@ -10,16 +10,15 @@
 {% endblock %}
 
 {% block content %}
-<div class="domains-page">
+<div class="domains-page" style="position:relative;">
+
+<!-- SKELETON LOADING OVERLAY -->
+{{ skeleton_overlay('domains-skeleton', controls=1, tables=[{ 'rows': 4 }]) }}
+<!-- END SKELETON OVERLAY -->
 
 {% if domain_statuses %}
 
-<div class="domains-list-wrapper" style="position:relative;">
-  <!-- SKELETON LOADING OVERLAY -->
-  {{ skeleton_overlay('domains-skeleton', controls=1, tables=[{ 'rows': 4 }]) }}
-  <!-- END SKELETON OVERLAY -->
-
-  <!-- Action Toolbar (Search & Filter) -->
+<!-- Action Toolbar (Search & Filter) -->
   <div class="action-toolbar mb-md">
     <div class="action-toolbar__search">
       <input type="text" id="domain-search-input" class="form-control" placeholder="Search domains by name or IP..." onkeyup="filterDomainsTable()">
