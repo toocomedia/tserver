@@ -58,13 +58,8 @@
   .proc-status--zombie   { background: var(--color-alert-danger-bg); color: var(--color-danger); }
   .proc-status--stopped  { background: var(--color-alert-danger-bg); color: var(--color-danger); }
 
-  [data-theme="dark"] .proc-status--running,
-  [data-theme="amoled"] .proc-status--running,
-  [data-theme="charcoal"] .proc-status--running { color: #9FD640 !important; }
-
-  [data-theme="dark"] .proc-status--sleeping,
-  [data-theme="amoled"] .proc-status--sleeping,
-  [data-theme="charcoal"] .proc-status--sleeping { color: #E5E7EB !important; }
+  :is([data-theme="dark"], [data-theme="amoled"], [data-theme="charcoal"]) .proc-status--running { color: #9FD640 !important; }
+  :is([data-theme="dark"], [data-theme="amoled"], [data-theme="charcoal"]) .proc-status--sleeping { color: #E5E7EB !important; }
 
   .info-row__value .usage-bar-wrap { min-width: 200px; }
 
