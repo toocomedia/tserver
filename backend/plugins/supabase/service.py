@@ -167,9 +167,9 @@ async def _refresh_pooler_connection(project: SupabaseProject) -> str | None:
         project.db_user = settings["user"]
         project.db_name = settings["database"]
         return None
-    except (httpx.HTTPError, ValueError):
-        logger.info("Could not refresh Supabase pooler connection for project %s", ref)
-        return "could not fetch Supabase Pooler configuration"
+    except (httpx.HTTPError, ValueError) as exc:
+        logger.info("Could not refresh Supabase pooler connection for project %s: %s", ref, exc)
+        return f"could not read Supabase Pooler configuration: {exc}"
 
 
 async def _pg_connect(project: SupabaseProject, db_name: str | None = None):
