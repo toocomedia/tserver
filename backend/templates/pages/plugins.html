@@ -112,8 +112,8 @@
 <script>
 // Hide the skeleton once the server-rendered DOM is ready.
 document.addEventListener('DOMContentLoaded', function() {
-  if (typeof hideSkeleton === 'function') hideSkeleton('plugins-skeleton');
-  else if (typeof window.hideSkeleton === 'function') window.hideSkeleton('plugins-skeleton');
+  if (typeof hideSkeleton === 'function') hideSkeleton('plugins-skeleton', 1000);
+  else if (typeof window.hideSkeleton === 'function') window.hideSkeleton('plugins-skeleton', 1000);
 });
 
 function closePluginCheckWindow(btn) {
