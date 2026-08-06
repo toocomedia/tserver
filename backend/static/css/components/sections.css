@@ -523,3 +523,174 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ============================================================
+   SETTINGS: RESTRUCTURED CURRENT ACCESS & PANEL URL
+   ============================================================ */
+
+/* Current Access Grid & Endpoints */
+.access-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.access-tile {
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: border-color 0.15s ease;
+}
+.access-tile:hover {
+  border-color: var(--color-accent);
+}
+.access-tile__label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-muted);
+}
+.access-tile__value {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text);
+  word-break: break-all;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 24px;
+}
+
+.access-endpoints-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  padding: 16px;
+}
+.access-endpoints-card__header {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-muted);
+  margin-bottom: 12px;
+}
+.access-endpoints-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.access-endpoints-list > div {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-line);
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text);
+}
+.access-endpoints-list a {
+  color: var(--color-accent-text, var(--color-text));
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Panel URL Layout */
+.panel-url-top-info {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.url-info-card {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  padding: 14px 16px;
+}
+.url-info-card__item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.url-info-card__label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-muted);
+}
+.url-info-card__val {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text);
+  word-break: break-all;
+}
+
+.ssl-active-top-box {
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-left: 3px solid var(--color-accent);
+  padding: 14px 16px;
+}
+.ssl-active-top-box__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+.ssl-active-top-box__col {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.ssl-active-top-box__label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-muted);
+}
+.ssl-active-top-box__val {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text);
+  word-break: break-all;
+}
+.ssl-active-top-box__val a {
+  color: var(--color-accent-text, var(--color-text));
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.url-dynamic-fields {
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  padding: 14px 16px;
+}
+
+.url-options-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px 24px;
+  align-items: center;
+  padding: 12px 16px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+}
+
+.form-actions--panel-url {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+}
+

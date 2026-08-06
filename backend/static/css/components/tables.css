@@ -1,6 +1,6 @@
 /* tables.css — Uniform 13px Font Size, 100% Vertical Centering & Line Dividers */
-.table-wrap { width: 100%; overflow-x: auto; margin-bottom: 24px; }
-.table { width: 100%; min-width: 100%; table-layout: fixed; border-collapse: collapse; font-size: 13px; }
+.table-wrap { width: 100% !important; max-width: 100% !important; overflow-x: auto; margin-bottom: 24px; }
+.table { width: 100% !important; min-width: 100% !important; table-layout: fixed; border-collapse: collapse; font-size: 13px; }
 .table thead tr { background: var(--color-header-bg-bar); height: 36px; }
 .table tbody tr { height: 38px; }
 .table th { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-muted); padding: 10px 14px; text-align: left; border-bottom: none; white-space: nowrap; background: var(--color-header-bg-bar); vertical-align: middle !important; }

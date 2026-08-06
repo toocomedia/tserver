@@ -43,38 +43,47 @@
       <div class="section mb-xl">
         <div class="section__header"><h3>Current Access Parameters</h3></div>
         <div class="section__body">
-          <div class="info-row">
-            <span class="info-row__label">Server IP</span>
-            <span class="info-row__value" id="stat-server-ip">{{ s.server_ip }}</span>
+          <div class="access-grid mb-lg">
+            <div class="access-tile">
+              <span class="access-tile__label">Server IP</span>
+              <span class="access-tile__value" id="stat-server-ip">{{ s.server_ip }}</span>
+            </div>
+            <div class="access-tile">
+              <span class="access-tile__label">Hostname</span>
+              <span class="access-tile__value" id="stat-hostname">{{ s.panel_domain or '— (IP only)' }}</span>
+            </div>
+            <div class="access-tile">
+              <span class="access-tile__label">DNS Status</span>
+              <span class="access-tile__value" id="stat-dns">
+                {% if s.panel_domain %}
+                  {% if s.dns_ok is sameas true %}<span class="badge badge--ok">OK</span>
+                  {% elif s.dns_ok is sameas false %}<span class="badge badge--error">wrong IP</span>
+                  {% else %}<span class="badge badge--neutral">?</span>{% endif %}
+                {% else %}<span class="text-muted">—</span>{% endif %}
+              </span>
+            </div>
+            <div class="access-tile">
+              <span class="access-tile__label">SSL Security</span>
+              <span class="access-tile__value" id="stat-ssl">
+                {% if s.ssl_active %}<span class="badge badge--ok">HTTPS</span>
+                {% else %}<span class="badge badge--neutral">off</span>{% endif %}
+              </span>
+            </div>
           </div>
-          <div class="info-row">
-            <span class="info-row__label">Hostname</span>
-            <span class="info-row__value" id="stat-hostname">{{ s.panel_domain or '— (IP only)' }}</span>
-          </div>
-          <div class="info-row">
-            <span class="info-row__label">DNS</span>
-            <span class="info-row__value" id="stat-dns">
-              {% if s.panel_domain %}
-                {% if s.dns_ok is sameas true %}<span class="badge badge--ok">OK</span>
-                {% elif s.dns_ok is sameas false %}<span class="badge badge--error">wrong IP</span>
-                {% else %}<span class="badge badge--neutral">?</span>{% endif %}
-              {% else %}<span class="text-muted">—</span>{% endif %}
-            </span>
-          </div>
-          <div class="info-row">
-            <span class="info-row__label">SSL</span>
-            <span class="info-row__value" id="stat-ssl">
-              {% if s.ssl_active %}<span class="badge badge--ok">HTTPS</span>
-              {% else %}<span class="badge badge--neutral">off</span>{% endif %}
-            </span>
-          </div>
-          <div class="info-row">
-            <span class="info-row__label">Open</span>
-            <span class="info-row__value text-small" id="stat-urls">
-              {% if s.urls.ip_http %}<div>IP: <a href="{{ s.urls.ip_http }}" target="_blank" rel="noopener">{{ s.urls.ip_http }}</a></div>{% endif %}
-              {% if s.urls.domain_http %}<div>HTTP: <a href="{{ s.urls.domain_http }}" target="_blank" rel="noopener">{{ s.urls.domain_http }}</a></div>{% endif %}
-              {% if s.urls.domain_https %}<div>HTTPS: <a href="{{ s.urls.domain_https }}" target="_blank" rel="noopener">{{ s.urls.domain_https }}</a></div>{% endif %}
-            </span>
+
+          <div class="access-endpoints-card">
+            <div class="access-endpoints-card__header">Active Access Endpoints</div>
+            <div class="access-endpoints-list" id="stat-urls">
+              {% if s.urls.ip_http %}
+              <div>IP: <a href="{{ s.urls.ip_http }}" target="_blank" rel="noopener">{{ s.urls.ip_http }}</a></div>
+              {% endif %}
+              {% if s.urls.domain_http %}
+              <div>HTTP: <a href="{{ s.urls.domain_http }}" target="_blank" rel="noopener">{{ s.urls.domain_http }}</a></div>
+              {% endif %}
+              {% if s.urls.domain_https %}
+              <div>HTTPS: <a href="{{ s.urls.domain_https }}" target="_blank" rel="noopener">{{ s.urls.domain_https }}</a></div>
+              {% endif %}
+            </div>
           </div>
         </div>
       </div>
@@ -83,14 +92,59 @@
     <!-- TAB: URL -->
     <div id="tab-url" class="split-tab">
       <div class="section mb-xl">
-        <div class="section__header"><h3>Panel URL</h3></div>
+        <div class="section__header"><h3>Panel URL & SSL Configuration</h3></div>
         <div class="section__body">
-          <p class="form-hint mb-md">
-            Hostname for the panel (SSL). IP can stay on a custom port (e.g. 8080).
-            Changing the URL does <strong>not</strong> delete SSL files unless you check the option below.
+
+          <!-- Information on Top -->
+          <div class="panel-url-top-info mb-lg">
+            <div class="url-info-card">
+              <div class="url-info-card__item">
+                <span class="url-info-card__label">Active Hostname</span>
+                <span class="url-info-card__val" id="result-hostname">{{ s.panel_domain or '(IP only)' }}</span>
+              </div>
+              <div class="url-info-card__item">
+                <span class="url-info-card__label">SSL Status</span>
+                <span class="url-info-card__val" id="ssl-status-badge">
+                  {% if s.ssl_active %}
+                    <span class="badge badge--ok">Active</span>
+                  {% else %}
+                    <span class="badge badge--neutral">Disabled</span>
+                  {% endif %}
+                </span>
+              </div>
+            </div>
+
+            <div id="ssl-active-box" class="ssl-active-top-box" {% if not s.ssl_active %}hidden{% endif %}>
+              <div class="ssl-active-top-box__grid">
+                <div class="ssl-active-top-box__col">
+                  <span class="ssl-active-top-box__label">SSL Hostname</span>
+                  <span class="ssl-active-top-box__val" id="ssl-active-host">{{ s.panel_domain or '—' }}</span>
+                </div>
+                <div class="ssl-active-top-box__col">
+                  <span class="ssl-active-top-box__label">Expires</span>
+                  <span class="ssl-active-top-box__val" id="ssl-active-expiry">{{ s.ssl_expiry or '—' }}</span>
+                </div>
+                <div class="ssl-active-top-box__col">
+                  <span class="ssl-active-top-box__label">HTTPS Link</span>
+                  <span class="ssl-active-top-box__val" id="ssl-active-link">
+                    {% if s.urls.domain_https %}
+                    <a href="{{ s.urls.domain_https }}" target="_blank" rel="noopener">{{ s.urls.domain_https }}</a>
+                    {% else %}—{% endif %}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <p class="form-hint mb-md" id="ssl-section-hint">
+            {% if s.ssl_active %}
+              Certificate is active. Renew before it expires, or remove it.
+            {% else %}
+              After the hostname is saved, issue Let’s Encrypt SSL here.
+            {% endif %}
           </p>
 
-          <div class="settings-choice-grid mb-lg">
+          <div class="settings-choice-grid mb-md">
             <label class="settings-choice {% if s.url_mode == 'none' or not s.panel_domain %}settings-choice--active{% endif %}">
               <input type="radio" name="url_mode" id="url_mode_none" value="none"
                 {% if s.url_mode == 'none' or not s.panel_domain %}checked{% endif %}>
@@ -112,7 +166,7 @@
             </label>
           </div>
 
-          <div id="url-subdomain-fields" class="settings-mode-box mb-md" hidden>
+          <div id="url-subdomain-fields" class="url-dynamic-fields mb-md" hidden>
             <div class="settings-subdomain-row">
               <input class="form-input" type="text" id="subdomain_label"
                      value="{{ s.subdomain_label or 'panel' }}" placeholder="panel" style="max-width:140px;">
@@ -129,7 +183,7 @@
             <p class="form-hint" style="margin-top:8px;">Preview: <strong id="subdomain-preview">—</strong></p>
           </div>
 
-          <div id="url-custom-fields" class="settings-mode-box mb-md" hidden>
+          <div id="url-custom-fields" class="url-dynamic-fields mb-md" hidden>
             <label class="form-label" for="custom_domain">Hostname</label>
             <input class="form-input" type="text" id="custom_domain"
                    value="{% if s.url_mode == 'custom' %}{{ s.panel_domain or '' }}{% endif %}"
@@ -139,60 +193,16 @@
             </p>
           </div>
 
-          <div class="info-row mb-md">
-            <span class="info-row__label">Will use</span>
-            <span class="info-row__value" id="result-hostname">{{ s.panel_domain or '(IP only)' }}</span>
-          </div>
+          <div class="url-options-row mb-md">
+            <label class="form-check" id="remove-ssl-on-change-wrap">
+              <input type="checkbox" id="remove_ssl_on_change">
+              <span>When changing URL, delete SSL for old hostname</span>
+            </label>
 
-          <label class="form-check mb-md" id="remove-ssl-on-change-wrap">
-            <input type="checkbox" id="remove_ssl_on_change">
-            <span>When changing URL, also <strong>delete SSL</strong> for the old hostname</span>
-          </label>
-
-          <div class="form-actions mb-lg">
-            <button type="button" class="btn btn--primary" id="btn-save-panel">Save panel URL</button>
-          </div>
-
-          <hr class="settings-divider">
-
-          <h3 class="settings-subhead">SSL for this URL</h3>
-          <p class="form-hint mb-md" id="ssl-section-hint">
-            {% if s.ssl_active %}
-              Certificate is active. Renew before it expires, or remove it.
-            {% else %}
-              After the hostname is saved, issue Let’s Encrypt SSL here.
-            {% endif %}
-          </p>
-
-          <label class="form-check mb-md" id="ssl-auto-renew-wrap" {% if not s.ssl_active %}hidden{% endif %}>
-            <input type="checkbox" id="panel_ssl_auto_renew_enabled" {% if s.panel_ssl_auto_renew_enabled %}checked{% endif %}>
-            <span>
-              <strong>Auto-Renew Panel SSL</strong>
-              <span class="form-hint d-block">Automatically renew the panel's certificate 30 days before expiry.</span>
-            </span>
-          </label>
-
-          <div id="ssl-active-box" class="settings-mode-box mb-md" {% if not s.ssl_active %}hidden{% endif %}>
-            <div class="info-row">
-              <span class="info-row__label">Status</span>
-              <span class="info-row__value"><span class="badge badge--ok">Active</span></span>
-            </div>
-            <div class="info-row">
-              <span class="info-row__label">Hostname</span>
-              <span class="info-row__value" id="ssl-active-host">{{ s.panel_domain or '—' }}</span>
-            </div>
-            <div class="info-row">
-              <span class="info-row__label">Expires</span>
-              <span class="info-row__value" id="ssl-active-expiry">{{ s.ssl_expiry or '—' }}</span>
-            </div>
-            <div class="info-row">
-              <span class="info-row__label">Open</span>
-              <span class="info-row__value text-small" id="ssl-active-link">
-                {% if s.urls.domain_https %}
-                <a href="{{ s.urls.domain_https }}" target="_blank" rel="noopener">{{ s.urls.domain_https }}</a>
-                {% else %}—{% endif %}
-              </span>
-            </div>
+            <label class="form-check" id="ssl-auto-renew-wrap" {% if not s.ssl_active %}hidden{% endif %}>
+              <input type="checkbox" id="panel_ssl_auto_renew_enabled" {% if s.panel_ssl_auto_renew_enabled %}checked{% endif %}>
+              <span>Auto-Renew Panel SSL (30 days before expiry)</span>
+            </label>
           </div>
 
           <div id="ssl-progress" class="ssl-progress mb-md" hidden>
@@ -203,8 +213,9 @@
             <p class="form-hint" id="ssl-progress-msg" style="margin-top:12px;"></p>
           </div>
 
-          <div class="form-actions">
-            <button type="button" class="btn btn--primary" id="btn-issue-ssl" {% if not s.panel_domain %}disabled{% endif %}>
+          <div class="form-actions form-actions--panel-url">
+            <button type="button" class="btn btn--primary" id="btn-save-panel">Save panel URL</button>
+            <button type="button" class="btn btn--secondary" id="btn-issue-ssl" {% if not s.panel_domain %}disabled{% endif %}>
               {% if s.ssl_active %}Renew SSL{% else %}Issue SSL{% endif %}
             </button>
             <button type="button" class="btn btn--danger" id="btn-remove-ssl" {% if not s.ssl_active %}hidden{% endif %}>
