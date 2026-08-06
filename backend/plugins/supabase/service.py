@@ -66,6 +66,36 @@ def _mgmt_headers(pat: str) -> dict[str, str]:
 
 
 # ──────────────────────────────────────────────
+# PAT: fetch all org projects from Supabase API
+# ──────────────────────────────────────────────
+
+async def fetch_account_projects(pat: str) -> list[dict[str, Any]]:
+    """Call Supabase Management API with a PAT and return all projects."""
+    async with httpx.AsyncClient(timeout=15) as client:
+        r = await client.get(f"{_MGMT_BASE}/projects", headers=_mgmt_headers(pat))
+        if r.status_code == 401:
+            from fastapi import HTTPException
+            raise HTTPException(401, "Invalid Personal Access Token.")
+        if not r.ok:
+            from fastapi import HTTPException
+            raise HTTPException(502, f"Supabase API error {r.status_code}: {r.text[:200]}")
+        raw = r.json()
+        return [
+            {
+                "ref": p.get("id", ""),
+                "name": p.get("name", ""),
+                "region": p.get("region", ""),
+                "status": p.get("status", ""),
+                "db_host": f"db.{p.get('id', '')}.supabase.co",
+                "db_port": 5432,
+                "db_name": "postgres",
+                "db_user": "postgres",
+            }
+            for p in raw
+        ]
+
+
+# ──────────────────────────────────────────────
 # Project CRUD (panel DB)
 # ──────────────────────────────────────────────
 

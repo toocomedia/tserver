@@ -1,48 +1,83 @@
-{# _sb_project_panel.html — rendered into #sb-project-panel via JS fetch #}
-<div class="sb-project-header">
-  <div class="sb-project-header__info">
-    <h2 class="sb-project-header__name">{{ project.name }}</h2>
-    <span class="text-muted text-small">{{ project.db_host }}</span>
-    {% if project.region %}<span class="badge badge--muted">{{ project.region }}</span>{% endif %}
-    <span class="badge {% if project.connection_status == 'ok' %}badge--success{% elif project.connection_status == 'error' %}badge--danger{% else %}badge--muted{% endif %}">
-      {{ project.connection_status }}
-    </span>
+{# _sb_project_panel.html — rendered in split-content, matching pg_manager style #}
+
+{# ── Project header bar ── #}
+<div class="action-toolbar" style="border-bottom: 1px solid var(--color-line); padding-bottom: 16px; margin-bottom: 0;">
+  <div class="d-flex flex-column gap-xs">
+    <h2 style="margin:0;">{{ project.name }}</h2>
+    <div class="d-flex align-center gap-sm flex-wrap">
+      <span class="text-muted text-small">{{ project.db_host }}</span>
+      {% if project.region %}
+        <span class="status-badge muted">{{ project.region }}</span>
+      {% endif %}
+      <span class="status-badge {% if project.connection_status == 'ok' %}success{% elif project.connection_status == 'error' %}danger{% else %}muted{% endif %}"
+            id="sb-status-badge">
+        {{ project.connection_status }}
+      </span>
+    </div>
   </div>
-  <div class="sb-project-header__actions">
-    <button class="btn btn--sm btn--secondary" id="sb-btn-test" data-project-id="{{ project.id }}">Test Connection</button>
-    <button class="btn btn--sm btn--secondary" id="sb-btn-stats" data-project-id="{{ project.id }}">Stats</button>
-    <button class="btn btn--sm btn--secondary" id="sb-btn-pause" data-project-id="{{ project.id }}">Pause</button>
-    <button class="btn btn--sm btn--danger" id="sb-btn-delete" data-project-id="{{ project.id }}">Delete</button>
+  <div class="d-flex gap-xs flex-wrap">
+    <button class="btn btn--secondary btn--sm" id="sb-btn-test" data-project-id="{{ project.id }}">
+      Test Connection
+    </button>
+    {% if project.connection_status != 'ok' %}
+    <button class="btn btn--secondary btn--sm" id="sb-btn-restore" data-project-id="{{ project.id }}">
+      Restore
+    </button>
+    {% else %}
+    <button class="btn btn--secondary btn--sm" id="sb-btn-pause" data-project-id="{{ project.id }}">
+      Pause
+    </button>
+    {% endif %}
+    <button class="btn btn--icon btn--sm btn--ghost" id="sb-btn-remove"
+            data-project-id="{{ project.id }}" data-project-name="{{ project.name }}"
+            data-action="open-delete" aria-label="Remove project" title="Remove project">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>
+        <path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/>
+      </svg>
+    </button>
   </div>
 </div>
 
-{# Tabs #}
-<div class="tabs" id="sb-tabs">
-  <button class="tab active" data-tab="databases">Databases</button>
-  <button class="tab" data-tab="roles">Users &amp; Roles</button>
-  <button class="tab" data-tab="query">Query Runner</button>
-  <button class="tab" data-tab="stats">Stats</button>
+{# ── Tabs ── #}
+<div class="split-sidebar" style="flex-direction:row; flex:none; border-bottom: 1px solid var(--color-line); padding: 0; background: transparent; border-right: none; border-top: none;">
+  <div class="split-sidebar__item active" id="sb-tab-databases" data-sb-tab="databases" style="cursor:pointer; border-bottom: none;">Databases</div>
+  <div class="split-sidebar__item" id="sb-tab-roles" data-sb-tab="roles" style="cursor:pointer; border-bottom: none;">Users &amp; Roles</div>
+  <div class="split-sidebar__item" id="sb-tab-query" data-sb-tab="query" style="cursor:pointer; border-bottom: none;">Query Runner</div>
+  <div class="split-sidebar__item" id="sb-tab-stats" data-sb-tab="stats" style="cursor:pointer; border-bottom: none;">Stats</div>
 </div>
 
-{# Databases tab #}
-<div id="sb-tab-databases" class="sb-tab-panel">
+{# ── Databases panel ── #}
+<div id="sb-panel-databases" class="pg-panel">
   <div class="action-toolbar">
-    <h3>Databases</h3>
+    <h2>Databases</h2>
   </div>
+
   {% if databases %}
   <div class="table-wrap">
-    <table class="table">
+    <table class="table" id="sb-db-table">
       <thead>
-        <tr><th>Name</th><th>Encoding</th><th>Size</th><th></th></tr>
+        <tr>
+          <th>Name</th><th>Encoding</th><th>Size</th><th></th>
+        </tr>
       </thead>
       <tbody>
         {% for db in databases %}
         <tr>
-          <td><button class="btn btn--sm" data-action="view-tables" data-db="{{ db.name }}" data-project-id="{{ project.id }}">{{ db.name }}</button></td>
+          <td>
+            <button class="btn btn--sm" data-action="view-tables"
+                    data-db="{{ db.name }}" data-project-id="{{ project.id }}"
+                    id="sb-db-{{ db.name }}">
+              {{ db.name }}
+            </button>
+          </td>
           <td class="text-muted">{{ db.encoding }}</td>
           <td class="text-muted">{{ db.size }}</td>
           <td class="text-right">
-            <button class="btn btn--sm btn--secondary" data-action="query-db" data-db="{{ db.name }}" data-project-id="{{ project.id }}">Query</button>
+            <button class="btn btn--sm btn--secondary" data-action="query-db"
+                    data-db="{{ db.name }}" data-project-id="{{ project.id }}">
+              Query
+            </button>
           </td>
         </tr>
         {% endfor %}
@@ -50,14 +85,17 @@
     </table>
   </div>
   {% else %}
-  <p class="text-muted">Could not load databases. Check connection.</p>
+  <div class="p-xl text-center text-muted">
+    <p>Could not load databases — check connection status.</p>
+    <button class="btn btn--secondary" id="sb-btn-test" data-project-id="{{ project.id }}">Test Connection</button>
+  </div>
   {% endif %}
 
-  {# Tables sub-panel (loaded dynamically) #}
-  <div id="sb-tables-panel" hidden>
+  {# Tables drill-down sub-panel #}
+  <div id="sb-tables-panel" style="display:none;">
     <div class="action-toolbar">
-      <h3 id="sb-tables-title">Tables</h3>
-      <button class="btn btn--sm btn--ghost" id="sb-tables-back">← Back to Databases</button>
+      <h3 id="sb-tables-title" style="margin:0;">Tables</h3>
+      <button class="btn btn--sm btn--ghost" id="sb-tables-back">← Databases</button>
     </div>
     <div class="table-wrap">
       <table class="table">
@@ -68,53 +106,92 @@
   </div>
 </div>
 
-{# Roles tab #}
-<div id="sb-tab-roles" class="sb-tab-panel" hidden>
-  <div class="action-toolbar"><h3>Users &amp; Roles</h3></div>
+{# ── Roles panel ── #}
+<div id="sb-panel-roles" class="pg-panel" style="display:none;">
+  <div class="action-toolbar">
+    <h2>Users &amp; Roles</h2>
+  </div>
   <div class="table-wrap">
     <table class="table">
-      <thead><tr><th>Name</th><th>Superuser</th><th>Login</th><th>Create DB</th></tr></thead>
+      <thead>
+        <tr><th>Name</th><th>Superuser</th><th>Can Login</th><th>Create DB</th></tr>
+      </thead>
       <tbody id="sb-roles-body">
-        <tr><td colspan="4" class="text-muted">Loading…</td></tr>
+        <tr><td colspan="4" class="text-muted p-lg text-center">Loading…</td></tr>
       </tbody>
     </table>
   </div>
 </div>
 
-{# Query runner tab #}
-<div id="sb-tab-query" class="sb-tab-panel" hidden>
+{# ── Query panel ── #}
+<div id="sb-panel-query" class="pg-panel" style="display:none;">
   <div class="action-toolbar">
-    <h3>Query Runner</h3>
-    <div class="d-flex gap-sm align-center">
-      <div class="form-select-wrap">
-        <select class="form-select" id="sb-query-db">
-          {% for db in databases %}
-          <option value="{{ db.name }}">{{ db.name }}</option>
-          {% endfor %}
-        </select>
+    <h2>Query Runner</h2>
+  </div>
+
+  <div class="alert alert--warning mb-lg">
+    Only <strong>SELECT</strong> statements are permitted. Queries run in a safe read-only context.
+  </div>
+
+  <div class="d-flex flex-column gap-md mb-lg">
+    <div class="d-flex gap-md align-end flex-wrap">
+      <div class="form-group flex-1" style="min-width:200px; max-width:320px;">
+        <label class="form-label" for="sb-query-db">Target Database</label>
+        <div class="form-select-wrap">
+          <select id="sb-query-db" class="form-select">
+            {% for db in databases %}
+              <option value="{{ db.name }}">{{ db.name }}</option>
+            {% endfor %}
+            {% if not databases %}
+              <option value="" disabled>No databases available</option>
+            {% endif %}
+          </select>
+        </div>
       </div>
-      <button class="btn btn--primary" id="sb-query-run">Run</button>
+      <div class="form-actions pt-0">
+        <button class="btn btn--primary" id="sb-query-run">Run Query</button>
+        <button class="btn btn--secondary" id="sb-query-clear">Clear</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="sb-query-sql">SQL Statement</label>
+      <textarea id="sb-query-sql" class="form-textarea form-input--code" rows="6"
+                placeholder="SELECT * FROM my_table LIMIT 50;" spellcheck="false"></textarea>
+      <span class="form-hint">SELECT only. Max 4,000 characters.</span>
     </div>
   </div>
-  <textarea class="form-input form-input--code sb-query-editor" id="sb-query-sql"
-            placeholder="SELECT * FROM your_table LIMIT 50;" rows="6" spellcheck="false"></textarea>
-  <p class="form-hint">Read-only. Only SELECT statements are allowed.</p>
-  <div id="sb-query-result" class="sb-query-result" hidden>
+
+  <div id="sb-query-error" class="form-error mb-md" style="display:none;"></div>
+
+  <div id="sb-query-results" style="display:none;">
+    <div class="d-flex align-center justify-between mb-md">
+      <h3 style="margin:0;">Results</h3>
+      <span id="sb-query-count" class="text-small text-muted"></span>
+    </div>
     <div class="table-wrap">
       <table class="table">
-        <thead id="sb-query-thead"></thead>
+        <thead id="sb-query-thead"><tr></tr></thead>
         <tbody id="sb-query-tbody"></tbody>
       </table>
     </div>
-    <p class="text-muted text-small" id="sb-query-count"></p>
   </div>
-  <p class="form-error" id="sb-query-error" hidden></p>
+  <div id="sb-query-empty" class="p-xl text-center text-muted" style="display:none;">
+    Query executed successfully — 0 rows returned.
+  </div>
 </div>
 
-{# Stats tab #}
-<div id="sb-tab-stats" class="sb-tab-panel" hidden>
-  <div class="action-toolbar"><h3>Project Stats</h3></div>
+{# ── Stats panel ── #}
+<div id="sb-panel-stats" class="pg-panel" style="display:none;">
+  <div class="action-toolbar">
+    <h2>Project Stats</h2>
+    <button class="btn btn--secondary" id="sb-stats-refresh" data-project-id="{{ project.id }}">Refresh</button>
+  </div>
   <div id="sb-stats-content">
-    <p class="text-muted">Click "Stats" to load project information from the Supabase Management API.</p>
+    <p class="text-muted">Click Refresh to load project information from the Supabase Management API.</p>
+    {% if not project.pat_enc %}
+    <div class="alert alert--warning mt-md">
+      No Personal Access Token stored for this project. Stats and pause/restore require a PAT.
+    </div>
+    {% endif %}
   </div>
 </div>

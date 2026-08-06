@@ -1,14 +1,10 @@
-"""FastAPI router for the Supabase plugin.
-
-UI  routes: GET  /plugins/supabase/
-API routes:     /plugins/supabase/api/*
-"""
 from __future__ import annotations
 
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
@@ -22,6 +18,28 @@ from plugins.supabase.schemas import (
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/plugins/supabase", tags=["supabase"])
+
+
+# ──────────────────────────────────────────────
+# Connect wizard API
+# ──────────────────────────────────────────────
+
+class _FetchProjectsRequest(BaseModel):
+    pat: str
+
+class _ImportEntry(BaseModel):
+    ref: str
+    name: str
+    db_host: str
+    db_port: int = 5432
+    db_name: str = "postgres"
+    db_user: str = "postgres"
+    region: str | None = None
+    db_password: str
+
+class _ImportRequest(BaseModel):
+    pat: str
+    projects: list[_ImportEntry]
 
 
 # ──────────────────────────────────────────────
@@ -186,3 +204,47 @@ async def api_pause_project(project_id: int, db: AsyncSession = Depends(get_db))
 @router.post("/api/projects/{project_id}/restore")
 async def api_restore_project(project_id: int, db: AsyncSession = Depends(get_db)):
     return await svc.restore_project(project_id, db)
+
+
+# ──────────────────────────────────────────────
+# API — Connect wizard (PAT → fetch → import)
+# ──────────────────────────────────────────────
+
+@router.post("/api/connect/fetch-projects")
+async def api_connect_fetch(payload: _FetchProjectsRequest):
+    """Step 1: validate PAT and return all Supabase projects in the account."""
+    return await svc.fetch_account_projects(payload.pat)
+
+
+@router.post("/api/connect/import", status_code=201)
+async def api_connect_import(payload: _ImportRequest, db: AsyncSession = Depends(get_db)):
+    """Step 2: save selected projects (with passwords) into panel DB."""
+    saved = []
+    for entry in payload.projects:
+        # Skip if already imported (same project_ref)
+        from sqlalchemy import select
+        from models.supabase_project import SupabaseProject
+        existing = await db.scalar(
+            select(SupabaseProject).where(SupabaseProject.project_ref == entry.ref)
+        )
+        if existing:
+            saved.append({"id": existing.id, "name": existing.name, "skipped": True})
+            continue
+        proj = await svc.create_project(
+            db,
+            name=entry.name,
+            db_host=entry.db_host,
+            db_port=entry.db_port,
+            db_name=entry.db_name,
+            db_user=entry.db_user,
+            db_password=entry.db_password,
+            pat=payload.pat,
+            region=entry.region,
+        )
+        # Test connection silently — don't fail import if test fails
+        try:
+            await svc.test_connection(db, proj.id)
+        except Exception:
+            pass
+        saved.append({"id": proj.id, "name": proj.name, "skipped": False})
+    return {"imported": saved}

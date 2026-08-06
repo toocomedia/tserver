@@ -1,339 +1,465 @@
-<script>
-(function () {
-  'use strict';
+<script type="module">
+/**
+ * _sb_scripts.html — Supabase Plugin JS module.
+ * Pattern mirrors _pg_scripts.html (postgres_manager).
+ * No jQuery. No global variables. ES6 module scope.
+ */
 
-  // ── Helpers ──────────────────────────────────────────────────────────
-  const $ = (sel, ctx = document) => ctx.querySelector(sel);
-  const $$ = (sel, ctx = document) => [...ctx.querySelectorAll(sel)];
+const BASE    = "/plugins/supabase/api";
+const csrfEl  = document.querySelector("meta[name='csrf-token']");
+const CSRF    = csrfEl ? csrfEl.content : "";
 
-  function csrfToken() {
-    const m = document.querySelector('meta[name="csrf-token"]');
-    return m ? m.content : '';
-  }
+// ── Helpers ───────────────────────────────────────────────────────────────
 
-  async function apiFetch(method, url, body = null) {
-    const opts = {
-      method,
-      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken() },
-    };
-    if (body) opts.body = JSON.stringify(body);
-    const r = await fetch(url, opts);
-    if (!r.ok) {
-      let msg = `HTTP ${r.status}`;
-      try { const d = await r.json(); msg = d.detail || d.message || msg; } catch {}
-      throw new Error(msg);
-    }
-    return r.status === 204 ? null : r.json();
-  }
+async function apiFetch(method, path, body = null) {
+  const opts = {
+    method,
+    headers: { "Content-Type": "application/json", "X-CSRF-Token": CSRF },
+  };
+  if (body) opts.body = JSON.stringify(body);
+  const res  = await fetch(BASE + path, opts);
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(json.detail || `HTTP ${res.status}`);
+  return json;
+}
 
-  // ── Modal ─────────────────────────────────────────────────────────────
-  function openModal(id) {
-    const m = document.getElementById(id);
-    if (m) { m.hidden = false; m.focus(); }
-  }
-  function closeModal(id) {
-    const m = document.getElementById(id);
-    if (m) m.hidden = true;
-  }
+function toast(msg, isError = false) {
+  if (window.showToast) { window.showToast(msg, isError ? "error" : "success"); return; }
+  console[isError ? "error" : "log"](msg);
+}
 
-  document.addEventListener('click', e => {
-    const opener = e.target.closest('[data-action="open-modal"]');
-    if (opener) { e.preventDefault(); openModal(opener.dataset.modal); return; }
-    const closer = e.target.closest('[data-action="close-modal"]');
-    if (closer) { e.preventDefault(); closeModal(closer.dataset.modal); return; }
-    // Click on overlay backdrop
-    if (e.target.classList.contains('modal-overlay')) {
-      e.target.hidden = true;
-    }
+function openModal(id) {
+  const el = document.getElementById(id);
+  if (el) el.style.display = "flex";
+}
+
+function closeModal(id) {
+  const el = document.getElementById(id);
+  if (el) el.style.display = "none";
+}
+
+function setLoading(btn, loading, label = null) {
+  btn.disabled = loading;
+  btn.classList.toggle("is-loading", loading);
+  if (label) btn.textContent = loading ? label : btn.dataset.origLabel || btn.textContent;
+}
+
+function showErr(id, msg) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = msg;
+  el.style.display = msg ? "" : "none";
+}
+
+// ── Tab switching ─────────────────────────────────────────────────────────
+
+const SB_TABS = ["databases", "roles", "query", "stats"];
+
+function switchTab(tabId) {
+  SB_TABS.forEach(t => {
+    const panel = document.getElementById("sb-panel-" + t);
+    const tab   = document.getElementById("sb-tab-" + t);
+    if (panel) panel.style.display = t === tabId ? "" : "none";
+    if (tab)   tab.classList.toggle("active", t === tabId);
   });
+  if (tabId === "roles") loadRoles();
+  if (tabId === "stats") { /* user clicks refresh */ }
+}
 
-  // ── Add project form ──────────────────────────────────────────────────
-  const addForm   = document.getElementById('sb-add-project-form');
-  const addSubmit = document.getElementById('sb-add-submit');
-  const addLabel  = document.getElementById('sb-add-submit-label');
-  const addSpinner = document.getElementById('sb-add-submit-spinner');
-  const addError  = document.getElementById('sb-add-error');
+document.querySelectorAll("[data-sb-tab]").forEach(btn => {
+  btn.addEventListener("click", () => switchTab(btn.dataset.sbTab));
+});
 
-  if (addSubmit) {
-    addSubmit.addEventListener('click', async () => {
-      if (!addForm.checkValidity()) { addForm.reportValidity(); return; }
-      addError.hidden = true;
-      addLabel.hidden = true;
-      addSpinner.hidden = false;
-      addSubmit.disabled = true;
+// ── Global click dispatcher ───────────────────────────────────────────────
 
-      const data = Object.fromEntries(new FormData(addForm).entries());
-      data.db_port = parseInt(data.db_port, 10);
+document.addEventListener("click", async e => {
+  // Modal open/close
+  const opener = e.target.closest("[data-action='open-modal']");
+  if (opener) { openModal(opener.dataset.modal); return; }
+  const closer = e.target.closest("[data-action='close-modal']");
+  if (closer) { closeModal(closer.dataset.modal); return; }
+  // Backdrop
+  if (e.target.classList.contains("modal-backdrop")) { e.target.style.display = "none"; return; }
 
-      try {
-        const proj = await apiFetch('POST', '/plugins/supabase/api/projects', data);
-        closeModal('sb-modal-add-project');
-        addForm.reset();
-        // Reload page to show new project in sidebar
-        window.location.reload();
-      } catch (err) {
-        addError.textContent = err.message;
-        addError.hidden = false;
-      } finally {
-        addLabel.hidden = false;
-        addSpinner.hidden = true;
-        addSubmit.disabled = false;
-      }
-    });
+  // Project select
+  const projSel = e.target.closest("[data-action='select-project']");
+  if (projSel) { loadProject(parseInt(projSel.dataset.projectId, 10)); return; }
+
+  // DB → tables
+  const viewTables = e.target.closest("[data-action='view-tables']");
+  if (viewTables) { loadTables(viewTables.dataset.projectId, viewTables.dataset.db); return; }
+
+  // Tables back
+  const tablesBack = e.target.closest("#sb-tables-back");
+  if (tablesBack) { showDatabases(); return; }
+
+  // Query from DB row
+  const queryDb = e.target.closest("[data-action='query-db']");
+  if (queryDb) { switchTab("query"); document.getElementById("sb-query-db").value = queryDb.dataset.db; return; }
+
+  // Delete project
+  const delBtn = e.target.closest("[data-action='open-delete']");
+  if (delBtn) {
+    document.getElementById("sb-delete-name").textContent = delBtn.dataset.projectName;
+    document.getElementById("sb-delete-confirm").dataset.projectId = delBtn.dataset.projectId;
+    openModal("sb-modal-delete");
+    return;
   }
+});
 
-  // ── Project selection ─────────────────────────────────────────────────
-  let currentProjectId = null;
+// ── Project selection ─────────────────────────────────────────────────────
 
-  async function loadProject(projectId) {
-    currentProjectId = projectId;
-    // Highlight sidebar item
-    $$('[data-action="select-project"]').forEach(el => {
-      el.classList.toggle('active', el.dataset.projectId === String(projectId));
-    });
-    // Fetch and render project panel HTML
-    const panel = document.getElementById('sb-project-panel') || document.getElementById('sb-main-content');
-    if (!panel) return;
-    panel.innerHTML = '<div class="loading-spinner"></div>';
-    try {
-      const r = await fetch(`/plugins/supabase/projects/${projectId}`);
-      const html = await r.text();
-      // Extract just the body content (the page extends layout, so parse the #sb-main-content part)
-      // Since project_detail returns a full page, use the split-content area
-      const tmp = document.createElement('div');
-      tmp.innerHTML = html;
-      const inner = tmp.querySelector('#sb-project-panel') || tmp.querySelector('.split-content');
-      panel.innerHTML = inner ? inner.innerHTML : html;
-      initProjectPanel(projectId);
-    } catch (err) {
-      panel.innerHTML = `<p class="form-error">${err.message}</p>`;
-    }
-  }
+let currentProjectId = null;
 
-  document.addEventListener('click', e => {
-    const sel = e.target.closest('[data-action="select-project"]');
-    if (sel) { e.preventDefault(); loadProject(parseInt(sel.dataset.projectId, 10)); }
+async function loadProject(projectId) {
+  currentProjectId = projectId;
+  document.querySelectorAll("[data-action='select-project']").forEach(el => {
+    el.classList.toggle("active", parseInt(el.dataset.projectId, 10) === projectId);
   });
-
-  // ── Tabs ──────────────────────────────────────────────────────────────
-  function initTabs() {
-    $$('.tab').forEach(tab => {
-      tab.addEventListener('click', () => {
-        $$('.tab').forEach(t => t.classList.remove('active'));
-        tab.classList.add('active');
-        $$('.sb-tab-panel').forEach(p => p.hidden = true);
-        const panel = document.getElementById(`sb-tab-${tab.dataset.tab}`);
-        if (panel) panel.hidden = false;
-        // Lazy load roles
-        if (tab.dataset.tab === 'roles' && currentProjectId) loadRoles(currentProjectId);
-      });
-    });
+  const panel = document.getElementById("sb-main-content");
+  panel.innerHTML = "<div class='p-xl text-center text-muted'>Loading…</div>";
+  try {
+    const r = await fetch(`/plugins/supabase/projects/${projectId}`);
+    const html = await r.text();
+    const tmp  = document.createElement("div");
+    tmp.innerHTML = html;
+    const inner = tmp.querySelector("#sb-project-panel");
+    panel.innerHTML = inner ? `<div id="sb-project-panel">${inner.innerHTML}</div>` : html;
+    initProjectPanel();
+  } catch (err) {
+    panel.innerHTML = `<p class="form-error p-lg">${err.message}</p>`;
   }
+}
 
-  // ── DB → Tables drill-down ────────────────────────────────────────────
-  function initTablesDrilldown(projectId) {
-    document.addEventListener('click', async e => {
-      const btn = e.target.closest('[data-action="view-tables"]');
-      if (!btn || btn.dataset.projectId !== String(projectId)) return;
-      const db = btn.dataset.db;
-      const dbPanel = document.getElementById('sb-tab-databases');
-      const tablesPanel = document.getElementById('sb-tables-panel');
-      if (!dbPanel || !tablesPanel) return;
-      // Hide db list, show tables
-      $$('#sb-tab-databases > .table-wrap, #sb-tab-databases > .action-toolbar').forEach(el => el.hidden = true);
-      tablesPanel.hidden = false;
-      document.getElementById('sb-tables-title').textContent = `Tables in "${db}"`;
-      const tbody = document.getElementById('sb-tables-body');
-      tbody.innerHTML = '<tr><td colspan="3" class="text-muted">Loading…</td></tr>';
-      try {
-        const rows = await apiFetch('GET', `/plugins/supabase/api/projects/${projectId}/databases/${db}/tables`);
-        tbody.innerHTML = rows.length
-          ? rows.map(r => `<tr><td class="text-muted">${r.schema}</td><td>${r.name}</td><td class="text-muted">${r.size}</td></tr>`).join('')
-          : '<tr><td colspan="3" class="text-muted">No tables found.</td></tr>';
-      } catch (err) {
-        tbody.innerHTML = `<tr><td colspan="3" class="form-error">${err.message}</td></tr>`;
-      }
-    });
-    // Back button
-    const backBtn = document.getElementById('sb-tables-back');
-    if (backBtn) {
-      backBtn.addEventListener('click', () => {
-        document.getElementById('sb-tables-panel').hidden = true;
-        $$('#sb-tab-databases > .table-wrap, #sb-tab-databases > .action-toolbar').forEach(el => el.hidden = false);
-      });
+function initProjectPanel() {
+  // Tabs already wired via event delegation
+  // Wire panel-specific buttons
+  const testBtn = document.getElementById("sb-btn-test");
+  if (testBtn) testBtn.addEventListener("click", handleTest);
+
+  const pauseBtn = document.getElementById("sb-btn-pause");
+  if (pauseBtn) pauseBtn.addEventListener("click", handlePause);
+
+  const restoreBtn = document.getElementById("sb-btn-restore");
+  if (restoreBtn) restoreBtn.addEventListener("click", handleRestore);
+
+  const statsBtn = document.getElementById("sb-stats-refresh");
+  if (statsBtn) statsBtn.addEventListener("click", handleStats);
+
+  const queryRun = document.getElementById("sb-query-run");
+  if (queryRun) queryRun.addEventListener("click", handleQuery);
+
+  const queryClear = document.getElementById("sb-query-clear");
+  if (queryClear) queryClear.addEventListener("click", () => {
+    document.getElementById("sb-query-sql").value = "";
+    document.getElementById("sb-query-results").style.display = "none";
+    document.getElementById("sb-query-empty").style.display   = "none";
+    showErr("sb-query-error", "");
+  });
+}
+
+// ── Test connection ───────────────────────────────────────────────────────
+
+async function handleTest() {
+  const btn = document.getElementById("sb-btn-test");
+  if (!btn || !currentProjectId) return;
+  btn.dataset.origLabel = btn.textContent;
+  setLoading(btn, true, "Testing…");
+  try {
+    const r = await apiFetch("POST", `/projects/${currentProjectId}/test`);
+    const badge = document.getElementById("sb-status-badge");
+    if (badge) {
+      badge.textContent = r.status;
+      badge.className   = `status-badge ${r.status === "ok" ? "success" : "danger"}`;
     }
+    toast(r.status === "ok" ? "Connection OK" : `Connection failed: ${r.detail}`, r.status !== "ok");
+  } catch (err) {
+    toast(err.message, true);
+  } finally {
+    setLoading(btn, false, "Test Connection");
   }
+}
 
-  // ── Roles ─────────────────────────────────────────────────────────────
-  async function loadRoles(projectId) {
-    const tbody = document.getElementById('sb-roles-body');
-    if (!tbody) return;
-    tbody.innerHTML = '<tr><td colspan="4" class="text-muted">Loading…</td></tr>';
-    try {
-      const roles = await apiFetch('GET', `/plugins/supabase/api/projects/${projectId}/roles`);
-      tbody.innerHTML = roles.map(r => `
-        <tr>
+// ── Pause / Restore ───────────────────────────────────────────────────────
+
+async function handlePause() {
+  if (!currentProjectId) return;
+  if (!confirm("Pause this Supabase project? It will stop serving requests until restored.")) return;
+  const btn = document.getElementById("sb-btn-pause");
+  setLoading(btn, true, "Pausing…");
+  try {
+    await apiFetch("POST", `/projects/${currentProjectId}/pause`);
+    toast("Project paused.");
+    setTimeout(() => window.location.reload(), 800);
+  } catch (err) { toast(err.message, true); setLoading(btn, false, "Pause"); }
+}
+
+async function handleRestore() {
+  if (!currentProjectId) return;
+  const btn = document.getElementById("sb-btn-restore");
+  setLoading(btn, true, "Restoring…");
+  try {
+    await apiFetch("POST", `/projects/${currentProjectId}/restore`);
+    toast("Project restoring — this may take a minute.");
+    setTimeout(() => window.location.reload(), 1200);
+  } catch (err) { toast(err.message, true); setLoading(btn, false, "Restore"); }
+}
+
+// ── Tables drill-down ─────────────────────────────────────────────────────
+
+async function loadTables(projectId, db) {
+  const dbPanel     = document.getElementById("sb-panel-databases");
+  const tablesPanel = document.getElementById("sb-tables-panel");
+  if (!dbPanel || !tablesPanel) return;
+  // Hide DB list, show tables sub-panel
+  dbPanel.querySelectorAll(":scope > .action-toolbar, :scope > .table-wrap, :scope > .p-xl").forEach(el => el.style.display = "none");
+  tablesPanel.style.display = "";
+  document.getElementById("sb-tables-title").textContent = `Tables — ${db}`;
+  const tbody = document.getElementById("sb-tables-body");
+  tbody.innerHTML = "<tr><td colspan='3' class='text-muted p-lg text-center'>Loading…</td></tr>";
+  try {
+    const rows = await apiFetch("GET", `/projects/${projectId}/databases/${db}/tables`);
+    tbody.innerHTML = rows.length
+      ? rows.map(r => `<tr><td class="text-muted">${r.schema}</td><td>${r.name}</td><td class="text-muted">${r.size}</td></tr>`).join("")
+      : "<tr><td colspan='3' class='text-muted p-lg text-center'>No tables found.</td></tr>";
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan='3' class='form-error p-lg'>${err.message}</td></tr>`;
+  }
+}
+
+function showDatabases() {
+  const dbPanel     = document.getElementById("sb-panel-databases");
+  const tablesPanel = document.getElementById("sb-tables-panel");
+  if (!dbPanel || !tablesPanel) return;
+  tablesPanel.style.display = "none";
+  dbPanel.querySelectorAll(":scope > .action-toolbar, :scope > .table-wrap, :scope > .p-xl").forEach(el => el.style.display = "");
+}
+
+// ── Roles ─────────────────────────────────────────────────────────────────
+
+async function loadRoles() {
+  if (!currentProjectId) return;
+  const tbody = document.getElementById("sb-roles-body");
+  if (!tbody) return;
+  tbody.innerHTML = "<tr><td colspan='4' class='text-muted p-lg text-center'>Loading…</td></tr>";
+  try {
+    const roles = await apiFetch("GET", `/projects/${currentProjectId}/roles`);
+    tbody.innerHTML = roles.length
+      ? roles.map(r => `<tr>
           <td>${r.name}</td>
-          <td>${r.superuser ? '✓' : '—'}</td>
-          <td>${r.can_login ? '✓' : '—'}</td>
-          <td>${r.create_db ? '✓' : '—'}</td>
-        </tr>`).join('') || '<tr><td colspan="4" class="text-muted">No roles found.</td></tr>';
-    } catch (err) {
-      tbody.innerHTML = `<tr><td colspan="4" class="form-error">${err.message}</td></tr>`;
+          <td>${r.superuser ? '<span class="status-badge warning">Yes</span>' : '<span class="status-badge muted">No</span>'}</td>
+          <td>${r.can_login ? '<span class="status-badge success">Yes</span>' : '<span class="status-badge muted">No</span>'}</td>
+          <td>${r.create_db ? '<span class="status-badge muted">Yes</span>' : '—'}</td>
+        </tr>`).join("")
+      : "<tr><td colspan='4' class='text-muted p-lg text-center'>No roles found.</td></tr>";
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan='4' class='form-error p-lg'>${err.message}</td></tr>`;
+  }
+}
+
+// ── Query runner ──────────────────────────────────────────────────────────
+
+async function handleQuery() {
+  if (!currentProjectId) return;
+  const sql = document.getElementById("sb-query-sql").value.trim();
+  const db  = document.getElementById("sb-query-db").value;
+  if (!sql) return;
+  const btn = document.getElementById("sb-query-run");
+  showErr("sb-query-error", "");
+  document.getElementById("sb-query-results").style.display = "none";
+  document.getElementById("sb-query-empty").style.display   = "none";
+  setLoading(btn, true, "Running…");
+  try {
+    const data = await apiFetch("POST", "/query", { project_id: currentProjectId, db, sql });
+    if (!data.rows.length) {
+      document.getElementById("sb-query-empty").style.display = "";
+      return;
     }
+    const keys = Object.keys(data.rows[0]);
+    document.getElementById("sb-query-thead").innerHTML = `<tr>${keys.map(k => `<th>${k}</th>`).join("")}</tr>`;
+    document.getElementById("sb-query-tbody").innerHTML = data.rows.map(r => `<tr>${keys.map(k => `<td>${r[k] ?? ""}</td>`).join("")}</tr>`).join("");
+    document.getElementById("sb-query-count").textContent = `${data.count} row${data.count !== 1 ? "s" : ""}`;
+    document.getElementById("sb-query-results").style.display = "";
+  } catch (err) {
+    showErr("sb-query-error", err.message);
+  } finally {
+    setLoading(btn, false, "Run Query");
   }
+}
 
-  // ── Query runner ──────────────────────────────────────────────────────
-  function initQueryRunner(projectId) {
-    const runBtn = document.getElementById('sb-query-run');
-    if (!runBtn) return;
-    runBtn.addEventListener('click', async () => {
-      const sql = document.getElementById('sb-query-sql').value.trim();
-      const db  = document.getElementById('sb-query-db').value;
-      const resultPanel = document.getElementById('sb-query-result');
-      const errEl = document.getElementById('sb-query-error');
-      const countEl = document.getElementById('sb-query-count');
-      errEl.hidden = true;
-      resultPanel.hidden = true;
-      if (!sql) return;
-      runBtn.disabled = true;
-      runBtn.textContent = 'Running…';
-      try {
-        const data = await apiFetch('POST', '/plugins/supabase/api/query', { project_id: projectId, db, sql });
-        if (!data.rows.length) { countEl.textContent = '0 rows'; resultPanel.hidden = false; return; }
-        const keys = Object.keys(data.rows[0]);
-        document.getElementById('sb-query-thead').innerHTML = `<tr>${keys.map(k => `<th>${k}</th>`).join('')}</tr>`;
-        document.getElementById('sb-query-tbody').innerHTML = data.rows
-          .map(r => `<tr>${keys.map(k => `<td>${r[k] ?? ''}</td>`).join('')}</tr>`).join('');
-        countEl.textContent = `${data.count} row${data.count !== 1 ? 's' : ''}`;
-        resultPanel.hidden = false;
-      } catch (err) {
-        errEl.textContent = err.message;
-        errEl.hidden = false;
-      } finally {
-        runBtn.disabled = false;
-        runBtn.textContent = 'Run';
-      }
-    });
+// ── Stats ─────────────────────────────────────────────────────────────────
+
+async function handleStats() {
+  if (!currentProjectId) return;
+  const btn = document.getElementById("sb-stats-refresh");
+  const content = document.getElementById("sb-stats-content");
+  setLoading(btn, true, "Loading…");
+  try {
+    const s = await apiFetch("GET", `/projects/${currentProjectId}/stats`);
+    if (s.error) { content.innerHTML = `<div class="alert alert--warning mt-md">${s.error}</div>`; return; }
+    content.innerHTML = `
+      <div class="d-flex flex-column gap-sm mt-md">
+        <div class="d-flex gap-md"><span class="text-muted" style="min-width:120px;">Name</span><strong>${s.name ?? "—"}</strong></div>
+        <div class="d-flex gap-md"><span class="text-muted" style="min-width:120px;">Status</span>
+          <span class="status-badge ${s.status === 'ACTIVE_HEALTHY' ? 'success' : 'muted'}">${s.status ?? "—"}</span>
+        </div>
+        <div class="d-flex gap-md"><span class="text-muted" style="min-width:120px;">Region</span><strong>${s.region ?? "—"}</strong></div>
+        <div class="d-flex gap-md"><span class="text-muted" style="min-width:120px;">Plan</span><strong>${s.plan ?? "—"}</strong></div>
+        <div class="d-flex gap-md"><span class="text-muted" style="min-width:120px;">Created</span><strong>${s.created_at ? new Date(s.created_at).toLocaleDateString() : "—"}</strong></div>
+      </div>`;
+  } catch (err) {
+    content.innerHTML = `<div class="form-error mt-md">${err.message}</div>`;
+  } finally {
+    setLoading(btn, false, "Refresh");
   }
+}
 
-  // ── Quick-switch query DB from table view ─────────────────────────────
-  document.addEventListener('click', e => {
-    const btn = e.target.closest('[data-action="query-db"]');
-    if (!btn || !currentProjectId) return;
-    // Switch to query tab and pre-fill DB
-    $$('.tab').forEach(t => t.classList.remove('active'));
-    const queryTab = $('[data-tab="query"]');
-    if (queryTab) queryTab.classList.add('active');
-    $$('.sb-tab-panel').forEach(p => p.hidden = true);
-    const queryPanel = document.getElementById('sb-tab-query');
-    if (queryPanel) queryPanel.hidden = false;
-    const dbSelect = document.getElementById('sb-query-db');
-    if (dbSelect) dbSelect.value = btn.dataset.db;
+// ── Delete project ────────────────────────────────────────────────────────
+
+const deleteConfirm = document.getElementById("sb-delete-confirm");
+if (deleteConfirm) {
+  deleteConfirm.addEventListener("click", async () => {
+    const projectId = deleteConfirm.dataset.projectId;
+    setLoading(deleteConfirm, true, "Removing…");
+    try {
+      await apiFetch("DELETE", `/projects/${projectId}`);
+      closeModal("sb-modal-delete");
+      window.location.reload();
+    } catch (err) {
+      toast(err.message, true);
+      setLoading(deleteConfirm, false, "Remove");
+    }
   });
+}
 
-  // ── Stats ─────────────────────────────────────────────────────────────
-  function initStatsButton(projectId) {
-    const btn = document.getElementById('sb-btn-stats');
-    if (!btn) return;
-    btn.addEventListener('click', async () => {
-      $$('.tab').forEach(t => t.classList.remove('active'));
-      const statsTab = $('[data-tab="stats"]');
-      if (statsTab) statsTab.classList.add('active');
-      $$('.sb-tab-panel').forEach(p => p.hidden = true);
-      const statsPanel = document.getElementById('sb-tab-stats');
-      if (statsPanel) statsPanel.hidden = false;
-      const content = document.getElementById('sb-stats-content');
-      content.innerHTML = '<div class="loading-spinner"></div>';
-      try {
-        const stats = await apiFetch('GET', `/plugins/supabase/api/projects/${projectId}/stats`);
-        if (stats.error) {
-          content.innerHTML = `<p class="form-error">${stats.error}</p>`;
-          return;
-        }
-        content.innerHTML = `
-          <div class="info-grid">
-            <div class="info-row"><span class="info-label">Name</span><span class="info-value">${stats.name ?? '—'}</span></div>
-            <div class="info-row"><span class="info-label">Status</span><span class="info-value">${stats.status ?? '—'}</span></div>
-            <div class="info-row"><span class="info-label">Region</span><span class="info-value">${stats.region ?? '—'}</span></div>
-            <div class="info-row"><span class="info-label">Plan</span><span class="info-value">${stats.plan ?? '—'}</span></div>
-            <div class="info-row"><span class="info-label">Created</span><span class="info-value">${stats.created_at ?? '—'}</span></div>
-          </div>`;
-      } catch (err) {
-        content.innerHTML = `<p class="form-error">${err.message}</p>`;
-      }
-    });
-  }
+// ── Connect wizard ────────────────────────────────────────────────────────
 
-  // ── Test connection button ────────────────────────────────────────────
-  function initTestButton(projectId) {
-    const btn = document.getElementById('sb-btn-test');
-    if (!btn) return;
-    btn.addEventListener('click', async () => {
-      btn.disabled = true;
-      btn.textContent = 'Testing…';
-      try {
-        const r = await apiFetch('POST', `/plugins/supabase/api/projects/${projectId}/test`);
-        btn.textContent = r.status === 'ok' ? '✓ Connected' : '✗ Failed';
-        btn.className = r.status === 'ok' ? 'btn btn--sm btn--success' : 'btn btn--sm btn--danger';
-      } catch (err) {
-        btn.textContent = '✗ Error';
-        btn.className = 'btn btn--sm btn--danger';
-      } finally {
-        btn.disabled = false;
-        setTimeout(() => { btn.textContent = 'Test Connection'; btn.className = 'btn btn--sm btn--secondary'; }, 3000);
-      }
-    });
-  }
+let wizardPat      = "";
+let wizardProjects = [];  // all fetched from API
+let wizardSelected = [];  // refs of checked projects
 
-  // ── Pause button ──────────────────────────────────────────────────────
-  function initPauseButton(projectId) {
-    const btn = document.getElementById('sb-btn-pause');
-    if (!btn) return;
-    btn.addEventListener('click', async () => {
-      if (!confirm('Pause this Supabase project? It will stop serving requests until restored.')) return;
-      btn.disabled = true;
-      btn.textContent = 'Pausing…';
-      try {
-        await apiFetch('POST', `/plugins/supabase/api/projects/${projectId}/pause`);
-        btn.textContent = 'Paused';
-      } catch (err) {
-        alert(err.message);
-        btn.textContent = 'Pause';
-        btn.disabled = false;
-      }
-    });
-  }
+function showWizardStep(n) {
+  [1, 2, 3, 4].forEach(i => {
+    const el = document.getElementById(`sb-wizard-step-${i}`);
+    if (el) el.style.display = i === n ? "" : "none";
+  });
+}
 
-  // ── Delete button ─────────────────────────────────────────────────────
-  function initDeleteButton(projectId) {
-    const btn = document.getElementById('sb-btn-delete');
-    if (!btn) return;
-    btn.addEventListener('click', async () => {
-      if (!confirm('Remove this project from panel? This only removes the stored credentials — it does NOT delete the Supabase project.')) return;
-      try {
-        await apiFetch('DELETE', `/plugins/supabase/api/projects/${projectId}`);
-        window.location.reload();
-      } catch (err) { alert(err.message); }
-    });
-  }
+// Step 1 — fetch projects
+const step1Next = document.getElementById("sb-step1-next");
+if (step1Next) {
+  step1Next.addEventListener("click", async () => {
+    const pat = document.getElementById("sb-pat-input").value.trim();
+    if (!pat) { showErr("sb-step1-error", "Enter your Personal Access Token."); return; }
+    showErr("sb-step1-error", "");
+    setLoading(step1Next, true, "Fetching…");
+    try {
+      const projects = await apiFetch("POST", "/connect/fetch-projects", { pat });
+      wizardPat      = pat;
+      wizardProjects = projects;
+      renderProjectPicker(projects);
+      showWizardStep(2);
+    } catch (err) {
+      showErr("sb-step1-error", err.message);
+    } finally {
+      setLoading(step1Next, false, "Fetch Projects");
+    }
+  });
+}
 
-  // ── Init project panel (called after panel HTML is injected) ──────────
-  function initProjectPanel(projectId) {
-    initTabs();
-    initTablesDrilldown(projectId);
-    initQueryRunner(projectId);
-    initStatsButton(projectId);
-    initTestButton(projectId);
-    initPauseButton(projectId);
-    initDeleteButton(projectId);
-  }
+function renderProjectPicker(projects) {
+  const tbody = document.getElementById("sb-projects-tbody");
+  if (!tbody) return;
+  document.getElementById("sb-step2-subtitle").textContent =
+    `Found ${projects.length} project${projects.length !== 1 ? "s" : ""} in your Supabase account.`;
+  tbody.innerHTML = projects.map(p => `
+    <tr>
+      <td><input type="checkbox" class="sb-proj-check" data-ref="${p.ref}" checked></td>
+      <td>
+        <strong>${p.name}</strong><br>
+        <span class="text-muted text-small">${p.ref}</span>
+      </td>
+      <td class="text-muted">${p.region || "—"}</td>
+      <td><span class="status-badge ${p.status.includes("ACTIVE") ? "success" : "muted"}">${p.status || "—"}</span></td>
+    </tr>`).join("");
+}
 
-  // ── Auto-load first project on page load ─────────────────────────────
-  const firstProject = $('[data-action="select-project"]');
-  if (firstProject) {
-    loadProject(parseInt(firstProject.dataset.projectId, 10));
-  }
+// Select all
+const selectAll = document.getElementById("sb-select-all");
+if (selectAll) {
+  selectAll.addEventListener("change", () => {
+    document.querySelectorAll(".sb-proj-check").forEach(cb => cb.checked = selectAll.checked);
+  });
+}
 
-})();
+// Step 2 nav
+const step2Next = document.getElementById("sb-step2-next");
+const step2Back = document.getElementById("sb-step2-back");
+if (step2Next) {
+  step2Next.addEventListener("click", () => {
+    wizardSelected = [...document.querySelectorAll(".sb-proj-check:checked")].map(cb => cb.dataset.ref);
+    if (!wizardSelected.length) { showErr("sb-step2-error", "Select at least one project."); return; }
+    showErr("sb-step2-error", "");
+    renderPasswordFields();
+    showWizardStep(3);
+  });
+}
+if (step2Back) step2Back.addEventListener("click", () => showWizardStep(1));
+
+function renderPasswordFields() {
+  const container = document.getElementById("sb-password-fields");
+  if (!container) return;
+  const selected = wizardProjects.filter(p => wizardSelected.includes(p.ref));
+  container.innerHTML = selected.map(p => `
+    <div class="form-group">
+      <label class="form-label" for="sb-pw-${p.ref}">
+        Password for <strong>${p.name}</strong>
+        <span class="text-muted text-small">(${p.ref})</span>
+      </label>
+      <input class="form-input" id="sb-pw-${p.ref}" type="password"
+             autocomplete="off" data-ref="${p.ref}"
+             placeholder="Database password">
+    </div>`).join("");
+}
+
+// Step 3 nav
+const step3Back   = document.getElementById("sb-step3-back");
+const step3Import = document.getElementById("sb-step3-import");
+if (step3Back)   step3Back.addEventListener("click", () => showWizardStep(2));
+if (step3Import) {
+  step3Import.addEventListener("click", async () => {
+    showErr("sb-step3-error", "");
+    const selected  = wizardProjects.filter(p => wizardSelected.includes(p.ref));
+    const projects  = [];
+    for (const p of selected) {
+      const pw = document.getElementById(`sb-pw-${p.ref}`)?.value || "";
+      if (!pw) { showErr("sb-step3-error", `Enter a password for "${p.name}".`); return; }
+      projects.push({ ...p, db_password: pw });
+    }
+    setLoading(step3Import, true, "Importing…");
+    try {
+      const res = await apiFetch("POST", "/connect/import", { pat: wizardPat, projects });
+      const count  = res.imported.filter(i => !i.skipped).length;
+      const skipped = res.imported.filter(i => i.skipped).length;
+      document.getElementById("sb-done-title").textContent    = `${count} project${count !== 1 ? "s" : ""} imported`;
+      document.getElementById("sb-done-subtitle").textContent = skipped ? `${skipped} already existed and were skipped.` : "All projects connected successfully.";
+      showWizardStep(4);
+    } catch (err) {
+      showErr("sb-step3-error", err.message);
+    } finally {
+      setLoading(step3Import, false, "Import Projects");
+    }
+  });
+}
+
+// Done
+const doneClose = document.getElementById("sb-done-close");
+if (doneClose) doneClose.addEventListener("click", () => window.location.reload());
+
+// ── Auto-load first project on page load ──────────────────────────────────
+const firstProj = document.querySelector("[data-action='select-project']");
+if (firstProj) {
+  currentProjectId = parseInt(firstProj.dataset.projectId, 10);
+  initProjectPanel();
+}
 </script>
