@@ -98,17 +98,20 @@
   40% { opacity: 1; transform: translateY(-4px); }
 }
 
-/* Inner skeleton chips — animates background-color only.
-   Borders, children, and text are completely unaffected. */
+/* ==========================================================================
+   SKELETON PULSE — single opacity blink, size-independent, one keyframe.
+   ========================================================================== */
+
+/* Outer skeleton shapes (cards, headers, async blocks) */
 .skeleton-box,
 .skeleton-shimmer,
 .skeleton-shimmer-box {
-  background-color: var(--color-surface);
-  animation: skeleton-pulse-box var(--skeleton-shimmer-duration) infinite ease-in-out;
+  background: var(--color-surface);
+  animation: skeleton-pulse var(--skeleton-shimmer-duration) infinite ease-in-out;
   border-radius: 4px;
 }
 
-/* Async loader placeholder (data-async-load) — fills its container */
+/* Async loader placeholder fills its container */
 .skeleton-shimmer,
 .skeleton-shimmer-box {
   display: block;
@@ -116,28 +119,18 @@
   min-height: 140px;
 }
 
-/* Inner skeleton chips — inverse phase from boxes so chips are always
-   visually distinct: when the box dims, chips lighten; when box brightens,
-   chips darken. Contrast is maintained at every animation frame.
-   .sk-cover is for square icon placeholders in card skeletons. */
+/* Inner chips — static dark fills. They visually ride the parent's opacity pulse
+   since a child's rendered opacity multiplies with the parent's animated opacity.
+   No separate animation needed; one pulse drives everything. */
 .sk-label, .sk-value, .sk-meta, .sk-th, .sk-td, .sk-text, .sk-btn, .sk-cover {
-  background-color: var(--color-line);
-  animation: skeleton-pulse-chip var(--skeleton-shimmer-duration) infinite ease-in-out;
+  background: var(--color-line);
+  opacity: 0.5;
   border-radius: 3px;
 }
-/* Mode 1 override: chip inside a .skeleton-box card — suppress chip animation
-   so only the outer card background pulses (avoids dual-speed flicker). */
-.skeleton-box .sk-label,
-.skeleton-box .sk-value,
-.skeleton-box .sk-meta,
-.skeleton-box .sk-th,
-.skeleton-box .sk-td,
-.skeleton-box .sk-text,
-.skeleton-box .sk-btn,
-.skeleton-box .sk-cover {
-  background-color: var(--color-line);
-  animation: none;
-  opacity: 0.5;
+
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
 }
 
 /* Skeleton cell width helpers — keeps templates free of inline styles.
@@ -148,17 +141,6 @@
 .sk-w-25 { width: 25%; }
 .sk-w-30 { width: 30%; }
 .sk-w-35 { width: 35%; }
-
-/* Box: surface → line (container dims while chips lighten) */
-@keyframes skeleton-pulse-box {
-  0%, 100% { background-color: var(--color-surface); }
-  50%       { background-color: var(--color-line); }
-}
-/* Chip: line → surface (inverse phase — chips always contrast the box) */
-@keyframes skeleton-pulse-chip {
-  0%, 100% { background-color: var(--color-line); }
-  50%       { background-color: var(--color-surface); }
-}
 
 /* ==========================================================================
    SKELETON OVERLAY — covers page content until first data load
@@ -200,7 +182,6 @@
   margin-bottom: 28px;
 }
 .skeleton-stat-card {
-  border: 1px solid var(--color-line);
   background: var(--color-bg);
   padding: 14px 18px;
   display: flex;
@@ -323,7 +304,6 @@
   display: flex;
   gap: 14px;
   padding: 14px 16px;
-  border: 1px solid var(--color-line);
   min-height: 96px;
   align-items: flex-start;
 }
