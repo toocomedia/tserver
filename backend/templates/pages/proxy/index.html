@@ -1,4 +1,4 @@
-{% extends "layout.html" %}
+{% from "partials/skeleton_overlay.html" import skeleton_overlay %}
 
 {% block title %}Reverse Proxy — {{ PANEL_NAME }}{% endblock %}
 {% block page_title %}Reverse Proxy{% endblock %}
@@ -8,6 +8,11 @@
 {% endblock %}
 
 {% block content %}
+<div class="proxy-page" style="position:relative;">
+
+<!-- SKELETON LOADING OVERLAY -->
+{{ skeleton_overlay('proxy-skeleton', tables=[{ 'cols': [22, 18, 8, 9, 9, 10, 24], 'rows': 4 }]) }}
+<!-- END SKELETON OVERLAY -->
 
 {% set created = request.query_params.get('created') %}
 {% set deleted = request.query_params.get('deleted') %}
@@ -207,12 +212,16 @@
   <a href="/proxy/create" style="font-weight:700;">Create your first proxy →</a>
 </div>
 {% endif %}
-
+</div><!-- /.proxy-page -->
 {% endblock %}
 
 {% block scripts %}
 <script src="/static/js/modules/proxy.js"></script>
 <script>
+document.addEventListener('DOMContentLoaded', function() {
+  hideSkeleton('proxy-skeleton');
+});
+
 function filterProxyTable() {
   const query = document.getElementById('proxy-search-input').value.toLowerCase().trim();
   const filter = document.getElementById('proxy-status-filter').value;

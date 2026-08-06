@@ -1,4 +1,4 @@
-{% extends "layout.html" %}
+{% from "partials/skeleton_overlay.html" import skeleton_overlay %}
 
 {% block title %}Notification Center — {{ PANEL_NAME }}{% endblock %}
 {% block page_title %}Notification Center{% endblock %}
@@ -9,6 +9,11 @@
 {% endblock %}
 
 {% block content %}
+<div class="notifications-page" style="position:relative;">
+
+<!-- SKELETON LOADING OVERLAY -->
+{{ skeleton_overlay('notifications-skeleton', tables=[{ 'cols': [15, 55, 18, 12], 'rows': 4 }]) }}
+<!-- END SKELETON OVERLAY -->
 <div class="section">
   <div class="section__body" style="padding: 0;">
     {% if not notifications %}
@@ -59,11 +64,13 @@
     {% endif %}
   </div>
 </div>
+</div><!-- /.notifications-page -->
 {% endblock %}
 
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', () => {
+  hideSkeleton('notifications-skeleton');
   const btnMarkAll = document.getElementById('btn-mark-all-read');
   if (btnMarkAll) {
     btnMarkAll.addEventListener('click', async () => {

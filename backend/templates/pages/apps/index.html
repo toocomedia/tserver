@@ -1,4 +1,4 @@
-{% extends "layout.html" %}
+{% from "partials/skeleton_overlay.html" import skeleton_overlay %}
 
 {% block title %}Python Apps — {{ PANEL_NAME }}{% endblock %}
 {% block page_title %}Python Apps{% endblock %}
@@ -8,6 +8,11 @@
 {% endblock %}
 
 {% block content %}
+<div class="apps-page" style="position:relative;">
+
+<!-- SKELETON LOADING OVERLAY -->
+{{ skeleton_overlay('apps-skeleton', tables=[{ 'cols': [30, 30, 16, 14, 10], 'rows': 4 }]) }}
+<!-- END SKELETON OVERLAY -->
 
 {% if apps %}
 <div class="table-wrap">
@@ -59,5 +64,13 @@
   No Python applications deployed yet. Select a domain from <a href="/domains" style="font-weight:800;">Domains →</a> to deploy your first Python app.
 </div>
 {% endif %}
+</div><!-- /.apps-page -->
+{% endblock %}
 
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  hideSkeleton('apps-skeleton');
+});
+</script>
 {% endblock %}

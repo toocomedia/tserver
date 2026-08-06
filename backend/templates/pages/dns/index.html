@@ -1,4 +1,4 @@
-{% extends "layout.html" %}
+{% from "partials/skeleton_overlay.html" import skeleton_overlay %}
 
 {% block title %}DNS Manager — {{ PANEL_NAME }}{% endblock %}
 {% block page_title %}DNS Manager{% endblock %}
@@ -8,6 +8,11 @@
 {% endblock %}
 
 {% block content %}
+<div class="dns-page" style="position:relative;">
+
+<!-- SKELETON LOADING OVERLAY -->
+{{ skeleton_overlay('dns-skeleton', tables=[{ 'cols': [36, 14, 14, 36], 'rows': 4 }]) }}
+<!-- END SKELETON OVERLAY -->
 
 <!-- Action Toolbar (Search & Filter) -->
 <div class="action-toolbar mb-md">
@@ -83,11 +88,15 @@
   No DNS zones yet. <a href="/domains/create" style="font-weight:700;">Add a domain first →</a>
 </div>
 {% endif %}
-
+</div><!-- /.dns-page -->
 {% endblock %}
 
 {% block scripts %}
 <script>
+document.addEventListener('DOMContentLoaded', function() {
+  hideSkeleton('dns-skeleton');
+});
+
 function filterDnsTable() {
   const query = document.getElementById('dns-search-input').value.toLowerCase().trim();
   const filter = document.getElementById('dns-status-filter').value;
