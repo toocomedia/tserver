@@ -19,7 +19,6 @@
            id="sb-proj-{{ p.id }}"
            data-action="select-project"
            data-project-id="{{ p.id }}"
-           {% if loop.index > 8 %}data-sb-hidden-project hidden{% endif %}
            style="cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
         <span class="split-sidebar__item-name" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ p.name }}</span>
         <span class="status-badge {% if p.connection_status == 'ok' %}success{% elif p.connection_status == 'error' %}danger{% else %}muted{% endif %}" style="margin-left:8px; flex-shrink:0;">
@@ -30,15 +29,9 @@
     {% endif %}
     </div>
 
-    {% if projects|length > 8 %}
-    <div class="supabase-load-more-wrap">
-      <button type="button" class="btn btn--ghost btn--sm" data-action="load-more-projects">Load more</button>
-    </div>
-    {% endif %}
-
-    <div style="padding: var(--space-md) var(--space-lg); border-top: 1px solid var(--color-line);">
-      <button type="button" class="btn btn--primary btn--sm w-100" data-action="open-modal" data-modal="sb-modal-connect">
-        + Connect Account
+    <div class="supabase-connect-action">
+      <button type="button" class="btn btn--ghost btn--sm" data-action="open-modal" data-modal="sb-modal-connect">
+        + Connect
       </button>
     </div>
 

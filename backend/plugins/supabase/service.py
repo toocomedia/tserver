@@ -385,8 +385,12 @@ async def list_databases(project_id: int, db: AsyncSession) -> list[dict[str, An
 
 
 async def list_tables(
-    project_id: int, database: str, db: AsyncSession
-) -> list[dict[str, Any]]:
+    project_id: int,
+    database: str,
+    db: AsyncSession,
+    offset: int = 0,
+    limit: int = 50,
+) -> dict[str, Any]:
     proj = await get_project(db, project_id)
     conn = await _safe_pg_connect(proj, db_name=database)
     try:
@@ -400,9 +404,13 @@ async def list_tables(
             FROM pg_tables
             WHERE schemaname NOT IN ('pg_catalog', 'information_schema')
             ORDER BY schemaname, tablename
-            """
+            LIMIT $1 OFFSET $2
+            """,
+            limit + 1,
+            offset,
         )
-        return [dict(r) for r in rows]
+        items = [dict(r) for r in rows[:limit]]
+        return {"items": items, "has_more": len(rows) > limit}
     finally:
         await conn.close()
 

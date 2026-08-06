@@ -83,13 +83,6 @@ document.addEventListener("click", async e => {
   const projSel = e.target.closest("[data-action='select-project']");
   if (projSel) { loadProject(parseInt(projSel.dataset.projectId, 10)); return; }
 
-  const loadMore = e.target.closest("[data-action='load-more-projects']");
-  if (loadMore) {
-    document.querySelectorAll("[data-sb-hidden-project]").forEach(el => el.hidden = false);
-    loadMore.parentElement.hidden = true;
-    return;
-  }
-
   // DB → tables
   const viewTables = e.target.closest("[data-action='view-tables']");
   if (viewTables) { loadTables(viewTables.dataset.projectId, viewTables.dataset.db); return; }
@@ -161,6 +154,13 @@ function initProjectPanel() {
     document.getElementById("sb-query-empty").style.display   = "none";
     showErr("sb-query-error", "");
   });
+
+  const tablesLoadMore = document.getElementById("sb-tables-load-more");
+  if (tablesLoadMore) {
+    tablesLoadMore.addEventListener("click", () => {
+      if (currentTablePage) loadTables(currentTablePage.projectId, currentTablePage.db, true);
+    });
+  }
 }
 
 // ── Test connection ───────────────────────────────────────────────────────
@@ -231,7 +231,10 @@ async function handleRestore() {
 
 // ── Tables drill-down ─────────────────────────────────────────────────────
 
-async function loadTables(projectId, db) {
+const SB_TABLE_PAGE_SIZE = 50;
+let currentTablePage = null;
+
+async function loadTables(projectId, db, append = false) {
   const dbPanel     = document.getElementById("sb-panel-databases");
   const tablesPanel = document.getElementById("sb-tables-panel");
   if (!dbPanel || !tablesPanel) return;
@@ -240,14 +243,23 @@ async function loadTables(projectId, db) {
   tablesPanel.style.display = "";
   document.getElementById("sb-tables-title").textContent = `Tables — ${db}`;
   const tbody = document.getElementById("sb-tables-body");
-  tbody.innerHTML = "<tr><td colspan='3' class='text-muted p-lg text-center'>Loading…</td></tr>";
+  const loadMore = document.getElementById("sb-tables-load-more");
+  if (!append) {
+    currentTablePage = { projectId, db, offset: 0 };
+    tbody.innerHTML = "<tr><td colspan='3' class='text-muted p-lg text-center'>Loading…</td></tr>";
+  }
   try {
-    const rows = await apiFetch("GET", `/projects/${projectId}/databases/${db}/tables`);
-    tbody.innerHTML = rows.length
-      ? rows.map(r => `<tr><td class="text-muted">${r.schema}</td><td>${r.name}</td><td class="text-muted">${r.size}</td></tr>`).join("")
-      : "<tr><td colspan='3' class='text-muted p-lg text-center'>No tables found.</td></tr>";
+    const offset = currentTablePage?.offset || 0;
+    const page = await apiFetch("GET", `/projects/${projectId}/databases/${encodeURIComponent(db)}/tables?offset=${offset}&limit=${SB_TABLE_PAGE_SIZE}`);
+    const rows = page.items;
+    const html = rows.map(r => `<tr><td class="text-muted">${r.schema}</td><td>${r.name}</td><td class="text-muted">${r.size}</td></tr>`).join("");
+    if (append) tbody.insertAdjacentHTML("beforeend", html);
+    else tbody.innerHTML = html || "<tr><td colspan='3' class='text-muted p-lg text-center'>No tables found.</td></tr>";
+    currentTablePage.offset += rows.length;
+    if (loadMore) loadMore.hidden = !page.has_more;
   } catch (err) {
     tbody.innerHTML = `<tr><td colspan='3' class='form-error p-lg'>${err.message}</td></tr>`;
+    if (loadMore) loadMore.hidden = true;
   }
 }
 

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -177,9 +177,13 @@ async def api_list_databases(project_id: int, db: AsyncSession = Depends(get_db)
 
 @router.get("/api/projects/{project_id}/databases/{database}/tables")
 async def api_list_tables(
-    project_id: int, database: str, db: AsyncSession = Depends(get_db)
+    project_id: int,
+    database: str,
+    offset: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=100),
+    db: AsyncSession = Depends(get_db),
 ):
-    return await svc.list_tables(project_id, database, db)
+    return await svc.list_tables(project_id, database, db, offset=offset, limit=limit)
 
 
 @router.get("/api/projects/{project_id}/roles")
