@@ -10,11 +10,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="domains-page" style="position:relative;">
-
-<!-- SKELETON LOADING OVERLAY -->
-{{ skeleton_overlay('domains-skeleton', tables=[{ 'cols': [34, 16, 16, 16, 18], 'rows': 4 }]) }}
-<!-- END SKELETON OVERLAY -->
+<div class="domains-page">
 
 {% if domain_statuses %}
 
@@ -32,7 +28,10 @@
   </div>
 </div>
 
-<div class="table-wrap">
+<div class="table-wrap" style="position:relative;">
+  <!-- SKELETON LOADING OVERLAY -->
+  {{ skeleton_overlay('domains-skeleton', tables=[{ 'rows': 4 }]) }}
+  <!-- END SKELETON OVERLAY -->
     <table class="table" id="domains-table">
       <colgroup>
         <col style="width:34%">

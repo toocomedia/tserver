@@ -10,11 +10,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="proxy-page" style="position:relative;">
-
-<!-- SKELETON LOADING OVERLAY -->
-{{ skeleton_overlay('proxy-skeleton', tables=[{ 'cols': [22, 18, 8, 9, 9, 10, 24], 'rows': 4 }]) }}
-<!-- END SKELETON OVERLAY -->
+<div class="proxy-page">
 
 {% set created = request.query_params.get('created') %}
 {% set deleted = request.query_params.get('deleted') %}
@@ -48,7 +44,10 @@
   </div>
 </div>
 
-<div class="table-wrap">
+<div class="table-wrap" style="position:relative;">
+  <!-- SKELETON LOADING OVERLAY -->
+  {{ skeleton_overlay('proxy-skeleton', tables=[{ 'rows': 4 }]) }}
+  <!-- END SKELETON OVERLAY -->
   <table class="table" id="proxy-table">
     <colgroup>
       <col style="width:22%">

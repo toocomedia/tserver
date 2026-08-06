@@ -38,21 +38,25 @@
 
   {% if controls %}
   <div class="skeleton-controls">
-    <div class="skeleton-section-header skeleton-box"></div>
-    {% for _ in range(controls) %}
-    <div class="skeleton-control-row"><div class="sk-text"></div><div class="sk-buttons"><div class="sk-btn"></div><div class="sk-btn"></div></div></div>
-    {% endfor %}
+    <div class="sk-search-input"></div>
+    <div class="sk-filter-select"></div>
   </div>
   {% endif %}
 
   {% for _table in tables %}
   <div class="skeleton-table-wrap">
     <div class="skeleton-table-header">
-      <div class="sk-th" style="width:100%;"></div>
+      <div class="sk-th" style="width:120px;"></div>
+      <div class="sk-th" style="width:60px;"></div>
     </div>
     {% for _ in range(_table.rows or rows) %}
     <div class="skeleton-table-row">
-      <div class="sk-td" style="width:100%;"></div>
+      <div class="sk-col-main">
+        <div class="sk-title"></div>
+        <div class="sk-sub"></div>
+      </div>
+      <div class="sk-col-status"></div>
+      <div class="sk-col-action"></div>
     </div>
     {% endfor %}
   </div>
