@@ -351,79 +351,14 @@
   border-right: 1px solid var(--color-line);
   border-radius: 0;
 }
-.skeleton-plugin-card .sk-main {
+.skeleton-plugin-card .sk-body {
   flex: 1;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: center;
   padding: 16px 20px;
-  gap: 12px;
+  gap: 10px;
 }
-.skeleton-plugin-card .sk-header-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-}
-.skeleton-plugin-card .sk-title {
-  width: 55%;
-  height: 16px;
-  border-radius: 3px;
-  background: var(--color-line);
-  opacity: 0.65;
-}
-.skeleton-plugin-card .sk-badge {
-  width: 40px;
-  height: 12px;
-  border-radius: 3px;
-  background: var(--color-line);
-  opacity: 0.65;
-}
-.skeleton-plugin-card .sk-desc-wrap {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.skeleton-plugin-card .sk-line {
-  height: 10px;
-  border-radius: 3px;
-  background: var(--color-line);
-  opacity: 0.65;
-}
-.sk-w-85 { width: 85%; }
-.sk-w-60 { width: 60%; }
-
-.skeleton-plugin-card .sk-footer-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  margin-top: auto;
-}
-.skeleton-plugin-card .sk-status {
-  width: 65px;
-  height: 14px;
-  border-radius: 3px;
-  background: var(--color-line);
-  opacity: 0.65;
-}
-.skeleton-plugin-card .sk-actions {
-  display: flex;
-  gap: 8px;
-}
-.skeleton-plugin-card .sk-icon-btn {
-  width: 32px;
-  height: 32px;
-  border-radius: 4px;
-  background: var(--color-line);
-  opacity: 0.65;
-}
-
-[data-theme="dark"] .skeleton-plugin-card .sk-title,
-[data-theme="dark"] .skeleton-plugin-card .sk-badge,
-[data-theme="dark"] .skeleton-plugin-card .sk-line,
-[data-theme="dark"] .skeleton-plugin-card .sk-status,
-[data-theme="dark"] .skeleton-plugin-card .sk-icon-btn {
-  background: rgba(255, 255, 255, 0.18);
-  opacity: 0.85;
-}
+.skeleton-plugin-card .sk-label { width: 55%; height: 14px; }
+.skeleton-plugin-card .sk-value { width: 85%; height: 10px; }
+.skeleton-plugin-card .sk-meta  { width: 40%; height: 8px; }
