@@ -1,4 +1,4 @@
-{% extends "layout.html" %}
+{% from "partials/skeleton_overlay.html" import skeleton_overlay %}
 
 {% block title %}System Dependencies — {{ PANEL_NAME }}{% endblock %}
 {% block page_title %}Dependencies{% endblock %}
@@ -11,6 +11,11 @@
 {% endblock %}
 
 {% block content %}
+<div class="dependencies-page" style="position:relative;">
+
+<!-- SKELETON LOADING OVERLAY -->
+{{ skeleton_overlay('dependencies-skeleton', cards=6) }}
+<!-- END SKELETON OVERLAY -->
 <div class="mb-xl">
   {% set dependency_title_icon %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/></svg>{% endset %}
   {% set title = 'System Dependencies Catalog' %}
@@ -66,4 +71,14 @@
   </div>
 </div>
 
+</div><!-- /.dependencies-page -->
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  hideSkeleton('dependencies-skeleton');
+});
+</script>
 {% endblock %}

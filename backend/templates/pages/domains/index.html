@@ -1,4 +1,4 @@
-{% extends "layout.html" %}
+{% from "partials/skeleton_overlay.html" import skeleton_overlay %}
 
 {% block title %}Domains — {{ PANEL_NAME }}{% endblock %}
 {% block page_title %}Domains{% endblock %}
@@ -8,6 +8,11 @@
 {% endblock %}
 
 {% block content %}
+<div class="domains-page" style="position:relative;">
+
+<!-- SKELETON LOADING OVERLAY -->
+{{ skeleton_overlay('domains-skeleton', tables=[{ 'cols': [34, 16, 16, 16, 18], 'rows': 4 }]) }}
+<!-- END SKELETON OVERLAY -->
 
 {% if domain_statuses %}
 
@@ -125,11 +130,15 @@
   No domains yet. <a href="/domains/create" style="font-weight:800;">Add your first domain →</a>
 </div>
 {% endif %}
-
+</div><!-- /.domains-page -->
 {% endblock %}
 
 {% block scripts %}
 <script>
+document.addEventListener('DOMContentLoaded', function() {
+  hideSkeleton('domains-skeleton');
+});
+
 function filterDomainsTable() {
   const query = document.getElementById('domain-search-input').value.toLowerCase().trim();
   const filter = document.getElementById('domain-status-filter').value;
