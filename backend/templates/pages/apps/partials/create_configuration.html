@@ -14,6 +14,14 @@
     <input class="form-input form-input--code" id="start_command" name="start_command" required>
   </div>
   <div class="form-group">
+    <label class="form-label" for="port">Private application port</label>
+    <input class="form-input" id="port" name="port" data-app-port type="number" min="{{ minimum_port }}" max="65535" value="{{ suggested_port }}" required>
+    <div class="d-flex gap-sm">
+      <button class="btn btn--secondary btn--sm" type="button" data-check-port>Check availability</button>
+      <p class="form-hint" data-port-status>Private loopback port. Your start command must use <code>PORT</code>.</p>
+    </div>
+  </div>
+  <div class="form-group">
     <label class="form-label" for="postgres_mode">PostgreSQL database</label>
     <div class="form-select-wrap">
       <select class="form-select" id="postgres_mode" name="postgres_mode" data-postgres-mode>

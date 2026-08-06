@@ -18,6 +18,8 @@ if (root) {
   const databaseUrl = root.querySelector('#database_url');
   const supabasePicker = root.querySelector('[data-supabase-picker]');
   const supabaseProject = root.querySelector('[data-supabase-project]');
+  const appPort = root.querySelector('[data-app-port]');
+  const portStatus = root.querySelector('[data-port-status]');
   const state = { step: 1, unlocked: 1, detected: null, appId: null, deploymentId: null };
   let branchTimer;
 
@@ -128,6 +130,19 @@ if (root) {
     if (supabaseProject) supabaseProject.required = supabase;
   }
 
+  async function checkPort() {
+    if (!appPort.reportValidity()) return false;
+    setText(portStatus, `Checking port ${appPort.value}…`);
+    try {
+      const result = await fetchJson(`/apps/port-availability?port=${encodeURIComponent(appPort.value)}`);
+      setText(portStatus, `Port ${result.port} is available on this VPS.`);
+      return true;
+    } catch (error) {
+      setText(portStatus, error.message || 'Port availability could not be checked.');
+      return false;
+    }
+  }
+
   function configurationError(message) {
     const alert = panel(state.step).querySelector('[data-configuration-error]');
     setText(alert, message);
@@ -136,7 +151,7 @@ if (root) {
 
   function validConfiguration() {
     root.querySelectorAll('[data-configuration-error]').forEach((alert) => setHidden(alert, true));
-    const fields = [root.querySelector('#build_command'), root.querySelector('#start_command')];
+    const fields = [root.querySelector('#build_command'), root.querySelector('#start_command'), appPort];
     if (databaseMode.value === 'external') fields.push(databaseUrl);
     if (databaseMode.value === 'supabase' && supabaseProject) fields.push(supabaseProject);
     if (!fields.every((field) => field.reportValidity())) return false;
@@ -148,8 +163,12 @@ if (root) {
     return true;
   }
 
-  function validEnvironment() {
+  async function validEnvironment() {
     if (!validConfiguration()) {
+      renderStep(3);
+      return false;
+    }
+    if (!await checkPort()) {
       renderStep(3);
       return false;
     }
@@ -160,7 +179,7 @@ if (root) {
   }
 
   async function startDeployment() {
-    if (!validEnvironment()) return;
+    if (!await validEnvironment()) return;
     setNextLoading(true, 'Deploying');
     try {
       const result = await fetchJson('/apps/create', {
@@ -212,6 +231,8 @@ if (root) {
     branchTimer = window.setTimeout(() => loadBranches().catch((error) => setText(branchMessage, error.message)), 700);
   });
   databaseMode.addEventListener('change', syncDatabaseMode);
+  appPort.addEventListener('input', () => setText(portStatus, 'Port changed. Check availability before deployment.'));
+  root.querySelector('[data-check-port]').addEventListener('click', checkPort);
   root.querySelector('[data-detection-retry]').addEventListener('click', detect);
   next.addEventListener('click', () => [detect, () => renderStep(3), () => { if (validConfiguration()) renderStep(4); }, startDeployment][state.step - 1]?.());
   back.addEventListener('click', () => renderStep(Math.max(1, state.step - 1)));
