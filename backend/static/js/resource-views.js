@@ -26,10 +26,43 @@ document.addEventListener("error", (event) => {
 }, true);
 
 /**
- * Toggle list record actions sub-tray under the row.
+ * Toggle list record actions sub-tray under the row (supports div rows and table <tr> rows).
  * @param {HTMLElement} triggerEl
  */
 function toggleListRowActions(triggerEl) {
+  // 1. Table row handling
+  const tr = triggerEl.closest('tr');
+  if (tr && !tr.classList.contains('table-row-subactions-tr')) {
+    const nextTr = tr.nextElementSibling;
+    const subactionsTr = (nextTr && nextTr.classList.contains('table-row-subactions-tr')) ? nextTr : null;
+    if (!subactionsTr) return;
+
+    const isExpanded = triggerEl.getAttribute('aria-expanded') === 'true';
+    const willExpand = !isExpanded;
+
+    // Close other open subaction rows in the same table
+    const tbody = tr.closest('tbody') || tr.parentElement;
+    if (tbody) {
+      tbody.querySelectorAll('.table-row-subactions-tr:not(.is-hidden)').forEach((otherTr) => {
+        if (otherTr !== subactionsTr) {
+          otherTr.classList.add('is-hidden');
+          const prevTr = otherTr.previousElementSibling;
+          const btn = prevTr?.querySelector('.list-actions-toggle-btn');
+          if (btn) {
+            btn.classList.remove('is-active');
+            btn.setAttribute('aria-expanded', 'false');
+          }
+        }
+      });
+    }
+
+    subactionsTr.classList.toggle('is-hidden', !willExpand);
+    triggerEl.classList.toggle('is-active', willExpand);
+    triggerEl.setAttribute('aria-expanded', String(willExpand));
+    return;
+  }
+
+  // 2. Div-based list row handling
   const row = triggerEl.closest('.list-item-row') || triggerEl.closest('.item-card') || triggerEl.closest('.plugin-requirements-host');
   if (!row) return;
 
@@ -39,7 +72,6 @@ function toggleListRowActions(triggerEl) {
   const isExpanded = triggerEl.getAttribute('aria-expanded') === 'true';
   const willExpand = !isExpanded;
 
-  // Close any other open action sub-trays in the list container for clean UI
   const container = row.closest('.view-list-container') || row.parentElement;
   if (container) {
     container.querySelectorAll('.list-row-subactions').forEach((tray) => {

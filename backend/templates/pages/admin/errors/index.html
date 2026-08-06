@@ -117,7 +117,27 @@
           {% endif %}
         </td>
         <td class="col-actions">
-          <a href="/admin/errors/{{ e.id }}" class="btn btn--secondary btn--sm">View</a>
+          <button type="button" class="btn btn--secondary btn--sm list-actions-toggle-btn" onclick="toggleListRowActions(this)" aria-expanded="false" title="Actions menu">
+            <span>Actions</span>
+            <svg class="chevron-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </button>
+        </td>
+      </tr>
+      <tr class="table-row-subactions-tr is-hidden">
+        <td colspan="6" style="padding:0; border-bottom:1px solid var(--color-line);">
+          <div class="list-row-subactions">
+            <div class="list-row-subactions__inner">
+              <span class="list-row-subactions__label">Actions for Error #{{ e.id }}:</span>
+              <div class="list-row-subactions__btns">
+                <a href="/admin/errors/{{ e.id }}" class="btn btn--primary btn--sm">
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                  <span>View Details</span>
+                </a>
+              </div>
+            </div>
+          </div>
         </td>
       </tr>
       {% endfor %}

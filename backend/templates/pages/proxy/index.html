@@ -120,37 +120,52 @@
         </td>
 
         <td class="col-actions">
-          <div class="d-flex gap-xs justify-end" style="flex-wrap:nowrap;">
-            {% if not p.ssl_enabled %}
-            <a href="/ssl/issue?full_domain={{ p.full_domain }}"
-               class="btn btn--secondary btn--sm"
-               title="Issue SSL"
-               id="btn-ssl-{{ p.id }}">
-              + SSL
-            </a>
-            {% endif %}
+          <button type="button" class="btn btn--secondary btn--sm list-actions-toggle-btn" onclick="toggleListRowActions(this)" aria-expanded="false" title="Actions menu">
+            <span>Actions</span>
+            <svg class="chevron-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </button>
+        </td>
+      </tr>
 
-            <button class="btn btn--secondary btn--sm"
-                    id="btn-cache-{{ p.id }}"
-                    data-proxy-id="{{ p.id }}"
-                    data-cache-enabled="{{ '1' if item.cache_enabled else '0' }}"
-                    data-cache-ttl="{{ p.cache_ttl_minutes }}"
-                    data-cache-auto="{{ p.cache_auto_clear_hours }}"
-                    title="Cache Settings">
-              Cache
-            </button>
+      <tr class="table-row-subactions-tr is-hidden">
+        <td colspan="7" style="padding:0; border-bottom:1px solid var(--color-line);">
+          <div class="list-row-subactions">
+            <div class="list-row-subactions__inner">
+              <span class="list-row-subactions__label">Actions for {{ p.full_domain }}:</span>
+              <div class="list-row-subactions__btns">
+                {% if not p.ssl_enabled %}
+                <a href="/ssl/issue?full_domain={{ p.full_domain }}"
+                   class="btn btn--secondary btn--sm"
+                   title="Issue SSL"
+                   id="btn-ssl-{{ p.id }}">
+                  + SSL
+                </a>
+                {% endif %}
 
-            <button class="btn btn--danger btn--sm"
-                    id="btn-del-{{ p.id }}"
-                    data-proxy-id="{{ p.id }}"
-                    data-full-domain="{{ p.full_domain }}"
-                    data-dns-managed="{{ '1' if item.dns_managed else '0' }}"
-                    title="Delete Proxy">
-              Delete
-            </button>
+                <button class="btn btn--secondary btn--sm"
+                        id="btn-cache-{{ p.id }}"
+                        data-proxy-id="{{ p.id }}"
+                        data-cache-enabled="{{ '1' if item.cache_enabled else '0' }}"
+                        data-cache-ttl="{{ p.cache_ttl_minutes }}"
+                        data-cache-auto="{{ p.cache_auto_clear_hours }}"
+                        title="Cache Settings">
+                  Cache Settings
+                </button>
+
+                <button class="btn btn--danger btn--sm"
+                        id="btn-del-{{ p.id }}"
+                        data-proxy-id="{{ p.id }}"
+                        data-full-domain="{{ p.full_domain }}"
+                        data-dns-managed="{{ '1' if item.dns_managed else '0' }}"
+                        title="Delete Proxy">
+                  Delete
+                </button>
+              </div>
+            </div>
           </div>
         </td>
-
       </tr>
 
       {# Inline cache settings row — hidden by default #}

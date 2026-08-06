@@ -54,7 +54,27 @@
           <span class="badge-minimal {% if app.status == 'running' %}badge-minimal--active{% else %}badge-minimal--neutral{% endif %}">{{ app.status | upper }}</span>
         </td>
         <td class="col-actions">
-          <a class="btn btn--secondary btn--sm" href="/apps/{{ app.id }}">Manage</a>
+          <button type="button" class="btn btn--secondary btn--sm list-actions-toggle-btn" onclick="toggleListRowActions(this)" aria-expanded="false" title="Actions menu">
+            <span>Actions</span>
+            <svg class="chevron-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </button>
+        </td>
+      </tr>
+      <tr class="table-row-subactions-tr is-hidden">
+        <td colspan="5" style="padding:0; border-bottom:1px solid var(--color-line);">
+          <div class="list-row-subactions">
+            <div class="list-row-subactions__inner">
+              <span class="list-row-subactions__label">Actions for {{ app.service_name }}:</span>
+              <div class="list-row-subactions__btns">
+                <a class="btn btn--primary btn--sm" href="/apps/{{ app.id }}">
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                  <span>Manage Application</span>
+                </a>
+              </div>
+            </div>
+          </div>
         </td>
       </tr>
       {% endfor %}
