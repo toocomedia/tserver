@@ -21,6 +21,8 @@
     align-items: center;
     gap: var(--space-md);
     flex: 1;
+    width: 100%;
+    min-width: 180px;
   }
   .usage-bar {
     flex: 1;
@@ -39,9 +41,10 @@
   .usage-bar__pct {
     font-size: var(--font-small);
     font-weight: 800;
-    min-width: 38px;
+    min-width: 48px;
     text-align: right;
     color: var(--color-text);
+    flex-shrink: 0;
   }
 
   .proc-status--sleeping, .proc-status--running, .proc-status--zombie, .proc-status--stopped {
@@ -61,7 +64,7 @@
   :is([data-theme="dark"], [data-theme="amoled"], [data-theme="charcoal"]) .proc-status--running { color: #9FD640 !important; }
   :is([data-theme="dark"], [data-theme="amoled"], [data-theme="charcoal"]) .proc-status--sleeping { color: #E5E7EB !important; }
 
-  .info-row__value .usage-bar-wrap { min-width: 200px; }
+  .info-row__value .usage-bar-wrap { min-width: 180px; flex: 1; }
 
 </style>
 {% endblock %}
@@ -203,7 +206,7 @@
               </div>
               <span class="usage-bar__pct">${dk.percent.toFixed(1)}%</span>
             </div>
-            <span class="text-small text-muted" style="margin-left:8px;">${dk.used_gb} / ${dk.total_gb} GB</span>
+            <span class="text-small text-muted" style="margin-left:12px; min-width:90px; text-align:right; flex-shrink:0;">${dk.used_gb} / ${dk.total_gb} GB</span>
           </span>
         </div>
       `).join('') || '<div class="info-row"><span class="info-row__label text-muted">No disks found</span></div>';

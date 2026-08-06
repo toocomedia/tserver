@@ -51,7 +51,7 @@
 
 /* Server optimization controls: equal-width, filled, borderless actions. */
 .optimization-list { display: flex; flex-direction: column; gap: var(--space-xl); padding-top: var(--space-sm); }
-.optimization-row { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-lg); flex-wrap: wrap; }
+.optimization-row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-lg); flex-wrap: wrap; }
 .optimization-row__copy { flex: 1; min-width: 240px; }
 .optimization-row__title { margin-bottom: 2px; font-size: var(--font-body); }
 .optimization-row__control { width: calc(var(--button-min-width) * 2); flex: 0 0 calc(var(--button-min-width) * 2); }
