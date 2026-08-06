@@ -4,7 +4,7 @@
   <div class="list-col-main">
     <div class="list-col-thumb">
       {% if icon_url %}
-        <img src="{{ icon_url }}" alt="{{ icon_alt }}" data-fallback-image>
+        <img src="{{ icon_url }}" alt="{{ icon_alt }}" loading="lazy" data-fallback-image onerror="this.onerror=null; this.hidden=true; if(this.nextElementSibling) this.nextElementSibling.classList.remove('is-hidden');">
       {% endif %}
       {% if resource_type == 'plugin' %}
         <svg class="list-col-thumb-fallback{% if icon_url %} is-hidden{% endif %}" viewBox="0 0 24 24" aria-hidden="true"><path d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
