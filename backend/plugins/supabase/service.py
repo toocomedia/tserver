@@ -135,11 +135,16 @@ def _pooler_settings(payload: Any) -> dict[str, Any] | None:
         if not isinstance(entry, dict):
             continue
         connection = entry.get("connectionString") or entry.get("connection_string")
-        parsed = urlsplit(connection) if isinstance(connection, str) else None
-        host = entry.get("db_host") or (parsed.hostname if parsed else None)
-        port = entry.get("db_port") or (parsed.port if parsed else None)
-        user = entry.get("db_user") or (unquote(parsed.username) if parsed and parsed.username else None)
-        database = entry.get("db_name") or (parsed.path.lstrip("/") if parsed else None)
+        host = entry.get("db_host")
+        port = entry.get("db_port")
+        user = entry.get("db_user")
+        database = entry.get("db_name")
+        if not all((host, port, user, database)) and isinstance(connection, str):
+            parsed = urlsplit(connection)
+            host = host or parsed.hostname
+            port = port or parsed.port
+            user = user or (unquote(parsed.username) if parsed.username else None)
+            database = database or parsed.path.lstrip("/")
         if host and port and user and database:
             settings.append({"host": host, "port": int(port), "user": user, "database": database})
     return next((item for item in settings if item["port"] == 5432), settings[0] if settings else None)

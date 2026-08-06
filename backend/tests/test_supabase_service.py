@@ -47,6 +47,16 @@ class SupabaseConnectionTests(unittest.TestCase):
         self.assertEqual(settings["port"], 5432)
         self.assertEqual(settings["user"], "postgres.uwhexjgccucvvqcwixrh")
 
+    def test_pooler_settings_prefer_api_fields_over_connection_template(self):
+        settings = service._pooler_settings([{
+            "db_host": "aws-1-eu-west-1.pooler.supabase.com",
+            "db_port": 5432,
+            "db_user": "postgres.uwhexjgccucvvqcwixrh",
+            "db_name": "postgres",
+            "connectionString": "postgresql://invalid@[aws-1-eu-west-1.pooler.supabase.com]",
+        }])
+        self.assertEqual(settings["host"], "aws-1-eu-west-1.pooler.supabase.com")
+
     def test_direct_network_failure_uses_pooler(self):
         error = OSError(101, "Network is unreachable")
         self.assertTrue(service._should_use_pooler(_project(), error))
