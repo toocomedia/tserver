@@ -24,8 +24,21 @@
   </div>
   <div class="list-col-desc">{{ description }}</div>
   <div class="list-col-actions">
-    {% if resource_type == 'plugin' %}{% set plugin = item %}{% else %}{% set dependency = item %}{% endif %}
-    {% include actions_template %}
+    <button type="button" class="btn btn--secondary btn--sm list-actions-toggle-btn" onclick="toggleListRowActions(this)" aria-expanded="false" title="Actions menu">
+      <span>Actions</span>
+      <svg class="chevron-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="6 9 12 15 18 9"></polyline>
+      </svg>
+    </button>
+  </div>
+  <div class="list-row-subactions is-hidden">
+    <div class="list-row-subactions__inner">
+      <span class="list-row-subactions__label">Actions for {{ name }}:</span>
+      <div class="list-row-subactions__btns">
+        {% if resource_type == 'plugin' %}{% set plugin = item %}{% else %}{% set dependency = item %}{% endif %}
+        {% include actions_template %}
+      </div>
+    </div>
   </div>
   {% if has_overlay and overlay_template %}
     {% set plugin = item %}
