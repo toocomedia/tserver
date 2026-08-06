@@ -177,8 +177,19 @@ trusted_proxies = [ip.strip() for ip in config.TRUSTED_PROXY_IPS.split(",") if i
 app.add_middleware(ProxyHeadersMiddleware, trusted_hosts=trusted_proxies or "127.0.0.1")
 register_error_handlers(app)
 
-# Static files
-app.mount("/static", StaticFiles(directory="static"), name="static")
+# Static files with Cache-Control headers
+class CachedStaticFiles(StaticFiles):
+    def file_response(self, *args, **kwargs):
+        response = super().file_response(*args, **kwargs)
+        path = args[0] if args else kwargs.get("full_path", "")
+        path_str = str(path).lower()
+        if path_str.endswith((".woff2", ".woff", ".ttf", ".eot", ".otf")):
+            response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+        elif path_str.endswith((".css", ".js", ".png", ".jpg", ".jpeg", ".svg", ".ico")):
+            response.headers["Cache-Control"] = "public, max-age=86400"
+        return response
+
+app.mount("/static", CachedStaticFiles(directory="static"), name="static")
 
 @app.get("/favicon.ico", include_in_schema=False)
 async def favicon():

@@ -302,12 +302,12 @@ p {
   --color-surface:    #26262B;
   --color-header-bg-bar: #2B2B30;
   --color-sidebar:    #111112;
-  --color-sidebar-text: #D1D5DB;
+  --color-sidebar-text: #E5E7EB;
   --color-sidebar-hover: #FFFFFF;
   --color-sidebar-border: rgba(255, 255, 255, 0.18);
   --color-sidebar-bg-hover: rgba(255, 255, 255, 0.05);
   --color-text:       #FFFFFF;
-  --color-muted:      #9CA3AF;
+  --color-muted:      #B0B7C3;
   --color-line:       rgba(255, 255, 255, 0.15);
   
   --color-accent:     #C7F464; 
@@ -359,3 +359,16 @@ p {
   transform: scale(1.1);
 }
 
+/* High-Contrast Label Styles */
+.form-label, label, .form-check span {
+  color: var(--color-text);
+}
+
+.info-row__label {
+  color: var(--color-muted);
+  font-weight: 600;
+}
+
+.form-hint {
+  color: var(--color-muted);
+}
