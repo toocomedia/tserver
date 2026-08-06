@@ -47,13 +47,15 @@
 
   {% for _table in tables %}
   <div class="skeleton-table-wrap">
+    {% if _table.title or _table.has_header %}
     <div class="skeleton-section-header skeleton-box"></div>
+    {% endif %}
     <div class="skeleton-table-header">
-      {% for _w in _table.cols %}<div class="sk-th sk-w-{{ _w }}"></div>{% endfor %}
+      {% for _w in _table.cols %}<div class="sk-th" style="width:{{ _w }}%; flex:0 0 {{ _w }}%; max-width:{{ _w }}%;"></div>{% endfor %}
     </div>
     {% for _ in range(_table.rows or rows) %}
     <div class="skeleton-table-row">
-      {% for _w in _table.cols %}<div class="sk-td sk-w-{{ _w }}"></div>{% endfor %}
+      {% for _w in _table.cols %}<div class="sk-td" style="width:{{ _w }}%; flex:0 0 {{ _w }}%; max-width:{{ _w }}%;"></div>{% endfor %}
     </div>
     {% endfor %}
   </div>
