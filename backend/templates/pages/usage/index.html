@@ -260,11 +260,8 @@
           <td>${app.cpu.toFixed(1)}%</td>
           <td>${app.memory}</td>
           <td><span class="${procStatusClass(app.status)}">${app.status}</span></td>
-          <td>
-            ${app.id ? `<button type="button" class="btn btn--secondary btn--sm" style="display:inline-flex; align-items:center; gap:4px;" onclick="rebootApp(${app.id}, '${(app.label || '').replace(/'/g, "\\'")}')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>Reboot</button>` : '—'}
-          </td>
         </tr>
-      `).join('') : '<tr><td colspan="6" class="text-muted">No hosted Python apps yet.</td></tr>';
+      `).join('') : '<tr><td colspan="5" class="text-muted">No hosted Python apps yet.</td></tr>';
     }
 
     const containerAppTbody = document.getElementById('container-app-usage-tbody');
@@ -460,19 +457,6 @@
     if (action === 'advanced-off') setAdvancedTuning(false);
     if (action === 'advanced-on') setAdvancedTuning(true);
   });
-
-  async function rebootApp(appId, appName) {
-    if (!appId) return;
-    if (!confirm(`Reboot application "${appName}"?`)) return;
-    toast(`Rebooting ${appName}...`, 'info');
-    try {
-      await panel.post(`/apps/${appId}/restart`);
-      toast(`Application ${appName} rebooted successfully.`, 'success');
-      fetchStats();
-    } catch (e) {
-      toast(`Failed to reboot ${appName}: ${e?.message || e?.detail || 'Unknown error'}`, 'danger');
-    }
-  }
 
   function togglePoll() {
     const btn = document.getElementById('btn-pause-poll');
