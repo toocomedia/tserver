@@ -8,6 +8,9 @@
 
   {# ── Left sidebar ── #}
   <div class="split-sidebar">
+    <div style="padding: 0 var(--space-lg) var(--space-sm); font-size: var(--font-small); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-muted);">
+      Projects
+    </div>
 
     {% if projects %}
       {% for p in projects %}
@@ -15,9 +18,9 @@
            id="sb-proj-{{ p.id }}"
            data-action="select-project"
            data-project-id="{{ p.id }}"
-           style="cursor:pointer;">
-        <span class="split-sidebar__item-name">{{ p.name }}</span>
-        <span class="status-badge {% if p.connection_status == 'ok' %}success{% elif p.connection_status == 'error' %}danger{% else %}muted{% endif %}" style="flex-shrink:0;">
+           style="cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
+        <span class="split-sidebar__item-name" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ p.name }}</span>
+        <span class="status-badge {% if p.connection_status == 'ok' %}success{% elif p.connection_status == 'error' %}danger{% else %}muted{% endif %}" style="margin-left:8px; flex-shrink:0;">
           {{ p.connection_status }}
         </span>
       </div>
@@ -26,12 +29,10 @@
 
     <div class="flex-1"></div>
 
-    <div class="split-sidebar__item split-sidebar__item--action"
-         id="sb-connect-btn"
-         data-action="open-modal"
-         data-modal="sb-modal-connect"
-         style="cursor:pointer; color: var(--color-primary);">
-      + Connect Supabase Account
+    <div style="padding: var(--space-md) var(--space-lg); border-top: 1px solid var(--color-line);">
+      <button type="button" class="btn btn--primary btn--sm w-100" data-action="open-modal" data-modal="sb-modal-connect">
+        + Connect Account
+      </button>
     </div>
 
     <div class="split-sidebar__footer">

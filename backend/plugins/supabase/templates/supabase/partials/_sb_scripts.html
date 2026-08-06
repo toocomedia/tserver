@@ -66,13 +66,11 @@ function switchTab(tabId) {
   if (tabId === "stats") { /* user clicks refresh */ }
 }
 
-document.querySelectorAll("[data-sb-tab]").forEach(btn => {
-  btn.addEventListener("click", () => switchTab(btn.dataset.sbTab));
-});
-
-// ── Global click dispatcher ───────────────────────────────────────────────
-
 document.addEventListener("click", async e => {
+  // Tab click
+  const tabBtn = e.target.closest("[data-sb-tab]");
+  if (tabBtn) { switchTab(tabBtn.dataset.sbTab); return; }
+
   // Modal open/close
   const opener = e.target.closest("[data-action='open-modal']");
   if (opener) { openModal(opener.dataset.modal); return; }

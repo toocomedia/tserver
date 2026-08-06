@@ -1,9 +1,9 @@
-{# _sb_project_panel.html — rendered in split-content, matching pg_manager style #}
+{# _sb_project_panel.html — rendered in split-content #}
 
 {# ── Project header bar ── #}
-<div class="action-toolbar" style="border-bottom: 1px solid var(--color-line); padding-bottom: 16px; margin-bottom: 0;">
-  <div class="d-flex flex-column gap-xs">
-    <h2 style="margin:0;">{{ project.name }}</h2>
+<div class="action-toolbar mb-lg">
+  <div>
+    <h2 style="margin:0 0 4px;">{{ project.name }}</h2>
     <div class="d-flex align-center gap-sm flex-wrap">
       <span class="text-muted text-small">{{ project.db_host }}</span>
       {% if project.region %}
@@ -15,20 +15,20 @@
       </span>
     </div>
   </div>
-  <div class="d-flex gap-xs flex-wrap">
-    <button class="btn btn--secondary btn--sm" id="sb-btn-test" data-project-id="{{ project.id }}">
+  <div class="d-flex gap-xs flex-wrap align-center">
+    <button type="button" class="btn btn--secondary btn--sm" id="sb-btn-test" data-project-id="{{ project.id }}">
       Test Connection
     </button>
     {% if project.connection_status != 'ok' %}
-    <button class="btn btn--secondary btn--sm" id="sb-btn-restore" data-project-id="{{ project.id }}">
+    <button type="button" class="btn btn--secondary btn--sm" id="sb-btn-restore" data-project-id="{{ project.id }}">
       Restore
     </button>
     {% else %}
-    <button class="btn btn--secondary btn--sm" id="sb-btn-pause" data-project-id="{{ project.id }}">
+    <button type="button" class="btn btn--secondary btn--sm" id="sb-btn-pause" data-project-id="{{ project.id }}">
       Pause
     </button>
     {% endif %}
-    <button class="btn btn--icon btn--sm btn--ghost" id="sb-btn-remove"
+    <button type="button" class="btn btn--icon btn--sm btn--ghost" id="sb-btn-remove"
             data-project-id="{{ project.id }}" data-project-name="{{ project.name }}"
             data-action="open-delete" aria-label="Remove project" title="Remove project">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -40,12 +40,12 @@
 </div>
 
 {# ── Tabs ── #}
-<div class="split-sidebar" style="flex-direction:row; flex:none; border-bottom: 1px solid var(--color-line); padding: 0; background: transparent; border-right: none; border-top: none;">
-  <div class="split-sidebar__item active" id="sb-tab-databases" data-sb-tab="databases" style="cursor:pointer; border-bottom: none;">Databases</div>
-  <div class="split-sidebar__item" id="sb-tab-roles" data-sb-tab="roles" style="cursor:pointer; border-bottom: none;">Users &amp; Roles</div>
-  <div class="split-sidebar__item" id="sb-tab-query" data-sb-tab="query" style="cursor:pointer; border-bottom: none;">Query Runner</div>
-  <div class="split-sidebar__item" id="sb-tab-stats" data-sb-tab="stats" style="cursor:pointer; border-bottom: none;">Stats</div>
-</div>
+<nav class="tabs-nav mb-lg">
+  <button type="button" class="btn btn--ghost active" id="sb-tab-databases" data-sb-tab="databases">Databases</button>
+  <button type="button" class="btn btn--ghost" id="sb-tab-roles" data-sb-tab="roles">Users &amp; Roles</button>
+  <button type="button" class="btn btn--ghost" id="sb-tab-query" data-sb-tab="query">Query Runner</button>
+  <button type="button" class="btn btn--ghost" id="sb-tab-stats" data-sb-tab="stats">Stats</button>
+</nav>
 
 {# ── Databases panel ── #}
 <div id="sb-panel-databases" class="pg-panel">
