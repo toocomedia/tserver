@@ -61,13 +61,22 @@ async def supabase_project_detail(
 ):
     project = await svc.get_project(db, project_id)
     databases = []
+    database_error = None
     try:
         databases = await svc.list_databases(project_id, db)
+    except HTTPException as exc:
+        database_error = exc.detail
     except Exception:
-        pass
+        logger.exception("Could not load databases for Supabase project %s", project_id)
+        database_error = "Could not load the Supabase database list."
     return templates.TemplateResponse(
         "supabase/project_detail.html",
-        {"request": request, "project": project, "databases": databases},
+        {
+            "request": request,
+            "project": project,
+            "databases": databases,
+            "database_error": database_error,
+        },
     )
 
 

@@ -364,12 +364,9 @@ async def list_databases(project_id: int, db: AsyncSession) -> list[dict[str, An
     try:
         rows = await conn.fetch(
             """
-            SELECT datname AS name,
-                   pg_catalog.pg_encoding_to_char(encoding) AS encoding,
-                   pg_size_pretty(pg_database_size(datname)) AS size
-            FROM pg_database
-            WHERE datistemplate = false
-            ORDER BY datname
+            SELECT current_database() AS name,
+                   current_setting('server_encoding') AS encoding,
+                   pg_size_pretty(pg_database_size(current_database())) AS size
             """
         )
         return [dict(r) for r in rows]

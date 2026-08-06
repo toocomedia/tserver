@@ -84,7 +84,7 @@
   </div>
   {% else %}
   <div class="p-xl text-center text-muted">
-    <p>Could not load databases — check connection status.</p>
+    <p>{{ database_error or "Could not load databases — check connection status." }}</p>
     <button class="btn btn--secondary" id="sb-btn-test" data-project-id="{{ project.id }}">Test Connection</button>
   </div>
   {% endif %}
