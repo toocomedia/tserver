@@ -36,6 +36,15 @@
       --shape-fill-accent: rgba(199, 244, 100, 0.08);
     }
 
+    [data-theme="charcoal"] {
+      --color-box-bg: #26262B;
+      --color-box-border: rgba(255, 255, 255, 0.15);
+      --color-input-bg: rgba(255, 255, 255, 0.05);
+      --color-input-line: rgba(255, 255, 255, 0.18);
+      --shape-fill-dark: rgba(255, 255, 255, 0.05);
+      --shape-fill-accent: rgba(199, 244, 100, 0.08);
+    }
+
     [data-theme="light"] {
       --color-box-bg: #FFFFFF;
       --color-box-border: rgba(15, 23, 32, 0.14);
@@ -415,7 +424,7 @@
         applyTheme(savedTheme);
       } else {
         const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-        applyTheme(prefersDark ? 'dark' : 'light');
+        applyTheme(prefersDark ? 'charcoal' : 'light');
       }
     })();
 

@@ -403,7 +403,7 @@
             if (val === "dark" || val === "amoled" || val === "charcoal") {
               document.documentElement.setAttribute("data-theme", val);
             } else if (val === "system" && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-              document.documentElement.setAttribute("data-theme", "dark");
+              document.documentElement.setAttribute("data-theme", "charcoal");
             } else {
               document.documentElement.removeAttribute("data-theme");
             }
@@ -414,7 +414,7 @@
       // Listen for system theme changes
       window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
         if ((localStorage.getItem("theme") || "system") === "system") {
-          if (e.matches) document.documentElement.setAttribute("data-theme", "dark");
+          if (e.matches) document.documentElement.setAttribute("data-theme", "charcoal");
           else document.documentElement.removeAttribute("data-theme");
         }
       });
