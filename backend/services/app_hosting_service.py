@@ -79,7 +79,7 @@ async def create_app(db: AsyncSession, domain_id: int, source_type: str, reposit
     if postgres_mode == "supabase":
         from plugins.supabase import service as supabase_service
         app.supabase_project_id = supabase_project_id
-        app.database_name = app.database_user = f"app{app.id}"
+        app.database_name = app.database_user = f"app{app.id}_{secrets.token_hex(4)}"
         external_url = await supabase_service.provision_app_database(
             supabase_project_id, app.database_name, app.database_user,
             secrets.token_urlsafe(24), db,

@@ -533,16 +533,45 @@ async def provision_app_database(
     """
     proj = await get_project(db, project_id)
     conn = await _pg_connect(proj)
+    app_conn = None
+    created_user = False
+    created_database = False
     try:
         # PostgreSQL utility commands cannot use asyncpg $1 parameters.
         await conn.execute(
             f"CREATE USER {_identifier(username)} WITH PASSWORD {_literal(password)} LOGIN"
         )
-        # Create database owned by that user
+        created_user = True
+        # Supabase cannot transfer database ownership to a newly created role.
         await conn.execute(
-            f"CREATE DATABASE {_identifier(database_name)} OWNER {_identifier(username)}"
+            f"CREATE DATABASE {_identifier(database_name)}"
         )
+        created_database = True
+        app_conn = await _pg_connect(proj, database_name)
+        await app_conn.execute(
+            f"GRANT CONNECT ON DATABASE {_identifier(database_name)} TO {_identifier(username)}"
+        )
+        await app_conn.execute(
+            f"GRANT USAGE, CREATE ON SCHEMA public TO {_identifier(username)}"
+        )
+    except Exception:
+        if app_conn:
+            try:
+                await app_conn.close()
+            except Exception:
+                logger.warning("Could not close failed Supabase app connection", exc_info=True)
+            app_conn = None
+        try:
+            if created_database:
+                await conn.execute(f"DROP DATABASE IF EXISTS {_identifier(database_name)}")
+            if created_user:
+                await conn.execute(f"DROP USER IF EXISTS {_identifier(username)}")
+        except Exception:
+            logger.warning("Could not clean failed Supabase app provisioning", exc_info=True)
+        raise
     finally:
+        if app_conn:
+            await app_conn.close()
         await conn.close()
 
     # Build and return DATABASE_URL

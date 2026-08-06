@@ -79,9 +79,12 @@ class SupabaseConnectionTests(unittest.TestCase):
 class SupabaseProvisionTests(unittest.IsolatedAsyncioTestCase):
     async def test_provision_uses_escaped_literals_for_ddl(self):
         connection = AsyncMock()
+        app_connection = AsyncMock()
         with (
             patch.object(service, "get_project", new=AsyncMock(return_value=_project())),
-            patch.object(service, "_pg_connect", new=AsyncMock(return_value=connection)),
+            patch.object(service, "_pg_connect", new=AsyncMock(
+                side_effect=[connection, app_connection]
+            )),
         ):
             await service.provision_app_database(
                 1, "app1", "app1", "pass'word", None
@@ -91,10 +94,19 @@ class SupabaseProvisionTests(unittest.IsolatedAsyncioTestCase):
             connection.execute.await_args_list[0].args[0],
         )
         self.assertEqual(
-            'CREATE DATABASE "app1" OWNER "app1"',
+            'CREATE DATABASE "app1"',
             connection.execute.await_args_list[1].args[0],
         )
+        self.assertEqual(
+            'GRANT CONNECT ON DATABASE "app1" TO "app1"',
+            app_connection.execute.await_args_list[0].args[0],
+        )
+        self.assertEqual(
+            'GRANT USAGE, CREATE ON SCHEMA public TO "app1"',
+            app_connection.execute.await_args_list[1].args[0],
+        )
         connection.close.assert_awaited_once()
+        app_connection.close.assert_awaited_once()
 
 
 if __name__ == "__main__":
