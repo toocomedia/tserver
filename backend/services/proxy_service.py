@@ -32,14 +32,14 @@ async def get_all(db: AsyncSession) -> list[ReverseProxy]:
     return list(result.scalars().all())
 
 
-async def get_paginated(db: AsyncSession, limit: int = 3, offset: int = 0) -> tuple[list[ReverseProxy], int]:
-    """Retrieve a page of reverse proxies using DB LIMIT and OFFSET to minimize DB load."""
-    total_res = await db.execute(select(func.count(ReverseProxy.id)))
-    total = total_res.scalar_one_or_none() or 0
-    query = select(ReverseProxy).order_by(ReverseProxy.created_at.desc()).offset(offset).limit(limit)
-    res = await db.execute(query)
-    proxies = list(res.scalars().all())
-    return proxies, total
+from utils.pagination import paginate_query
+import config
+
+async def get_paginated(db: AsyncSession, limit: int = config.DEFAULT_PAGE_LIMIT, offset: int = 0) -> tuple[list[ReverseProxy], int]:
+    """Retrieve a page of reverse proxies using central base pagination helper."""
+    stmt = select(ReverseProxy).order_by(ReverseProxy.created_at.desc())
+    proxies, total = await paginate_query(db, stmt, offset=offset, limit=limit)
+    return list(proxies), total
 
 
 async def get_by_id(db: AsyncSession, proxy_id: int) -> ReverseProxy:

@@ -64,7 +64,7 @@ async def _build_eligible(db: AsyncSession) -> list[dict]:
 async def ssl_index(
     request: Request,
     offset: int = 0,
-    limit: int = 3,
+    limit: int = 6,
     db: AsyncSession = Depends(get_db)
 ):
     """Show issued SSL certs with live expiry status using DB LIMIT and OFFSET."""

@@ -174,13 +174,14 @@ async def _read_expiry_from_cert(cert_path: str) -> datetime | None:
 # ---------------------------------------------------------------
 # LIST CERTS (from certbot + DB)
 # ---------------------------------------------------------------
-async def list_certs_paginated(db: AsyncSession, limit: int = 3, offset: int = 0) -> tuple[list[dict], int]:
-    """Return a page of certs from DB using LIMIT and OFFSET."""
+from utils.pagination import paginate_query
+
+async def list_certs_paginated(db: AsyncSession, limit: int = config.DEFAULT_PAGE_LIMIT, offset: int = 0) -> tuple[list[dict], int]:
+    """Return a page of certs from DB using central base pagination helper."""
     now = datetime.now(timezone.utc)
     try:
-        total_res = await db.execute(select(func.count(SslCert.id)))
-        total = total_res.scalar_one_or_none() or 0
-        certs = (await db.execute(select(SslCert).order_by(SslCert.id.desc()).offset(offset).limit(limit))).scalars().all()
+        stmt = select(SslCert).order_by(SslCert.id.desc())
+        certs, total = await paginate_query(db, stmt, offset=offset, limit=limit)
     except Exception as e:
         logger.error("list_certs_paginated DB failed: %s", e)
         return [], 0

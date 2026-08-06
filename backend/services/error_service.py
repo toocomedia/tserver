@@ -150,39 +150,35 @@ async def record_exception(
 # ---------------------------------------------------------------
 # QUERIES
 # ---------------------------------------------------------------
+from utils.pagination import paginate_query
+import config
+
 async def list_errors(
     db: AsyncSession,
     *,
     resolved: bool | None = None,
     source: str | None = None,
     q: str | None = None,
-    limit: int = 3,
+    limit: int = config.DEFAULT_PAGE_LIMIT,
     offset: int = 0,
 ) -> tuple[list[ErrorEvent], int]:
     stmt = select(ErrorEvent).order_by(ErrorEvent.created_at.desc())
-    count_stmt = select(func.count(ErrorEvent.id))
     if resolved is not None:
         stmt = stmt.where(ErrorEvent.resolved == resolved)
-        count_stmt = count_stmt.where(ErrorEvent.resolved == resolved)
     if source:
         stmt = stmt.where(ErrorEvent.source == source)
-        count_stmt = count_stmt.where(ErrorEvent.source == source)
     if q:
         like = f"%{q.strip()}%"
-        cond = or_(
-            ErrorEvent.message.ilike(like),
-            ErrorEvent.operation.ilike(like),
-            ErrorEvent.detail.ilike(like),
+        stmt = stmt.where(
+            or_(
+                ErrorEvent.message.ilike(like),
+                ErrorEvent.operation.ilike(like),
+                ErrorEvent.detail.ilike(like),
+            )
         )
-        stmt = stmt.where(cond)
-        count_stmt = count_stmt.where(cond)
     
-    total_res = await db.execute(count_stmt)
-    total = total_res.scalar_one_or_none() or 0
-
-    stmt = stmt.offset(offset).limit(limit)
-    errors = list((await db.execute(stmt)).scalars().all())
-    return errors, total
+    events, total = await paginate_query(db, stmt, offset=offset, limit=limit)
+    return list(events), total
 
 
 async def get(db: AsyncSession, error_id: int) -> ErrorEvent:

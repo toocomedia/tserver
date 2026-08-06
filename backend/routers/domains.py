@@ -39,7 +39,7 @@ async def domains_bulk_action(payload: BulkActionRequest, db: AsyncSession = Dep
 async def domains_list(
     request: Request,
     offset: int = 0,
-    limit: int = 3,
+    limit: int = 6,
     db: AsyncSession = Depends(get_db)
 ):
     domains, total = await domain_service.get_paginated(db, limit=limit, offset=offset)
@@ -73,7 +73,7 @@ async def domains_list(
 @router.get("/api/items")
 async def domains_api_items(
     offset: int = 0,
-    limit: int = 3,
+    limit: int = 6,
     db: AsyncSession = Depends(get_db)
 ):
     """DB-backed paginated items endpoint for Load More button."""

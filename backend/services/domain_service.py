@@ -26,14 +26,13 @@ async def get_all(db: AsyncSession) -> list[Domain]:
     return result.scalars().all()
 
 
-async def get_paginated(db: AsyncSession, limit: int = 3, offset: int = 0) -> tuple[list[Domain], int]:
-    """Retrieve a page of domains using DB LIMIT and OFFSET to minimize DB load."""
-    total_res = await db.execute(select(func.count(Domain.id)))
-    total = total_res.scalar_one_or_none() or 0
-    query = select(Domain).order_by(Domain.created_at.desc()).offset(offset).limit(limit)
-    res = await db.execute(query)
-    domains = list(res.scalars().all())
-    return domains, total
+from utils.pagination import paginate_query
+
+async def get_paginated(db: AsyncSession, limit: int = config.DEFAULT_PAGE_LIMIT, offset: int = 0) -> tuple[list[Domain], int]:
+    """Retrieve a page of domains using central base pagination helper."""
+    stmt = select(Domain).order_by(Domain.created_at.desc())
+    domains, total = await paginate_query(db, stmt, offset=offset, limit=limit)
+    return list(domains), total
 
 
 async def get_by_id(db: AsyncSession, domain_id: int) -> Domain:

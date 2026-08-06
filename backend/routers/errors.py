@@ -27,7 +27,7 @@ async def errors_index(
     source: str | None = Query(default=None),
     q: str | None = Query(default=None),
     offset: int = Query(default=0),
-    limit: int = Query(default=3),
+    limit: int = Query(default=6),
     db: AsyncSession = Depends(get_db),
 ):
     """List error log events with DB LIMIT + OFFSET pagination."""

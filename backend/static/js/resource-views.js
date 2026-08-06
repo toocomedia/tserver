@@ -140,9 +140,9 @@ document.addEventListener('mouseout', (e) => {
 
 /**
  * Base Client-Side List Pagination ("Load More" button engine).
- * Configured with test limit of 3 items.
+ * Configured with default limit of 6 items per page.
  */
-const DEFAULT_PAGE_LIMIT = 3;
+const DEFAULT_PAGE_LIMIT = 6;
 
 function applyListPagination(container, limit = DEFAULT_PAGE_LIMIT) {
   if (!container) return;
