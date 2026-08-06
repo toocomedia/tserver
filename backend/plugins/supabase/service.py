@@ -47,23 +47,41 @@ def _decrypt_pat(project: SupabaseProject) -> str | None:
 from urllib.parse import quote
 
 
-def _dsn(project: SupabaseProject, db_name: str | None = None) -> str:
+def _dsn(project: SupabaseProject, db_name: str | None = None, use_pooler: bool = False) -> str:
     password = _decrypt_password(project)
     db = db_name or project.db_name
-    user_enc = quote(project.db_user or "postgres", safe="")
     pass_enc = quote(password or "", safe="")
-    return (
-        f"postgresql://{user_enc}:{pass_enc}"
-        f"@{project.db_host}:{project.db_port}/{db}"
-    )
+
+    if use_pooler or "pooler.supabase.com" in project.db_host:
+        region = project.region or "eu-west-1"
+        host = project.db_host if "pooler" in project.db_host else f"aws-0-{region}.pooler.supabase.com"
+        port = project.db_port if "pooler" in project.db_host else 6543
+        user_base = project.db_user or "postgres"
+        ref = project.project_ref or ""
+        user = f"{user_base}.{ref}" if ref and not user_base.endswith(f".{ref}") else user_base
+        user_enc = quote(user, safe="")
+        return f"postgresql://{user_enc}:{pass_enc}@{host}:{port}/{db}"
+
+    user_enc = quote(project.db_user or "postgres", safe="")
+    return f"postgresql://{user_enc}:{pass_enc}@{project.db_host}:{project.db_port}/{db}"
 
 
 async def _pg_connect(project: SupabaseProject, db_name: str | None = None):
-    """Return a single asyncpg connection (caller must close)."""
-    return await asyncio.wait_for(
-        asyncpg.connect(_dsn(project, db_name), ssl="require"),
-        timeout=_CONNECT_TIMEOUT,
-    )
+    """Return a single asyncpg connection (caller must close). Auto-tries IPv4 Pooler if direct IPv6 is unreachable."""
+    try:
+        return await asyncio.wait_for(
+            asyncpg.connect(_dsn(project, db_name), ssl="require"),
+            timeout=_CONNECT_TIMEOUT,
+        )
+    except (OSError, asyncpg.exceptions.CannotConnectNowError, asyncio.TimeoutError) as exc:
+        err_str = str(exc).lower()
+        if "101" in err_str or "unreachable" in err_str or "timeout" in err_str or "cannot connect" in err_str:
+            logger.info("Direct IPv6 Supabase connection failed (%s), trying IPv4 Pooler fallback...", exc)
+            return await asyncio.wait_for(
+                asyncpg.connect(_dsn(project, db_name, use_pooler=True), ssl="require"),
+                timeout=_CONNECT_TIMEOUT,
+            )
+        raise
 
 
 def _mgmt_headers(pat: str) -> dict[str, str]:
