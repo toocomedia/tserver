@@ -219,7 +219,8 @@
 <script src="/static/js/modules/proxy.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-  hideSkeleton('proxy-skeleton');
+  if (typeof hideSkeleton === 'function') hideSkeleton('proxy-skeleton');
+  else if (typeof window.hideSkeleton === 'function') window.hideSkeleton('proxy-skeleton');
 });
 
 function filterProxyTable() {

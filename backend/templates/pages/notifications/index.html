@@ -70,7 +70,8 @@
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-  hideSkeleton('notifications-skeleton');
+  if (typeof hideSkeleton === 'function') hideSkeleton('notifications-skeleton');
+  else if (typeof window.hideSkeleton === 'function') window.hideSkeleton('notifications-skeleton');
   const btnMarkAll = document.getElementById('btn-mark-all-read');
   if (btnMarkAll) {
     btnMarkAll.addEventListener('click', async () => {

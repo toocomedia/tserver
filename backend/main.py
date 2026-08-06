@@ -180,6 +180,11 @@ register_error_handlers(app)
 # Static files
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    from fastapi.responses import FileResponse
+    return FileResponse(config.BASE_DIR / "static" / "favicon.ico")
+
 # Routers
 app.include_router(auth.router)
 app.include_router(system.router)

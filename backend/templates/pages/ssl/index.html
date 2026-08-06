@@ -163,7 +163,8 @@
 <script src="/static/js/modules/ssl.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-  hideSkeleton('ssl-skeleton');
+  if (typeof hideSkeleton === 'function') hideSkeleton('ssl-skeleton');
+  else if (typeof window.hideSkeleton === 'function') window.hideSkeleton('ssl-skeleton');
 });
 
 function filterSSLTable() {

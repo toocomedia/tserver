@@ -139,7 +139,8 @@
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-  hideSkeleton('dashboard-skeleton');
+  if (typeof hideSkeleton === 'function') hideSkeleton('dashboard-skeleton');
+  else if (typeof window.hideSkeleton === 'function') window.hideSkeleton('dashboard-skeleton');
 });
 
 async function refreshStatus() {

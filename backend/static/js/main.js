@@ -181,11 +181,13 @@ function hideSkeleton(id, delay = 80) {
   if (!el || el.classList.contains("is-hidden")) return;
   setTimeout(() => el.classList.add("is-hidden"), delay);
 }
+window.hideSkeleton = hideSkeleton;
 
 function showSkeleton(id) {
   const el = document.getElementById(id);
   if (el) el.classList.remove("is-hidden");
 }
+window.showSkeleton = showSkeleton;
 
 document.addEventListener("click", (e) => {
   if (e.target.classList.contains("modal-backdrop")) {

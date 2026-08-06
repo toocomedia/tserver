@@ -78,7 +78,8 @@
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-  hideSkeleton('dependencies-skeleton');
+  if (typeof hideSkeleton === 'function') hideSkeleton('dependencies-skeleton');
+  else if (typeof window.hideSkeleton === 'function') window.hideSkeleton('dependencies-skeleton');
 });
 </script>
 {% endblock %}
