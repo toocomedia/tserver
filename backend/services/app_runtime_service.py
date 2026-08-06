@@ -40,6 +40,8 @@ async def prepare_environment(app: HostedApp, source: Path) -> None:
     )
     if app.postgres_mode == "create":
         existing = _managed_database(app, source, existing)
+    elif app.postgres_mode == "supabase":
+        existing = _replace_database_url_scheme(existing, source)
     data_dir = Path(app.work_dir) / "data"
     data_dir.mkdir(parents=True, exist_ok=True)
     env_path.write_text(
@@ -122,11 +124,7 @@ def validate_commands(build_command: str, start_command: str) -> None:
 
 def _managed_database(app: HostedApp, source: Path, existing: str) -> str:
     from plugins.postgres_manager import queries as pg
-    scheme = str(
-        app_project_detector.detect_project(source).get(
-            "database_url_scheme", "postgresql"
-        )
-    )
+    scheme = _database_url_scheme(source)
     if not app.database_name:
         app.database_name, app.database_user = f"app{app.id}", f"app{app.id}"
         password = secrets.token_urlsafe(24)
@@ -137,9 +135,21 @@ def _managed_database(app: HostedApp, source: Path, existing: str) -> str:
         password = secrets.token_urlsafe(24)
         pg.change_password(app.database_user, password)
         return existing + _database_url(scheme, app, password)
+    return _replace_database_url_scheme(existing, source)
+
+
+def _database_url_scheme(source: Path) -> str:
+    return str(
+        app_project_detector.detect_project(source).get(
+            "database_url_scheme", "postgresql"
+        )
+    )
+
+
+def _replace_database_url_scheme(existing: str, source: Path) -> str:
     return re.sub(
         r"(?m)^DATABASE_URL=postgresql(?:\+[A-Za-z0-9_]+)?://",
-        f"DATABASE_URL={scheme}://",
+        f"DATABASE_URL={_database_url_scheme(source)}://",
         existing,
     )
 
