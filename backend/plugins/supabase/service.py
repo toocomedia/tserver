@@ -145,12 +145,12 @@ def _pooler_settings(payload: Any) -> dict[str, Any] | None:
     return next((item for item in settings if item["port"] == 5432), settings[0] if settings else None)
 
 
-async def _refresh_pooler_connection(project: SupabaseProject) -> bool:
+async def _refresh_pooler_connection(project: SupabaseProject) -> str | None:
     """Read Supabase's assigned pooler hostname instead of guessing aws-0/1."""
     pat = _decrypt_pat(project)
     ref = _project_ref(project)
     if not pat or not ref:
-        return False
+        return "missing Personal Access Token or project reference"
     try:
         async with httpx.AsyncClient(timeout=10) as client:
             response = await client.get(
@@ -158,18 +158,18 @@ async def _refresh_pooler_connection(project: SupabaseProject) -> bool:
                 headers=_mgmt_headers(pat),
             )
         if not response.is_success:
-            return False
+            return f"Supabase Pooler configuration returned HTTP {response.status_code}"
         settings = _pooler_settings(response.json())
         if not settings:
-            return False
+            return "Supabase returned no usable Session Pooler connection"
         project.db_host = settings["host"]
         project.db_port = settings["port"]
         project.db_user = settings["user"]
         project.db_name = settings["database"]
-        return True
+        return None
     except (httpx.HTTPError, ValueError):
         logger.info("Could not refresh Supabase pooler connection for project %s", ref)
-        return False
+        return "could not fetch Supabase Pooler configuration"
 
 
 async def _pg_connect(project: SupabaseProject, db_name: str | None = None):
@@ -183,12 +183,20 @@ async def _pg_connect(project: SupabaseProject, db_name: str | None = None):
         if not _should_use_pooler(project, exc):
             raise
         logger.info("Direct Supabase connection failed (%s), trying IPv4 Session Pooler...", exc)
-        if not await _refresh_pooler_connection(project):
+        config_error = await _refresh_pooler_connection(project)
+        if config_error:
             await _refresh_project_region(project)
-        return await asyncio.wait_for(
-            asyncpg.connect(_dsn(project, db_name, use_pooler=True), ssl="require"),
-            timeout=_CONNECT_TIMEOUT,
-        )
+        try:
+            return await asyncio.wait_for(
+                asyncpg.connect(_dsn(project, db_name, use_pooler=True), ssl="require"),
+                timeout=_CONNECT_TIMEOUT,
+            )
+        except Exception as pooler_exc:
+            endpoint = f"{project.db_host}:{project.db_port} as {project.db_user}"
+            detail = f"Pooler endpoint {endpoint}."
+            if config_error:
+                detail += f" Auto-discovery: {config_error}."
+            raise ConnectionError(f"{pooler_exc} ({detail})") from pooler_exc
 
 
 def _mgmt_headers(pat: str) -> dict[str, str]:
