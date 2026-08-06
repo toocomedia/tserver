@@ -335,9 +335,11 @@
     try {
       const data = await panel.get('/api/stats');
       render(data);
-      setUsageLoading(false);
       markUsageUpdated();
       hideSkeleton('usage-skeleton');
+      // Defer un-dimming live sections until after the skeleton fade-out completes
+      // (skeleton-fade-duration is 0.4s; 80ms hideSkeleton delay + 420ms buffer = 500ms).
+      setTimeout(() => setUsageLoading(false), 500);
     } catch (e) {
       markUsageUpdated('Waiting for server data…');
       fetchOptimizationStatus();

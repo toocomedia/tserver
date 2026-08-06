@@ -222,6 +222,17 @@
   min-height: 38px;
   padding: 0 16px;
   border-bottom: 1px solid var(--color-line);
+  /* shimmer on the row itself — inner sk-* children keep static fill */
+  background: linear-gradient(
+    100deg,
+    var(--color-surface) 0%,
+    var(--color-surface) 40%,
+    var(--color-line) 50%,
+    var(--color-surface) 60%,
+    var(--color-surface) 100%
+  );
+  background-size: 300% 100%;
+  animation: skeleton-shimmer var(--skeleton-shimmer-duration) infinite ease-in-out;
 }
 .skeleton-row .sk-label {
   width: 140px;
@@ -248,10 +259,20 @@
 .skeleton-table-header {
   display: flex;
   height: 36px;
-  background: var(--color-header-bg-bar);
   padding: 0 14px;
   gap: 16px;
   align-items: center;
+  /* shimmer — overrides static header-bg-bar so the wave is visible */
+  background: linear-gradient(
+    100deg,
+    var(--color-header-bg-bar) 0%,
+    var(--color-header-bg-bar) 40%,
+    var(--color-line) 50%,
+    var(--color-header-bg-bar) 60%,
+    var(--color-header-bg-bar) 100%
+  );
+  background-size: 300% 100%;
+  animation: skeleton-shimmer var(--skeleton-shimmer-duration) infinite ease-in-out;
 }
 .skeleton-table-header .sk-th {
   height: 8px;
@@ -263,6 +284,17 @@
   gap: 16px;
   align-items: center;
   border-bottom: 1px solid var(--color-line);
+  /* shimmer on each row — inner sk-td keep static fill */
+  background: linear-gradient(
+    100deg,
+    var(--color-surface) 0%,
+    var(--color-surface) 40%,
+    var(--color-line) 50%,
+    var(--color-surface) 60%,
+    var(--color-surface) 100%
+  );
+  background-size: 300% 100%;
+  animation: skeleton-shimmer var(--skeleton-shimmer-duration) infinite ease-in-out;
 }
 .skeleton-table-row .sk-td {
   height: 12px;
@@ -280,6 +312,17 @@
   min-height: 48px;
   padding: 10px 16px;
   border-bottom: 1px solid var(--color-line);
+  /* shimmer on the row — inner sk-* keep static fill */
+  background: linear-gradient(
+    100deg,
+    var(--color-surface) 0%,
+    var(--color-surface) 40%,
+    var(--color-line) 50%,
+    var(--color-surface) 60%,
+    var(--color-surface) 100%
+  );
+  background-size: 300% 100%;
+  animation: skeleton-shimmer var(--skeleton-shimmer-duration) infinite ease-in-out;
 }
 .skeleton-control-row .sk-text {
   width: 220px;

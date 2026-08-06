@@ -178,10 +178,13 @@ document.addEventListener("DOMContentLoaded", function() {
       return res.text();
     })
     .then(function(html) {
-      container.classList.add("skeleton-content--enter");
       container.innerHTML = html;
+      container.classList.add("skeleton-content--enter");
+      // Double-rAF: first frame commits opacity:0, second triggers the CSS transition.
       requestAnimationFrame(function() {
-        container.classList.remove("skeleton-content--enter");
+        requestAnimationFrame(function() {
+          container.classList.remove("skeleton-content--enter");
+        });
       });
       var evt = new CustomEvent("asyncLoaded", { detail: { container: container } });
       document.dispatchEvent(evt);
