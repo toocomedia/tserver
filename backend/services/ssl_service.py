@@ -180,7 +180,7 @@ async def list_certs_paginated(db: AsyncSession, limit: int = 3, offset: int = 0
     try:
         total_res = await db.execute(select(func.count(SslCert.id)))
         total = total_res.scalar_one_or_none() or 0
-        certs = (await db.execute(select(SslCert).order_by(SslCert.created_at.desc()).offset(offset).limit(limit))).scalars().all()
+        certs = (await db.execute(select(SslCert).order_by(SslCert.id.desc()).offset(offset).limit(limit))).scalars().all()
     except Exception as e:
         logger.error("list_certs_paginated DB failed: %s", e)
         return [], 0
