@@ -56,7 +56,7 @@ def _dsn(project: SupabaseProject, db_name: str | None = None) -> str:
 async def _pg_connect(project: SupabaseProject, db_name: str | None = None):
     """Return a single asyncpg connection (caller must close)."""
     return await asyncio.wait_for(
-        asyncpg.connect(_dsn(project, db_name)),
+        asyncpg.connect(_dsn(project, db_name), ssl="require"),
         timeout=_CONNECT_TIMEOUT,
     )
 
