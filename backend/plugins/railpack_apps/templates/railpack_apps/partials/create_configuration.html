@@ -2,10 +2,10 @@
   <span class="section-label">3. Configuration & Database Services</span>
 
   <div class="apps-engine-runtime-grid" style="margin-bottom: 20px;">
-    <div class="form-group" data-build-mode-group>
-      <span class="section-label" style="font-size:13px;">Build Method</span>
-      <div class="form-select-wrap">
-        <select class="form-select input-optic" id="build_mode" name="build_mode">
+    <div class="dropdown-optic" data-build-mode-group>
+      <label class="dropdown-optic__label" for="build_mode" style="font-size:13px;">Build Method</label>
+      <div class="dropdown-optic__wrap">
+        <select class="dropdown-optic__select" id="build_mode" name="build_mode">
           <option value="railpack">Automatic Railpack</option>
           <option value="dockerfile">Dockerfile</option>
         </select>
@@ -25,22 +25,20 @@
       <div class="optic-card apps-engine-database-choice" id="database-config-mariadb" data-database-row data-kind="mariadb">
         <label class="form-check" style="cursor:pointer; width:100%; display:flex; flex-direction:column; align-items:center; gap:8px;">
           <input type="checkbox" data-database-enabled style="display:none;">
-          <div class="optic-card__icon">
-            <img src="/static/images/apps-engine/database-mariadb.svg" alt="MySQL" aria-hidden="true">
-          </div>
-          <div class="optic-card__name">MySQL</div>
+          <span class="optic-icon icon-mysql"></span>
+          <span class="optic-card__name">MySQL</span>
         </label>
         <div class="form-subbox" data-database-options hidden style="width:100%; margin-top:8px;">
-          <div class="form-group">
-            <span class="section-label" style="font-size:11px;">Provider</span>
-            <div class="form-select-wrap">
-              <select class="form-select input-optic" id="database-provider-mariadb" data-database-provider style="height:32px; font-size:12px;">
+          <div class="dropdown-optic">
+            <label class="dropdown-optic__label" for="database-provider-mariadb" style="font-size:11px;">Provider</label>
+            <div class="dropdown-optic__wrap">
+              <select class="dropdown-optic__select dropdown-optic__select--sm" id="database-provider-mariadb" data-database-provider>
                 <option value="docker">Panel Docker</option>
                 <option value="external">External URL</option>
               </select>
             </div>
           </div>
-          <div class="form-group" data-database-external hidden>
+          <div class="form-group" data-database-external hidden style="margin-top:6px;">
             <input class="input-optic input-optic--code" id="database-url-mariadb" data-database-url type="password" autocomplete="off" placeholder="Connection URL" style="height:32px; font-size:12px;">
           </div>
         </div>
@@ -51,16 +49,14 @@
       <div class="optic-card apps-engine-database-choice" id="database-config-postgresql" data-database-row data-kind="postgresql">
         <label class="form-check" style="cursor:pointer; width:100%; display:flex; flex-direction:column; align-items:center; gap:8px;">
           <input type="checkbox" data-database-enabled style="display:none;">
-          <div class="optic-card__icon">
-            <img src="/static/images/apps-engine/postgresql.svg" alt="PostgreSQL" aria-hidden="true">
-          </div>
-          <div class="optic-card__name">PostgreSQL</div>
+          <span class="optic-icon icon-postgresql"></span>
+          <span class="optic-card__name">PostgreSQL</span>
         </label>
         <div class="form-subbox" data-database-options hidden style="width:100%; margin-top:8px;">
-          <div class="form-group">
-            <span class="section-label" style="font-size:11px;">Provider</span>
-            <div class="form-select-wrap">
-              <select class="form-select input-optic" id="database-provider-postgresql" data-database-provider style="height:32px; font-size:12px;">
+          <div class="dropdown-optic">
+            <label class="dropdown-optic__label" for="database-provider-postgresql" style="font-size:11px;">Provider</label>
+            <div class="dropdown-optic__wrap">
+              <select class="dropdown-optic__select dropdown-optic__select--sm" id="database-provider-postgresql" data-database-provider>
                 <option value="docker">Panel Docker</option>
                 <option value="panel_postgres">Panel PostgreSQL</option>
                 {% if supabase_projects %}<option value="supabase">Supabase</option>{% endif %}
@@ -69,9 +65,9 @@
             </div>
           </div>
           {% if supabase_projects %}
-          <div class="form-group" data-database-supabase-picker hidden>
-            <div class="form-select-wrap">
-              <select class="form-select input-optic" id="database-supabase-project-postgresql" data-database-supabase-project style="height:32px; font-size:12px;">
+          <div class="dropdown-optic" data-database-supabase-picker hidden style="margin-top:6px;">
+            <div class="dropdown-optic__wrap">
+              <select class="dropdown-optic__select dropdown-optic__select--sm" id="database-supabase-project-postgresql" data-database-supabase-project>
                 <option value="">Select Supabase</option>
                 {% for sp in supabase_projects %}
                 <option value="{{ sp.id }}">{{ sp.name }}</option>
@@ -80,7 +76,7 @@
             </div>
           </div>
           {% endif %}
-          <div class="form-group" data-database-external hidden>
+          <div class="form-group" data-database-external hidden style="margin-top:6px;">
             <input class="input-optic input-optic--code" id="database-url-postgresql" data-database-url type="password" autocomplete="off" placeholder="Connection URL" style="height:32px; font-size:12px;">
           </div>
         </div>
@@ -91,22 +87,20 @@
       <div class="optic-card apps-engine-database-choice" id="database-config-redis" data-database-row data-kind="redis">
         <label class="form-check" style="cursor:pointer; width:100%; display:flex; flex-direction:column; align-items:center; gap:8px;">
           <input type="checkbox" data-database-enabled style="display:none;">
-          <div class="optic-card__icon">
-            <img src="/static/images/apps-engine/database-redis.svg" alt="Redis" aria-hidden="true">
-          </div>
-          <div class="optic-card__name">Redis</div>
+          <span class="optic-icon icon-redis"></span>
+          <span class="optic-card__name">Redis</span>
         </label>
         <div class="form-subbox" data-database-options hidden style="width:100%; margin-top:8px;">
-          <div class="form-group">
-            <span class="section-label" style="font-size:11px;">Provider</span>
-            <div class="form-select-wrap">
-              <select class="form-select input-optic" id="database-provider-redis" data-database-provider style="height:32px; font-size:12px;">
+          <div class="dropdown-optic">
+            <label class="dropdown-optic__label" for="database-provider-redis" style="font-size:11px;">Provider</label>
+            <div class="dropdown-optic__wrap">
+              <select class="dropdown-optic__select dropdown-optic__select--sm" id="database-provider-redis" data-database-provider>
                 <option value="docker">Panel Docker</option>
                 <option value="external">External URL</option>
               </select>
             </div>
           </div>
-          <div class="form-group" data-database-external hidden>
+          <div class="form-group" data-database-external hidden style="margin-top:6px;">
             <input class="input-optic input-optic--code" id="database-url-redis" data-database-url type="password" autocomplete="off" placeholder="Connection URL" style="height:32px; font-size:12px;">
           </div>
         </div>
@@ -117,22 +111,20 @@
       <div class="optic-card apps-engine-database-choice" id="database-config-mongodb" data-database-row data-kind="mongodb">
         <label class="form-check" style="cursor:pointer; width:100%; display:flex; flex-direction:column; align-items:center; gap:8px;">
           <input type="checkbox" data-database-enabled style="display:none;">
-          <div class="optic-card__icon">
-            <img src="/static/images/apps-engine/database-mongodb.svg" alt="MongoDB" aria-hidden="true">
-          </div>
-          <div class="optic-card__name">MongoDB</div>
+          <span class="optic-icon icon-mongodb"></span>
+          <span class="optic-card__name">MongoDB</span>
         </label>
         <div class="form-subbox" data-database-options hidden style="width:100%; margin-top:8px;">
-          <div class="form-group">
-            <span class="section-label" style="font-size:11px;">Provider</span>
-            <div class="form-select-wrap">
-              <select class="form-select input-optic" id="database-provider-mongodb" data-database-provider style="height:32px; font-size:12px;">
+          <div class="dropdown-optic">
+            <label class="dropdown-optic__label" for="database-provider-mongodb" style="font-size:11px;">Provider</label>
+            <div class="dropdown-optic__wrap">
+              <select class="dropdown-optic__select dropdown-optic__select--sm" id="database-provider-mongodb" data-database-provider>
                 <option value="docker">Panel Docker</option>
                 <option value="external">External URL</option>
               </select>
             </div>
           </div>
-          <div class="form-group" data-database-external hidden>
+          <div class="form-group" data-database-external hidden style="margin-top:6px;">
             <input class="input-optic input-optic--code" id="database-url-mongodb" data-database-url type="password" autocomplete="off" placeholder="Connection URL" style="height:32px; font-size:12px;">
           </div>
         </div>

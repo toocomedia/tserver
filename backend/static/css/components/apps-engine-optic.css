@@ -1,6 +1,7 @@
 /* ============================================================
    APPS ENGINE OPTIC — MODULAR BORDERLESS UI/UX COMPONENT CSS
    Scoped to .apps-engine-optic to protect global panel styles
+   Dynamic mode adaptation using panel CSS variables
    ============================================================ */
 
 .apps-engine-optic {
@@ -20,7 +21,7 @@
 .apps-engine-optic .step-tab-optic {
   flex: 1;
   text-align: center;
-  padding: 10px 0;
+  padding: 12px 0;
   font-size: 13px;
   font-weight: 600;
   color: var(--color-muted, #94a3b8);
@@ -38,7 +39,7 @@
 }
 
 .apps-engine-optic .step-tab-optic.active {
-  background: var(--bg-card-selected, rgba(255, 255, 255, 0.13));
+  background: var(--bg-card-selected, rgba(255, 255, 255, 0.14));
   color: var(--color-text, #ffffff);
   font-weight: 700;
 }
@@ -98,10 +99,75 @@
   font-size: 12px;
 }
 
-/* Borderless Optic Inputs & Dropdowns */
-.apps-engine-optic .input-optic,
+/* Modular Optic Dropdown Component */
+.apps-engine-optic .dropdown-optic {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+
+.apps-engine-optic .dropdown-optic__label {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--color-text, #ffffff);
+}
+
+.apps-engine-optic .dropdown-optic__wrap {
+  position: relative;
+  width: 100%;
+}
+
+.apps-engine-optic .dropdown-optic__select,
 .apps-engine-optic select.input-optic,
 .apps-engine-optic .form-select-wrap select {
+  width: 100%;
+  height: 42px;
+  padding: 0 38px 0 14px;
+  font-size: 13px;
+  font-family: inherit;
+  background-color: var(--bg-card, rgba(255, 255, 255, 0.05));
+  color: var(--color-text, #ffffff);
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  outline: none !important;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23cbd5e1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.apps-engine-optic .dropdown-optic__select option,
+.apps-engine-optic select.input-optic option,
+.apps-engine-optic .form-select-wrap select option {
+  background-color: var(--color-surface, var(--bg-main, #1e293b));
+  color: var(--color-text, #ffffff);
+  padding: 10px 14px;
+  font-size: 13px;
+}
+
+.apps-engine-optic .dropdown-optic__select:hover, 
+.apps-engine-optic .dropdown-optic__select:focus,
+.apps-engine-optic select.input-optic:hover,
+.apps-engine-optic select.input-optic:focus,
+.apps-engine-optic .form-select-wrap select:hover,
+.apps-engine-optic .form-select-wrap select:focus {
+  background-color: var(--bg-card-hover, rgba(255, 255, 255, 0.1));
+  color: var(--color-text, #ffffff);
+}
+
+.apps-engine-optic .dropdown-optic__select--sm {
+  height: 34px;
+  font-size: 12px;
+  padding: 0 30px 0 10px;
+}
+
+.apps-engine-optic .input-optic {
   width: 100%;
   height: 42px;
   padding: 0 14px;
@@ -116,31 +182,8 @@
   transition: background-color 0.15s ease;
 }
 
-.apps-engine-optic select.input-optic,
-.apps-engine-optic .form-select-wrap select {
-  padding-right: 36px;
-  appearance: none;
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 14px center;
-  cursor: pointer;
-}
-
-.apps-engine-optic select.input-optic option,
-.apps-engine-optic .form-select-wrap select option {
-  background-color: var(--color-surface, #1e293b);
-  color: var(--color-text, #ffffff);
-  padding: 10px;
-}
-
-.apps-engine-optic .input-optic:hover, 
-.apps-engine-optic .input-optic:focus,
-.apps-engine-optic select.input-optic:hover,
-.apps-engine-optic select.input-optic:focus,
-.apps-engine-optic .form-select-wrap select:hover,
-.apps-engine-optic .form-select-wrap select:focus {
+.apps-engine-optic .input-optic:hover,
+.apps-engine-optic .input-optic:focus {
   background-color: var(--bg-card-hover, rgba(255, 255, 255, 0.1));
 }
 
@@ -180,24 +223,26 @@
   gap: 10px;
   padding: 20px 16px;
   background: var(--bg-card, rgba(255, 255, 255, 0.05));
-  color: var(--color-text, #ffffff);
+  color: var(--color-muted, #cbd5e1);
   border: none !important;
   border-radius: 0 !important;
   box-shadow: none !important;
   cursor: pointer;
-  transition: background 0.15s ease;
+  transition: background 0.15s ease, color 0.15s ease;
   position: relative;
   text-align: center;
 }
 
 .apps-engine-optic .optic-card:hover {
   background: var(--bg-card-hover, rgba(255, 255, 255, 0.09));
+  color: var(--color-text, #ffffff);
 }
 
 .apps-engine-optic .optic-card.selected,
 .apps-engine-optic .optic-card.settings-choice--active,
 .apps-engine-optic .optic-card:has(input:checked) {
   background: var(--bg-card-selected, rgba(255, 255, 255, 0.14));
+  color: var(--color-text, #ffffff);
 }
 
 .apps-engine-optic .optic-card.selected::before,
@@ -212,26 +257,53 @@
   background: var(--color-accent, #C7F464);
 }
 
-.apps-engine-optic .optic-card__icon {
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--color-muted, #cbd5e1);
-  transition: color 0.15s ease;
-}
-
-.apps-engine-optic .optic-card.selected .optic-card__icon,
-.apps-engine-optic .optic-card.settings-choice--active .optic-card__icon,
-.apps-engine-optic .optic-card:has(input:checked) .optic-card__icon {
-  color: var(--color-text, #ffffff);
-}
-
-.apps-engine-optic .optic-card__icon svg,
-.apps-engine-optic .optic-card__icon img {
+/* Clean Mode-Adaptive CSS Icon Masks */
+.apps-engine-optic .optic-icon {
+  display: inline-block;
   width: 28px;
   height: 28px;
+  background-color: currentColor;
+  mask-repeat: no-repeat;
+  mask-position: center;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  -webkit-mask-size: contain;
+}
+
+.apps-engine-optic .icon-git {
+  mask-image: url('/static/images/apps-engine/git.svg');
+  -webkit-mask-image: url('/static/images/apps-engine/git.svg');
+}
+
+.apps-engine-optic .icon-docker {
+  mask-image: url('/static/images/apps-engine/docker.svg');
+  -webkit-mask-image: url('/static/images/apps-engine/docker.svg');
+}
+
+.apps-engine-optic .icon-wordpress {
+  mask-image: url('/static/images/apps-engine/wordpress.svg');
+  -webkit-mask-image: url('/static/images/apps-engine/wordpress.svg');
+}
+
+.apps-engine-optic .icon-postgresql {
+  mask-image: url('/static/images/apps-engine/postgresql.svg');
+  -webkit-mask-image: url('/static/images/apps-engine/postgresql.svg');
+}
+
+.apps-engine-optic .icon-mysql {
+  mask-image: url('/static/images/apps-engine/database-mariadb.svg');
+  -webkit-mask-image: url('/static/images/apps-engine/database-mariadb.svg');
+}
+
+.apps-engine-optic .icon-redis {
+  mask-image: url('/static/images/apps-engine/database-redis.svg');
+  -webkit-mask-image: url('/static/images/apps-engine/database-redis.svg');
+}
+
+.apps-engine-optic .icon-mongodb {
+  mask-image: url('/static/images/apps-engine/database-mongodb.svg');
+  -webkit-mask-image: url('/static/images/apps-engine/database-mongodb.svg');
 }
 
 .apps-engine-optic .optic-card__name {
@@ -245,6 +317,50 @@
   margin-bottom: 12px;
   display: block;
   color: var(--color-text, #ffffff);
+}
+
+/* Step 2 Inspection Card Layout Structure */
+.apps-engine-optic .inspection-card-optic {
+  background: var(--bg-card, rgba(255, 255, 255, 0.05));
+  padding: 24px;
+  border: none !important;
+  margin-bottom: 24px;
+}
+
+.apps-engine-optic .inspection-grid-optic {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
+@media (max-width: 640px) {
+  .apps-engine-optic .inspection-grid-optic {
+    grid-template-columns: 1fr;
+  }
+}
+
+.apps-engine-optic .inspection-item-optic {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.apps-engine-optic .inspection-label-optic {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--color-muted, #94a3b8);
+}
+
+.apps-engine-optic .inspection-value-optic {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--color-text, #ffffff);
+}
+
+.apps-engine-optic .inspection-value-optic.accent {
+  color: var(--color-accent, #C7F464);
 }
 
 /* Custom Environment Variables Styling */

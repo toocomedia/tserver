@@ -1,10 +1,10 @@
 <section class="unboxed-step-container" data-wizard-panel="1">
   <span class="section-label">Select App Source</span>
 
-  <div class="form-group" style="margin-bottom: 20px;">
-    <label class="section-label" for="domain_id" style="font-size:13px;">Target Domain</label>
-    <div class="form-select-wrap">
-      <select class="form-select input-optic" id="domain_id" name="domain_id" required data-domain-select>
+  <div class="dropdown-optic" style="margin-bottom: 20px;">
+    <label class="dropdown-optic__label" for="domain_id">Target Domain</label>
+    <div class="dropdown-optic__wrap">
+      <select class="dropdown-optic__select" id="domain_id" name="domain_id" required data-domain-select>
         {% for domain in domains %}
         <option value="{{ domain.id }}" data-domain-name="{{ domain.name }}" data-domain-ssl="{{ 'true' if domain.name in ssl_domain_names else 'false' }}" {% if domain.id in used_domain_ids or domain.project_type != 'static' %}disabled{% endif %}>
           {{ domain.name }}{% if domain.id in used_domain_ids %} — in use{% elif domain.project_type != 'static' %} — unavailable{% endif %}
@@ -14,36 +14,23 @@
     </div>
   </div>
 
-  <!-- Cards Grid referencing saved SVG icons from static folder -->
   <div class="cards-grid-3">
-    <!-- Git Card -->
     <div class="optic-card selected" data-source-card="git">
-      <div class="optic-card__icon">
-        <img src="/static/images/apps-engine/git.svg" alt="Git" aria-hidden="true">
-      </div>
-      <div class="optic-card__name">Git Repository</div>
+      <span class="optic-icon icon-git"></span>
+      <span class="optic-card__name">Git Repository</span>
     </div>
-
-    <!-- Docker Card -->
     <div class="optic-card" data-source-card="image">
-      <div class="optic-card__icon">
-        <img src="/static/images/apps-engine/docker.svg" alt="Docker" aria-hidden="true">
-      </div>
-      <div class="optic-card__name">Docker Image</div>
+      <span class="optic-icon icon-docker"></span>
+      <span class="optic-card__name">Docker Image</span>
     </div>
-
-    <!-- WordPress Card -->
     <div class="optic-card" data-source-card="wordpress">
-      <div class="optic-card__icon">
-        <img src="/static/images/apps-engine/wordpress.svg" alt="WordPress" aria-hidden="true">
-      </div>
-      <div class="optic-card__name">WordPress</div>
+      <span class="optic-icon icon-wordpress"></span>
+      <span class="optic-card__name">WordPress</span>
     </div>
   </div>
 
   <input type="hidden" id="source_type" name="source_type" value="git" data-source-type>
 
-  <!-- Git Source Fields -->
   <div class="apps-engine-source-grid" data-git-fields>
     <div class="form-group">
       <span class="section-label" style="font-size:13px;">Repository URL</span>
@@ -55,7 +42,6 @@
     </div>
   </div>
 
-  <!-- Docker Image Field -->
   <div class="form-group" data-image-field hidden>
     <span class="section-label" style="font-size:13px;">Registry Image</span>
     <input class="input-optic input-optic--code" id="image_reference" name="image_reference" placeholder="ghcr.io/org/app:1.0" data-image-reference>
