@@ -745,43 +745,38 @@
   justify-content: center;
 }
 
-/* Small versions of login geometric shapes */
-.shape-square-sm, .shape-torus-sm, .shape-circle-sm, .shape-triangle-sm {
-  animation: shape-shuffle 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.6s backwards;
+/* Shape Sequencer (Multi-shape morph) */
+.shape-sequencer {
+  position: relative;
+  width: 100px;
+  height: 100px;
+  margin: 0 auto 60px auto;
+}
+.shape-sequencer > div {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-@keyframes shape-shuffle {
-  0% {
-    border-radius: 0 !important;
-    clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
-    background-color: var(--shape-fill-accent);
-    border: none !important;
-    transform: rotate(-28deg) scale(0.6);
-  }
-  30% {
-    clip-path: none;
-    border-radius: 50% !important;
-    background-color: transparent;
-    border: 24px solid var(--shape-fill-dark) !important;
-    transform: rotate(-12deg) scale(0.8);
-  }
-  60% {
-    clip-path: none;
-    border-radius: 16px !important;
-    background-color: var(--shape-fill-accent);
-    border: 1px solid var(--shape-border-accent) !important;
-    transform: rotate(22deg) scale(1.1);
-  }
-  90% {
-    clip-path: none;
-    border-radius: 50% !important;
-    background-color: var(--shape-fill-dark);
-    border: 1px solid var(--shape-border-dark) !important;
-    transform: rotate(0deg) scale(1.05);
-  }
-  100% {
-    transform: scale(1);
-  }
+.seq-1 { animation: seq-pop 0.5s ease-in-out 0.6s forwards; }
+.seq-2 { animation: seq-pop 0.5s ease-in-out 0.8s forwards; }
+.seq-3 { animation: seq-pop 0.5s ease-in-out 1.0s forwards; }
+.seq-final { animation: seq-final 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) 1.2s forwards; }
+
+@keyframes seq-pop {
+  0% { opacity: 0; transform: scale(0.5); }
+  40% { opacity: 1; transform: scale(1.1); }
+  100% { opacity: 0; transform: scale(1.5); }
+}
+@keyframes seq-final {
+  0% { opacity: 0; transform: scale(0.5); }
+  100% { opacity: 1; transform: scale(1); }
 }
 
 .shape-square-sm {
