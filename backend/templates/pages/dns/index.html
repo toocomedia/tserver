@@ -63,41 +63,27 @@
               <span class="badge-minimal badge-minimal--danger">MISSING</span>
             {% endif %}
           </td>
-          <td class="col-actions">
-            <button type="button" class="icon-btn list-actions-toggle-btn" onclick="toggleListRowActions(this)" aria-expanded="false" title="Actions">
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="1.5"></circle>
-                <circle cx="19" cy="12" r="1.5"></circle>
-                <circle cx="5" cy="12" r="1.5"></circle>
-              </svg>
-            </button>
-          </td>
-        </tr>
-        <tr class="table-row-subactions-tr is-hidden">
-          <td colspan="4" style="padding:0; border-bottom:1px solid var(--color-line);">
-            <div class="list-row-subactions">
-              <div class="list-row-subactions__inner">
-                <div class="list-row-subactions__btns">
-                  {% if z.zone_exists %}
-                  <a href="/dns/{{ z.domain.name }}/records?add=1"
-                     class="btn btn--primary btn--sm"
-                     title="Add DNS Record"
-                     id="btn-add-{{ z.domain.name }}">
-                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
-                    <span>+ Add Record</span>
-                  </a>
-                  {% endif %}
-                  <a href="/dns/{{ z.domain.name }}/records"
-                     class="btn btn--secondary btn--sm"
-                     title="Manage DNS Zone"
-                     id="btn-view-{{ z.domain.name }}">
-                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-                    <span>Manage Zone</span>
-                  </a>
-                </div>
-                <button type="button" class="btn btn--ghost btn--icon btn--sm" onclick="toggleListRowActions(this)" aria-label="Close" title="Close"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"></path></svg></button>
-              </div>
-            </div>
+          <td class="col-actions" style="position:relative;">
+            {% import "partials/list_actions_toggle.html" as list_actions %}
+            {{ list_actions.button() }}
+            {% call list_actions.tray() %}
+              {% if z.zone_exists %}
+              <a href="/dns/{{ z.domain.name }}/records?add=1"
+                 class="btn btn--primary btn--sm"
+                 title="Add DNS Record"
+                 id="btn-add-{{ z.domain.name }}">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+                <span>+ Add Record</span>
+              </a>
+              {% endif %}
+              <a href="/dns/{{ z.domain.name }}/records"
+                 class="btn btn--secondary btn--sm"
+                 title="Manage DNS Zone"
+                 id="btn-view-{{ z.domain.name }}">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                <span>Manage Zone</span>
+              </a>
+            {% endcall %}
           </td>
         </tr>
         {% endfor %}

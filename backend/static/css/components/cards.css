@@ -1023,8 +1023,8 @@
   padding: 0 20px;
   gap: 8px;
   z-index: 5;
-  transform: translateX(100%);
-  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  clip-path: inset(0 0 0 100%);
+  transition: clip-path 0.28s cubic-bezier(0.16, 1, 0.3, 1);
   box-shadow: none !important;
   margin: 0;
 }
@@ -1042,20 +1042,17 @@
 
 .is-actions-open > .list-row-subactions.slide-toolbar,
 .is-actions-open > td > .list-row-subactions.slide-toolbar {
-  transform: translateX(0);
+  clip-path: inset(0 0 0 0%);
 }
 
 .list-row-subactions.is-hidden {
   display: flex !important; /* override is-hidden to keep transition active */
-  transform: translateX(100%);
+  clip-path: inset(0 0 0 100%);
   pointer-events: none;
-  visibility: hidden;
-  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), visibility 0s 0.28s;
 }
 
 .list-row-subactions:not(.is-hidden) {
-  visibility: visible;
-  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), visibility 0s 0s;
+  /* No visibility rule needed anymore */
 }
 
 .list-row-subactions__inner {

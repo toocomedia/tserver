@@ -116,24 +116,15 @@
             <span class="badge badge--error badge--dot">Open</span>
           {% endif %}
         </td>
-        <td class="col-actions">
+        <td class="col-actions" style="position:relative;">
           {% import "partials/list_actions_toggle.html" as list_actions %}
           {{ list_actions.button() }}
-        </td>
-      </tr>
-      <tr class="table-row-subactions-tr is-hidden">
-        <td colspan="6" style="padding:0;">
-          <div class="list-row-subactions">
-            <div class="list-row-subactions__inner">
-              <div class="list-row-subactions__btns">
-                <a href="/admin/errors/{{ e.id }}" class="btn btn--primary btn--sm">
-                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
-                  <span>View Details</span>
-                </a>
-              </div>
-              <button type="button" class="btn btn--ghost btn--icon btn--sm" onclick="toggleListRowActions(this)" aria-label="Close" title="Close"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"></path></svg></button>
-            </div>
-          </div>
+          {% call list_actions.tray() %}
+            <a href="/admin/errors/{{ e.id }}" class="btn btn--primary btn--sm">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+              <span>View Details</span>
+            </a>
+          {% endcall %}
         </td>
       </tr>
       {% endfor %}
