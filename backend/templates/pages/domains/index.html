@@ -140,7 +140,9 @@
 </div>
 {% else %}
 <div class="empty-state" id="empty-state">
-  {% include 'partials/shape_sequencer.html' %}
+  <div class="empty-state__shape">
+    <div class="shape-torus-sm"></div>
+  </div>
   <h3 class="empty-state__title">No domains configured</h3>
   <p class="empty-state__desc">Add your first domain to start managing DNS, SSL, and Nginx routing.</p>
   <div class="empty-state__actions">

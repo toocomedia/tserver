@@ -213,7 +213,9 @@
 </div>
 {% else %}
 <div class="empty-state" id="empty-state">
-  {% include 'partials/shape_sequencer.html' %}
+  <div class="empty-state__shape">
+    <div class="shape-square-sm"></div>
+  </div>
   <h3 class="empty-state__title">No reverse proxies yet</h3>
   <p class="empty-state__desc">Route incoming traffic to your local ports or external services by creating your first proxy.</p>
   <div class="empty-state__actions">

@@ -158,7 +158,9 @@
 </div>
 {% else %}
 <div class="empty-state" id="empty-state">
-  {% include 'partials/shape_sequencer.html' %}
+  <div class="empty-state__shape">
+    <div class="shape-triangle-sm"></div>
+  </div>
   <h3 class="empty-state__title">No SSL certificates</h3>
   <p class="empty-state__desc">Secure your domains with free Let's Encrypt certificates.</p>
   <div class="empty-state__actions">

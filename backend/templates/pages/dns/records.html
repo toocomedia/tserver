@@ -102,7 +102,9 @@
 </div>
 {% else %}
 <div class="empty-state" id="no-records">
-  {% include 'partials/shape_sequencer.html' %}
+  <div class="empty-state__shape">
+    <div class="shape-torus-sm"></div>
+  </div>
   <h3 class="empty-state__title">No records in this zone</h3>
   <p class="empty-state__desc">Add custom A, AAAA, CNAME, TXT, or MX records for your domain.</p>
   <div class="empty-state__actions">
