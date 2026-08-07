@@ -644,14 +644,27 @@ async def deprovision_app_database(
     proj = await get_project(db, project_id)
     conn = await _pg_connect(proj)
     try:
-        await conn.execute(
-            f"SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = $1",
-            database_name,
-        )
-        await conn.execute(f"DROP DATABASE IF EXISTS {_identifier(database_name)}")
+        await _drop_database_after_terminating_sessions(conn, database_name)
         await conn.execute(f"DROP USER IF EXISTS {_identifier(username)}")
     finally:
         await conn.close()
+
+
+async def _drop_database_after_terminating_sessions(conn, database_name: str) -> None:
+    """Supavisor can briefly retain a session after systemd stops an app."""
+    for attempt in range(5):
+        await conn.execute(
+            "SELECT pg_terminate_backend(pid) FROM pg_stat_activity "
+            "WHERE datname = $1 AND pid <> pg_backend_pid()",
+            database_name,
+        )
+        try:
+            await conn.execute(f"DROP DATABASE IF EXISTS {_identifier(database_name)}")
+            return
+        except Exception as exc:
+            if "being accessed by other users" not in str(exc) or attempt == 4:
+                raise
+            await asyncio.sleep(1)
 
 
 def _identifier(value: str) -> str:

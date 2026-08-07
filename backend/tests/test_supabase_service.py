@@ -138,6 +138,18 @@ class SupabaseProvisionTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(changed)
         self.assertIn("app1.uwhexjgccucvvqcwixrh:secret@", repaired)
 
+    async def test_deprovision_terminates_sessions_before_drop(self):
+        connection = AsyncMock()
+        with (
+            patch.object(service, "get_project", new=AsyncMock(return_value=_project())),
+            patch.object(service, "_pg_connect", new=AsyncMock(return_value=connection)),
+        ):
+            await service.deprovision_app_database(1, "app1", "app1", None)
+        self.assertIn("pid <> pg_backend_pid()", connection.execute.await_args_list[0].args[0])
+        self.assertEqual('DROP DATABASE IF EXISTS "app1"', connection.execute.await_args_list[1].args[0])
+        self.assertEqual('DROP USER IF EXISTS "app1"', connection.execute.await_args_list[2].args[0])
+        connection.close.assert_awaited_once()
+
 
 if __name__ == "__main__":
     unittest.main()
