@@ -1003,6 +1003,11 @@
   overflow: visible !important;
 }
 
+.is-actions-open .list-actions-toggle-btn {
+  opacity: 0 !important;
+  pointer-events: none;
+}
+
 .list-row-subactions.slide-toolbar {
   position: absolute;
   top: 0;
@@ -1010,7 +1015,6 @@
   bottom: 0;
   left: auto;
   width: max-content;
-  min-width: 100%;
   background: var(--color-surface);
   border-left: 2px solid var(--color-accent);
   display: flex;
@@ -1023,6 +1027,17 @@
   transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
   box-shadow: none !important;
   margin: 0;
+}
+
+.list-item-row .list-row-subactions.slide-toolbar {
+  left: 30%;
+  width: auto;
+}
+
+@media (max-width: 900px) {
+  .list-item-row .list-row-subactions.slide-toolbar {
+    left: 140px;
+  }
 }
 
 .is-actions-open > .list-row-subactions.slide-toolbar,
