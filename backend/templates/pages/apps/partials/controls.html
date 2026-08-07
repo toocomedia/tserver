@@ -35,13 +35,13 @@
     <form method="post" action="/apps/{{ app.id }}/uninstall">
       <div class="modal__body">
         <p style="font-size: 14px; margin-bottom: 16px;">App files, service, systemd unit, Nginx proxy, releases, venv, pending files, persistent data, and environment file will be permanently removed.</p>
-        {% if app.postgres_mode == 'create' %}
+        {% if app.postgres_mode in ('create', 'supabase') %}
           <div class="form-group">
             <label class="form-label" for="delete_scope">Database Cleanup</label>
             <div class="form-select-wrap">
               <select class="form-select" id="delete_scope" name="delete_scope" required>
-                <option value="app_only">Delete app, keep managed database</option>
-                <option value="app_and_database">Delete app and managed PostgreSQL database/user</option>
+                <option value="app_only">Delete app, keep database</option>
+                <option value="app_and_database">Delete app and its database/user</option>
               </select>
             </div>
             <p class="form-hint" style="margin-top:6px;">Keeping the database preserves data but unlinks it from this app.</p>

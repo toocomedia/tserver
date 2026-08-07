@@ -4,7 +4,7 @@ import asyncio
 from fastapi import HTTPException
 
 
-async def wait_for_listener(port: int, attempts: int = 10) -> None:
+async def wait_for_listener(port: int, attempts: int = 60) -> None:
     for _ in range(attempts):
         try:
             reader, writer = await asyncio.wait_for(

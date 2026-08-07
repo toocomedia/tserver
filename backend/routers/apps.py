@@ -210,8 +210,8 @@ async def uninstall(app_id: int, delete_scope: str = Form("app_only"), db: Async
     app = await _app(db, app_id)
     if delete_scope not in {"app_only", "app_and_database"}:
         raise HTTPException(400, "Invalid delete option.")
-    if delete_scope == "app_and_database" and app.postgres_mode != "create":
-        raise HTTPException(400, "Only a panel-managed database can be deleted here.")
+    if delete_scope == "app_and_database" and app.postgres_mode not in {"create", "supabase"}:
+        raise HTTPException(400, "This app has no panel-managed database to delete.")
     if app.status == "deleting":
         raise HTTPException(409, "Deletion is already running for this app.")
     domain = await db.get(Domain, app.domain_id)
@@ -224,6 +224,7 @@ async def uninstall(app_id: int, delete_scope: str = Form("app_only"), db: Async
             lambda: app_cleanup_service.uninstall(
                 app, domain.name if domain else None,
                 delete_database=delete_scope == "app_and_database",
+                db=db,
             ),
             wait=True,
         )

@@ -7,6 +7,7 @@ from collections.abc import Awaitable, Callable
 from pathlib import Path
 
 from fastapi import HTTPException
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.hosted_app import HostedApp
 from plugins.postgres_manager import queries as pg
@@ -14,14 +15,17 @@ from services import app_runtime_service, nginx_service
 from utils import shell
 
 
-async def uninstall(app: HostedApp, domain_name: str | None, *, delete_database: bool) -> None:
+async def uninstall(
+    app: HostedApp, domain_name: str | None, *, delete_database: bool,
+    db: AsyncSession | None = None,
+) -> None:
     errors: list[str] = []
     await _step(errors, "stop service", lambda: app_runtime_service.stop(app, allow_missing=True))
     await _step(errors, "disable service", lambda: app_runtime_service.systemctl("disable", app.service_name, allow_missing=True))
     await _step(errors, "remove service unit", lambda: shell.remove_path(app_runtime_service.service_unit(app)))
     await _step(errors, "reload systemd", lambda: app_runtime_service.systemctl("daemon-reload"))
     if delete_database:
-        await _step(errors, "delete managed PostgreSQL data", lambda: _drop_database(app))
+        await _step(errors, "delete managed PostgreSQL data", lambda: _drop_database(app, db))
     if domain_name:
         await _step(errors, "remove Nginx proxy", lambda: nginx_service.remove_site(domain_name))
         await _step(errors, "reload Nginx", nginx_service.reload)
@@ -39,10 +43,16 @@ async def _step(errors: list[str], label: str, operation: Callable[[], Awaitable
         errors.append(f"{label}: {exc}")
 
 
-async def _drop_database(app: HostedApp) -> None:
-    if app.postgres_mode != "create" or not app.database_name or not app.database_user:
+async def _drop_database(app: HostedApp, db: AsyncSession | None = None) -> None:
+    if not app.database_name or not app.database_user:
         return
-    await asyncio.to_thread(pg.drop_app_database_and_user, app.database_name, app.database_user)
+    if app.postgres_mode == "create":
+        await asyncio.to_thread(pg.drop_app_database_and_user, app.database_name, app.database_user)
+    elif app.postgres_mode == "supabase" and app.supabase_project_id and db is not None:
+        from plugins.supabase import service as supabase_service
+        await supabase_service.deprovision_app_database(
+            app.supabase_project_id, app.database_name, app.database_user, db
+        )
 
 
 def _remove_tree(path: str) -> None:

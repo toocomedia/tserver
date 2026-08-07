@@ -48,6 +48,19 @@ class AppCleanupTests(unittest.IsolatedAsyncioTestCase):
             await app_cleanup_service._drop_database(app)
         drop.assert_not_called()
 
+    async def test_supabase_database_cleanup_uses_recorded_app_resources(self):
+        app = HostedApp(
+            id=10, work_dir="missing", env_path="missing.env", service_name="srv-python-10",
+            postgres_mode="supabase", supabase_project_id=3,
+            database_name="app10", database_user="app10",
+        )
+        database = object()
+        with patch(
+            "plugins.supabase.service.deprovision_app_database", new=AsyncMock()
+        ) as drop:
+            await app_cleanup_service._drop_database(app, database)
+        drop.assert_awaited_once_with(3, "app10", "app10", database)
+
 
 class AppLifecycleTests(unittest.IsolatedAsyncioTestCase):
     async def test_cancelled_deployment_waits_for_task_exit(self):
