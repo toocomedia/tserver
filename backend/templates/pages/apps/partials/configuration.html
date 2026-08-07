@@ -36,6 +36,16 @@
         <span class="info-row__label">Managed Database</span>
         <span class="info-row__value">{% if app.postgres_mode == 'create' %}Managed PostgreSQL{% elif app.postgres_mode == 'supabase' %}Supabase PostgreSQL{% elif app.postgres_mode == 'external' %}External DATABASE_URL{% else %}None{% endif %}</span>
       </div>
+      {% if app.postgres_mode == 'supabase' and app.database_name %}
+      <div class="info-row">
+        <span class="info-row__label">Current Supabase Database</span>
+        <a class="info-row__value mono" href="/plugins/supabase/projects/{{ app.supabase_project_id }}">{{ app.database_name }}</a>
+      </div>
+      <div class="info-row">
+        <span class="info-row__label">Database User</span>
+        <span class="info-row__value mono">{{ app.database_user }}</span>
+      </div>
+      {% endif %}
 
       {% if environment_keys %}
         {% for key in environment_keys %}

@@ -62,7 +62,7 @@
     <table class="table" id="sb-db-table">
       <thead>
         <tr>
-          <th>Name</th><th>Encoding</th><th>Size</th><th></th>
+          <th>Name</th><th>Encoding</th><th>Size</th><th>Status</th><th></th>
         </tr>
       </thead>
       <tbody>
@@ -77,11 +77,26 @@
           </td>
           <td class="text-muted">{{ db.encoding }}</td>
           <td class="text-muted">{{ db.size }}</td>
+          <td>
+            {% if db.in_use %}
+              <a class="status-badge success" href="/apps/{{ db.app_id }}">In use · App {{ db.app_id }}</a>
+            {% elif db.can_delete %}
+              <span class="status-badge muted">Unused</span>
+            {% else %}
+              <span class="status-badge muted">External</span>
+            {% endif %}
+          </td>
           <td class="text-right">
             <button class="btn btn--sm btn--secondary" data-action="query-db"
                     data-db="{{ db.name }}" data-project-id="{{ project.id }}">
               Query
             </button>
+            {% if db.can_delete %}
+            <button class="btn btn--sm btn--danger" data-action="delete-unused-db"
+                    data-db="{{ db.name }}" data-project-id="{{ project.id }}">
+              Delete
+            </button>
+            {% endif %}
           </td>
         </tr>
         {% endfor %}

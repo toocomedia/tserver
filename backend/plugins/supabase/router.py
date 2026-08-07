@@ -1,13 +1,16 @@
 from __future__ import annotations
 
 import logging
+import re
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 
 from database import get_db
+from models.hosted_app import HostedApp
 from templating import templates
 import plugins.supabase.service as svc
 from plugins.supabase.schemas import (
@@ -18,6 +21,24 @@ from plugins.supabase.schemas import (
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/plugins/supabase", tags=["supabase"])
+_APP_DATABASE_RE = re.compile(r"^app\d+_[0-9a-f]{8}$")
+
+
+async def _with_app_usage(
+    db: AsyncSession, project_id: int, databases: list[dict]
+) -> list[dict]:
+    apps = (await db.scalars(select(HostedApp).where(
+        HostedApp.postgres_mode == "supabase",
+        HostedApp.supabase_project_id == project_id,
+    ))).all()
+    owners = {app.database_name: app for app in apps if app.database_name}
+    for item in databases:
+        owner = owners.get(item["name"])
+        item["in_use"] = owner is not None
+        item["app_id"] = owner.id if owner else None
+        item["app_status"] = owner.status if owner else None
+        item["can_delete"] = owner is None and bool(_APP_DATABASE_RE.fullmatch(item["name"]))
+    return databases
 
 
 # ──────────────────────────────────────────────
@@ -63,7 +84,7 @@ async def supabase_project_detail(
     databases = []
     database_error = None
     try:
-        databases = await svc.list_databases(project_id, db)
+        databases = await _with_app_usage(db, project_id, await svc.list_databases(project_id, db))
     except HTTPException as exc:
         database_error = exc.detail
     except Exception:
@@ -172,7 +193,23 @@ async def api_test_connection(project_id: int, db: AsyncSession = Depends(get_db
 
 @router.get("/api/projects/{project_id}/databases")
 async def api_list_databases(project_id: int, db: AsyncSession = Depends(get_db)):
-    return await svc.list_databases(project_id, db)
+    return await _with_app_usage(db, project_id, await svc.list_databases(project_id, db))
+
+
+@router.delete("/api/projects/{project_id}/databases/{database}", status_code=204)
+async def api_delete_unused_app_database(
+    project_id: int, database: str, db: AsyncSession = Depends(get_db)
+):
+    if not _APP_DATABASE_RE.fullmatch(database):
+        raise HTTPException(400, "Only unused panel-created app databases can be deleted here.")
+    owner = await db.scalar(select(HostedApp.id).where(
+        HostedApp.postgres_mode == "supabase",
+        HostedApp.supabase_project_id == project_id,
+        HostedApp.database_name == database,
+    ))
+    if owner:
+        raise HTTPException(409, f"Database is used by Python app {owner} and cannot be deleted.")
+    await svc.deprovision_app_database(project_id, database, database, db)
 
 
 @router.get("/api/projects/{project_id}/databases/{database}/tables")

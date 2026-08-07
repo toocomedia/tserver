@@ -95,6 +95,22 @@ document.addEventListener("click", async e => {
   const queryDb = e.target.closest("[data-action='query-db']");
   if (queryDb) { switchTab("query"); document.getElementById("sb-query-db").value = queryDb.dataset.db; return; }
 
+  const deleteDb = e.target.closest("[data-action='delete-unused-db']");
+  if (deleteDb) {
+    const name = deleteDb.dataset.db;
+    if (!confirm(`Delete unused database and user ${name}? This cannot be undone.`)) return;
+    setLoading(deleteDb, true, "Deleting…");
+    try {
+      await apiFetch("DELETE", `/projects/${deleteDb.dataset.projectId}/databases/${encodeURIComponent(name)}`);
+      deleteDb.closest("tr")?.remove();
+      toast(`Deleted ${name}.`);
+    } catch (err) {
+      toast(err.message, true);
+      setLoading(deleteDb, false, "Delete");
+    }
+    return;
+  }
+
   // Delete project
   const delBtn = e.target.closest("[data-action='open-delete']");
   if (delBtn) {
