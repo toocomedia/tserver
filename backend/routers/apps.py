@@ -102,7 +102,12 @@ async def create(request: Request, domain_id: int = Form(...), source_type: str 
     if source_type == "git":
         detected = apps.inspect_repository(repository_url.strip(), branch.strip())
         repository_url, branch = str(detected["repository_url"]), str(detected["branch"])
-    app = await apps.create_app(db, domain_id, source_type, repository_url or None, branch, build_command, start_command, ssl, postgres_mode, database_url or None, supabase_project_id, port)
+    app = await apps.create_app(
+        db, domain_id, source_type, repository_url or None, branch,
+        build_command, start_command, ssl, postgres_mode, database_url or None,
+        supabase_project_id, port,
+        database_url_scheme=str(detected.get("database_url_scheme", "postgresql")),
+    )
     await app_environment_service.set_values(db, app, _environment_values(environment_values))
     deployment = await app_deployment_service.start(db, app)
     if "application/json" in request.headers.get("accept", ""):

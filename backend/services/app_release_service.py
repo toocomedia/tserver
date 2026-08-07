@@ -46,15 +46,18 @@ async def cutover(app: HostedApp, prepared: PreparedRelease, reporter=None) -> s
     old_release = active_release_path(app)
     was_running = app.status == "running" or old_release is not None
     environment = app_runtime_service.snapshot_environment(app)
+    restore_source = (
+        old_release / "source" if old_release is not None else prepared.path / "source"
+    )
     try:
         await app_runtime_service.prepare_environment(app, prepared.path / "source")
     except Exception:
-        app_runtime_service.restore_environment(app, environment)
+        app_runtime_service.restore_environment(app, environment, restore_source)
         raise
     try:
         await _progress(reporter, "service", "Switching to the prepared release.")
     except Exception:
-        app_runtime_service.restore_environment(app, environment)
+        app_runtime_service.restore_environment(app, environment, restore_source)
         raise
     if was_running:
         await app_runtime_service.stop(app)
@@ -68,7 +71,7 @@ async def cutover(app: HostedApp, prepared: PreparedRelease, reporter=None) -> s
         await _progress(reporter, "listener", "Validating the updated app locally.")
         await app_hosting_health_service.wait_for_listener(app.port)
     except Exception as exc:
-        app_runtime_service.restore_environment(app, environment)
+        app_runtime_service.restore_environment(app, environment, restore_source)
         restart_previous = was_running
         try:
             await _progress(reporter, "rollback", "Restoring the previous release.")

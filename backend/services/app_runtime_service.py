@@ -66,14 +66,19 @@ def snapshot_environment(app: HostedApp) -> bytes | None:
     return path.read_bytes() if path.is_file() else None
 
 
-def restore_environment(app: HostedApp, snapshot: bytes | None) -> None:
+def restore_environment(
+    app: HostedApp, snapshot: bytes | None, source: Path | None = None
+) -> None:
     path = Path(app.env_path)
     if snapshot is None:
         path.unlink(missing_ok=True)
         return
+    existing = snapshot.decode("utf-8")
+    if app.postgres_mode == "supabase" and source is not None:
+        existing = _replace_database_url_scheme(existing, source)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
-        _with_runtime_settings(app, snapshot.decode("utf-8")), encoding="utf-8"
+        _with_runtime_settings(app, existing), encoding="utf-8"
     )
     os.chmod(path, 0o600)
 
@@ -143,6 +148,13 @@ def _replace_database_url_scheme(existing: str, source: Path) -> str:
         r"(?m)^DATABASE_URL=postgresql(?:\+[A-Za-z0-9_]+)?://",
         f"DATABASE_URL={_database_url_scheme(source)}://",
         existing,
+    )
+
+
+def database_url_with_scheme(url: str, scheme: str) -> str:
+    """Apply the detected SQLAlchemy driver before a protected env is saved."""
+    return re.sub(
+        r"^postgresql(?:\+[A-Za-z0-9_]+)?://", f"{scheme}://", url
     )
 
 

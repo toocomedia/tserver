@@ -77,7 +77,7 @@ async def validate_port(db: AsyncSession, port: int) -> None:
         raise HTTPException(409, f"Private port {port} belongs to another Python app.")
     app_ownership_service.require_port_free(port)
 
-async def create_app(db: AsyncSession, domain_id: int, source_type: str, repository_url: str | None, branch: str, build: str, start: str, ssl: bool, postgres_mode: str, external_url: str | None, supabase_project_id: int | None = None, port: int | None = None) -> HostedApp:
+async def create_app(db: AsyncSession, domain_id: int, source_type: str, repository_url: str | None, branch: str, build: str, start: str, ssl: bool, postgres_mode: str, external_url: str | None, supabase_project_id: int | None = None, port: int | None = None, database_url_scheme: str = "postgresql") -> HostedApp:
     if source_type != "git": raise HTTPException(409, "ZIP source is coming soon.")
     if postgres_mode not in {"none", "create", "external", "supabase"}: raise HTTPException(400, "Invalid app setup.")
     if source_type == "git" and (not repository_url or not dependency_manager.is_healthy("git")): raise HTTPException(409, "Git & SSH dependency is required.")
@@ -100,6 +100,9 @@ async def create_app(db: AsyncSession, domain_id: int, source_type: str, reposit
         external_url = await supabase_service.provision_app_database(
             supabase_project_id, app.database_name, app.database_user,
             secrets.token_urlsafe(24), db,
+        )
+        external_url = app_runtime_service.database_url_with_scheme(
+            external_url, database_url_scheme
         )
     if postgres_mode in {"external", "supabase"}:
         ENV_ROOT.mkdir(parents=True, exist_ok=True)
