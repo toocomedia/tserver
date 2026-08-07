@@ -999,13 +999,17 @@
   transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1), transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+.table td.col-actions {
+  overflow: visible !important;
+}
+
 .list-row-subactions.slide-toolbar {
   position: absolute;
   top: 0;
-  right: -1px; /* Align to edge of td */
+  right: 0;
   bottom: 0;
-  left: auto; 
-  width: max-content;
+  left: 210px; /* leaves title column visible */
+  width: auto;
   background: var(--color-surface);
   border-left: 2px solid var(--color-accent);
   display: flex;

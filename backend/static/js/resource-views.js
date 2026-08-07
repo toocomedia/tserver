@@ -194,7 +194,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const subactionsDiv = subTr.querySelector('.list-row-subactions');
     const lastTd = mainTr.querySelector('td:last-child');
     if (lastTd && subactionsDiv) {
-      lastTd.style.position = 'relative';
+      mainTr.style.position = 'relative';
+      lastTd.style.position = 'static'; /* ensure static so it looks up to tr */
       lastTd.appendChild(subactionsDiv);
     }
     subTr.remove();
