@@ -1006,10 +1006,11 @@
 .list-row-subactions.slide-toolbar {
   position: absolute;
   top: 0;
-  right: 0;
+  right: -1px;
   bottom: 0;
-  left: 210px; /* leaves title column visible */
-  width: auto;
+  left: auto;
+  width: max-content;
+  min-width: 100%;
   background: var(--color-surface);
   border-left: 2px solid var(--color-accent);
   display: flex;
