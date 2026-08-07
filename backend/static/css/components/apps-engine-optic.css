@@ -1,7 +1,6 @@
 /* ============================================================
-   APPS ENGINE OPTIC — MODULAR UI COMPONENT CSS
+   APPS ENGINE OPTIC — UI COMPONENT CSS
    Scoped to .apps-engine-optic — uses panel CSS variables
-   NO borders, NO border-radius on buttons — matches panel style
    ============================================================ */
 
 .apps-engine-optic {
@@ -29,10 +28,10 @@
   border: none !important;
   border-radius: 0 !important;
   box-shadow: none !important;
+  border-bottom: 2px solid transparent !important;
   cursor: pointer;
   position: relative;
   transition: background 0.15s ease, color 0.15s ease;
-  border-bottom: 2px solid transparent !important;
 }
 
 .apps-engine-optic .step-tab-optic:hover {
@@ -53,7 +52,7 @@
   pointer-events: none;
 }
 
-/* ── Buttons ───────────────────────────────────────────────── */
+/* ── Buttons (no border, no radius — panel style) ──────────── */
 .apps-engine-optic .btn-optic {
   display: inline-flex;
   align-items: center;
@@ -105,7 +104,7 @@
 }
 
 .apps-engine-optic .dropdown-optic__label {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   color: var(--color-muted);
   text-transform: uppercase;
@@ -120,64 +119,67 @@
 
 .apps-engine-optic .custom-dropdown__trigger {
   width: 100%;
-  height: 38px;
-  padding: 0 36px 0 12px;
+  height: 36px;
+  padding: 0 32px 0 10px;
   font-size: 13px;
   font-family: inherit;
   font-weight: 500;
-  background: var(--color-surface);
+  background: var(--color-secondary-btn);
   color: var(--color-text);
   border: none !important;
   border-radius: 0 !important;
   box-shadow: none !important;
   display: flex;
   align-items: center;
-  justify-content: space-between;
   cursor: pointer;
   transition: background 0.15s ease;
   user-select: none;
   outline: none;
+  position: relative;
 }
 
 .apps-engine-optic .custom-dropdown__trigger:hover {
-  background: var(--color-secondary-btn);
+  background: var(--color-bg);
 }
 
 .apps-engine-optic .custom-dropdown__trigger::after {
   content: "";
   display: block;
   flex-shrink: 0;
-  width: 16px;
-  height: 16px;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  width: 14px;
+  height: 14px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: center;
   background-size: contain;
-  opacity: 0.5;
   transition: transform 0.2s ease;
   position: absolute;
-  right: 10px;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
 }
 
 .apps-engine-optic .custom-dropdown.is-open .custom-dropdown__trigger::after {
-  transform: rotate(180deg);
+  transform: translateY(-50%) rotate(180deg);
 }
 
+/* The menu must escape the card's overflow — uses fixed-like stacking */
 .apps-engine-optic .custom-dropdown__menu {
   position: absolute;
-  top: calc(100% + 2px);
+  top: calc(100% + 1px);
   left: 0;
   width: 100%;
-  background: var(--color-surface);
-  border: none;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
-  z-index: 200;
-  max-height: 220px;
+  min-width: 160px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-line);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.22);
+  z-index: 500;
+  max-height: 200px;
   overflow-y: auto;
   opacity: 0;
   pointer-events: none;
-  transform: translateY(-6px);
-  transition: opacity 0.18s ease, transform 0.18s ease;
+  transform: translateY(-4px);
+  transition: opacity 0.15s ease, transform 0.15s ease;
 }
 
 .apps-engine-optic .custom-dropdown.is-open .custom-dropdown__menu {
@@ -187,7 +189,7 @@
 }
 
 .apps-engine-optic .custom-dropdown__item {
-  padding: 10px 12px;
+  padding: 9px 12px;
   font-size: 13px;
   color: var(--color-text);
   cursor: pointer;
@@ -211,13 +213,13 @@
 /* ── Inputs ────────────────────────────────────────────────── */
 .apps-engine-optic .input-optic {
   width: 100%;
-  height: 38px;
-  padding: 0 12px;
+  height: 36px;
+  padding: 0 10px;
   font-size: 13px;
   font-family: inherit;
   background: var(--color-surface);
   color: var(--color-text);
-  border: none !important;
+  border: 1px solid var(--color-line) !important;
   border-radius: 0 !important;
   box-shadow: none !important;
   outline: none !important;
@@ -227,6 +229,7 @@
 .apps-engine-optic .input-optic:hover,
 .apps-engine-optic .input-optic:focus {
   background: var(--color-secondary-btn);
+  border-color: var(--color-accent) !important;
 }
 
 .apps-engine-optic .input-optic--code {
@@ -247,6 +250,7 @@
   grid-template-columns: repeat(4, 1fr);
   gap: 2px;
   margin-bottom: 24px;
+  overflow: visible;
 }
 
 @media (max-width: 640px) {
@@ -261,9 +265,9 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 10px;
-  padding: 20px 12px;
+  padding: 18px 12px 14px;
   background: var(--color-surface);
   color: var(--color-muted);
   border: none !important;
@@ -273,6 +277,8 @@
   transition: background 0.15s ease, color 0.15s ease;
   position: relative;
   text-align: center;
+  /* allow dropdowns inside to overflow */
+  overflow: visible;
 }
 
 .apps-engine-optic .optic-card:hover {
@@ -287,10 +293,10 @@
   color: var(--color-text);
 }
 
-/* accent dot top-right on selected card */
-.apps-engine-optic .optic-card.selected::after,
-.apps-engine-optic .optic-card.settings-choice--active::after,
-.apps-engine-optic .optic-card:has(input:checked)::after {
+/* accent top bar on selected */
+.apps-engine-optic .optic-card.selected::before,
+.apps-engine-optic .optic-card.settings-choice--active::before,
+.apps-engine-optic .optic-card:has(input:checked)::before {
   content: '';
   position: absolute;
   top: 0;
@@ -300,13 +306,28 @@
   background: var(--color-accent);
 }
 
-/* ── Icons ─────────────────────────────────────────────────── */
+/* ── Icons — dark mode aware ───────────────────────────────── */
 .apps-engine-optic .optic-icon {
   display: inline-block;
   width: 28px;
   height: 28px;
   object-fit: contain;
   flex-shrink: 0;
+  /* SVGs loaded as <img> have no fill — they render black by default.
+     In dark mode we invert + adjust hue to make them visible. */
+  transition: filter 0.2s ease;
+}
+
+/* Light mode: SVGs have black paths → visible on light bg */
+.apps-engine-optic .optic-icon {
+  filter: none;
+}
+
+/* Dark / AMOLED / Charcoal themes: invert black paths to white */
+[data-theme="dark"] .apps-engine-optic .optic-icon,
+[data-theme="amoled"] .apps-engine-optic .optic-icon,
+[data-theme="charcoal"] .apps-engine-optic .optic-icon {
+  filter: invert(1) hue-rotate(180deg);
 }
 
 .apps-engine-optic .optic-card__name {
@@ -331,6 +352,7 @@
   background: var(--color-surface);
   padding: 20px 24px;
   margin-bottom: 20px;
+  border-left: 3px solid var(--color-accent);
 }
 
 .apps-engine-optic .inspection-grid-optic {
@@ -396,13 +418,13 @@
 
 .apps-engine-optic .apps-engine-environment-row input {
   width: 100%;
-  height: 38px;
-  padding: 0 12px;
+  height: 36px;
+  padding: 0 10px;
   font-size: 12px;
   font-family: var(--font-mono, monospace);
   background: var(--color-surface);
   color: var(--color-text);
-  border: none !important;
+  border: 1px solid var(--color-line) !important;
   border-radius: 0 !important;
   box-shadow: none !important;
   outline: none !important;
@@ -415,7 +437,7 @@
 }
 
 .apps-engine-optic .apps-engine-environment-row .btn {
-  height: 38px;
+  height: 36px;
   background: var(--color-secondary-btn);
   color: var(--color-text);
   border: none !important;
