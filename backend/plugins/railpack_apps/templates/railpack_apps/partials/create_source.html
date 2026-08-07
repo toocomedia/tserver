@@ -63,3 +63,18 @@
 
   <p class="form-error" data-source-error hidden></p>
 </section>
+
+<script>
+  document.querySelectorAll('[data-source-card]').forEach((card) => {
+    card.addEventListener('click', () => {
+      const type = card.getAttribute('data-source-card');
+      const select = document.querySelector('[data-source-type]');
+      if (select) {
+        select.value = type;
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+      document.querySelectorAll('[data-source-card]').forEach((c) => c.classList.remove('selected'));
+      card.classList.add('selected');
+    });
+  });
+</script>

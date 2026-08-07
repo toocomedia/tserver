@@ -13,9 +13,9 @@
   <input type="hidden" name="database_attachments" value="[]" data-database-attachments>
   <input type="hidden" name="preset" value="" data-preset>
   <p class="apps-engine-wizard__target">Deploying to <span class="mono" data-wizard-domain-name>the selected domain</span></p>
-  <nav class="step-bar" aria-label="Apps Engine deployment steps">
+  <nav class="stepper-optic" aria-label="Apps Engine deployment steps">
     {% for number, label in [(1, 'Source'), (2, 'Inspection'), (3, 'Configuration'), (4, 'Install'), (5, 'Result')] %}
-    <button class="step-item{% if number == 1 %} active{% else %} disabled{% endif %}" type="button" data-wizard-nav="{{ number }}"><span class="step-num">0{{ number }}</span><span>{{ number }}. {{ label }}</span></button>
+    <button class="step-tab-optic{% if number == 1 %} active{% else %} disabled{% endif %}" type="button" data-wizard-nav="{{ number }}"><span class="step-num">0{{ number }}</span><span>{{ number }}. {{ label }}</span></button>
     {% endfor %}
   </nav>
   <div class="wizard-content-area">
