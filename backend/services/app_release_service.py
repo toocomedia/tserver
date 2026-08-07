@@ -115,10 +115,11 @@ async def _prepare_source(
         active = active_release_path(app)
         legacy = Path(app.work_dir) / "source"
         origin = (active / "source") if active else legacy
-        if not origin.is_dir():
-            raise HTTPException(400, "The current app source is missing.")
-        await asyncio.to_thread(shutil.copytree, origin, source)
-        return app.deployed_revision or "legacy"
+        if origin.is_dir():
+            await asyncio.to_thread(shutil.copytree, origin, source)
+            return app.deployed_revision or "legacy"
+        # A first deployment can fail before a current release exists. Git apps
+        # can recover by fetching their configured branch again.
     if app.source_type != "git":
         raise HTTPException(409, "ZIP updates are coming soon.")
     checkout = await asyncio.to_thread(
