@@ -1,12 +1,38 @@
 <section class="unboxed-step-container" data-wizard-panel="2" hidden>
-  <div class="unboxed-step-header"><span>2. Source inspection</span><span class="badge-pill badge-pill--accent">Editable suggestions</span></div>
-  <p class="form-hint" data-inspect-summary>Review the source summary before configuring the app.</p>
-  <div class="d-flex gap-sm align-center" data-inspect-loading hidden><span class="step-spinner" aria-hidden="true"></span><span>Inspecting source files…</span></div>
-  <div class="alert alert--danger" data-inspect-error hidden><span data-inspect-error-text></span><button class="btn btn--danger btn--sm" type="button" data-inspect-retry>Retry inspection</button></div>
-  <div class="apps-engine-inspection" data-inspect-results hidden>
-    <div class="info-row"><span class="info-row__label">Runtime</span><span class="info-row__value" data-inspection-runtime></span></div>
-    <div class="info-row"><span class="info-row__label">Build method</span><span class="info-row__value" data-inspection-build></span></div>
-    <div class="info-row"><span class="info-row__label">Private HTTP port</span><span class="info-row__value mono" data-inspection-port></span></div>
-    <div class="info-row"><span class="info-row__label">Database services</span><span class="info-row__value" data-inspection-databases></span></div>
+  <span class="section-label">2. Source Inspection</span>
+  <p class="form-hint" data-inspect-summary style="margin-bottom: 16px;">Review detected stack metrics.</p>
+
+  <div class="d-flex gap-sm align-center" data-inspect-loading hidden style="padding: 16px; background: var(--bg-card);">
+    <span class="step-spinner" aria-hidden="true"></span>
+    <span>Inspecting source files…</span>
+  </div>
+
+  <div class="alert alert--danger" data-inspect-error hidden style="padding: 12px; margin-bottom: 16px;">
+    <span data-inspect-error-text></span>
+    <button class="btn-optic btn-optic--sm" type="button" data-inspect-retry style="margin-top: 8px;">Retry inspection</button>
+  </div>
+
+  <!-- Borderless Inspection Metrics Grid -->
+  <div class="apps-engine-inspection" data-inspect-results hidden style="background: var(--bg-card); padding: 20px; border: none !important;">
+    <div class="apps-engine-runtime-grid" style="margin-bottom: 16px;">
+      <div>
+        <span class="section-label" style="font-size: 11px; color: var(--color-muted);">Runtime</span>
+        <div style="font-size: 16px; font-weight: 800; color: var(--color-text);" data-inspection-runtime></div>
+      </div>
+      <div>
+        <span class="section-label" style="font-size: 11px; color: var(--color-muted);">Build Method</span>
+        <div style="font-size: 16px; font-weight: 800; color: var(--color-text);" data-inspection-build></div>
+      </div>
+    </div>
+    <div class="apps-engine-runtime-grid">
+      <div>
+        <span class="section-label" style="font-size: 11px; color: var(--color-muted);">Internal HTTP Port</span>
+        <div class="mono" style="font-size: 15px; font-weight: 700; color: var(--color-text);" data-inspection-port></div>
+      </div>
+      <div>
+        <span class="section-label" style="font-size: 11px; color: var(--color-muted);">Detected Database Services</span>
+        <div style="font-size: 15px; font-weight: 700; color: var(--color-accent);" data-inspection-databases></div>
+      </div>
+    </div>
   </div>
 </section>
