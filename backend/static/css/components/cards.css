@@ -1032,10 +1032,11 @@
 .list-row-subactions.is-hidden {
   display: block !important; /* override is-hidden to keep transition active */
   pointer-events: none;
+  visibility: hidden;
 }
 
 .list-row-subactions:not(.is-hidden) {
-  /* Default is display block */
+  visibility: visible;
 }
 
 .list-row-subactions__inner {
@@ -1048,7 +1049,7 @@
   padding: 0 20px;
   background: var(--color-surface);
   border-left: 2px solid var(--color-accent);
-  transform: translateX(100%);
+  transform: translateX(calc(100% + 5px));
   transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
   overflow-x: auto;
   scrollbar-width: none;
