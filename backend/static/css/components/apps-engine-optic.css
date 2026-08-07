@@ -1,7 +1,7 @@
 /* ============================================================
-   APPS ENGINE OPTIC — MODULAR BORDERLESS UI/UX COMPONENT CSS
-   Scoped to .apps-engine-optic to protect global panel styles
-   Dynamic mode adaptation using panel CSS variables
+   APPS ENGINE OPTIC — MODULAR UI COMPONENT CSS
+   Scoped to .apps-engine-optic — uses panel CSS variables
+   NO borders, NO border-radius on buttons — matches panel style
    ============================================================ */
 
 .apps-engine-optic {
@@ -10,10 +10,10 @@
   margin: 0 auto;
 }
 
-/* Stepper Tabs (Fixed Width, Borderless) */
+/* ── Stepper Tabs ──────────────────────────────────────────── */
 .apps-engine-optic .stepper-optic {
   display: flex;
-  gap: 8px;
+  gap: 2px;
   margin-bottom: 32px;
   width: 100%;
 }
@@ -21,104 +21,98 @@
 .apps-engine-optic .step-tab-optic {
   flex: 1;
   text-align: center;
-  padding: 12px 0;
+  padding: 10px 0;
   font-size: 13px;
   font-weight: 600;
   color: var(--color-muted);
   background: var(--color-surface);
-  border: 1px solid transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
   cursor: pointer;
   position: relative;
   transition: background 0.15s ease, color 0.15s ease;
+  border-bottom: 2px solid transparent !important;
 }
 
 .apps-engine-optic .step-tab-optic:hover {
-  background: var(--color-bg);
+  background: var(--color-secondary-btn);
   color: var(--color-text);
 }
 
 .apps-engine-optic .step-tab-optic.active {
-  background: var(--color-bg);
+  background: var(--color-secondary-btn);
   color: var(--color-text);
   font-weight: 700;
-  border-color: var(--color-accent) !important;
+  border-bottom-color: var(--color-accent) !important;
 }
 
 .apps-engine-optic .step-tab-optic.disabled {
-  opacity: 0.45;
+  opacity: 0.4;
   cursor: not-allowed;
   pointer-events: none;
 }
 
-.apps-engine-optic .step-tab-optic.active::after {
-  content: '';
-  position: absolute;
-  bottom: -1px;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: var(--color-accent);
-}
-
-/* Borderless Optic Buttons */
+/* ── Buttons ───────────────────────────────────────────────── */
 .apps-engine-optic .btn-optic {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  height: 40px;
-  padding: 0 20px;
+  gap: 6px;
+  height: var(--button-height, 36px);
+  padding: 0 16px;
+  min-width: 90px;
   font-size: 13px;
-  font-weight: 700;
-  background: var(--color-surface);
+  font-weight: 600;
+  background: var(--color-secondary-btn);
   color: var(--color-text);
-  border: 1px solid var(--color-line) !important;
+  border: none !important;
+  border-radius: 0 !important;
   box-shadow: none !important;
+  outline: none;
   cursor: pointer;
   transition: background 0.15s ease, opacity 0.15s ease;
   text-decoration: none;
+  white-space: nowrap;
 }
 
 .apps-engine-optic .btn-optic:hover {
-  background: var(--color-bg);
+  background: var(--color-secondary-hover, var(--color-surface));
 }
 
 .apps-engine-optic .btn-optic--primary {
   background: var(--color-accent) !important;
-  color: var(--color-on-accent) !important;
-  border-color: var(--color-accent) !important;
+  color: var(--color-on-accent, #111111) !important;
 }
 
 .apps-engine-optic .btn-optic--primary:hover {
-  opacity: 0.9 !important;
+  opacity: 0.88;
 }
 
-.apps-engine-optic .btn-optic--sm {
-  height: 32px;
-  padding: 0 12px;
-  font-size: 12px;
+.apps-engine-optic .btn-optic:disabled,
+.apps-engine-optic .btn-optic.disabled {
+  opacity: 0.45;
+  pointer-events: none;
+  cursor: not-allowed;
 }
 
-/* Modular Optic Dropdown Component */
+/* ── Dropdown label wrapper ────────────────────────────────── */
 .apps-engine-optic .dropdown-optic {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
   width: 100%;
 }
 
 .apps-engine-optic .dropdown-optic__label {
-  font-size: 13px;
-  font-weight: 800;
-  color: var(--color-text);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
-.apps-engine-optic .dropdown-optic__wrap {
-  position: relative;
-  width: 100%;
-}
-
-/* Custom Dropdown (Div-based) */
+/* ── Custom Dropdown ───────────────────────────────────────── */
 .apps-engine-optic .custom-dropdown {
   position: relative;
   width: 100%;
@@ -126,34 +120,43 @@
 
 .apps-engine-optic .custom-dropdown__trigger {
   width: 100%;
-  height: 42px;
-  padding: 0 38px 0 14px;
+  height: 38px;
+  padding: 0 36px 0 12px;
   font-size: 13px;
   font-family: inherit;
-  background-color: var(--color-surface);
+  font-weight: 500;
+  background: var(--color-surface);
   color: var(--color-text);
-  border: 1px solid var(--color-line);
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
   display: flex;
   align-items: center;
   justify-content: space-between;
   cursor: pointer;
-  transition: border-color 0.15s ease, background-color 0.15s ease;
+  transition: background 0.15s ease;
   user-select: none;
+  outline: none;
 }
 
 .apps-engine-optic .custom-dropdown__trigger:hover {
-  background-color: var(--color-bg);
+  background: var(--color-secondary-btn);
 }
 
 .apps-engine-optic .custom-dropdown__trigger::after {
   content: "";
   display: block;
-  width: 14px;
-  height: 14px;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23cbd5e1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: center;
+  background-size: contain;
+  opacity: 0.5;
   transition: transform 0.2s ease;
+  position: absolute;
+  right: 10px;
 }
 
 .apps-engine-optic .custom-dropdown.is-open .custom-dropdown__trigger::after {
@@ -162,20 +165,19 @@
 
 .apps-engine-optic .custom-dropdown__menu {
   position: absolute;
-  top: 100%;
+  top: calc(100% + 2px);
   left: 0;
   width: 100%;
-  margin-top: 4px;
-  background-color: var(--color-surface);
-  border: 1px solid var(--color-line);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  z-index: 100;
-  max-height: 200px;
+  background: var(--color-surface);
+  border: none;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  z-index: 200;
+  max-height: 220px;
   overflow-y: auto;
   opacity: 0;
   pointer-events: none;
-  transform: translateY(-4px);
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  transform: translateY(-6px);
+  transition: opacity 0.18s ease, transform 0.18s ease;
 }
 
 .apps-engine-optic .custom-dropdown.is-open .custom-dropdown__menu {
@@ -185,15 +187,15 @@
 }
 
 .apps-engine-optic .custom-dropdown__item {
-  padding: 10px 14px;
+  padding: 10px 12px;
   font-size: 13px;
   color: var(--color-text);
   cursor: pointer;
-  transition: background-color 0.15s ease;
+  transition: background 0.12s ease;
 }
 
 .apps-engine-optic .custom-dropdown__item:hover {
-  background-color: var(--color-bg);
+  background: var(--color-secondary-btn);
 }
 
 .apps-engine-optic .custom-dropdown__item.is-selected {
@@ -202,126 +204,133 @@
 }
 
 .apps-engine-optic .custom-dropdown__item.is-disabled {
-  opacity: 0.5;
+  opacity: 0.4;
   pointer-events: none;
 }
 
+/* ── Inputs ────────────────────────────────────────────────── */
 .apps-engine-optic .input-optic {
   width: 100%;
-  height: 42px;
-  padding: 0 14px;
+  height: 38px;
+  padding: 0 12px;
   font-size: 13px;
   font-family: inherit;
-  background-color: var(--color-surface);
+  background: var(--color-surface);
   color: var(--color-text);
-  border: 1px solid var(--color-line) !important;
+  border: none !important;
+  border-radius: 0 !important;
   box-shadow: none !important;
   outline: none !important;
-  transition: background-color 0.15s ease;
+  transition: background 0.15s ease;
 }
 
 .apps-engine-optic .input-optic:hover,
 .apps-engine-optic .input-optic:focus {
-  background-color: var(--color-bg);
+  background: var(--color-secondary-btn);
 }
 
 .apps-engine-optic .input-optic--code {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 13px;
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 12px;
 }
 
-/* Fixed Grid Columns for Cards */
+/* ── Card Grids ────────────────────────────────────────────── */
 .apps-engine-optic .cards-grid-3 {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
+  gap: 2px;
   margin-bottom: 24px;
 }
 
 .apps-engine-optic .cards-grid-4 {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
+  gap: 2px;
   margin-bottom: 24px;
 }
 
 @media (max-width: 640px) {
-  .apps-engine-optic .cards-grid-3, 
+  .apps-engine-optic .cards-grid-3,
   .apps-engine-optic .cards-grid-4 {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
-/* Borderless Selection Cards */
+/* ── Selection Cards ───────────────────────────────────────── */
 .apps-engine-optic .optic-card {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 10px;
-  padding: 20px 16px;
+  padding: 20px 12px;
   background: var(--color-surface);
   color: var(--color-muted);
-  border: 1px solid var(--color-line) !important;
+  border: none !important;
+  border-radius: 0 !important;
   box-shadow: none !important;
   cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  transition: background 0.15s ease, color 0.15s ease;
   position: relative;
   text-align: center;
 }
 
 .apps-engine-optic .optic-card:hover {
-  background: var(--color-bg);
+  background: var(--color-secondary-btn);
   color: var(--color-text);
 }
 
 .apps-engine-optic .optic-card.selected,
 .apps-engine-optic .optic-card.settings-choice--active,
 .apps-engine-optic .optic-card:has(input:checked) {
-  background: var(--color-bg);
+  background: var(--color-secondary-btn);
   color: var(--color-text);
-  border-color: var(--color-accent) !important;
 }
 
-.apps-engine-optic .optic-card.selected::before,
-.apps-engine-optic .optic-card.settings-choice--active::before,
-.apps-engine-optic .optic-card:has(input:checked)::before {
+/* accent dot top-right on selected card */
+.apps-engine-optic .optic-card.selected::after,
+.apps-engine-optic .optic-card.settings-choice--active::after,
+.apps-engine-optic .optic-card:has(input:checked)::after {
   content: '';
   position: absolute;
-  top: 10px;
-  right: 10px;
-  width: 8px;
-  height: 8px;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
   background: var(--color-accent);
 }
 
-/* Clean Image Icons */
+/* ── Icons ─────────────────────────────────────────────────── */
 .apps-engine-optic .optic-icon {
   display: inline-block;
   width: 28px;
   height: 28px;
   object-fit: contain;
+  flex-shrink: 0;
 }
 
 .apps-engine-optic .optic-card__name {
+  font-size: 12px;
+  font-weight: 700;
+  color: inherit;
+}
+
+/* ── Labels ────────────────────────────────────────────────── */
+.apps-engine-optic .section-label {
   font-size: 13px;
   font-weight: 700;
-}
-
-.apps-engine-optic .section-label {
-  font-size: 14px;
-  font-weight: 800;
   margin-bottom: 12px;
   display: block;
-  color: var(--color-text);
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
-/* Step 2 Inspection Card Layout Structure */
+/* ── Inspection card (step 2) ──────────────────────────────── */
 .apps-engine-optic .inspection-card-optic {
   background: var(--color-surface);
-  padding: 24px;
-  border: 1px solid var(--color-line) !important;
-  margin-bottom: 24px;
+  padding: 20px 24px;
+  margin-bottom: 20px;
 }
 
 .apps-engine-optic .inspection-grid-optic {
@@ -346,7 +355,7 @@
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.05em;
   color: var(--color-muted);
 }
 
@@ -360,19 +369,18 @@
   color: var(--color-accent);
 }
 
-/* Custom Environment Variables Styling */
+/* ── Environment rows (step 3) ─────────────────────────────── */
 .apps-engine-optic .apps-engine-environment {
   border: none !important;
   margin-top: 24px;
-  padding-top: 0;
 }
 
 .apps-engine-optic .apps-engine-environment-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) auto;
-  gap: 12px;
+  gap: 2px;
   align-items: end;
-  margin-top: 12px;
+  margin-top: 2px;
 }
 
 .apps-engine-optic .apps-engine-environment-row .form-group {
@@ -381,20 +389,21 @@
 
 .apps-engine-optic .apps-engine-environment-row .form-label {
   font-size: 12px;
-  font-weight: 700;
-  color: var(--color-text);
+  font-weight: 600;
+  color: var(--color-muted);
   margin-bottom: 4px;
 }
 
 .apps-engine-optic .apps-engine-environment-row input {
   width: 100%;
-  height: 42px;
-  padding: 0 14px;
-  font-size: 13px;
-  font-family: 'JetBrains Mono', monospace;
+  height: 38px;
+  padding: 0 12px;
+  font-size: 12px;
+  font-family: var(--font-mono, monospace);
   background: var(--color-surface);
   color: var(--color-text);
-  border: 1px solid var(--color-line) !important;
+  border: none !important;
+  border-radius: 0 !important;
   box-shadow: none !important;
   outline: none !important;
   transition: background 0.15s ease;
@@ -402,30 +411,18 @@
 
 .apps-engine-optic .apps-engine-environment-row input:hover,
 .apps-engine-optic .apps-engine-environment-row input:focus {
-  background: var(--color-bg);
+  background: var(--color-secondary-btn);
 }
 
 .apps-engine-optic .apps-engine-environment-row .btn {
-  height: 42px;
-  padding: 0 16px;
-  font-size: 13px;
-  font-weight: 700;
-  background: var(--color-surface);
+  height: 38px;
+  background: var(--color-secondary-btn);
   color: var(--color-text);
-  border: 1px solid var(--color-line) !important;
+  border: none !important;
+  border-radius: 0 !important;
   box-shadow: none !important;
-  cursor: pointer;
-  transition: background 0.15s ease;
 }
 
 .apps-engine-optic .apps-engine-environment-row .btn:hover {
-  background: var(--color-bg);
-}
-
-/* Action Footer */
-.apps-engine-optic .action-footer-optic {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 32px;
+  background: var(--color-secondary-hover, var(--color-surface));
 }
