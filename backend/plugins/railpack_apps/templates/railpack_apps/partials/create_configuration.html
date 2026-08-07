@@ -3,12 +3,16 @@
 
   <div class="apps-engine-runtime-grid" style="margin-bottom: 20px;">
     <div class="dropdown-optic" data-build-mode-group>
-      <label class="dropdown-optic__label" for="build_mode" style="font-size:13px;">Build Method</label>
-      <div class="dropdown-optic__wrap">
-        <select class="dropdown-optic__select" id="build_mode" name="build_mode">
-          <option value="railpack">Automatic Railpack</option>
-          <option value="dockerfile">Dockerfile</option>
-        </select>
+      <label class="dropdown-optic__label" style="font-size:13px;">Build Method</label>
+      <div class="custom-dropdown" data-custom-dropdown="build_mode">
+        <input type="hidden" id="build_mode" name="build_mode" data-dropdown-value value="railpack">
+        <div class="custom-dropdown__trigger" data-dropdown-trigger tabindex="0">
+          <span class="custom-dropdown__label" data-dropdown-label>Automatic Railpack</span>
+        </div>
+        <div class="custom-dropdown__menu" data-dropdown-menu>
+          <div class="custom-dropdown__item is-selected" data-dropdown-item data-value="railpack" data-label="Automatic Railpack">Automatic Railpack</div>
+          <div class="custom-dropdown__item" data-dropdown-item data-value="dockerfile" data-label="Dockerfile">Dockerfile</div>
+        </div>
       </div>
     </div>
     <div class="form-group" data-port-group>
@@ -17,143 +21,11 @@
     </div>
   </div>
 
-  <fieldset class="form-group" style="border:none; padding:0; margin:0 0 24px 0;">
-    <legend class="section-label" style="margin-bottom:12px;">Attach Private Databases</legend>
-    <div class="cards-grid-4">
-      
-      <!-- MariaDB / MySQL -->
-      <div class="optic-card apps-engine-database-choice" id="database-config-mariadb" data-database-row data-kind="mariadb">
-        <label class="form-check" style="cursor:pointer; width:100%; display:flex; flex-direction:column; align-items:center; gap:8px;">
-          <input type="checkbox" data-database-enabled style="display:none;">
-          <span class="optic-icon icon-mysql"></span>
-          <span class="optic-card__name">MySQL</span>
-        </label>
-        <div class="form-subbox" data-database-options hidden style="width:100%; margin-top:8px;">
-          <div class="dropdown-optic">
-            <label class="dropdown-optic__label" for="database-provider-mariadb" style="font-size:11px;">Provider</label>
-            <div class="dropdown-optic__wrap">
-              <select class="dropdown-optic__select dropdown-optic__select--sm" id="database-provider-mariadb" data-database-provider>
-                <option value="docker">Panel Docker</option>
-                <option value="external">External URL</option>
-              </select>
-            </div>
-          </div>
-          <div class="form-group" data-database-external hidden style="margin-top:6px;">
-            <input class="input-optic input-optic--code" id="database-url-mariadb" data-database-url type="password" autocomplete="off" placeholder="Connection URL" style="height:32px; font-size:12px;">
-          </div>
-        </div>
-        <input data-database-key value="MYSQL_URL" type="hidden">
-      </div>
+  {% include "railpack_apps/partials/create_configuration_database.html" %}
 
-      <!-- PostgreSQL -->
-      <div class="optic-card apps-engine-database-choice" id="database-config-postgresql" data-database-row data-kind="postgresql">
-        <label class="form-check" style="cursor:pointer; width:100%; display:flex; flex-direction:column; align-items:center; gap:8px;">
-          <input type="checkbox" data-database-enabled style="display:none;">
-          <span class="optic-icon icon-postgresql"></span>
-          <span class="optic-card__name">PostgreSQL</span>
-        </label>
-        <div class="form-subbox" data-database-options hidden style="width:100%; margin-top:8px;">
-          <div class="dropdown-optic">
-            <label class="dropdown-optic__label" for="database-provider-postgresql" style="font-size:11px;">Provider</label>
-            <div class="dropdown-optic__wrap">
-              <select class="dropdown-optic__select dropdown-optic__select--sm" id="database-provider-postgresql" data-database-provider>
-                <option value="docker">Panel Docker</option>
-                <option value="panel_postgres">Panel PostgreSQL</option>
-                {% if supabase_projects %}<option value="supabase">Supabase</option>{% endif %}
-                <option value="external">External URL</option>
-              </select>
-            </div>
-          </div>
-          {% if supabase_projects %}
-          <div class="dropdown-optic" data-database-supabase-picker hidden style="margin-top:6px;">
-            <div class="dropdown-optic__wrap">
-              <select class="dropdown-optic__select dropdown-optic__select--sm" id="database-supabase-project-postgresql" data-database-supabase-project>
-                <option value="">Select Supabase</option>
-                {% for sp in supabase_projects %}
-                <option value="{{ sp.id }}">{{ sp.name }}</option>
-                {% endfor %}
-              </select>
-            </div>
-          </div>
-          {% endif %}
-          <div class="form-group" data-database-external hidden style="margin-top:6px;">
-            <input class="input-optic input-optic--code" id="database-url-postgresql" data-database-url type="password" autocomplete="off" placeholder="Connection URL" style="height:32px; font-size:12px;">
-          </div>
-        </div>
-        <input data-database-key value="DATABASE_URL" type="hidden">
-      </div>
+  {% include "railpack_apps/partials/create_configuration_env.html" %}
 
-      <!-- Redis -->
-      <div class="optic-card apps-engine-database-choice" id="database-config-redis" data-database-row data-kind="redis">
-        <label class="form-check" style="cursor:pointer; width:100%; display:flex; flex-direction:column; align-items:center; gap:8px;">
-          <input type="checkbox" data-database-enabled style="display:none;">
-          <span class="optic-icon icon-redis"></span>
-          <span class="optic-card__name">Redis</span>
-        </label>
-        <div class="form-subbox" data-database-options hidden style="width:100%; margin-top:8px;">
-          <div class="dropdown-optic">
-            <label class="dropdown-optic__label" for="database-provider-redis" style="font-size:11px;">Provider</label>
-            <div class="dropdown-optic__wrap">
-              <select class="dropdown-optic__select dropdown-optic__select--sm" id="database-provider-redis" data-database-provider>
-                <option value="docker">Panel Docker</option>
-                <option value="external">External URL</option>
-              </select>
-            </div>
-          </div>
-          <div class="form-group" data-database-external hidden style="margin-top:6px;">
-            <input class="input-optic input-optic--code" id="database-url-redis" data-database-url type="password" autocomplete="off" placeholder="Connection URL" style="height:32px; font-size:12px;">
-          </div>
-        </div>
-        <input data-database-key value="REDIS_URL" type="hidden">
-      </div>
-
-      <!-- MongoDB -->
-      <div class="optic-card apps-engine-database-choice" id="database-config-mongodb" data-database-row data-kind="mongodb">
-        <label class="form-check" style="cursor:pointer; width:100%; display:flex; flex-direction:column; align-items:center; gap:8px;">
-          <input type="checkbox" data-database-enabled style="display:none;">
-          <span class="optic-icon icon-mongodb"></span>
-          <span class="optic-card__name">MongoDB</span>
-        </label>
-        <div class="form-subbox" data-database-options hidden style="width:100%; margin-top:8px;">
-          <div class="dropdown-optic">
-            <label class="dropdown-optic__label" for="database-provider-mongodb" style="font-size:11px;">Provider</label>
-            <div class="dropdown-optic__wrap">
-              <select class="dropdown-optic__select dropdown-optic__select--sm" id="database-provider-mongodb" data-database-provider>
-                <option value="docker">Panel Docker</option>
-                <option value="external">External URL</option>
-              </select>
-            </div>
-          </div>
-          <div class="form-group" data-database-external hidden style="margin-top:6px;">
-            <input class="input-optic input-optic--code" id="database-url-mongodb" data-database-url type="password" autocomplete="off" placeholder="Connection URL" style="height:32px; font-size:12px;">
-          </div>
-        </div>
-        <input data-database-key value="MONGODB_URI" type="hidden">
-      </div>
-
-    </div>
-  </fieldset>
-
-  <!-- Environment Variables -->
-  <section class="form-group apps-engine-environment">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-      <span class="section-label" style="margin:0;">Custom Environment Variables</span>
-      <button class="btn-optic btn-optic--sm" type="button" data-add-environment>+ Add Variable</button>
-    </div>
-    <div class="apps-engine-environment__list" data-environment-list></div>
-    <p class="form-error" data-environment-error hidden></p>
-  </section>
-
-  <!-- WordPress Setup Section -->
-  <section class="form-group" data-wordpress-fields hidden style="margin-top:20px;">
-    <span class="section-label">WordPress Setup</span>
-    <div class="apps-engine-runtime-grid">
-      <div class="form-group"><input class="input-optic" id="wordpress_site_title" name="wordpress_site_title" placeholder="Site Title"></div>
-      <div class="form-group"><input class="input-optic" id="wordpress_admin_user" name="wordpress_admin_user" placeholder="Admin Username"></div>
-      <div class="form-group"><input class="input-optic" id="wordpress_admin_email" name="wordpress_admin_email" type="email" placeholder="Admin Email"></div>
-      <div class="form-group"><input class="input-optic" id="wordpress_admin_password" name="wordpress_admin_password" type="password" autocomplete="new-password" placeholder="Admin Password"></div>
-    </div>
-  </section>
+  {% include "railpack_apps/partials/create_configuration_wordpress.html" %}
 
   <!-- SSL Option -->
   <section class="form-group" style="margin-top:20px;">

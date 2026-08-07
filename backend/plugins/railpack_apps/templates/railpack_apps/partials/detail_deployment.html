@@ -1,0 +1,7 @@
+<div class="master-card" id="deployment"{% if deployment %} data-railpack-deployment data-deployment-url="/plugins/railpack_apps/{{ app.id }}/deployments/{{ deployment.id }}" data-deployment-active="{{ 'true' if deployment_active else 'false' }}"{% endif %}>
+  <div class="master-card__header"><span>Live deployment stream</span><span class="badge-pill" data-deployment-state>{% if deployment %}{{ deployment.status | title }} · {{ deployment.stage | title }}{% else %}Not deployed yet{% endif %}</span></div>
+  <div class="master-card__body">
+    {% if deployment %}<pre class="terminal-fluid" data-deployment-output>{{ deployment.output }}{% if deployment.error %}
+[error] {{ deployment.error }}{% endif %}</pre><div class="info-row"><span class="info-row__label">Deployment action</span><span class="info-row__value">{{ deployment.action | title }}</span></div>{% if deployments|length > 1 %}<div class="form-actions">{% for item in deployments %}<a class="btn btn--secondary btn--sm" href="/plugins/railpack_apps/{{ app.id }}?deployment={{ item.id }}">#{{ item.id }} · {{ item.status | title }}</a>{% endfor %}</div>{% endif %}{% else %}<p class="text-muted" style="font-size:14px;">No deployment output has been recorded yet.</p>{% endif %}
+  </div>
+</div>

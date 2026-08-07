@@ -24,24 +24,25 @@
   padding: 12px 0;
   font-size: 13px;
   font-weight: 600;
-  color: var(--color-muted, #94a3b8);
-  background: var(--bg-card, rgba(255, 255, 255, 0.05));
-  border: none !important;
-  border-radius: 0 !important;
+  color: var(--color-muted);
+  background: var(--color-surface);
+  border: 1px solid transparent !important;
+  border-radius: 4px !important;
   cursor: pointer;
   position: relative;
   transition: background 0.15s ease, color 0.15s ease;
 }
 
 .apps-engine-optic .step-tab-optic:hover {
-  background: var(--bg-card-hover, rgba(255, 255, 255, 0.09));
-  color: var(--color-text, #ffffff);
+  background: var(--color-bg);
+  color: var(--color-text);
 }
 
 .apps-engine-optic .step-tab-optic.active {
-  background: var(--bg-card-selected, rgba(255, 255, 255, 0.14));
-  color: var(--color-text, #ffffff);
+  background: var(--color-bg);
+  color: var(--color-text);
   font-weight: 700;
+  border-color: var(--color-accent) !important;
 }
 
 .apps-engine-optic .step-tab-optic.disabled {
@@ -53,11 +54,11 @@
 .apps-engine-optic .step-tab-optic.active::after {
   content: '';
   position: absolute;
-  bottom: 0;
+  bottom: -1px;
   left: 0;
   right: 0;
   height: 3px;
-  background: var(--color-accent, #C7F464);
+  background: var(--color-accent);
 }
 
 /* Borderless Optic Buttons */
@@ -70,10 +71,10 @@
   padding: 0 20px;
   font-size: 13px;
   font-weight: 700;
-  background: var(--color-secondary-btn, rgba(255, 255, 255, 0.06));
-  color: var(--color-text, #ffffff);
-  border: none !important;
-  border-radius: 0 !important;
+  background: var(--color-surface);
+  color: var(--color-text);
+  border: 1px solid var(--color-line) !important;
+  border-radius: 4px !important;
   box-shadow: none !important;
   cursor: pointer;
   transition: background 0.15s ease, opacity 0.15s ease;
@@ -81,12 +82,13 @@
 }
 
 .apps-engine-optic .btn-optic:hover {
-  background: var(--color-secondary-hover, rgba(255, 255, 255, 0.12));
+  background: var(--color-bg);
 }
 
 .apps-engine-optic .btn-optic--primary {
-  background: var(--color-accent, #C7F464) !important;
-  color: var(--color-on-accent, #111111) !important;
+  background: var(--color-accent) !important;
+  color: var(--color-on-accent) !important;
+  border-color: var(--color-accent) !important;
 }
 
 .apps-engine-optic .btn-optic--primary:hover {
@@ -110,7 +112,7 @@
 .apps-engine-optic .dropdown-optic__label {
   font-size: 13px;
   font-weight: 800;
-  color: var(--color-text, #ffffff);
+  color: var(--color-text);
 }
 
 .apps-engine-optic .dropdown-optic__wrap {
@@ -118,53 +120,94 @@
   width: 100%;
 }
 
-.apps-engine-optic .dropdown-optic__select,
-.apps-engine-optic select.input-optic,
-.apps-engine-optic .form-select-wrap select {
+/* Custom Dropdown (Div-based) */
+.apps-engine-optic .custom-dropdown {
+  position: relative;
+  width: 100%;
+}
+
+.apps-engine-optic .custom-dropdown__trigger {
   width: 100%;
   height: 42px;
   padding: 0 38px 0 14px;
   font-size: 13px;
   font-family: inherit;
-  background-color: var(--bg-card, rgba(255, 255, 255, 0.05));
-  color: var(--color-text, #ffffff);
-  border: none !important;
-  border-radius: 0 !important;
-  box-shadow: none !important;
-  outline: none !important;
-  appearance: none;
-  -webkit-appearance: none;
-  -moz-appearance: none;
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  border: 1px solid var(--color-line);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+  user-select: none;
+}
+
+.apps-engine-optic .custom-dropdown__trigger:hover {
+  background-color: var(--color-bg);
+}
+
+.apps-engine-optic .custom-dropdown__trigger::after {
+  content: "";
+  display: block;
+  width: 14px;
+  height: 14px;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23cbd5e1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
-  background-position: right 14px center;
-  cursor: pointer;
-  transition: background-color 0.15s ease, color 0.15s ease;
+  background-position: center;
+  transition: transform 0.2s ease;
 }
 
-.apps-engine-optic .dropdown-optic__select option,
-.apps-engine-optic select.input-optic option,
-.apps-engine-optic .form-select-wrap select option {
-  background-color: var(--color-surface, var(--bg-main, #1e293b));
-  color: var(--color-text, #ffffff);
+.apps-engine-optic .custom-dropdown.is-open .custom-dropdown__trigger::after {
+  transform: rotate(180deg);
+}
+
+.apps-engine-optic .custom-dropdown__menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 100%;
+  margin-top: 4px;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  z-index: 100;
+  max-height: 200px;
+  overflow-y: auto;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-4px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.apps-engine-optic .custom-dropdown.is-open .custom-dropdown__menu {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.apps-engine-optic .custom-dropdown__item {
   padding: 10px 14px;
   font-size: 13px;
+  color: var(--color-text);
+  cursor: pointer;
+  transition: background-color 0.15s ease;
 }
 
-.apps-engine-optic .dropdown-optic__select:hover, 
-.apps-engine-optic .dropdown-optic__select:focus,
-.apps-engine-optic select.input-optic:hover,
-.apps-engine-optic select.input-optic:focus,
-.apps-engine-optic .form-select-wrap select:hover,
-.apps-engine-optic .form-select-wrap select:focus {
-  background-color: var(--bg-card-hover, rgba(255, 255, 255, 0.1));
-  color: var(--color-text, #ffffff);
+.apps-engine-optic .custom-dropdown__item:hover {
+  background-color: var(--color-bg);
 }
 
-.apps-engine-optic .dropdown-optic__select--sm {
-  height: 34px;
-  font-size: 12px;
-  padding: 0 30px 0 10px;
+.apps-engine-optic .custom-dropdown__item.is-selected {
+  font-weight: 700;
+  color: var(--color-accent);
+}
+
+.apps-engine-optic .custom-dropdown__item.is-disabled {
+  opacity: 0.5;
+  pointer-events: none;
 }
 
 .apps-engine-optic .input-optic {
@@ -173,10 +216,10 @@
   padding: 0 14px;
   font-size: 13px;
   font-family: inherit;
-  background-color: var(--bg-card, rgba(255, 255, 255, 0.05));
-  color: var(--color-text, #ffffff);
-  border: none !important;
-  border-radius: 0 !important;
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  border: 1px solid var(--color-line) !important;
+  border-radius: 4px !important;
   box-shadow: none !important;
   outline: none !important;
   transition: background-color 0.15s ease;
@@ -184,7 +227,7 @@
 
 .apps-engine-optic .input-optic:hover,
 .apps-engine-optic .input-optic:focus {
-  background-color: var(--bg-card-hover, rgba(255, 255, 255, 0.1));
+  background-color: var(--color-bg);
 }
 
 .apps-engine-optic .input-optic--code {
@@ -222,27 +265,28 @@
   justify-content: center;
   gap: 10px;
   padding: 20px 16px;
-  background: var(--bg-card, rgba(255, 255, 255, 0.05));
-  color: var(--color-muted, #cbd5e1);
-  border: none !important;
-  border-radius: 0 !important;
+  background: var(--color-surface);
+  color: var(--color-muted);
+  border: 1px solid var(--color-line) !important;
+  border-radius: 4px !important;
   box-shadow: none !important;
   cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
   position: relative;
   text-align: center;
 }
 
 .apps-engine-optic .optic-card:hover {
-  background: var(--bg-card-hover, rgba(255, 255, 255, 0.09));
-  color: var(--color-text, #ffffff);
+  background: var(--color-bg);
+  color: var(--color-text);
 }
 
 .apps-engine-optic .optic-card.selected,
 .apps-engine-optic .optic-card.settings-choice--active,
 .apps-engine-optic .optic-card:has(input:checked) {
-  background: var(--bg-card-selected, rgba(255, 255, 255, 0.14));
-  color: var(--color-text, #ffffff);
+  background: var(--color-bg);
+  color: var(--color-text);
+  border-color: var(--color-accent) !important;
 }
 
 .apps-engine-optic .optic-card.selected::before,
@@ -252,9 +296,10 @@
   position: absolute;
   top: 10px;
   right: 10px;
-  width: 6px;
-  height: 6px;
-  background: var(--color-accent, #C7F464);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-accent);
 }
 
 /* Clean Mode-Adaptive CSS Icon Masks */
@@ -272,38 +317,38 @@
 }
 
 .apps-engine-optic .icon-git {
-  mask-image: url('/static/images/apps-engine/git.svg');
-  -webkit-mask-image: url('/static/images/apps-engine/git.svg');
+  mask-image: url('/plugins/railpack_apps/static/images/apps-engine/git.svg');
+  -webkit-mask-image: url('/plugins/railpack_apps/static/images/apps-engine/git.svg');
 }
 
 .apps-engine-optic .icon-docker {
-  mask-image: url('/static/images/apps-engine/docker.svg');
-  -webkit-mask-image: url('/static/images/apps-engine/docker.svg');
+  mask-image: url('/plugins/railpack_apps/static/images/apps-engine/docker.svg');
+  -webkit-mask-image: url('/plugins/railpack_apps/static/images/apps-engine/docker.svg');
 }
 
 .apps-engine-optic .icon-wordpress {
-  mask-image: url('/static/images/apps-engine/wordpress.svg');
-  -webkit-mask-image: url('/static/images/apps-engine/wordpress.svg');
+  mask-image: url('/plugins/railpack_apps/static/images/apps-engine/wordpress.svg');
+  -webkit-mask-image: url('/plugins/railpack_apps/static/images/apps-engine/wordpress.svg');
 }
 
 .apps-engine-optic .icon-postgresql {
-  mask-image: url('/static/images/apps-engine/postgresql.svg');
-  -webkit-mask-image: url('/static/images/apps-engine/postgresql.svg');
+  mask-image: url('/plugins/railpack_apps/static/images/apps-engine/postgresql.svg');
+  -webkit-mask-image: url('/plugins/railpack_apps/static/images/apps-engine/postgresql.svg');
 }
 
 .apps-engine-optic .icon-mysql {
-  mask-image: url('/static/images/apps-engine/database-mariadb.svg');
-  -webkit-mask-image: url('/static/images/apps-engine/database-mariadb.svg');
+  mask-image: url('/plugins/railpack_apps/static/images/apps-engine/mysql.svg');
+  -webkit-mask-image: url('/plugins/railpack_apps/static/images/apps-engine/mysql.svg');
 }
 
 .apps-engine-optic .icon-redis {
-  mask-image: url('/static/images/apps-engine/database-redis.svg');
-  -webkit-mask-image: url('/static/images/apps-engine/database-redis.svg');
+  mask-image: url('/plugins/railpack_apps/static/images/apps-engine/redis.svg');
+  -webkit-mask-image: url('/plugins/railpack_apps/static/images/apps-engine/redis.svg');
 }
 
 .apps-engine-optic .icon-mongodb {
-  mask-image: url('/static/images/apps-engine/database-mongodb.svg');
-  -webkit-mask-image: url('/static/images/apps-engine/database-mongodb.svg');
+  mask-image: url('/plugins/railpack_apps/static/images/apps-engine/mongodb.svg');
+  -webkit-mask-image: url('/plugins/railpack_apps/static/images/apps-engine/mongodb.svg');
 }
 
 .apps-engine-optic .optic-card__name {
@@ -316,14 +361,15 @@
   font-weight: 800;
   margin-bottom: 12px;
   display: block;
-  color: var(--color-text, #ffffff);
+  color: var(--color-text);
 }
 
 /* Step 2 Inspection Card Layout Structure */
 .apps-engine-optic .inspection-card-optic {
-  background: var(--bg-card, rgba(255, 255, 255, 0.05));
+  background: var(--color-surface);
   padding: 24px;
-  border: none !important;
+  border: 1px solid var(--color-line) !important;
+  border-radius: 4px;
   margin-bottom: 24px;
 }
 
@@ -350,17 +396,17 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: var(--color-muted, #94a3b8);
+  color: var(--color-muted);
 }
 
 .apps-engine-optic .inspection-value-optic {
   font-size: 16px;
   font-weight: 800;
-  color: var(--color-text, #ffffff);
+  color: var(--color-text);
 }
 
 .apps-engine-optic .inspection-value-optic.accent {
-  color: var(--color-accent, #C7F464);
+  color: var(--color-accent);
 }
 
 /* Custom Environment Variables Styling */
@@ -385,7 +431,7 @@
 .apps-engine-optic .apps-engine-environment-row .form-label {
   font-size: 12px;
   font-weight: 700;
-  color: var(--color-text, #ffffff);
+  color: var(--color-text);
   margin-bottom: 4px;
 }
 
@@ -395,10 +441,10 @@
   padding: 0 14px;
   font-size: 13px;
   font-family: 'JetBrains Mono', monospace;
-  background: var(--bg-card, rgba(255, 255, 255, 0.05));
-  color: var(--color-text, #ffffff);
-  border: none !important;
-  border-radius: 0 !important;
+  background: var(--color-surface);
+  color: var(--color-text);
+  border: 1px solid var(--color-line) !important;
+  border-radius: 4px !important;
   box-shadow: none !important;
   outline: none !important;
   transition: background 0.15s ease;
@@ -406,7 +452,7 @@
 
 .apps-engine-optic .apps-engine-environment-row input:hover,
 .apps-engine-optic .apps-engine-environment-row input:focus {
-  background: var(--bg-card-hover, rgba(255, 255, 255, 0.1));
+  background: var(--color-bg);
 }
 
 .apps-engine-optic .apps-engine-environment-row .btn {
@@ -414,17 +460,17 @@
   padding: 0 16px;
   font-size: 13px;
   font-weight: 700;
-  background: var(--color-secondary-btn, rgba(255, 255, 255, 0.06));
-  color: var(--color-text, #ffffff);
-  border: none !important;
-  border-radius: 0 !important;
+  background: var(--color-surface);
+  color: var(--color-text);
+  border: 1px solid var(--color-line) !important;
+  border-radius: 4px !important;
   box-shadow: none !important;
   cursor: pointer;
   transition: background 0.15s ease;
 }
 
 .apps-engine-optic .apps-engine-environment-row .btn:hover {
-  background: var(--color-secondary-hover, rgba(255, 255, 255, 0.12));
+  background: var(--color-bg);
 }
 
 /* Action Footer */

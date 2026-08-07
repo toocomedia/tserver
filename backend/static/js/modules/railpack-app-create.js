@@ -1,4 +1,4 @@
-import { addEnvironmentRow, csrfHeaders, environmentValues, fetchJson, inspectRegistryImage, renderDeployment, renderInspection, setHidden, setText } from './railpack-app-create-ui.js';
+import { addEnvironmentRow, csrfHeaders, environmentValues, fetchJson, inspectRegistryImage, renderDeployment, renderInspection, setHidden, setText, initDropdowns } from './railpack-app-create-ui.js';
 const form = document.querySelector('[data-railpack-builder]');
 if (form) {
   const state = { step: 1, unlocked: 1, appId: null, deploymentId: null };
@@ -37,7 +37,7 @@ if (form) {
     renderStep(1);
   }
   function domainState() {
-    const selected = query('[data-domain-select]').selectedOptions[0];
+    const selected = query('[data-domain-select]');
     const ssl = query('[data-ssl-request]');
     const hasSsl = selected?.dataset.domainSsl === 'true';
     ssl.checked = false;
@@ -198,7 +198,7 @@ if (form) {
   }
 
   query('[data-source-type]').addEventListener('change', sourceState);
-  query('[data-domain-select]').addEventListener('change', () => { const selected = query('[data-domain-select]').selectedOptions[0]; setText(query('[data-wizard-domain-name]'), selected.dataset.domainName); domainState(); });
+  query('[data-domain-select]').addEventListener('change', () => { const selected = query('[data-domain-select]'); setText(query('[data-wizard-domain-name]'), selected.dataset.domainName); domainState(); });
   query('[data-inspect-retry]').addEventListener('click', inspectSource);
   query('[data-add-environment]').addEventListener('click', () => addEnvironmentRow(form));
   form.querySelectorAll('[data-database-row]').forEach((row) => {
@@ -210,6 +210,7 @@ if (form) {
   form.addEventListener('submit', (event) => { event.preventDefault(); if (state.step === 3) startDeployment(); });
   form.querySelectorAll('[data-wizard-nav]').forEach((item) => item.addEventListener('click', () => { const step = Number(item.dataset.wizardNav); if (step <= state.unlocked) renderStep(step); }));
   form.querySelectorAll('[data-database-row]').forEach(attachmentState);
-  setText(query('[data-wizard-domain-name]'), query('[data-domain-select]').selectedOptions[0]?.dataset.domainName || 'the selected domain');
+  setText(query('[data-wizard-domain-name]'), query('[data-domain-select]')?.dataset.domainName || 'the selected domain');
+  initDropdowns();
   sourceState();
 }

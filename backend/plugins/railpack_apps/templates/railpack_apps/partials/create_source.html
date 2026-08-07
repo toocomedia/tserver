@@ -2,15 +2,24 @@
   <span class="section-label">Select App Source</span>
 
   <div class="dropdown-optic" style="margin-bottom: 20px;">
-    <label class="dropdown-optic__label" for="domain_id">Target Domain</label>
-    <div class="dropdown-optic__wrap">
-      <select class="dropdown-optic__select" id="domain_id" name="domain_id" required data-domain-select>
+    <label class="dropdown-optic__label">Target Domain</label>
+    <div class="custom-dropdown" data-custom-dropdown="domain_id">
+      <input type="hidden" id="domain_id" name="domain_id" required data-dropdown-value data-domain-select>
+      <div class="custom-dropdown__trigger" data-dropdown-trigger tabindex="0">
+        <span class="custom-dropdown__label" data-dropdown-label>Select Target Domain...</span>
+      </div>
+      <div class="custom-dropdown__menu" data-dropdown-menu>
         {% for domain in domains %}
-        <option value="{{ domain.id }}" data-domain-name="{{ domain.name }}" data-domain-ssl="{{ 'true' if domain.name in ssl_domain_names else 'false' }}" {% if domain.id in used_domain_ids or domain.project_type != 'static' %}disabled{% endif %}>
+        <div class="custom-dropdown__item {% if domain.id in used_domain_ids or domain.project_type != 'static' %}is-disabled{% endif %}" 
+             data-dropdown-item 
+             data-value="{{ domain.id }}" 
+             data-label="{{ domain.name }}"
+             data-domain-name="{{ domain.name }}" 
+             data-domain-ssl="{{ 'true' if domain.name in ssl_domain_names else 'false' }}">
           {{ domain.name }}{% if domain.id in used_domain_ids %} — in use{% elif domain.project_type != 'static' %} — unavailable{% endif %}
-        </option>
+        </div>
         {% endfor %}
-      </select>
+      </div>
     </div>
   </div>
 

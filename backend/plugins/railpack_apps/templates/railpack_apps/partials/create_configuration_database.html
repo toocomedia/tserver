@@ -1,0 +1,138 @@
+<fieldset class="form-group" style="border:none; padding:0; margin:0 0 24px 0;">
+  <legend class="section-label" style="margin-bottom:12px;">Attach Private Databases</legend>
+  <div class="cards-grid-4">
+    
+    <!-- MariaDB / MySQL -->
+    <div class="optic-card apps-engine-database-choice" id="database-config-mariadb" data-database-row data-kind="mariadb">
+      <label class="form-check" style="cursor:pointer; width:100%; display:flex; flex-direction:column; align-items:center; gap:8px;">
+        <input type="checkbox" data-database-enabled style="display:none;">
+        <span class="optic-icon icon-mysql"></span>
+        <span class="optic-card__name">MySQL</span>
+      </label>
+      <div class="form-subbox" data-database-options hidden style="width:100%; margin-top:8px;">
+        <div class="dropdown-optic">
+          <label class="dropdown-optic__label" style="font-size:11px;">Provider</label>
+          <div class="custom-dropdown" data-custom-dropdown="database-provider-mariadb">
+            <input type="hidden" id="database-provider-mariadb" data-dropdown-value data-database-provider value="docker">
+            <div class="custom-dropdown__trigger" data-dropdown-trigger tabindex="0">
+              <span class="custom-dropdown__label" data-dropdown-label>Panel Docker</span>
+            </div>
+            <div class="custom-dropdown__menu" data-dropdown-menu>
+              <div class="custom-dropdown__item is-selected" data-dropdown-item data-value="docker" data-label="Panel Docker">Panel Docker</div>
+              <div class="custom-dropdown__item" data-dropdown-item data-value="external" data-label="External URL">External URL</div>
+            </div>
+          </div>
+        </div>
+        <div class="form-group" data-database-external hidden style="margin-top:6px;">
+          <input class="input-optic input-optic--code" id="database-url-mariadb" data-database-url type="password" autocomplete="off" placeholder="Connection URL" style="height:32px; font-size:12px;">
+        </div>
+      </div>
+      <input data-database-key value="MYSQL_URL" type="hidden">
+    </div>
+
+    <!-- PostgreSQL -->
+    <div class="optic-card apps-engine-database-choice" id="database-config-postgresql" data-database-row data-kind="postgresql">
+      <label class="form-check" style="cursor:pointer; width:100%; display:flex; flex-direction:column; align-items:center; gap:8px;">
+        <input type="checkbox" data-database-enabled style="display:none;">
+        <span class="optic-icon icon-postgresql"></span>
+        <span class="optic-card__name">PostgreSQL</span>
+      </label>
+      <div class="form-subbox" data-database-options hidden style="width:100%; margin-top:8px;">
+        <div class="dropdown-optic">
+          <label class="dropdown-optic__label" style="font-size:11px;">Provider</label>
+          <div class="custom-dropdown" data-custom-dropdown="database-provider-postgresql">
+            <input type="hidden" id="database-provider-postgresql" data-dropdown-value data-database-provider value="docker">
+            <div class="custom-dropdown__trigger" data-dropdown-trigger tabindex="0">
+              <span class="custom-dropdown__label" data-dropdown-label>Panel Docker</span>
+            </div>
+            <div class="custom-dropdown__menu" data-dropdown-menu>
+              <div class="custom-dropdown__item is-selected" data-dropdown-item data-value="docker" data-label="Panel Docker">Panel Docker</div>
+              <div class="custom-dropdown__item" data-dropdown-item data-value="panel_postgres" data-label="Panel PostgreSQL">Panel PostgreSQL</div>
+              {% if supabase_projects %}
+              <div class="custom-dropdown__item" data-dropdown-item data-value="supabase" data-label="Supabase">Supabase</div>
+              {% endif %}
+              <div class="custom-dropdown__item" data-dropdown-item data-value="external" data-label="External URL">External URL</div>
+            </div>
+          </div>
+        </div>
+        {% if supabase_projects %}
+        <div class="dropdown-optic" data-database-supabase-picker hidden style="margin-top:6px;">
+          <div class="custom-dropdown" data-custom-dropdown="database-supabase-project-postgresql">
+            <input type="hidden" id="database-supabase-project-postgresql" data-dropdown-value data-database-supabase-project value="">
+            <div class="custom-dropdown__trigger" data-dropdown-trigger tabindex="0">
+              <span class="custom-dropdown__label" data-dropdown-label>Select Supabase</span>
+            </div>
+            <div class="custom-dropdown__menu" data-dropdown-menu>
+              <div class="custom-dropdown__item is-selected" data-dropdown-item data-value="" data-label="Select Supabase">Select Supabase</div>
+              {% for sp in supabase_projects %}
+              <div class="custom-dropdown__item" data-dropdown-item data-value="{{ sp.id }}" data-label="{{ sp.name }}">{{ sp.name }}</div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+        {% endif %}
+        <div class="form-group" data-database-external hidden style="margin-top:6px;">
+          <input class="input-optic input-optic--code" id="database-url-postgresql" data-database-url type="password" autocomplete="off" placeholder="Connection URL" style="height:32px; font-size:12px;">
+        </div>
+      </div>
+      <input data-database-key value="DATABASE_URL" type="hidden">
+    </div>
+
+    <!-- Redis -->
+    <div class="optic-card apps-engine-database-choice" id="database-config-redis" data-database-row data-kind="redis">
+      <label class="form-check" style="cursor:pointer; width:100%; display:flex; flex-direction:column; align-items:center; gap:8px;">
+        <input type="checkbox" data-database-enabled style="display:none;">
+        <span class="optic-icon icon-redis"></span>
+        <span class="optic-card__name">Redis</span>
+      </label>
+      <div class="form-subbox" data-database-options hidden style="width:100%; margin-top:8px;">
+        <div class="dropdown-optic">
+          <label class="dropdown-optic__label" style="font-size:11px;">Provider</label>
+          <div class="custom-dropdown" data-custom-dropdown="database-provider-redis">
+            <input type="hidden" id="database-provider-redis" data-dropdown-value data-database-provider value="docker">
+            <div class="custom-dropdown__trigger" data-dropdown-trigger tabindex="0">
+              <span class="custom-dropdown__label" data-dropdown-label>Panel Docker</span>
+            </div>
+            <div class="custom-dropdown__menu" data-dropdown-menu>
+              <div class="custom-dropdown__item is-selected" data-dropdown-item data-value="docker" data-label="Panel Docker">Panel Docker</div>
+              <div class="custom-dropdown__item" data-dropdown-item data-value="external" data-label="External URL">External URL</div>
+            </div>
+          </div>
+        </div>
+        <div class="form-group" data-database-external hidden style="margin-top:6px;">
+          <input class="input-optic input-optic--code" id="database-url-redis" data-database-url type="password" autocomplete="off" placeholder="Connection URL" style="height:32px; font-size:12px;">
+        </div>
+      </div>
+      <input data-database-key value="REDIS_URL" type="hidden">
+    </div>
+
+    <!-- MongoDB -->
+    <div class="optic-card apps-engine-database-choice" id="database-config-mongodb" data-database-row data-kind="mongodb">
+      <label class="form-check" style="cursor:pointer; width:100%; display:flex; flex-direction:column; align-items:center; gap:8px;">
+        <input type="checkbox" data-database-enabled style="display:none;">
+        <span class="optic-icon icon-mongodb"></span>
+        <span class="optic-card__name">MongoDB</span>
+      </label>
+      <div class="form-subbox" data-database-options hidden style="width:100%; margin-top:8px;">
+        <div class="dropdown-optic">
+          <label class="dropdown-optic__label" style="font-size:11px;">Provider</label>
+          <div class="custom-dropdown" data-custom-dropdown="database-provider-mongodb">
+            <input type="hidden" id="database-provider-mongodb" data-dropdown-value data-database-provider value="docker">
+            <div class="custom-dropdown__trigger" data-dropdown-trigger tabindex="0">
+              <span class="custom-dropdown__label" data-dropdown-label>Panel Docker</span>
+            </div>
+            <div class="custom-dropdown__menu" data-dropdown-menu>
+              <div class="custom-dropdown__item is-selected" data-dropdown-item data-value="docker" data-label="Panel Docker">Panel Docker</div>
+              <div class="custom-dropdown__item" data-dropdown-item data-value="external" data-label="External URL">External URL</div>
+            </div>
+          </div>
+        </div>
+        <div class="form-group" data-database-external hidden style="margin-top:6px;">
+          <input class="input-optic input-optic--code" id="database-url-mongodb" data-database-url type="password" autocomplete="off" placeholder="Connection URL" style="height:32px; font-size:12px;">
+        </div>
+      </div>
+      <input data-database-key value="MONGODB_URI" type="hidden">
+    </div>
+
+  </div>
+</fieldset>

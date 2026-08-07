@@ -111,3 +111,64 @@ function deploymentStep(line, current, status) {
 function stageLabels() {
   return { prepare: 'Preparing deployment', source: 'Cloning Git source', build: 'Building application image', pull: 'Pulling registry image', start: 'Starting application container', health: 'Checking private HTTP endpoint', routing: 'Publishing application route', wordpress: 'Finishing WordPress setup', ssl: 'Configuring HTTPS', rollback: 'Restoring previous image', complete: 'Deployment complete' };
 }
+
+export function initDropdowns() {
+  document.querySelectorAll('[data-custom-dropdown]').forEach(dropdown => {
+    const trigger = dropdown.querySelector('[data-dropdown-trigger]');
+    const menu = dropdown.querySelector('[data-dropdown-menu]');
+    const label = dropdown.querySelector('[data-dropdown-label]');
+    const hiddenInput = dropdown.querySelector('[data-dropdown-value]');
+    if (!trigger || !menu || !label || !hiddenInput) return;
+
+    trigger.addEventListener('click', (e) => {
+      e.preventDefault();
+      // Close other dropdowns
+      document.querySelectorAll('[data-custom-dropdown].is-open').forEach(d => {
+        if (d !== dropdown) d.classList.remove('is-open');
+      });
+      dropdown.classList.toggle('is-open');
+    });
+
+    menu.addEventListener('click', (e) => {
+      const item = e.target.closest('[data-dropdown-item]');
+      if (!item || item.classList.contains('is-disabled')) return;
+      
+      // Update label and hidden input
+      label.textContent = item.dataset.label || item.textContent.trim();
+      hiddenInput.value = item.dataset.value;
+      
+      // Copy dataset properties
+      Object.keys(item.dataset).forEach(key => {
+        if (!['dropdownItem', 'value', 'label'].includes(key)) {
+          hiddenInput.dataset[key] = item.dataset[key];
+        }
+      });
+      
+      // Update active state
+      menu.querySelectorAll('[data-dropdown-item]').forEach(i => i.classList.remove('is-selected'));
+      item.classList.add('is-selected');
+      
+      dropdown.classList.remove('is-open');
+      hiddenInput.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+
+    // Close when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!dropdown.contains(e.target)) dropdown.classList.remove('is-open');
+    });
+    
+    // Set initial active state if value matches
+    if (hiddenInput.value) {
+      const activeItem = menu.querySelector(`[data-dropdown-item][data-value="${hiddenInput.value}"]`);
+      if (activeItem) {
+        label.textContent = activeItem.dataset.label || activeItem.textContent.trim();
+        activeItem.classList.add('is-selected');
+        Object.keys(activeItem.dataset).forEach(key => {
+          if (!['dropdownItem', 'value', 'label'].includes(key)) {
+            hiddenInput.dataset[key] = activeItem.dataset[key];
+          }
+        });
+      }
+    }
+  });
+}

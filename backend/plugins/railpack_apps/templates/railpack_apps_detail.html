@@ -6,59 +6,13 @@
 {% set deployment_active = deployment and deployment.status in ['queued', 'running'] %}
 {% if request.query_params.get('error') %}<div class="alert alert--error">{{ request.query_params.get('error') }}</div>{% elif app.status == 'delete_failed' %}<div class="alert alert--error">Removal did not finish. Retry the removal below. Runtime controls are disabled until cleanup completes.</div>{% elif app.status == 'data_preserved' %}<div class="alert alert--info">The application runtime was removed. Its managed data remains available below until you explicitly delete it.</div>{% elif app.last_error %}<div class="alert alert--error">{{ app.last_error }}</div>{% endif %}
 
-<div class="hero-app-box">
-  <div>
-    <div style="display:flex;align-items:center;gap:12px;">
-      <h1 style="font-size:24px;font-weight:700;margin:0;">{{ domain.name if domain else app.container_name }}</h1>
-      <span class="badge-pill {% if app.status == 'running' %}badge-pill--accent{% endif %}">{{ app.status | title }}</span>
-    </div>
-    <div class="hero-stats">
-      <span>URL: {% if domain %}<a href="{{ public_url(domain.name, https=ssl_active) }}" target="_blank" rel="noopener" style="color:var(--color-text);font-weight:700;">{{ domain.name }}</a>{% else %}<span class="text-muted">Domain missing</span>{% endif %}</span>
-      <span>Port: <span class="mono" style="color:var(--color-text);font-weight:600;">127.0.0.1:{{ app.host_port }}</span></span>
-      <span>SSL: <span style="color:var(--color-text);font-weight:600;">{{ 'HTTPS active' if ssl_active else 'HTTP only' }}</span></span>
-    </div>
-  </div>
-  <div style="display:flex;gap:8px;flex-wrap:wrap;">
-    {% if app.status not in ['deleting', 'delete_failed'] and not deployment_active %}
-      {% if app.status == 'pending' %}<form method="post" action="/plugins/railpack_apps/{{ app.id }}/deploy">{% include "partials/csrf_field.html" %}<button class="btn btn--accent btn--sm">Deploy app</button></form>{% endif %}
-      {% if app.status in ['failed', 'stopped'] %}<form method="post" action="/plugins/railpack_apps/{{ app.id }}/deploy">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary btn--sm">Redeploy</button></form>{% endif %}
-      {% if app.status == 'running' %}<form method="post" action="/plugins/railpack_apps/{{ app.id }}/deploy">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary btn--sm">Redeploy</button></form><form method="post" action="/plugins/railpack_apps/{{ app.id }}/restart">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary btn--sm">Restart</button></form><form method="post" action="/plugins/railpack_apps/{{ app.id }}/stop">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary btn--sm">Stop</button></form>{% endif %}
-      {% if app.status == 'stopped' %}<form method="post" action="/plugins/railpack_apps/{{ app.id }}/start">{% include "partials/csrf_field.html" %}<button class="btn btn--accent btn--sm">Start</button></form>{% endif %}
-    {% endif %}
-    {% if deployment_active %}<a class="btn btn--secondary btn--sm" href="#deployment">View deployment</a>{% endif %}
-    {% if app.preset == 'wordpress' and app.status == 'running' %}<form method="post" action="/plugins/railpack_apps/{{ app.id }}/wordpress/update">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary btn--sm">Update WordPress</button></form><form method="post" action="/plugins/railpack_apps/{{ app.id }}/wordpress/backup">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary btn--sm">Back up WordPress</button></form>{% endif %}
-  </div>
-</div>
+{% include "railpack_apps/partials/detail_hero.html" %}
 
 <div class="layout-2col">
   <div>
-    <div class="master-card" id="deployment"{% if deployment %} data-railpack-deployment data-deployment-url="/plugins/railpack_apps/{{ app.id }}/deployments/{{ deployment.id }}" data-deployment-active="{{ 'true' if deployment_active else 'false' }}"{% endif %}>
-      <div class="master-card__header"><span>Live deployment stream</span><span class="badge-pill" data-deployment-state>{% if deployment %}{{ deployment.status | title }} · {{ deployment.stage | title }}{% else %}Not deployed yet{% endif %}</span></div>
-      <div class="master-card__body">
-        {% if deployment %}<pre class="terminal-fluid" data-deployment-output>{{ deployment.output }}{% if deployment.error %}
-[error] {{ deployment.error }}{% endif %}</pre><div class="info-row"><span class="info-row__label">Deployment action</span><span class="info-row__value">{{ deployment.action | title }}</span></div>{% if deployments|length > 1 %}<div class="form-actions">{% for item in deployments %}<a class="btn btn--secondary btn--sm" href="/plugins/railpack_apps/{{ app.id }}?deployment={{ item.id }}">#{{ item.id }} · {{ item.status | title }}</a>{% endfor %}</div>{% endif %}{% else %}<p class="text-muted" style="font-size:14px;">No deployment output has been recorded yet.</p>{% endif %}
-      </div>
-    </div>
+    {% include "railpack_apps/partials/detail_deployment.html" %}
 
-    <div class="master-card" id="databases">
-      <div class="master-card__header"><span>Managed services</span><span class="badge-pill">{{ databases | length }}</span></div>
-      <div class="master-card__body">
-        {% if databases %}
-          {% for item in databases %}{% set live = database_statuses.get(item.id, {}) %}
-          <section class="form-group">
-            <div class="info-row"><span class="info-row__label">{{ item.kind | title }}</span><span class="info-row__value">{{ item.provider }} · {{ live.get('status', item.status) }}</span></div>
-            <p class="form-hint">Available to this app as <span class="mono">{{ item.environment_key }}</span>.</p>
-            <div class="form-actions">
-              {% if item.provider == 'docker' %}<form method="post" action="/plugins/railpack_apps/{{ app.id }}/databases/{{ item.id }}/reconnect">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary btn--sm">Reconnect</button></form><form method="post" action="/plugins/railpack_apps/{{ app.id }}/databases/{{ item.id }}/backup">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary btn--sm">Create backup</button></form>{% endif %}
-              {% if item.provider != 'external' %}<form method="post" action="/plugins/railpack_apps/{{ app.id }}/databases/{{ item.id }}/rotate">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary btn--sm">Rotate credentials</button></form>{% endif %}
-            </div>
-            {% for backup in backups if backup.database_id == item.id and backup.status == 'complete' %}<form class="form-group" method="post" action="/plugins/railpack_apps/{{ app.id }}/databases/{{ item.id }}/restore/{{ backup.id }}"><label class="form-label" for="restore-{{ backup.id }}">Restore backup #{{ backup.id }}</label><p class="form-hint">Type RESTORE {{ backup.id }} to continue.</p><input class="form-input" id="restore-{{ backup.id }}" name="confirmation" required><div class="form-actions"><button class="btn btn--secondary btn--sm">Restore</button></div>{% include "partials/csrf_field.html" %}</form>{% endfor %}
-          </section>{% if not loop.last %}<hr class="settings-divider">{% endif %}
-          {% endfor %}
-        {% else %}<p class="text-muted" style="font-size:14px;">No managed services are attached to this app.</p>{% endif %}
-        {% if app.preset == 'wordpress' %}{% for backup in backups if backup.kind == 'wordpress' and backup.status == 'complete' %}<form class="form-group" method="post" action="/plugins/railpack_apps/{{ app.id }}/wordpress/restore/{{ backup.id }}"><label class="form-label" for="restore-wp-{{ backup.id }}">Restore WordPress backup #{{ backup.id }}</label><p class="form-hint">Type RESTORE {{ backup.id }} to continue.</p><input class="form-input" id="restore-wp-{{ backup.id }}" name="confirmation" required><div class="form-actions"><button class="btn btn--secondary btn--sm">Restore WordPress</button></div>{% include "partials/csrf_field.html" %}</form>{% endfor %}{% endif %}
-      </div>
-    </div>
+    {% include "railpack_apps/partials/detail_databases.html" %}
   </div>
 
   <div>
