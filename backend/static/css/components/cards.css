@@ -1013,20 +1013,20 @@
   padding: 0 20px;
   gap: 8px;
   z-index: 5;
-  transform: translateX(100%);
-  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  clip-path: inset(0 0 0 100%);
+  transition: clip-path 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   box-shadow: none !important;
   margin: 0;
 }
 
 .is-actions-open > .list-row-subactions.slide-toolbar,
 .is-actions-open > td > .list-row-subactions.slide-toolbar {
-  transform: translateX(0);
+  clip-path: inset(0 0 0 0);
 }
 
 .list-row-subactions.is-hidden {
   display: flex !important; /* override is-hidden to keep transition active */
-  transform: translateX(100%);
+  clip-path: inset(0 0 0 100%);
   pointer-events: none;
 }
 
@@ -1049,10 +1049,6 @@
 }
 
 /* Synchronized hover state */
-.table tr {
-  clip-path: inset(0 0 0 0); /* Clips the sliding toolbar so it doesn't cause a scrollbar */
-}
-
 .table tr.is-expanded,
 .table tr.is-hovered,
 .list-item-row.is-expanded,
