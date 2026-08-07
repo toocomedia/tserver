@@ -132,7 +132,7 @@
           <div class="list-row-subactions">
             <div class="list-row-subactions__inner">
               <div class="list-row-subactions__btns">
-                <form method="post" action="/ssl/{{ cert.id }}/renew" style="display:inline;">
+                <form method="post" action="/ssl/{{ cert.id }}/renew" style="display:contents;">
                   {% include "partials/csrf_field.html" %}
                   <button type="submit" class="btn btn--secondary btn--sm"
                           id="btn-renew-{{ cert.id }}"
@@ -150,7 +150,7 @@
                   <span>Revoke Certificate</span>
                 </button>
               </div>
-              <button type="button" class="icon-btn" onclick="toggleListRowActions(this)" aria-label="Close" title="Close"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"></path></svg></button>
+              <button type="button" class="btn btn--ghost btn--icon btn--sm" onclick="toggleListRowActions(this)" aria-label="Close" title="Close"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"></path></svg></button>
             </div>
           </div>
         </td>
