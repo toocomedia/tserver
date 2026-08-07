@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="/static/css/components/apps-engine-optic.css">
 {% endblock %}
 {% block content %}
-{{ skeleton_overlay('app-engine-create-skeleton', sections=3) }}
+{{ skeleton_overlay('app-engine-create-skeleton', sections=[3]) }}
 <div class="apps-engine-optic">
 <form class="wizard-form apps-engine-wizard" method="post" action="/plugins/railpack_apps/create" data-railpack-builder>
   {% include "partials/csrf_field.html" %}
