@@ -115,6 +115,21 @@ import os
 def get_app_version():
     try:
         base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        
+        # 1. Try checking COMMIT_HASH written by update.sh on VPS
+        commit_file = os.path.join(base_dir, "backend", "COMMIT_HASH")
+        if not os.path.exists(commit_file):
+            commit_file = os.path.join(base_dir, "COMMIT_HASH")
+            if not os.path.exists(commit_file):
+                commit_file = "/opt/srv-panel/app/COMMIT_HASH"
+                
+        if os.path.exists(commit_file):
+            with open(commit_file, "r") as f:
+                sha = f.read().strip()
+                if sha and len(sha) >= 7:
+                    return sha[:7]
+        
+        # 2. Try to read Git Hash directly if .git exists (Local development)
         git_dir = os.path.join(base_dir, ".git")
         head_file = os.path.join(git_dir, "HEAD")
         
@@ -140,6 +155,7 @@ def get_app_version():
     except Exception:
         pass
         
+    # 3. Fallback to file modified time
     try:
         return str(int(os.path.getmtime(os.path.abspath(__file__))))
     except Exception:
