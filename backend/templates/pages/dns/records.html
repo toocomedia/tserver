@@ -82,17 +82,27 @@
         <td class="text-small text-muted">{{ row.ttl }}</td>
         <td class="col-actions">
           {% import "partials/list_actions_toggle.html" as list_actions %}
-          {% call list_actions.render() %}
-            <button type="button"
-                    class="btn btn--danger btn--sm btn-del-record"
-                    id="btn-del-{{ loop.index }}"
-                    data-domain="{{ domain.name }}"
-                    data-name="{{ row.name }}"
-                    data-type="{{ row.type }}">
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path></svg>
-              <span>Delete Record</span>
-            </button>
-          {% endcall %}
+          {{ list_actions.button() }}
+        </td>
+      </tr>
+      <tr class="table-row-subactions-tr is-hidden">
+        <td colspan="5" style="padding:0;">
+          <div class="list-row-subactions">
+            <div class="list-row-subactions__inner">
+              <div class="list-row-subactions__btns">
+                <button type="button"
+                        class="btn btn--danger btn--sm btn-del-record"
+                        id="btn-del-{{ loop.index }}"
+                        data-domain="{{ domain.name }}"
+                        data-name="{{ row.name }}"
+                        data-type="{{ row.type }}">
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path></svg>
+                  <span>Delete Record</span>
+                </button>
+              </div>
+              <button type="button" class="btn btn--ghost btn--sm" onclick="toggleListRowActions(this)" title="Close">Close ✕</button>
+            </div>
+          </div>
         </td>
       </tr>
       {% endfor %}

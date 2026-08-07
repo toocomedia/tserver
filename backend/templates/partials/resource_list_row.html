@@ -25,10 +25,16 @@
   <div class="list-col-desc">{{ description }}</div>
   <div class="list-col-actions">
     {% import "partials/list_actions_toggle.html" as list_actions %}
-    {% call list_actions.render() %}
-      {% if resource_type == 'plugin' %}{% set plugin = item %}{% else %}{% set dependency = item %}{% endif %}
-      {% include actions_template %}
-    {% endcall %}
+    {{ list_actions.button() }}
+  </div>
+  <div class="list-row-subactions is-hidden">
+    <div class="list-row-subactions__inner">
+      <div class="list-row-subactions__btns">
+        {% if resource_type == 'plugin' %}{% set plugin = item %}{% else %}{% set dependency = item %}{% endif %}
+        {% include actions_template %}
+      </div>
+      <button type="button" class="btn btn--ghost btn--sm list-row-subactions__close" onclick="toggleListRowActions(this)" title="Close">Close ✕</button>
+    </div>
   </div>
   {% if has_overlay and overlay_template %}
     {% set plugin = item %}

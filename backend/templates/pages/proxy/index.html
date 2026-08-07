@@ -121,35 +121,45 @@
 
         <td class="col-actions">
           {% import "partials/list_actions_toggle.html" as list_actions %}
-          {% call list_actions.render() %}
-            {% if not p.ssl_enabled %}
-            <a href="/ssl/issue?full_domain={{ p.full_domain }}"
-               class="btn btn--secondary btn--sm"
-               title="Issue SSL"
-               id="btn-ssl-{{ p.id }}">
-              + SSL
-            </a>
-            {% endif %}
+          {{ list_actions.button() }}
+        </td>
+      </tr>
+      <tr class="table-row-subactions-tr is-hidden">
+        <td colspan="7" style="padding:0;">
+          <div class="list-row-subactions">
+            <div class="list-row-subactions__inner">
+              <div class="list-row-subactions__btns">
+                {% if not p.ssl_enabled %}
+                <a href="/ssl/issue?full_domain={{ p.full_domain }}"
+                   class="btn btn--secondary btn--sm"
+                   title="Issue SSL"
+                   id="btn-ssl-{{ p.id }}">
+                  + SSL
+                </a>
+                {% endif %}
 
-            <button class="btn btn--secondary btn--sm"
-                    id="btn-cache-{{ p.id }}"
-                    data-proxy-id="{{ p.id }}"
-                    data-cache-enabled="{{ '1' if item.cache_enabled else '0' }}"
-                    data-cache-ttl="{{ p.cache_ttl_minutes }}"
-                    data-cache-auto="{{ p.cache_auto_clear_hours }}"
-                    title="Cache Settings">
-              Cache Settings
-            </button>
+                <button class="btn btn--secondary btn--sm"
+                        id="btn-cache-{{ p.id }}"
+                        data-proxy-id="{{ p.id }}"
+                        data-cache-enabled="{{ '1' if item.cache_enabled else '0' }}"
+                        data-cache-ttl="{{ p.cache_ttl_minutes }}"
+                        data-cache-auto="{{ p.cache_auto_clear_hours }}"
+                        title="Cache Settings">
+                  Cache Settings
+                </button>
 
-            <button class="btn btn--danger btn--sm"
-                    id="btn-del-{{ p.id }}"
-                    data-proxy-id="{{ p.id }}"
-                    data-full-domain="{{ p.full_domain }}"
-                    data-dns-managed="{{ '1' if item.dns_managed else '0' }}"
-                    title="Delete Proxy">
-              Delete
-            </button>
-          {% endcall %}
+                <button class="btn btn--danger btn--sm"
+                        id="btn-del-{{ p.id }}"
+                        data-proxy-id="{{ p.id }}"
+                        data-full-domain="{{ p.full_domain }}"
+                        data-dns-managed="{{ '1' if item.dns_managed else '0' }}"
+                        title="Delete Proxy">
+                  Delete
+                </button>
+              </div>
+              <button type="button" class="btn btn--ghost btn--sm" onclick="toggleListRowActions(this)" title="Close">Close ✕</button>
+            </div>
+          </div>
         </td>
       </tr>
 

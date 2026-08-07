@@ -92,35 +92,45 @@
 
           <td class="col-actions">
             {% import "partials/list_actions_toggle.html" as list_actions %}
-            {% call list_actions.render() %}
-              {% if not item.ssl_active %}
-                {% if item.nginx_active %}
-                <a href="/ssl/issue?full_domain={{ item.domain.name }}"
-                   class="btn btn--secondary btn--sm"
-                   title="Issue SSL Certificate"
-                   id="btn-ssl-{{ item.domain.id }}">
-                  + SSL
-                </a>
-                {% else %}
-                <button type="button" class="btn btn--secondary btn--sm" disabled
-                        title="Nginx web server required for Let's Encrypt SSL verification">
-                  + SSL
-                </button>
-                {% endif %}
-              {% endif %}
-              <a href="/domains/{{ item.domain.id }}"
-                 class="btn btn--primary btn--sm"
-                 title="Manage Domain"
-                 id="btn-view-{{ item.domain.id }}">
-                Manage
-              </a>
-              <button type="button" class="btn btn--danger btn--sm"
-                      title="Delete Domain"
-                      id="btn-del-{{ item.domain.id }}"
-                      onclick="deleteDomain({{ item.domain.id }}, '{{ item.domain.name }}')">
-                Delete
-              </button>
-            {% endcall %}
+            {{ list_actions.button() }}
+          </td>
+        </tr>
+        <tr class="table-row-subactions-tr is-hidden">
+          <td colspan="5" style="padding:0;">
+            <div class="list-row-subactions">
+              <div class="list-row-subactions__inner">
+                <div class="list-row-subactions__btns">
+                  {% if not item.ssl_active %}
+                    {% if item.nginx_active %}
+                    <a href="/ssl/issue?full_domain={{ item.domain.name }}"
+                       class="btn btn--secondary btn--sm"
+                       title="Issue SSL Certificate"
+                       id="btn-ssl-{{ item.domain.id }}">
+                      + SSL
+                    </a>
+                    {% else %}
+                    <button type="button" class="btn btn--secondary btn--sm" disabled
+                            title="Nginx web server required for Let's Encrypt SSL verification">
+                      + SSL
+                    </button>
+                    {% endif %}
+                  {% endif %}
+                  <a href="/domains/{{ item.domain.id }}"
+                     class="btn btn--primary btn--sm"
+                     title="Manage Domain"
+                     id="btn-view-{{ item.domain.id }}">
+                    Manage
+                  </a>
+                  <button type="button" class="btn btn--danger btn--sm"
+                          title="Delete Domain"
+                          id="btn-del-{{ item.domain.id }}"
+                          onclick="deleteDomain({{ item.domain.id }}, '{{ item.domain.name }}')">
+                    Delete
+                  </button>
+                </div>
+                <button type="button" class="btn btn--ghost btn--sm" onclick="toggleListRowActions(this)" title="Close">Close ✕</button>
+              </div>
+            </div>
           </td>
         </tr>
         {% endfor %}

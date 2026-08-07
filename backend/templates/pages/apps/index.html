@@ -55,12 +55,22 @@
         </td>
         <td class="col-actions">
           {% import "partials/list_actions_toggle.html" as list_actions %}
-          {% call list_actions.render() %}
-            <a class="btn btn--primary btn--sm" href="/apps/{{ app.id }}">
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
-              <span>Manage Application</span>
-            </a>
-          {% endcall %}
+          {{ list_actions.button() }}
+        </td>
+      </tr>
+      <tr class="table-row-subactions-tr is-hidden">
+        <td colspan="5" style="padding:0;">
+          <div class="list-row-subactions">
+            <div class="list-row-subactions__inner">
+              <div class="list-row-subactions__btns">
+                <a class="btn btn--primary btn--sm" href="/apps/{{ app.id }}">
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                  <span>Manage Application</span>
+                </a>
+              </div>
+              <button type="button" class="btn btn--ghost btn--sm" onclick="toggleListRowActions(this)" title="Close">Close ✕</button>
+            </div>
+          </div>
         </td>
       </tr>
       {% endfor %}
