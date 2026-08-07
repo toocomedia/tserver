@@ -1015,7 +1015,7 @@
   bottom: 0;
   left: auto;
   width: max-content;
-  max-width: calc(100% + 1px);
+  max-width: 95vw; /* Bound by screen width, not td width */
   overflow: hidden; /* Prevents inner translation from expanding the scrollable area */
   z-index: 5;
   box-shadow: none !important;
@@ -1051,10 +1051,10 @@
   transform: translateX(100%);
   transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
   overflow-x: auto;
-  scrollbar-width: none; /* Firefox */
+  scrollbar-width: none;
 }
 .list-row-subactions__inner::-webkit-scrollbar {
-  display: none; /* Safari/Chrome */
+  display: none;
 }
 
 .list-row-subactions__btns {
