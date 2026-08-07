@@ -8,7 +8,9 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 
 import asyncpg
@@ -574,14 +576,59 @@ async def provision_app_database(
             await app_conn.close()
         await conn.close()
 
-    # Build and return DATABASE_URL
-    from urllib.parse import quote
-    pwd_enc = quote(password, safe="")
-    usr_enc = quote(username, safe="")
+    return _app_database_dsn(proj, database_name, username, password)
+
+
+def _app_database_dsn(
+    project: SupabaseProject, database_name: str, username: str, password: str
+) -> str:
+    """Return an app URL that identifies its tenant when Supavisor is in use."""
+    pooler = "pooler.supabase.com" in project.db_host
+    ref = _project_ref(project)
+    pooler_user = f"{username}.{ref}" if pooler and ref else username
     return (
-        f"postgresql://{usr_enc}:{pwd_enc}"
-        f"@{proj.db_host}:{proj.db_port}/{database_name}"
+        f"postgresql://{quote(pooler_user, safe='')}:{quote(password, safe='')}"
+        f"@{project.db_host}:{project.db_port}/{database_name}"
     )
+
+
+async def repair_app_database_url(app: Any, db: AsyncSession) -> bool:
+    """Add the Supavisor tenant suffix to URLs created by older panel releases."""
+    if app.postgres_mode != "supabase" or not app.supabase_project_id:
+        return False
+    project = await get_project(db, app.supabase_project_id)
+    ref = _project_ref(project)
+    path = Path(app.env_path)
+    if not ref or not path.is_file():
+        return False
+    lines = path.read_text(encoding="utf-8").splitlines()
+    updated = False
+    result: list[str] = []
+    for line in lines:
+        if not line.startswith("DATABASE_URL="):
+            result.append(line)
+            continue
+        prefix, value = "DATABASE_URL=", line.removeprefix("DATABASE_URL=")
+        parsed = urlsplit(value)
+        username = unquote(parsed.username or "")
+        if (
+            "pooler.supabase.com" not in (parsed.hostname or "")
+            or not username
+            or username.endswith(f".{ref}")
+        ):
+            result.append(line)
+            continue
+        password = parsed.password or ""
+        host = parsed.hostname or ""
+        port = f":{parsed.port}" if parsed.port else ""
+        tenant_user = quote(f"{username}.{ref}", safe="")
+        password_part = f":{password}" if password else ""
+        result.append(f"{prefix}{parsed.scheme}://{tenant_user}{password_part}@{host}{port}{parsed.path}" + (f"?{parsed.query}" if parsed.query else ""))
+        updated = True
+    if updated:
+        path.write_text("".join(f"{line}\n" for line in result), encoding="utf-8")
+        os.chmod(path, 0o600)
+    return updated
 
 
 async def deprovision_app_database(

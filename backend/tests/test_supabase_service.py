@@ -1,4 +1,5 @@
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
@@ -107,6 +108,35 @@ class SupabaseProvisionTests(unittest.IsolatedAsyncioTestCase):
         )
         connection.close.assert_awaited_once()
         app_connection.close.assert_awaited_once()
+
+    def test_pooler_app_url_includes_project_ref(self):
+        project = _project()
+        project.db_host = "aws-0-eu-central-1.pooler.supabase.com"
+
+        dsn = service._app_database_dsn(project, "app1", "app1", "secret")
+
+        self.assertIn("app1.uwhexjgccucvvqcwixrh:secret@", dsn)
+        self.assertIn("aws-0-eu-central-1.pooler.supabase.com:5432/app1", dsn)
+
+    async def test_repair_adds_tenant_to_older_pooler_url(self):
+        project = _project()
+        project.db_host = "aws-0-eu-central-1.pooler.supabase.com"
+        with tempfile.TemporaryDirectory() as directory:
+            env_path = Path(directory) / "app.env"
+            env_path.write_text(
+                "DATABASE_URL=postgresql+asyncpg://app1:secret@"
+                "aws-0-eu-central-1.pooler.supabase.com:5432/app1\n",
+                encoding="utf-8",
+            )
+            app = type("App", (), {
+                "postgres_mode": "supabase", "supabase_project_id": 1,
+                "env_path": str(env_path),
+            })()
+            with patch.object(service, "get_project", new=AsyncMock(return_value=project)):
+                changed = await service.repair_app_database_url(app, None)
+            repaired = env_path.read_text(encoding="utf-8")
+        self.assertTrue(changed)
+        self.assertIn("app1.uwhexjgccucvvqcwixrh:secret@", repaired)
 
 
 if __name__ == "__main__":

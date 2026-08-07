@@ -111,6 +111,9 @@ async def _run_after_commit(deployment_id: int) -> None:
             if app is None or domain is None:
                 await _finish(db, deployment, "failed", "setup", "App domain no longer exists.")
                 return
+            if app.postgres_mode == "supabase":
+                from plugins.supabase import service as supabase_service
+                await supabase_service.repair_app_database_url(app, db)
             app_id = app.id
             priority = await resource_guard_service.priority(db, "hosted_app", str(app.id))
             guard_token = resource_guard_service.register(
