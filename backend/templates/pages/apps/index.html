@@ -69,8 +69,15 @@
   </table>
 </div>
 {% else %}
-<div class="alert alert--info" id="empty-state">
-  No Python applications deployed yet. Select a domain from <a href="/domains" style="font-weight:800;">Domains →</a> to deploy your first Python app.
+<div class="empty-state" id="empty-state">
+  <div class="empty-state__icon">
+    <i data-lucide="package"></i>
+  </div>
+  <h3 class="empty-state__title">No apps deployed</h3>
+  <p class="empty-state__desc">Select a domain to deploy your first Python app.</p>
+  <div class="empty-state__actions">
+    <a href="/domains" class="btn btn--primary">Go to Domains</a>
+  </div>
 </div>
 {% endif %}
 </div><!-- /.apps-page -->

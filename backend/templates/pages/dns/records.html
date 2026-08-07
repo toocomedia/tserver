@@ -101,10 +101,15 @@
   </table>
 </div>
 {% else %}
-<div class="alert alert--info" id="no-records">
-  No records in this zone.
-  <button type="button" class="btn btn--primary btn--sm" onclick="openModal('add-record-modal')"
-          style="margin-left:var(--space-sm);">+ Custom DNS record</button>
+<div class="empty-state" id="no-records">
+  <div class="empty-state__icon">
+    <i data-lucide="list"></i>
+  </div>
+  <h3 class="empty-state__title">No records in this zone</h3>
+  <p class="empty-state__desc">Add custom A, AAAA, CNAME, TXT, or MX records for your domain.</p>
+  <div class="empty-state__actions">
+    <button type="button" class="btn btn--primary" onclick="openModal('add-record-modal')">Add DNS Record</button>
+  </div>
 </div>
 {% endif %}
 

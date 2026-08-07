@@ -157,9 +157,15 @@
 </p>
 </div>
 {% else %}
-<div class="alert alert--info" id="empty-state">
-  No SSL certificates yet.
-  <a href="/ssl/issue" style="font-weight:700;">Issue your first certificate →</a>
+<div class="empty-state" id="empty-state">
+  <div class="empty-state__icon">
+    <i data-lucide="shield"></i>
+  </div>
+  <h3 class="empty-state__title">No SSL certificates</h3>
+  <p class="empty-state__desc">Secure your domains with free Let's Encrypt certificates.</p>
+  <div class="empty-state__actions">
+    <a href="/ssl/issue" class="btn btn--primary">Issue Certificate</a>
+  </div>
 </div>
 {% endif %}
 </div><!-- /.ssl-page -->

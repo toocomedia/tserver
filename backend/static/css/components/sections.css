@@ -711,3 +711,50 @@
   gap: 12px;
   margin-top: 16px;
 }
+
+/* Empty State Component */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 48px 24px;
+  background: var(--color-surface);
+  border-radius: 8px;
+  border: none;
+  margin: var(--space-xl) 0;
+}
+.empty-state__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  background: var(--color-bg);
+  border-radius: 50%;
+  margin-bottom: var(--space-lg);
+}
+.empty-state__icon svg {
+  width: 32px;
+  height: 32px;
+  color: var(--color-muted);
+}
+.empty-state__title {
+  font-size: var(--font-h3);
+  font-weight: 700;
+  color: var(--color-text);
+  margin: 0 0 var(--space-sm) 0;
+}
+.empty-state__desc {
+  font-size: var(--font-body);
+  color: var(--color-muted);
+  max-width: 400px;
+  margin: 0 0 var(--space-xl) 0;
+  line-height: 1.5;
+}
+.empty-state__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}

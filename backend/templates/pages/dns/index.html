@@ -93,8 +93,15 @@
 </div>
 </div>
 {% else %}
-<div class="alert alert--info" id="empty-state">
-  No DNS zones yet. <a href="/domains/create" style="font-weight:700;">Add a domain first →</a>
+<div class="empty-state" id="empty-state">
+  <div class="empty-state__icon">
+    <i data-lucide="book-open"></i>
+  </div>
+  <h3 class="empty-state__title">No DNS zones</h3>
+  <p class="empty-state__desc">Create a domain first to manage its DNS records.</p>
+  <div class="empty-state__actions">
+    <a href="/domains/create" class="btn btn--primary">Add Domain</a>
+  </div>
 </div>
 {% endif %}
 </div><!-- /.dns-page -->

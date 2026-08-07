@@ -139,8 +139,15 @@
   </div>
 </div>
 {% else %}
-<div class="alert alert--info" id="empty-state">
-  No domains yet. <a href="/domains/create" style="font-weight:800;">Add your first domain →</a>
+<div class="empty-state" id="empty-state">
+  <div class="empty-state__icon">
+    <i data-lucide="globe"></i>
+  </div>
+  <h3 class="empty-state__title">No domains configured</h3>
+  <p class="empty-state__desc">Add your first domain to start managing DNS, SSL, and Nginx routing.</p>
+  <div class="empty-state__actions">
+    <a href="/domains/create" class="btn btn--primary">Add Domain</a>
+  </div>
 </div>
 {% endif %}
 </div><!-- /.domains-page -->
