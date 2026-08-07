@@ -110,5 +110,22 @@ templates.env.globals["PANEL_NAME"] = config.PANEL_NAME
 templates.env.globals["PANEL_SHORT_NAME"] = config.PANEL_SHORT_NAME
 templates.env.globals["PANEL_LOGO_PATH"] = config.PANEL_LOGO_PATH
 
+import time
+import subprocess
+
+def get_app_version():
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--short", "HEAD"],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        return result.stdout.strip()
+    except Exception:
+        return str(int(time.time()))
+
+templates.env.globals["APP_VERSION"] = get_app_version()
+
 # Aliases for Python imports
 path = app_path
