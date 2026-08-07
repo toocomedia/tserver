@@ -225,7 +225,8 @@ if (form) {
   query('[data-add-environment]').addEventListener('click', () => addEnvironmentRow(form));
   form.querySelectorAll('[data-database-row]').forEach((row) => {
     row.querySelector('[data-database-enabled]').addEventListener('change', () => attachmentState(row));
-    row.querySelector('[data-database-provider]').addEventListener('change', () => attachmentState(row));
+    const providerEl = _dbField(row, '[data-database-provider]');
+    if (providerEl) providerEl.addEventListener('change', () => attachmentState(row));
   });
   query('[data-wizard-next]').addEventListener('click', () => [inspectSource, () => { state.unlocked = 3; renderStep(3); }, startDeployment][state.step - 1]?.());
   query('[data-wizard-back]').addEventListener('click', () => renderStep(Math.max(1, state.step - 1)));
