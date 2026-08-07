@@ -97,13 +97,13 @@ def active_release_path(app: HostedApp) -> Path | None:
     if current.is_symlink():
         try:
             target = current.resolve(strict=True)
-            if target.is_dir():
+            if _release_is_ready(target):
                 return target
         except OSError:
             return None
     if app.active_release:
         target = releases_dir(app) / app.active_release
-        if target.is_dir():
+        if _release_is_ready(target):
             return target
     return None
 def releases_dir(app: HostedApp) -> Path:
@@ -149,7 +149,7 @@ async def _rollback(
 ) -> str:
     try:
         await app_runtime_service.stop(app)
-        if old_release is None or not old_release.is_dir():
+        if not _release_is_ready(old_release):
             return "unavailable"
         _switch_current(app, old_release)
         await app_runtime_service.install_unit(app, old_release)
@@ -167,6 +167,15 @@ def _switch_current(app: HostedApp, target: Path) -> None:
     temporary.unlink(missing_ok=True)
     os.symlink(target, temporary)
     os.replace(temporary, current)
+
+
+def _release_is_ready(release: Path | None) -> bool:
+    return bool(
+        release
+        and release.is_dir()
+        and (release / "source").is_dir()
+        and (release / ".venv").is_dir()
+    )
 
 
 def _retain_releases(app: HostedApp) -> None:

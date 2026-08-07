@@ -88,6 +88,7 @@ def restore_environment(
 async def start(app: HostedApp) -> None:
     app_ownership_service.require_environment(app)
     app_ownership_service.require_port_free(app.port)
+    await systemctl("reset-failed", app.service_name, allow_missing=True)
     await systemctl("enable", "--now", app.service_name)
 
 
