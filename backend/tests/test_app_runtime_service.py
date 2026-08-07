@@ -30,3 +30,23 @@ class AppRuntimeServiceTests(unittest.IsolatedAsyncioTestCase):
                 "DATABASE_URL=postgresql+asyncpg://app:secret@db.example/app",
                 env_path.read_text(encoding="utf-8"),
             )
+
+    def test_restore_environment_keeps_runtime_bindings(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            env_path = root / "app.env"
+            app = HostedApp(
+                id=1, env_path=str(env_path), work_dir=str(root / "work"), port=9100,
+            )
+
+            app_runtime_service.restore_environment(
+                app,
+                b"DATABASE_URL=postgresql+asyncpg://app:secret@db.example/app\n",
+            )
+
+            self.assertEqual(
+                env_path.read_text(encoding="utf-8"),
+                "DATABASE_URL=postgresql+asyncpg://app:secret@db.example/app\n"
+                "HOST=127.0.0.1\nPORT=9100\n"
+                f"APP_DATA_DIR={root / 'work' / 'data'}\n",
+            )

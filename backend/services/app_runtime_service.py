@@ -34,21 +34,11 @@ async def prepare_environment(app: HostedApp, source: Path) -> None:
     env_path = Path(app.env_path)
     env_path.parent.mkdir(parents=True, exist_ok=True)
     existing = env_path.read_text(encoding="utf-8") if env_path.exists() else ""
-    existing = "".join(
-        f"{line}\n" for line in existing.splitlines()
-        if not line.startswith(("HOST=", "PORT=", "APP_DATA_DIR="))
-    )
     if app.postgres_mode == "create":
         existing = _managed_database(app, source, existing)
     elif app.postgres_mode == "supabase":
         existing = _replace_database_url_scheme(existing, source)
-    data_dir = Path(app.work_dir) / "data"
-    data_dir.mkdir(parents=True, exist_ok=True)
-    env_path.write_text(
-        existing
-        + f"HOST=127.0.0.1\nPORT={app.port}\nAPP_DATA_DIR={data_dir}\n",
-        encoding="utf-8",
-    )
+    env_path.write_text(_with_runtime_settings(app, existing), encoding="utf-8")
     os.chmod(env_path, 0o600)
 
 
@@ -82,7 +72,9 @@ def restore_environment(app: HostedApp, snapshot: bytes | None) -> None:
         path.unlink(missing_ok=True)
         return
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_bytes(snapshot)
+    path.write_text(
+        _with_runtime_settings(app, snapshot.decode("utf-8")), encoding="utf-8"
+    )
     os.chmod(path, 0o600)
 
 
@@ -151,6 +143,20 @@ def _replace_database_url_scheme(existing: str, source: Path) -> str:
         r"(?m)^DATABASE_URL=postgresql(?:\+[A-Za-z0-9_]+)?://",
         f"DATABASE_URL={_database_url_scheme(source)}://",
         existing,
+    )
+
+
+def _with_runtime_settings(app: HostedApp, existing: str) -> str:
+    """Keep service bindings after a deployment restores user environment values."""
+    existing = "".join(
+        f"{line}\n" for line in existing.splitlines()
+        if not line.startswith(("HOST=", "PORT=", "APP_DATA_DIR="))
+    )
+    data_dir = Path(app.work_dir) / "data"
+    data_dir.mkdir(parents=True, exist_ok=True)
+    return (
+        existing
+        + f"HOST=127.0.0.1\nPORT={app.port}\nAPP_DATA_DIR={data_dir}\n"
     )
 
 
