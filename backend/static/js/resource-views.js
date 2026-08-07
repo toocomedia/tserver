@@ -33,61 +33,8 @@ document.addEventListener("error", (event) => {
   image.nextElementSibling?.classList.remove("is-hidden");
 }, true);
 
-/**
- * Toggle list record actions sub-tray under the row (supports div rows and table <tr> rows).
- * @param {HTMLElement} triggerEl
- */
 function toggleListRowActions(triggerEl) {
-  // A. Handle Table rows (tr & table-row-subactions-tr)
-  const tr = triggerEl.closest('tr');
-  if (tr) {
-    let mainTr = tr;
-    let subactionsTr = null;
-
-    if (tr.classList.contains('table-row-subactions-tr')) {
-      subactionsTr = tr;
-      mainTr = tr.previousElementSibling;
-    } else {
-      const nextTr = tr.nextElementSibling;
-      if (nextTr && nextTr.classList.contains('table-row-subactions-tr')) {
-        subactionsTr = nextTr;
-      }
-    }
-
-    if (subactionsTr && mainTr) {
-      const toggleBtn = mainTr.querySelector('.list-actions-toggle-btn');
-      const isExpanded = mainTr.classList.contains('is-expanded');
-      const willExpand = !isExpanded;
-
-      // Close other open subaction rows in the same table
-      const tbody = mainTr.closest('tbody') || mainTr.parentElement;
-      if (tbody) {
-        tbody.querySelectorAll('.table-row-subactions-tr').forEach((otherTr) => {
-          if (otherTr !== subactionsTr) {
-            otherTr.classList.add('is-hidden');
-            const prevTr = otherTr.previousElementSibling;
-            if (prevTr) prevTr.classList.remove('is-expanded');
-            const btn = prevTr?.querySelector('.list-actions-toggle-btn');
-            if (btn) {
-              btn.classList.remove('is-active');
-              btn.setAttribute('aria-expanded', 'false');
-            }
-          }
-        });
-      }
-
-      subactionsTr.classList.toggle('is-hidden', !willExpand);
-      mainTr.classList.toggle('is-expanded', willExpand);
-      if (toggleBtn) {
-        toggleBtn.classList.toggle('is-active', willExpand);
-        toggleBtn.setAttribute('aria-expanded', String(willExpand));
-      }
-      return;
-    }
-  }
-
-  // B. Handle Div-based list rows (.list-item-row, .item-card, etc.)
-  const row = triggerEl.closest('.list-item-row') || triggerEl.closest('.item-card') || triggerEl.closest('.plugin-requirements-host');
+  const row = triggerEl.closest('.list-item-row, tr');
   if (!row) return;
 
   const subactions = row.querySelector('.list-row-subactions');
@@ -97,11 +44,12 @@ function toggleListRowActions(triggerEl) {
   const isExpanded = row.classList.contains('is-expanded');
   const willExpand = !isExpanded;
 
-  const container = row.closest('.view-list-container') || row.parentElement;
+  const container = row.closest('.view-list-container, tbody, .table-wrap, .plugin-grid, .dependency-grid') || row.parentElement;
   if (container) {
     container.querySelectorAll('.is-expanded').forEach((otherRow) => {
       if (otherRow !== row) {
         otherRow.classList.remove('is-expanded');
+        otherRow.classList.remove('is-actions-open');
         const tray = otherRow.querySelector('.list-row-subactions');
         if (tray) tray.classList.add('is-hidden');
         const btn = otherRow.querySelector('.list-actions-toggle-btn');
@@ -115,6 +63,8 @@ function toggleListRowActions(triggerEl) {
 
   subactions.classList.toggle('is-hidden', !willExpand);
   row.classList.toggle('is-expanded', willExpand);
+  row.classList.toggle('is-actions-open', willExpand);
+  
   if (toggleBtn) {
     toggleBtn.classList.toggle('is-active', willExpand);
     toggleBtn.setAttribute('aria-expanded', String(willExpand));
@@ -122,39 +72,17 @@ function toggleListRowActions(triggerEl) {
 }
 window.toggleListRowActions = toggleListRowActions;
 
-// Hover synchronization for table rows and their expanded subactions
+// Hover synchronization for table rows
 document.addEventListener('mouseover', (e) => {
   const tr = e.target.closest('tr');
   if (!tr) return;
-  
-  if (tr.classList.contains('table-row-subactions-tr')) {
-    tr.classList.add('is-hovered');
-    const prev = tr.previousElementSibling;
-    if (prev) prev.classList.add('is-hovered');
-  } else {
-    tr.classList.add('is-hovered');
-    const next = tr.nextElementSibling;
-    if (next && next.classList.contains('table-row-subactions-tr') && !next.classList.contains('is-hidden')) {
-      next.classList.add('is-hovered');
-    }
-  }
+  tr.classList.add('is-hovered');
 });
 
 document.addEventListener('mouseout', (e) => {
   const tr = e.target.closest('tr');
   if (!tr) return;
-  
-  if (tr.classList.contains('table-row-subactions-tr')) {
-    tr.classList.remove('is-hovered');
-    const prev = tr.previousElementSibling;
-    if (prev) prev.classList.remove('is-hovered');
-  } else {
-    tr.classList.remove('is-hovered');
-    const next = tr.nextElementSibling;
-    if (next && next.classList.contains('table-row-subactions-tr')) {
-      next.classList.remove('is-hovered');
-    }
-  }
+  tr.classList.remove('is-hovered');
 });
 
 /**
@@ -259,6 +187,24 @@ function autoInitAllListPaginations(limit = DEFAULT_PAGE_LIMIT) {
 window.autoInitAllListPaginations = autoInitAllListPaginations;
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Convert table subactions to inline slide toolbars
+  document.querySelectorAll('.table-row-subactions-tr').forEach(subTr => {
+    const mainTr = subTr.previousElementSibling;
+    if (!mainTr) return;
+    const subactionsDiv = subTr.querySelector('.list-row-subactions');
+    const lastTd = mainTr.querySelector('td:last-child');
+    if (lastTd && subactionsDiv) {
+      mainTr.style.position = 'relative';
+      lastTd.appendChild(subactionsDiv);
+    }
+    subTr.remove();
+  });
+  
+  // Add slide-toolbar class to all subactions
+  document.querySelectorAll('.list-row-subactions').forEach(div => {
+    div.classList.add('slide-toolbar');
+  });
+
   autoInitAllListPaginations(DEFAULT_PAGE_LIMIT);
 });
 
