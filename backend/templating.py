@@ -110,26 +110,40 @@ templates.env.globals["PANEL_NAME"] = config.PANEL_NAME
 templates.env.globals["PANEL_SHORT_NAME"] = config.PANEL_SHORT_NAME
 templates.env.globals["PANEL_LOGO_PATH"] = config.PANEL_LOGO_PATH
 
-import time
-import subprocess
 import os
 
 def get_app_version():
     try:
         base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        result = subprocess.run(
-            "git rev-parse --short HEAD",
-            shell=True,
-            cwd=base_dir,
-            capture_output=True,
-            text=True,
-            check=True
-        )
-        hash_val = result.stdout.strip()
-        if hash_val:
-            return hash_val
-        return str(int(time.time()))
+        git_dir = os.path.join(base_dir, ".git")
+        head_file = os.path.join(git_dir, "HEAD")
+        
+        if os.path.exists(head_file):
+            with open(head_file, "r") as f:
+                head_content = f.read().strip()
+                
+            if head_content.startswith("ref: "):
+                ref_path = head_content.split(" ")[1].replace("/", os.sep)
+                ref_file = os.path.join(git_dir, ref_path)
+                if os.path.exists(ref_file):
+                    with open(ref_file, "r") as f:
+                        return f.read().strip()[:7]
+                
+                packed_refs = os.path.join(git_dir, "packed-refs")
+                if os.path.exists(packed_refs):
+                    with open(packed_refs, "r") as f:
+                        for line in f:
+                            if line.strip().endswith(head_content.split(" ")[1]):
+                                return line.split(" ")[0][:7]
+            else:
+                return head_content[:7]
     except Exception:
+        pass
+        
+    try:
+        return str(int(os.path.getmtime(os.path.abspath(__file__))))
+    except Exception:
+        import time
         return str(int(time.time()))
 
 templates.env.globals["APP_VERSION"] = get_app_version()
