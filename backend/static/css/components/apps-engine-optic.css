@@ -1,0 +1,221 @@
+/* ============================================================
+   APPS ENGINE OPTIC — MODULAR BORDERLESS UI/UX COMPONENT CSS
+   Scoped to .apps-engine-optic to protect global panel styles
+   ============================================================ */
+
+.apps-engine-optic {
+  width: 860px;
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+/* Stepper Tabs (Fixed Width, Borderless) */
+.apps-engine-optic .stepper-optic {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 32px;
+  width: 100%;
+}
+
+.apps-engine-optic .step-tab-optic {
+  flex: 1;
+  text-align: center;
+  padding: 10px 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-muted, #94a3b8);
+  background: var(--bg-card, rgba(255, 255, 255, 0.05));
+  border: none !important;
+  border-radius: 0 !important;
+  cursor: pointer;
+  position: relative;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.apps-engine-optic .step-tab-optic:hover {
+  background: var(--bg-card-hover, rgba(255, 255, 255, 0.09));
+  color: var(--color-text, #ffffff);
+}
+
+.apps-engine-optic .step-tab-optic.active {
+  background: var(--bg-card-selected, rgba(255, 255, 255, 0.13));
+  color: var(--color-text, #ffffff);
+  font-weight: 700;
+}
+
+.apps-engine-optic .step-tab-optic.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--color-accent, #C7F464);
+}
+
+/* Borderless Optic Buttons */
+.apps-engine-optic .btn-optic {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 20px;
+  font-size: 13px;
+  font-weight: 700;
+  background: var(--color-secondary-btn, rgba(255, 255, 255, 0.06));
+  color: var(--color-text, #ffffff);
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  cursor: pointer;
+  transition: background 0.15s ease, opacity 0.15s ease;
+  text-decoration: none;
+}
+
+.apps-engine-optic .btn-optic:hover {
+  background: var(--color-secondary-hover, rgba(255, 255, 255, 0.12));
+}
+
+.apps-engine-optic .btn-optic--primary {
+  background: var(--color-accent, #C7F464) !important;
+  color: var(--color-on-accent, #111111) !important;
+}
+
+.apps-engine-optic .btn-optic--primary:hover {
+  opacity: 0.9 !important;
+}
+
+.apps-engine-optic .btn-optic--sm {
+  height: 32px;
+  padding: 0 12px;
+  font-size: 12px;
+}
+
+/* Borderless Optic Inputs */
+.apps-engine-optic .input-optic {
+  width: 100%;
+  height: 42px;
+  padding: 0 14px;
+  font-size: 13px;
+  font-family: inherit;
+  background: var(--bg-card, rgba(255, 255, 255, 0.05));
+  color: var(--color-text, #ffffff);
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  outline: none !important;
+  transition: background 0.15s ease;
+}
+
+.apps-engine-optic .input-optic:hover, 
+.apps-engine-optic .input-optic:focus {
+  background: var(--bg-card-hover, rgba(255, 255, 255, 0.1));
+}
+
+.apps-engine-optic .input-optic--code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+}
+
+/* Fixed Grid Columns for Cards */
+.apps-engine-optic .cards-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.apps-engine-optic .cards-grid-4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+@media (max-width: 640px) {
+  .apps-engine-optic .cards-grid-3, 
+  .apps-engine-optic .cards-grid-4 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Borderless Selection Cards */
+.apps-engine-optic .optic-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 20px 16px;
+  background: var(--bg-card, rgba(255, 255, 255, 0.05));
+  color: var(--color-text, #ffffff);
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  position: relative;
+  text-align: center;
+}
+
+.apps-engine-optic .optic-card:hover {
+  background: var(--bg-card-hover, rgba(255, 255, 255, 0.09));
+}
+
+.apps-engine-optic .optic-card.selected,
+.apps-engine-optic .optic-card:has(input:checked) {
+  background: var(--bg-card-selected, rgba(255, 255, 255, 0.14));
+}
+
+.apps-engine-optic .optic-card.selected::before,
+.apps-engine-optic .optic-card:has(input:checked)::before {
+  content: '';
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 6px;
+  height: 6px;
+  background: var(--color-accent, #C7F464);
+}
+
+.apps-engine-optic .optic-card__icon {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-muted, #cbd5e1);
+  transition: color 0.15s ease;
+}
+
+.apps-engine-optic .optic-card.selected .optic-card__icon,
+.apps-engine-optic .optic-card:has(input:checked) .optic-card__icon {
+  color: var(--color-text, #ffffff);
+}
+
+.apps-engine-optic .optic-card__icon svg,
+.apps-engine-optic .optic-card__icon img {
+  width: 28px;
+  height: 28px;
+}
+
+.apps-engine-optic .optic-card__name {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.apps-engine-optic .section-label {
+  font-size: 14px;
+  font-weight: 800;
+  margin-bottom: 12px;
+  display: block;
+  color: var(--color-text, #ffffff);
+}
+
+.apps-engine-optic .action-footer-optic {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 32px;
+}

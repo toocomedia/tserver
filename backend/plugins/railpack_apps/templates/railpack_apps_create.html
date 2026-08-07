@@ -1,8 +1,12 @@
 {% extends "layout.html" %}
 {% block title %}Deploy App — {{ PANEL_NAME }}{% endblock %}
 {% block page_title %}Deploy App{% endblock %}
-{% block head %}<link rel="stylesheet" href="/static/css/components/apps-engine-wizard.css">{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="/static/css/components/apps-engine-wizard.css">
+<link rel="stylesheet" href="/static/css/components/apps-engine-optic.css">
+{% endblock %}
 {% block content %}
+<div class="apps-engine-optic">
 <form class="wizard-form apps-engine-wizard" method="post" action="/plugins/railpack_apps/create" data-railpack-builder>
   {% include "partials/csrf_field.html" %}
   <input type="hidden" name="environment_values" value="{}" data-environment-values>
@@ -34,5 +38,6 @@
     </div>
   </div>
 </form>
+</div>
 {% endblock %}
 {% block scripts %}<script type="module" src="/static/js/modules/railpack-app-create.js"></script>{% endblock %}
