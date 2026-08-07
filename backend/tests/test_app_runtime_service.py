@@ -1,6 +1,7 @@
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import Mock, patch
 
 from models.hosted_app import HostedApp
 from services import app_runtime_service
@@ -82,3 +83,10 @@ class AppRuntimeServiceTests(unittest.IsolatedAsyncioTestCase):
                 "DATABASE_URL=postgresql+asyncpg://app:secret@db.example/app",
                 env_path.read_text(encoding="utf-8"),
             )
+
+    def test_service_home_uses_hosting_account_home(self):
+        with patch(
+            "services.app_runtime_service.pwd.getpwnam",
+            return_value=Mock(pw_dir="/opt/srv-panel"),
+        ):
+            self.assertEqual(app_runtime_service._service_home(), "/opt/srv-panel")

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+import pwd
 import re
 import secrets
 
@@ -54,6 +55,7 @@ async def install_unit(app: HostedApp, _release: Path) -> None:
         "[Service]\nType=simple\n"
         f"User={config.APP_HOSTING_USER}\nGroup={config.APP_HOSTING_USER}\n"
         f"WorkingDirectory={source}\nEnvironmentFile={app.env_path}\n"
+        f"Environment=HOME={_service_home()}\n"
         f"ExecStart=/bin/bash -lc '{start}'\n"
         "Restart=on-failure\n\n[Install]\nWantedBy=multi-user.target\n"
     )
@@ -109,6 +111,13 @@ async def systemctl(*args: str, allow_missing: bool = False) -> bool:
 
 def service_unit(app: HostedApp) -> Path:
     return Path("/etc/systemd/system") / f"{app.service_name}.service"
+
+
+def _service_home() -> str:
+    try:
+        return pwd.getpwnam(config.APP_HOSTING_USER).pw_dir
+    except KeyError:
+        return "/"
 
 
 def validate_commands(build_command: str, start_command: str) -> None:
