@@ -719,9 +719,8 @@
   align-items: center;
   justify-content: center;
   text-align: center;
-  padding: 48px 24px;
-  background: var(--color-surface);
-  border-radius: 8px;
+  padding: 64px 24px;
+  background: transparent;
   border: none;
   margin: var(--space-xl) 0;
 }
@@ -729,15 +728,20 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 64px;
-  height: 64px;
-  background: var(--color-bg);
-  border-radius: 50%;
+  width: 80px;
+  height: 80px;
+  background: var(--color-surface);
+  border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
   margin-bottom: var(--space-lg);
+  animation: blob-morph 8s ease-in-out infinite;
+}
+@keyframes blob-morph {
+  0%, 100% { border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; }
+  50%      { border-radius: 30% 60% 70% 40% / 50% 60% 30% 60%; }
 }
 .empty-state__icon svg {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   color: var(--color-muted);
 }
 .empty-state__title {
