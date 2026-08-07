@@ -10,7 +10,8 @@ if (form) {
       setHidden(panel(index), index !== step);
       const nav = query(`[data-wizard-nav="${index}"]`);
       nav.classList.toggle('active', index === step);
-      nav.classList.toggle('disabled', index > state.unlocked);
+      nav.classList.toggle('completed', index < step);
+      nav.disabled = index > state.unlocked;
     }
     setHidden(query('[data-wizard-back]'), step === 1 || step >= 4);
     setHidden(query('[data-wizard-cancel]'), step >= 4);
