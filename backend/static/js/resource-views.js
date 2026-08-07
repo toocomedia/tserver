@@ -187,19 +187,6 @@ function autoInitAllListPaginations(limit = DEFAULT_PAGE_LIMIT) {
 window.autoInitAllListPaginations = autoInitAllListPaginations;
 
 document.addEventListener('DOMContentLoaded', () => {
-  // Convert table subactions to inline slide toolbars
-  document.querySelectorAll('.table-row-subactions-tr').forEach(subTr => {
-    const mainTr = subTr.previousElementSibling;
-    if (!mainTr) return;
-    const subactionsDiv = subTr.querySelector('.list-row-subactions');
-    const lastTd = mainTr.querySelector('td:last-child');
-    if (lastTd && subactionsDiv) {
-      lastTd.style.position = 'relative';
-      lastTd.appendChild(subactionsDiv);
-    }
-    subTr.remove();
-  });
-  
   // Add slide-toolbar class to all subactions
   document.querySelectorAll('.list-row-subactions').forEach(div => {
     div.classList.add('slide-toolbar');
