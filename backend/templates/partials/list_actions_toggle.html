@@ -1,0 +1,20 @@
+{# Base Reusable List Action Toggle Button & Subactions Component #}
+{% macro render(close_text="Close ✕") %}
+<div class="list-actions-wrapper">
+  <button type="button" class="icon-btn list-actions-toggle-btn" onclick="toggleListRowActions(this)" aria-expanded="false" title="Actions">
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" class="toggle-dots-icon">
+      <circle cx="12" cy="12" r="1.5"></circle>
+      <circle cx="19" cy="12" r="1.5"></circle>
+      <circle cx="5" cy="12" r="1.5"></circle>
+    </svg>
+  </button>
+  <div class="list-row-subactions is-hidden">
+    <div class="list-row-subactions__inner">
+      <div class="list-row-subactions__btns">
+        {{ caller() if caller is defined else '' }}
+      </div>
+      <button type="button" class="btn btn--ghost btn--sm list-row-subactions__close" onclick="toggleListRowActions(this)" title="Close">{{ close_text }}</button>
+    </div>
+  </div>
+</div>
+{% endmacro %}
