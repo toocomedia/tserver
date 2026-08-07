@@ -54,23 +54,13 @@
           <span class="badge-minimal {% if app.status == 'running' %}badge-minimal--active{% else %}badge-minimal--neutral{% endif %}">{{ app.status | upper }}</span>
         </td>
         <td class="col-actions">
-          <button type="button" class="btn btn--sm list-actions-toggle-btn" onclick="toggleListRowActions(this)" aria-expanded="false" title="Actions">
-            <span>Actions</span>
-            <svg class="chevron-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
-              <polyline points="6 9 12 15 18 9"></polyline>
-            </svg>
-          </button>
-          <div class="list-row-subactions is-hidden">
-            <div class="list-row-subactions__inner">
-              <div class="list-row-subactions__btns">
-                <a class="btn btn--primary btn--sm" href="/apps/{{ app.id }}">
-                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
-                  <span>Manage Application</span>
-                </a>
-              </div>
-              <button type="button" class="btn btn--ghost btn--sm" onclick="toggleListRowActions(this)" title="Close">Close ✕</button>
-            </div>
-          </div>
+          {% import "partials/list_actions_toggle.html" as list_actions %}
+          {% call list_actions.render() %}
+            <a class="btn btn--primary btn--sm" href="/apps/{{ app.id }}">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+              <span>Manage Application</span>
+            </a>
+          {% endcall %}
         </td>
       </tr>
       {% endfor %}
