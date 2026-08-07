@@ -157,18 +157,27 @@ export function initDropdowns() {
       if (!dropdown.contains(e.target)) dropdown.classList.remove('is-open');
     });
     
-    // Set initial active state if value matches
+    // Set initial active state
+    let activeItem = null;
     if (hiddenInput.value) {
-      const activeItem = menu.querySelector(`[data-dropdown-item][data-value="${hiddenInput.value}"]`);
-      if (activeItem) {
-        label.textContent = activeItem.dataset.label || activeItem.textContent.trim();
-        activeItem.classList.add('is-selected');
-        Object.keys(activeItem.dataset).forEach(key => {
-          if (!['dropdownItem', 'value', 'label'].includes(key)) {
-            hiddenInput.dataset[key] = activeItem.dataset[key];
-          }
-        });
-      }
+      activeItem = menu.querySelector(`[data-dropdown-item][data-value="${hiddenInput.value}"]`);
+    }
+    if (!activeItem) {
+      activeItem = menu.querySelector(`[data-dropdown-item].is-selected`);
+    }
+    if (!activeItem) {
+      activeItem = menu.querySelector(`[data-dropdown-item]:not(.is-disabled)`);
+    }
+
+    if (activeItem) {
+      label.textContent = activeItem.dataset.label || activeItem.textContent.trim();
+      hiddenInput.value = activeItem.dataset.value;
+      activeItem.classList.add('is-selected');
+      Object.keys(activeItem.dataset).forEach(key => {
+        if (!['dropdownItem', 'value', 'label'].includes(key)) {
+          hiddenInput.dataset[key] = activeItem.dataset[key];
+        }
+      });
     }
   });
 }

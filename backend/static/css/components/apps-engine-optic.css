@@ -302,53 +302,12 @@
   background: var(--color-accent);
 }
 
-/* Clean Mode-Adaptive CSS Icon Masks */
+/* Clean Image Icons */
 .apps-engine-optic .optic-icon {
   display: inline-block;
   width: 28px;
   height: 28px;
-  background-color: currentColor;
-  mask-repeat: no-repeat;
-  mask-position: center;
-  mask-size: contain;
-  -webkit-mask-repeat: no-repeat;
-  -webkit-mask-position: center;
-  -webkit-mask-size: contain;
-}
-
-.apps-engine-optic .icon-git {
-  mask-image: url('/plugins/railpack_apps/static/images/apps-engine/git.svg');
-  -webkit-mask-image: url('/plugins/railpack_apps/static/images/apps-engine/git.svg');
-}
-
-.apps-engine-optic .icon-docker {
-  mask-image: url('/plugins/railpack_apps/static/images/apps-engine/docker.svg');
-  -webkit-mask-image: url('/plugins/railpack_apps/static/images/apps-engine/docker.svg');
-}
-
-.apps-engine-optic .icon-wordpress {
-  mask-image: url('/plugins/railpack_apps/static/images/apps-engine/wordpress.svg');
-  -webkit-mask-image: url('/plugins/railpack_apps/static/images/apps-engine/wordpress.svg');
-}
-
-.apps-engine-optic .icon-postgresql {
-  mask-image: url('/plugins/railpack_apps/static/images/apps-engine/postgresql.svg');
-  -webkit-mask-image: url('/plugins/railpack_apps/static/images/apps-engine/postgresql.svg');
-}
-
-.apps-engine-optic .icon-mysql {
-  mask-image: url('/plugins/railpack_apps/static/images/apps-engine/mysql.svg');
-  -webkit-mask-image: url('/plugins/railpack_apps/static/images/apps-engine/mysql.svg');
-}
-
-.apps-engine-optic .icon-redis {
-  mask-image: url('/plugins/railpack_apps/static/images/apps-engine/redis.svg');
-  -webkit-mask-image: url('/plugins/railpack_apps/static/images/apps-engine/redis.svg');
-}
-
-.apps-engine-optic .icon-mongodb {
-  mask-image: url('/plugins/railpack_apps/static/images/apps-engine/mongodb.svg');
-  -webkit-mask-image: url('/plugins/railpack_apps/static/images/apps-engine/mongodb.svg');
+  object-fit: contain;
 }
 
 .apps-engine-optic .optic-card__name {
@@ -474,8 +433,7 @@
 }
 
 /* Action Footer */
-.apps-engine-optic .action-footer-optic,
-.apps-engine-optic .apps-engine-action-inner {
+.apps-engine-optic .action-footer-optic {
   display: flex;
   justify-content: space-between;
   align-items: center;
