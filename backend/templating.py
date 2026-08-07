@@ -111,25 +111,24 @@ templates.env.globals["PANEL_SHORT_NAME"] = config.PANEL_SHORT_NAME
 templates.env.globals["PANEL_LOGO_PATH"] = config.PANEL_LOGO_PATH
 
 import time
+import subprocess
 import os
 
 def get_app_version():
     try:
         base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        git_dir = os.path.join(base_dir, ".git")
-        head_file = os.path.join(git_dir, "HEAD")
-        
-        with open(head_file, "r") as f:
-            head_content = f.read().strip()
-            
-        if head_content.startswith("ref: "):
-            ref_path = head_content.split(" ")[1]
-            # Some OS use backslashes, but git always uses forward slashes in ref
-            ref_path = ref_path.replace("/", os.sep)
-            with open(os.path.join(git_dir, ref_path), "r") as f:
-                return f.read().strip()[:7]
-        else:
-            return head_content[:7]
+        result = subprocess.run(
+            "git rev-parse --short HEAD",
+            shell=True,
+            cwd=base_dir,
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        hash_val = result.stdout.strip()
+        if hash_val:
+            return hash_val
+        return str(int(time.time()))
     except Exception:
         return str(int(time.time()))
 
