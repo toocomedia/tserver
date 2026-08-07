@@ -38,9 +38,25 @@ document.addEventListener("error", (event) => {
  * @param {HTMLElement} triggerEl
  */
 function toggleListRowActions(triggerEl) {
-  // 1. Table row handling
+  // 1. Table subactions row close button handling
+  const subTr = triggerEl.closest('.table-row-subactions-tr');
+  if (subTr) {
+    subTr.classList.add('is-hidden');
+    const mainTr = subTr.previousElementSibling;
+    if (mainTr) {
+      mainTr.classList.remove('is-expanded');
+      const btn = mainTr.querySelector('.list-actions-toggle-btn');
+      if (btn) {
+        btn.classList.remove('is-active');
+        btn.setAttribute('aria-expanded', 'false');
+      }
+    }
+    return;
+  }
+
+  // 2. Table row handling
   const tr = triggerEl.closest('tr');
-  if (tr && !tr.classList.contains('table-row-subactions-tr')) {
+  if (tr) {
     const nextTr = tr.nextElementSibling;
     const subactionsTr = (nextTr && nextTr.classList.contains('table-row-subactions-tr')) ? nextTr : null;
     if (!subactionsTr) return;
@@ -72,14 +88,15 @@ function toggleListRowActions(triggerEl) {
     return;
   }
 
-  // 2. Div-based list row handling
+  // 3. Div-based list row handling
   const row = triggerEl.closest('.list-item-row') || triggerEl.closest('.item-card') || triggerEl.closest('.plugin-requirements-host');
   if (!row) return;
 
   const subactions = row.querySelector('.list-row-subactions');
   if (!subactions) return;
 
-  const isExpanded = triggerEl.getAttribute('aria-expanded') === 'true';
+  const toggleBtn = row.querySelector('.list-actions-toggle-btn');
+  const isExpanded = toggleBtn ? toggleBtn.getAttribute('aria-expanded') === 'true' : row.classList.contains('is-expanded');
   const willExpand = !isExpanded;
 
   const container = row.closest('.view-list-container') || row.parentElement;
@@ -100,7 +117,6 @@ function toggleListRowActions(triggerEl) {
 
   subactions.classList.toggle('is-hidden', !willExpand);
   row.classList.toggle('is-expanded', willExpand);
-  const toggleBtn = row.querySelector('.list-actions-toggle-btn');
   if (toggleBtn) {
     toggleBtn.classList.toggle('is-active', willExpand);
     toggleBtn.setAttribute('aria-expanded', String(willExpand));

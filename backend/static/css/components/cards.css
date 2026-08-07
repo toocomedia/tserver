@@ -945,32 +945,8 @@
 }
 
 /* ============================================================
-   DIRECT IN-ROW SLIDING ACTION TOOLBAR
+   CLEAN ACTION TOGGLE BUTTON & SUBACTIONS TRAY
    ============================================================ */
-.list-item-row {
-  position: relative;
-  overflow: hidden;
-}
-
-/* Secondary record details fade out on expand */
-.list-item-row .list-col-version,
-.list-item-row .list-col-status,
-.list-item-row .list-col-desc,
-.list-item-row .list-col-actions {
-  transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1), transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  opacity: 1;
-  transform: translateX(0);
-}
-
-.list-item-row.is-expanded .list-col-version,
-.list-item-row.is-expanded .list-col-status,
-.list-item-row.is-expanded .list-col-desc,
-.list-item-row.is-expanded .list-col-actions {
-  opacity: 0;
-  transform: translateX(-15px);
-  pointer-events: none;
-}
-
 .list-actions-toggle-btn {
   display: inline-flex;
   align-items: center;
@@ -1011,32 +987,29 @@
 }
 
 .list-row-subactions {
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  left: 240px;
-  width: auto;
-  padding: 0 16px;
+  grid-column: 1 / -1;
+  width: 100%;
+  padding: 8px 16px 12px 16px;
   margin: 0;
-  background: var(--color-surface) !important;
-  border-left: 2px solid var(--color-accent) !important;
-  display: flex !important;
-  align-items: center;
-  justify-content: flex-end;
-  z-index: 10;
-  transform: translateX(100%);
-  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-line);
   box-shadow: none !important;
-}
-
-.list-item-row.is-expanded .list-row-subactions,
-.list-row-subactions:not(.is-hidden) {
-  transform: translateX(0);
+  animation: slideDownSubactions 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .list-row-subactions.is-hidden {
-  transform: translateX(100%);
+  display: none !important;
+}
+
+@keyframes slideDownSubactions {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .list-row-subactions__inner {
@@ -1045,16 +1018,14 @@
   justify-content: flex-end;
   gap: 12px;
   width: 100%;
+  flex-wrap: wrap;
 }
 
 .list-row-subactions__btns {
   display: flex;
   align-items: center;
   gap: 8px;
-}
-
-.list-row-subactions__close {
-  margin-left: 8px;
+  flex-wrap: wrap;
 }
 
 /* Remove divider between main row and expanded subactions row */
