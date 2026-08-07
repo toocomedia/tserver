@@ -213,13 +213,13 @@
 </div>
 {% else %}
 <div class="empty-state" id="empty-state">
-  <div class="empty-state__icon">
-    <i data-lucide="server"></i>
+  <div class="empty-state__shape">
+    <div class="shape-square-sm"></div>
   </div>
   <h3 class="empty-state__title">No reverse proxies yet</h3>
   <p class="empty-state__desc">Route incoming traffic to your local ports or external services by creating your first proxy.</p>
   <div class="empty-state__actions">
-    <a href="/proxy/create" class="btn btn--primary">Create Proxy</a>
+    <a href="/proxy/create" class="btn btn--minimal">Create Proxy</a>
   </div>
 </div>
 {% endif %}

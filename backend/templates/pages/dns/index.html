@@ -94,13 +94,13 @@
 </div>
 {% else %}
 <div class="empty-state" id="empty-state">
-  <div class="empty-state__icon">
-    <i data-lucide="book-open"></i>
+  <div class="empty-state__shape">
+    <div class="shape-circle-sm"></div>
   </div>
   <h3 class="empty-state__title">No DNS zones</h3>
   <p class="empty-state__desc">Create a domain first to manage its DNS records.</p>
   <div class="empty-state__actions">
-    <a href="/domains/create" class="btn btn--primary">Add Domain</a>
+    <a href="/domains/create" class="btn btn--minimal">Add Domain</a>
   </div>
 </div>
 {% endif %}

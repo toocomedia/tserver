@@ -133,8 +133,8 @@
 </div>
 {% else %}
 <div class="empty-state" id="empty-state">
-  <div class="empty-state__icon">
-    <i data-lucide="check-circle"></i>
+  <div class="empty-state__shape">
+    <div class="shape-circle-sm"></div>
   </div>
   <h3 class="empty-state__title">No errors recorded{% if filter_status == 'open' %} (open){% endif %}</h3>
   <p class="empty-state__desc">Failures from domains, DNS, SSL, and proxy actions appear here automatically.</p>

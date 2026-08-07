@@ -158,13 +158,13 @@
 </div>
 {% else %}
 <div class="empty-state" id="empty-state">
-  <div class="empty-state__icon">
-    <i data-lucide="shield"></i>
+  <div class="empty-state__shape">
+    <div class="shape-triangle-sm"></div>
   </div>
   <h3 class="empty-state__title">No SSL certificates</h3>
   <p class="empty-state__desc">Secure your domains with free Let's Encrypt certificates.</p>
   <div class="empty-state__actions">
-    <a href="/ssl/issue" class="btn btn--primary">Issue Certificate</a>
+    <a href="/ssl/issue" class="btn btn--minimal">Issue Certificate</a>
   </div>
 </div>
 {% endif %}
