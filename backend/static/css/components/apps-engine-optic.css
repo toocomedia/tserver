@@ -98,25 +98,50 @@
   font-size: 12px;
 }
 
-/* Borderless Optic Inputs */
-.apps-engine-optic .input-optic {
+/* Borderless Optic Inputs & Dropdowns */
+.apps-engine-optic .input-optic,
+.apps-engine-optic select.input-optic,
+.apps-engine-optic .form-select-wrap select {
   width: 100%;
   height: 42px;
   padding: 0 14px;
   font-size: 13px;
   font-family: inherit;
-  background: var(--bg-card, rgba(255, 255, 255, 0.05));
+  background-color: var(--bg-card, rgba(255, 255, 255, 0.05));
   color: var(--color-text, #ffffff);
   border: none !important;
   border-radius: 0 !important;
   box-shadow: none !important;
   outline: none !important;
-  transition: background 0.15s ease;
+  transition: background-color 0.15s ease;
+}
+
+.apps-engine-optic select.input-optic,
+.apps-engine-optic .form-select-wrap select {
+  padding-right: 36px;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  cursor: pointer;
+}
+
+.apps-engine-optic select.input-optic option,
+.apps-engine-optic .form-select-wrap select option {
+  background-color: var(--color-surface, #1e293b);
+  color: var(--color-text, #ffffff);
+  padding: 10px;
 }
 
 .apps-engine-optic .input-optic:hover, 
-.apps-engine-optic .input-optic:focus {
-  background: var(--bg-card-hover, rgba(255, 255, 255, 0.1));
+.apps-engine-optic .input-optic:focus,
+.apps-engine-optic select.input-optic:hover,
+.apps-engine-optic select.input-optic:focus,
+.apps-engine-optic .form-select-wrap select:hover,
+.apps-engine-optic .form-select-wrap select:focus {
+  background-color: var(--bg-card-hover, rgba(255, 255, 255, 0.1));
 }
 
 .apps-engine-optic .input-optic--code {
@@ -170,11 +195,13 @@
 }
 
 .apps-engine-optic .optic-card.selected,
+.apps-engine-optic .optic-card.settings-choice--active,
 .apps-engine-optic .optic-card:has(input:checked) {
   background: var(--bg-card-selected, rgba(255, 255, 255, 0.14));
 }
 
 .apps-engine-optic .optic-card.selected::before,
+.apps-engine-optic .optic-card.settings-choice--active::before,
 .apps-engine-optic .optic-card:has(input:checked)::before {
   content: '';
   position: absolute;
@@ -196,6 +223,7 @@
 }
 
 .apps-engine-optic .optic-card.selected .optic-card__icon,
+.apps-engine-optic .optic-card.settings-choice--active .optic-card__icon,
 .apps-engine-optic .optic-card:has(input:checked) .optic-card__icon {
   color: var(--color-text, #ffffff);
 }
@@ -217,13 +245,6 @@
   margin-bottom: 12px;
   display: block;
   color: var(--color-text, #ffffff);
-}
-
-.apps-engine-optic .action-footer-optic {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 32px;
 }
 
 /* Custom Environment Variables Styling */
@@ -288,4 +309,13 @@
 
 .apps-engine-optic .apps-engine-environment-row .btn:hover {
   background: var(--color-secondary-hover, rgba(255, 255, 255, 0.12));
+}
+
+/* Action Footer */
+.apps-engine-optic .action-footer-optic,
+.apps-engine-optic .apps-engine-action-inner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 32px;
 }

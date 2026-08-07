@@ -15,7 +15,7 @@
   <p class="apps-engine-wizard__target">Deploying to <span class="mono" data-wizard-domain-name>the selected domain</span></p>
   <nav class="stepper-optic" aria-label="Apps Engine deployment steps">
     {% for number, label in [(1, 'Source'), (2, 'Inspection'), (3, 'Configuration'), (4, 'Install'), (5, 'Result')] %}
-    <button class="step-tab-optic{% if number == 1 %} active{% else %} disabled{% endif %}" type="button" data-wizard-nav="{{ number }}"><span class="step-num">0{{ number }}</span><span>{{ number }}. {{ label }}</span></button>
+    <button class="step-tab-optic{% if number == 1 %} active{% else %} disabled{% endif %}" type="button" data-wizard-nav="{{ number }}"><span>{{ number }}. {{ label }}</span></button>
     {% endfor %}
   </nav>
   <div class="wizard-content-area">
@@ -27,13 +27,13 @@
   </div>
   <div class="fixed-action-bar apps-engine-action-bar" data-wizard-actions>
     <div class="fixed-action-inner apps-engine-action-inner">
-      <button class="btn btn--secondary" type="button" data-wizard-back hidden>Back</button>
+      <button class="btn-optic" type="button" data-wizard-back hidden>Back</button>
       <span class="text-muted" data-wizard-hint>Step 1 of 5: Source</span>
       <div class="d-flex gap-sm apps-engine-action-inner__right">
-        <a class="btn btn--secondary" href="/plugins/railpack_apps/" data-wizard-cancel>Cancel</a>
-        <a class="btn btn--secondary" href="/plugins/railpack_apps/" data-deployment-details hidden>View app details</a>
-        <a class="btn btn--primary" href="/plugins/railpack_apps/" data-deployment-dashboard hidden>Manage app</a>
-        <button class="btn btn--primary" type="button" data-wizard-next>Inspect repository</button>
+        <a class="btn-optic" href="/plugins/railpack_apps/" data-wizard-cancel>Cancel</a>
+        <a class="btn-optic" href="/plugins/railpack_apps/" data-deployment-details hidden>View app details</a>
+        <a class="btn-optic btn-optic--primary" href="/plugins/railpack_apps/" data-deployment-dashboard hidden>Manage app</a>
+        <button class="btn-optic btn-optic--primary" type="button" data-wizard-next>Inspect repository</button>
       </div>
     </div>
   </div>
