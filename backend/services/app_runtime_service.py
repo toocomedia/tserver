@@ -38,7 +38,7 @@ async def prepare_environment(app: HostedApp, source: Path) -> None:
     if app.postgres_mode == "create":
         existing = _managed_database(app, source, existing)
     elif app.postgres_mode == "supabase":
-        existing = _replace_database_url_scheme(existing, source)
+        existing = _prepare_supabase_database_url(existing, source)
     env_path.write_text(_with_runtime_settings(app, existing), encoding="utf-8")
     os.chmod(env_path, 0o600)
 
@@ -77,7 +77,7 @@ def restore_environment(
         return
     existing = snapshot.decode("utf-8")
     if app.postgres_mode == "supabase" and source is not None:
-        existing = _replace_database_url_scheme(existing, source)
+        existing = _prepare_supabase_database_url(existing, source)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
         _with_runtime_settings(app, existing), encoding="utf-8"
@@ -157,6 +157,35 @@ def _replace_database_url_scheme(existing: str, source: Path) -> str:
     return re.sub(
         r"(?m)^DATABASE_URL=postgresql(?:\+[A-Za-z0-9_]+)?://",
         f"DATABASE_URL={_database_url_scheme(source)}://",
+        existing,
+    )
+
+
+def _prepare_supabase_database_url(existing: str, source: Path) -> str:
+    """Make a Supabase pooler URL safe for a detected asyncpg SQLAlchemy app."""
+    scheme = _database_url_scheme(source)
+    existing = _replace_database_url_scheme(existing, source)
+    if scheme != "postgresql+asyncpg":
+        return existing
+
+    def disable_prepared_statement_cache(match: re.Match[str]) -> str:
+        url = match.group("url")
+        if "prepared_statement_cache_size=" in url:
+            url = re.sub(
+                r"([?&]prepared_statement_cache_size=)[^&#\s]*",
+                r"\g<1>0",
+                url,
+            )
+        else:
+            url += "&" if "?" in url else "?"
+            url += "prepared_statement_cache_size=0"
+        return f"DATABASE_URL={url}"
+
+    # Supabase poolers use transaction pooling. asyncpg prepared statements are
+    # unsafe there; SQLAlchemy maps this URL option to asyncpg's statement cache.
+    return re.sub(
+        r"(?m)^DATABASE_URL=(?P<url>[^\s#]+)$",
+        disable_prepared_statement_cache,
         existing,
     )
 

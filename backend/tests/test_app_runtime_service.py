@@ -28,7 +28,7 @@ class AppRuntimeServiceTests(unittest.IsolatedAsyncioTestCase):
             )
             await app_runtime_service.prepare_environment(app, source)
             self.assertIn(
-                "DATABASE_URL=postgresql+asyncpg://app:secret@db.example/app",
+                "DATABASE_URL=postgresql+asyncpg://app:secret@db.example/app?prepared_statement_cache_size=0",
                 env_path.read_text(encoding="utf-8"),
             )
 
@@ -80,7 +80,33 @@ class AppRuntimeServiceTests(unittest.IsolatedAsyncioTestCase):
             )
 
             self.assertIn(
-                "DATABASE_URL=postgresql+asyncpg://app:secret@db.example/app",
+                "DATABASE_URL=postgresql+asyncpg://app:secret@db.example/app?prepared_statement_cache_size=0",
+                env_path.read_text(encoding="utf-8"),
+            )
+
+    async def test_supabase_asyncpg_url_preserves_existing_query_options(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "source"
+            source.mkdir()
+            (source / "main.py").write_text(
+                "from sqlalchemy.ext.asyncio import create_async_engine\n",
+                encoding="utf-8",
+            )
+            env_path = root / "app.env"
+            env_path.write_text(
+                "DATABASE_URL=postgresql://app:secret@db.example/app?sslmode=require\n",
+                encoding="utf-8",
+            )
+            app = HostedApp(
+                id=1, postgres_mode="supabase", env_path=str(env_path),
+                work_dir=str(root / "work"), port=9100,
+            )
+
+            await app_runtime_service.prepare_environment(app, source)
+
+            self.assertIn(
+                "DATABASE_URL=postgresql+asyncpg://app:secret@db.example/app?sslmode=require&prepared_statement_cache_size=0",
                 env_path.read_text(encoding="utf-8"),
             )
 
