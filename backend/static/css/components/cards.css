@@ -1049,6 +1049,10 @@
 }
 
 /* Synchronized hover state */
+.table tr {
+  clip-path: inset(0 0 0 0); /* Clips the sliding toolbar so it doesn't cause a scrollbar */
+}
+
 .table tr.is-expanded,
 .table tr.is-hovered,
 .list-item-row.is-expanded,
