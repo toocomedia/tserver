@@ -213,13 +213,7 @@
 </div>
 {% else %}
 <div class="empty-state" id="empty-state">
-  <div class="empty-state__shape shape-sequencer">
-    <div class="seq-1"><div class="shape-outline-circle"></div></div>
-    <div class="seq-2"><div class="shape-outline-leaf"></div></div>
-    <div class="seq-3"><div class="shape-outline-capsule"></div></div>
-    <div class="seq-4"><div class="shape-outline-diamond"></div></div>
-    <div class="seq-final"><div class="shape-outline-square"></div></div>
-  </div>
+  {% include 'partials/shape_sequencer.html' %}
   <h3 class="empty-state__title">No reverse proxies yet</h3>
   <p class="empty-state__desc">Route incoming traffic to your local ports or external services by creating your first proxy.</p>
   <div class="empty-state__actions">

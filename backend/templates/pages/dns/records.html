@@ -102,13 +102,7 @@
 </div>
 {% else %}
 <div class="empty-state" id="no-records">
-  <div class="empty-state__shape shape-sequencer">
-    <div class="seq-1"><div class="shape-outline-diamond"></div></div>
-    <div class="seq-2"><div class="shape-outline-circle"></div></div>
-    <div class="seq-3"><div class="shape-outline-leaf"></div></div>
-    <div class="seq-4"><div class="shape-outline-square"></div></div>
-    <div class="seq-final"><div class="shape-outline-capsule"></div></div>
-  </div>
+  {% include 'partials/shape_sequencer.html' %}
   <h3 class="empty-state__title">No records in this zone</h3>
   <p class="empty-state__desc">Add custom A, AAAA, CNAME, TXT, or MX records for your domain.</p>
   <div class="empty-state__actions">

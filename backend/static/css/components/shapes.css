@@ -1,11 +1,4 @@
-/* Outline Shapes */
-.shape-outline-square { width: 90px; height: 90px; border-radius: 20px; border: 2px solid var(--shape-border-accent); box-sizing: border-box; }
-.shape-outline-circle { width: 90px; height: 90px; border-radius: 50%; border: 2px solid var(--shape-border-dark); box-sizing: border-box; }
-.shape-outline-leaf { width: 90px; height: 90px; border-radius: 50% 0 50% 0; border: 2px solid var(--shape-border-accent); box-sizing: border-box; }
-.shape-outline-capsule { width: 120px; height: 60px; border-radius: 30px; border: 2px solid var(--shape-border-dark); box-sizing: border-box; }
-.shape-outline-diamond { width: 80px; height: 80px; border-radius: 12px; border: 2px solid var(--shape-border-accent); box-sizing: border-box; }
-
-/* Shape Sequencer */
+/* Shape Sequencer (Multi-shape morph) */
 .shape-sequencer {
   position: relative;
   width: 120px;
@@ -15,31 +8,74 @@
   align-items: center;
   justify-content: center;
 }
+
 .shape-sequencer > div {
   position: absolute;
   opacity: 0;
   display: flex;
   align-items: center;
   justify-content: center;
+  animation: solid-fade 20s infinite; /* 10 shapes, 2s each = 20s total */
 }
 
-/* Base Delays for 5 shapes (2s per shape) */
-.seq-1 { animation: spin-fade 2.5s forwards 0s; }
-.seq-2 { animation: spin-fade 2.5s forwards 1.8s; }
-.seq-3 { animation: spin-fade 2.5s forwards 3.6s; }
-.seq-4 { animation: spin-fade 2.5s forwards 5.4s; }
-.seq-final { animation: spin-fade-final 1.5s forwards 7.2s; }
+/* Base Delays for 10 Shapes */
+.seq-1 { animation-delay: 0s !important; }
+.seq-2 { animation-delay: 2s !important; }
+.seq-3 { animation-delay: 4s !important; }
+.seq-4 { animation-delay: 6s !important; }
+.seq-5 { animation-delay: 8s !important; }
+.seq-6 { animation-delay: 10s !important; }
+.seq-7 { animation-delay: 12s !important; }
+.seq-8 { animation-delay: 14s !important; }
+.seq-9 { animation-delay: 16s !important; }
+.seq-10{ animation-delay: 18s !important; }
 
-/* Spin Fade for intermediate shapes */
-@keyframes spin-fade {
-  0% { opacity: 0; transform: rotate(-45deg) scale(0.8); }
-  25% { opacity: 1; transform: rotate(0deg) scale(1); }
-  50% { opacity: 1; transform: rotate(45deg) scale(1); }
-  100% { opacity: 0; transform: rotate(90deg) scale(1.2); }
+@keyframes solid-fade {
+  0% { opacity: 0; transform: scale(0.8) rotate(-5deg); }
+  5% { opacity: 1; transform: scale(1) rotate(0deg); }
+  10% { opacity: 1; transform: scale(1) rotate(0deg); }
+  15% { opacity: 0; transform: scale(1.1) rotate(5deg); }
+  100% { opacity: 0; }
 }
 
-/* Spin Fade Final (stays on screen) */
-@keyframes spin-fade-final {
-  0% { opacity: 0; transform: rotate(-45deg) scale(0.8); }
-  100% { opacity: 1; transform: rotate(0deg) scale(1); }
+/* 10 SOLID SHAPES */
+.solid-square { 
+  width: 90px; height: 90px; border-radius: 20px; 
+  background-color: var(--shape-fill-accent); transform: rotate(15deg); 
+}
+.solid-circle { 
+  width: 90px; height: 90px; border-radius: 50%; 
+  background-color: var(--shape-fill-dark); 
+}
+.solid-leaf { 
+  width: 90px; height: 90px; border-radius: 50% 0 50% 0; 
+  background-color: var(--shape-fill-accent); transform: rotate(-10deg); 
+}
+.solid-capsule { 
+  width: 120px; height: 60px; border-radius: 30px; 
+  background-color: var(--shape-fill-dark); transform: rotate(20deg); 
+}
+.solid-diamond { 
+  width: 80px; height: 80px; border-radius: 12px; 
+  background-color: var(--shape-fill-accent); transform: rotate(45deg); 
+}
+.solid-arch { 
+  width: 90px; height: 90px; border-radius: 45px 45px 0 0; 
+  background-color: var(--shape-fill-dark); 
+}
+.solid-blob { 
+  width: 90px; height: 90px; border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%; 
+  background-color: var(--shape-fill-accent); transform: rotate(-30deg); 
+}
+.solid-teardrop { 
+  width: 90px; height: 90px; border-radius: 50% 50% 50% 0; 
+  background-color: var(--shape-fill-dark); transform: rotate(-45deg); 
+}
+.solid-star { 
+  width: 100px; height: 100px; background-color: var(--shape-fill-accent); 
+  clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%); 
+}
+.solid-triangle { 
+  width: 90px; height: 90px; background-color: var(--shape-fill-dark); 
+  clip-path: polygon(50% 0%, 0% 100%, 100% 100%); transform: rotate(180deg); 
 }
