@@ -945,62 +945,116 @@
 }
 
 /* ============================================================
-   SEAMLESS EXPANDED ACTION SUB-LIST (NO DIVIDER + LINKED HOVER)
+   DIRECT IN-ROW SLIDING ACTION TOOLBAR
    ============================================================ */
+.list-item-row {
+  position: relative;
+  overflow: hidden;
+}
+
+/* Secondary record details fade out on expand */
+.list-item-row .list-col-version,
+.list-item-row .list-col-status,
+.list-item-row .list-col-desc,
+.list-item-row .list-col-actions {
+  transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1), transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.list-item-row.is-expanded .list-col-version,
+.list-item-row.is-expanded .list-col-status,
+.list-item-row.is-expanded .list-col-desc,
+.list-item-row.is-expanded .list-col-actions {
+  opacity: 0;
+  transform: translateX(-15px);
+  pointer-events: none;
+}
+
 .list-actions-toggle-btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  height: 30px;
+  padding: 0 12px;
+  font-size: 12px;
   font-weight: 700;
+  background: var(--color-secondary-btn);
+  color: var(--color-text);
+  border: none !important;
+  border-radius: 0 !important;
   cursor: pointer;
-  transition: all 0.18s ease;
+  transition: background 0.15s ease, color 0.15s ease;
+  white-space: nowrap;
+}
+
+.list-actions-toggle-btn:hover {
+  background: var(--color-secondary-hover);
 }
 
 .list-actions-toggle-btn .chevron-icon {
-  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  width: 12px;
+  height: 12px;
+  stroke: currentColor;
+  stroke-width: 2.5;
+  fill: none;
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .list-actions-toggle-btn.is-active {
-  background: var(--color-accent, #3b82f6) !important;
-  color: #ffffff !important;
+  background: var(--color-accent) !important;
+  color: var(--color-on-accent, #111111) !important;
+}
+
+.list-actions-toggle-btn.is-active .chevron-icon {
+  transform: rotate(180deg);
 }
 
 .list-row-subactions {
-  grid-column: 1 / -1;
-  width: 100%;
-  padding: 4px 16px 12px 16px;
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 240px;
+  width: auto;
+  padding: 0 16px;
   margin: 0;
-  background: transparent !important;
-  border: none !important;
-  border-radius: 0;
+  background: var(--color-surface) !important;
+  border-left: 2px solid var(--color-accent) !important;
+  display: flex !important;
+  align-items: center;
+  justify-content: flex-end;
+  z-index: 10;
+  transform: translateX(100%);
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
   box-shadow: none !important;
-  animation: slideDownSubactions 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-@keyframes slideDownSubactions {
-  from {
-    opacity: 0;
-    transform: translateY(-4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.list-item-row.is-expanded .list-row-subactions,
+.list-row-subactions:not(.is-hidden) {
+  transform: translateX(0);
+}
+
+.list-row-subactions.is-hidden {
+  transform: translateX(100%);
 }
 
 .list-row-subactions__inner {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 16px;
-  flex-wrap: wrap;
+  gap: 12px;
+  width: 100%;
 }
 
 .list-row-subactions__btns {
   display: flex;
   align-items: center;
   gap: 8px;
-  flex-wrap: wrap;
+}
+
+.list-row-subactions__close {
+  margin-left: 8px;
 }
 
 /* Remove divider between main row and expanded subactions row */

@@ -84,11 +84,12 @@ function toggleListRowActions(triggerEl) {
 
   const container = row.closest('.view-list-container') || row.parentElement;
   if (container) {
-    container.querySelectorAll('.list-row-subactions').forEach((tray) => {
-      if (tray !== subactions) {
-        tray.classList.add('is-hidden');
-        const parentRow = tray.closest('.list-item-row') || tray.closest('.plugin-requirements-host');
-        const btn = parentRow?.querySelector('.list-actions-toggle-btn');
+    container.querySelectorAll('.list-item-row.is-expanded, .plugin-requirements-host.is-expanded').forEach((otherRow) => {
+      if (otherRow !== row) {
+        otherRow.classList.remove('is-expanded');
+        const tray = otherRow.querySelector('.list-row-subactions');
+        if (tray) tray.classList.add('is-hidden');
+        const btn = otherRow.querySelector('.list-actions-toggle-btn');
         if (btn) {
           btn.classList.remove('is-active');
           btn.setAttribute('aria-expanded', 'false');
@@ -98,8 +99,12 @@ function toggleListRowActions(triggerEl) {
   }
 
   subactions.classList.toggle('is-hidden', !willExpand);
-  triggerEl.classList.toggle('is-active', willExpand);
-  triggerEl.setAttribute('aria-expanded', String(willExpand));
+  row.classList.toggle('is-expanded', willExpand);
+  const toggleBtn = row.querySelector('.list-actions-toggle-btn');
+  if (toggleBtn) {
+    toggleBtn.classList.toggle('is-active', willExpand);
+    toggleBtn.setAttribute('aria-expanded', String(willExpand));
+  }
 }
 window.toggleListRowActions = toggleListRowActions;
 
