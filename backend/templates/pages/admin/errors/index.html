@@ -134,10 +134,11 @@
 {% else %}
 <div class="empty-state" id="empty-state">
   <div class="empty-state__shape shape-sequencer">
-    <div class="seq-1"><div class="shape-triangle-sm"></div></div>
-    <div class="seq-2"><div class="shape-torus-sm"></div></div>
-    <div class="seq-3"><div class="shape-square-sm"></div></div>
-    <div class="seq-final"><div class="shape-circle-sm"></div></div>
+    <div class="seq-1"><div class="shape-outline-leaf"></div></div>
+    <div class="seq-2"><div class="shape-outline-square"></div></div>
+    <div class="seq-3"><div class="shape-outline-capsule"></div></div>
+    <div class="seq-4"><div class="shape-outline-circle"></div></div>
+    <div class="seq-final"><div class="shape-outline-diamond"></div></div>
   </div>
   <h3 class="empty-state__title">No errors recorded{% if filter_status == 'open' %} (open){% endif %}</h3>
   <p class="empty-state__desc">Failures from domains, DNS, SSL, and proxy actions appear here automatically.</p>

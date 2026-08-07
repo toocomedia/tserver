@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<title>Animation Test V4 - Solid Options</title>
+<style>
+  :root {
+    --shape-fill-dark: rgba(255, 255, 255, 0.05);
+    --shape-fill-accent: rgba(199, 244, 100, 0.08);
+    --shape-border-dark: rgba(255, 255, 255, 0.08);
+    --shape-border-accent: rgba(199, 244, 100, 0.12);
+    --bg: #0B0C0B;
+    --text: #FFF;
+  }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: sans-serif;
+    padding: 60px;
+    display: flex;
+    gap: 40px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .demo-block {
+    text-align: center;
+    background: rgba(255,255,255,0.02);
+    padding: 40px;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.05);
+    width: 280px;
+  }
+  h3 { margin-top: 0; color: #C7F464; }
+  p { color: #888; font-size: 14px; margin-bottom: 40px; min-height: 40px; }
+
+  /* MIXED SHAPES (From V3) */
+  .mixed-square { width: 90px; height: 90px; border-radius: 20px; background-color: var(--shape-fill-accent); border: 1px solid var(--shape-border-accent); transform: rotate(15deg); box-sizing: border-box; }
+  .mixed-torus { width: 90px; height: 90px; border-radius: 50%; border: 20px solid var(--shape-fill-dark); outline: 1px solid var(--shape-border-dark); transform: rotate(-15deg); box-sizing: border-box; }
+  .mixed-leaf { width: 90px; height: 90px; border-radius: 50% 0 50% 0; background-color: var(--shape-fill-accent); border: 1px solid var(--shape-border-accent); transform: rotate(-10deg); box-sizing: border-box; }
+  .mixed-capsule { width: 120px; height: 60px; border-radius: 30px; background-color: var(--shape-fill-dark); border: 1px solid var(--shape-border-dark); transform: rotate(20deg); box-sizing: border-box; }
+  .mixed-diamond { width: 80px; height: 80px; border-radius: 12px; background-color: var(--shape-fill-dark); border: 1px solid var(--shape-border-dark); transform: rotate(45deg); box-sizing: border-box; }
+
+  /* SOLID SHAPES (No borders, just solid color blocks) */
+  .solid-square { width: 90px; height: 90px; border-radius: 20px; background-color: var(--shape-fill-accent); transform: rotate(15deg); }
+  .solid-circle { width: 90px; height: 90px; border-radius: 50%; background-color: var(--shape-fill-dark); }
+  .solid-leaf { width: 90px; height: 90px; border-radius: 50% 0 50% 0; background-color: var(--shape-fill-accent); transform: rotate(-10deg); }
+  .solid-capsule { width: 120px; height: 60px; border-radius: 30px; background-color: var(--shape-fill-dark); transform: rotate(20deg); }
+  .solid-diamond { width: 80px; height: 80px; border-radius: 12px; background-color: var(--shape-fill-accent); transform: rotate(45deg); }
+
+  /* OUTLINE SHAPES (No fills, just glowing borders) */
+  .outline-square { width: 90px; height: 90px; border-radius: 20px; border: 2px solid var(--shape-border-accent); transform: rotate(15deg); box-sizing: border-box;}
+  .outline-circle { width: 90px; height: 90px; border-radius: 50%; border: 2px solid var(--shape-border-dark); box-sizing: border-box;}
+  .outline-leaf { width: 90px; height: 90px; border-radius: 50% 0 50% 0; border: 2px solid var(--shape-border-accent); transform: rotate(-10deg); box-sizing: border-box;}
+  .outline-capsule { width: 120px; height: 60px; border-radius: 30px; border: 2px solid var(--shape-border-dark); transform: rotate(20deg); box-sizing: border-box;}
+  .outline-diamond { width: 80px; height: 80px; border-radius: 12px; border: 2px solid var(--shape-border-accent); transform: rotate(45deg); box-sizing: border-box;}
+
+  /* SEQUENCER STAGE */
+  .demo-stage {
+    position: relative; width: 120px; height: 120px; margin: 0 auto;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .demo-stage > div {
+    position: absolute; opacity: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  /* BASE DELAYS (2s per shape, 10s total loop for 5 shapes) */
+  .seq-1 { animation-delay: 0s !important; }
+  .seq-2 { animation-delay: 2s !important; }
+  .seq-3 { animation-delay: 4s !important; }
+  .seq-4 { animation-delay: 6s !important; }
+  .seq-5 { animation-delay: 8s !important; }
+
+  /* CROSSFADE ANIMATION */
+  .crossfade > div { animation: spin-fade 10s infinite; }
+  @keyframes spin-fade {
+    0% { opacity: 0; transform: rotate(-45deg) scale(0.8); }
+    10% { opacity: 1; transform: rotate(0deg) scale(1); }
+    20% { opacity: 1; transform: rotate(45deg) scale(1); }
+    30% { opacity: 0; transform: rotate(90deg) scale(1.2); }
+    100% { opacity: 0; }
+  }
+
+  /* OPTION 4: SINGLE FLUID MORPH (No crossfading, just one shape shifting) */
+  .single-morph {
+    width: 90px; height: 90px;
+    background-color: var(--shape-fill-accent);
+    animation: fluid-morph 10s infinite ease-in-out;
+  }
+  @keyframes fluid-morph {
+    0% { border-radius: 20px; transform: rotate(0deg) scale(1); background-color: var(--shape-fill-accent); } /* Square */
+    20% { border-radius: 50%; transform: rotate(45deg) scale(1.1); background-color: var(--shape-fill-dark); } /* Circle */
+    40% { border-radius: 50% 0 50% 0; transform: rotate(90deg) scale(1); background-color: var(--shape-fill-accent); } /* Leaf */
+    60% { border-radius: 30px; width: 120px; height: 60px; transform: rotate(135deg) scale(0.9); background-color: var(--shape-fill-dark); } /* Capsule */
+    80% { border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%; width: 90px; height: 90px; transform: rotate(270deg) scale(1); background-color: var(--shape-fill-accent); } /* Blob */
+    100% { border-radius: 20px; transform: rotate(360deg) scale(1); background-color: var(--shape-fill-accent); } /* Back to square */
+  }
+
+</style>
+</head>
+<body>
+
+  <!-- OPTION 1 -->
+  <div class="demo-block">
+    <h3>Option 1: Solid Shapes</h3>
+    <p>Multiple solid shapes crossfading into each other.</p>
+    <div class="demo-stage crossfade">
+      <div class="seq-1"><div class="solid-square"></div></div>
+      <div class="seq-2"><div class="solid-circle"></div></div>
+      <div class="seq-3"><div class="solid-leaf"></div></div>
+      <div class="seq-4"><div class="solid-capsule"></div></div>
+      <div class="seq-5"><div class="solid-diamond"></div></div>
+    </div>
+  </div>
+
+  <!-- OPTION 2 -->
+  <div class="demo-block">
+    <h3>Option 2: Outline Shapes</h3>
+    <p>Multiple glowing outline shapes crossfading.</p>
+    <div class="demo-stage crossfade">
+      <div class="seq-1"><div class="outline-square"></div></div>
+      <div class="seq-2"><div class="outline-circle"></div></div>
+      <div class="seq-3"><div class="outline-leaf"></div></div>
+      <div class="seq-4"><div class="outline-capsule"></div></div>
+      <div class="seq-5"><div class="outline-diamond"></div></div>
+    </div>
+  </div>
+
+  <!-- OPTION 3 -->
+  <div class="demo-block">
+    <h3>Option 3: Mixed Shapes</h3>
+    <p>Multiple mixed shapes crossfading (thick borders + fills).</p>
+    <div class="demo-stage crossfade">
+      <div class="seq-1"><div class="mixed-square"></div></div>
+      <div class="seq-2"><div class="mixed-torus"></div></div>
+      <div class="seq-3"><div class="mixed-leaf"></div></div>
+      <div class="seq-4"><div class="mixed-capsule"></div></div>
+      <div class="seq-5"><div class="mixed-diamond"></div></div>
+    </div>
+  </div>
+
+  <!-- OPTION 4 -->
+  <div class="demo-block">
+    <h3>Option 4: Single Solid Morph</h3>
+    <p>A single solid shape that fluidly morphs through all states without crossfading.</p>
+    <div class="demo-stage" style="display:flex;">
+      <div class="single-morph"></div>
+    </div>
+  </div>
+
+</body>
+</html>

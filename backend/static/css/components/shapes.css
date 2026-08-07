@@ -1,68 +1,45 @@
-/* Shape Sequencer (Multi-shape morph) */
+/* Outline Shapes */
+.shape-outline-square { width: 90px; height: 90px; border-radius: 20px; border: 2px solid var(--shape-border-accent); box-sizing: border-box; }
+.shape-outline-circle { width: 90px; height: 90px; border-radius: 50%; border: 2px solid var(--shape-border-dark); box-sizing: border-box; }
+.shape-outline-leaf { width: 90px; height: 90px; border-radius: 50% 0 50% 0; border: 2px solid var(--shape-border-accent); box-sizing: border-box; }
+.shape-outline-capsule { width: 120px; height: 60px; border-radius: 30px; border: 2px solid var(--shape-border-dark); box-sizing: border-box; }
+.shape-outline-diamond { width: 80px; height: 80px; border-radius: 12px; border: 2px solid var(--shape-border-accent); box-sizing: border-box; }
+
+/* Shape Sequencer */
 .shape-sequencer {
   position: relative;
-  width: 100px;
-  height: 100px;
+  width: 120px;
+  height: 120px;
   margin: 0 auto 60px auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .shape-sequencer > div {
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
   opacity: 0;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.seq-1 { animation: seq-pop 3s ease-in-out 0.6s forwards; }
-.seq-2 { animation: seq-pop 3s ease-in-out 2.1s forwards; }
-.seq-3 { animation: seq-pop 3s ease-in-out 3.6s forwards; }
-.seq-final { animation: seq-final 1.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) 5.1s forwards; }
+/* Base Delays for 5 shapes (2s per shape) */
+.seq-1 { animation: spin-fade 2.5s forwards 0s; }
+.seq-2 { animation: spin-fade 2.5s forwards 1.8s; }
+.seq-3 { animation: spin-fade 2.5s forwards 3.6s; }
+.seq-4 { animation: spin-fade 2.5s forwards 5.4s; }
+.seq-final { animation: spin-fade-final 1.5s forwards 7.2s; }
 
-@keyframes seq-pop {
-  0% { opacity: 0; transform: scale(0.5) rotate(-15deg); }
-  20% { opacity: 1; transform: scale(1.05) rotate(0deg); }
-  50% { opacity: 1; transform: scale(1) rotate(0deg); }
-  100% { opacity: 0; transform: scale(1.2) rotate(15deg); }
-}
-@keyframes seq-final {
-  0% { opacity: 0; transform: scale(0.5) rotate(-15deg); }
-  100% { opacity: 1; transform: scale(1) rotate(0deg); }
-}
-
-.shape-square-sm {
-  width: 100px;
-  height: 100px;
-  border-radius: 16px !important;
-  background-color: var(--shape-fill-accent);
-  border: 1px solid var(--shape-border-accent) !important;
-  transform: rotate(22deg);
+/* Spin Fade for intermediate shapes */
+@keyframes spin-fade {
+  0% { opacity: 0; transform: rotate(-45deg) scale(0.8); }
+  25% { opacity: 1; transform: rotate(0deg) scale(1); }
+  50% { opacity: 1; transform: rotate(45deg) scale(1); }
+  100% { opacity: 0; transform: rotate(90deg) scale(1.2); }
 }
 
-.shape-torus-sm {
-  width: 100px;
-  height: 100px;
-  border-radius: 50% !important;
-  border: 24px solid var(--shape-fill-dark) !important;
-  outline: 1px solid var(--shape-border-dark);
-  transform: rotate(-12deg);
-}
-
-.shape-circle-sm {
-  width: 100px;
-  height: 100px;
-  border-radius: 50% !important;
-  background-color: var(--shape-fill-dark);
-  border: 1px solid var(--shape-border-dark) !important;
-}
-
-.shape-triangle-sm {
-  width: 100px;
-  height: 100px;
-  background-color: var(--shape-fill-accent);
-  clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
-  transform: rotate(-28deg);
+/* Spin Fade Final (stays on screen) */
+@keyframes spin-fade-final {
+  0% { opacity: 0; transform: rotate(-45deg) scale(0.8); }
+  100% { opacity: 1; transform: rotate(0deg) scale(1); }
 }
