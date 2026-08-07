@@ -1011,7 +1011,7 @@
 .list-row-subactions.slide-toolbar {
   position: absolute;
   top: 0;
-  right: -1px;
+  right: 0;
   bottom: 0;
   left: auto;
   width: max-content;
