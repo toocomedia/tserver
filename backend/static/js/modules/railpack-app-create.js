@@ -55,31 +55,53 @@ if (form) {
   }
   function wordpressDatabaseState(required) {
     const row = query('[data-kind="mariadb"]');
-    if (required) { row.querySelector('[data-database-enabled]').checked = true; row.querySelector('[data-database-provider]').value = 'docker'; }
+    if (required) {
+      row.querySelector('[data-database-enabled]').checked = true;
+      // provider may be in the external options panel
+      const providerEl = _dbField(row, '[data-database-provider]');
+      if (providerEl) providerEl.value = 'docker';
+    }
     row.dataset.sourceRequired = required ? 'true' : '';
     attachmentState(row);
+  }
+  function _dbField(row, selector) {
+    // First check inside the card row itself, then in the sibling options panel
+    const inRow = row.querySelector(selector);
+    if (inRow) return inRow;
+    const kind = row.dataset.kind;
+    if (kind) {
+      const panel = form.querySelector(`[data-database-options][data-database-parent="${kind}"]`);
+      if (panel) return panel.querySelector(selector);
+    }
+    return null;
+  }
+  function _dbPanel(row) {
+    const kind = row.dataset.kind;
+    return kind ? form.querySelector(`[data-database-options][data-database-parent="${kind}"]`) : row.querySelector('[data-database-options]');
   }
   function attachmentState(row) {
     const required = row.dataset.sourceRequired === 'true';
     const enabled = row.querySelector('[data-database-enabled]').checked;
-    const provider = row.querySelector('[data-database-provider]');
-    const options = row.querySelector('[data-database-options]');
-    options.hidden = !enabled;
+    const provider = _dbField(row, '[data-database-provider]');
+    const optionsPanel = _dbPanel(row);
+    if (optionsPanel) optionsPanel.hidden = !enabled;
     row.classList.toggle('settings-choice--active', enabled);
     row.querySelector('[data-database-enabled]').disabled = required;
-    provider.disabled = required || !enabled;
-    const url = row.querySelector('[data-database-url]');
-    const external = provider.value === 'external';
-    const supabase = provider.value === 'supabase';
-    row.querySelector('[data-database-external]').hidden = !enabled || !external;
+    if (provider) provider.disabled = required || !enabled;
+    const providerVal = provider ? provider.value : 'docker';
+    const url = _dbField(row, '[data-database-url]');
+    const external = providerVal === 'external';
+    const supabase = providerVal === 'supabase';
+    const externalEl = _dbField(row, '[data-database-external]');
+    if (externalEl) externalEl.hidden = !enabled || !external;
     if (url) url.required = enabled && external;
-    // Supabase project picker
-    const supabasePicker = row.querySelector('[data-database-supabase-picker]');
+    const supabasePicker = _dbField(row, '[data-database-supabase-picker]');
     if (supabasePicker) supabasePicker.hidden = !enabled || !supabase;
-    const supabaseSelect = row.querySelector('[data-database-supabase-project]');
+    const supabaseSelect = _dbField(row, '[data-database-supabase-project]');
     if (supabaseSelect) supabaseSelect.required = enabled && supabase;
-    setHidden(row.querySelector('[data-database-requirement]'), !required);
-    setText(row.querySelector('[data-database-requirement]'), required ? 'Required by WordPress. The private MariaDB service is created with this app.' : '');
+    const reqEl = _dbField(row, '[data-database-requirement]');
+    setHidden(reqEl, !required);
+    setText(reqEl, required ? 'Required by WordPress. The private MariaDB service is created with this app.' : '');
   }
 
   function applyInspection(data) {
