@@ -38,70 +38,20 @@ document.addEventListener("error", (event) => {
  * @param {HTMLElement} triggerEl
  */
 function toggleListRowActions(triggerEl) {
-  // 1. Table subactions row close button handling
-  const subTr = triggerEl.closest('.table-row-subactions-tr');
-  if (subTr) {
-    subTr.classList.add('is-hidden');
-    const mainTr = subTr.previousElementSibling;
-    if (mainTr) {
-      mainTr.classList.remove('is-expanded');
-      const btn = mainTr.querySelector('.list-actions-toggle-btn');
-      if (btn) {
-        btn.classList.remove('is-active');
-        btn.setAttribute('aria-expanded', 'false');
-      }
-    }
-    return;
-  }
-
-  // 2. Table row handling
-  const tr = triggerEl.closest('tr');
-  if (tr) {
-    const nextTr = tr.nextElementSibling;
-    const subactionsTr = (nextTr && nextTr.classList.contains('table-row-subactions-tr')) ? nextTr : null;
-    if (!subactionsTr) return;
-
-    const isExpanded = triggerEl.getAttribute('aria-expanded') === 'true';
-    const willExpand = !isExpanded;
-
-    // Close other open subaction rows in the same table
-    const tbody = tr.closest('tbody') || tr.parentElement;
-    if (tbody) {
-      tbody.querySelectorAll('.table-row-subactions-tr:not(.is-hidden)').forEach((otherTr) => {
-        if (otherTr !== subactionsTr) {
-          otherTr.classList.add('is-hidden');
-          const prevTr = otherTr.previousElementSibling;
-          if (prevTr) prevTr.classList.remove('is-expanded');
-          const btn = prevTr?.querySelector('.list-actions-toggle-btn');
-          if (btn) {
-            btn.classList.remove('is-active');
-            btn.setAttribute('aria-expanded', 'false');
-          }
-        }
-      });
-    }
-
-    subactionsTr.classList.toggle('is-hidden', !willExpand);
-    tr.classList.toggle('is-expanded', willExpand);
-    triggerEl.classList.toggle('is-active', willExpand);
-    triggerEl.setAttribute('aria-expanded', String(willExpand));
-    return;
-  }
-
-  // 3. Div-based list row handling
-  const row = triggerEl.closest('.list-item-row') || triggerEl.closest('.item-card') || triggerEl.closest('.plugin-requirements-host');
+  const row = triggerEl.closest('tr') || triggerEl.closest('.list-item-row') || triggerEl.closest('.item-card') || triggerEl.closest('.plugin-requirements-host');
   if (!row) return;
 
   const subactions = row.querySelector('.list-row-subactions');
   if (!subactions) return;
 
   const toggleBtn = row.querySelector('.list-actions-toggle-btn');
-  const isExpanded = toggleBtn ? toggleBtn.getAttribute('aria-expanded') === 'true' : row.classList.contains('is-expanded');
+  const isExpanded = row.classList.contains('is-expanded');
   const willExpand = !isExpanded;
 
-  const container = row.closest('.view-list-container') || row.parentElement;
+  // Close any other open rows in the same container/table
+  const container = row.closest('tbody') || row.closest('.view-list-container') || row.parentElement;
   if (container) {
-    container.querySelectorAll('.list-item-row.is-expanded, .plugin-requirements-host.is-expanded').forEach((otherRow) => {
+    container.querySelectorAll('.is-expanded').forEach((otherRow) => {
       if (otherRow !== row) {
         otherRow.classList.remove('is-expanded');
         const tray = otherRow.querySelector('.list-row-subactions');
