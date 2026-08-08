@@ -517,30 +517,60 @@ html[data-theme="charcoal"] .apps-engine-optic .db-toggle-icon {
   overflow-y: auto;
   overflow-x: hidden;
   padding-right: 4px;
+  scrollbar-width: none;
   --mask-top-color: black;
   --mask-bottom-color: black;
   -webkit-mask-image: linear-gradient(to bottom, var(--mask-top-color) 0%, black 48px, black calc(100% - 48px), var(--mask-bottom-color) 100%);
   mask-image: linear-gradient(to bottom, var(--mask-top-color) 0%, black 48px, black calc(100% - 48px), var(--mask-bottom-color) 100%);
 }
-.apps-engine-optic .wizard-content-area.can-scroll-top {
+.apps-engine-optic .wizard-scroll-wrapper.can-scroll-top .wizard-content-area {
   --mask-top-color: transparent;
 }
-.apps-engine-optic .wizard-content-area.can-scroll-bottom {
+.apps-engine-optic .wizard-scroll-wrapper.can-scroll-bottom .wizard-content-area {
   --mask-bottom-color: transparent;
 }
 
 .apps-engine-optic .wizard-content-area::-webkit-scrollbar {
-  width: 6px;
+  display: none;
 }
-.apps-engine-optic .wizard-content-area::-webkit-scrollbar-track {
-  background: transparent;
+
+.apps-engine-optic .scroll-arrow {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  color: var(--color-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s, background 0.2s;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
-.apps-engine-optic .wizard-content-area::-webkit-scrollbar-thumb {
-  background: var(--color-line);
-  border-radius: 4px;
+.apps-engine-optic .scroll-arrow:hover {
+  background: var(--color-secondary-btn);
 }
-.apps-engine-optic .wizard-content-area::-webkit-scrollbar-thumb:hover {
-  background: var(--color-muted);
+.apps-engine-optic .scroll-arrow-top {
+  top: 10px;
+}
+.apps-engine-optic .scroll-arrow-bottom {
+  bottom: 10px;
+}
+
+.apps-engine-optic .wizard-scroll-wrapper.can-scroll-top .scroll-arrow-top {
+  opacity: 1;
+  pointer-events: auto;
+}
+.apps-engine-optic .wizard-scroll-wrapper.can-scroll-bottom .scroll-arrow-bottom {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .apps-engine-optic .inspection-item-optic {

@@ -24,12 +24,20 @@
     <button class="step-tab-optic{% if number == 1 %} active{% else %} disabled{% endif %}" type="button" data-wizard-nav="{{ number }}"><span>{{ number }}. {{ label }}</span></button>
     {% endfor %}
   </nav>
-  <div class="wizard-content-area">
-    {% include "railpack_apps/partials/create_source.html" %}
-    {% include "railpack_apps/partials/create_inspection.html" %}
-    {% include "railpack_apps/partials/create_configuration.html" %}
-    {% include "railpack_apps/partials/create_deployment.html" %}
-    {% include "railpack_apps/partials/create_result.html" %}
+  <div class="wizard-scroll-wrapper" style="position: relative;">
+    <button type="button" class="scroll-arrow scroll-arrow-top" data-scroll-dir="-1">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
+    </button>
+    <div class="wizard-content-area">
+      {% include "railpack_apps/partials/create_source.html" %}
+      {% include "railpack_apps/partials/create_inspection.html" %}
+      {% include "railpack_apps/partials/create_configuration.html" %}
+      {% include "railpack_apps/partials/create_deployment.html" %}
+      {% include "railpack_apps/partials/create_result.html" %}
+    </div>
+    <button type="button" class="scroll-arrow scroll-arrow-bottom" data-scroll-dir="1">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+    </button>
   </div>
   <div class="fixed-action-bar apps-engine-action-bar" data-wizard-actions>
     <div class="fixed-action-inner apps-engine-action-inner">

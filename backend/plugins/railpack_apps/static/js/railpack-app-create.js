@@ -308,15 +308,24 @@ if (form) {
   }
   sourceState();
   const scrollContainer = query('.wizard-content-area');
-  if (scrollContainer) {
+  const scrollWrapper = scrollContainer?.closest('.wizard-scroll-wrapper');
+  if (scrollContainer && scrollWrapper) {
     scrollContainer.updateScrollMask = () => {
       const atTop = scrollContainer.scrollTop <= 0;
       const atBottom = Math.ceil(scrollContainer.scrollTop + scrollContainer.clientHeight) >= scrollContainer.scrollHeight - 2;
-      scrollContainer.classList.toggle('can-scroll-top', !atTop);
-      scrollContainer.classList.toggle('can-scroll-bottom', !atBottom);
+      scrollWrapper.classList.toggle('can-scroll-top', !atTop);
+      scrollWrapper.classList.toggle('can-scroll-bottom', !atBottom);
     };
     scrollContainer.addEventListener('scroll', scrollContainer.updateScrollMask, { passive: true });
     window.addEventListener('resize', scrollContainer.updateScrollMask, { passive: true });
+    
+    scrollWrapper.querySelectorAll('.scroll-arrow').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const dir = parseInt(btn.dataset.scrollDir, 10);
+        scrollContainer.scrollBy({ top: dir * 150, behavior: 'smooth' });
+      });
+    });
+
     scrollContainer.updateScrollMask();
   }
 }
