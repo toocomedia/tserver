@@ -296,6 +296,12 @@ class PluginManager:
             if templates_dir.exists():
                 template_dirs.append(str(templates_dir))
 
+            static_dir = plugin_dir / "static"
+            if static_dir.exists() and not hasattr(self, f"_static_mounted_{plugin_id}"):
+                from fastapi.staticfiles import StaticFiles
+                app.mount(f"/plugins/{plugin_id}/static", StaticFiles(directory=str(static_dir)), name=f"{plugin_id}_static")
+                setattr(self, f"_static_mounted_{plugin_id}", True)
+
             router_file = plugin_dir / "router.py"
             if not router_file.exists() or plugin.get("manifest_error"):
                 continue
