@@ -27,6 +27,10 @@ if (form) {
     if (step === 1) setText(query('[data-wizard-next]'), query('[data-source-type]').value === 'git' ? 'Inspect repository' : 'Review configuration');
     if (step === 2) setText(query('[data-wizard-next]'), 'Continue to configuration');
     if (step === 3) setText(query('[data-wizard-next]'), 'Deploy app');
+    setTimeout(() => {
+      const scrollContainer = query('.wizard-content-area');
+      if (scrollContainer && scrollContainer.updateScrollMask) scrollContainer.updateScrollMask();
+    }, 10);
   }
   function sourceState() {
     const type = query('[data-source-type]').value;
@@ -303,4 +307,16 @@ if (form) {
     });
   }
   sourceState();
+  const scrollContainer = query('.wizard-content-area');
+  if (scrollContainer) {
+    scrollContainer.updateScrollMask = () => {
+      const atTop = scrollContainer.scrollTop <= 0;
+      const atBottom = Math.ceil(scrollContainer.scrollTop + scrollContainer.clientHeight) >= scrollContainer.scrollHeight - 2;
+      scrollContainer.classList.toggle('can-scroll-top', !atTop);
+      scrollContainer.classList.toggle('can-scroll-bottom', !atBottom);
+    };
+    scrollContainer.addEventListener('scroll', scrollContainer.updateScrollMask, { passive: true });
+    window.addEventListener('resize', scrollContainer.updateScrollMask, { passive: true });
+    scrollContainer.updateScrollMask();
+  }
 }

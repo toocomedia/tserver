@@ -513,12 +513,20 @@ html[data-theme="charcoal"] .apps-engine-optic .db-toggle-icon {
 }
 
 .apps-engine-optic .wizard-content-area {
-  height: calc(100vh - 220px);
+  height: calc(100vh - 280px);
   overflow-y: auto;
   overflow-x: hidden;
   padding-right: 4px;
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 48px, black calc(100% - 48px), transparent 100%);
-  mask-image: linear-gradient(to bottom, transparent 0%, black 48px, black calc(100% - 48px), transparent 100%);
+  --mask-top-color: black;
+  --mask-bottom-color: black;
+  -webkit-mask-image: linear-gradient(to bottom, var(--mask-top-color) 0%, black 48px, black calc(100% - 48px), var(--mask-bottom-color) 100%);
+  mask-image: linear-gradient(to bottom, var(--mask-top-color) 0%, black 48px, black calc(100% - 48px), var(--mask-bottom-color) 100%);
+}
+.apps-engine-optic .wizard-content-area.can-scroll-top {
+  --mask-top-color: transparent;
+}
+.apps-engine-optic .wizard-content-area.can-scroll-bottom {
+  --mask-bottom-color: transparent;
 }
 
 .apps-engine-optic .wizard-content-area::-webkit-scrollbar {
