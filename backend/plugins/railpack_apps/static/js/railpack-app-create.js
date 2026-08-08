@@ -16,6 +16,7 @@ if (form) {
     setHidden(query('[data-wizard-cancel]'), step >= 4);
     setHidden(query('[data-wizard-next]'), step >= 4);
     setText(query('[data-wizard-hint]'), `Step ${step} of 5: ${['Source', 'Inspection', 'Configuration', 'Install', 'Result'][step - 1]}`);
+    setText(query('[data-wizard-step-title]'), `${step}. ${['Source', 'Inspection', 'Configuration', 'Install', 'Result'][step - 1]}`);
     if (step === 1) setText(query('[data-wizard-next]'), query('[data-source-type]').value === 'git' ? 'Inspect repository' : 'Review configuration');
     if (step === 2) setText(query('[data-wizard-next]'), 'Continue to configuration');
     if (step === 3) setText(query('[data-wizard-next]'), 'Deploy app');
@@ -242,7 +243,7 @@ if (form) {
   }
 
   query('[data-source-type]').addEventListener('change', sourceState);
-  query('[data-domain-select]').addEventListener('change', () => { const selected = query('[data-domain-select]'); setText(query('[data-wizard-domain-name]'), selected.dataset.domainName); domainState(); });
+  query('[data-domain-select]').addEventListener('change', () => { domainState(); });
   query('[data-inspect-retry]').addEventListener('click', inspectSource);
   query('[data-add-environment]').addEventListener('click', () => addEnvironmentRow(form));
   form.querySelectorAll('[data-database-row]').forEach((row) => {
@@ -255,7 +256,6 @@ if (form) {
   form.addEventListener('submit', (event) => { event.preventDefault(); if (state.step === 3) startDeployment(); });
   form.querySelectorAll('[data-wizard-nav]').forEach((item) => item.addEventListener('click', () => { const step = Number(item.dataset.wizardNav); if (step <= state.unlocked) renderStep(step); }));
   form.querySelectorAll('[data-database-row]').forEach(attachmentState);
-  setText(query('[data-wizard-domain-name]'), query('[data-domain-select]')?.dataset.domainName || 'the selected domain');
   initDropdowns();
 
   const repoInput = query('[data-repository-url]');

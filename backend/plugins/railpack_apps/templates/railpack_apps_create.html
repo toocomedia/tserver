@@ -14,7 +14,11 @@
   <input type="hidden" name="environment_values" value="{}" data-environment-values>
   <input type="hidden" name="database_attachments" value="[]" data-database-attachments>
   <input type="hidden" name="preset" value="" data-preset>
-  <p class="apps-engine-wizard__target">Deploying to <span class="mono" data-wizard-domain-name>the selected domain</span></p>
+  <div class="apps-engine-wizard__breadcrumbs" style="font-size: 13px; font-weight: 600; color: var(--color-muted); margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+    <span>Deploy App</span>
+    <span style="opacity: 0.5;">/</span>
+    <span data-wizard-step-title style="color: var(--color-text);">1. Source</span>
+  </div>
   <nav class="stepper-optic" aria-label="Apps Engine deployment steps">
     {% for number, label in [(1, 'Source'), (2, 'Inspection'), (3, 'Configuration'), (4, 'Install'), (5, 'Result')] %}
     <button class="step-tab-optic{% if number == 1 %} active{% else %} disabled{% endif %}" type="button" data-wizard-nav="{{ number }}"><span>{{ number }}. {{ label }}</span></button>
