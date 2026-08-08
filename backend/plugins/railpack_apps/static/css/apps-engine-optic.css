@@ -9,6 +9,19 @@
   margin: 0 auto;
 }
 
+.apps-engine-optic .apps-engine-wizard__breadcrumbs {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none;
+}
+
 /* ── Stepper Tabs ──────────────────────────────────────────── */
 .apps-engine-optic .stepper-optic {
   display: flex;
@@ -261,7 +274,7 @@
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 2px;
-  margin-bottom: 48px;
+  margin-bottom: 24px;
 }
 
 .apps-engine-optic .cards-grid-4 {
@@ -523,7 +536,7 @@ html[data-theme="charcoal"] .apps-engine-optic .db-toggle-icon {
 }
 
 .apps-engine-optic .wizard-content-area {
-  max-height: calc(100vh - 280px);
+  max-height: calc(100vh - 360px);
   overflow-y: auto;
   overflow-x: hidden;
   padding-right: 4px;

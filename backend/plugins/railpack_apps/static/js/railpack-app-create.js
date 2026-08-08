@@ -15,7 +15,7 @@ if (form) {
     setHidden(query('[data-wizard-back]'), step === 1 || step >= 4);
     setHidden(query('[data-wizard-cancel]'), step >= 4);
     setHidden(query('[data-wizard-next]'), step >= 4);
-    setText(query('[data-wizard-hint]'), `Step ${step} of 5: ${['Source', 'Inspection', 'Configuration', 'Install', 'Result'][step - 1]}`);
+
     const stepDescriptions = [
       'Select Application Source',
       'Review Inspection Summary',

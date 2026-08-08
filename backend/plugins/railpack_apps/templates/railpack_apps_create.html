@@ -14,11 +14,7 @@
   <input type="hidden" name="environment_values" value="{}" data-environment-values>
   <input type="hidden" name="database_attachments" value="[]" data-database-attachments>
   <input type="hidden" name="preset" value="" data-preset>
-  <div class="apps-engine-wizard__breadcrumbs" style="font-size: 13px; font-weight: 600; color: var(--color-muted); margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
-    <span>Deploy App</span>
-    <span style="opacity: 0.5;">/</span>
-    <span data-wizard-step-title style="color: var(--color-text);">1. Source</span>
-  </div>
+
   <nav class="stepper-optic" aria-label="Apps Engine deployment steps">
     {% for number, label in [(1, 'Source'), (2, 'Inspection'), (3, 'Configuration'), (4, 'Install'), (5, 'Result')] %}
     <button class="step-tab-optic{% if number == 1 %} active{% else %} disabled{% endif %}" type="button" data-wizard-nav="{{ number }}"><span>{{ number }}. {{ label }}</span></button>
@@ -40,9 +36,13 @@
     </button>
   </div>
   <div class="fixed-action-bar apps-engine-action-bar" data-wizard-actions>
-    <div class="fixed-action-inner apps-engine-action-inner">
+    <div class="fixed-action-inner apps-engine-action-inner" style="position: relative;">
       <button class="btn-optic" type="button" data-wizard-back hidden>Back</button>
-      <span class="text-muted" data-wizard-hint>Step 1 of 5: Source</span>
+      <div class="apps-engine-wizard__breadcrumbs">
+        <span>Deploy App</span>
+        <span style="opacity: 0.5;">/</span>
+        <span data-wizard-step-title style="color: var(--color-text);">1. Source</span>
+      </div>
       <div class="d-flex gap-sm apps-engine-action-inner__right">
         <a class="btn-optic" href="/plugins/railpack_apps/" data-wizard-cancel>Cancel</a>
         <a class="btn-optic" href="/plugins/railpack_apps/" data-deployment-details hidden>View app details</a>
