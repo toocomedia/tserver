@@ -190,8 +190,11 @@ if (form) {
   }
 
   function showInspectionError(error) {
-    setText(query('[data-inspect-error-text]'), error.message || 'Inspection failed.');
-    setHidden(query('[data-inspect-error]'), false);
+    const errorEl = query('[data-source-error]');
+    if (errorEl) {
+      setText(errorEl, error.message || 'Inspection failed.');
+      setHidden(errorEl, false);
+    }
   }
 
   function submitValues() {
