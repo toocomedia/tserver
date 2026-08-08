@@ -459,7 +459,7 @@ html[data-theme="charcoal"] .apps-engine-optic .db-toggle-icon {
   flex-direction: column;
   background: var(--color-surface);
   padding: 20px;
-  border: 1px solid var(--color-line);
+  border-radius: 8px;
 }
 
 .apps-engine-optic .db-options-panel .custom-dropdown {
@@ -517,6 +517,8 @@ html[data-theme="charcoal"] .apps-engine-optic .db-toggle-icon {
   overflow-y: auto;
   overflow-x: hidden;
   padding-right: 4px;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 16px, black calc(100% - 16px), transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0%, black 16px, black calc(100% - 16px), transparent 100%);
 }
 
 .apps-engine-optic .wizard-content-area::-webkit-scrollbar {
