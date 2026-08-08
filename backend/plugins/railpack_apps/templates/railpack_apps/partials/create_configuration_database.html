@@ -50,44 +50,50 @@
 
   <!-- Provider options: shown below the cards when a DB is enabled -->
   <div class="db-options-panel" data-database-options data-database-parent="mariadb" hidden>
-    <div class="db-options-inner" id="db-options-mariadb">
-      <span class="db-options-title">MySQL — Provider</span>
-      <div class="custom-dropdown" data-custom-dropdown="database-provider-mariadb">
-        <input type="hidden" id="database-provider-mariadb" data-dropdown-value data-database-provider value="docker">
-        <div class="custom-dropdown__trigger" data-dropdown-trigger tabindex="0">
-          <span class="custom-dropdown__label" data-dropdown-label>Panel Docker</span>
-        </div>
-        <div class="custom-dropdown__menu" data-dropdown-menu>
-          <div class="custom-dropdown__item is-selected" data-dropdown-item data-value="docker" data-label="Panel Docker">Panel Docker</div>
-          <div class="custom-dropdown__item" data-dropdown-item data-value="external" data-label="External URL">External URL</div>
+    <div class="db-options-grid">
+      <div class="db-options-column">
+        <span class="section-label" style="margin-bottom: 8px;">MySQL Provider</span>
+        <div class="custom-dropdown" data-custom-dropdown="database-provider-mariadb">
+          <input type="hidden" id="database-provider-mariadb" data-dropdown-value data-database-provider value="docker">
+          <div class="custom-dropdown__trigger" data-dropdown-trigger tabindex="0">
+            <span class="custom-dropdown__label" data-dropdown-label>Panel Docker</span>
+          </div>
+          <div class="custom-dropdown__menu" data-dropdown-menu>
+            <div class="custom-dropdown__item is-selected" data-dropdown-item data-value="docker" data-label="Panel Docker">Panel Docker</div>
+            <div class="custom-dropdown__item" data-dropdown-item data-value="external" data-label="External URL">External URL</div>
+          </div>
         </div>
       </div>
-      <div data-database-external hidden>
+      <div class="db-options-column" data-database-external hidden>
+        <span class="section-label" style="margin-bottom: 8px;">Connection URL</span>
         <input class="input-optic input-optic--code" id="database-url-mariadb" data-database-url type="password" autocomplete="off" placeholder="Connection URL">
       </div>
-      <p class="db-options-hint" data-database-requirement hidden></p>
     </div>
+    <p class="db-options-hint" data-database-requirement hidden style="margin-top: 12px;"></p>
   </div>
 
   <div class="db-options-panel" data-database-options data-database-parent="postgresql" hidden>
-    <div class="db-options-inner" id="db-options-postgresql">
-      <span class="db-options-title">PostgreSQL — Provider</span>
-      <div class="custom-dropdown" data-custom-dropdown="database-provider-postgresql">
-        <input type="hidden" id="database-provider-postgresql" data-dropdown-value data-database-provider value="docker">
-        <div class="custom-dropdown__trigger" data-dropdown-trigger tabindex="0">
-          <span class="custom-dropdown__label" data-dropdown-label>Panel Docker</span>
-        </div>
-        <div class="custom-dropdown__menu" data-dropdown-menu>
-          <div class="custom-dropdown__item is-selected" data-dropdown-item data-value="docker" data-label="Panel Docker">Panel Docker</div>
-          <div class="custom-dropdown__item" data-dropdown-item data-value="panel_postgres" data-label="Panel PostgreSQL">Panel PostgreSQL</div>
-          {% if supabase_projects %}
-          <div class="custom-dropdown__item" data-dropdown-item data-value="supabase" data-label="Supabase">Supabase</div>
-          {% endif %}
-          <div class="custom-dropdown__item" data-dropdown-item data-value="external" data-label="External URL">External URL</div>
+    <div class="db-options-grid">
+      <div class="db-options-column">
+        <span class="section-label" style="margin-bottom: 8px;">PostgreSQL Provider</span>
+        <div class="custom-dropdown" data-custom-dropdown="database-provider-postgresql">
+          <input type="hidden" id="database-provider-postgresql" data-dropdown-value data-database-provider value="docker">
+          <div class="custom-dropdown__trigger" data-dropdown-trigger tabindex="0">
+            <span class="custom-dropdown__label" data-dropdown-label>Panel Docker</span>
+          </div>
+          <div class="custom-dropdown__menu" data-dropdown-menu>
+            <div class="custom-dropdown__item is-selected" data-dropdown-item data-value="docker" data-label="Panel Docker">Panel Docker</div>
+            <div class="custom-dropdown__item" data-dropdown-item data-value="panel_postgres" data-label="Panel PostgreSQL">Panel PostgreSQL</div>
+            {% if supabase_projects %}
+            <div class="custom-dropdown__item" data-dropdown-item data-value="supabase" data-label="Supabase">Supabase</div>
+            {% endif %}
+            <div class="custom-dropdown__item" data-dropdown-item data-value="external" data-label="External URL">External URL</div>
+          </div>
         </div>
       </div>
       {% if supabase_projects %}
-      <div data-database-supabase-picker hidden style="margin-top:8px;">
+      <div class="db-options-column" data-database-supabase-picker hidden>
+        <span class="section-label" style="margin-bottom: 8px;">Supabase Project</span>
         <div class="custom-dropdown" data-custom-dropdown="database-supabase-project-postgresql">
           <input type="hidden" id="database-supabase-project-postgresql" data-dropdown-value data-database-supabase-project value="">
           <div class="custom-dropdown__trigger" data-dropdown-trigger tabindex="0">
@@ -101,51 +107,58 @@
         </div>
       </div>
       {% endif %}
-      <div data-database-external hidden style="margin-top:8px;">
+      <div class="db-options-column" data-database-external hidden>
+        <span class="section-label" style="margin-bottom: 8px;">Connection URL</span>
         <input class="input-optic input-optic--code" id="database-url-postgresql" data-database-url type="password" autocomplete="off" placeholder="Connection URL">
       </div>
-      <p class="db-options-hint" data-database-requirement hidden></p>
     </div>
+    <p class="db-options-hint" data-database-requirement hidden style="margin-top: 12px;"></p>
   </div>
 
   <div class="db-options-panel" data-database-options data-database-parent="redis" hidden>
-    <div class="db-options-inner" id="db-options-redis">
-      <span class="db-options-title">Redis — Provider</span>
-      <div class="custom-dropdown" data-custom-dropdown="database-provider-redis">
-        <input type="hidden" id="database-provider-redis" data-dropdown-value data-database-provider value="docker">
-        <div class="custom-dropdown__trigger" data-dropdown-trigger tabindex="0">
-          <span class="custom-dropdown__label" data-dropdown-label>Panel Docker</span>
-        </div>
-        <div class="custom-dropdown__menu" data-dropdown-menu>
-          <div class="custom-dropdown__item is-selected" data-dropdown-item data-value="docker" data-label="Panel Docker">Panel Docker</div>
-          <div class="custom-dropdown__item" data-dropdown-item data-value="external" data-label="External URL">External URL</div>
+    <div class="db-options-grid">
+      <div class="db-options-column">
+        <span class="section-label" style="margin-bottom: 8px;">Redis Provider</span>
+        <div class="custom-dropdown" data-custom-dropdown="database-provider-redis">
+          <input type="hidden" id="database-provider-redis" data-dropdown-value data-database-provider value="docker">
+          <div class="custom-dropdown__trigger" data-dropdown-trigger tabindex="0">
+            <span class="custom-dropdown__label" data-dropdown-label>Panel Docker</span>
+          </div>
+          <div class="custom-dropdown__menu" data-dropdown-menu>
+            <div class="custom-dropdown__item is-selected" data-dropdown-item data-value="docker" data-label="Panel Docker">Panel Docker</div>
+            <div class="custom-dropdown__item" data-dropdown-item data-value="external" data-label="External URL">External URL</div>
+          </div>
         </div>
       </div>
-      <div data-database-external hidden style="margin-top:8px;">
+      <div class="db-options-column" data-database-external hidden>
+        <span class="section-label" style="margin-bottom: 8px;">Connection URL</span>
         <input class="input-optic input-optic--code" id="database-url-redis" data-database-url type="password" autocomplete="off" placeholder="Connection URL">
       </div>
-      <p class="db-options-hint" data-database-requirement hidden></p>
     </div>
+    <p class="db-options-hint" data-database-requirement hidden style="margin-top: 12px;"></p>
   </div>
 
   <div class="db-options-panel" data-database-options data-database-parent="mongodb" hidden>
-    <div class="db-options-inner" id="db-options-mongodb">
-      <span class="db-options-title">MongoDB — Provider</span>
-      <div class="custom-dropdown" data-custom-dropdown="database-provider-mongodb">
-        <input type="hidden" id="database-provider-mongodb" data-dropdown-value data-database-provider value="docker">
-        <div class="custom-dropdown__trigger" data-dropdown-trigger tabindex="0">
-          <span class="custom-dropdown__label" data-dropdown-label>Panel Docker</span>
-        </div>
-        <div class="custom-dropdown__menu" data-dropdown-menu>
-          <div class="custom-dropdown__item is-selected" data-dropdown-item data-value="docker" data-label="Panel Docker">Panel Docker</div>
-          <div class="custom-dropdown__item" data-dropdown-item data-value="external" data-label="External URL">External URL</div>
+    <div class="db-options-grid">
+      <div class="db-options-column">
+        <span class="section-label" style="margin-bottom: 8px;">MongoDB Provider</span>
+        <div class="custom-dropdown" data-custom-dropdown="database-provider-mongodb">
+          <input type="hidden" id="database-provider-mongodb" data-dropdown-value data-database-provider value="docker">
+          <div class="custom-dropdown__trigger" data-dropdown-trigger tabindex="0">
+            <span class="custom-dropdown__label" data-dropdown-label>Panel Docker</span>
+          </div>
+          <div class="custom-dropdown__menu" data-dropdown-menu>
+            <div class="custom-dropdown__item is-selected" data-dropdown-item data-value="docker" data-label="Panel Docker">Panel Docker</div>
+            <div class="custom-dropdown__item" data-dropdown-item data-value="external" data-label="External URL">External URL</div>
+          </div>
         </div>
       </div>
-      <div data-database-external hidden style="margin-top:8px;">
+      <div class="db-options-column" data-database-external hidden>
+        <span class="section-label" style="margin-bottom: 8px;">Connection URL</span>
         <input class="input-optic input-optic--code" id="database-url-mongodb" data-database-url type="password" autocomplete="off" placeholder="Connection URL">
       </div>
-      <p class="db-options-hint" data-database-requirement hidden></p>
     </div>
+    <p class="db-options-hint" data-database-requirement hidden style="margin-top: 12px;"></p>
   </div>
 
 </fieldset>

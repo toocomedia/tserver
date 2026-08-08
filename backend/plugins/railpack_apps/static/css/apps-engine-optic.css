@@ -356,9 +356,7 @@ html[data-theme="charcoal"] .apps-engine-optic .db-toggle-icon {
 .apps-engine-optic .db-toggle-card {
   position: relative;
   background: var(--color-surface);
-  border: 1px solid var(--color-line) !important;
-  border-radius: 6px !important;
-  transition: border-color 0.15s ease, background 0.15s ease;
+  transition: background 0.15s ease;
 }
 
 .apps-engine-optic .db-toggle-label {
@@ -375,10 +373,6 @@ html[data-theme="charcoal"] .apps-engine-optic .db-toggle-icon {
   position: relative;
 }
 
-.apps-engine-optic .db-toggle-card:hover {
-  border-color: var(--color-accent) !important;
-}
-
 .apps-engine-optic .db-toggle-card:hover .db-toggle-label {
   background: var(--color-secondary-btn);
   color: var(--color-text);
@@ -386,7 +380,6 @@ html[data-theme="charcoal"] .apps-engine-optic .db-toggle-icon {
 
 .apps-engine-optic .db-toggle-card.settings-choice--active {
   background: var(--color-secondary-btn);
-  border-color: var(--color-accent) !important;
 }
 
 .apps-engine-optic .db-toggle-card.settings-choice--active::before {
@@ -435,25 +428,23 @@ html[data-theme="charcoal"] .apps-engine-optic .db-toggle-icon {
 
 /* ── DB Options Panel (shown below toggle row) ─────────────── */
 .apps-engine-optic .db-options-panel {
-  background: var(--color-secondary-btn);
-  padding: 14px 16px;
-  margin-top: 2px;
-  margin-bottom: 16px;
+  background: var(--color-surface);
+  padding: 16px 20px;
+  margin-top: 12px;
+  margin-bottom: 24px;
+  border-left: 3px solid var(--color-accent);
 }
 
-.apps-engine-optic .db-options-inner {
+.apps-engine-optic .db-options-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  align-items: end;
+}
+
+.apps-engine-optic .db-options-column {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.apps-engine-optic .db-options-title {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--color-muted);
-  white-space: nowrap;
-  min-width: 120px;
+  flex-direction: column;
 }
 
 .apps-engine-optic .db-options-panel .custom-dropdown {
