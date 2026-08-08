@@ -266,7 +266,7 @@ if (form) {
 
   query('[data-source-type]').addEventListener('change', sourceState);
   query('[data-domain-select]').addEventListener('change', () => { domainState(); });
-  query('[data-inspect-retry]').addEventListener('click', inspectSource);
+
   query('[data-add-environment]').addEventListener('click', () => addEnvironmentRow(form));
   form.querySelectorAll('[data-database-row]').forEach((row) => {
     row.querySelector('[data-database-enabled]').addEventListener('change', () => attachmentState(row));
