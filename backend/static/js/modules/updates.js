@@ -124,20 +124,37 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function startPollingHealth() {
+    let sawRestart = false;
+    let healthyChecksAfterRestart = 0;
+
     const healthInterval = setInterval(async () => {
       try {
-        const res = await fetch('/api/health');
-        if (res.ok) {
-          clearInterval(healthInterval);
-          if (typeof window.toast === 'function') {
-            window.toast('Panel updated successfully! Reloading...', 'success');
+        const res = await fetch('/api/health', { cache: 'no-store' });
+        if (!res.ok) {
+          sawRestart = true;
+          healthyChecksAfterRestart = 0;
+          if (btnApply) {
+            btnApply.textContent = 'Panel restarting... Waiting for connection...';
           }
-          setTimeout(() => {
-            window.location.reload();
-          }, 1500);
+          return;
+        }
+
+        // The first healthy response can be from the old panel, before its
+        // scheduled restart begins. Reload only after the outage and two
+        // confirmed healthy responses from the restarted panel.
+        if (sawRestart) {
+          healthyChecksAfterRestart += 1;
+        }
+        if (healthyChecksAfterRestart >= 2) {
+          clearInterval(healthInterval);
+          window.location.reload();
         }
       } catch (e) {
-        // Service restarting...
+        sawRestart = true;
+        healthyChecksAfterRestart = 0;
+        if (btnApply) {
+          btnApply.textContent = 'Panel restarting... Waiting for connection...';
+        }
       }
     }, 2000);
   }

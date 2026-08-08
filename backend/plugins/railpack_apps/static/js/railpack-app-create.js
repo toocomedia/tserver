@@ -123,6 +123,12 @@ if (form) {
     setHidden(query('[data-inspect-error]'), true);
     setHidden(query('[data-inspect-results]'), true);
     setHidden(query('[data-inspect-loading]'), false);
+    
+    const nextBtn = query('[data-wizard-next]');
+    const originalText = nextBtn.textContent;
+    nextBtn.disabled = true;
+    nextBtn.innerHTML = '<span class="step-spinner" style="width: 14px; height: 14px; border-width: 2px; margin-right: 8px;"></span>Inspecting...';
+
     try {
       const body = new FormData();
       body.set('repository_url', query('[data-repository-url]').value);
@@ -134,7 +140,13 @@ if (form) {
       state.unlocked = 2;
       renderStep(2);
       setHidden(query('[data-inspect-results]'), false);
-    } catch (error) { showInspectionError(error); } finally { setHidden(query('[data-inspect-loading]'), true); }
+    } catch (error) { 
+      showInspectionError(error); 
+    } finally { 
+      setHidden(query('[data-inspect-loading]'), true);
+      nextBtn.disabled = false;
+      nextBtn.textContent = originalText;
+    }
   }
   async function showNonGitInspection(type) {
     const image = type === 'image';
@@ -187,6 +199,10 @@ if (form) {
 
   async function startDeployment() {
     if (!submitValues() || !form.reportValidity()) return;
+    const nextBtn = query('[data-wizard-next]');
+    const originalText = nextBtn.textContent;
+    nextBtn.disabled = true;
+    nextBtn.innerHTML = '<span class="step-spinner" style="width: 14px; height: 14px; border-width: 2px; margin-right: 8px;"></span>Deploying...';
     try {
       const data = await fetchJson(form.action, { method: 'POST', headers: { ...csrfHeaders(), Accept: 'application/json' }, body: new FormData(form) });
       state.appId = data.app_id;
@@ -194,7 +210,13 @@ if (form) {
       state.unlocked = 4;
       renderStep(4);
       pollDeployment();
-    } catch (error) { setText(query('[data-environment-error]'), error.message); setHidden(query('[data-environment-error]'), false); }
+    } catch (error) { 
+      setText(query('[data-environment-error]'), error.message); 
+      setHidden(query('[data-environment-error]'), false); 
+    } finally {
+      nextBtn.disabled = false;
+      nextBtn.textContent = originalText;
+    }
   }
 
   async function pollDeployment() {
@@ -235,5 +257,43 @@ if (form) {
   form.querySelectorAll('[data-database-row]').forEach(attachmentState);
   setText(query('[data-wizard-domain-name]'), query('[data-domain-select]')?.dataset.domainName || 'the selected domain');
   initDropdowns();
+
+  const repoInput = query('[data-repository-url]');
+  if (repoInput) {
+    repoInput.addEventListener('blur', async () => {
+      if (!repoInput.value) return;
+      const branchSpinner = query('[data-branch-spinner]');
+      const branchMenu = query('[data-branch-menu]');
+      if (branchSpinner) branchSpinner.style.display = 'inline-block';
+      try {
+        const body = new FormData();
+        body.set('repository_url', repoInput.value);
+        const data = await fetchJson('/plugins/railpack_apps/inspect-branches', { method: 'POST', headers: csrfHeaders(), body });
+        if (branchMenu) {
+            branchMenu.innerHTML = '';
+            data.branches.forEach((branch) => {
+                const div = document.createElement('div');
+                div.className = `custom-dropdown__item ${branch === data.default_branch ? 'is-selected' : ''}`;
+                div.dataset.dropdownItem = '';
+                div.dataset.value = branch;
+                div.dataset.label = branch;
+                div.textContent = branch;
+                branchMenu.appendChild(div);
+            });
+            const branchInput = query('#branch');
+            const branchLabel = branchMenu.closest('.custom-dropdown').querySelector('[data-dropdown-label]');
+            if (branchInput) {
+                branchInput.value = data.default_branch;
+                branchInput.dataset.value = data.default_branch;
+            }
+            if (branchLabel) branchLabel.textContent = data.default_branch;
+        }
+      } catch (error) {
+         console.warn("Could not fetch branches:", error);
+      } finally {
+        if (branchSpinner) branchSpinner.style.display = 'none';
+      }
+    });
+  }
   sourceState();
 }

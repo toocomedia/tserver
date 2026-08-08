@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import asyncio
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
@@ -15,6 +16,7 @@ from models.hosted_app import HostedApp
 from models.ssl_cert import SslCert
 from services import container_app_database_service, container_app_deployment_service
 from services import container_app_image_inspect_service, container_app_inspection_service, container_app_service, container_app_wordpress_service
+from dependencies.git import repository_service
 from templating import templates
 
 router = APIRouter()
@@ -45,6 +47,17 @@ async def create_page(request: Request, db: AsyncSession = Depends(get_db)):
 @router.post("/inspect")
 async def inspect(repository_url: str = Form(...), branch: str = Form("main")):
     return JSONResponse(container_app_inspection_service.inspect_repository(repository_url.strip(), branch.strip() or "main"))
+
+
+@router.post("/inspect-branches")
+async def inspect_branches(repository_url: str = Form(...)):
+    try:
+        result = await asyncio.to_thread(repository_service.list_branches, repository_url.strip())
+        return JSONResponse({"default_branch": result.default_branch, "branches": result.branches})
+    except Exception as exc:
+        if isinstance(exc, HTTPException):
+            raise exc
+        raise HTTPException(400, str(exc))
 
 
 @router.post("/inspect-image")

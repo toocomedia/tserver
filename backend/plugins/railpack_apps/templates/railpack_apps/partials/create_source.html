@@ -45,9 +45,17 @@
       <span class="section-label" style="font-size:13px;">Repository URL</span>
       <input class="input-optic input-optic--code" id="repository_url" name="repository_url" placeholder="https://github.com/owner/project.git" data-repository-url>
     </div>
-    <div class="form-group">
-      <span class="section-label" style="font-size:13px;">Branch</span>
-      <input class="input-optic" id="branch" name="branch" value="main" data-branch>
+    <div class="dropdown-optic" style="position: relative; overflow: visible;">
+      <span class="section-label" style="font-size:13px; margin-bottom: 4px; display: block;">Branch <span data-branch-spinner class="step-spinner" style="display: none; vertical-align: middle; margin-left: 8px; width: 14px; height: 14px; border-width: 2px;"></span></span>
+      <div class="custom-dropdown" data-custom-dropdown="branch">
+        <input type="hidden" id="branch" name="branch" value="main" data-branch data-dropdown-value>
+        <div class="custom-dropdown__trigger" data-dropdown-trigger tabindex="0" style="padding: 6px 12px; min-height: 32px; font-size: 13px;">
+          <span class="custom-dropdown__label" data-dropdown-label>main</span>
+        </div>
+        <div class="custom-dropdown__menu" data-dropdown-menu data-branch-menu>
+          <div class="custom-dropdown__item is-selected" data-dropdown-item data-value="main" data-label="main">main</div>
+        </div>
+      </div>
     </div>
   </div>
 

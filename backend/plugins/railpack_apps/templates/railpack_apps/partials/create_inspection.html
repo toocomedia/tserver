@@ -13,17 +13,24 @@
   </div>
 
   <!-- Clean Borderless Optic Inspection Metrics Card -->
-  <div class="apps-engine-inspection inspection-card-optic" data-inspect-results hidden>
-    <div class="inspection-grid-optic">
-      <div class="inspection-item-optic">
-        <span class="inspection-label-optic">Detected Runtime</span>
-        <div class="inspection-value-optic" data-inspection-runtime></div>
+  <div class="apps-engine-inspection" data-inspect-results hidden>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 24px;">
+      
+      <div class="master-card" style="padding: 16px;">
+        <span class="inspection-label-optic" style="margin-bottom: 8px; display: block; font-weight: 500; font-size: 13px;">Detected Runtime</span>
+        <div class="inspection-value-optic" data-inspection-runtime style="font-size: 15px; color: var(--text-base);"></div>
       </div>
-      <div class="inspection-item-optic dropdown-optic" data-build-mode-group style="overflow: visible;">
-        <span class="inspection-label-optic" style="margin-bottom: 4px; display: block;">Build Method</span>
+
+      <div class="master-card" style="padding: 16px;">
+        <span class="inspection-label-optic" style="margin-bottom: 8px; display: block; font-weight: 500; font-size: 13px;">Recommended Database Services</span>
+        <div class="inspection-value-optic accent" data-inspection-databases style="font-size: 15px;"></div>
+      </div>
+
+      <div class="master-card dropdown-optic" data-build-mode-group style="padding: 16px; overflow: visible;">
+        <span class="inspection-label-optic" style="margin-bottom: 8px; display: block; font-weight: 500; font-size: 13px;">Build Method</span>
         <div class="custom-dropdown" data-custom-dropdown="build_mode">
           <input type="hidden" id="build_mode" name="build_mode" data-dropdown-value value="railpack">
-          <div class="custom-dropdown__trigger" data-dropdown-trigger tabindex="0" style="padding: 6px 12px; min-height: 32px; font-size: 13px;">
+          <div class="custom-dropdown__trigger" data-dropdown-trigger tabindex="0">
             <span class="custom-dropdown__label" data-dropdown-label>Automatic Railpack</span>
           </div>
           <div class="custom-dropdown__menu" data-dropdown-menu>
@@ -32,14 +39,12 @@
           </div>
         </div>
       </div>
-      <div class="inspection-item-optic form-group" data-port-group>
-        <span class="inspection-label-optic" style="margin-bottom: 4px; display: block;">Internal HTTP Port</span>
-        <input class="input-optic input-optic--code" id="internal_port" name="internal_port" type="number" min="1" max="65535" value="3000" required style="padding: 6px 12px; height: 32px; font-size: 13px;">
+
+      <div class="master-card form-group" data-port-group style="padding: 16px;">
+        <span class="inspection-label-optic" style="margin-bottom: 8px; display: block; font-weight: 500; font-size: 13px;">Internal HTTP Port</span>
+        <input class="input-optic input-optic--code" id="internal_port" name="internal_port" type="number" min="1" max="65535" value="3000" required>
       </div>
-      <div class="inspection-item-optic">
-        <span class="inspection-label-optic">Recommended Database Services</span>
-        <div class="inspection-value-optic accent" data-inspection-databases></div>
-      </div>
+
     </div>
   </div>
 </section>
