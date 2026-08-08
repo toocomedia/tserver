@@ -16,7 +16,14 @@ if (form) {
     setHidden(query('[data-wizard-cancel]'), step >= 4);
     setHidden(query('[data-wizard-next]'), step >= 4);
     setText(query('[data-wizard-hint]'), `Step ${step} of 5: ${['Source', 'Inspection', 'Configuration', 'Install', 'Result'][step - 1]}`);
-    setText(query('[data-wizard-step-title]'), `${step}. ${['Source', 'Inspection', 'Configuration', 'Install', 'Result'][step - 1]}`);
+    const stepDescriptions = [
+      'Select Application Source',
+      'Review Inspection Summary',
+      'Configure Environment & Services',
+      'Installing & Deploying',
+      'Deployment Results'
+    ];
+    setText(query('[data-wizard-step-title]'), stepDescriptions[step - 1]);
     if (step === 1) setText(query('[data-wizard-next]'), query('[data-source-type]').value === 'git' ? 'Inspect repository' : 'Review configuration');
     if (step === 2) setText(query('[data-wizard-next]'), 'Continue to configuration');
     if (step === 3) setText(query('[data-wizard-next]'), 'Deploy app');
