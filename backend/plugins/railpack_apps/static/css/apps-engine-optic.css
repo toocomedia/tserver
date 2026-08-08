@@ -541,7 +541,7 @@ html[data-theme="charcoal"] .apps-engine-optic .db-toggle-icon {
 }
 
 .apps-engine-optic .wizard-content-area {
-  max-height: calc(100vh - 280px);
+  max-height: calc(100vh - 200px);
   overflow-y: auto;
   overflow-x: hidden;
   padding-right: 4px;

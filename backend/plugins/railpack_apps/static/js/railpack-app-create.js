@@ -322,12 +322,22 @@ if (form) {
   const scrollWrapper = scrollContainer?.closest('.wizard-scroll-wrapper');
   if (scrollContainer && scrollWrapper) {
     scrollContainer.updateScrollMask = () => {
-      const atTop = scrollContainer.scrollTop <= 0;
-      const atBottom = Math.ceil(scrollContainer.scrollTop + scrollContainer.clientHeight) >= scrollContainer.scrollHeight - 2;
-      scrollWrapper.classList.toggle('can-scroll-top', !atTop);
-      scrollWrapper.classList.toggle('can-scroll-bottom', !atBottom);
+      const isScrollable = scrollContainer.scrollHeight > scrollContainer.clientHeight + 10;
+      const atTop = scrollContainer.scrollTop <= 2;
+      const atBottom = Math.ceil(scrollContainer.scrollTop + scrollContainer.clientHeight) >= scrollContainer.scrollHeight - 4;
+      scrollWrapper.classList.toggle('can-scroll-top', isScrollable && !atTop);
+      scrollWrapper.classList.toggle('can-scroll-bottom', isScrollable && !atBottom);
     };
     scrollContainer.addEventListener('scroll', scrollContainer.updateScrollMask, { passive: true });
+    
+    // Use ResizeObserver to reliably detect layout changes and hide phantom arrows
+    const resizeObserver = new ResizeObserver(() => {
+      if (scrollContainer && scrollContainer.updateScrollMask) scrollContainer.updateScrollMask();
+    });
+    if (scrollContainer.firstElementChild) {
+      resizeObserver.observe(scrollContainer.firstElementChild);
+    }
+    resizeObserver.observe(scrollContainer);
     window.addEventListener('resize', scrollContainer.updateScrollMask, { passive: true });
     
     scrollWrapper.querySelectorAll('.scroll-arrow').forEach(btn => {
