@@ -129,6 +129,14 @@ if (form) {
     renderInspection(form, data);
   }
   async function inspectSource() {
+    const domainInput = query('[data-domain-select]');
+    const sourceError = query('[data-source-error]');
+    if (!domainInput.value) {
+      if (sourceError) { setText(sourceError, 'Please select a Target Domain to continue.'); setHidden(sourceError, false); }
+      return;
+    }
+    if (sourceError) setHidden(sourceError, true);
+
     const type = query('[data-source-type]').value;
     if (type !== 'git') return showNonGitInspection(type);
     if (!query('[data-repository-url]').reportValidity()) return;
