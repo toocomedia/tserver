@@ -293,6 +293,13 @@
   color: var(--color-text);
 }
 
+.apps-engine-optic .optic-card:has(input:disabled) {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+  background: var(--color-surface);
+}
+
 /* accent top bar on selected */
 .apps-engine-optic .optic-card.selected::before,
 .apps-engine-optic .optic-card.settings-choice--active::before,
