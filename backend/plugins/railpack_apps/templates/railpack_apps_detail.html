@@ -25,22 +25,8 @@
       </div>
     </div>
 
-    <div class="master-card" style="border-color:rgba(220,38,38,.3);">
-      <div class="master-card__header" style="color:#DC2626;">Danger zone</div>
-      <div class="master-card__body"><p class="form-hint">Remove the application and all local data, or keep the data you select.</p>
-        {% if app.status == 'deleting' %}<p class="text-muted">Removal is in progress.</p>{% else %}
-        <details class="railpack-delete-disclosure">
-          <summary class="btn btn--danger">{{ 'Retry delete all' if app.status == 'delete_failed' else 'Delete all' }}</summary>
-          <form class="form" method="post" action="/plugins/railpack_apps/{{ app.id }}/uninstall">
-            <p class="form-hint">Everything local is deleted by default. Check only what you want to keep.</p>
-            {% if databases or app.data_volume or app.wordpress_content_volume or backups %}<fieldset class="form-group"><legend class="form-label">Keep instead</legend>{% for item in databases %}{% if item.provider == 'docker' %}<label class="form-check"><input type="checkbox" name="keep_database_ids" value="{{ item.id }}"> Keep {{ item.kind | title }} service and data volume</label>{% else %}<p class="form-hint">{{ item.kind | title }} ({{ item.provider }}) is external and is always kept.</p>{% endif %}{% endfor %}{% if app.data_volume %}<label class="form-check"><input type="checkbox" name="keep_app_volume" value="true"> Keep application data volume</label>{% endif %}{% if app.wordpress_content_volume %}<label class="form-check"><input type="checkbox" name="keep_wordpress_files" value="true"> Keep WordPress uploads, plugins, and themes</label>{% endif %}{% if backups %}<label class="form-check"><input type="checkbox" name="keep_saved_backups" value="true"> Keep {{ backups | length }} local backup{{ '' if backups | length == 1 else 's' }}</label>{% endif %}</fieldset>{% endif %}
-            <div class="form-group"><label class="form-label" for="confirmation">Confirm deletion</label><p class="form-hint">Type DELETE ALL to continue.</p><input class="form-input" id="confirmation" name="confirmation" required></div>{% include "partials/csrf_field.html" %}<button class="btn btn--danger" type="submit">Delete all</button>
-          </form>
-        </details>
-        {% endif %}
-      </div>
-    </div>
+    {% include "railpack_apps/partials/detail_danger_zone.html" %}
   </div>
 </div>
 {% endblock %}
-{% block scripts %}<script type="module" src="/static/js/modules/railpack-app-detail.js"></script>{% endblock %}
+{% block scripts %}<script type="module" src="/plugins/railpack_apps/static/js/railpack-app-detail.js"></script>{% endblock %}

@@ -53,8 +53,22 @@ export function environmentValues(form) {
 
 export function renderInspection(form, data) {
   setText(form.querySelector('[data-inspection-runtime]'), data.runtime || 'Source ready');
-  setText(form.querySelector('[data-inspection-build]'), data.build_mode || 'Image');
-  setText(form.querySelector('[data-inspection-port]'), data.internal_port || 'Configured on the image');
+  
+  const buildModeInput = form.querySelector('#build_mode');
+  if (buildModeInput && data.build_mode) {
+    buildModeInput.value = data.build_mode;
+    const dropdown = buildModeInput.closest('.custom-dropdown');
+    if (dropdown) {
+      const item = dropdown.querySelector(`[data-dropdown-item][data-value="${data.build_mode}"]`);
+      if (item) item.click();
+    }
+  }
+  
+  const portInput = form.querySelector('#internal_port');
+  if (portInput) {
+    portInput.value = data.internal_port || 3000;
+  }
+
   const databases = data.database_types || [];
   setText(form.querySelector('[data-inspection-databases]'), databases.length ? databases.join(', ') : 'No database detected');
   setText(form.querySelector('[data-inspect-summary]'), [data.summary, data.inspection_note].filter(Boolean).join(' ') || 'Review these editable source suggestions.');

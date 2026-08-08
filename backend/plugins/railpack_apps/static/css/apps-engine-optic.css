@@ -578,3 +578,6 @@ html[data-theme="charcoal"] .apps-engine-optic .db-toggle-icon {
 .apps-engine-optic .apps-engine-environment-row .btn:hover {
   background: var(--color-secondary-hover, var(--color-surface));
 }
+
+.master-card--danger { border-color: rgba(220, 38, 38, .3); }
+.master-card--danger .master-card__header { color: #DC2626; }

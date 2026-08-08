@@ -3,8 +3,8 @@
 {% block title %}Deploy App — {{ PANEL_NAME }}{% endblock %}
 {% block page_title %}Deploy App{% endblock %}
 {% block head %}
-<link rel="stylesheet" href="/static/css/components/apps-engine-wizard.css">
-<link rel="stylesheet" href="/static/css/components/apps-engine-optic.css">
+<link rel="stylesheet" href="/plugins/railpack_apps/static/css/apps-engine-wizard.css">
+<link rel="stylesheet" href="/plugins/railpack_apps/static/css/apps-engine-optic.css">
 {% endblock %}
 {% block content %}
 {{ skeleton_overlay('app-engine-create-skeleton', sections=[3]) }}
@@ -47,5 +47,5 @@
   if (typeof hideSkeleton === 'function') hideSkeleton('app-engine-create-skeleton');
   else if (typeof window.hideSkeleton === 'function') window.hideSkeleton('app-engine-create-skeleton');
 </script>
-<script type="module" src="/static/js/modules/railpack-app-create.js"></script>
+<script type="module" src="/plugins/railpack_apps/static/js/railpack-app-create.js"></script>
 {% endblock %}
