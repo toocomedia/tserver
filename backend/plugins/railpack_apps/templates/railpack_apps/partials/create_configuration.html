@@ -9,11 +9,13 @@
 
   {% include "railpack_apps/partials/create_configuration_wordpress.html" %}
 
-  <!-- SSL Option -->
   <section class="form-group" style="margin-top:20px;">
-    <label class="form-check" style="display:flex; align-items:center; gap:8px; cursor:pointer;">
-      <input type="checkbox" name="ssl" value="true" data-ssl-request>
-      <span>Issue HTTPS certificate after deployment</span>
+    <label class="optic-card" style="flex-direction: row; align-items: center; justify-content: flex-start; gap: 12px; padding: 16px; cursor: pointer; text-align: left; overflow: hidden; height: auto;">
+      <input type="checkbox" name="ssl" value="true" data-ssl-request style="display: none;">
+      <div style="flex: 1;">
+        <span class="optic-card__name" style="display: block; font-size: 14px; margin-bottom: 4px; color: var(--text-base);">Issue HTTPS certificate after deployment</span>
+        <span style="font-size: 12px; font-weight: normal; color: var(--color-muted);" data-ssl-hint>No certificate is attached to this domain. Select this option to issue HTTPS after deployment.</span>
+      </div>
     </label>
   </section>
 </section>
