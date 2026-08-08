@@ -179,7 +179,7 @@ export function initDropdowns() {
     if (!activeItem) {
       activeItem = menu.querySelector(`[data-dropdown-item].is-selected`);
     }
-    if (!activeItem) {
+    if (!activeItem && !dropdown.hasAttribute('data-no-autoselect')) {
       activeItem = menu.querySelector(`[data-dropdown-item]:not(.is-disabled)`);
     }
 
