@@ -7,7 +7,8 @@
   width: 860px;
   max-width: 100%;
   margin: 0 auto;
-  max-height: calc(100vh - 100px);
+  height: calc(100vh - 140px);
+  max-height: 860px;
   display: flex;
   flex-direction: column;
 }
@@ -17,16 +18,6 @@
   flex-direction: column;
   flex: 1;
   min-height: 0;
-  padding-bottom: 0 !important;
-}
-
-.apps-engine-optic .fixed-action-bar {
-  position: relative !important;
-  bottom: auto !important;
-  left: auto !important;
-  right: auto !important;
-  z-index: 10;
-  width: 100% !important;
 }
 
 .apps-engine-optic .apps-engine-wizard__breadcrumbs {
