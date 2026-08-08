@@ -513,12 +513,12 @@ html[data-theme="charcoal"] .apps-engine-optic .db-toggle-icon {
 }
 
 .apps-engine-optic .wizard-content-area {
-  height: calc(100vh - 320px);
+  height: calc(100vh - 220px);
   overflow-y: auto;
   overflow-x: hidden;
   padding-right: 4px;
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 16px, black calc(100% - 16px), transparent 100%);
-  mask-image: linear-gradient(to bottom, transparent 0%, black 16px, black calc(100% - 16px), transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 48px, black calc(100% - 48px), transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0%, black 48px, black calc(100% - 48px), transparent 100%);
 }
 
 .apps-engine-optic .wizard-content-area::-webkit-scrollbar {
