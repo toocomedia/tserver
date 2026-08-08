@@ -2,57 +2,45 @@
   <legend class="section-label" style="margin-bottom:12px;">Attach Private Databases</legend>
 
   <!-- DB toggle cards row -->
-  <div class="db-toggle-row">
+  <div class="cards-grid-4">
     <!-- MariaDB / MySQL -->
-    <div class="db-toggle-card" id="database-config-mariadb" data-database-row data-kind="mariadb">
-      <label class="db-toggle-label">
-        <input type="checkbox" data-database-enabled style="display:none;">
-        <img class="db-toggle-icon" src="/plugins/railpack_apps/static/images/mysql.svg" alt="MySQL">
-        <span class="db-toggle-name">MySQL</span>
-        <span class="db-toggle-check">✓</span>
-      </label>
+    <label class="optic-card" id="database-config-mariadb" data-database-row data-kind="mariadb">
+      <input type="checkbox" data-database-enabled style="display:none;">
+      <img class="optic-icon" src="/plugins/railpack_apps/static/images/mariadb.svg" alt="MariaDB">
+      <span class="optic-card__name">MariaDB</span>
       <input data-database-key value="MYSQL_URL" type="hidden">
-    </div>
+    </label>
 
     <!-- PostgreSQL -->
-    <div class="db-toggle-card" id="database-config-postgresql" data-database-row data-kind="postgresql">
-      <label class="db-toggle-label">
-        <input type="checkbox" data-database-enabled style="display:none;">
-        <img class="db-toggle-icon" src="/plugins/railpack_apps/static/images/postgresql.svg" alt="PostgreSQL">
-        <span class="db-toggle-name">PostgreSQL</span>
-        <span class="db-toggle-check">✓</span>
-      </label>
+    <label class="optic-card" id="database-config-postgresql" data-database-row data-kind="postgresql">
+      <input type="checkbox" data-database-enabled style="display:none;">
+      <img class="optic-icon" src="/plugins/railpack_apps/static/images/postgresql.svg" alt="PostgreSQL">
+      <span class="optic-card__name">PostgreSQL</span>
       <input data-database-key value="DATABASE_URL" type="hidden">
-    </div>
+    </label>
 
     <!-- Redis -->
-    <div class="db-toggle-card" id="database-config-redis" data-database-row data-kind="redis">
-      <label class="db-toggle-label">
-        <input type="checkbox" data-database-enabled style="display:none;">
-        <img class="db-toggle-icon" src="/plugins/railpack_apps/static/images/redis.svg" alt="Redis">
-        <span class="db-toggle-name">Redis</span>
-        <span class="db-toggle-check">✓</span>
-      </label>
+    <label class="optic-card" id="database-config-redis" data-database-row data-kind="redis">
+      <input type="checkbox" data-database-enabled style="display:none;">
+      <img class="optic-icon" src="/plugins/railpack_apps/static/images/redis.svg" alt="Redis">
+      <span class="optic-card__name">Redis</span>
       <input data-database-key value="REDIS_URL" type="hidden">
-    </div>
+    </label>
 
     <!-- MongoDB -->
-    <div class="db-toggle-card" id="database-config-mongodb" data-database-row data-kind="mongodb">
-      <label class="db-toggle-label">
-        <input type="checkbox" data-database-enabled style="display:none;">
-        <img class="db-toggle-icon" src="/plugins/railpack_apps/static/images/mongodb.svg" alt="MongoDB">
-        <span class="db-toggle-name">MongoDB</span>
-        <span class="db-toggle-check">✓</span>
-      </label>
+    <label class="optic-card" id="database-config-mongodb" data-database-row data-kind="mongodb">
+      <input type="checkbox" data-database-enabled style="display:none;">
+      <img class="optic-icon" src="/plugins/railpack_apps/static/images/mongodb.svg" alt="MongoDB">
+      <span class="optic-card__name">MongoDB</span>
       <input data-database-key value="MONGODB_URI" type="hidden">
-    </div>
+    </label>
   </div>
 
   <!-- Provider options: shown below the cards when a DB is enabled -->
   <div class="db-options-panel" data-database-options data-database-parent="mariadb" hidden>
     <div class="db-options-grid">
       <div class="db-options-column">
-        <span class="section-label" style="margin-bottom: 8px;">MySQL Provider</span>
+        <span class="section-label" style="margin-bottom: 8px;">MariaDB Provider</span>
         <div class="custom-dropdown" data-custom-dropdown="database-provider-mariadb">
           <input type="hidden" id="database-provider-mariadb" data-dropdown-value data-database-provider value="docker">
           <div class="custom-dropdown__trigger" data-dropdown-trigger tabindex="0">
