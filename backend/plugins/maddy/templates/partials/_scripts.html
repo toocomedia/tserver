@@ -68,6 +68,19 @@ function setSidebarActiveText(text) {
   });
 }
 
+function updateScrollButtonsVisibility() {
+  const listEl = document.getElementById('listContent');
+  const container = document.querySelector('.list-container-wrap');
+  if (listEl && container) {
+    const visibleItems = Array.from(listEl.querySelectorAll('.list-item')).filter(el => el.style.display !== 'none');
+    if (visibleItems.length > 5) {
+      container.classList.add('has-scroll');
+    } else {
+      container.classList.remove('has-scroll');
+    }
+  }
+}
+
 function filterDomains(query) {
   const q = (query || '').toLowerCase().trim();
   document.querySelectorAll('#listContent .list-item').forEach(el => {
@@ -78,6 +91,7 @@ function filterDomains(query) {
       el.style.display = 'none';
     }
   });
+  updateScrollButtonsVisibility();
 }
 
 // ---------------------------------------------------------------------------
@@ -612,6 +626,7 @@ async function repairMaddyConfig() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  updateScrollButtonsVisibility();
   const firstItem = document.querySelector('#listContent .list-item');
   if (firstItem && firstItem.onclick) {
     firstItem.click();

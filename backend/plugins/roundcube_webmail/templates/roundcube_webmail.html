@@ -51,9 +51,6 @@
       {% endif %}
     </div>
 
-    <!-- Top Divider Line -->
-    <div class="sidebar-divider"></div>
-    
     <!-- Domain List Container -->
     <div class="list-container-wrap">
       <button type="button" class="sidebar-scroll-btn scroll-up" onclick="scrollDomains(-1)" title="Scroll up">
@@ -84,9 +81,6 @@
         <svg viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg>
       </button>
     </div>
-
-    <!-- Bottom Divider Line -->
-    <div class="sidebar-divider"></div>
 
     <div style="padding: 12px 16px 0 16px;">
       <div style="font-weight: 600; font-size: 13px; color: var(--text-main);">Roundcube Webmail</div>
@@ -299,6 +293,19 @@ function onSidebarSearchBlur(input) {
   }
 }
 
+function updateScrollButtonsVisibility() {
+  const listEl = document.getElementById('listContent');
+  const container = document.querySelector('.list-container-wrap');
+  if (listEl && container) {
+    const visibleItems = Array.from(listEl.querySelectorAll('.list-item')).filter(el => el.style.display !== 'none');
+    if (visibleItems.length > 5) {
+      container.classList.add('has-scroll');
+    } else {
+      container.classList.remove('has-scroll');
+    }
+  }
+}
+
 function filterDomains(query) {
   const q = (query || '').toLowerCase().trim();
   document.querySelectorAll('#listContent .list-item').forEach(el => {
@@ -309,6 +316,7 @@ function filterDomains(query) {
       el.style.display = 'none';
     }
   });
+  updateScrollButtonsVisibility();
 }
 
 function toggleMobileSidebar() {
@@ -317,5 +325,7 @@ function toggleMobileSidebar() {
     sidebar.classList.toggle('mobile-open');
   }
 }
+
+document.addEventListener('DOMContentLoaded', updateScrollButtonsVisibility);
 </script>
 {% endblock %}

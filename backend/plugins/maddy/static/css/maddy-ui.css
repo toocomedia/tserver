@@ -1,6 +1,4 @@
 /* Maddy Plugin Modern UI Styles */
-@import url('/static/css/components/plugin-sidebar.css');
-
 :root {
     /* Strict padding and margin rules */
     --spacing-xs: 4px;
@@ -195,14 +193,6 @@
     opacity: 0.9;
 }
 
-/* Divider between top section and list */
-.sidebar-divider {
-    width: calc(100% - 32px);
-    margin: 4px 16px;
-    height: 1px;
-    background-color: var(--color-line, rgba(255, 255, 255, 0.08));
-}
-
 .list-container-wrap {
     position: relative;
     display: flex;
@@ -226,8 +216,9 @@
     display: none;
 }
 
+/* Scroll buttons show ONLY when list has > 5 domains (has-scroll) */
 .sidebar-scroll-btn {
-    display: flex;
+    display: none;
     align-items: center;
     justify-content: center;
     width: 100%;
@@ -240,6 +231,11 @@
     transition: opacity 0.2s, color 0.2s;
     padding: 0;
 }
+
+.list-container-wrap.has-scroll .sidebar-scroll-btn {
+    display: flex;
+}
+
 .sidebar-scroll-btn:hover {
     opacity: 1;
     color: var(--text-main);
