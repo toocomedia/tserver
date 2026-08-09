@@ -202,56 +202,84 @@ function switchInnerTab(btnEl) {
 function renderAccountsList() {
   const tbody    = document.getElementById('accounts-tbody');
   const emptyDiv = document.getElementById('accounts-empty');
-  const table    = document.getElementById('accounts-table');
   tbody.innerHTML = '';
 
   const filtered = allAccounts.filter(a => a.email.endsWith('@' + currentDomain));
 
   if (filtered.length === 0) {
     emptyDiv.style.display = 'block';
-    table.style.display    = 'none';
   } else {
     emptyDiv.style.display = 'none';
-    table.style.display    = 'table';
     filtered.forEach(acc => {
-      const tr = document.createElement('tr');
-      const addressCell = document.createElement('td');
-      const address = document.createElement('strong');
-      address.textContent = acc.email;
-      addressCell.appendChild(address);
+      const row = document.createElement('div');
+      row.className = 'data-row';
 
-      const statusCell = document.createElement('td');
-      statusCell.innerHTML = '<span class="badge badge--success">Active</span>';
+      // Left section: dot + title
+      const leftCol = document.createElement('div');
+      leftCol.className = 'flex-row';
+      leftCol.style.gap = '16px';
 
-      const actionsCell = document.createElement('td');
-      actionsCell.style.textAlign = 'right';
+      const dot = document.createElement('div');
+      dot.className = 'status-dot active';
+
+      const info = document.createElement('div');
+      info.className = 'data-info';
+      
+      const title = document.createElement('div');
+      title.className = 'data-title';
+      title.textContent = acc.email;
+      
+      const meta = document.createElement('div');
+      meta.className = 'data-meta';
+      meta.textContent = 'Active';
+
+      info.appendChild(title);
+      info.appendChild(meta);
+      leftCol.appendChild(dot);
+      leftCol.appendChild(info);
+
+      // Right section: actions
+      const actionsCell = document.createElement('div');
+      actionsCell.className = 'flex-row';
+      actionsCell.style.gap = '8px';
+
       const webmail = webmailSites[currentDomain] || {};
       if (webmail.ready) {
         const openButton = document.createElement('button');
         openButton.type = 'button';
-        openButton.className = 'btn btn--secondary btn--sm';
-        openButton.textContent = 'Open Webmail';
-        openButton.style.marginRight = '0.5rem';
+        openButton.className = 'btn';
+        openButton.style.border = '1px solid var(--color-line)';
+        openButton.style.background = 'transparent';
+        openButton.style.color = 'var(--text-main)';
+        openButton.textContent = 'Webmail';
         openButton.addEventListener('click', () => openWebmail(acc.email));
         actionsCell.appendChild(openButton);
       } else {
         const setupLink = document.createElement('a');
-        setupLink.className = 'btn btn--secondary btn--sm';
-        setupLink.textContent = 'Set up Webmail';
+        setupLink.className = 'btn';
+        setupLink.style.border = '1px solid var(--color-line)';
+        setupLink.style.background = 'transparent';
+        setupLink.style.color = 'var(--text-main)';
+        setupLink.style.textDecoration = 'none';
+        setupLink.textContent = 'Webmail setup';
         setupLink.href = webmail.setup_url || '/plugins/roundcube_webmail/';
         setupLink.title = webmail.reason || 'Webmail is not ready.';
-        setupLink.style.marginRight = '0.5rem';
         actionsCell.appendChild(setupLink);
       }
+      
       const deleteButton = document.createElement('button');
       deleteButton.type = 'button';
-      deleteButton.className = 'btn btn--danger btn--sm';
+      deleteButton.className = 'btn';
+      deleteButton.style.background = 'var(--color-danger)';
+      deleteButton.style.color = 'white';
+      deleteButton.style.border = 'none';
       deleteButton.textContent = 'Delete';
       deleteButton.addEventListener('click', () => executeDeleteAccount(acc.email));
       actionsCell.appendChild(deleteButton);
 
-      tr.append(addressCell, statusCell, actionsCell);
-      tbody.appendChild(tr);
+      row.appendChild(leftCol);
+      row.appendChild(actionsCell);
+      tbody.appendChild(row);
     });
   }
 }

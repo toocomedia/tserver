@@ -1,58 +1,68 @@
 {% extends "layout.html" %}
+{% import "partials/_macros.html" as ui %}
 
 {% block title %}Mail Server (Maddy) — VPS Panel{% endblock %}
 {% block content_class %}content--flush{% endblock %}
 {% block page_header_wrapper %}{% endblock %}
 
-{% block content %}
-<div class="split-layout">
-  <!-- Sidebar -->
-  <div class="split-sidebar">
-    {% if plugin_installed %}
-      {% if mail_domains %}
-        {% for d in mail_domains %}
-          <div class="split-sidebar__item {% if loop.index == 1 %}active{% endif %}" onclick="openDomainDetail('{{ d.domain }}', '{{ d.server_ip }}')">
-            {{ d.domain }}
-          </div>
-        {% endfor %}
-      {% endif %}
-      <div class="split-sidebar__item {% if not mail_domains %}active{% endif %}" onclick="openAddDomain()">
-        <strong>+ Add Domain</strong>
-      </div>
-    {% else %}
-      <div class="split-sidebar__item active">Setup required</div>
-    {% endif %}
+{% block head %}
+  <link rel="stylesheet" href="/plugins/maddy/static/css/maddy-ui.css">
+{% endblock %}
 
-    <div style="flex-grow: 1;"></div>
+{% block content %}
+<div class="workspace">
+  <!-- 3. Simple Side List -->
+  <div class="floating-list">
     
-    <div class="split-sidebar__footer" style="padding: 1rem; margin-top: auto; color: var(--color-muted);">
-      <div style="font-weight: 600; color: var(--color-text); margin-bottom: 2px;">Mail Server (Maddy)</div>
-      <div style="font-size: 0.85rem; margin-bottom: 12px;">Version {{ plugin_version }}</div>
+    <div class="flex-between" style="padding: 0 28px; margin-bottom: 8px;">
+        <div style="font-weight: 600; font-size: 14px; color: var(--text-main);">Mail Domains</div>
+        {% if plugin_installed %}
+          <button class="btn primary" style="padding: 4px 8px; font-size: 12px; border-radius: 4px !important;" onclick="openAddDomain()">+ Add</button>
+        {% endif %}
+    </div>
+    
+    <div class="list-content">
+      {% if plugin_installed %}
+        {% if mail_domains %}
+          {% for d in mail_domains %}
+            {{ ui.sidebar_item(d.domain, onclick="openDomainDetail('" + d.domain + "', '" + d.server_ip + "')", active=(loop.index == 1)) }}
+          {% endfor %}
+        {% else %}
+          <div style="padding: 16px 28px; color: var(--text-muted); font-size: 13px;">No mail domains configured.</div>
+        {% endif %}
+      {% else %}
+        {{ ui.sidebar_item('Setup required', onclick="", active=True) }}
+      {% endif %}
+    </div>
+    
+    <!-- Footer / Diagnostics -->
+    <div style="padding: 16px 28px; margin-top: auto; border-top: 1px solid var(--color-line);">
+      <div style="font-weight: 600; color: var(--color-text); margin-bottom: 2px; font-size: 13px;">Maddy Server</div>
+      <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px;">Version {{ plugin_version }}</div>
       {% if plugin_installed %}
         <div style="display: flex; flex-direction: column; gap: 6px;">
-          <button type="button" class="btn btn--secondary btn--sm" style="width: 100%;" onclick="openMaddyDiagnostics()">Diagnostics</button>
-          <button type="button" class="btn btn--ghost btn--sm" style="width: 100%;" id="btn-repair-maddy" onclick="repairMaddyConfig()">Repair Config</button>
+          <button type="button" class="btn" style="width: 100%;" onclick="openMaddyDiagnostics()">Diagnostics</button>
+          <button type="button" class="btn" style="width: 100%; background: transparent; border: 1px solid var(--color-line);" id="btn-repair-maddy" onclick="repairMaddyConfig()">Repair</button>
         </div>
       {% endif %}
     </div>
+
   </div>
 
-  <!-- Content -->
-  <div class="split-content">
+  <!-- 4. Content Panel -->
+  <div class="content-panel">
     {% if plugin_installed %}
       {% include 'partials/_domains_tab.html' %}
     {% else %}
-      <div style="margin-top: 2rem;">
-        <div class="text-center p-4">
-          <h3 class="mb-md">Mail Server Not Installed</h3>
-          <p class="text-muted mb-lg">Maddy Mail Server is required to manage domains and mailboxes.</p>
-          <form method="post" action="/plugins/maddy/api/install">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
-            <button type="submit" class="btn btn--primary">
-              Install Mail Server (~30MB RAM)
-            </button>
-          </form>
-        </div>
+      <div style="margin: auto; text-align: center; max-width: 400px;">
+        <h3 class="maddy-title" style="margin-bottom: 16px;">Mail Server Not Installed</h3>
+        <p style="color: var(--text-muted); margin-bottom: 24px;">Maddy Mail Server is required to manage domains and mailboxes.</p>
+        <form method="post" action="/plugins/maddy/api/install">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+          <button type="submit" class="btn primary" style="width: 100%; padding: 12px;">
+            Install Mail Server (~30MB RAM)
+          </button>
+        </form>
       </div>
     {% endif %}
   </div>

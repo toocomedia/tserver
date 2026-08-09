@@ -1,212 +1,225 @@
 <div id="domain-detail-view" style="display:none;">
-  <div class="mb-xl" style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
-    <h2 style="margin:0;" id="detail-domain-name"></h2>
-    <button type="button" class="btn btn--danger btn--sm" id="btn-delete-domain" onclick="confirmDeleteDomain()">
+  <!-- Header -->
+  <div class="flex-between" style="margin-bottom: var(--spacing-lg);">
+    <div>
+      <h1 class="maddy-title" id="detail-domain-name"></h1>
+      <p class="maddy-subtitle">Mail server configuration</p>
+    </div>
+    <button type="button" class="btn primary" id="btn-delete-domain" onclick="confirmDeleteDomain()" style="background: var(--color-danger); color: white;">
       Delete Domain
     </button>
   </div>
 
   <!-- Inner Tab Navigation -->
-  <div class="tabs-nav mb-md" role="tablist">
-    <button type="button" class="btn btn--ghost active" data-inner-tab="inner-tab-mailboxes" onclick="switchInnerTab(this)">Mailboxes</button>
-    <button type="button" class="btn btn--ghost" data-inner-tab="inner-tab-dns" onclick="switchInnerTab(this)">DNS Records</button>
-    <button type="button" class="btn btn--ghost" data-inner-tab="inner-tab-ssl" onclick="switchInnerTab(this)">SSL Certificate</button>
-    <button type="button" class="btn btn--ghost" data-inner-tab="inner-tab-settings" onclick="switchInnerTab(this)">Client Settings</button>
+  <div class="tabs" role="tablist">
+    {{ ui.tab('Mailboxes', onclick="switchInnerTab(this)", active=True, class_extra='inner-tab-btn', data_target='inner-tab-mailboxes') }}
+    {{ ui.tab('DNS Records', onclick="switchInnerTab(this)", class_extra='inner-tab-btn', data_target='inner-tab-dns') }}
+    {{ ui.tab('SSL', onclick="switchInnerTab(this)", class_extra='inner-tab-btn', data_target='inner-tab-ssl') }}
+    {{ ui.tab('Settings', onclick="switchInnerTab(this)", class_extra='inner-tab-btn', data_target='inner-tab-settings') }}
   </div>
 
-  <!-- Mailboxes for this domain -->
-  <div id="inner-tab-mailboxes" class="inner-tab-content section mb-xl">
-    <div class="section__body">
-      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1.5rem;">
-        <p class="form-hint" style="margin:0;">Manage email accounts for this domain.</p>
-        <button class="btn btn--primary btn--sm" onclick="openAddAccountModal()">+ Add Mailbox</button>
+  <!-- 1. Mailboxes Tab -->
+  <div id="inner-tab-mailboxes" class="inner-tab-content">
+      <div class="data-list" id="accounts-tbody">
+          <!-- Populated by JS renderAccountsList() -->
       </div>
-      <div class="table-responsive" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
-        <table class="table" id="accounts-table" style="display:none;">
-          <thead>
-            <tr>
-              <th>Email Address</th>
-              <th>Status</th>
-              <th style="text-align:right;">Actions</th>
-            </tr>
-          </thead>
-          <tbody id="accounts-tbody"></tbody>
-        </table>
+      <div id="accounts-empty" style="display:none; padding: 24px; text-align: center; color: var(--text-muted); font-size: 13px;">
+        No mailboxes for this domain yet. Add one below.
       </div>
-      <div id="accounts-empty" class="text-center text-muted p-4" style="display:none;">
-        No mailboxes for this domain yet. Click "+ Add Mailbox" above.
+      
+      <!-- Add Mailbox (Naked Column Layout) -->
+      <div style="margin-top: var(--spacing-xl); padding-top: var(--spacing-xl); border-top: 1px solid var(--color-line);">
+          <div class="flex-between" style="margin-bottom: var(--spacing-md);">
+              <div>
+                  <h2 style="font-size: 16px; font-weight: 600; margin: 0; color: var(--text-main);">Add New Mailbox</h2>
+                  <p style="font-size: 13px; color: var(--text-muted); margin: 4px 0 0 0;">Create a new email address under this domain</p>
+              </div>
+          </div>
+          
+          <form id="add-account-form" onsubmit="event.preventDefault(); submitAddAccount();" style="display: flex; flex-direction: column; gap: var(--spacing-md); max-width: 400px;">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+              <input type="hidden" name="domain" id="add-account-domain">
+              <div class="form-group" style="margin: 0;">
+                  <label class="form-label">Email Username</label>
+                  <div style="display: flex; background: var(--bg-input); border-radius: var(--radius-sm) !important;">
+                      <input type="text" name="username" id="add-account-username" class="form-input" placeholder="hello" style="flex: 1; background: transparent;" required>
+                      <div style="display: flex; align-items: center; padding: 0 16px; color: var(--text-muted); font-size: 13px; font-weight: 500;" id="add-account-domain-suffix">
+                          @domain.com
+                      </div>
+                  </div>
+              </div>
+              
+              <div class="form-group" style="margin: 0;">
+                  <label class="form-label">Secure Password</label>
+                  <input type="password" name="password" id="add-account-password" class="form-input" placeholder="Min 8 characters" required>
+              </div>
+
+              <button type="button" class="btn primary" onclick="executeAddAccount()" style="padding: 10px 0; margin-top: 8px;">Create Mailbox</button>
+              <div id="add-account-result" style="display:none; font-size: 13px; margin-top: 8px;"></div>
+          </form>
       </div>
-    </div>
   </div>
 
-  <!-- DNS -->
-  <div id="inner-tab-dns" class="inner-tab-content section mb-xl" style="display:none;">
-    <div class="section__body">
-      <p class="form-hint mb-md">
+  <!-- 2. DNS Tab -->
+  <div id="inner-tab-dns" class="inner-tab-content" style="display:none;">
+      <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 24px;">
         If this domain is managed externally (e.g., Cloudflare, Namecheap), copy and paste these records exactly into your DNS provider. 
         If the domain is managed by this panel, these records are handled automatically by PowerDNS.
       </p>
 
-      <div class="table-responsive" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
-        <table class="table mb-lg" style="font-family: monospace; font-size: 0.9em; width: 100%;">
-          <thead>
-            <tr>
-              <th>Type</th>
-              <th>Name</th>
-              <th>Value / Content</th>
-              <th>Priority</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><strong>A</strong></td>
-              <td>mail</td>
-              <td id="dns-table-a"></td>
-              <td class="text-muted">—</td>
-            </tr>
-            <tr>
-              <td><strong>MX</strong></td>
-              <td>@</td>
-              <td id="dns-table-mx"></td>
-              <td>10</td>
-            </tr>
-            <tr>
-              <td><strong>TXT</strong></td>
-              <td>@</td>
-              <td id="dns-table-spf"></td>
-              <td class="text-muted">—</td>
-            </tr>
-            <tr>
-              <td><strong>TXT</strong></td>
-              <td>_dmarc</td>
-              <td>v=DMARC1; p=none;</td>
-              <td class="text-muted">—</td>
-            </tr>
-          </tbody>
-        </table>
+      <div class="data-list" style="font-family: monospace; font-size: 12px; margin-bottom: 24px;">
+          <!-- A Record -->
+          <div class="data-row">
+              <div class="flex-row" style="gap: 16px;">
+                  <div class="data-info">
+                      <div class="data-title" style="color: var(--text-main);">A (mail)</div>
+                      <div class="data-meta" id="dns-table-a"></div>
+                  </div>
+              </div>
+          </div>
+          <!-- MX Record -->
+          <div class="data-row">
+              <div class="flex-row" style="gap: 16px;">
+                  <div class="data-info">
+                      <div class="data-title" style="color: var(--text-main);">MX (@)</div>
+                      <div class="data-meta" id="dns-table-mx"></div>
+                  </div>
+              </div>
+              <div class="text-muted" style="font-size: 12px;">Priority 10</div>
+          </div>
+          <!-- TXT SPF -->
+          <div class="data-row">
+              <div class="flex-row" style="gap: 16px;">
+                  <div class="data-info">
+                      <div class="data-title" style="color: var(--text-main);">TXT (@)</div>
+                      <div class="data-meta" id="dns-table-spf"></div>
+                  </div>
+              </div>
+          </div>
+          <!-- TXT DMARC -->
+          <div class="data-row">
+              <div class="flex-row" style="gap: 16px;">
+                  <div class="data-info">
+                      <div class="data-title" style="color: var(--text-main);">TXT (_dmarc)</div>
+                      <div class="data-meta">v=DMARC1; p=none;</div>
+                  </div>
+              </div>
+          </div>
       </div>
 
-      <div class="mt-lg">
-        <p class="form-hint mb-md"><strong>Local PowerDNS Management:</strong> Re-provision or remove local PowerDNS mail records (only required if domain's Nameservers point to this VPS).</p>
+      <div style="padding-top: var(--spacing-lg); border-top: 1px solid var(--color-line);">
+        <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 12px;"><strong>Local PowerDNS Management:</strong> Re-provision or remove local PowerDNS mail records.</p>
+        <form id="dns-setup-form" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <input type="hidden" name="csrf_token"   value="{{ csrf_token(request) }}">
+          <input type="hidden" name="domain_name"  id="dns-domain-input">
+          <input type="hidden" name="server_ip"    id="dns-server-ip"    value="{{ server_ip }}">
+          <button type="button" onclick="handleDnsAction('/plugins/maddy/api/dns/auto-setup')" class="btn primary">Auto-Setup Local DNS</button>
+          <button type="button" onclick="handleDnsAction('/plugins/maddy/api/dns/remove')" class="btn">Remove Local DNS</button>
+        </form>
+        <div id="dns-result-message" style="display:none; margin-top:12px; font-size: 13px;"></div>
       </div>
-      <form id="dns-setup-form" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-        <input type="hidden" name="csrf_token"   value="{{ csrf_token(request) }}">
-        <input type="hidden" name="domain_name"  id="dns-domain-input">
-        <input type="hidden" name="server_ip"    id="dns-server-ip"    value="{{ server_ip }}">
-        <button type="button" onclick="handleDnsAction('/plugins/maddy/api/dns/auto-setup')" class="btn btn--primary btn--sm">
-          Auto-Setup Local DNS
-        </button>
-        <button type="button" onclick="handleDnsAction('/plugins/maddy/api/dns/remove')" class="btn btn--secondary btn--sm">
-          Remove Local DNS
-        </button>
-      </form>
-      <div id="dns-result-message" style="display:none; margin-top:12px;"></div>
-    </div>
   </div>
 
-  <!-- SSL -->
-  <div id="inner-tab-ssl" class="inner-tab-content section mb-xl" style="display:none;">
-    <div class="section__body">
-      <p class="form-hint mb-md">Request a Let's Encrypt TLS cert for <code id="mail-subdomain-preview"></code>. DNS must be working first.</p>
+  <!-- 3. SSL Tab -->
+  <div id="inner-tab-ssl" class="inner-tab-content" style="display:none;">
+      <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 24px;">Request a Let's Encrypt TLS cert for <strong style="color: var(--text-main);" id="mail-subdomain-preview"></strong>. DNS must be working first.</p>
       <form id="ssl-setup-form" style="display:flex; gap:8px; align-items:center;">
         <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
         <input type="hidden" name="domain"     id="ssl-domain-input">
-        <button type="button" onclick="issueMailSsl()" class="btn btn--secondary btn--sm">
-          Request Let's Encrypt SSL
-        </button>
+        <button type="button" onclick="issueMailSsl()" class="btn">Request Let's Encrypt SSL</button>
       </form>
-      <div id="ssl-result-message" style="display:none; margin-top:12px;"></div>
-    </div>
+      <div id="ssl-result-message" style="display:none; margin-top:12px; font-size: 13px;"></div>
   </div>
 
-  <!-- Connection settings -->
-  <div id="inner-tab-settings" class="inner-tab-content section mb-xl" style="display:none;">
-    <div class="section__body">
-      <div class="info-row">
-        <span class="info-row__label">IMAP (incoming)</span>
-        <span class="info-row__value"><code id="imap-host-preview"></code> &bull; Port <code>993</code> (SSL) / <code>143</code> (STARTTLS)</span>
+  <!-- 4. Settings Tab -->
+  <div id="inner-tab-settings" class="inner-tab-content" style="display:none;">
+      <div class="data-list">
+          <div class="data-row">
+              <div class="data-info">
+                  <div class="data-title" style="color: var(--text-muted);">IMAP (incoming)</div>
+                  <div class="data-meta" style="color: var(--text-main);"><span id="imap-host-preview"></span> &bull; Port 993 (SSL) / 143 (STARTTLS)</div>
+              </div>
+          </div>
+          <div class="data-row">
+              <div class="data-info">
+                  <div class="data-title" style="color: var(--text-muted);">SMTP (outgoing)</div>
+                  <div class="data-meta" style="color: var(--text-main);"><span id="smtp-host-preview"></span> &bull; Port 587 (STARTTLS) / 465 (SSL)</div>
+              </div>
+          </div>
+          <div class="data-row">
+              <div class="data-info">
+                  <div class="data-title" style="color: var(--text-muted);">Username</div>
+                  <div class="data-meta" style="color: var(--text-main);"><span id="username-example-preview"></span></div>
+              </div>
+          </div>
       </div>
-      <div class="info-row">
-        <span class="info-row__label">SMTP (outgoing)</span>
-        <span class="info-row__value"><code id="smtp-host-preview"></code> &bull; Port <code>587</code> (STARTTLS) / <code>465</code> (SSL)</span>
-      </div>
-      <div class="info-row">
-        <span class="info-row__label">Username</span>
-        <span class="info-row__value"><code id="username-example-preview"></code></span>
-      </div>
-    </div>
   </div>
 </div>
 
+<!-- ADD DOMAIN VIEW -->
 <div id="add-domain-view" style="display:none;">
   <div class="mb-xl">
-    <h3 style="margin-top:0; margin-bottom:1.5rem;">Add Mail Domain</h3>
+    <h1 class="maddy-title" style="margin-bottom: 24px;">Add Mail Domain</h1>
     <div>
-      
       <div class="mb-md" style="display:flex; gap:16px;">
-        <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+        <label style="display:flex; align-items:center; gap:6px; cursor:pointer; color: var(--text-main); font-size: 13px;">
           <input type="radio" name="domain_type" value="panel" checked onchange="toggleDomainInputType()">
           <span>Panel Domain</span>
         </label>
-        <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+        <label style="display:flex; align-items:center; gap:6px; cursor:pointer; color: var(--text-main); font-size: 13px;">
           <input type="radio" name="domain_type" value="external" onchange="toggleDomainInputType()">
           <span>External Domain</span>
         </label>
       </div>
 
-      <p class="form-hint mb-md" id="domain-hint-text">
+      <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 24px;" id="domain-hint-text">
         Select a domain hosted on this panel — MX, A, SPF, and DMARC records will be created automatically in PowerDNS.
       </p>
 
-      <form id="add-domain-form" style="display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap;">
+      <form id="add-domain-form" style="display:flex; flex-direction: column; gap:12px; max-width: 400px;">
         <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
         <input type="hidden" name="server_ip"  id="add-domain-ip" value="{{ server_ip }}">
         
-        <div style="flex:2; min-width:200px;">
+        <div class="form-group" style="margin:0;">
           <label class="form-label">Domain Name</label>
-          
-          <!-- Panel domains select -->
           <div id="domain-select-wrapper">
             {% if panel_domains %}
-            <select name="domain_select" id="add-domain-select" class="form-input" onchange="onDomainSelect(this)">
+            <select name="domain_select" id="add-domain-select" class="form-input" style="width: 100%;" onchange="onDomainSelect(this)">
               <option value="">— Select a domain —</option>
               {% for d in panel_domains %}
               <option value="{{ d.name }}" data-ip="{{ d.server_ip }}">{{ d.name }}</option>
               {% endfor %}
             </select>
             {% else %}
-            <select class="form-input" disabled>
+            <select class="form-input" disabled style="width: 100%;">
               <option>— No panel domains available —</option>
             </select>
             {% endif %}
           </div>
-
-          <!-- External domain input -->
           <div id="domain-input-wrapper" style="display:none;">
-            <input type="text" name="domain_custom" id="add-domain-custom" class="form-input" placeholder="e.g. outside-domain.com">
+            <input type="text" name="domain_custom" id="add-domain-custom" class="form-input" style="width: 100%;" placeholder="e.g. outside-domain.com">
           </div>
         </div>
 
-        <button type="button" onclick="handleAddDomain()" class="btn btn--primary btn--sm">
+        <button type="button" onclick="handleAddDomain()" class="btn primary" style="padding: 10px 0; margin-top: 8px;">
           + Add Domain
         </button>
       </form>
-      <div id="add-domain-result" style="display:none; margin-top:10px;"></div>
-      
+      <div id="add-domain-result" style="display:none; margin-top:10px; font-size: 13px;"></div>
     </div>
   </div>
 </div>
 
 <!-- DELETE DOMAIN CONFIRM MODAL -->
 <div id="delete-domain-modal" class="modal-backdrop hidden" role="dialog">
-  <div class="modal" style="max-width:480px;">
-    <div class="modal__header">
-      <h2 style="color:var(--color-danger,#e53e3e);">Delete Mail Domain</h2>
-      <button class="btn btn--ghost btn--icon" onclick="closeModal('delete-domain-modal')">✕</button>
+  <div class="modal" style="max-width:480px; background: var(--bg-panel); border-radius: var(--radius-lg) !important;">
+    <div class="modal__header" style="border-bottom: 1px solid var(--color-line);">
+      <h2 style="color:var(--color-danger,#e53e3e); font-size: 18px; margin: 0;">Delete Mail Domain</h2>
+      <button class="btn btn--ghost btn--icon" onclick="closeModal('delete-domain-modal')" style="background: transparent; color: var(--text-muted); border: none;">✕</button>
     </div>
-    <div class="modal__body">
-      <p>This permanently deletes <strong id="delete-domain-name"></strong> and all its data:</p>
-      <ul style="padding-left:1.4rem; line-height:2.2; color:var(--color-muted); font-size:0.9rem; margin-top:8px;">
+    <div class="modal__body" style="padding: 24px; color: var(--text-main); font-size: 14px;">
+      <p style="margin-top: 0;">This permanently deletes <strong id="delete-domain-name"></strong> and all its data:</p>
+      <ul style="padding-left:1.4rem; line-height:2.2; color:var(--text-muted); margin-top:8px;">
         <li>All mailbox accounts</li>
         <li>DNS records (MX, A, SPF, DKIM, DMARC)</li>
         <li>SSL certificate &amp; nginx config</li>
@@ -214,10 +227,10 @@
       </ul>
       <p style="margin-top:12px; font-weight:600;">This cannot be undone.</p>
     </div>
-    <div class="modal__footer">
+    <div class="modal__footer" style="border-top: 1px solid var(--color-line); padding: 16px 24px; display: flex; gap: 8px; justify-content: flex-end;">
       <input type="hidden" id="delete-domain-input">
-      <button type="button" class="btn btn--secondary" onclick="closeModal('delete-domain-modal')">Cancel</button>
-      <button type="button" class="btn btn--danger" onclick="executeDeleteDomain()">Delete Everything</button>
+      <button type="button" class="btn" style="background: transparent; border: 1px solid var(--color-line); color: var(--text-main);" onclick="closeModal('delete-domain-modal')">Cancel</button>
+      <button type="button" class="btn" style="background: var(--color-danger); color: white; border: none;" onclick="executeDeleteDomain()">Delete Everything</button>
     </div>
   </div>
 </div>

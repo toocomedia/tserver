@@ -1,0 +1,26 @@
+{% macro sidebar_item(label, onclick, active=False) %}
+<div class="list-item {% if active %}active{% endif %}" onclick="{{ onclick }}">
+    {{ label }}
+</div>
+{% endmacro %}
+
+{% macro tab(label, onclick='', active=False, class_extra='') %}
+<button class="tab {% if active %}active{% endif %} {{ class_extra }}" onclick="{{ onclick }}">
+    {{ label }}
+</button>
+{% endmacro %}
+
+{% macro data_row(title, meta, status_active=False, actions_html='') %}
+<div class="data-row">
+    <div class="flex-row" style="gap: 16px;">
+        <div class="status-dot {% if status_active %}active{% endif %}"></div>
+        <div class="data-info">
+            <div class="data-title">{{ title }}</div>
+            <div class="data-meta">{{ meta }}</div>
+        </div>
+    </div>
+    <div class="flex-row" style="gap: 8px;">
+        {{ actions_html | safe }}
+    </div>
+</div>
+{% endmacro %}
