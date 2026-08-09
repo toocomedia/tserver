@@ -1,0 +1,342 @@
+/* Rspamd Spam Filter Plugin Modern UI Styles */
+:root {
+    /* Spacing rules */
+    --spacing-xs: 4px;
+    --spacing-sm: 8px;
+    --spacing-md: 16px;
+    --spacing-lg: 24px;
+    --spacing-xl: 32px;
+
+    /* Universal Panel Theme Colors */
+    --bg-body: var(--color-bg, #09090b);
+    --bg-panel: var(--color-surface, #18181b);
+    --bg-glass: var(--color-surface, #18181b);
+    --bg-glass-hover: var(--color-row-active, rgba(125, 125, 125, 0.08));
+    --bg-input: var(--color-bg, #09090b);
+
+    --text-main: var(--color-text, #f4f4f5);
+    --text-muted: var(--color-muted, #a1a1aa);
+
+    /* Universal Adaptive Button Themes */
+    --btn-bg: var(--color-secondary-btn, rgba(125, 125, 125, 0.12));
+    --btn-hover: var(--color-secondary-hover, rgba(125, 125, 125, 0.22));
+    --btn-text: var(--color-text, #f4f4f5);
+
+    --btn-primary-bg: var(--color-secondary-btn, rgba(125, 125, 125, 0.18));
+    --btn-primary-hover: var(--color-secondary-hover, rgba(125, 125, 125, 0.28));
+    --btn-primary-text: var(--color-text, #ffffff);
+
+    --btn-danger-bg: rgba(239, 68, 68, 0.14);
+    --btn-danger-hover: rgba(239, 68, 68, 0.26);
+    --btn-danger-text: #ef4444;
+
+    /* Structural radius */
+    --radius-sm: 4px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+}
+
+/* Plugin Workspace - Single Content Panel Layout (No Sidebar) */
+.workspace {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    padding: var(--spacing-lg) var(--spacing-xl);
+    min-height: calc(100vh - 120px);
+    align-items: flex-start;
+    margin-top: 56px; /* Offset for topbar */
+}
+
+/* Main Content Area */
+.content-panel {
+    flex: 1;
+    max-width: 1000px;
+    width: 100%;
+    height: calc(100vh - 140px);
+    min-height: 520px;
+    background-color: var(--bg-panel);
+    border-radius: var(--radius-lg) !important;
+    padding: var(--spacing-xl);
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-lg);
+    overflow-y: auto;
+}
+
+/* Header & Typography */
+.rspamd-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.rspamd-title {
+    font-size: 24px;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+    margin: 0;
+    color: var(--text-main);
+}
+
+.rspamd-subtitle {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin: var(--spacing-xs) 0 0 0;
+}
+
+/* Badges */
+.badge-minimal {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    border-radius: 100px !important;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    line-height: 1;
+}
+
+.badge-minimal--active {
+    background: rgba(34, 197, 94, 0.15);
+    color: #4ade80;
+}
+
+.badge-minimal--neutral {
+    background: rgba(161, 161, 170, 0.15);
+    color: var(--text-muted);
+}
+
+.badge-minimal--danger {
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+}
+
+/* Stats Summary Cards Grid */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+}
+
+.stat-card {
+    background: var(--bg-glass-hover, rgba(125, 125, 125, 0.05));
+    border-radius: var(--radius-md) !important;
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    transition: background 0.2s ease;
+}
+
+.stat-card:hover {
+    background: var(--bg-glass-hover, rgba(125, 125, 125, 0.09));
+}
+
+.stat-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.stat-value {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--text-main);
+    margin-top: 6px;
+    line-height: 1.2;
+}
+
+/* Section Containers */
+.panel-section {
+    background: var(--bg-glass-hover, rgba(125, 125, 125, 0.04));
+    border-radius: var(--radius-md) !important;
+    padding: 20px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.panel-section-title {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0;
+    color: var(--text-main);
+}
+
+/* Form Controls & Strict Borderless Inputs */
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.form-label {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-muted);
+    margin: 0;
+}
+
+.form-hint {
+    font-size: 12px;
+    color: var(--text-muted);
+    opacity: 0.85;
+    margin: 0;
+}
+
+.form-control, .form-input {
+    background: var(--bg-input);
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    padding: 10px 14px;
+    border-radius: var(--radius-sm) !important;
+    color: var(--text-main);
+    font-size: 14px;
+    transition: background 0.2s;
+}
+
+.form-control:focus, .form-input:focus {
+    background: var(--bg-glass-hover);
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+/* Buttons - Borderless Translucent Styling */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    height: 32px;
+    padding: 0 16px;
+    margin: 0;
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1;
+    border-radius: var(--radius-sm, 6px) !important;
+    background: var(--btn-bg);
+    color: var(--btn-text);
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease, transform 0.1s ease;
+    text-decoration: none;
+    white-space: nowrap;
+    box-sizing: border-box;
+    width: auto;
+    flex-shrink: 0;
+}
+
+.btn:hover {
+    background: var(--btn-hover);
+    color: var(--text-main);
+    border: none !important;
+}
+
+.btn:active {
+    transform: scale(0.97);
+}
+
+.btn.primary {
+    background: var(--btn-primary-bg);
+    color: var(--btn-primary-text);
+    border: none !important;
+    font-weight: 600;
+}
+
+.btn.primary:hover {
+    background: var(--btn-primary-hover);
+    color: var(--text-main);
+    border: none !important;
+}
+
+.btn.danger {
+    background: var(--btn-danger-bg);
+    color: var(--btn-danger-text);
+    border: none !important;
+    font-weight: 500;
+}
+
+.btn.danger:hover {
+    background: var(--btn-danger-hover);
+    color: var(--btn-danger-text);
+    border: none !important;
+}
+
+.btn.ghost {
+    background: transparent;
+    color: var(--text-muted);
+}
+
+.btn.ghost:hover {
+    background: var(--bg-glass-hover);
+    color: var(--text-main);
+}
+
+.btn--sm {
+    height: 28px;
+    padding: 0 12px;
+    font-size: 12px;
+}
+
+/* Custom Scrollbar */
+.content-panel::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+}
+
+.content-panel::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.content-panel::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 10px;
+}
+
+.content-panel::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.content-panel {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+    scroll-behavior: smooth;
+}
+
+/* Responsive Layout */
+@media (max-width: 768px) {
+    .workspace {
+        padding: 16px 12px;
+        margin-top: 50px;
+    }
+
+    .content-panel {
+        padding: 20px 16px;
+        height: auto;
+        min-height: 480px;
+    }
+
+    .rspamd-header-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 480px) {
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+}

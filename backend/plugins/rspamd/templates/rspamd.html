@@ -5,60 +5,36 @@
 {% block page_header_wrapper %}{% endblock %}
 
 {% block content %}
-<div class="split-layout">
-  <!-- Sidebar -->
-  <div class="split-sidebar">
-    <div class="split-sidebar__item active" style="justify-content: space-between;">
-      <span>Overview</span>
-      {% if not status.installed %}
-        <span class="badge-minimal badge-minimal--neutral">NOT INSTALLED</span>
-      {% elif status.running %}
-        <span class="badge-minimal badge-minimal--active">ACTIVE</span>
-      {% else %}
-        <span class="badge-minimal badge-minimal--neutral">DOWN</span>
-      {% endif %}
-    </div>
+{% block head %}
+  <link rel="stylesheet" href="/plugins/rspamd/static/css/rspamd-ui.css">
+{% endblock %}
 
-    <div style="flex-grow: 1;"></div>
-
-    <div class="split-sidebar__footer">
-      <div style="font-weight: 600; color: var(--color-text); margin-bottom: 2px;">Spam Filter (Rspamd)</div>
-      <div style="font-size: var(--font-small);">Version {{ plugin_version }}</div>
-      {% if status.installed %}
-      <div style="margin-top: 1.5rem;">
-        <form method="post" action="/plugins/rspamd/api/uninstall" onsubmit="return confirm('Uninstall Rspamd and revert Maddy configuration?');">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
-          <button type="submit" class="btn btn--danger btn--sm" style="width: 100%;">Uninstall Plugin</button>
-        </form>
-      </div>
-      {% endif %}
-    </div>
-  </div>
-
-  <!-- Content -->
-  <div class="split-content">
+{% block content %}
+<div class="workspace">
+  <div class="content-panel">
     {% if not status.installed %}
       <!-- State 1: Not Installed -->
-      <div style="display: flex; justify-content: center; padding-top: 4rem;">
-        <div style="max-width: 480px; width: 100%;">
-          <div style="margin-bottom: 1.5rem;">
-            <h2 style="font-size: var(--font-h2); font-weight: 600; margin-bottom: 0.5rem; color: var(--color-text);">Spam Filter Not Installed</h2>
-            <p style="color: var(--color-muted); font-size: var(--font-body);">
-              Install the Rspamd content scanning engine to protect your Maddy mail server.
-            </p>
-          </div>
+      <div style="display: flex; justify-content: center; align-items: center; min-height: 380px;">
+        <div style="max-width: 480px; width: 100%; text-align: center;">
+          <h2 class="rspamd-title" style="margin-bottom: 8px;">Spam Filter Not Installed</h2>
+          <p class="rspamd-subtitle" style="margin-bottom: 24px;">
+            Install the Rspamd content scanning engine to protect your Maddy mail server from spam and phishing attacks.
+          </p>
           <form method="post" action="/plugins/rspamd/api/install">
             <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
-            <button type="submit" class="btn btn--primary">Install Spam Filter</button>
+            <button type="submit" class="btn primary">Install Spam Filter</button>
           </form>
         </div>
       </div>
 
     {% else %}
       <!-- State 2: Installed -->
-      <div class="mb-xl" style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
-        <h2 style="margin: 0;">Spam Filter (Rspamd)</h2>
-        <div style="display: flex; gap: 8px;">
+      <div class="rspamd-header-row">
+        <div>
+          <h2 class="rspamd-title">Spam Filter (Rspamd)</h2>
+          <p class="rspamd-subtitle">Version {{ plugin_version }} &bull; Content scanning engine for Maddy mail</p>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
           {% if status.running %}
             <span class="badge-minimal badge-minimal--active">RUNNING</span>
           {% else %}
@@ -70,87 +46,86 @@
           {% else %}
             <span class="badge-minimal badge-minimal--neutral">NOT INJECTED</span>
           {% endif %}
+
+          <form method="post" action="/plugins/rspamd/api/uninstall" onsubmit="return confirm('Uninstall Rspamd and revert Maddy configuration?');" style="margin-left: 8px;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+            <button type="submit" class="btn danger btn--sm">Uninstall</button>
+          </form>
         </div>
       </div>
 
       <!-- Stats Summary -->
-      <div class="section mb-xl">
-        <div class="section__body">
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1.5rem;">
-            <div>
-              <div style="font-size: var(--font-small); color: var(--color-muted);">Scanned</div>
-              <div data-rspamd-stat="scanned" style="font-size: 1.5rem; font-weight: 600; margin-top: 4px;">{{ stats.scanned }}</div>
-            </div>
-            <div>
-              <div style="font-size: var(--font-small); color: var(--color-muted);">Clean</div>
-              <div data-rspamd-stat="clean" style="font-size: 1.5rem; font-weight: 600; margin-top: 4px;">{{ stats.clean }}</div>
-            </div>
-            <div>
-              <div style="font-size: var(--font-small); color: var(--color-muted);">Blocked Spam</div>
-              <div data-rspamd-stat="spam" style="font-size: 1.5rem; font-weight: 600; margin-top: 4px;">{{ stats.spam }}</div>
-            </div>
-            <div>
-              <div style="font-size: var(--font-small); color: var(--color-muted);">Spam Ratio</div>
-              <div data-rspamd-stat="spam_percentage" style="font-size: 1.5rem; font-weight: 600; margin-top: 4px;">{{ stats.spam_percentage }}%</div>
-            </div>
-          </div>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <span class="stat-label">Scanned</span>
+          <span class="stat-value" data-rspamd-stat="scanned">{{ stats.scanned }}</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Clean</span>
+          <span class="stat-value" data-rspamd-stat="clean">{{ stats.clean }}</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Blocked Spam</span>
+          <span class="stat-value" data-rspamd-stat="spam">{{ stats.spam }}</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Spam Ratio</span>
+          <span class="stat-value" data-rspamd-stat="spam_percentage">{{ stats.spam_percentage }}%</span>
         </div>
       </div>
 
-      <!-- Controls -->
-      <div class="section mb-xl">
-        <div class="section__body">
-          <h3 style="margin-top: 0; margin-bottom: 1rem; font-size: var(--font-h3);">Service Control</h3>
+      <!-- Service Controls -->
+      <div class="panel-section">
+        <h3 class="panel-section-title">Service Control</h3>
 
-          <div class="form-group mb-lg">
-            <label class="form-label">Service State</label>
-            <div style="display: flex; gap: 8px;">
-              {% if status.running %}
-                <button type="button" class="btn btn--danger btn--sm" onclick="rspamdAction('stop')">Stop Service</button>
-                <button type="button" class="btn btn--ghost btn--sm" onclick="rspamdAction('restart')">Restart Service</button>
-              {% else %}
-                <button type="button" class="btn btn--primary btn--sm" onclick="rspamdAction('start')">Start Service</button>
-              {% endif %}
-            </div>
+        <div class="form-group">
+          <label class="form-label">Service State</label>
+          <div style="display: flex; gap: 8px;">
+            {% if status.running %}
+              <button type="button" class="btn danger btn--sm" onclick="rspamdAction('stop')">Stop Service</button>
+              <button type="button" class="btn ghost btn--sm" onclick="rspamdAction('restart')">Restart Service</button>
+            {% else %}
+              <button type="button" class="btn primary btn--sm" onclick="rspamdAction('start')">Start Service</button>
+            {% endif %}
           </div>
+        </div>
 
-          <div class="form-group">
-            <label class="form-label">Maddy Mail Integration</label>
-            <p class="form-hint mb-xs">Routes incoming email traffic through Rspamd for all Maddy mail domains.</p>
-            <div style="display: flex; gap: 8px;">
-              {% if status.maddy_integrated %}
-                <button type="button" class="btn btn--ghost btn--sm" onclick="toggleMaddy(false)">Disable Protection</button>
-              {% else %}
-                <button type="button" class="btn btn--primary btn--sm" onclick="toggleMaddy(true)">Enable Protection</button>
-              {% endif %}
-            </div>
+        <div class="form-group" style="margin-top: 8px;">
+          <label class="form-label">Maddy Mail Integration</label>
+          <p class="form-hint">Routes incoming email traffic through Rspamd for all Maddy mail domains.</p>
+          <div style="display: flex; gap: 8px; margin-top: 6px;">
+            {% if status.maddy_integrated %}
+              <button type="button" class="btn ghost btn--sm" onclick="toggleMaddy(false)">Disable Protection</button>
+            {% else %}
+              <button type="button" class="btn primary btn--sm" onclick="toggleMaddy(true)">Enable Protection</button>
+            {% endif %}
           </div>
         </div>
       </div>
 
       <!-- Settings -->
-      <div class="section">
-        <div class="section__body">
-          <h3 style="margin-top: 0; margin-bottom: 1rem; font-size: var(--font-h3);">Threshold Settings</h3>
-          <form id="threshold-form" onsubmit="saveThresholds(event)" style="max-width: 400px;">
-            <div class="form-group mb-md">
-              <label class="form-label" for="junk-score">Junk / Add Header Score</label>
-              <input type="number" step="0.5" min="1" max="50" class="form-control" id="junk-score" value="{{ thresholds.add_header }}" required />
-              <div class="form-hint">Messages above this score get tagged as spam.</div>
-            </div>
+      <div class="panel-section">
+        <h3 class="panel-section-title">Threshold Settings</h3>
+        <form id="threshold-form" onsubmit="saveThresholds(event)" style="max-width: 440px; display: flex; flex-direction: column; gap: 16px;">
+          <div class="form-group">
+            <label class="form-label" for="junk-score">Junk / Add Header Score</label>
+            <input type="number" step="0.5" min="1" max="50" class="form-control" id="junk-score" value="{{ thresholds.add_header }}" required />
+            <p class="form-hint">Messages above this score get tagged as spam.</p>
+          </div>
 
-            <div class="form-group mb-lg">
-              <label class="form-label" for="reject-score">Hard Reject Score</label>
-              <input type="number" step="0.5" min="2" max="100" class="form-control" id="reject-score" value="{{ thresholds.reject }}" required />
-              <div class="form-hint">Messages above this score are rejected.</div>
-            </div>
+          <div class="form-group">
+            <label class="form-label" for="reject-score">Hard Reject Score</label>
+            <input type="number" step="0.5" min="2" max="100" class="form-control" id="reject-score" value="{{ thresholds.reject }}" required />
+            <p class="form-hint">Messages above this score are rejected.</p>
+          </div>
 
-            <button type="submit" class="btn btn--primary" id="save-thresholds-btn">Save Settings</button>
-          </form>
-        </div>
+          <div>
+            <button type="submit" class="btn primary" id="save-thresholds-btn">Save Settings</button>
+          </div>
+        </form>
       </div>
     {% endif %}
-  </main>
+  </div>
 </div>
 
 <script>

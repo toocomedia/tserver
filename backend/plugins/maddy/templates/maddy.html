@@ -11,8 +11,19 @@
 
 {% block content %}
 <div class="workspace">
+  <!-- Mobile Domain Switcher Toggle Bar -->
+  <div class="mobile-domain-bar">
+    <button type="button" class="mobile-domain-toggle-btn" onclick="toggleMobileSidebar()">
+      <span style="display: flex; align-items: center; gap: 6px;">
+        <svg style="width:14px; height:14px; fill:currentColor; opacity:0.8;" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></path></svg>
+        <span>Domain: <strong id="mobile-active-domain-name">Select Domain</strong></span>
+      </span>
+      <svg style="width:12px; height:12px; fill:currentColor; opacity:0.7;" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></path></svg>
+    </button>
+  </div>
+
   <!-- 3. Simple Side List -->
-  <div class="floating-list">
+  <div class="floating-list" id="maddy-floating-sidebar">
     
     <div class="flex-between" style="padding: 0 16px; margin-bottom: 8px;">
         <div style="font-weight: 600; font-size: 14px; color: var(--text-main);">Mail Domains</div>

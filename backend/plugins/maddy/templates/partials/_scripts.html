@@ -11,11 +11,26 @@ function getCsrfToken() {
 }
 
 // ---------------------------------------------------------------------------
-// Sidebar Active State & Search Filter
+// Sidebar Active State, Mobile Toggle & Search Filter
 // ---------------------------------------------------------------------------
+function toggleMobileSidebar() {
+  const sidebar = document.getElementById('maddy-floating-sidebar');
+  if (sidebar) {
+    sidebar.classList.toggle('mobile-open');
+  }
+}
+
 function setSidebarActiveText(text) {
+  const mobileLabel = document.getElementById('mobile-active-domain-name');
+  if (mobileLabel) mobileLabel.innerText = text;
+
+  const sidebar = document.getElementById('maddy-floating-sidebar');
+  if (sidebar && sidebar.classList.contains('mobile-open')) {
+    sidebar.classList.remove('mobile-open');
+  }
+
   document.querySelectorAll('#listContent .list-item').forEach(el => {
-    if (el.innerText.trim() === text) {
+    if (el.innerText.trim() === text.trim()) {
       el.classList.add('active');
     } else {
       el.classList.remove('active');
