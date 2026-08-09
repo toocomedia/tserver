@@ -22,11 +22,13 @@
     </button>
   </div>
 
-  <!-- 3. Simple Side List -->
+  <!-- 3. Mail Domains Floating Sidebar -->
   <div class="floating-list" id="maddy-floating-sidebar">
     
-    <div class="sidebar-top-section">
-      <!-- Line 1: Title & Expanding Search Toggle -->
+    <!-- Domain List Card Box Surface (Contains Header + Items) -->
+    <div class="list-container-wrap">
+      
+      <!-- Header: Title & Expanding Search Toggle inside top of box -->
       <div class="sidebar-header" id="sidebarHeader">
         <div class="sidebar-title">Mail Domains</div>
         
@@ -38,17 +40,6 @@
         </div>
       </div>
 
-      <!-- Line 2: Big Width Add Button under Title -->
-      {% if plugin_installed %}
-        <button type="button" class="sidebar-big-add-btn" onclick="openAddDomain()" title="Add Domain">
-          <svg style="width:14px; height:14px; fill:currentColor;" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
-          <span>Add Domain</span>
-        </button>
-      {% endif %}
-    </div>
-
-    <!-- Domain List Container -->
-    <div class="list-container-wrap">
       <button type="button" class="sidebar-scroll-btn scroll-up" onclick="scrollDomains(-1)" title="Scroll up">
         <svg viewBox="0 0 24 24"><path d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"/></svg>
       </button>
@@ -71,6 +62,14 @@
         <svg viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg>
       </button>
     </div>
+
+    <!-- Add Domain Button under Domain List Box -->
+    {% if plugin_installed %}
+      <button type="button" class="sidebar-big-add-btn" onclick="openAddDomain()" title="Add Domain">
+        <svg style="width:14px; height:14px; fill:currentColor;" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+        <span>Add Domain</span>
+      </button>
+    {% endif %}
 
   </div>
 
