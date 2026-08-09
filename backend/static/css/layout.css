@@ -269,6 +269,13 @@
   letter-spacing: 0.02em;
 }
 
+/* View switcher in topbar matches the compact 28px button height */
+.page-header__actions .layout-switcher__btn {
+  height: 28px;
+  font-size: 11px;
+  padding: 0 8px;
+}
+
 .content {
   flex: 1;
   overflow-y: auto;

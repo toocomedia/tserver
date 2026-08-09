@@ -257,6 +257,8 @@
   flex-wrap: wrap;
   gap: 16px;
   margin-bottom: 28px;
+  /* Match real .stat-grid: indent from page edges + top breathing room */
+  padding: var(--page-gutter) var(--page-gutter) 0;
 }
 .skeleton-stat-card {
   flex: 1 1 180px;
@@ -267,7 +269,6 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  border-radius: 4px;
 }
 .skeleton-stat-card .sk-label {
   width: 60%;
