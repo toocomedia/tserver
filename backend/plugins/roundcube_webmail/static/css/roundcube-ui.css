@@ -220,7 +220,7 @@
     width: 100%;
     flex: 1;
     height: 100%;
-    background: var(--bg-hover, rgba(0, 0, 0, 0.04));
+    background: var(--bg-glass, var(--color-surface, rgba(125, 125, 125, 0.04)));
     border: none !important;
     border-radius: var(--radius-lg, 12px) !important;
     overflow: hidden;
@@ -269,7 +269,7 @@
 
 .sidebar-scroll-btn:hover {
     opacity: 1;
-    background: var(--bg-hover, rgba(0, 0, 0, 0.08));
+    background: var(--bg-glass-hover, rgba(125, 125, 125, 0.08));
     color: var(--text-main);
 }
 .sidebar-scroll-btn svg {
@@ -741,4 +741,104 @@
     .roundcube-title {
         font-size: 20px;
     }
+}
+
+/* Modals & Backdrop (iOS Style Confirmation Windows) */
+.modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    padding: 16px;
+    box-sizing: border-box;
+}
+
+.modal-backdrop.hidden {
+    display: none !important;
+}
+
+.modal.ios-modal {
+    background: var(--bg-panel, var(--color-surface, #18181b)) !important;
+    border: 1px solid var(--color-line, rgba(125, 125, 125, 0.15)) !important;
+    border-radius: 16px !important;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+    padding: 0;
+    width: 100%;
+    color: var(--text-main);
+}
+
+.ios-modal-body {
+    padding: 24px 24px 20px 24px;
+    color: var(--text-main);
+}
+
+.ios-modal-footer {
+    display: flex;
+    width: 100%;
+    height: 48px;
+    border-top: 1px solid var(--color-line, rgba(125, 125, 125, 0.15));
+    margin: 0;
+    padding: 0;
+    align-items: stretch;
+}
+
+.ios-modal-btn {
+    flex: 1 1 50%;
+    width: 50%;
+    height: 48px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    line-height: 1;
+    background: transparent;
+    border: none !important;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+    border-radius: 0 !important;
+    margin: 0;
+    padding: 0 16px;
+    outline: none !important;
+    box-sizing: border-box;
+}
+
+.ios-modal-btn:not(:last-child) {
+    border-right: 1px solid var(--color-line, rgba(125, 125, 125, 0.15)) !important;
+}
+
+.ios-modal-btn:hover {
+    background: var(--bg-glass-hover, rgba(125, 125, 125, 0.08));
+    color: var(--text-main);
+}
+
+.ios-modal-btn.danger-text {
+    color: var(--btn-danger-text, #ef4444);
+    font-weight: 600;
+}
+
+.ios-modal-btn.danger-text:hover {
+    background: var(--btn-danger-bg, rgba(239, 68, 68, 0.12));
+    color: var(--btn-danger-text, #ef4444);
+}
+
+.ios-modal-btn.primary-text {
+    color: var(--accent, var(--btn-primary-text, var(--text-main)));
+    font-weight: 600;
+}
+
+.ios-modal-btn.primary-text:hover {
+    background: var(--bg-glass-hover, rgba(125, 125, 125, 0.08));
+    color: var(--accent, var(--btn-primary-text, var(--text-main)));
 }

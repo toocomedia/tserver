@@ -99,13 +99,17 @@
           <h2 class="roundcube-title">{{ selected_domain }}</h2>
           <p class="roundcube-subtitle">{{ selected_domain_data.mailbox_count or 0 }} mailbox(es) configured for this domain</p>
         </div>
-        <div class="domain-header-actions">
+        <div class="domain-header-actions" style="display: flex; gap: 8px; align-items: center;">
           {% if selected_site and selected_site.ssl_status == 'ready' %}
             <a class="btn primary" id="open-webmail-button"
               href="https://{{ selected_site.public_host }}/" target="_blank" rel="noopener">Open Webmail</a>
           {% else %}
             <button class="btn primary" id="open-webmail-button" type="button" disabled
               title="Finish DNS and HTTPS setup first.">Open Webmail</button>
+          {% endif %}
+
+          {% if selected_site %}
+            <button class="btn danger" type="button" onclick="openDeleteRoundcubeModal('{{ selected_domain }}', '{{ selected_site.public_host }}')">Delete Domain</button>
           {% endif %}
         </div>
       </div>
@@ -118,9 +122,6 @@
           role="tab" data-tab="domain" aria-selected="{{ 'false' if selected_site else 'true' }}">Domain &amp; DNS</button>
         <button class="tab roundcube-tab-button" type="button" role="tab" data-tab="https" aria-selected="false">HTTPS</button>
         <button class="tab roundcube-tab-button" type="button" role="tab" data-tab="mail" aria-selected="false">Mail Server</button>
-        {% if selected_site %}
-          <button class="tab roundcube-tab-button" type="button" role="tab" data-tab="remove" aria-selected="false">Remove</button>
-        {% endif %}
       </div>
 
       <!-- Overview Tab -->
@@ -228,20 +229,6 @@
           <p style="color: var(--text-muted); font-size: 13px;">Configure and save the webmail hostname first.</p>
         {% endif %}
       </div>
-
-      <!-- Remove Tab -->
-      {% if selected_site %}
-        <div class="roundcube-tab-panel" data-panel="remove" role="tabpanel">
-          <p style="color: var(--text-muted); font-size: 13px; line-height: 1.6; margin-bottom: 16px;">
-            This action removes the webmail URL <strong>https://{{ selected_site.public_host }}/</strong>, its proxy configuration, panel-managed DNS A record, and SSL certificate.
-            Maddy mailboxes and emails are <strong>preserved</strong>.
-          </p>
-          <div>
-            <button class="btn danger" id="open-delete-modal-btn" type="button" onclick="openDeleteRoundcubeModal('{{ selected_domain }}', '{{ selected_site.public_host }}')">Delete Domain</button>
-          </div>
-          <div id="delete-result" style="display:none; font-size: 13px; color: #ef4444; margin-top: 8px;"></div>
-        </div>
-      {% endif %}
 
     {% endif %}
   </div>
