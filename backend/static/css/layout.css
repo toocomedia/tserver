@@ -234,7 +234,10 @@
   height: var(--topbar-height);
   /* Horizontal padding only — no side margin/padding on the bar itself */
   padding: 0 var(--page-gutter);
-  border-bottom: 1px solid var(--color-line);
+  /* Explicit background so the bar is always grounded to the page bg */
+  background: var(--color-bg);
+  /* Use sidebar-border color to match the sidebar divider exactly */
+  border-bottom: 1px solid var(--color-sidebar-border);
   flex-shrink: 0;
   flex-wrap: nowrap;
 }
