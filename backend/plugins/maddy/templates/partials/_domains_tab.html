@@ -5,9 +5,10 @@
       <h1 class="maddy-title" id="detail-domain-name"></h1>
       <p class="maddy-subtitle">Mail server configuration</p>
     </div>
-    <button type="button" class="btn primary" id="btn-delete-domain" onclick="confirmDeleteDomain()" style="background: var(--color-danger); color: white;">
-      Delete Domain
-    </button>
+    <div style="display: flex; gap: 8px;">
+        <button type="button" class="btn primary" onclick="toggleAddMailbox()">+ Add Mailbox</button>
+        <button type="button" class="btn danger" id="btn-delete-domain" onclick="confirmDeleteDomain()">Delete Domain</button>
+    </div>
   </div>
 
   <!-- Inner Tab Navigation -->
@@ -28,7 +29,7 @@
       </div>
       
       <!-- Add Mailbox (Naked Column Layout) -->
-      <div style="margin-top: var(--spacing-xl); padding-top: var(--spacing-xl); border-top: 1px solid var(--color-line);">
+      <div id="add-mailbox-container" style="display: none; margin-top: var(--spacing-xl); padding-top: var(--spacing-xl); border-top: 1px solid var(--color-line);">
           <div class="flex-between" style="margin-bottom: var(--spacing-md);">
               <div>
                   <h2 style="font-size: 16px; font-weight: 600; margin: 0; color: var(--text-main);">Add New Mailbox</h2>

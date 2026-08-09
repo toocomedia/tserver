@@ -248,18 +248,12 @@ function renderAccountsList() {
         const openButton = document.createElement('button');
         openButton.type = 'button';
         openButton.className = 'btn';
-        openButton.style.border = '1px solid var(--color-line)';
-        openButton.style.background = 'transparent';
-        openButton.style.color = 'var(--text-main)';
         openButton.textContent = 'Webmail';
         openButton.addEventListener('click', () => openWebmail(acc.email));
         actionsCell.appendChild(openButton);
       } else {
         const setupLink = document.createElement('a');
         setupLink.className = 'btn';
-        setupLink.style.border = '1px solid var(--color-line)';
-        setupLink.style.background = 'transparent';
-        setupLink.style.color = 'var(--text-main)';
         setupLink.style.textDecoration = 'none';
         setupLink.textContent = 'Webmail setup';
         setupLink.href = webmail.setup_url || '/plugins/roundcube_webmail/';
@@ -269,10 +263,7 @@ function renderAccountsList() {
       
       const deleteButton = document.createElement('button');
       deleteButton.type = 'button';
-      deleteButton.className = 'btn';
-      deleteButton.style.background = 'var(--color-danger)';
-      deleteButton.style.color = 'white';
-      deleteButton.style.border = 'none';
+      deleteButton.className = 'btn danger';
       deleteButton.textContent = 'Delete';
       deleteButton.addEventListener('click', () => executeDeleteAccount(acc.email));
       actionsCell.appendChild(deleteButton);
@@ -281,6 +272,16 @@ function renderAccountsList() {
       row.appendChild(actionsCell);
       tbody.appendChild(row);
     });
+  }
+}
+
+function toggleAddMailbox() {
+  const container = document.getElementById('add-mailbox-container');
+  if (container.style.display === 'none' || !container.style.display) {
+    container.style.display = 'block';
+    document.getElementById('add-account-username').focus();
+  } else {
+    container.style.display = 'none';
   }
 }
 

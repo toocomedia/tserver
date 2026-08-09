@@ -229,6 +229,39 @@
     transition: background 0.2s;
 }
 
-/* Layout utilities */
 .flex-row { display: flex; align-items: center; gap: var(--spacing-md); }
 .flex-between { display: flex; align-items: center; justify-content: space-between; }
+
+/* Buttons */
+.workspace .btn {
+    background: var(--color-secondary-btn, rgba(255,255,255,0.1));
+    color: var(--text-main);
+    border: none;
+    padding: 8px 16px;
+    border-radius: var(--radius-sm) !important;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.workspace .btn:hover { 
+    background: var(--color-secondary-hover, rgba(255,255,255,0.15)); 
+}
+.workspace .btn.primary {
+    background: var(--accent);
+    color: var(--on-accent);
+}
+.workspace .btn.primary:hover {
+    opacity: 0.85;
+    background: var(--accent);
+}
+.workspace .btn.danger {
+    background: var(--color-danger, #e53e3e);
+    color: white;
+}
+.workspace .btn.danger:hover {
+    opacity: 0.85;
+}
