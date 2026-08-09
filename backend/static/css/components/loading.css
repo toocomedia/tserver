@@ -300,7 +300,7 @@
   align-items: center;
   justify-content: space-between;
   min-height: 38px;
-  padding: 0 16px;
+  padding: 0 20px;
   border-bottom: 1px solid var(--color-line);
 }
 .skeleton-row .sk-label {
@@ -331,7 +331,7 @@
   display: flex;
   height: 36px;
   background: var(--color-header-bg-bar);
-  padding: 0 16px;
+  padding: 0 20px;
   justify-content: space-between;
   align-items: center;
   border-bottom: 1px solid var(--color-line);
@@ -345,7 +345,7 @@
 .skeleton-table-row {
   display: flex;
   height: 44px;
-  padding: 0 16px;
+  padding: 0 20px;
   justify-content: space-between;
   align-items: center;
   border-bottom: 1px solid var(--color-line);
@@ -397,7 +397,7 @@
   justify-content: space-between;
   gap: 12px;
   background: var(--color-surface);
-  padding: 10px 16px;
+  padding: 10px 20px;
   flex-wrap: wrap;
   border-bottom: 1px solid var(--color-line);
   /* No margin-bottom — the table header below provides the visual break */

@@ -3,8 +3,8 @@
 .table { width: 100% !important; min-width: 100% !important; table-layout: fixed; border-collapse: collapse; font-size: 13px; }
 .table thead tr { background: var(--color-header-bg-bar); height: 36px; }
 .table tbody tr { height: 38px; }
-.table th { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-muted); padding: 10px 14px; text-align: left; border-bottom: none; white-space: nowrap; background: var(--color-header-bg-bar); vertical-align: middle !important; }
-.table td { padding: 10px 14px; border-bottom: 1px solid var(--color-line); color: var(--color-text); vertical-align: middle !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 13px; font-weight: 500; }
+.table th { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-muted); padding: 10px 20px; text-align: left; border-bottom: none; white-space: nowrap; background: var(--color-header-bg-bar); vertical-align: middle !important; }
+.table td { padding: 10px 20px; border-bottom: 1px solid var(--color-line); color: var(--color-text); vertical-align: middle !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 13px; font-weight: 500; }
 .table tbody tr:hover { background: var(--color-surface); }
 .table tr.row--active { background: var(--color-row-active); border-left: 4px solid var(--color-accent); }
 .table .col-cb { width: 40px; text-align: center; }
