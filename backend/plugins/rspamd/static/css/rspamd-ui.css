@@ -1,4 +1,4 @@
-/* Rspamd Spam Filter Plugin Modern UI Styles */
+/* Rspamd Spam Filter Plugin Modern Minimal UI Styles */
 :root {
     /* Spacing rules */
     --spacing-xs: 4px;
@@ -7,17 +7,17 @@
     --spacing-lg: 24px;
     --spacing-xl: 32px;
 
-    /* Universal Panel Theme Colors */
+    /* Strict Theme Variable Mapping */
     --bg-body: var(--color-bg, #09090b);
     --bg-panel: var(--color-surface, #18181b);
-    --bg-glass: var(--color-surface, #18181b);
-    --bg-glass-hover: var(--color-row-active, rgba(125, 125, 125, 0.08));
     --bg-input: var(--color-bg, #09090b);
+    --bg-hover: var(--color-row-active, rgba(125, 125, 125, 0.08));
 
     --text-main: var(--color-text, #f4f4f5);
     --text-muted: var(--color-muted, #a1a1aa);
 
-    /* Universal Adaptive Button Themes */
+    --line-color: var(--color-line, rgba(125, 125, 125, 0.12));
+
     --btn-bg: var(--color-secondary-btn, rgba(125, 125, 125, 0.12));
     --btn-hover: var(--color-secondary-hover, rgba(125, 125, 125, 0.22));
     --btn-text: var(--color-text, #f4f4f5);
@@ -26,17 +26,16 @@
     --btn-primary-hover: var(--color-secondary-hover, rgba(125, 125, 125, 0.28));
     --btn-primary-text: var(--color-text, #ffffff);
 
-    --btn-danger-bg: rgba(239, 68, 68, 0.14);
-    --btn-danger-hover: rgba(239, 68, 68, 0.26);
-    --btn-danger-text: #ef4444;
+    --btn-danger-bg: var(--color-danger-btn, rgba(239, 68, 68, 0.14));
+    --btn-danger-hover: var(--color-danger-hover, rgba(239, 68, 68, 0.26));
+    --btn-danger-text: var(--color-danger, #ef4444);
 
-    /* Structural radius */
     --radius-sm: 4px;
     --radius-md: 8px;
     --radius-lg: 12px;
 }
 
-/* Plugin Workspace - Single Content Panel Layout (No Sidebar) */
+/* Plugin Workspace - Single Content Panel (No Sidebar) */
 .workspace {
     flex: 1;
     display: flex;
@@ -44,11 +43,11 @@
     padding: var(--spacing-lg) var(--spacing-xl);
     min-height: calc(100vh - 120px);
     align-items: flex-start;
-    margin-top: 56px; /* Offset for topbar */
+    margin-top: 56px;
     box-sizing: border-box;
 }
 
-/* Main Content Area */
+/* Flat Main Content Panel - NO Box-in-Box */
 .content-panel {
     flex: 1;
     max-width: 1000px;
@@ -65,15 +64,15 @@
     box-sizing: border-box;
 }
 
-/* Header & Typography */
+/* Header */
 .rspamd-header-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 16px;
     flex-wrap: wrap;
-    padding-bottom: 4px;
-    border-bottom: 1px solid var(--bg-glass-hover);
+    padding-bottom: var(--spacing-md);
+    border-bottom: 1px solid var(--line-color);
 }
 
 .rspamd-title {
@@ -84,14 +83,7 @@
     color: var(--text-main);
 }
 
-.rspamd-subtitle {
-    font-size: 13px;
-    color: var(--text-muted);
-    opacity: 0.9;
-    margin: 4px 0 0 0;
-}
-
-/* Badges */
+/* Badges consuming pure theme variables */
 .badge-minimal {
     display: inline-flex;
     align-items: center;
@@ -108,38 +100,35 @@
 }
 
 .badge-minimal--active {
-    background: rgba(34, 197, 94, 0.15);
-    color: #4ade80;
+    background: var(--color-success-bg, rgba(34, 197, 94, 0.15));
+    color: var(--color-success, #4ade80);
 }
 
 .badge-minimal--neutral {
-    background: rgba(161, 161, 170, 0.15);
+    background: var(--bg-hover);
     color: var(--text-muted);
 }
 
 .badge-minimal--danger {
-    background: rgba(239, 68, 68, 0.15);
-    color: #ef4444;
+    background: var(--btn-danger-bg);
+    color: var(--btn-danger-text);
 }
 
-/* Stats Summary Cards Grid */
-.stats-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 16px;
+/* Flat Stats Summary Row (No Cards/Boxes inside Content Panel) */
+.stats-row {
+    display: flex;
+    align-items: center;
+    gap: 32px;
+    flex-wrap: wrap;
+    padding-bottom: var(--spacing-md);
+    border-bottom: 1px solid var(--line-color);
 }
 
-.stat-card {
-    background: var(--bg-glass-hover, rgba(125, 125, 125, 0.05));
-    border-radius: var(--radius-md) !important;
-    padding: 16px 20px;
+.stat-item {
     display: flex;
     flex-direction: column;
-    transition: background 0.2s ease;
-}
-
-.stat-card:hover {
-    background: var(--bg-glass-hover, rgba(125, 125, 125, 0.09));
+    gap: 4px;
+    min-width: 120px;
 }
 
 .stat-label {
@@ -148,25 +137,27 @@
     color: var(--text-muted);
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    opacity: 0.95;
 }
 
 .stat-value {
-    font-size: 24px;
+    font-size: 22px;
     font-weight: 700;
     color: var(--text-main);
-    margin-top: 6px;
     line-height: 1.2;
 }
 
-/* Section Containers */
+/* Flat Section Layout - NO Nested Cards */
 .panel-section {
-    background: var(--bg-glass-hover, rgba(125, 125, 125, 0.04));
-    border-radius: var(--radius-md) !important;
-    padding: 20px 24px;
     display: flex;
     flex-direction: column;
     gap: 16px;
+    padding-bottom: var(--spacing-md);
+    border-bottom: 1px solid var(--line-color);
+}
+
+.panel-section:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
 }
 
 .panel-section-title {
@@ -177,7 +168,7 @@
     letter-spacing: -0.2px;
 }
 
-/* Form Controls & Strict Borderless Inputs */
+/* Form Controls & Borderless Inputs */
 .form-group {
     display: flex;
     flex-direction: column;
@@ -189,16 +180,8 @@
     font-size: 13.5px;
     font-weight: 600;
     color: var(--text-main);
-    margin: 0 0 2px 0;
-    display: inline-block;
-}
-
-.form-hint {
-    font-size: 12.5px;
-    color: var(--text-muted);
-    opacity: 0.9;
     margin: 0;
-    line-height: 1.4;
+    display: inline-block;
 }
 
 .form-control, .form-input {
@@ -220,13 +203,13 @@
 }
 
 .form-control:focus, .form-input:focus {
-    background: var(--bg-glass-hover);
+    background: var(--bg-hover);
     border: none !important;
     outline: none !important;
     box-shadow: none !important;
 }
 
-/* Buttons - Perfectly Aligned Translucent Buttons */
+/* Buttons - Theme Variable Compliance */
 .btn {
     display: inline-flex;
     align-items: center;
@@ -295,7 +278,7 @@
 }
 
 .btn.ghost:hover {
-    background: var(--bg-glass-hover);
+    background: var(--bg-hover);
     color: var(--text-main);
 }
 
@@ -316,17 +299,17 @@
 }
 
 .content-panel::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.15);
+    background: var(--bg-hover);
     border-radius: 10px;
 }
 
 .content-panel::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.3);
+    background: var(--line-color);
 }
 
 .content-panel {
     scrollbar-width: thin;
-    scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+    scrollbar-color: var(--bg-hover) transparent;
     scroll-behavior: smooth;
 }
 
@@ -360,13 +343,7 @@
         gap: 12px;
     }
 
-    .stats-grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
-}
-
-@media (max-width: 480px) {
-    .stats-grid {
-        grid-template-columns: 1fr;
+    .stats-row {
+        gap: 20px;
     }
 }

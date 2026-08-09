@@ -53,20 +53,20 @@
       </div>
 
       <!-- Stats Summary -->
-      <div class="stats-grid">
-        <div class="stat-card">
+      <div class="stats-row">
+        <div class="stat-item">
           <span class="stat-label">Scanned</span>
           <span class="stat-value" data-rspamd-stat="scanned">{{ stats.scanned }}</span>
         </div>
-        <div class="stat-card">
+        <div class="stat-item">
           <span class="stat-label">Clean</span>
           <span class="stat-value" data-rspamd-stat="clean">{{ stats.clean }}</span>
         </div>
-        <div class="stat-card">
+        <div class="stat-item">
           <span class="stat-label">Blocked Spam</span>
           <span class="stat-value" data-rspamd-stat="spam">{{ stats.spam }}</span>
         </div>
-        <div class="stat-card">
+        <div class="stat-item">
           <span class="stat-label">Spam Ratio</span>
           <span class="stat-value" data-rspamd-stat="spam_percentage">{{ stats.spam_percentage }}%</span>
         </div>

@@ -109,16 +109,16 @@
 
       <!-- Overview Tab -->
       <div class="roundcube-tab-panel {% if selected_site %}active{% endif %}" data-panel="overview" role="tabpanel">
-        <div class="grid-responsive-cards" style="margin-top: 8px;">
-          <div class="roundcube-card">
-            <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">DNS Resolution</span>
+        <div class="overview-metrics-row">
+          <div class="overview-metric-item">
+            <span style="font-size: 12px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">DNS Resolution</span>
             <div id="dns-status">
               <span class="badge badge--inactive">{{ "Checking…" if selected_site else "Not configured" }}</span>
             </div>
           </div>
 
-          <div class="roundcube-card">
-            <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">HTTPS Certificate</span>
+          <div class="overview-metric-item">
+            <span style="font-size: 12px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">HTTPS Certificate</span>
             <div id="ssl-status">
               <span class="badge {% if selected_site and selected_site.ssl_status == 'ready' %}badge--success{% else %}badge--inactive{% endif %}">
                 {{ selected_site.ssl_status if selected_site else "Not configured" }}
@@ -126,9 +126,9 @@
             </div>
           </div>
 
-          <div class="roundcube-card">
-            <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Mailboxes</span>
-            <strong style="font-size: 20px; color: var(--text-main);">{{ selected_domain_data.mailbox_count or 0 }}</strong>
+          <div class="overview-metric-item">
+            <span style="font-size: 12px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Mailboxes</span>
+            <strong style="font-size: 22px; color: var(--text-main); font-weight: 700; line-height: 1.2;">{{ selected_domain_data.mailbox_count or 0 }}</strong>
           </div>
         </div>
 
