@@ -132,9 +132,9 @@
 <div id="toast-container" role="status" aria-live="polite"></div>
 
 <!-- JS -->
-<script src="/static/js/main.js"></script>
-<script src="/static/js/modules/resource-guard-banner.js"></script>
-<script src="/static/js/resource-views.js"></script>
+<script src="/static/js/main.js?v={{ APP_VERSION }}"></script>
+<script src="/static/js/modules/resource-guard-banner.js?v={{ APP_VERSION }}"></script>
+<script src="/static/js/resource-views.js?v={{ APP_VERSION }}"></script>
 <script>
 document.addEventListener("DOMContentLoaded", function() {
   var bar = document.getElementById("top-progress-bar");

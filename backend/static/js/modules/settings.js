@@ -390,7 +390,11 @@
     if (themeRadios.length) {
       const savedTheme = localStorage.getItem("theme") || "system";
       themeRadios.forEach(radio => {
-        if (radio.value === savedTheme) radio.checked = true;
+        if (radio.value === savedTheme) {
+          radio.checked = true;
+          const card = radio.closest('.settings-choice');
+          if (card) card.classList.add('settings-choice--active');
+        }
         
         radio.addEventListener("change", (e) => {
           if (e.target.checked) {
@@ -425,7 +429,11 @@
     if (sidebarRadios.length) {
       const savedStyle = localStorage.getItem("sidebar_style") || "full";
       sidebarRadios.forEach(radio => {
-        if (radio.value === savedStyle) radio.checked = true;
+        if (radio.value === savedStyle) {
+          radio.checked = true;
+          const card = radio.closest('.settings-choice');
+          if (card) card.classList.add('settings-choice--active');
+        }
         
         radio.addEventListener("change", (e) => {
           if (e.target.checked) {

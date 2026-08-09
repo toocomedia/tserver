@@ -151,12 +151,12 @@
 /* Sidebar Active Style: Just Line */
 html[data-sidebar-style="line"] .sidebar__item--active,
 html[data-sidebar-style="line"] .sidebar__item--active:hover {
-  background: transparent;
-  color: var(--color-accent);
+  background: transparent !important;
+  color: var(--color-accent) !important;
 }
 
 html[data-sidebar-style="line"] .sidebar__item--active {
-  border-left-color: var(--color-accent);
+  border-left-color: var(--color-accent) !important;
 }
 
 .sidebar__item svg {
