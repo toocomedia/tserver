@@ -72,17 +72,3 @@
    (which has no horizontal padding) to align with page gutter. */
 .px-gutter   { padding-left: var(--page-gutter); padding-right: var(--page-gutter); }
 .content-pad { padding-left: var(--page-gutter); padding-right: var(--page-gutter); }
-
-/* Direct children of content__inner that are NOT full-width flush bars
-   need horizontal indent to align with page gutter.
-   Sections are excluded — they contain flush bars that handle their own padding. */
-.content__inner > .alert,
-.content__inner > .layout-2col,
-.content__inner > .master-card,
-.content__inner > .hero-app-box,
-.content__inner > .step-bar,
-.content__inner > .form-group {
-  padding-left: var(--page-gutter);
-  padding-right: var(--page-gutter);
-  box-sizing: border-box;
-}

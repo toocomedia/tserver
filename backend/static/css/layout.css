@@ -279,10 +279,10 @@
   max-width: 100%;
   margin-inline: 0;
   position: relative;
-  /* NO horizontal padding — full-width header bars (.section__header,
-     .list-title-bar, .action-toolbar) go edge-to-edge.
-     Vertical padding only for breathing room below the header divider. */
-  padding: var(--page-gutter) 0 var(--space-xl);
+  /* NO horizontal padding — full-width header bars go edge-to-edge.
+     NO top padding — first element (action-toolbar etc.) sits flush
+     directly under the page-header divider line. */
+  padding: 0 0 var(--space-xl);
 }
 
 /* Use .content-pad on content blocks that need horizontal indent
