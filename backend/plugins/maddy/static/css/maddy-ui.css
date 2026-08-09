@@ -473,5 +473,77 @@ select.form-input option {
     color: #ffffff;
 }
 
+/* Responsive Layout Breakpoints */
+@media (max-width: 992px) {
+    .workspace {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 16px;
+        min-height: auto;
+        gap: 16px;
+        margin-top: 56px;
+    }
+
+    .floating-list {
+        width: 100%;
+        height: auto;
+        max-height: 220px;
+        align-self: stretch;
+        margin: 0;
+        flex-shrink: 0;
+    }
+
+    .content-panel {
+        width: 100%;
+        height: auto;
+        min-height: 500px;
+        padding: 24px 20px;
+    }
+
+    .tabs {
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+}
+
+@media (max-width: 640px) {
+    .workspace {
+        padding: 12px 8px;
+        gap: 12px;
+        margin-top: 50px;
+    }
+
+    .floating-list {
+        padding: 12px 0;
+        max-height: 180px;
+    }
+
+    .content-panel {
+        padding: 16px 12px;
+        border-radius: var(--radius-md) !important;
+    }
+
+    .maddy-title {
+        font-size: 20px;
+    }
+
+    .data-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+
+    .data-row .flex-row {
+        width: 100%;
+        justify-content: flex-end;
+    }
+
+    .modal-backdrop .modal {
+        width: 92% !important;
+        max-width: 100% !important;
+        margin: 0 auto;
+    }
+}
+
 
 
