@@ -13,6 +13,36 @@ function getCsrfToken() {
 // ---------------------------------------------------------------------------
 // Sidebar Active State, Mobile Toggle & Search Filter
 // ---------------------------------------------------------------------------
+function scrollDomains(direction) {
+  const listEl = document.getElementById('listContent');
+  if (listEl) {
+    listEl.scrollBy({ top: direction * 40, behavior: 'smooth' });
+  }
+}
+
+function toggleSidebarSearch() {
+  const header = document.getElementById('sidebarHeader');
+  const input = document.getElementById('sidebarSearchInput');
+  if (header && input) {
+    const isActive = header.classList.contains('search-active');
+    if (!isActive) {
+      header.classList.add('search-active');
+      input.focus();
+    } else if (!input.value.trim()) {
+      header.classList.remove('search-active');
+    } else {
+      input.focus();
+    }
+  }
+}
+
+function onSidebarSearchBlur(input) {
+  if (!input.value.trim()) {
+    const header = document.getElementById('sidebarHeader');
+    if (header) header.classList.remove('search-active');
+  }
+}
+
 function toggleMobileSidebar() {
   const sidebar = document.getElementById('maddy-floating-sidebar');
   if (sidebar) {

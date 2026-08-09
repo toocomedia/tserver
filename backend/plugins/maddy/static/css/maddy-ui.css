@@ -1,4 +1,6 @@
 /* Maddy Plugin Modern UI Styles */
+@import url('/static/css/components/plugin-sidebar.css');
+
 :root {
     /* Strict padding and margin rules */
     --spacing-xs: 4px;
@@ -47,28 +49,205 @@
     margin-top: 56px; /* Offset for topbar */
 }
 
-/* 3. Mail Domains Floating Sidebar (Fixed Height, Vertically Centered) */
+/* 3. Mail Domains Floating Sidebar */
 .floating-list {
     width: 240px;
-    height: 520px;
-    align-self: center; /* Vertically centered independently */
+    height: auto;
+    align-self: center;
     margin: auto 0;
-    background: var(--bg-glass);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border-radius: var(--radius-lg) !important;
+    background: transparent;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
     display: flex;
     flex-direction: column;
     padding: 16px 0;
     flex-shrink: 0;
-    gap: 12px;
+    gap: 8px;
+    box-sizing: border-box;
+}
+
+/* Sidebar Top Section */
+.sidebar-top-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 0 16px;
+}
+
+/* Sidebar Header (Title + Search toggle) */
+.sidebar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 28px;
+    position: relative;
+    gap: 8px;
+}
+
+.sidebar-title {
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--text-main);
+    white-space: nowrap;
+    transition: opacity 0.2s ease, width 0.2s ease;
+}
+
+.sidebar-header.search-active .sidebar-title {
+    opacity: 0;
+    width: 0;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.header-icon-btn {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-sm) !important;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+    padding: 0;
+    flex-shrink: 0;
+}
+
+.header-icon-btn:hover {
+    background: var(--bg-glass-hover, rgba(125, 125, 125, 0.08));
+    color: var(--text-main);
+}
+
+.header-icon-btn svg {
+    width: 15px;
+    height: 15px;
+    fill: currentColor;
+}
+
+.expandable-search {
+    position: relative;
+    display: flex;
+    align-items: center;
+    transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    width: 28px;
+    height: 28px;
+    margin-left: auto;
+}
+
+.sidebar-header.search-active .expandable-search {
+    width: 100%;
+}
+
+.expandable-search .search-toggle-btn {
+    position: absolute;
+    right: 0;
+    top: 0;
+    z-index: 2;
+}
+
+.sidebar-header.search-active .expandable-search .search-toggle-btn {
+    left: 0;
+    right: auto;
+}
+
+.expandable-search-input {
+    width: 0;
+    opacity: 0;
+    pointer-events: none;
+    background: var(--bg-input, rgba(255, 255, 255, 0.06));
+    border: none !important;
+    outline: none !important;
+    border-radius: var(--radius-sm) !important;
+    color: var(--text-main);
+    font-size: 12px;
+    height: 28px;
+    padding: 0;
+    transition: width 0.25s ease, opacity 0.2s ease, padding 0.25s ease;
+}
+
+.sidebar-header.search-active .expandable-search-input {
+    width: 100%;
+    opacity: 1;
+    pointer-events: auto;
+    padding: 0 8px 0 28px;
+}
+
+/* Big Width Add Button under Title */
+.sidebar-big-add-btn {
+    width: 100%;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: var(--radius-sm, 6px) !important;
+    background: var(--btn-primary-bg, var(--color-secondary-btn, rgba(125, 125, 125, 0.18)));
+    color: var(--btn-primary-text, var(--text-main));
+    border: none !important;
+    cursor: pointer;
+    transition: opacity 0.15s ease, transform 0.1s ease;
+}
+.sidebar-big-add-btn:hover {
+    opacity: 0.9;
+}
+
+/* Divider between top section and list */
+.sidebar-divider {
+    width: calc(100% - 32px);
+    margin: 4px 16px;
+    height: 1px;
+    background-color: var(--color-line, rgba(255, 255, 255, 0.08));
+}
+
+.list-container-wrap {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
 }
 
 .list-content {
-    flex: 1;
+    max-height: 195px; /* Limit 5 domains */
     overflow-y: auto;
     display: flex;
     flex-direction: column;
+    width: 100%;
+    padding: 4px 0;
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 18px, black calc(100% - 18px), transparent 100%);
+    mask-image: linear-gradient(to bottom, transparent 0%, black 18px, black calc(100% - 18px), transparent 100%);
+    scrollbar-width: none;
+}
+.list-content::-webkit-scrollbar {
+    display: none;
+}
+
+.sidebar-scroll-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 22px;
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    opacity: 0.5;
+    transition: opacity 0.2s, color 0.2s;
+    padding: 0;
+}
+.sidebar-scroll-btn:hover {
+    opacity: 1;
+    color: var(--text-main);
+}
+.sidebar-scroll-btn svg {
+    width: 14px;
+    height: 14px;
+    fill: currentColor;
 }
 
 .list-item {

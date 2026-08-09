@@ -25,33 +25,58 @@
   <!-- 3. Simple Side List -->
   <div class="floating-list" id="maddy-floating-sidebar">
     
-    <div class="flex-between" style="padding: 0 16px; margin-bottom: 8px;">
-        <div style="font-weight: 600; font-size: 14px; color: var(--text-main);">Mail Domains</div>
-        {% if plugin_installed %}
-          <button type="button" class="btn primary sidebar-add-btn" onclick="openAddDomain()">+ Add</button>
-        {% endif %}
-    </div>
+    <div class="sidebar-top-section">
+      <!-- Line 1: Title & Expanding Search Toggle -->
+      <div class="sidebar-header" id="sidebarHeader">
+        <div class="sidebar-title">Mail Domains</div>
+        
+        <div class="expandable-search" id="expandableSearch">
+          <button type="button" class="header-icon-btn search-toggle-btn" onclick="toggleSidebarSearch()" title="Search domains">
+            <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 14z"/></svg>
+          </button>
+          <input type="text" class="expandable-search-input" id="sidebarSearchInput" placeholder="Search domains..." onblur="onSidebarSearchBlur(this)" oninput="filterDomains(this.value)">
+        </div>
+      </div>
 
-    {% if plugin_installed and mail_domains %}
-    <div class="search-wrap">
-        <svg class="search-icon" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
-        <input type="text" class="search-input" id="domain-search-input" placeholder="Search domains..." oninput="filterDomains(this.value)">
-    </div>
-    {% endif %}
-    
-    <div class="list-content" id="listContent">
+      <!-- Line 2: Big Width Add Button under Title -->
       {% if plugin_installed %}
-        {% if mail_domains %}
-          {% for d in mail_domains %}
-            {{ ui.sidebar_item(d.domain, onclick="openDomainDetail('" + d.domain + "', '" + d.server_ip + "')", active=(loop.index == 1)) }}
-          {% endfor %}
-        {% else %}
-          <div style="padding: 16px 28px; color: var(--text-muted); font-size: 13px;">No mail domains configured.</div>
-        {% endif %}
-      {% else %}
-        {{ ui.sidebar_item('Setup required', onclick="", active=True) }}
+        <button type="button" class="sidebar-big-add-btn" onclick="openAddDomain()" title="Add Domain">
+          <svg style="width:14px; height:14px; fill:currentColor;" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+          <span>Add Domain</span>
+        </button>
       {% endif %}
     </div>
+
+    <!-- Top Divider Line -->
+    <div class="sidebar-divider"></div>
+    
+    <!-- Domain List Container -->
+    <div class="list-container-wrap">
+      <button type="button" class="sidebar-scroll-btn scroll-up" onclick="scrollDomains(-1)" title="Scroll up">
+        <svg viewBox="0 0 24 24"><path d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"/></svg>
+      </button>
+
+      <div class="list-content" id="listContent">
+        {% if plugin_installed %}
+          {% if mail_domains %}
+            {% for d in mail_domains %}
+              {{ ui.sidebar_item(d.domain, onclick="openDomainDetail('" + d.domain + "', '" + d.server_ip + "')", active=(loop.index == 1)) }}
+            {% endfor %}
+          {% else %}
+            <div style="padding: 16px 28px; color: var(--text-muted); font-size: 13px;">No mail domains configured.</div>
+          {% endif %}
+        {% else %}
+          {{ ui.sidebar_item('Setup required', onclick="", active=True) }}
+        {% endif %}
+      </div>
+
+      <button type="button" class="sidebar-scroll-btn scroll-down" onclick="scrollDomains(1)" title="Scroll down">
+        <svg viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg>
+      </button>
+    </div>
+
+    <!-- Bottom Divider Line -->
+    <div class="sidebar-divider"></div>
 
   </div>
 

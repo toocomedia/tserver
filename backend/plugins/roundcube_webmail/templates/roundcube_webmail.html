@@ -27,38 +27,68 @@
 
   <!-- Floating Domain Sidebar -->
   <div class="floating-list" id="roundcube-floating-sidebar">
-    <div style="padding: 0 16px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between;">
-      <div style="font-weight: 600; font-size: 14px; color: var(--text-main);">Mail Domains</div>
-    </div>
+    
+    <div class="sidebar-top-section">
+      <!-- Line 1: Title & Expanding Search Toggle -->
+      <div class="sidebar-header" id="sidebarHeader">
+        <div class="sidebar-title">Mail Domains</div>
+        
+        <div class="expandable-search" id="expandableSearch">
+          <button type="button" class="header-icon-btn search-toggle-btn" onclick="toggleSidebarSearch()" title="Search domains">
+            <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+          </button>
+          <input type="text" class="expandable-search-input" id="sidebarSearchInput" placeholder="Search domains..." onblur="onSidebarSearchBlur(this)" oninput="filterDomains(this.value)">
+        </div>
+      </div>
 
-    <div class="list-content">
-      {% if domain_rows %}
-        {% for item in domain_rows %}
-          <a class="list-item {% if item.domain == selected_domain %}active{% endif %}"
-            href="/plugins/roundcube_webmail/?domain={{ item.domain }}">
-            <span style="overflow:hidden;text-overflow:ellipsis;flex:1;">{{ item.domain }}</span>
-            {% if item.public_url %}
-              <span class="badge badge--success" style="margin-left:auto;">Ready</span>
-            {% elif item.site %}
-              <span class="badge badge--inactive" style="margin-left:auto;">Setup</span>
-            {% else %}
-              <span class="badge badge--inactive" style="margin-left:auto;">Add</span>
-            {% endif %}
-          </a>
-        {% endfor %}
-      {% else %}
-        <div class="list-item active">No mail domains</div>
-      {% endif %}
-
+      <!-- Line 2: Big Width Add Button under Title -->
       {% set addable = domain_rows | selectattr('site', 'none') | list %}
       {% if addable %}
-        <a class="list-item" href="/plugins/roundcube_webmail/?domain={{ addable[0].domain }}" style="font-weight: 600; margin-top: 8px;">
-          + Add Webmail Domain
+        <a class="sidebar-big-add-btn" href="/plugins/roundcube_webmail/?domain={{ addable[0].domain }}" title="Add Webmail Domain">
+          <svg style="width:14px; height:14px; fill:currentColor;" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+          <span>Add Webmail</span>
         </a>
       {% endif %}
     </div>
 
-    <div style="padding: 12px 16px 0 16px; border-top: 1px solid var(--bg-glass-hover);">
+    <!-- Top Divider Line -->
+    <div class="sidebar-divider"></div>
+    
+    <!-- Domain List Container -->
+    <div class="list-container-wrap">
+      <button type="button" class="sidebar-scroll-btn scroll-up" onclick="scrollDomains(-1)" title="Scroll up">
+        <svg viewBox="0 0 24 24"><path d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"/></svg>
+      </button>
+
+      <div class="list-content" id="listContent">
+        {% if domain_rows %}
+          {% for item in domain_rows %}
+            <a class="list-item {% if item.domain == selected_domain %}active{% endif %}"
+              href="/plugins/roundcube_webmail/?domain={{ item.domain }}">
+              <span style="overflow:hidden;text-overflow:ellipsis;flex:1;">{{ item.domain }}</span>
+              {% if item.public_url %}
+                <span class="badge badge--success" style="margin-left:auto;">Ready</span>
+              {% elif item.site %}
+                <span class="badge badge--inactive" style="margin-left:auto;">Setup</span>
+              {% else %}
+                <span class="badge badge--inactive" style="margin-left:auto;">Add</span>
+              {% endif %}
+            </a>
+          {% endfor %}
+        {% else %}
+          <div class="list-item active">No mail domains</div>
+        {% endif %}
+      </div>
+
+      <button type="button" class="sidebar-scroll-btn scroll-down" onclick="scrollDomains(1)" title="Scroll down">
+        <svg viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg>
+      </button>
+    </div>
+
+    <!-- Bottom Divider Line -->
+    <div class="sidebar-divider"></div>
+
+    <div style="padding: 12px 16px 0 16px;">
       <div style="font-weight: 600; font-size: 13px; color: var(--text-main);">Roundcube Webmail</div>
       <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">Version {{ plugin_version }} &bull; Shared container</div>
     </div>
@@ -239,6 +269,48 @@
 {% block scripts %}
 <script src="/static/js/features/roundcube-webmail.js"></script>
 <script>
+function scrollDomains(direction) {
+  const listEl = document.getElementById('listContent');
+  if (listEl) {
+    listEl.scrollBy({ top: direction * 40, behavior: 'smooth' });
+  }
+}
+
+function toggleSidebarSearch() {
+  const header = document.getElementById('sidebarHeader');
+  const input = document.getElementById('sidebarSearchInput');
+  if (header && input) {
+    const isActive = header.classList.contains('search-active');
+    if (!isActive) {
+      header.classList.add('search-active');
+      input.focus();
+    } else if (!input.value.trim()) {
+      header.classList.remove('search-active');
+    } else {
+      input.focus();
+    }
+  }
+}
+
+function onSidebarSearchBlur(input) {
+  if (!input.value.trim()) {
+    const header = document.getElementById('sidebarHeader');
+    if (header) header.classList.remove('search-active');
+  }
+}
+
+function filterDomains(query) {
+  const q = (query || '').toLowerCase().trim();
+  document.querySelectorAll('#listContent .list-item').forEach(el => {
+    const text = el.innerText.toLowerCase().trim();
+    if (!q || text.includes(q)) {
+      el.style.display = 'flex';
+    } else {
+      el.style.display = 'none';
+    }
+  });
+}
+
 function toggleMobileSidebar() {
   const sidebar = document.getElementById('roundcube-floating-sidebar');
   if (sidebar) {
