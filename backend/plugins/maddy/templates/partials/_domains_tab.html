@@ -1,11 +1,11 @@
 <div id="domain-detail-view" style="display:none;">
   <!-- Header -->
-  <div class="flex-between" style="margin-bottom: var(--spacing-lg);">
+  <div class="flex-between" style="margin-bottom: var(--spacing-lg); align-items: flex-start;">
     <div>
       <h1 class="maddy-title" id="detail-domain-name"></h1>
       <p class="maddy-subtitle">Mail server configuration</p>
     </div>
-    <div style="display: flex; gap: 8px;">
+    <div style="display: flex; gap: 8px; align-items: center;">
         <button type="button" class="btn primary" onclick="openAddAccountModal()">+ Add Mailbox</button>
         <button type="button" class="btn danger" id="btn-delete-domain" onclick="confirmDeleteDomain()">Delete Domain</button>
     </div>
@@ -125,27 +125,27 @@
   </div>
 </div>
 
-<!-- DELETE DOMAIN CONFIRM MODAL -->
+<!-- DELETE DOMAIN CONFIRM MODAL (iOS Style) -->
 <div id="delete-domain-modal" class="modal-backdrop hidden" role="dialog">
-  <div class="modal" style="max-width:480px;">
-    <div class="modal__header">
-      <h2 style="color:var(--color-danger,#e53e3e);">Delete Mail Domain</h2>
-      <button class="btn" onclick="closeModal('delete-domain-modal')" style="background: transparent; color: var(--text-muted); border: none; font-size: 16px;">✕</button>
-    </div>
-    <div class="modal__body" style="color: var(--text-main); font-size: 14px;">
-      <p style="margin-top: 0;">This permanently deletes <strong id="delete-domain-name"></strong> and all its data:</p>
-      <ul style="padding-left:1.4rem; line-height:2.2; color:var(--text-muted); margin-top:8px;">
+  <div class="modal ios-modal" style="max-width: 440px;">
+    <div class="ios-modal-body">
+      <h2 style="color: var(--text-main); font-size: 18px; font-weight: 600; margin: 0 0 12px 0;">Delete Mail Domain</h2>
+      <p style="margin: 0 0 12px 0; color: var(--text-main); font-size: 14px; line-height: 1.4;">
+        This permanently deletes <strong id="delete-domain-name" style="color: #ffffff;"></strong> and all associated data:
+      </p>
+      <ul style="padding-left: 1.2rem; line-height: 2; color: var(--text-muted); margin: 0 0 12px 0; font-size: 13px;">
         <li>All mailbox accounts</li>
         <li>DNS records (MX, A, SPF, DKIM, DMARC)</li>
-        <li>SSL certificate &amp; nginx config</li>
+        <li>SSL certificate &amp; webmail configuration</li>
         <li>Entry in maddy.conf</li>
       </ul>
-      <p style="margin-top:12px; font-weight:600;">This cannot be undone.</p>
+      <p style="margin: 0; font-weight: 600; font-size: 13px; color: #f87171;">This action cannot be undone.</p>
     </div>
-    <div class="modal__footer">
+    
+    <div class="ios-modal-footer">
       <input type="hidden" id="delete-domain-input">
-      <button type="button" class="btn" style="background: transparent; border: 1px solid var(--color-line); color: var(--text-main);" onclick="closeModal('delete-domain-modal')">Cancel</button>
-      <button type="button" class="btn danger" onclick="executeDeleteDomain()">Delete Everything</button>
+      <button type="button" class="ios-modal-btn" onclick="closeModal('delete-domain-modal')">Cancel</button>
+      <button type="button" class="ios-modal-btn danger-text" onclick="executeDeleteDomain()">Delete Everything</button>
     </div>
   </div>
 </div>

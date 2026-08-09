@@ -32,15 +32,16 @@
     gap: var(--spacing-lg);
     padding: var(--spacing-lg) var(--spacing-xl);
     min-height: calc(100vh - 120px);
-    align-items: center; /* Center children vertically */
+    align-items: flex-start; /* Align children to top */
     margin-top: 56px; /* Offset for topbar */
 }
 
-/* 3. Simple Side List */
+/* 3. Simple Side List (Compact Small Height for Mail Domains) */
 .floating-list {
     width: 240px;
-    height: 65vh;
-    min-height: 520px;
+    height: auto;
+    max-height: 480px;
+    min-height: 280px;
     background: var(--bg-glass);
     border-radius: var(--radius-lg) !important;
     display: flex;
@@ -80,11 +81,11 @@
     font-weight: 600;
 }
 
-/* 4. Main Content Area */
+/* 4. Main Content Area (Full Height Workspace Card) */
 .content-panel {
     flex: 1;
-    height: 65vh;
-    min-height: 520px;
+    min-height: 560px;
+    height: calc(100vh - 140px);
     background-color: var(--bg-panel);
     border-radius: var(--radius-lg) !important;
     padding: var(--spacing-xl);
@@ -275,78 +276,63 @@ select.form-input option {
 .flex-row { display: flex; align-items: center; gap: var(--spacing-md); }
 .flex-between { display: flex; align-items: center; justify-content: space-between; }
 
-/* Minimal, Clean & Scaled Buttons with Opacity Blending */
+/* Buttons - Clean Solid Colors & Uniform Dimensions */
 .btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     height: 32px;
-    padding: 0 14px;
+    padding: 0 12px;
+    margin: 0;
     font-size: 13px;
     font-weight: 500;
     line-height: 1;
-    border-radius: var(--radius-sm) !important;
-    background: var(--color-secondary-btn, rgba(255, 255, 255, 0.08));
-    color: var(--text-main);
-    border: none !important;
-    opacity: 0.85;
+    border-radius: var(--radius-sm, 6px) !important;
+    background: #27272a;
+    color: #f4f4f5;
+    border: 1px solid #3f3f46 !important;
     cursor: pointer;
-    transition: opacity 0.2s ease, background 0.2s ease, transform 0.1s ease;
+    transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
     text-decoration: none;
     white-space: nowrap;
     box-sizing: border-box;
     outline: none !important;
 }
 .btn:hover { 
-    opacity: 1;
-    background: rgba(255, 255, 255, 0.14);
+    background: #3f3f46;
+    border-color: #52525b !important;
     color: #ffffff;
 }
 .btn:active {
     transform: scale(0.98);
 }
 
-/* Primary Button (Solid Accent with Soft Opacity) */
+/* Primary Button - Minimal Solid Accent */
 .btn.primary {
-    background: var(--accent, #3b82f6);
-    color: var(--on-accent, #ffffff);
-    opacity: 0.88;
+    background: #2563eb;
+    color: #ffffff;
+    border: 1px solid #2563eb !important;
     font-weight: 600;
-    border: none !important;
 }
 .btn.primary:hover {
-    opacity: 1;
-    background: var(--accent, #3b82f6);
-    color: var(--on-accent, #ffffff);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    background: #1d4ed8;
+    border-color: #1d4ed8 !important;
+    color: #ffffff;
 }
 
-/* Minimal Danger Button (Solid Danger Color with Opacity) */
+/* Danger Button - Minimal Solid Red */
 .btn.danger {
-    background: var(--color-danger, #e53e3e);
+    background: #dc2626;
     color: #ffffff;
-    opacity: 0.82;
+    border: 1px solid #dc2626 !important;
     font-weight: 500;
-    border: none !important;
 }
 .btn.danger:hover {
-    opacity: 1;
-    background: var(--color-danger, #e53e3e);
+    background: #b91c1c;
+    border-color: #b91c1c !important;
     color: #ffffff;
-    box-shadow: 0 2px 8px rgba(229, 62, 62, 0.25);
 }
 
-/* Button Sizing Utilities */
-.btn-sm {
-    height: 26px;
-    padding: 0 10px;
-    font-size: 12px;
-}
-.btn-lg {
-    height: 38px;
-    padding: 0 18px;
-    font-size: 14px;
-}
 
 
 
@@ -385,5 +371,68 @@ select.form-input option {
     gap: 8px;
     justify-content: flex-end;
 }
+
+/* iOS Style Alert Modal (No Outer Border, Split Full-Width Footer) */
+.modal-backdrop .modal.ios-modal {
+    background: var(--bg-panel, #18181b) !important;
+    border: none !important;
+    border-radius: 16px !important;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+    overflow: hidden;
+    padding: 0;
+}
+
+.ios-modal-body {
+    padding: 24px 24px 20px 24px;
+    color: var(--text-main);
+}
+
+.ios-modal-footer {
+    display: flex;
+    width: 100%;
+    height: 48px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    margin: 0;
+    padding: 0;
+}
+
+.ios-modal-btn {
+    flex: 1;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none !important;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+    border-radius: 0 !important;
+    margin: 0;
+    padding: 0 12px;
+    outline: none !important;
+}
+
+.ios-modal-btn:not(:last-child) {
+    border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+.ios-modal-btn:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-main);
+}
+
+.ios-modal-btn.danger-text {
+    color: #f87171;
+    font-weight: 600;
+}
+
+.ios-modal-btn.danger-text:hover {
+    background: rgba(239, 68, 68, 0.12);
+    color: #ef4444;
+}
+
 
 
