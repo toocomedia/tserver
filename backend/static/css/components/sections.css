@@ -153,6 +153,9 @@
   flex-wrap: wrap;
   gap: 16px;
   margin-bottom: 28px;
+  /* Indent from edge since content__inner has no horizontal padding */
+  padding-left: var(--page-gutter);
+  padding-right: var(--page-gutter);
 }
 .stat-card-box {
   flex: 1 1 180px;

@@ -221,15 +221,19 @@
   opacity: 0;
 }
 
-/* Page Header Skeleton */
+/* Page Header Skeleton — only used if header=1 is explicitly passed.
+   The real page-header is rendered above content__inner by layout.html
+   so most pages pass header=0. Kept for edge-cases. */
 .skeleton-page-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-md);
-  padding: 12px 0 16px 0;
-  margin-bottom: var(--space-xl);
-  flex-wrap: wrap;
+  /* Match real .page-header: same height, same side padding */
+  height: var(--topbar-height);
+  padding: 0 var(--page-gutter);
+  border-bottom: 1px solid var(--color-sidebar-border);
+  margin-bottom: 0;
 }
 .skeleton-page-header .sk-page-title {
   width: 220px;
@@ -396,7 +400,8 @@
   padding: 10px 16px;
   flex-wrap: wrap;
   border-bottom: 1px solid var(--color-line);
-  margin-bottom: 16px;
+  /* No margin-bottom — the table header below provides the visual break */
+  margin-bottom: 0;
   width: 100%;
   animation: skeleton-pulse var(--skeleton-shimmer-duration) infinite ease-in-out;
 }

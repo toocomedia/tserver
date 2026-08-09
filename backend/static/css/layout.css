@@ -279,9 +279,17 @@
   max-width: 100%;
   margin-inline: 0;
   position: relative;
-  /* Side padding lives here so all content aligns to the same column.
-     Top padding gives breathing room below the header divider. */
-  padding: var(--page-gutter) var(--page-gutter) var(--space-xl);
+  /* NO horizontal padding — full-width header bars (.section__header,
+     .list-title-bar, .action-toolbar) go edge-to-edge.
+     Vertical padding only for breathing room below the header divider. */
+  padding: var(--page-gutter) 0 var(--space-xl);
+}
+
+/* Use .content-pad on content blocks that need horizontal indent
+   (e.g. around stat grids, forms, regular text — not on flush bars) */
+.content-pad {
+  padding-left: var(--page-gutter);
+  padding-right: var(--page-gutter);
 }
 
 .content--flush .content__inner {
