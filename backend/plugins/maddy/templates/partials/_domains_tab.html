@@ -122,6 +122,15 @@
               </div>
           </div>
       </div>
+
+      <div style="margin-top: var(--spacing-xl); padding-top: var(--spacing-lg); border-top: 1px solid var(--color-line);">
+          <div style="font-weight: 600; color: var(--text-main); margin-bottom: 4px; font-size: 14px;">Maddy Server Management (v{{ plugin_version }})</div>
+          <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">Inspect live logs, service status, or repair Maddy configuration.</p>
+          <div style="display: flex; gap: 8px;">
+            <button type="button" class="btn" onclick="openMaddyDiagnostics()">Diagnostics &amp; Logs</button>
+            <button type="button" class="btn" id="btn-repair-maddy" onclick="repairMaddyConfig()">Repair Config</button>
+          </div>
+      </div>
   </div>
 </div>
 

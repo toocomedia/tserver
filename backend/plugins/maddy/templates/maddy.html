@@ -14,10 +14,10 @@
   <!-- 3. Simple Side List -->
   <div class="floating-list">
     
-    <div class="flex-between" style="padding: 0 16px; margin-bottom: 4px;">
+    <div class="flex-between" style="padding: 0 28px;">
         <div style="font-weight: 600; font-size: 14px; color: var(--text-main);">Mail Domains</div>
         {% if plugin_installed %}
-          <button class="btn primary btn-sm" onclick="openAddDomain()">+ Add</button>
+          <button class="btn primary" style="padding: 4px 8px; font-size: 12px; border-radius: 4px !important;" onclick="openAddDomain()">+ Add</button>
         {% endif %}
     </div>
 
@@ -35,24 +35,10 @@
             {{ ui.sidebar_item(d.domain, onclick="openDomainDetail('" + d.domain + "', '" + d.server_ip + "')", active=(loop.index == 1)) }}
           {% endfor %}
         {% else %}
-          <div style="padding: 16px; color: var(--text-muted); font-size: 13px;">No mail domains configured.</div>
+          <div style="padding: 16px 28px; color: var(--text-muted); font-size: 13px;">No mail domains configured.</div>
         {% endif %}
       {% else %}
         {{ ui.sidebar_item('Setup required', onclick="", active=True) }}
-      {% endif %}
-    </div>
-    
-    <!-- Footer / Diagnostics -->
-    <div style="padding: 12px 16px 0 16px; margin-top: auto; border-top: 1px solid var(--color-line, rgba(255,255,255,0.08));">
-      <div class="flex-between" style="margin-bottom: 8px;">
-        <div style="font-weight: 600; color: var(--text-main); font-size: 12px;">Maddy Server</div>
-        <div style="font-size: 11px; color: var(--text-muted); font-weight: 500;">v{{ plugin_version }}</div>
-      </div>
-      {% if plugin_installed %}
-        <div style="display: flex; gap: 6px;">
-          <button type="button" class="btn btn-sm" style="flex: 1;" onclick="openMaddyDiagnostics()">Diagnostics</button>
-          <button type="button" class="btn btn-sm" style="flex: 1;" id="btn-repair-maddy" onclick="repairMaddyConfig()">Repair</button>
-        </div>
       {% endif %}
     </div>
 

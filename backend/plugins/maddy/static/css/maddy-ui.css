@@ -32,17 +32,17 @@
     gap: var(--spacing-lg);
     padding: var(--spacing-lg) var(--spacing-xl);
     min-height: calc(100vh - 120px);
-    align-items: flex-start; /* Align children to top */
+    align-items: center; /* Center children vertically */
     margin-top: 56px; /* Offset for topbar */
 }
 
-/* 3. Simple Side List (Compact Small Height for Mail Domains) */
+/* 3. Simple Side List (Fixed 65vh Height, Vertically Centered) */
 .floating-list {
     width: 240px;
-    height: auto;
-    max-height: 480px;
-    min-height: 280px;
+    height: 65vh;
     background: var(--bg-glass);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     border-radius: var(--radius-lg) !important;
     display: flex;
     flex-direction: column;
@@ -81,11 +81,10 @@
     font-weight: 600;
 }
 
-/* 4. Main Content Area (Full Height Workspace Card) */
+/* 4. Main Content Area (Fixed 65vh Height) */
 .content-panel {
     flex: 1;
-    min-height: 560px;
-    height: calc(100vh - 140px);
+    height: 65vh;
     background-color: var(--bg-panel);
     border-radius: var(--radius-lg) !important;
     padding: var(--spacing-xl);
@@ -122,7 +121,7 @@
     border-radius: 100px !important;
     transition: all 0.2s;
     text-decoration: none;
-    border: none;
+    border: none !important;
     background: transparent;
 }
 .tab:hover { 
@@ -276,62 +275,48 @@ select.form-input option {
 .flex-row { display: flex; align-items: center; gap: var(--spacing-md); }
 .flex-between { display: flex; align-items: center; justify-content: space-between; }
 
-/* Buttons - Clean Solid Colors & Uniform Dimensions */
+/* Buttons - Panel Native Styling (No Borders) */
 .btn {
+    background: var(--color-secondary-btn, rgba(255,255,255,0.1));
+    color: var(--text-main);
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    padding: 8px 16px;
+    border-radius: var(--radius-sm) !important;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    height: 32px;
-    padding: 0 12px;
-    margin: 0;
-    font-size: 13px;
-    font-weight: 500;
-    line-height: 1;
-    border-radius: var(--radius-sm, 6px) !important;
-    background: #27272a;
-    color: #f4f4f5;
-    border: 1px solid #3f3f46 !important;
-    cursor: pointer;
-    transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
     text-decoration: none;
-    white-space: nowrap;
-    box-sizing: border-box;
-    outline: none !important;
 }
 .btn:hover { 
-    background: #3f3f46;
-    border-color: #52525b !important;
-    color: #ffffff;
+    background: var(--color-secondary-hover, rgba(255,255,255,0.15)); 
+    border: none !important;
 }
-.btn:active {
-    transform: scale(0.98);
-}
-
-/* Primary Button - Minimal Solid Accent */
 .btn.primary {
-    background: #2563eb;
-    color: #ffffff;
-    border: 1px solid #2563eb !important;
-    font-weight: 600;
+    background: var(--accent);
+    color: var(--on-accent);
+    border: none !important;
 }
 .btn.primary:hover {
-    background: #1d4ed8;
-    border-color: #1d4ed8 !important;
-    color: #ffffff;
+    opacity: 0.85;
+    background: var(--accent);
+    border: none !important;
 }
-
-/* Danger Button - Minimal Solid Red */
 .btn.danger {
-    background: #dc2626;
-    color: #ffffff;
-    border: 1px solid #dc2626 !important;
-    font-weight: 500;
+    background: var(--color-danger, #e53e3e);
+    color: white;
+    border: none !important;
 }
 .btn.danger:hover {
-    background: #b91c1c;
-    border-color: #b91c1c !important;
-    color: #ffffff;
+    opacity: 0.85;
+    border: none !important;
 }
+
 
 
 
