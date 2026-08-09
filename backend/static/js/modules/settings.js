@@ -420,6 +420,31 @@
       });
     }
 
+    // Sidebar style toggle logic
+    const sidebarRadios = document.querySelectorAll('input[name="sidebar_style"]');
+    if (sidebarRadios.length) {
+      const savedStyle = localStorage.getItem("sidebar_style") || "full";
+      sidebarRadios.forEach(radio => {
+        if (radio.value === savedStyle) radio.checked = true;
+        
+        radio.addEventListener("change", (e) => {
+          if (e.target.checked) {
+            sidebarRadios.forEach(r => {
+              const card = r.closest('.settings-choice');
+              if (card) card.classList.toggle('settings-choice--active', r.checked);
+            });
+            const val = e.target.value;
+            localStorage.setItem("sidebar_style", val);
+            if (val === "line") {
+              document.documentElement.setAttribute("data-sidebar-style", "line");
+            } else {
+              document.documentElement.removeAttribute("data-sidebar-style");
+            }
+          }
+        });
+      });
+    }
+
     document.querySelectorAll('input[name="url_mode"]').forEach((el) => {
       el.addEventListener("change", syncUrlModeUi);
     });

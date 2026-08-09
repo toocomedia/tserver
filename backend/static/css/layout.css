@@ -148,6 +148,17 @@
   border-left-color: var(--color-accent-2);
 }
 
+/* Sidebar Active Style: Just Line */
+html[data-sidebar-style="line"] .sidebar__item--active,
+html[data-sidebar-style="line"] .sidebar__item--active:hover {
+  background: transparent;
+  color: var(--color-accent);
+}
+
+html[data-sidebar-style="line"] .sidebar__item--active {
+  border-left-color: var(--color-accent);
+}
+
 .sidebar__item svg {
   width: 16px;
   height: 16px;
