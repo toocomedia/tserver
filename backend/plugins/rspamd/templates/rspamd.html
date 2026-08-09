@@ -76,20 +76,20 @@
       <div class="panel-section">
         <h3 class="panel-section-title">Service Control</h3>
 
-        <div style="display: flex; flex-wrap: wrap; gap: 16px; align-items: center;">
-          <div class="form-group" style="width: auto;">
-            <label class="form-label">Service</label>
+        <div class="service-control-grid">
+          <div class="service-control-card">
+            <label class="form-label">Service State</label>
             <div style="display: flex; gap: 8px;">
               {% if status.running %}
-                <button type="button" class="btn danger btn--sm" onclick="rspamdAction('stop')">Stop</button>
+                <button type="button" class="btn danger btn--sm" onclick="rspamdAction('stop')">Stop Service</button>
                 <button type="button" class="btn ghost btn--sm" onclick="rspamdAction('restart')">Restart</button>
               {% else %}
-                <button type="button" class="btn primary btn--sm" onclick="rspamdAction('start')">Start</button>
+                <button type="button" class="btn primary btn--sm" onclick="rspamdAction('start')">Start Service</button>
               {% endif %}
             </div>
           </div>
 
-          <div class="form-group" style="width: auto;">
+          <div class="service-control-card">
             <label class="form-label">Maddy Integration</label>
             <div style="display: flex; gap: 8px;">
               {% if status.maddy_integrated %}
@@ -105,15 +105,17 @@
       <!-- Settings -->
       <div class="panel-section">
         <h3 class="panel-section-title">Threshold Settings</h3>
-        <form id="threshold-form" onsubmit="saveThresholds(event)" style="max-width: 440px; display: flex; flex-direction: column; gap: 14px;">
-          <div class="form-group">
-            <label class="form-label" for="junk-score">Junk Score</label>
-            <input type="number" step="0.5" min="1" max="50" class="form-control" id="junk-score" value="{{ thresholds.add_header }}" required />
-          </div>
+        <form id="threshold-form" onsubmit="saveThresholds(event)" style="display: flex; flex-direction: column; gap: 16px;">
+          <div class="form-grid-row">
+            <div class="form-group">
+              <label class="form-label" for="junk-score">Junk Score</label>
+              <input type="number" step="0.5" min="1" max="50" class="form-control" id="junk-score" value="{{ thresholds.add_header }}" required />
+            </div>
 
-          <div class="form-group">
-            <label class="form-label" for="reject-score">Hard Reject Score</label>
-            <input type="number" step="0.5" min="2" max="100" class="form-control" id="reject-score" value="{{ thresholds.reject }}" required />
+            <div class="form-group">
+              <label class="form-label" for="reject-score">Hard Reject Score</label>
+              <input type="number" step="0.5" min="2" max="100" class="form-control" id="reject-score" value="{{ thresholds.reject }}" required />
+            </div>
           </div>
 
           <div>

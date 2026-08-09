@@ -7,29 +7,29 @@
     --spacing-lg: 24px;
     --spacing-xl: 32px;
 
-    /* Strict Theme Variable Mapping */
-    --bg-body: var(--color-bg, #09090b);
-    --bg-panel: var(--color-surface, #18181b);
-    --bg-glass: var(--color-surface, #18181b);
-    --bg-input: var(--color-bg, #09090b);
-    --bg-hover: var(--color-row-active, rgba(125, 125, 125, 0.08));
+    /* Strict Panel Theme Variable Mapping */
+    --bg-body: var(--color-bg, #ffffff);
+    --bg-panel: var(--color-surface, #f4f5f2);
+    --bg-glass: var(--color-surface, #f4f5f2);
+    --bg-input: var(--color-bg, #ffffff);
+    --bg-hover: var(--color-row-active, rgba(0, 0, 0, 0.04));
 
-    --text-main: var(--color-text, #f4f4f5);
-    --text-muted: var(--color-muted, #a1a1aa);
+    --text-main: var(--color-text, #0f1720);
+    --text-muted: var(--color-muted, #6b6f6a);
 
-    --line-color: var(--color-line, rgba(125, 125, 125, 0.12));
+    --line-color: var(--color-line, #e2e4dc);
 
-    --btn-bg: var(--color-secondary-btn, rgba(125, 125, 125, 0.12));
-    --btn-hover: var(--color-secondary-hover, rgba(125, 125, 125, 0.22));
-    --btn-text: var(--color-text, #f4f4f5);
+    --btn-bg: var(--color-secondary-btn, #e4e6e0);
+    --btn-hover: var(--color-secondary-hover, #d6d9d0);
+    --btn-text: var(--color-text, #0f1720);
 
-    --btn-primary-bg: var(--color-secondary-btn, rgba(125, 125, 125, 0.18));
-    --btn-primary-hover: var(--color-secondary-hover, rgba(125, 125, 125, 0.28));
-    --btn-primary-text: var(--color-text, #ffffff);
+    --btn-primary-bg: var(--color-secondary-btn, #e4e6e0);
+    --btn-primary-hover: var(--color-secondary-hover, #d6d9d0);
+    --btn-primary-text: var(--color-text, #0f1720);
 
-    --btn-danger-bg: var(--color-danger-btn, rgba(239, 68, 68, 0.14));
-    --btn-danger-hover: var(--color-danger-hover, rgba(239, 68, 68, 0.26));
-    --btn-danger-text: var(--color-danger, #ef4444);
+    --btn-danger-bg: var(--color-danger-btn, #fee2e2);
+    --btn-danger-hover: var(--color-danger-btn, #fca5a5);
+    --btn-danger-text: var(--color-danger-text, #991b1b);
 
     --radius-sm: 4px;
     --radius-md: 8px;
@@ -99,7 +99,7 @@
     font-weight: 600;
 }
 
-/* Flat Main Content Panel - NO Box-in-Box */
+/* Flat Main Content Panel */
 .content-panel {
     flex: 1;
     height: calc(100vh - 140px);
@@ -116,9 +116,9 @@
 
 /* Typography & Titles */
 .roundcube-title {
-    font-size: 22px;
-    font-weight: 700;
-    letter-spacing: -0.3px;
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: -0.2px;
     margin: 0;
     color: var(--text-main);
 }
@@ -203,7 +203,7 @@
     display: flex;
 }
 
-/* Flat Overview Metrics Row - NO Nested Cards */
+/* Flat Overview Metrics Row */
 .overview-metrics-row {
     display: flex;
     align-items: center;
@@ -220,36 +220,36 @@
     min-width: 140px;
 }
 
-/* Form Controls & Borderless Inputs */
+/* Compact, Refined Form Controls & Labels */
 .form-group {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 4px;
     width: 100%;
 }
 
 .form-label {
-    font-size: 13.5px;
-    font-weight: 600;
-    color: var(--text-main);
-    margin: 0;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-muted);
+    margin: 0 0 2px 0;
     display: inline-block;
 }
 
 .form-input {
     width: 100%;
-    height: 38px !important;
-    min-height: 38px !important;
+    height: 34px !important;
+    min-height: 34px !important;
     background: var(--bg-input);
     border: none !important;
     outline: none !important;
     box-shadow: none !important;
-    padding: 0 14px !important;
-    border-radius: var(--radius-md) !important;
+    padding: 0 12px !important;
+    border-radius: var(--radius-sm, 6px) !important;
     color: var(--text-main);
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 500;
-    line-height: 38px;
+    line-height: 34px;
     box-sizing: border-box !important;
     transition: background 0.2s;
 }
@@ -269,23 +269,23 @@
     margin-top: 4px;
 }
 
-/* Badges strictly consuming theme CSS variables */
+/* Badges */
 .badge {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    padding: 4px 10px;
+    padding: 3px 8px;
     border-radius: 100px !important;
     font-size: 11px;
     font-weight: 600;
     line-height: 1;
-    height: 24px;
+    height: 22px;
     box-sizing: border-box;
 }
 
 .badge--success {
-    background: var(--color-success-bg, rgba(34, 197, 94, 0.15));
-    color: var(--color-success, #4ade80);
+    background: var(--color-alert-success-bg, rgba(34, 197, 94, 0.15));
+    color: var(--color-accent-2, #22c55e);
 }
 
 .badge--inactive {
@@ -293,17 +293,17 @@
     color: var(--text-muted);
 }
 
-/* Buttons - Borderless Translucent Styling */
+/* Buttons - Theme Variable Compliance */
 .btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     text-align: center;
-    height: 34px;
-    padding: 0 16px;
+    height: 32px;
+    padding: 0 14px;
     margin: 0;
-    font-size: 13px;
-    font-weight: 600;
+    font-size: 12px;
+    font-weight: 500;
     line-height: 1;
     border-radius: var(--radius-sm, 6px) !important;
     background: var(--btn-bg);
@@ -347,7 +347,7 @@
     background: var(--btn-danger-bg);
     color: var(--btn-danger-text);
     border: none !important;
-    font-weight: 600;
+    font-weight: 500;
 }
 
 .btn.danger:hover, .btn--danger:hover {
@@ -362,8 +362,8 @@
 }
 
 .btn--sm {
-    height: 30px;
-    padding: 0 12px;
+    height: 28px;
+    padding: 0 10px;
     font-size: 12px;
 }
 
