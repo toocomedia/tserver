@@ -19,11 +19,13 @@
 }
 
 .sidebar__logo {
-  padding: var(--space-lg) var(--space-md);
+  height: var(--topbar-height);
+  padding: 0 var(--space-md);
   border-bottom: 1px solid var(--color-sidebar-border);
   display: flex;
   align-items: center;
   gap: var(--space-sm);
+  flex-shrink: 0;
 }
 
 .sidebar__logo-text {
@@ -62,7 +64,6 @@
   transform: translateX(-50%);
   width: 24px;
   height: 24px;
-  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -71,7 +72,6 @@
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   border: 1px solid var(--color-sidebar-border);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
   cursor: pointer;
   z-index: 10;
   opacity: 0;
@@ -223,19 +223,24 @@
   background: var(--color-bg);
 }
 
+/* Page header — height matches sidebar logo so both border-bottoms
+   form one continuous divider line across the full viewport width. */
 .page-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-md);
-  padding: 12px 0 16px 0;
-  margin-bottom: var(--space-xl);
-  flex-wrap: wrap;
+  /* Exact same height as .sidebar__logo so dividers align */
+  height: var(--topbar-height);
+  /* Horizontal padding only — no side margin/padding on the bar itself */
+  padding: 0 var(--page-gutter);
+  border-bottom: 1px solid var(--color-line);
+  flex-shrink: 0;
+  flex-wrap: nowrap;
 }
 
 .content--flush .page-header {
-  padding: var(--page-gutter) var(--page-gutter) var(--space-md);
-  margin-bottom: var(--space-lg);
+  padding: 0 var(--page-gutter);
 }
 
 .page-header__title {
@@ -255,7 +260,9 @@
 .content {
   flex: 1;
   overflow-y: auto;
-  padding: var(--page-gutter);
+  /* No side padding on the scroll container — alignment is handled by
+     content__inner so the page-header bar above can stay edge-to-edge */
+  padding: 0;
 }
 
 .content--flush {
@@ -269,6 +276,9 @@
   max-width: 100%;
   margin-inline: 0;
   position: relative;
+  /* Side padding lives here so all content aligns to the same column.
+     Top padding gives breathing room below the header divider. */
+  padding: var(--page-gutter) var(--page-gutter) var(--space-xl);
 }
 
 .content--flush .content__inner {
@@ -277,6 +287,7 @@
   flex-direction: column;
   max-width: none;
   margin-inline: 0;
+  padding: 0;
 }
 
 .section-header {
