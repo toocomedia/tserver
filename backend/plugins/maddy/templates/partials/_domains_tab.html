@@ -21,11 +21,25 @@
 
   <!-- 1. Mailboxes Tab -->
   <div id="inner-tab-mailboxes" class="inner-tab-content">
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px;">
+        <div style="font-size: 13px; font-weight: 600; color: var(--text-main);" id="mailbox-count-title">
+          Mail Accounts <span id="mailbox-count-badge" style="font-size: 11px; font-weight: 500; color: var(--text-muted); background: var(--bg-glass-hover); padding: 2px 8px; border-radius: 10px; margin-left: 6px;">0</span>
+        </div>
+        <div class="search-wrap" id="account-search-wrap" style="display: none; padding: 0; width: 200px;">
+          <svg class="search-icon" style="left: 10px;" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+          <input type="text" class="search-input" id="account-search-input" style="padding-left: 30px; font-size: 12px; height: 28px;" placeholder="Search accounts..." oninput="onAccountSearch(this.value)">
+        </div>
+      </div>
       <div class="data-list" id="accounts-tbody">
           <!-- Populated by JS renderAccountsList() -->
       </div>
+      <div id="accounts-load-more-wrap" style="display: none; text-align: center; padding: 16px 0 8px 0;">
+        <button type="button" class="btn" id="btn-load-more-accounts" onclick="loadMoreAccounts()" style="font-size: 12px; height: 30px; padding: 0 16px;">
+          Load More Accounts
+        </button>
+      </div>
       <div id="accounts-empty" style="display:none; padding: 24px; text-align: center; color: var(--text-muted); font-size: 13px;">
-        No mailboxes for this domain yet. Add one below.
+        No mailboxes for this domain yet. Add one above.
       </div>
   </div>
 

@@ -163,6 +163,10 @@ async function executeDeleteDomain() {
 function openDomainDetail(domain, serverIp) {
   currentDomain   = domain;
   currentDomainIp = serverIp || currentDomainIp;
+  currentAccountLimit = 10;
+  currentAccountSearchQuery = "";
+  const searchInput = document.getElementById('account-search-input');
+  if (searchInput) searchInput.value = "";
   setSidebarActiveText(domain);
 
   const detailView = document.getElementById('domain-detail-view');
@@ -204,80 +208,129 @@ function switchInnerTab(btnEl) {
 }
 
 // ---------------------------------------------------------------------------
-// Accounts list (filtered by currentDomain)
+// Accounts list & pagination (filtered by currentDomain)
 // ---------------------------------------------------------------------------
+let accountBatchSize = 10;
+let currentAccountLimit = 10;
+let currentAccountSearchQuery = "";
+
+function onAccountSearch(query) {
+  currentAccountSearchQuery = (query || "").trim().toLowerCase();
+  currentAccountLimit = accountBatchSize;
+  renderAccountsList();
+}
+
+function loadMoreAccounts() {
+  currentAccountLimit += accountBatchSize;
+  renderAccountsList();
+}
+
 function renderAccountsList() {
-  const tbody    = document.getElementById('accounts-tbody');
-  const emptyDiv = document.getElementById('accounts-empty');
+  const tbody        = document.getElementById('accounts-tbody');
+  const emptyDiv     = document.getElementById('accounts-empty');
+  const countBadge   = document.getElementById('mailbox-count-badge');
+  const searchWrap   = document.getElementById('account-search-wrap');
+  const loadMoreWrap = document.getElementById('accounts-load-more-wrap');
+  const loadMoreBtn  = document.getElementById('btn-load-more-accounts');
+
   if (!tbody) return;
   tbody.innerHTML = '';
 
-  const filtered = allAccounts.filter(a => a.email.endsWith('@' + currentDomain));
+  let domainAccounts = allAccounts.filter(a => a.email.endsWith('@' + currentDomain));
+  
+  if (countBadge) {
+    countBadge.innerText = domainAccounts.length;
+  }
+
+  // Show account search bar if domain has > 5 accounts
+  if (searchWrap) {
+    searchWrap.style.display = domainAccounts.length > 5 ? 'block' : 'none';
+  }
+
+  // Apply query filter if searching
+  let filtered = domainAccounts;
+  if (currentAccountSearchQuery) {
+    filtered = domainAccounts.filter(a => a.email.toLowerCase().includes(currentAccountSearchQuery));
+  }
 
   if (filtered.length === 0) {
     if (emptyDiv) emptyDiv.style.display = 'block';
-  } else {
-    if (emptyDiv) emptyDiv.style.display = 'none';
-    filtered.forEach(acc => {
-      const row = document.createElement('div');
-      row.className = 'data-row';
+    if (loadMoreWrap) loadMoreWrap.style.display = 'none';
+    return;
+  }
 
-      const leftCol = document.createElement('div');
-      leftCol.className = 'flex-row';
-      leftCol.style.gap = '16px';
+  if (emptyDiv) emptyDiv.style.display = 'none';
 
-      const dot = document.createElement('div');
-      dot.className = 'status-dot active';
+  const visibleBatch = filtered.slice(0, currentAccountLimit);
 
-      const info = document.createElement('div');
-      info.className = 'data-info';
-      
-      const title = document.createElement('div');
-      title.className = 'data-title';
-      title.textContent = acc.email;
-      
-      const meta = document.createElement('div');
-      meta.className = 'data-meta';
-      meta.textContent = 'Active';
+  visibleBatch.forEach(acc => {
+    const row = document.createElement('div');
+    row.className = 'data-row';
 
-      info.appendChild(title);
-      info.appendChild(meta);
-      leftCol.appendChild(dot);
-      leftCol.appendChild(info);
+    const leftCol = document.createElement('div');
+    leftCol.className = 'flex-row';
+    leftCol.style.gap = '16px';
 
-      const actionsCell = document.createElement('div');
-      actionsCell.className = 'flex-row';
-      actionsCell.style.gap = '8px';
+    const dot = document.createElement('div');
+    dot.className = 'status-dot active';
 
-      const webmail = webmailSites[currentDomain] || {};
-      if (webmail.ready) {
-        const openButton = document.createElement('button');
-        openButton.type = 'button';
-        openButton.className = 'btn btn-sm';
-        openButton.textContent = 'Webmail';
-        openButton.addEventListener('click', () => openWebmail(acc.email));
-        actionsCell.appendChild(openButton);
-      } else {
-        const setupLink = document.createElement('a');
-        setupLink.className = 'btn btn-sm';
-        setupLink.style.textDecoration = 'none';
-        setupLink.textContent = 'Webmail setup';
-        setupLink.href = webmail.setup_url || '/plugins/roundcube_webmail/';
-        setupLink.title = webmail.reason || 'Webmail is not ready.';
-        actionsCell.appendChild(setupLink);
-      }
-      
-      const deleteButton = document.createElement('button');
-      deleteButton.type = 'button';
-      deleteButton.className = 'btn danger btn-sm';
-      deleteButton.textContent = 'Delete';
-      deleteButton.addEventListener('click', () => executeDeleteAccount(acc.email));
-      actionsCell.appendChild(deleteButton);
+    const info = document.createElement('div');
+    info.className = 'data-info';
+    
+    const title = document.createElement('div');
+    title.className = 'data-title';
+    title.textContent = acc.email;
+    
+    const meta = document.createElement('div');
+    meta.className = 'data-meta';
+    meta.textContent = 'Active';
 
-      row.appendChild(leftCol);
-      row.appendChild(actionsCell);
-      tbody.appendChild(row);
-    });
+    info.appendChild(title);
+    info.appendChild(meta);
+    leftCol.appendChild(dot);
+    leftCol.appendChild(info);
+
+    const actionsCell = document.createElement('div');
+    actionsCell.className = 'flex-row';
+    actionsCell.style.gap = '8px';
+
+    const webmail = webmailSites[currentDomain] || {};
+    if (webmail.ready) {
+      const openButton = document.createElement('button');
+      openButton.type = 'button';
+      openButton.className = 'btn';
+      openButton.textContent = 'Webmail';
+      openButton.addEventListener('click', () => openWebmail(acc.email));
+      actionsCell.appendChild(openButton);
+    } else {
+      const setupLink = document.createElement('a');
+      setupLink.className = 'btn';
+      setupLink.style.textDecoration = 'none';
+      setupLink.textContent = 'Webmail setup';
+      setupLink.href = webmail.setup_url || '/plugins/roundcube_webmail/';
+      setupLink.title = webmail.reason || 'Webmail is not ready.';
+      actionsCell.appendChild(setupLink);
+    }
+    
+    const deleteButton = document.createElement('button');
+    deleteButton.type = 'button';
+    deleteButton.className = 'btn danger';
+    deleteButton.textContent = 'Delete';
+    deleteButton.addEventListener('click', () => executeDeleteAccount(acc.email));
+    actionsCell.appendChild(deleteButton);
+
+    row.appendChild(leftCol);
+    row.appendChild(actionsCell);
+    tbody.appendChild(row);
+  });
+
+  // Handle Load More visibility & remaining count
+  const remaining = filtered.length - visibleBatch.length;
+  if (remaining > 0 && loadMoreWrap && loadMoreBtn) {
+    loadMoreWrap.style.display = 'block';
+    loadMoreBtn.innerText = `Load More Accounts (${remaining} remaining)`;
+  } else if (loadMoreWrap) {
+    loadMoreWrap.style.display = 'none';
   }
 }
 
