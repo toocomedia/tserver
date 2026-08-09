@@ -277,6 +277,18 @@
     fill: currentColor;
 }
 
+/* Sidebar Bottom Footer Info (Name & Version) */
+.sidebar-footer-info {
+    padding: 4px 6px 0 6px;
+    text-align: center;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-muted);
+    opacity: 0.7;
+    flex-shrink: 0;
+    margin-top: auto;
+}
+
 /* Domain List Items (100% Transparent Background) */
 .list-item {
     padding: 8px 10px;
