@@ -363,15 +363,15 @@
     margin: 4px 0 0 0;
 }
 
-/* Header Row */
+/* Header Row (Borderless) */
 .domain-header-row {
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
     gap: 16px;
     margin-bottom: var(--spacing-xs);
-    padding-bottom: 8px;
-    border-bottom: 1px solid var(--line-color);
+    padding-bottom: 4px;
+    border-bottom: none !important;
 }
 
 .domain-header-actions {
@@ -390,6 +390,7 @@
     flex-wrap: nowrap;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
+    border-bottom: none !important;
 }
 
 .tabs::-webkit-scrollbar {
@@ -436,14 +437,14 @@
     display: flex;
 }
 
-/* Flat Overview Metrics Row */
+/* Flat Overview Metrics Row (Borderless) */
 .overview-metrics-row {
     display: flex;
     align-items: center;
     gap: 32px;
     flex-wrap: wrap;
     padding-bottom: var(--spacing-md);
-    border-bottom: 1px solid var(--line-color);
+    border-bottom: none !important;
 }
 
 .overview-metric-item {
@@ -743,16 +744,14 @@
     }
 }
 
-/* Modals & Backdrop (iOS Style Confirmation Windows) */
+/* Modals & Backdrop (Clean Standard Overlay - No Blur or Heavy Borders) */
 .modal-backdrop {
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.65);
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
+    background: rgba(0, 0, 0, 0.55);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -767,9 +766,9 @@
 
 .modal.ios-modal {
     background: var(--bg-panel, var(--color-surface, #18181b)) !important;
-    border: 1px solid var(--color-line, rgba(125, 125, 125, 0.15)) !important;
-    border-radius: 16px !important;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    border: none !important;
+    border-radius: var(--radius-lg, 12px) !important;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.35);
     overflow: hidden;
     padding: 0;
     width: 100%;
@@ -785,7 +784,7 @@
     display: flex;
     width: 100%;
     height: 48px;
-    border-top: 1px solid var(--color-line, rgba(125, 125, 125, 0.15));
+    border-top: none !important;
     margin: 0;
     padding: 0;
     align-items: stretch;
@@ -815,7 +814,7 @@
 }
 
 .ios-modal-btn:not(:last-child) {
-    border-right: 1px solid var(--color-line, rgba(125, 125, 125, 0.15)) !important;
+    border-right: none !important;
 }
 
 .ios-modal-btn:hover {

@@ -684,12 +684,12 @@ select.form-input option {
     justify-content: flex-end;
 }
 
-/* iOS Style Alert Modal (Theme-Adaptable Border, Background, and Dividers) */
+/* Alert Modal Surface (Clean Standard Overlay - No Blur or Heavy Borders) */
 .modal-backdrop .modal.ios-modal {
     background: var(--bg-panel, var(--color-surface, #18181b)) !important;
-    border: 1px solid var(--color-line, rgba(125, 125, 125, 0.15)) !important;
-    border-radius: 16px !important;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    border: none !important;
+    border-radius: var(--radius-lg, 12px) !important;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.35);
     overflow: hidden;
     padding: 0;
     color: var(--text-main);
