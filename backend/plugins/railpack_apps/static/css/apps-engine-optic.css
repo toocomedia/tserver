@@ -109,7 +109,7 @@
 
 .apps-engine-optic .btn-optic--primary {
   background: var(--color-accent) !important;
-  color: var(--color-on-accent, #111111) !important;
+  color: var(--color-on-accent) !important;
 }
 
 .apps-engine-optic .btn-optic--primary:hover {
@@ -154,13 +154,11 @@
   font-weight: 500;
   background: var(--color-bg);
   color: var(--color-text);
-  border: 1px solid var(--color-line) !important;
-  border-radius: 0 !important;
-  box-shadow: inset 0 1px 2px rgba(0,0,0,0.1) !important;
+  border: none !important;
   display: flex;
   align-items: center;
   cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease;
+  transition: background 0.15s ease;
   user-select: none;
   outline: none;
   position: relative;
@@ -172,7 +170,8 @@
 }
 
 .apps-engine-optic .custom-dropdown__trigger:focus {
-  border-color: var(--color-accent) !important;
+  background: var(--color-secondary-btn);
+  box-shadow: inset 0 0 0 1px var(--color-accent) !important;
 }
 
 .apps-engine-optic .custom-dropdown__trigger::after {
@@ -199,13 +198,12 @@
 /* The menu must escape the card's overflow — uses fixed-like stacking */
 .apps-engine-optic .custom-dropdown__menu {
   position: absolute;
-  top: calc(100% + 1px);
+  top: 100%;
   left: 0;
   width: 100%;
   min-width: 160px;
   background: var(--color-bg);
   border: 1px solid var(--color-line);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.22);
   z-index: 500;
   max-height: 200px;
   overflow-y: auto;
@@ -252,11 +250,9 @@
   font-family: inherit;
   background: var(--color-bg);
   color: var(--color-text);
-  border: 1px solid var(--color-line) !important;
-  border-radius: 0 !important;
-  box-shadow: inset 0 1px 2px rgba(0,0,0,0.1) !important;
+  border: none !important;
   outline: none !important;
-  transition: background 0.15s ease, border-color 0.15s ease;
+  transition: background 0.15s ease;
 }
 
 .apps-engine-optic .input-optic:hover {
@@ -265,7 +261,7 @@
 
 .apps-engine-optic .input-optic:focus {
   background: var(--color-secondary-btn);
-  border-color: var(--color-accent) !important;
+  box-shadow: inset 0 0 0 1px var(--color-accent) !important;
 }
 
 .apps-engine-optic .input-optic::placeholder {
@@ -493,7 +489,6 @@ html[data-theme="charcoal"] .apps-engine-optic .db-toggle-icon {
   flex-direction: column;
   background: var(--color-surface);
   padding: 12px;
-  border-radius: 8px;
 }
 
 .apps-engine-optic .db-options-panel .custom-dropdown {
@@ -584,7 +579,6 @@ html[data-theme="charcoal"] .apps-engine-optic .db-toggle-icon {
   z-index: 10;
   width: 32px;
   height: 32px;
-  border-radius: 50%;
   background: var(--color-surface);
   border: 1px solid var(--color-line);
   color: var(--color-text);
@@ -595,7 +589,6 @@ html[data-theme="charcoal"] .apps-engine-optic .db-toggle-icon {
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.2s, background 0.2s;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
 .apps-engine-optic .scroll-arrow:hover {
   background: var(--color-secondary-btn);
@@ -621,7 +614,6 @@ html[data-theme="charcoal"] .apps-engine-optic .db-toggle-icon {
   flex-direction: column;
   background: var(--color-surface);
   padding: 16px 20px;
-  border-radius: 8px;
   gap: 4px;
 }
 
@@ -676,11 +668,9 @@ html[data-theme="charcoal"] .apps-engine-optic .db-toggle-icon {
   font-family: var(--font-mono, monospace);
   background: var(--color-bg);
   color: var(--color-text);
-  border: 1px solid var(--color-line) !important;
-  border-radius: 0 !important;
-  box-shadow: inset 0 1px 2px rgba(0,0,0,0.1) !important;
+  border: none !important;
   outline: none !important;
-  transition: background 0.15s ease, border-color 0.15s ease;
+  transition: background 0.15s ease;
 }
 
 .apps-engine-optic .apps-engine-environment-row input:hover {
@@ -689,7 +679,7 @@ html[data-theme="charcoal"] .apps-engine-optic .db-toggle-icon {
 
 .apps-engine-optic .apps-engine-environment-row input:focus {
   background: var(--color-secondary-btn);
-  border-color: var(--color-accent) !important;
+  box-shadow: inset 0 0 0 1px var(--color-accent) !important;
 }
 
 .apps-engine-optic .apps-engine-environment-row input::placeholder {
@@ -712,3 +702,22 @@ html[data-theme="charcoal"] .apps-engine-optic .db-toggle-icon {
 
 .master-card--danger { border-color: rgba(220, 38, 38, .3); }
 .master-card--danger .master-card__header { color: #DC2626; }
+
+/* ── Hero app box header & actions ──────────────────────────── */
+.apps-engine-optic .hero-app-box__header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.apps-engine-optic .hero-app-box__header h1 {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.apps-engine-optic .hero-app-box__actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}

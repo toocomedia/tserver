@@ -1,16 +1,16 @@
 <div class="hero-app-box">
   <div>
-    <div style="display:flex;align-items:center;gap:12px;">
-      <h1 style="font-size:24px;font-weight:700;margin:0;">{{ domain.name if domain else app.container_name }}</h1>
+    <div class="hero-app-box__header">
+      <h1>{{ domain.name if domain else app.container_name }}</h1>
       <span class="badge-pill {% if app.status == 'running' %}badge-pill--accent{% endif %}">{{ app.status | title }}</span>
     </div>
     <div class="hero-stats">
-      <span>URL: {% if domain %}<a href="{{ public_url(domain.name, https=ssl_active) }}" target="_blank" rel="noopener" style="color:var(--color-text);font-weight:700;">{{ domain.name }}</a>{% else %}<span class="text-muted">Domain missing</span>{% endif %}</span>
-      <span>Port: <span class="mono" style="color:var(--color-text);font-weight:600;">127.0.0.1:{{ app.host_port }}</span></span>
-      <span>SSL: <span style="color:var(--color-text);font-weight:600;">{{ 'HTTPS active' if ssl_active else 'HTTP only' }}</span></span>
+      <span>URL: {% if domain %}<a href="{{ public_url(domain.name, https=ssl_active) }}" target="_blank" rel="noopener" style="font-weight:700;">{{ domain.name }}</a>{% else %}<span class="text-muted">Domain missing</span>{% endif %}</span>
+      <span>Port: <span class="mono" style="font-weight:600;">127.0.0.1:{{ app.host_port }}</span></span>
+      <span>SSL: <span style="font-weight:600;">{{ 'HTTPS active' if ssl_active else 'HTTP only' }}</span></span>
     </div>
   </div>
-  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+  <div class="hero-app-box__actions">
     {% if app.status not in ['deleting', 'delete_failed'] and not deployment_active %}
       {% if app.status == 'pending' %}<form method="post" action="/plugins/railpack_apps/{{ app.id }}/deploy">{% include "partials/csrf_field.html" %}<button class="btn btn--accent btn--sm">Deploy app</button></form>{% endif %}
       {% if app.status in ['failed', 'stopped'] %}<form method="post" action="/plugins/railpack_apps/{{ app.id }}/deploy">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary btn--sm">Redeploy</button></form>{% endif %}
