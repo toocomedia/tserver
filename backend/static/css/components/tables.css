@@ -1,5 +1,5 @@
 /* tables.css — Uniform 13px Font Size, 100% Vertical Centering & Line Dividers */
-.table-wrap { width: 100% !important; max-width: 100% !important; overflow-x: auto; margin-bottom: 24px; }
+.table-wrap { margin-inline: calc(var(--page-gutter) * -1); width: auto !important; max-width: none !important; overflow-x: auto; margin-bottom: 24px; }
 .table { width: 100% !important; min-width: 100% !important; table-layout: fixed; border-collapse: collapse; font-size: 13px; }
 .table thead tr { background: var(--color-header-bg-bar); height: 36px; }
 .table tbody tr { height: 38px; }

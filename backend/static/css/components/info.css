@@ -9,7 +9,7 @@
   flex-direction: column;
   gap: 28px;
   /* Indent from page edges — content__inner has no horizontal padding */
-  padding: var(--page-gutter) var(--page-gutter) var(--space-xl);
+  padding: var(--space-xl) 0;
 }
 
 /* Strict Hero Row (Icon 64px + Title/Badge + Action Buttons on Right) */

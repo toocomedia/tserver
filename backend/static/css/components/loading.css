@@ -251,6 +251,27 @@
   border: none !important;
 }
 
+/* Title Bar Skeleton — for pages that use resource_title_bar.html (e.g. plugins, dependencies) */
+.skeleton-title-bar {
+  background: var(--color-header-bg-bar);
+  height: 38px;
+  padding: 0 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--color-line);
+}
+.skeleton-title-bar .sk-title {
+  width: 260px;
+  height: 14px;
+  border: none !important;
+}
+.skeleton-title-bar .sk-count {
+  width: 60px;
+  height: 10px;
+  border: none !important;
+}
+
 /* Stat grid skeleton: 6 shimmer boxes in flex wrap layout */
 .skeleton-stat-grid {
   display: flex;
@@ -422,6 +443,7 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(520px, 1fr));
   gap: 24px;
+  margin-top: var(--space-lg);
   margin-bottom: 28px;
   padding-inline: var(--page-gutter);
 }

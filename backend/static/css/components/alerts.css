@@ -1,8 +1,5 @@
 /* alerts.css */
 .alert {
-  /* margin-inline indents the alert box from page edges since
-     content__inner has no horizontal padding */
-  margin-inline: var(--page-gutter);
   padding: var(--space-md) var(--space-lg);
   border: 1px solid;
   font-size: var(--font-body);

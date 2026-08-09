@@ -39,7 +39,8 @@
   padding: 0 20px;
   margin-bottom: 16px;
   border-bottom: 1px solid var(--color-line);
-  width: 100%;
+  margin-inline: calc(var(--page-gutter) * -1);
+  width: auto;
 }
 /* When section header is directly followed by a table or list title bar, remove bottom margin */
 .section__header:has(+ .table-wrap),
@@ -87,7 +88,8 @@
   gap: 12px;
   margin-bottom: 0;
   border-bottom: 1px solid var(--color-line);
-  width: 100%;
+  margin-inline: calc(var(--page-gutter) * -1);
+  width: auto;
 }
 .list-title-bar h3 {
   color: var(--color-text);
@@ -109,7 +111,6 @@
 }
 .resource-views {
   padding-top: var(--space-lg);
-  padding-inline: var(--page-gutter);
 }
 .resource-empty-state {
   grid-column: 1 / -1;
@@ -135,6 +136,8 @@
   margin-top: 0;
   /* No bottom margin — sits flush directly against the table below */
   margin-bottom: 0;
+  margin-inline: calc(var(--page-gutter) * -1);
+  width: auto;
 }
 .action-toolbar__search {
   display: flex;
@@ -156,8 +159,6 @@
   flex-wrap: wrap;
   gap: 16px;
   margin-bottom: 28px;
-  /* Indent from edge + top breathing room below the page-header divider */
-  padding: var(--page-gutter) var(--page-gutter) 0;
 }
 .stat-card-box {
   flex: 1 1 180px;
@@ -222,7 +223,6 @@
   border: 1px solid var(--color-line);
   background: var(--color-bg);
   margin-bottom: 28px;
-  margin-inline: var(--page-gutter);
 }
 .master-card__header {
   padding: 14px 24px;
@@ -243,7 +243,6 @@
   border: 1px solid var(--color-line);
   padding: 24px;
   margin-bottom: 32px;
-  margin-inline: var(--page-gutter);
   display: flex;
   align-items: center;
   justify-content: space-between;

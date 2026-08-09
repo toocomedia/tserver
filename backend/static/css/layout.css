@@ -294,11 +294,9 @@
 .content__inner {
   width: 100%;
   max-width: 100%;
-  margin-inline: 0;
-  /* NO horizontal padding — full-width header bars go edge-to-edge.
-     NO top padding — first element (action-toolbar etc.) sits flush
+  padding: 0 var(--page-gutter) var(--space-xl);
+  /* NO top padding — first element (action-toolbar etc.) sits flush
      directly under the page-header divider line. */
-  padding: 0 0 var(--space-xl);
 }
 
 /* Use .content-pad on content blocks that need horizontal indent
