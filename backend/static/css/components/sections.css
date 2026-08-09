@@ -129,9 +129,9 @@
   gap: 12px;
   background: transparent;
   padding: 0 0 16px 0;
-  flex-wrap: wrap;
-  border-radius: 0 !important;
+  border-bottom: none;
   margin-bottom: 0;
+  flex-wrap: wrap;
 }
 .action-toolbar__search {
   display: flex;
