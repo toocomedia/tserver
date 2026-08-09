@@ -48,12 +48,13 @@
     box-sizing: border-box;
 }
 
-/* Floating Sidebar List */
+/* Floating Sidebar List (Matches main content panel height) */
 .floating-list {
     width: 200px;
-    height: auto;
-    align-self: center;
-    margin: auto 0;
+    height: calc(100vh - 140px);
+    min-height: 520px;
+    align-self: flex-start;
+    margin: 0;
     background: transparent;
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
@@ -98,10 +99,7 @@
 }
 
 .sidebar-header.search-active .sidebar-title {
-    opacity: 0;
-    width: 0;
-    overflow: hidden;
-    pointer-events: none;
+    display: none;
 }
 
 .header-icon-btn {
@@ -142,7 +140,9 @@
 }
 
 .sidebar-header.search-active .expandable-search {
+    flex: 1;
     width: 100%;
+    margin-left: 0;
 }
 
 .expandable-search .search-toggle-btn {
@@ -177,7 +177,7 @@
     width: 100%;
     opacity: 1;
     pointer-events: auto;
-    padding: 0 8px 0 32px;
+    padding: 0 8px 0 30px;
 }
 
 /* Big Width Add Button under Domain List Box */
@@ -198,17 +198,20 @@
     transition: opacity 0.15s ease, transform 0.1s ease;
     text-decoration: none;
     box-sizing: border-box;
+    flex-shrink: 0;
 }
 .sidebar-big-add-btn:hover {
     opacity: 0.9;
 }
 
-/* Domain List Box Card Surface (Borderless) */
+/* Domain List Box Card Surface (Flexible Height Matching Content Panel) */
 .list-container-wrap {
     position: relative;
     display: flex;
     flex-direction: column;
     width: 100%;
+    flex: 1;
+    height: 100%;
     background: var(--bg-hover, rgba(0, 0, 0, 0.04));
     border: none !important;
     border-radius: var(--radius-lg, 12px) !important;
@@ -219,7 +222,7 @@
 }
 
 .list-content {
-    max-height: 195px; /* Limit 5 domains */
+    flex: 1;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
@@ -234,13 +237,13 @@
     display: none;
 }
 
-/* Scroll buttons show ONLY when list has > 5 domains (has-scroll) */
+/* Scroll Arrow Buttons (Always styled with smooth arrow effect) */
 .sidebar-scroll-btn {
-    display: none;
+    display: flex;
     align-items: center;
     justify-content: center;
     width: 100%;
-    height: 22px;
+    height: 20px;
     background: transparent;
     border: none !important;
     color: var(--text-muted);
@@ -249,16 +252,42 @@
     transition: opacity 0.2s, background 0.2s;
     padding: 0;
     border-radius: var(--radius-sm) !important;
-}
-
-.list-container-wrap.has-scroll .sidebar-scroll-btn {
-    display: flex;
+    flex-shrink: 0;
 }
 
 .sidebar-scroll-btn:hover {
     opacity: 1;
     background: var(--bg-hover, rgba(0, 0, 0, 0.08));
     color: var(--text-main);
+}
+.sidebar-scroll-btn svg {
+    width: 14px;
+    height: 14px;
+    fill: currentColor;
+}
+
+/* Load More Button at Bottom of Domain List */
+.sidebar-load-more-btn {
+    width: 100%;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-muted);
+    background: transparent;
+    border: none !important;
+    cursor: pointer;
+    border-radius: var(--radius-sm, 6px) !important;
+    transition: color 0.15s ease, background 0.15s ease;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+.sidebar-load-more-btn:hover {
+    color: var(--text-main);
+    background: var(--bg-hover, rgba(0, 0, 0, 0.06));
 }
 .sidebar-scroll-btn svg {
     width: 14px;
@@ -302,10 +331,10 @@
     width: 6px;
     height: 6px;
     border-radius: 50%;
-    background-color: var(--accent, #3b82f6);
+    background-color: var(--accent, currentColor);
     margin-right: 8px;
     flex-shrink: 0;
-    box-shadow: 0 0 6px var(--accent, rgba(59, 130, 246, 0.5));
+    box-shadow: 0 0 6px var(--accent, currentColor);
 }
 
 /* Flat Main Content Panel */
