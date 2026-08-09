@@ -409,12 +409,10 @@
 .skeleton-controls .sk-search-input {
   width: 280px;
   height: 38px;
-  border-radius: 4px;
 }
 .skeleton-controls .sk-filter-select {
   width: 140px;
   height: 38px;
-  border-radius: 4px;
 }
 
 /* ==========================================================================
@@ -425,6 +423,7 @@
   grid-template-columns: repeat(auto-fill, minmax(520px, 1fr));
   gap: 24px;
   margin-bottom: 28px;
+  padding-inline: var(--page-gutter);
 }
 .skeleton-plugin-card {
   display: flex;
@@ -432,7 +431,6 @@
   min-height: 180px;
   align-items: stretch;
   border: 1px solid var(--color-line);
-  border-radius: 4px;
   overflow: hidden;
   background: var(--color-bg);
   padding: 0;
