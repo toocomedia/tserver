@@ -4,7 +4,6 @@
 {% block content_class %}content--flush{% endblock %}
 {% block page_header_wrapper %}{% endblock %}
 
-{% block content %}
 {% block head %}
   <link rel="stylesheet" href="/plugins/rspamd/static/css/rspamd-ui.css">
 {% endblock %}
@@ -32,7 +31,6 @@
       <div class="rspamd-header-row">
         <div>
           <h2 class="rspamd-title">Spam Filter (Rspamd)</h2>
-          <p class="rspamd-subtitle">Version {{ plugin_version }} &bull; Content scanning engine for Maddy mail</p>
         </div>
         <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
           {% if status.running %}
@@ -42,7 +40,7 @@
           {% endif %}
 
           {% if status.maddy_integrated %}
-            <span class="badge-minimal badge-minimal--active">MADDY PROTECTED</span>
+            <span class="badge-minimal badge-minimal--active">PROTECTED</span>
           {% else %}
             <span class="badge-minimal badge-minimal--neutral">NOT INJECTED</span>
           {% endif %}
@@ -78,27 +76,28 @@
       <div class="panel-section">
         <h3 class="panel-section-title">Service Control</h3>
 
-        <div class="form-group">
-          <label class="form-label">Service State</label>
-          <div style="display: flex; gap: 8px;">
-            {% if status.running %}
-              <button type="button" class="btn danger btn--sm" onclick="rspamdAction('stop')">Stop Service</button>
-              <button type="button" class="btn ghost btn--sm" onclick="rspamdAction('restart')">Restart Service</button>
-            {% else %}
-              <button type="button" class="btn primary btn--sm" onclick="rspamdAction('start')">Start Service</button>
-            {% endif %}
+        <div style="display: flex; flex-wrap: wrap; gap: 16px; align-items: center;">
+          <div class="form-group" style="width: auto;">
+            <label class="form-label">Service</label>
+            <div style="display: flex; gap: 8px;">
+              {% if status.running %}
+                <button type="button" class="btn danger btn--sm" onclick="rspamdAction('stop')">Stop</button>
+                <button type="button" class="btn ghost btn--sm" onclick="rspamdAction('restart')">Restart</button>
+              {% else %}
+                <button type="button" class="btn primary btn--sm" onclick="rspamdAction('start')">Start</button>
+              {% endif %}
+            </div>
           </div>
-        </div>
 
-        <div class="form-group" style="margin-top: 8px;">
-          <label class="form-label">Maddy Mail Integration</label>
-          <p class="form-hint">Routes incoming email traffic through Rspamd for all Maddy mail domains.</p>
-          <div style="display: flex; gap: 8px; margin-top: 6px;">
-            {% if status.maddy_integrated %}
-              <button type="button" class="btn ghost btn--sm" onclick="toggleMaddy(false)">Disable Protection</button>
-            {% else %}
-              <button type="button" class="btn primary btn--sm" onclick="toggleMaddy(true)">Enable Protection</button>
-            {% endif %}
+          <div class="form-group" style="width: auto;">
+            <label class="form-label">Maddy Integration</label>
+            <div style="display: flex; gap: 8px;">
+              {% if status.maddy_integrated %}
+                <button type="button" class="btn ghost btn--sm" onclick="toggleMaddy(false)">Disable Protection</button>
+              {% else %}
+                <button type="button" class="btn primary btn--sm" onclick="toggleMaddy(true)">Enable Protection</button>
+              {% endif %}
+            </div>
           </div>
         </div>
       </div>
@@ -106,21 +105,19 @@
       <!-- Settings -->
       <div class="panel-section">
         <h3 class="panel-section-title">Threshold Settings</h3>
-        <form id="threshold-form" onsubmit="saveThresholds(event)" style="max-width: 440px; display: flex; flex-direction: column; gap: 16px;">
+        <form id="threshold-form" onsubmit="saveThresholds(event)" style="max-width: 440px; display: flex; flex-direction: column; gap: 14px;">
           <div class="form-group">
-            <label class="form-label" for="junk-score">Junk / Add Header Score</label>
+            <label class="form-label" for="junk-score">Junk Score</label>
             <input type="number" step="0.5" min="1" max="50" class="form-control" id="junk-score" value="{{ thresholds.add_header }}" required />
-            <p class="form-hint">Messages above this score get tagged as spam.</p>
           </div>
 
           <div class="form-group">
             <label class="form-label" for="reject-score">Hard Reject Score</label>
             <input type="number" step="0.5" min="2" max="100" class="form-control" id="reject-score" value="{{ thresholds.reject }}" required />
-            <p class="form-hint">Messages above this score are rejected.</p>
           </div>
 
           <div>
-            <button type="submit" class="btn primary" id="save-thresholds-btn">Save Settings</button>
+            <button type="submit" class="btn primary" id="save-thresholds-btn">Save</button>
           </div>
         </form>
       </div>

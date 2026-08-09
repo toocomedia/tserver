@@ -109,9 +109,7 @@
 
       <!-- Overview Tab -->
       <div class="roundcube-tab-panel {% if selected_site %}active{% endif %}" data-panel="overview" role="tabpanel">
-        <p class="form-hint">Current webmail availability and status for <strong>{{ selected_domain }}</strong>.</p>
-        
-        <div class="grid-responsive-cards" style="margin-top: 12px;">
+        <div class="grid-responsive-cards" style="margin-top: 8px;">
           <div class="roundcube-card">
             <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">DNS Resolution</span>
             <div id="dns-status">
@@ -139,39 +137,29 @@
 
       <!-- Domain & DNS Tab -->
       <div class="roundcube-tab-panel {% if not selected_site %}active{% endif %}" data-panel="domain" role="tabpanel">
-        <p class="form-hint">Choose the public hostname used to access Roundcube Webmail for this domain.</p>
-
         <form id="webmail-site-form"
           action="/plugins/roundcube_webmail/api/sites/{{ 'update' if selected_site else 'add' }}"
-          method="post" style="display: flex; flex-direction: column; gap: 16px; max-width: 500px; margin-top: 12px;">
+          method="post" style="display: flex; flex-direction: column; gap: 16px; max-width: 500px; margin-top: 8px;">
           <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
           <input type="hidden" name="mail_domain" value="{{ selected_domain }}">
 
           <div class="form-group">
-            <label class="form-label">Maddy mail domain</label>
+            <label class="form-label">Mail Domain</label>
             <div style="font-size: 14px; font-weight: 600; color: var(--text-main);">{{ selected_domain }}</div>
-            <div class="roundcube-inline-note">Fixed for this entry. Select another mail domain from the sidebar to configure it separately.</div>
           </div>
 
           <div class="form-group">
-            <label class="form-label" for="public-host">Webmail hostname</label>
+            <label class="form-label" for="public-host">Webmail Hostname</label>
             <input class="form-input" id="public-host" name="public_host" type="text"
               value="{{ selected_site.public_host if selected_site else default_host }}"
               placeholder="webmail.{{ selected_domain }}" required>
-            <div class="roundcube-inline-note">
-              Must be a unique subdomain of {{ selected_domain }}.
-              {% if selected_site %}Changing it removes the old SSL certificate, proxy, and panel-managed A record.{% endif %}
-            </div>
           </div>
 
           <div class="form-group">
-            <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;">
+            <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
               <input type="checkbox" id="manage-dns" name="manage_dns" value="true"
                 {% if not selected_site or selected_site.dns_managed %}checked{% endif %}>
-              <span>
-                <strong style="color: var(--text-main); font-size: 13px;">Manage DNS with this panel</strong>
-                <span style="display:block; font-size: 12px; color: var(--text-muted);">Turn off for Cloudflare or another external DNS provider.</span>
-              </span>
+              <span style="color: var(--text-main); font-size: 13px; font-weight: 600;">Manage DNS with this panel</span>
             </label>
           </div>
 
@@ -196,9 +184,8 @@
 
       <!-- HTTPS Tab -->
       <div class="roundcube-tab-panel" data-panel="https" role="tabpanel">
-        <p class="form-hint">Issue a Let's Encrypt TLS certificate after the webmail hostname resolves to this server IP.</p>
         {% if selected_site %}
-          <div style="margin: 12px 0;">
+          <div style="margin: 8px 0 14px 0;">
             <span style="color: var(--text-muted); font-size: 13px;">Target Hostname:</span> <code style="color: var(--text-main); font-size: 13px;">{{ selected_site.public_host }}</code>
           </div>
           <div>
@@ -216,9 +203,8 @@
 
       <!-- Mail Server Tab -->
       <div class="roundcube-tab-panel" data-panel="mail" role="tabpanel">
-        <p class="form-hint">Test Roundcube's IMAP and SMTP connectivity to the Maddy mail server.</p>
         {% if selected_site %}
-          <div class="roundcube-form-actions" style="margin-top: 12px;">
+          <div class="roundcube-form-actions" style="margin-top: 8px;">
             <button class="btn secondary btn--sm" id="test-mail-button" type="button">Test Maddy Connection</button>
           </div>
           <div id="mail-test-result" style="display:none; font-size: 13px; margin-top: 8px;"></div>
