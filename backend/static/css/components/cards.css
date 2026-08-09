@@ -50,7 +50,7 @@
 }
 
 /* Server optimization controls: equal-width, filled, borderless actions. */
-.optimization-list { display: flex; flex-direction: column; gap: var(--space-xl); padding-top: var(--space-sm); }
+.optimization-list { display: flex; flex-direction: column; gap: var(--space-xl); padding-top: var(--space-sm); padding-inline: var(--page-gutter); }
 .optimization-row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-lg); flex-wrap: wrap; }
 .optimization-row__copy { flex: 1; min-width: 240px; }
 .optimization-row__title { margin-bottom: 2px; font-size: var(--font-body); }

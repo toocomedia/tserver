@@ -260,6 +260,15 @@
   flex-wrap: wrap;
 }
 
+/* Topbar buttons are slightly smaller than standard btn--sm */
+.page-header__actions .btn {
+  height: 28px;
+  font-size: 11px;
+  padding: 0 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
 .content {
   flex: 1;
   overflow-y: auto;
