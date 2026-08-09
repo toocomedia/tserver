@@ -268,31 +268,17 @@ function renderAccountsList() {
     row.className = 'data-row';
 
     const leftCol = document.createElement('div');
-    leftCol.className = 'flex-row';
-    leftCol.style.gap = '16px';
+    leftCol.className = 'data-row-left';
 
-    const dot = document.createElement('div');
-    dot.className = 'status-dot active';
-
-    const info = document.createElement('div');
-    info.className = 'data-info';
-    
     const title = document.createElement('div');
     title.className = 'data-title';
+    title.style.color = 'var(--text-main)';
     title.textContent = acc.email;
-    
-    const meta = document.createElement('div');
-    meta.className = 'data-meta';
-    meta.textContent = 'Active';
 
-    info.appendChild(title);
-    info.appendChild(meta);
-    leftCol.appendChild(dot);
-    leftCol.appendChild(info);
+    leftCol.appendChild(title);
 
     const actionsCell = document.createElement('div');
-    actionsCell.className = 'flex-row';
-    actionsCell.style.gap = '8px';
+    actionsCell.className = 'data-row-actions';
 
     const webmail = webmailSites[currentDomain] || {};
     if (webmail.ready) {

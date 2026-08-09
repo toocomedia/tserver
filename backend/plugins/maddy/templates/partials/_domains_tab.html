@@ -1,11 +1,11 @@
 <div id="domain-detail-view" style="display:none;">
   <!-- Header -->
-  <div class="flex-between" style="margin-bottom: var(--spacing-lg); align-items: flex-start;">
+  <div class="domain-header-row">
     <div>
       <h1 class="maddy-title" id="detail-domain-name"></h1>
       <p class="maddy-subtitle">Mail server configuration</p>
     </div>
-    <div style="display: flex; gap: 8px; align-items: center;">
+    <div class="domain-header-actions">
         <button type="button" class="btn primary" onclick="openAddAccountModal()">+ Add Mailbox</button>
         <button type="button" class="btn danger" id="btn-delete-domain" onclick="confirmDeleteDomain()">Delete Domain</button>
     </div>
