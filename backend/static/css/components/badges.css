@@ -74,28 +74,35 @@
 .status-badge--warning { background: var(--color-surface); color: var(--color-warn); }
 .status-badge--danger { background: var(--color-alert-danger-bg); color: var(--color-danger); }
 
-/* Minimal Rounded Badges for Statuses */
+/* Minimal Badges for Statuses */
 .badge-minimal {
-  display: inline-block;
-  padding: 4px 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 8px;
   font-size: 10px;
   font-weight: 700;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  border-radius: 4px !important;
+  border-radius: 0 !important;
   line-height: 1;
+  border: 1px solid transparent;
 }
 .badge-minimal--active {
   background: var(--color-alert-success-bg);
   color: #3b5e13;
+  border-color: rgba(59, 94, 19, 0.2);
 }
 .badge-minimal--danger {
   background: var(--color-alert-danger-bg);
   color: var(--color-danger);
+  border-color: rgba(220, 38, 38, 0.2);
 }
 .badge-minimal--neutral {
   background: var(--color-header-bg-bar);
   color: var(--color-muted);
+  border-color: var(--color-line);
 }
 
 /* Base Dark Theme Badge Overrides (Midnight, Deep Dark, Charcoal) */
