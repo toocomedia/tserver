@@ -11,10 +11,10 @@ function getCsrfToken() {
 }
 
 // ---------------------------------------------------------------------------
-// Sidebar Active State
+// Sidebar Active State & Search Filter
 // ---------------------------------------------------------------------------
 function setSidebarActiveText(text) {
-  document.querySelectorAll('.split-sidebar__item').forEach(el => {
+  document.querySelectorAll('#listContent .list-item').forEach(el => {
     if (el.innerText.trim() === text) {
       el.classList.add('active');
     } else {
@@ -23,29 +23,40 @@ function setSidebarActiveText(text) {
   });
 }
 
+function filterDomains(query) {
+  const q = (query || '').toLowerCase().trim();
+  document.querySelectorAll('#listContent .list-item').forEach(el => {
+    const text = el.innerText.toLowerCase().trim();
+    if (!q || text.includes(q)) {
+      el.style.display = 'flex';
+    } else {
+      el.style.display = 'none';
+    }
+  });
+}
+
 // ---------------------------------------------------------------------------
-// Add Domain UI Toggle
+// Add Domain UI Toggle & Modal Pop Box
 // ---------------------------------------------------------------------------
 function toggleDomainInputType() {
-  const type = document.querySelector('input[name="domain_type"]:checked').value;
+  const radio = document.querySelector('input[name="domain_type"]:checked');
+  if (!radio) return;
+  const type = radio.value;
   const selectWrapper = document.getElementById('domain-select-wrapper');
   const inputWrapper  = document.getElementById('domain-input-wrapper');
   const hintText      = document.getElementById('domain-hint-text');
   
   if (type === 'panel') {
-    selectWrapper.style.display = 'block';
-    inputWrapper.style.display  = 'none';
-    hintText.innerText = "Select a domain hosted on this panel — MX, A, SPF, and DMARC records will be created automatically in PowerDNS.";
+    if (selectWrapper) selectWrapper.style.display = 'block';
+    if (inputWrapper)  inputWrapper.style.display  = 'none';
+    if (hintText) hintText.innerText = "Select a domain hosted on this panel — MX, A, SPF, and DMARC records will be created automatically in PowerDNS.";
   } else {
-    selectWrapper.style.display = 'none';
-    inputWrapper.style.display  = 'block';
-    hintText.innerText = "Enter an external domain (e.g. from Cloudflare). Local PowerDNS records will be skipped.";
+    if (selectWrapper) selectWrapper.style.display = 'none';
+    if (inputWrapper)  inputWrapper.style.display  = 'block';
+    if (hintText) hintText.innerText = "Enter an external domain (e.g. from Cloudflare). Local PowerDNS records will be skipped.";
   }
 }
 
-// ---------------------------------------------------------------------------
-// Domain select → auto-fill hidden IP
-// ---------------------------------------------------------------------------
 function onDomainSelect(selectEl) {
   const ip = selectEl.selectedOptions[0]?.dataset?.ip || '';
   if (ip) {
@@ -55,9 +66,15 @@ function onDomainSelect(selectEl) {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Add domain (AJAX)
-// ---------------------------------------------------------------------------
+function openAddDomain() {
+  const result = document.getElementById('add-domain-result');
+  if (result) { result.style.display = 'none'; result.innerText = ''; }
+  const form = document.getElementById('add-domain-form');
+  if (form) form.reset();
+  toggleDomainInputType();
+  openModal('add-domain-modal');
+}
+
 async function handleAddDomain() {
   const form     = document.getElementById('add-domain-form');
   const formData = new FormData(form);
@@ -78,7 +95,6 @@ async function handleAddDomain() {
     return;
   }
 
-  // The backend expects 'domain', so we construct a new FormData
   const payload = new FormData();
   payload.append('csrf_token', formData.get('csrf_token'));
   payload.append('domain', domain.trim());
@@ -94,7 +110,10 @@ async function handleAddDomain() {
     if (res.ok) {
       result.className = 'text-small text-accent';
       result.innerText = data.message || '✅ Domain added successfully.';
-      setTimeout(() => location.reload(), 1200);
+      setTimeout(() => {
+        closeModal('add-domain-modal');
+        location.reload();
+      }, 800);
     } else {
       result.className = 'text-small text-danger';
       result.innerText = data.detail || 'Failed to add domain.';
@@ -106,13 +125,14 @@ async function handleAddDomain() {
 }
 
 // ---------------------------------------------------------------------------
-// Delete domain — AJAX (fixes [object Object] from plain form POST)
+// Delete domain — AJAX
 // ---------------------------------------------------------------------------
 function confirmDeleteDomain(domain) {
-  // If no domain provided, use the current active one
   domain = domain || currentDomain;
-  document.getElementById('delete-domain-name').innerText = domain;
-  document.getElementById('delete-domain-input').value    = domain;
+  const nameEl = document.getElementById('delete-domain-name');
+  if (nameEl) nameEl.innerText = domain;
+  const inpEl = document.getElementById('delete-domain-input');
+  if (inpEl) inpEl.value = domain;
   openModal('delete-domain-modal');
 }
 
@@ -121,11 +141,6 @@ async function executeDeleteDomain() {
   const formData = new FormData();
   formData.append('csrf_token', getCsrfToken());
   formData.append('domain', domain);
-
-  // Show spinner in button
-  const btn = document.querySelector('#delete-domain-modal .btn--danger');
-  btn.disabled = true;
-  btn.innerText = 'Deleting…';
 
   try {
     const res  = await fetch('/plugins/maddy/api/domains/delete', { method: 'POST', body: formData });
@@ -143,15 +158,15 @@ async function executeDeleteDomain() {
 }
 
 // ---------------------------------------------------------------------------
-// Views
+// Views & Navigation
 // ---------------------------------------------------------------------------
 function openDomainDetail(domain, serverIp) {
   currentDomain   = domain;
   currentDomainIp = serverIp || currentDomainIp;
   setSidebarActiveText(domain);
 
-  document.getElementById('add-domain-view').style.display = 'none';
-  document.getElementById('domain-detail-view').style.display = 'block';
+  const detailView = document.getElementById('domain-detail-view');
+  if (detailView) detailView.style.display = 'block';
 
   document.getElementById('detail-domain-name').innerText        = domain;
   document.getElementById('dns-domain-input').value              = domain;
@@ -170,29 +185,21 @@ function openDomainDetail(domain, serverIp) {
   renderAccountsList();
 }
 
-function openAddDomain() {
-  setSidebarActiveText('+ Add Domain');
-  document.getElementById('domain-detail-view').style.display = 'none';
-  document.getElementById('add-domain-view').style.display = 'block';
-}
-
 // ---------------------------------------------------------------------------
 // Inner Tab Switching
 // ---------------------------------------------------------------------------
 function switchInnerTab(btnEl) {
-  // Reset buttons
-  document.querySelectorAll('.tabs-nav button').forEach(btn => btn.classList.remove('active'));
+  document.querySelectorAll('.tabs .tab').forEach(btn => btn.classList.remove('active'));
   btnEl.classList.add('active');
 
-  // Hide all inner tab contents
   document.querySelectorAll('.inner-tab-content').forEach(content => {
     content.style.display = 'none';
   });
 
-  // Show selected
   const tabId = btnEl.getAttribute('data-inner-tab');
   if (tabId) {
-    document.getElementById(tabId).style.display = 'block';
+    const target = document.getElementById(tabId);
+    if (target) target.style.display = 'block';
   }
 }
 
@@ -202,19 +209,19 @@ function switchInnerTab(btnEl) {
 function renderAccountsList() {
   const tbody    = document.getElementById('accounts-tbody');
   const emptyDiv = document.getElementById('accounts-empty');
+  if (!tbody) return;
   tbody.innerHTML = '';
 
   const filtered = allAccounts.filter(a => a.email.endsWith('@' + currentDomain));
 
   if (filtered.length === 0) {
-    emptyDiv.style.display = 'block';
+    if (emptyDiv) emptyDiv.style.display = 'block';
   } else {
-    emptyDiv.style.display = 'none';
+    if (emptyDiv) emptyDiv.style.display = 'none';
     filtered.forEach(acc => {
       const row = document.createElement('div');
       row.className = 'data-row';
 
-      // Left section: dot + title
       const leftCol = document.createElement('div');
       leftCol.className = 'flex-row';
       leftCol.style.gap = '16px';
@@ -238,7 +245,6 @@ function renderAccountsList() {
       leftCol.appendChild(dot);
       leftCol.appendChild(info);
 
-      // Right section: actions
       const actionsCell = document.createElement('div');
       actionsCell.className = 'flex-row';
       actionsCell.style.gap = '8px';
@@ -275,27 +281,27 @@ function renderAccountsList() {
   }
 }
 
-function toggleAddMailbox() {
-  const container = document.getElementById('add-mailbox-container');
-  if (container.style.display === 'none' || !container.style.display) {
-    container.style.display = 'block';
-    document.getElementById('add-account-username').focus();
-  } else {
-    container.style.display = 'none';
-  }
-}
-
 function openAddAccountModal() {
-  document.getElementById('modal-domain-input').value = currentDomain;
-  document.getElementById('domain-suffix-preview').innerText = '@' + currentDomain;
-  document.getElementById('add-account-result').style.display = 'none';
-  updateDomainSuffix();
-  openModal('add-account-modal');
-}
+  const domainInp = document.getElementById('add-account-domain');
+  if (domainInp) domainInp.value = currentDomain;
 
-function updateDomainSuffix() {
-  const username = document.getElementById('modal-username-input').value.replace(/@.*$/, '') || 'info';
-  document.getElementById('full-email-preview').innerText = username + '@' + currentDomain;
+  const suffixEl = document.getElementById('add-account-domain-suffix');
+  if (suffixEl) suffixEl.innerText = '@' + currentDomain;
+
+  const modalSubText = document.getElementById('modal-domain-subtitle-text');
+  if (modalSubText) modalSubText.innerText = currentDomain;
+
+  const resultDiv = document.getElementById('add-account-result');
+  if (resultDiv) { resultDiv.style.display = 'none'; resultDiv.innerText = ''; }
+
+  const form = document.getElementById('add-account-form');
+  if (form) form.reset();
+
+  openModal('add-account-modal');
+  setTimeout(() => {
+    const userInp = document.getElementById('add-account-username');
+    if (userInp) userInp.focus();
+  }, 100);
 }
 
 // ---------------------------------------------------------------------------
@@ -330,6 +336,7 @@ async function openWebmail(email) {
 async function executeAddAccount() {
   const form = document.getElementById('add-account-form');
   const formData = new FormData(form);
+  formData.set('domain', currentDomain); // Ensure current domain is set
   const resultDiv = document.getElementById('add-account-result');
 
   resultDiv.style.display = 'block';
@@ -342,7 +349,6 @@ async function executeAddAccount() {
     if (res.ok) {
       resultDiv.className = 'text-small text-accent';
       resultDiv.innerText = 'Mailbox created successfully!';
-      // Add to array and re-render
       allAccounts.push({ email: data.email });
       renderAccountsList();
       setTimeout(() => closeModal('add-account-modal'), 800);
@@ -368,7 +374,6 @@ async function executeDeleteAccount(email) {
     const res = await fetch('/plugins/maddy/api/accounts/delete', { method: 'POST', body: formData });
     const data = await res.json();
     if (res.ok) {
-      // Remove from array and re-render
       const index = allAccounts.findIndex(a => a.email === email);
       if (index > -1) {
         allAccounts.splice(index, 1);
@@ -458,7 +463,6 @@ async function pollMailSsl(domain, resultDiv) {
   }
 }
 
-
 // ---------------------------------------------------------------------------
 // Service Diagnostics & Config Repair
 // ---------------------------------------------------------------------------
@@ -512,11 +516,10 @@ async function repairMaddyConfig() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  const activeSidebarItem = document.querySelector('.split-sidebar__item.active');
-  if (activeSidebarItem && activeSidebarItem.onclick) {
-    activeSidebarItem.click();
-  } else if (activeSidebarItem && activeSidebarItem.innerText.trim() === '+ Add Domain') {
-    openAddDomain();
+  const firstItem = document.querySelector('#listContent .list-item');
+  if (firstItem && firstItem.onclick) {
+    firstItem.click();
   }
 });
 </script>
+
