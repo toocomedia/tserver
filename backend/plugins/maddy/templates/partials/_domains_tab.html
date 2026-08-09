@@ -11,25 +11,25 @@
     </div>
   </div>
 
-  <!-- Inner Tab Navigation -->
-  <div class="tabs" role="tablist">
-    {{ ui.tab('Mailboxes', onclick="switchInnerTab(this)", active=True, class_extra='inner-tab-btn', data_target='inner-tab-mailboxes') }}
-    {{ ui.tab('DNS Records', onclick="switchInnerTab(this)", class_extra='inner-tab-btn', data_target='inner-tab-dns') }}
-    {{ ui.tab('SSL', onclick="switchInnerTab(this)", class_extra='inner-tab-btn', data_target='inner-tab-ssl') }}
-    {{ ui.tab('Settings', onclick="switchInnerTab(this)", class_extra='inner-tab-btn', data_target='inner-tab-settings') }}
+  <!-- Inner Tab Navigation & Actions (Same Line) -->
+  <div class="flex-between" style="margin-bottom: var(--spacing-md); gap: 12px; align-items: center; flex-wrap: wrap;">
+    <div class="tabs" role="tablist" style="margin-bottom: 0;">
+      <button class="tab active inner-tab-btn" onclick="switchInnerTab(this)" data-inner-tab="inner-tab-mailboxes">
+        Mailboxes <span id="mailbox-count-badge" style="font-size: 11px; font-weight: 500; opacity: 0.85; margin-left: 3px;">(0)</span>
+      </button>
+      <button class="tab inner-tab-btn" onclick="switchInnerTab(this)" data-inner-tab="inner-tab-dns">DNS Records</button>
+      <button class="tab inner-tab-btn" onclick="switchInnerTab(this)" data-inner-tab="inner-tab-ssl">SSL</button>
+      <button class="tab inner-tab-btn" onclick="switchInnerTab(this)" data-inner-tab="inner-tab-settings">Settings</button>
+    </div>
+
+    <div class="search-wrap" id="account-search-wrap" style="display: none; padding: 0; width: 180px; flex-shrink: 0;">
+      <svg class="search-icon" style="left: 10px;" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+      <input type="text" class="search-input" id="account-search-input" style="padding-left: 30px; font-size: 12px; height: 28px;" placeholder="Search accounts..." oninput="onAccountSearch(this.value)">
+    </div>
   </div>
 
   <!-- 1. Mailboxes Tab -->
   <div id="inner-tab-mailboxes" class="inner-tab-content">
-      <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px;">
-        <div style="font-size: 13px; font-weight: 600; color: var(--text-main);" id="mailbox-count-title">
-          Mail Accounts <span id="mailbox-count-badge" style="font-size: 11px; font-weight: 500; color: var(--text-muted); background: var(--bg-glass-hover); padding: 2px 8px; border-radius: 10px; margin-left: 6px;">0</span>
-        </div>
-        <div class="search-wrap" id="account-search-wrap" style="display: none; padding: 0; width: 200px;">
-          <svg class="search-icon" style="left: 10px;" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
-          <input type="text" class="search-input" id="account-search-input" style="padding-left: 30px; font-size: 12px; height: 28px;" placeholder="Search accounts..." oninput="onAccountSearch(this.value)">
-        </div>
-      </div>
       <div class="data-list" id="accounts-tbody">
           <!-- Populated by JS renderAccountsList() -->
       </div>
@@ -169,6 +169,25 @@
       <input type="hidden" id="delete-domain-input">
       <button type="button" class="ios-modal-btn" onclick="closeModal('delete-domain-modal')">Cancel</button>
       <button type="button" class="ios-modal-btn danger-text" onclick="executeDeleteDomain()">Delete Everything</button>
+    </div>
+  </div>
+</div>
+
+<!-- DELETE MAILBOX CONFIRM MODAL (iOS Style) -->
+<div id="delete-account-modal" class="modal-backdrop hidden" role="dialog">
+  <div class="modal ios-modal" style="max-width: 440px;">
+    <div class="ios-modal-body">
+      <h2 style="color: var(--text-main); font-size: 18px; font-weight: 600; margin: 0 0 12px 0;">Delete Mailbox</h2>
+      <p style="margin: 0 0 12px 0; color: var(--text-main); font-size: 14px; line-height: 1.4;">
+        Are you sure you want to permanently delete <strong id="delete-account-email" style="color: #ffffff;"></strong>?
+      </p>
+      <p style="margin: 0; font-weight: 600; font-size: 13px; color: #f87171;">All emails and mailbox data for this address will be removed.</p>
+    </div>
+    
+    <div class="ios-modal-footer">
+      <input type="hidden" id="delete-account-email-input">
+      <button type="button" class="ios-modal-btn" onclick="closeModal('delete-account-modal')">Cancel</button>
+      <button type="button" class="ios-modal-btn danger-text" onclick="confirmExecuteDeleteAccount()">Delete Mailbox</button>
     </div>
   </div>
 </div>

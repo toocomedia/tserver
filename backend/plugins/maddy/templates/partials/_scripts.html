@@ -239,7 +239,7 @@ function renderAccountsList() {
   let domainAccounts = allAccounts.filter(a => a.email.endsWith('@' + currentDomain));
   
   if (countBadge) {
-    countBadge.innerText = domainAccounts.length;
+    countBadge.innerText = '(' + domainAccounts.length + ')';
   }
 
   // Show account search bar if domain has > 5 accounts
@@ -402,8 +402,20 @@ async function executeAddAccount() {
   }
 }
 
-async function executeDeleteAccount(email) {
-  if (!confirm(`Delete mailbox ${email}?`)) return;
+function executeDeleteAccount(email) {
+  const emailEl = document.getElementById('delete-account-email');
+  if (emailEl) emailEl.innerText = email;
+  const inputEl = document.getElementById('delete-account-email-input');
+  if (inputEl) inputEl.value = email;
+  openModal('delete-account-modal');
+}
+
+async function confirmExecuteDeleteAccount() {
+  const emailInput = document.getElementById('delete-account-email-input');
+  const email = emailInput ? emailInput.value : '';
+  if (!email) return;
+
+  closeModal('delete-account-modal');
 
   const formData = new FormData();
   formData.append('csrf_token', getCsrfToken());
