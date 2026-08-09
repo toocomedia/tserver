@@ -180,19 +180,19 @@
     padding: 0 8px 0 30px;
 }
 
-/* Big Width Add Button under Domain List Box */
+/* Solid Accent Add Button under Title & Search inside Card Box */
 .sidebar-big-add-btn {
     width: 100%;
-    height: 34px;
+    height: 32px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 6px;
     font-size: 13px;
     font-weight: 600;
-    border-radius: var(--radius-md, 8px) !important;
-    background: var(--btn-primary-bg, #e4e6e0);
-    color: var(--btn-primary-text, #0f1720);
+    border-radius: var(--radius-sm, 6px) !important;
+    background: var(--accent, var(--color-primary, #3b82f6)) !important;
+    color: var(--on-accent, #ffffff) !important;
     border: none !important;
     cursor: pointer;
     transition: opacity 0.15s ease, transform 0.1s ease;
@@ -202,6 +202,13 @@
 }
 .sidebar-big-add-btn:hover {
     opacity: 0.9;
+    color: var(--on-accent, #ffffff) !important;
+}
+.sidebar-big-add-btn:focus,
+.sidebar-big-add-btn:active {
+    outline: none !important;
+    background: var(--accent, var(--color-primary, #3b82f6)) !important;
+    color: var(--on-accent, #ffffff) !important;
 }
 
 /* Domain List Box Card Surface (Flexible Height Matching Content Panel) */
@@ -237,9 +244,9 @@
     display: none;
 }
 
-/* Scroll Arrow Buttons (Always styled with smooth arrow effect) */
+/* Scroll Arrow Buttons (Only show when space is not enough / has-scroll) */
 .sidebar-scroll-btn {
-    display: flex;
+    display: none;
     align-items: center;
     justify-content: center;
     width: 100%;
@@ -251,43 +258,18 @@
     opacity: 0.6;
     transition: opacity 0.2s, background 0.2s;
     padding: 0;
-    border-radius: var(--radius-sm) !important;
+    border-radius: var(--radius-sm, 6px) !important;
     flex-shrink: 0;
+}
+
+.list-container-wrap.has-scroll .sidebar-scroll-btn {
+    display: flex;
 }
 
 .sidebar-scroll-btn:hover {
     opacity: 1;
     background: var(--bg-hover, rgba(0, 0, 0, 0.08));
     color: var(--text-main);
-}
-.sidebar-scroll-btn svg {
-    width: 14px;
-    height: 14px;
-    fill: currentColor;
-}
-
-/* Load More Button at Bottom of Domain List */
-.sidebar-load-more-btn {
-    width: 100%;
-    height: 28px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 4px;
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--text-muted);
-    background: transparent;
-    border: none !important;
-    cursor: pointer;
-    border-radius: var(--radius-sm, 6px) !important;
-    transition: color 0.15s ease, background 0.15s ease;
-    flex-shrink: 0;
-    margin-top: 2px;
-}
-.sidebar-load-more-btn:hover {
-    color: var(--text-main);
-    background: var(--bg-hover, rgba(0, 0, 0, 0.06));
 }
 .sidebar-scroll-btn svg {
     width: 14px;
@@ -507,27 +489,27 @@
     margin-top: 4px;
 }
 
-/* Badges */
+/* Badges (Minimal) */
 .badge {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    padding: 3px 8px;
-    border-radius: 100px !important;
-    font-size: 11px;
-    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: var(--radius-sm, 4px) !important;
+    font-size: 10px;
+    font-weight: 500;
     line-height: 1;
-    height: 22px;
+    height: 18px;
     box-sizing: border-box;
 }
 
 .badge--success {
-    background: var(--color-alert-success-bg, rgba(34, 197, 94, 0.15));
+    background: rgba(34, 197, 94, 0.12);
     color: var(--color-accent-2, #22c55e);
 }
 
 .badge--inactive {
-    background: var(--bg-hover);
+    background: rgba(125, 125, 125, 0.08);
     color: var(--text-muted);
 }
 
