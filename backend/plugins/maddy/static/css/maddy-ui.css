@@ -40,6 +40,7 @@
 .floating-list {
     width: 240px;
     height: 65vh;
+    min-height: 520px;
     background: var(--bg-glass);
     border-radius: var(--radius-lg) !important;
     display: flex;
@@ -82,6 +83,8 @@
 /* 4. Main Content Area */
 .content-panel {
     flex: 1;
+    height: 65vh;
+    min-height: 520px;
     background-color: var(--bg-panel);
     border-radius: var(--radius-lg) !important;
     padding: var(--spacing-xl);
@@ -89,7 +92,6 @@
     flex-direction: column;
     gap: var(--spacing-lg);
     overflow-y: auto;
-    max-height: 80vh;
 }
 
 .maddy-title {
@@ -175,7 +177,7 @@
     color: var(--text-muted);
 }
 
-/* Forms & Inputs */
+/* Forms & Inputs - Strict No Border Styling */
 .search-wrap {
     position: relative;
     display: flex;
@@ -185,16 +187,20 @@
 .search-input {
     width: 100%;
     background: var(--bg-input);
-    border: none;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
     padding: 8px 12px 8px 36px;
     border-radius: var(--radius-sm) !important;
     color: var(--text-main);
     font-size: 13px;
-    outline: none;
     transition: background 0.2s;
 }
-.search-input:focus, .form-input:focus {
+.search-input:focus, .form-input:focus, select.form-input:focus {
     background: var(--bg-glass-hover);
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
 }
 .search-icon {
     position: absolute;
@@ -216,14 +222,15 @@
     color: var(--text-muted);
     margin: 0;
 }
-.form-input {
+.form-input, select.form-input {
     background: var(--bg-input);
-    border: none;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
     padding: 10px 14px;
     border-radius: var(--radius-sm) !important;
     color: var(--text-main);
     font-size: 14px;
-    outline: none;
     transition: background 0.2s;
 }
 select.form-input option {
@@ -231,43 +238,117 @@ select.form-input option {
     color: var(--text-main);
 }
 
+/* Connected Input Box (Username + Domain Suffix) */
+.input-connected-wrap {
+    display: flex;
+    align-items: center;
+    background: var(--bg-input);
+    border-radius: var(--radius-sm) !important;
+    border: none !important;
+    outline: none !important;
+    overflow: hidden;
+    transition: background 0.2s;
+}
+.input-connected-wrap:focus-within {
+    background: var(--bg-glass-hover);
+}
+.input-connected-wrap .form-input.connected-input {
+    flex: 1;
+    background: transparent !important;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    padding: 10px 14px;
+    border-radius: 0 !important;
+}
+.input-connected-wrap .domain-suffix-badge {
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    color: var(--text-muted);
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    user-select: none;
+}
+
 .flex-row { display: flex; align-items: center; gap: var(--spacing-md); }
 .flex-between { display: flex; align-items: center; justify-content: space-between; }
 
-/* Buttons */
+/* Minimal, Clean & Scaled Buttons with Opacity Blending */
 .btn {
-    background: var(--color-secondary-btn, rgba(255,255,255,0.1));
-    color: var(--text-main);
-    border: none;
-    padding: 8px 16px;
-    border-radius: var(--radius-sm) !important;
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    height: 32px;
+    padding: 0 14px;
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1;
+    border-radius: var(--radius-sm) !important;
+    background: var(--color-secondary-btn, rgba(255, 255, 255, 0.08));
+    color: var(--text-main);
+    border: none !important;
+    opacity: 0.85;
+    cursor: pointer;
+    transition: opacity 0.2s ease, background 0.2s ease, transform 0.1s ease;
     text-decoration: none;
+    white-space: nowrap;
+    box-sizing: border-box;
+    outline: none !important;
 }
 .btn:hover { 
-    background: var(--color-secondary-hover, rgba(255,255,255,0.15)); 
+    opacity: 1;
+    background: rgba(255, 255, 255, 0.14);
+    color: #ffffff;
 }
+.btn:active {
+    transform: scale(0.98);
+}
+
+/* Primary Button (Solid Accent with Soft Opacity) */
 .btn.primary {
-    background: var(--accent);
-    color: var(--on-accent);
+    background: var(--accent, #3b82f6);
+    color: var(--on-accent, #ffffff);
+    opacity: 0.88;
+    font-weight: 600;
+    border: none !important;
 }
 .btn.primary:hover {
-    opacity: 0.85;
-    background: var(--accent);
+    opacity: 1;
+    background: var(--accent, #3b82f6);
+    color: var(--on-accent, #ffffff);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
+
+/* Minimal Danger Button (Solid Danger Color with Opacity) */
 .btn.danger {
     background: var(--color-danger, #e53e3e);
-    color: white;
+    color: #ffffff;
+    opacity: 0.82;
+    font-weight: 500;
+    border: none !important;
 }
 .btn.danger:hover {
-    opacity: 0.85;
+    opacity: 1;
+    background: var(--color-danger, #e53e3e);
+    color: #ffffff;
+    box-shadow: 0 2px 8px rgba(229, 62, 62, 0.25);
 }
+
+/* Button Sizing Utilities */
+.btn-sm {
+    height: 26px;
+    padding: 0 10px;
+    font-size: 12px;
+}
+.btn-lg {
+    height: 38px;
+    padding: 0 18px;
+    font-size: 14px;
+}
+
+
 
 /* Pop Box / Modal Customizations */
 .modal-backdrop .modal {
@@ -304,4 +385,5 @@ select.form-input option {
     gap: 8px;
     justify-content: flex-end;
 }
+
 

@@ -253,13 +253,13 @@ function renderAccountsList() {
       if (webmail.ready) {
         const openButton = document.createElement('button');
         openButton.type = 'button';
-        openButton.className = 'btn';
+        openButton.className = 'btn btn-sm';
         openButton.textContent = 'Webmail';
         openButton.addEventListener('click', () => openWebmail(acc.email));
         actionsCell.appendChild(openButton);
       } else {
         const setupLink = document.createElement('a');
-        setupLink.className = 'btn';
+        setupLink.className = 'btn btn-sm';
         setupLink.style.textDecoration = 'none';
         setupLink.textContent = 'Webmail setup';
         setupLink.href = webmail.setup_url || '/plugins/roundcube_webmail/';
@@ -269,7 +269,7 @@ function renderAccountsList() {
       
       const deleteButton = document.createElement('button');
       deleteButton.type = 'button';
-      deleteButton.className = 'btn danger';
+      deleteButton.className = 'btn danger btn-sm';
       deleteButton.textContent = 'Delete';
       deleteButton.addEventListener('click', () => executeDeleteAccount(acc.email));
       actionsCell.appendChild(deleteButton);

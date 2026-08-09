@@ -17,7 +17,7 @@
     <div class="flex-between" style="padding: 0 28px; margin-bottom: 4px;">
         <div style="font-weight: 600; font-size: 14px; color: var(--text-main);">Mail Domains</div>
         {% if plugin_installed %}
-          <button class="btn primary" style="padding: 4px 8px; font-size: 12px; border-radius: 4px !important;" onclick="openAddDomain()">+ Add</button>
+          <button class="btn primary btn-sm" onclick="openAddDomain()">+ Add</button>
         {% endif %}
     </div>
 
@@ -152,9 +152,9 @@
 
           <div class="form-group" style="margin: 0;">
             <label class="form-label">Email Username</label>
-            <div style="display: flex; background: var(--bg-input); border-radius: var(--radius-sm) !important;">
-              <input type="text" name="username" id="add-account-username" class="form-input" placeholder="hello" style="flex: 1; background: transparent;" required>
-              <div style="display: flex; align-items: center; padding: 0 16px; color: var(--text-muted); font-size: 13px; font-weight: 500;" id="add-account-domain-suffix">
+            <div class="input-connected-wrap">
+              <input type="text" name="username" id="add-account-username" class="form-input connected-input" placeholder="hello" required autocomplete="off">
+              <div class="domain-suffix-badge" id="add-account-domain-suffix">
                 @domain.com
               </div>
             </div>
