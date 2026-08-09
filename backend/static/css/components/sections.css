@@ -127,11 +127,11 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  background: transparent;
-  padding: 0 0 16px 0;
-  border-bottom: none;
-  margin-bottom: 0;
+  background: var(--color-surface);
+  padding: 10px 16px;
   flex-wrap: wrap;
+  border-bottom: 1px solid var(--color-line);
+  margin-bottom: 16px;
 }
 .action-toolbar__search {
   display: flex;
@@ -139,7 +139,7 @@
   gap: 8px;
   flex: 1;
   min-width: 240px;
-  max-width: 380px;
+  max-width: 420px;
 }
 .action-toolbar__group {
   display: flex;
