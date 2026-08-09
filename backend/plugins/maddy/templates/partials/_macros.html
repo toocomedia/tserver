@@ -4,8 +4,8 @@
 </div>
 {% endmacro %}
 
-{% macro tab(label, onclick='', active=False, class_extra='') %}
-<button class="tab {% if active %}active{% endif %} {{ class_extra }}" onclick="{{ onclick }}">
+{% macro tab(label, onclick='', active=False, class_extra='', data_target='') %}
+<button class="tab {% if active %}active{% endif %} {{ class_extra }}" onclick="{{ onclick }}" {% if data_target %}data-inner-tab="{{ data_target }}"{% endif %}>
     {{ label }}
 </button>
 {% endmacro %}
