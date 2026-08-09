@@ -17,7 +17,7 @@
     <div class="flex-between" style="padding: 0 28px;">
         <div style="font-weight: 600; font-size: 14px; color: var(--text-main);">Mail Domains</div>
         {% if plugin_installed %}
-          <button class="btn primary" style="padding: 4px 8px; font-size: 12px; border-radius: 4px !important;" onclick="openAddDomain()">+ Add</button>
+          <button class="btn primary" onclick="openAddDomain()">+ Add</button>
         {% endif %}
     </div>
 
@@ -65,14 +65,12 @@
 
 {% if plugin_installed %}
 
-  <!-- Add Domain Modal (Pop Box) -->
+  <!-- Add Domain Modal (iOS Style Pop Box) -->
   <div id="add-domain-modal" class="modal-backdrop hidden" role="dialog">
-    <div class="modal" style="max-width: 480px; width: 100%;">
-      <div class="modal__header">
-        <h2>Add Mail Domain</h2>
-        <button type="button" class="btn" style="background: transparent; border: none; font-size: 16px; cursor: pointer; color: var(--text-muted);" onclick="closeModal('add-domain-modal')">✕</button>
-      </div>
-      <div class="modal__body">
+    <div class="modal ios-modal" style="max-width: 440px;">
+      <div class="ios-modal-body">
+        <h2 style="color: var(--text-main); font-size: 18px; font-weight: 600; margin: 0 0 16px 0;">Add Mail Domain</h2>
+
         <div style="display: flex; gap: 16px; margin-bottom: 16px;">
           <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; color: var(--text-main); font-size: 13px;">
             <input type="radio" name="domain_type" value="panel" checked onchange="toggleDomainInputType()">
@@ -84,7 +82,7 @@
           </label>
         </div>
 
-        <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 20px;" id="domain-hint-text">
+        <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 16px;" id="domain-hint-text">
           Select a domain hosted on this panel — MX, A, SPF, and DMARC records will be created automatically in PowerDNS.
         </p>
 
@@ -115,26 +113,24 @@
           <div id="add-domain-result" style="display: none; font-size: 13px;"></div>
         </form>
       </div>
-      <div class="modal__footer">
-        <button type="button" class="btn" style="background: transparent; border: 1px solid var(--color-line); color: var(--text-main);" onclick="closeModal('add-domain-modal')">Cancel</button>
-        <button type="button" class="btn primary" onclick="handleAddDomain()">+ Add Domain</button>
+
+      <div class="ios-modal-footer">
+        <button type="button" class="ios-modal-btn" onclick="closeModal('add-domain-modal')">Cancel</button>
+        <button type="button" class="ios-modal-btn primary-text" onclick="handleAddDomain()">+ Add Domain</button>
       </div>
     </div>
   </div>
 
-  <!-- Add Account Modal (Pop Box) -->
+  <!-- Add Account Modal (iOS Style Pop Box) -->
   <div id="add-account-modal" class="modal-backdrop hidden" role="dialog">
-    <div class="modal" style="max-width: 480px; width: 100%;">
-      <div class="modal__header">
-        <h2>Add New Mailbox</h2>
-        <button type="button" class="btn" style="background: transparent; border: none; font-size: 16px; cursor: pointer; color: var(--text-muted);" onclick="closeModal('add-account-modal')">✕</button>
-      </div>
-      <div class="modal__body">
-        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 20px;" id="add-account-modal-subtitle">
+    <div class="modal ios-modal" style="max-width: 440px;">
+      <div class="ios-modal-body">
+        <h2 style="color: var(--text-main); font-size: 18px; font-weight: 600; margin: 0 0 8px 0;">Add New Mailbox</h2>
+        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;" id="add-account-modal-subtitle">
           Create a new email address under <strong style="color: var(--text-main);" id="modal-domain-subtitle-text"></strong>
         </p>
 
-        <form id="add-account-form" style="display: flex; flex-direction: column; gap: 16px;">
+        <form id="add-account-form" style="display: flex; flex-direction: column; gap: 14px;">
           <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
           <input type="hidden" name="domain" id="add-account-domain">
 
@@ -156,9 +152,10 @@
           <div id="add-account-result" style="display: none; font-size: 13px;"></div>
         </form>
       </div>
-      <div class="modal__footer">
-        <button type="button" class="btn" style="background: transparent; border: 1px solid var(--color-line); color: var(--text-main);" onclick="closeModal('add-account-modal')">Cancel</button>
-        <button type="button" class="btn primary" onclick="executeAddAccount()">Create Mailbox</button>
+
+      <div class="ios-modal-footer">
+        <button type="button" class="ios-modal-btn" onclick="closeModal('add-account-modal')">Cancel</button>
+        <button type="button" class="ios-modal-btn primary-text" onclick="executeAddAccount()">Create Mailbox</button>
       </div>
     </div>
   </div>
