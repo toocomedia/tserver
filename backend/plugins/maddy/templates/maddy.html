@@ -14,10 +14,10 @@
   <!-- 3. Simple Side List -->
   <div class="floating-list">
     
-    <div class="flex-between" style="padding: 0 28px;">
+    <div class="flex-between" style="padding: 0 16px; margin-bottom: 8px;">
         <div style="font-weight: 600; font-size: 14px; color: var(--text-main);">Mail Domains</div>
         {% if plugin_installed %}
-          <button class="btn primary" onclick="openAddDomain()">+ Add</button>
+          <button type="button" class="btn primary sidebar-add-btn" onclick="openAddDomain()">+ Add</button>
         {% endif %}
     </div>
 
