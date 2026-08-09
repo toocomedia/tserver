@@ -180,7 +180,7 @@
     padding: 0 8px 0 30px;
 }
 
-/* Solid Accent Add Button under Title & Search inside Card Box */
+/* Theme-Compliant Add Button under Title & Search inside Card Box */
 .sidebar-big-add-btn {
     width: 100%;
     height: 32px;
@@ -191,24 +191,25 @@
     font-size: 13px;
     font-weight: 600;
     border-radius: var(--radius-sm, 6px) !important;
-    background: var(--accent, var(--color-primary, #3b82f6)) !important;
-    color: var(--on-accent, #ffffff) !important;
+    background: var(--btn-primary-bg, var(--accent, #3b82f6));
+    color: var(--btn-primary-text, var(--on-accent, #ffffff));
     border: none !important;
     cursor: pointer;
-    transition: opacity 0.15s ease, transform 0.1s ease;
+    transition: opacity 0.15s ease, background 0.15s ease;
     text-decoration: none;
     box-sizing: border-box;
     flex-shrink: 0;
 }
 .sidebar-big-add-btn:hover {
+    background: var(--btn-primary-hover, var(--accent, #3b82f6));
+    color: var(--btn-primary-text, var(--on-accent, #ffffff));
     opacity: 0.9;
-    color: var(--on-accent, #ffffff) !important;
 }
 .sidebar-big-add-btn:focus,
 .sidebar-big-add-btn:active {
     outline: none !important;
-    background: var(--accent, var(--color-primary, #3b82f6)) !important;
-    color: var(--on-accent, #ffffff) !important;
+    background: var(--btn-primary-bg, var(--accent, #3b82f6));
+    color: var(--btn-primary-text, var(--on-accent, #ffffff));
 }
 
 /* Domain List Box Card Surface (Flexible Height Matching Content Panel) */
@@ -564,15 +565,15 @@
 }
 
 .btn.danger, .btn--danger {
-    background: var(--btn-danger-bg);
-    color: var(--btn-danger-text);
+    background: var(--btn-danger-bg, rgba(239, 68, 68, 0.14));
+    color: var(--btn-danger-text, #ef4444);
     border: none !important;
     font-weight: 500;
 }
 
 .btn.danger:hover, .btn--danger:hover {
-    background: var(--btn-danger-hover);
-    color: var(--btn-danger-text);
+    background: var(--btn-danger-hover, rgba(239, 68, 68, 0.26));
+    color: var(--btn-danger-text, #ef4444);
     border: none !important;
 }
 
