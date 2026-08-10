@@ -9,10 +9,14 @@
 {% endblock %}
 
 {% block content %}
-<article class="info-subpage-wrap" data-php-runtime data-runtime-url="/api/dependencies/php/runtime-view" style="position:relative;min-height:560px;">
-  <div data-php-runtime-content data-async-load aria-live="polite"></div>
+<div class="php-dependency-page">
+  <!-- SKELETON LOADING OVERLAY -->
   {{ skeleton_overlay('php-runtime-skeleton', header=1, sections=[1], tables=[{'rows': 7}]) }}
-</article>
+  <!-- END SKELETON OVERLAY -->
+  <article class="info-subpage-wrap" data-php-runtime data-runtime-url="/api/dependencies/php/runtime-view" style="min-height:560px;">
+    <div data-php-runtime-content data-async-load aria-live="polite"></div>
+  </article>
+</div>
 {% endblock %}
 
 {% block scripts %}
