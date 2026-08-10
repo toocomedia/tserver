@@ -69,6 +69,25 @@ class PHPDependencyServiceTests(unittest.TestCase):
         self.assertEqual("availability refreshed", message)
         service._helper_call.assert_called_once_with("check_available", timeout=300)
 
+    def test_available_versions_uses_one_policy_call_for_all_php_packages(self):
+        service = PHPDependencyService()
+        service._run = Mock(side_effect=[
+            Mock(returncode=0, stdout="php7.4-fpm\nphp8.3-fpm\nphp8.4-cli\n"),
+            Mock(returncode=0, stdout=(
+                "php7.4-fpm:\n  Candidate: 7.4.33\n"
+                "php8.3-fpm:\n  Candidate: 8.3.30\n"
+            )),
+        ])
+
+        versions = service._available_versions()
+
+        self.assertEqual(["7.4", "8.3"], versions)
+        self.assertEqual(2, service._run.call_count)
+        self.assertEqual(
+            ["apt-cache", "policy", "php7.4-fpm", "php8.3-fpm"],
+            service._run.call_args_list[1].args[0],
+        )
+
     def test_external_repository_is_a_fixed_explicit_helper_operation(self):
         service = PHPDependencyService()
         service._helper_call = Mock(return_value={"message": "repository enabled"})

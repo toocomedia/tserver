@@ -1,0 +1,42 @@
+<!-- Cards view -->
+<div data-resource-container="dependencies" data-resource-view="cards" class="dependency-grid">
+  {% for dependency in dependencies %}
+    {% include "partials/dependency_card.html" %}
+  {% else %}
+    {% set empty_message = 'No system dependencies are registered.' %}
+    {% include "partials/empty_state.html" %}
+  {% endfor %}
+</div>
+
+<!-- Compact view -->
+<div data-resource-container="dependencies" data-resource-view="compact" class="dependency-compact-grid is-hidden">
+  {% for dependency in dependencies %}
+    {% include "partials/dependency_card_compact.html" %}
+  {% else %}
+    {% set empty_message = 'No system dependencies are registered.' %}
+    {% include "partials/empty_state.html" %}
+  {% endfor %}
+</div>
+
+<!-- List view -->
+<div data-resource-container="dependencies" data-resource-view="list" class="view-list-container is-hidden">
+  <div class="list-header-row">
+    <div>System Dependency</div><div>Driver</div><div>Status</div><div>Description</div><div>Actions</div>
+  </div>
+  {% from "partials/resource_list_row.html" import render as render_resource_row with context %}
+  {% for dependency in dependencies %}
+    {% if dependency.healthy and dependency.desired_enabled %}
+      {% set dependency_status_label = 'Healthy' %}{% set dependency_status_tone = 'success' %}
+    {% elif dependency.effective_state in ['missing', 'unhealthy', 'invalid', 'error'] %}
+      {% set dependency_status_label = dependency.effective_state | replace('_', ' ') | title %}{% set dependency_status_tone = 'danger' %}
+    {% elif dependency.effective_state in ['paused', 'disabled', 'stopped'] %}
+      {% set dependency_status_label = dependency.effective_state | replace('_', ' ') | title %}{% set dependency_status_tone = 'warning' %}
+    {% else %}
+      {% set dependency_status_label = dependency.effective_state | replace('_', ' ') | title %}{% set dependency_status_tone = 'muted' %}
+    {% endif %}
+    {{ render_resource_row(dependency, 'dependency', dependency.name, 'v' ~ dependency.version, dependency.description, dependency.icon, dependency.name ~ ' icon', dependency_status_label, dependency_status_tone, 'partials/dependency_list_actions.html') }}
+  {% else %}
+    {% set empty_message = 'No dependencies registered.' %}
+    {% include "partials/empty_state.html" %}
+  {% endfor %}
+</div>

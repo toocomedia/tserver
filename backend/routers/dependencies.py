@@ -28,13 +28,12 @@ async def dependency_asset(dependency_id: str):
 
 @router.get("/dependencies", response_class=HTMLResponse)
 async def dependencies_index(request: Request):
-    dependencies = dependency_manager.get_all_statuses(cached=True)
     return templates.TemplateResponse(
         "pages/dependencies.html",
         {
             "request": request,
             "active_page": "dependencies",
-            "dependencies": dependencies,
+            "dependency_count": len(dependency_manager._services),
         },
     )
 
@@ -74,6 +73,16 @@ def _php_service():
     if service is None:
         raise HTTPException(status_code=404, detail="PHP dependency is unavailable.")
     return service
+
+
+@router.get("/api/dependencies/catalog-view", response_class=HTMLResponse)
+async def dependency_catalog_view(request: Request):
+    """Render dependency cards after the shell page is visible."""
+    dependencies = await asyncio.to_thread(dependency_manager.get_all_statuses)
+    return templates.TemplateResponse(
+        "pages/partials/dependency_catalog.html",
+        {"request": request, "dependencies": dependencies},
+    )
 
 
 @router.get("/api/dependencies/php/runtime-view", response_class=HTMLResponse)

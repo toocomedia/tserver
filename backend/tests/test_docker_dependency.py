@@ -120,7 +120,10 @@ class DockerDependencyServiceTests(unittest.TestCase):
         self.assertNotIn("window.location.reload", template)
 
     def test_dependency_catalog_links_to_generic_detail_page_and_uses_placeholder(self):
-        catalog = (BACKEND / "templates" / "pages" / "dependencies.html").read_text(
+        catalog_page = (BACKEND / "templates" / "pages" / "dependencies.html").read_text(
+            encoding="utf-8"
+        )
+        catalog_partial = (BACKEND / "templates" / "pages" / "partials" / "dependency_catalog.html").read_text(
             encoding="utf-8"
         )
         detail = (BACKEND / "templates" / "pages" / "dependency_detail.html").read_text(
@@ -129,9 +132,11 @@ class DockerDependencyServiceTests(unittest.TestCase):
         router = (BACKEND / "routers" / "dependencies.py").read_text(encoding="utf-8")
         placeholder = BACKEND / "static" / "images" / "dependency-placeholder.svg"
 
-        self.assertIn('href="/dependencies/{{ dependency.id }}"', catalog)
-        self.assertIn("width:460px; height:160px", catalog)
+        self.assertIn("/api/dependencies/catalog-view", catalog_page)
+        self.assertIn("dependencies-skeleton", catalog_page)
+        self.assertIn('href="/dependencies/{{ dependency.id }}"', catalog_partial)
         self.assertIn('@router.get("/dependencies/{dependency_id}"', router)
+        self.assertIn('@router.get("/api/dependencies/catalog-view"', router)
         self.assertIn("dependency.install_guide", detail)
         self.assertIn("dependency.uninstall_guide", detail)
         self.assertTrue(placeholder.is_file())

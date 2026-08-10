@@ -94,18 +94,30 @@ class PHPDependencyService:
             match.group(1) for line in result.stdout.splitlines()
             if (match := PACKAGE_RE.fullmatch(line.strip()))
         }
+        ordered_versions = sorted(versions, key=lambda value: tuple(int(part) for part in value.split(".")))
+        if not ordered_versions:
+            return []
+        try:
+            policy = self._run(
+                ["apt-cache", "policy", *(self._package_name(version) for version in ordered_versions)],
+                timeout=max(20, len(ordered_versions) * 2),
+            )
+        except (OSError, subprocess.TimeoutExpired):
+            return []
+        if policy.returncode != 0:
+            return []
         available: list[str] = []
-        for version in sorted(versions, key=lambda value: tuple(int(part) for part in value.split("."))):
-            try:
-                policy = self._run(["apt-cache", "policy", self._package_name(version)], timeout=8)
-            except (OSError, subprocess.TimeoutExpired):
+        current_version = None
+        for line in policy.stdout.splitlines():
+            package_match = re.fullmatch(r"php(\d+\.\d+)-fpm:", line.strip())
+            if package_match:
+                current_version = package_match.group(1)
                 continue
-            candidate = next((
-                line.split(":", 1)[1].strip() for line in policy.stdout.splitlines()
-                if line.strip().startswith("Candidate:")
-            ), "")
-            if policy.returncode == 0 and candidate and candidate != "(none)":
-                available.append(version)
+            if current_version and line.strip().startswith("Candidate:"):
+                candidate = line.split(":", 1)[1].strip()
+                if candidate and candidate != "(none)":
+                    available.append(current_version)
+                current_version = None
         return available
 
     def _installed_package_version(self, version: str) -> str | None:

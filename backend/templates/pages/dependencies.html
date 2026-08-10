@@ -1,5 +1,4 @@
 {% extends "layout.html" %}
-
 {% from "partials/skeleton_overlay.html" import skeleton_overlay %}
 
 {% block title %}System Dependencies — {{ PANEL_NAME }}{% endblock %}
@@ -14,74 +13,47 @@
 
 {% block content %}
 <div class="dependencies-page">
-<div class="mb-xl">
-  {% set dependency_title_icon %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/></svg>{% endset %}
-  {% set title = 'System Dependencies Catalog' %}
-  {% set item_count = dependencies | length %}
-  {% set icon_svg = dependency_title_icon %}
-  {% include "partials/resource_title_bar.html" %}
+  <div class="mb-xl">
+    {% set dependency_title_icon %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/></svg>{% endset %}
+    {% set title = 'System Dependencies Catalog' %}
+    {% set item_count = dependency_count %}
+    {% set icon_svg = dependency_title_icon %}
+    {% include "partials/resource_title_bar.html" %}
 
-  <div class="resource-views">
-    
-    <!-- SKELETON LOADING OVERLAY -->
-    {{ skeleton_overlay('dependencies-skeleton', title_bar=1, cards=6) }}
-    <!-- END SKELETON OVERLAY -->
-    
-    <!-- 1. CARDS VIEW -->
-    <div data-resource-container="dependencies" data-resource-view="cards" class="dependency-grid">
-      {% for dependency in dependencies %}
-        {% include "partials/dependency_card.html" %}
-      {% else %}
-        {% set empty_message = 'No system dependencies are registered.' %}
-        {% include "partials/empty_state.html" %}
-      {% endfor %}
+    <div class="resource-views" data-dependency-catalog data-catalog-url="/api/dependencies/catalog-view" style="position:relative;min-height:420px;">
+      <div data-dependency-catalog-content data-async-load aria-live="polite"></div>
+      {{ skeleton_overlay('dependencies-skeleton', title_bar=1, cards=6) }}
     </div>
-
-    <!-- 2. COMPACT GRID VIEW -->
-    <div data-resource-container="dependencies" data-resource-view="compact" class="dependency-compact-grid is-hidden">
-      {% for dependency in dependencies %}
-        {% include "partials/dependency_card_compact.html" %}
-      {% else %}
-        {% set empty_message = 'No system dependencies are registered.' %}
-        {% include "partials/empty_state.html" %}
-      {% endfor %}
-    </div>
-
-    <!-- 3. LIST VIEW -->
-    <div data-resource-container="dependencies" data-resource-view="list" class="view-list-container is-hidden">
-      <div class="list-header-row">
-        <div>System Dependency</div><div>Driver</div><div>Status</div><div>Description</div><div>Actions</div>
-      </div>
-      {% from "partials/resource_list_row.html" import render as render_resource_row with context %}
-      {% for dependency in dependencies %}
-        {% if dependency.healthy and dependency.desired_enabled %}
-          {% set dependency_status_label = 'Healthy' %}{% set dependency_status_tone = 'success' %}
-        {% elif dependency.effective_state in ['missing', 'unhealthy', 'invalid', 'error'] %}
-          {% set dependency_status_label = dependency.effective_state | replace('_', ' ') | title %}{% set dependency_status_tone = 'danger' %}
-        {% elif dependency.effective_state in ['paused', 'disabled', 'stopped'] %}
-          {% set dependency_status_label = dependency.effective_state | replace('_', ' ') | title %}{% set dependency_status_tone = 'warning' %}
-        {% else %}
-          {% set dependency_status_label = dependency.effective_state | replace('_', ' ') | title %}{% set dependency_status_tone = 'muted' %}
-        {% endif %}
-        {{ render_resource_row(dependency, 'dependency', dependency.name, 'v' ~ dependency.version, dependency.description, dependency.icon, dependency.name ~ ' icon', dependency_status_label, dependency_status_tone, 'partials/dependency_list_actions.html') }}
-      {% else %}
-        {% set empty_message = 'No dependencies registered.' %}
-        {% include "partials/empty_state.html" %}
-      {% endfor %}
-    </div>
-
   </div>
 </div>
-
-</div><!-- /.dependencies-page -->
-
 {% endblock %}
 
 {% block scripts %}
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-  if (typeof hideSkeleton === 'function') hideSkeleton('dependencies-skeleton');
-  else if (typeof window.hideSkeleton === 'function') window.hideSkeleton('dependencies-skeleton');
-});
+(function () {
+  var root = document.querySelector('[data-dependency-catalog]');
+  if (!root) return;
+  var content = root.querySelector('[data-dependency-catalog-content]');
+
+  async function loadCatalog() {
+    try {
+      var response = await fetch(root.dataset.catalogUrl, {headers: {'Accept': 'text/html'}});
+      if (!response.ok) throw new Error('Could not load dependency status.');
+      content.innerHTML = await response.text();
+      content.classList.add('skeleton-content--enter');
+      window.requestAnimationFrame(function () {
+        content.classList.remove('skeleton-content--enter');
+      });
+      if (typeof window.autoInitAllListPaginations === 'function') window.autoInitAllListPaginations();
+      if (typeof window.hideSkeleton === 'function') window.hideSkeleton('dependencies-skeleton', 0);
+    } catch (error) {
+      content.innerHTML = '<p class="text-danger">Could not load dependency status. Refresh the page to try again.</p>';
+      if (typeof window.hideSkeleton === 'function') window.hideSkeleton('dependencies-skeleton', 0);
+      if (window.toast) window.toast(error.message, 'error');
+    }
+  }
+
+  loadCatalog();
+})();
 </script>
 {% endblock %}
