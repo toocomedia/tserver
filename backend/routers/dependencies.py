@@ -41,23 +41,24 @@ async def dependencies_index(request: Request):
 
 @router.get("/dependencies/{dependency_id}", response_class=HTMLResponse)
 async def dependency_detail(request: Request, dependency_id: str):
-    dependency = dependency_manager.get_status(dependency_id)
     service = dependency_manager.get_service(dependency_id)
-    if dependency is None or service is None:
+    if service is None:
         raise HTTPException(status_code=404, detail="Unknown dependency.")
 
-    dependency["dependents"] = dependency_manager.get_dependent_plugins(dependency_id)
-    dependency["install_guide"] = service.get_install_guide()
-    dependency["uninstall_guide"] = service.get_uninstall_guide()
     if dependency_id == "php":
         return templates.TemplateResponse(
             "pages/php_dependency_detail.html",
             {
                 "request": request,
                 "active_page": "dependencies",
-                "dependency": dependency,
             },
         )
+    dependency = dependency_manager.get_status(dependency_id)
+    if dependency is None:
+        raise HTTPException(status_code=404, detail="Unknown dependency.")
+    dependency["dependents"] = dependency_manager.get_dependent_plugins(dependency_id)
+    dependency["install_guide"] = service.get_install_guide()
+    dependency["uninstall_guide"] = service.get_uninstall_guide()
     return templates.TemplateResponse(
         "pages/dependency_detail.html",
         {
@@ -73,6 +74,18 @@ def _php_service():
     if service is None:
         raise HTTPException(status_code=404, detail="PHP dependency is unavailable.")
     return service
+
+
+@router.get("/api/dependencies/php/runtime-view", response_class=HTMLResponse)
+async def php_runtime_view(request: Request):
+    """Render PHP runtime data after the fast shell page has loaded."""
+    dependency = await asyncio.to_thread(dependency_manager.get_status, "php", force=True)
+    if dependency is None:
+        raise HTTPException(status_code=404, detail="PHP dependency is unavailable.")
+    return templates.TemplateResponse(
+        "pages/partials/php_dependency_runtime.html",
+        {"request": request, "dependency": dependency},
+    )
 
 
 @router.post("/api/dependencies/php/check-available")

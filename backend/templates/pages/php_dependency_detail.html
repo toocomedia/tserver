@@ -1,4 +1,5 @@
 {% extends "layout.html" %}
+{% from "partials/skeleton_overlay.html" import skeleton_overlay %}
 
 {% block title %}PHP Runtime — Dependencies — {{ PANEL_NAME }}{% endblock %}
 {% block page_title %}PHP Runtime{% endblock %}
@@ -8,131 +9,32 @@
 {% endblock %}
 
 {% block content %}
-<article class="info-subpage-wrap" data-php-runtime>
-  <header class="info-hero-row">
-    <div class="info-hero-row__icon">
-      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="1.5" d="M7 3h7l3 3v15H7z"/><path stroke-width="1.5" d="M14 3v4h4M9 12h6M9 16h6"/></svg>
-    </div>
-    <div class="info-hero-row__main">
-      <div class="info-hero-row__title-line">
-        <h1 class="info-hero-row__title">PHP Runtime</h1>
-        {% if dependency.healthy %}
-        <span class="badge badge--healthy"><span class="badge-dot"></span> Ready</span>
-        {% else %}
-        <span class="badge badge--danger"><span class="badge-dot"></span> {{ dependency.state | replace('_', ' ') }}</span>
-        {% endif %}
-      </div>
-      <div class="info-hero-row__meta">Native PHP-FPM · configured APT sources</div>
-    </div>
-    <div class="info-hero-row__actions">
-      <form method="post" action="/api/dependencies/php/check-available" data-php-check>
-        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
-        <button class="btn btn--secondary btn--sm" type="submit">Check available versions</button>
-      </form>
-      {% if dependency.external_repository.configured %}
-      <button class="btn btn--secondary btn--sm" type="button" disabled title="External PHP repository is already enabled">External PHP source enabled</button>
-      {% else %}
-      <form method="post" action="/api/dependencies/php/enable-external-repository" data-php-external-repository data-confirmation="ENABLE EXTERNAL PHP REPOSITORY">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
-        <input type="hidden" name="confirmation" value="">
-        <button class="btn btn--secondary btn--sm" type="submit">Enable external PHP source</button>
-      </form>
-      {% endif %}
-    </div>
-  </header>
-
-  <div>
-    <p class="text-small text-muted">Install only the PHP versions your scripts need. Removing a version keeps website files and databases.</p>
-  </div>
-
-  {% set missing_versions = dependency.versions | rejectattr('installed') | rejectattr('available_from_apt') | list %}
-  {% if missing_versions and not dependency.external_repository.configured %}
-  <div>
-    <h2 class="info-group-title">Need more PHP versions?</h2>
-    <p class="text-small text-muted" style="max-width:720px;">
-      Some versions are missing from your APT sources. The button above enables {{ dependency.external_repository.name }}; it is third-party and installs no PHP automatically.
-    </p>
-  </div>
-  {% elif dependency.external_repository.configured %}
-  <div>
-    <p class="text-small text-muted">External PHP source enabled · check APT to refresh the version list.</p>
-  </div>
-  {% endif %}
-
-  {% if dependency.last_error or dependency.error %}
-  <p class="text-danger" data-php-error>{{ dependency.last_error or dependency.error }}</p>
-  {% else %}
-  <p class="text-danger hidden" data-php-error></p>
-  {% endif %}
-
-  <div>
-    <div class="view-list-container">
-      <div class="list-header-row">
-        <div>PHP version</div><div>Package</div><div>Status</div><div>Socket</div><div>Actions</div>
-      </div>
-      {% for runtime in dependency.versions %}
-      <div class="list-item-row">
-        <div class="list-col-main"><span class="list-col-name">PHP {{ runtime.version }}</span></div>
-        <div class="list-col-version">{{ runtime.package_version or 'Available' }}</div>
-        <div class="list-col-status">
-          {% if runtime.installed and runtime.healthy %}
-          <span class="badge badge--healthy"><span class="badge-dot"></span> FPM socket ready</span>
-          {% elif runtime.installed and runtime.managed %}
-          <span class="badge badge--danger"><span class="badge-dot"></span> {{ runtime.error or 'Needs repair' }}</span>
-          {% elif runtime.installed %}
-          <span class="text-small text-muted">Installed outside SRV Panel · read-only</span>
-          {% elif runtime.available_from_apt %}
-          <span class="text-small text-muted">Available from current APT sources</span>
-          {% else %}
-          <span class="text-small text-muted">Not offered by current APT sources</span>
-          {% endif %}
-        </div>
-        <div class="list-col-desc text-small text-muted">
-          {% if runtime.installed %}{{ runtime.socket_path }}{% elif runtime.available_from_apt %}Available from APT{% else %}Not available{% endif %}
-        </div>
-        <div class="list-col-actions">
-          {% if runtime.can_install %}
-          <form method="post" action="/api/dependencies/php/versions/{{ runtime.version }}/install" data-php-install>
-            <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
-            <button class="btn btn--primary btn--sm" type="submit">Install</button>
-          </form>
-          {% elif runtime.can_uninstall %}
-          <form method="post" action="/api/dependencies/php/versions/{{ runtime.version }}/uninstall" data-php-uninstall data-confirmation="REMOVE PHP {{ runtime.version }}">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
-            <input type="hidden" name="confirmation" value="">
-            <button class="btn btn--danger btn--sm" type="submit">Uninstall</button>
-          </form>
-          {% elif runtime.installed %}
-          <span class="text-small text-muted">Managed outside the panel</span>
-          {% else %}
-          <span class="text-small text-muted">Unavailable from APT</span>
-          {% endif %}
-        </div>
-      </div>
-      {% else %}
-      <div class="list-item-row"><div class="list-col-main">No PHP-FPM versions are available from the current APT indexes.</div></div>
-      {% endfor %}
-    </div>
-  </div>
-
-  <div>
-    <h2 class="info-group-title">Safety</h2>
-    <p class="text-small text-muted">Only panel-installed PHP can be removed here. Existing PHP remains read-only.</p>
-  </div>
+<article class="info-subpage-wrap" data-php-runtime data-runtime-url="/api/dependencies/php/runtime-view" style="position:relative;min-height:560px;">
+  <div data-php-runtime-content data-async-load aria-live="polite"></div>
+  {{ skeleton_overlay('php-runtime-skeleton', header=1, sections=[1], tables=[{'rows': 7}]) }}
 </article>
 {% endblock %}
 
 {% block scripts %}
 <script>
 (function () {
+  var root = document.querySelector('[data-php-runtime]');
+  if (!root) return;
+  var content = root.querySelector('[data-php-runtime-content]');
+
   function showError(message) {
-    var error = document.querySelector('[data-php-error]');
+    var error = content.querySelector('[data-php-error]');
+    if (!error) return;
     error.textContent = message;
     error.classList.remove('hidden');
   }
+
   function bind(form) {
+    if (form.dataset.phpBound === 'true') return;
+    form.dataset.phpBound = 'true';
     form.addEventListener('submit', async function (event) {
       event.preventDefault();
+      event.stopPropagation();
       var expected = form.getAttribute('data-confirmation');
       if (expected) {
         var message = form.hasAttribute('data-php-external-repository')
@@ -146,7 +48,7 @@
       button.disabled = true;
       try {
         var response = await fetch(form.action, {method: 'POST', body: new FormData(form), headers: {'Accept': 'application/json'}});
-        var payload = await response.json();
+        var payload = await response.json().catch(function () { return {}; });
         if (!response.ok || !payload.success) throw new Error(payload.detail || 'PHP operation failed.');
         if (window.toast) window.toast(payload.message, 'success');
         window.location.reload();
@@ -157,10 +59,30 @@
       }
     });
   }
-  document.querySelectorAll('[data-php-install]').forEach(bind);
-  document.querySelectorAll('[data-php-uninstall]').forEach(bind);
-  document.querySelectorAll('[data-php-check]').forEach(bind);
-  document.querySelectorAll('[data-php-external-repository]').forEach(bind);
+
+  function bindActions() {
+    content.querySelectorAll('[data-php-install], [data-php-uninstall], [data-php-check], [data-php-external-repository]').forEach(bind);
+  }
+
+  async function loadRuntime() {
+    try {
+      var response = await fetch(root.dataset.runtimeUrl, {headers: {'Accept': 'text/html'}});
+      if (!response.ok) throw new Error('Could not load the PHP runtime status.');
+      content.innerHTML = await response.text();
+      content.classList.add('skeleton-content--enter');
+      window.requestAnimationFrame(function () {
+        content.classList.remove('skeleton-content--enter');
+      });
+      bindActions();
+      if (window.hideSkeleton) window.hideSkeleton('php-runtime-skeleton', 0);
+    } catch (error) {
+      content.innerHTML = '<p class="text-danger">Could not load the PHP runtime status. Refresh the page to try again.</p>';
+      if (window.hideSkeleton) window.hideSkeleton('php-runtime-skeleton', 0);
+      if (window.toast) window.toast(error.message, 'error');
+    }
+  }
+
+  loadRuntime();
 })();
 </script>
 {% endblock %}

@@ -3,6 +3,7 @@
   "name": "PHP Runtime",
   "description": "Install only the PHP-FPM versions your scripts need, using this server's configured APT sources.",
   "version": "1.0.0",
+  "icon": "icon.png",
   "author": "SRV Panel Core",
   "detail_only": true,
   "usage": {
