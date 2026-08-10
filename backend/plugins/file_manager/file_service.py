@@ -39,7 +39,9 @@ class FileRoot:
     def payload(self) -> dict[str, Any]:
         return {
             "id": self.id,
+            "name": self.label,
             "label": self.label,
+            "kind": self.kind,
             "persistence": "persistent" if self.persistent else "live_runtime",
             "edits_survive_deploy": self.persistent,
             "sensitive": self.sensitive,
@@ -48,12 +50,12 @@ class FileRoot:
 
 @dataclass(frozen=True)
 class FileContext:
-    app: ContainerApp
-    container_name: str
+    app: Any
+    container_name: str | None
     root: FileRoot
 
 
-def lock_for(app_id: int) -> asyncio.Lock:
+def lock_for(app_id: object) -> asyncio.Lock:
     return _locks.setdefault(app_id, asyncio.Lock())
 
 

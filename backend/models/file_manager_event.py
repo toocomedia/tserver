@@ -19,6 +19,7 @@ class FileManagerEvent(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[int | None] = mapped_column(Integer)
     app_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    target_type: Mapped[str] = mapped_column(String(24), nullable=False, default="container")
     root_id: Mapped[str] = mapped_column(String(64), nullable=False)
     relative_path: Mapped[str] = mapped_column(String(1024), nullable=False, default="")
     action: Mapped[str] = mapped_column(String(32), nullable=False)

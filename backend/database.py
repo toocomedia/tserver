@@ -270,6 +270,13 @@ def _migrate_sync(sync_conn) -> None:
     if "container_app_backups" in tables and "database_backup_id" not in _column_names(sync_conn, "container_app_backups"):
         sync_conn.execute(text("ALTER TABLE container_app_backups ADD COLUMN database_backup_id INTEGER"))
 
+    if "file_manager_events" in tables and "target_type" not in _column_names(sync_conn, "file_manager_events"):
+        logger.info("Migrating file_manager_events: add target_type")
+        sync_conn.execute(text(
+            "ALTER TABLE file_manager_events "
+            "ADD COLUMN target_type VARCHAR(24) DEFAULT 'container' NOT NULL"
+        ))
+
     if "users" in tables:
         cols = _column_names(sync_conn, "users")
         user_columns = {

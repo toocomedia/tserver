@@ -16,15 +16,34 @@ async function init() {
     const data = await api.fetchApps();
     const appSelector = document.getElementById('app-selector');
     if (data.apps.length === 0) {
-      appSelector.innerHTML = '<option value="">No apps available</option>';
+      appSelector.innerHTML = '<option value="">No targets available</option>';
     } else {
-      appSelector.innerHTML = '<option value="">Select App...</option>';
+      appSelector.innerHTML = '<option value="">Select Target...</option>';
+      
+      const groups = {
+        container: { label: 'Apps Engine', opts: [] },
+        python: { label: 'Python Hosted Apps', opts: [] },
+        static: { label: 'Static Sites', opts: [] }
+      };
+      
       data.apps.forEach(app => {
+        const type = app.target_type || 'container';
+        if (!groups[type]) groups[type] = { label: type.toUpperCase(), opts: [] };
+        
         const opt = document.createElement('option');
         opt.value = app.id;
         opt.textContent = `${app.domain || 'Unnamed'} (${app.preset})`;
-        appSelector.appendChild(opt);
+        groups[type].opts.push(opt);
       });
+      
+      for (const [key, group] of Object.entries(groups)) {
+        if (group.opts.length > 0) {
+          const optgroup = document.createElement('optgroup');
+          optgroup.label = group.label;
+          group.opts.forEach(opt => optgroup.appendChild(opt));
+          appSelector.appendChild(optgroup);
+        }
+      }
     }
     
     appSelector.disabled = false;
@@ -288,7 +307,7 @@ async function openEditor(entry) {
     
     const warnDiv = document.getElementById('editor-warning');
     if (state.activeRoot && state.activeRoot.persistence === 'live_runtime') {
-      warnDiv.textContent = 'Warning: This file is in the active container. A deploy or recreate will replace these edits.';
+      warnDiv.textContent = 'Warning: These files are in a live runtime (container or Python release). A deploy or recreate will replace these edits.';
       warnDiv.style.display = 'block';
     } else {
       warnDiv.style.display = 'none';

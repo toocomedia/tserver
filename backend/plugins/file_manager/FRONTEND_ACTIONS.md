@@ -1,13 +1,14 @@
 # File Manager frontend action contract
 
-This plugin currently provides backend APIs only. Do not add a sidebar item,
-template, CSS, or JavaScript until the File Manager UI is intentionally built.
+File Manager exposes only panel-owned application roots. It never accepts a
+server path from the browser.
 
 ## Screen model
 
-1. Load `GET /plugins/file_manager/api/apps` and let the user choose a running
-   Apps Engine application.
-2. Load `GET /plugins/file_manager/api/apps/{app_id}/roots` and show its roots
+1. Load `GET /plugins/file_manager/api/apps` and let the user choose a managed
+   application target. Each entry has `id`, `target_type`, `domain`, `preset`,
+   and `status`.
+2. Load `GET /plugins/file_manager/api/apps/{target_id}/roots` and show its roots
    as tabs or a compact selector. Never offer a server-path picker.
 3. Load `GET .../roots/{root_id}/entries?path=` for the selected root and
    folder. Build breadcrumbs only from returned relative paths.
@@ -17,9 +18,11 @@ as `X-CSRF-Token`; JSON mutation endpoints do not accept an absent token.
 
 Root metadata is required UI behavior:
 
-- `persistence: live_runtime` means files are in the active container and a
-  deploy/recreate replaces those edits. Show this warning before a write.
-- `persistence: persistent` means the root is a managed Docker volume.
+- `persistence: live_runtime` means files are from a running container or the
+  active Python release. A deploy/recreate replaces those edits. Show this
+  warning before a write.
+- `persistence: persistent` means a static-site webroot, managed Docker volume,
+  or Python application data folder.
 - `sensitive: true` identifies Runtime `.env`; show a warning before opening,
   downloading, or saving it.
 - Dotfiles, including application `.env`, are normal entries and must be shown.
@@ -41,7 +44,7 @@ Root metadata is required UI behavior:
 | Delete | `DELETE .../entries` with `{path, confirmation}` | Modal must require exact text `DELETE {path}` and state that deletion is permanent. |
 | Properties | Use the selected entry returned by directory listing or text response | Show name, kind, size, modified time, sensitive flag, and root persistence. |
 
-`...` means `/plugins/file_manager/api/apps/{app_id}/roots/{root_id}`.
+`...` means `/plugins/file_manager/api/apps/{target_id}/roots/{root_id}`.
 
 ## States and errors
 
@@ -52,7 +55,7 @@ Root metadata is required UI behavior:
 - A symlink is shown as a `symlink` entry but cannot be opened, edited,
   downloaded, moved, copied, or deleted through this UI. Explain that File
   Manager does not follow symlinks for safety.
-- Runtime `.env` supports only open, save, and download. `PORT` and panel-
+- Container Runtime `.env` supports only open, save, and download. `PORT` and panel-
   managed database variables cannot be changed; render their returned `409`
   messages inline without displaying their values in notifications.
 - A successful Runtime `.env` save returns `restart_required: true`. Tell the
@@ -68,3 +71,33 @@ Root metadata is required UI behavior:
 This UI must not add a terminal, command runner, archive extraction, archive
 creation, server-root picker, Docker shell access, or SFTP replacement. File
 Manager manages only roots returned by its API for the selected app.
+
+## Current target types
+
+| `target_type` | File roots |
+| --- | --- |
+| `container` | Verified running Railpack container working directory and its declared volumes. |
+| `python` | Verified active Python release source plus its persistent `data` folder. |
+| `static` | Verified static domain webroot: `/var/www/{domain}/public` by default. |
+
+Python source changes are live-release edits and will be replaced by the next
+deploy. Static-site and Python-data edits persist. An application `.env` inside
+one of these roots is a normal visible file; the separate container Runtime
+`.env` remains sensitive.
+
+## Adding a future stack
+
+Do not add stack-specific UI code or a server-path picker. Add one backend
+target provider in `file_targets.py` for the new stack type. Its provider must:
+
+1. return only database-owned targets with stable IDs such as `php:{id}`;
+2. compute every allowed root from the target ID and panel configuration, never
+   from a browser value or unchecked database path;
+3. verify the root exists, is not a symlink, and is inside that stack's
+   panel-owned storage;
+4. reject access while that stack is deploying or deleting;
+5. mark each root as `persistent` or `live_runtime`.
+
+Once that provider exists, the existing list, read, edit, upload, download,
+move, copy, delete, audit, CSRF, size-limit, and symlink protections apply
+without changing File Manager routes or frontend actions.

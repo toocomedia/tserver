@@ -13,6 +13,7 @@ async def record(
     request: Request,
     *,
     app_id: int,
+    target_type: str = "container",
     root_id: str,
     relative_path: str,
     action: str,
@@ -24,6 +25,7 @@ async def record(
     db.add(FileManagerEvent(
         user_id=user_id if isinstance(user_id, int) else None,
         app_id=app_id,
+        target_type=target_type[:24],
         root_id=root_id[:64],
         relative_path=relative_path[:1024],
         action=action[:32],
