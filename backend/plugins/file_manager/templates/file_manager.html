@@ -1,0 +1,91 @@
+{% extends "layout.html" %}
+
+{% block title %}File Manager - {{ super() }}{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="/plugins/file_manager/static/css/file_manager.css?v={{ APP_VERSION }}">
+{% endblock %}
+
+{% block page_title %}File Manager{% endblock %}
+
+{% block topbar_actions %}
+  <div class="file-manager__app-selector">
+    <div class="form-group" style="margin: 0; min-width: 220px;">
+      <div class="form-select-wrap">
+        <select id="app-selector" class="form-select" disabled aria-label="Select App">
+          <option value="">Loading apps...</option>
+        </select>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block content %}
+<div id="fm-main" style="position:relative;">
+  {% from "partials/skeleton_overlay.html" import skeleton_overlay %}
+  {{ skeleton_overlay(
+       'fm-skeleton',
+       tables=[
+         { 'cols': [35, 15, 20, 30], 'rows': 5 }
+       ]
+  ) }}
+
+  <!-- Roots Tabs -->
+  <div class="tabs tabs--sm mb-md" id="roots-tabs" style="display: none;"></div>
+
+  <!-- Breadcrumbs & Actions Toolbar -->
+  <div class="action-toolbar mb-md" id="fm-toolbar" style="display: none; align-items: center; justify-content: space-between;">
+    <div class="breadcrumbs" id="fm-breadcrumbs" style="display: flex; gap: var(--space-sm); align-items: center; font-weight: 600;"></div>
+    <div class="action-toolbar__actions">
+      <button class="btn btn--sm btn--primary" id="btn-upload" disabled>
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="17 8 12 3 7 8"></polyline>
+          <line x1="12" y1="3" x2="12" y2="15"></line>
+        </svg>
+        Upload
+      </button>
+      <button class="btn btn--sm btn--secondary" id="btn-new-folder" disabled>
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+          <line x1="12" y1="11" x2="12" y2="17"></line>
+          <line x1="9" y1="14" x2="15" y2="14"></line>
+        </svg>
+        New Folder
+      </button>
+      <button class="btn btn--icon btn--ghost" id="btn-refresh" aria-label="Refresh" disabled>
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polyline points="23 4 23 10 17 10"></polyline>
+          <polyline points="1 20 1 14 7 14"></polyline>
+          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="table-wrap" id="fm-table-wrap" style="display: none;">
+    <table class="table" id="fm-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th style="width: 120px;">Size</th>
+          <th style="width: 160px;">Modified</th>
+          <th style="width: 120px; text-align: right;">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="fm-tbody">
+      </tbody>
+    </table>
+  </div>
+  
+  <div id="fm-empty-state" style="display: none;">
+    {% include "partials/empty_state.html" %}
+  </div>
+</div>
+
+{% include "partials/modals.html" %}
+{% endblock %}
+
+{% block scripts %}
+<script type="module" src="/plugins/file_manager/static/js/file_manager.js?v={{ APP_VERSION }}"></script>
+{% endblock %}

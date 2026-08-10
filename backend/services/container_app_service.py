@@ -40,6 +40,15 @@ def _run(command: list[str], *, timeout: int) -> subprocess.CompletedProcess[str
     return subprocess.run([*prefix, *command], capture_output=True, text=True, timeout=timeout, check=False, shell=False, env=environment)
 
 
+def run_binary(command: list[str], *, timeout: int) -> subprocess.CompletedProcess[bytes]:
+    """Run an owned Docker command without decoding file content as text."""
+    prefix = ["sudo", "-n"] if hasattr(os, "geteuid") and os.geteuid() != 0 and config.PRIVILEGED_SUDO else []
+    return subprocess.run(
+        [*prefix, *command], capture_output=True, timeout=timeout, check=False,
+        shell=False,
+    )
+
+
 async def next_host_port(db: AsyncSession) -> int:
     used = set((await db.scalars(select(ContainerApp.host_port))).all())
     return next(port for port in range(config.CONTAINER_APP_PORT_START, 65536) if port not in used)

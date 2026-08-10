@@ -353,6 +353,7 @@ async def init_db():
     import models.container_app_deployment  # noqa: F401
     import models.container_app_database  # noqa: F401
     import models.container_app_backup  # noqa: F401
+    import models.file_manager_event  # noqa: F401
     import models.resource_guard  # noqa: F401
     import models.guard_operation  # noqa: F401
     import models.safe_install_run  # noqa: F401

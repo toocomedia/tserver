@@ -1,0 +1,150 @@
+<!-- Text Editor Modal -->
+<div id="modal-text-editor" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="modal-text-editor-title">
+  <div class="modal modal--lg" style="width: 800px; max-width: 95vw;">
+    <div class="modal__header">
+      <h2 id="modal-text-editor-title">Edit File</h2>
+      <button type="button" class="btn btn--ghost btn--icon" onclick="closeModal('modal-text-editor')" aria-label="Close">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
+    </div>
+    <div class="modal__body" style="display: flex; flex-direction: column; gap: var(--space-sm);">
+      <div id="editor-warning" class="alert alert--warning mb-md" style="display: none;"></div>
+      <div id="editor-error" class="alert alert--danger mb-md" style="display: none;"></div>
+      <div class="form-group" style="flex: 1; min-height: 400px; margin: 0;">
+        <textarea id="editor-textarea" class="form-input" style="height: 100%; font-family: monospace; white-space: pre; resize: none;" aria-label="File content"></textarea>
+      </div>
+    </div>
+    <div class="modal__footer">
+      <button type="button" class="btn btn--secondary" onclick="closeModal('modal-text-editor')">Cancel</button>
+      <button type="button" class="btn btn--primary" id="btn-save-text">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- New Folder Modal -->
+<div id="modal-new-folder" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="modal-new-folder-title">
+  <div class="modal">
+    <form id="form-new-folder">
+      <div class="modal__header">
+        <h2 id="modal-new-folder-title">New Folder</h2>
+        <button type="button" class="btn btn--ghost btn--icon" onclick="closeModal('modal-new-folder')" aria-label="Close">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <div class="modal__body">
+        <div id="new-folder-error" class="alert alert--danger mb-md" style="display: none;"></div>
+        <div class="form-group">
+          <label for="new-folder-name" class="form-label">Folder Name</label>
+          <input type="text" id="new-folder-name" class="form-input" required autofocus>
+        </div>
+      </div>
+      <div class="modal__footer">
+        <button type="button" class="btn btn--secondary" onclick="closeModal('modal-new-folder')">Cancel</button>
+        <button type="submit" class="btn btn--primary" id="btn-submit-new-folder">Create Folder</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Rename / Move / Copy Modal -->
+<div id="modal-transfer" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="modal-transfer-title">
+  <div class="modal">
+    <form id="form-transfer">
+      <input type="hidden" id="transfer-action">
+      <input type="hidden" id="transfer-source">
+      <div class="modal__header">
+        <h2 id="modal-transfer-title">Transfer</h2>
+        <button type="button" class="btn btn--ghost btn--icon" onclick="closeModal('modal-transfer')" aria-label="Close">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <div class="modal__body">
+        <div id="transfer-error" class="alert alert--danger mb-md" style="display: none;"></div>
+        <div class="form-group">
+          <label for="transfer-dest" class="form-label">Destination Path</label>
+          <input type="text" id="transfer-dest" class="form-input" required autofocus>
+          <div class="form-hint">Destination must be inside the same root. Relative to root directory.</div>
+        </div>
+      </div>
+      <div class="modal__footer">
+        <button type="button" class="btn btn--secondary" onclick="closeModal('modal-transfer')">Cancel</button>
+        <button type="submit" class="btn btn--primary" id="btn-submit-transfer">Confirm</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Properties Modal -->
+<div id="modal-properties" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="modal-properties-title">
+  <div class="modal">
+    <div class="modal__header">
+      <h2 id="modal-properties-title">Properties</h2>
+      <button type="button" class="btn btn--ghost btn--icon" onclick="closeModal('modal-properties')" aria-label="Close">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
+    </div>
+    <div class="modal__body">
+      <div class="info-group">
+        <div class="info-row">
+          <span class="info-row__label">Name</span>
+          <span class="info-row__value" id="prop-name" style="word-break: break-all;"></span>
+        </div>
+        <div class="info-row">
+          <span class="info-row__label">Kind</span>
+          <span class="info-row__value" id="prop-kind"></span>
+        </div>
+        <div class="info-row">
+          <span class="info-row__label">Size</span>
+          <span class="info-row__value" id="prop-size"></span>
+        </div>
+        <div class="info-row">
+          <span class="info-row__label">Modified</span>
+          <span class="info-row__value" id="prop-modified"></span>
+        </div>
+        <div class="info-row">
+          <span class="info-row__label">Sensitive</span>
+          <span class="info-row__value" id="prop-sensitive"></span>
+        </div>
+        <div class="info-row">
+          <span class="info-row__label">Persistence</span>
+          <span class="info-row__value" id="prop-persistence"></span>
+        </div>
+      </div>
+    </div>
+    <div class="modal__footer">
+      <button type="button" class="btn btn--secondary" onclick="closeModal('modal-properties')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Custom Delete Modal -->
+<div id="modal-delete-file" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="modal-delete-file-title">
+  <div class="modal">
+    <form id="form-delete-file">
+      <input type="hidden" id="delete-file-path">
+      <div class="modal__header">
+        <h2 id="modal-delete-file-title">Delete Permanently</h2>
+        <button type="button" class="btn btn--ghost btn--icon" onclick="closeModal('modal-delete-file')" aria-label="Close">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <div class="modal__body">
+        <div id="delete-file-error" class="alert alert--danger mb-md" style="display: none;"></div>
+        <div class="alert alert--danger mb-md">
+          This action is permanent and cannot be undone.
+        </div>
+        <div class="form-group">
+          <label for="delete-confirmation" class="form-label" id="delete-prompt-label">Type DELETE to confirm</label>
+          <input type="text" id="delete-confirmation" class="form-input" required autocomplete="off">
+        </div>
+      </div>
+      <div class="modal__footer">
+        <button type="button" class="btn btn--secondary" onclick="closeModal('modal-delete-file')">Cancel</button>
+        <button type="submit" class="btn btn--danger" id="btn-submit-delete">Delete</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Hidden file input for upload -->
+<input type="file" id="fm-file-input" style="display: none;">

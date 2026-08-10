@@ -12,5 +12,6 @@ from models.container_app import ContainerApp
 from models.container_app_deployment import ContainerAppDeployment
 from models.container_app_database import ContainerAppDatabase
 from models.container_app_backup import ContainerAppBackup
+from models.file_manager_event import FileManagerEvent
 from models.guard_operation import GuardOperation
 from models.safe_install_run import SafeInstallRun

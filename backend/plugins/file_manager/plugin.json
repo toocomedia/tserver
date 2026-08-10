@@ -1,0 +1,15 @@
+{
+  "id": "file_manager",
+  "name": "File Manager",
+  "description": "Managed Apps Engine file operations API.",
+  "version": "0.1.0",
+  "author": "SRV Panel Core",
+  "icon": "folder",
+  "route_prefix": "/plugins/file_manager",
+  "sidebar": true,
+  "sidebar_label": "File Manager",
+  "enabled": true,
+  "route_dependency_checks": true,
+  "usage": {},
+  "requires": {"dependencies": ["docker"]}
+}

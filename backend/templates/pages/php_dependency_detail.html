@@ -55,7 +55,7 @@
         var payload = await response.json().catch(function () { return {}; });
         if (!response.ok || !payload.success) throw new Error(payload.detail || 'PHP operation failed.');
         if (window.toast) window.toast(payload.message, 'success');
-        window.location.reload();
+        loadRuntime();
       } catch (error) {
         button.disabled = false;
         showError(error.message);

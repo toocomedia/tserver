@@ -1,0 +1,78 @@
+/* File Manager specific styles */
+
+.file-manager__app-selector {
+  display: flex;
+  align-items: center;
+}
+
+/* Breadcrumbs styling */
+.fm-breadcrumb-item {
+  color: var(--color-muted);
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.fm-breadcrumb-item:hover {
+  color: var(--color-text);
+}
+
+.fm-breadcrumb-item--active {
+  color: var(--color-text);
+  pointer-events: none;
+}
+
+.fm-breadcrumb-separator {
+  color: var(--color-muted);
+  user-select: none;
+}
+
+/* File icon colors */
+.fm-icon-folder {
+  color: var(--color-accent-2);
+}
+
+.fm-icon-file {
+  color: var(--color-muted);
+}
+
+.fm-icon-symlink {
+  color: var(--color-warn);
+}
+
+/* Action icons inside table */
+.fm-action-btn {
+  padding: var(--space-xs);
+  height: auto;
+  min-width: 0;
+}
+
+/* Make table rows clickable and look interactive */
+.fm-row {
+  cursor: pointer;
+  transition: background-color 0.1s ease;
+}
+
+.fm-row:hover {
+  background-color: var(--color-surface);
+}
+
+.fm-row-actions {
+  display: flex;
+  gap: var(--space-xs);
+  justify-content: flex-end;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.fm-row:hover .fm-row-actions,
+.fm-row:focus-within .fm-row-actions {
+  opacity: 1;
+}
+
+/* Small adjustments for mobile table */
+@media (max-width: 768px) {
+  .fm-row-actions {
+    opacity: 1; /* Always visible on mobile */
+  }
+}
