@@ -56,6 +56,16 @@ class PHPDependencyServiceTests(unittest.TestCase):
         self.assertIn("outside SRV Panel", message)
         service._helper_call.assert_not_called()
 
+    def test_availability_check_requires_an_explicit_helper_operation(self):
+        service = PHPDependencyService()
+        service._helper_call = Mock(return_value={"message": "availability refreshed"})
+
+        success, message = service.check_available_versions()
+
+        self.assertTrue(success)
+        self.assertEqual("availability refreshed", message)
+        service._helper_call.assert_called_once_with("check_available", timeout=300)
+
     def test_invalid_version_never_reaches_root_helper(self):
         service = PHPDependencyService()
         service._helper_call = Mock()
@@ -73,9 +83,11 @@ class PHPDependencyServiceTests(unittest.TestCase):
         update_script = (BACKEND.parent / "scripts" / "update.sh").read_text(encoding="utf-8")
 
         self.assertIn('"install_version": install_version', helper)
+        self.assertIn('"check_available": check_available', helper)
         self.assertIn('"uninstall_version": uninstall_version', helper)
         self.assertIn("cannot be adopted automatically", helper)
         self.assertIn("data-php-install", template)
+        self.assertIn("data-php-check", template)
         self.assertIn("data-php-uninstall", template)
         self.assertIn("PHP versions are never installed automatically", template)
         self.assertIn("PHP_RUNTIME_HELPER", install_script)

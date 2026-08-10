@@ -75,6 +75,40 @@ def _php_service():
     return service
 
 
+@router.post("/api/dependencies/php/check-available")
+async def php_check_available_versions(
+    db: AsyncSession = Depends(get_db),
+):
+    """Refresh configured APT indexes before showing installable PHP versions."""
+    service = _php_service()
+    from services.resource_guard_service import resource_guard_service
+
+    result = await resource_guard_service.preflight(db, "native_light")
+    if not result["ok"]:
+        return JSONResponse(
+            {
+                "success": False,
+                "detail": f"Resource Guard blocked PHP availability check: {result['reason']}",
+                "resource_guard": result,
+            },
+            status_code=409,
+        )
+    token = resource_guard_service.register(
+        "dependency", "php", "normal", "Check PHP availability", profile="native_light"
+    )
+    try:
+        success, message = await asyncio.to_thread(service.check_available_versions)
+    finally:
+        resource_guard_service.unregister(token)
+    if not success:
+        return JSONResponse({"success": False, "detail": message}, status_code=409)
+    return {
+        "success": True,
+        "message": message,
+        "status": dependency_manager.get_status("php", force=True),
+    }
+
+
 @router.post("/api/dependencies/php/versions/{version}/install")
 async def php_install_version(
     version: str,

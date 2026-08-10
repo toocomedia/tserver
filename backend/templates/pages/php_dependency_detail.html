@@ -24,6 +24,12 @@
       </div>
       <div class="info-hero-row__meta">Native PHP-FPM · configured APT sources</div>
     </div>
+    <div class="info-hero-row__actions">
+      <form method="post" action="/api/dependencies/php/check-available" data-php-check>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+        <button class="btn btn--secondary btn--sm" type="submit">Check available versions</button>
+      </form>
+    </div>
   </header>
 
   <div>
@@ -129,6 +135,7 @@
   }
   document.querySelectorAll('[data-php-install]').forEach(function (form) { bind(form, false); });
   document.querySelectorAll('[data-php-uninstall]').forEach(function (form) { bind(form, true); });
+  document.querySelectorAll('[data-php-check]').forEach(function (form) { bind(form, false); });
 })();
 </script>
 {% endblock %}

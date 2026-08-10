@@ -237,6 +237,15 @@ class PHPDependencyService:
             return False, f"PHP {normalized} installed but PHP-FPM socket health verification failed."
         return True, str(payload.get("message") or f"PHP {normalized} installed successfully.")
 
+    def check_available_versions(self) -> tuple[bool, str]:
+        """Refresh APT only after the administrator explicitly requests it."""
+        try:
+            payload = self._helper_call("check_available", timeout=300)
+        except RuntimeError as exc:
+            return False, str(exc)
+        self._invalidate()
+        return True, str(payload.get("message") or "PHP package availability refreshed.")
+
     def uninstall_version(self, version: str) -> tuple[bool, str]:
         normalized = self._valid_version(version)
         if normalized is None:

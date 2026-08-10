@@ -121,6 +121,12 @@ def install_version(data: dict[str, Any]) -> dict[str, Any]:
     return {"version": item_version, "message": f"PHP {item_version} installed and PHP-FPM socket is healthy."}
 
 
+def check_available(_: dict[str, Any]) -> dict[str, Any]:
+    print("==> Refreshing configured APT repositories...", file=sys.stderr)
+    run(["apt-get", "update", "-qq"], timeout=300)
+    return {"message": "PHP version availability was refreshed from the configured APT sources."}
+
+
 def uninstall_version(data: dict[str, Any]) -> dict[str, Any]:
     item_version = version(data.get("version"))
     state = load_state()
@@ -144,6 +150,7 @@ def list_managed(_: dict[str, Any]) -> dict[str, Any]:
 
 
 OPERATIONS = {
+    "check_available": check_available,
     "install_version": install_version,
     "uninstall_version": uninstall_version,
     "list_managed": list_managed,
