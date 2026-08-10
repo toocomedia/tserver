@@ -16,6 +16,9 @@ import config
 
 VERSION_RE = re.compile(r"^\d+\.\d+$")
 PACKAGE_RE = re.compile(r"^php(\d+\.\d+)-fpm$")
+# Always show the common PHP lines so an administrator can immediately see
+# whether their configured APT sources offer the version an older script needs.
+KNOWN_VERSION_SERIES = ("7.4", "8.0", "8.1", "8.2", "8.3", "8.4", "8.5")
 
 
 class PHPDependencyService:
@@ -105,7 +108,7 @@ class PHPDependencyService:
         values = payload.get("versions") or []
         return {value for value in values if isinstance(value, str) and self._valid_version(value)}
 
-    def _version_status(self, version: str, managed: bool) -> dict[str, Any]:
+    def _version_status(self, version: str, managed: bool, available_from_apt: bool) -> dict[str, Any]:
         package_version = self._installed_package_version(version)
         installed = package_version is not None
         running = False
@@ -132,8 +135,12 @@ class PHPDependencyService:
             "package_version": package_version, "running": running,
             "socket_path": socket_path, "socket_healthy": socket_healthy,
             "healthy": installed and running and socket_healthy,
-            "state": "healthy" if installed and running and socket_healthy else ("stopped" if installed else "available"),
-            "error": error, "can_install": not installed, "can_uninstall": installed and managed,
+            "state": "healthy" if installed and running and socket_healthy else (
+                "stopped" if installed else ("available" if available_from_apt else "unavailable")
+            ),
+            "error": error, "available_from_apt": available_from_apt,
+            "can_install": not installed and available_from_apt,
+            "can_uninstall": installed and managed,
         }
 
     def _probe(self) -> dict[str, Any]:
@@ -146,11 +153,14 @@ class PHPDependencyService:
             if os.name != "nt" and Path("/etc/php").is_dir() else set()
         )
         versions = sorted(
-            set(available) | configured,
+            set(KNOWN_VERSION_SERIES) | set(available) | configured,
             key=lambda value: tuple(int(part) for part in value.split(".")),
         )
         managed = self._managed_versions()
-        runtime_versions = [self._version_status(version, version in managed) for version in versions]
+        runtime_versions = [
+            self._version_status(version, version in managed, version in available)
+            for version in versions
+        ]
         installed = [item for item in runtime_versions if item["installed"]]
         managed_installed = [item for item in installed if item["managed"]]
         external_installed = [item for item in installed if not item["managed"]]

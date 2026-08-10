@@ -31,7 +31,7 @@
         <div class="dependency-card__actions">
           {% if dependency.detail_only %}
             <a href="/dependencies/{{ dependency.id }}" class="icon-btn icon-btn--primary" title="Manage {{ dependency.name }}">
-              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 00.34 1.88l.06.06-2.3 2.3-.06-.06a1.7 1.7 0 00-1.88-.34 1.7 1.7 0 00-1.03 1.56V21h-3.25v-.09A1.7 1.7 0 0010.25 19a1.7 1.7 0 00-1.88.34l-.06.06-2.3-2.3.06-.06A1.7 1.7 0 006.4 15a1.7 1.7 0 00-1.56-1.03H4.75v-3.25h.09A1.7 1.7 0 006.4 9.69a1.7 1.7 0 00-.34-1.88L6 7.75l2.3-2.3.06.06a1.7 1.7 0 001.88.34 1.7 1.7 0 001.03-1.56V4.2h3.25v.09a1.7 1.7 0 001.03 1.56 1.7 1.7 0 001.88-.34l.06-.06 2.3 2.3-.06.06a1.7 1.7 0 00-.34 1.88 1.7 1.7 0 001.56 1.03h.09v3.25h-.09A1.7 1.7 0 0019.4 15z"></path></svg>
+              <svg viewBox="0 0 24 24"><line x1="4" y1="6" x2="20" y2="6"></line><line x1="4" y1="12" x2="20" y2="12"></line><line x1="4" y1="18" x2="20" y2="18"></line><circle cx="9" cy="6" r="2"></circle><circle cx="15" cy="12" r="2"></circle><circle cx="11" cy="18" r="2"></circle></svg>
             </a>
           {% elif dependency.installed %}
             {% if dependency.can_toggle %}

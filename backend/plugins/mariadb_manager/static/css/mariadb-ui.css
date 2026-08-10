@@ -1,6 +1,23 @@
 /* mariadb-ui.css — MariaDB Manager plugin stylesheet.
    Self-contained, theme-aware: only CSS variables, no hardcoded colors. */
 
+/* ── Full-bleed workspace layout ─────────────────────────────────────
+   Mirrors the base .content__inner pattern: NO top padding so the
+   action-toolbar sits flush against the panel top, and side gutters
+   stay equal to --page-gutter so they align exactly with the
+   negative-margin bleed of .action-toolbar and .table-wrap (works at
+   every breakpoint, overriding layout-split.css mobile paddings). */
+.split-content {
+  padding: 0 var(--page-gutter) var(--page-gutter);
+}
+
+/* Empty states span the full panel width like the table rows —
+   no side margins, padding inside (notifications / plugins list style). */
+#mdb-db-empty,
+#mdb-user-empty {
+  margin-inline: calc(var(--page-gutter) * -1);
+}
+
 /* ── Unavailable / error state ─────────────────────────────────────── */
 .mdb-unavailable {
   max-width: 440px;

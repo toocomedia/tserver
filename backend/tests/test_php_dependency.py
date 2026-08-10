@@ -15,7 +15,7 @@ class PHPDependencyServiceTests(unittest.TestCase):
         service = PHPDependencyService()
         service._available_versions = Mock(return_value=["8.1", "8.3"])
         service._managed_versions = Mock(return_value={"8.3"})
-        service._version_status = Mock(side_effect=lambda version, managed: {
+        service._version_status = Mock(side_effect=lambda version, managed, available: {
             "version": version,
             "installed": version == "8.3",
             "managed": managed,
@@ -24,11 +24,11 @@ class PHPDependencyServiceTests(unittest.TestCase):
 
         status = service._probe()
 
-        self.assertEqual(["8.1", "8.3"], [item["version"] for item in status["versions"]])
-        self.assertFalse(status["versions"][0]["installed"])
-        self.assertTrue(status["versions"][1]["managed"])
+        self.assertEqual(["7.4", "8.0", "8.1", "8.2", "8.3", "8.4", "8.5"], [item["version"] for item in status["versions"]])
+        self.assertFalse(status["versions"][2]["installed"])
+        self.assertTrue(status["versions"][4]["managed"])
         self.assertEqual("panel_managed", status["install_origin"])
-        service._version_status.assert_called_with("8.3", True)
+        service._version_status.assert_called_with("8.5", False, False)
 
     def test_install_version_requires_verified_managed_socket(self):
         service = PHPDependencyService()

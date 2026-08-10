@@ -57,8 +57,10 @@
           <span class="badge badge--danger"><span class="badge-dot"></span> {{ runtime.error or 'Needs repair' }}</span>
           {% elif runtime.installed %}
           <span class="text-small text-muted">Installed outside SRV Panel · read-only</span>
+          {% elif runtime.available_from_apt %}
+          <span class="text-small text-muted">Available from current APT sources</span>
           {% else %}
-          <span class="text-small text-muted">Not installed</span>
+          <span class="text-small text-muted">Not offered by current APT sources</span>
           {% endif %}
         </div>
         <div>
@@ -73,8 +75,10 @@
             <input type="hidden" name="confirmation" value="">
             <button class="btn btn--danger btn--sm" type="submit">Uninstall</button>
           </form>
-          {% else %}
+          {% elif runtime.installed %}
           <span class="text-small text-muted">Managed outside the panel</span>
+          {% else %}
+          <span class="text-small text-muted">Unavailable from APT</span>
           {% endif %}
         </div>
       </div>
