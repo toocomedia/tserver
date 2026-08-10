@@ -29,15 +29,20 @@
         <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
         <button class="btn btn--secondary btn--sm" type="submit">Check available versions</button>
       </form>
+      {% if dependency.external_repository.configured %}
+      <button class="btn btn--secondary btn--sm" type="button" disabled title="External PHP repository is already enabled">External PHP source enabled</button>
+      {% else %}
+      <form method="post" action="/api/dependencies/php/enable-external-repository" data-php-external-repository data-confirmation="ENABLE EXTERNAL PHP REPOSITORY">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+        <input type="hidden" name="confirmation" value="">
+        <button class="btn btn--secondary btn--sm" type="submit">Enable external PHP source</button>
+      </form>
+      {% endif %}
     </div>
   </header>
 
   <div>
-    <h2 class="info-group-title">Choose exactly what you need</h2>
-    <p style="font-size:13px;line-height:1.55;color:var(--color-text);max-width:720px;">
-      PHP versions are never installed automatically. Install only the versions required by your scripts.
-      Each future PHP site can use its own installed version. Uninstalling a version preserves website files and databases.
-    </p>
+    <p class="text-small text-muted">Install only the PHP versions your scripts need. Removing a version keeps website files and databases.</p>
   </div>
 
   {% set missing_versions = dependency.versions | rejectattr('installed') | rejectattr('available_from_apt') | list %}
@@ -45,17 +50,12 @@
   <div>
     <h2 class="info-group-title">Need more PHP versions?</h2>
     <p class="text-small text-muted" style="max-width:720px;">
-      Your current Ubuntu APT sources do not offer every listed PHP version. Enable the external {{ dependency.external_repository.name }} to make more PHP versions available. This is a third-party repository, not an official Ubuntu source, and it installs no PHP version automatically.
+      Some versions are missing from your APT sources. The button above enables {{ dependency.external_repository.name }}; it is third-party and installs no PHP automatically.
     </p>
-    <form method="post" action="/api/dependencies/php/enable-external-repository" data-php-external-repository data-confirmation="ENABLE EXTERNAL PHP REPOSITORY">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
-      <input type="hidden" name="confirmation" value="">
-      <button class="btn btn--secondary btn--sm" type="submit">Enable external PHP repository</button>
-    </form>
   </div>
   {% elif dependency.external_repository.configured %}
   <div>
-    <p class="text-small text-muted">External PHP repository enabled · additional PHP versions may be available after checking APT.</p>
+    <p class="text-small text-muted">External PHP source enabled · check APT to refresh the version list.</p>
   </div>
   {% endif %}
 
@@ -66,16 +66,15 @@
   {% endif %}
 
   <div>
-    <h2 class="info-group-title">PHP-FPM versions</h2>
-    <div class="view-list-container" style="display:grid;gap:0;">
-      <div class="list-header-row" style="grid-template-columns:1.1fr 1.4fr 1.7fr auto;">
-        <div>Version</div><div>Package</div><div>Status</div><div>Action</div>
+    <div class="view-list-container">
+      <div class="list-header-row">
+        <div>PHP version</div><div>Package</div><div>Status</div><div>Socket</div><div>Actions</div>
       </div>
       {% for runtime in dependency.versions %}
-      <div class="list-item-row" style="grid-template-columns:1.1fr 1.4fr 1.7fr auto;align-items:center;">
-        <div><strong>PHP {{ runtime.version }}</strong></div>
-        <div class="text-small text-muted">{{ runtime.package_version or 'Available from APT' }}</div>
-        <div>
+      <div class="list-item-row">
+        <div class="list-col-main"><span class="list-col-name">PHP {{ runtime.version }}</span></div>
+        <div class="list-col-version">{{ runtime.package_version or 'Available' }}</div>
+        <div class="list-col-status">
           {% if runtime.installed and runtime.healthy %}
           <span class="badge badge--healthy"><span class="badge-dot"></span> FPM socket ready</span>
           {% elif runtime.installed and runtime.managed %}
@@ -88,7 +87,10 @@
           <span class="text-small text-muted">Not offered by current APT sources</span>
           {% endif %}
         </div>
-        <div>
+        <div class="list-col-desc text-small text-muted">
+          {% if runtime.installed %}{{ runtime.socket_path }}{% elif runtime.available_from_apt %}Available from APT{% else %}Not available{% endif %}
+        </div>
+        <div class="list-col-actions">
           {% if runtime.can_install %}
           <form method="post" action="/api/dependencies/php/versions/{{ runtime.version }}/install" data-php-install>
             <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
@@ -108,14 +110,14 @@
         </div>
       </div>
       {% else %}
-      <div class="list-item-row"><div>No PHP-FPM versions are available from the current APT indexes.</div></div>
+      <div class="list-item-row"><div class="list-col-main">No PHP-FPM versions are available from the current APT indexes.</div></div>
       {% endfor %}
     </div>
   </div>
 
   <div>
     <h2 class="info-group-title">Safety</h2>
-    <p class="text-small text-muted">Only versions installed through this panel can be uninstalled here. Existing administrator-installed PHP remains visible and read-only.</p>
+    <p class="text-small text-muted">Only panel-installed PHP can be removed here. Existing PHP remains read-only.</p>
   </div>
 </article>
 {% endblock %}
