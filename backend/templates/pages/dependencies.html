@@ -1,6 +1,4 @@
 {% extends "layout.html" %}
-{% from "partials/skeleton_overlay.html" import skeleton_overlay %}
-
 {% block title %}System Dependencies — {{ PANEL_NAME }}{% endblock %}
 {% block page_title %}Dependencies{% endblock %}
 
@@ -20,9 +18,16 @@
     {% set icon_svg = dependency_title_icon %}
     {% include "partials/resource_title_bar.html" %}
 
-    <div class="resource-views dependencies-catalog-shell" data-dependency-catalog data-catalog-url="/api/dependencies/catalog-view">
-      <div data-dependency-catalog-content data-async-load aria-live="polite"></div>
-      {{ skeleton_overlay('dependencies-skeleton', header=0, cards=2, class_name='dependencies-catalog-skeleton') }}
+    <div class="resource-views" data-dependency-catalog data-catalog-url="/api/dependencies/catalog-view">
+      <div id="dependencies-skeleton" class="skeleton-card-grid" aria-hidden="true">
+        {% for _ in range(6) %}
+        <div class="skeleton-plugin-card skeleton-box">
+          <div class="sk-cover"></div>
+          <div class="sk-body"><div class="sk-label"></div><div class="sk-value"></div><div class="sk-meta"></div></div>
+        </div>
+        {% endfor %}
+      </div>
+      <div data-dependency-catalog-content aria-live="polite"></div>
     </div>
   </div>
 </div>
@@ -39,16 +44,13 @@
     try {
       var response = await fetch(root.dataset.catalogUrl, {headers: {'Accept': 'text/html'}});
       if (!response.ok) throw new Error('Could not load dependency status.');
-      content.innerHTML = await response.text();
-      content.classList.add('skeleton-content--enter');
-      window.requestAnimationFrame(function () {
-        content.classList.remove('skeleton-content--enter');
-      });
+      var catalog = await response.text();
+      if (typeof window.hideSkeleton === 'function') await window.hideSkeleton('dependencies-skeleton');
+      content.innerHTML = catalog;
       if (typeof window.autoInitAllListPaginations === 'function') window.autoInitAllListPaginations();
-      if (typeof window.hideSkeleton === 'function') window.hideSkeleton('dependencies-skeleton');
     } catch (error) {
+      if (typeof window.hideSkeleton === 'function') await window.hideSkeleton('dependencies-skeleton');
       content.innerHTML = '<p class="text-danger">Could not load dependency status. Refresh the page to try again.</p>';
-      if (typeof window.hideSkeleton === 'function') window.hideSkeleton('dependencies-skeleton');
       if (window.toast) window.toast(error.message, 'error');
     }
   }
