@@ -195,6 +195,20 @@
 .resource-views > .skeleton-overlay {
   padding-top: var(--space-lg);
 }
+
+/* Dependencies loads its catalog after the page shell. Keep its two-card
+   placeholder exactly aligned with the real dependency grid. */
+.dependencies-catalog-shell {
+  position: relative;
+  min-height: 384px;
+}
+.resource-views > .dependencies-catalog-skeleton {
+  padding-top: 0;
+}
+.dependencies-catalog-skeleton .skeleton-card-grid {
+  padding-inline: 0;
+  margin: 0;
+}
 .skeleton-overlay.is-hidden {
   opacity: 0;
   pointer-events: none;

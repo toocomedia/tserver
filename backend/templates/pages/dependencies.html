@@ -20,9 +20,9 @@
     {% set icon_svg = dependency_title_icon %}
     {% include "partials/resource_title_bar.html" %}
 
-    <div class="resource-views" data-dependency-catalog data-catalog-url="/api/dependencies/catalog-view" style="position:relative;min-height:420px;">
+    <div class="resource-views dependencies-catalog-shell" data-dependency-catalog data-catalog-url="/api/dependencies/catalog-view">
       <div data-dependency-catalog-content data-async-load aria-live="polite"></div>
-      {{ skeleton_overlay('dependencies-skeleton', title_bar=1, cards=6) }}
+      {{ skeleton_overlay('dependencies-skeleton', header=0, cards=2, class_name='dependencies-catalog-skeleton') }}
     </div>
   </div>
 </div>
@@ -45,10 +45,10 @@
         content.classList.remove('skeleton-content--enter');
       });
       if (typeof window.autoInitAllListPaginations === 'function') window.autoInitAllListPaginations();
-      if (typeof window.hideSkeleton === 'function') window.hideSkeleton('dependencies-skeleton', 0);
+      if (typeof window.hideSkeleton === 'function') window.hideSkeleton('dependencies-skeleton');
     } catch (error) {
       content.innerHTML = '<p class="text-danger">Could not load dependency status. Refresh the page to try again.</p>';
-      if (typeof window.hideSkeleton === 'function') window.hideSkeleton('dependencies-skeleton', 0);
+      if (typeof window.hideSkeleton === 'function') window.hideSkeleton('dependencies-skeleton');
       if (window.toast) window.toast(error.message, 'error');
     }
   }

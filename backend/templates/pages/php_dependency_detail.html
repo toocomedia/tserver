@@ -74,10 +74,10 @@
         content.classList.remove('skeleton-content--enter');
       });
       bindActions();
-      if (window.hideSkeleton) window.hideSkeleton('php-runtime-skeleton', 0);
+      if (window.hideSkeleton) window.hideSkeleton('php-runtime-skeleton');
     } catch (error) {
       content.innerHTML = '<p class="text-danger">Could not load the PHP runtime status. Refresh the page to try again.</p>';
-      if (window.hideSkeleton) window.hideSkeleton('php-runtime-skeleton', 0);
+      if (window.hideSkeleton) window.hideSkeleton('php-runtime-skeleton');
       if (window.toast) window.toast(error.message, 'error');
     }
   }
