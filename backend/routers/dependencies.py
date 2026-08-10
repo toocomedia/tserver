@@ -1,4 +1,5 @@
 """System dependency management page and APIs."""
+import asyncio
 from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from pathlib import Path
@@ -48,6 +49,15 @@ async def dependency_detail(request: Request, dependency_id: str):
     dependency["dependents"] = dependency_manager.get_dependent_plugins(dependency_id)
     dependency["install_guide"] = service.get_install_guide()
     dependency["uninstall_guide"] = service.get_uninstall_guide()
+    if dependency_id == "php":
+        return templates.TemplateResponse(
+            "pages/php_dependency_detail.html",
+            {
+                "request": request,
+                "active_page": "dependencies",
+                "dependency": dependency,
+            },
+        )
     return templates.TemplateResponse(
         "pages/dependency_detail.html",
         {
@@ -56,6 +66,71 @@ async def dependency_detail(request: Request, dependency_id: str):
             "dependency": dependency,
         },
     )
+
+
+def _php_service():
+    service = dependency_manager.get_service("php")
+    if service is None:
+        raise HTTPException(status_code=404, detail="PHP dependency is unavailable.")
+    return service
+
+
+@router.post("/api/dependencies/php/versions/{version}/install")
+async def php_install_version(
+    version: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """Install one explicitly selected PHP-FPM version."""
+    service = _php_service()
+    from services.resource_guard_service import resource_guard_service
+
+    result = await resource_guard_service.preflight(db, "native_light")
+    if not result["ok"]:
+        return JSONResponse(
+            {
+                "success": False,
+                "detail": f"Resource Guard blocked PHP installation: {result['reason']}",
+                "resource_guard": result,
+            },
+            status_code=409,
+        )
+    token = resource_guard_service.register(
+        "dependency", "php", "normal", f"Install PHP {version}", profile="native_light"
+    )
+    try:
+        success, message = await asyncio.to_thread(service.install_version, version)
+    finally:
+        resource_guard_service.unregister(token)
+    if not success:
+        return JSONResponse({"success": False, "detail": message}, status_code=409)
+    return {
+        "success": True,
+        "message": message,
+        "status": dependency_manager.get_status("php", force=True),
+    }
+
+
+@router.post("/api/dependencies/php/versions/{version}/uninstall")
+async def php_uninstall_version(
+    version: str,
+    confirmation: str = Form(""),
+):
+    """Remove one panel-managed PHP runtime without touching site files."""
+    expected = f"REMOVE PHP {version}"
+    if confirmation.strip() != expected:
+        return JSONResponse(
+            {"success": False, "detail": f"Type {expected} to uninstall this PHP version."},
+            status_code=409,
+        )
+    service = _php_service()
+    success, message = await asyncio.to_thread(service.uninstall_version, version)
+    if not success:
+        return JSONResponse({"success": False, "detail": message}, status_code=409)
+    return {
+        "success": True,
+        "message": message,
+        "status": dependency_manager.get_status("php", force=True),
+    }
 
 
 @router.get("/api/dependencies/status")

@@ -1,5 +1,7 @@
 <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-  {% if dependency.installed and dependency.can_toggle %}
+  {% if dependency.detail_only %}
+  <a href="/dependencies/{{ dependency.id }}" class="btn btn--primary btn--sm">Manage</a>
+  {% elif dependency.installed and dependency.can_toggle %}
     <form method="post" action="/api/dependencies/{{ dependency.id }}/toggle" style="display:inline-flex;">
       <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
       {% if dependency.running %}

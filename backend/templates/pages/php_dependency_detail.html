@@ -1,0 +1,130 @@
+{% extends "layout.html" %}
+
+{% block title %}PHP Runtime — Dependencies — {{ PANEL_NAME }}{% endblock %}
+{% block page_title %}PHP Runtime{% endblock %}
+
+{% block topbar_actions %}
+<a class="btn btn--secondary btn--sm" href="/dependencies">← Back to Dependencies</a>
+{% endblock %}
+
+{% block content %}
+<article class="info-subpage-wrap" data-php-runtime>
+  <header class="info-hero-row">
+    <div class="info-hero-row__icon">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="1.5" d="M7 3h7l3 3v15H7z"/><path stroke-width="1.5" d="M14 3v4h4M9 12h6M9 16h6"/></svg>
+    </div>
+    <div class="info-hero-row__main">
+      <div class="info-hero-row__title-line">
+        <h1 class="info-hero-row__title">PHP Runtime</h1>
+        {% if dependency.healthy %}
+        <span class="badge badge--healthy"><span class="badge-dot"></span> Ready</span>
+        {% else %}
+        <span class="badge badge--danger"><span class="badge-dot"></span> {{ dependency.state | replace('_', ' ') }}</span>
+        {% endif %}
+      </div>
+      <div class="info-hero-row__meta">Native PHP-FPM · configured APT sources</div>
+    </div>
+  </header>
+
+  <div>
+    <h2 class="info-group-title">Choose exactly what you need</h2>
+    <p style="font-size:13px;line-height:1.55;color:var(--color-text);max-width:720px;">
+      PHP versions are never installed automatically. Install only the versions required by your scripts.
+      Each future PHP site can use its own installed version. Uninstalling a version preserves website files and databases.
+    </p>
+  </div>
+
+  {% if dependency.last_error or dependency.error %}
+  <p class="text-danger" data-php-error>{{ dependency.last_error or dependency.error }}</p>
+  {% else %}
+  <p class="text-danger hidden" data-php-error></p>
+  {% endif %}
+
+  <div>
+    <h2 class="info-group-title">PHP-FPM versions</h2>
+    <div class="view-list-container" style="display:grid;gap:0;">
+      <div class="list-header-row" style="grid-template-columns:1.1fr 1.4fr 1.7fr auto;">
+        <div>Version</div><div>Package</div><div>Status</div><div>Action</div>
+      </div>
+      {% for runtime in dependency.versions %}
+      <div class="list-item-row" style="grid-template-columns:1.1fr 1.4fr 1.7fr auto;align-items:center;">
+        <div><strong>PHP {{ runtime.version }}</strong></div>
+        <div class="text-small text-muted">{{ runtime.package_version or 'Available from APT' }}</div>
+        <div>
+          {% if runtime.installed and runtime.healthy %}
+          <span class="badge badge--healthy"><span class="badge-dot"></span> FPM socket ready</span>
+          {% elif runtime.installed and runtime.managed %}
+          <span class="badge badge--danger"><span class="badge-dot"></span> {{ runtime.error or 'Needs repair' }}</span>
+          {% elif runtime.installed %}
+          <span class="text-small text-muted">Installed outside SRV Panel · read-only</span>
+          {% else %}
+          <span class="text-small text-muted">Not installed</span>
+          {% endif %}
+        </div>
+        <div>
+          {% if runtime.can_install %}
+          <form method="post" action="/api/dependencies/php/versions/{{ runtime.version }}/install" data-php-install>
+            <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+            <button class="btn btn--primary btn--sm" type="submit">Install</button>
+          </form>
+          {% elif runtime.can_uninstall %}
+          <form method="post" action="/api/dependencies/php/versions/{{ runtime.version }}/uninstall" data-php-uninstall data-confirmation="REMOVE PHP {{ runtime.version }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+            <input type="hidden" name="confirmation" value="">
+            <button class="btn btn--danger btn--sm" type="submit">Uninstall</button>
+          </form>
+          {% else %}
+          <span class="text-small text-muted">Managed outside the panel</span>
+          {% endif %}
+        </div>
+      </div>
+      {% else %}
+      <div class="list-item-row"><div>No PHP-FPM versions are available from the current APT indexes.</div></div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div>
+    <h2 class="info-group-title">Safety</h2>
+    <p class="text-small text-muted">Only versions installed through this panel can be uninstalled here. Existing administrator-installed PHP remains visible and read-only.</p>
+  </div>
+</article>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  function showError(message) {
+    var error = document.querySelector('[data-php-error]');
+    error.textContent = message;
+    error.classList.remove('hidden');
+  }
+  function bind(form, uninstall) {
+    form.addEventListener('submit', async function (event) {
+      event.preventDefault();
+      if (uninstall) {
+        var expected = form.getAttribute('data-confirmation');
+        var entered = window.prompt('Type ' + expected + ' to remove this PHP version. Website files and databases are preserved.');
+        if (entered !== expected) return;
+        form.querySelector('input[name="confirmation"]').value = entered;
+      }
+      var button = form.querySelector('button');
+      button.disabled = true;
+      try {
+        var response = await fetch(form.action, {method: 'POST', body: new FormData(form), headers: {'Accept': 'application/json'}});
+        var payload = await response.json();
+        if (!response.ok || !payload.success) throw new Error(payload.detail || 'PHP operation failed.');
+        if (window.toast) window.toast(payload.message, 'success');
+        window.location.reload();
+      } catch (error) {
+        button.disabled = false;
+        showError(error.message);
+        if (window.toast) window.toast(error.message, 'error');
+      }
+    });
+  }
+  document.querySelectorAll('[data-php-install]').forEach(function (form) { bind(form, false); });
+  document.querySelectorAll('[data-php-uninstall]').forEach(function (form) { bind(form, true); });
+})();
+</script>
+{% endblock %}

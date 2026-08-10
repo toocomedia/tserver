@@ -68,10 +68,19 @@ class DependencyManager:
         status.setdefault("can_toggle", dependency_id == "docker")
         status["desired_enabled"] = state.desired_enabled
         status["operation"] = state.operation
+        # A dependency that owns several independently installed runtimes can
+        # report a more precise origin (for example panel-managed, external,
+        # or mixed).  Single-runtime dependencies retain the existing state
+        # based convention.
+        reported_origin = status.get("install_origin")
         status["install_origin"] = (
-            "external"
-            if status.get("installed") and state.install_origin == "bundled"
-            else state.install_origin
+            str(reported_origin)
+            if reported_origin
+            else (
+                "external"
+                if status.get("installed") and state.install_origin == "bundled"
+                else state.install_origin
+            )
         )
         # Native MariaDB is safe to control only after the panel installed its
         # localhost-only configuration.  A detected external installation is

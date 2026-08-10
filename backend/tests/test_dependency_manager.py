@@ -200,6 +200,27 @@ class DependencyManagerTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(status["can_check_update"])
         self.assertTrue(status["can_update"])
 
+    def test_php_status_preserves_mixed_per_version_install_origin(self):
+        manager = DependencyManager()
+        service = Mock()
+        service.get_status.return_value = {
+            "installed": True,
+            "running": True,
+            "healthy": True,
+            "state": "healthy",
+            "install_origin": "mixed",
+            "can_toggle": False,
+        }
+        manager._services["php"] = service
+
+        with patch(
+            "dependencies.manager.component_state_store.get",
+            return_value=ComponentStateValue(install_origin="bundled"),
+        ):
+            status = manager.get_status("php")
+
+        self.assertEqual("mixed", status["install_origin"])
+
 
 if __name__ == "__main__":
     unittest.main()

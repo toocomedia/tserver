@@ -1,119 +1,484 @@
 {% extends "layout.html" %}
 
 {% block title %}MariaDB Manager — {{ PANEL_NAME }}{% endblock %}
-{% block page_title %}MariaDB Manager{% endblock %}
+{% block content_class %}content--flush{% endblock %}
+{# Remove the default page header so the split layout fills the full height #}
+{% block page_header_wrapper %}{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="/plugins/mariadb_manager/static/css/mariadb-ui.css">
+{% endblock %}
+
+{% set available = status.healthy and status.install_origin == 'panel_managed' and not manager_error %}
 
 {% block content %}
-<section class="info-subpage-wrap" data-mariadb-manager>
-  <header class="info-hero-row">
-    <div class="info-hero-row__main">
-      <div class="info-hero-row__title-line">
-        <h1 class="info-hero-row__title">MariaDB Manager</h1>
-        {% if status.healthy and status.install_origin == 'panel_managed' %}
-        <span class="badge badge--healthy"><span class="badge-dot"></span> Local only</span>
-        {% else %}
-        <span class="badge badge--danger"><span class="badge-dot"></span> Unavailable</span>
-        {% endif %}
-      </div>
-      <div class="info-hero-row__meta">Panel-created databases use restricted local users. Root credentials are never shown.</div>
+<div class="split-layout">
+  {% if available %}
+
+  {# ── Left sidebar: tabs + plugin footer ── #}
+  <div class="split-sidebar">
+    <div class="split-sidebar__item active" data-mdb-tab="databases" id="mdb-tab-databases">
+      Databases
+      <span class="split-sidebar__count" data-mdb-count="databases">{{ databases | length }}</span>
     </div>
-  </header>
+    <div class="split-sidebar__item" data-mdb-tab="users" id="mdb-tab-users">
+      Users
+      <span class="split-sidebar__count" data-mdb-count="users">{{ users | length }}</span>
+    </div>
+    <div class="flex-1"></div>
+    <div class="split-sidebar__footer">
+      <div class="text-small">MariaDB Manager v{{ plugin_version }}</div>
+      <div class="text-small">Local only · 127.0.0.1</div>
+    </div>
+  </div>
 
-  {% if manager_error %}
-  <p class="text-danger">{{ manager_error }}</p>
-  {% elif not status.healthy or status.install_origin != 'panel_managed' %}
-  <p class="text-danger">Install panel-managed MariaDB from Dependencies before using this manager.</p>
+  {# ── Right content area ── #}
+  <div class="split-content">
+
+    {# Databases tab #}
+    <div class="split-tab active" id="mdb-panel-databases">
+      <div class="action-toolbar">
+        <h2>Databases</h2>
+        <button class="btn btn--primary" id="mdb-create-open" type="button">+ Create Database</button>
+      </div>
+
+      <div class="table-wrap" id="mdb-db-table-wrap" {% if not databases %}style="display:none;"{% endif %}>
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Access</th>
+              <th class="col-actions"></th>
+            </tr>
+          </thead>
+          <tbody id="mdb-db-tbody">
+            {% for database in databases %}
+            <tr data-mdb-database="{{ database.name }}">
+              <td>{{ database.name }}</td>
+              <td class="text-muted">Local restricted user</td>
+              <td class="col-actions">
+                <button class="btn btn--danger btn--sm" data-mdb-delete-database="{{ database.name }}" type="button">Delete</button>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <div id="mdb-db-empty" {% if databases %}style="display:none;"{% endif %}>
+        {%- set empty_message = "No user databases yet. Create one to get started." %}
+        {%- set empty_icon = none %}
+        {% include "partials/empty_state.html" %}
+      </div>
+    </div>
+
+    {# Users tab #}
+    <div class="split-tab" id="mdb-panel-users">
+      <div class="action-toolbar">
+        <h2>Restricted Users</h2>
+      </div>
+
+      <div class="table-wrap" id="mdb-user-table-wrap" {% if not users %}style="display:none;"{% endif %}>
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th class="col-actions" style="width: 230px;"></th>
+            </tr>
+          </thead>
+          <tbody id="mdb-user-tbody">
+            {% for user in users %}
+            <tr data-mdb-user="{{ user.name }}">
+              <td>{{ user.name }}</td>
+              <td class="col-actions d-flex gap-xs justify-end" style="width: 230px;">
+                <button class="btn btn--secondary btn--sm" data-mdb-reset-user="{{ user.name }}" type="button">Reset Password</button>
+                <button class="btn btn--danger btn--sm" data-mdb-delete-user="{{ user.name }}" type="button">Delete</button>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <div id="mdb-user-empty" {% if users %}style="display:none;"{% endif %}>
+        {%- set empty_message = "No restricted users yet. Users are created together with databases." %}
+        {%- set empty_icon = none %}
+        {% include "partials/empty_state.html" %}
+      </div>
+    </div>
+
+  </div>
   {% else %}
-  <div class="clean-specs-grid">
-    <div class="clean-specs-item"><div class="clean-specs-item__key">Databases</div><div class="clean-specs-item__val">{{ databases | length }}</div></div>
-    <div class="clean-specs-item"><div class="clean-specs-item__key">Restricted Users</div><div class="clean-specs-item__val">{{ users | length }}</div></div>
-    <div class="clean-specs-item"><div class="clean-specs-item__key">Network</div><div class="clean-specs-item__val">127.0.0.1 only</div></div>
-  </div>
 
-  <div>
-    <h2 class="info-group-title">Create Database</h2>
-    <form data-mariadb-create>
-      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
-      <label>Database <input name="database" required pattern="[a-z][a-z0-9_]{0,62}"></label>
-      <label>Restricted User <input name="user" required pattern="[a-z][a-z0-9_]{0,31}"></label>
-      <button class="btn btn--primary btn--sm" type="submit">Create Database</button>
-    </form>
-    <p class="text-small text-muted" data-mariadb-secret></p>
-  </div>
-
-  <div>
-    <h2 class="info-group-title">Databases</h2>
-    <ul>
-      {% for database in databases %}
-      <li>{{ database.name }} <button class="btn btn--danger btn--sm" data-delete-database="{{ database.name }}" type="button">Delete</button></li>
-      {% else %}
-      <li class="text-muted">No user databases.</li>
-      {% endfor %}
-    </ul>
-  </div>
-
-  <div>
-    <h2 class="info-group-title">Users</h2>
-    <ul>
-      {% for user in users %}
-      <li>{{ user.name }} <button class="btn btn--secondary btn--sm" data-reset-user="{{ user.name }}" type="button">Reset Password</button> <button class="btn btn--danger btn--sm" data-delete-user="{{ user.name }}" type="button">Delete</button></li>
-      {% else %}
-      <li class="text-muted">No restricted users.</li>
-      {% endfor %}
-    </ul>
+  {# ── Unavailable state ── #}
+  <div class="split-content">
+    <div class="mdb-unavailable">
+      <h3 class="mdb-unavailable__title">MariaDB Not Available</h3>
+      <p class="mdb-unavailable__text">
+        {% if manager_error %}
+          {{ manager_error }}
+        {% else %}
+          Install panel-managed MariaDB from Dependencies to create local databases and restricted users.
+        {% endif %}
+      </p>
+      <a class="btn btn--primary" href="/dependencies">Open Dependencies</a>
+    </div>
   </div>
   {% endif %}
-</section>
+</div>
+
+{% if available %}
+{# ── Create Database modal ── #}
+<div class="modal-backdrop hidden" id="mdb-modal-create" role="dialog" aria-modal="true">
+  <div class="modal mdb-modal">
+    <div class="mdb-modal-body">
+      <h2 class="mdb-modal-title">Create Database</h2>
+      <p class="mdb-modal-subtitle">A restricted local user is created together with the database.</p>
+      <div class="mdb-form-grid">
+        <div class="form-group">
+          <label class="form-label" for="mdb-create-database">Database</label>
+          <input type="text" id="mdb-create-database" class="form-input" placeholder="my_app_db"
+                 autocomplete="off" spellcheck="false">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="mdb-create-user">Restricted User</label>
+          <input type="text" id="mdb-create-user" class="form-input" placeholder="my_app_user"
+                 autocomplete="off" spellcheck="false">
+        </div>
+      </div>
+      <div id="mdb-create-error" class="form-error" style="display:none; margin-top: 12px;"></div>
+    </div>
+    <div class="mdb-modal-footer">
+      <button type="button" class="mdb-modal-btn" data-mdb-close="mdb-modal-create">Cancel</button>
+      <button type="button" class="mdb-modal-btn primary-text" id="mdb-create-submit">Create</button>
+    </div>
+  </div>
+</div>
+
+{# ── Credentials reveal modal ── #}
+<div class="modal-backdrop hidden" id="mdb-modal-credentials" role="dialog" aria-modal="true">
+  <div class="modal mdb-modal">
+    <div class="mdb-modal-body">
+      <h2 class="mdb-modal-title" id="mdb-credentials-title">Database Created</h2>
+      <p class="mdb-modal-subtitle" id="mdb-credentials-subtitle"></p>
+      <div class="mdb-credential-wrap">
+        <input type="text" id="mdb-credentials-password" class="form-input mdb-credential-input" readonly>
+        <button type="button" class="btn btn--secondary" id="mdb-credentials-copy">Copy</button>
+      </div>
+      <p class="mdb-credential-note">Save this password now — it cannot be shown again.</p>
+    </div>
+    <div class="mdb-modal-footer">
+      <button type="button" class="mdb-modal-btn primary-text" data-mdb-close="mdb-modal-credentials">Done</button>
+    </div>
+  </div>
+</div>
+
+{# ── Typed confirmation modal ── #}
+<div class="modal-backdrop hidden" id="mdb-modal-confirm" role="dialog" aria-modal="true">
+  <div class="modal mdb-modal">
+    <div class="mdb-modal-body">
+      <h2 class="mdb-modal-title" id="mdb-confirm-title"></h2>
+      <p class="mdb-modal-subtitle" id="mdb-confirm-description"></p>
+      <code class="mdb-confirm-phrase" id="mdb-confirm-phrase"></code>
+      <input type="text" id="mdb-confirm-input" class="form-input" placeholder="Type the phrase to confirm"
+             autocomplete="off" spellcheck="false">
+    </div>
+    <div class="mdb-modal-footer">
+      <button type="button" class="mdb-modal-btn" data-mdb-close="mdb-modal-confirm">Cancel</button>
+      <button type="button" class="mdb-modal-btn danger-text" id="mdb-confirm-ok" disabled>Delete</button>
+    </div>
+  </div>
+</div>
+{% endif %}
 {% endblock %}
 
 {% block scripts %}
+{% if available %}
 <script>
 (function () {
-  var root = document.querySelector('[data-mariadb-manager]');
-  if (!root) return;
-  var token = root.querySelector('input[name="csrf_token"]');
-  function request(url, options) {
-    options = options || {};
-    options.headers = Object.assign({'Accept': 'application/json', 'X-CSRF-Token': token ? token.value : ''}, options.headers || {});
-    return fetch(url, options).then(async function (response) {
-      var body = await response.json();
-      if (!response.ok) throw new Error(body.detail || 'MariaDB operation failed.');
-      return body;
+  'use strict';
+
+  var API = '/plugins/mariadb_manager/api';
+  var DB_PATTERN = /^[a-z][a-z0-9_]{0,62}$/;
+  var USER_PATTERN = /^[a-z][a-z0-9_]{0,31}$/;
+
+  function toast(message, type) {
+    if (window.toast) window.toast(message, type || 'success');
+  }
+
+  function openModal(id) { if (window.openModal) window.openModal(id); }
+  function closeModal(id) { if (window.closeModal) window.closeModal(id); }
+
+  function formatDetail(detail) {
+    if (!detail) return 'MariaDB operation failed.';
+    if (typeof detail === 'string') return detail;
+    if (Array.isArray(detail)) {
+      return detail.map(function (d) { return d.msg || JSON.stringify(d); }).join('; ');
+    }
+    return String(detail);
+  }
+
+  function api(url, method, body) {
+    var headers = window.csrfHeaders
+      ? window.csrfHeaders({ 'Content-Type': 'application/json', 'Accept': 'application/json' })
+      : { 'Content-Type': 'application/json', 'Accept': 'application/json' };
+    return fetch(url, { method: method, headers: headers, body: body ? JSON.stringify(body) : undefined })
+      .then(async function (response) {
+        var data = await response.json().catch(function () { return {}; });
+        if (!response.ok) throw new Error(formatDetail(data.detail));
+        return data;
+      });
+  }
+
+  function escapeHtml(value) {
+    return String(value).replace(/[&<>"']/g, function (ch) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch];
     });
   }
-  function typedConfirmation(text) {
-    return window.prompt('Type ' + text + ' to continue.') === text ? text : '';
-  }
-  var create = root.querySelector('[data-mariadb-create]');
-  if (create) create.addEventListener('submit', function (event) {
-    event.preventDefault();
-    var values = {database: create.database.value, user: create.user.value};
-    request('/plugins/mariadb_manager/api/databases', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(values)})
-      .then(function (body) {
-        root.querySelector('[data-mariadb-secret]').textContent = 'Save this password now: ' + body.password;
-        if (window.toast) window.toast('Database created.', 'success');
-      }).catch(function (error) { if (window.toast) window.toast(error.message, 'error'); else window.alert(error.message); });
+
+  /* ── Tabs ── */
+  document.querySelectorAll('[data-mdb-tab]').forEach(function (item) {
+    item.addEventListener('click', function () {
+      var target = item.getAttribute('data-mdb-tab');
+      document.querySelectorAll('[data-mdb-tab]').forEach(function (el) {
+        el.classList.toggle('active', el === item);
+      });
+      document.querySelectorAll('.split-tab[id^="mdb-panel-"]').forEach(function (panel) {
+        panel.classList.toggle('active', panel.id === 'mdb-panel-' + target);
+      });
+    });
   });
-  root.querySelectorAll('[data-delete-database]').forEach(function (button) { button.addEventListener('click', function () {
-    var name = button.getAttribute('data-delete-database');
-    var confirmation = typedConfirmation('DELETE DATABASE ' + name);
-    if (!confirmation) return;
-    request('/plugins/mariadb_manager/api/databases/' + encodeURIComponent(name), {method: 'DELETE', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({confirmation: confirmation})}).then(function () { window.location.reload(); }).catch(function (error) { window.alert(error.message); });
-  }); });
-  root.querySelectorAll('[data-delete-user]').forEach(function (button) { button.addEventListener('click', function () {
-    var name = button.getAttribute('data-delete-user');
-    var confirmation = typedConfirmation('DELETE USER ' + name);
-    if (!confirmation) return;
-    request('/plugins/mariadb_manager/api/users/' + encodeURIComponent(name), {method: 'DELETE', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({confirmation: confirmation})}).then(function () { window.location.reload(); }).catch(function (error) { window.alert(error.message); });
-  }); });
-  root.querySelectorAll('[data-reset-user]').forEach(function (button) { button.addEventListener('click', function () {
-    var name = button.getAttribute('data-reset-user');
-    var confirmation = typedConfirmation('RESET PASSWORD ' + name);
-    if (!confirmation) return;
-    request('/plugins/mariadb_manager/api/users/' + encodeURIComponent(name) + '/password', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({confirmation: confirmation})}).then(function (body) {
-      window.prompt('Copy the new password now:', body.password);
-    }).catch(function (error) { window.alert(error.message); });
-  }); });
+
+  /* ── Modal close buttons ── */
+  document.querySelectorAll('[data-mdb-close]').forEach(function (button) {
+    button.addEventListener('click', function () {
+      closeModal(button.getAttribute('data-mdb-close'));
+    });
+  });
+
+  /* ── Counts & empty states ── */
+  function updateCount(kind, delta) {
+    var el = document.querySelector('[data-mdb-count="' + kind + '"]');
+    if (!el) return;
+    el.textContent = String(Math.max(0, parseInt(el.textContent || '0', 10) + delta));
+  }
+
+  function syncEmpty(kind) {
+    var isDatabases = kind === 'databases';
+    var tbody = document.getElementById(isDatabases ? 'mdb-db-tbody' : 'mdb-user-tbody');
+    var empty = document.getElementById(isDatabases ? 'mdb-db-empty' : 'mdb-user-empty');
+    var tableWrap = document.getElementById(isDatabases ? 'mdb-db-table-wrap' : 'mdb-user-table-wrap');
+    if (!tbody || !empty) return;
+    var hasRows = tbody.querySelector('tr') !== null;
+    empty.style.display = hasRows ? 'none' : '';
+    if (tableWrap) tableWrap.style.display = hasRows ? '' : 'none';
+  }
+
+  /* ── Credentials reveal ── */
+  var credentialsTitle = document.getElementById('mdb-credentials-title');
+  var credentialsSubtitle = document.getElementById('mdb-credentials-subtitle');
+  var credentialsPassword = document.getElementById('mdb-credentials-password');
+  var credentialsCopy = document.getElementById('mdb-credentials-copy');
+
+  function showCredentials(title, subtitleHtml, password) {
+    credentialsTitle.textContent = title;
+    credentialsSubtitle.innerHTML = subtitleHtml;
+    credentialsPassword.value = password;
+    openModal('mdb-modal-credentials');
+    credentialsPassword.select();
+  }
+
+  credentialsCopy.addEventListener('click', function () {
+    function fallback() {
+      credentialsPassword.focus();
+      credentialsPassword.select();
+      try {
+        document.execCommand('copy');
+        toast('Copied to clipboard.');
+      } catch (err) {
+        toast('Copy failed — select the password and copy manually.', 'danger');
+      }
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(credentialsPassword.value)
+        .then(function () { toast('Copied to clipboard.'); })
+        .catch(fallback);
+    } else {
+      fallback();
+    }
+  });
+
+  /* ── Typed confirmation ── */
+  var confirmTitle = document.getElementById('mdb-confirm-title');
+  var confirmDescription = document.getElementById('mdb-confirm-description');
+  var confirmPhrase = document.getElementById('mdb-confirm-phrase');
+  var confirmInput = document.getElementById('mdb-confirm-input');
+  var confirmOk = document.getElementById('mdb-confirm-ok');
+  var confirmState = null;
+
+  function openTypedConfirm(options) {
+    confirmState = options;
+    confirmTitle.textContent = options.title;
+    confirmDescription.innerHTML = options.description;
+    confirmPhrase.textContent = options.phrase;
+    confirmOk.textContent = options.actionLabel || 'Delete';
+    confirmInput.value = '';
+    confirmOk.disabled = true;
+    openModal('mdb-modal-confirm');
+    confirmInput.focus();
+  }
+
+  confirmInput.addEventListener('input', function () {
+    confirmOk.disabled = !confirmState || confirmInput.value !== confirmState.phrase;
+  });
+
+  confirmInput.addEventListener('keydown', function (event) {
+    if (event.key === 'Enter' && !confirmOk.disabled) confirmOk.click();
+  });
+
+  confirmOk.addEventListener('click', function () {
+    if (!confirmState || confirmOk.disabled) return;
+    var state = confirmState;
+    confirmState = null;
+    closeModal('mdb-modal-confirm');
+    Promise.resolve(state.onConfirm()).catch(function (error) {
+      toast(error.message || 'MariaDB operation failed.', 'danger');
+    });
+  });
+
+  /* ── Create database ── */
+  var createOpen = document.getElementById('mdb-create-open');
+  var createDatabaseInput = document.getElementById('mdb-create-database');
+  var createUserInput = document.getElementById('mdb-create-user');
+  var createError = document.getElementById('mdb-create-error');
+  var createSubmit = document.getElementById('mdb-create-submit');
+
+  function showCreateError(message) {
+    createError.textContent = message;
+    createError.style.display = message ? '' : 'none';
+  }
+
+  function appendDatabaseRow(name) {
+    var tbody = document.getElementById('mdb-db-tbody');
+    if (!tbody) return;
+    var row = document.createElement('tr');
+    row.setAttribute('data-mdb-database', name);
+    row.innerHTML =
+      '<td>' + escapeHtml(name) + '</td>' +
+      '<td class="text-muted">Local restricted user</td>' +
+      '<td class="col-actions"><button class="btn btn--danger btn--sm" data-mdb-delete-database="' +
+      escapeHtml(name) + '" type="button">Delete</button></td>';
+    tbody.appendChild(row);
+  }
+
+  createOpen.addEventListener('click', function () {
+    createDatabaseInput.value = '';
+    createUserInput.value = '';
+    showCreateError('');
+    openModal('mdb-modal-create');
+    createDatabaseInput.focus();
+  });
+
+  createSubmit.addEventListener('click', function () {
+    var database = createDatabaseInput.value.trim();
+    var user = createUserInput.value.trim();
+    if (!DB_PATTERN.test(database)) {
+      showCreateError('Database must start with a lowercase letter and use only lowercase letters, digits and underscores (max 63 characters).');
+      return;
+    }
+    if (!USER_PATTERN.test(user)) {
+      showCreateError('User must start with a lowercase letter and use only lowercase letters, digits and underscores (max 32 characters).');
+      return;
+    }
+    showCreateError('');
+    createSubmit.disabled = true;
+    api(API + '/databases', 'POST', { database: database, user: user })
+      .then(function (body) {
+        closeModal('mdb-modal-create');
+        appendDatabaseRow(body.database);
+        updateCount('databases', 1);
+        syncEmpty('databases');
+        toast('Database created.');
+        showCredentials(
+          'Database Created',
+          'Database <strong class="mdb-target">' + escapeHtml(body.database) + '</strong> · User <strong class="mdb-target">' + escapeHtml(body.user) + '</strong>',
+          body.password
+        );
+      })
+      .catch(function (error) { showCreateError(error.message); })
+      .finally(function () { createSubmit.disabled = false; });
+  });
+
+  /* ── Row actions (delegated so freshly added rows work too) ── */
+  document.addEventListener('click', function (event) {
+    var button = event.target.closest('button[data-mdb-delete-database], button[data-mdb-delete-user], button[data-mdb-reset-user]');
+    if (!button) return;
+
+    if (button.hasAttribute('data-mdb-delete-database')) {
+      var dbName = button.getAttribute('data-mdb-delete-database');
+      var dbPhrase = 'DELETE DATABASE ' + dbName;
+      openTypedConfirm({
+        title: 'Delete Database',
+        description: 'This permanently drops <strong class="mdb-target">' + escapeHtml(dbName) + '</strong> and all of its data.',
+        phrase: dbPhrase,
+        actionLabel: 'Delete',
+        onConfirm: function () {
+          return api(API + '/databases/' + encodeURIComponent(dbName), 'DELETE', { confirmation: dbPhrase })
+            .then(function () {
+              var row = document.querySelector('tr[data-mdb-database="' + dbName + '"]');
+              if (row) row.remove();
+              updateCount('databases', -1);
+              syncEmpty('databases');
+              toast('Database deleted.');
+            });
+        }
+      });
+      return;
+    }
+
+    if (button.hasAttribute('data-mdb-delete-user')) {
+      var userName = button.getAttribute('data-mdb-delete-user');
+      var userPhrase = 'DELETE USER ' + userName;
+      openTypedConfirm({
+        title: 'Delete User',
+        description: 'This permanently removes the restricted user <strong class="mdb-target">' + escapeHtml(userName) + '</strong>.',
+        phrase: userPhrase,
+        actionLabel: 'Delete',
+        onConfirm: function () {
+          return api(API + '/users/' + encodeURIComponent(userName), 'DELETE', { confirmation: userPhrase })
+            .then(function () {
+              var row = document.querySelector('tr[data-mdb-user="' + userName + '"]');
+              if (row) row.remove();
+              updateCount('users', -1);
+              syncEmpty('users');
+              toast('User deleted.');
+            });
+        }
+      });
+      return;
+    }
+
+    var resetName = button.getAttribute('data-mdb-reset-user');
+    var resetPhrase = 'RESET PASSWORD ' + resetName;
+    openTypedConfirm({
+      title: 'Reset Password',
+      description: 'Generate a new password for <strong class="mdb-target">' + escapeHtml(resetName) + '</strong>? The old password stops working immediately.',
+      phrase: resetPhrase,
+      actionLabel: 'Reset',
+      onConfirm: function () {
+        return api(API + '/users/' + encodeURIComponent(resetName) + '/password', 'POST', { confirmation: resetPhrase })
+          .then(function (body) {
+            toast('Password reset.');
+            showCredentials(
+              'Password Reset',
+              'New password for user <strong class="mdb-target">' + escapeHtml(resetName) + '</strong>',
+              body.password
+            );
+          });
+      }
+    });
+  });
 })();
 </script>
+{% endif %}
 {% endblock %}

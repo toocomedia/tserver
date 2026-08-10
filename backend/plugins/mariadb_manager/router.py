@@ -23,6 +23,10 @@ def _require_managed_mariadb() -> None:
 
 @router.get("/", response_class=HTMLResponse)
 async def mariadb_index(request: Request):
+    from plugins.manager import plugin_manager
+
+    plugin_info = plugin_manager.get_plugin("mariadb_manager")
+    plugin_version = plugin_info["version"] if plugin_info else "1.0.0"
     status = dependency_manager.get_status("mariadb", cached=True) or {}
     databases: list[dict] = []
     users: list[dict] = []
@@ -42,6 +46,7 @@ async def mariadb_index(request: Request):
             "databases": databases,
             "users": users,
             "manager_error": error,
+            "plugin_version": plugin_version,
         },
     )
 
