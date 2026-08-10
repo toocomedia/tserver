@@ -35,6 +35,58 @@
   </div>
 </header>
 
+<!-- DESCRIPTION -->
+{% if dependency.description %}
+<div class="mb-xl">
+  <h2 class="info-group-title">Description</h2>
+  <p style="font-size: 13px; color: var(--color-text); line-height: 1.55;">
+    {{ dependency.description }}
+  </p>
+</div>
+{% endif %}
+
+<!-- SYSTEM SPECIFICATIONS -->
+<div class="mb-xl">
+  <h2 class="info-group-title">System Specifications</h2>
+  
+  <div class="clean-specs-grid">
+    <div class="clean-specs-item">
+      <div class="clean-specs-item__key">Installed Status</div>
+      <div class="clean-specs-item__val" data-role="installed-value">{{ 'Yes' if dependency.installed else 'No' }}</div>
+    </div>
+    <div class="clean-specs-item">
+      <div class="clean-specs-item__key">Install Source</div>
+      <div class="clean-specs-item__val" data-role="install-source">{{ dependency.install_origin | replace('_', ' ') if dependency.install_origin else 'Multiple' }}</div>
+    </div>
+    <div class="clean-specs-item">
+      <div class="clean-specs-item__key">Service State</div>
+      <div class="clean-specs-item__val" data-role="daemon-value">{{ ('Running' if dependency.running else 'Stopped') if dependency.can_toggle else 'Core runtime' }}</div>
+    </div>
+    <div class="clean-specs-item">
+      <div class="clean-specs-item__key">Version Detected</div>
+      <div class="clean-specs-item__val" data-role="version-value">{{ dependency.detected_version if dependency.detected_version else 'Multiple versions' }}</div>
+    </div>
+    {% if dependency.update %}
+    <div class="clean-specs-item">
+      <div class="clean-specs-item__key">Update Status</div>
+      <div class="clean-specs-item__val">{{ dependency.update.state | replace('_', ' ') }}</div>
+    </div>
+    {% endif %}
+    <div class="clean-specs-item">
+      <div class="clean-specs-item__key">Used by Plugins</div>
+      <div class="clean-specs-item__val">
+        {% if dependency.dependents %}
+          {{ dependency.dependents | map(attribute='name') | join(', ') }}
+        {% else %}
+          No plugins currently depend on this service.
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<h2 class="info-group-title">Runtime Management</h2>
+
 <p class="text-small text-muted mb-sm">Install only the PHP versions your scripts need. Removing a version keeps website files and databases.</p>
 
 {% set missing_versions = dependency.versions | rejectattr('installed') | rejectattr('available_from_apt') | list %}
@@ -98,7 +150,7 @@
             {% if runtime.can_install %}
             <form method="post" action="/api/dependencies/php/versions/{{ runtime.version }}/install" data-php-install style="margin:0;">
               <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
-              <button class="btn btn--primary btn--sm" type="submit">Install</button>
+              <button class="btn btn--secondary btn--sm" type="submit">Install</button>
             </form>
             {% elif runtime.can_uninstall %}
             <form method="post" action="/api/dependencies/php/versions/{{ runtime.version }}/uninstall" data-php-uninstall data-confirmation="REMOVE PHP {{ runtime.version }}" style="margin:0;">
