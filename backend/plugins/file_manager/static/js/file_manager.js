@@ -10,27 +10,37 @@ const state = {
   entries: []
 };
 
-document.addEventListener('DOMContentLoaded', async () => {
+async function init() {
   setupGlobalListeners();
   try {
     const data = await api.fetchApps();
     const appSelector = document.getElementById('app-selector');
-    appSelector.innerHTML = '<option value="">Select App...</option>';
-    data.apps.forEach(app => {
-      const opt = document.createElement('option');
-      opt.value = app.id;
-      opt.textContent = `${app.domain || 'Unnamed'} (${app.preset})`;
-      appSelector.appendChild(opt);
-    });
+    if (data.apps.length === 0) {
+      appSelector.innerHTML = '<option value="">No apps available</option>';
+    } else {
+      appSelector.innerHTML = '<option value="">Select App...</option>';
+      data.apps.forEach(app => {
+        const opt = document.createElement('option');
+        opt.value = app.id;
+        opt.textContent = `${app.domain || 'Unnamed'} (${app.preset})`;
+        appSelector.appendChild(opt);
+      });
+    }
     
     appSelector.disabled = false;
     appSelector.addEventListener('change', onAppChange);
-    hideSkeleton('fm-skeleton');
+    if (window.hideSkeleton) window.hideSkeleton('fm-skeleton');
     document.getElementById('fm-empty-state').style.display = 'block';
   } catch (err) {
-    showToast('Failed to load apps: ' + err.message, 'error');
+    if (window.showToast) window.showToast('Failed to load apps: ' + err.message, 'error');
   }
-});
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
+}
 
 function setupGlobalListeners() {
   document.getElementById('btn-refresh').onclick = () => loadEntries(true);
