@@ -1,0 +1,10 @@
+{
+  "id": "mariadb",
+  "name": "MariaDB",
+  "description": "Local MariaDB server for panel-managed PHP applications and websites.",
+  "version": "1.0.0",
+  "author": "SRV Panel Core",
+  "usage": {
+    "process_names": ["mariadbd", "mysqld"]
+  }
+}

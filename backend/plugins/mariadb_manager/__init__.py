@@ -1,0 +1,1 @@
+"""MariaDB Manager plugin."""

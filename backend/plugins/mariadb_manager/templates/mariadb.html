@@ -1,0 +1,119 @@
+{% extends "layout.html" %}
+
+{% block title %}MariaDB Manager — {{ PANEL_NAME }}{% endblock %}
+{% block page_title %}MariaDB Manager{% endblock %}
+
+{% block content %}
+<section class="info-subpage-wrap" data-mariadb-manager>
+  <header class="info-hero-row">
+    <div class="info-hero-row__main">
+      <div class="info-hero-row__title-line">
+        <h1 class="info-hero-row__title">MariaDB Manager</h1>
+        {% if status.healthy and status.install_origin == 'panel_managed' %}
+        <span class="badge badge--healthy"><span class="badge-dot"></span> Local only</span>
+        {% else %}
+        <span class="badge badge--danger"><span class="badge-dot"></span> Unavailable</span>
+        {% endif %}
+      </div>
+      <div class="info-hero-row__meta">Panel-created databases use restricted local users. Root credentials are never shown.</div>
+    </div>
+  </header>
+
+  {% if manager_error %}
+  <p class="text-danger">{{ manager_error }}</p>
+  {% elif not status.healthy or status.install_origin != 'panel_managed' %}
+  <p class="text-danger">Install panel-managed MariaDB from Dependencies before using this manager.</p>
+  {% else %}
+  <div class="clean-specs-grid">
+    <div class="clean-specs-item"><div class="clean-specs-item__key">Databases</div><div class="clean-specs-item__val">{{ databases | length }}</div></div>
+    <div class="clean-specs-item"><div class="clean-specs-item__key">Restricted Users</div><div class="clean-specs-item__val">{{ users | length }}</div></div>
+    <div class="clean-specs-item"><div class="clean-specs-item__key">Network</div><div class="clean-specs-item__val">127.0.0.1 only</div></div>
+  </div>
+
+  <div>
+    <h2 class="info-group-title">Create Database</h2>
+    <form data-mariadb-create>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+      <label>Database <input name="database" required pattern="[a-z][a-z0-9_]{0,62}"></label>
+      <label>Restricted User <input name="user" required pattern="[a-z][a-z0-9_]{0,31}"></label>
+      <button class="btn btn--primary btn--sm" type="submit">Create Database</button>
+    </form>
+    <p class="text-small text-muted" data-mariadb-secret></p>
+  </div>
+
+  <div>
+    <h2 class="info-group-title">Databases</h2>
+    <ul>
+      {% for database in databases %}
+      <li>{{ database.name }} <button class="btn btn--danger btn--sm" data-delete-database="{{ database.name }}" type="button">Delete</button></li>
+      {% else %}
+      <li class="text-muted">No user databases.</li>
+      {% endfor %}
+    </ul>
+  </div>
+
+  <div>
+    <h2 class="info-group-title">Users</h2>
+    <ul>
+      {% for user in users %}
+      <li>{{ user.name }} <button class="btn btn--secondary btn--sm" data-reset-user="{{ user.name }}" type="button">Reset Password</button> <button class="btn btn--danger btn--sm" data-delete-user="{{ user.name }}" type="button">Delete</button></li>
+      {% else %}
+      <li class="text-muted">No restricted users.</li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  var root = document.querySelector('[data-mariadb-manager]');
+  if (!root) return;
+  var token = root.querySelector('input[name="csrf_token"]');
+  function request(url, options) {
+    options = options || {};
+    options.headers = Object.assign({'Accept': 'application/json', 'X-CSRF-Token': token ? token.value : ''}, options.headers || {});
+    return fetch(url, options).then(async function (response) {
+      var body = await response.json();
+      if (!response.ok) throw new Error(body.detail || 'MariaDB operation failed.');
+      return body;
+    });
+  }
+  function typedConfirmation(text) {
+    return window.prompt('Type ' + text + ' to continue.') === text ? text : '';
+  }
+  var create = root.querySelector('[data-mariadb-create]');
+  if (create) create.addEventListener('submit', function (event) {
+    event.preventDefault();
+    var values = {database: create.database.value, user: create.user.value};
+    request('/plugins/mariadb_manager/api/databases', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(values)})
+      .then(function (body) {
+        root.querySelector('[data-mariadb-secret]').textContent = 'Save this password now: ' + body.password;
+        if (window.toast) window.toast('Database created.', 'success');
+      }).catch(function (error) { if (window.toast) window.toast(error.message, 'error'); else window.alert(error.message); });
+  });
+  root.querySelectorAll('[data-delete-database]').forEach(function (button) { button.addEventListener('click', function () {
+    var name = button.getAttribute('data-delete-database');
+    var confirmation = typedConfirmation('DELETE DATABASE ' + name);
+    if (!confirmation) return;
+    request('/plugins/mariadb_manager/api/databases/' + encodeURIComponent(name), {method: 'DELETE', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({confirmation: confirmation})}).then(function () { window.location.reload(); }).catch(function (error) { window.alert(error.message); });
+  }); });
+  root.querySelectorAll('[data-delete-user]').forEach(function (button) { button.addEventListener('click', function () {
+    var name = button.getAttribute('data-delete-user');
+    var confirmation = typedConfirmation('DELETE USER ' + name);
+    if (!confirmation) return;
+    request('/plugins/mariadb_manager/api/users/' + encodeURIComponent(name), {method: 'DELETE', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({confirmation: confirmation})}).then(function () { window.location.reload(); }).catch(function (error) { window.alert(error.message); });
+  }); });
+  root.querySelectorAll('[data-reset-user]').forEach(function (button) { button.addEventListener('click', function () {
+    var name = button.getAttribute('data-reset-user');
+    var confirmation = typedConfirmation('RESET PASSWORD ' + name);
+    if (!confirmation) return;
+    request('/plugins/mariadb_manager/api/users/' + encodeURIComponent(name) + '/password', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({confirmation: confirmation})}).then(function (body) {
+      window.prompt('Copy the new password now:', body.password);
+    }).catch(function (error) { window.alert(error.message); });
+  }); });
+})();
+</script>
+{% endblock %}

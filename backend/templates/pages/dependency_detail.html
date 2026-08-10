@@ -34,6 +34,19 @@
     </div>
 
     <div class="info-hero-row__actions" data-role="dependency-footer">
+      {% if dependency.can_check_update %}
+      <form method="post" action="/api/dependencies/{{ dependency.id }}/update/check" data-dependency-update-check>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+        <button class="btn btn--secondary btn--sm" type="submit">Check Updates</button>
+      </form>
+      {% endif %}
+      {% if dependency.can_update %}
+      <form method="post" action="/api/dependencies/{{ dependency.id }}/update" data-dependency-update-form data-confirmation="{{ dependency.update_confirmation }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+        <input type="hidden" name="confirmation" value="">
+        <button class="btn btn--primary btn--sm" type="submit">Update {{ dependency.name }}</button>
+      </form>
+      {% endif %}
       {% if dependency.installed and dependency.can_toggle %}
       <form method="post" action="/api/dependencies/{{ dependency.id }}/toggle">
         <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
@@ -86,6 +99,22 @@
         <div class="clean-specs-item__key">Version Detected</div>
         <div class="clean-specs-item__val" data-role="version-value">{{ dependency.detected_version if dependency.detected_version else 'Not detected' }}</div>
       </div>
+      <div class="clean-specs-item">
+        <div class="clean-specs-item__key">Update Status</div>
+        <div class="clean-specs-item__val">{{ dependency.update.state | replace('_', ' ') }}</div>
+      </div>
+      {% if dependency.update.candidate_version %}
+      <div class="clean-specs-item">
+        <div class="clean-specs-item__key">Available Version</div>
+        <div class="clean-specs-item__val">{{ dependency.update.candidate_version }}</div>
+      </div>
+      {% endif %}
+      {% if dependency.update.source %}
+      <div class="clean-specs-item">
+        <div class="clean-specs-item__key">Update Source</div>
+        <div class="clean-specs-item__val">{{ dependency.update.source }}</div>
+      </div>
+      {% endif %}
       <div class="clean-specs-item">
         <div class="clean-specs-item__key">Used by Plugins</div>
         <div class="clean-specs-item__val">
@@ -200,6 +229,36 @@
       } finally {
         window.clearInterval(timer);
         elapsed.textContent = 'Elapsed: ' + Math.floor((Date.now() - startedAt) / 1000) + 's';
+      }
+    });
+  });
+
+  document.querySelectorAll('[data-dependency-update-check], [data-dependency-update-form]').forEach(function (form) {
+    form.addEventListener('submit', async function (event) {
+      event.preventDefault();
+      var expected = form.getAttribute('data-confirmation');
+      if (expected) {
+        var entered = window.prompt('Type ' + expected + ' to continue.');
+        if (entered !== expected) return;
+        form.querySelector('input[name="confirmation"]').value = entered;
+      }
+      var button = form.querySelector('button');
+      button.disabled = true;
+      try {
+        var token = form.querySelector('input[name="csrf_token"]').value;
+        var response = await fetch(form.action, {
+          method: 'POST',
+          body: new FormData(form),
+          headers: { 'Accept': 'application/json', 'X-CSRF-Token': token }
+        });
+        var payload = await response.json();
+        if (!response.ok || !payload.success) throw new Error(payload.detail || 'Dependency operation failed.');
+        if (window.toast) window.toast(payload.message, 'success');
+        window.location.reload();
+      } catch (error) {
+        button.disabled = false;
+        if (window.toast) window.toast(error.message, 'error');
+        else window.alert(error.message);
       }
     });
   });

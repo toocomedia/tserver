@@ -1,12 +1,14 @@
 """Closed registry of dependency drivers shipped with SRV Panel core."""
 from dependencies.docker.service import DockerDependencyService
 from dependencies.git.service import GitDependencyService
+from dependencies.mariadb.service import MariaDBDependencyService
 from dependencies.python.service import PythonDependencyService
 from dependencies.postgresql.service import PostgreSQLDependencyService
 
 DEPENDENCY_REGISTRY = {
     "docker": DockerDependencyService,
     "git": GitDependencyService,
+    "mariadb": MariaDBDependencyService,
     "python": PythonDependencyService,
     "postgresql": PostgreSQLDependencyService,
 }

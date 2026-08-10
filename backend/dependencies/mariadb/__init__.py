@@ -1,0 +1,1 @@
+"""Native MariaDB runtime dependency."""

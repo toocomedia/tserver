@@ -73,6 +73,39 @@ class DependencyManager:
             if status.get("installed") and state.install_origin == "bundled"
             else state.install_origin
         )
+        # Native MariaDB is safe to control only after the panel installed its
+        # localhost-only configuration.  A detected external installation is
+        # intentionally read-only from the panel.
+        if dependency_id == "mariadb" and status["install_origin"] != "panel_managed":
+            status["can_toggle"] = False
+        update_getter = getattr(service, "get_cached_update_status", None)
+        update = (
+            update_getter()
+            if callable(update_getter)
+            else {
+                "state": "not_supported",
+                "available": False,
+                "candidate_version": None,
+                "source": None,
+                "message": "This dependency does not support panel updates.",
+                "last_checked": None,
+                "major_change": False,
+            }
+        )
+        status["update"] = update
+        status["update_confirmation"] = getattr(service, "update_confirmation", None)
+        status["can_check_update"] = bool(
+            status.get("installed")
+            and status["install_origin"] == "panel_managed"
+            and callable(getattr(service, "check_update", None))
+        )
+        status["can_update"] = bool(
+            status["can_check_update"]
+            and update.get("available")
+            and not update.get("major_change")
+            and state.operation == "idle"
+            and callable(getattr(service, "update", None))
+        )
         expected_offline = not state.desired_enabled and state.operation == "idle"
         status["last_error"] = (
             None
@@ -122,6 +155,12 @@ class DependencyManager:
             return None
         dependents = self.get_dependent_plugins(dependency_id)
         containers = service.list_containers() if action == "uninstall" else []
+        status = self.get_status(dependency_id, cached=True) or {}
+        blocked = action == "uninstall" and bool(dependents)
+        reason = None
+        if action == "update" and not status.get("can_update"):
+            blocked = True
+            reason = str((status.get("update") or {}).get("message") or "MariaDB update is unavailable.")
         return {
             "dependency_id": dependency_id,
             "action": action,
@@ -129,7 +168,9 @@ class DependencyManager:
             "unmanaged_containers": [
                 item for item in containers if not item["panel_managed"]
             ],
-            "blocked": action == "uninstall" and bool(dependents),
+            "blocked": blocked,
+            "reason": reason,
+            "update": status.get("update") if action == "update" else None,
         }
 
     async def toggle(self, dependency_id: str, enabled: bool) -> tuple[bool, str]:
@@ -261,6 +302,88 @@ class DependencyManager:
                 clear_error=True,
             )
             return True, message
+        finally:
+            lock.release()
+
+    async def check_update(self, dependency_id: str) -> tuple[bool, str]:
+        service = self.get_service(dependency_id)
+        lock = self._operation_locks.get(dependency_id)
+        status = self.get_status(dependency_id, force=True)
+        if service is None or lock is None or status is None:
+            return False, "Unknown dependency."
+        if status.get("install_origin") != "panel_managed":
+            return False, "Only panel-managed dependencies can check updates from the panel."
+        checker = getattr(service, "check_update", None)
+        if not callable(checker):
+            return False, "This dependency does not support panel update checks."
+        if not lock.acquire(blocking=False):
+            return False, "Another dependency operation is already running."
+        current = component_state_store.get("dependency", dependency_id)
+        try:
+            await component_state_store.set(
+                "dependency", dependency_id, operation="checking_update", clear_error=True
+            )
+            success, message = await asyncio.to_thread(checker)
+            await component_state_store.set(
+                "dependency",
+                dependency_id,
+                desired_enabled=current.desired_enabled,
+                operation="idle",
+                last_error=None if success else message,
+                clear_error=success,
+            )
+            return success, message
+        except Exception as exc:
+            message = str(exc)
+            await component_state_store.set(
+                "dependency",
+                dependency_id,
+                desired_enabled=current.desired_enabled,
+                operation="idle",
+                last_error=message,
+            )
+            return False, message
+        finally:
+            lock.release()
+
+    async def update(self, dependency_id: str) -> tuple[bool, str]:
+        service = self.get_service(dependency_id)
+        lock = self._operation_locks.get(dependency_id)
+        status = self.get_status(dependency_id, cached=True)
+        if service is None or lock is None or status is None:
+            return False, "Unknown dependency."
+        if not status.get("can_update"):
+            return False, str((status.get("update") or {}).get("message") or "Dependency update is unavailable.")
+        updater = getattr(service, "update", None)
+        if not callable(updater):
+            return False, "This dependency does not support panel updates."
+        if not lock.acquire(blocking=False):
+            return False, "Another dependency operation is already running."
+        current = component_state_store.get("dependency", dependency_id)
+        try:
+            await component_state_store.set(
+                "dependency", dependency_id, operation="updating", clear_error=True
+            )
+            success, message = await asyncio.to_thread(updater)
+            await component_state_store.set(
+                "dependency",
+                dependency_id,
+                desired_enabled=current.desired_enabled,
+                operation="idle",
+                last_error=None if success else message,
+                clear_error=success,
+            )
+            return success, message
+        except Exception as exc:
+            message = str(exc)
+            await component_state_store.set(
+                "dependency",
+                dependency_id,
+                desired_enabled=current.desired_enabled,
+                operation="idle",
+                last_error=message,
+            )
+            return False, message
         finally:
             lock.release()
 

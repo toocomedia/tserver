@@ -66,7 +66,7 @@ async def dependency_status():
 @router.get("/api/dependencies/{dependency_id}/precheck")
 async def dependency_precheck(
     dependency_id: str,
-    action: str = Query(..., pattern="^(disable|uninstall)$"),
+    action: str = Query(..., pattern="^(disable|uninstall|update)$"),
 ):
     result = dependency_manager.precheck(dependency_id, action)
     if result is None:
@@ -120,9 +120,19 @@ async def dependency_install(dependency_id: str, db: AsyncSession = Depends(get_
             "message": "Dependency is already installed and healthy.",
             "status": current,
         }
+    if current["installed"] and current.get("install_origin") == "external":
+        return JSONResponse(
+            {
+                "success": False,
+                "detail": "This dependency was installed outside SRV Panel. The panel will not reconfigure it automatically.",
+            },
+            status_code=409,
+        )
     # Guard preflight for install (may be a Docker pull or heavy setup)
     from services.resource_guard_service import resource_guard_service
-    result = await resource_guard_service.preflight(db, "plugin_install")
+    service = dependency_manager.get_service(dependency_id)
+    profile = str(getattr(service, "install_resource_profile", "plugin_install"))
+    result = await resource_guard_service.preflight(db, profile)
     if not result["ok"]:
         return JSONResponse(
             {"success": False, "detail": f"Resource Guard blocked dependency install: {result['reason']}", "resource_guard": result},
@@ -131,7 +141,7 @@ async def dependency_install(dependency_id: str, db: AsyncSession = Depends(get_
     guard_token = resource_guard_service.register(
         "dependency", dependency_id, "normal",
         f"Install dependency: {dependency_id}",
-        profile="plugin_install",
+        profile=profile,
     )
     try:
         success, message = await dependency_manager.install(dependency_id)
@@ -142,6 +152,69 @@ async def dependency_install(dependency_id: str, db: AsyncSession = Depends(get_
             {"success": False, "detail": message},
             status_code=409,
         )
+    return {
+        "success": True,
+        "message": message,
+        "status": dependency_manager.get_status(dependency_id, force=True),
+    }
+
+
+@router.post("/api/dependencies/{dependency_id}/update/check")
+async def dependency_update_check(dependency_id: str):
+    current = dependency_manager.get_status(dependency_id, force=True)
+    if current is None:
+        raise HTTPException(status_code=404, detail="Unknown dependency.")
+    success, message = await dependency_manager.check_update(dependency_id)
+    if not success:
+        return JSONResponse({"success": False, "detail": message}, status_code=409)
+    return {
+        "success": True,
+        "message": message,
+        "status": dependency_manager.get_status(dependency_id, cached=True),
+    }
+
+
+@router.post("/api/dependencies/{dependency_id}/update")
+async def dependency_update(
+    dependency_id: str,
+    confirmation: str = Form(""),
+    db: AsyncSession = Depends(get_db),
+):
+    current = dependency_manager.get_status(dependency_id, cached=True)
+    service = dependency_manager.get_service(dependency_id)
+    if current is None or service is None:
+        raise HTTPException(status_code=404, detail="Unknown dependency.")
+    expected_confirmation = str(current.get("update_confirmation") or "")
+    if expected_confirmation and confirmation.strip() != expected_confirmation:
+        return JSONResponse(
+            {"detail": f"Type {expected_confirmation} to update this dependency."},
+            status_code=409,
+        )
+    precheck = dependency_manager.precheck(dependency_id, "update")
+    if precheck and precheck["blocked"]:
+        return JSONResponse(
+            {"detail": precheck.get("reason") or "Dependency update is blocked.", "precheck": precheck},
+            status_code=409,
+        )
+    profile = str(getattr(service, "update_resource_profile", "plugin_install"))
+    from services.resource_guard_service import resource_guard_service
+    result = await resource_guard_service.preflight(db, profile)
+    if not result["ok"]:
+        return JSONResponse(
+            {"detail": f"Resource Guard blocked dependency update: {result['reason']}", "resource_guard": result},
+            status_code=409,
+        )
+    guard_token = resource_guard_service.register(
+        "dependency", dependency_id, "normal",
+        f"Update dependency: {dependency_id}",
+        profile=profile,
+    )
+    try:
+        success, message = await dependency_manager.update(dependency_id)
+    finally:
+        resource_guard_service.unregister(guard_token)
+    if not success:
+        return JSONResponse({"success": False, "detail": message}, status_code=409)
     return {
         "success": True,
         "message": message,

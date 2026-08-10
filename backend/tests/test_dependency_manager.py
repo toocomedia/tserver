@@ -154,6 +154,52 @@ class DependencyManagerTests(unittest.IsolatedAsyncioTestCase):
             result = manager.precheck("docker", "uninstall")
         self.assertEqual(["external"], [item["id"] for item in result["unmanaged_containers"]])
 
+    def test_external_mariadb_is_read_only(self):
+        manager = DependencyManager()
+        service = Mock()
+        service.get_status.return_value = {
+            "installed": True,
+            "running": True,
+            "healthy": True,
+            "state": "healthy",
+            "can_toggle": True,
+        }
+        service.get_cached_update_status.return_value = {"state": "not_checked", "available": False, "major_change": False}
+        manager._services["mariadb"] = service
+        with patch(
+            "dependencies.manager.component_state_store.get",
+            return_value=ComponentStateValue(install_origin="bundled"),
+        ):
+            status = manager.get_status("mariadb")
+        self.assertEqual("external", status["install_origin"])
+        self.assertFalse(status["can_toggle"])
+        self.assertFalse(status["can_check_update"])
+
+    def test_panel_managed_mariadb_exposes_available_update(self):
+        manager = DependencyManager()
+        service = Mock()
+        service.get_status.return_value = {
+            "installed": True,
+            "running": True,
+            "healthy": True,
+            "state": "healthy",
+            "can_toggle": True,
+        }
+        service.get_cached_update_status.return_value = {
+            "state": "available",
+            "available": True,
+            "major_change": False,
+            "candidate_version": "10.11.9",
+        }
+        manager._services["mariadb"] = service
+        with patch(
+            "dependencies.manager.component_state_store.get",
+            return_value=ComponentStateValue(install_origin="panel_managed"),
+        ):
+            status = manager.get_status("mariadb")
+        self.assertTrue(status["can_check_update"])
+        self.assertTrue(status["can_update"])
+
 
 if __name__ == "__main__":
     unittest.main()
