@@ -15,6 +15,7 @@ class PHPDependencyServiceTests(unittest.TestCase):
         service = PHPDependencyService()
         service._available_versions = Mock(return_value=["8.1", "8.3"])
         service._managed_versions = Mock(return_value={"8.3"})
+        service._external_repository_configured = Mock(return_value=False)
         service._version_status = Mock(side_effect=lambda version, managed, available: {
             "version": version,
             "installed": version == "8.3",
@@ -28,6 +29,8 @@ class PHPDependencyServiceTests(unittest.TestCase):
         self.assertFalse(status["versions"][2]["installed"])
         self.assertTrue(status["versions"][4]["managed"])
         self.assertEqual("panel_managed", status["install_origin"])
+        self.assertFalse(status["external_repository"]["configured"])
+        self.assertEqual("ppa:ondrej/php", status["external_repository"]["ppa"])
         service._version_status.assert_called_with("8.5", False, False)
 
     def test_install_version_requires_verified_managed_socket(self):
@@ -66,6 +69,16 @@ class PHPDependencyServiceTests(unittest.TestCase):
         self.assertEqual("availability refreshed", message)
         service._helper_call.assert_called_once_with("check_available", timeout=300)
 
+    def test_external_repository_is_a_fixed_explicit_helper_operation(self):
+        service = PHPDependencyService()
+        service._helper_call = Mock(return_value={"message": "repository enabled"})
+
+        success, message = service.enable_external_repository()
+
+        self.assertTrue(success)
+        self.assertEqual("repository enabled", message)
+        service._helper_call.assert_called_once_with("enable_external_repository", timeout=600)
+
     def test_invalid_version_never_reaches_root_helper(self):
         service = PHPDependencyService()
         service._helper_call = Mock()
@@ -79,17 +92,23 @@ class PHPDependencyServiceTests(unittest.TestCase):
     def test_helper_and_ui_keep_version_lifecycle_allowlisted(self):
         helper = (BACKEND.parent / "scripts" / "php_runtime_helper.py").read_text(encoding="utf-8")
         template = (BACKEND / "templates" / "pages" / "php_dependency_detail.html").read_text(encoding="utf-8")
+        router = (BACKEND / "routers" / "dependencies.py").read_text(encoding="utf-8")
         install_script = (BACKEND.parent / "scripts" / "install.sh").read_text(encoding="utf-8")
         update_script = (BACKEND.parent / "scripts" / "update.sh").read_text(encoding="utf-8")
 
         self.assertIn('"install_version": install_version', helper)
         self.assertIn('"check_available": check_available', helper)
+        self.assertIn('"enable_external_repository": enable_external_repository', helper)
+        self.assertIn('EXTERNAL_REPOSITORY_PPA = "ppa:ondrej/php"', helper)
         self.assertIn('"uninstall_version": uninstall_version', helper)
         self.assertIn("cannot be adopted automatically", helper)
         self.assertIn("data-php-install", template)
         self.assertIn("data-php-check", template)
+        self.assertIn("data-php-external-repository", template)
+        self.assertIn("not an official Ubuntu source", template)
         self.assertIn("data-php-uninstall", template)
         self.assertIn("PHP versions are never installed automatically", template)
+        self.assertIn("/api/dependencies/php/enable-external-repository", router)
         self.assertIn("PHP_RUNTIME_HELPER", install_script)
         self.assertIn("PHP_RUNTIME_HELPER", update_script)
 

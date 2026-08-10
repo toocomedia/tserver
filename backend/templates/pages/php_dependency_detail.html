@@ -40,6 +40,25 @@
     </p>
   </div>
 
+  {% set missing_versions = dependency.versions | rejectattr('installed') | rejectattr('available_from_apt') | list %}
+  {% if missing_versions and not dependency.external_repository.configured %}
+  <div>
+    <h2 class="info-group-title">Need more PHP versions?</h2>
+    <p class="text-small text-muted" style="max-width:720px;">
+      Your current Ubuntu APT sources do not offer every listed PHP version. Enable the external {{ dependency.external_repository.name }} to make more PHP versions available. This is a third-party repository, not an official Ubuntu source, and it installs no PHP version automatically.
+    </p>
+    <form method="post" action="/api/dependencies/php/enable-external-repository" data-php-external-repository data-confirmation="ENABLE EXTERNAL PHP REPOSITORY">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+      <input type="hidden" name="confirmation" value="">
+      <button class="btn btn--secondary btn--sm" type="submit">Enable external PHP repository</button>
+    </form>
+  </div>
+  {% elif dependency.external_repository.configured %}
+  <div>
+    <p class="text-small text-muted">External PHP repository enabled · additional PHP versions may be available after checking APT.</p>
+  </div>
+  {% endif %}
+
   {% if dependency.last_error or dependency.error %}
   <p class="text-danger" data-php-error>{{ dependency.last_error or dependency.error }}</p>
   {% else %}
@@ -109,12 +128,15 @@
     error.textContent = message;
     error.classList.remove('hidden');
   }
-  function bind(form, uninstall) {
+  function bind(form) {
     form.addEventListener('submit', async function (event) {
       event.preventDefault();
-      if (uninstall) {
-        var expected = form.getAttribute('data-confirmation');
-        var entered = window.prompt('Type ' + expected + ' to remove this PHP version. Website files and databases are preserved.');
+      var expected = form.getAttribute('data-confirmation');
+      if (expected) {
+        var message = form.hasAttribute('data-php-external-repository')
+          ? 'This adds the third-party Ondřej Surý PHP PPA to Ubuntu. No PHP versions will be installed. Type ' + expected + ' to continue.'
+          : 'Type ' + expected + ' to remove this PHP version. Website files and databases are preserved.';
+        var entered = window.prompt(message);
         if (entered !== expected) return;
         form.querySelector('input[name="confirmation"]').value = entered;
       }
@@ -133,9 +155,10 @@
       }
     });
   }
-  document.querySelectorAll('[data-php-install]').forEach(function (form) { bind(form, false); });
-  document.querySelectorAll('[data-php-uninstall]').forEach(function (form) { bind(form, true); });
-  document.querySelectorAll('[data-php-check]').forEach(function (form) { bind(form, false); });
+  document.querySelectorAll('[data-php-install]').forEach(bind);
+  document.querySelectorAll('[data-php-uninstall]').forEach(bind);
+  document.querySelectorAll('[data-php-check]').forEach(bind);
+  document.querySelectorAll('[data-php-external-repository]').forEach(bind);
 })();
 </script>
 {% endblock %}

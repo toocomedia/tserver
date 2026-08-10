@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import shutil
 import stat
 import subprocess
 import sys
@@ -14,6 +15,11 @@ from typing import Any
 
 VERSION_RE = re.compile(r"^\d+\.\d+$")
 STATE_PATH = Path("/var/lib/srv-panel/php-runtime/managed-versions.json")
+EXTERNAL_REPOSITORY_PPA = "ppa:ondrej/php"
+EXTERNAL_REPOSITORY_MARKERS = (
+    "ppa.launchpadcontent.net/ondrej/php",
+    "ppa.launchpad.net/ondrej/php",
+)
 
 
 def fail(message: str) -> None:
@@ -91,6 +97,34 @@ def apt_candidate(package: str) -> str:
     fail(f"{package} is unavailable from this server's configured APT repositories.")
 
 
+def external_repository_configured() -> bool:
+    source_files = [Path("/etc/apt/sources.list")]
+    source_directory = Path("/etc/apt/sources.list.d")
+    if source_directory.is_dir():
+        source_files.extend(source_directory.glob("*.list"))
+        source_files.extend(source_directory.glob("*.sources"))
+    for source_file in source_files:
+        try:
+            contents = source_file.read_text(encoding="utf-8", errors="ignore").lower()
+        except OSError:
+            continue
+        if any(marker in contents for marker in EXTERNAL_REPOSITORY_MARKERS):
+            return True
+    return False
+
+
+def require_ubuntu() -> None:
+    try:
+        values = dict(
+            line.split("=", 1) for line in Path("/etc/os-release").read_text(encoding="utf-8").splitlines()
+            if "=" in line
+        )
+    except OSError:
+        fail("Cannot identify this Linux distribution from /etc/os-release.")
+    if values.get("ID", "").strip().strip('"') != "ubuntu":
+        fail("The external PHP repository action is supported only on Ubuntu.")
+
+
 def verify_fpm(item_version: str) -> None:
     active = run(["systemctl", "is-active", f"php{item_version}-fpm"], timeout=30).stdout.strip() == "active"
     socket_path = Path(f"/run/php/php{item_version}-fpm.sock")
@@ -127,6 +161,30 @@ def check_available(_: dict[str, Any]) -> dict[str, Any]:
     return {"message": "PHP version availability was refreshed from the configured APT sources."}
 
 
+def enable_external_repository(_: dict[str, Any]) -> dict[str, Any]:
+    """Enable the one reviewed PHP PPA; repository URLs are never user input."""
+    require_ubuntu()
+    if external_repository_configured():
+        print("==> Refreshing configured APT repositories...", file=sys.stderr)
+        run(["apt-get", "update", "-qq"], timeout=300)
+        return {"message": "The external PHP repository is already enabled; package availability was refreshed."}
+    add_repository = shutil.which("add-apt-repository")
+    if not add_repository:
+        print("==> Installing Ubuntu repository management support...", file=sys.stderr)
+        run(["apt-get", "update", "-qq"], timeout=300)
+        run(["apt-get", "install", "-y", "software-properties-common"], timeout=300)
+        add_repository = shutil.which("add-apt-repository")
+    if not add_repository:
+        fail("Ubuntu repository management support could not be installed.")
+    print("==> Enabling the external PHP repository...", file=sys.stderr)
+    run([add_repository, "--yes", EXTERNAL_REPOSITORY_PPA], timeout=300)
+    if not external_repository_configured():
+        fail("The external PHP repository could not be verified after it was added.")
+    print("==> Refreshing configured APT repositories...", file=sys.stderr)
+    run(["apt-get", "update", "-qq"], timeout=300)
+    return {"message": "External PHP repository enabled. Choose individual PHP versions to install."}
+
+
 def uninstall_version(data: dict[str, Any]) -> dict[str, Any]:
     item_version = version(data.get("version"))
     state = load_state()
@@ -151,6 +209,7 @@ def list_managed(_: dict[str, Any]) -> dict[str, Any]:
 
 OPERATIONS = {
     "check_available": check_available,
+    "enable_external_repository": enable_external_repository,
     "install_version": install_version,
     "uninstall_version": uninstall_version,
     "list_managed": list_managed,

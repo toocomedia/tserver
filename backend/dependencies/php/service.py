@@ -19,6 +19,12 @@ PACKAGE_RE = re.compile(r"^php(\d+\.\d+)-fpm$")
 # Always show the common PHP lines so an administrator can immediately see
 # whether their configured APT sources offer the version an older script needs.
 KNOWN_VERSION_SERIES = ("7.4", "8.0", "8.1", "8.2", "8.3", "8.4", "8.5")
+EXTERNAL_REPOSITORY_NAME = "Ondřej Surý PHP PPA"
+EXTERNAL_REPOSITORY_PPA = "ppa:ondrej/php"
+EXTERNAL_REPOSITORY_MARKERS = (
+    "ppa.launchpadcontent.net/ondrej/php",
+    "ppa.launchpad.net/ondrej/php",
+)
 
 
 class PHPDependencyService:
@@ -54,6 +60,25 @@ class PHPDependencyService:
     @staticmethod
     def _package_name(version: str) -> str:
         return f"php{version}-fpm"
+
+    @staticmethod
+    def _external_repository_configured() -> bool:
+        """Detect the fixed external PHP repository without changing APT."""
+        if os.name == "nt":
+            return False
+        source_files = [Path("/etc/apt/sources.list")]
+        source_directory = Path("/etc/apt/sources.list.d")
+        if source_directory.is_dir():
+            source_files.extend(source_directory.glob("*.list"))
+            source_files.extend(source_directory.glob("*.sources"))
+        for source_file in source_files:
+            try:
+                contents = source_file.read_text(encoding="utf-8", errors="ignore").lower()
+            except OSError:
+                continue
+            if any(marker in contents for marker in EXTERNAL_REPOSITORY_MARKERS):
+                return True
+        return False
 
     def _available_versions(self) -> list[str]:
         """Return FPM packages that are available from the current APT indexes."""
@@ -170,6 +195,7 @@ class PHPDependencyService:
             ("mixed" if managed_installed and external_installed else
              ("panel_managed" if managed_installed else "external"))
         )
+        external_repository_configured = self._external_repository_configured()
         return {
             "id": self.dependency_id, "installed": bool(installed), "running": healthy,
             "healthy": healthy,
@@ -178,6 +204,12 @@ class PHPDependencyService:
             "install_origin": install_origin,
             "error": None if healthy or not installed else "No panel-managed PHP-FPM version has a healthy socket.",
             "can_toggle": False, "versions": runtime_versions, "available_versions": available,
+            "external_repository": {
+                "configured": external_repository_configured,
+                "name": EXTERNAL_REPOSITORY_NAME,
+                "ppa": EXTERNAL_REPOSITORY_PPA,
+                "official_ubuntu": False,
+            },
         }
 
     def get_status(self, *, force: bool = False) -> dict[str, Any]:
@@ -245,6 +277,15 @@ class PHPDependencyService:
             return False, str(exc)
         self._invalidate()
         return True, str(payload.get("message") or "PHP package availability refreshed.")
+
+    def enable_external_repository(self) -> tuple[bool, str]:
+        """Enable only the reviewed PHP PPA, never a user-provided repository."""
+        try:
+            payload = self._helper_call("enable_external_repository", timeout=600)
+        except RuntimeError as exc:
+            return False, str(exc)
+        self._invalidate()
+        return True, str(payload.get("message") or "External PHP repository enabled and package availability refreshed.")
 
     def uninstall_version(self, version: str) -> tuple[bool, str]:
         normalized = self._valid_version(version)

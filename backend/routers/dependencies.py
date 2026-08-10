@@ -109,6 +109,47 @@ async def php_check_available_versions(
     }
 
 
+@router.post("/api/dependencies/php/enable-external-repository")
+async def php_enable_external_repository(
+    confirmation: str = Form(""),
+    db: AsyncSession = Depends(get_db),
+):
+    """Explicitly add the fixed, reviewed PHP PPA and refresh APT."""
+    expected = "ENABLE EXTERNAL PHP REPOSITORY"
+    if confirmation.strip() != expected:
+        return JSONResponse(
+            {"success": False, "detail": f"Type {expected} to enable the external PHP repository."},
+            status_code=409,
+        )
+    service = _php_service()
+    from services.resource_guard_service import resource_guard_service
+
+    result = await resource_guard_service.preflight(db, "native_light")
+    if not result["ok"]:
+        return JSONResponse(
+            {
+                "success": False,
+                "detail": f"Resource Guard blocked the external PHP repository action: {result['reason']}",
+                "resource_guard": result,
+            },
+            status_code=409,
+        )
+    token = resource_guard_service.register(
+        "dependency", "php", "normal", "Enable external PHP repository", profile="native_light"
+    )
+    try:
+        success, message = await asyncio.to_thread(service.enable_external_repository)
+    finally:
+        resource_guard_service.unregister(token)
+    if not success:
+        return JSONResponse({"success": False, "detail": message}, status_code=409)
+    return {
+        "success": True,
+        "message": message,
+        "status": dependency_manager.get_status("php", force=True),
+    }
+
+
 @router.post("/api/dependencies/php/versions/{version}/install")
 async def php_install_version(
     version: str,
