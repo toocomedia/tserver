@@ -1,4 +1,5 @@
 {% extends "layout.html" %}
+{% from "partials/skeleton_overlay.html" import skeleton_overlay %}
 {% block title %}System Dependencies — {{ PANEL_NAME }}{% endblock %}
 {% block page_title %}Dependencies{% endblock %}
 
@@ -19,14 +20,9 @@
     {% include "partials/resource_title_bar.html" %}
 
     <div class="resource-views" data-dependency-catalog data-catalog-url="/api/dependencies/catalog-view">
-      <div id="dependencies-skeleton" class="skeleton-card-grid" aria-hidden="true">
-        {% for _ in range(6) %}
-        <div class="skeleton-plugin-card skeleton-box">
-          <div class="sk-cover"></div>
-          <div class="sk-body"><div class="sk-label"></div><div class="sk-value"></div><div class="sk-meta"></div></div>
-        </div>
-        {% endfor %}
-      </div>
+      <!-- SKELETON LOADING OVERLAY -->
+      {{ skeleton_overlay('dependencies-skeleton', header=0, title_bar=0, cards=6) }}
+      <!-- END SKELETON OVERLAY -->
       <div data-dependency-catalog-content aria-live="polite"></div>
     </div>
   </div>
