@@ -11,7 +11,7 @@ major() {
 
 apt-get update -qq
 installed="$(dpkg-query -W -f='${Version}' mariadb-server 2>/dev/null || true)"
-candidate="$(apt-cache policy mariadb-server | awk '/Candidate:/ { print $2; exit }')"
+candidate="$(apt-cache policy mariadb-server | awk '/Candidate:/ { print $2 }')"
 
 if [[ -z "$installed" || -z "$candidate" || "$candidate" == "(none)" ]]; then
   echo "MariaDB package candidate is unavailable from configured APT repositories." >&2

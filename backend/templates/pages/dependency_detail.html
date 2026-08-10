@@ -214,9 +214,12 @@
 
         stateBox.classList.add('is-success');
         stateTitle.textContent = dependencyName + ' installed successfully';
-        stateDetail.textContent = dependencyName + ' is installed and responding.';
+        stateDetail.textContent = dependencyName + ' is installed and responding. Refreshing controls…';
         button.textContent = 'Installed';
         if (window.toast) window.toast(dependencyName + ' installed successfully.', 'success');
+        window.setTimeout(function () {
+          window.location.reload();
+        }, 500);
       } catch (error) {
         stateBox.classList.add('is-error');
         stateTitle.textContent = 'Installation failed';
