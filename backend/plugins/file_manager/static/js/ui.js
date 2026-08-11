@@ -66,6 +66,20 @@ export function createEntryRow(entry, onAction) {
   const icon = isDir ? 'folder' : (entry.kind === 'symlink' ? 'corner-down-right' : 'file');
   const iconClass = isDir ? 'fm-icon-folder' : (entry.kind === 'symlink' ? 'fm-icon-symlink' : 'fm-icon-file');
 
+  const tdCheckbox = document.createElement('td');
+  tdCheckbox.style.textAlign = 'center';
+  if (entry.name !== '..') {
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.className = 'row-checkbox';
+    cb.value = entry.name;
+    cb.onclick = (e) => {
+      e.stopPropagation();
+      if (window.handleRowCheck) window.handleRowCheck(cb, entry);
+    };
+    tdCheckbox.appendChild(cb);
+  }
+
   const tdName = document.createElement('td');
   tdName.innerHTML = `<div style="display:flex;align-items:center;gap:8px;"><i data-lucide="${icon}" class="${iconClass}" style="width:16px;height:16px;"></i><span style="font-weight:500;word-break:break-all;">${entry.name}</span></div>`;
   
@@ -86,6 +100,7 @@ export function createEntryRow(entry, onAction) {
   tdActions.style.position = 'relative';
   tdActions.innerHTML = buildRowActionsHtml(entry);
   
+  tr.appendChild(tdCheckbox);
   tr.appendChild(tdName);
   tr.appendChild(tdSize);
   tr.appendChild(tdMod);

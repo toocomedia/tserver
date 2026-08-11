@@ -8,6 +8,7 @@ const state = {
   roots: [],
   path: '',
   entries: [],
+  selectedEntries: new Set(),
   sortCol: 'name',
   sortAsc: true
 };
@@ -82,6 +83,70 @@ async function init() {
 
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', init);
+
+window.handleRowCheck = (cb, entry) => {
+  if (cb.checked) {
+    state.selectedEntries.add(entry.name);
+  } else {
+    state.selectedEntries.delete(entry.name);
+  }
+  if (window.updateBulkDeleteUI) window.updateBulkDeleteUI();
+};
+
+window.toggleSelectAll = (cb) => {
+  const isChecked = cb.checked;
+  const checkboxes = document.querySelectorAll('.row-checkbox');
+  checkboxes.forEach(c => {
+    c.checked = isChecked;
+    if (isChecked) {
+      state.selectedEntries.add(c.value);
+    } else {
+      state.selectedEntries.delete(c.value);
+    }
+  });
+  if (window.updateBulkDeleteUI) window.updateBulkDeleteUI();
+};
+
+window.updateBulkDeleteUI = () => {
+  const count = state.selectedEntries.size;
+  const btn = document.getElementById('btn-bulk-delete');
+  const countSpan = document.getElementById('bulk-delete-count');
+  if (count > 0) {
+    btn.style.display = 'inline-flex';
+    if (countSpan) countSpan.textContent = count;
+  } else {
+    btn.style.display = 'none';
+  }
+  
+  const cbAll = document.getElementById('cb-select-all');
+  if (cbAll) {
+    const total = Array.from(document.querySelectorAll('.row-checkbox')).length;
+    cbAll.checked = count > 0 && count === total;
+  }
+};
+
+window.openBulkDeleteModal = () => {
+  if (state.selectedEntries.size === 0) return;
+  window.confirmAction(`Are you sure you want to delete ${state.selectedEntries.size} selected items?`, async () => {
+    const btn = document.getElementById('btn-bulk-delete');
+    btn.classList.add('is-loading');
+    btn.disabled = true;
+    try {
+      for (const name of state.selectedEntries) {
+        const path = (state.path ? state.path + '/' : '') + name;
+        await api.deleteFile(state.appId, state.rootId, path, '');
+      }
+      state.selectedEntries.clear();
+      window.updateBulkDeleteUI();
+      loadEntries();
+    } catch (err) {
+      window.toast(`Bulk delete error: ${err.message}`, 'error');
+    } finally {
+      btn.classList.remove('is-loading');
+      btn.disabled = false;
+    }
+  });
+};
 } else {
   init();
 }
@@ -189,6 +254,7 @@ async function loadEntries(isRefresh = false) {
   // Show localized skeleton loader inside the table while fetching
   tbody.innerHTML = Array.from({length: 3}).map(() => `
     <tr>
+      <td></td>
       <td><div class="skeleton-line" style="width: 50%;"></div></td>
       <td><div class="skeleton-line" style="width: 80%;"></div></td>
       <td><div class="skeleton-line" style="width: 60%;"></div></td>
@@ -204,6 +270,9 @@ async function loadEntries(isRefresh = false) {
       state.path = newPath;
       loadEntries();
     });
+    
+    state.selectedEntries = new Set();
+    if (window.updateBulkDeleteUI) window.updateBulkDeleteUI();
     
     renderEntries();
   } catch (err) {
@@ -327,6 +396,12 @@ async function handleNewFolder(e) {
     btn.classList.remove('is-loading');
     btn.disabled = false;
     btn.removeAttribute('aria-busy');
+    if (btn.dataset.originalLabel) {
+      btn.textContent = btn.dataset.originalLabel;
+      delete btn.dataset.originalLabel;
+    }
+    const form = btn.closest('form');
+    if (form) form.removeAttribute('data-submitting');
   }
 }
 
@@ -416,6 +491,12 @@ async function handleDelete(e) {
     btn.classList.remove('is-loading');
     btn.disabled = false;
     btn.removeAttribute('aria-busy');
+    if (btn.dataset.originalLabel) {
+      btn.textContent = btn.dataset.originalLabel;
+      delete btn.dataset.originalLabel;
+    }
+    const form = btn.closest('form');
+    if (form) form.removeAttribute('data-submitting');
   }
 }
 
