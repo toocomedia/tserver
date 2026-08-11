@@ -228,7 +228,7 @@ def _file_size(context: FileContext, path: str) -> int:
         raise HTTPException(502, "Could not determine file size.") from exc
 
 
-_LIST_DIRECTORY = '''
+_LIST_DIRECTORY = r'''
 dir="$1"; limit="$2"; count=0
 [ -d "$dir" ] && [ ! -L "$dir" ] || exit 20
 for item in "$dir"/..?* "$dir"/.[!.]* "$dir"/*; do
