@@ -83,6 +83,9 @@ async function init() {
 
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
+}
 
 window.handleRowCheck = (cb, entry) => {
   if (cb.checked) {
@@ -147,9 +150,6 @@ window.openBulkDeleteModal = () => {
     }
   });
 };
-} else {
-  init();
-}
 
 function setupGlobalListeners() {
   document.getElementById('btn-refresh').onclick = () => loadEntries(true);

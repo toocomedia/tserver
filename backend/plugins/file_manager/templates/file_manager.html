@@ -89,7 +89,7 @@
     <table class="table" id="fm-table">
       <thead>
         <tr>
-          <th style="width: 40px; text-align: center;"><input type="checkbox" id="cb-select-all" aria-label="Select all files"></th>
+          <th style="width: 40px; text-align: center;"><input type="checkbox" id="cb-select-all" aria-label="Select all files" onchange="toggleSelectAll(this)"></th>
           <th id="th-name" style="cursor: pointer; user-select: none;">Name <span id="sort-icon-name"></span></th>
           <th id="th-size" style="width: 120px; cursor: pointer; user-select: none;">Size <span id="sort-icon-size"></span></th>
           <th id="th-modified" style="width: 160px; cursor: pointer; user-select: none;">Modified <span id="sort-icon-modified"></span></th>
