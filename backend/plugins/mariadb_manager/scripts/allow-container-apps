@@ -4,7 +4,7 @@ set -euo pipefail
 
 # Find the config file that defines bind-address
 # Usually /etc/mysql/mariadb.conf.d/50-server.cnf on Debian/Ubuntu
-CONF_FILES="/etc/mysql/mariadb.conf.d/50-server.cnf /etc/mysql/my.cnf /etc/my.cnf"
+CONF_FILES="/etc/mysql/mariadb.conf.d/60-srv-panel.cnf /etc/mysql/mariadb.conf.d/50-server.cnf /etc/mysql/my.cnf /etc/my.cnf"
 TARGET_CONF=""
 
 for f in $CONF_FILES; do
