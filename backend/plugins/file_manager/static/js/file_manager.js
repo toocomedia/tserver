@@ -134,6 +134,22 @@ function resetView() {
 
 async function loadEntries(isRefresh = false) {
   setControlsEnabled(false);
+  
+  const tbody = document.getElementById('fm-tbody');
+  document.getElementById('fm-toolbar').style.display = 'flex';
+  document.getElementById('fm-empty-state').style.display = 'none';
+  document.getElementById('fm-table-wrap').style.display = 'block';
+  
+  // Show localized skeleton loader inside the table while fetching
+  tbody.innerHTML = Array.from({length: 3}).map(() => `
+    <tr>
+      <td><div class="skeleton-line" style="width: 50%;"></div></td>
+      <td><div class="skeleton-line" style="width: 80%;"></div></td>
+      <td><div class="skeleton-line" style="width: 60%;"></div></td>
+      <td><div class="skeleton-line" style="width: 30%;"></div></td>
+    </tr>
+  `).join('');
+
   try {
     const data = await api.fetchEntries(state.appId, state.rootId, state.path);
     state.entries = data.entries || [];
@@ -143,10 +159,7 @@ async function loadEntries(isRefresh = false) {
       loadEntries();
     });
     
-    const tbody = document.getElementById('fm-tbody');
     tbody.innerHTML = '';
-    
-    document.getElementById('fm-toolbar').style.display = 'flex';
     
     if (state.entries.length === 0) {
       document.getElementById('fm-empty-state').style.display = 'block';

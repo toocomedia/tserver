@@ -71,7 +71,7 @@ export function createEntryRow(entry, onAction) {
   
   if (isDir) {
     tr.onclick = (e) => {
-      if (!e.target.closest('button')) onAction('open', entry);
+      if (!e.target.closest('button') && !e.target.closest('.list-row-subactions')) onAction('open', entry);
     };
   }
 
@@ -82,7 +82,8 @@ export function createEntryRow(entry, onAction) {
   tdMod.textContent = entry.modified_at ? new Date(entry.modified_at * 1000).toLocaleString() : '--';
 
   const tdActions = document.createElement('td');
-  tdActions.style.textAlign = 'right';
+  tdActions.className = 'col-actions';
+  tdActions.style.position = 'relative';
   tdActions.innerHTML = buildRowActionsHtml(entry);
   
   tr.appendChild(tdName);
@@ -90,12 +91,28 @@ export function createEntryRow(entry, onAction) {
   tr.appendChild(tdMod);
   tr.appendChild(tdActions);
 
-  tdActions.querySelectorAll('button').forEach(btn => {
+  tdActions.querySelectorAll('.list-row-subactions__btns button').forEach(btn => {
     btn.onclick = (e) => {
       e.stopPropagation();
       onAction(btn.dataset.action, entry);
+      if (window.toggleListRowActions) {
+         const toggleBtn = tdActions.querySelector('.list-actions-toggle-btn');
+         if (toggleBtn && toggleBtn.getAttribute('aria-expanded') === 'true') window.toggleListRowActions(toggleBtn);
+      }
     };
   });
+  
+  // Stop propagation on the toggle buttons themselves so they don't trigger row click
+  tdActions.querySelectorAll('.list-actions-toggle-btn, .list-row-subactions__close').forEach(btn => {
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      if (window.toggleListRowActions) window.toggleListRowActions(btn);
+    }
+  });
+  
+  // Prevent tray clicks from propagating to row
+  const tray = tdActions.querySelector('.list-row-subactions');
+  if (tray) tray.onclick = (e) => e.stopPropagation();
 
   return tr;
 }
@@ -103,15 +120,31 @@ export function createEntryRow(entry, onAction) {
 function buildRowActionsHtml(entry) {
   const actions = [];
   if (entry.kind === 'file') {
-    actions.push(`<button class="btn btn--ghost fm-action-btn" data-action="download" title="Download"><i data-lucide="download" style="width:14px;height:14px;"></i></button>`);
-    actions.push(`<button class="btn btn--ghost fm-action-btn" data-action="edit" title="Edit"><i data-lucide="edit-2" style="width:14px;height:14px;"></i></button>`);
+    actions.push(`<button type="button" class="btn btn--secondary btn--sm" data-action="download" title="Download">Download</button>`);
+    actions.push(`<button type="button" class="btn btn--secondary btn--sm" data-action="edit" title="Edit">Edit</button>`);
   }
   if (entry.kind !== 'symlink') {
-    actions.push(`<button class="btn btn--ghost fm-action-btn" data-action="rename" title="Move/Rename"><i data-lucide="move" style="width:14px;height:14px;"></i></button>`);
-    actions.push(`<button class="btn btn--ghost fm-action-btn" data-action="copy" title="Copy"><i data-lucide="copy" style="width:14px;height:14px;"></i></button>`);
-    actions.push(`<button class="btn btn--ghost fm-action-btn" data-action="delete" title="Delete"><i data-lucide="trash-2" style="width:14px;height:14px;color:var(--color-danger);"></i></button>`);
+    actions.push(`<button type="button" class="btn btn--secondary btn--sm" data-action="rename" title="Move/Rename">Rename</button>`);
+    actions.push(`<button type="button" class="btn btn--secondary btn--sm" data-action="copy" title="Copy">Copy</button>`);
+    actions.push(`<button type="button" class="btn btn--danger btn--sm" data-action="delete" title="Delete">Delete</button>`);
   }
-  actions.push(`<button class="btn btn--ghost fm-action-btn" data-action="properties" title="Properties"><i data-lucide="info" style="width:14px;height:14px;"></i></button>`);
+  actions.push(`<button type="button" class="btn btn--secondary btn--sm" data-action="properties" title="Properties">Props</button>`);
 
-  return `<div class="fm-row-actions">${actions.join('')}</div>`;
+  return `
+    <button type="button" class="icon-btn list-actions-toggle-btn" aria-expanded="false" title="Actions">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" class="toggle-dots-icon">
+        <circle cx="12" cy="12" r="1.5"></circle>
+        <circle cx="19" cy="12" r="1.5"></circle>
+        <circle cx="5" cy="12" r="1.5"></circle>
+      </svg>
+    </button>
+    <div class="list-row-subactions slide-toolbar is-hidden">
+      <div class="list-row-subactions__inner">
+        <div class="list-row-subactions__btns">
+          ${actions.join('')}
+        </div>
+        <button type="button" class="btn btn--ghost btn--icon btn--sm list-row-subactions__close" aria-label="Close" title="Close"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"></path></svg></button>
+      </div>
+    </div>
+  `;
 }
