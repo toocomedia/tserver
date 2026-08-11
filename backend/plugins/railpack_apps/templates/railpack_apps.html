@@ -5,6 +5,126 @@
 {% block topbar_actions %}<a class="btn btn--primary" href="/plugins/railpack_apps/create">+ Deploy App</a>{% endblock %}
 {% block content %}
 {% include "railpack_apps/partials/orphan_recovery.html" %}
-{% if apps %}<div class="table-wrap"><table class="table"><thead><tr><th>App</th><th>Domain</th><th>Private port</th><th>Status</th><th class="col-actions">Actions</th></tr></thead><tbody>{% for app in apps %}{% set domain = domains_by_id.get(app.domain_id) %}<tr><td class="table-title">{{ app.container_name }}</td><td>{{ domain.name if domain else 'Unlinked' }}</td><td><code>127.0.0.1:{{ app.host_port }}</code></td><td><span class="badge-minimal {% if app.status == 'running' %}badge-minimal--active{% else %}badge-minimal--neutral{% endif %}">{{ app.status|upper }}</span></td><td class="col-actions" style="position:relative;">{% import "partials/list_actions_toggle.html" as list_actions %}{{ list_actions.button() }}{% call list_actions.tray() %}<a class="btn btn--primary btn--sm" href="/plugins/railpack_apps/{{ app.id }}">Manage</a>{% endcall %}</td></tr>{% endfor %}</tbody></table></div>{% else %}<div class="alert alert--info">No container apps deployed yet.</div>{% endif %}
+{% set search_placeholder = "Search apps by name or domain..." %}
+{% set filter_options = [{'val': 'running', 'label': 'Running'}, {'val': 'stopped', 'label': 'Stopped'}, {'val': 'pending', 'label': 'Pending'}, {'val': 'failed', 'label': 'Failed'}] %}
+{% set bulk_actions = [{'action': 'start', 'label': 'Start Selected'}, {'action': 'stop', 'label': 'Stop Selected'}, {'action': 'restart', 'label': 'Restart Selected'}, {'action': 'delete', 'label': 'Delete Selected'}] %}
+{% include "partials/action_toolbar.html" %}
+
+{% if apps %}<div class="table-wrap"><table class="table" id="apps-table"><thead><tr><th style="width: 40px;"><input type="checkbox" id="bulk-select-all" aria-label="Select all"></th><th>App</th><th>Domain</th><th>Private port</th><th>Status</th><th class="col-actions">Actions</th></tr></thead><tbody>{% for app in apps %}{% set domain = domains_by_id.get(app.domain_id) %}<tr class="app-row-item"><td><input type="checkbox" class="bulk-select-item" value="{{ app.id }}" aria-label="Select app"></td><td class="table-title">{{ app.container_name }}</td><td>{{ domain.name if domain else 'Unlinked' }}</td><td><code>127.0.0.1:{{ app.host_port }}</code></td><td><span class="badge-minimal {% if app.status == 'running' %}badge-minimal--active{% else %}badge-minimal--neutral{% endif %}">{{ app.status|upper }}</span></td><td class="col-actions" style="position:relative;">{% import "partials/list_actions_toggle.html" as list_actions %}{{ list_actions.button() }}{% call list_actions.tray() %}<a class="btn btn--primary btn--sm" href="/plugins/railpack_apps/{{ app.id }}">Manage</a>{% endcall %}</td></tr>{% endfor %}</tbody></table></div>{% else %}<div class="alert alert--info">No container apps deployed yet.</div>{% endif %}
 {% endblock %}
-{% block scripts %}<script type="module" src="/plugins/railpack_apps/static/js/railpack-app-orphan-recovery.js"></script>{% endblock %}
+{% block scripts %}
+<script type="module" src="/plugins/railpack_apps/static/js/railpack-app-orphan-recovery.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  // Filter logic
+  function filterAppsTable() {
+    const query = (document.getElementById('table-search-input')?.value || '').toLowerCase().trim();
+    const filter = document.getElementById('status-filter-select')?.value || 'all';
+    const rows = document.querySelectorAll('.app-row-item');
+
+    rows.forEach(row => {
+      const text = row.textContent.toLowerCase();
+      const matchesSearch = !query || text.includes(query);
+      
+      let matchesFilter = true;
+      if (filter !== 'all') {
+        matchesFilter = row.innerText.toLowerCase().includes(filter);
+      }
+
+      row.style.display = (matchesSearch && matchesFilter) ? '' : 'none';
+      
+      // Uncheck hidden rows
+      if (row.style.display === 'none') {
+        const cb = row.querySelector('.bulk-select-item');
+        if (cb) cb.checked = false;
+      }
+    });
+    updateBulkState();
+  }
+
+  document.getElementById('table-search-input')?.addEventListener('keyup', filterAppsTable);
+  document.getElementById('status-filter-select')?.addEventListener('change', filterAppsTable);
+
+  // Bulk Actions Logic
+  const selectAll = document.getElementById('bulk-select-all');
+  const itemCheckboxes = document.querySelectorAll('.bulk-select-item');
+  const bulkSelect = document.getElementById('bulk-action-select');
+  const bulkBtn = document.getElementById('bulk-action-apply-btn');
+
+  function updateBulkState() {
+    const anyChecked = Array.from(itemCheckboxes).some(cb => cb.checked);
+    if (bulkSelect) bulkSelect.disabled = !anyChecked;
+    if (bulkBtn) bulkBtn.disabled = !anyChecked || !bulkSelect.value;
+    
+    // Update select-all indeterminate state
+    if (selectAll) {
+      const allVisible = Array.from(itemCheckboxes).filter(cb => cb.closest('tr').style.display !== 'none');
+      const checkedCount = allVisible.filter(cb => cb.checked).length;
+      selectAll.checked = checkedCount > 0 && checkedCount === allVisible.length;
+      selectAll.indeterminate = checkedCount > 0 && checkedCount < allVisible.length;
+    }
+  }
+
+  if (selectAll) {
+    selectAll.addEventListener('change', (e) => {
+      itemCheckboxes.forEach(cb => {
+        // Only select visible items
+        if (cb.closest('tr').style.display !== 'none') {
+          cb.checked = e.target.checked;
+        }
+      });
+      updateBulkState();
+    });
+  }
+
+  itemCheckboxes.forEach(cb => {
+    cb.addEventListener('change', updateBulkState);
+  });
+
+  if (bulkSelect) {
+    bulkSelect.addEventListener('change', updateBulkState);
+  }
+
+  if (bulkBtn) {
+    bulkBtn.addEventListener('click', async () => {
+      const action = bulkSelect.value;
+      const selectedIds = Array.from(itemCheckboxes).filter(cb => cb.checked).map(cb => parseInt(cb.value));
+      
+      if (!action || selectedIds.length === 0) return;
+
+      const confirmMsg = action === 'delete' 
+        ? `Are you sure you want to permanently delete ${selectedIds.length} app(s) and all their associated data?`
+        : `Are you sure you want to ${action} ${selectedIds.length} app(s)?`;
+        
+      if (confirm(confirmMsg)) {
+        bulkBtn.disabled = true;
+        bulkBtn.textContent = 'Working...';
+        
+        try {
+          const res = await fetch(`/plugins/railpack_apps/bulk`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRF-Token': document.querySelector('[name="csrf_token"]')?.value || ''
+            },
+            body: JSON.stringify({ action, ids: selectedIds })
+          });
+          
+          if (res.ok) {
+            window.location.reload();
+          } else {
+            alert('Failed to execute bulk action.');
+            bulkBtn.disabled = false;
+            bulkBtn.textContent = 'Apply';
+          }
+        } catch (err) {
+          alert(err.message);
+          bulkBtn.disabled = false;
+          bulkBtn.textContent = 'Apply';
+        }
+      }
+    });
+  }
+});
+</script>
+{% endblock %}

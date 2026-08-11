@@ -5,6 +5,7 @@ from urllib.parse import urlencode
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from pydantic import BaseModel
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -36,6 +37,63 @@ async def index(request: Request, db: AsyncSession = Depends(get_db)):
         "request": request, "active_page": "railpack_apps", "apps": apps,
         "domains_by_id": {domain.id: domain for domain in domains},
     })
+
+
+class BulkActionRequest(BaseModel):
+    action: str
+    ids: list[int]
+
+
+@router.post("/bulk")
+async def bulk_action(req: BulkActionRequest, db: AsyncSession = Depends(get_db)):
+    if req.action not in ["start", "stop", "restart", "delete"]:
+        raise HTTPException(400, "Invalid bulk action.")
+    apps = (await db.scalars(select(ContainerApp).where(ContainerApp.id.in_(req.ids)))).all()
+    if not apps:
+        return JSONResponse({"status": "ok"})
+    
+    from services import container_app_control_service, container_app_cleanup_service, container_app_removal_service
+    from services.resource_guard_service import resource_guard_service
+
+    for app in apps:
+        domain = await db.get(Domain, app.domain_id)
+        if not domain:
+            continue
+        if req.action == "delete":
+            app.status = "deleting"
+            await db.commit()
+            try:
+                await container_app_cleanup_service.uninstall(db, app, domain, remove_network=False)
+                attachments = await container_app_database_service.attachments_for(db, app.id)
+                managed_ids = [item.id for item in attachments if item.provider in {"docker", "panel_postgres", "panel_mariadb"}]
+                await container_app_removal_service.remove_selected_data(
+                    db, app, attachments, database_ids=managed_ids,
+                    delete_app_volume=bool(app.data_volume), delete_wordpress_files=bool(app.wordpress_content_volume),
+                    delete_backups=True
+                )
+                await db.execute(delete(ContainerAppDeployment).where(ContainerAppDeployment.app_id == app.id))
+                await db.execute(delete(ContainerAppBackup).where(ContainerAppBackup.app_id == app.id))
+                await db.delete(app)
+            except Exception:
+                app.status = "delete_failed"
+                await db.commit()
+        else:
+            if app.status in {"deleting", "delete_failed", "data_preserved"}:
+                continue
+            if req.action != "stop":
+                try:
+                    await resource_guard_service.allow_start(db)
+                except RuntimeError:
+                    continue
+            try:
+                await container_app_control_service.control(db, app, domain, req.action)
+            except Exception:
+                if req.action != "stop":
+                    app.status = "failed"
+                    await db.commit()
+    
+    await db.commit()
+    return JSONResponse({"status": "ok"})
 
 
 router.include_router(create_router)
