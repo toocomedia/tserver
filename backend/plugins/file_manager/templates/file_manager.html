@@ -40,7 +40,7 @@
   </div>
 
   <!-- Roots Tabs -->
-  <div class="mb-md mt-md" id="roots-tabs" style="display: none; gap: var(--space-sm);"></div>
+  <div class="mb-md" id="roots-tabs" style="display: none; gap: var(--space-sm); margin-top: var(--space-md);"></div>
 
   <!-- Breadcrumbs & Actions Toolbar -->
   <div class="action-toolbar" id="fm-toolbar" style="display: none;">
@@ -85,9 +85,9 @@
     <table class="table" id="fm-table">
       <thead>
         <tr>
-          <th>Name</th>
-          <th style="width: 120px;">Size</th>
-          <th style="width: 160px;">Modified</th>
+          <th id="th-name" style="cursor: pointer; user-select: none;">Name <span id="sort-icon-name"></span></th>
+          <th id="th-size" style="width: 120px; cursor: pointer; user-select: none;">Size <span id="sort-icon-size"></span></th>
+          <th id="th-modified" style="width: 160px; cursor: pointer; user-select: none;">Modified <span id="sort-icon-modified"></span></th>
           <th class="col-actions">Actions</th>
         </tr>
       </thead>

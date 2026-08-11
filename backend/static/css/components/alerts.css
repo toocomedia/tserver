@@ -1,7 +1,6 @@
 /* alerts.css */
 .alert {
-  padding: var(--space-md) var(--space-lg);
-  border: 1px solid;
+  padding: var(--space-md);
   font-size: var(--font-body);
   display: flex;
   align-items: flex-start;
@@ -11,22 +10,18 @@
   display: none;
 }
 .alert--info {
-  border-color: var(--color-line);
   background: var(--color-surface);
   color: var(--color-text);
 }
 .alert--success {
-  border-color: var(--color-accent-2);
   background: var(--color-alert-success-bg);
   color: var(--color-text);
 }
 .alert--danger {
-  border-color: var(--color-danger);
   background: var(--color-alert-danger-bg);
   color: var(--color-danger);
 }
 .alert--warning {
-  border-color: var(--color-warn);
   background: var(--color-surface);
   color: var(--color-warn);
 }

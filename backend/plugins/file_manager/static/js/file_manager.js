@@ -7,7 +7,9 @@ const state = {
   activeRoot: null,
   roots: [],
   path: '',
-  entries: []
+  entries: [],
+  sortCol: 'name',
+  sortAsc: true
 };
 
 let textEditorFile = null;
@@ -86,6 +88,9 @@ if (document.readyState === 'loading') {
 
 function setupGlobalListeners() {
   document.getElementById('btn-refresh').onclick = () => loadEntries(true);
+  document.getElementById('th-name').onclick = () => handleSort('name');
+  document.getElementById('th-size').onclick = () => handleSort('size');
+  document.getElementById('th-modified').onclick = () => handleSort('modified');
   document.getElementById('btn-new-folder').onclick = () => {
     document.getElementById('new-folder-name').value = '';
     document.getElementById('new-folder-error').style.display = 'none';
@@ -200,22 +205,61 @@ async function loadEntries(isRefresh = false) {
       loadEntries();
     });
     
-    tbody.innerHTML = '';
-    
-    if (state.entries.length === 0) {
-      document.getElementById('fm-empty-state').style.display = 'block';
-      document.getElementById('fm-table-wrap').style.display = 'none';
-    } else {
-      document.getElementById('fm-empty-state').style.display = 'none';
-      document.getElementById('fm-table-wrap').style.display = 'block';
-      state.entries.forEach(entry => tbody.appendChild(ui.createEntryRow(entry, onEntryAction)));
-      if (window.lucide) window.lucide.createIcons();
-    }
+    renderEntries();
   } catch (err) {
     handleApiError(err);
   } finally {
     setControlsEnabled(true);
   }
+}
+
+function handleSort(col) {
+  if (state.sortCol === col) {
+    state.sortAsc = !state.sortAsc;
+  } else {
+    state.sortCol = col;
+    state.sortAsc = true;
+  }
+  renderEntries();
+}
+
+function renderEntries() {
+  const tbody = document.getElementById('fm-tbody');
+  tbody.innerHTML = '';
+  
+  if (state.entries.length === 0) {
+    document.getElementById('fm-empty-state').style.display = 'block';
+    document.getElementById('fm-table-wrap').style.display = 'none';
+    return;
+  }
+  
+  document.getElementById('fm-empty-state').style.display = 'none';
+  document.getElementById('fm-table-wrap').style.display = 'block';
+
+  ['name', 'size', 'modified'].forEach(c => {
+    const icon = document.getElementById(`sort-icon-${c}`);
+    if (icon) icon.innerHTML = state.sortCol === c ? (state.sortAsc ? ' ↑' : ' ↓') : '';
+  });
+
+  const sorted = [...state.entries].sort((a, b) => {
+    if (state.sortCol === 'name') {
+      if (a.kind === 'directory' && b.kind !== 'directory') return state.sortAsc ? -1 : 1;
+      if (a.kind !== 'directory' && b.kind === 'directory') return state.sortAsc ? 1 : -1;
+      return state.sortAsc ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name);
+    } else if (state.sortCol === 'size') {
+      const sizeA = a.kind === 'directory' ? -1 : (a.size || 0);
+      const sizeB = b.kind === 'directory' ? -1 : (b.size || 0);
+      return state.sortAsc ? sizeA - sizeB : sizeB - sizeA;
+    } else if (state.sortCol === 'modified') {
+      const modA = a.modified_at || 0;
+      const modB = b.modified_at || 0;
+      return state.sortAsc ? modA - modB : modB - modA;
+    }
+    return 0;
+  });
+
+  sorted.forEach(entry => tbody.appendChild(ui.createEntryRow(entry, onEntryAction)));
+  if (window.lucide) window.lucide.createIcons();
 }
 
 function setControlsEnabled(enabled) {

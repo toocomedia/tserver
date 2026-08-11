@@ -230,11 +230,11 @@ p {
   --color-sidebar:    var(--color-bg); /* Match page background in dark mode */
   --color-sidebar-text: #D1D5DB;
   --color-sidebar-hover: var(--color-text);
-  --color-sidebar-border: rgba(255, 255, 255, 0.22);
+  --color-sidebar-border: rgba(255, 255, 255, 0.08);
   --color-sidebar-bg-hover: var(--color-surface);
   --color-text:       #FFFFFF;
   --color-muted:      #D1D5DB;
-  --color-line:       rgba(255, 255, 255, 0.22);
+  --color-line:       rgba(255, 255, 255, 0.08);
   
   /* Keep accents the same, or dim slightly */
   --color-accent:     #C7F464; 
@@ -267,11 +267,11 @@ p {
   --color-sidebar:    #000000;
   --color-sidebar-text: #D4D4D8;
   --color-sidebar-hover: var(--color-text);
-  --color-sidebar-border: rgba(255, 255, 255, 0.25);
+  --color-sidebar-border: rgba(255, 255, 255, 0.08);
   --color-sidebar-bg-hover: var(--color-surface);
   --color-text:       #FFFFFF;
   --color-muted:      #D4D4D8;
-  --color-line:       rgba(255, 255, 255, 0.25);
+  --color-line:       rgba(255, 255, 255, 0.08);
   
   /* Keep accents the same */
   --color-accent:     #C7F464; 
