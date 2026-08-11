@@ -281,6 +281,8 @@ async function handleNewFolder(e) {
     errDiv.style.display = 'block';
   } finally {
     btn.classList.remove('is-loading');
+    btn.disabled = false;
+    btn.removeAttribute('aria-busy');
   }
 }
 
@@ -301,6 +303,8 @@ async function handleNewFile(e) {
     errDiv.style.display = 'block';
   } finally {
     btn.classList.remove('is-loading');
+    btn.disabled = false;
+    btn.removeAttribute('aria-busy');
   }
 }
 
@@ -345,6 +349,8 @@ async function handleTransfer(e) {
     errDiv.style.display = 'block';
   } finally {
     btn.classList.remove('is-loading');
+    btn.disabled = false;
+    btn.removeAttribute('aria-busy');
   }
 }
 
@@ -364,6 +370,8 @@ async function handleDelete(e) {
     errDiv.style.display = 'block';
   } finally {
     btn.classList.remove('is-loading');
+    btn.disabled = false;
+    btn.removeAttribute('aria-busy');
   }
 }
 
