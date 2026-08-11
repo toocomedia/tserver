@@ -144,7 +144,7 @@
 <script src="/static/js/modules/resource-guard-banner.js?v={{ APP_VERSION }}"></script>
 <script src="/static/js/resource-views.js?v={{ APP_VERSION }}"></script>
 <script>
-document.addEventListener("app:init", function() {
+document.addEventListener("DOMContentLoaded", function() {
   var bar = document.getElementById("top-progress-bar");
   
   // 1. Navigation Progress Bar
@@ -215,7 +215,7 @@ document.addEventListener("app:init", function() {
 });
 </script>
 <script>
-  document.addEventListener('app:init', function() {
+  document.addEventListener('DOMContentLoaded', function() {
     if (typeof lucide !== 'undefined') {
       lucide.createIcons();
     }

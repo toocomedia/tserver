@@ -126,7 +126,7 @@
           {% import "partials/list_actions_toggle.html" as list_actions %}
           {{ list_actions.button() }}
           {% call list_actions.tray() %}
-            <form method="post" action="/ssl/{{ cert.id }}/renew" style="display:contents;">
+            <form method="post" action="/ssl/{{ cert.id }}/renew" style="display:contents;" onsubmit="renewCert(event, {{ cert.id }}, '{{ cert.full_domain }}')">
               {% include "partials/csrf_field.html" %}
               <button type="submit" class="btn btn--secondary btn--sm"
                       id="btn-renew-{{ cert.id }}"
@@ -206,13 +206,32 @@ function revokeCert(id, domain) {
   confirmAction(
     `Revoke SSL certificate for "${domain}"? The domain will revert to HTTP only.`,
     async () => {
-      if (typeof window.submitPost === "function") {
-        window.submitPost(`/ssl/${id}/revoke`);
-      } else {
-        toast("Refresh the page (Ctrl+F5) and try again.", "danger");
+      showGlobalLoader("Revoking SSL...");
+      try {
+        await panel.post(`/ssl/${id}/revoke`);
+        hideGlobalLoader();
+        toast(`SSL for ${domain} revoked successfully.`, "success");
+        const row = document.getElementById(`cert-row-${id}`);
+        if (row) row.remove();
+      } catch (err) {
+        hideGlobalLoader();
+        toast(err.message || "Failed to revoke SSL.", "danger");
       }
     }
   );
+}
+
+async function renewCert(event, id, domain) {
+  event.preventDefault();
+  showGlobalLoader("Renewing Certificate...");
+  try {
+    await panel.post(`/ssl/${id}/renew`);
+    hideGlobalLoader();
+    toast(`SSL for ${domain} renewed successfully.`, "success");
+  } catch (err) {
+    hideGlobalLoader();
+    toast(err.message || "Failed to renew SSL.", "danger");
+  }
 }
 </script>
 {% endblock %}

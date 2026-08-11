@@ -143,14 +143,7 @@ function submitPost(action, fields = {}) {
   });
 
   document.body.appendChild(form);
-  
-  if (typeof window.pjaxNavigate === "function") {
-    const formData = new FormData(form);
-    window.pjaxNavigate(action, { method: "POST", body: formData });
-    form.remove();
-  } else {
-    form.submit();
-  }
+  form.submit();
 }
 
 function toast(message, type = "success") {
@@ -348,7 +341,7 @@ function guardFormSubmitButtons() {
   );
 }
 
-document.addEventListener("app:init", () => {
+document.addEventListener("DOMContentLoaded", () => {
   guardFormSubmitButtons();
 
   const current = window.location.pathname;
@@ -454,129 +447,6 @@ document.addEventListener("app:init", () => {
       sidebarNav.scrollBy({ top: 200, behavior: "smooth" });
     });
   }
-});
-
-// ============================================================================
-// GLOBAL PJAX ROUTER (ZERO RELOADS)
-// ============================================================================
-
-window.pjaxNavigate = async function(url, options = {}) {
-  const method = options.method || "GET";
-  // Always show loader for POST. For GET, we might want to just show it too.
-  showGlobalLoader("Loading...");
-  
-  try {
-    const res = await fetch(url, options);
-    
-    // If it's a JSON error, throw it
-    const contentType = res.headers.get("content-type");
-    if (contentType && contentType.includes("application/json") && !res.ok) {
-      const json = await res.json().catch(() => ({}));
-      throw new Error(json.detail || `Request failed (${res.status})`);
-    }
-
-    const html = await res.text();
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(html, "text/html");
-
-    // Swap the main content area
-    const currentMain = document.querySelector(".main");
-    const newMain = doc.querySelector(".main");
-    
-    if (currentMain && newMain) {
-      currentMain.innerHTML = newMain.innerHTML;
-      
-      // Update Title
-      if (doc.title) {
-        document.title = doc.title;
-      }
-      
-      // Update URL
-      if (options.pushState !== false) {
-        window.history.pushState(null, "", res.url);
-      }
-
-      // Re-evaluate new scripts that might be in the new main block
-      const scripts = currentMain.querySelectorAll("script");
-      scripts.forEach((oldScript) => {
-        const newScript = document.createElement("script");
-        Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
-        newScript.textContent = oldScript.textContent;
-        oldScript.parentNode.replaceChild(newScript, oldScript);
-      });
-
-      // Dispatch global init event so modules rebind
-      document.dispatchEvent(new Event("app:init"));
-      
-      hideGlobalLoader();
-      
-      // If there's a toast in the response HTML, we might need to render it? 
-      // Actually, standard toasts are rendered via flash messages in Python? No, toasts are JS only.
-      // Wait, flash messages are in the HTML! So they will be swapped in and appear automatically!
-    } else {
-      // Fallback if structure is missing
-      window.location.href = res.url;
-    }
-    
-  } catch (err) {
-    hideGlobalLoader();
-    toast(err.message || "Navigation failed", "danger");
-  }
-};
-
-document.addEventListener("click", (e) => {
-  // Prevent intercepting modified clicks (ctrl, shift, meta)
-  if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
-  const link = e.target.closest("a");
-  if (!link) return;
-  
-  const href = link.getAttribute("href");
-  if (!href || href === "#" || href.startsWith("#") || href.startsWith("javascript:")) return;
-  if (link.target && link.target !== "_self") return;
-  if (link.hasAttribute("download") || link.hasAttribute("data-no-pjax")) return;
-
-  try {
-    const targetUrl = new URL(link.href, window.location.href);
-    if (targetUrl.origin !== window.location.origin) return;
-    
-    e.preventDefault();
-    pjaxNavigate(targetUrl.href);
-  } catch(err) {
-    return; // Fallback to standard link
-  }
-});
-
-document.addEventListener("submit", (e) => {
-  const form = e.target;
-  if (form.hasAttribute("data-no-pjax")) return;
-  
-  // Exclude GET forms for now, or forms with target="_blank"
-  if (form.method.toUpperCase() !== "POST" || form.target === "_blank") return;
-
-  e.preventDefault();
-  
-  const formData = new FormData(form);
-  // handle checkboxes
-  form.querySelectorAll("input[type=checkbox]").forEach((cb) => {
-    if (!formData.has(cb.name)) {
-      formData.set(cb.name, cb.checked ? "on" : ""); // Standard browser behavior handles checked checkboxes automatically, but just in case
-    }
-  });
-
-  // Since it's a native form submit, we don't send application/json, 
-  // but panel.post expects JSON. Wait! Normal forms in this app usually expect form-encoded or JSON?
-  // Most of our custom actions use panel.post. 
-  // Standard routes (like add domain) are probably expecting Form Data. Let's send it as FormData.
-  pjaxNavigate(form.action, {
-    method: "POST",
-    body: formData
-    // note: no csrfHeaders here because we are using FormData and the CSRF token is usually in the form as a hidden input.
-  });
-});
-
-// Trigger initial app:init on first load
-document.addEventListener("DOMContentLoaded", () => {
-  document.dispatchEvent(new Event("app:init"));
 });
 
 window.PATHS = PATHS;
