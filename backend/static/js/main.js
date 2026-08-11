@@ -191,6 +191,7 @@ function hideSkeleton(id, delay = 1000) {
     }, delay);
   });
 }
+
 window.hideSkeleton = hideSkeleton;
 
 function showSkeleton(id) {
@@ -199,13 +200,30 @@ function showSkeleton(id) {
 }
 window.showSkeleton = showSkeleton;
 
+function showGlobalLoader(message = "Loading...") {
+  const loader = document.getElementById("global-loader");
+  const textEl = document.getElementById("global-loader-text");
+  if (loader) {
+    if (textEl) textEl.textContent = message;
+    loader.classList.remove("hidden");
+  }
+}
+window.showGlobalLoader = showGlobalLoader;
+
+function hideGlobalLoader() {
+  const loader = document.getElementById("global-loader");
+  if (loader) {
+    loader.classList.add("hidden");
+  }
+}
+window.hideGlobalLoader = hideGlobalLoader;
+
 document.addEventListener("click", (e) => {
   if (e.target.classList.contains("modal-backdrop")) {
     if (e.target.dataset.noBackdropClose === "true") return;
     e.target.classList.add("hidden");
   }
 });
-
 
 document.addEventListener("submit", (e) => {
   const button = e.submitter;
