@@ -15,6 +15,18 @@
 .apps-engine-inspection { border-top: 1px solid var(--color-line); margin-top: var(--space-lg); }
 .apps-engine-action-bar { min-height: calc(var(--button-height) + var(--space-xl) + var(--space-xs)); }
 .apps-engine-action-inner__right { align-items: center; }
+
+.apps-engine-wizard-error {
+  width: 100%;
+  background: var(--color-danger-btn);
+  color: var(--color-danger-text);
+  padding: 12px 20px;
+  text-align: center;
+  font-weight: 600;
+  font-size: var(--font-small);
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+}
+
 .apps-engine-wizard [hidden] { display: none !important; }
 @media (max-width: 720px) {
   .apps-engine-wizard { padding-bottom: calc((var(--button-height) * 2) + (var(--space-xl) * 3)); }
