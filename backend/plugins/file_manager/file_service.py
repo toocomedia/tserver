@@ -241,6 +241,7 @@ for item in "$dir"/..?* "$dir"/.[!.]* "$dir"/*; do
   printf '%s\000%s\000%s\000%s\000' "$name" "$kind" "$size" "$modified"
   count=$((count + 1)); [ "$count" -ge "$limit" ] && break
 done
+exit 0
 '''
 
 
