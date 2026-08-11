@@ -137,7 +137,7 @@ window.openBulkDeleteModal = () => {
     try {
       for (const name of state.selectedEntries) {
         const path = (state.path ? state.path + '/' : '') + name;
-        await api.deleteFile(state.appId, state.rootId, path, '');
+        await api.deleteFile(state.appId, state.rootId, path, `DELETE ${path}`);
       }
       state.selectedEntries.clear();
       window.updateBulkDeleteUI();
