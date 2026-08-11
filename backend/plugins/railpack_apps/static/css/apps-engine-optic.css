@@ -326,14 +326,14 @@
 }
 
 .apps-engine-optic .optic-card:hover {
-  background: var(--color-surface);
+  background: rgba(128, 128, 128, 0.15);
   color: var(--color-text);
 }
 
 .apps-engine-optic .optic-card.selected,
 .apps-engine-optic .optic-card.settings-choice--active,
 .apps-engine-optic .optic-card:has(input:checked) {
-  background: var(--color-surface);
+  background: rgba(128, 128, 128, 0.15);
   color: var(--color-text);
 }
 
@@ -418,12 +418,12 @@ html[data-theme="charcoal"] .apps-engine-optic .db-toggle-icon {
 }
 
 .apps-engine-optic .db-toggle-card:hover .db-toggle-label {
-  background: var(--color-surface);
+  background: rgba(128, 128, 128, 0.15);
   color: var(--color-text);
 }
 
 .apps-engine-optic .db-toggle-card.settings-choice--active {
-  background: var(--color-surface);
+  background: rgba(128, 128, 128, 0.15);
 }
 
 .apps-engine-optic .db-toggle-card.settings-choice--active::before {
