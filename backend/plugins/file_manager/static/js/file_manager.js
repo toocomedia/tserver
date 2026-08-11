@@ -353,6 +353,11 @@ async function openEditor(entry) {
         const mode = modelist.getModeForPath(entry.name).mode;
         aceEditor.session.setMode(mode);
       }
+      
+      const theme = document.documentElement.getAttribute('data-theme');
+      const isDark = theme === 'dark' || theme === 'amoled' || theme === 'charcoal';
+      aceEditor.setTheme(isDark ? "ace/theme/one_dark" : "ace/theme/chrome");
+      
       aceEditor.setValue(data.content, -1);
     } else {
       document.getElementById('editor-textarea').value = data.content;
