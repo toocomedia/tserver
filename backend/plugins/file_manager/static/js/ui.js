@@ -7,14 +7,14 @@ export function renderRootsTabs(roots, activeRootId, onSelectRoot) {
   }
   container.style.display = 'flex';
   
-  for (const root of roots) {
+  roots.forEach(root => {
     const btn = document.createElement('button');
     btn.type = 'button';
-    btn.className = `tabs__item ${root.id === activeRootId ? 'tabs__item--active' : ''}`;
+    btn.className = `btn btn--sm ${root.id === activeRootId ? 'btn--primary' : 'btn--secondary'}`;
     btn.textContent = root.name;
     btn.onclick = () => onSelectRoot(root.id);
     container.appendChild(btn);
-  }
+  });
 }
 
 export function renderBreadcrumbs(pathStr, onNavigate) {

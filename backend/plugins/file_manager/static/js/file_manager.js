@@ -10,6 +10,23 @@ const state = {
   entries: []
 };
 
+let textEditorFile = null;
+let aceEditor = null;
+
+// Initialize the Ace editor
+document.addEventListener('DOMContentLoaded', () => {
+  if (window.ace) {
+    aceEditor = ace.edit("editor-textarea");
+    aceEditor.setTheme("ace/theme/chrome");
+    aceEditor.session.setMode("ace/mode/text");
+    aceEditor.setOptions({
+      fontSize: "14px",
+      showPrintMargin: false,
+      wrap: true
+    });
+  }
+});
+
 async function init() {
   setupGlobalListeners();
   try {
@@ -48,8 +65,13 @@ async function init() {
     
     appSelector.disabled = false;
     appSelector.addEventListener('change', onAppChange);
-    if (window.hideSkeleton) window.hideSkeleton('fm-skeleton');
-    document.getElementById('fm-empty-state').style.display = 'block';
+    if (window.hideSkeleton) {
+      window.hideSkeleton('fm-skeleton');
+    }
+    
+    if (!state.appId) {
+      document.getElementById('fm-select-app-state').style.display = 'block';
+    }
   } catch (err) {
     if (window.showToast) window.showToast('Failed to load apps: ' + err.message, 'error');
   }
@@ -94,6 +116,12 @@ async function onAppChange(e) {
 }
 
 async function loadRoots() {
+  if (!state.appId) return;
+  document.getElementById('fm-select-app-state').style.display = 'none';
+  document.getElementById('fm-table-wrap').style.display = 'none';
+  document.getElementById('fm-empty-state').style.display = 'none';
+  document.getElementById('fm-toolbar').style.display = 'none';
+
   try {
     const data = await api.fetchRoots(state.appId);
     state.roots = data.roots || [];
@@ -130,12 +158,14 @@ function resetView() {
   document.getElementById('fm-toolbar').style.display = 'none';
   document.getElementById('fm-table-wrap').style.display = 'none';
   document.getElementById('fm-empty-state').style.display = 'block';
+  document.getElementById('fm-select-app-state').style.display = 'block';
 }
 
 async function loadEntries(isRefresh = false) {
   setControlsEnabled(false);
   
   const tbody = document.getElementById('fm-tbody');
+  document.getElementById('fm-select-app-state').style.display = 'none';
   document.getElementById('fm-toolbar').style.display = 'flex';
   document.getElementById('fm-empty-state').style.display = 'none';
   document.getElementById('fm-table-wrap').style.display = 'block';
@@ -307,7 +337,6 @@ async function handleDelete(e) {
 }
 
 // === Editor ===
-let currentEditorFile = null;
 
 async function openEditor(entry) {
   const path = getEntryPath(entry);
@@ -315,8 +344,18 @@ async function openEditor(entry) {
   
   try {
     const data = await api.fetchText(state.appId, state.rootId, path);
-    currentEditorFile = { path, etag: data.etag };
-    document.getElementById('editor-textarea').value = data.content;
+    textEditorFile = { path, etag: data.etag };
+    
+    if (aceEditor) {
+      const modelist = ace.require("ace/ext/modelist");
+      if (modelist) {
+        const mode = modelist.getModeForPath(entry.name).mode;
+        aceEditor.session.setMode(mode);
+      }
+      aceEditor.setValue(data.content, -1);
+    } else {
+      document.getElementById('editor-textarea').value = data.content;
+    }
     
     const warnDiv = document.getElementById('editor-warning');
     if (state.activeRoot && state.activeRoot.persistence === 'live_runtime') {
@@ -335,14 +374,14 @@ async function openEditor(entry) {
 }
 
 async function handleSaveText() {
-  if (!currentEditorFile) return;
-  const content = document.getElementById('editor-textarea').value;
+  if (!textEditorFile) return;
+  const content = aceEditor ? aceEditor.getValue() : document.getElementById('editor-textarea').value;
   const btn = document.getElementById('btn-save-text');
   btn.classList.add('is-loading');
   document.getElementById('editor-error').style.display = 'none';
   
   try {
-    const data = await api.saveText(state.appId, state.rootId, currentEditorFile.path, content, currentEditorFile.etag);
+    const data = await api.saveText(state.appId, state.rootId, textEditorFile.path, content, textEditorFile.etag);
     if (data.restart_required) {
       showToast('Values take effect after the next Apps Engine restart or redeploy.', 'warning');
     } else {

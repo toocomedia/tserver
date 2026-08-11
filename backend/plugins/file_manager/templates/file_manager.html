@@ -21,7 +21,7 @@
 {% endblock %}
 
 {% block content %}
-<div id="fm-main" style="position:relative;">
+<div id="fm-main">
   {% from "partials/skeleton_overlay.html" import skeleton_overlay %}
   {{ skeleton_overlay(
        'fm-skeleton',
@@ -30,8 +30,17 @@
        ]
   ) }}
 
+  <!-- Select App Empty State -->
+  <div id="fm-select-app-state" class="empty-state" style="display: none; margin-top: var(--space-xl);">
+    <div class="empty-state__shape">
+      <div class="shape-torus-sm"></div>
+    </div>
+    <h3 class="empty-state__title">Select a target</h3>
+    <p class="empty-state__desc">Choose an application from the dropdown above to manage its files.</p>
+  </div>
+
   <!-- Roots Tabs -->
-  <div class="tabs tabs--sm mb-md" id="roots-tabs" style="display: none;"></div>
+  <div class="mb-md" id="roots-tabs" style="display: none; gap: var(--space-sm);"></div>
 
   <!-- Breadcrumbs & Actions Toolbar -->
   <div class="action-toolbar mb-md" id="fm-toolbar" style="display: none; align-items: center; justify-content: space-between;">
@@ -87,5 +96,7 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="/plugins/file_manager/static/vendor/ace/ace.js"></script>
+<script src="/plugins/file_manager/static/vendor/ace/ext-modelist.js"></script>
 <script type="module" src="/plugins/file_manager/static/js/file_manager.js?v={{ APP_VERSION }}"></script>
 {% endblock %}
