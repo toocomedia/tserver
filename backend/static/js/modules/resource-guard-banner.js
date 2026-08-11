@@ -25,7 +25,7 @@
     }
   }
 
-  document.addEventListener("DOMContentLoaded", () => {
+  document.addEventListener("app:init", () => {
     document.addEventListener("click", (event) => {
       const action = event.target.closest("[data-resource-guard-dismiss]")?.dataset.resourceGuardDismiss;
       if (!action) return;

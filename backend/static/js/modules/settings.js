@@ -384,7 +384,7 @@
     el.hidden = false;
   }
 
-  document.addEventListener("DOMContentLoaded", () => {
+  document.addEventListener("app:init", () => {
     // Theme toggle logic
     const themeRadios = document.querySelectorAll('input[name="theme_mode"]');
     if (themeRadios.length) {

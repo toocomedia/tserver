@@ -4,7 +4,7 @@
  * Also handles per-proxy cache settings panel and purge actions.
  */
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("app:init", () => {
   initCreateForm();
   initDeleteButtons();
   initCacheButtons();

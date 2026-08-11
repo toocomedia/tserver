@@ -89,7 +89,7 @@
     }
   }
 
-  document.addEventListener("DOMContentLoaded", () => {
+  document.addEventListener("app:init", () => {
     $("btn-scan-resource-guard-disk")?.addEventListener("click", scan);
     $("resource-guard-disk-items")?.addEventListener("change", updateSelection);
     $("resource-guard-disk-select-all")?.addEventListener("change", (event) => {

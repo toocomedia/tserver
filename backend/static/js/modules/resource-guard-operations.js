@@ -69,7 +69,7 @@
     }
   }
 
-  document.addEventListener("DOMContentLoaded", () => {
+  document.addEventListener("app:init", () => {
     $("resource-guard-operations")?.addEventListener("click", (event) => {
       const button = event.target.closest("[data-operation-cancel]");
       if (!button || button.disabled) return;

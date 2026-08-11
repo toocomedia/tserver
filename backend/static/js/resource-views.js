@@ -186,7 +186,7 @@ function autoInitAllListPaginations(limit = DEFAULT_PAGE_LIMIT) {
 }
 window.autoInitAllListPaginations = autoInitAllListPaginations;
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('app:init', () => {
   // Add slide-toolbar class to all subactions
   document.querySelectorAll('.list-row-subactions').forEach(div => {
     div.classList.add('slide-toolbar');

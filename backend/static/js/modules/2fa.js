@@ -1,4 +1,4 @@
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('app:init', () => {
   const btnSetup = document.getElementById('btn-setup-2fa');
   const btnDisable = document.getElementById('btn-disable-2fa');
   const btnVerify = document.getElementById('btn-verify-2fa');

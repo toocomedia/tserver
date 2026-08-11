@@ -1,7 +1,7 @@
 /**
  * updates.js — Light Git update check & silent background deployment.
  */
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('app:init', () => {
   const btnCheck = document.getElementById('btn-check-updates');
   const btnCheckText = document.getElementById('btn-check-updates-text');
   const btnApply = document.getElementById('btn-apply-update');

@@ -90,7 +90,7 @@ function bindDeleteButtons() {
 }
 
 // Apply label on page load for the default selected type
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("app:init", () => {
   const typeSelect = document.getElementById("rec-type");
   if (typeSelect) {
     updateContentLabel(typeSelect.value);

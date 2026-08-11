@@ -4,7 +4,7 @@
  * updates live preview of domains to be certified.
  */
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("app:init", () => {
   const select      = document.getElementById("full_domain_select");
   const hiddenDomain = document.getElementById("full_domain");
   const hiddenId     = document.getElementById("domain_id");
@@ -68,32 +68,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Intercept submit, use global loader and async fetch for certbot
-  if (form && submitBtn) {
-    form.addEventListener("submit", async (e) => {
-      const opt = select.options[select.selectedIndex];
-      if (!opt || !opt.value) {
-        e.preventDefault();
-        return;
-      }
-      e.preventDefault();
-      
-      showGlobalLoader("Issuing Certificate... (This may take 30–60s)");
-      try {
-        const data = Object.fromEntries(new FormData(form).entries());
-        form.querySelectorAll("input[type=checkbox]").forEach((cb) => {
-          data[cb.name] = cb.checked;
-        });
-        
-        await panel.post(form.action, data);
-        window.location.href = "/ssl/?issued=" + encodeURIComponent(data.full_domain || "");
-      } catch (err) {
-        hideGlobalLoader();
-        toast(err.message || "Failed to issue SSL certificate.", "danger");
-      }
-    });
-  }
-
   // Auto-dismiss flash alerts
   ["alert-issued", "alert-renewed", "alert-revoked", "alert-error"].forEach((id) => {
     const el = document.getElementById(id);
@@ -104,7 +78,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if (select.value) updateForm();
 });
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("app:init", () => {
   document.querySelectorAll('.auto-renew-toggle').forEach(checkbox => {
     checkbox.addEventListener('change', async (e) => {
       const id = e.target.getAttribute('data-id');

@@ -64,7 +64,7 @@
     }
   }
 
-  document.addEventListener("DOMContentLoaded", () => {
+  document.addEventListener("app:init", () => {
     $("btn-save-resource-guard")?.addEventListener("click", save);
     $("resource-guard-priorities")?.addEventListener("change", savePriority);
     load();

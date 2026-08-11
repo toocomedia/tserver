@@ -3,7 +3,7 @@
  * Copy report to clipboard, clear-all confirm, delete confirm.
  */
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("app:init", () => {
   initCopyButtons();
   initClearAll();
   initDelete();
