@@ -17,9 +17,9 @@ async def remove_selected_data(
     delete_backups: bool,
 ) -> bool:
     selected = set(database_ids)
-    managed = {item.id: item for item in attachments if item.provider == "docker"}
+    managed = {item.id: item for item in attachments if item.provider in {"docker", "panel_postgres", "panel_mariadb"}}
     if selected - managed.keys():
-        raise ValueError("Only this app's Docker-managed services can be deleted here.")
+        raise ValueError("Only this app's local managed services can be deleted here.")
     backups = list((await db.scalars(select(ContainerAppBackup).where(ContainerAppBackup.app_id == app.id))).all())
     await _delete_selected_backups(db, backups, selected, delete_backups)
     for database_id in selected:
@@ -33,7 +33,7 @@ async def remove_selected_data(
         await container_app_cleanup_service.remove_volume(app.wordpress_content_volume)
         app.wordpress_content_volume = None
     remaining = [item for item in attachments if item.id not in selected]
-    if not any(item.provider == "docker" for item in remaining):
+    if not any(item.provider in {"docker", "panel_postgres", "panel_mariadb"} for item in remaining):
         await container_app_cleanup_service.remove_private_network(app)
     await db.flush()
     remaining_backups = bool(await db.scalar(select(ContainerAppBackup.id).where(

@@ -52,18 +52,30 @@ def delete_managed(item: ContainerAppDatabase, confirmation: str) -> None:
     expected = f"DELETE {item.kind.upper()} {item.id}"
     if confirmation != expected:
         raise HTTPException(400, f"Type {expected} to permanently delete this data.")
-    if item.provider == "supabase":
-        raise HTTPException(400, "Supabase databases are not deleted here — use the Supabase plugin or dashboard.")
-    if item.provider != "docker":
-        raise HTTPException(400, "Panel-hosted and external databases are not deleted here.")
+    if item.provider == "supabase" or item.provider == "external":
+        raise HTTPException(400, "External and Supabase databases are not deleted here.")
     purge_managed(item)
 
 
 def purge_managed(item: ContainerAppDatabase) -> None:
-    if item.provider != "docker":
-        raise HTTPException(400, "Only Docker-managed databases can be deleted here.")
-    databases._require(container_app_service._run(["docker", "rm", "-f", item.container_name or ""], timeout=45), "Could not remove database container.")
-    databases._require(container_app_service._run(["docker", "volume", "rm", item.volume_name or ""], timeout=45), "Could not remove database volume.")
+    if item.provider == "panel_postgres":
+        from plugins.postgres_manager import queries as pg
+        try:
+            pg.drop_app_database_and_user(item.database_name or "", item.username or "")
+        except Exception:
+            pass
+    elif item.provider == "panel_mariadb":
+        from plugins.mariadb_manager.service import mariadb_manager_service
+        try:
+            mariadb_manager_service.drop_database(item.database_name or "")
+            mariadb_manager_service.drop_user(item.username or "")
+        except Exception:
+            pass
+    elif item.provider == "docker":
+        databases._require(container_app_service._run(["docker", "rm", "-f", item.container_name or ""], timeout=45), "Could not remove database container.")
+        databases._require(container_app_service._run(["docker", "volume", "rm", item.volume_name or ""], timeout=45), "Could not remove database volume.")
+    else:
+        raise HTTPException(400, "Only managed local databases can be deleted here.")
     Path(item.credentials_path or "").unlink(missing_ok=True)
 
 

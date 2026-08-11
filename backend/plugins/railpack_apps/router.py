@@ -103,9 +103,9 @@ async def uninstall(
     if domain is None:
         raise HTTPException(409, "App domain is missing.")
     attachments = await container_app_database_service.attachments_for(db, app.id)
-    managed_ids = {item.id for item in attachments if item.provider == "docker"}
+    managed_ids = {item.id for item in attachments if item.provider in {"docker", "panel_postgres", "panel_mariadb"}}
     if set(keep_database_ids) - managed_ids:
-        raise HTTPException(400, "Only this app's Docker-managed services can be kept here.")
+        raise HTTPException(400, "Only this app's local managed services can be kept here.")
     if confirmation != "DELETE ALL":
         raise HTTPException(400, "Type DELETE ALL to confirm this removal.")
     delete_database_ids = list(managed_ids - set(keep_database_ids))

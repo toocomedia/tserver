@@ -237,6 +237,7 @@ def _provision_panel_mariadb(app: ContainerApp, item: ContainerAppDatabase) -> N
     if not dependency_manager.is_healthy("mariadb"):
         raise HTTPException(409, "Start MariaDB from Dependencies before using panel MariaDB.")
     from plugins.mariadb_manager.service import mariadb_manager_service
+    _allow_panel_mariadb_network()
     creds = _read_credentials(item)
     item.database_name, item.username, item.network_alias = creds["DATABASE"], creds["USERNAME"], "host.docker.internal"
     try:
@@ -281,6 +282,12 @@ def _allow_panel_postgres_network() -> None:
     script = Path(__file__).resolve().parents[1] / "plugins" / "postgres_manager" / "scripts" / "allow-container-apps"
     result = container_app_service._run(["bash", str(script)], timeout=45)
     _require(result, "Could not configure the PostgreSQL container bridge.")
+
+
+def _allow_panel_mariadb_network() -> None:
+    script = Path(__file__).resolve().parents[1] / "plugins" / "mariadb_manager" / "scripts" / "allow-container-apps"
+    result = container_app_service._run(["bash", str(script)], timeout=45)
+    _require(result, "Could not configure the MariaDB container bridge.")
 
 
 

@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# Allow Docker bridge networks to reach locally managed MariaDB.
+set -euo pipefail
+
+# Find the config file that defines bind-address
+# Usually /etc/mysql/mariadb.conf.d/50-server.cnf on Debian/Ubuntu
+CONF_FILES="/etc/mysql/mariadb.conf.d/50-server.cnf /etc/mysql/my.cnf /etc/my.cnf"
+TARGET_CONF=""
+
+for f in $CONF_FILES; do
+  if grep -Eq '^[[:space:]]*#?[[:space:]]*bind-address[[:space:]]*=' "$f" 2>/dev/null; then
+    TARGET_CONF="$f"
+    break
+  fi
+done
+
+if [ -n "$TARGET_CONF" ]; then
+  # If bind-address is set to 127.0.0.1, change it to * (or 0.0.0.0)
+  if grep -Eq '^[[:space:]]*bind-address[[:space:]]*=[[:space:]]*127\.0\.0\.1' "$TARGET_CONF"; then
+    sed -i -E "s|^[[:space:]]*bind-address[[:space:]]*=.*|bind-address = 0.0.0.0|" "$TARGET_CONF"
+    if systemctl is-active --quiet mariadb; then
+      systemctl restart mariadb
+    elif systemctl is-active --quiet mysql; then
+      systemctl restart mysql
+    fi
+  fi
+fi

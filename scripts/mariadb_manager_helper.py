@@ -94,8 +94,11 @@ def create_database(request_data: dict[str, Any]) -> dict[str, Any]:
         f"ALTER USER {literal(user)}@'localhost' IDENTIFIED BY {literal(secret)};"
         f"CREATE USER IF NOT EXISTS {literal(user)}@'127.0.0.1' IDENTIFIED BY {literal(secret)};"
         f"ALTER USER {literal(user)}@'127.0.0.1' IDENTIFIED BY {literal(secret)};"
+        f"CREATE USER IF NOT EXISTS {literal(user)}@'%' IDENTIFIED BY {literal(secret)};"
+        f"ALTER USER {literal(user)}@'%' IDENTIFIED BY {literal(secret)};"
         f"GRANT ALL PRIVILEGES ON {sql_identifier(database)}.* TO {literal(user)}@'localhost';"
         f"GRANT ALL PRIVILEGES ON {sql_identifier(database)}.* TO {literal(user)}@'127.0.0.1';"
+        f"GRANT ALL PRIVILEGES ON {sql_identifier(database)}.* TO {literal(user)}@'%';"
         "FLUSH PRIVILEGES;"
     )
     return {"database": database, "user": user}
@@ -116,6 +119,7 @@ def drop_user(request_data: dict[str, Any]) -> dict[str, Any]:
     run_sql(
         f"DROP USER IF EXISTS {literal(user)}@'localhost';"
         f"DROP USER IF EXISTS {literal(user)}@'127.0.0.1';"
+        f"DROP USER IF EXISTS {literal(user)}@'%';"
         "FLUSH PRIVILEGES;"
     )
     return {"user": user}
@@ -129,6 +133,7 @@ def reset_password(request_data: dict[str, Any]) -> dict[str, Any]:
     run_sql(
         f"ALTER USER {literal(user)}@'localhost' IDENTIFIED BY {literal(secret)};"
         f"ALTER USER {literal(user)}@'127.0.0.1' IDENTIFIED BY {literal(secret)};"
+        f"ALTER USER {literal(user)}@'%' IDENTIFIED BY {literal(secret)};"
         "FLUSH PRIVILEGES;"
     )
     return {"user": user}
