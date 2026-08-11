@@ -447,6 +447,9 @@ document.addEventListener("DOMContentLoaded", () => {
       sidebarNav.scrollBy({ top: 200, behavior: "smooth" });
     });
   }
+
+  // Trigger app:init so page-specific modules can initialize
+  document.dispatchEvent(new Event("app:init"));
 });
 
 window.PATHS = PATHS;
