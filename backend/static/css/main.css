@@ -225,7 +225,7 @@ p {
    ============================================================ */
 [data-theme="dark"] {
   --color-bg:         #0F1720;
-  --color-surface:    #141D27;
+  --color-surface:    #1E293B;
   --color-header-bg-bar: #1C2735;
   --color-sidebar:    var(--color-bg); /* Match page background in dark mode */
   --color-sidebar-text: #D1D5DB;
