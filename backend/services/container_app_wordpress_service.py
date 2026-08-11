@@ -10,7 +10,7 @@ from models.container_app import ContainerApp
 from models.domain import Domain
 from services import container_app_service
 
-WP_IMAGE = "wordpress:6-php8.3-apache"
+WP_IMAGE = "wordpress:php8.3-apache"
 WP_CLI_IMAGE = "wordpress:cli"
 
 

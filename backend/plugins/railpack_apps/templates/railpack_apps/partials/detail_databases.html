@@ -2,18 +2,66 @@
   <div class="master-card__header"><span>Managed services</span><span class="badge-pill">{{ databases | length }}</span></div>
   <div class="master-card__body">
     {% if databases %}
-      {% for item in databases %}{% set live = database_statuses.get(item.id, {}) %}
-      <section class="form-group">
-        <div class="info-row"><span class="info-row__label">{{ item.kind | title }}</span><span class="info-row__value">{{ item.provider }} · {{ live.get('status', item.status) }}</span></div>
-        <p class="form-hint">Available to this app as <span class="mono">{{ item.environment_key }}</span>.</p>
-        <div class="form-actions">
-          {% if item.provider == 'docker' %}<form method="post" action="/plugins/railpack_apps/{{ app.id }}/databases/{{ item.id }}/reconnect">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary btn--sm">Reconnect</button></form><form method="post" action="/plugins/railpack_apps/{{ app.id }}/databases/{{ item.id }}/backup">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary btn--sm">Create backup</button></form>{% endif %}
-          {% if item.provider != 'external' %}<form method="post" action="/plugins/railpack_apps/{{ app.id }}/databases/{{ item.id }}/rotate">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary btn--sm">Rotate credentials</button></form>{% endif %}
+      {% for item in databases %}
+      {% set live = database_statuses.get(item.id, {}) %}
+      <div class="mb-md">
+        <div class="info-row" style="margin-bottom: 8px;">
+          <span class="info-row__label">{{ item.kind | title }}</span>
+          <span class="info-row__value">{{ item.provider }} · {{ live.get('status', item.status) }}</span>
         </div>
-        {% for backup in backups if backup.database_id == item.id and backup.status == 'complete' %}<form class="form-group" method="post" action="/plugins/railpack_apps/{{ app.id }}/databases/{{ item.id }}/restore/{{ backup.id }}"><label class="form-label" for="restore-{{ backup.id }}">Restore backup #{{ backup.id }}</label><p class="form-hint">Type RESTORE {{ backup.id }} to continue.</p><input class="form-input" id="restore-{{ backup.id }}" name="confirmation" required><div class="form-actions"><button class="btn btn--secondary btn--sm">Restore</button></div>{% include "partials/csrf_field.html" %}</form>{% endfor %}
-      </section>{% if not loop.last %}<hr class="settings-divider">{% endif %}
+        <p class="form-hint" style="margin-bottom: 12px;">Available to this app as <span class="mono">{{ item.environment_key }}</span>.</p>
+        
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+          {% if item.provider == 'docker' %}
+          <form method="post" action="/plugins/railpack_apps/{{ app.id }}/databases/{{ item.id }}/reconnect">
+            {% include "partials/csrf_field.html" %}
+            <button class="btn btn--secondary btn--sm">Reconnect</button>
+          </form>
+          <form method="post" action="/plugins/railpack_apps/{{ app.id }}/databases/{{ item.id }}/backup">
+            {% include "partials/csrf_field.html" %}
+            <button class="btn btn--secondary btn--sm">Create backup</button>
+          </form>
+          {% endif %}
+          
+          {% if item.provider != 'external' %}
+          <form method="post" action="/plugins/railpack_apps/{{ app.id }}/databases/{{ item.id }}/rotate">
+            {% include "partials/csrf_field.html" %}
+            <button class="btn btn--secondary btn--sm">Rotate credentials</button>
+          </form>
+          {% endif %}
+        </div>
+
+        {% for backup in backups if backup.database_id == item.id and backup.status == 'complete' %}
+        <div class="form-group mt-md" style="padding: 12px; background: var(--color-surface-hover); border-radius: var(--radius-sm);">
+          <form method="post" action="/plugins/railpack_apps/{{ app.id }}/databases/{{ item.id }}/restore/{{ backup.id }}">
+            <label class="form-label" for="restore-{{ backup.id }}">Restore backup #{{ backup.id }}</label>
+            <p class="form-hint">Type RESTORE {{ backup.id }} to continue.</p>
+            <input class="form-input mb-sm" id="restore-{{ backup.id }}" name="confirmation" required>
+            {% include "partials/csrf_field.html" %}
+            <button class="btn btn--secondary btn--sm">Restore</button>
+          </form>
+        </div>
+        {% endfor %}
+      </div>
+      {% if not loop.last %}<hr class="settings-divider" style="margin: 20px 0;">{% endif %}
       {% endfor %}
-    {% else %}<p class="text-muted" style="font-size:14px;">No managed services are attached to this app.</p>{% endif %}
-    {% if app.preset == 'wordpress' %}{% for backup in backups if backup.kind == 'wordpress' and backup.status == 'complete' %}<form class="form-group" method="post" action="/plugins/railpack_apps/{{ app.id }}/wordpress/restore/{{ backup.id }}"><label class="form-label" for="restore-wp-{{ backup.id }}">Restore WordPress backup #{{ backup.id }}</label><p class="form-hint">Type RESTORE {{ backup.id }} to continue.</p><input class="form-input" id="restore-wp-{{ backup.id }}" name="confirmation" required><div class="form-actions"><button class="btn btn--secondary btn--sm">Restore WordPress</button></div>{% include "partials/csrf_field.html" %}</form>{% endfor %}{% endif %}
+    {% else %}
+      <p class="text-muted" style="font-size:14px;">No managed services are attached to this app.</p>
+    {% endif %}
+
+    {% if app.preset == 'wordpress' %}
+      {% for backup in backups if backup.kind == 'wordpress' and backup.status == 'complete' %}
+      <hr class="settings-divider" style="margin: 20px 0;">
+      <div class="form-group" style="padding: 12px; background: var(--color-surface-hover); border-radius: var(--radius-sm);">
+        <form method="post" action="/plugins/railpack_apps/{{ app.id }}/wordpress/restore/{{ backup.id }}">
+          <label class="form-label" for="restore-wp-{{ backup.id }}">Restore WordPress backup #{{ backup.id }}</label>
+          <p class="form-hint">Type RESTORE {{ backup.id }} to continue.</p>
+          <input class="form-input mb-sm" id="restore-wp-{{ backup.id }}" name="confirmation" required>
+          {% include "partials/csrf_field.html" %}
+          <button class="btn btn--secondary btn--sm">Restore WordPress</button>
+        </form>
+      </div>
+      {% endfor %}
+    {% endif %}
   </div>
 </div>

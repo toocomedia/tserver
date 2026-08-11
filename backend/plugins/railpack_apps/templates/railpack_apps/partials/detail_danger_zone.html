@@ -1,15 +1,81 @@
-    <div class="master-card master-card--danger">
-      <div class="master-card__header">Danger zone</div>
-      <div class="master-card__body"><p class="form-hint">Remove the application and all local data, or keep the data you select.</p>
-        {% if app.status == 'deleting' %}<p class="text-muted">Removal is in progress.</p>{% else %}
-        <details class="railpack-delete-disclosure">
-          <summary class="btn btn--danger">{{ 'Retry delete all' if app.status == 'delete_failed' else 'Delete all' }}</summary>
-          <form class="form" method="post" action="/plugins/railpack_apps/{{ app.id }}/uninstall">
-            <p class="form-hint">Everything local is deleted by default. Check only what you want to keep.</p>
-            {% if databases or app.data_volume or app.wordpress_content_volume or backups %}<fieldset class="form-group"><legend class="form-label">Keep instead</legend>{% for item in databases %}{% if item.provider in ['docker', 'panel_postgres', 'panel_mariadb'] %}<label class="form-check"><input type="checkbox" name="keep_database_ids" value="{{ item.id }}"> Keep {{ item.kind | title }} service and data</label>{% else %}<p class="form-hint">{{ item.kind | title }} ({{ item.provider }}) is external and is always kept.</p>{% endif %}{% endfor %}{% if app.data_volume %}<label class="form-check"><input type="checkbox" name="keep_app_volume" value="true"> Keep application data volume</label>{% endif %}{% if app.wordpress_content_volume %}<label class="form-check"><input type="checkbox" name="keep_wordpress_files" value="true"> Keep WordPress uploads, plugins, and themes</label>{% endif %}{% if backups %}<label class="form-check"><input type="checkbox" name="keep_saved_backups" value="true"> Keep {{ backups | length }} local backup{{ '' if backups | length == 1 else 's' }}</label>{% endif %}</fieldset>{% endif %}
-            <div class="form-group"><label class="form-label" for="confirmation">Confirm deletion</label><p class="form-hint">Type DELETE ALL to continue.</p><input class="form-input" id="confirmation" name="confirmation" required></div>{% include "partials/csrf_field.html" %}<button class="btn btn--danger" type="submit">Delete all</button>
-          </form>
-        </details>
-        {% endif %}
-      </div>
+<div class="master-card" style="border-color: rgba(220, 38, 38, 0.3);">
+  <div class="master-card__header" style="color: #DC2626;">Danger zone</div>
+  <div class="master-card__body">
+    <p style="font-size: 13px; color: var(--color-muted); margin-bottom: 14px; line-height: 1.5;">
+      Remove the application and all local data, or keep the data you select.
+    </p>
+    {% if app.status == 'deleting' %}
+      <p class="text-muted" style="font-size: 13px;">Removal is in progress...</p>
+    {% elif deployment_active %}
+      <p class="text-muted" style="font-size: 13px;">Stop the active deployment before deleting this app.</p>
+    {% else %}
+      <button class="btn btn--danger btn--sm" type="button" data-app-delete-open style="width: 100%;">
+        {{ 'Retry delete all' if app.status == 'delete_failed' else 'Delete all' }}
+      </button>
+    {% endif %}
+  </div>
+</div>
+
+{% if app.status != 'deleting' %}
+<!-- DELETE CONFIRMATION MODAL -->
+<div class="modal-backdrop hidden" data-app-delete-modal role="dialog" aria-modal="true" aria-labelledby="app-delete-title">
+  <div class="modal">
+    <div class="modal__header">
+      <h2 id="app-delete-title">Delete Application</h2>
+      <button class="btn btn--ghost btn--icon" type="button" data-app-delete-close aria-label="Close">×</button>
     </div>
+    <form class="form" method="post" action="/plugins/railpack_apps/{{ app.id }}/uninstall">
+      <div class="modal__body">
+        <p style="font-size: 14px; margin-bottom: 16px;">Everything local is deleted by default. Check only what you want to keep.</p>
+        
+        {% if databases or app.data_volume or app.wordpress_content_volume or backups %}
+        <div class="form-group mb-md">
+          <label class="form-label" style="margin-bottom: 8px;">Keep instead</label>
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            {% for item in databases %}
+              {% if item.provider in ['docker', 'panel_postgres', 'panel_mariadb'] %}
+                <label class="form-check">
+                  <input type="checkbox" name="keep_database_ids" value="{{ item.id }}">
+                  <span>Keep {{ item.kind | title }} service and data</span>
+                </label>
+              {% else %}
+                <p class="form-hint" style="margin-top: 0;">{{ item.kind | title }} ({{ item.provider }}) is external and is always kept.</p>
+              {% endif %}
+            {% endfor %}
+            {% if app.data_volume %}
+              <label class="form-check">
+                <input type="checkbox" name="keep_app_volume" value="true">
+                <span>Keep application data volume</span>
+              </label>
+            {% endif %}
+            {% if app.wordpress_content_volume %}
+              <label class="form-check">
+                <input type="checkbox" name="keep_wordpress_files" value="true">
+                <span>Keep WordPress uploads, plugins, and themes</span>
+              </label>
+            {% endif %}
+            {% if backups %}
+              <label class="form-check">
+                <input type="checkbox" name="keep_saved_backups" value="true">
+                <span>Keep {{ backups | length }} local backup{{ '' if backups | length == 1 else 's' }}</span>
+              </label>
+            {% endif %}
+          </div>
+        </div>
+        {% endif %}
+        
+        <div class="form-group">
+          <label class="form-label" for="confirmation">Confirm deletion</label>
+          <p class="form-hint">Type DELETE ALL to continue.</p>
+          <input class="form-input" id="confirmation" name="confirmation" required>
+        </div>
+        {% include "partials/csrf_field.html" %}
+      </div>
+      <div class="modal__footer">
+        <button class="btn btn--secondary" type="button" data-app-delete-close>Cancel</button>
+        <button class="btn btn--danger" type="submit">Delete all</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}

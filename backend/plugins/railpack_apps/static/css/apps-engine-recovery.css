@@ -6,3 +6,7 @@
   .apps-engine-recovery__row { align-items: stretch; flex-direction: column; }
   .apps-engine-recovery__row .btn { width: 100%; }
 }
+
+.apps-engine-recovery[hidden] {
+  display: none !important;
+}
