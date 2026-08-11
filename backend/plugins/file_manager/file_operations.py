@@ -19,8 +19,8 @@ def read_text(context: file_service.FileContext, path: str) -> dict[str, Any]:
     return _service(context).read_text(context, path)
 
 
-def write_text(context: file_service.FileContext, path: str, content: str, etag: str | None, protected: set[str]) -> int:
-    return _service(context).write_text(context, path, content, etag, protected)
+def write_text(context: file_service.FileContext, path: str, content: str, etag: str | None, protected: set[str], is_base64: bool = False) -> int:
+    return _service(context).write_text(context, path, content, etag, protected, is_base64=is_base64)
 
 
 def write_upload_file(context: file_service.FileContext, path: str, source: Path, size: int, etag: str | None) -> int:

@@ -35,6 +35,7 @@ class TextWrite(BaseModel):
     path: str
     content: str
     etag: str | None = None
+    is_base64: bool = False
 
 
 class DirectoryCreate(BaseModel):
@@ -206,7 +207,7 @@ def _mkdir(context: file_service.FileContext, path: str) -> dict[str, bool]:
 
 def _write(context: file_service.FileContext, body: TextWrite, protected: set[str]) -> dict[str, Any]:
     return {
-        "size": file_operations.write_text(context, body.path, body.content, body.etag, protected),
+        "size": file_operations.write_text(context, body.path, body.content, body.etag, protected, is_base64=body.is_base64),
         "restart_required": context.root.kind == "environment",
     }
 

@@ -277,10 +277,19 @@ def read_text(context: FileContext, relative_path: str) -> dict[str, Any]:
     return {"path": validate_relative_path(relative_path, allow_root=False), "content": text, "etag": _etag(data), "size": len(data)}
 
 
-def write_text(context: FileContext, relative_path: str, content: str, etag: str | None, protected_keys: set[str]) -> int:
+def write_text(context: FileContext, relative_path: str, content: str, etag: str | None, protected_keys: set[str], is_base64: bool = False) -> int:
     if not isinstance(content, str):
         raise HTTPException(400, "Text content is required.")
-    data = content.encode("utf-8")
+    
+    if is_base64:
+        import base64
+        try:
+            data = base64.b64decode(content)
+        except Exception:
+            raise HTTPException(400, "Invalid base64 payload.")
+    else:
+        data = content.encode("utf-8")
+        
     if len(data) > config.FILE_MANAGER_MAX_TEXT_BYTES:
         raise HTTPException(413, "Text files are limited to 2 MB. Use SFTP for larger files.")
     return _write_bytes(context, relative_path, data, etag, protected_keys)

@@ -22,7 +22,8 @@ document.addEventListener('DOMContentLoaded', () => {
     aceEditor.setOptions({
       fontSize: "14px",
       showPrintMargin: false,
-      wrap: true
+      wrap: true,
+      useWorker: false
     });
   }
 });
@@ -132,7 +133,7 @@ async function loadRoots() {
       resetView();
     }
   } catch (err) {
-    showToast('Failed to load roots: ' + err.message, 'error');
+    window.showToast('Failed to load roots: ' + err.message, 'error');
   }
 }
 
@@ -216,7 +217,7 @@ function handleApiError(err) {
   if (err.status === 409) {
     loadRoots();
   } else {
-    showToast(err.message, 'error');
+    window.showToast(err.message, 'error');
   }
 }
 
@@ -286,10 +287,10 @@ async function handleUpload(e) {
       if (confirm(`Conflict: ${err.message}. Overwrite?`)) {
         // We'd need etag to overwrite, which we don't have easily here.
         // Let's just show the error for now per simple requirements.
-        showToast(err.message, 'error');
+        window.showToast(err.message, 'error');
       }
     } else {
-      showToast(err.message, 'error');
+      window.showToast(err.message, 'error');
     }
   } finally {
     e.target.value = '';
@@ -383,9 +384,9 @@ async function handleSaveText() {
   try {
     const data = await api.saveText(state.appId, state.rootId, textEditorFile.path, content, textEditorFile.etag);
     if (data.restart_required) {
-      showToast('Values take effect after the next Apps Engine restart or redeploy.', 'warning');
+      window.showToast('Values take effect after the next Apps Engine restart or redeploy.', 'warning');
     } else {
-      showToast('File saved successfully.', 'success');
+      window.showToast('File saved successfully.', 'success');
     }
     closeModal('modal-text-editor');
     loadEntries();
