@@ -36,7 +36,7 @@
   background: var(--color-header-bg-bar);
   height: 38px;
   min-height: 38px;
-  padding: 0 var(--page-gutter);
+  padding: 0 20px;
   margin-bottom: 16px;
   border-bottom: 1px solid var(--color-line);
   margin-inline: calc(var(--page-gutter) * -1);
@@ -46,11 +46,6 @@
 .section__header:has(+ .table-wrap),
 .section__header:has(+ .section__body > .table-wrap) {
   margin-bottom: 0;
-}
-/* Fallback for browsers without :has support */
-.section__header + .table-wrap,
-.section__header + .section__body > .table-wrap {
-  margin-top: -16px;
 }
 .section__header h3, .section__header h2 { 
   color: var(--color-text);
