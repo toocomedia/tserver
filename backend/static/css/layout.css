@@ -153,10 +153,11 @@ html[data-sidebar-style="opacity"] .sidebar__item--active,
 html[data-sidebar-style="opacity"] .sidebar__item--active:hover {
   background: color-mix(in srgb, var(--color-accent) 15%, transparent) !important;
   color: var(--color-accent) !important;
+  margin: 0 12px;
 }
 
 html[data-sidebar-style="opacity"] .sidebar__item--active {
-  border-left-color: var(--color-accent) !important;
+  border-left-color: transparent !important;
 }
 
 /* Sidebar Active Style: Just Line */
