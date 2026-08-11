@@ -476,8 +476,8 @@ html[data-theme="charcoal"] .apps-engine-optic .db-toggle-icon {
 .apps-engine-optic .db-options-panel {
   background: transparent;
   padding: 0;
-  margin-top: 24px;
-  margin-bottom: 32px;
+  margin-top: 12px;
+  margin-bottom: 16px;
 }
 
 .apps-engine-optic .db-options-grid {
@@ -485,13 +485,13 @@ html[data-theme="charcoal"] .apps-engine-optic .db-toggle-icon {
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 20px;
   align-items: end;
+  background: var(--optic-box-bg);
+  padding: 16px;
 }
 
 .apps-engine-optic .db-options-column {
   display: flex;
   flex-direction: column;
-  background: var(--optic-box-bg);
-  padding: 12px;
 }
 
 .apps-engine-optic .db-options-panel .custom-dropdown {
