@@ -16,6 +16,7 @@
 
     --text-main: var(--color-text);
     --text-muted: var(--color-muted);
+    --border-line: var(--color-line);
 
     /* Universal Adaptive Button Themes */
     --btn-bg: var(--color-secondary-btn);
