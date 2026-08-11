@@ -171,6 +171,17 @@ html[data-sidebar-style="line"] .sidebar__item--active {
   border-left-color: var(--color-accent) !important;
 }
 
+/* Sidebar Active Style: Gradient */
+html[data-sidebar-style="gradient"] .sidebar__item--active,
+html[data-sidebar-style="gradient"] .sidebar__item--active:hover {
+  background: linear-gradient(to right, color-mix(in srgb, var(--color-accent) 50%, transparent), transparent) !important;
+  color: var(--color-accent) !important;
+}
+
+html[data-sidebar-style="gradient"] .sidebar__item--active {
+  border-left-color: var(--color-accent) !important;
+}
+
 .sidebar__item svg {
   width: 16px;
   height: 16px;

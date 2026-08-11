@@ -447,6 +447,8 @@
               document.documentElement.setAttribute("data-sidebar-style", "line");
             } else if (val === "opacity") {
               document.documentElement.setAttribute("data-sidebar-style", "opacity");
+            } else if (val === "gradient") {
+              document.documentElement.setAttribute("data-sidebar-style", "gradient");
             } else {
               document.documentElement.removeAttribute("data-sidebar-style");
             }
