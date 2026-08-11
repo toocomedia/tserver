@@ -46,6 +46,8 @@
     var sidebarStyle = localStorage.getItem('sidebar_style') || 'full';
     if (sidebarStyle === 'line') {
       document.documentElement.setAttribute('data-sidebar-style', 'line');
+    } else if (sidebarStyle === 'opacity') {
+      document.documentElement.setAttribute('data-sidebar-style', 'opacity');
     }
   </script>
   {% block head %}{% endblock %}

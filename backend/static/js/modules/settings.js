@@ -445,6 +445,8 @@
             localStorage.setItem("sidebar_style", val);
             if (val === "line") {
               document.documentElement.setAttribute("data-sidebar-style", "line");
+            } else if (val === "opacity") {
+              document.documentElement.setAttribute("data-sidebar-style", "opacity");
             } else {
               document.documentElement.removeAttribute("data-sidebar-style");
             }

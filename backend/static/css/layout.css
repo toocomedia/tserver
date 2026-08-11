@@ -148,6 +148,17 @@
   border-left-color: var(--color-accent-2);
 }
 
+/* Sidebar Active Style: Opacity */
+html[data-sidebar-style="opacity"] .sidebar__item--active,
+html[data-sidebar-style="opacity"] .sidebar__item--active:hover {
+  background: color-mix(in srgb, var(--color-accent) 15%, transparent) !important;
+  color: var(--color-accent) !important;
+}
+
+html[data-sidebar-style="opacity"] .sidebar__item--active {
+  border-left-color: var(--color-accent) !important;
+}
+
 /* Sidebar Active Style: Just Line */
 html[data-sidebar-style="line"] .sidebar__item--active,
 html[data-sidebar-style="line"] .sidebar__item--active:hover {
