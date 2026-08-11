@@ -76,3 +76,14 @@
     opacity: 1; /* Always visible on mobile */
   }
 }
+
+/* Override Ace Editor background to match theme */
+#editor-textarea.ace_editor,
+#editor-textarea .ace_scroller {
+  background-color: var(--color-bg) !important;
+}
+#editor-textarea .ace_gutter {
+  background-color: var(--color-surface) !important;
+  color: var(--color-muted) !important;
+  border-right: 1px solid var(--color-line) !important;
+}
