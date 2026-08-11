@@ -753,40 +753,8 @@ select.form-input option {
     color: var(--btn-danger-text, #ef4444);
 }
 
-/* Sleek Custom Scrollbars for Growing Lists */
-.list-content::-webkit-scrollbar,
-.content-panel::-webkit-scrollbar,
-.data-list::-webkit-scrollbar,
-#maddy-diagnostic-logs::-webkit-scrollbar {
-    width: 5px;
-    height: 5px;
-}
-
-.list-content::-webkit-scrollbar-track,
-.content-panel::-webkit-scrollbar-track,
-.data-list::-webkit-scrollbar-track,
-#maddy-diagnostic-logs::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-.list-content::-webkit-scrollbar-thumb,
-.content-panel::-webkit-scrollbar-thumb,
-.data-list::-webkit-scrollbar-thumb,
-#maddy-diagnostic-logs::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.15);
-    border-radius: 10px;
-}
-
-.list-content::-webkit-scrollbar-thumb:hover,
-.content-panel::-webkit-scrollbar-thumb:hover,
-.data-list::-webkit-scrollbar-thumb:hover,
-#maddy-diagnostic-logs::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.3);
-}
-
+/* Scrollbars are now handled globally in main.css */
 .list-content, .content-panel, .data-list {
-    scrollbar-width: thin;
-    scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
     scroll-behavior: smooth;
 }
 
