@@ -2,8 +2,15 @@
 # Allow Docker bridge networks to reach locally managed MariaDB.
 set -euo pipefail
 
+# Ensure the mariadb manager helper is up to date (syncs our source code changes to the system path)
+HELPER_SOURCE="$(cd "$(dirname "$0")/../../../../scripts" && pwd)/mariadb_manager_helper.py"
+HELPER_TARGET="/usr/local/lib/srv-panel/mariadb-manager"
+if [[ -f "$HELPER_SOURCE" ]]; then
+  install -d -m 755 /usr/local/lib/srv-panel
+  install -m 700 "$HELPER_SOURCE" "$HELPER_TARGET"
+fi
+
 # Find the config file that defines bind-address
-# Usually /etc/mysql/mariadb.conf.d/50-server.cnf on Debian/Ubuntu
 CONF_FILES="/etc/mysql/mariadb.conf.d/60-srv-panel.cnf /etc/mysql/mariadb.conf.d/50-server.cnf /etc/mysql/my.cnf /etc/my.cnf"
 TARGET_CONF=""
 
