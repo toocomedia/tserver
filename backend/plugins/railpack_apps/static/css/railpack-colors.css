@@ -1,0 +1,26 @@
+/* ============================================================
+   RAILPACK COLOR MANAGER
+   Base theme mapping for all Railpack plugin components.
+   Ensures robust contrast across all Panel modes (Light, Dark, AMOLED, Charcoal).
+   ============================================================ */
+
+/* Light Theme (Default) */
+:root {
+  --optic-box-bg: var(--color-secondary-btn);
+  --optic-box-hover: var(--color-secondary-hover);
+  --optic-input-bg: var(--color-surface);
+  --optic-input-hover: var(--color-bg);
+}
+
+/* Dark Themes */
+[data-theme="dark"],
+[data-theme="amoled"],
+[data-theme="charcoal"] {
+  /* Boxes use secondary-btn but highlight to row-active */
+  --optic-box-bg: var(--color-secondary-btn);
+  --optic-box-hover: var(--color-row-active);
+  
+  /* Inputs use a dark tint for clear distinction against both surface & bg */
+  --optic-input-bg: var(--color-header-bg-bar);
+  --optic-input-hover: var(--color-surface);
+}

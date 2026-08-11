@@ -3,6 +3,8 @@
    Scoped to .apps-engine-optic — uses panel CSS variables
    ============================================================ */
 
+
+
 .apps-engine-optic {
   width: 860px;
   max-width: 100%;
@@ -153,7 +155,7 @@
   font-size: 13px;
   font-family: inherit;
   font-weight: 500;
-  background: rgba(128, 128, 128, 0.1);
+  background: var(--optic-input-bg);
   color: var(--color-text);
   border: none !important;
   display: flex;
@@ -167,11 +169,11 @@
 
 .apps-engine-optic .custom-dropdown__trigger:hover,
 .apps-engine-optic .custom-dropdown.is-open .custom-dropdown__trigger {
-  background: rgba(128, 128, 128, 0.15);
+  background: var(--optic-input-hover);
 }
 
 .apps-engine-optic .custom-dropdown__trigger:focus {
-  background: rgba(128, 128, 128, 0.15);
+  background: var(--optic-input-hover);
   box-shadow: inset 0 0 0 1px var(--color-accent) !important;
 }
 
@@ -203,7 +205,7 @@
   left: 0;
   width: 100%;
   min-width: 160px;
-  background: rgba(128, 128, 128, 0.1);
+  background: var(--optic-input-bg);
   border: none;
   z-index: 500;
   max-height: 200px;
@@ -249,7 +251,7 @@
   padding: 0 14px;
   font-size: 13px;
   font-family: inherit;
-  background: rgba(128, 128, 128, 0.1);
+  background: var(--optic-input-bg);
   color: var(--color-text);
   border: none !important;
   outline: none !important;
@@ -257,11 +259,11 @@
 }
 
 .apps-engine-optic .input-optic:hover {
-  background: rgba(128, 128, 128, 0.15);
+  background: var(--optic-input-hover);
 }
 
 .apps-engine-optic .input-optic:focus {
-  background: rgba(128, 128, 128, 0.15);
+  background: var(--optic-input-hover);
   box-shadow: inset 0 0 0 1px var(--color-accent) !important;
 }
 
@@ -312,7 +314,7 @@
   justify-content: flex-start;
   gap: 10px;
   padding: 18px 12px 14px;
-  background: var(--color-secondary-btn);
+  background: var(--optic-box-bg);
   color: var(--color-muted);
   border: none !important;
   border-radius: 0 !important;
@@ -326,14 +328,14 @@
 }
 
 .apps-engine-optic .optic-card:hover {
-  background: rgba(128, 128, 128, 0.15);
+  background: var(--optic-box-hover);
   color: var(--color-text);
 }
 
 .apps-engine-optic .optic-card.selected,
 .apps-engine-optic .optic-card.settings-choice--active,
 .apps-engine-optic .optic-card:has(input:checked) {
-  background: rgba(128, 128, 128, 0.15);
+  background: var(--optic-box-hover);
   color: var(--color-text);
 }
 
@@ -341,7 +343,7 @@
   opacity: 0.5;
   cursor: not-allowed;
   pointer-events: none;
-  background: var(--color-secondary-btn);
+  background: var(--optic-box-bg);
 }
 
 /* accent top bar on selected */
@@ -399,7 +401,7 @@ html[data-theme="charcoal"] .apps-engine-optic .db-toggle-icon {
 
 .apps-engine-optic .db-toggle-card {
   position: relative;
-  background: var(--color-secondary-btn);
+  background: var(--optic-box-bg);
   transition: background 0.15s ease;
 }
 
@@ -418,12 +420,12 @@ html[data-theme="charcoal"] .apps-engine-optic .db-toggle-icon {
 }
 
 .apps-engine-optic .db-toggle-card:hover .db-toggle-label {
-  background: rgba(128, 128, 128, 0.15);
+  background: var(--optic-box-hover);
   color: var(--color-text);
 }
 
 .apps-engine-optic .db-toggle-card.settings-choice--active {
-  background: rgba(128, 128, 128, 0.15);
+  background: var(--optic-box-hover);
 }
 
 .apps-engine-optic .db-toggle-card.settings-choice--active::before {
@@ -488,7 +490,7 @@ html[data-theme="charcoal"] .apps-engine-optic .db-toggle-icon {
 .apps-engine-optic .db-options-column {
   display: flex;
   flex-direction: column;
-  background: var(--color-secondary-btn);
+  background: var(--optic-box-bg);
   padding: 12px;
 }
 
@@ -524,7 +526,7 @@ html[data-theme="charcoal"] .apps-engine-optic .db-toggle-icon {
 
 /* ── Inspection card (step 2) ──────────────────────────────── */
 .apps-engine-optic .inspection-card-optic {
-  background: var(--color-secondary-btn);
+  background: var(--optic-box-bg);
   padding: 20px 24px;
   margin-bottom: 20px;
   border-left: 3px solid var(--color-accent);
@@ -613,7 +615,7 @@ html[data-theme="charcoal"] .apps-engine-optic .db-toggle-icon {
 .apps-engine-optic .inspection-item-optic {
   display: flex;
   flex-direction: column;
-  background: var(--color-secondary-btn);
+  background: var(--optic-box-bg);
   padding: 16px 20px;
   gap: 4px;
 }
@@ -667,7 +669,7 @@ html[data-theme="charcoal"] .apps-engine-optic .db-toggle-icon {
   padding: 0 14px;
   font-size: 12px;
   font-family: var(--font-mono, monospace);
-  background: rgba(128, 128, 128, 0.1);
+  background: var(--optic-input-bg);
   color: var(--color-text);
   border: none !important;
   outline: none !important;
@@ -675,11 +677,11 @@ html[data-theme="charcoal"] .apps-engine-optic .db-toggle-icon {
 }
 
 .apps-engine-optic .apps-engine-environment-row input:hover {
-  background: rgba(128, 128, 128, 0.15);
+  background: var(--optic-input-hover);
 }
 
 .apps-engine-optic .apps-engine-environment-row input:focus {
-  background: rgba(128, 128, 128, 0.15);
+  background: var(--optic-input-hover);
   box-shadow: inset 0 0 0 1px var(--color-accent) !important;
 }
 
