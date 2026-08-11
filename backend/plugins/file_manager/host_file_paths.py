@@ -50,10 +50,16 @@ def etag(path: Path) -> str:
 
 def replace_bytes(path: Path, data: bytes) -> None:
     directory(path.parent)
+    try:
+        mode = path.stat().st_mode & 0o777
+    except FileNotFoundError:
+        mode = 0o644
+        
     handle, temporary = tempfile.mkstemp(prefix=".srv-panel-file-", dir=path.parent)
     try:
         with os.fdopen(handle, "wb") as output:
             output.write(data)
+        os.chmod(temporary, mode)
         os.replace(temporary, path)
     finally:
         try:
@@ -64,11 +70,17 @@ def replace_bytes(path: Path, data: bytes) -> None:
 
 def replace_file(path: Path, source: Path) -> None:
     directory(path.parent)
+    try:
+        mode = path.stat().st_mode & 0o777
+    except FileNotFoundError:
+        mode = 0o644
+        
     handle, temporary = tempfile.mkstemp(prefix=".srv-panel-file-", dir=path.parent)
     try:
         with source.open("rb") as input_file, os.fdopen(handle, "wb") as output:
             while block := input_file.read(1024 * 1024):
                 output.write(block)
+        os.chmod(temporary, mode)
         os.replace(temporary, path)
     finally:
         try:
