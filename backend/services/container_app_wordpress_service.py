@@ -57,4 +57,4 @@ def update(app: ContainerApp) -> None:
 
 
 def _cli(app: ContainerApp, command: list[str]) -> list[str]:
-    return ["docker", "run", "--rm", "--network", container_app_service.network_name(app.id), "--volumes-from", app.container_name, "--env-file", app.env_path, WP_CLI_IMAGE, *command]
+    return ["docker", "run", "--rm", "--network", container_app_service.network_name(app.id), "--add-host", "host.docker.internal:host-gateway", "--volumes-from", app.container_name, "--env-file", app.env_path, WP_CLI_IMAGE, *command]
