@@ -8,27 +8,27 @@
     --spacing-xl: 32px;
 
     /* Universal Panel Theme Colors */
-    --bg-body: var(--color-bg, #09090b);
-    --bg-panel: var(--color-surface, #18181b);
-    --bg-glass: var(--color-surface, #18181b);
-    --bg-glass-hover: var(--color-row-active, rgba(125, 125, 125, 0.08));
-    --bg-input: var(--color-bg, #09090b);
+    --bg-body: var(--color-bg);
+    --bg-panel: var(--color-surface);
+    --bg-glass: var(--color-surface);
+    --bg-glass-hover: var(--color-row-active);
+    --bg-input: var(--color-bg);
 
-    --text-main: var(--color-text, #f4f4f5);
-    --text-muted: var(--color-muted, #a1a1aa);
+    --text-main: var(--color-text);
+    --text-muted: var(--color-muted);
 
     /* Universal Adaptive Button Themes */
-    --btn-bg: var(--color-secondary-btn, rgba(125, 125, 125, 0.12));
-    --btn-hover: var(--color-secondary-hover, rgba(125, 125, 125, 0.22));
-    --btn-text: var(--color-text, #f4f4f5);
+    --btn-bg: var(--color-secondary-btn);
+    --btn-hover: var(--color-secondary-hover);
+    --btn-text: var(--color-text);
 
-    --btn-primary-bg: var(--color-secondary-btn, rgba(125, 125, 125, 0.18));
-    --btn-primary-hover: var(--color-secondary-hover, rgba(125, 125, 125, 0.28));
-    --btn-primary-text: var(--color-text, #ffffff);
+    --btn-primary-bg: var(--color-neutral-btn);
+    --btn-primary-hover: var(--color-neutral);
+    --btn-primary-text: var(--color-neutral-text);
 
-    --btn-danger-bg: rgba(239, 68, 68, 0.14);
-    --btn-danger-hover: rgba(239, 68, 68, 0.26);
-    --btn-danger-text: #ef4444;
+    --btn-danger-bg: var(--color-danger-btn);
+    --btn-danger-hover: var(--color-danger);
+    --btn-danger-text: var(--color-danger-text);
 
     /* Structural radius */
     --radius-sm: 4px;
