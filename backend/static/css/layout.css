@@ -174,12 +174,12 @@ html[data-sidebar-style="line"] .sidebar__item--active {
 /* Sidebar Active Style: Gradient */
 html[data-sidebar-style="gradient"] .sidebar__item--active,
 html[data-sidebar-style="gradient"] .sidebar__item--active:hover {
-  background: linear-gradient(to right, color-mix(in srgb, var(--color-accent) 50%, transparent), transparent) !important;
+  background: linear-gradient(to right, color-mix(in srgb, var(--color-accent) 15%, transparent), transparent) !important;
   color: var(--color-accent) !important;
 }
 
 html[data-sidebar-style="gradient"] .sidebar__item--active {
-  border-left-color: var(--color-accent) !important;
+  border-left-color: transparent !important;
 }
 
 .sidebar__item svg {
