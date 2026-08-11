@@ -224,17 +224,17 @@ p {
    DARK THEME
    ============================================================ */
 [data-theme="dark"] {
-  --color-bg:         #0F1720;
-  --color-surface:    #1E293B;
-  --color-header-bg-bar: #1C2735;
+  --color-bg:         #09090b;
+  --color-surface:    #18181b;
+  --color-header-bg-bar: #18181b;
   --color-sidebar:    var(--color-bg); /* Match page background in dark mode */
   --color-sidebar-text: #D1D5DB;
   --color-sidebar-hover: var(--color-text);
   --color-sidebar-border: rgba(255, 255, 255, 0.08);
   --color-sidebar-bg-hover: var(--color-surface);
   --color-text:       #FFFFFF;
-  --color-muted:      #D1D5DB;
-  --color-line:       rgba(255, 255, 255, 0.08);
+  --color-muted:      #A1A1AA;
+  --color-line:       #27272A;
   
   /* Keep accents the same, or dim slightly */
   --color-accent:     #C7F464; 
