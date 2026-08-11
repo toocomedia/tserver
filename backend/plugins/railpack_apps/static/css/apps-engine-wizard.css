@@ -1,6 +1,6 @@
 .apps-engine-wizard { padding-bottom: calc(var(--button-height) + var(--space-xl) + var(--space-xl)); }
 .apps-engine-wizard__target { color: var(--color-muted); margin-bottom: var(--space-lg); }
-.apps-engine-wizard .step-bar { margin-bottom: var(--space-xl); }
+.apps-engine-wizard .step-bar { margin-top: var(--space-xl); margin-bottom: var(--space-xl); }
 .apps-engine-source-grid, .apps-engine-runtime-grid { display: grid; gap: var(--space-lg); grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .apps-engine-source-grid { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
 .apps-engine-database-choice { min-height: 0; }
