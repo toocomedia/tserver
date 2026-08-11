@@ -224,17 +224,17 @@ p {
    DARK THEME
    ============================================================ */
 [data-theme="dark"] {
-  --color-bg:         #09090b;
-  --color-surface:    #27272A;
-  --color-header-bg-bar: #27272A;
+  --color-bg:         #0F1720;
+  --color-surface:    #141D27;
+  --color-header-bg-bar: #1C2735;
   --color-sidebar:    var(--color-bg); /* Match page background in dark mode */
   --color-sidebar-text: #D1D5DB;
   --color-sidebar-hover: var(--color-text);
   --color-sidebar-border: rgba(255, 255, 255, 0.08);
   --color-sidebar-bg-hover: var(--color-surface);
   --color-text:       #FFFFFF;
-  --color-muted:      #A1A1AA;
-  --color-line:       #3F3F46;
+  --color-muted:      #D1D5DB;
+  --color-line:       rgba(255, 255, 255, 0.08);
   
   /* Keep accents the same, or dim slightly */
   --color-accent:     #C7F464; 
@@ -262,16 +262,16 @@ p {
 
 [data-theme="amoled"] {
   --color-bg:         #000000;
-  --color-surface:    #0A0A0A;
-  --color-header-bg-bar: #161616;
+  --color-surface:    #18181b;
+  --color-header-bg-bar: #121212;
   --color-sidebar:    #000000;
   --color-sidebar-text: #D4D4D8;
   --color-sidebar-hover: var(--color-text);
   --color-sidebar-border: rgba(255, 255, 255, 0.2);
-  --color-sidebar-bg-hover: #242424;
+  --color-sidebar-bg-hover: #18181b;
   --color-text:       #FFFFFF;
   --color-muted:      #9CA3AF;
-  --color-line:       rgba(255, 255, 255, 0.2);
+  --color-line:       #27272A;
   
   /* Keep accents the same */
   --color-accent:     #C7F464; 
@@ -280,21 +280,21 @@ p {
   --color-danger:     #EF4444; 
   --color-warn:       #FBBF24;
   --color-icon:       #6B7280; 
-
+  
   /* Button Fills (AMOLED) */
   --color-neutral-btn:   #EAECEF;
   --color-neutral-text:  #000000;
-  --color-secondary-btn: #1E1E1E;
-  --color-secondary-hover:#404040;
+  --color-secondary-btn: #27272A;
+  --color-secondary-hover:#3F3F46;
   --color-danger-btn:    #350A0A;
   --color-danger-text:   #FCA5A5;
-
+  
   /* Components */
   --color-on-solid:   #FFFFFF; 
   --color-on-accent:  #111111;
   --color-alert-success-bg: #111A11;
   --color-alert-danger-bg:  #1A1111;
-  --color-row-active: #2A2A2A;
+  --color-row-active: #27272A;
 }
 
 [data-theme="charcoal"] {
