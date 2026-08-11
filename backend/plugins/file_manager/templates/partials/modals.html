@@ -40,7 +40,32 @@
       </div>
       <div class="modal__footer">
         <button type="button" class="btn btn--secondary" onclick="closeModal('modal-new-folder')">Cancel</button>
-        <button type="submit" class="btn btn--primary" id="btn-submit-new-folder">Create Folder</button>
+        <button type="submit" class="btn btn--primary" id="btn-submit-new-folder">Create</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- New File Modal -->
+<div id="modal-new-file" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="modal-new-file-title">
+  <div class="modal">
+    <form id="form-new-file">
+      <div class="modal__header">
+        <h2 id="modal-new-file-title">New File</h2>
+        <button type="button" class="btn btn--ghost btn--icon" onclick="closeModal('modal-new-file')" aria-label="Close">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <div class="modal__body">
+        <div id="new-file-error" class="alert alert--danger mb-md" style="display: none;"></div>
+        <div class="form-group">
+          <label class="form-label" for="new-file-name">File Name</label>
+          <input type="text" id="new-file-name" class="form-input" required pattern="^[^/\\:*?&quot;<>|]+$" title="Valid filename required" autocomplete="off" placeholder="index.html">
+        </div>
+      </div>
+      <div class="modal__footer">
+        <button type="button" class="btn btn--secondary" onclick="closeModal('modal-new-file')">Cancel</button>
+        <button type="submit" class="btn btn--primary" id="btn-submit-new-file">Create</button>
       </div>
     </form>
   </div>

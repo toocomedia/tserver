@@ -52,6 +52,8 @@ def replace_bytes(path: Path, data: bytes) -> None:
     directory(path.parent)
     try:
         mode = path.stat().st_mode & 0o777
+        if mode < 0o644:
+            mode = 0o644
     except FileNotFoundError:
         mode = 0o644
         
@@ -72,6 +74,8 @@ def replace_file(path: Path, source: Path) -> None:
     directory(path.parent)
     try:
         mode = path.stat().st_mode & 0o777
+        if mode < 0o644:
+            mode = 0o644
     except FileNotFoundError:
         mode = 0o644
         

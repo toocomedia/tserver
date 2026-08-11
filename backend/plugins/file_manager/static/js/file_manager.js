@@ -93,6 +93,13 @@ function setupGlobalListeners() {
   };
   document.getElementById('form-new-folder').onsubmit = handleNewFolder;
   
+  document.getElementById('btn-new-file').onclick = () => {
+    document.getElementById('new-file-name').value = '';
+    document.getElementById('new-file-error').style.display = 'none';
+    openModal('modal-new-file');
+  };
+  document.getElementById('form-new-file').onsubmit = handleNewFile;
+  
   document.getElementById('btn-upload').onclick = () => {
     document.getElementById('fm-file-input').click();
   };
@@ -143,12 +150,15 @@ function onRootSelect(rootId) {
   state.path = '';
   ui.renderRootsTabs(state.roots, state.rootId, onRootSelect);
   
-  // Disable new folder for runtime-env root per rules
+  // Disable new folder and new file for runtime-env root per rules
   const btnNewFolder = document.getElementById('btn-new-folder');
+  const btnNewFile = document.getElementById('btn-new-file');
   if (state.activeRoot && state.activeRoot.kind === 'environment') {
     btnNewFolder.style.display = 'none';
+    btnNewFile.style.display = 'none';
   } else {
     btnNewFolder.style.display = '';
+    btnNewFile.style.display = '';
   }
   
   loadEntries();
@@ -209,7 +219,7 @@ async function loadEntries(isRefresh = false) {
 }
 
 function setControlsEnabled(enabled) {
-  const btns = ['btn-new-folder', 'btn-upload', 'btn-refresh'];
+  const btns = ['btn-new-folder', 'btn-new-file', 'btn-upload', 'btn-refresh'];
   btns.forEach(id => document.getElementById(id).disabled = !enabled);
 }
 
@@ -267,6 +277,26 @@ async function handleNewFolder(e) {
     loadEntries();
   } catch (err) {
     const errDiv = document.getElementById('new-folder-error');
+    errDiv.textContent = err.message;
+    errDiv.style.display = 'block';
+  } finally {
+    btn.classList.remove('is-loading');
+  }
+}
+
+async function handleNewFile(e) {
+  e.preventDefault();
+  const name = document.getElementById('new-file-name').value.trim();
+  if (!name) return;
+  const targetPath = (state.path ? state.path + '/' : '') + name;
+  const btn = document.getElementById('btn-submit-new-file');
+  btn.classList.add('is-loading');
+  try {
+    await api.saveText(state.appId, state.rootId, targetPath, "", null);
+    closeModal('modal-new-file');
+    loadEntries();
+  } catch (err) {
+    const errDiv = document.getElementById('new-file-error');
     errDiv.textContent = err.message;
     errDiv.style.display = 'block';
   } finally {
