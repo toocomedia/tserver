@@ -34,6 +34,9 @@ def rotate_credentials(app: ContainerApp, item: ContainerAppDatabase) -> None:
     if item.provider == "panel_postgres":
         from plugins.postgres_manager import queries as pg
         pg.change_password(item.username or "", updated["PASSWORD"])
+    elif item.provider == "panel_mariadb":
+        from plugins.mariadb_manager.service import mariadb_manager_service
+        updated["PASSWORD"] = mariadb_manager_service.reset_password(item.username or "")
     elif item.kind == "redis":
         databases._require(container_app_service._run(["docker", "rm", "-f", item.container_name or ""], timeout=45), "Could not restart Redis.")
         databases._write_credentials(item, updated)
@@ -52,7 +55,7 @@ def delete_managed(item: ContainerAppDatabase, confirmation: str) -> None:
     if item.provider == "supabase":
         raise HTTPException(400, "Supabase databases are not deleted here — use the Supabase plugin or dashboard.")
     if item.provider != "docker":
-        raise HTTPException(400, "Panel PostgreSQL and external databases are not deleted here.")
+        raise HTTPException(400, "Panel-hosted and external databases are not deleted here.")
     purge_managed(item)
 
 

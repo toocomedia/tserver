@@ -17,7 +17,7 @@ from models.container_app_database import ContainerAppDatabase
 from services import container_app_service
 
 KINDS = {"mariadb", "postgresql", "redis", "mongodb"}
-PROVIDERS = {"docker", "panel_postgres", "supabase", "external"}
+PROVIDERS = {"docker", "panel_postgres", "panel_mariadb", "supabase", "external"}
 DEFAULT_KEYS = {"mariadb": "MYSQL_URL", "postgresql": "DATABASE_URL", "redis": "REDIS_URL", "mongodb": "MONGODB_URI"}
 IMAGES = {"mariadb": "mariadb:11", "postgresql": "postgres:16-alpine", "redis": "redis:7-alpine", "mongodb": "mongo:7"}
 
@@ -41,6 +41,8 @@ def parse_specs(raw: object) -> list[dict[str, str]]:
             raise HTTPException(400, "Database attachment values are invalid.")
         if provider == "panel_postgres" and kind != "postgresql":
             raise HTTPException(400, "Panel PostgreSQL is only available for PostgreSQL attachments.")
+        if provider == "panel_mariadb" and kind != "mariadb":
+            raise HTTPException(400, "Panel MariaDB is only available for MariaDB attachments.")
         if provider == "supabase" and kind != "postgresql":
             raise HTTPException(400, "Supabase is only available for PostgreSQL attachments.")
         supabase_project_id = str(item.get("supabase_project_id", ""))
@@ -68,6 +70,8 @@ async def create_attachments(db: AsyncSession, app: ContainerApp, specs: list[di
         _write_credentials(item, _new_credentials(item))
         if item.provider == "panel_postgres":
             _provision_panel_postgres(app, item)
+        elif item.provider == "panel_mariadb":
+            _provision_panel_mariadb(app, item)
         elif item.provider == "supabase":
             await _provision_supabase(app, item, spec.get("supabase_project_id", ""), db)
         else:
@@ -226,6 +230,25 @@ def _provision_panel_postgres(app: ContainerApp, item: ContainerAppDatabase) -> 
         pg.create_database(item.database_name, item.username)
     except Exception:
         pg.drop_app_database_and_user(item.database_name, item.username)
+        raise
+
+
+def _provision_panel_mariadb(app: ContainerApp, item: ContainerAppDatabase) -> None:
+    if not dependency_manager.is_healthy("mariadb"):
+        raise HTTPException(409, "Start MariaDB from Dependencies before using panel MariaDB.")
+    from plugins.mariadb_manager.service import mariadb_manager_service
+    creds = _read_credentials(item)
+    item.database_name, item.username, item.network_alias = creds["DATABASE"], creds["USERNAME"], "host.docker.internal"
+    try:
+        res = mariadb_manager_service.create_database(item.database_name, item.username)
+        creds["PASSWORD"] = res["password"]
+        _write_credentials(item, creds)
+    except Exception:
+        try:
+            mariadb_manager_service.drop_database(item.database_name)
+            mariadb_manager_service.drop_user(item.username)
+        except Exception:
+            pass
         raise
 
 

@@ -210,13 +210,15 @@ if (form) {
   function attachments() {
     return [...form.querySelectorAll('[data-database-row]')].flatMap((row) => {
       if (!row.querySelector('[data-database-enabled]').checked) return [];
-      const provider = row.querySelector('[data-database-provider]').value;
-      const supabasePicker = row.querySelector('[data-database-supabase-project]');
+      const providerEl = _dbField(row, '[data-database-provider]');
+      const provider = providerEl ? providerEl.value : 'docker';
+      const supabasePicker = _dbField(row, '[data-database-supabase-project]');
       const supabase_project_id = supabasePicker ? supabasePicker.value : '';
       if (provider === 'supabase' && !supabase_project_id) {
         throw new Error('Select a Supabase project for the PostgreSQL attachment.');
       }
-      return [{ kind: row.dataset.kind, provider, environment_key: row.querySelector('[data-database-key]').value, external_url: row.querySelector('[data-database-url]') ? row.querySelector('[data-database-url]').value : '', supabase_project_id }];
+      const urlEl = _dbField(row, '[data-database-url]');
+      return [{ kind: row.dataset.kind, provider, environment_key: row.querySelector('[data-database-key]').value, external_url: urlEl ? urlEl.value : '', supabase_project_id }];
     });
   }
 

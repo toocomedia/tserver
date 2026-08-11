@@ -159,6 +159,10 @@ def database_environment(mode: str, database_url: str | None, values: dict[str, 
         if "DATABASE_URL" in values or database_url:
             raise HTTPException(400, "Panel PostgreSQL creates this app's DATABASE_URL automatically.")
         return dict(values)
+    if mode == "panel_mariadb":
+        if "MYSQL_URL" in values or database_url:
+            raise HTTPException(400, "Panel MariaDB creates this app's MYSQL_URL automatically.")
+        return dict(values)
     if mode != "external" or not database_url:
         raise HTTPException(400, "Choose no database or provide an external DATABASE_URL.")
     parsed = urlsplit(database_url)
@@ -175,6 +179,8 @@ def _legacy_attachment_specs(mode: str, database_url: str | None) -> list[dict[s
         return []
     if mode == "panel_postgres":
         return [{"kind": "postgresql", "provider": "panel_postgres", "environment_key": "DATABASE_URL"}]
+    if mode == "panel_mariadb":
+        return [{"kind": "mariadb", "provider": "panel_mariadb", "environment_key": "MYSQL_URL"}]
     if mode == "external" and database_url:
         return [{"kind": "postgresql", "provider": "external", "environment_key": "DATABASE_URL", "external_url": database_url}]
     raise HTTPException(400, "Choose no database or provide an external DATABASE_URL.")
