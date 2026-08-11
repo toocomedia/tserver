@@ -17,14 +17,16 @@
 .apps-engine-action-inner__right { align-items: center; }
 
 .apps-engine-wizard-error {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
   width: 100%;
-  background: var(--color-danger-btn);
-  color: var(--color-danger-text);
-  padding: 12px 20px;
+  background: var(--color-danger);
+  color: #fff;
+  padding: 10px 20px;
   text-align: center;
-  font-weight: 600;
-  font-size: var(--font-small);
-  border-top: 1px solid rgba(0, 0, 0, 0.05);
+  font-size: 13px;
+  z-index: 10;
 }
 
 .apps-engine-wizard [hidden] { display: none !important; }
