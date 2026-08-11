@@ -427,7 +427,7 @@
     // Sidebar style toggle logic
     const sidebarRadios = document.querySelectorAll('input[name="sidebar_style"]');
     if (sidebarRadios.length) {
-      const savedStyle = localStorage.getItem("sidebar_style") || "full";
+      const savedStyle = localStorage.getItem("sidebar_style") || "gradient";
       sidebarRadios.forEach(radio => {
         if (radio.value === savedStyle) {
           radio.checked = true;
