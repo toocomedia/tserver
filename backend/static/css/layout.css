@@ -56,8 +56,8 @@
   border-color: var(--color-sidebar-border);
 }
 
-.sidebar__search:focus-within ~ .sidebar__logo-img,
-.sidebar__search.is-expanded ~ .sidebar__logo-img {
+.sidebar__logo:has(.sidebar__search:focus-within) .sidebar__logo-img,
+.sidebar__logo:has(.sidebar__search.is-expanded) .sidebar__logo-img {
   opacity: 0;
   transform: scale(0.9);
   pointer-events: none;
