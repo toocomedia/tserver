@@ -291,14 +291,17 @@ function openDomainDetail(domain, serverIp) {
   const searchInput = document.getElementById('account-search-input');
   if (searchInput) searchInput.value = "";
   
-  // Highlight active item in split sidebar
-  document.querySelectorAll('.maddy-split-sidebar .domain-item').forEach(el => {
-    if (el.getAttribute('data-domain') === domain) {
+  // Highlight active row in list
+  document.querySelectorAll('#listContent .list-item').forEach(el => {
+    el.classList.remove('active');
+    const titleEl = el.querySelector('.domain-name-text');
+    if (titleEl && titleEl.innerText.trim() === domain.trim()) {
       el.classList.add('active');
-    } else {
-      el.classList.remove('active');
     }
   });
+
+  const layout = document.getElementById('maddyLayout');
+  if (layout) layout.classList.add('is-split');
 
   safeSetText('detail-domain-name', domain);
   safeSetText('delete-domain-name-text', domain);
@@ -680,13 +683,7 @@ async function repairMaddyConfig() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  const firstItem = document.querySelector('.maddy-split-sidebar .domain-item');
-  if (firstItem) {
-    const domain = firstItem.getAttribute('data-domain');
-    if (domain) {
-      openDomainDetail(domain, "{{ server_ip }}");
-    }
-  }
+  updateScrollButtonsVisibility();
 });
 </script>
 

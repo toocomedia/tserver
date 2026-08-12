@@ -13,120 +13,187 @@
 
 {% block head %}
 <style>
-.maddy-split-layout {
+.maddy-layout {
   display: flex;
   width: 100%;
   height: calc(100vh - var(--topbar-height));
   overflow: hidden;
   background: var(--color-bg);
 }
-.maddy-split-sidebar {
-  width: 260px;
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  border-right: 1px solid var(--color-line);
-  background: var(--color-bg);
-  padding: var(--space-md) 0;
-  overflow-y: auto;
-}
-.maddy-split-sidebar__header {
-  padding: 0 var(--space-lg) var(--space-sm);
-  font-size: var(--font-small);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--color-muted);
-}
-.maddy-split-sidebar__item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  min-height: 44px;
-  padding: var(--space-xs) var(--space-lg);
-  font-size: var(--font-body);
-  font-weight: 600;
-  color: var(--color-muted);
-  background: transparent;
-  border-left: 3px solid transparent;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background 0.1s, color 0.1s, border-color 0.1s;
-}
-.maddy-split-sidebar__item:hover {
-  background: var(--color-surface);
-  color: var(--color-text);
-}
-.maddy-split-sidebar__item.active {
-  background: var(--color-surface);
-  color: var(--color-text);
-  border-left-color: var(--color-accent);
-}
-.maddy-split-sidebar__footer {
-  margin-top: auto;
-  padding: var(--space-md) var(--space-lg) 0;
-  border-top: 1px solid var(--color-line);
-}
-
-.maddy-split-content {
+.maddy-master {
   flex: 1;
   width: 100%;
-  min-width: 0;
-  padding: var(--space-md) var(--page-gutter) var(--page-gutter);
+  padding: 0;
+  margin: 0;
   overflow-y: auto;
   overflow-x: hidden;
   display: flex;
   flex-direction: column;
 }
+.maddy-master .table-wrap {
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none;
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow-x: hidden !important;
+}
+.maddy-detail {
+  width: 0;
+  opacity: 0;
+  visibility: hidden;
+  overflow: hidden;
+  border-left: none;
+  background: var(--color-bg);
+  pointer-events: none;
+}
+.maddy-detail__inner {
+  padding: var(--space-md) var(--page-gutter) var(--page-gutter) var(--page-gutter);
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  box-sizing: border-box;
+}
+
+@media (min-width: 768px) {
+  .maddy-layout.is-split .maddy-master {
+    width: 280px;
+    flex: none;
+    display: flex;
+  }
+  .maddy-layout.is-split .maddy-detail {
+    flex: 1;
+    width: auto;
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    border-left: 1px solid var(--color-line);
+  }
+}
+
+@media (max-width: 767px) {
+  .maddy-layout.is-split .maddy-master {
+    display: none;
+  }
+  .maddy-layout.is-split .maddy-detail {
+    width: 100%;
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    border-left: none;
+  }
+}
+
+/* Prevent horizontal scrolling on master list table with rule of 0 margin on side and inside padding */
+#maddy-domains-table {
+  width: 100%;
+  table-layout: fixed;
+  margin: 0;
+  border-collapse: collapse;
+}
+#maddy-domains-table th,
+#maddy-domains-table td {
+  padding-left: var(--page-gutter, 16px);
+  padding-right: var(--page-gutter, 16px);
+}
+#maddy-domains-table th:first-child,
+#maddy-domains-table td:first-child {
+  padding-left: var(--page-gutter, 16px);
+}
+#maddy-domains-table th:last-child,
+#maddy-domains-table td:last-child {
+  padding-right: var(--page-gutter, 16px);
+}
+.maddy-master .domain-name-text {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* When split, hide extra columns in master list */
+.maddy-layout.is-split .maddy-master .col-hide-on-split {
+  display: none;
+}
+
+/* Make list items look active */
+.list-item {
+  transition: background 0.15s ease;
+  cursor: pointer;
+}
+.list-item:hover {
+  background: var(--color-surface);
+}
+.list-item.active {
+  background: var(--color-row-active, var(--color-surface));
+}
+
+.detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-md);
+  margin: 0;
+  padding: 0;
+}
+
+/* Fix margin gap on the detail list tables to stretch full width */
+.maddy-detail__inner .table-wrap {
+  margin-left: calc(var(--page-gutter, 24px) * -1) !important;
+  margin-right: calc(var(--page-gutter, 24px) * -1) !important;
+  width: auto !important;
+}
+.maddy-detail__inner .table th:first-child,
+.maddy-detail__inner .table td:first-child {
+  padding-left: var(--page-gutter, 24px) !important;
+}
+.maddy-detail__inner .table th:last-child,
+.maddy-detail__inner .table td:last-child {
+  padding-right: var(--page-gutter, 24px) !important;
+}
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="maddy-split-layout" id="maddyLayout">
+<div class="maddy-layout" id="maddyLayout">
   
-  {% if plugin_installed %}
-    <!-- Left Domain List Control Sidebar (Matches App Standard Split Sidebar) -->
-    <div class="maddy-split-sidebar" id="maddy-sidebar">
-      <div class="maddy-split-sidebar__header">
-        Mail Domains
+  <div class="maddy-master">
+    {% if plugin_installed %}
+      <div class="table-wrap">
+        <table class="table" id="maddy-domains-table">
+          <thead>
+            <tr>
+              <th>Domain</th>
+              <th class="col-hide-on-split">Status</th>
+              <th class="col-actions col-hide-on-split">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="listContent">
+            {% if mail_domains %}
+              {% for d in mail_domains %}
+                <tr class="list-item" onclick="openDomainDetail('{{ d.domain }}', '{{ d.server_ip }}')" style="cursor: pointer;">
+                  <td class="table-title"><strong class="domain-name-text">{{ d.domain }}</strong></td>
+                  <td class="col-hide-on-split"><span class="badge-minimal badge-minimal--active">Active</span></td>
+                  <td class="col-actions col-hide-on-split">
+                    <button type="button" class="btn btn--sm btn--surface">Manage</button>
+                  </td>
+                </tr>
+              {% endfor %}
+            {% else %}
+              <tr>
+                <td colspan="3" class="text-muted" style="text-align: center; padding: var(--space-xl);">No mail domains configured.</td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
       </div>
-
-      <div style="flex: 1; overflow-y: auto;">
-        {% if mail_domains %}
-          {% for d in mail_domains %}
-            <div class="maddy-split-sidebar__item domain-item {% if loop.first %}active{% endif %}"
-                 onclick="openDomainDetail('{{ d.domain }}', '{{ d.server_ip }}')"
-                 data-domain="{{ d.domain }}">
-              <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;">{{ d.domain }}</span>
-              <span class="badge-minimal badge-minimal--active" style="margin-left: 8px; flex-shrink: 0;">Active</span>
-            </div>
-          {% endfor %}
-        {% else %}
-          <div class="text-muted" style="padding: var(--space-md) var(--space-lg); font-size: 13px;">No mail domains configured.</div>
-        {% endif %}
-      </div>
-
-      <div class="maddy-split-sidebar__footer">
-        <div style="font-weight: 600; color: var(--color-text); font-size: 13px;">Maddy Mail Server</div>
-        <div style="font-size: var(--font-small); color: var(--color-muted);">Version {{ plugin_version }}</div>
-      </div>
-    </div>
-
-    <!-- Right Main Content Panel -->
-    <div class="maddy-split-content" id="maddy-content-panel">
-      {% if mail_domains %}
-        {% include 'partials/_domains_tab.html' %}
-      {% else %}
-        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 300px; text-align: center; gap: var(--space-md);">
-          <h3 style="font-size: var(--font-h2);">No Domains Added</h3>
-          <p style="color: var(--color-muted); max-width: 400px;">Add your first mail domain to start managing mailboxes, DNS records, and SSL certificates.</p>
-          <button type="button" class="btn btn--surface" onclick="openAddDomain()">+ Add Domain</button>
-        </div>
-      {% endif %}
-    </div>
-  {% else %}
-    <div class="maddy-split-content" style="display: flex; align-items: center; justify-content: center; min-height: 400px;">
-      <div style="text-align: center; max-width: 400px; display: flex; flex-direction: column; gap: var(--space-md); align-items: center;">
+    {% else %}
+      <div style="text-align: center; max-width: 400px; display: flex; flex-direction: column; gap: var(--space-md); align-items: center; justify-content: center; height: 100%;">
         <h3 style="font-size: var(--font-h2);">Mail Server Not Installed</h3>
         <p style="color: var(--color-muted);">Maddy Mail Server is required to manage domains and mailboxes.</p>
         <form method="post" action="/plugins/maddy/api/install" style="width: 100%;">
@@ -136,10 +203,17 @@
           </button>
         </form>
       </div>
-    </div>
-  {% endif %}
-</div>
+    {% endif %}
+  </div>
 
+  <div class="maddy-detail" id="maddyDetailPanel">
+    <div class="maddy-detail__inner">
+      {% if plugin_installed %}
+        {% include 'partials/_domains_tab.html' %}
+      {% endif %}
+    </div>
+  </div>
+</div>
 
 {% if plugin_installed %}
   <!-- Add Domain Modal -->
