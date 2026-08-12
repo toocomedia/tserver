@@ -1,7 +1,7 @@
 {% extends "layout.html" %}
 
 {% block title %}Mail Server (Maddy) — VPS Panel{% endblock %}
-{% block content_class %}content--flush{% endblock %}
+{% block content_class %}{% endblock %}
 
 {% block page_title %}Mail Domains{% endblock %}
 
@@ -17,26 +17,7 @@
 
 {% block head %}
 <style>
-/* Prevent horizontal scrolling on master list table with rule of 0 margin on side and inside padding */
-#maddy-domains-table {
-  width: 100%;
-  table-layout: fixed;
-  margin: 0;
-  border-collapse: collapse;
-}
-#maddy-domains-table th,
-#maddy-domains-table td {
-  padding-left: var(--page-gutter, 16px);
-  padding-right: var(--page-gutter, 16px);
-}
-#maddy-domains-table th:first-child,
-#maddy-domains-table td:first-child {
-  padding-left: var(--page-gutter, 16px);
-}
-#maddy-domains-table th:last-child,
-#maddy-domains-table td:last-child {
-  padding-right: var(--page-gutter, 16px);
-}
+
 .domain-name-text {
   display: block;
   white-space: nowrap;
@@ -64,6 +45,7 @@
   margin: 0;
   padding: 0;
 }
+
 </style>
 {% endblock %}
 
