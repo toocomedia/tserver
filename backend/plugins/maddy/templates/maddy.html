@@ -63,18 +63,38 @@
   gap: var(--space-lg);
   box-sizing: border-box;
 }
-.maddy-layout.is-split .maddy-master {
-  width: 30%;
-  flex: none;
+
+@media (min-width: 768px) {
+  .maddy-layout.is-split .maddy-master {
+    width: 280px;
+    flex: none;
+    display: flex;
+  }
+  .maddy-layout.is-split .maddy-detail {
+    flex: 1;
+    width: auto;
+    opacity: 1;
+    transform: translateX(0);
+    visibility: visible;
+    pointer-events: auto;
+    border-left: 1px solid var(--color-line);
+  }
 }
-.maddy-layout.is-split .maddy-detail {
-  width: 70%;
-  opacity: 1;
-  transform: translateX(0);
-  visibility: visible;
-  pointer-events: auto;
-  border-left: 1px solid var(--color-line);
+
+@media (max-width: 767px) {
+  .maddy-layout.is-split .maddy-master {
+    display: none;
+  }
+  .maddy-layout.is-split .maddy-detail {
+    width: 100%;
+    opacity: 1;
+    transform: translateX(0);
+    visibility: visible;
+    pointer-events: auto;
+    border-left: none;
+  }
 }
+
 /* Prevent horizontal scrolling on master list table with rule of 0 margin on side and inside padding */
 #maddy-domains-table {
   width: 100%;
