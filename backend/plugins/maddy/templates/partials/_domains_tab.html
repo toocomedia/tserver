@@ -1,25 +1,25 @@
-<div id="domain-detail-view" style="display:none; height: 100%; flex-direction: column; gap: var(--space-lg);">
+<div id="domain-detail-view" style="display:none; height: 100%; flex-direction: column; gap: var(--space-md); max-width: 100%; overflow-x: hidden;">
   <!-- Header -->
-  <div class="detail-header" style="display: flex; justify-content: space-between; align-items: center; gap: var(--space-md);">
+  <div class="detail-header" style="display: flex; justify-content: space-between; align-items: center; gap: var(--space-sm); flex-wrap: wrap;">
     <h2 id="detail-domain-name" style="margin: 0; font-size: var(--font-h1); font-weight: 700;"></h2>
-    <div style="display: flex; gap: var(--space-xs); align-items: center;">
+    <div style="display: flex; gap: var(--space-xs); align-items: center; flex-wrap: wrap;">
       <button type="button" class="btn btn--ghost btn--sm" onclick="closeDomainDetail()">
         <svg viewBox="0 0 24 24" style="width: 14px; height: 14px;"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
         Back
       </button>
       <button type="button" class="btn btn--surface btn--sm" onclick="openAddAccountModal()">
         <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
-        Add Mailbox
+        + Mailbox
       </button>
       <button type="button" class="btn btn--danger btn--sm" id="btn-delete-domain" onclick="confirmDeleteDomain()">
         <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
-        Delete Domain
+        Delete
       </button>
     </div>
   </div>
 
   <!-- Tabs Navigation (Base App Design System) -->
-  <nav class="tabs-nav">
+  <nav class="tabs-nav" style="margin-bottom: var(--space-md);">
     <button type="button" class="btn btn--ghost active" data-tab="accounts" onclick="switchInnerTab('accounts', this)">
       Mailboxes <span id="account-count-badge" class="badge-minimal">0</span>
     </button>
@@ -50,15 +50,7 @@
   </div>
 
   <!-- Tab Content: DNS -->
-  <div id="inner-tab-dns" class="inner-tab-content hidden" style="display: none; flex-direction: column; gap: var(--space-lg);">
-    <div class="alert alert--info">
-      <strong style="display: flex; align-items: center; gap: 6px;">
-        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-        Required DNS Records
-      </strong>
-      <span class="text-muted" style="display: block; margin-top: 4px; font-size: 13px;">If you host DNS on this panel, click Auto-Setup. Otherwise, copy these records to your domain registrar.</span>
-    </div>
-
+  <div id="inner-tab-dns" class="inner-tab-content hidden" style="display: none; flex-direction: column; gap: var(--space-md);">
     <div class="table-wrap">
       <table class="table" style="font-size: 13px;">
         <thead>
@@ -70,8 +62,8 @@
       </table>
     </div>
 
-    <div style="display: flex; flex-direction: column; gap: var(--space-md); padding-top: var(--space-md); border-top: 1px solid var(--color-line);">
-      <form id="dns-setup-form" style="display:flex; gap: var(--space-sm); align-items:center;">
+    <div style="display: flex; gap: var(--space-sm); align-items: center;">
+      <form id="dns-setup-form" style="display:flex; gap: var(--space-sm); align-items:center; flex-wrap: wrap;">
         <input type="hidden" name="csrf_token"  value="{{ csrf_token(request) }}">
         <input type="hidden" name="domain_name" id="dns-domain-input">
         <input type="hidden" name="server_ip"   id="dns-server-ip"   value="{{ server_ip }}">
@@ -83,20 +75,13 @@
   </div>
 
   <!-- Tab Content: SSL -->
-  <div id="inner-tab-ssl" class="inner-tab-content hidden" style="display: none; flex-direction: column; gap: var(--space-lg);">
-    <div class="alert alert--info">
-      <strong style="display: flex; align-items: center; gap: 6px;">
-        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-        Mail Server SSL
-      </strong>
-      <span class="text-muted" style="display: block; margin-top: 4px; font-size: 13px;">Maddy requires a valid SSL certificate for <code>mail.yourdomain.com</code>.</span>
-    </div>
+  <div id="inner-tab-ssl" class="inner-tab-content hidden" style="display: none; flex-direction: column; gap: var(--space-md);">
     <div style="display: flex; flex-direction: column; gap: var(--space-md);">
       <div style="display: flex; align-items: center; gap: 8px;">
         <span id="ssl-status-badge" class="badge-minimal">Checking...</span>
         <span id="ssl-status-text" style="font-size: 13px;" class="text-muted"></span>
       </div>
-      <form id="ssl-setup-form" style="display:flex; gap: var(--space-sm); align-items:center;">
+      <form id="ssl-setup-form" style="display:flex; gap: var(--space-sm); align-items:center; flex-wrap: wrap;">
         <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
         <input type="hidden" name="domain"     id="ssl-domain-input">
         <button type="button" onclick="issueMailSsl()" class="btn btn--surface btn--sm">Request SSL Certificate</button>
@@ -106,10 +91,9 @@
   </div>
 
   <!-- Tab Content: Settings -->
-  <div id="inner-tab-settings" class="inner-tab-content hidden" style="display: none; flex-direction: column; gap: var(--space-xl);">
+  <div id="inner-tab-settings" class="inner-tab-content hidden" style="display: none; flex-direction: column; gap: var(--space-lg);">
     <div style="display: flex; flex-direction: column; gap: var(--space-sm);">
       <h3 style="margin: 0; font-size: var(--font-h3); font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;">Client Connection Details</h3>
-      <p class="text-muted" style="margin: 0; font-size: 13px;">Use these settings in Outlook, Thunderbird, or Apple Mail.</p>
       
       <div class="table-wrap">
         <table class="table" style="font-size: 13px;">
@@ -122,10 +106,9 @@
       </div>
     </div>
 
-    <div style="display: flex; flex-direction: column; gap: var(--space-sm); padding-top: var(--space-lg); border-top: 1px solid var(--color-line);">
+    <div style="display: flex; flex-direction: column; gap: var(--space-sm); padding-top: var(--space-md); border-top: 1px solid var(--color-line);">
       <h3 style="margin: 0; font-size: var(--font-h3); font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;">Maddy Server Management (v{{ plugin_version }})</h3>
-      <p class="text-muted" style="margin: 0; font-size: 13px;">Inspect live logs, service status, or repair Maddy configuration.</p>
-      <div style="display: flex; gap: var(--space-sm);">
+      <div style="display: flex; gap: var(--space-sm); flex-wrap: wrap;">
         <button type="button" class="btn btn--surface btn--sm" onclick="openMaddyDiagnostics()">Diagnostics &amp; Logs</button>
         <button type="button" class="btn btn--secondary btn--sm" id="btn-repair-maddy" onclick="repairMaddyConfig()">Repair Config</button>
       </div>

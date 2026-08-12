@@ -445,13 +445,24 @@ async def mail_ssl_status(
     )
     if configured is None:
         return JSONResponse({"detail": "Mail domain not found."}, status_code=404)
+
+    ssl_ready = configured.ssl_configured
+    mail_host = f"mail.{domain}"
+    if not ssl_ready:
+        cert_path = f"/etc/letsencrypt/live/{mail_host}/fullchain.pem"
+        domain_cert = f"/etc/letsencrypt/live/{domain}/fullchain.pem"
+        if os.path.exists(cert_path) or os.path.exists(domain_cert):
+            ssl_ready = True
+            configured.ssl_configured = True
+            await db.commit()
+
     return JSONResponse(
         {
-            "status": "ready" if configured.ssl_configured else "not_configured",
+            "status": "ready" if ssl_ready else "not_configured",
             "message": (
-                f"TLS is active for mail.{domain}."
-                if configured.ssl_configured
-                else "TLS is not configured."
+                f"TLS is active for {mail_host}."
+                if ssl_ready
+                else f"TLS is not configured for {mail_host}."
             ),
         }
     )
