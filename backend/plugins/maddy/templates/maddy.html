@@ -7,72 +7,16 @@
 
 {% block topbar_actions %}
   {% if plugin_installed %}
-  <button type="button" class="btn btn--surface" onclick="openAddDomain()">+ Add Domain</button>
+  <button type="button" class="btn btn--surface" id="btn-add-domain" onclick="openAddDomain()">+ Add Domain</button>
+  <button type="button" class="btn btn--ghost btn--sm" id="btn-back-master" onclick="closeDomainDetail()" style="display: none; align-items: center; gap: 6px;">
+    <svg viewBox="0 0 24 24" style="width: 14px; height: 14px;"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+    Back
+  </button>
   {% endif %}
 {% endblock %}
 
 {% block head %}
 <style>
-.maddy-layout {
-  display: flex;
-  width: 100%;
-  height: calc(100vh - var(--topbar-height));
-  overflow: hidden;
-  background: var(--color-bg);
-}
-.maddy-master {
-  flex: 1;
-  width: 100%;
-  padding: 0;
-  margin: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
-  display: flex;
-  flex-direction: column;
-}
-.maddy-master .table-wrap {
-  margin: 0 !important;
-  padding: 0 !important;
-  border: none;
-  width: 100% !important;
-  max-width: 100% !important;
-  overflow-x: hidden !important;
-}
-.maddy-detail {
-  width: 0;
-  opacity: 0;
-  visibility: hidden;
-  overflow: hidden;
-  border-left: none;
-  background: var(--color-bg);
-  pointer-events: none;
-}
-.maddy-detail__inner {
-  padding: var(--space-md) var(--page-gutter) var(--page-gutter) var(--page-gutter);
-  width: 100%;
-  max-width: 100%;
-  min-width: 0;
-  height: 100%;
-  overflow-y: auto;
-  overflow-x: hidden;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-lg);
-  box-sizing: border-box;
-}
-
-.maddy-layout.is-split .maddy-master {
-  display: none;
-}
-.maddy-layout.is-split .maddy-detail {
-  flex: 1;
-  width: 100%;
-  opacity: 1;
-  visibility: visible;
-  pointer-events: auto;
-  border-left: none;
-}
-
 /* Prevent horizontal scrolling on master list table with rule of 0 margin on side and inside padding */
 #maddy-domains-table {
   width: 100%;
@@ -93,7 +37,7 @@
 #maddy-domains-table td:last-child {
   padding-right: var(--page-gutter, 16px);
 }
-.maddy-master .domain-name-text {
+.domain-name-text {
   display: block;
   white-space: nowrap;
   overflow: hidden;
@@ -120,79 +64,65 @@
   margin: 0;
   padding: 0;
 }
-
-/* Fix margin gap on the detail list tables to stretch full width */
-.maddy-detail__inner .table-wrap {
-  margin-left: calc(var(--page-gutter, 24px) * -1) !important;
-  margin-right: calc(var(--page-gutter, 24px) * -1) !important;
-  width: auto !important;
-}
-.maddy-detail__inner .table th:first-child,
-.maddy-detail__inner .table td:first-child {
-  padding-left: var(--page-gutter, 24px) !important;
-}
-.maddy-detail__inner .table th:last-child,
-.maddy-detail__inner .table td:last-child {
-  padding-right: var(--page-gutter, 24px) !important;
-}
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="maddy-layout" id="maddyLayout">
-  
-  <div class="maddy-master">
-    {% if plugin_installed %}
-      <div class="table-wrap">
-        <table class="table" id="maddy-domains-table">
-          <thead>
-            <tr>
-              <th>Domain</th>
-              <th class="col-hide-on-split">Status</th>
-              <th class="col-actions col-hide-on-split">Actions</th>
-            </tr>
-          </thead>
-          <tbody id="listContent">
-            {% if mail_domains %}
-              {% for d in mail_domains %}
-                <tr class="list-item" onclick="openDomainDetail('{{ d.domain }}', '{{ d.server_ip }}')" style="cursor: pointer;">
-                  <td class="table-title"><strong class="domain-name-text">{{ d.domain }}</strong></td>
-                  <td class="col-hide-on-split"><span class="badge-minimal badge-minimal--active">Active</span></td>
-                  <td class="col-actions col-hide-on-split">
-                    <button type="button" class="btn btn--sm btn--surface">Manage</button>
-                  </td>
-                </tr>
-              {% endfor %}
-            {% else %}
-              <tr>
-                <td colspan="3" class="text-muted" style="text-align: center; padding: var(--space-xl);">No mail domains configured.</td>
-              </tr>
-            {% endif %}
-          </tbody>
-        </table>
-      </div>
-    {% else %}
-      <div style="text-align: center; max-width: 400px; display: flex; flex-direction: column; gap: var(--space-md); align-items: center; justify-content: center; height: 100%;">
-        <h3 style="font-size: var(--font-h2);">Mail Server Not Installed</h3>
-        <p style="color: var(--color-muted);">Maddy Mail Server is required to manage domains and mailboxes.</p>
-        <form method="post" action="/plugins/maddy/api/install" style="width: 100%;">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
-          <button type="submit" class="btn btn--surface" style="width: 100%; padding: 12px;">
-            Install Mail Server (~30MB RAM)
-          </button>
-        </form>
-      </div>
-    {% endif %}
-  </div>
+{% from "partials/skeleton_overlay.html" import skeleton_overlay %}
+<!-- SKELETON LOADING OVERLAY -->
+{{ skeleton_overlay('maddy-skeleton', header=1, tables=[{ 'rows': 4 }]) }}
+<!-- END SKELETON OVERLAY -->
 
-  <div class="maddy-detail" id="maddyDetailPanel">
-    <div class="maddy-detail__inner">
-      {% if plugin_installed %}
-        {% include 'partials/_domains_tab.html' %}
-      {% endif %}
+<div id="maddy-master-view">
+  {% if plugin_installed %}
+    <div class="table-wrap">
+      <table class="table" id="maddy-domains-table">
+        <thead>
+          <tr>
+            <th>Domain</th>
+            <th>Status</th>
+            <th class="col-actions">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="listContent">
+          {% if mail_domains %}
+            {% for d in mail_domains %}
+              <tr class="list-item" onclick="openDomainDetail('{{ d.domain }}', '{{ d.server_ip }}')" style="cursor: pointer;">
+                <td class="table-title"><strong class="domain-name-text">{{ d.domain }}</strong></td>
+                <td><span class="badge-minimal badge-minimal--active">Active</span></td>
+                <td class="col-actions">
+                  <button type="button" class="btn btn--sm btn--surface">Manage</button>
+                </td>
+              </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="3" class="text-muted" style="text-align: center; padding: var(--space-xl);">No mail domains configured.</td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
     </div>
-  </div>
+  {% else %}
+    <div style="text-align: center; max-width: 400px; margin: 40px auto; display: flex; flex-direction: column; gap: var(--space-md); align-items: center; justify-content: center;">
+      <h3 style="font-size: var(--font-h2);">Mail Server Not Installed</h3>
+      <p style="color: var(--color-muted);">Maddy Mail Server is required to manage domains and mailboxes.</p>
+      <form method="post" action="/plugins/maddy/api/install" style="width: 100%;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+        <button type="submit" class="btn btn--surface" style="width: 100%; padding: 12px;">
+          Install Mail Server (~30MB RAM)
+        </button>
+      </form>
+    </div>
+  {% endif %}
 </div>
+
+<div id="maddy-detail-view" style="display: none; flex-direction: column; gap: var(--space-lg);">
+  {% if plugin_installed %}
+    {% include 'partials/_domains_tab.html' %}
+  {% endif %}
+</div>
+
 
 {% if plugin_installed %}
   <!-- Add Domain Modal -->
