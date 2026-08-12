@@ -1,13 +1,13 @@
-<div id="domain-detail-view" style="display:none;">
+<div id="domain-detail-view" style="display:none; height: 100%; display: flex; flex-direction: column; gap: var(--space-xl);">
   <!-- Header -->
-  <div class="section-header" style="margin-bottom: var(--space-xl); display: flex; justify-content: space-between; align-items: flex-start;">
-    <div>
-      <button type="button" class="btn btn--ghost btn--sm" style="margin-bottom: 8px; padding-left: 0;" onclick="closeDomainDetail()">
+  <div class="detail-header">
+    <div style="display: flex; flex-direction: column; gap: var(--space-xs);">
+      <button type="button" class="btn btn--ghost btn--sm" style="padding-left: 0;" onclick="closeDomainDetail()">
         <svg viewBox="0 0 24 24" style="width: 14px; height: 14px;"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
         Back to domains
       </button>
       <h2 id="detail-domain-name" style="margin: 0; font-size: var(--font-h2);"></h2>
-      <p class="text-muted" style="margin: 4px 0 0 0; font-size: var(--font-body);">Mail server configuration</p>
+      <p class="text-muted" style="margin: 0; font-size: var(--font-body);">Mail server configuration</p>
     </div>
     <div style="display: flex; gap: var(--space-sm);">
         <button type="button" class="btn btn--surface" onclick="openAddAccountModal()">
@@ -21,133 +21,120 @@
     </div>
   </div>
 
-  <!-- Inner Tab Navigation -->
-  <div style="display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 1px solid var(--color-line); margin-bottom: var(--space-xl);">
-    <nav class="tabs-nav" style="border-bottom: none; margin-bottom: 0;">
-      <button class="tabs-nav__btn is-active inner-tab-btn" onclick="switchInnerTab(this)" data-inner-tab="inner-tab-mailboxes">
-        Mailboxes <span id="mailbox-count-badge" class="badge badge--muted" style="margin-left: 6px; font-size: 10px;">0</span>
-      </button>
-      <button class="tabs-nav__btn inner-tab-btn" onclick="switchInnerTab(this)" data-inner-tab="inner-tab-dns">DNS Records</button>
-      <button class="tabs-nav__btn inner-tab-btn" onclick="switchInnerTab(this)" data-inner-tab="inner-tab-ssl">SSL</button>
-      <button class="tabs-nav__btn inner-tab-btn" onclick="switchInnerTab(this)" data-inner-tab="inner-tab-settings">Settings</button>
-    </nav>
-
-    <div class="search-wrap" id="account-search-wrap" style="display: none; padding-bottom: var(--space-sm); width: 220px;">
-      <div class="form-group" style="margin: 0; position: relative;">
-        <svg style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); width: 14px; height: 14px; fill: var(--color-muted);" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
-        <input type="text" class="form-input" id="account-search-input" style="padding-left: 32px; height: 32px; font-size: 12px; width: 100%;" placeholder="Search accounts..." oninput="onAccountSearch(this.value)">
-      </div>
-    </div>
+  <!-- Tabs Header -->
+  <div class="tabs-header">
+    <button type="button" class="tab-btn active" onclick="switchInnerTab('accounts', this)">
+      Mailboxes <span id="account-count-badge" class="badge-minimal">0</span>
+    </button>
+    <button type="button" class="tab-btn" onclick="switchInnerTab('dns', this)">DNS Records</button>
+    <button type="button" class="tab-btn" onclick="switchInnerTab('ssl', this)">SSL</button>
+    <button type="button" class="tab-btn" onclick="switchInnerTab('settings', this)">Settings</button>
   </div>
 
-  <!-- 1. Mailboxes Tab -->
-  <div id="inner-tab-mailboxes" class="tabs-panel is-active">
-      <div class="data-list" id="accounts-tbody">
-          <!-- Populated by JS renderAccountsList() -->
+  <!-- Tab Content: Mailboxes -->
+  <div id="inner-tab-accounts" class="inner-tab-content active" style="display: flex; flex-direction: column; gap: var(--space-md);">
+      <div style="display: flex; justify-content: space-between; align-items: center; gap: var(--space-md);">
+        <input type="text" id="account-search-input" class="form-input" placeholder="Search mailboxes..." style="max-width: 280px;" oninput="onAccountSearch()">
+        <div style="display: flex; gap: var(--space-xs);">
+          <button type="button" class="btn btn--icon btn--ghost" onclick="prevAccountsPage()" id="btn-prev-accounts" disabled>
+            <svg viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+          </button>
+          <button type="button" class="btn btn--icon btn--ghost" onclick="nextAccountsPage()" id="btn-next-accounts" disabled>
+            <svg viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
+          </button>
+        </div>
       </div>
-      <div id="accounts-load-more-wrap" style="display: none; text-align: center; padding: 16px 0 8px 0;">
-        <button type="button" class="btn btn--secondary" id="btn-load-more-accounts" onclick="loadMoreAccounts()">
-          Load More Accounts
-        </button>
-      </div>
-      <div id="accounts-empty" style="display:none; padding: 32px; text-align: center; color: var(--color-muted); background: var(--color-surface); border: 1px dashed var(--color-line); border-radius: 8px;">
-        No mailboxes for this domain yet. Click 'Add Mailbox' to create one.
-      </div>
-  </div>
-
-  <!-- 2. DNS Tab -->
-  <div id="inner-tab-dns" class="tabs-panel">
-      <div class="alert alert--info" style="margin-bottom: var(--space-xl);">
-        If this domain is managed externally (e.g., Cloudflare, Namecheap), copy and paste these records exactly into your DNS provider. 
-        If the domain is managed by this panel, these records are handled automatically by PowerDNS.
-      </div>
-
-      <div class="table-responsive" style="margin-bottom: var(--space-xl);">
-        <table class="table" style="font-family: monospace; font-size: 13px;">
+      
+      <!-- Table for Mailboxes instead of weird divs -->
+      <div class="table-wrap">
+        <table class="table">
           <thead>
             <tr>
-              <th>Type</th>
-              <th>Name</th>
-              <th>Value</th>
+              <th>Mailbox</th>
+              <th class="col-actions">Actions</th>
             </tr>
           </thead>
-          <tbody>
-            <tr>
-              <td>A</td>
-              <td>mail</td>
-              <td id="dns-table-a"></td>
-            </tr>
-            <tr>
-              <td>MX</td>
-              <td>@</td>
-              <td><span id="dns-table-mx"></span> <span class="text-muted">(Priority 10)</span></td>
-            </tr>
-            <tr>
-              <td>TXT</td>
-              <td>@ (SPF)</td>
-              <td id="dns-table-spf"></td>
-            </tr>
-            <tr>
-              <td>TXT</td>
-              <td>_dmarc</td>
-              <td>v=DMARC1; p=none;</td>
-            </tr>
+          <tbody id="accounts-tbody">
+            <!-- Rendered by JS -->
+          </tbody>
+        </table>
+      </div>
+  </div>
+
+  <!-- Tab Content: DNS -->
+  <div id="inner-tab-dns" class="inner-tab-content hidden" style="display: flex; flex-direction: column; gap: var(--space-lg);">
+      <div class="info-card">
+        <h3 style="margin: 0; font-size: var(--font-body); display: flex; gap: 8px; align-items: center;">
+          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none"><path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path><path d="M9 12l2 2 4-4"></path></svg>
+          Required DNS Records
+        </h3>
+        <p class="text-muted" style="margin: 8px 0 0 0; font-size: 13px;">If you host DNS on this panel, click Auto-Setup. Otherwise, copy these records to your domain registrar.</p>
+      </div>
+
+      <div class="table-wrap">
+        <table class="table" style="font-size: 13px;">
+          <thead>
+            <tr><th>Type</th><th>Name</th><th>Value</th></tr>
+          </thead>
+          <tbody id="dns-records-tbody">
+            <!-- Dynamically populated -->
           </tbody>
         </table>
       </div>
 
-      <div class="card" style="padding: var(--space-lg); border: 1px solid var(--color-line); background: var(--color-surface);">
-        <h3 style="margin: 0 0 8px 0; font-size: var(--font-body);">Local PowerDNS Management</h3>
-        <p class="text-muted" style="font-size: 13px; margin-bottom: 16px;">Re-provision or remove local PowerDNS mail records.</p>
-        <form id="dns-setup-form" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+      <div style="display: flex; flex-direction: column; gap: var(--space-md); padding-top: var(--space-md); border-top: 1px solid var(--color-line);">
+        <form id="dns-setup-form" style="display:flex; gap:8px; align-items:center;">
           <input type="hidden" name="csrf_token"   value="{{ csrf_token(request) }}">
           <input type="hidden" name="domain_name"  id="dns-domain-input">
           <input type="hidden" name="server_ip"    id="dns-server-ip"    value="{{ server_ip }}">
           <button type="button" onclick="handleDnsAction('/plugins/maddy/api/dns/auto-setup')" class="btn btn--surface">Auto-Setup Local DNS</button>
           <button type="button" onclick="handleDnsAction('/plugins/maddy/api/dns/remove')" class="btn btn--surface">Remove Local DNS</button>
         </form>
-        <div id="dns-result-message" style="display:none; margin-top:12px; font-size: 13px;"></div>
+        <div id="dns-result-message" style="display:none; font-size: 13px;"></div>
       </div>
   </div>
 
-  <!-- 3. SSL Tab -->
-  <div id="inner-tab-ssl" class="tabs-panel">
-      <div class="card" style="padding: var(--space-lg); border: 1px solid var(--color-line); background: var(--color-surface);">
-        <h3 style="margin: 0 0 8px 0; font-size: var(--font-body);">Let's Encrypt SSL</h3>
-        <p class="text-muted" style="font-size: 13px; margin-bottom: 16px;">Request a Let's Encrypt TLS cert for <strong style="color: var(--color-text);" id="mail-subdomain-preview"></strong>. DNS must be working first.</p>
+  <!-- Tab Content: SSL -->
+  <div id="inner-tab-ssl" class="inner-tab-content hidden" style="display: flex; flex-direction: column; gap: var(--space-lg);">
+      <div class="info-card">
+        <h3 style="margin: 0; font-size: var(--font-body);">Mail Server SSL</h3>
+        <p class="text-muted" style="margin: 8px 0 0 0; font-size: 13px;">Maddy requires a valid SSL certificate for <code>mail.yourdomain.com</code>.</p>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: var(--space-md);">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span id="ssl-status-badge" class="badge-minimal">Checking...</span>
+          <span id="ssl-status-text" style="font-size: 13px;" class="text-muted"></span>
+        </div>
         <form id="ssl-setup-form" style="display:flex; gap:8px; align-items:center;">
           <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
           <input type="hidden" name="domain"     id="ssl-domain-input">
           <button type="button" onclick="issueMailSsl()" class="btn btn--surface">Request SSL Certificate</button>
         </form>
-        <div id="ssl-result-message" style="display:none; margin-top:12px; font-size: 13px;"></div>
+        <div id="ssl-result-message" style="display:none; font-size: 13px;"></div>
       </div>
   </div>
 
-  <!-- 4. Settings Tab -->
-  <div id="inner-tab-settings" class="tabs-panel">
-      <div class="table-responsive" style="margin-bottom: var(--space-xl);">
-        <table class="table">
-          <tbody>
-            <tr>
-              <td style="color: var(--color-muted); width: 200px;">IMAP (incoming)</td>
-              <td><span id="imap-host-preview" style="font-weight: 600;"></span> &bull; Port 993 (SSL) / 143 (STARTTLS)</td>
-            </tr>
-            <tr>
-              <td style="color: var(--color-muted);">SMTP (outgoing)</td>
-              <td><span id="smtp-host-preview" style="font-weight: 600;"></span> &bull; Port 587 (STARTTLS) / 465 (SSL)</td>
-            </tr>
-            <tr>
-              <td style="color: var(--color-muted);">Username</td>
-              <td><span id="username-example-preview" style="font-weight: 600;"></span></td>
-            </tr>
-          </tbody>
-        </table>
+  <!-- Tab Content: Settings -->
+  <div id="inner-tab-settings" class="inner-tab-content hidden" style="display: flex; flex-direction: column; gap: var(--space-xl);">
+      
+      <div style="display: flex; flex-direction: column; gap: var(--space-sm);">
+          <h3 style="margin: 0; font-size: var(--font-body);">Client Connection Details</h3>
+          <p class="text-muted" style="margin: 0; font-size: 13px;">Use these settings in Outlook, Thunderbird, or Apple Mail.</p>
+          
+          <div class="table-wrap">
+            <table class="table" style="font-size: 13px;">
+              <tbody>
+                <tr><td style="width:140px; color:var(--color-muted);">IMAP Server</td><td><strong id="setting-imap-server"></strong> (Port 993, SSL/TLS)</td></tr>
+                <tr><td style="color:var(--color-muted);">SMTP Server</td><td><strong id="setting-smtp-server"></strong> (Port 465, SSL/TLS)</td></tr>
+                <tr><td style="color:var(--color-muted);">Username</td><td>Your full email address</td></tr>
+              </tbody>
+            </table>
+          </div>
       </div>
 
-      <div class="card" style="padding: var(--space-lg); border: 1px solid var(--color-line); background: var(--color-surface);">
-          <h3 style="margin: 0 0 8px 0; font-size: var(--font-body);">Maddy Server Management (v{{ plugin_version }})</h3>
-          <p class="text-muted" style="font-size: 13px; margin-bottom: 16px;">Inspect live logs, service status, or repair Maddy configuration.</p>
+      <div style="display: flex; flex-direction: column; gap: var(--space-sm); padding-top: var(--space-xl); border-top: 1px solid var(--color-line);">
+          <h3 style="margin: 0; font-size: var(--font-body);">Maddy Server Management (v{{ plugin_version }})</h3>
+          <p class="text-muted" style="margin: 0; font-size: 13px;">Inspect live logs, service status, or repair Maddy configuration.</p>
           <div style="display: flex; gap: 8px;">
             <button type="button" class="btn btn--surface" onclick="openMaddyDiagnostics()">Diagnostics &amp; Logs</button>
             <button type="button" class="btn btn--surface" id="btn-repair-maddy" onclick="repairMaddyConfig()">Repair Config</button>
@@ -156,25 +143,16 @@
   </div>
 </div>
 
-<!-- DELETE DOMAIN CONFIRM MODAL -->
+<!-- Delete Domain Confirm Modal -->
 <div id="delete-domain-modal" class="modal-backdrop hidden" role="dialog">
-  <div class="modal" style="max-width: 440px;">
+  <div class="modal">
     <div class="modal__header">
       <h2>Delete Mail Domain</h2>
       <button type="button" class="btn btn--ghost btn--icon" onclick="closeModal('delete-domain-modal')" aria-label="Close">✕</button>
     </div>
-    <div class="modal__body">
-      <p style="margin: 0 0 12px 0; font-size: 14px; line-height: 1.4;">
-        This permanently deletes <strong id="delete-domain-name" style="color: var(--color-text);"></strong> and all associated data:
-      </p>
-      <ul style="padding-left: 1.2rem; line-height: 1.8; color: var(--color-muted); margin: 0 0 16px 0; font-size: 13px;">
-        <li>All mailbox accounts</li>
-        <li>DNS records (MX, A, SPF, DKIM, DMARC)</li>
-        <li>SSL certificate &amp; webmail configuration</li>
-        <li>Entry in maddy.conf</li>
-      </ul>
-      <div class="alert alert--danger" style="margin: 0; padding: 10px;">
-        This action cannot be undone.
+    <div class="modal__body" style="display: flex; flex-direction: column; gap: var(--space-md);">
+      <div class="alert alert--danger">
+        <strong>Warning:</strong> This will delete all mailboxes, aliases, and stored emails for <strong id="delete-domain-name-text"></strong>. This action is irreversible.
       </div>
     </div>
     <div class="modal__footer">
@@ -185,22 +163,17 @@
   </div>
 </div>
 
-<!-- DELETE MAILBOX CONFIRM MODAL -->
+<!-- Delete Account Confirm Modal -->
 <div id="delete-account-modal" class="modal-backdrop hidden" role="dialog">
-  <div class="modal" style="max-width: 440px;">
+  <div class="modal">
     <div class="modal__header">
       <h2>Delete Mailbox</h2>
       <button type="button" class="btn btn--ghost btn--icon" onclick="closeModal('delete-account-modal')" aria-label="Close">✕</button>
     </div>
-    <div class="modal__body">
-      <p style="margin: 0 0 12px 0; font-size: 14px; line-height: 1.4;">
-        Are you sure you want to permanently delete <strong id="delete-account-email" style="color: var(--color-text);"></strong>?
-      </p>
-      <div class="alert alert--danger" style="margin: 0; padding: 10px;">
-        All emails and mailbox data for this address will be removed.
-      </div>
+    <div class="modal__body" style="display: flex; flex-direction: column; gap: var(--space-md);">
+      <p>Are you sure you want to permanently delete the mailbox for <strong id="delete-account-name-text"></strong>?</p>
+      <p class="text-muted" style="font-size: 13px;">All emails stored in this account will be lost.</p>
     </div>
-    
     <div class="modal__footer">
       <input type="hidden" id="delete-account-email-input">
       <button type="button" class="btn btn--secondary" onclick="closeModal('delete-account-modal')">Cancel</button>

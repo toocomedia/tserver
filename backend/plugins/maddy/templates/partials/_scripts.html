@@ -330,32 +330,29 @@ function renderAccountsList() {
     filtered = domainAccounts.filter(a => a.email.toLowerCase().includes(currentAccountSearchQuery));
   }
 
+  listContainer.innerHTML = '';
+
   if (filtered.length === 0) {
-    if (emptyDiv) emptyDiv.style.display = 'block';
-    if (loadMoreWrap) loadMoreWrap.style.display = 'none';
+    listContainer.innerHTML = '<tr><td colspan="2" class="text-muted" style="text-align: center; padding: var(--space-xl);">No mailboxes found.</td></tr>';
     return;
   }
 
-  if (emptyDiv) emptyDiv.style.display = 'none';
-
-  const visibleBatch = filtered.slice(0, currentAccountLimit);
+  const start = (currentAccountsPage - 1) * currentAccountLimit;
+  const visibleBatch = filtered.slice(0, start + currentAccountLimit);
 
   visibleBatch.forEach(acc => {
-    const row = document.createElement('div');
-    row.className = 'data-row';
+    const row = document.createElement('tr');
+    
+    // Left column: Email
+    const nameCell = document.createElement('td');
+    nameCell.className = 'table-title';
+    nameCell.innerHTML = `<strong>${acc.email}</strong>`;
+    row.appendChild(nameCell);
 
-    const leftCol = document.createElement('div');
-    leftCol.className = 'data-row-left';
-
-    const title = document.createElement('div');
-    title.className = 'data-title';
-    title.style.color = 'var(--text-main)';
-    title.textContent = acc.email;
-
-    leftCol.appendChild(title);
-
-    const actionsCell = document.createElement('div');
-    actionsCell.className = 'data-row-actions';
+    // Right column: Actions
+    const actionsCell = document.createElement('td');
+    actionsCell.className = 'col-actions';
+    actionsCell.style.textAlign = 'right';
 
     const webmail = webmailSites[currentDomain] || {};
     if (webmail.ready) {
@@ -382,9 +379,8 @@ function renderAccountsList() {
     deleteButton.addEventListener('click', () => executeDeleteAccount(acc.email));
     actionsCell.appendChild(deleteButton);
 
-    row.appendChild(leftCol);
     row.appendChild(actionsCell);
-    tbody.appendChild(row);
+    listContainer.appendChild(row);
   });
 
   // Handle Load More visibility & remaining count

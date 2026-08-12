@@ -17,27 +17,43 @@
   display: flex;
   width: 100%;
   min-height: calc(100vh - var(--topbar-height));
+  overflow: hidden;
 }
 .maddy-master {
   flex: 1;
-  transition: width 0.2s ease, flex 0.2s ease;
+  transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1), flex 0.4s cubic-bezier(0.16, 1, 0.3, 1);
   padding: var(--space-xl);
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xl);
 }
 .maddy-detail {
-  display: none;
-  width: 60%;
-  border-left: 1px solid var(--color-line);
-  padding: var(--space-xl);
+  width: 0;
+  opacity: 0;
+  overflow: hidden;
+  border-left: none;
   background: var(--bg-body);
+  transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease;
+}
+.maddy-detail__inner {
+  padding: var(--space-xl);
+  width: 100%;
+  height: 100%;
   overflow-y: auto;
+  min-width: 500px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xl);
 }
 .maddy-layout.is-split .maddy-master {
   width: 40%;
   flex: none;
 }
 .maddy-layout.is-split .maddy-detail {
-  display: block;
+  width: 60%;
+  opacity: 1;
+  border-left: 1px solid var(--color-line);
 }
 /* When split, hide extra columns in master list */
 .maddy-layout.is-split .maddy-master .col-hide-on-split {
@@ -54,6 +70,13 @@
 .list-item:hover {
   background: var(--color-surface);
 }
+
+.detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-md);
+}
 </style>
 {% endblock %}
 
@@ -61,8 +84,6 @@
 <div class="maddy-layout" id="maddyLayout">
   
   <div class="maddy-master">
-
-
     {% if plugin_installed %}
       <div class="table-wrap">
         <table class="table" id="maddy-domains-table">
@@ -93,10 +114,10 @@
         </table>
       </div>
     {% else %}
-      <div style="margin: auto; text-align: center; max-width: 400px; margin-top: 100px;">
-        <h3 style="margin-bottom: 16px; font-size: var(--font-h2);">Mail Server Not Installed</h3>
-        <p style="color: var(--color-muted); margin-bottom: 24px;">Maddy Mail Server is required to manage domains and mailboxes.</p>
-        <form method="post" action="/plugins/maddy/api/install">
+      <div style="text-align: center; max-width: 400px; display: flex; flex-direction: column; gap: var(--space-md); align-items: center; justify-content: center; height: 100%;">
+        <h3 style="font-size: var(--font-h2);">Mail Server Not Installed</h3>
+        <p style="color: var(--color-muted);">Maddy Mail Server is required to manage domains and mailboxes.</p>
+        <form method="post" action="/plugins/maddy/api/install" style="width: 100%;">
           <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
           <button type="submit" class="btn btn--surface" style="width: 100%; padding: 12px;">
             Install Mail Server (~30MB RAM)
@@ -107,9 +128,11 @@
   </div>
 
   <div class="maddy-detail" id="maddyDetailPanel">
-    {% if plugin_installed %}
-      {% include 'partials/_domains_tab.html' %}
-    {% endif %}
+    <div class="maddy-detail__inner">
+      {% if plugin_installed %}
+        {% include 'partials/_domains_tab.html' %}
+      {% endif %}
+    </div>
   </div>
 </div>
 
@@ -121,27 +144,27 @@
         <h2>Add Mail Domain</h2>
         <button type="button" class="btn btn--ghost btn--icon" onclick="closeModal('add-domain-modal')" aria-label="Close">✕</button>
       </div>
-      <div class="modal__body">
-        <div style="display: flex; gap: 16px; margin-bottom: 16px;">
-          <label class="form-label" style="display: flex; align-items: center; gap: 6px; cursor: pointer; margin: 0;">
+      <div class="modal__body" style="display: flex; flex-direction: column; gap: var(--space-md);">
+        <div style="display: flex; gap: var(--space-md);">
+          <label class="form-label" style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
             <input type="radio" name="domain_type" value="panel" checked onchange="toggleDomainInputType()">
             <span>Panel Domain</span>
           </label>
-          <label class="form-label" style="display: flex; align-items: center; gap: 6px; cursor: pointer; margin: 0;">
+          <label class="form-label" style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
             <input type="radio" name="domain_type" value="external" onchange="toggleDomainInputType()">
             <span>External Domain</span>
           </label>
         </div>
 
-        <p class="text-muted" style="font-size: 13px; margin-bottom: 16px;" id="domain-hint-text">
+        <p class="text-muted" style="font-size: 13px;" id="domain-hint-text">
           Select a domain hosted on this panel — MX, A, SPF, and DMARC records will be created automatically in PowerDNS.
         </p>
 
-        <form id="add-domain-form" style="display: flex; flex-direction: column; gap: 14px;">
+        <form id="add-domain-form" style="display: flex; flex-direction: column; gap: var(--space-md);">
           <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
           <input type="hidden" name="server_ip" id="add-domain-ip" value="{{ server_ip }}">
 
-          <div class="form-group" style="margin: 0;">
+          <div class="form-group">
             <label class="form-label">Domain Name</label>
             <div id="domain-select-wrapper">
               {% if panel_domains %}
@@ -178,16 +201,16 @@
         <h2>Add New Mailbox</h2>
         <button type="button" class="btn btn--ghost btn--icon" onclick="closeModal('add-account-modal')" aria-label="Close">✕</button>
       </div>
-      <div class="modal__body">
-        <p style="font-size: 13px; color: var(--color-muted); margin-bottom: 16px;" id="add-account-modal-subtitle">
+      <div class="modal__body" style="display: flex; flex-direction: column; gap: var(--space-md);">
+        <p style="font-size: 13px; color: var(--color-muted);" id="add-account-modal-subtitle">
           Create a new email address under <strong style="color: var(--color-text);" id="modal-domain-subtitle-text"></strong>
         </p>
 
-        <form id="add-account-form" style="display: flex; flex-direction: column; gap: 14px;">
+        <form id="add-account-form" style="display: flex; flex-direction: column; gap: var(--space-md);">
           <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
           <input type="hidden" name="domain" id="add-account-domain">
 
-          <div class="form-group" style="margin: 0;">
+          <div class="form-group">
             <label class="form-label">Email Username</label>
             <div class="input-connected-wrap" style="display: flex;">
               <input type="text" name="username" id="add-account-username" class="form-input" style="border-top-right-radius: 0; border-bottom-right-radius: 0; flex: 1;" placeholder="hello" required autocomplete="off">
@@ -197,7 +220,7 @@
             </div>
           </div>
 
-          <div class="form-group" style="margin: 0;">
+          <div class="form-group">
             <label class="form-label">Secure Password</label>
             <input type="password" name="password" id="add-account-password" class="form-input" placeholder="Min 8 characters" required>
           </div>
@@ -220,7 +243,7 @@
         <button type="button" class="btn btn--ghost btn--icon" onclick="closeModal('maddy-diagnostics-modal')" aria-label="Close">✕</button>
       </div>
       <div class="modal__body">
-        <pre id="maddy-diagnostic-logs" style="margin: 0; max-height: 380px; overflow-y: auto; font-family: monospace; font-size: 12px; background: var(--color-surface); padding: 12px; color: var(--color-text); white-space: pre-wrap; border: 1px solid var(--color-line); border-radius: 4px;">Loading diagnostic logs...</pre>
+        <pre id="maddy-diagnostic-logs" style="max-height: 380px; overflow-y: auto; font-family: monospace; font-size: 12px; background: var(--color-surface); padding: var(--space-md); color: var(--color-text); white-space: pre-wrap; border: 1px solid var(--color-line); border-radius: 4px;">Loading diagnostic logs...</pre>
       </div>
       <div class="modal__footer">
         <button type="button" class="btn btn--secondary" onclick="openMaddyDiagnostics()">Refresh Logs</button>
