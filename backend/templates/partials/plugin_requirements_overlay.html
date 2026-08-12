@@ -1,8 +1,8 @@
 <div class="plugin-check-window is-hidden" data-plugin-id="{{ plugin.id }}">
   <div class="plugin-check-window__header">
     <span class="plugin-check-window__title">
-      <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="stroke-width:2.2;"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-      System Requirements
+      <svg width="13" height="13" fill="none" stroke="currentColor" viewbox="0 0 24 24" style="stroke-width:2.2;"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+      {{ _('system_requirements') }}
     </span>
     <button type="button" class="plugin-check-window__close" title="Close" onclick="closePluginCheckWindow(this);" aria-label="Close">✕</button>
   </div>
@@ -10,22 +10,22 @@
   <div class="plugin-check-window__body">
     <div class="plugin-check-window__section">
       <div class="plugin-check-window__status-header" style="display:flex; align-items:center; justify-content:space-between; width:100%; margin-bottom:4px;">
-        <span class="plugin-check-window__label">Requirements Status:</span>
+        <span class="plugin-check-window__label">{{ _('requirements_status') }}</span>
         <span class="tray-overall-status">
           {% if plugin.paused_by %}
-            <span class="badge badge--danger">✕ Unmet (Missing {{ plugin.paused_by | title }})</span>
+            <span class="badge badge--danger">{{ _('unmet_missing_plugin_paused_by_title') }}</span>
           {% elif plugin.dependency_status and plugin.dependency_status | length > 0 %}
             {% set all_healthy = true %}
             {% for dep in plugin.dependency_status %}
               {% if dep.healthy is not sameas true %}{% set all_healthy = false %}{% endif %}
             {% endfor %}
             {% if all_healthy %}
-              <span class="badge badge--healthy">✓ All Requirements Met</span>
+              <span class="badge badge--healthy">{{ _('all_requirements_met') }}</span>
             {% else %}
-              <span class="badge badge--warning">Checking...</span>
+              <span class="badge badge--warning">{{ _('checking') }}</span>
             {% endif %}
           {% else %}
-            <span class="badge badge--healthy">✓ No Requirements Needed</span>
+            <span class="badge badge--healthy">{{ _('no_requirements_needed') }}</span>
           {% endif %}
         </span>
       </div>
@@ -36,27 +36,27 @@
             <div class="plugin-check-window__item">
               <span class="plugin-check-window__item-name">{{ dependency.id | title }}</span>
               {% if dependency.healthy is sameas true %}
-                <span class="badge badge--healthy">✓ Healthy</span>
+                <span class="badge badge--healthy">{{ _('healthy_1') }}</span>
               {% elif dependency.healthy is sameas false %}
-                <span class="badge badge--danger">✕ Missing / Unhealthy</span>
+                <span class="badge badge--danger">{{ _('missing_unhealthy') }}</span>
               {% else %}
-                <span class="badge badge--muted">Checking...</span>
+                <span class="badge badge--muted">{{ _('checking') }}</span>
               {% endif %}
             </div>
           {% endfor %}
         {% else %}
           <div class="plugin-check-window__item">
-            <span class="badge badge--healthy">✓ No external dependencies required</span>
+            <span class="badge badge--healthy">{{ _('no_external_dependencies_required') }}</span>
           </div>
         {% endif %}
       </div>
     </div>
 
     {% if action_error and action_error_plugin_id == plugin.id and not plugin.paused_by %}
-      <div class="plugin-check-window__error">⚠️ {{ action_error }}</div>
+      <div class="plugin-check-window__error">{{ _('action_error') }}</div>
     {% endif %}
     {% if plugin.manifest_error %}
-      <div class="plugin-check-window__error">⚠️ {{ plugin.manifest_error }}</div>
+      <div class="plugin-check-window__error">{{ _('plugin_manifest_error') }}</div>
     {% endif %}
   </div>
 </div>

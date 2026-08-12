@@ -2,8 +2,8 @@
 <div class="section mb-xl">
   <div class="section__header">
     <h3 style="display:flex; align-items:center; gap:8px;">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px; height:15px;"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
-      Server Optimizations
+      <svg viewbox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px; height:15px;"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path></svg>
+      {{ _('server_optimizations') }}
     </h3>
   </div>
   <div class="section__body" data-live-section="optimizations">
@@ -13,14 +13,14 @@
       <div class="optimization-row">
         <div class="optimization-row__copy">
           <div class="optimization-row__title">
-            <strong>Low-RAM Optimization Mode</strong>
+            <strong>{{ _('low_ram_optimization_mode') }}</strong>
           </div>
-          <div class="text-small text-muted">zRAM compressed swap (500MB), swappiness (10), PowerDNS cache limits &amp; jemalloc.</div>
+          <div class="text-small text-muted">{{ _('zram_compressed_swap_500mb_swappiness_10') }}</div>
         </div>
         <div class="optimization-row__control">
           <div class="layout-switcher layout-switcher--two" id="group-opt-mode" role="group" aria-label="Low-RAM Optimization Mode">
-            <button type="button" class="layout-switcher__btn is-active" id="btn-opt-off" data-optimization-action="ram-off">Inactive</button>
-            <button type="button" class="layout-switcher__btn" id="btn-opt-on" data-optimization-action="ram-on">Active</button>
+            <button type="button" class="layout-switcher__btn is-active" id="btn-opt-off" data-optimization-action="ram-off">{{ _('inactive') }}</button>
+            <button type="button" class="layout-switcher__btn" id="btn-opt-on" data-optimization-action="ram-on">{{ _('active_1') }}</button>
           </div>
         </div>
       </div>
@@ -29,14 +29,14 @@
       <div class="optimization-row">
         <div class="optimization-row__copy">
           <div class="optimization-row__title">
-            <strong>Single Nginx Worker Mode</strong>
+            <strong>{{ _('single_nginx_worker_mode') }}</strong>
           </div>
-          <div class="text-small text-muted">Forces Nginx worker_processes to 1. Recommended for 1 CPU core VPS.</div>
+          <div class="text-small text-muted">{{ _('forces_nginx_worker_processes_to_1_recom') }}</div>
         </div>
         <div class="optimization-row__control">
           <div class="layout-switcher layout-switcher--two" id="group-nginx-worker" role="group" aria-label="Single Nginx Worker Mode">
-            <button type="button" class="layout-switcher__btn is-active" id="btn-ngx-auto" data-optimization-action="nginx-auto">Auto</button>
-            <button type="button" class="layout-switcher__btn" id="btn-ngx-single" data-optimization-action="nginx-single">1 Worker</button>
+            <button type="button" class="layout-switcher__btn is-active" id="btn-ngx-auto" data-optimization-action="nginx-auto">{{ _('auto') }}</button>
+            <button type="button" class="layout-switcher__btn" id="btn-ngx-single" data-optimization-action="nginx-single">{{ _('1_worker') }}</button>
           </div>
         </div>
       </div>
@@ -45,16 +45,16 @@
       <div class="optimization-row">
         <div class="optimization-row__copy">
           <div class="optimization-row__title">
-            <strong>Advanced Server Tuning</strong>
+            <strong>{{ _('advanced_server_tuning') }}</strong>
           </div>
-          <div class="text-small text-muted mb-sm">Smart background service disabling, TCP BBR speed control, and journald log capping.</div>
+          <div class="text-small text-muted mb-sm">{{ _('smart_background_service_disabling_tcp_b') }}</div>
           <div class="text-small mt-sm optimization-checks" id="advanced-tuning-checks">
           </div>
         </div>
         <div class="optimization-row__control">
           <div class="layout-switcher layout-switcher--two" id="group-advanced-tuning" role="group" aria-label="Advanced Server Tuning">
-            <button type="button" class="layout-switcher__btn is-active" id="btn-adv-off" data-optimization-action="advanced-off">Inactive</button>
-            <button type="button" class="layout-switcher__btn" id="btn-adv-on" data-optimization-action="advanced-on">Active</button>
+            <button type="button" class="layout-switcher__btn is-active" id="btn-adv-off" data-optimization-action="advanced-off">{{ _('inactive') }}</button>
+            <button type="button" class="layout-switcher__btn" id="btn-adv-on" data-optimization-action="advanced-on">{{ _('active_1') }}</button>
           </div>
         </div>
       </div>

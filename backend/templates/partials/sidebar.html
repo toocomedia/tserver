@@ -4,7 +4,7 @@
     <img src="/static/images/logobarq.png" alt="{{ PANEL_NAME }}" class="sidebar__logo-img" style="height: 28px; width: auto; object-fit: contain;">
     <div class="sidebar__search" id="sidebar-search">
       <button type="button" class="sidebar__search-btn" id="sidebar-search-btn" aria-label="Search sidebar">
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg viewbox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="11" cy="11" r="8"></circle>
           <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
         </svg>
@@ -15,7 +15,7 @@
 
   <div class="sidebar__nav-wrapper">
     <div class="sidebar__scroll-arrow sidebar__scroll-arrow--up" id="sidebar-scroll-up" aria-label="Scroll up">
-      <svg viewBox="0 0 24 24">
+      <svg viewbox="0 0 24 24">
         <polyline points="18 15 12 9 6 15"></polyline>
       </svg>
     </div>
@@ -23,106 +23,106 @@
 
     <li>
       <a href="{{ path('home') }}" class="sidebar__item" data-path="{{ path('home') }}" aria-label="Dashboard">
-        <svg viewBox="0 0 24 24" aria-hidden="true">
+        <svg viewbox="0 0 24 24" aria-hidden="true">
           <rect x="3" y="3" width="7" height="7"></rect>
           <rect x="14" y="3" width="7" height="7"></rect>
           <rect x="14" y="14" width="7" height="7"></rect>
           <rect x="3" y="14" width="7" height="7"></rect>
         </svg>
-        Dashboard
+        {{ _('dashboard') }}
       </a>
     </li>
 
-    <li class="sidebar__section-label">Hosting</li>
+    <li class="sidebar__section-label">{{ _('hosting') }}</li>
 
     <li>
       <a href="{{ path('domains') }}" class="sidebar__item" data-path="{{ path('domains') }}" aria-label="Domains">
-        <svg viewBox="0 0 24 24" aria-hidden="true">
+        <svg viewbox="0 0 24 24" aria-hidden="true">
           <circle cx="12" cy="12" r="10"></circle>
           <line x1="2" y1="12" x2="22" y2="12"></line>
           <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
         </svg>
-        Domains
+        {{ _('domains') }}
       </a>
     </li>
 
     <li>
       <a href="{{ path('proxy') }}" class="sidebar__item" data-path="{{ path('proxy') }}" aria-label="Reverse Proxy">
-        <svg viewBox="0 0 24 24" aria-hidden="true">
+        <svg viewbox="0 0 24 24" aria-hidden="true">
           <polyline points="17 1 21 5 17 9"></polyline>
           <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
           <polyline points="7 23 3 19 7 15"></polyline>
           <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
         </svg>
-        Reverse Proxy
+        {{ _('reverse_proxy') }}
       </a>
     </li>
 
     <li>
       <a href="{{ path('apps') }}" class="sidebar__item" data-path="{{ path('apps') }}" aria-label="Python Apps">
-        <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg viewbox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <polyline points="16 18 22 12 16 6"></polyline>
           <polyline points="8 6 2 12 8 18"></polyline>
         </svg>
-        Python Apps
+        {{ _('python_apps') }}
       </a>
     </li>
 
-    <li class="sidebar__section-label">DNS & SSL</li>
+    <li class="sidebar__section-label">{{ _('dns_ssl') }}</li>
 
     <li>
       <a href="{{ path('dns') }}" class="sidebar__item" data-path="{{ path('dns') }}" aria-label="DNS Manager">
-        <svg viewBox="0 0 24 24" aria-hidden="true">
+        <svg viewbox="0 0 24 24" aria-hidden="true">
           <rect x="2" y="2" width="20" height="8" rx="0"></rect>
           <rect x="2" y="14" width="20" height="8" rx="0"></rect>
           <line x1="6" y1="6" x2="6.01" y2="6"></line>
           <line x1="6" y1="18" x2="6.01" y2="18"></line>
         </svg>
-        DNS Manager
+        {{ _('dns_manager') }}
       </a>
     </li>
 
     <li>
       <a href="{{ path('ssl') }}" class="sidebar__item" data-path="{{ path('ssl') }}" aria-label="SSL Certificates">
-        <svg viewBox="0 0 24 24" aria-hidden="true">
+        <svg viewbox="0 0 24 24" aria-hidden="true">
           <rect x="3" y="11" width="18" height="11"></rect>
           <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
         </svg>
-        SSL Certs
+        {{ _('ssl_certs') }}
       </a>
     </li>
 
-    <li class="sidebar__section-label">Admin</li>
+    <li class="sidebar__section-label">{{ _('admin') }}</li>
 
     <li>
       <a href="{{ path('plugins') }}" class="sidebar__item" data-path="{{ path('plugins') }}" aria-label="Plugins">
-        <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg viewbox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <rect x="3" y="3" width="7" height="7"></rect>
           <rect x="14" y="3" width="7" height="7"></rect>
           <rect x="14" y="14" width="7" height="7"></rect>
           <rect x="3" y="14" width="7" height="7"></rect>
         </svg>
-        Plugins
+        {{ _('plugins') }}
       </a>
     </li>
 
     <li>
       <a href="{{ path('dependencies') }}" class="sidebar__item" data-path="{{ path('dependencies') }}" aria-label="Dependencies">
-        <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg viewbox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M9 12l2 2 4-4"></path>
           <path d="M12 3l7 4v5c0 5-3 8-7 9-4-1-7-4-7-9V7l7-4z"></path>
         </svg>
-        Dependencies
+        {{ _('dependencies') }}
       </a>
     </li>
 
     {% set plugin_items = get_plugin_sidebar_items() %}
     {% if plugin_items %}
-    <li class="sidebar__section-label">Plugins Services</li>
+    <li class="sidebar__section-label">{{ _('plugins_services') }}</li>
     {% for item in plugin_items %}
     <li>
       <a href="{{ item.route }}" class="sidebar__item" data-path="{{ item.route }}" aria-label="{{ item.label }}">
-        <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg viewbox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         {% if item.icon == 'mail' %}
           <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
           <polyline points="22,6 12,13 2,6"></polyline>
@@ -140,52 +140,52 @@
     {% endfor %}
     {% endif %}
 
-    <li class="sidebar__section-label">System</li>
+    <li class="sidebar__section-label">{{ _('system') }}</li>
 
     <li>
       <a href="{{ path('settings') }}" class="sidebar__item" data-path="{{ path('settings') }}" aria-label="Settings">
-        <svg viewBox="0 0 24 24" aria-hidden="true">
+        <svg viewbox="0 0 24 24" aria-hidden="true">
           <circle cx="12" cy="12" r="3"></circle>
           <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
         </svg>
-        Settings
+        {{ _('settings') }}
       </a>
     </li>
 
     <li>
       <a href="/notifications" class="sidebar__item" data-path="/notifications" aria-label="Notifications" id="nav-notifications">
-        <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg viewbox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
           <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
         </svg>
-        Notifications
+        {{ _('notifications') }}
         <span class="badge badge--danger" id="nav-notif-badge" style="display:none; margin-left:auto; font-size:0.7rem; padding:0.15rem 0.4rem; border-radius:10px;">0</span>
       </a>
     </li>
 
     <li>
       <a href="{{ path('usage') }}" class="sidebar__item" data-path="{{ path('usage') }}" aria-label="Server Usage">
-        <svg viewBox="0 0 24 24" aria-hidden="true">
+        <svg viewbox="0 0 24 24" aria-hidden="true">
           <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
         </svg>
-        Usage
+        {{ _('usage') }}
       </a>
     </li>
 
     <li>
       <a href="{{ path('errors') }}" class="sidebar__item" data-path="{{ path('errors') }}" aria-label="Errors">
-        <svg viewBox="0 0 24 24" aria-hidden="true">
+        <svg viewbox="0 0 24 24" aria-hidden="true">
           <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
           <line x1="12" y1="9" x2="12" y2="13"></line>
           <line x1="12" y1="17" x2="12.01" y2="17"></line>
         </svg>
-        Errors
+        {{ _('errors') }}
       </a>
     </li>
 
     </ul>
     <div class="sidebar__scroll-arrow sidebar__scroll-arrow--down" id="sidebar-scroll-down" aria-label="Scroll down">
-      <svg viewBox="0 0 24 24">
+      <svg viewbox="0 0 24 24">
         <polyline points="6 9 12 15 18 9"></polyline>
       </svg>
     </div>
@@ -200,7 +200,7 @@
     <form method="post" action="/logout" class="sidebar__logout">
       {% include "partials/csrf_field.html" %}
       <button type="submit" class="sidebar__logout-btn" aria-label="Logout" title="Logout">
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg viewbox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
           <polyline points="16 17 21 12 16 7"></polyline>
           <line x1="21" y1="12" x2="9" y2="12"></line>

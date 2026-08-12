@@ -6,9 +6,9 @@
 {% block topbar_actions %}
   <form method="post" action="/admin/errors/clear-resolved" style="display:inline;" id="form-clear-resolved">
     {% include "partials/csrf_field.html" %}
-    <button type="submit" class="btn btn--secondary btn--sm" id="btn-clear-resolved">Clear resolved</button>
+    <button type="submit" class="btn btn--secondary btn--sm" id="btn-clear-resolved">{{ _('clear_resolved') }}</button>
   </form>
-  <button type="button" class="btn btn--danger btn--sm" id="btn-clear-all">Clear all</button>
+  <button type="button" class="btn btn--danger btn--sm" id="btn-clear-all">{{ _('clear_all') }}</button>
 {% endblock %}
 
 {% block content %}
@@ -27,36 +27,35 @@
       <div class="d-flex gap-sm flex-wrap align-center " style="padding-top: var(--space-md); padding-bottom: var(--space-md);">
 
         <div class="form-group" style="margin:0; min-width:140px;">
-          <label class="form-label" for="status">Status</label>
+          <label class="form-label" for="status">{{ _('status') }}</label>
           <div class="form-select-wrap">
             <select name="status" id="status" class="form-select" onchange="this.form.submit()">
-              <option value="open"     {% if filter_status == 'open' %}selected{% endif %}>Open ({{ open_count }})</option>
-              <option value="resolved" {% if filter_status == 'resolved' %}selected{% endif %}>Resolved</option>
-              <option value="all"      {% if filter_status == 'all' %}selected{% endif %}>All</option>
+              <option value="open" {% if filter_status="=" 'open' %}selected{% endif %}>{{ _('open_open_count') }}</option>
+              <option value="resolved" {% if filter_status="=" 'resolved' %}selected{% endif %}>{{ _('resolved') }}</option>
+              <option value="all" {% if filter_status="=" 'all' %}selected{% endif %}>{{ _('all') }}</option>
             </select>
           </div>
         </div>
 
         <div class="form-group" style="margin:0; min-width:140px;">
-          <label class="form-label" for="source">Source</label>
+          <label class="form-label" for="source">{{ _('source') }}</label>
           <div class="form-select-wrap">
             <select name="source" id="source" class="form-select" onchange="this.form.submit()">
-              <option value="">All sources</option>
+              <option value="">{{ _('all_sources') }}</option>
               {% for s in sources %}
-              <option value="{{ s }}" {% if filter_source == s %}selected{% endif %}>{{ s }}</option>
+              <option value="{{ s }}" {% if filter_source="=" s %}selected{% endif %}>{{ s }}</option>
               {% endfor %}
             </select>
           </div>
         </div>
 
         <div class="form-group" style="margin:0; flex:1; min-width:180px;">
-          <label class="form-label" for="q">Search</label>
-          <input class="form-input" type="search" name="q" id="q"
-                 value="{{ filter_q }}" placeholder="message or operation…">
+          <label class="form-label" for="q">{{ _('search') }}</label>
+          <input class="form-input" type="search" name="q" id="q" value="{{ filter_q }}" placeholder="message or operation…">
         </div>
 
         <div class="form-group" style="margin:0; align-self:flex-end;">
-          <button type="submit" class="btn btn--secondary btn--sm">Filter</button>
+          <button type="submit" class="btn btn--secondary btn--sm">{{ _('filter') }}</button>
         </div>
 
       </div>
@@ -78,20 +77,18 @@
     </colgroup>
     <thead>
       <tr>
-        <th>When</th>
-        <th>Level</th>
-        <th>Source</th>
-        <th>Operation</th>
-        <th>Message</th>
-        <th>Status</th>
-        <th class="col-actions">Actions</th>
+        <th>{{ _('when') }}</th>
+        <th>{{ _('level') }}</th>
+        <th>{{ _('source') }}</th>
+        <th>{{ _('operation') }}</th>
+        <th>{{ _('message') }}</th>
+        <th>{{ _('status') }}</th>
+        <th class="col-actions">{{ _('actions') }}</th>
       </tr>
     </thead>
     <tbody>
       {% for e in events %}
-      <tr id="error-row-{{ e.id }}"
-          class="{% if not e.resolved %}row--active{% endif %}"
-          data-error-id="{{ e.id }}">
+      <tr id="error-row-{{ e.id }}" class="{% if not e.resolved %}row--active{% endif %}" data-error-id="{{ e.id }}">
         <td class="text-small">
           {% if e.created_at %}{{ e.created_at.strftime('%Y-%m-%d %H:%M') }}{% else %}—{% endif %}
         </td>
@@ -111,9 +108,9 @@
         </td>
         <td>
           {% if e.resolved %}
-            <span class="badge badge--ok badge--dot">Resolved</span>
+            <span class="badge badge--ok badge--dot">{{ _('resolved') }}</span>
           {% else %}
-            <span class="badge badge--error badge--dot">Open</span>
+            <span class="badge badge--error badge--dot">{{ _('open') }}</span>
           {% endif %}
         </td>
         <td class="col-actions" style="position:relative;">
@@ -121,8 +118,8 @@
           {{ list_actions.button() }}
           {% call list_actions.tray() %}
             <a href="/admin/errors/{{ e.id }}" class="btn btn--primary btn--sm">
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
-              <span>View Details</span>
+              <svg viewbox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+              <span>{{ _('view_details') }}</span>
             </a>
           {% endcall %}
         </td>
@@ -136,8 +133,8 @@
   <div class="empty-state__shape">
     <div class="shape-circle-sm"></div>
   </div>
-  <h3 class="empty-state__title">No errors recorded{% if filter_status == 'open' %} (open){% endif %}</h3>
-  <p class="empty-state__desc">Failures from domains, DNS, SSL, and proxy actions appear here automatically.</p>
+  <h3 class="empty-state__title">{{ _('no_errors_recorded_if_filter_status_open') }}</h3>
+  <p class="empty-state__desc">{{ _('failures_from_domains_dns_ssl_and_proxy_') }}</p>
 </div>
 {% endif %}
 

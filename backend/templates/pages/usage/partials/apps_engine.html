@@ -1,8 +1,8 @@
 <div class="section mb-xl">
   <div class="section__header">
     <h3 style="display:flex; align-items:center; gap:8px;">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px; height:15px;"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-      Apps Engine Container Apps
+      <svg viewbox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px; height:15px;"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+      {{ _('apps_engine_container_apps') }}
     </h3>
   </div>
   <div class="table-wrap" data-live-section="table">
@@ -16,15 +16,15 @@
       </colgroup>
       <thead>
         <tr>
-          <th>Application</th>
-          <th>Processes</th>
-          <th>CPU %</th>
-          <th>Memory</th>
-          <th>Status</th>
+          <th>{{ _('application') }}</th>
+          <th>{{ _('processes') }}</th>
+          <th>{{ _('cpu') }}</th>
+          <th>{{ _('memory') }}</th>
+          <th>{{ _('status') }}</th>
         </tr>
       </thead>
       <tbody id="container-app-usage-tbody">
-        <tr><td colspan="5" class="text-muted">Loading Apps Engine metrics…</td></tr>
+        <tr><td colspan="5" class="text-muted">{{ _('loading_apps_engine_metrics') }}</td></tr>
       </tbody>
     </table>
   </div>

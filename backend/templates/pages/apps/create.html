@@ -11,17 +11,17 @@
   <input type="hidden" name="environment_values" value="{}" data-environment-values>
 
   <div class="unboxed-step-container">
-    <p class="text-muted">Target Hostname: <span class="mono">{{ domain.name }}</span></p>
+    <p class="text-muted">{{ _('target_hostname') }} <span class="mono">{{ domain.name }}</span></p>
   </div>
   {% if notice %}<div class="alert alert--warning">{{ notice }}</div>{% endif %}
 
   <nav class="step-bar" aria-label="Deployment steps">
-    <div class="step-item active" role="button" tabindex="0" data-wizard-nav="1"><span class="step-num">01</span><span>1. Git Source</span></div>
-    <div class="step-item disabled" role="button" tabindex="0" data-wizard-nav="2"><span class="step-num">02</span><span>2. Auto-Detection</span></div>
-    <div class="step-item disabled" role="button" tabindex="0" data-wizard-nav="3"><span class="step-num">03</span><span>3. Configuration & DB</span></div>
-    <div class="step-item disabled" role="button" tabindex="0" data-wizard-nav="4"><span class="step-num">04</span><span>4. Environment</span></div>
-    <div class="step-item disabled" role="button" tabindex="0" data-wizard-nav="5"><span class="step-num">05</span><span>5. Deployment Steps</span></div>
-    <div class="step-item disabled" role="button" tabindex="0" data-wizard-nav="6"><span class="step-num">06</span><span>6. Terminal Stream</span></div>
+    <div class="step-item active" role="button" tabindex="0" data-wizard-nav="1"><span class="step-num">01</span><span>{{ _('1_git_source') }}</span></div>
+    <div class="step-item disabled" role="button" tabindex="0" data-wizard-nav="2"><span class="step-num">02</span><span>{{ _('2_auto_detection') }}</span></div>
+    <div class="step-item disabled" role="button" tabindex="0" data-wizard-nav="3"><span class="step-num">03</span><span>{{ _('3_configuration_db') }}</span></div>
+    <div class="step-item disabled" role="button" tabindex="0" data-wizard-nav="4"><span class="step-num">04</span><span>{{ _('4_environment') }}</span></div>
+    <div class="step-item disabled" role="button" tabindex="0" data-wizard-nav="5"><span class="step-num">05</span><span>{{ _('5_deployment_steps') }}</span></div>
+    <div class="step-item disabled" role="button" tabindex="0" data-wizard-nav="6"><span class="step-num">06</span><span>{{ _('6_terminal_stream') }}</span></div>
   </nav>
 
   <div class="wizard-content-area">
@@ -35,11 +35,11 @@
 
   <div class="fixed-action-bar" data-wizard-actions>
     <div class="fixed-action-inner">
-      <button class="btn btn--secondary" type="button" data-wizard-back hidden>Back</button>
-      <span class="text-muted" data-wizard-hint>Step 1 of 4: Git Source</span>
+      <button class="btn btn--secondary" type="button" data-wizard-back hidden>{{ _('back_1') }}</button>
+      <span class="text-muted" data-wizard-hint>{{ _('step_1_of_4_git_source') }}</span>
       <div class="d-flex gap-sm">
-        <a class="btn btn--secondary" href="/domains/{{ domain.id }}" data-wizard-cancel>Cancel</a>
-        <button class="btn btn--primary" type="button" data-wizard-next>Continue to Detection</button>
+        <a class="btn btn--secondary" href="/domains/{{ domain.id }}" data-wizard-cancel>{{ _('cancel') }}</a>
+        <button class="btn btn--primary" type="button" data-wizard-next>{{ _('continue_to_detection') }}</button>
       </div>
     </div>
   </div>

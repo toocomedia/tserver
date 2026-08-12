@@ -4,7 +4,7 @@
 {% block page_title %}{{ dependency.name }}{% endblock %}
 
 {% block topbar_actions %}
-<a class="btn btn--secondary btn--sm" href="/dependencies">← Back to Dependencies</a>
+<a class="btn btn--secondary btn--sm" href="/dependencies">{{ _('back_to_dependencies') }}</a>
 {% endblock %}
 
 {% block content %}
@@ -15,9 +15,9 @@
     <div class="info-hero-row__icon">
       {% if dependency.icon %}
         <img src="{{ dependency.icon }}" alt="{{ dependency.name }} icon" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='block';">
-        <svg style="display: none;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="1.5" d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
+        <svg style="display: none;" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-width="1.5" d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
       {% else %}
-        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="1.5" d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
+        <svg fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-width="1.5" d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
       {% endif %}
     </div>
 
@@ -25,26 +25,26 @@
       <div class="info-hero-row__title-line">
         <h1 class="info-hero-row__title">{{ dependency.name }}</h1>
         {% if dependency.healthy and dependency.desired_enabled %}
-          <span class="badge badge--healthy" data-role="dependency-status"><span class="badge-dot"></span> Healthy</span>
+          <span class="badge badge--healthy" data-role="dependency-status"><span class="badge-dot"></span> {{ _('healthy') }}</span>
         {% else %}
           <span class="badge badge--danger" data-role="dependency-status"><span class="badge-dot"></span> {{ dependency.effective_state }}</span>
         {% endif %}
       </div>
-      <div class="info-hero-row__meta">System dependency · Driver v{{ dependency.version }}</div>
+      <div class="info-hero-row__meta">{{ _('system_dependency_driver_v_dependency_ve') }}</div>
     </div>
 
     <div class="info-hero-row__actions" data-role="dependency-footer">
       {% if dependency.can_check_update %}
       <form method="post" action="/api/dependencies/{{ dependency.id }}/update/check" data-dependency-update-check>
         <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
-        <button class="btn btn--secondary btn--sm" type="submit">Check Updates</button>
+        <button class="btn btn--secondary btn--sm" type="submit">{{ _('check_updates') }}</button>
       </form>
       {% endif %}
       {% if dependency.can_update %}
       <form method="post" action="/api/dependencies/{{ dependency.id }}/update" data-dependency-update-form data-confirmation="{{ dependency.update_confirmation }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
         <input type="hidden" name="confirmation" value="">
-        <button class="btn btn--primary btn--sm" type="submit">Update {{ dependency.name }}</button>
+        <button class="btn btn--primary btn--sm" type="submit">{{ _('update_dependency_name') }}</button>
       </form>
       {% endif %}
       {% if dependency.installed and dependency.can_toggle %}
@@ -53,16 +53,16 @@
         {% if dependency.running %}
         <input type="hidden" name="enabled" value="false">
         <input type="hidden" name="confirmed" value="true">
-        <button class="btn btn--danger btn--sm" type="submit" onclick="return confirm('Disable {{ dependency.name }}? Dependent plugins will be paused.')">Disable Service</button>
+        <button class="btn btn--danger btn--sm" type="submit" onclick="return confirm('Disable {{ dependency.name }}? Dependent plugins will be paused.')">{{ _('disable_service') }}</button>
         {% else %}
         <input type="hidden" name="enabled" value="true">
-        <button class="btn btn--primary btn--sm" type="submit">Enable Service</button>
+        <button class="btn btn--primary btn--sm" type="submit">{{ _('enable_service') }}</button>
         {% endif %}
       </form>
       {% elif not dependency.installed %}
       <form method="post" action="/api/dependencies/{{ dependency.id }}/install" data-dependency-install-form>
         <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
-        <button class="btn btn--primary btn--sm" type="submit" data-role="install-button" {% if not dependency.install_guide.supported %}disabled title="Unsupported operating system"{% endif %}>Install {{ dependency.name }}</button>
+        <button class="btn btn--primary btn--sm" type="submit" data-role="install-button" {% if not dependency.install_guide.supported %}disabled title="Unsupported operating system" {% endif %}>{{ _('install_dependency_name') }}</button>
       </form>
       {% endif %}
     </div>
@@ -71,7 +71,7 @@
   <!-- DESCRIPTION -->
   {% if dependency.description %}
   <div>
-    <h2 class="info-group-title">Description</h2>
+    <h2 class="info-group-title">{{ _('description') }}</h2>
     <p style="font-size: 13px; color: var(--color-text); line-height: 1.55;">
       {{ dependency.description }}
     </p>
@@ -80,43 +80,43 @@
 
   <!-- SYSTEM SPECIFICATIONS -->
   <div>
-    <h2 class="info-group-title">System Specifications</h2>
+    <h2 class="info-group-title">{{ _('system_specifications') }}</h2>
     
     <div class="clean-specs-grid">
       <div class="clean-specs-item">
-        <div class="clean-specs-item__key">Installed Status</div>
+        <div class="clean-specs-item__key">{{ _('installed_status') }}</div>
         <div class="clean-specs-item__val" data-role="installed-value">{{ 'Yes' if dependency.installed else 'No' }}</div>
       </div>
       <div class="clean-specs-item">
-        <div class="clean-specs-item__key">Install Source</div>
+        <div class="clean-specs-item__key">{{ _('install_source') }}</div>
         <div class="clean-specs-item__val" data-role="install-source">{{ dependency.install_origin | replace('_', ' ') }}</div>
       </div>
       <div class="clean-specs-item">
-        <div class="clean-specs-item__key">Service State</div>
+        <div class="clean-specs-item__key">{{ _('service_state') }}</div>
         <div class="clean-specs-item__val" data-role="daemon-value">{{ ('Running' if dependency.running else 'Stopped') if dependency.can_toggle else 'Core runtime' }}</div>
       </div>
       <div class="clean-specs-item">
-        <div class="clean-specs-item__key">Version Detected</div>
+        <div class="clean-specs-item__key">{{ _('version_detected') }}</div>
         <div class="clean-specs-item__val" data-role="version-value">{{ dependency.detected_version if dependency.detected_version else 'Not detected' }}</div>
       </div>
       <div class="clean-specs-item">
-        <div class="clean-specs-item__key">Update Status</div>
+        <div class="clean-specs-item__key">{{ _('update_status') }}</div>
         <div class="clean-specs-item__val">{{ dependency.update.state | replace('_', ' ') }}</div>
       </div>
       {% if dependency.update.candidate_version %}
       <div class="clean-specs-item">
-        <div class="clean-specs-item__key">Available Version</div>
+        <div class="clean-specs-item__key">{{ _('available_version') }}</div>
         <div class="clean-specs-item__val">{{ dependency.update.candidate_version }}</div>
       </div>
       {% endif %}
       {% if dependency.update.source %}
       <div class="clean-specs-item">
-        <div class="clean-specs-item__key">Update Source</div>
+        <div class="clean-specs-item__key">{{ _('update_source') }}</div>
         <div class="clean-specs-item__val">{{ dependency.update.source }}</div>
       </div>
       {% endif %}
       <div class="clean-specs-item">
-        <div class="clean-specs-item__key">Used by Plugins</div>
+        <div class="clean-specs-item__key">{{ _('used_by_plugins') }}</div>
         <div class="clean-specs-item__val">
           {% if dependency.dependents %}
             {{ dependency.dependents | map(attribute='name') | join(', ') }}
@@ -137,21 +137,21 @@
   <!-- MANUAL TERMINAL INSTALLATION COMMAND / UNINSTALL GUIDE -->
   {% if not dependency.installed %}
   <div data-role="installation-guide">
-    <h2 class="info-group-title">Manual Terminal Installation Command</h2>
+    <h2 class="info-group-title">{{ _('manual_terminal_installation_command') }}</h2>
     <pre class="clean-cmd-box">{{ dependency.install_guide.command }}</pre>
   </div>
   <div class="dependency-install-state hidden" data-role="install-state" aria-live="polite">
     <div class="dependency-install-state__header">
       <span class="dependency-install-state__spinner" aria-hidden="true"></span>
-      <span data-role="install-state-title">Installing {{ dependency.name }}</span>
+      <span data-role="install-state-title">{{ _('installing_dependency_name') }}</span>
     </div>
     <div class="dependency-install-state__track"><span class="dependency-install-state__bar"></span></div>
-    <p class="text-small text-muted" data-role="install-state-detail">Installation is running on the server. Keep this page open.</p>
-    <span class="text-small text-muted" data-role="install-elapsed">Elapsed: 0s</span>
+    <p class="text-small text-muted" data-role="install-state-detail">{{ _('installation_is_running_on_the_server_ke') }}</p>
+    <span class="text-small text-muted" data-role="install-elapsed">{{ _('elapsed_0s') }}</span>
   </div>
   {% else %}
   <div>
-    <h2 class="info-group-title">Uninstall Guide</h2>
+    <h2 class="info-group-title">{{ _('uninstall_guide') }}</h2>
     <pre class="clean-cmd-box">{{ dependency.uninstall_guide.command }}</pre>
   </div>
   {% endif %}

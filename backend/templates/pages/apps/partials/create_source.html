@@ -1,24 +1,24 @@
 <section class="unboxed-step-container" data-wizard-panel="1">
   <div class="unboxed-step-header">
-    <span>Step 1: Connect Git Repository</span>
-    <span class="badge-pill">Safe Inspection Mode</span>
+    <span>{{ _('step_1_connect_git_repository') }}</span>
+    <span class="badge-pill">{{ _('safe_inspection_mode') }}</span>
   </div>
-  <p class="form-hint">Enter a Git URL to load its default branch and available branches.</p>
+  <p class="form-hint">{{ _('enter_a_git_url_to_load_its_default_bran') }}</p>
 
   <div class="form-group wizard-grid-2-1">
     <div>
-      <label class="form-label" for="repository_url">Repository URL</label>
+      <label class="form-label" for="repository_url">{{ _('repository_url') }}</label>
       <input class="form-input form-input--code" id="repository_url" name="repository_url" placeholder="https://github.com/owner/project.git" required data-repository-url>
-      <p class="form-hint">The panel only reads repository metadata and source files.</p>
+      <p class="form-hint">{{ _('the_panel_only_reads_repository_metadata') }}</p>
     </div>
     <div>
-      <label class="form-label" for="branch">Branch</label>
+      <label class="form-label" for="branch">{{ _('branch') }}</label>
       <div class="form-select-wrap">
         <select class="form-select" id="branch" name="branch" disabled required data-branch-select>
-          <option>Enter a repository URL first</option>
+          <option>{{ _('enter_a_repository_url_first') }}</option>
         </select>
       </div>
-      <p class="form-hint" data-branch-message>Branches load after the repository URL is valid.</p>
+      <p class="form-hint" data-branch-message>{{ _('branches_load_after_the_repository_url_i') }}</p>
     </div>
   </div>
 </section>

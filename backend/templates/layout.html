@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ request.state.lang if request and hasattr(request, 'state') and hasattr(request.state, 'lang') else 'en' }}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -52,6 +52,12 @@
     } else if (sidebarStyle === 'gradient') {
       document.documentElement.setAttribute('data-sidebar-style', 'gradient');
     }
+    
+    // JS Translations Catalog
+    window.I18N = {{ get_js_translations() | safe }};
+    window._ = function(key) {
+      return window.I18N[key] || key;
+    };
   </script>
   {% block head %}{% endblock %}
 </head>
@@ -66,7 +72,7 @@
       <img src="/static/images/logobarq.png" alt="{{ PANEL_NAME }}" class="sidebar__logo-img" style="height: 26px; width: auto; object-fit: contain;">
     </div>
     <button type="button" class="btn btn--icon btn--ghost" id="mobile-menu-toggle" aria-label="Toggle Menu">
-      <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <svg viewbox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <line x1="3" y1="12" x2="21" y2="12"></line>
         <line x1="3" y1="6" x2="21" y2="6"></line>
         <line x1="3" y1="18" x2="21" y2="18"></line>
@@ -98,13 +104,13 @@
     <main class="content {% block content_class %}{% endblock %}" id="main-content">
       <div class="content__inner">
 
-        {# Flash-style messages come from query params / page templates (no Flask) #}
+        {{ _('flash_style_messages_come_from_query_par') }}
         <div id="resource-guard-banner" class="alert alert--warning mb-lg" role="status" hidden></div>
         <aside id="resource-guard-recommendation" class="recommendation-card recommendation-card--floating px-gutter" role="status" hidden>
-          <div class="recommendation-card__copy">Resource Guard Recommended: enable it to stop a heavy panel action from exhausting this low-RAM VPS.</div>
+          <div class="recommendation-card__copy">{{ _('resource_guard_recommended_enable_it_to_') }}</div>
           <div class="recommendation-card__actions">
-            <a class="btn btn--sm btn--primary" href="/settings/">Open Settings</a>
-            <button type="button" class="btn btn--sm btn--secondary" data-resource-guard-dismiss="forever">Don't show again</button>
+            <a class="btn btn--sm btn--primary" href="/settings/">{{ _('open_settings') }}</a>
+            <button type="button" class="btn btn--sm btn--secondary" data-resource-guard-dismiss="forever">{{ _('don_t_show_again') }}</button>
             <button type="button" class="btn btn--ghost btn--sm" data-resource-guard-dismiss="close" aria-label="Close Resource Guard notice">×</button>
           </div>
         </aside>
@@ -120,15 +126,15 @@
 <div id="confirm-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
   <div class="modal">
     <div class="modal__header">
-      <h2 id="confirm-title">Confirm Action</h2>
+      <h2 id="confirm-title">{{ _('confirm_action') }}</h2>
       <button class="btn btn--ghost btn--icon" onclick="closeModal('confirm-modal')" aria-label="Close">✕</button>
     </div>
     <div class="modal__body">
-      <p id="confirm-message">Are you sure?</p>
+      <p id="confirm-message">{{ _('are_you_sure') }}</p>
     </div>
     <div class="modal__footer">
-      <button type="button" class="btn btn--secondary" onclick="closeModal('confirm-modal')">Cancel</button>
-      <button type="button" class="btn btn--danger" id="confirm-ok">Delete</button>
+      <button type="button" class="btn btn--secondary" onclick="closeModal('confirm-modal')">{{ _('cancel') }}</button>
+      <button type="button" class="btn btn--danger" id="confirm-ok">{{ _('delete') }}</button>
     </div>
   </div>
 </div>
@@ -136,7 +142,7 @@
 <!-- GLOBAL LOADER OVERLAY -->
 <div id="global-loader" class="global-loader hidden">
   <div class="global-loader__spinner"></div>
-  <div class="global-loader__text" id="global-loader-text">Loading...</div>
+  <div class="global-loader__text" id="global-loader-text">{{ _('loading') }}</div>
 </div>
 
 <!-- TOAST CONTAINER -->

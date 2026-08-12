@@ -6,7 +6,7 @@
 {% block page_title %}DNS Manager{% endblock %}
 
 {% block topbar_actions %}
-  <a href="/domains/create" class="btn btn--primary" id="btn-add-domain">+ Add Domain</a>
+  <a href="/domains/create" class="btn btn--primary" id="btn-add-domain">{{ _('add_domain') }}</a>
 {% endblock %}
 
 {% block content %}
@@ -24,9 +24,9 @@
     </div>
     <div class="action-toolbar__group">
       <select id="dns-status-filter" class="form-control" style="width: 140px;" onchange="filterDnsTable()">
-        <option value="all">All Zones</option>
-        <option value="active">Active Zones</option>
-        <option value="missing">Missing Zones</option>
+        <option value="all">{{ _('all_zones') }}</option>
+        <option value="active">{{ _('active_zones') }}</option>
+        <option value="missing">{{ _('missing_zones') }}</option>
       </select>
     </div>
   </div>
@@ -42,10 +42,10 @@
       </colgroup>
       <thead>
         <tr>
-          <th>Zone (Domain)</th>
-          <th>Records</th>
-          <th>Status</th>
-          <th class="col-actions">Actions</th>
+          <th>{{ _('zone_domain') }}</th>
+          <th>{{ _('records') }}</th>
+          <th>{{ _('status') }}</th>
+          <th class="col-actions">{{ _('actions') }}</th>
         </tr>
       </thead>
       <tbody>
@@ -54,13 +54,13 @@
           <td class="table-title">{{ z.domain.name }}</td>
           <td>
             <span style="font-weight:700;">{{ z.record_count }}</span>
-            <span class="text-small text-muted"> records</span>
+            <span class="text-small text-muted"> {{ _('records_1') }}</span>
           </td>
           <td>
             {% if z.zone_exists %}
-              <span class="badge-minimal badge-minimal--active">ACTIVE</span>
+              <span class="badge-minimal badge-minimal--active">{{ _('active') }}</span>
             {% else %}
-              <span class="badge-minimal badge-minimal--danger">MISSING</span>
+              <span class="badge-minimal badge-minimal--danger">{{ _('missing') }}</span>
             {% endif %}
           </td>
           <td class="col-actions" style="position:relative;">
@@ -68,20 +68,14 @@
             {{ list_actions.button() }}
             {% call list_actions.tray() %}
               {% if z.zone_exists %}
-              <a href="/dns/{{ z.domain.name }}/records?add=1"
-                 class="btn btn--primary btn--sm"
-                 title="Add DNS Record"
-                 id="btn-add-{{ z.domain.name }}">
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
-                <span>+ Add Record</span>
+              <a href="/dns/{{ z.domain.name }}/records?add=1" class="btn btn--primary btn--sm" title="Add DNS Record" id="btn-add-{{ z.domain.name }}">
+                <svg viewbox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"></path></svg>
+                <span>{{ _('add_record') }}</span>
               </a>
               {% endif %}
-              <a href="/dns/{{ z.domain.name }}/records"
-                 class="btn btn--secondary btn--sm"
-                 title="Manage DNS Zone"
-                 id="btn-view-{{ z.domain.name }}">
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-                <span>Manage Zone</span>
+              <a href="/dns/{{ z.domain.name }}/records" class="btn btn--secondary btn--sm" title="Manage DNS Zone" id="btn-view-{{ z.domain.name }}">
+                <svg viewbox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                <span>{{ _('manage_zone') }}</span>
               </a>
             {% endcall %}
           </td>
@@ -97,10 +91,10 @@
   <div class="empty-state__shape">
     <div class="shape-circle-sm"></div>
   </div>
-  <h3 class="empty-state__title">No DNS zones</h3>
-  <p class="empty-state__desc">Create a domain first to manage its DNS records.</p>
+  <h3 class="empty-state__title">{{ _('no_dns_zones') }}</h3>
+  <p class="empty-state__desc">{{ _('create_a_domain_first_to_manage_its_dns_') }}</p>
   <div class="empty-state__actions">
-    <a href="/domains/create" class="btn btn--minimal">Add Domain</a>
+    <a href="/domains/create" class="btn btn--minimal">{{ _('add_domain_1') }}</a>
   </div>
 </div>
 {% endif %}

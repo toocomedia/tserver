@@ -1,35 +1,35 @@
 <div class="master-card" id="deployment">
   <div class="master-card__header">
-    <span>Live Deployment Stream</span>
+    <span>{{ _('live_deployment_stream') }}</span>
     {% if deployment %}
       <span class="badge-pill" data-deployment-state>{{ deployment.status | upper }} · {{ deployment.stage }}</span>
     {% else %}
-      <span class="badge-pill">Not Deployed Yet</span>
+      <span class="badge-pill">{{ _('not_deployed_yet') }}</span>
     {% endif %}
   </div>
 
-  <div class="master-card__body" {% if deployment %}data-deployment-url="/apps/{{ app.id }}/deployments/{{ deployment.id }}"{% endif %}>
+  <div class="master-card__body" {% if deployment %}data-deployment-url="/apps/{{ app.id }}/deployments/{{ deployment.id }}" {% endif %}>
     {% if deployment %}
       <div class="terminal-fluid" data-deployment-output style="margin-bottom: 16px;">{{ deployment.output }}{{ deployment.error or '' }}</div>
 
       <div class="info-row">
-        <span class="info-row__label">Deployment Action</span>
+        <span class="info-row__label">{{ _('deployment_action') }}</span>
         <span class="info-row__value">{{ deployment.action | title }}</span>
       </div>
 
       {% if deployment.source_revision %}
       <div class="info-row">
-        <span class="info-row__label">Source Revision</span>
+        <span class="info-row__label">{{ _('source_revision') }}</span>
         <span class="info-row__value mono">{{ deployment.source_revision[:12] }}</span>
       </div>
       {% endif %}
 
       <div class="info-row" data-rollback-row {% if not deployment.rollback_status %}hidden{% endif %}>
-        <span class="info-row__label">Automatic Rollback</span>
+        <span class="info-row__label">{{ _('automatic_rollback') }}</span>
         <span class="info-row__value" data-rollback-state>{{ deployment.rollback_status or '' }}</span>
       </div>
     {% else %}
-      <p class="text-muted" style="font-size: 14px;">No active deployment output stream recorded yet.</p>
+      <p class="text-muted" style="font-size: 14px;">{{ _('no_active_deployment_output_stream_recor') }}</p>
     {% endif %}
   </div>
 </div>

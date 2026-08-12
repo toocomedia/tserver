@@ -1,37 +1,25 @@
-{#
-  action_toolbar.html — Reusable Action Toolbar Component
-  Parameters passed when included:
-    - search_placeholder: Text for search input (default: "Search...")
-    - search_id: ID for search input element
-    - filter_options: List of dicts [{'val': 'active', 'label': 'Active'}]
-    - bulk_actions: List of dicts [{'action': 'delete', 'label': 'Delete Selected'}]
-    - primary_action: Dict {'url': '/create', 'label': 'Create', 'icon': 'plus'}
-#}
+{{ _('action_toolbar_html_reusable_action_tool') }}
 <div class="action-toolbar">
   <div class="action-toolbar__search">
-    <input type="text" 
-           id="{{ search_id or 'table-search-input' }}" 
-           class="form-control" 
-           placeholder="{{ search_placeholder or 'Type to filter items...' }}"
-           aria-label="Filter items">
+    <input type="text" id="{{ search_id or 'table-search-input' }}" class="form-control" placeholder="{{ search_placeholder or 'Type to filter items...' }}" aria-label="Filter items">
   </div>
   
   <div class="action-toolbar__group">
     {% if bulk_actions %}
     <div class="bulk-actions-wrap" style="display: flex; align-items: center; gap: 8px;">
       <select id="bulk-action-select" class="form-control" style="width: 160px;" disabled>
-        <option value="">Bulk Actions</option>
+        <option value="">{{ _('bulk_actions') }}</option>
         {% for ba in bulk_actions %}
         <option value="{{ ba.action }}">{{ ba.label }}</option>
         {% endfor %}
       </select>
-      <button id="bulk-action-apply-btn" class="btn btn--secondary btn--sm" disabled>Apply</button>
+      <button id="bulk-action-apply-btn" class="btn btn--secondary btn--sm" disabled>{{ _('apply') }}</button>
     </div>
     {% endif %}
 
     {% if filter_options %}
     <select id="status-filter-select" class="form-control" style="width: 140px;">
-      <option value="all">All Items</option>
+      <option value="all">{{ _('all_items') }}</option>
       {% for fo in filter_options %}
       <option value="{{ fo.val }}">{{ fo.label }}</option>
       {% endfor %}
@@ -41,7 +29,7 @@
     {% if primary_action %}
     <a href="{{ primary_action.url }}" class="btn btn--primary btn--sm">
       {% if primary_action.icon %}
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg>
+      <svg viewbox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"></path></svg>
       {% endif %}
       {{ primary_action.label }}
     </a>

@@ -6,7 +6,7 @@
 {% block page_title %}Domains{% endblock %}
 
 {% block topbar_actions %}
-  <a href="/domains/create" class="btn btn--primary" id="btn-add-domain">+ Add Domain</a>
+  <a href="/domains/create" class="btn btn--primary" id="btn-add-domain">{{ _('add_domain') }}</a>
 {% endblock %}
 
 {% block content %}
@@ -25,9 +25,9 @@
     </div>
     <div class="action-toolbar__group">
       <select id="domain-status-filter" class="form-control" style="width: 140px;" onchange="filterDomainsTable()">
-        <option value="all">All Domains</option>
-        <option value="active">Active Nginx</option>
-        <option value="ssl">SSL Issued</option>
+        <option value="all">{{ _('all_domains') }}</option>
+        <option value="active">{{ _('active_nginx') }}</option>
+        <option value="ssl">{{ _('ssl_issued') }}</option>
       </select>
     </div>
   </div>
@@ -44,13 +44,13 @@
       </colgroup>
       <thead>
         <tr>
-          <th>Domain</th>
-          <th>Type</th>
-          <th>IP</th>
-          <th>DNS</th>
-          <th>Nginx</th>
-          <th>SSL</th>
-          <th class="col-actions">Actions</th>
+          <th>{{ _('domain') }}</th>
+          <th>{{ _('type') }}</th>
+          <th>{{ _('ip') }}</th>
+          <th>{{ _('dns') }}</th>
+          <th>{{ _('nginx') }}</th>
+          <th>{{ _('ssl_1') }}</th>
+          <th class="col-actions">{{ _('actions') }}</th>
         </tr>
       </thead>
       <tbody>
@@ -62,11 +62,11 @@
 
           <td>
             {% if item.domain.project_type == 'dns' %}
-              <span class="badge-minimal badge-minimal--neutral">DNS ONLY</span>
+              <span class="badge-minimal badge-minimal--neutral">{{ _('dns_only_1') }}</span>
             {% elif item.domain.project_type == 'python' %}
-              <span class="badge-minimal badge-minimal--active">PYTHON APP</span>
+              <span class="badge-minimal badge-minimal--active">{{ _('python_app_1') }}</span>
             {% else %}
-              <span class="badge-minimal badge-minimal--active">STATIC SITE</span>
+              <span class="badge-minimal badge-minimal--active">{{ _('static_site_1') }}</span>
             {% endif %}
           </td>
 
@@ -76,25 +76,25 @@
 
           <td>
             {% if item.domain.dns_zone_created %}
-              <span class="badge-minimal badge-minimal--active">ACTIVE</span>
+              <span class="badge-minimal badge-minimal--active">{{ _('active') }}</span>
             {% else %}
-              <span class="badge-minimal badge-minimal--neutral">NONE</span>
+              <span class="badge-minimal badge-minimal--neutral">{{ _('none_1') }}</span>
             {% endif %}
           </td>
 
           <td>
             {% if item.nginx_active %}
-              <span class="badge-minimal badge-minimal--active">ACTIVE</span>
+              <span class="badge-minimal badge-minimal--active">{{ _('active') }}</span>
             {% else %}
-              <span class="badge-minimal badge-minimal--neutral">NONE</span>
+              <span class="badge-minimal badge-minimal--neutral">{{ _('none_1') }}</span>
             {% endif %}
           </td>
 
           <td>
             {% if item.ssl_active %}
-              <span class="badge-minimal badge-minimal--active">ISSUED</span>
+              <span class="badge-minimal badge-minimal--active">{{ _('issued_1') }}</span>
             {% else %}
-              <span class="badge-minimal badge-minimal--neutral">NONE</span>
+              <span class="badge-minimal badge-minimal--neutral">{{ _('none_1') }}</span>
             {% endif %}
           </td>
 
@@ -105,30 +105,20 @@
             {% call list_actions.tray() %}
               {% if not item.ssl_active %}
                 {% if item.nginx_active %}
-                <a href="/ssl/issue?full_domain={{ item.domain.name }}"
-                   class="btn btn--secondary btn--sm"
-                   title="Issue SSL Certificate"
-                   id="btn-ssl-{{ item.domain.id }}">
-                  + SSL
+                <a href="/ssl/issue?full_domain={{ item.domain.name }}" class="btn btn--secondary btn--sm" title="Issue SSL Certificate" id="btn-ssl-{{ item.domain.id }}">
+                  {{ _('ssl_2') }}
                 </a>
                 {% else %}
-                <button type="button" class="btn btn--secondary btn--sm" disabled
-                        title="Nginx web server required for Let's Encrypt SSL verification">
-                  + SSL
+                <button type="button" class="btn btn--secondary btn--sm" disabled title="Nginx web server required for Let's Encrypt SSL verification">
+                  {{ _('ssl_2') }}
                 </button>
                 {% endif %}
               {% endif %}
-              <a href="/domains/{{ item.domain.id }}"
-                 class="btn btn--primary btn--sm"
-                 title="Manage Domain"
-                 id="btn-view-{{ item.domain.id }}">
-                Manage
+              <a href="/domains/{{ item.domain.id }}" class="btn btn--primary btn--sm" title="Manage Domain" id="btn-view-{{ item.domain.id }}">
+                {{ _('manage') }}
               </a>
-              <button type="button" class="btn btn--danger btn--sm"
-                      title="Delete Domain"
-                      id="btn-del-{{ item.domain.id }}"
-                      onclick="deleteDomain({{ item.domain.id }}, '{{ item.domain.name }}')">
-                Delete
+              <button type="button" class="btn btn--danger btn--sm" title="Delete Domain" id="btn-del-{{ item.domain.id }}" onclick="deleteDomain({{ item.domain.id }}, '{{ item.domain.name }}')">
+                {{ _('delete') }}
               </button>
             {% endcall %}
           </td>
@@ -143,10 +133,10 @@
   <div class="empty-state__shape">
     <div class="shape-torus-sm"></div>
   </div>
-  <h3 class="empty-state__title">No domains configured</h3>
-  <p class="empty-state__desc">Add your first domain to start managing DNS, SSL, and Nginx routing.</p>
+  <h3 class="empty-state__title">{{ _('no_domains_configured') }}</h3>
+  <p class="empty-state__desc">{{ _('add_your_first_domain_to_start_managing_') }}</p>
   <div class="empty-state__actions">
-    <a href="/domains/create" class="btn btn--minimal">Add Domain</a>
+    <a href="/domains/create" class="btn btn--minimal">{{ _('add_domain_1') }}</a>
   </div>
 </div>
 {% endif %}

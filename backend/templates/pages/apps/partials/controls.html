@@ -4,22 +4,22 @@
 
 <!-- DANGER ZONE CARD CONTAINER -->
 <div class="master-card" style="border-color: rgba(220, 38, 38, 0.3);">
-  <div class="master-card__header" style="color: #DC2626;">Danger Zone</div>
+  <div class="master-card__header" style="color: #DC2626;">{{ _('danger_zone') }}</div>
 
   <div class="master-card__body">
     <p style="font-size: 13px; color: var(--color-muted); margin-bottom: 14px; line-height: 1.5;">
-      Delete removes the service, systemd unit, Nginx proxy, releases, venv, app data, pending files, and environment file.
+      {{ _('delete_removes_the_service_systemd_unit_') }}
     </p>
 
     {% if deletion_active %}
-      <p class="text-muted" style="font-size: 13px;">Deleting app resources... Cleanup in progress.</p>
+      <p class="text-muted" style="font-size: 13px;">{{ _('deleting_app_resources_cleanup_in_progre') }}</p>
     {% elif deletion_failed %}
       <div class="alert alert--danger" style="margin-bottom: 12px; font-size: 13px;">{{ app.last_error or 'Deletion cleanup did not finish.' }}</div>
-      <button class="btn btn--danger btn--sm" type="button" data-app-delete-open style="width: 100%;">Retry Delete</button>
+      <button class="btn btn--danger btn--sm" type="button" data-app-delete-open style="width: 100%;">{{ _('retry_delete') }}</button>
     {% elif deployment_active %}
-      <p class="text-muted" style="font-size: 13px;">Stop the active deployment before deleting this app.</p>
+      <p class="text-muted" style="font-size: 13px;">{{ _('stop_the_active_deployment_before_deleti') }}</p>
     {% else %}
-      <button class="btn btn--danger btn--sm" type="button" data-app-delete-open style="width: 100%;">Delete Python App</button>
+      <button class="btn btn--danger btn--sm" type="button" data-app-delete-open style="width: 100%;">{{ _('delete_python_app') }}</button>
     {% endif %}
   </div>
 </div>
@@ -29,22 +29,22 @@
 <div class="modal-backdrop hidden" data-app-delete-modal role="dialog" aria-modal="true" aria-labelledby="app-delete-title">
   <div class="modal">
     <div class="modal__header">
-      <h2 id="app-delete-title">Delete Python App</h2>
+      <h2 id="app-delete-title">{{ _('delete_python_app') }}</h2>
       <button class="btn btn--ghost btn--icon" type="button" data-app-delete-close aria-label="Close">×</button>
     </div>
     <form method="post" action="/apps/{{ app.id }}/uninstall">
       <div class="modal__body">
-        <p style="font-size: 14px; margin-bottom: 16px;">App files, service, systemd unit, Nginx proxy, releases, venv, pending files, persistent data, and environment file will be permanently removed.</p>
+        <p style="font-size: 14px; margin-bottom: 16px;">{{ _('app_files_service_systemd_unit_nginx_pro') }}</p>
         {% if app.postgres_mode in ('create', 'supabase') %}
           <div class="form-group">
-            <label class="form-label" for="delete_scope">Database Cleanup</label>
+            <label class="form-label" for="delete_scope">{{ _('database_cleanup') }}</label>
             <div class="form-select-wrap">
               <select class="form-select" id="delete_scope" name="delete_scope" required>
-                <option value="app_only">Delete app, keep database</option>
-                <option value="app_and_database">Delete app and its database/user</option>
+                <option value="app_only">{{ _('delete_app_keep_database') }}</option>
+                <option value="app_and_database">{{ _('delete_app_and_its_database_user') }}</option>
               </select>
             </div>
-            <p class="form-hint" style="margin-top:6px;">Keeping the database preserves data but unlinks it from this app.</p>
+            <p class="form-hint" style="margin-top:6px;">{{ _('keeping_the_database_preserves_data_but_') }}</p>
           </div>
         {% else %}
           <input type="hidden" name="delete_scope" value="app_only">
@@ -52,8 +52,8 @@
         {% include "partials/csrf_field.html" %}
       </div>
       <div class="modal__footer">
-        <button class="btn btn--secondary" type="button" data-app-delete-close>Cancel</button>
-        <button class="btn btn--danger" type="submit">Delete App</button>
+        <button class="btn btn--secondary" type="button" data-app-delete-close>{{ _('cancel') }}</button>
+        <button class="btn btn--danger" type="submit">{{ _('delete_app') }}</button>
       </div>
     </form>
   </div>

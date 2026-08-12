@@ -1,32 +1,32 @@
 <div class="master-card" id="updates">
   <div class="master-card__header">
-    <span>Source Synchronization</span>
+    <span>{{ _('source_synchronization') }}</span>
     {% if update_ready %}
-      <span class="badge-pill badge-pill--accent">Update Available</span>
+      <span class="badge-pill badge-pill--accent">{{ _('update_available') }}</span>
     {% else %}
-      <span class="badge-pill">Up to Date</span>
+      <span class="badge-pill">{{ _('up_to_date') }}</span>
     {% endif %}
   </div>
 
   <div class="master-card__body">
     <div class="info-row">
-      <span class="info-row__label">Deployed Revision</span>
+      <span class="info-row__label">{{ _('deployed_revision') }}</span>
       <span class="info-row__value mono">{{ app.deployed_revision[:12] if app.deployed_revision else 'Not deployed' }}</span>
     </div>
 
     {% if app.source_type == 'git' %}
       <div class="info-row">
-        <span class="info-row__label">Git Repository</span>
+        <span class="info-row__label">{{ _('git_repository') }}</span>
         <span class="info-row__value mono">{{ app.repository_url }}</span>
       </div>
 
       <div class="info-row">
-        <span class="info-row__label">Branch</span>
+        <span class="info-row__label">{{ _('branch') }}</span>
         <span class="info-row__value mono">{{ app.branch }}</span>
       </div>
 
       <div class="info-row">
-        <span class="info-row__label">Checked Revision</span>
+        <span class="info-row__label">{{ _('checked_revision') }}</span>
         <span class="info-row__value mono">
           {% if app.available_revision %}{{ app.available_revision[:12] }}{% else %}Not checked{% endif %}
           {% if app.available_revision_message %} · {{ app.available_revision_message }}{% endif %}
@@ -34,7 +34,7 @@
       </div>
 
       <div class="info-row">
-        <span class="info-row__label">Last Checked</span>
+        <span class="info-row__label">{{ _('last_checked') }}</span>
         <span class="info-row__value">{{ app.source_checked_at or 'Never' }}</span>
       </div>
 
@@ -42,7 +42,7 @@
         <form method="post" action="/apps/{{ app.id }}/updates/check">
           {% include "partials/csrf_field.html" %}
           <button class="btn btn--secondary btn--sm">
-            <i data-lucide="git-pull-request" style="width:14px;height:14px;"></i> Check for updates
+            <i data-lucide="git-pull-request" style="width:14px;height:14px;"></i> {{ _('check_for_updates') }}
           </button>
         </form>
 
@@ -50,13 +50,13 @@
         <form method="post" action="/apps/{{ app.id }}/updates/apply">
           {% include "partials/csrf_field.html" %}
           <button class="btn btn--accent btn--sm">
-            <i data-lucide="download" style="width:14px;height:14px;"></i> Apply update
+            <i data-lucide="download" style="width:14px;height:14px;"></i> {{ _('apply_update') }}
           </button>
         </form>
         {% endif %}
       </div>
     {% else %}
-      <div class="alert alert--warning" style="margin-top: 12px;">ZIP updates coming soon.</div>
+      <div class="alert alert--warning" style="margin-top: 12px;">{{ _('zip_updates_coming_soon') }}</div>
     {% endif %}
   </div>
 </div>

@@ -21,7 +21,7 @@
 <!-- List view -->
 <div data-resource-container="dependencies" data-resource-view="list" class="view-list-container is-hidden">
   <div class="list-header-row">
-    <div>System Dependency</div><div>Driver</div><div>Status</div><div>Description</div><div>Actions</div>
+    <div>{{ _('system_dependency') }}</div><div>{{ _('driver') }}</div><div>{{ _('status') }}</div><div>{{ _('description') }}</div><div>{{ _('actions') }}</div>
   </div>
   {% from "partials/resource_list_row.html" import render as render_resource_row with context %}
   {% for dependency in dependencies %}

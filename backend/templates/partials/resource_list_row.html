@@ -1,5 +1,4 @@
-{# Shared resource list row. Page-specific actions are included by template name. #}
-{% macro render(item, resource_type, name, version, description, icon_url, icon_alt, status_label, status_tone, actions_template, overlay_template=None, has_overlay=False) %}
+{{ _('shared_resource_list_row_page_specific_a') }}
 <div class="list-item-row{% if resource_type == 'plugin' %} plugin-requirements-host{% endif %}">
   <div class="list-col-main">
     <div class="list-col-thumb">
@@ -7,9 +6,9 @@
         <img src="{{ icon_url }}" alt="{{ icon_alt }}" loading="lazy" data-fallback-image onerror="this.onerror=null; this.hidden=true; if(this.nextElementSibling) this.nextElementSibling.classList.remove('is-hidden');">
       {% endif %}
       {% if resource_type == 'plugin' %}
-        <svg class="list-col-thumb-fallback{% if icon_url %} is-hidden{% endif %}" viewBox="0 0 24 24" aria-hidden="true"><path d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+        <svg class="list-col-thumb-fallback{% if icon_url %} is-hidden{% endif %}" viewbox="0 0 24 24" aria-hidden="true"><path d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
       {% else %}
-        <svg class="list-col-thumb-fallback{% if icon_url %} is-hidden{% endif %}" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
+        <svg class="list-col-thumb-fallback{% if icon_url %} is-hidden{% endif %}" viewbox="0 0 24 24" aria-hidden="true"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
       {% endif %}
     </div>
     {% if resource_type == 'plugin' %}

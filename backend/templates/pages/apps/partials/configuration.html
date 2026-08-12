@@ -1,6 +1,6 @@
 <div class="master-card" id="configuration">
   <div class="master-card__header">
-    <span>Runtime & Environment Settings</span>
+    <span>{{ _('runtime_environment_settings') }}</span>
     <span class="badge-pill">{{ app.source_type | upper }}</span>
   </div>
 
@@ -10,39 +10,39 @@
       {% include "partials/csrf_field.html" %}
       
       <div class="form-group">
-        <label class="form-label" for="build_command">Build Command</label>
+        <label class="form-label" for="build_command">{{ _('build_command') }}</label>
         <input class="form-input form-input--code" id="build_command" name="build_command" value="{{ app.build_command }}" required>
       </div>
 
       <div class="form-group">
-        <label class="form-label" for="start_command">Start Command</label>
+        <label class="form-label" for="start_command">{{ _('start_command') }}</label>
         <input class="form-input form-input--code" id="start_command" name="start_command" value="{{ app.start_command }}" required>
       </div>
 
       <div style="display: flex; gap: 10px; margin-bottom: 24px;">
-        <button class="btn btn--secondary btn--sm" style="flex:1;">Save Commands</button>
-        <button class="btn btn--secondary btn--sm" formmethod="post" formaction="/apps/{{ app.id }}/detect">Detect Again</button>
+        <button class="btn btn--secondary btn--sm" style="flex:1;">{{ _('save_commands') }}</button>
+        <button class="btn btn--secondary btn--sm" formmethod="post" formaction="/apps/{{ app.id }}/detect">{{ _('detect_again') }}</button>
       </div>
     </form>
 
     <!-- ENVIRONMENT VARIABLES -->
     <div style="border-top: 1px solid var(--color-line); padding-top: 20px;" id="environment">
       <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
-        <strong style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-muted);">Environment Keys</strong>
+        <strong style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-muted);">{{ _('environment_keys') }}</strong>
         <span class="badge-pill">{% if environment_keys %}{{ environment_keys | length }} Keys{% else %}0 Keys{% endif %}</span>
       </div>
 
       <div class="info-row">
-        <span class="info-row__label">Managed Database</span>
+        <span class="info-row__label">{{ _('managed_database') }}</span>
         <span class="info-row__value">{% if app.postgres_mode == 'create' %}Managed PostgreSQL{% elif app.postgres_mode == 'supabase' %}Supabase PostgreSQL{% elif app.postgres_mode == 'external' %}External DATABASE_URL{% else %}None{% endif %}</span>
       </div>
       {% if app.postgres_mode == 'supabase' and app.database_name %}
       <div class="info-row">
-        <span class="info-row__label">Current Supabase Database</span>
+        <span class="info-row__label">{{ _('current_supabase_database') }}</span>
         <a class="info-row__value mono" href="/plugins/supabase/projects/{{ app.supabase_project_id }}">{{ app.database_name }}</a>
       </div>
       <div class="info-row">
-        <span class="info-row__label">Database User</span>
+        <span class="info-row__label">{{ _('database_user') }}</span>
         <span class="info-row__value mono">{{ app.database_user }}</span>
       </div>
       {% endif %}
@@ -53,7 +53,7 @@
           <span class="info-row__value mono">{{ key }}</span>
           <form method="post" action="/apps/{{ app.id }}/environment/{{ key }}/delete" style="display:inline;">
             {% include "partials/csrf_field.html" %}
-            <button class="btn btn--danger btn--sm" style="padding:2px 8px; font-size:11px;" title="Delete {{ key }}">Delete</button>
+            <button class="btn btn--danger btn--sm" style="padding:2px 8px; font-size:11px;" title="Delete {{ key }}">{{ _('delete') }}</button>
           </form>
         </div>
         {% endfor %}
@@ -63,7 +63,7 @@
         {% include "partials/csrf_field.html" %}
         <input class="form-input" name="key" placeholder="VARIABLE_NAME" aria-label="Environment variable name" required style="padding: 8px 10px; font-size: 12px;">
         <input class="form-input" name="value" type="password" placeholder="Value" aria-label="Environment variable value" required style="padding: 8px 10px; font-size: 12px;">
-        <button class="btn btn--secondary btn--sm">Add</button>
+        <button class="btn btn--secondary btn--sm">{{ _('add') }}</button>
       </form>
     </div>
   </div>

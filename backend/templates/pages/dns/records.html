@@ -6,9 +6,8 @@
 {% block page_title %}{{ domain.name }}{% endblock %}
 
 {% block topbar_actions %}
-  <a href="/dns/" class="btn btn--secondary" id="btn-back">← All Zones</a>
-  <button type="button" class="btn btn--primary" id="btn-add-record"
-          onclick="openModal('add-record-modal')">+ Custom DNS record</button>
+  <a href="/dns/" class="btn btn--secondary" id="btn-back">{{ _('all_zones_1') }}</a>
+  <button type="button" class="btn btn--primary" id="btn-add-record" onclick="openModal('add-record-modal')">{{ _('custom_dns_record') }}</button>
 {% endblock %}
 
 {% block content %}
@@ -18,8 +17,7 @@
 {{ skeleton_overlay('dns-records-skeleton', tables=[{ 'cols': [28, 10, 40, 10, 12], 'rows': 4 }]) }}
 <!-- END SKELETON OVERLAY -->
 
-{# Flash messages from redirect query params #}
-{% if request.query_params.get('success') %}
+{{ _('flash_messages_from_redirect_query_param') }}
 <div class="alert alert--success mb-lg" id="alert-success">
   {{ request.query_params.get('success') }}
 </div>
@@ -35,19 +33,17 @@
   <div class="d-flex gap-sm align-center">
     <span class="text-muted text-small">{{ rows|length }} record{{ 's' if rows|length != 1 else '' }}</span>
   </div>
-  <form method="post" action="/dns/{{ domain.name }}/records/template"
-        class="d-flex gap-sm align-center" id="template-form">
+  <form method="post" action="/dns/{{ domain.name }}/records/template" class="d-flex gap-sm align-center" id="template-form">
     {% include "partials/csrf_field.html" %}
     <div class="form-select-wrap">
-      <select name="template_name" class="form-select"
-              id="template-select" style="width:200px;" required>
-        <option value="" disabled selected>Apply template…</option>
+      <select name="template_name" class="form-select" id="template-select" style="width:200px;" required>
+        <option value="" disabled selected>{{ _('apply_template') }}</option>
         {% for key, tmpl in templates.items() %}
           <option value="{{ key }}">{{ tmpl.label }}</option>
         {% endfor %}
       </select>
     </div>
-    <button type="submit" class="btn btn--secondary" id="btn-apply-template">Apply</button>
+    <button type="submit" class="btn btn--secondary" id="btn-apply-template">{{ _('apply') }}</button>
   </form>
 </div>
 
@@ -64,11 +60,11 @@
     </colgroup>
     <thead>
       <tr>
-        <th>Name</th>
-        <th>Type</th>
-        <th>Content</th>
-        <th>TTL</th>
-        <th class="col-actions">Action</th>
+        <th>{{ _('name') }}</th>
+        <th>{{ _('type') }}</th>
+        <th>{{ _('content') }}</th>
+        <th>{{ _('ttl') }}</th>
+        <th class="col-actions">{{ _('action') }}</th>
       </tr>
     </thead>
     <tbody>
@@ -84,14 +80,9 @@
           {% import "partials/list_actions_toggle.html" as list_actions %}
           {{ list_actions.button() }}
           {% call list_actions.tray() %}
-            <button type="button"
-                    class="btn btn--danger btn--sm btn-del-record"
-                    id="btn-del-{{ loop.index }}"
-                    data-domain="{{ domain.name }}"
-                    data-name="{{ row.name }}"
-                    data-type="{{ row.type }}">
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path></svg>
-              <span>Delete Record</span>
+            <button type="button" class="btn btn--danger btn--sm btn-del-record" id="btn-del-{{ loop.index }}" data-domain="{{ domain.name }}" data-name="{{ row.name }}" data-type="{{ row.type }}">
+              <svg viewbox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path></svg>
+              <span>{{ _('delete_record') }}</span>
             </button>
           {% endcall %}
         </td>
@@ -105,36 +96,32 @@
   <div class="empty-state__shape">
     <div class="shape-torus-sm"></div>
   </div>
-  <h3 class="empty-state__title">No records in this zone</h3>
-  <p class="empty-state__desc">Add custom A, AAAA, CNAME, TXT, or MX records for your domain.</p>
+  <h3 class="empty-state__title">{{ _('no_records_in_this_zone') }}</h3>
+  <p class="empty-state__desc">{{ _('add_custom_a_aaaa_cname_txt_or_mx_record') }}</p>
   <div class="empty-state__actions">
-    <button type="button" class="btn btn--minimal" onclick="openModal('add-record-modal')">Add DNS Record</button>
+    <button type="button" class="btn btn--minimal" onclick="openModal('add-record-modal')">{{ _('add_dns_record') }}</button>
   </div>
 </div>
 {% endif %}
 
 
 <!-- ADD RECORD MODAL -->
-<div id="add-record-modal" class="modal-backdrop hidden"
-     role="dialog" aria-modal="true" aria-labelledby="modal-title">
+<div id="add-record-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title">
   <div class="modal">
     <div class="modal__header">
-      <h2 id="modal-title">Add DNS Record</h2>
-      <button class="btn btn--ghost btn--icon"
-              onclick="closeModal('add-record-modal')" aria-label="Close">✕</button>
+      <h2 id="modal-title">{{ _('add_dns_record') }}</h2>
+      <button class="btn btn--ghost btn--icon" onclick="closeModal('add-record-modal')" aria-label="Close">✕</button>
     </div>
 
-    <form method="post" action="/dns/{{ domain.name }}/records/add"
-          id="add-record-form" class="form" style="max-width:none;">
+    <form method="post" action="/dns/{{ domain.name }}/records/add" id="add-record-form" class="form" style="max-width:none;">
       {% include "partials/csrf_field.html" %}
       <div class="modal__body" style="display:flex; flex-direction:column; gap:var(--space-md);">
 
         <!-- TYPE — dropdown, not free text -->
         <div class="form-group">
-          <label class="form-label" for="rec-type">Type</label>
+          <label class="form-label" for="rec-type">{{ _('type') }}</label>
           <div class="form-select-wrap">
-            <select name="type" id="rec-type" class="form-select" required
-                    onchange="updateContentLabel(this.value)">
+            <select name="type" id="rec-type" class="form-select" required onchange="updateContentLabel(this.value)">
               {% for rtype in record_types %}
                 <option value="{{ rtype }}">{{ rtype }}</option>
               {% endfor %}
@@ -144,35 +131,28 @@
 
         <!-- NAME -->
         <div class="form-group">
-          <label class="form-label" for="rec-name">Name</label>
-          <input name="name" id="rec-name" type="text"
-                 class="form-input" placeholder="@ or subdomain" required
-                 autocomplete="off" autocapitalize="none">
-          <span class="form-hint">Use <strong>@</strong> for root, or enter a subdomain prefix</span>
+          <label class="form-label" for="rec-name">{{ _('name') }}</label>
+          <input name="name" id="rec-name" type="text" class="form-input" placeholder="@ or subdomain" required autocomplete="off" autocapitalize="none">
+          <span class="form-hint">{{ _('use') }} <strong>@</strong> {{ _('for_root_or_enter_a_subdomain_prefix') }}</span>
         </div>
 
         <!-- CONTENT — label changes per type -->
         <div class="form-group">
-          <label class="form-label" id="content-label" for="rec-content">IPv4 Address</label>
-          <input name="content" id="rec-content" type="text"
-                 class="form-input" placeholder="{{ server_ip }}" required
-                 autocomplete="off" autocapitalize="none" spellcheck="false">
+          <label class="form-label" id="content-label" for="rec-content">{{ _('ipv4_address') }}</label>
+          <input name="content" id="rec-content" type="text" class="form-input" placeholder="{{ server_ip }}" required autocomplete="off" autocapitalize="none" spellcheck="false">
           <span class="form-hint text-muted" id="content-hint"></span>
         </div>
 
         <!-- TTL -->
         <div class="form-group">
-          <label class="form-label" for="rec-ttl">TTL (seconds)</label>
-          <input name="ttl" id="rec-ttl" type="number"
-                 class="form-input" value="3600" min="60" max="86400" required
-                 style="max-width:140px;">
+          <label class="form-label" for="rec-ttl">{{ _('ttl_seconds') }}</label>
+          <input name="ttl" id="rec-ttl" type="number" class="form-input" value="3600" min="60" max="86400" required style="max-width:140px;">
         </div>
 
       </div>
       <div class="modal__footer">
-        <button type="button" class="btn btn--secondary"
-                onclick="closeModal('add-record-modal')">Cancel</button>
-        <button type="submit" class="btn btn--primary" id="btn-save-record">Add Record</button>
+        <button type="button" class="btn btn--secondary" onclick="closeModal('add-record-modal')">{{ _('cancel') }}</button>
+        <button type="submit" class="btn btn--primary" id="btn-save-record">{{ _('add_record_1') }}</button>
       </div>
     </form>
   </div>

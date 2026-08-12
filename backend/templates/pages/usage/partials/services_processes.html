@@ -2,8 +2,8 @@
 <div class="section mb-xl">
   <div class="section__header">
     <h3 style="display:flex; align-items:center; gap:8px;">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px; height:15px;"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/></svg>
-      Stack Services Resource Consumption
+      <svg viewbox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px; height:15px;"><rect x="2" y="2" width="20" height="8" rx="2"></rect><rect x="2" y="14" width="20" height="8" rx="2"></rect></svg>
+      {{ _('stack_services_resource_consumption') }}
     </h3>
   </div>
   <div class="table-wrap" data-live-section="table">
@@ -17,15 +17,15 @@
       </colgroup>
       <thead>
         <tr>
-          <th>Service</th>
-          <th>Processes</th>
-          <th>CPU %</th>
-          <th>Memory</th>
-          <th>Status</th>
+          <th>{{ _('service') }}</th>
+          <th>{{ _('processes') }}</th>
+          <th>{{ _('cpu') }}</th>
+          <th>{{ _('memory') }}</th>
+          <th>{{ _('status') }}</th>
         </tr>
       </thead>
       <tbody id="svc-tbody">
-        <tr><td colspan="5" class="text-muted">Loading services diagnostics…</td></tr>
+        <tr><td colspan="5" class="text-muted">{{ _('loading_services_diagnostics') }}</td></tr>
       </tbody>
     </table>
   </div>
@@ -35,8 +35,8 @@
 <div class="section mb-xl">
   <div class="section__header">
     <h3 style="display:flex; align-items:center; gap:8px;">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px; height:15px;"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-      Plugins Resource Consumption
+      <svg viewbox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px; height:15px;"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+      {{ _('plugins_resource_consumption') }}
     </h3>
   </div>
   <div class="table-wrap" data-live-section="table">
@@ -50,15 +50,15 @@
       </colgroup>
       <thead>
         <tr>
-          <th>Plugin</th>
-          <th>Processes</th>
-          <th>CPU %</th>
-          <th>Memory</th>
-          <th>Status</th>
+          <th>{{ _('plugin') }}</th>
+          <th>{{ _('processes') }}</th>
+          <th>{{ _('cpu') }}</th>
+          <th>{{ _('memory') }}</th>
+          <th>{{ _('status') }}</th>
         </tr>
       </thead>
       <tbody id="plugin-usage-tbody">
-        <tr><td colspan="5" class="text-muted">Loading plugin metrics…</td></tr>
+        <tr><td colspan="5" class="text-muted">{{ _('loading_plugin_metrics') }}</td></tr>
       </tbody>
     </table>
   </div>
@@ -68,8 +68,8 @@
 <div class="section mb-xl">
   <div class="section__header">
     <h3 style="display:flex; align-items:center; gap:8px;">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px; height:15px;"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
-      Hosted Python Apps
+      <svg viewbox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px; height:15px;"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path></svg>
+      {{ _('hosted_python_apps') }}
     </h3>
   </div>
   <div class="table-wrap" data-live-section="table">
@@ -83,15 +83,15 @@
       </colgroup>
       <thead>
         <tr>
-          <th>Domain / App</th>
-          <th>Processes</th>
-          <th>CPU %</th>
-          <th>Memory</th>
-          <th>Status</th>
+          <th>{{ _('domain_app') }}</th>
+          <th>{{ _('processes') }}</th>
+          <th>{{ _('cpu') }}</th>
+          <th>{{ _('memory') }}</th>
+          <th>{{ _('status') }}</th>
         </tr>
       </thead>
       <tbody id="hosted-app-usage-tbody">
-        <tr><td colspan="5" class="text-muted">Loading hosted app metrics…</td></tr>
+        <tr><td colspan="5" class="text-muted">{{ _('loading_hosted_app_metrics') }}</td></tr>
       </tbody>
     </table>
   </div>
@@ -101,8 +101,8 @@
 <div class="section mb-xl">
   <div class="section__header">
     <h3 style="display:flex; align-items:center; gap:8px;">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px; height:15px;"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
-      Runtime Dependencies
+      <svg viewbox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px; height:15px;"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
+      {{ _('runtime_dependencies') }}
     </h3>
   </div>
   <div class="table-wrap" data-live-section="table">
@@ -116,15 +116,15 @@
       </colgroup>
       <thead>
         <tr>
-          <th>Dependency</th>
-          <th>Processes</th>
-          <th>CPU %</th>
-          <th>Memory</th>
-          <th>Status</th>
+          <th>{{ _('dependency') }}</th>
+          <th>{{ _('processes') }}</th>
+          <th>{{ _('cpu') }}</th>
+          <th>{{ _('memory') }}</th>
+          <th>{{ _('status') }}</th>
         </tr>
       </thead>
       <tbody id="dependency-usage-tbody">
-        <tr><td colspan="5" class="text-muted">Loading dependency usage…</td></tr>
+        <tr><td colspan="5" class="text-muted">{{ _('loading_dependency_usage') }}</td></tr>
       </tbody>
     </table>
   </div>
@@ -134,8 +134,8 @@
 <div class="section mb-xl">
   <div class="section__header">
     <h3 style="display:flex; align-items:center; gap:8px;">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px; height:15px;"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-      Top Active System Processes
+      <svg viewbox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px; height:15px;"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+      {{ _('top_active_system_processes') }}
     </h3>
   </div>
   <div class="table-wrap" data-live-section="table">
@@ -149,15 +149,15 @@
       </colgroup>
       <thead>
         <tr>
-          <th>Process (PID)</th>
-          <th>Processes</th>
-          <th>CPU %</th>
-          <th>MEM %</th>
-          <th>Status</th>
+          <th>{{ _('process_pid') }}</th>
+          <th>{{ _('processes') }}</th>
+          <th>{{ _('cpu') }}</th>
+          <th>{{ _('mem') }}</th>
+          <th>{{ _('status') }}</th>
         </tr>
       </thead>
       <tbody id="proc-tbody">
-        <tr><td colspan="5" class="text-muted">Loading process table…</td></tr>
+        <tr><td colspan="5" class="text-muted">{{ _('loading_process_table') }}</td></tr>
       </tbody>
     </table>
   </div>

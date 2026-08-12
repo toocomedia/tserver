@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="VPS Control Panel login - 2FA">
   <meta name="csrf-token" content="{{ csrf_token(request) }}">
-  <title>2FA Verification — {{ PANEL_NAME }}</title>
+  <title>{{ _('2fa_verification_panel_name') }}</title>
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="/static/favicon.png">
   <link rel="shortcut icon" href="/static/favicon.ico">
@@ -342,46 +342,28 @@
       <!-- Brand Header -->
       <div class="brand-section">
         <img src="/static/images/logobarq.png" alt="{{ PANEL_NAME }}" class="brand-logo-img">
-        <h2 class="brand-title">Two-Factor Authentication</h2>
-        <p class="brand-subtitle">Enter the 6-digit code from your authenticator app.</p>
+        <h2 class="brand-title">{{ _('two_factor_authentication') }}</h2>
+        <p class="brand-subtitle">{{ _('enter_the_6_digit_code_from_your_authent') }}</p>
       </div>
 
       {% if error %}
       <div class="alert alert--danger mb-lg" role="alert">{{ error }}</div>
       {% endif %}
 
-      <form method="post" action="/login/2fa" class="login-form" id="login-form" autocomplete="off"{% if locked %} data-locked="1"{% endif %}>
+      <form method="post" action="/login/2fa" class="login-form" id="login-form" autocomplete="off" {% if locked %} data-locked="1" {% endif %}>
         {% include "partials/csrf_field.html" %}
 
         <div class="form-group">
-          <label class="form-label" for="code">Authentication Code</label>
-          <input
-            class="form-input-code{% if error %} form-input--error{% endif %}"
-            type="text"
-            id="code"
-            name="code"
-            placeholder="123456"
-            required
-            {% if not locked %}autofocus{% endif %}
-            autocomplete="one-time-code"
-            inputmode="numeric"
-            pattern="[0-9]*"
-            maxlength="6"
-            {% if locked %}disabled{% endif %}
-          >
+          <label class="form-label" for="code">{{ _('authentication_code') }}</label>
+          <input class="form-input-code{% if error %} form-input--error{% endif %}" type="text" id="code" name="code" placeholder="123456" required {% if not locked %}autofocus{% endif %} autocomplete="one-time-code" inputmode="numeric" pattern="[0-9]*" maxlength="6" {% if locked %}disabled{% endif %}>
         </div>
 
-        <button
-          type="submit"
-          id="login-submit"
-          class="btn-3d-primary"
-          {% if locked %}disabled aria-disabled="true"{% endif %}
-        >
+        <button type="submit" id="login-submit" class="btn-3d-primary" {% if locked %}disabled aria-disabled="true" {% endif %}>
           {% if locked %}Try again later{% else %}Verify{% endif %}
         </button>
 
         <div class="back-link-wrap">
-          <a href="/login" class="back-link">&larr; Back to login</a>
+          <a href="/login" class="back-link">{{ _('back_to_login') }}</a>
         </div>
       </form>
 

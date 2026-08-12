@@ -220,3 +220,24 @@ async def login_2fa_submit(
 async def logout(request: Request):
     request.session.clear()
     return RedirectResponse("/login", status_code=303)
+
+
+@router.post("/language")
+async def set_language(
+    request: Request,
+    lang: str = Form(...),
+    next: str = Form("/"),
+):
+    next_url = _safe_next(next)
+    if lang not in ("en", "fr"):
+        lang = "en"
+    
+    response = RedirectResponse(next_url, status_code=303)
+    response.set_cookie(
+        "panel_lang", 
+        lang, 
+        max_age=31536000, 
+        path="/", 
+        samesite="lax"
+    )
+    return response

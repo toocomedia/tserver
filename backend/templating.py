@@ -96,8 +96,37 @@ def csrf_token(request: Request) -> str:
     return ensure_csrf_token(request)
 
 
-from jinja2 import select_autoescape
+from jinja2 import select_autoescape, pass_context
 import config
+from services.i18n_service import i18n_service
+
+@pass_context
+def _translate(context, key: str) -> str:
+    request = context.get("request")
+    lang = getattr(request.state, "lang", "en") if request else "en"
+    return i18n_service.get_string(key, lang)
+
+@pass_context
+def _translate_plural(context, key: str, count: int) -> str:
+    request = context.get("request")
+    lang = getattr(request.state, "lang", "en") if request else "en"
+    return i18n_service.get_plural_string(key, count, lang)
+
+@pass_context
+def get_js_translations(context) -> str:
+    import json
+    request = context.get("request")
+    lang = getattr(request.state, "lang", "en") if request else "en"
+    
+    # Base dictionary from English
+    js_strings = {k: v for k, v in i18n_service.en_strings.items() if k.startswith("js.")}
+    
+    # Override with French if enabled
+    if lang == "fr" and i18n_service.french_enabled:
+        fr_overrides = {k: v for k, v in i18n_service.fr_strings.items() if k.startswith("js.")}
+        js_strings.update(fr_overrides)
+        
+    return json.dumps(js_strings)
 
 templates = Jinja2Templates(directory="templates")
 templates.env.autoescape = select_autoescape(["html", "xml"])
@@ -109,6 +138,9 @@ templates.env.globals["get_plugin_sidebar_items"] = get_plugin_sidebar_items
 templates.env.globals["PANEL_NAME"] = config.PANEL_NAME
 templates.env.globals["PANEL_SHORT_NAME"] = config.PANEL_SHORT_NAME
 templates.env.globals["PANEL_LOGO_PATH"] = config.PANEL_LOGO_PATH
+templates.env.globals["_"] = _translate
+templates.env.globals["n_"] = _translate_plural
+templates.env.globals["get_js_translations"] = get_js_translations
 
 import os
 

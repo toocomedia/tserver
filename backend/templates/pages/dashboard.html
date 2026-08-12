@@ -7,7 +7,7 @@
 {% block page_title %}Dashboard{% endblock %}
 
 {% block topbar_actions %}
-  <a href="/api/health" class="btn btn--secondary btn--sm" target="_blank" id="btn-health-check">Health Check</a>
+  <a href="/api/health" class="btn btn--secondary btn--sm" target="_blank" id="btn-health-check">{{ _('health_check') }}</a>
 {% endblock %}
 
 {% block content %}
@@ -20,9 +20,9 @@
 <!-- LOW-RAM RECOMMENDATION NOTICE -->
 <div id="low-ram-notice" class="alert alert--warn mb-lg" style="display:none; align-items:center; justify-content:space-between; gap: 12px; padding: 12px 16px;">
   <div style="font-size: 13px; line-height: 1.5;">
-    <strong>Optimization Recommended:</strong> Your server has <span id="low-ram-val">less than 2.0 GB</span> RAM. Enable Low-RAM Optimization Mode to activate zRAM, tune the kernel, and lower the memory footprint.
+    <strong>{{ _('optimization_recommended') }}</strong> {{ _('your_server_has') }} <span id="low-ram-val">{{ _('less_than_2_0_gb') }}</span> {{ _('ram_enable_low_ram_optimization_mode_to_') }}
   </div>
-  <button class="btn btn--sm btn--primary" id="btn-quick-optimize" onclick="enableOptimizationQuick()" style="white-space: nowrap;">Enable</button>
+  <button class="btn btn--sm btn--primary" id="btn-quick-optimize" onclick="enableOptimizationQuick()" style="white-space: nowrap;">{{ _('enable') }}</button>
 </div>
 
 <!-- STAT GRID (1px Border Box Cards) -->
@@ -30,44 +30,44 @@
 
   <div class="stat-card-box">
     <div class="stat-card-box__label">
-      <span>Domains</span>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zM2 12h20"/></svg>
+      <span>{{ _('domains') }}</span>
+      <svg viewbox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zM2 12h20"></path></svg>
     </div>
     <div class="stat-card-box__val" id="stat-domains">{{ domain_count }}</div>
-    <div class="stat-card-box__meta">Virtual Hosts Configured</div>
+    <div class="stat-card-box__meta">{{ _('virtual_hosts_configured') }}</div>
   </div>
 
   <div class="stat-card-box">
     <div class="stat-card-box__label">
-      <span>SSL Certificates</span>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      <span>{{ _('ssl_certificates') }}</span>
+      <svg viewbox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
     </div>
     <div class="stat-card-box__val" id="stat-certs">{{ cert_count }}</div>
-    <div class="stat-card-box__meta">Let's Encrypt Active</div>
+    <div class="stat-card-box__meta">{{ _('let_s_encrypt_active') }}</div>
   </div>
 
   <div class="stat-card-box">
     <div class="stat-card-box__label">
-      <span>Reverse Proxies</span>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1zM4 22v-7"/></svg>
+      <span>{{ _('reverse_proxies') }}</span>
+      <svg viewbox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1zM4 22v-7"></path></svg>
     </div>
     <div class="stat-card-box__val" id="stat-proxies">{{ proxy_count }}</div>
-    <div class="stat-card-box__meta">Active Routing Rules</div>
+    <div class="stat-card-box__meta">{{ _('active_routing_rules') }}</div>
   </div>
 
   <div class="stat-card-box">
     <div class="stat-card-box__label">
-      <span>Server IP</span>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      <span>{{ _('server_ip') }}</span>
+      <svg viewbox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"></path></svg>
     </div>
     <div class="stat-card-box__val" style="font-size:16px; font-weight:800;" id="stat-ip">{{ server_ip }}</div>
-    <div class="stat-card-box__meta">Public IP Address</div>
+    <div class="stat-card-box__meta">{{ _('public_ip_address') }}</div>
   </div>
 
   <div class="stat-card-box">
     <div class="stat-card-box__label">
-      <span>Open Errors</span>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0zM12 9v4M12 17h.01"/></svg>
+      <span>{{ _('open_errors') }}</span>
+      <svg viewbox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0zM12 9v4M12 17h.01"></path></svg>
     </div>
     <div class="stat-card-box__val" id="stat-errors">
       {% if open_errors %}
@@ -76,7 +76,7 @@
         0
       {% endif %}
     </div>
-    <div class="stat-card-box__meta">System Log Traps</div>
+    <div class="stat-card-box__meta">{{ _('system_log_traps') }}</div>
   </div>
 
 </div>
@@ -85,37 +85,37 @@
 <div class="mb-xl">
   <div class="list-title-bar">
     <h3>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px; height:14px;"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/></svg>
-      Core Server Services
+      <svg viewbox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px; height:14px;"><rect x="2" y="2" width="20" height="8" rx="2"></rect><rect x="2" y="14" width="20" height="8" rx="2"></rect></svg>
+      {{ _('core_server_services') }}
     </h3>
-    <button class="btn btn--secondary btn--sm" id="btn-refresh-status" onclick="refreshStatus()">Refresh</button>
+    <button class="btn btn--secondary btn--sm" id="btn-refresh-status" onclick="refreshStatus()">{{ _('refresh') }}</button>
   </div>
 
   <div class="section__body">
     <div class="info-row">
-      <span class="info-row__label">Hostname</span>
+      <span class="info-row__label">{{ _('hostname') }}</span>
       <span class="info-row__value">{{ hostname }}</span>
     </div>
 
     <div class="info-row">
-      <span class="info-row__label">Nginx Web Engine</span>
+      <span class="info-row__label">{{ _('nginx_web_engine') }}</span>
       <span class="info-row__value" id="nginx-status">
         {% if nginx.ok %}
-          <span class="badge-minimal badge-minimal--active">ACTIVE</span>
+          <span class="badge-minimal badge-minimal--active">{{ _('active') }}</span>
         {% else %}
-          <span class="badge-minimal badge-minimal--danger">ERROR</span>
+          <span class="badge-minimal badge-minimal--danger">{{ _('error') }}</span>
           <span class="text-small text-muted" style="margin-left:8px;">{{ nginx.detail }}</span>
         {% endif %}
       </span>
     </div>
 
     <div class="info-row">
-      <span class="info-row__label">PowerDNS Name Server</span>
+      <span class="info-row__label">{{ _('powerdns_name_server') }}</span>
       <span class="info-row__value" id="pdns-status">
         {% if powerdns.ok %}
-          <span class="badge-minimal badge-minimal--active">ACTIVE</span>
+          <span class="badge-minimal badge-minimal--active">{{ _('active') }}</span>
         {% else %}
-          <span class="badge-minimal badge-minimal--danger">ERROR</span>
+          <span class="badge-minimal badge-minimal--danger">{{ _('error') }}</span>
           <span class="text-small text-muted" style="margin-left:8px;">{{ powerdns.detail }}</span>
         {% endif %}
       </span>
@@ -125,15 +125,15 @@
 
 <!-- QUICK ACTIONS -->
 <div class="list-title-bar" style="margin-bottom: 12px;">
-  <h3>Quick Actions</h3>
+  <h3>{{ _('quick_actions') }}</h3>
 </div>
 
 <div class="d-flex gap-sm flex-wrap content-pad">
-  <a href="/domains/create" class="btn btn--primary" id="btn-add-domain">+ Add Domain</a>
-  <a href="/proxy/create"   class="btn btn--secondary" id="btn-add-proxy">+ Add Reverse Proxy</a>
-  <a href="/ssl"            class="btn btn--secondary" id="btn-manage-ssl">Manage SSL</a>
-  <a href="/dns"            class="btn btn--secondary" id="btn-manage-dns">Manage DNS</a>
-  <a href="/admin/errors/"  class="btn btn--secondary" id="btn-manage-errors">Error Tracker</a>
+  <a href="/domains/create" class="btn btn--primary" id="btn-add-domain">{{ _('add_domain') }}</a>
+  <a href="/proxy/create" class="btn btn--secondary" id="btn-add-proxy">{{ _('add_reverse_proxy') }}</a>
+  <a href="/ssl" class="btn btn--secondary" id="btn-manage-ssl">{{ _('manage_ssl') }}</a>
+  <a href="/dns" class="btn btn--secondary" id="btn-manage-dns">{{ _('manage_dns') }}</a>
+  <a href="/admin/errors/" class="btn btn--secondary" id="btn-manage-errors">{{ _('error_tracker') }}</a>
 </div>
 </div><!-- /.dashboard-page -->
 {% endblock %}

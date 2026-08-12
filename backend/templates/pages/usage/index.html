@@ -7,10 +7,10 @@
 
 {% block topbar_actions %}
   <span id="usage-last-updated" class="text-small text-muted" style="margin-right: 8px;"></span>
-  <button class="btn btn--secondary btn--sm" id="btn-pause-poll" onclick="togglePoll()">Pause</button>
+  <button class="btn btn--secondary btn--sm" id="btn-pause-poll" onclick="togglePoll()">{{ _('pause') }}</button>
   <button class="btn btn--danger btn--sm" id="btn-reboot-server" onclick="rebootServer()" style="margin-left: 8px;">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin-right:4px;"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path><line x1="12" y1="2" x2="12" y2="12"></line></svg>
-    Reboot Server
+    <svg width="14" height="14" viewbox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin-right:4px;"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path><line x1="12" y1="2" x2="12" y2="12"></line></svg>
+    {{ _('reboot_server') }}
   </button>
 {% endblock %}
 

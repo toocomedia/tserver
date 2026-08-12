@@ -1,13 +1,13 @@
 <section class="unboxed-step-container" data-wizard-panel="6" hidden>
   <div class="unboxed-step-header">
-    <span>Step 6: Live Terminal Stream Output</span>
-    <span class="badge-pill badge-pill--accent" data-deployment-stage>Waiting</span>
+    <span>{{ _('step_6_live_terminal_stream_output') }}</span>
+    <span class="badge-pill badge-pill--accent" data-deployment-stage>{{ _('waiting') }}</span>
   </div>
-  <p class="form-hint">Server execution journal stream</p>
+  <p class="form-hint">{{ _('server_execution_journal_stream') }}</p>
   <div class="terminal-fluid" data-deployment-output aria-live="polite"></div>
   <div class="alert alert--danger" data-deployment-error hidden>
     <span data-deployment-error-text></span>
-    <a class="btn btn--danger btn--sm" data-deployment-details>Open app details</a>
+    <a class="btn btn--danger btn--sm" data-deployment-details>{{ _('open_app_details') }}</a>
   </div>
-  <a class="btn btn--primary" data-deployment-dashboard hidden>Open App Dashboard</a>
+  <a class="btn btn--primary" data-deployment-dashboard hidden>{{ _('open_app_dashboard') }}</a>
 </section>

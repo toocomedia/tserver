@@ -1,10 +1,8 @@
 <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
   {% if plugin.dependency_status or plugin.manifest_error or (action_error and action_error_plugin_id == plugin.id) %}
-    <button type="button" class="btn btn--secondary btn--sm requirements-info-btn {% if plugin.paused_by %}requirements-info-btn--danger{% endif %}"
-            title="{% if plugin.paused_by %}Missing Requirements — Click to Check Details{% else %}System Check & Details{% endif %}"
-            onclick="toggleAndCheckPlugin(this);">
-      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
-      <span>System Check</span>
+    <button type="button" class="btn btn--secondary btn--sm requirements-info-btn {% if plugin.paused_by %}requirements-info-btn--danger{% endif %}" title="{% if plugin.paused_by %}Missing Requirements — Click to Check Details{% else %}System Check & Details{% endif %}" onclick="toggleAndCheckPlugin(this);">
+      <svg viewbox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+      <span>{{ _('system_check') }}</span>
     </button>
   {% endif %}
 
@@ -12,10 +10,9 @@
     <form method="post" action="/plugins/api/install" style="display:inline-flex;">
       <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
       <input type="hidden" name="plugin_id" value="{{ plugin.id }}">
-      <button type="submit" class="btn btn--primary btn--sm" title="Install {{ plugin.name }}"
-        {% if plugin.paused_by %}disabled style="opacity:0.5;" title="Install required system dependency first"{% endif %}>
-        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-        <span>Install</span>
+      <button type="submit" class="btn btn--primary btn--sm" title="Install {{ plugin.name }}" {% if plugin.paused_by %}disabled style="opacity:0.5;" title="Install required system dependency first" {% endif %}>
+        <svg viewbox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+        <span>{{ _('install') }}</span>
       </button>
     </form>
     {% if plugin.data_purge %}
@@ -23,18 +20,17 @@
       <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
       <input type="hidden" name="plugin_id" value="{{ plugin.id }}">
       <input type="hidden" name="confirmation" value="">
-      <button type="submit" class="btn btn--danger btn--sm" title="Purge Data"
-        onclick="const value=prompt('Type PURGE {{ plugin.id }} to permanently delete preserved data.'); if(value===null)return false; this.form.elements.confirmation.value=value; return true;">
-        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-        <span>Purge Data</span>
+      <button type="submit" class="btn btn--danger btn--sm" title="Purge Data" onclick="const value=prompt('Type PURGE {{ plugin.id }} to permanently delete preserved data.'); if(value===null)return false; this.form.elements.confirmation.value=value; return true;">
+        <svg viewbox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+        <span>{{ _('purge_data') }}</span>
       </button>
     </form>
     {% endif %}
   {% else %}
     {% if plugin.route_prefix and plugin.effective_status == 'active' %}
       <a href="{{ plugin.route_prefix }}" class="btn btn--primary btn--sm" title="Manage {{ plugin.name }}">
-        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
-        <span>Manage</span>
+        <svg viewbox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+        <span>{{ _('manage') }}</span>
       </a>
     {% endif %}
 
@@ -45,11 +41,11 @@
       <input type="hidden" name="enabled" value="{% if plugin.enabled %}false{% else %}true{% endif %}">
       <button type="submit" class="btn btn--secondary btn--sm" title="{% if plugin.enabled %}Disable{% else %}Enable{% endif %} {{ plugin.name }}">
         {% if plugin.enabled %}
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
-          <span>Disable</span>
+          <svg viewbox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
+          <span>{{ _('disable') }}</span>
         {% else %}
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-          <span>Enable</span>
+          <svg viewbox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+          <span>{{ _('enable') }}</span>
         {% endif %}
       </button>
     </form>
@@ -59,8 +55,8 @@
       <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
       <input type="hidden" name="plugin_id" value="{{ plugin.id }}">
       <button type="submit" class="btn btn--danger btn--sm" title="Uninstall {{ plugin.name }}" onclick="return confirm('Uninstall {{ plugin.name }}?')">
-        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path></svg>
-        <span>Uninstall</span>
+        <svg viewbox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path></svg>
+        <span>{{ _('uninstall') }}</span>
       </button>
     </form>
   {% endif %}

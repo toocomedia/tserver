@@ -4,7 +4,7 @@
 {% block page_title %}{{ plugin.name }}{% endblock %}
 
 {% block topbar_actions %}
-<a class="btn btn--secondary btn--sm" href="/plugins">← Back to Plugins</a>
+<a class="btn btn--secondary btn--sm" href="/plugins">{{ _('back_to_plugins') }}</a>
 {% endblock %}
 
 {% block content %}
@@ -14,31 +14,31 @@
   <header class="info-hero-row">
     <div class="info-hero-row__icon">
       <img src="/plugins/assets/{{ plugin.id }}/icon.png" alt="{{ plugin.name }} icon" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='block';">
-      <svg style="display: none; width:64px; height:64px; stroke:var(--color-text);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="1.5" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+      <svg style="display: none; width:64px; height:64px; stroke:var(--color-text);" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-width="1.5" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
     </div>
 
     <div class="info-hero-row__main">
       <div class="info-hero-row__title-line">
         <h1 class="info-hero-row__title">{{ plugin.name }}</h1>
         {% if plugin.effective_status == 'active' %}
-          <span class="badge badge--healthy"><span class="badge-dot"></span> Active</span>
+          <span class="badge badge--healthy"><span class="badge-dot"></span> {{ _('active_1') }}</span>
         {% elif plugin.effective_status == 'paused' %}
-          <span class="badge badge--warning"><span class="badge-dot"></span> Paused (Missing Dependency)</span>
+          <span class="badge badge--warning"><span class="badge-dot"></span> {{ _('paused_missing_dependency') }}</span>
         {% elif plugin.effective_status == 'disabled' %}
-          <span class="badge badge--muted"><span class="badge-dot"></span> Disabled</span>
+          <span class="badge badge--muted"><span class="badge-dot"></span> {{ _('disabled') }}</span>
         {% elif plugin.effective_status == 'missing' %}
-          <span class="badge badge--muted"><span class="badge-dot"></span> Not Installed</span>
+          <span class="badge badge--muted"><span class="badge-dot"></span> {{ _('not_installed') }}</span>
         {% else %}
           <span class="badge badge--danger"><span class="badge-dot"></span> {{ plugin.effective_status | upper }}</span>
         {% endif %}
       </div>
-      <div class="info-hero-row__meta">System Extension / Plugin · v{{ plugin.version }}</div>
+      <div class="info-hero-row__meta">{{ _('system_extension_plugin_v_plugin_version') }}</div>
     </div>
 
     <div class="info-hero-row__actions">
       {% if plugin.installed %}
         {% if plugin.route_prefix and plugin.effective_status == 'active' %}
-          <a href="{{ plugin.route_prefix }}" class="btn btn--primary btn--sm">Manage {{ plugin.name }}</a>
+          <a href="{{ plugin.route_prefix }}" class="btn btn--primary btn--sm">{{ _('manage_plugin_name') }}</a>
         {% endif %}
         {% if plugin.effective_status != 'invalid' %}
           <form method="post" action="/plugins/api/toggle" style="display:inline-flex;">
@@ -51,21 +51,20 @@
         <form method="post" action="/plugins/api/uninstall" style="display:inline-flex;">
           <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
           <input type="hidden" name="plugin_id" value="{{ plugin.id }}">
-          <button type="submit" class="btn btn--danger btn--sm" onclick="return confirm('Uninstall {{ plugin.name }}?')">Uninstall</button>
+          <button type="submit" class="btn btn--danger btn--sm" onclick="return confirm('Uninstall {{ plugin.name }}?')">{{ _('uninstall') }}</button>
         </form>
       {% else %}
         <form method="post" action="/plugins/api/install" style="display:inline-flex;">
           <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
           <input type="hidden" name="plugin_id" value="{{ plugin.id }}">
-          <button type="submit" class="btn btn--primary btn--sm" {% if plugin.paused_by %}disabled title="Install required system dependency first"{% endif %}>Install {{ plugin.name }}</button>
+          <button type="submit" class="btn btn--primary btn--sm" {% if plugin.paused_by %}disabled title="Install required system dependency first" {% endif %}>{{ _('install_plugin_name') }}</button>
         </form>
         {% if plugin.data_purge %}
         <form method="post" action="/plugins/api/purge-data" style="display:inline-flex;">
           <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
           <input type="hidden" name="plugin_id" value="{{ plugin.id }}">
           <input type="hidden" name="confirmation" value="">
-          <button type="submit" class="btn btn--danger btn--sm"
-            onclick="const value=prompt('Type PURGE {{ plugin.id }} to permanently delete preserved data.'); if(value===null)return false; this.form.elements.confirmation.value=value; return true;">Purge Data</button>
+          <button type="submit" class="btn btn--danger btn--sm" onclick="const value=prompt('Type PURGE {{ plugin.id }} to permanently delete preserved data.'); if(value===null)return false; this.form.elements.confirmation.value=value; return true;">{{ _('purge_data') }}</button>
         </form>
         {% endif %}
       {% endif %}
@@ -75,7 +74,7 @@
   <!-- DESCRIPTION -->
   {% if plugin.description %}
   <div style="margin-bottom: 2rem;">
-    <h2 class="info-group-title">Description</h2>
+    <h2 class="info-group-title">{{ _('description') }}</h2>
     <p style="font-size: 13px; color: var(--color-text); line-height: 1.55;">
       {{ plugin.description }}
     </p>
@@ -84,27 +83,27 @@
 
   <!-- SYSTEM SPECIFICATIONS & REQUIREMENTS -->
   <div style="margin-bottom: 2rem;">
-    <h2 class="info-group-title">System Specifications &amp; Requirements</h2>
+    <h2 class="info-group-title">{{ _('system_specifications_requirements') }}</h2>
     
     <div class="clean-specs-grid">
       <div class="clean-specs-item">
-        <div class="clean-specs-item__key">Plugin ID</div>
+        <div class="clean-specs-item__key">{{ _('plugin_id') }}</div>
         <div class="clean-specs-item__val"><code>{{ plugin.id }}</code></div>
       </div>
       <div class="clean-specs-item">
-        <div class="clean-specs-item__key">Version</div>
-        <div class="clean-specs-item__val">v{{ plugin.version }}</div>
+        <div class="clean-specs-item__key">{{ _('version') }}</div>
+        <div class="clean-specs-item__val">{{ _('v_plugin_version') }}</div>
       </div>
       <div class="clean-specs-item">
-        <div class="clean-specs-item__key">Installation Status</div>
+        <div class="clean-specs-item__key">{{ _('installation_status') }}</div>
         <div class="clean-specs-item__val">{{ 'Installed' if plugin.installed else 'Not Installed' }}</div>
       </div>
       <div class="clean-specs-item">
-        <div class="clean-specs-item__key">Effective State</div>
+        <div class="clean-specs-item__key">{{ _('effective_state') }}</div>
         <div class="clean-specs-item__val">{{ plugin.effective_status | replace('_', ' ') | title }}</div>
       </div>
       <div class="clean-specs-item">
-        <div class="clean-specs-item__key">Required System Dependencies</div>
+        <div class="clean-specs-item__key">{{ _('required_system_dependencies') }}</div>
         <div class="clean-specs-item__val">
           {% if plugin.dependency_status and plugin.dependency_status | length > 0 %}
             <div style="display:flex; flex-direction:column; gap:6px; margin-top:4px;">
@@ -112,11 +111,11 @@
                 <div style="display:flex; align-items:center; gap:8px;">
                   <a href="/dependencies/{{ dep.id }}" style="color:var(--color-accent); font-weight:700; text-decoration:underline;">{{ dep.id | title }}</a>
                   {% if dep.healthy is sameas true %}
-                    <span class="badge badge--healthy" style="padding:2px 6px; font-size:10px;">✓ Healthy</span>
+                    <span class="badge badge--healthy" style="padding:2px 6px; font-size:10px;">{{ _('healthy_1') }}</span>
                   {% elif dep.healthy is sameas false %}
-                    <span class="badge badge--danger" style="padding:2px 6px; font-size:10px;">✕ Missing / Unhealthy</span>
+                    <span class="badge badge--danger" style="padding:2px 6px; font-size:10px;">{{ _('missing_unhealthy') }}</span>
                   {% else %}
-                    <span class="badge badge--muted" style="padding:2px 6px; font-size:10px;">Not checked</span>
+                    <span class="badge badge--muted" style="padding:2px 6px; font-size:10px;">{{ _('not_checked') }}</span>
                   {% endif %}
                 </div>
               {% endfor %}
@@ -130,10 +129,10 @@
   </div>
 
   {% if action_error %}
-  <p class="text-danger" style="margin-bottom: 1rem;">⚠️ {{ action_error }}</p>
+  <p class="text-danger" style="margin-bottom: 1rem;">{{ _('action_error') }}</p>
   {% endif %}
   {% if plugin.manifest_error %}
-  <p class="text-danger" style="margin-bottom: 1rem;">⚠️ {{ plugin.manifest_error }}</p>
+  <p class="text-danger" style="margin-bottom: 1rem;">{{ _('plugin_manifest_error') }}</p>
   {% endif %}
 
 </article>

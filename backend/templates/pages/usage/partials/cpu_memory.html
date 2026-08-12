@@ -2,21 +2,21 @@
 <div class="section mb-xl">
   <div class="section__header">
     <h3 style="display:flex; align-items:center; gap:8px;">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px; height:15px;"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9h6v6H9z"/></svg>
-      CPU &amp; Memory Diagnostics
+      <svg viewbox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px; height:15px;"><rect x="4" y="4" width="16" height="16" rx="2"></rect><path d="M9 9h6v6H9z"></path></svg>
+      {{ _('cpu_memory_diagnostics') }}
     </h3>
   </div>
   <div class="section__body" data-live-section="cpumem">
     <!-- Notice banner for < 2GB RAM -->
     <div id="usage-low-ram-alert" class="recommendation-card mb-md" hidden>
       <div class="recommendation-card__copy">
-        <strong>Optimization Recommended:</strong> Your server has <span id="usage-ram-val">less than 2.0 GB</span> RAM. Enable Low-RAM Optimization Mode to activate zRAM, tune the kernel, and lower the memory footprint.
+        <strong>{{ _('optimization_recommended') }}</strong> {{ _('your_server_has') }} <span id="usage-ram-val">{{ _('less_than_2_0_gb') }}</span> {{ _('ram_enable_low_ram_optimization_mode_to_') }}
       </div>
-      <div class="recommendation-card__actions"><button class="btn btn--sm btn--primary" id="btn-quick-optimize-usage" data-optimization-action="ram-on">Enable</button></div>
+      <div class="recommendation-card__actions"><button class="btn btn--sm btn--primary" id="btn-quick-optimize-usage" data-optimization-action="ram-on">{{ _('enable') }}</button></div>
     </div>
 
     <div class="info-row">
-      <span class="info-row__label">CPU Usage</span>
+      <span class="info-row__label">{{ _('cpu_usage') }}</span>
       <span class="info-row__value">
         <div class="usage-bar-wrap">
           <div class="usage-bar"><div class="usage-bar__fill" id="bar-cpu" style="width:0%"></div></div>
@@ -26,7 +26,7 @@
     </div>
 
     <div class="info-row">
-      <span class="info-row__label">RAM</span>
+      <span class="info-row__label">{{ _('ram') }}</span>
       <span class="info-row__value">
         <div class="usage-bar-wrap">
           <div class="usage-bar"><div class="usage-bar__fill" id="bar-ram" style="width:0%"></div></div>
@@ -36,12 +36,12 @@
     </div>
 
     <div class="info-row">
-      <span class="info-row__label">RAM Detail</span>
+      <span class="info-row__label">{{ _('ram_detail') }}</span>
       <span class="info-row__value text-muted" id="ram-detail">—</span>
     </div>
 
     <div class="info-row">
-      <span class="info-row__label">Swap</span>
+      <span class="info-row__label">{{ _('swap') }}</span>
       <span class="info-row__value">
         <div class="usage-bar-wrap">
           <div class="usage-bar"><div class="usage-bar__fill" id="bar-swap" style="width:0%"></div></div>
@@ -51,7 +51,7 @@
     </div>
 
     <div class="info-row">
-      <span class="info-row__label">Swap Detail</span>
+      <span class="info-row__label">{{ _('swap_detail') }}</span>
       <span class="info-row__value text-muted" id="swap-detail">—</span>
     </div>
   </div>

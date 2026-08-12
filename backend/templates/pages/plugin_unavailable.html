@@ -8,9 +8,9 @@
   <strong>{{ plugin_id }}</strong>
   <p>{{ message }}</p>
   {% if code == 'dependency_unavailable' %}
-  <a class="btn btn--primary" href="/dependencies">Open Dependencies</a>
+  <a class="btn btn--primary" href="/dependencies">{{ _('open_dependencies') }}</a>
   {% else %}
-  <a class="btn btn--secondary" href="/plugins/">Open Plugins</a>
+  <a class="btn btn--secondary" href="/plugins/">{{ _('open_plugins') }}</a>
   {% endif %}
 </div>
 {% endblock %}

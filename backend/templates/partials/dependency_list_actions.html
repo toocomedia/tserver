@@ -1,6 +1,6 @@
 <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
   {% if dependency.detail_only %}
-  <a href="/dependencies/{{ dependency.id }}" class="btn btn--primary btn--sm">Manage</a>
+  <a href="/dependencies/{{ dependency.id }}" class="btn btn--primary btn--sm">{{ _('manage') }}</a>
   {% elif dependency.installed and dependency.can_toggle %}
     <form method="post" action="/api/dependencies/{{ dependency.id }}/toggle" style="display:inline-flex;">
       <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
@@ -8,20 +8,20 @@
         <input type="hidden" name="enabled" value="false">
         <input type="hidden" name="confirmed" value="true">
         <button class="btn btn--secondary btn--sm" type="submit" onclick="return confirm('Disable {{ dependency.name }}? Dependent plugins will be paused.')">
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
-          <span>Disable</span>
+          <svg viewbox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
+          <span>{{ _('disable') }}</span>
         </button>
       {% else %}
         <input type="hidden" name="enabled" value="true">
         <button class="btn btn--primary btn--sm" type="submit">
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-          <span>Enable</span>
+          <svg viewbox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+          <span>{{ _('enable') }}</span>
         </button>
       {% endif %}
     </form>
   {% endif %}
   <a href="/dependencies/{{ dependency.id }}" class="btn btn--secondary btn--sm">
-    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
-    <span>View Info</span>
+    <svg viewbox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+    <span>{{ _('view_info') }}</span>
   </a>
 </div>

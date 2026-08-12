@@ -6,7 +6,7 @@
 {% block page_title %}Python Apps{% endblock %}
 
 {% block topbar_actions %}
-  <a href="/domains" class="btn btn--primary" id="btn-deploy-app">+ Deploy Python App</a>
+  <a href="/domains" class="btn btn--primary" id="btn-deploy-app">{{ _('deploy_python_app') }}</a>
 {% endblock %}
 
 {% block content %}
@@ -28,11 +28,11 @@
     </colgroup>
     <thead>
       <tr>
-        <th>Service Name</th>
-        <th>Linked Domain</th>
-        <th>Port</th>
-        <th>Status</th>
-        <th class="col-actions">Actions</th>
+        <th>{{ _('service_name') }}</th>
+        <th>{{ _('linked_domain') }}</th>
+        <th>{{ _('port_1') }}</th>
+        <th>{{ _('status') }}</th>
+        <th class="col-actions">{{ _('actions') }}</th>
       </tr>
     </thead>
     <tbody>
@@ -46,10 +46,10 @@
           {% if domain %}
             <a href="/domains/{{ domain.id }}" style="font-weight:700; color:var(--color-text);">{{ domain.name }}</a>
           {% else %}
-            <span class="text-muted">Unlinked</span>
+            <span class="text-muted">{{ _('unlinked') }}</span>
           {% endif %}
         </td>
-        <td><code>127.0.0.1:{{ app.port }}</code></td>
+        <td><code>{{ _('127_0_0_1_app_port') }}</code></td>
         <td>
           <span class="badge-minimal {% if app.status == 'running' %}badge-minimal--active{% else %}badge-minimal--neutral{% endif %}">{{ app.status | upper }}</span>
         </td>
@@ -58,8 +58,8 @@
           {{ list_actions.button() }}
           {% call list_actions.tray() %}
             <a class="btn btn--primary btn--sm" href="/apps/{{ app.id }}">
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
-              <span>Manage Application</span>
+              <svg viewbox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+              <span>{{ _('manage_application') }}</span>
             </a>
           {% endcall %}
         </td>
@@ -73,10 +73,10 @@
   <div class="empty-state__shape">
     <div class="shape-square-sm"></div>
   </div>
-  <h3 class="empty-state__title">No apps deployed</h3>
-  <p class="empty-state__desc">Select a domain to deploy your first Python app.</p>
+  <h3 class="empty-state__title">{{ _('no_apps_deployed') }}</h3>
+  <p class="empty-state__desc">{{ _('select_a_domain_to_deploy_your_first_pyt') }}</p>
   <div class="empty-state__actions">
-    <a href="/domains" class="btn btn--minimal">Go to Domains</a>
+    <a href="/domains" class="btn btn--minimal">{{ _('go_to_domains') }}</a>
   </div>
 </div>
 {% endif %}

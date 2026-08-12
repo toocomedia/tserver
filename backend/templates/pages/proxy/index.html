@@ -6,7 +6,7 @@
 {% block page_title %}Reverse Proxy{% endblock %}
 
 {% block topbar_actions %}
-  <a href="/proxy/create" class="btn btn--primary" id="btn-add-proxy">+ Create Proxy</a>
+  <a href="/proxy/create" class="btn btn--primary" id="btn-add-proxy">{{ _('create_proxy') }}</a>
 {% endblock %}
 
 {% block content %}
@@ -22,12 +22,11 @@
 
 {% if created %}
 <div class="alert alert--success mb-lg" id="alert-created">
-  Proxy created for <strong>{{ created }}</strong>. Nginx configured
-  (DNS updated when using a managed domain).
+  {{ _('proxy_created_for') }} <strong>{{ created }}</strong>{{ _('nginx_configured_dns_updated_when_using_') }}
 </div>
 {% endif %}
 {% if deleted %}
-<div class="alert alert--info mb-lg" id="alert-deleted">Reverse proxy deleted and cleaned up.</div>
+<div class="alert alert--info mb-lg" id="alert-deleted">{{ _('reverse_proxy_deleted_and_cleaned_up') }}</div>
 {% endif %}
 {% if error %}
 <div class="alert alert--danger mb-lg" id="alert-error">{{ error }}</div>
@@ -42,9 +41,9 @@
     </div>
     <div class="action-toolbar__group">
       <select id="proxy-status-filter" class="form-control" style="width: 140px;" onchange="filterProxyTable()">
-        <option value="all">All Proxies</option>
-        <option value="ssl">SSL Enabled</option>
-        <option value="cache">Cache Enabled</option>
+        <option value="all">{{ _('all_proxies') }}</option>
+        <option value="ssl">{{ _('ssl_enabled') }}</option>
+        <option value="cache">{{ _('cache_enabled') }}</option>
       </select>
     </div>
   </div>
@@ -62,20 +61,19 @@
     </colgroup>
     <thead>
       <tr>
-        <th>Subdomain</th>
-        <th>Target</th>
-        <th>Protocol</th>
-        <th>SSL</th>
-        <th>DNS</th>
-        <th>Cache</th>
-        <th class="col-actions">Actions</th>
+        <th>{{ _('subdomain') }}</th>
+        <th>{{ _('target') }}</th>
+        <th>{{ _('protocol') }}</th>
+        <th>{{ _('ssl_1') }}</th>
+        <th>{{ _('dns') }}</th>
+        <th>{{ _('cache') }}</th>
+        <th class="col-actions">{{ _('actions') }}</th>
       </tr>
     </thead>
     <tbody>
       {% for item in rows %}
       {% set p = item.proxy %}
-      <tr id="proxy-row-{{ p.id }}"
-          data-proxy-id="{{ p.id }}">
+      <tr id="proxy-row-{{ p.id }}" data-proxy-id="{{ p.id }}">
 
         <td>
           <span class="table-title">{{ p.full_domain }}</span>
@@ -93,29 +91,29 @@
 
         <td>
           {% if p.ssl_enabled %}
-            <span class="status-badge status-badge--success">SSL</span>
+            <span class="status-badge status-badge--success">{{ _('ssl_1') }}</span>
           {% else %}
-            <span class="status-badge status-badge--muted">HTTP</span>
+            <span class="status-badge status-badge--muted">{{ _('http') }}</span>
           {% endif %}
         </td>
 
         <td>
           {% if item.dns_status == 'external' %}
-            <span class="status-badge status-badge--muted">External</span>
+            <span class="status-badge status-badge--muted">{{ _('external_1') }}</span>
           {% elif item.dns_ok %}
-            <span class="status-badge status-badge--success">Active</span>
+            <span class="status-badge status-badge--success">{{ _('active_1') }}</span>
           {% else %}
-            <span class="status-badge status-badge--danger">Missing</span>
+            <span class="status-badge status-badge--danger">{{ _('missing_1') }}</span>
           {% endif %}
         </td>
 
         <td>
           {% if item.cache_enabled %}
             <span class="status-badge status-badge--success" id="cache-badge-{{ p.id }}">
-              ON{% if item.cache_size_mb > 0 %} · {{ item.cache_size_mb }}MB{% endif %}
+              {{ _('on_if_item_cache_size_mb_0_item_cache_si') }}
             </span>
           {% else %}
-            <span class="status-badge status-badge--muted" id="cache-badge-{{ p.id }}">OFF</span>
+            <span class="status-badge status-badge--muted" id="cache-badge-{{ p.id }}">{{ _('off') }}</span>
           {% endif %}
         </td>
 
@@ -124,81 +122,55 @@
           {{ list_actions.button() }}
           {% call list_actions.tray() %}
             {% if not p.ssl_enabled %}
-            <a href="/ssl/issue?full_domain={{ p.full_domain }}"
-               class="btn btn--secondary btn--sm"
-               title="Issue SSL"
-               id="btn-ssl-{{ p.id }}">
-              + SSL
+            <a href="/ssl/issue?full_domain={{ p.full_domain }}" class="btn btn--secondary btn--sm" title="Issue SSL" id="btn-ssl-{{ p.id }}">
+              {{ _('ssl_2') }}
             </a>
             {% endif %}
 
-            <button class="btn btn--secondary btn--sm"
-                    id="btn-cache-{{ p.id }}"
-                    data-proxy-id="{{ p.id }}"
-                    data-cache-enabled="{{ '1' if item.cache_enabled else '0' }}"
-                    data-cache-ttl="{{ p.cache_ttl_minutes }}"
-                    data-cache-auto="{{ p.cache_auto_clear_hours }}"
-                    title="Cache Settings">
-              Cache Settings
+            <button class="btn btn--secondary btn--sm" id="btn-cache-{{ p.id }}" data-proxy-id="{{ p.id }}" data-cache-enabled="{{ '1' if item.cache_enabled else '0' }}" data-cache-ttl="{{ p.cache_ttl_minutes }}" data-cache-auto="{{ p.cache_auto_clear_hours }}" title="Cache Settings">
+              {{ _('cache_settings') }}
             </button>
 
-            <button class="btn btn--danger btn--sm"
-                    id="btn-del-{{ p.id }}"
-                    data-proxy-id="{{ p.id }}"
-                    data-full-domain="{{ p.full_domain }}"
-                    data-dns-managed="{{ '1' if item.dns_managed else '0' }}"
-                    title="Delete Proxy">
-              Delete
+            <button class="btn btn--danger btn--sm" id="btn-del-{{ p.id }}" data-proxy-id="{{ p.id }}" data-full-domain="{{ p.full_domain }}" data-dns-managed="{{ '1' if item.dns_managed else '0' }}" title="Delete Proxy">
+              {{ _('delete') }}
             </button>
           {% endcall %}
         </td>
       </tr>
 
-      {# Inline cache settings row — hidden by default #}
+      {{ _('inline_cache_settings_row_hidden_by_defa') }}
       <tr id="cache-panel-{{ p.id }}" class="cache-settings-row" style="display:none;">
         <td colspan="7">
           <div class="cache-settings-box" id="cache-box-{{ p.id }}">
             <div class="cache-settings-header">
-              <strong>Cache settings — {{ p.full_domain }}</strong>
+              <strong>{{ _('cache_settings_p_full_domain') }}</strong>
               <span id="cache-status-msg-{{ p.id }}" class="text-small text-muted"></span>
             </div>
             <div class="cache-settings-body">
               <label class="form-check">
-                <input type="checkbox" id="cache-chk-{{ p.id }}"
-                       {% if item.cache_enabled %}checked{% endif %}>
-                <span>Enable proxy cache</span>
+                <input type="checkbox" id="cache-chk-{{ p.id }}" {% if item.cache_enabled %}checked{% endif %}>
+                <span>{{ _('enable_proxy_cache') }}</span>
               </label>
               <div class="d-flex gap-md align-center mt-sm" style="flex-wrap:wrap;">
                 <div class="form-group" style="margin:0;">
-                  <label class="form-label" for="cache-ttl-{{ p.id }}">TTL (minutes)</label>
-                  <input class="form-input" type="number" min="1" max="10080"
-                         id="cache-ttl-{{ p.id }}" value="{{ p.cache_ttl_minutes }}"
-                         style="max-width:100px;">
+                  <label class="form-label" for="cache-ttl-{{ p.id }}">{{ _('ttl_minutes') }}</label>
+                  <input class="form-input" type="number" min="1" max="10080" id="cache-ttl-{{ p.id }}" value="{{ p.cache_ttl_minutes }}" style="max-width:100px;">
                 </div>
                 <div class="form-group" style="margin:0;">
-                  <label class="form-label" for="cache-auto-{{ p.id }}">Auto-clear (hours, 0=off)</label>
-                  <input class="form-input" type="number" min="0" max="8760"
-                         id="cache-auto-{{ p.id }}" value="{{ p.cache_auto_clear_hours }}"
-                         style="max-width:110px;">
+                  <label class="form-label" for="cache-auto-{{ p.id }}">{{ _('auto_clear_hours_0_off') }}</label>
+                  <input class="form-input" type="number" min="0" max="8760" id="cache-auto-{{ p.id }}" value="{{ p.cache_auto_clear_hours }}" style="max-width:110px;">
                 </div>
               </div>
               <div class="d-flex gap-xs mt-sm">
-                <button class="btn btn--primary btn--sm"
-                        id="btn-cache-save-{{ p.id }}"
-                        data-proxy-id="{{ p.id }}">Save</button>
-                <button class="btn btn--warning btn--sm"
-                        id="btn-cache-purge-{{ p.id }}"
-                        data-proxy-id="{{ p.id }}"
-                        {% if not item.cache_enabled %}disabled{% endif %}>
-                  Purge Cache
+                <button class="btn btn--primary btn--sm" id="btn-cache-save-{{ p.id }}" data-proxy-id="{{ p.id }}">{{ _('save') }}</button>
+                <button class="btn btn--warning btn--sm" id="btn-cache-purge-{{ p.id }}" data-proxy-id="{{ p.id }}" {% if not item.cache_enabled %}disabled{% endif %}>
+                  {{ _('purge_cache') }}
                 </button>
-                <button class="btn btn--secondary btn--sm"
-                        id="btn-cache-close-{{ p.id }}"
-                        data-proxy-id="{{ p.id }}">Close</button>
+                <button class="btn btn--secondary btn--sm" id="btn-cache-close-{{ p.id }}" data-proxy-id="{{ p.id }}">{{ _('close') }}</button>
               </div>
               {% if item.last_cache_cleared %}
               <p class="form-hint mt-xs">
-                Last cleared: {{ item.last_cache_cleared.strftime('%Y-%m-%d %H:%M') }} UTC
+                {{ _('last_cleared_item_last_cache_cleared_str') }}
               </p>
               {% endif %}
             </div>
@@ -216,10 +188,10 @@
   <div class="empty-state__shape">
     <div class="shape-square-sm"></div>
   </div>
-  <h3 class="empty-state__title">No reverse proxies yet</h3>
-  <p class="empty-state__desc">Route incoming traffic to your local ports or external services by creating your first proxy.</p>
+  <h3 class="empty-state__title">{{ _('no_reverse_proxies_yet') }}</h3>
+  <p class="empty-state__desc">{{ _('route_incoming_traffic_to_your_local_por') }}</p>
   <div class="empty-state__actions">
-    <a href="/proxy/create" class="btn btn--minimal">Create Proxy</a>
+    <a href="/proxy/create" class="btn btn--minimal">{{ _('create_proxy_1') }}</a>
   </div>
 </div>
 {% endif %}

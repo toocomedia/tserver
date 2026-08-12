@@ -13,7 +13,7 @@
 {% include "partials/resource_view_switcher.html" with context %}
 <div class="layout-switcher-wrap">
   <button class="btn btn--primary" onclick="openModal('upload-plugin-modal')">
-    + Upload Plugin (.zip)
+    {{ _('upload_plugin_zip') }}
   </button>
 </div>
 {% endblock %}
@@ -26,7 +26,7 @@
 <!-- END SKELETON OVERLAY -->
 
 <div class="mb-xl">
-  {% set plugin_title_icon %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>{% endset %}
+  {% set plugin_title_icon %}<svg viewbox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>{% endset %}
   {% set title = 'Installed Extensions & Plugins' %}
   {% set item_count = plugins | length %}
   {% set icon_svg = plugin_title_icon %}
@@ -57,7 +57,7 @@
     <!-- 3. LIST VIEW -->
     <div data-resource-container="plugins" data-resource-view="list" class="view-list-container is-hidden">
       <div class="list-header-row">
-        <div>Extension / Plugin</div><div>Version</div><div>Status</div><div>Description</div><div>Actions</div>
+        <div>{{ _('extension_plugin') }}</div><div>{{ _('version') }}</div><div>{{ _('status') }}</div><div>{{ _('description') }}</div><div>{{ _('actions') }}</div>
       </div>
       {% from "partials/resource_list_row.html" import render as render_resource_row with context %}
       {% for plugin in plugins %}
@@ -84,21 +84,21 @@
 <div id="upload-plugin-modal" class="modal-backdrop hidden" role="dialog">
   <div class="modal" style="border-radius:0;">
     <div class="modal__header">
-      <h2>Upload Plugin (.zip)</h2>
+      <h2>{{ _('upload_plugin_zip_1') }}</h2>
       <button class="btn btn--ghost btn--icon" onclick="closeModal('upload-plugin-modal')">✕</button>
     </div>
     <form method="post" action="/plugins/api/upload" enctype="multipart/form-data">
       <div class="modal__body">
         <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
         <div class="form-group mb-3">
-          <label class="form-label">Plugin Archive (.zip)</label>
+          <label class="form-label">{{ _('plugin_archive_zip') }}</label>
           <input type="file" name="plugin_file" accept=".zip" required class="form-input">
-          <div class="form-hint mt-1">Must contain a valid <code>plugin.json</code> manifest file.</div>
+          <div class="form-hint mt-1">{{ _('must_contain_a_valid') }} <code>{{ _('plugin_json') }}</code> {{ _('manifest_file') }}</div>
         </div>
       </div>
       <div class="modal__footer">
-        <button type="button" class="btn btn--secondary" onclick="closeModal('upload-plugin-modal')">Cancel</button>
-        <button type="submit" class="btn btn--primary">Upload & Register</button>
+        <button type="button" class="btn btn--secondary" onclick="closeModal('upload-plugin-modal')">{{ _('cancel') }}</button>
+        <button type="submit" class="btn btn--primary">{{ _('upload_register') }}</button>
       </div>
     </form>
   </div>

@@ -2,56 +2,56 @@
 <div class="stat-grid mt-xl mb-xl" id="usage-overview" data-live-section="stats">
   <div class="stat-card-box">
     <div class="stat-card-box__label">
-      <span>CPU Usage</span>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px; height:15px;"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M9 1v3M15 1v3M9 20v3M15 20v3M20 9h3M20 15h3M1 9h3M1 15h3"/></svg>
+      <span>{{ _('cpu_usage') }}</span>
+      <svg viewbox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px; height:15px;"><rect x="4" y="4" width="16" height="16" rx="2"></rect><rect x="9" y="9" width="6" height="6"></rect><path d="M9 1v3M15 1v3M9 20v3M15 20v3M20 9h3M20 15h3M1 9h3M1 15h3"></path></svg>
     </div>
     <div class="stat-card-box__val" id="ov-cpu">—</div>
-    <div class="stat-card-box__meta">Processor Load</div>
+    <div class="stat-card-box__meta">{{ _('processor_load') }}</div>
   </div>
 
   <div class="stat-card-box">
     <div class="stat-card-box__label">
-      <span>RAM Used</span>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px; height:15px;"><path d="M6 19v-3M10 19v-3M14 19v-3M18 19v-3M6 8V5M10 8V5M14 8V5M18 8V5M2 8h20v8H2z"/></svg>
+      <span>{{ _('ram_used') }}</span>
+      <svg viewbox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px; height:15px;"><path d="M6 19v-3M10 19v-3M14 19v-3M18 19v-3M6 8V5M10 8V5M14 8V5M18 8V5M2 8h20v8H2z"></path></svg>
     </div>
     <div class="stat-card-box__val" id="ov-ram">—</div>
-    <div class="stat-card-box__meta">Memory In Use</div>
+    <div class="stat-card-box__meta">{{ _('memory_in_use') }}</div>
   </div>
 
   <div class="stat-card-box">
     <div class="stat-card-box__label">
-      <span>Disk (root)</span>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px; height:15px;"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+      <span>{{ _('disk_root') }}</span>
+      <svg viewbox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px; height:15px;"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
     </div>
     <div class="stat-card-box__val" id="ov-disk">—</div>
-    <div class="stat-card-box__meta">Storage Capacity</div>
+    <div class="stat-card-box__meta">{{ _('storage_capacity') }}</div>
   </div>
 
   <div class="stat-card-box">
     <div class="stat-card-box__label">
-      <span>Uptime</span>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px; height:15px;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      <span>{{ _('uptime') }}</span>
+      <svg viewbox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px; height:15px;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
     </div>
     <div class="stat-card-box__val" id="ov-uptime">—</div>
-    <div class="stat-card-box__meta">Server Runtime</div>
+    <div class="stat-card-box__meta">{{ _('server_runtime') }}</div>
   </div>
 
   <div class="stat-card-box">
     <div class="stat-card-box__label">
-      <span>CPU Cores</span>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px; height:15px;"><rect x="2" y="2" width="20" height="20" rx="2"/><path d="M8 2v20M16 2v20M2 8h20M2 16h20"/></svg>
+      <span>{{ _('cpu_cores') }}</span>
+      <svg viewbox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px; height:15px;"><rect x="2" y="2" width="20" height="20" rx="2"></rect><path d="M8 2v20M16 2v20M2 8h20M2 16h20"></path></svg>
     </div>
     <div class="stat-card-box__val" id="ov-cores">—</div>
-    <div class="stat-card-box__meta">Cores Available</div>
+    <div class="stat-card-box__meta">{{ _('cores_available') }}</div>
   </div>
 
   <div class="stat-card-box">
     <div class="stat-card-box__label">
-      <span>CPU Freq</span>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px; height:15px;"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      <span>{{ _('cpu_freq') }}</span>
+      <svg viewbox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px; height:15px;"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
     </div>
     <div class="stat-card-box__val" id="ov-freq">—</div>
-    <div class="stat-card-box__meta">Frequency Speed</div>
+    <div class="stat-card-box__meta">{{ _('frequency_speed') }}</div>
   </div>
 </div>
 

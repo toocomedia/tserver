@@ -22,6 +22,7 @@ from plugins.manager import PluginUnavailableError
 from middleware.error_capture import RequestIdMiddleware, register_error_handlers
 from middleware.auth import AuthMiddleware
 from middleware.csrf import CSRFMiddleware
+from middleware.locale import LocaleMiddleware
 from middleware.limiter import limiter
 from middleware.security_headers import SecurityHeadersMiddleware
 from services import login_guard
@@ -71,6 +72,10 @@ async def lifespan(app: FastAPI):
     from database import AsyncSessionLocal
     from services.resource_guard_operation_service import resource_guard_operation_service
     from services.resource_guard_service import resource_guard_service
+    from services.i18n_service import i18n_service
+    
+    i18n_service.init_app(config.BASE_DIR)
+    
     async with AsyncSessionLocal() as db:
         await resource_guard_operation_service.recover(db)
         await db.commit()
@@ -157,10 +162,11 @@ async def _plugin_unavailable_handler(request: Request, exc: PluginUnavailableEr
     )
 
 # Middleware order: last added runs first on the request.
-# ProxyHeaders → Session → SecurityHeaders → RequestId → CSRF → Auth → app
+# ProxyHeaders → Session → SecurityHeaders → RequestId → Locale → CSRF → Auth → app
 # ProxyHeaders: honor X-Forwarded-* so redirects keep :8080 when behind nginx
 app.add_middleware(AuthMiddleware)
 app.add_middleware(CSRFMiddleware)
+app.add_middleware(LocaleMiddleware)
 app.add_middleware(RequestIdMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(
