@@ -2,8 +2,8 @@
 .tabs-nav {
   display: flex;
   align-items: center;
-  gap: var(--space-xs, 4px);
-  padding: 4px 0;
+  gap: var(--space-md, 24px);
+  padding: 0;
   margin-bottom: var(--space-lg, 16px);
   overflow-x: auto;
   white-space: nowrap;
@@ -20,26 +20,26 @@
 .tabs-nav .btn--ghost {
   position: relative;
   flex-shrink: 0;
-  height: 34px;
-  padding: 0 var(--space-md);
-  font-size: 13px;
+  height: 40px;
+  padding: 0 4px;
+  font-size: 14px;
   font-weight: 500;
   color: var(--color-muted);
-  background: transparent;
+  background: transparent !important;
   border: none !important;
-  border-radius: 6px !important;
-  transition: color 0.15s ease, background 0.15s ease;
+  border-radius: 0 !important;
+  transition: color 0.15s ease;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 
 .tabs-nav .tabs-nav__btn:hover,
 .tabs-nav .btn:hover,
 .tabs-nav .btn--ghost:hover {
   color: var(--color-text);
-  background: var(--color-surface);
+  background: transparent !important;
 }
 
 .tabs-nav .tabs-nav__btn.is-active,
@@ -50,7 +50,7 @@
 .tabs-nav .btn--ghost.active {
   color: var(--color-text);
   font-weight: 600;
-  background: var(--color-surface);
+  background: transparent !important;
 }
 
 .tabs-nav .tabs-nav__btn.is-active::after,
@@ -61,12 +61,12 @@
 .tabs-nav .btn--ghost.active::after {
   content: "";
   position: absolute;
-  bottom: -5px;
-  left: 6px;
-  right: 6px;
+  bottom: -1px;
+  left: 0;
+  right: 0;
   height: 2px;
   background-color: var(--color-text);
-  border-radius: 2px !important;
+  border-radius: 0 !important;
 }
 
 /* Base content panel for tabs */
