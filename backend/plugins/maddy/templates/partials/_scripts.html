@@ -217,12 +217,76 @@ async function executeDeleteDomain() {
 }
 
 // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
 // Views & Navigation
 // ---------------------------------------------------------------------------
+function safeSetText(id, text) {
+  const el = document.getElementById(id);
+  if (el) el.innerText = text;
+}
+function safeSetValue(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.value = val;
+}
+
+function renderDnsRecordsTable(domain, ip) {
+  const tbody = document.getElementById('dns-records-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = `
+    <tr>
+      <td><strong>A</strong></td>
+      <td><code>mail.${domain}</code></td>
+      <td><code>${ip}</code></td>
+    </tr>
+    <tr>
+      <td><strong>MX</strong></td>
+      <td><code>${domain}</code></td>
+      <td><code>10 mail.${domain}.</code></td>
+    </tr>
+    <tr>
+      <td><strong>TXT</strong></td>
+      <td><code>${domain}</code> (SPF)</td>
+      <td><code>v=spf1 mx ip4:${ip} ~all</code></td>
+    </tr>
+    <tr>
+      <td><strong>TXT</strong></td>
+      <td><code>_dmarc.${domain}</code></td>
+      <td><code>v=DMARC1; p=none;</code></td>
+    </tr>
+  `;
+}
+
+async function checkMailSslStatus(domain) {
+  const badge = document.getElementById('ssl-status-badge');
+  const text  = document.getElementById('ssl-status-text');
+  if (!badge) return;
+  
+  badge.className = 'badge-minimal';
+  badge.innerText = 'Checking...';
+  if (text) text.innerText = '';
+
+  try {
+    const res = await fetch('/plugins/maddy/api/ssl/status?domain=' + encodeURIComponent(domain));
+    const data = await res.json();
+    if (res.ok && data.status === 'ready') {
+      badge.className = 'badge-minimal badge-minimal--active';
+      badge.innerText = 'Valid SSL';
+      if (text) text.innerText = data.message || 'SSL certificate active for mail.' + domain;
+    } else {
+      badge.className = 'badge-minimal badge-minimal--danger';
+      badge.innerText = 'No SSL';
+      if (text) text.innerText = data.detail || data.message || 'Missing certificate for mail.' + domain;
+    }
+  } catch (err) {
+    badge.className = 'badge-minimal badge-minimal--danger';
+    badge.innerText = 'Unknown';
+    if (text) text.innerText = 'Could not check SSL status.';
+  }
+}
+
 function openDomainDetail(domain, serverIp) {
   currentDomain   = domain;
   currentDomainIp = serverIp || currentDomainIp;
-  currentAccountLimit = 10;
   currentAccountSearchQuery = "";
   const searchInput = document.getElementById('account-search-input');
   if (searchInput) searchInput.value = "";
@@ -240,22 +304,19 @@ function openDomainDetail(domain, serverIp) {
   if (layout) layout.classList.add('is-split');
 
   const detailView = document.getElementById('domain-detail-view');
-  if (detailView) detailView.style.display = 'block';
+  if (detailView) detailView.style.display = 'flex';
 
-  document.getElementById('detail-domain-name').innerText        = domain;
-  document.getElementById('dns-domain-input').value              = domain;
-  document.getElementById('ssl-domain-input').value              = domain;
-  document.getElementById('dns-server-ip').value                 = currentDomainIp;
-  document.getElementById('mail-subdomain-preview').innerText    = 'mail.' + domain;
-  document.getElementById('imap-host-preview').innerText         = 'mail.' + domain;
-  document.getElementById('smtp-host-preview').innerText         = 'mail.' + domain;
-  document.getElementById('username-example-preview').innerText  = 'user@' + domain;
+  safeSetText('detail-domain-name', domain);
+  safeSetText('delete-domain-name-text', domain);
+  safeSetValue('dns-domain-input', domain);
+  safeSetValue('ssl-domain-input', domain);
+  safeSetValue('dns-server-ip', currentDomainIp);
 
-  // Fill DNS Cheat Sheet
-  document.getElementById('dns-table-a').innerText   = currentDomainIp;
-  document.getElementById('dns-table-mx').innerText  = 'mail.' + domain;
-  document.getElementById('dns-table-spf').innerText = 'v=spf1 mx ip4:' + currentDomainIp + ' ~all';
+  safeSetText('setting-imap-server', 'mail.' + domain);
+  safeSetText('setting-smtp-server', 'mail.' + domain);
 
+  renderDnsRecordsTable(domain, currentDomainIp);
+  checkMailSslStatus(domain);
   renderAccountsList();
 }
 
@@ -269,87 +330,74 @@ function closeDomainDetail() {
 // ---------------------------------------------------------------------------
 // Inner Tab Switching
 // ---------------------------------------------------------------------------
-function switchInnerTab(btnEl) {
-  document.querySelectorAll('.tabs-nav .tabs-nav__btn').forEach(btn => btn.classList.remove('is-active'));
-  btnEl.classList.add('is-active');
+function switchInnerTab(tabName, btnEl) {
+  if (!btnEl && typeof tabName !== 'string') {
+    btnEl = tabName;
+    tabName = btnEl.getAttribute('data-tab');
+  }
 
-  document.querySelectorAll('.tabs-panel').forEach(content => {
-    content.classList.remove('is-active');
+  const container = document.getElementById('domain-detail-view');
+  if (!container) return;
+
+  container.querySelectorAll('.tabs-nav .btn--ghost').forEach(b => {
+    b.classList.remove('active', 'is-active');
+  });
+  if (btnEl) btnEl.classList.add('active', 'is-active');
+
+  container.querySelectorAll('.inner-tab-content').forEach(panel => {
+    panel.classList.add('hidden');
+    panel.classList.remove('active', 'is-active');
+    panel.style.display = 'none';
   });
 
-  const tabId = btnEl.getAttribute('data-inner-tab');
-  if (tabId) {
-    const target = document.getElementById(tabId);
-    if (target) target.classList.add('is-active');
+  const target = document.getElementById('inner-tab-' + tabName);
+  if (target) {
+    target.classList.remove('hidden');
+    target.classList.add('active', 'is-active');
+    target.style.display = 'flex';
   }
 }
 
 // ---------------------------------------------------------------------------
 // Accounts list & pagination (filtered by currentDomain)
 // ---------------------------------------------------------------------------
-let accountBatchSize = 10;
-let currentAccountLimit = 10;
 let currentAccountSearchQuery = "";
 
 function onAccountSearch(query) {
   currentAccountSearchQuery = (query || "").trim().toLowerCase();
-  currentAccountLimit = accountBatchSize;
-  renderAccountsList();
-}
-
-function loadMoreAccounts() {
-  currentAccountLimit += accountBatchSize;
   renderAccountsList();
 }
 
 function renderAccountsList() {
-  const tbody        = document.getElementById('accounts-tbody');
-  const emptyDiv     = document.getElementById('accounts-empty');
-  const countBadge   = document.getElementById('mailbox-count-badge');
-  const searchWrap   = document.getElementById('account-search-wrap');
-  const loadMoreWrap = document.getElementById('accounts-load-more-wrap');
-  const loadMoreBtn  = document.getElementById('btn-load-more-accounts');
-
+  const tbody      = document.getElementById('accounts-tbody');
+  const countBadge = document.getElementById('account-count-badge');
   if (!tbody) return;
   tbody.innerHTML = '';
 
   let domainAccounts = allAccounts.filter(a => a.email.endsWith('@' + currentDomain));
   
   if (countBadge) {
-    countBadge.innerText = '(' + domainAccounts.length + ')';
+    countBadge.innerText = domainAccounts.length;
   }
 
-  // Show account search bar if domain has > 5 accounts
-  if (searchWrap) {
-    searchWrap.style.display = domainAccounts.length > 5 ? 'block' : 'none';
-  }
-
-  // Apply query filter if searching
   let filtered = domainAccounts;
   if (currentAccountSearchQuery) {
     filtered = domainAccounts.filter(a => a.email.toLowerCase().includes(currentAccountSearchQuery));
   }
 
-  listContainer.innerHTML = '';
-
   if (filtered.length === 0) {
-    listContainer.innerHTML = '<tr><td colspan="2" class="text-muted" style="text-align: center; padding: var(--space-xl);">No mailboxes found.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="2" class="text-muted" style="text-align: center; padding: var(--space-xl);">No mailboxes found.</td></tr>';
     return;
   }
 
-  const start = (currentAccountsPage - 1) * currentAccountLimit;
-  const visibleBatch = filtered.slice(0, start + currentAccountLimit);
-
-  visibleBatch.forEach(acc => {
+  filtered.forEach(acc => {
     const row = document.createElement('tr');
     
-    // Left column: Email
     const nameCell = document.createElement('td');
     nameCell.className = 'table-title';
     nameCell.innerHTML = `<strong>${acc.email}</strong>`;
     row.appendChild(nameCell);
 
-    // Right column: Actions
     const actionsCell = document.createElement('td');
     actionsCell.className = 'col-actions';
     actionsCell.style.textAlign = 'right';
@@ -359,12 +407,14 @@ function renderAccountsList() {
       const openButton = document.createElement('button');
       openButton.type = 'button';
       openButton.className = 'btn btn--surface btn--sm';
+      openButton.style.marginRight = '6px';
       openButton.textContent = 'Webmail';
       openButton.addEventListener('click', () => openWebmail(acc.email));
       actionsCell.appendChild(openButton);
     } else {
       const setupLink = document.createElement('a');
       setupLink.className = 'btn btn--surface btn--sm';
+      setupLink.style.marginRight = '6px';
       setupLink.style.textDecoration = 'none';
       setupLink.textContent = 'Webmail setup';
       setupLink.href = webmail.setup_url || '/plugins/roundcube_webmail/';
@@ -374,23 +424,14 @@ function renderAccountsList() {
     
     const deleteButton = document.createElement('button');
     deleteButton.type = 'button';
-    deleteButton.className = 'btn btn--surface btn--sm';
+    deleteButton.className = 'btn btn--danger btn--sm';
     deleteButton.textContent = 'Delete';
     deleteButton.addEventListener('click', () => executeDeleteAccount(acc.email));
     actionsCell.appendChild(deleteButton);
 
     row.appendChild(actionsCell);
-    listContainer.appendChild(row);
+    tbody.appendChild(row);
   });
-
-  // Handle Load More visibility & remaining count
-  const remaining = filtered.length - visibleBatch.length;
-  if (remaining > 0 && loadMoreWrap && loadMoreBtn) {
-    loadMoreWrap.style.display = 'block';
-    loadMoreBtn.innerText = `Load More Accounts (${remaining} remaining)`;
-  } else if (loadMoreWrap) {
-    loadMoreWrap.style.display = 'none';
-  }
 }
 
 function openAddAccountModal() {

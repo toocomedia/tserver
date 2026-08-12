@@ -16,43 +16,46 @@
 .maddy-layout {
   display: flex;
   width: 100%;
-  min-height: calc(100vh - var(--topbar-height));
+  height: calc(100vh - var(--topbar-height));
   overflow: hidden;
+  background: var(--color-bg);
 }
 .maddy-master {
   flex: 1;
-  transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1), flex 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-  padding: var(--space-xl);
+  width: 100%;
+  transition: width 0.2s cubic-bezier(0.4, 0, 0.2, 1), flex 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  padding: var(--page-gutter);
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: var(--space-xl);
+  gap: var(--space-lg);
 }
 .maddy-detail {
   width: 0;
   opacity: 0;
+  visibility: hidden;
   overflow: hidden;
   border-left: none;
-  background: var(--bg-body);
-  transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease;
+  background: var(--color-bg);
+  transition: width 0.2s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.15s ease, visibility 0.2s;
 }
 .maddy-detail__inner {
-  padding: var(--space-xl);
+  padding: var(--page-gutter);
   width: 100%;
   height: 100%;
   overflow-y: auto;
-  min-width: 500px;
   display: flex;
   flex-direction: column;
-  gap: var(--space-xl);
+  gap: var(--space-lg);
 }
 .maddy-layout.is-split .maddy-master {
-  width: 40%;
+  width: 38%;
   flex: none;
 }
 .maddy-layout.is-split .maddy-detail {
-  width: 60%;
+  width: 62%;
   opacity: 1;
+  visibility: visible;
   border-left: 1px solid var(--color-line);
 }
 /* When split, hide extra columns in master list */
@@ -61,14 +64,15 @@
 }
 
 /* Make list items look active */
-.list-item.active {
-  background: var(--color-surface);
-}
 .list-item {
   transition: background 0.15s ease;
+  cursor: pointer;
 }
 .list-item:hover {
   background: var(--color-surface);
+}
+.list-item.active {
+  background: var(--color-row-active, var(--color-surface));
 }
 
 .detail-header {
