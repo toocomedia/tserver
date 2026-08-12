@@ -100,23 +100,26 @@ from jinja2 import select_autoescape, pass_context
 import config
 from services.i18n_service import i18n_service
 
+def _extract_lang(context) -> str:
+    request = context.get("request")
+    return request.state.lang if request and hasattr(request, "state") and hasattr(request.state, "lang") else "en"
+
+@pass_context
+def get_lang(context) -> str:
+    return _extract_lang(context)
+
 @pass_context
 def _translate(context, key: str) -> str:
-    request = context.get("request")
-    lang = request.state.lang if request and hasattr(request, "state") and hasattr(request.state, "lang") else "en"
-    return i18n_service.get_string(key, lang)
+    return i18n_service.get_string(key, _extract_lang(context))
 
 @pass_context
 def _translate_plural(context, key: str, count: int) -> str:
-    request = context.get("request")
-    lang = request.state.lang if request and hasattr(request, "state") and hasattr(request.state, "lang") else "en"
-    return i18n_service.get_plural_string(key, count, lang)
+    return i18n_service.get_plural_string(key, count, _extract_lang(context))
 
 @pass_context
 def get_js_translations(context) -> str:
     import json
-    request = context.get("request")
-    lang = request.state.lang if request and hasattr(request, "state") and hasattr(request.state, "lang") else "en"
+    lang = _extract_lang(context)
     
     # Base dictionary from English
     js_strings = {k: v for k, v in i18n_service.en_strings.items() if k.startswith("js.")}
@@ -141,6 +144,7 @@ templates.env.globals["PANEL_LOGO_PATH"] = config.PANEL_LOGO_PATH
 templates.env.globals["_"] = _translate
 templates.env.globals["n_"] = _translate_plural
 templates.env.globals["get_js_translations"] = get_js_translations
+templates.env.globals["get_lang"] = get_lang
 
 import os
 

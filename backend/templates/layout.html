@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ request.state.lang if request and hasattr(request, 'state') and hasattr(request.state, 'lang') else 'en' }}">
+<html lang="{{ get_lang() }}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
