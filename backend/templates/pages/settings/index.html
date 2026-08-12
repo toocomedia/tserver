@@ -146,17 +146,17 @@
 
           <div class="settings-choice-grid mb-md">
             <label class="settings-choice {% if s.url_mode == 'none' or not s.panel_domain %}settings-choice--active{% endif %}">
-              <input type="radio" name="url_mode" id="url_mode_none" value="none" {% if s.url_mode="=" 'none' or not s.panel_domain %}checked{% endif %}>
+              <input type="radio" name="url_mode" id="url_mode_none" value="none" {% if s.url_mode== 'none' or not s.panel_domain %}checked{% endif %}>
               <span class="settings-choice__title">{{ _('ip_only') }}</span>
               <span class="settings-choice__desc">{{ _('no_domain_name') }}</span>
             </label>
             <label class="settings-choice {% if s.url_mode == 'subdomain' %}settings-choice--active{% endif %}">
-              <input type="radio" name="url_mode" id="url_mode_subdomain" value="subdomain" {% if s.url_mode="=" 'subdomain' %}checked{% endif %} {% if not s.managed_domains %}disabled{% endif %}>
+              <input type="radio" name="url_mode" id="url_mode_subdomain" value="subdomain" {% if s.url_mode== 'subdomain' %}checked{% endif %} {% if not s.managed_domains %}disabled{% endif %}>
               <span class="settings-choice__title">{{ _('subdomain_here') }}</span>
               <span class="settings-choice__desc">{{ _('e_g_panel_yourdomain_com') }}</span>
             </label>
             <label class="settings-choice {% if s.url_mode == 'custom' %}settings-choice--active{% endif %}">
-              <input type="radio" name="url_mode" id="url_mode_custom" value="custom" {% if s.url_mode="=" 'custom' %}checked{% endif %}>
+              <input type="radio" name="url_mode" id="url_mode_custom" value="custom" {% if s.url_mode== 'custom' %}checked{% endif %}>
               <span class="settings-choice__title">{{ _('custom_name') }}</span>
               <span class="settings-choice__desc">{{ _('you_set_the_a_record') }}</span>
             </label>
@@ -170,7 +170,7 @@
                 <select class="form-select" id="parent_domain">
                   <option value="">{{ _('select_domain') }}</option>
                   {% for d in s.managed_domains %}
-                  <option value="{{ d }}" {% if s.parent_domain="=" d %}selected{% endif %}>{{ d }}</option>
+                  <option value="{{ d }}" {% if s.parent_domain== d %}selected{% endif %}>{{ d }}</option>
                   {% endfor %}
                 </select>
               </div>
@@ -322,8 +322,8 @@
             <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
             <input type="hidden" name="next" value="/settings/">
             <select name="lang" class="form-select" onchange="document.getElementById('form-language-settings').submit();" style="flex:1;">
-              <option value="en" {% if request.state.lang="=" 'en' %}selected{% endif %}>{{ _('english') }}</option>
-              <option value="fr" {% if request.state.lang="=" 'fr' %}selected{% endif %}>{{ _('fran_ais') }}</option>
+              <option value="en" {% if request.state.lang== 'en' %}selected{% endif %}>{{ _('english') }}</option>
+              <option value="fr" {% if request.state.lang== 'fr' %}selected{% endif %}>{{ _('fran_ais') }}</option>
             </select>
           </form>
 

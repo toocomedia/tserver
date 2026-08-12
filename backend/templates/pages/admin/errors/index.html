@@ -30,9 +30,9 @@
           <label class="form-label" for="status">{{ _('status') }}</label>
           <div class="form-select-wrap">
             <select name="status" id="status" class="form-select" onchange="this.form.submit()">
-              <option value="open" {% if filter_status="=" 'open' %}selected{% endif %}>{{ _('open_open_count') }}</option>
-              <option value="resolved" {% if filter_status="=" 'resolved' %}selected{% endif %}>{{ _('resolved') }}</option>
-              <option value="all" {% if filter_status="=" 'all' %}selected{% endif %}>{{ _('all') }}</option>
+              <option value="open" {% if filter_status== 'open' %}selected{% endif %}>{{ _('open_open_count') }}</option>
+              <option value="resolved" {% if filter_status== 'resolved' %}selected{% endif %}>{{ _('resolved') }}</option>
+              <option value="all" {% if filter_status== 'all' %}selected{% endif %}>{{ _('all') }}</option>
             </select>
           </div>
         </div>
@@ -43,7 +43,7 @@
             <select name="source" id="source" class="form-select" onchange="this.form.submit()">
               <option value="">{{ _('all_sources') }}</option>
               {% for s in sources %}
-              <option value="{{ s }}" {% if filter_source="=" s %}selected{% endif %}>{{ s }}</option>
+              <option value="{{ s }}" {% if filter_source== s %}selected{% endif %}>{{ s }}</option>
               {% endfor %}
             </select>
           </div>

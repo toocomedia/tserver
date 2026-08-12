@@ -92,7 +92,7 @@
 
         <!-- Option 2 -->
         <label class="stack-pure-item {% if project_type == 'dns' %}stack-pure-item--active{% endif %} opt-item" onclick="selectStack('dns', 'DNS Manager Only', this)">
-          <input type="radio" name="project_type" value="dns" {% if project_type="=" 'dns' %}checked{% endif %} style="position:absolute;opacity:0;pointer-events:none;">
+          <input type="radio" name="project_type" value="dns" {% if project_type== 'dns' %}checked{% endif %} style="position:absolute;opacity:0;pointer-events:none;">
           <span class="pure-tech-icon"><i data-lucide="globe"></i></span>
           <span class="stack-title-text">{{ _('dns_manager_only') }}</span>
         </label>
@@ -149,7 +149,7 @@
     <h1 class="panel-heading">{{ _('ssl_certificate_security') }}</h1>
     <p class="panel-subheading">{{ _('choose_whether_to_provision_an_automated') }}</p>
 
-    <div class="ssl-pure-grid" id="ssl-options-container" {% if project_type="=" 'dns' %}style="display:none;" {% endif %}>
+    <div class="ssl-pure-grid" id="ssl-options-container" {% if project_type== 'dns' %}style="display:none;" {% endif %}>
       <!-- Option 1: No SSL (DEFAULT / NOT PRE-ACTIVE!) -->
       <div class="ssl-pure-opt ssl-pure-opt--active" id="ssl-opt-no" onclick="selectSsl(false)">
         <span class="ssl-icon"><i data-lucide="shield-off"></i></span>
@@ -201,7 +201,7 @@
         <span class="review-value" id="rev-stack">{% if project_type == 'dns' %}DNS Manager Only{% else %}Static Site / HTML{% endif %}</span>
       </div>
 
-      <div class="review-pure-row" id="rev-nginx-row" {% if project_type="=" 'dns' %}style="display:none;" {% endif %}>
+      <div class="review-pure-row" id="rev-nginx-row" {% if project_type== 'dns' %}style="display:none;" {% endif %}>
         <span class="review-label">{{ _('web_server') }}</span>
         <span class="review-value" style="opacity: 0.8;">{{ _('nginx_enabled') }}</span>
       </div>

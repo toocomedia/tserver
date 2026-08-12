@@ -331,8 +331,8 @@
       <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
       <input type="hidden" name="next" value="{{ request.url.path }}">
       <select name="lang" class="form-select" onchange="document.getElementById('form-language-login').submit();" style="height: 38px; padding-top:0; padding-bottom:0; background: var(--color-box-bg); border-color: var(--color-box-border); color: var(--color-text); border-radius: 8px;">
-        <option value="en" {% if request.state.lang="=" 'en' %}selected{% endif %}>{{ _('en') }}</option>
-        <option value="fr" {% if request.state.lang="=" 'fr' %}selected{% endif %}>{{ _('fr') }}</option>
+        <option value="en" {% if request.state.lang== 'en' %}selected{% endif %}>{{ _('en') }}</option>
+        <option value="fr" {% if request.state.lang== 'fr' %}selected{% endif %}>{{ _('fr') }}</option>
       </select>
     </form>
   </div>

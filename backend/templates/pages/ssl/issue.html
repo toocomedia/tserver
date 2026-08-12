@@ -42,7 +42,7 @@
               {{ _('select_a_domain') }}
             </option>
             {% for item in eligible %}
-              <option value="{{ item.full_domain }}" data-domain-id="{{ item.id if item.id is not none else '' }}" {% if preselect_full_domain and item.full_domain="=" preselect_full_domain %}selected{% endif %}>
+              <option value="{{ item.full_domain }}" data-domain-id="{{ item.id if item.id is not none else '' }}" {% if preselect_full_domain and item.full_domain== preselect_full_domain %}selected{% endif %}>
                 {{ item.label }}
               </option>
             {% endfor %}

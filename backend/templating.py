@@ -103,20 +103,20 @@ from services.i18n_service import i18n_service
 @pass_context
 def _translate(context, key: str) -> str:
     request = context.get("request")
-    lang = getattr(request.state, "lang", "en") if request else "en"
+    lang = request.state.lang if request and hasattr(request, "state") and hasattr(request.state, "lang") else "en"
     return i18n_service.get_string(key, lang)
 
 @pass_context
 def _translate_plural(context, key: str, count: int) -> str:
     request = context.get("request")
-    lang = getattr(request.state, "lang", "en") if request else "en"
+    lang = request.state.lang if request and hasattr(request, "state") and hasattr(request.state, "lang") else "en"
     return i18n_service.get_plural_string(key, count, lang)
 
 @pass_context
 def get_js_translations(context) -> str:
     import json
     request = context.get("request")
-    lang = getattr(request.state, "lang", "en") if request else "en"
+    lang = request.state.lang if request and hasattr(request, "state") and hasattr(request.state, "lang") else "en"
     
     # Base dictionary from English
     js_strings = {k: v for k, v in i18n_service.en_strings.items() if k.startswith("js.")}

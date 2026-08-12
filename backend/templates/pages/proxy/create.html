@@ -44,7 +44,7 @@
               <span>{{ _('managed_domain') }}</span>
             </label>
             <label class="form-check">
-              <input type="radio" name="mode" id="mode-external" value="external" {% if mode="=" 'external' %}checked{% endif %}>
+              <input type="radio" name="mode" id="mode-external" value="external" {% if mode== 'external' %}checked{% endif %}>
               <span>{{ _('external_hostname') }}</span>
             </label>
           </div>
@@ -79,7 +79,7 @@
                   {{ _('select_a_domain') }}
                 </option>
                 {% for d in domains %}
-                <option value="{{ d.id }}" data-name="{{ d.name }}" {% if form.get('domain_id')="=" d.id %}selected{% endif %}>
+                <option value="{{ d.id }}" data-name="{{ d.name }}" {% if form.get('domain_id')== d.id %}selected{% endif %}>
                   {{ d.name }}
                 </option>
                 {% endfor %}
@@ -145,8 +145,8 @@
           <label class="form-label" for="protocol">{{ _('backend_protocol') }}</label>
           <div class="form-select-wrap">
             <select id="protocol" name="protocol" class="form-select">
-              <option value="http" {% if form.get('protocol', 'http')="=" 'http' %}selected{% endif %}>{{ _('http') }}</option>
-              <option value="https" {% if form.get('protocol')="=" 'https' %}selected{% endif %}>{{ _('https') }}</option>
+              <option value="http" {% if form.get('protocol', 'http')== 'http' %}selected{% endif %}>{{ _('http') }}</option>
+              <option value="https" {% if form.get('protocol')== 'https' %}selected{% endif %}>{{ _('https') }}</option>
             </select>
           </div>
           <span class="form-hint">{{ _('protocol_used_between_nginx_and_the_targ') }}</span>
