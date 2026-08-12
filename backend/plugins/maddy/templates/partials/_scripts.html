@@ -298,6 +298,17 @@ function openDomainDetail(domain, serverIp) {
   if (detailView) {
     detailView.style.display = 'flex';
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    
+    // Simulate loading for detail view
+    const skel = document.getElementById('domain-skeleton');
+    if (skel) {
+      skel.classList.remove('is-hidden');
+      skel.setAttribute('aria-hidden', 'false');
+      setTimeout(() => {
+        if (typeof hideSkeleton === 'function') hideSkeleton('domain-skeleton');
+        else if (typeof window.hideSkeleton === 'function') window.hideSkeleton('domain-skeleton');
+      }, 350);
+    }
   }
 
   // Update topbar buttons

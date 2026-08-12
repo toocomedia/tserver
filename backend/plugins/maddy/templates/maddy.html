@@ -99,7 +99,8 @@
   {% endif %}
 </div>
 
-<div id="maddy-detail-view" style="display: none; flex-direction: column; gap: var(--space-lg);">
+<div id="maddy-detail-view" style="display: none; flex-direction: column; gap: var(--space-lg); margin-top: var(--space-xl);">
+  {{ skeleton_overlay('domain-skeleton', title_bar=1, tables=[{ 'rows': 4 }]) }}
   {% if plugin_installed %}
     {% include 'partials/_domains_tab.html' %}
   {% endif %}
