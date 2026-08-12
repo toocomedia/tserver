@@ -1,54 +1,80 @@
-/* tabs.css — Base Component for Panel Tab Navigation */
-.tabs-nav { 
-  display: flex; 
-  gap: var(--space-lg); 
-  padding-bottom: 0; 
-  margin-bottom: var(--space-xl); 
-  overflow-x: auto; 
-  white-space: nowrap; 
-  scrollbar-width: none; 
-  -webkit-overflow-scrolling: touch; 
-  border-bottom: 1px solid var(--color-line); 
+/* tabs.css — Sleek Base Component for Panel Tab Navigation */
+.tabs-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs, 4px);
+  padding: 4px 0;
+  margin-bottom: var(--space-lg, 16px);
+  overflow-x: auto;
+  white-space: nowrap;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  border-bottom: 1px solid var(--color-line);
 }
-.tabs-nav::-webkit-scrollbar { 
-  display: none; 
+.tabs-nav::-webkit-scrollbar {
+  display: none;
 }
 
-.tabs-nav__btn { 
-  position: relative; 
-  flex-shrink: 0; 
-  padding: var(--space-sm) var(--space-md); 
-  font-size: var(--font-body); 
-  font-weight: 500; 
-  color: var(--color-muted); 
-  background: transparent; 
-  border: none; 
-  border-radius: 0; 
-  transition: color 0.15s ease; 
+.tabs-nav .tabs-nav__btn,
+.tabs-nav .btn,
+.tabs-nav .btn--ghost {
+  position: relative;
+  flex-shrink: 0;
+  height: 34px;
+  padding: 0 var(--space-md);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-muted);
+  background: transparent;
+  border: none !important;
+  border-radius: 6px !important;
+  transition: color 0.15s ease, background 0.15s ease;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
-.tabs-nav__btn:hover { 
-  color: var(--color-text); 
-  background: transparent; 
+
+.tabs-nav .tabs-nav__btn:hover,
+.tabs-nav .btn:hover,
+.tabs-nav .btn--ghost:hover {
+  color: var(--color-text);
+  background: var(--color-surface);
 }
-.tabs-nav__btn.is-active { 
-  color: var(--color-text); 
-  font-weight: 700; 
+
+.tabs-nav .tabs-nav__btn.is-active,
+.tabs-nav .tabs-nav__btn.active,
+.tabs-nav .btn.is-active,
+.tabs-nav .btn.active,
+.tabs-nav .btn--ghost.is-active,
+.tabs-nav .btn--ghost.active {
+  color: var(--color-text);
+  font-weight: 600;
+  background: var(--color-surface);
 }
-.tabs-nav__btn.is-active::after { 
-  content: ""; 
-  position: absolute; 
-  right: 0; 
-  bottom: -1px; 
-  left: 0; 
-  height: 2px; 
-  background-color: var(--color-text); 
+
+.tabs-nav .tabs-nav__btn.is-active::after,
+.tabs-nav .tabs-nav__btn.active::after,
+.tabs-nav .btn.is-active::after,
+.tabs-nav .btn.active::after,
+.tabs-nav .btn--ghost.is-active::after,
+.tabs-nav .btn--ghost.active::after {
+  content: "";
+  position: absolute;
+  bottom: -5px;
+  left: 6px;
+  right: 6px;
+  height: 2px;
+  background-color: var(--color-text);
+  border-radius: 2px !important;
 }
 
 /* Base content panel for tabs */
 .tabs-panel {
   display: none;
 }
-.tabs-panel.is-active {
+.tabs-panel.is-active,
+.tabs-panel.active {
   display: block;
 }
+
