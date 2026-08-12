@@ -31,7 +31,7 @@
   "error": "ERROR",
   "powerdns_name_server": "PowerDNS Name Server",
   "quick_actions": "Quick Actions",
-  "add_domain": "+ Add Domain",
+  "add_domain": "Add Domain",
   "add_reverse_proxy": "+ Add Reverse Proxy",
   "manage_ssl": "Manage SSL",
   "manage_dns": "Manage DNS",
@@ -130,7 +130,7 @@
   "start": "Start",
   "restart": "Restart",
   "stop": "Stop",
-  "deploy_python_app": "+ Deploy Python App",
+  "deploy_python_app": "Deploy Python App",
   "service_name": "Service Name",
   "linked_domain": "Linked Domain",
   "port_1": "Port",
@@ -725,5 +725,12 @@
   "some_versions_missing_info": "Some versions are missing. The external source button adds",
   "without_installing_php": "without installing PHP.",
   "login": "Login",
-  "2fa_verification": "2FA Verification"
+  "2fa_verification": "2FA Verification",
+  "system_dependencies": "System Dependencies",
+  "php_runtime": "PHP Runtime",
+  "plugins_manager": "Plugins Manager",
+  "plugin_unavailable": "Plugin Unavailable",
+  "app_logs": "App Logs",
+  "notification_center": "Notification Center",
+  "issue_ssl_certificate": "Issue SSL Certificate"
 }

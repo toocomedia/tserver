@@ -31,7 +31,7 @@
   "error": "ОШИБКА",
   "powerdns_name_server": "Сервер имен PowerDNS",
   "quick_actions": "Быстрые действия",
-  "add_domain": "+ Добавить домен",
+  "add_domain": "Добавить домен",
   "add_reverse_proxy": "+ Добавить обратный прокси",
   "manage_ssl": "Управление SSL",
   "manage_dns": "Управление DNS",
@@ -130,7 +130,7 @@
   "start": "Начинать",
   "restart": "Перезапуск",
   "stop": "Останавливаться",
-  "deploy_python_app": "+ Развертывание приложения Python",
+  "deploy_python_app": "Развернуть Python-приложение",
   "service_name": "Имя службы",
   "linked_domain": "Связанный домен",
   "port_1": "Порт",
@@ -725,5 +725,12 @@
   "some_versions_missing_info": "Некоторые версии отсутствуют. Кнопка внешнего источника добавляет",
   "without_installing_php": "без установки PHP.",
   "login": "Вход",
-  "2fa_verification": "2FA-верификация"
+  "2fa_verification": "2FA-верификация",
+  "system_dependencies": "Системные зависимости",
+  "php_runtime": "Среда выполнения PHP",
+  "plugins_manager": "Менеджер плагинов",
+  "plugin_unavailable": "Плагин недоступен",
+  "app_logs": "Логи приложения",
+  "notification_center": "Центр уведомлений",
+  "issue_ssl_certificate": "Выпустить SSL-сертификат"
 }

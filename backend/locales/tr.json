@@ -31,7 +31,7 @@
   "error": "HATA",
   "powerdns_name_server": "PowerDNS Ad Sunucusu",
   "quick_actions": "Hızlı Eylemler",
-  "add_domain": "+ Alan Adı Ekle",
+  "add_domain": "Alan Adı Ekle",
   "add_reverse_proxy": "+ Ters Proxy Ekle",
   "manage_ssl": "SSL'yi yönet",
   "manage_dns": "DNS'yi yönet",
@@ -130,7 +130,7 @@
   "start": "Başlangıç",
   "restart": "Tekrar başlat",
   "stop": "Durmak",
-  "deploy_python_app": "+ Python Uygulamasını Dağıtın",
+  "deploy_python_app": "Python Uygulaması Dağıt",
   "service_name": "Hizmet Adı",
   "linked_domain": "Bağlantılı Alan Adı",
   "port_1": "Liman",
@@ -725,5 +725,12 @@
   "some_versions_missing_info": "Bazı versiyonlar eksik. Harici kaynak düğmesi ekler",
   "without_installing_php": "PHP'yi kurmadan.",
   "login": "Giriş",
-  "2fa_verification": "2FA Doğrulaması"
+  "2fa_verification": "2FA Doğrulaması",
+  "system_dependencies": "Sistem Bağımlılıkları",
+  "php_runtime": "PHP Çalışma Zamanı",
+  "plugins_manager": "Eklenti Yöneticisi",
+  "plugin_unavailable": "Eklenti Kullanılamıyor",
+  "app_logs": "Uygulama Günlükleri",
+  "notification_center": "Bildirim Merkezi",
+  "issue_ssl_certificate": "SSL Sertifikası Düzenle"
 }
