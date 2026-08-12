@@ -3,6 +3,17 @@
 {% block title %}Mail Server (Maddy) — VPS Panel{% endblock %}
 {% block content_class %}content--flush{% endblock %}
 
+{% block page_header_wrapper %}
+  {% include "partials/page_header.html" %}
+{% endblock %}
+{% block page_title %}Mail Domains{% endblock %}
+
+{% block topbar_actions %}
+  {% if plugin_installed %}
+  <button type="button" class="btn btn--surface" onclick="openAddDomain()">+ Add Domain</button>
+  {% endif %}
+{% endblock %}
+
 {% block head %}
 <style>
 .maddy-layout {
@@ -53,12 +64,7 @@
 <div class="maddy-layout" id="maddyLayout">
   
   <div class="maddy-master">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-xl);">
-      <h2 style="margin: 0; font-size: var(--font-h2);">Mail Domains</h2>
-      {% if plugin_installed %}
-      <button type="button" class="btn btn--surface" onclick="openAddDomain()">+ Add Domain</button>
-      {% endif %}
-    </div>
+
 
     {% if plugin_installed %}
       <div class="table-wrap">
