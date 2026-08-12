@@ -86,7 +86,7 @@ function filterDomains(query) {
   document.querySelectorAll('#listContent .list-item').forEach(el => {
     const text = el.innerText.toLowerCase().trim();
     if (!q || text.includes(q)) {
-      el.style.display = 'flex';
+      el.style.display = '';
     } else {
       el.style.display = 'none';
     }
@@ -399,24 +399,28 @@ function renderAccountsList() {
     actionsCell.className = 'col-actions';
     actionsCell.style.textAlign = 'right';
 
+    const actionsWrap = document.createElement('div');
+    actionsWrap.style.display = 'inline-flex';
+    actionsWrap.style.gap = '6px';
+    actionsWrap.style.alignItems = 'center';
+    actionsWrap.style.justifyContent = 'flex-end';
+
     const webmail = webmailSites[currentDomain] || {};
     if (webmail.ready) {
       const openButton = document.createElement('button');
       openButton.type = 'button';
       openButton.className = 'btn btn--surface btn--sm';
-      openButton.style.marginRight = '6px';
       openButton.textContent = 'Webmail';
       openButton.addEventListener('click', () => openWebmail(acc.email));
-      actionsCell.appendChild(openButton);
+      actionsWrap.appendChild(openButton);
     } else {
       const setupLink = document.createElement('a');
       setupLink.className = 'btn btn--surface btn--sm';
-      setupLink.style.marginRight = '6px';
       setupLink.style.textDecoration = 'none';
       setupLink.textContent = 'Webmail setup';
       setupLink.href = webmail.setup_url || '/plugins/roundcube_webmail/';
       setupLink.title = webmail.reason || 'Webmail is not ready.';
-      actionsCell.appendChild(setupLink);
+      actionsWrap.appendChild(setupLink);
     }
     
     const deleteButton = document.createElement('button');
@@ -424,8 +428,9 @@ function renderAccountsList() {
     deleteButton.className = 'btn btn--danger btn--sm';
     deleteButton.textContent = 'Delete';
     deleteButton.addEventListener('click', () => executeDeleteAccount(acc.email));
-    actionsCell.appendChild(deleteButton);
+    actionsWrap.appendChild(deleteButton);
 
+    actionsCell.appendChild(actionsWrap);
     row.appendChild(actionsCell);
     tbody.appendChild(row);
   });
