@@ -1,94 +1,52 @@
 {% extends "layout.html" %}
-{% import "partials/_macros.html" as ui %}
 
 {% block title %}Mail Server (Maddy) — VPS Panel{% endblock %}
 {% block content_class %}content--flush{% endblock %}
 {% block page_header_wrapper %}{% endblock %}
 
-{% block head %}
-  <link rel="stylesheet" href="/plugins/maddy/static/css/maddy-ui.css">
-{% endblock %}
-
 {% block content %}
-<div class="workspace">
-  <!-- Mobile Domain Switcher Toggle Bar -->
-  <div class="mobile-domain-bar">
-    <button type="button" class="mobile-domain-toggle-btn" onclick="toggleMobileSidebar()">
-      <span style="display: flex; align-items: center; gap: 6px;">
-        <svg style="width:14px; height:14px; fill:currentColor; opacity:0.8;" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></path></svg>
-        <span>Domain: <strong id="mobile-active-domain-name">Select Domain</strong></span>
-      </span>
-      <svg style="width:12px; height:12px; fill:currentColor; opacity:0.7;" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></path></svg>
-    </button>
-  </div>
-
-  <!-- 3. Mail Domains Floating Sidebar -->
-  <div class="floating-list" id="maddy-floating-sidebar">
-    
-    <!-- Domain List Card Box Surface (Contains Header + Add + Items) -->
-    <div class="list-container-wrap">
-      
-      <!-- Header: Title & Expanding Search Toggle inside top of box -->
-      <div class="sidebar-header" id="sidebarHeader">
-        <div class="sidebar-title">Mail Domains</div>
-        
-        <div class="expandable-search" id="expandableSearch">
-          <button type="button" class="header-icon-btn search-toggle-btn" onclick="toggleSidebarSearch()" title="Search domains">
-            <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 14z"/></svg>
-          </button>
-          <input type="text" class="expandable-search-input" id="sidebarSearchInput" placeholder="Search domains..." onblur="onSidebarSearchBlur(this)" oninput="filterDomains(this.value)">
-        </div>
-      </div>
-
-      <!-- Solid Accent Add Domain Button directly under Title & Search inside Card Box -->
-      {% if plugin_installed %}
-        <button type="button" class="sidebar-big-add-btn" onclick="openAddDomain()" title="Add Domain">
+<div class="split-layout">
+  
+  <div class="split-sidebar">
+    {% if plugin_installed %}
+      <div style="padding: var(--space-md); border-bottom: 1px solid var(--color-line);">
+        <button type="button" class="btn btn--primary" style="width: 100%;" onclick="openAddDomain()">
           <svg style="width:14px; height:14px; fill:currentColor;" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
-          <span>Add Domain</span>
+          Add Domain
         </button>
-      {% endif %}
-
-      <button type="button" class="sidebar-scroll-btn scroll-up" onclick="scrollDomains(-1)" title="Scroll up">
-        <svg viewBox="0 0 24 24"><path d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"/></svg>
-      </button>
-
-      <div class="list-content" id="listContent">
-        {% if plugin_installed %}
-          {% if mail_domains %}
-            {% for d in mail_domains %}
-              {{ ui.sidebar_item(d.domain, onclick="openDomainDetail('" + d.domain + "', '" + d.server_ip + "')", active=(loop.index == 1)) }}
-            {% endfor %}
-          {% else %}
-            <div style="padding: 16px 28px; color: var(--text-muted); font-size: 13px;">No mail domains configured.</div>
-          {% endif %}
+      </div>
+      
+      <div class="list-content" id="listContent" style="flex: 1; overflow-y: auto;">
+        {% if mail_domains %}
+          {% for d in mail_domains %}
+            <div class="split-sidebar__item list-item {% if loop.index == 1 %}active{% endif %}" onclick="openDomainDetail('{{ d.domain }}', '{{ d.server_ip }}')">
+              {{ d.domain }}
+            </div>
+          {% endfor %}
         {% else %}
-          {{ ui.sidebar_item('Setup required', onclick="", active=True) }}
+          <div style="padding: 16px 28px; color: var(--color-muted); font-size: 13px;">No mail domains configured.</div>
         {% endif %}
       </div>
+    {% else %}
+      <div class="split-sidebar__item active">Setup required</div>
+    {% endif %}
 
-      <button type="button" class="sidebar-scroll-btn scroll-down" onclick="scrollDomains(1)" title="Scroll down">
-        <svg viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg>
-      </button>
+    <div class="split-sidebar__footer">
+      <div class="text-small">Maddy Mail Server</div>
+      <div class="text-small">v{{ plugin_version }}</div>
     </div>
-
-    <!-- Sidebar Bottom Footer Info (Name & Version) -->
-    <div class="sidebar-footer-info">
-      Maddy Mail Server v{{ plugin_version }}
-    </div>
-
   </div>
 
-  <!-- 4. Content Panel -->
-  <div class="content-panel">
+  <div class="split-content">
     {% if plugin_installed %}
       {% include 'partials/_domains_tab.html' %}
     {% else %}
-      <div style="margin: auto; text-align: center; max-width: 400px;">
-        <h3 class="maddy-title" style="margin-bottom: 16px;">Mail Server Not Installed</h3>
-        <p style="color: var(--text-muted); margin-bottom: 24px;">Maddy Mail Server is required to manage domains and mailboxes.</p>
+      <div style="margin: auto; text-align: center; max-width: 400px; margin-top: 100px;">
+        <h3 style="margin-bottom: 16px; font-size: var(--font-h1);">Mail Server Not Installed</h3>
+        <p style="color: var(--color-muted); margin-bottom: 24px;">Maddy Mail Server is required to manage domains and mailboxes.</p>
         <form method="post" action="/plugins/maddy/api/install">
           <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
-          <button type="submit" class="btn primary" style="width: 100%; padding: 12px;">
+          <button type="submit" class="btn btn--primary" style="width: 100%; padding: 12px;">
             Install Mail Server (~30MB RAM)
           </button>
         </form>
@@ -98,25 +56,26 @@
 </div>
 
 {% if plugin_installed %}
-
-  <!-- Add Domain Modal (iOS Style Pop Box) -->
+  <!-- Add Domain Modal -->
   <div id="add-domain-modal" class="modal-backdrop hidden" role="dialog">
-    <div class="modal ios-modal" style="max-width: 440px;">
-      <div class="ios-modal-body">
-        <h2 style="color: var(--text-main); font-size: 18px; font-weight: 600; margin: 0 0 16px 0;">Add Mail Domain</h2>
-
+    <div class="modal" style="max-width: 440px;">
+      <div class="modal__header">
+        <h2>Add Mail Domain</h2>
+        <button type="button" class="btn btn--ghost btn--icon" onclick="closeModal('add-domain-modal')" aria-label="Close">✕</button>
+      </div>
+      <div class="modal__body">
         <div style="display: flex; gap: 16px; margin-bottom: 16px;">
-          <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; color: var(--text-main); font-size: 13px;">
+          <label class="form-label" style="display: flex; align-items: center; gap: 6px; cursor: pointer; margin: 0;">
             <input type="radio" name="domain_type" value="panel" checked onchange="toggleDomainInputType()">
             <span>Panel Domain</span>
           </label>
-          <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; color: var(--text-main); font-size: 13px;">
+          <label class="form-label" style="display: flex; align-items: center; gap: 6px; cursor: pointer; margin: 0;">
             <input type="radio" name="domain_type" value="external" onchange="toggleDomainInputType()">
             <span>External Domain</span>
           </label>
         </div>
 
-        <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 16px;" id="domain-hint-text">
+        <p class="text-muted" style="font-size: 13px; margin-bottom: 16px;" id="domain-hint-text">
           Select a domain hosted on this panel — MX, A, SPF, and DMARC records will be created automatically in PowerDNS.
         </p>
 
@@ -147,21 +106,23 @@
           <div id="add-domain-result" style="display: none; font-size: 13px;"></div>
         </form>
       </div>
-
-      <div class="ios-modal-footer">
-        <button type="button" class="ios-modal-btn" onclick="closeModal('add-domain-modal')">Cancel</button>
-        <button type="button" class="ios-modal-btn primary-text" onclick="handleAddDomain()">+ Add Domain</button>
+      <div class="modal__footer">
+        <button type="button" class="btn btn--secondary" onclick="closeModal('add-domain-modal')">Cancel</button>
+        <button type="button" class="btn btn--primary" onclick="handleAddDomain()">+ Add Domain</button>
       </div>
     </div>
   </div>
 
-  <!-- Add Account Modal (iOS Style Pop Box) -->
+  <!-- Add Account Modal -->
   <div id="add-account-modal" class="modal-backdrop hidden" role="dialog">
-    <div class="modal ios-modal" style="max-width: 440px;">
-      <div class="ios-modal-body">
-        <h2 style="color: var(--text-main); font-size: 18px; font-weight: 600; margin: 0 0 8px 0;">Add New Mailbox</h2>
-        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;" id="add-account-modal-subtitle">
-          Create a new email address under <strong style="color: var(--text-main);" id="modal-domain-subtitle-text"></strong>
+    <div class="modal" style="max-width: 440px;">
+      <div class="modal__header">
+        <h2>Add New Mailbox</h2>
+        <button type="button" class="btn btn--ghost btn--icon" onclick="closeModal('add-account-modal')" aria-label="Close">✕</button>
+      </div>
+      <div class="modal__body">
+        <p style="font-size: 13px; color: var(--color-muted); margin-bottom: 16px;" id="add-account-modal-subtitle">
+          Create a new email address under <strong style="color: var(--color-text);" id="modal-domain-subtitle-text"></strong>
         </p>
 
         <form id="add-account-form" style="display: flex; flex-direction: column; gap: 14px;">
@@ -170,9 +131,9 @@
 
           <div class="form-group" style="margin: 0;">
             <label class="form-label">Email Username</label>
-            <div class="input-connected-wrap">
-              <input type="text" name="username" id="add-account-username" class="form-input connected-input" placeholder="hello" required autocomplete="off">
-              <div class="domain-suffix-badge" id="add-account-domain-suffix">
+            <div class="input-connected-wrap" style="display: flex;">
+              <input type="text" name="username" id="add-account-username" class="form-input" style="border-top-right-radius: 0; border-bottom-right-radius: 0; flex: 1;" placeholder="hello" required autocomplete="off">
+              <div class="domain-suffix-badge" id="add-account-domain-suffix" style="background: var(--color-surface); border: 1px solid var(--color-line); border-left: none; padding: 0 12px; display: flex; align-items: center; border-top-right-radius: 6px; border-bottom-right-radius: 6px; font-size: 13px; color: var(--color-muted);">
                 @domain.com
               </div>
             </div>
@@ -186,10 +147,9 @@
           <div id="add-account-result" style="display: none; font-size: 13px;"></div>
         </form>
       </div>
-
-      <div class="ios-modal-footer">
-        <button type="button" class="ios-modal-btn" onclick="closeModal('add-account-modal')">Cancel</button>
-        <button type="button" class="ios-modal-btn primary-text" onclick="executeAddAccount()">Create Mailbox</button>
+      <div class="modal__footer">
+        <button type="button" class="btn btn--secondary" onclick="closeModal('add-account-modal')">Cancel</button>
+        <button type="button" class="btn btn--primary" onclick="executeAddAccount()">Create Mailbox</button>
       </div>
     </div>
   </div>
@@ -199,14 +159,14 @@
     <div class="modal" style="max-width: 680px; width: 100%;">
       <div class="modal__header">
         <h2>Service Diagnostics & Logs</h2>
-        <button type="button" class="btn" style="background: transparent; border: none; font-size: 16px; cursor: pointer; color: var(--text-muted);" onclick="closeModal('maddy-diagnostics-modal')">✕</button>
+        <button type="button" class="btn btn--ghost btn--icon" onclick="closeModal('maddy-diagnostics-modal')" aria-label="Close">✕</button>
       </div>
       <div class="modal__body">
-        <pre id="maddy-diagnostic-logs" style="margin: 0; max-height: 380px; overflow-y: auto; font-family: monospace; font-size: 12px; background: var(--color-surface); padding: 12px; color: var(--color-text); white-space: pre-wrap;">Loading diagnostic logs...</pre>
+        <pre id="maddy-diagnostic-logs" style="margin: 0; max-height: 380px; overflow-y: auto; font-family: monospace; font-size: 12px; background: var(--color-surface); padding: 12px; color: var(--color-text); white-space: pre-wrap; border: 1px solid var(--color-line); border-radius: 4px;">Loading diagnostic logs...</pre>
       </div>
       <div class="modal__footer">
-        <button type="button" class="btn" onclick="openMaddyDiagnostics()">Refresh Logs</button>
-        <button type="button" class="btn primary" onclick="repairMaddyConfig()">Repair Config</button>
+        <button type="button" class="btn btn--secondary" onclick="openMaddyDiagnostics()">Refresh Logs</button>
+        <button type="button" class="btn btn--primary" onclick="repairMaddyConfig()">Repair Config</button>
       </div>
     </div>
   </div>

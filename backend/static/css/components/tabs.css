@@ -1,0 +1,54 @@
+/* tabs.css — Base Component for Panel Tab Navigation */
+.tabs-nav { 
+  display: flex; 
+  gap: var(--space-lg); 
+  padding-bottom: 0; 
+  margin-bottom: var(--space-xl); 
+  overflow-x: auto; 
+  white-space: nowrap; 
+  scrollbar-width: none; 
+  -webkit-overflow-scrolling: touch; 
+  border-bottom: 1px solid var(--color-line); 
+}
+.tabs-nav::-webkit-scrollbar { 
+  display: none; 
+}
+
+.tabs-nav__btn { 
+  position: relative; 
+  flex-shrink: 0; 
+  padding: var(--space-sm) var(--space-md); 
+  font-size: var(--font-body); 
+  font-weight: 500; 
+  color: var(--color-muted); 
+  background: transparent; 
+  border: none; 
+  border-radius: 0; 
+  transition: color 0.15s ease; 
+  cursor: pointer;
+}
+.tabs-nav__btn:hover { 
+  color: var(--color-text); 
+  background: transparent; 
+}
+.tabs-nav__btn.is-active { 
+  color: var(--color-text); 
+  font-weight: 700; 
+}
+.tabs-nav__btn.is-active::after { 
+  content: ""; 
+  position: absolute; 
+  right: 0; 
+  bottom: -1px; 
+  left: 0; 
+  height: 2px; 
+  background-color: var(--color-text); 
+}
+
+/* Base content panel for tabs */
+.tabs-panel {
+  display: none;
+}
+.tabs-panel.is-active {
+  display: block;
+}
