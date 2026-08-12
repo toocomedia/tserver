@@ -1,0 +1,267 @@
+/* ==========================================================================
+   srv-t Control Panel — Right-To-Left (RTL) Master Stylesheet
+   Applied automatically when <html dir="rtl"> is present.
+   ========================================================================== */
+
+html[dir="rtl"] {
+  direction: rtl;
+  text-align: right;
+}
+
+/* --------------------------------------------------------------------------
+   1. Typography & Base Alignment
+   -------------------------------------------------------------------------- */
+html[dir="rtl"] body,
+html[dir="rtl"] p,
+html[dir="rtl"] h1,
+html[dir="rtl"] h2,
+html[dir="rtl"] h3,
+html[dir="rtl"] h4,
+html[dir="rtl"] h5,
+html[dir="rtl"] h6,
+html[dir="rtl"] label,
+html[dir="rtl"] th,
+html[dir="rtl"] td {
+  text-align: right;
+}
+
+/* --------------------------------------------------------------------------
+   2. Main Application Layout & Sidebar
+   -------------------------------------------------------------------------- */
+/* Sidebar position */
+html[dir="rtl"] .sidebar {
+  right: 0;
+  left: auto;
+  border-left: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
+  border-right: none;
+}
+
+/* Main content margin offset for sidebar */
+@media (min-width: 992px) {
+  html[dir="rtl"] .main {
+    margin-right: var(--sidebar-width, 240px);
+    margin-left: 0;
+  }
+
+  html[dir="rtl"] .sidebar--collapsed + .main {
+    margin-right: var(--sidebar-collapsed-width, 64px);
+    margin-left: 0;
+  }
+}
+
+/* Page Header & Topbar Actions */
+html[dir="rtl"] .page-header {
+  flex-direction: row;
+}
+
+html[dir="rtl"] .page-header__actions {
+  margin-right: auto;
+  margin-left: 0;
+}
+
+/* Sidebar navigation items */
+html[dir="rtl"] .sidebar__nav-link {
+  text-align: right;
+}
+
+html[dir="rtl"] .sidebar__nav-icon {
+  margin-left: 0.75rem;
+  margin-right: 0;
+}
+
+html[dir="rtl"] .sidebar__nav-chevron {
+  margin-right: auto;
+  margin-left: 0;
+  transform: rotate(180deg);
+}
+
+html[dir="rtl"] .sidebar__nav-item--open > .sidebar__nav-link .sidebar__nav-chevron {
+  transform: rotate(90deg);
+}
+
+/* Mobile Header */
+html[dir="rtl"] .mobile-header #mobile-menu-toggle {
+  margin-right: auto;
+  margin-left: 0;
+}
+
+/* --------------------------------------------------------------------------
+   3. Split Layout (Sidebar + Content Split View)
+   -------------------------------------------------------------------------- */
+html[dir="rtl"] .layout-split__sidebar {
+  border-left: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
+  border-right: none;
+}
+
+/* --------------------------------------------------------------------------
+   4. Buttons & Icon Spacing
+   -------------------------------------------------------------------------- */
+html[dir="rtl"] .btn svg,
+html[dir="rtl"] .btn i,
+html[dir="rtl"] .btn .btn__icon {
+  margin-left: 0.5rem;
+  margin-right: 0;
+}
+
+html[dir="rtl"] .btn--icon-only svg,
+html[dir="rtl"] .btn--icon-only i {
+  margin-left: 0;
+  margin-right: 0;
+}
+
+html[dir="rtl"] .btn-group {
+  flex-direction: row;
+}
+
+/* --------------------------------------------------------------------------
+   5. Form Controls & Inputs
+   -------------------------------------------------------------------------- */
+html[dir="rtl"] .form-label {
+  text-align: right;
+}
+
+html[dir="rtl"] .form-control,
+html[dir="rtl"] .form-select,
+html[dir="rtl"] textarea {
+  text-align: right;
+  direction: rtl;
+}
+
+/* Form input icon positions */
+html[dir="rtl"] .input-icon-wrapper {
+  position: relative;
+}
+
+html[dir="rtl"] .input-icon-wrapper .input-icon {
+  right: 0.75rem;
+  left: auto;
+}
+
+html[dir="rtl"] .input-icon-wrapper .form-control {
+  padding-right: 2.5rem;
+  padding-left: 0.75rem;
+}
+
+/* Form Checkbox & Radio Labels */
+html[dir="rtl"] .form-check-label,
+html[dir="rtl"] .form-radio-label {
+  padding-right: 0.5rem;
+  padding-left: 0;
+}
+
+html[dir="rtl"] .form-switch {
+  padding-right: 2.5em;
+  padding-left: 0;
+}
+
+html[dir="rtl"] .form-switch .form-check-input {
+  margin-right: -2.5em;
+  margin-left: 0;
+}
+
+/* --------------------------------------------------------------------------
+   6. Components: Cards, Tables, Badges, Tabs, Alerts, Modals
+   -------------------------------------------------------------------------- */
+/* Cards */
+html[dir="rtl"] .card__header {
+  flex-direction: row;
+}
+
+html[dir="rtl"] .card__actions,
+html[dir="rtl"] .card__header-actions {
+  margin-right: auto;
+  margin-left: 0;
+}
+
+/* Tables */
+html[dir="rtl"] table th,
+html[dir="rtl"] table td {
+  text-align: right;
+}
+
+html[dir="rtl"] table th:last-child,
+html[dir="rtl"] table td:last-child,
+html[dir="rtl"] .table-actions {
+  text-align: left;
+}
+
+/* Badges */
+html[dir="rtl"] .badge svg,
+html[dir="rtl"] .badge i {
+  margin-left: 0.35rem;
+  margin-right: 0;
+}
+
+/* Tabs */
+html[dir="rtl"] .tabs__nav {
+  flex-direction: row;
+}
+
+html[dir="rtl"] .tab-item {
+  margin-left: 1rem;
+  margin-right: 0;
+}
+
+/* Modals */
+html[dir="rtl"] .modal__header .btn-close,
+html[dir="rtl"] .modal__header button[aria-label="Close"] {
+  margin-right: auto;
+  margin-left: 0;
+}
+
+html[dir="rtl"] .modal__footer {
+  flex-direction: row-reverse;
+  justify-content: flex-start;
+}
+
+html[dir="rtl"] .modal__footer .btn + .btn {
+  margin-right: 0;
+  margin-left: 0.5rem;
+}
+
+/* Alerts */
+html[dir="rtl"] .alert {
+  text-align: right;
+}
+
+html[dir="rtl"] .alert__icon {
+  margin-left: 0.75rem;
+  margin-right: 0;
+}
+
+html[dir="rtl"] .alert__close {
+  margin-right: auto;
+  margin-left: 0;
+}
+
+/* Stepper */
+html[dir="rtl"] .stepper {
+  flex-direction: row;
+}
+
+html[dir="rtl"] .stepper__step {
+  text-align: right;
+}
+
+/* Toast Container */
+html[dir="rtl"] #toast-container {
+  left: 1.5rem;
+  right: auto;
+}
+
+/* --------------------------------------------------------------------------
+   7. Directional Icons Flipping
+   -------------------------------------------------------------------------- */
+html[dir="rtl"] .flip-rtl,
+html[dir="rtl"] [data-lucide="chevron-right"],
+html[dir="rtl"] [data-lucide="chevron-left"],
+html[dir="rtl"] [data-lucide="arrow-right"],
+html[dir="rtl"] [data-lucide="arrow-left"],
+html[dir="rtl"] [data-lucide="arrow-right-circle"],
+html[dir="rtl"] [data-lucide="arrow-left-circle"],
+html[dir="rtl"] [data-lucide="log-out"],
+html[dir="rtl"] [data-lucide="move-right"],
+html[dir="rtl"] [data-lucide="move-left"] {
+  transform: scaleX(-1);
+  display: inline-block;
+}

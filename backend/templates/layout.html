@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ get_lang() }}">
+<html lang="{{ get_lang() }}" dir="{{ get_dir() }}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -32,11 +32,14 @@
   <link rel="stylesheet" href="/static/css/components/stepper.css?v={{ APP_VERSION }}">
   <link rel="stylesheet" href="/static/css/components/loading.css?v={{ APP_VERSION }}">
   <link rel="stylesheet" href="/static/css/utils.css?v={{ APP_VERSION }}">
+  <link rel="stylesheet" href="/static/css/rtl.css?v={{ APP_VERSION }}">
   <!-- Devicon & Lucide Icons -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/devicon.min.css">
   <script src="https://unpkg.com/lucide@latest"></script>
 
   <script>
+    window.IS_RTL = {{ 'true' if get_dir() == 'rtl' else 'false' }};
+
     var theme = localStorage.getItem('theme') || 'system';
     if (theme === 'dark' || theme === 'amoled' || theme === 'charcoal') {
       document.documentElement.setAttribute('data-theme', theme);

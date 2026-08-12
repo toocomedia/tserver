@@ -5,10 +5,18 @@ from pathlib import Path
 logger = logging.getLogger(__name__)
 
 class I18nService:
+    RTL_LANGUAGES = {"ar", "fa", "he", "ur"}
+
     def __init__(self):
         self.locales = {}
         self.language_names = {}
         self.en_strings = {}
+
+    def is_rtl(self, lang: str) -> bool:
+        return (lang or "").lower() in self.RTL_LANGUAGES
+
+    def get_direction(self, lang: str) -> str:
+        return "rtl" if self.is_rtl(lang) else "ltr"
 
     def init_app(self, base_dir: Path):
         self.locales_dir = base_dir / "locales"

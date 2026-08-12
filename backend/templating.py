@@ -109,6 +109,14 @@ def get_lang(context) -> str:
     return _extract_lang(context)
 
 @pass_context
+def get_dir(context) -> str:
+    return i18n_service.get_direction(_extract_lang(context))
+
+@pass_context
+def is_rtl(context) -> bool:
+    return i18n_service.is_rtl(_extract_lang(context))
+
+@pass_context
 def _translate(context, key: str) -> str:
     return i18n_service.get_string(key, _extract_lang(context))
 
@@ -145,6 +153,8 @@ templates.env.globals["_"] = _translate
 templates.env.globals["n_"] = _translate_plural
 templates.env.globals["get_js_translations"] = get_js_translations
 templates.env.globals["get_lang"] = get_lang
+templates.env.globals["get_dir"] = get_dir
+templates.env.globals["is_rtl"] = is_rtl
 templates.env.globals["get_available_languages"] = i18n_service.get_available_languages
 
 import os
