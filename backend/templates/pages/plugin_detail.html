@@ -32,13 +32,13 @@
           <span class="badge badge--danger"><span class="badge-dot"></span> {{ plugin.effective_status | upper }}</span>
         {% endif %}
       </div>
-      <div class="info-hero-row__meta">{{ _('system_extension_plugin_v_plugin_version') }}</div>
+      <div class="info-hero-row__meta">{{ _('system_extension_plugin') }} · v{{ plugin.version }}</div>
     </div>
 
     <div class="info-hero-row__actions">
       {% if plugin.installed %}
         {% if plugin.route_prefix and plugin.effective_status == 'active' %}
-          <a href="{{ plugin.route_prefix }}" class="btn btn--primary btn--sm">{{ _('manage_plugin_name') }}</a>
+          <a href="{{ plugin.route_prefix }}" class="btn btn--primary btn--sm">{{ _('manage') }} {{ plugin.name }}</a>
         {% endif %}
         {% if plugin.effective_status != 'invalid' %}
           <form method="post" action="/plugins/api/toggle" style="display:inline-flex;">
@@ -57,7 +57,7 @@
         <form method="post" action="/plugins/api/install" style="display:inline-flex;">
           <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
           <input type="hidden" name="plugin_id" value="{{ plugin.id }}">
-          <button type="submit" class="btn btn--primary btn--sm" {% if plugin.paused_by %}disabled title="Install required system dependency first" {% endif %}>{{ _('install_plugin_name') }}</button>
+          <button type="submit" class="btn btn--primary btn--sm" {% if plugin.paused_by %}disabled title="Install required system dependency first" {% endif %}>{{ _('install') }} {{ plugin.name }}</button>
         </form>
         {% if plugin.data_purge %}
         <form method="post" action="/plugins/api/purge-data" style="display:inline-flex;">
@@ -92,7 +92,7 @@
       </div>
       <div class="clean-specs-item">
         <div class="clean-specs-item__key">{{ _('version') }}</div>
-        <div class="clean-specs-item__val">{{ _('v_plugin_version') }}</div>
+        <div class="clean-specs-item__val">v{{ plugin.version }}</div>
       </div>
       <div class="clean-specs-item">
         <div class="clean-specs-item__key">{{ _('installation_status') }}</div>
@@ -129,10 +129,10 @@
   </div>
 
   {% if action_error %}
-  <p class="text-danger" style="margin-bottom: 1rem;">{{ _('action_error') }}</p>
+  <p class="text-danger" style="margin-bottom: 1rem;">⚠️ {{ action_error }}</p>
   {% endif %}
   {% if plugin.manifest_error %}
-  <p class="text-danger" style="margin-bottom: 1rem;">{{ _('plugin_manifest_error') }}</p>
+  <p class="text-danger" style="margin-bottom: 1rem;">⚠️ {{ plugin.manifest_error }}</p>
   {% endif %}
 
 </article>

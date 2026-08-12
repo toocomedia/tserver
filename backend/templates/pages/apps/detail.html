@@ -30,8 +30,8 @@
     </div>
 
     <div class="hero-stats">
-      <span>{{ _('url_if_domain') }}<a href="{{ public_url(domain.name, https=app.ssl_requested) }}" target="_blank" rel="noopener" style="color:var(--color-text); font-weight:700;">{{ domain.name }}</a>{% else %}<span class="text-muted">{{ _('domain_removed') }}</span>{% endif %}</span>
-      <span>{{ _('port') }} <span class="mono" style="color:var(--color-text); font-weight:600;">{{ _('127_0_0_1_app_port') }}</span></span>
+      <span>URL: {% if domain %}<a href="{{ public_url(domain.name, https=app.ssl_requested) }}" target="_blank" rel="noopener" style="color:var(--color-text); font-weight:700;">{{ domain.name }}</a>{% else %}<span class="text-muted">{{ _('domain_removed') }}</span>{% endif %}</span>
+      <span>{{ _('port') }} <span class="mono" style="color:var(--color-text); font-weight:600;">127.0.0.1:{{ app.port }}</span></span>
       <span>{{ _('ssl') }} <span style="color:var(--color-text); font-weight:600;">{{ 'HTTPS active' if app.ssl_requested else 'HTTP only' }}</span></span>
     </div>
   </div>

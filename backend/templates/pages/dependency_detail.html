@@ -30,7 +30,7 @@
           <span class="badge badge--danger" data-role="dependency-status"><span class="badge-dot"></span> {{ dependency.effective_state }}</span>
         {% endif %}
       </div>
-      <div class="info-hero-row__meta">{{ _('system_dependency_driver_v_dependency_ve') }}</div>
+      <div class="info-hero-row__meta">{{ _('system_dependency') }} · Driver v{{ dependency.version }}</div>
     </div>
 
     <div class="info-hero-row__actions" data-role="dependency-footer">
@@ -44,7 +44,7 @@
       <form method="post" action="/api/dependencies/{{ dependency.id }}/update" data-dependency-update-form data-confirmation="{{ dependency.update_confirmation }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
         <input type="hidden" name="confirmation" value="">
-        <button class="btn btn--primary btn--sm" type="submit">{{ _('update_dependency_name') }}</button>
+        <button class="btn btn--primary btn--sm" type="submit">{{ _('update') }} {{ dependency.name }}</button>
       </form>
       {% endif %}
       {% if dependency.installed and dependency.can_toggle %}
@@ -62,7 +62,7 @@
       {% elif not dependency.installed %}
       <form method="post" action="/api/dependencies/{{ dependency.id }}/install" data-dependency-install-form>
         <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
-        <button class="btn btn--primary btn--sm" type="submit" data-role="install-button" {% if not dependency.install_guide.supported %}disabled title="Unsupported operating system" {% endif %}>{{ _('install_dependency_name') }}</button>
+        <button class="btn btn--primary btn--sm" type="submit" data-role="install-button" {% if not dependency.install_guide.supported %}disabled title="Unsupported operating system" {% endif %}>{{ _('install') }} {{ dependency.name }}</button>
       </form>
       {% endif %}
     </div>
@@ -143,7 +143,7 @@
   <div class="dependency-install-state hidden" data-role="install-state" aria-live="polite">
     <div class="dependency-install-state__header">
       <span class="dependency-install-state__spinner" aria-hidden="true"></span>
-      <span data-role="install-state-title">{{ _('installing_dependency_name') }}</span>
+      <span data-role="install-state-title">{{ _('installing') }} {{ dependency.name }}</span>
     </div>
     <div class="dependency-install-state__track"><span class="dependency-install-state__bar"></span></div>
     <p class="text-small text-muted" data-role="install-state-detail">{{ _('installation_is_running_on_the_server_ke') }}</p>

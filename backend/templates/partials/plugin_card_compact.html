@@ -21,7 +21,7 @@
       <a href="/plugins/info/{{ plugin.id }}" style="text-decoration:none; color:inherit;">
         <div class="compact-card-1x1__title">{{ plugin.name }}</div>
       </a>
-      <div class="compact-card-1x1__meta">{{ _('v_plugin_version') }}</div>
+      <div class="compact-card-1x1__meta">v{{ plugin.version }}</div>
       <div class="compact-card-1x1__actions" style="display:flex; gap:6px; margin-top:6px; flex-wrap:wrap;">
         {% if plugin.dependency_status or plugin.manifest_error or (action_error and action_error_plugin_id == plugin.id) %}
           <button type="button" class="icon-btn requirements-info-btn {% if plugin.paused_by %}requirements-info-btn--danger{% endif %}" style="color:#FFF;" title="{% if plugin.paused_by %}Missing Requirements — Click to Check Details{% else %}System Check & Details{% endif %}" onclick="toggleAndCheckPlugin(this);">

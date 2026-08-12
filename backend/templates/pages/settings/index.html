@@ -12,7 +12,7 @@
 <div id="settings-notes" class="mb-lg" hidden></div>
 
 {% if s.load_error %}
-<div class="alert alert--danger mb-lg">{{ _('could_not_load_full_status_s_load_error') }}</div>
+<div class="alert alert--danger mb-lg">{{ _('could_not_load_full_status') }}: {{ s.load_error }}</div>
 {% endif %}
 
 <div class="split-layout">
@@ -231,7 +231,7 @@
           <div class="form-group mb-md" id="ip-port-group">
             <label class="form-label" for="ip_port">{{ _('public_port') }}</label>
             <input class="form-input" type="number" id="ip_port" min="1" max="65535" value="{{ s.ip_port or 80 }}" style="max-width:140px;">
-            <p class="form-hint">{{ _('e_g_8080') }} <code>{{ _('http_s_server_ip_8080') }}</code></p>
+            <p class="form-hint">{{ _('e_g_8080') }} <code>http://{{ s.server_ip }}:8080/</code></p>
           </div>
           <div class="form-actions">
             <button type="button" class="btn btn--primary" id="btn-save-ip">{{ _('save_ip_access') }}</button>

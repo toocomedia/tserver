@@ -30,7 +30,7 @@
           <label class="form-label" for="status">{{ _('status') }}</label>
           <div class="form-select-wrap">
             <select name="status" id="status" class="form-select" onchange="this.form.submit()">
-              <option value="open" {% if filter_status== 'open' %}selected{% endif %}>{{ _('open_open_count') }}</option>
+              <option value="open" {% if filter_status== 'open' %}selected{% endif %}>{{ _('open') }} ({{ open_count }})</option>
               <option value="resolved" {% if filter_status== 'resolved' %}selected{% endif %}>{{ _('resolved') }}</option>
               <option value="all" {% if filter_status== 'all' %}selected{% endif %}>{{ _('all') }}</option>
             </select>
@@ -133,7 +133,7 @@
   <div class="empty-state__shape">
     <div class="shape-circle-sm"></div>
   </div>
-  <h3 class="empty-state__title">{{ _('no_errors_recorded_if_filter_status_open') }}</h3>
+  <h3 class="empty-state__title">{{ _('no_errors_recorded') }}{% if filter_status == 'open' %} ({{ _('open') }}){% endif %}</h3>
   <p class="empty-state__desc">{{ _('failures_from_domains_dns_ssl_and_proxy_') }}</p>
 </div>
 {% endif %}

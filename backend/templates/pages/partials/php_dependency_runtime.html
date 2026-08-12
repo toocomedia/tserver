@@ -16,7 +16,7 @@
         <span class="badge badge--danger" data-role="dependency-status"><span class="badge-dot"></span> {{ dependency.effective_state | default('Not ready') }}</span>
       {% endif %}
     </div>
-    <div class="info-hero-row__meta">{{ _('system_dependency_driver_v_dependency_ve') }}</div>
+    <div class="info-hero-row__meta">{{ _('system_dependency') }} · Driver v{{ dependency.version }}</div>
   </div>
   <div class="info-hero-row__actions">
     <form method="post" action="/api/dependencies/php/check-available" data-php-check>
@@ -91,7 +91,7 @@
 
 {% set missing_versions = dependency.versions | rejectattr('installed') | rejectattr('available_from_apt') | list %}
 {% if missing_versions and not dependency.external_repository.configured %}
-<p class="text-small text-muted mb-md">{{ _('some_versions_are_missing_the_external_s') }}</p>
+<p class="text-small text-muted mb-md">{{ _('some_versions_missing_info') }} {{ dependency.external_repository.name }} {{ _('without_installing_php') }}</p>
 {% elif dependency.external_repository.configured %}
 <p class="text-small text-muted mb-md">{{ _('external_php_source_enabled_1') }}</p>
 {% else %}
@@ -125,7 +125,7 @@
     <tbody>
       {% for runtime in dependency.versions %}
       <tr>
-        <td><span class="table-title">{{ _('php_runtime_version') }}</span></td>
+        <td><span class="table-title">PHP {{ runtime.version }}</span></td>
         <td><span class="text-small text-muted" title="{{ runtime.package_version or '' }}">{{ runtime.package_version or '—' }}</span></td>
         <td>
           {% if runtime.installed and runtime.healthy %}

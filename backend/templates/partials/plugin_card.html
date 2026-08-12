@@ -11,7 +11,7 @@
         <a href="/plugins/info/{{ plugin.id }}" style="text-decoration:none; color:inherit;">
           <h3 class="plugin-card__title" {% if plugin.effective_status in ['missing', 'invalid'] %}style="color: var(--color-muted)" {% endif %}>{{ plugin.name }}</h3>
         </a>
-        <span class="plugin-card__meta">{{ _('v_plugin_version') }}</span>
+        <span class="plugin-card__meta">v{{ plugin.version }}</span>
       </div>
 
       <div class="plugin-card__description">{{ plugin.description }}</div>

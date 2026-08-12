@@ -13,7 +13,7 @@
         <span class="plugin-check-window__label">{{ _('requirements_status') }}</span>
         <span class="tray-overall-status">
           {% if plugin.paused_by %}
-            <span class="badge badge--danger">{{ _('unmet_missing_plugin_paused_by_title') }}</span>
+            <span class="badge badge--danger">✕ {{ _('unmet') }} ({{ _('missing') }} {{ plugin.paused_by | title }})</span>
           {% elif plugin.dependency_status and plugin.dependency_status | length > 0 %}
             {% set all_healthy = true %}
             {% for dep in plugin.dependency_status %}
@@ -53,10 +53,10 @@
     </div>
 
     {% if action_error and action_error_plugin_id == plugin.id and not plugin.paused_by %}
-      <div class="plugin-check-window__error">{{ _('action_error') }}</div>
+      <div class="plugin-check-window__error">⚠️ {{ action_error }}</div>
     {% endif %}
     {% if plugin.manifest_error %}
-      <div class="plugin-check-window__error">{{ _('plugin_manifest_error') }}</div>
+      <div class="plugin-check-window__error">⚠️ {{ plugin.manifest_error }}</div>
     {% endif %}
   </div>
 </div>

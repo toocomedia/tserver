@@ -49,7 +49,7 @@
             <span class="text-muted">{{ _('unlinked') }}</span>
           {% endif %}
         </td>
-        <td><code>{{ _('127_0_0_1_app_port') }}</code></td>
+        <td><code>127.0.0.1:{{ app.port }}</code></td>
         <td>
           <span class="badge-minimal {% if app.status == 'running' %}badge-minimal--active{% else %}badge-minimal--neutral{% endif %}">{{ app.status | upper }}</span>
         </td>

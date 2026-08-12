@@ -238,10 +238,11 @@
 
 <div id="page-preview" class="settings-mode-box">
   <span class="text-small text-muted">
-    {{ _('served_at_if_cert') }}
-      <strong>{{ _('https_domain_name') }}</strong>
+    {{ _('served_at') }}:
+    {% if cert %}
+      <strong>https://{{ domain.name }}</strong>
     {% else %}
-      <strong>{{ _('http_domain_name') }}</strong>
+      <strong>http://{{ domain.name }}</strong>
     {% endif %}
      · 
     <button type="button" class="btn btn--ghost btn--sm p-0" onclick="toggleEditor()">

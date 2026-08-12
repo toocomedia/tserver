@@ -110,7 +110,7 @@
         <td>
           {% if item.cache_enabled %}
             <span class="status-badge status-badge--success" id="cache-badge-{{ p.id }}">
-              {{ _('on_if_item_cache_size_mb_0_item_cache_si') }}
+              {{ _('on') }}{% if item.cache_size_mb > 0 %} · {{ item.cache_size_mb }}MB{% endif %}
             </span>
           {% else %}
             <span class="status-badge status-badge--muted" id="cache-badge-{{ p.id }}">{{ _('off') }}</span>
@@ -143,7 +143,7 @@
         <td colspan="7">
           <div class="cache-settings-box" id="cache-box-{{ p.id }}">
             <div class="cache-settings-header">
-              <strong>{{ _('cache_settings_p_full_domain') }}</strong>
+              <strong>{{ _('cache_settings') }} — {{ p.full_domain }}</strong>
               <span id="cache-status-msg-{{ p.id }}" class="text-small text-muted"></span>
             </div>
             <div class="cache-settings-body">
@@ -170,7 +170,7 @@
               </div>
               {% if item.last_cache_cleared %}
               <p class="form-hint mt-xs">
-                {{ _('last_cleared_item_last_cache_cleared_str') }}
+                {{ _('last_cleared') }}: {{ item.last_cache_cleared.strftime('%Y-%m-%d %H:%M') }} UTC
               </p>
               {% endif %}
             </div>
