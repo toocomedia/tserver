@@ -104,7 +104,7 @@
   "clear_all": "Clear all",
   "all": "All",
   "all_sources": "All sources",
-  "search": "Search",
+  "search": "Search...",
   "filter": "Filter",
   "level": "Level",
   "view_details": "View Details",
@@ -737,5 +737,7 @@
   "installed_extensions_plugins": "Installed Extensions & Plugins",
   "system_dependencies_catalog": "System Dependencies Catalog",
   "python_app_logs": "Python App Logs",
-  "total": "Total"
+  "total": "Total",
+  "search_sidebar": "Search sidebar",
+  "search_items": "Search items"
 }

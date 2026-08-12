@@ -104,7 +104,7 @@
   "clear_all": "Tout effacer",
   "all": "Tous",
   "all_sources": "Toutes les sources",
-  "search": "Recherche",
+  "search": "Rechercher...",
   "filter": "Filtre",
   "level": "Niveau",
   "view_details": "Afficher les détails",
@@ -737,5 +737,7 @@
   "installed_extensions_plugins": "Extensions et plugins installés",
   "system_dependencies_catalog": "Catalogue des dépendances système",
   "python_app_logs": "Journaux de l'application Python",
-  "total": "Total"
+  "total": "Total",
+  "search_sidebar": "Rechercher dans la barre latérale",
+  "search_items": "Rechercher des éléments"
 }

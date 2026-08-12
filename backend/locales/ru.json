@@ -104,7 +104,7 @@
   "clear_all": "Очистить все",
   "all": "Все",
   "all_sources": "Все источники",
-  "search": "Поиск",
+  "search": "Поиск...",
   "filter": "Фильтр",
   "level": "Уровень",
   "view_details": "Посмотреть детали",
@@ -737,5 +737,7 @@
   "installed_extensions_plugins": "Установленные расширения и плагины",
   "system_dependencies_catalog": "Каталог системных зависимостей",
   "python_app_logs": "Логи Python-приложения",
-  "total": "Всего"
+  "total": "Всего",
+  "search_sidebar": "Поиск по боковой панели",
+  "search_items": "Поиск элементов"
 }

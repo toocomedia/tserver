@@ -208,6 +208,10 @@ html[dir="rtl"] .form-switch .form-check-input {
   margin-left: 0;
 }
 
+html[dir="rtl"] .form-switch .form-check-input:checked {
+  transform: translateX(-20px);
+}
+
 /* --------------------------------------------------------------------------
    6. Components: Cards, Tables, Badges, Tabs, Alerts, Modals
    -------------------------------------------------------------------------- */
@@ -313,4 +317,39 @@ html[dir="rtl"] [data-lucide="move-right"],
 html[dir="rtl"] [data-lucide="move-left"] {
   transform: scaleX(-1);
   display: inline-block;
+}
+
+/* --------------------------------------------------------------------------
+   8. In-Row List Action Slide Toolbars & Toggle Animations
+   -------------------------------------------------------------------------- */
+html[dir="rtl"] .list-row-subactions.slide-toolbar {
+  left: 0;
+  right: auto;
+}
+
+html[dir="rtl"] .list-row-subactions__inner {
+  border-right: 2px solid var(--color-accent);
+  border-left: none;
+  transform: translateX(calc(-100% - 5px));
+  justify-content: flex-start;
+}
+
+html[dir="rtl"] .is-actions-open > .list-row-subactions.slide-toolbar .list-row-subactions__inner,
+html[dir="rtl"] .is-actions-open > td > .list-row-subactions.slide-toolbar .list-row-subactions__inner {
+  transform: translateX(0);
+}
+
+html[dir="rtl"] .list-item-row.is-actions-open .list-col-version,
+html[dir="rtl"] .list-item-row.is-actions-open .list-col-status,
+html[dir="rtl"] .list-item-row.is-actions-open .list-col-desc,
+html[dir="rtl"] .list-item-row.is-actions-open .list-col-actions,
+html[dir="rtl"] .table tr.is-actions-open td:not(:first-child):not(.col-actions) {
+  transform: translateX(15px);
+}
+
+/* Prevent unwanted horizontal scrollbars on list containers during toggle transitions */
+html[dir="rtl"] .view-list-container,
+html[dir="rtl"] .table-wrap,
+html[dir="rtl"] .list-item-row {
+  overflow-x: hidden;
 }

@@ -3,13 +3,13 @@
   <div class="sidebar__logo">
     <img src="/static/images/logobarq.png" alt="{{ PANEL_NAME }}" class="sidebar__logo-img" style="height: 28px; width: auto; object-fit: contain;">
     <div class="sidebar__search" id="sidebar-search">
-      <button type="button" class="sidebar__search-btn" id="sidebar-search-btn" aria-label="Search sidebar">
+      <button type="button" class="sidebar__search-btn" id="sidebar-search-btn" aria-label="{{ _('search_sidebar') }}">
         <svg viewbox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="11" cy="11" r="8"></circle>
           <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
         </svg>
       </button>
-      <input type="search" class="sidebar__search-input" id="sidebar-search-input" placeholder="Search..." aria-label="Search items" autocomplete="new-password" name="sidebar_search_input_dummy" data-lpignore="true" data-1p-ignore="true" readonly onfocus="this.removeAttribute('readonly');">
+      <input type="search" class="sidebar__search-input" id="sidebar-search-input" placeholder="{{ _('search') }}" aria-label="{{ _('search_items') }}" autocomplete="new-password" name="sidebar_search_input_dummy" data-lpignore="true" data-1p-ignore="true" readonly onfocus="this.removeAttribute('readonly');">
     </div>
   </div>
 
