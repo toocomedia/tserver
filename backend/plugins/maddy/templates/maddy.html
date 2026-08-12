@@ -24,15 +24,19 @@
   flex: 1;
   width: 100%;
   transition: width 0.22s cubic-bezier(0.2, 0, 0, 1), flex 0.22s cubic-bezier(0.2, 0, 0, 1);
-  padding: var(--space-md) var(--page-gutter);
+  padding: 0;
+  margin: 0;
   overflow-y: auto;
   overflow-x: hidden;
   display: flex;
   flex-direction: column;
 }
 .maddy-master .table-wrap {
-  margin-inline: calc(var(--page-gutter) * -1);
+  margin: 0 !important;
+  padding: 0 !important;
   border: none;
+  width: 100% !important;
+  max-width: 100% !important;
 }
 .maddy-detail {
   width: 0;
