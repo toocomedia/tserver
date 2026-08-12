@@ -124,10 +124,10 @@ def get_js_translations(context) -> str:
     # Base dictionary from English
     js_strings = {k: v for k, v in i18n_service.en_strings.items() if k.startswith("js.")}
     
-    # Override with French if enabled
-    if lang == "fr" and i18n_service.french_enabled:
-        fr_overrides = {k: v for k, v in i18n_service.fr_strings.items() if k.startswith("js.")}
-        js_strings.update(fr_overrides)
+    # Override with requested language if available
+    target_strings = i18n_service.locales.get(lang, {})
+    overrides = {k: v for k, v in target_strings.items() if k.startswith("js.")}
+    js_strings.update(overrides)
         
     return json.dumps(js_strings)
 
@@ -145,6 +145,7 @@ templates.env.globals["_"] = _translate
 templates.env.globals["n_"] = _translate_plural
 templates.env.globals["get_js_translations"] = get_js_translations
 templates.env.globals["get_lang"] = get_lang
+templates.env.globals["get_available_languages"] = i18n_service.get_available_languages
 
 import os
 

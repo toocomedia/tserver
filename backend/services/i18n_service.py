@@ -6,43 +6,73 @@ logger = logging.getLogger(__name__)
 
 class I18nService:
     def __init__(self):
+        self.locales = {}
+        self.language_names = {}
         self.en_strings = {}
-        self.fr_strings = {}
-        self.french_enabled = False
 
     def init_app(self, base_dir: Path):
         self.locales_dir = base_dir / "locales"
         self.load_locales()
 
     def load_locales(self):
-        en_path = self.locales_dir / "en.json"
-        fr_path = self.locales_dir / "fr.json"
+        self.locales.clear()
+        self.language_names.clear()
+        if not hasattr(self, "locales_dir") or not self.locales_dir.exists():
+            logger.error("Locales directory not found")
+            return
 
-        # English is mandatory
-        try:
-            with open(en_path, "r", encoding="utf-8") as f:
-                self.en_strings = json.load(f)
-        except Exception as e:
-            logger.critical(f"Failed to load English translations from {en_path}: {e}")
-            raise RuntimeError(f"English translations are required for startup. Error: {e}")
+        # 1. Load languages.json manifest if present
+        manifest_path = self.locales_dir / "languages.json"
+        if manifest_path.exists():
+            try:
+                with open(manifest_path, "r", encoding="utf-8") as f:
+                    self.language_names = json.load(f)
+            except Exception as e:
+                logger.error(f"Failed to load languages.json manifest: {e}")
 
-        # French is optional/graceful failure
-        try:
-            with open(fr_path, "r", encoding="utf-8") as f:
-                self.fr_strings = json.load(f)
-            self.french_enabled = True
-        except Exception as e:
-            logger.error(f"Failed to load French translations from {fr_path}. French will be disabled. Error: {e}")
-            self.french_enabled = False
+        # 2. Load all locale files (*.json except languages.json)
+        for json_file in self.locales_dir.glob("*.json"):
+            if json_file.name == "languages.json":
+                continue
+            lang = json_file.stem.lower()
+            try:
+                with open(json_file, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    self.locales[lang] = data
+                    # Fallback to key or stem if not in manifest
+                    if lang not in self.language_names:
+                        self.language_names[lang] = data.get(lang, data.get("language_name", lang.upper()))
+            except Exception as e:
+                logger.error(f"Failed to load translations from {json_file}: {e}")
+
+        # English is mandatory fallback
+        self.en_strings = self.locales.get("en", {})
+        if not self.en_strings:
+            logger.critical("English translations (en.json) missing or empty.")
+
+    def get_available_languages(self) -> dict[str, str]:
+        """
+        Returns a dictionary of {lang_code: display_name} for all loaded locales.
+        Example: {"en": "English", "fr": "Français", "ru": "Русский"}
+        """
+        return {code: self.language_names.get(code, code.upper()) for code in self.locales.keys()}
+
+    @property
+    def french_enabled(self) -> bool:
+        return "fr" in self.locales
+
+    @property
+    def fr_strings(self) -> dict:
+        return self.locales.get("fr", {})
 
     def get_string(self, key: str, lang: str = "en") -> str:
         """
-        Fallback logic: French -> English -> Key
+        Fallback logic: Requested lang -> English -> Key
         """
-        if lang == "fr" and self.french_enabled:
-            val = self.fr_strings.get(key)
-            if val is not None:
-                return val
+        lang_strings = self.locales.get(lang, {})
+        val = lang_strings.get(key)
+        if val is not None:
+            return val
                 
         val = self.en_strings.get(key)
         if val is not None:
@@ -51,24 +81,21 @@ class I18nService:
         return key
 
     def get_plural_string(self, key: str, count: int, lang: str = "en") -> str:
-        # Very basic pluralization support for v1
-        # Look for key_plural if count != 1
         lookup_key = key if count == 1 else f"{key}_plural"
+        lang_strings = self.locales.get(lang, {})
         
-        if lang == "fr" and self.french_enabled:
-            val = self.fr_strings.get(lookup_key)
-            if val is not None:
-                return val
-            # Fallback to singular French if plural missing
-            val = self.fr_strings.get(key)
-            if val is not None:
-                return val
+        val = lang_strings.get(lookup_key)
+        if val is not None:
+            return val
+            
+        val = lang_strings.get(key)
+        if val is not None:
+            return val
                 
         val = self.en_strings.get(lookup_key)
         if val is not None:
             return val
         
-        # Fallback to singular English
         val = self.en_strings.get(key)
         if val is not None:
             return val

@@ -1,11 +1,12 @@
 from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
+from services.i18n_service import i18n_service
 
 class LocaleMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
-        # Validate cookie against explicit en/fr allowlist
+        # Validate cookie against loaded locales
         lang = request.cookies.get("panel_lang", "en")
-        if lang not in ("en", "fr"):
+        if lang not in i18n_service.locales:
             lang = "en"
         
         # Store result in request.state.lang. Never mutate shared language state.

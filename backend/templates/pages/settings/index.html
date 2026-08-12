@@ -322,8 +322,9 @@
             <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
             <input type="hidden" name="next" value="/settings/">
             <select name="lang" class="form-select" onchange="document.getElementById('form-language-settings').submit();" style="flex:1;">
-              <option value="en" {% if request.state.lang== 'en' %}selected{% endif %}>{{ _('english') }}</option>
-              <option value="fr" {% if request.state.lang== 'fr' %}selected{% endif %}>{{ _('fran_ais') }}</option>
+              {% for code, name in get_available_languages().items() %}
+                <option value="{{ code }}" {% if request.state.lang == code %}selected{% endif %}>{{ name }}</option>
+              {% endfor %}
             </select>
           </form>
 

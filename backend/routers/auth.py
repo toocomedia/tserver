@@ -229,7 +229,8 @@ async def set_language(
     next: str = Form("/"),
 ):
     next_url = _safe_next(next)
-    if lang not in ("en", "fr"):
+    from services.i18n_service import i18n_service
+    if lang not in i18n_service.locales:
         lang = "en"
     
     response = RedirectResponse(next_url, status_code=303)
