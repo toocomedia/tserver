@@ -9,6 +9,15 @@
   src: url('/static/fonts/Onest-Variable.woff2') format('woff2');
 }
 
+@font-face {
+  font-family: 'Janna LT';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('/static/fonts/Janna-LT-Regular.woff2') format('woff2');
+}
+
+
 /* PostgreSQL remote access */
 .remote-page, .remote-form { max-width: 1120px; }
 .pg-remote-panel { max-width: none; padding: 32px 40px; width: 100%; }
