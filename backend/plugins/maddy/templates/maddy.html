@@ -24,14 +24,14 @@
   flex: 1;
   width: 100%;
   transition: width 0.22s cubic-bezier(0.2, 0, 0, 1), flex 0.22s cubic-bezier(0.2, 0, 0, 1);
-  padding: 0;
+  padding: var(--space-md) var(--page-gutter);
   overflow-y: auto;
   overflow-x: hidden;
   display: flex;
   flex-direction: column;
 }
 .maddy-master .table-wrap {
-  margin: 0 !important;
+  margin-inline: calc(var(--page-gutter) * -1);
   border: none;
 }
 .maddy-detail {
@@ -41,8 +41,8 @@
   overflow: hidden;
   border-left: none;
   background: var(--color-bg);
-  transform: translateX(16px);
-  transition: width 0.22s cubic-bezier(0.2, 0, 0, 1), opacity 0.12s ease-out, transform 0.22s cubic-bezier(0.2, 0, 0, 1), visibility 0.22s;
+  transform: translateX(20px);
+  transition: width 0.22s cubic-bezier(0.2, 0, 0, 1), opacity 0.2s ease, transform 0.22s cubic-bezier(0.2, 0, 0, 1), visibility 0.22s;
   pointer-events: none;
 }
 .maddy-detail__inner {

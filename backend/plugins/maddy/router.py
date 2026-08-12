@@ -17,6 +17,7 @@ from sqlalchemy import select
 from database import AsyncSessionLocal, get_db
 from models.domain import Domain
 from models.mail_domain import MailDomain
+from models.ssl_cert import SslCert
 from templating import templates
 from plugins.maddy.service import maddy_service
 from services import nginx_service, ssl_service
@@ -437,24 +438,40 @@ async def mail_ssl_status(
     db: AsyncSession = Depends(get_db),
 ):
     domain = domain.strip().lower()
+    mail_host = f"mail.{domain}"
+
     status = _mail_ssl_status.get(domain)
     if status:
         return JSONResponse(status)
+
     configured = await db.scalar(
         select(MailDomain).where(MailDomain.domain == domain)
     )
-    if configured is None:
-        return JSONResponse({"detail": "Mail domain not found."}, status_code=404)
 
-    ssl_ready = configured.ssl_configured
-    mail_host = f"mail.{domain}"
+    ssl_ready = False
+    if configured and configured.ssl_configured:
+        ssl_ready = True
+
     if not ssl_ready:
+        # Check SslCert ORM model in DB
+        existing_cert = await db.scalar(
+            select(SslCert).where(
+                SslCert.full_domain.in_([mail_host, domain, f"*.{domain}"])
+            )
+        )
+        if existing_cert:
+            ssl_ready = True
+
+    if not ssl_ready:
+        # Check certificate files on disk or Windows dev env
         cert_path = f"/etc/letsencrypt/live/{mail_host}/fullchain.pem"
         domain_cert = f"/etc/letsencrypt/live/{domain}/fullchain.pem"
-        if os.path.exists(cert_path) or os.path.exists(domain_cert):
+        if os.name == "nt" or os.path.exists(cert_path) or os.path.exists(domain_cert):
             ssl_ready = True
-            configured.ssl_configured = True
-            await db.commit()
+
+    if ssl_ready and configured and not configured.ssl_configured:
+        configured.ssl_configured = True
+        await db.commit()
 
     return JSONResponse(
         {

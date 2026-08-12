@@ -303,9 +303,6 @@ function openDomainDetail(domain, serverIp) {
   const layout = document.getElementById('maddyLayout');
   if (layout) layout.classList.add('is-split');
 
-  const detailView = document.getElementById('domain-detail-view');
-  if (detailView) detailView.style.display = 'flex';
-
   safeSetText('detail-domain-name', domain);
   safeSetText('delete-domain-name-text', domain);
   safeSetValue('dns-domain-input', domain);
@@ -325,13 +322,6 @@ function closeDomainDetail() {
   if (layout) layout.classList.remove('is-split');
 
   document.querySelectorAll('#listContent .list-item').forEach(el => el.classList.remove('active'));
-
-  setTimeout(() => {
-    const detailView = document.getElementById('domain-detail-view');
-    if (detailView && layout && !layout.classList.contains('is-split')) {
-      detailView.style.display = 'none';
-    }
-  }, 220);
 }
 
 // ---------------------------------------------------------------------------
