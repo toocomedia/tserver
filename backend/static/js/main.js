@@ -448,6 +448,68 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  // Sidebar Search
+  const sidebarSearchBtn = document.getElementById("sidebar-search-btn");
+  const sidebarSearchInput = document.getElementById("sidebar-search-input");
+  const sidebarSearchContainer = document.getElementById("sidebar-search");
+  
+  if (sidebarSearchBtn && sidebarSearchInput && sidebarSearchContainer && sidebarNav) {
+    sidebarSearchBtn.addEventListener("click", () => {
+      sidebarSearchContainer.classList.toggle("is-expanded");
+      if (sidebarSearchContainer.classList.contains("is-expanded")) {
+        sidebarSearchInput.focus();
+      } else {
+        sidebarSearchInput.value = "";
+        sidebarSearchInput.dispatchEvent(new Event('input')); // trigger reset
+      }
+    });
+
+    // Close when clicking outside
+    document.addEventListener("click", (e) => {
+      if (!sidebarSearchContainer.contains(e.target) && sidebarSearchContainer.classList.contains("is-expanded") && !sidebarSearchInput.value) {
+        sidebarSearchContainer.classList.remove("is-expanded");
+      }
+    });
+
+    sidebarSearchInput.addEventListener("input", (e) => {
+      const term = e.target.value.toLowerCase().trim();
+      const items = sidebarNav.querySelectorAll("li");
+      
+      let currentSectionLabel = null;
+      let sectionHasVisibleItems = false;
+      
+      items.forEach(li => {
+        if (li.classList.contains("sidebar__section-label")) {
+          // If we had a previous section, hide it if it had no visible items
+          if (currentSectionLabel && !sectionHasVisibleItems) {
+            currentSectionLabel.style.display = "none";
+          }
+          currentSectionLabel = li;
+          sectionHasVisibleItems = false; // reset for new section
+          // Show by default unless we hide it later
+          li.style.display = ""; 
+        } else {
+          // Regular item
+          const text = li.textContent.toLowerCase();
+          if (text.includes(term)) {
+            li.style.display = "";
+            sectionHasVisibleItems = true;
+          } else {
+            li.style.display = "none";
+          }
+        }
+      });
+      
+      // Check last section
+      if (currentSectionLabel && !sectionHasVisibleItems) {
+        currentSectionLabel.style.display = "none";
+      }
+      
+      // Update arrows
+      sidebarNav.dispatchEvent(new Event("scroll"));
+    });
+  }
+
   // Trigger app:init so page-specific modules can initialize
   document.dispatchEvent(new Event("app:init"));
 });
