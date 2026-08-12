@@ -1,4 +1,23 @@
-{{ _('skeleton_overlay_html_shared_page_level_') }}
+{# skeleton_overlay.html — shared page-level skeleton overlay.
+   Usage (inside a `position: relative` content container):
+     {% from "partials/skeleton_overlay.html" import skeleton_overlay %}
+     {{ skeleton_overlay(
+          'my-skeleton',
+          stat_cards=6,
+          sections=[5, 4],
+          controls=3,
+          tables=[{ 'cols': [30, 15, 12, 15, 12], 'rows': 4 }]
+       ) }}
+   Params:
+     id          — element id, used by hideSkeleton(id) in main.js
+     stat_cards  — number of stat-card boxes (default 0)
+     sections    — list of row counts, one entry per section block
+     controls    — number of toggle-row strips (default 0)
+     tables      — list of { 'cols': [widths], 'rows': n } to mirror real tables
+     rows        — default row count when a table omits 'rows'
+   Fade-out is handled by the shared JS helper: hideSkeleton('my-skeleton');
+#}
+{% macro skeleton_overlay(id, header=1, title_bar=0, stat_cards=0, sections=[], controls=0, tables=[], rows=3, cards=0) %}
 <div id="{{ id }}" class="skeleton-overlay" aria-hidden="true">
 
   {% if header %}

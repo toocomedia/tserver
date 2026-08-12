@@ -1,4 +1,5 @@
-{{ _('shared_resource_list_row_page_specific_a') }}
+{# Shared resource list row. Page-specific actions are included by template name. #}
+{% macro render(item, resource_type, name, version, description, icon_url, icon_alt, status_label, status_tone, actions_template, overlay_template=None, has_overlay=False) %}
 <div class="list-item-row{% if resource_type == 'plugin' %} plugin-requirements-host{% endif %}">
   <div class="list-col-main">
     <div class="list-col-thumb">

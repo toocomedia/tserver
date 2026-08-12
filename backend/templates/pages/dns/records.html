@@ -17,7 +17,8 @@
 {{ skeleton_overlay('dns-records-skeleton', tables=[{ 'cols': [28, 10, 40, 10, 12], 'rows': 4 }]) }}
 <!-- END SKELETON OVERLAY -->
 
-{{ _('flash_messages_from_redirect_query_param') }}
+{# Flash messages from redirect query params #}
+{% if request.query_params.get('success') %}
 <div class="alert alert--success mb-lg" id="alert-success">
   {{ request.query_params.get('success') }}
 </div>

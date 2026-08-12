@@ -1,4 +1,12 @@
-{{ _('action_toolbar_html_reusable_action_tool') }}
+{#
+  action_toolbar.html — Reusable Action Toolbar Component
+  Parameters passed when included:
+    - search_placeholder: Text for search input (default: "Search...")
+    - search_id: ID for search input element
+    - filter_options: List of dicts [{'val': 'active', 'label': 'Active'}]
+    - bulk_actions: List of dicts [{'action': 'delete', 'label': 'Delete Selected'}]
+    - primary_action: Dict {'url': '/create', 'label': 'Create', 'icon': 'plus'}
+#}
 <div class="action-toolbar">
   <div class="action-toolbar__search">
     <input type="text" id="{{ search_id or 'table-search-input' }}" class="form-control" placeholder="{{ search_placeholder or 'Type to filter items...' }}" aria-label="Filter items">

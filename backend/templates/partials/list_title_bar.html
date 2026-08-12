@@ -1,4 +1,11 @@
-{{ _('list_title_bar_html_reusable_background_') }}
+{#
+  list_title_bar.html — Reusable Background Fill Title Bar Component
+  Parameters passed when included:
+    - title: String header text
+    - icon_svg: Optional inline SVG stroke icon
+    - item_count: Optional count integer/string
+    - right_action: Optional dict {'url': '/add', 'label': 'Add Item'}
+#}
 <div class="list-title-bar">
   <h3>
     {% if icon_svg %}

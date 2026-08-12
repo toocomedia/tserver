@@ -104,7 +104,7 @@
     <main class="content {% block content_class %}{% endblock %}" id="main-content">
       <div class="content__inner">
 
-        {{ _('flash_style_messages_come_from_query_par') }}
+        {# Flash-style messages come from query params / page templates (no Flask) #}
         <div id="resource-guard-banner" class="alert alert--warning mb-lg" role="status" hidden></div>
         <aside id="resource-guard-recommendation" class="recommendation-card recommendation-card--floating px-gutter" role="status" hidden>
           <div class="recommendation-card__copy">{{ _('resource_guard_recommended_enable_it_to_') }}</div>

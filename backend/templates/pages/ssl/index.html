@@ -16,7 +16,13 @@
 {{ skeleton_overlay('ssl-skeleton', controls=1, tables=[{ 'rows': 4 }]) }}
 <!-- END SKELETON OVERLAY -->
 
-{{ _('status_messages_from_redirect_params_set') }}
+{# Status messages from redirect params #}
+{% set issued  = request.query_params.get('issued') %}
+{% set renewed = request.query_params.get('renewed') %}
+{% set revoked = request.query_params.get('revoked') %}
+{% set error   = request.query_params.get('error') %}
+
+{% if issued %}
 <div class="alert alert--success mb-lg" id="alert-issued">
   {{ _('certificate_issued_for') }} <strong>{{ issued }}</strong>{{ _('nginx_updated_to_https') }}
 </div>
