@@ -226,7 +226,18 @@ function openDomainDetail(domain, serverIp) {
   currentAccountSearchQuery = "";
   const searchInput = document.getElementById('account-search-input');
   if (searchInput) searchInput.value = "";
-  setSidebarActiveText(domain);
+  
+  // Highlight active row in list
+  document.querySelectorAll('#listContent .list-item').forEach(el => {
+    el.classList.remove('active');
+    const titleEl = el.querySelector('.domain-name-text');
+    if (titleEl && titleEl.innerText.trim() === domain.trim()) {
+      el.classList.add('active');
+    }
+  });
+
+  const layout = document.getElementById('maddyLayout');
+  if (layout) layout.classList.add('is-split');
 
   const detailView = document.getElementById('domain-detail-view');
   if (detailView) detailView.style.display = 'block';
@@ -246,6 +257,13 @@ function openDomainDetail(domain, serverIp) {
   document.getElementById('dns-table-spf').innerText = 'v=spf1 mx ip4:' + currentDomainIp + ' ~all';
 
   renderAccountsList();
+}
+
+function closeDomainDetail() {
+  const layout = document.getElementById('maddyLayout');
+  if (layout) layout.classList.remove('is-split');
+
+  document.querySelectorAll('#listContent .list-item').forEach(el => el.classList.remove('active'));
 }
 
 // ---------------------------------------------------------------------------

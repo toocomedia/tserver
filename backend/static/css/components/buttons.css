@@ -59,6 +59,14 @@
   background: var(--color-secondary-hover) !important;
 }
 
+.btn--surface {
+  background: var(--color-surface) !important;
+  color: var(--color-text) !important;
+}
+.btn--surface:hover {
+  background: var(--color-line) !important;
+}
+
 .btn--ghost {
   background: transparent !important;
   color: var(--color-muted) !important;

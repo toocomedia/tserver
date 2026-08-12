@@ -2,55 +2,110 @@
 
 {% block title %}Mail Server (Maddy) — VPS Panel{% endblock %}
 {% block content_class %}content--flush{% endblock %}
-{% block page_header_wrapper %}{% endblock %}
+
+{% block head %}
+<style>
+.maddy-layout {
+  display: flex;
+  width: 100%;
+  min-height: calc(100vh - var(--topbar-height));
+}
+.maddy-master {
+  flex: 1;
+  transition: width 0.2s ease, flex 0.2s ease;
+  padding: var(--space-xl);
+  overflow-y: auto;
+}
+.maddy-detail {
+  display: none;
+  width: 60%;
+  border-left: 1px solid var(--color-line);
+  padding: var(--space-xl);
+  background: var(--bg-body);
+  overflow-y: auto;
+}
+.maddy-layout.is-split .maddy-master {
+  width: 40%;
+  flex: none;
+}
+.maddy-layout.is-split .maddy-detail {
+  display: block;
+}
+/* When split, hide extra columns in master list */
+.maddy-layout.is-split .maddy-master .col-hide-on-split {
+  display: none;
+}
+
+/* Make list items look active */
+.list-item.active {
+  background: var(--color-surface);
+}
+.list-item {
+  transition: background 0.15s ease;
+}
+.list-item:hover {
+  background: var(--color-surface);
+}
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="split-layout">
+<div class="maddy-layout" id="maddyLayout">
   
-  <div class="split-sidebar">
-    {% if plugin_installed %}
-      <div style="padding: var(--space-md); border-bottom: 1px solid var(--color-line);">
-        <button type="button" class="btn btn--primary" style="width: 100%;" onclick="openAddDomain()">
-          <svg style="width:14px; height:14px; fill:currentColor;" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
-          Add Domain
-        </button>
-      </div>
-      
-      <div class="list-content" id="listContent" style="flex: 1; overflow-y: auto;">
-        {% if mail_domains %}
-          {% for d in mail_domains %}
-            <div class="split-sidebar__item list-item {% if loop.index == 1 %}active{% endif %}" onclick="openDomainDetail('{{ d.domain }}', '{{ d.server_ip }}')">
-              {{ d.domain }}
-            </div>
-          {% endfor %}
-        {% else %}
-          <div style="padding: 16px 28px; color: var(--color-muted); font-size: 13px;">No mail domains configured.</div>
-        {% endif %}
-      </div>
-    {% else %}
-      <div class="split-sidebar__item active">Setup required</div>
-    {% endif %}
-
-    <div class="split-sidebar__footer">
-      <div class="text-small">Maddy Mail Server</div>
-      <div class="text-small">v{{ plugin_version }}</div>
+  <div class="maddy-master">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-xl);">
+      <h2 style="margin: 0; font-size: var(--font-h2);">Mail Domains</h2>
+      {% if plugin_installed %}
+      <button type="button" class="btn btn--surface" onclick="openAddDomain()">+ Add Domain</button>
+      {% endif %}
     </div>
-  </div>
 
-  <div class="split-content">
     {% if plugin_installed %}
-      {% include 'partials/_domains_tab.html' %}
+      <div class="table-wrap">
+        <table class="table" id="maddy-domains-table">
+          <thead>
+            <tr>
+              <th>Domain</th>
+              <th class="col-hide-on-split">Status</th>
+              <th class="col-actions col-hide-on-split">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="listContent">
+            {% if mail_domains %}
+              {% for d in mail_domains %}
+                <tr class="list-item" onclick="openDomainDetail('{{ d.domain }}', '{{ d.server_ip }}')" style="cursor: pointer;">
+                  <td class="table-title"><strong class="domain-name-text">{{ d.domain }}</strong></td>
+                  <td class="col-hide-on-split"><span class="badge-minimal badge-minimal--active">Active</span></td>
+                  <td class="col-actions col-hide-on-split">
+                    <button type="button" class="btn btn--sm btn--surface">Manage</button>
+                  </td>
+                </tr>
+              {% endfor %}
+            {% else %}
+              <tr>
+                <td colspan="3" class="text-muted" style="text-align: center; padding: var(--space-xl);">No mail domains configured.</td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
     {% else %}
       <div style="margin: auto; text-align: center; max-width: 400px; margin-top: 100px;">
-        <h3 style="margin-bottom: 16px; font-size: var(--font-h1);">Mail Server Not Installed</h3>
+        <h3 style="margin-bottom: 16px; font-size: var(--font-h2);">Mail Server Not Installed</h3>
         <p style="color: var(--color-muted); margin-bottom: 24px;">Maddy Mail Server is required to manage domains and mailboxes.</p>
         <form method="post" action="/plugins/maddy/api/install">
           <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
-          <button type="submit" class="btn btn--primary" style="width: 100%; padding: 12px;">
+          <button type="submit" class="btn btn--surface" style="width: 100%; padding: 12px;">
             Install Mail Server (~30MB RAM)
           </button>
         </form>
       </div>
+    {% endif %}
+  </div>
+
+  <div class="maddy-detail" id="maddyDetailPanel">
+    {% if plugin_installed %}
+      {% include 'partials/_domains_tab.html' %}
     {% endif %}
   </div>
 </div>
@@ -108,7 +163,7 @@
       </div>
       <div class="modal__footer">
         <button type="button" class="btn btn--secondary" onclick="closeModal('add-domain-modal')">Cancel</button>
-        <button type="button" class="btn btn--primary" onclick="handleAddDomain()">+ Add Domain</button>
+        <button type="button" class="btn btn--surface" onclick="handleAddDomain()">+ Add Domain</button>
       </div>
     </div>
   </div>
@@ -149,7 +204,7 @@
       </div>
       <div class="modal__footer">
         <button type="button" class="btn btn--secondary" onclick="closeModal('add-account-modal')">Cancel</button>
-        <button type="button" class="btn btn--primary" onclick="executeAddAccount()">Create Mailbox</button>
+        <button type="button" class="btn btn--surface" onclick="executeAddAccount()">Create Mailbox</button>
       </div>
     </div>
   </div>
@@ -166,7 +221,7 @@
       </div>
       <div class="modal__footer">
         <button type="button" class="btn btn--secondary" onclick="openMaddyDiagnostics()">Refresh Logs</button>
-        <button type="button" class="btn btn--primary" onclick="repairMaddyConfig()">Repair Config</button>
+        <button type="button" class="btn btn--surface" onclick="repairMaddyConfig()">Repair Config</button>
       </div>
     </div>
   </div>
