@@ -4,7 +4,7 @@
 
 {% block title %}{{ _('plugins_manager') }} — {{ PANEL_NAME }}{% endblock %}
 
-{% block page_title %}Plugins{% endblock %}
+{% block page_title %}{{ _('plugins') }}{% endblock %}
 
 {% block topbar_actions %}
 {% set resource_id = 'plugins' %}
@@ -27,7 +27,7 @@
 
 <div class="mb-xl">
   {% set plugin_title_icon %}<svg viewbox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>{% endset %}
-  {% set title = 'Installed Extensions & Plugins' %}
+  {% set title = _('installed_extensions_plugins') %}
   {% set item_count = plugins | length %}
   {% set icon_svg = plugin_title_icon %}
   {% include "partials/resource_title_bar.html" %}

@@ -1,6 +1,6 @@
 {% extends "layout.html" %}
 {% block title %}{{ _('deploy_python_app') }} — {{ PANEL_NAME }}{% endblock %}
-{% block page_title %}Deploy Python App{% endblock %}
+{% block page_title %}{{ _('deploy_python_app') }}{% endblock %}
 
 {% block content %}
 <form class="wizard-form" id="app-setup-form" data-app-wizard method="post" action="/apps/create">

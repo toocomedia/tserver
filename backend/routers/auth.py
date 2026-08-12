@@ -19,13 +19,13 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["auth"])
 
 
-def _safe_next(raw: str | None) -> str:
+def _safe_next(raw: str | None, allow_login: bool = False) -> str:
     if not raw:
         return "/"
     path = unquote(raw)
     if not path.startswith("/") or path.startswith("//"):
         return "/"
-    if path.startswith("/login"):
+    if not allow_login and path.startswith("/login"):
         return "/"
     return path
 
@@ -228,7 +228,7 @@ async def set_language(
     lang: str = Form(...),
     next: str = Form("/"),
 ):
-    next_url = _safe_next(next)
+    next_url = _safe_next(next, allow_login=True)
     from services.i18n_service import i18n_service
     if lang not in i18n_service.locales:
         lang = "en"

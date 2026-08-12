@@ -5,6 +5,6 @@
     {{ title }}
   </h3>
   {% if item_count is defined and item_count is not none %}
-    <span class="resource-title-bar__count">{{ item_count }} Total</span>
+    <span class="resource-title-bar__count">{{ item_count }} {{ _('total') }}</span>
   {% endif %}
 </div>

@@ -1,7 +1,7 @@
 {% extends "layout.html" %}
 
 {% block title %}{{ _('errors') }} — {{ PANEL_NAME }}{% endblock %}
-{% block page_title %}Error Tracker{% endblock %}
+{% block page_title %}{{ _('error_tracker') }}{% endblock %}
 
 {% block topbar_actions %}
   <form method="post" action="/admin/errors/clear-resolved" style="display:inline;" id="form-clear-resolved">

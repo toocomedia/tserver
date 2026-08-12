@@ -35,7 +35,7 @@
   "add_reverse_proxy": "+ Добавить обратный прокси",
   "manage_ssl": "Управление SSL",
   "manage_dns": "Управление DNS",
-  "error_tracker": "Трекер ошибок",
+  "error_tracker": "Отслеживание ошибок",
   "back_to_dependencies": "← Назад к Зависимости",
   "healthy": "Здоровый",
   "check_updates": "Проверить обновления",
@@ -315,7 +315,7 @@
   "domain": "Домен",
   "project_type": "Тип проекта",
   "dns_only": "Только DNS",
-  "python_app": "Приложение Python",
+  "python_app": "Python-приложение",
   "static_site": "Статический сайт",
   "webroot": "Вебрут",
   "nginx_config": "Конфигурация Nginx",
@@ -732,5 +732,10 @@
   "plugin_unavailable": "Плагин недоступен",
   "app_logs": "Логи приложения",
   "notification_center": "Центр уведомлений",
-  "issue_ssl_certificate": "Выпустить SSL-сертификат"
+  "issue_ssl_certificate": "Выпустить SSL-сертификат",
+  "server_usage_diagnostics": "Диагностика использования сервера",
+  "installed_extensions_plugins": "Установленные расширения и плагины",
+  "system_dependencies_catalog": "Каталог системных зависимостей",
+  "python_app_logs": "Логи Python-приложения",
+  "total": "Всего"
 }

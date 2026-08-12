@@ -35,7 +35,7 @@
   "add_reverse_proxy": "+ Ters Proxy Ekle",
   "manage_ssl": "SSL'yi yönet",
   "manage_dns": "DNS'yi yönet",
-  "error_tracker": "Hata İzleyici",
+  "error_tracker": "Hata Takibi",
   "back_to_dependencies": "← Bağımlılıklar'e geri dön",
   "healthy": "Sağlıklı",
   "check_updates": "Güncellemeleri Kontrol Et",
@@ -732,5 +732,10 @@
   "plugin_unavailable": "Eklenti Kullanılamıyor",
   "app_logs": "Uygulama Günlükleri",
   "notification_center": "Bildirim Merkezi",
-  "issue_ssl_certificate": "SSL Sertifikası Düzenle"
+  "issue_ssl_certificate": "SSL Sertifikası Düzenle",
+  "server_usage_diagnostics": "Sunucu Kullanım Teşhisi",
+  "installed_extensions_plugins": "Yüklü Uzantılar ve Eklentiler",
+  "system_dependencies_catalog": "Sistem Bağımlılıkları Kataloğu",
+  "python_app_logs": "Python Uygulama Günlükleri",
+  "total": "Toplam"
 }

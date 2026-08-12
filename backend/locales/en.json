@@ -732,5 +732,10 @@
   "plugin_unavailable": "Plugin Unavailable",
   "app_logs": "App Logs",
   "notification_center": "Notification Center",
-  "issue_ssl_certificate": "Issue SSL Certificate"
+  "issue_ssl_certificate": "Issue SSL Certificate",
+  "server_usage_diagnostics": "Server Usage Diagnostics",
+  "installed_extensions_plugins": "Installed Extensions & Plugins",
+  "system_dependencies_catalog": "System Dependencies Catalog",
+  "python_app_logs": "Python App Logs",
+  "total": "Total"
 }

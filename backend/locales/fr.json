@@ -732,5 +732,10 @@
   "plugin_unavailable": "Plugin indisponible",
   "app_logs": "Journaux d'application",
   "notification_center": "Centre de notifications",
-  "issue_ssl_certificate": "Émettre un certificat SSL"
+  "issue_ssl_certificate": "Émettre un certificat SSL",
+  "server_usage_diagnostics": "Diagnostic de l'utilisation du serveur",
+  "installed_extensions_plugins": "Extensions et plugins installés",
+  "system_dependencies_catalog": "Catalogue des dépendances système",
+  "python_app_logs": "Journaux de l'application Python",
+  "total": "Total"
 }

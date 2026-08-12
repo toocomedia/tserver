@@ -335,6 +335,18 @@
     <!-- Icon injected via JS -->
   </button>
 
+  <div style="position: fixed; top: 24px; right: 74px; z-index: 100;">
+    <form method="post" action="/language" id="form-language-2fa">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+      <input type="hidden" name="next" value="{{ request.url.path }}{% if request.url.query %}?{{ request.url.query }}{% endif %}">
+      <select name="lang" class="form-select" onchange="document.getElementById('form-language-2fa').submit();" style="height: 38px; padding-top:0; padding-bottom:0; background: var(--color-box-bg); border-color: var(--color-box-border); color: var(--color-text); border-radius: 8px;">
+        {% for code, name in get_available_languages().items() %}
+          <option value="{{ code }}" {% if request.state.lang == code %}selected{% endif %}>{{ name }}</option>
+        {% endfor %}
+      </select>
+    </form>
+  </div>
+
   <!-- Centered 2FA Box -->
   <div class="login-container">
     <div class="login-card">

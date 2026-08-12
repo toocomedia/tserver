@@ -3,7 +3,7 @@
 {% from "partials/skeleton_overlay.html" import skeleton_overlay %}
 
 {% block title %}{{ _('python_apps') }} — {{ PANEL_NAME }}{% endblock %}
-{% block page_title %}Python Apps{% endblock %}
+{% block page_title %}{{ _('python_apps') }}{% endblock %}
 
 {% block topbar_actions %}
   <a href="/domains" class="btn btn--primary" id="btn-deploy-app">{{ _('deploy_python_app') }}</a>

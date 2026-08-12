@@ -3,7 +3,7 @@
 {% from "partials/skeleton_overlay.html" import skeleton_overlay %}
 
 {% block title %}{{ _('reverse_proxy') }} — {{ PANEL_NAME }}{% endblock %}
-{% block page_title %}Reverse Proxy{% endblock %}
+{% block page_title %}{{ _('reverse_proxy') }}{% endblock %}
 
 {% block topbar_actions %}
   <a href="/proxy/create" class="btn btn--primary" id="btn-add-proxy">{{ _('create_proxy') }}</a>

@@ -1,7 +1,7 @@
 {% extends "layout.html" %}
 {% from "partials/skeleton_overlay.html" import skeleton_overlay %}
 {% block title %}{{ _('system_dependencies') }} — {{ PANEL_NAME }}{% endblock %}
-{% block page_title %}Dependencies{% endblock %}
+{% block page_title %}{{ _('dependencies') }}{% endblock %}
 
 {% block topbar_actions %}
 {% set resource_id = 'dependencies' %}
@@ -19,7 +19,7 @@
 
   <div class="mb-xl">
     {% set dependency_title_icon %}<svg viewbox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="2" y="2" width="20" height="8" rx="2"></rect><rect x="2" y="14" width="20" height="8" rx="2"></rect></svg>{% endset %}
-    {% set title = 'System Dependencies Catalog' %}
+    {% set title = _('system_dependencies_catalog') %}
     {% set item_count = dependency_count %}
     {% set icon_svg = dependency_title_icon %}
     {% include "partials/resource_title_bar.html" %}

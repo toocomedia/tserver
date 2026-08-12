@@ -3,7 +3,7 @@
 {% from "partials/skeleton_overlay.html" import skeleton_overlay %}
 
 {% block title %}{{ _('ssl_certificates') }} — {{ PANEL_NAME }}{% endblock %}
-{% block page_title %}SSL Certificates{% endblock %}
+{% block page_title %}{{ _('ssl_certificates') }}{% endblock %}
 
 {% block topbar_actions %}
   <a href="/ssl/issue" class="btn btn--primary" id="btn-issue-ssl">{{ _('issue_certificate') }}</a>

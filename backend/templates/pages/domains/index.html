@@ -3,7 +3,7 @@
 {% from "partials/skeleton_overlay.html" import skeleton_overlay %}
 
 {% block title %}{{ _('domains') }} — {{ PANEL_NAME }}{% endblock %}
-{% block page_title %}Domains{% endblock %}
+{% block page_title %}{{ _('domains') }}{% endblock %}
 
 {% block topbar_actions %}
   <a href="/domains/create" class="btn btn--primary" id="btn-add-domain">{{ _('add_domain') }}</a>

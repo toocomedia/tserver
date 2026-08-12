@@ -1,6 +1,6 @@
 {% extends "layout.html" %}
 {% block title %}{{ _('app_logs') }} — {{ PANEL_NAME }}{% endblock %}
-{% block page_title %}Python App Logs{% endblock %}
+{% block page_title %}{{ _('python_app_logs') }}{% endblock %}
 {% block content %}
 <section class="section"><div class="section__header"><h3>{{ app.service_name }}</h3><a class="btn btn--secondary" href="/apps/{{ app.id }}">{{ _('back_to_app') }}</a></div><div class="section__body"><p class="text-muted">{{ _('latest_200_lines_from_the_system_service') }}</p><pre class="clean-cmd-box">{{ logs }}</pre></div></section>
 {% endblock %}

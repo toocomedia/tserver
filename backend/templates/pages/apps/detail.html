@@ -1,6 +1,6 @@
 {% extends "layout.html" %}
 {% block title %}{{ app.service_name }} — {{ PANEL_NAME }}{% endblock %}
-{% block page_title %}Python App{% endblock %}
+{% block page_title %}{{ _('python_app') }}{% endblock %}
 
 {% block topbar_actions %}
   <a class="btn btn--secondary" href="/apps/{{ app.id }}/logs">
