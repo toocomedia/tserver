@@ -26,27 +26,61 @@ html[dir="rtl"] td {
 }
 
 /* --------------------------------------------------------------------------
-   2. Main Application Layout & Sidebar
+   2. Main Application Shell & Primary Sidebar
    -------------------------------------------------------------------------- */
-/* Sidebar position */
+/* Primary Sidebar Border & Position */
 html[dir="rtl"] .sidebar {
-  right: 0;
-  left: auto;
-  border-left: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
+  border-left: 1px solid var(--color-sidebar-border, rgba(255, 255, 255, 0.18));
   border-right: none;
 }
 
-/* Main content margin offset for sidebar */
-@media (min-width: 992px) {
-  html[dir="rtl"] .main {
-    margin-right: var(--sidebar-width, 240px);
-    margin-left: 0;
-  }
+/* On desktop, .app flexbox sits sidebar & main side-by-side naturally in RTL order */
+html[dir="rtl"] .main {
+  margin-left: 0;
+  margin-right: 0;
+}
 
-  html[dir="rtl"] .sidebar--collapsed + .main {
-    margin-right: var(--sidebar-collapsed-width, 64px);
-    margin-left: 0;
-  }
+/* Primary Sidebar Header & Search Bar */
+html[dir="rtl"] .sidebar__search {
+  left: var(--space-md, 12px);
+  right: auto;
+  flex-direction: row;
+}
+
+html[dir="rtl"] .sidebar__search-input {
+  direction: rtl;
+  text-align: right;
+}
+
+html[dir="rtl"] .sidebar__search:focus-within .sidebar__search-input,
+html[dir="rtl"] .sidebar__search.is-expanded .sidebar__search-input {
+  padding-right: 8px;
+  padding-left: 12px;
+}
+
+/* Primary Sidebar Items & Nav */
+html[dir="rtl"] .sidebar__item {
+  text-align: right;
+}
+
+html[dir="rtl"] .sidebar__item svg,
+html[dir="rtl"] .sidebar__item i {
+  margin-left: 0.75rem;
+  margin-right: 0;
+}
+
+html[dir="rtl"] .sidebar__section-label {
+  text-align: right;
+}
+
+/* Sidebar User Footer */
+html[dir="rtl"] .sidebar__user {
+  flex-direction: row;
+}
+
+html[dir="rtl"] .sidebar__logout {
+  margin-right: auto;
+  margin-left: 0;
 }
 
 /* Page Header & Topbar Actions */
@@ -59,38 +93,53 @@ html[dir="rtl"] .page-header__actions {
   margin-left: 0;
 }
 
-/* Sidebar navigation items */
-html[dir="rtl"] .sidebar__nav-link {
-  text-align: right;
-}
-
-html[dir="rtl"] .sidebar__nav-icon {
-  margin-left: 0.75rem;
-  margin-right: 0;
-}
-
-html[dir="rtl"] .sidebar__nav-chevron {
-  margin-right: auto;
-  margin-left: 0;
-  transform: rotate(180deg);
-}
-
-html[dir="rtl"] .sidebar__nav-item--open > .sidebar__nav-link .sidebar__nav-chevron {
-  transform: rotate(90deg);
-}
-
-/* Mobile Header */
+/* Mobile Header & Mobile Sidebar Slide */
 html[dir="rtl"] .mobile-header #mobile-menu-toggle {
   margin-right: auto;
   margin-left: 0;
 }
 
+@media (max-width: 768px) {
+  html[dir="rtl"] .sidebar {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    right: 0;
+    left: auto;
+    z-index: 100;
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+  }
+
+  html[dir="rtl"] .sidebar--open {
+    transform: translateX(0);
+  }
+}
+
 /* --------------------------------------------------------------------------
-   3. Split Layout (Sidebar + Content Split View)
+   3. Split Layout (Secondary Sidebar / Settings Tabs)
    -------------------------------------------------------------------------- */
-html[dir="rtl"] .layout-split__sidebar {
-  border-left: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
-  border-right: none;
+@media (min-width: 768px) {
+  html[dir="rtl"] .split-sidebar {
+    border-left: 1px solid var(--color-line, rgba(255, 255, 255, 0.08));
+    border-right: none;
+  }
+}
+
+html[dir="rtl"] .split-sidebar__item {
+  border-right: 3px solid transparent;
+  border-left: none;
+  text-align: right;
+}
+
+html[dir="rtl"] .split-sidebar__item.active {
+  border-right-color: var(--color-accent);
+  border-left-color: transparent;
+}
+
+html[dir="rtl"] .split-sidebar__count {
+  margin-right: auto;
+  margin-left: 0;
 }
 
 /* --------------------------------------------------------------------------
