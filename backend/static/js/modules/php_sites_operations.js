@@ -3,15 +3,15 @@
  * Polls GET /api/php-sites/operations/{id} until terminal state succeeded or failed.
  */
 
-export function parseErrorMessage(err) {
+function extractErrorMessage(err) {
   if (!err) return "An unexpected error occurred.";
   if (typeof err === "string") return err;
   
   if (err.detail !== undefined && err.detail !== null) {
-    return parseErrorMessage(err.detail);
+    return extractErrorMessage(err.detail);
   }
   if (err.error !== undefined && err.error !== null) {
-    return parseErrorMessage(err.error);
+    return extractErrorMessage(err.error);
   }
   if (typeof err.message === "string") return err.message;
   if (typeof err.reason === "string") return err.reason;
@@ -70,7 +70,7 @@ export async function pollOperation(operationId, onSuccess, onError) {
       const res = await fetch(`/api/php-sites/operations/${operationId}`);
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
-        throw new Error(parseErrorMessage(errData));
+        throw new Error(extractErrorMessage(errData));
       }
       const data = await res.json();
       
@@ -88,7 +88,7 @@ export async function pollOperation(operationId, onSuccess, onError) {
       } else if (data.status === "failed") {
         clearInterval(interval);
         if (spinner) spinner.style.display = "none";
-        const errorMsg = parseErrorMessage(data.error || "Operation failed.");
+        const errorMsg = extractErrorMessage(data.error || "Operation failed.");
         if (errEl) {
           errEl.textContent = errorMsg;
           errEl.style.display = "block";
@@ -99,7 +99,7 @@ export async function pollOperation(operationId, onSuccess, onError) {
     } catch (err) {
       clearInterval(interval);
       if (spinner) spinner.style.display = "none";
-      const errorMsg = parseErrorMessage(err);
+      const errorMsg = extractErrorMessage(err);
       if (errEl) {
         errEl.textContent = errorMsg;
         errEl.style.display = "block";

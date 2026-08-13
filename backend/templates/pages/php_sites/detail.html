@@ -1,82 +1,124 @@
 {% extends "layout.html" %}
 
 {% block title %}{{ site.domain_name or ('PHP Site #' ~ site.id) }} — {{ PANEL_NAME }}{% endblock %}
-{% block page_title %}{{ site.domain_name or ('PHP Site #' ~ site.id) }}{% endblock %}
 
-{% block topbar_actions %}
-  {% if site.status == 'active' %}
-    <button type="button" class="btn btn--secondary btn--sm" id="btn-toggle-control" data-action="disable">Disable Site</button>
-  {% elif site.status == 'disabled' %}
-    <button type="button" class="btn btn--primary btn--sm" id="btn-toggle-control" data-action="enable">Enable Site</button>
-  {% endif %}
-  <button type="button" class="btn btn--secondary btn--sm" id="btn-repair-site">Repair Site</button>
-  {% if site.domain_name %}
-    <a href="http://{{ site.domain_name }}" target="_blank" rel="noopener" class="btn btn--dark btn--sm">Open Site ↗</a>
-  {% endif %}
+{% block page_header_wrapper %}
+<!-- Strict Page Header matching domain manager layout -->
 {% endblock %}
 
 {% block content %}
 <div class="php-site-detail-page" data-site-id="{{ site.id }}">
 
-  <!-- Header Banner -->
-  <div class="section-header-bar mb-lg">
-    <div class="section-header-bar__info">
-      <span class="status-badge status-badge--info">{{ site.preset | upper }}</span>
-      <span class="badge badge--dark ms-sm">PHP {{ site.php_version }}</span>
-      <span class="text-muted ms-md">Root: /var/www/{{ site.domain_name }}/{{ site.document_root }}</span>
+  <!-- PAGE HEADER -->
+  <div class="page-header-strict" style="margin-top: 24px;">
+    <div>
+      <h1 style="margin-bottom: 4px;">{{ site.domain_name or ('PHP Website #' ~ site.id) }}</h1>
+      <span style="color: var(--color-muted); font-size: 14px;">PHP Website Manager</span>
     </div>
-    <div class="section-header-bar__actions">
-      <a href="/plugins/file_manager/api/apps/php:{{ site.id }}/roots" target="_blank" class="btn btn--secondary btn--sm">File Manager ↗</a>
+    <div class="actions" style="display: flex; gap: 8px;">
+      {% if site.domain_name %}
+        <a href="http://{{ site.domain_name }}" target="_blank" rel="noopener" class="btn btn--secondary" style="height: 38px; padding: 0 16px;">
+          Visit Site ↗
+        </a>
+      {% endif %}
+      {% if site.status == 'active' %}
+        <button type="button" class="btn btn--secondary" style="height: 38px; padding: 0 16px;" id="btn-toggle-control" data-action="disable">
+          Disable Site
+        </button>
+      {% else %}
+        <button type="button" class="btn btn--primary" style="height: 38px; padding: 0 16px;" id="btn-toggle-control" data-action="enable">
+          Enable Site
+        </button>
+      {% endif %}
+      <button type="button" class="btn btn--danger" style="height: 38px; padding: 0 16px;" id="btn-delete-site-perm">
+        Delete
+      </button>
     </div>
   </div>
 
-  <!-- Navigation Tabs -->
-  <div class="tab-bar mb-xl">
-    <button type="button" class="tab-item tab-item--active" data-tab="overview">Overview & Health</button>
-    <button type="button" class="tab-item" data-tab="runtime">Runtime Config</button>
-    <button type="button" class="tab-item" data-tab="database">MariaDB Database</button>
+  <!-- STATUS & HEALTH CARDS -->
+  <div class="stat-grid-strict mb-lg">
+    <div class="stat-card-strict">
+      <div class="stat-card-strict__title">Status</div>
+      <div class="stat-card-strict__value">
+        {% if site.status == 'active' %}
+          <span style="width: 8px; height: 8px; background: var(--color-text); display: inline-block;"></span> Active
+        {% else %}
+          <span style="width: 8px; height: 8px; background: var(--color-danger); display: inline-block;"></span> {{ site.status | upper }}
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="stat-card-strict">
+      <div class="stat-card-strict__title">PHP Runtime</div>
+      <div class="stat-card-strict__value">
+        PHP {{ site.php_version }}
+      </div>
+      <div style="font-size: 12px; color: var(--color-muted); margin-top: 8px;">
+        Pool: php{{ site.php_version }}-fpm-site{{ site.id }}
+      </div>
+    </div>
+
+    <div class="stat-card-strict">
+      <div class="stat-card-strict__title">Database</div>
+      <div class="stat-card-strict__value">
+        {% if site.database %}
+          <span style="width: 8px; height: 8px; background: var(--color-text); display: inline-block;"></span> {{ site.database.database_name }}
+        {% else %}
+          <span style="width: 8px; height: 8px; border: 1px solid var(--color-muted); display: inline-block;"></span> None
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- NAVIGATION TABS -->
+  <div class="tab-bar mb-lg">
+    <button class="tab-item tab-item--active" data-tab="overview">Overview</button>
+    <button class="tab-item" data-tab="runtime">PHP Runtime</button>
+    <button class="tab-item" data-tab="database">MariaDB Database</button>
     {% if site.preset == 'wordpress' %}
-      <button type="button" class="tab-item" data-tab="wordpress">WordPress</button>
+      <button class="tab-item" data-tab="wordpress">WordPress</button>
     {% endif %}
-    <button type="button" class="tab-item" data-tab="ssl">SSL & HTTPS</button>
-    <button type="button" class="tab-item" data-tab="logs">Logs</button>
-    <button type="button" class="tab-item" data-tab="danger">Danger Zone</button>
+    <button class="tab-item" data-tab="ssl">SSL Certificate</button>
+    <button class="tab-item" data-tab="logs">Logs & Streams</button>
+    <button class="tab-item" data-tab="danger">Danger Zone</button>
   </div>
 
-  <!-- Tab Content Panels -->
-  <div id="tab-overview" class="tab-pane tab-pane--active">
-    {% include "pages/php_sites/partials/detail_overview.html" %}
-  </div>
+  <!-- TAB PANES -->
+  <div class="tab-content">
+    <div class="tab-pane" id="tab-overview" style="display: block;">
+      {% include "pages/php_sites/partials/detail_overview.html" %}
+    </div>
 
-  <div id="tab-runtime" class="tab-pane" style="display: none;">
-    {% include "pages/php_sites/partials/detail_runtime.html" %}
-  </div>
+    <div class="tab-pane" id="tab-runtime" style="display: none;">
+      {% include "pages/php_sites/partials/detail_runtime.html" %}
+    </div>
 
-  <div id="tab-database" class="tab-pane" style="display: none;">
-    {% include "pages/php_sites/partials/detail_database.html" %}
-  </div>
+    <div class="tab-pane" id="tab-database" style="display: none;">
+      {% include "pages/php_sites/partials/detail_database.html" %}
+    </div>
 
-  {% if site.preset == 'wordpress' %}
-  <div id="tab-wordpress" class="tab-pane" style="display: none;">
-    {% include "pages/php_sites/partials/detail_wordpress.html" %}
-  </div>
-  {% endif %}
+    {% if site.preset == 'wordpress' %}
+    <div class="tab-pane" id="tab-wordpress" style="display: none;">
+      {% include "pages/php_sites/partials/detail_wordpress.html" %}
+    </div>
+    {% endif %}
 
-  <div id="tab-ssl" class="tab-pane" style="display: none;">
-    {% include "pages/php_sites/partials/detail_ssl.html" %}
-  </div>
+    <div class="tab-pane" id="tab-ssl" style="display: none;">
+      {% include "pages/php_sites/partials/detail_ssl.html" %}
+    </div>
 
-  <div id="tab-logs" class="tab-pane" style="display: none;">
-    {% include "pages/php_sites/partials/detail_logs.html" %}
-  </div>
+    <div class="tab-pane" id="tab-logs" style="display: none;">
+      {% include "pages/php_sites/partials/detail_logs.html" %}
+    </div>
 
-  <div id="tab-danger" class="tab-pane" style="display: none;">
-    {% include "pages/php_sites/partials/detail_danger.html" %}
+    <div class="tab-pane" id="tab-danger" style="display: none;">
+      {% include "pages/php_sites/partials/detail_danger.html" %}
+    </div>
   </div>
-
 </div>
 
 {% include "pages/php_sites/partials/operation_modal.html" %}
 
-<script type="module" src="/static/js/modules/php_sites_detail.js"></script>
+<script type="module" src="/static/js/modules/php_sites_detail.js?v={{ APP_VERSION }}"></script>
 {% endblock %}

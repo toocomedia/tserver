@@ -1,7 +1,39 @@
 /**
  * JS Module for PHP Site Detail Page (detail.html)
  */
-import { showOperationModal, pollOperation, parseErrorMessage } from "./php_sites_operations.js";
+import { showOperationModal, pollOperation } from "./php_sites_operations.js";
+
+function parseErrorMessage(err) {
+  if (!err) return "An unexpected error occurred.";
+  if (typeof err === "string") return err;
+  
+  if (err.detail !== undefined && err.detail !== null) {
+    return parseErrorMessage(err.detail);
+  }
+  if (err.error !== undefined && err.error !== null) {
+    return parseErrorMessage(err.error);
+  }
+  if (typeof err.message === "string") return err.message;
+  if (typeof err.reason === "string") return err.reason;
+
+  if (Array.isArray(err)) {
+    return err.map(item => {
+      if (typeof item === "string") return item;
+      if (item && typeof item === "object") {
+        const field = Array.isArray(item.loc) ? item.loc.filter(x => x !== "body").join(".") : "";
+        const msg = item.msg || item.message || item.detail || item.reason || JSON.stringify(item);
+        return field ? `${field}: ${msg}` : msg;
+      }
+      return String(item);
+    }).join("\n");
+  }
+
+  try {
+    return JSON.stringify(err, null, 2);
+  } catch (_) {
+    return String(err);
+  }
+}
 
 document.addEventListener("DOMContentLoaded", () => {
   const container = document.querySelector(".php-site-detail-page");
