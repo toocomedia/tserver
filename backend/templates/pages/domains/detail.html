@@ -1,254 +1,241 @@
 {% extends "layout.html" %}
 
 {% block title %}{{ domain.name }} — {{ PANEL_NAME }}{% endblock %}
-{% block page_title %}{{ domain.name }}{% endblock %}
 
-{% block topbar_actions %}
-  <a href="/dns/{{ domain.name }}/records" class="btn btn--secondary" id="btn-dns">{{ _('dns') }}</a>
-  {% if not cert %}
-    {% if nginx_active %}
-    <a href="/ssl/issue?full_domain={{ domain.name }}" class="btn btn--primary" id="btn-issue-ssl">
-      {{ _('issue_ssl') }}
-    </a>
-    {% else %}
-    <button type="button" class="btn btn--primary" disabled id="btn-issue-ssl" title="SSL issuance requires an active Nginx web server (Static Site or Reverse Proxy)">
-      {{ _('issue_ssl') }}
-    </button>
-    {% endif %}
-  {% endif %}
-  <button type="button" class="btn btn--danger" id="btn-delete" onclick="deleteDomain({{ domain.id }}, '{{ domain.name }}')">{{ _('delete') }}</button>
+{% block page_header_wrapper %}
+<!-- We override the default page header and replace it with our brutalist page-header-strict inside content block -->
 {% endblock %}
 
 {% block content %}
 
+<!-- PAGE HEADER -->
+<div class="page-header-strict" style="margin-top: 24px;">
+  <div>
+    <h1 style="margin-bottom: 4px;">{{ domain.name }}</h1>
+    <span style="color: var(--color-muted); font-size: 14px;">Domain Manager</span>
+  </div>
+  <div class="actions">
+    <a href="/dns/{{ domain.name }}/records" class="btn btn--secondary" style="height: 38px; padding: 0 16px;" id="btn-dns">{{ _('dns') }}</a>
+    {% if not cert %}
+      {% if nginx_active %}
+      <a href="/ssl/issue?full_domain={{ domain.name }}" class="btn btn--primary" style="height: 38px; padding: 0 16px;" id="btn-issue-ssl">
+        {{ _('issue_ssl') }}
+      </a>
+      {% else %}
+      <button type="button" class="btn btn--primary" disabled style="height: 38px; padding: 0 16px;" id="btn-issue-ssl" title="SSL issuance requires an active Nginx web server">
+        {{ _('issue_ssl') }}
+      </button>
+      {% endif %}
+    {% endif %}
+    <button type="button" class="btn btn--danger" style="height: 38px; padding: 0 16px;" id="btn-delete" onclick="deleteDomain({{ domain.id }}, '{{ domain.name }}')">{{ _('delete') }}</button>
+  </div>
+</div>
+
 {% if request.query_params.get('saved') %}
-<div class="alert alert--success mb-lg" id="saved-alert">{{ _('default_page_saved_successfully') }}</div>
+<div class="alert alert--success mb-lg" id="saved-alert" style="border-radius:0;">{{ _('default_page_saved_successfully') }}</div>
 {% endif %}
 {% if request.query_params.get('enabled_static') %}
-<div class="alert alert--success mb-lg" id="enabled-alert">{{ _('static_html_site_and_webroot_enabled_suc') }}</div>
+<div class="alert alert--success mb-lg" id="enabled-alert" style="border-radius:0;">{{ _('static_html_site_and_webroot_enabled_suc') }}</div>
 {% endif %}
 
 {% if error %}
-<div class="alert alert--danger mb-lg" id="error-alert">{{ error }}</div>
+<div class="alert alert--danger mb-lg" id="error-alert" style="border-radius:0;">{{ error }}</div>
 {% endif %}
 
 {% if domain.project_type == 'python' %}
-<div class="section mb-lg"><div class="section__header"><h3>{{ _('python_application') }}</h3></div><div class="section__body">
-  {% if app %}<p class="text-muted">{{ _('setup_status') }} <strong>{{ app.status }}</strong></p><a class="btn btn--primary" href="/apps/{{ app.id }}">{{ _('open_python_app') }}</a>
-  {% else %}<p class="text-muted">{{ _('this_domain_has_dns_configured_but_no_py') }}</p><a class="btn btn--primary" href="/apps/create?domain_id={{ domain.id }}">{{ _('complete_python_app_setup') }}</a>{% endif %}
-</div></div>
+<div class="info-section mb-lg">
+  <div class="info-section-header"><h3>{{ _('python_application') }}</h3></div>
+  <div>
+    {% if app %}<p class="text-muted" style="margin-bottom: 16px;">{{ _('setup_status') }} <strong>{{ app.status }}</strong></p><a class="btn btn--primary" href="/apps/{{ app.id }}">{{ _('open_python_app') }}</a>
+    {% else %}<p class="text-muted" style="margin-bottom: 16px;">{{ _('this_domain_has_dns_configured_but_no_py') }}</p><a class="btn btn--primary" href="/apps/create?domain_id={{ domain.id }}">{{ _('complete_python_app_setup') }}</a>{% endif %}
+  </div>
+</div>
 {% endif %}
 
-<!-- INFO ROW -->
-<div class="section mb-lg" id="domain-info">
-  <div class="section__header">
+<!-- STATUS + QUICK ACTIONS -->
+<div class="stat-grid-strict">
+  <div class="stat-card-strict">
+    <div class="stat-card-strict__title">{{ _('dns_zone') }}</div>
+    <div class="stat-card-strict__value">
+      {% if domain.dns_zone_created %}
+        <span style="width: 8px; height: 8px; background: var(--color-text);"></span> {{ _('active_1') }}
+      {% else %}
+        <span style="width: 8px; height: 8px; background: var(--color-danger);"></span> {{ _('none') }}
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="stat-card-strict">
+    <div class="stat-card-strict__title">{{ _('nginx') }}</div>
+    <div class="stat-card-strict__value">
+      {% if nginx_active %}
+        <span style="width: 8px; height: 8px; background: var(--color-text);"></span> {{ _('active_1') }}
+      {% else %}
+        <span style="width: 8px; height: 8px; background: var(--color-danger);"></span> {{ _('inactive') }}
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="stat-card-strict">
+    <div class="stat-card-strict__title">{{ _('ssl_1') }}</div>
+    <div class="stat-card-strict__value" {% if not cert %}style="color: var(--color-muted);"{% endif %}>
+      {% if cert %}
+        <span style="width: 8px; height: 8px; background: var(--color-text);"></span> {{ _('issued') }}
+      {% else %}
+        <span style="width: 8px; height: 8px; border: 1px solid var(--color-muted);"></span> {{ _('none') }}
+      {% endif %}
+    </div>
+    <div style="font-size: 12px; color: var(--color-muted); margin-top: 8px;">
+      {% if cert %}
+        {% if cert.expiry_date %}Expires {{ cert.expiry_date.strftime('%Y-%m-%d') }}{% else %}Certificate active{% endif %}
+      {% else %}
+        {% if not nginx_active %}
+        Nginx web server must be active.
+        {% else %}
+        Ready for SSL issuance.
+        {% endif %}
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- INFO ROW SECTION -->
+<div class="info-section">
+  <div class="info-section-header">
     <h3>{{ _('domain_info') }}</h3>
   </div>
-  <div class="section__body">
-    <div class="info-row">
-      <span class="info-row__label">{{ _('domain') }}</span>
-      <span class="info-row__value" style="font-weight:700;">{{ domain.name }}</span>
-    </div>
-    <div class="info-row">
-      <span class="info-row__label">{{ _('project_type') }}</span>
-      <span class="info-row__value" style="font-weight:700;">
-        {% if domain.project_type == 'dns' %}
-          <span class="badge badge--neutral badge--dot">{{ _('dns_only') }}</span>
-        {% elif domain.project_type == 'python' %}
-          <span class="badge badge--neutral badge--dot">{{ _('python_app') }}</span>
-        {% else %}
-          <span class="badge badge--ok badge--dot">{{ _('static_site') }}</span>
-        {% endif %}
-      </span>
-    </div>
-    <div class="info-row">
-      <span class="info-row__label">{{ _('server_ip') }}</span>
-      <span class="info-row__value">{{ domain.server_ip }}</span>
-    </div>
-    <div class="info-row">
-      <span class="info-row__label">{{ _('webroot') }}</span>
-      <span class="info-row__value text-small">{{ domain.webroot_path or '—' }}</span>
-    </div>
-    <div class="info-row">
-      <span class="info-row__label">{{ _('nginx_config') }}</span>
-      <span class="info-row__value text-small">{{ domain.nginx_config_path or '—' }}</span>
-    </div>
-    <div class="info-row">
-      <span class="info-row__label">{{ _('created') }}</span>
-      <span class="info-row__value text-small">{{ domain.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
-    </div>
-  </div>
-</div>
-
-<!-- STATUS + QUICK ACTIONS -->
-<div class="stat-grid mb-lg" id="status-grid">
-  <div class="stat-card">
-    <div class="stat-card__label">{{ _('dns_zone') }}</div>
-    <div class="mt-sm">
-      {% if domain.dns_zone_created %}
-        <span class="badge badge--ok badge--dot">{{ _('active_1') }}</span>
+  
+  <div class="info-row-strict">
+    <div class="info-row-strict__label">{{ _('project_type') }}</div>
+    <div class="info-row-strict__val">
+      {% if domain.project_type == 'dns' %}
+        {{ _('dns_only') }}
+      {% elif domain.project_type == 'python' %}
+        {{ _('python_app') }}
       {% else %}
-        <span class="badge badge--error badge--dot">{{ _('none') }}</span>
+        {{ _('static_site') }}
       {% endif %}
     </div>
   </div>
-
-  <div class="stat-card">
-    <div class="stat-card__label">{{ _('nginx') }}</div>
-    <div class="mt-sm">
-      {% if nginx_active %}
-        <span class="badge badge--ok badge--dot">{{ _('active_1') }}</span>
-      {% else %}
-        <span class="badge badge--error badge--dot">{{ _('inactive') }}</span>
-      {% endif %}
-    </div>
+  
+  <div class="info-row-strict">
+    <div class="info-row-strict__label">{{ _('server_ip') }}</div>
+    <div class="info-row-strict__val">{{ domain.server_ip }}</div>
+  </div>
+  
+  <div class="info-row-strict">
+    <div class="info-row-strict__label">{{ _('webroot') }}</div>
+    <div class="info-row-strict__val" style="font-family: monospace;">{{ domain.webroot_path or '—' }}</div>
   </div>
 
-  <div class="stat-card">
-    <div class="stat-card__label">{{ _('ssl_1') }}</div>
-    <div class="mt-sm">
-      {% if cert %}
-        <span class="badge badge--ok badge--dot">{{ _('issued') }}</span>
-      {% else %}
-        <span class="badge badge--neutral badge--dot">{{ _('none') }}</span>
-      {% endif %}
-    </div>
-    <div class="mt-sm">
-      {% if cert %}
-        <span class="text-small text-muted">
-          {% if cert.expiry_date %}Expires {{ cert.expiry_date.strftime('%Y-%m-%d') }}{% else %}Certificate active{% endif %}
-        </span>
-      {% else %}
-        {% if nginx_active %}
-        <a href="/ssl/issue?full_domain={{ domain.name }}" class="btn btn--primary btn--sm" id="btn-issue-ssl-card">
-          {{ _('issue_ssl') }}
-        </a>
-        {% else %}
-        <button type="button" class="btn btn--primary btn--sm" disabled id="btn-issue-ssl-card" title="SSL issuance requires an active Nginx web server">
-          {{ _('issue_ssl') }}
-        </button>
-        <div class="text-small text-muted mt-sm">
-          {{ _('nginx_web_server_is_inactive_activate_a_') }}
-        </div>
-        {% endif %}
-      {% endif %}
-    </div>
+  <div class="info-row-strict">
+    <div class="info-row-strict__label">{{ _('nginx_config') }}</div>
+    <div class="info-row-strict__val" style="font-family: monospace;">{{ domain.nginx_config_path or '—' }}</div>
   </div>
-</div>
-
-<!-- DNS QUICK ACTIONS -->
-<div class="section-header mb-md">
-  <h2>{{ _('dns') }}</h2>
-  <div class="d-flex gap-sm">
-    <a href="/dns/{{ domain.name }}/records?add=1" class="btn btn--primary btn--sm" id="btn-add-dns">
-      {{ _('custom_dns_record') }}
-    </a>
-    <a href="/dns/{{ domain.name }}/records" class="btn btn--secondary btn--sm">{{ _('manage_all_records') }}</a>
+  
+  <div class="info-row-strict">
+    <div class="info-row-strict__label">{{ _('created') }}</div>
+    <div class="info-row-strict__val">{{ domain.created_at.strftime('%Y-%m-%d %H:%M') }} UTC</div>
   </div>
-</div>
-<div class="alert alert--info mb-lg text-small">
-  {{ _('add_a_cname_txt_ns_etc_for') }} <strong>{{ domain.name }}</strong>{{ _('or_apply_templates_basic_web_child_ns') }}
 </div>
 
 <!-- REVERSE PROXIES ON THIS DOMAIN -->
-<div class="section-header mb-md">
-  <h2>{{ _('reverse_proxies') }}</h2>
-  <a href="/proxy/create?domain_id={{ domain.id }}" class="btn btn--secondary btn--sm">{{ _('add_proxy') }}</a>
-</div>
-{% if proxies %}
-<div class="table-wrap mb-lg">
-  <table class="table" id="proxy-table">
-    <thead>
-      <tr>
-        <th>{{ _('subdomain') }}</th>
-        <th>{{ _('target') }}</th>
-        <th>{{ _('ssl_1') }}</th>
-        <th class="col-actions">{{ _('actions') }}</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for proxy in proxies %}
-      <tr>
-        <td style="font-weight:700;">{{ proxy.full_domain }}</td>
-        <td class="text-small">{{ proxy.protocol }}://{{ proxy.target_ip }}:{{ proxy.target_port }}</td>
-        <td>
-          {% if proxy.ssl_enabled %}
-            <span class="badge badge--ok badge--dot">{{ _('yes') }}</span>
-          {% else %}
-            <span class="badge badge--neutral badge--dot">{{ _('no') }}</span>
-          {% endif %}
-        </td>
-        <td class="col-actions" style="position:relative;">
-          {% import "partials/list_actions_toggle.html" as list_actions %}
-          {{ list_actions.button() }}
-          {% call list_actions.tray() %}
-            {% if not proxy.ssl_enabled %}
-            <a href="/ssl/issue?full_domain={{ proxy.full_domain }}" class="btn btn--primary btn--sm">{{ _('issue_ssl') }}</a>
+<div class="info-section">
+  <div class="info-section-header" style="display:flex; justify-content:space-between; align-items:center;">
+    <h3>{{ _('reverse_proxies') }}</h3>
+    <a href="/proxy/create?domain_id={{ domain.id }}" class="btn btn--secondary" style="height: 32px; padding: 0 12px; font-size:12px;">{{ _('add_proxy') }}</a>
+  </div>
+  
+  {% if proxies %}
+  <div class="table-wrap" style="border: 1px solid var(--color-line); border-radius:0;">
+    <table class="table" id="proxy-table">
+      <thead>
+        <tr>
+          <th>{{ _('subdomain') }}</th>
+          <th>{{ _('target') }}</th>
+          <th>{{ _('ssl_1') }}</th>
+          <th class="col-actions">{{ _('actions') }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for proxy in proxies %}
+        <tr>
+          <td style="font-weight:700;">{{ proxy.full_domain }}</td>
+          <td class="text-small">{{ proxy.protocol }}://{{ proxy.target_ip }}:{{ proxy.target_port }}</td>
+          <td>
+            {% if proxy.ssl_enabled %}
+              <span style="display:inline-block; width:8px; height:8px; background:var(--color-text);"></span> {{ _('yes') }}
+            {% else %}
+              <span style="display:inline-block; width:8px; height:8px; border:1px solid var(--color-muted);"></span> {{ _('no') }}
             {% endif %}
-            <a href="/proxy/" class="btn btn--secondary btn--sm">{{ _('manage_proxy_rules') }}</a>
-          {% endcall %}
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+          </td>
+          <td class="col-actions" style="position:relative;">
+            {% import "partials/list_actions_toggle.html" as list_actions %}
+            {{ list_actions.button() }}
+            {% call list_actions.tray() %}
+              {% if not proxy.ssl_enabled %}
+              <a href="/ssl/issue?full_domain={{ proxy.full_domain }}" class="btn btn--primary btn--sm">{{ _('issue_ssl') }}</a>
+              {% endif %}
+              <a href="/proxy/" class="btn btn--secondary btn--sm">{{ _('manage_proxy_rules') }}</a>
+            {% endcall %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div style="color: var(--color-muted); font-size: 14px;">
+    {{ _('no_reverse_proxies_on_this_domain') }}
+  </div>
+  {% endif %}
 </div>
-{% else %}
-<div class="d-flex gap-sm align-center mb-lg">
-  <span class="text-muted text-small">{{ _('no_reverse_proxies_on_this_domain') }}</span>
-  <a href="/proxy/create?domain_id={{ domain.id }}" class="btn btn--secondary btn--sm">{{ _('add_proxy') }}</a>
-</div>
-{% endif %}
 
 {% if domain.project_type == 'python' %}
 {% elif domain.project_type == 'dns' %}
-<div class="section mb-lg">
-  <div class="section__header">
+<div class="info-section">
+  <div class="info-section-header">
     <h3>{{ _('web_server_landing_page') }}</h3>
   </div>
-  <div class="section__body">
-    <div class="alert alert--info mb-md">
-      <strong>{{ _('dns_only_mode') }}</strong> {{ _('this_domain_is_configured_for_dns_manage') }}
-    </div>
-    <form method="post" action="/domains/{{ domain.id }}/enable-static" class="m-0">
-      {% include "partials/csrf_field.html" %}
-      <button type="submit" class="btn btn--primary">{{ _('enable_static_site_webroot') }}</button>
-    </form>
+  <div class="alert alert--info mb-md" style="border-radius:0;">
+    <strong>{{ _('dns_only_mode') }}</strong> {{ _('this_domain_is_configured_for_dns_manage') }}
   </div>
+  <form method="post" action="/domains/{{ domain.id }}/enable-static" class="m-0">
+    {% include "partials/csrf_field.html" %}
+    <button type="submit" class="btn btn--primary">{{ _('enable_static_site_webroot') }}</button>
+  </form>
 </div>
 {% else %}
 <!-- EDIT DEFAULT PAGE -->
-<div class="section-header mb-md" id="edit-page-section">
-  <h2>{{ _('default_page') }}</h2>
-  <button type="button" class="btn btn--ghost btn--sm" id="btn-toggle-editor" onclick="toggleEditor()">{{ _('edit_html') }}</button>
-</div>
+<div class="info-section">
+  <div class="info-section-header" style="display:flex; justify-content:space-between; align-items:center;" id="edit-page-section">
+    <h3>{{ _('default_page') }}</h3>
+    <button type="button" class="btn btn--ghost" style="height: 32px; padding: 0 12px; font-size:12px; border:1px solid var(--color-line);" id="btn-toggle-editor" onclick="toggleEditor()">{{ _('edit_html') }}</button>
+  </div>
 
-<div id="page-editor" style="display:none;">
-  <form method="post" action="/domains/{{ domain.id }}/edit-page" id="edit-page-form">
-    {% include "partials/csrf_field.html" %}
-    <div class="form-group mb-md">
-      <textarea name="content" id="page-content" class="form-textarea" style="height:320px;" spellcheck="false">{{ current_html }}</textarea>
-    </div>
-    <div class="form-actions">
-      <button type="submit" class="btn btn--primary" id="btn-save-page">{{ _('save_page') }}</button>
-      <button type="button" class="btn btn--secondary" onclick="toggleEditor()">{{ _('cancel') }}</button>
-    </div>
-  </form>
-</div>
+  <div id="page-editor" style="display:none;">
+    <form method="post" action="/domains/{{ domain.id }}/edit-page" id="edit-page-form">
+      {% include "partials/csrf_field.html" %}
+      <div class="form-group mb-md">
+        <textarea name="content" id="page-content" class="form-textarea" style="height:320px; border-radius:0; width:100%; border:1px solid var(--color-line); font-family:monospace; padding:16px;" spellcheck="false">{{ current_html }}</textarea>
+      </div>
+      <div class="form-actions" style="margin-top: 16px;">
+        <button type="submit" class="btn btn--primary" id="btn-save-page">{{ _('save_page') }}</button>
+        <button type="button" class="btn btn--secondary" onclick="toggleEditor()">{{ _('cancel') }}</button>
+      </div>
+    </form>
+  </div>
 
-<div id="page-preview" class="settings-mode-box">
-  <span class="text-small text-muted">
-    {{ _('served_at') }}:
-    {% if cert %}
-      <strong>https://{{ domain.name }}</strong>
-    {% else %}
-      <strong>http://{{ domain.name }}</strong>
-    {% endif %}
-     · 
-    <button type="button" class="btn btn--ghost btn--sm p-0" onclick="toggleEditor()">
-      {{ _('edit_page_html') }}
-    </button>
-  </span>
+  <div id="page-preview" style="padding: 16px; border: 1px solid var(--color-line); background: var(--color-surface);">
+    <span class="text-small text-muted">
+      {{ _('served_at') }}:
+      {% if cert %}
+        <strong style="color:var(--color-text);">https://{{ domain.name }}</strong>
+      {% else %}
+        <strong style="color:var(--color-text);">http://{{ domain.name }}</strong>
+      {% endif %}
+    </span>
+  </div>
 </div>
 {% endif %}
 

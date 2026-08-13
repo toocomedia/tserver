@@ -184,15 +184,15 @@
 </div>
 </div>
 {% else %}
-<div class="empty-state" id="empty-state">
-  <div class="empty-state__shape">
-    <div class="shape-square-sm"></div>
+<div class="empty-state-strict" id="empty-state">
+  <div class="empty-state-shapes">
+    <div class="shape-2"></div>
+    <div class="shape-1"></div>
+    <div class="shape-3"></div>
   </div>
-  <h3 class="empty-state__title">{{ _('no_reverse_proxies_yet') }}</h3>
-  <p class="empty-state__desc">{{ _('route_incoming_traffic_to_your_local_por') }}</p>
-  <div class="empty-state__actions">
-    <a href="/proxy/create" class="btn btn--minimal">{{ _('create_proxy_1') }}</a>
-  </div>
+  <h3 class="empty-state-strict__title">{{ _('no_reverse_proxies_yet') }}</h3>
+  <p class="empty-state-strict__desc">{{ _('route_incoming_traffic_to_your_local_por') }}</p>
+  <a href="/proxy/create" class="btn btn--primary" style="padding: 0 24px; height: 42px; font-weight: 600; display: inline-flex; align-items: center;">{{ _('create_proxy_1') }}</a>
 </div>
 {% endif %}
 </div><!-- /.proxy-page -->

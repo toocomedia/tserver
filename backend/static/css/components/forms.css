@@ -133,3 +133,101 @@ input[type="checkbox"]:checked { background: var(--color-accent); border-color: 
 @media (max-width: 600px) {
   .conn-breakdown { grid-template-columns: 1fr; }
 }
+
+/* Brutalist Horizontal Form Grid */
+.form-group-horizontal {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 32px;
+  align-items: flex-start;
+  margin: 0 0 32px 0;
+  padding: 0 0 32px 0;
+  border-bottom: 1px solid var(--color-line);
+}
+.form-group-horizontal:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+.form-group-horizontal .form-label-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.form-group-horizontal .form-label {
+  font-size: 14px;
+  font-weight: 600;
+}
+.form-group-horizontal .form-hint {
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* Brutalist Wizard Steps */
+.wizard-steps {
+  display: inline-flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 13px;
+}
+.step-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--color-muted);
+  font-weight: 500;
+}
+.step-item.active {
+  color: var(--color-text);
+  font-weight: 700;
+}
+.step-square {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--color-line);
+  background: var(--color-bg);
+}
+.step-item.active .step-square {
+  background: var(--color-text);
+  color: var(--color-bg);
+  border-color: var(--color-text);
+}
+.step-divider {
+  width: 48px;
+  height: 1px;
+  background: var(--color-line);
+}
+
+/* Brutalist Clean Form Container */
+.clean-form {
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  width: 100%;
+  margin: 0;
+  padding: 40px;
+}
+
+/* Fixed Bottom Action Bar */
+.fixed-action-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 80px;
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 40px;
+  z-index: 1000;
+}
+@media (min-width: 992px) {
+  .fixed-action-bar {
+    left: var(--sidebar-width);
+  }
+}
+
