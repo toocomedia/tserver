@@ -183,15 +183,9 @@ input[type="checkbox"]:checked { background: var(--color-accent); border-color: 
   font-weight: 600;
 }
 .step-square {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  background: transparent;
+  display: inline;
 }
 .step-item.active .step-square {
-  background: var(--color-surface);
   color: var(--color-text);
 }
 .step-divider {
@@ -228,8 +222,6 @@ input[type="checkbox"]:checked { background: var(--color-accent); border-color: 
   justify-content: space-between;
   width: 100%;
   height: 100%;
-  max-width: 1120px;
-  margin: 0 auto;
   padding: 0 var(--page-gutter);
 }
 
