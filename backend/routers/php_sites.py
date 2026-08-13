@@ -19,7 +19,7 @@ from templating import templates
 
 
 def require_php_active() -> None:
-    status = dependency_manager.get_status("php") or {}
+    status = dependency_manager.get_status("php", cached=True) or {}
     if not status.get("healthy"):
         raise HTTPException(
             503,

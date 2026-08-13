@@ -146,8 +146,8 @@ class DependencyManager:
             for dep_id in self._services
         ]
 
-    def is_healthy(self, dependency_id: str) -> bool:
-        status = self.get_status(dependency_id)
+    def is_healthy(self, dependency_id: str, *, cached: bool = True) -> bool:
+        status = self.get_status(dependency_id, cached=cached)
         # The desired-state flag controls the panel toggle only.  It can be
         # stale after a reboot or manual systemctl action and must not block a
         # plugin when its actual dependency is healthy.
