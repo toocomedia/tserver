@@ -49,6 +49,15 @@
 .php-detail__credentials code { color: var(--color-text); }
 .php-detail__alert { margin-bottom: var(--space-lg); }
 .php-detail__danger { border-top: 1px solid var(--color-danger); padding-top: var(--space-lg); }
+.php-site-delete-modal__description { margin: 0 0 var(--space-lg); line-height: 1.5; }
+.php-site-delete-modal__confirmation { margin-bottom: var(--space-lg); }
+.php-site-delete-modal__confirmation code { display: block; margin: var(--space-sm) 0; overflow-wrap: anywhere; }
+.php-site-delete-modal__database { border: 0; margin: 0; padding: 0; }
+.php-site-delete-modal__database legend { padding: 0; }
+.php-site-delete-modal__choice { align-items: flex-start; border-bottom: 1px solid var(--color-line); margin: 0; padding: var(--space-md) 0; }
+.php-site-delete-modal__choice--danger span { color: var(--color-danger); font-weight: 700; }
+.php-site-delete-modal__database > .form-hint { margin-top: var(--space-sm); }
+.php-site-delete-modal__error { margin-top: var(--space-lg); }
 @media (max-width: 900px) { .php-detail__grid { grid-template-columns: 1fr; } .php-detail__section--wide { grid-column: auto; } }
 @media (max-width: 768px) { .php-wizard__steps { gap: var(--space-lg); } .php-wizard__step { flex: 1; font-size: 11px; } .php-detail__hero { flex-direction: column; } .php-detail__actions { justify-content: flex-start; } .php-detail__row, .php-review__row { grid-template-columns: 1fr; gap: var(--space-xs); } }
 @media (max-width: 480px) { .php-wizard__steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-sm); } .php-wizard__step { flex-direction: column; align-items: flex-start; } .php-wizard__action-group { flex: 1; } .php-wizard__action-group .btn { flex: 1; } }
