@@ -244,7 +244,7 @@ html[dir="rtl"] .mobile-header #mobile-menu-toggle {
    -------------------------------------------------------------------------- */
 @media (min-width: 768px) {
   html[dir="rtl"] .split-sidebar {
-    border-left: 1px solid var(--color-line, rgba(255, 255, 255, 0.16));
+    border-left: 1px solid var(--color-line, rgba(255, 255, 255, 0.11));
     border-right: none;
   }
 

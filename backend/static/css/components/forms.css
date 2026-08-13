@@ -62,16 +62,23 @@ input[type="checkbox"]:checked, input[type="radio"]:checked {
   justify-content: center;
   gap: 8px;
   padding: 20px 24px;
-  border: 1px solid var(--color-line);
-  background: var(--color-bg);
+  border: none !important;
+  border-top: 3px solid transparent !important;
+  background: var(--color-surface);
   box-shadow: none !important;
   cursor: pointer;
   min-height: 110px;
   transition: border-color 0.15s ease, background 0.15s ease;
 }
+.settings-choice:hover {
+  background: var(--color-header-bg-bar);
+}
 .settings-choice--compact { min-height: auto; padding: 16px 20px; }
 .settings-choice:has(input:disabled) { opacity: 0.55; cursor: not-allowed; }
-.settings-choice--active, .settings-choice:has(input:checked) { border-color: var(--color-accent); background: var(--color-surface); }
+.settings-choice--active, .settings-choice:has(input:checked) {
+  border-top-color: var(--color-accent) !important;
+  background: var(--color-surface);
+}
 
 .settings-choice__header {
   display: flex;
@@ -80,9 +87,10 @@ input[type="checkbox"]:checked, input[type="radio"]:checked {
   width: 100%;
 }
 .settings-choice__header input[type="radio"],
-.settings-choice__header input[type="checkbox"] {
-  margin: 0;
-  flex-shrink: 0;
+.settings-choice__header input[type="checkbox"],
+.settings-choice input[type="radio"],
+.settings-choice input[type="checkbox"] {
+  display: none !important;
 }
 .settings-choice__title { font-weight: 700; font-size: 14px; color: var(--color-text); line-height: 1.3; }
 .settings-choice__desc { font-size: var(--font-small); color: var(--color-muted); line-height: 1.5; margin-top: 2px; }
