@@ -86,7 +86,6 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-top: calc(var(--space-md) * -1);
   margin-bottom: 0;
   border-bottom: 1px solid var(--color-line);
   margin-inline: calc(var(--page-gutter) * -1);
@@ -134,7 +133,8 @@
   padding: 10px 20px;
   flex-wrap: wrap;
   border-bottom: 1px solid var(--color-line);
-  margin-top: calc(var(--space-md) * -1);
+  margin-top: 0;
+  /* No bottom margin — sits flush directly against the table below */
   margin-bottom: 0;
   margin-inline: calc(var(--page-gutter) * -1);
   width: auto;

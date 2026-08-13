@@ -418,10 +418,13 @@ html[data-sidebar-style="gradient"] .sidebar__item--active:hover {
 .content__inner {
   width: 100%;
   max-width: 100%;
-  padding: var(--space-md) var(--page-gutter) var(--space-xl);
+  padding: 0 var(--page-gutter) var(--space-xl);
+  /* NO top padding — first element (action-toolbar etc.) sits flush
+     directly under the page-header divider line. */
 }
 
-/* Use .content-pad on content blocks that need horizontal indent */
+/* Use .content-pad on content blocks that need horizontal indent
+   (e.g. around stat grids, forms, regular text — not on flush bars) */
 .content-pad {
   padding-left: var(--page-gutter);
   padding-right: var(--page-gutter);
@@ -436,31 +439,17 @@ html[data-sidebar-style="gradient"] .sidebar__item--active:hover {
   padding: 0;
 }
 
-/* Standard Section Header — Full-width bar (0 side margin, inside padding) */
 .section-header {
-  background: var(--color-header-bg-bar);
-  height: 38px;
-  min-height: 38px;
-  padding: 0 var(--page-gutter);
-  margin-inline: calc(var(--page-gutter) * -1);
-  border-bottom: 1px solid var(--color-line);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: var(--space-md);
+  margin-bottom: var(--space-lg);
+  padding-bottom: var(--space-sm);
+  border-bottom: 1px solid var(--color-line);
 }
 
-.section-header h2,
-.section-header h3 {
-  font-size: var(--font-h3, 11px);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--color-text);
-  margin: 0;
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.section-header h2 {
+  font-size: var(--font-h2);
 }
 
 .stat-grid {

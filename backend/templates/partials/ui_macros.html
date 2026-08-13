@@ -1,105 +1,42 @@
-{# =========================================================================
-   UI_MACROS.HTML — Shared App Macro Suite for Add & Info Pages
-   ========================================================================= #}
-
-{# --- Minimal Status Badge --- #}
-{% macro badge(label, tone='neutral', is_dot=True) %}
-  <span class="badge-minimal badge-minimal--{{ tone }}{% if is_dot %} badge-minimal--dot{% endif %}">{{ label }}</span>
-{% endmacro %}
-
-{# --- Section Header with Title, optional Subtitle & Action slot --- #}
-{% macro section_header(title, subtitle=None, actions=None) %}
-<div class="section-header">
-  <h3>
-    {{ title }}
-    {% if subtitle %}
-    <span class="text-small text-muted font-normal">({{ subtitle }})</span>
+{% macro page_header(title, back_url='', back_text='') %}
+<div class="section-header mb-md" style="display:flex; align-items:center; justify-content:space-between; gap:var(--space-md); flex-wrap:wrap;">
+  <h2 style="margin:0;">{{ title }}</h2>
+  <div class="d-flex gap-sm align-center">
+    {% if caller %}{{ caller() }}{% endif %}
+    {% if back_url %}
+      <a href="{{ back_url }}" class="btn btn--secondary btn--sm" id="btn-back">{{ back_text }}</a>
     {% endif %}
-  </h3>
-  {% if actions %}
-  <div class="d-flex align-center gap-xs">
-    {{ actions | safe }}
   </div>
-  {% endif %}
 </div>
 {% endmacro %}
 
-{# --- Single Key-Value Info Row --- #}
-{% macro info_row(label, value=None, is_mono=False, badge_tone=None) %}
-<div class="info-row d-flex align-center justify-between border-bottom" style="padding: 10px var(--page-gutter);">
-  <span class="info-row__label text-muted text-small">{{ label }}</span>
-  <span class="info-row__value text-small{% if is_mono %} font-mono{% endif %}" style="font-weight: 600;">
-    {% if badge_tone %}
-      <span class="badge-minimal badge-minimal--{{ badge_tone }}">{{ value }}</span>
-    {% elif value != None %}
-      {{ value }}
-    {% else %}
-      {{ caller() }}
-    {% endif %}
+{% macro section_card(title, extra_header='') %}
+<div class="section mb-lg">
+  <div class="section__header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:var(--space-md);">
+    <h3 style="margin:0;">{{ title }}</h3>
+    {% if extra_header %}{{ extra_header|safe }}{% endif %}
+  </div>
+  <div class="section__body">
+    {{ caller() }}
+  </div>
+</div>
+{% endmacro %}
+
+{% macro info_row(label, value='', bold=False) %}
+<div class="info-row">
+  <span class="info-row__label">{{ label }}</span>
+  <span class="info-row__value"{% if bold %} style="font-weight:700;"{% endif %}>
+    {% if caller %}{{ caller() }}{% else %}{{ value|safe }}{% endif %}
   </span>
 </div>
 {% endmacro %}
 
-{# --- Overview Stat Cards Grid --- #}
-{% macro stat_grid(cards=[]) %}
-<div class="stat-grid mb-lg">
-  {% for card in cards %}
-  <div class="stat-card-box p-md">
-    <div class="stat-card-box__label text-muted text-small mb-xs d-flex align-center justify-between">
-      <span>{{ card.label }}</span>
-      {% if card.icon %}
-      <i data-lucide="{{ card.icon }}" style="width: 14px; height: 14px; opacity: 0.6;"></i>
-      {% endif %}
-    </div>
-    <div class="stat-card-box__val d-flex align-center gap-xs">
-      {% if card.badge_tone %}
-        <span class="badge-minimal badge-minimal--{{ card.badge_tone }}">{{ card.value }}</span>
-      {% else %}
-        <span style="font-size: 18px; font-weight: 700;">{{ card.value }}</span>
-      {% endif %}
-    </div>
-    {% if card.subtext %}
-    <div class="stat-card-box__meta text-small text-muted mt-xs">{{ card.subtext }}</div>
-    {% endif %}
-    {% if card.action %}
-    <div class="mt-sm">{{ card.action | safe }}</div>
-    {% endif %}
-  </div>
-  {% endfor %}
-</div>
-{% endmacro %}
-
-{# --- Multi-step Wizard Navigation Bar --- #}
-{% macro wizard_nav(steps=[], current_step=1, onclick_prefix='goToStep') %}
-<div class="pure-nav mb-lg">
-  {% for step in steps %}
-    <div class="pure-step-item{% if loop.index == current_step %} pure-step-item--active{% elif loop.index < current_step %} pure-step-item--done{% endif %}" 
-         id="nav-step-{{ loop.index }}" 
-         {% if onclick_prefix %}onclick="{{ onclick_prefix }}({{ loop.index }})"{% endif %}>
-      <span class="step-number">0{{ loop.index }}</span>
-      <span>{{ step.title }}</span>
-    </div>
-    {% if not loop.last %}
-    <span class="nav-divider">/</span>
-    {% endif %}
-  {% endfor %}
-</div>
-{% endmacro %}
-
-{# --- Interactive Option Card (Selection Grids for Forms) --- #}
-{% macro option_card(name, value, title, icon=None, devicon=None, subtitle=None, is_active=False, disabled=False, onclick=None, id=None) %}
-<label class="stack-pure-item opt-item{% if is_active %} stack-pure-item--active{% endif %}{% if disabled %} stack-pure-item--disabled{% endif %}"
-       {% if id %}id="{{ id }}"{% endif %}
-       {% if onclick and not disabled %}onclick="{{ onclick }}"{% endif %}>
-  <input type="radio" name="{{ name }}" value="{{ value }}" {% if is_active %}checked{% endif %} {% if disabled %}disabled{% endif %} style="position:absolute;opacity:0;pointer-events:none;">
-  {% if devicon %}
-    <span class="pure-tech-icon"><i class="{{ devicon }}"></i></span>
-  {% elif icon %}
-    <span class="pure-tech-icon"><i data-lucide="{{ icon }}" style="width: 20px; height: 20px;"></i></span>
+{% macro form_group(name, label, hint='') %}
+<div class="form-group">
+  <label class="form-label" for="{{ name }}">{{ label }}</label>
+  {{ caller() }}
+  {% if hint %}
+  <span class="form-hint">{{ hint|safe }}</span>
   {% endif %}
-  <span class="stack-title-text">{{ title }}</span>
-  {% if subtitle %}
-    <span class="text-small text-muted d-block mt-xs">{{ subtitle }}</span>
-  {% endif %}
-</label>
+</div>
 {% endmacro %}
