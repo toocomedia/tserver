@@ -809,5 +809,7 @@
   "js.dns_only_desc": "DNS zone & A record only. No Nginx vhost.",
   "js.not_applicable_dns": "Not Applicable (DNS Only)",
   "js.python_domain_desc": "DNS domain created first. Continue to Python app source and deployment setup.",
-  "js.nginx_webroot_desc": "Nginx HTTP vhost & webroot directory created."
+  "js.nginx_webroot_desc": "Nginx HTTP vhost & webroot directory created.",
+  "an_unexpected_error_occurred": "An unexpected error occurred",
+  "error_not_found": "Error not found"
 }

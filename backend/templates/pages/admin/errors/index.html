@@ -14,10 +14,10 @@
 {% block content %}
 
 {% if flash_error %}
-<div class="alert alert--danger mb-lg" id="alert-error">{{ flash_error }}</div>
+<div class="alert alert--danger mb-lg" id="alert-error">{{ _(flash_error) }}</div>
 {% endif %}
 {% if flash_ok %}
-<div class="alert alert--success mb-lg" id="alert-ok">{{ flash_ok }}</div>
+<div class="alert alert--success mb-lg" id="alert-ok">{{ _(flash_ok) }}</div>
 {% endif %}
 
 <!-- Filters -->

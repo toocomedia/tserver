@@ -213,6 +213,13 @@ app.include_router(dns.router)       # Phase 3
 app.include_router(ssl.router)       # Phase 4
 app.include_router(proxy.router)     # Phase 5
 app.include_router(errors.router)    # Phase 6
+
+@app.get("/errors", include_in_schema=False)
+@app.get("/errors/", include_in_schema=False)
+async def errors_shortcut_redirect(request: Request):
+    from fastapi.responses import RedirectResponse
+    q = request.url.query
+    return RedirectResponse(f"/admin/errors/{'?' + q if q else ''}", status_code=307)
 app.include_router(notifications.router)
 plugin_manager.init_app(app)
 app.include_router(plugins.router)
