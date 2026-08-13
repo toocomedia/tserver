@@ -181,6 +181,8 @@ input[type="checkbox"]:checked { background: var(--color-accent); border-color: 
 .step-item.active {
   color: var(--color-text);
   font-weight: 600;
+  background: var(--color-surface);
+  padding: 6px 12px;
 }
 .step-square {
   display: inline;
@@ -189,9 +191,9 @@ input[type="checkbox"]:checked { background: var(--color-accent); border-color: 
   color: var(--color-text);
 }
 .step-divider {
-  width: 32px;
-  height: 1px;
-  background: var(--color-line);
+  color: var(--color-muted);
+  font-weight: 400;
+  margin: 0 4px;
 }
 
 /* Brutalist Clean Form Container */

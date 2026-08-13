@@ -2,11 +2,13 @@
 <div class="wizard-steps">
   {% for step in steps %}
     <div class="step-item {% if loop.index == 1 %}active{% endif %}" id="{{ step.id }}" {% if step.onclick %}onclick="{{ step.onclick }}"{% endif %}>
-      <div class="step-square">{{ loop.index }}</div>
+      {% if not step.hide_number %}
+      <span class="step-square">{{ loop.index }}</span>
+      {% endif %}
       <span>{{ step.label }}</span>
     </div>
     {% if not loop.last %}
-    <div class="step-divider"></div>
+    <div class="step-divider">/</div>
     {% endif %}
   {% endfor %}
 </div>
