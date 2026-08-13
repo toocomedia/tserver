@@ -2,9 +2,9 @@ import { esc, request, t } from "./php-sites-api.js";
 
 export function renderLogSection() {
   return `
-    <section class="info-section php-detail__section php-detail__section--wide">
-      <div class="info-section-header php-detail__logs-header">
-        <h3>${esc(t("logs"))}</h3>
+    <div class="php-detail__card">
+      <div class="php-detail__logs-header">
+        <div class="php-detail__card-title">${esc(t("logs"))}</div>
         <div class="php-detail__logs-controls">
           <div class="php-log-tabs">
             <button type="button" class="btn btn--sm btn--secondary php-log-tab is-active" data-log-stream="access">${esc(t("access_log"))}</button>
@@ -25,7 +25,7 @@ export function renderLogSection() {
       <div class="php-detail__logs-body">
         <pre class="php-log-terminal" data-log-terminal>${esc(t("loading"))}</pre>
       </div>
-    </section>
+    </div>
   `;
 }
 

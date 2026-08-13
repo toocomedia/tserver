@@ -24,24 +24,20 @@ function can(act) { return Boolean(site?.available_actions?.[act]); }
 function btn(act, lbl, tone = "secondary", extra = "") {
   return `<button id="act-${act}" class="btn btn--${tone} btn--sm" type="button" data-action="${act}" ${extra}>${esc(lbl)}</button>`;
 }
-function row(lbl, val) {
-  return `<div class="info-row-strict"><div class="info-row-strict__label">${esc(lbl)}</div><div class="info-row-strict__val">${val}</div></div>`;
-}
-function sect(title, body, extra = "") {
-  return `<section class="info-section php-detail__section ${extra}"><div class="info-section-header"><h3>${esc(title)}</h3></div><div class="php-detail__section-body">${body}</div></section>`;
+function card(title, body, extra = "") {
+  return `
+    <div class="php-detail__card ${extra}">
+      ${title ? `<div class="php-detail__card-title">${esc(title)}</div>` : ""}
+      <div class="php-specs-list">${body}</div>
+    </div>
+  `;
 }
 
-function statGrid() {
-  const h = site.health || {};
-  const dot = (ok) => `<span class="stat-dot ${ok ? "stat-dot--active" : "stat-dot--danger"}"></span>`;
-  const httpCode = h.http?.status_code ? `HTTP ${h.http.status_code}` : t("not_checked");
+function spec(key, val) {
   return `
-    <div class="stat-grid-strict mb-lg">
-      <div class="stat-card-strict"><div class="stat-card-strict__title">${esc(t("php_fpm_socket"))}</div><div class="stat-card-strict__value">${dot(h.socket_healthy)} ${h.socket_healthy ? t("active_1") : t("disabled")}</div></div>
-      <div class="stat-card-strict"><div class="stat-card-strict__title">${esc(t("nginx_web_engine"))}</div><div class="stat-card-strict__value">${dot(h.nginx_active)} ${h.nginx_active ? t("active_1") : t("disabled")}</div></div>
-      <div class="stat-card-strict"><div class="stat-card-strict__title">${esc(t("local_http"))}</div><div class="stat-card-strict__value">${esc(httpCode)}</div></div>
-      <div class="stat-card-strict"><div class="stat-card-strict__title">${esc(t("database"))}</div><div class="stat-card-strict__value">${site.database ? `${dot(h.mariadb_healthy)} ${site.database.database}` : `<span style="color:var(--color-muted);">${esc(t("no_database_attached"))}</span>`}</div></div>
-      <div class="stat-card-strict"><div class="stat-card-strict__title">${esc(t("ssl_certificates"))}</div><div class="stat-card-strict__value">${site.ssl?.active ? `${dot(true)} ${t("active_1")}` : `<span style="color:var(--color-muted);">${esc(t("not_available"))}</span>`}</div></div>
+    <div class="php-spec-row">
+      <div class="php-spec-key">${esc(key)}</div>
+      <div class="php-spec-val">${val}</div>
     </div>
   `;
 }
@@ -57,66 +53,6 @@ function tabsNav() {
       <button class="tabs-nav__btn ${currentTab === "danger" ? "is-active" : ""}" type="button" role="tab" data-tab-target="danger" id="tab-btn-danger" style="color:var(--color-danger);">${esc(t("danger_zone"))}</button>
     </nav>
   `;
-}
-
-function runtimeSection() {
-  const vers = (options?.php_versions || []).map((i) => `<option value="${esc(i.version)}" ${i.version === site.php_version ? "selected" : ""}>${esc(i.version)}</option>`).join("");
-  const vSelect = options ? `<select id="php-runtime-ver" class="form-select" data-runtime-version>${vers}</select>` : `<select class="form-select" disabled><option>${t("loading")}</option></select>`;
-  return sect(t("runtime_settings"), `
-    ${row(t("php_version"), `<div class="php-detail__inline">${vSelect}${can("change_php_version") ? btn("runtime-submit", t("change"), "secondary") : ""}</div>`)}
-    ${row(t("document_root"), `<div class="php-detail__inline"><input id="php-doc-root" class="form-input" data-document-root value="${esc(site.document_root)}" pattern="[A-Za-z0-9][A-Za-z0-9._\\-/]*">${can("change_document_root") ? btn("root-submit", t("change"), "secondary") : ""}</div>`)}
-  `);
-}
-
-function databaseSection() {
-  if (!site.database) {
-    return sect(t("database"), `<p class="form-hint">${t("no_database_attached")}</p>${can("create_database") ? `<div class="form-actions mt-md"><label class="form-check"><input type="checkbox" data-db-install checked><span>${t("install_missing_extensions")}</span></label>${btn("db-create", t("create_database_for_site"), "primary")}</div>` : ""}`);
-  }
-  const db = site.database;
-  return sect(t("database"), `
-    ${row(t("database_name"), `<code>${esc(db.database)}</code>`)}
-    ${row(t("admin_user"), `<code>${esc(db.username)}</code>`)}
-    ${row(t("host"), `<code>${esc(db.host)}:${esc(db.port)}</code>`)}
-    ${row(t("status"), badge(db.status))}
-    <div class="form-actions php-detail__controls mt-md">
-      ${btn("db-reveal", t("reveal_credentials"))}
-      ${btn("db-rotate", t("rotate_password"))}
-      ${can("delete_database") ? btn("db-delete", t("delete_database"), "danger") : ""}
-    </div>
-    <div class="php-detail__credentials" data-credentials hidden></div>
-  `);
-}
-
-function sslSection() {
-  const ssl = site.ssl || {};
-  const act = can("issue_ssl") ? btn("ssl-issue", t("issue_ssl"), "primary") : `${can("renew_ssl") ? btn("ssl-renew", t("renew")) : ""}${can("revoke_ssl") ? btn("ssl-revoke", t("revoke"), "danger") : ""}`;
-  return sect(t("ssl_certificates"), `
-    ${row(t("status"), badge(ssl.active ? "active" : "inactive"))}
-    ${row(t("expires"), esc(ssl.expiry_date || t("not_available")))}
-    <div class="form-actions php-detail__controls mt-md">
-      <label class="form-check"><input type="checkbox" data-ssl-www ${ssl.include_www ? "checked" : ""}><span>${t("include_www")}</span></label>
-      ${act}
-    </div>
-  `);
-}
-
-function wpSection() {
-  if (site.preset !== "wordpress") return "";
-  const wp = site.wordpress || {};
-  const retry = can("wordpress_retry") ? `
-    <div class="form-actions php-detail__controls mt-md">
-      <div class="form-group php-detail__password"><label class="form-label">${t("new_admin_password")}</label><input class="form-input" data-wp-password type="password" minlength="12"></div>
-      <label class="form-check"><input type="checkbox" data-wp-install checked><span>${t("install_missing_extensions")}</span></label>
-      ${btn("wp-retry", t("retry"), "primary")}
-    </div>
-  ` : "";
-  return sect(t("wordpress_settings"), `
-    ${row(t("site_title"), esc(wp.site_title))}
-    ${row(t("admin_user"), esc(wp.admin_user))}
-    ${row(t("admin_email"), esc(wp.admin_email))}
-    ${row(t("status"), badge(wp.installed ? "active" : "failed"))}
-    ${retry}
-  `);
 }
 
 function switchTab(tabId) {
@@ -154,58 +90,110 @@ function render() {
   if (can("restore")) actions += btn("restore", t("restore_website"), "primary");
 
   const isWp = site.preset === "wordpress";
+  const wp = site.wordpress || {};
+  const h = site.health || {};
+  const dot = (ok) => `<span class="stat-dot ${ok ? "stat-dot--active" : "stat-dot--danger"}"></span>`;
+  const httpCode = h.http?.status_code ? `HTTP ${h.http.status_code}` : t("not_checked");
+
+  const vers = (options?.php_versions || []).map((i) => `<option value="${esc(i.version)}" ${i.version === site.php_version ? "selected" : ""}>${esc(i.version)}</option>`).join("");
+  const vSelect = options ? `<select id="php-runtime-ver" class="form-select" data-runtime-version>${vers}</select>` : `<select class="form-select" disabled><option>${t("loading")}</option></select>`;
+
+  const ssl = site.ssl || {};
+  const sslAct = can("issue_ssl") ? btn("ssl-issue", t("issue_ssl"), "primary") : `${can("renew_ssl") ? btn("ssl-renew", t("renew")) : ""}${can("revoke_ssl") ? btn("ssl-revoke", t("revoke"), "danger") : ""}`;
+
+  const wpRetry = can("wordpress_retry") ? `
+    <div class="form-actions mt-sm" style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+      <input class="form-input" data-wp-password type="password" minlength="12" placeholder="${esc(t("new_admin_password"))}" style="max-width:240px;">
+      <label class="form-check" style="margin:0;"><input type="checkbox" data-wp-install checked><span>${t("install_missing_extensions")}</span></label>
+      ${btn("wp-retry", t("retry"), "primary")}
+    </div>
+  ` : "";
 
   content.innerHTML = `
-    <div class="page-header-strict mb-lg">
-      <div>
-        <h1 style="margin-bottom: 4px;">${esc(site.domain)} ${badge(site.status)}</h1>
-        <span style="color:var(--color-muted); font-size:14px;">PHP Website Manager · ${esc(isWp ? t("wordpress") : t("plain_php"))}</span>
+    <div class="page-header-strict">
+      <div class="page-header__title-wrap">
+        <div class="page-header__heading">
+          <h1>${esc(site.domain)}</h1>
+          ${badge(site.status)}
+        </div>
+        <span class="page-header__subtitle">PHP Website Manager · ${esc(isWp ? t("wordpress") : t("plain_php"))}</span>
       </div>
-      <div class="actions" style="display:flex; gap:8px; flex-wrap:wrap;">${actions}</div>
+      <div class="actions">${actions}</div>
     </div>
 
     ${site.last_error ? `<div class="alert alert--danger mb-lg">${esc(site.last_error)}</div>` : ""}
     ${site.last_warning ? `<div class="alert alert--warning mb-lg">${esc(site.last_warning)}</div>` : ""}
     ${site.operation && ["queued", "running"].includes(site.operation.status) ? `<div class="php-operation mb-lg"><div class="php-operation__status">${esc(site.operation.stage)} · ${esc(site.operation.status)}</div><div class="php-operation__message">${esc(site.operation.message)}</div></div>` : ""}
 
-    ${statGrid()}
     ${tabsNav()}
 
     <!-- TAB 1: OVERVIEW -->
     <div class="php-tab-pane ${currentTab === "overview" ? "is-active" : ""}" data-tab-panel="overview">
-      <div class="php-detail__grid">
-        ${sect(t("overview"), `
-          ${row(t("domain"), `<a href="${esc(url)}" target="_blank" rel="noopener" style="font-weight:700; color:var(--color-text);">${esc(site.domain)} ↗</a>`)}
-          ${row(t("preset"), `<span class="badge-pill">${esc(isWp ? t("wordpress") : t("plain_php"))}</span>`)}
-          ${row(t("status"), badge(site.status))}
-          ${row(t("linux_user"), `<code>srvphp${site.id}</code>`)}
-          ${row(t("webroot"), `<code>/var/www/${esc(site.domain)}/${esc(site.document_root)}</code>`)}
-        `)}
-        ${sect(t("runtime_settings"), `
-          ${row(t("php_version"), `<strong>${esc(site.php_version || "—")}</strong>`)}
-          ${row(t("document_root"), `<code>${esc(site.document_root || "public")}</code>`)}
-          ${row(t("database"), site.database ? `<code>${esc(site.database.database)}</code> (${esc(site.database.status || "active")})` : `<span style="color:var(--color-muted);">${esc(t("no_database_attached"))}</span>`)}
-          ${row(t("ssl_certificates"), site.ssl?.active ? `${badge("active")} ${site.ssl.expiry_date ? `(Expires ${esc(site.ssl.expiry_date)})` : ""}` : `<span style="color:var(--color-muted);">${esc(t("not_available"))}</span>`)}
-        `)}
-      </div>
+      ${card(t("overview"), `
+        ${spec(t("domain"), `<a href="${esc(url)}" target="_blank" rel="noopener" style="font-weight:700; color:var(--color-text);">${esc(site.domain)} ↗</a>`)}
+        ${spec(t("preset"), `<span class="badge-pill">${esc(isWp ? t("wordpress") : t("plain_php"))}</span>`)}
+        ${spec(t("status"), badge(site.status))}
+        ${spec(t("linux_user"), `<code>srvphp${site.id}</code>`)}
+        ${spec(t("document_root"), `<code>${esc(site.document_root || "public")}</code>`)}
+        ${spec(t("webroot"), `<code>/var/www/${esc(site.domain)}/${esc(site.document_root)}</code>`)}
+        ${spec(t("php_version"), `<strong>${esc(site.php_version || "—")}</strong>`)}
+        ${spec(t("php_fpm_socket"), `${dot(h.socket_healthy)} <strong>${h.socket_healthy ? t("active_1") : t("disabled")}</strong>`)}
+        ${spec(t("nginx_web_engine"), `${dot(h.nginx_active)} <strong>${h.nginx_active ? t("active_1") : t("disabled")}</strong>`)}
+        ${spec(t("local_http"), `<strong>${esc(httpCode)}</strong>`)}
+        ${spec(t("database"), site.database ? `${dot(h.mariadb_healthy)} <code>${esc(site.database.database)}</code>` : `<span style="color:var(--color-muted);">${esc(t("no_database_attached"))}</span>`)}
+        ${spec(t("ssl_certificates"), site.ssl?.active ? `${dot(true)} <strong>${t("active_1")}</strong>${site.ssl.expiry_date ? ` <span style="font-size:12px; color:var(--color-muted);">(Expires ${esc(site.ssl.expiry_date)})</span>` : ""}` : `<span style="color:var(--color-muted);">${esc(t("not_available"))}</span>`)}
+      `)}
     </div>
 
     <!-- TAB 2: RUNTIME SETTINGS -->
     <div class="php-tab-pane ${currentTab === "runtime" ? "is-active" : ""}" data-tab-panel="runtime">
-      <div class="${isWp ? "php-detail__grid" : ""}">
-        ${runtimeSection()}
-        ${isWp ? wpSection() : ""}
-      </div>
+      ${card(t("runtime_settings"), `
+        ${spec(t("php_version"), `<div class="php-detail__inline">${vSelect}${can("change_php_version") ? btn("runtime-submit", t("change"), "secondary") : ""}</div>`)}
+        ${spec(t("document_root"), `<div class="php-detail__inline"><input id="php-doc-root" class="form-input" data-document-root value="${esc(site.document_root)}" pattern="[A-Za-z0-9][A-Za-z0-9._\\-/]*">${can("change_document_root") ? btn("root-submit", t("change"), "secondary") : ""}</div>`)}
+      `)}
+      ${isWp ? card(t("wordpress_settings"), `
+        ${spec(t("site_title"), esc(wp.site_title))}
+        ${spec(t("admin_user"), esc(wp.admin_user))}
+        ${spec(t("admin_email"), esc(wp.admin_email))}
+        ${spec(t("status"), badge(wp.installed ? "active" : "failed"))}
+        ${wpRetry ? spec("", wpRetry) : ""}
+      `) : ""}
     </div>
 
     <!-- TAB 3: DATABASE -->
     <div class="php-tab-pane ${currentTab === "database" ? "is-active" : ""}" data-tab-panel="database">
-      ${databaseSection()}
+      ${site.database ? card(t("database"), `
+        ${spec(t("database_name"), `<code>${esc(site.database.database)}</code>`)}
+        ${spec(t("admin_user"), `<code>${esc(site.database.username)}</code>`)}
+        ${spec(t("host"), `<code>${esc(site.database.host)}:${esc(site.database.port)}</code>`)}
+        ${spec(t("status"), badge(site.database.status))}
+        <div class="form-actions mt-sm">
+          ${btn("db-reveal", t("reveal_credentials"))}
+          ${btn("db-rotate", t("rotate_password"))}
+          ${can("delete_database") ? btn("db-delete", t("delete_database"), "danger") : ""}
+        </div>
+        <div class="php-detail__credentials" data-credentials hidden></div>
+      `) : card(t("database"), `
+        <p class="form-hint" style="margin:0;">${t("no_database_attached")}</p>
+        ${can("create_database") ? `
+          <div class="form-actions mt-sm">
+            <label class="form-check"><input type="checkbox" data-db-install checked><span>${t("install_missing_extensions")}</span></label>
+            ${btn("db-create", t("create_database_for_site"), "primary")}
+          </div>
+        ` : ""}
+      `)}
     </div>
 
     <!-- TAB 4: SSL CERTIFICATES -->
     <div class="php-tab-pane ${currentTab === "ssl" ? "is-active" : ""}" data-tab-panel="ssl">
-      ${sslSection()}
+      ${card(t("ssl_certificates"), `
+        ${spec(t("status"), badge(ssl.active ? "active" : "inactive"))}
+        ${spec(t("expires"), esc(ssl.expiry_date || t("not_available")))}
+        ${spec(t("options") || "Options", `<label class="form-check" style="margin:0;"><input type="checkbox" data-ssl-www ${ssl.include_www ? "checked" : ""}><span>${t("include_www")}</span></label>`)}
+        <div class="form-actions mt-sm">
+          ${sslAct}
+        </div>
+      `)}
     </div>
 
     <!-- TAB 5: LOGS -->
@@ -215,13 +203,13 @@ function render() {
 
     <!-- TAB 6: DANGER ZONE -->
     <div class="php-tab-pane ${currentTab === "danger" ? "is-active" : ""}" data-tab-panel="danger">
-      ${sect(t("danger_zone"), `
-        <p class="form-hint mb-lg" style="max-width:600px; line-height:1.6;">${t("delete_php_site_desc")}</p>
-        <div style="display:flex; gap:12px; flex-wrap:wrap;">
+      ${card(t("danger_zone"), `
+        <p class="form-hint" style="max-width:600px; line-height:1.6; margin:0;">${t("delete_php_site_desc")}</p>
+        <div style="display:flex; gap:12px; flex-wrap:wrap; margin-top:8px;">
           ${can("archive") ? btn("archive-site", t("archive_website"), "secondary") : ""}
           ${can("delete_site") ? btn("delete-site", t("delete_website"), "danger") : ""}
         </div>
-      `, "php-detail__danger")}
+      `, "php-detail__card--danger")}
     </div>
   `;
 
