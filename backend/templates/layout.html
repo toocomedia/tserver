@@ -13,6 +13,9 @@
 
   <!-- Preload Fonts -->
   <link rel="preload" href="/static/fonts/Onest-Variable.woff2" as="font" type="font/woff2" crossorigin>
+  {% if is_rtl(request) or get_dir() == 'rtl' %}
+  <link rel="preload" href="/static/fonts/arabictooco-vf.woff2" as="font" type="font/woff2" crossorigin>
+  {% endif %}
 
   <!-- CSS -->
   <link rel="stylesheet" href="/static/css/main.css?v={{ APP_VERSION }}">

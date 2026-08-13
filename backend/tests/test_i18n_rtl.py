@@ -19,5 +19,13 @@ class TestI18nRTL(unittest.TestCase):
         self.assertEqual(i18n_service.get_direction("en"), "ltr")
         self.assertEqual(i18n_service.get_direction("es"), "ltr")
 
+    def test_plugin_translation_loading(self):
+        from pathlib import Path
+        import config
+        i18n_service.init_app(config.BASE_DIR)
+        # Verify file_manager plugin translations are loaded
+        self.assertIn("select_target", i18n_service.en_strings)
+        self.assertEqual(i18n_service.get_string("select_target", "en"), "Select Target")
+
 if __name__ == "__main__":
     unittest.main()

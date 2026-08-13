@@ -10,11 +10,11 @@
 }
 
 @font-face {
-  font-family: 'Janna LT';
+  font-family: 'ArabicTooco';
   font-style: normal;
-  font-weight: 400 700;
+  font-weight: 100 900;
   font-display: swap;
-  src: url('/static/fonts/Janna-LT-Regular.woff2') format('woff2');
+  src: url('/static/fonts/arabictooco-vf.woff2') format('woff2');
 }
 
 

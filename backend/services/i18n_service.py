@@ -53,6 +53,33 @@ class I18nService:
             except Exception as e:
                 logger.error(f"Failed to load translations from {json_file}: {e}")
 
+        # 3. Load plugin translations from backend/plugins/*/(locales|i18n|translations|translate)/*.json
+        plugins_dir = self.locales_dir.parent / "plugins"
+        if plugins_dir.exists() and plugins_dir.is_dir():
+            for plugin_folder in plugins_dir.iterdir():
+                if not plugin_folder.is_dir():
+                    continue
+                trans_dir = None
+                for folder_candidate in ("locales", "i18n", "translations", "translate"):
+                    candidate = plugin_folder / folder_candidate
+                    if candidate.exists() and candidate.is_dir():
+                        trans_dir = candidate
+                        break
+                if trans_dir:
+                    for json_file in trans_dir.glob("*.json"):
+                        if json_file.name == "languages.json":
+                            continue
+                        lang = json_file.stem.lower()
+                        try:
+                            with open(json_file, "r", encoding="utf-8") as f:
+                                plugin_data = json.load(f)
+                                if lang not in self.locales:
+                                    self.locales[lang] = {}
+                                for k, v in plugin_data.items():
+                                    self.locales[lang][k] = v
+                        except Exception as e:
+                            logger.error(f"Failed to load plugin translations from {json_file}: {e}")
+
         # English is mandatory fallback
         self.en_strings = self.locales.get("en", {})
         if not self.en_strings:

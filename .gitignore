@@ -40,6 +40,7 @@ temp_*.html
 !/docs/git_dependency_internal_api.md
 !/docs/python_app_hosting.md
 /rules/
+tools/
 push-to-github.bat
 
 # Node / Build artifacts

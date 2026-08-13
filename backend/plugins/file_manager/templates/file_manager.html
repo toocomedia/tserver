@@ -12,8 +12,8 @@
   <div class="file-manager__app-selector">
     <div class="form-group" style="margin: 0; min-width: 220px;">
       <div class="form-select-wrap">
-        <select id="app-selector" class="form-select" disabled aria-label="Select Target">
-          <option value="">Loading targets...</option>
+        <select id="app-selector" class="form-select" disabled aria-label="{{ _("select_target") }}">
+          <option value="">{{ _("loading_targets") }}</option>
         </select>
       </div>
     </div>
@@ -35,8 +35,8 @@
     <div class="empty-state__shape">
       <div class="shape-torus-sm"></div>
     </div>
-    <h3 class="empty-state__title">Select a target</h3>
-    <p class="empty-state__desc">Choose an application from the dropdown above to manage its files.</p>
+    <h3 class="empty-state__title">{{ _("select_a_target") }}</h3>
+    <p class="empty-state__desc">{{ _("choose_an_application_from_the_dropdown") }}</p>
   </div>
 
   <!-- Roots Tabs -->
@@ -52,7 +52,7 @@
           <polyline points="17 8 12 3 7 8"></polyline>
           <line x1="12" y1="3" x2="12" y2="15"></line>
         </svg>
-        Upload
+        {{ _("upload") }}
       </button>
       <button class="btn btn--sm btn--secondary" id="btn-new-folder" disabled>
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -60,7 +60,7 @@
           <line x1="12" y1="11" x2="12" y2="17"></line>
           <line x1="9" y1="14" x2="15" y2="14"></line>
         </svg>
-        New Folder
+        {{ _("new_folder") }}
       </button>
       <button class="btn btn--sm btn--secondary" id="btn-new-file" disabled>
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -69,9 +69,9 @@
           <line x1="12" y1="18" x2="12" y2="12"></line>
           <line x1="9" y1="15" x2="15" y2="15"></line>
         </svg>
-        New File
+        {{ _("new_file") }}
       </button>
-      <button class="btn btn--icon btn--ghost" id="btn-refresh" aria-label="Refresh" disabled>
+      <button class="btn btn--icon btn--ghost" id="btn-refresh" aria-label="{{ _("refresh") }}" disabled>
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <polyline points="23 4 23 10 17 10"></polyline>
           <polyline points="1 20 1 14 7 14"></polyline>
@@ -80,7 +80,7 @@
       </button>
       <button class="btn btn--danger btn--sm" id="btn-bulk-delete" style="display: none;" onclick="openBulkDeleteModal()">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
-        Delete Selected (<span id="bulk-delete-count">0</span>)
+        {{ _("delete_selected") }} (<span id="bulk-delete-count">0</span>)
       </button>
     </div>
   </div>
@@ -89,11 +89,11 @@
     <table class="table" id="fm-table">
       <thead>
         <tr>
-          <th style="width: 40px; text-align: center;"><input type="checkbox" id="cb-select-all" aria-label="Select all files" onchange="toggleSelectAll(this)"></th>
-          <th id="th-name" style="cursor: pointer; user-select: none;">Name <span id="sort-icon-name"></span></th>
-          <th id="th-size" style="width: 120px; cursor: pointer; user-select: none;">Size <span id="sort-icon-size"></span></th>
-          <th id="th-modified" style="width: 160px; cursor: pointer; user-select: none;">Modified <span id="sort-icon-modified"></span></th>
-          <th class="col-actions">Actions</th>
+          <th style="width: 40px; text-align: center;"><input type="checkbox" id="cb-select-all" aria-label="{{ _("select_all_files") }}" onchange="toggleSelectAll(this)"></th>
+          <th id="th-name" style="cursor: pointer; user-select: none;">{{ _("name") }} <span id="sort-icon-name"></span></th>
+          <th id="th-size" style="width: 120px; cursor: pointer; user-select: none;">{{ _("size") }} <span id="sort-icon-size"></span></th>
+          <th id="th-modified" style="width: 160px; cursor: pointer; user-select: none;">{{ _("modified") }} <span id="sort-icon-modified"></span></th>
+          <th class="col-actions">{{ _("actions") }}</th>
         </tr>
       </thead>
       <tbody id="fm-tbody">
