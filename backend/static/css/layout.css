@@ -355,9 +355,9 @@ html[data-sidebar-style="gradient"] .sidebar__item--active:hover {
   align-items: center;
   justify-content: space-between;
   gap: var(--space-md);
-  height: auto;
-  min-height: 60px;
-  padding: 14px var(--page-gutter);
+  height: var(--topbar-height);
+  min-height: var(--topbar-height);
+  padding: 0 var(--page-gutter);
   margin-bottom: 0;
   background: var(--color-bg);
   border-bottom: 1px solid var(--color-line);
@@ -368,7 +368,7 @@ html[data-sidebar-style="gradient"] .sidebar__item--active:hover {
 .page-header:has(+ .content--flush),
 .main:has(.content--flush) .page-header,
 .content--flush .page-header {
-  padding: 14px var(--page-gutter);
+  padding: 0 var(--page-gutter);
   margin-bottom: 0 !important;
 }
 
