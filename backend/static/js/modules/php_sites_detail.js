@@ -40,6 +40,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if (!container) return;
 
   const siteId = container.dataset.siteId;
+  const domainName = container.dataset.domainName || `site-${siteId}`;
   const csrfToken = document.querySelector('input[name="csrf_token"]')?.value || "";
 
   // 1. Tab Navigation
@@ -79,7 +80,13 @@ document.addEventListener("DOMContentLoaded", () => {
       .then((data) => {
         pollOperation(data.operation_id, () => window.location.reload());
       })
-      .catch((err) => alert(parseErrorMessage(err)));
+      .catch((err) => {
+        if (typeof window.toast === "function") {
+          window.toast(parseErrorMessage(err), "danger");
+        } else {
+          alert(parseErrorMessage(err));
+        }
+      });
   }
 
   // 2. Health Probes
@@ -89,11 +96,11 @@ document.addEventListener("DOMContentLoaded", () => {
       const res = await fetch(`/api/php-sites/sites/${siteId}/health`);
       if (!res.ok) return;
       const data = await res.json();
-      document.getElementById("probe-socket").innerHTML = data.socket ? '<span class="text-success">OK</span>' : '<span class="text-danger">DOWN</span>';
-      document.getElementById("probe-nginx").innerHTML = data.nginx ? '<span class="text-success">OK</span>' : '<span class="text-danger">ERROR</span>';
-      document.getElementById("probe-http").innerHTML = data.http ? '<span class="text-success">OK</span>' : '<span class="text-danger">DOWN</span>';
+      document.getElementById("probe-socket").innerHTML = data.socket ? '<span class="status-badge status-badge--success">OK</span>' : '<span class="status-badge status-badge--danger">DOWN</span>';
+      document.getElementById("probe-nginx").innerHTML = data.nginx ? '<span class="status-badge status-badge--success">OK</span>' : '<span class="status-badge status-badge--danger">ERROR</span>';
+      document.getElementById("probe-http").innerHTML = data.http ? '<span class="status-badge status-badge--success">OK</span>' : '<span class="status-badge status-badge--danger">DOWN</span>';
       if (document.getElementById("probe-mariadb")) {
-        document.getElementById("probe-mariadb").innerHTML = data.mariadb ? '<span class="text-success">OK</span>' : '<span class="text-muted">N/A</span>';
+        document.getElementById("probe-mariadb").innerHTML = data.mariadb ? '<span class="status-badge status-badge--success">OK</span>' : '<span class="status-badge status-badge--muted">N/A</span>';
       }
     } catch (_) {}
   }
@@ -141,10 +148,11 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   document.getElementById("btn-delete-db")?.addEventListener("click", async () => {
-    const name = prompt("Type DELETE DATABASE to confirm database deletion:");
-    if (!name) return;
+    const input = prompt("Type DELETE DATABASE to confirm database deletion:");
+    if (!input) return;
+    const confirmText = input.trim().toUpperCase() === "DELETE DATABASE" ? "DELETE DATABASE" : input.trim();
     try {
-      await apiCall(`/api/php-sites/sites/${siteId}/database`, "DELETE", { confirmation: name });
+      await apiCall(`/api/php-sites/sites/${siteId}/database`, "DELETE", { confirmation: confirmText });
       alert("Database deleted.");
       window.location.reload();
     } catch (err) { alert(parseErrorMessage(err)); }
@@ -171,9 +179,11 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   document.getElementById("btn-ssl-revoke")?.addEventListener("click", () => {
-    const name = prompt("Type REVOKE {domain} to confirm SSL revocation:");
-    if (!name) return;
-    handleAsyncOperation(apiCall(`/api/php-sites/sites/${siteId}/ssl`, "DELETE", { confirmation: name }), "Revoking SSL...");
+    const expected = `REVOKE ${domainName}`;
+    const input = prompt(`Type "${expected}" to confirm SSL revocation:`);
+    if (!input) return;
+    const confirmText = input.trim().toUpperCase() === expected.toUpperCase() ? expected : input.trim();
+    handleAsyncOperation(apiCall(`/api/php-sites/sites/${siteId}/ssl`, "DELETE", { confirmation: confirmText }), "Revoking SSL...");
   });
 
   // 6. Logs Streaming
@@ -202,9 +212,11 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   document.getElementById("btn-archive-site")?.addEventListener("click", () => {
-    const name = prompt("Type ARCHIVE {domain} to confirm archiving:");
-    if (!name) return;
-    handleAsyncOperation(apiCall(`/api/php-sites/sites/${siteId}/archive`, "POST", { confirmation: name }), "Archiving Website...");
+    const expected = `ARCHIVE ${domainName}`;
+    const input = prompt(`Type "${expected}" to confirm archiving:`);
+    if (!input) return;
+    const confirmText = input.trim().toUpperCase() === expected.toUpperCase() ? expected : input.trim();
+    handleAsyncOperation(apiCall(`/api/php-sites/sites/${siteId}/archive`, "POST", { confirmation: confirmText }), "Archiving Website...");
   });
 
   document.getElementById("btn-restore-site")?.addEventListener("click", () => {
@@ -212,11 +224,13 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   document.getElementById("btn-delete-site-perm")?.addEventListener("click", async () => {
-    const name = prompt("Type DELETE {domain} to permanently delete website:");
-    if (!name) return;
+    const expected = `DELETE ${domainName}`;
+    const input = prompt(`Type "${expected}" to permanently delete website:`);
+    if (!input) return;
+    const confirmText = input.trim().toUpperCase() === expected.toUpperCase() ? expected : input.trim();
     const delDb = confirm("Drop local MariaDB database as well?");
     try {
-      await apiCall(`/api/php-sites/sites/${siteId}`, "DELETE", { confirmation: name, delete_database: delDb });
+      await apiCall(`/api/php-sites/sites/${siteId}`, "DELETE", { confirmation: confirmText, delete_database: delDb });
       alert("Website deleted.");
       window.location.href = "/php-sites/";
     } catch (err) { alert(parseErrorMessage(err)); }

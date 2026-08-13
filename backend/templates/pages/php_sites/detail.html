@@ -7,7 +7,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="php-site-detail-page" data-site-id="{{ site.id }}">
+<div class="php-site-detail-page" data-site-id="{{ site.id }}" data-domain-name="{{ site.domain_name or ('site-' ~ site.id) }}">
 
   <!-- PAGE HEADER -->
   <div class="page-header-strict" style="margin-top: 24px;">

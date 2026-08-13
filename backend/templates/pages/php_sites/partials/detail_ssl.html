@@ -1,19 +1,27 @@
-<div class="section mb-xl">
-  <h3 class="section__title mb-md">SSL / HTTPS Certificate</h3>
-  {% if site.ssl and site.ssl.active %}
-    <div class="alert alert--success mb-md">
-      SSL Certificate is active for <strong>{{ site.domain_name }}</strong>{% if site.ssl.include_www %} (including www){% endif %}.
-    </div>
-    <div class="d-flex gap-md">
-      <button type="button" class="btn btn--secondary" id="btn-ssl-renew">Renew Certificate</button>
-      <button type="button" class="btn btn--danger" id="btn-ssl-revoke">Revoke SSL</button>
-    </div>
-  {% else %}
-    <p class="text-muted mb-md">No active SSL certificate. You can issue a free Let's Encrypt TLS certificate.</p>
-    <div class="form-check mb-md">
-      <input type="checkbox" id="ssl-include-www" value="true" checked>
-      <label for="ssl-include-www">Include www alias in SSL Certificate</label>
-    </div>
-    <button type="button" class="btn btn--primary" id="btn-ssl-issue">+ Issue SSL Certificate</button>
-  {% endif %}
+<div class="info-section mb-xl">
+  <div class="info-section-header">
+    <h3>SSL / HTTPS Certificate</h3>
+  </div>
+
+  <div class="info-section-body" style="padding: 16px; border: 1px solid var(--color-line); background: var(--color-surface);">
+    {% if site.ssl and site.ssl.active %}
+      <div class="alert alert--success mb-md">
+        ✓ SSL Certificate is active for <strong>{{ site.domain_name }}</strong>{% if site.ssl.include_www %} (including www alias){% endif %}.
+      </div>
+      <p class="text-muted text-small mb-md">
+        Confirmation text for revocation: <code class="mono">REVOKE {{ site.domain_name }}</code>
+      </p>
+      <div class="d-flex gap-md">
+        <button type="button" class="btn btn--secondary" id="btn-ssl-renew">Renew Certificate</button>
+        <button type="button" class="btn btn--danger" id="btn-ssl-revoke">Revoke SSL</button>
+      </div>
+    {% else %}
+      <p class="text-muted mb-md">No active SSL certificate. You can issue a free Let's Encrypt TLS certificate for this domain.</p>
+      <div class="form-check mb-md">
+        <input type="checkbox" id="ssl-include-www" value="true" checked>
+        <label for="ssl-include-www">Include www alias in SSL Certificate</label>
+      </div>
+      <button type="button" class="btn btn--primary" id="btn-ssl-issue">+ Issue SSL Certificate</button>
+    {% endif %}
+  </div>
 </div>
