@@ -14,6 +14,8 @@
 
 {% macro action_bar() %}
 <div class="fixed-action-bar">
-  {{ caller() }}
+  <div class="fixed-action-bar__inner">
+    {{ caller() }}
+  </div>
 </div>
 {% endmacro %}
