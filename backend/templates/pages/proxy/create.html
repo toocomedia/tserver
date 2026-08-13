@@ -154,42 +154,55 @@
       <!-- Enable SSL -->
       <div class="form-group-horizontal">
         <div class="form-label-wrap">
-          <label class="form-label">Security</label>
+          <label class="form-label">{{ _('ssl_certificate_security') }}</label>
+          <span class="form-hint">{{ _('choose_whether_to_provision_an_automated') }}</span>
         </div>
-        <label class="settings-choice {% if form.get('enable_ssl') %}settings-choice--active{% endif %}" id="choice-enable-ssl">
-          <div class="settings-choice__header">
-            <input type="checkbox" name="enable_ssl" id="enable_ssl" value="true" {% if form.get('enable_ssl') %}checked{% endif %}>
-            <span class="settings-choice__title">{{ _('enable_ssl_let_s_encrypt') }}</span>
-          </div>
-          <span class="settings-choice__desc">{{ _('will_issue_a_certificate_after_the_proxy') }}</span>
-        </label>
+        <div class="settings-choice-grid">
+          <label class="settings-choice {% if not form.get('enable_ssl') %}settings-choice--active{% endif %}" id="proxy-ssl-opt-no" onclick="selectProxySsl(false)">
+            <div class="settings-choice__header">
+              <input type="radio" name="proxy_ssl_opt" id="proxy-ssl-radio-no" value="no" {% if not form.get('enable_ssl') %}checked{% endif %}>
+              <span class="settings-choice__title">{{ _('no_ssl_http_only') }}</span>
+            </div>
+            <span class="settings-choice__desc">{{ _('standard_unencrypted_port_80_traffic_cer') }}</span>
+          </label>
+
+          <label class="settings-choice {% if form.get('enable_ssl') %}settings-choice--active{% endif %}" id="proxy-ssl-opt-yes" onclick="selectProxySsl(true)">
+            <div class="settings-choice__header">
+              <input type="radio" name="proxy_ssl_opt" id="proxy-ssl-radio-yes" value="yes" {% if form.get('enable_ssl') %}checked{% endif %}>
+              <span class="settings-choice__title">{{ _('enable_let_s_encrypt_free_tls_https') }}</span>
+            </div>
+            <span class="settings-choice__desc">{{ _('will_issue_a_certificate_after_the_proxy') }}</span>
+          </label>
+        </div>
+        <input type="checkbox" name="enable_ssl" id="enable_ssl" value="true" {% if form.get('enable_ssl') %}checked{% endif %} style="display:none;">
       </div>
 
       <!-- Proxy Cache (optional) -->
       <div class="form-group-horizontal" style="border-bottom:none; margin-bottom:0; padding-bottom:0;">
         <div class="form-label-wrap">
-          <label class="form-label" style="cursor:pointer;" id="cache-toggle-label">
-            <span id="cache-toggle-icon">▶</span>
-            <span style="margin-left:6px;">{{ _('proxy_cache') }} <span class="text-muted text-small">{{ _('optional') }}</span></span>
+          <label class="form-label" style="cursor:pointer; display:inline-flex; align-items:center; gap:6px;" id="cache-toggle-label">
+            <span id="cache-toggle-icon" style="font-size: 10px;">▶</span>
+            <span>{{ _('proxy_cache') }} <span class="text-muted" style="font-weight:400; font-size:12px;">({{ _('optional') }})</span></span>
           </label>
           <span class="form-hint">{{ _('caches_upstream_responses_on_disk_good_f') }}</span>
         </div>
         
-        <div id="cache-fields" style="display:none; flex-direction:column; gap:16px;">
-          <label class="settings-choice {% if form.get('cache_enabled') %}settings-choice--active{% endif %}" id="choice-cache-enabled">
+        <div id="cache-fields" style="display:none; flex-direction:column; gap:16px; margin-top:16px;">
+          <label class="settings-choice settings-choice--compact {% if form.get('cache_enabled') %}settings-choice--active{% endif %}" id="choice-cache-enabled">
             <div class="settings-choice__header">
               <input type="checkbox" name="cache_enabled" id="cache_enabled" value="true" {% if form.get('cache_enabled') %}checked{% endif %}>
               <span class="settings-choice__title">{{ _('enable_proxy_cache') }}</span>
             </div>
+            <span class="settings-choice__desc">{{ _('caches_upstream_responses_on_disk_good_f') }}</span>
           </label>
           
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
             <div>
-              <label class="form-label" style="display:block; margin-bottom: 8px;" for="cache_ttl_minutes">{{ _('cache_ttl_minutes') }}</label>
+              <label class="form-label" style="display:block; margin-bottom: 6px; font-size:13px;" for="cache_ttl_minutes">{{ _('cache_ttl_minutes') }}</label>
               <input class="form-input clean-input" type="number" id="cache_ttl_minutes" name="cache_ttl_minutes" value="{{ form.get('cache_ttl_minutes', 10) }}" min="1" max="10080">
             </div>
             <div>
-              <label class="form-label" style="display:block; margin-bottom: 8px;" for="cache_auto_clear_hours">{{ _('auto_clear_hours') }}</label>
+              <label class="form-label" style="display:block; margin-bottom: 6px; font-size:13px;" for="cache_auto_clear_hours">{{ _('auto_clear_hours') }}</label>
               <input class="form-input clean-input" type="number" id="cache_auto_clear_hours" name="cache_auto_clear_hours" value="{{ form.get('cache_auto_clear_hours', 0) }}" min="0" max="8760">
             </div>
           </div>
@@ -225,6 +238,56 @@
 {% block scripts %}
 <script src="/static/js/modules/proxy.js"></script>
 <script>
+  function goToStep(step) {
+    const step1 = document.getElementById("proxy-step-1");
+    const step2 = document.getElementById("proxy-step-2");
+    const nextBtn1 = document.getElementById("btn-next-step-1");
+    const backBtn2 = document.getElementById("btn-back-step-2");
+    const submitBtn = document.getElementById("btn-submit");
+    const stepErr1 = document.getElementById("step-1-error");
+
+    const modeExternal = document.getElementById("mode-external");
+    const domainSelect = document.getElementById("domain_id");
+    const subdomainIn = document.getElementById("subdomain");
+    const hostnameIn = document.getElementById("hostname");
+
+    if (step > 1) {
+      if (stepErr1) stepErr1.style.display = "none";
+      const external = modeExternal && modeExternal.checked;
+      if (external) {
+        if (!hostnameIn || !hostnameIn.value.trim()) {
+          if (stepErr1) { stepErr1.textContent = "Please enter an external hostname."; stepErr1.style.display = "block"; }
+          if (hostnameIn) hostnameIn.focus();
+          return false;
+        }
+      } else {
+        if (!domainSelect || !domainSelect.value) {
+          if (stepErr1) { stepErr1.textContent = "Please select a parent domain."; stepErr1.style.display = "block"; }
+          if (domainSelect) domainSelect.focus();
+          return false;
+        }
+        if (!subdomainIn || !subdomainIn.value.trim()) {
+          if (stepErr1) { stepErr1.textContent = "Please enter a subdomain prefix."; stepErr1.style.display = "block"; }
+          if (subdomainIn) subdomainIn.focus();
+          return false;
+        }
+      }
+    }
+
+    const n1 = document.getElementById("nav-step-1");
+    const n2 = document.getElementById("nav-step-2");
+
+    if (step1) step1.style.display = step === 1 ? "flex" : "none";
+    if (step2) step2.style.display = step === 2 ? "flex" : "none";
+
+    if (n1) n1.classList.toggle("active", step === 1);
+    if (n2) n2.classList.toggle("active", step === 2);
+
+    if (backBtn2) backBtn2.style.display = step === 2 ? "block" : "none";
+    if (nextBtn1) nextBtn1.style.display = step === 1 ? "block" : "none";
+    if (submitBtn) submitBtn.style.display = step === 2 ? "block" : "none";
+  }
+  window.goToStep = goToStep;
   // Add listeners to custom settings-choice wrappers to sync active class
   document.querySelectorAll('input[type="radio"], input[type="checkbox"]').forEach(input => {
     input.addEventListener('change', (e) => {
@@ -268,6 +331,24 @@
     });
   });
   
+  window.selectProxySsl = function(enable) {
+    const sslCheck = document.getElementById("enable_ssl");
+    if (sslCheck) {
+      sslCheck.checked = enable;
+      sslCheck.dispatchEvent(new Event("change"));
+    }
+    const optNo = document.getElementById("proxy-ssl-opt-no");
+    const optYes = document.getElementById("proxy-ssl-opt-yes");
+    const radioNo = document.getElementById("proxy-ssl-radio-no");
+    const radioYes = document.getElementById("proxy-ssl-radio-yes");
+
+    if (optNo) optNo.classList.toggle("settings-choice--active", !enable);
+    if (optYes) optYes.classList.toggle("settings-choice--active", enable);
+
+    if (radioNo) radioNo.checked = !enable;
+    if (radioYes) radioYes.checked = enable;
+  };
+
   const step2 = document.getElementById('proxy-step-2');
   if (step2) {
     observer.observe(step2, { attributes: true });

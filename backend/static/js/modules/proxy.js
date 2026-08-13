@@ -45,43 +45,45 @@ function initCreateForm() {
   const backBtn2 = document.getElementById("btn-back-step-2");
   const stepErr1 = document.getElementById("step-1-error");
 
-  window.goToStep = function(step) {
-    if (step > 1) {
-      if (stepErr1) stepErr1.style.display = "none";
-      const external = isExternal();
-      if (external) {
-        if (!hostnameIn || !hostnameIn.value.trim()) {
-          if (stepErr1) { stepErr1.textContent = "Please enter an external hostname."; stepErr1.style.display = "block"; }
-          if (hostnameIn) hostnameIn.focus();
-          return false;
-        }
-      } else {
-        if (!domainSelect || !domainSelect.value) {
-          if (stepErr1) { stepErr1.textContent = "Please select a parent domain."; stepErr1.style.display = "block"; }
-          if (domainSelect) domainSelect.focus();
-          return false;
-        }
-        if (!subdomainIn || !subdomainIn.value.trim()) {
-          if (stepErr1) { stepErr1.textContent = "Please enter a subdomain prefix."; stepErr1.style.display = "block"; }
-          if (subdomainIn) subdomainIn.focus();
-          return false;
+  if (typeof window.goToStep !== "function") {
+    window.goToStep = function(step) {
+      if (step > 1) {
+        if (stepErr1) stepErr1.style.display = "none";
+        const external = isExternal();
+        if (external) {
+          if (!hostnameIn || !hostnameIn.value.trim()) {
+            if (stepErr1) { stepErr1.textContent = "Please enter an external hostname."; stepErr1.style.display = "block"; }
+            if (hostnameIn) hostnameIn.focus();
+            return false;
+          }
+        } else {
+          if (!domainSelect || !domainSelect.value) {
+            if (stepErr1) { stepErr1.textContent = "Please select a parent domain."; stepErr1.style.display = "block"; }
+            if (domainSelect) domainSelect.focus();
+            return false;
+          }
+          if (!subdomainIn || !subdomainIn.value.trim()) {
+            if (stepErr1) { stepErr1.textContent = "Please enter a subdomain prefix."; stepErr1.style.display = "block"; }
+            if (subdomainIn) subdomainIn.focus();
+            return false;
+          }
         }
       }
-    }
 
-    const n1 = document.getElementById("nav-step-1") || document.getElementById("proxy-step-pill-1");
-    const n2 = document.getElementById("nav-step-2") || document.getElementById("proxy-step-pill-2");
+      const n1 = document.getElementById("nav-step-1") || document.getElementById("proxy-step-pill-1");
+      const n2 = document.getElementById("nav-step-2") || document.getElementById("proxy-step-pill-2");
 
-    if (step1) step1.style.display = step === 1 ? "flex" : "none";
-    if (step2) step2.style.display = step === 2 ? "flex" : "none";
+      if (step1) step1.style.display = step === 1 ? "flex" : "none";
+      if (step2) step2.style.display = step === 2 ? "flex" : "none";
 
-    if (n1) n1.classList.toggle("active", step === 1);
-    if (n2) n2.classList.toggle("active", step === 2);
+      if (n1) n1.classList.toggle("active", step === 1);
+      if (n2) n2.classList.toggle("active", step === 2);
 
-    if (backBtn2) backBtn2.style.display = step === 2 ? "block" : "none";
-    if (nextBtn1) nextBtn1.style.display = step === 1 ? "block" : "none";
-    if (submitBtn) submitBtn.style.display = step === 2 ? "block" : "none";
-  };
+      if (backBtn2) backBtn2.style.display = step === 2 ? "block" : "none";
+      if (nextBtn1) nextBtn1.style.display = step === 1 ? "block" : "none";
+      if (submitBtn) submitBtn.style.display = step === 2 ? "block" : "none";
+    };
+  }
 
   if (nextBtn1) {
     nextBtn1.addEventListener("click", () => window.goToStep(2));
