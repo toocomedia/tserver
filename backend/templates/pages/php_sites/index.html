@@ -1,29 +1,167 @@
 {% extends "layout.html" %}
+
 {% from "partials/skeleton_overlay.html" import skeleton_overlay %}
 
 {% block title %}{{ _('php_websites') }} — {{ PANEL_NAME }}{% endblock %}
 {% block page_title %}{{ _('php_websites') }}{% endblock %}
 
-{% block head %}
-<link rel="stylesheet" href="/static/css/php-sites.css?v={{ APP_VERSION }}">
-{% endblock %}
-
 {% block topbar_actions %}
-<a class="btn btn--primary" href="{{ path('php_sites_create') }}" id="php-sites-create-link">+ {{ _('create_php_site') }}</a>
+  <a href="{{ path('php_sites_create') }}" class="btn btn--primary" id="btn-add-php-site">+ {{ _('create_php_site') }}</a>
 {% endblock %}
 
 {% block content %}
-<section class="php-sites-page" data-php-sites-list aria-label="{{ _('managed_websites') }}" style="position: relative; min-height: 420px;">
-  <!-- SKELETON LOADING OVERLAY -->
-  {{ skeleton_overlay('php-sites-list-skeleton', header=0, title_bar=1, tables=[{'rows': 4}]) }}
+<div class="php-sites-page">
 
-  <!-- LAZY LOADED CONTENT CONTAINER -->
-  <div data-sites-container style="display:none;" aria-live="polite"></div>
+<!-- SKELETON LOADING OVERLAY -->
+{{ skeleton_overlay('php-sites-skeleton', controls=1, tables=[{ 'rows': 4 }]) }}
+<!-- END SKELETON OVERLAY -->
 
-  <div class="alert alert--danger php-sites__error mt-lg" data-site-error hidden role="alert"></div>
-</section>
+{% if sites %}
+
+  <!-- Action Toolbar (Search & Filter) -->
+  <div class="action-toolbar">
+    <div class="action-toolbar__search">
+      <input type="text" id="php-search-input" class="form-control" placeholder="Search websites by domain or version..." onkeyup="filterPhpSitesTable()">
+    </div>
+    <div class="action-toolbar__group">
+      <select id="php-status-filter" class="form-control" style="width: 140px;" onchange="filterPhpSitesTable()">
+        <option value="all">All Websites</option>
+        <option value="wordpress">{{ _('wordpress') }}</option>
+        <option value="php">{{ _('plain_php') }}</option>
+        <option value="active">{{ _('active_1') }}</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table class="table" id="php-sites-table">
+      <colgroup>
+        <col style="width:28%">
+        <col style="width:14%">
+        <col style="width:12%">
+        <col style="width:14%">
+        <col style="width:14%">
+        <col style="width:18%">
+      </colgroup>
+      <thead>
+        <tr>
+          <th>{{ _('domain') }}</th>
+          <th>{{ _('preset') }}</th>
+          <th>{{ _('php_version') }}</th>
+          <th>{{ _('database') }}</th>
+          <th>{{ _('status') }}</th>
+          <th class="col-actions">{{ _('actions') }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for site in sites %}
+        {% set is_active = site.status in ['active', 'ready', 'succeeded'] %}
+        <tr data-site-id="{{ site.id }}" class="php-site-row-item" data-preset="{{ site.preset }}" data-status="{{ site.status }}">
+          <td>
+            <a href="{{ path('php_sites', site.id) }}" class="domain-name-txt table-title">{{ site.domain or '—' }}</a>
+          </td>
+
+          <td>
+            {% if site.preset == 'wordpress' %}
+              <span class="badge-minimal badge-minimal--active">{{ _('wordpress') }}</span>
+            {% else %}
+              <span class="badge-minimal badge-minimal--neutral">{{ _('plain_php') }}</span>
+            {% endif %}
+          </td>
+
+          <td>
+            <code>{{ site.php_version }}</code>
+          </td>
+
+          <td>
+            {% if site.database %}
+              <span class="badge-minimal badge-minimal--active">{{ site.database.database }}</span>
+            {% else %}
+              <span class="badge-minimal badge-minimal--neutral">—</span>
+            {% endif %}
+          </td>
+
+          <td>
+            {% if is_active %}
+              <span class="badge-minimal badge-minimal--active">{{ _('active_1') }}</span>
+            {% elif site.status == 'disabled' %}
+              <span class="badge-minimal badge-minimal--neutral">{{ _('disabled') }}</span>
+            {% elif site.status == 'archived' %}
+              <span class="badge-minimal badge-minimal--neutral">{{ _('archived') if _('archived') != 'archived' else 'Archived' }}</span>
+            {% else %}
+              <span class="badge-minimal badge-minimal--danger">{{ site.status | replace('_', ' ') | title }}</span>
+            {% endif %}
+          </td>
+
+          <td class="col-actions" style="position:relative;">
+            {% import "partials/list_actions_toggle.html" as list_actions %}
+            {{ list_actions.button() }}
+
+            {% call list_actions.tray() %}
+              <a href="{{ path('php_sites', site.id) }}" class="btn btn--primary btn--sm" title="Manage Website">
+                {{ _('manage') }}
+              </a>
+              <a href="http{{ 's' if site.ssl and site.ssl.active else '' }}://{{ site.domain }}/" target="_blank" rel="noopener" class="btn btn--secondary btn--sm" title="Visit Site">
+                {{ _('view_site') }} ↗
+              </a>
+              <a href="{{ path('php_sites', site.id) }}" class="btn btn--danger btn--sm" title="Delete Website">
+                {{ _('delete') }}
+              </a>
+            {% endcall %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+{% else %}
+
+  <div class="empty-state-strict" id="empty-state">
+    <div class="empty-state-shapes">
+      <div class="shape-2"></div>
+      <div class="shape-1"></div>
+      <div class="shape-3"></div>
+    </div>
+    <h3 class="empty-state-strict__title">{{ _('no_php_websites') }}</h3>
+    <p class="empty-state-strict__desc">{{ _('choose_php_or_wordpress_desc') }}</p>
+    <a href="{{ path('php_sites_create') }}" class="btn btn--primary" style="padding: 0 24px; height: 42px; font-weight: 600; display: inline-flex; align-items: center;">+ {{ _('create_php_site') }}</a>
+  </div>
+
+{% endif %}
+
+</div><!-- /.php-sites-page -->
 {% endblock %}
 
 {% block scripts %}
-<script type="module" src="/static/js/modules/php-sites-list.js?v={{ APP_VERSION }}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  if (typeof hideSkeleton === 'function') hideSkeleton('php-sites-skeleton');
+  else if (typeof window.hideSkeleton === 'function') window.hideSkeleton('php-sites-skeleton');
+});
+
+function filterPhpSitesTable() {
+  const query = (document.getElementById('php-search-input')?.value || '').toLowerCase().trim();
+  const filter = document.getElementById('php-status-filter')?.value || 'all';
+  const rows = document.querySelectorAll('.php-site-row-item');
+
+  rows.forEach(row => {
+    const text = row.textContent.toLowerCase();
+    const matchesSearch = !query || text.includes(query);
+    const preset = row.dataset.preset;
+    const status = row.dataset.status;
+
+    let matchesFilter = true;
+    if (filter === 'wordpress') {
+      matchesFilter = preset === 'wordpress';
+    } else if (filter === 'php') {
+      matchesFilter = preset === 'php';
+    } else if (filter === 'active') {
+      matchesFilter = ['active', 'ready', 'succeeded'].includes(status);
+    }
+
+    row.style.display = (matchesSearch && matchesFilter) ? '' : 'none';
+  });
+}
+</script>
 {% endblock %}
