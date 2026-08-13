@@ -105,7 +105,7 @@ class PHPWebsitesSchemaTests(unittest.TestCase):
             ControlRequest(action="invalid_action")
 
 
-class PHPWebsitesServiceTests(unittest.TestCase):
+class PHPWebsitesServiceTests(unittest.IsolatedAsyncioTestCase):
     """Test business logic and dependency checks for PHP Websites."""
 
     @patch("dependencies.dependency_manager.get_status")
@@ -132,6 +132,20 @@ class PHPWebsitesServiceTests(unittest.TestCase):
             require_mariadb()
         self.assertEqual(409, ctx.exception.status_code)
         self.assertIn("panel-managed local MariaDB", str(ctx.exception.detail))
+
+    @patch("services.php_site_service.selectable_versions", return_value=[{"version": "8.3"}])
+    @patch("dependencies.dependency_manager.get_status", return_value={"healthy": True, "install_origin": "panel_managed"})
+    async def test_service_options_returns_dict(self, mock_get_status, mock_vers):
+        from services.php_site_service import options
+        db = AsyncMock()
+        mock_scalars = Mock()
+        mock_scalars.all.return_value = []
+        db.scalars.return_value = mock_scalars
+        res = await options(db)
+        self.assertIn("domains", res)
+        self.assertIn("php_versions", res)
+        self.assertIn("wordpress", res)
+        self.assertIn("mariadb", res)
 
 
 class PHPWebsitesAPIRoutesTests(unittest.TestCase):
