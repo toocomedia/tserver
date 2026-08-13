@@ -286,16 +286,39 @@ input[type="checkbox"]:checked, input[type="radio"]:checked {
     font-size: 13.5px;
   }
   .clean-form {
-    padding-bottom: 90px;
+    padding-bottom: 80px;
   }
   .fixed-action-bar {
     left: 0 !important;
-    height: 64px;
+    height: 60px;
+  }
+  .fixed-action-bar__inner {
+    padding: 0 var(--page-gutter);
+    gap: 8px;
   }
   .wizard-steps {
-    flex-wrap: wrap;
+    display: flex;
+    align-items: center;
     gap: 6px;
-    font-size: 12px;
+    overflow-x: auto;
+    width: 100%;
+    padding-bottom: 4px;
+    margin-bottom: 16px;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .wizard-steps::-webkit-scrollbar {
+    display: none;
+  }
+  .wizard-steps .step-item {
+    padding: 4px 8px;
+    font-size: 11px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .wizard-steps .step-divider {
+    display: none;
   }
   .settings-subdomain-row {
     flex-direction: column;
@@ -317,6 +340,11 @@ input[type="checkbox"]:checked, input[type="radio"]:checked {
   .settings-choice-grid {
     grid-template-columns: 1fr;
   }
+  .wizard-steps .step-item {
+    font-size: 10.5px;
+    padding: 3px 6px;
+  }
 }
+
 
 
