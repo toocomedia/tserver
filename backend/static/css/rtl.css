@@ -6,7 +6,7 @@
 html[dir="rtl"] {
   direction: rtl;
   text-align: right;
-  font-family: 'Cairo', 'Tajawal', 'IBM Plex Sans Arabic', 'Onest', system-ui, -apple-system, sans-serif;
+  font-family: 'Janna LT', 'Onest', system-ui, -apple-system, sans-serif;
 }
 
 /* --------------------------------------------------------------------------
@@ -29,7 +29,7 @@ html[dir="rtl"] select,
 html[dir="rtl"] textarea,
 html[dir="rtl"] span,
 html[dir="rtl"] a {
-  font-family: 'Cairo', 'Tajawal', 'IBM Plex Sans Arabic', 'Onest', system-ui, -apple-system, sans-serif;
+  font-family: 'Janna LT', 'Onest', system-ui, -apple-system, sans-serif;
   text-align: right;
 }
 
