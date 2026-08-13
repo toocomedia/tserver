@@ -20,43 +20,45 @@ let pendingDestructiveAction;
 function setError(message) { error.textContent = message || ""; error.hidden = !message; }
 function badge(value) { return `<span class="status-badge status-badge--${statusTone(value)}">${esc(value || "—")}</span>`; }
 function can(action) { return Boolean(site.available_actions?.[action]); }
-function button(action, label, tone = "secondary", extra = "") { return `<button class="btn btn--${tone} btn--sm" type="button" data-action="${action}" ${extra}>${esc(label)}</button>`; }
-function row(label, value) { return `<div class="php-detail__row"><span class="php-detail__label">${esc(label)}</span><span class="php-detail__value">${value}</span></div>`; }
+function button(action, label, tone = "secondary", extra = "") { return `<button id="php-site-action-${action}" class="btn btn--${tone} btn--sm" type="button" data-action="${action}" ${extra}>${esc(label)}</button>`; }
+function row(label, value) { return `<div class="info-row-strict"><div class="info-row-strict__label">${esc(label)}</div><div class="info-row-strict__val">${value}</div></div>`; }
+function section(title, body, extra = "") { return `<section class="info-section php-detail__section ${extra}"><div class="info-section-header"><h3>${esc(title)}</h3></div><div class="php-detail__section-body">${body}</div></section>`; }
 
 function healthSection() {
   const health = site.health || {};
   const http = health.http?.status_code ? `${health.http.status_code}` : t("not_checked");
   const errors = (health.errors || []).map((item) => `<div class="form-error">${esc(item)}</div>`).join("");
-  return `<section class="php-detail__section"><h2>${t("health")}</h2><div class="php-detail__rows">${row(t("overall"), badge(health.state || site.status))}${row(t("php_fpm_socket"), badge(health.socket_healthy ? "active" : "inactive"))}${row(t("nginx"), badge(health.nginx_active ? "active" : "inactive"))}${row(t("local_http"), esc(http))}${site.database ? row(t("mariadb"), badge(health.mariadb_healthy ? "active" : "inactive")) : ""}</div>${errors ? `<div class="php-detail__alert">${errors}</div>` : ""}</section>`;
+  return section(t("health"), `${row(t("overall"), badge(health.state || site.status))}${row(t("php_fpm_socket"), badge(health.socket_healthy ? "active" : "inactive"))}${row(t("nginx"), badge(health.nginx_active ? "active" : "inactive"))}${row(t("local_http"), esc(http))}${site.database ? row(t("mariadb"), badge(health.mariadb_healthy ? "active" : "inactive")) : ""}${errors ? `<div class="alert alert--danger php-detail__section-alert">${errors}</div>` : ""}`);
 }
 
 function runtimeSection() {
   const versions = (options?.php_versions || []).map((item) => `<option value="${esc(item.version)}" ${item.version === site.php_version ? "selected" : ""}>${esc(item.version)}</option>`).join("");
-  return `<section class="php-detail__section"><h2>${t("runtime_settings")}</h2><div class="php-detail__rows">${row(t("php_version"), `<div class="php-detail__inline"><select class="form-select" data-runtime-version>${versions}</select>${can("change_php_version") ? button("runtime-submit", t("change"), "secondary") : ""}</div>`)}${row(t("document_root"), `<div class="php-detail__inline"><input class="form-input" data-document-root value="${esc(site.document_root)}" pattern="[A-Za-z0-9][A-Za-z0-9._/-]*">${can("change_document_root") ? button("root-submit", t("change"), "secondary") : ""}</div>`)}</div></section>`;
+  const versionControl = options ? `<select id="php-site-runtime-version" class="form-select" data-runtime-version>${versions}</select>` : `<select id="php-site-runtime-version" class="form-select" data-runtime-version disabled><option>${t("loading")}</option></select>`;
+  return section(t("runtime_settings"), `${row(t("php_version"), `<div class="php-detail__inline">${versionControl}${can("change_php_version") ? button("runtime-submit", t("change"), "secondary") : ""}</div>`)}${row(t("document_root"), `<div class="php-detail__inline"><input id="php-site-document-root" class="form-input" data-document-root value="${esc(site.document_root)}" pattern="[A-Za-z0-9][A-Za-z0-9._/-]*">${can("change_document_root") ? button("root-submit", t("change"), "secondary") : ""}</div>`)}`);
 }
 
 function databaseSection() {
-  if (!site.database) return `<section class="php-detail__section"><h2>${t("database")}</h2><p class="form-hint">${t("no_database_attached")}</p>${can("create_database") ? `<label class="form-check"><input type="checkbox" data-db-install><span>${t("install_missing_extensions")}</span></label>${button("db-create", t("create_database"), "primary")}` : ""}</section>`;
+  if (!site.database) return section(t("database"), `<p class="form-hint">${t("no_database_attached")}</p>${can("create_database") ? `<div class="form-actions"><label class="form-check"><input id="php-site-db-install" type="checkbox" data-db-install><span>${t("install_missing_extensions")}</span></label>${button("db-create", t("create_database"), "primary")}</div>` : ""}`);
   const db = site.database;
-  return `<section class="php-detail__section"><h2>${t("database")}</h2><div class="php-detail__rows">${row(t("database_name"), esc(db.database))}${row(t("database_user"), esc(db.username))}${row(t("host"), `${esc(db.host)}:${esc(db.port)}`)}${row(t("status"), badge(db.status))}</div><div class="php-detail__controls">${button("db-reveal", t("reveal_credentials"))}${button("db-rotate", t("rotate_password"))}${can("delete_database") ? button("db-delete", t("delete_database"), "danger") : ""}</div><div class="php-detail__credentials" data-credentials hidden></div></section>`;
+  return section(t("database"), `${row(t("database_name"), esc(db.database))}${row(t("database_user"), esc(db.username))}${row(t("host"), `${esc(db.host)}:${esc(db.port)}`)}${row(t("status"), badge(db.status))}<div class="form-actions php-detail__controls">${button("db-reveal", t("reveal_credentials"))}${button("db-rotate", t("rotate_password"))}${can("delete_database") ? button("db-delete", t("delete_database"), "danger") : ""}</div><div class="php-detail__credentials" data-credentials hidden></div>`);
 }
 
 function sslSection() {
   const ssl = site.ssl || {};
   const controls = can("issue_ssl") ? `${button("ssl-issue", t("issue_ssl"), "primary")}` : `${can("renew_ssl") ? button("ssl-renew", t("renew")) : ""}${can("revoke_ssl") ? button("ssl-revoke", t("revoke"), "danger") : ""}`;
-  return `<section class="php-detail__section"><h2>${t("ssl")}</h2><div class="php-detail__rows">${row(t("status"), badge(ssl.active ? "active" : "inactive"))}${row(t("expires"), esc(ssl.expiry_date || t("not_available")))}</div><label class="form-check php-detail__ssl-www"><input type="checkbox" data-ssl-www ${ssl.include_www ? "checked" : ""}><span>${t("include_www")}</span></label><div class="php-detail__controls">${controls}</div></section>`;
+  return section(t("ssl"), `${row(t("status"), badge(ssl.active ? "active" : "inactive"))}${row(t("expires"), esc(ssl.expiry_date || t("not_available")))}<div class="form-actions php-detail__controls"><label class="form-check"><input id="php-site-ssl-www" type="checkbox" data-ssl-www ${ssl.include_www ? "checked" : ""}><span>${t("include_www")}</span></label>${controls}</div>`);
 }
 
 function wordpressSection() {
   if (site.preset !== "wordpress") return "";
   const wp = site.wordpress || {};
-  return `<section class="php-detail__section"><h2>${t("wordpress_settings")}</h2><div class="php-detail__rows">${row(t("site_title"), esc(wp.site_title))}${row(t("admin_user"), esc(wp.admin_user))}${row(t("admin_email"), esc(wp.admin_email))}${row(t("status"), badge(wp.installed ? "active" : "failed"))}</div>${can("wordpress_retry") ? `<div class="php-detail__controls"><input class="form-input" data-wp-password type="password" minlength="12" placeholder="${t("new_admin_password")}" autocomplete="new-password"><label class="form-check"><input type="checkbox" data-wp-install><span>${t("install_missing_extensions")}</span></label>${button("wp-retry", t("retry"), "primary")}</div>` : ""}</section>`;
+  return section(t("wordpress_settings"), `${row(t("site_title"), esc(wp.site_title))}${row(t("admin_user"), esc(wp.admin_user))}${row(t("admin_email"), esc(wp.admin_email))}${row(t("status"), badge(wp.installed ? "active" : "failed"))}${can("wordpress_retry") ? `<div class="form-actions php-detail__controls"><div class="form-group php-detail__password"><label class="form-label" for="php-site-wp-password">${t("new_admin_password")}</label><input id="php-site-wp-password" class="form-input" data-wp-password type="password" minlength="12" autocomplete="new-password"></div><label class="form-check"><input id="php-site-wp-install" type="checkbox" data-wp-install><span>${t("install_missing_extensions")}</span></label>${button("wp-retry", t("retry"), "primary")}</div>` : ""}`);
 }
 
 function render() {
   let actionButtons = can("enable") ? button("control", t("enable"), "primary", 'data-value="enable"') : can("disable") ? button("control", t("disable"), "secondary", 'data-value="disable"') : "";
   if (can("repair")) actionButtons += button("repair", t("repair"), "primary");
-  content.innerHTML = `<div class="php-detail__hero"><div class="php-detail__identity"><h1 class="php-detail__title">${esc(site.domain)} ${badge(site.status)}</h1><div class="php-detail__meta"><span>${esc(site.preset === "wordpress" ? t("wordpress") : t("plain_php"))}</span><span>PHP ${esc(site.php_version)}</span><span>${t("document_root")}: ${esc(site.document_root)}</span></div></div><div class="php-detail__actions">${actionButtons}</div></div>${site.last_error ? `<div class="alert alert--danger">${esc(site.last_error)}</div>` : ""}${site.last_warning ? `<div class="alert alert--warning">${esc(site.last_warning)}</div>` : ""}${site.operation ? `<div class="php-operation" data-operation-status><div class="php-operation__status">${esc(site.operation.stage)} · ${esc(site.operation.status)}</div><div class="php-operation__message">${esc(site.operation.message)}</div></div>` : ""}<div class="php-detail__grid">${healthSection()}${runtimeSection()}${databaseSection()}${sslSection()}${wordpressSection()}<section class="php-detail__section php-detail__section--wide php-detail__danger"><h2>${t("danger_zone")}</h2><p class="form-hint">${t("delete_php_site_desc")}</p>${can("delete_site") ? button("delete-site", t("delete_website"), "danger") : ""}</section></div>`;
+  content.innerHTML = `<div class="info-hero-row php-detail__hero"><div class="info-hero-row__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 5h16v14H4z"></path><path d="M8 9h8M8 13h5"></path></svg></div><div class="info-hero-row__main"><div class="info-hero-row__title-line"><h2 class="info-hero-row__title">${esc(site.domain)} ${badge(site.status)}</h2></div><div class="info-hero-row__meta"><span>${esc(site.preset === "wordpress" ? t("wordpress") : t("plain_php"))}</span><span>PHP ${esc(site.php_version)}</span><span>${t("document_root")}: ${esc(site.document_root)}</span></div></div><div class="info-hero-row__actions">${actionButtons}</div></div>${site.last_error ? `<div class="alert alert--danger">${esc(site.last_error)}</div>` : ""}${site.last_warning ? `<div class="alert alert--warning">${esc(site.last_warning)}</div>` : ""}${site.operation ? `<div class="php-operation" data-operation-status><div class="php-operation__status">${esc(site.operation.stage)} · ${esc(site.operation.status)}</div><div class="php-operation__message">${esc(site.operation.message)}</div></div>` : ""}<div class="php-detail__grid">${healthSection()}${runtimeSection()}${databaseSection()}${sslSection()}${wordpressSection()}${section(t("danger_zone"), `<p class="form-hint">${t("delete_php_site_desc")}</p>${can("delete_site") ? button("delete-site", t("delete_website"), "danger") : ""}`, "php-detail__section--wide php-detail__danger")}</div>`;
 }
 
 function closeDeleteModal() {
@@ -142,8 +144,27 @@ async function submitDestructiveAction() {
 }
 
 async function load() {
-  loading.hidden = false;
-  try { [site, options] = await Promise.all([request(`/sites/${encodeURIComponent(siteId)}`), request("/options")]); render(); content.hidden = false; loading.hidden = true; if (site.operation && ["queued", "running"].includes(site.operation.status)) { await complete({ status_url: `/api/php-sites/operations/${site.operation.id}` }); await load(); } } catch (err) { loading.hidden = true; setError(err.message); }
+  const firstLoad = !site;
+  if (firstLoad) loading.hidden = false;
+  try {
+    site = await request(`/sites/${encodeURIComponent(siteId)}`);
+    render();
+    content.hidden = false;
+    loading.hidden = true;
+    if (window.hideSkeleton) window.hideSkeleton("php-site-detail-skeleton", 0);
+    if (site.operation && ["queued", "running"].includes(site.operation.status)) {
+      await complete({ status_url: `/api/php-sites/operations/${site.operation.id}` });
+      return load();
+    }
+    if (!options) {
+      try { options = await request("/options"); render(); }
+      catch (err) { setError(err.message); }
+    }
+  } catch (err) {
+    loading.hidden = true;
+    if (window.hideSkeleton) window.hideSkeleton("php-site-detail-skeleton", 0);
+    setError(err.message);
+  }
 }
 
 root?.addEventListener("click", async (event) => {

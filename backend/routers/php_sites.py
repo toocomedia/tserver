@@ -43,13 +43,14 @@ def _php_page_redirect() -> RedirectResponse | None:
 
 
 @page_router.get("/", response_class=HTMLResponse, include_in_schema=False)
-async def page_index(request: Request):
+async def page_index(request: Request, db: AsyncSession = Depends(get_db)):
     redirect = _php_page_redirect()
     if redirect:
         return redirect
     return templates.TemplateResponse("pages/php_sites/index.html", {
         "request": request,
         "active_page": "php_sites",
+        "sites": await service.list_sites(db),
     })
 
 

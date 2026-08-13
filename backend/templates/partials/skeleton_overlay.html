@@ -63,10 +63,19 @@
   {% for _table in tables %}
   <div class="skeleton-table-wrap">
     <div class="skeleton-table-header">
+      {% if _table.cols %}
+      {% for _width in _table.cols %}<div class="sk-th sk-w-{{ _width }}"></div>{% endfor %}
+      {% else %}
       <div class="sk-th" style="width:120px;"></div>
       <div class="sk-th" style="width:60px;"></div>
+      {% endif %}
     </div>
     {% for _ in range(_table.rows or rows) %}
+    {% if _table.cols %}
+    <div class="skeleton-table-row">
+      {% for _width in _table.cols %}<div class="sk-cell sk-w-{{ _width }}"></div>{% endfor %}
+    </div>
+    {% else %}
     <div class="skeleton-table-row">
       <div class="sk-col-main">
         <div class="sk-title"></div>
@@ -74,6 +83,7 @@
       <div class="sk-col-status"></div>
       <div class="sk-col-action"></div>
     </div>
+    {% endif %}
     {% endfor %}
   </div>
   {% endfor %}

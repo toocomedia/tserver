@@ -12,8 +12,10 @@
 {% endblock %}
 
 {% block content %}
+{% from "partials/skeleton_overlay.html" import skeleton_overlay %}
 <section class="php-sites-page php-detail" data-php-site-detail data-site-id="{{ site_id }}" aria-live="polite">
-  <div class="php-detail__loading" data-detail-loading>{{ _('loading') }}</div>
+  {{ skeleton_overlay('php-site-detail-skeleton', header=0, sections=[5, 4]) }}
+  <div class="php-detail__loading" data-detail-loading hidden>{{ _('loading') }}</div>
   <div class="alert alert--danger" data-detail-error hidden role="alert"></div>
   <div data-detail-content hidden></div>
 
