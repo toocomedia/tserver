@@ -13,8 +13,8 @@
 {% endblock %}
 
 {% block content %}
-<div class="php-sites-page" id="php-create-container" data-php-site-create style="max-width: 760px; margin: 0 auto; width: 100%;">
-  <div class="form-header" style="text-align: center; margin: 16px 0 24px 0;">
+<div id="create-php-site-panel" data-php-site-create style="max-width: 800px; margin: 0 auto; width: 100%;">
+  <div class="form-header" style="text-align: center; margin: 24px 0 36px 0;">
     {{ wizard.render_steps([
       {'id': 'nav-step-1', 'onclick': 'goToStep(1)', 'label': _('website_type')},
       {'id': 'nav-step-2', 'onclick': 'goToStep(2)', 'label': _('runtime_settings')},
@@ -22,35 +22,16 @@
     ]) }}
   </div>
 
-  <div class="alert alert--danger mb-md" id="create-error" data-create-error hidden role="alert"></div>
-  <div class="alert alert--warning mb-md" id="create-warning" data-create-warning hidden role="status"></div>
+  <div class="alert alert--danger mb-lg" id="create-error" data-create-error hidden role="alert"></div>
+  <div class="alert alert--warning mb-lg" id="create-warning" data-create-warning hidden role="status"></div>
 
   <form class="clean-form" id="php-create-form" data-create-form novalidate>
-    <!-- STEP 1: WEBSITE TYPE & DOMAIN -->
-    <div id="step-panel-1" data-step-panel="1" class="php-form-step">
-      <div class="form-group-horizontal php-form-row">
+    <!-- STEP 1: HOSTNAME & WEBSITE TYPE -->
+    <div id="step-panel-1" data-step-panel="1" style="display:flex; flex-direction:column;">
+      <div class="form-group-horizontal">
         <div class="form-label-wrap">
-          <label class="form-label">{{ _('website_type') }}</label>
-        </div>
-        <div class="settings-choice-grid php-choice-grid">
-          <label class="settings-choice settings-choice--active" id="choice-preset-php">
-            <div class="settings-choice__header">
-              <input type="radio" name="preset" value="php" checked>
-              <span class="settings-choice__title">{{ _('plain_php') }}</span>
-            </div>
-          </label>
-          <label class="settings-choice" id="choice-preset-wordpress">
-            <div class="settings-choice__header">
-              <input type="radio" name="preset" value="wordpress">
-              <span class="settings-choice__title">{{ _('wordpress') }}</span>
-            </div>
-          </label>
-        </div>
-      </div>
-
-      <div class="form-group-horizontal php-form-row">
-        <div class="form-label-wrap">
-          <label class="form-label" for="php-site-domain">{{ _('domain') }}</label>
+          <label class="form-label" for="php-site-domain">{{ _('target_hostname_1') }}</label>
+          <span class="form-hint">{{ _('only_unused_domains_available') }}</span>
         </div>
         <div class="form-select-wrap">
           <select class="form-select clean-input" id="php-site-domain" name="domain_id" required disabled>
@@ -58,13 +39,37 @@
           </select>
         </div>
       </div>
+
+      <div class="form-group-horizontal" style="border-bottom:none; margin-bottom:0; padding-bottom:0;">
+        <div class="form-label-wrap">
+          <label class="form-label">{{ _('website_type') }}</label>
+          <span class="form-hint">{{ _('choose_php_or_wordpress_desc') }}</span>
+        </div>
+        <div class="settings-choice-grid php-choice-grid">
+          <label class="settings-choice settings-choice--active opt-item" id="choice-preset-php">
+            <div class="settings-choice__header">
+              <input type="radio" name="preset" value="php" checked>
+              <span class="settings-choice__title">{{ _('plain_php') }}</span>
+            </div>
+            <span class="settings-choice__desc">{{ _('plain_php_desc') }}</span>
+          </label>
+          <label class="settings-choice opt-item" id="choice-preset-wordpress">
+            <div class="settings-choice__header">
+              <input type="radio" name="preset" value="wordpress">
+              <span class="settings-choice__title">{{ _('wordpress') }}</span>
+            </div>
+            <span class="settings-choice__desc">{{ _('wordpress_desc') }}</span>
+          </label>
+        </div>
+      </div>
     </div>
 
     <!-- STEP 2: RUNTIME & APPLICATION SETTINGS -->
-    <div id="step-panel-2" data-step-panel="2" class="php-form-step" style="display:none;">
-      <div class="form-group-horizontal php-form-row">
+    <div id="step-panel-2" data-step-panel="2" style="display:none; flex-direction:column;">
+      <div class="form-group-horizontal">
         <div class="form-label-wrap">
           <label class="form-label" for="php-site-version">{{ _('php_version') }}</label>
+          <span class="form-hint">{{ _('only_healthy_managed_php') }}</span>
         </div>
         <div class="form-select-wrap">
           <select class="form-select clean-input" id="php-site-version" name="php_version" required disabled>
@@ -73,67 +78,102 @@
         </div>
       </div>
 
-      <div class="form-group-horizontal php-form-row">
+      <div class="form-group-horizontal">
         <div class="form-label-wrap">
           <label class="form-label" for="php-site-root">{{ _('document_root') }}</label>
+          <span class="form-hint">{{ _('relative_document_root_desc') }}</span>
         </div>
         <div>
-          <input class="form-input clean-input" id="php-site-root" name="document_root" value="public" required pattern="[A-Za-z0-9][A-Za-z0-9._\-/]*" autocomplete="off" spellcheck="false" placeholder="public">
+          <input class="form-input clean-input" id="php-site-root" name="document_root" value="public" required pattern="[A-Za-z0-9][A-Za-z0-9._\-/]*" autocomplete="off" spellcheck="false">
         </div>
       </div>
 
-      <div class="form-group-horizontal php-form-row">
+      <div class="form-group-horizontal" id="plain-db-option-row">
         <div class="form-label-wrap">
-          <label class="form-label">{{ _('features') if _('features') != 'features' else 'Options' }}</label>
+          <label class="form-label">{{ _('database') }}</label>
+          <span class="form-hint">{{ _('plain_php_database_desc') }}</span>
         </div>
-        <div class="php-options-grid">
-          <label class="form-check" id="plain-db-option-row"><input type="checkbox" id="php-site-database" name="create_database"><span><strong>{{ _('create_database') }}</strong></span></label>
+        <div>
+          <label class="form-check"><input type="checkbox" id="php-site-database" name="create_database"><span><strong>{{ _('create_database') }}</strong></span></label>
+        </div>
+      </div>
+
+      <div class="form-group-horizontal">
+        <div class="form-label-wrap">
+          <label class="form-label">{{ _('ssl_certificate_security') }}</label>
+          <span class="form-hint">{{ _('ssl_issue_after_creation') }}</span>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:12px;">
           <label class="form-check"><input type="checkbox" id="php-site-ssl" name="ssl" checked><span><strong>{{ _('enable_ssl') }}</strong></span></label>
           <label class="form-check"><input type="checkbox" id="php-site-www" name="include_www"><span><strong>{{ _('include_www') }}</strong></span></label>
-          <label class="form-check" data-install-extensions hidden><input type="checkbox" id="php-site-install-extensions" name="install_missing_extensions" checked><span><strong>{{ _('install_missing_extensions') }}</strong></span></label>
+        </div>
+      </div>
+
+      <div class="form-group-horizontal" data-install-extensions hidden>
+        <div class="form-label-wrap">
+          <label class="form-label">{{ _('missing_packages') }}</label>
+          <span class="form-hint" data-extension-hint></span>
+        </div>
+        <div>
+          <label class="form-check"><input type="checkbox" id="php-site-install-extensions" name="install_missing_extensions" checked><span><strong>{{ _('install_missing_extensions') }}</strong></span></label>
         </div>
       </div>
 
       <!-- WORDPRESS SPECIFIC FIELDS -->
-      <div id="wordpress-fields" data-wordpress-fields style="display:none;" class="php-wp-grid">
-        <div class="form-group">
-          <label class="form-label" for="wp-site-title">{{ _('site_title') }}</label>
-          <input class="form-input clean-input" id="wp-site-title" name="wp_site_title" placeholder="My WordPress Site">
+      <div id="wordpress-fields" data-wordpress-fields style="display:none; flex-direction:column;">
+        <div class="form-group-horizontal">
+          <div class="form-label-wrap">
+            <label class="form-label" for="wp-site-title">{{ _('site_title') }}</label>
+          </div>
+          <div><input class="form-input clean-input" id="wp-site-title" name="wp_site_title" placeholder="My WordPress Site"></div>
         </div>
-        <div class="form-group">
-          <label class="form-label" for="wp-admin-user">{{ _('admin_user') }}</label>
-          <input class="form-input clean-input" id="wp-admin-user" name="wp_admin_user" placeholder="siteadmin" autocomplete="off">
+        <div class="form-group-horizontal">
+          <div class="form-label-wrap">
+            <label class="form-label" for="wp-admin-user">{{ _('admin_user') }}</label>
+          </div>
+          <div><input class="form-input clean-input" id="wp-admin-user" name="wp_admin_user" placeholder="siteadmin" autocomplete="off"></div>
         </div>
-        <div class="form-group php-grid-full">
-          <label class="form-label" for="wp-admin-email">{{ _('admin_email') }}</label>
-          <input class="form-input clean-input" id="wp-admin-email" name="wp_admin_email" type="email" placeholder="admin@example.com">
+        <div class="form-group-horizontal">
+          <div class="form-label-wrap">
+            <label class="form-label" for="wp-admin-email">{{ _('admin_email') }}</label>
+          </div>
+          <div><input class="form-input clean-input" id="wp-admin-email" name="wp_admin_email" type="email" placeholder="admin@example.com"></div>
         </div>
-        <div class="form-group">
-          <label class="form-label" for="wp-admin-password">{{ _('admin_password') }}</label>
-          <input class="form-input clean-input" id="wp-admin-password" name="wp_admin_password" type="password" minlength="12" autocomplete="new-password" placeholder="Min 12 chars">
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="wp-admin-password-confirm">{{ _('confirm_admin_password') }}</label>
-          <input class="form-input clean-input" id="wp-admin-password-confirm" name="wp_admin_password_confirm" type="password" minlength="12" autocomplete="new-password" placeholder="Repeat password">
-          <div class="form-error mt-xs text-danger" id="wp-password-error" style="display:none; font-weight:600; font-size:12px;"></div>
+        <div class="form-group-horizontal" style="border-bottom:none; margin-bottom:0; padding-bottom:0;">
+          <div class="form-label-wrap">
+            <label class="form-label" for="wp-admin-password">{{ _('admin_password') }}</label>
+            <span class="form-hint">{{ _('password_min_length') }}</span>
+          </div>
+          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px;">
+            <div>
+              <input class="form-input clean-input" id="wp-admin-password" name="wp_admin_password" type="password" minlength="12" autocomplete="new-password" placeholder="{{ _('admin_password') }}">
+            </div>
+            <div>
+              <input class="form-input clean-input" id="wp-admin-password-confirm" name="wp_admin_password_confirm" type="password" minlength="12" autocomplete="new-password" placeholder="{{ _('confirm_admin_password') }}">
+              <div class="form-error mt-xs text-danger" id="wp-password-error" style="display:none; font-weight:600; font-size:12px;"></div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
 
     <!-- STEP 3: REVIEW & DEPLOY -->
-    <div id="step-panel-3" data-step-panel="3" class="php-form-step" style="display:none;">
+    <div id="step-panel-3" data-step-panel="3" style="display:none; flex-direction:column;">
+      <div style="margin-bottom: 32px; border-bottom: 1px solid var(--color-line); padding-bottom: 16px;">
+        <h3 style="margin:0; font-size: 18px;">{{ _('review') }}</h3>
+      </div>
       <div class="php-review" data-review></div>
-      <div class="php-operation mt-md" data-create-operation hidden aria-live="polite"></div>
+      <div class="php-operation mt-lg" data-create-operation hidden aria-live="polite"></div>
     </div>
 
     <!-- FIXED ACTION BAR -->
     {% call wizard.action_bar() %}
       <div>
-        <button type="button" class="btn btn--secondary" id="btn-back-step" data-create-back style="display:none; height:40px; padding:0 20px;">{{ _('back') }}</button>
+        <button type="button" class="btn btn--secondary" id="btn-back-step" data-create-back style="display:none; height:42px; padding:0 24px;">{{ _('back') }}</button>
       </div>
-      <div style="display: flex; gap: 10px;">
-        <button type="button" class="btn btn--primary" id="btn-next-step" data-create-next style="height:40px; padding:0 20px;">{{ _('next') }}</button>
-        <button type="submit" class="btn btn--primary" id="btn-submit-step" data-create-submit style="display:none; height:40px; padding:0 20px;">{{ _('create_php_site') }}</button>
+      <div style="display: flex; gap: 12px;">
+        <button type="button" class="btn btn--primary" id="btn-next-step" data-create-next style="height:42px; padding:0 24px;">{{ _('next') }}</button>
+        <button type="submit" class="btn btn--primary" id="btn-submit-step" data-create-submit style="display:none; height:42px; padding:0 24px;">{{ _('create_php_site') }}</button>
       </div>
     {% endcall %}
   </form>

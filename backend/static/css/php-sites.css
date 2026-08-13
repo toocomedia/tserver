@@ -7,14 +7,6 @@
 .php-sites-page .table .col-actions { width: var(--button-min-width); }
 .php-sites-table__domain { width: 32%; }
 
-/* Clean Form Wizard */
-.php-form-step { display: flex; flex-direction: column; gap: var(--space-md); }
-.php-form-row { margin-bottom: 0; padding-bottom: var(--space-md); border-bottom: 1px solid var(--color-line); }
-.php-form-row:last-child { border-bottom: none; }
-.php-options-grid { display: flex; flex-wrap: wrap; gap: var(--space-md) var(--space-xl); align-items: center; }
-.php-wp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-md); margin-top: var(--space-xs); padding-top: var(--space-md); border-top: 1px solid var(--color-line); }
-.php-grid-full { grid-column: 1 / -1; }
-
 /* Operation feedback box */
 .php-operation {
   padding: var(--space-md) var(--space-lg);
@@ -105,7 +97,6 @@
 }
 
 @media (max-width: 768px) {
-  .php-wp-grid { grid-template-columns: 1fr; }
   .php-detail__logs-header { flex-direction: column; align-items: flex-start; }
   .php-detail__logs-controls { width: 100%; justify-content: space-between; }
   .php-detail__section .info-row-strict { grid-template-columns: 1fr; gap: var(--space-xs); }

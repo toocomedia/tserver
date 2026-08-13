@@ -88,7 +88,12 @@ def require_mariadb() -> dict[str, Any]:
     return status
 
 
+_ext_cache: dict[str, Any] = {}
+_ext_cache_at: float = 0.0
+
+
 async def options(db: AsyncSession) -> dict[str, Any]:
+    global _ext_cache, _ext_cache_at
     used = set((await db.scalars(select(ContainerApp.domain_id))).all())
     used.update((await db.scalars(select(HostedApp.domain_id))).all())
     used.update((await db.scalars(select(PhpWebsite.domain_id))).all())
@@ -96,22 +101,28 @@ async def options(db: AsyncSession) -> dict[str, Any]:
         Domain.project_type.in_(("static", "dns")),
     ).order_by(Domain.name))).all())
     certs = set((await db.scalars(select(SslCert.full_domain))).all())
-    versions = await asyncio.to_thread(selectable_versions, force=True)
+    versions = await asyncio.to_thread(selectable_versions, force=False)
+    now = time.monotonic()
+    if not _ext_cache or (now - _ext_cache_at > 60.0):
+        wp_vers: dict[str, Any] = {}
+        db_exts: dict[str, Any] = {}
+        for item in versions:
+            version = str(item["version"])
+            try:
+                wp_vers[version] = await asyncio.to_thread(runtime.wordpress_extension_status, version)
+            except RuntimeError as exc:
+                wp_vers[version] = {"ready": False, "missing_packages": [], "error": str(exc)}
+            try:
+                db_exts[version] = await asyncio.to_thread(runtime.database_extension_status, version)
+            except RuntimeError as exc:
+                db_exts[version] = {"ready": False, "missing_packages": [], "error": str(exc)}
+        _ext_cache = {"wordpress_versions": wp_vers, "database_extensions": db_exts}
+        _ext_cache_at = now
+
     wordpress: dict[str, Any] = {
         "wp_cli_available": os.name != "nt" and Path("/usr/local/bin/wp").is_file(),
-        "versions": {},
+        "versions": _ext_cache.get("wordpress_versions", {}),
     }
-    database_extensions: dict[str, Any] = {}
-    for item in versions:
-        version = str(item["version"])
-        try:
-            wordpress["versions"][version] = await asyncio.to_thread(runtime.wordpress_extension_status, version)
-        except RuntimeError as exc:
-            wordpress["versions"][version] = {"ready": False, "missing_packages": [], "error": str(exc)}
-        try:
-            database_extensions[version] = await asyncio.to_thread(runtime.database_extension_status, version)
-        except RuntimeError as exc:
-            database_extensions[version] = {"ready": False, "missing_packages": [], "error": str(exc)}
     mariadb = dependency_manager.get_status("mariadb", cached=True) or {}
     return {
         "domains": [
@@ -130,7 +141,7 @@ async def options(db: AsyncSession) -> dict[str, Any]:
             "panel_managed": mariadb.get("install_origin") == "panel_managed",
         },
         "wordpress": wordpress,
-        "database_extensions": database_extensions,
+        "database_extensions": _ext_cache.get("database_extensions", {}),
     }
 
 
