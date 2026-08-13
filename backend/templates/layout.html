@@ -13,7 +13,7 @@
 
   <!-- Preload Fonts -->
   <link rel="preload" href="/static/fonts/Onest-Variable.woff2" as="font" type="font/woff2" crossorigin>
-  {% if is_rtl(request) or get_dir() == 'rtl' %}
+  {% if is_rtl() %}
   <link rel="preload" href="/static/fonts/arabictooco-vf.woff2" as="font" type="font/woff2" crossorigin>
   {% endif %}
 
