@@ -227,6 +227,7 @@ plugin_manager.init_app(app)
 app.include_router(plugins.router)
 app.include_router(dependencies.router)
 app.include_router(php_sites.router)
+app.include_router(php_sites.page_router)
 app.include_router(app_updates.router)
 app.include_router(apps.router)
 if getattr(config, "DEBUG", False):

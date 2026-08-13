@@ -68,6 +68,18 @@
       </a>
     </li>
 
+    {% if is_php_active() %}
+    <li>
+      <a href="{{ path('php_sites') }}" class="sidebar__item" data-path="{{ path('php_sites') }}" aria-label="{{ _('php_websites') }}">
+        <svg viewbox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 4h16v16H4z"></path>
+          <path d="M8 8h8M8 12h5M8 16h8"></path>
+        </svg>
+        {{ _('php_websites') }}
+      </a>
+    </li>
+    {% endif %}
+
 
 
     <li class="sidebar__section-label">{{ _('dns_ssl') }}</li>

@@ -25,6 +25,8 @@ const PATHS = {
   health: "/api/health",
   api_settings: "/api/settings",
   api_settings_performance: "/api/settings/performance",
+  php_sites: "/php-sites/",
+  php_sites_create: "/php-sites/create",
 };
 
 function path(name, ...parts) {

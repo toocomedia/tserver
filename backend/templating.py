@@ -35,6 +35,8 @@ PATHS: dict[str, str] = {
     "plugins": "/plugins/",
     "dependencies": "/dependencies",
     "apps": "/apps/",
+    "php_sites": "/php-sites/",
+    "php_sites_create": "/php-sites/create",
 }
 
 

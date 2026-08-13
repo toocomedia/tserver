@@ -1,0 +1,24 @@
+{% extends "layout.html" %}
+
+{% block title %}{{ _('php_websites') }} — {{ PANEL_NAME }}{% endblock %}
+{% block page_title %}{{ _('php_websites') }}{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="/static/css/php-sites.css?v={{ APP_VERSION }}">
+{% endblock %}
+
+{% block topbar_actions %}
+<a class="btn btn--secondary" href="{{ path('php_sites') }}">{{ _('back_to_php_websites') }}</a>
+{% endblock %}
+
+{% block content %}
+<section class="php-sites-page php-detail" data-php-site-detail data-site-id="{{ site_id }}" aria-live="polite">
+  <div class="php-detail__loading" data-detail-loading>{{ _('loading') }}</div>
+  <div class="alert alert--danger" data-detail-error hidden role="alert"></div>
+  <div data-detail-content hidden></div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script type="module" src="/static/js/modules/php-sites-detail.js?v={{ APP_VERSION }}"></script>
+{% endblock %}

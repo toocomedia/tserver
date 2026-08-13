@@ -137,6 +137,21 @@ class PHPWebsitesServiceTests(unittest.TestCase):
 class PHPWebsitesAPIRoutesTests(unittest.TestCase):
     """Test HTML page routes and conditional visibility logic."""
 
+    @patch("dependencies.dependency_manager.is_healthy", return_value=False)
+    def test_php_page_redirects_when_dependency_inactive(self, mock_healthy):
+        from routers.php_sites import _php_page_redirect
+
+        response = _php_page_redirect()
+        self.assertIsNotNone(response)
+        self.assertEqual(303, response.status_code)
+        self.assertEqual("/dependencies", response.headers["location"])
+
+    @patch("dependencies.dependency_manager.is_healthy", return_value=True)
+    def test_php_page_has_no_redirect_when_dependency_active(self, mock_healthy):
+        from routers.php_sites import _php_page_redirect
+
+        self.assertIsNone(_php_page_redirect())
+
     @patch("dependencies.dependency_manager.is_healthy", return_value=True)
     def test_templating_is_php_active_returns_true(self, mock_healthy):
         from templating import is_php_active

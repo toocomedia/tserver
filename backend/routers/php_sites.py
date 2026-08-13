@@ -3,8 +3,8 @@ from __future__ import annotations
 
 import asyncio
 
-from fastapi import APIRouter, Depends, HTTPException, Query
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -15,6 +15,7 @@ from dependencies import dependency_manager
 from schemas import php_sites as schemas
 from services import php_site_runtime as runtime
 from services import php_site_service as service
+from templating import templates
 
 
 def require_php_active() -> None:
@@ -31,6 +32,48 @@ router = APIRouter(
     tags=["php-sites"],
     dependencies=[Depends(require_php_active)],
 )
+
+page_router = APIRouter(prefix="/php-sites", tags=["php-site-pages"])
+
+
+def _php_page_redirect() -> RedirectResponse | None:
+    if not dependency_manager.is_healthy("php"):
+        return RedirectResponse("/dependencies", status_code=303)
+    return None
+
+
+@page_router.get("/", response_class=HTMLResponse, include_in_schema=False)
+async def page_index(request: Request):
+    redirect = _php_page_redirect()
+    if redirect:
+        return redirect
+    return templates.TemplateResponse("pages/php_sites/index.html", {
+        "request": request,
+        "active_page": "php_sites",
+    })
+
+
+@page_router.get("/create", response_class=HTMLResponse, include_in_schema=False)
+async def page_create(request: Request):
+    redirect = _php_page_redirect()
+    if redirect:
+        return redirect
+    return templates.TemplateResponse("pages/php_sites/create.html", {
+        "request": request,
+        "active_page": "php_sites",
+    })
+
+
+@page_router.get("/{site_id}", response_class=HTMLResponse, include_in_schema=False)
+async def page_detail(request: Request, site_id: int):
+    redirect = _php_page_redirect()
+    if redirect:
+        return redirect
+    return templates.TemplateResponse("pages/php_sites/detail.html", {
+        "request": request,
+        "active_page": "php_sites",
+        "site_id": site_id,
+    })
 
 
 @router.get("/")

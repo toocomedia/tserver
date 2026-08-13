@@ -1,0 +1,35 @@
+{% extends "layout.html" %}
+
+{% block title %}{{ _('php_websites') }} — {{ PANEL_NAME }}{% endblock %}
+{% block page_title %}{{ _('php_websites') }}{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="/static/css/php-sites.css?v={{ APP_VERSION }}">
+{% endblock %}
+
+{% block topbar_actions %}
+<a class="btn btn--primary" href="{{ path('php_sites_create') }}" id="php-sites-create-link">{{ _('create_php_site') }}</a>
+{% endblock %}
+
+{% block content %}
+{% from "partials/skeleton_overlay.html" import skeleton_overlay %}
+<section class="php-sites-page" data-php-sites-list aria-labelledby="php-sites-list-title">
+  {{ skeleton_overlay('php-sites-list-skeleton', tables=[{'rows': 4}]) }}
+  <div class="list-title-bar">
+    <h3 id="php-sites-list-title">{{ _('managed_websites') }}</h3>
+    <span class="php-sites__count" data-site-count></span>
+  </div>
+  <div class="table-wrap" data-site-table hidden></div>
+  <div data-site-empty hidden>
+    {% set empty_icon = '<div class="empty-state__shape"><div class="shape-square-sm"></div></div>' %}
+    {% set empty_message = _('no_php_websites') %}
+    {% include "partials/empty_state.html" %}
+    <div class="empty-state__actions"><a class="btn btn--primary" href="{{ path('php_sites_create') }}">{{ _('create_php_site') }}</a></div>
+  </div>
+  <div class="alert alert--danger php-sites__error" data-site-error hidden role="alert"></div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script type="module" src="/static/js/modules/php-sites-list.js?v={{ APP_VERSION }}"></script>
+{% endblock %}

@@ -1,0 +1,86 @@
+{% extends "layout.html" %}
+
+{% block title %}{{ _('create_php_site') }} — {{ PANEL_NAME }}{% endblock %}
+{% block page_title %}{{ _('create_php_site') }}{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="/static/css/php-sites.css?v={{ APP_VERSION }}">
+{% endblock %}
+
+{% block topbar_actions %}
+<a class="btn btn--secondary" href="{{ path('php_sites') }}">{{ _('cancel') }}</a>
+{% endblock %}
+
+{% block content %}
+<section class="php-sites-page php-wizard" data-php-site-create aria-labelledby="php-create-title">
+  <div class="php-wizard__steps" aria-label="{{ _('creation_steps') }}">
+    <div class="php-wizard__step is-active" data-step-indicator="1"><span>1</span>{{ _('website_type') }}</div>
+    <div class="php-wizard__step" data-step-indicator="2"><span>2</span>{{ _('runtime_settings') }}</div>
+    <div class="php-wizard__step" data-step-indicator="3"><span>3</span>{{ _('review') }}</div>
+  </div>
+
+  <div class="alert alert--danger" data-create-error hidden role="alert"></div>
+  <div class="alert alert--warning" data-create-warning hidden role="status"></div>
+  <form class="php-wizard__form clean-form" data-create-form novalidate>
+    <section class="php-wizard__panel is-active" data-step-panel="1" aria-labelledby="php-create-title">
+      <h2 id="php-create-title">{{ _('choose_website_type') }}</h2>
+      <p class="form-hint">{{ _('choose_php_or_wordpress_desc') }}</p>
+      <div class="settings-choice-grid php-choice-grid">
+        <label class="settings-choice settings-choice--active">
+          <input type="radio" name="preset" value="php" checked>
+          <span class="settings-choice__title">{{ _('plain_php') }}</span>
+          <span class="settings-choice__desc">{{ _('plain_php_desc') }}</span>
+        </label>
+        <label class="settings-choice">
+          <input type="radio" name="preset" value="wordpress">
+          <span class="settings-choice__title">{{ _('wordpress') }}</span>
+          <span class="settings-choice__desc">{{ _('wordpress_desc') }}</span>
+        </label>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="php-site-domain">{{ _('domain') }}</label>
+        <div class="form-select-wrap"><select class="form-select" id="php-site-domain" name="domain_id" required disabled><option value="">{{ _('loading') }}</option></select></div>
+        <p class="form-hint">{{ _('only_unused_domains_available') }}</p>
+      </div>
+    </section>
+
+    <section class="php-wizard__panel" data-step-panel="2" aria-labelledby="runtime-settings-title" hidden>
+      <h2 id="runtime-settings-title">{{ _('runtime_settings') }}</h2>
+      <div class="form-group-horizontal">
+        <div class="form-label-wrap"><label class="form-label" for="php-site-version">{{ _('php_version') }}</label><p class="form-hint">{{ _('only_healthy_managed_php') }}</p></div>
+        <div class="form-select-wrap"><select class="form-select" id="php-site-version" name="php_version" required disabled><option value="">{{ _('loading') }}</option></select></div>
+      </div>
+      <div class="form-group-horizontal">
+        <div class="form-label-wrap"><label class="form-label" for="php-site-root">{{ _('document_root') }}</label><p class="form-hint">{{ _('relative_document_root_desc') }}</p></div>
+        <input class="form-input" id="php-site-root" name="document_root" value="public" required pattern="[A-Za-z0-9][A-Za-z0-9._/-]*">
+      </div>
+      <label class="form-check php-wizard__check"><input type="checkbox" id="php-site-database" name="create_database"><span><strong>{{ _('create_database') }}</strong><small>{{ _('plain_php_database_desc') }}</small></span></label>
+      <label class="form-check php-wizard__check"><input type="checkbox" id="php-site-ssl" name="ssl"><span><strong>{{ _('enable_ssl') }}</strong><small>{{ _('ssl_issue_after_creation') }}</small></span></label>
+      <label class="form-check php-wizard__check"><input type="checkbox" id="php-site-www" name="include_www"><span><strong>{{ _('include_www') }}</strong><small>{{ _('include_www_desc') }}</small></span></label>
+      <label class="form-check php-wizard__check" data-install-extensions hidden><input type="checkbox" id="php-site-install-extensions" name="install_missing_extensions"><span><strong>{{ _('install_missing_extensions') }}</strong><small data-extension-hint></small></span></label>
+      <div class="php-wizard__wordpress" data-wordpress-fields hidden>
+        <h3>{{ _('wordpress_settings') }}</h3>
+        <div class="form-group"><label class="form-label" for="wp-site-title">{{ _('site_title') }}</label><input class="form-input" id="wp-site-title" name="wp_site_title"></div>
+        <div class="form-group"><label class="form-label" for="wp-admin-user">{{ _('admin_user') }}</label><input class="form-input" id="wp-admin-user" name="wp_admin_user"></div>
+        <div class="form-group"><label class="form-label" for="wp-admin-email">{{ _('admin_email') }}</label><input class="form-input" id="wp-admin-email" name="wp_admin_email" type="email"></div>
+        <div class="form-group"><label class="form-label" for="wp-admin-password">{{ _('admin_password') }}</label><input class="form-input" id="wp-admin-password" name="wp_admin_password" type="password" minlength="12" autocomplete="new-password"></div>
+      </div>
+    </section>
+
+    <section class="php-wizard__panel" data-step-panel="3" aria-labelledby="review-title" hidden>
+      <h2 id="review-title">{{ _('review') }}</h2>
+      <p class="form-hint">{{ _('review_before_create') }}</p>
+      <div class="php-review" data-review></div>
+      <div class="php-operation" data-create-operation hidden aria-live="polite"></div>
+    </section>
+
+    <div class="fixed-action-bar php-wizard__actions">
+      <div class="fixed-action-bar__inner"><a class="btn btn--secondary" href="{{ path('php_sites') }}">{{ _('cancel') }}</a><div class="php-wizard__action-group"><button class="btn btn--secondary" type="button" data-create-back hidden>{{ _('back') }}</button><button class="btn btn--primary" type="button" data-create-next>{{ _('next') }}</button><button class="btn btn--primary" type="submit" data-create-submit hidden>{{ _('create_php_site') }}</button></div></div>
+    </div>
+  </form>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script type="module" src="/static/js/modules/php-sites-create.js?v={{ APP_VERSION }}"></script>
+{% endblock %}
