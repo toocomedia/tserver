@@ -500,3 +500,55 @@ html[dir="rtl"] .table-wrap,
 html[dir="rtl"] .list-item-row {
   overflow-x: hidden;
 }
+
+/* --------------------------------------------------------------------------
+   9. Fixed Bottom Action Bar & Wizard Layout in RTL
+   -------------------------------------------------------------------------- */
+@media (min-width: 992px) {
+  html[dir="rtl"] .fixed-action-bar {
+    left: 0 !important;
+    right: var(--sidebar-width, 260px) !important;
+  }
+}
+@media (max-width: 991px) {
+  html[dir="rtl"] .fixed-action-bar {
+    left: 0 !important;
+    right: 0 !important;
+  }
+}
+
+html[dir="rtl"] .fixed-action-bar__inner {
+  flex-direction: row;
+  justify-content: space-between;
+}
+
+/* --------------------------------------------------------------------------
+   10. Notice Windows, Alerts, Banners & Floating Cards in RTL
+   -------------------------------------------------------------------------- */
+html[dir="rtl"] .alert,
+html[dir="rtl"] .notice-banner,
+html[dir="rtl"] .recommendation-card {
+  text-align: right;
+  direction: rtl;
+}
+
+html[dir="rtl"] .recommendation-card--floating {
+  right: calc(var(--sidebar-width, 260px) + 2%) !important;
+  left: auto !important;
+  width: calc(100% - var(--sidebar-width, 260px) - 4%) !important;
+}
+
+@media (max-width: 768px) {
+  html[dir="rtl"] .recommendation-card--floating {
+    right: 3% !important;
+    left: auto !important;
+    width: 94% !important;
+  }
+}
+
+html[dir="rtl"] .alert button[aria-label="Close"],
+html[dir="rtl"] .alert [data-resource-guard-dismiss="close"],
+html[dir="rtl"] .alert .btn-close {
+  margin-right: auto !important;
+  margin-left: 0 !important;
+}

@@ -809,5 +809,15 @@
   "js.dns_only_desc": "نطاق DNS وسجل A فقط. بدون Nginx vhost.",
   "js.not_applicable_dns": "غير ينطبق (DNS فقط)",
   "js.python_domain_desc": "تم إنشاء نطاق DNS أولاً. تابع لإعداد مصدر تطبيق Python والنشر.",
-  "js.nginx_webroot_desc": "تم إنشاء Nginx HTTP vhost ومجلد الجذر للموقع."
+  "js.nginx_webroot_desc": "تم إنشاء Nginx HTTP vhost ومجلد الجذر للموقع.",
+  "python_runtime_desc": "بيئة تشغيل Python مع إعداد الوكيل العكسي (Reverse Proxy).",
+  "the_destination_server_ip": "عنوان IP للخادم المستهدف",
+  "routing_details": "تفاصيل التوجيه",
+  "specify_the_port_and_protocol_used_by": "حدد المنفذ والبروتوكول المستخدمين من قبل الهدف.",
+  "valid_domain_hostname_required": "يلزم إدخال اسم نطاق صحيح (مثال: app.domain.com) للمتابعة.",
+  "please_enter_an_external_hostname": "يرجى إدخال اسم خادم خارجي.",
+  "please_select_a_parent_domain": "يرجى اختيار النطاق الرئيسي.",
+  "please_enter_a_subdomain_prefix": "يرجى إدخال بادئة النطاق الفرعي.",
+  "not_applicable_dns_only": "غير ينطبق (DNS فقط)",
+  "resolving_ellipsis": "جاري التحديد..."
 }

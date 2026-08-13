@@ -810,6 +810,16 @@
   "js.not_applicable_dns": "Not Applicable (DNS Only)",
   "js.python_domain_desc": "DNS domain created first. Continue to Python app source and deployment setup.",
   "js.nginx_webroot_desc": "Nginx HTTP vhost & webroot directory created.",
+  "python_runtime_desc": "Python runtime with reverse proxy configuration.",
+  "the_destination_server_ip": "The destination server IP address",
+  "routing_details": "Routing Details",
+  "specify_the_port_and_protocol_used_by": "Specify the port and protocol used by the target.",
+  "valid_domain_hostname_required": "A valid domain hostname is required (e.g. app.domain.com) to proceed.",
+  "please_enter_an_external_hostname": "Please enter an external hostname.",
+  "please_select_a_parent_domain": "Please select a parent domain.",
+  "please_enter_a_subdomain_prefix": "Please enter a subdomain prefix.",
+  "not_applicable_dns_only": "Not Applicable (DNS Only)",
+  "resolving_ellipsis": "Resolving...",
   "an_unexpected_error_occurred": "An unexpected error occurred",
   "error_not_found": "Error not found"
 }

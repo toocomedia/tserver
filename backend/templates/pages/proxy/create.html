@@ -122,7 +122,7 @@
       <div class="form-group-horizontal">
         <div class="form-label-wrap">
           <label class="form-label" for="target_ip">{{ _('target_ip') }}</label>
-          <span class="form-hint">The destination server IP</span>
+          <span class="form-hint">{{ _('the_destination_server_ip') }}</span>
         </div>
         <div>
           <input class="form-input clean-input" type="text" id="target_ip" name="target_ip" value="{{ form.get('target_ip', '') }}" placeholder="1.2.3.4" autocomplete="off">
@@ -131,8 +131,8 @@
 
       <div class="form-group-horizontal">
         <div class="form-label-wrap">
-          <label class="form-label">Routing Details</label>
-          <span class="form-hint">Specify the port and protocol used by the target.</span>
+          <label class="form-label">{{ _('routing_details') }}</label>
+          <span class="form-hint">{{ _('specify_the_port_and_protocol_used_by') }}</span>
         </div>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
           <div>
@@ -256,18 +256,18 @@
       const external = modeExternal && modeExternal.checked;
       if (external) {
         if (!hostnameIn || !hostnameIn.value.trim()) {
-          if (stepErr1) { stepErr1.textContent = "Please enter an external hostname."; stepErr1.style.display = "block"; }
+          if (stepErr1) { stepErr1.textContent = {{ _('please_enter_an_external_hostname')|tojson }}; stepErr1.style.display = "block"; }
           if (hostnameIn) hostnameIn.focus();
           return false;
         }
       } else {
         if (!domainSelect || !domainSelect.value) {
-          if (stepErr1) { stepErr1.textContent = "Please select a parent domain."; stepErr1.style.display = "block"; }
+          if (stepErr1) { stepErr1.textContent = {{ _('please_select_a_parent_domain')|tojson }}; stepErr1.style.display = "block"; }
           if (domainSelect) domainSelect.focus();
           return false;
         }
         if (!subdomainIn || !subdomainIn.value.trim()) {
-          if (stepErr1) { stepErr1.textContent = "Please enter a subdomain prefix."; stepErr1.style.display = "block"; }
+          if (stepErr1) { stepErr1.textContent = {{ _('please_enter_a_subdomain_prefix')|tojson }}; stepErr1.style.display = "block"; }
           if (subdomainIn) subdomainIn.focus();
           return false;
         }

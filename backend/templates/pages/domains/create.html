@@ -60,7 +60,7 @@
               <input type="radio" name="stack_opt" value="static" {% if project_type != 'dns' and project_type != 'python' %}checked{% endif %}>
               <span class="settings-choice__title">{{ _('static_site_html') }}</span>
             </div>
-            <span class="settings-choice__desc">Nginx HTTP vhost & webroot directory created.</span>
+            <span class="settings-choice__desc">{{ _('js.nginx_webroot_desc') }}</span>
           </label>
           
           <label class="settings-choice {% if project_type == 'python' %}settings-choice--active{% endif %} opt-item" onclick="selectStack('python', 'Python App')">
@@ -68,7 +68,7 @@
               <input type="radio" name="stack_opt" value="python" {% if project_type == 'python' %}checked{% endif %}>
               <span class="settings-choice__title">{{ _('python_uvicorn') }}</span>
             </div>
-            <span class="settings-choice__desc">Python runtime with reverse proxy configuration.</span>
+            <span class="settings-choice__desc">{{ _('python_runtime_desc') }}</span>
           </label>
 
           <label class="settings-choice {% if project_type == 'dns' %}settings-choice--active{% endif %} opt-item" onclick="selectStack('dns', 'DNS Manager Only')">
@@ -76,7 +76,7 @@
               <input type="radio" name="stack_opt" value="dns" {% if project_type == 'dns' %}checked{% endif %}>
               <span class="settings-choice__title">{{ _('dns_manager_only') }}</span>
             </div>
-            <span class="settings-choice__desc">DNS zone & A record only. No Nginx vhost.</span>
+            <span class="settings-choice__desc">{{ _('js.dns_only_desc') }}</span>
           </label>
 
         </div>
@@ -127,7 +127,7 @@
 
       <div class="info-row-strict">
         <div class="info-row-strict__label">{{ _('runtime_engine') }}</div>
-        <div class="info-row-strict__val" id="rev-stack">{% if project_type == 'dns' %}DNS Manager Only{% elif project_type == 'python' %}Python App{% else %}Static Site / HTML{% endif %}</div>
+        <div class="info-row-strict__val" id="rev-stack">{% if project_type == 'dns' %}{{ _('dns_manager_only') }}{% elif project_type == 'python' %}{{ _('python_uvicorn') }}{% else %}{{ _('static_site_html') }}{% endif %}</div>
       </div>
 
       <div class="info-row-strict" id="rev-nginx-row" {% if project_type == 'dns' %}style="display:none;"{% endif %}>
@@ -137,12 +137,12 @@
 
       <div class="info-row-strict">
         <div class="info-row-strict__label">{{ _('ssl_security') }}</div>
-        <div class="info-row-strict__val" id="rev-ssl" style="color: var(--color-muted);">{% if project_type == 'dns' %}Not Applicable (DNS Only){% else %}No SSL (HTTP Only){% endif %}</div>
+        <div class="info-row-strict__val" id="rev-ssl" style="color: var(--color-muted);">{% if project_type == 'dns' %}{{ _('not_applicable_dns_only') }}{% else %}{{ _('no_ssl_http_only') }}{% endif %}</div>
       </div>
 
       <div class="info-row-strict" style="border-bottom:none;">
         <div class="info-row-strict__label">{{ _('resolving_ip_address') }}</div>
-        <div class="info-row-strict__val" style="font-family: monospace;">{{ server_ip or 'Resolving...' }} (A Record)</div>
+        <div class="info-row-strict__val" style="font-family: monospace;">{{ server_ip or _('resolving_ellipsis') }} (A Record)</div>
       </div>
     </div>
 
