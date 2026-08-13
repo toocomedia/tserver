@@ -171,10 +171,11 @@
     </div>
 
     <!-- Fixed Action Bar -->
-    <div class="fixed-wizard-bar">
+    {% from "partials/wizard_macros.html" import action_bar %}
+    {% call action_bar() %}
       <a href="/php-sites/" class="btn btn--secondary">Cancel</a>
       <button type="submit" class="btn btn--primary" id="btn-submit-php-site">+ Deploy Website</button>
-    </div>
+    {% endcall %}
   </form>
 </div>
 

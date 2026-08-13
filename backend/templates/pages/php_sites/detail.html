@@ -2,73 +2,51 @@
 
 {% block title %}{{ site.domain_name or ('PHP Site #' ~ site.id) }} — {{ PANEL_NAME }}{% endblock %}
 
-{% block page_header_wrapper %}
-<!-- Strict Page Header matching domain manager layout -->
+{% block page_title %}{{ site.domain_name or ('PHP Website #' ~ site.id) }}{% endblock %}
+
+{% block topbar_actions %}
+  {% if site.domain_name %}
+    <a href="http://{{ site.domain_name }}" target="_blank" rel="noopener" class="btn btn--secondary" style="height: 38px; padding: 0 16px;">
+      Visit Site ↗
+    </a>
+  {% endif %}
+  {% if site.status == 'active' %}
+    <button type="button" class="btn btn--secondary" style="height: 38px; padding: 0 16px;" id="btn-toggle-control" data-action="disable">
+      Disable Site
+    </button>
+  {% else %}
+    <button type="button" class="btn btn--primary" style="height: 38px; padding: 0 16px;" id="btn-toggle-control" data-action="enable">
+      Enable Site
+    </button>
+  {% endif %}
+  <button type="button" class="btn btn--danger" style="height: 38px; padding: 0 16px;" id="btn-delete-site-perm">
+    Delete
+  </button>
 {% endblock %}
 
 {% block content %}
 <div class="php-site-detail-page" data-site-id="{{ site.id }}" data-domain-name="{{ site.domain_name or ('site-' ~ site.id) }}">
 
-  <!-- PAGE HEADER -->
-  <div class="page-header-strict" style="margin-top: 24px;">
-    <div>
-      <h1 style="margin-bottom: 4px;">{{ site.domain_name or ('PHP Website #' ~ site.id) }}</h1>
-      <span style="color: var(--color-muted); font-size: 14px;">PHP Website Manager</span>
-    </div>
-    <div class="actions" style="display: flex; gap: 8px;">
-      {% if site.domain_name %}
-        <a href="http://{{ site.domain_name }}" target="_blank" rel="noopener" class="btn btn--secondary" style="height: 38px; padding: 0 16px;">
-          Visit Site ↗
-        </a>
-      {% endif %}
-      {% if site.status == 'active' %}
-        <button type="button" class="btn btn--secondary" style="height: 38px; padding: 0 16px;" id="btn-toggle-control" data-action="disable">
-          Disable Site
-        </button>
-      {% else %}
-        <button type="button" class="btn btn--primary" style="height: 38px; padding: 0 16px;" id="btn-toggle-control" data-action="enable">
-          Enable Site
-        </button>
-      {% endif %}
-      <button type="button" class="btn btn--danger" style="height: 38px; padding: 0 16px;" id="btn-delete-site-perm">
-        Delete
-      </button>
-    </div>
-  </div>
-
   <!-- STATUS & HEALTH CARDS -->
-  <div class="stat-grid-strict mb-lg">
-    <div class="stat-card-strict">
-      <div class="stat-card-strict__title">Status</div>
-      <div class="stat-card-strict__value">
-        {% if site.status == 'active' %}
-          <span style="width: 8px; height: 8px; background: var(--color-text); display: inline-block;"></span> Active
-        {% else %}
-          <span style="width: 8px; height: 8px; background: var(--color-danger); display: inline-block;"></span> {{ site.status | upper }}
-        {% endif %}
-      </div>
-    </div>
-
-    <div class="stat-card-strict">
-      <div class="stat-card-strict__title">PHP Runtime</div>
-      <div class="stat-card-strict__value">
-        PHP {{ site.php_version }}
-      </div>
-      <div style="font-size: 12px; color: var(--color-muted); margin-top: 8px;">
-        Pool: php{{ site.php_version }}-fpm-site{{ site.id }}
-      </div>
-    </div>
-
-    <div class="stat-card-strict">
-      <div class="stat-card-strict__title">Database</div>
-      <div class="stat-card-strict__value">
-        {% if site.database %}
-          <span style="width: 8px; height: 8px; background: var(--color-text); display: inline-block;"></span> {{ site.database.database_name }}
-        {% else %}
-          <span style="width: 8px; height: 8px; border: 1px solid var(--color-muted); display: inline-block;"></span> None
-        {% endif %}
-      </div>
-    </div>
+  <div class="mb-lg">
+    {% set stats = [
+      {
+        'label': 'Status',
+        'value': 'Active' if site.status == 'active' else site.status | upper,
+        'icon': '<span style="width: 8px; height: 8px; background: var(--color-text); display: inline-block; margin-right: 6px; border-radius: 50%;"></span>' if site.status == 'active' else '<span style="width: 8px; height: 8px; background: var(--color-danger); display: inline-block; margin-right: 6px; border-radius: 50%;"></span>'
+      },
+      {
+        'label': 'PHP Runtime',
+        'value': 'PHP ' ~ site.php_version,
+        'meta': 'Pool: php' ~ site.php_version ~ '-fpm-site' ~ site.id
+      },
+      {
+        'label': 'Database',
+        'value': site.database.database_name if site.database else 'None',
+        'icon': '<span style="width: 8px; height: 8px; background: var(--color-text); display: inline-block; margin-right: 6px; border-radius: 50%;"></span>' if site.database else '<span style="width: 8px; height: 8px; border: 1px solid var(--color-muted); display: inline-block; margin-right: 6px; border-radius: 50%;"></span>'
+      }
+    ] %}
+    {% include "partials/stat_cards.html" %}
   </div>
 
   <!-- NAVIGATION TABS -->

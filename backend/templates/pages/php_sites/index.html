@@ -23,19 +23,10 @@
   {% include "partials/stat_cards.html" %}
 
   {% if sites %}
-  <!-- ACTION TOOLBAR -->
-  <div class="action-toolbar mb-md">
-    <div class="action-toolbar__search">
-      <input type="text" id="php-site-search" class="form-control" placeholder="Search PHP websites..." onkeyup="filterPhpSitesTable()">
-    </div>
-    <div class="action-toolbar__group">
-      <select id="php-preset-filter" class="form-control" style="width: 150px;" onchange="filterPhpSitesTable()">
-        <option value="all">All Presets</option>
-        <option value="php">Plain PHP</option>
-        <option value="wordpress">WordPress</option>
-      </select>
-    </div>
-  </div>
+  {% set filter_options = [{'val': 'php', 'label': 'Plain PHP'}, {'val': 'wordpress', 'label': 'WordPress'}] %}
+  {% set search_id = 'php-site-search' %}
+  {% set search_placeholder = 'Search PHP websites...' %}
+  {% include "partials/action_toolbar.html" with context %}
 
   <div class="table-wrap">
     <table class="table" id="php-sites-table">
@@ -84,13 +75,15 @@
             {% endif %}
             {% include "partials/status_badge.html" %}
           </td>
-          <td class="col-actions">
-            <a href="/php-sites/{{ site.id }}" class="btn btn--secondary btn--sm">Manage</a>
-            {% if site.domain_name %}
-              <a href="http://{{ site.domain_name }}" target="_blank" rel="noopener" class="btn btn--ghost btn--sm btn--icon" title="Open Website">
-                <svg viewbox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
-              </a>
-            {% endif %}
+          <td class="col-actions" style="position:relative;">
+            {% import "partials/list_actions_toggle.html" as list_actions %}
+            {{ list_actions.button() }}
+            {% call list_actions.tray() %}
+              <a href="/php-sites/{{ site.id }}" class="btn btn--primary btn--sm">Manage</a>
+              {% if site.domain_name %}
+                <a href="http://{{ site.domain_name }}" target="_blank" rel="noopener" class="btn btn--secondary btn--sm">Open Website</a>
+              {% endif %}
+            {% endcall %}
           </td>
         </tr>
         {% endfor %}
@@ -114,6 +107,15 @@
 document.addEventListener('DOMContentLoaded', function() {
   if (typeof hideSkeleton === 'function') hideSkeleton('php-sites-skeleton', 100);
   else if (typeof window.hideSkeleton === 'function') window.hideSkeleton('php-sites-skeleton', 100);
+
+  const searchInput = document.getElementById('php-site-search');
+  const statusFilter = document.getElementById('status-filter-select');
+  if (searchInput && typeof filterPhpSitesTable === 'function') {
+    searchInput.addEventListener('keyup', filterPhpSitesTable);
+  }
+  if (statusFilter && typeof filterPhpSitesTable === 'function') {
+    statusFilter.addEventListener('change', filterPhpSitesTable);
+  }
 });
 </script>
 {% endblock %}
