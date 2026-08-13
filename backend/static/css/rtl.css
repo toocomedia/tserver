@@ -89,7 +89,7 @@ html[dir="rtl"] .btn--primary,
 html[dir="rtl"] .btn--secondary,
 html[dir="rtl"] .btn--ghost,
 html[dir="rtl"] .btn--danger {
-  font-weight: 700 !important;
+  font-weight: 500 !important;
   padding-top: max(4px, calc(var(--space-xs, 8px) - 2px));
   padding-bottom: calc(var(--space-xs, 8px) + 2px);
 }
