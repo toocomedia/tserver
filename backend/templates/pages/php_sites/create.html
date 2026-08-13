@@ -31,6 +31,19 @@
       </div>
     </div>
 
+    {% if not options.domains %}
+    <div class="alert alert--warning mb-lg">
+      No available static or DNS domains found. Please <a href="/domains/create">create a domain</a> first.
+    </div>
+    {% endif %}
+    {% if not options.php_versions %}
+    <div class="alert alert--warning mb-lg">
+      No active PHP versions found. Please <a href="/dependencies/php">install a PHP version</a> in Dependencies.
+    </div>
+    {% endif %}
+
+    <div id="form-error-alert" class="alert alert--danger mb-lg" style="display: none;"></div>
+
     <div class="section mb-xl">
       <div class="form-row-grid">
         <div class="form-row-grid__label">
@@ -38,12 +51,17 @@
           <div class="form-hint">Select an available domain owned by the panel.</div>
         </div>
         <div class="form-row-grid__input">
-          <select id="domain_id" name="domain_id" class="form-select" required>
+          <select id="domain_id" name="domain_id" class="form-select" required {% if not options.domains %}disabled{% endif %}>
             <option value="">-- Select Domain --</option>
             {% for d in options.domains %}
-              <option value="{{ d.id }}">{{ d.name }}</option>
+              <option value="{{ d.id }}" data-has-ssl="{{ '1' if d.has_ssl else '0' }}">
+                {{ d.name }}{% if d.has_ssl %} (SSL Active){% endif %}
+              </option>
             {% endfor %}
           </select>
+          <div id="domain-ssl-note" class="form-hint text-success mt-xs" style="display: none;">
+            ✓ This domain already has an active SSL certificate.
+          </div>
         </div>
       </div>
 
@@ -53,9 +71,9 @@
           <div class="form-hint">Installed and healthy PHP-FPM runtimes.</div>
         </div>
         <div class="form-row-grid__input">
-          <select id="php_version" name="php_version" class="form-select" required>
+          <select id="php_version" name="php_version" class="form-select" required {% if not options.php_versions %}disabled{% endif %}>
             {% for v in options.php_versions %}
-              <option value="{{ v }}">PHP {{ v }}</option>
+              <option value="{{ v.version if v is mapping else v }}">PHP {{ v.version if v is mapping else v }}</option>
             {% endfor %}
           </select>
         </div>

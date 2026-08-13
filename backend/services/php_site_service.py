@@ -95,6 +95,7 @@ async def options(db: AsyncSession) -> dict[str, Any]:
     domains = list((await db.scalars(select(Domain).where(
         Domain.project_type.in_(("static", "dns")),
     ).order_by(Domain.name))).all())
+    certs = set((await db.scalars(select(SslCert.full_domain))).all())
     versions = await asyncio.to_thread(selectable_versions, force=True)
     wordpress: dict[str, Any] = {
         "wp_cli_available": os.name != "nt" and Path("/usr/local/bin/wp").is_file(),
@@ -114,7 +115,12 @@ async def options(db: AsyncSession) -> dict[str, Any]:
     mariadb = dependency_manager.get_status("mariadb", cached=True) or {}
     return {
         "domains": [
-            {"id": item.id, "name": item.name, "project_type": item.project_type}
+            {
+                "id": item.id,
+                "name": item.name,
+                "project_type": item.project_type,
+                "has_ssl": item.name in certs,
+            }
             for item in domains if item.id not in used
         ],
         "php_versions": versions,
