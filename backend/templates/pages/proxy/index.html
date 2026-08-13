@@ -1,4 +1,5 @@
 {% extends "layout.html" %}
+{% import "partials/ui_macros.html" as ui %}
 
 {% from "partials/skeleton_overlay.html" import skeleton_overlay %}
 
@@ -22,7 +23,7 @@
 
 {% if created %}
 <div class="alert alert--success mb-lg" id="alert-created">
-  {{ _('proxy_created_for') }} <strong>{{ created }}</strong>{{ _('nginx_configured_dns_updated_when_using_') }}
+  {{ _('proxy_created_for') }} <strong>{{ created }}</strong>
 </div>
 {% endif %}
 {% if deleted %}
@@ -35,79 +36,59 @@
 {% if rows %}
 
   <!-- Action Toolbar (Search & Filter) -->
-  <div class="action-toolbar">
-    <div class="action-toolbar__search">
-      <input type="text" id="proxy-search-input" class="form-control" placeholder="Search proxies by domain, target IP or port..." onkeyup="filterProxyTable()">
-    </div>
-    <div class="action-toolbar__group">
-      <select id="proxy-status-filter" class="form-control" style="width: 140px;" onchange="filterProxyTable()">
-        <option value="all">{{ _('all_proxies') }}</option>
-        <option value="ssl">{{ _('ssl_enabled') }}</option>
-        <option value="cache">{{ _('cache_enabled') }}</option>
-      </select>
+  <div class="action-toolbar mb-lg" style="border-bottom:none; background:transparent; padding:0; margin-inline:0;">
+    <div class="d-flex gap-md" style="width:100%; flex-wrap:wrap;">
+      <div class="action-toolbar__search" style="flex: 1; min-width:280px; max-width:100%;">
+        <input type="text" id="proxy-search-input" class="form-control" style="width:100%;" placeholder="Search proxies by domain, target IP or port..." onkeyup="filterProxyGrid()">
+      </div>
+      <div class="action-toolbar__group">
+        <select id="proxy-status-filter" class="form-control" style="width: 160px;" onchange="filterProxyGrid()">
+          <option value="all">{{ _('all_proxies') }}</option>
+          <option value="ssl">{{ _('ssl_enabled') }}</option>
+          <option value="cache">{{ _('cache_enabled') }}</option>
+        </select>
+      </div>
     </div>
   </div>
 
-  <div class="table-wrap">
-  <table class="table" id="proxy-table">
-    <colgroup>
-      <col style="width:22%">
-      <col style="width:18%">
-      <col style="width:8%">
-      <col style="width:9%">
-      <col style="width:9%">
-      <col style="width:10%">
-      <col style="width:24%">
-    </colgroup>
-    <thead>
-      <tr>
-        <th>{{ _('subdomain') }}</th>
-        <th>{{ _('target') }}</th>
-        <th>{{ _('protocol') }}</th>
-        <th>{{ _('ssl_1') }}</th>
-        <th>{{ _('dns') }}</th>
-        <th>{{ _('cache') }}</th>
-        <th class="col-actions">{{ _('actions') }}</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for item in rows %}
-      {% set p = item.proxy %}
-      <tr id="proxy-row-{{ p.id }}" data-proxy-id="{{ p.id }}">
-
-        <td>
-          <span class="table-title">{{ p.full_domain }}</span>
-          <br>
-          <span class="text-small text-muted">{{ item.domain_name }}</span>
-        </td>
-
-        <td class="text-small">
-          {{ p.target_ip }}:{{ p.target_port }}
-        </td>
-
-        <td>
-          <span class="status-badge status-badge--muted">{{ p.protocol | upper }}</span>
-        </td>
-
-        <td>
+  <div id="proxy-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: var(--space-lg);">
+    {% for item in rows %}
+    {% set p = item.proxy %}
+    <div class="proxy-card" data-proxy-id="{{ p.id }}" style="background: var(--color-surface); border: 1px solid var(--color-line); display: flex; flex-direction: column; transition: border-color 0.2s;">
+      
+      <!-- Card Header -->
+      <div style="padding: var(--space-md); border-bottom: 1px solid var(--color-line); display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-sm);">
+        <div style="min-width: 0;">
+          <h3 style="margin: 0; font-size: 16px; font-weight: 700; color: var(--color-text); word-break: break-all;">{{ p.full_domain }}</h3>
+          <span style="font-size: 12px; color: var(--color-muted);">{{ item.domain_name }}</span>
+        </div>
+        <div style="display: flex; gap: 6px; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end;">
           {% if p.ssl_enabled %}
             <span class="status-badge status-badge--success">{{ _('ssl_1') }}</span>
           {% else %}
             <span class="status-badge status-badge--muted">{{ _('http') }}</span>
           {% endif %}
-        </td>
-
-        <td>
+          
           {% if item.dns_status == 'external' %}
             <span class="status-badge status-badge--muted">{{ _('external_1') }}</span>
           {% elif item.dns_ok %}
-            <span class="status-badge status-badge--success">{{ _('active_1') }}</span>
+            <span class="status-badge status-badge--success">{{ _('dns_ok') }}</span>
           {% else %}
             <span class="status-badge status-badge--danger">{{ _('missing_1') }}</span>
           {% endif %}
-        </td>
+        </div>
+      </div>
 
-        <td>
+      <!-- Card Body -->
+      <div style="padding: var(--space-md); flex: 1;">
+        <div style="background: var(--color-bg); padding: 10px 14px; border: 1px solid var(--color-line); font-family: ui-monospace, SFMono-Regular, monospace; font-size: 13px; color: var(--color-text); word-break: break-all; display: flex; justify-content: space-between; align-items: center;">
+          <span>{{ p.target_ip }}:{{ p.target_port }}</span>
+          <span style="color: var(--color-muted); font-size: 11px; font-weight: 700; padding: 2px 6px; border: 1px solid var(--color-line);">{{ p.protocol | upper }}</span>
+        </div>
+        
+        <!-- Cache Status -->
+        <div style="margin-top: var(--space-md); display: flex; align-items: center; justify-content: space-between;">
+          <span style="font-size: 12px; font-weight: 600; color: var(--color-muted); text-transform: uppercase; letter-spacing: 0.05em;">{{ _('cache') }}</span>
           {% if item.cache_enabled %}
             <span class="status-badge status-badge--success" id="cache-badge-{{ p.id }}">
               {{ _('on') }}{% if item.cache_size_mb > 0 %} · {{ item.cache_size_mb }}MB{% endif %}
@@ -115,85 +96,76 @@
           {% else %}
             <span class="status-badge status-badge--muted" id="cache-badge-{{ p.id }}">{{ _('off') }}</span>
           {% endif %}
-        </td>
+        </div>
+      </div>
 
-        <td class="col-actions" style="position:relative;">
-          {% import "partials/list_actions_toggle.html" as list_actions %}
-          {{ list_actions.button() }}
-          {% call list_actions.tray() %}
-            {% if not p.ssl_enabled %}
-            <a href="/ssl/issue?full_domain={{ p.full_domain }}" class="btn btn--secondary btn--sm" title="Issue SSL" id="btn-ssl-{{ p.id }}">
-              {{ _('ssl_2') }}
-            </a>
-            {% endif %}
-
-            <button class="btn btn--secondary btn--sm" id="btn-cache-{{ p.id }}" data-proxy-id="{{ p.id }}" data-cache-enabled="{{ '1' if item.cache_enabled else '0' }}" data-cache-ttl="{{ p.cache_ttl_minutes }}" data-cache-auto="{{ p.cache_auto_clear_hours }}" title="Cache Settings">
-              {{ _('cache_settings') }}
-            </button>
-
-            <button class="btn btn--danger btn--sm" id="btn-del-{{ p.id }}" data-proxy-id="{{ p.id }}" data-full-domain="{{ p.full_domain }}" data-dns-managed="{{ '1' if item.dns_managed else '0' }}" title="Delete Proxy">
-              {{ _('delete') }}
-            </button>
+      <!-- Inline Cache Settings (Hidden by default) -->
+      <div id="cache-panel-{{ p.id }}" style="display: none; padding: var(--space-md); background: var(--color-bg); border-top: 1px solid var(--color-line);">
+        <div style="display: flex; justify-content: space-between; margin-bottom: var(--space-sm);">
+          <strong style="font-size: 13px;">{{ _('cache_settings') }}</strong>
+          <span id="cache-status-msg-{{ p.id }}" class="text-small text-muted"></span>
+        </div>
+        <label class="form-check" style="margin-bottom: var(--space-sm);">
+          <input type="checkbox" id="cache-chk-{{ p.id }}" {% if item.cache_enabled %}checked{% endif %}>
+          <span>{{ _('enable_proxy_cache') }}</span>
+        </label>
+        
+        <div class="d-flex gap-sm mb-md" style="flex-wrap:wrap;">
+          {% call ui.form_group('cache-ttl-' ~ p.id, _('ttl_minutes')) %}
+            <input class="form-input" type="number" min="1" max="10080" id="cache-ttl-{{ p.id }}" value="{{ p.cache_ttl_minutes }}">
           {% endcall %}
-        </td>
-      </tr>
+          {% call ui.form_group('cache-auto-' ~ p.id, _('auto_clear_hours_0_off')) %}
+            <input class="form-input" type="number" min="0" max="8760" id="cache-auto-{{ p.id }}" value="{{ p.cache_auto_clear_hours }}">
+          {% endcall %}
+        </div>
+        
+        <div class="d-flex gap-xs mt-sm" style="flex-wrap:wrap;">
+          <button class="btn btn--primary btn--sm" style="flex:1;" id="btn-cache-save-{{ p.id }}" data-proxy-id="{{ p.id }}">{{ _('save') }}</button>
+          <button class="btn btn--warning btn--sm" style="flex:1;" id="btn-cache-purge-{{ p.id }}" data-proxy-id="{{ p.id }}" {% if not item.cache_enabled %}disabled{% endif %}>
+            {{ _('purge') }}
+          </button>
+          <button class="btn btn--secondary btn--sm" style="flex:1;" id="btn-cache-close-{{ p.id }}" data-proxy-id="{{ p.id }}">{{ _('close') }}</button>
+        </div>
+        {% if item.last_cache_cleared %}
+        <div class="form-hint mt-xs" style="text-align: center;">
+          {{ _('last_cleared') }}: {{ item.last_cache_cleared.strftime('%Y-%m-%d %H:%M') }}
+        </div>
+        {% endif %}
+      </div>
 
-      {# Inline cache settings row — hidden by default #}
-      <tr id="cache-panel-{{ p.id }}" class="cache-settings-row" style="display:none;">
-        <td colspan="7">
-          <div class="cache-settings-box" id="cache-box-{{ p.id }}">
-            <div class="cache-settings-header">
-              <strong>{{ _('cache_settings') }} — {{ p.full_domain }}</strong>
-              <span id="cache-status-msg-{{ p.id }}" class="text-small text-muted"></span>
-            </div>
-            <div class="cache-settings-body">
-              <label class="form-check">
-                <input type="checkbox" id="cache-chk-{{ p.id }}" {% if item.cache_enabled %}checked{% endif %}>
-                <span>{{ _('enable_proxy_cache') }}</span>
-              </label>
-              <div class="d-flex gap-md align-center mt-sm" style="flex-wrap:wrap;">
-                <div class="form-group" style="margin:0;">
-                  <label class="form-label" for="cache-ttl-{{ p.id }}">{{ _('ttl_minutes') }}</label>
-                  <input class="form-input" type="number" min="1" max="10080" id="cache-ttl-{{ p.id }}" value="{{ p.cache_ttl_minutes }}" style="max-width:100px;">
-                </div>
-                <div class="form-group" style="margin:0;">
-                  <label class="form-label" for="cache-auto-{{ p.id }}">{{ _('auto_clear_hours_0_off') }}</label>
-                  <input class="form-input" type="number" min="0" max="8760" id="cache-auto-{{ p.id }}" value="{{ p.cache_auto_clear_hours }}" style="max-width:110px;">
-                </div>
-              </div>
-              <div class="d-flex gap-xs mt-sm">
-                <button class="btn btn--primary btn--sm" id="btn-cache-save-{{ p.id }}" data-proxy-id="{{ p.id }}">{{ _('save') }}</button>
-                <button class="btn btn--warning btn--sm" id="btn-cache-purge-{{ p.id }}" data-proxy-id="{{ p.id }}" {% if not item.cache_enabled %}disabled{% endif %}>
-                  {{ _('purge_cache') }}
-                </button>
-                <button class="btn btn--secondary btn--sm" id="btn-cache-close-{{ p.id }}" data-proxy-id="{{ p.id }}">{{ _('close') }}</button>
-              </div>
-              {% if item.last_cache_cleared %}
-              <p class="form-hint mt-xs">
-                {{ _('last_cleared') }}: {{ item.last_cache_cleared.strftime('%Y-%m-%d %H:%M') }} UTC
-              </p>
-              {% endif %}
-            </div>
-          </div>
-        </td>
-      </tr>
+      <!-- Card Actions -->
+      <div style="padding: var(--space-sm) var(--space-md); border-top: 1px solid var(--color-line); background: var(--color-surface); display: flex; justify-content: space-between; gap: var(--space-sm);">
+        <div style="display: flex; gap: var(--space-xs);">
+          {% if not p.ssl_enabled %}
+          <a href="/ssl/issue?full_domain={{ p.full_domain }}" class="btn btn--secondary btn--sm" title="Issue SSL" id="btn-ssl-{{ p.id }}">
+            {{ _('ssl_2') }}
+          </a>
+          {% endif %}
+          <button class="btn btn--secondary btn--sm" id="btn-cache-{{ p.id }}" data-proxy-id="{{ p.id }}" data-cache-enabled="{{ '1' if item.cache_enabled else '0' }}" data-cache-ttl="{{ p.cache_ttl_minutes }}" data-cache-auto="{{ p.cache_auto_clear_hours }}" title="Cache Settings">
+            {{ _('cache_settings') }}
+          </button>
+        </div>
+        <button class="btn btn--danger btn--sm" id="btn-del-{{ p.id }}" data-proxy-id="{{ p.id }}" data-full-domain="{{ p.full_domain }}" data-dns-managed="{{ '1' if item.dns_managed else '0' }}" title="Delete Proxy">
+          {{ _('delete') }}
+        </button>
+      </div>
 
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
-</div>
+    </div>
+    {% endfor %}
+  </div>
+
 {% else %}
-<div class="empty-state" id="empty-state">
-  <div class="empty-state__shape">
-    <div class="shape-square-sm"></div>
+{% call ui.section_card('', extra_header='') %}
+  <div class="empty-state" id="empty-state" style="margin: 0; padding: var(--space-xl) var(--space-md);">
+    <div class="empty-state__shape">
+      <div class="shape-square-sm"></div>
+    </div>
+    <h3 class="empty-state__title">{{ _('no_reverse_proxies_yet') }}</h3>
+    <div class="empty-state__actions mt-lg">
+      <a href="/proxy/create" class="btn btn--primary">{{ _('create_proxy_1') }}</a>
+    </div>
   </div>
-  <h3 class="empty-state__title">{{ _('no_reverse_proxies_yet') }}</h3>
-  <p class="empty-state__desc">{{ _('route_incoming_traffic_to_your_local_por') }}</p>
-  <div class="empty-state__actions">
-    <a href="/proxy/create" class="btn btn--minimal">{{ _('create_proxy_1') }}</a>
-  </div>
-</div>
+{% endcall %}
 {% endif %}
 </div><!-- /.proxy-page -->
 {% endblock %}
@@ -206,28 +178,31 @@ document.addEventListener('DOMContentLoaded', function() {
   else if (typeof window.hideSkeleton === 'function') window.hideSkeleton('proxy-skeleton');
 });
 
-function filterProxyTable() {
+function filterProxyGrid() {
   const query = document.getElementById('proxy-search-input').value.toLowerCase().trim();
   const filter = document.getElementById('proxy-status-filter').value;
-  const rows = document.querySelectorAll('#proxy-table tbody tr[data-proxy-id]');
+  const cards = document.querySelectorAll('.proxy-card');
 
-  rows.forEach(row => {
-    const text = row.textContent.toLowerCase();
+  cards.forEach(card => {
+    const text = card.textContent.toLowerCase();
     const matchesSearch = !query || text.includes(query);
     
     let matchesFilter = true;
     if (filter === 'ssl') {
-      matchesFilter = row.innerText.includes('SSL');
+      matchesFilter = card.innerText.includes('SSL') || card.innerText.includes('ssl');
     } else if (filter === 'cache') {
-      matchesFilter = row.innerText.includes('ON');
+      matchesFilter = card.innerText.includes('ON') || card.innerText.includes('on');
     }
 
     if (matchesSearch && matchesFilter) {
-      row.style.display = '';
+      card.style.display = 'flex';
     } else {
-      row.style.display = 'none';
+      card.style.display = 'none';
     }
   });
 }
 </script>
+<style>
+.proxy-card:hover { border-color: var(--color-accent) !important; }
+</style>
 {% endblock %}
