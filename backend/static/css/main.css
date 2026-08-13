@@ -72,8 +72,8 @@
 .remote-choice-row, .remote-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .remote-choice { align-items: flex-start; background: var(--color-surface); cursor: pointer; display: flex; gap: 10px; min-height: 72px; padding: 14px; border: none !important; border-top: 3px solid transparent !important; transition: border-color 0.15s ease, background 0.15s ease; }
 .remote-choice input { display: none !important; }
-.remote-choice:hover { background: var(--color-header-bg-bar); }
-.remote-choice:has(input:checked), .remote-choice--active { border-top-color: var(--color-accent) !important; }
+.remote-choice:hover { background: color-mix(in srgb, var(--color-header-bg-bar) 60%, var(--color-surface)); }
+.remote-choice:has(input:checked), .remote-choice--active { border-top-color: var(--color-accent) !important; background: var(--color-header-bg-bar) !important; }
 .remote-choice strong, .remote-choice small { display: block; }
 .remote-choice small { color: var(--color-muted); line-height: 1.45; margin-top: 4px; }
 .remote-choice em { color: var(--color-muted); font-size: var(--font-small); font-style: normal; font-weight: 600; }

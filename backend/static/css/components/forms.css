@@ -71,13 +71,13 @@ input[type="checkbox"]:checked, input[type="radio"]:checked {
   transition: border-color 0.15s ease, background 0.15s ease;
 }
 .settings-choice:hover {
-  background: var(--color-header-bg-bar);
+  background: color-mix(in srgb, var(--color-header-bg-bar) 60%, var(--color-surface));
 }
 .settings-choice--compact { min-height: auto; padding: 16px 20px; }
 .settings-choice:has(input:disabled) { opacity: 0.55; cursor: not-allowed; }
 .settings-choice--active, .settings-choice:has(input:checked) {
   border-top-color: var(--color-accent) !important;
-  background: var(--color-surface);
+  background: var(--color-header-bg-bar) !important;
 }
 
 .settings-choice__header {
