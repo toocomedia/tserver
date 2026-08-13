@@ -3,7 +3,9 @@
 {% block title %}{{ _('settings') }} — {{ PANEL_NAME }}{% endblock %}
 {% block page_title %}{{ _('settings') }}{% endblock %}
 
-{% block page_header_wrapper %}{% endblock %}
+{% block topbar_actions %}
+  <button type="button" class="btn btn--secondary btn--sm" id="btn-refresh-settings" onclick="window.location.reload();">{{ _('refresh') }}</button>
+{% endblock %}
 
 {% block content_class %}content--flush{% endblock %}
 
@@ -30,13 +32,6 @@
 
   <!-- Content Area -->
   <div class="split-content">
-    
-    <div class="page-header">
-      <h1 class="page-header__title">{{ _('settings') }}</h1>
-      <div class="page-header__actions">
-        <button type="button" class="btn btn--secondary btn--sm" id="btn-refresh-settings">{{ _('refresh') }}</button>
-      </div>
-    </div>
 
     <!-- TAB: ACCESS -->
     <div id="tab-access" class="split-tab active">

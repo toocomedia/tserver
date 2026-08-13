@@ -235,24 +235,24 @@ function goToStep(step) {
     backBtn.style.display = 'none';
     nextBtn.style.display = 'block';
     submitBtn.style.display = 'none';
-    nextText.textContent = window._('js.continue_to_runtime') || 'Continue to Runtime';
+    nextText.textContent = window._('continue_to_runtime') || 'Continue to Runtime';
   } else if (step === 2) {
     backBtn.style.display = 'block';
     nextBtn.style.display = 'block';
     submitBtn.style.display = 'none';
-    backText.textContent = window._('js.back_to_hostname') || 'Back to Hostname';
-    nextText.textContent = window._('js.continue_to_ssl') || 'Continue to SSL';
+    backText.textContent = window._('back_to_hostname') || 'Back to Hostname';
+    nextText.textContent = window._('continue_to_ssl') || 'Continue to SSL';
   } else if (step === 3) {
     backBtn.style.display = 'block';
     nextBtn.style.display = 'block';
     submitBtn.style.display = 'none';
-    backText.textContent = window._('js.back_to_runtime') || 'Back to Runtime';
-    nextText.textContent = window._('js.review_provision') || 'Review & Provision';
+    backText.textContent = window._('back_to_runtime') || 'Back to Runtime';
+    nextText.textContent = window._('review_provision') || 'Review & Provision';
   } else if (step === 4) {
     backBtn.style.display = 'block';
     nextBtn.style.display = 'none';
     submitBtn.style.display = 'block';
-    backText.textContent = window._('js.back_to_ssl') || 'Back to SSL';
+    backText.textContent = window._('back_to_ssl') || 'Back to SSL';
   }
 }
 

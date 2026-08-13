@@ -59,7 +59,11 @@
     // JS Translations Catalog
     window.I18N = {{ get_js_translations() | safe }};
     window._ = function(key) {
-      return window.I18N[key] || key;
+      if (window.I18N[key]) return window.I18N[key];
+      if (typeof key === 'string' && key.startsWith('js.') && window.I18N[key.slice(3)]) {
+        return window.I18N[key.slice(3)];
+      }
+      return key;
     };
   </script>
   {% block head %}{% endblock %}
