@@ -14,7 +14,7 @@
     {% if deletion_active %}
       <p class="text-muted" style="font-size: 13px;">{{ _('deleting_app_resources_cleanup_in_progre') }}</p>
     {% elif deletion_failed %}
-      <div class="alert alert--danger" style="margin-bottom: 12px; font-size: 13px;">{{ app.last_error or 'Deletion cleanup did not finish.' }}</div>
+      <div class="alert alert--danger" style="margin-bottom: 12px; font-size: 13px;">{{ app.last_error or _('deletion_cleanup_did_not_finish') }}</div>
       <button class="btn btn--danger btn--sm" type="button" data-app-delete-open style="width: 100%;">{{ _('retry_delete') }}</button>
     {% elif deployment_active %}
       <p class="text-muted" style="font-size: 13px;">{{ _('stop_the_active_deployment_before_deleti') }}</p>
@@ -30,7 +30,7 @@
   <div class="modal">
     <div class="modal__header">
       <h2 id="app-delete-title">{{ _('delete_python_app') }}</h2>
-      <button class="btn btn--ghost btn--icon" type="button" data-app-delete-close aria-label="Close">×</button>
+      <button class="btn btn--ghost btn--icon" type="button" data-app-delete-close aria-label="{{ _('close') }}">×</button>
     </div>
     <form method="post" action="/apps/{{ app.id }}/uninstall">
       <div class="modal__body">

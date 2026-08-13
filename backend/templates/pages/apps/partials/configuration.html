@@ -29,12 +29,12 @@
     <div style="border-top: 1px solid var(--color-line); padding-top: 20px;" id="environment">
       <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
         <strong style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-muted);">{{ _('environment_keys') }}</strong>
-        <span class="badge-pill">{% if environment_keys %}{{ environment_keys | length }} Keys{% else %}0 Keys{% endif %}</span>
+        <span class="badge-pill">{% if environment_keys %}{{ environment_keys | length }} {{ _('keys') }}{% else %}0 {{ _('keys') }}{% endif %}</span>
       </div>
 
       <div class="info-row">
         <span class="info-row__label">{{ _('managed_database') }}</span>
-        <span class="info-row__value">{% if app.postgres_mode == 'create' %}Managed PostgreSQL{% elif app.postgres_mode == 'supabase' %}Supabase PostgreSQL{% elif app.postgres_mode == 'external' %}External DATABASE_URL{% else %}None{% endif %}</span>
+        <span class="info-row__value">{% if app.postgres_mode == 'create' %}{{ _('managed_postgresql') }}{% elif app.postgres_mode == 'supabase' %}{{ _('supabase_postgresql') }}{% elif app.postgres_mode == 'external' %}{{ _('external_database_url_label') }}{% else %}{{ _('none') }}{% endif %}</span>
       </div>
       {% if app.postgres_mode == 'supabase' and app.database_name %}
       <div class="info-row">
@@ -53,7 +53,7 @@
           <span class="info-row__value mono">{{ key }}</span>
           <form method="post" action="/apps/{{ app.id }}/environment/{{ key }}/delete" style="display:inline;">
             {% include "partials/csrf_field.html" %}
-            <button class="btn btn--danger btn--sm" style="padding:2px 8px; font-size:11px;" title="Delete {{ key }}">{{ _('delete') }}</button>
+            <button class="btn btn--danger btn--sm" style="padding:2px 8px; font-size:11px;" title="{{ _('delete') }} {{ key }}">{{ _('delete') }}</button>
           </form>
         </div>
         {% endfor %}
@@ -61,8 +61,8 @@
 
       <form method="post" action="/apps/{{ app.id }}/environment" style="display: flex; gap: 8px; margin-top: 16px;">
         {% include "partials/csrf_field.html" %}
-        <input class="form-input" name="key" placeholder="VARIABLE_NAME" aria-label="Environment variable name" required style="padding: 8px 10px; font-size: 12px;">
-        <input class="form-input" name="value" type="password" placeholder="Value" aria-label="Environment variable value" required style="padding: 8px 10px; font-size: 12px;">
+        <input class="form-input" name="key" placeholder="VARIABLE_NAME" aria-label="{{ _('environment_variable_name') }}" required style="padding: 8px 10px; font-size: 12px;">
+        <input class="form-input" name="value" type="password" placeholder="{{ _('value') }}" aria-label="{{ _('environment_variable_value') }}" required style="padding: 8px 10px; font-size: 12px;">
         <button class="btn btn--secondary btn--sm">{{ _('add') }}</button>
       </form>
     </div>

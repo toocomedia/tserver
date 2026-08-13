@@ -331,20 +331,20 @@ function selectStack(type, title, el) {
   const descText = document.getElementById('desc-text');
   
   if (type === 'dns') {
-    if (descText) descText.textContent = 'DNS zone & A record only. No Nginx vhost.';
+    if (descText) descText.textContent = window._('js.dns_only_desc');
     if (nginxRow) nginxRow.style.display = 'none';
     if (sslContainer) sslContainer.style.display = 'none';
     if (sslDnsMsg) sslDnsMsg.style.display = 'block';
-    document.getElementById('rev-ssl').textContent = 'Not Applicable (DNS Only)';
+    document.getElementById('rev-ssl').textContent = window._('js.not_applicable_dns');
     document.getElementById('rev-ssl').style.color = '#707885';
   } else if (type === 'python') {
-    if (descText) descText.textContent = 'DNS domain created first. Continue to Python app source and deployment setup.';
+    if (descText) descText.textContent = window._('js.python_domain_desc');
     if (nginxRow) nginxRow.style.display = 'flex';
     if (sslContainer) sslContainer.style.display = 'flex';
     if (sslDnsMsg) sslDnsMsg.style.display = 'none';
     selectSsl(currentSslEnabled);
   } else {
-    if (descText) descText.textContent = 'Nginx HTTP vhost & webroot directory created.';
+    if (descText) descText.textContent = window._('js.nginx_webroot_desc');
     if (nginxRow) nginxRow.style.display = 'flex';
     if (sslContainer) sslContainer.style.display = 'flex';
     if (sslDnsMsg) sslDnsMsg.style.display = 'none';

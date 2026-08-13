@@ -17,7 +17,7 @@ document.addEventListener('app:init', () => {
   if (!btnCheck) return; // Not on settings page
 
   async function checkUpdates(force = false) {
-    if (btnCheckText) btnCheckText.textContent = 'Checking...';
+    if (btnCheckText) btnCheckText.textContent = window._('js.checking');
     if (btnCheck) btnCheck.disabled = true;
 
     try {
@@ -28,7 +28,7 @@ document.addEventListener('app:init', () => {
       if (elLocalCommit) elLocalCommit.innerHTML = `<code>${data.local_short_sha || 'unknown'}</code>`;
       if (elRemoteCommit) elRemoteCommit.innerHTML = `<code>${data.remote_short_sha || 'unknown'}</code>`;
       if (elCommitMsg) elCommitMsg.textContent = data.commit_message || '—';
-      if (elLastChecked) elLastChecked.textContent = data.last_checked || 'Just now';
+      if (elLastChecked) elLastChecked.textContent = data.last_checked || window._('js.just_now');
       if (chkAutoUpdate && typeof data.auto_update_enabled === 'boolean') {
         chkAutoUpdate.checked = data.auto_update_enabled;
       }
@@ -37,20 +37,20 @@ document.addEventListener('app:init', () => {
       if (data.has_update) {
         if (elStatusBadge) {
           elStatusBadge.className = 'badge badge--error badge--dot';
-          elStatusBadge.textContent = 'Update Available';
+          elStatusBadge.textContent = window._('update_available');
         }
         if (btnApply) {
           btnApply.disabled = false;
-          btnApply.textContent = 'Update & Restart Panel';
+          btnApply.textContent = window._('js.update_and_restart');
         }
       } else {
         if (elStatusBadge) {
           elStatusBadge.className = 'badge badge--ok badge--dot';
-          elStatusBadge.textContent = 'Up to date';
+          elStatusBadge.textContent = window._('up_to_date');
         }
         if (btnApply) {
           btnApply.disabled = true;
-          btnApply.textContent = 'Already Up to Date';
+          btnApply.textContent = window._('js.already_up_to_date');
         }
       }
       updateSkeleton?.classList.remove('is-data-loading');
@@ -59,13 +59,13 @@ document.addEventListener('app:init', () => {
       console.error('Update check failed:', err);
       if (elStatusBadge) {
         elStatusBadge.className = 'badge badge--error';
-        elStatusBadge.textContent = 'Check Failed';
+        elStatusBadge.textContent = window._('js.check_failed');
       }
       updateSkeleton?.classList.remove('is-data-loading');
       updateSkeleton?.setAttribute('aria-busy', 'false');
-      if (elStatusMsg) elStatusMsg.textContent = `Could not verify updates: ${err.message}`;
+      if (elStatusMsg) elStatusMsg.textContent = `${window._('js.check_failed')}: ${err.message}`;
     } finally {
-      if (btnCheckText) btnCheckText.textContent = 'Check for Updates';
+      if (btnCheckText) btnCheckText.textContent = window._('check_for_updates');
       if (btnCheck) btnCheck.disabled = false;
     }
   }
@@ -74,25 +74,25 @@ document.addEventListener('app:init', () => {
     try {
       await window.panel.post('/api/updates/auto-update', { enabled });
       if (typeof window.toast === 'function') {
-        window.toast(`Automatic updates ${enabled ? 'enabled' : 'disabled'}.`, 'success');
+        window.toast(window._('js.automatic_updates_status').replace('{status}', enabled ? 'enabled' : 'disabled'), 'success');
       }
     } catch (err) {
       console.error('Failed to update auto-update setting:', err);
       if (typeof window.toast === 'function') {
-        window.toast(`Could not save auto-update setting: ${err.message}`, 'danger');
+        window.toast(window._('js.could_not_save_autoupdate').replace('{error}', err.message), 'danger');
       }
       if (chkAutoUpdate) chkAutoUpdate.checked = !enabled;
     }
   }
 
   async function applyUpdate() {
-    if (!confirm('Are you sure you want to update and restart the panel now?\n\nA database backup will be created automatically.')) {
+    if (!confirm(window._('js.confirm_update_and_restart'))) {
       return;
     }
 
     if (btnApply) {
       btnApply.disabled = true;
-      btnApply.innerHTML = '<span class="spinner" style="display:inline-block; border:2px solid currentColor; border-top-color:transparent; border-radius:50%; width:12px; height:12px; animation:spin 1s linear infinite; margin-right:6px;"></span> Updating in background...';
+      btnApply.innerHTML = `<span class="spinner" style="display:inline-block; border:2px solid currentColor; border-top-color:transparent; border-radius:50%; width:12px; height:12px; animation:spin 1s linear infinite; margin-right:6px;"></span> ${window._('js.updating_in_background')}`;
     }
 
     try {
@@ -103,13 +103,13 @@ document.addEventListener('app:init', () => {
         }
         if (btnApply) {
           btnApply.disabled = false;
-          btnApply.textContent = 'Update & Restart Panel';
+          btnApply.textContent = window._('js.update_and_restart');
         }
         return;
       }
 
       if (typeof window.toast === 'function') {
-        window.toast('Update started in background! Database backed up. Panel will restart shortly.', 'success');
+        window.toast(window._('js.update_started_in_background'), 'success');
       }
 
       // Start background reconnect polling
@@ -117,7 +117,7 @@ document.addEventListener('app:init', () => {
     } catch (err) {
       console.error('Apply update trigger:', err);
       if (typeof window.toast === 'function') {
-        window.toast('Update process launched. Reconnecting to server...', 'info');
+        window.toast(window._('js.update_process_launched'), 'info');
       }
       startPollingHealth();
     }
@@ -134,7 +134,7 @@ document.addEventListener('app:init', () => {
           sawRestart = true;
           healthyChecksAfterRestart = 0;
           if (btnApply) {
-            btnApply.textContent = 'Panel restarting... Waiting for connection...';
+            btnApply.textContent = window._('js.panel_restarting_waiting');
           }
           return;
         }
@@ -153,7 +153,7 @@ document.addEventListener('app:init', () => {
         sawRestart = true;
         healthyChecksAfterRestart = 0;
         if (btnApply) {
-          btnApply.textContent = 'Panel restarting... Waiting for connection...';
+          btnApply.textContent = window._('js.panel_restarting_waiting');
         }
       }
     }, 2000);

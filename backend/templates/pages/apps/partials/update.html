@@ -11,7 +11,7 @@
   <div class="master-card__body">
     <div class="info-row">
       <span class="info-row__label">{{ _('deployed_revision') }}</span>
-      <span class="info-row__value mono">{{ app.deployed_revision[:12] if app.deployed_revision else 'Not deployed' }}</span>
+      <span class="info-row__value mono">{{ app.deployed_revision[:12] if app.deployed_revision else _('not_deployed') }}</span>
     </div>
 
     {% if app.source_type == 'git' %}
@@ -28,14 +28,14 @@
       <div class="info-row">
         <span class="info-row__label">{{ _('checked_revision') }}</span>
         <span class="info-row__value mono">
-          {% if app.available_revision %}{{ app.available_revision[:12] }}{% else %}Not checked{% endif %}
+          {% if app.available_revision %}{{ app.available_revision[:12] }}{% else %}{{ _('not_checked') }}{% endif %}
           {% if app.available_revision_message %} · {{ app.available_revision_message }}{% endif %}
         </span>
       </div>
 
       <div class="info-row">
         <span class="info-row__label">{{ _('last_checked') }}</span>
-        <span class="info-row__value">{{ app.source_checked_at or 'Never' }}</span>
+        <span class="info-row__value">{{ app.source_checked_at or _('never') }}</span>
       </div>
 
       <div style="display: flex; gap: 10px; margin-top: 20px;">

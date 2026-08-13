@@ -32,7 +32,7 @@
     <div class="hero-stats">
       <span>URL: {% if domain %}<a href="{{ public_url(domain.name, https=app.ssl_requested) }}" target="_blank" rel="noopener" style="color:var(--color-text); font-weight:700;">{{ domain.name }}</a>{% else %}<span class="text-muted">{{ _('domain_removed') }}</span>{% endif %}</span>
       <span>{{ _('port') }} <span class="mono" style="color:var(--color-text); font-weight:600;">127.0.0.1:{{ app.port }}</span></span>
-      <span>{{ _('ssl') }} <span style="color:var(--color-text); font-weight:600;">{{ 'HTTPS active' if app.ssl_requested else 'HTTP only' }}</span></span>
+      <span>{{ _('ssl') }} <span style="color:var(--color-text); font-weight:600;">{{ _('https_active') if app.ssl_requested else _('http_only') }}</span></span>
     </div>
   </div>
 
@@ -52,7 +52,7 @@
       <form method="post" action="/apps/{{ app.id }}/restart">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary btn--sm" {% if deployment_active %} disabled{% endif %}><i data-lucide="rotate-cw" style="width:13px;height:13px;"></i> {{ _('restart') }}</button></form>
       <form method="post" action="/apps/{{ app.id }}/stop">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary btn--sm"><i data-lucide="square" style="width:13px;height:13px;"></i> {{ _('stop') }}</button></form>
     {% endif %}
-    <form method="post" action="/apps/{{ app.id }}/deploy">{% include "partials/csrf_field.html" %}<button class="btn {% if app.status == 'pending' and not app.deployed_revision %}btn--accent{% else %}btn--secondary{% endif %} btn--sm" {% if deployment_active %} disabled{% endif %}><i data-lucide="refresh-cw" style="width:13px;height:13px;"></i> {% if app.status == 'pending' and not app.deployed_revision %}Deploy App{% else %}Redeploy{% endif %}</button></form>
+    <form method="post" action="/apps/{{ app.id }}/deploy">{% include "partials/csrf_field.html" %}<button class="btn {% if app.status == 'pending' and not app.deployed_revision %}btn--accent{% else %}btn--secondary{% endif %} btn--sm" {% if deployment_active %} disabled{% endif %}><i data-lucide="refresh-cw" style="width:13px;height:13px;"></i> {% if app.status == 'pending' and not app.deployed_revision %}{{ _('deploy_app') }}{% else %}{{ _('redeploy') }}{% endif %}</button></form>
   </div>
   {% endif %}
 </div>

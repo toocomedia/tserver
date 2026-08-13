@@ -130,12 +130,11 @@ def get_js_translations(context) -> str:
     lang = _extract_lang(context)
     
     # Base dictionary from English
-    js_strings = {k: v for k, v in i18n_service.en_strings.items() if k.startswith("js.")}
+    js_strings = dict(i18n_service.en_strings)
     
     # Override with requested language if available
     target_strings = i18n_service.locales.get(lang, {})
-    overrides = {k: v for k, v in target_strings.items() if k.startswith("js.")}
-    js_strings.update(overrides)
+    js_strings.update(target_strings)
         
     return json.dumps(js_strings)
 

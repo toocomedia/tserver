@@ -38,11 +38,11 @@ if (root) {
     cancel.hidden = step >= 5;
     next.hidden = step >= 5;
     next.disabled = step === 2 && !state.detected;
-    if (step === 1) next.textContent = 'Continue to Detection';
-    if (step === 2) next.textContent = 'Continue to Configuration';
-    if (step === 3) next.textContent = 'Continue to Environment';
-    if (step === 4) next.textContent = 'Deploy App';
-    setText(root.querySelector('[data-wizard-hint]'), `Step ${step} of 6`);
+    if (step === 1) next.textContent = window._('js.continue_to_detection');
+    if (step === 2) next.textContent = window._('js.continue_to_configuration');
+    if (step === 3) next.textContent = window._('js.continue_to_environment');
+    if (step === 4) next.textContent = window._('deploy_app');
+    setText(root.querySelector('[data-wizard-hint]'), window._('js.step_n_of_6').replace('{step}', step));
   }
 
   function setNextLoading(loading, label) {
@@ -53,13 +53,13 @@ if (root) {
 
   function resetBranches() {
     branch.disabled = true;
-    branch.replaceChildren(new Option('Loading branches…'));
-    setText(branchMessage, 'Branches will load from the repository.');
+    branch.replaceChildren(new Option(window._('js.loading_branches')));
+    setText(branchMessage, window._('js.branches_will_load'));
   }
 
   async function loadBranches() {
     const url = repo.value.trim();
-    if (!url) throw new Error('Enter a Git repository URL first.');
+    if (!url) throw new Error(window._('js.enter_git_url_first'));
     resetBranches();
     const values = new FormData();
     values.append('repository_url', url);
@@ -68,7 +68,8 @@ if (root) {
     });
     repo.value = data.repository_url || url;
     renderBranches(branch, data.branches, data.default_branch);
-    setText(branchMessage, `${data.branches.length} branch${data.branches.length === 1 ? '' : 'es'} available.`);
+    const msgKey = data.branches.length === 1 ? 'js.branch_available' : 'js.branches_available';
+    setText(branchMessage, window._(msgKey).replace('{count}', data.branches.length));
   }
 
   function showDetectionError(error) {
@@ -76,7 +77,7 @@ if (root) {
     renderStep(2);
     setHidden(root.querySelector('[data-detection-loading]'), true);
     setHidden(root.querySelector('[data-detection-results]'), true);
-    setText(root.querySelector('[data-detection-error-text]'), error.message || 'Detection failed.');
+    setText(root.querySelector('[data-detection-error-text]'), error.message || window._('js.detection_failed'));
     setHidden(root.querySelector('[data-detection-error]'), false);
     next.disabled = true;
   }
@@ -88,7 +89,7 @@ if (root) {
     renderEnvironmentFields(root.querySelector('[data-environment-list]'), environmentKeys);
     setHidden(root.querySelector('[data-environment-empty]'), Boolean(environmentKeys.length));
     const evidence = detected.database_evidence || [];
-    setText(root.querySelector('[data-database-hint]'), evidence.length ? evidence.join(' · ') : 'No database was detected.');
+    setText(root.querySelector('[data-database-hint]'), evidence.length ? evidence.join(' · ') : window._('js.no_database_detected'));
     const supabaseOption = root.querySelector('[data-supabase-option]');
     if (supabaseOption) supabaseOption.hidden = !detected.postgres_suspected;
     databaseMode.value = detected.managed_postgres_recommended ? 'create' : 'none';
@@ -132,13 +133,13 @@ if (root) {
 
   async function checkPort() {
     if (!appPort.reportValidity()) return false;
-    setText(portStatus, `Checking port ${appPort.value}…`);
+    setText(portStatus, window._('js.checking_port').replace('{port}', appPort.value));
     try {
       const result = await fetchJson(`/apps/port-availability?port=${encodeURIComponent(appPort.value)}`);
-      setText(portStatus, `Port ${result.port} is available on this VPS.`);
+      setText(portStatus, window._('js.port_available').replace('{port}', result.port));
       return true;
     } catch (error) {
-      setText(portStatus, error.message || 'Port availability could not be checked.');
+      setText(portStatus, error.message || window._('js.port_check_failed'));
       return false;
     }
   }
@@ -157,7 +158,7 @@ if (root) {
     if (!fields.every((field) => field.reportValidity())) return false;
     const databaseRequired = state.detected?.environment_keys?.some((item) => item.name === 'DATABASE_URL' && item.required);
     if (databaseRequired && databaseMode.value === 'none') {
-      configurationError('DATABASE_URL is required. Select managed PostgreSQL or provide an external URL.');
+      configurationError(window._('js.database_url_required'));
       return false;
     }
     return true;
@@ -180,7 +181,7 @@ if (root) {
 
   async function startDeployment() {
     if (!await validEnvironment()) return;
-    setNextLoading(true, 'Deploying');
+    setNextLoading(true, window._('js.deploying'));
     try {
       const result = await fetchJson('/apps/create', {
         method: 'POST', headers: { ...csrfHeaders(), Accept: 'application/json' }, body: new FormData(form),
@@ -192,9 +193,9 @@ if (root) {
       setHidden(actions, true);
       pollDeployment();
     } catch (error) {
-      configurationError(error.message || 'Deployment could not be started.');
+      configurationError(error.message || window._('js.deployment_could_not_start'));
     } finally {
-      setNextLoading(false, 'Deploy App');
+      setNextLoading(false, window._('deploy_app'));
     }
   }
 
@@ -202,7 +203,7 @@ if (root) {
     try {
       const data = await fetchJson(`/apps/${state.appId}/deployments/${state.deploymentId}`, { headers: csrfHeaders() });
       root.querySelectorAll('[data-deployment-stage]').forEach((item) => setText(item, `${data.status} · ${data.stage}`));
-      setText(root.querySelector('[data-deployment-summary]'), data.status === 'success' ? 'Deployment completed successfully.' : 'Deployment is running on the server.');
+      setText(root.querySelector('[data-deployment-summary]'), data.status === 'success' ? window._('js.deployment_completed') : window._('js.deployment_running'));
       setText(root.querySelector('[data-deployment-output]'), `${data.output || ''}${data.error || ''}`);
       renderDeploymentSteps(root.querySelector('[data-deployment-steps]'), data.stage);
       if (['queued', 'running'].includes(data.status)) return window.setTimeout(pollDeployment, 1200);
@@ -215,13 +216,13 @@ if (root) {
         return;
       }
       state.unlocked = 6;
-      setText(root.querySelector('[data-deployment-summary]'), 'Deployment failed. Review the output, then retry from app details.');
-      setText(root.querySelector('[data-deployment-error-text]'), data.error || 'Deployment failed.');
+      setText(root.querySelector('[data-deployment-summary]'), window._('js.deployment_failed_review'));
+      setText(root.querySelector('[data-deployment-error-text]'), data.error || window._('js.deployment_failed'));
       root.querySelector('[data-deployment-details]').href = `/apps/${state.appId}`;
       setHidden(root.querySelector('[data-deployment-error]'), false);
       renderStep(6);
     } catch (error) {
-      setText(root.querySelector('[data-deployment-error-text]'), error.message || 'Could not read deployment status.');
+      setText(root.querySelector('[data-deployment-error-text]'), error.message || window._('js.could_not_read_status'));
       setHidden(root.querySelector('[data-deployment-error]'), false);
     }
   }
@@ -231,7 +232,7 @@ if (root) {
     branchTimer = window.setTimeout(() => loadBranches().catch((error) => setText(branchMessage, error.message)), 700);
   });
   databaseMode.addEventListener('change', syncDatabaseMode);
-  appPort.addEventListener('input', () => setText(portStatus, 'Port changed. Check availability before deployment.'));
+  appPort.addEventListener('input', () => setText(portStatus, window._('js.port_changed')));
   root.querySelector('[data-check-port]').addEventListener('click', checkPort);
   root.querySelector('[data-detection-retry]').addEventListener('click', detect);
   next.addEventListener('click', () => [detect, () => renderStep(3), () => { if (validConfiguration()) renderStep(4); }, startDeployment][state.step - 1]?.());
