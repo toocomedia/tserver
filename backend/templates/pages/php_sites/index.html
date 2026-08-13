@@ -10,7 +10,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="php-sites-page">
+<div class="php-sites-page" style="position: relative;">
   <!-- SKELETON LOADING OVERLAY -->
   {{ skeleton_overlay('php-sites-skeleton', controls=1, tables=[{ 'rows': 4 }]) }}
 
@@ -24,12 +24,6 @@
 
   {% if sites %}
   <!-- ACTION TOOLBAR -->
-  {% set search_id = 'php-site-search' %}
-  {% set search_placeholder = 'Search PHP websites by domain or root...' %}
-  {% set filter_options = [
-    {'val': 'php', 'label': 'Plain PHP'},
-    {'val': 'wordpress', 'label': 'WordPress'}
-  ] %}
   <div class="action-toolbar mb-md">
     <div class="action-toolbar__search">
       <input type="text" id="php-site-search" class="form-control" placeholder="Search PHP websites..." onkeyup="filterPhpSitesTable()">
@@ -112,6 +106,14 @@
   </div>
   {% endif %}
 </div>
+{% endblock %}
 
+{% block scripts %}
 <script type="module" src="/static/js/modules/php_sites_list.js?v={{ APP_VERSION }}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  if (typeof hideSkeleton === 'function') hideSkeleton('php-sites-skeleton', 100);
+  else if (typeof window.hideSkeleton === 'function') window.hideSkeleton('php-sites-skeleton', 100);
+});
+</script>
 {% endblock %}
