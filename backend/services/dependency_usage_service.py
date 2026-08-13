@@ -11,6 +11,18 @@ from dependencies import dependency_manager
 _STACK_SERVICE_DEPENDENCIES = frozenset({"docker"})
 
 
+def _matches_process(process_name: str, process_names: set[str]) -> bool:
+    if not process_name:
+        return False
+    if process_name in process_names:
+        return True
+    if any(process_name.startswith(name) for name in process_names):
+        return True
+    if "php-fpm" in process_names and ("php" in process_name and "fpm" in process_name):
+        return True
+    return False
+
+
 def _process_metrics(
     processes: list[dict[str, Any]],
     process_names: set[str],
@@ -18,7 +30,7 @@ def _process_metrics(
 ) -> dict[str, Any]:
     matches = [
         process for process in processes
-        if str(process.get("name") or "").lower() in process_names
+        if _matches_process(str(process.get("name") or "").lower(), process_names)
     ]
     memory_bytes = sum(
         int(getattr(process.get("memory_info"), "rss", 0) or 0)

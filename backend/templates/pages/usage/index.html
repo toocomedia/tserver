@@ -79,6 +79,7 @@
     { 'cols': [30, 15, 12, 15, 12], 'rows': 4 },
     { 'cols': [30, 15, 12, 15, 12], 'rows': 3 },
     { 'cols': [30, 15, 12, 15, 12], 'rows': 2 },
+    { 'cols': [30, 15, 12, 15, 12], 'rows': 2 },
     { 'cols': [25, 12, 12, 12, 15, 12], 'rows': 2 },
     { 'cols': [10, 35, 12, 12, 12], 'rows': 5 },
     { 'cols': [30, 15, 12, 15, 12], 'rows': 2 },
@@ -262,6 +263,20 @@
           <td><span class="${procStatusClass(app.status)}">${app.status}</span></td>
         </tr>
       `).join('') : '<tr><td colspan="5" class="text-muted">No hosted Python apps yet.</td></tr>';
+    }
+
+    const phpSiteTbody = document.getElementById('php-site-usage-tbody');
+    if (phpSiteTbody) {
+      const sites = d.php_sites || [];
+      phpSiteTbody.innerHTML = sites.length ? sites.map(site => `
+        <tr>
+          <td class="table-title">${site.label}${site.version ? ` <span class="text-small text-muted" style="font-weight:400; margin-left:6px;">(${site.preset === 'wordpress' ? 'WordPress' : 'PHP ' + site.version})</span>` : ''}</td>
+          <td>${site.count}</td>
+          <td>${site.cpu.toFixed(1)}%</td>
+          <td>${site.memory}</td>
+          <td><span class="${procStatusClass(site.status)}">${site.status}</span></td>
+        </tr>
+      `).join('') : '<tr><td colspan="5" class="text-muted">No hosted PHP websites yet.</td></tr>';
     }
 
     const containerAppTbody = document.getElementById('container-app-usage-tbody');

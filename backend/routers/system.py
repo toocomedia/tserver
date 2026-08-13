@@ -29,6 +29,7 @@ from models.proxy import ReverseProxy
 from services import error_service
 from services import dependency_usage_service
 from services import hosted_app_usage_service
+from services import php_site_usage_service
 from services import process_usage_classifier
 from services import plugin_usage_service
 from services import container_app_usage_service
@@ -243,6 +244,7 @@ def _collect_usage_snapshot() -> dict:
             "memory_percent",
             "memory_info",
             "status",
+            "username",
         ]
     ):
         try:
@@ -327,6 +329,7 @@ async def server_stats(db: AsyncSession = Depends(get_db)):
 
     plugins = await plugin_usage_service.get_plugin_usage(procs, ram.total)
     hosted_apps = await hosted_app_usage_service.get_usage(db, procs, ram.total)
+    php_sites = await php_site_usage_service.get_usage(db, procs, ram.total)
     container_apps = await container_app_usage_service.get_usage(db, ram.total)
     dependencies = await dependency_usage_service.get_runtime_usage(procs, ram.total)
     resource_guard = await resource_guard_service.status(db)
@@ -381,6 +384,7 @@ async def server_stats(db: AsyncSession = Depends(get_db)):
         "plugins": plugins,
         "dependencies": dependencies,
         "hosted_apps": hosted_apps,
+        "php_sites": php_sites,
         "container_apps": container_apps,
         "resource_guard": resource_guard,
         "processes": top_procs,

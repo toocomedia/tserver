@@ -31,6 +31,25 @@ class DependencyUsageServiceTests(unittest.TestCase):
         self.assertEqual("20 MB (20.0% of server)", rows[0]["memory"])
         self.assertEqual("—", rows[1]["memory"])
 
+    def test_php_fpm_versioned_processes_are_matched(self):
+        statuses = [
+            {"id": "php", "name": "PHP Runtime", "running": True,
+             "usage": {"process_names": ["php-fpm", "php-fpm8.3", "php-fpm8.5"]},
+             "detected_version": "8.3, 8.5", "effective_state": "healthy"},
+        ]
+
+        processes = [
+            {"name": "php-fpm8.3", "cpu_percent": 1.2, "memory_info": SimpleNamespace(rss=30 * 1024 ** 2)},
+            {"name": "php-fpm8.5", "cpu_percent": 0.8, "memory_info": SimpleNamespace(rss=20 * 1024 ** 2)},
+        ]
+        rows = dependency_usage_service._rows(statuses, processes, 1000 * 1024 ** 2)
+        self.assertEqual(1, len(rows))
+        self.assertEqual("PHP Runtime", rows[0]["label"])
+        self.assertEqual(2, rows[0]["count"])
+        self.assertEqual(2.0, rows[0]["cpu"])
+        self.assertIn("50 MB", rows[0]["memory"])
+
 
 if __name__ == "__main__":
     unittest.main()
+
