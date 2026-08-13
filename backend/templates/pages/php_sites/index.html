@@ -13,55 +13,13 @@
 {% endblock %}
 
 {% block content %}
-<section class="php-sites-page" data-php-sites-list aria-label="{{ _('managed_websites') }}">
-  {{ skeleton_overlay('php-sites-list-skeleton', header=0, title_bar=1, tables=[{'cols': [30, 15, 12, 15, 12], 'rows': 4}]) }}
-  {% set php_title_icon %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 5h16v14H4z"></path><path d="M8 9h8M8 13h5"></path></svg>{% endset %}
-  {% set title = _('managed_websites') %}
-  {% set item_count = sites|length %}
-  {% set icon_svg = php_title_icon %}
-  {% include "partials/resource_title_bar.html" %}
+<section class="php-sites-page" data-php-sites-list aria-label="{{ _('managed_websites') }}" style="position: relative; min-height: 420px;">
+  <!-- SKELETON LOADING OVERLAY -->
+  {{ skeleton_overlay('php-sites-list-skeleton', header=0, title_bar=1, tables=[{'rows': 4}]) }}
 
-  {% if sites %}
-  <div class="table-wrap" data-site-table>
-    <table class="table php-sites-table">
-      <colgroup><col class="php-sites-table__domain"><col><col><col><col class="php-sites-table__actions"></colgroup>
-      <thead>
-        <tr>
-          <th>{{ _('website') }}</th>
-          <th>{{ _('preset') }}</th>
-          <th>{{ _('php_version') }}</th>
-          <th>{{ _('status') }}</th>
-          <th class="col-actions">{{ _('actions') }}</th>
-        </tr>
-      </thead>
-      <tbody>
-      {% for site in sites %}
-        {% set site_status_tone = 'success' if site.status in ['active', 'succeeded', 'ready'] else 'warning' if site.status in ['provisioning', 'queued', 'running', 'degraded'] else 'danger' if site.status in ['failed', 'deleting', 'error'] else 'muted' %}
-        <tr data-site-id="{{ site.id }}">
-          <td class="table-title"><a href="{{ path('php_sites', site.id) }}">{{ site.domain or '—' }}</a></td>
-          <td>{{ _('wordpress') if site.preset == 'wordpress' else _('plain_php') }}</td>
-          <td><code>{{ site.php_version }}</code></td>
-          <td>{% set status_label = site.status|replace('_', ' ')|title %}{% set status_tone = site_status_tone %}{% include "partials/status_badge.html" %}</td>
-          <td class="col-actions" style="display:flex; gap:6px; justify-content:flex-end;">
-            <a class="icon-btn" href="{{ path('php_sites', site.id) }}" title="{{ _('manage_php_site') }}" aria-label="{{ _('manage_php_site') }}">
-              <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"></path><path d="m19.4 15 .1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2V19a2 2 0 1 1-4 0v-.1A1.7 1.7 0 0 0 6.8 18l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.7 1.7 0 0 0 2.8 12H3a2 2 0 1 1 0-4h-.1A1.7 1.7 0 0 0 4 5.1l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.7 1.7 0 0 0 10 1.2V1a2 2 0 1 1 4 0v.1A1.7 1.7 0 0 0 16.9 2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1A1.7 1.7 0 0 0 21.2 8h-.1a2 2 0 1 1 0 4h.1a2 2 0 1 1-1.8 3Z"></path></svg>
-            </a>
-          </td>
-        </tr>
-      {% endfor %}
-      </tbody>
-    </table>
-  </div>
-  {% else %}
-  <div data-site-empty>
-    {% set empty_icon = '<div class="empty-state__shape"><div class="shape-square-sm"></div></div>' %}
-    {% set empty_message = _('no_php_websites') %}
-    {% include "partials/empty_state.html" %}
-    <div class="empty-state__actions mt-lg" style="display:flex; justify-content:center;">
-      <a class="btn btn--primary" href="{{ path('php_sites_create') }}">{{ _('create_php_site') }}</a>
-    </div>
-  </div>
-  {% endif %}
+  <!-- LAZY LOADED CONTENT CONTAINER -->
+  <div data-sites-container style="display:none;" aria-live="polite"></div>
+
   <div class="alert alert--danger php-sites__error mt-lg" data-site-error hidden role="alert"></div>
 </section>
 {% endblock %}
