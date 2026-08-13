@@ -6,11 +6,11 @@
 html[dir="rtl"] {
   direction: rtl;
   text-align: right;
-  font-family: 'Janna LT', 'Onest', system-ui, -apple-system, sans-serif;
+  font-family: 'Cairo', 'Tajawal', 'IBM Plex Sans Arabic', 'Onest', system-ui, -apple-system, sans-serif;
 }
 
 /* --------------------------------------------------------------------------
-   1. Typography & Base Alignment
+   1. Typography & Base Alignment & Sharp Arabic Bold Weights
    -------------------------------------------------------------------------- */
 html[dir="rtl"] body,
 html[dir="rtl"] p,
@@ -26,9 +26,33 @@ html[dir="rtl"] td,
 html[dir="rtl"] input,
 html[dir="rtl"] button,
 html[dir="rtl"] select,
-html[dir="rtl"] textarea {
-  font-family: 'Janna LT', 'Onest', system-ui, -apple-system, sans-serif;
+html[dir="rtl"] textarea,
+html[dir="rtl"] span,
+html[dir="rtl"] a {
+  font-family: 'Cairo', 'Tajawal', 'IBM Plex Sans Arabic', 'Onest', system-ui, -apple-system, sans-serif;
   text-align: right;
+}
+
+/* Enhanced Arabic Bold Text Rendering */
+html[dir="rtl"] b,
+html[dir="rtl"] strong,
+html[dir="rtl"] h1,
+html[dir="rtl"] h2,
+html[dir="rtl"] h3,
+html[dir="rtl"] h4,
+html[dir="rtl"] h5,
+html[dir="rtl"] h6,
+html[dir="rtl"] th,
+html[dir="rtl"] .active,
+html[dir="rtl"] .is-active,
+html[dir="rtl"] .font-bold,
+html[dir="rtl"] .fw-bold,
+html[dir="rtl"] .master-card__header,
+html[dir="rtl"] .page-header__title,
+html[dir="rtl"] .sidebar__item--active,
+html[dir="rtl"] .split-sidebar__item.active,
+html[dir="rtl"] .step-item.active {
+  font-weight: 700 !important;
 }
 
 /* --------------------------------------------------------------------------
@@ -64,15 +88,42 @@ html[dir="rtl"] .sidebar__search.is-expanded .sidebar__search-input {
   padding-left: 12px;
 }
 
-/* Primary Sidebar Items & Nav */
+/* Primary Sidebar Items & Active Direction Flipping */
 html[dir="rtl"] .sidebar__item {
   text-align: right;
+  border-left: none;
+  border-right: 4px solid transparent;
 }
 
 html[dir="rtl"] .sidebar__item svg,
 html[dir="rtl"] .sidebar__item i {
   margin-left: 0.75rem;
   margin-right: 0;
+}
+
+html[dir="rtl"] .sidebar__item--active,
+html[dir="rtl"] .sidebar__item--active:hover {
+  border-left-color: transparent !important;
+  border-right-color: var(--color-accent-2, var(--color-accent)) !important;
+}
+
+/* Sidebar Active Style Variants in RTL */
+html[data-sidebar-style="line"][dir="rtl"] .sidebar__item--active,
+html[data-sidebar-style="line"][dir="rtl"] .sidebar__item--active:hover {
+  border-left-color: transparent !important;
+  border-right-color: var(--color-accent) !important;
+}
+
+html[data-sidebar-style="gradient"][dir="rtl"] .sidebar__item {
+  border-left: none !important;
+  border-right: none !important;
+  padding-left: var(--space-md);
+  padding-right: calc(var(--space-md) + 4px);
+}
+
+html[data-sidebar-style="gradient"][dir="rtl"] .sidebar__item--active,
+html[data-sidebar-style="gradient"][dir="rtl"] .sidebar__item--active:hover {
+  background: linear-gradient(to left, color-mix(in srgb, var(--color-accent) 20%, transparent), transparent) !important;
 }
 
 html[dir="rtl"] .sidebar__section-label {
@@ -123,24 +174,38 @@ html[dir="rtl"] .mobile-header #mobile-menu-toggle {
 }
 
 /* --------------------------------------------------------------------------
-   3. Split Layout (Secondary Sidebar / Settings Tabs)
+   3. Split Layout & Secondary Tabs Direction Fixes
    -------------------------------------------------------------------------- */
 @media (min-width: 768px) {
   html[dir="rtl"] .split-sidebar {
     border-left: 1px solid var(--color-line, rgba(255, 255, 255, 0.08));
     border-right: none;
   }
+
+  html[dir="rtl"] .split-sidebar__item {
+    border-right: 3px solid transparent;
+    border-left: none;
+    text-align: right;
+  }
+
+  html[dir="rtl"] .split-sidebar__item.active {
+    border-right-color: var(--color-accent);
+    border-left-color: transparent;
+  }
 }
 
-html[dir="rtl"] .split-sidebar__item {
-  border-right: 3px solid transparent;
-  border-left: none;
-  text-align: right;
-}
+@media (max-width: 767px) {
+  html[dir="rtl"] .split-sidebar__item {
+    border-left: none !important;
+    border-right: none !important;
+    border-bottom: 3px solid transparent;
+  }
 
-html[dir="rtl"] .split-sidebar__item.active {
-  border-right-color: var(--color-accent);
-  border-left-color: transparent;
+  html[dir="rtl"] .split-sidebar__item.active {
+    border-left-color: transparent !important;
+    border-right-color: transparent !important;
+    border-bottom-color: var(--color-accent) !important;
+  }
 }
 
 html[dir="rtl"] .split-sidebar__count {
@@ -293,13 +358,21 @@ html[dir="rtl"] .alert__close {
   margin-left: 0;
 }
 
-/* Stepper */
-html[dir="rtl"] .stepper {
+/* Stepper & Wizard Step Bar */
+html[dir="rtl"] .stepper,
+html[dir="rtl"] .step-bar {
   flex-direction: row;
 }
 
-html[dir="rtl"] .stepper__step {
+html[dir="rtl"] .stepper__step,
+html[dir="rtl"] .step-item {
   text-align: right;
+  flex-direction: row;
+}
+
+html[dir="rtl"] .step-item .step-num {
+  margin-left: 6px;
+  margin-right: 0;
 }
 
 /* Toast Container */
