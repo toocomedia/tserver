@@ -47,13 +47,15 @@
       document.documentElement.setAttribute('data-theme', 'charcoal');
     }
 
-    var sidebarStyle = localStorage.getItem('sidebar_style') || 'gradient';
+    var sidebarStyle = localStorage.getItem('sidebar_style') || 'opacity';
     if (sidebarStyle === 'line') {
       document.documentElement.setAttribute('data-sidebar-style', 'line');
     } else if (sidebarStyle === 'opacity') {
       document.documentElement.setAttribute('data-sidebar-style', 'opacity');
     } else if (sidebarStyle === 'gradient') {
       document.documentElement.setAttribute('data-sidebar-style', 'gradient');
+    } else if (sidebarStyle === 'full') {
+      document.documentElement.setAttribute('data-sidebar-style', 'full');
     }
     
     // JS Translations Catalog

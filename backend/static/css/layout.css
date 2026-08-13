@@ -355,20 +355,18 @@ html[data-sidebar-style="gradient"] .sidebar__item--active:hover {
   align-items: center;
   justify-content: space-between;
   gap: var(--space-md);
-  /* Exact same height as .sidebar__logo so dividers align */
-  height: var(--topbar-height);
-  /* Horizontal padding only — no side margin/padding on the bar itself */
-  padding: 0 var(--page-gutter);
-  /* Explicit background so the bar is always grounded to the page bg */
+  height: auto;
+  min-height: 60px;
+  padding: 14px var(--page-gutter);
+  margin-bottom: 16px;
   background: var(--color-bg);
-  /* Use sidebar-border color to match the sidebar divider exactly */
   border-bottom: 1px solid var(--color-sidebar-border);
   flex-shrink: 0;
   flex-wrap: nowrap;
 }
 
 .content--flush .page-header {
-  padding: 0 var(--page-gutter);
+  padding: 14px var(--page-gutter);
 }
 
 .page-header__title {
@@ -666,9 +664,10 @@ html[data-sidebar-style="gradient"] .sidebar__item--active:hover {
     align-items: stretch;
     justify-content: center;
     height: auto;
-    min-height: var(--topbar-height, 56px);
-    padding: 12px var(--page-gutter);
-    gap: 10px;
+    min-height: 64px;
+    padding: 16px var(--page-gutter);
+    gap: 12px;
+    margin-bottom: 20px;
     background: var(--color-bg);
     border-bottom: 1px solid var(--color-sidebar-border);
   }

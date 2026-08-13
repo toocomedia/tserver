@@ -100,13 +100,17 @@
         <label class="form-label">Connection Hostname</label>
         <div class="settings-choice-grid mt-sm">
           <label class="settings-choice settings-choice--active" id="choice-mode-managed">
-            <input type="radio" name="pg-remote-mode" value="managed" checked>
-            <span class="settings-choice__title">Managed subdomain</span>
+            <div class="settings-choice__header">
+              <input type="radio" name="pg-remote-mode" value="managed" checked>
+              <span class="settings-choice__title">Managed subdomain</span>
+            </div>
             <span class="settings-choice__desc">The panel creates its DNS record.</span>
           </label>
           <label class="settings-choice" id="choice-mode-external">
-            <input type="radio" name="pg-remote-mode" value="external">
-            <span class="settings-choice__title">External hostname</span>
+            <div class="settings-choice__header">
+              <input type="radio" name="pg-remote-mode" value="external">
+              <span class="settings-choice__title">External hostname</span>
+            </div>
             <span class="settings-choice__desc">You manage its DNS record.</span>
           </label>
         </div>
@@ -143,13 +147,17 @@
         <label class="form-label">Connection Security</label>
         <div class="settings-choice-grid mt-sm">
           <label class="settings-choice settings-choice--active" id="choice-enc-true">
-            <input type="radio" name="pg-remote-encryption" value="true" checked>
-            <span class="settings-choice__title">Encrypted with SSL (Recommended)</span>
+            <div class="settings-choice__header">
+              <input type="radio" name="pg-remote-encryption" value="true" checked>
+              <span class="settings-choice__title">Encrypted with SSL (Recommended)</span>
+            </div>
             <span class="settings-choice__desc">Uses Let’s Encrypt (sslmode=verify-full).</span>
           </label>
           <label class="settings-choice" id="choice-enc-false">
-            <input type="radio" name="pg-remote-encryption" value="false">
-            <span class="settings-choice__title">Not encrypted</span>
+            <div class="settings-choice__header">
+              <input type="radio" name="pg-remote-encryption" value="false">
+              <span class="settings-choice__title">Not encrypted</span>
+            </div>
             <span class="settings-choice__desc">Uses sslmode=disable.</span>
           </label>
         </div>

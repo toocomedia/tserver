@@ -141,18 +141,24 @@
 
           <div class="settings-choice-grid mb-md">
             <label class="settings-choice {% if s.url_mode == 'none' or not s.panel_domain %}settings-choice--active{% endif %}">
-              <input type="radio" name="url_mode" id="url_mode_none" value="none" {% if s.url_mode== 'none' or not s.panel_domain %}checked{% endif %}>
-              <span class="settings-choice__title">{{ _('ip_only') }}</span>
+              <div class="settings-choice__header">
+                <input type="radio" name="url_mode" id="url_mode_none" value="none" {% if s.url_mode== 'none' or not s.panel_domain %}checked{% endif %}>
+                <span class="settings-choice__title">{{ _('ip_only') }}</span>
+              </div>
               <span class="settings-choice__desc">{{ _('no_domain_name') }}</span>
             </label>
             <label class="settings-choice {% if s.url_mode == 'subdomain' %}settings-choice--active{% endif %}">
-              <input type="radio" name="url_mode" id="url_mode_subdomain" value="subdomain" {% if s.url_mode== 'subdomain' %}checked{% endif %} {% if not s.managed_domains %}disabled{% endif %}>
-              <span class="settings-choice__title">{{ _('subdomain_here') }}</span>
+              <div class="settings-choice__header">
+                <input type="radio" name="url_mode" id="url_mode_subdomain" value="subdomain" {% if s.url_mode== 'subdomain' %}checked{% endif %} {% if not s.managed_domains %}disabled{% endif %}>
+                <span class="settings-choice__title">{{ _('subdomain_here') }}</span>
+              </div>
               <span class="settings-choice__desc">{{ _('e_g_panel_yourdomain_com') }}</span>
             </label>
             <label class="settings-choice {% if s.url_mode == 'custom' %}settings-choice--active{% endif %}">
-              <input type="radio" name="url_mode" id="url_mode_custom" value="custom" {% if s.url_mode== 'custom' %}checked{% endif %}>
-              <span class="settings-choice__title">{{ _('custom_name') }}</span>
+              <div class="settings-choice__header">
+                <input type="radio" name="url_mode" id="url_mode_custom" value="custom" {% if s.url_mode== 'custom' %}checked{% endif %}>
+                <span class="settings-choice__title">{{ _('custom_name') }}</span>
+              </div>
               <span class="settings-choice__desc">{{ _('you_set_the_a_record') }}</span>
             </label>
           </div>
@@ -326,8 +332,10 @@
           <h4 class="mb-sm" style="font-size: 1rem; font-weight: 600;">{{ _('theme') }}</h4>
           <div class="settings-choice-grid mb-md">
             <label class="settings-choice">
-              <input type="radio" name="theme_mode" value="light">
-              <span class="settings-choice__title">{{ _('light') }}</span>
+              <div class="settings-choice__header">
+                <input type="radio" name="theme_mode" value="light">
+                <span class="settings-choice__title">{{ _('light') }}</span>
+              </div>
               <span class="settings-choice__desc">{{ _('always_use_light_mode') }}</span>
               <div class="settings-choice__palette">
                 <span class="palette-swatch" style="background: #FFFFFF;" title="Background #FFFFFF"></span>
@@ -337,8 +345,10 @@
               </div>
             </label>
             <label class="settings-choice">
-              <input type="radio" name="theme_mode" value="dark">
-              <span class="settings-choice__title">{{ _('midnight') }}</span>
+              <div class="settings-choice__header">
+                <input type="radio" name="theme_mode" value="dark">
+                <span class="settings-choice__title">{{ _('midnight') }}</span>
+              </div>
               <span class="settings-choice__desc">{{ _('slate_blue_gray_dark_mode') }}</span>
               <div class="settings-choice__palette">
                 <span class="palette-swatch" style="background: #0F1720;" title="Background #0F1720"></span>
@@ -348,8 +358,10 @@
               </div>
             </label>
             <label class="settings-choice">
-              <input type="radio" name="theme_mode" value="amoled">
-              <span class="settings-choice__title">{{ _('deep_dark') }}</span>
+              <div class="settings-choice__header">
+                <input type="radio" name="theme_mode" value="amoled">
+                <span class="settings-choice__title">{{ _('deep_dark') }}</span>
+              </div>
               <span class="settings-choice__desc">{{ _('pure_black_for_oled_screens') }}</span>
               <div class="settings-choice__palette">
                 <span class="palette-swatch" style="background: #000000;" title="Background #000000"></span>
@@ -359,8 +371,10 @@
               </div>
             </label>
             <label class="settings-choice">
-              <input type="radio" name="theme_mode" value="charcoal">
-              <span class="settings-choice__title">{{ _('charcoal') }}</span>
+              <div class="settings-choice__header">
+                <input type="radio" name="theme_mode" value="charcoal">
+                <span class="settings-choice__title">{{ _('charcoal') }}</span>
+              </div>
               <span class="settings-choice__desc">{{ _('1f1f22_bg_111112_sidebar') }}</span>
               <div class="settings-choice__palette">
                 <span class="palette-swatch" style="background: #1F1F22;" title="Background #1F1F22"></span>
@@ -370,8 +384,10 @@
               </div>
             </label>
             <label class="settings-choice">
-              <input type="radio" name="theme_mode" value="system">
-              <span class="settings-choice__title">{{ _('system') }}</span>
+              <div class="settings-choice__header">
+                <input type="radio" name="theme_mode" value="system">
+                <span class="settings-choice__title">{{ _('system') }}</span>
+              </div>
               <span class="settings-choice__desc">{{ _('match_system_preference') }}</span>
               <div class="settings-choice__palette">
                 <span class="palette-swatch" style="background: linear-gradient(135deg, #FFFFFF 50%, #1C1E21 50%);" title="Auto system theme"></span>
@@ -383,23 +399,31 @@
           <h4 class="mb-sm" style="margin-top: 1.5rem; font-size: 1rem; font-weight: 600;">{{ _('sidebar_active_style') }}</h4>
           <div class="settings-choice-grid mb-md" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
             <label class="settings-choice">
-              <input type="radio" name="sidebar_style" value="full">
-              <span class="settings-choice__title">{{ _('full_hover_button') }}</span>
+              <div class="settings-choice__header">
+                <input type="radio" name="sidebar_style" value="full">
+                <span class="settings-choice__title">{{ _('full_hover_button') }}</span>
+              </div>
               <span class="settings-choice__desc">{{ _('solid_background_on_active') }}</span>
             </label>
             <label class="settings-choice">
-              <input type="radio" name="sidebar_style" value="opacity">
-              <span class="settings-choice__title">{{ _('opacity') }}</span>
+              <div class="settings-choice__header">
+                <input type="radio" name="sidebar_style" value="opacity">
+                <span class="settings-choice__title">{{ _('opacity') }}</span>
+              </div>
               <span class="settings-choice__desc">{{ _('15_opacity_background') }}</span>
             </label>
             <label class="settings-choice">
-              <input type="radio" name="sidebar_style" value="line">
-              <span class="settings-choice__title">{{ _('just_line') }}</span>
+              <div class="settings-choice__header">
+                <input type="radio" name="sidebar_style" value="line">
+                <span class="settings-choice__title">{{ _('just_line') }}</span>
+              </div>
               <span class="settings-choice__desc">{{ _('minimal_line_indicator_only') }}</span>
             </label>
             <label class="settings-choice">
-              <input type="radio" name="sidebar_style" value="gradient">
-              <span class="settings-choice__title">{{ _('gradient') }}</span>
+              <div class="settings-choice__header">
+                <input type="radio" name="sidebar_style" value="gradient">
+                <span class="settings-choice__title">{{ _('gradient') }}</span>
+              </div>
               <span class="settings-choice__desc">{{ _('half_transparent_gradient_to_right') }}</span>
             </label>
           </div>

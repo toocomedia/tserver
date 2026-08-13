@@ -427,7 +427,7 @@
     // Sidebar style toggle logic
     const sidebarRadios = document.querySelectorAll('input[name="sidebar_style"]');
     if (sidebarRadios.length) {
-      const savedStyle = localStorage.getItem("sidebar_style") || "gradient";
+      const savedStyle = localStorage.getItem("sidebar_style") || "opacity";
       sidebarRadios.forEach(radio => {
         if (radio.value === savedStyle) {
           radio.checked = true;
@@ -449,6 +449,8 @@
               document.documentElement.setAttribute("data-sidebar-style", "opacity");
             } else if (val === "gradient") {
               document.documentElement.setAttribute("data-sidebar-style", "gradient");
+            } else if (val === "full") {
+              document.documentElement.setAttribute("data-sidebar-style", "full");
             } else {
               document.documentElement.removeAttribute("data-sidebar-style");
             }

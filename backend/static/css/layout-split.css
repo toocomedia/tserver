@@ -3,8 +3,54 @@
 .split-sidebar { width: 100%; display: flex; flex-direction: row; overflow-x: auto; padding-bottom: 0; border-right: none; border-bottom: 1px solid var(--color-line); }
 .split-sidebar__item { display: flex; align-items: center; min-height: 50px; padding: var(--space-sm) var(--space-lg); font-size: var(--font-body); font-weight: 600; color: var(--color-muted); background: transparent; border-left: 3px solid transparent; cursor: pointer; white-space: nowrap; transition: background 0.1s, color 0.1s, border-color 0.1s; }
 .split-sidebar__item:hover { background: var(--color-surface); color: var(--color-text); }
-.split-sidebar__item.active { background: var(--color-surface); color: var(--color-text); border-left-color: var(--color-accent); }
-.split-sidebar__item.active:hover { background: var(--color-line); }
+.split-sidebar__item.active { background: color-mix(in srgb, var(--color-accent) 15%, transparent); color: var(--color-accent); border-left-color: transparent; border-radius: var(--radius-sm, 6px); }
+.split-sidebar__item.active:hover { background: color-mix(in srgb, var(--color-accent) 25%, transparent); }
+
+/* Sidebar Active Style overrides for split-sidebar (.split-sidebar__item) */
+html[data-sidebar-style="opacity"] .split-sidebar__item {
+  margin: 2px 8px;
+  border-left-color: transparent !important;
+  border-radius: var(--radius-sm, 6px);
+}
+html[data-sidebar-style="opacity"] .split-sidebar__item.active,
+html[data-sidebar-style="opacity"] .split-sidebar__item.active:hover {
+  background: color-mix(in srgb, var(--color-accent) 15%, transparent) !important;
+  color: var(--color-accent) !important;
+  border-left-color: transparent !important;
+}
+
+html[data-sidebar-style="line"] .split-sidebar__item {
+  margin: 0;
+  border-radius: 0;
+}
+html[data-sidebar-style="line"] .split-sidebar__item.active,
+html[data-sidebar-style="line"] .split-sidebar__item.active:hover {
+  background: transparent !important;
+  color: var(--color-accent) !important;
+  border-left-color: var(--color-accent) !important;
+}
+
+html[data-sidebar-style="gradient"] .split-sidebar__item {
+  margin: 0;
+  border-radius: 0;
+  border-left: none !important;
+}
+html[data-sidebar-style="gradient"] .split-sidebar__item.active,
+html[data-sidebar-style="gradient"] .split-sidebar__item.active:hover {
+  background: linear-gradient(to right, color-mix(in srgb, var(--color-accent) 20%, transparent), transparent) !important;
+  color: var(--color-accent) !important;
+}
+
+html[data-sidebar-style="full"] .split-sidebar__item {
+  margin: 0;
+  border-radius: 0;
+}
+html[data-sidebar-style="full"] .split-sidebar__item.active,
+html[data-sidebar-style="full"] .split-sidebar__item.active:hover {
+  background: var(--color-accent) !important;
+  color: var(--color-on-accent) !important;
+  border-left-color: var(--color-accent-2) !important;
+}
 .split-sidebar__status, .split-sidebar__footer { padding: var(--space-lg); border-top: 1px solid var(--color-line); }
 .split-sidebar__count { margin-left: auto; font-size: var(--font-small); color: var(--color-muted); }
 .split-sidebar__footer { margin-top: auto; color: var(--color-muted); }
