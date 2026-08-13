@@ -34,10 +34,10 @@
 {% endif %}
 
 {% if domain.project_type == 'python' %}
-<div class="section mb-lg"><div class="section__header"><h3>{{ _('python_application') }}</h3></div><div class="section__body">
+{% call ui.section_card(_('python_application')) %}
   {% if app %}<p class="text-muted">{{ _('setup_status') }} <strong>{{ app.status }}</strong></p><a class="btn btn--primary" href="/apps/{{ app.id }}">{{ _('open_python_app') }}</a>
   {% else %}<p class="text-muted">{{ _('this_domain_has_dns_configured_but_no_py') }}</p><a class="btn btn--primary" href="/apps/create?domain_id={{ domain.id }}">{{ _('complete_python_app_setup') }}</a>{% endif %}
-</div></div>
+{% endcall %}
 {% endif %}
 
 <!-- INFO ROW -->
@@ -184,11 +184,7 @@
 
 {% if domain.project_type == 'python' %}
 {% elif domain.project_type == 'dns' %}
-<div class="section mb-lg">
-  <div class="section__header">
-    <h3>{{ _('web_server_landing_page') }}</h3>
-  </div>
-  <div class="section__body">
+{% call ui.section_card(_('web_server_landing_page')) %}
     <div class="alert alert--info mb-md">
       <strong>{{ _('dns_only_mode') }}</strong> {{ _('this_domain_is_configured_for_dns_manage') }}
     </div>
@@ -196,8 +192,7 @@
       {% include "partials/csrf_field.html" %}
       <button type="submit" class="btn btn--primary">{{ _('enable_static_site_webroot') }}</button>
     </form>
-  </div>
-</div>
+{% endcall %}
 {% else %}
 <!-- EDIT DEFAULT PAGE -->
 <div id="edit-page-section">

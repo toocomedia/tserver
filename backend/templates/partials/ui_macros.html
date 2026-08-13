@@ -10,8 +10,8 @@
 </div>
 {% endmacro %}
 
-{% macro section_card(title, extra_header='') %}
-<div class="section mb-lg">
+{% macro section_card(title, extra_header='', id='') %}
+<div class="section mb-lg"{% if id %} id="{{ id }}"{% endif %}>
   <div class="section__header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:var(--space-md);">
     <h3 style="margin:0;">{{ title }}</h3>
     {% if extra_header %}{{ extra_header|safe }}{% endif %}
