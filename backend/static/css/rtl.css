@@ -35,7 +35,7 @@ html[dir="rtl"] textarea {
 
 html[dir="rtl"] body {
   font-size: 0.925rem;
-  font-weight: 400;
+  font-weight: 500;
 }
 
 html[dir="rtl"] p,
@@ -43,7 +43,7 @@ html[dir="rtl"] td,
 html[dir="rtl"] input,
 html[dir="rtl"] select,
 html[dir="rtl"] textarea {
-  font-weight: 400;
+  font-weight: 500;
 }
 
 html[dir="rtl"] .form-hint,
@@ -51,7 +51,7 @@ html[dir="rtl"] small,
 html[dir="rtl"] .text-muted,
 html[dir="rtl"] .card__desc,
 html[dir="rtl"] .empty-state__desc {
-  font-weight: 300;
+  font-weight: 400;
 }
 
 html[dir="rtl"] h1,
@@ -63,13 +63,12 @@ html[dir="rtl"] h6,
 html[dir="rtl"] .page-header__title,
 html[dir="rtl"] .modal__header h2,
 html[dir="rtl"] .section__title {
-  font-weight: 600;
+  font-weight: 700;
   line-height: 1.25;
   margin-top: -2px;
 }
 
 html[dir="rtl"] .sidebar__item,
-html[dir="rtl"] .btn,
 html[dir="rtl"] .form-label,
 html[dir="rtl"] .form-input,
 html[dir="rtl"] .form-select,
@@ -79,13 +78,18 @@ html[dir="rtl"] .tab {
 }
 
 html[dir="rtl"] .sidebar__item {
-  font-weight: 500;
+  font-weight: 600;
   padding-top: max(4px, calc(var(--space-sm, 10px) - 2px));
   padding-bottom: calc(var(--space-sm, 10px) + 2px);
 }
 
-html[dir="rtl"] .btn {
-  font-weight: 600;
+html[dir="rtl"] .btn,
+html[dir="rtl"] button,
+html[dir="rtl"] .btn--primary,
+html[dir="rtl"] .btn--secondary,
+html[dir="rtl"] .btn--ghost,
+html[dir="rtl"] .btn--danger {
+  font-weight: 700 !important;
   padding-top: max(4px, calc(var(--space-xs, 8px) - 2px));
   padding-bottom: calc(var(--space-xs, 8px) + 2px);
 }
