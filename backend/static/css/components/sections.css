@@ -843,23 +843,20 @@
     margin-bottom: 24px;
   }
   .step-bar {
-    gap: 6px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
     margin-bottom: 20px;
-    padding-bottom: 4px;
-    overflow-x: auto;
     width: 100%;
-    flex-wrap: nowrap;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-  }
-  .step-bar::-webkit-scrollbar {
-    display: none;
+    overflow: visible;
   }
   .step-bar .step-item {
     padding: 6px 10px;
     font-size: 11.5px;
-    flex-shrink: 0;
-    white-space: nowrap;
+    width: 100%;
+    box-sizing: border-box;
+    justify-content: center;
+    text-align: center;
   }
 }
 
@@ -879,9 +876,10 @@
     min-width: 0;
   }
   .step-bar .step-item {
-    padding: 4px 8px;
+    padding: 5px 8px;
     font-size: 10.5px;
   }
 }
+
 
 

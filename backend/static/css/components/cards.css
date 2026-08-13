@@ -94,7 +94,7 @@
 .plugin-grid,
 .dependency-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(520px, 1fr));
   gap: 20px;
 }
 
@@ -122,15 +122,15 @@
   display: flex;
   flex-direction: row;
   align-items: stretch;
-  min-height: 140px;
+  min-height: 180px;
 }
 
-/* 1:1 Square Image Cover Box (140px x 140px, Full 100% Fit, 0 Padding) */
+/* 1:1 Square Image Cover Box (180px x 180px, Full 100% Fit, 0 Padding) */
 .item-card__img-box,
 .plugin-card__cover,
 .dependency-card__cover {
-  width: 140px;
-  min-height: 140px;
+  width: 180px;
+  min-height: 180px;
   aspect-ratio: 1 / 1;
   flex-shrink: 0;
   background: var(--color-surface);
