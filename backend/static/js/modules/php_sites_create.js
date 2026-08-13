@@ -3,6 +3,21 @@
  */
 import { showOperationModal, pollOperation } from "./php_sites_operations.js";
 
+function parseErrorMessage(detail) {
+  if (typeof detail === "string") return detail;
+  if (Array.isArray(detail)) {
+    return detail.map(item => {
+      if (typeof item === "string") return item;
+      const field = Array.isArray(item.loc) ? item.loc.slice(1).join(".") : "";
+      return field ? `${field}: ${item.msg}` : (item.msg || JSON.stringify(item));
+    }).join("\n");
+  }
+  if (detail && typeof detail === "object") {
+    return detail.message || JSON.stringify(detail);
+  }
+  return "An unexpected error occurred.";
+}
+
 window.togglePresetFields = function (preset) {
   const wpGroup = document.getElementById("wordpress-fields-group");
   const dbOptionWrap = document.getElementById("php-db-option-wrap");
@@ -40,8 +55,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const includeWww = document.getElementById("include_www")?.checked || false;
     const installExt = document.getElementById("install_missing_extensions")?.checked || false;
 
-    if (!domainId) {
-      alert("Please select a domain name.");
+    if (!domainId || isNaN(domainId)) {
+      alert("Please select an available domain name.");
       return;
     }
 
@@ -51,8 +66,20 @@ document.addEventListener("DOMContentLoaded", () => {
       const confirmPwd = document.getElementById("wp_confirm_password").value;
       const pwdErr = document.getElementById("wp-pwd-error");
 
+      if (pwd.length < 12) {
+        if (pwdErr) {
+          pwdErr.textContent = "WordPress admin password must be at least 12 characters.";
+          pwdErr.style.display = "block";
+        } else {
+          alert("WordPress admin password must be at least 12 characters.");
+        }
+        return;
+      }
       if (pwd !== confirmPwd) {
-        if (pwdErr) pwdErr.style.display = "block";
+        if (pwdErr) {
+          pwdErr.textContent = "Passwords do not match.";
+          pwdErr.style.display = "block";
+        }
         return;
       }
       if (pwdErr) pwdErr.style.display = "none";
@@ -94,8 +121,8 @@ document.addEventListener("DOMContentLoaded", () => {
       });
 
       if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.detail || "Failed to create site.");
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(parseErrorMessage(errData.detail));
       }
 
       const result = await res.json();

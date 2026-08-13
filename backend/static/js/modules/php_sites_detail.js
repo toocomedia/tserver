@@ -3,6 +3,21 @@
  */
 import { showOperationModal, pollOperation } from "./php_sites_operations.js";
 
+function parseErrorMessage(detail) {
+  if (typeof detail === "string") return detail;
+  if (Array.isArray(detail)) {
+    return detail.map(item => {
+      if (typeof item === "string") return item;
+      const field = Array.isArray(item.loc) ? item.loc.slice(1).join(".") : "";
+      return field ? `${field}: ${item.msg}` : (item.msg || JSON.stringify(item));
+    }).join("\n");
+  }
+  if (detail && typeof detail === "object") {
+    return detail.message || JSON.stringify(detail);
+  }
+  return "An unexpected error occurred.";
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   const container = document.querySelector(".php-site-detail-page");
   if (!container) return;
@@ -36,8 +51,8 @@ document.addEventListener("DOMContentLoaded", () => {
       opts.body = JSON.stringify(body);
     }
     const res = await fetch(url, opts);
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || "Action failed.");
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(parseErrorMessage(data.detail));
     return data;
   }
 
@@ -120,8 +135,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // 5. WordPress & SSL
   document.getElementById("btn-wp-retry")?.addEventListener("click", () => {
-    const pwd = prompt("Enter one-time WordPress admin password:");
+    const pwd = prompt("Enter one-time WordPress admin password (at least 12 characters):");
     if (!pwd) return;
+    if (pwd.length < 12) {
+      alert("WordPress administrator password must be at least 12 characters.");
+      return;
+    }
     handleAsyncOperation(apiCall(`/api/php-sites/sites/${siteId}/wordpress/retry`, "POST", { admin_password: pwd, install_missing_extensions: true }), "Retrying WordPress Setup...");
   });
 
