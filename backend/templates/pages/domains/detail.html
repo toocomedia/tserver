@@ -1,5 +1,4 @@
 {% extends "layout.html" %}
-{% import "partials/ui_macros.html" as ui %}
 
 {% block title %}{{ domain.name }} — {{ PANEL_NAME }}{% endblock %}
 {% block page_title %}{{ domain.name }}{% endblock %}
@@ -34,40 +33,52 @@
 {% endif %}
 
 {% if domain.project_type == 'python' %}
-{% call ui.section_card(_('python_application')) %}
+<div class="section mb-lg"><div class="section__header"><h3>{{ _('python_application') }}</h3></div><div class="section__body">
   {% if app %}<p class="text-muted">{{ _('setup_status') }} <strong>{{ app.status }}</strong></p><a class="btn btn--primary" href="/apps/{{ app.id }}">{{ _('open_python_app') }}</a>
   {% else %}<p class="text-muted">{{ _('this_domain_has_dns_configured_but_no_py') }}</p><a class="btn btn--primary" href="/apps/create?domain_id={{ domain.id }}">{{ _('complete_python_app_setup') }}</a>{% endif %}
-{% endcall %}
+</div></div>
 {% endif %}
 
 <!-- INFO ROW -->
-{% call ui.section_card(_('domain_info')) %}
-  {{ ui.info_row(_('domain'), domain.name, bold=True) }}
-  
-  {% call ui.info_row(_('project_type'), bold=True) %}
-    {% if domain.project_type == 'dns' %}
-      <span class="badge badge--neutral badge--dot">{{ _('dns_only') }}</span>
-    {% elif domain.project_type == 'python' %}
-      <span class="badge badge--neutral badge--dot">{{ _('python_app') }}</span>
-    {% else %}
-      <span class="badge badge--ok badge--dot">{{ _('static_site') }}</span>
-    {% endif %}
-  {% endcall %}
-
-  {{ ui.info_row(_('server_ip'), domain.server_ip) }}
-  
-  {% call ui.info_row(_('webroot')) %}
-    <span class="text-small">{{ domain.webroot_path or '—' }}</span>
-  {% endcall %}
-  
-  {% call ui.info_row(_('nginx_config')) %}
-    <span class="text-small">{{ domain.nginx_config_path or '—' }}</span>
-  {% endcall %}
-  
-  {% call ui.info_row(_('created')) %}
-    <span class="text-small">{{ domain.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
-  {% endcall %}
-{% endcall %}
+<div class="section mb-lg" id="domain-info">
+  <div class="section__header">
+    <h3>{{ _('domain_info') }}</h3>
+  </div>
+  <div class="section__body">
+    <div class="info-row">
+      <span class="info-row__label">{{ _('domain') }}</span>
+      <span class="info-row__value" style="font-weight:700;">{{ domain.name }}</span>
+    </div>
+    <div class="info-row">
+      <span class="info-row__label">{{ _('project_type') }}</span>
+      <span class="info-row__value" style="font-weight:700;">
+        {% if domain.project_type == 'dns' %}
+          <span class="badge badge--neutral badge--dot">{{ _('dns_only') }}</span>
+        {% elif domain.project_type == 'python' %}
+          <span class="badge badge--neutral badge--dot">{{ _('python_app') }}</span>
+        {% else %}
+          <span class="badge badge--ok badge--dot">{{ _('static_site') }}</span>
+        {% endif %}
+      </span>
+    </div>
+    <div class="info-row">
+      <span class="info-row__label">{{ _('server_ip') }}</span>
+      <span class="info-row__value">{{ domain.server_ip }}</span>
+    </div>
+    <div class="info-row">
+      <span class="info-row__label">{{ _('webroot') }}</span>
+      <span class="info-row__value text-small">{{ domain.webroot_path or '—' }}</span>
+    </div>
+    <div class="info-row">
+      <span class="info-row__label">{{ _('nginx_config') }}</span>
+      <span class="info-row__value text-small">{{ domain.nginx_config_path or '—' }}</span>
+    </div>
+    <div class="info-row">
+      <span class="info-row__label">{{ _('created') }}</span>
+      <span class="info-row__value text-small">{{ domain.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
+    </div>
+  </div>
+</div>
 
 <!-- STATUS + QUICK ACTIONS -->
 <div class="stat-grid mb-lg" id="status-grid">
@@ -126,17 +137,24 @@
 </div>
 
 <!-- DNS QUICK ACTIONS -->
-{% call ui.page_header(_('dns')) %}
-  <a href="/dns/{{ domain.name }}/records?add=1" class="btn btn--primary btn--sm" id="btn-add-dns">
-    {{ _('custom_dns_record') }}
-  </a>
-  <a href="/dns/{{ domain.name }}/records" class="btn btn--secondary btn--sm">{{ _('manage_all_records') }}</a>
-{% endcall %}
+<div class="section-header mb-md">
+  <h2>{{ _('dns') }}</h2>
+  <div class="d-flex gap-sm">
+    <a href="/dns/{{ domain.name }}/records?add=1" class="btn btn--primary btn--sm" id="btn-add-dns">
+      {{ _('custom_dns_record') }}
+    </a>
+    <a href="/dns/{{ domain.name }}/records" class="btn btn--secondary btn--sm">{{ _('manage_all_records') }}</a>
+  </div>
+</div>
+<div class="alert alert--info mb-lg text-small">
+  {{ _('add_a_cname_txt_ns_etc_for') }} <strong>{{ domain.name }}</strong>{{ _('or_apply_templates_basic_web_child_ns') }}
+</div>
 
 <!-- REVERSE PROXIES ON THIS DOMAIN -->
-{% call ui.page_header(_('reverse_proxies')) %}
+<div class="section-header mb-md">
+  <h2>{{ _('reverse_proxies') }}</h2>
   <a href="/proxy/create?domain_id={{ domain.id }}" class="btn btn--secondary btn--sm">{{ _('add_proxy') }}</a>
-{% endcall %}
+</div>
 {% if proxies %}
 <div class="table-wrap mb-lg">
   <table class="table" id="proxy-table">
@@ -184,7 +202,11 @@
 
 {% if domain.project_type == 'python' %}
 {% elif domain.project_type == 'dns' %}
-{% call ui.section_card(_('web_server_landing_page')) %}
+<div class="section mb-lg">
+  <div class="section__header">
+    <h3>{{ _('web_server_landing_page') }}</h3>
+  </div>
+  <div class="section__body">
     <div class="alert alert--info mb-md">
       <strong>{{ _('dns_only_mode') }}</strong> {{ _('this_domain_is_configured_for_dns_manage') }}
     </div>
@@ -192,13 +214,13 @@
       {% include "partials/csrf_field.html" %}
       <button type="submit" class="btn btn--primary">{{ _('enable_static_site_webroot') }}</button>
     </form>
-{% endcall %}
+  </div>
+</div>
 {% else %}
 <!-- EDIT DEFAULT PAGE -->
-<div id="edit-page-section">
-  {% call ui.page_header(_('default_page')) %}
-    <button type="button" class="btn btn--ghost btn--sm" id="btn-toggle-editor" onclick="toggleEditor()">{{ _('edit_html') }}</button>
-  {% endcall %}
+<div class="section-header mb-md" id="edit-page-section">
+  <h2>{{ _('default_page') }}</h2>
+  <button type="button" class="btn btn--ghost btn--sm" id="btn-toggle-editor" onclick="toggleEditor()">{{ _('edit_html') }}</button>
 </div>
 
 <div id="page-editor" style="display:none;">

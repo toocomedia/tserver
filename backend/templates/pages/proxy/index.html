@@ -1,5 +1,4 @@
 {% extends "layout.html" %}
-{% import "partials/ui_macros.html" as ui %}
 
 {% from "partials/skeleton_overlay.html" import skeleton_overlay %}
 
@@ -23,7 +22,7 @@
 
 {% if created %}
 <div class="alert alert--success mb-lg" id="alert-created">
-  {{ _('proxy_created_for') }} <strong>{{ created }}</strong>
+  {{ _('proxy_created_for') }} <strong>{{ created }}</strong>{{ _('nginx_configured_dns_updated_when_using_') }}
 </div>
 {% endif %}
 {% if deleted %}
@@ -153,12 +152,14 @@
                 <span>{{ _('enable_proxy_cache') }}</span>
               </label>
               <div class="d-flex gap-md align-center mt-sm" style="flex-wrap:wrap;">
-                {% call ui.form_group('cache-ttl-' ~ p.id, _('ttl_minutes')) %}
+                <div class="form-group" style="margin:0;">
+                  <label class="form-label" for="cache-ttl-{{ p.id }}">{{ _('ttl_minutes') }}</label>
                   <input class="form-input" type="number" min="1" max="10080" id="cache-ttl-{{ p.id }}" value="{{ p.cache_ttl_minutes }}" style="max-width:100px;">
-                {% endcall %}
-                {% call ui.form_group('cache-auto-' ~ p.id, _('auto_clear_hours_0_off')) %}
+                </div>
+                <div class="form-group" style="margin:0;">
+                  <label class="form-label" for="cache-auto-{{ p.id }}">{{ _('auto_clear_hours_0_off') }}</label>
                   <input class="form-input" type="number" min="0" max="8760" id="cache-auto-{{ p.id }}" value="{{ p.cache_auto_clear_hours }}" style="max-width:110px;">
-                {% endcall %}
+                </div>
               </div>
               <div class="d-flex gap-xs mt-sm">
                 <button class="btn btn--primary btn--sm" id="btn-cache-save-{{ p.id }}" data-proxy-id="{{ p.id }}">{{ _('save') }}</button>

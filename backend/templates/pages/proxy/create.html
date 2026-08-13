@@ -1,5 +1,4 @@
 {% extends "layout.html" %}
-{% import "partials/ui_macros.html" as ui %}
 
 {% block title %}{{ _('create_reverse_proxy') }} — {{ PANEL_NAME }}{% endblock %}
 {% block page_title %}{{ _('create_reverse_proxy') }}{% endblock %}
@@ -10,170 +9,214 @@
 
 {% block content %}
 
-<!-- Elegant Step Bar (Shared component) -->
-<div class="step-bar">
-  <div class="step-item active" id="proxy-step-pill-1">
-    {{ _('1_hostname_setup') }}
+<div class="section" id="create-proxy-panel">
+  <div class="section__header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:var(--space-md);">
+    <h3>{{ _('new_reverse_proxy_wizard') }}</h3>
+    
+    <!-- Step Progress Indicator -->
+    <div style="display:flex;align-items:center;gap:var(--space-sm);font-size:var(--font-small);">
+      <span id="proxy-step-pill-1" class="status-badge success" style="padding:4px 12px;font-weight:700;">{{ _('1_hostname_setup') }}</span>
+      <span style="color:var(--color-muted);">→</span>
+      <span id="proxy-step-pill-2" class="status-badge muted" style="padding:4px 12px;">{{ _('2_target_ssl') }}</span>
+    </div>
   </div>
-  <div class="step-item" id="proxy-step-pill-2">
-    {{ _('2_target_ssl') }}
+
+  <div class="section__body">
+
+    {% if error %}
+    <div class="alert alert--danger mb-lg" id="form-error" role="alert">{{ error }}</div>
+    {% endif %}
+
+    {% set mode = form.get('mode', 'managed') %}
+
+    <form method="post" action="/proxy/create" class="form" id="create-proxy-form">
+      {% include "partials/csrf_field.html" %}
+
+      <!-- Step 1: Hostname Setup -->
+      <div id="proxy-step-1" style="display:flex;flex-direction:column;gap:var(--space-md);">
+        
+        <!-- Mode: managed vs external -->
+        <div class="form-group">
+          <label class="form-label">{{ _('hostname_source') }}</label>
+          <div class="d-flex gap-md" style="flex-wrap:wrap;">
+            <label class="form-check">
+              <input type="radio" name="mode" id="mode-managed" value="managed" {% if mode !="external" %}checked{% endif %}>
+              <span>{{ _('managed_domain') }}</span>
+            </label>
+            <label class="form-check">
+              <input type="radio" name="mode" id="mode-external" value="external" {% if mode== 'external' %}checked{% endif %}>
+              <span>{{ _('external_hostname') }}</span>
+            </label>
+          </div>
+          <span class="form-hint">
+            {{ _('external_domain_subdomain_dns_already_po') }}
+          </span>
+        </div>
+
+        <div class="alert alert--info mb-lg" id="info-block-managed" style="{% if mode == 'external' %}display:none;{% endif %}">
+          {{ _('creating_a_managed_proxy_will_automatica') }}<br>
+          <strong>1.</strong> {{ _('add_an_a_record_for_the_subdomain') }} <strong>{{ server_ip }}</strong><br>
+          <strong>2.</strong> {{ _('configure_nginx_to_forward_traffic_to_th') }}<br>
+          <strong>3.</strong> {{ _('optionally_issue_an_ssl_certificate_for_') }}<br><br>
+          {{ _('traffic_hits_this_server_first_nginx_pro') }}
+        </div>
+
+        <div class="alert alert--info mb-lg" id="info-block-external" style="{% if mode != 'external' %}display:none;{% endif %}">
+          {{ _('external_mode_does') }} <strong>{{ _('not') }}</strong> {{ _('change_dns') }}<br>
+          {{ _('ensure_an_a_cname_for_the_hostname_alrea') }}
+          <strong>{{ server_ip }}</strong> {{ _('before_enabling_ssl') }}<br>
+          {{ _('nginx_will_reverse_proxy_the_hostname_to') }}
+        </div>
+
+        <!-- Managed: domain + subdomain -->
+        <div id="managed-fields" style="{% if mode == 'external' %}display:none;{% endif %}">
+          {% if domains %}
+          <div class="form-group">
+            <label class="form-label" for="domain_id">{{ _('parent_domain') }}</label>
+            <div class="form-select-wrap">
+              <select id="domain_id" name="domain_id" class="form-select">
+                <option value="" disabled {% if not form.get('domain_id') %}selected{% endif %}>
+                  {{ _('select_a_domain') }}
+                </option>
+                {% for d in domains %}
+                <option value="{{ d.id }}" data-name="{{ d.name }}" {% if form.get('domain_id')== d.id %}selected{% endif %}>
+                  {{ d.name }}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+            <span class="form-hint">{{ _('domain_must_already_be_managed_by_the_pa') }}</span>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="subdomain">{{ _('subdomain') }}</label>
+            <input class="form-input" type="text" id="subdomain" name="subdomain" value="{{ form.get('subdomain', '') }}" placeholder="app" autocomplete="off" autocapitalize="none" spellcheck="false">
+            <span class="form-hint">
+              {{ _('prefix_only_full_host_will_be') }}
+              <strong id="subdomain-hint">{{ _('app') }}<span id="hint-domain">{{ _('domain_com') }}</span></strong>
+            </span>
+          </div>
+          {% else %}
+          <div class="alert alert--info" id="no-domains">
+            {{ _('no_managed_domains_found_use') }} <strong>{{ _('external_hostname') }}</strong>{{ _('or') }}
+            <a href="/domains/create">{{ _('add_a_domain') }}</a> {{ _('first') }}
+          </div>
+          {% endif %}
+        </div>
+
+        <!-- External: full hostname -->
+        <div id="external-fields" style="{% if mode != 'external' %}display:none;{% endif %}">
+          <div class="form-group">
+            <label class="form-label" for="hostname">{{ _('hostname') }}</label>
+            <input class="form-input" type="text" id="hostname" name="hostname" value="{{ form.get('hostname', '') }}" placeholder="app.other-domain.com" autocomplete="off" autocapitalize="none" spellcheck="false">
+            <span class="form-hint">
+              {{ _('full_domain_or_subdomain_already_pointin') }} <strong>{{ server_ip }}</strong>.
+            </span>
+          </div>
+        </div>
+
+        <div id="step-1-error" class="form-error" style="display:none;"></div>
+
+        <div class="form-actions" style="margin-top:var(--space-md);">
+          <button type="button" class="btn btn--primary" id="btn-next-step-1">
+            {{ _('next_target_ssl_configuration') }}
+          </button>
+        </div>
+
+      </div>
+
+      <!-- Step 2: Target & SSL Configuration -->
+      <div id="proxy-step-2" style="display:none;flex-direction:column;gap:var(--space-md);">
+
+        <!-- Target IP -->
+        <div class="form-group">
+          <label class="form-label" for="target_ip">{{ _('target_ip') }}</label>
+          <input class="form-input" type="text" id="target_ip" name="target_ip" value="{{ form.get('target_ip', '') }}" placeholder="1.2.3.4" autocomplete="off">
+        </div>
+
+        <!-- Target Port -->
+        <div class="form-group">
+          <label class="form-label" for="target_port">{{ _('target_port') }}</label>
+          <input class="form-input" type="number" id="target_port" name="target_port" value="{{ form.get('target_port', '') }}" placeholder="9000" min="1" max="65535">
+        </div>
+
+        <!-- Protocol to backend -->
+        <div class="form-group">
+          <label class="form-label" for="protocol">{{ _('backend_protocol') }}</label>
+          <div class="form-select-wrap">
+            <select id="protocol" name="protocol" class="form-select">
+              <option value="http" {% if form.get('protocol', 'http')== 'http' %}selected{% endif %}>{{ _('http') }}</option>
+              <option value="https" {% if form.get('protocol')== 'https' %}selected{% endif %}>{{ _('https') }}</option>
+            </select>
+          </div>
+          <span class="form-hint">{{ _('protocol_used_between_nginx_and_the_targ') }}</span>
+        </div>
+
+        <!-- Enable SSL -->
+        <div class="form-group">
+          <label class="form-check">
+            <input type="checkbox" name="enable_ssl" id="enable_ssl" value="true" {% if form.get('enable_ssl') %}checked{% endif %}>
+            <span>{{ _('enable_ssl_let_s_encrypt') }}</span>
+          </label>
+          <div class="alert alert--info mt-sm" id="ssl-info" style="display:none;">
+            {{ _('will_issue_a_certificate_after_the_proxy') }}
+          </div>
+        </div>
+
+        <!-- Proxy Cache (optional) -->
+        <div class="form-group" id="cache-section">
+          <label class="form-label" style="cursor:pointer;" id="cache-toggle-label">
+            <span id="cache-toggle-icon">▶</span>
+            <span style="margin-left:6px;">{{ _('proxy_cache') }} <span class="text-muted text-small">{{ _('optional') }}</span></span>
+          </label>
+          <div id="cache-fields" style="display:none; margin-top:10px;">
+            <div class="alert alert--info mb-sm" style="font-size:var(--font-small);">
+              {{ _('caches_upstream_responses_on_disk_good_f') }}
+              <strong>{{ _('do_not_enable_for_apis_or_user_specific_') }}</strong>
+            </div>
+            <label class="form-check mb-sm">
+              <input type="checkbox" name="cache_enabled" id="cache_enabled" value="true" {% if form.get('cache_enabled') %}checked{% endif %}>
+              <span>{{ _('enable_proxy_cache') }}</span>
+            </label>
+            <div class="d-flex gap-md" style="flex-wrap:wrap;">
+              <div class="form-group" style="margin:0;">
+                <label class="form-label" for="cache_ttl_minutes">{{ _('cache_ttl_minutes') }}</label>
+                <input class="form-input" type="number" id="cache_ttl_minutes" name="cache_ttl_minutes" value="{{ form.get('cache_ttl_minutes', 10) }}" min="1" max="10080" style="max-width:110px;">
+                <span class="form-hint">{{ _('how_long_to_keep_cached_responses') }}</span>
+              </div>
+              <div class="form-group" style="margin:0;">
+                <label class="form-label" for="cache_auto_clear_hours">{{ _('auto_clear_hours') }}</label>
+                <input class="form-input" type="number" id="cache_auto_clear_hours" name="cache_auto_clear_hours" value="{{ form.get('cache_auto_clear_hours', 0) }}" min="0" max="8760" style="max-width:110px;">
+                <span class="form-hint">{{ _('0_disabled_manual_only') }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Live preview -->
+        <div class="section" id="proxy-preview" style="display:none; background:var(--color-surface);">
+          <div class="section__body" style="padding:var(--space-md);">
+            <span class="text-small text-muted">{{ _('preview_routing_rule') }}</span><br>
+            <span style="font-weight:700; font-size:var(--font-body);" id="preview-line">—</span>
+          </div>
+        </div>
+
+        <div class="form-actions" style="display:flex;justify-content:space-between;margin-top:var(--space-md);">
+          <button type="button" class="btn btn--secondary" id="btn-back-step-2">
+            {{ _('back_to_hostname_setup') }}
+          </button>
+          <button type="submit" class="btn btn--primary" id="btn-submit">
+            {{ _('create_reverse_proxy') }}
+          </button>
+        </div>
+
+      </div>
+
+    </form>
+
   </div>
 </div>
 
-{% if error %}
-<div class="alert alert--danger mb-lg" id="form-error" role="alert">{{ error }}</div>
-{% endif %}
-
-{% set mode = form.get('mode', 'managed') %}
-
-<form method="post" action="/proxy/create" class="wizard-form" id="create-proxy-form">
-  {% include "partials/csrf_field.html" %}
-
-  <!-- ===============================
-       STEP 1: HOSTNAME SETUP
-       =============================== -->
-  <div id="proxy-step-1">
-    {% call ui.section_card(_('1_hostname_setup')) %}
-      
-      <!-- Mode: managed vs external -->
-      {% call ui.form_group('mode', _('hostname_source'), _('external_domain_subdomain_dns_already_po')) %}
-        <div class="d-flex gap-md" style="flex-wrap:wrap;">
-          <label class="form-check">
-            <input type="radio" name="mode" id="mode-managed" value="managed" {% if mode !="external" %}checked{% endif %}>
-            <span>{{ _('managed_domain') }}</span>
-          </label>
-          <label class="form-check">
-            <input type="radio" name="mode" id="mode-external" value="external" {% if mode== 'external' %}checked{% endif %}>
-            <span>{{ _('external_hostname') }}</span>
-          </label>
-        </div>
-      {% endcall %}
-
-      <!-- Managed: domain + subdomain -->
-      <div id="managed-fields" style="{% if mode == 'external' %}display:none;{% endif %}">
-        {% if domains %}
-        {% call ui.form_group('domain_id', _('parent_domain'), _('domain_must_already_be_managed_by_the_pa')) %}
-          <div class="form-select-wrap">
-            <select id="domain_id" name="domain_id" class="form-select">
-              <option value="" disabled {% if not form.get('domain_id') %}selected{% endif %}>
-                {{ _('select_a_domain') }}
-              </option>
-              {% for d in domains %}
-              <option value="{{ d.id }}" data-name="{{ d.name }}" {% if form.get('domain_id')== d.id %}selected{% endif %}>
-                {{ d.name }}
-              </option>
-              {% endfor %}
-            </select>
-          </div>
-        {% endcall %}
-
-        {% call ui.form_group('subdomain', _('subdomain'), _('prefix_only_full_host_will_be') ~ ' <strong id="subdomain-hint">' ~ _('app') ~ '<span id="hint-domain">' ~ _('domain_com') ~ '</span></strong>') %}
-          <input class="form-input" type="text" id="subdomain" name="subdomain" value="{{ form.get('subdomain', '') }}" placeholder="app" autocomplete="off" autocapitalize="none" spellcheck="false">
-        {% endcall %}
-        {% else %}
-        <div class="alert alert--info" id="no-domains">
-          {{ _('no_managed_domains_found_use') }} <strong>{{ _('external_hostname') }}</strong>{{ _('or') }}
-          <a href="/domains/create">{{ _('add_a_domain') }}</a> {{ _('first') }}
-        </div>
-        {% endif %}
-      </div>
-
-      <!-- External: full hostname -->
-      <div id="external-fields" style="{% if mode != 'external' %}display:none;{% endif %}">
-        {% call ui.form_group('hostname', _('hostname'), _('full_domain_or_subdomain_already_pointin') ~ ' <strong>' ~ server_ip ~ '</strong>.') %}
-          <input class="form-input" type="text" id="hostname" name="hostname" value="{{ form.get('hostname', '') }}" placeholder="app.other-domain.com" autocomplete="off" autocapitalize="none" spellcheck="false">
-        {% endcall %}
-      </div>
-
-      <div id="step-1-error" class="form-error" style="display:none;"></div>
-
-      <div class="form-actions mt-md" style="display: flex; justify-content: flex-end; border-top: 1px solid var(--color-line); padding-top: var(--space-md);">
-        <button type="button" class="btn btn--primary" id="btn-next-step-1">
-          {{ _('next_target_ssl_configuration') }}
-        </button>
-      </div>
-      
-    {% endcall %}
-  </div>
-
-
-  <!-- ===============================
-       STEP 2: TARGET & SSL
-       =============================== -->
-  <div id="proxy-step-2" style="display:none;">
-    {% call ui.section_card(_('2_target_ssl')) %}
-
-      <!-- Target IP -->
-      {% call ui.form_group('target_ip', _('target_ip')) %}
-        <input class="form-input" type="text" id="target_ip" name="target_ip" value="{{ form.get('target_ip', '') }}" placeholder="1.2.3.4" autocomplete="off">
-      {% endcall %}
-
-      <!-- Target Port -->
-      {% call ui.form_group('target_port', _('target_port')) %}
-        <input class="form-input" type="number" id="target_port" name="target_port" value="{{ form.get('target_port', '') }}" placeholder="9000" min="1" max="65535">
-      {% endcall %}
-
-      <!-- Protocol to backend -->
-      {% call ui.form_group('protocol', _('backend_protocol'), _('protocol_used_between_nginx_and_the_targ')) %}
-        <div class="form-select-wrap">
-          <select id="protocol" name="protocol" class="form-select">
-            <option value="http" {% if form.get('protocol', 'http')== 'http' %}selected{% endif %}>{{ _('http') }}</option>
-            <option value="https" {% if form.get('protocol')== 'https' %}selected{% endif %}>{{ _('https') }}</option>
-          </select>
-        </div>
-      {% endcall %}
-
-      <!-- Enable SSL -->
-      {% call ui.form_group('enable_ssl', '') %}
-        <label class="form-check">
-          <input type="checkbox" name="enable_ssl" id="enable_ssl" value="true" {% if form.get('enable_ssl') %}checked{% endif %}>
-          <span>{{ _('enable_ssl_let_s_encrypt') }}</span>
-        </label>
-      {% endcall %}
-
-      <!-- Proxy Cache (optional) -->
-      <div class="form-group" id="cache-section" style="margin-top: var(--space-lg);">
-        <label class="form-label" style="cursor:pointer;" id="cache-toggle-label">
-          <span id="cache-toggle-icon">▶</span>
-          <span style="margin-left:6px;">{{ _('proxy_cache') }} <span class="text-muted text-small">{{ _('optional') }}</span></span>
-        </label>
-        <div id="cache-fields" style="display:none; margin-top:10px;">
-          <label class="form-check mb-sm">
-            <input type="checkbox" name="cache_enabled" id="cache_enabled" value="true" {% if form.get('cache_enabled') %}checked{% endif %}>
-            <span>{{ _('enable_proxy_cache') }}</span>
-          </label>
-          <div class="d-flex gap-md" style="flex-wrap:wrap;">
-            {% call ui.form_group('cache_ttl_minutes', _('cache_ttl_minutes'), _('how_long_to_keep_cached_responses')) %}
-              <input class="form-input" type="number" id="cache_ttl_minutes" name="cache_ttl_minutes" value="{{ form.get('cache_ttl_minutes', 10) }}" min="1" max="10080" style="max-width:110px;">
-            {% endcall %}
-            {% call ui.form_group('cache_auto_clear_hours', _('auto_clear_hours'), _('0_disabled_manual_only')) %}
-              <input class="form-input" type="number" id="cache_auto_clear_hours" name="cache_auto_clear_hours" value="{{ form.get('cache_auto_clear_hours', 0) }}" min="0" max="8760" style="max-width:110px;">
-            {% endcall %}
-          </div>
-        </div>
-      </div>
-
-      <!-- Live preview -->
-      <div class="section" id="proxy-preview" style="display:none; background:var(--color-surface); margin-top:var(--space-md);">
-        <div class="section__body" style="padding:var(--space-md);">
-          <span class="text-small text-muted">{{ _('preview_routing_rule') }}</span><br>
-          <span style="font-weight:700; font-size:var(--font-body);" id="preview-line">—</span>
-        </div>
-      </div>
-
-      <div class="form-actions mt-lg" style="display:flex;justify-content:space-between; border-top: 1px solid var(--color-line); padding-top: var(--space-md);">
-        <button type="button" class="btn btn--secondary" id="btn-back-step-2">
-          {{ _('back_to_hostname_setup') }}
-        </button>
-        <button type="submit" class="btn btn--primary" id="btn-submit">
-          {{ _('create_reverse_proxy') }}
-        </button>
-      </div>
-
-    {% endcall %}
-  </div>
-
-</form>
 {% endblock %}
 
 {% block scripts %}
