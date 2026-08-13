@@ -662,48 +662,54 @@ html[data-sidebar-style="gradient"] .sidebar__item--active:hover {
 @media (max-width: 768px) {
   .page-header {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    height: var(--topbar-height, 56px);
-    padding: 0 var(--page-gutter);
-    flex-wrap: nowrap;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: center;
+    height: auto;
+    min-height: var(--topbar-height, 56px);
+    padding: 8px var(--page-gutter);
+    gap: 6px;
   }
 
   .page-header__title {
     font-size: 16px;
     font-weight: 700;
     line-height: 1.2;
+    margin: 0;
+    width: 100%;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    flex: 1;
-    min-width: 0;
-    margin: 0;
   }
 
   .page-header__actions {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 6px;
-    width: auto;
-    flex-shrink: 0;
-    margin-left: auto;
+    width: 100%;
+    flex-wrap: wrap;
+    margin-top: 2px;
     overflow: visible;
   }
 
   .page-header__actions .btn {
-    height: 30px;
+    height: 28px;
     font-size: 11px;
-    padding: 0 8px;
+    padding: 0 10px;
     font-weight: 600;
     gap: 4px;
     white-space: nowrap;
     min-width: auto;
   }
 
+  .page-header__actions .layout-switcher-wrap {
+    display: flex;
+    align-items: center;
+  }
+
   .page-header__actions .layout-switcher__btn {
-    height: 30px;
+    height: 28px;
     font-size: 11px;
     padding: 0 6px;
     gap: 4px;
@@ -764,8 +770,8 @@ html[data-sidebar-style="gradient"] .sidebar__item--active:hover {
 
 @media (max-width: 480px) {
   .page-header {
-    gap: 6px;
-    padding: 0 var(--page-gutter);
+    padding: 6px var(--page-gutter);
+    gap: 4px;
   }
 
   .page-header__title {
@@ -773,13 +779,13 @@ html[data-sidebar-style="gradient"] .sidebar__item--active:hover {
   }
 
   .page-header__actions .btn {
-    height: 28px;
+    height: 26px;
     font-size: 10.5px;
-    padding: 0 6px;
+    padding: 0 8px;
   }
 
   .page-header__actions .layout-switcher__btn {
-    height: 28px;
+    height: 26px;
     font-size: 10.5px;
     padding: 0 5px;
   }
@@ -793,5 +799,6 @@ html[data-sidebar-style="gradient"] .sidebar__item--active:hover {
     font-size: 20px;
   }
 }
+
 
 
