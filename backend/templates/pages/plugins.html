@@ -11,11 +11,9 @@
 {% set resource_label = 'Plugins' %}
 {% set active_view = 'cards' %}
 {% include "partials/resource_view_switcher.html" with context %}
-<div class="layout-switcher-wrap">
-  <button class="btn btn--primary" onclick="openModal('upload-plugin-modal')">
-    {{ _('upload_plugin_zip') }}
-  </button>
-</div>
+<button class="btn btn--primary" onclick="openModal('upload-plugin-modal')">
+  {{ _('upload_plugin_zip') }}
+</button>
 {% endblock %}
 
 {% block content %}

@@ -686,14 +686,20 @@ html[data-sidebar-style="gradient"] .sidebar__item--active:hover {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 6px;
+    gap: 8px;
     width: 100%;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     margin-top: 2px;
     overflow: visible;
   }
 
-  .page-header__actions .btn {
+  .page-header__actions .layout-switcher-wrap {
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+  }
+
+  .page-header__actions > .btn {
     height: 28px;
     font-size: 11px;
     padding: 0 10px;
@@ -701,17 +707,14 @@ html[data-sidebar-style="gradient"] .sidebar__item--active:hover {
     gap: 4px;
     white-space: nowrap;
     min-width: auto;
-  }
-
-  .page-header__actions .layout-switcher-wrap {
-    display: flex;
-    align-items: center;
+    flex-shrink: 0;
+    margin-left: auto;
   }
 
   .page-header__actions .layout-switcher__btn {
     height: 28px;
     font-size: 11px;
-    padding: 0 6px;
+    padding: 0 8px;
     gap: 4px;
   }
 
