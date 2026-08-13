@@ -385,20 +385,33 @@ html[data-sidebar-style="gradient"] .sidebar__item--active:hover {
   flex-wrap: wrap;
 }
 
-/* Topbar buttons are slightly smaller than standard btn--sm */
+/* Topbar buttons with clean height & vertical centering */
 .page-header__actions .btn {
-  height: 28px;
-  font-size: 11px;
-  padding: 0 10px;
+  height: 32px;
+  font-size: 12px;
+  padding: 0 12px;
   font-weight: 600;
   letter-spacing: 0.02em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 }
 
-/* View switcher in topbar matches the compact 28px button height */
+.page-header__actions .layout-switcher-wrap {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* View switcher in topbar matches the clean 32px button height */
 .page-header__actions .layout-switcher__btn {
-  height: 28px;
-  font-size: 11px;
-  padding: 0 8px;
+  height: 32px;
+  font-size: 12px;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 }
 
 .content {
