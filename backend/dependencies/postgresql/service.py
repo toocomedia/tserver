@@ -83,8 +83,21 @@ class PostgreSQLDependencyService:
             return dict(self._cache)
 
     def get_cached_status(self) -> dict[str, Any]:
+        """Return only an existing snapshot; never launch systemctl."""
         with self._cache_lock:
-            return dict(self._cache) if self._cache else self._probe()
+            if self._cache is not None:
+                return dict(self._cache)
+        installed = shutil.which("psql") is not None or Path("/usr/bin/psql").is_file()
+        return {
+            "id": self.dependency_id,
+            "installed": installed,
+            "running": False,
+            "healthy": False,
+            "state": "unknown" if installed else "not_installed",
+            "detected_version": None,
+            "error": None,
+            "can_toggle": True,
+        }
 
     def _invalidate(self) -> None:
         with self._cache_lock:

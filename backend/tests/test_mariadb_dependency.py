@@ -11,6 +11,16 @@ from dependencies.mariadb.service import MariaDBDependencyService
 
 
 class MariaDBDependencyTests(unittest.TestCase):
+    def test_cached_status_never_probes_when_cache_is_empty(self):
+        service = MariaDBDependencyService()
+        service._probe = Mock(side_effect=AssertionError("cached status must not probe"))
+
+        status = service.get_cached_status()
+
+        self.assertIn(status["state"], {"unknown", "not_installed"})
+        self.assertFalse(status["healthy"])
+        service._probe.assert_not_called()
+
     def test_status_is_cached(self):
         service = MariaDBDependencyService()
         service._probe = Mock(return_value={"healthy": True})

@@ -11,6 +11,25 @@ from dependencies.php.service import PHPDependencyService
 
 
 class PHPDependencyServiceTests(unittest.TestCase):
+    def test_cached_status_never_probes_when_cache_is_empty(self):
+        service = PHPDependencyService()
+        service._probe = Mock(side_effect=AssertionError("cached status must not probe"))
+
+        status = service.get_cached_status()
+
+        self.assertEqual("unknown", status["state"])
+        self.assertFalse(status["healthy"])
+        service._probe.assert_not_called()
+
+    def test_forced_status_warms_cached_status(self):
+        service = PHPDependencyService()
+        snapshot = {"state": "healthy", "healthy": True}
+        service._probe = Mock(return_value=snapshot)
+
+        self.assertEqual(snapshot, service.get_status(force=True))
+        self.assertEqual(snapshot, service.get_cached_status())
+        service._probe.assert_called_once()
+
     def test_status_reports_each_version_without_installing_anything(self):
         service = PHPDependencyService()
         service._available_versions = Mock(return_value=["8.1", "8.3"])

@@ -75,6 +75,48 @@ class PanelLoadingRegressionTests(unittest.TestCase):
         ).read_text(encoding="utf-8")
         self.assertIn("def get_usage_details(self)", maddy_service)
 
+    def test_usage_polling_is_slow_visible_and_single_flight(self):
+        usage_template = (
+            BACKEND / "templates" / "pages" / "usage" / "index.html"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("const INTERVAL = 30000", usage_template)
+        self.assertIn("let statsRequestPending = false", usage_template)
+        self.assertIn("document.hidden", usage_template)
+        self.assertIn("document.addEventListener('visibilitychange'", usage_template)
+        self.assertNotIn("const INTERVAL = 3000;", usage_template)
+
+    def test_stats_endpoint_uses_shared_cache_and_no_live_dependency_hooks(self):
+        system_router = (
+            BACKEND / "routers" / "system.py"
+        ).read_text(encoding="utf-8")
+        stats_builder = system_router[
+            system_router.index("async def _build_server_stats")
+            : system_router.index("class OptimizationToggleIn")
+        ]
+
+        self.assertIn("_STATS_CACHE_SECONDS = 15.0", system_router)
+        self.assertIn('dependency_manager.get_status, "docker", cached=True', stats_builder)
+        self.assertIn("live_hooks=False", stats_builder)
+        self.assertIn("async with _stats_cache_lock", stats_builder)
+        self.assertNotIn("systemctl", stats_builder)
+        self.assertNotIn("snap list", stats_builder)
+
+    def test_php_site_list_batches_related_records(self):
+        php_sites = (
+            BACKEND / "services" / "php_site_service.py"
+        ).read_text(encoding="utf-8")
+        list_sites = php_sites[
+            php_sites.index("async def list_sites")
+            : php_sites.index("async def serialize_site")
+        ]
+
+        self.assertIn("Domain.id.in_(domain_ids)", list_sites)
+        self.assertIn("PhpWebsiteDatabase.site_id.in_(site_ids)", list_sites)
+        self.assertIn("PhpWebsiteOperation.site_id.in_(site_ids)", list_sites)
+        self.assertIn("_site_payload(", list_sites)
+        self.assertNotIn("await serialize_site", list_sites)
+
     def test_hosting_routers_use_batched_queries(self):
         domains_router = (
             BACKEND / "routers" / "domains.py"

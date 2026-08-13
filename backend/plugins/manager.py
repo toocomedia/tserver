@@ -211,7 +211,12 @@ class PluginManager:
                 self._operation_locks.setdefault(plugin_id, threading.Lock())
             except Exception as exc:
                 logger.error("Error reading manifest for plugin %s: %s", item.name, exc)
-        return [self._effective(plugin) for plugin in self.plugins.values()]
+        # Discovery records manifest/install state only. Dependency health is
+        # warmed separately and must not make startup discovery run probes.
+        return [
+            self._effective(plugin, check_dependencies=False)
+            for plugin in self.plugins.values()
+        ]
 
     def state_components(self) -> list[tuple[str, str, bool, str]]:
         if not self.plugins:
@@ -369,8 +374,11 @@ class PluginManager:
             else None
         )
 
-    def get_service(self, plugin_id: str):
-        plugin = self.get_plugin(plugin_id)
+    def get_service(self, plugin_id: str, *, check_dependencies: bool = True):
+        plugin = self.get_plugin(
+            plugin_id,
+            check_dependencies=check_dependencies,
+        )
         if not plugin:
             return None
         return self._find_service(Path(plugin["dir_path"]), plugin_id)

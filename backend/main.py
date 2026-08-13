@@ -68,6 +68,15 @@ async def lifespan(app: FastAPI):
     await component_state_store.initialize(
         plugin_manager.state_components() + dependency_manager.state_components()
     )
+    # Populate dependency snapshots once at startup. Request paths use cached
+    # snapshots and never spawn APT, Docker, PHP, or systemctl health probes.
+    try:
+        await asyncio.to_thread(
+            dependency_manager.get_all_statuses,
+            force=True,
+        )
+    except Exception as exc:
+        logger.warning("Dependency status warm-up failed: %s", exc)
     from services import app_deployment_service, container_app_deployment_service, update_service, ssl_auto_renew
     from database import AsyncSessionLocal
     from services.resource_guard_operation_service import resource_guard_operation_service

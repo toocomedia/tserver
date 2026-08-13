@@ -129,8 +129,17 @@
 <script>
   let polling = true;
   let pollTimer = null;
-  const INTERVAL = 3000;
+  const INTERVAL = 30000;
   let isActionPending = false;
+  let statsRequestPending = false;
+
+  function scheduleStats(delay = INTERVAL) {
+    if (pollTimer) clearTimeout(pollTimer);
+    pollTimer = null;
+    if (polling && !document.hidden) {
+      pollTimer = setTimeout(fetchStats, delay);
+    }
+  }
 
   function setUsageLoading(loading, target = null) {
     if (target) {
@@ -573,11 +582,13 @@
   }
 
   async function fetchStats() {
+    if (!polling || document.hidden || statsRequestPending) return;
     if (isActionPending) {
-      if (polling) pollTimer = setTimeout(fetchStats, INTERVAL);
+      scheduleStats();
       return;
     }
 
+    statsRequestPending = true;
     try {
       const data = await panel.get('/api/stats');
       render(data);
@@ -589,10 +600,9 @@
     } catch (e) {
       markUsageUpdated('Waiting for server data…');
       fetchOptimizationStatus();
-    }
-
-    if (polling) {
-      pollTimer = setTimeout(fetchStats, INTERVAL);
+    } finally {
+      statsRequestPending = false;
+      scheduleStats();
     }
   }
 
@@ -695,8 +705,25 @@
     const btn = document.getElementById('btn-pause-poll');
     polling = !polling;
     btn.textContent = polling ? 'Pause' : 'Resume';
-    if (polling) fetchStats();
+    if (!polling && pollTimer) {
+      clearTimeout(pollTimer);
+      pollTimer = null;
+    }
+    if (polling && !document.hidden) fetchStats();
   }
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      if (pollTimer) clearTimeout(pollTimer);
+      pollTimer = null;
+      return;
+    }
+    if (polling) fetchStats();
+  });
+  window.addEventListener('pagehide', () => {
+    if (pollTimer) clearTimeout(pollTimer);
+    pollTimer = null;
+  });
 
   async function rebootServer() {
     if (!confirm('Are you sure you want to REBOOT the entire server? All active processes will restart and connections will be temporarily interrupted.')) {
@@ -713,6 +740,6 @@
 
   setOptimizationButtonsDisabled(true);
   fetchOptimizationStatus();
-  fetchStats();
+  if (!document.hidden) fetchStats();
 </script>
 {% endblock %}

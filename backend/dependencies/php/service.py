@@ -234,8 +234,29 @@ class PHPDependencyService:
             return dict(self._cache)
 
     def get_cached_status(self) -> dict[str, Any]:
+        """Return only an existing snapshot; never launch APT or system helpers."""
         with self._cache_lock:
-            return dict(self._cache) if self._cache else self._probe()
+            if self._cache is not None:
+                return dict(self._cache)
+        return {
+            "id": self.dependency_id,
+            "installed": False,
+            "running": False,
+            "healthy": False,
+            "state": "unknown",
+            "detected_version": None,
+            "install_origin": "unknown",
+            "error": None,
+            "can_toggle": False,
+            "versions": [],
+            "available_versions": [],
+            "external_repository": {
+                "configured": False,
+                "name": EXTERNAL_REPOSITORY_NAME,
+                "ppa": EXTERNAL_REPOSITORY_PPA,
+                "official_ubuntu": False,
+            },
+        }
 
     def _invalidate(self) -> None:
         with self._cache_lock:

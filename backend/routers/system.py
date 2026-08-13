@@ -3,6 +3,7 @@ routers/system.py — Health check + server status routes
 Returns real nginx and PowerDNS status, not mocked data.
 """
 import asyncio
+from copy import deepcopy
 import socket
 import time
 import httpx
@@ -106,14 +107,19 @@ async def _get_optimization_status() -> dict:
         except Exception:
             pass
 
-    # 2. zRAM inspection
+    # 2. zRAM inspection without spawning systemctl on every stats request.
     zram_active = False
     try:
-        res = await run(["systemctl", "is-active", "zramswap"])
-        if res.success and "active" in res.stdout.strip():
-            zram_active = True
+        swaps = Path("/proc/swaps")
+        if swaps.is_file():
+            zram_active = any(
+                line.split()[0].startswith("/dev/zram")
+                for line in swaps.read_text(encoding="utf-8", errors="ignore").splitlines()[1:]
+                if line.split()
+            )
+        if zram_active:
             opt_active = True
-    except Exception:
+    except OSError:
         pass
 
     # 3. Nginx worker_processes inspection
@@ -151,17 +157,16 @@ async def _get_optimization_status() -> dict:
             pass
 
         has_snaps = False
-        if Path("/usr/bin/snap").exists():
-            snap_res = await run(["snap", "list"])
-            if snap_res.success:
-                lines = snap_res.stdout.strip().split("\n")[1:]
-                for line in lines:
-                    parts = line.split()
-                    if parts:
-                        name = parts[0]
-                        if name not in ["core", "core18", "core20", "core22", "bare", "snapd", "lxd"]:
-                            has_snaps = True
-                            break
+        snap_root = Path("/var/lib/snapd/snaps")
+        ignored_snaps = {"core", "core18", "core20", "core22", "bare", "snapd", "lxd"}
+        if snap_root.is_dir():
+            try:
+                has_snaps = any(
+                    item.stem.rsplit("_", 1)[0] not in ignored_snaps
+                    for item in snap_root.glob("*.snap")
+                )
+            except OSError:
+                pass
         
         _HARDWARE_CACHE = {
             "has_fibre": has_fibre,
@@ -317,8 +322,13 @@ def _collect_usage_snapshot() -> dict:
     }
 
 
-@router.get("/api/stats")
-async def server_stats(db: AsyncSession = Depends(get_db)):
+_STATS_CACHE_SECONDS = 15.0
+_stats_cache: dict | None = None
+_stats_cache_at = 0.0
+_stats_cache_lock = asyncio.Lock()
+
+
+async def _build_server_stats(db: AsyncSession) -> dict:
     """Live server resource stats via psutil — CPU, RAM, disk, network, processes."""
     from fastapi import HTTPException
     if not _PSUTIL_OK:
@@ -340,7 +350,7 @@ async def server_stats(db: AsyncSession = Depends(get_db)):
     services = snapshot["services"]
 
     docker_status = await asyncio.to_thread(
-        dependency_manager.get_status, "docker"
+        dependency_manager.get_status, "docker", cached=True
     )
     if docker_status:
         if docker_status.get("healthy"):
@@ -361,7 +371,11 @@ async def server_stats(db: AsyncSession = Depends(get_db)):
             f"({s['mem']:.1f}% of server)"
         )
 
-    plugins = await plugin_usage_service.get_plugin_usage(procs, ram.total)
+    plugins = await plugin_usage_service.get_plugin_usage(
+        procs,
+        ram.total,
+        live_hooks=False,
+    )
     hosted_apps = await hosted_app_usage_service.get_usage(db, procs, ram.total)
     php_sites = await php_site_usage_service.get_usage(db, procs, ram.total)
     container_apps = await container_app_usage_service.get_usage(db, ram.total)
@@ -424,6 +438,24 @@ async def server_stats(db: AsyncSession = Depends(get_db)):
         "processes": top_procs,
         "optimization": opt_status,
     }
+
+
+@router.get("/api/stats")
+async def server_stats(db: AsyncSession = Depends(get_db)):
+    """Return one shared short-lived stats snapshot for all browser sessions."""
+    global _stats_cache, _stats_cache_at
+    now = time.monotonic()
+    if _stats_cache is not None and now - _stats_cache_at < _STATS_CACHE_SECONDS:
+        return deepcopy(_stats_cache)
+
+    async with _stats_cache_lock:
+        now = time.monotonic()
+        if _stats_cache is not None and now - _stats_cache_at < _STATS_CACHE_SECONDS:
+            return deepcopy(_stats_cache)
+        payload = await _build_server_stats(db)
+        _stats_cache = deepcopy(payload)
+        _stats_cache_at = time.monotonic()
+        return payload
 
 
 class OptimizationToggleIn(BaseModel):

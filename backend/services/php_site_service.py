@@ -148,7 +148,50 @@ async def options(db: AsyncSession) -> dict[str, Any]:
 
 async def list_sites(db: AsyncSession) -> list[dict[str, Any]]:
     sites = list((await db.scalars(select(PhpWebsite).order_by(PhpWebsite.id.desc()))).all())
-    return [await serialize_site(db, site, include_health=False) for site in sites]
+    if not sites:
+        return []
+
+    site_ids = [site.id for site in sites]
+    domain_ids = list({site.domain_id for site in sites})
+    domains = {
+        item.id: item
+        for item in (await db.scalars(select(Domain).where(Domain.id.in_(domain_ids)))).all()
+    }
+    databases = {
+        item.site_id: item
+        for item in (await db.scalars(
+            select(PhpWebsiteDatabase).where(PhpWebsiteDatabase.site_id.in_(site_ids))
+        )).all()
+    }
+    certificates = {
+        (item.domain_id, item.full_domain): item
+        for item in (await db.scalars(
+            select(SslCert).where(SslCert.domain_id.in_(domain_ids))
+        )).all()
+    }
+    operations: dict[int, PhpWebsiteOperation] = {}
+    for item in (await db.scalars(
+        select(PhpWebsiteOperation)
+        .where(
+            PhpWebsiteOperation.site_id.in_(site_ids),
+            PhpWebsiteOperation.status.in_(ACTIVE_OPERATION_STATES),
+        )
+        .order_by(PhpWebsiteOperation.id.desc())
+    )).all():
+        operations.setdefault(item.site_id, item)
+
+    results = []
+    for site in sites:
+        domain = domains.get(site.domain_id)
+        cert = certificates.get((site.domain_id, domain.name if domain else ""))
+        results.append(_site_payload(
+            site,
+            domain,
+            databases.get(site.id),
+            cert,
+            operations.get(site.id),
+        ))
+    return results
 
 
 async def serialize_site(
@@ -158,6 +201,19 @@ async def serialize_site(
     database = await database_for(db, site.id)
     cert = await db.scalar(select(SslCert).where(SslCert.domain_id == site.domain_id, SslCert.full_domain == (domain.name if domain else "")))
     operation = await active_operation(db, site.id)
+    result = _site_payload(site, domain, database, cert, operation)
+    if include_health:
+        result["health"] = await health(db, site)
+    return result
+
+
+def _site_payload(
+    site: PhpWebsite,
+    domain: Domain | None,
+    database: PhpWebsiteDatabase | None,
+    cert: SslCert | None,
+    operation: PhpWebsiteOperation | None,
+) -> dict[str, Any]:
     result = {
         "id": site.id,
         "domain_id": site.domain_id,
@@ -193,8 +249,6 @@ async def serialize_site(
         "available_actions": _available_actions(site, operation is not None, database is not None, cert is not None),
         "created_at": site.created_at.isoformat() if site.created_at else None,
     }
-    if include_health:
-        result["health"] = await health(db, site)
     return result
 
 
@@ -920,4 +974,3 @@ async def recover_interrupted() -> None:
             if site and site.status in {"provisioning", "deleting"}:
                 site.status, site.last_error = "failed", operation.error
         await db.commit()
-

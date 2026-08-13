@@ -1,10 +1,15 @@
 """Health driver for the panel and hosted-app Python runtime."""
 from __future__ import annotations
-import os, re, shutil, subprocess
+import os, re, shutil, subprocess, threading, time
 from typing import Any
 
 class PythonDependencyService:
     dependency_id = "python"
+    CACHE_SECONDS = 300.0
+    def __init__(self):
+        self._cache = None
+        self._cache_at = 0.0
+        self._cache_lock = threading.Lock()
     def _python(self):
         for name in ("python3.13", "python3.12", "python3.11", "python3"):
             if path := shutil.which(name): return path
@@ -22,8 +27,22 @@ class PythonDependencyService:
             except (OSError, subprocess.TimeoutExpired): error = "Python health check failed."
         else: error = "Python 3.11 or newer is required."
         return {"id":self.dependency_id,"installed":bool(command),"running":False,"can_toggle":False,"healthy":bool(command and not error),"state":"healthy" if command and not error else "not_installed","detected_version":version,"error":error}
-    def get_status(self, *, force: bool = False): return self._probe()
-    def get_cached_status(self): return self._probe()
+    def get_status(self, *, force: bool = False):
+        now = time.monotonic()
+        with self._cache_lock:
+            if not force and self._cache is not None and now - self._cache_at < self.CACHE_SECONDS:
+                return dict(self._cache)
+            self._cache = self._probe()
+            self._cache_at = now
+            return dict(self._cache)
+    def get_cached_status(self):
+        with self._cache_lock:
+            if self._cache is not None:
+                return dict(self._cache)
+        installed = self._python() is not None
+        return {"id": self.dependency_id, "installed": installed, "running": False,
+                "can_toggle": False, "healthy": False, "state": "unknown" if installed else "not_installed",
+                "detected_version": None, "error": None}
     def install(self): return False, "Python is installed with SRV Panel. Run the panel installer/update to repair this core runtime."
     def get_install_guide(self): return {"supported":False,"command":"sudo bash /opt/srv-panel/scripts/update.sh","warning":"Do not remove Python: SRV Panel and hosted apps use it."}
     def get_uninstall_guide(self): return {"command":"Not available","warning":"Python is a core panel runtime and cannot be removed here."}

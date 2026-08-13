@@ -1,10 +1,15 @@
 """Health and repair driver for the panel's core Git tools."""
 from __future__ import annotations
-import os, shutil, subprocess
+import os, shutil, subprocess, threading, time
 from typing import Any
 
 class GitDependencyService:
     dependency_id = "git"
+    CACHE_SECONDS = 300.0
+    def __init__(self):
+        self._cache = None
+        self._cache_at = 0.0
+        self._cache_lock = threading.Lock()
     def _probe(self) -> dict[str, Any]:
         git, ssh = shutil.which("git"), shutil.which("ssh")
         version = None
@@ -15,8 +20,22 @@ class GitDependencyService:
         return {"id": self.dependency_id, "installed": installed, "running": False,
                 "can_toggle": False, "healthy": installed, "state": "healthy" if installed else "not_installed",
                 "detected_version": version, "error": None if installed else "Git and OpenSSH client are required."}
-    def get_status(self, *, force: bool = False): return self._probe()
-    def get_cached_status(self): return self._probe()
+    def get_status(self, *, force: bool = False):
+        now = time.monotonic()
+        with self._cache_lock:
+            if not force and self._cache is not None and now - self._cache_at < self.CACHE_SECONDS:
+                return dict(self._cache)
+            self._cache = self._probe()
+            self._cache_at = now
+            return dict(self._cache)
+    def get_cached_status(self):
+        with self._cache_lock:
+            if self._cache is not None:
+                return dict(self._cache)
+        installed = bool(shutil.which("git") and shutil.which("ssh"))
+        return {"id": self.dependency_id, "installed": installed, "running": False,
+                "can_toggle": False, "healthy": False, "state": "unknown" if installed else "not_installed",
+                "detected_version": None, "error": None}
     def install(self):
         if os.name == "nt": return False, "Git repair is only available on Linux."
         try:

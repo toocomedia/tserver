@@ -49,7 +49,7 @@ def _process_usage(
 def _installed_plugins() -> list[dict[str, Any]]:
     installed = []
     for plugin_id in list(plugin_manager.plugins):
-        plugin = plugin_manager.get_plugin(plugin_id)
+        plugin = plugin_manager.get_plugin(plugin_id, check_dependencies=False)
         if plugin and plugin.get("installed"):
             installed.append(plugin)
     return installed
@@ -58,6 +58,8 @@ def _installed_plugins() -> list[dict[str, Any]]:
 async def get_plugin_usage(
     processes: list[dict[str, Any]],
     total_memory: int,
+    *,
+    live_hooks: bool = True,
 ) -> dict[str, dict[str, Any]]:
     """Return live metrics for every installed plugin from its usage contract."""
     if not plugin_manager.plugins:
@@ -73,9 +75,13 @@ async def get_plugin_usage(
         if plugin.get("effective_status") != "active":
             continue
 
-        service = await asyncio.to_thread(plugin_manager.get_service, plugin_id)
+        service = await asyncio.to_thread(
+            plugin_manager.get_service,
+            plugin_id,
+            check_dependencies=False,
+        )
         usage_hook = getattr(service, "get_usage", None)
-        if usage_hook:
+        if usage_hook and live_hooks:
             try:
                 row.update(await asyncio.to_thread(usage_hook))
             except Exception:
@@ -91,7 +97,7 @@ async def get_plugin_usage(
                 )
 
         details_hook = getattr(service, "get_usage_details", None)
-        if details_hook:
+        if details_hook and live_hooks:
             try:
                 row.update(await asyncio.to_thread(details_hook))
             except Exception:
