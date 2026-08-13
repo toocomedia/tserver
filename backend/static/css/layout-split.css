@@ -24,8 +24,18 @@
 .split-sidebar__item.active,
 .split-sidebar__item.active:hover {
   background: color-mix(in srgb, var(--color-accent) 15%, transparent) !important;
-  color: var(--color-accent) !important;
+  color: var(--color-text) !important;
+  font-weight: 700;
   border-left-color: transparent !important;
+}
+
+[data-theme="dark"] .split-sidebar__item.active,
+[data-theme="dark"] .split-sidebar__item.active:hover,
+[data-theme="amoled"] .split-sidebar__item.active,
+[data-theme="amoled"] .split-sidebar__item.active:hover,
+[data-theme="charcoal"] .split-sidebar__item.active,
+[data-theme="charcoal"] .split-sidebar__item.active:hover {
+  color: var(--color-accent) !important;
 }
 .split-sidebar__status, .split-sidebar__footer { padding: var(--space-lg); border-top: 1px solid var(--color-line); }
 .split-sidebar__count { margin-left: auto; font-size: var(--font-small); color: var(--color-muted); }

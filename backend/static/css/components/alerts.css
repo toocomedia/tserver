@@ -24,6 +24,11 @@
 .alert--warning {
   background: var(--color-surface);
   color: var(--color-warn);
+  margin-top: var(--space-md);
+}
+
+#resource-guard-banner:not([hidden]) {
+  margin-top: var(--space-md);
 }
 
 .recommendation-card {
