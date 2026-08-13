@@ -48,16 +48,11 @@
   .sidebar > .sidebar__logo { display: none; }
   .main { flex: 1; overflow: hidden; }
   .content { overflow-y: auto; }
-  .page-header { gap: var(--space-sm); }
-  .page-header__title { white-space: normal; overflow-wrap: anywhere; font-size: 18px; }
-  .page-header__actions { width: 100%; display: flex; gap: var(--space-xs); }
-  .page-header__actions .btn { flex: 1; min-width: 0; font-size: 12px; height: 32px; padding: 0 8px; }
   .split-content { padding: 0 var(--page-gutter) var(--space-lg); }
 }
 
 @media (max-width: 480px) {
   .split-content { padding: 0 var(--page-gutter) var(--space-md); }
-  .page-header__actions { flex-wrap: wrap; }
-  .page-header__actions .btn { flex: 1 1 calc(50% - 4px); min-width: auto; }
 }
+
 
