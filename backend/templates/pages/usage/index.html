@@ -63,6 +63,24 @@
 
   .info-row__value .usage-bar-wrap { min-width: 200px; }
 
+  .table-total-row {
+    background: var(--color-header-bg-bar) !important;
+    border-top: 2px solid var(--color-line);
+    border-bottom: 2px solid var(--color-line);
+  }
+  .table-total-row td {
+    font-weight: 700 !important;
+    color: var(--color-text) !important;
+    border-bottom: none !important;
+  }
+  .table-total-row .table-title {
+    font-weight: 700 !important;
+    color: var(--color-text) !important;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
 </style>
 {% endblock %}
 
@@ -157,6 +175,12 @@
       : mb.toFixed(0) + ' MB';
   }
 
+  function formatTotalMemory(memPct, totalRamGb) {
+    if (!totalRamGb || memPct <= 0) return '0 MB (0.0% of server)';
+    const totalMb = (memPct / 100) * totalRamGb * 1024;
+    return `${fmtMb(totalMb)} (${memPct.toFixed(1)}% of server)`;
+  }
+
   function procStatusClass(s) {
     if (['running', 'active', 'healthy'].includes(s)) return 'proc-status--running';
     if (s === 'zombie')   return 'proc-status--zombie';
@@ -225,88 +249,282 @@
         'panel': 'Panel (FastAPI)',
         'docker': 'Docker Engine'
       };
-      svcTbody.innerHTML = Object.entries(d.services).map(([key, svc]) => `
-        <tr>
-          <td class="table-title">${svc.label || svcNames[key] || key}</td>
-          <td>${key === 'nginx' ? `${svc.worker_count} worker / ${svc.count} total` : svc.count}</td>
-          <td>${svc.cpu.toFixed(1)}%</td>
-          <td>${svc.memory}</td>
-          <td><span class="${procStatusClass(svc.status)}">${svc.status}</span></td>
+      const entries = Object.entries(d.services);
+      let totalCount = 0;
+      let totalCpu = 0;
+      let totalMem = 0;
+      let activeCount = 0;
+
+      const rowsHtml = entries.map(([key, svc]) => {
+        totalCount += (svc.count || 0);
+        totalCpu += (svc.cpu || 0);
+        totalMem += (svc.mem || 0);
+        if (svc.status === 'running' || svc.count > 0) activeCount++;
+        return `
+          <tr>
+            <td class="table-title">${svc.label || svcNames[key] || key}</td>
+            <td>${key === 'nginx' ? `${svc.worker_count} worker / ${svc.count} total` : svc.count}</td>
+            <td>${svc.cpu.toFixed(1)}%</td>
+            <td>${svc.memory}</td>
+            <td><span class="${procStatusClass(svc.status)}">${svc.status}</span></td>
+          </tr>
+        `;
+      }).join('');
+
+      const totalRowHtml = entries.length ? `
+        <tr class="table-total-row">
+          <td class="table-title"><strong>{{ _('total') }}</strong></td>
+          <td><strong>${totalCount}</strong></td>
+          <td><strong>${totalCpu.toFixed(1)}%</strong></td>
+          <td><strong>${formatTotalMemory(totalMem, d.ram?.total_gb)}</strong></td>
+          <td><span class="${procStatusClass('running')}">${activeCount}/${entries.length} {{ _('running') }}</span></td>
         </tr>
-      `).join('');
+      ` : '';
+
+      svcTbody.innerHTML = rowsHtml + totalRowHtml;
     }
 
     // Plugins
     const pluginTbody = document.getElementById('plugin-usage-tbody');
     if (pluginTbody) {
       const pluginRows = Object.entries(d.plugins || {});
-      pluginTbody.innerHTML = pluginRows.length ? pluginRows.map(([key, plugin]) => `
-        <tr>
-          <td class="table-title">${plugin.label || key}</td>
-          <td>${plugin.count}</td>
-          <td>${plugin.cpu.toFixed(1)}%</td>
-          <td>${plugin.memory}</td>
-          <td><span class="${procStatusClass(plugin.status)}">${plugin.status}</span></td>
-        </tr>
-      `).join('') : '<tr><td colspan="5" class="text-muted">No active plugins running.</td></tr>';
+      if (pluginRows.length) {
+        let totalCount = 0;
+        let totalCpu = 0;
+        let totalMem = 0;
+        let activeCount = 0;
+
+        const rowsHtml = pluginRows.map(([key, plugin]) => {
+          totalCount += (plugin.count || 0);
+          totalCpu += (plugin.cpu || 0);
+          totalMem += (plugin.mem || 0);
+          if (['running', 'active', 'healthy'].includes(plugin.status) || plugin.count > 0) activeCount++;
+          return `
+            <tr>
+              <td class="table-title">${plugin.label || key}</td>
+              <td>${plugin.count}</td>
+              <td>${plugin.cpu.toFixed(1)}%</td>
+              <td>${plugin.memory}</td>
+              <td><span class="${procStatusClass(plugin.status)}">${plugin.status}</span></td>
+            </tr>
+          `;
+        }).join('');
+
+        const totalRowHtml = `
+          <tr class="table-total-row">
+            <td class="table-title"><strong>{{ _('total') }}</strong></td>
+            <td><strong>${totalCount}</strong></td>
+            <td><strong>${totalCpu.toFixed(1)}%</strong></td>
+            <td><strong>${formatTotalMemory(totalMem, d.ram?.total_gb)}</strong></td>
+            <td><span class="${procStatusClass(activeCount ? 'active' : 'stopped')}">${activeCount}/${pluginRows.length} {{ _('active') }}</span></td>
+          </tr>
+        `;
+        pluginTbody.innerHTML = rowsHtml + totalRowHtml;
+      } else {
+        pluginTbody.innerHTML = '<tr><td colspan="5" class="text-muted">No active plugins running.</td></tr>';
+      }
     }
 
     const hostedAppTbody = document.getElementById('hosted-app-usage-tbody');
     if (hostedAppTbody) {
       const apps = d.hosted_apps || [];
-      hostedAppTbody.innerHTML = apps.length ? apps.map(app => `
-        <tr>
-          <td class="table-title">${app.label}</td>
-          <td>${app.count}</td>
-          <td>${app.cpu.toFixed(1)}%</td>
-          <td>${app.memory}</td>
-          <td><span class="${procStatusClass(app.status)}">${app.status}</span></td>
-        </tr>
-      `).join('') : '<tr><td colspan="5" class="text-muted">No hosted Python apps yet.</td></tr>';
+      if (apps.length) {
+        let totalCount = 0;
+        let totalCpu = 0;
+        let totalMem = 0;
+        let runningCount = 0;
+
+        const rowsHtml = apps.map(app => {
+          totalCount += (app.count || 0);
+          totalCpu += (app.cpu || 0);
+          totalMem += (app.mem || 0);
+          if (app.status === 'running' || app.count > 0) runningCount++;
+          return `
+            <tr>
+              <td class="table-title">${app.label}</td>
+              <td>${app.count}</td>
+              <td>${app.cpu.toFixed(1)}%</td>
+              <td>${app.memory}</td>
+              <td><span class="${procStatusClass(app.status)}">${app.status}</span></td>
+            </tr>
+          `;
+        }).join('');
+
+        const totalRowHtml = `
+          <tr class="table-total-row">
+            <td class="table-title"><strong>{{ _('total') }}</strong></td>
+            <td><strong>${totalCount}</strong></td>
+            <td><strong>${totalCpu.toFixed(1)}%</strong></td>
+            <td><strong>${formatTotalMemory(totalMem, d.ram?.total_gb)}</strong></td>
+            <td><span class="${procStatusClass(runningCount ? 'running' : 'active')}">${runningCount}/${apps.length} {{ _('running') }}</span></td>
+          </tr>
+        `;
+        hostedAppTbody.innerHTML = rowsHtml + totalRowHtml;
+      } else {
+        hostedAppTbody.innerHTML = '<tr><td colspan="5" class="text-muted">No hosted Python apps yet.</td></tr>';
+      }
     }
 
     const phpSiteTbody = document.getElementById('php-site-usage-tbody');
     if (phpSiteTbody) {
       const sites = d.php_sites || [];
-      phpSiteTbody.innerHTML = sites.length ? sites.map(site => `
-        <tr>
-          <td class="table-title">${site.label}${site.version ? ` <span class="text-small text-muted" style="font-weight:400; margin-left:6px;">(${site.preset === 'wordpress' ? 'WordPress' : 'PHP ' + site.version})</span>` : ''}</td>
-          <td>${site.count}</td>
-          <td>${site.cpu.toFixed(1)}%</td>
-          <td>${site.memory}</td>
-          <td><span class="${procStatusClass(site.status)}">${site.status}</span></td>
-        </tr>
-      `).join('') : '<tr><td colspan="5" class="text-muted">No hosted PHP websites yet.</td></tr>';
+      if (sites.length) {
+        let totalCount = 0;
+        let totalCpu = 0;
+        let totalMem = 0;
+        let activeCount = 0;
+
+        const rowsHtml = sites.map(site => {
+          totalCount += (site.count || 0);
+          totalCpu += (site.cpu || 0);
+          totalMem += (site.mem || 0);
+          if (['running', 'active', 'healthy'].includes(site.status) || site.count > 0) activeCount++;
+          return `
+            <tr>
+              <td class="table-title">${site.label}${site.version ? ` <span class="text-small text-muted" style="font-weight:400; margin-left:6px;">(${site.preset === 'wordpress' ? 'WordPress' : 'PHP ' + site.version})</span>` : ''}</td>
+              <td>${site.count}</td>
+              <td>${site.cpu.toFixed(1)}%</td>
+              <td>${site.memory}</td>
+              <td><span class="${procStatusClass(site.status)}">${site.status}</span></td>
+            </tr>
+          `;
+        }).join('');
+
+        const totalRowHtml = `
+          <tr class="table-total-row">
+            <td class="table-title"><strong>{{ _('total') }}</strong></td>
+            <td><strong>${totalCount}</strong></td>
+            <td><strong>${totalCpu.toFixed(1)}%</strong></td>
+            <td><strong>${formatTotalMemory(totalMem, d.ram?.total_gb)}</strong></td>
+            <td><span class="${procStatusClass(activeCount ? 'active' : 'stopped')}">${activeCount}/${sites.length} {{ _('active') }}</span></td>
+          </tr>
+        `;
+        phpSiteTbody.innerHTML = rowsHtml + totalRowHtml;
+      } else {
+        phpSiteTbody.innerHTML = '<tr><td colspan="5" class="text-muted">No hosted PHP websites yet.</td></tr>';
+      }
     }
 
     const containerAppTbody = document.getElementById('container-app-usage-tbody');
     if (containerAppTbody) {
       const engine = d.container_apps || {};
-      const rows = [...(engine.apps || []), ...(engine.build ? [engine.build] : []), ...(engine.total ? [engine.total] : [])];
-      containerAppTbody.innerHTML = rows.length ? rows.map(app => `<tr><td class="table-title">${app.label}</td><td>${app.count}</td><td>${app.cpu.toFixed(1)}%</td><td>${app.memory}</td><td><span class="${procStatusClass(app.status)}">${app.status}</span></td></tr>`).join('') : '<tr><td colspan="5" class="text-muted">No Apps Engine apps yet.</td></tr>';
+      const apps = engine.apps || [];
+      const build = engine.build;
+      const total = engine.total;
+
+      if (apps.length || build || total) {
+        const appRowsHtml = apps.map(app => `
+          <tr>
+            <td class="table-title">${app.label}</td>
+            <td>${app.count}</td>
+            <td>${app.cpu.toFixed(1)}%</td>
+            <td>${app.memory}</td>
+            <td><span class="${procStatusClass(app.status)}">${app.status}</span></td>
+          </tr>
+        `).join('');
+
+        const buildRowHtml = build ? `
+          <tr>
+            <td class="table-title">${build.label}</td>
+            <td>${build.count}</td>
+            <td>${build.cpu.toFixed(1)}%</td>
+            <td>${build.memory}</td>
+            <td><span class="${procStatusClass(build.status)}">${build.status}</span></td>
+          </tr>
+        ` : '';
+
+        const totalRowHtml = total ? `
+          <tr class="table-total-row">
+            <td class="table-title"><strong>{{ _('total') }}</strong></td>
+            <td><strong>${total.count}</strong></td>
+            <td><strong>${total.cpu.toFixed(1)}%</strong></td>
+            <td><strong>${total.memory}</strong></td>
+            <td><span class="${procStatusClass(total.status)}">${total.status}</span></td>
+          </tr>
+        ` : '';
+
+        containerAppTbody.innerHTML = appRowsHtml + buildRowHtml + totalRowHtml;
+      } else {
+        containerAppTbody.innerHTML = '<tr><td colspan="5" class="text-muted">No Apps Engine apps yet.</td></tr>';
+      }
     }
 
     const dependencyTbody = document.getElementById('dependency-usage-tbody');
     if (dependencyTbody) {
       const dependencies = d.dependencies || [];
-      dependencyTbody.innerHTML = dependencies.map(dep => `
-        <tr><td class="table-title">${dep.label}${dep.version ? ` <span class="text-small text-muted" style="font-weight:400; margin-left:6px;">(${dep.version})</span>` : ''}</td><td>${dep.count}</td><td>${dep.cpu.toFixed(1)}%</td><td>${dep.memory}</td><td><span class="${procStatusClass(dep.status)}">${dep.status}</span></td></tr>
-      `).join('') || '<tr><td colspan="5" class="text-muted">No runtime dependencies found.</td></tr>';
+      if (dependencies.length) {
+        let totalCount = 0;
+        let totalCpu = 0;
+        let totalMem = 0;
+        let healthyCount = 0;
+
+        const rowsHtml = dependencies.map(dep => {
+          totalCount += (dep.count || 0);
+          totalCpu += (dep.cpu || 0);
+          totalMem += (dep.mem || 0);
+          if (['running', 'active', 'healthy'].includes(dep.status)) healthyCount++;
+          return `
+            <tr>
+              <td class="table-title">${dep.label}${dep.version ? ` <span class="text-small text-muted" style="font-weight:400; margin-left:6px;">(${dep.version})</span>` : ''}</td>
+              <td>${dep.count}</td>
+              <td>${dep.cpu.toFixed(1)}%</td>
+              <td>${dep.memory}</td>
+              <td><span class="${procStatusClass(dep.status)}">${dep.status}</span></td>
+            </tr>
+          `;
+        }).join('');
+
+        const totalRowHtml = `
+          <tr class="table-total-row">
+            <td class="table-title"><strong>{{ _('total') }}</strong></td>
+            <td><strong>${totalCount}</strong></td>
+            <td><strong>${totalCpu.toFixed(1)}%</strong></td>
+            <td><strong>${formatTotalMemory(totalMem, d.ram?.total_gb)}</strong></td>
+            <td><span class="${procStatusClass('healthy')}">${healthyCount}/${dependencies.length} {{ _('healthy') }}</span></td>
+          </tr>
+        `;
+        dependencyTbody.innerHTML = rowsHtml + totalRowHtml;
+      } else {
+        dependencyTbody.innerHTML = '<tr><td colspan="5" class="text-muted">No runtime dependencies found.</td></tr>';
+      }
     }
 
     // Top processes table
     if (d.processes) {
       const procTbody = document.getElementById('proc-tbody');
       if (procTbody) {
-        procTbody.innerHTML = d.processes.map(p => `
-          <tr>
-            <td class="table-title">${p.name} <span class="text-small text-muted" style="font-weight:400; margin-left:6px;">(PID ${p.pid})</span></td>
-            <td>1</td>
-            <td>${typeof p.cpu === 'number' ? p.cpu.toFixed(1) : p.cpu}%</td>
-            <td>${typeof p.mem === 'number' ? p.mem.toFixed(1) : p.mem}%</td>
-            <td><span class="${procStatusClass(p.status)}">${p.status}</span></td>
-          </tr>
-        `).join('');
+        const procs = d.processes;
+        if (procs.length) {
+          let totalCpu = 0;
+          let totalMem = 0;
+
+          const rowsHtml = procs.map(p => {
+            const cpuVal = typeof p.cpu === 'number' ? p.cpu : parseFloat(p.cpu) || 0;
+            const memVal = typeof p.mem === 'number' ? p.mem : parseFloat(p.mem) || 0;
+            totalCpu += cpuVal;
+            totalMem += memVal;
+            return `
+              <tr>
+                <td class="table-title">${p.name} <span class="text-small text-muted" style="font-weight:400; margin-left:6px;">(PID ${p.pid})</span></td>
+                <td>1</td>
+                <td>${cpuVal.toFixed(1)}%</td>
+                <td>${memVal.toFixed(1)}%</td>
+                <td><span class="${procStatusClass(p.status)}">${p.status}</span></td>
+              </tr>
+            `;
+          }).join('');
+
+          const totalRowHtml = `
+            <tr class="table-total-row">
+              <td class="table-title"><strong>{{ _('total') }} (Top ${procs.length})</strong></td>
+              <td><strong>${procs.length}</strong></td>
+              <td><strong>${totalCpu.toFixed(1)}%</strong></td>
+              <td><strong>${totalMem.toFixed(1)}%</strong></td>
+              <td><span class="${procStatusClass('running')}">${procs.length} procs</span></td>
+            </tr>
+          `;
+          procTbody.innerHTML = rowsHtml + totalRowHtml;
+        }
       }
     }
 

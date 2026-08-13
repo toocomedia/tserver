@@ -186,8 +186,21 @@ async def optimization_status():
     return await _get_optimization_status()
 
 
+import threading
+
+_proc_cpu_tracker: dict[int, tuple[float, float, float]] = {}
+_proc_tracker_lock = threading.Lock()
+
+
 def _collect_usage_snapshot() -> dict:
     """Collect synchronous psutil data away from the async request loop."""
+    global _proc_cpu_tracker
+    now = time.time()
+    next_tracker: dict[int, tuple[float, float, float]] = {}
+
+    with _proc_tracker_lock:
+        prev_tracker = dict(_proc_cpu_tracker)
+
     cpu_percent = _psutil.cpu_percent(interval=None)
     cpu_count = _psutil.cpu_count(logical=True)
     cpu_freq = _psutil.cpu_freq()
@@ -240,7 +253,8 @@ def _collect_usage_snapshot() -> dict:
             "pid",
             "name",
             "cmdline",
-            "cpu_percent",
+            "cpu_times",
+            "create_time",
             "memory_percent",
             "memory_info",
             "status",
@@ -249,25 +263,45 @@ def _collect_usage_snapshot() -> dict:
     ):
         try:
             info = p.info
-            if info["cpu_percent"] is not None:
-                procs.append(info)
+            pid = info["pid"]
+            times = info.get("cpu_times")
+            create_time = float(info.get("create_time") or 0.0)
+            total_time = float(times.user + times.system) if times else 0.0
 
-                name = info.get("name", "").lower() if info.get("name") else ""
-                cmdline = " ".join(info.get("cmdline") or []).lower()
+            if pid in prev_tracker and abs(prev_tracker[pid][0] - create_time) < 1.0:
+                _, prev_total, prev_time = prev_tracker[pid]
+                dt = now - prev_time
+                if dt > 0.2:
+                    cpu_pct = max(0.0, ((total_time - prev_total) / dt) * 100.0)
+                else:
+                    cpu_pct = 0.0
+            else:
+                dt = now - create_time if create_time and (now - create_time > 0.5) else 0.0
+                cpu_pct = max(0.0, (total_time / dt) * 100.0) if dt > 0 else 0.0
 
-                svc = process_usage_classifier.stack_service(name, cmdline)
+            info["cpu_percent"] = round(cpu_pct, 1)
+            next_tracker[pid] = (create_time, total_time, now)
+            procs.append(info)
 
-                if svc:
-                    services[svc]["cpu"] += info["cpu_percent"] or 0.0
-                    services[svc]["_memory_bytes"] += int(
-                        getattr(info.get("memory_info"), "rss", 0) or 0
-                    )
-                    services[svc]["count"] += 1
-                    services[svc]["status"] = "running"
-                    if svc == "nginx" and process_usage_classifier.is_nginx_worker(cmdline):
-                        services[svc]["worker_count"] += 1
+            name = info.get("name", "").lower() if info.get("name") else ""
+            cmdline = " ".join(info.get("cmdline") or []).lower()
+
+            svc = process_usage_classifier.stack_service(name, cmdline)
+
+            if svc:
+                services[svc]["cpu"] += info["cpu_percent"] or 0.0
+                services[svc]["_memory_bytes"] += int(
+                    getattr(info.get("memory_info"), "rss", 0) or 0
+                )
+                services[svc]["count"] += 1
+                services[svc]["status"] = "running"
+                if svc == "nginx" and process_usage_classifier.is_nginx_worker(cmdline):
+                    services[svc]["worker_count"] += 1
         except (_psutil.NoSuchProcess, _psutil.AccessDenied):
             pass
+
+    with _proc_tracker_lock:
+        _proc_cpu_tracker = next_tracker
 
     return {
         "cpu_percent": cpu_percent,

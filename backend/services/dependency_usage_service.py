@@ -40,6 +40,8 @@ def _process_metrics(
     return {
         "count": len(matches),
         "cpu": round(sum(float(p.get("cpu_percent") or 0) for p in matches), 1),
+        "mem": round(memory_percent, 1),
+        "memory_bytes": memory_bytes,
         "memory": f"{memory_bytes / (1024 ** 2):.0f} MB ({memory_percent:.1f}% of server)",
     }
 
@@ -59,7 +61,7 @@ def _rows(
         }
         metrics = (
             _process_metrics(processes, process_names, total_memory)
-            if process_names else {"count": 0, "cpu": 0.0, "memory": "—"}
+            if process_names else {"count": 0, "cpu": 0.0, "mem": 0.0, "memory_bytes": 0, "memory": "—"}
         )
         rows.append({
             "label": status.get("name", status["id"]),
