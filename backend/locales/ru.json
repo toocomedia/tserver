@@ -391,6 +391,8 @@
   "new_reverse_proxy_wizard": "Новый мастер обратного прокси",
   "1_hostname_setup": "1. Настройка имени хоста",
   "2_target_ssl": "2. Цель и SSL",
+  "hostname_setup": "Настройка имени хоста",
+  "target_ssl": "Цель и SSL",
   "hostname_source": "Источник имени хоста",
   "managed_domain": "Управляемый домен",
   "external_hostname": "Внешнее имя хоста",

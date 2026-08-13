@@ -10,15 +10,13 @@
 {% endblock %}
 
 {% block content %}
-<div id="create-proxy-panel" style="width: 100%;">
+<div id="create-proxy-panel" style="max-width: 800px; margin: 0 auto; width: 100%;">
   
-  <div class="form-header" style="text-align: center; margin: 40px 0 48px 0;">
-    <h2 style="font-size: 28px; font-weight: 700; margin: 0 0 24px 0; letter-spacing: -0.02em;">{{ _('new_reverse_proxy_wizard') }}</h2>
-    
+  <div class="form-header" style="text-align: center; margin: 24px 0 36px 0;">
     <!-- Step Progress Indicator (Brutalist) -->
     {{ wizard.render_steps([
-      {'id': 'proxy-step-pill-1', 'label': _('1_hostname_setup'), 'hide_number': true},
-      {'id': 'proxy-step-pill-2', 'label': _('2_target_ssl'), 'hide_number': true}
+      {'id': 'nav-step-1', 'onclick': 'goToStep(1)', 'label': _('hostname_setup')},
+      {'id': 'nav-step-2', 'onclick': 'goToStep(2)', 'label': _('target_ssl')}
     ]) }}
   </div>
 
@@ -241,26 +239,23 @@
     });
   });
 
-  // Sync wizard steps UI manually if JS from proxy.js doesn't touch the new DOM elements accurately
-  // The original JS might toggle #proxy-step-1 and #proxy-step-2.
+  // Sync wizard steps UI manually if style changes on #proxy-step-2
   const observer = new MutationObserver((mutations) => {
     mutations.forEach((mutation) => {
       if (mutation.target.id === 'proxy-step-2' && mutation.attributeName === 'style') {
         const isStep2Visible = mutation.target.style.display !== 'none';
-        
-        if (isStep2Visible) {
-          document.getElementById('proxy-step-pill-1').classList.remove('active');
-          document.getElementById('proxy-step-pill-2').classList.add('active');
-          document.getElementById('btn-back-step-2').style.display = 'block';
-          document.getElementById('btn-next-step-1').style.display = 'none';
-          document.getElementById('btn-submit').style.display = 'block';
-        } else {
-          document.getElementById('proxy-step-pill-1').classList.add('active');
-          document.getElementById('proxy-step-pill-2').classList.remove('active');
-          document.getElementById('btn-back-step-2').style.display = 'none';
-          document.getElementById('btn-next-step-1').style.display = 'block';
-          document.getElementById('btn-submit').style.display = 'none';
-        }
+        const n1 = document.getElementById('nav-step-1');
+        const n2 = document.getElementById('nav-step-2');
+        if (n1) n1.classList.toggle('active', !isStep2Visible);
+        if (n2) n2.classList.toggle('active', isStep2Visible);
+
+        const btnBack = document.getElementById('btn-back-step-2');
+        const btnNext = document.getElementById('btn-next-step-1');
+        const btnSubmit = document.getElementById('btn-submit');
+
+        if (btnBack) btnBack.style.display = isStep2Visible ? 'block' : 'none';
+        if (btnNext) btnNext.style.display = isStep2Visible ? 'none' : 'block';
+        if (btnSubmit) btnSubmit.style.display = isStep2Visible ? 'block' : 'none';
       }
     });
   });
