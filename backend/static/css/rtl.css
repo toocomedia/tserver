@@ -37,21 +37,52 @@ html[dir="rtl"] h2,
 html[dir="rtl"] h3,
 html[dir="rtl"] h4,
 html[dir="rtl"] h5,
-html[dir="rtl"] h6 {
+html[dir="rtl"] h6,
+html[dir="rtl"] .page-header__title,
+html[dir="rtl"] .modal__header h2,
+html[dir="rtl"] .section__title {
   font-weight: 700;
   line-height: 1.25;
+  margin-top: -2px;
 }
 
 html[dir="rtl"] .sidebar__item,
 html[dir="rtl"] .btn,
 html[dir="rtl"] .form-label,
 html[dir="rtl"] .form-input,
-html[dir="rtl"] .form-select {
+html[dir="rtl"] .form-select,
+html[dir="rtl"] .badge,
+html[dir="rtl"] .tab {
   align-items: center;
 }
 
 html[dir="rtl"] .sidebar__item {
   font-weight: 500;
+  padding-top: max(4px, calc(var(--space-sm, 10px) - 2px));
+  padding-bottom: calc(var(--space-sm, 10px) + 2px);
+}
+
+html[dir="rtl"] .btn {
+  font-weight: 600;
+  padding-top: max(4px, calc(var(--space-xs, 8px) - 2px));
+  padding-bottom: calc(var(--space-xs, 8px) + 2px);
+}
+
+html[dir="rtl"] .btn--sm {
+  padding-top: 3px;
+  padding-bottom: 5px;
+}
+
+html[dir="rtl"] .form-input,
+html[dir="rtl"] .form-select {
+  padding-top: max(4px, calc(var(--space-sm, 10px) - 2px));
+  padding-bottom: calc(var(--space-sm, 10px) + 2px);
+}
+
+html[dir="rtl"] th,
+html[dir="rtl"] td {
+  padding-top: max(4px, calc(var(--space-sm, 12px) - 2px));
+  padding-bottom: calc(var(--space-sm, 12px) + 2px);
 }
 
 /* --------------------------------------------------------------------------
