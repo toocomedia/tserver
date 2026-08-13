@@ -34,7 +34,7 @@
 {% endif %}
 
 <!-- TOP STATUS GRID -->
-<div class="stat-grid mb-xl" id="status-grid">
+<div class="stat-grid mt-md mb-xl" id="status-grid">
   <div class="stat-card-box">
     <div class="stat-card-box__label">{{ _('dns_zone') }}</div>
     <div class="stat-card-box__val mt-xs">
@@ -78,7 +78,7 @@
 </div>
 
 {% if domain.project_type == 'python' %}
-<div class="d-flex align-center justify-between p-sm mb-lg" style="background: var(--color-surface); border-bottom: 1px solid var(--color-line);">
+<div class="d-flex align-center justify-between p-sm mt-xl mb-lg" style="background: var(--color-surface); border-bottom: 1px solid var(--color-line);">
   <div>
     <span class="text-small font-bold d-block">{{ _('python_application') }}</span>
     <span class="text-small text-muted">Status: {{ app.status if app else 'Not Configured' }}</span>
@@ -92,7 +92,7 @@
 {% endif %}
 
 <!-- DOMAIN SPECIFICATIONS SECTION -->
-<div class="mb-xl">
+<div class="mt-xl mb-xl">
   {{ ui.section_header(_('domain_info')) }}
   <div class="info-list border-top">
     {{ ui.info_row(_('domain'), domain.name, is_mono=True) }}
@@ -113,9 +113,9 @@
 </div>
 
 <!-- REVERSE PROXIES ON THIS DOMAIN -->
-<div class="mb-xl">
+<div class="mt-xl mb-xl">
   {% set proxy_actions %}
-    <a href="/proxy/create?domain_id={{ domain.id }}" class="btn btn--secondary btn--sm">+ {{ _('add_proxy') }}</a>
+    <a href="/proxy/create?domain_id={{ domain.id }}" class="btn btn--secondary btn--sm">{{ _('add_proxy') }}</a>
   {% endset %}
   {{ ui.section_header(_('reverse_proxies'), actions=proxy_actions) }}
 
@@ -165,7 +165,7 @@
 </div>
 
 {% if domain.project_type == 'dns' %}
-<div class="mb-xl">
+<div class="mt-xl mb-xl">
   {{ ui.section_header(_('web_server_landing_page')) }}
   <div class="py-md d-flex align-center justify-between border-bottom">
     <span class="text-small text-muted">{{ _('this_domain_is_configured_for_dns_manage') }}</span>
@@ -177,7 +177,7 @@
 </div>
 {% elif domain.project_type != 'python' %}
 <!-- DEFAULT HTML LANDING PAGE EDITOR -->
-<div class="mb-xl" id="edit-page-section">
+<div class="mt-xl mb-xl" id="edit-page-section">
   {% set editor_actions %}
     <button type="button" class="btn btn--secondary btn--sm" id="btn-toggle-editor" onclick="toggleEditor()">{{ _('edit_html') }}</button>
   {% endset %}

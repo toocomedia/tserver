@@ -418,20 +418,7 @@ html[data-sidebar-style="gradient"] .sidebar__item--active:hover {
 .content__inner {
   width: 100%;
   max-width: 100%;
-  padding: 0 var(--page-gutter) var(--space-xl);
-}
-
-/* 
-   First child inside .content__inner:
-   Header elements (.action-toolbar, .list-title-bar, .section-header, .pure-nav) sit flush with 0 top margin.
-   All non-header elements automatically receive top spacing.
-*/
-.content__inner > :first-child {
-  margin-top: 0;
-}
-
-.content__inner > :first-child:not(.action-toolbar):not(.list-title-bar):not(.section-header):not(.section__header):not(.pure-nav) {
-  margin-top: var(--space-xl);
+  padding: var(--space-md) var(--page-gutter) var(--space-xl);
 }
 
 /* Use .content-pad on content blocks that need horizontal indent */
@@ -449,19 +436,14 @@ html[data-sidebar-style="gradient"] .sidebar__item--active:hover {
   padding: 0;
 }
 
-/* Section Header — Full Width Bar (0 side margin, inside padding) */
+/* Standard Section Header */
 .section-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: var(--color-header-bg-bar);
-  height: 38px;
-  min-height: 38px;
-  padding: 0 var(--page-gutter);
+  padding-bottom: var(--space-xs);
   margin-bottom: var(--space-md);
   border-bottom: 1px solid var(--color-line);
-  margin-inline: calc(var(--page-gutter) * -1);
-  width: auto;
 }
 
 .section-header h2,
