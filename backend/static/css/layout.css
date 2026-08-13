@@ -360,13 +360,14 @@ html[data-sidebar-style="gradient"] .sidebar__item--active:hover {
   padding: 14px var(--page-gutter);
   margin-bottom: 16px;
   background: var(--color-bg);
-  border-bottom: 1px solid var(--color-sidebar-border);
+  border-bottom: 1px solid var(--color-line);
   flex-shrink: 0;
   flex-wrap: nowrap;
 }
 
 .content--flush .page-header {
   padding: 14px var(--page-gutter);
+  margin-bottom: 0;
 }
 
 .page-header__title {
@@ -669,7 +670,7 @@ html[data-sidebar-style="gradient"] .sidebar__item--active:hover {
     gap: 12px;
     margin-bottom: 20px;
     background: var(--color-bg);
-    border-bottom: 1px solid var(--color-sidebar-border);
+    border-bottom: 1px solid var(--color-line);
   }
 
   .page-header__title {
