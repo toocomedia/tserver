@@ -1,9 +1,9 @@
 <!-- dependency_card.html partial (Strict 180px Layout + Icon Buttons + Absolute Overlay Info Popover) -->
 <div class="dependency-card">
   <div class="dependency-card__top">
-    <div class="dependency-card__cover">
+    <div class="dependency-card__cover{% if dependency.icon %} img-skeleton-box{% endif %}">
       {% if dependency.icon %}
-        <img src="{{ dependency.icon }}" alt="{{ dependency.name }} icon" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='block';">
+        <img src="{{ dependency.icon }}" alt="{{ dependency.name }} icon" loading="lazy" onload="this.parentElement.classList.add('is-loaded')" onerror="this.onerror=null; this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.style.display='block'; this.parentElement.classList.remove('img-skeleton-box'); this.parentElement.classList.add('is-error');">
         <svg style="display: none; width:64px; height:64px; stroke:var(--color-text);" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-width="1.5" d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
       {% else %}
         <svg style="width:64px; height:64px; stroke:var(--color-text);" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-width="1.5" d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>

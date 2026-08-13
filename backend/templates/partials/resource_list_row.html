@@ -2,9 +2,9 @@
 {% macro render(item, resource_type, name, version, description, icon_url, icon_alt, status_label, status_tone, actions_template, overlay_template=None, has_overlay=False) %}
 <div class="list-item-row{% if resource_type == 'plugin' %} plugin-requirements-host{% endif %}">
   <div class="list-col-main">
-    <div class="list-col-thumb">
+    <div class="list-col-thumb{% if icon_url %} img-skeleton-box{% endif %}">
       {% if icon_url %}
-        <img src="{{ icon_url }}" alt="{{ icon_alt }}" loading="lazy" data-fallback-image onerror="this.onerror=null; this.hidden=true; if(this.nextElementSibling) this.nextElementSibling.classList.remove('is-hidden');">
+        <img src="{{ icon_url }}" alt="{{ icon_alt }}" loading="lazy" data-fallback-image onload="this.parentElement.classList.add('is-loaded')" onerror="this.onerror=null; this.hidden=true; if(this.nextElementSibling) this.nextElementSibling.classList.remove('is-hidden'); this.parentElement.classList.remove('img-skeleton-box'); this.parentElement.classList.add('is-error');">
       {% endif %}
       {% if resource_type == 'plugin' %}
         <svg class="list-col-thumb-fallback{% if icon_url %} is-hidden{% endif %}" viewbox="0 0 24 24" aria-hidden="true"><path d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>

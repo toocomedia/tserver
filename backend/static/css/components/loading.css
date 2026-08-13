@@ -485,6 +485,91 @@
 .skeleton-plugin-card .sk-meta  { width: 40%; height: 8px; }
 
 /* ==========================================================================
+   IMAGE BOX SKELETON & REAL LAZY LOAD
+   ========================================================================== */
+.img-skeleton-box,
+.plugin-card__cover:not(.is-loaded):not(.is-error),
+.compact-card-1x1__icon:not(.is-loaded):not(.is-error),
+.info-hero-row__icon:not(.is-loaded):not(.is-error),
+.list-col-thumb:not(.is-loaded):not(.is-error),
+.dependency-card__cover:not(.is-loaded):not(.is-error) {
+  position: relative;
+  overflow: hidden;
+  background-color: var(--color-surface, #1e293b);
+  animation: skeleton-pulse var(--skeleton-shimmer-duration, 1.5s) infinite ease-in-out;
+}
+
+.img-skeleton-box::after,
+.plugin-card__cover:not(.is-loaded):not(.is-error)::after,
+.compact-card-1x1__icon:not(.is-loaded):not(.is-error)::after,
+.info-hero-row__icon:not(.is-loaded):not(.is-error)::after,
+.list-col-thumb:not(.is-loaded):not(.is-error)::after,
+.dependency-card__cover:not(.is-loaded):not(.is-error)::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.08),
+    transparent
+  );
+  animation: img-skeleton-shimmer 1.5s infinite;
+  pointer-events: none;
+}
+
+[data-theme="light"] .img-skeleton-box::after,
+[data-theme="light"] .plugin-card__cover:not(.is-loaded):not(.is-error)::after,
+[data-theme="light"] .compact-card-1x1__icon:not(.is-loaded):not(.is-error)::after,
+[data-theme="light"] .info-hero-row__icon:not(.is-loaded):not(.is-error)::after,
+[data-theme="light"] .list-col-thumb:not(.is-loaded):not(.is-error)::after,
+[data-theme="light"] .dependency-card__cover:not(.is-loaded):not(.is-error)::after {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(0, 0, 0, 0.06),
+    transparent
+  );
+}
+
+@keyframes img-skeleton-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.plugin-card__cover img,
+.compact-card-1x1__icon img,
+.info-hero-row__icon img,
+.list-col-thumb img,
+.dependency-card__cover img,
+.img-skeleton-box img {
+  opacity: 0;
+  transition: opacity 0.35s ease-in-out;
+}
+
+.plugin-card__cover.is-loaded img,
+.compact-card-1x1__icon.is-loaded img,
+.info-hero-row__icon.is-loaded img,
+.list-col-thumb.is-loaded img,
+.dependency-card__cover.is-loaded img,
+.img-skeleton-box.is-loaded img,
+img.is-loaded {
+  opacity: 1 !important;
+}
+
+.is-loaded,
+.is-error {
+  animation: none !important;
+}
+
+.is-loaded::after,
+.is-error::after {
+  display: none !important;
+}
+
+/* ==========================================================================
    GLOBAL FULL WINDOW LOADER (Async Actions)
    ========================================================================== */
 .global-loader {

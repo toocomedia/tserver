@@ -510,9 +510,55 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  // Initialize Lazy Image Skeleton Loaders
+  initLazyImageSkeletons();
+  document.addEventListener("app:init", initLazyImageSkeletons);
+
   // Trigger app:init so page-specific modules can initialize
   document.dispatchEvent(new Event("app:init"));
 });
+
+/**
+ * Lazy Image Skeleton Loader: automatically marks image boxes as loaded or error,
+ * and handles pre-cached images gracefully.
+ */
+function initLazyImageSkeletons() {
+  const images = document.querySelectorAll(
+    ".img-skeleton-box img, .plugin-card__cover img, .compact-card-1x1__icon img, .info-hero-row__icon img, .list-col-thumb img, .dependency-card__cover img"
+  );
+  images.forEach((img) => {
+    const parent = img.parentElement;
+    if (!parent) return;
+
+    if (
+      !parent.classList.contains("img-skeleton-box") &&
+      !parent.classList.contains("is-loaded") &&
+      !parent.classList.contains("is-error")
+    ) {
+      parent.classList.add("img-skeleton-box");
+    }
+
+    if (img.complete && img.naturalWidth !== 0) {
+      parent.classList.add("is-loaded");
+      img.classList.add("is-loaded");
+    } else {
+      img.addEventListener("load", () => {
+        parent.classList.add("is-loaded");
+        img.classList.add("is-loaded");
+      });
+      img.addEventListener("error", () => {
+        parent.classList.remove("img-skeleton-box");
+        parent.classList.add("is-error");
+        img.style.display = "none";
+        const svg = parent.querySelector("svg");
+        if (svg) {
+          svg.style.display = "block";
+          svg.classList.remove("is-hidden");
+        }
+      });
+    }
+  });
+}
 
 window.PATHS = PATHS;
 window.path = path;
@@ -527,3 +573,4 @@ window.closeModal = closeModal;
 window.hideSkeleton = hideSkeleton;
 window.showSkeleton = showSkeleton;
 window.confirmAction = confirmAction;
+window.initLazyImageSkeletons = initLazyImageSkeletons;
