@@ -3,6 +3,46 @@
  */
 import { showOperationModal, pollOperation } from "./php_sites_operations.js";
 
+function showPromptModal(title, message, expectedText, isPassword, extraHtml, onConfirm) {
+  document.getElementById('prompt-modal-title').textContent = title;
+  document.getElementById('prompt-modal-message').innerHTML = message;
+  
+  const label = document.getElementById('prompt-modal-label');
+  if (expectedText) {
+    label.innerHTML = `Type <code class="mono">${expectedText}</code> to confirm`;
+  } else {
+    label.innerHTML = isPassword ? "Enter password:" : "Enter value:";
+  }
+  
+  const input = document.getElementById('prompt-modal-input');
+  input.type = isPassword ? 'password' : 'text';
+  input.value = '';
+  
+  const extra = document.getElementById('prompt-modal-extra');
+  if (extraHtml) {
+    extra.innerHTML = extraHtml;
+    extra.style.display = 'block';
+  } else {
+    extra.style.display = 'none';
+  }
+  
+  const btn = document.getElementById('btn-prompt-modal-confirm');
+  btn.onclick = () => {
+    const val = input.value.trim();
+    if (!val) return;
+    if (expectedText && val.toUpperCase() !== expectedText.toUpperCase()) {
+      if (typeof window.toast === 'function') window.toast(`Input must match exactly: ${expectedText}`, 'danger');
+      else alert(`Input must match exactly: ${expectedText}`);
+      return;
+    }
+    closeModal('prompt-modal');
+    onConfirm(expectedText ? expectedText : val);
+  };
+  
+  openModal('prompt-modal');
+  setTimeout(() => input.focus(), 100);
+}
+
 function parseErrorMessage(err) {
   if (!err) return "An unexpected error occurred.";
   if (typeof err === "string") return err;
@@ -44,15 +84,19 @@ document.addEventListener("DOMContentLoaded", () => {
   const csrfToken = document.querySelector('input[name="csrf_token"]')?.value || "";
 
   // 1. Tab Navigation
-  const tabs = container.querySelectorAll(".tab-item");
+  const tabs = container.querySelectorAll(".tabs-nav__btn");
   tabs.forEach((tab) => {
     tab.addEventListener("click", () => {
-      tabs.forEach((t) => t.classList.remove("tab-item--active"));
-      tab.classList.add("tab-item--active");
+      tabs.forEach((t) => t.classList.remove("is-active"));
+      tab.classList.add("is-active");
 
       const target = tab.dataset.tab;
-      container.querySelectorAll(".tab-pane").forEach((pane) => {
-        pane.style.display = pane.id === `tab-${target}` ? "block" : "none";
+      container.querySelectorAll(".tabs-panel").forEach((pane) => {
+        if (pane.id === `tab-${target}`) {
+          pane.classList.add("is-active");
+        } else {
+          pane.classList.remove("is-active");
+        }
       });
       if (target === "logs") fetchLogs();
     });
@@ -130,13 +174,16 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   document.getElementById("btn-rotate-db")?.addEventListener("click", async () => {
-    if (!confirm("Rotate database password and update PHP-FPM environment?")) return;
-    try {
-      const data = await apiCall(`/api/php-sites/sites/${siteId}/database/rotate`);
-      document.getElementById("db-revealed-pwd").textContent = data.password;
-      document.getElementById("db-credentials-box").style.display = "block";
-      alert("Database password rotated successfully.");
-    } catch (err) { alert(parseErrorMessage(err)); }
+    if (typeof confirmAction === 'function') {
+      confirmAction("Rotate database password and update PHP-FPM environment?", async () => {
+        try {
+          const data = await apiCall(`/api/php-sites/sites/${siteId}/database/rotate`);
+          document.getElementById("db-revealed-pwd").textContent = data.password;
+          document.getElementById("db-credentials-box").style.display = "block";
+          if (typeof window.toast === 'function') window.toast("Database password rotated successfully.", 'success');
+        } catch (err) { if (typeof window.toast === 'function') window.toast(parseErrorMessage(err), 'danger'); else alert(parseErrorMessage(err)); }
+      });
+    }
   });
 
   document.getElementById("btn-create-db")?.addEventListener("click", async () => {
@@ -147,26 +194,40 @@ document.addEventListener("DOMContentLoaded", () => {
     } catch (err) { alert(parseErrorMessage(err)); }
   });
 
-  document.getElementById("btn-delete-db")?.addEventListener("click", async () => {
-    const input = prompt("Type DELETE DATABASE to confirm database deletion:");
-    if (!input) return;
-    const confirmText = input.trim().toUpperCase() === "DELETE DATABASE" ? "DELETE DATABASE" : input.trim();
-    try {
-      await apiCall(`/api/php-sites/sites/${siteId}/database`, "DELETE", { confirmation: confirmText });
-      alert("Database deleted.");
-      window.location.reload();
-    } catch (err) { alert(parseErrorMessage(err)); }
+  document.getElementById("btn-delete-db")?.addEventListener("click", () => {
+    showPromptModal(
+      "Delete Database",
+      "Permanently delete the local MariaDB database and user?",
+      "DELETE DATABASE",
+      false,
+      null,
+      async (confirmText) => {
+        try {
+          await apiCall(`/api/php-sites/sites/${siteId}/database`, "DELETE", { confirmation: confirmText });
+          if (typeof window.toast === 'function') window.toast("Database deleted.", 'success');
+          setTimeout(() => window.location.reload(), 1000);
+        } catch (err) { if (typeof window.toast === 'function') window.toast(parseErrorMessage(err), 'danger'); else alert(parseErrorMessage(err)); }
+      }
+    );
   });
 
   // 5. WordPress & SSL
   document.getElementById("btn-wp-retry")?.addEventListener("click", () => {
-    const pwd = prompt("Enter one-time WordPress admin password (at least 12 characters):");
-    if (!pwd) return;
-    if (pwd.length < 12) {
-      alert("WordPress administrator password must be at least 12 characters long.");
-      return;
-    }
-    handleAsyncOperation(apiCall(`/api/php-sites/sites/${siteId}/wordpress/retry`, "POST", { admin_password: pwd, install_missing_extensions: true }), "Retrying WordPress Setup...");
+    showPromptModal(
+      "Retry WordPress Setup",
+      "Enter a one-time WordPress admin password to retry setup (at least 12 characters).",
+      null,
+      true,
+      null,
+      (pwd) => {
+        if (pwd.length < 12) {
+          if (typeof window.toast === 'function') window.toast("Password must be at least 12 characters.", 'danger');
+          else alert("Password must be at least 12 characters.");
+          return;
+        }
+        handleAsyncOperation(apiCall(`/api/php-sites/sites/${siteId}/wordpress/retry`, "POST", { admin_password: pwd, install_missing_extensions: true }), "Retrying WordPress Setup...");
+      }
+    );
   });
 
   document.getElementById("btn-ssl-issue")?.addEventListener("click", () => {
@@ -180,10 +241,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
   document.getElementById("btn-ssl-revoke")?.addEventListener("click", () => {
     const expected = `REVOKE ${domainName}`;
-    const input = prompt(`Type "${expected}" to confirm SSL revocation:`);
-    if (!input) return;
-    const confirmText = input.trim().toUpperCase() === expected.toUpperCase() ? expected : input.trim();
-    handleAsyncOperation(apiCall(`/api/php-sites/sites/${siteId}/ssl`, "DELETE", { confirmation: confirmText }), "Revoking SSL...");
+    showPromptModal(
+      "Revoke SSL",
+      "This will revoke the active Let's Encrypt certificate and revert the site to HTTP.",
+      expected,
+      false,
+      null,
+      (confirmText) => {
+        handleAsyncOperation(apiCall(`/api/php-sites/sites/${siteId}/ssl`, "DELETE", { confirmation: confirmText }), "Revoking SSL...");
+      }
+    );
   });
 
   // 6. Logs Streaming
@@ -213,26 +280,44 @@ document.addEventListener("DOMContentLoaded", () => {
 
   document.getElementById("btn-archive-site")?.addEventListener("click", () => {
     const expected = `ARCHIVE ${domainName}`;
-    const input = prompt(`Type "${expected}" to confirm archiving:`);
-    if (!input) return;
-    const confirmText = input.trim().toUpperCase() === expected.toUpperCase() ? expected : input.trim();
-    handleAsyncOperation(apiCall(`/api/php-sites/sites/${siteId}/archive`, "POST", { confirmation: confirmText }), "Archiving Website...");
+    showPromptModal(
+      "Archive Website",
+      "This will stop the PHP-FPM pool and Nginx site while keeping all data intact.",
+      expected,
+      false,
+      null,
+      (confirmText) => {
+        handleAsyncOperation(apiCall(`/api/php-sites/sites/${siteId}/archive`, "POST", { confirmation: confirmText }), "Archiving Website...");
+      }
+    );
   });
 
   document.getElementById("btn-restore-site")?.addEventListener("click", () => {
     handleAsyncOperation(apiCall(`/api/php-sites/sites/${siteId}/restore`), "Restoring Website...");
   });
 
-  document.getElementById("btn-delete-site-perm")?.addEventListener("click", async () => {
+  document.getElementById("btn-delete-site-perm")?.addEventListener("click", () => {
     const expected = `DELETE ${domainName}`;
-    const input = prompt(`Type "${expected}" to permanently delete website:`);
-    if (!input) return;
-    const confirmText = input.trim().toUpperCase() === expected.toUpperCase() ? expected : input.trim();
-    const delDb = confirm("Drop local MariaDB database as well?");
-    try {
-      await apiCall(`/api/php-sites/sites/${siteId}`, "DELETE", { confirmation: confirmText, delete_database: delDb });
-      alert("Website deleted.");
-      window.location.href = "/php-sites/";
-    } catch (err) { alert(parseErrorMessage(err)); }
+    const extraHtml = `
+      <label class="form-check" style="display: flex; align-items: center; gap: 8px;">
+        <input type="checkbox" id="delete-site-db-check" checked>
+        <span>Also drop the attached local MariaDB database</span>
+      </label>
+    `;
+    showPromptModal(
+      "Delete Website Permanently",
+      "This will permanently delete the PHP-FPM pool, webroot directory, and Nginx configuration. This action cannot be undone.",
+      expected,
+      false,
+      extraHtml,
+      async (confirmText) => {
+        const delDb = document.getElementById('delete-site-db-check')?.checked || false;
+        try {
+          await apiCall(`/api/php-sites/sites/${siteId}`, "DELETE", { confirmation: confirmText, delete_database: delDb });
+          if (typeof window.toast === 'function') window.toast("Website deleted.", 'success');
+          setTimeout(() => window.location.href = "/php-sites/", 1000);
+        } catch (err) { if (typeof window.toast === 'function') window.toast(parseErrorMessage(err), 'danger'); else alert(parseErrorMessage(err)); }
+      }
+    );
   });
 });

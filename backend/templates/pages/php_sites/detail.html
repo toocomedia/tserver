@@ -25,7 +25,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="php-site-detail-page" data-site-id="{{ site.id }}" data-domain-name="{{ site.domain_name or ('site-' ~ site.id) }}">
+<div class="php-site-detail-page mt-lg" data-site-id="{{ site.id }}" data-domain-name="{{ site.domain_name or ('site-' ~ site.id) }}">
 
   <!-- STATUS & HEALTH CARDS -->
   <div class="mb-lg">
@@ -50,53 +50,75 @@
   </div>
 
   <!-- NAVIGATION TABS -->
-  <div class="tab-bar mb-lg">
-    <button class="tab-item tab-item--active" data-tab="overview">Overview</button>
-    <button class="tab-item" data-tab="runtime">PHP Runtime</button>
-    <button class="tab-item" data-tab="database">MariaDB Database</button>
+  <div class="tabs-nav mb-lg">
+    <button class="tabs-nav__btn is-active" data-tab="overview">Overview</button>
+    <button class="tabs-nav__btn" data-tab="runtime">PHP Runtime</button>
+    <button class="tabs-nav__btn" data-tab="database">MariaDB Database</button>
     {% if site.preset == 'wordpress' %}
-      <button class="tab-item" data-tab="wordpress">WordPress</button>
+      <button class="tabs-nav__btn" data-tab="wordpress">WordPress</button>
     {% endif %}
-    <button class="tab-item" data-tab="ssl">SSL Certificate</button>
-    <button class="tab-item" data-tab="logs">Logs & Streams</button>
-    <button class="tab-item" data-tab="danger">Danger Zone</button>
+    <button class="tabs-nav__btn" data-tab="ssl">SSL Certificate</button>
+    <button class="tabs-nav__btn" data-tab="logs">Logs & Streams</button>
+    <button class="tabs-nav__btn" data-tab="danger">Danger Zone</button>
   </div>
 
   <!-- TAB PANES -->
   <div class="tab-content">
-    <div class="tab-pane" id="tab-overview" style="display: block;">
+    <div class="tabs-panel is-active" id="tab-overview">
       {% include "pages/php_sites/partials/detail_overview.html" %}
     </div>
 
-    <div class="tab-pane" id="tab-runtime" style="display: none;">
+    <div class="tabs-panel" id="tab-runtime">
       {% include "pages/php_sites/partials/detail_runtime.html" %}
     </div>
 
-    <div class="tab-pane" id="tab-database" style="display: none;">
+    <div class="tabs-panel" id="tab-database">
       {% include "pages/php_sites/partials/detail_database.html" %}
     </div>
 
     {% if site.preset == 'wordpress' %}
-    <div class="tab-pane" id="tab-wordpress" style="display: none;">
+    <div class="tabs-panel" id="tab-wordpress">
       {% include "pages/php_sites/partials/detail_wordpress.html" %}
     </div>
     {% endif %}
 
-    <div class="tab-pane" id="tab-ssl" style="display: none;">
+    <div class="tabs-panel" id="tab-ssl">
       {% include "pages/php_sites/partials/detail_ssl.html" %}
     </div>
 
-    <div class="tab-pane" id="tab-logs" style="display: none;">
+    <div class="tabs-panel" id="tab-logs">
       {% include "pages/php_sites/partials/detail_logs.html" %}
     </div>
 
-    <div class="tab-pane" id="tab-danger" style="display: none;">
+    <div class="tabs-panel" id="tab-danger">
       {% include "pages/php_sites/partials/detail_danger.html" %}
     </div>
   </div>
 </div>
 
 {% include "pages/php_sites/partials/operation_modal.html" %}
+
+<!-- GENERIC PROMPT MODAL -->
+<div id="prompt-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+  <div class="modal">
+    <div class="modal__header">
+      <h2 id="prompt-modal-title">Confirm Action</h2>
+      <button class="btn btn--ghost btn--icon" onclick="closeModal('prompt-modal')" aria-label="Close">✕</button>
+    </div>
+    <div class="modal__body">
+      <p id="prompt-modal-message" class="mb-md"></p>
+      <div id="prompt-modal-extra" class="mb-md" style="display:none;"></div>
+      <div class="form-group">
+        <label for="prompt-modal-input" class="form-label" id="prompt-modal-label">Type to confirm</label>
+        <input type="text" id="prompt-modal-input" class="form-control" autocomplete="off">
+      </div>
+    </div>
+    <div class="modal__footer">
+      <button type="button" class="btn btn--secondary" onclick="closeModal('prompt-modal')">Cancel</button>
+      <button type="button" class="btn btn--danger" id="btn-prompt-modal-confirm">Confirm</button>
+    </div>
+  </div>
+</div>
 
 <script type="module" src="/static/js/modules/php_sites_detail.js?v={{ APP_VERSION }}"></script>
 {% endblock %}
