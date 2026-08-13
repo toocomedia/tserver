@@ -35,5 +35,7 @@
   "delete_permanently": "حذف نهائي",
   "this_action_is_permanent_and_cannot_be_undone": "هذا الإجراء نهائي ولا يمكن التراجع عنه.",
   "type_delete_to_confirm": "اكتب DELETE للتأكيد",
-  "delete": "حذف"
+  "delete": "حذف",
+  "File management and operations for all hosted applications on the panel.": "إدارة الملفات وعمليات المستندات لجميع التطبيقات المستضافة على اللوحة.",
+  "File management and operations for all hosted applications on the panel": "إدارة الملفات وعمليات المستندات لجميع التطبيقات المستضافة على اللوحة."
 }

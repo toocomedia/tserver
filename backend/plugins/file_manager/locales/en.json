@@ -33,5 +33,7 @@
   "delete_permanently": "Delete Permanently",
   "this_action_is_permanent_and_cannot_be_undone": "This action is permanent and cannot be undone.",
   "type_delete_to_confirm": "Type DELETE to confirm",
-  "delete": "Delete"
+  "delete": "Delete",
+  "File management and operations for all hosted applications on the panel.": "File management and operations for all hosted applications on the panel.",
+  "File management and operations for all hosted applications on the panel": "File management and operations for all hosted applications on the panel"
 }
