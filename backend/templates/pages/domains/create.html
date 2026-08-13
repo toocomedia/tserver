@@ -1,4 +1,5 @@
 {% extends "layout.html" %}
+{% import "partials/ui_macros.html" as ui %}
 
 {% block title %}{{ _('add_domain') }} — {{ PANEL_NAME }}{% endblock %}
 {% block page_title %}{{ _('add_domain') }}{% endblock %}
@@ -20,34 +21,8 @@
   {% include "partials/csrf_field.html" %}
   <input type="hidden" name="ssl_enabled" id="ssl-enabled-input" value="no">
 
-  <!-- 4-STEP ZERO-BOX TOP STEP INDICATOR -->
-  <div class="pure-nav">
-    <div class="pure-step-item pure-step-item--active" id="nav-step-1" onclick="goToStep(1)">
-      <span class="step-number">01</span>
-      <span>{{ _('hostname') }}</span>
-    </div>
-    
-    <span class="nav-divider">/</span>
-
-    <div class="pure-step-item" id="nav-step-2" onclick="goToStep(2)">
-      <span class="step-number">02</span>
-      <span>{{ _('runtime_stack') }}</span>
-    </div>
-
-    <span class="nav-divider">/</span>
-
-    <div class="pure-step-item" id="nav-step-3" onclick="goToStep(3)">
-      <span class="step-number">03</span>
-      <span>{{ _('ssl_certificate') }}</span>
-    </div>
-
-    <span class="nav-divider">/</span>
-
-    <div class="pure-step-item" id="nav-step-4" onclick="goToStep(4)">
-      <span class="step-number">04</span>
-      <span>{{ _('review_deploy') }}</span>
-    </div>
-  </div>
+  <!-- 4-STEP WIZARD NAV BAR -->
+  {{ ui.wizard_nav([{'title': _('hostname')}, {'title': _('runtime_stack')}, {'title': _('ssl_certificate')}, {'title': _('review_deploy')}], current_step=1, onclick_prefix='goToStep') }}
 
   <!-- =========================================================================
        STEP 1: HOSTNAME (BORDERLESS UNDERLINE INPUT)

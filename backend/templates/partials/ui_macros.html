@@ -1,0 +1,105 @@
+{# =========================================================================
+   UI_MACROS.HTML — Shared App Macro Suite for Add & Info Pages
+   ========================================================================= #}
+
+{# --- Minimal Status Badge --- #}
+{% macro badge(label, tone='neutral', is_dot=True) %}
+  <span class="badge-minimal badge-minimal--{{ tone }}{% if is_dot %} badge-minimal--dot{% endif %}">{{ label }}</span>
+{% endmacro %}
+
+{# --- Section Header with Title, optional Subtitle & Action slot --- #}
+{% macro section_header(title, subtitle=None, actions=None) %}
+<div class="section-header mb-md d-flex align-center justify-between flex-wrap gap-sm">
+  <div>
+    <h2 class="m-0" style="font-size: 16px; font-weight: 700;">{{ title }}</h2>
+    {% if subtitle %}
+    <span class="text-small text-muted mt-xs d-block">{{ subtitle }}</span>
+    {% endif %}
+  </div>
+  {% if actions %}
+  <div class="d-flex align-center gap-xs">
+    {{ actions | safe }}
+  </div>
+  {% endif %}
+</div>
+{% endmacro %}
+
+{# --- Single Key-Value Info Row --- #}
+{% macro info_row(label, value=None, is_mono=False, badge_tone=None) %}
+<div class="info-row d-flex align-center justify-between py-xs border-bottom">
+  <span class="info-row__label text-muted text-small">{{ label }}</span>
+  <span class="info-row__value text-small{% if is_mono %} font-mono{% endif %}" style="font-weight: 600;">
+    {% if badge_tone %}
+      <span class="badge-minimal badge-minimal--{{ badge_tone }}">{{ value }}</span>
+    {% elif value != None %}
+      {{ value }}
+    {% else %}
+      {{ caller() }}
+    {% endif %}
+  </span>
+</div>
+{% endmacro %}
+
+{# --- Overview Stat Cards Grid --- #}
+{% macro stat_grid(cards=[]) %}
+<div class="stat-grid mb-lg">
+  {% for card in cards %}
+  <div class="stat-card-box p-md">
+    <div class="stat-card-box__label text-muted text-small mb-xs d-flex align-center justify-between">
+      <span>{{ card.label }}</span>
+      {% if card.icon %}
+      <i data-lucide="{{ card.icon }}" style="width: 14px; height: 14px; opacity: 0.6;"></i>
+      {% endif %}
+    </div>
+    <div class="stat-card-box__val d-flex align-center gap-xs">
+      {% if card.badge_tone %}
+        <span class="badge-minimal badge-minimal--{{ card.badge_tone }}">{{ card.value }}</span>
+      {% else %}
+        <span style="font-size: 18px; font-weight: 700;">{{ card.value }}</span>
+      {% endif %}
+    </div>
+    {% if card.subtext %}
+    <div class="stat-card-box__meta text-small text-muted mt-xs">{{ card.subtext }}</div>
+    {% endif %}
+    {% if card.action %}
+    <div class="mt-sm">{{ card.action | safe }}</div>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endmacro %}
+
+{# --- Multi-step Wizard Navigation Bar --- #}
+{% macro wizard_nav(steps=[], current_step=1, onclick_prefix='goToStep') %}
+<div class="pure-nav mb-lg">
+  {% for step in steps %}
+    <div class="pure-step-item{% if loop.index == current_step %} pure-step-item--active{% elif loop.index < current_step %} pure-step-item--done{% endif %}" 
+         id="nav-step-{{ loop.index }}" 
+         {% if onclick_prefix %}onclick="{{ onclick_prefix }}({{ loop.index }})"{% endif %}>
+      <span class="step-number">0{{ loop.index }}</span>
+      <span>{{ step.title }}</span>
+    </div>
+    {% if not loop.last %}
+    <span class="nav-divider">/</span>
+    {% endif %}
+  {% endfor %}
+</div>
+{% endmacro %}
+
+{# --- Interactive Option Card (Selection Grids for Forms) --- #}
+{% macro option_card(name, value, title, icon=None, devicon=None, subtitle=None, is_active=False, disabled=False, onclick=None, id=None) %}
+<label class="stack-pure-item opt-item{% if is_active %} stack-pure-item--active{% endif %}{% if disabled %} stack-pure-item--disabled{% endif %}"
+       {% if id %}id="{{ id }}"{% endif %}
+       {% if onclick and not disabled %}onclick="{{ onclick }}"{% endif %}>
+  <input type="radio" name="{{ name }}" value="{{ value }}" {% if is_active %}checked{% endif %} {% if disabled %}disabled{% endif %} style="position:absolute;opacity:0;pointer-events:none;">
+  {% if devicon %}
+    <span class="pure-tech-icon"><i class="{{ devicon }}"></i></span>
+  {% elif icon %}
+    <span class="pure-tech-icon"><i data-lucide="{{ icon }}" style="width: 20px; height: 20px;"></i></span>
+  {% endif %}
+  <span class="stack-title-text">{{ title }}</span>
+  {% if subtitle %}
+    <span class="text-small text-muted d-block mt-xs">{{ subtitle }}</span>
+  {% endif %}
+</label>
+{% endmacro %}
