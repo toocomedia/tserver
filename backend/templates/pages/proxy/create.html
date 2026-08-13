@@ -3,6 +3,8 @@
 {% block title %}{{ _('create_reverse_proxy') }} — {{ PANEL_NAME }}{% endblock %}
 {% block page_title %}{{ _('create_reverse_proxy') }}{% endblock %}
 
+{% import "partials/wizard_macros.html" as wizard %}
+
 {% block topbar_actions %}
   <a href="/proxy/" class="btn btn--secondary" id="btn-back">{{ _('back_to_proxies') }}</a>
 {% endblock %}
@@ -10,21 +12,14 @@
 {% block content %}
 <div id="create-proxy-panel" style="width: 100%;">
   
-  <div class="form-header" style="text-align: center; margin: 0 0 48px 0;">
+  <div class="form-header" style="text-align: center; margin: 40px 0 48px 0;">
     <h2 style="font-size: 28px; font-weight: 700; margin: 0 0 24px 0; letter-spacing: -0.02em;">{{ _('new_reverse_proxy_wizard') }}</h2>
     
     <!-- Step Progress Indicator (Brutalist) -->
-    <div class="wizard-steps">
-      <div class="step-item active" id="proxy-step-pill-1">
-        <div class="step-square">1</div>
-        <span>{{ _('1_hostname_setup') }}</span>
-      </div>
-      <div class="step-divider"></div>
-      <div class="step-item" id="proxy-step-pill-2">
-        <div class="step-square">2</div>
-        <span>{{ _('2_target_ssl') }}</span>
-      </div>
-    </div>
+    {{ wizard.render_steps([
+      {'id': 'proxy-step-pill-1', 'label': _('hostname_setup')},
+      {'id': 'proxy-step-pill-2', 'label': _('target_ssl')}
+    ]) }}
   </div>
 
   {% if error %}
@@ -198,7 +193,7 @@
     </div>
 
     <!-- Fixed Bottom Action Bar -->
-    <div class="fixed-action-bar">
+    {% call wizard.action_bar() %}
       <!-- Hidden Cancel button to balance flex or explicit Back -->
       <div>
         <button type="button" class="btn btn--secondary" id="btn-back-step-2" style="display:none; height:42px; padding:0 24px;">
@@ -214,7 +209,7 @@
           {{ _('create_reverse_proxy') }}
         </button>
       </div>
-    </div>
+    {% endcall %}
 
   </form>
 

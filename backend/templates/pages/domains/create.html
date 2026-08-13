@@ -3,6 +3,8 @@
 {% block title %}{{ _('add_domain') }} — {{ PANEL_NAME }}{% endblock %}
 {% block page_title %}{{ _('add_domain') }}{% endblock %}
 
+{% import "partials/wizard_macros.html" as wizard %}
+
 {% block topbar_actions %}
   <a href="/domains/" class="btn btn--secondary" id="btn-back">{{ _('back_to_domains') }}</a>
 {% endblock %}
@@ -10,31 +12,16 @@
 {% block content %}
 <div id="create-domain-panel" style="width: 100%;">
   
-  <div class="form-header" style="text-align: center; margin: 0 0 48px 0;">
+  <div class="form-header" style="text-align: center; margin: 40px 0 48px 0;">
     <h2 style="font-size: 28px; font-weight: 700; margin: 0 0 24px 0; letter-spacing: -0.02em;">{{ _('new_domain_wizard') }}</h2>
     
     <!-- Step Progress Indicator (Brutalist) -->
-    <div class="wizard-steps">
-      <div class="step-item active" id="nav-step-1" onclick="goToStep(1)">
-        <div class="step-square">1</div>
-        <span>{{ _('hostname') }}</span>
-      </div>
-      <div class="step-divider"></div>
-      <div class="step-item" id="nav-step-2" onclick="goToStep(2)">
-        <div class="step-square">2</div>
-        <span>{{ _('runtime_stack') }}</span>
-      </div>
-      <div class="step-divider"></div>
-      <div class="step-item" id="nav-step-3" onclick="goToStep(3)">
-        <div class="step-square">3</div>
-        <span>{{ _('ssl_certificate') }}</span>
-      </div>
-      <div class="step-divider"></div>
-      <div class="step-item" id="nav-step-4" onclick="goToStep(4)">
-        <div class="step-square">4</div>
-        <span>{{ _('review_deploy') }}</span>
-      </div>
-    </div>
+    {{ wizard.render_steps([
+      {'id': 'nav-step-1', 'onclick': 'goToStep(1)', 'label': _('hostname')},
+      {'id': 'nav-step-2', 'onclick': 'goToStep(2)', 'label': _('runtime_stack')},
+      {'id': 'nav-step-3', 'onclick': 'goToStep(3)', 'label': _('ssl_certificate')},
+      {'id': 'nav-step-4', 'onclick': 'goToStep(4)', 'label': _('review_deploy')}
+    ]) }}
   </div>
 
   {% if error %}
@@ -147,7 +134,7 @@
     </div>
 
     <!-- FIXED ACTION BAR -->
-    <div class="fixed-action-bar">
+    {% call wizard.action_bar() %}
       <!-- Back Buttons (dynamic based on step) -->
       <div>
         <button type="button" class="btn btn--secondary" id="btn-back-step" style="display:none; height:42px; padding:0 24px;" onclick="goBackStep()">
@@ -163,7 +150,7 @@
           {{ _('deploy_domain_now') }}
         </button>
       </div>
-    </div>
+    {% endcall %}
 
   </form>
 </div>
