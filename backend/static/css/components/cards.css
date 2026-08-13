@@ -1202,3 +1202,27 @@
     min-width: 0;
   }
 }
+
+@media (max-width: 768px) {
+  .stat-card-box {
+    padding: 12px 14px;
+  }
+  .stat-card-box__val {
+    font-size: 17px;
+  }
+  .grid-responsive-cards {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: var(--space-md);
+  }
+}
+
+@media (max-width: 480px) {
+  .grid-responsive-cards {
+    grid-template-columns: 1fr;
+  }
+  .list-col-version,
+  .list-col-desc {
+    margin-left: 0;
+  }
+}
+

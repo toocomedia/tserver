@@ -350,3 +350,35 @@
 }
 .review-label { color: var(--color-muted, #9AA0A6); }
 .review-value { color: var(--color-text, #FFFFFF); font-weight: 600; }
+
+/* Mobile Responsive Stepper Adjustments */
+@media (max-width: 768px) {
+  .top-action-bar {
+    margin-bottom: 24px;
+  }
+  .pure-nav {
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .pure-step-item {
+    font-size: 12px;
+  }
+  .panel-heading {
+    font-size: 20px;
+  }
+  .panel-subheading {
+    font-size: 13px;
+    margin-bottom: 24px;
+  }
+  .input-borderless {
+    font-size: 18px;
+  }
+  .carousel-track {
+    padding: 0 32px;
+    gap: 20px;
+  }
+  .arrow-side-zone {
+    width: 32px;
+  }
+}
+

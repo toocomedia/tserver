@@ -138,6 +138,24 @@
   --skeleton-fade-duration: 0.4s;
 }
 
+@media (max-width: 768px) {
+  :root {
+    --page-gutter: 16px;
+    --font-h1: 20px;
+    --font-h2: 16px;
+    --font-body: 13.5px;
+    --font-small: 11.5px;
+  }
+}
+
+@media (max-width: 480px) {
+  :root {
+    --page-gutter: 12px;
+    --font-h1: 18px;
+    --font-h2: 15px;
+  }
+}
+
 /* ============================================================
    RESET
    ============================================================ */
@@ -156,6 +174,7 @@ html, body {
   color: var(--color-text);
   background: var(--color-bg);
   -webkit-font-smoothing: antialiased;
+  -webkit-text-size-adjust: 100%;
   line-height: 1.5;
 }
 
