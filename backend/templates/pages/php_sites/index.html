@@ -12,15 +12,17 @@
 {% block content %}
 <div class="php-sites-page">
   <!-- SKELETON LOADING OVERLAY -->
-  {{ skeleton_overlay('php-sites-skeleton', controls=1, tables=[{ 'rows': 4 }]) }}
+  {{ skeleton_overlay('php-sites-skeleton', stat_cards=3, controls=1, tables=[{ 'rows': 4 }]) }}
 
   <!-- STAT CARDS -->
-  {% set stats = [
-    {'label': 'Total Sites', 'value': total_sites},
-    {'label': 'WordPress Sites', 'value': wp_sites},
-    {'label': 'Active Runtimes', 'value': active_sites}
-  ] %}
-  {% include "partials/stat_cards.html" %}
+  <div class="mt-lg">
+    {% set stats = [
+      {'label': 'Total Sites', 'value': total_sites},
+      {'label': 'WordPress Sites', 'value': wp_sites},
+      {'label': 'Active Runtimes', 'value': active_sites}
+    ] %}
+    {% include "partials/stat_cards.html" %}
+  </div>
 
   {% if sites %}
   {% set filter_options = [{'val': 'php', 'label': 'Plain PHP'}, {'val': 'wordpress', 'label': 'WordPress'}] %}

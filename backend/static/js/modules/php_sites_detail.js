@@ -3,12 +3,14 @@
  */
 import { showOperationModal, pollOperation } from "./php_sites_operations.js";
 
-function showPromptModal(title, message, expectedText, isPassword, extraHtml, onConfirm) {
+function showPromptModal(title, message, expectedText, confirmInstruction, isPassword, extraHtml, onConfirm) {
   document.getElementById('prompt-modal-title').textContent = title;
   document.getElementById('prompt-modal-message').innerHTML = message;
   
   const label = document.getElementById('prompt-modal-label');
-  if (expectedText) {
+  if (confirmInstruction) {
+    label.innerHTML = confirmInstruction;
+  } else if (expectedText) {
     label.innerHTML = `Type <code class="mono">${expectedText}</code> to confirm`;
   } else {
     label.innerHTML = isPassword ? "Enter password:" : "Enter value:";
@@ -199,6 +201,7 @@ document.addEventListener("DOMContentLoaded", () => {
       "Delete Database",
       "Permanently delete the local MariaDB database and user?",
       "DELETE DATABASE",
+      `Type <code class="mono">DELETE DATABASE</code> to confirm deletion.`,
       false,
       null,
       async (confirmText) => {
@@ -216,6 +219,7 @@ document.addEventListener("DOMContentLoaded", () => {
     showPromptModal(
       "Retry WordPress Setup",
       "Enter a one-time WordPress admin password to retry setup (at least 12 characters).",
+      null,
       null,
       true,
       null,
@@ -245,6 +249,7 @@ document.addEventListener("DOMContentLoaded", () => {
       "Revoke SSL",
       "This will revoke the active Let's Encrypt certificate and revert the site to HTTP.",
       expected,
+      `Type <code class="mono">${expected}</code> to confirm SSL revocation.`,
       false,
       null,
       (confirmText) => {
@@ -284,6 +289,7 @@ document.addEventListener("DOMContentLoaded", () => {
       "Archive Website",
       "This will stop the PHP-FPM pool and Nginx site while keeping all data intact.",
       expected,
+      `Type <code class="mono">${expected}</code> to confirm archiving.`,
       false,
       null,
       (confirmText) => {
@@ -308,6 +314,7 @@ document.addEventListener("DOMContentLoaded", () => {
       "Delete Website Permanently",
       "This will permanently delete the PHP-FPM pool, webroot directory, and Nginx configuration. This action cannot be undone.",
       expected,
+      `Type <code class="mono">${expected}</code> to confirm permanent removal.`,
       false,
       extraHtml,
       async (confirmText) => {
