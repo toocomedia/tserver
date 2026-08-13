@@ -40,13 +40,17 @@
         </div>
         <div class="settings-choice-grid">
           <label class="settings-choice {% if mode !='external' %}settings-choice--active{% endif %}" id="choice-mode-managed">
-            <input type="radio" name="mode" id="mode-managed" value="managed" {% if mode !="external" %}checked{% endif %}>
-            <span class="settings-choice__title">{{ _('managed_domain') }}</span>
+            <div class="settings-choice__header">
+              <input type="radio" name="mode" id="mode-managed" value="managed" {% if mode !="external" %}checked{% endif %}>
+              <span class="settings-choice__title">{{ _('managed_domain') }}</span>
+            </div>
             <span class="settings-choice__desc">{{ _('creating_a_managed_proxy_will_automatica') }}</span>
           </label>
           <label class="settings-choice {% if mode =='external' %}settings-choice--active{% endif %}" id="choice-mode-external">
-            <input type="radio" name="mode" id="mode-external" value="external" {% if mode== 'external' %}checked{% endif %}>
-            <span class="settings-choice__title">{{ _('external_hostname') }}</span>
+            <div class="settings-choice__header">
+              <input type="radio" name="mode" id="mode-external" value="external" {% if mode== 'external' %}checked{% endif %}>
+              <span class="settings-choice__title">{{ _('external_hostname') }}</span>
+            </div>
             <span class="settings-choice__desc">{{ _('external_mode_does') }} {{ _('not') }} {{ _('change_dns') }}</span>
           </label>
         </div>
@@ -153,8 +157,10 @@
           <label class="form-label">Security</label>
         </div>
         <label class="settings-choice {% if form.get('enable_ssl') %}settings-choice--active{% endif %}" id="choice-enable-ssl">
-          <input type="checkbox" name="enable_ssl" id="enable_ssl" value="true" {% if form.get('enable_ssl') %}checked{% endif %}>
-          <span class="settings-choice__title">{{ _('enable_ssl_let_s_encrypt') }}</span>
+          <div class="settings-choice__header">
+            <input type="checkbox" name="enable_ssl" id="enable_ssl" value="true" {% if form.get('enable_ssl') %}checked{% endif %}>
+            <span class="settings-choice__title">{{ _('enable_ssl_let_s_encrypt') }}</span>
+          </div>
           <span class="settings-choice__desc">{{ _('will_issue_a_certificate_after_the_proxy') }}</span>
         </label>
       </div>
@@ -171,8 +177,10 @@
         
         <div id="cache-fields" style="display:none; flex-direction:column; gap:16px;">
           <label class="settings-choice {% if form.get('cache_enabled') %}settings-choice--active{% endif %}" id="choice-cache-enabled">
-            <input type="checkbox" name="cache_enabled" id="cache_enabled" value="true" {% if form.get('cache_enabled') %}checked{% endif %}>
-            <span class="settings-choice__title">{{ _('enable_proxy_cache') }}</span>
+            <div class="settings-choice__header">
+              <input type="checkbox" name="cache_enabled" id="cache_enabled" value="true" {% if form.get('cache_enabled') %}checked{% endif %}>
+              <span class="settings-choice__title">{{ _('enable_proxy_cache') }}</span>
+            </div>
           </label>
           
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">

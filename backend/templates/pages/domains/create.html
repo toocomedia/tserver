@@ -56,17 +56,26 @@
         <div class="settings-choice-grid">
           
           <label class="settings-choice {% if project_type != 'dns' and project_type != 'python' %}settings-choice--active{% endif %} opt-item" onclick="selectStack('static', 'Static Site / HTML')">
-            <span class="settings-choice__title">{{ _('static_site_html') }}</span>
+            <div class="settings-choice__header">
+              <input type="radio" name="stack_opt" value="static" {% if project_type != 'dns' and project_type != 'python' %}checked{% endif %}>
+              <span class="settings-choice__title">{{ _('static_site_html') }}</span>
+            </div>
             <span class="settings-choice__desc">Nginx HTTP vhost & webroot directory created.</span>
           </label>
           
           <label class="settings-choice {% if project_type == 'python' %}settings-choice--active{% endif %} opt-item" onclick="selectStack('python', 'Python App')">
-            <span class="settings-choice__title">{{ _('python_uvicorn') }}</span>
+            <div class="settings-choice__header">
+              <input type="radio" name="stack_opt" value="python" {% if project_type == 'python' %}checked{% endif %}>
+              <span class="settings-choice__title">{{ _('python_uvicorn') }}</span>
+            </div>
             <span class="settings-choice__desc">Python runtime with reverse proxy configuration.</span>
           </label>
 
           <label class="settings-choice {% if project_type == 'dns' %}settings-choice--active{% endif %} opt-item" onclick="selectStack('dns', 'DNS Manager Only')">
-            <span class="settings-choice__title">{{ _('dns_manager_only') }}</span>
+            <div class="settings-choice__header">
+              <input type="radio" name="stack_opt" value="dns" {% if project_type == 'dns' %}checked{% endif %}>
+              <span class="settings-choice__title">{{ _('dns_manager_only') }}</span>
+            </div>
             <span class="settings-choice__desc">DNS zone & A record only. No Nginx vhost.</span>
           </label>
 
@@ -82,13 +91,19 @@
           <span class="form-hint">{{ _('choose_whether_to_provision_an_automated') }}</span>
         </div>
         <div class="settings-choice-grid">
-          <label class="settings-choice ssl-pure-opt ssl-pure-opt--active" id="ssl-opt-no" onclick="selectSsl(false)">
-            <span class="settings-choice__title">{{ _('no_ssl_http_only') }}</span>
+          <label class="settings-choice settings-choice--active" id="ssl-opt-no" onclick="selectSsl(false)">
+            <div class="settings-choice__header">
+              <input type="radio" name="ssl_opt" id="ssl-radio-no" value="no" checked>
+              <span class="settings-choice__title">{{ _('no_ssl_http_only') }}</span>
+            </div>
             <span class="settings-choice__desc">{{ _('standard_unencrypted_port_80_traffic_cer') }}</span>
           </label>
           
-          <label class="settings-choice ssl-pure-opt" id="ssl-opt-yes" onclick="selectSsl(true)">
-            <span class="settings-choice__title">{{ _('enable_let_s_encrypt_free_tls_https') }}</span>
+          <label class="settings-choice" id="ssl-opt-yes" onclick="selectSsl(true)">
+            <div class="settings-choice__header">
+              <input type="radio" name="ssl_opt" id="ssl-radio-yes" value="yes">
+              <span class="settings-choice__title">{{ _('enable_let_s_encrypt_free_tls_https') }}</span>
+            </div>
             <span class="settings-choice__desc">{{ _('automated_rsa_ecc_certificate_provisioni') }}</span>
           </label>
         </div>
