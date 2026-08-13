@@ -10,11 +10,27 @@
 }
 
 @font-face {
-  font-family: 'ArabicTooco';
+  font-family: 'ArabicFont';
   font-style: normal;
-  font-weight: 100 900;
+  font-weight: 300;
   font-display: swap;
-  src: url('/static/fonts/arabictooco-vf.woff2') format('woff2');
+  src: url('/static/fonts/arfont/helvetica-neue-lt-arabic-45-light.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'ArabicFont';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/static/fonts/arfont/helvetica-neue-lt-arabic-55-roman.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'ArabicFont';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/static/fonts/arfont/helvetica-neue-lt-arabic-75-bold.woff2') format('woff2');
 }
 
 

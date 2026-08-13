@@ -23,9 +23,11 @@ class TestI18nRTL(unittest.TestCase):
         from pathlib import Path
         import config
         i18n_service.init_app(config.BASE_DIR)
-        # Verify file_manager plugin translations are loaded
+        # Verify file_manager plugin translations are loaded for English and Arabic
         self.assertIn("select_target", i18n_service.en_strings)
         self.assertEqual(i18n_service.get_string("select_target", "en"), "Select Target")
+        self.assertEqual(i18n_service.get_string("select_target", "ar"), "اختر الهدف")
+        self.assertEqual(i18n_service.get_string("File Manager", "ar"), "مدير الملفات")
 
 if __name__ == "__main__":
     unittest.main()

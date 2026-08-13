@@ -1,12 +1,12 @@
 {% extends "layout.html" %}
 
-{% block title %}File Manager - {{ super() }}{% endblock %}
+{% block title %}{{ _('File Manager') }} - {{ super() }}{% endblock %}
 
 {% block head %}
 <link rel="stylesheet" href="/plugins/file_manager/static/css/file_manager.css?v={{ APP_VERSION }}">
 {% endblock %}
 
-{% block page_title %}File Manager{% endblock %}
+{% block page_title %}{{ _('File Manager') }}{% endblock %}
 
 {% block topbar_actions %}
   <div class="file-manager__app-selector">

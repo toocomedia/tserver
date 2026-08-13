@@ -9,12 +9,12 @@
     <div class="plugin-card__main">
       <div class="plugin-card__header-row">
         <a href="/plugins/info/{{ plugin.id }}" style="text-decoration:none; color:inherit;">
-          <h3 class="plugin-card__title" {% if plugin.effective_status in ['missing', 'invalid'] %}style="color: var(--color-muted)" {% endif %}>{{ plugin.name }}</h3>
+          <h3 class="plugin-card__title" {% if plugin.effective_status in ['missing', 'invalid'] %}style="color: var(--color-muted)" {% endif %}>{{ _(plugin.name) }}</h3>
         </a>
         <span class="plugin-card__meta">v{{ plugin.version }}</span>
       </div>
 
-      <div class="plugin-card__description">{{ plugin.description }}</div>
+      <div class="plugin-card__description">{{ _(plugin.description) }}</div>
 
       <div class="plugin-card__footer-row">
         <div style="display:flex; align-items:center; gap:8px;">
