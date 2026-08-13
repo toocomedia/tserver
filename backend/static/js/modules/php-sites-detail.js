@@ -15,6 +15,8 @@ const deleteDbChoice = root?.querySelector("[data-php-site-delete-database]");
 const deleteModalErr = root?.querySelector("[data-php-site-delete-error]");
 const deleteSubmit = root?.querySelector("[data-php-site-delete-submit]");
 let site, options, pendingAction;
+let currentTab = "overview";
+const validTabs = ["overview", "runtime", "database", "ssl", "logs", "danger"];
 
 function setError(msg) { errorEl.textContent = msg || ""; errorEl.hidden = !msg; }
 function badge(val) { return `<span class="status-badge status-badge--${statusTone(val)}">${esc(val || "—")}</span>`; }
@@ -34,13 +36,26 @@ function statGrid() {
   const dot = (ok) => `<span class="stat-dot ${ok ? "stat-dot--active" : "stat-dot--danger"}"></span>`;
   const httpCode = h.http?.status_code ? `HTTP ${h.http.status_code}` : t("not_checked");
   return `
-    <div class="stat-grid-strict mb-xl">
+    <div class="stat-grid-strict mb-lg">
       <div class="stat-card-strict"><div class="stat-card-strict__title">${esc(t("php_fpm_socket"))}</div><div class="stat-card-strict__value">${dot(h.socket_healthy)} ${h.socket_healthy ? t("active_1") : t("disabled")}</div></div>
       <div class="stat-card-strict"><div class="stat-card-strict__title">${esc(t("nginx_web_engine"))}</div><div class="stat-card-strict__value">${dot(h.nginx_active)} ${h.nginx_active ? t("active_1") : t("disabled")}</div></div>
       <div class="stat-card-strict"><div class="stat-card-strict__title">${esc(t("local_http"))}</div><div class="stat-card-strict__value">${esc(httpCode)}</div></div>
       <div class="stat-card-strict"><div class="stat-card-strict__title">${esc(t("database"))}</div><div class="stat-card-strict__value">${site.database ? `${dot(h.mariadb_healthy)} ${site.database.database}` : `<span style="color:var(--color-muted);">${esc(t("no_database_attached"))}</span>`}</div></div>
       <div class="stat-card-strict"><div class="stat-card-strict__title">${esc(t("ssl_certificates"))}</div><div class="stat-card-strict__value">${site.ssl?.active ? `${dot(true)} ${t("active_1")}` : `<span style="color:var(--color-muted);">${esc(t("not_available"))}</span>`}</div></div>
     </div>
+  `;
+}
+
+function tabsNav() {
+  return `
+    <nav class="tabs-nav mb-lg" data-detail-tabs role="tablist">
+      <button class="tabs-nav__btn ${currentTab === "overview" ? "is-active" : ""}" type="button" role="tab" data-tab-target="overview" id="tab-btn-overview">${esc(t("overview"))}</button>
+      <button class="tabs-nav__btn ${currentTab === "runtime" ? "is-active" : ""}" type="button" role="tab" data-tab-target="runtime" id="tab-btn-runtime">${esc(t("runtime_settings"))}</button>
+      <button class="tabs-nav__btn ${currentTab === "database" ? "is-active" : ""}" type="button" role="tab" data-tab-target="database" id="tab-btn-database">${esc(t("database"))}</button>
+      <button class="tabs-nav__btn ${currentTab === "ssl" ? "is-active" : ""}" type="button" role="tab" data-tab-target="ssl" id="tab-btn-ssl">${esc(t("ssl_certificates"))}</button>
+      <button class="tabs-nav__btn ${currentTab === "logs" ? "is-active" : ""}" type="button" role="tab" data-tab-target="logs" id="tab-btn-logs">${esc(t("logs"))}</button>
+      <button class="tabs-nav__btn ${currentTab === "danger" ? "is-active" : ""}" type="button" role="tab" data-tab-target="danger" id="tab-btn-danger" style="color:var(--color-danger);">${esc(t("danger_zone"))}</button>
+    </nav>
   `;
 }
 
@@ -104,7 +119,32 @@ function wpSection() {
   `);
 }
 
+function switchTab(tabId) {
+  if (!validTabs.includes(tabId)) tabId = "overview";
+  currentTab = tabId;
+  try {
+    history.replaceState(null, "", `#${tabId}`);
+  } catch (_) {
+    window.location.hash = tabId;
+  }
+
+  content.querySelectorAll("[data-tab-target]").forEach((btn) => {
+    btn.classList.toggle("is-active", btn.dataset.tabTarget === tabId);
+  });
+
+  content.querySelectorAll(".php-tab-pane").forEach((pane) => {
+    pane.classList.toggle("is-active", pane.dataset.tabPanel === tabId);
+  });
+
+  if (tabId === "logs") {
+    loadLogs(siteId, content);
+  }
+}
+
 function render() {
+  const hash = (window.location.hash || "").replace("#", "");
+  if (validTabs.includes(hash)) currentTab = hash;
+
   const url = `${site.ssl?.active ? "https" : "http"}://${site.domain}/`;
   let actions = `<a class="btn btn--secondary btn--sm" href="${esc(url)}" target="_blank" rel="noopener">${t("visit_website")} ↗</a>`;
   if (site.file_manager_target) actions += `<a class="btn btn--secondary btn--sm" href="/plugins/file_manager/?target=${encodeURIComponent(site.file_manager_target)}">${t("file_manager")}</a>`;
@@ -113,27 +153,82 @@ function render() {
   if (can("repair")) actions += btn("repair", t("repair"), "primary");
   if (can("restore")) actions += btn("restore", t("restore_website"), "primary");
 
+  const isWp = site.preset === "wordpress";
+
   content.innerHTML = `
     <div class="page-header-strict mb-lg">
-      <div><h1 style="margin-bottom: 4px;">${esc(site.domain)} ${badge(site.status)}</h1><span style="color:var(--color-muted); font-size:14px;">PHP Website Manager · ${esc(site.preset === "wordpress" ? t("wordpress") : t("plain_php"))}</span></div>
+      <div>
+        <h1 style="margin-bottom: 4px;">${esc(site.domain)} ${badge(site.status)}</h1>
+        <span style="color:var(--color-muted); font-size:14px;">PHP Website Manager · ${esc(isWp ? t("wordpress") : t("plain_php"))}</span>
+      </div>
       <div class="actions" style="display:flex; gap:8px; flex-wrap:wrap;">${actions}</div>
     </div>
+
     ${site.last_error ? `<div class="alert alert--danger mb-lg">${esc(site.last_error)}</div>` : ""}
     ${site.last_warning ? `<div class="alert alert--warning mb-lg">${esc(site.last_warning)}</div>` : ""}
     ${site.operation && ["queued", "running"].includes(site.operation.status) ? `<div class="php-operation mb-lg"><div class="php-operation__status">${esc(site.operation.stage)} · ${esc(site.operation.status)}</div><div class="php-operation__message">${esc(site.operation.message)}</div></div>` : ""}
+
     ${statGrid()}
-    <div class="php-detail__grid">
-      ${sect(t("overview"), `${row(t("domain"), esc(site.domain))}${row(t("linux_user"), `<code>srvphp${site.id}</code>`)}${row(t("webroot"), `<code>/var/www/${esc(site.domain)}/${esc(site.document_root)}</code>`)}`)}
-      ${runtimeSection()}
+    ${tabsNav()}
+
+    <!-- TAB 1: OVERVIEW -->
+    <div class="php-tab-pane ${currentTab === "overview" ? "is-active" : ""}" data-tab-panel="overview">
+      <div class="php-detail__grid">
+        ${sect(t("overview"), `
+          ${row(t("domain"), `<a href="${esc(url)}" target="_blank" rel="noopener" style="font-weight:700; color:var(--color-text);">${esc(site.domain)} ↗</a>`)}
+          ${row(t("preset"), `<span class="badge-pill">${esc(isWp ? t("wordpress") : t("plain_php"))}</span>`)}
+          ${row(t("status"), badge(site.status))}
+          ${row(t("linux_user"), `<code>srvphp${site.id}</code>`)}
+          ${row(t("webroot"), `<code>/var/www/${esc(site.domain)}/${esc(site.document_root)}</code>`)}
+        `)}
+        ${sect(t("runtime_settings"), `
+          ${row(t("php_version"), `<strong>${esc(site.php_version || "—")}</strong>`)}
+          ${row(t("document_root"), `<code>${esc(site.document_root || "public")}</code>`)}
+          ${row(t("database"), site.database ? `<code>${esc(site.database.database)}</code> (${esc(site.database.status || "active")})` : `<span style="color:var(--color-muted);">${esc(t("no_database_attached"))}</span>`)}
+          ${row(t("ssl_certificates"), site.ssl?.active ? `${badge("active")} ${site.ssl.expiry_date ? `(Expires ${esc(site.ssl.expiry_date)})` : ""}` : `<span style="color:var(--color-muted);">${esc(t("not_available"))}</span>`)}
+        `)}
+      </div>
+    </div>
+
+    <!-- TAB 2: RUNTIME SETTINGS -->
+    <div class="php-tab-pane ${currentTab === "runtime" ? "is-active" : ""}" data-tab-panel="runtime">
+      <div class="${isWp ? "php-detail__grid" : ""}">
+        ${runtimeSection()}
+        ${isWp ? wpSection() : ""}
+      </div>
+    </div>
+
+    <!-- TAB 3: DATABASE -->
+    <div class="php-tab-pane ${currentTab === "database" ? "is-active" : ""}" data-tab-panel="database">
       ${databaseSection()}
+    </div>
+
+    <!-- TAB 4: SSL CERTIFICATES -->
+    <div class="php-tab-pane ${currentTab === "ssl" ? "is-active" : ""}" data-tab-panel="ssl">
       ${sslSection()}
-      ${wpSection()}
+    </div>
+
+    <!-- TAB 5: LOGS -->
+    <div class="php-tab-pane ${currentTab === "logs" ? "is-active" : ""}" data-tab-panel="logs">
       ${renderLogSection()}
-      ${sect(t("danger_zone"), `<p class="form-hint mb-md">${t("delete_php_site_desc")}</p><div style="display:flex; gap:12px;">${can("archive") ? btn("archive-site", t("archive_website"), "secondary") : ""}${can("delete_site") ? btn("delete-site", t("delete_website"), "danger") : ""}</div>`, "php-detail__section--wide php-detail__danger")}
+    </div>
+
+    <!-- TAB 6: DANGER ZONE -->
+    <div class="php-tab-pane ${currentTab === "danger" ? "is-active" : ""}" data-tab-panel="danger">
+      ${sect(t("danger_zone"), `
+        <p class="form-hint mb-lg" style="max-width:600px; line-height:1.6;">${t("delete_php_site_desc")}</p>
+        <div style="display:flex; gap:12px; flex-wrap:wrap;">
+          ${can("archive") ? btn("archive-site", t("archive_website"), "secondary") : ""}
+          ${can("delete_site") ? btn("delete-site", t("delete_website"), "danger") : ""}
+        </div>
+      `, "php-detail__danger")}
     </div>
   `;
+
   bindLogEvents(siteId, content);
-  loadLogs(siteId, content);
+  if (currentTab === "logs") {
+    loadLogs(siteId, content);
+  }
 }
 
 function openModal(kind) {
@@ -248,6 +343,11 @@ async function load() {
 }
 
 root?.addEventListener("click", async (e) => {
+  const tabBtn = e.target.closest("[data-tab-target]");
+  if (tabBtn) {
+    switchTab(tabBtn.dataset.tabTarget);
+    return;
+  }
   if (e.target.closest("[data-php-site-delete-close]") || e.target === deleteModal) { closeModal(); return; }
   const trigger = e.target.closest("[data-action]");
   if (!trigger) return;
@@ -257,6 +357,11 @@ root?.addEventListener("click", async (e) => {
   setError("");
   try { await handle(trigger.dataset.action, trigger); }
   catch (err) { setError(err.message); trigger.disabled = false; }
+});
+
+window.addEventListener("hashchange", () => {
+  const hash = window.location.hash.replace("#", "");
+  if (validTabs.includes(hash)) switchTab(hash);
 });
 
 deleteConfirm?.addEventListener("input", () => {

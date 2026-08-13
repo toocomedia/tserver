@@ -60,6 +60,11 @@
 .php-detail__loading { color: var(--color-muted); padding: var(--space-xl) 0; }
 .php-detail__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-xl); }
 
+/* Tab Panes */
+.php-tab-pane { display: none; width: 100%; }
+.php-tab-pane.is-active { display: flex; flex-direction: column; gap: var(--space-xl); }
+.php-tab-pane .php-detail__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-xl); }
+
 .php-detail__section { min-width: 0; margin: 0; padding: 0; background: transparent; border: 0; }
 .php-detail__section .info-section-header { margin: 0 0 var(--space-md); padding: 0 0 var(--space-md); border-bottom: 1px solid var(--color-line); }
 .php-detail__section .info-section-header h3 { font-size: var(--font-h2); }
