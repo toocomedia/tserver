@@ -1,0 +1,24 @@
+{% extends "layout.html" %}
+
+{% block title %}{{ _('php_websites') }} — {{ PANEL_NAME }}{% endblock %}
+{% block page_title %}{{ _('php_websites') }}{% endblock %}
+
+{% block content %}
+<div class="content__inner">
+  <div class="empty-state-panel" style="padding: 60px 20px; text-align: center;">
+    <div class="geometric-shape-container" style="display: flex; justify-content: center; gap: 12px; margin-bottom: 24px;">
+      <div class="shape-square-sm" style="width: 32px; height: 32px; background: var(--color-danger); opacity: 0.8;"></div>
+      <div class="shape-torus-sm" style="width: 32px; height: 32px; border: 3px solid var(--color-text); opacity: 0.3;"></div>
+    </div>
+    <h2 style="font-size: var(--font-h2); font-weight: 700; margin-bottom: 8px; color: var(--color-text);">
+      {{ _('php_dependency_required') }}
+    </h2>
+    <p style="max-width: 460px; margin: 0 auto 24px; color: var(--color-muted); font-size: var(--font-body);">
+      {{ _('php_dependency_required_desc') }}
+    </p>
+    <a href="/dependencies/php" class="btn btn--primary" id="btn-activate-php-dep">
+      {{ _('go_to_dependencies') }}
+    </a>
+  </div>
+</div>
+{% endblock %}

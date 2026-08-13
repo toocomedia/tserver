@@ -1,0 +1,19 @@
+<div class="section mb-xl">
+  <h3 class="section__title mb-md text-danger">Danger Zone</h3>
+
+  <div class="card mb-lg p-lg border-danger">
+    <h4 class="font-weight-bold mb-xs">Archive Website</h4>
+    <p class="text-muted text-small mb-md">Stops FPM pool process but preserves all files, database, and settings on disk.</p>
+    {% if site.status == 'archived' %}
+      <button type="button" class="btn btn--primary" id="btn-restore-site">Restore Archived Site</button>
+    {% else %}
+      <button type="button" class="btn btn--secondary" id="btn-archive-site">Archive Site...</button>
+    {% endif %}
+  </div>
+
+  <div class="card p-lg border-danger">
+    <h4 class="font-weight-bold mb-xs text-danger">Delete Website Permanently</h4>
+    <p class="text-muted text-small mb-md">Removes Linux user, FPM pool, Nginx configuration, and site files. Domain record is preserved.</p>
+    <button type="button" class="btn btn--danger" id="btn-delete-site-perm">Delete Site Permanently...</button>
+  </div>
+</div>

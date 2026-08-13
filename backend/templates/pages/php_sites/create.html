@@ -1,0 +1,163 @@
+{% extends "layout.html" %}
+
+{% block title %}{{ _('create_php_site') }} — {{ PANEL_NAME }}{% endblock %}
+{% block page_title %}{{ _('create_php_site') }}{% endblock %}
+
+{% block content %}
+<div class="content__inner" style="padding-bottom: 100px;">
+  <form id="php-site-create-form" autocomplete="off">
+    {% include "partials/csrf_field.html" %}
+
+    <div class="section mb-xl">
+      <div class="form-row-grid">
+        <div class="form-row-grid__label">
+          <label class="form-label">Application Preset</label>
+          <div class="form-hint">Choose between plain PHP script host or full native WordPress setup.</div>
+        </div>
+        <div class="form-row-grid__input">
+          <div class="preset-choice-grid">
+            <label class="choice-card choice-card--selected" id="card-preset-php">
+              <input type="radio" name="preset" value="php" checked class="sr-only" onchange="togglePresetFields('php')">
+              <div class="choice-card__title">Plain PHP Website</div>
+              <div class="choice-card__desc">Fast PHP-FPM pool for custom scripts, frameworks, or static hosting.</div>
+            </label>
+            <label class="choice-card" id="card-preset-wp">
+              <input type="radio" name="preset" value="wordpress" class="sr-only" onchange="togglePresetFields('wordpress')">
+              <div class="choice-card__title">Native WordPress</div>
+              <div class="choice-card__desc">WP-CLI automated setup with local MariaDB database.</div>
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section mb-xl">
+      <div class="form-row-grid">
+        <div class="form-row-grid__label">
+          <label for="domain_id" class="form-label">Domain Name</label>
+          <div class="form-hint">Select an available domain owned by the panel.</div>
+        </div>
+        <div class="form-row-grid__input">
+          <select id="domain_id" name="domain_id" class="form-select" required>
+            <option value="">-- Select Domain --</option>
+            {% for d in options.domains %}
+              <option value="{{ d.id }}">{{ d.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row-grid">
+        <div class="form-row-grid__label">
+          <label for="php_version" class="form-label">PHP Version</label>
+          <div class="form-hint">Installed and healthy PHP-FPM runtimes.</div>
+        </div>
+        <div class="form-row-grid__input">
+          <select id="php_version" name="php_version" class="form-select" required>
+            {% for v in options.php_versions %}
+              <option value="{{ v }}">PHP {{ v }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row-grid">
+        <div class="form-row-grid__label">
+          <label for="document_root" class="form-label">Document Root</label>
+          <div class="form-hint">Relative folder under /var/www/{domain}. Default: public</div>
+        </div>
+        <div class="form-row-grid__input">
+          <input type="text" id="document_root" name="document_root" class="form-input" value="{{ options.default_document_root or 'public' }}" required>
+        </div>
+      </div>
+    </div>
+
+    <!-- WordPress Group -->
+    <div id="wordpress-fields-group" class="section mb-xl" style="display: none;">
+      <h3 class="section__title mb-md">WordPress Administrator Setup</h3>
+      <div class="form-row-grid">
+        <div class="form-row-grid__label">
+          <label for="wp_site_title" class="form-label">Site Title</label>
+        </div>
+        <div class="form-row-grid__input">
+          <input type="text" id="wp_site_title" name="wp_site_title" class="form-input" placeholder="My WordPress Site">
+        </div>
+      </div>
+
+      <div class="form-row-grid">
+        <div class="form-row-grid__label">
+          <label for="wp_admin_user" class="form-label">Admin Username</label>
+        </div>
+        <div class="form-row-grid__input">
+          <input type="text" id="wp_admin_user" name="wp_admin_user" class="form-input" placeholder="admin">
+        </div>
+      </div>
+
+      <div class="form-row-grid">
+        <div class="form-row-grid__label">
+          <label for="wp_admin_email" class="form-label">Admin Email</label>
+        </div>
+        <div class="form-row-grid__input">
+          <input type="email" id="wp_admin_email" name="wp_admin_email" class="form-input" placeholder="admin@example.com">
+        </div>
+      </div>
+
+      <div class="form-row-grid">
+        <div class="form-row-grid__label">
+          <label for="wp_admin_password" class="form-label">Admin Password</label>
+        </div>
+        <div class="form-row-grid__input">
+          <input type="password" id="wp_admin_password" name="wp_admin_password" class="form-input" autocomplete="new-password">
+        </div>
+      </div>
+
+      <div class="form-row-grid">
+        <div class="form-row-grid__label">
+          <label for="wp_confirm_password" class="form-label">Confirm Password</label>
+        </div>
+        <div class="form-row-grid__input">
+          <input type="password" id="wp_confirm_password" name="wp_confirm_password" class="form-input" autocomplete="new-password">
+          <div id="wp-pwd-error" class="form-error" style="display:none;">Passwords do not match.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Options Group -->
+    <div class="section mb-xl">
+      <div class="form-row-grid">
+        <div class="form-row-grid__label">
+          <label class="form-label">Features & SSL</label>
+        </div>
+        <div class="form-row-grid__input">
+          <div id="php-db-option-wrap" class="form-check mb-sm">
+            <input type="checkbox" id="create_database" name="create_database" value="true">
+            <label for="create_database">Create Local MariaDB Database & loopback user</label>
+          </div>
+          <div class="form-check mb-sm">
+            <input type="checkbox" id="ssl" name="ssl" value="true" checked>
+            <label for="ssl">Issue Let's Encrypt SSL Certificate</label>
+          </div>
+          <div class="form-check mb-sm">
+            <input type="checkbox" id="include_www" name="include_www" value="true">
+            <label for="include_www">Include www alias in Certificate and Nginx</label>
+          </div>
+          <div class="form-check mb-sm">
+            <input type="checkbox" id="install_missing_extensions" name="install_missing_extensions" value="true" checked>
+            <label for="install_missing_extensions">Allow installing missing PHP extensions if required</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Fixed Action Bar -->
+    <div class="fixed-wizard-bar">
+      <a href="/php-sites/" class="btn btn--secondary">Cancel</a>
+      <button type="submit" class="btn btn--primary" id="btn-submit-php-site">+ Deploy Website</button>
+    </div>
+  </form>
+</div>
+
+{% include "pages/php_sites/partials/operation_modal.html" %}
+
+<script type="module" src="/static/js/modules/php_sites_create.js"></script>
+{% endblock %}

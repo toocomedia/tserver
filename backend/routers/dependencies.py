@@ -6,7 +6,10 @@ from pathlib import Path
 
 from database import get_db
 from dependencies import dependency_manager
+from models.domain import Domain
+from models.php_website import PhpWebsite
 from templating import templates
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(tags=["dependencies"])
@@ -211,12 +214,28 @@ async def php_install_version(
 async def php_uninstall_version(
     version: str,
     confirmation: str = Form(""),
+    db: AsyncSession = Depends(get_db),
 ):
     """Remove one panel-managed PHP runtime without touching site files."""
     expected = f"REMOVE PHP {version}"
     if confirmation.strip() != expected:
         return JSONResponse(
             {"success": False, "detail": f"Type {expected} to uninstall this PHP version."},
+            status_code=409,
+        )
+    sites = (await db.execute(
+        select(PhpWebsite.id, Domain.name)
+        .join(Domain, Domain.id == PhpWebsite.domain_id)
+        .where(PhpWebsite.php_version == version)
+        .order_by(Domain.name)
+    )).all()
+    if sites:
+        return JSONResponse(
+            {
+                "success": False,
+                "detail": f"PHP {version} is still used by managed PHP websites.",
+                "sites": [{"id": site_id, "domain": domain} for site_id, domain in sites],
+            },
             status_code=409,
         )
     service = _php_service()

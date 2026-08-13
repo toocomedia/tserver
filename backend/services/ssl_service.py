@@ -19,6 +19,7 @@ from sqlalchemy import select
 from models.domain import Domain
 from models.hosted_app import HostedApp
 from models.container_app import ContainerApp
+from models.php_website import PhpWebsite
 from models.ssl_cert import SslCert
 from models.proxy import ReverseProxy
 from services import nginx_service, error_service
@@ -337,12 +338,16 @@ async def issue_cert(
     )
     hosted_app = None
     container_app = None
+    php_site = None
     if domain_obj:
         hosted_app = await db.scalar(
             select(HostedApp).where(HostedApp.domain_id == domain_obj.id)
         )
         container_app = await db.scalar(
             select(ContainerApp).where(ContainerApp.domain_id == domain_obj.id)
+        )
+        php_site = await db.scalar(
+            select(PhpWebsite).where(PhpWebsite.domain_id == domain_obj.id)
         )
 
     try:
@@ -357,6 +362,18 @@ async def issue_cert(
             )
             proxy_obj.ssl_enabled = True
             proxy_obj.nginx_config_path = new_config
+        elif php_site:
+            from services import php_site_runtime as php_runtime
+            from services import php_site_service as php_sites
+            access_log, error_log = php_sites.log_paths(php_site)
+            new_config = await nginx_service.update_php_site_ssl(
+                full_domain, str(php_sites.document_root(php_site)),
+                php_runtime.socket_path(php_site.id, php_site.php_version),
+                access_log, error_log, cert_path, key_path,
+                include_www=php_site.ssl_include_www,
+            )
+            php_site.ssl_requested = True
+            domain_obj.nginx_config_path = new_config
         elif hosted_app:
             new_config = await nginx_service.update_proxy_ssl(
                 full_domain, "127.0.0.1", hosted_app.port, "http", cert_path, key_path,
@@ -491,12 +508,16 @@ async def revoke_cert(
     )
     hosted_app = None
     container_app = None
+    php_site = None
     if domain_obj:
         hosted_app = await db.scalar(
             select(HostedApp).where(HostedApp.domain_id == domain_obj.id)
         )
         container_app = await db.scalar(
             select(ContainerApp).where(ContainerApp.domain_id == domain_obj.id)
+        )
+        php_site = await db.scalar(
+            select(PhpWebsite).where(PhpWebsite.domain_id == domain_obj.id)
         )
     try:
         if proxy_obj:
@@ -509,6 +530,22 @@ async def revoke_cert(
             proxy_obj.ssl_enabled = False
             proxy_obj.ssl_cert_id = None
             proxy_obj.nginx_config_path = new_config
+        elif php_site:
+            from services import php_site_runtime as php_runtime
+            from services import php_site_service as php_sites
+            access_log, error_log = php_sites.log_paths(php_site)
+            if php_site.status in {"disabled", "archived"}:
+                new_config = await nginx_service.set_php_site_offline(
+                    domain_name, include_www=php_site.ssl_include_www,
+                )
+            else:
+                new_config = await nginx_service.create_php_site(
+                    domain_name, str(php_sites.document_root(php_site)),
+                    php_runtime.socket_path(php_site.id, php_site.php_version),
+                    access_log, error_log, include_www=php_site.ssl_include_www,
+                )
+            php_site.ssl_requested = False
+            domain_obj.nginx_config_path = new_config
         elif hosted_app:
             new_config = await nginx_service.create_proxy(
                 domain_name, "127.0.0.1", hosted_app.port, "http",

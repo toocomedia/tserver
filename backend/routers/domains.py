@@ -4,7 +4,7 @@ Routes call services only — no direct DB or nginx calls here.
 """
 import logging
 import os
-from fastapi import APIRouter, Depends, Request, Form
+from fastapi import APIRouter, Depends, Request, Form, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -19,6 +19,7 @@ import config
 from utils.search_and_bulk import execute_bulk_action, BulkActionRequest
 from models.domain import Domain
 from models.hosted_app import HostedApp
+from models.php_website import PhpWebsite
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/domains", tags=["domains"])
@@ -27,6 +28,17 @@ router = APIRouter(prefix="/domains", tags=["domains"])
 @router.post("/api/bulk")
 async def domains_bulk_action(payload: BulkActionRequest, db: AsyncSession = Depends(get_db)):
     """Generic endpoint for bulk operations on domains (e.g. bulk delete)."""
+    if payload.action.lower().strip() == "delete":
+        managed = (await db.execute(
+            select(PhpWebsite.id, PhpWebsite.domain_id).where(
+                PhpWebsite.domain_id.in_(payload.item_ids)
+            )
+        )).all()
+        if managed:
+            raise HTTPException(
+                409,
+                "Remove managed PHP websites before bulk-deleting their domains.",
+            )
     result = await execute_bulk_action(db, Domain, payload.action, payload.item_ids)
     return result
 

@@ -170,6 +170,65 @@ async def update_static_site_ssl(
     return config_path
 
 
+async def _write_validated_site(domain: str, content: str) -> str:
+    """Replace one owned site config and restore previous content if nginx -t fails."""
+    name = _conf_name(domain)
+    available = _available_path(name)
+    previous = None
+    try:
+        if available.is_file():
+            previous = available.read_text(encoding="utf-8")
+    except OSError:
+        previous = None
+    config_path = str(await _write_config(name, content))
+    result = await shell.nginx_test()
+    if result.success:
+        return config_path
+    if previous is not None:
+        await _write_config(name, previous)
+    else:
+        await _remove_config(name)
+    raise ValueError(f"Nginx config test failed: {result.stderr}")
+
+
+async def create_php_site(
+    domain: str, document_root: str, socket_path: str, access_log: str, error_log: str,
+    *, include_www: bool = False,
+) -> str:
+    return await _write_validated_site(
+        domain,
+        nginx_templates.php_site_config(
+            domain, document_root, socket_path, access_log, error_log,
+            include_www=include_www,
+        ),
+    )
+
+
+async def update_php_site_ssl(
+    domain: str, document_root: str, socket_path: str, access_log: str, error_log: str,
+    cert_path: str, key_path: str, *, include_www: bool = False,
+) -> str:
+    return await _write_validated_site(
+        domain,
+        nginx_templates.php_site_ssl_config(
+            domain, document_root, socket_path, access_log, error_log, cert_path, key_path,
+            include_www=include_www,
+        ),
+    )
+
+
+async def set_php_site_offline(
+    domain: str, *, cert_path: str | None = None, key_path: str | None = None,
+    include_www: bool = False,
+) -> str:
+    return await _write_validated_site(
+        domain,
+        nginx_templates.php_site_offline_config(
+            domain, cert_path=cert_path, key_path=key_path, include_www=include_www,
+        ),
+    )
+
+
 async def ensure_http_maps() -> None:
     """
     Write conf.d map for $connection_upgrade (WebSocket + upstream keepalive).

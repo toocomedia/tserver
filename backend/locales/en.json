@@ -821,5 +821,19 @@
   "not_applicable_dns_only": "Not Applicable (DNS Only)",
   "resolving_ellipsis": "Resolving...",
   "an_unexpected_error_occurred": "An unexpected error occurred",
-  "error_not_found": "Error not found"
+  "error_not_found": "Error not found",
+  "php_websites": "PHP Websites",
+  "create_php_site": "Create PHP Website",
+  "preset": "Preset",
+  "plain_php": "Plain PHP Website",
+  "wordpress": "Native WordPress",
+  "php_version": "PHP Version",
+  "document_root": "Document Root",
+  "create_database": "Create Local MariaDB Database",
+  "reveal_credentials": "Reveal Credentials",
+  "rotate_password": "Rotate Password",
+  "wordpress_settings": "WordPress Settings",
+  "php_dependency_required": "PHP Dependency Required",
+  "php_dependency_required_desc": "PHP Websites feature requires at least one panel-managed PHP-FPM version installed and running.",
+  "go_to_dependencies": "Go to Dependencies"
 }

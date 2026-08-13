@@ -11,5 +11,5 @@
   "enabled": true,
   "route_dependency_checks": true,
   "usage": {},
-  "requires": {"dependencies": ["docker"]}
+  "requires": {"dependencies": []}
 }

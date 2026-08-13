@@ -1,0 +1,82 @@
+{% extends "layout.html" %}
+
+{% block title %}{{ site.domain_name or ('PHP Site #' ~ site.id) }} — {{ PANEL_NAME }}{% endblock %}
+{% block page_title %}{{ site.domain_name or ('PHP Site #' ~ site.id) }}{% endblock %}
+
+{% block topbar_actions %}
+  {% if site.status == 'active' %}
+    <button type="button" class="btn btn--secondary btn--sm" id="btn-toggle-control" data-action="disable">Disable Site</button>
+  {% elif site.status == 'disabled' %}
+    <button type="button" class="btn btn--primary btn--sm" id="btn-toggle-control" data-action="enable">Enable Site</button>
+  {% endif %}
+  <button type="button" class="btn btn--secondary btn--sm" id="btn-repair-site">Repair Site</button>
+  {% if site.domain_name %}
+    <a href="http://{{ site.domain_name }}" target="_blank" rel="noopener" class="btn btn--dark btn--sm">Open Site ↗</a>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="php-site-detail-page" data-site-id="{{ site.id }}">
+
+  <!-- Header Banner -->
+  <div class="section-header-bar mb-lg">
+    <div class="section-header-bar__info">
+      <span class="status-badge status-badge--info">{{ site.preset | upper }}</span>
+      <span class="badge badge--dark ms-sm">PHP {{ site.php_version }}</span>
+      <span class="text-muted ms-md">Root: /var/www/{{ site.domain_name }}/{{ site.document_root }}</span>
+    </div>
+    <div class="section-header-bar__actions">
+      <a href="/plugins/file_manager/api/apps/php:{{ site.id }}/roots" target="_blank" class="btn btn--secondary btn--sm">File Manager ↗</a>
+    </div>
+  </div>
+
+  <!-- Navigation Tabs -->
+  <div class="tab-bar mb-xl">
+    <button type="button" class="tab-item tab-item--active" data-tab="overview">Overview & Health</button>
+    <button type="button" class="tab-item" data-tab="runtime">Runtime Config</button>
+    <button type="button" class="tab-item" data-tab="database">MariaDB Database</button>
+    {% if site.preset == 'wordpress' %}
+      <button type="button" class="tab-item" data-tab="wordpress">WordPress</button>
+    {% endif %}
+    <button type="button" class="tab-item" data-tab="ssl">SSL & HTTPS</button>
+    <button type="button" class="tab-item" data-tab="logs">Logs</button>
+    <button type="button" class="tab-item" data-tab="danger">Danger Zone</button>
+  </div>
+
+  <!-- Tab Content Panels -->
+  <div id="tab-overview" class="tab-pane tab-pane--active">
+    {% include "pages/php_sites/partials/detail_overview.html" %}
+  </div>
+
+  <div id="tab-runtime" class="tab-pane" style="display: none;">
+    {% include "pages/php_sites/partials/detail_runtime.html" %}
+  </div>
+
+  <div id="tab-database" class="tab-pane" style="display: none;">
+    {% include "pages/php_sites/partials/detail_database.html" %}
+  </div>
+
+  {% if site.preset == 'wordpress' %}
+  <div id="tab-wordpress" class="tab-pane" style="display: none;">
+    {% include "pages/php_sites/partials/detail_wordpress.html" %}
+  </div>
+  {% endif %}
+
+  <div id="tab-ssl" class="tab-pane" style="display: none;">
+    {% include "pages/php_sites/partials/detail_ssl.html" %}
+  </div>
+
+  <div id="tab-logs" class="tab-pane" style="display: none;">
+    {% include "pages/php_sites/partials/detail_logs.html" %}
+  </div>
+
+  <div id="tab-danger" class="tab-pane" style="display: none;">
+    {% include "pages/php_sites/partials/detail_danger.html" %}
+  </div>
+
+</div>
+
+{% include "pages/php_sites/partials/operation_modal.html" %}
+
+<script type="module" src="/static/js/modules/php_sites_detail.js"></script>
+{% endblock %}

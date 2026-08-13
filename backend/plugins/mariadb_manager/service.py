@@ -64,6 +64,11 @@ class MariaDBManagerService:
         result = self._call("create_database", database=database, user=user, password=password)
         return {"database": str(result["database"]), "user": str(result["user"]), "password": password}
 
+    def create_local_database(self, database: str, user: str) -> dict[str, str]:
+        password = self.new_password()
+        result = self._call("create_local_database", database=database, user=user, password=password)
+        return {"database": str(result["database"]), "user": str(result["user"]), "password": password}
+
     def drop_database(self, database: str) -> None:
         self._call("drop_database", database=database)
 
@@ -73,6 +78,14 @@ class MariaDBManagerService:
     def reset_password(self, user: str) -> str:
         password = self.new_password()
         self._call("reset_password", user=user, password=password)
+        return password
+
+    def set_local_password(self, user: str, password: str) -> None:
+        self._call("reset_local_password", user=user, password=password)
+
+    def reset_local_password(self, user: str) -> str:
+        password = self.new_password()
+        self.set_local_password(user, password)
         return password
 
 

@@ -1,0 +1,50 @@
+<div class="section mb-xl">
+  <div class="d-flex justify-content-between align-items-center mb-md">
+    <h3 class="section__title">Health & Live Probes</h3>
+    <button type="button" class="btn btn--secondary btn--sm" id="btn-refresh-health">Refresh Health</button>
+  </div>
+  <div class="stat-grid" id="health-probes-grid">
+    <div class="stat-card-box">
+      <div class="stat-card-box__label">PHP-FPM Socket</div>
+      <div class="stat-card-box__value" id="probe-socket">
+        {% if site.health and site.health.socket %}
+          <span class="text-success">OK</span>
+        {% else %}
+          <span class="text-muted">Probing...</span>
+        {% endif %}
+      </div>
+    </div>
+    <div class="stat-card-box">
+      <div class="stat-card-box__label">Nginx Config</div>
+      <div class="stat-card-box__value" id="probe-nginx">
+        {% if site.health and site.health.nginx %}
+          <span class="text-success">OK</span>
+        {% else %}
+          <span class="text-muted">Probing...</span>
+        {% endif %}
+      </div>
+    </div>
+    <div class="stat-card-box">
+      <div class="stat-card-box__label">Local HTTP</div>
+      <div class="stat-card-box__value" id="probe-http">
+        {% if site.health and site.health.http %}
+          <span class="text-success">OK</span>
+        {% else %}
+          <span class="text-muted">Probing...</span>
+        {% endif %}
+      </div>
+    </div>
+    <div class="stat-card-box">
+      <div class="stat-card-box__label">MariaDB Connection</div>
+      <div class="stat-card-box__value" id="probe-mariadb">
+        {% if site.health and site.health.mariadb %}
+          <span class="text-success">OK</span>
+        {% elif site.database %}
+          <span class="text-muted">Probing...</span>
+        {% else %}
+          <span class="text-muted">N/A</span>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>

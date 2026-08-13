@@ -1,0 +1,19 @@
+<div class="section mb-xl">
+  <h3 class="section__title mb-md">SSL / HTTPS Certificate</h3>
+  {% if site.ssl and site.ssl.active %}
+    <div class="alert alert--success mb-md">
+      SSL Certificate is active for <strong>{{ site.domain_name }}</strong>{% if site.ssl.include_www %} (including www){% endif %}.
+    </div>
+    <div class="d-flex gap-md">
+      <button type="button" class="btn btn--secondary" id="btn-ssl-renew">Renew Certificate</button>
+      <button type="button" class="btn btn--danger" id="btn-ssl-revoke">Revoke SSL</button>
+    </div>
+  {% else %}
+    <p class="text-muted mb-md">No active SSL certificate. You can issue a free Let's Encrypt TLS certificate.</p>
+    <div class="form-check mb-md">
+      <input type="checkbox" id="ssl-include-www" value="true" checked>
+      <label for="ssl-include-www">Include www alias in SSL Certificate</label>
+    </div>
+    <button type="button" class="btn btn--primary" id="btn-ssl-issue">+ Issue SSL Certificate</button>
+  {% endif %}
+</div>

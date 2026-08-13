@@ -35,6 +35,8 @@ PATHS: dict[str, str] = {
     "plugins": "/plugins/",
     "dependencies": "/dependencies",
     "apps": "/apps/",
+    "php_sites": "/php-sites/",
+    "php_sites_create": "/php-sites/create",
 }
 
 
@@ -42,6 +44,12 @@ def get_plugin_sidebar_items():
     """Jinja helper to list active plugin sidebar links."""
     from plugins import plugin_manager
     return plugin_manager.get_sidebar_items()
+
+
+def is_php_active() -> bool:
+    """Jinja helper: return True if PHP dependency is installed and healthy."""
+    from dependencies import dependency_manager
+    return dependency_manager.is_healthy("php")
 
 
 def app_path(name: str, *parts: str | int, query: str | None = None) -> str:
@@ -145,6 +153,7 @@ templates.env.globals["PATHS"] = PATHS
 templates.env.globals["public_url"] = public_url
 templates.env.globals["csrf_token"] = csrf_token
 templates.env.globals["get_plugin_sidebar_items"] = get_plugin_sidebar_items
+templates.env.globals["is_php_active"] = is_php_active
 templates.env.globals["PANEL_NAME"] = config.PANEL_NAME
 templates.env.globals["PANEL_SHORT_NAME"] = config.PANEL_SHORT_NAME
 templates.env.globals["PANEL_LOGO_PATH"] = config.PANEL_LOGO_PATH

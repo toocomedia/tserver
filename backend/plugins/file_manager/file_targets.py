@@ -14,11 +14,13 @@ import config
 from models.container_app import ContainerApp
 from models.domain import Domain
 from models.hosted_app import HostedApp
+from models.php_website import PhpWebsite
+from models.php_website_operation import PhpWebsiteOperation
 from plugins.file_manager import file_service
 from services import app_ownership_service
 
 
-TARGET_ID = re.compile(r"^(container|python|static):([1-9][0-9]*)$")
+TARGET_ID = re.compile(r"^(container|python|static|php):([1-9][0-9]*)$")
 
 
 @dataclass(frozen=True)
@@ -52,6 +54,7 @@ async def list_targets(db: AsyncSession) -> list[dict[str, Any]]:
     targets.extend(await _container_targets(db))
     targets.extend(await _python_targets(db))
     targets.extend(await _static_targets(db))
+    targets.extend(await _php_targets(db))
     return [target.payload() for target in sorted(targets, key=lambda item: ((item.domain or "").lower(), item.kind, item.resource_id))]
 
 
@@ -77,6 +80,9 @@ async def _roots(db: AsyncSession, target: FileTarget) -> list[file_service.File
     if target.kind == "python":
         app = await _host_owner(db, target)
         return _python_roots(app)
+    if target.kind == "php":
+        app = await _host_owner(db, target)
+        return _php_roots(app)
     domain = await _host_owner(db, target)
     return _static_roots(domain)
 
@@ -104,7 +110,18 @@ async def _static_targets(db: AsyncSession) -> list[FileTarget]:
     return [FileTarget("static", domain.id, domain.name, "Static site", "ready") for domain in domains if _static_roots(domain)]
 
 
-async def _host_owner(db: AsyncSession, target: FileTarget) -> HostedApp | Domain:
+async def _php_targets(db: AsyncSession) -> list[FileTarget]:
+    rows = (await db.execute(
+        select(PhpWebsite, Domain.name).join(Domain, Domain.id == PhpWebsite.domain_id)
+        .where(PhpWebsite.status.not_in(("deleting",)))
+    )).all()
+    return [
+        FileTarget("php", site.id, domain, "WordPress" if site.preset == "wordpress" else "PHP site", site.status)
+        for site, domain in rows if _php_roots(site, domain)
+    ]
+
+
+async def _host_owner(db: AsyncSession, target: FileTarget) -> HostedApp | Domain | PhpWebsite:
     if target.kind == "python":
         app = await db.get(HostedApp, target.resource_id)
         if app is None or app.status in {"deleting", "delete_failed"}:
@@ -113,6 +130,21 @@ async def _host_owner(db: AsyncSession, target: FileTarget) -> HostedApp | Domai
         app_lifecycle_service.ensure_available(app.id)
         await app_deployment_service.ensure_idle(db, app.id)
         return app
+    if target.kind == "php":
+        site = await db.get(PhpWebsite, target.resource_id)
+        if site is None or site.status == "deleting":
+            raise HTTPException(404, "PHP website not found.")
+        operation = await db.scalar(select(PhpWebsiteOperation.id).where(
+            PhpWebsiteOperation.site_id == site.id,
+            PhpWebsiteOperation.status.in_(("queued", "running")),
+        ))
+        if operation:
+            raise HTTPException(409, "PHP website files are locked while a lifecycle operation is running.")
+        domain = await db.get(Domain, site.domain_id)
+        expected = Path(config.NGINX_WEBROOT) / domain.name if domain else None
+        if domain is None or Path(site.root_path) != expected:
+            raise HTTPException(409, "PHP website root ownership verification failed.")
+        return site
     domain = await db.get(Domain, target.resource_id)
     if domain is None or domain.project_type != "static" or not domain.nginx_active:
         raise HTTPException(404, "Static site not found.")
@@ -137,6 +169,15 @@ def _static_roots(domain: Domain) -> list[file_service.FileRoot]:
         return []
     root = _host_root("application", "Website files", expected, True)
     return [root] if root else []
+
+
+def _php_roots(site: PhpWebsite, domain_name: str | None = None) -> list[file_service.FileRoot]:
+    expected = Path(config.NGINX_WEBROOT) / (domain_name or Path(site.root_path).name)
+    root = Path(site.root_path)
+    if root != expected or root.parent != Path(config.NGINX_WEBROOT):
+        return []
+    verified = _host_root("application", "PHP website files", expected, True)
+    return [verified] if verified else []
 
 
 def _host_root(root_id: str, label: str, path: Path, persistent: bool) -> file_service.FileRoot | None:

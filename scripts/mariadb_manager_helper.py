@@ -104,6 +104,24 @@ def create_database(request_data: dict[str, Any]) -> dict[str, Any]:
     return {"database": database, "user": user}
 
 
+def create_local_database(request_data: dict[str, Any]) -> dict[str, Any]:
+    """Create credentials usable only from this VPS, not Docker bridge hosts."""
+    database = identifier(request_data.get("database"))
+    user = identifier(request_data.get("user"), user=True)
+    secret = password(request_data.get("password"))
+    run_sql(
+        f"CREATE DATABASE IF NOT EXISTS {sql_identifier(database)} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+        f"CREATE USER IF NOT EXISTS {literal(user)}@'localhost' IDENTIFIED BY {literal(secret)};"
+        f"ALTER USER {literal(user)}@'localhost' IDENTIFIED BY {literal(secret)};"
+        f"CREATE USER IF NOT EXISTS {literal(user)}@'127.0.0.1' IDENTIFIED BY {literal(secret)};"
+        f"ALTER USER {literal(user)}@'127.0.0.1' IDENTIFIED BY {literal(secret)};"
+        f"GRANT ALL PRIVILEGES ON {sql_identifier(database)}.* TO {literal(user)}@'localhost';"
+        f"GRANT ALL PRIVILEGES ON {sql_identifier(database)}.* TO {literal(user)}@'127.0.0.1';"
+        "FLUSH PRIVILEGES;"
+    )
+    return {"database": database, "user": user}
+
+
 def drop_database(request_data: dict[str, Any]) -> dict[str, Any]:
     database = identifier(request_data.get("database"))
     if database in SYSTEM_DATABASES:
@@ -139,13 +157,29 @@ def reset_password(request_data: dict[str, Any]) -> dict[str, Any]:
     return {"user": user}
 
 
+def reset_local_password(request_data: dict[str, Any]) -> dict[str, Any]:
+    """Change only the two loopback identities used by native PHP sites."""
+    user = identifier(request_data.get("user"), user=True)
+    secret = password(request_data.get("password"))
+    if user in SYSTEM_USERS:
+        fail("System user passwords cannot be changed here.")
+    run_sql(
+        f"ALTER USER {literal(user)}@'localhost' IDENTIFIED BY {literal(secret)};"
+        f"ALTER USER {literal(user)}@'127.0.0.1' IDENTIFIED BY {literal(secret)};"
+        "FLUSH PRIVILEGES;"
+    )
+    return {"user": user}
+
+
 OPERATIONS = {
     "list_databases": lambda data: list_databases(),
     "list_users": lambda data: list_users(),
     "create_database": create_database,
+    "create_local_database": create_local_database,
     "drop_database": drop_database,
     "drop_user": drop_user,
     "reset_password": reset_password,
+    "reset_local_password": reset_local_password,
 }
 
 

@@ -15,7 +15,7 @@ from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
 import config
 from database import init_db
-from routers import system, domains, dns, ssl, proxy, errors, auth, settings, updates, dev, notifications, plugins, dependencies, app_updates, apps, resource_guard
+from routers import system, domains, dns, ssl, proxy, errors, auth, settings, updates, dev, notifications, plugins, dependencies, app_updates, apps, resource_guard, php_sites, php_sites_pages
 from dependencies import dependency_manager
 from plugins import plugin_manager
 from plugins.manager import PluginUnavailableError
@@ -81,6 +81,8 @@ async def lifespan(app: FastAPI):
         await db.commit()
     await app_deployment_service.recover_interrupted()
     await container_app_deployment_service.recover_interrupted()
+    from services import php_site_service
+    await php_site_service.recover_interrupted()
     purge_task = asyncio.create_task(_auto_purge_loop())
     update_task = asyncio.create_task(update_service.run_auto_update_loop())
     ssl_renew_task = asyncio.create_task(ssl_auto_renew.run_scheduler())
@@ -224,6 +226,8 @@ app.include_router(notifications.router)
 plugin_manager.init_app(app)
 app.include_router(plugins.router)
 app.include_router(dependencies.router)
+app.include_router(php_sites.router)
+app.include_router(php_sites_pages.router)
 app.include_router(app_updates.router)
 app.include_router(apps.router)
 if getattr(config, "DEBUG", False):

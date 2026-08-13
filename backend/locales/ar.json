@@ -819,5 +819,19 @@
   "please_select_a_parent_domain": "يرجى اختيار النطاق الرئيسي.",
   "please_enter_a_subdomain_prefix": "يرجى إدخال بادئة النطاق الفرعي.",
   "not_applicable_dns_only": "غير ينطبق (DNS فقط)",
-  "resolving_ellipsis": "جاري التحديد..."
+  "resolving_ellipsis": "جاري التحديد...",
+  "php_websites": "مواقع PHP",
+  "create_php_site": "إنشاء موقع PHP",
+  "preset": "النوع",
+  "plain_php": "موقع PHP عادي",
+  "wordpress": "WordPress أصلي",
+  "php_version": "إصدار PHP",
+  "document_root": "مجلد الجذر للموقع",
+  "create_database": "إنشاء قاعدة بيانات MariaDB محليًا",
+  "reveal_credentials": "كشف بيانات الاعتماد",
+  "rotate_password": "تدوير كلمة المرور",
+  "wordpress_settings": "إعدادات WordPress",
+  "php_dependency_required": "مطلوب تفعيل تباعية PHP",
+  "php_dependency_required_desc": "تتطلب ميزة مواقع PHP وجود إصدار واحد على الأقل من PHP-FPM مُدار ومثبت ويعمل من الشاشة التابعيات.",
+  "go_to_dependencies": "الذهاب إلى التابعيات"
 }

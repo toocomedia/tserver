@@ -79,6 +79,7 @@ Manager manages only roots returned by its API for the selected app.
 | `container` | Verified running Railpack container working directory and its declared volumes. |
 | `python` | Verified active Python release source plus its persistent `data` folder. |
 | `static` | Verified static domain webroot: `/var/www/{domain}/public` by default. |
+| `php` | Verified native PHP website root: `/var/www/{domain}`. The selected document root is returned by the PHP Websites API. |
 
 Python source changes are live-release edits and will be replaced by the next
 deploy. Static-site and Python-data edits persist. An application `.env` inside

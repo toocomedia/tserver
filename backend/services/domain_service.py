@@ -172,9 +172,19 @@ async def delete(db: AsyncSession, domain_id: int, force: bool = False) -> None:
     5. Remove from DB
     """
     from models.proxy import ReverseProxy
+    from models.php_website import PhpWebsite
     from models.ssl_cert import SslCert
 
     domain = await get_by_id(db, domain_id)
+
+    php_site = await db.scalar(
+        select(PhpWebsite.id).where(PhpWebsite.domain_id == domain_id)
+    )
+    if php_site:
+        raise HTTPException(
+            status_code=409,
+            detail="Remove the managed PHP website before deleting this domain.",
+        )
 
     # Guard: active reverse proxies
     proxy_count = await db.scalar(
@@ -221,6 +231,8 @@ async def delete(db: AsyncSession, domain_id: int, force: bool = False) -> None:
 async def update_index_html(db: AsyncSession, domain_id: int, content: str) -> None:
     """Update the domain's default HTML page."""
     domain = await get_by_id(db, domain_id)
+    if domain.project_type != "static":
+        raise HTTPException(409, "The default HTML editor is available only for static sites.")
     nginx_service.write_index_html(domain.name, content)
     logger.info("index.html updated for: %s", domain.name)
 
@@ -231,6 +243,8 @@ async def update_index_html(db: AsyncSession, domain_id: int, content: str) -> N
 async def enable_static_site(db: AsyncSession, domain_id: int) -> Domain:
     """Convert a DNS-only domain to a static HTML site with Nginx vhost & webroot."""
     domain = await get_by_id(db, domain_id)
+    if domain.project_type not in {"static", "dns"}:
+        raise HTTPException(409, "This domain is owned by another hosting feature.")
     if domain.nginx_active:
         return domain
 

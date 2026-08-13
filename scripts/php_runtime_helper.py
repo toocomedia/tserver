@@ -15,6 +15,7 @@ from typing import Any
 
 VERSION_RE = re.compile(r"^\d+\.\d+$")
 STATE_PATH = Path("/var/lib/srv-panel/php-runtime/managed-versions.json")
+SITE_EXTENSION_NAMES = {"curl", "gd", "intl", "mbstring", "mysql", "xml", "zip", "opcache"}
 EXTERNAL_REPOSITORY_PPA = "ppa:ondrej/php"
 EXTERNAL_REPOSITORY_MARKERS = (
     "ppa.launchpadcontent.net/ondrej/php",
@@ -155,6 +156,34 @@ def install_version(data: dict[str, Any]) -> dict[str, Any]:
     return {"version": item_version, "message": f"PHP {item_version} installed and PHP-FPM socket is healthy."}
 
 
+def install_site_extensions(data: dict[str, Any]) -> dict[str, Any]:
+    """Install an allowlisted extension and remember only packages the panel added."""
+    item_version = version(data.get("version"))
+    requested = data.get("extensions")
+    if (
+        not isinstance(requested, list) or not requested
+        or any(str(name) not in SITE_EXTENSION_NAMES for name in requested)
+    ):
+        fail("Invalid PHP site extension request.")
+    names = sorted({str(name) for name in requested})
+    state = load_state()
+    if item_version not in state:
+        fail(f"PHP {item_version} is not managed by SRV Panel.")
+    packages = [f"php{item_version}-{name}" for name in names]
+    added = [package for package in packages if not package_installed(package)]
+    if added:
+        print("==> Refreshing configured APT repositories...", file=sys.stderr)
+        run(["apt-get", "update", "-qq"], timeout=300)
+        for package in added:
+            apt_candidate(package)
+        run(["apt-get", "install", "-y", "--no-install-recommends", *added], timeout=900)
+        state[item_version] = sorted(set(state[item_version] + added))
+        save_state(state)
+        run(["systemctl", "reload-or-restart", f"php{item_version}-fpm"], timeout=90)
+        verify_fpm(item_version)
+    return {"version": item_version, "installed_packages": added, "required_packages": packages}
+
+
 def check_available(_: dict[str, Any]) -> dict[str, Any]:
     print("==> Refreshing configured APT repositories...", file=sys.stderr)
     run(["apt-get", "update", "-qq"], timeout=300)
@@ -211,6 +240,7 @@ OPERATIONS = {
     "check_available": check_available,
     "enable_external_repository": enable_external_repository,
     "install_version": install_version,
+    "install_site_extensions": install_site_extensions,
     "uninstall_version": uninstall_version,
     "list_managed": list_managed,
 }

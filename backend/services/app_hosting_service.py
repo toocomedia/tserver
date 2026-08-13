@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import config
 from dependencies import dependency_manager
 from dependencies.git import repository_service
+from models.domain import Domain
 from models.hosted_app import HostedApp
 from services import nginx_service
 from services import app_project_detector
@@ -82,6 +83,9 @@ async def create_app(db: AsyncSession, domain_id: int, source_type: str, reposit
     if postgres_mode not in {"none", "create", "external", "supabase"}: raise HTTPException(400, "Invalid app setup.")
     if source_type == "git" and (not repository_url or not dependency_manager.is_healthy("git")): raise HTTPException(409, "Git & SSH dependency is required.")
     if not dependency_manager.is_healthy("python"): raise HTTPException(409, "Python Runtime dependency is required.")
+    domain = await db.get(Domain, domain_id)
+    if domain is None or domain.project_type != "python":
+        raise HTTPException(409, "This domain is not available for Python hosting.")
     if await db.scalar(select(HostedApp.id).where(HostedApp.domain_id == domain_id)):
         raise HTTPException(409, "This domain already has Python app setup. Open it from the domain page.")
     app_runtime_service.validate_commands(build, start)

@@ -1,10 +1,14 @@
 """MariaDB Manager routes. Database work stays in the root-owned helper."""
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 
 from dependencies import dependency_manager
+from database import get_db
+from models.php_website_database import PhpWebsiteDatabase
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 from plugins.mariadb_manager.schemas import Confirmation, DatabaseCreate
 from plugins.mariadb_manager.service import mariadb_manager_service
 from templating import templates
@@ -52,17 +56,27 @@ async def mariadb_index(request: Request):
 
 
 @router.get("/api/databases")
-async def list_databases():
+async def list_databases(db: AsyncSession = Depends(get_db)):
     _require_managed_mariadb()
     try:
-        return JSONResponse(mariadb_manager_service.list_databases())
+        values = mariadb_manager_service.list_databases()
+        owned = {item.database_name: item.site_id for item in (await db.scalars(select(PhpWebsiteDatabase))).all()}
+        for item in values:
+            if item.get("name") in owned:
+                item["owner"] = {"type": "php_site", "site_id": owned[item["name"]]}
+        return JSONResponse(values)
     except RuntimeError as exc:
         raise HTTPException(502, str(exc)) from exc
 
 
 @router.post("/api/databases")
-async def create_database(body: DatabaseCreate):
+async def create_database(body: DatabaseCreate, db: AsyncSession = Depends(get_db)):
     _require_managed_mariadb()
+    owner = await db.scalar(select(PhpWebsiteDatabase.id).where(
+        (PhpWebsiteDatabase.database_name == body.database) | (PhpWebsiteDatabase.username == body.user)
+    ))
+    if owner:
+        raise HTTPException(409, "Database or user belongs to a PHP website. Manage it from PHP Websites.")
     try:
         return JSONResponse(mariadb_manager_service.create_database(body.database, body.user), status_code=201)
     except RuntimeError as exc:
@@ -70,8 +84,11 @@ async def create_database(body: DatabaseCreate):
 
 
 @router.delete("/api/databases/{database}")
-async def delete_database(database: str, body: Confirmation):
+async def delete_database(database: str, body: Confirmation, db: AsyncSession = Depends(get_db)):
     _require_managed_mariadb()
+    owner = await db.scalar(select(PhpWebsiteDatabase).where(PhpWebsiteDatabase.database_name == database))
+    if owner:
+        raise HTTPException(409, f"Database belongs to PHP website {owner.site_id}. Remove it from PHP Websites.")
     if body.confirmation != f"DELETE DATABASE {database}":
         raise HTTPException(409, f"Type DELETE DATABASE {database} to confirm.")
     try:
@@ -82,17 +99,25 @@ async def delete_database(database: str, body: Confirmation):
 
 
 @router.get("/api/users")
-async def list_users():
+async def list_users(db: AsyncSession = Depends(get_db)):
     _require_managed_mariadb()
     try:
-        return JSONResponse(mariadb_manager_service.list_users())
+        values = mariadb_manager_service.list_users()
+        owned = {item.username: item.site_id for item in (await db.scalars(select(PhpWebsiteDatabase))).all()}
+        for item in values:
+            if item.get("name") in owned:
+                item["owner"] = {"type": "php_site", "site_id": owned[item["name"]]}
+        return JSONResponse(values)
     except RuntimeError as exc:
         raise HTTPException(502, str(exc)) from exc
 
 
 @router.delete("/api/users/{user}")
-async def delete_user(user: str, body: Confirmation):
+async def delete_user(user: str, body: Confirmation, db: AsyncSession = Depends(get_db)):
     _require_managed_mariadb()
+    owner = await db.scalar(select(PhpWebsiteDatabase).where(PhpWebsiteDatabase.username == user))
+    if owner:
+        raise HTTPException(409, f"User belongs to PHP website {owner.site_id}. Remove it from PHP Websites.")
     if body.confirmation != f"DELETE USER {user}":
         raise HTTPException(409, f"Type DELETE USER {user} to confirm.")
     try:
@@ -103,8 +128,11 @@ async def delete_user(user: str, body: Confirmation):
 
 
 @router.post("/api/users/{user}/password")
-async def reset_user_password(user: str, body: Confirmation):
+async def reset_user_password(user: str, body: Confirmation, db: AsyncSession = Depends(get_db)):
     _require_managed_mariadb()
+    owner = await db.scalar(select(PhpWebsiteDatabase).where(PhpWebsiteDatabase.username == user))
+    if owner:
+        raise HTTPException(409, f"User belongs to PHP website {owner.site_id}. Rotate it from PHP Websites.")
     if body.confirmation != f"RESET PASSWORD {user}":
         raise HTTPException(409, f"Type RESET PASSWORD {user} to confirm.")
     try:
