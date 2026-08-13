@@ -39,6 +39,14 @@ class PHPDependencyService:
         self._cache: dict[str, Any] | None = None
         self._cache_at = 0.0
         self._cache_lock = threading.Lock()
+        self._operation_lock = threading.Lock()
+
+    def _operation_busy(self) -> tuple[bool, str]:
+        return False, "Another PHP runtime operation is already running."
+
+    def _with_operation_state(self, status: dict[str, Any]) -> dict[str, Any]:
+        status["operation_in_progress"] = self._operation_lock.locked()
+        return status
 
     @staticmethod
     def _command_prefix() -> list[str]:
@@ -201,6 +209,7 @@ class PHPDependencyService:
         installed = [item for item in runtime_versions if item["installed"]]
         managed_installed = [item for item in installed if item["managed"]]
         external_installed = [item for item in installed if not item["managed"]]
+        running = any(item.get("running") for item in managed_installed)
         healthy = any(item["healthy"] for item in managed_installed)
         install_origin = (
             "not_installed" if not installed else
@@ -209,13 +218,14 @@ class PHPDependencyService:
         )
         external_repository_configured = self._external_repository_configured()
         return {
-            "id": self.dependency_id, "installed": bool(installed), "running": healthy,
+            "id": self.dependency_id, "installed": bool(installed), "running": running,
             "healthy": healthy,
             "state": "not_installed" if not installed else ("healthy" if healthy else "stopped"),
             "detected_version": ", ".join(item["version"] for item in installed) or None,
             "install_origin": install_origin,
             "error": None if healthy or not installed else "No panel-managed PHP-FPM version has a healthy socket.",
-            "can_toggle": False, "versions": runtime_versions, "available_versions": available,
+            "can_toggle": bool(managed_installed),
+            "versions": runtime_versions, "available_versions": available,
             "external_repository": {
                 "configured": external_repository_configured,
                 "name": EXTERNAL_REPOSITORY_NAME,
@@ -228,17 +238,17 @@ class PHPDependencyService:
         now = time.monotonic()
         with self._cache_lock:
             if not force and self._cache and now - self._cache_at < self.CACHE_SECONDS:
-                return dict(self._cache)
+                return self._with_operation_state(dict(self._cache))
             self._cache = self._probe()
             self._cache_at = now
-            return dict(self._cache)
+            return self._with_operation_state(dict(self._cache))
 
     def get_cached_status(self) -> dict[str, Any]:
         """Return only an existing snapshot; never launch APT or system helpers."""
         with self._cache_lock:
             if self._cache is not None:
-                return dict(self._cache)
-        return {
+                return self._with_operation_state(dict(self._cache))
+        return self._with_operation_state({
             "id": self.dependency_id,
             "installed": False,
             "running": False,
@@ -256,14 +266,14 @@ class PHPDependencyService:
                 "ppa": EXTERNAL_REPOSITORY_PPA,
                 "official_ubuntu": False,
             },
-        }
+        })
 
     def _invalidate(self) -> None:
         with self._cache_lock:
             self._cache = None
             self._cache_at = 0.0
 
-    def _helper_call(self, operation: str, *, timeout: int = 900, **values: str) -> dict[str, Any]:
+    def _helper_call(self, operation: str, *, timeout: int = 900, **values: Any) -> dict[str, Any]:
         if os.name == "nt":
             raise RuntimeError("PHP runtime management is available only on Linux.")
         if not self.HELPER_PATH.is_file():
@@ -290,58 +300,98 @@ class PHPDependencyService:
         normalized = self._valid_version(version)
         if normalized is None:
             return False, "Invalid PHP version."
+        if not self._operation_lock.acquire(blocking=False):
+            return self._operation_busy()
         try:
-            payload = self._helper_call("install_version", version=normalized)
-        except RuntimeError as exc:
-            return False, str(exc)
-        self._invalidate()
-        current = next(
-            (item for item in self.get_status(force=True)["versions"] if item["version"] == normalized), None,
-        )
-        if not current or not current["managed"] or not current["healthy"]:
-            return False, f"PHP {normalized} installed but PHP-FPM socket health verification failed."
-        return True, str(payload.get("message") or f"PHP {normalized} installed successfully.")
+            try:
+                payload = self._helper_call("install_version", version=normalized)
+            except RuntimeError as exc:
+                return False, str(exc)
+            self._invalidate()
+            current = next(
+                (item for item in self.get_status(force=True)["versions"] if item["version"] == normalized), None,
+            )
+            if not current or not current["managed"] or not current["healthy"]:
+                return False, f"PHP {normalized} installed but PHP-FPM socket health verification failed."
+            return True, str(payload.get("message") or f"PHP {normalized} installed successfully.")
+        finally:
+            self._operation_lock.release()
 
     def check_available_versions(self) -> tuple[bool, str]:
         """Refresh APT only after the administrator explicitly requests it."""
+        if not self._operation_lock.acquire(blocking=False):
+            return self._operation_busy()
         try:
-            payload = self._helper_call("check_available", timeout=300)
-        except RuntimeError as exc:
-            return False, str(exc)
-        self._invalidate()
-        return True, str(payload.get("message") or "PHP package availability refreshed.")
+            try:
+                payload = self._helper_call("check_available", timeout=300)
+            except RuntimeError as exc:
+                return False, str(exc)
+            self._invalidate()
+            return True, str(payload.get("message") or "PHP package availability refreshed.")
+        finally:
+            self._operation_lock.release()
 
     def enable_external_repository(self) -> tuple[bool, str]:
         """Enable only the reviewed PHP PPA, never a user-provided repository."""
+        if not self._operation_lock.acquire(blocking=False):
+            return self._operation_busy()
         try:
-            payload = self._helper_call("enable_external_repository", timeout=600)
-        except RuntimeError as exc:
-            return False, str(exc)
-        self._invalidate()
-        return True, str(payload.get("message") or "External PHP repository enabled and package availability refreshed.")
+            try:
+                payload = self._helper_call("enable_external_repository", timeout=600)
+            except RuntimeError as exc:
+                return False, str(exc)
+            self._invalidate()
+            return True, str(payload.get("message") or "External PHP repository enabled and package availability refreshed.")
+        finally:
+            self._operation_lock.release()
 
     def uninstall_version(self, version: str) -> tuple[bool, str]:
         normalized = self._valid_version(version)
         if normalized is None:
             return False, "Invalid PHP version."
-        current = next(
-            (item for item in self.get_status(force=True)["versions"] if item["version"] == normalized), None,
-        )
-        if not current or not current["installed"]:
-            return False, f"PHP {normalized} is not installed."
-        if not current["managed"]:
-            return False, f"PHP {normalized} was installed outside SRV Panel and is read-only."
+        if not self._operation_lock.acquire(blocking=False):
+            return self._operation_busy()
         try:
-            payload = self._helper_call("uninstall_version", version=normalized)
-        except RuntimeError as exc:
-            return False, str(exc)
-        self._invalidate()
-        remaining = next(
-            (item for item in self.get_status(force=True)["versions"] if item["version"] == normalized), None,
-        )
-        if remaining and remaining["installed"]:
-            return False, f"PHP {normalized} packages are still installed after the removal request."
-        return True, str(payload.get("message") or f"PHP {normalized} uninstalled successfully.")
+            current = next(
+                (item for item in self.get_status(force=True)["versions"] if item["version"] == normalized), None,
+            )
+            if not current or not current["installed"]:
+                return False, f"PHP {normalized} is not installed."
+            if not current["managed"]:
+                return False, f"PHP {normalized} was installed outside SRV Panel and is read-only."
+            try:
+                payload = self._helper_call("uninstall_version", version=normalized)
+            except RuntimeError as exc:
+                return False, str(exc)
+            self._invalidate()
+            remaining = next(
+                (item for item in self.get_status(force=True)["versions"] if item["version"] == normalized), None,
+            )
+            if remaining and remaining["installed"]:
+                return False, f"PHP {normalized} packages are still installed after the removal request."
+            return True, str(payload.get("message") or f"PHP {normalized} uninstalled successfully.")
+        finally:
+            self._operation_lock.release()
+
+    def toggle(self, enabled: bool) -> tuple[bool, str]:
+        """Start or stop every panel-managed PHP-FPM version as one operation."""
+        if not self._operation_lock.acquire(blocking=False):
+            return self._operation_busy()
+        try:
+            try:
+                payload = self._helper_call("set_all_enabled", enabled=bool(enabled), timeout=180)
+            except RuntimeError as exc:
+                return False, str(exc)
+            self._invalidate()
+            status = self.get_status(force=True)
+            if enabled and not status["healthy"]:
+                return False, "PHP-FPM services started but no managed PHP socket is healthy."
+            if not enabled and status["running"]:
+                return False, "One or more managed PHP-FPM services are still running."
+            fallback = "All managed PHP-FPM services enabled." if enabled else "All managed PHP-FPM services disabled."
+            return True, str(payload.get("message") or fallback)
+        finally:
+            self._operation_lock.release()
 
     def install(self) -> tuple[bool, str]:
         return False, "Choose a PHP version from the PHP Runtime page."

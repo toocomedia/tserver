@@ -65,86 +65,103 @@
     </div>
 
     <!-- STEP 2: RUNTIME & APPLICATION SETTINGS -->
-    <div id="step-panel-2" data-step-panel="2" style="display:none; flex-direction:column;">
-      <div class="form-group-horizontal">
-        <div class="form-label-wrap">
-          <label class="form-label" for="php-site-version">{{ _('php_version') }}</label>
-          <span class="form-hint">{{ _('only_healthy_managed_php') }}</span>
+    <div id="step-panel-2" data-step-panel="2" class="php-create-step2" style="display:none;">
+      <!-- Runtime Core (PHP Version & Doc Root) -->
+      <div class="php-create-row-grid">
+        <div class="form-group">
+          <div class="form-label-wrap">
+            <label class="form-label" for="php-site-version">{{ _('php_version') }}</label>
+            <span class="form-hint">{{ _('only_healthy_managed_php') }}</span>
+          </div>
+          <div class="form-select-wrap">
+            <select class="form-select clean-input" id="php-site-version" name="php_version" required disabled>
+              <option value="">{{ _('loading') }}</option>
+            </select>
+          </div>
         </div>
-        <div class="form-select-wrap">
-          <select class="form-select clean-input" id="php-site-version" name="php_version" required disabled>
-            <option value="">{{ _('loading') }}</option>
-          </select>
+
+        <div class="form-group">
+          <div class="form-label-wrap">
+            <label class="form-label" for="php-site-root">{{ _('document_root') }}</label>
+            <span class="form-hint">{{ _('relative_document_root_desc') }}</span>
+          </div>
+          <div>
+            <input class="form-input clean-input" id="php-site-root" name="document_root" value="public" required pattern="[A-Za-z0-9][A-Za-z0-9._\-/]*" autocomplete="off" spellcheck="false">
+          </div>
         </div>
       </div>
 
-      <div class="form-group-horizontal">
-        <div class="form-label-wrap">
-          <label class="form-label" for="php-site-root">{{ _('document_root') }}</label>
-          <span class="form-hint">{{ _('relative_document_root_desc') }}</span>
+      <!-- Options (Database, SSL, Extensions) -->
+      <div class="php-create-options-card">
+        <div id="plain-db-option-row" style="display:flex;">
+          <label class="form-check" style="align-items:flex-start;">
+            <input type="checkbox" id="php-site-database" name="create_database">
+            <div>
+              <span><strong>{{ _('create_database') }}</strong></span>
+              <span class="form-hint" style="display:block; margin-top:2px;">{{ _('plain_php_database_desc') }}</span>
+            </div>
+          </label>
         </div>
-        <div>
-          <input class="form-input clean-input" id="php-site-root" name="document_root" value="public" required pattern="[A-Za-z0-9][A-Za-z0-9._\-/]*" autocomplete="off" spellcheck="false">
-        </div>
-      </div>
 
-      <div class="form-group-horizontal" id="plain-db-option-row">
-        <div class="form-label-wrap">
-          <label class="form-label">{{ _('database') }}</label>
-          <span class="form-hint">{{ _('plain_php_database_desc') }}</span>
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          <label class="form-check" style="align-items:flex-start;">
+            <input type="checkbox" id="php-site-ssl" name="ssl" checked>
+            <div>
+              <span><strong>{{ _('enable_ssl') }}</strong></span>
+              <span class="form-hint" style="display:block; margin-top:2px;">{{ _('ssl_issue_after_creation') }}</span>
+            </div>
+          </label>
+          <div style="padding-left:24px;">
+            <label class="form-check">
+              <input type="checkbox" id="php-site-www" name="include_www">
+              <span>{{ _('include_www') }}</span>
+            </label>
+          </div>
         </div>
-        <div>
-          <label class="form-check"><input type="checkbox" id="php-site-database" name="create_database"><span><strong>{{ _('create_database') }}</strong></span></label>
-        </div>
-      </div>
 
-      <div class="form-group-horizontal">
-        <div class="form-label-wrap">
-          <label class="form-label">{{ _('ssl_certificate_security') }}</label>
-          <span class="form-hint">{{ _('ssl_issue_after_creation') }}</span>
-        </div>
-        <div style="display:flex; flex-direction:column; gap:12px;">
-          <label class="form-check"><input type="checkbox" id="php-site-ssl" name="ssl" checked><span><strong>{{ _('enable_ssl') }}</strong></span></label>
-          <label class="form-check"><input type="checkbox" id="php-site-www" name="include_www"><span><strong>{{ _('include_www') }}</strong></span></label>
-        </div>
-      </div>
-
-      <div class="form-group-horizontal" data-install-extensions hidden>
-        <div class="form-label-wrap">
-          <label class="form-label">{{ _('missing_packages') }}</label>
-          <span class="form-hint" data-extension-hint></span>
-        </div>
-        <div>
-          <label class="form-check"><input type="checkbox" id="php-site-install-extensions" name="install_missing_extensions" checked><span><strong>{{ _('install_missing_extensions') }}</strong></span></label>
+        <div data-install-extensions hidden>
+          <label class="form-check" style="align-items:flex-start;">
+            <input type="checkbox" id="php-site-install-extensions" name="install_missing_extensions" checked>
+            <div>
+              <span><strong>{{ _('install_missing_extensions') }}</strong></span>
+              <span class="form-hint" data-extension-hint style="display:block; margin-top:2px;"></span>
+            </div>
+          </label>
         </div>
       </div>
 
       <!-- WORDPRESS SPECIFIC FIELDS -->
-      <div id="wordpress-fields" data-wordpress-fields style="display:none; flex-direction:column;">
-        <div class="form-group-horizontal">
+      <div id="wordpress-fields" data-wordpress-fields class="php-create-wp-fields" style="display:none;">
+        <div class="php-create-wp-title">{{ _('wordpress_settings') }}</div>
+
+        <div class="form-group">
           <div class="form-label-wrap">
             <label class="form-label" for="wp-site-title">{{ _('site_title') }}</label>
           </div>
           <div><input class="form-input clean-input" id="wp-site-title" name="wp_site_title" placeholder="My WordPress Site"></div>
         </div>
-        <div class="form-group-horizontal">
-          <div class="form-label-wrap">
-            <label class="form-label" for="wp-admin-user">{{ _('admin_user') }}</label>
+
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:16px;">
+          <div class="form-group">
+            <div class="form-label-wrap">
+              <label class="form-label" for="wp-admin-user">{{ _('admin_user') }}</label>
+            </div>
+            <div><input class="form-input clean-input" id="wp-admin-user" name="wp_admin_user" placeholder="siteadmin" autocomplete="off"></div>
           </div>
-          <div><input class="form-input clean-input" id="wp-admin-user" name="wp_admin_user" placeholder="siteadmin" autocomplete="off"></div>
-        </div>
-        <div class="form-group-horizontal">
-          <div class="form-label-wrap">
-            <label class="form-label" for="wp-admin-email">{{ _('admin_email') }}</label>
+          <div class="form-group">
+            <div class="form-label-wrap">
+              <label class="form-label" for="wp-admin-email">{{ _('admin_email') }}</label>
+            </div>
+            <div><input class="form-input clean-input" id="wp-admin-email" name="wp_admin_email" type="email" placeholder="admin@example.com"></div>
           </div>
-          <div><input class="form-input clean-input" id="wp-admin-email" name="wp_admin_email" type="email" placeholder="admin@example.com"></div>
         </div>
-        <div class="form-group-horizontal" style="border-bottom:none; margin-bottom:0; padding-bottom:0;">
+
+        <div class="form-group">
           <div class="form-label-wrap">
             <label class="form-label" for="wp-admin-password">{{ _('admin_password') }}</label>
             <span class="form-hint">{{ _('password_min_length') }}</span>
           </div>
-          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px;">
+          <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:16px;">
             <div>
               <input class="form-input clean-input" id="wp-admin-password" name="wp_admin_password" type="password" minlength="12" autocomplete="new-password" placeholder="{{ _('admin_password') }}">
             </div>

@@ -25,6 +25,23 @@
   var root = document.querySelector('[data-php-runtime]');
   if (!root) return;
   var content = root.querySelector('[data-php-runtime-content]');
+  var operationPending = false;
+  var runtimeRefreshTimer = null;
+  var actionSelector = '[data-php-install], [data-php-uninstall], [data-php-check], [data-php-external-repository], [data-php-toggle]';
+
+  function setActionsDisabled(disabled) {
+    content.querySelectorAll(actionSelector).forEach(function (form) {
+      var button = form.querySelector('button');
+      if (!button) return;
+      if (disabled) {
+        button.dataset.phpWasDisabled = button.disabled ? 'true' : 'false';
+        button.disabled = true;
+      } else if (Object.prototype.hasOwnProperty.call(button.dataset, 'phpWasDisabled')) {
+        button.disabled = button.dataset.phpWasDisabled === 'true';
+        delete button.dataset.phpWasDisabled;
+      }
+    });
+  }
 
   function showError(message) {
     var error = content.querySelector('[data-php-error]');
@@ -39,36 +56,51 @@
     form.addEventListener('submit', async function (event) {
       event.preventDefault();
       event.stopPropagation();
+      if (operationPending) return;
       var expected = form.getAttribute('data-confirmation');
       if (expected) {
-        var message = form.hasAttribute('data-php-external-repository')
-          ? 'This adds the third-party Ondřej Surý PHP PPA to Ubuntu. No PHP versions will be installed. Type ' + expected + ' to continue.'
-          : 'Type ' + expected + ' to remove this PHP version. Website files and databases are preserved.';
+        var message;
+        if (form.hasAttribute('data-php-external-repository')) {
+          message = 'This adds the third-party Ondřej Surý PHP PPA to Ubuntu. No PHP versions will be installed. Type ' + expected + ' to continue.';
+        } else if (form.hasAttribute('data-php-toggle')) {
+          message = 'This stops every panel-managed PHP-FPM version. All managed PHP websites will go offline until PHP is enabled again. Files and databases are preserved. Type ' + expected + ' to continue.';
+        } else {
+          message = 'Type ' + expected + ' to remove this PHP version. Website files and databases are preserved.';
+        }
         var entered = window.prompt(message);
         if (entered !== expected) return;
         form.querySelector('input[name="confirmation"]').value = entered;
       }
-      var button = form.querySelector('button');
-      button.disabled = true;
+      operationPending = true;
+      setActionsDisabled(true);
       try {
         var response = await fetch(form.action, {method: 'POST', body: new FormData(form), headers: {'Accept': 'application/json'}});
         var payload = await response.json().catch(function () { return {}; });
         if (!response.ok || !payload.success) throw new Error(payload.detail || 'PHP operation failed.');
         if (window.toast) window.toast(payload.message, 'success');
-        loadRuntime();
+        await loadRuntime();
       } catch (error) {
-        button.disabled = false;
         showError(error.message);
         if (window.toast) window.toast(error.message, 'error');
+        if (String(error.message).includes('Another PHP runtime operation')) {
+          await loadRuntime();
+        }
+      } finally {
+        operationPending = false;
+        setActionsDisabled(false);
       }
     });
   }
 
   function bindActions() {
-    content.querySelectorAll('[data-php-install], [data-php-uninstall], [data-php-check], [data-php-external-repository]').forEach(bind);
+    content.querySelectorAll(actionSelector).forEach(bind);
   }
 
   async function loadRuntime() {
+    if (runtimeRefreshTimer) {
+      window.clearTimeout(runtimeRefreshTimer);
+      runtimeRefreshTimer = null;
+    }
     try {
       var response = await fetch(root.dataset.runtimeUrl, {headers: {'Accept': 'text/html'}});
       if (!response.ok) throw new Error('Could not load the PHP runtime status.');
@@ -78,6 +110,11 @@
         content.classList.remove('skeleton-content--enter');
       });
       bindActions();
+      setActionsDisabled(operationPending);
+      var operationState = content.querySelector('[data-php-operation-active]');
+      if (operationState && operationState.dataset.phpOperationActive === 'true') {
+        runtimeRefreshTimer = window.setTimeout(loadRuntime, 2000);
+      }
       if (window.hideSkeleton) window.hideSkeleton('php-runtime-skeleton');
     } catch (error) {
       content.innerHTML = '<p class="text-danger">Could not load the PHP runtime status. Refresh the page to try again.</p>';

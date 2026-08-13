@@ -181,6 +181,12 @@ async def php_install_version(
     db: AsyncSession = Depends(get_db),
 ):
     """Install one explicitly selected PHP-FPM version."""
+    current = dependency_manager.get_status("php", cached=True) or {}
+    if not current.get("desired_enabled", True):
+        return JSONResponse(
+            {"success": False, "detail": "Enable PHP before installing another version."},
+            status_code=409,
+        )
     service = _php_service()
     from services.resource_guard_service import resource_guard_service
 
@@ -201,6 +207,28 @@ async def php_install_version(
         success, message = await asyncio.to_thread(service.install_version, version)
     finally:
         resource_guard_service.unregister(token)
+    if not success:
+        return JSONResponse({"success": False, "detail": message}, status_code=409)
+    return {
+        "success": True,
+        "message": message,
+        "status": dependency_manager.get_status("php", force=True),
+    }
+
+
+@router.post("/api/dependencies/php/toggle")
+async def php_toggle_all(
+    enabled: bool = Form(...),
+    confirmation: str = Form(""),
+):
+    """Start or stop all panel-managed PHP-FPM versions together."""
+    expected = "DISABLE ALL PHP"
+    if not enabled and confirmation.strip() != expected:
+        return JSONResponse(
+            {"success": False, "detail": f"Type {expected} to disable all managed PHP versions."},
+            status_code=409,
+        )
+    success, message = await dependency_manager.toggle("php", enabled)
     if not success:
         return JSONResponse({"success": False, "detail": message}, status_code=409)
     return {

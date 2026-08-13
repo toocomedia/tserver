@@ -1,4 +1,4 @@
-<header class="info-hero-row mb-lg">
+<header class="info-hero-row mb-lg" data-php-operation-active="{{ 'true' if dependency.operation_in_progress else 'false' }}">
   <div class="info-hero-row__icon">
     {% if dependency.icon %}
       <img src="{{ dependency.icon }}" alt="{{ dependency.name }} icon" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='block';">
@@ -19,9 +19,19 @@
     <div class="info-hero-row__meta">{{ _('system_dependency') }} · Driver v{{ dependency.version }}</div>
   </div>
   <div class="info-hero-row__actions">
+    {% if dependency.can_toggle %}
+    <form method="post" action="/api/dependencies/php/toggle" data-php-toggle{% if dependency.running %} data-confirmation="DISABLE ALL PHP"{% endif %}>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+      <input type="hidden" name="enabled" value="{{ 'false' if dependency.running else 'true' }}">
+      <input type="hidden" name="confirmation" value="">
+      <button class="btn {{ 'btn--danger' if dependency.running else 'btn--secondary' }} btn--sm" type="submit"{% if dependency.operation_in_progress %} disabled{% endif %}>
+        {{ _('disable') if dependency.running else _('enable') }} all PHP
+      </button>
+    </form>
+    {% endif %}
     <form method="post" action="/api/dependencies/php/check-available" data-php-check>
       <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
-      <button class="btn btn--secondary btn--sm" type="submit">{{ _('check_available_versions') }}</button>
+      <button class="btn btn--secondary btn--sm" type="submit"{% if dependency.operation_in_progress %} disabled{% endif %}>{{ _('check_available_versions') }}</button>
     </form>
     {% if dependency.external_repository.configured %}
     <button class="btn btn--secondary btn--sm" type="button" disabled title="External PHP repository is already enabled">{{ _('external_php_source_enabled') }}</button>
@@ -29,7 +39,7 @@
     <form method="post" action="/api/dependencies/php/enable-external-repository" data-php-external-repository data-confirmation="ENABLE EXTERNAL PHP REPOSITORY">
       <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
       <input type="hidden" name="confirmation" value="">
-      <button class="btn btn--secondary btn--sm" type="submit">{{ _('enable_external_php_source') }}</button>
+      <button class="btn btn--secondary btn--sm" type="submit"{% if dependency.operation_in_progress %} disabled{% endif %}>{{ _('enable_external_php_source') }}</button>
     </form>
     {% endif %}
   </div>
@@ -103,6 +113,9 @@
 {% else %}
 <p class="text-danger hidden mb-md" data-php-error></p>
 {% endif %}
+{% if dependency.operation_in_progress %}
+<p class="text-small text-muted mb-md" data-php-operation-message>Another PHP runtime operation is running. All actions are temporarily disabled.</p>
+{% endif %}
 
 <div class="table-wrap mb-md">
   <table class="table">
@@ -150,13 +163,13 @@
             {% if runtime.can_install %}
             <form method="post" action="/api/dependencies/php/versions/{{ runtime.version }}/install" data-php-install style="margin:0;">
               <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
-              <button class="btn btn--secondary btn--sm" type="submit">{{ _('install') }}</button>
+              <button class="btn btn--secondary btn--sm" type="submit"{% if dependency.operation_in_progress or not dependency.desired_enabled %} disabled{% endif %}{% if not dependency.desired_enabled %} title="Enable PHP before installing another version"{% endif %}>{{ _('install') }}</button>
             </form>
             {% elif runtime.can_uninstall %}
             <form method="post" action="/api/dependencies/php/versions/{{ runtime.version }}/uninstall" data-php-uninstall data-confirmation="REMOVE PHP {{ runtime.version }}" style="margin:0;">
               <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
               <input type="hidden" name="confirmation" value="">
-              <button class="btn btn--danger btn--sm" type="submit">{{ _('uninstall') }}</button>
+              <button class="btn btn--danger btn--sm" type="submit"{% if dependency.operation_in_progress %} disabled{% endif %}>{{ _('uninstall') }}</button>
             </form>
             {% elif runtime.installed %}
             <span class="text-small text-muted">{{ _('external_1') }}</span>

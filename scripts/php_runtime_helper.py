@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import fcntl
 import os
 import re
 import shutil
@@ -15,6 +16,7 @@ from typing import Any
 
 VERSION_RE = re.compile(r"^\d+\.\d+$")
 STATE_PATH = Path("/var/lib/srv-panel/php-runtime/managed-versions.json")
+LOCK_PATH = STATE_PATH.parent / "operation.lock"
 SITE_EXTENSION_NAMES = {"curl", "gd", "intl", "mbstring", "mysql", "xml", "zip", "opcache"}
 EXTERNAL_REPOSITORY_PPA = "ppa:ondrej/php"
 EXTERNAL_REPOSITORY_MARKERS = (
@@ -232,6 +234,46 @@ def uninstall_version(data: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def set_all_enabled(data: dict[str, Any]) -> dict[str, Any]:
+    """Start or stop all panel-managed PHP-FPM services without removing data."""
+    enabled = data.get("enabled")
+    if not isinstance(enabled, bool):
+        fail("Invalid PHP runtime state.")
+    state = load_state()
+    versions = [
+        item_version
+        for item_version in sorted(state, key=lambda value: tuple(int(part) for part in value.split(".")))
+        if package_installed(f"php{item_version}-fpm")
+    ]
+    if not versions:
+        fail("No panel-managed PHP-FPM versions are installed.")
+    units = [f"php{item_version}-fpm" for item_version in versions]
+    if enabled:
+        run(["systemctl", "enable", "--now", *units], timeout=180)
+        for item_version in versions:
+            verify_fpm(item_version)
+        return {
+            "versions": versions,
+            "message": "All panel-managed PHP-FPM services were enabled.",
+        }
+
+    run(["systemctl", "disable", "--now", *units], timeout=180)
+    still_running = []
+    for unit in units:
+        result = subprocess.run(
+            ["systemctl", "is-active", unit],
+            capture_output=True, text=True, timeout=30, check=False,
+        )
+        if result.stdout.strip() == "active":
+            still_running.append(unit)
+    if still_running:
+        fail(f"PHP-FPM services are still running: {', '.join(still_running)}.")
+    return {
+        "versions": versions,
+        "message": "All panel-managed PHP-FPM services were disabled. Website files and databases were preserved.",
+    }
+
+
 def list_managed(_: dict[str, Any]) -> dict[str, Any]:
     return {"versions": sorted(load_state(), key=lambda value: tuple(int(part) for part in value.split(".")))}
 
@@ -241,9 +283,19 @@ OPERATIONS = {
     "enable_external_repository": enable_external_repository,
     "install_version": install_version,
     "install_site_extensions": install_site_extensions,
+    "set_all_enabled": set_all_enabled,
     "uninstall_version": uninstall_version,
     "list_managed": list_managed,
 }
+
+MUTATING_OPERATIONS = frozenset({
+    "check_available",
+    "enable_external_repository",
+    "install_version",
+    "install_site_extensions",
+    "set_all_enabled",
+    "uninstall_version",
+})
 
 
 def main() -> None:
@@ -252,7 +304,18 @@ def main() -> None:
     handler = OPERATIONS.get(operation)
     if handler is None:
         fail("Unsupported PHP runtime operation.")
-    print(json.dumps({"ok": True, "result": handler(data)}))
+    if operation not in MUTATING_OPERATIONS:
+        print(json.dumps({"ok": True, "result": handler(data)}))
+        return
+
+    LOCK_PATH.parent.mkdir(parents=True, exist_ok=True)
+    with LOCK_PATH.open("a+", encoding="utf-8") as lock_file:
+        os.chmod(LOCK_PATH, stat.S_IRUSR | stat.S_IWUSR)
+        try:
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            fail("Another PHP runtime operation is already running.")
+        print(json.dumps({"ok": True, "result": handler(data)}))
 
 
 if __name__ == "__main__":

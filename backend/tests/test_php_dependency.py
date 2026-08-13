@@ -1,7 +1,7 @@
 import sys
 import unittest
 from pathlib import Path
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 BACKEND = Path(__file__).resolve().parents[1]
 if str(BACKEND) not in sys.path:
@@ -25,9 +25,10 @@ class PHPDependencyServiceTests(unittest.TestCase):
         service = PHPDependencyService()
         snapshot = {"state": "healthy", "healthy": True}
         service._probe = Mock(return_value=snapshot)
+        expected = {**snapshot, "operation_in_progress": False}
 
-        self.assertEqual(snapshot, service.get_status(force=True))
-        self.assertEqual(snapshot, service.get_cached_status())
+        self.assertEqual(expected, service.get_status(force=True))
+        self.assertEqual(expected, service.get_cached_status())
         service._probe.assert_called_once()
 
     def test_status_reports_each_version_without_installing_anything(self):
@@ -65,6 +66,32 @@ class PHPDependencyServiceTests(unittest.TestCase):
         self.assertEqual("installed", message)
         service._helper_call.assert_called_once_with("install_version", version="8.3")
 
+    def test_second_runtime_operation_is_rejected(self):
+        service = PHPDependencyService()
+        service._helper_call = Mock()
+        service._operation_lock.acquire()
+        try:
+            success, message = service.install_version("8.3")
+        finally:
+            service._operation_lock.release()
+
+        self.assertFalse(success)
+        self.assertEqual("Another PHP runtime operation is already running.", message)
+        service._helper_call.assert_not_called()
+
+    def test_toggle_disables_all_managed_php_versions(self):
+        service = PHPDependencyService()
+        service._helper_call = Mock(return_value={"message": "PHP disabled"})
+        service.get_status = Mock(return_value={"healthy": False, "running": False})
+
+        success, message = service.toggle(False)
+
+        self.assertTrue(success)
+        self.assertEqual("PHP disabled", message)
+        service._helper_call.assert_called_once_with(
+            "set_all_enabled", enabled=False, timeout=180,
+        )
+
     def test_uninstall_rejects_an_external_version(self):
         service = PHPDependencyService()
         service.get_status = Mock(return_value={"versions": [{
@@ -98,7 +125,8 @@ class PHPDependencyServiceTests(unittest.TestCase):
             )),
         ])
 
-        versions = service._available_versions()
+        with patch("dependencies.php.service.os.name", "posix"):
+            versions = service._available_versions()
 
         self.assertEqual(["7.4", "8.3"], versions)
         self.assertEqual(2, service._run.call_count)
@@ -140,6 +168,9 @@ class PHPDependencyServiceTests(unittest.TestCase):
         self.assertIn('"enable_external_repository": enable_external_repository', helper)
         self.assertIn('EXTERNAL_REPOSITORY_PPA = "ppa:ondrej/php"', helper)
         self.assertIn('"uninstall_version": uninstall_version', helper)
+        self.assertIn('"set_all_enabled": set_all_enabled', helper)
+        self.assertIn("fcntl.LOCK_EX | fcntl.LOCK_NB", helper)
+        self.assertIn("Another PHP runtime operation is already running.", helper)
         self.assertIn("cannot be adopted automatically", helper)
         self.assertIn("php-runtime-skeleton", page_template)
         self.assertIn("/api/dependencies/php/runtime-view", page_template)
@@ -147,8 +178,11 @@ class PHPDependencyServiceTests(unittest.TestCase):
         self.assertIn("data-php-check", runtime_template)
         self.assertIn("data-php-external-repository", runtime_template)
         self.assertIn("data-php-uninstall", runtime_template)
-        self.assertIn("External PHP source enabled", runtime_template)
+        self.assertIn("data-php-toggle", runtime_template)
+        self.assertIn("DISABLE ALL PHP", runtime_template)
+        self.assertIn("external_php_source_enabled", runtime_template)
         self.assertIn("/api/dependencies/php/enable-external-repository", router)
+        self.assertIn("/api/dependencies/php/toggle", router)
         self.assertIn("/api/dependencies/php/runtime-view", router)
         self.assertIn("PHP_RUNTIME_HELPER", install_script)
         self.assertIn("PHP_RUNTIME_HELPER", update_script)
