@@ -203,11 +203,8 @@ input[type="checkbox"]:checked { background: var(--color-accent); border-color: 
 
 /* Brutalist Clean Form Container */
 .clean-form {
-  background: var(--color-surface);
-  border: 1px solid var(--color-line);
   width: 100%;
-  margin: 0;
-  padding: 40px;
+  padding-bottom: 120px; /* Space for the fixed action bar */
 }
 
 /* Fixed Bottom Action Bar */

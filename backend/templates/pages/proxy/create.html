@@ -8,15 +8,10 @@
 {% endblock %}
 
 {% block content %}
-<style>
-/* Add bottom padding to body so the fixed bar doesn't overlap form content */
-.app { padding-bottom: 100px; }
-</style>
-
 <div id="create-proxy-panel" style="width: 100%;">
   
-  <div class="form-header">
-    <h2>{{ _('new_reverse_proxy_wizard') }}</h2>
+  <div class="form-header" style="text-align: center; margin: 0 0 48px 0;">
+    <h2 style="font-size: 28px; font-weight: 700; margin: 0 0 24px 0; letter-spacing: -0.02em;">{{ _('new_reverse_proxy_wizard') }}</h2>
     
     <!-- Step Progress Indicator (Brutalist) -->
     <div class="wizard-steps">
