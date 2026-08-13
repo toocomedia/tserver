@@ -30,7 +30,43 @@
 @font-face {
   font-family: 'ArabicFont';
   font-style: normal;
-  font-weight: 500 900;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/static/fonts/arfont/din-next-arabic-medium.woff2') format('woff2');
+  unicode-range: U+0600-06FF, U+0750-077F, U+08A0-08FF, U+FB50-FDFF, U+FE70-FEFF;
+}
+
+@font-face {
+  font-family: 'ArabicFont';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/static/fonts/arfont/din-next-arabic-medium.woff2') format('woff2');
+  unicode-range: U+0600-06FF, U+0750-077F, U+08A0-08FF, U+FB50-FDFF, U+FE70-FEFF;
+}
+
+@font-face {
+  font-family: 'ArabicFont';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/static/fonts/arfont/din-next-arabic-medium.woff2') format('woff2');
+  unicode-range: U+0600-06FF, U+0750-077F, U+08A0-08FF, U+FB50-FDFF, U+FE70-FEFF;
+}
+
+@font-face {
+  font-family: 'ArabicFont';
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url('/static/fonts/arfont/din-next-arabic-medium.woff2') format('woff2');
+  unicode-range: U+0600-06FF, U+0750-077F, U+08A0-08FF, U+FB50-FDFF, U+FE70-FEFF;
+}
+
+@font-face {
+  font-family: 'ArabicFont';
+  font-style: normal;
+  font-weight: 900;
   font-display: swap;
   src: url('/static/fonts/arfont/din-next-arabic-medium.woff2') format('woff2');
   unicode-range: U+0600-06FF, U+0750-077F, U+08A0-08FF, U+FB50-FDFF, U+FE70-FEFF;

@@ -35,7 +35,7 @@ html[dir="rtl"] textarea {
 
 html[dir="rtl"] body {
   font-size: 0.925rem;
-  font-weight: 500;
+  font-weight: 400;
 }
 
 html[dir="rtl"] p,
@@ -43,7 +43,7 @@ html[dir="rtl"] td,
 html[dir="rtl"] input,
 html[dir="rtl"] select,
 html[dir="rtl"] textarea {
-  font-weight: 500;
+  font-weight: 400;
 }
 
 html[dir="rtl"] .form-hint,
@@ -51,7 +51,7 @@ html[dir="rtl"] small,
 html[dir="rtl"] .text-muted,
 html[dir="rtl"] .card__desc,
 html[dir="rtl"] .empty-state__desc {
-  font-weight: 400;
+  font-weight: 300;
 }
 
 html[dir="rtl"] h1,
