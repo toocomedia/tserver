@@ -3,6 +3,38 @@
  * Polls GET /api/php-sites/operations/{id} until terminal state succeeded or failed.
  */
 
+export function parseErrorMessage(err) {
+  if (!err) return "An unexpected error occurred.";
+  if (typeof err === "string") return err;
+  
+  if (err.detail !== undefined && err.detail !== null) {
+    return parseErrorMessage(err.detail);
+  }
+  if (err.error !== undefined && err.error !== null) {
+    return parseErrorMessage(err.error);
+  }
+  if (typeof err.message === "string") return err.message;
+  if (typeof err.reason === "string") return err.reason;
+
+  if (Array.isArray(err)) {
+    return err.map(item => {
+      if (typeof item === "string") return item;
+      if (item && typeof item === "object") {
+        const field = Array.isArray(item.loc) ? item.loc.filter(x => x !== "body").join(".") : "";
+        const msg = item.msg || item.message || item.detail || item.reason || JSON.stringify(item);
+        return field ? `${field}: ${msg}` : msg;
+      }
+      return String(item);
+    }).join("\n");
+  }
+
+  try {
+    return JSON.stringify(err, null, 2);
+  } catch (_) {
+    return String(err);
+  }
+}
+
 export function showOperationModal(title) {
   const modal = document.getElementById("operation-modal");
   const titleEl = document.getElementById("op-modal-title");
@@ -37,7 +69,8 @@ export async function pollOperation(operationId, onSuccess, onError) {
     try {
       const res = await fetch(`/api/php-sites/operations/${operationId}`);
       if (!res.ok) {
-        throw new Error(`Failed to poll operation (HTTP ${res.status})`);
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(parseErrorMessage(errData));
       }
       const data = await res.json();
       
@@ -55,22 +88,24 @@ export async function pollOperation(operationId, onSuccess, onError) {
       } else if (data.status === "failed") {
         clearInterval(interval);
         if (spinner) spinner.style.display = "none";
+        const errorMsg = parseErrorMessage(data.error || "Operation failed.");
         if (errEl) {
-          errEl.textContent = data.error || "Operation failed.";
+          errEl.textContent = errorMsg;
           errEl.style.display = "block";
         }
         if (footerEl) footerEl.style.display = "flex";
-        if (typeof onError === "function") onError(data.error);
+        if (typeof onError === "function") onError(errorMsg);
       }
     } catch (err) {
       clearInterval(interval);
       if (spinner) spinner.style.display = "none";
+      const errorMsg = parseErrorMessage(err);
       if (errEl) {
-        errEl.textContent = err.message;
+        errEl.textContent = errorMsg;
         errEl.style.display = "block";
       }
       if (footerEl) footerEl.style.display = "flex";
-      if (typeof onError === "function") onError(err.message);
+      if (typeof onError === "function") onError(errorMsg);
     }
   }, 1200);
 }

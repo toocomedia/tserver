@@ -1,22 +1,7 @@
 /**
  * JS Module for PHP Site Detail Page (detail.html)
  */
-import { showOperationModal, pollOperation } from "./php_sites_operations.js";
-
-function parseErrorMessage(detail) {
-  if (typeof detail === "string") return detail;
-  if (Array.isArray(detail)) {
-    return detail.map(item => {
-      if (typeof item === "string") return item;
-      const field = Array.isArray(item.loc) ? item.loc.slice(1).join(".") : "";
-      return field ? `${field}: ${item.msg}` : (item.msg || JSON.stringify(item));
-    }).join("\n");
-  }
-  if (detail && typeof detail === "object") {
-    return detail.message || JSON.stringify(detail);
-  }
-  return "An unexpected error occurred.";
-}
+import { showOperationModal, pollOperation, parseErrorMessage } from "./php_sites_operations.js";
 
 document.addEventListener("DOMContentLoaded", () => {
   const container = document.querySelector(".php-site-detail-page");
@@ -52,7 +37,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     const res = await fetch(url, opts);
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(parseErrorMessage(data.detail));
+    if (!res.ok) throw new Error(parseErrorMessage(data));
     return data;
   }
 
@@ -62,7 +47,7 @@ document.addEventListener("DOMContentLoaded", () => {
       .then((data) => {
         pollOperation(data.operation_id, () => window.location.reload());
       })
-      .catch((err) => alert(err.message));
+      .catch((err) => alert(parseErrorMessage(err)));
   }
 
   // 2. Health Probes
@@ -102,7 +87,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const data = await apiCall(`/api/php-sites/sites/${siteId}/database/reveal`);
       document.getElementById("db-revealed-pwd").textContent = data.password;
       document.getElementById("db-credentials-box").style.display = "block";
-    } catch (err) { alert(err.message); }
+    } catch (err) { alert(parseErrorMessage(err)); }
   });
 
   document.getElementById("btn-rotate-db")?.addEventListener("click", async () => {
@@ -112,7 +97,7 @@ document.addEventListener("DOMContentLoaded", () => {
       document.getElementById("db-revealed-pwd").textContent = data.password;
       document.getElementById("db-credentials-box").style.display = "block";
       alert("Database password rotated successfully.");
-    } catch (err) { alert(err.message); }
+    } catch (err) { alert(parseErrorMessage(err)); }
   });
 
   document.getElementById("btn-create-db")?.addEventListener("click", async () => {
@@ -120,7 +105,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const data = await apiCall(`/api/php-sites/sites/${siteId}/database`, "POST", { install_missing_extension: true });
       alert(`Database ${data.database} created!`);
       window.location.reload();
-    } catch (err) { alert(err.message); }
+    } catch (err) { alert(parseErrorMessage(err)); }
   });
 
   document.getElementById("btn-delete-db")?.addEventListener("click", async () => {
@@ -130,7 +115,7 @@ document.addEventListener("DOMContentLoaded", () => {
       await apiCall(`/api/php-sites/sites/${siteId}/database`, "DELETE", { confirmation: name });
       alert("Database deleted.");
       window.location.reload();
-    } catch (err) { alert(err.message); }
+    } catch (err) { alert(parseErrorMessage(err)); }
   });
 
   // 5. WordPress & SSL
@@ -138,7 +123,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const pwd = prompt("Enter one-time WordPress admin password (at least 12 characters):");
     if (!pwd) return;
     if (pwd.length < 12) {
-      alert("WordPress administrator password must be at least 12 characters.");
+      alert("WordPress administrator password must be at least 12 characters long.");
       return;
     }
     handleAsyncOperation(apiCall(`/api/php-sites/sites/${siteId}/wordpress/retry`, "POST", { admin_password: pwd, install_missing_extensions: true }), "Retrying WordPress Setup...");
@@ -170,7 +155,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const res = await fetch(`/api/php-sites/sites/${siteId}/logs?stream=${stream}&lines=${lines}`);
       const data = await res.json();
       box.textContent = (data.lines || []).join("\n") || "Log file is empty.";
-    } catch (err) { box.textContent = "Failed to load logs: " + err.message; }
+    } catch (err) { box.textContent = "Failed to load logs: " + parseErrorMessage(err); }
   }
   document.getElementById("btn-fetch-logs")?.addEventListener("click", fetchLogs);
 
@@ -202,6 +187,6 @@ document.addEventListener("DOMContentLoaded", () => {
       await apiCall(`/api/php-sites/sites/${siteId}`, "DELETE", { confirmation: name, delete_database: delDb });
       alert("Website deleted.");
       window.location.href = "/php-sites/";
-    } catch (err) { alert(err.message); }
+    } catch (err) { alert(parseErrorMessage(err)); }
   });
 });

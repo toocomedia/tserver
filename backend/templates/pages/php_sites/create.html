@@ -123,9 +123,11 @@
       <div class="form-row-grid">
         <div class="form-row-grid__label">
           <label for="wp_admin_password" class="form-label">Admin Password</label>
+          <div class="form-hint">Must be at least 12 characters long.</div>
         </div>
         <div class="form-row-grid__input">
-          <input type="password" id="wp_admin_password" name="wp_admin_password" class="form-input" autocomplete="new-password">
+          <input type="password" id="wp_admin_password" name="wp_admin_password" class="form-input" autocomplete="new-password" placeholder="Min. 12 characters">
+          <div id="wp-pwd-length-hint" class="form-hint mt-xs text-muted">0 / 12 characters minimum</div>
         </div>
       </div>
 
@@ -134,8 +136,9 @@
           <label for="wp_confirm_password" class="form-label">Confirm Password</label>
         </div>
         <div class="form-row-grid__input">
-          <input type="password" id="wp_confirm_password" name="wp_confirm_password" class="form-input" autocomplete="new-password">
-          <div id="wp-pwd-error" class="form-error" style="display:none;">Passwords do not match.</div>
+          <input type="password" id="wp_confirm_password" name="wp_confirm_password" class="form-input" autocomplete="new-password" placeholder="Re-enter password">
+          <div id="wp-pwd-match-hint" class="form-hint mt-xs text-muted"></div>
+          <div id="wp-pwd-error" class="form-error mt-xs" style="display:none;"></div>
         </div>
       </div>
     </div>

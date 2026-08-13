@@ -1,31 +1,17 @@
 /**
  * JS Module for PHP Site Creation Page (create.html)
  */
-import { showOperationModal, pollOperation } from "./php_sites_operations.js";
-
-function parseErrorMessage(detail) {
-  if (typeof detail === "string") return detail;
-  if (Array.isArray(detail)) {
-    return detail.map(item => {
-      if (typeof item === "string") return item;
-      const field = Array.isArray(item.loc) ? item.loc.slice(1).join(".") : "";
-      return field ? `${field}: ${item.msg}` : (item.msg || JSON.stringify(item));
-    }).join("\n");
-  }
-  if (detail && typeof detail === "object") {
-    return detail.message || JSON.stringify(detail);
-  }
-  return "An unexpected error occurred.";
-}
+import { showOperationModal, pollOperation, parseErrorMessage } from "./php_sites_operations.js";
 
 function showError(msg) {
   const alertBox = document.getElementById("form-error-alert");
+  const cleanMsg = parseErrorMessage(msg);
   if (alertBox) {
-    alertBox.textContent = msg;
+    alertBox.textContent = cleanMsg;
     alertBox.style.display = "block";
     alertBox.scrollIntoView({ behavior: "smooth", block: "center" });
   } else {
-    alert(msg);
+    alert(cleanMsg);
   }
 }
 
@@ -78,6 +64,45 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  // Password Strength & Live Match Validation
+  const pwdInput = document.getElementById("wp_admin_password");
+  const confirmInput = document.getElementById("wp_confirm_password");
+  const lengthHint = document.getElementById("wp-pwd-length-hint");
+  const matchHint = document.getElementById("wp-pwd-match-hint");
+
+  function validateLivePasswords() {
+    if (!pwdInput) return;
+    const val = pwdInput.value;
+    const confirmVal = confirmInput ? confirmInput.value : "";
+
+    if (lengthHint) {
+      lengthHint.textContent = `${val.length} / 12 characters minimum`;
+      if (val.length >= 12) {
+        lengthHint.classList.remove("text-muted", "text-danger");
+        lengthHint.classList.add("text-success");
+      } else {
+        lengthHint.classList.remove("text-success");
+        lengthHint.classList.add(val.length > 0 ? "text-danger" : "text-muted");
+      }
+    }
+
+    if (matchHint && confirmInput) {
+      if (!confirmVal) {
+        matchHint.textContent = "";
+        matchHint.className = "form-hint mt-xs text-muted";
+      } else if (val === confirmVal) {
+        matchHint.textContent = "✓ Passwords match";
+        matchHint.className = "form-hint mt-xs text-success";
+      } else {
+        matchHint.textContent = "✕ Passwords do not match";
+        matchHint.className = "form-hint mt-xs text-danger";
+      }
+    }
+  }
+
+  if (pwdInput) pwdInput.addEventListener("input", validateLivePasswords);
+  if (confirmInput) confirmInput.addEventListener("input", validateLivePasswords);
+
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     hideError();
@@ -88,7 +113,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const phpVersion = document.getElementById("php_version")?.value || "";
     let docRoot = document.getElementById("document_root").value.trim();
 
-    // Sanitize document root (strip leading/trailing slashes)
     docRoot = docRoot.replace(/\\/g, "/").replace(/^\/+/, "").replace(/\/+$/, "");
     if (!docRoot) docRoot = "public";
 
@@ -114,7 +138,6 @@ document.addEventListener("DOMContentLoaded", () => {
       const email = document.getElementById("wp_admin_email").value.trim();
       const pwd = document.getElementById("wp_admin_password").value;
       const confirmPwd = document.getElementById("wp_confirm_password").value;
-      const pwdErr = document.getElementById("wp-pwd-error");
 
       if (!email || !email.includes("@")) {
         showError("Please enter a valid WordPress administrator email.");
@@ -128,23 +151,14 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       if (pwd.length < 12) {
-        if (pwdErr) {
-          pwdErr.textContent = "WordPress admin password must be at least 12 characters.";
-          pwdErr.style.display = "block";
-        }
-        showError("WordPress admin password must be at least 12 characters.");
+        showError("WordPress admin password must be at least 12 characters long.");
         return;
       }
 
       if (pwd !== confirmPwd) {
-        if (pwdErr) {
-          pwdErr.textContent = "Passwords do not match.";
-          pwdErr.style.display = "block";
-        }
         showError("Passwords do not match.");
         return;
       }
-      if (pwdErr) pwdErr.style.display = "none";
 
       wpData = {
         site_title: title,
@@ -184,7 +198,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
-        throw new Error(parseErrorMessage(errData.detail));
+        throw new Error(parseErrorMessage(errData));
       }
 
       const result = await res.json();
@@ -194,15 +208,16 @@ document.addEventListener("DOMContentLoaded", () => {
         () => {
           window.location.href = `/php-sites/${result.site_id}`;
         },
-        () => {
+        (err) => {
           if (submitBtn) {
             submitBtn.disabled = false;
             submitBtn.classList.remove("is-loading");
           }
+          showError(err);
         }
       );
     } catch (err) {
-      showError(err.message);
+      showError(err);
       if (submitBtn) {
         submitBtn.disabled = false;
         submitBtn.classList.remove("is-loading");
