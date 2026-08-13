@@ -9,13 +9,13 @@
 
 {# --- Section Header with Title, optional Subtitle & Action slot --- #}
 {% macro section_header(title, subtitle=None, actions=None) %}
-<div class="section-header mb-md d-flex align-center justify-between flex-wrap gap-sm">
-  <div>
-    <h2 class="m-0" style="font-size: 16px; font-weight: 700;">{{ title }}</h2>
+<div class="section-header">
+  <h3>
+    {{ title }}
     {% if subtitle %}
-    <span class="text-small text-muted mt-xs d-block">{{ subtitle }}</span>
+    <span class="text-small text-muted font-normal">({{ subtitle }})</span>
     {% endif %}
-  </div>
+  </h3>
   {% if actions %}
   <div class="d-flex align-center gap-xs">
     {{ actions | safe }}
@@ -26,7 +26,7 @@
 
 {# --- Single Key-Value Info Row --- #}
 {% macro info_row(label, value=None, is_mono=False, badge_tone=None) %}
-<div class="info-row d-flex align-center justify-between py-xs border-bottom">
+<div class="info-row d-flex align-center justify-between border-bottom" style="padding: 10px var(--page-gutter);">
   <span class="info-row__label text-muted text-small">{{ label }}</span>
   <span class="info-row__value text-small{% if is_mono %} font-mono{% endif %}" style="font-weight: 600;">
     {% if badge_tone %}

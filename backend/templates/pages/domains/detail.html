@@ -78,7 +78,8 @@
 </div>
 
 {% if domain.project_type == 'python' %}
-<div class="d-flex align-center justify-between p-sm mt-xl mb-lg" style="background: var(--color-surface); border-bottom: 1px solid var(--color-line);">
+<!-- FULL-WIDTH PYTHON APP STATUS STRIP (0 SIDE MARGIN, INSIDE PADDING) -->
+<div class="d-flex align-center justify-between mt-xl mb-lg" style="background: var(--color-surface); border-bottom: 1px solid var(--color-line); margin-inline: calc(var(--page-gutter) * -1); padding: 12px var(--page-gutter);">
   <div>
     <span class="text-small font-bold d-block">{{ _('python_application') }}</span>
     <span class="text-small text-muted">Status: {{ app.status if app else 'Not Configured' }}</span>
@@ -94,7 +95,7 @@
 <!-- DOMAIN SPECIFICATIONS SECTION -->
 <div class="mt-xl mb-xl">
   {{ ui.section_header(_('domain_info')) }}
-  <div class="info-list border-top">
+  <div class="info-list" style="margin-inline: calc(var(--page-gutter) * -1);">
     {{ ui.info_row(_('domain'), domain.name, is_mono=True) }}
     {% call ui.info_row(_('project_type')) %}
       {% if domain.project_type == 'dns' %}
@@ -158,7 +159,7 @@
     </table>
   </div>
   {% else %}
-  <div class="py-md border-bottom text-muted text-small">
+  <div class="py-md border-bottom text-muted text-small" style="margin-inline: calc(var(--page-gutter) * -1); padding-left: var(--page-gutter);">
     {{ _('no_reverse_proxies_on_this_domain') }}
   </div>
   {% endif %}
@@ -167,7 +168,7 @@
 {% if domain.project_type == 'dns' %}
 <div class="mt-xl mb-xl">
   {{ ui.section_header(_('web_server_landing_page')) }}
-  <div class="py-md d-flex align-center justify-between border-bottom">
+  <div class="d-flex align-center justify-between border-bottom" style="background: var(--color-surface); margin-inline: calc(var(--page-gutter) * -1); padding: 12px var(--page-gutter);">
     <span class="text-small text-muted">{{ _('this_domain_is_configured_for_dns_manage') }}</span>
     <form method="post" action="/domains/{{ domain.id }}/enable-static" class="m-0">
       {% include "partials/csrf_field.html" %}
@@ -183,7 +184,7 @@
   {% endset %}
   {{ ui.section_header(_('default_page'), actions=editor_actions) }}
 
-  <div id="page-preview" class="py-sm border-bottom d-flex align-center justify-between">
+  <div id="page-preview" class="d-flex align-center justify-between border-bottom mb-md" style="background: var(--color-surface); margin-inline: calc(var(--page-gutter) * -1); padding: 10px var(--page-gutter);">
     <span class="text-small font-mono">
       URL: 
       {% if cert %}
