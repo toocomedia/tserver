@@ -358,16 +358,18 @@ html[data-sidebar-style="gradient"] .sidebar__item--active:hover {
   height: auto;
   min-height: 60px;
   padding: 14px var(--page-gutter);
-  margin-bottom: 16px;
+  margin-bottom: 0;
   background: var(--color-bg);
   border-bottom: 1px solid var(--color-line);
   flex-shrink: 0;
   flex-wrap: nowrap;
 }
 
+.page-header:has(+ .content--flush),
+.main:has(.content--flush) .page-header,
 .content--flush .page-header {
   padding: 14px var(--page-gutter);
-  margin-bottom: 0;
+  margin-bottom: 0 !important;
 }
 
 .page-header__title {
@@ -668,7 +670,7 @@ html[data-sidebar-style="gradient"] .sidebar__item--active:hover {
     min-height: 64px;
     padding: 16px var(--page-gutter);
     gap: 12px;
-    margin-bottom: 20px;
+    margin-bottom: 0;
     background: var(--color-bg);
     border-bottom: 1px solid var(--color-line);
   }

@@ -167,6 +167,10 @@
   box-shadow: none !important;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 html, body {
   height: 100%;
   font-family: 'Onest', system-ui, sans-serif;
