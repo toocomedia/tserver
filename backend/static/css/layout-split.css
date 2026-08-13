@@ -1,55 +1,31 @@
 /* Split views, tab bars, and responsive shell behavior. */
 .split-layout { display: flex; flex: 1; flex-direction: column; }
 .split-sidebar { width: 100%; display: flex; flex-direction: row; overflow-x: auto; padding-bottom: 0; border-right: none; border-bottom: 1px solid var(--color-line); }
-.split-sidebar__item { display: flex; align-items: center; min-height: 38px; padding: 6px 14px; font-size: var(--font-body); font-weight: 600; color: var(--color-muted); background: transparent; border-left: 3px solid transparent; cursor: pointer; white-space: nowrap; transition: background 0.1s, color 0.1s, border-color 0.1s; }
-.split-sidebar__item:hover { background: var(--color-surface); color: var(--color-text); }
-.split-sidebar__item.active { background: color-mix(in srgb, var(--color-accent) 15%, transparent); color: var(--color-accent); border-left-color: transparent; border-radius: var(--radius-sm, 6px); }
-.split-sidebar__item.active:hover { background: color-mix(in srgb, var(--color-accent) 25%, transparent); }
-
-/* Sidebar Active Style overrides for split-sidebar (.split-sidebar__item) */
-html[data-sidebar-style="opacity"] .split-sidebar__item {
-  margin: 3px 14px;
-  border-left-color: transparent !important;
+.split-sidebar__item {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 10px 18px;
+  margin: 2px 12px;
+  font-size: var(--font-body);
+  font-weight: 600;
+  color: var(--color-muted);
+  background: transparent;
+  border-left: 3px solid transparent !important;
   border-radius: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.1s, color 0.1s, border-color 0.1s;
 }
-html[data-sidebar-style="opacity"] .split-sidebar__item.active,
-html[data-sidebar-style="opacity"] .split-sidebar__item.active:hover {
+.split-sidebar__item:hover {
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+.split-sidebar__item.active,
+.split-sidebar__item.active:hover {
   background: color-mix(in srgb, var(--color-accent) 15%, transparent) !important;
   color: var(--color-accent) !important;
   border-left-color: transparent !important;
-}
-
-html[data-sidebar-style="line"] .split-sidebar__item {
-  margin: 0;
-  border-radius: 0;
-}
-html[data-sidebar-style="line"] .split-sidebar__item.active,
-html[data-sidebar-style="line"] .split-sidebar__item.active:hover {
-  background: transparent !important;
-  color: var(--color-accent) !important;
-  border-left-color: var(--color-accent) !important;
-}
-
-html[data-sidebar-style="gradient"] .split-sidebar__item {
-  margin: 0;
-  border-radius: 0;
-  border-left: none !important;
-}
-html[data-sidebar-style="gradient"] .split-sidebar__item.active,
-html[data-sidebar-style="gradient"] .split-sidebar__item.active:hover {
-  background: linear-gradient(to right, color-mix(in srgb, var(--color-accent) 20%, transparent), transparent) !important;
-  color: var(--color-accent) !important;
-}
-
-html[data-sidebar-style="full"] .split-sidebar__item {
-  margin: 0;
-  border-radius: 0;
-}
-html[data-sidebar-style="full"] .split-sidebar__item.active,
-html[data-sidebar-style="full"] .split-sidebar__item.active:hover {
-  background: var(--color-accent) !important;
-  color: var(--color-on-accent) !important;
-  border-left-color: var(--color-accent-2) !important;
 }
 .split-sidebar__status, .split-sidebar__footer { padding: var(--space-lg); border-top: 1px solid var(--color-line); }
 .split-sidebar__count { margin-left: auto; font-size: var(--font-small); color: var(--color-muted); }
@@ -72,7 +48,7 @@ html[data-sidebar-style="full"] .split-sidebar__item.active:hover {
 
 @media (min-width: 768px) {
   .split-layout { flex-direction: row; align-items: stretch; }
-  .split-sidebar { width: 240px; flex-shrink: 0; flex-direction: column; padding: var(--space-xs) 0; background: transparent; border-right: 1px solid var(--color-line); border-bottom: none; }
+  .split-sidebar { width: 260px; flex-shrink: 0; flex-direction: column; padding: 0; background: transparent; border-right: 1px solid var(--color-line); border-bottom: none; }
   .supabase-split { min-height: 0; }
   .supabase-sidebar { min-height: 0; }
   .supabase-project-list { flex: 1; min-height: 0; overflow-y: auto; }
