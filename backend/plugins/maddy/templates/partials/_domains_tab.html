@@ -50,23 +50,20 @@
             <div class="php-card__title">
               <span>Mailbox Accounts</span>
               <div style="display: flex; gap: 8px; align-items: center;">
-                <input type="text" id="account-search-input" class="form-input" placeholder="Search mailboxes..." style="width: 180px; height: 30px; font-size: 12px;" oninput="onAccountSearch(this.value)">
-                <button type="button" class="btn btn--surface btn--sm" onclick="openAddAccountModal()">+ Mailbox</button>
+                <input type="text" id="account-search-input" class="form-input" placeholder="Search mailboxes..." style="width: 200px; height: 30px; font-size: 12px;" oninput="onAccountSearch(this.value)">
               </div>
             </div>
-            <div class="table-wrap" style="margin-bottom: 0;">
-              <table class="table" style="width: 100%; table-layout: fixed;">
-                <thead>
-                  <tr>
-                    <th>Mailbox Address</th>
-                    <th class="col-actions" style="width: 190px; text-align: right;">Actions</th>
-                  </tr>
-                </thead>
-                <tbody id="accounts-tbody">
-                  <!-- Rendered by JS -->
-                </tbody>
-              </table>
-            </div>
+            <table class="table" style="width: 100%; table-layout: fixed; margin-bottom: 0;">
+              <thead>
+                <tr>
+                  <th style="padding: 8px 12px;">Mailbox Address</th>
+                  <th class="col-actions" style="width: 190px; text-align: right; padding: 8px 12px;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="accounts-tbody">
+                <!-- Rendered by JS -->
+              </tbody>
+            </table>
           </div>
 
           <div class="php-card">
@@ -108,16 +105,18 @@
             <div class="php-card__title">
               <span>Required DNS Records</span>
             </div>
-            <div class="table-wrap" style="margin-bottom: 0;">
-              <table class="table" style="font-size: 13px;">
-                <thead>
-                  <tr><th>Type</th><th>Host / Name</th><th>Target / Value</th></tr>
-                </thead>
-                <tbody id="dns-records-tbody">
-                  <!-- Dynamically populated -->
-                </tbody>
-              </table>
-            </div>
+            <table class="table" style="width: 100%; font-size: 13px; margin-bottom: 0;">
+              <thead>
+                <tr>
+                  <th style="padding: 8px 12px;">Type</th>
+                  <th style="padding: 8px 12px;">Host / Name</th>
+                  <th style="padding: 8px 12px;">Target / Value</th>
+                </tr>
+              </thead>
+              <tbody id="dns-records-tbody">
+                <!-- Dynamically populated -->
+              </tbody>
+            </table>
           </div>
 
           <div class="php-card">
