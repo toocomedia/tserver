@@ -1,5 +1,7 @@
 {% extends "layout.html" %}
 
+{% from "partials/skeleton_overlay.html" import skeleton_overlay %}
+
 {% block title %}{{ _('File Manager') }} - {{ super() }}{% endblock %}
 
 {% block head %}
@@ -21,15 +23,11 @@
 {% endblock %}
 
 {% block content %}
-<div id="fm-main">
-  {% from "partials/skeleton_overlay.html" import skeleton_overlay %}
-  {{ skeleton_overlay(
-       'fm-skeleton',
-       header=0,
-       tables=[
-         { 'cols': [45, 15, 25, 15], 'rows': 5 }
-       ]
-  ) }}
+<div class="file-manager-page" id="fm-main">
+
+<!-- SKELETON LOADING OVERLAY -->
+{{ skeleton_overlay('fm-skeleton', controls=1, tables=[{ 'rows': 4 }]) }}
+<!-- END SKELETON OVERLAY -->
 
   <!-- Select App Empty State -->
   <div id="fm-select-app-state" class="empty-state-strict" style="display: none;">
