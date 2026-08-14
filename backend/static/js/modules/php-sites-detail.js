@@ -74,22 +74,6 @@ function render() {
   const dot = (ok) => `<span class="stat-dot ${ok ? "stat-dot--active" : "stat-dot--danger"}"></span>`;
   const httpCode = h.http?.status_code ? `HTTP ${h.http.status_code}` : t("not_checked");
 
-  const titleEl = document.getElementById("php-site-title");
-  if (titleEl) {
-    titleEl.innerHTML = `${esc(site.domain)} ${badge(site.status)}`;
-  }
-
-  const topbarActionsEl = document.getElementById("php-site-topbar-actions");
-  if (topbarActionsEl) {
-    let actHtml = `<a class="btn btn--secondary btn--sm" href="${esc(url)}" target="_blank" rel="noopener">${t("visit_website")} ↗</a>`;
-    if (site.file_manager_target) actHtml += `<a class="btn btn--secondary btn--sm" href="/plugins/file_manager/?target=${encodeURIComponent(site.file_manager_target)}">${t("file_manager")}</a>`;
-    if (can("enable")) actHtml += btn("control", t("enable"), "primary", 'data-value="enable"');
-    if (can("disable")) actHtml += btn("control", t("disable"), "secondary", 'data-value="disable"');
-    if (can("repair")) actHtml += btn("repair", t("repair"), "primary");
-    if (can("restore")) actHtml += btn("restore", t("restore_website"), "primary");
-    topbarActionsEl.innerHTML = actHtml;
-  }
-
   const vers = (options?.php_versions || []).map((i) => `<option value="${esc(i.version)}" ${i.version === site.php_version ? "selected" : ""}>${esc(i.version)}</option>`).join("");
   const vSelect = options ? `<select id="php-runtime-ver" class="form-select" data-runtime-version style="width:160px; height:32px;">${vers}</select>` : `<select class="form-select" disabled style="width:160px; height:32px;"><option>${t("loading")}</option></select>`;
 
@@ -110,6 +94,31 @@ function render() {
     ${site.last_error ? `<div class="alert alert--danger mb-lg">${esc(site.last_error)}</div>` : ""}
     ${site.last_warning ? `<div class="alert alert--warning mb-lg">${esc(site.last_warning)}</div>` : ""}
     ${site.operation && ["queued", "running"].includes(site.operation.status) ? `<div class="php-operation mb-lg"><div class="php-operation__status">${esc(site.operation.stage)} · ${esc(site.operation.status)}</div><div class="php-operation__message">${esc(site.operation.message)}</div></div>` : ""}
+
+    <!-- HERO APP BANNER BOX -->
+    <div class="hero-app-box mb-lg">
+      <div>
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <h1 style="font-size: 22px; font-weight: 700; margin: 0; line-height: 1.2;">${esc(site.domain)}</h1>
+          ${badge(site.status)}
+        </div>
+        <div class="hero-stats">
+          <span>URL: <a href="${esc(url)}" target="_blank" rel="noopener" style="color:var(--color-text); font-weight:700;">${esc(site.domain)} ↗</a></span>
+          <span>${esc(t("preset"))}: <strong style="color:var(--color-text);">${esc(isWp ? t("wordpress") : t("plain_php"))}</strong></span>
+          <span>${esc(t("php_version"))}: <strong style="color:var(--color-text);">${esc(site.php_version || "—")}</strong></span>
+          <span>${esc(t("database"))}: ${site.database ? `<code style="color:var(--color-text); font-weight:700;">${esc(site.database.database)}</code>` : `<span style="color:var(--color-muted);">${esc(t("none"))}</span>`}</span>
+          <span>${esc(t("ssl_certificates"))}: <strong style="color:var(--color-text);">${site.ssl?.active ? t("active_1") : t("inactive")}</strong></span>
+        </div>
+      </div>
+      <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+        <a class="btn btn--secondary btn--sm" href="${esc(url)}" target="_blank" rel="noopener">${t("visit_website")} ↗</a>
+        ${site.file_manager_target ? `<a class="btn btn--secondary btn--sm" href="/plugins/file_manager/?target=${encodeURIComponent(site.file_manager_target)}">${t("file_manager")}</a>` : ""}
+        ${can("enable") ? btn("control", t("enable"), "primary", 'data-value="enable"') : ""}
+        ${can("disable") ? btn("control", t("disable"), "secondary", 'data-value="disable"') : ""}
+        ${can("repair") ? btn("repair", t("repair"), "primary") : ""}
+        ${can("restore") ? btn("restore", t("restore_website"), "primary") : ""}
+      </div>
+    </div>
 
     ${tabsNav()}
 

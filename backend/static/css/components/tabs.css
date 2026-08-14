@@ -1,15 +1,15 @@
-/* tabs.css — Sleek Base Component for Panel Tab Navigation */
+/* tabs.css — Unified Tab Navigation Component (No Divider + Opacity Highlight, 0 Radius) */
 .tabs-nav {
   display: flex;
   align-items: center;
-  gap: var(--space-md, 24px);
+  gap: var(--space-xs, 6px);
   padding: 0;
-  margin-bottom: var(--space-lg, 16px);
+  margin-bottom: var(--space-lg, 20px);
   overflow-x: auto;
   white-space: nowrap;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
-  border-bottom: 1px solid var(--color-line);
+  border-bottom: none !important;
 }
 .tabs-nav::-webkit-scrollbar {
   display: none;
@@ -20,15 +20,15 @@
 .tabs-nav .btn--ghost {
   position: relative;
   flex-shrink: 0;
-  height: 40px;
-  padding: 0 4px;
-  font-size: 14px;
+  height: 34px;
+  padding: 0 14px;
+  font-size: 13px;
   font-weight: 500;
   color: var(--color-muted);
   background: transparent !important;
   border: none !important;
   border-radius: 0 !important;
-  transition: color 0.15s ease;
+  transition: background 0.15s ease, color 0.15s ease;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -39,7 +39,7 @@
 .tabs-nav .btn:hover,
 .tabs-nav .btn--ghost:hover {
   color: var(--color-text);
-  background: transparent !important;
+  background: color-mix(in srgb, var(--color-text) 6%, transparent) !important;
 }
 
 .tabs-nav .tabs-nav__btn.is-active,
@@ -48,9 +48,9 @@
 .tabs-nav .btn.active,
 .tabs-nav .btn--ghost.is-active,
 .tabs-nav .btn--ghost.active {
-  color: var(--color-text);
-  font-weight: 600;
-  background: transparent !important;
+  color: var(--color-accent) !important;
+  background: color-mix(in srgb, var(--color-accent) 14%, transparent) !important;
+  font-weight: 700;
 }
 
 .tabs-nav .tabs-nav__btn.is-active::after,
@@ -59,14 +59,30 @@
 .tabs-nav .btn.active::after,
 .tabs-nav .btn--ghost.is-active::after,
 .tabs-nav .btn--ghost.active::after {
-  content: "";
-  position: absolute;
-  bottom: -1px;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background-color: var(--color-text);
-  border-radius: 0 !important;
+  display: none !important;
+}
+
+/* Danger Tab in Navigation */
+.tabs-nav .tabs-nav__btn--danger,
+.tabs-nav .btn--danger {
+  color: var(--color-danger) !important;
+  opacity: 0.8;
+}
+
+.tabs-nav .tabs-nav__btn--danger:hover,
+.tabs-nav .btn--danger:hover {
+  opacity: 1;
+  background: color-mix(in srgb, var(--color-danger) 10%, transparent) !important;
+}
+
+.tabs-nav .tabs-nav__btn--danger.is-active,
+.tabs-nav .tabs-nav__btn--danger.active,
+.tabs-nav .btn--danger.is-active,
+.tabs-nav .btn--danger.active {
+  opacity: 1;
+  color: var(--color-danger) !important;
+  background: color-mix(in srgb, var(--color-danger) 16%, transparent) !important;
+  font-weight: 700;
 }
 
 /* Base content panel for tabs */
@@ -78,71 +94,4 @@
   display: block;
 }
 
-/* Opacity / Dividerless Tab Navigation Variant */
-.tabs-nav--opacity {
-  border-bottom: none !important;
-  gap: 8px;
-  margin-bottom: var(--space-lg, 16px);
-  padding: 4px 0;
-}
-
-.tabs-nav--opacity .tabs-nav__btn,
-.tabs-nav--opacity .btn,
-.tabs-nav--opacity .btn--ghost {
-  height: 34px;
-  padding: 0 14px;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--color-muted);
-  background: transparent !important;
-  border: none !important;
-  border-radius: 4px !important;
-  transition: all 0.15s ease;
-}
-
-.tabs-nav--opacity .tabs-nav__btn:hover,
-.tabs-nav--opacity .btn:hover,
-.tabs-nav--opacity .btn--ghost:hover {
-  color: var(--color-text);
-  background: color-mix(in srgb, var(--color-text) 8%, transparent) !important;
-}
-
-.tabs-nav--opacity .tabs-nav__btn.is-active,
-.tabs-nav--opacity .tabs-nav__btn.active,
-.tabs-nav--opacity .btn.is-active,
-.tabs-nav--opacity .btn.active,
-.tabs-nav--opacity .btn--ghost.is-active,
-.tabs-nav--opacity .btn--ghost.active {
-  color: var(--color-accent) !important;
-  background: color-mix(in srgb, var(--color-accent) 14%, transparent) !important;
-  font-weight: 700;
-}
-
-.tabs-nav--opacity .tabs-nav__btn.is-active::after,
-.tabs-nav--opacity .tabs-nav__btn.active::after,
-.tabs-nav--opacity .btn.is-active::after,
-.tabs-nav--opacity .btn.active::after,
-.tabs-nav--opacity .btn--ghost.is-active::after,
-.tabs-nav--opacity .btn--ghost.active::after {
-  display: none !important;
-}
-
-/* Danger tab in opacity variant */
-.tabs-nav--opacity .tabs-nav__btn--danger {
-  color: var(--color-danger) !important;
-  opacity: 0.75;
-}
-
-.tabs-nav--opacity .tabs-nav__btn--danger:hover {
-  opacity: 1;
-  background: color-mix(in srgb, var(--color-danger) 10%, transparent) !important;
-}
-
-.tabs-nav--opacity .tabs-nav__btn--danger.is-active,
-.tabs-nav--opacity .tabs-nav__btn--danger.active {
-  opacity: 1;
-  color: var(--color-danger) !important;
-  background: color-mix(in srgb, var(--color-danger) 16%, transparent) !important;
-  font-weight: 700;
-}
 

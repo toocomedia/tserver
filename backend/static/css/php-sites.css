@@ -59,16 +59,48 @@
 .php-detail { width: 100%; }
 .php-detail__loading { color: var(--color-muted); padding: var(--space-xl) 0; }
 
+.php-detail .hero-app-box {
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: 0 !important;
+  padding: 20px 24px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+.php-detail .hero-stats {
+  display: flex;
+  gap: 24px;
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--color-muted);
+  flex-wrap: wrap;
+}
+.php-detail .hero-stats span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.php-detail .hero-stats code {
+  background: rgba(0, 0, 0, 0.2);
+  padding: 2px 6px;
+  border-radius: 0 !important;
+}
+
 .php-detail__credentials {
   padding: var(--space-md) var(--space-lg);
   background: var(--color-surface);
   border: 1px solid var(--color-line);
   border-left: 3px solid var(--color-accent);
+  border-radius: 0 !important;
   font-size: var(--font-small);
   overflow-wrap: anywhere;
   line-height: 1.6;
 }
-.php-detail__credentials code { color: var(--color-text); font-weight: 700; }
+.php-detail__credentials code { color: var(--color-text); font-weight: 700; border-radius: 0 !important; }
 
 /* Status Dot Indicators */
 .stat-dot { display: inline-block; width: 8px; height: 8px; vertical-align: middle; margin-right: 6px; }
