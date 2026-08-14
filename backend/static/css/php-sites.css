@@ -196,6 +196,20 @@
   justify-content: space-between;
 }
 
+/* When a table immediately follows the title, remove bottom margin so thead sits flush */
+.php-card__title:has(+ .table),
+.php-card__title:has(+ .table-wrap),
+.php-card__title:has(+ table),
+.php-card .php-card__title.has-table {
+  margin-bottom: 0;
+}
+
+/* Remove bottom divider on the last table row */
+.php-card .table tbody tr:last-child td,
+.table tbody tr:last-child td {
+  border-bottom: none !important;
+}
+
 .php-specs {
   display: flex;
   flex-direction: column;
