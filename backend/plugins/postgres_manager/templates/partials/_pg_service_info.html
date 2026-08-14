@@ -1,67 +1,84 @@
-{# _pg_service_info.html — PostgreSQL Service & Connection Reference panel #}
+{# _pg_service_info.html — Consolidated Service & Specs Reference panel #}
 <div id="pg-panel-service-info" class="pg-panel" style="display:none;">
   <div class="php-cards-grid">
+    <!-- ENGINE SPECIFICATIONS -->
     <div class="php-card">
       <div class="php-card__title">
-        <span>PostgreSQL Service Details</span>
+        <span>PostgreSQL Engine Specifications</span>
       </div>
       <div class="php-specs">
         <div class="php-spec-row">
-          <div class="php-spec-key">Service Status</div>
+          <div class="php-spec-key">Engine Status</div>
           <div class="php-spec-val">
             <span class="stat-dot stat-dot--active"></span>
-            <strong>PostgreSQL Engine Active</strong>
+            <strong>PostgreSQL Service Active</strong>
           </div>
+        </div>
+        <div class="php-spec-row">
+          <div class="php-spec-key">Plugin Version</div>
+          <div class="php-spec-val">PostgreSQL Manager v{{ plugin_version }}</div>
         </div>
         <div class="php-spec-row">
           <div class="php-spec-key">Local Binding</div>
-          <div class="php-spec-val"><code>127.0.0.1:5432</code></div>
+          <div class="php-spec-val"><code>127.0.0.1:5432</code> (Loopback only)</div>
         </div>
         <div class="php-spec-row">
-          <div class="php-spec-key">Default Admin Role</div>
+          <div class="php-spec-key">Default Superuser</div>
           <div class="php-spec-val"><code>postgres</code></div>
         </div>
         <div class="php-spec-row">
-          <div class="php-spec-key">Auth Mechanism</div>
-          <div class="php-spec-val"><code>SCRAM-SHA-256</code> (peer / md5 fallback)</div>
-        </div>
-        <div class="php-spec-row">
-          <div class="php-spec-key">Remote Endpoints</div>
-          <div class="php-spec-val">
-            {% if remote_domains %}
-              <span class="badge-minimal badge-minimal--active">{{ remote_domains|length }} Active</span>
-            {% else %}
-              <span class="badge-minimal">Local Only</span>
-            {% endif %}
-          </div>
+          <div class="php-spec-key">Server Encoding</div>
+          <div class="php-spec-val"><code>UTF8</code> (Collation: en_US.utf8)</div>
         </div>
       </div>
     </div>
 
+    <!-- CONNECTION SNIPPETS -->
     <div class="php-card">
       <div class="php-card__title">
-        <span>Connection Code Snippets &amp; URI Reference</span>
+        <span>CLI &amp; Application Connection Snippets</span>
       </div>
       <div class="php-specs">
         <div class="php-spec-row">
-          <div class="php-spec-key">CLI (psql)</div>
-          <div class="php-spec-val"><code>psql -h 127.0.0.1 -U [user] -d [database]</code></div>
+          <div class="php-spec-key">psql CLI</div>
+          <div class="php-spec-val"><code>psql -h 127.0.0.1 -U [username] -d [database]</code></div>
         </div>
         <div class="php-spec-row">
-          <div class="php-spec-key">Generic Connection URI</div>
+          <div class="php-spec-key">Node.js (pg)</div>
           <div class="php-spec-val"><code>postgresql://[user]:[password]@127.0.0.1:5432/[database]</code></div>
         </div>
         <div class="php-spec-row">
-          <div class="php-spec-key">Node.js (pg / Prisma)</div>
-          <div class="php-spec-val"><code>DATABASE_URL="postgresql://[user]:[password]@127.0.0.1:5432/[database]?schema=public"</code></div>
-        </div>
-        <div class="php-spec-row">
-          <div class="php-spec-key">Python (asyncpg / SQLA)</div>
+          <div class="php-spec-key">Python (asyncpg)</div>
           <div class="php-spec-val"><code>postgresql+asyncpg://[user]:[password]@127.0.0.1:5432/[database]</code></div>
         </div>
         <div class="php-spec-row">
-          <div class="php-spec-key">PHP PDO (Postgres)</div>
+          <div class="php-spec-key">PHP PDO (pgsql)</div>
           <div class="php-spec-val"><code>$pdo = new PDO('pgsql:host=127.0.0.1;port=5432;dbname=[database]', $user, $password);</code></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ARCHITECTURE & SECURITY SPECS -->
+    <div class="php-card">
+      <div class="php-card__title">
+        <span>Role Privileges &amp; TLS Security Architecture</span>
+      </div>
+      <div class="php-specs">
+        <div class="php-spec-row">
+          <div class="php-spec-key">Password Encryption</div>
+          <div class="php-spec-val"><code>SCRAM-SHA-256</code> (Secure salted hash)</div>
+        </div>
+        <div class="php-spec-row">
+          <div class="php-spec-key">Database Ownership</div>
+          <div class="php-spec-val">Users own all tables, sequences, and schemas created in their respective databases</div>
+        </div>
+        <div class="php-spec-row">
+          <div class="php-spec-key">TLS Termination</div>
+          <div class="php-spec-val">SNI-routed secure TLS proxy with Let’s Encrypt automated renewal for remote endpoints</div>
+        </div>
+        <div class="php-spec-row">
+          <div class="php-spec-key">Network Isolation</div>
+          <div class="php-spec-val">Direct database engine is never bound to public interfaces (<code>127.0.0.1</code> loopback only)</div>
         </div>
       </div>
     </div>

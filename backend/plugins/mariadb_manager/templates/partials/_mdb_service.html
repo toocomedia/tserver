@@ -1,6 +1,41 @@
-{# _mdb_service.html — Service Overview & Connection Reference tab panel #}
+{# _mdb_service.html — Service Overview & Reference Specs tab panel #}
 <div class="inner-tab-content" id="mdb-panel-service" style="display:none;">
   <div class="php-cards-grid">
+    <div class="php-card">
+      <div class="php-card__title">
+        <span>MariaDB Service Specifications</span>
+      </div>
+      <div class="php-specs">
+        <div class="php-spec-row">
+          <div class="php-spec-key">Service Status</div>
+          <div class="php-spec-val">
+            <span class="stat-dot stat-dot--active"></span>
+            <strong>MariaDB Engine Active</strong>
+          </div>
+        </div>
+        <div class="php-spec-row">
+          <div class="php-spec-key">Plugin Version</div>
+          <div class="php-spec-val">MariaDB Manager v{{ plugin_version }}</div>
+        </div>
+        <div class="php-spec-row">
+          <div class="php-spec-key">Listening Address</div>
+          <div class="php-spec-val"><code>127.0.0.1:3306</code> (Loopback only)</div>
+        </div>
+        <div class="php-spec-row">
+          <div class="php-spec-key">UNIX Socket</div>
+          <div class="php-spec-val"><code>/run/mysqld/mysqld.sock</code></div>
+        </div>
+        <div class="php-spec-row">
+          <div class="php-spec-key">Default Storage Engine</div>
+          <div class="php-spec-val"><code>InnoDB</code></div>
+        </div>
+        <div class="php-spec-row">
+          <div class="php-spec-key">Default Character Set</div>
+          <div class="php-spec-val"><code>utf8mb4 / utf8mb4_unicode_ci</code></div>
+        </div>
+      </div>
+    </div>
+
     <div class="php-card">
       <div class="php-card__title">
         <span>CLI &amp; Application Connection Snippets</span>
@@ -27,20 +62,20 @@
 
     <div class="php-card">
       <div class="php-card__title">
-        <span>MariaDB Server Specs</span>
+        <span>User Isolation Architecture</span>
       </div>
       <div class="php-specs">
         <div class="php-spec-row">
-          <div class="php-spec-key">Plugin Version</div>
-          <div class="php-spec-val">MariaDB Manager v{{ plugin_version }}</div>
+          <div class="php-spec-key">Grant Isolation</div>
+          <div class="php-spec-val">Each restricted user is granted privileges strictly on their dedicated database (<code>GRANT ALL ON db.*</code>)</div>
         </div>
         <div class="php-spec-row">
-          <div class="php-spec-key">Listening Address</div>
-          <div class="php-spec-val"><code>127.0.0.1:3306</code> (Loopback only)</div>
+          <div class="php-spec-key">Host Restriction</div>
+          <div class="php-spec-val">Scoped strictly to <code>localhost</code> (127.0.0.1) TCP and local UNIX socket</div>
         </div>
         <div class="php-spec-row">
-          <div class="php-spec-key">Authentication Plugin</div>
-          <div class="php-spec-val"><code>mysql_native_password</code> / <code>auth_socket</code> for root</div>
+          <div class="php-spec-key">Administrative Access</div>
+          <div class="php-spec-val">Root access is locked to system UNIX socket authentication only</div>
         </div>
       </div>
     </div>

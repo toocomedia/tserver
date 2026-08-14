@@ -27,15 +27,15 @@
               <td class="table-title"><strong>{{ user.name }}</strong></td>
               <td><code>localhost</code></td>
               <td><span class="badge-minimal">Restricted</span></td>
-              <td class="col-actions" style="position:relative;" onclick="event.stopPropagation()">
+              <td class="col-actions" style="position:relative;">
                 {{ list_actions.button() }}
 
                 {% call list_actions.tray() %}
-                  <button type="button" class="btn btn--secondary btn--sm" data-mdb-reset-user="{{ user.name }}" title="Reset password">
-                    Reset PW
+                  <button type="button" class="btn btn--secondary btn--sm" data-mdb-reset-user="{{ user.name }}" title="Reset Password">
+                    Reset Password
                   </button>
-                  <button type="button" class="btn btn--danger btn--sm" data-mdb-delete-user="{{ user.name }}" title="Delete user">
-                    Delete
+                  <button type="button" class="btn btn--danger btn--sm" data-mdb-delete-user="{{ user.name }}" title="Delete User">
+                    Delete User
                   </button>
                 {% endcall %}
               </td>
@@ -50,26 +50,6 @@
           {% endif %}
         </tbody>
       </table>
-    </div>
-
-    <div class="php-card">
-      <div class="php-card__title">
-        <span>User Isolation Architecture</span>
-      </div>
-      <div class="php-specs">
-        <div class="php-spec-row">
-          <div class="php-spec-key">Grant Isolation</div>
-          <div class="php-spec-val">Each restricted user is granted privileges strictly on their dedicated database (<code>GRANT ALL ON db.*</code>)</div>
-        </div>
-        <div class="php-spec-row">
-          <div class="php-spec-key">Host Restriction</div>
-          <div class="php-spec-val">Scoped strictly to <code>localhost</code> (127.0.0.1) TCP and local UNIX socket</div>
-        </div>
-        <div class="php-spec-row">
-          <div class="php-spec-key">Administrative Access</div>
-          <div class="php-spec-val">Root access is locked to system UNIX socket authentication only</div>
-        </div>
-      </div>
     </div>
   </div>
 </div>

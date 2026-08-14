@@ -1,37 +1,33 @@
 {# _pg_query.html — Query Runner tab panel #}
 <div id="pg-panel-query" class="pg-panel" style="display:none;">
   <div class="php-cards-grid">
+    <!-- QUERY CONSOLE CARD -->
     <div class="php-card">
       <div class="php-card__title">
-        <span>Execute SQL Query</span>
-        <span class="badge-minimal">Read-Only Safe Mode</span>
+        <span>Execute Read-Only SQL Query</span>
       </div>
 
       <div style="display: flex; flex-direction: column; gap: var(--space-md);">
-        <div style="display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap;">
-          <div class="form-group" style="min-width: 220px; flex: 1;">
-            <label class="form-label" for="pg-query-db">Target Database</label>
-            <select id="pg-query-db" class="form-input" style="width: 100%;">
-              {% for db in databases %}
-                <option value="{{ db.name }}">{{ db.name }}</option>
-              {% endfor %}
-              {% if not databases %}
-                <option value="" disabled>No databases available</option>
-              {% endif %}
-            </select>
-          </div>
-          <div style="display: flex; gap: 8px;">
-            <button class="btn btn--primary btn--sm" id="pg-query-run">Run Query</button>
-            <button class="btn btn--secondary btn--sm" id="pg-query-clear">Clear</button>
-          </div>
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" for="pg-query-db">Target Database</label>
+          <select id="pg-query-db" class="form-input" style="max-width: 300px;">
+            {% for db in databases %}
+              <option value="{{ db.name }}">{{ db.name }}</option>
+            {% endfor %}
+            {% if not databases %}
+              <option value="postgres">postgres</option>
+            {% endif %}
+          </select>
         </div>
 
-        <div class="form-group">
-          <label class="form-label" for="pg-query-sql">SQL Statement</label>
-          <textarea id="pg-query-sql" class="form-input form-input--code" rows="5"
-                    style="font-family: var(--font-mono); font-size: 13px; width: 100%;"
-                    placeholder="SELECT * FROM pg_stat_activity LIMIT 20;"></textarea>
-          <span class="form-hint">Only SELECT queries are permitted in this execution console.</span>
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" for="pg-query-sql">SQL Query (SELECT statements only)</label>
+          <textarea id="pg-query-sql" class="form-input" rows="4" style="font-family: var(--font-mono); font-size: 12px; resize: vertical;" placeholder="SELECT table_name FROM information_schema.tables WHERE table_schema='public';"></textarea>
+        </div>
+
+        <div style="display: flex; gap: 8px;">
+          <button class="btn btn--primary btn--sm" id="pg-query-run">Run Query</button>
+          <button class="btn btn--secondary btn--sm" id="pg-query-clear">Clear</button>
         </div>
 
         <div id="pg-query-error" class="alert alert--danger" style="display:none; font-size: 13px;"></div>
@@ -44,38 +40,13 @@
         <span>Query Results</span>
         <span id="pg-query-count" class="badge-minimal"></span>
       </div>
-      <div style="overflow-x: auto;">
-        <table class="table" style="width: 100%; margin-bottom: 0;">
-          <thead id="pg-query-thead"><tr></tr></thead>
-          <tbody id="pg-query-tbody"></tbody>
-        </table>
-      </div>
+      <table class="table" style="width: 100%; margin-bottom: 0;">
+        <tbody id="pg-query-tbody"></tbody>
+      </table>
     </div>
 
-    <div class="php-card" id="pg-query-empty" style="display:none;">
-      <div style="padding: var(--space-lg); text-align: center; color: var(--color-muted); font-size: 13px;">
-        Query executed successfully (0 rows returned).
-      </div>
-    </div>
-
-    <div class="php-card">
-      <div class="php-card__title">
-        <span>Execution Environment &amp; Safety Standards</span>
-      </div>
-      <div class="php-specs">
-        <div class="php-spec-row">
-          <div class="php-spec-key">Transaction Isolation</div>
-          <div class="php-spec-val">Queries run inside a strict <code>READ ONLY</code> transaction block</div>
-        </div>
-        <div class="php-spec-row">
-          <div class="php-spec-key">Execution Timeout</div>
-          <div class="php-spec-val">10 seconds max runtime per query</div>
-        </div>
-        <div class="php-spec-row">
-          <div class="php-spec-key">Input Buffer</div>
-          <div class="php-spec-val">Maximum 4,000 characters per execution payload</div>
-        </div>
-      </div>
+    <div id="pg-query-empty" class="alert alert--warning" style="display:none; font-size: 13px;">
+      Query executed successfully — 0 rows returned.
     </div>
   </div>
 </div>

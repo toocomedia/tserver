@@ -46,21 +46,21 @@
                   <span class="text-danger" style="font-size: 11px; display: block;">{{ endpoint.last_error }}</span>
                 {% endif %}
               </td>
-              <td class="col-actions" style="position:relative;" onclick="event.stopPropagation()">
+              <td class="col-actions" style="position:relative;">
                 {{ list_actions.button() }}
 
                 {% call list_actions.tray() %}
                   <button type="button" class="btn btn--secondary btn--sm" data-action="open-connection-modal" data-domain="{{ endpoint.domain }}" title="Connection URL & credentials">
-                    Connect
+                    Connection Info
                   </button>
                   <button type="button" class="btn btn--secondary btn--sm" data-pg-remote-action="test" data-domain="{{ endpoint.domain }}" title="Test connection">
-                    Test
+                    Test Connection
                   </button>
                   <button type="button" class="btn btn--secondary btn--sm" data-pg-remote-action="ssl" data-domain="{{ endpoint.domain }}" title="{{ 'Renew SSL' if endpoint.encryption_enabled else 'Enable SSL' }}">
-                    {{ 'Renew' if endpoint.encryption_enabled else 'SSL' }}
+                    {{ 'Renew SSL' if endpoint.encryption_enabled else 'Enable SSL' }}
                   </button>
                   <button type="button" class="btn btn--danger btn--sm" data-pg-remote-action="delete" data-domain="{{ endpoint.domain }}" title="Delete endpoint">
-                    Delete
+                    Delete Endpoint
                   </button>
                 {% endcall %}
               </td>
@@ -75,27 +75,6 @@
           {% endif %}
         </tbody>
       </table>
-    </div>
-
-    <!-- NETWORKING ARCHITECTURE CARD -->
-    <div class="php-card">
-      <div class="php-card__title">
-        <span>Remote Access &amp; TLS Security Architecture</span>
-      </div>
-      <div class="php-specs">
-        <div class="php-spec-row">
-          <div class="php-spec-key">TLS Termination</div>
-          <div class="php-spec-val">SNI-routed secure TLS proxy with Let’s Encrypt automated renewal</div>
-        </div>
-        <div class="php-spec-row">
-          <div class="php-spec-key">Network Exposure</div>
-          <div class="php-spec-val">Direct PostgreSQL engine is never bound to public interfaces (<code>127.0.0.1</code> isolation)</div>
-        </div>
-        <div class="php-spec-row">
-          <div class="php-spec-key">IP Filtering</div>
-          <div class="php-spec-val">Configurable CIDR whitelisting applied at the edge connection layer</div>
-        </div>
-      </div>
     </div>
   </div>
 </div>

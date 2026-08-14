@@ -40,15 +40,15 @@
                   <span class="badge-minimal">No</span>
                 {% endif %}
               </td>
-              <td class="col-actions" style="position:relative;" onclick="event.stopPropagation()">
+              <td class="col-actions" style="position:relative;">
                 {{ list_actions.button() }}
 
                 {% call list_actions.tray() %}
-                  <button type="button" class="btn btn--secondary btn--sm" data-action="change-password" data-user="{{ user.name }}" id="pg-user-pw-{{ user.name }}" title="Change password">
-                    Password
+                  <button type="button" class="btn btn--secondary btn--sm" data-action="change-password" data-user="{{ user.name }}" id="pg-user-pw-{{ user.name }}" title="Change Password">
+                    Change Password
                   </button>
-                  <button type="button" class="btn btn--danger btn--sm" data-action="delete-user" data-user="{{ user.name }}" id="pg-user-del-{{ user.name }}" title="Drop role">
-                    Drop
+                  <button type="button" class="btn btn--danger btn--sm" data-action="delete-user" data-user="{{ user.name }}" id="pg-user-del-{{ user.name }}" title="Delete User">
+                    Delete User
                   </button>
                 {% endcall %}
               </td>
@@ -63,27 +63,6 @@
           {% endif %}
         </tbody>
       </table>
-    </div>
-
-    <!-- PRIVILEGES SPEC CARD -->
-    <div class="php-card">
-      <div class="php-card__title">
-        <span>Role Privileges &amp; Authentication Architecture</span>
-      </div>
-      <div class="php-specs">
-        <div class="php-spec-row">
-          <div class="php-spec-key">Password Encryption</div>
-          <div class="php-spec-val"><code>SCRAM-SHA-256</code> (Secure salted hash)</div>
-        </div>
-        <div class="php-spec-row">
-          <div class="php-spec-key">Connection Login</div>
-          <div class="php-spec-val">Enabled by default (<code>LOGIN</code> privilege granted to created roles)</div>
-        </div>
-        <div class="php-spec-row">
-          <div class="php-spec-key">Database Ownership</div>
-          <div class="php-spec-val">Users own all tables, sequences, and schemas created in their respective databases</div>
-        </div>
-      </div>
     </div>
   </div>
 </div>

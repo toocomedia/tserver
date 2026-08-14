@@ -34,18 +34,18 @@
               <td><span class="text-muted">{{ db.encoding }}</span></td>
               <td><span class="text-muted">{{ db.size }}</span></td>
               <td id="pg-db-tables-{{ db.name }}" class="text-muted">—</td>
-              <td class="col-actions" style="position:relative;" onclick="event.stopPropagation()">
+              <td class="col-actions" style="position:relative;">
                 {{ list_actions.button() }}
 
                 {% call list_actions.tray() %}
                   <button type="button" class="btn btn--secondary btn--sm" data-action="view-tables" data-db="{{ db.name }}" id="pg-db-view-{{ db.name }}" title="Browse tables">
-                    Tables
+                    Browse Tables
                   </button>
                   <button type="button" class="btn btn--secondary btn--sm" data-action="open-connection-modal" data-db="{{ db.name }}" data-owner="{{ db.owner }}" id="pg-db-conn-{{ db.name }}" title="Connection Info">
-                    Connect
+                    Connection Info
                   </button>
-                  <button type="button" class="btn btn--danger btn--sm" data-action="delete-db" data-db="{{ db.name }}" id="pg-db-del-{{ db.name }}" title="Drop database">
-                    Drop
+                  <button type="button" class="btn btn--danger btn--sm" data-action="delete-db" data-db="{{ db.name }}" id="pg-db-del-{{ db.name }}" title="Delete database">
+                    Delete Database
                   </button>
                 {% endcall %}
               </td>
@@ -80,34 +80,6 @@
           <tr><td colspan="3" class="text-muted" style="padding: 12px;">Select a database to view tables.</td></tr>
         </tbody>
       </table>
-    </div>
-
-    <!-- ENGINE SPEC CARD -->
-    <div class="php-card">
-      <div class="php-card__title">
-        <span>Database Engine Specifications</span>
-      </div>
-      <div class="php-specs">
-        <div class="php-spec-row">
-          <div class="php-spec-key">Engine Status</div>
-          <div class="php-spec-val">
-            <span class="stat-dot stat-dot--active"></span>
-            <strong>PostgreSQL Engine Ready</strong>
-          </div>
-        </div>
-        <div class="php-spec-row">
-          <div class="php-spec-key">Default Superuser</div>
-          <div class="php-spec-val"><code>postgres</code></div>
-        </div>
-        <div class="php-spec-row">
-          <div class="php-spec-key">Server Encoding</div>
-          <div class="php-spec-val"><code>UTF8</code> (Collation: en_US.utf8)</div>
-        </div>
-        <div class="php-spec-row">
-          <div class="php-spec-key">Host Binding</div>
-          <div class="php-spec-val"><code>127.0.0.1:5432</code></div>
-        </div>
-      </div>
     </div>
   </div>
 </div>

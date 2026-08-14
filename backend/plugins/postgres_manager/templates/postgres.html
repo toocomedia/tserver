@@ -1,7 +1,7 @@
 {% extends "layout.html" %}
 
-{% block title %}PostgreSQL Server — {{ PANEL_NAME }}{% endblock %}
-{% block content_class %}{% endblock %}
+{% block title %}PostgreSQL Manager — {{ PANEL_NAME }}{% endblock %}
+{% block page_title %}PostgreSQL Manager{% endblock %}
 
 {% block head %}
 <link rel="stylesheet" href="/static/css/php-sites.css?v={{ APP_VERSION }}">
@@ -11,25 +11,16 @@
 </style>
 {% endblock %}
 
+{% block topbar_actions %}
+  <button type="button" class="btn btn--primary" id="pg-hero-create-db" data-action="open-modal" data-modal="pg-modal-create-db">+ Create Database</button>
+  <button type="button" class="btn btn--secondary" id="pg-hero-create-user" data-action="open-modal" data-modal="pg-modal-create-user">+ Create User</button>
+  <button type="button" class="btn btn--secondary" id="pg-hero-add-remote" data-action="open-modal" data-modal="pg-modal-add-remote">+ Add Endpoint</button>
+{% endblock %}
+
 {% block content %}
 {% import "partials/list_actions_toggle.html" as list_actions %}
 
 <div class="php-detail" style="width: 100%;">
-  <!-- HERO APP BANNER BOX -->
-  <div class="hero-app-box" style="margin-bottom: 24px;">
-    <div style="display: flex; align-items: center; gap: 12px; min-width: 0; flex-wrap: wrap;">
-      <h1 style="font-size: 22px; font-weight: 700; margin: 0; line-height: 1.2;">PostgreSQL Server</h1>
-      <span class="badge-minimal badge-minimal--active">Running</span>
-      <span class="text-muted" style="font-size: 12px;">Port: 5432 · Local (127.0.0.1) · v{{ plugin_version }}</span>
-    </div>
-
-    <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
-      <button type="button" class="btn btn--primary btn--sm" id="pg-hero-create-db" data-action="open-modal" data-modal="pg-modal-create-db">+ Create Database</button>
-      <button type="button" class="btn btn--secondary btn--sm" id="pg-hero-create-user" data-action="open-modal" data-modal="pg-modal-create-user">+ Create User</button>
-      <button type="button" class="btn btn--secondary btn--sm" id="pg-hero-add-remote" data-action="open-modal" data-modal="pg-modal-add-remote">+ Add Endpoint</button>
-    </div>
-  </div>
-
   <!-- VERTICAL SPLIT LAYOUT -->
   <div class="php-split-layout">
     <!-- LEFT COLUMN: VERTICAL SPLIT NAVIGATION -->

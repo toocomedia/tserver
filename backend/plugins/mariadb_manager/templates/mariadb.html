@@ -1,7 +1,9 @@
 {% extends "layout.html" %}
 
-{% block title %}MariaDB Server — {{ PANEL_NAME }}{% endblock %}
-{% block content_class %}{% endblock %}
+{% block title %}MariaDB Manager — {{ PANEL_NAME }}{% endblock %}
+{% block page_title %}MariaDB Manager{% endblock %}
+
+{% set available = status.healthy and status.install_origin == 'panel_managed' and not manager_error %}
 
 {% block head %}
 <link rel="stylesheet" href="/static/css/php-sites.css?v={{ APP_VERSION }}">
@@ -12,31 +14,16 @@
 </style>
 {% endblock %}
 
-{% set available = status.healthy and status.install_origin == 'panel_managed' and not manager_error %}
+{% block topbar_actions %}
+  {% if available %}
+    <button type="button" class="btn btn--primary" id="mdb-create-open">+ Create Database</button>
+  {% else %}
+    <a class="btn btn--primary" href="/dependencies">Open Dependencies</a>
+  {% endif %}
+{% endblock %}
 
 {% block content %}
 <div class="php-detail" style="width: 100%;">
-  <!-- HERO APP BANNER BOX -->
-  <div class="hero-app-box" style="margin-bottom: 24px;">
-    <div style="display: flex; align-items: center; gap: 12px; min-width: 0; flex-wrap: wrap;">
-      <h1 style="font-size: 22px; font-weight: 700; margin: 0; line-height: 1.2;">MariaDB Server</h1>
-      {% if available %}
-        <span class="badge-minimal badge-minimal--active">Active</span>
-        <span class="text-muted" style="font-size: 12px;">Port: 3306 · Local (127.0.0.1) · v{{ plugin_version }}</span>
-      {% else %}
-        <span class="badge-minimal badge-minimal--danger">Unavailable</span>
-      {% endif %}
-    </div>
-
-    <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
-      {% if available %}
-        <button type="button" class="btn btn--primary btn--sm" id="mdb-create-open">+ Create Database</button>
-      {% else %}
-        <a class="btn btn--primary btn--sm" href="/dependencies">Open Dependencies</a>
-      {% endif %}
-    </div>
-  </div>
-
   {% if available %}
   <!-- VERTICAL SPLIT LAYOUT -->
   <div class="php-split-layout">

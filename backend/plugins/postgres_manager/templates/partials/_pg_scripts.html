@@ -111,21 +111,37 @@
   }
 
   document.addEventListener("click", e => {
-    const btn = e.target.closest("[data-action='open-connection-modal']");
-    if (!btn) return;
-    const db     = btn.dataset.db;
-    const owner  = btn.dataset.owner;
-    const domain = btn.dataset.domain;
-    if (db) {
-      const dbInput = document.getElementById("pg-conn-db-name");
-      if (dbInput) dbInput.value = db;
+    const connBtn = e.target.closest("[data-action='open-connection-modal']");
+    if (connBtn) {
+      const db     = connBtn.dataset.db;
+      const owner  = connBtn.dataset.owner;
+      const domain = connBtn.dataset.domain;
+      if (db) {
+        const dbInput = document.getElementById("pg-conn-db-name");
+        if (dbInput) dbInput.value = db;
+      }
+      const userSelect = document.getElementById("pg-conn-user-select");
+      if (userSelect && owner) userSelect.value = owner;
+      const modeSelect = document.getElementById("pg-conn-mode-select");
+      if (modeSelect && domain) modeSelect.value = domain;
+      updateConnectionUrls();
+      window._pgOpenModal("pg-modal-connection");
+      return;
     }
-    const userSelect = document.getElementById("pg-conn-user-select");
-    if (userSelect && owner) userSelect.value = owner;
-    const modeSelect = document.getElementById("pg-conn-mode-select");
-    if (modeSelect && domain) modeSelect.value = domain;
-    updateConnectionUrls();
-    window._pgOpenModal("pg-modal-connection");
+
+    const modalOpenBtn = e.target.closest("[data-action='open-modal']");
+    if (modalOpenBtn) {
+      const modal = modalOpenBtn.dataset.modal;
+      if (modal) window._pgOpenModal(modal);
+      return;
+    }
+
+    const modalCloseBtn = e.target.closest("[data-action='close-modal']");
+    if (modalCloseBtn) {
+      const modal = modalCloseBtn.dataset.modal;
+      if (modal) window._pgCloseModal(modal);
+      return;
+    }
   });
 
   ["pg-conn-user-select", "pg-conn-mode-select", "pg-conn-password-input"].forEach(id => {
@@ -166,16 +182,6 @@
     } catch (err) {
       window._pgShowToast("Copy failed", true);
     }
-  });
-
-  // Modal open/close bindings (data-action)
-  document.addEventListener("click", e => {
-    const btn = e.target.closest("[data-action]");
-    if (!btn) return;
-    const action = btn.dataset.action;
-    const modal  = btn.dataset.modal;
-    if (action === "open-modal" && modal) window._pgOpenModal(modal);
-    if (action === "close-modal" && modal) window._pgCloseModal(modal);
   });
 
   document.querySelectorAll(".modal-backdrop").forEach(backdrop => {

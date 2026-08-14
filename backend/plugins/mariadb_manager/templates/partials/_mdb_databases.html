@@ -27,12 +27,12 @@
               <td class="table-title"><strong>{{ database.name }}</strong></td>
               <td><code>Local restricted user</code></td>
               <td><span class="text-muted">utf8mb4 / InnoDB</span></td>
-              <td class="col-actions" style="position:relative;" onclick="event.stopPropagation()">
+              <td class="col-actions" style="position:relative;">
                 {{ list_actions.button() }}
 
                 {% call list_actions.tray() %}
                   <button type="button" class="btn btn--danger btn--sm" data-mdb-delete-database="{{ database.name }}" title="Delete database">
-                    Delete
+                    Delete Database
                   </button>
                 {% endcall %}
               </td>
@@ -47,37 +47,6 @@
           {% endif %}
         </tbody>
       </table>
-    </div>
-
-    <div class="php-card">
-      <div class="php-card__title">
-        <span>MariaDB Service Configuration</span>
-      </div>
-      <div class="php-specs">
-        <div class="php-spec-row">
-          <div class="php-spec-key">Service Status</div>
-          <div class="php-spec-val">
-            <span class="stat-dot stat-dot--active"></span>
-            <strong>MariaDB Engine Active</strong>
-          </div>
-        </div>
-        <div class="php-spec-row">
-          <div class="php-spec-key">Local Binding</div>
-          <div class="php-spec-val"><code>127.0.0.1:3306</code></div>
-        </div>
-        <div class="php-spec-row">
-          <div class="php-spec-key">UNIX Socket</div>
-          <div class="php-spec-val"><code>/run/mysqld/mysqld.sock</code></div>
-        </div>
-        <div class="php-spec-row">
-          <div class="php-spec-key">Default Storage Engine</div>
-          <div class="php-spec-val"><code>InnoDB</code></div>
-        </div>
-        <div class="php-spec-row">
-          <div class="php-spec-key">Character Set</div>
-          <div class="php-spec-val"><code>utf8mb4 / utf8mb4_unicode_ci</code></div>
-        </div>
-      </div>
     </div>
   </div>
 </div>

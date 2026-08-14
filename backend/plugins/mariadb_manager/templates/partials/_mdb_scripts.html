@@ -74,9 +74,24 @@
     });
   };
 
-  /* ── Modal close bindings ── */
-  document.querySelectorAll('[data-mdb-close]').forEach(function (btn) {
-    btn.addEventListener('click', function () { closeModal(btn.getAttribute('data-mdb-close')); });
+  /* ── Modal bindings ── */
+  document.addEventListener('click', function (e) {
+    var closeBtn = e.target.closest('[data-mdb-close]');
+    if (closeBtn) {
+      closeModal(closeBtn.getAttribute('data-mdb-close'));
+      return;
+    }
+
+    var createBtn = e.target.closest('#mdb-create-open');
+    if (createBtn) {
+      var createDatabaseInput = document.getElementById('mdb-create-database');
+      var createUserInput = document.getElementById('mdb-create-user');
+      if (createDatabaseInput) createDatabaseInput.value = '';
+      if (createUserInput) createUserInput.value = '';
+      showCreateError('');
+      openModal('mdb-modal-create');
+      if (createDatabaseInput) createDatabaseInput.focus();
+    }
   });
 
   document.querySelectorAll('.modal-backdrop').forEach(function (backdrop) {
@@ -156,7 +171,6 @@
   }
 
   /* ── Create database ── */
-  var createOpen = document.getElementById('mdb-create-open');
   var createDatabaseInput = document.getElementById('mdb-create-database');
   var createUserInput = document.getElementById('mdb-create-user');
   var createError = document.getElementById('mdb-create-error');
@@ -180,27 +194,17 @@
       '<td class="table-title"><strong>' + escapeHtml(name) + '</strong></td>' +
       '<td><code>Local restricted user</code></td>' +
       '<td><span class="text-muted">utf8mb4 / InnoDB</span></td>' +
-      '<td class="col-actions" style="position:relative;" onclick="event.stopPropagation()">' +
+      '<td class="col-actions" style="position:relative;">' +
       '<button type="button" class="icon-btn list-actions-toggle-btn" onclick="toggleListRowActions(this)" aria-expanded="false" title="Actions">' +
       '<svg viewbox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" class="toggle-dots-icon">' +
       '<circle cx="12" cy="12" r="1.5"></circle><circle cx="19" cy="12" r="1.5"></circle><circle cx="5" cy="12" r="1.5"></circle>' +
       '</svg></button>' +
       '<div class="list-row-subactions slide-toolbar is-hidden"><div class="list-row-subactions__inner"><div class="list-row-subactions__btns">' +
-      '<button type="button" class="btn btn--danger btn--sm" data-mdb-delete-database="' + escapeHtml(name) + '" title="Delete database">Delete</button>' +
+      '<button type="button" class="btn btn--danger btn--sm" data-mdb-delete-database="' + escapeHtml(name) + '" title="Delete database">Delete Database</button>' +
       '</div><button type="button" class="btn btn--ghost btn--icon btn--sm list-row-subactions__close" onclick="toggleListRowActions(this)" aria-label="Close" title="Close">' +
       '<svg viewbox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"></path></svg>' +
       '</button></div></div></td>';
     tbody.appendChild(row);
-  }
-
-  if (createOpen) {
-    createOpen.addEventListener('click', function () {
-      if (createDatabaseInput) createDatabaseInput.value = '';
-      if (createUserInput) createUserInput.value = '';
-      showCreateError('');
-      openModal('mdb-modal-create');
-      if (createDatabaseInput) createDatabaseInput.focus();
-    });
   }
 
   if (createSubmit) {
@@ -234,7 +238,7 @@
       var dbPhrase = 'DELETE DATABASE ' + dbName;
       openTypedConfirm({
         title: 'Delete MariaDB Database',
-        description: 'Permanently drops database <strong class="mdb-target">' + escapeHtml(dbName) + '</strong> and all data.',
+        description: 'Permanently drops database <strong class="mdb-target">' + escapeHtml(dbName) + '</strong> and all tables.',
         phrase: dbPhrase,
         actionLabel: 'Delete Database',
         onConfirm: function () {
