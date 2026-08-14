@@ -48,9 +48,30 @@
 .tabs-nav .btn.active,
 .tabs-nav .btn--ghost.is-active,
 .tabs-nav .btn--ghost.active {
+  color: var(--color-text) !important;
+  background: color-mix(in srgb, var(--color-accent) 18%, transparent) !important;
+  font-weight: 600 !important;
+}
+
+[data-theme="dark"] .tabs-nav .tabs-nav__btn.is-active,
+[data-theme="dark"] .tabs-nav .tabs-nav__btn.active,
+[data-theme="dark"] .tabs-nav .btn.is-active,
+[data-theme="dark"] .tabs-nav .btn.active,
+[data-theme="dark"] .tabs-nav .btn--ghost.is-active,
+[data-theme="dark"] .tabs-nav .btn--ghost.active,
+[data-theme="amoled"] .tabs-nav .tabs-nav__btn.is-active,
+[data-theme="amoled"] .tabs-nav .tabs-nav__btn.active,
+[data-theme="amoled"] .tabs-nav .btn.is-active,
+[data-theme="amoled"] .tabs-nav .btn.active,
+[data-theme="amoled"] .tabs-nav .btn--ghost.is-active,
+[data-theme="amoled"] .tabs-nav .btn--ghost.active,
+[data-theme="charcoal"] .tabs-nav .tabs-nav__btn.is-active,
+[data-theme="charcoal"] .tabs-nav .tabs-nav__btn.active,
+[data-theme="charcoal"] .tabs-nav .btn.is-active,
+[data-theme="charcoal"] .tabs-nav .btn.active,
+[data-theme="charcoal"] .tabs-nav .btn--ghost.is-active,
+[data-theme="charcoal"] .tabs-nav .btn--ghost.active {
   color: var(--color-accent) !important;
-  background: color-mix(in srgb, var(--color-accent) 14%, transparent) !important;
-  font-weight: 500 !important;
 }
 
 .tabs-nav .tabs-nav__btn.is-active::after,

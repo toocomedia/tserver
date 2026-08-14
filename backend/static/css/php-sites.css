@@ -113,9 +113,15 @@
 }
 
 .php-split-nav-btn.is-active {
+  color: var(--color-text) !important;
+  background: color-mix(in srgb, var(--color-accent) 18%, transparent) !important;
+  font-weight: 600 !important;
+}
+
+[data-theme="dark"] .php-split-nav-btn.is-active,
+[data-theme="amoled"] .php-split-nav-btn.is-active,
+[data-theme="charcoal"] .php-split-nav-btn.is-active {
   color: var(--color-accent) !important;
-  background: color-mix(in srgb, var(--color-accent) 14%, transparent) !important;
-  font-weight: 500 !important;
 }
 
 .php-split-nav-btn--danger {
@@ -132,7 +138,7 @@
   opacity: 1;
   color: var(--color-danger) !important;
   background: color-mix(in srgb, var(--color-danger) 16%, transparent) !important;
-  font-weight: 500 !important;
+  font-weight: 600 !important;
 }
 
 .php-split-content {
@@ -169,7 +175,6 @@
   padding: 20px 24px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
   width: 100%;
 }
 .php-card--danger {
@@ -180,8 +185,9 @@
   font-size: 14px;
   font-weight: 700;
   color: var(--color-text);
-  padding-bottom: 4px;
-  border-bottom: none;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--color-line);
+  margin-bottom: 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -226,47 +232,6 @@
   background: rgba(0, 0, 0, 0.2);
   padding: 2px 6px;
   border-radius: 0 !important;
-}
-
-/* Runtime Settings Form Layout */
-.php-runtime-form {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  max-width: 600px;
-}
-
-.php-runtime-field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.php-runtime-field .form-label {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--color-text);
-  margin: 0;
-}
-
-.php-runtime-input-group {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.php-runtime-input-group .form-input,
-.php-runtime-input-group .form-select {
-  height: 34px;
-  border-radius: 0 !important;
-}
-
-.php-runtime-field .form-hint {
-  font-size: 12px;
-  color: var(--color-muted);
-  margin: 0;
-  line-height: 1.4;
 }
 
 /* Form Controls Inline */

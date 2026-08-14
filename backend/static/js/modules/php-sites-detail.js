@@ -155,28 +155,10 @@ function render() {
         <!-- TAB 2: RUNTIME SETTINGS -->
         <div class="tabs-panel ${currentTab === "runtime" ? "is-active" : ""}" data-tab-panel="runtime">
           <div class="php-cards-grid">
-            <div class="php-card">
-              <div class="php-card__title">${esc(t("runtime_settings"))}</div>
-              <div class="php-runtime-form">
-                <div class="php-runtime-field">
-                  <label class="form-label" for="php-runtime-ver">${esc(t("php_version"))}</label>
-                  <div class="php-runtime-input-group">
-                    ${vSelect}
-                    ${can("change_php_version") ? btn("runtime-submit", t("change"), "secondary") : ""}
-                  </div>
-                  <span class="form-hint">${esc(t("select_php_version_desc") || "Select the PHP interpreter version running for this website.")}</span>
-                </div>
-
-                <div class="php-runtime-field">
-                  <label class="form-label" for="php-doc-root">${esc(t("document_root"))}</label>
-                  <div class="php-runtime-input-group">
-                    <input id="php-doc-root" class="form-input" data-document-root value="${esc(site.document_root)}" pattern="[A-Za-z0-9][A-Za-z0-9._\\-/]*" placeholder="public" style="width:220px;">
-                    ${can("change_document_root") ? btn("root-submit", t("change"), "secondary") : ""}
-                  </div>
-                  <span class="form-hint">${esc(t("doc_root_hint") || "Relative path from site root, e.g. public or web (served by Nginx).")}</span>
-                </div>
-              </div>
-            </div>
+            ${card(t("runtime_settings"), `
+              ${spec(t("php_version"), `<div class="php-inline-control">${vSelect}${can("change_php_version") ? btn("runtime-submit", t("change"), "secondary") : ""}</div>`)}
+              ${spec(t("document_root"), `<div class="php-inline-control"><input id="php-doc-root" class="form-input" data-document-root value="${esc(site.document_root)}" pattern="[A-Za-z0-9][A-Za-z0-9._\\-/]*" style="width:200px;">${can("change_document_root") ? btn("root-submit", t("change"), "secondary") : ""}</div>`)}
+            `)}
 
             ${isWp ? card(t("wordpress_settings"), `
               ${spec(t("site_title"), esc(wp.site_title || "—"))}
