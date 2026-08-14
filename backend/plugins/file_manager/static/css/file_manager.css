@@ -1,20 +1,9 @@
 /* File Manager specific styles */
 
-#fm-main {
+#fm-main,
+.file-manager-page {
   position: relative;
   width: 100%;
-  min-height: 400px;
-}
-
-#fm-main > .skeleton-overlay {
-  position: absolute;
-  top: 0;
-  left: calc(var(--page-gutter) * -1);
-  right: calc(var(--page-gutter) * -1);
-  bottom: 0;
-  width: auto;
-  z-index: 10;
-  background: var(--color-bg);
 }
 
 .file-manager__app-selector {
@@ -30,7 +19,6 @@
   border-radius: 3px;
   animation: skeleton-pulse var(--skeleton-shimmer-duration, 1.6s) infinite ease-in-out;
 }
-
 
 /* Breadcrumbs styling */
 .fm-breadcrumb-item {

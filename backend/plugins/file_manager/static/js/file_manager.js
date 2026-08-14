@@ -382,7 +382,7 @@ function renderEntries() {
   tbody.innerHTML = '';
   
   if (state.entries.length === 0) {
-    document.getElementById('fm-empty-state').style.display = 'block';
+    document.getElementById('fm-empty-state').style.display = 'flex';
     document.getElementById('fm-table-wrap').style.display = 'none';
     return;
   }
