@@ -45,6 +45,7 @@
       var catalog = await response.text();
       if (typeof window.hideSkeleton === 'function') await window.hideSkeleton('dependencies-skeleton');
       content.innerHTML = catalog;
+      if (typeof window.initLazyImageSkeletons === 'function') window.initLazyImageSkeletons();
       if (typeof window.autoInitAllListPaginations === 'function') window.autoInitAllListPaginations();
     } catch (error) {
       if (typeof window.hideSkeleton === 'function') await window.hideSkeleton('dependencies-skeleton');

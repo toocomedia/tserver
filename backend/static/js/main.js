@@ -520,6 +520,12 @@ document.addEventListener("DOMContentLoaded", () => {
   document.dispatchEvent(new Event("app:init"));
 });
 
+document.addEventListener("asyncLoaded", function() {
+  if (typeof initLazyImageSkeletons === "function") {
+    initLazyImageSkeletons();
+  }
+});
+
 /**
  * Lazy Image Skeleton Loader: automatically marks image boxes as loaded or error,
  * and handles pre-cached images gracefully.

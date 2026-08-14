@@ -105,6 +105,7 @@
       var response = await fetch(root.dataset.runtimeUrl, {headers: {'Accept': 'text/html'}});
       if (!response.ok) throw new Error('Could not load the PHP runtime status.');
       content.innerHTML = await response.text();
+      if (typeof window.initLazyImageSkeletons === 'function') window.initLazyImageSkeletons();
       content.classList.add('skeleton-content--enter');
       window.requestAnimationFrame(function () {
         content.classList.remove('skeleton-content--enter');
