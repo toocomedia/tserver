@@ -316,7 +316,7 @@ function openDomainDetail(domain, serverIp) {
   renderAccountsList();
 
   // Reset inner tab to accounts
-  const firstTabBtn = document.querySelector('.maddy-drawer-nav .tabs-nav [data-tab="accounts"]');
+  const firstTabBtn = document.querySelector('.maddy-drawer-nav [data-tab="accounts"]');
   if (firstTabBtn) {
     switchInnerTab('accounts', firstTabBtn);
   }
@@ -365,7 +365,7 @@ function switchInnerTab(tabName, btnEl) {
   const drawer = document.getElementById('maddy-detail-drawer');
   if (!drawer) return;
 
-  drawer.querySelectorAll('.tabs-nav .btn--ghost').forEach(b => {
+  drawer.querySelectorAll('.php-split-nav-btn').forEach(b => {
     b.classList.remove('active', 'is-active');
   });
   if (btnEl) btnEl.classList.add('active', 'is-active');
@@ -381,11 +381,6 @@ function switchInnerTab(tabName, btnEl) {
     target.classList.remove('hidden');
     target.classList.add('active', 'is-active');
     target.style.display = 'flex';
-  }
-
-  const searchWrap = document.getElementById('maddy-search-wrapper');
-  if (searchWrap) {
-    searchWrap.style.display = (tabName === 'accounts') ? 'block' : 'none';
   }
 }
 

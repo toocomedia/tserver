@@ -1,134 +1,213 @@
-<!-- Drawer Header -->
+<!-- Drawer Header: Hero App Banner Style -->
 <div class="maddy-drawer-header">
-  <div class="maddy-drawer-header__left">
-    <div class="maddy-drawer-domain-icon">
-      <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-        <polyline points="22,6 12,13 2,6"/>
-      </svg>
-    </div>
-    <div style="display: flex; flex-direction: column; min-width: 0;">
-      <div style="display: flex; align-items: center; gap: 8px;">
-        <h2 id="detail-domain-name" class="maddy-drawer-title"></h2>
-        <span class="badge-minimal badge-minimal--active">Active</span>
-      </div>
-      <span id="detail-domain-ip" class="text-muted" style="font-size: 12px; margin-top: 2px;"></span>
-    </div>
+  <div style="display: flex; align-items: center; gap: 12px; min-width: 0;">
+    <h1 id="detail-domain-name" style="font-size: 20px; font-weight: 700; margin: 0; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></h1>
+    <span class="badge-minimal badge-minimal--active">Active</span>
+    <span id="detail-domain-ip" class="text-muted" style="font-size: 12px;"></span>
   </div>
 
-  <div class="maddy-drawer-header__actions">
-    <button type="button" class="btn btn--surface btn--sm" onclick="openAddAccountModal()">
-      <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
-      + Mailbox
-    </button>
-    <button type="button" class="btn btn--danger btn--sm" id="btn-delete-domain" onclick="confirmDeleteDomain()">
-      <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
-      Delete
-    </button>
-    <button type="button" class="btn btn--ghost btn--icon" onclick="closeDomainDetail()" aria-label="Close drawer" style="margin-left: 2px;">
+  <div style="display: flex; gap: 8px; align-items: center; flex-shrink: 0;">
+    <button type="button" class="btn btn--primary btn--sm" onclick="openAddAccountModal()">+ Add Mailbox</button>
+    <button type="button" class="btn btn--secondary btn--sm" onclick="openMaddyDiagnostics()">Diagnostics</button>
+    <button type="button" class="btn btn--ghost btn--icon" onclick="closeDomainDetail()" aria-label="Close drawer" style="margin-left: 4px;">
       <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
     </button>
   </div>
 </div>
 
-<!-- Drawer Tabs Navigation -->
+<!-- Drawer Navigation: Split Nav Style -->
 <div class="maddy-drawer-nav">
-  <nav class="tabs-nav" style="margin-bottom: 0; border-bottom: none; flex: 1;">
-    <button type="button" class="btn btn--ghost active" data-tab="accounts" onclick="switchInnerTab('accounts', this)">
-      Mailboxes <span id="account-count-badge" class="badge-minimal">0</span>
+  <div class="php-split-nav" style="flex-direction: row; position: static; gap: 4px; overflow-x: auto; white-space: nowrap;" role="tablist">
+    <button class="php-split-nav-btn is-active" type="button" role="tab" data-tab="accounts" onclick="switchInnerTab('accounts', this)">
+      <span>Mailboxes</span>
+      <span id="account-count-badge" class="badge-minimal" style="margin-left: 4px;">0</span>
     </button>
-    <button type="button" class="btn btn--ghost" data-tab="dns" onclick="switchInnerTab('dns', this)">DNS Records</button>
-    <button type="button" class="btn btn--ghost" data-tab="ssl" onclick="switchInnerTab('ssl', this)">SSL</button>
-    <button type="button" class="btn btn--ghost" data-tab="settings" onclick="switchInnerTab('settings', this)">Settings</button>
-  </nav>
-  <div id="maddy-search-wrapper" style="padding-bottom: 2px;">
-    <input type="text" id="account-search-input" class="form-input" placeholder="Search mailboxes..." style="width: 200px;" oninput="onAccountSearch(this.value)">
+    <button class="php-split-nav-btn" type="button" role="tab" data-tab="dns" onclick="switchInnerTab('dns', this)">
+      <span>DNS Records</span>
+    </button>
+    <button class="php-split-nav-btn" type="button" role="tab" data-tab="ssl" onclick="switchInnerTab('ssl', this)">
+      <span>SSL Certificates</span>
+    </button>
+    <button class="php-split-nav-btn" type="button" role="tab" data-tab="settings" onclick="switchInnerTab('settings', this)">
+      <span>Connection Details</span>
+    </button>
+    <button class="php-split-nav-btn php-split-nav-btn--danger" type="button" role="tab" data-tab="danger" onclick="switchInnerTab('danger', this)">
+      <span>Danger Zone</span>
+    </button>
   </div>
 </div>
 
-<!-- Drawer Body (Scrollable) -->
+<!-- Drawer Body (Scrollable Cards Grid) -->
 <div class="maddy-drawer-body">
   {{ skeleton_overlay('domain-skeleton', title_bar=1, tables=[{ 'rows': 4 }]) }}
 
-  <!-- Tab Content: Mailboxes -->
-  <div id="inner-tab-accounts" class="inner-tab-content active" style="display: flex; flex-direction: column; gap: var(--space-md);">
-    <div class="table-wrap" style="margin-bottom: 0;">
-      <table class="table" style="width: 100%; table-layout: fixed;">
-        <thead>
-          <tr>
-            <th>Mailbox</th>
-            <th class="col-actions" style="width: 200px; min-width: 200px; text-align: right;">Actions</th>
-          </tr>
-        </thead>
-        <tbody id="accounts-tbody">
-          <!-- Rendered by JS -->
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-  <!-- Tab Content: DNS -->
-  <div id="inner-tab-dns" class="inner-tab-content hidden" style="display: none; flex-direction: column; gap: var(--space-md);">
-    <div class="table-wrap" style="margin-bottom: 0;">
-      <table class="table" style="font-size: 13px;">
-        <thead>
-          <tr><th>Type</th><th>Name</th><th>Value</th></tr>
-        </thead>
-        <tbody id="dns-records-tbody">
-          <!-- Dynamically populated -->
-        </tbody>
-      </table>
-    </div>
-
-    <div style="display: flex; gap: var(--space-sm); align-items: center;">
-      <form id="dns-setup-form" style="display:flex; gap: var(--space-sm); align-items:center; flex-wrap: wrap;">
-        <input type="hidden" name="csrf_token"  value="{{ csrf_token(request) }}">
-        <input type="hidden" name="domain_name" id="dns-domain-input">
-        <input type="hidden" name="server_ip"   id="dns-server-ip"   value="{{ server_ip }}">
-        <button type="button" onclick="handleDnsAction('/plugins/maddy/api/dns/auto-setup')" class="btn btn--surface btn--sm">Auto-Setup Local DNS</button>
-        <button type="button" onclick="handleDnsAction('/plugins/maddy/api/dns/remove')" class="btn btn--secondary btn--sm">Remove Local DNS</button>
-      </form>
-      <div id="dns-result-message" style="display:none; font-size: 13px;"></div>
-    </div>
-  </div>
-
-  <!-- Tab Content: SSL -->
-  <div id="inner-tab-ssl" class="inner-tab-content hidden" style="display: none; flex-direction: column; gap: var(--space-md);">
-    <div style="display: flex; flex-direction: column; gap: var(--space-md);">
-      <div style="display: flex; align-items: center; gap: 8px;">
-        <span id="ssl-status-badge" class="badge-minimal">Checking...</span>
-        <span id="ssl-status-text" style="font-size: 13px;" class="text-muted"></span>
-      </div>
-      <form id="ssl-setup-form" style="display:flex; gap: var(--space-sm); align-items:center; flex-wrap: wrap;">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
-        <input type="hidden" name="domain"     id="ssl-domain-input">
-        <button type="button" onclick="issueMailSsl()" class="btn btn--surface btn--sm">Request SSL Certificate</button>
-      </form>
-      <div id="ssl-result-message" style="display:none; font-size: 13px;"></div>
-    </div>
-  </div>
-
-  <!-- Tab Content: Settings -->
-  <div id="inner-tab-settings" class="inner-tab-content hidden" style="display: none; flex-direction: column; gap: var(--space-lg);">
-    <div style="display: flex; flex-direction: column; gap: var(--space-sm);">
-      <h3 style="margin: 0; font-size: var(--font-h3); font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;">Client Connection Details</h3>
-      
-      <div class="table-wrap" style="margin-bottom: 0;">
-        <table class="table" style="font-size: 13px;">
-          <tbody>
-            <tr><td style="width:140px; color:var(--color-muted);">IMAP Server</td><td><strong id="setting-imap-server"></strong> (Port 993, SSL/TLS)</td></tr>
-            <tr><td style="color:var(--color-muted);">SMTP Server</td><td><strong id="setting-smtp-server"></strong> (Port 465, SSL/TLS)</td></tr>
-            <tr><td style="color:var(--color-muted);">Username</td><td>Your full email address</td></tr>
-          </tbody>
-        </table>
+  <!-- Tab 1: Mailboxes -->
+  <div id="inner-tab-accounts" class="inner-tab-content active" style="display: flex; flex-direction: column; gap: 20px;">
+    <div class="php-cards-grid">
+      <div class="php-card">
+        <div class="php-card__title">
+          <span>Configured Mailboxes</span>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <input type="text" id="account-search-input" class="form-input" placeholder="Search mailboxes..." style="width: 200px; height: 32px; font-size: 13px;" oninput="onAccountSearch(this.value)">
+            <button type="button" class="btn btn--surface btn--sm" onclick="openAddAccountModal()">+ Mailbox</button>
+          </div>
+        </div>
+        <div class="table-wrap" style="margin-bottom: 0;">
+          <table class="table" style="width: 100%; table-layout: fixed;">
+            <thead>
+              <tr>
+                <th>Mailbox</th>
+                <th class="col-actions" style="width: 200px; min-width: 200px; text-align: right;">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="accounts-tbody">
+              <!-- Rendered by JS -->
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
+  </div>
 
-    <div style="display: flex; flex-direction: column; gap: var(--space-sm);">
-      <h3 style="margin: 0; font-size: var(--font-h3); font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;">Maddy Server Management (v{{ plugin_version }})</h3>
-      <div style="display: flex; gap: var(--space-sm); flex-wrap: wrap;">
-        <button type="button" class="btn btn--surface btn--sm" onclick="openMaddyDiagnostics()">Diagnostics &amp; Logs</button>
-        <button type="button" class="btn btn--secondary btn--sm" id="btn-repair-maddy" onclick="repairMaddyConfig()">Repair Config</button>
+  <!-- Tab 2: DNS Records -->
+  <div id="inner-tab-dns" class="inner-tab-content hidden" style="display: none; flex-direction: column; gap: 20px;">
+    <div class="php-cards-grid">
+      <div class="php-card">
+        <div class="php-card__title">
+          <span>Required DNS Records</span>
+        </div>
+        <div class="table-wrap" style="margin-bottom: 0;">
+          <table class="table" style="font-size: 13px;">
+            <thead>
+              <tr><th>Type</th><th>Name</th><th>Value</th></tr>
+            </thead>
+            <tbody id="dns-records-tbody">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="php-card">
+        <div class="php-card__title">
+          <span>Local DNS Automation (PowerDNS)</span>
+        </div>
+        <div class="php-specs">
+          <div class="php-spec-row">
+            <div class="php-spec-key">Manage Local DNS</div>
+            <div class="php-spec-val">
+              <form id="dns-setup-form" style="display: flex; gap: var(--space-sm); align-items: center; flex-wrap: wrap;">
+                <input type="hidden" name="csrf_token"  value="{{ csrf_token(request) }}">
+                <input type="hidden" name="domain_name" id="dns-domain-input">
+                <input type="hidden" name="server_ip"   id="dns-server-ip"   value="{{ server_ip }}">
+                <button type="button" onclick="handleDnsAction('/plugins/maddy/api/dns/auto-setup')" class="btn btn--surface btn--sm">Auto-Setup Local DNS</button>
+                <button type="button" onclick="handleDnsAction('/plugins/maddy/api/dns/remove')" class="btn btn--secondary btn--sm">Remove Local DNS</button>
+              </form>
+            </div>
+          </div>
+        </div>
+        <div id="dns-result-message" style="display:none; font-size: 13px; margin-top: 12px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab 3: SSL Certificates -->
+  <div id="inner-tab-ssl" class="inner-tab-content hidden" style="display: none; flex-direction: column; gap: 20px;">
+    <div class="php-cards-grid">
+      <div class="php-card">
+        <div class="php-card__title">
+          <span>SSL Certificates</span>
+        </div>
+        <div class="php-specs">
+          <div class="php-spec-row">
+            <div class="php-spec-key">Certificate Status</div>
+            <div class="php-spec-val">
+              <span id="ssl-status-badge" class="badge-minimal">Checking...</span>
+              <span id="ssl-status-text" style="font-size: 13px;" class="text-muted"></span>
+            </div>
+          </div>
+          <div class="php-spec-row">
+            <div class="php-spec-key">Mail Hostname</div>
+            <div class="php-spec-val"><code id="ssl-mail-hostname">mail.domain.com</code></div>
+          </div>
+          <div class="php-spec-row">
+            <div class="php-spec-key">Actions</div>
+            <div class="php-spec-val">
+              <form id="ssl-setup-form" style="display: flex; gap: var(--space-sm); align-items: center; flex-wrap: wrap;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+                <input type="hidden" name="domain"     id="ssl-domain-input">
+                <button type="button" onclick="issueMailSsl()" class="btn btn--primary btn--sm">Request SSL Certificate</button>
+              </form>
+            </div>
+          </div>
+        </div>
+        <div id="ssl-result-message" style="display:none; font-size: 13px; margin-top: 12px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab 4: Connection Details -->
+  <div id="inner-tab-settings" class="inner-tab-content hidden" style="display: none; flex-direction: column; gap: 20px;">
+    <div class="php-cards-grid">
+      <div class="php-card">
+        <div class="php-card__title">
+          <span>Client Connection Details</span>
+        </div>
+        <div class="php-specs">
+          <div class="php-spec-row">
+            <div class="php-spec-key">IMAP Server</div>
+            <div class="php-spec-val"><strong id="setting-imap-server"></strong> <span style="font-size: 12px; color: var(--color-muted);">(Port 993, SSL/TLS)</span></div>
+          </div>
+          <div class="php-spec-row">
+            <div class="php-spec-key">SMTP Server</div>
+            <div class="php-spec-val"><strong id="setting-smtp-server"></strong> <span style="font-size: 12px; color: var(--color-muted);">(Port 465, SSL/TLS)</span></div>
+          </div>
+          <div class="php-spec-row">
+            <div class="php-spec-key">Username</div>
+            <div class="php-spec-val"><code>user@yourdomain.com</code> (Your full email address)</div>
+          </div>
+          <div class="php-spec-row">
+            <div class="php-spec-key">Authentication</div>
+            <div class="php-spec-val">Standard Password (Plain / LOGIN)</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="php-card">
+        <div class="php-card__title">
+          <span>Maddy Server Management (v{{ plugin_version }})</span>
+        </div>
+        <div class="php-specs">
+          <div class="php-spec-row">
+            <div class="php-spec-key">Diagnostics &amp; Logs</div>
+            <div class="php-spec-val">
+              <button type="button" class="btn btn--surface btn--sm" onclick="openMaddyDiagnostics()">View Service Diagnostics</button>
+            </div>
+          </div>
+          <div class="php-spec-row">
+            <div class="php-spec-key">Config Repair</div>
+            <div class="php-spec-val">
+              <button type="button" class="btn btn--secondary btn--sm" id="btn-repair-maddy" onclick="repairMaddyConfig()">Repair &amp; Sync Config</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab 5: Danger Zone -->
+  <div id="inner-tab-danger" class="inner-tab-content hidden" style="display: none; flex-direction: column; gap: 20px;">
+    <div class="php-cards-grid">
+      <div class="php-card php-card--danger">
+        <div class="php-card__title">
+          <span>Danger Zone</span>
+        </div>
+        <p class="form-hint" style="max-width: 640px; line-height: 1.6; margin: 0 0 16px 0;">
+          Deleting this mail domain will permanently erase all associated mailboxes, email accounts, aliases, and all stored emails from the server. This action is irreversible.
+        </p>
+        <div class="d-flex align-center gap-md" style="flex-wrap: wrap;">
+          <button type="button" class="btn btn--danger btn--sm" id="btn-delete-domain" onclick="confirmDeleteDomain()">Delete Mail Domain</button>
+        </div>
       </div>
     </div>
   </div>
