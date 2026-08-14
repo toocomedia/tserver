@@ -1,20 +1,21 @@
 {% extends "layout.html" %}
 
 {% block title %}{{ _('php_websites') }} — {{ PANEL_NAME }}{% endblock %}
-{% block page_title %}{{ _('php_websites') }}{% endblock %}
+{% block page_title %}<span id="php-site-title">{{ _('php_websites') }}</span>{% endblock %}
 
 {% block head %}
 <link rel="stylesheet" href="/static/css/php-sites.css?v={{ APP_VERSION }}">
 {% endblock %}
 
 {% block topbar_actions %}
-<a class="btn btn--secondary" href="{{ path('php_sites') }}" id="btn-back-sites">{{ _('back_to_php_websites') }}</a>
+<a class="btn btn--secondary btn--sm" href="{{ path('php_sites') }}" id="btn-back-sites">{{ _('back_to_php_websites') }}</a>
+<div id="php-site-topbar-actions" class="d-flex align-center gap-sm"></div>
 {% endblock %}
 
 {% block content %}
 {% from "partials/skeleton_overlay.html" import skeleton_overlay %}
 <section class="php-sites-page php-detail" data-php-site-detail data-site-id="{{ site_id }}" aria-live="polite">
-  {{ skeleton_overlay('php-site-detail-skeleton', header=1, stat_cards=0, sections=[4, 4]) }}
+  {{ skeleton_overlay('php-site-detail-skeleton', header=0, stat_cards=0, sections=[4, 4]) }}
   <div class="php-detail__loading" data-detail-loading hidden>{{ _('loading') }}</div>
   <div class="alert alert--danger mb-lg" data-detail-error hidden role="alert"></div>
   <div data-detail-content hidden></div>
