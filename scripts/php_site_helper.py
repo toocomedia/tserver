@@ -415,11 +415,15 @@ def install_managed_extensions(php_version: str, extensions: tuple[str, ...]) ->
 
 def run_as_site(
     item: dict[str, Any], arguments: list[str], *, timeout: int = 300, check: bool = True,
+    cache_dir: Path | None = None,
 ) -> subprocess.CompletedProcess[str]:
-    return run([
-        "runuser", "-u", item["user"], "--", f"/usr/bin/php{item['version']}",
+    command = ["runuser", "-u", item["user"], "--"]
+    if cache_dir is not None:
+        command.extend(["/usr/bin/env", f"WP_CLI_CACHE_DIR={cache_dir}"])
+    command.extend([f"/usr/bin/php{item['version']}",
         str(WP_CLI), f"--path={item['public']}", *arguments,
-    ], timeout=timeout, check=check)
+    ])
+    return run(command, timeout=timeout, check=check)
 
 
 def wordpress_values(value: Any) -> dict[str, str]:
@@ -453,7 +457,11 @@ def install_wordpress(data: dict[str, Any]) -> dict[str, Any]:
     if placeholder.is_file() and "PHP site ready" in placeholder.read_text(encoding="utf-8", errors="ignore"):
         placeholder.unlink()
     if not (item["public"] / "wp-load.php").is_file():
-        run_as_site(item, ["core", "download", "--skip-cache", "--no-color"], timeout=600)
+        with tempfile.TemporaryDirectory(prefix=f"srv-panel-wpcli-{item['id']}-") as temporary:
+            cache_dir = Path(temporary)
+            user = pwd.getpwnam(item["user"])
+            os.chown(cache_dir, user.pw_uid, user.pw_gid)
+            run_as_site(item, ["core", "download", "--no-color"], timeout=600, cache_dir=cache_dir)
     run_as_site(item, [
         "config", "create", f"--dbname={database['database']}", f"--dbuser={database['username']}",
         f"--dbpass={database['password']}", "--dbhost=127.0.0.1", "--skip-check", "--force", "--no-color",

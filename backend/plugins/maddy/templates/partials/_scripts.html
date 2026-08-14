@@ -429,40 +429,62 @@ function renderAccountsList() {
 
     const actionsCell = document.createElement('td');
     actionsCell.className = 'col-actions';
+    actionsCell.style.position = 'relative';
     actionsCell.style.textAlign = 'right';
 
-    const actionsWrap = document.createElement('div');
-    actionsWrap.style.display = 'inline-flex';
-    actionsWrap.style.gap = '6px';
-    actionsWrap.style.alignItems = 'center';
-    actionsWrap.style.justifyContent = 'flex-end';
+    const toggleBtn = document.createElement('button');
+    toggleBtn.type = 'button';
+    toggleBtn.className = 'icon-btn list-actions-toggle-btn';
+    toggleBtn.title = 'Actions';
+    toggleBtn.setAttribute('aria-expanded', 'false');
+    toggleBtn.onclick = function(e) {
+      e.stopPropagation();
+      toggleListRowActions(this);
+    };
+    toggleBtn.innerHTML = `
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" class="toggle-dots-icon">
+        <circle cx="12" cy="12" r="1.5"></circle>
+        <circle cx="19" cy="12" r="1.5"></circle>
+        <circle cx="5" cy="12" r="1.5"></circle>
+      </svg>
+    `;
+    actionsCell.appendChild(toggleBtn);
 
-    const webmail = webmailSites[currentDomain] || {};
-    if (webmail.ready) {
-      const openButton = document.createElement('button');
-      openButton.type = 'button';
-      openButton.className = 'btn btn--surface btn--sm';
-      openButton.textContent = 'Webmail';
-      openButton.addEventListener('click', () => openWebmail(acc.email));
-      actionsWrap.appendChild(openButton);
-    } else {
-      const setupLink = document.createElement('a');
-      setupLink.className = 'btn btn--surface btn--sm';
-      setupLink.style.textDecoration = 'none';
-      setupLink.textContent = 'Webmail setup';
-      setupLink.href = webmail.setup_url || '/plugins/roundcube_webmail/';
-      setupLink.title = webmail.reason || 'Webmail is not ready.';
-      actionsWrap.appendChild(setupLink);
-    }
+    const subactionsTray = document.createElement('div');
+    subactionsTray.className = 'list-row-subactions slide-toolbar is-hidden';
+    
+    const trayInner = document.createElement('div');
+    trayInner.className = 'list-row-subactions__inner';
+
+    const btnsWrap = document.createElement('div');
+    btnsWrap.className = 'list-row-subactions__btns';
     
     const deleteButton = document.createElement('button');
     deleteButton.type = 'button';
     deleteButton.className = 'btn btn--danger btn--sm';
     deleteButton.textContent = 'Delete';
-    deleteButton.addEventListener('click', () => executeDeleteAccount(acc.email));
-    actionsWrap.appendChild(deleteButton);
+    deleteButton.addEventListener('click', (e) => {
+      e.stopPropagation();
+      executeDeleteAccount(acc.email);
+    });
+    btnsWrap.appendChild(deleteButton);
 
-    actionsCell.appendChild(actionsWrap);
+    const closeBtn = document.createElement('button');
+    closeBtn.type = 'button';
+    closeBtn.className = 'btn btn--ghost btn--icon btn--sm list-row-subactions__close';
+    closeBtn.setAttribute('aria-label', 'Close');
+    closeBtn.setAttribute('title', 'Close');
+    closeBtn.onclick = function(e) {
+      e.stopPropagation();
+      toggleListRowActions(this);
+    };
+    closeBtn.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"></path></svg>`;
+
+    trayInner.appendChild(btnsWrap);
+    trayInner.appendChild(closeBtn);
+    subactionsTray.appendChild(trayInner);
+    actionsCell.appendChild(subactionsTray);
+
     row.appendChild(actionsCell);
     tbody.appendChild(row);
   });
