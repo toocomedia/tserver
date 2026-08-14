@@ -1,0 +1,48 @@
+{# _mdb_service.html — Service Overview & Connection Reference tab panel #}
+<div class="inner-tab-content" id="mdb-panel-service" style="display:none;">
+  <div class="php-cards-grid">
+    <div class="php-card">
+      <div class="php-card__title">
+        <span>CLI &amp; Application Connection Snippets</span>
+      </div>
+      <div class="php-specs">
+        <div class="php-spec-row">
+          <div class="php-spec-key">CLI (mysql)</div>
+          <div class="php-spec-val"><code>mysql -h 127.0.0.1 -u [username] -p [database]</code></div>
+        </div>
+        <div class="php-spec-row">
+          <div class="php-spec-key">PHP PDO (MySQL)</div>
+          <div class="php-spec-val"><code>$pdo = new PDO('mysql:host=127.0.0.1;port=3306;dbname=[database]', $user, $password);</code></div>
+        </div>
+        <div class="php-spec-row">
+          <div class="php-spec-key">Node.js (mysql2)</div>
+          <div class="php-spec-val"><code>mysql://[user]:[password]@127.0.0.1:3306/[database]</code></div>
+        </div>
+        <div class="php-spec-row">
+          <div class="php-spec-key">Python (PyMySQL)</div>
+          <div class="php-spec-val"><code>mysql+pymysql://[user]:[password]@127.0.0.1:3306/[database]</code></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="php-card">
+      <div class="php-card__title">
+        <span>MariaDB Server Specs</span>
+      </div>
+      <div class="php-specs">
+        <div class="php-spec-row">
+          <div class="php-spec-key">Plugin Version</div>
+          <div class="php-spec-val">MariaDB Manager v{{ plugin_version }}</div>
+        </div>
+        <div class="php-spec-row">
+          <div class="php-spec-key">Listening Address</div>
+          <div class="php-spec-val"><code>127.0.0.1:3306</code> (Loopback only)</div>
+        </div>
+        <div class="php-spec-row">
+          <div class="php-spec-key">Authentication Plugin</div>
+          <div class="php-spec-val"><code>mysql_native_password</code> / <code>auth_socket</code> for root</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

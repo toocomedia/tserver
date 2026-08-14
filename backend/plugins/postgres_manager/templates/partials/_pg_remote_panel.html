@@ -1,183 +1,101 @@
 {# _pg_remote_panel.html — Remote Access tab panel #}
+{% import "partials/list_actions_toggle.html" as list_actions %}
+
 <div id="pg-panel-remote" class="pg-panel" style="display:none;">
+  <div class="php-cards-grid">
+    <!-- REMOTE ENDPOINTS TABLE CARD -->
+    <div class="php-card">
+      <div class="php-card__title has-table" style="margin-bottom: 0;">
+        <span>Remote Access Endpoints</span>
+        <span id="pg-remote-feedback" class="text-muted" style="font-size: 12px; font-weight: normal;"></span>
+      </div>
 
-  {# Toolbar #}
-  <div class="action-toolbar">
-    <h2>Remote Access</h2>
-    <button class="btn btn--primary" id="pg-remote-add-open" data-action="open-modal" data-modal="pg-modal-add-remote">
-      + Add endpoint
-    </button>
-  </div>
+      <table class="table" id="pg-remote-table" style="width: 100%; table-layout: fixed; margin-bottom: 0;">
+        <thead>
+          <tr>
+            <th style="padding: 8px 12px;">Endpoint Hostname</th>
+            <th style="padding: 8px 12px; width: 170px;">Security / SSL</th>
+            <th style="padding: 8px 12px; width: 140px;">Allowed IPs</th>
+            <th style="padding: 8px 12px; width: 110px;">Status</th>
+            <th class="col-actions" style="width: 140px; text-align: right; padding: 8px 12px;">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if remote_domains %}
+            {% for endpoint in remote_domains %}
+            <tr data-domain="{{ endpoint.domain }}">
+              <td class="table-title">
+                <strong>{{ endpoint.domain }}</strong>
+                <span class="text-muted" style="font-size: 11px; display: block;">{{ endpoint.mode | title }} endpoint</span>
+              </td>
+              <td>
+                <span class="badge-minimal {{ 'badge-minimal--active' if endpoint.encryption_enabled else '' }}">
+                  {{ 'SSL Active' if endpoint.encryption_enabled else 'Plain (No SSL)' }}
+                </span>
+              </td>
+              <td>
+                <span class="text-muted" style="font-size: 12px;">
+                  {{ 'Allow all (0.0.0.0/0)' if endpoint.allowed_cidrs == ['0.0.0.0/0'] else endpoint.allowed_cidrs | join(', ') }}
+                </span>
+              </td>
+              <td>
+                <span class="badge-minimal {{ 'badge-minimal--active' if endpoint.enabled else 'badge-minimal--danger' }}">
+                  {{ 'Active' if endpoint.enabled else 'Disabled' }}
+                </span>
+                {% if endpoint.last_error %}
+                  <span class="text-danger" style="font-size: 11px; display: block;">{{ endpoint.last_error }}</span>
+                {% endif %}
+              </td>
+              <td class="col-actions" style="position:relative;" onclick="event.stopPropagation()">
+                {{ list_actions.button() }}
 
-  <p id="pg-remote-feedback" class="text-muted mb-md" role="status"></p>
-
-  {# Endpoints Table #}
-  {% if remote_domains %}
-  <div class="table-wrap">
-    <table class="table" id="pg-remote-table">
-      <thead>
-        <tr>
-          <th>Endpoint</th>
-          <th>Security &amp; Certificate</th>
-          <th>Allowed IPs</th>
-          <th>Status</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for endpoint in remote_domains %}
-        <tr data-domain="{{ endpoint.domain }}">
-          <td>
-            <strong>{{ endpoint.domain }}</strong>
-            <span class="text-muted text-small d-block">{{ endpoint.mode | title }}</span>
-          </td>
-          <td>
-            <span class="status-badge {{ 'success' if endpoint.encryption_enabled else 'warning' }}">
-              {{ 'SSL encrypted' if endpoint.encryption_enabled else 'No SSL' }}
-            </span>
-            {% if endpoint.encryption_enabled %}
-              <span class="text-muted text-small d-block">
-                Let’s Encrypt · {% if endpoint.certificate_expiry %}Expires {{ endpoint.certificate_expiry[:10] }}{% elif endpoint.ssl_active %}Certificate active{% else %}Pending issuance{% endif %}
-              </span>
-            {% endif %}
-          </td>
-          <td class="text-muted">
-            {{ 'Allow all' if endpoint.allowed_cidrs == ['0.0.0.0/0'] else endpoint.allowed_cidrs | join(', ') }}
-          </td>
-          <td>
-            <span class="status-badge {{ 'success' if endpoint.enabled else 'danger' }}">
-              {{ 'Active' if endpoint.enabled else 'Needs attention' }}
-            </span>
-            {% if endpoint.last_error %}
-              <span class="text-danger text-small d-block">{{ endpoint.last_error }}</span>
-            {% endif %}
-          </td>
-          <td class="text-right d-flex gap-xs justify-end">
-            <button class="btn btn--sm btn--secondary" data-action="open-connection-modal" data-domain="{{ endpoint.domain }}"
-                    title="Generate Connection URL &amp; credentials for {{ endpoint.domain }}">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
-                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
-              </svg>
-              Connection Info
-            </button>
-            <button class="btn btn--sm btn--secondary" data-pg-remote-action="test" data-domain="{{ endpoint.domain }}" title="Test connection">
-              Test
-            </button>
-            <button class="btn btn--sm btn--secondary" data-pg-remote-action="ssl" data-domain="{{ endpoint.domain }}" title="{{ 'Renew SSL' if endpoint.encryption_enabled else 'Enable SSL' }}">
-              {{ 'Renew SSL' if endpoint.encryption_enabled else 'Enable SSL' }}
-            </button>
-            <button class="btn btn--icon btn--sm btn--danger" data-pg-remote-action="delete" data-domain="{{ endpoint.domain }}" title="Delete endpoint" aria-label="Delete endpoint">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>
-                <path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/>
-              </svg>
-            </button>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-  {% else %}
-  {%- set empty_message = "No remote endpoints configured. Add an endpoint to connect from external tools like pgAdmin or DBeaver." %}
-  {%- set empty_icon = none %}
-  {% include "partials/empty_state.html" %}
-  {% endif %}
-</div>
-
-{# Add Remote Endpoint Modal #}
-<div class="modal-backdrop" id="pg-modal-add-remote" style="display:none;" aria-modal="true" role="dialog">
-  <div class="modal modal--wide">
-    <div class="modal__header">
-      <h2>Add Remote Endpoint</h2>
-      <button class="btn btn--icon btn--sm btn--ghost" data-action="close-modal" data-modal="pg-modal-add-remote" aria-label="Close">✕</button>
+                {% call list_actions.tray() %}
+                  <button type="button" class="btn btn--secondary btn--sm" data-action="open-connection-modal" data-domain="{{ endpoint.domain }}" title="Connection URL & credentials">
+                    Connect
+                  </button>
+                  <button type="button" class="btn btn--secondary btn--sm" data-pg-remote-action="test" data-domain="{{ endpoint.domain }}" title="Test connection">
+                    Test
+                  </button>
+                  <button type="button" class="btn btn--secondary btn--sm" data-pg-remote-action="ssl" data-domain="{{ endpoint.domain }}" title="{{ 'Renew SSL' if endpoint.encryption_enabled else 'Enable SSL' }}">
+                    {{ 'Renew' if endpoint.encryption_enabled else 'SSL' }}
+                  </button>
+                  <button type="button" class="btn btn--danger btn--sm" data-pg-remote-action="delete" data-domain="{{ endpoint.domain }}" title="Delete endpoint">
+                    Delete
+                  </button>
+                {% endcall %}
+              </td>
+            </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="5" class="text-muted" style="text-align: center; padding: var(--space-xl);">
+                No remote endpoints configured. Add an endpoint to connect from external tools like pgAdmin, DBeaver, or remote apps.
+              </td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
     </div>
-    <div class="modal__body d-flex flex-column gap-md">
-      
-      {# Mode selection #}
-      <div class="form-group">
-        <label class="form-label">Connection Hostname</label>
-        <div class="settings-choice-grid mt-sm">
-          <label class="settings-choice settings-choice--active" id="choice-mode-managed">
-            <div class="settings-choice__header">
-              <input type="radio" name="pg-remote-mode" value="managed" checked>
-              <span class="settings-choice__title">Managed subdomain</span>
-            </div>
-            <span class="settings-choice__desc">The panel creates its DNS record.</span>
-          </label>
-          <label class="settings-choice" id="choice-mode-external">
-            <div class="settings-choice__header">
-              <input type="radio" name="pg-remote-mode" value="external">
-              <span class="settings-choice__title">External hostname</span>
-            </div>
-            <span class="settings-choice__desc">You manage its DNS record.</span>
-          </label>
+
+    <!-- NETWORKING ARCHITECTURE CARD -->
+    <div class="php-card">
+      <div class="php-card__title">
+        <span>Remote Access &amp; TLS Security Architecture</span>
+      </div>
+      <div class="php-specs">
+        <div class="php-spec-row">
+          <div class="php-spec-key">TLS Termination</div>
+          <div class="php-spec-val">SNI-routed secure TLS proxy with Let’s Encrypt automated renewal</div>
+        </div>
+        <div class="php-spec-row">
+          <div class="php-spec-key">Network Exposure</div>
+          <div class="php-spec-val">Direct PostgreSQL engine is never bound to public interfaces (<code>127.0.0.1</code> isolation)</div>
+        </div>
+        <div class="php-spec-row">
+          <div class="php-spec-key">IP Filtering</div>
+          <div class="php-spec-val">Configurable CIDR whitelisting applied at the edge connection layer</div>
         </div>
       </div>
-      
-      {# Managed Fields #}
-      <div id="pg-remote-managed-wrap" class="grid-2">
-        <div class="form-group">
-          <label class="form-label" for="pg-remote-domain">Parent Domain</label>
-          <div class="form-select-wrap">
-            <select class="form-select" id="pg-remote-domain">
-              {% for domain in domains %}
-                <option value="{{ domain.name }}">{{ domain.name }}</option>
-              {% endfor %}
-            </select>
-          </div>
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="pg-remote-subdomain">Subdomain</label>
-          <input class="form-input" id="pg-remote-subdomain" value="db" placeholder="db">
-          <span class="form-hint">Preview: <strong id="pg-remote-preview">db.example.com</strong></span>
-        </div>
-      </div>
-      
-      {# External Fields #}
-      <div id="pg-remote-external-wrap" class="form-group" style="display:none;">
-        <label class="form-label" for="pg-remote-hostname">Full Hostname</label>
-        <input class="form-input" id="pg-remote-hostname" placeholder="postgres.example.com">
-        <span class="form-hint">Point its DNS A record to this VPS before enabling SSL.</span>
-      </div>
-      
-      {# Security #}
-      <div class="form-group">
-        <label class="form-label">Connection Security</label>
-        <div class="settings-choice-grid mt-sm">
-          <label class="settings-choice settings-choice--active" id="choice-enc-true">
-            <div class="settings-choice__header">
-              <input type="radio" name="pg-remote-encryption" value="true" checked>
-              <span class="settings-choice__title">Encrypted with SSL (Recommended)</span>
-            </div>
-            <span class="settings-choice__desc">Uses Let’s Encrypt (sslmode=verify-full).</span>
-          </label>
-          <label class="settings-choice" id="choice-enc-false">
-            <div class="settings-choice__header">
-              <input type="radio" name="pg-remote-encryption" value="false">
-              <span class="settings-choice__title">Not encrypted</span>
-            </div>
-            <span class="settings-choice__desc">Uses sslmode=disable.</span>
-          </label>
-        </div>
-      </div>
-      
-      {# Allowed IPs #}
-      <div class="form-group">
-        <label class="form-label" for="pg-remote-cidrs">Allowed IP Ranges (CIDR)</label>
-        <div class="d-flex gap-xs">
-          <input class="form-input flex-1" id="pg-remote-cidrs" value="0.0.0.0/0" placeholder="203.0.113.10/32, 198.51.100.0/24">
-          <button type="button" class="btn btn--secondary btn--sm" id="pg-remote-allow-all">Allow all</button>
-        </div>
-        <span class="form-hint">Use /32 for a single IP address. 0.0.0.0/0 allows any IP (password authentication still applies).</span>
-      </div>
-      
-      <div id="pg-remote-error" class="form-error" style="display:none;"></div>
-    </div>
-    <div class="modal__footer">
-      <button class="btn btn--secondary" data-action="close-modal" data-modal="pg-modal-add-remote">Cancel</button>
-      <button class="btn btn--primary" id="pg-remote-submit-btn">Enable Remote Access</button>
     </div>
   </div>
 </div>

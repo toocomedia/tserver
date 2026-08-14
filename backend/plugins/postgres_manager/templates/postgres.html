@@ -1,68 +1,82 @@
 {% extends "layout.html" %}
 
-{% block title %}PostgreSQL Manager — VPS Panel{% endblock %}
-{% block content_class %}content--flush{% endblock %}
-{# Remove the default page header so the split layout fills the full height #}
-{% block page_header_wrapper %}{% endblock %}
+{% block title %}PostgreSQL Server — {{ PANEL_NAME }}{% endblock %}
+{% block content_class %}{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="/static/css/php-sites.css?v={{ APP_VERSION }}">
+<style>
+.pg-search-input { width: 200px; height: 30px; font-size: 12px; }
+.pg-panel { width: 100%; }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="split-layout">
+{% import "partials/list_actions_toggle.html" as list_actions %}
 
-  {# ── Left sidebar: tabs + service status ── #}
-  <div class="split-sidebar">
+<div class="php-detail" style="width: 100%;">
+  <!-- HERO APP BANNER BOX -->
+  <div class="hero-app-box" style="margin-bottom: 24px;">
+    <div style="display: flex; align-items: center; gap: 12px; min-width: 0; flex-wrap: wrap;">
+      <h1 style="font-size: 22px; font-weight: 700; margin: 0; line-height: 1.2;">PostgreSQL Server</h1>
+      <span class="badge-minimal badge-minimal--active">Running</span>
+      <span class="text-muted" style="font-size: 12px;">Port: 5432 · Local (127.0.0.1) · v{{ plugin_version }}</span>
+    </div>
 
-      <div class="split-sidebar__item active"
-           data-pg-tab="databases" id="pg-tab-databases">
-        Databases
-        {% if databases %}
-          <span class="split-sidebar__count">{{ databases|length }}</span>
-        {% endif %}
-      </div>
-
-      <div class="split-sidebar__item" data-pg-tab="users" id="pg-tab-users">
-        Users &amp; Roles
-        {% if users %}
-          <span class="split-sidebar__count">{{ users|length }}</span>
-        {% endif %}
-      </div>
-
-      <div class="split-sidebar__item" data-pg-tab="system-roles" id="pg-tab-system-roles">
-        System Roles
-        {% if system_roles %}
-          <span class="split-sidebar__count">{{ system_roles|length }}</span>
-        {% endif %}
-      </div>
-
-      <div class="split-sidebar__item" data-pg-tab="query" id="pg-tab-query">
-        Query Runner
-      </div>
-
-      <div class="split-sidebar__item" data-pg-tab="remote" id="pg-tab-remote">
-        Remote Access
-      </div>
-    <div class="flex-1"></div>
-
-    <div class="split-sidebar__footer">
-      <div class="text-small">PostgreSQL Manager</div>
-      <div class="text-small">v{{ plugin_version }}</div>
+    <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+      <button type="button" class="btn btn--primary btn--sm" id="pg-hero-create-db" data-action="open-modal" data-modal="pg-modal-create-db">+ Create Database</button>
+      <button type="button" class="btn btn--secondary btn--sm" id="pg-hero-create-user" data-action="open-modal" data-modal="pg-modal-create-user">+ Create User</button>
+      <button type="button" class="btn btn--secondary btn--sm" id="pg-hero-add-remote" data-action="open-modal" data-modal="pg-modal-add-remote">+ Add Endpoint</button>
     </div>
   </div>
 
-  {# ── Right content area ── #}
-  <div class="split-content">
+  <!-- VERTICAL SPLIT LAYOUT -->
+  <div class="php-split-layout">
+    <!-- LEFT COLUMN: VERTICAL SPLIT NAVIGATION -->
+    <div class="php-split-nav" data-detail-tabs role="tablist">
+      <button class="php-split-nav-btn is-active" type="button" role="tab" data-pg-tab="databases" id="pg-tab-databases" onclick="switchTab('databases', this)">
+        <span>Databases</span>
+        <span class="badge-minimal" id="pg-badge-databases-count" style="margin-left: auto;">{{ databases|length if databases else 0 }}</span>
+      </button>
+      <button class="php-split-nav-btn" type="button" role="tab" data-pg-tab="users" id="pg-tab-users" onclick="switchTab('users', this)">
+        <span>Users &amp; Roles</span>
+        <span class="badge-minimal" id="pg-badge-users-count" style="margin-left: auto;">{{ users|length if users else 0 }}</span>
+      </button>
+      <button class="php-split-nav-btn" type="button" role="tab" data-pg-tab="system-roles" id="pg-tab-system-roles" onclick="switchTab('system-roles', this)">
+        <span>System Roles</span>
+        <span class="badge-minimal" id="pg-badge-sysroles-count" style="margin-left: auto;">{{ system_roles|length if system_roles else 0 }}</span>
+      </button>
+      <button class="php-split-nav-btn" type="button" role="tab" data-pg-tab="query" id="pg-tab-query" onclick="switchTab('query', this)">
+        <span>Query Runner</span>
+      </button>
+      <button class="php-split-nav-btn" type="button" role="tab" data-pg-tab="remote" id="pg-tab-remote" onclick="switchTab('remote', this)">
+        <span>Remote Access</span>
+        <span class="badge-minimal" id="pg-badge-remote-count" style="margin-left: auto;">{{ remote_domains|length if remote_domains else 0 }}</span>
+      </button>
+      <button class="php-split-nav-btn" type="button" role="tab" data-pg-tab="service-info" id="pg-tab-service-info" onclick="switchTab('service-info', this)">
+        <span>Service &amp; Specs</span>
+      </button>
+    </div>
+
+    <!-- RIGHT COLUMN: SPLIT CONTENT & CARDS GRID -->
+    <div class="php-split-content">
       {% include 'partials/_pg_databases.html' %}
       {% include 'partials/_pg_users.html' %}
       {% include 'partials/_pg_system_roles.html' %}
       {% include 'partials/_pg_query.html' %}
       {% include 'partials/_pg_remote_panel.html' %}
+      {% include 'partials/_pg_service_info.html' %}
+      {% include 'partials/_pg_create_db_modal.html' %}
+      {% include 'partials/_pg_user_modals.html' %}
+      {% include 'partials/_pg_remote_modal.html' %}
       {% include 'partials/_pg_connection_modal.html' %}
-
-
-
+    </div>
   </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
   {% include 'partials/_pg_scripts.html' %}
+  {% include 'partials/_pg_scripts_db.html' %}
+  {% include 'partials/_pg_scripts_remote.html' %}
 {% endblock %}

@@ -1,0 +1,65 @@
+{# _pg_create_db_modal.html — Create Database Modal #}
+<div class="modal-backdrop" id="pg-modal-create-db" style="display:none;" aria-modal="true" role="dialog">
+  <div class="modal" style="max-width: 480px;">
+    <div class="modal__header">
+      <h2>Create PostgreSQL Database</h2>
+      <button class="btn btn--icon btn--sm btn--ghost" data-action="close-modal" data-modal="pg-modal-create-db" aria-label="Close">✕</button>
+    </div>
+    <div class="modal__body" style="display: flex; flex-direction: column; gap: var(--space-md);">
+      <div class="form-group">
+        <label class="form-label" for="pg-new-db-name">Database Name</label>
+        <input type="text" id="pg-new-db-name" class="form-input" placeholder="my_app_db" autocomplete="off" spellcheck="false">
+        <span class="form-hint">Use lowercase letters, digits, and underscores (e.g. app_db).</span>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Database Owner</label>
+        <div style="display: flex; gap: 16px; margin-top: 4px;">
+          <label class="form-check" style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+            <input type="radio" name="pg-owner-mode" value="existing" id="pg-owner-mode-existing" checked>
+            <span>Existing User</span>
+          </label>
+          <label class="form-check" style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+            <input type="radio" name="pg-owner-mode" value="new" id="pg-owner-mode-new">
+            <span>+ Create New User</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Option 1: Existing User Selector -->
+      <div class="form-group" id="pg-owner-existing-wrap">
+        <label class="form-label" for="pg-new-db-owner-select">Select Owner User</label>
+        <select id="pg-new-db-owner-select" class="form-input" style="width: 100%;">
+          {% for u in users %}
+            <option value="{{ u.name }}">{{ u.name }}{% if u.superuser %} (superuser){% endif %}</option>
+          {% endfor %}
+          {% if not users %}
+            <option value="postgres">postgres</option>
+          {% endif %}
+        </select>
+      </div>
+
+      <!-- Option 2: New User Form -->
+      <div id="pg-owner-new-wrap" style="display:none; flex-direction: column; gap: var(--space-md); padding: 12px; background: var(--color-bg); border: 1px solid var(--color-line);">
+        <div class="form-group">
+          <label class="form-label" for="pg-new-owner-username">New Username</label>
+          <input type="text" id="pg-new-owner-username" class="form-input" placeholder="app_user" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="pg-new-owner-password">Password</label>
+          <input type="password" id="pg-new-owner-password" class="form-input" placeholder="Min 8 characters">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="pg-new-owner-password-confirm">Confirm Password</label>
+          <input type="password" id="pg-new-owner-password-confirm" class="form-input" placeholder="••••••••">
+        </div>
+      </div>
+
+      <div id="pg-db-error" class="alert alert--danger" style="display:none; font-size: 13px;"></div>
+    </div>
+    <div class="modal__footer">
+      <button class="btn btn--secondary" data-action="close-modal" data-modal="pg-modal-create-db">Cancel</button>
+      <button class="btn btn--primary" id="pg-db-create-submit">Create Database</button>
+    </div>
+  </div>
+</div>

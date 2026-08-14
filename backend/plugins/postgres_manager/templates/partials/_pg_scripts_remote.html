@@ -1,0 +1,165 @@
+<script>
+/**
+ * _pg_scripts_remote.html — PostgreSQL Remote Access & Query Runner Logic
+ */
+(function () {
+  'use strict';
+  const apiFetch = window._pgApiFetch;
+  const showToast = window._pgShowToast;
+  const closeModal = window._pgCloseModal;
+  const setLoading = window._pgSetLoading;
+
+  // ── Remote Access Endpoint Management ─────────────────────────────────────
+  const remoteFeedback = document.getElementById("pg-remote-feedback");
+  const managedWrap    = document.getElementById("pg-remote-managed-wrap");
+  const externalWrap   = document.getElementById("pg-remote-external-wrap");
+
+  const updateRemoteMode = () => {
+    const checked = document.querySelector('input[name="pg-remote-mode"]:checked');
+    if (!checked) return;
+    const isManaged = checked.value === "managed";
+    if (managedWrap) managedWrap.style.display = isManaged ? "grid" : "none";
+    if (externalWrap) externalWrap.style.display = isManaged ? "none" : "block";
+  };
+
+  const updateRemotePreview = () => {
+    const preview = document.getElementById("pg-remote-preview");
+    if (!preview) return;
+    const sub = (document.getElementById("pg-remote-subdomain")?.value || "db").trim();
+    const dom = (document.getElementById("pg-remote-domain")?.value || "example.com").trim();
+    preview.textContent = `${sub}.${dom}`;
+  };
+
+  document.querySelectorAll('input[name="pg-remote-mode"]').forEach(r => r.addEventListener("change", updateRemoteMode));
+  document.getElementById("pg-remote-subdomain")?.addEventListener("input", updateRemotePreview);
+  document.getElementById("pg-remote-domain")?.addEventListener("change", updateRemotePreview);
+  document.getElementById("pg-remote-allow-all")?.addEventListener("click", () => {
+    const inp = document.getElementById("pg-remote-cidrs");
+    if (inp) inp.value = "0.0.0.0/0";
+  });
+
+  document.getElementById("pg-remote-submit-btn")?.addEventListener("click", async (e) => {
+    const btn = e.currentTarget;
+    const activeMode = document.querySelector('input[name="pg-remote-mode"]:checked')?.value || "managed";
+    const errEl = document.getElementById("pg-remote-error");
+    if (errEl) errEl.style.display = "none";
+    
+    setLoading(btn, true);
+    const body = {
+      mode: activeMode,
+      domain: activeMode === "managed" ? document.getElementById("pg-remote-domain")?.value : null,
+      subdomain: activeMode === "managed" ? document.getElementById("pg-remote-subdomain")?.value?.trim() : null,
+      hostname: activeMode === "external" ? document.getElementById("pg-remote-hostname")?.value?.trim() : null,
+      encryption_enabled: document.querySelector('input[name="pg-remote-encryption"]:checked')?.value === "true",
+      allowed_cidrs: (document.getElementById("pg-remote-cidrs")?.value || "0.0.0.0/0").split(/[,;\s]+/).map(x => x.trim()).filter(Boolean)
+    };
+    
+    try {
+      await apiFetch("/remote/domains", {
+        method: "POST",
+        body: JSON.stringify(body)
+      });
+      showToast("Remote endpoint configured successfully!");
+      closeModal("pg-modal-add-remote");
+      setTimeout(() => location.reload(), 800);
+    } catch (err) {
+      if (errEl) {
+        errEl.textContent = err.message || "Could not enable remote access.";
+        errEl.style.display = "block";
+      } else {
+        showToast(err.message, true);
+      }
+    } finally {
+      setLoading(btn, false);
+    }
+  });
+
+  document.addEventListener("click", async (e) => {
+    const btn = e.target.closest("[data-pg-remote-action]");
+    if (!btn) return;
+    const action = btn.dataset.pgRemoteAction;
+    const domain = btn.dataset.domain;
+    if (!domain) return;
+    
+    if (action === "delete" && !confirm(`Delete remote endpoint ${domain}?`)) return;
+    
+    setLoading(btn, true);
+    const suffix = action === "delete" ? "" : `/${action}`;
+    const method = action === "delete" ? "DELETE" : "POST";
+    
+    try {
+      await apiFetch(`/remote/domains/${encodeURIComponent(domain)}${suffix}`, { method });
+      if (action === "test") {
+        if (remoteFeedback) {
+          remoteFeedback.textContent = `${domain} is ready to accept connections.`;
+          remoteFeedback.style.color = "var(--color-accent)";
+        }
+        showToast(`${domain} is active and reachable!`);
+        setLoading(btn, false);
+        return;
+      }
+      showToast(`Action '${action}' completed for ${domain}.`);
+      setTimeout(() => location.reload(), 800);
+    } catch (err) {
+      if (remoteFeedback) {
+        remoteFeedback.textContent = err.message || "Action failed.";
+        remoteFeedback.style.color = "var(--color-danger)";
+      }
+      showToast(err.message, true);
+      setLoading(btn, false);
+    }
+  });
+
+  updateRemoteMode();
+  updateRemotePreview();
+
+  // ── Query runner ──────────────────────────────────────────────────────────
+  const runBtn = document.getElementById("pg-query-run");
+  if (runBtn) {
+    runBtn.addEventListener("click", async () => {
+      const db  = document.getElementById("pg-query-db").value;
+      const sql = document.getElementById("pg-query-sql").value.trim();
+      const errEl     = document.getElementById("pg-query-error");
+      const resultsEl = document.getElementById("pg-query-results");
+      const emptyEl   = document.getElementById("pg-query-empty");
+      const tbody     = document.getElementById("pg-query-tbody");
+      const countEl   = document.getElementById("pg-query-count");
+      if (errEl) errEl.style.display = "none";
+      if (resultsEl) resultsEl.style.display = "none";
+      if (emptyEl) emptyEl.style.display = "none";
+      if (!sql) {
+        if (errEl) { errEl.textContent = "Enter a SELECT query."; errEl.style.display = "block"; }
+        return;
+      }
+      setLoading(runBtn, true);
+      try {
+        const data = await apiFetch("/query", { method: "POST", body: JSON.stringify({ db, sql }) });
+        if (!data.rows || data.rows.length === 0) {
+          if (emptyEl) emptyEl.style.display = "block";
+          return;
+        }
+        tbody.innerHTML = data.rows.map(r => {
+          const cols = r.row.split("|");
+          return "<tr>" + cols.map(c => `<td><code>${c}</code></td>`).join("") + "</tr>";
+        }).join("");
+        if (countEl) countEl.textContent = `${data.count} row${data.count !== 1 ? "s" : ""}`;
+        if (resultsEl) resultsEl.style.display = "block";
+      } catch (err) {
+        if (errEl) { errEl.textContent = err.message; errEl.style.display = "block"; }
+      } finally {
+        setLoading(runBtn, false);
+      }
+    });
+  }
+
+  const clearBtn = document.getElementById("pg-query-clear");
+  if (clearBtn) {
+    clearBtn.addEventListener("click", () => {
+      document.getElementById("pg-query-sql").value = "";
+      document.getElementById("pg-query-results").style.display = "none";
+      document.getElementById("pg-query-empty").style.display = "none";
+      document.getElementById("pg-query-error").style.display = "none";
+    });
+  }
+})();
+</script>

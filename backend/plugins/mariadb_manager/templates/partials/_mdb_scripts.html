@@ -1,0 +1,288 @@
+<script>
+(function () {
+  'use strict';
+
+  var API = '/plugins/mariadb_manager/api';
+  var DB_PATTERN = /^[a-z][a-z0-9_]{0,62}$/;
+  var USER_PATTERN = /^[a-z][a-z0-9_]{0,31}$/;
+
+  function toast(message, type) {
+    if (window.toast) { window.toast(message, type || 'success'); return; }
+    if (window.showToast) { window.showToast(message, type === 'danger' ? 'error' : 'success'); return; }
+    console.log(message);
+  }
+
+  function openModal(id) {
+    var el = document.getElementById(id);
+    if (el) { el.classList.remove('hidden'); el.style.display = 'flex'; }
+  }
+
+  function closeModal(id) {
+    var el = document.getElementById(id);
+    if (el) { el.classList.add('hidden'); el.style.display = 'none'; }
+  }
+
+  function formatDetail(detail) {
+    if (!detail) return 'MariaDB operation failed.';
+    if (typeof detail === 'string') return detail;
+    if (Array.isArray(detail)) return detail.map(function (d) { return d.msg || JSON.stringify(d); }).join('; ');
+    return String(detail);
+  }
+
+  function api(url, method, body) {
+    var headers = window.csrfHeaders
+      ? window.csrfHeaders({ 'Content-Type': 'application/json', 'Accept': 'application/json' })
+      : { 'Content-Type': 'application/json', 'Accept': 'application/json' };
+    return fetch(url, { method: method, headers: headers, body: body ? JSON.stringify(body) : undefined })
+      .then(async function (response) {
+        var data = await response.json().catch(function () { return {}; });
+        if (!response.ok) throw new Error(formatDetail(data.detail));
+        return data;
+      });
+  }
+
+  function escapeHtml(value) {
+    return String(value).replace(/[&<>"']/g, function (ch) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch];
+    });
+  }
+
+  /* ── Tab Switching ── */
+  var MDB_TABS = ['databases', 'users', 'service'];
+
+  window.switchMdbTab = function (tabId, btnEl) {
+    MDB_TABS.forEach(function (t) {
+      var panel = document.getElementById('mdb-panel-' + t);
+      var tabBtn = document.getElementById('mdb-tab-' + t);
+      if (panel) panel.style.display = t === tabId ? '' : 'none';
+      if (tabBtn) tabBtn.classList.toggle('is-active', t === tabId);
+    });
+  };
+
+  /* ── Search Filtering ── */
+  window.onMdbDbSearch = function (query) {
+    var q = (query || '').trim().toLowerCase();
+    document.querySelectorAll('#mdb-db-tbody tr[data-mdb-database]').forEach(function (r) {
+      r.style.display = r.getAttribute('data-mdb-database').toLowerCase().indexOf(q) !== -1 ? '' : 'none';
+    });
+  };
+
+  window.onMdbUserSearch = function (query) {
+    var q = (query || '').trim().toLowerCase();
+    document.querySelectorAll('#mdb-user-tbody tr[data-mdb-user]').forEach(function (r) {
+      r.style.display = r.getAttribute('data-mdb-user').toLowerCase().indexOf(q) !== -1 ? '' : 'none';
+    });
+  };
+
+  /* ── Modal close bindings ── */
+  document.querySelectorAll('[data-mdb-close]').forEach(function (btn) {
+    btn.addEventListener('click', function () { closeModal(btn.getAttribute('data-mdb-close')); });
+  });
+
+  document.querySelectorAll('.modal-backdrop').forEach(function (backdrop) {
+    backdrop.addEventListener('click', function (e) {
+      if (e.target === backdrop) { backdrop.classList.add('hidden'); backdrop.style.display = 'none'; }
+    });
+  });
+
+  function updateCount(kind, delta) {
+    var el = document.querySelector('[data-mdb-count="' + kind + '"]');
+    if (el) el.textContent = String(Math.max(0, parseInt(el.textContent || '0', 10) + delta));
+  }
+
+  /* ── Credentials reveal ── */
+  var credentialsTitle = document.getElementById('mdb-credentials-title');
+  var credentialsSubtitle = document.getElementById('mdb-credentials-subtitle');
+  var credentialsPassword = document.getElementById('mdb-credentials-password');
+  var credentialsCopy = document.getElementById('mdb-credentials-copy');
+
+  function showCredentials(title, subtitleHtml, password) {
+    if (credentialsTitle) credentialsTitle.textContent = title;
+    if (credentialsSubtitle) credentialsSubtitle.innerHTML = subtitleHtml;
+    if (credentialsPassword) credentialsPassword.value = password;
+    openModal('mdb-modal-credentials');
+    if (credentialsPassword) credentialsPassword.select();
+  }
+
+  if (credentialsCopy) {
+    credentialsCopy.addEventListener('click', function () {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(credentialsPassword.value).then(function () { toast('Copied to clipboard.'); });
+      } else {
+        credentialsPassword.focus();
+        credentialsPassword.select();
+        document.execCommand('copy');
+        toast('Copied to clipboard.');
+      }
+    });
+  }
+
+  /* ── Typed confirmation ── */
+  var confirmTitle = document.getElementById('mdb-confirm-title');
+  var confirmDescription = document.getElementById('mdb-confirm-description');
+  var confirmPhrase = document.getElementById('mdb-confirm-phrase');
+  var confirmInput = document.getElementById('mdb-confirm-input');
+  var confirmOk = document.getElementById('mdb-confirm-ok');
+  var confirmState = null;
+
+  function openTypedConfirm(options) {
+    confirmState = options;
+    if (confirmTitle) confirmTitle.textContent = options.title;
+    if (confirmDescription) confirmDescription.innerHTML = options.description;
+    if (confirmPhrase) confirmPhrase.textContent = options.phrase;
+    if (confirmOk) { confirmOk.textContent = options.actionLabel || 'Delete'; confirmOk.disabled = true; }
+    if (confirmInput) confirmInput.value = '';
+    openModal('mdb-modal-confirm');
+    if (confirmInput) confirmInput.focus();
+  }
+
+  if (confirmInput) {
+    confirmInput.addEventListener('input', function () {
+      if (confirmOk) confirmOk.disabled = !confirmState || confirmInput.value !== confirmState.phrase;
+    });
+    confirmInput.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' && !confirmOk.disabled) confirmOk.click();
+    });
+  }
+
+  if (confirmOk) {
+    confirmOk.addEventListener('click', function () {
+      if (!confirmState || confirmOk.disabled) return;
+      var state = confirmState;
+      confirmState = null;
+      closeModal('mdb-modal-confirm');
+      Promise.resolve(state.onConfirm()).catch(function (error) { toast(error.message || 'Operation failed.', 'danger'); });
+    });
+  }
+
+  /* ── Create database ── */
+  var createOpen = document.getElementById('mdb-create-open');
+  var createDatabaseInput = document.getElementById('mdb-create-database');
+  var createUserInput = document.getElementById('mdb-create-user');
+  var createError = document.getElementById('mdb-create-error');
+  var createSubmit = document.getElementById('mdb-create-submit');
+
+  function showCreateError(msg) {
+    if (!createError) return;
+    createError.textContent = msg;
+    createError.style.display = msg ? 'block' : 'none';
+  }
+
+  function appendDatabaseRow(name) {
+    var tbody = document.getElementById('mdb-db-tbody');
+    if (!tbody) return;
+    var emptyRow = document.getElementById('mdb-db-empty-row');
+    if (emptyRow) emptyRow.remove();
+
+    var row = document.createElement('tr');
+    row.setAttribute('data-mdb-database', name);
+    row.innerHTML =
+      '<td class="table-title"><strong>' + escapeHtml(name) + '</strong></td>' +
+      '<td><code>Local restricted user</code></td>' +
+      '<td><span class="text-muted">utf8mb4 / InnoDB</span></td>' +
+      '<td class="col-actions" style="position:relative;" onclick="event.stopPropagation()">' +
+      '<button type="button" class="icon-btn list-actions-toggle-btn" onclick="toggleListRowActions(this)" aria-expanded="false" title="Actions">' +
+      '<svg viewbox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" class="toggle-dots-icon">' +
+      '<circle cx="12" cy="12" r="1.5"></circle><circle cx="19" cy="12" r="1.5"></circle><circle cx="5" cy="12" r="1.5"></circle>' +
+      '</svg></button>' +
+      '<div class="list-row-subactions slide-toolbar is-hidden"><div class="list-row-subactions__inner"><div class="list-row-subactions__btns">' +
+      '<button type="button" class="btn btn--danger btn--sm" data-mdb-delete-database="' + escapeHtml(name) + '" title="Delete database">Delete</button>' +
+      '</div><button type="button" class="btn btn--ghost btn--icon btn--sm list-row-subactions__close" onclick="toggleListRowActions(this)" aria-label="Close" title="Close">' +
+      '<svg viewbox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"></path></svg>' +
+      '</button></div></div></td>';
+    tbody.appendChild(row);
+  }
+
+  if (createOpen) {
+    createOpen.addEventListener('click', function () {
+      if (createDatabaseInput) createDatabaseInput.value = '';
+      if (createUserInput) createUserInput.value = '';
+      showCreateError('');
+      openModal('mdb-modal-create');
+      if (createDatabaseInput) createDatabaseInput.focus();
+    });
+  }
+
+  if (createSubmit) {
+    createSubmit.addEventListener('click', function () {
+      var database = createDatabaseInput ? createDatabaseInput.value.trim() : '';
+      var user = createUserInput ? createUserInput.value.trim() : '';
+      if (!DB_PATTERN.test(database)) { showCreateError('Database must use lowercase letters, digits, and underscores (max 63 chars).'); return; }
+      if (!USER_PATTERN.test(user)) { showCreateError('User must use lowercase letters, digits, and underscores (max 32 chars).'); return; }
+      showCreateError('');
+      createSubmit.disabled = true;
+      api(API + '/databases', 'POST', { database: database, user: user })
+        .then(function (body) {
+          closeModal('mdb-modal-create');
+          appendDatabaseRow(body.database);
+          updateCount('databases', 1);
+          toast('Database created.');
+          showCredentials('Database Created', 'Database <strong class="mdb-target">' + escapeHtml(body.database) + '</strong> · User <strong class="mdb-target">' + escapeHtml(body.user) + '</strong>', body.password);
+        })
+        .catch(function (err) { showCreateError(err.message); })
+        .finally(function () { createSubmit.disabled = false; });
+    });
+  }
+
+  /* ── Row actions (delegated) ── */
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest('button[data-mdb-delete-database], button[data-mdb-delete-user], button[data-mdb-reset-user]');
+    if (!btn) return;
+
+    if (btn.hasAttribute('data-mdb-delete-database')) {
+      var dbName = btn.getAttribute('data-mdb-delete-database');
+      var dbPhrase = 'DELETE DATABASE ' + dbName;
+      openTypedConfirm({
+        title: 'Delete MariaDB Database',
+        description: 'Permanently drops database <strong class="mdb-target">' + escapeHtml(dbName) + '</strong> and all data.',
+        phrase: dbPhrase,
+        actionLabel: 'Delete Database',
+        onConfirm: function () {
+          return api(API + '/databases/' + encodeURIComponent(dbName), 'DELETE', { confirmation: dbPhrase }).then(function () {
+            var row = document.querySelector('tr[data-mdb-database="' + dbName + '"]');
+            if (row) row.remove();
+            updateCount('databases', -1);
+            toast('Database deleted.');
+          });
+        }
+      });
+      return;
+    }
+
+    if (btn.hasAttribute('data-mdb-delete-user')) {
+      var userName = btn.getAttribute('data-mdb-delete-user');
+      var userPhrase = 'DELETE USER ' + userName;
+      openTypedConfirm({
+        title: 'Delete Restricted User',
+        description: 'Permanently removes restricted user <strong class="mdb-target">' + escapeHtml(userName) + '</strong>.',
+        phrase: userPhrase,
+        actionLabel: 'Delete User',
+        onConfirm: function () {
+          return api(API + '/users/' + encodeURIComponent(userName), 'DELETE', { confirmation: userPhrase }).then(function () {
+            var row = document.querySelector('tr[data-mdb-user="' + userName + '"]');
+            if (row) row.remove();
+            updateCount('users', -1);
+            toast('User deleted.');
+          });
+        }
+      });
+      return;
+    }
+
+    var resetName = btn.getAttribute('data-mdb-reset-user');
+    var resetPhrase = 'RESET PASSWORD ' + resetName;
+    openTypedConfirm({
+      title: 'Reset User Password',
+      description: 'Generate a new password for <strong class="mdb-target">' + escapeHtml(resetName) + '</strong>? The old password stops immediately.',
+      phrase: resetPhrase,
+      actionLabel: 'Reset Password',
+      onConfirm: function () {
+        return api(API + '/users/' + encodeURIComponent(resetName) + '/password', 'POST', { confirmation: resetPhrase }).then(function (body) {
+          toast('Password reset.');
+          showCredentials('Password Reset', 'New password for user <strong class="mdb-target">' + escapeHtml(resetName) + '</strong>', body.password);
+        });
+      }
+    });
+  });
+})();
+</script>

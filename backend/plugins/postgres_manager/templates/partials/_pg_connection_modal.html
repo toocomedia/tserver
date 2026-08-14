@@ -1,87 +1,93 @@
 {# _pg_connection_modal.html — Connection URL & Credentials Generator Modal #}
 <div class="modal-backdrop" id="pg-modal-connection" data-no-backdrop-close="true" style="display:none;" aria-modal="true" role="dialog">
-
-  <div class="modal">
+  <div class="modal" style="max-width: 540px;">
     <div class="modal__header">
-      <h2>Connection Info &amp; URLs</h2>
+      <h2>PostgreSQL Connection Info &amp; URLs</h2>
       <button class="btn btn--icon btn--sm btn--ghost" data-action="close-modal" data-modal="pg-modal-connection" aria-label="Close">✕</button>
     </div>
-    <div class="modal__body d-flex flex-column gap-md">
+    <div class="modal__body" style="display: flex; flex-direction: column; gap: var(--space-md);">
       
       <!-- Target Database (Readonly) -->
       <div class="form-group">
         <label class="form-label">Database Name</label>
-        <input type="text" id="pg-conn-db-name" class="form-input form-input--code font-bold" readonly>
+        <input type="text" id="pg-conn-db-name" class="form-input form-input--code" style="font-weight: 700;" readonly>
       </div>
 
       <!-- Controls Row: User + Mode -->
-      <div class="grid-2">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
         <div class="form-group">
           <label class="form-label" for="pg-conn-user-select">Username</label>
-          <div class="form-select-wrap">
-            <select id="pg-conn-user-select" class="form-select">
-              {% for u in users %}
-                <option value="{{ u.name }}">{{ u.name }}</option>
-              {% endfor %}
-              {% if not users %}
-                <option value="postgres">postgres</option>
-              {% endif %}
-            </select>
-          </div>
+          <select id="pg-conn-user-select" class="form-input" style="width: 100%;">
+            {% for u in users %}
+              <option value="{{ u.name }}">{{ u.name }}</option>
+            {% endfor %}
+            {% if not users %}
+              <option value="postgres">postgres</option>
+            {% endif %}
+          </select>
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="pg-conn-mode-select">Connection Mode</label>
-          <div class="form-select-wrap">
-            <select id="pg-conn-mode-select" class="form-select">
-              <option value="127.0.0.1">Local VPS (127.0.0.1)</option>
-              {% for rd in remote_domains if rd.enabled %}
-                <option value="{{ rd.domain }}" data-sslmode="{{ 'verify-full' if rd.encryption_enabled else 'disable' }}">Remote {{ 'SSL' if rd.encryption_enabled else 'plain' }} ({{ rd.domain }})</option>
-              {% endfor %}
-              {% if not (remote_domains | selectattr('enabled') | list) %}
-                <option value="" disabled>No remote endpoint configured</option>
-              {% endif %}
-            </select>
-          </div>
+          <label class="form-label" for="pg-conn-mode-select">Connection Host</label>
+          <select id="pg-conn-mode-select" class="form-input" style="width: 100%;">
+            <option value="127.0.0.1">Local VPS (127.0.0.1)</option>
+            {% for rd in remote_domains if rd.enabled %}
+              <option value="{{ rd.domain }}" data-sslmode="{{ 'verify-full' if rd.encryption_enabled else 'disable' }}">Remote {{ 'SSL' if rd.encryption_enabled else 'plain' }} ({{ rd.domain }})</option>
+            {% endfor %}
+            {% if not (remote_domains | selectattr('enabled') | list) %}
+              <option value="" disabled>No remote endpoint configured</option>
+            {% endif %}
+          </select>
         </div>
-
       </div>
 
       <!-- Password Input -->
       <div class="form-group">
-        <label class="form-label" for="pg-conn-password-input">Password</label>
-        <div class="d-flex gap-xs">
-          <input type="password" id="pg-conn-password-input" class="form-input flex-1" placeholder="Enter password to reveal complete URLs">
+        <label class="form-label" for="pg-conn-password-input">Password (to reveal full URL)</label>
+        <div style="display: flex; gap: 8px;">
+          <input type="password" id="pg-conn-password-input" class="form-input" style="flex: 1;" placeholder="Enter password to generate complete string">
           <button class="btn btn--secondary btn--sm" id="pg-conn-toggle-pw-btn" type="button">Show</button>
         </div>
       </div>
 
-      <hr class="my-xs" style="border:none;border-top:1px solid var(--color-line);">
+      <hr style="border:none; border-top: 1px solid var(--color-line); margin: 4px 0;">
 
       <!-- Format 1: Standard Connection URI -->
       <div class="form-group">
         <label class="form-label" for="pg-conn-uri">Standard Connection URI</label>
-        <div class="d-flex gap-xs">
-          <input type="text" id="pg-conn-uri" class="form-input form-input--code flex-1" readonly>
+        <div style="display: flex; gap: 8px;">
+          <input type="text" id="pg-conn-uri" class="form-input form-input--code" style="flex: 1; font-family: var(--font-mono); font-size: 12px;" readonly>
           <button class="btn btn--secondary btn--sm" data-copy-target="pg-conn-uri">Copy</button>
         </div>
       </div>
 
       <!-- Format 2: Environment Variable (.env) -->
       <div class="form-group">
-        <label class="form-label" for="pg-conn-env">Environment Variable (.env / Prisma / Drizzle)</label>
-        <div class="d-flex gap-xs">
-          <input type="text" id="pg-conn-env" class="form-input form-input--code flex-1" readonly>
+        <label class="form-label" for="pg-conn-env">Environment Variable (<code>DATABASE_URL</code>)</label>
+        <div style="display: flex; gap: 8px;">
+          <input type="text" id="pg-conn-env" class="form-input form-input--code" style="flex: 1; font-family: var(--font-mono); font-size: 12px;" readonly>
           <button class="btn btn--secondary btn--sm" data-copy-target="pg-conn-env">Copy</button>
         </div>
       </div>
 
-      <!-- Format 3: Individual Credential Breakdown -->
-      <div class="conn-breakdown">
-        <div><strong class="text-muted">Host:</strong> <span id="pg-conn-host-val">127.0.0.1</span></div>
-        <div><strong class="text-muted">Port:</strong> <span id="pg-conn-port-val">5432</span></div>
-        <div><strong class="text-muted">Database:</strong> <span id="pg-conn-db-val">—</span></div>
-        <div><strong class="text-muted">User:</strong> <span id="pg-conn-user-val">—</span></div>
+      <!-- Format 3: Individual Breakdown Specs -->
+      <div class="php-specs" style="margin-top: 4px; padding: 12px; background: var(--color-bg); border: 1px solid var(--color-line);">
+        <div class="php-spec-row" style="grid-template-columns: 100px 1fr; min-height: 22px;">
+          <div class="php-spec-key">Host:</div>
+          <div class="php-spec-val"><code id="pg-conn-host-val">127.0.0.1</code></div>
+        </div>
+        <div class="php-spec-row" style="grid-template-columns: 100px 1fr; min-height: 22px;">
+          <div class="php-spec-key">Port:</div>
+          <div class="php-spec-val"><code id="pg-conn-port-val">5432</code></div>
+        </div>
+        <div class="php-spec-row" style="grid-template-columns: 100px 1fr; min-height: 22px;">
+          <div class="php-spec-key">Database:</div>
+          <div class="php-spec-val"><code id="pg-conn-db-val">—</code></div>
+        </div>
+        <div class="php-spec-row" style="grid-template-columns: 100px 1fr; min-height: 22px;">
+          <div class="php-spec-key">User:</div>
+          <div class="php-spec-val"><code id="pg-conn-user-val">—</code></div>
+        </div>
       </div>
 
     </div>

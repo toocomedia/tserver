@@ -1,50 +1,69 @@
 {# _pg_system_roles.html — Internal PostgreSQL System Roles tab panel #}
 <div id="pg-panel-system-roles" class="pg-panel" style="display:none;">
+  <div class="php-cards-grid">
+    <div class="php-card">
+      <div class="php-card__title has-table" style="margin-bottom: 0;">
+        <span>PostgreSQL Built-in System Roles</span>
+      </div>
 
-  <div class="action-toolbar">
-    <h2>System Roles</h2>
-  </div>
+      <table class="table" id="pg-sys-role-table" style="width: 100%; table-layout: fixed; margin-bottom: 0;">
+        <thead>
+          <tr>
+            <th style="padding: 8px 12px;">System Role</th>
+            <th style="padding: 8px 12px; width: 140px;">Superuser</th>
+            <th style="padding: 8px 12px; width: 140px;">Can Login</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if system_roles %}
+            {% for role in system_roles %}
+            <tr>
+              <td class="table-title"><code>{{ role.name }}</code></td>
+              <td>
+                {% if role.superuser %}
+                  <span class="badge-minimal badge-minimal--active">Yes</span>
+                {% else %}
+                  <span class="badge-minimal">No</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if role.can_login %}
+                  <span class="badge-minimal badge-minimal--active">Yes</span>
+                {% else %}
+                  <span class="badge-minimal">No</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="3" class="text-muted" style="text-align: center; padding: var(--space-xl);">
+                No system roles found.
+              </td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
 
-  <div class="alert alert--info mb-lg">
-    Built-in PostgreSQL internal roles (<code>pg_*</code>). Managed by PostgreSQL engine; cannot log in directly.
+    <div class="php-card">
+      <div class="php-card__title">
+        <span>System Roles Architecture</span>
+      </div>
+      <div class="php-specs">
+        <div class="php-spec-row">
+          <div class="php-spec-key">Role Prefix</div>
+          <div class="php-spec-val"><code>pg_*</code> (Internal engine predefined roles)</div>
+        </div>
+        <div class="php-spec-row">
+          <div class="php-spec-key">Direct Login</div>
+          <div class="php-spec-val">Disabled (Engine-maintained; cannot be authenticated directly)</div>
+        </div>
+        <div class="php-spec-row">
+          <div class="php-spec-key">Privilege Delegation</div>
+          <div class="php-spec-val">Used for granting fine-grained privileges without assigning full superuser status (e.g. <code>pg_read_all_data</code>, <code>pg_write_all_data</code>)</div>
+        </div>
+      </div>
+    </div>
   </div>
-
-  {% if system_roles %}
-  <div class="table-wrap">
-    <table class="table" id="pg-sys-role-table">
-      <thead>
-        <tr>
-          <th>System Role</th>
-          <th>Superuser</th>
-          <th>Can Login</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for role in system_roles %}
-        <tr>
-          <td><code>{{ role.name }}</code></td>
-          <td>
-            {% if role.superuser %}
-              <span class="status-badge warning">Yes</span>
-            {% else %}
-              <span class="status-badge muted">No</span>
-            {% endif %}
-          </td>
-          <td>
-            {% if role.can_login %}
-              <span class="status-badge success">Yes</span>
-            {% else %}
-              <span class="status-badge muted">No</span>
-            {% endif %}
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-  {% else %}
-  {%- set empty_message = "No system roles found." %}
-  {%- set empty_icon = none %}
-  {% include "partials/empty_state.html" %}
-  {% endif %}
 </div>

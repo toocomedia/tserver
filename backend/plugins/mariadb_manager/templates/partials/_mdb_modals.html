@@ -1,0 +1,81 @@
+{# _mdb_modals.html — Modals for Create, Reveal Credentials, and Confirmation #}
+
+<!-- CREATE DATABASE MODAL -->
+<div class="modal-backdrop hidden" id="mdb-modal-create" role="dialog" aria-modal="true">
+  <div class="modal" style="max-width: 440px;">
+    <div class="modal__header">
+      <h2>Create MariaDB Database</h2>
+      <button type="button" class="btn btn--ghost btn--icon" data-mdb-close="mdb-modal-create" aria-label="Close">✕</button>
+    </div>
+    <div class="modal__body" style="display: flex; flex-direction: column; gap: var(--space-md);">
+      <p class="text-muted" style="font-size: 13px; margin: 0;">
+        A restricted local database user will be created and granted full privileges on this database.
+      </p>
+
+      <div class="form-group">
+        <label class="form-label" for="mdb-create-database">Database Name</label>
+        <input type="text" id="mdb-create-database" class="form-input" placeholder="my_app_db" autocomplete="off" spellcheck="false">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="mdb-create-user">Restricted Username</label>
+        <input type="text" id="mdb-create-user" class="form-input" placeholder="my_app_user" autocomplete="off" spellcheck="false">
+      </div>
+
+      <div id="mdb-create-error" class="alert alert--danger" style="display:none; font-size: 13px;"></div>
+    </div>
+    <div class="modal__footer">
+      <button type="button" class="btn btn--secondary" data-mdb-close="mdb-modal-create">Cancel</button>
+      <button type="button" class="btn btn--primary" id="mdb-create-submit">Create Database</button>
+    </div>
+  </div>
+</div>
+
+<!-- CREDENTIALS REVEAL MODAL -->
+<div class="modal-backdrop hidden" id="mdb-modal-credentials" role="dialog" aria-modal="true">
+  <div class="modal" style="max-width: 460px;">
+    <div class="modal__header">
+      <h2 id="mdb-credentials-title">Database Created</h2>
+      <button type="button" class="btn btn--ghost btn--icon" data-mdb-close="mdb-modal-credentials" aria-label="Close">✕</button>
+    </div>
+    <div class="modal__body" style="display: flex; flex-direction: column; gap: var(--space-md);">
+      <p class="text-muted" style="font-size: 13px; margin: 0;" id="mdb-credentials-subtitle"></p>
+
+      <div class="mdb-credential-wrap">
+        <input type="text" id="mdb-credentials-password" class="form-input mdb-credential-input" readonly>
+        <button type="button" class="btn btn--secondary btn--sm" id="mdb-credentials-copy">Copy</button>
+      </div>
+
+      <div class="alert alert--warning" style="font-size: 12px; margin: 0;">
+        <strong>Important:</strong> Save this password now. It cannot be retrieved again later.
+      </div>
+    </div>
+    <div class="modal__footer">
+      <button type="button" class="btn btn--primary" data-mdb-close="mdb-modal-credentials">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- TYPED CONFIRMATION MODAL -->
+<div class="modal-backdrop hidden" id="mdb-modal-confirm" role="dialog" aria-modal="true">
+  <div class="modal" style="max-width: 460px;">
+    <div class="modal__header">
+      <h2 id="mdb-confirm-title">Confirm Deletion</h2>
+      <button type="button" class="btn btn--ghost btn--icon" data-mdb-close="mdb-modal-confirm" aria-label="Close">✕</button>
+    </div>
+    <div class="modal__body" style="display: flex; flex-direction: column; gap: var(--space-md);">
+      <p class="text-muted" style="font-size: 13px; margin: 0;" id="mdb-confirm-description"></p>
+
+      <code class="mdb-confirm-phrase" id="mdb-confirm-phrase"></code>
+
+      <div class="form-group">
+        <label class="form-label" for="mdb-confirm-input">Type phrase to confirm</label>
+        <input type="text" id="mdb-confirm-input" class="form-input" placeholder="Type exact phrase above" autocomplete="off" spellcheck="false">
+      </div>
+    </div>
+    <div class="modal__footer">
+      <button type="button" class="btn btn--secondary" data-mdb-close="mdb-modal-confirm">Cancel</button>
+      <button type="button" class="btn btn--danger" id="mdb-confirm-ok" disabled>Delete</button>
+    </div>
+  </div>
+</div>

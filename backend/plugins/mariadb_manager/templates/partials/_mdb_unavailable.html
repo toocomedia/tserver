@@ -1,0 +1,18 @@
+{# _mdb_unavailable.html — MariaDB Unavailable Warning card #}
+<div class="php-cards-grid" style="max-width: 580px; margin: 40px auto;">
+  <div class="php-card" style="text-align: center; padding: 32px 24px;">
+    <div class="php-card__title" style="justify-content: center; border-bottom: none; margin-bottom: 8px;">
+      <span style="font-size: 18px;">MariaDB Not Available</span>
+    </div>
+    <p class="text-muted" style="font-size: 13px; line-height: 1.6; margin-bottom: 24px;">
+      {% if manager_error %}
+        {{ manager_error }}
+      {% else %}
+        Install panel-managed MariaDB from Dependencies to create local databases and restricted users.
+      {% endif %}
+    </p>
+    <div>
+      <a class="btn btn--primary" href="/dependencies">Open Dependencies</a>
+    </div>
+  </div>
+</div>

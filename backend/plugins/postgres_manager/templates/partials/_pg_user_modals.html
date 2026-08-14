@@ -1,0 +1,53 @@
+{# _pg_user_modals.html — Create User & Change Password Modals #}
+
+<!-- CREATE USER MODAL -->
+<div class="modal-backdrop" id="pg-modal-create-user" style="display:none;" aria-modal="true" role="dialog">
+  <div class="modal" style="max-width: 440px;">
+    <div class="modal__header">
+      <h2>Create PostgreSQL User</h2>
+      <button class="btn btn--icon btn--sm btn--ghost" data-action="close-modal" data-modal="pg-modal-create-user" aria-label="Close">✕</button>
+    </div>
+    <div class="modal__body" style="display: flex; flex-direction: column; gap: var(--space-md);">
+      <div class="form-group">
+        <label class="form-label" for="pg-new-user-name">Username</label>
+        <input type="text" id="pg-new-user-name" class="form-input" placeholder="app_user" autocomplete="off" spellcheck="false">
+        <span class="form-hint">Use lowercase letters, digits, and underscores.</span>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="pg-new-user-pw">Password</label>
+        <input type="password" id="pg-new-user-pw" class="form-input" placeholder="Min 8 characters">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="pg-new-user-pw-confirm">Confirm Password</label>
+        <input type="password" id="pg-new-user-pw-confirm" class="form-input" placeholder="••••••••">
+      </div>
+      <div id="pg-user-error" class="alert alert--danger" style="display:none; font-size: 13px;"></div>
+    </div>
+    <div class="modal__footer">
+      <button class="btn btn--secondary" data-action="close-modal" data-modal="pg-modal-create-user">Cancel</button>
+      <button class="btn btn--primary" id="pg-user-create-submit">Create User</button>
+    </div>
+  </div>
+</div>
+
+<!-- CHANGE PASSWORD MODAL -->
+<div class="modal-backdrop" id="pg-modal-change-pw" style="display:none;" aria-modal="true" role="dialog">
+  <div class="modal" style="max-width: 440px;">
+    <div class="modal__header">
+      <h2>Change Password — <span id="pg-pw-username"></span></h2>
+      <button class="btn btn--icon btn--sm btn--ghost" data-action="close-modal" data-modal="pg-modal-change-pw" aria-label="Close">✕</button>
+    </div>
+    <div class="modal__body" style="display: flex; flex-direction: column; gap: var(--space-md);">
+      <div class="form-group">
+        <label class="form-label" for="pg-change-pw-input">New Password</label>
+        <input type="password" id="pg-change-pw-input" class="form-input" placeholder="Min 8 characters">
+        <span class="form-hint">Must be at least 8 characters.</span>
+      </div>
+      <div id="pg-pw-error" class="alert alert--danger" style="display:none; font-size: 13px;"></div>
+    </div>
+    <div class="modal__footer">
+      <button class="btn btn--secondary" data-action="close-modal" data-modal="pg-modal-change-pw">Cancel</button>
+      <button class="btn btn--primary" id="pg-pw-submit">Update Password</button>
+    </div>
+  </div>
+</div>

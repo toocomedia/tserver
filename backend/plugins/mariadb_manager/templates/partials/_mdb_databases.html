@@ -1,0 +1,83 @@
+{# _mdb_databases.html — Databases tab panel #}
+{% import "partials/list_actions_toggle.html" as list_actions %}
+
+<div class="inner-tab-content" id="mdb-panel-databases">
+  <div class="php-cards-grid">
+    <div class="php-card">
+      <div class="php-card__title has-table" style="margin-bottom: 0;">
+        <span>User Databases</span>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <input type="text" id="mdb-db-search" class="form-input pg-search-input" placeholder="Search databases..." oninput="onMdbDbSearch(this.value)">
+        </div>
+      </div>
+
+      <table class="table" id="mdb-db-table" style="width: 100%; table-layout: fixed; margin-bottom: 0;">
+        <thead>
+          <tr>
+            <th style="padding: 8px 12px;">Database Name</th>
+            <th style="padding: 8px 12px; width: 180px;">Access Scope</th>
+            <th style="padding: 8px 12px; width: 160px;">Collation / Engine</th>
+            <th class="col-actions" style="width: 140px; text-align: right; padding: 8px 12px;">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="mdb-db-tbody">
+          {% if databases %}
+            {% for database in databases %}
+            <tr data-mdb-database="{{ database.name }}">
+              <td class="table-title"><strong>{{ database.name }}</strong></td>
+              <td><code>Local restricted user</code></td>
+              <td><span class="text-muted">utf8mb4 / InnoDB</span></td>
+              <td class="col-actions" style="position:relative;" onclick="event.stopPropagation()">
+                {{ list_actions.button() }}
+
+                {% call list_actions.tray() %}
+                  <button type="button" class="btn btn--danger btn--sm" data-mdb-delete-database="{{ database.name }}" title="Delete database">
+                    Delete
+                  </button>
+                {% endcall %}
+              </td>
+            </tr>
+            {% endfor %}
+          {% else %}
+            <tr id="mdb-db-empty-row">
+              <td colspan="4" class="text-muted" style="text-align: center; padding: var(--space-xl);">
+                No databases found. Create one using the "+ Create Database" button above.
+              </td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="php-card">
+      <div class="php-card__title">
+        <span>MariaDB Service Configuration</span>
+      </div>
+      <div class="php-specs">
+        <div class="php-spec-row">
+          <div class="php-spec-key">Service Status</div>
+          <div class="php-spec-val">
+            <span class="stat-dot stat-dot--active"></span>
+            <strong>MariaDB Engine Active</strong>
+          </div>
+        </div>
+        <div class="php-spec-row">
+          <div class="php-spec-key">Local Binding</div>
+          <div class="php-spec-val"><code>127.0.0.1:3306</code></div>
+        </div>
+        <div class="php-spec-row">
+          <div class="php-spec-key">UNIX Socket</div>
+          <div class="php-spec-val"><code>/run/mysqld/mysqld.sock</code></div>
+        </div>
+        <div class="php-spec-row">
+          <div class="php-spec-key">Default Storage Engine</div>
+          <div class="php-spec-val"><code>InnoDB</code></div>
+        </div>
+        <div class="php-spec-row">
+          <div class="php-spec-key">Character Set</div>
+          <div class="php-spec-val"><code>utf8mb4 / utf8mb4_unicode_ci</code></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

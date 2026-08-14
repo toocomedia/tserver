@@ -1,0 +1,81 @@
+{# _pg_remote_modal.html — Add Remote Endpoint Modal #}
+<div class="modal-backdrop" id="pg-modal-add-remote" style="display:none;" aria-modal="true" role="dialog">
+  <div class="modal modal--wide" style="max-width: 540px;">
+    <div class="modal__header">
+      <h2>Add Remote PostgreSQL Endpoint</h2>
+      <button class="btn btn--icon btn--sm btn--ghost" data-action="close-modal" data-modal="pg-modal-add-remote" aria-label="Close">✕</button>
+    </div>
+    <div class="modal__body" style="display: flex; flex-direction: column; gap: var(--space-md);">
+      
+      {# Mode selection #}
+      <div class="form-group">
+        <label class="form-label">Connection Hostname Mode</label>
+        <div style="display: flex; gap: 16px; margin-top: 4px;">
+          <label class="form-check" style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+            <input type="radio" name="pg-remote-mode" value="managed" checked>
+            <span>Managed Subdomain</span>
+          </label>
+          <label class="form-check" style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+            <input type="radio" name="pg-remote-mode" value="external">
+            <span>External Hostname</span>
+          </label>
+        </div>
+      </div>
+      
+      {# Managed Fields #}
+      <div id="pg-remote-managed-wrap" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <div class="form-group">
+          <label class="form-label" for="pg-remote-domain">Parent Domain</label>
+          <select class="form-input" id="pg-remote-domain" style="width: 100%;">
+            {% for domain in domains %}
+              <option value="{{ domain.name }}">{{ domain.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="pg-remote-subdomain">Subdomain</label>
+          <input class="form-input" id="pg-remote-subdomain" value="db" placeholder="db">
+          <span class="form-hint" style="font-size: 11px;">Preview: <strong id="pg-remote-preview">db.example.com</strong></span>
+        </div>
+      </div>
+      
+      {# External Fields #}
+      <div id="pg-remote-external-wrap" class="form-group" style="display:none;">
+        <label class="form-label" for="pg-remote-hostname">Full Hostname</label>
+        <input class="form-input" id="pg-remote-hostname" placeholder="postgres.example.com">
+        <span class="form-hint">Point its DNS A record to this VPS before enabling SSL.</span>
+      </div>
+      
+      {# Security #}
+      <div class="form-group">
+        <label class="form-label">Connection Security</label>
+        <div style="display: flex; gap: 16px; margin-top: 4px;">
+          <label class="form-check" style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+            <input type="radio" name="pg-remote-encryption" value="true" checked>
+            <span>SSL Encrypted (Let's Encrypt)</span>
+          </label>
+          <label class="form-check" style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+            <input type="radio" name="pg-remote-encryption" value="false">
+            <span>Plain (No SSL)</span>
+          </label>
+        </div>
+      </div>
+      
+      {# Allowed IPs #}
+      <div class="form-group">
+        <label class="form-label" for="pg-remote-cidrs">Allowed IP Ranges (CIDR)</label>
+        <div style="display: flex; gap: 8px;">
+          <input class="form-input" id="pg-remote-cidrs" value="0.0.0.0/0" style="flex: 1;" placeholder="0.0.0.0/0">
+          <button type="button" class="btn btn--secondary btn--sm" id="pg-remote-allow-all">Allow All</button>
+        </div>
+        <span class="form-hint">Use 0.0.0.0/0 to allow any IP (password authentication still applies).</span>
+      </div>
+      
+      <div id="pg-remote-error" class="alert alert--danger" style="display:none; font-size: 13px;"></div>
+    </div>
+    <div class="modal__footer">
+      <button class="btn btn--secondary" data-action="close-modal" data-modal="pg-modal-add-remote">Cancel</button>
+      <button class="btn btn--primary" id="pg-remote-submit-btn">Enable Remote Access</button>
+    </div>
+  </div>
+</div>
