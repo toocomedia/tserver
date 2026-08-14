@@ -44,14 +44,14 @@ function spec(key, val) {
 
 function tabsNav() {
   return `
-    <nav class="tabs-nav mb-lg" data-detail-tabs role="tablist">
-      <button class="tabs-nav__btn ${currentTab === "overview" ? "is-active" : ""}" type="button" role="tab" data-tab-target="overview" id="tab-btn-overview">${esc(t("overview"))}</button>
-      <button class="tabs-nav__btn ${currentTab === "runtime" ? "is-active" : ""}" type="button" role="tab" data-tab-target="runtime" id="tab-btn-runtime">${esc(t("runtime_settings"))}</button>
-      <button class="tabs-nav__btn ${currentTab === "database" ? "is-active" : ""}" type="button" role="tab" data-tab-target="database" id="tab-btn-database">${esc(t("database"))}</button>
-      <button class="tabs-nav__btn ${currentTab === "ssl" ? "is-active" : ""}" type="button" role="tab" data-tab-target="ssl" id="tab-btn-ssl">${esc(t("ssl_certificates"))}</button>
-      <button class="tabs-nav__btn ${currentTab === "logs" ? "is-active" : ""}" type="button" role="tab" data-tab-target="logs" id="tab-btn-logs">${esc(t("logs"))}</button>
-      <button class="tabs-nav__btn tabs-nav__btn--danger ${currentTab === "danger" ? "is-active" : ""}" type="button" role="tab" data-tab-target="danger" id="tab-btn-danger">${esc(t("danger_zone"))}</button>
-    </nav>
+    <div class="php-split-nav" data-detail-tabs role="tablist">
+      <button class="php-split-nav-btn ${currentTab === "overview" ? "is-active" : ""}" type="button" role="tab" data-tab-target="overview" id="tab-btn-overview">${esc(t("overview"))}</button>
+      <button class="php-split-nav-btn ${currentTab === "runtime" ? "is-active" : ""}" type="button" role="tab" data-tab-target="runtime" id="tab-btn-runtime">${esc(t("runtime_settings"))}</button>
+      <button class="php-split-nav-btn ${currentTab === "database" ? "is-active" : ""}" type="button" role="tab" data-tab-target="database" id="tab-btn-database">${esc(t("database"))}</button>
+      <button class="php-split-nav-btn ${currentTab === "ssl" ? "is-active" : ""}" type="button" role="tab" data-tab-target="ssl" id="tab-btn-ssl">${esc(t("ssl_certificates"))}</button>
+      <button class="php-split-nav-btn ${currentTab === "logs" ? "is-active" : ""}" type="button" role="tab" data-tab-target="logs" id="tab-btn-logs">${esc(t("logs"))}</button>
+      <button class="php-split-nav-btn php-split-nav-btn--danger ${currentTab === "danger" ? "is-active" : ""}" type="button" role="tab" data-tab-target="danger" id="tab-btn-danger">${esc(t("danger_zone"))}</button>
+    </div>
   `;
 }
 
@@ -134,131 +134,135 @@ function render() {
       </div>
     </div>
 
-    ${tabsNav()}
+    <!-- VERTICAL SPLIT CONTAINER (OPTION 4) -->
+    <div class="php-split-layout">
+      ${tabsNav()}
 
-    <!-- TAB 1: OVERVIEW -->
-    <div class="tabs-panel ${currentTab === "overview" ? "is-active" : ""}" data-tab-panel="overview">
-      <div class="php-cards-grid">
-        ${card(t("site_details") || "Site Details", `
-          ${spec(t("domain"), `<a href="${esc(url)}" target="_blank" rel="noopener" style="font-weight:700; color:var(--color-text);">${esc(site.domain)} ↗</a>`)}
-          ${spec(t("preset"), `<span class="badge-pill">${esc(isWp ? t("wordpress") : t("plain_php"))}</span>`)}
-          ${spec(t("linux_user"), `<code>srvphp${site.id}</code>`)}
-          ${spec(t("document_root"), `<code>${esc(site.document_root || "public")}</code>`)}
-          ${spec(t("webroot"), `<code>/var/www/${esc(site.domain)}/${esc(site.document_root)}</code>`)}
-        `)}
+      <div class="php-split-content">
+        <!-- TAB 1: OVERVIEW -->
+        <div class="tabs-panel ${currentTab === "overview" ? "is-active" : ""}" data-tab-panel="overview">
+          <div class="php-cards-grid">
+            ${card(t("site_details") || "Site & Webroot Details", `
+              ${spec(t("linux_user"), `<code>srvphp${site.id}</code>`)}
+              ${spec(t("document_root"), `<code>${esc(site.document_root || "public")}</code>`)}
+              ${spec(t("webroot"), `<code>/var/www/${esc(site.domain)}/${esc(site.document_root)}</code>`)}
+              ${spec(t("preset"), `<span class="badge-pill">${esc(isWp ? t("wordpress") : t("plain_php"))}</span>`)}
+            `)}
 
-        ${card(t("service_state_health") || "Service State & Health", `
-          ${spec(t("php_fpm_socket"), `${dot(h.socket_healthy)} <strong>${h.socket_healthy ? t("active_1") : t("disabled")}</strong> (PHP ${esc(site.php_version || "—")})`)}
-          ${spec(t("nginx_web_engine"), `${dot(h.nginx_active)} <strong>${h.nginx_active ? t("active_1") : t("disabled")}</strong>`)}
-          ${spec(t("local_http"), `<strong>${esc(httpCode)}</strong>`)}
-          ${spec(t("database"), site.database ? `${dot(h.mariadb_healthy)} <code>${esc(site.database.database)}</code>` : `<span style="color:var(--color-muted);">${esc(t("no_database_attached"))}</span>`)}
-          ${spec(t("ssl_certificates"), site.ssl?.active ? `${dot(true)} <strong>${t("active_1")}</strong>${sslExp ? ` <span style="font-size:12px; color:var(--color-muted);">(Expires ${esc(sslExp)})</span>` : ""}` : `<span style="color:var(--color-muted);">${esc(t("not_available"))}</span>`)}
-        `)}
-      </div>
-    </div>
-
-    <!-- TAB 2: RUNTIME SETTINGS -->
-    <div class="tabs-panel ${currentTab === "runtime" ? "is-active" : ""}" data-tab-panel="runtime">
-      <div class="php-cards-grid">
-        ${card(t("runtime_settings"), `
-          ${spec(t("php_version"), `<div class="php-inline-control">${vSelect}${can("change_php_version") ? btn("runtime-submit", t("change"), "secondary") : ""}</div>`)}
-          ${spec(t("document_root"), `<div class="php-inline-control"><input id="php-doc-root" class="form-input" data-document-root value="${esc(site.document_root)}" pattern="[A-Za-z0-9][A-Za-z0-9._\\-/]*" style="width:200px;">${can("change_document_root") ? btn("root-submit", t("change"), "secondary") : ""}</div>`)}
-        `)}
-
-        ${isWp ? card(t("wordpress_settings"), `
-          ${spec(t("site_title"), esc(wp.site_title || "—"))}
-          ${spec(t("admin_user"), `<code>${esc(wp.admin_user || "—")}</code>`)}
-          ${spec(t("admin_email"), esc(wp.admin_email || "—"))}
-          ${spec(t("status"), badge(wp.installed ? "active" : "failed"))}
-          ${wpRetry ? spec(t("retry_setup") || "Retry Setup", wpRetry) : ""}
-        `) : ""}
-      </div>
-    </div>
-
-    <!-- TAB 3: DATABASE -->
-    <div class="tabs-panel ${currentTab === "database" ? "is-active" : ""}" data-tab-panel="database">
-      <div class="php-cards-grid">
-        ${site.database ? card(t("database"), `
-          ${spec(t("database_name"), `<code>${esc(site.database.database)}</code>`)}
-          ${spec(t("admin_user"), `<code>${esc(site.database.username)}</code>`)}
-          ${spec(t("host"), `<code>${esc(site.database.host)}:${esc(site.database.port)}</code>`)}
-          ${spec(t("status"), badge(site.database.status))}
-          ${spec(t("actions") || "Actions", `
-            <div class="d-flex align-center gap-sm" style="flex-wrap:wrap;">
-              ${btn("db-reveal", t("reveal_credentials"))}
-              ${btn("db-rotate", t("rotate_password"))}
-              ${can("delete_database") ? btn("db-delete", t("delete_database"), "danger") : ""}
-            </div>
-          `)}
-          <div class="php-detail__credentials" data-credentials hidden style="margin-top: 12px;"></div>
-        `) : card(t("database"), `
-          <p class="form-hint" style="margin:0;">${esc(t("no_database_attached"))}</p>
-          ${can("create_database") ? `
-            <div class="d-flex align-center gap-md" style="flex-wrap:wrap; margin-top: 12px;">
-              <label class="form-check" style="margin:0;"><input type="checkbox" data-db-install checked><span>${t("install_missing_extensions")}</span></label>
-              ${btn("db-create", t("create_database_for_site"), "primary")}
-            </div>
-          ` : ""}
-        `)}
-      </div>
-    </div>
-
-    <!-- TAB 4: SSL CERTIFICATES -->
-    <div class="tabs-panel ${currentTab === "ssl" ? "is-active" : ""}" data-tab-panel="ssl">
-      <div class="php-cards-grid">
-        ${card(t("ssl_certificates"), `
-          ${spec(t("status"), badge(ssl.active ? "active" : "inactive"))}
-          ${spec(t("expires"), esc(sslExp || t("not_available")))}
-          ${spec(t("include_www") || "Include WWW", `
-            <label class="form-check" style="margin:0;"><input type="checkbox" data-ssl-www ${ssl.include_www ? "checked" : ""}><span>${esc(t("include_www"))}</span></label>
-          `)}
-          ${spec(t("actions") || "Actions", `
-            <div class="d-flex align-center gap-sm" style="flex-wrap:wrap;">
-              ${sslAct}
-            </div>
-          `)}
-        `)}
-      </div>
-    </div>
-
-    <!-- TAB 5: LOGS -->
-    <div class="tabs-panel ${currentTab === "logs" ? "is-active" : ""}" data-tab-panel="logs">
-      <div class="php-cards-grid">
-        <div class="php-card">
-          <div class="php-card__title php-log-header">
-            <span>${esc(t("logs"))}</span>
-            <div class="d-flex align-center gap-sm" style="flex-wrap:wrap;">
-              <div class="php-log-tabs d-flex gap-xs">
-                <button type="button" class="btn btn--sm btn--secondary php-log-tab is-active" data-log-stream="access">${esc(t("access_log"))}</button>
-                <button type="button" class="btn btn--sm btn--secondary php-log-tab" data-log-stream="nginx_error">${esc(t("nginx_error_log"))}</button>
-                <button type="button" class="btn btn--sm btn--secondary php-log-tab" data-log-stream="php">${esc(t("php_fpm_log"))}</button>
-              </div>
-              <select class="form-select php-log-lines" data-log-lines style="height:30px; font-size:12px; padding:0 8px; width:auto;">
-                <option value="50">50 ${esc(t("lines"))}</option>
-                <option value="100" selected>100 ${esc(t("lines"))}</option>
-                <option value="200">200 ${esc(t("lines"))}</option>
-                <option value="500">500 ${esc(t("lines"))}</option>
-              </select>
-              <button type="button" class="btn btn--sm btn--secondary" data-log-refresh>${esc(t("refresh"))}</button>
-            </div>
-          </div>
-          <div style="padding-top: 4px;">
-            <pre class="php-log-terminal" data-log-terminal style="margin:0;">${esc(t("loading"))}</pre>
+            ${card(t("service_state_health") || "Service State & Health", `
+              ${spec(t("php_fpm_socket"), `${dot(h.socket_healthy)} <strong>${h.socket_healthy ? t("active_1") : t("disabled")}</strong> (PHP ${esc(site.php_version || "—")})`)}
+              ${spec(t("nginx_web_engine"), `${dot(h.nginx_active)} <strong>${h.nginx_active ? t("active_1") : t("disabled")}</strong>`)}
+              ${spec(t("local_http"), `<strong>${esc(httpCode)}</strong>`)}
+              ${spec(t("database"), site.database ? `${dot(h.mariadb_healthy)} <code>${esc(site.database.database)}</code> <span style="font-size:12px; color:var(--color-muted);">(${esc(site.database.host)}:${esc(site.database.port)})</span>` : `<span style="color:var(--color-muted);">${esc(t("no_database_attached"))}</span>`)}
+              ${spec(t("ssl_certificates"), site.ssl?.active ? `${dot(true)} <strong>${t("active_1")}</strong>${sslExp ? ` <span style="font-size:12px; color:var(--color-muted);">(Expires ${esc(sslExp)})</span>` : ""}` : `<span style="color:var(--color-muted);">${esc(t("not_available"))}</span>`)}
+            `)}
           </div>
         </div>
-      </div>
-    </div>
 
-    <!-- TAB 6: DANGER ZONE -->
-    <div class="tabs-panel ${currentTab === "danger" ? "is-active" : ""}" data-tab-panel="danger">
-      <div class="php-cards-grid">
-        ${card(t("danger_zone"), `
-          <p class="form-hint" style="max-width:640px; line-height:1.6; margin:0;">${esc(t("delete_php_site_desc"))}</p>
-          <div class="d-flex align-center gap-md" style="flex-wrap:wrap; margin-top: 12px;">
-            ${can("archive") ? btn("archive-site", t("archive_website"), "secondary") : ""}
-            ${can("delete_site") ? btn("delete-site", t("delete_website"), "danger") : ""}
+        <!-- TAB 2: RUNTIME SETTINGS -->
+        <div class="tabs-panel ${currentTab === "runtime" ? "is-active" : ""}" data-tab-panel="runtime">
+          <div class="php-cards-grid">
+            ${card(t("runtime_settings"), `
+              ${spec(t("php_version"), `<div class="php-inline-control">${vSelect}${can("change_php_version") ? btn("runtime-submit", t("change"), "secondary") : ""}</div>`)}
+              ${spec(t("document_root"), `<div class="php-inline-control"><input id="php-doc-root" class="form-input" data-document-root value="${esc(site.document_root)}" pattern="[A-Za-z0-9][A-Za-z0-9._\\-/]*" style="width:200px;">${can("change_document_root") ? btn("root-submit", t("change"), "secondary") : ""}</div>`)}
+            `)}
+
+            ${isWp ? card(t("wordpress_settings"), `
+              ${spec(t("site_title"), esc(wp.site_title || "—"))}
+              ${spec(t("admin_user"), `<code>${esc(wp.admin_user || "—")}</code>`)}
+              ${spec(t("admin_email"), esc(wp.admin_email || "—"))}
+              ${spec(t("status"), badge(wp.installed ? "active" : "failed"))}
+              ${wpRetry ? spec(t("retry_setup") || "Retry Setup", wpRetry) : ""}
+            `) : ""}
           </div>
-        `, "php-card--danger")}
+        </div>
+
+        <!-- TAB 3: DATABASE -->
+        <div class="tabs-panel ${currentTab === "database" ? "is-active" : ""}" data-tab-panel="database">
+          <div class="php-cards-grid">
+            ${site.database ? card(t("database"), `
+              ${spec(t("database_name"), `<code>${esc(site.database.database)}</code>`)}
+              ${spec(t("admin_user"), `<code>${esc(site.database.username)}</code>`)}
+              ${spec(t("host"), `<code>${esc(site.database.host)}:${esc(site.database.port)}</code>`)}
+              ${spec(t("status"), badge(site.database.status))}
+              ${spec(t("actions") || "Actions", `
+                <div class="d-flex align-center gap-sm" style="flex-wrap:wrap;">
+                  ${btn("db-reveal", t("reveal_credentials"))}
+                  ${btn("db-rotate", t("rotate_password"))}
+                  ${can("delete_database") ? btn("db-delete", t("delete_database"), "danger") : ""}
+                </div>
+              `)}
+              <div class="php-detail__credentials" data-credentials hidden style="margin-top: 12px;"></div>
+            `) : card(t("database"), `
+              <p class="form-hint" style="margin:0;">${esc(t("no_database_attached"))}</p>
+              ${can("create_database") ? `
+                <div class="d-flex align-center gap-md" style="flex-wrap:wrap; margin-top: 12px;">
+                  <label class="form-check" style="margin:0;"><input type="checkbox" data-db-install checked><span>${t("install_missing_extensions")}</span></label>
+                  ${btn("db-create", t("create_database_for_site"), "primary")}
+                </div>
+              ` : ""}
+            `)}
+          </div>
+        </div>
+
+        <!-- TAB 4: SSL CERTIFICATES -->
+        <div class="tabs-panel ${currentTab === "ssl" ? "is-active" : ""}" data-tab-panel="ssl">
+          <div class="php-cards-grid">
+            ${card(t("ssl_certificates"), `
+              ${spec(t("status"), badge(ssl.active ? "active" : "inactive"))}
+              ${spec(t("expires"), esc(sslExp || t("not_available")))}
+              ${spec(t("include_www") || "Include WWW", `
+                <label class="form-check" style="margin:0;"><input type="checkbox" data-ssl-www ${ssl.include_www ? "checked" : ""}><span>${esc(t("include_www"))}</span></label>
+              `)}
+              ${spec(t("actions") || "Actions", `
+                <div class="d-flex align-center gap-sm" style="flex-wrap:wrap;">
+                  ${sslAct}
+                </div>
+              `)}
+            `)}
+          </div>
+        </div>
+
+        <!-- TAB 5: LOGS -->
+        <div class="tabs-panel ${currentTab === "logs" ? "is-active" : ""}" data-tab-panel="logs">
+          <div class="php-cards-grid">
+            <div class="php-card">
+              <div class="php-card__title php-log-header">
+                <span>${esc(t("logs"))}</span>
+                <div class="d-flex align-center gap-sm" style="flex-wrap:wrap;">
+                  <div class="php-log-tabs d-flex gap-xs">
+                    <button type="button" class="btn btn--sm btn--secondary php-log-tab is-active" data-log-stream="access">${esc(t("access_log"))}</button>
+                    <button type="button" class="btn btn--sm btn--secondary php-log-tab" data-log-stream="nginx_error">${esc(t("nginx_error_log"))}</button>
+                    <button type="button" class="btn btn--sm btn--secondary php-log-tab" data-log-stream="php">${esc(t("php_fpm_log"))}</button>
+                  </div>
+                  <select class="form-select php-log-lines" data-log-lines style="height:30px; font-size:12px; padding:0 8px; width:auto;">
+                    <option value="50">50 ${esc(t("lines"))}</option>
+                    <option value="100" selected>100 ${esc(t("lines"))}</option>
+                    <option value="200">200 ${esc(t("lines"))}</option>
+                    <option value="500">500 ${esc(t("lines"))}</option>
+                  </select>
+                  <button type="button" class="btn btn--sm btn--secondary" data-log-refresh>${esc(t("refresh"))}</button>
+                </div>
+              </div>
+              <div style="padding-top: 4px;">
+                <pre class="php-log-terminal" data-log-terminal style="margin:0;">${esc(t("loading"))}</pre>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 6: DANGER ZONE -->
+        <div class="tabs-panel ${currentTab === "danger" ? "is-active" : ""}" data-tab-panel="danger">
+          <div class="php-cards-grid">
+            ${card(t("danger_zone"), `
+              <p class="form-hint" style="max-width:640px; line-height:1.6; margin:0;">${esc(t("delete_php_site_desc"))}</p>
+              <div class="d-flex align-center gap-md" style="flex-wrap:wrap; margin-top: 12px;">
+                ${can("archive") ? btn("archive-site", t("archive_website"), "secondary") : ""}
+                ${can("delete_site") ? btn("delete-site", t("delete_website"), "danger") : ""}
+              </div>
+            `, "php-card--danger")}
+          </div>
+        </div>
       </div>
     </div>
   `;

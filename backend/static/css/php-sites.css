@@ -65,7 +65,8 @@
   border: 1px solid var(--color-line);
   border-radius: 0 !important;
   padding: 20px 24px;
-  margin-bottom: 20px;
+  margin-top: 24px;
+  margin-bottom: 24px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -90,6 +91,86 @@
   background: rgba(0, 0, 0, 0.2);
   padding: 2px 6px;
   border-radius: 0 !important;
+}
+
+/* Vertical Split Navigation Layout (Option 4) */
+.php-split-layout {
+  display: grid;
+  grid-template-columns: 210px 1fr;
+  gap: 28px;
+  align-items: start;
+  width: 100%;
+}
+
+.php-split-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  position: sticky;
+  top: 20px;
+}
+
+.php-split-nav-btn {
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-muted);
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.php-split-nav-btn:hover {
+  color: var(--color-text);
+  background: color-mix(in srgb, var(--color-text) 6%, transparent) !important;
+}
+
+.php-split-nav-btn.is-active {
+  color: var(--color-accent) !important;
+  background: color-mix(in srgb, var(--color-accent) 14%, transparent) !important;
+  font-weight: 500 !important;
+}
+
+.php-split-nav-btn--danger {
+  color: var(--color-danger) !important;
+  opacity: 0.85;
+}
+
+.php-split-nav-btn--danger:hover {
+  opacity: 1;
+  background: color-mix(in srgb, var(--color-danger) 10%, transparent) !important;
+}
+
+.php-split-nav-btn--danger.is-active {
+  opacity: 1;
+  color: var(--color-danger) !important;
+  background: color-mix(in srgb, var(--color-danger) 16%, transparent) !important;
+  font-weight: 500 !important;
+}
+
+.php-split-content {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+}
+
+@media (max-width: 860px) {
+  .php-split-layout {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  .php-split-nav {
+    flex-direction: row;
+    overflow-x: auto;
+    white-space: nowrap;
+    position: static;
+  }
 }
 
 /* Boxed Cards Layout inside Tabs */
