@@ -1,17 +1,8 @@
 /* File Manager specific styles */
 
-#fm-main,
-.file-manager-page {
+#fm-main {
   position: relative;
-  width: 100%;
-  min-height: 440px;
-}
-
-.file-manager-page > .skeleton-overlay {
-  position: absolute;
-  inset: 0;
-  z-index: 10;
-  background: var(--color-bg);
+  min-height: 400px;
 }
 
 .file-manager__app-selector {
@@ -19,42 +10,12 @@
   align-items: center;
 }
 
-/* Quick Target Selection on Start Page */
-.fm-quick-targets-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  justify-content: center;
-  max-width: 680px;
-  margin: var(--space-md) auto 0;
-}
-
-.fm-quick-target-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius-md, 8px);
-  color: var(--color-text);
-  font-size: var(--font-body, 14px);
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  text-decoration: none;
-}
-
-.fm-quick-target-btn:hover {
-  background: var(--color-surface-hover, var(--color-surface));
-  border-color: var(--color-accent);
-  color: var(--color-text);
-  transform: translateY(-1px);
-}
-
-.fm-quick-target-btn .badge-minimal {
-  font-size: 11px;
-  padding: 2px 6px;
+.skeleton-line {
+  height: 12px;
+  background: var(--color-line);
+  opacity: 0.65;
+  border-radius: 3px;
+  animation: skeleton-pulse var(--skeleton-shimmer-duration, 1.6s) infinite ease-in-out;
 }
 
 /* Roots Tabs */
@@ -64,26 +25,6 @@
   gap: 8px;
   margin-top: var(--space-md);
   margin-bottom: var(--space-md);
-}
-
-/* Localized Skeleton Rows in Table */
-.skeleton-table-row-sim td {
-  padding: 12px 16px;
-  vertical-align: middle;
-}
-
-.skeleton-line {
-  display: block;
-  height: 14px;
-  background: var(--color-line);
-  opacity: 0.65;
-  border-radius: 3px;
-  animation: skeleton-pulse var(--skeleton-shimmer-duration, 1.6s) infinite ease-in-out;
-}
-
-[data-theme="dark"] .skeleton-line {
-  background: rgba(255, 255, 255, 0.25) !important;
-  opacity: 0.9 !important;
 }
 
 /* Breadcrumbs styling */
