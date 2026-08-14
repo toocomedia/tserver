@@ -551,12 +551,6 @@ function initLazyImageSkeletons() {
       img.addEventListener("error", () => {
         parent.classList.remove("img-skeleton-box");
         parent.classList.add("is-error");
-        img.style.display = "none";
-        const svg = parent.querySelector("svg");
-        if (svg) {
-          svg.style.display = "block";
-          svg.classList.remove("is-hidden");
-        }
       });
     }
   });

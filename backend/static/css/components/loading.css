@@ -558,7 +558,8 @@
 .dependency-card__cover img,
 .img-skeleton-box img {
   opacity: 0;
-  transition: opacity 0.35s ease-in-out;
+  transition: opacity 0.35s ease-in-out, visibility 0.35s ease-in-out;
+  display: block !important;
 }
 
 .plugin-card__cover.is-loaded img,
@@ -579,6 +580,35 @@ img.is-loaded {
 .is-loaded::after,
 .is-error::after {
   display: none !important;
+}
+
+/* Hide fallback SVG by default and allow fade transition */
+.plugin-card__cover svg,
+.compact-card-1x1__icon svg,
+.info-hero-row__icon svg,
+.list-col-thumb svg,
+.dependency-card__cover svg,
+.img-skeleton-box svg {
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.35s ease-in-out, visibility 0.35s ease-in-out;
+  display: block !important;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+/* On error, fade out image and fade in SVG */
+.is-error img {
+  opacity: 0 !important;
+  visibility: hidden;
+}
+
+.is-error svg {
+  opacity: 1 !important;
+  visibility: visible;
 }
 
 /* ==========================================================================
