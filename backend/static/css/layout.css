@@ -272,10 +272,22 @@ html[data-sidebar-style="gradient"] .sidebar__item--active:hover {
   color: var(--color-accent) !important;
 }
 
-.sidebar__item svg {
+.sidebar__item svg,
+.sidebar__item i,
+.sidebar__item [class^="devicon-"],
+.sidebar__item [class*=" devicon-"] {
   width: 16px;
   height: 16px;
+  font-size: 16px;
   flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  color: inherit;
+}
+
+.sidebar__item svg {
   stroke: currentColor;
   fill: none;
   stroke-width: 1.75;
