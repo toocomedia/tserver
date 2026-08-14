@@ -922,6 +922,8 @@
   "linux_user": "Linux User",
   "created_at": "Created At",
   "site_details": "Site Details",
+  "site_access": "Site Access",
+  "website_root": "Website root",
   "service_state_health": "Service State & Health",
   "retry_setup": "Retry Setup",
   "wordpress_installer_cache": "WordPress installer cache",

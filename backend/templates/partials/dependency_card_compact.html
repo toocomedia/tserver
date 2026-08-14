@@ -49,12 +49,12 @@
           {% if dependency.running %}
             <input type="hidden" name="enabled" value="false">
             <input type="hidden" name="confirmed" value="true">
-            <button class="compact-card-1x1__btn-icon btn-icon--warn" type="submit" title="Disable {{ dependency.name }}" onclick="return confirm('Disable {{ dependency.name }}? Dependent plugins will be paused.')">
+            <button class="compact-card-1x1__btn-icon" type="submit" title="Disable {{ dependency.name }}" onclick="return confirm('Disable {{ dependency.name }}? Dependent plugins will be paused.')">
               <svg viewbox="0 0 24 24"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
             </button>
           {% else %}
             <input type="hidden" name="enabled" value="true">
-            <button class="compact-card-1x1__btn-icon btn-icon--warn" type="submit" title="Enable {{ dependency.name }}">
+            <button class="compact-card-1x1__btn-icon" type="submit" title="Enable {{ dependency.name }}">
               <svg viewbox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
             </button>
           {% endif %}

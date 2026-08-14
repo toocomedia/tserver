@@ -236,6 +236,8 @@
   padding: 2px 6px;
   border-radius: 0 !important;
 }
+.php-site-link { color: var(--color-text); display: inline-flex; gap: 8px; align-items: center; min-width: 0; overflow-wrap: anywhere; }
+.php-site-link:hover { color: var(--color-accent); }
 
 /* Form Controls Inline */
 .php-inline-control {

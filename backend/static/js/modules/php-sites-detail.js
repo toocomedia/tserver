@@ -42,6 +42,18 @@ function spec(key, val) {
   `;
 }
 
+const PRESET_OVERVIEW_ROWS = {
+  filament: [{ label: "filament_admin_url", path: "/admin" }],
+};
+
+function overviewAccessRows(url) {
+  const rows = [{ label: "website_root", path: "/" }, ...(PRESET_OVERVIEW_ROWS[site.preset] || [])];
+  return rows.map(({ label, path }) => {
+    const href = path === "/" ? url : `${url}${path.slice(1)}`;
+    return spec(t(label), `<a class="php-site-link" href="${esc(href)}" target="_blank" rel="noopener"><code>${esc(path)}</code><span>${esc(href)} ↗</span></a>`);
+  }).join("");
+}
+
 function tabsNav() {
   return `
     <div class="php-split-nav" data-detail-tabs role="tablist">
@@ -150,6 +162,8 @@ function render() {
         <!-- TAB 1: OVERVIEW -->
         <div class="tabs-panel ${currentTab === "overview" ? "is-active" : ""}" data-tab-panel="overview">
           <div class="php-cards-grid">
+            ${card(t("site_access"), overviewAccessRows(url))}
+
             ${card(t("site_details") || "Site Details", `
               ${spec(t("domain"), `<a href="${esc(url)}" target="_blank" rel="noopener" style="font-weight:700; color:var(--color-text);">${esc(site.domain)} ↗</a>`)}
               ${spec(t("preset"), `<span class="badge-pill">${esc(isWp ? t("wordpress") : isFilament ? t("filament") : isLaravel ? t("laravel") : t("plain_php"))}</span>`)}
@@ -189,7 +203,6 @@ function render() {
             ${isLaravel ? card(isFilament ? t("filament_settings") : t("laravel_settings"), `
               ${spec(t("document_root"), `<code>public</code>`)}
               ${spec(t("database"), site.database ? `<code>${esc(site.database.database)}</code>` : "—")}
-              ${isFilament ? spec(t("filament_admin_url"), `<a href="${esc(url)}admin" target="_blank" rel="noopener">/admin</a>`) : ""}
               ${laravelRetry ? spec(t("retry_setup") || "Retry Setup", laravelRetry) : ""}
               ${filamentRetry ? spec(t("retry_setup") || "Retry Setup", filamentRetry) : ""}
             `) : ""}

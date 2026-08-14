@@ -919,16 +919,13 @@
 }
 
 .compact-card-1x1__btn-icon:hover {
-  background: #252D3B !important;
+  background: #28303E !important;
+  color: #FFFFFF !important;
 }
 
-.compact-card-1x1__btn-icon.btn-icon--warn:hover {
-  background: var(--color-warn, #F59E0B) !important;
-  color: #000000 !important;
-}
-
-.compact-card-1x1__btn-icon.btn-icon--danger:hover {
-  background: var(--color-danger, #DC2626) !important;
+.compact-card-1x1__btn-icon.is-expanded,
+.compact-card-1x1__btn-icon.requirements-info-btn.is-expanded {
+  background: #374151 !important;
   color: #FFFFFF !important;
 }
 

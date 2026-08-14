@@ -77,7 +77,7 @@
           <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
           <input type="hidden" name="plugin_id" value="{{ plugin.id }}">
           <input type="hidden" name="enabled" value="{% if plugin.enabled %}false{% else %}true{% endif %}">
-          <button type="submit" class="compact-card-1x1__btn-icon btn-icon--warn" title="{% if plugin.enabled %}Disable{% else %}Enable{% endif %} {{ plugin.name }}">
+          <button type="submit" class="compact-card-1x1__btn-icon" title="{% if plugin.enabled %}Disable{% else %}Enable{% endif %} {{ plugin.name }}">
             {% if plugin.enabled %}
               <svg viewbox="0 0 24 24"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
             {% else %}
@@ -94,14 +94,14 @@
       <form method="post" action="/plugins/api/uninstall" style="display:inline-flex;">
         <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
         <input type="hidden" name="plugin_id" value="{{ plugin.id }}">
-        <button type="submit" class="compact-card-1x1__btn-icon btn-icon--danger" title="Uninstall {{ plugin.name }}" onclick="return confirm('Uninstall {{ plugin.name }}?')">
+        <button type="submit" class="compact-card-1x1__btn-icon" title="Uninstall {{ plugin.name }}" onclick="return confirm('Uninstall {{ plugin.name }}?')">
           <svg viewbox="0 0 24 24"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path></svg>
         </button>
       </form>
     {% endif %}
 
     {% if plugin.dependency_status or plugin.manifest_error or (action_error and action_error_plugin_id == plugin.id) %}
-      <button type="button" class="compact-card-1x1__btn-icon btn-icon--danger requirements-info-btn {% if plugin.paused_by %}requirements-info-btn--danger{% endif %}" title="{% if plugin.paused_by %}Missing Requirements — Click to Check Details{% else %}System Check & Details{% endif %}" onclick="toggleAndCheckPlugin(this);">
+      <button type="button" class="compact-card-1x1__btn-icon requirements-info-btn {% if plugin.paused_by %}requirements-info-btn--danger{% endif %}" title="{% if plugin.paused_by %}Missing Requirements — Click to Check Details{% else %}System Check & Details{% endif %}" onclick="toggleAndCheckPlugin(this);">
         <svg viewbox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
       </button>
     {% endif %}
