@@ -111,18 +111,9 @@ function render() {
 
     <!-- HERO APP BANNER BOX -->
     <div class="hero-app-box mb-lg">
-      <div>
-        <div style="display: flex; align-items: center; gap: 12px;">
-          <h1 style="font-size: 22px; font-weight: 700; margin: 0; line-height: 1.2;">${esc(site.domain)}</h1>
-          ${badge(site.status)}
-        </div>
-        <div class="hero-stats">
-          <span>URL: <a href="${esc(url)}" target="_blank" rel="noopener" style="color:var(--color-text); font-weight:700;">${esc(site.domain)} ↗</a></span>
-          <span>${esc(t("preset"))}: <strong style="color:var(--color-text);">${esc(isWp ? t("wordpress") : t("plain_php"))}</strong></span>
-          <span>${esc(t("php_version"))}: <strong style="color:var(--color-text);">${esc(site.php_version || "—")}</strong></span>
-          <span>${esc(t("database"))}: ${site.database ? `<code style="color:var(--color-text); font-weight:700;">${esc(site.database.database)}</code>` : `<span style="color:var(--color-muted);">${esc(t("none"))}</span>`}</span>
-          <span>${esc(t("ssl_certificates"))}: <strong style="color:var(--color-text);">${site.ssl?.active ? t("active_1") : t("inactive")}</strong></span>
-        </div>
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <h1 style="font-size: 22px; font-weight: 700; margin: 0; line-height: 1.2;">${esc(site.domain)}</h1>
+        ${badge(site.status)}
       </div>
       <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
         <a class="btn btn--secondary btn--sm" href="${esc(url)}" target="_blank" rel="noopener">${t("visit_website")} ↗</a>
@@ -142,15 +133,17 @@ function render() {
         <!-- TAB 1: OVERVIEW -->
         <div class="tabs-panel ${currentTab === "overview" ? "is-active" : ""}" data-tab-panel="overview">
           <div class="php-cards-grid">
-            ${card(t("site_details") || "Site & Webroot Details", `
+            ${card(t("site_details") || "Site Details", `
+              ${spec(t("domain"), `<a href="${esc(url)}" target="_blank" rel="noopener" style="font-weight:700; color:var(--color-text);">${esc(site.domain)} ↗</a>`)}
+              ${spec(t("preset"), `<span class="badge-pill">${esc(isWp ? t("wordpress") : t("plain_php"))}</span>`)}
               ${spec(t("linux_user"), `<code>srvphp${site.id}</code>`)}
               ${spec(t("document_root"), `<code>${esc(site.document_root || "public")}</code>`)}
               ${spec(t("webroot"), `<code>/var/www/${esc(site.domain)}/${esc(site.document_root)}</code>`)}
-              ${spec(t("preset"), `<span class="badge-pill">${esc(isWp ? t("wordpress") : t("plain_php"))}</span>`)}
             `)}
 
             ${card(t("service_state_health") || "Service State & Health", `
-              ${spec(t("php_fpm_socket"), `${dot(h.socket_healthy)} <strong>${h.socket_healthy ? t("active_1") : t("disabled")}</strong> (PHP ${esc(site.php_version || "—")})`)}
+              ${spec(t("php_version"), `<strong>${esc(site.php_version || "—")}</strong>`)}
+              ${spec(t("php_fpm_socket"), `${dot(h.socket_healthy)} <strong>${h.socket_healthy ? t("active_1") : t("disabled")}</strong>`)}
               ${spec(t("nginx_web_engine"), `${dot(h.nginx_active)} <strong>${h.nginx_active ? t("active_1") : t("disabled")}</strong>`)}
               ${spec(t("local_http"), `<strong>${esc(httpCode)}</strong>`)}
               ${spec(t("database"), site.database ? `${dot(h.mariadb_healthy)} <code>${esc(site.database.database)}</code> <span style="font-size:12px; color:var(--color-muted);">(${esc(site.database.host)}:${esc(site.database.port)})</span>` : `<span style="color:var(--color-muted);">${esc(t("no_database_attached"))}</span>`)}
@@ -162,10 +155,28 @@ function render() {
         <!-- TAB 2: RUNTIME SETTINGS -->
         <div class="tabs-panel ${currentTab === "runtime" ? "is-active" : ""}" data-tab-panel="runtime">
           <div class="php-cards-grid">
-            ${card(t("runtime_settings"), `
-              ${spec(t("php_version"), `<div class="php-inline-control">${vSelect}${can("change_php_version") ? btn("runtime-submit", t("change"), "secondary") : ""}</div>`)}
-              ${spec(t("document_root"), `<div class="php-inline-control"><input id="php-doc-root" class="form-input" data-document-root value="${esc(site.document_root)}" pattern="[A-Za-z0-9][A-Za-z0-9._\\-/]*" style="width:200px;">${can("change_document_root") ? btn("root-submit", t("change"), "secondary") : ""}</div>`)}
-            `)}
+            <div class="php-card">
+              <div class="php-card__title">${esc(t("runtime_settings"))}</div>
+              <div class="php-runtime-form">
+                <div class="php-runtime-field">
+                  <label class="form-label" for="php-runtime-ver">${esc(t("php_version"))}</label>
+                  <div class="php-runtime-input-group">
+                    ${vSelect}
+                    ${can("change_php_version") ? btn("runtime-submit", t("change"), "secondary") : ""}
+                  </div>
+                  <span class="form-hint">${esc(t("select_php_version_desc") || "Select the PHP interpreter version running for this website.")}</span>
+                </div>
+
+                <div class="php-runtime-field">
+                  <label class="form-label" for="php-doc-root">${esc(t("document_root"))}</label>
+                  <div class="php-runtime-input-group">
+                    <input id="php-doc-root" class="form-input" data-document-root value="${esc(site.document_root)}" pattern="[A-Za-z0-9][A-Za-z0-9._\\-/]*" placeholder="public" style="width:220px;">
+                    ${can("change_document_root") ? btn("root-submit", t("change"), "secondary") : ""}
+                  </div>
+                  <span class="form-hint">${esc(t("doc_root_hint") || "Relative path from site root, e.g. public or web (served by Nginx).")}</span>
+                </div>
+              </div>
+            </div>
 
             ${isWp ? card(t("wordpress_settings"), `
               ${spec(t("site_title"), esc(wp.site_title || "—"))}

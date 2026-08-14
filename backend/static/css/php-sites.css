@@ -62,7 +62,7 @@
 /* Hero App Banner */
 .php-detail .hero-app-box {
   background: var(--color-surface);
-  border: 1px solid var(--color-line);
+  border: none !important;
   border-radius: 0 !important;
   padding: 20px 24px;
   margin-top: 24px;
@@ -72,25 +72,6 @@
   justify-content: space-between;
   gap: 20px;
   flex-wrap: wrap;
-}
-.php-detail .hero-stats {
-  display: flex;
-  gap: 24px;
-  margin-top: 8px;
-  font-size: 13px;
-  color: var(--color-muted);
-  flex-wrap: wrap;
-}
-.php-detail .hero-stats span {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-.php-detail .hero-stats code {
-  font-family: var(--font-mono);
-  background: rgba(0, 0, 0, 0.2);
-  padding: 2px 6px;
-  border-radius: 0 !important;
 }
 
 /* Vertical Split Navigation Layout (Option 4) */
@@ -173,7 +154,7 @@
   }
 }
 
-/* Boxed Cards Layout inside Tabs */
+/* Surface Cards Layout inside Tabs */
 .php-cards-grid {
   display: flex;
   flex-direction: column;
@@ -183,7 +164,7 @@
 
 .php-card {
   background: var(--color-surface);
-  border: 1px solid var(--color-line);
+  border: none !important;
   border-radius: 0 !important;
   padding: 20px 24px;
   display: flex;
@@ -192,15 +173,15 @@
   width: 100%;
 }
 .php-card--danger {
-  border-left: 3px solid var(--color-danger);
+  border-left: 3px solid var(--color-danger) !important;
 }
 
 .php-card__title {
   font-size: 14px;
   font-weight: 700;
   color: var(--color-text);
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--color-line);
+  padding-bottom: 4px;
+  border-bottom: none;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -245,6 +226,47 @@
   background: rgba(0, 0, 0, 0.2);
   padding: 2px 6px;
   border-radius: 0 !important;
+}
+
+/* Runtime Settings Form Layout */
+.php-runtime-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 600px;
+}
+
+.php-runtime-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.php-runtime-field .form-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0;
+}
+
+.php-runtime-input-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.php-runtime-input-group .form-input,
+.php-runtime-input-group .form-select {
+  height: 34px;
+  border-radius: 0 !important;
+}
+
+.php-runtime-field .form-hint {
+  font-size: 12px;
+  color: var(--color-muted);
+  margin: 0;
+  line-height: 1.4;
 }
 
 /* Form Controls Inline */

@@ -241,7 +241,7 @@
 
 .hero-app-box {
   background: var(--color-surface);
-  border: 1px solid var(--color-line);
+  border: none;
   padding: 24px;
   margin-top: 24px;
   margin-bottom: 28px;
