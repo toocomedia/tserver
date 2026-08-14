@@ -168,7 +168,7 @@ def install(data: dict) -> dict:
         run_as_site(item, ["artisan", "filament:install", "--panels", "--no-interaction"], env)
         enable_access(item, values)
         run_as_site(item, ["artisan", "config:clear", "--no-interaction"], env)
-        code = """$app=require 'bootstrap/app.php';$app->make(Illuminate\\Contracts\\Console\\Kernel::class)->bootstrap();$c=App\\Models\\User::class;$u=$c::query()->firstOrNew(['email'=>getenv('FILAMENT_ADMIN_EMAIL')]);$u->name=getenv('FILAMENT_ADMIN_NAME');$u->password=Illuminate\\Support\\Facades\\Hash::make(getenv('FILAMENT_ADMIN_PASSWORD'));$u->save();"""
+        code = """require 'vendor/autoload.php';$app=require 'bootstrap/app.php';$app->make(Illuminate\\Contracts\\Console\\Kernel::class)->bootstrap();$c=App\\Models\\User::class;$u=$c::query()->firstOrNew(['email'=>getenv('FILAMENT_ADMIN_EMAIL')]);$u->name=getenv('FILAMENT_ADMIN_NAME');$u->password=Illuminate\\Support\\Facades\\Hash::make(getenv('FILAMENT_ADMIN_PASSWORD'));$u->save();"""
         run_as_site(item, ["-r", code], env)
     finally:
         shutil.rmtree(temporary, ignore_errors=True)
