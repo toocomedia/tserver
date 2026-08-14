@@ -765,6 +765,8 @@
   align-items: center;
   justify-content: center;
   z-index: 1;
+  overflow: hidden;
+  background: #0F1218;
 }
 
 .compact-card-1x1__icon img {
@@ -772,6 +774,11 @@
   height: 100%;
   object-fit: cover;
   display: block;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.compact-card-1x1:hover .compact-card-1x1__icon img {
+  transform: scale(1.06);
 }
 
 .compact-card-1x1__icon svg {
@@ -788,8 +795,13 @@
   left: 0;
   width: 100%;
   height: 100%;
-  background: linear-gradient(180deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.85) 100%);
+  background: linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.4) 45%, rgba(0,0,0,0.94) 100%);
   z-index: 2;
+  transition: background 0.25s ease;
+}
+
+.compact-card-1x1:hover .compact-card-1x1__overlay {
+  background: linear-gradient(180deg, rgba(0,0,0,0.25) 0%, rgba(0,0,0,0.55) 40%, rgba(0,0,0,0.96) 100%);
 }
 
 .compact-card-1x1__content {
@@ -810,9 +822,11 @@
 
 .compact-card-1x1__bottom {
   margin-top: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.compact-card-1x1:hover .compact-card-1x1__bottom {
+  transform: translateY(-46px);
 }
 
 .compact-card-1x1__title {
@@ -820,17 +834,138 @@
   font-weight: 800;
   color: #FFFFFF;
   line-height: 1.2;
+  text-transform: uppercase;
 }
 
 .compact-card-1x1__meta {
+  font-family: var(--font-mono, monospace);
   font-size: 11px;
+  font-weight: 700;
   color: rgba(255, 255, 255, 0.75);
 }
 
-.compact-card-1x1__actions {
+/* Slide-Up Horizontal Icon Array Dock */
+.compact-card-1x1__dock {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #000000;
+  border-top: 1px solid rgba(255, 255, 255, 0.18);
   display: flex;
-  gap: 6px;
-  margin-top: 6px;
+  align-items: center;
+  height: 40px;
+  transform: translateY(100%);
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 4;
+}
+
+.compact-card-1x1:hover .compact-card-1x1__dock,
+.compact-card-1x1:focus-within .compact-card-1x1__dock,
+.compact-card-1x1.is-actions-open .compact-card-1x1__dock {
+  transform: translateY(0);
+}
+
+.compact-card-1x1__btn-main {
+  flex: 1;
+  height: 100%;
+  background: var(--color-accent) !important;
+  color: var(--color-on-accent, #111111) !important;
+  border: none !important;
+  font-size: 11.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+  padding: 0 10px;
+  transition: opacity 0.15s ease;
+}
+
+.compact-card-1x1__btn-main:hover {
+  opacity: 0.9;
+}
+
+.compact-card-1x1__btn-main svg {
+  width: 13px;
+  height: 13px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2.2;
+}
+
+.compact-card-1x1__btn-icon {
+  width: 38px;
+  height: 100%;
+  background: #151A22 !important;
+  border: none !important;
+  border-left: 1px solid rgba(255, 255, 255, 0.15) !important;
+  color: #FFFFFF !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  text-decoration: none;
+  padding: 0;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.compact-card-1x1__btn-icon:hover {
+  background: #252D3B !important;
+}
+
+.compact-card-1x1__btn-icon.btn-icon--warn:hover {
+  background: var(--color-warn, #F59E0B) !important;
+  color: #000000 !important;
+}
+
+.compact-card-1x1__btn-icon.btn-icon--danger:hover {
+  background: var(--color-danger, #DC2626) !important;
+  color: #FFFFFF !important;
+}
+
+.compact-card-1x1__btn-icon svg {
+  width: 15px;
+  height: 15px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2;
+}
+
+/* Status Pill Helper */
+.status-pill {
+  font-family: var(--font-mono, monospace);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 2px 6px;
+  line-height: 1.2;
+}
+
+.status-pill--active {
+  background: var(--color-accent);
+  color: var(--color-on-accent, #111111);
+}
+
+.status-pill--paused {
+  background: var(--color-warn);
+  color: #000000;
+}
+
+.status-pill--danger {
+  background: var(--color-danger);
+  color: #FFFFFF;
+}
+
+.status-pill--available {
+  background: rgba(255, 255, 255, 0.2);
+  color: #FFFFFF;
 }
 
 /* ============================================================

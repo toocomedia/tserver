@@ -26,10 +26,13 @@ function selectedPreset() {
 
 function updatePreset() {
   const isWp = selectedPreset() === "wordpress";
-  const isLaravel = selectedPreset() === "laravel";
+  const isFilament = selectedPreset() === "filament";
+  const isLaravel = selectedPreset() === "laravel" || isFilament;
   const wpFields = root.querySelector("[data-wordpress-fields]");
+  const filamentFields = root.querySelector("[data-filament-fields]");
   const dbRow = root.querySelector("#plain-db-option-row");
   if (wpFields) wpFields.style.display = isWp ? "flex" : "none";
+  if (filamentFields) filamentFields.style.display = isFilament ? "flex" : "none";
   if (dbRow) dbRow.style.display = (isWp || isLaravel) ? "none" : "flex";
   if (rootInput) {
     if (isLaravel) rootInput.value = "public";
@@ -46,7 +49,7 @@ function updatePreset() {
 function updateExtensionHint() {
   const version = versionSelect?.value;
   const isWp = selectedPreset() === "wordpress";
-  const isLaravel = selectedPreset() === "laravel";
+  const isLaravel = ["laravel", "filament"].includes(selectedPreset());
   const info = isWp ? options?.wordpress?.versions?.[version] : isLaravel ? options?.laravel?.versions?.[version] : options?.database_extensions?.[version];
   const needs = info && info.ready === false && info.missing_packages?.length;
   const row = root.querySelector("[data-install-extensions]");
@@ -116,9 +119,27 @@ function validateStep(stepNum) {
       }
       if (passErr) passErr.style.display = "none";
     }
-    if (selectedPreset() === "laravel" && !options?.laravel?.composer_available) {
+    if (["laravel", "filament"].includes(selectedPreset()) && !options?.laravel?.composer_available) {
       setError(t("laravel_composer_required"));
       return false;
+    }
+    if (selectedPreset() === "filament") {
+      const name = root.querySelector("#filament-admin-name")?.value.trim();
+      const email = root.querySelector("#filament-admin-email")?.value.trim();
+      const pass = root.querySelector("#filament-admin-password")?.value || "";
+      const confirmPass = root.querySelector("#filament-admin-password-confirm")?.value || "";
+      const passErr = root.querySelector("#filament-password-error");
+      if (!name) { setError(t("name")); root.querySelector("#filament-admin-name")?.focus(); return false; }
+      if (!email || !email.includes("@")) { setError(t("admin_email")); root.querySelector("#filament-admin-email")?.focus(); return false; }
+      if (pass.length < 12) { setError(t("password_min_length")); root.querySelector("#filament-admin-password")?.focus(); return false; }
+      if (pass !== confirmPass) {
+        if (passErr) { passErr.textContent = t("passwords_do_not_match"); passErr.style.display = "block"; }
+        setError(t("passwords_do_not_match"));
+        root.querySelector("#filament-admin-password-confirm")?.focus();
+        return false;
+      }
+      if (passErr) passErr.style.display = "none";
+      if (!options?.filament?.composer_available) { setError(t("filament_composer_required")); return false; }
     }
     return true;
   }
@@ -129,9 +150,10 @@ function review() {
   const values = new FormData(form);
   const domain = options?.domains?.find((item) => String(item.id) === values.get("domain_id"));
   const isWp = selectedPreset() === "wordpress";
-  const isLaravel = selectedPreset() === "laravel";
+  const isFilament = selectedPreset() === "filament";
+  const isLaravel = selectedPreset() === "laravel" || isFilament;
   const rows = [
-    [t("preset"), isWp ? t("wordpress") : isLaravel ? t("laravel") : t("plain_php")],
+    [t("preset"), isWp ? t("wordpress") : isFilament ? t("filament") : isLaravel ? t("laravel") : t("plain_php")],
     [t("domain"), domain?.name || "—"],
     [t("php_version"), values.get("php_version") || "—"],
     [t("document_root"), values.get("document_root") || "public"],
@@ -142,6 +164,11 @@ function review() {
     rows.push([t("site_title"), values.get("wp_site_title") || "—"]);
     rows.push([t("admin_user"), values.get("wp_admin_user") || "—"]);
     rows.push([t("admin_email"), values.get("wp_admin_email") || "—"]);
+  }
+  if (isFilament) {
+    rows.push([t("name"), values.get("filament_admin_name") || "—"]);
+    rows.push([t("admin_email"), values.get("filament_admin_email") || "—"]);
+    rows.push([t("filament_admin_url"), "/admin"]);
   }
   const reviewContainer = root.querySelector("[data-review]");
   if (reviewContainer) {
@@ -180,7 +207,8 @@ async function handleSubmit(event) {
   setError("");
   const values = new FormData(form);
   const isWp = selectedPreset() === "wordpress";
-  const isLaravel = selectedPreset() === "laravel";
+  const isFilament = selectedPreset() === "filament";
+  const isLaravel = selectedPreset() === "laravel" || isFilament;
   const body = {
     domain_id: Number(values.get("domain_id")),
     preset: selectedPreset(),
@@ -195,6 +223,11 @@ async function handleSubmit(event) {
       admin_user: values.get("wp_admin_user"),
       admin_email: values.get("wp_admin_email"),
       admin_password: values.get("wp_admin_password"),
+    } : null,
+    filament: isFilament ? {
+      admin_name: values.get("filament_admin_name"),
+      admin_email: values.get("filament_admin_email"),
+      admin_password: values.get("filament_admin_password"),
     } : null,
   };
 

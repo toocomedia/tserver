@@ -11,14 +11,20 @@ from services import php_site_laravel_runtime as runtime
 
 
 PRESET = "laravel"
+FILAMENT_PRESET = "filament"
+PRESETS = frozenset({PRESET, FILAMENT_PRESET})
+
+
+def is_laravel_preset(preset: str) -> bool:
+    return preset in PRESETS
 
 
 def requires_database(preset: str) -> bool:
-    return preset in {"wordpress", PRESET}
+    return preset == "wordpress" or is_laravel_preset(preset)
 
 
 def install_profile(preset: str) -> str:
-    return "plugin_install" if preset in {"wordpress", PRESET} else "native_light"
+    return "plugin_install" if preset == "wordpress" or is_laravel_preset(preset) else "native_light"
 
 
 async def options(versions: list[dict[str, Any]]) -> dict[str, Any]:

@@ -13,6 +13,7 @@ from models.domain import Domain
 from models.php_website_operation import PhpWebsiteOperation
 from dependencies import dependency_manager
 from schemas import php_sites as schemas
+from services import php_site_laravel_service as laravel
 from services import php_site_runtime as runtime
 from services import php_site_service as service
 from templating import templates
@@ -155,6 +156,8 @@ async def api_change_runtime(
 ):
     site = await service.get_site(db, site_id)
     await asyncio.to_thread(service.require_version, body.php_version)
+    if laravel.is_laravel_preset(site.preset) and tuple(map(int, body.php_version.split("."))) < (8, 3):
+        raise HTTPException(409, "Laravel and Filament websites require PHP 8.3 or newer.")
     return accepted(await service.queue_action(db, site, "runtime", body.model_dump()))
 
 
@@ -163,7 +166,7 @@ async def api_change_document_root(
     site_id: int, body: schemas.DocumentRootChange, db: AsyncSession = Depends(get_db),
 ):
     site = await service.get_site(db, site_id)
-    if site.preset == "laravel":
+    if laravel.is_laravel_preset(site.preset):
         raise HTTPException(409, "Laravel document root is always public.")
     return accepted(await service.queue_action(db, site, "document_root", body.model_dump()))
 
@@ -344,6 +347,17 @@ async def api_laravel_retry(
 ):
     site = await service.get_site(db, site_id)
     return accepted(await service.queue_action(db, site, "laravel_retry", body.model_dump()))
+
+
+@router.post("/sites/{site_id}/filament/retry")
+async def api_filament_retry(
+    site_id: int, body: schemas.FilamentRetry, db: AsyncSession = Depends(get_db),
+):
+    site = await service.get_site(db, site_id)
+    return accepted(await service.queue_action(db, site, "filament_retry", {
+        "filament": body.model_dump(exclude={"install_missing_extensions"}),
+        "install_missing_extensions": body.install_missing_extensions,
+    }))
 
 
 @router.delete("/sites/{site_id}")

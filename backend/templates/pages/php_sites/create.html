@@ -67,6 +67,13 @@
             </div>
             <span class="settings-choice__desc">{{ _('laravel_desc') }}</span>
           </label>
+          <label class="settings-choice opt-item" id="choice-preset-filament">
+            <div class="settings-choice__header">
+              <input type="radio" name="preset" value="filament">
+              <span class="settings-choice__title">{{ _('filament') }}</span>
+            </div>
+            <span class="settings-choice__desc">{{ _('filament_desc') }}</span>
+          </label>
         </div>
       </div>
     </div>
@@ -175,6 +182,35 @@
             <div>
               <input class="form-input clean-input" id="wp-admin-password-confirm" name="wp_admin_password_confirm" type="password" minlength="12" autocomplete="new-password" placeholder="{{ _('confirm_admin_password') }}">
               <div class="form-error mt-xs text-danger" id="wp-password-error" style="display:none; font-weight:600; font-size:12px;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="filament-fields" data-filament-fields class="php-create-wp-fields" style="display:none;">
+        <div class="php-create-wp-title">{{ _('filament_settings') }}</div>
+
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:16px;">
+          <div class="form-group">
+            <div class="form-label-wrap"><label class="form-label" for="filament-admin-name">{{ _('name') }}</label></div>
+            <div><input class="form-input clean-input" id="filament-admin-name" name="filament_admin_name" autocomplete="name" placeholder="Site administrator"></div>
+          </div>
+          <div class="form-group">
+            <div class="form-label-wrap"><label class="form-label" for="filament-admin-email">{{ _('admin_email') }}</label></div>
+            <div><input class="form-input clean-input" id="filament-admin-email" name="filament_admin_email" type="email" autocomplete="email" placeholder="admin@example.com"></div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <div class="form-label-wrap">
+            <label class="form-label" for="filament-admin-password">{{ _('admin_password') }}</label>
+            <span class="form-hint">{{ _('password_min_length') }}</span>
+          </div>
+          <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:16px;">
+            <div><input class="form-input clean-input" id="filament-admin-password" name="filament_admin_password" type="password" minlength="12" autocomplete="new-password" placeholder="{{ _('admin_password') }}"></div>
+            <div>
+              <input class="form-input clean-input" id="filament-admin-password-confirm" name="filament_admin_password_confirm" type="password" minlength="12" autocomplete="new-password" placeholder="{{ _('confirm_admin_password') }}">
+              <div class="form-error mt-xs text-danger" id="filament-password-error" style="display:none; font-weight:600; font-size:12px;"></div>
             </div>
           </div>
         </div>

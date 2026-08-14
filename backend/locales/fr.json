@@ -810,10 +810,16 @@
   "js.python_domain_desc": "Domaine DNS créé en premier. Continuez la configuration de la source et du déploiement de l'application Python.",
   "js.nginx_webroot_desc": "Vhost Nginx HTTP et répertoire webroot créés.",
   "laravel": "Laravel",
+  "filament": "Laravel + Filament",
   "laravel_settings": "Paramètres Laravel",
+  "filament_settings": "Paramètres Filament",
   "choose_php_wordpress_or_laravel_desc": "Choisissez un site PHP natif, WordPress ou Laravel sur ce serveur.",
   "laravel_desc": "Installez Laravel 13 avec Composer et une base MariaDB gérée par le panneau.",
+  "filament_desc": "Installez Laravel 13 avec administration Filament sur /admin.",
   "laravel_composer_required": "Composer géré par le panneau est indisponible. Exécutez d'abord la mise à jour SRV Panel.",
+  "filament_composer_required": "Composer géré par le panneau est indisponible. Exécutez d'abord la mise à jour SRV Panel.",
+  "filament_admin_url": "URL administration Filament",
+  "filament_admin_required": "Saisissez nom, e-mail et mot de passe administrateur Filament de 12 caractères.",
   "wordpress_installer_cache": "Cache de l'installateur WordPress",
   "clear_wordpress_installer_cache": "Vider le cache de l'installateur"
 }

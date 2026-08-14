@@ -20,6 +20,7 @@ from schemas.php_sites import (
     ControlRequest,
     DatabaseCreate,
     DocumentRootChange,
+    FilamentSetup,
     RuntimeChange,
     SiteCreate,
     WordPressRetry,
@@ -119,6 +120,20 @@ class PHPWebsitesSchemaTests(unittest.TestCase):
                 php_version="8.2",
                 document_root="public",
             )
+        filament = SiteCreate(
+            domain_id=1,
+            preset="filament",
+            php_version="8.3",
+            document_root="public",
+            filament=FilamentSetup(
+                admin_name="Site Admin",
+                admin_email="admin@example.com",
+                admin_password="a-very-long-secure-password-123",
+            ),
+        )
+        self.assertEqual("filament", filament.preset)
+        with self.assertRaises(Exception):
+            SiteCreate(domain_id=1, preset="filament", php_version="8.3", document_root="public")
 
     def test_control_request_action_validation(self):
         ctrl = ControlRequest(action="enable")
@@ -168,6 +183,7 @@ class PHPWebsitesServiceTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("php_versions", res)
         self.assertIn("wordpress", res)
         self.assertIn("laravel", res)
+        self.assertIn("filament", res)
         self.assertIn("mariadb", res)
 
 

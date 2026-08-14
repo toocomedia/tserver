@@ -21,7 +21,7 @@ function renderTitleBar(count) {
 function renderTable(sites) {
   const rows = sites.map((site) => {
     const tone = statusTone(site.status);
-    const presetLabel = site.preset === "wordpress" ? t("wordpress") : site.preset === "laravel" ? t("laravel") : t("plain_php");
+    const presetLabel = site.preset === "wordpress" ? t("wordpress") : site.preset === "filament" ? t("filament") : site.preset === "laravel" ? t("laravel") : t("plain_php");
     const statusLabel = (site.status || "").replace(/_/g, " ");
     return `
       <tr data-site-id="${site.id}">

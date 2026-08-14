@@ -28,6 +28,7 @@
         <option value="all">All Websites</option>
         <option value="wordpress">{{ _('wordpress') }}</option>
         <option value="laravel">{{ _('laravel') }}</option>
+        <option value="filament">{{ _('filament') }}</option>
         <option value="php">{{ _('plain_php') }}</option>
         <option value="active">{{ _('active_1') }}</option>
       </select>
@@ -65,8 +66,10 @@
           <td>
             {% if site.preset == 'wordpress' %}
               <span class="badge-minimal badge-minimal--active">{{ _('wordpress') }}</span>
-            {% elif site.preset == 'laravel' %}
-              <span class="badge-minimal badge-minimal--active">{{ _('laravel') }}</span>
+          {% elif site.preset == 'laravel' %}
+            <span class="badge-minimal badge-minimal--active">{{ _('laravel') }}</span>
+          {% elif site.preset == 'filament' %}
+            <span class="badge-minimal badge-minimal--active">{{ _('filament') }}</span>
             {% else %}
               <span class="badge-minimal badge-minimal--neutral">{{ _('plain_php') }}</span>
             {% endif %}
@@ -159,6 +162,8 @@ function filterPhpSitesTable() {
       matchesFilter = preset === 'wordpress';
     } else if (filter === 'laravel') {
       matchesFilter = preset === 'laravel';
+    } else if (filter === 'filament') {
+      matchesFilter = preset === 'filament';
     } else if (filter === 'php') {
       matchesFilter = preset === 'php';
     } else if (filter === 'active') {

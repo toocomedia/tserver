@@ -83,7 +83,8 @@ function render() {
 
   const url = `${site.ssl?.active ? "https" : "http"}://${site.domain}/`;
   const isWp = site.preset === "wordpress";
-  const isLaravel = site.preset === "laravel";
+  const isFilament = site.preset === "filament";
+  const isLaravel = site.preset === "laravel" || isFilament;
   const wp = site.wordpress || {};
   const h = site.health || {};
   const dot = (ok) => `<span class="stat-dot ${ok ? "stat-dot--active" : "stat-dot--danger"}"></span>`;
@@ -106,6 +107,15 @@ function render() {
     <div class="d-flex align-center gap-sm" style="flex-wrap:wrap;">
       <label class="form-check" style="margin:0;"><input type="checkbox" data-laravel-install checked><span>${t("install_missing_extensions")}</span></label>
       ${btn("laravel-retry", t("retry"), "primary")}
+    </div>
+  ` : "";
+  const filamentRetry = can("filament_retry") ? `
+    <div class="d-flex align-center gap-sm" style="flex-wrap:wrap;">
+      <input class="form-input" data-filament-name placeholder="${esc(t("name"))}" style="width:160px; height:32px;">
+      <input class="form-input" data-filament-email type="email" placeholder="${esc(t("admin_email"))}" style="width:220px; height:32px;">
+      <input class="form-input" data-filament-password type="password" minlength="12" placeholder="${esc(t("new_admin_password"))}" style="width:220px; height:32px;">
+      <label class="form-check" style="margin:0;"><input type="checkbox" data-filament-install checked><span>${t("install_missing_extensions")}</span></label>
+      ${btn("filament-retry", t("retry"), "primary")}
     </div>
   ` : "";
 
@@ -142,7 +152,7 @@ function render() {
           <div class="php-cards-grid">
             ${card(t("site_details") || "Site Details", `
               ${spec(t("domain"), `<a href="${esc(url)}" target="_blank" rel="noopener" style="font-weight:700; color:var(--color-text);">${esc(site.domain)} ↗</a>`)}
-              ${spec(t("preset"), `<span class="badge-pill">${esc(isWp ? t("wordpress") : isLaravel ? t("laravel") : t("plain_php"))}</span>`)}
+              ${spec(t("preset"), `<span class="badge-pill">${esc(isWp ? t("wordpress") : isFilament ? t("filament") : isLaravel ? t("laravel") : t("plain_php"))}</span>`)}
               ${spec(t("linux_user"), `<code>srvphp${site.id}</code>`)}
               ${spec(t("document_root"), `<code>${esc(site.document_root || "public")}</code>`)}
               ${spec(t("webroot"), `<code>/var/www/${esc(site.domain)}/${esc(site.document_root)}</code>`)}
@@ -176,10 +186,12 @@ function render() {
               ${spec(t("wordpress_installer_cache"), btn("wp-cache-clear", t("clear_wordpress_installer_cache"), "secondary"))}
             `) : ""}
 
-            ${isLaravel ? card(t("laravel_settings"), `
+            ${isLaravel ? card(isFilament ? t("filament_settings") : t("laravel_settings"), `
               ${spec(t("document_root"), `<code>public</code>`)}
               ${spec(t("database"), site.database ? `<code>${esc(site.database.database)}</code>` : "—")}
+              ${isFilament ? spec(t("filament_admin_url"), `<a href="${esc(url)}admin" target="_blank" rel="noopener">/admin</a>`) : ""}
               ${laravelRetry ? spec(t("retry_setup") || "Retry Setup", laravelRetry) : ""}
+              ${filamentRetry ? spec(t("retry_setup") || "Retry Setup", filamentRetry) : ""}
             `) : ""}
           </div>
         </div>
@@ -349,6 +361,16 @@ async function handle(action, trigger) {
   }
   if (action === "laravel-retry") {
     payload = await request(actionUrl(id, "/laravel/retry"), "POST", { install_missing_extensions: Boolean(content.querySelector("[data-laravel-install]")?.checked) });
+  }
+  if (action === "filament-retry") {
+    const admin_name = content.querySelector("[data-filament-name]")?.value.trim();
+    const admin_email = content.querySelector("[data-filament-email]")?.value.trim();
+    const admin_password = content.querySelector("[data-filament-password]")?.value || "";
+    if (!admin_name || !admin_email || admin_password.length < 12) throw new Error(t("filament_admin_required"));
+    payload = await request(actionUrl(id, "/filament/retry"), "POST", {
+      admin_name, admin_email, admin_password,
+      install_missing_extensions: Boolean(content.querySelector("[data-filament-install]")?.checked),
+    });
   }
   if (payload?.status_url) await waitForOperation(payload);
   await load();

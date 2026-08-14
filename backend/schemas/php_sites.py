@@ -55,6 +55,24 @@ class WordPressSetup(BaseModel):
         return value
 
 
+class FilamentSetup(BaseModel):
+    admin_name: str = Field(min_length=1, max_length=120)
+    admin_email: str = Field(max_length=255)
+    admin_password: str = Field(min_length=12, max_length=512)
+
+    @field_validator("admin_name", "admin_email")
+    @classmethod
+    def strip_text(cls, value: str) -> str:
+        return value.strip()
+
+    @field_validator("admin_email")
+    @classmethod
+    def valid_email(cls, value: str) -> str:
+        if value.count("@") != 1 or value.startswith("@") or value.endswith("@"):
+            raise ValueError("Invalid Filament administrator email.")
+        return value
+
+
 class SiteCreate(BaseModel):
     domain_id: int = Field(gt=0)
     preset: str = "php"
@@ -65,6 +83,7 @@ class SiteCreate(BaseModel):
     include_www: bool = False
     install_missing_extensions: bool = False
     wordpress: WordPressSetup | None = None
+    filament: FilamentSetup | None = None
 
     @field_validator("php_version")
     @classmethod
@@ -78,17 +97,19 @@ class SiteCreate(BaseModel):
 
     @model_validator(mode="after")
     def valid_preset(self):
-        if self.preset not in {"php", "wordpress", "laravel"}:
-            raise ValueError("Preset must be php, wordpress, or laravel.")
+        if self.preset not in {"php", "wordpress", "laravel", "filament"}:
+            raise ValueError("Preset must be php, wordpress, laravel, or filament.")
         if self.preset == "wordpress" and self.wordpress is None:
             raise ValueError("WordPress administrator details are required.")
-        if self.preset == "php" and self.wordpress is not None:
+        if self.preset != "wordpress" and self.wordpress is not None:
             raise ValueError("WordPress details are valid only for the WordPress preset.")
-        if self.preset == "laravel" and self.wordpress is not None:
-            raise ValueError("WordPress details are valid only for the WordPress preset.")
-        if self.preset == "laravel" and self.document_root != "public":
+        if self.preset == "filament" and self.filament is None:
+            raise ValueError("Filament administrator details are required.")
+        if self.preset != "filament" and self.filament is not None:
+            raise ValueError("Filament details are valid only for the Filament preset.")
+        if self.preset in {"laravel", "filament"} and self.document_root != "public":
             raise ValueError("Laravel document root must be public.")
-        if self.preset == "laravel" and tuple(map(int, self.php_version.split("."))) < (8, 3):
+        if self.preset in {"laravel", "filament"} and tuple(map(int, self.php_version.split("."))) < (8, 3):
             raise ValueError("Laravel 13 requires PHP 8.3 or newer.")
         return self
 
@@ -149,4 +170,8 @@ class WordPressRetry(BaseModel):
 
 
 class LaravelRetry(BaseModel):
+    install_missing_extensions: bool = False
+
+
+class FilamentRetry(FilamentSetup):
     install_missing_extensions: bool = False
