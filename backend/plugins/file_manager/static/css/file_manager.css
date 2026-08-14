@@ -6,9 +6,20 @@
   width: 100%;
 }
 
+#fm-main > .skeleton-overlay {
+  left: calc(var(--page-gutter) * -1);
+  right: calc(var(--page-gutter) * -1);
+  width: calc(100% + (var(--page-gutter) * 2));
+}
+
 .file-manager__app-selector {
   display: flex;
   align-items: center;
+}
+
+#roots-tabs.tabs-nav {
+  margin-top: var(--space-md, 16px);
+  margin-bottom: var(--space-md, 16px);
 }
 
 .skeleton-line {
