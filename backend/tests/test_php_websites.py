@@ -98,6 +98,28 @@ class PHPWebsitesSchemaTests(unittest.TestCase):
                 wordpress=None,
             )
 
+        laravel = SiteCreate(
+            domain_id=1,
+            preset="laravel",
+            php_version="8.3",
+            document_root="public",
+        )
+        self.assertEqual("laravel", laravel.preset)
+        with self.assertRaises(Exception):
+            SiteCreate(
+                domain_id=1,
+                preset="laravel",
+                php_version="8.3",
+                document_root="web",
+            )
+        with self.assertRaises(Exception):
+            SiteCreate(
+                domain_id=1,
+                preset="laravel",
+                php_version="8.2",
+                document_root="public",
+            )
+
     def test_control_request_action_validation(self):
         ctrl = ControlRequest(action="enable")
         self.assertEqual("enable", ctrl.action)
@@ -145,6 +167,7 @@ class PHPWebsitesServiceTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("domains", res)
         self.assertIn("php_versions", res)
         self.assertIn("wordpress", res)
+        self.assertIn("laravel", res)
         self.assertIn("mariadb", res)
 
 

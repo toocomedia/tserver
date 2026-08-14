@@ -60,10 +60,7 @@
 
     <li>
       <a href="{{ path('apps') }}" class="sidebar__item" data-path="{{ path('apps') }}" aria-label="Python Apps">
-        <svg viewbox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="16 18 22 12 16 6"></polyline>
-          <polyline points="8 6 2 12 8 18"></polyline>
-        </svg>
+        <i class="devicon-python-plain colored" style="font-size: 1.25rem;"></i>
         {{ _('python_apps') }}
       </a>
     </li>
@@ -71,10 +68,7 @@
     {% if is_php_active() %}
     <li>
       <a href="{{ path('php_sites') }}" class="sidebar__item" data-path="{{ path('php_sites') }}" aria-label="{{ _('php_websites') }}">
-        <svg viewbox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M4 4h16v16H4z"></path>
-          <path d="M8 8h8M8 12h5M8 16h8"></path>
-        </svg>
+        <i class="devicon-php-plain colored" style="font-size: 1.25rem;"></i>
         {{ _('php_websites') }}
       </a>
     </li>
@@ -136,18 +130,22 @@
     {% for item in plugin_items %}
     <li>
       <a href="{{ item.route }}" class="sidebar__item" data-path="{{ item.route }}" aria-label="{{ item.label }}">
+        {% if item.icon and item.icon.startswith('devicon-') %}
+        <i class="{{ item.icon }} colored" style="font-size: 1.25rem;"></i>
+        {% else %}
         <svg viewbox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         {% if item.icon == 'mail' %}
           <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
           <polyline points="22,6 12,13 2,6"></polyline>
-          {% elif item.icon == 'shield' %}
+        {% elif item.icon == 'shield' %}
           <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-          {% else %}
+        {% else %}
           <circle cx="12" cy="12" r="10"></circle>
           <line x1="12" y1="8" x2="12" y2="12"></line>
           <line x1="12" y1="16" x2="12.01" y2="16"></line>
-          {% endif %}
+        {% endif %}
         </svg>
+        {% endif %}
         {{ _(item.label) }}
       </a>
     </li>

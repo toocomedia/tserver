@@ -43,7 +43,7 @@
       <div class="form-group-horizontal" style="border-bottom:none; margin-bottom:0; padding-bottom:0;">
         <div class="form-label-wrap">
           <label class="form-label">{{ _('website_type') }}</label>
-          <span class="form-hint">{{ _('choose_php_or_wordpress_desc') }}</span>
+          <span class="form-hint">{{ _('choose_php_wordpress_or_laravel_desc') }}</span>
         </div>
         <div class="settings-choice-grid php-choice-grid">
           <label class="settings-choice settings-choice--active opt-item" id="choice-preset-php">
@@ -59,6 +59,13 @@
               <span class="settings-choice__title">{{ _('wordpress') }}</span>
             </div>
             <span class="settings-choice__desc">{{ _('wordpress_desc') }}</span>
+          </label>
+          <label class="settings-choice opt-item" id="choice-preset-laravel">
+            <div class="settings-choice__header">
+              <input type="radio" name="preset" value="laravel">
+              <span class="settings-choice__title">{{ _('laravel') }}</span>
+            </div>
+            <span class="settings-choice__desc">{{ _('laravel_desc') }}</span>
           </label>
         </div>
       </div>

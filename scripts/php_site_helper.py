@@ -453,7 +453,7 @@ def install_wordpress(data: dict[str, Any]) -> dict[str, Any]:
     if placeholder.is_file() and "PHP site ready" in placeholder.read_text(encoding="utf-8", errors="ignore"):
         placeholder.unlink()
     if not (item["public"] / "wp-load.php").is_file():
-        run_as_site(item, ["core", "download", "--no-color"], timeout=600)
+        run_as_site(item, ["core", "download", "--skip-cache", "--no-color"], timeout=600)
     run_as_site(item, [
         "config", "create", f"--dbname={database['database']}", f"--dbuser={database['username']}",
         f"--dbpass={database['password']}", "--dbhost=127.0.0.1", "--skip-check", "--force", "--no-color",
@@ -486,6 +486,23 @@ def wordpress_database_password(data: dict[str, Any]) -> dict[str, Any]:
         "config", "set", "DB_PASSWORD", database["password"], "--type=constant", "--no-color",
     ], timeout=120)
     return {"updated": True}
+
+
+def clear_wordpress_cache(data: dict[str, Any]) -> dict[str, Any]:
+    item = paths(data)
+    core_cache = item["root"] / ".wp-cli" / "cache" / "core"
+    reject_unsafe_path_chain(item["root"], core_cache)
+    if not core_cache.exists():
+        return {"cleared": False}
+    if core_cache.is_symlink() or not core_cache.is_dir():
+        fail("WordPress core cache path is unsafe.")
+    shutil.rmtree(core_cache)
+    for directory in (core_cache.parent, core_cache.parent.parent):
+        try:
+            directory.rmdir()
+        except OSError:
+            break
+    return {"cleared": True}
 
 
 def read_logs(data: dict[str, Any]) -> dict[str, Any]:
@@ -521,6 +538,7 @@ OPERATIONS = {
     "install_wordpress": install_wordpress,
     "wordpress_url": wordpress_url,
     "wordpress_database_password": wordpress_database_password,
+    "clear_wordpress_cache": clear_wordpress_cache,
     "read_logs": read_logs,
 }
 

@@ -26,10 +26,15 @@ function selectedPreset() {
 
 function updatePreset() {
   const isWp = selectedPreset() === "wordpress";
+  const isLaravel = selectedPreset() === "laravel";
   const wpFields = root.querySelector("[data-wordpress-fields]");
   const dbRow = root.querySelector("#plain-db-option-row");
   if (wpFields) wpFields.style.display = isWp ? "flex" : "none";
-  if (dbRow) dbRow.style.display = isWp ? "none" : "flex";
+  if (dbRow) dbRow.style.display = (isWp || isLaravel) ? "none" : "flex";
+  if (rootInput) {
+    if (isLaravel) rootInput.value = "public";
+    rootInput.readOnly = isLaravel;
+  }
 
   root.querySelectorAll(".php-choice-grid .settings-choice").forEach((item) => {
     const radio = item.querySelector("input[type=radio]");
@@ -41,7 +46,8 @@ function updatePreset() {
 function updateExtensionHint() {
   const version = versionSelect?.value;
   const isWp = selectedPreset() === "wordpress";
-  const info = isWp ? options?.wordpress?.versions?.[version] : options?.database_extensions?.[version];
+  const isLaravel = selectedPreset() === "laravel";
+  const info = isWp ? options?.wordpress?.versions?.[version] : isLaravel ? options?.laravel?.versions?.[version] : options?.database_extensions?.[version];
   const needs = info && info.ready === false && info.missing_packages?.length;
   const row = root.querySelector("[data-install-extensions]");
   if (row) {
@@ -110,6 +116,10 @@ function validateStep(stepNum) {
       }
       if (passErr) passErr.style.display = "none";
     }
+    if (selectedPreset() === "laravel" && !options?.laravel?.composer_available) {
+      setError(t("laravel_composer_required"));
+      return false;
+    }
     return true;
   }
   return true;
@@ -119,12 +129,13 @@ function review() {
   const values = new FormData(form);
   const domain = options?.domains?.find((item) => String(item.id) === values.get("domain_id"));
   const isWp = selectedPreset() === "wordpress";
+  const isLaravel = selectedPreset() === "laravel";
   const rows = [
-    [t("preset"), isWp ? t("wordpress") : t("plain_php")],
+    [t("preset"), isWp ? t("wordpress") : isLaravel ? t("laravel") : t("plain_php")],
     [t("domain"), domain?.name || "—"],
     [t("php_version"), values.get("php_version") || "—"],
     [t("document_root"), values.get("document_root") || "public"],
-    [t("database"), isWp ? `${t("yes")} (MariaDB)` : values.get("create_database") ? t("yes") : t("no")],
+    [t("database"), (isWp || isLaravel) ? `${t("yes")} (MariaDB)` : values.get("create_database") ? t("yes") : t("no")],
     [t("enable_ssl"), values.get("ssl") ? `${t("yes")} (${values.get("include_www") ? "include www" : "single host"})` : t("no")],
   ];
   if (isWp) {
@@ -169,12 +180,13 @@ async function handleSubmit(event) {
   setError("");
   const values = new FormData(form);
   const isWp = selectedPreset() === "wordpress";
+  const isLaravel = selectedPreset() === "laravel";
   const body = {
     domain_id: Number(values.get("domain_id")),
     preset: selectedPreset(),
     php_version: values.get("php_version"),
     document_root: values.get("document_root"),
-    create_database: isWp ? true : values.get("create_database") === "on",
+    create_database: (isWp || isLaravel) ? true : values.get("create_database") === "on",
     ssl: values.get("ssl") === "on",
     include_www: values.get("include_www") === "on",
     install_missing_extensions: values.get("install_missing_extensions") === "on",

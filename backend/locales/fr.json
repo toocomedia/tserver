@@ -808,5 +808,12 @@
   "js.dns_only_desc": "Zone DNS et enregistrement A uniquement. Aucun vhost Nginx.",
   "js.not_applicable_dns": "Non applicable (DNS uniquement)",
   "js.python_domain_desc": "Domaine DNS créé en premier. Continuez la configuration de la source et du déploiement de l'application Python.",
-  "js.nginx_webroot_desc": "Vhost Nginx HTTP et répertoire webroot créés."
+  "js.nginx_webroot_desc": "Vhost Nginx HTTP et répertoire webroot créés.",
+  "laravel": "Laravel",
+  "laravel_settings": "Paramètres Laravel",
+  "choose_php_wordpress_or_laravel_desc": "Choisissez un site PHP natif, WordPress ou Laravel sur ce serveur.",
+  "laravel_desc": "Installez Laravel 13 avec Composer et une base MariaDB gérée par le panneau.",
+  "laravel_composer_required": "Composer géré par le panneau est indisponible. Exécutez d'abord la mise à jour SRV Panel.",
+  "wordpress_installer_cache": "Cache de l'installateur WordPress",
+  "clear_wordpress_installer_cache": "Vider le cache de l'installateur"
 }

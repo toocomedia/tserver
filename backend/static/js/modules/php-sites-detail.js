@@ -83,6 +83,7 @@ function render() {
 
   const url = `${site.ssl?.active ? "https" : "http"}://${site.domain}/`;
   const isWp = site.preset === "wordpress";
+  const isLaravel = site.preset === "laravel";
   const wp = site.wordpress || {};
   const h = site.health || {};
   const dot = (ok) => `<span class="stat-dot ${ok ? "stat-dot--active" : "stat-dot--danger"}"></span>`;
@@ -99,6 +100,12 @@ function render() {
       <input class="form-input" data-wp-password type="password" minlength="12" placeholder="${esc(t("new_admin_password"))}" style="width:220px; height:32px;">
       <label class="form-check" style="margin:0;"><input type="checkbox" data-wp-install checked><span>${t("install_missing_extensions")}</span></label>
       ${btn("wp-retry", t("retry"), "primary")}
+    </div>
+  ` : "";
+  const laravelRetry = can("laravel_retry") ? `
+    <div class="d-flex align-center gap-sm" style="flex-wrap:wrap;">
+      <label class="form-check" style="margin:0;"><input type="checkbox" data-laravel-install checked><span>${t("install_missing_extensions")}</span></label>
+      ${btn("laravel-retry", t("retry"), "primary")}
     </div>
   ` : "";
 
@@ -135,7 +142,7 @@ function render() {
           <div class="php-cards-grid">
             ${card(t("site_details") || "Site Details", `
               ${spec(t("domain"), `<a href="${esc(url)}" target="_blank" rel="noopener" style="font-weight:700; color:var(--color-text);">${esc(site.domain)} ↗</a>`)}
-              ${spec(t("preset"), `<span class="badge-pill">${esc(isWp ? t("wordpress") : t("plain_php"))}</span>`)}
+              ${spec(t("preset"), `<span class="badge-pill">${esc(isWp ? t("wordpress") : isLaravel ? t("laravel") : t("plain_php"))}</span>`)}
               ${spec(t("linux_user"), `<code>srvphp${site.id}</code>`)}
               ${spec(t("document_root"), `<code>${esc(site.document_root || "public")}</code>`)}
               ${spec(t("webroot"), `<code>/var/www/${esc(site.domain)}/${esc(site.document_root)}</code>`)}
@@ -157,7 +164,7 @@ function render() {
           <div class="php-cards-grid">
             ${card(t("runtime_settings"), `
               ${spec(t("php_version"), `<div class="php-inline-control">${vSelect}${can("change_php_version") ? btn("runtime-submit", t("change"), "secondary") : ""}</div>`)}
-              ${spec(t("document_root"), `<div class="php-inline-control"><input id="php-doc-root" class="form-input" data-document-root value="${esc(site.document_root)}" pattern="[A-Za-z0-9][A-Za-z0-9._\\-/]*" style="width:200px;">${can("change_document_root") ? btn("root-submit", t("change"), "secondary") : ""}</div>`)}
+              ${spec(t("document_root"), isLaravel ? `<code>public</code>` : `<div class="php-inline-control"><input id="php-doc-root" class="form-input" data-document-root value="${esc(site.document_root)}" pattern="[A-Za-z0-9][A-Za-z0-9._\\-/]*" style="width:200px;">${can("change_document_root") ? btn("root-submit", t("change"), "secondary") : ""}</div>`)}
             `)}
 
             ${isWp ? card(t("wordpress_settings"), `
@@ -166,6 +173,13 @@ function render() {
               ${spec(t("admin_email"), esc(wp.admin_email || "—"))}
               ${spec(t("status"), badge(wp.installed ? "active" : "failed"))}
               ${wpRetry ? spec(t("retry_setup") || "Retry Setup", wpRetry) : ""}
+              ${spec(t("wordpress_installer_cache"), btn("wp-cache-clear", t("clear_wordpress_installer_cache"), "secondary"))}
+            `) : ""}
+
+            ${isLaravel ? card(t("laravel_settings"), `
+              ${spec(t("document_root"), `<code>public</code>`)}
+              ${spec(t("database"), site.database ? `<code>${esc(site.database.database)}</code>` : "—")}
+              ${laravelRetry ? spec(t("retry_setup") || "Retry Setup", laravelRetry) : ""}
             `) : ""}
           </div>
         </div>
@@ -327,6 +341,14 @@ async function handle(action, trigger) {
     const pass = content.querySelector("[data-wp-password]")?.value;
     if (!pass) throw new Error(t("password_required"));
     payload = await request(actionUrl(id, "/wordpress/retry"), "POST", { admin_password: pass, install_missing_extensions: Boolean(content.querySelector("[data-wp-install]")?.checked) });
+  }
+  if (action === "wp-cache-clear") {
+    await request(actionUrl(id, "/wordpress/cache/clear"), "POST");
+    await load();
+    return;
+  }
+  if (action === "laravel-retry") {
+    payload = await request(actionUrl(id, "/laravel/retry"), "POST", { install_missing_extensions: Boolean(content.querySelector("[data-laravel-install]")?.checked) });
   }
   if (payload?.status_url) await waitForOperation(payload);
   await load();

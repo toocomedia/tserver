@@ -518,6 +518,9 @@ PHP_RUNTIME_HELPER_SOURCE="$PANEL_DIR/scripts/php_runtime_helper.py"
 PHP_RUNTIME_HELPER="/usr/local/lib/srv-panel/php-runtime-manager"
 PHP_SITE_HELPER_SOURCE="$PANEL_DIR/scripts/php_site_helper.py"
 PHP_SITE_HELPER="/usr/local/lib/srv-panel/php-site-manager"
+LARAVEL_HELPER_SOURCE="$PANEL_DIR/scripts/php_site_laravel_helper.py"
+LARAVEL_HELPER="/usr/local/lib/srv-panel/php-site-laravel-manager"
+COMPOSER_INSTALL_SH="$PANEL_DIR/scripts/install_composer.sh"
 
 if [[ ! -f "$PHP_RUNTIME_HELPER_SOURCE" ]]; then
   die "PHP runtime helper is missing from the panel release"
@@ -525,11 +528,21 @@ fi
 if [[ ! -f "$PHP_SITE_HELPER_SOURCE" ]]; then
   die "PHP site helper is missing from the panel release"
 fi
+if [[ ! -f "$LARAVEL_HELPER_SOURCE" ]]; then
+  die "Laravel site helper is missing from the panel release"
+fi
+if [[ ! -f "$COMPOSER_INSTALL_SH" ]]; then
+  die "Composer installer is missing from the panel release"
+fi
 install -d -m 755 /usr/local/lib/srv-panel
 install -m 700 "$PHP_RUNTIME_HELPER_SOURCE" "$PHP_RUNTIME_HELPER"
 install -m 700 "$PHP_SITE_HELPER_SOURCE" "$PHP_SITE_HELPER"
+install -m 700 "$LARAVEL_HELPER_SOURCE" "$LARAVEL_HELPER"
 if ! bash "$PANEL_DIR/scripts/install_wp_cli.sh"; then
   warn "WP-CLI installation failed — native WordPress creation will remain unavailable"
+fi
+if ! bash "$COMPOSER_INSTALL_SH"; then
+  warn "Composer installation failed — native Laravel creation will remain unavailable"
 fi
 
 cat > "$SUDOERS_FILE" <<EOF
@@ -537,7 +550,7 @@ cat > "$SUDOERS_FILE" <<EOF
 # Installed by scripts/install.sh — validate: visudo -cf $SUDOERS_FILE
 Defaults:$PANEL_USER !requiretty
 Defaults:$PANEL_USER env_keep += "BUILDKIT_HOST"
-Cmnd_Alias SRV_PANEL_CMDS = $NGINX_BIN, $CERTBOT_BIN, $OPENSSL_BIN, $TEE_BIN, $LN_BIN, $RM_BIN, $MKDIR_BIN, $SYSTEMCTL_BIN, $JOURNALCTL_BIN, $SYSCTL_BIN, $DOCKER_BIN, $RAILPACK_BIN, /bin/bash $OPTIMIZE_SH *, /usr/bin/bash $OPTIMIZE_SH *, $OPTIMIZE_SH *, /bin/bash $UPDATE_SH *, /usr/bin/bash $UPDATE_SH *, /bin/bash $GET_UPDATE_SH *, /usr/bin/bash $GET_UPDATE_SH *, $UPDATE_SH *, $GET_UPDATE_SH *, /bin/bash $DOCKER_INSTALL_SH, /usr/bin/bash $DOCKER_INSTALL_SH, /bin/bash $MARIADB_INSTALL_SH, /usr/bin/bash $MARIADB_INSTALL_SH, /bin/bash $MARIADB_CHECK_UPDATE_SH, /usr/bin/bash $MARIADB_CHECK_UPDATE_SH, /bin/bash $MARIADB_UPDATE_SH, /usr/bin/bash $MARIADB_UPDATE_SH, $MARIADB_HELPER, $PHP_RUNTIME_HELPER, $PHP_SITE_HELPER, /bin/bash $PANEL_DIR/app/plugins/*, /usr/bin/bash $PANEL_DIR/app/plugins/*
+Cmnd_Alias SRV_PANEL_CMDS = $NGINX_BIN, $CERTBOT_BIN, $OPENSSL_BIN, $TEE_BIN, $LN_BIN, $RM_BIN, $MKDIR_BIN, $SYSTEMCTL_BIN, $JOURNALCTL_BIN, $SYSCTL_BIN, $DOCKER_BIN, $RAILPACK_BIN, /bin/bash $OPTIMIZE_SH *, /usr/bin/bash $OPTIMIZE_SH *, $OPTIMIZE_SH *, /bin/bash $UPDATE_SH *, /usr/bin/bash $UPDATE_SH *, /bin/bash $GET_UPDATE_SH *, /usr/bin/bash $GET_UPDATE_SH *, $UPDATE_SH *, $GET_UPDATE_SH *, /bin/bash $DOCKER_INSTALL_SH, /usr/bin/bash $DOCKER_INSTALL_SH, /bin/bash $MARIADB_INSTALL_SH, /usr/bin/bash $MARIADB_INSTALL_SH, /bin/bash $MARIADB_CHECK_UPDATE_SH, /usr/bin/bash $MARIADB_CHECK_UPDATE_SH, /bin/bash $MARIADB_UPDATE_SH, /usr/bin/bash $MARIADB_UPDATE_SH, $MARIADB_HELPER, $PHP_RUNTIME_HELPER, $PHP_SITE_HELPER, $LARAVEL_HELPER, /bin/bash $PANEL_DIR/app/plugins/*, /usr/bin/bash $PANEL_DIR/app/plugins/*
 $PANEL_USER ALL=(root) NOPASSWD: SRV_PANEL_CMDS
 EOF
 chmod 440 "$SUDOERS_FILE"

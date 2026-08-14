@@ -27,6 +27,7 @@
       <select id="php-status-filter" class="form-control" style="width: 140px;" onchange="filterPhpSitesTable()">
         <option value="all">All Websites</option>
         <option value="wordpress">{{ _('wordpress') }}</option>
+        <option value="laravel">{{ _('laravel') }}</option>
         <option value="php">{{ _('plain_php') }}</option>
         <option value="active">{{ _('active_1') }}</option>
       </select>
@@ -64,6 +65,8 @@
           <td>
             {% if site.preset == 'wordpress' %}
               <span class="badge-minimal badge-minimal--active">{{ _('wordpress') }}</span>
+            {% elif site.preset == 'laravel' %}
+              <span class="badge-minimal badge-minimal--active">{{ _('laravel') }}</span>
             {% else %}
               <span class="badge-minimal badge-minimal--neutral">{{ _('plain_php') }}</span>
             {% endif %}
@@ -124,7 +127,7 @@
       <div class="shape-3"></div>
     </div>
     <h3 class="empty-state-strict__title">{{ _('no_php_websites') }}</h3>
-    <p class="empty-state-strict__desc">{{ _('choose_php_or_wordpress_desc') }}</p>
+    <p class="empty-state-strict__desc">{{ _('choose_php_wordpress_or_laravel_desc') }}</p>
     <a href="{{ path('php_sites_create') }}" class="btn btn--primary" style="padding: 0 24px; height: 42px; font-weight: 600; display: inline-flex; align-items: center;">+ {{ _('create_php_site') }}</a>
   </div>
 
@@ -154,6 +157,8 @@ function filterPhpSitesTable() {
     let matchesFilter = true;
     if (filter === 'wordpress') {
       matchesFilter = preset === 'wordpress';
+    } else if (filter === 'laravel') {
+      matchesFilter = preset === 'laravel';
     } else if (filter === 'php') {
       matchesFilter = preset === 'php';
     } else if (filter === 'active') {

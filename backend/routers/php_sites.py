@@ -163,6 +163,8 @@ async def api_change_document_root(
     site_id: int, body: schemas.DocumentRootChange, db: AsyncSession = Depends(get_db),
 ):
     site = await service.get_site(db, site_id)
+    if site.preset == "laravel":
+        raise HTTPException(409, "Laravel document root is always public.")
     return accepted(await service.queue_action(db, site, "document_root", body.model_dump()))
 
 
@@ -318,6 +320,30 @@ async def api_wordpress_retry(
 ):
     site = await service.get_site(db, site_id)
     return accepted(await service.queue_action(db, site, "wordpress_retry", body.model_dump()))
+
+
+@router.post("/sites/{site_id}/wordpress/cache/clear")
+async def api_clear_wordpress_cache(site_id: int, db: AsyncSession = Depends(get_db)):
+    site = await service.get_site(db, site_id)
+    if site.preset != "wordpress":
+        raise HTTPException(409, "This is not a WordPress website.")
+    if await service.active_operation(db, site.id):
+        raise HTTPException(409, "Another PHP website operation is already running.")
+    domain = await db.get(Domain, site.domain_id)
+    if domain is None:
+        raise HTTPException(409, "PHP website domain is missing.")
+    try:
+        return await asyncio.to_thread(runtime.clear_wordpress_cache, site, domain.name)
+    except RuntimeError as exc:
+        raise HTTPException(502, str(exc)) from exc
+
+
+@router.post("/sites/{site_id}/laravel/retry")
+async def api_laravel_retry(
+    site_id: int, body: schemas.LaravelRetry, db: AsyncSession = Depends(get_db),
+):
+    site = await service.get_site(db, site_id)
+    return accepted(await service.queue_action(db, site, "laravel_retry", body.model_dump()))
 
 
 @router.delete("/sites/{site_id}")

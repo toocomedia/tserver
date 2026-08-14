@@ -21,7 +21,7 @@ function renderTitleBar(count) {
 function renderTable(sites) {
   const rows = sites.map((site) => {
     const tone = statusTone(site.status);
-    const presetLabel = site.preset === "wordpress" ? t("wordpress") : t("plain_php");
+    const presetLabel = site.preset === "wordpress" ? t("wordpress") : site.preset === "laravel" ? t("laravel") : t("plain_php");
     const statusLabel = (site.status || "").replace(/_/g, " ");
     return `
       <tr data-site-id="${site.id}">
@@ -67,7 +67,7 @@ function renderEmptyState() {
         <div class="shape-3"></div>
       </div>
       <h3 class="empty-state-strict__title">${esc(t("no_php_websites"))}</h3>
-      <p class="empty-state-strict__desc">${esc(t("choose_php_or_wordpress_desc"))}</p>
+      <p class="empty-state-strict__desc">${esc(t("choose_php_wordpress_or_laravel_desc"))}</p>
       <div class="empty-state__actions mt-lg" style="display:flex; justify-content:center;">
         <a class="btn btn--primary" href="/php-sites/create" style="padding: 0 24px; height: 40px; font-weight: 600; display: inline-flex; align-items: center;">+ ${esc(t("create_php_site"))}</a>
       </div>

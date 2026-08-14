@@ -135,3 +135,7 @@ def update_wordpress_database_password(
         "wordpress_database_password", **site_values(site, domain),
         database=database, timeout=120,
     )
+
+
+def clear_wordpress_cache(site: PhpWebsite, domain: str) -> dict[str, Any]:
+    return call("clear_wordpress_cache", **site_values(site, domain), timeout=300)

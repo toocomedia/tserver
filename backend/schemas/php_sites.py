@@ -78,12 +78,18 @@ class SiteCreate(BaseModel):
 
     @model_validator(mode="after")
     def valid_preset(self):
-        if self.preset not in {"php", "wordpress"}:
-            raise ValueError("Preset must be php or wordpress.")
+        if self.preset not in {"php", "wordpress", "laravel"}:
+            raise ValueError("Preset must be php, wordpress, or laravel.")
         if self.preset == "wordpress" and self.wordpress is None:
             raise ValueError("WordPress administrator details are required.")
         if self.preset == "php" and self.wordpress is not None:
             raise ValueError("WordPress details are valid only for the WordPress preset.")
+        if self.preset == "laravel" and self.wordpress is not None:
+            raise ValueError("WordPress details are valid only for the WordPress preset.")
+        if self.preset == "laravel" and self.document_root != "public":
+            raise ValueError("Laravel document root must be public.")
+        if self.preset == "laravel" and tuple(map(int, self.php_version.split("."))) < (8, 3):
+            raise ValueError("Laravel 13 requires PHP 8.3 or newer.")
         return self
 
 
@@ -139,4 +145,8 @@ class DatabaseCreate(BaseModel):
 
 class WordPressRetry(BaseModel):
     admin_password: str = Field(min_length=12, max_length=512)
+    install_missing_extensions: bool = False
+
+
+class LaravelRetry(BaseModel):
     install_missing_extensions: bool = False

@@ -23,6 +23,7 @@ from models.php_website import PhpWebsite
 from models.php_website_database import PhpWebsiteDatabase
 from models.php_website_operation import PhpWebsiteOperation
 from models.ssl_cert import SslCert
+from services import php_site_laravel_service as laravel
 from services import php_site_runtime as runtime
 from services import nginx_service, ssl_service
 
@@ -117,7 +118,11 @@ async def options(db: AsyncSession) -> dict[str, Any]:
                 db_exts[version] = await asyncio.to_thread(runtime.database_extension_status, version)
             except RuntimeError as exc:
                 db_exts[version] = {"ready": False, "missing_packages": [], "error": str(exc)}
-        _ext_cache = {"wordpress_versions": wp_vers, "database_extensions": db_exts}
+        _ext_cache = {
+            "wordpress_versions": wp_vers,
+            "database_extensions": db_exts,
+            "laravel": await laravel.options(versions),
+        }
         _ext_cache_at = now
 
     wordpress: dict[str, Any] = {
@@ -142,6 +147,7 @@ async def options(db: AsyncSession) -> dict[str, Any]:
             "panel_managed": mariadb.get("install_origin") == "panel_managed",
         },
         "wordpress": wordpress,
+        "laravel": _ext_cache.get("laravel", {}),
         "database_extensions": _ext_cache.get("database_extensions", {}),
     }
 
@@ -272,13 +278,13 @@ def _available_actions(
         "disable": not busy and site.status in {"active", "degraded"},
         "repair": not busy and site.status in {"failed", "degraded", "disabled"},
         "create_database": (
-            not busy and not has_database and site.preset != "wordpress"
+            not busy and not has_database and site.preset not in {"wordpress", laravel.PRESET}
             and site.status in {"active", "degraded"}
         ),
         "rotate_database": not busy and has_database and site.status != "deleting",
         "delete_database": (
             not busy and has_database and site.status != "deleting"
-            and site.preset != "wordpress"
+            and site.preset not in {"wordpress", laravel.PRESET}
         ),
         "issue_ssl": not busy and not has_certificate and site.status in {"active", "degraded"},
         "renew_ssl": not busy and has_certificate and site.status in {"active", "disabled", "degraded", "archived"},
@@ -288,6 +294,9 @@ def _available_actions(
         "wordpress_retry": (
             not busy and site.preset == "wordpress" and site.wordpress_installed_at is None
             and site.status in {"active", "degraded", "failed"}
+        ),
+        "laravel_retry": (
+            not busy and site.preset == laravel.PRESET and site.status in {"degraded", "failed"}
         ),
         "delete_site": not busy and site.status != "deleting",
     }
@@ -363,11 +372,11 @@ async def create_site(db: AsyncSession, body) -> tuple[PhpWebsite, PhpWebsiteOpe
         select(HostedApp.id).where(HostedApp.domain_id == domain.id)
     ):
         raise HTTPException(409, "This domain is already used by another application.")
-    create_database = bool(body.create_database or body.preset == "wordpress")
+    create_database = bool(body.create_database or laravel.requires_database(body.preset))
     if create_database:
         await asyncio.to_thread(require_mariadb)
     from services.resource_guard_service import resource_guard_service
-    profile = "plugin_install" if body.preset == "wordpress" else "native_light"
+    profile = laravel.install_profile(body.preset)
     preflight = await resource_guard_service.preflight(db, profile)
     if not preflight["ok"]:
         raise HTTPException(409, f"Resource Guard blocked PHP website creation: {preflight['reason']}")
@@ -416,11 +425,14 @@ async def queue_action(
         "ssl_renew": {"active", "disabled", "degraded", "archived"},
         "ssl_revoke": {"active", "disabled", "degraded", "archived"},
         "wordpress_retry": {"active", "degraded", "failed"},
+        "laravel_retry": {"degraded", "failed"},
     }
     if action not in allowed_states or site.status not in allowed_states[action]:
         raise HTTPException(409, f"Action {action} is not available while the website is {site.status}.")
     if action == "wordpress_retry" and site.preset != "wordpress":
         raise HTTPException(409, "This is not a WordPress website.")
+    if action == "laravel_retry" and site.preset != laravel.PRESET:
+        raise HTTPException(409, "This is not a Laravel website.")
     operation = PhpWebsiteOperation(site_id=site.id, action=action)
     db.add(operation)
     await db.flush()
@@ -443,7 +455,10 @@ async def _run_after_commit(operation_id: int, action: str, payload: dict[str, A
         await db.commit()
         from services.resource_guard_service import resource_guard_service
         task = asyncio.current_task()
-        profile = "plugin_install" if site.preset == "wordpress" and action in {"create", "wordpress_retry"} else "native_light"
+        framework_install = (
+            action == "create" and site.preset in {"wordpress", laravel.PRESET}
+        ) or action in {"wordpress_retry", "laravel_retry"}
+        profile = laravel.install_profile(site.preset) if framework_install else "native_light"
         guard_token = resource_guard_service.register(
             "php_site", str(site.id), "normal", f"PHP website: {domain.name}",
             (lambda: task.cancel()) if task else None, profile=profile,
@@ -469,6 +484,10 @@ async def _run_after_commit(operation_id: int, action: str, payload: dict[str, A
                 await _execute_wordpress_retry(
                     db, operation, site, domain, str(payload["admin_password"]),
                     bool(payload.get("install_missing_extensions")),
+                )
+            elif action == "laravel_retry":
+                await _execute_laravel_retry(
+                    db, operation, site, domain, bool(payload.get("install_missing_extensions")),
                 )
             else:
                 raise RuntimeError("Unsupported PHP website operation.")
@@ -516,6 +535,11 @@ async def _execute_create(
         await ensure_wordpress_extensions(
             site.php_version, install=bool(payload.get("install_missing_extensions")),
         )
+    elif site.preset == laravel.PRESET:
+        await _stage(db, operation, "extensions", "Checking Laravel PHP extensions and Composer.")
+        await laravel.ensure_requirements(
+            site.php_version, install=bool(payload.get("install_missing_extensions")),
+        )
     elif payload.get("create_database"):
         await _stage(db, operation, "extensions", "Checking PHP MariaDB extension.")
         await ensure_database_extension(
@@ -544,12 +568,20 @@ async def _execute_create(
         )
         site.wordpress_installed_at = datetime.utcnow()
         await db.commit()
+    elif site.preset == laravel.PRESET:
+        if credentials is None:
+            raise RuntimeError("Laravel database credentials are missing.")
+        await _stage(db, operation, "laravel", "Installing Laravel.")
+        cert = await _certificate(db, domain)
+        await laravel.install(site, domain.name, credentials, https=cert is not None)
     if payload.get("ssl"):
         await _stage(db, operation, "ssl", "Requesting SSL certificate.")
         try:
             await ssl_service.issue_cert(db, domain.id, domain.name, bool(payload.get("include_www")))
             if site.preset == "wordpress":
                 await asyncio.to_thread(runtime.update_wordpress_url, site, domain.name, https=True)
+            elif site.preset == laravel.PRESET:
+                await laravel.update_url(site, domain.name, https=True)
         except Exception as exc:
             site.last_warning = f"Website is active over HTTP, but SSL failed: {getattr(exc, 'detail', exc)}"[:1000]
     await _stage(db, operation, "health", "Verifying website health.")
@@ -685,6 +717,8 @@ async def _execute_ssl_issue(
     await ssl_service.issue_cert(db, domain.id, domain.name, include_www)
     if site.preset == "wordpress" and site.wordpress_installed_at:
         await asyncio.to_thread(runtime.update_wordpress_url, site, domain.name, https=True)
+    elif site.preset == laravel.PRESET:
+        await laravel.update_url(site, domain.name, https=True)
 
 
 async def _execute_ssl_renew(
@@ -707,6 +741,8 @@ async def _execute_ssl_revoke(
     await ssl_service.revoke_cert(db, cert.id)
     if site.preset == "wordpress" and site.wordpress_installed_at:
         await asyncio.to_thread(runtime.update_wordpress_url, site, domain.name, https=False)
+    elif site.preset == laravel.PRESET:
+        await laravel.update_url(site, domain.name, https=False)
 
 
 async def _execute_wordpress_retry(
@@ -733,6 +769,29 @@ async def _execute_wordpress_retry(
         "admin_password": password,
     }, https=cert is not None)
     site.wordpress_installed_at = datetime.utcnow()
+    site.status, site.last_error = "active", None
+
+
+async def _execute_laravel_retry(
+    db: AsyncSession, operation: PhpWebsiteOperation, site: PhpWebsite, domain: Domain,
+    install_missing_extensions: bool,
+) -> None:
+    if site.preset != laravel.PRESET:
+        raise HTTPException(409, "This is not a Laravel website.")
+    await _stage(db, operation, "extensions", "Checking Laravel PHP extensions and Composer.")
+    await laravel.ensure_requirements(site.php_version, install=install_missing_extensions)
+    database = await database_for(db, site.id)
+    if database is None:
+        await _stage(db, operation, "database", "Creating missing Laravel database.")
+        database = await create_database(db, site, during_provision=True)
+    credentials = read_credentials(database)
+    await _stage(db, operation, "runtime", "Restoring PHP-FPM pool and website root.")
+    await asyncio.to_thread(runtime.provision, site, domain.name, database=credentials)
+    await _stage(db, operation, "routing", "Publishing PHP website through Nginx.")
+    await publish(db, site, domain)
+    await _stage(db, operation, "laravel", "Retrying Laravel installation.")
+    cert = await _certificate(db, domain)
+    await laravel.install(site, domain.name, credentials, https=cert is not None)
     site.status, site.last_error = "active", None
 
 
@@ -774,8 +833,8 @@ async def create_database(
     db: AsyncSession, site: PhpWebsite, *, during_provision: bool = False,
 ) -> PhpWebsiteDatabase:
     if not during_provision:
-        if site.preset == "wordpress":
-            raise HTTPException(409, "WordPress database ownership is managed by its website setup.")
+        if site.preset in {"wordpress", laravel.PRESET}:
+            raise HTTPException(409, "Framework database ownership is managed by its website setup.")
         if site.status not in {"active", "degraded"}:
             raise HTTPException(409, "Enable the PHP website before attaching a database.")
         if await active_operation(db, site.id):
@@ -858,6 +917,8 @@ async def rotate_database(db: AsyncSession, site: PhpWebsite) -> dict[str, str]:
             await asyncio.to_thread(runtime.provision, site, domain.name, database=current)
         if site.preset == "wordpress" and site.wordpress_installed_at:
             await asyncio.to_thread(runtime.update_wordpress_database_password, site, domain.name, current)
+        elif site.preset == laravel.PRESET:
+            await laravel.update_database_password(site, domain.name, current)
         item.status, item.last_error = "ready", None
         return current
     except Exception as exc:
@@ -877,6 +938,8 @@ async def rotate_database(db: AsyncSession, site: PhpWebsite) -> dict[str, str]:
                     await asyncio.to_thread(
                         runtime.update_wordpress_database_password, site, domain.name, old,
                     )
+                elif site.preset == laravel.PRESET:
+                    await laravel.update_database_password(site, domain.name, old)
             except Exception:
                 item.status, item.last_error = "error", "Database password rotation rollback failed. Repair credentials manually."
             await db.commit()
@@ -887,8 +950,8 @@ async def remove_database(db: AsyncSession, site: PhpWebsite, confirmation: str)
     item = await database_for(db, site.id)
     if item is None:
         raise HTTPException(404, "PHP website database not found.")
-    if site.preset == "wordpress":
-        raise HTTPException(409, "A WordPress database can be removed only with the complete website.")
+    if site.preset in {"wordpress", laravel.PRESET}:
+        raise HTTPException(409, "A framework database can be removed only with the complete website.")
     if await active_operation(db, site.id):
         raise HTTPException(409, "Another PHP website operation is already running.")
     if confirmation != f"DELETE DATABASE {item.database_name}":
