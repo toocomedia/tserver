@@ -1,37 +1,57 @@
-<div id="domain-detail-view" style="display: flex; flex-direction: column; gap: var(--space-md); max-width: 100%;">
-  <!-- Header -->
-  <div class="detail-header" style="display: flex; justify-content: space-between; align-items: center; gap: var(--space-sm); width: 100%; max-width: 100%;">
-    <h2 id="detail-domain-name" style="margin: 0; font-size: var(--font-h2); font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; min-width: 0;"></h2>
-    <div style="display: flex; gap: 6px; align-items: center; flex-shrink: 0;">
-      <button type="button" class="btn btn--surface btn--sm" onclick="openAddAccountModal()">
-        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
-        + Mailbox
-      </button>
-      <button type="button" class="btn btn--danger btn--sm" id="btn-delete-domain" onclick="confirmDeleteDomain()">
-        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
-        Delete
-      </button>
+<!-- Drawer Header -->
+<div class="maddy-drawer-header">
+  <div class="maddy-drawer-header__left">
+    <div class="maddy-drawer-domain-icon">
+      <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+        <polyline points="22,6 12,13 2,6"/>
+      </svg>
+    </div>
+    <div style="display: flex; flex-direction: column; min-width: 0;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <h2 id="detail-domain-name" class="maddy-drawer-title"></h2>
+        <span class="badge-minimal badge-minimal--active">Active</span>
+      </div>
+      <span id="detail-domain-ip" class="text-muted" style="font-size: 12px; margin-top: 2px;"></span>
     </div>
   </div>
 
-  <!-- Tabs Navigation (Base App Design System) -->
-  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-md); border-bottom: 1px solid var(--color-line); gap: var(--space-md);">
-    <nav class="tabs-nav" style="margin-bottom: 0; border-bottom: none; flex: 1;">
-      <button type="button" class="btn btn--ghost active" data-tab="accounts" onclick="switchInnerTab('accounts', this)">
-        Mailboxes <span id="account-count-badge" class="badge-minimal">0</span>
-      </button>
-      <button type="button" class="btn btn--ghost" data-tab="dns" onclick="switchInnerTab('dns', this)">DNS Records</button>
-      <button type="button" class="btn btn--ghost" data-tab="ssl" onclick="switchInnerTab('ssl', this)">SSL</button>
-      <button type="button" class="btn btn--ghost" data-tab="settings" onclick="switchInnerTab('settings', this)">Settings</button>
-    </nav>
-    <div style="padding-bottom: 4px;">
-      <input type="text" id="account-search-input" class="form-input" placeholder="Search mailboxes..." style="width: 220px;" oninput="onAccountSearch(this.value)">
-    </div>
+  <div class="maddy-drawer-header__actions">
+    <button type="button" class="btn btn--surface btn--sm" onclick="openAddAccountModal()">
+      <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+      + Mailbox
+    </button>
+    <button type="button" class="btn btn--danger btn--sm" id="btn-delete-domain" onclick="confirmDeleteDomain()">
+      <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+      Delete
+    </button>
+    <button type="button" class="btn btn--ghost btn--icon" onclick="closeDomainDetail()" aria-label="Close drawer" style="margin-left: 2px;">
+      <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+    </button>
   </div>
+</div>
+
+<!-- Drawer Tabs Navigation -->
+<div class="maddy-drawer-nav">
+  <nav class="tabs-nav" style="margin-bottom: 0; border-bottom: none; flex: 1;">
+    <button type="button" class="btn btn--ghost active" data-tab="accounts" onclick="switchInnerTab('accounts', this)">
+      Mailboxes <span id="account-count-badge" class="badge-minimal">0</span>
+    </button>
+    <button type="button" class="btn btn--ghost" data-tab="dns" onclick="switchInnerTab('dns', this)">DNS Records</button>
+    <button type="button" class="btn btn--ghost" data-tab="ssl" onclick="switchInnerTab('ssl', this)">SSL</button>
+    <button type="button" class="btn btn--ghost" data-tab="settings" onclick="switchInnerTab('settings', this)">Settings</button>
+  </nav>
+  <div id="maddy-search-wrapper" style="padding-bottom: 2px;">
+    <input type="text" id="account-search-input" class="form-input" placeholder="Search mailboxes..." style="width: 200px;" oninput="onAccountSearch(this.value)">
+  </div>
+</div>
+
+<!-- Drawer Body (Scrollable) -->
+<div class="maddy-drawer-body">
+  {{ skeleton_overlay('domain-skeleton', title_bar=1, tables=[{ 'rows': 4 }]) }}
 
   <!-- Tab Content: Mailboxes -->
   <div id="inner-tab-accounts" class="inner-tab-content active" style="display: flex; flex-direction: column; gap: var(--space-md);">
-    
     <div class="table-wrap" style="margin-bottom: 0;">
       <table class="table" style="width: 100%; table-layout: fixed;">
         <thead>

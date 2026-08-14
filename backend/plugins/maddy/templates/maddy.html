@@ -8,10 +8,6 @@
 {% block topbar_actions %}
   {% if plugin_installed %}
   <button type="button" class="btn btn--surface" id="btn-add-domain" onclick="openAddDomain()">+ Add Domain</button>
-  <button type="button" class="btn btn--ghost btn--sm" id="btn-back-master" onclick="closeDomainDetail()" style="display: none; align-items: center; gap: 6px;">
-    <svg viewBox="0 0 24 24" style="width: 14px; height: 14px;"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
-    Back
-  </button>
   {% endif %}
 {% endblock %}
 
@@ -25,9 +21,9 @@
   text-overflow: ellipsis;
 }
 
-/* Make list items look active */
+/* Master list items */
 .list-item {
-  transition: background 0.15s ease;
+  transition: background 0.15s ease, border-color 0.15s ease;
   cursor: pointer;
 }
 .list-item:hover {
@@ -37,13 +33,154 @@
   background: var(--color-row-active, var(--color-surface));
 }
 
-.detail-header {
+/* 70% Right Split Drawer & Overlay Backdrop */
+.maddy-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.52);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  z-index: 950;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.28s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+}
+.maddy-drawer-backdrop.is-open {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.maddy-detail-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 70%;
+  max-width: 1100px;
+  min-width: 340px;
+  height: 100vh;
+  height: 100dvh;
+  background: var(--color-bg);
+  border-left: 1px solid var(--color-line);
+  box-shadow: -10px 0 40px rgba(0, 0, 0, 0.35);
+  z-index: 951;
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+}
+
+[dir="rtl"] .maddy-detail-drawer {
+  right: auto;
+  left: 0;
+  border-left: none;
+  border-right: 1px solid var(--color-line);
+  box-shadow: 10px 0 40px rgba(0, 0, 0, 0.35);
+  transform: translateX(-100%);
+}
+
+.maddy-detail-drawer.is-open {
+  transform: translateX(0);
+}
+
+.maddy-drawer-header {
+  padding: var(--space-md) var(--space-xl);
+  border-bottom: 1px solid var(--color-line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  background: var(--color-bg);
+  flex-shrink: 0;
+}
+
+.maddy-drawer-header__left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  min-width: 0;
+  flex: 1;
+}
+
+.maddy-drawer-domain-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-accent);
+  flex-shrink: 0;
+}
+
+.maddy-drawer-title {
+  margin: 0;
+  font-size: var(--font-h2);
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.maddy-drawer-header__actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.maddy-drawer-nav {
+  padding: 0 var(--space-xl);
+  border-bottom: 1px solid var(--color-line);
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: var(--space-md);
-  margin: 0;
-  padding: 0;
+  background: var(--color-bg);
+  flex-shrink: 0;
+}
+
+.maddy-drawer-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-xl);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  position: relative;
+}
+
+@media (max-width: 900px) {
+  .maddy-detail-drawer {
+    width: 85%;
+  }
+}
+
+@media (max-width: 640px) {
+  .maddy-detail-drawer {
+    width: 100%;
+    max-width: 100%;
+  }
+  .maddy-drawer-header,
+  .maddy-drawer-nav,
+  .maddy-drawer-body {
+    padding-left: var(--space-md);
+    padding-right: var(--space-md);
+  }
+  .maddy-drawer-nav {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-sm);
+    padding-bottom: var(--space-sm);
+  }
+  #maddy-search-wrapper input {
+    width: 100% !important;
+  }
 }
 
 </style>
@@ -99,12 +236,13 @@
   {% endif %}
 </div>
 
-<div id="maddy-detail-view" style="display: none; flex-direction: column; gap: var(--space-lg); margin-top: var(--space-xl);">
-  {{ skeleton_overlay('domain-skeleton', title_bar=1, tables=[{ 'rows': 4 }]) }}
-  {% if plugin_installed %}
+{% if plugin_installed %}
+  <!-- 70% Right Split Drawer & Overlay Backdrop -->
+  <div id="maddy-drawer-backdrop" class="maddy-drawer-backdrop" onclick="closeDomainDetail()" aria-hidden="true"></div>
+  <aside id="maddy-detail-drawer" class="maddy-detail-drawer" role="dialog" aria-modal="true" aria-labelledby="detail-domain-name">
     {% include 'partials/_domains_tab.html' %}
-  {% endif %}
-</div>
+  </aside>
+{% endif %}
 
 
 {% if plugin_installed %}

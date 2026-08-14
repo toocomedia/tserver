@@ -291,33 +291,18 @@ function openDomainDetail(domain, serverIp) {
   const searchInput = document.getElementById('account-search-input');
   if (searchInput) searchInput.value = "";
   
-  // Drill-down: hide master list, show detail view
-  const masterView = document.getElementById('maddy-master-view');
-  const detailView = document.getElementById('maddy-detail-view');
-  if (masterView) masterView.style.display = 'none';
-  if (detailView) {
-    detailView.style.display = 'flex';
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    
-    // Simulate loading for detail view
-    const skel = document.getElementById('domain-skeleton');
-    if (skel) {
-      skel.classList.remove('is-hidden');
-      skel.setAttribute('aria-hidden', 'false');
-      setTimeout(() => {
-        if (typeof hideSkeleton === 'function') hideSkeleton('domain-skeleton');
-        else if (typeof window.hideSkeleton === 'function') window.hideSkeleton('domain-skeleton');
-      }, 350);
+  // Highlight active row in master table
+  document.querySelectorAll('#listContent .list-item').forEach(el => {
+    const strong = el.querySelector('.domain-name-text');
+    if (strong && strong.innerText.trim() === domain.trim()) {
+      el.classList.add('active');
+    } else {
+      el.classList.remove('active');
     }
-  }
-
-  // Update topbar buttons
-  const btnAdd = document.getElementById('btn-add-domain');
-  const btnBack = document.getElementById('btn-back-master');
-  if (btnAdd) btnAdd.style.display = 'none';
-  if (btnBack) btnBack.style.display = 'inline-flex';
+  });
 
   safeSetText('detail-domain-name', domain);
+  safeSetText('detail-domain-ip', currentDomainIp ? 'Server IP: ' + currentDomainIp : '');
   safeSetText('delete-domain-name-text', domain);
   safeSetValue('dns-domain-input', domain);
   safeSetValue('ssl-domain-input', domain);
@@ -329,19 +314,43 @@ function openDomainDetail(domain, serverIp) {
   renderDnsRecordsTable(domain, currentDomainIp);
   checkMailSslStatus(domain);
   renderAccountsList();
+
+  // Reset inner tab to accounts
+  const firstTabBtn = document.querySelector('.maddy-drawer-nav .tabs-nav [data-tab="accounts"]');
+  if (firstTabBtn) {
+    switchInnerTab('accounts', firstTabBtn);
+  }
+
+  // Open right split drawer and overlay backdrop
+  const backdrop = document.getElementById('maddy-drawer-backdrop');
+  const drawer   = document.getElementById('maddy-detail-drawer');
+  if (backdrop) backdrop.classList.add('is-open');
+  if (drawer) drawer.classList.add('is-open');
+  document.body.style.overflow = 'hidden';
+
+  // Skeleton loading inside drawer
+  const skel = document.getElementById('domain-skeleton');
+  if (skel) {
+    skel.classList.remove('is-hidden');
+    skel.setAttribute('aria-hidden', 'false');
+    skel.style.display = '';
+    setTimeout(() => {
+      if (typeof hideSkeleton === 'function') hideSkeleton('domain-skeleton', 200);
+      else if (typeof window.hideSkeleton === 'function') window.hideSkeleton('domain-skeleton', 200);
+    }, 150);
+  }
 }
 
 function closeDomainDetail() {
-  const masterView = document.getElementById('maddy-master-view');
-  const detailView = document.getElementById('maddy-detail-view');
-  if (masterView) masterView.style.display = 'block';
-  if (detailView) detailView.style.display = 'none';
+  const backdrop = document.getElementById('maddy-drawer-backdrop');
+  const drawer   = document.getElementById('maddy-detail-drawer');
+  if (backdrop) backdrop.classList.remove('is-open');
+  if (drawer) drawer.classList.remove('is-open');
+  document.body.style.overflow = '';
 
-  // Update topbar buttons
-  const btnAdd = document.getElementById('btn-add-domain');
-  const btnBack = document.getElementById('btn-back-master');
-  if (btnAdd) btnAdd.style.display = 'inline-flex';
-  if (btnBack) btnBack.style.display = 'none';
+  document.querySelectorAll('#listContent .list-item').forEach(el => {
+    el.classList.remove('active');
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -353,15 +362,15 @@ function switchInnerTab(tabName, btnEl) {
     tabName = btnEl.getAttribute('data-tab');
   }
 
-  const container = document.getElementById('domain-detail-view');
-  if (!container) return;
+  const drawer = document.getElementById('maddy-detail-drawer');
+  if (!drawer) return;
 
-  container.querySelectorAll('.tabs-nav .btn--ghost').forEach(b => {
+  drawer.querySelectorAll('.tabs-nav .btn--ghost').forEach(b => {
     b.classList.remove('active', 'is-active');
   });
   if (btnEl) btnEl.classList.add('active', 'is-active');
 
-  container.querySelectorAll('.inner-tab-content').forEach(panel => {
+  drawer.querySelectorAll('.inner-tab-content').forEach(panel => {
     panel.classList.add('hidden');
     panel.classList.remove('active', 'is-active');
     panel.style.display = 'none';
@@ -372,6 +381,11 @@ function switchInnerTab(tabName, btnEl) {
     target.classList.remove('hidden');
     target.classList.add('active', 'is-active');
     target.style.display = 'flex';
+  }
+
+  const searchWrap = document.getElementById('maddy-search-wrapper');
+  if (searchWrap) {
+    searchWrap.style.display = (tabName === 'accounts') ? 'block' : 'none';
   }
 }
 
@@ -706,6 +720,18 @@ document.addEventListener('DOMContentLoaded', () => {
   if (typeof hideSkeleton === 'function') hideSkeleton('maddy-skeleton');
   else if (typeof window.hideSkeleton === 'function') window.hideSkeleton('maddy-skeleton');
   updateScrollButtonsVisibility();
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    const openModals = document.querySelectorAll('.modal-backdrop:not(.hidden)');
+    if (openModals.length > 0) return;
+
+    const drawer = document.getElementById('maddy-detail-drawer');
+    if (drawer && drawer.classList.contains('is-open')) {
+      closeDomainDetail();
+    }
+  }
 });
 </script>
 
