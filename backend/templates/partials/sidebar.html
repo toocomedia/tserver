@@ -54,13 +54,69 @@
           <polyline points="7 23 3 19 7 15"></polyline>
           <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
         </svg>
+<nav class="sidebar" aria-label="Main navigation">
+
+  <div class="sidebar__logo">
+    <img src="/static/images/logobarq.png" alt="{{ PANEL_NAME }}" class="sidebar__logo-img" style="height: 28px; width: auto; object-fit: contain;">
+    <div class="sidebar__search" id="sidebar-search">
+      <button type="button" class="sidebar__search-btn" id="sidebar-search-btn" aria-label="{{ _('search_sidebar') }}">
+        <svg viewbox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+      </button>
+      <input type="search" class="sidebar__search-input" id="sidebar-search-input" placeholder="{{ _('search') }}" aria-label="{{ _('search_items') }}" autocomplete="new-password" name="sidebar_search_input_dummy" data-lpignore="true" data-1p-ignore="true" readonly onfocus="this.removeAttribute('readonly');">
+    </div>
+  </div>
+
+  <div class="sidebar__nav-wrapper">
+    <div class="sidebar__scroll-arrow sidebar__scroll-arrow--up" id="sidebar-scroll-up" aria-label="Scroll up">
+      <svg viewbox="0 0 24 24">
+        <polyline points="18 15 12 9 6 15"></polyline>
+      </svg>
+    </div>
+    <ul class="sidebar__nav" id="sidebar-nav" role="list">
+
+    <li>
+      <a href="{{ path('home') }}" class="sidebar__item" data-path="{{ path('home') }}" aria-label="Dashboard">
+        <svg viewbox="0 0 24 24" aria-hidden="true">
+          <rect x="3" y="3" width="7" height="7"></rect>
+          <rect x="14" y="3" width="7" height="7"></rect>
+          <rect x="14" y="14" width="7" height="7"></rect>
+          <rect x="3" y="14" width="7" height="7"></rect>
+        </svg>
+        {{ _('dashboard') }}
+      </a>
+    </li>
+
+    <li class="sidebar__section-label">{{ _('hosting') }}</li>
+
+    <li>
+      <a href="{{ path('domains') }}" class="sidebar__item" data-path="{{ path('domains') }}" aria-label="Domains">
+        <svg viewbox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="2" y1="12" x2="22" y2="12"></line>
+          <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+        </svg>
+        {{ _('domains') }}
+      </a>
+    </li>
+
+    <li>
+      <a href="{{ path('proxy') }}" class="sidebar__item" data-path="{{ path('proxy') }}" aria-label="Reverse Proxy">
+        <svg viewbox="0 0 24 24" aria-hidden="true">
+          <polyline points="17 1 21 5 17 9"></polyline>
+          <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
+          <polyline points="7 23 3 19 7 15"></polyline>
+          <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
+        </svg>
         {{ _('reverse_proxy') }}
       </a>
     </li>
 
     <li>
       <a href="{{ path('apps') }}" class="sidebar__item" data-path="{{ path('apps') }}" aria-label="Python Apps">
-        <i class="devicon-python-plain colored" style="font-size: 1.25rem;"></i>
+        <i class="devicon-python-plain" style="font-size: 1.25rem; width: 24px; text-align: center;"></i>
         {{ _('python_apps') }}
       </a>
     </li>
@@ -68,90 +124,11 @@
     {% if is_php_active() %}
     <li>
       <a href="{{ path('php_sites') }}" class="sidebar__item" data-path="{{ path('php_sites') }}" aria-label="{{ _('php_websites') }}">
-        <i class="devicon-php-plain colored" style="font-size: 1.25rem;"></i>
+        <i class="devicon-php-plain" style="font-size: 1.25rem; width: 24px; text-align: center;"></i>
         {{ _('php_websites') }}
       </a>
     </li>
     {% endif %}
-
-
-
-    <li class="sidebar__section-label">{{ _('dns_ssl') }}</li>
-
-    <li>
-      <a href="{{ path('dns') }}" class="sidebar__item" data-path="{{ path('dns') }}" aria-label="DNS Manager">
-        <svg viewbox="0 0 24 24" aria-hidden="true">
-          <rect x="2" y="2" width="20" height="8" rx="0"></rect>
-          <rect x="2" y="14" width="20" height="8" rx="0"></rect>
-          <line x1="6" y1="6" x2="6.01" y2="6"></line>
-          <line x1="6" y1="18" x2="6.01" y2="18"></line>
-        </svg>
-        {{ _('dns_manager') }}
-      </a>
-    </li>
-
-    <li>
-      <a href="{{ path('ssl') }}" class="sidebar__item" data-path="{{ path('ssl') }}" aria-label="SSL Certificates">
-        <svg viewbox="0 0 24 24" aria-hidden="true">
-          <rect x="3" y="11" width="18" height="11"></rect>
-          <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-        </svg>
-        {{ _('ssl_certs') }}
-      </a>
-    </li>
-
-    <li class="sidebar__section-label">{{ _('admin') }}</li>
-
-    <li>
-      <a href="{{ path('plugins') }}" class="sidebar__item" data-path="{{ path('plugins') }}" aria-label="Plugins">
-        <svg viewbox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="3" y="3" width="7" height="7"></rect>
-          <rect x="14" y="3" width="7" height="7"></rect>
-          <rect x="14" y="14" width="7" height="7"></rect>
-          <rect x="3" y="14" width="7" height="7"></rect>
-        </svg>
-        {{ _('plugins') }}
-      </a>
-    </li>
-
-    <li>
-      <a href="{{ path('dependencies') }}" class="sidebar__item" data-path="{{ path('dependencies') }}" aria-label="Dependencies">
-        <svg viewbox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M9 12l2 2 4-4"></path>
-          <path d="M12 3l7 4v5c0 5-3 8-7 9-4-1-7-4-7-9V7l7-4z"></path>
-        </svg>
-        {{ _('dependencies') }}
-      </a>
-    </li>
-
-    {% set plugin_items = get_plugin_sidebar_items() %}
-    {% if plugin_items %}
-    <li class="sidebar__section-label">{{ _('plugins_services') }}</li>
-    {% for item in plugin_items %}
-    <li>
-      <a href="{{ item.route }}" class="sidebar__item" data-path="{{ item.route }}" aria-label="{{ item.label }}">
-        {% if item.icon and item.icon.startswith('devicon-') %}
-        <i class="{{ item.icon }} colored" style="font-size: 1.25rem;"></i>
-        {% else %}
-        <svg viewbox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        {% if item.icon == 'mail' %}
-          <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
-          <polyline points="22,6 12,13 2,6"></polyline>
-        {% elif item.icon == 'shield' %}
-          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-        {% else %}
-          <circle cx="12" cy="12" r="10"></circle>
-          <line x1="12" y1="8" x2="12" y2="12"></line>
-          <line x1="12" y1="16" x2="12.01" y2="16"></line>
-        {% endif %}
-        </svg>
-        {% endif %}
-        {{ _(item.label) }}
-      </a>
-    </li>
-    {% endfor %}
-    {% endif %}
-
     <li class="sidebar__section-label">{{ _('system') }}</li>
 
     <li>

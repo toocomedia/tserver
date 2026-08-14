@@ -4,7 +4,7 @@
   "description": "Manage panel-created local MariaDB databases and restricted users.",
   "version": "1.0.0",
   "author": "SRV Panel Core",
-  "icon": "database",
+  "icon": "devicon-mariadb-plain",
   "route_prefix": "/plugins/mariadb_manager",
   "sidebar": true,
   "sidebar_label": "MariaDB",

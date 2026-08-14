@@ -4,7 +4,7 @@
   "description": "Manage multiple Supabase projects — browse databases, run queries, view stats, and attach to hosted apps.",
   "version": "1.0.0",
   "author": "tooco.",
-  "icon": "database",
+  "icon": "devicon-supabase-plain",
   "route_prefix": "/plugins/supabase",
   "sidebar": true,
   "sidebar_label": "Supabase",

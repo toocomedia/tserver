@@ -4,7 +4,7 @@
   "description": "Lightweight PostgreSQL manager with databases, users, and safe queries.",
   "version": "1.0.0",
   "author": "tooco.",
-  "icon": "database",
+  "icon": "devicon-postgresql-plain",
   "route_prefix": "/plugins/postgres_manager",
   "sidebar": true,
   "sidebar_label": "PostgreSQL",
