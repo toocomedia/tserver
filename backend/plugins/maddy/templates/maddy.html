@@ -105,6 +105,7 @@
 
 {% block content %}
 {% from "partials/skeleton_overlay.html" import skeleton_overlay %}
+{% import "partials/list_actions_toggle.html" as list_actions %}
 <!-- SKELETON LOADING OVERLAY -->
 {{ skeleton_overlay('maddy-skeleton', header=1, tables=[{ 'rows': 4 }]) }}
 <!-- END SKELETON OVERLAY -->
@@ -126,8 +127,17 @@
               <tr class="list-item" onclick="openDomainDetail('{{ d.domain }}', '{{ d.server_ip }}')" style="cursor: pointer;">
                 <td class="table-title"><strong class="domain-name-text">{{ d.domain }}</strong></td>
                 <td><span class="badge-minimal badge-minimal--active">Active</span></td>
-                <td class="col-actions">
-                  <button type="button" class="btn btn--sm btn--surface">Manage</button>
+                <td class="col-actions" style="position:relative;" onclick="event.stopPropagation()">
+                  {{ list_actions.button() }}
+
+                  {% call list_actions.tray() %}
+                    <button type="button" class="btn btn--primary btn--sm" onclick="openDomainDetail('{{ d.domain }}', '{{ d.server_ip }}')">
+                      Manage
+                    </button>
+                    <button type="button" class="btn btn--danger btn--sm" onclick="currentDomain='{{ d.domain }}'; confirmDeleteDomain();">
+                      Delete
+                    </button>
+                  {% endcall %}
                 </td>
               </tr>
             {% endfor %}

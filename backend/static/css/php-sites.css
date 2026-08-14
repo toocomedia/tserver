@@ -204,9 +204,8 @@
   margin-bottom: 0;
 }
 
-/* Remove bottom divider on the last table row */
-.php-card .table tbody tr:last-child td,
-.table tbody tr:last-child td {
+/* Remove bottom divider on the last table row inside cards */
+.php-card .table tbody tr:last-child td {
   border-bottom: none !important;
 }
 
