@@ -50,7 +50,7 @@
 .tabs-nav .btn--ghost.active {
   color: var(--color-accent) !important;
   background: color-mix(in srgb, var(--color-accent) 14%, transparent) !important;
-  font-weight: 700;
+  font-weight: 500 !important;
 }
 
 .tabs-nav .tabs-nav__btn.is-active::after,
@@ -82,7 +82,7 @@
   opacity: 1;
   color: var(--color-danger) !important;
   background: color-mix(in srgb, var(--color-danger) 16%, transparent) !important;
-  font-weight: 700;
+  font-weight: 500 !important;
 }
 
 /* Base content panel for tabs */
