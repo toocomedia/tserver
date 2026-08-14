@@ -499,24 +499,19 @@
 /* ==========================================================================
    IMAGE BOX SKELETON & REAL LAZY LOAD
    ========================================================================== */
-.img-skeleton-box,
-.plugin-card__cover:not(.is-loaded):not(.is-error),
-.compact-card-1x1__icon:not(.is-loaded):not(.is-error),
-.info-hero-row__icon:not(.is-loaded):not(.is-error),
-.list-col-thumb:not(.is-loaded):not(.is-error),
-.dependency-card__cover:not(.is-loaded):not(.is-error) {
-  position: relative;
+.img-skeleton-box {
   overflow: hidden;
   background-color: var(--color-surface, #1e293b);
   animation: skeleton-pulse var(--skeleton-shimmer-duration, 1.5s) infinite ease-in-out;
+  transition: background-color 0.35s ease-in-out;
 }
 
-.img-skeleton-box::after,
-.plugin-card__cover:not(.is-loaded):not(.is-error)::after,
-.compact-card-1x1__icon:not(.is-loaded):not(.is-error)::after,
-.info-hero-row__icon:not(.is-loaded):not(.is-error)::after,
-.list-col-thumb:not(.is-loaded):not(.is-error)::after,
-.dependency-card__cover:not(.is-loaded):not(.is-error)::after {
+/* Ensure skeleton relative positioning without breaking absolute elements */
+.img-skeleton-box:not(.compact-card-1x1__icon) {
+  position: relative;
+}
+
+.img-skeleton-box::after {
   content: "";
   position: absolute;
   inset: 0;
@@ -529,14 +524,11 @@
   );
   animation: img-skeleton-shimmer 1.5s infinite;
   pointer-events: none;
+  opacity: 1;
+  transition: opacity 0.35s ease-in-out;
 }
 
-[data-theme="light"] .img-skeleton-box::after,
-[data-theme="light"] .plugin-card__cover:not(.is-loaded):not(.is-error)::after,
-[data-theme="light"] .compact-card-1x1__icon:not(.is-loaded):not(.is-error)::after,
-[data-theme="light"] .info-hero-row__icon:not(.is-loaded):not(.is-error)::after,
-[data-theme="light"] .list-col-thumb:not(.is-loaded):not(.is-error)::after,
-[data-theme="light"] .dependency-card__cover:not(.is-loaded):not(.is-error)::after {
+[data-theme="light"] .img-skeleton-box::after {
   background: linear-gradient(
     90deg,
     transparent,
@@ -577,9 +569,24 @@ img.is-loaded {
   animation: none !important;
 }
 
+.img-skeleton-box.is-loaded,
+.img-skeleton-box.is-error,
+.plugin-card__cover.is-loaded,
+.plugin-card__cover.is-error,
+.compact-card-1x1__icon.is-loaded,
+.compact-card-1x1__icon.is-error,
+.info-hero-row__icon.is-loaded,
+.info-hero-row__icon.is-error,
+.list-col-thumb.is-loaded,
+.list-col-thumb.is-error,
+.dependency-card__cover.is-loaded,
+.dependency-card__cover.is-error {
+  background-color: transparent !important;
+}
+
 .is-loaded::after,
 .is-error::after {
-  display: none !important;
+  opacity: 0 !important;
 }
 
 /* Hide fallback SVG by default and allow fade transition */
