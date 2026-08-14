@@ -310,13 +310,16 @@ function openDomainDetail(domain, serverIp) {
 
   safeSetText('setting-imap-server', 'mail.' + domain);
   safeSetText('setting-smtp-server', 'mail.' + domain);
+  safeSetText('overview-imap-server', 'mail.' + domain + ':993');
+  safeSetText('overview-smtp-server', 'mail.' + domain + ':465');
+  safeSetText('ssl-mail-hostname', 'mail.' + domain);
 
   renderDnsRecordsTable(domain, currentDomainIp);
   checkMailSslStatus(domain);
   renderAccountsList();
 
   // Reset inner tab to accounts
-  const firstTabBtn = document.querySelector('.maddy-drawer-nav [data-tab="accounts"]');
+  const firstTabBtn = document.querySelector('.php-split-nav [data-tab="accounts"]');
   if (firstTabBtn) {
     switchInnerTab('accounts', firstTabBtn);
   }
@@ -365,7 +368,7 @@ function switchInnerTab(tabName, btnEl) {
   const drawer = document.getElementById('maddy-detail-drawer');
   if (!drawer) return;
 
-  drawer.querySelectorAll('.tabs-nav .btn--ghost, .php-split-nav-btn').forEach(b => {
+  drawer.querySelectorAll('.php-split-nav-btn').forEach(b => {
     b.classList.remove('active', 'is-active');
   });
   if (btnEl) btnEl.classList.add('active', 'is-active');
@@ -380,7 +383,7 @@ function switchInnerTab(tabName, btnEl) {
   if (target) {
     target.classList.remove('hidden');
     target.classList.add('active', 'is-active');
-    target.style.display = 'flex';
+    target.style.display = 'block';
   }
 }
 
