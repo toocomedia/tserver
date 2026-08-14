@@ -30,13 +30,13 @@ function row(lbl, val) {
 
 function tabsNav() {
   return `
-    <nav class="tabs-nav mb-lg" data-detail-tabs role="tablist">
+    <nav class="tabs-nav tabs-nav--opacity mb-lg" data-detail-tabs role="tablist">
       <button class="tabs-nav__btn ${currentTab === "overview" ? "is-active" : ""}" type="button" role="tab" data-tab-target="overview" id="tab-btn-overview">${esc(t("overview"))}</button>
       <button class="tabs-nav__btn ${currentTab === "runtime" ? "is-active" : ""}" type="button" role="tab" data-tab-target="runtime" id="tab-btn-runtime">${esc(t("runtime_settings"))}</button>
       <button class="tabs-nav__btn ${currentTab === "database" ? "is-active" : ""}" type="button" role="tab" data-tab-target="database" id="tab-btn-database">${esc(t("database"))}</button>
       <button class="tabs-nav__btn ${currentTab === "ssl" ? "is-active" : ""}" type="button" role="tab" data-tab-target="ssl" id="tab-btn-ssl">${esc(t("ssl_certificates"))}</button>
       <button class="tabs-nav__btn ${currentTab === "logs" ? "is-active" : ""}" type="button" role="tab" data-tab-target="logs" id="tab-btn-logs">${esc(t("logs"))}</button>
-      <button class="tabs-nav__btn ${currentTab === "danger" ? "is-active" : ""}" type="button" role="tab" data-tab-target="danger" id="tab-btn-danger" style="color:var(--color-danger);">${esc(t("danger_zone"))}</button>
+      <button class="tabs-nav__btn tabs-nav__btn--danger ${currentTab === "danger" ? "is-active" : ""}" type="button" role="tab" data-tab-target="danger" id="tab-btn-danger">${esc(t("danger_zone"))}</button>
     </nav>
   `;
 }

@@ -78,3 +78,71 @@
   display: block;
 }
 
+/* Opacity / Dividerless Tab Navigation Variant */
+.tabs-nav--opacity {
+  border-bottom: none !important;
+  gap: 8px;
+  margin-bottom: var(--space-lg, 16px);
+  padding: 4px 0;
+}
+
+.tabs-nav--opacity .tabs-nav__btn,
+.tabs-nav--opacity .btn,
+.tabs-nav--opacity .btn--ghost {
+  height: 34px;
+  padding: 0 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-muted);
+  background: transparent !important;
+  border: none !important;
+  border-radius: 4px !important;
+  transition: all 0.15s ease;
+}
+
+.tabs-nav--opacity .tabs-nav__btn:hover,
+.tabs-nav--opacity .btn:hover,
+.tabs-nav--opacity .btn--ghost:hover {
+  color: var(--color-text);
+  background: color-mix(in srgb, var(--color-text) 8%, transparent) !important;
+}
+
+.tabs-nav--opacity .tabs-nav__btn.is-active,
+.tabs-nav--opacity .tabs-nav__btn.active,
+.tabs-nav--opacity .btn.is-active,
+.tabs-nav--opacity .btn.active,
+.tabs-nav--opacity .btn--ghost.is-active,
+.tabs-nav--opacity .btn--ghost.active {
+  color: var(--color-accent) !important;
+  background: color-mix(in srgb, var(--color-accent) 14%, transparent) !important;
+  font-weight: 700;
+}
+
+.tabs-nav--opacity .tabs-nav__btn.is-active::after,
+.tabs-nav--opacity .tabs-nav__btn.active::after,
+.tabs-nav--opacity .btn.is-active::after,
+.tabs-nav--opacity .btn.active::after,
+.tabs-nav--opacity .btn--ghost.is-active::after,
+.tabs-nav--opacity .btn--ghost.active::after {
+  display: none !important;
+}
+
+/* Danger tab in opacity variant */
+.tabs-nav--opacity .tabs-nav__btn--danger {
+  color: var(--color-danger) !important;
+  opacity: 0.75;
+}
+
+.tabs-nav--opacity .tabs-nav__btn--danger:hover {
+  opacity: 1;
+  background: color-mix(in srgb, var(--color-danger) 10%, transparent) !important;
+}
+
+.tabs-nav--opacity .tabs-nav__btn--danger.is-active,
+.tabs-nav--opacity .tabs-nav__btn--danger.active {
+  opacity: 1;
+  color: var(--color-danger) !important;
+  background: color-mix(in srgb, var(--color-danger) 16%, transparent) !important;
+  font-weight: 700;
+}
+
