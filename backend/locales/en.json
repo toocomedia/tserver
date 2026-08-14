@@ -909,5 +909,12 @@
   "overview": "Overview",
   "socket_path": "Socket Path",
   "linux_user": "Linux User",
-  "created_at": "Created At"
+  "created_at": "Created At",
+  "site_details": "Site Details",
+  "service_state_health": "Service State & Health",
+  "retry_setup": "Retry Setup",
+  "change": "Change",
+  "expires": "Expires",
+  "renew": "Renew",
+  "revoke": "Revoke"
 }

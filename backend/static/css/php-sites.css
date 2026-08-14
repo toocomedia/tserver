@@ -94,7 +94,7 @@
 .php-split-nav-btn {
   padding: 10px 14px;
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 500 !important;
   color: var(--color-muted);
   background: transparent !important;
   border: none !important;
@@ -115,30 +115,33 @@
 .php-split-nav-btn.is-active {
   color: var(--color-text) !important;
   background: color-mix(in srgb, var(--color-accent) 18%, transparent) !important;
-  font-weight: 600 !important;
+  font-weight: 500 !important;
 }
 
-[data-theme="dark"] .php-split-nav-btn.is-active,
-[data-theme="amoled"] .php-split-nav-btn.is-active,
-[data-theme="charcoal"] .php-split-nav-btn.is-active {
+[data-theme="dark"] .php-split-nav-btn.is-active:not(.php-split-nav-btn--danger),
+[data-theme="amoled"] .php-split-nav-btn.is-active:not(.php-split-nav-btn--danger),
+[data-theme="charcoal"] .php-split-nav-btn.is-active:not(.php-split-nav-btn--danger) {
   color: var(--color-accent) !important;
 }
 
+/* Danger Split Nav Button — Always strictly red in all themes */
 .php-split-nav-btn--danger {
   color: var(--color-danger) !important;
-  opacity: 0.85;
+  font-weight: 500 !important;
 }
 
 .php-split-nav-btn--danger:hover {
-  opacity: 1;
+  color: var(--color-danger) !important;
   background: color-mix(in srgb, var(--color-danger) 10%, transparent) !important;
 }
 
-.php-split-nav-btn--danger.is-active {
-  opacity: 1;
+.php-split-nav-btn--danger.is-active,
+[data-theme="dark"] .php-split-nav-btn--danger.is-active,
+[data-theme="amoled"] .php-split-nav-btn--danger.is-active,
+[data-theme="charcoal"] .php-split-nav-btn--danger.is-active {
   color: var(--color-danger) !important;
   background: color-mix(in srgb, var(--color-danger) 16%, transparent) !important;
-  font-weight: 600 !important;
+  font-weight: 500 !important;
 }
 
 .php-split-content {

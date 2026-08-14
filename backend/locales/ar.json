@@ -909,5 +909,12 @@
   "overview": "نظرة عامة",
   "socket_path": "مسار المقبس",
   "linux_user": "مستخدم Linux",
-  "created_at": "تاريخ الإنشاء"
+  "created_at": "تاريخ الإنشاء",
+  "site_details": "تفاصيل الموقع",
+  "service_state_health": "حالة الخدمات والصحة",
+  "retry_setup": "إعادة محاولة الإعداد",
+  "change": "تغيير",
+  "expires": "تاريخ الانتهاء",
+  "renew": "تجديد",
+  "revoke": "إلغاء"
 }

@@ -50,27 +50,27 @@
 .tabs-nav .btn--ghost.active {
   color: var(--color-text) !important;
   background: color-mix(in srgb, var(--color-accent) 18%, transparent) !important;
-  font-weight: 600 !important;
+  font-weight: 500 !important;
 }
 
-[data-theme="dark"] .tabs-nav .tabs-nav__btn.is-active,
-[data-theme="dark"] .tabs-nav .tabs-nav__btn.active,
-[data-theme="dark"] .tabs-nav .btn.is-active,
-[data-theme="dark"] .tabs-nav .btn.active,
-[data-theme="dark"] .tabs-nav .btn--ghost.is-active,
-[data-theme="dark"] .tabs-nav .btn--ghost.active,
-[data-theme="amoled"] .tabs-nav .tabs-nav__btn.is-active,
-[data-theme="amoled"] .tabs-nav .tabs-nav__btn.active,
-[data-theme="amoled"] .tabs-nav .btn.is-active,
-[data-theme="amoled"] .tabs-nav .btn.active,
-[data-theme="amoled"] .tabs-nav .btn--ghost.is-active,
-[data-theme="amoled"] .tabs-nav .btn--ghost.active,
-[data-theme="charcoal"] .tabs-nav .tabs-nav__btn.is-active,
-[data-theme="charcoal"] .tabs-nav .tabs-nav__btn.active,
-[data-theme="charcoal"] .tabs-nav .btn.is-active,
-[data-theme="charcoal"] .tabs-nav .btn.active,
-[data-theme="charcoal"] .tabs-nav .btn--ghost.is-active,
-[data-theme="charcoal"] .tabs-nav .btn--ghost.active {
+[data-theme="dark"] .tabs-nav .tabs-nav__btn.is-active:not(.tabs-nav__btn--danger):not(.btn--danger),
+[data-theme="dark"] .tabs-nav .tabs-nav__btn.active:not(.tabs-nav__btn--danger):not(.btn--danger),
+[data-theme="dark"] .tabs-nav .btn.is-active:not(.tabs-nav__btn--danger):not(.btn--danger),
+[data-theme="dark"] .tabs-nav .btn.active:not(.tabs-nav__btn--danger):not(.btn--danger),
+[data-theme="dark"] .tabs-nav .btn--ghost.is-active:not(.tabs-nav__btn--danger):not(.btn--danger),
+[data-theme="dark"] .tabs-nav .btn--ghost.active:not(.tabs-nav__btn--danger):not(.btn--danger),
+[data-theme="amoled"] .tabs-nav .tabs-nav__btn.is-active:not(.tabs-nav__btn--danger):not(.btn--danger),
+[data-theme="amoled"] .tabs-nav .tabs-nav__btn.active:not(.tabs-nav__btn--danger):not(.btn--danger),
+[data-theme="amoled"] .tabs-nav .btn.is-active:not(.tabs-nav__btn--danger):not(.btn--danger),
+[data-theme="amoled"] .tabs-nav .btn.active:not(.tabs-nav__btn--danger):not(.btn--danger),
+[data-theme="amoled"] .tabs-nav .btn--ghost.is-active:not(.tabs-nav__btn--danger):not(.btn--danger),
+[data-theme="amoled"] .tabs-nav .btn--ghost.active:not(.tabs-nav__btn--danger):not(.btn--danger),
+[data-theme="charcoal"] .tabs-nav .tabs-nav__btn.is-active:not(.tabs-nav__btn--danger):not(.btn--danger),
+[data-theme="charcoal"] .tabs-nav .tabs-nav__btn.active:not(.tabs-nav__btn--danger):not(.btn--danger),
+[data-theme="charcoal"] .tabs-nav .btn.is-active:not(.tabs-nav__btn--danger):not(.btn--danger),
+[data-theme="charcoal"] .tabs-nav .btn.active:not(.tabs-nav__btn--danger):not(.btn--danger),
+[data-theme="charcoal"] .tabs-nav .btn--ghost.is-active:not(.tabs-nav__btn--danger):not(.btn--danger),
+[data-theme="charcoal"] .tabs-nav .btn--ghost.active:not(.tabs-nav__btn--danger):not(.btn--danger) {
   color: var(--color-accent) !important;
 }
 
@@ -83,24 +83,35 @@
   display: none !important;
 }
 
-/* Danger Tab in Navigation */
+/* Danger Tab in Navigation — Always strictly red in all themes */
 .tabs-nav .tabs-nav__btn--danger,
 .tabs-nav .btn--danger {
   color: var(--color-danger) !important;
-  opacity: 0.8;
+  font-weight: 500 !important;
 }
 
 .tabs-nav .tabs-nav__btn--danger:hover,
 .tabs-nav .btn--danger:hover {
-  opacity: 1;
+  color: var(--color-danger) !important;
   background: color-mix(in srgb, var(--color-danger) 10%, transparent) !important;
 }
 
 .tabs-nav .tabs-nav__btn--danger.is-active,
 .tabs-nav .tabs-nav__btn--danger.active,
 .tabs-nav .btn--danger.is-active,
-.tabs-nav .btn--danger.active {
-  opacity: 1;
+.tabs-nav .btn--danger.active,
+[data-theme="dark"] .tabs-nav .tabs-nav__btn--danger.is-active,
+[data-theme="dark"] .tabs-nav .tabs-nav__btn--danger.active,
+[data-theme="dark"] .tabs-nav .btn--danger.is-active,
+[data-theme="dark"] .tabs-nav .btn--danger.active,
+[data-theme="amoled"] .tabs-nav .tabs-nav__btn--danger.is-active,
+[data-theme="amoled"] .tabs-nav .tabs-nav__btn--danger.active,
+[data-theme="amoled"] .tabs-nav .btn--danger.is-active,
+[data-theme="amoled"] .tabs-nav .btn--danger.active,
+[data-theme="charcoal"] .tabs-nav .tabs-nav__btn--danger.is-active,
+[data-theme="charcoal"] .tabs-nav .tabs-nav__btn--danger.active,
+[data-theme="charcoal"] .tabs-nav .btn--danger.is-active,
+[data-theme="charcoal"] .tabs-nav .btn--danger.active {
   color: var(--color-danger) !important;
   background: color-mix(in srgb, var(--color-danger) 16%, transparent) !important;
   font-weight: 500 !important;
