@@ -63,19 +63,25 @@
 
   .info-row__value .usage-bar-wrap { min-width: 200px; }
 
+  .usage-page .table th:last-child,
+  .usage-page .table td:last-child {
+    text-align: right;
+    text-align: end;
+  }
+
   .table-total-row {
-    background: var(--color-header-bg-bar) !important;
-    border-top: 2px solid var(--color-line);
-    border-bottom: 2px solid var(--color-line);
+    background: transparent !important;
+    border-top: 1px solid var(--color-line);
+    border-bottom: 1px solid var(--color-line);
   }
   .table-total-row td {
-    font-weight: 700 !important;
-    color: var(--color-text) !important;
-    border-bottom: none !important;
+    font-weight: 400 !important;
+    color: var(--color-muted) !important;
+    border-bottom: 1px solid var(--color-line) !important;
   }
   .table-total-row .table-title {
-    font-weight: 700 !important;
-    color: var(--color-text) !important;
+    font-weight: 400 !important;
+    color: var(--color-muted) !important;
     display: inline-flex;
     align-items: center;
     gap: 6px;
@@ -282,10 +288,10 @@
 
       const totalRowHtml = entries.length ? `
         <tr class="table-total-row">
-          <td class="table-title"><strong>{{ _('total') }}</strong></td>
-          <td><strong>${totalCount}</strong></td>
-          <td><strong>${totalCpu.toFixed(1)}%</strong></td>
-          <td><strong>${formatTotalMemory(totalMem, d.ram?.total_gb)}</strong></td>
+          <td class="table-title">{{ _('total') }}</td>
+          <td>${totalCount}</td>
+          <td>${totalCpu.toFixed(1)}%</td>
+          <td>${formatTotalMemory(totalMem, d.ram?.total_gb)}</td>
           <td><span class="${procStatusClass('running')}">${activeCount}/${entries.length} {{ _('running') }}</span></td>
         </tr>
       ` : '';
@@ -321,10 +327,10 @@
 
         const totalRowHtml = `
           <tr class="table-total-row">
-            <td class="table-title"><strong>{{ _('total') }}</strong></td>
-            <td><strong>${totalCount}</strong></td>
-            <td><strong>${totalCpu.toFixed(1)}%</strong></td>
-            <td><strong>${formatTotalMemory(totalMem, d.ram?.total_gb)}</strong></td>
+            <td class="table-title">{{ _('total') }}</td>
+            <td>${totalCount}</td>
+            <td>${totalCpu.toFixed(1)}%</td>
+            <td>${formatTotalMemory(totalMem, d.ram?.total_gb)}</td>
             <td><span class="${procStatusClass(activeCount ? 'active' : 'stopped')}">${activeCount}/${pluginRows.length} {{ _('active') }}</span></td>
           </tr>
         `;
@@ -361,10 +367,10 @@
 
         const totalRowHtml = `
           <tr class="table-total-row">
-            <td class="table-title"><strong>{{ _('total') }}</strong></td>
-            <td><strong>${totalCount}</strong></td>
-            <td><strong>${totalCpu.toFixed(1)}%</strong></td>
-            <td><strong>${formatTotalMemory(totalMem, d.ram?.total_gb)}</strong></td>
+            <td class="table-title">{{ _('total') }}</td>
+            <td>${totalCount}</td>
+            <td>${totalCpu.toFixed(1)}%</td>
+            <td>${formatTotalMemory(totalMem, d.ram?.total_gb)}</td>
             <td><span class="${procStatusClass(runningCount ? 'running' : 'active')}">${runningCount}/${apps.length} {{ _('running') }}</span></td>
           </tr>
         `;
@@ -401,10 +407,10 @@
 
         const totalRowHtml = `
           <tr class="table-total-row">
-            <td class="table-title"><strong>{{ _('total') }}</strong></td>
-            <td><strong>${totalCount}</strong></td>
-            <td><strong>${totalCpu.toFixed(1)}%</strong></td>
-            <td><strong>${formatTotalMemory(totalMem, d.ram?.total_gb)}</strong></td>
+            <td class="table-title">{{ _('total') }}</td>
+            <td>${totalCount}</td>
+            <td>${totalCpu.toFixed(1)}%</td>
+            <td>${formatTotalMemory(totalMem, d.ram?.total_gb)}</td>
             <td><span class="${procStatusClass(activeCount ? 'active' : 'stopped')}">${activeCount}/${sites.length} {{ _('active') }}</span></td>
           </tr>
         `;
@@ -444,10 +450,10 @@
 
         const totalRowHtml = total ? `
           <tr class="table-total-row">
-            <td class="table-title"><strong>{{ _('total') }}</strong></td>
-            <td><strong>${total.count}</strong></td>
-            <td><strong>${total.cpu.toFixed(1)}%</strong></td>
-            <td><strong>${total.memory}</strong></td>
+            <td class="table-title">{{ _('total') }}</td>
+            <td>${total.count}</td>
+            <td>${total.cpu.toFixed(1)}%</td>
+            <td>${total.memory}</td>
             <td><span class="${procStatusClass(total.status)}">${total.status}</span></td>
           </tr>
         ` : '';
@@ -485,10 +491,10 @@
 
         const totalRowHtml = `
           <tr class="table-total-row">
-            <td class="table-title"><strong>{{ _('total') }}</strong></td>
-            <td><strong>${totalCount}</strong></td>
-            <td><strong>${totalCpu.toFixed(1)}%</strong></td>
-            <td><strong>${formatTotalMemory(totalMem, d.ram?.total_gb)}</strong></td>
+            <td class="table-title">{{ _('total') }}</td>
+            <td>${totalCount}</td>
+            <td>${totalCpu.toFixed(1)}%</td>
+            <td>${formatTotalMemory(totalMem, d.ram?.total_gb)}</td>
             <td><span class="${procStatusClass('healthy')}">${healthyCount}/${dependencies.length} {{ _('healthy') }}</span></td>
           </tr>
         `;
@@ -525,10 +531,10 @@
 
           const totalRowHtml = `
             <tr class="table-total-row">
-              <td class="table-title"><strong>{{ _('total') }} (Top ${procs.length})</strong></td>
-              <td><strong>${procs.length}</strong></td>
-              <td><strong>${totalCpu.toFixed(1)}%</strong></td>
-              <td><strong>${totalMem.toFixed(1)}%</strong></td>
+              <td class="table-title">{{ _('total') }} (Top ${procs.length})</td>
+              <td>${procs.length}</td>
+              <td>${totalCpu.toFixed(1)}%</td>
+              <td>${totalMem.toFixed(1)}%</td>
               <td><span class="${procStatusClass('running')}">${procs.length} procs</span></td>
             </tr>
           `;
