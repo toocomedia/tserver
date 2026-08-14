@@ -365,7 +365,7 @@ function switchInnerTab(tabName, btnEl) {
   const drawer = document.getElementById('maddy-detail-drawer');
   if (!drawer) return;
 
-  drawer.querySelectorAll('.php-split-nav-btn').forEach(b => {
+  drawer.querySelectorAll('.tabs-nav .btn--ghost, .php-split-nav-btn').forEach(b => {
     b.classList.remove('active', 'is-active');
   });
   if (btnEl) btnEl.classList.add('active', 'is-active');
