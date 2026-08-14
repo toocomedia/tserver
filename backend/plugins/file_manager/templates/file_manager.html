@@ -25,8 +25,9 @@
   {% from "partials/skeleton_overlay.html" import skeleton_overlay %}
   {{ skeleton_overlay(
        'fm-skeleton',
+       header=0,
        tables=[
-         { 'cols': [50, 15, 25, 10], 'rows': 5 }
+         { 'cols': [45, 15, 25, 15], 'rows': 5 }
        ]
   ) }}
 
@@ -39,11 +40,11 @@
     </div>
     <h3 class="empty-state-strict__title">{{ _("select_a_target") }}</h3>
     <p class="empty-state-strict__desc">{{ _("choose_an_application_from_the_dropdown") }}</p>
-    <div id="fm-quick-targets" style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; max-width: 480px;"></div>
+    <div id="fm-quick-targets" style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; max-width: 480px; margin-top: var(--space-md);"></div>
   </div>
 
   <!-- Roots Tabs -->
-  <div id="roots-tabs" style="display: none;"></div>
+  <div id="roots-tabs" class="tabs-nav" style="display: none; margin-bottom: var(--space-sm, 12px);"></div>
 
   <!-- Breadcrumbs & Actions Toolbar -->
   <div class="action-toolbar" id="fm-toolbar" style="display: none;">

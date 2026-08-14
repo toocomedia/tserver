@@ -2,7 +2,19 @@
 
 #fm-main {
   position: relative;
+  width: 100%;
   min-height: 400px;
+}
+
+#fm-main > .skeleton-overlay {
+  position: absolute;
+  top: 0;
+  left: calc(var(--page-gutter) * -1);
+  right: calc(var(--page-gutter) * -1);
+  bottom: 0;
+  width: auto;
+  z-index: 10;
+  background: var(--color-bg);
 }
 
 .file-manager__app-selector {
@@ -11,6 +23,7 @@
 }
 
 .skeleton-line {
+  display: block;
   height: 12px;
   background: var(--color-line);
   opacity: 0.65;
@@ -18,14 +31,6 @@
   animation: skeleton-pulse var(--skeleton-shimmer-duration, 1.6s) infinite ease-in-out;
 }
 
-/* Roots Tabs */
-#roots-tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: var(--space-md);
-  margin-bottom: var(--space-md);
-}
 
 /* Breadcrumbs styling */
 .fm-breadcrumb-item {

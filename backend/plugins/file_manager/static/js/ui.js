@@ -1,7 +1,8 @@
 export function renderRootsTabs(roots, activeRootId, onSelectRoot) {
   const container = document.getElementById('roots-tabs');
+  if (!container) return;
   container.innerHTML = '';
-  if (!roots || roots.length === 0) {
+  if (!roots || roots.length <= 1) {
     container.style.display = 'none';
     return;
   }
@@ -10,7 +11,7 @@ export function renderRootsTabs(roots, activeRootId, onSelectRoot) {
   roots.forEach(root => {
     const btn = document.createElement('button');
     btn.type = 'button';
-    btn.className = `btn btn--sm ${root.id === activeRootId ? 'btn--primary' : 'btn--secondary'}`;
+    btn.className = `tabs-nav__btn ${root.id === activeRootId ? 'is-active' : ''}`;
     btn.textContent = root.name;
     btn.onclick = () => onSelectRoot(root.id);
     container.appendChild(btn);
