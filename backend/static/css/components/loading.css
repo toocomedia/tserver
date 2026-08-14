@@ -125,10 +125,16 @@
    No separate animation needed; one pulse drives everything. */
 .sk-label, .sk-value, .sk-meta, .sk-th, .sk-td, .sk-text, .sk-btn, .sk-cover,
 .sk-title, .sk-sub, .sk-col-status, .sk-col-action, .sk-search-input, .sk-filter-select,
-.sk-page-title, .sk-page-btn {
+.sk-page-title, .sk-page-btn, .skeleton-line {
   background: var(--color-line);
   opacity: 0.65;
   border-radius: 3px;
+}
+
+.skeleton-line {
+  display: block;
+  height: 14px;
+  animation: skeleton-pulse var(--skeleton-shimmer-duration) infinite ease-in-out;
 }
 
 [data-theme="dark"] .sk-label,
@@ -147,6 +153,7 @@
 [data-theme="dark"] .sk-filter-select,
 [data-theme="dark"] .sk-page-title,
 [data-theme="dark"] .sk-page-btn,
+[data-theme="dark"] .skeleton-line,
 [data-theme="dark"] .skeleton-table-header .sk-th,
 [data-theme="dark"] .skeleton-table-row .sk-title,
 [data-theme="dark"] .skeleton-table-row .sk-sub,

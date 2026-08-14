@@ -34,6 +34,10 @@
   "this_action_is_permanent_and_cannot_be_undone": "This action is permanent and cannot be undone.",
   "type_delete_to_confirm": "Type DELETE to confirm",
   "delete": "Delete",
+  "no_targets_available": "No targets available",
+  "no_targets_desc": "Create a PHP website, Python app, or container first.",
+  "this_folder_is_empty": "This folder is empty",
+  "upload_files_or_create_new_folder": "Upload files or create a new file/folder to get started.",
   "File management and operations for all hosted applications on the panel.": "File management and operations for all hosted applications on the panel.",
   "File management and operations for all hosted applications on the panel": "File management and operations for all hosted applications on the panel"
 }

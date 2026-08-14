@@ -36,6 +36,10 @@
   "this_action_is_permanent_and_cannot_be_undone": "هذا الإجراء نهائي ولا يمكن التراجع عنه.",
   "type_delete_to_confirm": "اكتب DELETE للتأكيد",
   "delete": "حذف",
+  "no_targets_available": "لا توجد أهداف متاحة",
+  "no_targets_desc": "قم بإنشاء موقع PHP أو تطبيق Python أو حاوية أولاً.",
+  "this_folder_is_empty": "هذا المجلد فارغ",
+  "upload_files_or_create_new_folder": "قم برفع ملفات أو إنشاء ملف/مجلد جديد للبدء.",
   "File management and operations for all hosted applications on the panel.": "إدارة الملفات وعمليات المستندات لجميع التطبيقات المستضافة على اللوحة.",
   "File management and operations for all hosted applications on the panel": "إدارة الملفات وعمليات المستندات لجميع التطبيقات المستضافة على اللوحة."
 }

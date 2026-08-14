@@ -304,6 +304,15 @@ class FileManagerTargetTests(unittest.TestCase):
                 roots = file_targets._python_roots(item)
             self.assertEqual([root.id for root in roots], ["application", "data"])
 
+    def test_file_manager_template_has_proper_skeleton_and_empty_states(self):
+        template_path = BACKEND / "plugins" / "file_manager" / "templates" / "file_manager.html"
+        content = template_path.read_text(encoding="utf-8")
+        self.assertIn('class="file-manager-page"', content)
+        self.assertIn("fm-skeleton", content)
+        self.assertIn("empty-state-strict", content)
+        self.assertIn("empty-state-shapes", content)
+        self.assertIn("fm-quick-targets", content)
+
 
 if __name__ == "__main__":
     unittest.main()

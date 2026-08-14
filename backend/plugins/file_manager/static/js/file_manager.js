@@ -36,18 +36,32 @@ async function init() {
   try {
     const data = await api.fetchApps();
     const appSelector = document.getElementById('app-selector');
-    if (data.apps.length === 0) {
-      appSelector.innerHTML = '<option value="">No targets available</option>';
+    const quickTargetsContainer = document.getElementById('fm-quick-targets');
+    const t = (key, fallback) => (typeof window._ === 'function' ? window._(key) : fallback) || fallback;
+    
+    if (!data.apps || data.apps.length === 0) {
+      appSelector.innerHTML = `<option value="">${t('no_targets_available', 'No targets available')}</option>`;
+      const emptyTitle = document.querySelector('#fm-select-app-state .empty-state-strict__title');
+      const emptyDesc = document.querySelector('#fm-select-app-state .empty-state-strict__desc');
+      if (emptyTitle) emptyTitle.textContent = t('no_targets_available', 'No targets available');
+      if (emptyDesc) emptyDesc.textContent = t('no_targets_desc', 'Create a PHP website, Python app, or container first.');
+      if (quickTargetsContainer) {
+        quickTargetsContainer.innerHTML = `
+          <a href="/php-sites/create" class="btn btn--primary btn--sm">+ ${t('create_php_site', 'Create PHP Website')}</a>
+          <a href="/apps" class="btn btn--secondary btn--sm">${t('apps_engine', 'Apps Engine')}</a>
+        `;
+      }
     } else {
-      appSelector.innerHTML = '<option value="">Select Target...</option>';
+      appSelector.innerHTML = `<option value="">${t('select_target', 'Select Target...')}</option>`;
       
-      const t = (key, fallback) => (typeof window._ === 'function' ? window._(key) : fallback) || fallback;
       const groups = {
         php: { label: t('hosted_php_websites', 'PHP Websites'), opts: [] },
         container: { label: t('apps_engine', 'Apps Engine'), opts: [] },
         python: { label: t('hosted_python_apps', 'Python Hosted Apps'), opts: [] },
         static: { label: t('static_sites', 'Static Sites'), opts: [] }
       };
+      
+      if (quickTargetsContainer) quickTargetsContainer.innerHTML = '';
       
       data.apps.forEach(app => {
         const type = app.target_type || 'container';
@@ -57,6 +71,25 @@ async function init() {
         opt.value = app.id;
         opt.textContent = `${app.domain || 'Unnamed'} (${app.preset || app.target_type})`;
         groups[type].opts.push(opt);
+
+        if (quickTargetsContainer) {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'fm-quick-target-btn';
+          const typeBadge = (app.preset || app.target_type || 'app').toUpperCase();
+          btn.innerHTML = `
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+            </svg>
+            <span>${app.domain || 'Unnamed'}</span>
+            <span class="badge-minimal badge-minimal--neutral">${typeBadge}</span>
+          `;
+          btn.onclick = () => {
+            appSelector.value = app.id;
+            onAppChange({ target: appSelector });
+          };
+          quickTargetsContainer.appendChild(btn);
+        }
       });
       
       for (const [key, group] of Object.entries(groups)) {
@@ -94,7 +127,7 @@ async function init() {
         }
       }
       if (!state.appId) {
-        document.getElementById('fm-select-app-state').style.display = 'block';
+        document.getElementById('fm-select-app-state').style.display = 'flex';
       }
     }
   } catch (err) {
@@ -291,7 +324,7 @@ function resetView() {
   document.getElementById('fm-toolbar').style.display = 'none';
   document.getElementById('fm-table-wrap').style.display = 'none';
   document.getElementById('fm-empty-state').style.display = 'none';
-  document.getElementById('fm-select-app-state').style.display = 'block';
+  document.getElementById('fm-select-app-state').style.display = 'flex';
 }
 
 async function loadEntries(isRefresh = false) {
@@ -304,13 +337,13 @@ async function loadEntries(isRefresh = false) {
   document.getElementById('fm-table-wrap').style.display = 'block';
   
   // Show localized skeleton loader inside the table while fetching
-  tbody.innerHTML = Array.from({length: 3}).map(() => `
-    <tr>
-      <td></td>
-      <td><div class="skeleton-line" style="width: 50%;"></div></td>
-      <td><div class="skeleton-line" style="width: 80%;"></div></td>
-      <td><div class="skeleton-line" style="width: 60%;"></div></td>
-      <td><div class="skeleton-line" style="width: 30%;"></div></td>
+  tbody.innerHTML = Array.from({length: 5}).map((_, idx) => `
+    <tr class="skeleton-table-row-sim">
+      <td style="text-align: center;"><div class="skeleton-line" style="width: 16px; height: 16px; margin: 0 auto; border-radius: 3px;"></div></td>
+      <td><div class="skeleton-line" style="width: ${35 + ((idx * 17) % 35)}%; height: 14px;"></div></td>
+      <td><div class="skeleton-line" style="width: 50px; height: 12px;"></div></td>
+      <td><div class="skeleton-line" style="width: 110px; height: 12px;"></div></td>
+      <td class="col-actions"><div class="skeleton-line" style="width: 70px; height: 24px; margin-inline-start: auto; border-radius: 4px;"></div></td>
     </tr>
   `).join('');
 

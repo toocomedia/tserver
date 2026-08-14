@@ -21,26 +21,31 @@
 {% endblock %}
 
 {% block content %}
-<div id="fm-main">
+<div id="fm-main" class="file-manager-page">
   {% from "partials/skeleton_overlay.html" import skeleton_overlay %}
   {{ skeleton_overlay(
        'fm-skeleton',
+       header=0,
+       controls=1,
        tables=[
-         { 'cols': [50, 15, 25, 10], 'rows': 5 }
+         { 'cols': [45, 15, 25, 15], 'rows': 6 }
        ]
   ) }}
 
-  <!-- Select App Empty State -->
-  <div id="fm-select-app-state" class="empty-state" style="display: none; margin-top: var(--space-xl);">
-    <div class="empty-state__shape">
-      <div class="shape-torus-sm"></div>
+  <!-- Select App Empty State (Start Page) -->
+  <div id="fm-select-app-state" class="empty-state-strict" style="display: none;">
+    <div class="empty-state-shapes">
+      <div class="shape-2"></div>
+      <div class="shape-1"></div>
+      <div class="shape-3"></div>
     </div>
-    <h3 class="empty-state__title">{{ _("select_a_target") }}</h3>
-    <p class="empty-state__desc">{{ _("choose_an_application_from_the_dropdown") }}</p>
+    <h3 class="empty-state-strict__title">{{ _("select_a_target") }}</h3>
+    <p class="empty-state-strict__desc">{{ _("choose_an_application_from_the_dropdown") }}</p>
+    <div id="fm-quick-targets" class="fm-quick-targets-grid"></div>
   </div>
 
   <!-- Roots Tabs -->
-  <div class="mb-md" id="roots-tabs" style="display: none; gap: var(--space-sm); margin-top: var(--space-md);"></div>
+  <div id="roots-tabs" style="display: none;"></div>
 
   <!-- Breadcrumbs & Actions Toolbar -->
   <div class="action-toolbar" id="fm-toolbar" style="display: none;">
@@ -101,8 +106,32 @@
     </table>
   </div>
   
-  <div id="fm-empty-state" style="display: none;">
-    {% include "partials/empty_state.html" %}
+  <div id="fm-empty-state" class="empty-state-strict" style="display: none; min-height: 320px; padding: 48px 20px;">
+    <div class="empty-state-shapes">
+      <div class="shape-2"></div>
+      <div class="shape-1"></div>
+      <div class="shape-3"></div>
+    </div>
+    <h3 class="empty-state-strict__title">{{ _("this_folder_is_empty") }}</h3>
+    <p class="empty-state-strict__desc">{{ _("upload_files_or_create_new_folder") }}</p>
+    <div class="empty-state-strict__actions" style="display: flex; gap: 8px; justify-content: center;">
+      <button type="button" class="btn btn--primary btn--sm" onclick="document.getElementById('fm-file-input').click()">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="17 8 12 3 7 8"></polyline>
+          <line x1="12" y1="3" x2="12" y2="15"></line>
+        </svg>
+        {{ _("upload") }}
+      </button>
+      <button type="button" class="btn btn--secondary btn--sm" onclick="document.getElementById('btn-new-folder').click()">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+          <line x1="12" y1="11" x2="12" y2="17"></line>
+          <line x1="9" y1="14" x2="15" y2="14"></line>
+        </svg>
+        {{ _("new_folder") }}
+      </button>
+    </div>
   </div>
 </div>
 
