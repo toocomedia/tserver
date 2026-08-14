@@ -223,7 +223,9 @@ class FileManagerTargetTests(unittest.TestCase):
     def test_target_identifier_requires_a_known_provider_and_numeric_id(self):
         target = file_targets.parse_target("python:7")
         self.assertEqual((target.kind, target.resource_id), ("python", 7))
-        for value in ("7", "php:7", "python:0", "python:seven"):
+        target_php = file_targets.parse_target("php:7")
+        self.assertEqual((target_php.kind, target_php.resource_id), ("php", 7))
+        for value in ("7", "unknown:7", "python:0", "python:seven", "php:0"):
             with self.assertRaises(HTTPException):
                 file_targets.parse_target(value)
 
@@ -242,7 +244,22 @@ class FileManagerTargetTests(unittest.TestCase):
             with patch.object(file_targets.config, "NGINX_WEBROOT", directory):
                 self.assertEqual(file_targets._static_roots(domain), [])
 
-    def test_target_listing_combines_container_python_and_static_apps(self):
+    def test_php_roots_must_match_the_panel_webroot(self):
+        with tempfile.TemporaryDirectory() as directory:
+            site_dir = Path(directory) / "phpsite.test"
+            site_dir.mkdir(parents=True)
+            site = SimpleNamespace(
+                id=1, domain_id=1, preset="plain", status="active",
+                root_path=str(site_dir),
+            )
+            with patch.object(file_targets.config, "NGINX_WEBROOT", directory):
+                roots = file_targets._php_roots(site, "phpsite.test")
+                self.assertEqual([root.id for root in roots], ["application"])
+            site.root_path = "/tmp/not-owned"
+            with patch.object(file_targets.config, "NGINX_WEBROOT", directory):
+                self.assertEqual(file_targets._php_roots(site, "phpsite.test"), [])
+
+    def test_target_listing_combines_container_python_static_and_php_apps(self):
         class Result:
             def __init__(self, rows): self.rows = rows
             def all(self): return self.rows
@@ -252,6 +269,7 @@ class FileManagerTargetTests(unittest.TestCase):
                 self.results = iter((
                     Result([(SimpleNamespace(id=2, preset=None, status="running"), "api.test")]),
                     Result([(SimpleNamespace(id=3, status="stopped"), "python.test")]),
+                    Result([(SimpleNamespace(id=5, preset="plain", status="active", root_path="/var/www/php.test"), "php.test")]),
                 ))
 
             async def execute(self, _statement):
@@ -263,12 +281,14 @@ class FileManagerTargetTests(unittest.TestCase):
         async def run():
             with patch.object(file_targets, "_python_roots", return_value=[Mock()]), patch.object(
                 file_targets, "_static_roots", return_value=[Mock()],
+            ), patch.object(
+                file_targets, "_php_roots", return_value=[Mock()],
             ):
                 return await file_targets.list_targets(Db())
 
         self.assertEqual(
             [item["id"] for item in asyncio.run(run())],
-            ["container:2", "python:3", "static:4"],
+            ["container:2", "php:5", "python:3", "static:4"],
         )
 
     def test_python_roots_stay_inside_the_owned_active_release(self):

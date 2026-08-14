@@ -41,10 +41,12 @@ async function init() {
     } else {
       appSelector.innerHTML = '<option value="">Select Target...</option>';
       
+      const t = (key, fallback) => (typeof window._ === 'function' ? window._(key) : fallback) || fallback;
       const groups = {
-        container: { label: 'Apps Engine', opts: [] },
-        python: { label: 'Python Hosted Apps', opts: [] },
-        static: { label: 'Static Sites', opts: [] }
+        php: { label: t('hosted_php_websites', 'PHP Websites'), opts: [] },
+        container: { label: t('apps_engine', 'Apps Engine'), opts: [] },
+        python: { label: t('hosted_python_apps', 'Python Hosted Apps'), opts: [] },
+        static: { label: t('static_sites', 'Static Sites'), opts: [] }
       };
       
       data.apps.forEach(app => {
@@ -53,7 +55,7 @@ async function init() {
         
         const opt = document.createElement('option');
         opt.value = app.id;
-        opt.textContent = `${app.domain || 'Unnamed'} (${app.preset})`;
+        opt.textContent = `${app.domain || 'Unnamed'} (${app.preset || app.target_type})`;
         groups[type].opts.push(opt);
       });
       
@@ -72,9 +74,28 @@ async function init() {
     if (window.hideSkeleton) {
       window.hideSkeleton('fm-skeleton');
     }
-    
-    if (!state.appId) {
-      document.getElementById('fm-select-app-state').style.display = 'block';
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const targetParam = urlParams.get('target') || urlParams.get('app');
+    const rootParam = urlParams.get('root');
+    const pathParam = urlParams.get('path');
+
+    if (targetParam && data.apps && data.apps.some(a => a.id === targetParam)) {
+      appSelector.value = targetParam;
+      state.appId = targetParam;
+      if (pathParam) {
+        state.path = pathParam.replace(/^\/+|\/+$/g, '');
+      }
+      await loadRoots(rootParam);
+    } else {
+      if (targetParam && data.apps && data.apps.length > 0) {
+        if (window.toast) {
+          window.toast(`Target "${targetParam}" not found or unavailable.`, 'warning');
+        }
+      }
+      if (!state.appId) {
+        document.getElementById('fm-select-app-state').style.display = 'block';
+      }
     }
   } catch (err) {
     if (window.toast) window.toast('Failed to load apps: ' + err.message, 'error');
@@ -185,6 +206,21 @@ async function onAppChange(e) {
   state.rootId = null;
   state.path = '';
   
+  if (window.history && window.history.replaceState) {
+    const url = new URL(window.location.href);
+    if (state.appId) {
+      url.searchParams.set('target', state.appId);
+      url.searchParams.delete('root');
+      url.searchParams.delete('path');
+    } else {
+      url.searchParams.delete('target');
+      url.searchParams.delete('app');
+      url.searchParams.delete('root');
+      url.searchParams.delete('path');
+    }
+    window.history.replaceState(null, '', url.toString());
+  }
+
   if (!state.appId) {
     resetView();
     return;
@@ -193,7 +229,7 @@ async function onAppChange(e) {
   await loadRoots();
 }
 
-async function loadRoots() {
+async function loadRoots(preferredRootId = null) {
   if (!state.appId) return;
   document.getElementById('fm-select-app-state').style.display = 'none';
   document.getElementById('fm-table-wrap').style.display = 'none';
@@ -203,9 +239,12 @@ async function loadRoots() {
   try {
     const data = await api.fetchRoots(state.appId);
     state.roots = data.roots || [];
-    ui.renderRootsTabs(state.roots, state.rootId, onRootSelect);
     if (state.roots.length > 0) {
-      onRootSelect(state.roots[0].id);
+      const targetRootId = (preferredRootId && state.roots.some(r => r.id === preferredRootId))
+        ? preferredRootId
+        : state.roots[0].id;
+      ui.renderRootsTabs(state.roots, targetRootId, onRootSelect);
+      onRootSelect(targetRootId, Boolean(state.path));
     } else {
       resetView();
     }
@@ -214,12 +253,25 @@ async function loadRoots() {
   }
 }
 
-function onRootSelect(rootId) {
+function onRootSelect(rootId, preservePath = false) {
   state.rootId = rootId;
   state.activeRoot = state.roots.find(r => r.id === rootId);
-  state.path = '';
+  if (!preservePath) {
+    state.path = '';
+  }
   ui.renderRootsTabs(state.roots, state.rootId, onRootSelect);
   
+  if (window.history && window.history.replaceState) {
+    const url = new URL(window.location.href);
+    if (state.appId) {
+      url.searchParams.set('target', state.appId);
+      if (state.rootId) url.searchParams.set('root', state.rootId);
+      if (state.path) url.searchParams.set('path', state.path);
+      else url.searchParams.delete('path');
+    }
+    window.history.replaceState(null, '', url.toString());
+  }
+
   // Disable new folder and new file for runtime-env root per rules
   const btnNewFolder = document.getElementById('btn-new-folder');
   const btnNewFile = document.getElementById('btn-new-file');
@@ -238,7 +290,7 @@ function resetView() {
   document.getElementById('roots-tabs').style.display = 'none';
   document.getElementById('fm-toolbar').style.display = 'none';
   document.getElementById('fm-table-wrap').style.display = 'none';
-  document.getElementById('fm-empty-state').style.display = 'block';
+  document.getElementById('fm-empty-state').style.display = 'none';
   document.getElementById('fm-select-app-state').style.display = 'block';
 }
 
@@ -268,6 +320,12 @@ async function loadEntries(isRefresh = false) {
     
     ui.renderBreadcrumbs(state.path, (newPath) => {
       state.path = newPath;
+      if (window.history && window.history.replaceState) {
+        const url = new URL(window.location.href);
+        if (state.path) url.searchParams.set('path', state.path);
+        else url.searchParams.delete('path');
+        window.history.replaceState(null, '', url.toString());
+      }
       loadEntries();
     });
     
@@ -347,6 +405,11 @@ function handleApiError(err) {
 function onEntryAction(action, entry) {
   if (action === 'open') {
     state.path = (state.path ? state.path + '/' : '') + entry.name;
+    if (window.history && window.history.replaceState) {
+      const url = new URL(window.location.href);
+      url.searchParams.set('path', state.path);
+      window.history.replaceState(null, '', url.toString());
+    }
     loadEntries();
   } else if (action === 'edit') {
     openEditor(entry);
