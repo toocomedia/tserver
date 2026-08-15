@@ -25,28 +25,20 @@ enable_optimization() {
   fi
   echo "==> Enabling Low-RAM Optimization Mode..."
 
-  # 1. zRAM Setup (only if no on-disk swapfile exists)
-  if [[ ! -f /swapfile ]]; then
-    if command -v apt-get &>/dev/null; then
-      if ! dpkg -s zram-tools &>/dev/null; then
-        DEBIAN_FRONTEND=noninteractive apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq zram-tools || true
-      fi
+  # 1. zRAM Setup (Provides baseline ~500MB compressed swap in RAM)
+  if command -v apt-get &>/dev/null; then
+    if ! dpkg -s zram-tools &>/dev/null; then
+      DEBIAN_FRONTEND=noninteractive apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq zram-tools || true
     fi
+  fi
 
-    if [[ -f /etc/default/zramswap ]]; then
-      cat > /etc/default/zramswap <<'EOF'
+  if [[ -f /etc/default/zramswap ]]; then
+    cat > /etc/default/zramswap <<'EOF'
 # Managed by srv-panel optimize.sh
 ALGO=zstd
 PERCENT=50
 EOF
-      systemctl enable --now zramswap 2>/dev/null || systemctl restart zramswap 2>/dev/null || true
-    fi
-  else
-    # An on-disk swapfile is configured; ensure zramswap is disabled to prevent duplicate stacking
-    if systemctl is-active --quiet zramswap 2>/dev/null; then
-      systemctl stop zramswap 2>/dev/null || true
-      systemctl disable zramswap 2>/dev/null || true
-    fi
+    systemctl enable --now zramswap 2>/dev/null || systemctl restart zramswap 2>/dev/null || true
   fi
 
   # 2. Kernel sysctl tuning

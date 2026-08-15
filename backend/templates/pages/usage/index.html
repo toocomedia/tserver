@@ -7,7 +7,11 @@
 
 {% block topbar_actions %}
   <span id="usage-last-updated" class="text-small text-muted" style="margin-right: 8px;"></span>
-  <button class="btn btn--secondary btn--sm" id="btn-pause-poll" onclick="togglePoll()">{{ _('pause') }}</button>
+  <button class="btn btn--secondary btn--sm" id="btn-refresh-stats" onclick="manualRefreshStats()" title="Refresh live statistics">
+    <svg width="13" height="13" viewbox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px; margin-right:4px;"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path></svg>
+    {{ _('refresh') or 'Refresh' }}
+  </button>
+  <button class="btn btn--secondary btn--sm" id="btn-pause-poll" onclick="togglePoll()" style="margin-left: 8px;">{{ _('pause') }}</button>
   <button class="btn btn--danger btn--sm" id="btn-reboot-server" onclick="rebootServer()" style="margin-left: 8px;">
     <svg width="14" height="14" viewbox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin-right:4px;"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path><line x1="12" y1="2" x2="12" y2="12"></line></svg>
     {{ _('reboot_server') }}
@@ -984,6 +988,21 @@
       return;
     }
   });
+
+  async function manualRefreshStats() {
+    const btn = document.getElementById('btn-refresh-stats');
+    if (btn) btn.classList.add('is-loading');
+    markUsageUpdated('Refreshing stats...');
+    try {
+      await fetchOptimizationStatus();
+      await fetchStats();
+      toast('Live statistics updated.', 'success');
+    } catch (e) {
+      toast('Failed to refresh stats.', 'danger');
+    } finally {
+      if (btn) btn.classList.remove('is-loading');
+    }
+  }
 
   function togglePoll() {
     const btn = document.getElementById('btn-pause-poll');
