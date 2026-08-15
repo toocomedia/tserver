@@ -174,7 +174,7 @@ async def _get_optimization_status() -> dict:
             "has_snaps": has_snaps
         }
 
-    # 5. Swapfile and Purge Safety Inspection
+    # 5. Swapfile and Safety Inspection
     swapfile_size_mb = 0
     swapfile_path = Path("/swapfile")
     if swapfile_path.is_file():
@@ -184,10 +184,17 @@ async def _get_optimization_status() -> dict:
             pass
 
     can_purge_swap = False
+    can_disable_swap = True
+    ram_available_mb = 0
+    swap_used_mb = 0
     try:
-        vm = _psutil.virtual_memory()
-        sm = _psutil.swap_memory()
-        can_purge_swap = sm.used == 0 or vm.available >= (sm.used + 100 * 1024 * 1024)
+        if _psutil is not None:
+            vm = _psutil.virtual_memory()
+            sm = _psutil.swap_memory()
+            ram_available_mb = round(vm.available / (1024 * 1024))
+            swap_used_mb = round(sm.used / (1024 * 1024))
+            can_purge_swap = sm.used == 0 or vm.available >= (sm.used + 100 * 1024 * 1024)
+            can_disable_swap = sm.used == 0 or vm.available >= (sm.used + 100 * 1024 * 1024)
     except Exception:
         pass
 
@@ -201,6 +208,9 @@ async def _get_optimization_status() -> dict:
         "hardware_checks": _HARDWARE_CACHE,
         "swapfile_size_mb": swapfile_size_mb,
         "can_safely_purge_swap": can_purge_swap,
+        "can_safely_disable_swap": can_disable_swap,
+        "ram_available_mb": ram_available_mb,
+        "swap_used_mb": swap_used_mb,
     }
 
 

@@ -1,0 +1,108 @@
+RAM & SWAP ISSUES — Compact Summary
+=====================================
+Date: 2026-08-15
+
+All issues reported during conversation about RAM/Swap behavior.
+
+
+ISSUE 1 — Swap turns off completely when resizing (causes RAM spike)
+--------------------------------------------------------------------
+When user switches swap from 500MB to 1GB, the old script:
+  1. Turns swap OFF (swapoff /swapfile)
+  2. Deletes the old file
+  3. Creates new file
+  4. Turns swap ON again
+
+During steps 1-3, ALL swap data is pushed back into RAM.
+If RAM was already at 60-70%, this pushes it to 90%+ and can crash the server.
+
+STATUS: FIXED in optimize.sh
+  - Two-phase resize: create /swapfile.new FIRST, activate it, THEN remove old
+  - Swap is never fully off during the transition
+  - RAM safety gate added: refuses resize if RAM cannot absorb current swap usage
+
+
+ISSUE 2 — After page refresh, Swap Storage Size doesn't show correct selected button
+--------------------------------------------------------------------------------------
+When Low-RAM Optimization Mode is ON and user had set 1GB swap:
+  - Page refreshes
+  - fetchStats() may return cached data (up to 15s old) with old swapfile_size_mb
+  - fetchOptimizationStatus() returns fresh data
+  - Race condition: whichever API returns LAST wins
+STATUS: FIXED in optimize.sh, system.py, and usage/index.html
+  - Unified static 5-button set (Off | 512M | 1G | 2G | 4G)
+  - Direct 1-to-1 swap size allocation (no button morphing or hidden 500M buttons)
+  - RAM & Swap Preflight Safety Guard with interactive confirmation modal
+  - Memory pagecache dropper before resize/disable to prevent OOM server crash
+  - Comprehensive unit test suite in backend/tests/test_ram_swap_lifecycle.py
+  - Standalone bash test suite in scripts/test_ram_swap_lifecycle.sh
+
+
+ISSUE 3 — When Low-RAM Mode is OFF, Swap Storage Size UI works correctly
+-------------------------------------------------------------------------
+Button set shows: Off | 512M | 1G | 2G | 4G
+The correct button highlights after setting or after refresh.
+No issues when zRAM (Low-RAM Mode) is disabled.
+
+STATUS: No fix needed for this case
+
+
+ISSUE 4 — When Low-RAM Mode is ON, Swap Storage Size UI is messed up
+----------------------------------------------------------------------
+The UI swaps out the button set:
+  - Hides: "Off" button, "512M" button
+  - Shows: hidden "500M (Base zRAM)" button
+  - Changes layout from 5-button to 4-button group
+
+Problems this causes:
+  a) When user enables Low-RAM Mode, the 500M button suddenly appears as "active"
+     even though the user never clicked it — looks like swap jumped to 500MB
+  b) Switching Low-RAM Mode on/off makes buttons appear/disappear unexpectedly
+  c) The "active" selection can be wrong or desynced after the button set changes
+  d) After page refresh with Low-RAM ON, correct swap size button may not highlight
+
+STATUS: FIXED
+
+
+ISSUE 5 — "Off" button only appears when Low-RAM Mode is disabled
+-----------------------------------------------------------------
+When Low-RAM is ON, the "Off" button is hidden and replaced with "500M (Base zRAM)".
+The user noticed this and correctly identified it as the source of confusion.
+When Low-RAM is OFF the Off button is there and sizes work fine.
+
+ROOT CAUSE: The button set was designed to reflect the internal state of
+  "disk swap only" vs "disk swap + zRAM", but this is too complex for the user.
+  The user just wants to pick a TOTAL swap size and not think about zRAM internals.
+
+STATUS: FIXED
+
+
+ISSUE 6 — UI mismatch between what user set and what is shown
+-------------------------------------------------------------
+When Low-RAM is ON and disk swap is 500MB (= 1GB total with zRAM):
+  - The "500M" button appears as the "base" state
+  - The 1G button should be highlighted as the effective total
+  - But the active matching logic can desynce from the actual state
+
+STATUS: FIXED
+
+
+PLANNED FIX (Phase 2)
+======================
+Remove the dual button-set logic entirely.
+Always show the same 5 buttons: Off | 512M | 1G | 2G | 4G
+
+When Low-RAM Mode is ON:
+  - "Off" button stays visible but is relabeled/described as "zRAM only (500MB)"
+  - All size buttons represent the TOTAL effective swap (disk + zRAM)
+  - No buttons are hidden or swapped out
+  - The selected button always reflects the actual total
+
+This makes the UI predictable regardless of zRAM state.
+
+
+FILES INVOLVED
+==============
+- backend/templates/pages/usage/index.html   (swap button UI + JS logic)
+- backend/templates/pages/usage/partials/optimizations.html  (swap button HTML)
+- scripts/optimize.sh                         (actual swap resize logic)
