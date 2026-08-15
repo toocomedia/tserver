@@ -499,7 +499,7 @@ echo json_encode([
                     if size < 1024:
                         return f"{size:.1f} {unit}"
                     size /= 1024
-        except OSError:
+        except (OSError, PermissionError):
             pass
         return "0 KB"
 
@@ -511,22 +511,29 @@ echo json_encode([
             "users_count": 0,
             "contacts_count": 0,
         }
-        if not self.db_path.is_file() or os.name == "nt":
+        if os.name == "nt":
             return stats
         try:
+            if not self.db_path.is_file():
+                return stats
             query = "SELECT (SELECT count(*) FROM users), (SELECT count(*) FROM contacts);"
             result = self._run(["sqlite3", str(self.db_path), query], timeout=5)
             if result.returncode == 0 and "|" in result.stdout:
                 users, contacts = result.stdout.strip().split("|", 1)
                 stats["users_count"] = int(users)
                 stats["contacts_count"] = int(contacts)
-        except Exception:
+        except (OSError, PermissionError, Exception):
             pass
         return stats
 
     def optimize_db(self) -> None:
-        if not self.db_path.is_file() or os.name == "nt":
+        if os.name == "nt":
             return
+        try:
+            if not self.db_path.is_file():
+                return
+        except (OSError, PermissionError):
+            pass
         result = self._run(["sqlite3", str(self.db_path), "VACUUM; ANALYZE;"], timeout=15)
         if result.returncode != 0:
             raise RuntimeError(result.stderr.strip() or "Database optimization failed.")

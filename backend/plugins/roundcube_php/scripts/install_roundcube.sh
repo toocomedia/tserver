@@ -140,15 +140,28 @@ mkdir -p "$HTDOCS/plugins/srvpanel_launch"
 cp -f "$SCRIPT_DIR/srvpanel_launch/srvpanel_launch.php" "$HTDOCS/plugins/srvpanel_launch/"
 
 # 8. Set File Ownership & Permissions
-chown -R www-data:www-data "$HTDOCS" "$DATA_DIR/db" "$DATA_DIR/tmp" "$DATA_DIR/logs" "$DATA_DIR/sessions"
+chown -R www-data:www-data "$HTDOCS" "$DATA_DIR/tmp" "$DATA_DIR/logs" "$DATA_DIR/sessions"
 chmod -R 0755 "$HTDOCS"
-chmod 0770 "$DATA_DIR/db" "$DATA_DIR/tmp" "$DATA_DIR/logs" "$DATA_DIR/sessions"
-[[ -f "$DB_FILE" ]] && chmod 0660 "$DB_FILE"
+chmod 0770 "$DATA_DIR/tmp" "$DATA_DIR/logs" "$DATA_DIR/sessions"
+
+chown -R "${PANEL_USER}:www-data" "$DATA_DIR/db" 2>/dev/null || chown -R www-data:www-data "$DATA_DIR/db" 2>/dev/null || true
+chmod 0775 "$DATA_DIR/db"
+if [[ -f "$DB_FILE" ]]; then
+    chown "${PANEL_USER}:www-data" "$DB_FILE" 2>/dev/null || true
+    chmod 0664 "$DB_FILE"
+fi
+if [[ -f "$DATA_DIR/db/des_key.secret" ]]; then
+    chown "${PANEL_USER}:www-data" "$DATA_DIR/db/des_key.secret" 2>/dev/null || true
+    chmod 0640 "$DATA_DIR/db/des_key.secret"
+fi
 
 chown "${PANEL_USER}:www-data" "$DATA_DIR/launch.secret" 2>/dev/null || true
 chmod 0640 "$DATA_DIR/launch.secret"
 chown "${PANEL_USER}:www-data" "$DATA_DIR" 2>/dev/null || true
 chmod 0755 "$DATA_DIR"
+if [[ "$DATA_DIR" == /opt/srv-panel/* ]]; then
+    chmod o+x /opt/srv-panel /opt/srv-panel/data 2>/dev/null || true
+fi
 
 # 9. Update state.json
 python3 - "$DATA_DIR" "$PORT" "$PHP_VERSION" <<'PY'
