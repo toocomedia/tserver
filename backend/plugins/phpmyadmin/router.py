@@ -48,6 +48,7 @@ _PASS_RESPONSE_HEADERS = frozenset(
 
 
 @control_router.get("/", response_class=HTMLResponse)
+@control_router.get("", response_class=HTMLResponse)
 async def index(request: Request):
     from plugins.manager import plugin_manager
 
@@ -130,11 +131,16 @@ async def uninstall_phpmyadmin(request: Request):
 
 
 @app_router.api_route(
+    "",
+    methods=["GET", "POST", "HEAD", "PUT", "PATCH", "DELETE"],
+    include_in_schema=False,
+)
+@app_router.api_route(
     "/{path:path}",
     methods=["GET", "POST", "HEAD", "PUT", "PATCH", "DELETE"],
     include_in_schema=False,
 )
-async def proxy_phpmyadmin(request: Request, path: str):
+async def proxy_phpmyadmin(request: Request, path: str = ""):
     """Stream requests to the local phpMyAdmin server, keeping panel auth."""
     if not phpmyadmin_service.is_installed():
         return RedirectResponse("/plugins/phpmyadmin/", status_code=303)
