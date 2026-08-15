@@ -91,6 +91,31 @@ async def start_phpmyadmin(request: Request):
     )
 
 
+@control_router.post("/api/restart")
+async def restart_phpmyadmin(request: Request):
+    try:
+        if phpmyadmin_service.is_installed():
+            try:
+                phpmyadmin_service.pause()
+            except Exception:
+                pass
+            phpmyadmin_service.resume()
+    except RuntimeError as exc:
+        return JSONResponse({"detail": str(exc)}, status_code=500)
+    return JSONResponse(
+        {
+            "status": "ok",
+            "message": "phpMyAdmin server restarted.",
+            "server": phpmyadmin_service.get_status(),
+        }
+    )
+
+
+@control_router.get("/api/status")
+async def status_phpmyadmin(request: Request):
+    return JSONResponse(phpmyadmin_service.get_status())
+
+
 @control_router.post("/api/uninstall")
 async def uninstall_phpmyadmin(request: Request):
     from plugins.manager import plugin_manager

@@ -161,6 +161,12 @@ class PluginManager:
         result["operation"] = state.operation
         result["last_error"] = state.last_error
 
+        if not result.get("installed", False) and result.get("dir_path"):
+            installed = self._check_plugin_installed(Path(result["dir_path"]), plugin_id)
+            result["installed"] = installed
+            if plugin_id in self.plugins:
+                self.plugins[plugin_id]["installed"] = installed
+
         requirements = []
         paused_by = []
         for dependency_id in self._required_dependencies(result):

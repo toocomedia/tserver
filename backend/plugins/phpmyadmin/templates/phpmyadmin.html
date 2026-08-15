@@ -3,38 +3,220 @@
 {% block title %}phpMyAdmin — {{ PANEL_NAME }}{% endblock %}
 {% block page_title %}phpMyAdmin{% endblock %}
 
-{% block content %}
-<div class="php-detail" style="width: 100%;">
-  <div class="php-cards-grid" style="max-width: 620px; margin: 40px auto;">
-    <div class="php-card" style="text-align: center; padding: 40px 24px;">
-      <div class="php-card__title" style="justify-content: center; border-bottom: none; margin-bottom: 16px;">
-        <span style="font-size: 18px;">phpMyAdmin</span>
-      </div>
+{% block head %}
+<link rel="stylesheet" href="/static/css/php-sites.css?v={{ APP_VERSION }}">
+<style>
+.pma-container {
+  max-width: 680px;
+  margin: 32px auto;
+}
+.pma-hero-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg, 12px);
+  padding: 32px 28px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+}
+.pma-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: 24px;
+}
+.pma-title-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.pma-icon-box {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: var(--color-surface-hover, rgba(255,255,255,0.05));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  border: 1px solid var(--color-border);
+}
+.pma-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-text);
+  margin: 0;
+}
+.pma-meta {
+  font-size: 12px;
+  color: var(--color-muted);
+}
+.pma-specs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin-bottom: 24px;
+}
+.pma-spec-item {
+  background: var(--color-bg, rgba(0,0,0,0.15));
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md, 8px);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.pma-spec-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--color-muted);
+}
+.pma-spec-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.pma-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: flex-start;
+  margin-top: 20px;
+}
+.pma-logs-box {
+  margin-top: 20px;
+  border-top: 1px solid var(--color-border);
+  padding-top: 16px;
+}
+.pma-logs-box summary {
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--color-muted);
+  font-weight: 500;
+  user-select: none;
+}
+.pma-logs-pre {
+  white-space: pre-wrap;
+  background: var(--color-bg, #0d1117);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm, 6px);
+  padding: 12px;
+  font-size: 12px;
+  color: var(--color-text);
+  margin-top: 10px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+</style>
+{% endblock %}
 
-      <p class="text-muted" style="font-size: 13px; line-height: 1.6; margin-bottom: 24px;">
-        Opens in a new window. Log in with a user created in MariaDB Manager.
-        {% if not status.healthy %}
-          <br><strong style="color: var(--color-danger);">{{ status.error }}</strong>
+{% block content %}
+<div class="pma-container">
+  <div class="pma-hero-card">
+    
+    <!-- HEADER -->
+    <div class="pma-header">
+      <div class="pma-title-group">
+        <div class="pma-icon-box">
+          <i class="devicon-mysql-plain" style="color: #00758f;"></i>
+        </div>
+        <div>
+          <h1 class="pma-title">phpMyAdmin</h1>
+          <div class="pma-meta">Panel Plugin · v{{ plugin_version }}</div>
+        </div>
+      </div>
+      <div>
+        {% if not status.installed %}
+          <span class="badge badge--muted"><span class="badge-dot"></span> Not Installed</span>
+        {% elif status.healthy %}
+          <span class="badge badge--healthy"><span class="badge-dot"></span> Healthy</span>
+        {% elif status.running %}
+          <span class="badge badge--warning"><span class="badge-dot"></span> Running (DB Warning)</span>
+        {% else %}
+          <span class="badge badge--danger"><span class="badge-dot"></span> Stopped</span>
         {% endif %}
+      </div>
+    </div>
+
+    <!-- NOTICE / ERROR -->
+    {% if not status.installed %}
+      <p class="text-muted" style="font-size: 13px; line-height: 1.6; margin-bottom: 20px;">
+        Native PHP-powered phpMyAdmin instance running locally behind panel authentication. Click below to install.
       </p>
-      <button type="button" class="btn btn--primary" id="pma-open-btn"
-        {% if not status.healthy %}disabled{% endif %}>Open phpMyAdmin</button>
-      <div style="margin-top: 12px; display: flex; gap: 8px; justify-content: center;">
-        {% if status.installed and not status.running %}
+    {% elif not status.healthy %}
+      <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 8px; padding: 12px 16px; margin-bottom: 20px;">
+        <strong style="color: var(--color-danger); font-size: 13px;">⚠️ {{ status.error }}</strong>
+      </div>
+    {% else %}
+      <p class="text-muted" style="font-size: 13px; line-height: 1.6; margin-bottom: 20px;">
+        phpMyAdmin is active and accessible. Opens in a new window behind panel authentication. Log in with database credentials created in MariaDB Manager.
+      </p>
+    {% endif %}
+
+    <!-- SPECS GRID -->
+    {% if status.installed %}
+    <div class="pma-specs-grid">
+      <div class="pma-spec-item">
+        <span class="pma-spec-label">Access Route</span>
+        <span class="pma-spec-value"><code>/phpmyadmin/</code></span>
+      </div>
+      <div class="pma-spec-item">
+        <span class="pma-spec-label">Internal Listener</span>
+        <span class="pma-spec-value"><code>127.0.0.1:{{ status.port }}</code></span>
+      </div>
+      <div class="pma-spec-item">
+        <span class="pma-spec-label">PHP CLI Engine</span>
+        <span class="pma-spec-value">{{ ('PHP ' ~ status.php_version) if status.php_version else 'Managed PHP' }}</span>
+      </div>
+      <div class="pma-spec-item">
+        <span class="pma-spec-label">Target Database</span>
+        <span class="pma-spec-value">
+          <code>127.0.0.1:3306</code>
+          {% if status.healthy %}
+            <span class="badge badge--healthy" style="padding: 2px 6px; font-size: 10px;">OK</span>
+          {% endif %}
+        </span>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- ACTIONS -->
+    <div class="pma-actions">
+      {% if not status.installed %}
+        <button type="button" class="btn btn--primary" id="pma-install-btn">Install phpMyAdmin</button>
+      {% else %}
+        <button type="button" class="btn btn--primary" id="pma-open-btn"
+          {% if not status.healthy %}disabled title="Server is not healthy"{% endif %}>
+          Open phpMyAdmin ↗
+        </button>
+
+        {% if status.running %}
+          <button type="button" class="btn btn--secondary" id="pma-restart-btn">Restart</button>
+        {% else %}
           <button type="button" class="btn btn--secondary" id="pma-start-btn">Start Server</button>
           <button type="button" class="btn btn--secondary" id="pma-reinstall-btn">Reinstall</button>
         {% endif %}
-        <button type="button" class="btn btn--secondary" id="pma-uninstall-btn">Uninstall</button>
-      </div>
-      {% if status.installed and not status.running %}
-        <details id="pma-unit-logs" style="margin-top: 16px; text-align: left;">
-          <summary style="cursor: pointer; font-size: 13px; color: var(--color-muted);">Server logs</summary>
-          <pre style="white-space: pre-wrap; background: var(--color-surface); padding: 12px; font-size: 12px; color: var(--color-text); margin-top: 8px; text-align: left;">
-{{ status.unit_logs or 'No recent logs.' }}</pre>
-        </details>
+
+        <button type="button" class="btn btn--danger" id="pma-uninstall-btn" style="margin-left: auto;">Uninstall</button>
       {% endif %}
-      <div class="text-muted" id="pma-result" style="margin-top: 12px; font-size: 13px;"></div>
     </div>
+
+    <!-- LOGS ACCORDION -->
+    {% if status.installed and (not status.healthy or status.unit_logs) %}
+      <details id="pma-unit-logs" class="pma-logs-box" {% if not status.running %}open{% endif %}>
+        <summary>Server logs (journalctl)</summary>
+        <pre class="pma-logs-pre">{{ status.unit_logs or 'No recent server log entries.' }}</pre>
+      </details>
+    {% endif %}
+
+    <div class="text-muted" id="pma-result" style="margin-top: 16px; font-size: 13px;"></div>
   </div>
 </div>
 {% endblock %}
@@ -42,7 +224,6 @@
 {% block scripts %}
 <script>
 (() => {
-  const page = document.getElementById('pma-open-btn');
   const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
   const showResult = (message, ok) => {
     const el = document.getElementById('pma-result');
@@ -64,33 +245,30 @@
     return data;
   };
 
-  document.getElementById('pma-start-btn')?.addEventListener('click', async (event) => {
-    const button = event.currentTarget;
-    button.disabled = true;
-    try {
-      const data = await postAction('/plugins/phpmyadmin/api/start');
-      showResult(data.message || 'Started.', true);
-      setTimeout(() => window.location.reload(), 800);
-    } catch (err) {
-      showResult(err.message, false);
-      button.disabled = false;
-    }
-  });
+  const handleAction = (btnId, url, progressText, doneText) => {
+    const btn = document.getElementById(btnId);
+    if (!btn) return;
+    btn.addEventListener('click', async (event) => {
+      const button = event.currentTarget;
+      const originalText = button.textContent;
+      button.disabled = true;
+      if (progressText) button.textContent = progressText;
+      try {
+        const data = await postAction(url);
+        showResult(data.message || doneText || 'Done.', true);
+        setTimeout(() => window.location.reload(), 800);
+      } catch (err) {
+        showResult(err.message, false);
+        button.disabled = false;
+        button.textContent = originalText;
+      }
+    });
+  };
 
-  document.getElementById('pma-reinstall-btn')?.addEventListener('click', async (event) => {
-    const button = event.currentTarget;
-    button.disabled = true;
-    button.textContent = 'Reinstalling…';
-    try {
-      const data = await postAction('/plugins/phpmyadmin/api/install');
-      showResult(data.message || 'Installed.', true);
-      setTimeout(() => window.location.reload(), 1000);
-    } catch (err) {
-      showResult(err.message, false);
-      button.disabled = false;
-      button.textContent = 'Reinstall';
-    }
-  });
+  handleAction('pma-install-btn', '/plugins/phpmyadmin/api/install', 'Installing…', 'Installed.');
+  handleAction('pma-start-btn', '/plugins/phpmyadmin/api/start', 'Starting…', 'Started.');
+  handleAction('pma-restart-btn', '/plugins/phpmyadmin/api/restart', 'Restarting…', 'Restarted.');
+  handleAction('pma-reinstall-btn', '/plugins/phpmyadmin/api/install', 'Reinstalling…', 'Reinstalled.');
 
   const uninstallBtn = document.getElementById('pma-uninstall-btn');
   if (uninstallBtn) {
@@ -98,12 +276,8 @@
       if (!window.confirm('Uninstall phpMyAdmin? Databases and users are preserved.')) return;
       uninstallBtn.disabled = true;
       uninstallBtn.textContent = 'Uninstalling…';
-      const body = new FormData();
-      body.append('csrf_token', csrf);
       try {
-        const response = await fetch('/plugins/phpmyadmin/api/uninstall', { method: 'POST', body });
-        const data = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(data.detail || data.message || 'Uninstall failed.');
+        const data = await postAction('/plugins/phpmyadmin/api/uninstall');
         showResult(data.message || 'Uninstalled.', true);
         setTimeout(() => window.location.reload(), 800);
       } catch (err) {

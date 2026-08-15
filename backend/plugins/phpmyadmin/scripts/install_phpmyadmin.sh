@@ -175,6 +175,7 @@ fi
 chown -R www-data:www-data "$HTDOCS" "$DATA_DIR/sessions" "$DATA_DIR/tmp"
 chmod -R 0755 "$HTDOCS"
 chmod 0755 "$DATA_DIR"
+chmod 0644 "$DATA_DIR/state.json" 2>/dev/null || true
 if [[ "$DATA_DIR" == /opt/srv-panel/* ]]; then
     chmod o+x /opt/srv-panel /opt/srv-panel/data 2>/dev/null || true
 fi

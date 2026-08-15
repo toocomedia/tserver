@@ -39,6 +39,16 @@ class PhpMyAdminService:
         stored = self.read_state().get("port")
         if isinstance(stored, int) and 1024 <= stored <= 65535:
             return stored
+        if os.name != "nt":
+            unit_file = Path(f"/etc/systemd/system/{self.unit_name}.service")
+            if unit_file.is_file():
+                try:
+                    content = unit_file.read_text(encoding="utf-8")
+                    match = re.search(r"-S\s+(?:127\.0\.0\.1|localhost):(\d+)", content)
+                    if match:
+                        return int(match.group(1))
+                except Exception:
+                    pass
         return self.default_port
 
     def __init__(self) -> None:
