@@ -13,13 +13,26 @@
 
       <p class="text-muted" style="font-size: 13px; line-height: 1.6; margin-bottom: 24px;">
         Opens in a new window. Log in with a user created in MariaDB Manager.
-        {% if not status.healthy %}<br><strong style="color: var(--color-danger);">{{ status.error }}</strong>{% endif %}
+        {% if not status.healthy %}
+          <br><strong style="color: var(--color-danger);">{{ status.error }}</strong>
+        {% endif %}
       </p>
       <button type="button" class="btn btn--primary" id="pma-open-btn"
         {% if not status.healthy %}disabled{% endif %}>Open phpMyAdmin</button>
-      <div style="margin-top: 12px;">
+      <div style="margin-top: 12px; display: flex; gap: 8px; justify-content: center;">
+        {% if status.installed and not status.running %}
+          <button type="button" class="btn btn--secondary" id="pma-start-btn">Start Server</button>
+          <button type="button" class="btn btn--secondary" id="pma-reinstall-btn">Reinstall</button>
+        {% endif %}
         <button type="button" class="btn btn--secondary" id="pma-uninstall-btn">Uninstall</button>
       </div>
+      {% if status.installed and not status.running %}
+        <details id="pma-unit-logs" style="margin-top: 16px; text-align: left;">
+          <summary style="cursor: pointer; font-size: 13px; color: var(--color-muted);">Server logs</summary>
+          <pre style="white-space: pre-wrap; background: var(--color-surface); padding: 12px; font-size: 12px; color: var(--color-text); margin-top: 8px; text-align: left;">
+{{ status.unit_logs or 'No recent logs.' }}</pre>
+        </details>
+      {% endif %}
       <div class="text-muted" id="pma-result" style="margin-top: 12px; font-size: 13px;"></div>
     </div>
   </div>
@@ -40,6 +53,43 @@
 
   document.getElementById('pma-open-btn')?.addEventListener('click', () => {
     window.open('/phpmyadmin/', '_blank', 'noopener');
+  });
+
+  const postAction = async (url) => {
+    const body = new FormData();
+    body.append('csrf_token', csrf);
+    const response = await fetch(url, { method: 'POST', body });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.detail || data.message || 'Request failed.');
+    return data;
+  };
+
+  document.getElementById('pma-start-btn')?.addEventListener('click', async (event) => {
+    const button = event.currentTarget;
+    button.disabled = true;
+    try {
+      const data = await postAction('/phpmyadmin/api/start');
+      showResult(data.message || 'Started.', true);
+      setTimeout(() => window.location.reload(), 800);
+    } catch (err) {
+      showResult(err.message, false);
+      button.disabled = false;
+    }
+  });
+
+  document.getElementById('pma-reinstall-btn')?.addEventListener('click', async (event) => {
+    const button = event.currentTarget;
+    button.disabled = true;
+    button.textContent = 'Reinstalling…';
+    try {
+      const data = await postAction('/phpmyadmin/api/install');
+      showResult(data.message || 'Installed.', true);
+      setTimeout(() => window.location.reload(), 1000);
+    } catch (err) {
+      showResult(err.message, false);
+      button.disabled = false;
+      button.textContent = 'Reinstall';
+    }
   });
 
   const uninstallBtn = document.getElementById('pma-uninstall-btn');

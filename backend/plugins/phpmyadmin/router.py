@@ -59,6 +59,34 @@ async def index(request: Request):
     )
 
 
+@router.post("/api/install")
+async def install_phpmyadmin(request: Request):
+    from plugins.manager import plugin_manager
+
+    success, message = await plugin_manager.run_plugin_script(
+        "phpmyadmin", "install"
+    )
+    return JSONResponse(
+        {"status": "ok" if success else "error", "message": message},
+        status_code=200 if success else 500,
+    )
+
+
+@router.post("/api/start")
+async def start_phpmyadmin(request: Request):
+    try:
+        phpmyadmin_service.resume()
+    except RuntimeError as exc:
+        return JSONResponse({"detail": str(exc)}, status_code=500)
+    return JSONResponse(
+        {
+            "status": "ok",
+            "message": "phpMyAdmin server started.",
+            "server": phpmyadmin_service.get_status(),
+        }
+    )
+
+
 @router.post("/api/uninstall")
 async def uninstall_phpmyadmin(request: Request):
     from plugins.manager import plugin_manager

@@ -98,6 +98,8 @@ class PhpMyAdminLifecycleTests(unittest.TestCase):
             service.htdocs.mkdir(parents=True)
             (service.htdocs / "index.php").write_text("<?php", encoding="utf-8")
             service.php_binary = Mock(return_value="/usr/bin/php8.3")
+            service._unit_state = Mock(return_value=(True, "active"))
+            service.unit_logs = Mock(return_value="")
             service._port_open = Mock(return_value=False)
             service.mariadb_reachable = Mock(return_value=True)
 
@@ -105,6 +107,7 @@ class PhpMyAdminLifecycleTests(unittest.TestCase):
             self.assertTrue(status["installed"])
             self.assertFalse(status["running"])
             self.assertEqual(status["state"], "stopped")
+            self.assertTrue(status["unit_exists"])
 
             service._port_open.return_value = True
             service.mariadb_reachable.return_value = False
@@ -119,6 +122,25 @@ class PhpMyAdminLifecycleTests(unittest.TestCase):
             self.assertEqual(status["state"], "healthy")
             self.assertIsNone(status["error"])
 
+    def test_failed_unit_surfaces_logs(self):
+        with tempfile.TemporaryDirectory() as temp, patch.dict(
+            os.environ, {"PHPMYADMIN_DATA_DIR": temp}
+        ):
+            service = PhpMyAdminService()
+            service.htdocs.mkdir(parents=True)
+            (service.htdocs / "index.php").write_text("<?php", encoding="utf-8")
+            service.php_binary = Mock(return_value="/usr/bin/php8.3")
+            service._unit_state = Mock(return_value=(True, "failed"))
+            service.unit_logs = Mock(return_value="Address already in use")
+            service._port_open = Mock(return_value=False)
+            service.mariadb_reachable = Mock(return_value=True)
+
+            status = service.get_status()
+
+            self.assertEqual(status["unit_state"], "failed")
+            self.assertEqual(status["unit_logs"], "Address already in use")
+            self.assertIn("systemd failed", status["error"])
+
     def test_status_reports_missing_php_binary(self):
         with tempfile.TemporaryDirectory() as temp, patch.dict(
             os.environ, {"PHPMYADMIN_DATA_DIR": temp}
@@ -132,6 +154,16 @@ class PhpMyAdminLifecycleTests(unittest.TestCase):
 
             self.assertTrue(status["installed"])
             self.assertEqual(status["state"], "error")
+
+    def test_unit_state_parses_systemctl_output(self):
+        service = PhpMyAdminService()
+        service._run = Mock(
+            return_value=subprocess.CompletedProcess([], 0, "active\n", "")
+        )
+        self.assertEqual(service._unit_state(), (True, "active"))
+
+        service._run.return_value = subprocess.CompletedProcess([], 4, "", "")
+        self.assertEqual(service._unit_state(), (False, "unknown"))
 
     def test_usage_counts_server_process(self):
         service = PhpMyAdminService()
@@ -232,7 +264,9 @@ class PhpMyAdminPackagingTests(unittest.TestCase):
         self.assertIn("pma-open-btn", template)
         self.assertIn("window.open", template)
         self.assertIn("/phpmyadmin/api/uninstall", template)
-        self.assertNotIn("pma-install-btn", template)
+        self.assertIn("pma-start-btn", template)
+        self.assertIn('@router.post("/api/install")', router)
+        self.assertIn('@router.post("/api/start")', router)
         self.assertNotIn("manage_dns", template)
 
 

@@ -153,6 +153,23 @@ class PhpMyAdminService:
             return False
         return PhpMyAdminService._port_open("127.0.0.1", 3306)
 
+    def _unit_state(self) -> tuple[bool, str]:
+        """Return (unit_exists, systemd active state)."""
+        result = self._run(["systemctl", "is-active", self.unit_name], timeout=10)
+        state = (result.stdout or "").strip().lower() or "unknown"
+        exists = result.returncode in (0, 3) or state in (
+            "active", "inactive", "failed", "activating", "deactivating",
+        )
+        return exists, state
+
+    def unit_logs(self, lines: int = 8) -> str:
+        """Last journal lines for the server unit (empty when unavailable)."""
+        result = self._run(
+            ["journalctl", "-u", self.unit_name, "-n", str(lines), "--no-pager", "-o", "cat"],
+            timeout=10,
+        )
+        return (result.stdout or result.stderr or "").strip()
+
     def get_status(self) -> dict[str, Any]:
         status = {
             "installed": False,
@@ -162,6 +179,9 @@ class PhpMyAdminService:
             "error": None,
             "php_version": self.php_version(),
             "port": self.port,
+            "unit_exists": False,
+            "unit_state": "unknown",
+            "unit_logs": "",
             "pid": None,
         }
         if not self.is_installed():
@@ -171,19 +191,25 @@ class PhpMyAdminService:
             status["state"] = "error"
             status["error"] = "No panel-managed PHP CLI is installed."
             return status
+        unit_exists, unit_state = self._unit_state()
         running = self._port_open(self.host, self.port)
         mariadb = self.mariadb_reachable()
         healthy = running and mariadb
+        if unit_exists and unit_state == "failed":
+            status["unit_logs"] = self.unit_logs()
         status.update(
             {
                 "running": running,
                 "healthy": healthy,
                 "state": "healthy" if healthy else ("running" if running else "stopped"),
+                "unit_exists": unit_exists,
+                "unit_state": unit_state,
                 "error": (
                     None
                     if healthy
                     else (
-                        "phpMyAdmin server is not running."
+                        "phpMyAdmin server is not running (systemd "
+                        f"{unit_state}, unit {'present' if unit_exists else 'missing'})."
                         if not running
                         else "MariaDB is not reachable on 127.0.0.1:3306."
                     )
