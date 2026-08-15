@@ -1,0 +1,59 @@
+{#
+  partials/ssl_choice.html — Reusable SSL Certificate Box Cards Component
+
+  Usage:
+    {% import "partials/ssl_choice.html" as ssl_choice %}
+
+    {{ ssl_choice.render(
+        name="ssl",
+        enabled=true,
+        include_www=false,
+        show_www_option=true,
+        grid_id="php-ssl-choice-grid",
+        radio_name="ssl_choice",
+        hidden_input_id="php-site-ssl"
+    ) }}
+#}
+
+{% macro render(
+    name="ssl",
+    enabled=true,
+    include_www=false,
+    show_www_option=true,
+    grid_id="ssl-choice-grid",
+    radio_name="ssl_choice",
+    hidden_input_id="enable_ssl"
+) %}
+<div class="form-group-horizontal" style="margin-top: 8px;">
+  <div class="form-label-wrap">
+    <label class="form-label">{{ _('ssl_certificate_security') }}</label>
+    <span class="form-hint">{{ _('choose_whether_to_provision_an_automated') }}</span>
+  </div>
+  <div class="settings-choice-grid" id="{{ grid_id }}">
+    <label class="settings-choice {% if not enabled %}settings-choice--active{% endif %} opt-item" id="{{ grid_id }}-opt-no">
+      <div class="settings-choice__header">
+        <input type="radio" name="{{ radio_name }}" value="no" id="{{ grid_id }}-radio-no" {% if not enabled %}checked{% endif %}>
+        <span class="settings-choice__title">{{ _('no_ssl_http_only') }}</span>
+      </div>
+      <span class="settings-choice__desc">{{ _('standard_unencrypted_port_80_traffic_cer') }}</span>
+    </label>
+    <label class="settings-choice {% if enabled %}settings-choice--active{% endif %} opt-item" id="{{ grid_id }}-opt-yes">
+      <div class="settings-choice__header">
+        <input type="radio" name="{{ radio_name }}" value="yes" id="{{ grid_id }}-radio-yes" {% if enabled %}checked{% endif %}>
+        <span class="settings-choice__title">{{ _('enable_let_s_encrypt_free_tls_https') }}</span>
+      </div>
+      <span class="settings-choice__desc">{{ _('will_issue_a_certificate_after_the_proxy') }}</span>
+    </label>
+  </div>
+</div>
+
+{% if show_www_option %}
+<div id="{{ grid_id }}-www-wrap" style="padding-left: 2px; margin-top: -6px; margin-bottom: 4px; {% if not enabled %}display:none;{% endif %}">
+  <label class="form-check" style="align-items: center;">
+    <input type="checkbox" id="php-site-www" name="include_www" {% if include_www %}checked{% endif %}>
+    <span>{{ _('include_www') }}</span>
+  </label>
+</div>
+{% endif %}
+<input type="checkbox" id="{{ hidden_input_id }}" name="{{ name }}" value="true" {% if enabled %}checked{% endif %} style="display:none;">
+{% endmacro %}

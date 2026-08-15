@@ -46,6 +46,18 @@ function updatePreset() {
   updateExtensionHint();
 }
 
+function updateSslChoice() {
+  const isYes = form?.querySelector("[name=ssl_choice]:checked")?.value === "yes";
+  const sslHidden = root.querySelector("#php-site-ssl");
+  const wwwWrap = root.querySelector("#php-ssl-www-wrap");
+  if (sslHidden) sslHidden.checked = isYes;
+  if (wwwWrap) wwwWrap.style.display = isYes ? "block" : "none";
+  root.querySelectorAll("#php-ssl-choice-grid .settings-choice").forEach((item) => {
+    const radio = item.querySelector("input[type=radio]");
+    item.classList.toggle("settings-choice--active", Boolean(radio?.checked));
+  });
+}
+
 function updateExtensionHint() {
   const version = versionSelect?.value;
   const isWp = selectedPreset() === "wordpress";
@@ -264,11 +276,13 @@ async function init() {
   form?.addEventListener("submit", handleSubmit);
   form?.addEventListener("change", (e) => {
     if (e.target.name === "preset") updatePreset();
+    if (e.target.name === "ssl_choice") updateSslChoice();
     if (e.target.name === "php_version") updateExtensionHint();
   });
   nextBtn?.addEventListener("click", () => goToStep(currentStep + 1));
   backBtn?.addEventListener("click", () => goToStep(currentStep - 1));
   updatePreset();
+  updateSslChoice();
 }
 
 if (root) init();

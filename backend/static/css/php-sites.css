@@ -17,29 +17,69 @@
 .php-operation__status { font-weight: 700; font-size: var(--font-body); }
 .php-operation__message { color: var(--color-muted); font-size: var(--font-small); margin-top: var(--space-xs); }
 
-/* PHP Creation Wizard Step 2 Adjustments */
-.php-choice-grid .settings-choice__header i[class*="devicon-"],
-.php-choice-grid .settings-choice__header [class^="devicon-"] {
-  font-size: 22px;
-  width: 24px;
-  height: 24px;
+/* PHP Website Type Preset Grid (Centered Logo & Spacious Layout) */
+.php-choice-grid .settings-choice {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 24px 20px;
+  gap: 6px;
+  min-height: 140px;
+}
+
+.php-choice-grid .settings-choice__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin-bottom: 6px;
+}
+
+.php-choice-grid .settings-choice__icon i[class*="devicon-"],
+.php-choice-grid .settings-choice__icon [class^="devicon-"] {
+  font-size: 32px;
+  width: 36px;
+  height: 36px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
   color: var(--color-muted);
   transition: color 0.15s ease, transform 0.15s ease;
 }
 
-.php-choice-grid .settings-choice:hover .settings-choice__header i[class*="devicon-"],
-.php-choice-grid .settings-choice:hover .settings-choice__header [class^="devicon-"] {
+.php-choice-grid .settings-choice:hover .settings-choice__icon i[class*="devicon-"],
+.php-choice-grid .settings-choice:hover .settings-choice__icon [class^="devicon-"] {
   color: var(--color-text);
-  transform: translateY(-1px);
+  transform: translateY(-2px) scale(1.08);
 }
 
-.php-choice-grid .settings-choice--active .settings-choice__header i[class*="devicon-"],
-.php-choice-grid .settings-choice--active .settings-choice__header [class^="devicon-"] {
+.php-choice-grid .settings-choice--active .settings-choice__icon i[class*="devicon-"],
+.php-choice-grid .settings-choice--active .settings-choice__icon [class^="devicon-"] {
   color: var(--color-accent);
+}
+
+.php-choice-grid .settings-choice__header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.php-choice-grid .settings-choice__title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-text);
+  text-align: center;
+}
+
+.php-choice-grid .settings-choice__desc {
+  text-align: center;
+  font-size: 12px;
+  color: var(--color-muted);
+  line-height: 1.4;
+  margin-top: 2px;
 }
 
 .php-create-step2 {

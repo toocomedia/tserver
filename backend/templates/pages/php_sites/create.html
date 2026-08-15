@@ -1,5 +1,6 @@
 {% extends "layout.html" %}
 {% import "partials/wizard_macros.html" as wizard %}
+{% import "partials/ssl_choice.html" as ssl_choice %}
 
 {% block title %}{{ _('create_php_site') }} — {{ PANEL_NAME }}{% endblock %}
 {% block page_title %}{{ _('create_php_site') }}{% endblock %}
@@ -47,33 +48,41 @@
         </div>
         <div class="settings-choice-grid php-choice-grid">
           <label class="settings-choice settings-choice--active opt-item" id="choice-preset-php">
+            <div class="settings-choice__icon">
+              <i class="devicon-php-plain" aria-hidden="true"></i>
+            </div>
             <div class="settings-choice__header">
               <input type="radio" name="preset" value="php" checked>
-              <i class="devicon-php-plain" aria-hidden="true"></i>
               <span class="settings-choice__title">{{ _('plain_php') }}</span>
             </div>
             <span class="settings-choice__desc">{{ _('plain_php_desc') }}</span>
           </label>
           <label class="settings-choice opt-item" id="choice-preset-wordpress">
+            <div class="settings-choice__icon">
+              <i class="devicon-wordpress-plain" aria-hidden="true"></i>
+            </div>
             <div class="settings-choice__header">
               <input type="radio" name="preset" value="wordpress">
-              <i class="devicon-wordpress-plain" aria-hidden="true"></i>
               <span class="settings-choice__title">{{ _('wordpress') }}</span>
             </div>
             <span class="settings-choice__desc">{{ _('wordpress_desc') }}</span>
           </label>
           <label class="settings-choice opt-item" id="choice-preset-laravel">
+            <div class="settings-choice__icon">
+              <i class="devicon-laravel-original" aria-hidden="true"></i>
+            </div>
             <div class="settings-choice__header">
               <input type="radio" name="preset" value="laravel">
-              <i class="devicon-laravel-original" aria-hidden="true"></i>
               <span class="settings-choice__title">{{ _('laravel') }}</span>
             </div>
             <span class="settings-choice__desc">{{ _('laravel_desc') }}</span>
           </label>
           <label class="settings-choice opt-item" id="choice-preset-filament">
+            <div class="settings-choice__icon">
+              <i class="devicon-filamentphp-plain" aria-hidden="true"></i>
+            </div>
             <div class="settings-choice__header">
               <input type="radio" name="preset" value="filament">
-              <i class="devicon-filamentphp-plain" aria-hidden="true"></i>
               <span class="settings-choice__title">{{ _('filament') }}</span>
             </div>
             <span class="settings-choice__desc">{{ _('filament_desc') }}</span>
@@ -109,7 +118,18 @@
         </div>
       </div>
 
-      <!-- Options (Database, SSL, Extensions) -->
+      <!-- SSL Certificate Box Cards Component -->
+      {{ ssl_choice.render(
+        name="ssl",
+        enabled=true,
+        include_www=false,
+        show_www_option=true,
+        grid_id="php-ssl-choice-grid",
+        radio_name="ssl_choice",
+        hidden_input_id="php-site-ssl"
+      ) }}
+
+      <!-- Options (Database, Extensions) -->
       <div class="php-create-options-card">
         <div id="plain-db-option-row" style="display:flex;">
           <label class="form-check" style="align-items:flex-start;">
@@ -119,22 +139,6 @@
               <span class="form-hint" style="display:block; margin-top:2px;">{{ _('plain_php_database_desc') }}</span>
             </div>
           </label>
-        </div>
-
-        <div style="display:flex; flex-direction:column; gap:8px;">
-          <label class="form-check" style="align-items:flex-start;">
-            <input type="checkbox" id="php-site-ssl" name="ssl" checked>
-            <div>
-              <span><strong>{{ _('enable_ssl') }}</strong></span>
-              <span class="form-hint" style="display:block; margin-top:2px;">{{ _('ssl_issue_after_creation') }}</span>
-            </div>
-          </label>
-          <div style="padding-left:24px;">
-            <label class="form-check">
-              <input type="checkbox" id="php-site-www" name="include_www">
-              <span>{{ _('include_www') }}</span>
-            </label>
-          </div>
         </div>
 
         <div data-install-extensions hidden>
