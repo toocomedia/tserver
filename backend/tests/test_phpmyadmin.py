@@ -274,7 +274,7 @@ class PhpMyAdminPackagingTests(unittest.TestCase):
 
         self.assertIn('prefix="/phpmyadmin"', router)
         self.assertIn("pma-open-btn", template)
-        self.assertIn("window.open", template)
+        self.assertIn("window.open('/phpmyadmin/index.php'", template)
         self.assertIn("/phpmyadmin/api/uninstall", template)
         self.assertIn("pma-start-btn", template)
         self.assertIn('@router.post("/api/install")', router)
