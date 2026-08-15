@@ -19,8 +19,10 @@ app_router = APIRouter(prefix="/phpmyadmin", tags=["phpmyadmin_app"])
 
 import re
 
-_HOP_BY_HOP_HEADERS = frozenset(
+_STRIP_REQUEST_HEADERS = frozenset(
     {
+        "host",
+        "content-length",
         "connection",
         "keep-alive",
         "proxy-authenticate",
@@ -29,7 +31,21 @@ _HOP_BY_HOP_HEADERS = frozenset(
         "trailers",
         "transfer-encoding",
         "upgrade",
-        "host",
+    }
+)
+
+_STRIP_RESPONSE_HEADERS = frozenset(
+    {
+        "content-encoding",
+        "content-length",
+        "transfer-encoding",
+        "connection",
+        "keep-alive",
+        "proxy-authenticate",
+        "proxy-authorization",
+        "te",
+        "trailers",
+        "upgrade",
     }
 )
 
@@ -157,7 +173,7 @@ async def proxy_phpmyadmin(request: Request, path: str = ""):
     headers = {
         key.lower(): value
         for key, value in request.headers.items()
-        if key.lower() not in _HOP_BY_HOP_HEADERS
+        if key.lower() not in _STRIP_REQUEST_HEADERS
     }
     headers["host"] = f"{phpmyadmin_service.host}:{phpmyadmin_service.port}"
     headers["x-forwarded-proto"] = request.url.scheme
@@ -186,7 +202,7 @@ async def proxy_phpmyadmin(request: Request, path: str = ""):
     response_headers: list[tuple[str, str]] = []
     for name, value in upstream.headers.multi_items():
         name_lower = name.lower()
-        if name_lower in _HOP_BY_HOP_HEADERS:
+        if name_lower in _STRIP_RESPONSE_HEADERS:
             continue
         if name_lower == "location":
             match = re.match(
@@ -210,6 +226,8 @@ async def proxy_phpmyadmin(request: Request, path: str = ""):
             elif not value.startswith("http://") and not value.startswith("https://"):
                 value = f"/phpmyadmin/{value.lstrip('/')}"
         response_headers.append((name, value))
+
+    response_headers.append(("content-length", str(len(content))))
 
     response = Response(
         content=content,
