@@ -595,6 +595,29 @@ $config['plugins'] = [{plugins_repr}];
                 except Exception as f_exc:
                     logger.error("Privileged write fallback failed for %s: %s", config_file, f_exc)
 
+    def _sync_db_skin(self, new_skin: str) -> None:
+        if not self.db_path.is_file():
+            return
+        try:
+            import sqlite3
+            con = sqlite3.connect(str(self.db_path))
+            cur = con.cursor()
+            cur.execute("SELECT user_id, preferences FROM users WHERE preferences IS NOT NULL AND preferences != ''")
+            rows = cur.fetchall()
+            for uid, prefs in rows:
+                if isinstance(prefs, str) and "skin" in prefs:
+                    updated_prefs = re.sub(
+                        r's:4:"skin";s:\d+:"[^"]+"',
+                        f's:4:"skin";s:{len(new_skin)}:"{new_skin}"',
+                        prefs
+                    )
+                    if updated_prefs != prefs:
+                        cur.execute("UPDATE users SET preferences = ? WHERE user_id = ?", (updated_prefs, uid))
+            con.commit()
+            con.close()
+        except Exception as exc:
+            logger.warning("Could not sync skin in Roundcube database: %s", exc)
+
     def update_settings(self, **new_settings: Any) -> dict[str, Any]:
         with self._state_lock:
             state = self.read_state()
@@ -603,6 +626,13 @@ $config['plugins'] = [{plugins_repr}];
             state["settings"] = settings
             self.write_state(state)
             self.sync_config_file()
+            if "skin" in new_settings:
+                self._sync_db_skin(str(new_settings["skin"]))
+            if self.is_installed() and os.name != "nt":
+                try:
+                    self.resume()
+                except Exception as exc:
+                    logger.warning("Could not auto-restart Roundcube service after settings update: %s", exc)
             return settings
 
     # ---------------------------------------------------------------

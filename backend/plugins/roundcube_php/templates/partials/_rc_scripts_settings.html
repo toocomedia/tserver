@@ -4,9 +4,12 @@ document.getElementById('rc-settings-form')?.addEventListener('submit', async fu
   e.preventDefault();
   const btn = document.getElementById('rc-save-settings-btn');
   const status = document.getElementById('rc-settings-status');
-  const origText = btn ? btn.textContent : 'Save';
+  const origText = btn ? (btn.dataset.origText || btn.textContent.trim() || 'Save') : 'Save';
 
   if (btn) {
+    if (!btn.dataset.origText) btn.dataset.origText = origText;
+    btn.classList.remove('is-loading');
+    btn.setAttribute('aria-busy', 'true');
     btn.disabled = true;
     btn.textContent = 'Saving…';
   }
@@ -36,6 +39,8 @@ document.getElementById('rc-settings-form')?.addEventListener('submit', async fu
     }
   } finally {
     if (btn) {
+      btn.classList.remove('is-loading');
+      btn.removeAttribute('aria-busy');
       btn.disabled = false;
       btn.textContent = origText;
     }
@@ -47,9 +52,12 @@ document.getElementById('rc-plugins-form')?.addEventListener('submit', async fun
   e.preventDefault();
   const btn = document.getElementById('rc-save-plugins-btn');
   const status = document.getElementById('rc-plugins-status');
-  const origText = btn ? btn.textContent : 'Save';
+  const origText = btn ? (btn.dataset.origText || btn.textContent.trim() || 'Save') : 'Save';
 
   if (btn) {
+    if (!btn.dataset.origText) btn.dataset.origText = origText;
+    btn.classList.remove('is-loading');
+    btn.setAttribute('aria-busy', 'true');
     btn.disabled = true;
     btn.textContent = 'Saving…';
   }
@@ -79,6 +87,8 @@ document.getElementById('rc-plugins-form')?.addEventListener('submit', async fun
     }
   } finally {
     if (btn) {
+      btn.classList.remove('is-loading');
+      btn.removeAttribute('aria-busy');
       btn.disabled = false;
       btn.textContent = origText;
     }
@@ -87,7 +97,10 @@ document.getElementById('rc-plugins-form')?.addEventListener('submit', async fun
 
 // Database Vacuum
 document.getElementById('rc-vacuum-btn')?.addEventListener('click', async function() {
-  const origText = this.textContent;
+  const origText = this.dataset.origText || this.textContent.trim() || 'Optimize Database (VACUUM)';
+  if (!this.dataset.origText) this.dataset.origText = origText;
+  this.classList.remove('is-loading');
+  this.setAttribute('aria-busy', 'true');
   this.disabled = true;
   this.textContent = 'Optimizing…';
   const resBox = document.getElementById('rc-maintenance-result');
@@ -114,6 +127,8 @@ document.getElementById('rc-vacuum-btn')?.addEventListener('click', async functi
       resBox.textContent = err.message || 'Optimization failed.';
     }
   } finally {
+    this.classList.remove('is-loading');
+    this.removeAttribute('aria-busy');
     this.disabled = false;
     this.textContent = origText;
   }
@@ -121,7 +136,10 @@ document.getElementById('rc-vacuum-btn')?.addEventListener('click', async functi
 
 // Purge Cache & Temp
 document.getElementById('rc-purge-temp-btn')?.addEventListener('click', async function() {
-  const origText = this.textContent;
+  const origText = this.dataset.origText || this.textContent.trim() || 'Purge Temp & Sessions';
+  if (!this.dataset.origText) this.dataset.origText = origText;
+  this.classList.remove('is-loading');
+  this.setAttribute('aria-busy', 'true');
   this.disabled = true;
   this.textContent = 'Purging…';
   const resBox = document.getElementById('rc-maintenance-result');
@@ -144,6 +162,8 @@ document.getElementById('rc-purge-temp-btn')?.addEventListener('click', async fu
       resBox.textContent = err.message || 'Purge failed.';
     }
   } finally {
+    this.classList.remove('is-loading');
+    this.removeAttribute('aria-busy');
     this.disabled = false;
     this.textContent = origText;
   }
@@ -153,10 +173,13 @@ document.getElementById('rc-purge-temp-btn')?.addEventListener('click', async fu
 function handlePluginControl(btnId, url, promptMsg, loadingMsg) {
   const btn = document.getElementById(btnId);
   if (!btn) return;
-  const origText = btn.textContent;
+  const origText = btn.dataset.origText || btn.textContent.trim();
+  if (!btn.dataset.origText) btn.dataset.origText = origText;
 
   btn.addEventListener('click', async () => {
     if (promptMsg && !confirm(promptMsg)) return;
+    btn.classList.remove('is-loading');
+    btn.setAttribute('aria-busy', 'true');
     btn.disabled = true;
     btn.textContent = loadingMsg || 'Processing…';
 
@@ -169,6 +192,8 @@ function handlePluginControl(btnId, url, promptMsg, loadingMsg) {
       setTimeout(() => window.location.reload(), 600);
     } catch (err) {
       rcToast(err.message || 'Operation failed.', 'danger');
+      btn.classList.remove('is-loading');
+      btn.removeAttribute('aria-busy');
       btn.disabled = false;
       btn.textContent = origText;
     }

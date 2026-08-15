@@ -28,9 +28,12 @@ document.getElementById('rc-form-add-domain')?.addEventListener('submit', async 
   e.preventDefault();
   const btn = document.getElementById('rc-submit-add-domain');
   const errBox = document.getElementById('rc-add-site-error');
-  const origText = btn ? btn.textContent : 'Save Domain';
+  const origText = btn ? (btn.dataset.origText || btn.textContent.trim() || 'Save Domain') : 'Save Domain';
 
   if (btn) {
+    if (!btn.dataset.origText) btn.dataset.origText = origText;
+    btn.classList.remove('is-loading');
+    btn.setAttribute('aria-busy', 'true');
     btn.disabled = true;
     btn.textContent = 'Saving…';
   }
@@ -54,6 +57,8 @@ document.getElementById('rc-form-add-domain')?.addEventListener('submit', async 
     }
     rcToast(err.message || 'Failed to add webmail access.', 'danger');
     if (btn) {
+      btn.classList.remove('is-loading');
+      btn.removeAttribute('aria-busy');
       btn.disabled = false;
       btn.textContent = origText;
     }
@@ -81,7 +86,10 @@ document.addEventListener('click', async (e) => {
     if (input) input.value = domain;
     openRcModal('rc-modal-delete-domain');
   } else if (action === 'issue-ssl') {
-    const origText = actionBtn.textContent;
+    const origText = actionBtn.dataset.origText || actionBtn.textContent.trim() || 'Issue / Renew SSL';
+    if (!actionBtn.dataset.origText) actionBtn.dataset.origText = origText;
+    actionBtn.classList.remove('is-loading');
+    actionBtn.setAttribute('aria-busy', 'true');
     actionBtn.disabled = true;
     actionBtn.textContent = 'Issuing SSL…';
     const body = new FormData();
@@ -97,6 +105,8 @@ document.addEventListener('click', async (e) => {
       setTimeout(() => window.location.reload(), 1000);
     } catch (err) {
       rcToast(err.message || 'SSL issuance failed.', 'danger');
+      actionBtn.classList.remove('is-loading');
+      actionBtn.removeAttribute('aria-busy');
       actionBtn.disabled = false;
       actionBtn.textContent = origText;
     }
@@ -108,9 +118,12 @@ async function executeDeleteWebmail() {
   const domain = document.getElementById('rc-delete-domain-input')?.value;
   const btn = document.getElementById('rc-confirm-delete-btn');
   if (!domain) return;
-  const origText = btn ? btn.textContent : 'Delete';
+  const origText = btn ? (btn.dataset.origText || btn.textContent.trim() || 'Delete') : 'Delete';
 
   if (btn) {
+    if (!btn.dataset.origText) btn.dataset.origText = origText;
+    btn.classList.remove('is-loading');
+    btn.setAttribute('aria-busy', 'true');
     btn.disabled = true;
     btn.textContent = 'Deleting…';
   }
@@ -129,6 +142,8 @@ async function executeDeleteWebmail() {
   } catch (err) {
     rcToast(err.message || 'Delete failed.', 'danger');
     if (btn) {
+      btn.classList.remove('is-loading');
+      btn.removeAttribute('aria-busy');
       btn.disabled = false;
       btn.textContent = origText;
     }
