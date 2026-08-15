@@ -405,7 +405,15 @@ class RoundcubePhpService:
             self.data_dir.mkdir(parents=True, exist_ok=True)
             temp = self.state_path.with_suffix(".tmp")
             temp.write_text(json.dumps(normalized, indent=2), encoding="utf-8")
+            try:
+                temp.chmod(0o664)
+            except OSError:
+                pass
             temp.replace(self.state_path)
+            try:
+                self.state_path.chmod(0o664)
+            except OSError:
+                pass
 
     def update_state(self, **changes: Any) -> dict[str, Any]:
         with self._state_lock:
@@ -560,10 +568,32 @@ $config['max_message_size'] = '{max_message_size}';
 // Active Roundcube Plugins
 $config['plugins'] = [{plugins_repr}];
 """
+        written = False
         try:
             config_file.write_text(php_content, encoding="utf-8")
-        except (OSError, PermissionError):
-            pass
+            try:
+                config_file.chmod(0o664)
+            except OSError:
+                pass
+            written = True
+        except (OSError, PermissionError) as exc:
+            logger.warning("Direct write to %s failed (%s), attempting privileged write fallback", config_file, exc)
+            if os.name != "nt":
+                try:
+                    import tempfile
+                    with tempfile.NamedTemporaryFile("w", encoding="utf-8", delete=False) as tf:
+                        tf.write(php_content)
+                        temp_name = tf.name
+                    self._run(["cp", "-f", temp_name, str(config_file)])
+                    self._run(["chmod", "0664", str(config_file)])
+                    self._run(["chown", "www-data:www-data", str(config_file)])
+                    try:
+                        os.unlink(temp_name)
+                    except OSError:
+                        pass
+                    written = True
+                except Exception as f_exc:
+                    logger.error("Privileged write fallback failed for %s: %s", config_file, f_exc)
 
     def update_settings(self, **new_settings: Any) -> dict[str, Any]:
         with self._state_lock:

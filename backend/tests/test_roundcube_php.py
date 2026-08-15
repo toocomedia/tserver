@@ -81,6 +81,25 @@ class RoundcubePhpStateAndSettingsTests(unittest.TestCase):
         reloaded = self.service.get_settings()
         self.assertEqual(reloaded["skin"], "larry")
 
+    def test_sync_config_file_generates_valid_php(self):
+        config_dir = self.service.htdocs / "config"
+        config_dir.mkdir(parents=True, exist_ok=True)
+        self.service.update_settings(
+            skin="classic",
+            product_name="Custom Webmail",
+            max_message_size="128M",
+            session_lifetime=120,
+            plugins=["archive", "zipdownload"],
+        )
+        config_file = config_dir / "config.inc.php"
+        self.assertTrue(config_file.is_file())
+        content = config_file.read_text(encoding="utf-8")
+        self.assertIn("$config['skin'] = 'classic';", content)
+        self.assertIn("$config['product_name'] = 'Custom Webmail';", content)
+        self.assertIn("$config['max_message_size'] = '128M';", content)
+        self.assertIn("$config['session_lifetime'] = 120;", content)
+        self.assertIn("'srvpanel_launch'", content)
+
     def test_site_operations(self):
         self.assertEqual(self.service.get_sites(), {})
         self.service.save_site("example.com", {

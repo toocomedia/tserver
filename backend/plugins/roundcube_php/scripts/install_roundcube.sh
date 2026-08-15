@@ -191,6 +191,15 @@ chown -R www-data:www-data "$HTDOCS" "$DATA_DIR/tmp" "$DATA_DIR/logs" "$DATA_DIR
 chmod -R 0755 "$HTDOCS"
 chmod 0770 "$DATA_DIR/tmp" "$DATA_DIR/logs" "$DATA_DIR/sessions"
 
+# Ensure config directory and config file are writable by panel user and www-data
+mkdir -p "$HTDOCS/config"
+chown -R "${PANEL_USER}:www-data" "$HTDOCS/config" 2>/dev/null || true
+chmod 0775 "$HTDOCS/config" 2>/dev/null || true
+if [[ -f "$HTDOCS/config/config.inc.php" ]]; then
+    chown "${PANEL_USER}:www-data" "$HTDOCS/config/config.inc.php" 2>/dev/null || true
+    chmod 0664 "$HTDOCS/config/config.inc.php" 2>/dev/null || true
+fi
+
 chown -R "${PANEL_USER}:www-data" "$DATA_DIR/db" 2>/dev/null || chown -R www-data:www-data "$DATA_DIR/db" 2>/dev/null || true
 chmod 0775 "$DATA_DIR/db"
 if [[ -f "$DB_FILE" ]]; then

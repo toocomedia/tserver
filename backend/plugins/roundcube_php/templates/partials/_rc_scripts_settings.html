@@ -1,132 +1,183 @@
 <script>
+// Configuration Settings Form
 document.getElementById('rc-settings-form')?.addEventListener('submit', async function(e) {
   e.preventDefault();
   const btn = document.getElementById('rc-save-settings-btn');
   const status = document.getElementById('rc-settings-status');
-  btn.disabled = true;
-  btn.textContent = 'Saving…';
+  const origText = btn ? btn.textContent : 'Save';
+
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Saving…';
+  }
+  if (status) {
+    status.textContent = '';
+  }
+
   const formData = new FormData(this);
-  formData.append('csrf_token', rcCsrf);
+  formData.set('csrf_token', getRcCsrf());
+
   try {
-    const res = await fetch('/plugins/roundcube_php/api/settings/update', { method: 'POST', body: formData });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || 'Failed to update settings');
+    const data = await rcApi('/plugins/roundcube_php/api/settings/update', {
+      method: 'POST',
+      body: formData
+    });
+    rcToast(data.message || 'Configuration saved.', 'success');
     if (status) {
       status.style.color = 'var(--color-success)';
-      status.textContent = 'Settings saved.';
+      status.textContent = 'Configuration saved.';
+      setTimeout(() => { if (status) status.textContent = ''; }, 4000);
     }
   } catch (err) {
+    rcToast(err.message || 'Failed to save configuration.', 'danger');
     if (status) {
       status.style.color = 'var(--color-danger)';
-      status.textContent = err.message;
+      status.textContent = err.message || 'Failed to save.';
     }
   } finally {
-    btn.disabled = false;
-    btn.textContent = 'Save Configuration';
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = origText;
+    }
   }
 });
 
+// Active Plugins Form
 document.getElementById('rc-plugins-form')?.addEventListener('submit', async function(e) {
   e.preventDefault();
   const btn = document.getElementById('rc-save-plugins-btn');
   const status = document.getElementById('rc-plugins-status');
-  btn.disabled = true;
-  btn.textContent = 'Saving…';
+  const origText = btn ? btn.textContent : 'Save';
+
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Saving…';
+  }
+  if (status) {
+    status.textContent = '';
+  }
+
   const formData = new FormData(this);
-  formData.append('csrf_token', rcCsrf);
+  formData.set('csrf_token', getRcCsrf());
+
   try {
-    const res = await fetch('/plugins/roundcube_php/api/settings/update', { method: 'POST', body: formData });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || 'Failed to update plugins');
+    const data = await rcApi('/plugins/roundcube_php/api/settings/update', {
+      method: 'POST',
+      body: formData
+    });
+    rcToast(data.message || 'Active plugins updated.', 'success');
     if (status) {
       status.style.color = 'var(--color-success)';
-      status.textContent = 'Active plugins updated.';
+      status.textContent = 'Plugins updated.';
+      setTimeout(() => { if (status) status.textContent = ''; }, 4000);
     }
   } catch (err) {
+    rcToast(err.message || 'Failed to update plugins.', 'danger');
     if (status) {
       status.style.color = 'var(--color-danger)';
-      status.textContent = err.message;
+      status.textContent = err.message || 'Failed to save.';
     }
   } finally {
-    btn.disabled = false;
-    btn.textContent = 'Save Active Plugins';
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = origText;
+    }
   }
 });
 
+// Database Vacuum
 document.getElementById('rc-vacuum-btn')?.addEventListener('click', async function() {
+  const origText = this.textContent;
   this.disabled = true;
   this.textContent = 'Optimizing…';
   const resBox = document.getElementById('rc-maintenance-result');
+  if (resBox) resBox.textContent = '';
+
   try {
-    const res = await fetch('/plugins/roundcube_php/api/maintenance/optimize', {
+    const data = await rcApi('/plugins/roundcube_php/api/maintenance/optimize', {
       method: 'POST',
-      body: new URLSearchParams({ csrf_token: rcCsrf })
+      body: new URLSearchParams({ csrf_token: getRcCsrf() })
     });
-    const data = await res.json();
+    rcToast(data.message || 'Database optimized.', 'success');
     if (resBox) {
       resBox.style.color = 'var(--color-success)';
       resBox.textContent = data.message || 'Database optimized.';
     }
+    if (data.stats && data.stats.db_size) {
+      const sizeEl = document.getElementById('rc-db-size-val');
+      if (sizeEl) sizeEl.textContent = data.stats.db_size;
+    }
   } catch (err) {
+    rcToast(err.message || 'Optimization failed.', 'danger');
     if (resBox) {
       resBox.style.color = 'var(--color-danger)';
-      resBox.textContent = err.message;
+      resBox.textContent = err.message || 'Optimization failed.';
     }
   } finally {
     this.disabled = false;
-    this.textContent = 'Optimize Database (VACUUM)';
+    this.textContent = origText;
   }
 });
 
+// Purge Cache & Temp
 document.getElementById('rc-purge-temp-btn')?.addEventListener('click', async function() {
+  const origText = this.textContent;
   this.disabled = true;
   this.textContent = 'Purging…';
   const resBox = document.getElementById('rc-maintenance-result');
+  if (resBox) resBox.textContent = '';
+
   try {
-    const res = await fetch('/plugins/roundcube_php/api/maintenance/purge-cache', {
+    const data = await rcApi('/plugins/roundcube_php/api/maintenance/purge-cache', {
       method: 'POST',
-      body: new URLSearchParams({ csrf_token: rcCsrf })
+      body: new URLSearchParams({ csrf_token: getRcCsrf() })
     });
-    const data = await res.json();
+    rcToast(data.message || 'Cache purged.', 'success');
     if (resBox) {
       resBox.style.color = 'var(--color-success)';
       resBox.textContent = data.message || 'Cache purged.';
     }
   } catch (err) {
+    rcToast(err.message || 'Purge failed.', 'danger');
     if (resBox) {
       resBox.style.color = 'var(--color-danger)';
-      resBox.textContent = err.message;
+      resBox.textContent = err.message || 'Purge failed.';
     }
   } finally {
     this.disabled = false;
-    this.textContent = 'Purge Temporary & Session Files';
+    this.textContent = origText;
   }
 });
 
-const handlePluginControl = (btnId, url, promptMsg) => {
+// Lifecycle & Installation control buttons
+function handlePluginControl(btnId, url, promptMsg, loadingMsg) {
   const btn = document.getElementById(btnId);
   if (!btn) return;
+  const origText = btn.textContent;
+
   btn.addEventListener('click', async () => {
     if (promptMsg && !confirm(promptMsg)) return;
     btn.disabled = true;
+    btn.textContent = loadingMsg || 'Processing…';
+
     try {
-      const res = await fetch(url, {
+      const data = await rcApi(url, {
         method: 'POST',
-        body: new URLSearchParams({ csrf_token: rcCsrf })
+        body: new URLSearchParams({ csrf_token: getRcCsrf() })
       });
-      const data = await res.json();
-      alert(data.message || 'Operation complete.');
-      window.location.reload();
+      rcToast(data.message || 'Operation complete.', 'success');
+      setTimeout(() => window.location.reload(), 600);
     } catch (err) {
-      alert(err.message || 'Operation failed.');
+      rcToast(err.message || 'Operation failed.', 'danger');
       btn.disabled = false;
+      btn.textContent = origText;
     }
   });
-};
+}
 
-handlePluginControl('rc-topbar-install-btn', '/plugins/roundcube_php/api/install');
-handlePluginControl('rc-topbar-start-btn', '/plugins/roundcube_php/api/restart');
-handlePluginControl('rc-topbar-restart-btn', '/plugins/roundcube_php/api/restart');
-handlePluginControl('rc-specs-restart-btn', '/plugins/roundcube_php/api/restart');
-handlePluginControl('rc-specs-uninstall-btn', '/plugins/roundcube_php/api/uninstall', 'Uninstall Roundcube PHP service? Webmail data and mailboxes will be preserved.');
+handlePluginControl('rc-topbar-install-btn', '/plugins/roundcube_php/api/install', null, 'Installing…');
+handlePluginControl('rc-topbar-start-btn', '/plugins/roundcube_php/api/restart', null, 'Starting…');
+handlePluginControl('rc-topbar-restart-btn', '/plugins/roundcube_php/api/restart', null, 'Restarting…');
+handlePluginControl('rc-specs-restart-btn', '/plugins/roundcube_php/api/restart', null, 'Restarting…');
+handlePluginControl('rc-specs-uninstall-btn', '/plugins/roundcube_php/api/uninstall', 'Uninstall Roundcube PHP service? Webmail data and mailboxes will be preserved.', 'Uninstalling…');
 </script>

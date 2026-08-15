@@ -1,5 +1,66 @@
 <script>
-const rcCsrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
+function getRcCsrf() {
+  return document.querySelector('meta[name="csrf-token"]')?.content ||
+         (typeof window.getCsrfToken === 'function' ? window.getCsrfToken() : '') ||
+         document.querySelector('input[name="csrf_token"]')?.value || '';
+}
+
+const rcCsrf = getRcCsrf();
+
+function rcToast(message, type = 'success') {
+  if (typeof window.toast === 'function') {
+    window.toast(message, type);
+    return;
+  }
+  if (typeof window.showToast === 'function') {
+    window.showToast(message, type === 'danger' ? 'error' : 'success');
+    return;
+  }
+  if (type === 'danger') {
+    alert(message);
+  } else {
+    console.log('[Roundcube]', message);
+  }
+}
+
+async function rcApi(url, options = {}) {
+  const method = (options.method || 'GET').toUpperCase();
+  const token = getRcCsrf();
+  const headers = window.csrfHeaders
+    ? window.csrfHeaders(options.headers || {})
+    : { ...(options.headers || {}) };
+
+  if (token && !headers['X-CSRF-Token']) {
+    headers['X-CSRF-Token'] = token;
+  }
+  if (!headers['Accept']) {
+    headers['Accept'] = 'application/json';
+  }
+
+  let body = options.body;
+  if (options.json !== undefined) {
+    headers['Content-Type'] = 'application/json';
+    body = JSON.stringify(options.json);
+  }
+
+  const res = await fetch(url, {
+    method,
+    headers,
+    body,
+  });
+
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    let errorMsg = data.detail || data.message || `Request failed (${res.status})`;
+    if (Array.isArray(errorMsg)) {
+      errorMsg = errorMsg.map(item => item.msg || JSON.stringify(item)).join('; ');
+    } else if (typeof errorMsg === 'object') {
+      errorMsg = JSON.stringify(errorMsg);
+    }
+    throw new Error(errorMsg);
+  }
+  return data;
+}
 
 function switchRcTab(tabName, button) {
   document.querySelectorAll('.php-split-nav-btn').forEach(btn => btn.classList.remove('is-active'));

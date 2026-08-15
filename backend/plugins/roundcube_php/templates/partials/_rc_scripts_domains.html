@@ -23,31 +23,44 @@ document.getElementById('rc-modal-manage-dns')?.addEventListener('change', funct
   if (preview) preview.style.display = this.checked ? 'none' : 'block';
 });
 
+// Add Webmail Domain Form
 document.getElementById('rc-form-add-domain')?.addEventListener('submit', async function(e) {
   e.preventDefault();
   const btn = document.getElementById('rc-submit-add-domain');
   const errBox = document.getElementById('rc-add-site-error');
-  btn.disabled = true;
-  btn.textContent = 'Saving…';
+  const origText = btn ? btn.textContent : 'Save Domain';
+
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Saving…';
+  }
   if (errBox) errBox.style.display = 'none';
 
   const formData = new FormData(this);
-  formData.append('csrf_token', rcCsrf);
+  formData.set('csrf_token', getRcCsrf());
+
   try {
-    const res = await fetch('/plugins/roundcube_php/api/sites/add', { method: 'POST', body: formData });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || 'Failed to add webmail access');
-    window.location.reload();
+    const data = await rcApi('/plugins/roundcube_php/api/sites/add', {
+      method: 'POST',
+      body: formData
+    });
+    rcToast(data.message || 'Webmail domain added.', 'success');
+    closeRcModal('rc-modal-add-domain');
+    setTimeout(() => window.location.reload(), 600);
   } catch (err) {
     if (errBox) {
-      errBox.textContent = err.message;
+      errBox.textContent = err.message || 'Failed to add domain.';
       errBox.style.display = 'block';
     }
-    btn.disabled = false;
-    btn.textContent = 'Add Webmail Domain';
+    rcToast(err.message || 'Failed to add webmail access.', 'danger');
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = origText;
+    }
   }
 });
 
+// Delegated Domain Actions
 document.addEventListener('click', async (e) => {
   const actionBtn = e.target.closest('[data-action]');
   if (!actionBtn) return;
@@ -68,47 +81,61 @@ document.addEventListener('click', async (e) => {
     if (input) input.value = domain;
     openRcModal('rc-modal-delete-domain');
   } else if (action === 'issue-ssl') {
+    const origText = actionBtn.textContent;
     actionBtn.disabled = true;
     actionBtn.textContent = 'Issuing SSL…';
     const body = new FormData();
-    body.append('csrf_token', rcCsrf);
-    body.append('mail_domain', domain);
+    body.set('csrf_token', getRcCsrf());
+    body.set('mail_domain', domain);
+
     try {
-      const res = await fetch('/plugins/roundcube_php/api/sites/ssl', { method: 'POST', body });
-      const data = await res.json();
-      alert(data.message || 'SSL process started.');
-      window.location.reload();
+      const data = await rcApi('/plugins/roundcube_php/api/sites/ssl', {
+        method: 'POST',
+        body
+      });
+      rcToast(data.message || 'SSL issuance started in background.', 'success');
+      setTimeout(() => window.location.reload(), 1000);
     } catch (err) {
-      alert(err.message || 'SSL issuance failed.');
+      rcToast(err.message || 'SSL issuance failed.', 'danger');
       actionBtn.disabled = false;
-      actionBtn.textContent = 'Issue / Renew SSL';
+      actionBtn.textContent = origText;
     }
   }
 });
 
+// Delete Webmail Action
 async function executeDeleteWebmail() {
   const domain = document.getElementById('rc-delete-domain-input')?.value;
   const btn = document.getElementById('rc-confirm-delete-btn');
   if (!domain) return;
-  btn.disabled = true;
-  btn.textContent = 'Deleting…';
+  const origText = btn ? btn.textContent : 'Delete';
+
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Deleting…';
+  }
   const body = new FormData();
-  body.append('csrf_token', rcCsrf);
-  body.append('mail_domain', domain);
+  body.set('csrf_token', getRcCsrf());
+  body.set('mail_domain', domain);
+
   try {
-    const res = await fetch('/plugins/roundcube_php/api/sites/delete', { method: 'POST', body });
-    if (!res.ok) {
-      const d = await res.json();
-      throw new Error(d.detail || 'Delete failed');
-    }
-    window.location.reload();
+    const data = await rcApi('/plugins/roundcube_php/api/sites/delete', {
+      method: 'POST',
+      body
+    });
+    rcToast(data.message || `Webmail removed for ${domain}.`, 'success');
+    closeRcModal('rc-modal-delete-domain');
+    setTimeout(() => window.location.reload(), 600);
   } catch (err) {
-    alert(err.message);
-    btn.disabled = false;
-    btn.textContent = 'Delete Webmail';
+    rcToast(err.message || 'Delete failed.', 'danger');
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = origText;
+    }
   }
 }
 
+// Mail Diagnostics
 document.getElementById('rc-topbar-test-mail')?.addEventListener('click', async () => {
   openRcModal('rc-modal-diagnostics');
   const loading = document.getElementById('rc-diag-loading');
@@ -116,12 +143,14 @@ document.getElementById('rc-topbar-test-mail')?.addEventListener('click', async 
   const imapEl = document.getElementById('rc-diag-imap-val');
   const smtpEl = document.getElementById('rc-diag-smtp-val');
   const bannerBox = document.getElementById('rc-diag-banner-box');
-  if (loading) loading.style.display = 'block';
+  if (loading) {
+    loading.style.display = 'block';
+    loading.textContent = 'Checking 127.0.0.1:143 & 587…';
+  }
   if (content) content.style.display = 'none';
 
   try {
-    const res = await fetch('/plugins/roundcube_php/api/mail-diagnostics');
-    const data = await res.json();
+    const data = await rcApi('/plugins/roundcube_php/api/mail-diagnostics');
     if (loading) loading.style.display = 'none';
     if (content) content.style.display = 'flex';
     if (imapEl) imapEl.innerHTML = data.imap?.ok ? '<span class="badge badge--healthy">Connected (127.0.0.1:143)</span>' : '<span class="badge badge--danger">Failed</span>';

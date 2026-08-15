@@ -340,36 +340,75 @@ async def issue_ssl(
 
 @router.post("/api/settings/update")
 async def update_settings(request: Request):
-    form_data = await request.form()
+    content_type = request.headers.get("content-type", "")
     updates: dict[str, Any] = {}
 
-    if "skin" in form_data:
-        skin = str(form_data.get("skin", "")).strip()
-        if skin in {"elastic", "larry", "classic"}:
-            updates["skin"] = skin
-
-    if "product_name" in form_data:
-        pname = str(form_data.get("product_name", "")).strip()
-        if pname:
-            updates["product_name"] = pname
-
-    if "max_message_size" in form_data:
-        msize = str(form_data.get("max_message_size", "")).strip()
-        if msize:
-            updates["max_message_size"] = msize
-
-    if "session_lifetime" in form_data:
+    if "application/json" in content_type:
         try:
-            updates["session_lifetime"] = max(5, min(1440, int(form_data.get("session_lifetime", 30))))
-        except ValueError:
-            pass
+            payload = await request.json()
+        except Exception:
+            payload = {}
+        if not isinstance(payload, dict):
+            payload = {}
 
-    if "plugins" in form_data:
-        plugin_list = form_data.getlist("plugins")
-        cleaned_plugins = [str(p).strip() for p in plugin_list if p]
-        if "srvpanel_launch" not in cleaned_plugins:
-            cleaned_plugins.append("srvpanel_launch")
-        updates["plugins"] = cleaned_plugins
+        if "skin" in payload:
+            skin = str(payload["skin"]).strip().lower()
+            if skin in {"elastic", "larry", "classic"}:
+                updates["skin"] = skin
+
+        if "product_name" in payload:
+            pname = str(payload["product_name"]).strip()
+            if pname:
+                updates["product_name"] = pname
+
+        if "max_message_size" in payload:
+            msize = str(payload["max_message_size"]).strip()
+            if msize:
+                updates["max_message_size"] = msize
+
+        if "session_lifetime" in payload:
+            try:
+                updates["session_lifetime"] = max(5, min(1440, int(payload["session_lifetime"])))
+            except (ValueError, TypeError):
+                pass
+
+        if "plugins" in payload:
+            raw_plugins = payload["plugins"]
+            if isinstance(raw_plugins, list):
+                cleaned_plugins = [str(p).strip() for p in raw_plugins if str(p).strip()]
+                if "srvpanel_launch" not in cleaned_plugins:
+                    cleaned_plugins.append("srvpanel_launch")
+                updates["plugins"] = cleaned_plugins
+    else:
+        form_data = await request.form()
+
+        if "skin" in form_data:
+            skin = str(form_data.get("skin", "")).strip().lower()
+            if skin in {"elastic", "larry", "classic"}:
+                updates["skin"] = skin
+
+        if "product_name" in form_data:
+            pname = str(form_data.get("product_name", "")).strip()
+            if pname:
+                updates["product_name"] = pname
+
+        if "max_message_size" in form_data:
+            msize = str(form_data.get("max_message_size", "")).strip()
+            if msize:
+                updates["max_message_size"] = msize
+
+        if "session_lifetime" in form_data:
+            try:
+                updates["session_lifetime"] = max(5, min(1440, int(form_data.get("session_lifetime", 30))))
+            except (ValueError, TypeError):
+                pass
+
+        if "plugins" in form_data:
+            plugin_list = form_data.getlist("plugins")
+            cleaned_plugins = [str(p).strip() for p in plugin_list if str(p).strip()]
+            if "srvpanel_launch" not in cleaned_plugins:
+                cleaned_plugins.append("srvpanel_launch")
+            updates["plugins"] = cleaned_plugins
 
     saved = roundcube_php_service.update_settings(**updates)
     return JSONResponse({"status": "ok", "message": "Settings updated.", "settings": saved})
