@@ -17,34 +17,38 @@ control_router = APIRouter(prefix="/plugins/phpmyadmin", tags=["phpmyadmin"])
 # phpMyAdmin app itself, served same-origin behind panel auth.
 app_router = APIRouter(prefix="/phpmyadmin", tags=["phpmyadmin_app"])
 
-# Headers forwarded verbatim to phpMyAdmin.
-_PASS_REQUEST_HEADERS = frozenset(
+import re
+
+_HOP_BY_HOP_HEADERS = frozenset(
     {
-        "accept",
-        "accept-language",
-        "content-type",
-        "cookie",
-        "origin",
-        "referer",
-        "user-agent",
-        "x-requested-with",
+        "connection",
+        "keep-alive",
+        "proxy-authenticate",
+        "proxy-authorization",
+        "te",
+        "trailers",
+        "transfer-encoding",
+        "upgrade",
+        "host",
     }
 )
-_PASS_RESPONSE_HEADERS = frozenset(
-    {
-        "content-type",
-        "content-disposition",
-        "content-language",
-        "cache-control",
-        "expires",
-        "last-modified",
-        "etag",
-        "location",
-        "set-cookie",
-        "www-authenticate",
-        "x-powered-by",
-    }
-)
+
+_proxy_client: httpx.AsyncClient | None = None
+
+
+def _get_proxy_client() -> httpx.AsyncClient:
+    global _proxy_client
+    if _proxy_client is None or _proxy_client.is_closed:
+        _proxy_client = httpx.AsyncClient(
+            limits=httpx.Limits(
+                max_keepalive_connections=50,
+                max_connections=100,
+                keepalive_expiry=30.0,
+            ),
+            timeout=httpx.Timeout(120.0, connect=10.0),
+            follow_redirects=False,
+        )
+    return _proxy_client
 
 
 @control_router.get("/", response_class=HTMLResponse)
@@ -141,23 +145,29 @@ async def proxy_phpmyadmin(request: Request, path: str = ""):
     if not phpmyadmin_service.is_installed():
         return RedirectResponse("/plugins/phpmyadmin/", status_code=303)
 
+    if not path and not request.url.path.endswith("/"):
+        q = f"?{request.url.query}" if request.url.query else ""
+        return RedirectResponse(f"/phpmyadmin/{q}", status_code=307)
+
     upstream_path = f"/{path}" if path else "/"
     url = f"{phpmyadmin_service.base_url}{upstream_path}"
     if request.url.query:
         url = f"{url}?{request.url.query}"
 
     headers = {
-        key: value
+        key.lower(): value
         for key, value in request.headers.items()
-        if key.lower() in _PASS_REQUEST_HEADERS
+        if key.lower() not in _HOP_BY_HOP_HEADERS
     }
-    # phpMyAdmin detects HTTPS from X-Forwarded-Proto; pass the panel's real
-    # scheme so cookie security and the login https-mismatch check match the
-    # browser's connection (http://IP or https://domain both work).
+    headers["host"] = f"{phpmyadmin_service.host}:{phpmyadmin_service.port}"
     headers["x-forwarded-proto"] = request.url.scheme
-    body = await request.body()
+    headers["x-forwarded-host"] = request.headers.get("host", request.url.netloc)
+    headers["x-forwarded-prefix"] = "/phpmyadmin"
+    if request.client:
+        headers["x-forwarded-for"] = request.client.host
 
-    client = httpx.AsyncClient(timeout=120.0)
+    body = await request.body()
+    client = _get_proxy_client()
     try:
         upstream = await client.request(
             request.method,
@@ -172,29 +182,45 @@ async def proxy_phpmyadmin(request: Request, path: str = ""):
             {"detail": "phpMyAdmin is not running. Start or install it from the plugin page."},
             status_code=502,
         )
-    finally:
-        await client.aclose()
 
-    response_headers = [
-        (name, value)
-        for name, value in upstream.headers.items()
-        if name.lower() in _PASS_RESPONSE_HEADERS
-    ]
-    # phpMyAdmin redirects to absolute paths; keep them inside /phpmyadmin.
-    for index, (name, value) in enumerate(response_headers):
-        if name.lower() == "location" and value.startswith("/"):
-            value = (
-                f"/phpmyadmin{value}"
-                if not value.startswith("/phpmyadmin")
-                else value
+    response_headers: list[tuple[str, str]] = []
+    for name, value in upstream.headers.multi_items():
+        name_lower = name.lower()
+        if name_lower in _HOP_BY_HOP_HEADERS:
+            continue
+        if name_lower == "location":
+            match = re.match(
+                r"^https?://(?:127\.0\.0\.1|localhost)(?::\d+)?(/.*)?$",
+                value,
+                re.IGNORECASE,
             )
-            response_headers[index] = (name, value)
+            if match:
+                path_part = match.group(1) or "/"
+                value = (
+                    f"/phpmyadmin{path_part}"
+                    if not path_part.startswith("/phpmyadmin")
+                    else path_part
+                )
+            elif value.startswith("/"):
+                value = (
+                    f"/phpmyadmin{value}"
+                    if not value.startswith("/phpmyadmin")
+                    else value
+                )
+            elif not value.startswith("http://") and not value.startswith("https://"):
+                value = f"/phpmyadmin/{value.lstrip('/')}"
+        response_headers.append((name, value))
 
-    return Response(
+    response = Response(
         content=content,
         status_code=upstream.status_code,
-        headers=dict(response_headers),
     )
+    # Set raw_headers to preserve duplicate headers such as multiple Set-Cookie entries
+    response.raw_headers = [
+        (name.lower().encode("latin-1"), value.encode("latin-1"))
+        for name, value in response_headers
+    ]
+    return response
 
 
 # The manager mounts `router`; it carries both the control page (under
