@@ -226,9 +226,21 @@
 
     // Swap
     setBar('bar-swap', 'pct-swap', d.swap.percent);
-    document.getElementById('swap-detail').textContent = d.swap.total_gb > 0
-      ? `${d.swap.used_gb} GB used / ${d.swap.total_gb} GB total`
-      : 'No swap configured';
+    let swapDetailText = 'No swap configured';
+    if (d.swap.total_gb > 0) {
+      swapDetailText = `${d.swap.used_gb} GB used / ${d.swap.total_gb} GB total`;
+      if (d.swap.zram_active && d.swap.swapfile_size_mb > 0) {
+        const diskLabel = d.swap.swapfile_size_mb >= 1024
+          ? `${(d.swap.swapfile_size_mb / 1024).toFixed(d.swap.swapfile_size_mb % 1024 === 0 ? 0 : 1)} GB`
+          : `${d.swap.swapfile_size_mb} MB`;
+        swapDetailText += ` (${diskLabel} disk + zRAM)`;
+      } else if (d.swap.zram_active) {
+        swapDetailText += ` (zRAM)`;
+      } else if (d.swap.swapfile_size_mb > 0) {
+        swapDetailText += ` (disk)`;
+      }
+    }
+    document.getElementById('swap-detail').textContent = swapDetailText;
 
     // Disk rows
     const diskSection = document.getElementById('disk-section');
@@ -584,13 +596,45 @@
       btnAdvOn.classList.toggle('is-active', isAdvTuning);
     }
 
-    const swapSizeMb = opt.swapfile_size_mb ?? 0;
     const swapGroup = document.getElementById('group-swap-size');
     if (swapGroup) {
+      const btnOff = document.getElementById('btn-swap-off');
+      const btnBase = document.getElementById('btn-swap-base');
+      const btn512 = document.getElementById('btn-swap-512');
+
+      if (isOptActive) {
+        if (btnOff) btnOff.style.display = 'none';
+        if (btn512) btn512.style.display = 'none';
+        if (btnBase) btnBase.style.display = '';
+        swapGroup.classList.remove('layout-switcher--five');
+        swapGroup.classList.add('layout-switcher--four');
+      } else {
+        if (btnOff) btnOff.style.display = '';
+        if (btn512) btn512.style.display = '';
+        if (btnBase) btnBase.style.display = 'none';
+        swapGroup.classList.remove('layout-switcher--four');
+        swapGroup.classList.add('layout-switcher--five');
+      }
+
+      const swapfileMb = opt.swapfile_size_mb ?? 0;
+      const totalEffectiveMb = isOptActive ? (500 + swapfileMb) : swapfileMb;
+
       swapGroup.querySelectorAll('button[data-swap-size]').forEach(btn => {
-        const sz = parseInt(btn.dataset.swapSize, 10);
-        const isMatch = (sz === 0 && swapSizeMb === 0) ||
-                        (sz > 0 && Math.abs(sz - swapSizeMb) <= 64);
+        if (btn.style.display === 'none') {
+          btn.classList.remove('is-active');
+          return;
+        }
+        const targetSz = parseInt(btn.dataset.swapSize, 10);
+        let isMatch = false;
+        if (targetSz === 0) {
+          isMatch = !isOptActive && totalEffectiveMb === 0;
+        } else if (targetSz === 500) {
+          isMatch = isOptActive && swapfileMb === 0;
+        } else if (targetSz === 512) {
+          isMatch = !isOptActive && Math.abs(512 - totalEffectiveMb) <= 64;
+        } else {
+          isMatch = Math.abs(targetSz - totalEffectiveMb) <= 64;
+        }
         btn.classList.toggle('is-active', isMatch);
       });
     }
@@ -717,25 +761,39 @@
       { advanced_active: enable }, `Advanced Server Tuning ${enable ? 'enabled' : 'disabled'}`);
   }
 
-  function setSwapSize(sizeMb) {
+  function setSwapSize(sizeMb, clickedBtn) {
     if (isActionPending) return;
     setActionState(true);
-    const label = sizeMb === 0 ? 'Disabled' : (sizeMb >= 1024 ? `${sizeMb / 1024} GB` : `${sizeMb} MB`);
+    if (clickedBtn) clickedBtn.classList.add('is-loading');
+
+    // Optimistically update active button
+    const swapGroup = document.getElementById('group-swap-size');
+    if (swapGroup && clickedBtn) {
+      swapGroup.querySelectorAll('button[data-swap-size]').forEach(btn => {
+        btn.classList.toggle('is-active', btn === clickedBtn);
+      });
+    }
+
+    const label = sizeMb === 0 ? 'Disabled' : (sizeMb === 500 ? '500 MB (Base zRAM)' : (sizeMb >= 1024 ? `${sizeMb / 1024} GB` : `${sizeMb} MB`));
     toast(`Configuring swap size to ${label}... this may take a few moments.`, 'info');
     panel.post('/api/system/swap/set', { size_mb: sizeMb })
       .then(res => {
         setActionState(false);
+        if (clickedBtn) clickedBtn.classList.remove('is-loading');
         if (res && res.success) {
           toast(`Swap size successfully updated to ${label}.`, 'success');
           fetchStats();
           fetchOptimizationStatus();
         } else {
           toast(res?.detail || 'Failed to update swap size.', 'danger');
+          fetchOptimizationStatus();
         }
       })
       .catch(() => {
         setActionState(false);
+        if (clickedBtn) clickedBtn.classList.remove('is-loading');
         toast('Failed to update swap size. Please try again.', 'danger');
+        fetchOptimizationStatus();
       });
   }
 
@@ -795,7 +853,7 @@
     const swapButton = event.target.closest('[data-swap-size]');
     if (swapButton) {
       const sz = parseInt(swapButton.dataset.swapSize, 10);
-      setSwapSize(sz);
+      setSwapSize(sz, swapButton);
       return;
     }
 

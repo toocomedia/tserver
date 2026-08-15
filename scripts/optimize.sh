@@ -25,20 +25,28 @@ enable_optimization() {
   fi
   echo "==> Enabling Low-RAM Optimization Mode..."
 
-  # 1. zRAM Setup
-  if command -v apt-get &>/dev/null; then
-    if ! dpkg -s zram-tools &>/dev/null; then
-      DEBIAN_FRONTEND=noninteractive apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq zram-tools || true
+  # 1. zRAM Setup (only if no on-disk swapfile exists)
+  if [[ ! -f /swapfile ]]; then
+    if command -v apt-get &>/dev/null; then
+      if ! dpkg -s zram-tools &>/dev/null; then
+        DEBIAN_FRONTEND=noninteractive apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq zram-tools || true
+      fi
     fi
-  fi
 
-  if [[ -f /etc/default/zramswap ]]; then
-    cat > /etc/default/zramswap <<'EOF'
+    if [[ -f /etc/default/zramswap ]]; then
+      cat > /etc/default/zramswap <<'EOF'
 # Managed by srv-panel optimize.sh
 ALGO=zstd
 PERCENT=50
 EOF
-    systemctl enable --now zramswap 2>/dev/null || systemctl restart zramswap 2>/dev/null || true
+      systemctl enable --now zramswap 2>/dev/null || systemctl restart zramswap 2>/dev/null || true
+    fi
+  else
+    # An on-disk swapfile is configured; ensure zramswap is disabled to prevent duplicate stacking
+    if systemctl is-active --quiet zramswap 2>/dev/null; then
+      systemctl stop zramswap 2>/dev/null || true
+      systemctl disable zramswap 2>/dev/null || true
+    fi
   fi
 
   # 2. Kernel sysctl tuning
@@ -276,16 +284,33 @@ set_swap() {
     echo "ERROR: Must run as root (sudo bash scripts/optimize.sh set-swap <MB>)" >&2
     exit 1
   fi
-  local size_mb="${1:-0}"
-  if ! [[ "$size_mb" =~ ^[0-9]+$ ]]; then
-    echo "ERROR: Swap size must be a positive integer in MB (e.g. 0, 512, 1024, 2048, 4096)" >&2
+  local target_mb="${1:-0}"
+  if ! [[ "$target_mb" =~ ^[0-9]+$ ]]; then
+    echo "ERROR: Swap target must be a positive integer in MB (e.g. 0, 500, 512, 1024, 2048, 4096)" >&2
     exit 1
   fi
 
   SWAP_FILE="/swapfile"
+  local is_zram="false"
+  if systemctl is-active --quiet zramswap 2>/dev/null; then
+    is_zram="true"
+  fi
 
-  if [[ "$size_mb" -eq 0 ]]; then
-    echo "==> Disabling and removing swapfile..."
+  # Calculate needed disk swapfile size based on whether zRAM baseline is active
+  local disk_swap_mb=0
+  if [[ "$is_zram" == "true" ]]; then
+    # zRAM baseline provides ~500 MB in RAM
+    if [[ "$target_mb" -le 500 ]]; then
+      disk_swap_mb=0
+    else
+      disk_swap_mb=$((target_mb - 500))
+    fi
+  else
+    disk_swap_mb="$target_mb"
+  fi
+
+  # If no disk swapfile needed (either total is 0 or base zRAM is sufficient)
+  if [[ "$disk_swap_mb" -le 0 ]]; then
     if swapon --show=NAME 2>/dev/null | grep -q "^$SWAP_FILE$"; then
       swapoff "$SWAP_FILE" 2>/dev/null || true
     fi
@@ -295,18 +320,24 @@ set_swap() {
     if [[ -f /etc/fstab ]]; then
       sed -i '\|/swapfile|d' /etc/fstab
     fi
-    echo "==> Swapfile disabled."
+
+    if [[ "$is_zram" == "false" && "$target_mb" -eq 0 ]]; then
+      swapoff -a 2>/dev/null || true
+      echo "==> All Swap disabled (0 MB)."
+    else
+      echo "==> Configured to Base zRAM Swap (500 MB). Disk swapfile removed."
+    fi
     return 0
   fi
 
-  echo "==> Configuring swapfile to ${size_mb} MB..."
+  echo "==> Configuring swap to reach ${target_mb} MB total (allocating ${disk_swap_mb} MB on disk)..."
   
   # Check available disk space in root partition
   local avail_kb
   avail_kb="$(df -k --output=avail / 2>/dev/null | tail -n 1 | tr -d ' ' || echo 0)"
-  local needed_kb=$((size_mb * 1024))
+  local needed_kb=$((disk_swap_mb * 1024))
   if [[ "$avail_kb" =~ ^[0-9]+$ ]] && [[ "$avail_kb" -gt 0 ]] && [[ "$avail_kb" -lt "$needed_kb" ]]; then
-    echo "ERROR: Not enough disk space. Available: $((avail_kb / 1024)) MB, Required: ${size_mb} MB" >&2
+    echo "ERROR: Not enough disk space. Available: $((avail_kb / 1024)) MB, Required: ${disk_swap_mb} MB" >&2
     exit 1
   fi
 
@@ -315,11 +346,11 @@ set_swap() {
     swapoff "$SWAP_FILE" 2>/dev/null || true
   fi
 
-  # Allocate
+  # Allocate exactly disk_swap_mb
   if command -v fallocate &>/dev/null; then
-    fallocate -l "${size_mb}M" "$SWAP_FILE" 2>/dev/null || dd if=/dev/zero of="$SWAP_FILE" bs=1M count="$size_mb" status=none
+    fallocate -l "${disk_swap_mb}M" "$SWAP_FILE" 2>/dev/null || dd if=/dev/zero of="$SWAP_FILE" bs=1M count="$disk_swap_mb" status=none
   else
-    dd if=/dev/zero of="$SWAP_FILE" bs=1M count="$size_mb" status=none
+    dd if=/dev/zero of="$SWAP_FILE" bs=1M count="$disk_swap_mb" status=none
   fi
 
   chmod 600 "$SWAP_FILE"
@@ -333,7 +364,7 @@ set_swap() {
     fi
   fi
 
-  echo "==> Swapfile successfully configured to ${size_mb} MB."
+  echo "==> Swap successfully configured to ${target_mb} MB total."
 }
 
 clean_ram() {

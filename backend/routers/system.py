@@ -437,6 +437,8 @@ async def _build_server_stats(db: AsyncSession) -> dict:
             "total_gb": round(swap.total / (1024 ** 3), 1),
             "used_gb": round(swap.used / (1024 ** 3), 1),
             "percent": swap.percent,
+            "swapfile_size_mb": opt_status.get("swapfile_size_mb", 0),
+            "zram_active": opt_status.get("zram_active", False),
         },
         "disk": disks,
         "net": {
@@ -457,6 +459,11 @@ async def _build_server_stats(db: AsyncSession) -> dict:
         "processes": top_procs,
         "optimization": opt_status,
     }
+
+
+def _invalidate_stats_cache():
+    global _stats_cache
+    _stats_cache = None
 
 
 @router.get("/api/stats")
@@ -509,6 +516,7 @@ async def toggle_optimization(payload: OptimizationToggleIn):
 
     action = "enable" if payload.enabled else "disable"
     res = await run(["bash", str(script_path), action])
+    _invalidate_stats_cache()
     detail = res.stdout if res.success else res.stderr
     if "password is required" in detail.lower():
         detail = "Sudoers permissions need updating. Please run on server: sudo bash /opt/srv-panel/scripts/update.sh"
@@ -527,6 +535,7 @@ async def toggle_nginx_worker(payload: NginxWorkerToggleIn):
 
     action = "nginx-worker-1" if payload.single_worker else "nginx-worker-auto"
     res = await run(["bash", str(script_path), action])
+    _invalidate_stats_cache()
     detail = res.stdout if res.success else res.stderr
     if "password is required" in detail.lower():
         detail = "Sudoers permissions need updating. Please run on server: sudo bash /opt/srv-panel/scripts/update.sh"
@@ -545,6 +554,7 @@ async def toggle_advanced_tuning(payload: AdvancedTuningToggleIn):
 
     action = "advanced-enable" if payload.enabled else "advanced-disable"
     res = await run(["bash", str(script_path), action])
+    _invalidate_stats_cache()
     detail = res.stdout if res.success else res.stderr
     if "password is required" in detail.lower():
         detail = "Sudoers permissions need updating. Please run on server: sudo bash /opt/srv-panel/scripts/update.sh"
@@ -569,6 +579,7 @@ async def set_swap_size(payload: SwapConfigIn):
         return {"success": False, "detail": "optimize.sh script not found"}
 
     res = await run(["bash", str(script_path), "set-swap", str(payload.size_mb)])
+    _invalidate_stats_cache()
     detail = res.stdout if res.success else res.stderr
     if "password is required" in detail.lower():
         detail = "Sudoers permissions need updating. Please run on server: sudo bash /opt/srv-panel/scripts/update.sh"
@@ -586,6 +597,7 @@ async def clean_ram_cache():
         return {"success": False, "detail": "optimize.sh script not found"}
 
     res = await run(["bash", str(script_path), "clean-ram"])
+    _invalidate_stats_cache()
     if res.success:
         try:
             data = json.loads(res.stdout)
@@ -603,6 +615,7 @@ async def clean_swap_cache():
         return {"success": False, "detail": "optimize.sh script not found"}
 
     res = await run(["bash", str(script_path), "clean-swap"])
+    _invalidate_stats_cache()
     if res.success:
         try:
             data = json.loads(res.stdout)
