@@ -49,19 +49,19 @@
 
     <!-- RIGHT COLUMN: SPLIT CONTENT & CARDS GRID -->
     <div class="php-split-content">
-      {% include 'partials/_domains_tab.html' %}
-      {% include 'partials/_settings_tab.html' %}
-      {% include 'partials/_plugins_tab.html' %}
-      {% include 'partials/_maintenance_tab.html' %}
-      {% include 'partials/_service_specs.html' %}
-      {% include 'partials/_modals.html' %}
+      {% include 'partials/_rc_domains.html' %}
+      {% include 'partials/_rc_settings.html' %}
+      {% include 'partials/_rc_plugins.html' %}
+      {% include 'partials/_rc_maintenance.html' %}
+      {% include 'partials/_rc_service_specs.html' %}
+      {% include 'partials/_rc_modals.html' %}
     </div>
   </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
-  {% include 'partials/_scripts_core.html' %}
-  {% include 'partials/_scripts_domains.html' %}
-  {% include 'partials/_scripts_settings.html' %}
+  {% include 'partials/_rc_scripts_core.html' %}
+  {% include 'partials/_rc_scripts_domains.html' %}
+  {% include 'partials/_rc_scripts_settings.html' %}
 {% endblock %}

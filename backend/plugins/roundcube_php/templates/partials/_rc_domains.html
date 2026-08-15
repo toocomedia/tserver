@@ -8,8 +8,8 @@
     </div>
 
     {% if not domain_rows %}
-      <div style="padding: 32px 20px; text-align: center; color: var(--color-muted); font-size: 13px;">
-        No Maddy mail domains found. Add domains in <a href="/plugins/maddy/" style="color: var(--color-accent);">Maddy Mail Server</a> first.
+      <div style="padding: 36px 20px; text-align: center; color: var(--color-muted); font-size: 13px;">
+        No mail domains found. Add domains in <a href="/plugins/maddy/" style="color: var(--color-accent); text-decoration: underline;">Maddy Mail Server</a> first.
       </div>
     {% else %}
       <table class="table" id="rc-domains-table">
@@ -26,11 +26,11 @@
           {% for row in domain_rows %}
             <tr class="rc-domain-row" data-domain="{{ row.domain }}">
               <td>
-                <strong style="color: var(--color-text);">{{ row.domain }}</strong>
+                <strong style="color: var(--color-text); font-size: 13px;">{{ row.domain }}</strong>
               </td>
               <td>
                 {% if row.site and row.site.public_host %}
-                  <code style="color: var(--color-accent);">{{ row.site.public_host }}</code>
+                  <code style="color: var(--color-accent); font-size: 12px;">{{ row.site.public_host }}</code>
                 {% else %}
                   <span style="color: var(--color-muted); font-size: 12px;">Not Configured</span>
                 {% endif %}
