@@ -99,6 +99,30 @@ def public_url(
     return f"{scheme}://{host}/"
 
 
+def domain_url(
+    domain: Any,
+    *,
+    https: bool = False,
+    port: int | None = None,
+) -> str:
+    """
+    Smart Jinja helper for generating a public URL from a Domain model, dict, or string.
+    """
+    if domain is None:
+        return "/"
+    if isinstance(domain, str):
+        host = domain
+    elif hasattr(domain, "name"):
+        host = str(domain.name)
+    elif isinstance(domain, dict) and "name" in domain:
+        host = str(domain["name"])
+    elif isinstance(domain, dict) and "domain" in domain:
+        host = str(domain["domain"])
+    else:
+        host = str(domain)
+    return public_url(host, https=https, port=port)
+
+
 def csrf_token(request: Request) -> str:
     """Jinja helper: {{ csrf_token(request) }} for hidden fields / meta tags."""
     return ensure_csrf_token(request)
@@ -151,6 +175,7 @@ templates.env.autoescape = select_autoescape(["html", "xml"])
 templates.env.globals["path"] = app_path
 templates.env.globals["PATHS"] = PATHS
 templates.env.globals["public_url"] = public_url
+templates.env.globals["domain_url"] = domain_url
 templates.env.globals["csrf_token"] = csrf_token
 templates.env.globals["get_plugin_sidebar_items"] = get_plugin_sidebar_items
 templates.env.globals["is_php_active"] = is_php_active

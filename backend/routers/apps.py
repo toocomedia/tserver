@@ -20,7 +20,7 @@ from services import app_dependency_service, app_hosting_health_service
 from services import app_lifecycle_service
 from services import hosted_app_control_service
 from services import app_hosting_service as apps
-from services import app_update_service
+from services import app_update_service, ssl_service
 from dependencies.git import repository_service
 from templating import templates
 
@@ -169,11 +169,13 @@ async def detail(app_id: int, request: Request, deployment: int | None = None, d
     app = await _app(db, app_id)
     latest = await app_deployment_service.latest(db, app.id)
     domain = await db.get(Domain, app.domain_id)
+    ssl_active = await ssl_service.is_domain_ssl_active(db, domain)
     return templates.TemplateResponse("pages/apps/detail.html", {
         "request": request,
         "active_page": "apps",
         "app": app,
         "domain": domain,
+        "ssl_active": ssl_active,
         "deployment": latest,
         "environment_keys": await app_environment_service.keys(db, app.id),
         "update_ready": app_update_service.has_update(app),

@@ -56,6 +56,18 @@ function publicUrl(host, { https = false, port = null } = {}) {
   return `${scheme}://${h}/`;
 }
 
+/** Standard check whether a resource, domain, or site has active SSL. */
+function isSslActive(resource) {
+  if (!resource) return false;
+  if (typeof resource === "boolean") return resource;
+  if (typeof resource.ssl_active === "boolean") return resource.ssl_active;
+  if (resource.ssl && typeof resource.ssl.active === "boolean") return resource.ssl.active;
+  if (typeof resource.ssl_requested === "boolean") return resource.ssl_requested;
+  return false;
+}
+window.publicUrl = publicUrl;
+window.isSslActive = isSslActive;
+
 function formatDetail(detail) {
   if (!detail) return "Request failed";
   if (typeof detail === "string") return detail;

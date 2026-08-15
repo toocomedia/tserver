@@ -19,7 +19,7 @@ from models.ssl_cert import SslCert
 from services import container_app_cleanup_service, container_app_database_service
 from services import container_app_database_lifecycle_service
 from services import container_app_deployment_service
-from services import container_app_removal_service
+from services import container_app_removal_service, ssl_service
 from plugins.railpack_apps.router_create import router as create_router
 from plugins.railpack_apps.router_recovery import router as recovery_router
 from plugins.railpack_apps.router_resources import router as resource_router
@@ -106,7 +106,7 @@ async def detail(app_id: int, request: Request, db: AsyncSession = Depends(get_d
     if app is None:
         raise HTTPException(404, "Container app not found.")
     domain = await db.get(Domain, app.domain_id)
-    ssl_active = await db.scalar(select(SslCert.id).where(SslCert.full_domain == domain.name)) is not None if domain else False
+    ssl_active = await ssl_service.is_domain_ssl_active(db, domain)
     deployments = (await db.scalars(select(ContainerAppDeployment).where(
         ContainerAppDeployment.app_id == app.id,
     ).order_by(ContainerAppDeployment.id.desc()).limit(8))).all()

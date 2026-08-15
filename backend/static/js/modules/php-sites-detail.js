@@ -166,7 +166,7 @@ function render() {
 
             ${card(t("site_details") || "Site Details", `
               ${spec(t("domain"), `<a href="${esc(url)}" target="_blank" rel="noopener" style="font-weight:700; color:var(--color-text);">${esc(site.domain)} ↗</a>`)}
-              ${spec(t("preset"), `<span class="badge-pill">${esc(isWp ? t("wordpress") : isFilament ? t("filament") : isLaravel ? t("laravel") : t("plain_php"))}</span>`)}
+              ${spec(t("preset"), `<span class="badge-pill" style="display:inline-flex; align-items:center; gap:6px;"><i class="devicon-${isWp ? 'wordpress-plain' : isFilament ? 'filamentphp-plain' : isLaravel ? 'laravel-original' : 'php-plain'}" aria-hidden="true" style="font-size:14px;"></i>${esc(isWp ? t("wordpress") : isFilament ? t("filament") : isLaravel ? t("laravel") : t("plain_php"))}</span>`)}
               ${spec(t("linux_user"), `<code>srvphp${site.id}</code>`)}
               ${spec(t("document_root"), `<code>${esc(site.document_root || "public")}</code>`)}
               ${spec(t("webroot"), `<code>/var/www/${esc(site.domain)}/${esc(site.document_root)}</code>`)}

@@ -35,6 +35,40 @@ _LE_LIVE = Path("/etc/letsencrypt/live")
 # ---------------------------------------------------------------
 # HELPERS
 # ---------------------------------------------------------------
+def _resolve_domain_name(domain: Domain | str | int | None) -> str | None:
+    if domain is None:
+        return None
+    if isinstance(domain, str):
+        return domain.strip().lower()
+    if hasattr(domain, "name"):
+        return str(domain.name).strip().lower()
+    return None
+
+
+async def is_domain_ssl_active(db: AsyncSession, domain: Domain | str | int | None) -> bool:
+    """Check if a domain has an active, valid, non-expired SSL cert."""
+    if domain is None:
+        return False
+    if isinstance(domain, int):
+        cert = await db.scalar(select(SslCert).where(SslCert.domain_id == domain))
+    else:
+        name = _resolve_domain_name(domain)
+        if not name:
+            return False
+        cert = await db.scalar(select(SslCert).where(SslCert.full_domain == name))
+        if cert is None and hasattr(domain, "id") and domain.id:
+            cert = await db.scalar(select(SslCert).where(SslCert.domain_id == domain.id))
+    if cert is None:
+        return False
+    if cert.expiry_date:
+        exp = cert.expiry_date
+        if exp.tzinfo is None:
+            exp = exp.replace(tzinfo=timezone.utc)
+        if exp <= datetime.now(timezone.utc):
+            return False
+    return True
+
+
 def _cert_path(domain: str) -> str:
     return str(_LE_LIVE / domain / "fullchain.pem")
 

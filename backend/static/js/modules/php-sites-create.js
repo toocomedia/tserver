@@ -152,8 +152,12 @@ function review() {
   const isWp = selectedPreset() === "wordpress";
   const isFilament = selectedPreset() === "filament";
   const isLaravel = selectedPreset() === "laravel" || isFilament;
+  const presetIcon = isWp ? "devicon-wordpress-plain" : isFilament ? "devicon-filamentphp-plain" : isLaravel ? "devicon-laravel-original" : "devicon-php-plain";
+  const presetText = isWp ? t("wordpress") : isFilament ? t("filament") : isLaravel ? t("laravel") : t("plain_php");
+  const presetHtml = `<span style="display:inline-flex; align-items:center; gap:8px;"><i class="${presetIcon}" aria-hidden="true" style="font-size:16px; color:var(--color-accent);"></i><strong>${esc(presetText)}</strong></span>`;
+
   const rows = [
-    [t("preset"), isWp ? t("wordpress") : isFilament ? t("filament") : isLaravel ? t("laravel") : t("plain_php")],
+    [t("preset"), presetHtml, true],
     [t("domain"), domain?.name || "—"],
     [t("php_version"), values.get("php_version") || "—"],
     [t("document_root"), values.get("document_root") || "public"],
@@ -172,10 +176,10 @@ function review() {
   }
   const reviewContainer = root.querySelector("[data-review]");
   if (reviewContainer) {
-    reviewContainer.innerHTML = rows.map(([label, val]) => `
+    reviewContainer.innerHTML = rows.map(([label, val, isRawHtml]) => `
       <div class="info-row-strict">
         <div class="info-row-strict__label">${esc(label)}</div>
-        <div class="info-row-strict__val">${esc(val)}</div>
+        <div class="info-row-strict__val">${isRawHtml ? val : esc(val)}</div>
       </div>
     `).join("");
   }

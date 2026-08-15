@@ -1,0 +1,63 @@
+{#
+  partials/base_card.html — Standard Base Card & Hero Box Macros (App Engine standard)
+
+  Usage:
+    {% import "partials/base_card.html" as base_card %}
+
+    {{ base_card.hero_box(
+        title="example.com",
+        status_text="Running",
+        status_active=true,
+        stats=[
+          {"label": "URL", "val": '<a href="...">example.com</a>', "raw": true},
+          {"label": "Port", "val": "127.0.0.1:8000", "mono": true},
+          {"label": "SSL", "val": "HTTPS active" if ssl_active else "HTTP only"}
+        ],
+        actions_html='<button class="btn btn--secondary btn--sm">Restart</button>'
+    ) }}
+
+    {% call base_card.master_card(title="Application settings", extra_header='<span class="badge-pill">GIT</span>') %}
+      <div class="info-row"><span class="info-row__label">Runtime</span><span class="info-row__value">Node.js</span></div>
+    {% endcall %}
+#}
+
+{% macro hero_box(title, status_text=none, status_active=none, badge_tone=none, stats=[], actions_html=none, id=none) %}
+<div class="hero-app-box{% if status_active is sameas true %} hero-app-box--active{% elif status_active is sameas false %} hero-app-box--inactive{% endif %}"{% if id %} id="{{ id }}"{% endif %}>
+  <div class="hero-app-box__main">
+    <div class="hero-app-box__header">
+      <h1>{{ title }}</h1>
+      {% if status_text %}
+        {% set tone_class = 'badge-pill--accent' if (status_active or badge_tone == 'accent' or badge_tone == 'active') else ('badge-pill--danger' if badge_tone == 'danger' else '') %}
+        <span class="badge-pill {{ tone_class }}">{{ status_text }}</span>
+      {% endif %}
+    </div>
+    {% if stats %}
+      <div class="hero-stats">
+        {% for s in stats %}
+          <span>{{ s.label }}: {% if s.raw %}{{ s.val | safe }}{% elif s.mono %}<span class="mono" style="font-weight:600; color:var(--color-text);">{{ s.val }}</span>{% else %}<span style="font-weight:600; color:var(--color-text);">{{ s.val }}</span>{% endif %}</span>
+        {% endfor %}
+      </div>
+    {% endif %}
+  </div>
+  {% if actions_html or caller is defined %}
+    <div class="hero-app-box__actions">
+      {% if actions_html %}{{ actions_html | safe }}{% endif %}
+      {% if caller is defined %}{{ caller() }}{% endif %}
+    </div>
+  {% endif %}
+</div>
+{% endmacro %}
+
+{% macro master_card(title=none, extra_header=none, danger=false, active=false, id=none, body_class="") %}
+<div class="master-card{% if danger %} master-card--danger{% endif %}{% if active %} master-card--active{% endif %}"{% if id %} id="{{ id }}"{% endif %}>
+  {% if title or extra_header %}
+    <div class="master-card__header">
+      <span>{{ title }}</span>
+      {% if extra_header %}{{ extra_header | safe }}{% endif %}
+    </div>
+  {% endif %}
+  <div class="master-card__body{% if body_class %} {{ body_class }}{% endif %}">
+    {{ caller() }}
+  </div>
+</div>
+{% endmacro %}
