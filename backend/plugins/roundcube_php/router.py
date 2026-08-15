@@ -19,6 +19,7 @@ from database import AsyncSessionLocal, get_db
 from models.mail_domain import MailDomain
 from models.ssl_cert import SslCert
 from plugins.maddy.service import maddy_service
+from plugins.roundcube_php.config_manager import roundcube_config_manager
 from plugins.roundcube_php.service import roundcube_php_service
 from services import dns_service, nginx_service, ssl_service
 from templating import templates
@@ -176,7 +177,7 @@ async def index(request: Request, db: AsyncSession = Depends(get_db)):
             "domain_rows": site_rows,
             "mail_domains": domains,
             "status": roundcube_php_service.get_status(),
-            "settings": roundcube_php_service.get_settings(),
+            "settings": roundcube_config_manager.get_settings(),
             "db_stats": roundcube_php_service.get_db_stats(),
             "server_ip": getattr(config, "SERVER_IP", "127.0.0.1"),
         },
@@ -188,7 +189,7 @@ async def get_status(request: Request):
     return JSONResponse(
         {
             "status": roundcube_php_service.get_status(),
-            "settings": roundcube_php_service.get_settings(),
+            "settings": roundcube_config_manager.get_settings(),
             "db_stats": roundcube_php_service.get_db_stats(),
         }
     )
@@ -440,7 +441,7 @@ async def update_settings(request: Request):
                 cleaned_plugins.append("srvpanel_launch")
             updates["plugins"] = cleaned_plugins
 
-    saved = roundcube_php_service.update_settings(**updates)
+    saved = roundcube_config_manager.save_settings(**updates)
     return JSONResponse({"status": "ok", "message": "Settings updated.", "settings": saved})
 
 

@@ -101,6 +101,27 @@ class RoundcubePhpStateAndSettingsTests(unittest.TestCase):
         self.assertIn("$config['session_lifetime'] = 120;", content)
         self.assertIn("'srvpanel_launch'", content)
 
+    def test_config_manager_roundtrip(self):
+        from plugins.roundcube_php.config_manager import RoundcubeConfigManager
+        cm = RoundcubeConfigManager(data_dir=Path(self.temp.name))
+        (cm.htdocs / "skins" / "elastic").mkdir(parents=True, exist_ok=True)
+        cm.save_settings(
+            skin="elastic",
+            product_name="tooco Webmail",
+            max_message_size="32M",
+            session_lifetime=30,
+        )
+        # Verify read from config.inc.php directly
+        parsed = cm.read_config_file()
+        self.assertEqual(parsed.get("skin"), "elastic")
+        self.assertEqual(parsed.get("product_name"), "tooco Webmail")
+        self.assertEqual(parsed.get("max_message_size"), "32M")
+        self.assertEqual(parsed.get("session_lifetime"), 30)
+
+        # Verify get_settings reflects both
+        settings = cm.get_settings()
+        self.assertEqual(settings.get("product_name"), "tooco Webmail")
+
     def test_site_operations(self):
         self.assertEqual(self.service.get_sites(), {})
         self.service.save_site("example.com", {
