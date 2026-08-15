@@ -1,0 +1,44 @@
+/* Roundcube Webmail (PHP) - Brutalist Manage Layout Styles */
+.rc-search-input {
+  width: 220px;
+  height: 32px;
+  font-size: 12px;
+}
+
+.rc-tab-panel {
+  width: 100%;
+}
+
+.php-spec-item {
+  background: var(--color-surface-hover, rgba(255, 255, 255, 0.04));
+  border: 1px solid var(--color-line);
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.php-spec-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--color-muted);
+}
+
+.php-spec-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Zero border radius brutalist contract */
+.rc-tab-panel input,
+.rc-tab-panel select,
+.rc-tab-panel button,
+.rc-tab-panel .php-spec-item {
+  border-radius: 0 !important;
+}

@@ -1,0 +1,98 @@
+<!-- MODAL: ADD / CONFIGURE WEBMAIL DOMAIN -->
+<div class="modal-backdrop hidden" id="rc-modal-add-domain" role="dialog">
+  <div class="modal" style="max-width: 480px;">
+    <div class="modal__header">
+      <h3 class="modal__title">Configure Webmail Domain</h3>
+      <button type="button" class="modal__close" data-action="close-modal">&times;</button>
+    </div>
+    <form id="rc-form-add-domain">
+      <div class="modal__body" style="display: flex; flex-direction: column; gap: 14px;">
+        <div class="form-group">
+          <label class="form-label" for="rc-modal-mail-domain">Maddy Mail Domain</label>
+          <select class="input" id="rc-modal-mail-domain" name="mail_domain" required onchange="onRcDomainSelectChange(this.value)">
+            <option value="">Select Domain...</option>
+            {% for item in domain_rows %}
+              {% if not item.site %}
+                <option value="{{ item.domain }}">{{ item.domain }}</option>
+              {% endif %}
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="rc-modal-public-host">Webmail Hostname</label>
+          <input type="text" class="input" id="rc-modal-public-host" name="public_host" placeholder="webmail.example.com" required>
+        </div>
+
+        <div class="form-group">
+          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+            <input type="checkbox" id="rc-modal-manage-dns" name="manage_dns" value="true" checked>
+            <span style="font-size: 12px; color: var(--color-text);">Manage DNS A Record automatically</span>
+          </label>
+        </div>
+
+        <div id="rc-modal-dns-preview" style="display: none; padding: 10px 12px; background: var(--color-surface-hover); font-size: 12px; color: var(--color-text);">
+          Add A record: <strong><span id="rc-dns-host-text"></span> &rarr; {{ server_ip }}</strong>
+        </div>
+
+        <div id="rc-add-site-error" style="display: none; font-size: 12px; color: var(--color-danger);"></div>
+      </div>
+      <div class="modal__footer">
+        <button type="button" class="btn btn--secondary" data-action="close-modal">Cancel</button>
+        <button type="submit" class="btn btn--primary" id="rc-submit-add-domain">Add Webmail Domain</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL: DELETE WEBMAIL ACCESS -->
+<div class="modal-backdrop hidden" id="rc-modal-delete-domain" role="dialog">
+  <div class="modal" style="max-width: 440px;">
+    <div class="modal__header">
+      <h3 class="modal__title">Delete Webmail Access</h3>
+      <button type="button" class="modal__close" data-action="close-modal">&times;</button>
+    </div>
+    <div class="modal__body">
+      <p style="font-size: 13px; color: var(--color-text); margin-bottom: 12px; line-height: 1.5;">
+        This will remove the webmail proxy, SSL certificate, and DNS record for <strong id="rc-delete-domain-name" style="color: var(--color-danger);"></strong>.
+      </p>
+      <p style="font-size: 12px; color: var(--color-muted);">
+        Maddy mailboxes, emails, and contacts are fully preserved.
+      </p>
+    </div>
+    <div class="modal__footer">
+      <input type="hidden" id="rc-delete-domain-input">
+      <button type="button" class="btn btn--secondary" data-action="close-modal">Cancel</button>
+      <button type="button" class="btn btn--danger" id="rc-confirm-delete-btn" onclick="executeDeleteWebmail()">Delete Webmail</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: MAIL DIAGNOSTICS -->
+<div class="modal-backdrop hidden" id="rc-modal-diagnostics" role="dialog">
+  <div class="modal" style="max-width: 480px;">
+    <div class="modal__header">
+      <h3 class="modal__title">Maddy Mail Diagnostics</h3>
+      <button type="button" class="modal__close" data-action="close-modal">&times;</button>
+    </div>
+    <div class="modal__body">
+      <div id="rc-diag-loading" style="text-align: center; padding: 20px; color: var(--color-muted); font-size: 13px;">
+        Probing Maddy IMAP and SMTP listeners…
+      </div>
+      <div id="rc-diag-content" style="display: none; flex-direction: column; gap: 12px;">
+        <div class="php-spec-item">
+          <span class="php-spec-label">IMAP Connection</span>
+          <span class="php-spec-value" id="rc-diag-imap-val"></span>
+        </div>
+        <div class="php-spec-item">
+          <span class="php-spec-label">SMTP Submission</span>
+          <span class="php-spec-value" id="rc-diag-smtp-val"></span>
+        </div>
+        <div id="rc-diag-banner-box" style="font-size: 11px; color: var(--color-muted); padding: 8px 10px; background: var(--color-surface-hover);"></div>
+      </div>
+    </div>
+    <div class="modal__footer">
+      <button type="button" class="btn btn--secondary" data-action="close-modal">Close</button>
+    </div>
+  </div>
+</div>

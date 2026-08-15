@@ -1,0 +1,21 @@
+{
+  "id": "roundcube_php",
+  "name": "Roundcube Webmail (PHP)",
+  "description": "Native PHP webmail for Maddy mailboxes with SQLite database and customizable settings.",
+  "version": "1.0.0",
+  "author": "tooco.",
+  "icon": "mail",
+  "route_prefix": "/plugins/roundcube_php",
+  "sidebar": true,
+  "sidebar_label": "Webmail PHP",
+  "enabled": true,
+  "data_purge": true,
+  "usage": {
+    "process_names": ["php", "php-fpm"]
+  },
+  "requires": {
+    "dependencies": ["php"]
+  },
+  "install_script": "scripts/install_roundcube.sh",
+  "uninstall_script": "scripts/uninstall_roundcube.sh"
+}

@@ -1,0 +1,67 @@
+{% extends "layout.html" %}
+
+{% block title %}Roundcube Webmail (PHP) — {{ PANEL_NAME }}{% endblock %}
+{% block page_title %}Roundcube Webmail (PHP){% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="/static/css/php-sites.css?v={{ APP_VERSION }}">
+<link rel="stylesheet" href="/plugins/roundcube_php/static/css/roundcube_php.css?v={{ APP_VERSION }}">
+{% endblock %}
+
+{% block topbar_actions %}
+  {% if not status.installed %}
+    <button type="button" class="btn btn--primary" id="rc-topbar-install-btn">+ Install Webmail</button>
+  {% else %}
+    <button type="button" class="btn btn--primary" id="rc-topbar-add-domain" data-action="open-modal" data-modal="rc-modal-add-domain">+ Add Webmail Domain</button>
+    <button type="button" class="btn btn--secondary" id="rc-topbar-test-mail">Test Mail Connection</button>
+    {% if status.running %}
+      <button type="button" class="btn btn--secondary" id="rc-topbar-restart-btn">Restart</button>
+    {% else %}
+      <button type="button" class="btn btn--secondary" id="rc-topbar-start-btn">Start Server</button>
+    {% endif %}
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+{% import "partials/list_actions_toggle.html" as list_actions %}
+
+<div class="php-detail" style="width: 100%;">
+  <div class="php-split-layout">
+    <!-- LEFT COLUMN: STICKY NAVIGATION RAIL -->
+    <div class="php-split-nav" data-detail-tabs role="tablist">
+      <button class="php-split-nav-btn is-active" type="button" role="tab" data-rc-tab="domains" id="rc-tab-domains" onclick="switchRcTab('domains', this)">
+        <span>Webmail Domains</span>
+        <span class="badge-minimal" id="rc-badge-domains-count" style="margin-left: auto;">{{ domain_rows|length if domain_rows else 0 }}</span>
+      </button>
+      <button class="php-split-nav-btn" type="button" role="tab" data-rc-tab="settings" id="rc-tab-settings" onclick="switchRcTab('settings', this)">
+        <span>Configuration &amp; Skin</span>
+      </button>
+      <button class="php-split-nav-btn" type="button" role="tab" data-rc-tab="plugins" id="rc-tab-plugins" onclick="switchRcTab('plugins', this)">
+        <span>Roundcube Plugins</span>
+      </button>
+      <button class="php-split-nav-btn" type="button" role="tab" data-rc-tab="maintenance" id="rc-tab-maintenance" onclick="switchRcTab('maintenance', this)">
+        <span>Database &amp; Cache</span>
+      </button>
+      <button class="php-split-nav-btn" type="button" role="tab" data-rc-tab="service-specs" id="rc-tab-service-specs" onclick="switchRcTab('service-specs', this)">
+        <span>Service &amp; Specs</span>
+      </button>
+    </div>
+
+    <!-- RIGHT COLUMN: SPLIT CONTENT & CARDS GRID -->
+    <div class="php-split-content">
+      {% include 'partials/_domains_tab.html' %}
+      {% include 'partials/_settings_tab.html' %}
+      {% include 'partials/_plugins_tab.html' %}
+      {% include 'partials/_maintenance_tab.html' %}
+      {% include 'partials/_service_specs.html' %}
+      {% include 'partials/_modals.html' %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+  {% include 'partials/_scripts_core.html' %}
+  {% include 'partials/_scripts_domains.html' %}
+  {% include 'partials/_scripts_settings.html' %}
+{% endblock %}

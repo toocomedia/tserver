@@ -60,18 +60,53 @@ async def maddy_index(request: Request, db: AsyncSession = Depends(get_db)):
 
     server_ip = getattr(config, "SERVER_IP", "127.0.0.1")
     webmail_sites = {}
-    webmail_plugin = plugin_manager.plugins.get("roundcube_webmail")
     from services.component_state import component_state_store
 
-    webmail_enabled = bool(
-        webmail_plugin
-        and component_state_store.get(
-            "plugin",
-            "roundcube_webmail",
-            default_enabled=bool(webmail_plugin.get("manifest_enabled", True)),
-        ).desired_enabled
-    )
-    if webmail_enabled and webmail_plugin.get("installed"):
+    # Check for roundcube_php first, then fall back to roundcube_webmail
+    active_webmail_id = None
+    for candidate_id in ("roundcube_php", "roundcube_webmail"):
+        cand_plugin = plugin_manager.plugins.get(candidate_id)
+        if (
+            cand_plugin
+            and cand_plugin.get("installed")
+            and component_state_store.get(
+                "plugin",
+                candidate_id,
+                default_enabled=bool(cand_plugin.get("manifest_enabled", True)),
+            ).desired_enabled
+        ):
+            active_webmail_id = candidate_id
+            break
+
+    if active_webmail_id == "roundcube_php":
+        try:
+            from plugins.roundcube_php.service import roundcube_php_service
+
+            for item in mail_domains:
+                domain = item["domain"].lower()
+                site = roundcube_php_service.get_site(domain)
+                public_url = roundcube_php_service.get_public_url(domain)
+                if not site:
+                    reason = "Set up webmail for this domain."
+                elif not public_url:
+                    reason = "Finish DNS and HTTPS setup."
+                else:
+                    reason = None
+                webmail_sites[domain] = {
+                    "ready": bool(public_url),
+                    "reason": reason,
+                    "setup_url": f"/plugins/roundcube_php/#domains",
+                }
+        except Exception:
+            logger.exception("Could not determine Roundcube PHP webmail availability.")
+            for item in mail_domains:
+                domain = item["domain"].lower()
+                webmail_sites[domain] = {
+                    "ready": False,
+                    "reason": "Could not read Roundcube PHP status.",
+                    "setup_url": "/plugins/roundcube_php/",
+                }
+    elif active_webmail_id == "roundcube_webmail":
         try:
             from plugins.roundcube_webmail.service import roundcube_webmail_service
 
