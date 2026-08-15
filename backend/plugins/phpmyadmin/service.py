@@ -166,7 +166,16 @@ class PhpMyAdminService:
     @staticmethod
     def _port_open(host: str, port: int) -> bool:
         try:
-            with socket.create_connection((host, port), timeout=1.0):
+            with socket.create_connection((host, port), timeout=1.5) as sock:
+                if port != 3306:
+                    # Send a minimal valid HTTP request so PHP's built-in CLI web
+                    # server handles it cleanly without triggering speculative
+                    # connection disconnect log warnings or worker process deadlocks.
+                    try:
+                        sock.sendall(b"HEAD / HTTP/1.0\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n")
+                        sock.recv(64)
+                    except OSError:
+                        pass
                 return True
         except OSError:
             return False
@@ -276,10 +285,10 @@ class PhpMyAdminService:
             )
 
     def resume(self) -> None:
-        """Start the owned phpMyAdmin server unit."""
+        """Start or restart the owned phpMyAdmin server unit."""
         if not self.is_installed():
             raise RuntimeError("phpMyAdmin is not installed.")
-        result = self._run(["systemctl", "start", self.unit_name], timeout=30)
+        result = self._run(["systemctl", "restart", self.unit_name], timeout=30)
         if result.returncode != 0:
             raise RuntimeError(
                 result.stderr.strip() or f"Could not start {self.unit_name}."

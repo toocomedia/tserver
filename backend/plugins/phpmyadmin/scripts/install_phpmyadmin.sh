@@ -9,17 +9,38 @@ DATA_DIR="${PHPMYADMIN_DATA_DIR:-/opt/srv-panel/data/phpmyadmin}"
 HTDOCS="$DATA_DIR/htdocs"
 UNIT="srv-panel-phpmyadmin.service"
 UNIT_PATH="/etc/systemd/system/${UNIT}"
+PANEL_USER="${PANEL_USER:-panel}"
+
+# Stop the existing service first so candidate port checks reflect actual external usage.
+systemctl stop "$UNIT" >/dev/null 2>&1 || true
+
 PORT=""
 if [[ -n "${PHPMYADMIN_PORT:-}" ]]; then
     PORT="$PHPMYADMIN_PORT"
 else
-    # Pick the first free local port so a busy 8090 cannot wedge the server.
-    for CANDIDATE in 8090 8091 8092 8093 8094 8095; do
-        if ! (exec 3<>/dev/tcp/127.0.0.1/${CANDIDATE}) 2>/dev/null; then
-            PORT="$CANDIDATE"
-            break
-        fi
-    done
+    # Check if an existing port is already recorded in state.json
+    EXISTING_PORT="$(python3 -c '
+import json, sys
+try:
+    data = json.load(open(sys.argv[1], encoding="utf-8"))
+    port = data.get("port")
+    if isinstance(port, int) and 1024 <= port <= 65535:
+        print(port)
+except Exception:
+    pass
+' "${DATA_DIR}/state.json" 2>/dev/null || true)"
+
+    if [[ -n "$EXISTING_PORT" ]] && ! (exec 3<>/dev/tcp/127.0.0.1/${EXISTING_PORT}) 2>/dev/null; then
+        PORT="$EXISTING_PORT"
+    else
+        # Pick the first free local port so a busy 8090 cannot wedge the server.
+        for CANDIDATE in 8090 8091 8092 8093 8094 8095; do
+            if ! (exec 3<>/dev/tcp/127.0.0.1/${CANDIDATE}) 2>/dev/null; then
+                PORT="$CANDIDATE"
+                break
+            fi
+        done
+    fi
 fi
 if [[ -z "$PORT" ]]; then
     echo "No free port available for phpMyAdmin (8090-8095)." >&2
@@ -39,10 +60,10 @@ try:
 except Exception:
     pass
 data["port"] = int(sys.argv[2])
+data["schema_version"] = 2
 with open(path, "w", encoding="utf-8") as handle:
     json.dump(data, handle, indent=2)
 PY
-PANEL_USER="${PANEL_USER:-panel}"
 PMA_URL="https://files.phpmyadmin.net/phpMyAdmin/${PMA_VERSION}/phpMyAdmin-${PMA_VERSION}-all-languages.tar.gz"
 PMA_SHA256_URL="${PMA_URL}.sha256"
 
@@ -171,11 +192,16 @@ fi
 
 # 6. Ownership and a systemd unit running the PHP built-in server.
 #    www-data must be able to traverse into htdocs (WorkingDirectory), so the
-#    data dir needs world execute — files inside stay root/www-data protected.
+#    data dir needs execute — files inside stay root/www-data protected.
+#    Panel user must be able to read/write state.json.
+mkdir -p "$HTDOCS" "$DATA_DIR/sessions" "$DATA_DIR/tmp"
 chown -R www-data:www-data "$HTDOCS" "$DATA_DIR/sessions" "$DATA_DIR/tmp"
 chmod -R 0755 "$HTDOCS"
+chmod 0770 "$DATA_DIR/sessions" "$DATA_DIR/tmp"
+chown "${PANEL_USER}:www-data" "$DATA_DIR" 2>/dev/null || chown www-data:www-data "$DATA_DIR" 2>/dev/null || true
 chmod 0755 "$DATA_DIR"
-chmod 0644 "$DATA_DIR/state.json" 2>/dev/null || true
+chown "${PANEL_USER}:www-data" "$DATA_DIR/state.json" 2>/dev/null || true
+chmod 0664 "$DATA_DIR/state.json" 2>/dev/null || true
 if [[ "$DATA_DIR" == /opt/srv-panel/* ]]; then
     chmod o+x /opt/srv-panel /opt/srv-panel/data 2>/dev/null || true
 fi
@@ -190,10 +216,11 @@ Type=simple
 User=www-data
 Group=www-data
 WorkingDirectory=${HTDOCS}
-Environment=PHP_CLI_SERVER_WORKERS=2
+Environment=PHP_CLI_SERVER_WORKERS=4
 ExecStart=${PHP_BIN} -S 127.0.0.1:${PORT} -t ${HTDOCS} -d session.save_path=${DATA_DIR}/sessions -d upload_tmp_dir=${DATA_DIR}/tmp -d post_max_size=64M -d upload_max_filesize=64M
-Restart=on-failure
-RestartSec=3
+Restart=always
+RestartSec=2
+KillMode=control-group
 NoNewPrivileges=true
 ProtectSystem=full
 ProtectHome=true
@@ -204,7 +231,8 @@ WantedBy=multi-user.target
 UNIT
 
 systemctl daemon-reload
-systemctl enable --now "$UNIT" >/dev/null 2>&1 || systemctl restart "$UNIT"
+systemctl enable "$UNIT" >/dev/null 2>&1 || true
+systemctl restart "$UNIT"
 for _ in $(seq 1 15); do
     if (exec 3<>/dev/tcp/127.0.0.1/${PORT}) 2>/dev/null; then
         break
@@ -217,4 +245,6 @@ if ! (exec 3<>/dev/tcp/127.0.0.1/${PORT}) 2>/dev/null; then
 fi
 
 echo "$CONFIG_VERSION" > "$DATA_DIR/config_version"
+chown "${PANEL_USER}:www-data" "$DATA_DIR/config_version" 2>/dev/null || true
+chmod 0664 "$DATA_DIR/config_version" 2>/dev/null || true
 echo "==> phpMyAdmin ${PMA_VERSION} installed on PHP ${PHP_VERSION} (127.0.0.1:${PORT})."

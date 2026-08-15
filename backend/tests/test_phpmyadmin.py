@@ -210,7 +210,7 @@ class PhpMyAdminLifecycleTests(unittest.TestCase):
         service.resume()
         self.assertEqual(
             service._run.call_args.args[0],
-            ["systemctl", "start", service.unit_name],
+            ["systemctl", "restart", service.unit_name],
         )
 
     def test_pause_skips_when_not_installed(self):

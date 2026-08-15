@@ -96,10 +96,6 @@ async def start_phpmyadmin(request: Request):
 async def restart_phpmyadmin(request: Request):
     try:
         if phpmyadmin_service.is_installed():
-            try:
-                phpmyadmin_service.pause()
-            except Exception:
-                pass
             phpmyadmin_service.resume()
     except RuntimeError as exc:
         return JSONResponse({"detail": str(exc)}, status_code=500)
@@ -161,7 +157,7 @@ async def proxy_phpmyadmin(request: Request, path: str = ""):
     headers["x-forwarded-proto"] = request.url.scheme
     body = await request.body()
 
-    client = httpx.AsyncClient(timeout=None)
+    client = httpx.AsyncClient(timeout=120.0)
     try:
         upstream = await client.request(
             request.method,
@@ -173,7 +169,7 @@ async def proxy_phpmyadmin(request: Request, path: str = ""):
     except httpx.HTTPError as exc:
         logger.warning("phpMyAdmin proxy failed: %s", exc)
         return JSONResponse(
-            {"detail": "phpMyAdmin is not running. Install it from the plugin page."},
+            {"detail": "phpMyAdmin is not running. Start or install it from the plugin page."},
             status_code=502,
         )
     finally:
