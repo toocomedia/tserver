@@ -238,6 +238,81 @@ PY
 chown "${PANEL_USER}:www-data" "$DATA_DIR/state.json" 2>/dev/null || true
 chmod 0664 "$DATA_DIR/state.json" 2>/dev/null || true
 
+# 9.1 Sync config.inc.php with state.json
+python3 - "$DATA_DIR" "$HTDOCS" <<'PY'
+import json, os, sys
+data_dir, htdocs = sys.argv[1], sys.argv[2]
+state_path = os.path.join(data_dir, "state.json")
+config_path = os.path.join(htdocs, "config", "config.inc.php")
+settings = {"skin": "elastic", "product_name": "SRV Webmail", "max_message_size": "32M", "session_lifetime": 30, "plugins": ["archive", "zipdownload", "markasjunk", "srvpanel_launch"]}
+try:
+    with open(state_path, encoding="utf-8") as f:
+        st = json.load(f)
+        if isinstance(st, dict) and "settings" in st and isinstance(st["settings"], dict):
+            settings.update(st["settings"])
+except Exception:
+    pass
+
+skin = settings.get("skin") or "elastic"
+product_name = (settings.get("product_name") or "SRV Webmail").replace("'", "\\'")
+max_size = settings.get("max_message_size") or "32M"
+lifetime = int(settings.get("session_lifetime") or 30)
+plugins = list(settings.get("plugins") or ["archive", "zipdownload", "markasjunk", "srvpanel_launch"])
+if "srvpanel_launch" not in plugins:
+    plugins.append("srvpanel_launch")
+plugins_repr = ", ".join(f"'{p}'" for p in plugins)
+db_path = f"{data_dir}/db/roundcube.db"
+
+content = f"""<?php
+
+// Database connection — SQLite for lightweight native execution
+$db_path = '{db_path}';
+$config['db_dsnw'] = 'sqlite:///' . $db_path . '?mode=0646';
+
+// DES Encryption key for session cookies (must be exactly 24 chars)
+$des_file = dirname($db_path) . '/des_key.secret';
+if (file_exists($des_file) && ($key = trim(file_get_contents($des_file))) && strlen($key) >= 24) {{
+    $config['des_key'] = substr($key, 0, 24);
+}} else {{
+    $config['des_key'] = 'rcmail-!srv-panel-key24!';
+}}
+
+// Mail server transport settings — direct localhost connection to Maddy
+$maddy_host = '127.0.0.1';
+$config['imap_host'] = $maddy_host . ':143';
+$config['smtp_host'] = $maddy_host . ':587';
+$config['smtp_user'] = '%u';
+$config['smtp_pass'] = '%p';
+
+$local_tls = [
+    'verify_peer' => false,
+    'verify_peer_name' => false,
+    'allow_self_signed' => true,
+];
+$config['imap_conn_options'] = ['ssl' => $local_tls];
+$config['smtp_conn_options'] = ['ssl' => $local_tls];
+
+// Authentication & Session settings
+$config['auto_create_user'] = true;
+$config['login_lc'] = 2;
+$config['login_autocomplete'] = 1;
+$config['session_lifetime'] = {lifetime};
+
+// UI & Presentation
+$config['skin'] = '{skin}';
+$config['product_name'] = '{product_name}';
+$config['use_https'] = true;
+$config['request_path'] = '/';
+$config['remote_resources'] = false;
+$config['max_message_size'] = '{max_size}';
+
+// Active Roundcube Plugins
+$config['plugins'] = [{plugins_repr}];
+"""
+with open(config_path, "w", encoding="utf-8") as f:
+    f.write(content)
+PY
+
 # 10. Create Systemd Service Unit
 cat > "$UNIT_PATH" <<UNIT
 [Unit]

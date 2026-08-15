@@ -496,6 +496,75 @@ class RoundcubePhpService:
             merged.update(settings)
         return merged
 
+    def sync_config_file(self) -> None:
+        """Generates and writes /opt/srv-panel/data/roundcube_php/htdocs/config/config.inc.php directly."""
+        config_dir = self.htdocs / "config"
+        if not config_dir.is_dir():
+            return
+        config_file = config_dir / "config.inc.php"
+
+        settings = self.get_settings()
+        skin = settings.get("skin") or "elastic"
+        raw_title = settings.get("product_name") or "SRV Webmail"
+        product_name = raw_title.replace("'", "\\'")
+        max_message_size = settings.get("max_message_size") or "32M"
+        session_lifetime = int(settings.get("session_lifetime") or 30)
+        plugins_list = list(settings.get("plugins") or ["archive", "zipdownload", "markasjunk", "srvpanel_launch"])
+        if "srvpanel_launch" not in plugins_list:
+            plugins_list.append("srvpanel_launch")
+        plugins_repr = ", ".join(f"'{p}'" for p in plugins_list)
+
+        php_content = f"""<?php
+
+// Database connection — SQLite for lightweight native execution
+$db_path = '{self.db_path}';
+$config['db_dsnw'] = 'sqlite:///' . $db_path . '?mode=0646';
+
+// DES Encryption key for session cookies (must be exactly 24 chars)
+$des_file = dirname($db_path) . '/des_key.secret';
+if (file_exists($des_file) && ($key = trim(file_get_contents($des_file))) && strlen($key) >= 24) {{
+    $config['des_key'] = substr($key, 0, 24);
+}} else {{
+    $config['des_key'] = 'rcmail-!srv-panel-key24!';
+}}
+
+// Mail server transport settings — direct localhost connection to Maddy
+$maddy_host = '127.0.0.1';
+$config['imap_host'] = $maddy_host . ':143';
+$config['smtp_host'] = $maddy_host . ':587';
+$config['smtp_user'] = '%u';
+$config['smtp_pass'] = '%p';
+
+$local_tls = [
+    'verify_peer' => false,
+    'verify_peer_name' => false,
+    'allow_self_signed' => true,
+];
+$config['imap_conn_options'] = ['ssl' => $local_tls];
+$config['smtp_conn_options'] = ['ssl' => $local_tls];
+
+// Authentication & Session settings
+$config['auto_create_user'] = true;
+$config['login_lc'] = 2;
+$config['login_autocomplete'] = 1;
+$config['session_lifetime'] = {session_lifetime};
+
+// UI & Presentation
+$config['skin'] = '{skin}';
+$config['product_name'] = '{product_name}';
+$config['use_https'] = true;
+$config['request_path'] = '/';
+$config['remote_resources'] = false;
+$config['max_message_size'] = '{max_message_size}';
+
+// Active Roundcube Plugins
+$config['plugins'] = [{plugins_repr}];
+"""
+        try:
+            config_file.write_text(php_content, encoding="utf-8")
+        except (OSError, PermissionError):
+            pass
+
     def update_settings(self, **new_settings: Any) -> dict[str, Any]:
         with self._state_lock:
             state = self.read_state()
@@ -503,6 +572,7 @@ class RoundcubePhpService:
             settings.update(new_settings)
             state["settings"] = settings
             self.write_state(state)
+            self.sync_config_file()
             return settings
 
     # ---------------------------------------------------------------

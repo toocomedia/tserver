@@ -1,10 +1,10 @@
 {% import "partials/list_actions_toggle.html" as list_actions %}
 
-<div class="rc-tab-pane" id="rc-panel-domains" data-panel="domains">
-  <div class="rc-card">
-    <div class="rc-card-head">
-      <h3 class="rc-card-title">Configured Webmail Domains</h3>
-      <input type="text" class="input input--sm rc-input-sm" placeholder="Filter domains..." oninput="filterRcDomains(this.value)">
+<div class="rc-panel" id="rc-panel-domains" data-panel="domains">
+  <div class="php-card">
+    <div class="php-card__title">
+      <span>Webmail Domains</span>
+      <input type="text" class="form-input rc-search-box" placeholder="Filter domains..." oninput="filterRcDomains(this.value)">
     </div>
 
     {% if not domain_rows %}

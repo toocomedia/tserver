@@ -1,26 +1,26 @@
-<div class="rc-tab-pane" id="rc-panel-maintenance" data-panel="maintenance" style="display:none;">
-  <div class="rc-card">
-    <div class="rc-card-head">
-      <h3 class="rc-card-title">Database &amp; Storage</h3>
+<div class="rc-panel" id="rc-panel-maintenance" data-panel="maintenance" style="display:none;">
+  <div class="php-card">
+    <div class="php-card__title">
+      <span>Database &amp; Storage</span>
     </div>
 
     <div style="padding: 18px; display: flex; flex-direction: column; gap: 18px;">
-      <div class="rc-spec-grid">
-        <div class="rc-spec-box">
-          <span class="rc-spec-lbl">Engine</span>
-          <span class="rc-spec-val">{{ db_stats.db_type or 'SQLite' }}</span>
+      <div class="php-spec-grid">
+        <div class="php-spec-item">
+          <span class="php-spec-label">Engine</span>
+          <span class="php-spec-value">{{ db_stats.db_type or 'SQLite' }}</span>
         </div>
-        <div class="rc-spec-box">
-          <span class="rc-spec-lbl">Size</span>
-          <span class="rc-spec-val" id="rc-db-size-val">{{ db_stats.db_size or '0 KB' }}</span>
+        <div class="php-spec-item">
+          <span class="php-spec-label">Size</span>
+          <span class="php-spec-value" id="rc-db-size-val">{{ db_stats.db_size or '0 KB' }}</span>
         </div>
-        <div class="rc-spec-box">
-          <span class="rc-spec-lbl">Users</span>
-          <span class="rc-spec-val" id="rc-db-users-val">{{ db_stats.users_count or 0 }}</span>
+        <div class="php-spec-item">
+          <span class="php-spec-label">Users</span>
+          <span class="php-spec-value" id="rc-db-users-val">{{ db_stats.users_count or 0 }}</span>
         </div>
-        <div class="rc-spec-box">
-          <span class="rc-spec-lbl">Contacts</span>
-          <span class="rc-spec-val" id="rc-db-contacts-val">{{ db_stats.contacts_count or 0 }}</span>
+        <div class="php-spec-item">
+          <span class="php-spec-label">Contacts</span>
+          <span class="php-spec-value" id="rc-db-contacts-val">{{ db_stats.contacts_count or 0 }}</span>
         </div>
       </div>
 

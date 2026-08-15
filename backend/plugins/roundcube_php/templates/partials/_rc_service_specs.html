@@ -1,7 +1,7 @@
-<div class="rc-tab-pane" id="rc-panel-service-specs" data-panel="service-specs" style="display:none;">
-  <div class="rc-card">
-    <div class="rc-card-head">
-      <h3 class="rc-card-title">Service Specifications</h3>
+<div class="rc-panel" id="rc-panel-service-specs" data-panel="service-specs" style="display:none;">
+  <div class="php-card">
+    <div class="php-card__title">
+      <span>Service Specifications</span>
       <div>
         {% if not status.installed %}
           <span class="badge badge--muted">Not Installed</span>
@@ -16,22 +16,22 @@
     </div>
 
     <div style="padding: 18px; display: flex; flex-direction: column; gap: 16px;">
-      <div class="rc-spec-grid">
-        <div class="rc-spec-box">
-          <span class="rc-spec-lbl">Systemd Unit</span>
-          <span class="rc-spec-val"><code>srv-panel-roundcube-php</code></span>
+      <div class="php-spec-grid">
+        <div class="php-spec-item">
+          <span class="php-spec-label">Systemd Unit</span>
+          <span class="php-spec-value"><code>srv-panel-roundcube-php</code></span>
         </div>
-        <div class="rc-spec-box">
-          <span class="rc-spec-lbl">PHP Engine</span>
-          <span class="rc-spec-val">{{ ('PHP ' ~ status.php_version) if status.php_version else 'Managed' }}</span>
+        <div class="php-spec-item">
+          <span class="php-spec-label">PHP Engine</span>
+          <span class="php-spec-value">{{ ('PHP ' ~ status.php_version) if status.php_version else 'Managed' }}</span>
         </div>
-        <div class="rc-spec-box">
-          <span class="rc-spec-lbl">Local Listener</span>
-          <span class="rc-spec-val"><code>127.0.0.1:{{ status.port }}</code></span>
+        <div class="php-spec-item">
+          <span class="php-spec-label">Local Listener</span>
+          <span class="php-spec-value"><code>127.0.0.1:{{ status.port }}</code></span>
         </div>
-        <div class="rc-spec-box">
-          <span class="rc-spec-lbl">Maddy Server</span>
-          <span class="rc-spec-val"><code>127.0.0.1:143 / 587</code></span>
+        <div class="php-spec-item">
+          <span class="php-spec-label">Maddy Server</span>
+          <span class="php-spec-value"><code>127.0.0.1:143 / 587</code></span>
         </div>
       </div>
 

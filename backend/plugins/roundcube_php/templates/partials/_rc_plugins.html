@@ -1,31 +1,31 @@
-<div class="rc-tab-pane" id="rc-panel-plugins" data-panel="plugins" style="display:none;">
-  <div class="rc-card">
-    <div class="rc-card-head">
-      <h3 class="rc-card-title">Roundcube Plugins</h3>
+<div class="rc-panel" id="rc-panel-plugins" data-panel="plugins" style="display:none;">
+  <div class="php-card">
+    <div class="php-card__title">
+      <span>Plugins</span>
     </div>
 
     <form id="rc-plugins-form" style="padding: 18px; max-width: 520px; display: flex; flex-direction: column; gap: 10px;">
-      <label class="rc-toggle-item">
+      <label class="php-spec-item" style="cursor: pointer; flex-direction: row; justify-content: space-between; align-items: center;">
         <span style="font-size: 13px; font-weight: 600; color: var(--color-text);">Archive Folder (archive)</span>
         <input type="checkbox" name="plugins" value="archive" {% if 'archive' in settings.plugins %}checked{% endif %}>
       </label>
 
-      <label class="rc-toggle-item">
+      <label class="php-spec-item" style="cursor: pointer; flex-direction: row; justify-content: space-between; align-items: center;">
         <span style="font-size: 13px; font-weight: 600; color: var(--color-text);">Zip Attachments (zipdownload)</span>
         <input type="checkbox" name="plugins" value="zipdownload" {% if 'zipdownload' in settings.plugins %}checked{% endif %}>
       </label>
 
-      <label class="rc-toggle-item">
+      <label class="php-spec-item" style="cursor: pointer; flex-direction: row; justify-content: space-between; align-items: center;">
         <span style="font-size: 13px; font-weight: 600; color: var(--color-text);">Mark as Junk (markasjunk)</span>
         <input type="checkbox" name="plugins" value="markasjunk" {% if 'markasjunk' in settings.plugins %}checked{% endif %}>
       </label>
 
-      <label class="rc-toggle-item">
+      <label class="php-spec-item" style="cursor: pointer; flex-direction: row; justify-content: space-between; align-items: center;">
         <span style="font-size: 13px; font-weight: 600; color: var(--color-text);">Emoticons (emoticons)</span>
         <input type="checkbox" name="plugins" value="emoticons" {% if 'emoticons' in settings.plugins %}checked{% endif %}>
       </label>
 
-      <label class="rc-toggle-item" style="opacity: 0.85;">
+      <label class="php-spec-item" style="opacity: 0.85; flex-direction: row; justify-content: space-between; align-items: center;">
         <span style="font-size: 13px; font-weight: 600; color: var(--color-text);">Fast Launch (srvpanel_launch)</span>
         <input type="checkbox" name="plugins" value="srvpanel_launch" checked disabled>
       </label>

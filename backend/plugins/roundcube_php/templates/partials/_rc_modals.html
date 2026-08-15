@@ -9,19 +9,21 @@
       <div class="modal__body" style="display: flex; flex-direction: column; gap: 12px;">
         <div class="form-group">
           <label class="form-label" for="rc-modal-mail-domain">Mail Domain</label>
-          <select class="input" id="rc-modal-mail-domain" name="mail_domain" required onchange="onRcDomainSelectChange(this.value)">
-            <option value="">Select Domain...</option>
-            {% for item in domain_rows %}
-              {% if not item.site %}
-                <option value="{{ item.domain }}">{{ item.domain }}</option>
-              {% endif %}
-            {% endfor %}
-          </select>
+          <div class="form-select-wrap">
+            <select class="form-select" id="rc-modal-mail-domain" name="mail_domain" required onchange="onRcDomainSelectChange(this.value)">
+              <option value="">Select Domain...</option>
+              {% for item in domain_rows %}
+                {% if not item.site %}
+                  <option value="{{ item.domain }}">{{ item.domain }}</option>
+                {% endif %}
+              {% endfor %}
+            </select>
+          </div>
         </div>
 
         <div class="form-group">
           <label class="form-label" for="rc-modal-public-host">Hostname (e.g. mm.domain.com)</label>
-          <input type="text" class="input" id="rc-modal-public-host" name="public_host" placeholder="mm.yourdomain.com" required>
+          <input type="text" class="form-input" id="rc-modal-public-host" name="public_host" placeholder="mm.yourdomain.com" required>
         </div>
 
         <div class="form-group">
