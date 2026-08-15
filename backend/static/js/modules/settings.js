@@ -424,6 +424,35 @@
       });
     }
 
+    // Accent color toggle logic
+    const accentRadios = document.querySelectorAll('input[name="accent_color"]');
+    if (accentRadios.length) {
+      const savedAccent = localStorage.getItem("accent_color") || "lime";
+      accentRadios.forEach(radio => {
+        if (radio.value === savedAccent) {
+          radio.checked = true;
+          const card = radio.closest('.settings-choice');
+          if (card) card.classList.add('settings-choice--active');
+        }
+        
+        radio.addEventListener("change", (e) => {
+          if (e.target.checked) {
+            accentRadios.forEach(r => {
+              const card = r.closest('.settings-choice');
+              if (card) card.classList.toggle('settings-choice--active', r.checked);
+            });
+            const val = e.target.value;
+            localStorage.setItem("accent_color", val);
+            if (val && val !== "lime") {
+              document.documentElement.setAttribute("data-accent", val);
+            } else {
+              document.documentElement.removeAttribute("data-accent");
+            }
+          }
+        });
+      });
+    }
+
     // Sidebar style toggle logic
     const sidebarRadios = document.querySelectorAll('input[name="sidebar_style"]');
     if (sidebarRadios.length) {
