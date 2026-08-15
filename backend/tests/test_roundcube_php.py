@@ -84,6 +84,7 @@ class RoundcubePhpStateAndSettingsTests(unittest.TestCase):
     def test_sync_config_file_generates_valid_php(self):
         config_dir = self.service.htdocs / "config"
         config_dir.mkdir(parents=True, exist_ok=True)
+        (self.service.htdocs / "skins" / "classic").mkdir(parents=True, exist_ok=True)
         self.service.update_settings(
             skin="classic",
             product_name="Custom Webmail",

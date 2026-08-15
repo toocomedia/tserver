@@ -512,7 +512,10 @@ class RoundcubePhpService:
         config_file = config_dir / "config.inc.php"
 
         settings = self.get_settings()
-        skin = settings.get("skin") or "elastic"
+        requested_skin = settings.get("skin") or "elastic"
+        # Validate that skin directory exists in htdocs/skins to avoid Roundcube 404
+        skin_dir = self.htdocs / "skins" / requested_skin
+        skin = requested_skin if skin_dir.is_dir() else "elastic"
         raw_title = settings.get("product_name") or "SRV Webmail"
         product_name = raw_title.replace("'", "\\'")
         max_message_size = settings.get("max_message_size") or "32M"
