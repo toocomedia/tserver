@@ -651,7 +651,7 @@
       }
 
       const swapfileMb = opt.swapfile_size_mb ?? 0;
-      const totalEffectiveMb = isOptActive ? (500 + swapfileMb) : swapfileMb;
+      const totalEffectiveMb = opt.total_swap_mb ?? (isOptActive ? (500 + swapfileMb) : swapfileMb);
 
       swapGroup.querySelectorAll('button[data-swap-size]').forEach(btn => {
         if (btn.style.display === 'none') {
@@ -663,11 +663,11 @@
         if (targetSz === 0) {
           isMatch = !isOptActive && totalEffectiveMb === 0;
         } else if (targetSz === 500) {
-          isMatch = isOptActive && swapfileMb === 0;
+          isMatch = isOptActive && totalEffectiveMb <= 750;
         } else if (targetSz === 512) {
           isMatch = !isOptActive && Math.abs(512 - totalEffectiveMb) <= 64;
         } else {
-          isMatch = Math.abs(targetSz - totalEffectiveMb) <= 128;
+          isMatch = Math.abs(targetSz - totalEffectiveMb) <= 256;
         }
         btn.classList.toggle('is-active', isMatch);
       });

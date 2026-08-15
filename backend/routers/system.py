@@ -187,10 +187,12 @@ async def _get_optimization_status() -> dict:
     can_disable_swap = True
     ram_available_mb = 0
     swap_used_mb = 0
+    total_swap_mb = 0
     try:
         if _psutil is not None:
             vm = _psutil.virtual_memory()
             sm = _psutil.swap_memory()
+            total_swap_mb = round(sm.total / (1024 * 1024))
             ram_available_mb = round(vm.available / (1024 * 1024))
             swap_used_mb = round(sm.used / (1024 * 1024))
             can_purge_swap = sm.used == 0 or vm.available >= (sm.used + 100 * 1024 * 1024)
@@ -207,6 +209,7 @@ async def _get_optimization_status() -> dict:
         "advanced_tuning_active": advanced_active,
         "hardware_checks": _HARDWARE_CACHE,
         "swapfile_size_mb": swapfile_size_mb,
+        "total_swap_mb": total_swap_mb,
         "can_safely_purge_swap": can_purge_swap,
         "can_safely_disable_swap": can_disable_swap,
         "ram_available_mb": ram_available_mb,
