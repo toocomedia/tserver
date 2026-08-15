@@ -360,6 +360,7 @@ p {
 
   /* Components */
   --color-on-solid:   #FFFFFF; 
+  --color-on-accent:  #111111;
   --color-alert-success-bg: #1A2E22;
   --color-alert-danger-bg:  #3A1A1A;
   --color-row-active: #1E293B;
@@ -378,6 +379,9 @@ p {
   --color-muted:      #9CA3AF;
   --color-line:       #2A2A34;
   
+  /* Keep accents the same */
+  --color-accent:     #C7F464; 
+  --color-accent-2:   #A8E04A;
   --color-neutral:    #EAECEF; 
   --color-danger:     #EF4444; 
   --color-warn:       #FBBF24;
@@ -393,6 +397,7 @@ p {
   
   /* Components */
   --color-on-solid:   #FFFFFF; 
+  --color-on-accent:  #111111;
   --color-alert-success-bg: #111A11;
   --color-alert-danger-bg:  #1A1111;
   --color-row-active: #1F1F24;
@@ -411,6 +416,8 @@ p {
   --color-muted:      #B0B7C3;
   --color-line:       rgba(255, 255, 255, 0.15);
   
+  --color-accent:     #C7F464; 
+  --color-accent-2:   #A8E04A;
   --color-neutral:    #EAECEF; 
   --color-danger:     #EF4444; 
   --color-warn:       #FBBF24; 
@@ -426,49 +433,10 @@ p {
 
   /* Components */
   --color-on-solid:   #FFFFFF; 
+  --color-on-accent:  #111111;
   --color-alert-success-bg: #1B2E21;
   --color-alert-danger-bg:  #381B1B;
   --color-row-active: #272B31;
-}
-
-/* ============================================================
-   ACCENT COLOR VARIANTS
-   ============================================================ */
-:root,
-[data-accent="lime"] {
-  --color-accent:     #C7F464;
-  --color-accent-2:   #A8E04A;
-  --color-on-accent:  #111111;
-}
-
-[data-accent="emerald"] {
-  --color-accent:     #00D87F;
-  --color-accent-2:   #00B368;
-  --color-on-accent:  #0B0C0B;
-}
-
-[data-accent="cyan"] {
-  --color-accent:     #38BDF8;
-  --color-accent-2:   #0EA5E9;
-  --color-on-accent:  #0F172A;
-}
-
-[data-accent="violet"] {
-  --color-accent:     #A855F7;
-  --color-accent-2:   #9333EA;
-  --color-on-accent:  #FFFFFF;
-}
-
-[data-accent="amber"] {
-  --color-accent:     #F59E0B;
-  --color-accent-2:   #D97706;
-  --color-on-accent:  #111111;
-}
-
-[data-accent="rose"] {
-  --color-accent:     #F43F5E;
-  --color-accent-2:   #E11D48;
-  --color-on-accent:  #FFFFFF;
 }
 
 /* ============================================================

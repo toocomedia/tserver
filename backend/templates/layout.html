@@ -60,11 +60,6 @@
     } else if (sidebarStyle === 'full') {
       document.documentElement.setAttribute('data-sidebar-style', 'full');
     }
-
-    var accentColor = localStorage.getItem('accent_color') || 'lime';
-    if (accentColor && accentColor !== 'lime') {
-      document.documentElement.setAttribute('data-accent', accentColor);
-    }
     
     // JS Translations Catalog
     window.I18N = {{ get_js_translations() | safe }};
