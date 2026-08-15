@@ -1,15 +1,69 @@
 /* ==========================================================================
    srv-t Control Panel — Right-To-Left (RTL) Master Stylesheet
-   Optimized Arabic Typography (Bahij Font, line-height: 1.5) & RTL Layout
+   Optimized Arabic Typography (Bahij Font, Full Bold & Weight Coverage, line-height: 1.5)
+   Full RTL Layout, Text Alignment & Center Alignment Preservation
    ========================================================================== */
 
 /* --------------------------------------------------------------------------
    0. Arabic Font Declarations (@font-face)
+   Multi-weight declarations ensure browsers resolve Bahij for ALL weights
+   (400, 500, 600, 700, 800, 900) instead of falling back to system fonts on bold.
    -------------------------------------------------------------------------- */
 @font-face {
   font-family: 'Bahij';
   font-style: normal;
-  font-weight: 100 900;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/static/fonts/ar/bahij.woff') format('woff'),
+       url('/static/fonts/ar/bahij.ttf') format('truetype');
+  unicode-range: U+0600-06FF, U+0750-077F, U+08A0-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FEFF, U+FE80-FEFC;
+}
+
+@font-face {
+  font-family: 'Bahij';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/static/fonts/ar/bahij.woff') format('woff'),
+       url('/static/fonts/ar/bahij.ttf') format('truetype');
+  unicode-range: U+0600-06FF, U+0750-077F, U+08A0-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FEFF, U+FE80-FEFC;
+}
+
+@font-face {
+  font-family: 'Bahij';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/static/fonts/ar/bahij.woff') format('woff'),
+       url('/static/fonts/ar/bahij.ttf') format('truetype');
+  unicode-range: U+0600-06FF, U+0750-077F, U+08A0-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FEFF, U+FE80-FEFC;
+}
+
+@font-face {
+  font-family: 'Bahij';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/static/fonts/ar/bahij.woff') format('woff'),
+       url('/static/fonts/ar/bahij.ttf') format('truetype');
+  unicode-range: U+0600-06FF, U+0750-077F, U+08A0-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FEFF, U+FE80-FEFC;
+}
+
+@font-face {
+  font-family: 'Bahij';
+  font-style: normal;
+  font-weight: 800 900;
+  font-display: swap;
+  src: url('/static/fonts/ar/bahij.woff') format('woff'),
+       url('/static/fonts/ar/bahij.ttf') format('truetype');
+  unicode-range: U+0600-06FF, U+0750-077F, U+08A0-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FEFF, U+FE80-FEFC;
+}
+
+/* Alias for ArabicFont */
+@font-face {
+  font-family: 'ArabicFont';
+  font-style: normal;
+  font-weight: 400;
   font-display: swap;
   src: url('/static/fonts/ar/bahij.woff') format('woff'),
        url('/static/fonts/ar/bahij.ttf') format('truetype');
@@ -19,7 +73,27 @@
 @font-face {
   font-family: 'ArabicFont';
   font-style: normal;
-  font-weight: 100 900;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/static/fonts/ar/bahij.woff') format('woff'),
+       url('/static/fonts/ar/bahij.ttf') format('truetype');
+  unicode-range: U+0600-06FF, U+0750-077F, U+08A0-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FEFF, U+FE80-FEFC;
+}
+
+@font-face {
+  font-family: 'ArabicFont';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/static/fonts/ar/bahij.woff') format('woff'),
+       url('/static/fonts/ar/bahij.ttf') format('truetype');
+  unicode-range: U+0600-06FF, U+0750-077F, U+08A0-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FEFF, U+FE80-FEFC;
+}
+
+@font-face {
+  font-family: 'ArabicFont';
+  font-style: normal;
+  font-weight: 800 900;
   font-display: swap;
   src: url('/static/fonts/ar/bahij.woff') format('woff'),
        url('/static/fonts/ar/bahij.ttf') format('truetype');
@@ -27,59 +101,35 @@
 }
 
 /* --------------------------------------------------------------------------
-   1. Typography & Global Direction
+   1. Typography, Bold Rendering & Global Direction
    -------------------------------------------------------------------------- */
 html[dir="rtl"] {
   direction: rtl;
   text-align: right;
   font-family: 'Bahij', 'ArabicFont', 'Onest', system-ui, -apple-system, sans-serif;
   line-height: 1.5;
-}
-
-html[dir="rtl"] body,
-html[dir="rtl"] p,
-html[dir="rtl"] h1,
-html[dir="rtl"] h2,
-html[dir="rtl"] h3,
-html[dir="rtl"] h4,
-html[dir="rtl"] h5,
-html[dir="rtl"] h6,
-html[dir="rtl"] label,
-html[dir="rtl"] th,
-html[dir="rtl"] td,
-html[dir="rtl"] input,
-html[dir="rtl"] button,
-html[dir="rtl"] select,
-html[dir="rtl"] textarea {
-  font-family: 'Bahij', 'ArabicFont', 'Onest', system-ui, -apple-system, sans-serif;
-  text-align: right;
-  line-height: 1.5;
+  font-synthesis: weight style;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 html[dir="rtl"] body {
+  font-family: 'Bahij', 'ArabicFont', 'Onest', system-ui, -apple-system, sans-serif;
   font-size: var(--font-body, 14px);
   line-height: 1.5;
   font-weight: 400;
+  direction: rtl;
+  text-align: right;
+  font-synthesis: weight style;
 }
 
-html[dir="rtl"] p,
-html[dir="rtl"] td,
-html[dir="rtl"] input,
-html[dir="rtl"] select,
-html[dir="rtl"] textarea {
-  font-weight: 400;
-  line-height: 1.5;
-}
-
-html[dir="rtl"] .form-hint,
-html[dir="rtl"] small,
-html[dir="rtl"] .text-muted,
-html[dir="rtl"] .card__desc,
-html[dir="rtl"] .empty-state__desc,
-html[dir="rtl"] .settings-choice__desc,
-html[dir="rtl"] .remote-meta {
-  font-weight: 400;
-  line-height: 1.5;
+/* Proper Bold Weights in Arabic */
+html[dir="rtl"] strong,
+html[dir="rtl"] b,
+html[dir="rtl"] .font-bold,
+html[dir="rtl"] .fw-bold,
+html[dir="rtl"] .fw-700 {
+  font-weight: 700 !important;
 }
 
 html[dir="rtl"] h1,
@@ -93,10 +143,43 @@ html[dir="rtl"] .modal__header h2,
 html[dir="rtl"] .modal__header h3,
 html[dir="rtl"] .section__title,
 html[dir="rtl"] .table-title,
-html[dir="rtl"] .settings-choice__title {
+html[dir="rtl"] .settings-choice__title,
+html[dir="rtl"] .panel__header h3,
+html[dir="rtl"] .info-hero-row__title {
+  font-family: 'Bahij', 'ArabicFont', 'Onest', system-ui, -apple-system, sans-serif;
   font-weight: 700;
   line-height: 1.4;
   letter-spacing: normal;
+}
+
+/* Semibold weights */
+html[dir="rtl"] th,
+html[dir="rtl"] .form-label,
+html[dir="rtl"] .sidebar__item,
+html[dir="rtl"] .btn,
+html[dir="rtl"] .status-badge,
+html[dir="rtl"] .badge,
+html[dir="rtl"] .clean-specs-item__key,
+html[dir="rtl"] .clean-specs-item__val,
+html[dir="rtl"] .fw-600 {
+  font-weight: 600;
+}
+
+/* Regular / muted weights */
+html[dir="rtl"] p,
+html[dir="rtl"] td,
+html[dir="rtl"] input,
+html[dir="rtl"] select,
+html[dir="rtl"] textarea,
+html[dir="rtl"] .form-hint,
+html[dir="rtl"] small,
+html[dir="rtl"] .text-muted,
+html[dir="rtl"] .card__desc,
+html[dir="rtl"] .empty-state__desc,
+html[dir="rtl"] .settings-choice__desc,
+html[dir="rtl"] .remote-meta {
+  font-weight: 400;
+  line-height: 1.5;
 }
 
 /* Monospace & LTR Exceptions (IPs, domains, hashes, code, ports) */
@@ -120,31 +203,95 @@ html[dir="rtl"] .ltr-force {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
 }
 
-/* Consistent Flex Alignments */
-html[dir="rtl"] .sidebar__item,
-html[dir="rtl"] .form-label,
-html[dir="rtl"] .form-input,
-html[dir="rtl"] .form-select,
-html[dir="rtl"] .badge,
-html[dir="rtl"] .tab,
-html[dir="rtl"] .btn {
-  align-items: center;
+/* --------------------------------------------------------------------------
+   2. Text Alignment & Centering Protection
+   Fixes .text-center, .text-left, .text-right, and inherently centered widgets
+   -------------------------------------------------------------------------- */
+/* Utility Classes (High Priority) */
+html[dir="rtl"] .text-center,
+html[dir="rtl"] .text-center *,
+html[dir="rtl"] [class*="text-center"],
+html[dir="rtl"] p.text-center,
+html[dir="rtl"] div.text-center,
+html[dir="rtl"] span.text-center,
+html[dir="rtl"] td.text-center,
+html[dir="rtl"] th.text-center {
+  text-align: center !important;
 }
 
+html[dir="rtl"] .text-left,
+html[dir="rtl"] .text-left *,
+html[dir="rtl"] [class*="text-left"],
+html[dir="rtl"] p.text-left,
+html[dir="rtl"] td.text-left,
+html[dir="rtl"] th.text-left {
+  text-align: left !important;
+}
+
+html[dir="rtl"] .text-right,
+html[dir="rtl"] .text-right *,
+html[dir="rtl"] [class*="text-right"],
+html[dir="rtl"] p.text-right,
+html[dir="rtl"] td.text-right,
+html[dir="rtl"] th.text-right {
+  text-align: right !important;
+}
+
+html[dir="rtl"] .text-start {
+  text-align: right !important;
+}
+
+html[dir="rtl"] .text-end {
+  text-align: left !important;
+}
+
+/* Centered Table Checkbox Columns */
+html[dir="rtl"] .table .col-cb,
+html[dir="rtl"] .table th.col-cb,
+html[dir="rtl"] .table td.col-cb,
+html[dir="rtl"] th.col-cb,
+html[dir="rtl"] td.col-cb,
+html[dir="rtl"] .col-cb {
+  text-align: center !important;
+  justify-content: center;
+}
+
+/* Centered Action Buttons & Button Groups */
 html[dir="rtl"] .btn,
-html[dir="rtl"] button,
-html[dir="rtl"] .btn--primary,
-html[dir="rtl"] .btn--secondary,
-html[dir="rtl"] .btn--ghost,
-html[dir="rtl"] .btn--danger,
-html[dir="rtl"] .btn--dark {
-  font-weight: 600;
-  letter-spacing: normal;
-  line-height: 1.5;
+html[dir="rtl"] button.btn,
+html[dir="rtl"] a.btn,
+html[dir="rtl"] .pure-btn--primary,
+html[dir="rtl"] .layout-switcher__btn {
+  justify-content: center;
+  text-align: center;
+}
+
+/* PHP Website Type Preset Grid Centering */
+html[dir="rtl"] .php-choice-grid .settings-choice,
+html[dir="rtl"] .php-choice-grid .settings-choice__title,
+html[dir="rtl"] .php-choice-grid .settings-choice__desc,
+html[dir="rtl"] .php-choice-grid .settings-choice__icon {
+  text-align: center !important;
+  justify-content: center;
+}
+
+/* Empty States & Auth Header Centering */
+html[dir="rtl"] .empty-state,
+html[dir="rtl"] .empty-state__title,
+html[dir="rtl"] .empty-state__desc,
+html[dir="rtl"] .empty-state p {
+  text-align: center !important;
+}
+
+/* Centered Badges & Icons */
+html[dir="rtl"] .badge-minimal,
+html[dir="rtl"] .ssl-step__icon {
+  text-align: center !important;
+  justify-content: center;
 }
 
 /* --------------------------------------------------------------------------
-   2. Main Application Shell & Primary Sidebar
+   3. Main Application Shell & Primary Sidebar
    -------------------------------------------------------------------------- */
 /* Primary Sidebar Border & Position */
 html[dir="rtl"] .sidebar {
@@ -287,7 +434,7 @@ html[dir="rtl"] .mobile-header #mobile-menu-toggle {
 }
 
 /* --------------------------------------------------------------------------
-   3. Split Layout & Secondary Navigation
+   4. Split Layout & Secondary Navigation
    -------------------------------------------------------------------------- */
 @media (min-width: 768px) {
   html[dir="rtl"] .split-sidebar {
@@ -329,7 +476,7 @@ html[dir="rtl"] .split-sidebar__count {
 }
 
 /* --------------------------------------------------------------------------
-   4. Buttons & Icon Spacing
+   5. Buttons & Icon Spacing
    -------------------------------------------------------------------------- */
 html[dir="rtl"] .btn svg,
 html[dir="rtl"] .btn i,
@@ -357,7 +504,7 @@ html[dir="rtl"] .remote-back svg {
 }
 
 /* --------------------------------------------------------------------------
-   5. Form Controls & Inputs
+   6. Form Controls & Inputs
    -------------------------------------------------------------------------- */
 html[dir="rtl"] .form-label {
   text-align: right;
@@ -428,7 +575,7 @@ html[dir="rtl"] .form-switch .form-check-input:checked {
 }
 
 /* --------------------------------------------------------------------------
-   6. Components: Cards, Tables, Badges, Tabs, Alerts, Modals
+   7. Components: Cards, Tables, Badges, Tabs, Alerts, Modals
    -------------------------------------------------------------------------- */
 /* Cards */
 html[dir="rtl"] .card__header {
@@ -578,7 +725,7 @@ html[dir="rtl"] #toast-container {
 }
 
 /* --------------------------------------------------------------------------
-   7. Directional Icons Flipping
+   8. Directional Icons Flipping
    -------------------------------------------------------------------------- */
 html[dir="rtl"] .flip-rtl,
 html[dir="rtl"] [data-lucide="chevron-right"],
@@ -597,7 +744,7 @@ html[dir="rtl"] [data-lucide="corner-down-left"] {
 }
 
 /* --------------------------------------------------------------------------
-   8. In-Row List Action Slide Toolbars & Toggle Animations
+   9. In-Row List Action Slide Toolbars & Toggle Animations
    -------------------------------------------------------------------------- */
 html[dir="rtl"] .list-row-subactions.slide-toolbar {
   left: 0;
@@ -632,7 +779,7 @@ html[dir="rtl"] .list-item-row {
 }
 
 /* --------------------------------------------------------------------------
-   9. Fixed Bottom Action Bar & Wizard Layout in RTL
+   10. Fixed Bottom Action Bar & Wizard Layout in RTL
    -------------------------------------------------------------------------- */
 @media (min-width: 992px) {
   html[dir="rtl"] .fixed-action-bar {
@@ -654,7 +801,7 @@ html[dir="rtl"] .fixed-action-bar__inner {
 }
 
 /* --------------------------------------------------------------------------
-   10. Floating Cards & Utility Overrides in RTL
+   11. Floating Cards & Utility Overrides in RTL
    -------------------------------------------------------------------------- */
 html[dir="rtl"] .recommendation-card--floating {
   right: calc(var(--sidebar-width, 260px) + 2%) !important;
@@ -670,7 +817,7 @@ html[dir="rtl"] .recommendation-card--floating {
   }
 }
 
-/* Layout Utilities in RTL */
+/* Spacing Utilities in RTL */
 html[dir="rtl"] .ml-auto {
   margin-left: 0 !important;
   margin-right: auto !important;
@@ -679,12 +826,4 @@ html[dir="rtl"] .ml-auto {
 html[dir="rtl"] .mr-auto {
   margin-right: 0 !important;
   margin-left: auto !important;
-}
-
-html[dir="rtl"] .text-start {
-  text-align: right !important;
-}
-
-html[dir="rtl"] .text-end {
-  text-align: left !important;
 }
