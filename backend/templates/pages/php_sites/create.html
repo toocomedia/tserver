@@ -118,15 +118,14 @@
         </div>
       </div>
 
-      <!-- SSL Certificate Box Cards Component -->
+      <!-- SSL Certificate Box Card Component -->
       {{ ssl_choice.render(
         name="ssl",
         enabled=true,
         include_www=false,
         show_www_option=true,
         grid_id="php-ssl-choice-grid",
-        radio_name="ssl_choice",
-        hidden_input_id="php-site-ssl"
+        input_id="php-site-ssl"
       ) }}
 
       <!-- Options (Database, Extensions) -->
