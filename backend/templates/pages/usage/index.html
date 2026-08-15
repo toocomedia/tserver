@@ -632,14 +632,42 @@
 
     const swapGroup = document.getElementById('group-swap-size');
     if (swapGroup) {
+      const btnOff = document.getElementById('btn-swap-off');
+      const btnBase = document.getElementById('btn-swap-base');
+      const btn512 = document.getElementById('btn-swap-512');
+
+      if (isOptActive) {
+        if (btnOff) btnOff.style.display = 'none';
+        if (btn512) btn512.style.display = 'none';
+        if (btnBase) btnBase.style.display = '';
+        swapGroup.classList.remove('layout-switcher--five');
+        swapGroup.classList.add('layout-switcher--four');
+      } else {
+        if (btnOff) btnOff.style.display = '';
+        if (btn512) btn512.style.display = '';
+        if (btnBase) btnBase.style.display = 'none';
+        swapGroup.classList.remove('layout-switcher--four');
+        swapGroup.classList.add('layout-switcher--five');
+      }
+
       const swapfileMb = opt.swapfile_size_mb ?? 0;
+      const totalEffectiveMb = isOptActive ? (500 + swapfileMb) : swapfileMb;
+
       swapGroup.querySelectorAll('button[data-swap-size]').forEach(btn => {
+        if (btn.style.display === 'none') {
+          btn.classList.remove('is-active');
+          return;
+        }
         const targetSz = parseInt(btn.dataset.swapSize, 10);
         let isMatch = false;
         if (targetSz === 0) {
-          isMatch = swapfileMb === 0;
+          isMatch = !isOptActive && totalEffectiveMb === 0;
+        } else if (targetSz === 500) {
+          isMatch = isOptActive && swapfileMb === 0;
+        } else if (targetSz === 512) {
+          isMatch = !isOptActive && Math.abs(512 - totalEffectiveMb) <= 64;
         } else {
-          isMatch = Math.abs(targetSz - swapfileMb) <= 64;
+          isMatch = Math.abs(targetSz - totalEffectiveMb) <= 128;
         }
         btn.classList.toggle('is-active', isMatch);
       });
@@ -756,29 +784,33 @@
     const ramPct = lastRamStats?.percent ?? 0;
     const ramAvailMb = lastRamStats?.available_gb ? Math.round(lastRamStats.available_gb * 1024) : 0;
     const swapUsedMb = lastSwapStats?.used_gb ? Math.round(lastSwapStats.used_gb * 1024) : 0;
+    const targetMb = details.targetMb ?? 0;
 
-    // If swap is empty or negligible (< 10 MB) and RAM is under 85%, it is completely safe
-    if (swapUsedMb < 10 && ramPct < 85) {
+    // If new target swap is greater than or equal to current swap in use, all data fits in new swap!
+    // No downgrade excess -> 100% safe!
+    if (swapUsedMb <= targetMb) {
       return { safe: true };
     }
 
-    // Critical: Available RAM is less than swap used -> 100% OOM crash risk
-    if (swapUsedMb > 0 && ramAvailMb < swapUsedMb) {
+    const excessMb = swapUsedMb - targetMb;
+
+    // Critical: RAM available is less than the excess memory that must be absorbed
+    if (ramAvailMb < excessMb) {
       return {
         safe: false,
         critical: true,
-        message: `Cannot safely ${details.actionName}. Swap memory in use (${swapUsedMb} MB) exceeds available physical RAM (${ramAvailMb} MB). Disabling or reducing Swap now will cause an immediate Out-of-Memory (OOM) server crash.`,
-        detailHtml: `<strong>RAM Usage:</strong> ${ramPct.toFixed(1)}% (${ramAvailMb} MB available)<br><strong>Active Swap:</strong> ${swapUsedMb} MB in use<br><br>👉 <strong>Action Required:</strong> Click <em>"Free RAM Cache First"</em> or stop memory-heavy applications before changing swap settings.`
+        message: `Cannot safely ${details.actionName}. Current memory in Swap (${swapUsedMb} MB) exceeds target swap size (${targetMb} MB). Physical RAM available (${ramAvailMb} MB) cannot absorb the ${excessMb} MB of excess memory without risk of an Out-of-Memory (OOM) crash.`,
+        detailHtml: `<strong>Target Swap:</strong> ${targetMb} MB<br><strong>Current Swap in Use:</strong> ${swapUsedMb} MB<br><strong>RAM Available:</strong> ${ramAvailMb} MB (Need at least ${excessMb} MB)<br><br>👉 <strong>Action Required:</strong> Click <em>"Free RAM Cache First"</em> or stop memory-heavy apps before downgrading swap.`
       };
     }
 
-    // Warning: RAM is high (>= 75%) or Available RAM < swap used + 250MB buffer
-    if (ramPct >= 75 || (swapUsedMb > 0 && ramAvailMb < swapUsedMb + 250)) {
+    // Warning: Available RAM can absorb it, but RAM usage is high (>= 75%) or buffer is small
+    if (ramPct >= 75 || ramAvailMb < excessMb + 150) {
       return {
         safe: false,
         warning: true,
-        message: `High RAM Usage detected (${ramPct.toFixed(1)}%). ${details.actionName} will force ${swapUsedMb} MB of swap data into physical RAM, which may spike RAM usage and risk taking the server down.`,
-        detailHtml: `<strong>RAM Usage:</strong> ${ramPct.toFixed(1)}% (${ramAvailMb} MB available)<br><strong>Active Swap:</strong> ${swapUsedMb} MB in use<br><br>💡 <em>Recommendation: Click "Free RAM Cache First" to safely free inactive buffers before proceeding.</em>`
+        message: `High RAM Usage Warning: ${details.actionName} will force ${excessMb} MB of excess swap memory into physical RAM.`,
+        detailHtml: `<strong>Target Swap:</strong> ${targetMb} MB<br><strong>Current Swap in Use:</strong> ${swapUsedMb} MB<br><strong>Excess to RAM:</strong> ${excessMb} MB<br><strong>RAM Available:</strong> ${ramAvailMb} MB<br><br>💡 <em>Recommendation: Click "Free RAM Cache First" before proceeding.</em>`
       };
     }
 
@@ -803,7 +835,7 @@
 
   function setOptMode(enable) {
     if (!enable) {
-      const safety = checkRamSafety({ actionName: 'disabling Low-RAM Optimization Mode' });
+      const safety = checkRamSafety({ actionName: 'disabling Low-RAM Optimization Mode', targetMb: 0 });
       if (!safety.safe) {
         showSafetyModal(safety, () => {
           performToggle('/api/system/optimization/toggle', { enabled: false },
@@ -839,7 +871,7 @@
       });
     }
 
-    const label = sizeMb === 0 ? 'Disabled (0 MB)' : (sizeMb >= 1024 ? `${sizeMb / 1024} GB` : `${sizeMb} MB`);
+    const label = sizeMb === 0 ? 'Disabled (0 MB)' : (sizeMb === 500 ? '500 MB (Base zRAM)' : (sizeMb >= 1024 ? `${sizeMb / 1024} GB` : `${sizeMb} MB`));
     toast(`Configuring swap to ${label}… RAM may briefly adjust while swap is resized.`, 'info');
     panel.post('/api/system/swap/set', { size_mb: sizeMb })
       .then(res => {
@@ -867,12 +899,12 @@
   function setSwapSize(sizeMb, clickedBtn) {
     if (isActionPending) return;
 
-    const currentSwapMb = lastSwapStats?.swapfile_size_mb ?? 0;
-    const isReducing = sizeMb === 0 || (currentSwapMb > 0 && sizeMb < currentSwapMb);
+    const currentTotalMb = lastSwapStats ? (Math.round((lastSwapStats.total_gb || 0) * 1024)) : 0;
+    const isReducing = sizeMb < currentTotalMb;
 
     if (isReducing) {
-      const actionName = sizeMb === 0 ? 'disabling Swap Storage' : `reducing Swap Storage to ${sizeMb >= 1024 ? sizeMb / 1024 + ' GB' : sizeMb + ' MB'}`;
-      const safety = checkRamSafety({ actionName });
+      const actionName = sizeMb === 0 ? 'disabling Swap Storage' : (sizeMb === 500 ? 'reducing Swap to Base zRAM (500 MB)' : `reducing Swap Storage to ${sizeMb >= 1024 ? sizeMb / 1024 + ' GB' : sizeMb + ' MB'}`);
+      const safety = checkRamSafety({ actionName, targetMb: sizeMb });
       if (!safety.safe) {
         showSafetyModal(safety, () => {
           executeSwapSizeChange(sizeMb, clickedBtn);

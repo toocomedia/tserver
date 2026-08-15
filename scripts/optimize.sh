@@ -300,31 +300,60 @@ set_swap() {
   fi
   local target_mb="${1:-0}"
   if ! [[ "$target_mb" =~ ^[0-9]+$ ]]; then
-    echo "ERROR: Swap target must be a positive integer in MB (e.g. 0, 512, 1024, 2048, 4096)" >&2
+    echo "ERROR: Swap target must be a positive integer in MB (e.g. 0, 500, 512, 1024, 2048, 4096)" >&2
     exit 1
   fi
 
   SWAP_FILE="/swapfile"
+  local is_zram="false"
+  if systemctl is-active --quiet zramswap 2>/dev/null; then
+    is_zram="true"
+  fi
 
-  # If target is 0 (disable swap): check safety and turn off
-  if [[ "$target_mb" -eq 0 ]]; then
-    # Pre-flush RAM caches
-    sync
-    echo 3 > /proc/sys/vm/drop_caches 2>/dev/null || true
+  # Calculate needed disk swapfile size based on whether zRAM baseline is active
+  local disk_swap_mb=0
+  if [[ "$is_zram" == "true" ]]; then
+    # zRAM baseline provides ~500 MB in RAM
+    if [[ "$target_mb" -le 500 ]]; then
+      disk_swap_mb=0
+    else
+      disk_swap_mb=$((target_mb - 500))
+    fi
+  else
+    disk_swap_mb="$target_mb"
+  fi
 
-    local swap_used_kb=0
-    swap_used_kb=$(swapon --show --noheadings --bytes 2>/dev/null \
-      | awk '{s+=$4} END {printf "%d", s/1024}' 2>/dev/null || echo 0)
-    local mem_available_kb=0
-    mem_available_kb=$(grep -i MemAvailable /proc/meminfo 2>/dev/null | awk '{print $2}' || echo 0)
-    local safety_buffer_kb=$(( 100 * 1024 ))   # 100 MB buffer
+  # Current total swap in use across all devices (disk + zram)
+  local current_swap_total_kb=0
+  current_swap_total_kb=$(grep -i SwapTotal /proc/meminfo 2>/dev/null | awk '{print $2}' || echo 0)
+  local current_swap_free_kb=0
+  current_swap_free_kb=$(grep -i SwapFree /proc/meminfo 2>/dev/null | awk '{print $2}' || echo 0)
+  local current_swap_used_kb=$((current_swap_total_kb - current_swap_free_kb))
+  if [[ "$current_swap_used_kb" -lt 0 ]]; then current_swap_used_kb=0; fi
 
-    if [[ "$swap_used_kb" -gt 0 ]] && \
-       [[ "$mem_available_kb" -lt $(( swap_used_kb + safety_buffer_kb )) ]]; then
-      echo "ERROR: Cannot safely disable swap. Swap in use: $((swap_used_kb/1024)) MB, RAM available: $((mem_available_kb/1024)) MB. Run 'Free RAM Cache' first to reduce RAM usage." >&2
+  local target_total_kb=$((target_mb * 1024))
+  local mem_available_kb=0
+  mem_available_kb=$(grep -i MemAvailable /proc/meminfo 2>/dev/null | awk '{print $2}' || echo 0)
+
+  # Check if this is a DOWNGRADE where existing swap data exceeds the new target size
+  if [[ "$current_swap_used_kb" -gt "$target_total_kb" ]]; then
+    local excess_kb=$((current_swap_used_kb - target_total_kb))
+    local safety_buffer_kb=$(( 50 * 1024 )) # 50 MB buffer
+    if [[ "$mem_available_kb" -lt $((excess_kb + safety_buffer_kb)) ]]; then
+      local excess_mb=$((excess_kb / 1024))
+      local avail_mb=$((mem_available_kb / 1024))
+      local used_mb=$((current_swap_used_kb / 1024))
+      echo "ERROR: Cannot safely downgrade swap to ${target_mb} MB. Currently ${used_mb} MB is used in swap. Downgrading requires RAM to absorb ${excess_mb} MB of excess data, but only ${avail_mb} MB is available. Run 'Free RAM Cache' first." >&2
       exit 1
     fi
+  fi
 
+  # Pre-flush RAM caches
+  sync
+  echo 3 > /proc/sys/vm/drop_caches 2>/dev/null || true
+
+  # If target disk swap is 0 (either total 0 or base zRAM 500MB)
+  if [[ "$disk_swap_mb" -le 0 ]]; then
     if swapon --show=NAME 2>/dev/null | grep -q "^$SWAP_FILE$"; then
       swapoff "$SWAP_FILE" 2>/dev/null || true
     fi
@@ -335,13 +364,17 @@ set_swap() {
       sed -i '\|/swapfile|d' /etc/fstab
     fi
 
-    echo "==> All Swap disabled (0 MB)."
+    if [[ "$is_zram" == "false" && "$target_mb" -eq 0 ]]; then
+      swapoff -a 2>/dev/null || true
+      echo "==> All Swap disabled (0 MB)."
+    else
+      echo "==> Configured to Base zRAM Swap (500 MB). Disk swapfile removed."
+    fi
     return 0
   fi
 
-  local disk_swap_mb="$target_mb"
   echo "==> Configuring swap to reach ${target_mb} MB total (allocating ${disk_swap_mb} MB on disk)..."
-  
+
   # Check available disk space in root partition
   local avail_kb
   avail_kb="$(df -k --output=avail / 2>/dev/null | tail -n 1 | tr -d ' ' || echo 0)"
@@ -350,30 +383,6 @@ set_swap() {
     echo "ERROR: Not enough disk space. Available: $((avail_kb / 1024)) MB, Required: ${disk_swap_mb} MB" >&2
     exit 1
   fi
-
-  # RAM safety gate: measure how much swap data is currently loaded, and refuse
-  # the resize if available RAM cannot absorb it (with a 200 MB safety buffer).
-  local swap_used_kb=0
-  if swapon --show=NAME 2>/dev/null | grep -q "^$SWAP_FILE$"; then
-    swap_used_kb=$(swapon --show --noheadings --bytes 2>/dev/null \
-      | grep "^$SWAP_FILE" \
-      | awk '{printf "%d", $4/1024}' 2>/dev/null || echo 0)
-  fi
-  local mem_available_kb=0
-  mem_available_kb=$(grep -i MemAvailable /proc/meminfo 2>/dev/null | awk '{print $2}' || echo 0)
-  local safety_buffer_kb=$(( 200 * 1024 ))   # 200 MB hard buffer
-
-  if [[ "$swap_used_kb" -gt 0 ]] && \
-     [[ "$mem_available_kb" -lt $(( swap_used_kb + safety_buffer_kb )) ]]; then
-    echo "ERROR: Cannot safely resize swap. Swap in use: $((swap_used_kb/1024)) MB, " \
-         "RAM available: $((mem_available_kb/1024)) MB (need at least $((( swap_used_kb + safety_buffer_kb )/1024)) MB). " \
-         "Run 'Free RAM Cache' or 'Smart Flush Swap' first to empty swap, then retry." >&2
-    exit 1
-  fi
-
-  # Pre-flush RAM caches so physical RAM can safely absorb memory during swap deactivation
-  sync
-  echo 3 > /proc/sys/vm/drop_caches 2>/dev/null || true
 
   # Two-phase resize strategy: create the new swapfile BEFORE removing the old
   # one so swap is NEVER fully off during the transition.
