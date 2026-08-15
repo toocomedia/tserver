@@ -68,7 +68,7 @@
     const button = event.currentTarget;
     button.disabled = true;
     try {
-      const data = await postAction('/phpmyadmin/api/start');
+      const data = await postAction('/plugins/phpmyadmin/api/start');
       showResult(data.message || 'Started.', true);
       setTimeout(() => window.location.reload(), 800);
     } catch (err) {
@@ -82,7 +82,7 @@
     button.disabled = true;
     button.textContent = 'Reinstalling…';
     try {
-      const data = await postAction('/phpmyadmin/api/install');
+      const data = await postAction('/plugins/phpmyadmin/api/install');
       showResult(data.message || 'Installed.', true);
       setTimeout(() => window.location.reload(), 1000);
     } catch (err) {
@@ -101,7 +101,7 @@
       const body = new FormData();
       body.append('csrf_token', csrf);
       try {
-        const response = await fetch('/phpmyadmin/api/uninstall', { method: 'POST', body });
+        const response = await fetch('/plugins/phpmyadmin/api/uninstall', { method: 'POST', body });
         const data = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(data.detail || data.message || 'Uninstall failed.');
         showResult(data.message || 'Uninstalled.', true);

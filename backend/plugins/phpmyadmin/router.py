@@ -1,4 +1,4 @@
-"""phpMyAdmin: panel-served proxy + minimal landing page."""
+"""phpMyAdmin: control page under /plugins/phpmyadmin, app proxy under /phpmyadmin."""
 from __future__ import annotations
 
 import logging
@@ -10,8 +10,12 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Resp
 from plugins.phpmyadmin.service import phpmyadmin_service
 from templating import templates
 
-router = APIRouter(prefix="/phpmyadmin", tags=["phpmyadmin"])
 logger = logging.getLogger(__name__)
+
+# Control page (matches the panel's /plugins/<id>/ convention).
+control_router = APIRouter(prefix="/plugins/phpmyadmin", tags=["phpmyadmin"])
+# phpMyAdmin app itself, served same-origin behind panel auth.
+app_router = APIRouter(prefix="/phpmyadmin", tags=["phpmyadmin_app"])
 
 # Headers forwarded verbatim to phpMyAdmin.
 _PASS_REQUEST_HEADERS = frozenset(
@@ -43,7 +47,7 @@ _PASS_RESPONSE_HEADERS = frozenset(
 )
 
 
-@router.get("/", response_class=HTMLResponse)
+@control_router.get("/", response_class=HTMLResponse)
 async def index(request: Request):
     from plugins.manager import plugin_manager
 
@@ -59,7 +63,7 @@ async def index(request: Request):
     )
 
 
-@router.post("/api/install")
+@control_router.post("/api/install")
 async def install_phpmyadmin(request: Request):
     from plugins.manager import plugin_manager
 
@@ -72,7 +76,7 @@ async def install_phpmyadmin(request: Request):
     )
 
 
-@router.post("/api/start")
+@control_router.post("/api/start")
 async def start_phpmyadmin(request: Request):
     try:
         phpmyadmin_service.resume()
@@ -87,7 +91,7 @@ async def start_phpmyadmin(request: Request):
     )
 
 
-@router.post("/api/uninstall")
+@control_router.post("/api/uninstall")
 async def uninstall_phpmyadmin(request: Request):
     from plugins.manager import plugin_manager
 
@@ -100,7 +104,7 @@ async def uninstall_phpmyadmin(request: Request):
     )
 
 
-@router.api_route(
+@app_router.api_route(
     "/{path:path}",
     methods=["GET", "POST", "HEAD", "PUT", "PATCH", "DELETE"],
     include_in_schema=False,
@@ -108,7 +112,7 @@ async def uninstall_phpmyadmin(request: Request):
 async def proxy_phpmyadmin(request: Request, path: str):
     """Stream requests to the local phpMyAdmin server, keeping panel auth."""
     if not phpmyadmin_service.is_installed():
-        return RedirectResponse("/phpmyadmin/", status_code=303)
+        return RedirectResponse("/plugins/phpmyadmin/", status_code=303)
 
     upstream_path = f"/{path}" if path else "/"
     url = f"{phpmyadmin_service.base_url}{upstream_path}"
@@ -120,6 +124,10 @@ async def proxy_phpmyadmin(request: Request, path: str):
         for key, value in request.headers.items()
         if key.lower() in _PASS_REQUEST_HEADERS
     }
+    # phpMyAdmin detects HTTPS from X-Forwarded-Proto; pass the panel's real
+    # scheme so cookie security and the login https-mismatch check match the
+    # browser's connection (http://IP or https://domain both work).
+    headers["x-forwarded-proto"] = request.url.scheme
     body = await request.body()
 
     client = httpx.AsyncClient(timeout=None)
@@ -160,3 +168,10 @@ async def proxy_phpmyadmin(request: Request, path: str):
         status_code=upstream.status_code,
         headers=dict(response_headers),
     )
+
+
+# The manager mounts `router`; it carries both the control page (under
+# /plugins/phpmyadmin) and the app proxy (under /phpmyadmin).
+router = APIRouter()
+router.include_router(control_router)
+router.include_router(app_router)

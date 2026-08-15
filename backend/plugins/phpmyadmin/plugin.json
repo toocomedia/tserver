@@ -5,7 +5,7 @@
   "version": "1.0.0",
   "author": "SRV Panel Core",
   "icon": "devicon-mysql-original",
-  "route_prefix": "/phpmyadmin",
+  "route_prefix": "/plugins/phpmyadmin",
   "sidebar": true,
   "sidebar_label": "phpMyAdmin",
   "enabled": true,

@@ -229,7 +229,7 @@ class PhpMyAdminPackagingTests(unittest.TestCase):
         manifest = json.loads((plugin / "plugin.json").read_text(encoding="utf-8"))
 
         self.assertEqual(manifest["id"], "phpmyadmin")
-        self.assertEqual(manifest["route_prefix"], "/phpmyadmin")
+        self.assertEqual(manifest["route_prefix"], "/plugins/phpmyadmin")
         self.assertTrue(manifest["sidebar"])
         self.assertEqual(
             sorted(manifest["requires"]["dependencies"]), ["mariadb", "php"]
@@ -272,13 +272,16 @@ class PhpMyAdminPackagingTests(unittest.TestCase):
         )
         router = (plugin / "router.py").read_text(encoding="utf-8")
 
+        self.assertIn('prefix="/plugins/phpmyadmin"', router)
         self.assertIn('prefix="/phpmyadmin"', router)
         self.assertIn("pma-open-btn", template)
         self.assertIn("window.open('/phpmyadmin/index.php'", template)
-        self.assertIn("/phpmyadmin/api/uninstall", template)
+        self.assertIn("/plugins/phpmyadmin/api/uninstall", template)
         self.assertIn("pma-start-btn", template)
-        self.assertIn('@router.post("/api/install")', router)
-        self.assertIn('@router.post("/api/start")', router)
+        self.assertIn('@control_router.post("/api/install")', router)
+        self.assertIn('@control_router.post("/api/start")', router)
+        self.assertIn('@app_router.api_route', router)
+        self.assertIn('"x-forwarded-proto"] = request.url.scheme', router)
         self.assertNotIn("manage_dns", template)
 
 
