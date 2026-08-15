@@ -138,7 +138,7 @@ async def options(db: AsyncSession) -> dict[str, Any]:
                 "id": item.id,
                 "name": item.name,
                 "project_type": item.project_type,
-                "has_ssl": item.name in certs,
+                "has_ssl": await ssl_service.is_domain_ssl_active(db, item),
             }
             for item in domains if item.id not in used
         ],

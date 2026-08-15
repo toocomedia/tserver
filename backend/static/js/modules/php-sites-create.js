@@ -47,12 +47,49 @@ function updatePreset() {
 }
 
 function updateSslChoice() {
+  const domainId = domainSelect?.value;
+  const domain = options?.domains?.find((d) => String(d.id) === String(domainId));
+  const hasDomainSsl = Boolean(domain?.has_ssl);
   const sslInput = root.querySelector("#php-site-ssl");
-  const isChecked = Boolean(sslInput?.checked);
   const card = root.querySelector("#php-ssl-choice-grid-card") || root.querySelector("#php-ssl-choice-grid .settings-choice");
-  if (card) card.classList.toggle("settings-choice--active", isChecked);
+  const descEl = card?.querySelector(".settings-choice__desc");
+  const titleEl = card?.querySelector(".settings-choice__title");
   const wwwWrap = root.querySelector("#php-ssl-choice-grid-www-wrap") || root.querySelector("#php-ssl-www-wrap");
-  if (wwwWrap) wwwWrap.style.display = isChecked ? "block" : "none";
+
+  if (hasDomainSsl) {
+    if (sslInput) {
+      sslInput.checked = true;
+      sslInput.disabled = true;
+    }
+    if (card) {
+      card.classList.add("settings-choice--active");
+      card.style.opacity = "0.9";
+      card.style.cursor = "default";
+    }
+    if (titleEl) {
+      titleEl.innerHTML = `${t("enable_let_s_encrypt_free_tls_https")} <span class="badge-pill badge-pill--accent" style="margin-left: 8px; font-size: 11px;">Active</span>`;
+    }
+    if (descEl) {
+      descEl.textContent = "This domain already has an active SSL certificate. HTTPS is enabled automatically.";
+    }
+    if (wwwWrap) wwwWrap.style.display = "none";
+  } else {
+    if (sslInput) {
+      sslInput.disabled = false;
+    }
+    if (card) {
+      card.style.opacity = "1";
+      card.style.cursor = "pointer";
+      card.classList.toggle("settings-choice--active", Boolean(sslInput?.checked));
+    }
+    if (titleEl) {
+      titleEl.textContent = t("enable_let_s_encrypt_free_tls_https");
+    }
+    if (descEl) {
+      descEl.textContent = t("will_issue_a_certificate_after_the_proxy");
+    }
+    if (wwwWrap) wwwWrap.style.display = sslInput?.checked ? "block" : "none";
+  }
 }
 
 function updateExtensionHint() {
@@ -168,13 +205,21 @@ function review() {
   const presetText = isWp ? t("wordpress") : isFilament ? t("filament") : isLaravel ? t("laravel") : t("plain_php");
   const presetHtml = `<span style="display:inline-flex; align-items:center; gap:8px;"><i class="${presetIcon}" aria-hidden="true" style="font-size:16px; color:var(--color-accent);"></i><strong>${esc(presetText)}</strong></span>`;
 
+  const hasDomainSsl = Boolean(domain?.has_ssl);
+  const sslActive = hasDomainSsl || Boolean(values.get("ssl"));
+  const sslText = hasDomainSsl
+    ? `${t("yes")} (Certificate active)`
+    : sslActive
+    ? `${t("yes")} (${values.get("include_www") ? "include www" : "single host"})`
+    : t("no");
+
   const rows = [
     [t("preset"), presetHtml, true],
     [t("domain"), domain?.name || "—"],
     [t("php_version"), values.get("php_version") || "—"],
     [t("document_root"), values.get("document_root") || "public"],
     [t("database"), (isWp || isLaravel) ? `${t("yes")} (MariaDB)` : values.get("create_database") ? t("yes") : t("no")],
-    [t("enable_ssl"), values.get("ssl") ? `${t("yes")} (${values.get("include_www") ? "include www" : "single host"})` : t("no")],
+    [t("enable_ssl"), sslText],
   ];
   if (isWp) {
     rows.push([t("site_title"), values.get("wp_site_title") || "—"]);
@@ -213,6 +258,7 @@ export function goToStep(target) {
   if (backBtn) backBtn.style.display = currentStep > 1 ? "inline-flex" : "none";
   if (nextBtn) nextBtn.style.display = currentStep < 3 ? "inline-flex" : "none";
   if (submitBtn) submitBtn.style.display = currentStep === 3 ? "inline-flex" : "none";
+  if (currentStep === 2) updateSslChoice();
   if (currentStep === 3) review();
 }
 window.goToStep = goToStep;
@@ -222,6 +268,8 @@ async function handleSubmit(event) {
   if (!validateStep(1) || !validateStep(2)) return;
   setError("");
   const values = new FormData(form);
+  const domain = options?.domains?.find((item) => String(item.id) === String(values.get("domain_id") || domainSelect?.value));
+  const hasDomainSsl = Boolean(domain?.has_ssl);
   const isWp = selectedPreset() === "wordpress";
   const isFilament = selectedPreset() === "filament";
   const isLaravel = selectedPreset() === "laravel" || isFilament;
@@ -231,7 +279,7 @@ async function handleSubmit(event) {
     php_version: values.get("php_version"),
     document_root: values.get("document_root"),
     create_database: (isWp || isLaravel) ? true : values.get("create_database") === "on",
-    ssl: values.get("ssl") === "on",
+    ssl: hasDomainSsl ? true : (values.get("ssl") === "on" || values.get("ssl") === "true"),
     include_www: values.get("include_www") === "on",
     install_missing_extensions: values.get("install_missing_extensions") === "on",
     wordpress: isWp ? {
@@ -274,6 +322,7 @@ async function init() {
   } catch (err) { setError(err.message); }
 
   form?.addEventListener("submit", handleSubmit);
+  domainSelect?.addEventListener("change", updateSslChoice);
   form?.addEventListener("change", (e) => {
     if (e.target.name === "preset") updatePreset();
     if (e.target.name === "ssl" || e.target.id === "php-site-ssl") updateSslChoice();

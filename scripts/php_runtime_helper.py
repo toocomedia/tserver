@@ -17,7 +17,22 @@ from typing import Any
 VERSION_RE = re.compile(r"^\d+\.\d+$")
 STATE_PATH = Path("/var/lib/srv-panel/php-runtime/managed-versions.json")
 LOCK_PATH = STATE_PATH.parent / "operation.lock"
-SITE_EXTENSION_NAMES = {"curl", "gd", "intl", "mbstring", "mysql", "xml", "zip", "opcache"}
+# These are the native, version-specific packages required by every PHP
+# Website preset currently offered by the panel.  They deliberately remain a
+# small, reviewed baseline: Composer packages and arbitrary ext-* suggestions
+# are never treated as substitutes for system extensions.
+SITE_EXTENSION_NAMES = ("curl", "gd", "intl", "mbstring", "mysql", "xml", "zip", "opcache")
+SITE_EXTENSION_SET = frozenset(SITE_EXTENSION_NAMES)
+FPM_MODULES = {
+    "curl": frozenset({"curl"}),
+    "gd": frozenset({"gd"}),
+    "intl": frozenset({"intl"}),
+    "mbstring": frozenset({"mbstring"}),
+    "mysql": frozenset({"mysqli", "pdo_mysql"}),
+    "xml": frozenset({"dom", "xml"}),
+    "zip": frozenset({"zip"}),
+    "opcache": frozenset({"zend opcache"}),
+}
 EXTERNAL_REPOSITORY_PPA = "ppa:ondrej/php"
 EXTERNAL_REPOSITORY_MARKERS = (
     "ppa.launchpadcontent.net/ondrej/php",
@@ -139,23 +154,54 @@ def verify_fpm(item_version: str) -> None:
         fail(f"PHP {item_version}-FPM did not become healthy; expected socket {socket_path}.")
 
 
+def verify_fpm_extensions(item_version: str, extensions: tuple[str, ...]) -> None:
+    """Confirm the FPM SAPI, rather than only CLI, has each requested module."""
+    binary = shutil.which(f"php-fpm{item_version}")
+    if not binary:
+        fail(f"PHP {item_version}-FPM binary is unavailable after installation.")
+    output = run([binary, "-m"], timeout=30).stdout
+    loaded = {
+        line.strip().lower()
+        for line in output.splitlines()
+        if line.strip() and not (line.startswith("[") and line.endswith("]"))
+    }
+    missing = [
+        extension
+        for extension in extensions
+        if not FPM_MODULES[extension].issubset(loaded)
+    ]
+    if missing:
+        fail(
+            f"PHP {item_version}-FPM did not load required extensions: {', '.join(missing)}. "
+            "Check its FPM conf.d files before retrying."
+        )
+
+
 def install_version(data: dict[str, Any]) -> dict[str, Any]:
     item_version = version(data.get("version"))
     state = load_state()
     fpm_package = f"php{item_version}-fpm"
     cli_package = f"php{item_version}-cli"
+    extension_packages = [f"php{item_version}-{name}" for name in SITE_EXTENSION_NAMES]
+    packages = [fpm_package, cli_package, *extension_packages]
     if package_installed(fpm_package) and item_version not in state:
         fail(f"PHP {item_version} is installed outside SRV Panel and cannot be adopted automatically.")
     print("==> Refreshing configured APT repositories...", file=sys.stderr)
     run(["apt-get", "update", "-qq"], timeout=300)
-    apt_candidate(fpm_package)
-    print(f"==> Installing PHP {item_version}-FPM...", file=sys.stderr)
-    run(["apt-get", "install", "-y", fpm_package, cli_package], timeout=900)
+    for package in packages:
+        apt_candidate(package)
+    print(f"==> Installing PHP {item_version}-FPM and the panel extension baseline...", file=sys.stderr)
+    run(["apt-get", "install", "-y", "--no-install-recommends", *packages], timeout=900)
     run(["systemctl", "enable", "--now", f"php{item_version}-fpm"], timeout=90)
     verify_fpm(item_version)
-    state[item_version] = sorted(set(state.get(item_version, []) + [fpm_package, cli_package]))
+    verify_fpm_extensions(item_version, SITE_EXTENSION_NAMES)
+    state[item_version] = sorted(set(state.get(item_version, []) + packages))
     save_state(state)
-    return {"version": item_version, "message": f"PHP {item_version} installed and PHP-FPM socket is healthy."}
+    return {
+        "version": item_version,
+        "installed_packages": packages,
+        "message": f"PHP {item_version} installed with the panel extension baseline and a healthy PHP-FPM socket.",
+    }
 
 
 def install_site_extensions(data: dict[str, Any]) -> dict[str, Any]:
@@ -164,7 +210,7 @@ def install_site_extensions(data: dict[str, Any]) -> dict[str, Any]:
     requested = data.get("extensions")
     if (
         not isinstance(requested, list) or not requested
-        or any(str(name) not in SITE_EXTENSION_NAMES for name in requested)
+        or any(str(name) not in SITE_EXTENSION_SET for name in requested)
     ):
         fail("Invalid PHP site extension request.")
     names = sorted({str(name) for name in requested})
