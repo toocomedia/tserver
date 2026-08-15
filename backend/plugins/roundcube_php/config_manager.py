@@ -60,6 +60,15 @@ class RoundcubeConfigManager:
             "plugins": ["archive", "zipdownload", "markasjunk", "srvpanel_launch"],
         }
 
+    def _maybe_sudo(self, args: list[str]) -> list[str]:
+        try:
+            from utils.shell import _maybe_sudo
+            return _maybe_sudo(args)
+        except Exception:
+            if hasattr(os, "geteuid") and os.geteuid() != 0:
+                return ["sudo", "-n", *args]
+            return args
+
     def read_config_file(self) -> dict[str, Any]:
         """Parses the active config.inc.php file on disk if it exists."""
         if not self.config_file.is_file():
@@ -181,34 +190,36 @@ $config['plugins'] = [{plugins_repr}];
 """
 
     def write_config_file(self, content: str) -> bool:
-        """Writes content to config.inc.php with proper permissions and root fallback."""
+        """Writes content to config.inc.php with proper permissions and sudo tee fallback."""
         self.config_dir.mkdir(parents=True, exist_ok=True)
+        data = content.encode("utf-8")
         try:
-            self.config_file.write_text(content, encoding="utf-8")
+            self.config_file.write_bytes(data)
             try:
                 self.config_file.chmod(0o664)
             except OSError:
                 pass
             return True
-        except (OSError, PermissionError) as exc:
-            logger.warning("Direct write to %s failed (%s), using privileged write", self.config_file, exc)
-            if os.name != "nt":
-                try:
-                    import tempfile
-                    with tempfile.NamedTemporaryFile("w", encoding="utf-8", delete=False) as tf:
-                        tf.write(content)
-                        temp_name = tf.name
-                    subprocess.run(["sudo", "cp", "-f", temp_name, str(self.config_file)], check=True)
-                    subprocess.run(["sudo", "chmod", "0664", str(self.config_file)], check=False)
-                    subprocess.run(["sudo", "chown", "www-data:www-data", str(self.config_file)], check=False)
-                    try:
-                        os.unlink(temp_name)
-                    except OSError:
-                        pass
-                    return True
-                except Exception as f_exc:
-                    logger.error("Privileged write failed for %s: %s", self.config_file, f_exc)
-            return False
+        except (OSError, PermissionError):
+            pass
+
+        if os.name != "nt":
+            try:
+                args = self._maybe_sudo(["tee", str(self.config_file)])
+                subprocess.run(
+                    args,
+                    input=data,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.PIPE,
+                    timeout=10,
+                    check=True,
+                )
+                subprocess.run(self._maybe_sudo(["chmod", "0664", str(self.config_file)]), check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                subprocess.run(self._maybe_sudo(["chown", "www-data:www-data", str(self.config_file)]), check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                return True
+            except Exception as exc:
+                logger.error("Failed to write %s via sudo tee: %s", self.config_file, exc)
+        return False
 
     def write_state(self, settings: dict[str, Any]) -> None:
         """Persists settings into state.json."""
@@ -223,14 +234,24 @@ $config['plugins'] = [{plugins_repr}];
             current_state = {}
 
         current_state["settings"] = settings
+        data = json.dumps(current_state, indent=2).encode("utf-8")
         try:
-            self.state_file.write_text(json.dumps(current_state, indent=2), encoding="utf-8")
+            self.state_file.write_bytes(data)
             try:
                 self.state_file.chmod(0o664)
             except OSError:
                 pass
-        except Exception as exc:
-            logger.warning("Could not write state.json: %s", exc)
+            return
+        except (OSError, PermissionError):
+            pass
+
+        if os.name != "nt":
+            try:
+                args = self._maybe_sudo(["tee", str(self.state_file)])
+                subprocess.run(args, input=data, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, timeout=10, check=True)
+                subprocess.run(self._maybe_sudo(["chmod", "0664", str(self.state_file)]), check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            except Exception as exc:
+                logger.error("Failed to write %s via sudo tee: %s", self.state_file, exc)
 
     def sync_db_skin(self, new_skin: str) -> None:
         """Updates user preferences in SQLite DB so existing users get the new skin."""
@@ -259,8 +280,9 @@ $config['plugins'] = [{plugins_repr}];
         """Restarts the systemd service so PHP workers reload the new config."""
         if os.name != "nt":
             try:
+                args = self._maybe_sudo(["systemctl", "restart", "srv-panel-roundcube-php"])
                 subprocess.run(
-                    ["systemctl", "restart", "srv-panel-roundcube-php"],
+                    args,
                     check=False,
                     stdout=subprocess.DEVNULL,
                     stderr=subprocess.DEVNULL,
@@ -277,7 +299,7 @@ $config['plugins'] = [{plugins_repr}];
         # 1. Write state.json
         self.write_state(settings)
 
-        # 2. Write config.inc.php
+        # 2. Write config.inc.php (using direct write or sudo tee)
         php_code = self.generate_config_php(settings)
         self.write_config_file(php_code)
 
