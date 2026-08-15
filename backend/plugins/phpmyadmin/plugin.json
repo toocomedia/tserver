@@ -1,0 +1,19 @@
+{
+  "id": "phpmyadmin",
+  "name": "phpMyAdmin",
+  "description": "Native PHP-FPM phpMyAdmin for panel-managed MariaDB databases.",
+  "version": "1.0.0",
+  "author": "SRV Panel Core",
+  "icon": "devicon-mysql-original",
+  "route_prefix": "/phpmyadmin",
+  "sidebar": true,
+  "sidebar_label": "phpMyAdmin",
+  "enabled": true,
+  "data_purge": true,
+  "usage": {},
+  "requires": {
+    "dependencies": ["php", "mariadb"]
+  },
+  "install_script": "scripts/install_phpmyadmin.sh",
+  "uninstall_script": "scripts/uninstall_phpmyadmin.sh"
+}

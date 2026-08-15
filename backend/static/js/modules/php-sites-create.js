@@ -203,7 +203,7 @@ function review() {
   const isLaravel = selectedPreset() === "laravel" || isFilament;
   const presetIcon = isWp ? "devicon-wordpress-plain" : isFilament ? "devicon-filamentphp-plain" : isLaravel ? "devicon-laravel-original" : "devicon-php-plain";
   const presetText = isWp ? t("wordpress") : isFilament ? t("filament") : isLaravel ? t("laravel") : t("plain_php");
-  const presetHtml = `<span style="display:inline-flex; align-items:center; gap:8px;"><i class="${presetIcon}" aria-hidden="true" style="font-size:16px; color:var(--color-accent);"></i><strong>${esc(presetText)}</strong></span>`;
+  const presetHtml = `<span class="badge-minimal badge-minimal--active"><i class="${presetIcon}" aria-hidden="true"></i>${esc(presetText)}</span>`;
 
   const hasDomainSsl = Boolean(domain?.has_ssl);
   const sslActive = hasDomainSsl || Boolean(values.get("ssl"));

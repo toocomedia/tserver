@@ -74,9 +74,12 @@
 .status-badge--warning { background: var(--color-surface); color: var(--color-warn); }
 .status-badge--danger { background: var(--color-alert-danger-bg); color: var(--color-danger); }
 
-/* Minimal Rounded Badges for Statuses */
+/* Minimal Rounded Badges for Statuses & Presets */
 .badge-minimal {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
   padding: 4px 8px;
   font-size: 10px;
   font-weight: 700;
@@ -84,6 +87,16 @@
   letter-spacing: 0.05em;
   border-radius: 4px !important;
   line-height: 1;
+  vertical-align: middle;
+}
+.badge-minimal i[class*="devicon-"],
+.badge-minimal [class^="devicon-"] {
+  font-size: 12px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
 }
 .badge-minimal--active {
   background: var(--color-alert-success-bg);
