@@ -148,6 +148,44 @@ cp -f "$SCRIPT_DIR/roundcube-config.inc.php" "$HTDOCS/config/config.inc.php"
 mkdir -p "$HTDOCS/plugins/srvpanel_launch"
 cp -f "$SCRIPT_DIR/srvpanel_launch/srvpanel_launch.php" "$HTDOCS/plugins/srvpanel_launch/"
 
+# 7.1 Patch PHP 8.4+ / 8.5 compatibility (array_first native declaration fix)
+python3 - "$HTDOCS/program/lib/Roundcube/bootstrap.php" <<'PY'
+import sys, os
+
+file_path = sys.argv[1] if len(sys.argv) > 1 else ""
+if os.path.isfile(file_path):
+    with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+        code = f.read()
+
+    def wrap_function(src, func_name):
+        search_target = f"function {func_name}("
+        idx = src.find(search_target)
+        if idx == -1:
+            return src
+        if f"function_exists('{func_name}')" in src or f'function_exists("{func_name}")' in src:
+            return src
+        brace_start = src.find("{", idx)
+        if brace_start == -1:
+            return src
+        depth = 1
+        i = brace_start + 1
+        while i < len(src) and depth > 0:
+            if src[i] == "{":
+                depth += 1
+            elif src[i] == "}":
+                depth -= 1
+            i += 1
+        func_block = src[idx:i]
+        replacement = f"if (!function_exists('{func_name}')) {{\n{func_block}\n}}"
+        return src[:idx] + replacement + src[i:]
+
+    for fn in ["array_first", "array_last", "array_find", "array_find_key", "array_any", "array_all"]:
+        code = wrap_function(code, fn)
+
+    with open(file_path, "w", encoding="utf-8") as f:
+        f.write(code)
+PY
+
 # 8. Set File Ownership & Permissions
 chown -R www-data:www-data "$HTDOCS" "$DATA_DIR/tmp" "$DATA_DIR/logs" "$DATA_DIR/sessions"
 chmod -R 0755 "$HTDOCS"

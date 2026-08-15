@@ -286,9 +286,48 @@ class RoundcubePhpService:
         if result.returncode != 0:
             raise RuntimeError(result.stderr.strip() or f"Could not stop {self.unit_name}.")
 
+    def patch_php_compatibility(self) -> bool:
+        """Patches Roundcube 1.6.x for PHP 8.4+ / 8.5 compatibility (native array_first redeclaration fix)."""
+        bootstrap_path = self.htdocs / "program" / "lib" / "Roundcube" / "bootstrap.php"
+        if not bootstrap_path.is_file():
+            return False
+        try:
+            code = bootstrap_path.read_text(encoding="utf-8", errors="ignore")
+            modified = False
+            for fn in ["array_first", "array_last", "array_find", "array_find_key", "array_any", "array_all"]:
+                search_target = f"function {fn}("
+                idx = code.find(search_target)
+                if idx == -1:
+                    continue
+                if f"function_exists('{fn}')" in code or f'function_exists("{fn}")' in code:
+                    continue
+                brace_start = code.find("{", idx)
+                if brace_start == -1:
+                    continue
+                depth = 1
+                i = brace_start + 1
+                while i < len(code) and depth > 0:
+                    if code[i] == "{":
+                        depth += 1
+                    elif code[i] == "}":
+                        depth -= 1
+                    i += 1
+                func_block = code[idx:i]
+                replacement = f"if (!function_exists('{fn}')) {{\n{func_block}\n}}"
+                code = code[:idx] + replacement + code[i:]
+                modified = True
+
+            if modified:
+                bootstrap_path.write_text(code, encoding="utf-8")
+                return True
+        except (OSError, PermissionError):
+            pass
+        return False
+
     def resume(self) -> None:
         if not self.is_installed() or os.name == "nt":
             raise RuntimeError("Roundcube PHP service is not installed.")
+        self.patch_php_compatibility()
         result = self._run(["systemctl", "restart", self.unit_name], timeout=30)
         if result.returncode != 0:
             raise RuntimeError(result.stderr.strip() or f"Could not start {self.unit_name}.")
