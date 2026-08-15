@@ -25,7 +25,26 @@
         </div>
       </div>
 
-      <!-- Control 2: Single Nginx Worker Mode -->
+      <!-- Control 2: Swap Storage Size -->
+      <div class="optimization-row">
+        <div class="optimization-row__copy">
+          <div class="optimization-row__title">
+            <strong>{{ _('swap_storage_size') }}</strong>
+          </div>
+          <div class="text-small text-muted">{{ _('configure_swapfile_on_disk_to_prevent_oom') }}</div>
+        </div>
+        <div class="optimization-row__control optimization-row__control--wide">
+          <div class="layout-switcher layout-switcher--five" id="group-swap-size" role="group" aria-label="Swap Storage Size">
+            <button type="button" class="layout-switcher__btn" id="btn-swap-0" data-swap-size="0">{{ _('off') }}</button>
+            <button type="button" class="layout-switcher__btn" id="btn-swap-512" data-swap-size="512">512M</button>
+            <button type="button" class="layout-switcher__btn" id="btn-swap-1024" data-swap-size="1024">1G</button>
+            <button type="button" class="layout-switcher__btn" id="btn-swap-2048" data-swap-size="2048">2G</button>
+            <button type="button" class="layout-switcher__btn" id="btn-swap-4096" data-swap-size="4096">4G</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Control 3: Single Nginx Worker Mode -->
       <div class="optimization-row">
         <div class="optimization-row__copy">
           <div class="optimization-row__title">
@@ -41,7 +60,7 @@
         </div>
       </div>
 
-      <!-- Control 3: Advanced Server Tuning -->
+      <!-- Control 4: Advanced Server Tuning -->
       <div class="optimization-row">
         <div class="optimization-row__copy">
           <div class="optimization-row__title">
@@ -56,6 +75,26 @@
             <button type="button" class="layout-switcher__btn is-active" id="btn-adv-off" data-optimization-action="advanced-off">{{ _('inactive') }}</button>
             <button type="button" class="layout-switcher__btn" id="btn-adv-on" data-optimization-action="advanced-on">{{ _('active_1') }}</button>
           </div>
+        </div>
+      </div>
+
+      <!-- Control 5: Memory Maintenance Actions -->
+      <div class="optimization-row">
+        <div class="optimization-row__copy">
+          <div class="optimization-row__title">
+            <strong>{{ _('memory_maintenance') }}</strong>
+          </div>
+          <div class="text-small text-muted">{{ _('free_ram_pagecache_or_safely_flush_cold_swap') }}</div>
+        </div>
+        <div class="optimization-row__control optimization-row__control--wide" style="display:flex; gap:var(--space-sm); justify-content:flex-end;">
+          <button type="button" class="btn btn-secondary btn-sm" id="btn-clean-ram" data-memory-action="clean-ram" title="{{ _('free_ram_cache_tooltip') }}" style="white-space:nowrap;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px; height:13px; margin-right:4px; vertical-align:-2px;"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path></svg>
+            {{ _('free_ram_cache') }}
+          </button>
+          <button type="button" class="btn btn-secondary btn-sm" id="btn-clean-swap" data-memory-action="clean-swap" title="{{ _('smart_flush_swap_tooltip') }}" style="white-space:nowrap;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px; height:13px; margin-right:4px; vertical-align:-2px;"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path></svg>
+            {{ _('smart_flush_swap') }}
+          </button>
         </div>
       </div>
 

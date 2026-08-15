@@ -584,6 +584,17 @@
       btnAdvOn.classList.toggle('is-active', isAdvTuning);
     }
 
+    const swapSizeMb = opt.swapfile_size_mb ?? 0;
+    const swapGroup = document.getElementById('group-swap-size');
+    if (swapGroup) {
+      swapGroup.querySelectorAll('button[data-swap-size]').forEach(btn => {
+        const sz = parseInt(btn.dataset.swapSize, 10);
+        const isMatch = (sz === 0 && swapSizeMb === 0) ||
+                        (sz > 0 && Math.abs(sz - swapSizeMb) <= 64);
+        btn.classList.toggle('is-active', isMatch);
+      });
+    }
+
     if (!isActionPending) setOptimizationButtonsDisabled(false);
   }
 
@@ -622,7 +633,7 @@
   }
 
   function setOptimizationButtonsDisabled(disabled) {
-    const ids = ['group-opt-mode', 'group-nginx-worker', 'group-advanced-tuning'];
+    const ids = ['group-opt-mode', 'group-nginx-worker', 'group-advanced-tuning', 'group-swap-size'];
     ids.forEach(id => {
       const group = document.getElementById(id);
       if (group) {
@@ -632,6 +643,17 @@
         });
       }
     });
+
+    const btnCleanRam = document.getElementById('btn-clean-ram');
+    if (btnCleanRam) {
+      btnCleanRam.disabled = disabled;
+      if (!disabled) btnCleanRam.classList.remove('is-loading');
+    }
+    const btnCleanSwap = document.getElementById('btn-clean-swap');
+    if (btnCleanSwap) {
+      btnCleanSwap.disabled = disabled;
+      if (!disabled) btnCleanSwap.classList.remove('is-loading');
+    }
   }
 
   function setActionState(pending) {
@@ -695,16 +717,95 @@
       { advanced_active: enable }, `Advanced Server Tuning ${enable ? 'enabled' : 'disabled'}`);
   }
 
+  function setSwapSize(sizeMb) {
+    if (isActionPending) return;
+    setActionState(true);
+    const label = sizeMb === 0 ? 'Disabled' : (sizeMb >= 1024 ? `${sizeMb / 1024} GB` : `${sizeMb} MB`);
+    toast(`Configuring swap size to ${label}... this may take a few moments.`, 'info');
+    panel.post('/api/system/swap/set', { size_mb: sizeMb })
+      .then(res => {
+        setActionState(false);
+        if (res && res.success) {
+          toast(`Swap size successfully updated to ${label}.`, 'success');
+          fetchStats();
+          fetchOptimizationStatus();
+        } else {
+          toast(res?.detail || 'Failed to update swap size.', 'danger');
+        }
+      })
+      .catch(() => {
+        setActionState(false);
+        toast('Failed to update swap size. Please try again.', 'danger');
+      });
+  }
+
+  async function cleanRamCache(btn) {
+    if (btn) btn.classList.add('is-loading');
+    toast('Freeing inactive RAM pagecache...', 'info');
+    try {
+      const res = await panel.post('/api/system/memory/clean-ram');
+      if (res && res.success) {
+        toast(res.detail || 'RAM cache cleared successfully.', 'success');
+        fetchStats();
+      } else {
+        toast(res?.detail || 'Failed to clean RAM cache.', 'danger');
+      }
+    } catch (e) {
+      toast('Error while cleaning RAM cache.', 'danger');
+    } finally {
+      if (btn) btn.classList.remove('is-loading');
+    }
+  }
+
+  async function cleanSwapCache(btn) {
+    if (btn) btn.classList.add('is-loading');
+    toast('Running Smart Swap cleaner...', 'info');
+    try {
+      const res = await panel.post('/api/system/memory/clean-swap');
+      if (res && res.success && res.purged) {
+        toast(res.detail || 'Swap refreshed successfully.', 'success');
+        fetchStats();
+      } else if (res && res.skipped_safety) {
+        toast(res.detail || 'Swap flush skipped for safety.', 'warning');
+        fetchStats();
+      } else {
+        toast(res?.detail || 'Swap refresh encountered an issue.', 'danger');
+      }
+    } catch (e) {
+      toast('Error while running Swap cleaner.', 'danger');
+    } finally {
+      if (btn) btn.classList.remove('is-loading');
+    }
+  }
+
   document.addEventListener('click', (event) => {
-    const button = event.target.closest('[data-optimization-action]');
-    const action = button?.dataset.optimizationAction;
-    if (button) button.classList.add('is-loading');
-    if (action === 'ram-off') setOptMode(false);
-    if (action === 'ram-on') setOptMode(true);
-    if (action === 'nginx-auto') setNginxWorker(false);
-    if (action === 'nginx-single') setNginxWorker(true);
-    if (action === 'advanced-off') setAdvancedTuning(false);
-    if (action === 'advanced-on') setAdvancedTuning(true);
+    const optButton = event.target.closest('[data-optimization-action]');
+    if (optButton) {
+      optButton.classList.add('is-loading');
+      const action = optButton.dataset.optimizationAction;
+      if (action === 'ram-off') setOptMode(false);
+      if (action === 'ram-on') setOptMode(true);
+      if (action === 'nginx-auto') setNginxWorker(false);
+      if (action === 'nginx-single') setNginxWorker(true);
+      if (action === 'advanced-off') setAdvancedTuning(false);
+      if (action === 'advanced-on') setAdvancedTuning(true);
+      return;
+    }
+
+    const swapButton = event.target.closest('[data-swap-size]');
+    if (swapButton) {
+      const sz = parseInt(swapButton.dataset.swapSize, 10);
+      setSwapSize(sz);
+      return;
+    }
+
+    const memButton = event.target.closest('[data-memory-action]');
+    if (memButton) {
+      const memAction = memButton.dataset.memoryAction;
+      if (memAction === 'clean-ram') cleanRamCache(memButton);
+      if (memAction === 'clean-swap') cleanSwapCache(memButton);
+      return;
+    }
   });
 
   function togglePoll() {

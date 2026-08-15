@@ -13,6 +13,8 @@
 }
 .layout-switcher--two { --switcher-columns: 2; }
 .layout-switcher--three { --switcher-columns: 3; width: calc(var(--button-min-width) * 3 + var(--space-md)); }
+.layout-switcher--four { --switcher-columns: 4; width: calc(var(--button-min-width) * 4); }
+.layout-switcher--five { --switcher-columns: 5; width: calc(var(--button-min-width) * 5); }
 .layout-switcher__btn {
   width: 100%;
   min-width: 0;
@@ -60,6 +62,7 @@
 .optimization-row__copy { flex: 1; min-width: 240px; }
 .optimization-row__title { margin-bottom: 2px; font-size: var(--font-body); }
 .optimization-row__control { width: calc(var(--button-min-width) * 2); flex: 0 0 calc(var(--button-min-width) * 2); }
+.optimization-row__control--wide { width: auto; max-width: 100%; flex: 0 0 auto; }
 .layout-switcher__btn:disabled { opacity: .45; cursor: wait; pointer-events: none; }
 .optimization-checks { display: none; line-height: 1.4; }
 

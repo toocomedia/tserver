@@ -271,6 +271,177 @@ set_nginx_worker_auto() {
   fi
 }
 
+set_swap() {
+  if ! is_root; then
+    echo "ERROR: Must run as root (sudo bash scripts/optimize.sh set-swap <MB>)" >&2
+    exit 1
+  fi
+  local size_mb="${1:-0}"
+  if ! [[ "$size_mb" =~ ^[0-9]+$ ]]; then
+    echo "ERROR: Swap size must be a positive integer in MB (e.g. 0, 512, 1024, 2048, 4096)" >&2
+    exit 1
+  fi
+
+  SWAP_FILE="/swapfile"
+
+  if [[ "$size_mb" -eq 0 ]]; then
+    echo "==> Disabling and removing swapfile..."
+    if swapon --show=NAME 2>/dev/null | grep -q "^$SWAP_FILE$"; then
+      swapoff "$SWAP_FILE" 2>/dev/null || true
+    fi
+    if [[ -f "$SWAP_FILE" ]]; then
+      rm -f "$SWAP_FILE"
+    fi
+    if [[ -f /etc/fstab ]]; then
+      sed -i '\|/swapfile|d' /etc/fstab
+    fi
+    echo "==> Swapfile disabled."
+    return 0
+  fi
+
+  echo "==> Configuring swapfile to ${size_mb} MB..."
+  
+  # Check available disk space in root partition
+  local avail_kb
+  avail_kb="$(df -k --output=avail / 2>/dev/null | tail -n 1 | tr -d ' ' || echo 0)"
+  local needed_kb=$((size_mb * 1024))
+  if [[ "$avail_kb" =~ ^[0-9]+$ ]] && [[ "$avail_kb" -gt 0 ]] && [[ "$avail_kb" -lt "$needed_kb" ]]; then
+    echo "ERROR: Not enough disk space. Available: $((avail_kb / 1024)) MB, Required: ${size_mb} MB" >&2
+    exit 1
+  fi
+
+  # Turn off existing swapfile if active
+  if swapon --show=NAME 2>/dev/null | grep -q "^$SWAP_FILE$"; then
+    swapoff "$SWAP_FILE" 2>/dev/null || true
+  fi
+
+  # Allocate
+  if command -v fallocate &>/dev/null; then
+    fallocate -l "${size_mb}M" "$SWAP_FILE" 2>/dev/null || dd if=/dev/zero of="$SWAP_FILE" bs=1M count="$size_mb" status=none
+  else
+    dd if=/dev/zero of="$SWAP_FILE" bs=1M count="$size_mb" status=none
+  fi
+
+  chmod 600 "$SWAP_FILE"
+  mkswap "$SWAP_FILE" >/dev/null
+  swapon "$SWAP_FILE"
+
+  # Persist in /etc/fstab if not present
+  if [[ -f /etc/fstab ]]; then
+    if ! grep -q "^$SWAP_FILE" /etc/fstab; then
+      echo "$SWAP_FILE none swap sw 0 0" >> /etc/fstab
+    fi
+  fi
+
+  echo "==> Swapfile successfully configured to ${size_mb} MB."
+}
+
+clean_ram() {
+  if ! is_root; then
+    echo "ERROR: Must run as root" >&2
+    exit 1
+  fi
+  local ram_before_avail_kb
+  ram_before_avail_kb="$(grep -i MemAvailable /proc/meminfo 2>/dev/null | awk '{print $2}' || echo 0)"
+
+  sync
+  echo 3 > /proc/sys/vm/drop_caches 2>/dev/null || true
+  if [[ -f /proc/sys/vm/compact_memory ]]; then
+    echo 1 > /proc/sys/vm/compact_memory 2>/dev/null || true
+  fi
+
+  local ram_after_avail_kb
+  ram_after_avail_kb="$(grep -i MemAvailable /proc/meminfo 2>/dev/null | awk '{print $2}' || echo 0)"
+  local freed_kb=$((ram_after_avail_kb - ram_before_avail_kb))
+  if [[ "$freed_kb" -lt 0 ]]; then freed_kb=0; fi
+  local freed_mb=$((freed_kb / 1024))
+  local total_avail_mb=$((ram_after_avail_kb / 1024))
+
+  cat <<EOF
+{
+  "success": true,
+  "freed_mb": $freed_mb,
+  "available_ram_mb": $total_avail_mb,
+  "detail": "RAM pagecache safely purged. Reclaimed ${freed_mb} MB."
+}
+EOF
+}
+
+clean_swap() {
+  if ! is_root; then
+    echo "ERROR: Must run as root" >&2
+    exit 1
+  fi
+
+  # Step 1: Pre-flush RAM caches to maximize headroom
+  sync
+  echo 3 > /proc/sys/vm/drop_caches 2>/dev/null || true
+  if [[ -f /proc/sys/vm/compact_memory ]]; then
+    echo 1 > /proc/sys/vm/compact_memory 2>/dev/null || true
+  fi
+
+  # Step 2: Safety Check
+  local ram_avail_kb
+  ram_avail_kb="$(grep -i MemAvailable /proc/meminfo 2>/dev/null | awk '{print $2}' || echo 0)"
+  local swap_total_kb
+  swap_total_kb="$(grep -i SwapTotal /proc/meminfo 2>/dev/null | awk '{print $2}' || echo 0)"
+  local swap_free_kb
+  swap_free_kb="$(grep -i SwapFree /proc/meminfo 2>/dev/null | awk '{print $2}' || echo 0)"
+  local swap_used_kb=$((swap_total_kb - swap_free_kb))
+
+  if [[ "$swap_used_kb" -le 0 ]]; then
+    cat <<EOF
+{
+  "success": true,
+  "purged": true,
+  "freed_swap_mb": 0,
+  "detail": "Swap is already empty (0 MB used)."
+}
+EOF
+    return 0
+  fi
+
+  # Require at least swap_used + 100MB of free RAM to safely turn swap off
+  local safety_margin_kb=$((100 * 1024))
+  local required_ram_kb=$((swap_used_kb + safety_margin_kb))
+
+  local ram_avail_mb=$((ram_avail_kb / 1024))
+  local swap_used_mb=$((swap_used_kb / 1024))
+
+  if [[ "$ram_avail_kb" -lt "$required_ram_kb" ]]; then
+    cat <<EOF
+{
+  "success": false,
+  "purged": false,
+  "skipped_safety": true,
+  "available_ram_mb": $ram_avail_mb,
+  "used_swap_mb": $swap_used_mb,
+  "detail": "Safety hold: Available RAM (${ram_avail_mb} MB) is too low to safely absorb ${swap_used_mb} MB from Swap without crashing. RAM cache was cleared."
+}
+EOF
+    return 0
+  fi
+
+  # Safe to cycle swap
+  swapoff -a
+  swapon -a
+
+  local swap_free_after_kb
+  swap_free_after_kb="$(grep -i SwapFree /proc/meminfo 2>/dev/null | awk '{print $2}' || echo 0)"
+  local swap_used_after_kb=$((swap_total_kb - swap_free_after_kb))
+  local freed_swap_mb=$(( (swap_used_kb - swap_used_after_kb) / 1024 ))
+  if [[ "$freed_swap_mb" -lt 0 ]]; then freed_swap_mb=0; fi
+
+  cat <<EOF
+{
+  "success": true,
+  "purged": true,
+  "freed_swap_mb": $freed_swap_mb,
+  "detail": "Swap refreshed successfully. Freed ${freed_swap_mb} MB from swap."
+}
+EOF
+}
+
 get_status() {
   local opt_active="false"
   local zram_active="false"
@@ -278,6 +449,7 @@ get_status() {
   local swappiness="60"
   local worker_setting="auto"
   local advanced_active="false"
+  local swapfile_size_mb=0
 
   if [[ -f /etc/systemd/journald.conf.d/99-srv-panel.conf ]]; then
     advanced_active="true"
@@ -304,6 +476,14 @@ get_status() {
     swappiness="$(cat /proc/sys/vm/swappiness 2>/dev/null || echo "60")"
   fi
 
+  if [[ -f /swapfile ]]; then
+    local sz
+    sz="$(stat -c%s /swapfile 2>/dev/null || stat -f%z /swapfile 2>/dev/null || echo 0)"
+    if [[ "$sz" =~ ^[0-9]+$ ]] && [[ "$sz" -gt 0 ]]; then
+      swapfile_size_mb=$((sz / 1024 / 1024))
+    fi
+  fi
+
   cat <<EOF
 {
   "optimization_active": $opt_active,
@@ -311,7 +491,8 @@ get_status() {
   "nginx_single_worker": $nginx_single,
   "nginx_worker_setting": "$worker_setting",
   "swappiness": $swappiness,
-  "advanced_active": $advanced_active
+  "advanced_active": $advanced_active,
+  "swapfile_size_mb": $swapfile_size_mb
 }
 EOF
 }
@@ -325,9 +506,12 @@ case "$ACTION" in
   advanced-disable)    disable_advanced ;;
   nginx-worker-1)      set_nginx_worker_1 ;;
   nginx-worker-auto)   set_nginx_worker_auto ;;
+  set-swap)            set_swap "${2:-0}" ;;
+  clean-ram)           clean_ram ;;
+  clean-swap)          clean_swap ;;
   status)              get_status ;;
   *)
-    echo "Usage: $0 {enable|disable|advanced-enable|advanced-disable|nginx-worker-1|nginx-worker-auto|status}" >&2
+    echo "Usage: $0 {enable|disable|advanced-enable|advanced-disable|nginx-worker-1|nginx-worker-auto|set-swap <MB>|clean-ram|clean-swap|status}" >&2
     exit 1
     ;;
 esac

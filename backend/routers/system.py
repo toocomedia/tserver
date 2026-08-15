@@ -174,6 +174,23 @@ async def _get_optimization_status() -> dict:
             "has_snaps": has_snaps
         }
 
+    # 5. Swapfile and Purge Safety Inspection
+    swapfile_size_mb = 0
+    swapfile_path = Path("/swapfile")
+    if swapfile_path.is_file():
+        try:
+            swapfile_size_mb = round(swapfile_path.stat().st_size / (1024 * 1024))
+        except Exception:
+            pass
+
+    can_purge_swap = False
+    try:
+        vm = _psutil.virtual_memory()
+        sm = _psutil.swap_memory()
+        can_purge_swap = sm.used == 0 or vm.available >= (sm.used + 100 * 1024 * 1024)
+    except Exception:
+        pass
+
     return {
         "optimization_active": opt_active,
         "zram_active": zram_active,
@@ -182,6 +199,8 @@ async def _get_optimization_status() -> dict:
         "advanced_active": advanced_active,
         "advanced_tuning_active": advanced_active,
         "hardware_checks": _HARDWARE_CACHE,
+        "swapfile_size_mb": swapfile_size_mb,
+        "can_safely_purge_swap": can_purge_swap,
     }
 
 
@@ -458,6 +477,17 @@ async def server_stats(db: AsyncSession = Depends(get_db)):
         return payload
 
 
+def _get_optimize_script_path() -> Path | None:
+    for candidate in [
+        config.BASE_DIR / "scripts" / "optimize.sh",
+        config.BASE_DIR.parent / "scripts" / "optimize.sh",
+        Path("/opt/srv-panel/scripts/optimize.sh"),
+    ]:
+        if candidate.exists():
+            return candidate
+    return None
+
+
 class OptimizationToggleIn(BaseModel):
     enabled: bool
 
@@ -473,11 +503,8 @@ class AdvancedTuningToggleIn(BaseModel):
 @router.post("/api/system/optimization/toggle")
 async def toggle_optimization(payload: OptimizationToggleIn):
     """Enable or disable server Low-RAM optimization mode."""
-    script_path = config.BASE_DIR / "scripts" / "optimize.sh"
-    if not script_path.exists():
-        script_path = Path("/opt/srv-panel/scripts/optimize.sh")
-
-    if not script_path.exists():
+    script_path = _get_optimize_script_path()
+    if not script_path:
         return {"success": False, "detail": "optimize.sh script not found"}
 
     action = "enable" if payload.enabled else "disable"
@@ -494,11 +521,8 @@ async def toggle_optimization(payload: OptimizationToggleIn):
 @router.post("/api/system/nginx-worker/toggle")
 async def toggle_nginx_worker(payload: NginxWorkerToggleIn):
     """Set Nginx worker_processes to 1 or auto independently."""
-    script_path = config.BASE_DIR / "scripts" / "optimize.sh"
-    if not script_path.exists():
-        script_path = Path("/opt/srv-panel/scripts/optimize.sh")
-
-    if not script_path.exists():
+    script_path = _get_optimize_script_path()
+    if not script_path:
         return {"success": False, "detail": "optimize.sh script not found"}
 
     action = "nginx-worker-1" if payload.single_worker else "nginx-worker-auto"
@@ -515,11 +539,8 @@ async def toggle_nginx_worker(payload: NginxWorkerToggleIn):
 @router.post("/api/system/advanced/toggle")
 async def toggle_advanced_tuning(payload: AdvancedTuningToggleIn):
     """Enable or disable Advanced Server Tuning."""
-    script_path = config.BASE_DIR / "scripts" / "optimize.sh"
-    if not script_path.exists():
-        script_path = Path("/opt/srv-panel/scripts/optimize.sh")
-
-    if not script_path.exists():
+    script_path = _get_optimize_script_path()
+    if not script_path:
         return {"success": False, "detail": "optimize.sh script not found"}
 
     action = "advanced-enable" if payload.enabled else "advanced-disable"
@@ -531,6 +552,64 @@ async def toggle_advanced_tuning(payload: AdvancedTuningToggleIn):
         "success": res.success,
         "detail": detail,
     }
+
+
+class SwapConfigIn(BaseModel):
+    size_mb: int
+
+
+@router.post("/api/system/swap/set")
+async def set_swap_size(payload: SwapConfigIn):
+    """Configure or resize /swapfile (0 to disable, or size in MB)."""
+    if payload.size_mb < 0 or payload.size_mb > 32768:
+        return {"success": False, "detail": "Swap size must be between 0 and 32768 MB."}
+
+    script_path = _get_optimize_script_path()
+    if not script_path:
+        return {"success": False, "detail": "optimize.sh script not found"}
+
+    res = await run(["bash", str(script_path), "set-swap", str(payload.size_mb)])
+    detail = res.stdout if res.success else res.stderr
+    if "password is required" in detail.lower():
+        detail = "Sudoers permissions need updating. Please run on server: sudo bash /opt/srv-panel/scripts/update.sh"
+    return {
+        "success": res.success,
+        "detail": detail.strip(),
+    }
+
+
+@router.post("/api/system/memory/clean-ram")
+async def clean_ram_cache():
+    """Safely drop inactive kernel pagecaches and compact memory."""
+    script_path = _get_optimize_script_path()
+    if not script_path:
+        return {"success": False, "detail": "optimize.sh script not found"}
+
+    res = await run(["bash", str(script_path), "clean-ram"])
+    if res.success:
+        try:
+            data = json.loads(res.stdout)
+            return data
+        except Exception:
+            return {"success": True, "detail": res.stdout.strip()}
+    return {"success": False, "detail": res.stderr.strip() or "Failed to clean RAM caches"}
+
+
+@router.post("/api/system/memory/clean-swap")
+async def clean_swap_cache():
+    """Smart swap cleaner with OOM safety protection."""
+    script_path = _get_optimize_script_path()
+    if not script_path:
+        return {"success": False, "detail": "optimize.sh script not found"}
+
+    res = await run(["bash", str(script_path), "clean-swap"])
+    if res.success:
+        try:
+            data = json.loads(res.stdout)
+            return data
+        except Exception:
+            return {"success": True, "detail": res.stdout.strip()}
+    return {"success": False, "detail": res.stderr.strip() or "Failed to purge swap"}
 
 
 @router.post("/api/system/reboot")

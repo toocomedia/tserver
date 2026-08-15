@@ -450,7 +450,7 @@
   "protocol": "Protocolo",
   "cache": "Caché",
   "missing_1": "Faltante",
-  "off": "APAGADO",
+  "off": "Desactivado",
   "cache_settings": "Configuración de caché",
   "ttl_minutes": "TTL (minutos)",
   "auto_clear_hours_0_off": "Limpieza automática (horas, 0=Apagado)",
@@ -808,5 +808,13 @@
   "js.dns_only_desc": "Solo zona DNS y registro A. Sin vhost Nginx.",
   "js.not_applicable_dns": "No aplicable (Solo DNS)",
   "js.python_domain_desc": "Dominio DNS creado primero. Continúe con la configuración de la fuente y despliegue de la aplicación Python.",
-  "js.nginx_webroot_desc": "Vhost Nginx HTTP y directorio webroot creados."
+  "js.nginx_webroot_desc": "Vhost Nginx HTTP y directorio webroot creados.",
+  "swap_storage_size": "Tamaño de almacenamiento Swap",
+  "configure_swapfile_on_disk_to_prevent_oom": "Configure el almacenamiento de intercambio en disco (swapfile) para evitar bloqueos por falta de memoria (OOM).",
+  "memory_maintenance": "Mantenimiento de memoria",
+  "free_ram_pagecache_or_safely_flush_cold_swap": "Libere la caché de páginas inactiva del SO o actualice el swap frío en la memoria de forma segura.",
+  "free_ram_cache": "Liberar caché RAM",
+  "smart_flush_swap": "Vaciado inteligente de Swap",
+  "free_ram_cache_tooltip": "Elimina de forma segura las cachés de páginas inactivas del kernel, liberando RAM física al instante.",
+  "smart_flush_swap_tooltip": "Limpia la caché de RAM y purga de forma segura las asignaciones de swap antiguas si la memoria lo permite."
 }

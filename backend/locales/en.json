@@ -450,7 +450,7 @@
   "protocol": "Protocol",
   "cache": "Cache",
   "missing_1": "Missing",
-  "off": "OFF",
+  "off": "Off",
   "cache_settings": "Cache settings",
   "ttl_minutes": "TTL (minutes)",
   "auto_clear_hours_0_off": "Auto-clear (hours, 0=off)",
@@ -929,7 +929,14 @@
   "wordpress_installer_cache": "WordPress installer cache",
   "clear_wordpress_installer_cache": "Clear installer cache",
   "change": "Change",
-  "expires": "Expires",
   "renew": "Renew",
-  "revoke": "Revoke"
+  "revoke": "Revoke",
+  "swap_storage_size": "Swap Storage Size",
+  "configure_swapfile_on_disk_to_prevent_oom": "Configure on-disk swap storage (swapfile) to give extra headroom and prevent Out-Of-Memory crashes.",
+  "memory_maintenance": "Memory Maintenance",
+  "free_ram_pagecache_or_safely_flush_cold_swap": "Free inactive OS page cache or safely refresh cold swap back into memory.",
+  "free_ram_cache": "Free RAM Cache",
+  "smart_flush_swap": "Smart Flush Swap",
+  "free_ram_cache_tooltip": "Safely drops clean inactive kernel pagecaches, freeing physical RAM instantly.",
+  "smart_flush_swap_tooltip": "Cleans RAM cache and safely purges stale swap allocations if free memory allows."
 }

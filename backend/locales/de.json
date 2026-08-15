@@ -450,7 +450,7 @@
   "protocol": "Protokoll",
   "cache": "Cache",
   "missing_1": "Fehlend",
-  "off": "AUS",
+  "off": "Aus",
   "cache_settings": "Cache-Einstellungen",
   "ttl_minutes": "TTL (Minuten)",
   "auto_clear_hours_0_off": "Auto-Bereinigung (Stunden, 0=Aus)",
@@ -808,5 +808,13 @@
   "js.dns_only_desc": "Nur DNS-Zone & A-Record. Kein Nginx-Vhost.",
   "js.not_applicable_dns": "Nicht zutreffend (Nur DNS)",
   "js.python_domain_desc": "DNS-Domain zuerst erstellt. Fahren Sie mit der Einrichtung von Quelle und Bereitstellung der Python-App fort.",
-  "js.nginx_webroot_desc": "Nginx HTTP-Vhost & Webroot-Verzeichnis erstellt."
+  "js.nginx_webroot_desc": "Nginx HTTP-Vhost & Webroot-Verzeichnis erstellt.",
+  "swap_storage_size": "Swap-Speichergröße",
+  "configure_swapfile_on_disk_to_prevent_oom": "Konfigurieren Sie Swap-Speicher (Swapfile) auf der Festplatte, um Out-Of-Memory-Abstürze zu verhindern.",
+  "memory_maintenance": "Speicherwartung",
+  "free_ram_pagecache_or_safely_flush_cold_swap": "Geben Sie inaktiven Betriebssystem-Pagecache frei oder leeren Sie kalten Swap sicher in den Arbeitsspeicher.",
+  "free_ram_cache": "RAM-Cache leeren",
+  "smart_flush_swap": "Smart-Swap-Bereinigung",
+  "free_ram_cache_tooltip": "Gibt inaktive Kernel-Pagecaches sicher frei und leert sofort physischen Arbeitsspeicher.",
+  "smart_flush_swap_tooltip": "Bereinigt den RAM-Cache und leert alte Swap-Belegungen sicher, wenn genügend freier Speicher vorhanden ist."
 }

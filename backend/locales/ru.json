@@ -450,7 +450,7 @@
   "protocol": "Протокол",
   "cache": "Кэш",
   "missing_1": "Отсутствующий",
-  "off": "ВЫКЛЮЧЕННЫЙ",
+  "off": "Выкл",
   "cache_settings": "Настройки кэша",
   "ttl_minutes": "Срок жизни (минуты)",
   "auto_clear_hours_0_off": "Автоматическая очистка (часы, 0 = выключено)",
@@ -808,5 +808,13 @@
   "js.dns_only_desc": "Только DNS-зона и A-запись. Без Nginx vhost.",
   "js.not_applicable_dns": "Неприменимо (Только DNS)",
   "js.python_domain_desc": "Сначала создан DNS-домен. Продолжите настройку исходников и развертывания Python-приложения.",
-  "js.nginx_webroot_desc": "Созданы HTTP vhost Nginx и корневой каталог webroot."
+  "js.nginx_webroot_desc": "Созданы HTTP vhost Nginx и корневой каталог webroot.",
+  "swap_storage_size": "Размер файла подкачки (Swap)",
+  "configure_swapfile_on_disk_to_prevent_oom": "Настройте файл подкачки (swapfile) на диске для дополнительного запаса памяти и предотвращения сбоев OOM.",
+  "memory_maintenance": "Обслуживание памяти",
+  "free_ram_pagecache_or_safely_flush_cold_swap": "Освободите неактивный кэш страниц ОС или безопасно обновите холодный swap обратно в память.",
+  "free_ram_cache": "Очистить кэш RAM",
+  "smart_flush_swap": "Умная очистка Swap",
+  "free_ram_cache_tooltip": "Безопасно очищает неактивные кэши страниц ядра, мгновенно освобождая физическую память.",
+  "smart_flush_swap_tooltip": "Очищает кэш RAM и безопасно сбрасывает устаревшие данные swap, если позволяет свободная память."
 }

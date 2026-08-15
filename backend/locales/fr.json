@@ -450,7 +450,7 @@
   "protocol": "Protocole",
   "cache": "Cache",
   "missing_1": "Manquant",
-  "off": "DÉSACTIVÉ",
+  "off": "Désactivé",
   "cache_settings": "Paramètres de cache",
   "ttl_minutes": "Durée de vie (minutes)",
   "auto_clear_hours_0_off": "Effacement automatique (heures, 0 = désactivé)",
@@ -823,5 +823,13 @@
   "website_root": "Racine du site",
   "filament_admin_required": "Saisissez nom, e-mail et mot de passe administrateur Filament de 12 caractères.",
   "wordpress_installer_cache": "Cache de l'installateur WordPress",
-  "clear_wordpress_installer_cache": "Vider le cache de l'installateur"
+  "clear_wordpress_installer_cache": "Vider le cache de l'installateur",
+  "swap_storage_size": "Taille du stockage Swap",
+  "configure_swapfile_on_disk_to_prevent_oom": "Configurez le fichier d'échange (swapfile) pour offrir une marge de sécurité et éviter les plantages OOM.",
+  "memory_maintenance": "Maintenance de la mémoire",
+  "free_ram_pagecache_or_safely_flush_cold_swap": "Libérez le cache de pages inactif ou actualisez le swap froid en mémoire en toute sécurité.",
+  "free_ram_cache": "Vider le cache RAM",
+  "smart_flush_swap": "Purge intelligente du Swap",
+  "free_ram_cache_tooltip": "Supprime en toute sécurité les caches de pages inactifs du noyau, libérant instantanément la RAM physique.",
+  "smart_flush_swap_tooltip": "Nettoie le cache RAM et purge en toute sécurité les anciennes allocations de swap si la mémoire le permet."
 }

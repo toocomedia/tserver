@@ -450,7 +450,7 @@
   "protocol": "Protokol",
   "cache": "Önbellek",
   "missing_1": "Eksik",
-  "off": "KAPALI",
+  "off": "Kapalı",
   "cache_settings": "Önbellek ayarları",
   "ttl_minutes": "TTL (dakika)",
   "auto_clear_hours_0_off": "Otomatik temizleme (saat, 0=kapalı)",
@@ -808,5 +808,13 @@
   "js.dns_only_desc": "Yalnızca DNS bölgesi ve A kaydı. Nginx vhost yok.",
   "js.not_applicable_dns": "Uygulanamaz (Yalnızca DNS)",
   "js.python_domain_desc": "Önce DNS alanı oluşturuldu. Python uygulaması kaynağı ve dağıtım kurulumuna devam edin.",
-  "js.nginx_webroot_desc": "Nginx HTTP vhost ve webroot dizini oluşturuldu."
+  "js.nginx_webroot_desc": "Nginx HTTP vhost ve webroot dizini oluşturuldu.",
+  "swap_storage_size": "Takas (Swap) Depolama Boyutu",
+  "configure_swapfile_on_disk_to_prevent_oom": "Bellek yetersizliği (OOM) çökmelerini önlemek için disk üzerinde takas alanı (swapfile) yapılandırın.",
+  "memory_maintenance": "Bellek Bakımı",
+  "free_ram_pagecache_or_safely_flush_cold_swap": "Etkin olmayan işletim sistemi sayfa önbelleğini boşaltın veya soğuk takas alanını güvenle belleğe yenileyin.",
+  "free_ram_cache": "RAM Önbelleğini Boşalt",
+  "smart_flush_swap": "Akıllı Swap Temizleme",
+  "free_ram_cache_tooltip": "Etkin olmayan çekirdek sayfa önbelleklerini güvenle boşaltır ve fiziksel RAM'i anında serbest bırakır.",
+  "smart_flush_swap_tooltip": "RAM önbelleğini temizler ve yeterli boş bellek varsa eski swap ayırmalarını güvenle temizler."
 }
