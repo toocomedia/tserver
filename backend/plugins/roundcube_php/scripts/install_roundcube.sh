@@ -82,6 +82,11 @@ if [[ ! -x "$PHP_BIN" ]]; then
 fi
 
 # Ensure required extensions
+if command -v apt-get >/dev/null 2>&1; then
+    apt-get install -y -qq "php${PHP_VERSION}-sqlite3" "php${PHP_VERSION}-intl" "php${PHP_VERSION}-mbstring" "php${PHP_VERSION}-xml" "php${PHP_VERSION}-zip" "php${PHP_VERSION}-curl" >/dev/null 2>&1 || \
+    apt-get install -y -qq php-sqlite3 php-intl php-mbstring php-xml php-zip php-curl >/dev/null 2>&1 || true
+fi
+
 RUNTIME_HELPER="/usr/local/lib/srv-panel/php-runtime-manager"
 if [[ -x "$RUNTIME_HELPER" ]]; then
     echo "{\"operation\":\"install_site_extensions\",\"version\":\"${PHP_VERSION}\",\"extensions\":[\"sqlite3\",\"mbstring\",\"intl\",\"xml\",\"zip\",\"curl\"]}" \
@@ -89,27 +94,17 @@ if [[ -x "$RUNTIME_HELPER" ]]; then
 fi
 
 # 3. Discover Maddy Mail Configuration
-MADDY_CONF="/etc/maddy/maddy.conf"
 MAIL_HOST="127.0.0.1"
 MAIL_TRANSPORT="local"
-if [[ -f "$MADDY_CONF" ]]; then
-    PRIMARY_DOMAIN="$(sed -nE 's/^[[:space:]]*\$\(primary_domain\)[[:space:]]*=[[:space:]]*([^[:space:]#]+).*/\1/p' "$MADDY_CONF" | head -n1)"
-    if [[ -n "$PRIMARY_DOMAIN" && "$PRIMARY_DOMAIN" != *.local ]]; then
-        MAIL_HOST="mail.${PRIMARY_DOMAIN}"
-        if timeout 5 openssl s_client -connect 127.0.0.1:993 -servername "$MAIL_HOST" </dev/null >/dev/null 2>&1; then
-            MAIL_TRANSPORT="tls_unverified"
-        fi
-    fi
-fi
 
 # 4. Generate Secrets
 if [[ ! -s "$DATA_DIR/launch.secret" || $(wc -c < "$DATA_DIR/launch.secret") -lt 32 ]]; then
     umask 027
     openssl rand -hex 32 > "$DATA_DIR/launch.secret"
 fi
-if [[ ! -s "$DATA_DIR/db/des_key.secret" || $(wc -c < "$DATA_DIR/db/des_key.secret") -lt 24 ]]; then
+if [[ ! -s "$DATA_DIR/db/des_key.secret" || $(wc -c < "$DATA_DIR/db/des_key.secret") -ne 24 ]]; then
     umask 027
-    openssl rand -base64 24 | tr -d '\n' > "$DATA_DIR/db/des_key.secret"
+    openssl rand -hex 12 | tr -d '\n' > "$DATA_DIR/db/des_key.secret"
 fi
 
 # 5. Download Roundcube Complete Tarball if htdocs is missing index.php
@@ -128,10 +123,24 @@ if [[ ! -f "$HTDOCS/index.php" ]]; then
     rm -rf "$EXTRACT_DIR"
 fi
 
-# 6. Initialize SQLite Database
+# 6. Initialize SQLite Database via PHP PDO
 DB_FILE="$DATA_DIR/db/roundcube.db"
-if [[ ! -f "$DB_FILE" && -f "$HTDOCS/SQL/sqlite.initial.sql" ]]; then
-    sqlite3 "$DB_FILE" < "$HTDOCS/SQL/sqlite.initial.sql"
+if [[ -f "$HTDOCS/SQL/sqlite.initial.sql" ]]; then
+    ${PHP_BIN} -r '
+        $db = $argv[1];
+        $sqlFile = $argv[2];
+        try {
+            $pdo = new PDO("sqlite:" . $db);
+            $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+            $check = $pdo->query("SELECT count(*) FROM sqlite_master WHERE type=\"table\" AND name=\"users\"")->fetchColumn();
+            if (!$check) {
+                $sql = file_get_contents($sqlFile);
+                $pdo->exec($sql);
+            }
+        } catch (Exception $e) {
+            exec("sqlite3 " . escapeshellarg($db) . " < " . escapeshellarg($sqlFile) . " 2>/dev/null");
+        }
+    ' "$DB_FILE" "$HTDOCS/SQL/sqlite.initial.sql" 2>/dev/null || true
 fi
 
 # 7. Install Config & Plugins

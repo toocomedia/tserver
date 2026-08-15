@@ -119,8 +119,10 @@ class RoundcubePhpPackagingTests(unittest.TestCase):
         template_file = plugin_dir / "templates" / "roundcube.html"
         self.assertTrue(template_file.is_file())
         content = template_file.read_text(encoding="utf-8")
-        self.assertIn("rc-container", content)
-        self.assertIn("rc-domains-table", content)
+        self.assertIn("php-split-layout", content)
+        self.assertIn("_rc_domains.html", content)
+        partials_dir = plugin_dir / "templates" / "partials"
+        self.assertTrue((partials_dir / "_rc_domains.html").is_file())
 
 
 if __name__ == "__main__":

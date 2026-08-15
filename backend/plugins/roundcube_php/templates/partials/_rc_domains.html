@@ -1,0 +1,72 @@
+{% import "partials/list_actions_toggle.html" as list_actions %}
+
+<div class="rc-tab-panel is-active" id="rc-panel-domains" data-panel="domains">
+  <div class="php-card">
+    <div class="php-card__title">
+      <span>Configured Webmail Domains</span>
+      <input type="text" class="input input--sm rc-search-input" id="rc-domain-search" placeholder="Filter domains..." oninput="filterRcDomains(this.value)">
+    </div>
+
+    {% if not domain_rows %}
+      <div style="padding: 36px 20px; text-align: center; color: var(--color-muted); font-size: 13px;">
+        No mail domains found. Add domains in <a href="/plugins/maddy/" style="color: var(--color-accent); text-decoration: underline;">Maddy Mail Server</a> first.
+      </div>
+    {% else %}
+      <table class="table" id="rc-domains-table">
+        <thead>
+          <tr>
+            <th>Mail Domain</th>
+            <th>Webmail Hostname</th>
+            <th>Mailboxes</th>
+            <th>DNS &amp; SSL</th>
+            <th class="col-actions">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in domain_rows %}
+            <tr class="rc-domain-row" data-domain="{{ row.domain }}">
+              <td>
+                <strong style="color: var(--color-text); font-size: 13px;">{{ row.domain }}</strong>
+              </td>
+              <td>
+                {% if row.site and row.site.public_host %}
+                  <code style="color: var(--color-accent); font-size: 12px;">{{ row.site.public_host }}</code>
+                {% else %}
+                  <span style="color: var(--color-muted); font-size: 12px;">Not Configured</span>
+                {% endif %}
+              </td>
+              <td>
+                <span class="badge-minimal">{{ row.mailbox_count or 0 }}</span>
+              </td>
+              <td>
+                {% if not row.site %}
+                  <span class="badge badge--muted">Not Added</span>
+                {% elif row.site.ssl_status == 'ready' %}
+                  <span class="badge badge--healthy">HTTPS Active</span>
+                {% elif row.site.ssl_status == 'pending' %}
+                  <span class="badge badge--warning">SSL Pending</span>
+                {% else %}
+                  <span class="badge badge--danger">HTTP Only</span>
+                {% endif %}
+              </td>
+              <td class="col-actions" style="position:relative;">
+                {{ list_actions.button() }}
+                {% call list_actions.tray() %}
+                  {% if row.site and row.site.public_url %}
+                    <a href="{{ row.site.public_url }}" target="_blank" rel="noopener" class="btn btn--secondary btn--sm" style="text-decoration:none;">Open Webmail</a>
+                  {% endif %}
+                  {% if row.site %}
+                    <button type="button" class="btn btn--secondary btn--sm" data-action="issue-ssl" data-domain="{{ row.domain }}">Issue / Renew SSL</button>
+                    <button type="button" class="btn btn--danger btn--sm" data-action="delete-site" data-domain="{{ row.domain }}">Delete Webmail</button>
+                  {% else %}
+                    <button type="button" class="btn btn--primary btn--sm" data-action="add-webmail" data-domain="{{ row.domain }}">Configure Webmail</button>
+                  {% endif %}
+                {% endcall %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% endif %}
+  </div>
+</div>
