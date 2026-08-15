@@ -166,7 +166,10 @@ class RoundcubePhpService:
     # Status & Health
     # ---------------------------------------------------------------
     def is_installed(self) -> bool:
-        return (self.htdocs / "index.php").is_file()
+        if os.name == "nt":
+            return (self.htdocs / "index.php").is_file()
+        unit_file = Path(f"/etc/systemd/system/{self.unit_name}.service")
+        return unit_file.is_file() and (self.htdocs / "index.php").is_file()
 
     def needs_reconcile(self) -> bool:
         if not self.is_installed():
