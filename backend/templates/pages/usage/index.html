@@ -138,6 +138,7 @@
   const INTERVAL = 30000;
   let isActionPending = false;
   let statsRequestPending = false;
+  let swapSizeChangePending = false;
 
   function scheduleStats(delay = INTERVAL) {
     if (pollTimer) clearTimeout(pollTimer);
@@ -577,7 +578,9 @@
 
     const btnOff = document.getElementById('btn-opt-off');
     const btnOn = document.getElementById('btn-opt-on');
-    if (btnOff && btnOn) {
+    // Don't flip the Low-RAM button during a swap size change —
+    // the OS swappiness value is transitional while the resize script runs.
+    if (btnOff && btnOn && !swapSizeChangePending) {
       btnOff.classList.toggle('is-active', !isOptActive);
       btnOn.classList.toggle('is-active', isOptActive);
     }
@@ -764,6 +767,7 @@
   function setSwapSize(sizeMb, clickedBtn) {
     if (isActionPending) return;
     setActionState(true);
+    swapSizeChangePending = true;
     if (clickedBtn) clickedBtn.classList.add('is-loading');
 
     // Optimistically update active button
@@ -775,25 +779,28 @@
     }
 
     const label = sizeMb === 0 ? 'Disabled' : (sizeMb === 500 ? '500 MB (Base zRAM)' : (sizeMb >= 1024 ? `${sizeMb / 1024} GB` : `${sizeMb} MB`));
-    toast(`Configuring swap size to ${label}... this may take a few moments.`, 'info');
+    toast(`Configuring swap to ${label}… RAM may briefly spike while swap is rebuilt. This is normal.`, 'info');
     panel.post('/api/system/swap/set', { size_mb: sizeMb })
       .then(res => {
         setActionState(false);
+        swapSizeChangePending = false;
         if (clickedBtn) clickedBtn.classList.remove('is-loading');
         if (res && res.success) {
           toast(`Swap size successfully updated to ${label}.`, 'success');
           fetchStats();
-          fetchOptimizationStatus();
+          // Delay re-sync so the OS values have settled after the script finishes
+          setTimeout(fetchOptimizationStatus, 3000);
         } else {
           toast(res?.detail || 'Failed to update swap size.', 'danger');
-          fetchOptimizationStatus();
+          setTimeout(fetchOptimizationStatus, 3000);
         }
       })
       .catch(() => {
         setActionState(false);
+        swapSizeChangePending = false;
         if (clickedBtn) clickedBtn.classList.remove('is-loading');
         toast('Failed to update swap size. Please try again.', 'danger');
-        fetchOptimizationStatus();
+        setTimeout(fetchOptimizationStatus, 3000);
       });
   }
 
