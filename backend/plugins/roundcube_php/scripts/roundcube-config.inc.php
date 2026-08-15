@@ -49,6 +49,7 @@ $config['session_lifetime'] = !empty($dyn['session_lifetime']) ? (int)$dyn['sess
 // UI & Presentation
 $config['skin'] = !empty($dyn['skin']) ? $dyn['skin'] : (getenv('ROUNDCUBE_SKIN') ?: 'elastic');
 $config['product_name'] = !empty($dyn['product_name']) ? $dyn['product_name'] : (getenv('ROUNDCUBE_PRODUCT_NAME') ?: 'SRV Webmail');
+$config['dont_override'] = ['skin'];
 $config['use_https'] = true;
 $config['request_path'] = '/';
 $config['remote_resources'] = false;

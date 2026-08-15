@@ -560,6 +560,7 @@ $config['session_lifetime'] = {session_lifetime};
 // UI & Presentation
 $config['skin'] = '{skin}';
 $config['product_name'] = '{product_name}';
+$config['dont_override'] = ['skin'];
 $config['use_https'] = true;
 $config['request_path'] = '/';
 $config['remote_resources'] = false;
