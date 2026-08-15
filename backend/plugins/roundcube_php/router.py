@@ -237,16 +237,38 @@ async def uninstall_plugin(request: Request):
     )
 
 
+async def _extract_request_data(request: Request) -> dict[str, Any]:
+    content_type = request.headers.get("content-type", "")
+    if "application/json" in content_type:
+        try:
+            data = await request.json()
+            if isinstance(data, dict):
+                return data
+        except Exception:
+            pass
+        return {}
+    try:
+        form = await request.form()
+        return dict(form)
+    except Exception:
+        return {}
+
+
 @router.post("/api/sites/add")
 async def add_site(
     request: Request,
-    mail_domain: str = Form(...),
-    public_host: str = Form(...),
-    manage_dns: bool = Form(False),
     db: AsyncSession = Depends(get_db),
 ):
-    domain = mail_domain.strip().lower()
-    public_host = public_host.strip().lower()
+    data = await _extract_request_data(request)
+    mail_domain = str(data.get("mail_domain", "")).strip().lower()
+    public_host = str(data.get("public_host", "")).strip().lower()
+    raw_dns = data.get("manage_dns", False)
+    manage_dns = raw_dns if isinstance(raw_dns, bool) else str(raw_dns).lower() in ("true", "1", "yes", "on")
+
+    if not mail_domain or not public_host:
+        return JSONResponse({"detail": "mail_domain and public_host are required."}, status_code=400)
+
+    domain = mail_domain
     domains = await _mail_domains(db)
     validation_error = _validate_site(domain, public_host, domains)
     if validation_error:
@@ -291,10 +313,14 @@ async def add_site(
 @router.post("/api/sites/delete")
 async def delete_site(
     request: Request,
-    mail_domain: str = Form(...),
     db: AsyncSession = Depends(get_db),
 ):
-    domain = mail_domain.strip().lower()
+    data = await _extract_request_data(request)
+    mail_domain = str(data.get("mail_domain", "")).strip().lower()
+    if not mail_domain:
+        return JSONResponse({"detail": "mail_domain is required."}, status_code=400)
+
+    domain = mail_domain
     site = roundcube_php_service.get_site(domain)
     if not site:
         return JSONResponse({"detail": "Webmail access not found."}, status_code=404)
@@ -319,10 +345,14 @@ async def delete_site(
 @router.post("/api/sites/ssl")
 async def issue_ssl(
     request: Request,
-    mail_domain: str = Form(...),
     db: AsyncSession = Depends(get_db),
 ):
-    domain = mail_domain.strip().lower()
+    data = await _extract_request_data(request)
+    mail_domain = str(data.get("mail_domain", "")).strip().lower()
+    if not mail_domain:
+        return JSONResponse({"detail": "mail_domain is required."}, status_code=400)
+
+    domain = mail_domain
     domains = await _mail_domains(db)
     site = roundcube_php_service.get_site(domain)
     if domain not in domains or not site:

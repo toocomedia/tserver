@@ -1,29 +1,31 @@
 <script>
-// Configuration Settings Form
-document.getElementById('rc-settings-form')?.addEventListener('submit', async function(e) {
-  e.preventDefault();
-  const btn = document.getElementById('rc-save-settings-btn');
+// Save Configuration Button (Pure Click Handler with JSON payload)
+document.getElementById('rc-save-settings-btn')?.addEventListener('click', async function() {
+  const btn = this;
+  const origText = btn.dataset.origText || btn.textContent.trim() || 'Save Configuration';
+  if (!btn.dataset.origText) btn.dataset.origText = origText;
+
+  const skinEl = document.getElementById('rc-setting-skin');
+  const titleEl = document.getElementById('rc-setting-title');
+  const sizeEl = document.getElementById('rc-setting-max-size');
+  const lifetimeEl = document.getElementById('rc-setting-lifetime');
   const status = document.getElementById('rc-settings-status');
-  const origText = btn ? (btn.dataset.origText || btn.textContent.trim() || 'Save') : 'Save';
 
-  if (btn) {
-    if (!btn.dataset.origText) btn.dataset.origText = origText;
-    btn.classList.remove('is-loading');
-    btn.setAttribute('aria-busy', 'true');
-    btn.disabled = true;
-    btn.textContent = 'Saving…';
-  }
-  if (status) {
-    status.textContent = '';
-  }
+  const payload = {
+    skin: skinEl ? skinEl.value : 'elastic',
+    product_name: titleEl ? titleEl.value.trim() : 'SRV Webmail',
+    max_message_size: sizeEl ? sizeEl.value : '32M',
+    session_lifetime: lifetimeEl ? parseInt(lifetimeEl.value, 10) || 30 : 30
+  };
 
-  const formData = new FormData(this);
-  formData.set('csrf_token', getRcCsrf());
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+  if (status) status.textContent = '';
 
   try {
     const data = await rcApi('/plugins/roundcube_php/api/settings/update', {
       method: 'POST',
-      body: formData
+      json: payload
     });
     rcToast(data.message || 'Configuration saved.', 'success');
     if (status) {
@@ -38,40 +40,33 @@ document.getElementById('rc-settings-form')?.addEventListener('submit', async fu
       status.textContent = err.message || 'Failed to save.';
     }
   } finally {
-    if (btn) {
-      btn.classList.remove('is-loading');
-      btn.removeAttribute('aria-busy');
-      btn.disabled = false;
-      btn.textContent = origText;
-    }
+    btn.disabled = false;
+    btn.textContent = origText;
   }
 });
 
-// Active Plugins Form
-document.getElementById('rc-plugins-form')?.addEventListener('submit', async function(e) {
-  e.preventDefault();
-  const btn = document.getElementById('rc-save-plugins-btn');
+// Save Active Plugins Button (Pure Click Handler with JSON payload)
+document.getElementById('rc-save-plugins-btn')?.addEventListener('click', async function() {
+  const btn = this;
+  const origText = btn.dataset.origText || btn.textContent.trim() || 'Save Active Plugins';
+  if (!btn.dataset.origText) btn.dataset.origText = origText;
+
   const status = document.getElementById('rc-plugins-status');
-  const origText = btn ? (btn.dataset.origText || btn.textContent.trim() || 'Save') : 'Save';
+  const checkedPlugins = ['srvpanel_launch'];
+  document.querySelectorAll('input[name="rc_plugin_item"]:checked').forEach(cb => {
+    if (cb.value && !checkedPlugins.includes(cb.value)) {
+      checkedPlugins.push(cb.value);
+    }
+  });
 
-  if (btn) {
-    if (!btn.dataset.origText) btn.dataset.origText = origText;
-    btn.classList.remove('is-loading');
-    btn.setAttribute('aria-busy', 'true');
-    btn.disabled = true;
-    btn.textContent = 'Saving…';
-  }
-  if (status) {
-    status.textContent = '';
-  }
-
-  const formData = new FormData(this);
-  formData.set('csrf_token', getRcCsrf());
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+  if (status) status.textContent = '';
 
   try {
     const data = await rcApi('/plugins/roundcube_php/api/settings/update', {
       method: 'POST',
-      body: formData
+      json: { plugins: checkedPlugins }
     });
     rcToast(data.message || 'Active plugins updated.', 'success');
     if (status) {
@@ -86,30 +81,26 @@ document.getElementById('rc-plugins-form')?.addEventListener('submit', async fun
       status.textContent = err.message || 'Failed to save.';
     }
   } finally {
-    if (btn) {
-      btn.classList.remove('is-loading');
-      btn.removeAttribute('aria-busy');
-      btn.disabled = false;
-      btn.textContent = origText;
-    }
+    btn.disabled = false;
+    btn.textContent = origText;
   }
 });
 
-// Database Vacuum
+// Database Vacuum (Optimize)
 document.getElementById('rc-vacuum-btn')?.addEventListener('click', async function() {
-  const origText = this.dataset.origText || this.textContent.trim() || 'Optimize Database (VACUUM)';
-  if (!this.dataset.origText) this.dataset.origText = origText;
-  this.classList.remove('is-loading');
-  this.setAttribute('aria-busy', 'true');
-  this.disabled = true;
-  this.textContent = 'Optimizing…';
+  const btn = this;
+  const origText = btn.dataset.origText || btn.textContent.trim() || 'Optimize Database (VACUUM)';
+  if (!btn.dataset.origText) btn.dataset.origText = origText;
+
+  btn.disabled = true;
+  btn.textContent = 'Optimizing…';
   const resBox = document.getElementById('rc-maintenance-result');
   if (resBox) resBox.textContent = '';
 
   try {
     const data = await rcApi('/plugins/roundcube_php/api/maintenance/optimize', {
       method: 'POST',
-      body: new URLSearchParams({ csrf_token: getRcCsrf() })
+      json: {}
     });
     rcToast(data.message || 'Database optimized.', 'success');
     if (resBox) {
@@ -127,28 +118,26 @@ document.getElementById('rc-vacuum-btn')?.addEventListener('click', async functi
       resBox.textContent = err.message || 'Optimization failed.';
     }
   } finally {
-    this.classList.remove('is-loading');
-    this.removeAttribute('aria-busy');
-    this.disabled = false;
-    this.textContent = origText;
+    btn.disabled = false;
+    btn.textContent = origText;
   }
 });
 
 // Purge Cache & Temp
 document.getElementById('rc-purge-temp-btn')?.addEventListener('click', async function() {
-  const origText = this.dataset.origText || this.textContent.trim() || 'Purge Temp & Sessions';
-  if (!this.dataset.origText) this.dataset.origText = origText;
-  this.classList.remove('is-loading');
-  this.setAttribute('aria-busy', 'true');
-  this.disabled = true;
-  this.textContent = 'Purging…';
+  const btn = this;
+  const origText = btn.dataset.origText || btn.textContent.trim() || 'Purge Temp & Sessions';
+  if (!btn.dataset.origText) btn.dataset.origText = origText;
+
+  btn.disabled = true;
+  btn.textContent = 'Purging…';
   const resBox = document.getElementById('rc-maintenance-result');
   if (resBox) resBox.textContent = '';
 
   try {
     const data = await rcApi('/plugins/roundcube_php/api/maintenance/purge-cache', {
       method: 'POST',
-      body: new URLSearchParams({ csrf_token: getRcCsrf() })
+      json: {}
     });
     rcToast(data.message || 'Cache purged.', 'success');
     if (resBox) {
@@ -162,10 +151,8 @@ document.getElementById('rc-purge-temp-btn')?.addEventListener('click', async fu
       resBox.textContent = err.message || 'Purge failed.';
     }
   } finally {
-    this.classList.remove('is-loading');
-    this.removeAttribute('aria-busy');
-    this.disabled = false;
-    this.textContent = origText;
+    btn.disabled = false;
+    btn.textContent = origText;
   }
 });
 
@@ -178,22 +165,18 @@ function handlePluginControl(btnId, url, promptMsg, loadingMsg) {
 
   btn.addEventListener('click', async () => {
     if (promptMsg && !confirm(promptMsg)) return;
-    btn.classList.remove('is-loading');
-    btn.setAttribute('aria-busy', 'true');
     btn.disabled = true;
     btn.textContent = loadingMsg || 'Processing…';
 
     try {
       const data = await rcApi(url, {
         method: 'POST',
-        body: new URLSearchParams({ csrf_token: getRcCsrf() })
+        json: {}
       });
       rcToast(data.message || 'Operation complete.', 'success');
       setTimeout(() => window.location.reload(), 600);
     } catch (err) {
       rcToast(err.message || 'Operation failed.', 'danger');
-      btn.classList.remove('is-loading');
-      btn.removeAttribute('aria-busy');
       btn.disabled = false;
       btn.textContent = origText;
     }

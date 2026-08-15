@@ -1,40 +1,46 @@
 <div class="rc-panel" id="rc-panel-plugins" data-panel="plugins" style="display:none;">
   <div class="php-card">
     <div class="php-card__title">
-      <span>Plugins</span>
+      <span>Roundcube Active Plugins</span>
     </div>
 
-    <form id="rc-plugins-form" style="padding: 18px; max-width: 520px; display: flex; flex-direction: column; gap: 10px;">
-      <label class="php-spec-item" style="cursor: pointer; flex-direction: row; justify-content: space-between; align-items: center;">
-        <span style="font-size: 13px; font-weight: 600; color: var(--color-text);">Archive Folder (archive)</span>
-        <input type="checkbox" name="plugins" value="archive" {% if 'archive' in settings.plugins %}checked{% endif %}>
+    <div style="padding: 18px; display: flex; flex-direction: column; gap: 12px; max-width: 520px;">
+      <label style="display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: var(--color-surface); border: 1px solid var(--color-line); cursor: pointer;">
+        <div>
+          <div style="font-weight: 600; font-size: 13px;">Archive Folder</div>
+          <div style="font-size: 11px; color: var(--color-muted);">Adds a 1-click quick archive button to the toolbar</div>
+        </div>
+        <input type="checkbox" name="rc_plugin_item" value="archive" {% if 'archive' in settings.plugins %}checked{% endif %}>
       </label>
 
-      <label class="php-spec-item" style="cursor: pointer; flex-direction: row; justify-content: space-between; align-items: center;">
-        <span style="font-size: 13px; font-weight: 600; color: var(--color-text);">Zip Attachments (zipdownload)</span>
-        <input type="checkbox" name="plugins" value="zipdownload" {% if 'zipdownload' in settings.plugins %}checked{% endif %}>
+      <label style="display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: var(--color-surface); border: 1px solid var(--color-line); cursor: pointer;">
+        <div>
+          <div style="font-weight: 600; font-size: 13px;">Zip Download</div>
+          <div style="font-size: 11px; color: var(--color-muted);">Allows downloading all email attachments as a single ZIP file</div>
+        </div>
+        <input type="checkbox" name="rc_plugin_item" value="zipdownload" {% if 'zipdownload' in settings.plugins %}checked{% endif %}>
       </label>
 
-      <label class="php-spec-item" style="cursor: pointer; flex-direction: row; justify-content: space-between; align-items: center;">
-        <span style="font-size: 13px; font-weight: 600; color: var(--color-text);">Mark as Junk (markasjunk)</span>
-        <input type="checkbox" name="plugins" value="markasjunk" {% if 'markasjunk' in settings.plugins %}checked{% endif %}>
+      <label style="display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: var(--color-surface); border: 1px solid var(--color-line); cursor: pointer;">
+        <div>
+          <div style="font-weight: 600; font-size: 13px;">Mark as Junk / Spam</div>
+          <div style="font-size: 11px; color: var(--color-muted);">Adds Mark as Spam / Not Spam toolbar buttons</div>
+        </div>
+        <input type="checkbox" name="rc_plugin_item" value="markasjunk" {% if 'markasjunk' in settings.plugins %}checked{% endif %}>
       </label>
 
-      <label class="php-spec-item" style="cursor: pointer; flex-direction: row; justify-content: space-between; align-items: center;">
-        <span style="font-size: 13px; font-weight: 600; color: var(--color-text);">Emoticons (emoticons)</span>
-        <input type="checkbox" name="plugins" value="emoticons" {% if 'emoticons' in settings.plugins %}checked{% endif %}>
-      </label>
-
-      <label class="php-spec-item" style="opacity: 0.85; flex-direction: row; justify-content: space-between; align-items: center;">
-        <span style="font-size: 13px; font-weight: 600; color: var(--color-text);">Fast Launch (srvpanel_launch)</span>
-        <input type="hidden" name="plugins" value="srvpanel_launch">
+      <label style="display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: var(--color-surface); border: 1px solid var(--color-line); opacity: 0.85;">
+        <div>
+          <div style="font-weight: 600; font-size: 13px;">SRV Panel SSO Launch <span class="badge badge--healthy" style="font-size: 9px; margin-left: 6px;">System Core</span></div>
+          <div style="font-size: 11px; color: var(--color-muted);">Enables automatic 1-click login from control panel mail accounts</div>
+        </div>
         <input type="checkbox" checked disabled title="Mandatory for panel SSO launch">
       </label>
 
       <div style="margin-top: 10px; display: flex; align-items: center; gap: 12px;">
-        <button type="submit" class="btn btn--primary" id="rc-save-plugins-btn" data-no-loading="true">Save</button>
+        <button type="button" class="btn btn--primary" id="rc-save-plugins-btn">Save Active Plugins</button>
         <span id="rc-plugins-status" style="font-size: 12px;"></span>
       </div>
-    </form>
+    </div>
   </div>
 </div>

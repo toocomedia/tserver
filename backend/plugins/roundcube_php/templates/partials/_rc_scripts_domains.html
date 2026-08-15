@@ -23,29 +23,41 @@ document.getElementById('rc-modal-manage-dns')?.addEventListener('change', funct
   if (preview) preview.style.display = this.checked ? 'none' : 'block';
 });
 
-// Add Webmail Domain Form
-document.getElementById('rc-form-add-domain')?.addEventListener('submit', async function(e) {
-  e.preventDefault();
-  const btn = document.getElementById('rc-submit-add-domain');
+// Add Webmail Domain Action
+document.getElementById('rc-submit-add-domain')?.addEventListener('click', async function() {
+  const btn = this;
+  const domainSelect = document.getElementById('rc-modal-mail-domain');
+  const hostInput = document.getElementById('rc-modal-public-host');
+  const dnsCheckbox = document.getElementById('rc-modal-manage-dns');
   const errBox = document.getElementById('rc-add-site-error');
-  const origText = btn ? (btn.dataset.origText || btn.textContent.trim() || 'Save Domain') : 'Save Domain';
+  const origText = btn.dataset.origText || btn.textContent.trim() || 'Save Domain';
+  if (!btn.dataset.origText) btn.dataset.origText = origText;
 
-  if (btn) {
-    if (!btn.dataset.origText) btn.dataset.origText = origText;
-    btn.classList.remove('is-loading');
-    btn.setAttribute('aria-busy', 'true');
-    btn.disabled = true;
-    btn.textContent = 'Saving…';
+  const mailDomain = domainSelect ? domainSelect.value.trim() : '';
+  const publicHost = hostInput ? hostInput.value.trim() : '';
+  const manageDns = dnsCheckbox ? dnsCheckbox.checked : true;
+
+  if (!mailDomain) {
+    if (errBox) { errBox.textContent = 'Please select a mail domain.'; errBox.style.display = 'block'; }
+    return;
   }
-  if (errBox) errBox.style.display = 'none';
+  if (!publicHost) {
+    if (errBox) { errBox.textContent = 'Please enter a hostname (e.g. mm.domain.com).'; errBox.style.display = 'block'; }
+    return;
+  }
 
-  const formData = new FormData(this);
-  formData.set('csrf_token', getRcCsrf());
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+  if (errBox) errBox.style.display = 'none';
 
   try {
     const data = await rcApi('/plugins/roundcube_php/api/sites/add', {
       method: 'POST',
-      body: formData
+      json: {
+        mail_domain: mailDomain,
+        public_host: publicHost,
+        manage_dns: manageDns
+      }
     });
     rcToast(data.message || 'Webmail domain added.', 'success');
     closeRcModal('rc-modal-add-domain');
@@ -56,12 +68,9 @@ document.getElementById('rc-form-add-domain')?.addEventListener('submit', async 
       errBox.style.display = 'block';
     }
     rcToast(err.message || 'Failed to add webmail access.', 'danger');
-    if (btn) {
-      btn.classList.remove('is-loading');
-      btn.removeAttribute('aria-busy');
-      btn.disabled = false;
-      btn.textContent = origText;
-    }
+  } finally {
+    btn.disabled = false;
+    btn.textContent = origText;
   }
 });
 
@@ -88,25 +97,19 @@ document.addEventListener('click', async (e) => {
   } else if (action === 'issue-ssl') {
     const origText = actionBtn.dataset.origText || actionBtn.textContent.trim() || 'Issue / Renew SSL';
     if (!actionBtn.dataset.origText) actionBtn.dataset.origText = origText;
-    actionBtn.classList.remove('is-loading');
-    actionBtn.setAttribute('aria-busy', 'true');
     actionBtn.disabled = true;
     actionBtn.textContent = 'Issuing SSL…';
-    const body = new FormData();
-    body.set('csrf_token', getRcCsrf());
-    body.set('mail_domain', domain);
 
     try {
       const data = await rcApi('/plugins/roundcube_php/api/sites/ssl', {
         method: 'POST',
-        body
+        json: { mail_domain: domain }
       });
       rcToast(data.message || 'SSL issuance started in background.', 'success');
       setTimeout(() => window.location.reload(), 1000);
     } catch (err) {
       rcToast(err.message || 'SSL issuance failed.', 'danger');
-      actionBtn.classList.remove('is-loading');
-      actionBtn.removeAttribute('aria-busy');
+    } finally {
       actionBtn.disabled = false;
       actionBtn.textContent = origText;
     }
@@ -114,41 +117,31 @@ document.addEventListener('click', async (e) => {
 });
 
 // Delete Webmail Action
-async function executeDeleteWebmail() {
+document.getElementById('rc-confirm-delete-btn')?.addEventListener('click', async function() {
   const domain = document.getElementById('rc-delete-domain-input')?.value;
-  const btn = document.getElementById('rc-confirm-delete-btn');
+  const btn = this;
   if (!domain) return;
-  const origText = btn ? (btn.dataset.origText || btn.textContent.trim() || 'Delete') : 'Delete';
+  const origText = btn.dataset.origText || btn.textContent.trim() || 'Delete';
+  if (!btn.dataset.origText) btn.dataset.origText = origText;
 
-  if (btn) {
-    if (!btn.dataset.origText) btn.dataset.origText = origText;
-    btn.classList.remove('is-loading');
-    btn.setAttribute('aria-busy', 'true');
-    btn.disabled = true;
-    btn.textContent = 'Deleting…';
-  }
-  const body = new FormData();
-  body.set('csrf_token', getRcCsrf());
-  body.set('mail_domain', domain);
+  btn.disabled = true;
+  btn.textContent = 'Deleting…';
 
   try {
     const data = await rcApi('/plugins/roundcube_php/api/sites/delete', {
       method: 'POST',
-      body
+      json: { mail_domain: domain }
     });
     rcToast(data.message || `Webmail removed for ${domain}.`, 'success');
     closeRcModal('rc-modal-delete-domain');
     setTimeout(() => window.location.reload(), 600);
   } catch (err) {
     rcToast(err.message || 'Delete failed.', 'danger');
-    if (btn) {
-      btn.classList.remove('is-loading');
-      btn.removeAttribute('aria-busy');
-      btn.disabled = false;
-      btn.textContent = origText;
-    }
+  } finally {
+    btn.disabled = false;
+    btn.textContent = origText;
   }
-}
+});
 
 // Mail Diagnostics
 document.getElementById('rc-topbar-test-mail')?.addEventListener('click', async () => {

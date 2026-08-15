@@ -4,12 +4,12 @@
       <span>Configuration</span>
     </div>
 
-    <form id="rc-settings-form" style="padding: 18px; display: flex; flex-direction: column; gap: 14px; max-width: 520px;">
+    <div style="padding: 18px; display: flex; flex-direction: column; gap: 14px; max-width: 520px;">
       <div class="form-group">
         <label class="form-label" for="rc-setting-skin">Skin / Theme</label>
         <div class="form-select-wrap">
           <select class="form-select" id="rc-setting-skin" name="skin">
-            <option value="elastic" {% if settings.skin == 'elastic' %}selected{% endif %}>Elastic (Mobile Responsive)</option>
+            <option value="elastic" {% if settings.skin == 'elastic' %}selected{% endif %}>Elastic (Mobile Responsive &amp; Modern)</option>
             <option value="larry" {% if settings.skin == 'larry' %}selected{% endif %}>Larry (Desktop Classic)</option>
             <option value="classic" {% if settings.skin == 'classic' %}selected{% endif %}>Classic</option>
           </select>
@@ -41,9 +41,9 @@
       </div>
 
       <div style="margin-top: 6px; display: flex; align-items: center; gap: 12px;">
-        <button type="submit" class="btn btn--primary" id="rc-save-settings-btn" data-no-loading="true">Save</button>
+        <button type="button" class="btn btn--primary" id="rc-save-settings-btn">Save Configuration</button>
         <span id="rc-settings-status" style="font-size: 12px;"></span>
       </div>
-    </form>
+    </div>
   </div>
 </div>

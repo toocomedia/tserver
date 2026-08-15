@@ -497,11 +497,41 @@ class RoundcubePhpService:
             "plugins": ["archive", "zipdownload", "markasjunk", "srvpanel_launch"],
         }
 
+    def read_config_file(self) -> dict[str, Any]:
+        config_file = self.htdocs / "config" / "config.inc.php"
+        if not config_file.is_file():
+            return {}
+        try:
+            content = config_file.read_text(encoding="utf-8")
+        except Exception:
+            return {}
+        parsed: dict[str, Any] = {}
+        m = re.search(r"\$config\['skin'\]\s*=\s*'([^']+)'", content)
+        if m:
+            parsed["skin"] = m.group(1)
+        m = re.search(r"\$config\['product_name'\]\s*=\s*'((?:\\'|[^'])*)'", content)
+        if m:
+            parsed["product_name"] = m.group(1).replace("\\'", "'")
+        m = re.search(r"\$config\['max_message_size'\]\s*=\s*'([^']+)'", content)
+        if m:
+            parsed["max_message_size"] = m.group(1)
+        m = re.search(r"\$config\['session_lifetime'\]\s*=\s*(\d+)", content)
+        if m:
+            parsed["session_lifetime"] = int(m.group(1))
+        m = re.search(r"\$config\['plugins'\]\s*=\s*\[(.*?)\];", content, re.DOTALL)
+        if m:
+            plugins = re.findall(r"'([^']+)'", m.group(1))
+            if plugins:
+                parsed["plugins"] = plugins
+        return parsed
+
     def get_settings(self) -> dict[str, Any]:
-        settings = self.read_state().get("settings", {})
         merged = self.default_settings()
-        if isinstance(settings, dict):
-            merged.update(settings)
+        file_settings = self.read_config_file()
+        merged.update(file_settings)
+        state_settings = self.read_state().get("settings", {})
+        if isinstance(state_settings, dict):
+            merged.update(state_settings)
         return merged
 
     def sync_config_file(self) -> None:
