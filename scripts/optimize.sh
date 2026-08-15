@@ -365,12 +365,11 @@ set_swap() {
 
   # If target disk swap is 0 (either total 0 or base zRAM 500MB)
   if [[ "$disk_swap_mb" -le 0 ]]; then
-    if swapon --show=NAME 2>/dev/null | grep -q "^$SWAP_FILE$"; then
-      swapoff "$SWAP_FILE" 2>/dev/null || true
-    fi
-    if [[ -f "$SWAP_FILE" ]]; then
-      rm -f "$SWAP_FILE"
-    fi
+    for old_swap in $(swapon --show=NAME --noheadings 2>/dev/null | grep -E '^/swapfile'); do
+      swapoff "$old_swap" 2>/dev/null || true
+      rm -f "$old_swap" 2>/dev/null || true
+    done
+    rm -f "$SWAP_FILE" "${SWAP_FILE}.new" 2>/dev/null || true
     if [[ -f /etc/fstab ]]; then
       sed -i '\|/swapfile|d' /etc/fstab
     fi
@@ -397,7 +396,14 @@ set_swap() {
 
   # Two-phase resize strategy: create the new swapfile BEFORE removing the old
   # one so swap is NEVER fully off during the transition.
+  # Dynamically pick temporary swapfile name to prevent 'Text file busy'
   local SWAP_FILE_TMP="/swapfile.new"
+  if swapon --show=NAME 2>/dev/null | grep -q "^$SWAP_FILE_TMP$"; then
+    SWAP_FILE_TMP="/swapfile.tmp.$$"
+  fi
+  if ! swapon --show=NAME 2>/dev/null | grep -q "^$SWAP_FILE_TMP$"; then
+    rm -f "$SWAP_FILE_TMP" 2>/dev/null || true
+  fi
 
   # Allocate new swapfile at the target size
   if command -v fallocate &>/dev/null; then
@@ -412,14 +418,17 @@ set_swap() {
   # Activate new swapfile FIRST so we never have zero disk swap
   swapon "$SWAP_FILE_TMP"
 
-  # Now safely remove old swapfile (new one is already active)
-  if swapon --show=NAME 2>/dev/null | grep -q "^$SWAP_FILE$"; then
-    swapoff "$SWAP_FILE" 2>/dev/null || true
-  fi
-  rm -f "$SWAP_FILE"
+  # Safely deactivate and remove all old /swapfile instances
+  for old_swap in $(swapon --show=NAME --noheadings 2>/dev/null | grep -E '^/swapfile'); do
+    if [[ "$old_swap" != "$SWAP_FILE_TMP" ]]; then
+      swapoff "$old_swap" 2>/dev/null || true
+      rm -f "$old_swap" 2>/dev/null || true
+    fi
+  done
+  rm -f "$SWAP_FILE" 2>/dev/null || true
 
   # Rename new into place
-  mv "$SWAP_FILE_TMP" "$SWAP_FILE"
+  mv "$SWAP_FILE_TMP" "$SWAP_FILE" 2>/dev/null || true
 
   # Persist in /etc/fstab if not present
   if [[ -f /etc/fstab ]]; then
