@@ -23,7 +23,7 @@
     input_id="php-site-ssl",
     www_id="php-site-www"
 ) %}
-<div class="form-group-horizontal" style="margin-top: 8px;">
+<div class="form-group-horizontal" style="margin-top: 4px; margin-bottom: 0; padding-bottom: 0; border-bottom: none; gap: 8px;">
   <div class="form-label-wrap">
     <label class="form-label">{{ _('ssl_certificate_security') }}</label>
   </div>
@@ -36,14 +36,14 @@
       <span class="settings-choice__desc">{{ _('will_issue_a_certificate_after_the_proxy') }}</span>
     </label>
   </div>
-</div>
 
-{% if show_www_option %}
-<div id="{{ grid_id }}-www-wrap" style="padding-left: 2px; margin-top: -6px; margin-bottom: 4px; {% if not enabled %}display:none;{% endif %}">
-  <label class="form-check" style="align-items: center;">
-    <input type="checkbox" id="{{ www_id }}" name="include_www" {% if include_www %}checked{% endif %}>
-    <span>{{ _('include_www') }}</span>
-  </label>
+  {% if show_www_option %}
+  <div id="{{ grid_id }}-www-wrap" style="padding-left: 2px; margin-top: 4px; {% if not enabled %}display:none;{% endif %}">
+    <label class="form-check" style="align-items: center;">
+      <input type="checkbox" id="{{ www_id }}" name="include_www" {% if include_www %}checked{% endif %}>
+      <span>{{ _('include_www') }}</span>
+    </label>
+  </div>
+  {% endif %}
 </div>
-{% endif %}
 {% endmacro %}

@@ -57,13 +57,16 @@ function updateSslChoice() {
 
 function updateExtensionHint() {
   const version = versionSelect?.value;
-  const isWp = selectedPreset() === "wordpress";
-  const isLaravel = ["laravel", "filament"].includes(selectedPreset());
-  const info = isWp ? options?.wordpress?.versions?.[version] : isLaravel ? options?.laravel?.versions?.[version] : options?.database_extensions?.[version];
-  const needs = info && info.ready === false && info.missing_packages?.length;
+  const preset = selectedPreset();
+  const isWp = preset === "wordpress";
+  const isLaravel = ["laravel", "filament"].includes(preset);
+  const isPlainWithDb = preset === "php" && Boolean(root.querySelector("#php-site-database")?.checked);
+  const info = isWp ? options?.wordpress?.versions?.[version] : isLaravel ? options?.laravel?.versions?.[version] : isPlainWithDb ? options?.database_extensions?.[version] : null;
+  const needs = Boolean(info && info.ready === false && info.missing_packages?.length);
   const row = root.querySelector("[data-install-extensions]");
   if (row) {
     row.hidden = !needs;
+    row.style.display = needs ? "flex" : "none";
     const hintEl = row.querySelector("[data-extension-hint]");
     if (hintEl) hintEl.textContent = needs ? `${t("missing_packages")}: ${info.missing_packages.join(", ")}` : "";
   }
@@ -274,7 +277,7 @@ async function init() {
   form?.addEventListener("change", (e) => {
     if (e.target.name === "preset") updatePreset();
     if (e.target.name === "ssl" || e.target.id === "php-site-ssl") updateSslChoice();
-    if (e.target.name === "php_version") updateExtensionHint();
+    if (e.target.name === "php_version" || e.target.name === "create_database" || e.target.id === "php-site-database") updateExtensionHint();
   });
   nextBtn?.addEventListener("click", () => goToStep(currentStep + 1));
   backBtn?.addEventListener("click", () => goToStep(currentStep - 1));
