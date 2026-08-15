@@ -3,7 +3,7 @@
 set -euo pipefail
 
 PLUGIN_ID="phpmyadmin"
-CONFIG_VERSION="2"
+CONFIG_VERSION="3"
 PMA_VERSION="5.2.2"
 DATA_DIR="${PHPMYADMIN_DATA_DIR:-/opt/srv-panel/data/phpmyadmin}"
 HTDOCS="$DATA_DIR/htdocs"
@@ -140,11 +140,17 @@ fi
 # 5. Write config.inc.php. Cookie auth scoped to /phpmyadmin; app served
 #    at a subpath, so PmaAbsoluteUri must match the panel's own route.
 mkdir -p "$DATA_DIR/sessions" "$DATA_DIR/tmp"
-if [[ ! -s "$DATA_DIR/pma.secret" ]]; then
+if [[ ! -s "$DATA_DIR/pma.secret" || $(wc -c < "$DATA_DIR/pma.secret") -ne 32 ]]; then
     umask 027
-    openssl rand -hex 32 > "$DATA_DIR/pma.secret"
+    openssl rand -hex 16 | tr -d '\n' > "$DATA_DIR/pma.secret"
 fi
-SECRET="$(cat "$DATA_DIR/pma.secret")"
+SECRET="$(head -c 32 "$DATA_DIR/pma.secret")"
+
+# Import phpMyAdmin storage tables if available and MariaDB allows root socket auth
+if [[ -f "$HTDOCS/sql/create_tables.sql" ]]; then
+    mariadb < "$HTDOCS/sql/create_tables.sql" >/dev/null 2>&1 || mysql < "$HTDOCS/sql/create_tables.sql" >/dev/null 2>&1 || true
+fi
+
 cat > "$HTDOCS/config.inc.php" <<PHP
 <?php
 declare(strict_types=1);
@@ -154,6 +160,7 @@ declare(strict_types=1);
 \$cfg['CookieSameSite'] = 'Lax';
 \$cfg['SendErrorReports'] = 'never';
 \$cfg['SessionSavePath'] = '${DATA_DIR}/sessions';
+\$cfg['PmaNoRelation_DisableWarning'] = true;
 \$i = 0;
 \$i++;
 \$cfg['Servers'][\$i]['auth_type'] = 'cookie';
@@ -161,6 +168,26 @@ declare(strict_types=1);
 \$cfg['Servers'][\$i]['port'] = 3306;
 \$cfg['Servers'][\$i]['compress'] = false;
 \$cfg['Servers'][\$i]['AllowNoPassword'] = false;
+\$cfg['Servers'][\$i]['pmadb'] = 'phpmyadmin';
+\$cfg['Servers'][\$i]['bookmarktable'] = 'pma__bookmark';
+\$cfg['Servers'][\$i]['relation'] = 'pma__relation';
+\$cfg['Servers'][\$i]['table_info'] = 'pma__table_info';
+\$cfg['Servers'][\$i]['table_coords'] = 'pma__table_coords';
+\$cfg['Servers'][\$i]['pdf_pages'] = 'pma__pdf_pages';
+\$cfg['Servers'][\$i]['column_info'] = 'pma__column_info';
+\$cfg['Servers'][\$i]['history'] = 'pma__history';
+\$cfg['Servers'][\$i]['table_uiprefs'] = 'pma__table_uiprefs';
+\$cfg['Servers'][\$i]['tracking'] = 'pma__tracking';
+\$cfg['Servers'][\$i]['userconfig'] = 'pma__userconfig';
+\$cfg['Servers'][\$i]['recent'] = 'pma__recent';
+\$cfg['Servers'][\$i]['favorite'] = 'pma__favorite';
+\$cfg['Servers'][\$i]['users'] = 'pma__users';
+\$cfg['Servers'][\$i]['usergroups'] = 'pma__usergroups';
+\$cfg['Servers'][\$i]['navigationhiding'] = 'pma__navigationhiding';
+\$cfg['Servers'][\$i]['savedsearches'] = 'pma__savedsearches';
+\$cfg['Servers'][\$i]['central_columns'] = 'pma__central_columns';
+\$cfg['Servers'][\$i]['designer_settings'] = 'pma__designer_settings';
+\$cfg['Servers'][\$i]['export_templates'] = 'pma__export_templates';
 \$cfg['UploadDir'] = '${DATA_DIR}/tmp';
 \$cfg['SaveDir'] = '${DATA_DIR}/tmp';
 \$cfg['TempDir'] = '${DATA_DIR}/tmp';

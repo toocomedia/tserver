@@ -21,7 +21,7 @@ PHP_STATE_PATH = Path("/var/lib/srv-panel/php-runtime/managed-versions.json")
 
 class PhpMyAdminService:
     plugin_id = "phpmyadmin"
-    config_version = "2"
+    config_version = "3"
     unit_name = "srv-panel-phpmyadmin"
     host = "127.0.0.1"
     default_port = 8090

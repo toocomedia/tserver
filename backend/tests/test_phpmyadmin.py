@@ -47,7 +47,7 @@ class PhpMyAdminStateTests(unittest.TestCase):
     def test_purge_data_requires_uninstalled_app(self):
         self.service.state_path.write_text("{}", encoding="utf-8")
         self.service.secret_path.write_text("s" * 64, encoding="utf-8")
-        self.service.marker_path.write_text("2", encoding="utf-8")
+        self.service.marker_path.write_text("3", encoding="utf-8")
         self.service.is_installed = Mock(return_value=False)
 
         self.service.purge_data()
