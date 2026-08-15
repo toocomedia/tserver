@@ -24,8 +24,22 @@ class PhpMyAdminService:
     config_version = "2"
     unit_name = "srv-panel-phpmyadmin"
     host = "127.0.0.1"
-    port = int(os.getenv("PHPMYADMIN_PORT", "8090"))
+    default_port = 8090
     command_timeout = 15
+
+    @property
+    def port(self) -> int:
+        """Port from state (chosen at install), env override, else default."""
+        env_port = os.getenv("PHPMYADMIN_PORT")
+        if env_port:
+            try:
+                return int(env_port)
+            except ValueError:
+                pass
+        stored = self.read_state().get("port")
+        if isinstance(stored, int) and 1024 <= stored <= 65535:
+            return stored
+        return self.default_port
 
     def __init__(self) -> None:
         self._state_lock = threading.RLock()
@@ -195,7 +209,7 @@ class PhpMyAdminService:
         running = self._port_open(self.host, self.port)
         mariadb = self.mariadb_reachable()
         healthy = running and mariadb
-        if unit_exists and unit_state == "failed":
+        if unit_exists and not running:
             status["unit_logs"] = self.unit_logs()
         status.update(
             {

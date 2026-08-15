@@ -9,7 +9,39 @@ DATA_DIR="${PHPMYADMIN_DATA_DIR:-/opt/srv-panel/data/phpmyadmin}"
 HTDOCS="$DATA_DIR/htdocs"
 UNIT="srv-panel-phpmyadmin.service"
 UNIT_PATH="/etc/systemd/system/${UNIT}"
-PORT="${PHPMYADMIN_PORT:-8090}"
+PORT=""
+if [[ -n "${PHPMYADMIN_PORT:-}" ]]; then
+    PORT="$PHPMYADMIN_PORT"
+else
+    # Pick the first free local port so a busy 8090 cannot wedge the server.
+    for CANDIDATE in 8090 8091 8092 8093 8094 8095; do
+        if ! (exec 3<>/dev/tcp/127.0.0.1/${CANDIDATE}) 2>/dev/null; then
+            PORT="$CANDIDATE"
+            break
+        fi
+    done
+fi
+if [[ -z "$PORT" ]]; then
+    echo "No free port available for phpMyAdmin (8090-8095)." >&2
+    exit 1
+fi
+# Persist the chosen port so the panel service probes the right one.
+mkdir -p "$DATA_DIR"
+python3 - "$DATA_DIR" "$PORT" <<'PY'
+import json
+import os
+import sys
+path = os.path.join(sys.argv[1], "state.json")
+data = {}
+try:
+    with open(path, encoding="utf-8") as handle:
+        data = json.load(handle)
+except Exception:
+    pass
+data["port"] = int(sys.argv[2])
+with open(path, "w", encoding="utf-8") as handle:
+    json.dump(data, handle, indent=2)
+PY
 PANEL_USER="${PANEL_USER:-panel}"
 PMA_URL="https://files.phpmyadmin.net/phpMyAdmin/${PMA_VERSION}/phpMyAdmin-${PMA_VERSION}-all-languages.tar.gz"
 PMA_SHA256_URL="${PMA_URL}.sha256"

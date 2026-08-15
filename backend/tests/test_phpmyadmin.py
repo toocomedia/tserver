@@ -35,6 +35,15 @@ class PhpMyAdminStateTests(unittest.TestCase):
         self.assertEqual(state["schema_version"], 2)
         self.assertEqual(state["installed_at"], 123)
 
+    def test_port_reads_state_then_env_override(self):
+        self.assertEqual(self.service.port, 8090)
+
+        self.service.update_state(port=8093)
+        self.assertEqual(self.service.port, 8093)
+
+        with patch.dict(os.environ, {"PHPMYADMIN_PORT": "9000"}):
+            self.assertEqual(self.service.port, 9000)
+
     def test_purge_data_requires_uninstalled_app(self):
         self.service.state_path.write_text("{}", encoding="utf-8")
         self.service.secret_path.write_text("s" * 64, encoding="utf-8")
@@ -242,6 +251,7 @@ class PhpMyAdminPackagingTests(unittest.TestCase):
         self.assertIn("sha256sum", install)
         self.assertIn("srv-panel-phpmyadmin.conf", install)  # v1 migration
         self.assertIn("systemctl reload-or-restart", install)
+        self.assertIn("8090 8091 8092", install)  # free-port selection
 
     def test_uninstaller_removes_unit_and_files(self):
         plugin = BACKEND / "plugins" / "phpmyadmin"
