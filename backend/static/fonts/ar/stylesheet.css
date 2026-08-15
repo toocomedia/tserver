@@ -1,0 +1,8 @@
+@font-face {
+    font-family: 'Bahij';
+    src: url('bahij.woff') format('woff');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+    unicode-range: U+0600-06FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE80-FEFC;
+}

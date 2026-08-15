@@ -341,10 +341,17 @@ set_swap() {
     exit 1
   fi
 
+  # Pre-flush RAM caches so physical RAM can safely absorb memory during swap deactivation
+  sync
+  echo 3 > /proc/sys/vm/drop_caches 2>/dev/null || true
+
   # Turn off existing swapfile if active
   if swapon --show=NAME 2>/dev/null | grep -q "^$SWAP_FILE$"; then
     swapoff "$SWAP_FILE" 2>/dev/null || true
   fi
+
+  # Crucial: Always remove old swapfile so fallocate shrinks the file to the exact new size!
+  rm -f "$SWAP_FILE"
 
   # Allocate exactly disk_swap_mb
   if command -v fallocate &>/dev/null; then

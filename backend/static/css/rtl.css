@@ -1,19 +1,41 @@
 /* ==========================================================================
    srv-t Control Panel — Right-To-Left (RTL) Master Stylesheet
-   Applied automatically when <html dir="rtl"> is present.
+   Optimized Arabic Typography (Bahij Font, line-height: 1.5) & RTL Layout
    ========================================================================== */
 
-html[dir="rtl"] {
-  direction: rtl;
-  text-align: right;
-  font-family: 'ArabicFont', 'Onest', system-ui, -apple-system, sans-serif;
-  font-size: 106%;
-  line-height: 1.5;
+/* --------------------------------------------------------------------------
+   0. Arabic Font Declarations (@font-face)
+   -------------------------------------------------------------------------- */
+@font-face {
+  font-family: 'Bahij';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/static/fonts/ar/bahij.woff') format('woff'),
+       url('/static/fonts/ar/bahij.ttf') format('truetype');
+  unicode-range: U+0600-06FF, U+0750-077F, U+08A0-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FEFF, U+FE80-FEFC;
+}
+
+@font-face {
+  font-family: 'ArabicFont';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/static/fonts/ar/bahij.woff') format('woff'),
+       url('/static/fonts/ar/bahij.ttf') format('truetype');
+  unicode-range: U+0600-06FF, U+0750-077F, U+08A0-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FEFF, U+FE80-FEFC;
 }
 
 /* --------------------------------------------------------------------------
-   1. Typography & Base Alignment
+   1. Typography & Global Direction
    -------------------------------------------------------------------------- */
+html[dir="rtl"] {
+  direction: rtl;
+  text-align: right;
+  font-family: 'Bahij', 'ArabicFont', 'Onest', system-ui, -apple-system, sans-serif;
+  line-height: 1.5;
+}
+
 html[dir="rtl"] body,
 html[dir="rtl"] p,
 html[dir="rtl"] h1,
@@ -29,12 +51,14 @@ html[dir="rtl"] input,
 html[dir="rtl"] button,
 html[dir="rtl"] select,
 html[dir="rtl"] textarea {
-  font-family: 'ArabicFont', 'Onest', system-ui, -apple-system, sans-serif;
+  font-family: 'Bahij', 'ArabicFont', 'Onest', system-ui, -apple-system, sans-serif;
   text-align: right;
+  line-height: 1.5;
 }
 
 html[dir="rtl"] body {
-  font-size: 0.925rem;
+  font-size: var(--font-body, 14px);
+  line-height: 1.5;
   font-weight: 400;
 }
 
@@ -44,14 +68,18 @@ html[dir="rtl"] input,
 html[dir="rtl"] select,
 html[dir="rtl"] textarea {
   font-weight: 400;
+  line-height: 1.5;
 }
 
 html[dir="rtl"] .form-hint,
 html[dir="rtl"] small,
 html[dir="rtl"] .text-muted,
 html[dir="rtl"] .card__desc,
-html[dir="rtl"] .empty-state__desc {
-  font-weight: 300;
+html[dir="rtl"] .empty-state__desc,
+html[dir="rtl"] .settings-choice__desc,
+html[dir="rtl"] .remote-meta {
+  font-weight: 400;
+  line-height: 1.5;
 }
 
 html[dir="rtl"] h1,
@@ -62,25 +90,45 @@ html[dir="rtl"] h5,
 html[dir="rtl"] h6,
 html[dir="rtl"] .page-header__title,
 html[dir="rtl"] .modal__header h2,
-html[dir="rtl"] .section__title {
+html[dir="rtl"] .modal__header h3,
+html[dir="rtl"] .section__title,
+html[dir="rtl"] .table-title,
+html[dir="rtl"] .settings-choice__title {
   font-weight: 700;
-  line-height: 1.25;
-  margin-top: -2px;
+  line-height: 1.4;
+  letter-spacing: normal;
 }
 
+/* Monospace & LTR Exceptions (IPs, domains, hashes, code, ports) */
+html[dir="rtl"] code,
+html[dir="rtl"] pre,
+html[dir="rtl"] kbd,
+html[dir="rtl"] samp,
+html[dir="rtl"] .font-mono,
+html[dir="rtl"] .mono,
+html[dir="rtl"] .badge-mono,
+html[dir="rtl"] .ip,
+html[dir="rtl"] .hash,
+html[dir="rtl"] .path,
+html[dir="rtl"] .url-text,
+html[dir="rtl"] .badge--mono,
+html[dir="rtl"] input[type="password"],
+html[dir="rtl"] .ltr-force {
+  direction: ltr;
+  text-align: left;
+  unicode-bidi: embed;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
+}
+
+/* Consistent Flex Alignments */
 html[dir="rtl"] .sidebar__item,
 html[dir="rtl"] .form-label,
 html[dir="rtl"] .form-input,
 html[dir="rtl"] .form-select,
 html[dir="rtl"] .badge,
-html[dir="rtl"] .tab {
+html[dir="rtl"] .tab,
+html[dir="rtl"] .btn {
   align-items: center;
-}
-
-html[dir="rtl"] .sidebar__item {
-  font-weight: 600;
-  padding-top: max(4px, calc(var(--space-sm, 10px) - 2px));
-  padding-bottom: calc(var(--space-sm, 10px) + 2px);
 }
 
 html[dir="rtl"] .btn,
@@ -88,27 +136,11 @@ html[dir="rtl"] button,
 html[dir="rtl"] .btn--primary,
 html[dir="rtl"] .btn--secondary,
 html[dir="rtl"] .btn--ghost,
-html[dir="rtl"] .btn--danger {
-  font-weight: 500 !important;
-  padding-top: max(4px, calc(var(--space-xs, 8px) - 2px));
-  padding-bottom: calc(var(--space-xs, 8px) + 2px);
-}
-
-html[dir="rtl"] .btn--sm {
-  padding-top: 3px;
-  padding-bottom: 5px;
-}
-
-html[dir="rtl"] .form-input,
-html[dir="rtl"] .form-select {
-  padding-top: max(4px, calc(var(--space-sm, 10px) - 2px));
-  padding-bottom: calc(var(--space-sm, 10px) + 2px);
-}
-
-html[dir="rtl"] th,
-html[dir="rtl"] td {
-  padding-top: max(4px, calc(var(--space-sm, 12px) - 2px));
-  padding-bottom: calc(var(--space-sm, 12px) + 2px);
+html[dir="rtl"] .btn--danger,
+html[dir="rtl"] .btn--dark {
+  font-weight: 600;
+  letter-spacing: normal;
+  line-height: 1.5;
 }
 
 /* --------------------------------------------------------------------------
@@ -120,7 +152,7 @@ html[dir="rtl"] .sidebar {
   border-right: none;
 }
 
-/* On desktop, .app flexbox sits sidebar & main side-by-side naturally in RTL order */
+/* Desktop App Flexbox order */
 html[dir="rtl"] .main {
   margin-left: 0;
   margin-right: 0;
@@ -136,6 +168,7 @@ html[dir="rtl"] .sidebar__search {
 html[dir="rtl"] .sidebar__search-input {
   direction: rtl;
   text-align: right;
+  font-family: inherit;
 }
 
 html[dir="rtl"] .sidebar__search:focus-within .sidebar__search-input,
@@ -149,12 +182,21 @@ html[dir="rtl"] .sidebar__item {
   text-align: right;
   border-left: none;
   border-right: 4px solid transparent;
+  font-weight: 500;
+  line-height: 1.5;
 }
 
 html[dir="rtl"] .sidebar__item svg,
-html[dir="rtl"] .sidebar__item i {
+html[dir="rtl"] .sidebar__item i,
+html[dir="rtl"] .sidebar__item-icon {
   margin-left: 0.75rem;
   margin-right: 0;
+}
+
+html[dir="rtl"] .sidebar__badge,
+html[dir="rtl"] .sidebar__item-badge {
+  margin-right: auto;
+  margin-left: 0;
 }
 
 html[dir="rtl"] .sidebar__item--active,
@@ -198,6 +240,7 @@ html[data-sidebar-style="gradient"][dir="rtl"] .sidebar__item--active:hover {
 
 html[dir="rtl"] .sidebar__section-label {
   text-align: right;
+  letter-spacing: normal;
 }
 
 /* Sidebar User Footer */
@@ -244,7 +287,7 @@ html[dir="rtl"] .mobile-header #mobile-menu-toggle {
 }
 
 /* --------------------------------------------------------------------------
-   3. Split Layout & Secondary Tabs Direction Fixes
+   3. Split Layout & Secondary Navigation
    -------------------------------------------------------------------------- */
 @media (min-width: 768px) {
   html[dir="rtl"] .split-sidebar {
@@ -305,21 +348,45 @@ html[dir="rtl"] .btn-group {
   flex-direction: row;
 }
 
+html[dir="rtl"] .pure-btn--back svg,
+html[dir="rtl"] .back-arrow-link svg,
+html[dir="rtl"] .remote-back svg {
+  margin-left: 8px;
+  margin-right: 0;
+  transform: scaleX(-1);
+}
+
 /* --------------------------------------------------------------------------
    5. Form Controls & Inputs
    -------------------------------------------------------------------------- */
 html[dir="rtl"] .form-label {
   text-align: right;
+  line-height: 1.5;
 }
 
 html[dir="rtl"] .form-control,
+html[dir="rtl"] .form-input,
 html[dir="rtl"] .form-select,
 html[dir="rtl"] textarea {
   text-align: right;
   direction: rtl;
+  font-family: inherit;
+  line-height: 1.5;
 }
 
-/* Form input icon positions */
+/* Form Select Dropdown Arrow on Left */
+html[dir="rtl"] .form-select-wrap::after {
+  left: var(--space-sm, 8px);
+  right: auto;
+}
+
+html[dir="rtl"] .form-select,
+html[dir="rtl"] .form-select-wrap .form-select {
+  padding-left: 28px;
+  padding-right: 10px;
+}
+
+/* Form Input Icon Positions */
 html[dir="rtl"] .input-icon-wrapper {
   position: relative;
 }
@@ -329,7 +396,8 @@ html[dir="rtl"] .input-icon-wrapper .input-icon {
   left: auto;
 }
 
-html[dir="rtl"] .input-icon-wrapper .form-control {
+html[dir="rtl"] .input-icon-wrapper .form-control,
+html[dir="rtl"] .input-icon-wrapper .form-input {
   padding-right: 2.5rem;
   padding-left: 0.75rem;
 }
@@ -339,6 +407,10 @@ html[dir="rtl"] .form-check-label,
 html[dir="rtl"] .form-radio-label {
   padding-right: 0.5rem;
   padding-left: 0;
+}
+
+html[dir="rtl"] .form-check {
+  flex-direction: row;
 }
 
 html[dir="rtl"] .form-switch {
@@ -364,7 +436,8 @@ html[dir="rtl"] .card__header {
 }
 
 html[dir="rtl"] .card__actions,
-html[dir="rtl"] .card__header-actions {
+html[dir="rtl"] .card__header-actions,
+html[dir="rtl"] .info-hero-row__actions {
   margin-right: auto;
   margin-left: 0;
 }
@@ -373,12 +446,32 @@ html[dir="rtl"] .card__header-actions {
 html[dir="rtl"] table th,
 html[dir="rtl"] table td {
   text-align: right;
+  line-height: 1.5;
 }
 
 html[dir="rtl"] table th:last-child,
 html[dir="rtl"] table td:last-child,
-html[dir="rtl"] .table-actions {
+html[dir="rtl"] .table .col-actions,
+html[dir="rtl"] .table-actions,
+html[dir="rtl"] .remote-actions {
   text-align: left;
+}
+
+html[dir="rtl"] .table tr.row--active {
+  border-right: 4px solid var(--color-accent);
+  border-left: none;
+}
+
+html[dir="rtl"] .cache-settings-box,
+html[dir="rtl"] .php-operation,
+html[dir="rtl"] .clean-cmd-box {
+  border-right: 3px solid var(--color-accent);
+  border-left: none;
+}
+
+html[dir="rtl"] .plugin-check-window__error {
+  border-right: 3px solid var(--color-danger);
+  border-left: none;
 }
 
 /* Badges */
@@ -389,6 +482,7 @@ html[dir="rtl"] .badge i {
 }
 
 /* Tabs */
+html[dir="rtl"] .tabs-nav,
 html[dir="rtl"] .tabs__nav {
   flex-direction: row;
 }
@@ -415,9 +509,29 @@ html[dir="rtl"] .modal__footer .btn + .btn {
   margin-left: 0.5rem;
 }
 
-/* Alerts */
-html[dir="rtl"] .alert {
+html[dir="rtl"] .modal-backdrop--slide {
+  justify-content: flex-start;
+  padding: 0;
+}
+
+html[dir="rtl"] .modal--slide {
+  border-right: 1px solid var(--color-line);
+  border-left: none;
+  animation: slideInLeft 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideInLeft {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+
+/* Alerts & Banners */
+html[dir="rtl"] .alert,
+html[dir="rtl"] .notice-banner,
+html[dir="rtl"] .recommendation-card {
   text-align: right;
+  direction: rtl;
+  line-height: 1.5;
 }
 
 html[dir="rtl"] .alert__icon {
@@ -425,26 +539,36 @@ html[dir="rtl"] .alert__icon {
   margin-right: 0;
 }
 
-html[dir="rtl"] .alert__close {
-  margin-right: auto;
-  margin-left: 0;
+html[dir="rtl"] .alert__close,
+html[dir="rtl"] .alert button[aria-label="Close"],
+html[dir="rtl"] .alert [data-resource-guard-dismiss="close"],
+html[dir="rtl"] .alert .btn-close {
+  margin-right: auto !important;
+  margin-left: 0 !important;
 }
 
 /* Stepper & Wizard Step Bar */
 html[dir="rtl"] .stepper,
-html[dir="rtl"] .step-bar {
+html[dir="rtl"] .step-bar,
+html[dir="rtl"] .pure-nav {
   flex-direction: row;
 }
 
 html[dir="rtl"] .stepper__step,
-html[dir="rtl"] .step-item {
+html[dir="rtl"] .step-item,
+html[dir="rtl"] .pure-step-item {
   text-align: right;
   flex-direction: row;
 }
 
-html[dir="rtl"] .step-item .step-num {
+html[dir="rtl"] .step-item .step-num,
+html[dir="rtl"] .pure-step-item .pure-step-num {
   margin-left: 6px;
   margin-right: 0;
+}
+
+html[dir="rtl"] .wizard-actions {
+  flex-direction: row;
 }
 
 /* Toast Container */
@@ -465,7 +589,9 @@ html[dir="rtl"] [data-lucide="arrow-right-circle"],
 html[dir="rtl"] [data-lucide="arrow-left-circle"],
 html[dir="rtl"] [data-lucide="log-out"],
 html[dir="rtl"] [data-lucide="move-right"],
-html[dir="rtl"] [data-lucide="move-left"] {
+html[dir="rtl"] [data-lucide="move-left"],
+html[dir="rtl"] [data-lucide="corner-down-right"],
+html[dir="rtl"] [data-lucide="corner-down-left"] {
   transform: scaleX(-1);
   display: inline-block;
 }
@@ -514,6 +640,7 @@ html[dir="rtl"] .list-item-row {
     right: var(--sidebar-width, 260px) !important;
   }
 }
+
 @media (max-width: 991px) {
   html[dir="rtl"] .fixed-action-bar {
     left: 0 !important;
@@ -527,15 +654,8 @@ html[dir="rtl"] .fixed-action-bar__inner {
 }
 
 /* --------------------------------------------------------------------------
-   10. Notice Windows, Alerts, Banners & Floating Cards in RTL
+   10. Floating Cards & Utility Overrides in RTL
    -------------------------------------------------------------------------- */
-html[dir="rtl"] .alert,
-html[dir="rtl"] .notice-banner,
-html[dir="rtl"] .recommendation-card {
-  text-align: right;
-  direction: rtl;
-}
-
 html[dir="rtl"] .recommendation-card--floating {
   right: calc(var(--sidebar-width, 260px) + 2%) !important;
   left: auto !important;
@@ -550,9 +670,21 @@ html[dir="rtl"] .recommendation-card--floating {
   }
 }
 
-html[dir="rtl"] .alert button[aria-label="Close"],
-html[dir="rtl"] .alert [data-resource-guard-dismiss="close"],
-html[dir="rtl"] .alert .btn-close {
-  margin-right: auto !important;
+/* Layout Utilities in RTL */
+html[dir="rtl"] .ml-auto {
   margin-left: 0 !important;
+  margin-right: auto !important;
+}
+
+html[dir="rtl"] .mr-auto {
+  margin-right: 0 !important;
+  margin-left: auto !important;
+}
+
+html[dir="rtl"] .text-start {
+  text-align: right !important;
+}
+
+html[dir="rtl"] .text-end {
+  text-align: left !important;
 }
