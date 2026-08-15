@@ -133,21 +133,21 @@
 
 <!-- RAM & SWAP SAFETY CONFIRMATION MODAL -->
 <div id="ram-safety-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="ram-safety-title">
-  <div class="modal">
-    <div class="modal__header">
-      <h2 id="ram-safety-title" style="display:flex; align-items:center; gap:8px;">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:20px; height:20px; color:var(--color-warning, #f59e0b);"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
-        {{ _('high_ram_usage_warning') or 'High RAM Usage Warning' }}
-      </h2>
+  <div class="modal modal--sm" style="max-width: 480px;">
+    <div class="modal__header" style="padding-bottom: 12px;">
+      <h3 id="ram-safety-title" style="display:flex; align-items:center; gap:8px; margin:0; font-size:1.05rem;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px; height:18px; color:var(--color-warning, #f59e0b); flex-shrink:0;"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+        <span>{{ _('high_ram_usage_warning') or 'High RAM Usage Warning' }}</span>
+      </h3>
       <button class="btn btn--ghost btn--icon" onclick="closeModal('ram-safety-modal')" aria-label="Close">✕</button>
     </div>
-    <div class="modal__body" style="display:flex; flex-direction:column; gap:var(--space-md);">
-      <p id="ram-safety-message" style="margin:0; line-height:1.5; font-weight:500;"></p>
-      <div id="ram-safety-details" class="alert alert--warn" style="font-size:0.875rem; margin:0; line-height:1.6;"></div>
+    <div class="modal__body" style="padding: 14px 20px; display:flex; flex-direction:column; gap:12px;">
+      <p id="ram-safety-message" style="margin:0; font-size:0.875rem; line-height:1.45; color:var(--color-text);"></p>
+      <div id="ram-safety-details"></div>
     </div>
-    <div class="modal__footer" style="display:flex; justify-content:flex-end; gap:var(--space-sm); flex-wrap:wrap;">
+    <div class="modal__footer" style="padding-top: 12px; display:flex; justify-content:flex-end; gap:8px; flex-wrap:wrap;">
       <button type="button" class="btn btn--secondary" onclick="closeModal('ram-safety-modal')">{{ _('cancel') }}</button>
-      <button type="button" class="btn btn--secondary" id="btn-safety-free-ram">
+      <button type="button" class="btn btn--primary" id="btn-safety-free-ram">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px; height:13px; margin-right:4px; vertical-align:-2px;"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path></svg>
         {{ _('free_ram_cache_first') or 'Free RAM Cache First' }}
       </button>
@@ -675,6 +675,18 @@
         }
         btn.classList.toggle('is-active', isMatch);
       });
+
+      const swapRow = document.getElementById('row-swap-size');
+      if (swapRow) {
+        swapRow.style.opacity = isOptActive ? '1' : '0.45';
+        swapRow.style.pointerEvents = isOptActive ? 'auto' : 'none';
+        const helpText = swapRow.querySelector('.text-small.text-muted');
+        if (helpText) {
+          helpText.textContent = isOptActive
+            ? 'Configure swap size (500 MB base zRAM + on-disk swap).'
+            : 'Disabled. Enable Low-RAM Optimization Mode to configure swap storage.';
+        }
+      }
     }
 
     if (!isActionPending) setOptimizationButtonsDisabled(false);
@@ -792,7 +804,6 @@
     const targetMb = details.targetMb ?? 0;
 
     // If new target swap is greater than or equal to current swap in use, all data fits in new swap!
-    // No downgrade excess -> 100% safe!
     if (swapUsedMb <= targetMb) {
       return { safe: true };
     }
@@ -804,8 +815,25 @@
       return {
         safe: false,
         critical: true,
-        message: `Cannot safely ${details.actionName}. Current memory in Swap (${swapUsedMb} MB) exceeds target swap size (${targetMb} MB). Physical RAM available (${ramAvailMb} MB) cannot absorb the ${excessMb} MB of excess memory without risk of an Out-of-Memory (OOM) crash.`,
-        detailHtml: `<strong>Target Swap:</strong> ${targetMb} MB<br><strong>Current Swap in Use:</strong> ${swapUsedMb} MB<br><strong>RAM Available:</strong> ${ramAvailMb} MB (Need at least ${excessMb} MB)<br><br>👉 <strong>Action Required:</strong> Click <em>"Free RAM Cache First"</em> or stop memory-heavy apps before downgrading swap.`
+        message: `Current data in Swap (${swapUsedMb} MB) exceeds target size (${targetMb} MB). Physical RAM available (${ramAvailMb} MB) cannot absorb the excess ${excessMb} MB without risk of an Out-of-Memory crash.`,
+        detailHtml: `
+          <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; text-align:center; margin-top:4px;">
+            <div style="background:var(--color-bg-subtle, rgba(255,255,255,0.04)); padding:8px; border-radius:6px; border:1px solid var(--color-border, #333);">
+              <div style="font-size:0.75rem; opacity:0.75;">Swap In Use</div>
+              <div style="font-weight:700; font-size:0.95rem; margin-top:2px;">${swapUsedMb} MB</div>
+            </div>
+            <div style="background:var(--color-bg-subtle, rgba(255,255,255,0.04)); padding:8px; border-radius:6px; border:1px solid var(--color-border, #333);">
+              <div style="font-size:0.75rem; opacity:0.75;">Excess to RAM</div>
+              <div style="font-weight:700; font-size:0.95rem; margin-top:2px; color:var(--color-danger, #ef4444);">${excessMb} MB</div>
+            </div>
+            <div style="background:var(--color-bg-subtle, rgba(255,255,255,0.04)); padding:8px; border-radius:6px; border:1px solid var(--color-border, #333);">
+              <div style="font-size:0.75rem; opacity:0.75;">Available RAM</div>
+              <div style="font-weight:700; font-size:0.95rem; margin-top:2px; color:var(--color-danger, #ef4444);">${ramAvailMb} MB</div>
+            </div>
+          </div>
+          <div class="alert alert--danger" style="margin:8px 0 0; font-size:0.8rem; padding:8px 12px;">
+            ⚠️ <strong>Action Required:</strong> Click <em>"Free RAM Cache First"</em> or close background apps.
+          </div>`
       };
     }
 
@@ -814,8 +842,21 @@
       return {
         safe: false,
         warning: true,
-        message: `High RAM Usage Warning: ${details.actionName} will force ${excessMb} MB of excess swap memory into physical RAM.`,
-        detailHtml: `<strong>Target Swap:</strong> ${targetMb} MB<br><strong>Current Swap in Use:</strong> ${swapUsedMb} MB<br><strong>Excess to RAM:</strong> ${excessMb} MB<br><strong>RAM Available:</strong> ${ramAvailMb} MB<br><br>💡 <em>Recommendation: Click "Free RAM Cache First" before proceeding.</em>`
+        message: `${details.actionName} will transfer ${excessMb} MB of swap memory into physical RAM.`,
+        detailHtml: `
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; text-align:center; margin-top:4px;">
+            <div style="background:var(--color-bg-subtle, rgba(255,255,255,0.04)); padding:8px; border-radius:6px; border:1px solid var(--color-border, #333);">
+              <div style="font-size:0.75rem; opacity:0.75;">Swap to Transfer</div>
+              <div style="font-weight:700; font-size:0.95rem; margin-top:2px;">${excessMb} MB</div>
+            </div>
+            <div style="background:var(--color-bg-subtle, rgba(255,255,255,0.04)); padding:8px; border-radius:6px; border:1px solid var(--color-border, #333);">
+              <div style="font-size:0.75rem; opacity:0.75;">Available RAM</div>
+              <div style="font-weight:700; font-size:0.95rem; margin-top:2px;">${ramAvailMb} MB</div>
+            </div>
+          </div>
+          <div class="alert alert--warn" style="margin:8px 0 0; font-size:0.8rem; padding:8px 12px;">
+            💡 <strong>Recommendation:</strong> Click <em>"Free RAM Cache First"</em> before proceeding.
+          </div>`
       };
     }
 
