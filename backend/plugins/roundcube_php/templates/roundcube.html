@@ -5,63 +5,375 @@
 
 {% block head %}
 <link rel="stylesheet" href="/static/css/php-sites.css?v={{ APP_VERSION }}">
-<link rel="stylesheet" href="/plugins/roundcube_php/static/css/roundcube_php.css?v={{ APP_VERSION }}">
+<style>
+.rc-container { max-width: 1100px; margin: 20px auto; width: 100%; display: flex; flex-direction: column; gap: 20px; }
+.rc-card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 0 !important; }
+.rc-card-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid var(--color-line); }
+.rc-card-title { font-size: 14px; font-weight: 700; color: var(--color-text); margin: 0; display: flex; align-items: center; gap: 10px; }
+.rc-specs-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; padding: 14px 18px; border-top: 1px solid var(--color-line); background: var(--color-surface-hover); }
+.rc-spec-box { display: flex; flex-direction: column; gap: 2px; }
+.rc-spec-lbl { font-size: 10px; font-weight: 600; text-transform: uppercase; color: var(--color-muted); }
+.rc-spec-val { font-size: 12px; font-weight: 600; color: var(--color-text); }
+</style>
 {% endblock %}
 
 {% block topbar_actions %}
   {% if not status.installed %}
-    <button type="button" class="btn btn--primary" id="rc-topbar-install-btn">+ Install Webmail</button>
+    <button type="button" class="btn btn--primary" id="rc-btn-install">+ Install Webmail (PHP)</button>
   {% else %}
-    <button type="button" class="btn btn--primary" id="rc-topbar-add-domain" data-action="open-modal" data-modal="rc-modal-add-domain">+ Add Webmail Domain</button>
-    <button type="button" class="btn btn--secondary" id="rc-topbar-test-mail">Test Mail Connection</button>
-    {% if status.running %}
-      <button type="button" class="btn btn--secondary" id="rc-topbar-restart-btn">Restart</button>
-    {% else %}
-      <button type="button" class="btn btn--secondary" id="rc-topbar-start-btn">Start Server</button>
-    {% endif %}
+    <button type="button" class="btn btn--primary" id="rc-btn-add-domain" data-action="open-modal" data-modal="rc-modal-add">+ Add Webmail Domain</button>
+    <button type="button" class="btn btn--secondary" id="rc-btn-diagnostics">Test Mail Server</button>
+    <button type="button" class="btn btn--secondary" id="rc-btn-restart">Restart</button>
   {% endif %}
 {% endblock %}
 
 {% block content %}
 {% import "partials/list_actions_toggle.html" as list_actions %}
 
-<div class="php-detail" style="width: 100%;">
-  <div class="php-split-layout">
-    <!-- LEFT COLUMN: STICKY NAVIGATION RAIL -->
-    <div class="php-split-nav" data-detail-tabs role="tablist">
-      <button class="php-split-nav-btn is-active" type="button" role="tab" data-rc-tab="domains" id="rc-tab-domains" onclick="switchRcTab('domains', this)">
+<div class="rc-container">
+  <div class="rc-card">
+    <div class="rc-card-header">
+      <div class="rc-card-title">
         <span>Webmail Domains</span>
-        <span class="badge-minimal" id="rc-badge-domains-count" style="margin-left: auto;">{{ domain_rows|length if domain_rows else 0 }}</span>
-      </button>
-      <button class="php-split-nav-btn" type="button" role="tab" data-rc-tab="settings" id="rc-tab-settings" onclick="switchRcTab('settings', this)">
-        <span>Configuration &amp; Skin</span>
-      </button>
-      <button class="php-split-nav-btn" type="button" role="tab" data-rc-tab="plugins" id="rc-tab-plugins" onclick="switchRcTab('plugins', this)">
-        <span>Roundcube Plugins</span>
-      </button>
-      <button class="php-split-nav-btn" type="button" role="tab" data-rc-tab="maintenance" id="rc-tab-maintenance" onclick="switchRcTab('maintenance', this)">
-        <span>Database &amp; Cache</span>
-      </button>
-      <button class="php-split-nav-btn" type="button" role="tab" data-rc-tab="service-specs" id="rc-tab-service-specs" onclick="switchRcTab('service-specs', this)">
-        <span>Service &amp; Specs</span>
-      </button>
+        {% if not status.installed %}
+          <span class="badge badge--muted">Not Installed</span>
+        {% elif status.healthy %}
+          <span class="badge badge--healthy">Service Active (PHP {{ status.php_version }})</span>
+        {% elif status.running %}
+          <span class="badge badge--warning">Running</span>
+        {% else %}
+          <span class="badge badge--danger">Stopped</span>
+        {% endif %}
+      </div>
+      <input type="text" class="input input--sm" style="width: 220px; font-size: 12px;" placeholder="Filter domains..." oninput="filterDomains(this.value)">
     </div>
 
-    <!-- RIGHT COLUMN: SPLIT CONTENT & CARDS GRID -->
-    <div class="php-split-content">
-      {% include 'partials/_rc_domains.html' %}
-      {% include 'partials/_rc_settings.html' %}
-      {% include 'partials/_rc_plugins.html' %}
-      {% include 'partials/_rc_maintenance.html' %}
-      {% include 'partials/_rc_service_specs.html' %}
-      {% include 'partials/_rc_modals.html' %}
+    {% if not domain_rows %}
+      <div style="padding: 36px 20px; text-align: center; color: var(--color-muted); font-size: 13px;">
+        No mail domains configured. Add domains in <a href="/plugins/maddy/" style="color: var(--color-accent);">Maddy Mail Server</a> first.
+      </div>
+    {% else %}
+      <table class="table" id="rc-domains-table">
+        <thead>
+          <tr>
+            <th>Mail Domain</th>
+            <th>Webmail URL / Hostname</th>
+            <th>Mailboxes</th>
+            <th>HTTPS / SSL</th>
+            <th class="col-actions">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in domain_rows %}
+            <tr class="rc-row" data-domain="{{ row.domain }}">
+              <td><strong style="color: var(--color-text);">{{ row.domain }}</strong></td>
+              <td>
+                {% if row.site and row.site.public_host %}
+                  <code style="color: var(--color-accent); font-size: 12px;">{{ row.site.public_host }}</code>
+                {% else %}
+                  <span style="color: var(--color-muted); font-size: 12px;">Not Configured</span>
+                {% endif %}
+              </td>
+              <td><span class="badge-minimal">{{ row.mailbox_count or 0 }}</span></td>
+              <td>
+                {% if not row.site %}
+                  <span class="badge badge--muted">Not Added</span>
+                {% elif row.site.ssl_status == 'ready' %}
+                  <span class="badge badge--healthy">HTTPS Active</span>
+                {% elif row.site.ssl_status == 'pending' %}
+                  <span class="badge badge--warning">SSL Pending</span>
+                {% else %}
+                  <span class="badge badge--danger">HTTP Only</span>
+                {% endif %}
+              </td>
+              <td class="col-actions" style="position:relative;">
+                {{ list_actions.button() }}
+                {% call list_actions.tray() %}
+                  {% if row.site and row.site.public_url %}
+                    <a href="{{ row.site.public_url }}" target="_blank" rel="noopener" class="btn btn--secondary btn--sm" style="text-decoration:none;">Open Webmail</a>
+                  {% endif %}
+                  {% if row.site %}
+                    <button type="button" class="btn btn--secondary btn--sm" data-action="issue-ssl" data-domain="{{ row.domain }}">Issue / Renew SSL</button>
+                    <button type="button" class="btn btn--danger btn--sm" data-action="delete-site" data-domain="{{ row.domain }}">Delete Webmail</button>
+                  {% else %}
+                    <button type="button" class="btn btn--primary btn--sm" data-action="configure-site" data-domain="{{ row.domain }}">Configure Webmail</button>
+                  {% endif %}
+                {% endcall %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% endif %}
+
+    <div class="rc-specs-row">
+      <div class="rc-spec-box">
+        <span class="rc-spec-lbl">Engine</span>
+        <span class="rc-spec-val">Native PHP {{ status.php_version or '' }}</span>
+      </div>
+      <div class="rc-spec-box">
+        <span class="rc-spec-lbl">Local Port</span>
+        <span class="rc-spec-val">127.0.0.1:{{ status.port }}</span>
+      </div>
+      <div class="rc-spec-box">
+        <span class="rc-spec-lbl">SQLite DB Size</span>
+        <span class="rc-spec-val">{{ db_stats.db_size or '0 KB' }}</span>
+      </div>
+      <div class="rc-spec-box">
+        <span class="rc-spec-lbl">Maddy IMAP &amp; SMTP</span>
+        <span class="rc-spec-val">127.0.0.1:143 / 587</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: ADD / CONFIGURE DOMAIN -->
+<div class="modal-backdrop hidden" id="rc-modal-add" role="dialog">
+  <div class="modal" style="max-width: 460px;">
+    <div class="modal__header">
+      <h3 class="modal__title">Configure Webmail Domain</h3>
+      <button type="button" class="modal__close" data-action="close-modal">&times;</button>
+    </div>
+    <form id="rc-form-add">
+      <div class="modal__body" style="display: flex; flex-direction: column; gap: 14px;">
+        <div class="form-group">
+          <label class="form-label" for="rc-select-domain">Mail Domain</label>
+          <select class="input" id="rc-select-domain" name="mail_domain" required onchange="onDomainChange(this.value)">
+            <option value="">Select Domain...</option>
+            {% for item in domain_rows %}
+              {% if not item.site %}
+                <option value="{{ item.domain }}">{{ item.domain }}</option>
+              {% endif %}
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="rc-input-host">Webmail Hostname (e.g. mm.domain.com)</label>
+          <input type="text" class="input" id="rc-input-host" name="public_host" placeholder="mm.yourdomain.com" required>
+        </div>
+
+        <div class="form-group">
+          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+            <input type="checkbox" id="rc-chk-dns" name="manage_dns" value="true" checked>
+            <span style="font-size: 12px; color: var(--color-text);">Create DNS A Record automatically</span>
+          </label>
+        </div>
+        <div id="rc-add-err" style="display: none; font-size: 12px; color: var(--color-danger);"></div>
+      </div>
+      <div class="modal__footer">
+        <button type="button" class="btn btn--secondary" data-action="close-modal">Cancel</button>
+        <button type="submit" class="btn btn--primary" id="rc-submit-add">Save Domain</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL: DELETE CONFIRMATION -->
+<div class="modal-backdrop hidden" id="rc-modal-delete" role="dialog">
+  <div class="modal" style="max-width: 420px;">
+    <div class="modal__header">
+      <h3 class="modal__title">Delete Webmail Access</h3>
+      <button type="button" class="modal__close" data-action="close-modal">&times;</button>
+    </div>
+    <div class="modal__body">
+      <p style="font-size: 13px; color: var(--color-text); margin-bottom: 8px;">
+        Remove webmail access for <strong id="rc-del-domain-lbl" style="color: var(--color-danger);"></strong>?
+      </p>
+      <p style="font-size: 12px; color: var(--color-muted);">Maddy mailboxes and emails are preserved.</p>
+    </div>
+    <div class="modal__footer">
+      <input type="hidden" id="rc-del-domain-input">
+      <button type="button" class="btn btn--secondary" data-action="close-modal">Cancel</button>
+      <button type="button" class="btn btn--danger" id="rc-confirm-del">Delete Webmail</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: DIAGNOSTICS -->
+<div class="modal-backdrop hidden" id="rc-modal-diag" role="dialog">
+  <div class="modal" style="max-width: 440px;">
+    <div class="modal__header">
+      <h3 class="modal__title">Maddy Connection Status</h3>
+      <button type="button" class="modal__close" data-action="close-modal">&times;</button>
+    </div>
+    <div class="modal__body">
+      <div id="rc-diag-loading" style="text-align:center; padding: 16px; font-size: 13px; color: var(--color-muted);">Checking 127.0.0.1:143 &amp; 587…</div>
+      <div id="rc-diag-results" style="display:none; flex-direction:column; gap: 10px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 10px; background:var(--color-surface-hover);">
+          <span style="font-size:12px; font-weight:600; color:var(--color-text);">IMAP (127.0.0.1:143)</span>
+          <span id="rc-diag-imap"></span>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 10px; background:var(--color-surface-hover);">
+          <span style="font-size:12px; font-weight:600; color:var(--color-text);">SMTP (127.0.0.1:587)</span>
+          <span id="rc-diag-smtp"></span>
+        </div>
+      </div>
+    </div>
+    <div class="modal__footer">
+      <button type="button" class="btn btn--secondary" data-action="close-modal">Close</button>
     </div>
   </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
-  {% include 'partials/_rc_scripts_core.html' %}
-  {% include 'partials/_rc_scripts_domains.html' %}
-  {% include 'partials/_rc_scripts_settings.html' %}
+<script>
+const rcCsrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
+
+function filterDomains(q) {
+  const query = (q || '').toLowerCase().trim();
+  document.querySelectorAll('#rc-domains-table tbody tr').forEach(row => {
+    row.style.display = (!query || row.innerText.toLowerCase().includes(query)) ? '' : 'none';
+  });
+}
+
+function onDomainChange(domain) {
+  const input = document.getElementById('rc-input-host');
+  if (domain && input && !input.value) {
+    input.value = `mm.${domain}`;
+  }
+}
+
+document.addEventListener('click', (e) => {
+  const openModalBtn = e.target.closest('[data-action="open-modal"]');
+  if (openModalBtn) {
+    const mId = openModalBtn.getAttribute('data-modal');
+    if (mId) document.getElementById(mId)?.classList.remove('hidden');
+    return;
+  }
+  const closeBtn = e.target.closest('[data-action="close-modal"]');
+  if (closeBtn) {
+    closeBtn.closest('.modal-backdrop')?.classList.add('hidden');
+    return;
+  }
+  if (e.target.classList.contains('modal-backdrop')) {
+    e.target.classList.add('hidden');
+  }
+});
+
+document.addEventListener('click', async (e) => {
+  const btn = e.target.closest('[data-action]');
+  if (!btn) return;
+  const action = btn.getAttribute('data-action');
+  const domain = btn.getAttribute('data-domain');
+
+  if (action === 'configure-site') {
+    const sel = document.getElementById('rc-select-domain');
+    const input = document.getElementById('rc-input-host');
+    if (sel && domain) {
+      sel.value = domain;
+      if (input) input.value = `mm.${domain}`;
+    }
+    document.getElementById('rc-modal-add')?.classList.remove('hidden');
+  } else if (action === 'delete-site') {
+    const lbl = document.getElementById('rc-del-domain-lbl');
+    const inp = document.getElementById('rc-del-domain-input');
+    if (lbl) lbl.textContent = domain;
+    if (inp) inp.value = domain;
+    document.getElementById('rc-modal-delete')?.classList.remove('hidden');
+  } else if (action === 'issue-ssl') {
+    btn.disabled = true;
+    btn.textContent = 'Issuing SSL…';
+    const body = new FormData();
+    body.append('csrf_token', rcCsrf);
+    body.append('mail_domain', domain);
+    try {
+      const res = await fetch('/plugins/roundcube_php/api/sites/ssl', { method: 'POST', body });
+      const d = await res.json();
+      alert(d.message || 'SSL process started.');
+      window.location.reload();
+    } catch (err) {
+      alert(err.message || 'SSL failed.');
+      btn.disabled = false;
+      btn.textContent = 'Issue / Renew SSL';
+    }
+  }
+});
+
+document.getElementById('rc-form-add')?.addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const subBtn = document.getElementById('rc-submit-add');
+  const errBox = document.getElementById('rc-add-err');
+  subBtn.disabled = true;
+  subBtn.textContent = 'Saving…';
+  if (errBox) errBox.style.display = 'none';
+
+  const formData = new FormData(this);
+  formData.append('csrf_token', rcCsrf);
+  try {
+    const res = await fetch('/plugins/roundcube_php/api/sites/add', { method: 'POST', body: formData });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Failed to configure webmail');
+    window.location.reload();
+  } catch (err) {
+    if (errBox) {
+      errBox.textContent = err.message;
+      errBox.style.display = 'block';
+    }
+    subBtn.disabled = false;
+    subBtn.textContent = 'Save Domain';
+  }
+});
+
+document.getElementById('rc-confirm-del')?.addEventListener('click', async function() {
+  const domain = document.getElementById('rc-del-domain-input')?.value;
+  if (!domain) return;
+  this.disabled = true;
+  this.textContent = 'Deleting…';
+  const body = new FormData();
+  body.append('csrf_token', rcCsrf);
+  body.append('mail_domain', domain);
+  try {
+    const res = await fetch('/plugins/roundcube_php/api/sites/delete', { method: 'POST', body });
+    if (!res.ok) {
+      const d = await res.json();
+      throw new Error(d.detail || 'Delete failed');
+    }
+    window.location.reload();
+  } catch (err) {
+    alert(err.message);
+    this.disabled = false;
+    this.textContent = 'Delete Webmail';
+  }
+});
+
+document.getElementById('rc-btn-diagnostics')?.addEventListener('click', async () => {
+  document.getElementById('rc-modal-diag')?.classList.remove('hidden');
+  const loading = document.getElementById('rc-diag-loading');
+  const results = document.getElementById('rc-diag-results');
+  const imapEl = document.getElementById('rc-diag-imap');
+  const smtpEl = document.getElementById('rc-diag-smtp');
+  if (loading) loading.style.display = 'block';
+  if (results) results.style.display = 'none';
+
+  try {
+    const res = await fetch('/plugins/roundcube_php/api/mail-diagnostics');
+    const data = await res.json();
+    if (loading) loading.style.display = 'none';
+    if (results) results.style.display = 'flex';
+    if (imapEl) imapEl.innerHTML = data.imap?.ok ? '<span class="badge badge--healthy">OK</span>' : '<span class="badge badge--danger">Failed</span>';
+    if (smtpEl) smtpEl.innerHTML = data.smtp?.ok ? '<span class="badge badge--healthy">OK</span>' : '<span class="badge badge--danger">Failed</span>';
+  } catch (err) {
+    if (loading) loading.textContent = `Diagnostic error: ${err.message}`;
+  }
+});
+
+const triggerAction = (id, url, promptMsg) => {
+  document.getElementById(id)?.addEventListener('click', async () => {
+    if (promptMsg && !confirm(promptMsg)) return;
+    try {
+      const res = await fetch(url, { method: 'POST', body: new URLSearchParams({ csrf_token: rcCsrf }) });
+      const d = await res.json();
+      alert(d.message || 'Operation complete.');
+      window.location.reload();
+    } catch (err) {
+      alert(err.message || 'Operation failed.');
+    }
+  });
+};
+
+triggerAction('rc-btn-install', '/plugins/roundcube_php/api/install');
+triggerAction('rc-btn-restart', '/plugins/roundcube_php/api/restart');
+</script>
 {% endblock %}

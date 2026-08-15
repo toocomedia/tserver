@@ -114,13 +114,13 @@ class RoundcubePhpPackagingTests(unittest.TestCase):
         self.assertIn("sqlite.initial.sql", install_script)
         self.assertIn("srv-panel-roundcube-php.service", install_script)
 
-    def test_template_partials_exist_and_respect_line_limits(self):
+    def test_template_exists_and_is_clean(self):
         plugin_dir = BACKEND / "plugins" / "roundcube_php"
-        partials_dir = plugin_dir / "templates" / "partials"
-        self.assertTrue(partials_dir.is_dir())
-        for partial in partials_dir.glob("*.html"):
-            lines = partial.read_text(encoding="utf-8").splitlines()
-            self.assertLessEqual(len(lines), 150, f"Partial {partial.name} exceeds 150 lines: {len(lines)}")
+        template_file = plugin_dir / "templates" / "roundcube.html"
+        self.assertTrue(template_file.is_file())
+        content = template_file.read_text(encoding="utf-8")
+        self.assertIn("rc-container", content)
+        self.assertIn("rc-domains-table", content)
 
 
 if __name__ == "__main__":

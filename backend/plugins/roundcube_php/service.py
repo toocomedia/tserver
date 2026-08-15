@@ -307,7 +307,7 @@ function srv_probe($host, $port, $tls) {
     ]]);
     $target = ($tls ? 'ssl://' : 'tcp://') . $host . ':' . $port;
     $socket = @stream_socket_client(
-        $target, $errno, $error, 5, STREAM_CLIENT_CONNECT, $context
+        $target, $errno, $error, 3, STREAM_CLIENT_CONNECT, $context
     );
     if (!$socket) {
         return ['ok' => false, 'host' => $host, 'port' => $port, 'error' => trim($errno . ' ' . $error)];
@@ -317,32 +317,19 @@ function srv_probe($host, $port, $tls) {
     fclose($socket);
     return ['ok' => true, 'host' => $host, 'port' => $port, 'banner' => $banner];
 }
-$maddyConf = '/etc/maddy/maddy.conf';
-$host = '127.0.0.1';
-$tls = false;
-if (file_exists($maddyConf)) {
-    $content = file_get_contents($maddyConf);
-    if (preg_match('/^\s*\$\(primary_domain\)\s*=\s*([^\s#]+)/m', $content, $m)) {
-        if (!preg_match('/\.local$/', $m[1])) {
-            $host = 'mail.' . trim($m[1]);
-            $tls = true;
-        }
-    }
+$imap = srv_probe('127.0.0.1', 143, false);
+if (!$imap['ok']) {
+    $imap = srv_probe('127.0.0.1', 993, true);
 }
-$imapPort = $tls ? 993 : 143;
-$imap = srv_probe($host, $imapPort, $tls);
-if (!$imap['ok'] && $tls) {
-    $imap = srv_probe('127.0.0.1', 143, false);
-}
-$smtp = srv_probe($host, 587, false);
+$smtp = srv_probe('127.0.0.1', 587, false);
 if (!$smtp['ok']) {
-    $smtp = srv_probe('127.0.0.1', 587, false);
+    $smtp = srv_probe('127.0.0.1', 465, true);
 }
 echo json_encode([
     'ok' => $imap['ok'] && $smtp['ok'],
     'imap' => $imap,
     'smtp' => $smtp,
-    'transport' => $tls ? 'tls_unverified' : 'local',
+    'transport' => 'local',
 ]);
 """
         try:
