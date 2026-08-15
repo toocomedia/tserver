@@ -152,6 +152,17 @@ disable_optimization() {
     nohup bash -c 'sleep 1 && systemctl restart srv-panel' >/dev/null 2>&1 &
   fi
 
+  # 5. Disable any active disk swapfile (full 0 MB swap when optimization is off)
+  if swapon --show=NAME 2>/dev/null | grep -q "^/swapfile$"; then
+    swapoff "/swapfile" 2>/dev/null || true
+  fi
+  if [[ -f "/swapfile" ]]; then
+    rm -f "/swapfile"
+  fi
+  if [[ -f /etc/fstab ]]; then
+    sed -i '\|/swapfile|d' /etc/fstab
+  fi
+
   echo "==> Low-RAM Optimization Mode DEACTIVATED."
 }
 
