@@ -252,6 +252,8 @@ class PhpMyAdminPackagingTests(unittest.TestCase):
         self.assertIn("srv-panel-phpmyadmin.conf", install)  # v1 migration
         self.assertIn("systemctl reload-or-restart", install)
         self.assertIn("8090 8091 8092", install)  # free-port selection
+        self.assertIn('chmod 0755 "$DATA_DIR"', install)  # www-data traversal
+        self.assertIn("chmod o+x /opt/srv-panel", install)
 
     def test_uninstaller_removes_unit_and_files(self):
         plugin = BACKEND / "plugins" / "phpmyadmin"

@@ -170,10 +170,14 @@ if nginx -t >/dev/null 2>&1; then
 fi
 
 # 6. Ownership and a systemd unit running the PHP built-in server.
+#    www-data must be able to traverse into htdocs (WorkingDirectory), so the
+#    data dir needs world execute — files inside stay root/www-data protected.
 chown -R www-data:www-data "$HTDOCS" "$DATA_DIR/sessions" "$DATA_DIR/tmp"
 chmod -R 0755 "$HTDOCS"
-chown "$PANEL_USER":"$PANEL_USER" "$DATA_DIR" 2>/dev/null || true
-chmod 0750 "$DATA_DIR"
+chmod 0755 "$DATA_DIR"
+if [[ "$DATA_DIR" == /opt/srv-panel/* ]]; then
+    chmod o+x /opt/srv-panel /opt/srv-panel/data 2>/dev/null || true
+fi
 
 cat > "$UNIT_PATH" <<UNIT
 [Unit]
