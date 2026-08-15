@@ -1,11 +1,35 @@
 {% extends "layout.html" %}
 
-{% block title %}Roundcube Webmail (PHP) — {{ PANEL_NAME }}{% endblock %}
-{% block page_title %}Roundcube Webmail (PHP){% endblock %}
+{% block title %}Roundcube Webmail — {{ PANEL_NAME }}{% endblock %}
+{% block page_title %}Roundcube Webmail{% endblock %}
 
 {% block head %}
 <link rel="stylesheet" href="/static/css/php-sites.css?v={{ APP_VERSION }}">
-<link rel="stylesheet" href="/plugins/roundcube_php/static/css/roundcube_php.css?v={{ APP_VERSION }}">
+<style>
+.rc-split-layout { display: flex; gap: 20px; width: 100%; align-items: flex-start; }
+.rc-nav-rail { width: 210px; flex-shrink: 0; display: flex; flex-direction: column; gap: 4px; position: sticky; top: 16px; }
+.rc-nav-btn { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; font-size: 13px; font-weight: 600; color: var(--color-muted); background: transparent; border: 1px solid transparent; border-radius: 0 !important; cursor: pointer; text-align: left; width: 100%; transition: color 0.15s, background 0.15s, border-color 0.15s; }
+.rc-nav-btn:hover { color: var(--color-text); background: var(--color-surface-hover); }
+.rc-nav-btn.is-active { color: var(--color-text); background: var(--color-surface); border-color: var(--color-line); font-weight: 700; }
+.rc-content { flex: 1; min-width: 0; width: 100%; }
+.rc-tab-pane { width: 100%; }
+.rc-card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 0 !important; margin-bottom: 20px; }
+.rc-card-head { display: flex; align-items: center; justify-content: space-between; padding: 12px 18px; border-bottom: 1px solid var(--color-line); }
+.rc-card-title { font-size: 13px; font-weight: 700; color: var(--color-text); margin: 0; }
+.rc-spec-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
+.rc-spec-box { display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; background: var(--color-surface-hover); border: 1px solid var(--color-line); border-radius: 0 !important; }
+.rc-spec-lbl { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--color-muted); }
+.rc-spec-val { font-size: 13px; font-weight: 600; color: var(--color-text); }
+.rc-input-sm { width: 220px; height: 32px; font-size: 12px; border-radius: 0 !important; }
+.rc-toggle-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: var(--color-surface-hover); border: 1px solid var(--color-line); border-radius: 0 !important; cursor: pointer; }
+.rc-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media (max-width: 860px) {
+  .rc-split-layout { flex-direction: column; }
+  .rc-nav-rail { width: 100%; position: static; flex-direction: row; flex-wrap: wrap; }
+  .rc-nav-btn { width: auto; }
+  .rc-form-grid { grid-template-columns: 1fr; }
+}
+</style>
 {% endblock %}
 
 {% block topbar_actions %}
@@ -13,7 +37,7 @@
     <button type="button" class="btn btn--primary" id="rc-topbar-install-btn">+ Install Webmail</button>
   {% else %}
     <button type="button" class="btn btn--primary" id="rc-topbar-add-domain" data-action="open-modal" data-modal="rc-modal-add-domain">+ Add Webmail Domain</button>
-    <button type="button" class="btn btn--secondary" id="rc-topbar-test-mail">Test Mail Connection</button>
+    <button type="button" class="btn btn--secondary" id="rc-topbar-test-mail">Test Mail Server</button>
     {% if status.running %}
       <button type="button" class="btn btn--secondary" id="rc-topbar-restart-btn">Restart</button>
     {% else %}
@@ -26,29 +50,29 @@
 {% import "partials/list_actions_toggle.html" as list_actions %}
 
 <div class="php-detail" style="width: 100%;">
-  <div class="php-split-layout">
-    <!-- LEFT COLUMN: STICKY NAVIGATION RAIL -->
-    <div class="php-split-nav" data-detail-tabs role="tablist">
-      <button class="php-split-nav-btn is-active" type="button" role="tab" data-rc-tab="domains" id="rc-tab-domains" onclick="switchRcTab('domains', this)">
-        <span>Webmail Domains</span>
-        <span class="badge-minimal" id="rc-badge-domains-count" style="margin-left: auto;">{{ domain_rows|length if domain_rows else 0 }}</span>
+  <div class="rc-split-layout">
+    <!-- LEFT NAVIGATION RAIL -->
+    <div class="rc-nav-rail" role="tablist">
+      <button class="rc-nav-btn is-active" type="button" role="tab" data-rc-tab="domains" onclick="switchRcTab('domains', this)">
+        <span>Domains</span>
+        <span class="badge-minimal">{{ domain_rows|length if domain_rows else 0 }}</span>
       </button>
-      <button class="php-split-nav-btn" type="button" role="tab" data-rc-tab="settings" id="rc-tab-settings" onclick="switchRcTab('settings', this)">
-        <span>Configuration &amp; Skin</span>
+      <button class="rc-nav-btn" type="button" role="tab" data-rc-tab="settings" onclick="switchRcTab('settings', this)">
+        <span>Configuration</span>
       </button>
-      <button class="php-split-nav-btn" type="button" role="tab" data-rc-tab="plugins" id="rc-tab-plugins" onclick="switchRcTab('plugins', this)">
-        <span>Roundcube Plugins</span>
+      <button class="rc-nav-btn" type="button" role="tab" data-rc-tab="plugins" onclick="switchRcTab('plugins', this)">
+        <span>Plugins</span>
       </button>
-      <button class="php-split-nav-btn" type="button" role="tab" data-rc-tab="maintenance" id="rc-tab-maintenance" onclick="switchRcTab('maintenance', this)">
-        <span>Database &amp; Cache</span>
+      <button class="rc-nav-btn" type="button" role="tab" data-rc-tab="maintenance" onclick="switchRcTab('maintenance', this)">
+        <span>Database</span>
       </button>
-      <button class="php-split-nav-btn" type="button" role="tab" data-rc-tab="service-specs" id="rc-tab-service-specs" onclick="switchRcTab('service-specs', this)">
-        <span>Service &amp; Specs</span>
+      <button class="rc-nav-btn" type="button" role="tab" data-rc-tab="service-specs" onclick="switchRcTab('service-specs', this)">
+        <span>Specifications</span>
       </button>
     </div>
 
-    <!-- RIGHT COLUMN: SPLIT CONTENT & CARDS GRID -->
-    <div class="php-split-content">
+    <!-- RIGHT CONTENT PANELS -->
+    <div class="rc-content">
       {% include 'partials/_rc_domains.html' %}
       {% include 'partials/_rc_settings.html' %}
       {% include 'partials/_rc_plugins.html' %}

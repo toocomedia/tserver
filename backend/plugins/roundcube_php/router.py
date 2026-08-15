@@ -339,28 +339,40 @@ async def issue_ssl(
 
 
 @router.post("/api/settings/update")
-async def update_settings(
-    request: Request,
-    skin: str = Form("elastic"),
-    product_name: str = Form("SRV Webmail"),
-    max_message_size: str = Form("32M"),
-    session_lifetime: int = Form(30),
-    plugins: list[str] = Form(None),
-):
-    valid_skins = {"elastic", "larry", "classic"}
-    selected_skin = skin if skin in valid_skins else "elastic"
-    selected_plugins = plugins or ["archive", "zipdownload", "markasjunk", "srvpanel_launch"]
-    if "srvpanel_launch" not in selected_plugins:
-        selected_plugins.append("srvpanel_launch")
+async def update_settings(request: Request):
+    form_data = await request.form()
+    updates: dict[str, Any] = {}
 
-    new_settings = roundcube_php_service.update_settings(
-        skin=selected_skin,
-        product_name=product_name.strip() or "SRV Webmail",
-        max_message_size=max_message_size.strip() or "32M",
-        session_lifetime=max(5, min(1440, session_lifetime)),
-        plugins=selected_plugins,
-    )
-    return JSONResponse({"status": "ok", "message": "Settings updated.", "settings": new_settings})
+    if "skin" in form_data:
+        skin = str(form_data.get("skin", "")).strip()
+        if skin in {"elastic", "larry", "classic"}:
+            updates["skin"] = skin
+
+    if "product_name" in form_data:
+        pname = str(form_data.get("product_name", "")).strip()
+        if pname:
+            updates["product_name"] = pname
+
+    if "max_message_size" in form_data:
+        msize = str(form_data.get("max_message_size", "")).strip()
+        if msize:
+            updates["max_message_size"] = msize
+
+    if "session_lifetime" in form_data:
+        try:
+            updates["session_lifetime"] = max(5, min(1440, int(form_data.get("session_lifetime", 30))))
+        except ValueError:
+            pass
+
+    if "plugins" in form_data:
+        plugin_list = form_data.getlist("plugins")
+        cleaned_plugins = [str(p).strip() for p in plugin_list if p]
+        if "srvpanel_launch" not in cleaned_plugins:
+            cleaned_plugins.append("srvpanel_launch")
+        updates["plugins"] = cleaned_plugins
+
+    saved = roundcube_php_service.update_settings(**updates)
+    return JSONResponse({"status": "ok", "message": "Settings updated.", "settings": saved})
 
 
 @router.post("/api/maintenance/optimize")

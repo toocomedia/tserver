@@ -1,52 +1,48 @@
 {% import "partials/list_actions_toggle.html" as list_actions %}
 
-<div class="rc-tab-panel is-active" id="rc-panel-domains" data-panel="domains">
-  <div class="php-card">
-    <div class="php-card__title">
-      <span>Configured Webmail Domains</span>
-      <input type="text" class="input input--sm rc-search-input" id="rc-domain-search" placeholder="Filter domains..." oninput="filterRcDomains(this.value)">
+<div class="rc-tab-pane" id="rc-panel-domains" data-panel="domains">
+  <div class="rc-card">
+    <div class="rc-card-head">
+      <h3 class="rc-card-title">Configured Webmail Domains</h3>
+      <input type="text" class="input input--sm rc-input-sm" placeholder="Filter domains..." oninput="filterRcDomains(this.value)">
     </div>
 
     {% if not domain_rows %}
-      <div style="padding: 36px 20px; text-align: center; color: var(--color-muted); font-size: 13px;">
-        No mail domains found. Add domains in <a href="/plugins/maddy/" style="color: var(--color-accent); text-decoration: underline;">Maddy Mail Server</a> first.
+      <div style="padding: 32px 20px; text-align: center; color: var(--color-muted); font-size: 13px;">
+        No mail domains found. Add domains in <a href="/plugins/maddy/" style="color: var(--color-accent); text-decoration: underline;">Maddy</a> first.
       </div>
     {% else %}
       <table class="table" id="rc-domains-table">
         <thead>
           <tr>
-            <th>Mail Domain</th>
-            <th>Webmail Hostname</th>
+            <th>Domain</th>
+            <th>Hostname</th>
             <th>Mailboxes</th>
-            <th>DNS &amp; SSL</th>
+            <th>SSL</th>
             <th class="col-actions">Actions</th>
           </tr>
         </thead>
         <tbody>
           {% for row in domain_rows %}
             <tr class="rc-domain-row" data-domain="{{ row.domain }}">
-              <td>
-                <strong style="color: var(--color-text); font-size: 13px;">{{ row.domain }}</strong>
-              </td>
+              <td><strong style="color: var(--color-text);">{{ row.domain }}</strong></td>
               <td>
                 {% if row.site and row.site.public_host %}
-                  <code style="color: var(--color-accent); font-size: 12px;">{{ row.site.public_host }}</code>
+                  <code style="color: var(--color-accent);">{{ row.site.public_host }}</code>
                 {% else %}
                   <span style="color: var(--color-muted); font-size: 12px;">Not Configured</span>
                 {% endif %}
               </td>
-              <td>
-                <span class="badge-minimal">{{ row.mailbox_count or 0 }}</span>
-              </td>
+              <td><span class="badge-minimal">{{ row.mailbox_count or 0 }}</span></td>
               <td>
                 {% if not row.site %}
                   <span class="badge badge--muted">Not Added</span>
                 {% elif row.site.ssl_status == 'ready' %}
-                  <span class="badge badge--healthy">HTTPS Active</span>
+                  <span class="badge badge--healthy">Active</span>
                 {% elif row.site.ssl_status == 'pending' %}
-                  <span class="badge badge--warning">SSL Pending</span>
+                  <span class="badge badge--warning">Pending</span>
                 {% else %}
-                  <span class="badge badge--danger">HTTP Only</span>
+                  <span class="badge badge--danger">HTTP</span>
                 {% endif %}
               </td>
               <td class="col-actions" style="position:relative;">

@@ -339,57 +339,45 @@ class RoundcubePhpService:
     # Maddy Mail Connection Diagnostics
     # ---------------------------------------------------------------
     def diagnose_mail_connection(self) -> dict[str, Any]:
-        php_bin = self.php_binary() or "php"
-        php = r"""
-function srv_probe($host, $port, $tls) {
-    $context = stream_context_create(['ssl' => [
-        'verify_peer' => false,
-        'verify_peer_name' => false,
-        'allow_self_signed' => true,
-    ]]);
-    $target = ($tls ? 'ssl://' : 'tcp://') . $host . ':' . $port;
-    $socket = @stream_socket_client(
-        $target, $errno, $error, 3, STREAM_CLIENT_CONNECT, $context
-    );
-    if (!$socket) {
-        return ['ok' => false, 'host' => $host, 'port' => $port, 'error' => trim($errno . ' ' . $error)];
-    }
-    stream_set_timeout($socket, 2);
-    $banner = trim((string) fgets($socket, 512));
-    fclose($socket);
-    return ['ok' => true, 'host' => $host, 'port' => $port, 'banner' => $banner];
-}
-$imap = srv_probe('127.0.0.1', 143, false);
-if (!$imap['ok']) {
-    $imap = srv_probe('127.0.0.1', 993, true);
-}
-$smtp = srv_probe('127.0.0.1', 587, false);
-if (!$smtp['ok']) {
-    $smtp = srv_probe('127.0.0.1', 465, true);
-}
-echo json_encode([
-    'ok' => $imap['ok'] && $smtp['ok'],
-    'imap' => $imap,
-    'smtp' => $smtp,
-    'transport' => 'local',
-]);
-"""
-        try:
-            result = self._run([php_bin, "-r", php], timeout=10)
-        except (OSError, subprocess.TimeoutExpired) as exc:
-            return {"ok": False, "error": str(exc), "imap": None, "smtp": None}
-        if result.returncode != 0:
-            return {
-                "ok": False,
-                "error": result.stderr.strip() or "Mail connection test failed.",
-                "imap": None,
-                "smtp": None,
-            }
-        try:
-            data = json.loads(result.stdout)
-            return data if isinstance(data, dict) else {"ok": False}
-        except json.JSONDecodeError:
-            return {"ok": False, "error": "Invalid diagnostic output.", "imap": None, "smtp": None}
+        """Direct TCP socket probe for Maddy IMAP and SMTP listeners."""
+        import socket
+        import ssl
+
+        def probe_tcp(host: str, port: int, use_ssl: bool = False, timeout: float = 3.0) -> dict[str, Any]:
+            try:
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.settimeout(timeout)
+                if use_ssl:
+                    ctx = ssl.create_default_context()
+                    ctx.check_hostname = False
+                    ctx.verify_mode = ssl.CERT_NONE
+                    sock = ctx.wrap_socket(sock)
+                sock.connect((host, port))
+                banner = ""
+                try:
+                    data = sock.recv(512)
+                    banner = data.decode("utf-8", errors="ignore").strip()
+                except Exception:
+                    pass
+                sock.close()
+                return {"ok": True, "host": host, "port": port, "banner": banner}
+            except Exception as exc:
+                return {"ok": False, "host": host, "port": port, "error": str(exc)}
+
+        imap = probe_tcp("127.0.0.1", 143, False)
+        if not imap["ok"]:
+            imap = probe_tcp("127.0.0.1", 993, True)
+
+        smtp = probe_tcp("127.0.0.1", 587, False)
+        if not smtp["ok"]:
+            smtp = probe_tcp("127.0.0.1", 465, True)
+
+        return {
+            "ok": bool(imap["ok"] and smtp["ok"]),
+            "imap": imap,
+            "smtp": smtp,
+            "transport": "local",
+        }
 
     # ---------------------------------------------------------------
     # Multi-Domain Sites State

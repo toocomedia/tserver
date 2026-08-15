@@ -2,10 +2,10 @@
 const rcCsrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
 
 function switchRcTab(tabName, button) {
-  document.querySelectorAll('.php-split-nav-btn').forEach(btn => btn.classList.remove('is-active'));
+  document.querySelectorAll('.rc-nav-btn').forEach(btn => btn.classList.remove('is-active'));
   if (button) button.classList.add('is-active');
 
-  document.querySelectorAll('.rc-tab-panel').forEach(panel => {
+  document.querySelectorAll('.rc-tab-pane').forEach(panel => {
     panel.style.display = (panel.dataset.panel === tabName) ? 'block' : 'none';
   });
   if (history.replaceState) {

@@ -1,41 +1,34 @@
-<div class="rc-tab-panel" id="rc-panel-maintenance" data-panel="maintenance" style="display:none;">
-  <div class="php-card">
-    <div class="php-card__title">
-      <span>Database &amp; Storage Maintenance</span>
+<div class="rc-tab-pane" id="rc-panel-maintenance" data-panel="maintenance" style="display:none;">
+  <div class="rc-card">
+    <div class="rc-card-head">
+      <h3 class="rc-card-title">Database &amp; Storage</h3>
     </div>
 
-    <div style="padding: 20px; display: flex; flex-direction: column; gap: 20px;">
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px;">
-        <div class="php-spec-item">
-          <span class="php-spec-label">Database Type</span>
-          <span class="php-spec-value">{{ db_stats.db_type or 'SQLite' }}</span>
+    <div style="padding: 18px; display: flex; flex-direction: column; gap: 18px;">
+      <div class="rc-spec-grid">
+        <div class="rc-spec-box">
+          <span class="rc-spec-lbl">Engine</span>
+          <span class="rc-spec-val">{{ db_stats.db_type or 'SQLite' }}</span>
         </div>
-        <div class="php-spec-item">
-          <span class="php-spec-label">Database File Size</span>
-          <span class="php-spec-value" id="rc-db-size-val">{{ db_stats.db_size or '0 KB' }}</span>
+        <div class="rc-spec-box">
+          <span class="rc-spec-lbl">Size</span>
+          <span class="rc-spec-val" id="rc-db-size-val">{{ db_stats.db_size or '0 KB' }}</span>
         </div>
-        <div class="php-spec-item">
-          <span class="php-spec-label">Webmail Users</span>
-          <span class="php-spec-value" id="rc-db-users-val">{{ db_stats.users_count or 0 }}</span>
+        <div class="rc-spec-box">
+          <span class="rc-spec-lbl">Users</span>
+          <span class="rc-spec-val" id="rc-db-users-val">{{ db_stats.users_count or 0 }}</span>
         </div>
-        <div class="php-spec-item">
-          <span class="php-spec-label">Saved Contacts</span>
-          <span class="php-spec-value" id="rc-db-contacts-val">{{ db_stats.contacts_count or 0 }}</span>
+        <div class="rc-spec-box">
+          <span class="rc-spec-lbl">Contacts</span>
+          <span class="rc-spec-val" id="rc-db-contacts-val">{{ db_stats.contacts_count or 0 }}</span>
         </div>
       </div>
 
-      <div style="border-top: 1px solid var(--color-line); padding-top: 16px;">
-        <h4 style="font-size: 13px; font-weight: 600; color: var(--color-text); margin-bottom: 8px;">Maintenance Actions</h4>
-        <p style="font-size: 12px; color: var(--color-muted); line-height: 1.5; margin-bottom: 16px;">
-          Clean up fragmentation in the SQLite database and remove stale temporary uploads and expired session files.
-        </p>
-
-        <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
-          <button type="button" class="btn btn--secondary" id="rc-vacuum-btn">Optimize Database (VACUUM)</button>
-          <button type="button" class="btn btn--secondary" id="rc-purge-temp-btn">Purge Temporary &amp; Session Files</button>
-        </div>
-        <div id="rc-maintenance-result" style="margin-top: 12px; font-size: 12px;"></div>
+      <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center; padding-top: 6px;">
+        <button type="button" class="btn btn--secondary btn--sm" id="rc-vacuum-btn">Optimize Database (VACUUM)</button>
+        <button type="button" class="btn btn--secondary btn--sm" id="rc-purge-temp-btn">Purge Temp &amp; Sessions</button>
       </div>
+      <div id="rc-maintenance-result" style="font-size: 12px;"></div>
     </div>
   </div>
 </div>

@@ -1,44 +1,43 @@
-<div class="rc-tab-panel" id="rc-panel-settings" data-panel="settings" style="display:none;">
-  <div class="php-card">
-    <div class="php-card__title">
-      <span>Roundcube Configuration &amp; Appearance</span>
+<div class="rc-tab-pane" id="rc-panel-settings" data-panel="settings" style="display:none;">
+  <div class="rc-card">
+    <div class="rc-card-head">
+      <h3 class="rc-card-title">Configuration &amp; Appearance</h3>
     </div>
 
-    <form id="rc-settings-form" style="padding: 20px; display: flex; flex-direction: column; gap: 18px; max-width: 580px;">
+    <form id="rc-settings-form" style="padding: 18px; display: flex; flex-direction: column; gap: 14px; max-width: 520px;">
       <div class="form-group">
-        <label class="form-label" for="rc-setting-skin">Default Webmail Skin / Theme</label>
+        <label class="form-label" for="rc-setting-skin">Skin / Theme</label>
         <select class="input" id="rc-setting-skin" name="skin">
-          <option value="elastic" {% if settings.skin == 'elastic' %}selected{% endif %}>Elastic (Modern Mobile-Responsive)</option>
+          <option value="elastic" {% if settings.skin == 'elastic' %}selected{% endif %}>Elastic (Mobile Responsive)</option>
           <option value="larry" {% if settings.skin == 'larry' %}selected{% endif %}>Larry (Desktop Classic)</option>
           <option value="classic" {% if settings.skin == 'classic' %}selected{% endif %}>Classic</option>
         </select>
-        <span style="font-size: 11px; color: var(--color-muted);">Elastic adapts seamlessly to phones, tablets, and dark mode.</span>
       </div>
 
       <div class="form-group">
-        <label class="form-label" for="rc-setting-title">Webmail Brand / Product Title</label>
+        <label class="form-label" for="rc-setting-title">Brand Title</label>
         <input type="text" class="input" id="rc-setting-title" name="product_name" value="{{ settings.product_name }}" placeholder="SRV Webmail">
       </div>
 
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+      <div class="rc-form-grid">
         <div class="form-group">
-          <label class="form-label" for="rc-setting-max-size">Max Attachment / Upload Size</label>
+          <label class="form-label" for="rc-setting-max-size">Max Upload Size</label>
           <select class="input" id="rc-setting-max-size" name="max_message_size">
             <option value="16M" {% if settings.max_message_size == '16M' %}selected{% endif %}>16 MB</option>
-            <option value="32M" {% if settings.max_message_size == '32M' %}selected{% endif %}>32 MB (Recommended)</option>
+            <option value="32M" {% if settings.max_message_size == '32M' %}selected{% endif %}>32 MB</option>
             <option value="64M" {% if settings.max_message_size == '64M' %}selected{% endif %}>64 MB</option>
             <option value="128M" {% if settings.max_message_size == '128M' %}selected{% endif %}>128 MB</option>
           </select>
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="rc-setting-lifetime">Session Lifetime (Minutes)</label>
+          <label class="form-label" for="rc-setting-lifetime">Session Lifetime (Min)</label>
           <input type="number" class="input" id="rc-setting-lifetime" name="session_lifetime" value="{{ settings.session_lifetime }}" min="5" max="1440">
         </div>
       </div>
 
-      <div style="margin-top: 10px; display: flex; align-items: center; gap: 12px;">
-        <button type="submit" class="btn btn--primary" id="rc-save-settings-btn">Save Configuration</button>
+      <div style="margin-top: 6px; display: flex; align-items: center; gap: 12px;">
+        <button type="submit" class="btn btn--primary" id="rc-save-settings-btn">Save</button>
         <span id="rc-settings-status" style="font-size: 12px;"></span>
       </div>
     </form>

@@ -27,20 +27,41 @@ $local_tls = [
 $config['imap_conn_options'] = ['ssl' => $local_tls];
 $config['smtp_conn_options'] = ['ssl' => $local_tls];
 
+// Load dynamic settings from state.json
+$state_file = dirname($db_path, 2) . '/state.json';
+if (!file_exists($state_file)) {
+    $state_file = '/opt/srv-panel/data/roundcube_php/state.json';
+}
+$dyn = [];
+if (file_exists($state_file) && ($json = @file_get_contents($state_file))) {
+    $data = @json_decode($json, true);
+    if (is_array($data) && !empty($data['settings']) && is_array($data['settings'])) {
+        $dyn = $data['settings'];
+    }
+}
+
 // Authentication & Session settings
 $config['auto_create_user'] = true;
 $config['login_lc'] = 2;
 $config['login_autocomplete'] = 1;
-$config['session_lifetime'] = (int)(getenv('ROUNDCUBE_SESSION_LIFETIME') ?: 30);
+$config['session_lifetime'] = !empty($dyn['session_lifetime']) ? (int)$dyn['session_lifetime'] : (int)(getenv('ROUNDCUBE_SESSION_LIFETIME') ?: 30);
 
 // UI & Presentation
-$config['skin'] = getenv('ROUNDCUBE_SKIN') ?: 'elastic';
-$config['product_name'] = getenv('ROUNDCUBE_PRODUCT_NAME') ?: 'SRV Webmail';
+$config['skin'] = !empty($dyn['skin']) ? $dyn['skin'] : (getenv('ROUNDCUBE_SKIN') ?: 'elastic');
+$config['product_name'] = !empty($dyn['product_name']) ? $dyn['product_name'] : (getenv('ROUNDCUBE_PRODUCT_NAME') ?: 'SRV Webmail');
 $config['use_https'] = true;
 $config['request_path'] = '/';
 $config['remote_resources'] = false;
-$config['max_message_size'] = getenv('ROUNDCUBE_MAX_MESSAGE_SIZE') ?: '32M';
+$config['max_message_size'] = !empty($dyn['max_message_size']) ? $dyn['max_message_size'] : (getenv('ROUNDCUBE_MAX_MESSAGE_SIZE') ?: '32M');
 
 // Active Roundcube Plugins
-$plugins_str = getenv('ROUNDCUBE_PLUGINS') ?: 'archive,zipdownload,markasjunk,srvpanel_launch';
-$config['plugins'] = array_filter(array_map('trim', explode(',', $plugins_str)));
+if (!empty($dyn['plugins']) && is_array($dyn['plugins'])) {
+    $active_plugins = $dyn['plugins'];
+    if (!in_array('srvpanel_launch', $active_plugins, true)) {
+        $active_plugins[] = 'srvpanel_launch';
+    }
+    $config['plugins'] = array_values(array_filter($active_plugins));
+} else {
+    $plugins_str = getenv('ROUNDCUBE_PLUGINS') ?: 'archive,zipdownload,markasjunk,srvpanel_launch';
+    $config['plugins'] = array_filter(array_map('trim', explode(',', $plugins_str)));
+}
