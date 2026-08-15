@@ -680,16 +680,17 @@
     if (!isActionPending) setOptimizationButtonsDisabled(false);
   }
 
-  async function fetchStats() {
-    if (!polling || document.hidden || statsRequestPending) return;
-    if (isActionPending) {
+  async function fetchStats(force = false) {
+    if (!force && (!polling || document.hidden || statsRequestPending)) return;
+    if (!force && isActionPending) {
       scheduleStats();
       return;
     }
 
     statsRequestPending = true;
     try {
-      const data = await panel.get('/api/stats');
+      const url = force ? '/api/stats?force=true' : '/api/stats';
+      const data = await panel.get(url);
       render(data);
       markUsageUpdated();
       hideSkeleton('usage-skeleton');
@@ -701,7 +702,7 @@
       fetchOptimizationStatus();
     } finally {
       statsRequestPending = false;
-      scheduleStats();
+      if (polling) scheduleStats();
     }
   }
 
@@ -992,11 +993,11 @@
   async function manualRefreshStats() {
     const btn = document.getElementById('btn-refresh-stats');
     if (btn) btn.classList.add('is-loading');
-    markUsageUpdated('Refreshing stats...');
+    markUsageUpdated('Refreshing...');
     try {
+      await fetchStats(true);
       await fetchOptimizationStatus();
-      await fetchStats();
-      toast('Live statistics updated.', 'success');
+      toast('Live CPU & Memory Diagnostics refreshed.', 'success');
     } catch (e) {
       toast('Failed to refresh stats.', 'danger');
     } finally {

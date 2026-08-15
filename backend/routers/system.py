@@ -480,16 +480,16 @@ def _invalidate_stats_cache():
 
 
 @router.get("/api/stats")
-async def server_stats(db: AsyncSession = Depends(get_db)):
+async def server_stats(force: bool = False, db: AsyncSession = Depends(get_db)):
     """Return one shared short-lived stats snapshot for all browser sessions."""
     global _stats_cache, _stats_cache_at
     now = time.monotonic()
-    if _stats_cache is not None and now - _stats_cache_at < _STATS_CACHE_SECONDS:
+    if not force and _stats_cache is not None and now - _stats_cache_at < _STATS_CACHE_SECONDS:
         return deepcopy(_stats_cache)
 
     async with _stats_cache_lock:
         now = time.monotonic()
-        if _stats_cache is not None and now - _stats_cache_at < _STATS_CACHE_SECONDS:
+        if not force and _stats_cache is not None and now - _stats_cache_at < _STATS_CACHE_SECONDS:
             return deepcopy(_stats_cache)
         payload = await _build_server_stats(db)
         _stats_cache = deepcopy(payload)
