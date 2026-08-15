@@ -88,7 +88,13 @@ class CSRFMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
 
         path = request.url.path
-        if path.startswith("/static") or path.startswith("/api/updates/"):
+        if (
+            path.startswith("/static")
+            or path.startswith("/api/updates/")
+            or path.startswith("/phpmyadmin")
+        ):
+            # /phpmyadmin is phpMyAdmin's own UI proxied behind panel auth;
+            # its login/export forms carry phpMyAdmin's own tokens.
             return await call_next(request)
 
         try:

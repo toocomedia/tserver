@@ -1,21 +1,23 @@
 #!/usr/bin/env bash
-# Install phpMyAdmin as a native PHP-FPM app served by nginx. No Docker.
+# Install phpMyAdmin as a local PHP server, served by the panel behind login.
 set -euo pipefail
 
 PLUGIN_ID="phpmyadmin"
-CONFIG_VERSION="1"
+CONFIG_VERSION="2"
 PMA_VERSION="5.2.2"
 DATA_DIR="${PHPMYADMIN_DATA_DIR:-/opt/srv-panel/data/phpmyadmin}"
 HTDOCS="$DATA_DIR/htdocs"
-FPM_POOL="srv-panel-phpmyadmin"
+UNIT="srv-panel-phpmyadmin.service"
+UNIT_PATH="/etc/systemd/system/${UNIT}"
+PORT="${PHPMYADMIN_PORT:-8090}"
+PANEL_USER="${PANEL_USER:-panel}"
 PMA_URL="https://files.phpmyadmin.net/phpMyAdmin/${PMA_VERSION}/phpMyAdmin-${PMA_VERSION}-all-languages.tar.gz"
 PMA_SHA256_URL="${PMA_URL}.sha256"
-PANEL_USER="${PANEL_USER:-panel}"
 
 command -v curl >/dev/null 2>&1 || { echo "curl is not installed." >&2; exit 1; }
 command -v openssl >/dev/null 2>&1 || { echo "openssl is not installed." >&2; exit 1; }
 
-# 1. Pick the highest panel-managed PHP-FPM version, then fall back to scanning.
+# 1. Pick the highest panel-managed PHP version, then fall back to scanning.
 PHP_VERSION=""
 if [[ -f /var/lib/srv-panel/php-runtime/managed-versions.json ]]; then
     PHP_VERSION="$(python3 -c '
@@ -35,17 +37,17 @@ if [[ -z "$PHP_VERSION" && -d /etc/php ]]; then
     PHP_VERSION="$(ls /etc/php 2>/dev/null | sort -V | tail -n1)"
 fi
 if [[ -z "$PHP_VERSION" ]]; then
-    echo "No PHP-FPM installation found. Install the PHP dependency first." >&2
+    echo "No PHP installation found. Install the PHP dependency first." >&2
     exit 1
 fi
-FPM_SERVICE="php${PHP_VERSION}-fpm"
-POOL_DIR="/etc/php/${PHP_VERSION}/fpm/pool.d"
-if [[ ! -d "$POOL_DIR" ]]; then
-    echo "PHP-FPM pool directory $POOL_DIR does not exist for PHP ${PHP_VERSION}." >&2
+PHP_BIN="/usr/bin/php${PHP_VERSION}"
+if [[ ! -x "$PHP_BIN" ]]; then
+    PHP_BIN="/usr/bin/php"
+fi
+if [[ ! -x "$PHP_BIN" ]]; then
+    echo "PHP CLI binary is missing for version ${PHP_VERSION}." >&2
     exit 1
 fi
-POOL_PATH="${POOL_DIR}/${FPM_POOL}.conf"
-SOCKET_PATH="/run/php/${FPM_POOL}-${PHP_VERSION}.sock"
 
 # 2. Ensure the allowlisted extensions phpMyAdmin needs (mysqli, mbstring...).
 RUNTIME_HELPER="/usr/local/lib/srv-panel/php-runtime-manager"
@@ -82,7 +84,8 @@ if [[ ! -f "$HTDOCS/index.php" ]]; then
     rm -rf "$EXTRACT_DIR"
 fi
 
-# 5. Write config.inc.php (blowfish secret persisted for cookie auth).
+# 5. Write config.inc.php. Cookie auth scoped to /phpmyadmin; app served
+#    at a subpath, so PmaAbsoluteUri must match the panel's own route.
 mkdir -p "$DATA_DIR/sessions" "$DATA_DIR/tmp"
 if [[ ! -s "$DATA_DIR/pma.secret" ]]; then
     umask 027
@@ -93,6 +96,8 @@ cat > "$HTDOCS/config.inc.php" <<PHP
 <?php
 declare(strict_types=1);
 \$cfg['blowfish_secret'] = '${SECRET}';
+\$cfg['PmaAbsoluteUri'] = '/phpmyadmin/';
+\$cfg['CookiePath'] = '/phpmyadmin';
 \$i = 0;
 \$i++;
 \$cfg['Servers'][\$i]['auth_type'] = 'cookie';
@@ -106,47 +111,73 @@ declare(strict_types=1);
 \$cfg['CheckConfigurationPermissions'] = false;
 PHP
 
-# 6. Dedicated PHP-FPM pool on its own unix socket.
-cat > "$POOL_PATH" <<FPM
-[${FPM_POOL}]
-user = www-data
-group = www-data
-listen = ${SOCKET_PATH}
-listen.owner = www-data
-listen.group = www-data
-listen.mode = 0660
-pm = dynamic
-pm.max_children = 5
-pm.start_servers = 1
-pm.min_spare_servers = 1
-pm.max_spare_servers = 2
-pm.max_requests = 500
-php_admin_value[open_basedir] = ${HTDOCS}:${DATA_DIR}:/tmp
-php_value[session.save_path] = ${DATA_DIR}/sessions
-php_admin_value[upload_tmp_dir] = ${DATA_DIR}/tmp
-php_admin_value[post_max_size] = 64M
-php_admin_value[upload_max_filesize] = 64M
-php_admin_flag[display_errors] = off
-FPM
+# 5b. Migrate from plugin v1's public-subdomain layout: drop any nginx
+#     site and FPM pool it created so only the panel-served app remains.
+OLD_HOST="$(python3 -c '
+import json, sys
+site = {}
+try:
+    data = json.load(open(sys.argv[1], encoding="utf-8"))
+    site = data.get("site") or {}
+except Exception:
+    pass
+print(site.get("public_host", "") if isinstance(site, dict) else "")
+' "${DATA_DIR}/state.json" 2>/dev/null || true)"
+if [[ -n "$OLD_HOST" && "$OLD_HOST" =~ ^[a-z0-9.-]+$ ]]; then
+    rm -f "/etc/nginx/sites-enabled/${OLD_HOST}.conf"
+    rm -f "/etc/nginx/sites-available/${OLD_HOST}.conf"
+fi
+for OLD_POOL in /etc/php/*/fpm/pool.d/srv-panel-phpmyadmin.conf; do
+    [[ -f "$OLD_POOL" ]] || continue
+    OLD_VER="$(basename "$(dirname "$(dirname "$(dirname "$OLD_POOL")")")")"
+    rm -f "$OLD_POOL"
+    systemctl reload-or-restart "php${OLD_VER}-fpm" >/dev/null 2>&1 || true
+done
+if nginx -t >/dev/null 2>&1; then
+    systemctl reload nginx >/dev/null 2>&1 || true
+fi
 
-# 7. Ownership, logs, and a live FPM reload.
+# 6. Ownership and a systemd unit running the PHP built-in server.
 chown -R www-data:www-data "$HTDOCS" "$DATA_DIR/sessions" "$DATA_DIR/tmp"
-chmod -R 0750 "$DATA_DIR/sessions" "$DATA_DIR/tmp"
 chmod -R 0755 "$HTDOCS"
 chown "$PANEL_USER":"$PANEL_USER" "$DATA_DIR" 2>/dev/null || true
 chmod 0750 "$DATA_DIR"
-touch /var/log/nginx/phpmyadmin.access.log /var/log/nginx/phpmyadmin.error.log 2>/dev/null || true
-chown www-data:www-data /var/log/nginx/phpmyadmin.access.log /var/log/nginx/phpmyadmin.error.log 2>/dev/null || true
 
-systemctl reload-or-restart "$FPM_SERVICE" >/dev/null 2>&1 || systemctl restart "$FPM_SERVICE"
-for _ in $(seq 1 30); do
-    [[ -S "$SOCKET_PATH" ]] && break
+cat > "$UNIT_PATH" <<UNIT
+[Unit]
+Description=phpMyAdmin local server (SRV Panel plugin)
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=${HTDOCS}
+Environment=PHP_CLI_SERVER_WORKERS=2
+ExecStart=${PHP_BIN} -S 127.0.0.1:${PORT} -t ${HTDOCS} -d session.save_path=${DATA_DIR}/sessions -d upload_tmp_dir=${DATA_DIR}/tmp -d post_max_size=64M -d upload_max_filesize=64M
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+
+systemctl daemon-reload
+systemctl enable --now "$UNIT" >/dev/null 2>&1 || systemctl restart "$UNIT"
+for _ in $(seq 1 15); do
+    if (exec 3<>/dev/tcp/127.0.0.1/${PORT}) 2>/dev/null; then
+        break
+    fi
     sleep 1
 done
-if [[ ! -S "$SOCKET_PATH" ]]; then
-    echo "PHP-FPM socket ${SOCKET_PATH} is unavailable." >&2
+if ! (exec 3<>/dev/tcp/127.0.0.1/${PORT}) 2>/dev/null; then
+    echo "phpMyAdmin server is not listening on 127.0.0.1:${PORT}." >&2
     exit 1
 fi
 
 echo "$CONFIG_VERSION" > "$DATA_DIR/config_version"
-echo "==> phpMyAdmin ${PMA_VERSION} installed on PHP ${PHP_VERSION} (FPM pool ${FPM_POOL})."
+echo "==> phpMyAdmin ${PMA_VERSION} installed on PHP ${PHP_VERSION} (127.0.0.1:${PORT})."

@@ -1,190 +1,26 @@
 {% extends "layout.html" %}
 
-{% block title %}phpMyAdmin — VPS Panel{% endblock %}
+{% block title %}phpMyAdmin — {{ PANEL_NAME }}{% endblock %}
 {% block page_title %}phpMyAdmin{% endblock %}
 
-{% block head %}
-  <link rel="stylesheet" href="/plugins/phpmyadmin/static/css/phpmyadmin-ui.css">
-{% endblock %}
-
 {% block content %}
-<div class="pma-wrap" id="phpmyadmin-page"
-  data-installed="{{ 'true' if status.installed else 'false' }}"
-  data-public-host="{{ site.public_host if site else '' }}">
-
-  <div class="card p-5">
-    <div class="pma-header">
-      <div>
-        <h2 class="pma-title">phpMyAdmin</h2>
-        <p class="pma-subtitle">Manage MariaDB databases with a browser UI. Log in with a user created in MariaDB Manager.</p>
+<div class="php-detail" style="width: 100%;">
+  <div class="php-cards-grid" style="max-width: 620px; margin: 40px auto;">
+    <div class="php-card" style="text-align: center; padding: 40px 24px;">
+      <div class="php-card__title" style="justify-content: center; border-bottom: none; margin-bottom: 16px;">
+        <span style="font-size: 18px;">phpMyAdmin</span>
       </div>
-      <div class="pma-header__actions">
-        <span id="pma-state-badge">
-          <span class="badge {% if status.healthy %}badge--healthy{% else %}badge--inactive{% endif %}" id="pma-state-badge-value">
-            {{ status.state if status.installed else "Not installed" }}
-          </span>
-        </span>
-        <button class="btn primary" id="open-pma-button" type="button"
-          {% if not (status.healthy and site) %}disabled{% endif %}>Open phpMyAdmin</button>
-        {% if status.installed %}
-          <button class="btn danger" id="uninstall-pma-button" type="button">Uninstall</button>
-        {% else %}
-          <button class="btn primary" id="install-pma-button" type="button">Install</button>
-        {% endif %}
+
+      <p class="text-muted" style="font-size: 13px; line-height: 1.6; margin-bottom: 24px;">
+        Opens in a new window. Log in with a user created in MariaDB Manager.
+        {% if not status.healthy %}<br><strong style="color: var(--color-danger);">{{ status.error }}</strong>{% endif %}
+      </p>
+      <button type="button" class="btn btn--primary" id="pma-open-btn"
+        {% if not status.healthy %}disabled{% endif %}>Open phpMyAdmin</button>
+      <div style="margin-top: 12px;">
+        <button type="button" class="btn btn--secondary" id="pma-uninstall-btn">Uninstall</button>
       </div>
-    </div>
-
-    {% if status.installed %}
-      <div class="pma-metrics">
-        <div class="pma-metric">
-          <span class="pma-metric__label">PHP Version</span>
-          <span class="pma-metric__value" id="pma-php-version">{{ status.php_version or "—" }}</span>
-        </div>
-        <div class="pma-metric">
-          <span class="pma-metric__label">MariaDB</span>
-          <span class="pma-metric__value" id="pma-mariadb-value">{{ "Reachable" if status.healthy else "Unreachable" }}</span>
-        </div>
-        <div class="pma-metric">
-          <span class="pma-metric__label">Access URL</span>
-          <span class="pma-metric__value" id="pma-url-value" style="font-size:13px; word-break:break-all;">
-            {{ site.configured_url if site and site.configured_url else "Not configured" }}
-          </span>
-        </div>
-      </div>
-    {% endif %}
-  </div>
-
-  {% if status.installed %}
-  <div class="card p-5">
-    <div class="pma-tabs" role="tablist" aria-label="phpMyAdmin settings">
-      <button class="pma-tab {% if site %}active{% endif %}" type="button" role="tab" data-tab="overview" aria-selected="{{ 'true' if site else 'false' }}">Overview</button>
-      <button class="pma-tab {% if not site %}active{% endif %}" type="button" role="tab" data-tab="access" aria-selected="{{ 'false' if site else 'true' }}">Access &amp; DNS</button>
-      <button class="pma-tab" type="button" role="tab" data-tab="https" aria-selected="false">HTTPS</button>
-    </div>
-
-    <div class="pma-tab-panel {% if site %}active{% endif %}" data-panel="overview" role="tabpanel">
-      <div class="pma-metrics">
-        <div class="pma-metric">
-          <span class="pma-metric__label">DNS Resolution</span>
-          <div id="pma-dns-status">
-            <span class="badge badge--inactive">{{ "Checking…" if site else "Not configured" }}</span>
-          </div>
-        </div>
-        <div class="pma-metric">
-          <span class="pma-metric__label">HTTPS Certificate</span>
-          <div id="pma-ssl-status">
-            <span class="badge {% if site and site.ssl_status == 'ready' %}badge--healthy{% else %}badge--inactive{% endif %}">
-              {{ site.ssl_status if site else "Not configured" }}
-            </span>
-          </div>
-        </div>
-      </div>
-      <div class="pma-result" id="pma-status-message"></div>
-    </div>
-
-    <div class="pma-tab-panel {% if not site %}active{% endif %}" data-panel="access" role="tabpanel">
-      <form id="pma-site-form" method="post"
-        action="/phpmyadmin/api/site" class="pma-form">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
-        <div class="form-group">
-          <label class="form-label" for="pma-public-host">Public Hostname</label>
-          <input class="form-input" id="pma-public-host" name="public_host" type="text"
-            value="{{ site.public_host if site else '' }}"
-            placeholder="pma.example.com" required>
-          <div style="font-size:12px; color:var(--text-muted); margin-top:6px;">
-            Served by nginx + PHP-FPM. Add an A record pointing to <strong>{{ expected_ip }}</strong>.
-          </div>
-        </div>
-        <div class="form-group">
-          <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
-            <input type="checkbox" id="pma-manage-dns" name="manage_dns" value="true"
-              {% if not site or site.dns_managed %}checked{% endif %}>
-            <span style="color:var(--text-main); font-size:13px; font-weight:600;">Manage DNS automatically</span>
-          </label>
-        </div>
-        <div class="pma-dns-record" id="pma-external-dns">
-          Add A record <strong><span id="pma-dns-host">{{ site.public_host if site else '' }}</span>
-          &rarr; <span id="pma-dns-target">{{ expected_ip }}</span></strong>
-          <button class="btn secondary btn--sm" id="pma-copy-dns" type="button" style="margin-left:8px;">Copy</button>
-        </div>
-        <div class="pma-header__actions">
-          <button class="btn primary btn--sm" type="submit">{{ "Save Changes" if site else "Add Access" }}</button>
-          {% if site %}
-            <button class="btn secondary btn--sm" id="pma-refresh-status" type="button">Check DNS</button>
-            <button class="btn danger btn--sm" id="pma-delete-site" type="button">Remove Access</button>
-          {% endif %}
-        </div>
-        <div class="pma-result" id="pma-site-result"></div>
-      </form>
-    </div>
-
-    <div class="pma-tab-panel" data-panel="https" role="tabpanel">
-      {% if site %}
-        <div style="margin: 8px 0 14px 0;">
-          <span style="color:var(--text-muted); font-size:13px;">Hostname:</span>
-          <code style="color:var(--text-main); font-size:13px;">{{ site.public_host }}</code>
-        </div>
-        <button class="btn primary btn--sm" id="pma-issue-ssl" type="button">Issue / Retry HTTPS</button>
-        <div class="pma-result" id="pma-ssl-result"></div>
-        <details id="pma-ssl-error-details" style="display:none; margin-top:12px;">
-          <summary style="cursor:pointer; font-size:13px; color:var(--text-muted);">Details</summary>
-          <pre id="pma-ssl-error-detail" style="white-space:pre-wrap; background:var(--bg-input); padding:12px; border-radius:var(--radius-sm); font-size:12px; color:var(--text-main); margin-top:8px;"></pre>
-        </details>
-      {% endif %}
-    </div>
-  </div>
-  {% else %}
-  <div class="card p-5">
-    <div class="pma-empty">
-      <div class="pma-empty__icon">🗄️</div>
-      <h3 style="margin: 0 0 8px 0; color: var(--text-main);">Install phpMyAdmin</h3>
-      <p style="margin: 0 0 20px 0; color: var(--text-muted); font-size: 13px;">
-        Requires the PHP and MariaDB dependencies to be active. Uses its own PHP-FPM pool — no Docker.
-      </p>
-      <button class="btn primary" id="install-pma-button" type="button">Install phpMyAdmin</button>
-      <div class="pma-result" id="pma-install-result"></div>
-    </div>
-  </div>
-  {% endif %}
-</div>
-
-<!-- Uninstall confirmation modal -->
-<div id="pma-uninstall-modal" class="modal-backdrop hidden" role="dialog">
-  <div class="modal ios-modal" style="max-width: 440px;">
-    <div class="ios-modal-body">
-      <h2 style="color: var(--text-main); font-size: 18px; font-weight: 600; margin: 0 0 12px 0;">Uninstall phpMyAdmin</h2>
-      <p style="margin: 0 0 12px 0; color: var(--text-main); font-size: 14px; line-height: 1.4;">
-        This removes phpMyAdmin, its PHP-FPM pool, and any public nginx access.
-      </p>
-      <p style="margin: 0; font-size: 12px; color: var(--text-muted);">
-        <em>Your MariaDB databases and users are preserved.</em>
-      </p>
-    </div>
-    <div class="ios-modal-footer">
-      <button type="button" class="ios-modal-btn" onclick="closeModal('pma-uninstall-modal')">Cancel</button>
-      <button type="button" class="ios-modal-btn danger-text" id="confirm-uninstall-pma-btn">Uninstall</button>
-    </div>
-  </div>
-</div>
-
-<!-- Remove access confirmation modal -->
-<div id="pma-delete-modal" class="modal-backdrop hidden" role="dialog">
-  <div class="modal ios-modal" style="max-width: 440px;">
-    <div class="ios-modal-body">
-      <h2 style="color: var(--text-main); font-size: 18px; font-weight: 600; margin: 0 0 12px 0;">Remove public access</h2>
-      <p style="margin: 0 0 12px 0; color: var(--text-main); font-size: 14px; line-height: 1.4;">
-        This removes the URL <strong id="pma-delete-host" style="color: var(--text-main); font-weight: 700;"></strong>,
-        its nginx config, panel-managed DNS A record, and SSL certificate.
-      </p>
-      <p style="margin: 0 0 12px 0; font-size: 12px; color: var(--text-muted);">
-        Type the hostname to confirm.
-      </p>
-      <input class="form-input" id="pma-delete-confirm" type="text" placeholder="pma.example.com">
-      <p style="margin: 12px 0 0 0; font-weight: 600; font-size: 13px; color: #f87171;">This action cannot be undone.</p>
-    </div>
-    <div class="ios-modal-footer">
-      <button type="button" class="ios-modal-btn" onclick="closeModal('pma-delete-modal')">Cancel</button>
-      <button type="button" class="ios-modal-btn danger-text" id="confirm-delete-pma-btn">Remove Access</button>
+      <div class="text-muted" id="pma-result" style="margin-top: 12px; font-size: 13px;"></div>
     </div>
   </div>
 </div>
@@ -193,273 +29,40 @@
 {% block scripts %}
 <script>
 (() => {
-  const page = document.getElementById('phpmyadmin-page');
-  if (!page) return;
+  const page = document.getElementById('pma-open-btn');
   const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
-  let pollTimer = null;
-
-  const activateTab = (name) => {
-    document.querySelectorAll('.pma-tab').forEach((button) => {
-      const active = button.dataset.tab === name;
-      button.classList.toggle('active', active);
-      button.setAttribute('aria-selected', active ? 'true' : 'false');
-    });
-    document.querySelectorAll('.pma-tab-panel').forEach((panel) => {
-      panel.classList.toggle('active', panel.dataset.panel === name);
-    });
+  const showResult = (message, ok) => {
+    const el = document.getElementById('pma-result');
+    if (!el) return;
+    el.style.color = ok ? 'var(--color-success)' : 'var(--color-danger)';
+    el.textContent = message;
   };
-  document.querySelectorAll('.pma-tab').forEach((button) => {
-    button.addEventListener('click', () => activateTab(button.dataset.tab));
+
+  document.getElementById('pma-open-btn')?.addEventListener('click', () => {
+    window.open('/phpmyadmin/', '_blank', 'noopener');
   });
 
-  const readJson = async (response) => {
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.detail || data.message || 'Request failed.');
-    return data;
-  };
-
-  const showResult = (id, message, ok = false) => {
-    const element = document.getElementById(id);
-    if (!element) return;
-    element.classList.add('show');
-    element.classList.toggle('ok', ok);
-    element.classList.toggle('err', !ok);
-    element.textContent = message;
-  };
-
-  const setBadge = (id, text, ready) => {
-    const element = document.getElementById(id);
-    if (!element) return;
-    const badge = document.createElement('span');
-    badge.className = `badge ${ready ? 'badge--healthy' : 'badge--inactive'}`;
-    badge.textContent = text;
-    element.replaceChildren(badge);
-  };
-
-  const renderStatus = (data) => {
-    const status = data.status || {};
-    const site = data.site || null;
-    const badgeEl = document.getElementById('pma-state-badge-value');
-    if (badgeEl) {
-      badgeEl.textContent = status.state || 'missing';
-      badgeEl.className = `badge ${status.healthy ? 'badge--success' : 'badge--inactive'}`;
-    }
-    const openBtn = document.getElementById('open-pma-button');
-    if (openBtn) openBtn.disabled = !(status.healthy && site);
-    const urlEl = document.getElementById('pma-url-value');
-    if (urlEl) urlEl.textContent = (site && site.configured_url) || 'Not configured';
-    const phpEl = document.getElementById('pma-php-version');
-    if (phpEl) phpEl.textContent = status.php_version || '—';
-    const mariadbEl = document.getElementById('pma-mariadb-value');
-    if (mariadbEl) mariadbEl.textContent = status.healthy ? 'Reachable' : 'Unreachable';
-    if (!site) {
-      setBadge('pma-dns-status', 'Not configured', false);
-      setBadge('pma-ssl-status', 'Not configured', false);
-      return;
-    }
-    const dns = site.dns || {};
-    const dnsText = dns.status === 'ready' ? 'Ready'
-      : dns.status === 'mismatch' ? 'Wrong address'
-        : dns.status === 'pending' ? 'Not resolved' : 'Not configured';
-    setBadge('pma-dns-status', dnsText, dns.status === 'ready');
-    setBadge('pma-ssl-status', site.ssl_status, site.ssl_status === 'ready');
-    if (site.ssl_status === 'pending') {
-      schedulePoll();
-    }
-  };
-
-  const refreshStatus = async () => {
-    const response = await fetch('/phpmyadmin/api/status', {
-      headers: { 'X-CSRF-Token': csrf },
-    });
-    renderStatus(await readJson(response));
-  };
-
-  const schedulePoll = () => {
-    if (pollTimer) return;
-    pollTimer = setInterval(async () => {
-      try {
-        const response = await fetch('/phpmyadmin/api/status', {
-          headers: { 'X-CSRF-Token': csrf },
-        });
-        const data = await readJson(response);
-        renderStatus(data);
-        if ((data.site || {}).ssl_status !== 'pending') {
-          clearInterval(pollTimer);
-          pollTimer = null;
-        }
-      } catch {
-        clearInterval(pollTimer);
-        pollTimer = null;
-      }
-    }, 3000);
-  };
-
-  const busy = (button, text, disabled) => {
-    if (!button) return;
-    button.disabled = disabled;
-    button.textContent = text;
-  };
-
-  document.querySelectorAll('#install-pma-button').forEach((button) => {
-    button.addEventListener('click', async () => {
-      busy(button, 'Installing…', true);
-      try {
-        const body = new FormData();
-        body.append('csrf_token', csrf);
-        const response = await fetch('/phpmyadmin/api/install', { method: 'POST', body });
-        const data = await readJson(response);
-        showResult('pma-install-result', data.message || 'Installed.', true);
-        setTimeout(() => window.location.reload(), 800);
-      } catch (err) {
-        showResult('pma-install-result', err.message, false);
-        busy(button, 'Install', false);
-      }
-    });
-  });
-
-  const uninstallBtn = document.getElementById('uninstall-pma-button');
+  const uninstallBtn = document.getElementById('pma-uninstall-btn');
   if (uninstallBtn) {
-    uninstallBtn.addEventListener('click', () => {
-      if (typeof openModal === 'function') openModal('pma-uninstall-modal');
-    });
-  }
-  const confirmUninstallBtn = document.getElementById('confirm-uninstall-pma-btn');
-  if (confirmUninstallBtn) {
-    confirmUninstallBtn.addEventListener('click', async () => {
-      busy(confirmUninstallBtn, 'Uninstalling…', true);
+    uninstallBtn.addEventListener('click', async () => {
+      if (!window.confirm('Uninstall phpMyAdmin? Databases and users are preserved.')) return;
+      uninstallBtn.disabled = true;
+      uninstallBtn.textContent = 'Uninstalling…';
+      const body = new FormData();
+      body.append('csrf_token', csrf);
       try {
-        const body = new FormData();
-        body.append('csrf_token', csrf);
         const response = await fetch('/phpmyadmin/api/uninstall', { method: 'POST', body });
-        const data = await readJson(response);
-        if (typeof closeModal === 'function') closeModal('pma-uninstall-modal');
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.detail || data.message || 'Uninstall failed.');
+        showResult(data.message || 'Uninstalled.', true);
         setTimeout(() => window.location.reload(), 800);
       } catch (err) {
-        showResult('pma-status-message', err.message, false);
-        busy(confirmUninstallBtn, 'Uninstall', false);
+        showResult(err.message, false);
+        uninstallBtn.disabled = false;
+        uninstallBtn.textContent = 'Uninstall';
       }
     });
   }
-
-  const openBtn = document.getElementById('open-pma-button');
-  if (openBtn) {
-    openBtn.addEventListener('click', () => {
-      window.location.href = '/phpmyadmin/api/launch';
-    });
-  }
-
-  const siteForm = document.getElementById('pma-site-form');
-  if (siteForm) {
-    siteForm.addEventListener('submit', async (event) => {
-      event.preventDefault();
-      const button = siteForm.querySelector('button[type="submit"]');
-      busy(button, 'Saving…', true);
-      const body = new FormData(siteForm);
-      const manageDns = document.getElementById('pma-manage-dns').checked;
-      body.set('manage_dns', manageDns ? 'true' : 'false');
-      try {
-        const response = await fetch('/phpmyadmin/api/site', { method: 'POST', body });
-        const data = await readJson(response);
-        showResult('pma-site-result', data.message || 'Saved.', true);
-        renderStatus(data);
-        setTimeout(() => window.location.reload(), 800);
-      } catch (err) {
-        showResult('pma-site-result', err.message, false);
-        busy(button, 'Save Changes', false);
-      }
-    });
-
-    const manageDns = document.getElementById('pma-manage-dns');
-    const externalDns = document.getElementById('pma-external-dns');
-    const updateDnsHint = () => {
-      if (!externalDns) return;
-      const host = document.getElementById('pma-public-host').value.trim();
-      document.getElementById('pma-dns-host').textContent = host || 'pma.example.com';
-      externalDns.style.display = manageDns.checked ? 'none' : 'block';
-    };
-    manageDns.addEventListener('change', updateDnsHint);
-    document.getElementById('pma-public-host').addEventListener('input', updateDnsHint);
-    updateDnsHint();
-
-    const copyBtn = document.getElementById('pma-copy-dns');
-    if (copyBtn) {
-      copyBtn.addEventListener('click', () => {
-        const host = document.getElementById('pma-dns-host').textContent;
-        const target = document.getElementById('pma-dns-target').textContent;
-        navigator.clipboard?.writeText(`${host} IN A ${target}`).catch(() => {});
-        copyBtn.textContent = 'Copied';
-        setTimeout(() => { copyBtn.textContent = 'Copy'; }, 1500);
-      });
-    }
-
-    const refreshBtn = document.getElementById('pma-refresh-status');
-    if (refreshBtn) {
-      refreshBtn.addEventListener('click', async () => {
-        refreshBtn.disabled = true;
-        await refreshStatus();
-        refreshBtn.disabled = false;
-      });
-    }
-
-    const deleteBtn = document.getElementById('pma-delete-site');
-    if (deleteBtn) {
-      deleteBtn.addEventListener('click', () => {
-        const host = page.dataset.publicHost || '';
-        document.getElementById('pma-delete-host').textContent = host;
-        document.getElementById('pma-delete-confirm').value = '';
-        if (typeof openModal === 'function') openModal('pma-delete-modal');
-      });
-    }
-  }
-
-  const confirmDeleteBtn = document.getElementById('confirm-delete-pma-btn');
-  if (confirmDeleteBtn) {
-    confirmDeleteBtn.addEventListener('click', async () => {
-      const host = page.dataset.publicHost || '';
-      const typed = document.getElementById('pma-delete-confirm').value.trim();
-      if (typed.toLowerCase() !== host) {
-        showResult('pma-site-result', `Type ${host} to confirm.`, false);
-        return;
-      }
-      busy(confirmDeleteBtn, 'Removing…', true);
-      const body = new FormData();
-      body.append('csrf_token', csrf);
-      body.append('public_host', host);
-      body.append('confirmation', host);
-      try {
-        const response = await fetch('/phpmyadmin/api/site/delete', { method: 'POST', body });
-        const data = await readJson(response);
-        if (typeof closeModal === 'function') closeModal('pma-delete-modal');
-        setTimeout(() => window.location.reload(), 800);
-      } catch (err) {
-        showResult('pma-site-result', err.message, false);
-        busy(confirmDeleteBtn, 'Remove Access', false);
-      }
-    });
-  }
-
-  const issueSslBtn = document.getElementById('pma-issue-ssl');
-  if (issueSslBtn) {
-    issueSslBtn.addEventListener('click', async () => {
-      busy(issueSslBtn, 'Issuing…', true);
-      const body = new FormData();
-      body.append('csrf_token', csrf);
-      body.append('public_host', page.dataset.publicHost || '');
-      try {
-        const response = await fetch('/phpmyadmin/api/site/ssl', { method: 'POST', body });
-        const data = await readJson(response);
-        showResult('pma-ssl-result', data.message || 'SSL setup started.', true);
-        schedulePoll();
-        busy(issueSslBtn, 'Issue / Retry HTTPS', false);
-      } catch (err) {
-        showResult('pma-ssl-result', err.message, false);
-        busy(issueSslBtn, 'Issue / Retry HTTPS', false);
-      }
-    });
-  }
-
-  refreshStatus().catch(() => {});
 })();
 </script>
 {% endblock %}

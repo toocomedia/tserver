@@ -11,7 +11,7 @@ BACKEND = Path(__file__).resolve().parents[1]
 if str(BACKEND) not in sys.path:
     sys.path.insert(0, str(BACKEND))
 
-from plugins.phpmyadmin.service import PhpMyAdminService, PHP_STATE_PATH
+from plugins.phpmyadmin.service import PhpMyAdminService
 
 
 class PhpMyAdminStateTests(unittest.TestCase):
@@ -28,50 +28,17 @@ class PhpMyAdminStateTests(unittest.TestCase):
         self.env.stop()
         self.temp.cleanup()
 
-    def test_site_state_roundtrip_and_delete(self):
-        self.assertIsNone(self.service.get_site())
-
-        self.service.save_site(
-            {"public_host": "pma.example.com", "ssl_status": "ready"}
-        )
-        site = self.service.get_site()
-        self.assertEqual(site["public_host"], "pma.example.com")
-        self.assertEqual(site["ssl_status"], "ready")
-
-        removed = self.service.delete_site()
-        self.assertEqual(removed["public_host"], "pma.example.com")
-        self.assertIsNone(self.service.get_site())
-
     def test_update_state_keeps_schema_and_merges(self):
-        self.service.save_site({"public_host": "pma.example.com"})
-        self.service.update_state(paused=True)
+        self.service.update_state(installed_at=123)
 
         state = json.loads(self.service.state_path.read_text(encoding="utf-8"))
-        self.assertEqual(state["schema_version"], 1)
-        self.assertTrue(state["paused"])
-        self.assertEqual(state["site"]["public_host"], "pma.example.com")
-
-    def test_public_url_requires_ready_ssl(self):
-        self.service.save_site({"public_host": "pma.example.com"})
-        self.assertIsNone(self.service.get_public_url())
-        self.assertEqual(
-            self.service.get_configured_url(), "http://pma.example.com/"
-        )
-
-        self.service.save_site(
-            {"public_host": "pma.example.com", "ssl_status": "ready"}
-        )
-        self.assertEqual(
-            self.service.get_public_url(), "https://pma.example.com/"
-        )
-        self.assertEqual(
-            self.service.get_configured_url(), "https://pma.example.com/"
-        )
+        self.assertEqual(state["schema_version"], 2)
+        self.assertEqual(state["installed_at"], 123)
 
     def test_purge_data_requires_uninstalled_app(self):
         self.service.state_path.write_text("{}", encoding="utf-8")
         self.service.secret_path.write_text("s" * 64, encoding="utf-8")
-        self.service.marker_path.write_text("1", encoding="utf-8")
+        self.service.marker_path.write_text("2", encoding="utf-8")
         self.service.is_installed = Mock(return_value=False)
 
         self.service.purge_data()
@@ -94,22 +61,17 @@ class PhpMyAdminStateTests(unittest.TestCase):
                 json.dumps({"8.1": ["php8.1-fpm"], "8.3": ["php8.3-fpm"]}),
                 encoding="utf-8",
             )
-            with patch(
-                "plugins.phpmyadmin.service.PHP_STATE_PATH", state
-            ):
+            with patch("plugins.phpmyadmin.service.PHP_STATE_PATH", state):
                 self.assertEqual(self.service.php_version(), "8.3")
 
-    def test_php_version_falls_back_to_installed_directories(self):
-        with tempfile.TemporaryDirectory() as temp:
-            php_dir = Path(temp) / "php"
-            (php_dir / "8.2").mkdir(parents=True)
-            (php_dir / "8.3").mkdir(parents=True)
-            with patch(
-                "plugins.phpmyadmin.service.PHP_STATE_PATH",
-                Path(temp) / "missing.json",
-            ), patch("plugins.phpmyadmin.service.Path") as mock_path:
-                mock_path.return_value = php_dir
-                self.assertEqual(self.service.php_version(), "8.3")
+    def test_php_binary_falls_back_to_plain_php(self):
+        service = PhpMyAdminService()
+        service.php_version = Mock(return_value="8.3")
+        with patch(
+            "plugins.phpmyadmin.service.os.path.isfile",
+            side_effect=lambda path: path == "/usr/bin/php",
+        ):
+            self.assertEqual(service.php_binary(), "/usr/bin/php")
 
 
 class PhpMyAdminLifecycleTests(unittest.TestCase):
@@ -128,92 +90,96 @@ class PhpMyAdminLifecycleTests(unittest.TestCase):
             )
             self.assertFalse(service.needs_reconcile())
 
-    @patch("plugins.phpmyadmin.service.PhpMyAdminService.mariadb_reachable")
-    def test_status_tracks_socket_and_mariadb(self, mariadb):
+    def test_status_tracks_port_and_mariadb(self):
         with tempfile.TemporaryDirectory() as temp, patch.dict(
             os.environ, {"PHPMYADMIN_DATA_DIR": temp}
         ):
             service = PhpMyAdminService()
             service.htdocs.mkdir(parents=True)
             (service.htdocs / "index.php").write_text("<?php", encoding="utf-8")
-            service.php_version = Mock(return_value="8.3")
+            service.php_binary = Mock(return_value="/usr/bin/php8.3")
+            service._port_open = Mock(return_value=False)
+            service.mariadb_reachable = Mock(return_value=True)
 
-            service.socket_path = Mock(return_value=None)
-            mariadb.return_value = True
             status = service.get_status()
             self.assertTrue(status["installed"])
             self.assertFalse(status["running"])
-            self.assertFalse(status["healthy"])
             self.assertEqual(status["state"], "stopped")
 
-            fake_socket = Path(temp) / "fpm.sock"
-            fake_socket.touch()
-            service.socket_path = Mock(return_value=fake_socket)
-            mariadb.return_value = False
+            service._port_open.return_value = True
+            service.mariadb_reachable.return_value = False
             status = service.get_status()
             self.assertTrue(status["running"])
             self.assertFalse(status["healthy"])
             self.assertEqual(status["state"], "running")
 
-            mariadb.return_value = True
+            service.mariadb_reachable.return_value = True
             status = service.get_status()
             self.assertTrue(status["healthy"])
             self.assertEqual(status["state"], "healthy")
             self.assertIsNone(status["error"])
 
-    def test_usage_counts_pool_workers(self):
+    def test_status_reports_missing_php_binary(self):
+        with tempfile.TemporaryDirectory() as temp, patch.dict(
+            os.environ, {"PHPMYADMIN_DATA_DIR": temp}
+        ):
+            service = PhpMyAdminService()
+            service.htdocs.mkdir(parents=True)
+            (service.htdocs / "index.php").write_text("<?php", encoding="utf-8")
+            service.php_binary = Mock(return_value=None)
+
+            status = service.get_status()
+
+            self.assertTrue(status["installed"])
+            self.assertEqual(status["state"], "error")
+
+    def test_usage_counts_server_process(self):
         service = PhpMyAdminService()
         service.get_status = Mock(
             return_value={
                 "installed": True,
-                "running": True,
                 "healthy": True,
                 "state": "healthy",
             }
         )
         service._run = Mock(
             return_value=subprocess.CompletedProcess(
-                [], 0, "123\n124\n125\n", ""
+                [], 0, "123\n124\n", ""
             )
         )
 
         usage = service.get_usage()
 
-        self.assertEqual(usage["count"], 3)
+        self.assertEqual(usage["count"], 2)
         self.assertEqual(usage["status"], "running")
 
-    @patch("plugins.phpmyadmin.service.PhpMyAdminService._write_live_site")
-    @patch("plugins.phpmyadmin.service.PhpMyAdminService._write_offline_site")
-    def test_pause_and_resume_swap_site_and_flag(self, offline, live):
-        with tempfile.TemporaryDirectory() as temp, patch.dict(
-            os.environ, {"PHPMYADMIN_DATA_DIR": temp}
-        ):
-            service = PhpMyAdminService()
-            service.save_site(
-                {"public_host": "pma.example.com", "ssl_status": "ready"}
-            )
+    def test_pause_stops_and_resume_starts_unit(self):
+        service = PhpMyAdminService()
+        service.is_installed = Mock(return_value=True)
+        service._run = Mock(
+            return_value=subprocess.CompletedProcess([], 0, "", "")
+        )
 
-            service.pause()
-            offline.assert_called_once_with(
-                "pma.example.com",
-                service.get_site(),
-            )
-            self.assertTrue(service.is_paused())
+        service.pause()
+        self.assertEqual(
+            service._run.call_args.args[0],
+            ["systemctl", "stop", service.unit_name],
+        )
 
-            service.resume()
-            live.assert_called_once_with(
-                "pma.example.com",
-                service.get_site(),
-            )
-            self.assertFalse(service.is_paused())
+        service.resume()
+        self.assertEqual(
+            service._run.call_args.args[0],
+            ["systemctl", "start", service.unit_name],
+        )
 
-    def test_pause_without_site_only_flags_state(self):
-        with tempfile.TemporaryDirectory() as temp, patch.dict(
-            os.environ, {"PHPMYADMIN_DATA_DIR": temp}
-        ):
-            service = PhpMyAdminService()
-            service.pause()
-            self.assertTrue(service.read_state().get("paused"))
+    def test_pause_skips_when_not_installed(self):
+        service = PhpMyAdminService()
+        service.is_installed = Mock(return_value=False)
+        service._run = Mock()
+
+        service.pause()
+
+        service._run.assert_not_called()
 
 
 class PhpMyAdminPackagingTests(unittest.TestCase):
@@ -228,36 +194,34 @@ class PhpMyAdminPackagingTests(unittest.TestCase):
             sorted(manifest["requires"]["dependencies"]), ["mariadb", "php"]
         )
         self.assertEqual(manifest["usage"], {})
-        self.assertNotIn("docker", manifest["requires"]["dependencies"])
 
-    def test_installer_is_native_php_without_docker(self):
+    def test_installer_runs_local_php_server_without_nginx_or_docker(self):
         plugin = BACKEND / "plugins" / "phpmyadmin"
         install = (plugin / "scripts" / "install_phpmyadmin.sh").read_text(
             encoding="utf-8"
         )
 
         self.assertNotIn("docker", install)
-        self.assertIn("PHP-FPM", install)
-        self.assertIn('FPM_POOL="srv-panel-phpmyadmin"', install)
-        self.assertIn('"php${PHP_VERSION}-fpm"', install)
-        self.assertIn("config.inc.php", install)
+        self.assertIn('-S 127.0.0.1:${PORT}', install)
+        self.assertIn("srv-panel-phpmyadmin.service", install)
+        self.assertIn("PmaAbsoluteUri", install)
+        self.assertIn("CookiePath", install)
         self.assertIn("blowfish_secret", install)
-        self.assertIn("127.0.0.1", install)
         self.assertIn("sha256sum", install)
-        self.assertIn('POOL_PATH="${POOL_DIR}/${FPM_POOL}.conf"', install)
+        self.assertIn("srv-panel-phpmyadmin.conf", install)  # v1 migration
+        self.assertIn("systemctl reload-or-restart", install)
 
-    def test_uninstaller_removes_pool_and_nginx_site(self):
+    def test_uninstaller_removes_unit_and_files(self):
         plugin = BACKEND / "plugins" / "phpmyadmin"
         uninstall = (plugin / "scripts" / "uninstall_phpmyadmin.sh").read_text(
             encoding="utf-8"
         )
 
-        self.assertIn("srv-panel-phpmyadmin", uninstall)
-        self.assertIn("sites-enabled", uninstall)
-        self.assertIn("sites-available", uninstall)
-        self.assertIn("reload-or-restart", uninstall)
+        self.assertIn("srv-panel-phpmyadmin.service", uninstall)
+        self.assertIn("systemctl disable --now", uninstall)
+        self.assertIn("daemon-reload", uninstall)
 
-    def test_template_and_router_use_phpmyadmin_route(self):
+    def test_template_is_minimal_launcher(self):
         plugin = BACKEND / "plugins" / "phpmyadmin"
         template = (plugin / "templates" / "phpmyadmin.html").read_text(
             encoding="utf-8"
@@ -265,9 +229,11 @@ class PhpMyAdminPackagingTests(unittest.TestCase):
         router = (plugin / "router.py").read_text(encoding="utf-8")
 
         self.assertIn('prefix="/phpmyadmin"', router)
-        self.assertIn("install", template)
-        self.assertIn("open-pma-button", template)
-        self.assertIn("manage_dns", template)
+        self.assertIn("pma-open-btn", template)
+        self.assertIn("window.open", template)
+        self.assertIn("/phpmyadmin/api/uninstall", template)
+        self.assertNotIn("pma-install-btn", template)
+        self.assertNotIn("manage_dns", template)
 
 
 if __name__ == "__main__":
