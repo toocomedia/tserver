@@ -1121,7 +1121,7 @@
 }
 
 /* ============================================================
-   ULTRA-SIMPLE MINIMAL LIST VIEW (NO INNER VERTICAL DIVIDERS)
+   ULTRA-SIMPLE MINIMAL LIST VIEW (0 MARGIN DIVIDERS & INNER PADDING)
    ============================================================ */
 .view-list-container {
   display: flex;
@@ -1129,14 +1129,18 @@
   background: transparent;
   border-top: 1px solid var(--color-line);
   border-bottom: 1px solid var(--color-line);
-  border-left: none;
-  border-right: none;
+  border-left: none !important;
+  border-right: none !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  width: 100%;
 }
 
 .list-header-row {
   display: grid;
   grid-template-columns: 2.5fr 110px 140px 3fr 180px;
-  padding: 10px 0;
+  margin: 0;
+  padding: 12px 18px;
   font-size: 11px;
   font-weight: 800;
   text-transform: uppercase;
@@ -1150,7 +1154,8 @@
   display: grid;
   grid-template-columns: 2.5fr 110px 140px 3fr 180px;
   align-items: center;
-  padding: 10px 0;
+  margin: 0;
+  padding: 12px 18px;
   background: transparent;
   border-bottom: 1px solid var(--color-line);
   transition: background 0.15s ease;
@@ -1162,7 +1167,7 @@
 }
 
 .list-item-row:hover {
-  background: var(--color-surface);
+  background: var(--color-surface-hover, var(--color-surface)) !important;
 }
 
 .list-col-main {
@@ -1233,7 +1238,9 @@
 .list-col-actions {
   display: flex;
   justify-content: flex-end;
+  align-items: center;
   gap: 8px;
+  padding-right: 2px;
 }
 
 /* ============================================================
@@ -1244,20 +1251,28 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
   padding: 0;
   border-radius: 0 !important;
   border: none !important;
-  background: var(--color-secondary-btn);
+  background: rgba(255, 255, 255, 0.08);
   color: var(--color-text);
   cursor: pointer;
   transition: background 0.15s ease, color 0.15s ease;
   z-index: 2;
 }
 
+:root:not([data-theme="dark"]):not([data-theme="amoled"]):not([data-theme="charcoal"]) .list-actions-toggle-btn {
+  background: rgba(0, 0, 0, 0.06);
+}
+
 .list-actions-toggle-btn:hover {
-  background: var(--color-secondary-hover);
+  background: rgba(255, 255, 255, 0.16);
+}
+
+:root:not([data-theme="dark"]):not([data-theme="amoled"]):not([data-theme="charcoal"]) .list-actions-toggle-btn:hover {
+  background: rgba(0, 0, 0, 0.12);
 }
 
 .list-actions-toggle-btn .toggle-dots-icon {
