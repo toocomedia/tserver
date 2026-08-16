@@ -19,14 +19,6 @@
 {% block content %}
 <div class="plugins-page">
 
-<!-- FULL-WIDTH SEARCH BAR AT TOP OF PAGE -->
-<div class="page-search-wrap" style="width: 100%; margin-bottom: 20px;">
-  <div style="position:relative; display:flex; align-items:center; width:100%;">
-    <svg style="position:absolute; left:14px; width:15px; height:15px; color:var(--color-muted); pointer-events:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-    <input type="text" id="plugin-search-input" class="form-control" placeholder="{{ _('search_plugins') or 'Search plugins by name, ID, or description...' }}" style="padding-left:38px; height:38px; font-size:13px; border-radius:0 !important; background:var(--color-surface); border:1px solid var(--color-line); color:var(--color-text); width:100%;" oninput="filterPlugins(this.value)">
-  </div>
-</div>
-
 <!-- SKELETON LOADING OVERLAY -->
 {{ skeleton_overlay('plugins-skeleton', header=1, title_bar=1, cards=6) }}
 <!-- END SKELETON OVERLAY -->
@@ -37,6 +29,14 @@
   {% set item_count = plugins | length %}
   {% set icon_svg = plugin_title_icon %}
   {% include "partials/resource_title_bar.html" %}
+
+  <!-- FULL-WIDTH SEARCH BAR (IN PAGE BELOW TITLE BAR WITH TOP MARGIN) -->
+  <div class="page-search-wrap" style="width: 100%; margin-top: 18px; margin-bottom: 20px;">
+    <div style="position:relative; display:flex; align-items:center; width:100%;">
+      <svg style="position:absolute; left:14px; width:15px; height:15px; color:var(--color-muted); pointer-events:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+      <input type="text" id="plugin-search-input" class="form-control" placeholder="{{ _('search_plugins') or 'Search plugins by name, ID, or description...' }}" style="padding-left:38px; height:38px; font-size:13px; border-radius:0 !important; background:var(--color-surface); border:1px solid var(--color-line); color:var(--color-text); width:100%;" oninput="filterPlugins(this.value)">
+    </div>
+  </div>
 
   <div class="resource-views">
     
