@@ -63,19 +63,28 @@
               {% else %}<span class="badge badge--neutral">{{ _('off_1') }}</span>{% endif %}
             </span>
           </div>
-          <div class="info-row">
-            <span class="info-row__label">{{ _('active_access_endpoints') }}</span>
-            <span class="info-row__value" id="stat-urls" style="display:flex; flex-direction:column; gap:6px; align-items:flex-end;">
+          <div class="info-row" style="align-items:flex-start; padding:14px 0;">
+            <span class="info-row__label" style="padding-top:3px;">{{ _('active_access_endpoints') }}</span>
+            <div class="info-row__value" id="stat-urls" style="display:flex; flex-direction:column; gap:8px; align-items:flex-end;">
               {% if s.urls.ip_http %}
-              <div><span class="text-muted" style="font-size:11px; margin-right:6px;">IP:</span><a href="{{ s.urls.ip_http }}" target="_blank" rel="noopener">{{ s.urls.ip_http }}</a></div>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span class="badge badge--neutral" style="font-size:10px; padding:2px 6px; font-weight:700;">IP</span>
+                <a href="{{ s.urls.ip_http }}" target="_blank" rel="noopener" class="mono" style="font-size:13px;">{{ s.urls.ip_http }}</a>
+              </div>
               {% endif %}
               {% if s.urls.domain_http %}
-              <div><span class="text-muted" style="font-size:11px; margin-right:6px;">HTTP:</span><a href="{{ s.urls.domain_http }}" target="_blank" rel="noopener">{{ s.urls.domain_http }}</a></div>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span class="badge badge--neutral" style="font-size:10px; padding:2px 6px; font-weight:700;">HTTP</span>
+                <a href="{{ s.urls.domain_http }}" target="_blank" rel="noopener" class="mono" style="font-size:13px;">{{ s.urls.domain_http }}</a>
+              </div>
               {% endif %}
               {% if s.urls.domain_https %}
-              <div><span class="text-muted" style="font-size:11px; margin-right:6px;">HTTPS:</span><a href="{{ s.urls.domain_https }}" target="_blank" rel="noopener">{{ s.urls.domain_https }}</a></div>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span class="badge badge--ok" style="font-size:10px; padding:2px 6px; font-weight:700;">HTTPS</span>
+                <a href="{{ s.urls.domain_https }}" target="_blank" rel="noopener" class="mono" style="font-size:13px;">{{ s.urls.domain_https }}</a>
+              </div>
               {% endif %}
-            </span>
+            </div>
           </div>
         </div>
       </div>
@@ -109,12 +118,12 @@
             <span class="info-row__label">{{ _('https_link') }}</span>
             <span class="info-row__value" id="ssl-active-link">
               {% if s.urls.domain_https %}
-              <a href="{{ s.urls.domain_https }}" target="_blank" rel="noopener">{{ s.urls.domain_https }}</a>
+              <a href="{{ s.urls.domain_https }}" target="_blank" rel="noopener" class="mono">{{ s.urls.domain_https }}</a>
               {% else %}—{% endif %}
             </span>
           </div>
 
-          <p class="form-hint" style="margin: 16px 0 14px;" id="ssl-section-hint">
+          <p class="form-hint" style="margin: 18px 0 14px;" id="ssl-section-hint">
             {% if s.ssl_active %}
               Certificate is active. Renew before it expires, or remove it.
             {% else %}
@@ -148,11 +157,11 @@
 
           <div id="url-subdomain-fields" class="mb-lg" hidden>
             <label class="form-label" style="font-size:12px;">{{ _('subdomain_here') }}</label>
-            <div class="settings-subdomain-row mt-xs">
-              <input class="form-input" type="text" id="subdomain_label" value="{{ s.subdomain_label or 'panel' }}" placeholder="panel" style="max-width:140px;">
-              <span class="settings-subdomain-dot">.</span>
-              <div class="form-select-wrap" style="flex:1; max-width:280px;">
-                <select class="form-select" id="parent_domain">
+            <div class="settings-subdomain-row mt-xs" style="display:flex; align-items:center; gap:8px; width:100%;">
+              <input class="form-input" type="text" id="subdomain_label" value="{{ s.subdomain_label or 'panel' }}" placeholder="panel" style="flex:0 0 200px; max-width:240px;">
+              <span class="settings-subdomain-dot" style="font-weight:700; color:var(--color-muted); font-size:16px;">.</span>
+              <div class="form-select-wrap" style="flex:1;">
+                <select class="form-select" id="parent_domain" style="width:100%;">
                   <option value="">{{ _('select_domain') }}</option>
                   {% for d in s.managed_domains %}
                   <option value="{{ d }}" {% if s.parent_domain == d %}selected{% endif %}>{{ d }}</option>
@@ -160,13 +169,13 @@
                 </select>
               </div>
             </div>
-            <p class="form-hint mt-xs">{{ _('preview') }} <strong id="subdomain-preview">—</strong></p>
+            <p class="form-hint mt-xs">{{ _('preview') }} <strong id="subdomain-preview" class="mono">—</strong></p>
           </div>
 
           <div id="url-custom-fields" class="mb-lg" hidden>
-            <div class="form-group" style="max-width:380px;">
+            <div class="form-group" style="width:100%;">
               <label class="form-label" for="custom_domain" style="font-size:12px;">{{ _('hostname') }}</label>
-              <input class="form-input" type="text" id="custom_domain" value="{% if s.url_mode == 'custom' %}{{ s.panel_domain or '' }}{% endif %}" placeholder="panel.example.com">
+              <input class="form-input" type="text" id="custom_domain" value="{% if s.url_mode == 'custom' %}{{ s.panel_domain or '' }}{% endif %}" placeholder="panel.example.com" style="width:100%;">
               <p class="form-hint mt-xs">
                 {{ _('a_record') }} <code id="custom-dns-hint">{{ s.server_ip }}</code>
               </p>
@@ -221,9 +230,9 @@
             <input type="checkbox" id="allow_ip" {% if s.allow_ip %}checked{% endif %}>
             <span>{{ _('allow_access_by_server_ip') }}</span>
           </label>
-          <div class="form-group mb-lg" id="ip-port-group" style="max-width:320px;">
+          <div class="form-group mb-lg" id="ip-port-group" style="width:100%;">
             <label class="form-label" for="ip_port" style="font-size:12px;">{{ _('public_port') }}</label>
-            <input class="form-input" type="number" id="ip_port" min="1" max="65535" value="{{ s.ip_port or 80 }}" style="max-width:110px;">
+            <input class="form-input" type="number" id="ip_port" min="1" max="65535" value="{{ s.ip_port or 80 }}" style="max-width:180px;">
             <p class="form-hint mt-xs">{{ _('e_g_8080') }} <code>http://{{ s.server_ip }}:{{ s.ip_port or 80 }}/</code></p>
           </div>
         </div>
@@ -256,9 +265,9 @@
             <input type="checkbox" id="hsts_enabled" {% if s.hsts_enabled %}checked{% endif %}>
             <span>{{ _('hsts') }}</span>
           </label>
-          <div class="form-group mb-lg" style="max-width:320px;">
+          <div class="form-group mb-lg" style="width:100%;">
             <label class="form-label" for="session_max_age_days" style="font-size:12px;">{{ _('session_days') }}</label>
-            <input class="form-input" type="number" id="session_max_age_days" min="1" max="365" value="{{ s.session_max_age_days or 7 }}" style="max-width:110px;">
+            <input class="form-input" type="number" id="session_max_age_days" min="1" max="365" value="{{ s.session_max_age_days or 7 }}" style="max-width:180px;">
           </div>
         </div>
       </div>
@@ -289,9 +298,9 @@
             </div>
             <p class="form-hint mb-md">{{ _('or_enter_this_secret_manually') }} <code id="2fa-secret-text"></code></p>
             
-            <div class="form-group mb-md" style="max-width:200px;">
+            <div class="form-group mb-md" style="width:100%;">
               <label class="form-label" for="2fa-verify-code" style="font-size:12px;">{{ _('verification_code') }}</label>
-              <input class="form-input" type="text" id="2fa-verify-code" placeholder="123456" style="max-width:120px;">
+              <input class="form-input" type="text" id="2fa-verify-code" placeholder="123456" style="max-width:180px;">
             </div>
             <div class="d-flex gap-sm">
               <button type="button" class="btn btn--primary btn--sm" id="btn-verify-2fa">{{ _('verify_enable') }}</button>
@@ -443,28 +452,36 @@
       <div class="section mb-xl">
         <div class="section__header"><h3>{{ _('performance') }}</h3></div>
         <div class="section__body">
-          <p class="form-hint mb-md">
+          <p class="form-hint mb-lg">
             {{ _('global_nginx_optimizations_applied_to_al') }} <code>{{ _('etc_nginx_conf_d_performance_conf') }}</code> {{ _('and_reload_nginx') }}
           </p>
 
           <div id="perf-notes" class="mb-md" hidden></div>
 
-          <label class="form-check mb-md">
-            <input type="checkbox" id="perf_gzip" {% if s.perf_gzip %}checked{% endif %}>
-            <span>
-              <strong>{{ _('gzip_compression') }}</strong>
-              <span class="form-hint d-block">{{ _('compress_html_css_js_json_svg_before_sen') }}</span>
-            </span>
-          </label>
-          <label class="form-check mb-md">
-            <input type="checkbox" id="perf_static_cache" {% if s.perf_static_cache %}checked{% endif %}>
-            <span>
-              <strong>{{ _('browser_cache_for_static_assets') }}</strong>
-              <span class="form-hint d-block">{{ _('adds_1_year_cache_control_headers_for_fo') }}</span>
-            </span>
-          </label>
-          <div class="form-actions">
-            <button type="button" class="btn btn--primary" id="btn-save-perf">{{ _('save_performance') }}</button>
+          <div class="mb-lg" style="display:flex; flex-direction:column; gap:16px;">
+            <label class="form-check form-check--stacked">
+              <input type="checkbox" id="perf_gzip" {% if s.perf_gzip %}checked{% endif %}>
+              <span>
+                <strong style="font-size:13px; color:var(--color-text);">{{ _('gzip_compression') }}</strong>
+                <span class="form-hint d-block" style="margin-top:2px;">{{ _('compress_html_css_js_json_svg_before_sen') }}</span>
+              </span>
+            </label>
+            <label class="form-check form-check--stacked">
+              <input type="checkbox" id="perf_static_cache" {% if s.perf_static_cache %}checked{% endif %}>
+              <span>
+                <strong style="font-size:13px; color:var(--color-text);">{{ _('browser_cache_for_static_assets') }}</strong>
+                <span class="form-hint d-block" style="margin-top:2px;">{{ _('adds_1_year_cache_control_headers_for_fo') }}</span>
+              </span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fixed Bottom Action Bar -->
+      <div class="fixed-action-bar">
+        <div class="fixed-action-bar__inner">
+          <div style="margin-left:auto;">
+            <button type="button" class="btn btn--primary btn--sm" id="btn-save-perf">{{ _('save_performance') }}</button>
           </div>
         </div>
       </div>
@@ -512,8 +529,15 @@
             <span class="info-row__value text-muted" id="update-last-checked">—</span>
           </div>
 
-          <div class="form-actions mt-lg">
-            <button type="button" class="btn btn--primary" id="btn-apply-update" disabled>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fixed Bottom Action Bar -->
+      <div class="fixed-action-bar">
+        <div class="fixed-action-bar__inner">
+          <div style="margin-left:auto;">
+            <button type="button" class="btn btn--primary btn--sm" id="btn-apply-update" disabled>
               {{ _('update_restart_panel') }}
             </button>
           </div>
