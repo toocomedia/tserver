@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-import pwd
 import re
 import secrets
 
@@ -116,8 +115,9 @@ def service_unit(app: HostedApp) -> Path:
 
 def _service_home() -> str:
     try:
+        import pwd
         return pwd.getpwnam(config.APP_HOSTING_USER).pw_dir
-    except KeyError:
+    except (KeyError, ImportError, AttributeError, Exception):
         return "/"
 
 

@@ -172,9 +172,9 @@
       const https = s.urls.domain_https || (s.panel_domain && s.ssl_active && typeof publicUrl === "function"
         ? publicUrl(s.panel_domain, { https: true })
         : s.urls.domain_https);
-      if (ip) parts.push(`<div>IP: <a href="${ip}" target="_blank" rel="noopener">${ip}</a></div>`);
-      if (http) parts.push(`<div>HTTP: <a href="${http}" target="_blank" rel="noopener">${http}</a></div>`);
-      if (https) parts.push(`<div>HTTPS: <a href="${https}" target="_blank" rel="noopener">${https}</a></div>`);
+      if (ip) parts.push(`<div><span><span class="badge badge--neutral" style="margin-right:6px;">IP</span> <a href="${ip}" target="_blank" rel="noopener">${ip}</a></span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" style="opacity:0.6;"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3"></path></svg></div>`);
+      if (http) parts.push(`<div><span><span class="badge badge--neutral" style="margin-right:6px;">HTTP</span> <a href="${http}" target="_blank" rel="noopener">${http}</a></span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" style="opacity:0.6;"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3"></path></svg></div>`);
+      if (https) parts.push(`<div><span><span class="badge badge--ok" style="margin-right:6px;">HTTPS</span> <a href="${https}" target="_blank" rel="noopener">${https}</a></span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" style="opacity:0.6;"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3"></path></svg></div>`);
       $("stat-urls").innerHTML = parts.join("") || "—";
     }
     syncUrlModeUi();
