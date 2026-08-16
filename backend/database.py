@@ -63,13 +63,18 @@ def _migrate_sync(sync_conn) -> None:
     """Idempotent SQLite migrations for existing panel DBs."""
     tables = set(inspect(sync_conn).get_table_names())
 
-    # --- domains: project_type ---
+    # --- domains: project_type & parent_domain ---
     if "domains" in tables:
         cols = _column_names(sync_conn, "domains")
         if "project_type" not in cols:
             logger.info("Migrating domains: add project_type")
             sync_conn.execute(text(
                 "ALTER TABLE domains ADD COLUMN project_type VARCHAR(32) DEFAULT 'static' NOT NULL"
+            ))
+        if "parent_domain" not in cols:
+            logger.info("Migrating domains: add parent_domain")
+            sync_conn.execute(text(
+                "ALTER TABLE domains ADD COLUMN parent_domain VARCHAR(255)"
             ))
 
     # --- postgres_remote_domains: v2 remote-access fields ---

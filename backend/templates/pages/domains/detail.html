@@ -15,7 +15,13 @@
     <span style="color: var(--color-muted); font-size: 14px;">Domain Manager</span>
   </div>
   <div class="actions">
-    <a href="/dns/{{ domain.name }}/records" class="btn btn--secondary" style="height: 38px; padding: 0 16px;" id="btn-dns">{{ _('dns') }}</a>
+    {% if domain.dns_zone_created %}
+      <a href="/dns/{{ domain.name }}/records" class="btn btn--secondary" style="height: 38px; padding: 0 16px;" id="btn-dns">{{ _('dns') }}</a>
+    {% elif domain.parent_domain %}
+      <a href="/dns/{{ domain.parent_domain }}/records" class="btn btn--secondary" style="height: 38px; padding: 0 16px;" id="btn-dns" title="Managed inside {{ domain.parent_domain }} zone">{{ _('dns') }} ({{ domain.parent_domain }})</a>
+    {% else %}
+      <a href="/dns/" class="btn btn--secondary" style="height: 38px; padding: 0 16px;" id="btn-dns">{{ _('dns') }}</a>
+    {% endif %}
     {% if not cert %}
       {% if nginx_active %}
       <a href="/ssl/issue?full_domain={{ domain.name }}" class="btn btn--primary" style="height: 38px; padding: 0 16px;" id="btn-issue-ssl">
@@ -59,10 +65,17 @@
     <div class="stat-card-strict__value">
       {% if domain.dns_zone_created %}
         <span style="width: 8px; height: 8px; background: var(--color-text);"></span> {{ _('active_1') }}
+      {% elif domain.parent_domain %}
+        <span style="width: 8px; height: 8px; background: var(--color-text);"></span> Subdomain
       {% else %}
         <span style="width: 8px; height: 8px; background: var(--color-danger);"></span> {{ _('none') }}
       {% endif %}
     </div>
+    {% if domain.parent_domain and not domain.dns_zone_created %}
+    <div style="font-size: 12px; color: var(--color-muted); margin-top: 8px;">
+      In zone {{ domain.parent_domain }}
+    </div>
+    {% endif %}
   </div>
 
   <div class="stat-card-strict">
@@ -106,14 +119,31 @@
   </div>
   
   <div class="info-row-strict">
-    <div class="info-row-strict__label">{{ _('project_type') }}</div>
+    <div class="info-row-strict__label">{{ _('domain_purpose') }}</div>
     <div class="info-row-strict__val">
       {% if domain.project_type == 'dns' %}
         {{ _('dns_only') }}
       {% elif domain.project_type == 'python' %}
         {{ _('python_app') }}
+      {% elif domain.project_type == 'php' %}
+        PHP Website
+      {% elif domain.project_type == 'container' %}
+        Container App
       {% else %}
-        {{ _('static_site') }}
+        {{ _('website_and_app_hosting') }}
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="info-row-strict">
+    <div class="info-row-strict__label">{{ _('dns_routing') }}</div>
+    <div class="info-row-strict__val">
+      {% if domain.dns_zone_created %}
+        Standalone DNS Zone
+      {% elif domain.parent_domain %}
+        DNS Record in <a href="/dns/{{ domain.parent_domain }}/records" style="text-decoration:underline;">{{ domain.parent_domain }}</a>
+      {% else %}
+        None
       {% endif %}
     </div>
   </div>

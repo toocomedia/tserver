@@ -102,6 +102,7 @@ async def domains_api_items(
             "server_ip": d.server_ip,
             "project_type": d.project_type,
             "dns_zone_created": d.dns_zone_created,
+            "parent_domain": d.parent_domain,
             "nginx_active": f"{d.name}.conf" in enabled_sites,
             "ssl_active": cert is not None,
         })
@@ -116,6 +117,57 @@ async def domains_api_items(
 
 
 # ---------------------------------------------------------------
+# CHECK HOSTNAME (SMART SUBDOMAIN DETECTION)
+# ---------------------------------------------------------------
+@router.get("/api/check-hostname")
+async def check_hostname(
+    name: str = "",
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Check if a hostname is valid, if it already exists, and if a parent domain exists.
+    """
+    name = (name or "").strip().lower()
+    if not name:
+        return {"valid": False, "exists": False, "is_subdomain": False, "parent_domain": None, "subdomain_prefix": None}
+
+    try:
+        from utils.validators import sanitize_domain
+        clean_name = sanitize_domain(name)
+    except Exception:
+        return {"valid": False, "exists": False, "is_subdomain": False, "parent_domain": None, "subdomain_prefix": None}
+
+    existing = await domain_service.get_by_name(db, clean_name)
+    if existing:
+        return {
+            "valid": True,
+            "exists": True,
+            "is_subdomain": False,
+            "parent_domain": None,
+            "subdomain_prefix": None,
+            "message": f"Domain '{clean_name}' already exists in your panel."
+        }
+
+    parent, prefix = await domain_service.find_parent_domain(db, clean_name)
+    if parent:
+        return {
+            "valid": True,
+            "exists": False,
+            "is_subdomain": True,
+            "parent_domain": parent.name,
+            "subdomain_prefix": prefix,
+            "parent_has_zone": parent.dns_zone_created,
+        }
+
+    return {
+        "valid": True,
+        "exists": False,
+        "is_subdomain": False,
+        "parent_domain": None,
+        "subdomain_prefix": None,
+    }
+
+
 # ---------------------------------------------------------------
 # CREATE — form page
 # ---------------------------------------------------------------
@@ -128,6 +180,8 @@ async def domains_create_page(request: Request):
         "error": None,
         "name": "",
         "project_type": "static",
+        "dns_mode": "new_zone",
+        "parent_domain": "",
     })
 
 
@@ -140,12 +194,19 @@ async def domains_create(
     name: str = Form(...),
     project_type: str = Form("static"),
     ssl_enabled: str = Form("no"),
+    dns_mode: str = Form("new_zone"),
+    parent_domain: str | None = Form(None),
     db: AsyncSession = Depends(get_db),
 ):
     try:
-        domain = await domain_service.create(db, name, project_type=project_type)
-        if project_type == "python":
-            return RedirectResponse(f"/apps/create?domain_id={domain.id}&ssl={'1' if ssl_enabled == 'yes' else '0'}", status_code=303)
+        clean_parent = parent_domain.strip() if (parent_domain and parent_domain.strip()) else None
+        domain = await domain_service.create(
+            db,
+            name,
+            project_type=project_type,
+            dns_mode=dns_mode,
+            parent_domain=clean_parent,
+        )
         if ssl_enabled == "yes" and project_type != "dns":
             return RedirectResponse(f"/ssl/issue?domain_id={domain.id}&full_domain={domain.name}", status_code=303)
         return RedirectResponse(f"/domains/{domain.id}", status_code=303)
@@ -158,6 +219,8 @@ async def domains_create(
             "error": error_msg,
             "name": name,
             "project_type": project_type,
+            "dns_mode": dns_mode,
+            "parent_domain": parent_domain or "",
         }, status_code=400)
 
 

@@ -16,7 +16,7 @@
     <!-- Step Progress Indicator (Brutalist) -->
     {{ wizard.render_steps([
       {'id': 'nav-step-1', 'onclick': 'goToStep(1)', 'label': _('hostname')},
-      {'id': 'nav-step-2', 'onclick': 'goToStep(2)', 'label': _('runtime_stack')},
+      {'id': 'nav-step-2', 'onclick': 'goToStep(2)', 'label': _('domain_purpose')},
       {'id': 'nav-step-3', 'onclick': 'goToStep(3)', 'label': _('ssl_certificate')},
       {'id': 'nav-step-4', 'onclick': 'goToStep(4)', 'label': _('review_deploy')}
     ]) }}
@@ -29,54 +29,78 @@
   <form method="post" action="/domains/create" class="clean-form" id="create-domain-form">
     {% include "partials/csrf_field.html" %}
     <input type="hidden" name="ssl_enabled" id="ssl-enabled-input" value="no">
-    <!-- Keep project_type sync -->
+    <!-- Domain Purpose / Type -->
     <input type="hidden" name="project_type" id="project-type-input" value="{% if project_type %}{{ project_type }}{% else %}static{% endif %}">
+    <!-- Smart Subdomain DNS Mode: 'new_zone' or 'parent_record' -->
+    <input type="hidden" name="dns_mode" id="dns-mode-input" value="{% if dns_mode %}{{ dns_mode }}{% else %}new_zone{% endif %}">
+    <input type="hidden" name="parent_domain" id="parent-domain-input" value="{{ parent_domain or '' }}">
 
     <!-- STEP 1: HOSTNAME -->
-    <div id="panel-1" style="display:flex;flex-direction:column;">
+    <div id="panel-1" style="display:flex;flex-direction:column;gap:24px;">
       <div class="form-group-horizontal" style="border-bottom:none; margin-bottom:0; padding-bottom:0;">
         <div class="form-label-wrap">
           <label class="form-label" for="name">{{ _('target_hostname_1') }}</label>
           <span class="form-hint">{{ _('enter_the_root_domain_or_subdomain_you_w') }}</span>
         </div>
         <div>
-          <input type="text" class="form-input clean-input{% if error %} form-input--error{% endif %}" id="name" name="name" value="{{ name or '' }}" placeholder="example.com (e.g. app.domain.com)" autocomplete="off" autocapitalize="none" spellcheck="false" required autofocus oninput="syncDomain()">
+          <input type="text" class="form-input clean-input{% if error %} form-input--error{% endif %}" id="name" name="name" value="{{ name or '' }}" placeholder="example.com (e.g. app.domain.com)" autocomplete="off" autocapitalize="none" spellcheck="false" required autofocus oninput="onHostnameInput()">
           <div class="form-error mt-xs text-danger" id="name-error" style="display:none; font-weight:600; font-size:12px;"></div>
+        </div>
+      </div>
+
+      <!-- SMART SUBDOMAIN DETECTION PANEL -->
+      <div id="subdomain-smart-panel" style="display:none; padding:18px; border:1px solid var(--color-line); background:var(--color-bg-alt, rgba(255,255,255,0.03));">
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
+          <span style="display:inline-block; width:8px; height:8px; background:var(--color-primary, #3b82f6); border-radius:50%;"></span>
+          <strong style="font-size:14px;">{{ _('parent_zone_detected') }}</strong>
+        </div>
+        <p style="font-size:13px; color:var(--color-muted); margin:0 0 16px 0;" id="subdomain-smart-text">
+          {{ _('parent_zone_detected_desc') }}
+        </p>
+
+        <div class="settings-choice-grid" style="grid-template-columns: 1fr 1fr; gap: 12px;">
+          <label class="settings-choice settings-choice--active" id="dns-choice-parent" onclick="selectDnsMode('parent_record')">
+            <div class="settings-choice__header">
+              <input type="radio" name="dns_mode_opt" value="parent_record" checked>
+              <span class="settings-choice__title" id="dns-title-parent">{{ _('add_as_parent_record') }}</span>
+            </div>
+            <span class="settings-choice__desc" id="dns-desc-parent">{{ _('add_as_parent_record_desc') }}</span>
+          </label>
+
+          <label class="settings-choice" id="dns-choice-newzone" onclick="selectDnsMode('new_zone')">
+            <div class="settings-choice__header">
+              <input type="radio" name="dns_mode_opt" value="new_zone">
+              <span class="settings-choice__title">{{ _('create_standalone_zone') }}</span>
+            </div>
+            <span class="settings-choice__desc" id="dns-desc-newzone">{{ _('create_standalone_zone_desc') }}</span>
+          </label>
         </div>
       </div>
     </div>
 
-    <!-- STEP 2: RUNTIME STACK -->
+    <!-- STEP 2: DOMAIN PURPOSE (WEBSITE VS DNS ONLY) -->
     <div id="panel-2" style="display:none;flex-direction:column;">
       <div class="form-group-horizontal" style="border-bottom:none; margin-bottom:0; padding-bottom:0;">
         <div class="form-label-wrap">
-          <label class="form-label">{{ _('runtime_environment') }}</label>
-          <span class="form-hint" id="desc-text">{{ _('select_the_server_engine_and_process_man') }}</span>
+          <label class="form-label">{{ _('domain_purpose') }}</label>
+          <span class="form-hint" id="desc-text">{{ _('domain_purpose_desc') }}</span>
         </div>
         <div class="settings-choice-grid">
           
-          <label class="settings-choice {% if project_type != 'dns' and project_type != 'python' %}settings-choice--active{% endif %} opt-item" onclick="selectStack('static', 'Static Site / HTML')">
+          <label class="settings-choice {% if project_type != 'dns' %}settings-choice--active{% endif %} opt-item" id="purpose-choice-static" onclick="selectPurpose('static', 'Website & Web Application')">
             <div class="settings-choice__header">
-              <input type="radio" name="stack_opt" value="static" {% if project_type != 'dns' and project_type != 'python' %}checked{% endif %}>
-              <span class="settings-choice__title">{{ _('static_site_html') }}</span>
+              <input type="radio" name="purpose_opt" value="static" {% if project_type != 'dns' %}checked{% endif %}>
+              <span class="settings-choice__title">{{ _('website_and_app_hosting') }}</span>
             </div>
-            <span class="settings-choice__desc">{{ _('js.nginx_webroot_desc') }}</span>
+            <span class="settings-choice__desc">{{ _('website_and_app_desc') }}</span>
           </label>
           
-          <label class="settings-choice {% if project_type == 'python' %}settings-choice--active{% endif %} opt-item" onclick="selectStack('python', 'Python App')">
+          <label class="settings-choice {% if project_type == 'dns' %}settings-choice--active{% endif %} opt-item" id="purpose-choice-dns" onclick="selectPurpose('dns', 'DNS Zone Only')">
             <div class="settings-choice__header">
-              <input type="radio" name="stack_opt" value="python" {% if project_type == 'python' %}checked{% endif %}>
-              <span class="settings-choice__title">{{ _('python_uvicorn') }}</span>
+              <input type="radio" name="purpose_opt" value="dns" {% if project_type == 'dns' %}checked{% endif %}>
+              <span class="settings-choice__title">{{ _('dns_zone_only') }}</span>
             </div>
-            <span class="settings-choice__desc">{{ _('python_runtime_desc') }}</span>
-          </label>
-
-          <label class="settings-choice {% if project_type == 'dns' %}settings-choice--active{% endif %} opt-item" onclick="selectStack('dns', 'DNS Manager Only')">
-            <div class="settings-choice__header">
-              <input type="radio" name="stack_opt" value="dns" {% if project_type == 'dns' %}checked{% endif %}>
-              <span class="settings-choice__title">{{ _('dns_manager_only') }}</span>
-            </div>
-            <span class="settings-choice__desc">{{ _('js.dns_only_desc') }}</span>
+            <span class="settings-choice__desc">{{ _('dns_only_desc') }}</span>
           </label>
 
         </div>
@@ -126,8 +150,13 @@
       </div>
 
       <div class="info-row-strict">
-        <div class="info-row-strict__label">{{ _('runtime_engine') }}</div>
-        <div class="info-row-strict__val" id="rev-stack">{% if project_type == 'dns' %}{{ _('dns_manager_only') }}{% elif project_type == 'python' %}{{ _('python_uvicorn') }}{% else %}{{ _('static_site_html') }}{% endif %}</div>
+        <div class="info-row-strict__label">{{ _('domain_purpose') }}</div>
+        <div class="info-row-strict__val" id="rev-purpose">{% if project_type == 'dns' %}{{ _('dns_zone_only') }}{% else %}{{ _('website_and_app_hosting') }}{% endif %}</div>
+      </div>
+
+      <div class="info-row-strict">
+        <div class="info-row-strict__label">{{ _('dns_routing') }}</div>
+        <div class="info-row-strict__val" id="rev-dns-mode">{{ _('standalone_dns_zone') }}</div>
       </div>
 
       <div class="info-row-strict" id="rev-nginx-row" {% if project_type == 'dns' %}style="display:none;"{% endif %}>
@@ -175,10 +204,17 @@ const input = document.getElementById('name');
 const nameError = document.getElementById('name-error');
 const form = document.getElementById('create-domain-form');
 const submitBtn = document.getElementById('btn-submit');
+const smartPanel = document.getElementById('subdomain-smart-panel');
+const smartText = document.getElementById('subdomain-smart-text');
+const dnsModeInput = document.getElementById('dns-mode-input');
+const parentDomainInput = document.getElementById('parent-domain-input');
 
 const domainRe = /^(?!-)([A-Za-z0-9-]{1,63}\.)+[A-Za-z]{2,}$/;
 let currentSslEnabled = false;
 let currentStep = 1;
+let currentParentDomain = null;
+let currentSubdomainPrefix = null;
+let checkTimeout = null;
 
 /* INTERCEPT ENTER KEY */
 form.addEventListener('keydown', (e) => {
@@ -191,12 +227,106 @@ form.addEventListener('keydown', (e) => {
   }
 });
 
+function onHostnameInput() {
+  syncDomain();
+  if (checkTimeout) clearTimeout(checkTimeout);
+  checkTimeout = setTimeout(checkHostnameApi, 300);
+}
+
+async function checkHostnameApi() {
+  const val = input.value.trim().toLowerCase();
+  if (!val || !domainRe.test(val)) {
+    smartPanel.style.display = 'none';
+    currentParentDomain = null;
+    currentSubdomainPrefix = null;
+    parentDomainInput.value = '';
+    dnsModeInput.value = 'new_zone';
+    updateReviewDns();
+    return;
+  }
+
+  try {
+    const res = await fetch(`/domains/api/check-hostname?name=${encodeURIComponent(val)}`);
+    if (!res.ok) return;
+    const data = await res.json();
+
+    if (data.exists) {
+      nameError.textContent = data.message || `Domain '${val}' already exists.`;
+      nameError.style.display = 'block';
+      input.classList.add('form-input--error');
+      smartPanel.style.display = 'none';
+      return;
+    } else {
+      nameError.style.display = 'none';
+      input.classList.remove('form-input--error');
+    }
+
+    if (data.is_subdomain && data.parent_domain) {
+      currentParentDomain = data.parent_domain;
+      currentSubdomainPrefix = data.subdomain_prefix;
+      parentDomainInput.value = data.parent_domain;
+
+      // Update smart panel UI
+      smartText.textContent = `Detected parent domain '${data.parent_domain}' in your panel. How would you like to handle DNS routing for '${val}'?`;
+      document.getElementById('dns-title-parent').textContent = `Add as DNS Record in ${data.parent_domain}`;
+      document.getElementById('dns-desc-parent').textContent = `Creates an A record (${data.subdomain_prefix} → Server IP) in the existing '${data.parent_domain}' DNS zone. (Recommended)`;
+      document.getElementById('dns-desc-newzone').textContent = `Creates a separate authoritative PowerDNS zone for '${val}'.`;
+
+      smartPanel.style.display = 'block';
+
+      // Default to parent_record if previously unset or parent_record
+      if (!dnsModeInput.value || dnsModeInput.value === 'parent_record') {
+        selectDnsMode('parent_record');
+      } else {
+        selectDnsMode('new_zone');
+      }
+    } else {
+      smartPanel.style.display = 'none';
+      currentParentDomain = null;
+      currentSubdomainPrefix = null;
+      parentDomainInput.value = '';
+      dnsModeInput.value = 'new_zone';
+      updateReviewDns();
+    }
+  } catch (err) {
+    console.error('Failed to check hostname:', err);
+  }
+}
+
+function selectDnsMode(mode) {
+  dnsModeInput.value = mode;
+
+  const parentChoice = document.getElementById('dns-choice-parent');
+  const newZoneChoice = document.getElementById('dns-choice-newzone');
+
+  if (parentChoice) parentChoice.classList.toggle('settings-choice--active', mode === 'parent_record');
+  if (newZoneChoice) newZoneChoice.classList.toggle('settings-choice--active', mode === 'new_zone');
+
+  const parentRadio = parentChoice?.querySelector('input[type="radio"]');
+  const newZoneRadio = newZoneChoice?.querySelector('input[type="radio"]');
+  if (parentRadio) parentRadio.checked = (mode === 'parent_record');
+  if (newZoneRadio) newZoneRadio.checked = (mode === 'new_zone');
+
+  updateReviewDns();
+}
+
+function updateReviewDns() {
+  const revDns = document.getElementById('rev-dns-mode');
+  if (!revDns) return;
+
+  if (dnsModeInput.value === 'parent_record' && parentDomainInput.value) {
+    revDns.textContent = `A Record in '${parentDomainInput.value}' Zone`;
+  } else {
+    revDns.textContent = 'Standalone DNS Zone';
+  }
+}
+
 function goNextStep() {
   if (currentStep < 4) {
     if (currentStep === 1) {
       const val = input.value.trim().toLowerCase();
       if (!val || !domainRe.test(val)) {
-        nameError.textContent = 'A valid domain hostname is required (e.g. app.domain.com) to proceed.';
+        nameError.textContent = 'A valid domain hostname is required (e.g. example.com or app.domain.com) to proceed.';
         nameError.style.display = 'block';
         input.classList.add('form-input--error');
         input.focus();
@@ -218,7 +348,7 @@ function goToStep(step) {
     const val = input.value.trim().toLowerCase();
     if (!val || !domainRe.test(val)) {
       step = 1;
-      nameError.textContent = 'A valid domain hostname is required (e.g. app.domain.com) to proceed.';
+      nameError.textContent = 'A valid domain hostname is required (e.g. example.com or app.domain.com) to proceed.';
       nameError.style.display = 'block';
       input.classList.add('form-input--error');
       input.focus();
@@ -250,19 +380,19 @@ function goToStep(step) {
     backBtn.style.display = 'none';
     nextBtn.style.display = 'block';
     submitBtn.style.display = 'none';
-    nextText.textContent = window._('continue_to_runtime') || 'Continue to Runtime';
+    nextText.textContent = window._('continue_to_purpose') || 'Continue to Purpose →';
   } else if (step === 2) {
     backBtn.style.display = 'block';
     nextBtn.style.display = 'block';
     submitBtn.style.display = 'none';
     backText.textContent = window._('back_to_hostname') || 'Back to Hostname';
-    nextText.textContent = window._('continue_to_ssl') || 'Continue to SSL';
+    nextText.textContent = window._('continue_to_ssl') || 'Continue to SSL →';
   } else if (step === 3) {
     backBtn.style.display = 'block';
     nextBtn.style.display = 'block';
     submitBtn.style.display = 'none';
-    backText.textContent = window._('back_to_runtime') || 'Back to Runtime';
-    nextText.textContent = window._('review_provision') || 'Review & Provision';
+    backText.textContent = window._('back_to_purpose') || 'Back to Purpose';
+    nextText.textContent = window._('review_provision') || 'Review & Provision →';
   } else if (step === 4) {
     backBtn.style.display = 'block';
     nextBtn.style.display = 'none';
@@ -291,37 +421,32 @@ function syncDomain() {
   }
 }
 
-function selectStack(type, title) {
+function selectPurpose(type, title) {
   // Update hidden input
   document.getElementById('project-type-input').value = type;
 
   // Update UI active state
   document.querySelectorAll('.opt-item').forEach(c => c.classList.remove('settings-choice--active'));
-  event.currentTarget.classList.add('settings-choice--active');
+  const activeChoice = document.getElementById('purpose-choice-' + type);
+  if (activeChoice) activeChoice.classList.add('settings-choice--active');
+
+  const radio = activeChoice?.querySelector('input[type="radio"]');
+  if (radio) radio.checked = true;
 
   // Update review text
-  document.getElementById('rev-stack').textContent = title;
+  document.getElementById('rev-purpose').textContent = title;
   
   const nginxRow = document.getElementById('rev-nginx-row');
   const sslContainer = document.getElementById('ssl-options-container');
   const sslDnsMsg = document.getElementById('ssl-dns-msg');
-  const descText = document.getElementById('desc-text');
   
   if (type === 'dns') {
-    if (descText) descText.textContent = 'DNS zone & A record only. No Nginx vhost.';
     if (nginxRow) nginxRow.style.display = 'none';
     if (sslContainer) sslContainer.style.display = 'none';
     if (sslDnsMsg) sslDnsMsg.style.display = 'block';
     document.getElementById('rev-ssl').textContent = 'Not Applicable (DNS Only)';
     document.getElementById('rev-ssl').style.color = 'var(--color-muted)';
-  } else if (type === 'python') {
-    if (descText) descText.textContent = 'Python runtime with reverse proxy configuration.';
-    if (nginxRow) nginxRow.style.display = 'flex';
-    if (sslContainer) sslContainer.style.display = 'grid'; // changed from flex to grid for form-group-horizontal
-    if (sslDnsMsg) sslDnsMsg.style.display = 'none';
-    selectSsl(currentSslEnabled);
   } else {
-    if (descText) descText.textContent = 'Nginx HTTP vhost & webroot directory created.';
     if (nginxRow) nginxRow.style.display = 'flex';
     if (sslContainer) sslContainer.style.display = 'grid';
     if (sslDnsMsg) sslDnsMsg.style.display = 'none';
@@ -367,6 +492,7 @@ form.addEventListener('submit', (e) => {
 
 document.addEventListener('DOMContentLoaded', () => {
   syncDomain();
+  onHostnameInput();
   goToStep(1); // Initialize UI state
 });
 </script>

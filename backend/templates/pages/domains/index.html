@@ -65,8 +65,12 @@
               <span class="badge-minimal badge-minimal--neutral">{{ _('dns_only_1') }}</span>
             {% elif item.domain.project_type == 'python' %}
               <span class="badge-minimal badge-minimal--active">{{ _('python_app_1') }}</span>
+            {% elif item.domain.project_type == 'php' %}
+              <span class="badge-minimal badge-minimal--active">PHP Website</span>
+            {% elif item.domain.project_type == 'container' %}
+              <span class="badge-minimal badge-minimal--active">App</span>
             {% else %}
-              <span class="badge-minimal badge-minimal--active">{{ _('static_site_1') }}</span>
+              <span class="badge-minimal badge-minimal--active">Website</span>
             {% endif %}
           </td>
 
@@ -77,6 +81,8 @@
           <td>
             {% if item.domain.dns_zone_created %}
               <span class="badge-minimal badge-minimal--active">{{ _('active') }}</span>
+            {% elif item.domain.parent_domain %}
+              <span class="badge-minimal badge-minimal--neutral" title="Subdomain in {{ item.domain.parent_domain }}">Subdomain</span>
             {% else %}
               <span class="badge-minimal badge-minimal--neutral">{{ _('none_1') }}</span>
             {% endif %}

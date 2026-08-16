@@ -48,23 +48,55 @@ async def get_by_name(db: AsyncSession, name: str) -> Domain | None:
     return result.scalar_one_or_none()
 
 
+async def find_parent_domain(db: AsyncSession, hostname: str) -> tuple[Domain | None, str | None]:
+    """
+    Given a hostname like 'app.sub.example.com', finds the closest matching
+    existing parent domain in the database (e.g. 'sub.example.com' or 'example.com')
+    and returns (parent_domain, relative_subdomain_prefix).
+    """
+    try:
+        clean_name = sanitize_domain(hostname).lower()
+    except Exception:
+        return None, None
+
+    parts = clean_name.split(".")
+    if len(parts) <= 2:
+        return None, None
+
+    for i in range(1, len(parts) - 1):
+        candidate_parent = ".".join(parts[i:])
+        prefix = ".".join(parts[:i])
+        parent = await get_by_name(db, candidate_parent)
+        if parent:
+            return parent, prefix
+
+    return None, None
+
+
 # ---------------------------------------------------------------
 # CREATE
 # ---------------------------------------------------------------
-async def create(db: AsyncSession, name: str, project_type: str = "static") -> Domain:
+async def create(
+    db: AsyncSession,
+    name: str,
+    project_type: str = "static",
+    dns_mode: str = "new_zone",
+    parent_domain: str | None = None,
+) -> Domain:
     """
     Full domain creation:
     1. Validate name
     2. Check DB + nginx for duplicates
-    3. Create DNS zone + A record
-    4. Create webroot + default index.html (if static)
-    5. Create nginx config (HTTP static site, if static)
-    6. nginx -t → rollback all if fails
-    7. nginx reload (if static)
-    8. Save to DB
+    3. Setup DNS (either separate zone or A record in parent zone)
+    4. If Website (static): Create webroot + default index.html, create nginx static site, test & reload
+    5. Save to DB
     """
     name = sanitize_domain(name)
-    if project_type not in ("static", "dns", "python"):
+    if project_type in ("static", "website"):
+        project_type = "static"
+    elif project_type == "dns":
+        project_type = "dns"
+    else:
         project_type = "static"
 
     # Guard: already in DB
@@ -85,44 +117,67 @@ async def create(db: AsyncSession, name: str, project_type: str = "static") -> D
         # 1. Ensure shared acme-challenge dir exists
         nginx_service.ensure_acme_root()
 
-        # 2. DNS zone
-        await dns_service.create_zone(name)
-        steps_done.append("dns_zone")
+        dns_zone_created = False
+        saved_parent_domain = None
 
-        # 3. DNS A record → server IP
-        await dns_service.add_a_record(name, "@", config.SERVER_IP)
-        steps_done.append("dns_record")
+        if dns_mode == "parent_record" and parent_domain:
+            parent_obj = await get_by_name(db, parent_domain)
+            if not parent_obj:
+                raise HTTPException(status_code=400, detail=f"Specified parent domain '{parent_domain}' does not exist.")
+
+            # Compute subdomain prefix
+            if name.endswith("." + parent_domain):
+                prefix = name[:-len("." + parent_domain)]
+            else:
+                raise HTTPException(status_code=400, detail=f"Domain '{name}' is not a subdomain of '{parent_domain}'.")
+
+            # Add A record in parent zone
+            await dns_service.add_a_record(parent_domain, prefix, config.SERVER_IP)
+            steps_done.append(f"dns_parent_record:{parent_domain}:{prefix}")
+            dns_zone_created = False
+            saved_parent_domain = parent_domain
+        else:
+            # Standalone DNS zone
+            await dns_service.create_zone(name)
+            steps_done.append("dns_zone")
+
+            # DNS A record → server IP
+            await dns_service.add_a_record(name, "@", config.SERVER_IP)
+            steps_done.append("dns_record")
+            dns_zone_created = True
+            saved_parent_domain = None
 
         webroot = None
         nginx_config_path = None
         nginx_active = False
 
         if project_type == "static":
-            # 4. Webroot + default page
+            # Webroot + default page
             webroot = nginx_service.create_webroot(name)
             steps_done.append("webroot")
 
-            # 5. Nginx config (writes + nginx -t inside; raises if fails)
+            # Nginx config (writes + nginx -t inside; raises if fails)
             nginx_config_path = await nginx_service.create_static_site(name)
             steps_done.append("nginx_config")
 
-            # 6. Reload nginx
+            # Reload nginx
             await nginx_service.reload()
             nginx_active = True
 
-        # 7. Save to DB
+        # Save to DB
         domain = Domain(
             name=name,
             server_ip=config.SERVER_IP,
             nginx_config_path=nginx_config_path,
             webroot_path=webroot,
-            dns_zone_created=True,
+            dns_zone_created=dns_zone_created,
+            parent_domain=saved_parent_domain,
             nginx_active=nginx_active,
             project_type=project_type,
         )
         db.add(domain)
         await db.flush()
-        logger.info("Domain created: %s (type=%s)", name, project_type)
+        logger.info("Domain created: %s (type=%s, dns_mode=%s)", name, project_type, dns_mode)
         return domain
 
     except Exception as exc:
@@ -153,6 +208,11 @@ async def _rollback(name: str, steps_done: list[str]) -> None:
                 nginx_service.remove_webroot(name)
             elif step == "dns_zone":
                 await dns_service.delete_zone(name)
+            elif step.startswith("dns_parent_record:"):
+                parts = step.split(":", 2)
+                parent_dom = parts[1]
+                prefix = parts[2]
+                await dns_service.delete_record(parent_dom, prefix, "A")
             elif step == "dns_record":
                 pass  # deleted with zone
         except Exception as e:
@@ -168,7 +228,7 @@ async def delete(db: AsyncSession, domain_id: int, force: bool = False) -> None:
     1. Check no active reverse proxies
     2. Remove nginx config
     3. Remove webroot
-    4. Remove DNS zone
+    4. Remove DNS zone or parent DNS record
     5. Remove from DB
     """
     from models.proxy import ReverseProxy
@@ -215,11 +275,20 @@ async def delete(db: AsyncSession, domain_id: int, force: bool = False) -> None:
     except Exception as e:
         logger.warning("Webroot cleanup failed for %s: %s", domain.name, e)
 
-    # Remove DNS zone
-    try:
-        await dns_service.delete_zone(domain.name)
-    except Exception as e:
-        logger.warning("DNS cleanup failed for %s: %s", domain.name, e)
+    # Remove DNS
+    if domain.dns_zone_created:
+        try:
+            await dns_service.delete_zone(domain.name)
+        except Exception as e:
+            logger.warning("DNS cleanup failed for %s: %s", domain.name, e)
+    elif domain.parent_domain:
+        try:
+            prefix = domain.name
+            if prefix.endswith("." + domain.parent_domain):
+                prefix = prefix[:-len("." + domain.parent_domain)]
+            await dns_service.delete_record(domain.parent_domain, prefix, "A")
+        except Exception as e:
+            logger.warning("DNS record cleanup failed for %s in parent %s: %s", domain.name, domain.parent_domain, e)
 
     await db.delete(domain)
     logger.info("Domain deleted: %s", domain.name)
