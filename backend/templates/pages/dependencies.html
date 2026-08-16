@@ -24,6 +24,14 @@
     {% set icon_svg = dependency_title_icon %}
     {% include "partials/resource_title_bar.html" %}
 
+    <!-- SEARCH BAR FOR SYSTEM DEPENDENCIES -->
+    <div class="mb-md" style="margin-bottom: 16px; max-width: 320px;">
+      <div style="position:relative; display:flex; align-items:center;">
+        <svg style="position:absolute; left:12px; width:14px; height:14px; color:var(--color-muted); pointer-events:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        <input type="text" id="dependency-search-input" class="form-control" placeholder="{{ _('search_dependencies') or 'Search dependencies...' }}" style="padding-left:34px; height:34px; font-size:12.5px; border-radius:0 !important; background:var(--color-surface); border:1px solid var(--color-line); color:var(--color-text);" oninput="filterDependencies(this.value)">
+      </div>
+    </div>
+
     <div class="resource-views" data-dependency-catalog data-catalog-url="/api/dependencies/catalog-view">
       <div data-dependency-catalog-content aria-live="polite"></div>
     </div>
@@ -38,6 +46,34 @@
   if (!root) return;
   var content = root.querySelector('[data-dependency-catalog-content]');
 
+  window.filterDependencies = function(query) {
+    var q = (query || '').trim().toLowerCase();
+    if (!content) return;
+
+    var items = content.querySelectorAll('.dependency-card, .compact-card-1x1, .list-item-row');
+    var visibleCount = 0;
+    items.forEach(function(el) {
+      var text = el.textContent.toLowerCase();
+      var match = !q || text.indexOf(q) !== -1;
+      el.style.display = match ? '' : 'none';
+      if (match) visibleCount++;
+    });
+
+    var emptyEl = content.querySelector('.dependency-search-empty');
+    if (!emptyEl && visibleCount === 0 && q) {
+      emptyEl = document.createElement('div');
+      emptyEl.className = 'dependency-search-empty';
+      emptyEl.style.padding = '24px 0';
+      emptyEl.style.color = 'var(--color-muted)';
+      emptyEl.style.fontSize = '13px';
+      emptyEl.textContent = 'No dependencies found matching "' + q + '".';
+      content.appendChild(emptyEl);
+    } else if (emptyEl) {
+      emptyEl.style.display = (visibleCount === 0 && q) ? 'block' : 'none';
+      if (visibleCount === 0 && q) emptyEl.textContent = 'No dependencies found matching "' + q + '".';
+    }
+  };
+
   async function loadCatalog() {
     try {
       var response = await fetch(root.dataset.catalogUrl, {headers: {'Accept': 'text/html'}});
@@ -47,6 +83,9 @@
       content.innerHTML = catalog;
       if (typeof window.initLazyImageSkeletons === 'function') window.initLazyImageSkeletons();
       if (typeof window.autoInitAllListPaginations === 'function') window.autoInitAllListPaginations();
+
+      var input = document.getElementById('dependency-search-input');
+      if (input && input.value) window.filterDependencies(input.value);
     } catch (error) {
       if (typeof window.hideSkeleton === 'function') await window.hideSkeleton('dependencies-skeleton');
       content.innerHTML = '<p class="text-danger">Could not load dependency status. Refresh the page to try again.</p>';

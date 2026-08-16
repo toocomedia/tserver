@@ -603,6 +603,60 @@
   background: rgba(220, 38, 38, 0.08);
 }
 
+/* COMPACT 1:1 CARD OVERLAY FIT (Exact 200x200 1:1 Box) */
+.compact-card-1x1 .plugin-check-window {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 200px;
+  height: 200px;
+  max-height: 200px;
+  aspect-ratio: 1 / 1;
+  padding: 10px 12px;
+  z-index: 50;
+  font-size: 11px;
+  overflow-y: auto;
+  border: none !important;
+  box-shadow: none !important;
+  background: var(--color-surface);
+}
+
+.compact-card-1x1 .plugin-check-window__header {
+  padding-bottom: 4px;
+}
+
+.compact-card-1x1 .plugin-check-window__title {
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.compact-card-1x1 .plugin-check-window__close {
+  width: 20px;
+  height: 20px;
+  font-size: 11px;
+}
+
+.compact-card-1x1 .plugin-check-window__body {
+  gap: 6px;
+}
+
+.compact-card-1x1 .plugin-check-window__label {
+  font-size: 9.5px;
+}
+
+.compact-card-1x1 .plugin-check-window__item {
+  padding: 4px 6px;
+  font-size: 10.5px;
+  gap: 6px;
+}
+
+.compact-card-1x1 .plugin-check-window__error {
+  padding: 4px 6px;
+  font-size: 10px;
+}
+
 /* LIST ROW FIXED ELEMENT POSITIONING */
 .list-item-row {
   position: relative;

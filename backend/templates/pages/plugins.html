@@ -30,6 +30,14 @@
   {% set icon_svg = plugin_title_icon %}
   {% include "partials/resource_title_bar.html" %}
 
+  <!-- SEARCH BAR FOR PLUGINS -->
+  <div class="mb-md" style="margin-bottom: 16px; max-width: 320px;">
+    <div style="position:relative; display:flex; align-items:center;">
+      <svg style="position:absolute; left:12px; width:14px; height:14px; color:var(--color-muted); pointer-events:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+      <input type="text" id="plugin-search-input" class="form-control" placeholder="{{ _('search_plugins') or 'Search plugins...' }}" style="padding-left:34px; height:34px; font-size:12.5px; border-radius:0 !important; background:var(--color-surface); border:1px solid var(--color-line); color:var(--color-text);" oninput="filterPlugins(this.value)">
+    </div>
+  </div>
+
   <div class="resource-views">
     
     <!-- 1. CARDS VIEW (DEFAULT) -->
@@ -113,6 +121,21 @@ document.addEventListener('DOMContentLoaded', function() {
   if (typeof hideSkeleton === 'function') hideSkeleton('plugins-skeleton');
   else if (typeof window.hideSkeleton === 'function') window.hideSkeleton('plugins-skeleton');
 });
+
+window.filterPlugins = function(query) {
+  var q = (query || '').trim().toLowerCase();
+  var views = document.querySelector('.resource-views');
+  if (!views) return;
+
+  var items = views.querySelectorAll('.plugin-card, .compact-card-1x1, .list-item-row');
+  var visibleCount = 0;
+  items.forEach(function(el) {
+    var text = el.textContent.toLowerCase();
+    var match = !q || text.indexOf(q) !== -1;
+    el.style.display = match ? '' : 'none';
+    if (match) visibleCount++;
+  });
+};
 
 function closePluginCheckWindow(btn) {
   const host = btn.closest('.plugin-requirements-host');
