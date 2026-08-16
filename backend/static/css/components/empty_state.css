@@ -60,6 +60,21 @@
   padding: 60px 20px;
   overflow: hidden;
   margin: 16px 0 24px;
+  z-index: 1;
+  transition: opacity var(--skeleton-fade-duration, 0.4s) ease, visibility var(--skeleton-fade-duration, 0.4s) ease;
+}
+
+/* Skeleton overlay coordination: Keep empty state hidden while skeleton is active, reveal smoothly once dismissed */
+.skeleton-overlay:not(.is-hidden) ~ .empty-state-grid-card,
+.skeleton-overlay:not(.is-hidden) ~ * .empty-state-grid-card,
+.skeleton-overlay:not(.is-hidden) + .empty-state-grid-card,
+:has(> .skeleton-overlay:not(.is-hidden)) .empty-state-grid-card,
+:has(> .skeleton-overlay:not(.is-hidden)) #empty-state,
+.skeleton-overlay:not(.is-hidden) ~ #empty-state,
+.skeleton-overlay:not(.is-hidden) ~ * #empty-state {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
 }
 
 /* Compact Variant for Sub-panels, Table Insets, and Split Views */
@@ -187,7 +202,7 @@
 /* 5. Minimal Focal Hero Geometry */
 .empty-hero-art {
   position: relative;
-  z-index: 10;
+  z-index: 3;
   margin-bottom: 20px;
   display: flex;
   align-items: center;
@@ -272,7 +287,7 @@
 /* 6. Typography & Actions Layer */
 .empty-state-content {
   position: relative;
-  z-index: 10;
+  z-index: 3;
   max-width: 440px;
   display: flex;
   flex-direction: column;
