@@ -14,16 +14,26 @@ import getpass
 import sys
 
 
-async def _run(username: str, password: str, force: bool) -> int:
+async def _run(username: str, password: str | None, force: bool, disable_2fa: bool) -> int:
     from database import init_db, AsyncSessionLocal
     from services import auth_service
 
     await init_db()
     async with AsyncSessionLocal() as session:
         try:
-            user, action = await auth_service.create_or_reset_admin(
-                session, username, password, force=force
-            )
+            if disable_2fa:
+                await auth_service.disable_2fa_for_user(session, username)
+                print(f"OK: disabled 2FA for admin user '{username}'")
+                
+            if password is not None:
+                user, action = await auth_service.create_or_reset_admin(
+                    session, username, password, force=force
+                )
+                print(f"OK: admin user '{user.username}' {action}")
+            elif not disable_2fa:
+                print("ERROR: Password required", file=sys.stderr)
+                return 1
+
             await session.commit()
         except ValueError as exc:
             print(f"ERROR: {exc}", file=sys.stderr)
@@ -34,7 +44,6 @@ async def _run(username: str, password: str, force: bool) -> int:
             await session.rollback()
             return 1
 
-    print(f"OK: admin user '{user.username}' {action}")
     return 0
 
 
@@ -55,6 +64,11 @@ def main() -> int:
         help="Reset password if the user already exists",
     )
     parser.add_argument(
+        "--disable-2fa",
+        action="store_true",
+        help="Disable 2FA for the user",
+    )
+    parser.add_argument(
         "--check",
         action="store_true",
         help="Exit 0 if at least one user exists, 1 otherwise (no create)",
@@ -65,18 +79,21 @@ def main() -> int:
         return asyncio.run(_check_users())
 
     password = args.password
-    if not password:
+    if not password and not args.disable_2fa:
         password = getpass.getpass("Admin password: ")
         confirm = getpass.getpass("Confirm password: ")
         if password != confirm:
             print("ERROR: Passwords do not match", file=sys.stderr)
             return 1
 
-    if len(password) < 8:
+        if len(password) < 8:
+            print("ERROR: Password must be at least 8 characters", file=sys.stderr)
+            return 1
+    elif password is not None and len(password) < 8:
         print("ERROR: Password must be at least 8 characters", file=sys.stderr)
         return 1
 
-    return asyncio.run(_run(args.username.strip() or "admin", password, args.force))
+    return asyncio.run(_run(args.username.strip() or "admin", password, args.force, args.disable_2fa))
 
 
 async def _check_users() -> int:

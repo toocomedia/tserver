@@ -19,6 +19,7 @@ USERNAME="admin"
 PASSWORD=""
 FORCE=0
 CHECK=0
+DISABLE_2FA=0
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -38,6 +39,10 @@ while [[ $# -gt 0 ]]; do
       CHECK=1
       shift
       ;;
+    --disable-2fa)
+      DISABLE_2FA=1
+      shift
+      ;;
     -h|--help)
       cat <<EOF
 Usage: sudo bash create_admin.sh [options]
@@ -45,6 +50,7 @@ Usage: sudo bash create_admin.sh [options]
   --user, -u NAME       Username (default: admin)
   --password, -p PASS   Password (prompt if omitted)
   --force, -f           Reset password if user already exists
+  --disable-2fa         Disable 2FA for the user
   --check               Exit 0 if any admin exists, 1 if none
 EOF
       exit 0
@@ -92,10 +98,14 @@ fi
 
 ARGS=(--username "$USERNAME")
 [[ "$FORCE" == "1" ]] && ARGS+=(--force)
+[[ "$DISABLE_2FA" == "1" ]] && ARGS+=(--disable-2fa)
 
 if [[ -n "$PASSWORD" ]]; then
   ARGS+=(--password "$PASSWORD")
-  info "Creating/updating admin '${USERNAME}'..."
+  info "Updating admin '${USERNAME}'..."
+  run_cli "${ARGS[@]}"
+elif [[ "$DISABLE_2FA" == "1" ]]; then
+  info "Disabling 2FA for admin '${USERNAME}'..."
   run_cli "${ARGS[@]}"
 else
   info "Creating/updating admin '${USERNAME}' (password prompt)..."

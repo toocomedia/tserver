@@ -146,3 +146,17 @@ def verify_totp_code(secret: str, code: str) -> bool:
         return False
     totp = pyotp.TOTP(secret)
     return totp.verify(code)
+
+
+async def disable_2fa_for_user(
+    db: AsyncSession, username: str
+) -> User:
+    """Clear TOTP secret and disable 2FA for an existing user."""
+    user = await get_by_username(db, username)
+    if user is None:
+        raise ValueError(f"User '{username}' not found")
+    user.totp_secret = None
+    user.is_2fa_enabled = False
+    await db.flush()
+    await db.refresh(user)
+    return user

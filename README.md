@@ -42,10 +42,18 @@ sudo systemctl status srv-panel
 sudo journalctl -u srv-panel -f
 ```
 
-**Reset Admin Password:**
-If you get locked out, you can run the admin creation script locally on your server:
+**Password & 2FA Recovery (Secure CLI):**
+For security, the panel does not expose a public "Forgot Password" form. If you get locked out, use the secure SSH commands locally on your server:
+
 ```bash
-sudo bash /opt/srv-panel/scripts/create_admin.sh --user admin --force
+# Forcefully reset the admin password
+sudo bash /opt/srv-panel/scripts/create_admin.sh --user admin --password "YourNewPassword" --force
+
+# Disable 2FA if you lost access to your authenticator app
+sudo bash /opt/srv-panel/scripts/create_admin.sh --user admin --disable-2fa
+
+# Reset password AND disable 2FA at the same time
+sudo bash /opt/srv-panel/scripts/create_admin.sh --user admin --password "YourNewPassword" --force --disable-2fa
 ```
 
 ---
