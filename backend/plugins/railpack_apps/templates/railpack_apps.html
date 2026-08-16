@@ -5,12 +5,57 @@
 {% block topbar_actions %}<a class="btn btn--primary" href="/plugins/railpack_apps/create">+ Deploy App</a>{% endblock %}
 {% block content %}
 {% include "railpack_apps/partials/orphan_recovery.html" %}
+
+{% if apps %}
 {% set search_placeholder = "Search apps by name or domain..." %}
 {% set filter_options = [{'val': 'running', 'label': 'Running'}, {'val': 'stopped', 'label': 'Stopped'}, {'val': 'pending', 'label': 'Pending'}, {'val': 'failed', 'label': 'Failed'}] %}
 {% set bulk_actions = [{'action': 'start', 'label': 'Start Selected'}, {'action': 'stop', 'label': 'Stop Selected'}, {'action': 'restart', 'label': 'Restart Selected'}, {'action': 'delete', 'label': 'Delete Selected'}] %}
 {% include "partials/action_toolbar.html" %}
-
-{% if apps %}<div class="table-wrap"><table class="table" id="apps-table"><thead><tr><th style="width: 40px;"><input type="checkbox" id="bulk-select-all" aria-label="Select all"></th><th>App</th><th>Domain</th><th>Private port</th><th>Status</th><th class="col-actions">Actions</th></tr></thead><tbody>{% for app in apps %}{% set domain = domains_by_id.get(app.domain_id) %}<tr class="app-row-item"><td><input type="checkbox" class="bulk-select-item" value="{{ app.id }}" aria-label="Select app"></td><td class="table-title">{{ app.container_name }}</td><td>{{ domain.name if domain else 'Unlinked' }}</td><td><code>127.0.0.1:{{ app.host_port }}</code></td><td><span class="badge-minimal {% if app.status == 'running' %}badge-minimal--active{% else %}badge-minimal--neutral{% endif %}">{{ app.status|upper }}</span></td><td class="col-actions" style="position:relative;">{% import "partials/list_actions_toggle.html" as list_actions %}{{ list_actions.button() }}{% call list_actions.tray() %}<a class="btn btn--primary btn--sm" href="/plugins/railpack_apps/{{ app.id }}">Manage</a>{% endcall %}</td></tr>{% endfor %}</tbody></table></div>{% else %}<div class="alert alert--info">No container apps deployed yet.</div>{% endif %}
+<div class="table-wrap">
+  <table class="table" id="apps-table">
+    <thead>
+      <tr>
+        <th style="width: 40px;"><input type="checkbox" id="bulk-select-all" aria-label="Select all"></th>
+        <th>App</th>
+        <th>Domain</th>
+        <th>Private port</th>
+        <th>Status</th>
+        <th class="col-actions">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for app in apps %}
+      {% set domain = domains_by_id.get(app.domain_id) %}
+      <tr class="app-row-item">
+        <td><input type="checkbox" class="bulk-select-item" value="{{ app.id }}" aria-label="Select app"></td>
+        <td class="table-title">{{ app.container_name }}</td>
+        <td>{{ domain.name if domain else 'Unlinked' }}</td>
+        <td><code>127.0.0.1:{{ app.host_port }}</code></td>
+        <td><span class="badge-minimal {% if app.status == 'running' %}badge-minimal--active{% else %}badge-minimal--neutral{% endif %}">{{ app.status|upper }}</span></td>
+        <td class="col-actions" style="position:relative;">
+          {% import "partials/list_actions_toggle.html" as list_actions %}
+          {{ list_actions.button() }}
+          {% call list_actions.tray() %}
+          <a class="btn btn--primary btn--sm" href="/plugins/railpack_apps/{{ app.id }}">Manage</a>
+          {% endcall %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+  {% from "partials/empty_state.html" import empty_state %}
+  {{ empty_state(
+    icon='cpu',
+    title='No Apps Deployed Yet',
+    desc='Deploy Git repositories and container images as isolated web applications.',
+    action_url='/plugins/railpack_apps/create',
+    action_label='Deploy App',
+    action_icon='plus',
+    id='empty-state'
+  ) }}
+{% endif %}
 {% endblock %}
 {% block scripts %}
 <script type="module" src="/plugins/railpack_apps/static/js/railpack-app-orphan-recovery.js"></script>
