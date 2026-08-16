@@ -20,44 +20,45 @@
   <link rel="stylesheet" href="/static/css/rtl.css?v={{ range(1, 99999999) | random }}">
   <style>
     :root {
-      --color-box-bg: rgba(20, 26, 36, 0.95);
+      --color-box-bg: rgba(20, 26, 36, 0.98);
       --color-box-border: rgba(255, 255, 255, 0.14);
-      --color-input-bg: rgba(255, 255, 255, 0.04);
-      --color-input-line: rgba(255, 255, 255, 0.18);
+      --color-input-bg: rgba(255, 255, 255, 0.06);
+      --color-input-line: rgba(255, 255, 255, 0.24);
       --color-input-focus-line: #C7F464;
       --color-accent-3d: #92CD26;
-      --shape-fill-dark: rgba(255, 255, 255, 0.06);
-      --shape-fill-accent: rgba(199, 244, 100, 0.07);
-      --shape-border-dark: rgba(255, 255, 255, 0.08);
-      --shape-border-accent: rgba(199, 244, 100, 0.12);
+      --shape-fill-dark: rgba(255, 255, 255, 0.05);
+      --shape-fill-accent: rgba(199, 244, 100, 0.06);
+      --shape-border-dark: rgba(255, 255, 255, 0.06);
+      --shape-border-accent: rgba(199, 244, 100, 0.10);
     }
 
     [data-theme="amoled"] {
       --color-box-bg: #0C0E12;
       --color-box-border: rgba(255, 255, 255, 0.16);
-      --color-input-bg: rgba(255, 255, 255, 0.05);
-      --shape-fill-dark: rgba(255, 255, 255, 0.075);
-      --shape-fill-accent: rgba(199, 244, 100, 0.08);
+      --color-input-bg: rgba(255, 255, 255, 0.07);
+      --color-input-line: rgba(255, 255, 255, 0.24);
+      --shape-fill-dark: rgba(255, 255, 255, 0.06);
+      --shape-fill-accent: rgba(199, 244, 100, 0.06);
     }
 
     [data-theme="charcoal"] {
       --color-box-bg: #26262B;
       --color-box-border: rgba(255, 255, 255, 0.15);
-      --color-input-bg: rgba(255, 255, 255, 0.05);
-      --color-input-line: rgba(255, 255, 255, 0.18);
-      --shape-fill-dark: rgba(255, 255, 255, 0.05);
-      --shape-fill-accent: rgba(199, 244, 100, 0.08);
+      --color-input-bg: rgba(255, 255, 255, 0.06);
+      --color-input-line: rgba(255, 255, 255, 0.22);
+      --shape-fill-dark: rgba(255, 255, 255, 0.04);
+      --shape-fill-accent: rgba(199, 244, 100, 0.06);
     }
 
     [data-theme="light"] {
       --color-box-bg: #FFFFFF;
       --color-box-border: rgba(15, 23, 32, 0.14);
-      --color-input-bg: rgba(0, 0, 0, 0.035);
-      --color-input-line: rgba(0, 0, 0, 0.15);
+      --color-input-bg: rgba(0, 0, 0, 0.04);
+      --color-input-line: rgba(0, 0, 0, 0.2);
       --color-input-focus-line: #0F1720;
       --color-accent-3d: #8AC220;
-      --shape-fill-dark: rgba(15, 23, 32, 0.05);
-      --shape-fill-accent: rgba(199, 244, 100, 0.3);
+      --shape-fill-dark: rgba(15, 23, 32, 0.04);
+      --shape-fill-accent: rgba(199, 244, 100, 0.25);
     }
 
     body {
@@ -65,19 +66,20 @@
       min-height: 100vh;
       background: var(--color-bg);
       display: flex;
-      align-items: flex-start;
+      align-items: center;
       justify-content: flex-end;
       position: relative;
       overflow-x: hidden;
       overflow-y: auto;
-      padding: 32px;
+      padding: 48px 8vw 48px 48px;
       box-sizing: border-box;
     }
 
-    @media (max-width: 600px) {
+    @media (max-width: 900px) {
       body {
-        padding: 16px;
+        padding: 32px 20px;
         justify-content: center;
+        align-items: center;
       }
     }
 
@@ -132,13 +134,20 @@
       transform: rotate(-28deg);
     }
 
-    /* Single Icon Theme Toggle Button */
-    .theme-toggle-btn {
+    /* Top Controls Bar (Theme + Language) */
+    .top-controls {
       position: fixed;
-      top: 24px;
-      left: 24px;
-      width: 38px;
-      height: 38px;
+      top: 28px;
+      left: 36px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      z-index: 100;
+    }
+
+    .theme-toggle-btn {
+      width: 40px;
+      height: 40px;
       padding: 0;
       border-radius: 0 !important;
       background-color: var(--color-surface);
@@ -148,19 +157,33 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: transform 0.15s ease;
-      z-index: 100;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+      transition: transform 0.15s ease, background-color 0.15s ease;
     }
     .theme-toggle-btn:hover {
       transform: scale(1.05);
     }
 
-    /* Minimal Floating Card Container */
+    .lang-select-box {
+      height: 40px;
+      padding: 0 12px;
+      background: var(--color-surface);
+      border: none !important;
+      color: var(--color-text);
+      border-radius: 0 !important;
+      font-family: var(--font-main);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    }
+
+    /* Elegant Floating Card Container */
     .login-container {
       position: relative;
       z-index: 10;
       width: 100%;
-      max-width: 340px;
+      max-width: 440px;
       margin: 0;
     }
 
@@ -168,78 +191,68 @@
       background-color: var(--color-surface);
       border: none !important;
       border-radius: 0 !important;
-      padding: 28px 24px 28px;
+      padding: 44px 38px 48px;
       min-height: auto;
       display: flex;
       flex-direction: column;
       justify-content: flex-start;
-      box-shadow: none !important;
+      box-shadow: 0 24px 60px -12px rgba(0, 0, 0, 0.45), 0 4px 16px rgba(0, 0, 0, 0.2) !important;
+      position: relative;
+    }
+
+    [data-theme="light"] .login-card {
+      box-shadow: 0 24px 60px -12px rgba(0, 0, 0, 0.12), 0 4px 16px rgba(0, 0, 0, 0.05) !important;
     }
 
     /* Brand Header */
     .brand-section {
-      text-align: center;
-      margin-bottom: 24px;
+      text-align: left;
+      margin-bottom: 32px;
       cursor: pointer;
     }
     .brand-logo-img {
       height: 44px;
       width: auto;
       object-fit: contain;
-      margin-bottom: 4px;
+      margin-bottom: 6px;
       transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
     }
     .brand-section:hover .brand-logo-img {
-      transform: scale(1.05);
+      transform: scale(1.03);
     }
     
-    /* Animated Hover Description */
     .brand-subtitle {
-      font-size: 12px;
+      font-size: 13px;
       color: var(--color-muted);
       font-weight: 500;
       line-height: 1.4;
-      margin: 0;
-      max-height: 0;
-      opacity: 0;
-      transform: translateY(-8px);
-      overflow: hidden;
-      pointer-events: none;
-      transition: max-height 0.35s cubic-bezier(0.16, 1, 0.3, 1), 
-                  opacity 0.3s ease, 
-                  transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
-                  margin-top 0.3s ease;
-    }
-    .brand-section:hover .brand-subtitle {
-      max-height: 40px;
-      opacity: 1;
-      transform: translateY(0);
-      margin-top: 8px;
+      margin: 4px 0 0 0;
+      opacity: 0.9;
     }
 
     /* Form Fields & Spacing */
     .login-form {
       display: flex;
       flex-direction: column;
-      gap: 16px;
+      gap: 20px;
       flex: 1;
       justify-content: center;
     }
     .form-group {
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 7px;
     }
     .form-label {
       font-family: var(--font-main);
-      font-size: 11px;
+      font-size: 12px;
       font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 0.08em;
+      letter-spacing: 0.07em;
       color: var(--color-text);
     }
 
-    /* Custom Input Style (Sharp 0px Corners) */
+    /* Custom Input Style (Sharp 0px Corners, High Contrast) */
     .input-wrapper {
       position: relative;
       display: flex;
@@ -247,21 +260,26 @@
     }
     .form-input {
       width: 100%;
-      height: 44px;
-      padding: 0 12px;
+      height: 48px;
+      padding: 0 14px;
       border: none !important;
       border-radius: 0 !important;
       background-color: var(--color-input-bg);
       border-bottom: 2px solid var(--color-input-line) !important;
       font-family: var(--font-main);
-      font-size: 14px;
+      font-size: 15px;
+      font-weight: 500;
       color: var(--color-text);
       transition: all 0.2s ease;
       box-shadow: none !important;
+      box-sizing: border-box;
     }
     .form-input:focus {
-      border-bottom-color: var(--color-input-focus-line) !important;
-      background-color: rgba(255, 255, 255, 0.07);
+      border-bottom-color: var(--color-accent) !important;
+      background-color: rgba(255, 255, 255, 0.09);
+    }
+    [data-theme="light"] .form-input:focus {
+      background-color: rgba(0, 0, 0, 0.05);
     }
     .eye-btn {
       position: absolute;
@@ -270,11 +288,12 @@
       border: none !important;
       color: var(--color-muted);
       cursor: pointer;
-      padding: 6px 8px;
+      padding: 8px 10px;
       border-radius: 0 !important;
       display: flex;
       align-items: center;
       justify-content: center;
+      transition: color 0.15s ease;
     }
     .eye-btn:hover {
       color: var(--color-text);
@@ -283,15 +302,16 @@
     /* 3D Tactile Submit Button */
     .btn-3d-primary {
       width: 100%;
-      height: 44px;
-      margin-top: 12px;
+      height: 50px;
+      margin-top: 14px;
       border: none !important;
       border-radius: 0 !important;
       background-color: var(--color-accent);
       color: #111111;
       font-family: var(--font-main);
-      font-size: 14px;
+      font-size: 15px;
       font-weight: 700;
+      letter-spacing: 0.02em;
       cursor: pointer;
       display: flex;
       align-items: center;
@@ -300,7 +320,7 @@
       position: relative;
       top: 0;
       transition: all 0.08s ease-in-out;
-      box-shadow: none !important;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15) !important;
     }
     .btn-3d-primary:hover {
       background-color: var(--color-accent-2);
@@ -331,16 +351,15 @@
     <div class="shape-triangle"></div>
   </div>
 
-  <!-- Single Icon Theme Toggle Button -->
-  <button class="theme-toggle-btn" onclick="toggleTheme()" id="theme-btn" title="Toggle Theme" aria-label="Toggle Theme">
-    <!-- Icon injected via JS -->
-  </button>
-  
-  <div style="position: fixed; top: 24px; left: 70px; z-index: 100;">
-    <form method="post" action="/language" id="form-language-login">
+  <!-- Top Controls: Theme & Language -->
+  <div class="top-controls">
+    <button class="theme-toggle-btn" onclick="toggleTheme()" id="theme-btn" title="Toggle Theme" aria-label="Toggle Theme">
+      <!-- Icon injected via JS -->
+    </button>
+    <form method="post" action="/language" id="form-language-login" style="margin: 0;">
       <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
       <input type="hidden" name="next" value="{{ request.url.path }}{% if request.url.query %}?{{ request.url.query }}{% endif %}">
-      <select name="lang" class="form-select" onchange="document.getElementById('form-language-login').submit();" style="height: 38px; padding-top:0; padding-bottom:0; background: var(--color-surface); border: none; color: var(--color-text); border-radius: 0;">
+      <select name="lang" class="form-select lang-select-box" onchange="document.getElementById('form-language-login').submit();">
         {% for code, name in get_available_languages().items() %}
           <option value="{{ code }}" {% if request.state.lang == code %}selected{% endif %}>{{ name }}</option>
         {% endfor %}
