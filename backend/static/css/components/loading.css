@@ -454,8 +454,8 @@
    ========================================================================== */
 .skeleton-card-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(520px, 1fr));
-  gap: 24px;
+  grid-template-columns: repeat(auto-fill, minmax(430px, 1fr));
+  gap: 18px;
   margin-top: var(--space-lg);
   margin-bottom: 28px;
   padding-inline: var(--page-gutter);
@@ -468,20 +468,23 @@
 .skeleton-plugin-card {
   display: flex;
   flex-direction: row;
-  min-height: 180px;
+  min-height: 130px;
+  height: 130px;
   align-items: stretch;
-  border: 1px solid var(--color-line);
+  border: none !important;
   overflow: hidden;
-  background: var(--color-bg);
+  background: var(--color-surface);
   padding: 0;
+  animation: skeleton-pulse var(--skeleton-shimmer-duration, 1.5s) infinite ease-in-out;
 }
 .skeleton-plugin-card .sk-cover {
-  width: 180px;
-  height: 180px;
+  width: 130px;
+  height: 130px;
+  min-height: 130px;
   aspect-ratio: 1 / 1;
   flex-shrink: 0;
-  background: var(--color-surface);
-  border-right: 1px solid var(--color-line);
+  background: var(--color-header-bg-bar);
+  border: none !important;
   border-radius: 0;
 }
 .skeleton-plugin-card .sk-body {
@@ -489,12 +492,20 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: 16px 20px;
-  gap: 10px;
+  gap: 16px;
+  padding: 20px 24px;
+  min-width: 0;
 }
-.skeleton-plugin-card .sk-label { width: 55%; height: 14px; }
-.skeleton-plugin-card .sk-value { width: 85%; height: 10px; }
-.skeleton-plugin-card .sk-meta  { width: 40%; height: 8px; }
+.skeleton-plugin-card .sk-bar--title {
+  width: 50%;
+  height: 16px;
+  background: var(--color-line);
+}
+.skeleton-plugin-card .sk-bar--desc {
+  width: 80%;
+  height: 12px;
+  background: var(--color-line);
+}
 
 /* ==========================================================================
    IMAGE BOX SKELETON & REAL LAZY LOAD

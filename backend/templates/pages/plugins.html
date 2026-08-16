@@ -9,7 +9,7 @@
 {% block topbar_actions %}
 {% set resource_id = 'plugins' %}
 {% set resource_label = 'Plugins' %}
-{% set active_view = 'compact' %}
+{% set active_view = 'cards' %}
 {% include "partials/resource_view_switcher.html" with context %}
 <button class="btn btn--primary" onclick="openModal('upload-plugin-modal')">
   {{ _('upload_plugin_zip') }}
@@ -32,8 +32,8 @@
 
   <div class="resource-views">
     
-    <!-- 1. CARDS VIEW -->
-    <div data-resource-container="plugins" data-resource-view="cards" class="plugin-grid is-hidden">
+    <!-- 1. CARDS VIEW (DEFAULT) -->
+    <div data-resource-container="plugins" data-resource-view="cards" class="plugin-grid">
       {% for plugin in plugins %}
         {% include "partials/plugin_card.html" %}
       {% else %}
@@ -42,8 +42,8 @@
       {% endfor %}
     </div>
 
-    <!-- 2. COMPACT GRID VIEW (DEFAULT) -->
-    <div data-resource-container="plugins" data-resource-view="compact" class="plugin-compact-grid">
+    <!-- 2. COMPACT GRID VIEW -->
+    <div data-resource-container="plugins" data-resource-view="compact" class="plugin-compact-grid is-hidden">
       {% for plugin in plugins %}
         {% include "partials/plugin_card_compact.html" %}
       {% else %}
