@@ -186,6 +186,8 @@
     const host = s.panel_domain || "";
     const box = $("ssl-active-box");
     if (box) box.hidden = !active;
+    const linkWrap = $("ssl-active-link-wrap");
+    if (linkWrap) linkWrap.hidden = !active;
     
     const renewWrap = $("ssl-auto-renew-wrap");
     if (renewWrap) renewWrap.hidden = !active;
