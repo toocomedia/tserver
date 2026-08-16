@@ -38,56 +38,44 @@
       <div class="section mb-xl">
         <div class="section__header"><h3>{{ _('current_access_parameters') }}</h3></div>
         <div class="section__body">
-          <div class="access-grid">
-            <div class="access-tile">
-              <span class="access-tile__label">{{ _('server_ip') }}</span>
-              <span class="access-tile__value" id="stat-server-ip">{{ s.server_ip }}</span>
-            </div>
-            <div class="access-tile">
-              <span class="access-tile__label">{{ _('hostname') }}</span>
-              <span class="access-tile__value" id="stat-hostname">{{ s.panel_domain or '— (IP only)' }}</span>
-            </div>
-            <div class="access-tile">
-              <span class="access-tile__label">{{ _('dns_status') }}</span>
-              <span class="access-tile__value" id="stat-dns">
-                {% if s.panel_domain %}
-                  {% if s.dns_ok is sameas true %}<span class="badge badge--ok">{{ _('ok') }}</span>
-                  {% elif s.dns_ok is sameas false %}<span class="badge badge--error">{{ _('wrong_ip') }}</span>
-                  {% else %}<span class="badge badge--neutral">?</span>{% endif %}
-                {% else %}<span class="text-muted">—</span>{% endif %}
-              </span>
-            </div>
-            <div class="access-tile">
-              <span class="access-tile__label">{{ _('ssl_security') }}</span>
-              <span class="access-tile__value" id="stat-ssl">
-                {% if s.ssl_active %}<span class="badge badge--ok">{{ _('https') }}</span>
-                {% else %}<span class="badge badge--neutral">{{ _('off_1') }}</span>{% endif %}
-              </span>
-            </div>
+          <div class="info-row">
+            <span class="info-row__label">{{ _('server_ip') }}</span>
+            <span class="info-row__value" id="stat-server-ip">{{ s.server_ip }}</span>
           </div>
-
-          <div class="access-endpoints-card">
-            <div class="access-endpoints-card__header">{{ _('active_access_endpoints') }}</div>
-            <div class="access-endpoints-list" id="stat-urls">
+          <div class="info-row">
+            <span class="info-row__label">{{ _('hostname') }}</span>
+            <span class="info-row__value" id="stat-hostname">{{ s.panel_domain or '— (IP only)' }}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-row__label">{{ _('dns_status') }}</span>
+            <span class="info-row__value" id="stat-dns">
+              {% if s.panel_domain %}
+                {% if s.dns_ok is sameas true %}<span class="badge badge--ok">{{ _('ok') }}</span>
+                {% elif s.dns_ok is sameas false %}<span class="badge badge--error">{{ _('wrong_ip') }}</span>
+                {% else %}<span class="badge badge--neutral">?</span>{% endif %}
+              {% else %}<span class="text-muted">—</span>{% endif %}
+            </span>
+          </div>
+          <div class="info-row">
+            <span class="info-row__label">{{ _('ssl_security') }}</span>
+            <span class="info-row__value" id="stat-ssl">
+              {% if s.ssl_active %}<span class="badge badge--ok">{{ _('https') }}</span>
+              {% else %}<span class="badge badge--neutral">{{ _('off_1') }}</span>{% endif %}
+            </span>
+          </div>
+          <div class="info-row">
+            <span class="info-row__label">{{ _('active_access_endpoints') }}</span>
+            <span class="info-row__value" id="stat-urls" style="display:flex; flex-direction:column; gap:4px; align-items:flex-end;">
               {% if s.urls.ip_http %}
-              <div>
-                <span class="badge badge--neutral">{{ _('ip_1') }}</span>
-                <a href="{{ s.urls.ip_http }}" target="_blank" rel="noopener">{{ s.urls.ip_http }}</a>
-              </div>
+              <div><span class="text-muted" style="font-size:11px; margin-right:4px;">IP:</span><a href="{{ s.urls.ip_http }}" target="_blank" rel="noopener">{{ s.urls.ip_http }}</a></div>
               {% endif %}
               {% if s.urls.domain_http %}
-              <div>
-                <span class="badge badge--neutral">{{ _('http_1') }}</span>
-                <a href="{{ s.urls.domain_http }}" target="_blank" rel="noopener">{{ s.urls.domain_http }}</a>
-              </div>
+              <div><span class="text-muted" style="font-size:11px; margin-right:4px;">HTTP:</span><a href="{{ s.urls.domain_http }}" target="_blank" rel="noopener">{{ s.urls.domain_http }}</a></div>
               {% endif %}
               {% if s.urls.domain_https %}
-              <div>
-                <span class="badge badge--ok">{{ _('https_1') }}</span>
-                <a href="{{ s.urls.domain_https }}" target="_blank" rel="noopener">{{ s.urls.domain_https }}</a>
-              </div>
+              <div><span class="text-muted" style="font-size:11px; margin-right:4px;">HTTPS:</span><a href="{{ s.urls.domain_https }}" target="_blank" rel="noopener">{{ s.urls.domain_https }}</a></div>
               {% endif %}
-            </div>
+            </span>
           </div>
         </div>
       </div>
@@ -99,37 +87,34 @@
         <div class="section__header"><h3>{{ _('panel_url_ssl_configuration') }}</h3></div>
         <div class="section__body">
 
-          <!-- Clean Overview Status Line -->
-          <div class="url-hero-box">
-            <div class="url-hero-box__item">
-              <span class="url-hero-box__label">{{ _('active_hostname') }}</span>
-              <span class="url-hero-box__val" id="result-hostname">{{ s.panel_domain or '(IP only)' }}</span>
-            </div>
-            <div class="url-hero-box__item">
-              <span class="url-hero-box__label">{{ _('ssl_status') }}</span>
-              <span class="url-hero-box__val" id="ssl-status-badge">
-                {% if s.ssl_active %}
-                  <span class="badge badge--ok">{{ _('active_1') }}</span>
-                {% else %}
-                  <span class="badge badge--neutral">{{ _('disabled') }}</span>
-                {% endif %}
-              </span>
-            </div>
-            <div class="url-hero-box__item" id="ssl-active-box" {% if not s.ssl_active %}hidden{% endif %}>
-              <span class="url-hero-box__label">{{ _('expires') }}</span>
-              <span class="url-hero-box__val" id="ssl-active-expiry">{{ s.ssl_expiry or '—' }}</span>
-            </div>
-            <div class="url-hero-box__item" id="ssl-active-link-wrap" {% if not s.ssl_active %}hidden{% endif %}>
-              <span class="url-hero-box__label">{{ _('https_link') }}</span>
-              <span class="url-hero-box__val" id="ssl-active-link">
-                {% if s.urls.domain_https %}
-                <a href="{{ s.urls.domain_https }}" target="_blank" rel="noopener">{{ s.urls.domain_https }}</a>
-                {% else %}—{% endif %}
-              </span>
-            </div>
+          <div class="info-row">
+            <span class="info-row__label">{{ _('active_hostname') }}</span>
+            <span class="info-row__value" id="result-hostname">{{ s.panel_domain or '(IP only)' }}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-row__label">{{ _('ssl_status') }}</span>
+            <span class="info-row__value" id="ssl-status-badge">
+              {% if s.ssl_active %}
+                <span class="badge badge--ok">{{ _('active_1') }}</span>
+              {% else %}
+                <span class="badge badge--neutral">{{ _('disabled') }}</span>
+              {% endif %}
+            </span>
+          </div>
+          <div class="info-row" id="ssl-active-box" {% if not s.ssl_active %}hidden{% endif %}>
+            <span class="info-row__label">{{ _('expires') }}</span>
+            <span class="info-row__value" id="ssl-active-expiry">{{ s.ssl_expiry or '—' }}</span>
+          </div>
+          <div class="info-row" id="ssl-active-link-wrap" {% if not s.ssl_active %}hidden{% endif %}>
+            <span class="info-row__label">{{ _('https_link') }}</span>
+            <span class="info-row__value" id="ssl-active-link">
+              {% if s.urls.domain_https %}
+              <a href="{{ s.urls.domain_https }}" target="_blank" rel="noopener">{{ s.urls.domain_https }}</a>
+              {% else %}—{% endif %}
+            </span>
           </div>
 
-          <p class="form-hint mb-md" id="ssl-section-hint">
+          <p class="form-hint mt-md mb-md" id="ssl-section-hint">
             {% if s.ssl_active %}
               Certificate is active. Renew before it expires, or remove it.
             {% else %}
@@ -137,7 +122,6 @@
             {% endif %}
           </p>
 
-          <!-- Mode Selector (Clean 3-Choice Grid) -->
           <div class="settings-choice-grid mb-md">
             <label class="settings-choice {% if s.url_mode == 'none' or not s.panel_domain %}settings-choice--active{% endif %}">
               <div class="settings-choice__header">
@@ -162,39 +146,34 @@
             </label>
           </div>
 
-          <!-- Dynamic Input: Subdomain -->
-          <div id="url-subdomain-fields" class="url-dynamic-fields" hidden>
-            <div class="form-group mb-sm">
-              <label class="form-label" style="font-size:13px;">{{ _('subdomain_here') }}</label>
-              <div style="display:flex; align-items:center; gap:8px; max-width:440px;">
-                <input class="form-input" type="text" id="subdomain_label" value="{{ s.subdomain_label or 'panel' }}" placeholder="panel" style="max-width:140px;">
-                <span style="font-weight:700; color:var(--color-muted); font-size:16px;">.</span>
-                <div class="form-select-wrap" style="flex:1;">
-                  <select class="form-select" id="parent_domain">
-                    <option value="">{{ _('select_domain') }}</option>
-                    {% for d in s.managed_domains %}
-                    <option value="{{ d }}" {% if s.parent_domain == d %}selected{% endif %}>{{ d }}</option>
-                    {% endfor %}
-                  </select>
-                </div>
+          <div id="url-subdomain-fields" class="mb-md" hidden>
+            <label class="form-label">{{ _('subdomain_here') }}</label>
+            <div class="settings-subdomain-row mt-xs">
+              <input class="form-input" type="text" id="subdomain_label" value="{{ s.subdomain_label or 'panel' }}" placeholder="panel" style="max-width:140px;">
+              <span class="settings-subdomain-dot">.</span>
+              <div class="form-select-wrap" style="flex:1; max-width:280px;">
+                <select class="form-select" id="parent_domain">
+                  <option value="">{{ _('select_domain') }}</option>
+                  {% for d in s.managed_domains %}
+                  <option value="{{ d }}" {% if s.parent_domain == d %}selected{% endif %}>{{ d }}</option>
+                  {% endfor %}
+                </select>
               </div>
-              <span class="form-hint" style="margin-top:6px;">{{ _('preview') }} <strong id="subdomain-preview" style="font-family:monospace; color:var(--color-text);">—</strong></span>
             </div>
+            <p class="form-hint mt-xs">{{ _('preview') }} <strong id="subdomain-preview">—</strong></p>
           </div>
 
-          <!-- Dynamic Input: Custom Hostname -->
-          <div id="url-custom-fields" class="url-dynamic-fields" hidden>
-            <div class="form-group mb-sm" style="max-width:440px;">
-              <label class="form-label" for="custom_domain" style="font-size:13px;">{{ _('hostname') }}</label>
+          <div id="url-custom-fields" class="mb-md" hidden>
+            <div class="form-group" style="max-width:380px;">
+              <label class="form-label" for="custom_domain">{{ _('hostname') }}</label>
               <input class="form-input" type="text" id="custom_domain" value="{% if s.url_mode == 'custom' %}{{ s.panel_domain or '' }}{% endif %}" placeholder="panel.example.com">
-              <span class="form-hint" style="margin-top:6px;">
+              <p class="form-hint mt-xs">
                 {{ _('a_record') }} <code id="custom-dns-hint">{{ s.server_ip }}</code>
-              </span>
+              </p>
             </div>
           </div>
 
-          <!-- Options -->
-          <div class="url-options-list">
+          <div class="mb-md" style="display:flex; flex-direction:column; gap:8px;">
             <label class="form-check" id="remove-ssl-on-change-wrap">
               <input type="checkbox" id="remove_ssl_on_change">
               <span>{{ _('when_changing_url_delete_ssl_for_old_hos') }}</span>
@@ -206,17 +185,15 @@
             </label>
           </div>
 
-          <!-- Progress -->
-          <div id="ssl-progress" class="ssl-progress" style="margin-top:16px;" hidden>
+          <div id="ssl-progress" class="ssl-progress mb-md" hidden>
             <div class="ssl-step" data-step="1"><span class="ssl-step__icon">○</span> {{ _('save_hostname') }}</div>
             <div class="ssl-step" data-step="2"><span class="ssl-step__icon">○</span> {{ _('prepare_nginx') }}</div>
             <div class="ssl-step" data-step="3"><span class="ssl-step__icon">○</span> {{ _('request_certificate') }} <span class="text-muted">{{ _('1_2_min') }}</span></div>
             <div class="ssl-step" data-step="4"><span class="ssl-step__icon">○</span> {{ _('enable_https') }}</div>
-            <p class="form-hint" id="ssl-progress-msg" style="margin-top:8px;"></p>
+            <p class="form-hint mt-xs" id="ssl-progress-msg"></p>
           </div>
 
-          <!-- Actions -->
-          <div class="settings-actions">
+          <div class="form-actions">
             <button type="button" class="btn btn--primary" id="btn-save-panel">{{ _('save_panel_url') }}</button>
             <button type="button" class="btn btn--secondary" id="btn-issue-ssl" {% if not s.panel_domain %}disabled{% endif %}>
               {% if s.ssl_active %}Renew SSL{% else %}Issue SSL{% endif %}
@@ -234,31 +211,16 @@
       <div class="section mb-xl">
         <div class="section__header"><h3>{{ _('ip_access_1') }}</h3></div>
         <div class="section__body">
-          <div class="setting-controls-group">
-            <div class="setting-control-row">
-              <div class="setting-control-row__info">
-                <span class="setting-control-row__title">{{ _('allow_access_by_server_ip') }}</span>
-                <span class="setting-control-row__hint">Enable direct browser access to this control panel using the public server IP address.</span>
-              </div>
-              <div class="setting-control-row__input">
-                <label class="form-check" style="margin:0;">
-                  <input type="checkbox" id="allow_ip" {% if s.allow_ip %}checked{% endif %}>
-                </label>
-              </div>
-            </div>
-
-            <div class="setting-control-row" id="ip-port-group">
-              <div class="setting-control-row__info">
-                <span class="setting-control-row__title">{{ _('public_port') }}</span>
-                <span class="setting-control-row__hint">{{ _('e_g_8080') }} <code style="font-size:12px;">http://{{ s.server_ip }}:{{ s.ip_port or 80 }}/</code></span>
-              </div>
-              <div class="setting-control-row__input">
-                <input class="form-input" type="number" id="ip_port" min="1" max="65535" value="{{ s.ip_port or 80 }}" style="max-width:100px; text-align:center; font-weight:700;">
-              </div>
-            </div>
+          <label class="form-check mb-md">
+            <input type="checkbox" id="allow_ip" {% if s.allow_ip %}checked{% endif %}>
+            <span>{{ _('allow_access_by_server_ip') }}</span>
+          </label>
+          <div class="form-group mb-md" id="ip-port-group" style="max-width:320px;">
+            <label class="form-label" for="ip_port">{{ _('public_port') }}</label>
+            <input class="form-input" type="number" id="ip_port" min="1" max="65535" value="{{ s.ip_port or 80 }}" style="max-width:110px;">
+            <p class="form-hint">{{ _('e_g_8080') }} <code>http://{{ s.server_ip }}:{{ s.ip_port or 80 }}/</code></p>
           </div>
-
-          <div class="settings-actions">
+          <div class="form-actions">
             <button type="button" class="btn btn--primary" id="btn-save-ip">{{ _('save_ip_access') }}</button>
           </div>
         </div>
@@ -270,55 +232,23 @@
       <div class="section mb-xl">
         <div class="section__header"><h3>{{ _('security') }}</h3></div>
         <div class="section__body">
-          <div class="setting-controls-group">
-            <div class="setting-control-row">
-              <div class="setting-control-row__info">
-                <span class="setting-control-row__title">{{ _('secure_cookies_https_only_breaks_ip_http') }}</span>
-                <span class="setting-control-row__hint">Flag session cookies as Secure (HTTPS only). Requires active SSL on your panel URL.</span>
-              </div>
-              <div class="setting-control-row__input">
-                <label class="form-check" style="margin:0;">
-                  <input type="checkbox" id="session_https_only" {% if s.session_https_only %}checked{% endif %}>
-                </label>
-              </div>
-            </div>
-
-            <div class="setting-control-row">
-              <div class="setting-control-row__info">
-                <span class="setting-control-row__title">{{ _('security_headers') }}</span>
-                <span class="setting-control-row__hint">Adds X-Frame-Options, X-Content-Type-Options, and Referrer-Policy headers to responses.</span>
-              </div>
-              <div class="setting-control-row__input">
-                <label class="form-check" style="margin:0;">
-                  <input type="checkbox" id="security_headers" {% if s.security_headers %}checked{% endif %}>
-                </label>
-              </div>
-            </div>
-
-            <div class="setting-control-row">
-              <div class="setting-control-row__info">
-                <span class="setting-control-row__title">{{ _('hsts') }} (HTTP Strict Transport Security)</span>
-                <span class="setting-control-row__hint">Instructs browsers to communicate with this panel strictly over HTTPS.</span>
-              </div>
-              <div class="setting-control-row__input">
-                <label class="form-check" style="margin:0;">
-                  <input type="checkbox" id="hsts_enabled" {% if s.hsts_enabled %}checked{% endif %}>
-                </label>
-              </div>
-            </div>
-
-            <div class="setting-control-row">
-              <div class="setting-control-row__info">
-                <span class="setting-control-row__title">{{ _('session_days') }}</span>
-                <span class="setting-control-row__hint">Active duration before an idle admin session expires and requires logging in again.</span>
-              </div>
-              <div class="setting-control-row__input">
-                <input class="form-input" type="number" id="session_max_age_days" min="1" max="365" value="{{ s.session_max_age_days or 7 }}" style="max-width:90px; text-align:center; font-weight:700;">
-              </div>
-            </div>
+          <label class="form-check mb-md">
+            <input type="checkbox" id="session_https_only" {% if s.session_https_only %}checked{% endif %}>
+            <span>{{ _('secure_cookies_https_only_breaks_ip_http') }}</span>
+          </label>
+          <label class="form-check mb-md">
+            <input type="checkbox" id="security_headers" {% if s.security_headers %}checked{% endif %}>
+            <span>{{ _('security_headers') }}</span>
+          </label>
+          <label class="form-check mb-md">
+            <input type="checkbox" id="hsts_enabled" {% if s.hsts_enabled %}checked{% endif %}>
+            <span>{{ _('hsts') }}</span>
+          </label>
+          <div class="form-group mb-md" style="max-width:320px;">
+            <label class="form-label" for="session_max_age_days">{{ _('session_days') }}</label>
+            <input class="form-input" type="number" id="session_max_age_days" min="1" max="365" value="{{ s.session_max_age_days or 7 }}" style="max-width:110px;">
           </div>
-
-          <div class="settings-actions">
+          <div class="form-actions">
             <button type="button" class="btn btn--primary" id="btn-save-security">{{ _('save_security') }}</button>
           </div>
         </div>
@@ -332,43 +262,35 @@
             {{ _('protect_your_account_with_an_additional_') }}
           </p>
           
-          <div class="setting-control-row" id="2fa-status-box">
-            <div class="setting-control-row__info">
-              <span class="setting-control-row__title">Two-Factor Authentication (TOTP)</span>
-              <span class="setting-control-row__hint">Protect panel login using an authenticator app (Google Authenticator, 1Password, Authy).</span>
-            </div>
-            <div class="setting-control-row__input">
+          <div class="info-row mb-md" id="2fa-status-box">
+            <span class="info-row__label">{{ _('status') }}</span>
+            <span class="info-row__value">
               {% if is_2fa_enabled %}
                 <span class="badge badge--ok">{{ _('enabled') }}</span>
               {% else %}
                 <span class="badge badge--neutral">{{ _('disabled') }}</span>
               {% endif %}
-            </div>
+            </span>
           </div>
           
-          <div id="2fa-setup-box" class="two-fa-setup-panel" style="display:none;">
-            <h4 style="margin:0; font-size:14px; font-weight:700;">{{ _('scan_this_qr_code_with_your_authenticato') }}</h4>
-            <div class="two-fa-qr-wrap">
-              <div class="two-fa-qr-code">
-                <img id="2fa-qr-img" src="" alt="2FA QR Code">
-              </div>
-              <div class="two-fa-secret-box">
-                <span class="form-hint">{{ _('or_enter_this_secret_manually') }}</span>
-                <code id="2fa-secret-text" style="font-size:14px; font-weight:700; word-break:break-all; padding:8px 12px; background:var(--color-bg); border:1px solid var(--color-line); display:inline-block;"></code>
-              </div>
+          <div id="2fa-setup-box" class="mb-md" style="display:none;">
+            <p class="mb-sm">{{ _('scan_this_qr_code_with_your_authenticato') }}</p>
+            <div class="mb-sm">
+              <img id="2fa-qr-img" src="" alt="2FA QR Code" style="max-width:160px; border:1px solid var(--color-line);">
             </div>
+            <p class="form-hint mb-md">{{ _('or_enter_this_secret_manually') }} <code id="2fa-secret-text"></code></p>
             
-            <div class="form-group" style="max-width:240px; margin-top:8px;">
+            <div class="form-group mb-md" style="max-width:200px;">
               <label class="form-label" for="2fa-verify-code">{{ _('verification_code') }}</label>
-              <input class="form-input" type="text" id="2fa-verify-code" placeholder="123456" style="max-width:140px; text-align:center; font-weight:700; letter-spacing:2px;">
+              <input class="form-input" type="text" id="2fa-verify-code" placeholder="123456" style="max-width:120px;">
             </div>
-            <div class="settings-actions" style="margin-top:8px;">
+            <div class="form-actions">
               <button type="button" class="btn btn--primary" id="btn-verify-2fa">{{ _('verify_enable') }}</button>
               <button type="button" class="btn btn--secondary" id="btn-cancel-2fa">{{ _('cancel') }}</button>
             </div>
           </div>
           
-          <div class="settings-actions" id="2fa-actions">
+          <div class="form-actions" id="2fa-actions">
             {% if is_2fa_enabled %}
               <button type="button" class="btn btn--danger" id="btn-disable-2fa">{{ _('disable_2fa') }}</button>
             {% else %}

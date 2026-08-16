@@ -599,216 +599,39 @@
 }
 
 /* ============================================================
-   SETTINGS: MINIMAL, SPACE-EFFICIENT & BORDERLESS DESIGN
+   SETTINGS: MINIMAL & UNBOXED
    ============================================================ */
-
-/* Current Access Grid & Endpoints */
-.access-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 16px;
-  margin-bottom: 20px;
-}
-
-.access-tile {
-  background: var(--color-surface);
-  border: 1px solid var(--color-line);
-  padding: 16px 20px;
+.ssl-progress {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  transition: border-color 0.15s ease;
+  padding: 10px 14px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
 }
-.access-tile:hover {
-  border-color: var(--color-text);
-}
-.access-tile__label {
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+.ssl-step {
+  font-size: 13px;
   color: var(--color-muted);
-}
-.access-tile__value {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--color-text);
-  word-break: break-all;
   display: flex;
   align-items: center;
   gap: 8px;
-  min-height: 24px;
 }
-
-.access-endpoints-card {
-  background: var(--color-surface);
-  border: 1px solid var(--color-line);
-  padding: 18px 20px;
-}
-.access-endpoints-card__header {
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--color-muted);
-  margin-bottom: 12px;
-}
-.access-endpoints-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.access-endpoints-list > div {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-size: 13.5px;
-  color: var(--color-text);
-}
-.access-endpoints-list a {
+.ssl-step--run {
   color: var(--color-text);
   font-weight: 600;
-  font-family: monospace;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  word-break: break-all;
 }
-.access-endpoints-list a:hover {
-  color: var(--color-accent);
-}
-
-/* Panel URL & SSL Configuration Hero Summary */
-.url-hero-box {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 20px 36px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-line);
-  padding: 16px 20px;
-  margin-bottom: 18px;
-}
-.url-hero-box__item {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.url-hero-box__label {
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--color-muted);
-}
-.url-hero-box__val {
-  font-size: 14px;
-  font-weight: 700;
+.ssl-step--ok {
   color: var(--color-text);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  word-break: break-all;
 }
-.url-hero-box__val a {
-  color: var(--color-text);
+.ssl-step--fail {
+  color: var(--color-danger);
   font-weight: 600;
-  font-family: monospace;
-  text-decoration: underline;
-  text-underline-offset: 2px;
 }
-.url-hero-box__val a:hover {
-  color: var(--color-accent);
-}
-
-.url-dynamic-fields {
-  margin-top: 14px;
-}
-
-.url-options-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin-top: 16px;
-}
-
-.settings-actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-  margin-top: 24px;
-}
-
-/* Minimal Setting Control Rows (Clean Spacing, No Messy Divider Lines) */
-.setting-controls-group {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-  margin-bottom: 24px;
-}
-.setting-control-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-}
-.setting-control-row__info {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  flex: 1;
-  min-width: 0;
-}
-.setting-control-row__title {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--color-text);
-}
-.setting-control-row__hint {
-  font-size: 12.5px;
-  color: var(--color-muted);
-  line-height: 1.45;
-}
-.setting-control-row__input {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-}
-
-/* 2FA Setup Panel */
-.two-fa-setup-panel {
-  background: var(--color-surface);
-  border: 1px solid var(--color-line);
-  padding: 20px 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  margin-top: 16px;
-}
-.two-fa-qr-wrap {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  flex-wrap: wrap;
-}
-.two-fa-qr-code {
-  padding: 6px;
-  background: #ffffff;
-  border: 1px solid var(--color-line);
-  display: inline-flex;
-}
-.two-fa-qr-code img {
-  display: block;
-  max-width: 140px;
-  height: auto;
-}
-.two-fa-secret-box {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  flex: 1;
-  min-width: 200px;
+.ssl-step__icon {
+  font-weight: bold;
+  width: 14px;
+  display: inline-block;
+  text-align: center;
 }
 
 /* Empty State Component */
