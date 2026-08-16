@@ -1,5 +1,6 @@
-<!-- dependency_card_compact.html partial (Compact 230px 1:1 Box with Horizontal Icon Array) -->
+<!-- dependency_card_compact.html partial (200x200 Full 1:1 Image Card + Top-Right Hover Actions) -->
 <div class="compact-card-1x1">
+  <!-- Full 1:1 Background Image (Zero Animation) -->
   <div class="compact-card-1x1__icon{% if dependency.icon %} img-skeleton-box{% endif %}">
     {% if dependency.icon %}
       <img src="{{ dependency.icon }}" alt="{{ dependency.name }} icon" loading="lazy" onload="this.parentElement.classList.add('is-loaded')" onerror="this.onerror=null; this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.style.display='block'; this.parentElement.classList.remove('img-skeleton-box'); this.parentElement.classList.add('is-error');">
@@ -8,39 +9,15 @@
       <svg style="width:64px; height:64px; stroke:var(--color-text);" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-width="1.5" d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
     {% endif %}
   </div>
-  <div class="compact-card-1x1__overlay"></div>
 
-  <div class="compact-card-1x1__content">
-    <div class="compact-card-1x1__top">
-      <span class="status-pill {% if dependency.healthy and dependency.desired_enabled %}status-pill--active{% elif dependency.effective_state in ['missing', 'unhealthy', 'invalid', 'error'] %}status-pill--danger{% elif dependency.effective_state in ['paused', 'disabled', 'stopped'] %}status-pill--paused{% else %}status-pill--available{% endif %}">
-        {% if dependency.healthy and dependency.desired_enabled %}
-          {{ _('healthy') | upper }}
-        {% elif not dependency.installed %}
-          {{ _('missing_1') | upper }}
-        {% else %}
-          {{ dependency.effective_state | replace('_', ' ') | upper }}
-        {% endif %}
-      </span>
-      <span class="compact-card-1x1__meta">v{{ dependency.version }}</span>
-    </div>
-
-    <div class="compact-card-1x1__bottom">
-      <a href="/dependencies/{{ dependency.id }}" style="text-decoration:none; color:inherit;">
-        <div class="compact-card-1x1__title">{{ dependency.name }}</div>
-      </a>
-    </div>
-  </div>
-
-  <!-- SLIDE-UP HORIZONTAL ICON ARRAY DOCK -->
-  <div class="compact-card-1x1__dock">
+  <!-- Top-Right Action Buttons (Appear on Mouseover) -->
+  <div class="compact-card-1x1__actions">
     {% if dependency.detail_only %}
-      <a href="/dependencies/{{ dependency.id }}" class="compact-card-1x1__btn-main" title="Manage {{ dependency.name }}">
-        <span>{{ _('manage') | upper }}</span>
+      <a href="/dependencies/{{ dependency.id }}" class="btn-clean-icon btn-clean-icon--primary" title="Manage {{ dependency.name }}">
         <svg viewbox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
       </a>
     {% elif dependency.installed %}
-      <a href="/dependencies/{{ dependency.id }}" class="compact-card-1x1__btn-main" title="Manage {{ dependency.name }}">
-        <span>{{ _('open') | upper }}</span>
+      <a href="/dependencies/{{ dependency.id }}" class="btn-clean-icon btn-clean-icon--primary" title="Manage {{ dependency.name }}">
         <svg viewbox="0 0 24 24"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
       </a>
       {% if dependency.can_toggle %}
@@ -49,25 +26,40 @@
           {% if dependency.running %}
             <input type="hidden" name="enabled" value="false">
             <input type="hidden" name="confirmed" value="true">
-            <button class="compact-card-1x1__btn-icon" type="submit" title="Disable {{ dependency.name }}" onclick="return confirm('Disable {{ dependency.name }}? Dependent plugins will be paused.')">
+            <button class="btn-clean-icon" type="submit" title="Disable {{ dependency.name }}" onclick="return confirm('Disable {{ dependency.name }}? Dependent plugins will be paused.')">
               <svg viewbox="0 0 24 24"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
             </button>
           {% else %}
             <input type="hidden" name="enabled" value="true">
-            <button class="compact-card-1x1__btn-icon" type="submit" title="Enable {{ dependency.name }}">
+            <button class="btn-clean-icon" type="submit" title="Enable {{ dependency.name }}">
               <svg viewbox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
             </button>
           {% endif %}
         </form>
       {% endif %}
-      <a href="/dependencies/{{ dependency.id }}" class="compact-card-1x1__btn-icon" title="View Info">
+      <a href="/dependencies/{{ dependency.id }}" class="btn-clean-icon" title="View Info">
         <svg viewbox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
       </a>
     {% else %}
-      <a href="/dependencies/{{ dependency.id }}" class="compact-card-1x1__btn-main" title="Install {{ dependency.name }}">
-        <span>{{ _('install') | upper }}</span>
+      <a href="/dependencies/{{ dependency.id }}" class="btn-clean-icon btn-clean-icon--primary" title="Install {{ dependency.name }}">
         <svg viewbox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
       </a>
     {% endif %}
+  </div>
+
+  <!-- Bottom Title & Status (Direct Text, Zero Background) -->
+  <div class="compact-card-1x1__footer">
+    <a href="/dependencies/{{ dependency.id }}" style="text-decoration:none; color:inherit; min-width:0; overflow:hidden;">
+      <div class="compact-card-1x1__title">{{ dependency.name }}</div>
+    </a>
+    <span class="compact-card-1x1__status">
+      {% if dependency.healthy and dependency.desired_enabled %}
+        {{ _('healthy') }}
+      {% elif not dependency.installed %}
+        {{ _('missing_1') }}
+      {% else %}
+        {{ dependency.effective_state | replace('_', ' ') }}
+      {% endif %}
+    </span>
   </div>
 </div>

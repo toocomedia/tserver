@@ -1,42 +1,18 @@
-<!-- plugin_card_compact.html partial (Compact 230px 1:1 Box with Horizontal Icon Array) -->
+<!-- plugin_card_compact.html partial (200x200 Full 1:1 Image Card + Top-Right Hover Actions) -->
 <div class="compact-card-1x1 plugin-requirements-host">
+  <!-- Full 1:1 Background Image (Zero Animation) -->
   <div class="compact-card-1x1__icon img-skeleton-box">
     <img src="/plugins/assets/{{ plugin.id }}/icon.png" alt="{{ plugin.name }} icon" loading="lazy" onload="this.parentElement.classList.add('is-loaded')" onerror="this.onerror=null; this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.style.display='block'; this.parentElement.classList.remove('img-skeleton-box'); this.parentElement.classList.add('is-error');">
     <svg style="display: none; width:64px; height:64px; stroke:var(--color-text);" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-width="1.5" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
   </div>
-  <div class="compact-card-1x1__overlay"></div>
 
-  <div class="compact-card-1x1__content">
-    <div class="compact-card-1x1__top">
-      <span class="status-pill {% if plugin.effective_status == 'active' %}status-pill--active{% elif plugin.effective_status == 'paused' %}status-pill--paused{% elif plugin.effective_status in ['missing', 'invalid', 'error', 'unhealthy'] %}status-pill--danger{% else %}status-pill--available{% endif %}">
-        {% if plugin.effective_status == 'active' %}
-          {{ _('active_1') | upper }}
-        {% elif plugin.effective_status == 'paused' %}
-          {{ _('paused') | upper }}
-        {% elif plugin.effective_status in ['missing', 'invalid', 'error', 'unhealthy'] %}
-          {{ plugin.effective_status | replace('_', ' ') | upper }}
-        {% else %}
-          {{ plugin.effective_status | replace('_', ' ') | upper }}
-        {% endif %}
-      </span>
-      <span class="compact-card-1x1__meta">v{{ plugin.version }}</span>
-    </div>
-
-    <div class="compact-card-1x1__bottom">
-      <a href="/plugins/info/{{ plugin.id }}" style="text-decoration:none; color:inherit;">
-        <div class="compact-card-1x1__title">{{ _(plugin.name) }}</div>
-      </a>
-    </div>
-  </div>
-
-  <!-- SLIDE-UP HORIZONTAL ICON ARRAY DOCK -->
-  <div class="compact-card-1x1__dock">
+  <!-- Top-Right Action Buttons (Appear on Mouseover) -->
+  <div class="compact-card-1x1__actions">
     {% if not plugin.installed %}
-      <form method="post" action="/plugins/api/install" style="flex:1; display:flex;">
+      <form method="post" action="/plugins/api/install" style="display:inline-flex;">
         <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
         <input type="hidden" name="plugin_id" value="{{ plugin.id }}">
-        <button type="submit" class="compact-card-1x1__btn-main" title="Install {{ plugin.name }}" {% if plugin.paused_by %}disabled style="opacity:0.5;" title="Install required system dependency first" {% endif %}>
-          <span>{{ _('install') | upper }}</span>
+        <button type="submit" class="btn-clean-icon btn-clean-icon--primary" title="Install {{ plugin.name }}" {% if plugin.paused_by %}disabled style="opacity:0.5;" title="Install required system dependency first" {% endif %}>
           <svg viewbox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
         </button>
       </form>
@@ -45,66 +21,65 @@
         <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
         <input type="hidden" name="plugin_id" value="{{ plugin.id }}">
         <input type="hidden" name="confirmation" value="">
-        <button type="submit" class="compact-card-1x1__btn-icon btn-icon--danger" title="Purge Data" onclick="const value=prompt('Type PURGE {{ plugin.id }} to permanently delete preserved data.'); if(value===null)return false; this.form.elements.confirmation.value=value; return true;">
+        <button type="submit" class="btn-clean-icon btn-clean-icon--danger" title="Purge Data" onclick="const value=prompt('Type PURGE {{ plugin.id }} to permanently delete preserved data.'); if(value===null)return false; this.form.elements.confirmation.value=value; return true;">
           <svg viewbox="0 0 24 24"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
         </button>
       </form>
       {% endif %}
     {% else %}
       {% if plugin.route_prefix and plugin.effective_status == 'active' %}
-        <a href="{{ plugin.route_prefix }}" class="compact-card-1x1__btn-main" title="Manage {{ plugin.name }}">
-          <span>{{ _('open') | upper }}</span>
+        <a href="{{ plugin.route_prefix }}" class="btn-clean-icon btn-clean-icon--primary" title="Open {{ plugin.name }}">
           <svg viewbox="0 0 24 24"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
         </a>
-      {% elif plugin.effective_status != 'invalid' %}
-        <form method="post" action="/plugins/api/toggle" style="flex:1; display:flex;">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
-          <input type="hidden" name="plugin_id" value="{{ plugin.id }}">
-          <input type="hidden" name="enabled" value="{% if plugin.enabled %}false{% else %}true{% endif %}">
-          <button type="submit" class="compact-card-1x1__btn-main" title="{% if plugin.enabled %}Disable{% else %}Enable{% endif %} {{ plugin.name }}">
-            <span>{% if plugin.enabled %}{{ _('active_1') | upper }}{% else %}{{ _('start') | upper }}{% endif %}</span>
-            {% if plugin.enabled %}
-              <svg viewbox="0 0 24 24"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
-            {% else %}
-              <svg viewbox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-            {% endif %}
-          </button>
-        </form>
       {% endif %}
 
-      {% if plugin.route_prefix and plugin.effective_status == 'active' and plugin.effective_status != 'invalid' %}
-        <form method="post" action="/plugins/api/toggle" style="display:inline-flex;">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
-          <input type="hidden" name="plugin_id" value="{{ plugin.id }}">
-          <input type="hidden" name="enabled" value="{% if plugin.enabled %}false{% else %}true{% endif %}">
-          <button type="submit" class="compact-card-1x1__btn-icon" title="{% if plugin.enabled %}Disable{% else %}Enable{% endif %} {{ plugin.name }}">
-            {% if plugin.enabled %}
-              <svg viewbox="0 0 24 24"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
-            {% else %}
-              <svg viewbox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-            {% endif %}
-          </button>
-        </form>
+      {% if plugin.effective_status != 'invalid' %}
+      <form method="post" action="/plugins/api/toggle" style="display:inline-flex;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+        <input type="hidden" name="plugin_id" value="{{ plugin.id }}">
+        <input type="hidden" name="enabled" value="{% if plugin.enabled %}false{% else %}true{% endif %}">
+        <button type="submit" class="btn-clean-icon" title="{% if plugin.enabled %}Disable{% else %}Enable{% endif %} {{ plugin.name }}">
+          {% if plugin.enabled %}
+            <svg viewbox="0 0 24 24"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
+          {% else %}
+            <svg viewbox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+          {% endif %}
+        </button>
+      </form>
       {% endif %}
-
-      <a href="/plugins/info/{{ plugin.id }}" class="compact-card-1x1__btn-icon" title="{{ _('settings') }} & {{ _('details') }}">
-        <svg viewbox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"></path></svg>
-      </a>
 
       <form method="post" action="/plugins/api/uninstall" style="display:inline-flex;">
         <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
         <input type="hidden" name="plugin_id" value="{{ plugin.id }}">
-        <button type="submit" class="compact-card-1x1__btn-icon" title="Uninstall {{ plugin.name }}" onclick="return confirm('Uninstall {{ plugin.name }}?')">
+        <button type="submit" class="btn-clean-icon btn-clean-icon--danger" title="Uninstall {{ plugin.name }}" onclick="return confirm('Uninstall {{ plugin.name }}?')">
           <svg viewbox="0 0 24 24"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path></svg>
         </button>
       </form>
     {% endif %}
 
     {% if plugin.dependency_status or plugin.manifest_error or (action_error and action_error_plugin_id == plugin.id) %}
-      <button type="button" class="compact-card-1x1__btn-icon requirements-info-btn {% if plugin.paused_by %}requirements-info-btn--danger{% endif %}" title="{% if plugin.paused_by %}Missing Requirements — Click to Check Details{% else %}System Check & Details{% endif %}" onclick="toggleAndCheckPlugin(this);">
+      <button type="button" class="btn-clean-icon requirements-info-btn {% if plugin.paused_by %}requirements-info-btn--danger{% endif %}" title="{% if plugin.paused_by %}Missing Requirements — Click to Check Details{% else %}System Check & Details{% endif %}" onclick="toggleAndCheckPlugin(this);">
         <svg viewbox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
       </button>
     {% endif %}
+  </div>
+
+  <!-- Bottom Title & Status (Direct Text, Zero Background) -->
+  <div class="compact-card-1x1__footer">
+    <a href="/plugins/info/{{ plugin.id }}" style="text-decoration:none; color:inherit; min-width:0; overflow:hidden;">
+      <div class="compact-card-1x1__title">{{ _(plugin.name) }}</div>
+    </a>
+    <span class="compact-card-1x1__status">
+      {% if plugin.effective_status == 'active' %}
+        {{ _('active_1') }}
+      {% elif plugin.effective_status == 'paused' %}
+        {{ _('paused') }}
+      {% elif plugin.effective_status in ['missing', 'invalid', 'error', 'unhealthy'] %}
+        {{ plugin.effective_status | replace('_', ' ') }}
+      {% else %}
+        {{ plugin.effective_status | replace('_', ' ') }}
+      {% endif %}
+    </span>
   </div>
 
   <!-- ABSOLUTE OVERLAY POPUP WINDOW (ZERO CARD RESIZING) -->

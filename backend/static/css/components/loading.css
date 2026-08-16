@@ -507,6 +507,35 @@
   background: var(--color-line);
 }
 
+.skeleton-compact-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 200px));
+  gap: 18px;
+  margin-top: var(--space-lg);
+  margin-bottom: 28px;
+  padding-inline: var(--page-gutter);
+}
+
+.skeleton-compact-card {
+  width: 200px;
+  height: 200px;
+  aspect-ratio: 1 / 1;
+  background: var(--color-header-bg-bar);
+  border: none !important;
+  border-radius: 0 !important;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 12px;
+  animation: skeleton-pulse var(--skeleton-shimmer-duration, 1.5s) infinite ease-in-out;
+}
+
+.skeleton-compact-card .sk-bar--title {
+  width: 60%;
+  height: 12px;
+  background: var(--color-line);
+}
+
 /* ==========================================================================
    IMAGE BOX SKELETON & REAL LAZY LOAD
    ========================================================================== */
