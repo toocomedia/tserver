@@ -36,8 +36,7 @@
   gap: 8px;
   cursor: pointer;
   font-size: 13px;
-  line-height: 16px;
-  min-height: 16px;
+  line-height: 1.4;
   user-select: none;
 }
 input[type="checkbox"], input[type="radio"] {
@@ -50,7 +49,6 @@ input[type="checkbox"], input[type="radio"] {
   cursor: pointer;
   flex-shrink: 0;
   margin: 0;
-  vertical-align: middle;
 }
 input[type="checkbox"]:checked, input[type="radio"]:checked {
   background: var(--color-accent);
@@ -65,16 +63,15 @@ input[type="checkbox"]:checked, input[type="radio"]:checked {
 }
 .form-check > span, .form-check-label {
   font-size: 13px;
-  line-height: 16px;
+  line-height: 1.4;
   color: var(--color-text);
-  display: inline-block;
-  vertical-align: middle;
+  display: inline;
 }
 .form-check:has(.form-hint), .form-check--stacked {
   align-items: flex-start;
 }
 .form-check:has(.form-hint) input[type="checkbox"], .form-check--stacked input[type="checkbox"] {
-  margin-top: 1px;
+  margin-top: 2px;
 }
 .form-check--stacked span {
   display: flex;
