@@ -87,38 +87,11 @@
         <div class="section__header"><h3>{{ _('panel_url_ssl_configuration') }}</h3></div>
         <div class="section__body">
 
-          <div class="info-row">
-            <span class="info-row__label">{{ _('active_hostname') }}</span>
-            <span class="info-row__value" id="result-hostname">{{ s.panel_domain or '(IP only)' }}</span>
-          </div>
-          <div class="info-row">
-            <span class="info-row__label">{{ _('ssl_status') }}</span>
-            <span class="info-row__value" id="ssl-status-badge">
-              {% if s.ssl_active %}
-                <span class="badge badge--ok">{{ _('active_1') }}</span>
-              {% else %}
-                <span class="badge badge--neutral">{{ _('disabled') }}</span>
-              {% endif %}
-            </span>
-          </div>
-          <div class="info-row" id="ssl-active-box" {% if not s.ssl_active %}hidden{% endif %}>
-            <span class="info-row__label">{{ _('expires') }}</span>
-            <span class="info-row__value" id="ssl-active-expiry">{{ s.ssl_expiry or '—' }}</span>
-          </div>
-          <div class="info-row" id="ssl-active-link-wrap" {% if not s.ssl_active %}hidden{% endif %}>
-            <span class="info-row__label">{{ _('https_link') }}</span>
-            <span class="info-row__value" id="ssl-active-link">
-              {% if s.urls.domain_https %}
-              <a href="{{ s.urls.domain_https }}" target="_blank" rel="noopener">{{ s.urls.domain_https }}</a>
-              {% else %}—{% endif %}
-            </span>
-          </div>
-
-          <p class="form-hint" style="margin: 16px 0 14px;" id="ssl-section-hint">
+          <p class="form-hint mb-md" id="ssl-section-hint">
             {% if s.ssl_active %}
               Certificate is active. Renew before it expires, or remove it.
             {% else %}
-              After the hostname is saved, issue Let’s Encrypt SSL here.
+              Configure a hostname or domain for the panel, then issue Let’s Encrypt SSL.
             {% endif %}
           </p>
 
@@ -171,7 +144,9 @@
             </p>
           </div>
 
-          <div class="mb-lg" style="display:flex; flex-direction:column; gap:10px;">
+          <div style="border-bottom: 1px solid var(--color-line); margin: 20px 0;"></div>
+
+          <div class="mb-lg" style="display:flex; flex-direction:column; gap:12px;">
             <label class="form-check" id="remove-ssl-on-change-wrap">
               <input type="checkbox" id="remove_ssl_on_change">
               <span>{{ _('when_changing_url_delete_ssl_for_old_hos') }}</span>
@@ -182,6 +157,8 @@
               <span>{{ _('auto_renew_panel_ssl_30_days_before_expi') }}</span>
             </label>
           </div>
+
+          <div style="border-bottom: 1px solid var(--color-line); margin: 20px 0;"></div>
 
           <div id="ssl-progress" class="ssl-progress mb-lg" hidden>
             <div class="ssl-step" data-step="1"><span class="ssl-step__icon">○</span> {{ _('save_hostname') }}</div>
@@ -441,28 +418,36 @@
       <div class="section mb-xl">
         <div class="section__header"><h3>{{ _('performance') }}</h3></div>
         <div class="section__body">
-          <p class="form-hint mb-md">
+          <p class="form-hint mb-lg">
             {{ _('global_nginx_optimizations_applied_to_al') }} <code>{{ _('etc_nginx_conf_d_performance_conf') }}</code> {{ _('and_reload_nginx') }}
           </p>
 
           <div id="perf-notes" class="mb-md" hidden></div>
 
-          <label class="form-check mb-md">
-            <input type="checkbox" id="perf_gzip" {% if s.perf_gzip %}checked{% endif %}>
-            <span>
-              <strong>{{ _('gzip_compression') }}</strong>
-              <span class="form-hint d-block">{{ _('compress_html_css_js_json_svg_before_sen') }}</span>
-            </span>
-          </label>
-          <label class="form-check mb-md">
-            <input type="checkbox" id="perf_static_cache" {% if s.perf_static_cache %}checked{% endif %}>
-            <span>
-              <strong>{{ _('browser_cache_for_static_assets') }}</strong>
-              <span class="form-hint d-block">{{ _('adds_1_year_cache_control_headers_for_fo') }}</span>
-            </span>
-          </label>
-          <div class="form-actions">
-            <button type="button" class="btn btn--primary" id="btn-save-perf">{{ _('save_performance') }}</button>
+          <div style="display:flex; flex-direction:column; gap:16px;">
+            <label class="form-check form-check--stacked">
+              <input type="checkbox" id="perf_gzip" {% if s.perf_gzip %}checked{% endif %}>
+              <span>
+                <strong style="font-size:13px; color:var(--color-text);">{{ _('gzip_compression') }}</strong>
+                <span class="form-hint d-block" style="margin-top:2px;">{{ _('compress_html_css_js_json_svg_before_sen') }}</span>
+              </span>
+            </label>
+            <label class="form-check form-check--stacked">
+              <input type="checkbox" id="perf_static_cache" {% if s.perf_static_cache %}checked{% endif %}>
+              <span>
+                <strong style="font-size:13px; color:var(--color-text);">{{ _('browser_cache_for_static_assets') }}</strong>
+                <span class="form-hint d-block" style="margin-top:2px;">{{ _('adds_1_year_cache_control_headers_for_fo') }}</span>
+              </span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fixed Bottom Action Bar -->
+      <div class="fixed-action-bar">
+        <div class="fixed-action-bar__inner">
+          <div style="margin-left:auto;">
+            <button type="button" class="btn btn--primary btn--sm" id="btn-save-perf">{{ _('save_performance') }}</button>
           </div>
         </div>
       </div>
@@ -476,7 +461,7 @@
         <div class="section__header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
           <h3>{{ _('system_updates') }}</h3>
           <div style="display:flex; align-items:center; gap:1rem;">
-            <label class="form-check" style="margin:0; font-size:var(--font-small, 0.85rem); cursor:pointer; display:flex; align-items:center; gap:0.35rem;">
+            <label class="form-check">
               <input type="checkbox" id="chk_auto_update">
               <span>{{ _('auto_update') }}</span>
             </label>
@@ -509,9 +494,14 @@
             <span class="info-row__label">{{ _('last_checked') }}</span>
             <span class="info-row__value text-muted" id="update-last-checked">—</span>
           </div>
+        </div>
+      </div>
 
-          <div class="form-actions mt-lg">
-            <button type="button" class="btn btn--primary" id="btn-apply-update" disabled>
+      <!-- Fixed Bottom Action Bar -->
+      <div class="fixed-action-bar">
+        <div class="fixed-action-bar__inner">
+          <div style="margin-left:auto;">
+            <button type="button" class="btn btn--primary btn--sm" id="btn-apply-update" disabled>
               {{ _('update_restart_panel') }}
             </button>
           </div>

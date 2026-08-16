@@ -31,12 +31,13 @@
 .railpack-delete-disclosure > summary::-webkit-details-marker { display: none; }
 .railpack-delete-disclosure > .form { margin-top: var(--space-lg); }
 .form-check {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: var(--space-sm);
+  gap: 8px;
   cursor: pointer;
   font-size: 13px;
-  line-height: 1.4;
+  line-height: 16px;
+  min-height: 16px;
   user-select: none;
 }
 input[type="checkbox"], input[type="radio"] {
@@ -59,17 +60,26 @@ input[type="checkbox"]:checked, input[type="radio"]:checked {
   background-repeat: no-repeat;
   background-position: center;
 }
-.form-check input[type="checkbox"], .form-check input[type="radio"] { margin: 0; }
-.form-check span {
-  display: inline-flex;
-  align-items: center;
-  line-height: 1.4;
+.form-check input[type="checkbox"], .form-check input[type="radio"] {
+  margin: 0;
+}
+.form-check > span, .form-check-label {
+  font-size: 13px;
+  line-height: 16px;
+  color: var(--color-text);
+  display: inline-block;
+  vertical-align: middle;
 }
 .form-check:has(.form-hint), .form-check--stacked {
   align-items: flex-start;
 }
 .form-check:has(.form-hint) input[type="checkbox"], .form-check--stacked input[type="checkbox"] {
-  margin-top: 2px;
+  margin-top: 1px;
+}
+.form-check--stacked span {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.4;
 }
 
 /* Settings custom classes */
