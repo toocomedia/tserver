@@ -44,30 +44,31 @@
   --grid-block-tint:      rgba(255, 255, 255, 0.035);
 }
 
-/* 1. Base Container */
+/* 1. Base Container (Borderless & Unboxed — floats seamlessly on page) */
 .empty-state-grid-card {
   position: relative;
   width: 100%;
-  min-height: 380px;
-  border: 1px solid var(--color-line);
-  background: var(--color-bg);
+  min-height: 420px;
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   text-align: center;
-  padding: 48px 20px;
+  padding: 60px 20px;
   overflow: hidden;
-  contain: paint;
-  margin: 20px 0 32px;
+  margin: 16px 0 24px;
 }
 
 /* Compact Variant for Sub-panels, Table Insets, and Split Views */
 .empty-state-grid-card--compact {
-  min-height: 240px;
-  padding: 32px 16px;
+  min-height: 220px;
+  padding: 24px 16px;
   margin: 0;
-  border: none;
+  border: none !important;
+  background: transparent !important;
 }
 
 /* 2. Abstract Grid Background Layers */

@@ -6,8 +6,10 @@
 {% block page_title %}{{ _('notification_center') }}{% endblock %}
 
 {% block topbar_actions %}
+{% if notifications %}
 <button class="btn btn--secondary btn--sm" id="btn-mark-all-read">{{ _('mark_all_read') }}</button>
 <button class="btn btn--danger btn--sm" id="btn-clear-all">{{ _('clear_all_1') }}</button>
+{% endif %}
 {% endblock %}
 
 {% block content %}
@@ -18,13 +20,13 @@
 <!-- END SKELETON OVERLAY -->
 
     {% if not notifications %}
-      <div style="padding: 3rem; text-align: center; color: var(--color-muted);">
-        <svg viewbox="0 0 24 24" width="48" height="48" stroke="currentColor" fill="none" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 1rem; opacity: 0.5;">
-          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-          <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-        </svg>
-        <p>{{ _('no_notifications_yet') }}</p>
-      </div>
+      {% from "partials/empty_state.html" import empty_state %}
+      {{ empty_state(
+        icon='bell-off',
+        title=_('no_notifications_yet'),
+        desc='All caught up. System alerts and event notices will appear here.',
+        id='empty-state'
+      ) }}
     {% else %}
       <div class="table-wrap">
         <table class="table" id="notifications-table">
