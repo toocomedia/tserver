@@ -69,16 +69,16 @@
   </table>
 </div>
 {% else %}
-<div class="empty-state" id="empty-state">
-  <div class="empty-state__shape">
-    <div class="shape-square-sm"></div>
-  </div>
-  <h3 class="empty-state__title">{{ _('no_apps_deployed') }}</h3>
-  <p class="empty-state__desc">{{ _('select_a_domain_to_deploy_your_first_pyt') }}</p>
-  <div class="empty-state__actions">
-    <a href="/domains" class="btn btn--minimal">{{ _('go_to_domains') }}</a>
-  </div>
-</div>
+{% from "partials/empty_state.html" import empty_state %}
+{{ empty_state(
+  icon='cpu',
+  title=_('no_apps_deployed'),
+  desc=_('select_a_domain_to_deploy_your_first_pyt'),
+  action_url='/domains',
+  action_label=_('go_to_domains'),
+  action_icon='globe',
+  id='empty-state'
+) }}
 {% endif %}
 </div><!-- /.apps-page -->
 {% endblock %}

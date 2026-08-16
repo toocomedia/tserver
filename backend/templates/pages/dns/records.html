@@ -93,16 +93,16 @@
   </table>
 </div>
 {% else %}
-<div class="empty-state" id="no-records">
-  <div class="empty-state__shape">
-    <div class="shape-torus-sm"></div>
-  </div>
-  <h3 class="empty-state__title">{{ _('no_records_in_this_zone') }}</h3>
-  <p class="empty-state__desc">{{ _('add_custom_a_aaaa_cname_txt_or_mx_record') }}</p>
-  <div class="empty-state__actions">
-    <button type="button" class="btn btn--minimal" onclick="openModal('add-record-modal')">{{ _('add_dns_record') }}</button>
-  </div>
-</div>
+{% from "partials/empty_state.html" import empty_state %}
+{{ empty_state(
+  icon='list-plus',
+  title=_('no_records_in_this_zone'),
+  desc=_('add_custom_a_aaaa_cname_txt_or_mx_record'),
+  action_label=_('add_dns_record'),
+  action_icon='plus',
+  action_onclick="openModal('add-record-modal')",
+  id='no-records'
+) }}
 {% endif %}
 
 

@@ -122,18 +122,16 @@
   </div>
 
 {% else %}
-
-  <div class="empty-state-strict" id="empty-state">
-    <div class="empty-state-shapes">
-      <div class="shape-2"></div>
-      <div class="shape-1"></div>
-      <div class="shape-3"></div>
-    </div>
-    <h3 class="empty-state-strict__title">{{ _('no_php_websites') }}</h3>
-    <p class="empty-state-strict__desc">{{ _('choose_php_wordpress_or_laravel_desc') }}</p>
-    <a href="{{ path('php_sites_create') }}" class="btn btn--primary" style="padding: 0 24px; height: 42px; font-weight: 600; display: inline-flex; align-items: center;">+ {{ _('create_php_site') }}</a>
-  </div>
-
+{% from "partials/empty_state.html" import empty_state %}
+{{ empty_state(
+  icon='folder-code',
+  title=_('no_php_websites'),
+  desc=_('choose_php_wordpress_or_laravel_desc'),
+  action_url=path('php_sites_create'),
+  action_label=_('create_php_site'),
+  action_icon='plus',
+  id='empty-state'
+) }}
 {% endif %}
 
 </div><!-- /.php-sites-page -->

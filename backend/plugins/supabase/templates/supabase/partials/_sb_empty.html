@@ -1,15 +1,11 @@
 {# _sb_empty.html — no projects yet #}
-<div class="p-xl d-flex flex-column align-center gap-lg" style="text-align:center; padding-top: 80px;">
-  <svg viewBox="0 0 24 24" width="56" height="56" fill="none" stroke="var(--color-text-muted)" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-    <ellipse cx="12" cy="5" rx="9" ry="3"/>
-    <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/>
-    <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>
-  </svg>
-  <div>
-    <h2 style="margin:0 0 8px;">No Supabase projects connected</h2>
-    <p class="text-muted" style="margin:0;">Connect your Supabase account to import all your projects at once.</p>
-  </div>
-  <button class="btn btn--primary" data-action="open-modal" data-modal="sb-modal-connect">
-    Connect Supabase Account
-  </button>
-</div>
+{% from "partials/empty_state.html" import empty_state %}
+{{ empty_state(
+  icon='database',
+  title='No Supabase Projects Connected',
+  desc='Connect your Supabase account to import all your projects at once.',
+  action_label='Connect Supabase Account',
+  action_icon='plus',
+  action_onclick="document.querySelector('[data-modal=\"sb-modal-connect\"]').click()",
+  id='sb-empty-state'
+) }}

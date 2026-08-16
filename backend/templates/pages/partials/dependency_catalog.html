@@ -3,7 +3,9 @@
   {% for dependency in dependencies %}
     {% include "partials/dependency_card.html" %}
   {% else %}
-    {% set empty_message = 'No system dependencies are registered.' %}
+    {% set empty_icon = 'boxes' %}
+    {% set empty_title = 'No Dependencies Registered' %}
+    {% set empty_desc = 'System dependencies and runtimes will appear here.' %}
     {% include "partials/empty_state.html" %}
   {% endfor %}
 </div>
@@ -13,7 +15,9 @@
   {% for dependency in dependencies %}
     {% include "partials/dependency_card_compact.html" %}
   {% else %}
-    {% set empty_message = 'No system dependencies are registered.' %}
+    {% set empty_icon = 'boxes' %}
+    {% set empty_title = 'No Dependencies Registered' %}
+    {% set empty_compact = true %}
     {% include "partials/empty_state.html" %}
   {% endfor %}
 </div>
@@ -36,7 +40,9 @@
     {% endif %}
     {{ render_resource_row(dependency, 'dependency', dependency.name, 'v' ~ dependency.version, dependency.description, dependency.icon, dependency.name ~ ' icon', dependency_status_label, dependency_status_tone, 'partials/dependency_list_actions.html') }}
   {% else %}
-    {% set empty_message = 'No dependencies registered.' %}
+    {% set empty_icon = 'boxes' %}
+    {% set empty_title = 'No Dependencies Registered' %}
+    {% set empty_compact = true %}
     {% include "partials/empty_state.html" %}
   {% endfor %}
 </div>

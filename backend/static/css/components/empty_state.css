@@ -1,0 +1,324 @@
+/* ============================================================
+   EMPTY STATE COMPONENT SYSTEM
+   Fading-Edge Abstract Grid Pattern with Sharp Brutalist Geometry
+   ============================================================ */
+
+:root {
+  --grid-line-color:      rgba(15, 23, 32, 0.08);
+  --grid-line-bold:       rgba(15, 23, 32, 0.16);
+  --grid-dot-color:       rgba(15, 23, 32, 0.18);
+  --grid-crosshair-color: rgba(15, 23, 32, 0.35);
+  --grid-glow-color:      rgba(199, 244, 100, 0.16);
+  --grid-accent-cell:     rgba(199, 244, 100, 0.45);
+  --grid-block-tint:      rgba(15, 23, 32, 0.04);
+  --grid-size:            32px;
+}
+
+[data-theme="dark"] {
+  --grid-line-color:      rgba(255, 255, 255, 0.07);
+  --grid-line-bold:       rgba(255, 255, 255, 0.14);
+  --grid-dot-color:       rgba(255, 255, 255, 0.18);
+  --grid-crosshair-color: rgba(255, 255, 255, 0.4);
+  --grid-glow-color:      rgba(199, 244, 100, 0.14);
+  --grid-accent-cell:     rgba(199, 244, 100, 0.25);
+  --grid-block-tint:      rgba(255, 255, 255, 0.03);
+}
+
+[data-theme="amoled"] {
+  --grid-line-color:      rgba(255, 255, 255, 0.08);
+  --grid-line-bold:       rgba(255, 255, 255, 0.18);
+  --grid-dot-color:       rgba(255, 255, 255, 0.25);
+  --grid-crosshair-color: rgba(199, 244, 100, 0.7);
+  --grid-glow-color:      rgba(199, 244, 100, 0.18);
+  --grid-accent-cell:     rgba(199, 244, 100, 0.3);
+  --grid-block-tint:      rgba(255, 255, 255, 0.04);
+}
+
+[data-theme="charcoal"] {
+  --grid-line-color:      rgba(255, 255, 255, 0.07);
+  --grid-line-bold:       rgba(255, 255, 255, 0.15);
+  --grid-dot-color:       rgba(255, 255, 255, 0.2);
+  --grid-crosshair-color: rgba(255, 255, 255, 0.45);
+  --grid-glow-color:      rgba(199, 244, 100, 0.13);
+  --grid-accent-cell:     rgba(199, 244, 100, 0.25);
+  --grid-block-tint:      rgba(255, 255, 255, 0.035);
+}
+
+/* 1. Base Container */
+.empty-state-grid-card {
+  position: relative;
+  width: 100%;
+  min-height: 380px;
+  border: 1px solid var(--color-line);
+  background: var(--color-bg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 48px 20px;
+  overflow: hidden;
+  contain: paint;
+  margin: 20px 0 32px;
+}
+
+/* Compact Variant for Sub-panels, Table Insets, and Split Views */
+.empty-state-grid-card--compact {
+  min-height: 240px;
+  padding: 32px 16px;
+  margin: 0;
+  border: none;
+}
+
+/* 2. Abstract Grid Background Layers */
+.grid-pattern-bg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  background-image: 
+    linear-gradient(to right, var(--grid-line-color) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid-line-color) 1px, transparent 1px);
+  background-size: var(--grid-size) var(--grid-size);
+  background-position: center center;
+  -webkit-mask-image: radial-gradient(ellipse 65% 65% at 50% 50%, #000 15%, transparent 80%);
+  mask-image: radial-gradient(ellipse 65% 65% at 50% 50%, #000 15%, transparent 80%);
+}
+
+.grid-pattern-dots {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  background-image: radial-gradient(var(--grid-dot-color) 1.5px, transparent 1.5px);
+  background-size: 24px 24px;
+  background-position: center center;
+  -webkit-mask-image: radial-gradient(ellipse 65% 65% at 50% 50%, #000 20%, transparent 80%);
+  mask-image: radial-gradient(ellipse 65% 65% at 50% 50%, #000 20%, transparent 80%);
+}
+
+.grid-pattern-iso {
+  position: absolute;
+  inset: -100px;
+  pointer-events: none;
+  z-index: 1;
+  background-image: 
+    linear-gradient(30deg, var(--grid-line-color) 1px, transparent 1px),
+    linear-gradient(150deg, var(--grid-line-color) 1px, transparent 1px);
+  background-size: 48px 28px;
+  background-position: center center;
+  -webkit-mask-image: radial-gradient(ellipse 60% 60% at 50% 50%, #000 15%, transparent 80%);
+  mask-image: radial-gradient(ellipse 60% 60% at 50% 50%, #000 15%, transparent 80%);
+}
+
+/* 3. Central Ambient Depth Glow */
+.grid-ambient-glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 320px;
+  height: 320px;
+  transform: translate(-50%, -55%);
+  background: radial-gradient(circle at 50% 50%, var(--grid-glow-color) 0%, transparent 65%);
+  pointer-events: none;
+  z-index: 2;
+  filter: blur(24px);
+}
+
+.empty-state-grid-card--compact .grid-ambient-glow {
+  width: 200px;
+  height: 200px;
+}
+
+/* 4. Abstract Matrix Layer (Decor Cells & Precision Crosshairs) */
+.grid-matrix-layer {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 400px;
+  height: 240px;
+  transform: translate(-50%, -60%);
+  pointer-events: none;
+  z-index: 3;
+}
+
+.empty-state-grid-card--compact .grid-matrix-layer {
+  display: none;
+}
+
+.grid-cell-accent {
+  position: absolute;
+  top: 32px;
+  left: 64px;
+  width: 32px;
+  height: 32px;
+  background: var(--grid-accent-cell);
+  border: 1px solid var(--color-accent);
+  opacity: 0.6;
+}
+
+.grid-cell-tint {
+  position: absolute;
+  bottom: 32px;
+  right: 96px;
+  width: 64px;
+  height: 32px;
+  background: var(--grid-block-tint);
+  border: 1px solid var(--grid-line-bold);
+}
+
+.grid-crosshair {
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--grid-crosshair-color);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  transform: translate(-50%, -50%);
+}
+.grid-crosshair::before {
+  content: "+";
+}
+
+/* 5. Minimal Focal Hero Geometry */
+.empty-hero-art {
+  position: relative;
+  z-index: 10;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hero-cube-minimal {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.empty-state-grid-card--compact .hero-cube-minimal {
+  width: 54px;
+  height: 54px;
+}
+
+.cube-backdrop {
+  position: absolute;
+  width: 56px;
+  height: 56px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  transform: translate(-6px, -6px);
+}
+
+.empty-state-grid-card--compact .cube-backdrop {
+  width: 42px;
+  height: 42px;
+  transform: translate(-4px, -4px);
+}
+
+.cube-accent-tint {
+  position: absolute;
+  width: 44px;
+  height: 44px;
+  background: var(--color-accent);
+  opacity: 0.85;
+  transform: translate(6px, 6px);
+}
+
+.empty-state-grid-card--compact .cube-accent-tint {
+  width: 34px;
+  height: 34px;
+  transform: translate(4px, 4px);
+}
+
+.cube-frame {
+  position: absolute;
+  width: 52px;
+  height: 52px;
+  border: 1.5px solid var(--color-text);
+  background: var(--color-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+}
+
+.empty-state-grid-card--compact .cube-frame {
+  width: 40px;
+  height: 40px;
+}
+
+.cube-frame svg,
+.cube-frame i[data-lucide] {
+  width: 22px;
+  height: 22px;
+  color: var(--color-text);
+  stroke-width: 2;
+}
+
+.empty-state-grid-card--compact .cube-frame svg,
+.empty-state-grid-card--compact .cube-frame i[data-lucide] {
+  width: 18px;
+  height: 18px;
+}
+
+/* 6. Typography & Actions Layer */
+.empty-state-content {
+  position: relative;
+  z-index: 10;
+  max-width: 440px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.empty-state-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-text);
+  margin: 0 0 6px;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+}
+
+.empty-state-grid-card--compact .empty-state-title {
+  font-size: 15px;
+  margin-bottom: 4px;
+}
+
+.empty-state-desc {
+  font-size: 13px;
+  color: var(--color-muted);
+  line-height: 1.45;
+  margin: 0 0 20px;
+  max-width: 360px;
+}
+
+.empty-state-grid-card--compact .empty-state-desc {
+  font-size: 12px;
+  margin-bottom: 14px;
+}
+
+.empty-state-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+@media (max-width: 768px) {
+  .empty-state-grid-card {
+    min-height: 320px;
+    padding: 36px 16px;
+  }
+  .grid-matrix-layer {
+    display: none;
+  }
+}

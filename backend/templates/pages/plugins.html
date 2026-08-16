@@ -44,7 +44,12 @@
       {% for plugin in plugins %}
         {% include "partials/plugin_card.html" %}
       {% else %}
-        {% set empty_message = 'No plugins available. Click “+ Upload Plugin (.zip)” to add a plugin.' %}
+        {% set empty_icon = 'puzzle' %}
+        {% set empty_title = _('no_plugins_available') if _('no_plugins_available') != 'no_plugins_available' else 'No Plugins Available' %}
+        {% set empty_desc = 'Upload a .zip archive to install plugin extensions.' %}
+        {% set empty_action_label = _('upload_plugin') if _('upload_plugin') != 'upload_plugin' else 'Upload Plugin' %}
+        {% set empty_action_icon = 'upload' %}
+        {% set empty_action_onclick = "openModal('upload-plugin-modal')" %}
         {% include "partials/empty_state.html" %}
       {% endfor %}
     </div>
@@ -54,7 +59,9 @@
       {% for plugin in plugins %}
         {% include "partials/plugin_card_compact.html" %}
       {% else %}
-        {% set empty_message = 'No plugins available.' %}
+        {% set empty_icon = 'puzzle' %}
+        {% set empty_title = 'No Plugins Available' %}
+        {% set empty_compact = true %}
         {% include "partials/empty_state.html" %}
       {% endfor %}
     </div>
@@ -77,7 +84,9 @@
         {% endif %}
         {{ render_resource_row(plugin, 'plugin', plugin.name, 'v' ~ plugin.version, plugin.description, '/plugins/assets/' ~ plugin.id ~ '/icon.png', plugin.name ~ ' icon', plugin_status_label, plugin_status_tone, 'partials/plugin_list_actions.html', 'partials/plugin_requirements_overlay.html', True) }}
       {% else %}
-        {% set empty_message = 'No plugins available.' %}
+        {% set empty_icon = 'puzzle' %}
+        {% set empty_title = 'No Plugins Available' %}
+        {% set empty_compact = true %}
         {% include "partials/empty_state.html" %}
       {% endfor %}
     </div>

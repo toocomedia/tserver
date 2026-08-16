@@ -87,16 +87,16 @@
 </div>
 </div>
 {% else %}
-<div class="empty-state" id="empty-state">
-  <div class="empty-state__shape">
-    <div class="shape-circle-sm"></div>
-  </div>
-  <h3 class="empty-state__title">{{ _('no_dns_zones') }}</h3>
-  <p class="empty-state__desc">{{ _('create_a_domain_first_to_manage_its_dns_') }}</p>
-  <div class="empty-state__actions">
-    <a href="/domains/create" class="btn btn--minimal">{{ _('add_domain_1') }}</a>
-  </div>
-</div>
+{% from "partials/empty_state.html" import empty_state %}
+{{ empty_state(
+  icon='network',
+  title=_('no_dns_zones'),
+  desc=_('create_a_domain_first_to_manage_its_dns_'),
+  action_url='/domains/create',
+  action_label=_('add_domain_1'),
+  action_icon='plus',
+  id='empty-state'
+) }}
 {% endif %}
 </div><!-- /.dns-page -->
 {% endblock %}

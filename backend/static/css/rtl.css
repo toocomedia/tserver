@@ -277,8 +277,12 @@ html[dir="rtl"] .php-choice-grid .settings-choice__icon {
 
 /* Empty States & Auth Header Centering */
 html[dir="rtl"] .empty-state,
+html[dir="rtl"] .empty-state-grid-card,
+html[dir="rtl"] .empty-state-strict,
 html[dir="rtl"] .empty-state__title,
+html[dir="rtl"] .empty-state-title,
 html[dir="rtl"] .empty-state__desc,
+html[dir="rtl"] .empty-state-desc,
 html[dir="rtl"] .empty-state p {
   text-align: center !important;
 }

@@ -1,5 +1,95 @@
-{# Shared empty state. #}
-<div class="empty-state resource-empty-state">
-  {% if empty_icon %}{{ empty_icon | safe }}{% endif %}
-  <span>{{ empty_message }}</span>
+{# ============================================================
+   SHARED REUSABLE EMPTY STATE COMPONENT
+   Fading-Edge Abstract Grid Pattern with Sharp Brutalist Geometry
+   ============================================================ #}
+
+{% macro empty_state(icon='layers', title=None, desc=None, action_url=None, action_label=None, action_icon='plus', action_onclick=None, action_btn_id=None, secondary_url=None, secondary_label=None, compact=false, id=None, grid_variant='standard') -%}
+<div class="empty-state-grid-card{% if compact %} empty-state-grid-card--compact{% endif %}"{% if id %} id="{{ id }}"{% endif %}>
+  <!-- 1. Fading Grid Background -->
+  <div class="{% if grid_variant == 'dots' %}grid-pattern-dots{% elif grid_variant == 'iso' %}grid-pattern-iso{% else %}grid-pattern-bg{% endif %}"></div>
+
+  <!-- 2. Central Ambient Glow -->
+  <div class="grid-ambient-glow"></div>
+
+  <!-- 3. Abstract Grid Decorative Cells (Full view only) -->
+  {% if not compact %}
+  <div class="grid-matrix-layer">
+    <div class="grid-cell-accent"></div>
+    <div class="grid-cell-tint"></div>
+    <div class="grid-crosshair" style="top: 32px; left: 64px;"></div>
+    <div class="grid-crosshair" style="top: 32px; left: 96px;"></div>
+    <div class="grid-crosshair" style="bottom: 32px; right: 96px;"></div>
+  </div>
+  {% endif %}
+
+  <!-- 4. Hero Abstract Graphic -->
+  <div class="empty-hero-art">
+    <div class="hero-cube-minimal">
+      <div class="cube-backdrop"></div>
+      <div class="cube-accent-tint"></div>
+      <div class="cube-frame">
+        {% if icon %}
+          {% if '<svg' in icon %}
+            {{ icon | safe }}
+          {% else %}
+            <i data-lucide="{{ icon }}"></i>
+          {% endif %}
+        {% else %}
+          <i data-lucide="layers"></i>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. Content & Actions -->
+  <div class="empty-state-content">
+    {% if title %}
+      <h3 class="empty-state-title">{{ title }}</h3>
+    {% endif %}
+
+    {% if desc %}
+      <p class="empty-state-desc">{{ desc }}</p>
+    {% endif %}
+
+    {% if (action_label and (action_url or action_onclick)) or (secondary_label and secondary_url) %}
+    <div class="empty-state-actions">
+      {% if action_label %}
+        {% if action_url %}
+          <a href="{{ action_url }}" class="btn btn--primary{% if compact %} btn--sm{% endif %}"{% if action_btn_id %} id="{{ action_btn_id }}"{% endif %}>
+            {% if action_icon %}<i data-lucide="{{ action_icon }}" style="width: 14px; height: 14px;"></i>{% endif %}
+            {{ action_label }}
+          </a>
+        {% elif action_onclick %}
+          <button type="button" class="btn btn--primary{% if compact %} btn--sm{% endif %}" onclick="{{ action_onclick }}"{% if action_btn_id %} id="{{ action_btn_id }}"{% endif %}>
+            {% if action_icon %}<i data-lucide="{{ action_icon }}" style="width: 14px; height: 14px;"></i>{% endif %}
+            {{ action_label }}
+          </button>
+        {% endif %}
+      {% endif %}
+
+      {% if secondary_label and secondary_url %}
+        <a href="{{ secondary_url }}" class="btn btn--secondary{% if compact %} btn--sm{% endif %}">
+          {{ secondary_label }}
+        </a>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
 </div>
+{%- endmacro %}
+
+{# Context Include fallback for {% include "partials/empty_state.html" %} #}
+{% if var_included_as_template is not defined or not var_included_as_template %}
+  {% set _title = empty_title | default(empty_message | default(None)) %}
+  {% set _desc = empty_desc | default(None) %}
+  {% set _icon = empty_icon | default('layers') %}
+  {% set _action_url = empty_action_url | default(None) %}
+  {% set _action_label = empty_action_label | default(None) %}
+  {% set _action_icon = empty_action_icon | default('plus') %}
+  {% set _action_onclick = empty_action_onclick | default(None) %}
+  {% set _action_btn_id = empty_action_btn_id | default(None) %}
+  {% set _compact = empty_compact | default(false) %}
+  {% set _id = empty_id | default(None) %}
+  {% set _grid_variant = empty_grid_variant | default('standard') %}
+  {{ empty_state(icon=_icon, title=_title, desc=_desc, action_url=_action_url, action_label=_action_label, action_icon=_action_icon, action_onclick=_action_onclick, action_btn_id=_action_btn_id, compact=_compact, id=_id, grid_variant=_grid_variant) }}
+{% endif %}

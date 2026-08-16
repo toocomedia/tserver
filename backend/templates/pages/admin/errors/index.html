@@ -129,13 +129,13 @@
   </table>
 </div>
 {% else %}
-<div class="empty-state" id="empty-state">
-  <div class="empty-state__shape">
-    <div class="shape-circle-sm"></div>
-  </div>
-  <h3 class="empty-state__title">{{ _('no_errors_recorded') }}{% if filter_status == 'open' %} ({{ _('open') }}){% endif %}</h3>
-  <p class="empty-state__desc">{{ _('failures_from_domains_dns_ssl_and_proxy_') }}</p>
-</div>
+{% from "partials/empty_state.html" import empty_state %}
+{{ empty_state(
+  icon='check-circle-2',
+  title=_('no_errors_recorded') ~ (' (' ~ _('open') ~ ')' if filter_status == 'open' else ''),
+  desc=_('failures_from_domains_dns_ssl_and_proxy_'),
+  id='empty-state'
+) }}
 {% endif %}
 
 {% endblock %}

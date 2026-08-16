@@ -151,16 +151,16 @@
 </p>
 </div>
 {% else %}
-<div class="empty-state" id="empty-state">
-  <div class="empty-state__shape">
-    <div class="shape-triangle-sm"></div>
-  </div>
-  <h3 class="empty-state__title">{{ _('no_ssl_certificates') }}</h3>
-  <p class="empty-state__desc">{{ _('secure_your_domains_with_free_let_s_encr') }}</p>
-  <div class="empty-state__actions">
-    <a href="/ssl/issue" class="btn btn--minimal">{{ _('issue_certificate_1') }}</a>
-  </div>
-</div>
+{% from "partials/empty_state.html" import empty_state %}
+{{ empty_state(
+  icon='shield-check',
+  title=_('no_ssl_certificates'),
+  desc=_('secure_your_domains_with_free_let_s_encr'),
+  action_url='/ssl/issue',
+  action_label=_('issue_certificate_1'),
+  action_icon='shield-plus',
+  id='empty-state'
+) }}
 {% endif %}
 </div><!-- /.ssl-page -->
 {% endblock %}
