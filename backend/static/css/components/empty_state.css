@@ -1,48 +1,52 @@
 /* ============================================================
    EMPTY STATE COMPONENT SYSTEM
-   Clean Fading-Edge Abstract Grid Pattern & Sharp Geometry
+   Rich Fading-Edge Abstract Grid Pattern & Sharp Geometry
    ============================================================ */
 
 :root {
-  --grid-line-color:      rgba(15, 23, 32, 0.05);
-  --grid-line-bold:       rgba(15, 23, 32, 0.10);
-  --grid-dot-color:       rgba(15, 23, 32, 0.12);
-  --grid-crosshair-color: rgba(15, 23, 32, 0.25);
-  --grid-glow-color:      rgba(199, 244, 100, 0.12);
-  --grid-size:            32px;
+  --grid-line-color:      rgba(15, 23, 32, 0.065);
+  --grid-line-bold:       rgba(15, 23, 32, 0.13);
+  --grid-dot-color:       rgba(15, 23, 32, 0.16);
+  --grid-crosshair-color: rgba(15, 23, 32, 0.30);
+  --grid-glow-color:      rgba(199, 244, 100, 0.18);
+  --grid-accent-cell:     rgba(199, 244, 100, 0.22);
+  --grid-size:            48px;
 
   --empty-title-color:    #0F1720;
-  --empty-desc-color:     #555A64;
+  --empty-desc-color:     #525866;
 }
 
 [data-theme="dark"] {
-  --grid-line-color:      rgba(255, 255, 255, 0.045);
-  --grid-line-bold:       rgba(255, 255, 255, 0.09);
-  --grid-dot-color:       rgba(255, 255, 255, 0.12);
-  --grid-crosshair-color: rgba(255, 255, 255, 0.25);
-  --grid-glow-color:      rgba(199, 244, 100, 0.09);
+  --grid-line-color:      rgba(255, 255, 255, 0.065);
+  --grid-line-bold:       rgba(255, 255, 255, 0.13);
+  --grid-dot-color:       rgba(255, 255, 255, 0.16);
+  --grid-crosshair-color: rgba(255, 255, 255, 0.30);
+  --grid-glow-color:      rgba(199, 244, 100, 0.14);
+  --grid-accent-cell:     rgba(199, 244, 100, 0.18);
 
   --empty-title-color:    #FFFFFF;
   --empty-desc-color:     #9CA3AF;
 }
 
 [data-theme="amoled"] {
-  --grid-line-color:      rgba(255, 255, 255, 0.06);
-  --grid-line-bold:       rgba(255, 255, 255, 0.12);
-  --grid-dot-color:       rgba(255, 255, 255, 0.16);
-  --grid-crosshair-color: rgba(199, 244, 100, 0.45);
-  --grid-glow-color:      rgba(199, 244, 100, 0.11);
+  --grid-line-color:      rgba(255, 255, 255, 0.08);
+  --grid-line-bold:       rgba(255, 255, 255, 0.16);
+  --grid-dot-color:       rgba(255, 255, 255, 0.20);
+  --grid-crosshair-color: rgba(199, 244, 100, 0.55);
+  --grid-glow-color:      rgba(199, 244, 100, 0.17);
+  --grid-accent-cell:     rgba(199, 244, 100, 0.22);
 
   --empty-title-color:    #FFFFFF;
   --empty-desc-color:     #A1A7B3;
 }
 
 [data-theme="charcoal"] {
-  --grid-line-color:      rgba(255, 255, 255, 0.05);
-  --grid-line-bold:       rgba(255, 255, 255, 0.10);
-  --grid-dot-color:       rgba(255, 255, 255, 0.14);
-  --grid-crosshair-color: rgba(255, 255, 255, 0.30);
-  --grid-glow-color:      rgba(199, 244, 100, 0.08);
+  --grid-line-color:      rgba(255, 255, 255, 0.07);
+  --grid-line-bold:       rgba(255, 255, 255, 0.14);
+  --grid-dot-color:       rgba(255, 255, 255, 0.18);
+  --grid-crosshair-color: rgba(255, 255, 255, 0.35);
+  --grid-glow-color:      rgba(199, 244, 100, 0.13);
+  --grid-accent-cell:     rgba(199, 244, 100, 0.16);
 
   --empty-title-color:    #FFFFFF;
   --empty-desc-color:     #A3AAB8;
@@ -90,7 +94,7 @@
   background: transparent !important;
 }
 
-/* 2. Clean Abstract Grid Background */
+/* 2. Abstract Grid Background Layers (Spacious 48px Grid) */
 .grid-pattern-bg {
   position: absolute;
   inset: 0;
@@ -101,8 +105,8 @@
     linear-gradient(to bottom, var(--grid-line-color) 1px, transparent 1px);
   background-size: var(--grid-size) var(--grid-size);
   background-position: center center;
-  -webkit-mask-image: radial-gradient(ellipse 60% 60% at 50% 50%, #000 15%, transparent 75%);
-  mask-image: radial-gradient(ellipse 60% 60% at 50% 50%, #000 15%, transparent 75%);
+  -webkit-mask-image: radial-gradient(ellipse 65% 65% at 50% 50%, #000 20%, transparent 80%);
+  mask-image: radial-gradient(ellipse 65% 65% at 50% 50%, #000 20%, transparent 80%);
 }
 
 .grid-pattern-dots {
@@ -111,10 +115,10 @@
   pointer-events: none;
   z-index: 1;
   background-image: radial-gradient(var(--grid-dot-color) 1.5px, transparent 1.5px);
-  background-size: 24px 24px;
+  background-size: 32px 32px;
   background-position: center center;
-  -webkit-mask-image: radial-gradient(ellipse 60% 60% at 50% 50%, #000 15%, transparent 75%);
-  mask-image: radial-gradient(ellipse 60% 60% at 50% 50%, #000 15%, transparent 75%);
+  -webkit-mask-image: radial-gradient(ellipse 65% 65% at 50% 50%, #000 20%, transparent 80%);
+  mask-image: radial-gradient(ellipse 65% 65% at 50% 50%, #000 20%, transparent 80%);
 }
 
 .grid-pattern-iso {
@@ -125,41 +129,89 @@
   background-image: 
     linear-gradient(30deg, var(--grid-line-color) 1px, transparent 1px),
     linear-gradient(150deg, var(--grid-line-color) 1px, transparent 1px);
-  background-size: 48px 28px;
+  background-size: 56px 32px;
   background-position: center center;
   -webkit-mask-image: radial-gradient(ellipse 60% 60% at 50% 50%, #000 15%, transparent 75%);
   mask-image: radial-gradient(ellipse 60% 60% at 50% 50%, #000 15%, transparent 75%);
 }
 
-/* 3. Subtle Central Ambient Depth Glow */
+/* 3. Central Ambient Depth Glow */
 .grid-ambient-glow {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 280px;
-  height: 280px;
+  width: 320px;
+  height: 320px;
   transform: translate(-50%, -50%);
   background: radial-gradient(circle at 50% 50%, var(--grid-glow-color) 0%, transparent 65%);
   pointer-events: none;
   z-index: 2;
-  filter: blur(28px);
+  filter: blur(32px);
 }
 
 .empty-state-grid-card--compact .grid-ambient-glow {
-  width: 180px;
-  height: 180px;
+  width: 200px;
+  height: 200px;
 }
 
-/* 4. Matrix Layer (Clean, noise-free) */
+/* 4. Abstract Matrix Decorative Accents (Precision Snapped to Grid) */
 .grid-matrix-layer {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 384px;
+  height: 240px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.empty-state-grid-card--compact .grid-matrix-layer {
   display: none;
+}
+
+.grid-cell-accent {
+  position: absolute;
+  top: 0;
+  left: 48px;
+  width: 48px;
+  height: 48px;
+  background: var(--grid-accent-cell);
+  border: 1px solid var(--color-accent);
+  opacity: 0.45;
+}
+
+.grid-cell-tint {
+  position: absolute;
+  bottom: 0;
+  right: 48px;
+  width: 48px;
+  height: 48px;
+  border: 1px dashed var(--grid-line-bold);
+  opacity: 0.6;
+}
+
+.grid-crosshair {
+  position: absolute;
+  width: 11px;
+  height: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--grid-crosshair-color);
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  transform: translate(-50%, -50%);
+}
+.grid-crosshair::before {
+  content: "+";
 }
 
 /* 5. Clean, Refined Hero Graphic */
 .empty-hero-art {
   position: relative;
   z-index: 3;
-  margin-bottom: 18px;
+  margin-bottom: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -167,8 +219,8 @@
 
 .hero-cube-minimal {
   position: relative;
-  width: 58px;
-  height: 58px;
+  width: 64px;
+  height: 64px;
   background: var(--color-surface);
   border: 1px solid var(--color-line);
   display: flex;
@@ -186,9 +238,20 @@
   background: var(--color-accent);
 }
 
+.hero-cube-minimal::before {
+  content: "";
+  position: absolute;
+  top: -1px;
+  left: -1px;
+  width: 7px;
+  height: 7px;
+  border-top: 1px solid var(--color-text);
+  border-left: 1px solid var(--color-text);
+}
+
 .empty-state-grid-card--compact .hero-cube-minimal {
-  width: 46px;
-  height: 46px;
+  width: 48px;
+  height: 48px;
 }
 
 .cube-backdrop,
@@ -232,11 +295,11 @@
 }
 
 .empty-state-title {
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 700;
   color: var(--empty-title-color, var(--color-text));
   margin: 0 0 6px;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.015em;
   line-height: 1.3;
 }
 
@@ -246,11 +309,11 @@
 }
 
 .empty-state-desc {
-  font-size: 13px;
+  font-size: 13.5px;
   color: var(--empty-desc-color, var(--color-muted));
-  line-height: 1.5;
+  line-height: 1.55;
   margin: 0 0 20px;
-  max-width: 380px;
+  max-width: 390px;
 }
 
 .empty-state-grid-card--compact .empty-state-desc {
@@ -261,9 +324,41 @@
 .empty-state-actions {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   flex-wrap: wrap;
   justify-content: center;
+}
+
+.empty-state-actions .btn {
+  height: 30px;
+  padding: 0 12px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  background: var(--color-surface) !important;
+  border: 1px solid var(--color-line) !important;
+  color: var(--color-text) !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.empty-state-actions .btn:hover {
+  background: var(--color-surface-hover) !important;
+  border-color: var(--color-text) !important;
+  color: var(--color-text) !important;
+}
+
+.empty-state-actions .btn svg,
+.empty-state-actions .btn i[data-lucide] {
+  width: 13px;
+  height: 13px;
+  color: var(--color-text);
+  opacity: 0.9;
 }
 
 @media (max-width: 768px) {
@@ -272,4 +367,3 @@
     padding: 36px 16px;
   }
 }
-
