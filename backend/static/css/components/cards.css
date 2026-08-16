@@ -551,6 +551,14 @@
   gap: 6px;
 }
 
+.plugin-check-window__status-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin-bottom: 4px;
+}
+
 .plugin-check-window__label {
   font-size: 10px;
   font-weight: 700;
@@ -603,58 +611,162 @@
   background: rgba(220, 38, 38, 0.08);
 }
 
-/* COMPACT 1:1 CARD OVERLAY FIT (Exact 200x200 1:1 Box) */
+/* COMPACT 1:1 CARD OVERLAY FIT (Exact 100% 1:1 Square Box Fit) */
 .compact-card-1x1 .plugin-check-window {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  width: 200px;
-  height: 200px;
-  max-height: 200px;
-  aspect-ratio: 1 / 1;
-  padding: 10px 12px;
-  z-index: 50;
-  font-size: 11px;
-  overflow-y: auto;
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  aspect-ratio: 1 / 1 !important;
+  padding: 10px 12px !important;
+  z-index: 50 !important;
+  font-size: 10px !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
   border: none !important;
+  border-radius: 0 !important;
   box-shadow: none !important;
-  background: var(--color-surface);
+  background: var(--color-surface) !important;
+  box-sizing: border-box !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: flex-start !important;
+  gap: 6px !important;
+}
+
+.compact-card-1x1 .plugin-check-window.is-hidden {
+  display: flex !important;
+  opacity: 0 !important;
+  transform: translateY(100%) translateZ(0) !important;
+  pointer-events: none !important;
 }
 
 .compact-card-1x1 .plugin-check-window__header {
-  padding-bottom: 4px;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding-bottom: 4px !important;
+  margin-bottom: 2px !important;
+  flex-shrink: 0 !important;
+  border-bottom: 1px solid var(--color-line) !important;
 }
 
 .compact-card-1x1 .plugin-check-window__title {
-  font-size: 10px;
-  font-weight: 800;
+  font-size: 10px !important;
+  font-weight: 800 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.compact-card-1x1 .plugin-check-window__title svg {
+  width: 11px !important;
+  height: 11px !important;
 }
 
 .compact-card-1x1 .plugin-check-window__close {
-  width: 20px;
-  height: 20px;
-  font-size: 11px;
+  width: 18px !important;
+  height: 18px !important;
+  font-size: 10px !important;
+  padding: 0 !important;
+  flex-shrink: 0 !important;
 }
 
 .compact-card-1x1 .plugin-check-window__body {
-  gap: 6px;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 5px !important;
+  flex: 1 !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+}
+
+.compact-card-1x1 .plugin-check-window__section {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 4px !important;
+  margin: 0 !important;
+}
+
+.compact-card-1x1 .plugin-check-window__status-header {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  gap: 2px !important;
+  margin-bottom: 2px !important;
+  width: 100% !important;
 }
 
 .compact-card-1x1 .plugin-check-window__label {
-  font-size: 9.5px;
+  font-size: 8.5px !important;
+  font-weight: 800 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  color: var(--color-muted) !important;
+  margin: 0 !important;
+}
+
+.compact-card-1x1 .plugin-check-window .tray-overall-status {
+  font-size: 9.5px !important;
+}
+
+.compact-card-1x1 .plugin-check-window .tray-overall-status .badge {
+  font-size: 9px !important;
+  padding: 2px 4px !important;
+  white-space: nowrap !important;
+}
+
+.compact-card-1x1 .plugin-check-window__list {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 3px !important;
+  width: 100% !important;
+  margin: 0 !important;
 }
 
 .compact-card-1x1 .plugin-check-window__item {
-  padding: 4px 6px;
-  font-size: 10.5px;
-  gap: 6px;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 3px 6px !important;
+  font-size: 9.5px !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: none !important;
+  border-radius: 0 !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+:root:not([data-theme="dark"]):not([data-theme="amoled"]):not([data-theme="charcoal"]) .compact-card-1x1 .plugin-check-window__item {
+  background: rgba(0, 0, 0, 0.04) !important;
+}
+
+.compact-card-1x1 .plugin-check-window__item-name {
+  font-size: 9.5px !important;
+  font-weight: 700 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.compact-card-1x1 .plugin-check-window__item .badge {
+  font-size: 8.5px !important;
+  padding: 1px 4px !important;
 }
 
 .compact-card-1x1 .plugin-check-window__error {
-  padding: 4px 6px;
-  font-size: 10px;
+  padding: 4px 6px !important;
+  font-size: 9px !important;
+  border: none !important;
+  background: rgba(239, 68, 68, 0.12) !important;
+  color: #FCA5A5 !important;
+  margin-top: 2px !important;
 }
 
 /* LIST ROW FIXED ELEMENT POSITIONING */

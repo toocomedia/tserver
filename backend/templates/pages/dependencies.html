@@ -4,6 +4,10 @@
 {% block page_title %}{{ _('dependencies') }}{% endblock %}
 
 {% block topbar_actions %}
+<div class="topbar-search-wrap" style="position:relative; display:flex; align-items:center; width:220px;">
+  <svg style="position:absolute; left:10px; width:13px; height:13px; color:var(--color-muted); pointer-events:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+  <input type="text" id="dependency-search-input" class="form-control" placeholder="{{ _('search') or 'Search...' }}" style="padding-left:30px; height:32px; font-size:12px; border-radius:0 !important; background:var(--color-surface); border:1px solid var(--color-line); color:var(--color-text); width:100%;" oninput="filterDependencies(this.value)">
+</div>
 {% set resource_id = 'dependencies' %}
 {% set resource_label = 'Dependencies' %}
 {% set active_view = 'cards' %}
@@ -23,14 +27,6 @@
     {% set item_count = dependency_count %}
     {% set icon_svg = dependency_title_icon %}
     {% include "partials/resource_title_bar.html" %}
-
-    <!-- SEARCH BAR FOR SYSTEM DEPENDENCIES -->
-    <div class="mb-md" style="margin-bottom: 16px; max-width: 320px;">
-      <div style="position:relative; display:flex; align-items:center;">
-        <svg style="position:absolute; left:12px; width:14px; height:14px; color:var(--color-muted); pointer-events:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-        <input type="text" id="dependency-search-input" class="form-control" placeholder="{{ _('search_dependencies') or 'Search dependencies...' }}" style="padding-left:34px; height:34px; font-size:12.5px; border-radius:0 !important; background:var(--color-surface); border:1px solid var(--color-line); color:var(--color-text);" oninput="filterDependencies(this.value)">
-      </div>
-    </div>
 
     <div class="resource-views" data-dependency-catalog data-catalog-url="/api/dependencies/catalog-view">
       <div data-dependency-catalog-content aria-live="polite"></div>
