@@ -122,7 +122,7 @@
     <div class="info-row-strict__label">{{ _('domain_purpose') }}</div>
     <div class="info-row-strict__val">
       {% if domain.project_type == 'dns' %}
-        {{ _('dns_only') }}
+        {{ _('dns_zone_only') }}
       {% elif domain.project_type == 'python' %}
         {{ _('python_app') }}
       {% elif domain.project_type == 'php' %}
@@ -139,11 +139,11 @@
     <div class="info-row-strict__label">{{ _('dns_routing') }}</div>
     <div class="info-row-strict__val">
       {% if domain.dns_zone_created %}
-        Standalone DNS Zone
+        {{ _('standalone_dns_zone') }}
       {% elif domain.parent_domain %}
-        DNS Record in <a href="/dns/{{ domain.parent_domain }}/records" style="text-decoration:underline;">{{ domain.parent_domain }}</a>
+        Record in <a href="/dns/{{ domain.parent_domain }}/records" style="text-decoration:underline;">{{ domain.parent_domain }}</a>
       {% else %}
-        None
+        External
       {% endif %}
     </div>
   </div>

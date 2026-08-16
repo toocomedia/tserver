@@ -54,15 +54,25 @@ async def create_reverse_proxy_full(
     try:
         # 1. DNS: only when panel manages the parent zone
         if dns_managed:
-            if not domain_name or not subdomain:
+            if not domain_name:
                 raise HTTPException(
                     status_code=400,
-                    detail="Managed proxy requires parent domain and subdomain",
+                    detail="Managed proxy requires parent domain",
                 )
-            await dns_service.add_record(
-                domain_name, subdomain, "A", config.SERVER_IP
-            )
-            steps_done.append("dns")
+            if subdomain:
+                await dns_service.add_record(
+                    domain_name, subdomain, "A", config.SERVER_IP
+                )
+                steps_done.append("dns")
+            else:
+                # Root domain: ensure apex A record exists
+                try:
+                    await dns_service.add_record(
+                        domain_name, "@", "A", config.SERVER_IP
+                    )
+                except Exception:
+                    pass
+                steps_done.append("dns_root")
 
         # 2. Nginx reverse-proxy config (+ nginx -t inside)
         nginx_service.ensure_acme_root()

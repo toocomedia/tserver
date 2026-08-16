@@ -68,7 +68,7 @@ async def proxy_index(
                 if domain.name not in dns_cache:
                     dns_cache[domain.name] = await dns_service.list_records(domain.name)
                 rrsets = dns_cache[domain.name]
-                fqdn = f"{p.subdomain}.{domain.name}."
+                fqdn = f"{p.subdomain}.{domain.name}." if p.subdomain else f"{domain.name}."
                 for rr in rrsets:
                     if rr.get("type") == "A" and rr.get("name", "").rstrip(".") == fqdn.rstrip("."):
                         dns_ok = True

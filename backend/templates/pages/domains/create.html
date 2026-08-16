@@ -29,36 +29,36 @@
   <form method="post" action="/domains/create" class="clean-form" id="create-domain-form">
     {% include "partials/csrf_field.html" %}
     <input type="hidden" name="ssl_enabled" id="ssl-enabled-input" value="no">
-    <!-- Domain Purpose / Type -->
+    <!-- Domain Type: 'static' (Website) or 'dns' (DNS Only) -->
     <input type="hidden" name="project_type" id="project-type-input" value="{% if project_type %}{{ project_type }}{% else %}static{% endif %}">
     <!-- Smart Subdomain DNS Mode: 'new_zone' or 'parent_record' -->
     <input type="hidden" name="dns_mode" id="dns-mode-input" value="{% if dns_mode %}{{ dns_mode }}{% else %}new_zone{% endif %}">
     <input type="hidden" name="parent_domain" id="parent-domain-input" value="{{ parent_domain or '' }}">
 
     <!-- STEP 1: HOSTNAME -->
-    <div id="panel-1" style="display:flex;flex-direction:column;gap:24px;">
+    <div id="panel-1" style="display:flex;flex-direction:column;gap:20px;">
       <div class="form-group-horizontal" style="border-bottom:none; margin-bottom:0; padding-bottom:0;">
         <div class="form-label-wrap">
           <label class="form-label" for="name">{{ _('target_hostname_1') }}</label>
           <span class="form-hint">{{ _('enter_the_root_domain_or_subdomain_you_w') }}</span>
         </div>
         <div>
-          <input type="text" class="form-input clean-input{% if error %} form-input--error{% endif %}" id="name" name="name" value="{{ name or '' }}" placeholder="example.com (e.g. app.domain.com)" autocomplete="off" autocapitalize="none" spellcheck="false" required autofocus oninput="onHostnameInput()">
+          <input type="text" class="form-input clean-input{% if error %} form-input--error{% endif %}" id="name" name="name" value="{{ name or '' }}" placeholder="example.com or app.domain.com" autocomplete="off" autocapitalize="none" spellcheck="false" required autofocus oninput="onHostnameInput()">
           <div class="form-error mt-xs text-danger" id="name-error" style="display:none; font-weight:600; font-size:12px;"></div>
         </div>
       </div>
 
       <!-- SMART SUBDOMAIN DETECTION PANEL -->
-      <div id="subdomain-smart-panel" style="display:none; padding:18px; border:1px solid var(--color-line); background:var(--color-bg-alt, rgba(255,255,255,0.03));">
-        <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
-          <span style="display:inline-block; width:8px; height:8px; background:var(--color-primary, #3b82f6); border-radius:50%;"></span>
-          <strong style="font-size:14px;">{{ _('parent_zone_detected') }}</strong>
+      <div id="subdomain-smart-panel" style="display:none; padding:16px; border:1px solid var(--color-line); background:var(--color-bg-alt, rgba(255,255,255,0.02));">
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
+          <span style="display:inline-block; width:7px; height:7px; background:var(--color-text); border-radius:50%;"></span>
+          <strong style="font-size:13px; letter-spacing:0.3px;" id="subdomain-smart-header">{{ _('parent_zone_detected') }}</strong>
         </div>
-        <p style="font-size:13px; color:var(--color-muted); margin:0 0 16px 0;" id="subdomain-smart-text">
+        <p style="font-size:12px; color:var(--color-muted); margin:0 0 14px 0;" id="subdomain-smart-text">
           {{ _('parent_zone_detected_desc') }}
         </p>
 
-        <div class="settings-choice-grid" style="grid-template-columns: 1fr 1fr; gap: 12px;">
+        <div class="settings-choice-grid" style="grid-template-columns: 1fr 1fr; gap: 10px;">
           <label class="settings-choice settings-choice--active" id="dns-choice-parent" onclick="selectDnsMode('parent_record')">
             <div class="settings-choice__header">
               <input type="radio" name="dns_mode_opt" value="parent_record" checked>
@@ -78,7 +78,7 @@
       </div>
     </div>
 
-    <!-- STEP 2: DOMAIN PURPOSE (WEBSITE VS DNS ONLY) -->
+    <!-- STEP 2: DOMAIN TYPE (WEBSITE VS DNS ONLY) -->
     <div id="panel-2" style="display:none;flex-direction:column;">
       <div class="form-group-horizontal" style="border-bottom:none; margin-bottom:0; padding-bottom:0;">
         <div class="form-label-wrap">
@@ -87,7 +87,7 @@
         </div>
         <div class="settings-choice-grid">
           
-          <label class="settings-choice {% if project_type != 'dns' %}settings-choice--active{% endif %} opt-item" id="purpose-choice-static" onclick="selectPurpose('static', 'Website & Web Application')">
+          <label class="settings-choice {% if project_type != 'dns' %}settings-choice--active{% endif %} opt-item" id="purpose-choice-static" onclick="selectPurpose('static', 'Website')">
             <div class="settings-choice__header">
               <input type="radio" name="purpose_opt" value="static" {% if project_type != 'dns' %}checked{% endif %}>
               <span class="settings-choice__title">{{ _('website_and_app_hosting') }}</span>
@@ -95,7 +95,7 @@
             <span class="settings-choice__desc">{{ _('website_and_app_desc') }}</span>
           </label>
           
-          <label class="settings-choice {% if project_type == 'dns' %}settings-choice--active{% endif %} opt-item" id="purpose-choice-dns" onclick="selectPurpose('dns', 'DNS Zone Only')">
+          <label class="settings-choice {% if project_type == 'dns' %}settings-choice--active{% endif %} opt-item" id="purpose-choice-dns" onclick="selectPurpose('dns', 'DNS Only')">
             <div class="settings-choice__header">
               <input type="radio" name="purpose_opt" value="dns" {% if project_type == 'dns' %}checked{% endif %}>
               <span class="settings-choice__title">{{ _('dns_zone_only') }}</span>
@@ -140,8 +140,8 @@
 
     <!-- STEP 4: REVIEW -->
     <div id="panel-4" style="display:none;flex-direction:column;">
-      <div style="margin-bottom: 32px; border-bottom: 1px solid var(--color-line); padding-bottom: 16px;">
-        <h3 style="margin:0; font-size: 18px;">{{ _('review_deploy') }}</h3>
+      <div style="margin-bottom: 24px; border-bottom: 1px solid var(--color-line); padding-bottom: 12px;">
+        <h3 style="margin:0; font-size: 16px;">{{ _('review_deploy') }}</h3>
       </div>
       
       <div class="info-row-strict">
@@ -205,6 +205,7 @@ const nameError = document.getElementById('name-error');
 const form = document.getElementById('create-domain-form');
 const submitBtn = document.getElementById('btn-submit');
 const smartPanel = document.getElementById('subdomain-smart-panel');
+const smartHeader = document.getElementById('subdomain-smart-header');
 const smartText = document.getElementById('subdomain-smart-text');
 const dnsModeInput = document.getElementById('dns-mode-input');
 const parentDomainInput = document.getElementById('parent-domain-input');
@@ -230,7 +231,7 @@ form.addEventListener('keydown', (e) => {
 function onHostnameInput() {
   syncDomain();
   if (checkTimeout) clearTimeout(checkTimeout);
-  checkTimeout = setTimeout(checkHostnameApi, 300);
+  checkTimeout = setTimeout(checkHostnameApi, 250);
 }
 
 async function checkHostnameApi() {
@@ -267,10 +268,11 @@ async function checkHostnameApi() {
       parentDomainInput.value = data.parent_domain;
 
       // Update smart panel UI
-      smartText.textContent = `Detected parent domain '${data.parent_domain}' in your panel. How would you like to handle DNS routing for '${val}'?`;
-      document.getElementById('dns-title-parent').textContent = `Add as DNS Record in ${data.parent_domain}`;
-      document.getElementById('dns-desc-parent').textContent = `Creates an A record (${data.subdomain_prefix} → Server IP) in the existing '${data.parent_domain}' DNS zone. (Recommended)`;
-      document.getElementById('dns-desc-newzone').textContent = `Creates a separate authoritative PowerDNS zone for '${val}'.`;
+      smartHeader.textContent = `Parent Zone '${data.parent_domain}' Detected`;
+      smartText.textContent = `Choose how to configure DNS routing for '${val}':`;
+      document.getElementById('dns-title-parent').textContent = `Add to ${data.parent_domain}`;
+      document.getElementById('dns-desc-parent').textContent = `Add an A record in '${data.parent_domain}' (Recommended).`;
+      document.getElementById('dns-desc-newzone').textContent = `Create a separate authoritative DNS zone.`;
 
       smartPanel.style.display = 'block';
 
@@ -315,9 +317,9 @@ function updateReviewDns() {
   if (!revDns) return;
 
   if (dnsModeInput.value === 'parent_record' && parentDomainInput.value) {
-    revDns.textContent = `A Record in '${parentDomainInput.value}' Zone`;
+    revDns.textContent = `Record in ${parentDomainInput.value}`;
   } else {
-    revDns.textContent = 'Standalone DNS Zone';
+    revDns.textContent = 'Standalone Zone';
   }
 }
 
@@ -380,24 +382,24 @@ function goToStep(step) {
     backBtn.style.display = 'none';
     nextBtn.style.display = 'block';
     submitBtn.style.display = 'none';
-    nextText.textContent = window._('continue_to_purpose') || 'Continue to Purpose →';
+    nextText.textContent = window._('continue_to_purpose') || 'Continue →';
   } else if (step === 2) {
     backBtn.style.display = 'block';
     nextBtn.style.display = 'block';
     submitBtn.style.display = 'none';
-    backText.textContent = window._('back_to_hostname') || 'Back to Hostname';
+    backText.textContent = window._('back_to_hostname') || 'Back';
     nextText.textContent = window._('continue_to_ssl') || 'Continue to SSL →';
   } else if (step === 3) {
     backBtn.style.display = 'block';
     nextBtn.style.display = 'block';
     submitBtn.style.display = 'none';
-    backText.textContent = window._('back_to_purpose') || 'Back to Purpose';
+    backText.textContent = window._('back_to_purpose') || 'Back';
     nextText.textContent = window._('review_provision') || 'Review & Provision →';
   } else if (step === 4) {
     backBtn.style.display = 'block';
     nextBtn.style.display = 'none';
     submitBtn.style.display = 'block';
-    backText.textContent = window._('back_to_ssl') || 'Back to SSL';
+    backText.textContent = window._('back_to_ssl') || 'Back';
   }
 }
 

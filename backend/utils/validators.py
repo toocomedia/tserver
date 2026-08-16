@@ -39,6 +39,34 @@ def is_valid_ip(ip: str) -> bool:
         return False
 
 
+_TARGET_LABEL_RE = re.compile(r"^[A-Za-z0-9_-]{1,63}$")
+
+
+def is_valid_target_host(host: str) -> bool:
+    """Return True if host is a valid IPv4/IPv6, 'localhost', domain, or container/hostname."""
+    if not host or len(host) > 253:
+        return False
+    host = host.strip().lower()
+    if host == "localhost":
+        return True
+    if is_valid_ip(host):
+        return True
+    if is_valid_domain(host):
+        return True
+    parts = host.split(".")
+    if all(_TARGET_LABEL_RE.match(p) and not p.startswith("-") and not p.endswith("-") for p in parts):
+        return True
+    return False
+
+
+def sanitize_target_host(host: str) -> str:
+    """Lowercase and strip whitespace from target host/ip. Raises ValueError if invalid."""
+    host = (host or "").strip().lower()
+    if not is_valid_target_host(host):
+        raise ValueError(f"Invalid target host or IP: {host!r}")
+    return host
+
+
 def is_valid_port(port: int) -> bool:
     """Return True if port is in valid range 1–65535."""
     return 1 <= port <= 65535
@@ -46,15 +74,17 @@ def is_valid_port(port: int) -> bool:
 
 def sanitize_domain(domain: str) -> str:
     """Lowercase and strip whitespace from domain. Raises ValueError if invalid."""
-    domain = domain.strip().lower()
+    domain = (domain or "").strip().lower()
     if not is_valid_domain(domain):
         raise ValueError(f"Invalid domain name: {domain!r}")
     return domain
 
 
-def sanitize_subdomain_label(label: str) -> str:
+def sanitize_subdomain_label(label: str, allow_empty: bool = False) -> str:
     """Lowercase and strip whitespace from subdomain label. Raises ValueError if invalid."""
-    label = label.strip().lower()
+    label = (label or "").strip().lower()
+    if allow_empty and (not label or label == "@"):
+        return ""
     if not is_valid_subdomain_label(label):
         raise ValueError(f"Invalid subdomain label: {label!r}")
     return label

@@ -15,6 +15,7 @@ from utils.validators import (
     sanitize_domain,
     is_valid_ip,
     is_valid_port,
+    is_valid_target_host,
 )
 
 logger = logging.getLogger(__name__)
@@ -76,14 +77,15 @@ async def create_proxy(
 ) -> ReverseProxy:
     """
     Create reverse proxy with full cascade (DNS + nginx + optional SSL).
-    Subdomain DNS points to THIS server; nginx forwards to target_ip:port.
+    Supports subdomains (app.example.com) or root domain (example.com).
+    target_ip can be an IP address or hostname/domain.
     """
-    subdomain = sanitize_subdomain_label(subdomain)
+    subdomain = sanitize_subdomain_label(subdomain, allow_empty=True)
     target_ip = target_ip.strip()
     protocol = protocol.strip().lower()
 
-    if not is_valid_ip(target_ip):
-        raise HTTPException(status_code=400, detail=f"Invalid target IP: {target_ip}")
+    if not is_valid_target_host(target_ip):
+        raise HTTPException(status_code=400, detail=f"Invalid target host or IP: {target_ip}")
     if not is_valid_port(target_port):
         raise HTTPException(status_code=400, detail="Port must be between 1 and 65535")
     if protocol not in ("http", "https"):
@@ -99,7 +101,7 @@ async def create_proxy(
             detail=f"DNS zone not active for {domain.name}. Fix the domain first.",
         )
 
-    full_domain = f"{subdomain}.{domain.name}"
+    full_domain = f"{subdomain}.{domain.name}" if subdomain else domain.name
 
     # Uniqueness: DB
     existing = await get_by_full_domain(db, full_domain)
@@ -109,15 +111,18 @@ async def create_proxy(
             detail=f"Proxy already exists for: {full_domain}",
         )
 
-    # Uniqueness: must not collide with a managed root domain
-    if await db.scalar(select(Domain).where(Domain.name == full_domain)):
+    # Uniqueness: must not collide with another managed domain unless it's this parent domain
+    existing_domain = await db.scalar(select(Domain).where(Domain.name == full_domain))
+    if existing_domain and existing_domain.id != domain.id:
         raise HTTPException(
             status_code=409,
             detail=f"'{full_domain}' is already a managed domain",
         )
 
-    # Uniqueness: nginx server_name
-    if nginx_service.server_name_in_use(full_domain):
+    # Uniqueness: nginx server_name check
+    if not subdomain and nginx_service.config_exists(full_domain):
+        await nginx_service.remove_site(full_domain)
+    elif subdomain and nginx_service.server_name_in_use(full_domain):
         raise HTTPException(
             status_code=409,
             detail=f"Nginx already has a config using server_name '{full_domain}'",
@@ -166,8 +171,8 @@ async def create_external_proxy(
     target_ip = target_ip.strip()
     protocol = protocol.strip().lower()
 
-    if not is_valid_ip(target_ip):
-        raise HTTPException(status_code=400, detail=f"Invalid target IP: {target_ip}")
+    if not is_valid_target_host(target_ip):
+        raise HTTPException(status_code=400, detail=f"Invalid target host or IP: {target_ip}")
     if not is_valid_port(target_port):
         raise HTTPException(status_code=400, detail="Port must be between 1 and 65535")
     if protocol not in ("http", "https"):

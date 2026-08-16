@@ -120,9 +120,15 @@ def _proxy_cache_location_directives(full_domain: str, ttl_minutes: int) -> str:
         add_header             X-Cache-Status $upstream_cache_status;"""
 
 
-def _proxy_common_headers() -> str:
-    """Shared proxy headers: WebSocket-safe Connection + forwarding headers."""
-    return """\
+def _proxy_common_headers(protocol: str = "http", target_ip: str = "") -> str:
+    """Shared proxy headers: WebSocket-safe Connection + forwarding headers + SSL SNI if https."""
+    ssl_sni = ""
+    if (protocol or "").strip().lower() == "https":
+        ssl_sni = "\n        proxy_ssl_server_name on;"
+        target = (target_ip or "").strip()
+        if target:
+            ssl_sni += f"\n        proxy_ssl_name        {target};"
+    return f"""\
         proxy_http_version 1.1;
         proxy_set_header   Host              $http_host;
         proxy_set_header   X-Real-IP         $remote_addr;
@@ -133,7 +139,7 @@ def _proxy_common_headers() -> str:
         proxy_set_header   Connection        $connection_upgrade;
         proxy_read_timeout 60s;
         proxy_connect_timeout 10s;
-        proxy_socket_keepalive on;"""
+        proxy_socket_keepalive on;{ssl_sni}"""
 
 
 def _error_pages_location() -> str:
@@ -418,7 +424,7 @@ server {{
 
     location / {{
         proxy_pass         {pass_url};
-{_proxy_common_headers()}
+{_proxy_common_headers(protocol, target_ip)}
 {cache_directives}
     }}{static_loc}
 }}
@@ -488,7 +494,7 @@ server {{
 
     location / {{
         proxy_pass         {pass_url};
-{_proxy_common_headers()}
+{_proxy_common_headers(protocol, target_ip)}
 {cache_directives}
     }}{static_loc}
 }}

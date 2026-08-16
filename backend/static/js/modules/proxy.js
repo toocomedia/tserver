@@ -62,11 +62,6 @@ function initCreateForm() {
             if (domainSelect) domainSelect.focus();
             return false;
           }
-          if (!subdomainIn || !subdomainIn.value.trim()) {
-            if (stepErr1) { stepErr1.textContent = "Please enter a subdomain prefix."; stepErr1.style.display = "block"; }
-            if (subdomainIn) subdomainIn.focus();
-            return false;
-          }
         }
       }
 
@@ -127,8 +122,7 @@ function initCreateForm() {
       if (external) domainSelect.removeAttribute("required");
     }
     if (subdomainIn) {
-      subdomainIn.required = !external;
-      if (external) subdomainIn.removeAttribute("required");
+      subdomainIn.removeAttribute("required");
     }
     if (hostnameIn) {
       hostnameIn.required = external;
@@ -147,29 +141,35 @@ function initCreateForm() {
       sslInfo.style.display = sslCheck && sslCheck.checked ? "block" : "none";
     }
 
-    if (!preview || !previewLine) return;
-
     let frontHost = "";
     if (isExternal()) {
       frontHost = (hostnameIn && hostnameIn.value.trim().toLowerCase()) || "";
     } else {
       const domain = selectedDomainName();
       const sub = (subdomainIn && subdomainIn.value.trim().toLowerCase()) || "";
-      if (hintDomain) hintDomain.textContent = domain || "domain.com";
-      if (domain && sub) frontHost = `${sub}.${domain}`;
+      if (domain) {
+        frontHost = sub ? `${sub}.${domain}` : domain;
+      }
     }
 
-    if (!frontHost) {
+    const liveRouteDisplay = document.getElementById("live-route-display");
+    if (liveRouteDisplay) {
+      liveRouteDisplay.textContent = frontHost || "—";
+    }
+
+    if (!preview || !previewLine) return;
+
+    if (!frontHost && !ip) {
       preview.style.display = "none";
       return;
     }
 
-    const front = `${frontProt}://${frontHost}`;
+    const front = frontHost ? `${frontProt}://${frontHost}` : `${frontProt}://…`;
     const back  = ip && port
       ? `${protocol}://${ip}:${port}`
-      : `${protocol}://…`;
+      : (ip ? `${protocol}://${ip}` : `${protocol}://…`);
 
-    preview.style.display = "block";
+    preview.style.display = "flex";
     previewLine.textContent = `${front} → ${back}`;
   }
 
@@ -192,7 +192,7 @@ function initCreateForm() {
           return;
         }
       } else {
-        if (!domainSelect || !domainSelect.value || !subdomainIn || !subdomainIn.value.trim()) {
+        if (!domainSelect || !domainSelect.value) {
           e.preventDefault();
           return;
         }
