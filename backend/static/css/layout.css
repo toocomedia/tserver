@@ -427,6 +427,96 @@ html[data-sidebar-style="gradient"] .sidebar__item--active:hover {
   gap: 6px;
 }
 
+/* ============================================================
+   TOPBAR EXPANDABLE / COLLAPSIBLE SEARCH WIDGET
+   ============================================================ */
+.topbar-search-expandable {
+  display: inline-flex;
+  align-items: center;
+  position: relative;
+  height: 32px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  transition: width 0.25s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease, background 0.2s ease;
+  width: 32px;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.topbar-search-expandable.is-expanded,
+.topbar-search-expandable:focus-within {
+  width: 220px;
+  background: var(--color-surface);
+  border-color: var(--color-accent);
+}
+
+.topbar-search-expandable__toggle {
+  width: 30px;
+  height: 30px;
+  min-width: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none !important;
+  color: var(--color-muted);
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  transition: color 0.15s ease;
+}
+
+.topbar-search-expandable__toggle:hover,
+.topbar-search-expandable.is-expanded .topbar-search-expandable__toggle,
+.topbar-search-expandable:focus-within .topbar-search-expandable__toggle {
+  color: var(--color-text);
+}
+
+.topbar-search-expandable__input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: none !important;
+  background: transparent !important;
+  color: var(--color-text);
+  font-size: 12px;
+  padding: 0 4px 0 2px;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.topbar-search-expandable__input::placeholder {
+  color: var(--color-muted);
+  font-size: 12px;
+}
+
+.topbar-search-expandable__close {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  min-width: 22px;
+  margin-right: 4px;
+  background: transparent;
+  border: none !important;
+  color: var(--color-muted);
+  cursor: pointer;
+  padding: 0;
+  font-size: 11px;
+  line-height: 1;
+  border-radius: 0;
+}
+
+.topbar-search-expandable.is-expanded .topbar-search-expandable__close,
+.topbar-search-expandable:focus-within .topbar-search-expandable__close {
+  display: inline-flex;
+}
+
+.topbar-search-expandable__close:hover {
+  color: var(--color-text);
+}
+
 .content {
   flex: 1;
   overflow-y: auto;

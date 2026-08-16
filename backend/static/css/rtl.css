@@ -833,3 +833,8 @@ html[dir="rtl"] .mr-auto {
   margin-right: 0 !important;
   margin-left: auto !important;
 }
+
+html[dir="rtl"] .topbar-search-expandable__close {
+  margin-right: 0 !important;
+  margin-left: 4px !important;
+}

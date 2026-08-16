@@ -195,3 +195,56 @@ document.addEventListener('app:init', () => {
   autoInitAllListPaginations(DEFAULT_PAGE_LIMIT);
 });
 
+// ============================================================
+// TOPBAR EXPANDABLE / COLLAPSIBLE SEARCH CONTROLLER
+// ============================================================
+function toggleTopbarSearch(btn) {
+  const container = btn.closest('[data-topbar-search]');
+  if (!container) return;
+  const isExpanded = container.classList.contains('is-expanded');
+  if (isExpanded) {
+    const input = container.querySelector('.topbar-search-expandable__input');
+    if (!input || !input.value.trim()) {
+      container.classList.remove('is-expanded');
+    }
+  } else {
+    container.classList.add('is-expanded');
+    const input = container.querySelector('.topbar-search-expandable__input');
+    if (input) {
+      input.focus();
+    }
+  }
+}
+window.toggleTopbarSearch = toggleTopbarSearch;
+
+function clearAndCloseTopbarSearch(btn) {
+  const container = btn.closest('[data-topbar-search]');
+  if (!container) return;
+  const input = container.querySelector('.topbar-search-expandable__input');
+  if (input) {
+    input.value = '';
+    input.dispatchEvent(new Event('input'));
+  }
+  container.classList.remove('is-expanded');
+}
+window.clearAndCloseTopbarSearch = clearAndCloseTopbarSearch;
+
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('[data-topbar-search]')) {
+    document.querySelectorAll('[data-topbar-search].is-expanded').forEach(container => {
+      const input = container.querySelector('.topbar-search-expandable__input');
+      if (!input || !input.value.trim()) {
+        container.classList.remove('is-expanded');
+      }
+    });
+  }
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    document.querySelectorAll('[data-topbar-search].is-expanded').forEach(container => {
+      clearAndCloseTopbarSearch(container);
+    });
+  }
+});
+
