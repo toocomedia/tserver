@@ -40,7 +40,7 @@
 .split-sidebar__status, .split-sidebar__footer { padding: var(--space-lg); border-top: 1px solid var(--color-line); }
 .split-sidebar__count { margin-left: auto; font-size: var(--font-small); color: var(--color-muted); }
 .split-sidebar__footer { margin-top: auto; color: var(--color-muted); }
-.split-content { flex: 1; width: 100%; max-width: var(--max-content-width); min-width: 0; margin-inline: auto; padding: 0 var(--page-gutter) var(--space-xl); overflow-x: hidden; }
+.split-content { flex: 1; width: 100%; max-width: var(--max-content-width); min-width: 0; margin-inline: auto; padding: 0 var(--page-gutter) 80px; overflow-x: hidden; }
 .split-tab { display: none; }
 .split-tab.active { display: block; }
 

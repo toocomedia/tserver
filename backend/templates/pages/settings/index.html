@@ -65,15 +65,15 @@
           </div>
           <div class="info-row">
             <span class="info-row__label">{{ _('active_access_endpoints') }}</span>
-            <span class="info-row__value" id="stat-urls" style="display:flex; flex-direction:column; gap:4px; align-items:flex-end;">
+            <span class="info-row__value" id="stat-urls" style="display:flex; flex-direction:column; gap:6px; align-items:flex-end;">
               {% if s.urls.ip_http %}
-              <div><span class="text-muted" style="font-size:11px; margin-right:4px;">IP:</span><a href="{{ s.urls.ip_http }}" target="_blank" rel="noopener">{{ s.urls.ip_http }}</a></div>
+              <div><span class="text-muted" style="font-size:11px; margin-right:6px;">IP:</span><a href="{{ s.urls.ip_http }}" target="_blank" rel="noopener">{{ s.urls.ip_http }}</a></div>
               {% endif %}
               {% if s.urls.domain_http %}
-              <div><span class="text-muted" style="font-size:11px; margin-right:4px;">HTTP:</span><a href="{{ s.urls.domain_http }}" target="_blank" rel="noopener">{{ s.urls.domain_http }}</a></div>
+              <div><span class="text-muted" style="font-size:11px; margin-right:6px;">HTTP:</span><a href="{{ s.urls.domain_http }}" target="_blank" rel="noopener">{{ s.urls.domain_http }}</a></div>
               {% endif %}
               {% if s.urls.domain_https %}
-              <div><span class="text-muted" style="font-size:11px; margin-right:4px;">HTTPS:</span><a href="{{ s.urls.domain_https }}" target="_blank" rel="noopener">{{ s.urls.domain_https }}</a></div>
+              <div><span class="text-muted" style="font-size:11px; margin-right:6px;">HTTPS:</span><a href="{{ s.urls.domain_https }}" target="_blank" rel="noopener">{{ s.urls.domain_https }}</a></div>
               {% endif %}
             </span>
           </div>
@@ -114,7 +114,7 @@
             </span>
           </div>
 
-          <p class="form-hint mt-md mb-md" id="ssl-section-hint">
+          <p class="form-hint" style="margin: 16px 0 14px;" id="ssl-section-hint">
             {% if s.ssl_active %}
               Certificate is active. Renew before it expires, or remove it.
             {% else %}
@@ -122,7 +122,7 @@
             {% endif %}
           </p>
 
-          <div class="settings-choice-grid mb-md">
+          <div class="settings-choice-grid mb-lg">
             <label class="settings-choice {% if s.url_mode == 'none' or not s.panel_domain %}settings-choice--active{% endif %}">
               <div class="settings-choice__header">
                 <input type="radio" name="url_mode" id="url_mode_none" value="none" {% if s.url_mode == 'none' or not s.panel_domain %}checked{% endif %}>
@@ -146,8 +146,8 @@
             </label>
           </div>
 
-          <div id="url-subdomain-fields" class="mb-md" hidden>
-            <label class="form-label">{{ _('subdomain_here') }}</label>
+          <div id="url-subdomain-fields" class="mb-lg" hidden>
+            <label class="form-label" style="font-size:12px;">{{ _('subdomain_here') }}</label>
             <div class="settings-subdomain-row mt-xs">
               <input class="form-input" type="text" id="subdomain_label" value="{{ s.subdomain_label or 'panel' }}" placeholder="panel" style="max-width:140px;">
               <span class="settings-subdomain-dot">.</span>
@@ -163,9 +163,9 @@
             <p class="form-hint mt-xs">{{ _('preview') }} <strong id="subdomain-preview">—</strong></p>
           </div>
 
-          <div id="url-custom-fields" class="mb-md" hidden>
+          <div id="url-custom-fields" class="mb-lg" hidden>
             <div class="form-group" style="max-width:380px;">
-              <label class="form-label" for="custom_domain">{{ _('hostname') }}</label>
+              <label class="form-label" for="custom_domain" style="font-size:12px;">{{ _('hostname') }}</label>
               <input class="form-input" type="text" id="custom_domain" value="{% if s.url_mode == 'custom' %}{{ s.panel_domain or '' }}{% endif %}" placeholder="panel.example.com">
               <p class="form-hint mt-xs">
                 {{ _('a_record') }} <code id="custom-dns-hint">{{ s.server_ip }}</code>
@@ -173,7 +173,7 @@
             </div>
           </div>
 
-          <div class="mb-md" style="display:flex; flex-direction:column; gap:8px;">
+          <div class="mb-lg" style="display:flex; flex-direction:column; gap:10px;">
             <label class="form-check" id="remove-ssl-on-change-wrap">
               <input type="checkbox" id="remove_ssl_on_change">
               <span>{{ _('when_changing_url_delete_ssl_for_old_hos') }}</span>
@@ -185,7 +185,7 @@
             </label>
           </div>
 
-          <div id="ssl-progress" class="ssl-progress mb-md" hidden>
+          <div id="ssl-progress" class="ssl-progress mb-lg" hidden>
             <div class="ssl-step" data-step="1"><span class="ssl-step__icon">○</span> {{ _('save_hostname') }}</div>
             <div class="ssl-step" data-step="2"><span class="ssl-step__icon">○</span> {{ _('prepare_nginx') }}</div>
             <div class="ssl-step" data-step="3"><span class="ssl-step__icon">○</span> {{ _('request_certificate') }} <span class="text-muted">{{ _('1_2_min') }}</span></div>
@@ -193,14 +193,20 @@
             <p class="form-hint mt-xs" id="ssl-progress-msg"></p>
           </div>
 
-          <div class="form-actions">
-            <button type="button" class="btn btn--primary" id="btn-save-panel">{{ _('save_panel_url') }}</button>
-            <button type="button" class="btn btn--secondary" id="btn-issue-ssl" {% if not s.panel_domain %}disabled{% endif %}>
+        </div>
+      </div>
+
+      <!-- Fixed Bottom Action Bar -->
+      <div class="fixed-action-bar">
+        <div class="fixed-action-bar__inner">
+          <button type="button" class="btn btn--danger btn--sm" id="btn-remove-ssl" {% if not s.ssl_active %}hidden{% endif %}>
+            {{ _('remove_ssl') }}
+          </button>
+          <div style="display:flex; align-items:center; gap:8px; margin-left:auto;">
+            <button type="button" class="btn btn--secondary btn--sm" id="btn-issue-ssl" {% if not s.panel_domain %}disabled{% endif %}>
               {% if s.ssl_active %}Renew SSL{% else %}Issue SSL{% endif %}
             </button>
-            <button type="button" class="btn btn--danger" id="btn-remove-ssl" {% if not s.ssl_active %}hidden{% endif %}>
-              {{ _('remove_ssl') }}
-            </button>
+            <button type="button" class="btn btn--primary btn--sm" id="btn-save-panel">{{ _('save_panel_url') }}</button>
           </div>
         </div>
       </div>
@@ -211,17 +217,23 @@
       <div class="section mb-xl">
         <div class="section__header"><h3>{{ _('ip_access_1') }}</h3></div>
         <div class="section__body">
-          <label class="form-check mb-md">
+          <label class="form-check mb-lg">
             <input type="checkbox" id="allow_ip" {% if s.allow_ip %}checked{% endif %}>
             <span>{{ _('allow_access_by_server_ip') }}</span>
           </label>
-          <div class="form-group mb-md" id="ip-port-group" style="max-width:320px;">
-            <label class="form-label" for="ip_port">{{ _('public_port') }}</label>
+          <div class="form-group mb-lg" id="ip-port-group" style="max-width:320px;">
+            <label class="form-label" for="ip_port" style="font-size:12px;">{{ _('public_port') }}</label>
             <input class="form-input" type="number" id="ip_port" min="1" max="65535" value="{{ s.ip_port or 80 }}" style="max-width:110px;">
-            <p class="form-hint">{{ _('e_g_8080') }} <code>http://{{ s.server_ip }}:{{ s.ip_port or 80 }}/</code></p>
+            <p class="form-hint mt-xs">{{ _('e_g_8080') }} <code>http://{{ s.server_ip }}:{{ s.ip_port or 80 }}/</code></p>
           </div>
-          <div class="form-actions">
-            <button type="button" class="btn btn--primary" id="btn-save-ip">{{ _('save_ip_access') }}</button>
+        </div>
+      </div>
+
+      <!-- Fixed Bottom Action Bar -->
+      <div class="fixed-action-bar">
+        <div class="fixed-action-bar__inner">
+          <div style="margin-left:auto;">
+            <button type="button" class="btn btn--primary btn--sm" id="btn-save-ip">{{ _('save_ip_access') }}</button>
           </div>
         </div>
       </div>
@@ -244,12 +256,9 @@
             <input type="checkbox" id="hsts_enabled" {% if s.hsts_enabled %}checked{% endif %}>
             <span>{{ _('hsts') }}</span>
           </label>
-          <div class="form-group mb-md" style="max-width:320px;">
-            <label class="form-label" for="session_max_age_days">{{ _('session_days') }}</label>
+          <div class="form-group mb-lg" style="max-width:320px;">
+            <label class="form-label" for="session_max_age_days" style="font-size:12px;">{{ _('session_days') }}</label>
             <input class="form-input" type="number" id="session_max_age_days" min="1" max="365" value="{{ s.session_max_age_days or 7 }}" style="max-width:110px;">
-          </div>
-          <div class="form-actions">
-            <button type="button" class="btn btn--primary" id="btn-save-security">{{ _('save_security') }}</button>
           </div>
         </div>
       </div>
@@ -262,7 +271,7 @@
             {{ _('protect_your_account_with_an_additional_') }}
           </p>
           
-          <div class="info-row mb-md" id="2fa-status-box">
+          <div class="info-row mb-lg" id="2fa-status-box">
             <span class="info-row__label">{{ _('status') }}</span>
             <span class="info-row__value">
               {% if is_2fa_enabled %}
@@ -273,29 +282,38 @@
             </span>
           </div>
           
-          <div id="2fa-setup-box" class="mb-md" style="display:none;">
-            <p class="mb-sm">{{ _('scan_this_qr_code_with_your_authenticato') }}</p>
+          <div id="2fa-setup-box" class="mb-lg" style="display:none;">
+            <p class="mb-sm" style="font-size:13px;">{{ _('scan_this_qr_code_with_your_authenticato') }}</p>
             <div class="mb-sm">
               <img id="2fa-qr-img" src="" alt="2FA QR Code" style="max-width:160px; border:1px solid var(--color-line);">
             </div>
             <p class="form-hint mb-md">{{ _('or_enter_this_secret_manually') }} <code id="2fa-secret-text"></code></p>
             
             <div class="form-group mb-md" style="max-width:200px;">
-              <label class="form-label" for="2fa-verify-code">{{ _('verification_code') }}</label>
+              <label class="form-label" for="2fa-verify-code" style="font-size:12px;">{{ _('verification_code') }}</label>
               <input class="form-input" type="text" id="2fa-verify-code" placeholder="123456" style="max-width:120px;">
             </div>
-            <div class="form-actions">
-              <button type="button" class="btn btn--primary" id="btn-verify-2fa">{{ _('verify_enable') }}</button>
-              <button type="button" class="btn btn--secondary" id="btn-cancel-2fa">{{ _('cancel') }}</button>
+            <div class="d-flex gap-sm">
+              <button type="button" class="btn btn--primary btn--sm" id="btn-verify-2fa">{{ _('verify_enable') }}</button>
+              <button type="button" class="btn btn--secondary btn--sm" id="btn-cancel-2fa">{{ _('cancel') }}</button>
             </div>
           </div>
           
-          <div class="form-actions" id="2fa-actions">
+          <div id="2fa-actions">
             {% if is_2fa_enabled %}
-              <button type="button" class="btn btn--danger" id="btn-disable-2fa">{{ _('disable_2fa') }}</button>
+              <button type="button" class="btn btn--danger btn--sm" id="btn-disable-2fa">{{ _('disable_2fa') }}</button>
             {% else %}
-              <button type="button" class="btn btn--primary" id="btn-setup-2fa">{{ _('setup_2fa') }}</button>
+              <button type="button" class="btn btn--primary btn--sm" id="btn-setup-2fa">{{ _('setup_2fa') }}</button>
             {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Fixed Bottom Action Bar -->
+      <div class="fixed-action-bar">
+        <div class="fixed-action-bar__inner">
+          <div style="margin-left:auto;">
+            <button type="button" class="btn btn--primary btn--sm" id="btn-save-security">{{ _('save_security') }}</button>
           </div>
         </div>
       </div>
@@ -515,16 +533,25 @@
     const tabItems = document.querySelectorAll('.split-sidebar__item');
     const tabs = document.querySelectorAll('.split-tab');
     
+    function switchTab(tabId) {
+      tabItems.forEach(t => t.classList.toggle('active', t.getAttribute('data-tab') === tabId));
+      tabs.forEach(t => t.classList.toggle('active', t.id === tabId));
+    }
+
     tabItems.forEach(item => {
       item.addEventListener('click', () => {
-        tabItems.forEach(t => t.classList.remove('active'));
-        tabs.forEach(t => t.classList.remove('active'));
-        
-        item.classList.add('active');
         const tabId = item.getAttribute('data-tab');
-        document.getElementById(tabId).classList.add('active');
+        switchTab(tabId);
+        if (history.replaceState) history.replaceState(null, '', '#' + tabId);
       });
     });
+
+    if (window.location.hash) {
+      const hashTab = window.location.hash.replace('#', '');
+      if (document.getElementById(hashTab)) {
+        switchTab(hashTab);
+      }
+    }
   });
 </script>
 <script src="/static/js/modules/settings.js?v={{ APP_VERSION }}"></script>

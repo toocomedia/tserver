@@ -258,17 +258,23 @@ input[type="checkbox"]:checked, input[type="radio"]:checked {
   bottom: 0;
   left: 0;
   right: 0;
-  height: 80px;
+  height: 56px;
   background: var(--color-surface);
   border-top: 1px solid var(--color-line);
   z-index: 1000;
+  display: flex;
+  align-items: center;
 }
 @media (min-width: 992px) {
   .fixed-action-bar {
     left: var(--sidebar-width);
   }
+  [dir="rtl"] .fixed-action-bar {
+    left: 0;
+    right: var(--sidebar-width);
+  }
 }
-.fixed-action-bar__inner {
+.fixed-action-bar__inner, .fixed-action-inner {
   display: flex;
   align-items: center;
   justify-content: space-between;
