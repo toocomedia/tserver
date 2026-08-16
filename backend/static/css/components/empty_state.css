@@ -44,11 +44,10 @@
   --grid-block-tint:      rgba(255, 255, 255, 0.035);
 }
 
-/* 1. Base Container (Borderless & Unboxed — floats seamlessly on page) */
+/* 1. Base Container (Borderless & Unboxed — natural layout flow) */
 .empty-state-grid-card {
   position: relative;
   width: 100%;
-  min-height: 420px;
   border: none !important;
   background: transparent !important;
   box-shadow: none !important;
@@ -57,9 +56,8 @@
   align-items: center;
   justify-content: center;
   text-align: center;
-  padding: 60px 20px;
+  padding: 48px 20px;
   overflow: hidden;
-  margin: 16px 0 24px;
   z-index: 1;
   transition: opacity var(--skeleton-fade-duration, 0.4s) ease, visibility var(--skeleton-fade-duration, 0.4s) ease;
 }
