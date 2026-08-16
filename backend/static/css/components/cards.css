@@ -93,21 +93,20 @@
 /* ============================================================
    CARDS GRID VIEW (130px Surface Cards & Compact Layout)
    ============================================================ */
-.view-cards-container,
-.dependency-grid {
+.view-cards-container {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(520px, 1fr));
   gap: 20px;
 }
 
-.plugin-grid {
+.plugin-grid,
+.dependency-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(430px, 1fr));
   gap: 18px;
 }
 
-.item-card,
-.dependency-card {
+.item-card {
   border: 1px solid var(--color-line);
   background: var(--color-bg);
   box-shadow: none !important;
@@ -118,7 +117,8 @@
   transition: border-color 0.15s ease;
 }
 
-.plugin-card {
+.plugin-card,
+.dependency-card {
   background: var(--color-surface);
   border: none !important;
   box-shadow: none !important;
@@ -131,23 +131,17 @@
   transition: background 0.15s ease;
 }
 
-.plugin-card:hover {
-  background: var(--color-surface-hover);
+.plugin-card:hover,
+.dependency-card:hover {
+  background: var(--color-surface-hover, color-mix(in srgb, var(--color-header-bg-bar) 80%, var(--color-surface))) !important;
 }
 
-.item-card:hover,
-.dependency-card:hover {
+.item-card:hover {
   border-color: var(--color-text);
 }
 
+.plugin-card__top,
 .dependency-card__top {
-  display: flex;
-  flex-direction: row;
-  align-items: stretch;
-  min-height: 180px;
-}
-
-.plugin-card__top {
   display: flex;
   flex-direction: row;
   align-items: stretch;
@@ -156,8 +150,7 @@
 }
 
 /* 1:1 Square Image Cover Box */
-.item-card__img-box,
-.dependency-card__cover {
+.item-card__img-box {
   width: 180px;
   min-height: 180px;
   aspect-ratio: 1 / 1;
@@ -171,7 +164,8 @@
   overflow: hidden;
 }
 
-.plugin-card__cover {
+.plugin-card__cover,
+.dependency-card__cover {
   width: 130px;
   min-height: 130px;
   height: 130px;
@@ -206,8 +200,7 @@
 }
 
 /* Strict Main Container */
-.item-card__content,
-.dependency-card__main {
+.item-card__content {
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -216,7 +209,8 @@
   min-width: 0;
 }
 
-.plugin-card__main {
+.plugin-card__main,
+.dependency-card__main {
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -234,8 +228,7 @@
   line-height: 1.2;
 }
 
-.item-card__title,
-.dependency-card__title {
+.item-card__title {
   font-size: 17px;
   font-weight: 800;
   color: var(--color-text);
@@ -246,7 +239,8 @@
   text-overflow: ellipsis;
 }
 
-.plugin-card__title {
+.plugin-card__title,
+.dependency-card__title {
   font-size: 14px;
   font-weight: 700;
   color: var(--color-text);
@@ -266,29 +260,20 @@
   flex-shrink: 0;
 }
 
+.plugin-card__description,
 .dependency-card__body {
-  font-size: 13px;
-  color: var(--color-muted);
-  line-height: 1.5;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  margin: auto 0;
-}
-
-.plugin-card__description {
   font-size: 12px;
   color: var(--color-muted);
   line-height: 1.4;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  margin: 0;
+  margin: 8px 0;
   display: block;
 }
 
-.plugin-card__footer-row {
+.plugin-card__footer-row,
+.dependency-card__footer-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -298,15 +283,8 @@
   gap: 8px;
 }
 
+.plugin-card__status,
 .dependency-card__status {
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--color-muted);
-}
-
-.plugin-card__status {
   font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
@@ -314,7 +292,8 @@
   color: var(--color-muted);
 }
 
-.plugin-card__actions {
+.plugin-card__actions,
+.dependency-card__actions {
   display: flex;
   align-items: center;
   gap: 5px;
@@ -470,7 +449,7 @@
   transform: rotate(180deg);
 }
 
-/* UNIVERSAL CLEAN PLUGIN CHECK WINDOW OVERLAY (Theme-Adaptive Finish) */
+/* UNIVERSAL CLEAN PLUGIN CHECK WINDOW OVERLAY (Minimal Borderless Surface) */
 .plugin-check-window {
   position: absolute;
   top: 0;
@@ -480,7 +459,7 @@
   z-index: 50;
   background: var(--color-surface);
   color: var(--color-text);
-  padding: 14px 16px;
+  padding: 14px 18px;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
@@ -488,10 +467,11 @@
   overflow-y: auto;
   opacity: 1;
   transform: translateY(0) translateZ(0);
-  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;
   pointer-events: auto;
   will-change: transform, opacity;
-  border: 1px solid var(--color-line);
+  border: none !important;
+  box-shadow: none !important;
   box-sizing: border-box;
 }
 
@@ -506,15 +486,15 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-bottom: 8px;
-  border-bottom: 1px solid var(--color-line);
+  padding-bottom: 4px;
+  border-bottom: none !important;
 }
 
 .plugin-check-window__title {
   font-size: 11px;
   font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.05em;
   color: var(--color-text);
   display: flex;
   align-items: center;
@@ -522,30 +502,46 @@
 }
 
 [data-theme="dark"] .plugin-check-window__title,
-[data-theme="amoled"] .plugin-check-window__title {
-  color: var(--color-accent);
+[data-theme="amoled"] .plugin-check-window__title,
+[data-theme="charcoal"] .plugin-check-window__title {
+  color: var(--color-text);
 }
 
 .plugin-check-window__close {
-  background: transparent;
-  border: none;
+  background: rgba(255, 255, 255, 0.08);
+  border: none !important;
   color: var(--color-muted);
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 700;
   cursor: pointer;
-  padding: 0 4px;
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   line-height: 1;
-  transition: color 0.15s ease;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+:root:not([data-theme="dark"]):not([data-theme="amoled"]):not([data-theme="charcoal"]) .plugin-check-window__close {
+  background: rgba(0, 0, 0, 0.06);
+  color: var(--color-muted);
 }
 
 .plugin-check-window__close:hover {
+  background: rgba(255, 255, 255, 0.16);
+  color: var(--color-text);
+}
+
+:root:not([data-theme="dark"]):not([data-theme="amoled"]):not([data-theme="charcoal"]) .plugin-check-window__close:hover {
+  background: rgba(0, 0, 0, 0.12);
   color: var(--color-text);
 }
 
 .plugin-check-window__body {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   flex: 1;
 }
 
@@ -557,7 +553,7 @@
 
 .plugin-check-window__label {
   font-size: 10px;
-  font-weight: 800;
+  font-weight: 700;
   text-transform: uppercase;
   color: var(--color-muted);
   letter-spacing: 0.05em;
@@ -566,7 +562,7 @@
 .plugin-check-window__list {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
   width: 100%;
 }
 
@@ -575,12 +571,16 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 600;
   padding: 6px 10px;
-  background: var(--color-bg);
-  border: 1px solid var(--color-line);
+  background: rgba(255, 255, 255, 0.04);
+  border: none !important;
   color: var(--color-text);
+}
+
+:root:not([data-theme="dark"]):not([data-theme="amoled"]):not([data-theme="charcoal"]) .plugin-check-window__item {
+  background: rgba(0, 0, 0, 0.04);
 }
 
 .plugin-check-window__item-name {
@@ -591,11 +591,16 @@
 .plugin-check-window__error {
   font-size: 11px;
   font-weight: 600;
-  color: var(--color-danger);
-  background: var(--color-alert-danger-bg);
-  border-left: 3px solid var(--color-danger);
+  color: #FCA5A5;
+  background: rgba(239, 68, 68, 0.12);
+  border: none !important;
   padding: 6px 10px;
   line-height: 1.35;
+}
+
+:root:not([data-theme="dark"]):not([data-theme="amoled"]):not([data-theme="charcoal"]) .plugin-check-window__error {
+  color: #DC2626;
+  background: rgba(220, 38, 38, 0.08);
 }
 
 /* LIST ROW FIXED ELEMENT POSITIONING */
@@ -615,8 +620,7 @@
   box-sizing: border-box;
   background: var(--color-surface);
   color: var(--color-text);
-  border: none;
-  border-bottom: 1px solid var(--color-line);
+  border: none !important;
 }
 
 .list-item-row .plugin-check-window__header {

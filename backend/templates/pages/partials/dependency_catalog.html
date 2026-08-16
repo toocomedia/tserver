@@ -1,5 +1,5 @@
-<!-- Cards view -->
-<div data-resource-container="dependencies" data-resource-view="cards" class="dependency-grid is-hidden">
+<!-- Cards view (DEFAULT) -->
+<div data-resource-container="dependencies" data-resource-view="cards" class="dependency-grid">
   {% for dependency in dependencies %}
     {% include "partials/dependency_card.html" %}
   {% else %}
@@ -8,8 +8,8 @@
   {% endfor %}
 </div>
 
-<!-- Compact view (DEFAULT) -->
-<div data-resource-container="dependencies" data-resource-view="compact" class="dependency-compact-grid">
+<!-- Compact view -->
+<div data-resource-container="dependencies" data-resource-view="compact" class="dependency-compact-grid is-hidden">
   {% for dependency in dependencies %}
     {% include "partials/dependency_card_compact.html" %}
   {% else %}

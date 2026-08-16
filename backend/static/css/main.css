@@ -150,6 +150,7 @@
   /* Colors */
   --color-bg:         #FFFFFF;
   --color-surface:    #F4F5F2;
+  --color-surface-hover: #ECEEE7;
   --color-header-bg-bar: #E8EAE4;
   --color-sidebar:    #0B0C0B;
   --color-sidebar-text: #FFFFFF;
@@ -332,6 +333,7 @@ p {
 [data-theme="dark"] {
   --color-bg:         #0F1720;
   --color-surface:    #141D27;
+  --color-surface-hover: #1C2735;
   --color-header-bg-bar: #1C2735;
   --color-sidebar:    var(--color-bg); /* Match page background in dark mode */
   --color-sidebar-text: #D1D5DB;
@@ -369,6 +371,7 @@ p {
 [data-theme="amoled"] {
   --color-bg:         #000000;
   --color-surface:    #141417;
+  --color-surface-hover: #1F1F24;
   --color-header-bg-bar: #24242C;
   --color-sidebar:    #000000;
   --color-sidebar-text: #D4D4D8;
@@ -406,6 +409,7 @@ p {
 [data-theme="charcoal"] {
   --color-bg:         #1F1F22;
   --color-surface:    #26262B;
+  --color-surface-hover: #32323A;
   --color-header-bg-bar: #2B2B30;
   --color-sidebar:    #111112;
   --color-sidebar-text: #E5E7EB;
