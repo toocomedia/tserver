@@ -205,10 +205,27 @@
 }
 
 /* Info row (20px Horizontal Padding Alignment & Dead-Center Height) */
-.info-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 38px; padding: 0 var(--page-gutter); border-bottom: 1px solid var(--color-line); margin-inline: calc(var(--page-gutter) * -1); }
+.info-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 40px; padding: 6px var(--page-gutter); border-bottom: 1px solid var(--color-line); margin-inline: calc(var(--page-gutter) * -1); }
 .info-row:last-child { border-bottom: none; }
 .info-row__label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-muted); min-width: 140px; flex-shrink: 0; display: flex; align-items: center; }
 .info-row__value { font-size: 13px; color: var(--color-text); font-weight: 500; display: flex; align-items: center; gap: 8px; }
+.info-row--multiline, .info-row:has(.endpoints-list), .info-row:has(#stat-urls) {
+  padding-top: 14px;
+  padding-bottom: 14px;
+  align-items: flex-start;
+}
+.endpoints-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-end;
+}
+.endpoint-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
 /* Monospace block */
 .code-block { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: var(--font-small); line-height: 1.5; background: var(--color-surface); border: 1px solid var(--color-line); padding: var(--space-md); margin: 0; white-space: pre-wrap; word-break: break-word; max-height: 360px; overflow: auto; color: var(--color-text); }
 /* SSL Progress */

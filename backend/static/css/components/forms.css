@@ -33,11 +33,11 @@
 .form-check {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-sm);
   cursor: pointer;
-  user-select: none;
   font-size: 13px;
   line-height: 1.4;
+  user-select: none;
 }
 input[type="checkbox"], input[type="radio"] {
   width: 16px;
@@ -60,38 +60,44 @@ input[type="checkbox"]:checked, input[type="radio"]:checked {
   background-position: center;
 }
 .form-check input[type="checkbox"], .form-check input[type="radio"] { margin: 0; }
-.form-check--stacked { align-items: flex-start; }
-.form-check--stacked input[type="checkbox"], .form-check--stacked input[type="radio"] { margin-top: 2px; }
+.form-check span {
+  display: inline-flex;
+  align-items: center;
+  line-height: 1.4;
+}
+.form-check:has(.form-hint), .form-check--stacked {
+  align-items: flex-start;
+}
+.form-check:has(.form-hint) input[type="checkbox"], .form-check--stacked input[type="checkbox"] {
+  margin-top: 2px;
+}
 
 /* Settings custom classes */
-.settings-choice-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 12px;
-  width: 100%;
-  margin-top: 4px;
-}
+.settings-choice-grid { display: grid; grid-template-columns: 1fr; gap: 16px; margin-top: 4px; }
+@media (min-width: 600px) { .settings-choice-grid { grid-template-columns: 1fr 1fr; } }
+@media (min-width: 900px) { .settings-choice-grid { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); } }
 .settings-choice {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 6px;
-  padding: 14px 18px;
-  border: 1px solid var(--color-line) !important;
+  gap: 8px;
+  padding: 20px 24px;
+  border: none !important;
+  border-top: 3px solid transparent !important;
   background: var(--color-surface);
   box-shadow: none !important;
   cursor: pointer;
-  min-height: 76px;
+  min-height: 110px;
   transition: border-color 0.15s ease, background 0.15s ease;
 }
 .settings-choice:hover {
-  border-color: var(--color-text) !important;
+  background: color-mix(in srgb, var(--color-header-bg-bar) 60%, var(--color-surface));
 }
-.settings-choice--compact { min-height: auto; padding: 12px 16px; }
+.settings-choice--compact { min-height: auto; padding: 16px 20px; }
 .settings-choice:has(input:disabled) { opacity: 0.55; cursor: not-allowed; }
 .settings-choice--active, .settings-choice:has(input:checked) {
-  border-color: var(--color-text) !important;
-  background: color-mix(in srgb, var(--color-accent) 10%, var(--color-surface)) !important;
+  border-top-color: var(--color-accent) !important;
+  background: var(--color-header-bg-bar) !important;
 }
 
 .settings-choice__header {

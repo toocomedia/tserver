@@ -172,9 +172,9 @@
       const https = s.urls.domain_https || (s.panel_domain && s.ssl_active && typeof publicUrl === "function"
         ? publicUrl(s.panel_domain, { https: true })
         : s.urls.domain_https);
-      if (ip) parts.push(`<div style="display:flex; align-items:center; gap:8px;"><span class="badge badge--neutral" style="font-size:10px; padding:2px 6px; font-weight:700;">IP</span><a href="${ip}" target="_blank" rel="noopener" class="mono" style="font-size:13px;">${ip}</a></div>`);
-      if (http) parts.push(`<div style="display:flex; align-items:center; gap:8px;"><span class="badge badge--neutral" style="font-size:10px; padding:2px 6px; font-weight:700;">HTTP</span><a href="${http}" target="_blank" rel="noopener" class="mono" style="font-size:13px;">${http}</a></div>`);
-      if (https) parts.push(`<div style="display:flex; align-items:center; gap:8px;"><span class="badge badge--ok" style="font-size:10px; padding:2px 6px; font-weight:700;">HTTPS</span><a href="${https}" target="_blank" rel="noopener" class="mono" style="font-size:13px;">${https}</a></div>`);
+      if (ip) parts.push(`<div class="endpoint-item"><span class="badge badge--neutral" style="font-size:10px; padding:2px 6px;">IP</span><a href="${ip}" target="_blank" rel="noopener" class="mono">${ip}</a></div>`);
+      if (http) parts.push(`<div class="endpoint-item"><span class="badge badge--neutral" style="font-size:10px; padding:2px 6px;">HTTP</span><a href="${http}" target="_blank" rel="noopener" class="mono">${http}</a></div>`);
+      if (https) parts.push(`<div class="endpoint-item"><span class="badge badge--ok" style="font-size:10px; padding:2px 6px;">HTTPS</span><a href="${https}" target="_blank" rel="noopener" class="mono">${https}</a></div>`);
       $("stat-urls").innerHTML = parts.join("") || "—";
     }
     syncUrlModeUi();
