@@ -975,6 +975,15 @@
   background: var(--color-header-bg-bar);
 }
 
+.compact-card-1x1__icon::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 2;
+  pointer-events: none;
+}
+
 .compact-card-1x1__icon img {
   width: 100%;
   height: 100%;
@@ -1006,6 +1015,35 @@
   transition: opacity 0.18s ease, transform 0.18s ease;
 }
 
+.compact-card-1x1__actions .btn-clean-icon {
+  background: rgba(255, 255, 255, 0.16);
+  color: #FFFFFF;
+  backdrop-filter: blur(8px);
+}
+
+.compact-card-1x1__actions .btn-clean-icon:hover {
+  background: rgba(255, 255, 255, 0.28);
+  color: #FFFFFF;
+}
+
+.compact-card-1x1__actions .btn-clean-icon--primary {
+  background: rgba(255, 255, 255, 0.26) !important;
+  color: #FFFFFF !important;
+}
+
+.compact-card-1x1__actions .btn-clean-icon--primary:hover {
+  background: rgba(255, 255, 255, 0.38) !important;
+}
+
+.compact-card-1x1__actions .btn-clean-icon--danger {
+  background: rgba(239, 68, 68, 0.30) !important;
+  color: #FFFFFF !important;
+}
+
+.compact-card-1x1__actions .btn-clean-icon--danger:hover {
+  background: rgba(239, 68, 68, 0.45) !important;
+}
+
 .compact-card-1x1:hover .compact-card-1x1__actions,
 .compact-card-1x1:focus-within .compact-card-1x1__actions,
 .compact-card-1x1.is-actions-open .compact-card-1x1__actions {
@@ -1013,13 +1051,13 @@
   transform: translateY(0);
 }
 
-/* Bottom Title & Status (Direct Text, Zero Background Box) */
+/* Bottom Title & Status (Direct Text, Zero Background Box, No Text Shadows) */
 .compact-card-1x1__footer {
   position: absolute;
   bottom: 0;
   left: 0;
   right: 0;
-  z-index: 2;
+  z-index: 3;
   padding: 10px 12px;
   display: flex;
   justify-content: space-between;
@@ -1032,7 +1070,7 @@
   font-size: 13px;
   font-weight: 800;
   color: #FFFFFF;
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8), 0 0 10px rgba(0, 0, 0, 0.6);
+  text-shadow: none !important;
   line-height: 1.2;
   white-space: nowrap;
   overflow: hidden;
@@ -1045,7 +1083,7 @@
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: rgba(255, 255, 255, 0.85);
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+  text-shadow: none !important;
   flex-shrink: 0;
 }
 
