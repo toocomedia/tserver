@@ -44,10 +44,11 @@
   --grid-block-tint:      rgba(255, 255, 255, 0.035);
 }
 
-/* 1. Base Container (Borderless & Unboxed — natural layout flow) */
+/* 1. Base Container (Centered Horizontally & Vertically on Page) */
 .empty-state-grid-card {
   position: relative;
   width: 100%;
+  min-height: clamp(420px, calc(100vh - var(--topbar-height, 52px) - 140px), 740px);
   border: none !important;
   background: transparent !important;
   box-shadow: none !important;
@@ -56,8 +57,9 @@
   align-items: center;
   justify-content: center;
   text-align: center;
-  padding: 48px 20px;
+  padding: 40px 20px;
   overflow: hidden;
+  margin: 0 auto;
   z-index: 1;
   transition: opacity var(--skeleton-fade-duration, 0.4s) ease, visibility var(--skeleton-fade-duration, 0.4s) ease;
 }
@@ -132,7 +134,7 @@
   left: 50%;
   width: 320px;
   height: 320px;
-  transform: translate(-50%, -55%);
+  transform: translate(-50%, -50%);
   background: radial-gradient(circle at 50% 50%, var(--grid-glow-color) 0%, transparent 65%);
   pointer-events: none;
   z-index: 2;
@@ -151,9 +153,9 @@
   left: 50%;
   width: 400px;
   height: 240px;
-  transform: translate(-50%, -60%);
+  transform: translate(-50%, -50%);
   pointer-events: none;
-  z-index: 3;
+  z-index: 2;
 }
 
 .empty-state-grid-card--compact .grid-matrix-layer {
