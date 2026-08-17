@@ -1,0 +1,16 @@
+{
+  "id": "ai_helper",
+  "name": "AI Assistant",
+  "description": "Intelligent AI helper for beginners — app deployment assistance, log debugging, and coding guidance.",
+  "version": "0.1.0",
+  "author": "SRV Panel Core",
+  "icon": "sparkles",
+  "route_prefix": "/plugins/ai_helper",
+  "sidebar": true,
+  "sidebar_label": "AI Assistant",
+  "enabled": true,
+  "usage": {},
+  "requires": {
+    "dependencies": []
+  }
+}

@@ -1,0 +1,562 @@
+{% extends "layout.html" %}
+
+{% block title %}AI Assistant — {{ PANEL_NAME }}{% endblock %}
+{% block page_title %}AI Assistant Configuration{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="/plugins/ai_helper/static/css/ai-helper.css?v={{ APP_VERSION }}">
+<style>
+.ai-settings-banner {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.12) 0%, rgba(168, 85, 247, 0.12) 100%);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  border-radius: var(--radius-md, 8px);
+  padding: 16px 20px;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.ai-settings-banner__text h3 {
+  margin: 0 0 4px 0;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ai-settings-banner__text p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--color-text-muted, #94a3b8);
+}
+.provider-preset-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.preset-card {
+  background: var(--color-surface, #1e2029);
+  border: 1px solid var(--color-border, #333745);
+  border-radius: 8px;
+  padding: 12px 10px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.preset-card:hover {
+  border-color: var(--color-primary, #6366f1);
+  background: var(--color-surface-hover, #262936);
+  transform: translateY(-2px);
+}
+.preset-card.active {
+  border-color: var(--color-primary, #6366f1);
+  background: rgba(99, 102, 241, 0.15);
+  box-shadow: 0 0 0 1px var(--color-primary, #6366f1);
+}
+.preset-card__name {
+  font-weight: 600;
+  font-size: 13px;
+  margin-bottom: 2px;
+}
+.preset-card__desc {
+  font-size: 11px;
+  color: var(--color-text-muted, #94a3b8);
+}
+.test-status-box {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  margin-left: 12px;
+}
+[dir="rtl"] .test-status-box {
+  margin-left: 0;
+  margin-right: 12px;
+}
+</style>
+{% endblock %}
+
+{% block content_class %}content--flush{% endblock %}
+
+{% block content %}
+<div class="split-layout">
+  <!-- Tabs Sidebar -->
+  <div class="split-sidebar">
+    <div class="split-sidebar__item active" data-tab="tab-config">
+      <i data-lucide="settings"></i> Configuration
+    </div>
+    <div class="split-sidebar__item" data-tab="tab-rules">
+      <i data-lucide="sliders"></i> Custom Rules
+    </div>
+    <div class="split-sidebar__item" data-tab="tab-playground">
+      <i data-lucide="sparkles"></i> Test Playground
+    </div>
+    <div class="split-sidebar__item" data-tab="tab-docs">
+      <i data-lucide="book-open"></i> Integration Guide
+    </div>
+  </div>
+
+  <!-- Content Area -->
+  <div class="split-content">
+
+    <!-- TAB 1: CONFIGURATION -->
+    <div id="tab-config" class="split-tab active">
+      <div class="ai-settings-banner">
+        <div class="ai-settings-banner__text">
+          <h3><i data-lucide="sparkles"></i> AI Assistant Engine</h3>
+          <p>Native zero-dependency assistant for app deployments, log diagnostics, and developer guidance.</p>
+        </div>
+        <div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="ai-toggle-enabled" {% if settings.is_enabled %}checked{% endif %}>
+            <span class="toggle-switch__slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="section mb-xl">
+        <div class="section__header">
+          <h3>1. Choose Provider Preset</h3>
+        </div>
+        <div class="section__body">
+          <p class="text-sm text-muted mb-md">Select a quick preset to autofill the Base URL and recommended Model, or choose Custom for your own endpoint.</p>
+          <div class="provider-preset-grid">
+            <div class="preset-card" data-preset="openai">
+              <div class="preset-card__name">OpenAI</div>
+              <div class="preset-card__desc">gpt-4o-mini</div>
+            </div>
+            <div class="preset-card" data-preset="anthropic">
+              <div class="preset-card__name">Anthropic</div>
+              <div class="preset-card__desc">Claude 3.5 Sonnet</div>
+            </div>
+            <div class="preset-card" data-preset="openrouter">
+              <div class="preset-card__name">OpenRouter</div>
+              <div class="preset-card__desc">Multi-Model</div>
+            </div>
+            <div class="preset-card" data-preset="deepseek">
+              <div class="preset-card__name">DeepSeek</div>
+              <div class="preset-card__desc">V3 / R1</div>
+            </div>
+            <div class="preset-card" data-preset="groq">
+              <div class="preset-card__name">Groq</div>
+              <div class="preset-card__desc">Fast Llama 3.3</div>
+            </div>
+            <div class="preset-card" data-preset="custom">
+              <div class="preset-card__name">Custom</div>
+              <div class="preset-card__desc">Any Base URL</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section mb-xl">
+        <div class="section__header">
+          <h3>2. Provider Connection Details</h3>
+        </div>
+        <div class="section__body">
+          <form id="ai-settings-form">
+            <div class="form-group mb-md">
+              <label class="form-label" for="provider_type">Protocol Format</label>
+              <select class="form-control" id="provider_type" name="provider_type">
+                <option value="openai_compatible" {% if settings.provider_type == 'openai_compatible' %}selected{% endif %}>OpenAI-Compatible (/chat/completions)</option>
+                <option value="anthropic" {% if settings.provider_type == 'anthropic' %}selected{% endif %}>Anthropic (/messages)</option>
+              </select>
+              <small class="form-help">Choose Anthropic for Claude API, or OpenAI-Compatible for all other providers.</small>
+            </div>
+
+            <div class="form-group mb-md">
+              <label class="form-label" for="api_key">API Key</label>
+              <div class="d-flex gap-sm">
+                <input type="password" class="form-control font-mono" id="api_key" name="api_key" placeholder="{% if has_api_key %}{{ masked_api_key }} (Leave blank to keep unchanged){% else %}Enter API key (sk-...){% endif %}">
+                <button type="button" class="btn btn--secondary" id="btn-toggle-key" title="Show/Hide Key">👁️</button>
+              </div>
+              <small class="form-help">Stored encrypted in the panel database with AES-128 Fernet.</small>
+            </div>
+
+            <div class="form-group mb-md">
+              <label class="form-label" for="base_url">Base URL</label>
+              <input type="text" class="form-control font-mono" id="base_url" name="base_url" value="{{ settings.base_url }}" placeholder="https://api.openai.com/v1">
+              <small class="form-help">The API endpoint base URL.</small>
+            </div>
+
+            <div class="form-group mb-md">
+              <label class="form-label" for="model_name">Model Identifier</label>
+              <input type="text" class="form-control font-mono" id="model_name" name="model_name" value="{{ settings.model_name }}" placeholder="gpt-4o-mini">
+              <small class="form-help">Examples: <code>gpt-4o-mini</code>, <code>claude-3-5-sonnet-20241022</code>, <code>deepseek-chat</code>, <code>llama-3.3-70b-versatile</code></small>
+            </div>
+
+            <div class="row">
+              <div class="col-6 mb-md">
+                <label class="form-label" for="temperature">Temperature (Creativity: 0.0 – 1.0)</label>
+                <input type="number" step="0.05" min="0.0" max="1.0" class="form-control" id="temperature" name="temperature" value="{{ settings.temperature }}">
+                <small class="form-help">Recommended: <code>0.2</code> for deterministic coding/configurations.</small>
+              </div>
+              <div class="col-6 mb-md">
+                <label class="form-label" for="max_tokens">Max Response Tokens</label>
+                <input type="number" step="256" min="256" max="32768" class="form-control" id="max_tokens" name="max_tokens" value="{{ settings.max_tokens }}">
+                <small class="form-help">Max tokens per response (default: 4096).</small>
+              </div>
+            </div>
+
+            <div class="d-flex align-items-center gap-sm mt-lg">
+              <button type="submit" class="btn btn--primary" id="btn-save-settings">Save Settings</button>
+              <button type="button" class="btn btn--secondary" id="btn-test-connection">Test Connection</button>
+              <span id="test-connection-status" class="test-status-box" hidden></span>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: CUSTOM RULES -->
+    <div id="tab-rules" class="split-tab">
+      <div class="section mb-xl">
+        <div class="section__header">
+          <h3>Custom Administrator Rules & Instructions</h3>
+        </div>
+        <div class="section__body">
+          <p class="text-sm text-muted mb-md">
+            These rules are automatically merged into the system prompt along with the built-in VPS architecture knowledge. You can enforce language preferences, preferred technology stacks, or specific deployment habits.
+          </p>
+
+          <form id="ai-rules-form">
+            <div class="form-group mb-md">
+              <label class="form-label" for="custom_rules">Custom System Prompt Directives</label>
+              <textarea class="form-control font-mono" id="custom_rules" name="custom_rules" rows="8" placeholder="Example:
+- Always respond in French (or Arabic).
+- Prefer PostgreSQL for database questions.
+- Recommend Node.js 20 LTS for JavaScript apps.
+- When generating Nginx configs, always enforce HTTPS redirects.">{{ settings.custom_rules }}</textarea>
+              <small class="form-help">These instructions will be followed on every page where the AI is invoked.</small>
+            </div>
+
+            <div class="d-flex gap-sm">
+              <button type="submit" class="btn btn--primary" id="btn-save-rules">Save Custom Rules</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: PLAYGROUND -->
+    <div id="tab-playground" class="split-tab">
+      <div class="section mb-xl">
+        <div class="section__header">
+          <h3>Interactive AI Playground</h3>
+        </div>
+        <div class="section__body">
+          <p class="text-sm text-muted mb-md">Test live streaming responses and Markdown formatting directly in the panel:</p>
+          <div style="height: 420px; border: 1px solid var(--color-border); border-radius: 8px; display: flex; flex-direction: column; overflow: hidden; background: var(--color-surface);">
+            <div id="playground-messages" style="flex: 1; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px;">
+              <div class="ai-empty-state">
+                <h4>Playground Ready</h4>
+                <p>Type a message below to test connection, streaming, and Markdown rendering.</p>
+              </div>
+            </div>
+            <div style="padding: 12px; border-top: 1px solid var(--color-border); display: flex; gap: 8px; background: var(--color-surface-raised);">
+              <input type="text" id="playground-input" class="form-control" placeholder="Ask a test question (e.g. 'Write a simple Flask app')...">
+              <button type="button" class="btn btn--primary" id="playground-send-btn">Send</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 4: INTEGRATION GUIDE -->
+    <div id="tab-docs" class="split-tab">
+      <div class="section mb-xl">
+        <div class="section__header">
+          <h3>Developer Integration Guide</h3>
+        </div>
+        <div class="section__body">
+          <p class="text-sm text-muted mb-md">Because <code>ai-helper.js</code> is loaded globally in <code>layout.html</code>, you can add AI capabilities to any page or wizard with simple HTML attributes or 1-line JS calls.</p>
+
+          <h4>1. Declarative HTML Triggers</h4>
+          <div class="ai-code-block mb-md">
+            <button type="button" class="ai-code-copy-btn">Copy</button>
+            <pre><code>&lt;!-- Pre-filled prompt button --&gt;
+&lt;button type="button" class="btn btn--sm btn--secondary" 
+        data-ai-prompt="Explain how to configure environment variables for Node.js."&gt;
+  &lt;i data-lucide="sparkles"&gt;&lt;/i&gt; Ask AI
+&lt;/button&gt;
+
+&lt;!-- "Explain Error" button for build/runtime logs --&gt;
+&lt;button type="button" class="btn btn--sm btn--danger" 
+        data-ai-explain-error="#deployment-live-logs"
+        data-ai-context="Apps Engine Deployment Error"&gt;
+  &lt;i data-lucide="sparkles"&gt;&lt;/i&gt; Explain Error with AI
+&lt;/button&gt;</code></pre>
+          </div>
+
+          <h4>2. JavaScript API (`window.AiHelper`)</h4>
+          <div class="ai-code-block mb-md">
+            <button type="button" class="ai-code-copy-btn">Copy</button>
+            <pre><code>// Open chat drawer with custom context
+AiHelper.open({
+  title: "App Setup Assistant",
+  context: "Configuring App: my-flask-app | Repo: github.com/user/repo",
+  initialPrompt: "What environment variables and port does this Flask app need?"
+});
+
+// Explain any error text programmatically
+AiHelper.explainError(rawErrorLog, { context: "Railpack Build Log" });</code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  // Tab Switching
+  var tabItems = document.querySelectorAll(".split-sidebar__item");
+  var tabPanes = document.querySelectorAll(".split-tab");
+
+  tabItems.forEach(function (item) {
+    item.addEventListener("click", function () {
+      var tabId = this.getAttribute("data-tab");
+      tabItems.forEach(function (i) { i.classList.remove("active"); });
+      tabPanes.forEach(function (p) { p.classList.remove("active"); });
+      this.classList.add("active");
+      var activePane = document.getElementById(tabId);
+      if (activePane) activePane.classList.add("active");
+    });
+  });
+
+  // Presets Auto-fill
+  var presets = {
+    openai: {
+      type: "openai_compatible",
+      url: "https://api.openai.com/v1",
+      model: "gpt-4o-mini"
+    },
+    anthropic: {
+      type: "anthropic",
+      url: "https://api.anthropic.com/v1",
+      model: "claude-3-5-sonnet-20241022"
+    },
+    openrouter: {
+      type: "openai_compatible",
+      url: "https://openrouter.ai/api/v1",
+      model: "openai/gpt-4o-mini"
+    },
+    deepseek: {
+      type: "openai_compatible",
+      url: "https://api.deepseek.com/v1",
+      model: "deepseek-chat"
+    },
+    groq: {
+      type: "openai_compatible",
+      url: "https://api.groq.com/openai/v1",
+      model: "llama-3.3-70b-versatile"
+    },
+    custom: {
+      type: "openai_compatible",
+      url: "",
+      model: ""
+    }
+  };
+
+  document.querySelectorAll(".preset-card").forEach(function (card) {
+    card.addEventListener("click", function () {
+      document.querySelectorAll(".preset-card").forEach(function (c) { c.classList.remove("active"); });
+      this.classList.add("active");
+      var presetKey = this.getAttribute("data-preset");
+      var p = presets[presetKey];
+      if (p) {
+        document.getElementById("provider_type").value = p.type;
+        if (p.url) document.getElementById("base_url").value = p.url;
+        if (p.model) document.getElementById("model_name").value = p.model;
+      }
+    });
+  });
+
+  // Show/Hide API Key
+  var keyInput = document.getElementById("api_key");
+  var toggleBtn = document.getElementById("btn-toggle-key");
+  if (toggleBtn && keyInput) {
+    toggleBtn.addEventListener("click", function () {
+      if (keyInput.type === "password") {
+        keyInput.type = "text";
+        toggleBtn.textContent = "🔒";
+      } else {
+        keyInput.type = "password";
+        toggleBtn.textContent = "👁️";
+      }
+    });
+  }
+
+  // Save Settings
+  var settingsForm = document.getElementById("ai-settings-form");
+  if (settingsForm) {
+    settingsForm.addEventListener("submit", function (e) {
+      e.preventDefault();
+      var btn = document.getElementById("btn-save-settings");
+      btn.disabled = true;
+      btn.textContent = "Saving...";
+
+      var payload = {
+        is_enabled: document.getElementById("ai-toggle-enabled").checked,
+        provider_type: document.getElementById("provider_type").value,
+        api_key: document.getElementById("api_key").value,
+        base_url: document.getElementById("base_url").value,
+        model_name: document.getElementById("model_name").value,
+        temperature: parseFloat(document.getElementById("temperature").value) || 0.2,
+        max_tokens: parseInt(document.getElementById("max_tokens").value) || 4096,
+      };
+
+      fetch("/plugins/ai_helper/api/settings", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRF-Token": document.querySelector("meta[name='csrf-token']")?.getAttribute("content") || "",
+        },
+        body: JSON.stringify(payload),
+      })
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+          btn.disabled = false;
+          btn.textContent = "Save Settings";
+          if (data.status === "ok") {
+            alert("Settings saved successfully!");
+          } else {
+            alert("Failed to save settings: " + (data.message || "Unknown error"));
+          }
+        })
+        .catch(function (err) {
+          btn.disabled = false;
+          btn.textContent = "Save Settings";
+          alert("Error saving settings: " + err.message);
+        });
+    });
+  }
+
+  // Save Custom Rules
+  var rulesForm = document.getElementById("ai-rules-form");
+  if (rulesForm) {
+    rulesForm.addEventListener("submit", function (e) {
+      e.preventDefault();
+      var btn = document.getElementById("btn-save-rules");
+      btn.disabled = true;
+      btn.textContent = "Saving...";
+
+      fetch("/plugins/ai_helper/api/settings", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRF-Token": document.querySelector("meta[name='csrf-token']")?.getAttribute("content") || "",
+        },
+        body: JSON.stringify({
+          custom_rules: document.getElementById("custom_rules").value,
+        }),
+      })
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+          btn.disabled = false;
+          btn.textContent = "Save Custom Rules";
+          if (data.status === "ok") {
+            alert("Custom rules saved successfully!");
+          }
+        })
+        .catch(function (err) {
+          btn.disabled = false;
+          btn.textContent = "Save Custom Rules";
+          alert("Error: " + err.message);
+        });
+    });
+  }
+
+  // Test Connection
+  var testBtn = document.getElementById("btn-test-connection");
+  var statusBox = document.getElementById("test-connection-status");
+  if (testBtn) {
+    testBtn.addEventListener("click", function () {
+      testBtn.disabled = true;
+      testBtn.textContent = "Testing...";
+      statusBox.hidden = false;
+      statusBox.innerHTML = '<span class="text-muted">Connecting to AI provider...</span>';
+
+      var payload = {
+        provider_type: document.getElementById("provider_type").value,
+        api_key: document.getElementById("api_key").value || undefined,
+        base_url: document.getElementById("base_url").value,
+        model_name: document.getElementById("model_name").value,
+      };
+
+      fetch("/plugins/ai_helper/api/test-connection", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRF-Token": document.querySelector("meta[name='csrf-token']")?.getAttribute("content") || "",
+        },
+        body: JSON.stringify(payload),
+      })
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+          testBtn.disabled = false;
+          testBtn.textContent = "Test Connection";
+          if (data.success) {
+            statusBox.innerHTML = '<span style="color: #10b981; font-weight: 600;">✓ Connected successfully (' + data.latency_ms + 'ms)</span>';
+          } else {
+            statusBox.innerHTML = '<span style="color: #ef4444; font-weight: 600;">✗ Failed: ' + (data.error || "Connection error") + '</span>';
+          }
+        })
+        .catch(function (err) {
+          testBtn.disabled = false;
+          testBtn.textContent = "Test Connection";
+          statusBox.innerHTML = '<span style="color: #ef4444;">✗ Network error: ' + err.message + '</span>';
+        });
+    });
+  }
+
+  // Playground
+  var pgSendBtn = document.getElementById("playground-send-btn");
+  var pgInput = document.getElementById("playground-input");
+  var pgMessages = document.getElementById("playground-messages");
+
+  if (pgSendBtn && pgInput && pgMessages) {
+    function sendPlayground() {
+      var text = pgInput.value.trim();
+      if (!text) return;
+      pgInput.value = "";
+
+      // Append user msg
+      var uDiv = document.createElement("div");
+      uDiv.style.cssText = "align-self: flex-end; background: var(--color-primary); color: #fff; padding: 8px 12px; border-radius: 8px; max-width: 80%; font-size: 13px;";
+      uDiv.textContent = text;
+      pgMessages.appendChild(uDiv);
+
+      // Append assistant bubble
+      var aDiv = document.createElement("div");
+      aDiv.style.cssText = "align-self: flex-start; background: var(--color-surface-raised); border: 1px solid var(--color-border); padding: 10px 14px; border-radius: 8px; max-width: 85%; font-size: 13px;";
+      aDiv.innerHTML = '<span class="ai-cursor"></span>';
+      pgMessages.appendChild(aDiv);
+      pgMessages.scrollTop = pgMessages.scrollHeight;
+
+      AiHelper.ask(text, {
+        context: "Settings Playground Test",
+        onChunk: function (token) {
+          // Handled on completion or simple append
+        },
+        onComplete: function (full) {
+          aDiv.innerHTML = AiHelper.renderMarkdown(full);
+          pgMessages.scrollTop = pgMessages.scrollHeight;
+        },
+        onError: function (err) {
+          aDiv.innerHTML = '<span style="color: #ef4444;">Error: ' + err.message + '</span>';
+        }
+      });
+    }
+
+    pgSendBtn.addEventListener("click", sendPlayground);
+    pgInput.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") sendPlayground();
+    });
+  }
+});
+</script>
+{% endblock %}

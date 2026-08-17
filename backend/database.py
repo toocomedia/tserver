@@ -373,6 +373,7 @@ async def init_db():
     import models.php_website  # noqa: F401
     import models.php_website_database  # noqa: F401
     import models.php_website_operation  # noqa: F401
+    import models.ai_helper  # noqa: F401
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
         await conn.run_sync(_migrate_sync)
