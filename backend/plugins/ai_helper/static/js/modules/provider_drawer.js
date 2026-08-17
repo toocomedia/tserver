@@ -1,5 +1,5 @@
 /**
- * modules/provider_drawer.js — AI Provider Drawer & CRUD Management Controller
+ * modules/provider_drawer.js — AI Provider Drawer & CRUD Controller
  */
 import { PRESET_CONFIGS } from "./presets.js";
 
@@ -360,7 +360,10 @@ export const ProviderDrawerManager = {
     this.defaultModel = "";
     this.selectPresetCard("openai");
 
-    if (this.drawerModal) this.drawerModal.classList.add("open");
+    if (this.drawerModal) {
+      this.drawerModal.classList.remove("hidden");
+      document.body.classList.add("modal-open");
+    }
     if (typeof lucide !== "undefined") lucide.createIcons();
   },
 
@@ -402,12 +405,18 @@ export const ProviderDrawerManager = {
     }
     this.selectPresetCard(matchedPreset);
 
-    if (this.drawerModal) this.drawerModal.classList.add("open");
+    if (this.drawerModal) {
+      this.drawerModal.classList.remove("hidden");
+      document.body.classList.add("modal-open");
+    }
     if (typeof lucide !== "undefined") lucide.createIcons();
   },
 
   closeDrawer() {
-    if (this.drawerModal) this.drawerModal.classList.remove("open");
+    if (this.drawerModal) {
+      this.drawerModal.classList.add("hidden");
+      document.body.classList.remove("modal-open");
+    }
     this.currentEditId = null;
   },
 };

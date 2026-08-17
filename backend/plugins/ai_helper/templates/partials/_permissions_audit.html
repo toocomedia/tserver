@@ -1,0 +1,18 @@
+<!-- Tab 4: Security Audit -->
+<div id="perm-tab-audit" class="perm-tab-pane" style="display: none;">
+  <div class="d-flex align-items-center justify-content-between mb-sm">
+    <div>
+      <label class="form-label m-0">Recent Tool Invocations</label>
+      <span class="text-xs text-muted">History of AI tool permissions and results.</span>
+    </div>
+    <button type="button" class="btn btn--secondary btn--sm" onclick="refreshAuditLogs()">
+      <i data-lucide="refresh-cw"></i> Refresh
+    </button>
+  </div>
+
+  <div id="audit-log-list" class="border rounded" style="background: var(--color-surface); max-height: 320px; overflow-y: auto;">
+    <div class="p-lg text-center text-muted text-xs">
+      <p class="m-0">Click Refresh to load recent security audit logs.</p>
+    </div>
+  </div>
+</div>

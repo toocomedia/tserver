@@ -1,0 +1,123 @@
+<!-- Tab 3: Granular Whitelist -->
+<div id="perm-tab-scope" class="perm-tab-pane" style="display: none;">
+  <div class="form-group mb-sm">
+    <label class="form-label">Granular Resource Whitelist</label>
+    <p class="text-xs text-muted">Select specific resources accessible to the AI when in Granular Scope mode.</p>
+  </div>
+
+  <div class="d-flex flex-column gap-md">
+    
+    <!-- Domains Dropdown -->
+    <div class="perm-select-group" id="ms-domains">
+      <div class="d-flex align-items-center justify-content-between mb-xs">
+        <label class="text-xs font-bold">Whitelisted Domains</label>
+        <span id="count-badge-domains" class="text-xs text-muted">0 selected</span>
+      </div>
+      <div class="perm-multiselect">
+        <div class="perm-multiselect__trigger form-select" tabindex="0">
+          <div class="perm-multiselect__tags" id="ms-tags-domains">
+            <span class="perm-multiselect__placeholder text-muted" id="ms-placeholder-domains">Click to select domains...</span>
+          </div>
+          <span class="text-muted text-xs">▾</span>
+        </div>
+        <div class="perm-multiselect__dropdown">
+          <div class="perm-multiselect__search-bar">
+            <input type="text" class="form-input form-input--sm perm-multiselect__search" placeholder="Search or type domain...">
+            <button type="button" class="btn btn--secondary btn--sm btn-add-custom-tag">+ Add</button>
+          </div>
+          <div class="perm-multiselect__actions">
+            <button type="button" class="btn btn--ghost btn--sm btn-select-all" style="font-size: 11px; padding: 2px 6px;">Select All</button>
+            <button type="button" class="btn btn--ghost btn--sm btn-clear-all" style="font-size: 11px; padding: 2px 6px;">Clear</button>
+          </div>
+          <div class="perm-multiselect__list" id="ms-list-domains"></div>
+        </div>
+      </div>
+      <input type="hidden" id="input_allowed_domains" name="allowed_domains" value='{{ policy.allowed_domains | tojson }}'>
+    </div>
+
+    <!-- Apps Dropdown -->
+    <div class="perm-select-group" id="ms-apps">
+      <div class="d-flex align-items-center justify-content-between mb-xs">
+        <label class="text-xs font-bold">Whitelisted Applications</label>
+        <span id="count-badge-apps" class="text-xs text-muted">0 selected</span>
+      </div>
+      <div class="perm-multiselect">
+        <div class="perm-multiselect__trigger form-select" tabindex="0">
+          <div class="perm-multiselect__tags" id="ms-tags-apps">
+            <span class="perm-multiselect__placeholder text-muted" id="ms-placeholder-apps">Click to select apps...</span>
+          </div>
+          <span class="text-muted text-xs">▾</span>
+        </div>
+        <div class="perm-multiselect__dropdown">
+          <div class="perm-multiselect__search-bar">
+            <input type="text" class="form-input form-input--sm perm-multiselect__search" placeholder="Search apps...">
+            <button type="button" class="btn btn--secondary btn--sm btn-add-custom-tag">+ Add</button>
+          </div>
+          <div class="perm-multiselect__actions">
+            <button type="button" class="btn btn--ghost btn--sm btn-select-all" style="font-size: 11px; padding: 2px 6px;">Select All</button>
+            <button type="button" class="btn btn--ghost btn--sm btn-clear-all" style="font-size: 11px; padding: 2px 6px;">Clear</button>
+          </div>
+          <div class="perm-multiselect__list" id="ms-list-apps"></div>
+        </div>
+      </div>
+      <input type="hidden" id="input_allowed_app_ids" name="allowed_app_ids" value='{{ policy.allowed_app_ids | tojson }}'>
+    </div>
+
+    <!-- Databases Dropdown -->
+    <div class="perm-select-group" id="ms-databases">
+      <div class="d-flex align-items-center justify-content-between mb-xs">
+        <label class="text-xs font-bold">Whitelisted Databases</label>
+        <span id="count-badge-databases" class="text-xs text-muted">0 selected</span>
+      </div>
+      <div class="perm-multiselect">
+        <div class="perm-multiselect__trigger form-select" tabindex="0">
+          <div class="perm-multiselect__tags" id="ms-tags-databases">
+            <span class="perm-multiselect__placeholder text-muted" id="ms-placeholder-databases">Click to select databases...</span>
+          </div>
+          <span class="text-muted text-xs">▾</span>
+        </div>
+        <div class="perm-multiselect__dropdown">
+          <div class="perm-multiselect__search-bar">
+            <input type="text" class="form-input form-input--sm perm-multiselect__search" placeholder="Search databases...">
+            <button type="button" class="btn btn--secondary btn--sm btn-add-custom-tag">+ Add</button>
+          </div>
+          <div class="perm-multiselect__actions">
+            <button type="button" class="btn btn--ghost btn--sm btn-select-all" style="font-size: 11px; padding: 2px 6px;">Select All</button>
+            <button type="button" class="btn btn--ghost btn--sm btn-clear-all" style="font-size: 11px; padding: 2px 6px;">Clear</button>
+          </div>
+          <div class="perm-multiselect__list" id="ms-list-databases"></div>
+        </div>
+      </div>
+      <input type="hidden" id="input_allowed_databases" name="allowed_databases" value='{{ policy.allowed_databases | tojson }}'>
+    </div>
+
+    <!-- File Targets Dropdown -->
+    <div class="perm-select-group" id="ms-file_targets">
+      <div class="d-flex align-items-center justify-content-between mb-xs">
+        <label class="text-xs font-bold">Whitelisted Webroots & Codebases</label>
+        <span id="count-badge-file_targets" class="text-xs text-muted">0 selected</span>
+      </div>
+      <div class="perm-multiselect">
+        <div class="perm-multiselect__trigger form-select" tabindex="0">
+          <div class="perm-multiselect__tags" id="ms-tags-file_targets">
+            <span class="perm-multiselect__placeholder text-muted" id="ms-placeholder-file_targets">Click to select file paths...</span>
+          </div>
+          <span class="text-muted text-xs">▾</span>
+        </div>
+        <div class="perm-multiselect__dropdown">
+          <div class="perm-multiselect__search-bar">
+            <input type="text" class="form-input form-input--sm perm-multiselect__search" placeholder="Search file paths...">
+            <button type="button" class="btn btn--secondary btn--sm btn-add-custom-tag">+ Add</button>
+          </div>
+          <div class="perm-multiselect__actions">
+            <button type="button" class="btn btn--ghost btn--sm btn-select-all" style="font-size: 11px; padding: 2px 6px;">Select All</button>
+            <button type="button" class="btn btn--ghost btn--sm btn-clear-all" style="font-size: 11px; padding: 2px 6px;">Clear</button>
+          </div>
+          <div class="perm-multiselect__list" id="ms-list-file_targets"></div>
+        </div>
+      </div>
+      <input type="hidden" id="input_allowed_file_targets" name="allowed_file_targets" value='{{ policy.allowed_file_targets | tojson }}'>
+    </div>
+
+  </div>
+</div>

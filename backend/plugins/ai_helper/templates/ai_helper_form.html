@@ -3,8 +3,8 @@
 {% block title %}{% if is_edit %}Edit AI Provider{% else %}Add AI Provider{% endif %} — {{ PANEL_NAME }}{% endblock %}
 {% block page_title %}{% if is_edit %}Edit AI Provider{% else %}Add AI Provider{% endif %}{% endblock %}
 
-{% block head_extra %}
-<link rel="stylesheet" href="/plugins/ai_helper/static/css/ai-helper-admin.css">
+{% block head %}
+<link rel="stylesheet" href="/plugins/ai_helper/static/css/ai-helper-admin.css?v={{ APP_VERSION }}">
 {% endblock %}
 
 {% block topbar_actions %}

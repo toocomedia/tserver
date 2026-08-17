@@ -1,5 +1,5 @@
 /**
- * modules/multiselect.js — Reusable Searchable Multi-Select Tag Dropdown Component
+ * modules/multiselect.js — Reusable Multi-Select Droplist Component
  */
 
 export class MultiSelectPicker {
@@ -13,10 +13,7 @@ export class MultiSelectPicker {
     this.countBadge = document.getElementById("count-badge-" + this.key);
     this.allOptions = [];
     this.selected = [];
-
-    if (this.container) {
-      this.init();
-    }
+    if (this.container) this.init();
   }
 
   init() {
@@ -52,9 +49,7 @@ export class MultiSelectPicker {
       });
     }
 
-    if (this.dropdown) {
-      this.dropdown.addEventListener("click", (e) => e.stopPropagation());
-    }
+    if (this.dropdown) this.dropdown.addEventListener("click", (e) => e.stopPropagation());
 
     if (this.searchInput) {
       this.searchInput.addEventListener("input", () => this.renderList());
@@ -128,9 +123,7 @@ export class MultiSelectPicker {
   }
 
   updateUI() {
-    if (this.hiddenInput) {
-      this.hiddenInput.value = JSON.stringify(this.selected);
-    }
+    if (this.hiddenInput) this.hiddenInput.value = JSON.stringify(this.selected);
 
     if (this.countBadge) {
       const count = this.selected.length;

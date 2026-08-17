@@ -89,6 +89,17 @@ window.deleteProvider = (providerId, providerName) => {
 function initAll() {
   ProviderDrawerManager.init();
   PermissionsManager.init();
+
+  const btnAdd = document.getElementById("btn-open-add");
+  if (btnAdd) {
+    btnAdd.addEventListener("click", () => ProviderDrawerManager.openAddDrawer());
+  }
+
+  const btnPerm = document.getElementById("btn-open-permissions");
+  if (btnPerm) {
+    btnPerm.addEventListener("click", () => PermissionsManager.openDrawer());
+  }
+
   if (window.location.search.includes("open=create")) {
     ProviderDrawerManager.openAddDrawer();
   }
