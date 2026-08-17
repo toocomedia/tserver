@@ -42,46 +42,145 @@ var btnToggleLabel = document.getElementById("drawer-btn-toggle-label");
 var modelStatus = document.getElementById("drawer-model-status");
 var testIndicator = document.getElementById("drawer-test-indicator");
 
+var modelsListHidden = document.getElementById("drawer_models_list");
+var modelChipsContainer = document.getElementById("drawer-model-chips-list");
+var addModelChipInput = document.getElementById("drawer-add-model-input");
+var btnAddModelChip = document.getElementById("drawer-btn-add-model-chip");
+
 var isCustomMode = false;
 var currentEditId = null;
+var currentModels = [];
+
+function renderModelChips() {
+  if (!modelChipsContainer) return;
+  modelChipsContainer.innerHTML = "";
+  
+  if (currentModels.length === 0) {
+    modelChipsContainer.innerHTML = '<span class="text-muted" style="font-size: 11px;">No models added yet. Enter key to fetch or type above.</span>';
+  } else {
+    currentModels.forEach(function(m) {
+      var isPrimary = (m === modelNameHidden.value);
+      var chip = document.createElement("span");
+      chip.className = "badge " + (isPrimary ? "badge--ok" : "badge--neutral");
+      chip.style.cssText = "display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px; font-family: monospace; font-size: 11px; cursor: pointer;";
+      chip.innerHTML = (isPrimary ? "★ " : "") + m + '<button type="button" style="background:none;border:none;color:inherit;cursor:pointer;padding:0;margin-left:4px;font-size:12px;opacity:0.7;" title="Remove model">✕</button>';
+      
+      chip.addEventListener("click", function(e) {
+        if (e.target.tagName.toLowerCase() === "button") return;
+        modelNameHidden.value = m;
+        if (modelSelect) modelSelect.value = m;
+        renderModelChips();
+      });
+      
+      chip.querySelector("button").addEventListener("click", function(e) {
+        e.stopPropagation();
+        currentModels = currentModels.filter(function(x) { return x !== m; });
+        if (modelNameHidden.value === m && currentModels.length > 0) {
+          modelNameHidden.value = currentModels[0];
+        } else if (currentModels.length === 0) {
+          modelNameHidden.value = "";
+        }
+        syncModelsState();
+      });
+      
+      modelChipsContainer.appendChild(chip);
+    });
+  }
+
+  if (modelsListHidden) {
+    modelsListHidden.value = currentModels.join(", ");
+  }
+
+  updateDropdownFromModels();
+}
+
+function updateDropdownFromModels() {
+  if (!modelSelect) return;
+  modelSelect.innerHTML = "";
+  if (currentModels.length === 0) {
+    modelSelect.innerHTML = '<option value="" disabled selected>-- Enter API key or add models --</option>';
+    return;
+  }
+  currentModels.forEach(function(m) {
+    var opt = document.createElement("option");
+    opt.value = m;
+    opt.textContent = m;
+    if (m === modelNameHidden.value) opt.selected = true;
+    modelSelect.appendChild(opt);
+  });
+  if (!modelNameHidden.value && currentModels.length > 0) {
+    modelNameHidden.value = currentModels[0];
+    modelSelect.selectedIndex = 0;
+  }
+}
+
+function syncModelsState() {
+  if (modelsListHidden) {
+    modelsListHidden.value = currentModels.join(", ");
+  }
+  renderModelChips();
+}
+
+function addModelToCurrent(m) {
+  var clean = (m || "").trim();
+  if (!clean) return;
+  if (!currentModels.includes(clean)) {
+    currentModels.push(clean);
+  }
+  if (!modelNameHidden.value) {
+    modelNameHidden.value = clean;
+  }
+  syncModelsState();
+}
+
+if (btnAddModelChip && addModelChipInput) {
+  btnAddModelChip.addEventListener("click", function() {
+    addModelToCurrent(addModelChipInput.value);
+    addModelChipInput.value = "";
+  });
+  addModelChipInput.addEventListener("keydown", function(e) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      addModelToCurrent(addModelChipInput.value);
+      addModelChipInput.value = "";
+    }
+  });
+}
 
 function syncModelValue() {
   if (isCustomMode) {
     modelNameHidden.value = customModelInput.value.trim();
+    if (customModelInput.value.trim() && !currentModels.includes(customModelInput.value.trim())) {
+      currentModels.push(customModelInput.value.trim());
+      syncModelsState();
+    }
   } else if (modelSelect && modelSelect.value) {
     modelNameHidden.value = modelSelect.value.trim();
     customModelInput.value = modelSelect.value.trim();
+    renderModelChips();
   }
 }
 
 function setDropdownOptions(modelsList, selectedValue) {
   if (!modelsList || modelsList.length === 0) return;
-  modelSelect.innerHTML = "";
-  var found = false;
-
+  
   modelsList.forEach(function (m) {
-    if (!m) return;
-    var opt = document.createElement("option");
-    opt.value = m;
-    opt.textContent = m;
-    if (m === selectedValue) {
-      opt.selected = true;
-      found = true;
+    if (m && !currentModels.includes(m.trim())) {
+      currentModels.push(m.trim());
     }
-    modelSelect.appendChild(opt);
   });
 
-  if (!found && selectedValue) {
-    var optCur = document.createElement("option");
-    optCur.value = selectedValue;
-    optCur.textContent = selectedValue;
-    optCur.selected = true;
-    modelSelect.insertBefore(optCur, modelSelect.firstChild);
-  } else if (!found && modelsList.length > 0) {
-    modelSelect.selectedIndex = 0;
+  if (selectedValue && !currentModels.includes(selectedValue.trim())) {
+    currentModels.unshift(selectedValue.trim());
   }
 
-  syncModelValue();
+  if (selectedValue) {
+    modelNameHidden.value = selectedValue;
+  } else if (currentModels.length > 0) {
+    modelNameHidden.value = currentModels[0];
+  }
+
+  syncModelsState();
 }
 
 function selectPresetCard(presetKey) {
@@ -133,7 +232,7 @@ if (btnToggleCustom) {
       modelSelectWrap.style.display = "block";
       btnToggleLabel.textContent = "Custom Model";
       if (customModelInput.value.trim()) {
-        setDropdownOptions([customModelInput.value.trim()], customModelInput.value.trim());
+        addModelToCurrent(customModelInput.value.trim());
       }
     }
     syncModelValue();
@@ -245,9 +344,10 @@ function openAddDrawer() {
   if (testIndicator) testIndicator.innerHTML = "";
   if (modelStatus) modelStatus.style.display = "none";
 
-  modelSelect.innerHTML = '<option value="" disabled selected>-- Enter API key to load models --</option>';
-  modelNameHidden.value = "";
-  customModelInput.value = "";
+  currentModels = ["gpt-4o-mini", "gpt-4o"];
+  modelNameHidden.value = "gpt-4o-mini";
+  customModelInput.value = "gpt-4o-mini";
+  syncModelsState();
 
   isCustomMode = false;
   modelCustomWrap.style.display = "none";
@@ -274,6 +374,7 @@ function openEditDrawer(providerId) {
   var pType = row.getAttribute("data-type") || "openai_compatible";
   var pUrl = row.getAttribute("data-url") || "";
   var pModel = row.getAttribute("data-model") || "";
+  var pModelsRaw = row.getAttribute("data-models") || "";
   var pTemp = row.getAttribute("data-temp") || "0.2";
   var pTokens = row.getAttribute("data-tokens") || "4096";
   var pRules = row.getAttribute("data-rules") || "";
@@ -305,10 +406,17 @@ function openEditDrawer(providerId) {
   });
   selectPresetCard(matchedPreset);
 
-  // Set model
-  setDropdownOptions([pModel], pModel);
-  modelNameHidden.value = pModel;
-  customModelInput.value = pModel;
+  // Set multi-models
+  currentModels = pModelsRaw ? pModelsRaw.split(",").map(function(s){ return s.trim(); }).filter(Boolean) : [];
+  if (pModel && !currentModels.includes(pModel)) {
+    currentModels.unshift(pModel);
+  }
+  if (currentModels.length === 0 && pModel) {
+    currentModels = [pModel];
+  }
+  modelNameHidden.value = pModel || (currentModels[0] || "gpt-4o-mini");
+  customModelInput.value = modelNameHidden.value;
+  syncModelsState();
 
   isCustomMode = false;
   modelCustomWrap.style.display = "none";

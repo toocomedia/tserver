@@ -24,6 +24,7 @@
             data-type="{{ p.provider_type }}"
             data-url="{{ p.base_url }}"
             data-model="{{ p.model_name }}"
+            data-models="{{ p.models_list }}"
             data-temp="{{ p.temperature }}"
             data-tokens="{{ p.max_tokens }}"
             data-rules="{{ p.custom_rules }}"
@@ -41,7 +42,13 @@
             <span class="badge badge--neutral">{{ 'Anthropic' if p.provider_type == 'anthropic' else 'OpenAI' }}</span>
           </td>
           <td>
-            <code class="font-mono text-sm font-bold">{{ p.model_name }}</code>
+            <div style="display: flex; flex-wrap: wrap; gap: 4px; align-items: center;">
+              {% for m in p.get_models() %}
+                <code class="font-mono text-xs" style="padding: 2px 6px; border-radius: 3px; background: var(--color-surface); {% if m == p.model_name %}color: var(--color-accent); font-weight: 700; border: 1px solid rgba(var(--color-accent-rgb, 120, 120, 120), 0.3);{% endif %}" title="{% if m == p.model_name %}Default model for this provider{% endif %}">
+                  {{ m }}{% if m == p.model_name %} ★{% endif %}
+                </code>
+              {% endfor %}
+            </div>
           </td>
           <td class="text-muted font-mono text-sm">
             {{ p.base_url }}

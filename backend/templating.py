@@ -46,6 +46,13 @@ def get_plugin_sidebar_items():
     return plugin_manager.get_sidebar_items()
 
 
+def is_plugin_active(plugin_id: str) -> bool:
+    """Jinja helper: return True if a plugin is registered, installed, and actively enabled."""
+    from plugins import plugin_manager
+    plugin = plugin_manager.get_plugin(plugin_id, check_dependencies=False)
+    return bool(plugin and plugin.get("effective_status") == "active")
+
+
 def is_php_active() -> bool:
     """Jinja helper: return True if PHP dependency is installed and healthy."""
     from dependencies import dependency_manager
@@ -178,6 +185,7 @@ templates.env.globals["public_url"] = public_url
 templates.env.globals["domain_url"] = domain_url
 templates.env.globals["csrf_token"] = csrf_token
 templates.env.globals["get_plugin_sidebar_items"] = get_plugin_sidebar_items
+templates.env.globals["is_plugin_active"] = is_plugin_active
 templates.env.globals["is_php_active"] = is_php_active
 templates.env.globals["PANEL_NAME"] = config.PANEL_NAME
 templates.env.globals["PANEL_SHORT_NAME"] = config.PANEL_SHORT_NAME

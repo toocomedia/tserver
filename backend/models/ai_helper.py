@@ -21,6 +21,7 @@ class AiProvider(Base):
     custom_rules: Mapped[str] = mapped_column(Text, default="", nullable=False)
     is_default: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     is_enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    models_list: Mapped[str] = mapped_column(Text, default="", nullable=False)
     last_tested_status: Mapped[str] = mapped_column(String(32), default="untested", nullable=False)
     last_latency_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
@@ -29,6 +30,30 @@ class AiProvider(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), onupdate=func.now(), nullable=False
     )
+
+    def get_models(self) -> list[str]:
+        """Returns list of enabled model names for this provider."""
+        models: list[str] = []
+        if self.models_list and self.models_list.strip():
+            raw = self.models_list.strip()
+            if raw.startswith("["):
+                try:
+                    import json
+                    parsed = json.loads(raw)
+                    if isinstance(parsed, list):
+                        models = [str(m).strip() for m in parsed if str(m).strip()]
+                except Exception:
+                    pass
+            if not models:
+                models = [m.strip() for m in raw.split(",") if m.strip()]
+
+        if self.model_name and self.model_name.strip() and self.model_name.strip() not in models:
+            models.insert(0, self.model_name.strip())
+
+        if not models:
+            models = [self.model_name.strip() if self.model_name else "gpt-4o-mini"]
+
+        return models
 
 
 class AiHelperSettings(Base):

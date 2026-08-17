@@ -344,6 +344,13 @@ def _migrate_sync(sync_conn) -> None:
         sync_conn.execute(text("CREATE INDEX ix_safe_install_runs_operation_id ON safe_install_runs (operation_id)"))
         sync_conn.execute(text("CREATE INDEX ix_safe_install_runs_outcome ON safe_install_runs (outcome)"))
 
+    # --- ai_providers: multi-model support ---
+    if "ai_providers" in tables:
+        cols = _column_names(sync_conn, "ai_providers")
+        if "models_list" not in cols:
+            logger.info("Migrating ai_providers: add models_list")
+            sync_conn.execute(text("ALTER TABLE ai_providers ADD COLUMN models_list TEXT DEFAULT '' NOT NULL"))
+
 
 async def init_db():
     """Create all tables on startup if they do not exist, then migrate."""

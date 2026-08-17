@@ -51,10 +51,10 @@
           </div>
         </div>
 
-        <!-- Model Identifier with Auto-Check on Key Input & Custom Toggle -->
+        <!-- Model Configuration: Primary Model & Multi-Model Enabled List -->
         <div class="form-group mb-lg" id="drawer-model-section">
           <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
-            <label class="form-label m-0" for="drawer_model_select">Model</label>
+            <label class="form-label m-0" for="drawer_model_select">Default Model</label>
             <div style="display: flex; align-items: center; gap: 8px;">
               <span id="drawer-model-status" class="badge badge--neutral" style="display: none;"></span>
               <button type="button" class="btn btn--secondary btn--sm" id="drawer-btn-toggle-custom" style="height: 24px; padding: 0 8px; font-size: 11px;">
@@ -76,6 +76,26 @@
           </div>
 
           <input type="hidden" id="drawer_model_name" name="model_name" value="">
+
+          <!-- Multi-Model Selector for Single API -->
+          <div class="mt-sm" id="drawer-multi-models-box" style="background: var(--color-surface); padding: 10px 12px; border-radius: 4px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+              <label class="form-label m-0" style="font-size: 11px; font-weight: 700; color: var(--color-text);">Enabled Models for this API Key</label>
+              <span class="text-muted" style="font-size: 10px;">Select models for quick switching</span>
+            </div>
+            
+            <div id="drawer-model-chips-list" style="display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px; min-height: 24px;">
+              <!-- Dynamic chips will be inserted here -->
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <input type="text" class="form-input font-mono text-xs" id="drawer-add-model-input" placeholder="Add model name (e.g. gpt-4o)..." style="height: 28px; padding: 2px 8px; flex: 1;" autocomplete="off" data-lpignore="true">
+              <button type="button" class="btn btn--secondary btn--sm" id="drawer-btn-add-model-chip" style="height: 28px; padding: 0 10px; font-size: 11px;">
+                + Add
+              </button>
+            </div>
+            <input type="hidden" id="drawer_models_list" name="models_list" value="">
+          </div>
         </div>
 
         <!-- Default Provider Checkbox -->

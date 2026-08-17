@@ -37,7 +37,9 @@
   <link rel="stylesheet" href="/static/css/components/empty_state.css?v={{ APP_VERSION }}">
   <link rel="stylesheet" href="/static/css/utils.css?v={{ APP_VERSION }}">
   <link rel="stylesheet" href="/static/css/rtl.css?v={{ APP_VERSION }}">
+  {% if is_plugin_active('ai_helper') %}
   <link rel="stylesheet" href="/plugins/ai_helper/static/css/ai-helper.css?v={{ APP_VERSION }}">
+  {% endif %}
   <!-- Devicon & Lucide Icons -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/devicon.min.css">
   <script src="https://unpkg.com/lucide@latest"></script>
@@ -244,7 +246,9 @@ document.addEventListener("DOMContentLoaded", function() {
     }
   });
 </script>
+{% if is_plugin_active('ai_helper') %}
 <script src="/plugins/ai_helper/static/js/ai-helper.js?v={{ APP_VERSION }}"></script>
+{% endif %}
 {% block scripts %}{% endblock %}
 
 </body>

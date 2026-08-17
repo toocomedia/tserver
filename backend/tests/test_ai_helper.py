@@ -341,6 +341,39 @@ class AIHelperTests(unittest.IsolatedAsyncioTestCase):
             )
             self.assertEqual(models, ["gpt-4o", "gpt-4o-mini", "text-embedding-3-small"])
 
+    def test_is_plugin_active_helper(self):
+        """Verify templating is_plugin_active helper."""
+        from templating import is_plugin_active
+        # ai_helper is registered and active by default
+        self.assertTrue(is_plugin_active("ai_helper"))
+        # non-existent plugin returns False
+        self.assertFalse(is_plugin_active("non_existent_plugin_123"))
+
+    async def test_multi_model_persistence_and_get_models(self):
+        """Verify multiple models per provider are stored and retrieved."""
+        async with AsyncSessionLocal() as db:
+            provider = await service.create_provider(db, {
+                "name": "OpenAI Multi-Model",
+                "provider_type": "openai_compatible",
+                "base_url": "https://api.openai.com/v1",
+                "model_name": "gpt-4o-mini",
+                "models_list": "gpt-4o, gpt-4o-mini, o3-mini",
+                "api_key": "sk-multi-test",
+            })
+            self.assertEqual(provider.model_name, "gpt-4o-mini")
+            self.assertIn("o3-mini", provider.models_list)
+            models = provider.get_models()
+            self.assertIn("gpt-4o", models)
+            self.assertIn("gpt-4o-mini", models)
+            self.assertIn("o3-mini", models)
+
+            # Test updating models list
+            updated = await service.update_provider(db, provider.id, {
+                "models_list": "gpt-4o, claude-3-5-sonnet",
+            })
+            self.assertIn("claude-3-5-sonnet", updated.models_list)
+            self.assertIn("claude-3-5-sonnet", updated.get_models())
+
 
 if __name__ == "__main__":
     unittest.main()

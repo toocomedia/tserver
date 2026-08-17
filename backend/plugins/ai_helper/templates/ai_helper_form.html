@@ -52,10 +52,10 @@
       </div>
     </div>
 
-    <!-- Model Identifier with Auto-Check & Custom Toggle -->
+    <!-- Model Configuration: Primary Model & Multi-Model Enabled List -->
     <div class="form-group mb-lg" id="model-section">
       <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
-        <label class="form-label m-0" for="model_select">Model</label>
+        <label class="form-label m-0" for="model_select">Default Model</label>
         <div style="display: flex; align-items: center; gap: 8px;">
           <span id="model-status" class="badge badge--neutral" style="display: none;"></span>
           <button type="button" class="btn btn--secondary btn--sm" id="btn-toggle-custom" style="height: 26px; padding: 0 8px; font-size: 11px;">
@@ -81,6 +81,26 @@
       </div>
 
       <input type="hidden" id="model_name" name="model_name" value="{{ provider.model_name if provider else '' }}">
+
+      <!-- Multi-Model Selector for Single API -->
+      <div class="mt-sm" id="multi-models-box" style="background: var(--color-surface); padding: 12px 14px; border-radius: 4px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+          <label class="form-label m-0" style="font-size: 11.5px; font-weight: 700; color: var(--color-text);">Enabled Models for this API Key</label>
+          <span class="text-muted" style="font-size: 10.5px;">Select models for quick switching</span>
+        </div>
+        
+        <div id="model-chips-list" style="display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px; min-height: 24px;">
+          <!-- Dynamic chips will be inserted here -->
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <input type="text" class="form-input font-mono text-xs" id="add-model-input" placeholder="Add model name (e.g. gpt-4o)..." style="height: 30px; padding: 2px 8px; flex: 1;" autocomplete="off" data-lpignore="true">
+          <button type="button" class="btn btn--secondary btn--sm" id="btn-add-model-chip" style="height: 30px; padding: 0 10px; font-size: 11px;">
+            + Add
+          </button>
+        </div>
+        <input type="hidden" id="models_list" name="models_list" value="{{ provider.models_list if provider else '' }}">
+      </div>
     </div>
 
     <!-- Default Provider Checkbox -->
@@ -181,46 +201,157 @@ document.addEventListener("DOMContentLoaded", function () {
   var btnToggleLabel = document.getElementById("btn-toggle-label");
   var modelStatus = document.getElementById("model-status");
 
+  var modelsListHidden = document.getElementById("models_list");
+  var modelChipsContainer = document.getElementById("model-chips-list");
+  var addModelChipInput = document.getElementById("add-model-input");
+  var btnAddModelChip = document.getElementById("btn-add-model-chip");
+
   var isCustomMode = false;
+  var currentModels = [];
+
+  {% if provider %}
+  var initModelsRaw = "{{ provider.models_list or '' }}";
+  var initModel = "{{ provider.model_name or '' }}";
+  currentModels = initModelsRaw ? initModelsRaw.split(",").map(function(s){ return s.trim(); }).filter(Boolean) : [];
+  if (initModel && !currentModels.includes(initModel)) {
+    currentModels.unshift(initModel);
+  }
+  {% else %}
+  currentModels = ["gpt-4o-mini", "gpt-4o"];
+  {% endif %}
+
+  function renderModelChips() {
+    if (!modelChipsContainer) return;
+    modelChipsContainer.innerHTML = "";
+    
+    if (currentModels.length === 0) {
+      modelChipsContainer.innerHTML = '<span class="text-muted" style="font-size: 11px;">No models added yet. Enter key to fetch or type above.</span>';
+    } else {
+      currentModels.forEach(function(m) {
+        var isPrimary = (m === modelNameHidden.value);
+        var chip = document.createElement("span");
+        chip.className = "badge " + (isPrimary ? "badge--ok" : "badge--neutral");
+        chip.style.cssText = "display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px; font-family: monospace; font-size: 11px; cursor: pointer;";
+        chip.innerHTML = (isPrimary ? "★ " : "") + m + '<button type="button" style="background:none;border:none;color:inherit;cursor:pointer;padding:0;margin-left:4px;font-size:12px;opacity:0.7;" title="Remove model">✕</button>';
+        
+        chip.addEventListener("click", function(e) {
+          if (e.target.tagName.toLowerCase() === "button") return;
+          modelNameHidden.value = m;
+          if (modelSelect) modelSelect.value = m;
+          renderModelChips();
+        });
+        
+        chip.querySelector("button").addEventListener("click", function(e) {
+          e.stopPropagation();
+          currentModels = currentModels.filter(function(x) { return x !== m; });
+          if (modelNameHidden.value === m && currentModels.length > 0) {
+            modelNameHidden.value = currentModels[0];
+          } else if (currentModels.length === 0) {
+            modelNameHidden.value = "";
+          }
+          syncModelsState();
+        });
+        
+        modelChipsContainer.appendChild(chip);
+      });
+    }
+
+    if (modelsListHidden) {
+      modelsListHidden.value = currentModels.join(", ");
+    }
+
+    updateDropdownFromModels();
+  }
+
+  function updateDropdownFromModels() {
+    if (!modelSelect) return;
+    modelSelect.innerHTML = "";
+    if (currentModels.length === 0) {
+      modelSelect.innerHTML = '<option value="" disabled selected>-- Enter API key or add models --</option>';
+      return;
+    }
+    currentModels.forEach(function(m) {
+      var opt = document.createElement("option");
+      opt.value = m;
+      opt.textContent = m;
+      if (m === modelNameHidden.value) opt.selected = true;
+      modelSelect.appendChild(opt);
+    });
+    if (!modelNameHidden.value && currentModels.length > 0) {
+      modelNameHidden.value = currentModels[0];
+      modelSelect.selectedIndex = 0;
+    }
+  }
+
+  function syncModelsState() {
+    if (modelsListHidden) {
+      modelsListHidden.value = currentModels.join(", ");
+    }
+    renderModelChips();
+  }
+
+  function addModelToCurrent(m) {
+    var clean = (m || "").trim();
+    if (!clean) return;
+    if (!currentModels.includes(clean)) {
+      currentModels.push(clean);
+    }
+    if (!modelNameHidden.value) {
+      modelNameHidden.value = clean;
+    }
+    syncModelsState();
+  }
+
+  if (btnAddModelChip && addModelChipInput) {
+    btnAddModelChip.addEventListener("click", function() {
+      addModelToCurrent(addModelChipInput.value);
+      addModelChipInput.value = "";
+    });
+    addModelChipInput.addEventListener("keydown", function(e) {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        addModelToCurrent(addModelChipInput.value);
+        addModelChipInput.value = "";
+      }
+    });
+  }
 
   function syncModelValue() {
     if (isCustomMode) {
       modelNameHidden.value = customModelInput.value.trim();
+      if (customModelInput.value.trim() && !currentModels.includes(customModelInput.value.trim())) {
+        currentModels.push(customModelInput.value.trim());
+        syncModelsState();
+      }
     } else if (modelSelect && modelSelect.value) {
       modelNameHidden.value = modelSelect.value.trim();
       customModelInput.value = modelSelect.value.trim();
+      renderModelChips();
     }
   }
 
   function setDropdownOptions(modelsList, selectedValue) {
     if (!modelsList || modelsList.length === 0) return;
-    modelSelect.innerHTML = "";
-    var found = false;
-
     modelsList.forEach(function (m) {
-      if (!m) return;
-      var opt = document.createElement("option");
-      opt.value = m;
-      opt.textContent = m;
-      if (m === selectedValue) {
-        opt.selected = true;
-        found = true;
+      if (m && !currentModels.includes(m.trim())) {
+        currentModels.push(m.trim());
       }
-      modelSelect.appendChild(opt);
     });
 
-    if (!found && selectedValue) {
-      var optCur = document.createElement("option");
-      optCur.value = selectedValue;
-      optCur.textContent = selectedValue;
-      optCur.selected = true;
-      modelSelect.insertBefore(optCur, modelSelect.firstChild);
-    } else if (!found && modelsList.length > 0) {
-      modelSelect.selectedIndex = 0;
+    if (selectedValue && !currentModels.includes(selectedValue.trim())) {
+      currentModels.unshift(selectedValue.trim());
     }
 
-    syncModelValue();
+    if (selectedValue) {
+      modelNameHidden.value = selectedValue;
+    } else if (currentModels.length > 0) {
+      modelNameHidden.value = currentModels[0];
+    }
+
+    syncModelsState();
   }
+
+  renderModelChips();
 
   function selectPresetCard(presetKey) {
     var cards = document.querySelectorAll("#form-preset-grid .settings-choice");

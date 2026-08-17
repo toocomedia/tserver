@@ -129,7 +129,6 @@ async def get_active_provider(db: AsyncSession) -> Optional[AiProvider]:
 
 async def create_provider(db: AsyncSession, data: Dict[str, any]) -> AiProvider:
     """Adds a new AI provider."""
-    # If first provider or is_default is specified, set default
     existing_count = (await db.execute(select(AiProvider))).scalars().all()
     should_be_default = bool(data.get("is_default")) or len(existing_count) == 0
 
@@ -137,12 +136,26 @@ async def create_provider(db: AsyncSession, data: Dict[str, any]) -> AiProvider:
         await db.execute(update(AiProvider).values(is_default=False))
 
     raw_key = data.get("api_key") or ""
+    
+    # Process multi-model list
+    models_input = []
+    if "models" in data and isinstance(data["models"], list):
+        models_input = [str(m).strip() for m in data["models"] if str(m).strip()]
+    elif "models_list" in data and isinstance(data["models_list"], str):
+        models_input = [m.strip() for m in data["models_list"].split(",") if m.strip()]
+
+    model_name = str(data.get("model_name") or (models_input[0] if models_input else "gpt-4o-mini")).strip()
+    if model_name and model_name not in models_input:
+        models_input.insert(0, model_name)
+    models_list_str = ", ".join(models_input) if models_input else model_name
+
     provider = AiProvider(
         name=str(data.get("name") or "New Provider").strip(),
         provider_type=str(data.get("provider_type") or "openai_compatible").strip(),
         api_key_encrypted=encrypt_key(raw_key) if raw_key else None,
         base_url=str(data.get("base_url") or "https://api.openai.com/v1").strip(),
-        model_name=str(data.get("model_name") or "gpt-4o-mini").strip(),
+        model_name=model_name or "gpt-4o-mini",
+        models_list=models_list_str,
         temperature=float(data.get("temperature", 0.2)),
         max_tokens=int(data.get("max_tokens", 4096)),
         custom_rules=str(data.get("custom_rules") or "").strip(),
@@ -187,6 +200,17 @@ async def update_provider(db: AsyncSession, provider_id: int, data: Dict[str, an
         provider.custom_rules = str(data["custom_rules"]).strip()
     if "is_enabled" in data:
         provider.is_enabled = bool(data["is_enabled"])
+
+    if "models" in data and isinstance(data["models"], list):
+        models_input = [str(m).strip() for m in data["models"] if str(m).strip()]
+        if provider.model_name and provider.model_name not in models_input:
+            models_input.insert(0, provider.model_name)
+        provider.models_list = ", ".join(models_input)
+    elif "models_list" in data and isinstance(data["models_list"], str):
+        models_input = [m.strip() for m in data["models_list"].split(",") if m.strip()]
+        if provider.model_name and provider.model_name not in models_input:
+            models_input.insert(0, provider.model_name)
+        provider.models_list = ", ".join(models_input)
 
     raw_key = data.get("api_key")
     if raw_key and isinstance(raw_key, str) and raw_key.strip():
@@ -353,6 +377,7 @@ async def stream_ai_chat(
     context_key: Optional[str] = None,
     context_text: Optional[str] = None,
     provider_id: Optional[int] = None,
+    model_name: Optional[str] = None,
 ) -> AsyncGenerator[str, None]:
     """
     Main multi-turn streaming chat pipeline:
@@ -379,6 +404,9 @@ async def stream_ai_chat(
     if not api_key:
         yield "Error: No API key configured for the active provider. Please configure an API key."
         return
+
+    # Effective model name to use
+    effective_model = model_name.strip() if model_name and model_name.strip() else active.model_name
 
     # Trim context log to prevent exceeding context window
     trimmed_context = engine.trim_context_log(context_text or "")
@@ -423,7 +451,7 @@ async def stream_ai_chat(
             provider_type=active.provider_type,
             base_url=active.base_url,
             api_key=api_key,
-            model_name=active.model_name,
+            model_name=effective_model,
             messages=messages,
             temperature=active.temperature,
             max_tokens=active.max_tokens,

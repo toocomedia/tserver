@@ -71,6 +71,7 @@ async def ai_helper_create_action(
     api_key: str = Form(""),
     base_url: str = Form("https://api.openai.com/v1"),
     model_name: str = Form("gpt-4o-mini"),
+    models_list: str = Form(""),
     temperature: float = Form(0.2),
     max_tokens: int = Form(4096),
     custom_rules: str = Form(""),
@@ -85,6 +86,7 @@ async def ai_helper_create_action(
         "api_key": api_key,
         "base_url": base_url,
         "model_name": model_name,
+        "models_list": models_list,
         "temperature": temperature,
         "max_tokens": max_tokens,
         "custom_rules": custom_rules,
@@ -125,6 +127,7 @@ async def ai_helper_edit_action(
     api_key: str = Form(""),
     base_url: str = Form("https://api.openai.com/v1"),
     model_name: str = Form("gpt-4o-mini"),
+    models_list: str = Form(""),
     temperature: float = Form(0.2),
     max_tokens: int = Form(4096),
     custom_rules: str = Form(""),
@@ -139,6 +142,7 @@ async def ai_helper_edit_action(
         "api_key": api_key if api_key.strip() else None,
         "base_url": base_url,
         "model_name": model_name,
+        "models_list": models_list,
         "temperature": temperature,
         "max_tokens": max_tokens,
         "custom_rules": custom_rules,
@@ -190,6 +194,7 @@ async def get_providers_list(db: AsyncSession = Depends(get_db)):
             "name": p.name,
             "provider_type": p.provider_type,
             "model_name": p.model_name,
+            "models": p.get_models(),
             "is_default": p.is_default,
         }
         for p in providers
@@ -226,6 +231,7 @@ async def chat_endpoint(req: ChatRequest, db: AsyncSession = Depends(get_db)):
             context_key=req.context_key,
             context_text=req.context,
             provider_id=req.provider_id,
+            model_name=req.model_name,
         ):
             chunks.append(chunk)
         return JSONResponse({
@@ -244,6 +250,7 @@ async def chat_endpoint(req: ChatRequest, db: AsyncSession = Depends(get_db)):
             context_key=req.context_key,
             context_text=req.context,
             provider_id=req.provider_id,
+            model_name=req.model_name,
         ):
             yield f"data: {json.dumps({'type': 'token', 'token': chunk})}\n\n"
         yield "data: [DONE]\n\n"

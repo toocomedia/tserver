@@ -13,6 +13,8 @@ class ProviderPayload(BaseModel):
     api_key: Optional[str] = None
     base_url: str = "https://api.openai.com/v1"
     model_name: str = "gpt-4o-mini"
+    models: Optional[List[str]] = None
+    models_list: Optional[str] = None
     temperature: Optional[float] = 0.2
     max_tokens: Optional[int] = 4096
     custom_rules: Optional[str] = ""
@@ -48,5 +50,6 @@ class ProviderSummary(BaseModel):
     name: str
     provider_type: str
     model_name: str
+    models: List[str] = []
     is_default: bool
     is_enabled: bool
