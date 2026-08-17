@@ -599,3 +599,20 @@ async def get_session_messages(db: AsyncSession, session_id: str) -> List[Dict[s
         }
         for r in records
     ]
+
+
+class AiHelperService:
+    """Plugin lifecycle hooks for the native AI Assistant plugin."""
+
+    def is_installed(self) -> bool:
+        return True
+
+    def pause(self) -> None:
+        return None
+
+    def resume(self) -> None:
+        return None
+
+
+ai_helper_service = AiHelperService()
+
