@@ -13,17 +13,13 @@ export const PermissionsManager = {
     this.pickers.databases = new MultiSelectPicker({ key: "databases" });
     this.pickers.file_targets = new MultiSelectPicker({ key: "file_targets" });
 
-    if (window.INITIAL_RESOURCES) {
-      this.populateResources(window.INITIAL_RESOURCES);
-    }
+    if (window.INITIAL_RESOURCES) this.populateResources(window.INITIAL_RESOURCES);
 
-    // Tab Switching inside Permissions Drawer
     document.querySelectorAll(".perm-tab-btn").forEach((btn) => {
       btn.addEventListener("click", () => {
         const targetId = btn.getAttribute("data-target");
         document.querySelectorAll(".perm-tab-btn").forEach((b) => b.classList.remove("active"));
         document.querySelectorAll(".perm-tab-pane").forEach((p) => (p.style.display = "none"));
-
         btn.classList.add("active");
         const pane = document.getElementById(targetId);
         if (pane) pane.style.display = "block";
@@ -31,7 +27,6 @@ export const PermissionsManager = {
       });
     });
 
-    // Close multi-select dropdown when clicking outside
     document.addEventListener("click", (e) => {
       if (!e.target.closest(".perm-multiselect")) {
         document.querySelectorAll(".perm-multiselect.open").forEach((el) => el.classList.remove("open"));
@@ -54,9 +49,7 @@ export const PermissionsManager = {
     fetch("/plugins/ai_helper/api/resources")
       .then((res) => res.json())
       .then((data) => {
-        if (data.status === "ok" && data.resources) {
-          this.populateResources(data.resources);
-        }
+        if (data.status === "ok" && data.resources) this.populateResources(data.resources);
       })
       .catch((err) => console.debug("Resource discovery error:", err));
   },
@@ -107,9 +100,7 @@ export const PermissionsManager = {
     if (!modal) return;
     modal.classList.remove("hidden");
     document.body.classList.add("modal-open");
-    if (window.INITIAL_RESOURCES && !this.cachedResources) {
-      this.populateResources(window.INITIAL_RESOURCES);
-    }
+    if (window.INITIAL_RESOURCES && !this.cachedResources) this.populateResources(window.INITIAL_RESOURCES);
     this.fetchResources();
     this.updateAccessModeUI();
     if (typeof lucide !== "undefined") lucide.createIcons();
@@ -147,7 +138,8 @@ export const PermissionsManager = {
       .catch((err) => console.debug("Failed to refresh audit logs:", err));
   },
 
-  savePermissions() {
+  savePermissions(e) {
+    if (e && e.preventDefault) e.preventDefault();
     const form = document.getElementById("ai-permissions-form");
     if (!form) return;
 
@@ -188,17 +180,16 @@ export const PermissionsManager = {
           btn.innerHTML = '<i data-lucide="check" style="width: 14px; height: 14px;"></i> Save Permissions';
           if (typeof lucide !== "undefined") lucide.createIcons();
         }
-
         if (statusMsg) {
           if (data.status === "ok") {
             statusMsg.className = "alert alert--ok mt-sm";
-            statusMsg.textContent = "✓ Permissions updated successfully!";
+            statusMsg.textContent = "✓ Permissions updated!";
             statusMsg.style.display = "block";
             this.updateAccessModeUI();
             setTimeout(() => {
               statusMsg.style.display = "none";
               this.closeDrawer();
-            }, 1000);
+            }, 600);
           } else {
             statusMsg.className = "alert alert--danger mt-sm";
             statusMsg.textContent = "Failed: " + (data.message || "Unknown error");

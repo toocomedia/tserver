@@ -16,7 +16,7 @@ window.closeDrawer = () => ProviderDrawerManager.closeDrawer();
 window.openPermissionsDrawer = () => PermissionsManager.openDrawer();
 window.closePermissionsDrawer = () => PermissionsManager.closeDrawer();
 window.updateAccessModeUI = () => PermissionsManager.updateAccessModeUI();
-window.savePermissions = () => PermissionsManager.savePermissions();
+window.savePermissions = (e) => PermissionsManager.savePermissions(e);
 window.refreshAuditLogs = () => PermissionsManager.refreshAuditLogs();
 
 window.testProvider = (providerId, btn) => {

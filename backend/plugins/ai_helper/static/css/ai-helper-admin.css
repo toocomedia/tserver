@@ -18,6 +18,7 @@
   border-radius: 4px;
   cursor: pointer;
   user-select: none;
+  text-align: left;
   transition: border-color 0.15s ease;
 }
 
@@ -59,11 +60,13 @@
   border-radius: 3px;
   gap: 8px;
   color: var(--color-text);
+  text-align: left;
 }
 
 .model-dropdown-item label,
 .model-dropdown-item span {
   color: var(--color-text) !important;
+  text-align: left;
 }
 
 .model-dropdown-item:hover {
@@ -74,12 +77,13 @@
   background: rgba(199, 244, 100, 0.08) !important;
 }
 
-/* Permissions Minimal Tabs */
+/* Permissions Minimal Tabs (No Background) */
 .perm-tab-nav {
   display: flex;
+  align-items: center;
   gap: 4px;
-  padding: 10px 20px;
-  background: var(--color-surface);
+  padding: 8px 20px;
+  background: transparent;
   border-bottom: 1px solid var(--color-line);
 }
 
@@ -87,11 +91,12 @@
   background: transparent;
   border: none;
   border-bottom: 2px solid transparent;
-  padding: 4px 10px;
+  padding: 6px 12px;
   font-size: 13px;
   font-weight: 600;
   color: var(--color-muted);
   cursor: pointer;
+  text-align: center;
   transition: color 0.15s ease, border-color 0.15s ease;
 }
 
@@ -118,6 +123,7 @@
   border-bottom: 1px solid var(--color-line);
   cursor: pointer;
   user-select: none;
+  text-align: left;
 }
 
 .perm-category-row:last-child {
@@ -146,6 +152,7 @@
   border-radius: 4px;
   cursor: pointer;
   user-select: none;
+  text-align: left;
 }
 
 .perm-multiselect__tags {
@@ -153,6 +160,7 @@
   flex-wrap: wrap;
   gap: 4px;
   flex: 1;
+  text-align: left;
 }
 
 .perm-tag {
@@ -200,12 +208,14 @@
 
 .perm-multiselect__search-bar {
   display: flex;
+  align-items: center;
   gap: 6px;
   margin-bottom: 6px;
 }
 
 .perm-multiselect__actions {
   display: flex;
+  align-items: center;
   justify-content: flex-end;
   gap: 6px;
   padding-bottom: 6px;
@@ -230,11 +240,13 @@
   cursor: pointer;
   transition: background 0.1s ease;
   color: var(--color-text);
+  text-align: left;
 }
 
 .perm-multiselect__item label,
 .perm-multiselect__item span {
   color: var(--color-text) !important;
+  text-align: left;
 }
 
 .perm-multiselect__item:hover {

@@ -20,7 +20,7 @@
     </div>
 
     <div class="modal__body" style="overflow-y: auto; flex: 1; padding: 20px;">
-      <form id="ai-permissions-form" onsubmit="event.preventDefault(); savePermissions();">
+      <form id="ai-permissions-form" onsubmit="event.preventDefault(); window.savePermissions(event);">
         {% include "partials/_permissions_policy.html" %}
         {% include "partials/_permissions_categories.html" %}
         {% include "partials/_permissions_scope.html" %}
@@ -31,7 +31,7 @@
 
     <div class="modal__footer" style="display: flex; align-items: center; justify-content: flex-end; gap: 8px;">
       <button type="button" class="btn btn--secondary btn--sm" onclick="closePermissionsDrawer()">Cancel</button>
-      <button type="button" class="btn btn--primary btn--sm" id="btn-save-permissions" onclick="savePermissions()">
+      <button type="button" class="btn btn--primary btn--sm" id="btn-save-permissions" onclick="window.savePermissions(event)">
         <i data-lucide="save"></i> Save Permissions
       </button>
     </div>

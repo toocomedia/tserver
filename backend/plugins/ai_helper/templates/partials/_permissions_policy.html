@@ -10,7 +10,7 @@
         <div class="d-flex align-items-center justify-content-between" style="width: 100%;">
           <div class="d-flex align-items-center gap-sm">
             <input type="radio" name="global_mode" value="full_read_only" {% if policy.global_mode == 'full_read_only' %}checked{% endif %} onchange="updateAccessModeUI()">
-            <div>
+            <div class="text-left">
               <span class="font-bold text-sm d-block" style="color: var(--color-text);">Full Access</span>
               <span class="text-xs text-muted">Read access across all categories (no whitelist restrictions).</span>
             </div>
@@ -24,7 +24,7 @@
         <div class="d-flex align-items-center justify-content-between" style="width: 100%;">
           <div class="d-flex align-items-center gap-sm">
             <input type="radio" name="global_mode" value="selective" {% if policy.global_mode == 'selective' %}checked{% endif %} onchange="updateAccessModeUI()">
-            <div>
+            <div class="text-left">
               <span class="font-bold text-sm d-block" style="color: var(--color-text);">Granular Whitelist</span>
               <span class="text-xs text-muted">Restrict AI strictly to chosen resources configured in the Whitelist tab.</span>
             </div>
@@ -38,7 +38,7 @@
         <div class="d-flex align-items-center justify-content-between" style="width: 100%;">
           <div class="d-flex align-items-center gap-sm">
             <input type="radio" name="global_mode" value="disabled" {% if policy.global_mode == 'disabled' %}checked{% endif %} onchange="updateAccessModeUI()">
-            <div>
+            <div class="text-left">
               <span class="font-bold text-sm d-block" style="color: var(--color-text);">Block AI Access</span>
               <span class="text-xs text-muted">Completely disable AI assistant from querying any server tools or data.</span>
             </div>
@@ -50,13 +50,13 @@
     </div>
   </div>
 
-  <div class="form-group pt-sm" style="border-top: 1px solid var(--color-line);">
-    <label class="form-check m-0" style="cursor: pointer; justify-content: space-between;">
-      <div>
+  <div class="form-group pt-xs">
+    <label class="form-check m-0" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between;">
+      <div class="text-left">
         <span class="font-bold text-sm d-block" style="color: var(--color-text);">On-Demand Confirmation</span>
         <span class="text-xs text-muted">Ask for confirmation before inspecting sensitive logs or files.</span>
       </div>
-      <input type="checkbox" name="ask_on_demand" class="form-check-input" {% if policy.ask_on_demand %}checked{% endif %}>
+      <input type="checkbox" name="ask_on_demand" class="form-check-input m-0" {% if policy.ask_on_demand %}checked{% endif %}>
     </label>
   </div>
 </div>

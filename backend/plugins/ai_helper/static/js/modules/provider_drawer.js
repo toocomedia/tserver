@@ -22,39 +22,37 @@ export const ProviderDrawerManager = {
     this.drawerTitle = document.getElementById("drawer-title");
     this.drawerSaveBtn = document.getElementById("drawer-btn-save");
 
-    this.apiKeyInput = document.getElementById("drawer_api_key") || document.getElementById("api_key");
-    this.providerNameInput = document.getElementById("drawer_provider_name") || document.getElementById("provider_name");
-    this.baseUrlInput = document.getElementById("drawer_base_url") || document.getElementById("base_url");
-    this.providerTypeSelect = document.getElementById("drawer_provider_type") || document.getElementById("provider_type");
-    this.tempInput = document.getElementById("drawer_temperature") || document.getElementById("temperature");
-    this.tokensInput = document.getElementById("drawer_max_tokens") || document.getElementById("max_tokens");
-    this.rulesInput = document.getElementById("drawer_custom_rules") || document.getElementById("custom_rules");
-    this.isDefaultCheck = document.getElementById("drawer_is_default") || document.getElementById("is_default");
+    this.apiKeyInput = document.getElementById("drawer_api_key");
+    this.providerNameInput = document.getElementById("drawer_provider_name");
+    this.baseUrlInput = document.getElementById("drawer_base_url");
+    this.providerTypeSelect = document.getElementById("drawer_provider_type");
+    this.tempInput = document.getElementById("drawer_temperature");
+    this.tokensInput = document.getElementById("drawer_max_tokens");
+    this.rulesInput = document.getElementById("drawer_custom_rules");
+    this.isDefaultCheck = document.getElementById("drawer_is_default");
 
-    this.modelDropdownWrap = document.getElementById("drawer-model-dropdown-wrap") || document.getElementById("model-dropdown-wrap");
-    this.modelTrigger = document.getElementById("drawer-model-trigger") || document.getElementById("model-trigger");
-    this.modelTriggerText = document.getElementById("drawer-model-trigger-text") || document.getElementById("model-trigger-text");
-    this.modelMenu = document.getElementById("drawer-model-menu") || document.getElementById("model-menu");
-    this.filterModelInput = document.getElementById("drawer-filter-model-input") || document.getElementById("filter-model-input");
-    this.btnAddModel = document.getElementById("drawer-btn-add-model") || document.getElementById("btn-add-model");
-    this.btnFetchModels = document.getElementById("drawer-btn-fetch-models") || document.getElementById("btn-fetch-models");
-    this.modelsListItems = document.getElementById("drawer-models-list-items") || document.getElementById("models-list-items");
+    this.modelDropdownWrap = document.getElementById("drawer-model-dropdown-wrap");
+    this.modelTrigger = document.getElementById("drawer-model-trigger");
+    this.modelTriggerText = document.getElementById("drawer-model-trigger-text");
+    this.modelMenu = document.getElementById("drawer-model-menu");
+    this.filterModelInput = document.getElementById("drawer-filter-model-input");
+    this.btnAddModel = document.getElementById("drawer-btn-add-model");
+    this.btnFetchModels = document.getElementById("drawer-btn-fetch-models");
+    this.modelsListItems = document.getElementById("drawer-models-list-items");
 
-    this.modelNameHidden = document.getElementById("drawer_model_name") || document.getElementById("model_name");
-    this.modelsListHidden = document.getElementById("drawer_models_list") || document.getElementById("models_list");
-    this.modelStatus = document.getElementById("drawer-model-status") || document.getElementById("model-status");
-    this.testIndicator = document.getElementById("drawer-test-indicator") || document.getElementById("test-indicator");
-    this.drawerTestBtn = document.getElementById("drawer-btn-test") || document.getElementById("btn-test-connection");
+    this.modelNameHidden = document.getElementById("drawer_model_name");
+    this.modelsListHidden = document.getElementById("drawer_models_list");
+    this.modelStatus = document.getElementById("drawer-model-status");
+    this.testIndicator = document.getElementById("drawer-test-indicator");
+    this.drawerTestBtn = document.getElementById("drawer-btn-test");
   },
 
   bindEvents() {
-    document.querySelectorAll(".settings-choice").forEach((card) => {
+    document.querySelectorAll("#preset-choice-grid .settings-choice").forEach((card) => {
       card.addEventListener("click", () => {
         const key = card.getAttribute("data-preset-key");
         if (key) this.selectPresetCard(key);
-        if (this.apiKeyInput && this.apiKeyInput.value.trim().length >= 6) {
-          this.autoFetchModels();
-        }
+        if (this.apiKeyInput && this.apiKeyInput.value.trim().length >= 6) this.autoFetchModels();
       });
     });
 
@@ -63,15 +61,11 @@ export const ProviderDrawerManager = {
         e.stopPropagation();
         const isOpen = this.modelMenu.style.display === "block";
         this.modelMenu.style.display = isOpen ? "none" : "block";
-        if (!isOpen && this.filterModelInput) {
-          setTimeout(() => this.filterModelInput.focus(), 50);
-        }
+        if (!isOpen && this.filterModelInput) setTimeout(() => this.filterModelInput.focus(), 50);
       });
 
       document.addEventListener("click", (e) => {
-        if (this.modelDropdownWrap && !this.modelDropdownWrap.contains(e.target)) {
-          this.modelMenu.style.display = "none";
-        }
+        if (this.modelDropdownWrap && !this.modelDropdownWrap.contains(e.target)) this.modelMenu.style.display = "none";
       });
       this.modelMenu.addEventListener("click", (e) => e.stopPropagation());
     }
@@ -98,34 +92,28 @@ export const ProviderDrawerManager = {
       });
     }
 
-    if (this.btnFetchModels) {
-      this.btnFetchModels.addEventListener("click", () => this.autoFetchModels(true));
-    }
+    if (this.btnFetchModels) this.btnFetchModels.addEventListener("click", () => this.autoFetchModels(true));
 
     if (this.apiKeyInput) {
       this.apiKeyInput.addEventListener("input", () => {
         clearTimeout(this.fetchTimeout);
-        if (this.apiKeyInput.value.trim().length >= 6) {
-          this.fetchTimeout = setTimeout(() => this.autoFetchModels(), 500);
-        }
+        if (this.apiKeyInput.value.trim().length >= 6) this.fetchTimeout = setTimeout(() => this.autoFetchModels(), 500);
       });
     }
 
-    const toggleKeyBtn = document.getElementById("drawer-btn-toggle-key") || document.getElementById("btn-toggle-key");
+    const toggleKeyBtn = document.getElementById("drawer-btn-toggle-key");
     if (toggleKeyBtn && this.apiKeyInput) {
       toggleKeyBtn.addEventListener("click", () => {
         this.apiKeyInput.type = this.apiKeyInput.type === "password" ? "text" : "password";
       });
     }
 
-    if (this.drawerTestBtn) {
-      this.drawerTestBtn.addEventListener("click", () => this.testDrawerConnection());
-    }
+    if (this.drawerTestBtn) this.drawerTestBtn.addEventListener("click", () => this.testDrawerConnection());
   },
 
   selectPresetCard(presetKey) {
     const config = PRESET_CONFIGS[presetKey] || PRESET_CONFIGS.custom;
-    document.querySelectorAll(".settings-choice").forEach((card) => {
+    document.querySelectorAll("#preset-choice-grid .settings-choice").forEach((card) => {
       const radio = card.querySelector("input[type='radio']");
       const isTarget = card.getAttribute("data-preset-key") === presetKey;
       card.classList.toggle("settings-choice--active", isTarget);
@@ -135,12 +123,8 @@ export const ProviderDrawerManager = {
     if (config.name && presetKey !== "custom" && !this.currentEditId && this.providerNameInput) {
       this.providerNameInput.value = config.name;
     }
-    if (config.provider_type && this.providerTypeSelect) {
-      this.providerTypeSelect.value = config.provider_type;
-    }
-    if (config.base_url !== null && config.base_url !== "" && this.baseUrlInput) {
-      this.baseUrlInput.value = config.base_url;
-    }
+    if (config.provider_type && this.providerTypeSelect) this.providerTypeSelect.value = config.provider_type;
+    if (config.base_url !== null && config.base_url !== "" && this.baseUrlInput) this.baseUrlInput.value = config.base_url;
   },
 
   setDropdownOptions(modelsArray, selectedValue) {
@@ -150,9 +134,7 @@ export const ProviderDrawerManager = {
       if (str && !this.allKnownModels.includes(str)) this.allKnownModels.push(str);
     });
 
-    if (this.enabledModels.length === 0) {
-      this.enabledModels = this.allKnownModels.slice(0, 3);
-    }
+    if (this.enabledModels.length === 0) this.enabledModels = this.allKnownModels.slice(0, 3);
 
     if (selectedValue) {
       this.defaultModel = selectedValue;
@@ -170,14 +152,10 @@ export const ProviderDrawerManager = {
     if (this.modelsListHidden) this.modelsListHidden.value = this.enabledModels.join(", ");
 
     if (this.modelTriggerText) {
-      if (!this.defaultModel && this.enabledModels.length === 0) {
-        this.modelTriggerText.textContent = "-- Enter API key to load models --";
-      } else {
-        const count = this.enabledModels.length;
-        this.modelTriggerText.textContent = count > 1
-          ? `${this.defaultModel || this.enabledModels[0]} (${count} models)`
-          : (this.defaultModel || this.enabledModels[0] || "-- Select Model --");
-      }
+      const count = this.enabledModels.length;
+      this.modelTriggerText.textContent = (!this.defaultModel && count === 0)
+        ? "-- Enter API key to load models --"
+        : (count > 1 ? `${this.defaultModel || this.enabledModels[0]} (${count} models)` : (this.defaultModel || this.enabledModels[0]));
     }
 
     if (!this.modelsListItems) return;
@@ -216,16 +194,14 @@ export const ProviderDrawerManager = {
           if (!this.defaultModel) this.defaultModel = m;
         } else {
           this.enabledModels = this.enabledModels.filter((x) => x !== m);
-          if (this.defaultModel === m) {
-            this.defaultModel = this.enabledModels.length > 0 ? this.enabledModels[0] : "";
-          }
+          if (this.defaultModel === m) this.defaultModel = this.enabledModels.length > 0 ? this.enabledModels[0] : "";
         }
         this.updateModelDropdownUI();
       });
 
       const nameSpan = document.createElement("span");
       nameSpan.className = "font-mono text-xs";
-      nameSpan.style.cssText = "color: var(--color-text); font-weight: " + (isDefault ? "700" : "500") + ";";
+      nameSpan.style.cssText = `color: var(--color-text); font-weight: ${isDefault ? "700" : "500"};`;
       nameSpan.textContent = m;
 
       checkLabel.appendChild(checkbox);
@@ -301,9 +277,7 @@ export const ProviderDrawerManager = {
     const origHtml = this.drawerTestBtn.innerHTML;
     this.drawerTestBtn.disabled = true;
     this.drawerTestBtn.innerHTML = '<span class="spinner-sm"></span> Testing...';
-    if (this.testIndicator) {
-      this.testIndicator.innerHTML = '<span class="badge badge--neutral"><span class="spinner-sm"></span> Connecting...</span>';
-    }
+    if (this.testIndicator) this.testIndicator.innerHTML = '<span class="badge badge--neutral"><span class="spinner-sm"></span> Connecting...</span>';
 
     const csrfToken = document.querySelector("meta[name='csrf-token']")?.getAttribute("content") || "";
     const payload = {
@@ -334,9 +308,7 @@ export const ProviderDrawerManager = {
         this.drawerTestBtn.disabled = false;
         this.drawerTestBtn.innerHTML = origHtml;
         if (typeof lucide !== "undefined") lucide.createIcons();
-        if (this.testIndicator) {
-          this.testIndicator.innerHTML = `<span class="badge badge--error">✗ Error: ${err.message}</span>`;
-        }
+        if (this.testIndicator) this.testIndicator.innerHTML = `<span class="badge badge--error">✗ Error: ${err.message}</span>`;
       });
   },
 

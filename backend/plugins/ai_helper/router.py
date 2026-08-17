@@ -101,7 +101,10 @@ async def ai_helper_create_action(
         "is_default": is_default,
         "is_enabled": is_enabled,
     }
-    await service.create_provider(db, data)
+    created = await service.create_provider(db, data)
+    from middleware.auth import wants_json
+    if wants_json(request):
+        return JSONResponse({"status": "ok", "message": "Provider created successfully.", "id": created.id})
     return RedirectResponse(url="/plugins/ai_helper/", status_code=303)
 
 
@@ -160,6 +163,9 @@ async def ai_helper_edit_action(
     updated = await service.update_provider(db, provider_id, data)
     if not updated:
         raise HTTPException(404, "AI Provider not found.")
+    from middleware.auth import wants_json
+    if wants_json(request):
+        return JSONResponse({"status": "ok", "message": "Provider updated successfully."})
     return RedirectResponse(url="/plugins/ai_helper/", status_code=303)
 
 
