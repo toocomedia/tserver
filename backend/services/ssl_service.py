@@ -287,6 +287,7 @@ async def issue_cert(
         raise HTTPException(status_code=400, detail=f"Invalid domain name: {full_domain!r}")
 
     # Guard: cert already exists
+    skip_certbot = False
     existing = await db.scalar(
         select(SslCert).where(SslCert.full_domain == full_domain)
     )
@@ -302,60 +303,64 @@ async def issue_cert(
                 await db.flush()
                 existing = None
         if existing:
-            raise HTTPException(status_code=409, detail=f"Cert already exists for: {full_domain}")
+            logger.info("Cert already exists for: %s, skipping certbot and updating nginx config", full_domain)
+            skip_certbot = True
 
-    # Guard: nginx must exist for this exact host (not parent domain)
-    if not nginx_service.config_exists(full_domain):
-        raise HTTPException(
-            status_code=400,
-            detail=f"Nginx config not found for {full_domain}. HTTP must be active before issuing SSL."
-        )
+    if not skip_certbot:
+        # Guard: nginx must exist for this exact host (not parent domain)
+        if not nginx_service.config_exists(full_domain):
+            raise HTTPException(
+                status_code=400,
+                detail=f"Nginx config not found for {full_domain}. HTTP must be active before issuing SSL."
+            )
 
-    nginx_service.ensure_acme_root()
+        nginx_service.ensure_acme_root()
 
-    # Build certbot command
-    cmd = [
-        "certbot", "certonly",
-        "--webroot",
-        f"--webroot-path={config.NGINX_WEBROOT}/acme-challenge",
-        "--non-interactive",
-        "--agree-tos",
-        f"--email={config.CERTBOT_EMAIL}",
-        f"--cert-name={full_domain}",
-        "-d", full_domain,
-    ]
-    if include_www and not full_domain.startswith("www."):
-        cmd += ["-d", f"www.{full_domain}"]
+        # Build certbot command
+        cmd = [
+            "certbot", "certonly",
+            "--webroot",
+            f"--webroot-path={config.NGINX_WEBROOT}/acme-challenge",
+            "--non-interactive",
+            "--agree-tos",
+            f"--email={config.CERTBOT_EMAIL}",
+            f"--cert-name={full_domain}",
+            "-d", full_domain,
+        ]
+        if include_www and not full_domain.startswith("www."):
+            cmd += ["-d", f"www.{full_domain}"]
 
-    logger.info("Running certbot for: %s (www=%s)", full_domain, include_www)
-    result = await shell.run(cmd, timeout=120)
+        logger.info("Running certbot for: %s (www=%s)", full_domain, include_www)
+        result = await shell.run(cmd, timeout=120)
 
-    if not result.success:
-        logger.error("Certbot failed for %s: %s", full_domain, result.stderr)
-        await error_service.record(
-            db=db,
-            level="error",
-            source="ssl",
-            operation="issue_cert",
-            message=f"Certbot failed for {full_domain}",
-            detail=result.stderr or result.stdout,
-            context={
-                "full_domain": full_domain,
-                "domain_id": domain_id,
-                "include_www": include_www,
-            },
-        )
-        raise HTTPException(
-            status_code=500,
-            detail=f"Certbot failed: {result.stderr[-300:]}"
-        )
+        if not result.success:
+            logger.error("Certbot failed for %s: %s", full_domain, result.stderr)
+            await error_service.record(
+                db=db,
+                level="error",
+                source="ssl",
+                operation="issue_cert",
+                message=f"Certbot failed for {full_domain}",
+                detail=result.stderr or result.stdout,
+                context={
+                    "full_domain": full_domain,
+                    "domain_id": domain_id,
+                    "include_www": include_www,
+                },
+            )
+            raise HTTPException(
+                status_code=500,
+                detail=f"Certbot failed: {result.stderr[-300:]}"
+            )
 
-    logger.info("Certbot success for: %s", full_domain)
+        logger.info("Certbot success for: %s", full_domain)
 
-    # Parse expiry from certbot output (never open LE files as panel user)
-    expiry = _parse_expiry(result.stdout + result.stderr, full_domain)
-    if not expiry:
-        expiry = await _read_expiry_from_cert(_cert_path(full_domain))
+        # Parse expiry from certbot output (never open LE files as panel user)
+        expiry = _parse_expiry(result.stdout + result.stderr, full_domain)
+        if not expiry:
+            expiry = await _read_expiry_from_cert(_cert_path(full_domain))
+    else:
+        expiry = existing.expiry_date
 
     cert_path = _cert_path(full_domain)
     key_path  = _key_path(full_domain)
@@ -452,15 +457,18 @@ async def issue_cert(
         resolved_domain_id = domain_obj.id
 
     # Save cert to DB
-    cert = SslCert(
-        domain_id=resolved_domain_id,
-        full_domain=full_domain,
-        cert_path=cert_path,
-        expiry_date=expiry,
-        auto_renew=True,
-    )
-    db.add(cert)
-    await db.flush()
+    if not skip_certbot:
+        cert = SslCert(
+            domain_id=resolved_domain_id,
+            full_domain=full_domain,
+            cert_path=cert_path,
+            expiry_date=expiry,
+            auto_renew=True,
+        )
+        db.add(cert)
+        await db.flush()
+    else:
+        cert = existing
 
     # Link cert to proxy if applicable
     if proxy_obj:
