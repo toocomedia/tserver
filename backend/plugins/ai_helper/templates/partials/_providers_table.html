@@ -1,90 +1,85 @@
 {% if providers and providers|length > 0 %}
-<div class="section mb-xl">
-  <div class="section__header">
-    <h3><i data-lucide="layers"></i> AI Providers</h3>
-  </div>
-  <div class="table-wrap">
-    <table class="table" id="ai-providers-table">
-      <thead>
-        <tr>
-          <th>Provider</th>
-          <th>Protocol</th>
-          <th>Model</th>
-          <th>Endpoint</th>
-          <th>Status</th>
-          <th class="col-actions text-right" style="width: 220px;">Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for p in providers %}
-        <tr class="provider-row-item" 
-            id="provider-row-{{ p.id }}"
-            data-id="{{ p.id }}"
-            data-name="{{ p.name }}"
-            data-type="{{ p.provider_type }}"
-            data-url="{{ p.base_url }}"
-            data-model="{{ p.model_name }}"
-            data-models="{{ p.models_list }}"
-            data-temp="{{ p.temperature }}"
-            data-tokens="{{ p.max_tokens }}"
-            data-rules="{{ p.custom_rules }}"
-            data-default="{{ '1' if p.is_default else '0' }}"
-            data-has-key="{{ '1' if p.api_key_encrypted else '0' }}">
-          <td>
-            <div style="font-weight: 700; color: var(--color-text); display: flex; align-items: center; gap: 8px;">
-              {{ p.name }}
-              {% if p.is_default %}
-                <span class="badge badge--ok">Default</span>
-              {% endif %}
-            </div>
-          </td>
-          <td>
-            <span class="badge badge--neutral">{{ 'Anthropic' if p.provider_type == 'anthropic' else 'OpenAI' }}</span>
-          </td>
-          <td>
-            <div style="display: flex; flex-wrap: wrap; gap: 4px; align-items: center;">
-              {% for m in p.get_models() %}
-                <code class="font-mono text-xs" style="padding: 2px 6px; border-radius: 3px; background: var(--color-surface); {% if m == p.model_name %}color: var(--color-accent); font-weight: 700; border: 1px solid rgba(var(--color-accent-rgb, 120, 120, 120), 0.3);{% endif %}" title="{% if m == p.model_name %}Default model for this provider{% endif %}">
-                  {{ m }}{% if m == p.model_name %} ★{% endif %}
-                </code>
-              {% endfor %}
-            </div>
-          </td>
-          <td class="text-muted font-mono text-sm">
-            {{ p.base_url }}
-          </td>
-          <td>
-            {% if p.last_tested_status == 'ok' %}
-              <span class="badge badge--ok"><span class="badge-dot"></span>{{ p.last_latency_ms }}ms</span>
-            {% elif p.last_tested_status == 'failed' %}
-              <span class="badge badge--error"><span class="badge-dot"></span>Failed</span>
-            {% else %}
-              <span class="badge badge--neutral"><span class="badge-dot"></span>Untested</span>
+<div class="table-wrap">
+  <table class="table" id="ai-providers-table">
+    <thead>
+      <tr>
+        <th>Provider</th>
+        <th>Type</th>
+        <th>Models</th>
+        <th>Endpoint</th>
+        <th>Status</th>
+        <th class="col-actions text-right">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in providers %}
+      <tr class="provider-row-item" 
+          id="provider-row-{{ p.id }}"
+          data-id="{{ p.id }}"
+          data-name="{{ p.name }}"
+          data-type="{{ p.provider_type }}"
+          data-url="{{ p.base_url }}"
+          data-model="{{ p.model_name }}"
+          data-models="{{ p.models_list }}"
+          data-temp="{{ p.temperature }}"
+          data-tokens="{{ p.max_tokens }}"
+          data-rules="{{ p.custom_rules }}"
+          data-default="{{ '1' if p.is_default else '0' }}"
+          data-has-key="{{ '1' if p.api_key_encrypted else '0' }}">
+        <td>
+          <div class="table-title d-flex align-items-center gap-xs">
+            <span>{{ p.name }}</span>
+            {% if p.is_default %}
+              <span class="badge-minimal badge-minimal--active">Default</span>
             {% endif %}
-          </td>
-          <td class="col-actions text-right">
-            <div style="display: flex; align-items: center; justify-content: flex-end; gap: 6px;">
-              {% if not p.is_default %}
-              <button type="button" class="btn btn--secondary btn--sm" onclick="setDefaultProvider({{ p.id }})" title="Set as default AI model">
-                Set Default
-              </button>
-              {% endif %}
-              <button type="button" class="btn btn--secondary btn--sm" onclick="testProvider({{ p.id }}, this)" title="Test Connection">
-                <i data-lucide="zap"></i>
-              </button>
-              <button type="button" class="btn btn--secondary btn--sm" onclick="openEditDrawer({{ p.id }})" title="Edit Provider">
-                <i data-lucide="edit-3"></i>
-              </button>
-              <button type="button" class="btn btn--danger btn--sm" onclick="deleteProvider({{ p.id }}, '{{ p.name }}')" title="Delete Provider">
-                <i data-lucide="trash-2"></i>
-              </button>
-            </div>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+          </div>
+        </td>
+        <td>
+          <span class="badge-minimal badge-minimal--neutral">{{ 'Anthropic' if p.provider_type == 'anthropic' else 'OpenAI' }}</span>
+        </td>
+        <td>
+          <div class="d-flex flex-wrap gap-xs align-items-center">
+            {% for m in p.get_models() %}
+              <span class="badge-minimal {% if m == p.model_name %}badge-minimal--active{% else %}badge-minimal--neutral{% endif %}" title="{% if m == p.model_name %}Default Model{% endif %}">
+                {{ m }}{% if m == p.model_name %} ★{% endif %}
+              </span>
+            {% endfor %}
+          </div>
+        </td>
+        <td>
+          <span class="text-small text-muted font-mono">{{ p.base_url }}</span>
+        </td>
+        <td>
+          {% if p.last_tested_status == 'ok' %}
+            <span class="badge-minimal badge-minimal--active">{{ p.last_latency_ms }}ms</span>
+          {% elif p.last_tested_status == 'failed' %}
+            <span class="badge-minimal badge-minimal--danger">Failed</span>
+          {% else %}
+            <span class="badge-minimal badge-minimal--neutral">Untested</span>
+          {% endif %}
+        </td>
+        <td class="col-actions text-right">
+          <div class="d-flex align-items-center justify-content-end gap-xs">
+            {% if not p.is_default %}
+            <button type="button" class="btn btn--secondary btn--sm" onclick="setDefaultProvider({{ p.id }})" title="Set as default AI provider">
+              Set Default
+            </button>
+            {% endif %}
+            <button type="button" class="btn btn--secondary btn--sm" onclick="testProvider({{ p.id }}, this)" title="Test Connection">
+              <i data-lucide="zap"></i>
+            </button>
+            <button type="button" class="btn btn--secondary btn--sm" onclick="openEditDrawer({{ p.id }})" title="Edit Provider">
+              <i data-lucide="edit-3"></i>
+            </button>
+            <button type="button" class="btn btn--danger btn--sm" onclick="deleteProvider({{ p.id }}, '{{ p.name }}')" title="Delete Provider">
+              <i data-lucide="trash-2"></i>
+            </button>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
 </div>
 {% else %}
 {% from "partials/empty_state.html" import empty_state %}

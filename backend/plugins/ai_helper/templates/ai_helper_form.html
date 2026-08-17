@@ -12,95 +12,52 @@
 {% block content %}
 <div style="max-width: 640px; margin: 0 auto; padding: 16px 0 100px;">
 
-  <form id="provider-form" method="POST" action="{% if is_edit %}/plugins/ai_helper/{{ provider.id }}/edit{% else %}/plugins/ai_helper/create{% endif %}" autocomplete="off" data-lpignore="true" data-form-type="other">
+  <form id="provider-form" method="POST" action="{% if is_edit %}/plugins/ai_helper/{{ provider.id }}/edit{% else %}/plugins/ai_helper/create{% endif %}" autocomplete="off" data-lpignore="true">
     {% include "partials/csrf_field.html" %}
 
-    <!-- Decoy inputs to prevent password autofill -->
-    <input type="text" name="fake_email_prevent_autofill" style="display:none !important;" tabindex="-1" autocomplete="off">
-    <input type="password" name="fake_password_prevent_autofill" style="display:none !important;" tabindex="-1" autocomplete="off">
-
-    <!-- Provider Service Choice Cards (Step Pages Style) -->
+    <!-- Provider Preset -->
     <div class="form-group mb-lg">
-      <label class="form-label">Provider</label>
-      <div class="settings-choice-grid mb-xs" id="form-preset-grid" style="grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px;">
-        {% for key, p in presets.items() %}
-        {% set is_active = (provider and provider.provider_type == p.type and p.base_url and p.base_url in provider.base_url) or (not provider and key == 'openai') %}
-        <label class="settings-choice settings-choice--compact {% if is_active %}settings-choice--active{% endif %}"
-               data-preset-key="{{ key }}" 
-               data-name="{{ p.name }}"
-               data-type="{{ p.type }}" 
-               data-url="{{ p.base_url }}"
-               style="padding: 12px 14px; min-height: auto;">
-          <div class="settings-choice__header" style="gap: 6px;">
-            <input type="radio" name="provider_preset" value="{{ key }}" {% if is_active %}checked{% endif %}>
-            <span class="settings-choice__title" style="font-size: 12px; font-weight: 700;">{{ p.name }}</span>
-          </div>
-          <span class="settings-choice__desc" style="font-size: 10.5px; margin-top: 2px;">{{ p.desc }}</span>
-        </label>
-        {% endfor %}
+      <label class="form-label" for="form_preset_select">Provider Preset</label>
+      <div class="form-select-wrap">
+        <select class="form-select" id="form_preset_select">
+          {% for key, p in presets.items() %}
+          <option value="{{ key }}" 
+                  data-name="{{ p.name }}" 
+                  data-type="{{ p.type }}" 
+                  data-url="{{ p.base_url }}"
+                  {% if (provider and provider.provider_type == p.type and p.base_url in (provider.base_url or '')) or (not provider and key == 'openai') %}selected{% endif %}>
+            {{ p.name }} ({{ p.desc }})
+          </option>
+          {% endfor %}
+        </select>
       </div>
     </div>
 
-    <!-- API Key Input with Show/Hide -->
+    <!-- API Key -->
     <div class="form-group mb-lg">
       <label class="form-label" for="api_key">API Key</label>
-      <div style="display: flex; align-items: center; gap: 8px;">
-        <input type="password" class="form-input font-mono" id="api_key" name="api_key" placeholder="{% if is_edit and has_api_key %}•••••••••••••••• (Leave blank to keep unchanged){% else %}Enter API key (sk-...){% endif %}" autocomplete="new-password" data-lpignore="true" data-1p-ignore="true" style="flex: 1;">
+      <div class="d-flex align-items-center gap-xs">
+        <input type="password" class="form-input font-mono" id="api_key" name="api_key" placeholder="{% if is_edit and has_api_key %}•••••••••••••••• (Leave blank to keep unchanged){% else %}Enter API key (sk-...){% endif %}" autocomplete="new-password" data-lpignore="true" style="flex: 1;">
         <button type="button" class="btn btn--secondary btn--sm" id="btn-toggle-key" style="height: 34px; padding: 0 10px;" title="Toggle visibility">
           <i data-lucide="eye" id="key-eye-icon"></i>
         </button>
       </div>
     </div>
 
-    <!-- Model Configuration: Primary Model & Multi-Model Enabled List -->
-    <div class="form-group mb-lg" id="model-section">
-      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
-        <label class="form-label m-0" for="model_select">Default Model</label>
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <span id="model-status" class="badge badge--neutral" style="display: none;"></span>
-          <button type="button" class="btn btn--secondary btn--sm" id="btn-toggle-custom" style="height: 26px; padding: 0 8px; font-size: 11px;">
-            <i data-lucide="edit-2" style="width: 12px; height: 12px;"></i> <span id="btn-toggle-label">Custom Model</span>
-          </button>
-        </div>
+    <!-- Default Model -->
+    <div class="form-group mb-md">
+      <div class="d-flex align-items-center justify-content-between mb-xs">
+        <label class="form-label m-0" for="model_name">Default Model</label>
+        <span id="model-status" class="badge-minimal badge-minimal--neutral" style="display: none;"></span>
       </div>
+      <input type="text" class="form-input font-mono" id="model_name" name="model_name" placeholder="e.g. gpt-4o-mini" value="{{ provider.model_name if provider else 'gpt-4o-mini' }}" required autocomplete="off" data-lpignore="true">
+    </div>
 
-      <!-- Dropdown mode -->
-      <div class="form-select-wrap" id="model-select-wrap">
-        <select class="form-select font-mono" id="model_select">
-          {% if provider and provider.model_name %}
-            <option value="{{ provider.model_name }}" selected>{{ provider.model_name }}</option>
-          {% else %}
-            <option value="" disabled selected>-- Enter API key to load models --</option>
-          {% endif %}
-        </select>
-      </div>
-
-      <!-- Custom text mode -->
-      <div id="model-custom-wrap" style="display: none;">
-        <input type="text" class="form-input font-mono" id="custom_model_input" placeholder="e.g. gpt-4o, claude-3-5-sonnet, deepseek-chat" value="{{ provider.model_name if provider else '' }}" autocomplete="off" data-lpignore="true">
-      </div>
-
-      <input type="hidden" id="model_name" name="model_name" value="{{ provider.model_name if provider else '' }}">
-
-      <!-- Multi-Model Selector for Single API -->
-      <div class="mt-sm" id="multi-models-box" style="background: var(--color-surface); padding: 12px 14px; border-radius: 4px;">
-        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
-          <label class="form-label m-0" style="font-size: 11.5px; font-weight: 700; color: var(--color-text);">Enabled Models for this API Key</label>
-          <span class="text-muted" style="font-size: 10.5px;">Select models for quick switching</span>
-        </div>
-        
-        <div id="model-chips-list" style="display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px; min-height: 24px;">
-          <!-- Dynamic chips will be inserted here -->
-        </div>
-
-        <div style="display: flex; align-items: center; gap: 6px;">
-          <input type="text" class="form-input font-mono text-xs" id="add-model-input" placeholder="Add model name (e.g. gpt-4o)..." style="height: 30px; padding: 2px 8px; flex: 1;" autocomplete="off" data-lpignore="true">
-          <button type="button" class="btn btn--secondary btn--sm" id="btn-add-model-chip" style="height: 30px; padding: 0 10px; font-size: 11px;">
-            + Add
-          </button>
-        </div>
-        <input type="hidden" id="models_list" name="models_list" value="{{ provider.models_list if provider else '' }}">
-      </div>
+    <!-- Enabled Models -->
+    <div class="form-group mb-lg">
+      <label class="form-label" for="models_list">Enabled Models</label>
+      <input type="text" class="form-input font-mono" id="models_list" name="models_list" placeholder="e.g. gpt-4o-mini, gpt-4o, o3-mini" value="{{ provider.models_list if provider else 'gpt-4o-mini, gpt-4o' }}" autocomplete="off" data-lpignore="true">
+      <span class="text-small text-muted" style="margin-top: 4px; display: block;">Comma-separated models available for this API key.</span>
     </div>
 
     <!-- Default Provider Checkbox -->
@@ -111,7 +68,7 @@
       </label>
     </div>
 
-    <!-- Advanced Settings (Unboxed) -->
+    <!-- Advanced Settings -->
     <details class="mb-xl" id="advanced-settings-details" style="border: none; background: transparent;">
       <summary style="cursor: pointer; display: inline-flex; align-items: center; gap: 8px; font-weight: 600; font-size: 13px; color: var(--color-muted); padding: 8px 0; user-select: none;">
         <i data-lucide="sliders"></i>
@@ -152,416 +109,105 @@
 
         <div class="form-group">
           <label class="form-label" for="custom_rules">Custom Rules</label>
-          <textarea class="form-input font-mono" id="custom_rules" name="custom_rules" rows="3" style="height: auto; padding: 10px; line-height: 1.5;" placeholder="Optional prompt directives (e.g. 'Prefer PostgreSQL').">{{ provider.custom_rules if provider else '' }}</textarea>
+          <textarea class="form-input font-mono" id="custom_rules" name="custom_rules" rows="3" style="height: auto; padding: 10px; line-height: 1.45;" placeholder="Optional prompt directives (e.g. 'Prefer PostgreSQL over MySQL').">{{ provider.custom_rules if provider else '' }}</textarea>
         </div>
       </div>
     </details>
 
-    <!-- Fixed Bottom Action Bar -->
-    <div class="fixed-action-bar">
-      <div class="fixed-action-bar__inner">
-        <div style="display: flex; align-items: center; gap: 10px;">
-          <span id="test-indicator" style="display: flex; align-items: center; gap: 6px; font-size: 13px;"></span>
-        </div>
-        <div style="display: flex; align-items: center; gap: 8px; margin-left: auto;">
-          <a href="/plugins/ai_helper/" class="btn btn--secondary btn--sm">Cancel</a>
-          <button type="button" class="btn btn--secondary btn--sm" id="btn-test-connection">
-            <i data-lucide="zap"></i> Test Connection
-          </button>
-          <button type="submit" class="btn btn--primary btn--sm" id="btn-save-provider">
-            <i data-lucide="save"></i> {% if is_edit %}Update Provider{% else %}Save Provider{% endif %}
-          </button>
-        </div>
+    <div class="d-flex align-items-center justify-content-between gap-sm">
+      <span id="test-indicator" class="d-flex align-items-center gap-xs text-small"></span>
+      <div class="d-flex align-items-center gap-xs">
+        <a href="/plugins/ai_helper/" class="btn btn--secondary btn--sm">Cancel</a>
+        <button type="button" class="btn btn--secondary btn--sm" id="btn-test-connection">
+          <i data-lucide="zap"></i> Test Connection
+        </button>
+        <button type="submit" class="btn btn--primary btn--sm" id="btn-save-provider">
+          <i data-lucide="save"></i> {% if is_edit %}Update Provider{% else %}Save Provider{% endif %}
+        </button>
       </div>
     </div>
 
   </form>
-
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
 document.addEventListener("DOMContentLoaded", function () {
-  if (typeof lucide !== 'undefined') {
-    lucide.createIcons();
-  }
-
+  var presetSelect = document.getElementById("form_preset_select");
   var providerNameInput = document.getElementById("provider_name");
   var providerTypeSelect = document.getElementById("provider_type");
   var baseUrlInput = document.getElementById("base_url");
   var apiKeyInput = document.getElementById("api_key");
-
-  var modelSelectWrap = document.getElementById("model-select-wrap");
-  var modelSelect = document.getElementById("model_select");
-  var modelCustomWrap = document.getElementById("model-custom-wrap");
-  var customModelInput = document.getElementById("custom_model_input");
-  var modelNameHidden = document.getElementById("model_name");
-  var btnToggleCustom = document.getElementById("btn-toggle-custom");
-  var btnToggleLabel = document.getElementById("btn-toggle-label");
+  var modelNameInput = document.getElementById("model_name");
+  var modelsListInput = document.getElementById("models_list");
   var modelStatus = document.getElementById("model-status");
+  var btnTest = document.getElementById("btn-test-connection");
+  var testIndicator = document.getElementById("test-indicator");
+  var btnToggleKey = document.getElementById("btn-toggle-key");
+  var keyEyeIcon = document.getElementById("key-eye-icon");
 
-  var modelsListHidden = document.getElementById("models_list");
-  var modelChipsContainer = document.getElementById("model-chips-list");
-  var addModelChipInput = document.getElementById("add-model-input");
-  var btnAddModelChip = document.getElementById("btn-add-model-chip");
+  if (presetSelect) {
+    presetSelect.addEventListener("change", function () {
+      var opt = presetSelect.options[presetSelect.selectedIndex];
+      if (!opt) return;
+      var name = opt.getAttribute("data-name");
+      var type = opt.getAttribute("data-type");
+      var url = opt.getAttribute("data-url");
 
-  var isCustomMode = false;
-  var currentModels = [];
-
-  {% if provider %}
-  var initModelsRaw = "{{ provider.models_list or '' }}";
-  var initModel = "{{ provider.model_name or '' }}";
-  currentModels = initModelsRaw ? initModelsRaw.split(",").map(function(s){ return s.trim(); }).filter(Boolean) : [];
-  if (initModel && !currentModels.includes(initModel)) {
-    currentModels.unshift(initModel);
-  }
-  {% else %}
-  currentModels = ["gpt-4o-mini", "gpt-4o"];
-  {% endif %}
-
-  function renderModelChips() {
-    if (!modelChipsContainer) return;
-    modelChipsContainer.innerHTML = "";
-    
-    if (currentModels.length === 0) {
-      modelChipsContainer.innerHTML = '<span class="text-muted" style="font-size: 11px;">No models added yet. Enter key to fetch or type above.</span>';
-    } else {
-      currentModels.forEach(function(m) {
-        var isPrimary = (m === modelNameHidden.value);
-        var chip = document.createElement("span");
-        chip.className = "badge " + (isPrimary ? "badge--ok" : "badge--neutral");
-        chip.style.cssText = "display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px; font-family: monospace; font-size: 11px; cursor: pointer;";
-        chip.innerHTML = (isPrimary ? "★ " : "") + m + '<button type="button" style="background:none;border:none;color:inherit;cursor:pointer;padding:0;margin-left:4px;font-size:12px;opacity:0.7;" title="Remove model">✕</button>';
-        
-        chip.addEventListener("click", function(e) {
-          if (e.target.tagName.toLowerCase() === "button") return;
-          modelNameHidden.value = m;
-          if (modelSelect) modelSelect.value = m;
-          renderModelChips();
-        });
-        
-        chip.querySelector("button").addEventListener("click", function(e) {
-          e.stopPropagation();
-          currentModels = currentModels.filter(function(x) { return x !== m; });
-          if (modelNameHidden.value === m && currentModels.length > 0) {
-            modelNameHidden.value = currentModels[0];
-          } else if (currentModels.length === 0) {
-            modelNameHidden.value = "";
-          }
-          syncModelsState();
-        });
-        
-        modelChipsContainer.appendChild(chip);
-      });
-    }
-
-    if (modelsListHidden) {
-      modelsListHidden.value = currentModels.join(", ");
-    }
-
-    updateDropdownFromModels();
-  }
-
-  function updateDropdownFromModels() {
-    if (!modelSelect) return;
-    modelSelect.innerHTML = "";
-    if (currentModels.length === 0) {
-      modelSelect.innerHTML = '<option value="" disabled selected>-- Enter API key or add models --</option>';
-      return;
-    }
-    currentModels.forEach(function(m) {
-      var opt = document.createElement("option");
-      opt.value = m;
-      opt.textContent = m;
-      if (m === modelNameHidden.value) opt.selected = true;
-      modelSelect.appendChild(opt);
-    });
-    if (!modelNameHidden.value && currentModels.length > 0) {
-      modelNameHidden.value = currentModels[0];
-      modelSelect.selectedIndex = 0;
-    }
-  }
-
-  function syncModelsState() {
-    if (modelsListHidden) {
-      modelsListHidden.value = currentModels.join(", ");
-    }
-    renderModelChips();
-  }
-
-  function addModelToCurrent(m) {
-    var clean = (m || "").trim();
-    if (!clean) return;
-    if (!currentModels.includes(clean)) {
-      currentModels.push(clean);
-    }
-    if (!modelNameHidden.value) {
-      modelNameHidden.value = clean;
-    }
-    syncModelsState();
-  }
-
-  if (btnAddModelChip && addModelChipInput) {
-    btnAddModelChip.addEventListener("click", function() {
-      addModelToCurrent(addModelChipInput.value);
-      addModelChipInput.value = "";
-    });
-    addModelChipInput.addEventListener("keydown", function(e) {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        addModelToCurrent(addModelChipInput.value);
-        addModelChipInput.value = "";
-      }
+      if (name && providerNameInput) providerNameInput.value = name;
+      if (type && providerTypeSelect) providerTypeSelect.value = type;
+      if (url && baseUrlInput) baseUrlInput.value = url;
     });
   }
 
-  function syncModelValue() {
-    if (isCustomMode) {
-      modelNameHidden.value = customModelInput.value.trim();
-      if (customModelInput.value.trim() && !currentModels.includes(customModelInput.value.trim())) {
-        currentModels.push(customModelInput.value.trim());
-        syncModelsState();
-      }
-    } else if (modelSelect && modelSelect.value) {
-      modelNameHidden.value = modelSelect.value.trim();
-      customModelInput.value = modelSelect.value.trim();
-      renderModelChips();
-    }
-  }
-
-  function setDropdownOptions(modelsList, selectedValue) {
-    if (!modelsList || modelsList.length === 0) return;
-    modelsList.forEach(function (m) {
-      if (m && !currentModels.includes(m.trim())) {
-        currentModels.push(m.trim());
-      }
-    });
-
-    if (selectedValue && !currentModels.includes(selectedValue.trim())) {
-      currentModels.unshift(selectedValue.trim());
-    }
-
-    if (selectedValue) {
-      modelNameHidden.value = selectedValue;
-    } else if (currentModels.length > 0) {
-      modelNameHidden.value = currentModels[0];
-    }
-
-    syncModelsState();
-  }
-
-  renderModelChips();
-
-  function selectPresetCard(presetKey) {
-    var cards = document.querySelectorAll("#form-preset-grid .settings-choice");
-    cards.forEach(function (card) {
-      var isMatch = card.getAttribute("data-preset-key") === presetKey;
-      var radio = card.querySelector("input[type='radio']");
-      if (isMatch) {
-        card.classList.add("settings-choice--active");
-        if (radio) radio.checked = true;
-
-        var pName = card.getAttribute("data-name");
-        var pType = card.getAttribute("data-type");
-        var pUrl = card.getAttribute("data-url");
-
-        var isEdit = {% if is_edit %}true{% else %}false{% endif %};
-        if (pName && presetKey !== "custom" && !isEdit && providerNameInput) providerNameInput.value = pName;
-        if (pType && providerTypeSelect) providerTypeSelect.value = pType;
-        if (pUrl !== null && pUrl !== "" && baseUrlInput) baseUrlInput.value = pUrl;
+  if (btnToggleKey && apiKeyInput) {
+    btnToggleKey.addEventListener("click", function () {
+      if (apiKeyInput.type === "password") {
+        apiKeyInput.type = "text";
+        if (keyEyeIcon) keyEyeIcon.setAttribute("data-lucide", "eye-off");
       } else {
-        card.classList.remove("settings-choice--active");
-        if (radio) radio.checked = false;
+        apiKeyInput.type = "password";
+        if (keyEyeIcon) keyEyeIcon.setAttribute("data-lucide", "eye");
       }
+      if (typeof lucide !== 'undefined') lucide.createIcons();
     });
   }
 
-  document.querySelectorAll("#form-preset-grid .settings-choice").forEach(function (card) {
-    card.addEventListener("click", function () {
-      var key = this.getAttribute("data-preset-key");
-      if (key) selectPresetCard(key);
-      if (apiKeyInput && apiKeyInput.value.trim().length >= 6) {
-        autoFetchModels();
-      }
-    });
-  });
-
-  // Toggle Custom / Dropdown Mode
-  if (btnToggleCustom) {
-    btnToggleCustom.addEventListener("click", function () {
-      isCustomMode = !isCustomMode;
-      if (isCustomMode) {
-        modelSelectWrap.style.display = "none";
-        modelCustomWrap.style.display = "block";
-        btnToggleLabel.textContent = "Select from List";
-        customModelInput.value = modelNameHidden.value;
-        customModelInput.focus();
-      } else {
-        modelCustomWrap.style.display = "none";
-        modelSelectWrap.style.display = "block";
-        btnToggleLabel.textContent = "Custom Model";
-        if (customModelInput.value.trim()) {
-          setDropdownOptions([customModelInput.value.trim()], customModelInput.value.trim());
-        }
-      }
-      syncModelValue();
-    });
-  }
-
-  modelSelect.addEventListener("change", syncModelValue);
-  customModelInput.addEventListener("input", syncModelValue);
-
-  // Auto-Check & Fetch Models from API
-  var fetchTimeout = null;
-  var lastFetchedKey = "";
-
-  function autoFetchModels() {
-    var apiKey = apiKeyInput ? apiKeyInput.value.trim() : "";
-    var baseUrl = baseUrlInput ? baseUrlInput.value.trim() : "";
-    var providerType = providerTypeSelect ? providerTypeSelect.value : "openai_compatible";
-
-    var isEditMode = {% if is_edit and has_api_key %}true{% else %}false{% endif %};
-    if (!apiKey && !isEditMode) {
-      return;
-    }
-
-    if (apiKey === lastFetchedKey && apiKey !== "") {
-      return;
-    }
-    lastFetchedKey = apiKey;
-
-    if (modelStatus) {
-      modelStatus.style.display = "inline-flex";
-      modelStatus.className = "badge badge--neutral";
-      modelStatus.innerHTML = '<span class="spinner-sm"></span> Loading models...';
-    }
-
-    var payload = {
-      provider_type: providerType,
-      api_key: apiKey || undefined,
-      base_url: baseUrl,
-    };
-
-    var csrfToken = document.querySelector("meta[name='csrf-token']")?.getAttribute("content") || "";
-
-    fetch("/plugins/ai_helper/api/fetch-models", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-CSRF-Token": csrfToken,
-      },
-      body: JSON.stringify(payload),
-    })
-      .then(function (res) { return res.json(); })
-      .then(function (data) {
-        if (data.success && data.models && data.models.length > 0) {
-          setDropdownOptions(data.models, modelNameHidden.value);
-          if (modelStatus) {
-            modelStatus.className = "badge badge--ok";
-            modelStatus.innerHTML = "✓ " + data.count + " models loaded";
-            modelStatus.style.display = "inline-flex";
-          }
-        } else {
-          if (modelStatus) {
-            modelStatus.className = "badge badge--error";
-            modelStatus.innerHTML = "Failed to load models";
-            modelStatus.style.display = "inline-flex";
-          }
-        }
-      })
-      .catch(function () {
-        if (modelStatus) modelStatus.style.display = "none";
-      });
-  }
-
-  if (apiKeyInput) {
-    apiKeyInput.addEventListener("input", function () {
-      clearTimeout(fetchTimeout);
-      var val = this.value.trim();
-      if (val.length >= 6) {
-        fetchTimeout = setTimeout(autoFetchModels, 500);
-      }
-    });
-
-    apiKeyInput.addEventListener("blur", function () {
-      if (this.value.trim().length >= 6) {
-        autoFetchModels();
-      }
-    });
-  }
-
-  // Show/Hide API Key Toggle
-  var toggleBtn = document.getElementById("btn-toggle-key");
-  if (toggleBtn && apiKeyInput) {
-    toggleBtn.addEventListener("click", function () {
-      apiKeyInput.type = (apiKeyInput.type === "password") ? "text" : "password";
-    });
-  }
-
-  // Test Connection
-  var testBtn = document.getElementById("btn-test-connection");
-  var indicator = document.getElementById("test-indicator");
-
-  if (testBtn) {
-    testBtn.addEventListener("click", function () {
-      syncModelValue();
-      testBtn.disabled = true;
-      var origHtml = testBtn.innerHTML;
-      testBtn.textContent = "Testing...";
-      if (indicator) indicator.innerHTML = '<span class="spinner-sm"></span> <span class="text-muted">Testing...</span>';
-
-      var payload = {
-        provider_type: providerTypeSelect ? providerTypeSelect.value : "openai_compatible",
-        api_key: apiKeyInput ? apiKeyInput.value : undefined,
-        base_url: baseUrlInput ? baseUrlInput.value : "",
-        model_name: modelNameHidden.value,
-      };
-
+  if (btnTest) {
+    btnTest.addEventListener("click", function () {
+      var key = apiKeyInput ? apiKeyInput.value.trim() : "";
       var csrfToken = document.querySelector("meta[name='csrf-token']")?.getAttribute("content") || "";
+
+      btnTest.disabled = true;
+      testIndicator.innerHTML = '<span class="spinner-sm"></span> Testing...';
 
       fetch("/plugins/ai_helper/api/test-connection", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-CSRF-Token": csrfToken,
-        },
-        body: JSON.stringify(payload),
-      })
-        .then(function (res) { return res.json(); })
-        .then(function (data) {
-          testBtn.disabled = false;
-          testBtn.innerHTML = origHtml;
-          if (typeof lucide !== 'undefined') lucide.createIcons();
-
-          if (data.success) {
-            if (indicator) indicator.innerHTML = '<span class="badge badge--ok">✓ Connected (' + data.latency_ms + 'ms)</span>';
-          } else {
-            if (indicator) indicator.innerHTML = '<span class="badge badge--error">✗ ' + (data.error || "Connection failed") + '</span>';
-          }
+        headers: { "Content-Type": "application/json", "X-CSRF-Token": csrfToken },
+        body: JSON.stringify({
+          provider_type: providerTypeSelect.value,
+          base_url: baseUrlInput.value,
+          model_name: modelNameInput.value,
+          api_key: key || undefined,
+          provider_id: {% if provider %}{{ provider.id }}{% else %}undefined{% endif %}
         })
-        .catch(function (err) {
-          testBtn.disabled = false;
-          testBtn.innerHTML = origHtml;
-          if (typeof lucide !== 'undefined') lucide.createIcons();
-          if (indicator) indicator.innerHTML = '<span class="badge badge--error">✗ Error: ' + err.message + '</span>';
-        });
+      })
+      .then(function(res) { return res.json(); })
+      .then(function(data) {
+        btnTest.disabled = false;
+        if (data.status === "ok") {
+          testIndicator.innerHTML = '<span class="badge-minimal badge-minimal--active">✓ Online (' + data.latency_ms + 'ms)</span>';
+        } else {
+          testIndicator.innerHTML = '<span class="badge-minimal badge-minimal--danger">✕ ' + (data.message || 'Failed') + '</span>';
+        }
+      })
+      .catch(function(err) {
+        btnTest.disabled = false;
+        testIndicator.innerHTML = '<span class="badge-minimal badge-minimal--danger">✕ ' + err.message + '</span>';
+      });
     });
   }
-
-  // Form submit verification
-  document.getElementById("provider-form").addEventListener("submit", function (e) {
-    syncModelValue();
-    if (!modelNameHidden.value.trim()) {
-      e.preventDefault();
-      alert("Please enter or select a Model. Enter an API key to load models, or click 'Custom Model' to type one.");
-      if (isCustomMode) customModelInput.focus();
-    }
-  });
-
-  {% if not is_edit %}
-  selectPresetCard("openai");
-  {% endif %}
 });
 </script>
 {% endblock %}

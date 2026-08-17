@@ -23,312 +23,24 @@ var drawerForm = document.getElementById("provider-drawer-form");
 var drawerTitle = document.getElementById("drawer-title");
 var drawerSaveBtn = document.getElementById("drawer-btn-save");
 
+var presetSelect = document.getElementById("drawer_preset_select");
 var apiKeyInput = document.getElementById("drawer_api_key");
 var providerNameInput = document.getElementById("drawer_provider_name");
 var baseUrlInput = document.getElementById("drawer_base_url");
 var providerTypeSelect = document.getElementById("drawer_provider_type");
+var modelNameInput = document.getElementById("drawer_model_name");
+var modelsListInput = document.getElementById("drawer_models_list");
 var tempInput = document.getElementById("drawer_temperature");
 var tokensInput = document.getElementById("drawer_max_tokens");
 var rulesInput = document.getElementById("drawer_custom_rules");
 var isDefaultCheck = document.getElementById("drawer_is_default");
-
-var modelSelectWrap = document.getElementById("drawer-model-select-wrap");
-var modelSelect = document.getElementById("drawer_model_select");
-var modelCustomWrap = document.getElementById("drawer-model-custom-wrap");
-var customModelInput = document.getElementById("drawer_custom_model_input");
-var modelNameHidden = document.getElementById("drawer_model_name");
-var btnToggleCustom = document.getElementById("drawer-btn-toggle-custom");
-var btnToggleLabel = document.getElementById("drawer-btn-toggle-label");
-var modelStatus = document.getElementById("drawer-model-status");
 var testIndicator = document.getElementById("drawer-test-indicator");
+var btnDrawerTest = document.getElementById("drawer-btn-test");
+var btnToggleKey = document.getElementById("drawer-btn-toggle-key");
+var keyEyeIcon = document.getElementById("drawer-key-eye-icon");
 
-var modelsListHidden = document.getElementById("drawer_models_list");
-var modelChipsContainer = document.getElementById("drawer-model-chips-list");
-var addModelChipInput = document.getElementById("drawer-add-model-input");
-var btnAddModelChip = document.getElementById("drawer-btn-add-model-chip");
-
-var isCustomMode = false;
 var currentEditId = null;
-var currentModels = [];
 
-function renderModelChips() {
-  if (!modelChipsContainer) return;
-  modelChipsContainer.innerHTML = "";
-  
-  if (currentModels.length === 0) {
-    modelChipsContainer.innerHTML = '<span class="text-muted" style="font-size: 11px;">No models added yet. Enter key to fetch or type above.</span>';
-  } else {
-    currentModels.forEach(function(m) {
-      var isPrimary = (m === modelNameHidden.value);
-      var chip = document.createElement("span");
-      chip.className = "badge " + (isPrimary ? "badge--ok" : "badge--neutral");
-      chip.style.cssText = "display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px; font-family: monospace; font-size: 11px; cursor: pointer;";
-      chip.innerHTML = (isPrimary ? "★ " : "") + m + '<button type="button" style="background:none;border:none;color:inherit;cursor:pointer;padding:0;margin-left:4px;font-size:12px;opacity:0.7;" title="Remove model">✕</button>';
-      
-      chip.addEventListener("click", function(e) {
-        if (e.target.tagName.toLowerCase() === "button") return;
-        modelNameHidden.value = m;
-        if (modelSelect) modelSelect.value = m;
-        renderModelChips();
-      });
-      
-      chip.querySelector("button").addEventListener("click", function(e) {
-        e.stopPropagation();
-        currentModels = currentModels.filter(function(x) { return x !== m; });
-        if (modelNameHidden.value === m && currentModels.length > 0) {
-          modelNameHidden.value = currentModels[0];
-        } else if (currentModels.length === 0) {
-          modelNameHidden.value = "";
-        }
-        syncModelsState();
-      });
-      
-      modelChipsContainer.appendChild(chip);
-    });
-  }
-
-  if (modelsListHidden) {
-    modelsListHidden.value = currentModels.join(", ");
-  }
-
-  updateDropdownFromModels();
-}
-
-function updateDropdownFromModels() {
-  if (!modelSelect) return;
-  modelSelect.innerHTML = "";
-  if (currentModels.length === 0) {
-    modelSelect.innerHTML = '<option value="" disabled selected>-- Enter API key or add models --</option>';
-    return;
-  }
-  currentModels.forEach(function(m) {
-    var opt = document.createElement("option");
-    opt.value = m;
-    opt.textContent = m;
-    if (m === modelNameHidden.value) opt.selected = true;
-    modelSelect.appendChild(opt);
-  });
-  if (!modelNameHidden.value && currentModels.length > 0) {
-    modelNameHidden.value = currentModels[0];
-    modelSelect.selectedIndex = 0;
-  }
-}
-
-function syncModelsState() {
-  if (modelsListHidden) {
-    modelsListHidden.value = currentModels.join(", ");
-  }
-  renderModelChips();
-}
-
-function addModelToCurrent(m) {
-  var clean = (m || "").trim();
-  if (!clean) return;
-  if (!currentModels.includes(clean)) {
-    currentModels.push(clean);
-  }
-  if (!modelNameHidden.value) {
-    modelNameHidden.value = clean;
-  }
-  syncModelsState();
-}
-
-if (btnAddModelChip && addModelChipInput) {
-  btnAddModelChip.addEventListener("click", function() {
-    addModelToCurrent(addModelChipInput.value);
-    addModelChipInput.value = "";
-  });
-  addModelChipInput.addEventListener("keydown", function(e) {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      addModelToCurrent(addModelChipInput.value);
-      addModelChipInput.value = "";
-    }
-  });
-}
-
-function syncModelValue() {
-  if (isCustomMode) {
-    modelNameHidden.value = customModelInput.value.trim();
-    if (customModelInput.value.trim() && !currentModels.includes(customModelInput.value.trim())) {
-      currentModels.push(customModelInput.value.trim());
-      syncModelsState();
-    }
-  } else if (modelSelect && modelSelect.value) {
-    modelNameHidden.value = modelSelect.value.trim();
-    customModelInput.value = modelSelect.value.trim();
-    renderModelChips();
-  }
-}
-
-function setDropdownOptions(modelsList, selectedValue) {
-  if (!modelsList || modelsList.length === 0) return;
-  
-  modelsList.forEach(function (m) {
-    if (m && !currentModels.includes(m.trim())) {
-      currentModels.push(m.trim());
-    }
-  });
-
-  if (selectedValue && !currentModels.includes(selectedValue.trim())) {
-    currentModels.unshift(selectedValue.trim());
-  }
-
-  if (selectedValue) {
-    modelNameHidden.value = selectedValue;
-  } else if (currentModels.length > 0) {
-    modelNameHidden.value = currentModels[0];
-  }
-
-  syncModelsState();
-}
-
-function selectPresetCard(presetKey) {
-  var cards = document.querySelectorAll("#preset-choice-grid .settings-choice");
-  cards.forEach(function (card) {
-    var isMatch = card.getAttribute("data-preset-key") === presetKey;
-    var radio = card.querySelector("input[type='radio']");
-    if (isMatch) {
-      card.classList.add("settings-choice--active");
-      if (radio) radio.checked = true;
-
-      var pName = card.getAttribute("data-name");
-      var pType = card.getAttribute("data-type");
-      var pUrl = card.getAttribute("data-url");
-
-      if (pName && presetKey !== "custom" && !currentEditId) providerNameInput.value = pName;
-      if (pType) providerTypeSelect.value = pType;
-      if (pUrl !== null && pUrl !== "") baseUrlInput.value = pUrl;
-    } else {
-      card.classList.remove("settings-choice--active");
-      if (radio) radio.checked = false;
-    }
-  });
-}
-
-// Preset Card Click Listener
-document.querySelectorAll("#preset-choice-grid .settings-choice").forEach(function (card) {
-  card.addEventListener("click", function () {
-    var key = this.getAttribute("data-preset-key");
-    if (key) selectPresetCard(key);
-    if (apiKeyInput && apiKeyInput.value.trim().length >= 6) {
-      autoFetchModels();
-    }
-  });
-});
-
-// Toggle Custom / Dropdown Mode
-if (btnToggleCustom) {
-  btnToggleCustom.addEventListener("click", function () {
-    isCustomMode = !isCustomMode;
-    if (isCustomMode) {
-      modelSelectWrap.style.display = "none";
-      modelCustomWrap.style.display = "block";
-      btnToggleLabel.textContent = "Select from List";
-      customModelInput.value = modelNameHidden.value;
-      customModelInput.focus();
-    } else {
-      modelCustomWrap.style.display = "none";
-      modelSelectWrap.style.display = "block";
-      btnToggleLabel.textContent = "Custom Model";
-      if (customModelInput.value.trim()) {
-        addModelToCurrent(customModelInput.value.trim());
-      }
-    }
-    syncModelValue();
-  });
-}
-
-modelSelect.addEventListener("change", syncModelValue);
-customModelInput.addEventListener("input", syncModelValue);
-
-// Auto-Check & Fetch Models from API upon entering API key
-var fetchTimeout = null;
-var lastFetchedKey = "";
-
-function autoFetchModels() {
-  var apiKey = apiKeyInput ? apiKeyInput.value.trim() : "";
-  var baseUrl = baseUrlInput ? baseUrlInput.value.trim() : "";
-  var providerType = providerTypeSelect ? providerTypeSelect.value : "openai_compatible";
-
-  if (!apiKey && !currentEditId) {
-    return;
-  }
-
-  if (apiKey === lastFetchedKey && apiKey !== "") {
-    return;
-  }
-  lastFetchedKey = apiKey;
-
-  if (modelStatus) {
-    modelStatus.style.display = "inline-flex";
-    modelStatus.className = "badge badge--neutral";
-    modelStatus.innerHTML = '<span class="spinner-sm"></span> Loading models...';
-  }
-
-  var payload = {
-    provider_type: providerType,
-    api_key: apiKey || undefined,
-    base_url: baseUrl,
-  };
-
-  var csrfToken = document.querySelector("meta[name='csrf-token']")?.getAttribute("content") || "";
-
-  fetch("/plugins/ai_helper/api/fetch-models", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRF-Token": csrfToken,
-    },
-    body: JSON.stringify(payload),
-  })
-    .then(function (res) { return res.json(); })
-    .then(function (data) {
-      if (data.success && data.models && data.models.length > 0) {
-        setDropdownOptions(data.models, modelNameHidden.value);
-        if (modelStatus) {
-          modelStatus.className = "badge badge--ok";
-          modelStatus.innerHTML = "✓ " + data.count + " models loaded";
-          modelStatus.style.display = "inline-flex";
-        }
-      } else {
-        if (modelStatus) {
-          modelStatus.className = "badge badge--error";
-          modelStatus.innerHTML = "Failed to load models";
-          modelStatus.style.display = "inline-flex";
-        }
-      }
-    })
-    .catch(function () {
-      if (modelStatus) modelStatus.style.display = "none";
-    });
-}
-
-if (apiKeyInput) {
-  apiKeyInput.addEventListener("input", function () {
-    clearTimeout(fetchTimeout);
-    var val = this.value.trim();
-    if (val.length >= 6) {
-      fetchTimeout = setTimeout(autoFetchModels, 500);
-    }
-  });
-
-  apiKeyInput.addEventListener("blur", function () {
-    if (this.value.trim().length >= 6) {
-      autoFetchModels();
-    }
-  });
-}
-
-// Show/Hide API Key Toggle
-var toggleKeyBtn = document.getElementById("drawer-btn-toggle-key");
-if (toggleKeyBtn && apiKeyInput) {
-  toggleKeyBtn.addEventListener("click", function () {
-    apiKeyInput.type = (apiKeyInput.type === "password") ? "text" : "password";
-  });
-}
-
-// Drawer Open / Close Functions
 function openAddDrawer() {
   currentEditId = null;
   drawerForm.action = "/plugins/ai_helper/create";
@@ -337,24 +49,17 @@ function openAddDrawer() {
 
   apiKeyInput.value = "";
   apiKeyInput.placeholder = "Enter API key (sk-...)";
+  providerNameInput.value = "OpenAI";
+  baseUrlInput.value = "https://api.openai.com/v1";
+  providerTypeSelect.value = "openai_compatible";
+  modelNameInput.value = "gpt-4o-mini";
+  modelsListInput.value = "gpt-4o-mini, gpt-4o";
   tempInput.value = "0.2";
   tokensInput.value = "4096";
   rulesInput.value = "";
   isDefaultCheck.checked = true;
   if (testIndicator) testIndicator.innerHTML = "";
-  if (modelStatus) modelStatus.style.display = "none";
-
-  currentModels = ["gpt-4o-mini", "gpt-4o"];
-  modelNameHidden.value = "gpt-4o-mini";
-  customModelInput.value = "gpt-4o-mini";
-  syncModelsState();
-
-  isCustomMode = false;
-  modelCustomWrap.style.display = "none";
-  modelSelectWrap.style.display = "block";
-  btnToggleLabel.textContent = "Custom Model";
-
-  selectPresetCard("openai");
+  if (presetSelect) presetSelect.value = "openai";
 
   drawerModal.classList.remove("hidden");
   if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -374,7 +79,7 @@ function openEditDrawer(providerId) {
   var pType = row.getAttribute("data-type") || "openai_compatible";
   var pUrl = row.getAttribute("data-url") || "";
   var pModel = row.getAttribute("data-model") || "";
-  var pModelsRaw = row.getAttribute("data-models") || "";
+  var pModels = row.getAttribute("data-models") || "";
   var pTemp = row.getAttribute("data-temp") || "0.2";
   var pTokens = row.getAttribute("data-tokens") || "4096";
   var pRules = row.getAttribute("data-rules") || "";
@@ -384,6 +89,8 @@ function openEditDrawer(providerId) {
   providerNameInput.value = pName;
   providerTypeSelect.value = pType;
   baseUrlInput.value = pUrl;
+  modelNameInput.value = pModel;
+  modelsListInput.value = pModels || pModel;
   tempInput.value = pTemp;
   tokensInput.value = pTokens;
   rulesInput.value = pRules;
@@ -393,207 +100,159 @@ function openEditDrawer(providerId) {
   apiKeyInput.placeholder = hasKey ? "•••••••••••••••• (Leave blank to keep unchanged)" : "Enter API key (sk-...)";
 
   if (testIndicator) testIndicator.innerHTML = "";
-  if (modelStatus) modelStatus.style.display = "none";
 
-  // Match preset card
-  var matchedPreset = "custom";
-  document.querySelectorAll("#preset-choice-grid .settings-choice").forEach(function (c) {
-    var cType = c.getAttribute("data-type");
-    var cUrl = c.getAttribute("data-url");
-    if (cType === pType && cUrl && pUrl.indexOf(cUrl) !== -1) {
-      matchedPreset = c.getAttribute("data-preset-key");
+  if (presetSelect) {
+    var matched = "custom";
+    for (var i = 0; i < presetSelect.options.length; i++) {
+      var opt = presetSelect.options[i];
+      if (opt.getAttribute("data-type") === pType && pUrl.indexOf(opt.getAttribute("data-url") || "") !== -1) {
+        matched = opt.value;
+        break;
+      }
     }
-  });
-  selectPresetCard(matchedPreset);
-
-  // Set multi-models
-  currentModels = pModelsRaw ? pModelsRaw.split(",").map(function(s){ return s.trim(); }).filter(Boolean) : [];
-  if (pModel && !currentModels.includes(pModel)) {
-    currentModels.unshift(pModel);
+    presetSelect.value = matched;
   }
-  if (currentModels.length === 0 && pModel) {
-    currentModels = [pModel];
-  }
-  modelNameHidden.value = pModel || (currentModels[0] || "gpt-4o-mini");
-  customModelInput.value = modelNameHidden.value;
-  syncModelsState();
-
-  isCustomMode = false;
-  modelCustomWrap.style.display = "none";
-  modelSelectWrap.style.display = "block";
-  btnToggleLabel.textContent = "Custom Model";
 
   drawerModal.classList.remove("hidden");
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 function closeProviderDrawer() {
-  drawerModal.classList.add("hidden");
+  if (drawerModal) drawerModal.classList.add("hidden");
 }
 
-// Close drawer on backdrop click or ESC key
-drawerModal.addEventListener("click", function (e) {
-  if (e.target === drawerModal) {
-    closeProviderDrawer();
-  }
-});
-
-document.addEventListener("keydown", function (e) {
-  if (e.key === "Escape" && !drawerModal.classList.contains("hidden")) {
-    closeProviderDrawer();
-  }
-});
-
-// Test Connection in Drawer
-var drawerTestBtn = document.getElementById("drawer-btn-test");
-if (drawerTestBtn) {
-  drawerTestBtn.addEventListener("click", function () {
-    syncModelValue();
-    drawerTestBtn.disabled = true;
-    var origHtml = drawerTestBtn.innerHTML;
-    drawerTestBtn.textContent = "Testing...";
-    if (testIndicator) testIndicator.innerHTML = '<span class="spinner-sm"></span> <span class="text-muted">Testing...</span>';
-
-    var payload = {
-      provider_type: providerTypeSelect ? providerTypeSelect.value : "openai_compatible",
-      api_key: apiKeyInput ? apiKeyInput.value : undefined,
-      base_url: baseUrlInput ? baseUrlInput.value : "",
-      model_name: modelNameHidden.value,
-    };
-
-    var csrfToken = document.querySelector("meta[name='csrf-token']")?.getAttribute("content") || "";
-
-    fetch("/plugins/ai_helper/api/test-connection", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-CSRF-Token": csrfToken,
-      },
-      body: JSON.stringify(payload),
-    })
-      .then(function (res) { return res.json(); })
-      .then(function (data) {
-        drawerTestBtn.disabled = false;
-        drawerTestBtn.innerHTML = origHtml;
-        if (typeof lucide !== 'undefined') lucide.createIcons();
-
-        if (data.success) {
-          if (testIndicator) testIndicator.innerHTML = '<span class="badge badge--ok">✓ Connected (' + data.latency_ms + 'ms)</span>';
-        } else {
-          if (testIndicator) testIndicator.innerHTML = '<span class="badge badge--error">✗ ' + (data.error || "Failed") + '</span>';
-        }
-      })
-      .catch(function (err) {
-        drawerTestBtn.disabled = false;
-        drawerTestBtn.innerHTML = origHtml;
-        if (typeof lucide !== 'undefined') lucide.createIcons();
-        if (testIndicator) testIndicator.innerHTML = '<span class="badge badge--error">✗ Error: ' + err.message + '</span>';
-      });
+if (drawerModal) {
+  drawerModal.addEventListener("click", function(e) {
+    if (e.target === drawerModal) closeProviderDrawer();
   });
 }
 
-// Drawer Form Submit validation
-drawerForm.addEventListener("submit", function (e) {
-  syncModelValue();
-  if (!modelNameHidden.value.trim()) {
-    e.preventDefault();
-    alert("Please enter or select a Model. You can enter an API key to load models, or click 'Custom Model' to type one.");
-    if (isCustomMode) {
-      customModelInput.focus();
+if (presetSelect) {
+  presetSelect.addEventListener("change", function () {
+    var opt = presetSelect.options[presetSelect.selectedIndex];
+    if (!opt) return;
+    var name = opt.getAttribute("data-name");
+    var type = opt.getAttribute("data-type");
+    var url = opt.getAttribute("data-url");
+
+    if (name && providerNameInput) providerNameInput.value = name;
+    if (type && providerTypeSelect) providerTypeSelect.value = type;
+    if (url && baseUrlInput) baseUrlInput.value = url;
+  });
+}
+
+if (btnToggleKey && apiKeyInput) {
+  btnToggleKey.addEventListener("click", function () {
+    if (apiKeyInput.type === "password") {
+      apiKeyInput.type = "text";
+      if (keyEyeIcon) keyEyeIcon.setAttribute("data-lucide", "eye-off");
     } else {
-      apiKeyInput.focus();
+      apiKeyInput.type = "password";
+      if (keyEyeIcon) keyEyeIcon.setAttribute("data-lucide", "eye");
     }
-  }
-});
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  });
+}
 
-// Row action functions
-function testProvider(providerId, btn) {
-  var origHtml = btn.innerHTML;
-  btn.disabled = true;
-  btn.textContent = "...";
+if (btnDrawerTest) {
+  btnDrawerTest.addEventListener("click", function () {
+    var key = apiKeyInput ? apiKeyInput.value.trim() : "";
+    var csrfToken = document.querySelector("meta[name='csrf-token']")?.getAttribute("content") || "";
 
-  var csrfToken = document.querySelector("meta[name='csrf-token']")?.getAttribute("content") || "";
+    btnDrawerTest.disabled = true;
+    testIndicator.innerHTML = '<span class="spinner-sm"></span> Testing...';
 
-  fetch("/plugins/ai_helper/" + providerId + "/test", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRF-Token": csrfToken,
-    }
-  })
-    .then(function (res) { return res.json(); })
-    .then(function (data) {
-      btn.disabled = false;
-      btn.innerHTML = origHtml;
-      if (typeof lucide !== 'undefined') lucide.createIcons();
-
-      if (data.success) {
-        alert("Connection successful (" + data.latency_ms + "ms)");
-        window.location.reload();
+    fetch("/plugins/ai_helper/api/test-connection", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-CSRF-Token": csrfToken },
+      body: JSON.stringify({
+        provider_type: providerTypeSelect.value,
+        base_url: baseUrlInput.value,
+        model_name: modelNameInput.value,
+        api_key: key || undefined,
+        provider_id: currentEditId || undefined
+      })
+    })
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+      btnDrawerTest.disabled = false;
+      if (data.status === "ok") {
+        testIndicator.innerHTML = '<span class="badge-minimal badge-minimal--active">✓ Online (' + data.latency_ms + 'ms)</span>';
       } else {
-        alert("Connection failed: " + (data.error || "Unknown error"));
+        testIndicator.innerHTML = '<span class="badge-minimal badge-minimal--danger">✕ ' + (data.message || 'Failed') + '</span>';
       }
     })
-    .catch(function (err) {
-      btn.disabled = false;
-      btn.innerHTML = origHtml;
-      if (typeof lucide !== 'undefined') lucide.createIcons();
-      alert("Network error: " + err.message);
+    .catch(function(err) {
+      btnDrawerTest.disabled = false;
+      testIndicator.innerHTML = '<span class="badge-minimal badge-minimal--danger">✕ ' + err.message + '</span>';
     });
+  });
 }
 
 function setDefaultProvider(providerId) {
   var csrfToken = document.querySelector("meta[name='csrf-token']")?.getAttribute("content") || "";
-
-  fetch("/plugins/ai_helper/" + providerId + "/set-default", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRF-Token": csrfToken,
-    }
-  })
-    .then(function (res) { return res.json(); })
-    .then(function (data) {
-      if (data.status === "ok") {
-        window.location.reload();
-      } else {
-        alert("Failed to set default: " + (data.message || "Unknown error"));
-      }
-    })
-    .catch(function (err) {
-      alert("Error: " + err.message);
-    });
+  var form = document.createElement("form");
+  form.method = "POST";
+  form.action = "/plugins/ai_helper/" + providerId + "/set-default";
+  var input = document.createElement("input");
+  input.type = "hidden";
+  input.name = "csrf_token";
+  input.value = csrfToken;
+  form.appendChild(input);
+  document.body.appendChild(form);
+  form.submit();
 }
 
 function deleteProvider(providerId, providerName) {
-  if (!confirm("Are you sure you want to delete '" + providerName + "'?")) {
-    return;
-  }
-
+  if (!confirm("Are you sure you want to delete AI provider '" + providerName + "'?")) return;
   var csrfToken = document.querySelector("meta[name='csrf-token']")?.getAttribute("content") || "";
-
-  fetch("/plugins/ai_helper/" + providerId, {
-    method: "DELETE",
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRF-Token": csrfToken,
-    }
-  })
-    .then(function (res) { return res.json(); })
-    .then(function (data) {
-      if (data.status === "ok") {
-        window.location.reload();
-      } else {
-        alert("Failed to delete provider: " + (data.message || "Unknown error"));
-      }
-    })
-    .catch(function (err) {
-      alert("Error deleting provider: " + err.message);
-    });
+  var form = document.createElement("form");
+  form.method = "POST";
+  form.action = "/plugins/ai_helper/" + providerId + "/delete";
+  var input = document.createElement("input");
+  input.type = "hidden";
+  input.name = "csrf_token";
+  input.value = csrfToken;
+  form.appendChild(input);
+  document.body.appendChild(form);
+  form.submit();
 }
 
-if (window.location.search.indexOf("open=create") !== -1) {
-  openAddDrawer();
+function testProvider(providerId, btn) {
+  var row = document.getElementById("provider-row-" + providerId);
+  if (!row) return;
+  var csrfToken = document.querySelector("meta[name='csrf-token']")?.getAttribute("content") || "";
+
+  var origHtml = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-sm"></span>';
+
+  fetch("/plugins/ai_helper/api/test-connection", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-CSRF-Token": csrfToken },
+    body: JSON.stringify({
+      provider_type: row.getAttribute("data-type"),
+      base_url: row.getAttribute("data-url"),
+      model_name: row.getAttribute("data-model"),
+      provider_id: providerId
+    })
+  })
+  .then(function(res) { return res.json(); })
+  .then(function(data) {
+    btn.disabled = false;
+    btn.innerHTML = origHtml;
+    if (data.status === "ok") {
+      alert("Provider Connection Successful! Latency: " + data.latency_ms + "ms");
+      window.location.reload();
+    } else {
+      alert("Provider Connection Failed:\n" + (data.message || "Unknown error"));
+    }
+  })
+  .catch(function(err) {
+    btn.disabled = false;
+    btn.innerHTML = origHtml;
+    alert("Test Error: " + err.message);
+  });
 }
 </script>
 {% endblock %}

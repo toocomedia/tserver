@@ -1,9 +1,9 @@
-<!-- Slide-Out Right Split Drawer (Base CSS: modal-backdrop--slide & modal--slide) -->
+<!-- Slide-Out Right Split Drawer -->
 <div class="modal-backdrop modal-backdrop--slide hidden" id="provider-drawer-modal" role="dialog" aria-modal="true">
   <div class="modal modal--slide" style="max-width: 560px;">
     
     <div class="modal__header">
-      <h3 id="drawer-title" style="display: flex; align-items: center; gap: 8px;">
+      <h3 id="drawer-title" class="d-flex align-items-center gap-xs">
         <i data-lucide="sparkles"></i> <span>Add AI Provider</span>
       </h3>
       <button type="button" class="btn btn--secondary btn--sm" onclick="closeProviderDrawer()" aria-label="Close" style="padding: 0 10px; height: 30px;">
@@ -15,35 +15,24 @@
       <form id="provider-drawer-form" method="POST" action="/plugins/ai_helper/create" autocomplete="off" data-lpignore="true">
         {% include "partials/csrf_field.html" %}
 
-        <!-- Decoy inputs to prevent password autofill -->
-        <input type="text" name="fake_email_prevent_autofill" style="display:none !important;" tabindex="-1" autocomplete="off">
-        <input type="password" name="fake_password_prevent_autofill" style="display:none !important;" tabindex="-1" autocomplete="off">
-
-        <!-- Provider Choice Cards (Step Pages Style) -->
+        <!-- Provider Preset -->
         <div class="form-group mb-lg">
-          <label class="form-label">Provider</label>
-          <div class="settings-choice-grid mb-xs" id="preset-choice-grid" style="grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px;">
-            {% for key, p in presets.items() %}
-            <label class="settings-choice settings-choice--compact {% if loop.first %}settings-choice--active{% endif %}" 
-                   data-preset-key="{{ key }}"
-                   data-name="{{ p.name }}"
-                   data-type="{{ p.type }}"
-                   data-url="{{ p.base_url }}"
-                   style="padding: 12px 14px; min-height: auto;">
-              <div class="settings-choice__header" style="gap: 6px;">
-                <input type="radio" name="provider_preset" value="{{ key }}" {% if loop.first %}checked{% endif %}>
-                <span class="settings-choice__title" style="font-size: 12px; font-weight: 700;">{{ p.name }}</span>
-              </div>
-              <span class="settings-choice__desc" style="font-size: 10.5px; margin-top: 2px;">{{ p.desc }}</span>
-            </label>
-            {% endfor %}
+          <label class="form-label" for="drawer_preset_select">Provider Preset</label>
+          <div class="form-select-wrap">
+            <select class="form-select" id="drawer_preset_select">
+              {% for key, p in presets.items() %}
+              <option value="{{ key }}" data-name="{{ p.name }}" data-type="{{ p.type }}" data-url="{{ p.base_url }}" {% if loop.first %}selected{% endif %}>
+                {{ p.name }} ({{ p.desc }})
+              </option>
+              {% endfor %}
+            </select>
           </div>
         </div>
 
-        <!-- API Key Input with Show/Hide -->
+        <!-- API Key Input -->
         <div class="form-group mb-lg">
           <label class="form-label" for="drawer_api_key">API Key</label>
-          <div style="display: flex; align-items: center; gap: 8px;">
+          <div class="d-flex align-items-center gap-xs">
             <input type="password" class="form-input font-mono" id="drawer_api_key" name="api_key" placeholder="Enter API key (sk-...)" autocomplete="new-password" data-lpignore="true" style="flex: 1;">
             <button type="button" class="btn btn--secondary btn--sm" id="drawer-btn-toggle-key" style="height: 34px; padding: 0 10px;" title="Toggle visibility">
               <i data-lucide="eye" id="drawer-key-eye-icon"></i>
@@ -51,51 +40,20 @@
           </div>
         </div>
 
-        <!-- Model Configuration: Primary Model & Multi-Model Enabled List -->
-        <div class="form-group mb-lg" id="drawer-model-section">
-          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
-            <label class="form-label m-0" for="drawer_model_select">Default Model</label>
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <span id="drawer-model-status" class="badge badge--neutral" style="display: none;"></span>
-              <button type="button" class="btn btn--secondary btn--sm" id="drawer-btn-toggle-custom" style="height: 24px; padding: 0 8px; font-size: 11px;">
-                <i data-lucide="edit-2" style="width: 11px; height: 11px;"></i> <span id="drawer-btn-toggle-label">Custom Model</span>
-              </button>
-            </div>
+        <!-- Default Model -->
+        <div class="form-group mb-md">
+          <div class="d-flex align-items-center justify-content-between mb-xs">
+            <label class="form-label m-0" for="drawer_model_name">Default Model</label>
+            <span id="drawer-model-status" class="badge-minimal badge-minimal--neutral" style="display: none;"></span>
           </div>
+          <input type="text" class="form-input font-mono" id="drawer_model_name" name="model_name" placeholder="e.g. gpt-4o-mini" value="gpt-4o-mini" required autocomplete="off" data-lpignore="true">
+        </div>
 
-          <!-- Dropdown mode -->
-          <div class="form-select-wrap" id="drawer-model-select-wrap">
-            <select class="form-select font-mono" id="drawer_model_select">
-              <option value="" disabled selected>-- Enter API key to load models --</option>
-            </select>
-          </div>
-
-          <!-- Custom text mode -->
-          <div id="drawer-model-custom-wrap" style="display: none;">
-            <input type="text" class="form-input font-mono" id="drawer_custom_model_input" placeholder="e.g. gpt-4o, claude-3-5-sonnet, deepseek-chat" autocomplete="off" data-lpignore="true">
-          </div>
-
-          <input type="hidden" id="drawer_model_name" name="model_name" value="">
-
-          <!-- Multi-Model Selector for Single API -->
-          <div class="mt-sm" id="drawer-multi-models-box" style="background: var(--color-surface); padding: 10px 12px; border-radius: 4px;">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
-              <label class="form-label m-0" style="font-size: 11px; font-weight: 700; color: var(--color-text);">Enabled Models for this API Key</label>
-              <span class="text-muted" style="font-size: 10px;">Select models for quick switching</span>
-            </div>
-            
-            <div id="drawer-model-chips-list" style="display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px; min-height: 24px;">
-              <!-- Dynamic chips will be inserted here -->
-            </div>
-
-            <div style="display: flex; align-items: center; gap: 6px;">
-              <input type="text" class="form-input font-mono text-xs" id="drawer-add-model-input" placeholder="Add model name (e.g. gpt-4o)..." style="height: 28px; padding: 2px 8px; flex: 1;" autocomplete="off" data-lpignore="true">
-              <button type="button" class="btn btn--secondary btn--sm" id="drawer-btn-add-model-chip" style="height: 28px; padding: 0 10px; font-size: 11px;">
-                + Add
-              </button>
-            </div>
-            <input type="hidden" id="drawer_models_list" name="models_list" value="">
-          </div>
+        <!-- Enabled Multi-Models -->
+        <div class="form-group mb-lg">
+          <label class="form-label" for="drawer_models_list">Enabled Models</label>
+          <input type="text" class="form-input font-mono" id="drawer_models_list" name="models_list" placeholder="e.g. gpt-4o-mini, gpt-4o, o3-mini" value="gpt-4o-mini, gpt-4o" autocomplete="off" data-lpignore="true">
+          <span class="text-small text-muted" style="margin-top: 4px; display: block;">Comma-separated models available for this API key.</span>
         </div>
 
         <!-- Default Provider Checkbox -->
@@ -106,7 +64,7 @@
           </label>
         </div>
 
-        <!-- Advanced Settings (Unboxed) -->
+        <!-- Advanced Settings -->
         <details class="mb-lg" id="drawer-advanced-details" style="border: none; background: transparent;">
           <summary style="cursor: pointer; display: inline-flex; align-items: center; gap: 8px; font-weight: 600; font-size: 12.5px; color: var(--color-muted); padding: 6px 0; user-select: none;">
             <i data-lucide="sliders" style="width: 13px; height: 13px;"></i>
@@ -155,11 +113,11 @@
       </form>
     </div>
 
-    <div class="modal__footer" style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+    <div class="modal__footer d-flex align-items-center justify-content-between gap-sm">
       <div>
-        <span id="drawer-test-indicator" style="display: flex; align-items: center; gap: 6px; font-size: 12px;"></span>
+        <span id="drawer-test-indicator" class="d-flex align-items-center gap-xs text-small"></span>
       </div>
-      <div style="display: flex; align-items: center; gap: 8px;">
+      <div class="d-flex align-items-center gap-xs">
         <button type="button" class="btn btn--secondary btn--sm" onclick="closeProviderDrawer()">Cancel</button>
         <button type="button" class="btn btn--secondary btn--sm" id="drawer-btn-test">
           <i data-lucide="zap"></i> Test
