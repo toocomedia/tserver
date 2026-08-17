@@ -196,7 +196,7 @@ class PluginManager:
         result["effective_status"] = effective_status
         return result
 
-    def discover_plugins(self) -> List[Dict[str, Any]]:
+    def discover_plugins(self, *, check_dependencies: bool = True) -> List[Dict[str, Any]]:
         self.plugins.clear()
         if not PLUGINS_DIR.exists():
             return []
@@ -217,12 +217,11 @@ class PluginManager:
                 self._operation_locks.setdefault(plugin_id, threading.Lock())
             except Exception as exc:
                 logger.error("Error reading manifest for plugin %s: %s", item.name, exc)
-        # Discovery records manifest/install state only. Dependency health is
-        # warmed separately and must not make startup discovery run probes.
         return [
-            self._effective(plugin, check_dependencies=False)
+            self._effective(plugin, check_dependencies=check_dependencies)
             for plugin in self.plugins.values()
         ]
+
 
     def state_components(self) -> list[tuple[str, str, bool, str]]:
         if not self.plugins:
