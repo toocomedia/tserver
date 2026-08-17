@@ -30,8 +30,6 @@
                data-name="{{ p.name }}"
                data-type="{{ p.type }}" 
                data-url="{{ p.base_url }}"
-               data-model="{{ p.default_model }}"
-               data-models='{{ p.models | tojson }}'
                style="padding: 12px 14px; min-height: auto;">
           <div class="settings-choice__header" style="gap: 6px;">
             <input type="radio" name="provider_preset" value="{{ key }}" {% if is_active %}checked{% endif %}>
@@ -59,7 +57,7 @@
       <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
         <label class="form-label m-0" for="model_select">Model</label>
         <div style="display: flex; align-items: center; gap: 8px;">
-          <span id="model-status" class="badge badge--ok" style="display: none;"></span>
+          <span id="model-status" class="badge badge--neutral" style="display: none;"></span>
           <button type="button" class="btn btn--secondary btn--sm" id="btn-toggle-custom" style="height: 26px; padding: 0 8px; font-size: 11px;">
             <i data-lucide="edit-2" style="width: 12px; height: 12px;"></i> <span id="btn-toggle-label">Custom Model</span>
           </button>
@@ -72,7 +70,7 @@
           {% if provider and provider.model_name %}
             <option value="{{ provider.model_name }}" selected>{{ provider.model_name }}</option>
           {% else %}
-            <option value="gpt-4o-mini" selected>gpt-4o-mini</option>
+            <option value="" disabled selected>-- Enter API key to load models --</option>
           {% endif %}
         </select>
       </div>
@@ -82,7 +80,7 @@
         <input type="text" class="form-input font-mono" id="custom_model_input" placeholder="e.g. gpt-4o, claude-3-5-sonnet, deepseek-chat" value="{{ provider.model_name if provider else '' }}" autocomplete="off" data-lpignore="true">
       </div>
 
-      <input type="hidden" id="model_name" name="model_name" value="{{ provider.model_name if provider else 'gpt-4o-mini' }}">
+      <input type="hidden" id="model_name" name="model_name" value="{{ provider.model_name if provider else '' }}">
     </div>
 
     <!-- Default Provider Checkbox -->
@@ -236,20 +234,11 @@ document.addEventListener("DOMContentLoaded", function () {
         var pName = card.getAttribute("data-name");
         var pType = card.getAttribute("data-type");
         var pUrl = card.getAttribute("data-url");
-        var pModel = card.getAttribute("data-model");
-        var pModelsRaw = card.getAttribute("data-models");
 
         var isEdit = {% if is_edit %}true{% else %}false{% endif %};
         if (pName && presetKey !== "custom" && !isEdit && providerNameInput) providerNameInput.value = pName;
         if (pType && providerTypeSelect) providerTypeSelect.value = pType;
         if (pUrl !== null && pUrl !== "" && baseUrlInput) baseUrlInput.value = pUrl;
-
-        try {
-          var models = JSON.parse(pModelsRaw || "[]");
-          if (models.length > 0) {
-            setDropdownOptions(models, pModel || models[0]);
-          }
-        } catch (e) {}
       } else {
         card.classList.remove("settings-choice--active");
         if (radio) radio.checked = false;
@@ -261,7 +250,7 @@ document.addEventListener("DOMContentLoaded", function () {
     card.addEventListener("click", function () {
       var key = this.getAttribute("data-preset-key");
       if (key) selectPresetCard(key);
-      if (apiKeyInput && apiKeyInput.value.trim().length >= 8) {
+      if (apiKeyInput && apiKeyInput.value.trim().length >= 6) {
         autoFetchModels();
       }
     });
@@ -314,7 +303,7 @@ document.addEventListener("DOMContentLoaded", function () {
     if (modelStatus) {
       modelStatus.style.display = "inline-flex";
       modelStatus.className = "badge badge--neutral";
-      modelStatus.innerHTML = '<span class="spinner-sm"></span> Checking...';
+      modelStatus.innerHTML = '<span class="spinner-sm"></span> Loading models...';
     }
 
     var payload = {
@@ -339,11 +328,15 @@ document.addEventListener("DOMContentLoaded", function () {
           setDropdownOptions(data.models, modelNameHidden.value);
           if (modelStatus) {
             modelStatus.className = "badge badge--ok";
-            modelStatus.innerHTML = "✓ " + data.count + " models available";
+            modelStatus.innerHTML = "✓ " + data.count + " models loaded";
             modelStatus.style.display = "inline-flex";
           }
         } else {
-          if (modelStatus) modelStatus.style.display = "none";
+          if (modelStatus) {
+            modelStatus.className = "badge badge--error";
+            modelStatus.innerHTML = "Failed to load models";
+            modelStatus.style.display = "inline-flex";
+          }
         }
       })
       .catch(function () {
@@ -355,13 +348,13 @@ document.addEventListener("DOMContentLoaded", function () {
     apiKeyInput.addEventListener("input", function () {
       clearTimeout(fetchTimeout);
       var val = this.value.trim();
-      if (val.length >= 8) {
-        fetchTimeout = setTimeout(autoFetchModels, 600);
+      if (val.length >= 6) {
+        fetchTimeout = setTimeout(autoFetchModels, 500);
       }
     });
 
     apiKeyInput.addEventListener("blur", function () {
-      if (this.value.trim().length >= 8) {
+      if (this.value.trim().length >= 6) {
         autoFetchModels();
       }
     });
@@ -430,12 +423,11 @@ document.addEventListener("DOMContentLoaded", function () {
     syncModelValue();
     if (!modelNameHidden.value.trim()) {
       e.preventDefault();
-      alert("Please select or enter a Model.");
+      alert("Please enter or select a Model. Enter an API key to load models, or click 'Custom Model' to type one.");
       if (isCustomMode) customModelInput.focus();
     }
   });
 
-  // Initial load preset models setup
   {% if not is_edit %}
   selectPresetCard("openai");
   {% endif %}
