@@ -10,87 +10,61 @@
 {% endblock %}
 
 {% block content %}
-<div style="max-width: 860px; margin: 0 auto; padding-bottom: 80px;">
+<div style="max-width: 680px; margin: 0 auto; padding: 12px 0 100px;">
 
-  <!-- Step 1: Quick Presets -->
-  <div class="section mb-lg">
-    <div class="section__header">
-      <h3><i data-lucide="layers"></i> 1. Choose Provider Preset</h3>
-    </div>
-    <div class="section__body">
-      <p class="form-hint mb-md">Select an AI service provider to auto-fill its protocol format and verified Base URL:</p>
-      <div class="settings-choice-grid mb-md" id="preset-grid">
-        {% for key, p in presets.items() %}
-        <label class="settings-choice {% if (provider and provider.provider_type == p.type and p.base_url and p.base_url in provider.base_url) or (not provider and key == 'openai') %}settings-choice--active{% endif %}" 
-               data-preset-key="{{ key }}" 
-               data-preset-name="{{ p.name }}"
-               data-preset-type="{{ p.type }}" 
-               data-preset-url="{{ p.base_url }}">
-          <div class="settings-choice__header">
-            <input type="radio" name="provider_preset" value="{{ key }}" {% if (provider and provider.provider_type == p.type and p.base_url and p.base_url in provider.base_url) or (not provider and key == 'openai') %}checked{% endif %}>
-            <span class="settings-choice__title">{{ p.name }}</span>
-          </div>
-          <span class="settings-choice__desc">{{ p.desc }}</span>
-        </label>
-        {% endfor %}
+  <form id="provider-form" method="POST" action="{% if is_edit %}/plugins/ai_helper/{{ provider.id }}/edit{% else %}/plugins/ai_helper/create{% endif %}" autocomplete="off" data-lpignore="true" data-form-type="other">
+    {% include "partials/csrf_field.html" %}
+
+    <!-- Decoy inputs to prevent browser password managers from auto-filling admin email/passwords into configuration fields -->
+    <input type="text" name="fake_email_prevent_autofill" style="display:none !important;" tabindex="-1" autocomplete="off">
+    <input type="password" name="fake_password_prevent_autofill" style="display:none !important;" tabindex="-1" autocomplete="off">
+
+    <!-- Section: Basic Setup (Essential Fields) -->
+    <div class="section mb-lg">
+      <div class="section__header">
+        <h3><i data-lucide="sparkles"></i> AI Provider Setup</h3>
       </div>
-    </div>
-  </div>
+      <div class="section__body">
 
-  <!-- Step 2: Connection & Model Form -->
-  <div class="section mb-xl">
-    <div class="section__header">
-      <h3><i data-lucide="sliders"></i> 2. Provider & Model Configuration</h3>
-    </div>
-    <div class="section__body">
-      <form id="provider-form" method="POST" action="{% if is_edit %}/plugins/ai_helper/{{ provider.id }}/edit{% else %}/plugins/ai_helper/create{% endif %}" autocomplete="off" data-lpignore="true" data-form-type="other">
-        
-        <!-- Decoy inputs to prevent browser password managers from auto-filling admin email/passwords into configuration fields -->
-        <input type="text" name="fake_email_prevent_autofill" style="display:none !important;" tabindex="-1" autocomplete="off">
-        <input type="password" name="fake_password_prevent_autofill" style="display:none !important;" tabindex="-1" autocomplete="off">
-
+        <!-- Provider Service Preset Selector -->
         <div class="form-group mb-lg">
-          <label class="form-label" for="provider_name">Display Name</label>
-          <input type="text" class="form-input" id="provider_name" name="name" value="{{ provider.name if provider else 'OpenAI' }}" placeholder="e.g. OpenAI Production, DeepSeek V3, Claude Sonnet" required autocomplete="off" data-lpignore="true">
-          <p class="form-hint">A label to identify this AI provider model in the panel.</p>
-        </div>
-
-        <div class="form-group mb-lg">
-          <label class="form-label" for="provider_type">Protocol Format</label>
+          <label class="form-label" for="preset_selector">Provider Service</label>
           <div class="form-select-wrap">
-            <select class="form-select" id="provider_type" name="provider_type" autocomplete="off" data-lpignore="true">
-              <option value="openai_compatible" {% if provider and provider.provider_type == 'openai_compatible' %}selected{% endif %}>OpenAI-Compatible (/chat/completions)</option>
-              <option value="anthropic" {% if provider and provider.provider_type == 'anthropic' %}selected{% endif %}>Anthropic (/messages)</option>
+            <select class="form-select" id="preset_selector">
+              {% for key, p in presets.items() %}
+              <option value="{{ key }}" 
+                      data-name="{{ p.name }}"
+                      data-type="{{ p.type }}" 
+                      data-url="{{ p.base_url }}"
+                      {% if (provider and provider.provider_type == p.type and p.base_url and p.base_url in provider.base_url) or (not provider and key == 'openai') %}selected{% endif %}>
+                {{ p.name }} ({{ p.desc }})
+              </option>
+              {% endfor %}
             </select>
           </div>
-          <p class="form-hint">Select Anthropic for Claude API; use OpenAI-Compatible for all other providers (DeepSeek, OpenRouter, Groq, Gemini, Mistral, Together, Custom).</p>
+          <p class="form-hint">Choose your provider. Base URL and protocol are auto-configured.</p>
         </div>
 
+        <!-- API Key Input -->
         <div class="form-group mb-lg">
           <label class="form-label" for="api_key">API Key</label>
           <div style="display: flex; align-items: center; gap: 8px;">
-            <input type="password" class="form-input font-mono" id="api_key" name="api_key" placeholder="{% if is_edit and has_api_key %}•••••••••••••••• (Leave blank to keep unchanged){% else %}Enter your API Key (e.g. sk-...){% endif %}" autocomplete="new-password" data-lpignore="true" data-1p-ignore="true" style="flex: 1;">
+            <input type="password" class="form-input font-mono" id="api_key" name="api_key" placeholder="{% if is_edit and has_api_key %}•••••••••••••••• (Leave blank to keep unchanged){% else %}Enter API Key (sk-...){% endif %}" autocomplete="new-password" data-lpignore="true" data-1p-ignore="true" style="flex: 1;">
             <button type="button" class="btn btn--secondary btn--sm" id="btn-toggle-key" style="height: 34px; padding: 0 12px;" title="Toggle show/hide">
               <i data-lucide="eye" id="key-eye-icon"></i>
             </button>
           </div>
-          <p class="form-hint">Stored securely encrypted at rest using AES-128 Fernet with the panel secret key.</p>
+          <p class="form-hint">Stored encrypted in the panel database using AES-128 Fernet.</p>
         </div>
 
-        <div class="form-group mb-lg">
-          <label class="form-label" for="base_url">Endpoint Base URL</label>
-          <input type="text" class="form-input font-mono" id="base_url" name="base_url" value="{{ provider.base_url if provider else 'https://api.openai.com/v1' }}" placeholder="https://api.openai.com/v1" required autocomplete="off" data-lpignore="true">
-          <p class="form-hint">Base URL of the provider API endpoint.</p>
-        </div>
-
-        <!-- Model Identifier Section with Check/Fetch and Custom option -->
+        <!-- Model Identifier with Live Check & Fetch -->
         <div class="form-group mb-lg" id="model-section">
           <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
             <label class="form-label m-0" for="model_select">Model Identifier</label>
             <div style="display: flex; align-items: center; gap: 8px;">
               <span id="fetch-models-count" class="badge badge--ok" hidden></span>
               <button type="button" class="btn btn--secondary btn--sm" id="btn-fetch-models" style="height: 28px; padding: 0 10px; font-size: 11.5px;">
-                <i data-lucide="refresh-cw" style="width: 13px; height: 13px;"></i> Check & Fetch Models from API
+                <i data-lucide="refresh-cw" style="width: 13px; height: 13px;"></i> Check & Fetch Models
               </button>
             </div>
           </div>
@@ -101,77 +75,112 @@
               {% if provider and provider.model_name %}
                 <option value="{{ provider.model_name }}" selected>{{ provider.model_name }} (Current Active)</option>
               {% else %}
-                <option value="">-- Click 'Check & Fetch Models' or choose custom below --</option>
+                <option value="">-- Click 'Check & Fetch Models' or select custom --</option>
               {% endif %}
               <option value="__custom__">✏️ + Enter Custom Model Name...</option>
             </select>
           </div>
 
-          <!-- Custom Model Text Input (shown when __custom__ is selected or custom model is typed) -->
+          <!-- Custom Model Text Input (shown when __custom__ is selected) -->
           <div id="custom-model-wrap" {% if provider and provider.model_name %}style="display: none;"{% endif %}>
             <div style="display: flex; align-items: center; gap: 8px;">
-              <input type="text" class="form-input font-mono" id="custom_model_input" placeholder="Type custom model name (e.g. gpt-4o, claude-3-5-sonnet, deepseek-chat)..." value="{{ provider.model_name if provider else '' }}" autocomplete="off" data-lpignore="true" style="flex: 1;">
+              <input type="text" class="form-input font-mono" id="custom_model_input" placeholder="Type model identifier (e.g. gpt-4o, claude-3-5-sonnet, deepseek-chat)..." value="{{ provider.model_name if provider else '' }}" autocomplete="off" data-lpignore="true" style="flex: 1;">
               <button type="button" class="btn btn--secondary btn--sm" id="btn-back-to-select" style="height: 34px; white-space: nowrap;">
                 Use Dropdown List
               </button>
             </div>
           </div>
 
-          <!-- Actual Hidden Form Input submitted with form -->
+          <!-- Hidden input submitted with the form -->
           <input type="hidden" id="model_name" name="model_name" value="{{ provider.model_name if provider else '' }}">
 
           <p class="form-hint" id="model-hint-text">
-            Click <strong>Check & Fetch Models from API</strong> to retrieve available models from your account, or select <strong>+ Enter Custom Model Name</strong>.
+            Click <strong>Check & Fetch Models</strong> to get all available models on your API key, or enter a custom model name.
           </p>
         </div>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;" class="mb-lg">
+        <!-- Default Provider Checkbox -->
+        <div class="mb-sm">
+          <label class="form-check">
+            <input type="checkbox" name="is_default" value="true" {% if (provider and provider.is_default) or not is_edit %}checked{% endif %}>
+            <span style="font-weight: 600;">Set as Active Default Provider</span>
+          </label>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Section: Advanced Settings (Expandable Details) -->
+    <details class="mb-xl" id="advanced-settings-details" style="border: 1px solid var(--color-line); background: var(--color-surface); padding: 14px 18px; border-radius: 4px;">
+      <summary style="font-weight: 700; font-size: 13.5px; color: var(--color-text); display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none;">
+        <i data-lucide="sliders"></i> Advanced Settings (Base URL, Temperature, Custom Rules)
+      </summary>
+
+      <div style="margin-top: 18px; display: flex; flex-direction: column; gap: 16px;">
+        
+        <div class="form-group">
+          <label class="form-label" for="provider_name">Display Name</label>
+          <input type="text" class="form-input" id="provider_name" name="name" value="{{ provider.name if provider else 'OpenAI' }}" placeholder="e.g. OpenAI Production" required autocomplete="off" data-lpignore="true">
+          <p class="form-hint">Label shown in the panel provider list.</p>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="base_url">Endpoint Base URL</label>
+          <input type="text" class="form-input font-mono" id="base_url" name="base_url" value="{{ provider.base_url if provider else 'https://api.openai.com/v1' }}" placeholder="https://api.openai.com/v1" required autocomplete="off" data-lpignore="true">
+          <p class="form-hint">Custom or proxy API endpoint URL.</p>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="provider_type">Protocol Format</label>
+          <div class="form-select-wrap">
+            <select class="form-select" id="provider_type" name="provider_type" autocomplete="off" data-lpignore="true">
+              <option value="openai_compatible" {% if provider and provider.provider_type == 'openai_compatible' %}selected{% endif %}>OpenAI-Compatible (/chat/completions)</option>
+              <option value="anthropic" {% if provider and provider.provider_type == 'anthropic' %}selected{% endif %}>Anthropic (/messages)</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
           <div class="form-group">
             <label class="form-label" for="temperature">Temperature</label>
             <input type="number" step="0.05" min="0.0" max="1.0" class="form-input" id="temperature" name="temperature" value="{{ provider.temperature if provider else 0.2 }}" autocomplete="off">
-            <p class="form-hint">Recommended: <code>0.2</code> for deterministic, reliable code and commands.</p>
+            <p class="form-hint">Recommended: <code>0.2</code> for code/config.</p>
           </div>
           <div class="form-group">
             <label class="form-label" for="max_tokens">Max Response Tokens</label>
             <input type="number" step="256" min="256" max="32768" class="form-input" id="max_tokens" name="max_tokens" value="{{ provider.max_tokens if provider else 4096 }}" autocomplete="off">
-            <p class="form-hint">Max token length per AI response (default: 4096).</p>
+            <p class="form-hint">Max tokens (default: 4096).</p>
           </div>
         </div>
 
-        <div class="form-group mb-lg">
+        <div class="form-group">
           <label class="form-label" for="custom_rules">Custom System Prompt Rules</label>
           <textarea class="form-input font-mono" id="custom_rules" name="custom_rules" rows="4" style="height: auto; padding: 10px; line-height: 1.5;" placeholder="Optional prompt directives (e.g. 'Always respond in French', 'Prefer PostgreSQL').">{{ provider.custom_rules if provider else '' }}</textarea>
-          <p class="form-hint">Special instructions followed when this AI model is used.</p>
+          <p class="form-hint">Injected instructions followed when this model is invoked.</p>
         </div>
 
-        <div class="mb-lg">
-          <label class="form-check">
-            <input type="checkbox" name="is_default" value="true" {% if (provider and provider.is_default) or not is_edit %}checked{% endif %}>
-            <span style="font-weight: 600;">Set as Active Default AI Provider for the panel</span>
-          </label>
-        </div>
+      </div>
+    </details>
 
-        <!-- Fixed Bottom Action Bar -->
-        <div class="fixed-action-bar">
-          <div class="fixed-action-inner">
-            <div style="display: flex; align-items: center; gap: 10px;">
-              <span id="test-connection-indicator" style="display: flex; align-items: center; gap: 6px; font-size: 13px;"></span>
-            </div>
-            <div style="display: flex; align-items: center; gap: 8px; margin-left: auto;">
-              <a href="/plugins/ai_helper/" class="btn btn--secondary btn--sm">Cancel</a>
-              <button type="button" class="btn btn--secondary btn--sm" id="btn-test-connection">
-                <i data-lucide="zap"></i> Test Connection
-              </button>
-              <button type="submit" class="btn btn--primary btn--sm" id="btn-save-provider">
-                <i data-lucide="save"></i> {% if is_edit %}Update Provider{% else %}Save Provider{% endif %}
-              </button>
-            </div>
-          </div>
+    <!-- Fixed Bottom Action Bar -->
+    <div class="fixed-action-bar">
+      <div class="fixed-action-inner">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span id="test-connection-indicator" style="display: flex; align-items: center; gap: 6px; font-size: 13px;"></span>
         </div>
-
-      </form>
+        <div style="display: flex; align-items: center; gap: 8px; margin-left: auto;">
+          <a href="/plugins/ai_helper/" class="btn btn--secondary btn--sm">Cancel</a>
+          <button type="button" class="btn btn--secondary btn--sm" id="btn-test-connection">
+            <i data-lucide="zap"></i> Test Connection
+          </button>
+          <button type="submit" class="btn btn--primary btn--sm" id="btn-save-provider">
+            <i data-lucide="save"></i> {% if is_edit %}Update Provider{% else %}Save Provider{% endif %}
+          </button>
+        </div>
+      </div>
     </div>
-  </div>
+
+  </form>
 
 </div>
 {% endblock %}
@@ -182,6 +191,11 @@ document.addEventListener("DOMContentLoaded", function () {
   if (typeof lucide !== 'undefined') {
     lucide.createIcons();
   }
+
+  var presetSelector = document.getElementById("preset_selector");
+  var providerNameInput = document.getElementById("provider_name");
+  var providerTypeSelect = document.getElementById("provider_type");
+  var baseUrlInput = document.getElementById("base_url");
 
   var modelSelect = document.getElementById("model_select");
   var customModelWrap = document.getElementById("custom-model-wrap");
@@ -197,6 +211,22 @@ document.addEventListener("DOMContentLoaded", function () {
       modelNameHidden.value = modelSelect.value.trim();
       customModelInput.value = modelSelect.value.trim();
     }
+  }
+
+  // Handle Preset change
+  if (presetSelector) {
+    presetSelector.addEventListener("change", function () {
+      var opt = this.options[this.selectedIndex];
+      if (opt) {
+        var pName = opt.getAttribute("data-name");
+        var pType = opt.getAttribute("data-type");
+        var pUrl = opt.getAttribute("data-url");
+
+        if (pName && this.value !== "custom") providerNameInput.value = pName;
+        if (pType) providerTypeSelect.value = pType;
+        if (pUrl !== null && pUrl !== "") baseUrlInput.value = pUrl;
+      }
+    });
   }
 
   modelSelect.addEventListener("change", function () {
@@ -223,34 +253,14 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
-  // Preset Card Click Handler
-  var presetCards = document.querySelectorAll("[data-preset-key]");
-  presetCards.forEach(function (card) {
-    card.addEventListener("click", function () {
-      presetCards.forEach(function (c) { c.classList.remove("settings-choice--active"); });
-      this.classList.add("settings-choice--active");
-      var radio = this.querySelector("input[type='radio']");
-      if (radio) radio.checked = true;
-
-      var pKey = this.getAttribute("data-preset-key");
-      var pName = this.getAttribute("data-preset-name");
-      var pType = this.getAttribute("data-preset-type");
-      var pUrl = this.getAttribute("data-preset-url");
-
-      if (pName && pKey !== "custom") document.getElementById("provider_name").value = pName;
-      if (pType) document.getElementById("provider_type").value = pType;
-      if (pUrl !== null && pUrl !== "") document.getElementById("base_url").value = pUrl;
-    });
-  });
-
   // Dynamic "Check & Fetch Models from API" Button
   var fetchModelsBtn = document.getElementById("btn-fetch-models");
   var fetchCountBadge = document.getElementById("fetch-models-count");
 
   function runFetchModels() {
     var apiKey = document.getElementById("api_key").value.trim();
-    var baseUrl = document.getElementById("base_url").value.trim();
-    var providerType = document.getElementById("provider_type").value;
+    var baseUrl = baseUrlInput.value.trim();
+    var providerType = providerTypeSelect.value;
 
     fetchModelsBtn.disabled = true;
     var origHtml = fetchModelsBtn.innerHTML;
@@ -280,7 +290,6 @@ document.addEventListener("DOMContentLoaded", function () {
         if (typeof lucide !== 'undefined') lucide.createIcons();
 
         if (data.success && data.models && data.models.length > 0) {
-          // Rebuild select options
           modelSelect.innerHTML = "";
           
           var curVal = modelNameHidden.value.trim();
@@ -355,10 +364,10 @@ document.addEventListener("DOMContentLoaded", function () {
       if (indicator) indicator.innerHTML = '<span class="text-muted">Testing connection...</span>';
 
       var payload = {
-        provider_type: document.getElementById("provider_type").value,
+        provider_type: providerTypeSelect.value,
         api_key: document.getElementById("api_key").value || undefined,
-        base_url: document.getElementById("base_url").value,
-        model_name: document.getElementById("model_name").value,
+        base_url: baseUrlInput.value,
+        model_name: modelNameHidden.value,
       };
 
       var csrfToken = document.querySelector("meta[name='csrf-token']")?.getAttribute("content") || "";
@@ -389,7 +398,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
-  // Before form submits, ensure model_name has value
+  // Form submit verification
   document.getElementById("provider-form").addEventListener("submit", function (e) {
     syncModelValue();
     if (!modelNameHidden.value.trim()) {
