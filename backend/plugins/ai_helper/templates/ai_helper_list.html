@@ -262,8 +262,9 @@ document.querySelectorAll("#preset-choice-grid .settings-choice").forEach(functi
 // Auto-Check & Fetch Models from API upon entering API key
 var fetchTimeout = null;
 var lastFetchedKey = "";
+var btnDrawerFetchModels = document.getElementById("drawer-btn-fetch-models");
 
-function autoFetchModels() {
+function autoFetchModels(force) {
   var apiKey = apiKeyInput ? apiKeyInput.value.trim() : "";
   var baseUrl = baseUrlInput ? baseUrlInput.value.trim() : "";
   var providerType = providerTypeSelect ? providerTypeSelect.value : "openai_compatible";
@@ -272,7 +273,7 @@ function autoFetchModels() {
     return;
   }
 
-  if (apiKey === lastFetchedKey && apiKey !== "") {
+  if (!force && apiKey === lastFetchedKey && apiKey !== "") {
     return;
   }
   lastFetchedKey = apiKey;
@@ -287,6 +288,7 @@ function autoFetchModels() {
     provider_type: providerType,
     api_key: apiKey || undefined,
     base_url: baseUrl,
+    provider_id: currentEditId || undefined,
   };
 
   var csrfToken = document.querySelector("meta[name='csrf-token']")?.getAttribute("content") || "";
@@ -302,7 +304,7 @@ function autoFetchModels() {
     .then(function (res) { return res.json(); })
     .then(function (data) {
       if (data.success && data.models && data.models.length > 0) {
-        setDropdownOptions(data.models, modelNameHidden.value);
+        setDropdownOptions(data.models, defaultModel || modelNameHidden.value);
         if (modelStatus) {
           modelStatus.className = "badge badge--ok";
           modelStatus.innerHTML = "✓ " + data.count + " models loaded";
@@ -311,13 +313,21 @@ function autoFetchModels() {
       } else {
         if (modelStatus) {
           modelStatus.className = "badge badge--error";
-          modelStatus.innerHTML = "Failed to load models";
+          modelStatus.innerHTML = data.error || "Failed to load models";
           modelStatus.style.display = "inline-flex";
         }
       }
     })
     .catch(function () {
       if (modelStatus) modelStatus.style.display = "none";
+    });
+}
+
+if (btnDrawerFetchModels) {
+  btnDrawerFetchModels.addEventListener("click", function () {
+    autoFetchModels(true);
+  });
+}
     });
 }
 

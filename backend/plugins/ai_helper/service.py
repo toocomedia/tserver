@@ -285,21 +285,26 @@ async def test_connection(
     base_url = override_data.get("base_url") if override_data else None
     model_name = override_data.get("model_name") if override_data else None
     override_key = override_data.get("api_key") if override_data else None
+    provider_id = override_data.get("provider_id") if override_data else None
 
-    if not provider_type or not base_url or not model_name:
+    if override_key and isinstance(override_key, str) and override_key.strip():
+        api_key = override_key.strip()
+    elif provider_id:
+        p = await db.get(AiProvider, int(provider_id))
+        api_key = decrypt_key(p.api_key_encrypted) if p else ""
+        if p:
+            provider_type = provider_type or p.provider_type
+            base_url = base_url or p.base_url
+            model_name = model_name or p.model_name
+    else:
         active = await get_active_provider(db)
         if active:
             provider_type = provider_type or active.provider_type
             base_url = base_url or active.base_url
             model_name = model_name or active.model_name
-            if not override_key:
-                api_key = decrypt_key(active.api_key_encrypted)
-            else:
-                api_key = override_key.strip()
+            api_key = decrypt_key(active.api_key_encrypted)
         else:
-            api_key = override_key.strip() if override_key else ""
-    else:
-        api_key = override_key.strip() if override_key else ""
+            api_key = ""
 
     if not api_key:
         return {
@@ -311,10 +316,10 @@ async def test_connection(
         }
 
     return await engine.test_api_connection(
-        provider_type=provider_type,
-        base_url=base_url,
+        provider_type=provider_type or "openai_compatible",
+        base_url=base_url or "https://api.openai.com/v1",
         api_key=api_key,
-        model_name=model_name,
+        model_name=model_name or "gpt-4o-mini",
     )
 
 
@@ -326,9 +331,18 @@ async def fetch_models(
     provider_type = (override_data.get("provider_type") if override_data else None) or "openai_compatible"
     base_url = (override_data.get("base_url") if override_data else None) or "https://api.openai.com/v1"
     override_key = override_data.get("api_key") if override_data else None
+    provider_id = override_data.get("provider_id") if override_data else None
 
     if override_key and isinstance(override_key, str) and override_key.strip():
         api_key = override_key.strip()
+    elif provider_id:
+        p = await db.get(AiProvider, int(provider_id))
+        api_key = decrypt_key(p.api_key_encrypted) if p else ""
+        if p:
+            if not override_data.get("provider_type"):
+                provider_type = p.provider_type
+            if not override_data.get("base_url"):
+                base_url = p.base_url
     else:
         active = await get_active_provider(db)
         api_key = decrypt_key(active.api_key_encrypted) if active else ""

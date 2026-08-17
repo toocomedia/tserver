@@ -68,11 +68,14 @@
 
         <!-- Dropdown Menu with Checkboxes -->
         <div class="model-dropdown-menu" id="model-menu" style="display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: var(--color-surface); border: 1px solid var(--color-line); box-shadow: 0 10px 30px rgba(0,0,0,0.35); z-index: 1000; border-radius: 4px; max-height: 260px; overflow-y: auto; padding: 6px;">
-          <!-- Quick Filter / Add Model Input -->
+          <!-- Quick Filter / Add Model Input & Recheck API -->
           <div style="display: flex; gap: 6px; padding: 4px 4px 8px; border-bottom: 1px solid var(--color-line); margin-bottom: 6px;">
             <input type="text" class="form-input font-mono text-xs" id="filter-model-input" placeholder="Search or type custom model..." style="height: 28px; padding: 2px 8px; flex: 1;" autocomplete="off" data-lpignore="true">
-            <button type="button" class="btn btn--secondary btn--sm" id="btn-add-model" style="height: 28px; padding: 0 8px; font-size: 11px;">
+            <button type="button" class="btn btn--secondary btn--sm" id="btn-add-model" style="height: 28px; padding: 0 8px; font-size: 11px;" title="Add custom model">
               + Add
+            </button>
+            <button type="button" class="btn btn--secondary btn--sm" id="btn-fetch-models" style="height: 28px; padding: 0 8px; font-size: 11px;" title="Recheck & fetch all available models from API">
+              ↻ Recheck
             </button>
           </div>
 
@@ -390,8 +393,9 @@ document.addEventListener("DOMContentLoaded", function () {
   // Auto-Check & Fetch Models from API
   var fetchTimeout = null;
   var lastFetchedKey = "";
+  var btnFormFetchModels = document.getElementById("btn-fetch-models");
 
-  function autoFetchModels() {
+  function autoFetchModels(force) {
     var apiKey = apiKeyInput ? apiKeyInput.value.trim() : "";
     var baseUrl = baseUrlInput ? baseUrlInput.value.trim() : "";
     var providerType = providerTypeSelect ? providerTypeSelect.value : "openai_compatible";
@@ -401,7 +405,7 @@ document.addEventListener("DOMContentLoaded", function () {
       return;
     }
 
-    if (apiKey === lastFetchedKey && apiKey !== "") {
+    if (!force && apiKey === lastFetchedKey && apiKey !== "") {
       return;
     }
     lastFetchedKey = apiKey;
@@ -416,6 +420,7 @@ document.addEventListener("DOMContentLoaded", function () {
       provider_type: providerType,
       api_key: apiKey || undefined,
       base_url: baseUrl,
+      provider_id: {% if is_edit and provider %}{{ provider.id }}{% else %}undefined{% endif %},
     };
 
     var csrfToken = document.querySelector("meta[name='csrf-token']")?.getAttribute("content") || "";
@@ -431,7 +436,7 @@ document.addEventListener("DOMContentLoaded", function () {
       .then(function (res) { return res.json(); })
       .then(function (data) {
         if (data.success && data.models && data.models.length > 0) {
-          setDropdownOptions(data.models, modelNameHidden.value);
+          setDropdownOptions(data.models, defaultModel || modelNameHidden.value);
           if (modelStatus) {
             modelStatus.className = "badge badge--ok";
             modelStatus.innerHTML = "✓ " + data.count + " models loaded";
@@ -440,7 +445,7 @@ document.addEventListener("DOMContentLoaded", function () {
         } else {
           if (modelStatus) {
             modelStatus.className = "badge badge--error";
-            modelStatus.innerHTML = "Failed to load models";
+            modelStatus.innerHTML = data.error || "Failed to load models";
             modelStatus.style.display = "inline-flex";
           }
         }
@@ -448,6 +453,12 @@ document.addEventListener("DOMContentLoaded", function () {
       .catch(function () {
         if (modelStatus) modelStatus.style.display = "none";
       });
+  }
+
+  if (btnFormFetchModels) {
+    btnFormFetchModels.addEventListener("click", function () {
+      autoFetchModels(true);
+    });
   }
 
   if (apiKeyInput) {

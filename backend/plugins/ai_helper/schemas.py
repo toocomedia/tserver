@@ -27,12 +27,14 @@ class TestConnectionRequest(BaseModel):
     api_key: Optional[str] = None
     base_url: Optional[str] = None
     model_name: Optional[str] = None
+    provider_id: Optional[int] = None
 
 
 class FetchModelsRequest(BaseModel):
     provider_type: Optional[str] = None
     api_key: Optional[str] = None
     base_url: Optional[str] = None
+    provider_id: Optional[int] = None
 
 
 class ChatRequest(BaseModel):
