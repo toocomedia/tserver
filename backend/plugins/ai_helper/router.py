@@ -1,5 +1,5 @@
 """
-router.py — FastAPI router for AI Helper settings dashboard, streaming chat, and connection testing.
+router.py — FastAPI router for AI Helper: multi-provider management, settings, and streaming chat.
 """
 from __future__ import annotations
 
@@ -7,8 +7,8 @@ import json
 import uuid
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
+from fastapi import APIRouter, Depends, Form, HTTPException, Request
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -19,15 +19,17 @@ from templating import templates
 router = APIRouter(prefix="/plugins/ai_helper", tags=["ai-helper"])
 
 
-class SettingsUpdateRequest(BaseModel):
-    is_enabled: Optional[bool] = True
-    provider_type: Optional[str] = "openai_compatible"
+class ProviderPayload(BaseModel):
+    name: str = Field(..., min_length=1)
+    provider_type: str = "openai_compatible"
     api_key: Optional[str] = None
-    base_url: Optional[str] = "https://api.openai.com/v1"
-    model_name: Optional[str] = "gpt-4o-mini"
+    base_url: str = "https://api.openai.com/v1"
+    model_name: str = "gpt-4o-mini"
     temperature: Optional[float] = 0.2
     max_tokens: Optional[int] = 4096
     custom_rules: Optional[str] = ""
+    is_default: Optional[bool] = False
+    is_enabled: Optional[bool] = True
 
 
 class TestConnectionRequest(BaseModel):
@@ -59,35 +61,152 @@ def _mask_key(decrypted_key: str) -> str:
     return f"{decrypted_key[:4]}••••••••{decrypted_key[-4:]}"
 
 
-@router.get("/", response_class=HTMLResponse)
-async def ai_helper_settings_page(request: Request, db: AsyncSession = Depends(get_db)):
-    settings = await service.get_settings(db)
-    raw_key = service.decrypt_key(settings.api_key_encrypted)
-    has_api_key = bool(raw_key)
-    masked_key = _mask_key(raw_key)
+# -------------------------------------------------------------
+# Web Views: List, Add, Edit
+# -------------------------------------------------------------
 
-    return templates.TemplateResponse("ai_helper_settings.html", {
+@router.get("/", response_class=HTMLResponse)
+async def ai_helper_index(request: Request, db: AsyncSession = Depends(get_db)):
+    """Main list view: displays all added AI providers and active status."""
+    providers = await service.list_providers(db)
+    active_provider = await service.get_active_provider(db)
+
+    return templates.TemplateResponse("ai_helper_list.html", {
         "request": request,
         "active_page": "ai_helper",
-        "settings": settings,
-        "has_api_key": has_api_key,
+        "providers": providers,
+        "active_provider": active_provider,
+    })
+
+
+@router.get("/create", response_class=HTMLResponse)
+async def ai_helper_create_page(request: Request, db: AsyncSession = Depends(get_db)):
+    """Dedicated Add Provider form page."""
+    return templates.TemplateResponse("ai_helper_form.html", {
+        "request": request,
+        "active_page": "ai_helper",
+        "is_edit": False,
+        "provider": None,
+        "presets": service.PROVIDER_PRESETS,
+    })
+
+
+@router.post("/create")
+async def ai_helper_create_action(
+    request: Request,
+    name: str = Form(...),
+    provider_type: str = Form("openai_compatible"),
+    api_key: str = Form(""),
+    base_url: str = Form("https://api.openai.com/v1"),
+    model_name: str = Form("gpt-4o-mini"),
+    temperature: float = Form(0.2),
+    max_tokens: int = Form(4096),
+    custom_rules: str = Form(""),
+    is_default: bool = Form(False),
+    is_enabled: bool = Form(True),
+    db: AsyncSession = Depends(get_db),
+):
+    """Handles creating a new provider."""
+    data = {
+        "name": name,
+        "provider_type": provider_type,
+        "api_key": api_key,
+        "base_url": base_url,
+        "model_name": model_name,
+        "temperature": temperature,
+        "max_tokens": max_tokens,
+        "custom_rules": custom_rules,
+        "is_default": is_default,
+        "is_enabled": is_enabled,
+    }
+    provider = await service.create_provider(db, data)
+    return RedirectResponse(url="/plugins/ai_helper/", status_code=303)
+
+
+@router.get("/{provider_id}/edit", response_class=HTMLResponse)
+async def ai_helper_edit_page(provider_id: int, request: Request, db: AsyncSession = Depends(get_db)):
+    """Dedicated Edit Provider form page."""
+    provider = await service.get_provider(db, provider_id)
+    if not provider:
+        raise HTTPException(404, "AI Provider not found.")
+
+    raw_key = service.decrypt_key(provider.api_key_encrypted)
+    masked_key = _mask_key(raw_key)
+
+    return templates.TemplateResponse("ai_helper_form.html", {
+        "request": request,
+        "active_page": "ai_helper",
+        "is_edit": True,
+        "provider": provider,
+        "has_api_key": bool(raw_key),
         "masked_api_key": masked_key,
         "presets": service.PROVIDER_PRESETS,
     })
 
 
-@router.post("/api/settings")
-async def update_settings(req: SettingsUpdateRequest, db: AsyncSession = Depends(get_db)):
-    data = req.model_dump(exclude_unset=True)
-    settings = await service.save_settings(db, data)
-    return JSONResponse({
-        "status": "ok",
-        "message": "AI Assistant settings saved successfully.",
-        "is_enabled": settings.is_enabled,
-        "provider_type": settings.provider_type,
-        "model_name": settings.model_name,
-    })
+@router.post("/{provider_id}/edit")
+async def ai_helper_edit_action(
+    provider_id: int,
+    request: Request,
+    name: str = Form(...),
+    provider_type: str = Form("openai_compatible"),
+    api_key: str = Form(""),
+    base_url: str = Form("https://api.openai.com/v1"),
+    model_name: str = Form("gpt-4o-mini"),
+    temperature: float = Form(0.2),
+    max_tokens: int = Form(4096),
+    custom_rules: str = Form(""),
+    is_default: bool = Form(False),
+    is_enabled: bool = Form(True),
+    db: AsyncSession = Depends(get_db),
+):
+    """Handles updating an existing provider."""
+    data = {
+        "name": name,
+        "provider_type": provider_type,
+        "api_key": api_key if api_key.strip() else None,
+        "base_url": base_url,
+        "model_name": model_name,
+        "temperature": temperature,
+        "max_tokens": max_tokens,
+        "custom_rules": custom_rules,
+        "is_default": is_default,
+        "is_enabled": is_enabled,
+    }
+    updated = await service.update_provider(db, provider_id, data)
+    if not updated:
+        raise HTTPException(404, "AI Provider not found.")
+    return RedirectResponse(url="/plugins/ai_helper/", status_code=303)
 
+
+@router.post("/{provider_id}/set-default")
+async def ai_helper_set_default(provider_id: int, db: AsyncSession = Depends(get_db)):
+    """Sets a provider as active default."""
+    success = await service.set_default_provider(db, provider_id)
+    if not success:
+        raise HTTPException(404, "AI Provider not found.")
+    return JSONResponse({"status": "ok", "message": "Default provider updated."})
+
+
+@router.post("/{provider_id}/test")
+async def ai_helper_test_provider(provider_id: int, db: AsyncSession = Depends(get_db)):
+    """Tests connectivity to a stored provider."""
+    result = await service.test_provider(db, provider_id)
+    return JSONResponse(result)
+
+
+@router.delete("/{provider_id}")
+async def ai_helper_delete_provider(provider_id: int, db: AsyncSession = Depends(get_db)):
+    """Deletes an AI provider."""
+    success = await service.delete_provider(db, provider_id)
+    if not success:
+        raise HTTPException(404, "AI Provider not found.")
+    return JSONResponse({"status": "ok", "message": "Provider deleted."})
+
+
+# -------------------------------------------------------------
+# API Endpoints (Test Connection, Model Fetching, Chat Stream)
+# -------------------------------------------------------------
 
 @router.post("/api/test-connection")
 async def test_connection(req: TestConnectionRequest, db: AsyncSession = Depends(get_db)):

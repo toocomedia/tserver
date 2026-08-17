@@ -1,0 +1,227 @@
+{% extends "layout.html" %}
+
+{% block title %}AI Assistant — {{ PANEL_NAME }}{% endblock %}
+{% block page_title %}AI Assistant{% endblock %}
+
+{% block topbar_actions %}
+<div class="d-flex align-items-center gap-sm">
+  <a href="/plugins/ai_helper/create" class="btn btn--primary btn--sm">
+    <i data-lucide="plus"></i> Add Provider
+  </a>
+</div>
+{% endblock %}
+
+{% block content %}
+{% if providers and providers|length > 0 %}
+
+<!-- Active Default Engine Banner -->
+{% if active_provider %}
+<div class="hero-app-box hero-app-box--active mb-lg">
+  <div class="hero-app-box__main">
+    <div class="hero-app-box__header">
+      <h3 style="font-size: 16px; margin: 0; font-weight: 700; display: flex; align-items: center; gap: 8px;">
+        <i data-lucide="sparkles" style="color: var(--color-accent);"></i> Active AI Engine: {{ active_provider.name }}
+      </h3>
+      <span class="badge badge--ok">Default Active</span>
+    </div>
+    <div class="hero-stats">
+      <span><i data-lucide="cpu" style="width: 14px; height: 14px;"></i> Model: <code>{{ active_provider.model_name }}</code></span>
+      <span><i data-lucide="link" style="width: 14px; height: 14px;"></i> {{ active_provider.base_url }}</span>
+      <span><i data-lucide="zap" style="width: 14px; height: 14px;"></i> Status: 
+        {% if active_provider.last_tested_status == 'ok' %}
+          <strong style="color: var(--color-success);">Operational ({{ active_provider.last_latency_ms }}ms)</strong>
+        {% elif active_provider.last_tested_status == 'failed' %}
+          <strong style="color: var(--color-danger);">Failed Test</strong>
+        {% else %}
+          <span class="text-muted">Untested</span>
+        {% endif %}
+      </span>
+    </div>
+  </div>
+  <div class="hero-app-box__actions">
+    <button type="button" class="btn btn--secondary btn--sm" onclick="testProvider({{ active_provider.id }}, this)">
+      <i data-lucide="zap"></i> Test Connection
+    </button>
+    <a href="/plugins/ai_helper/{{ active_provider.id }}/edit" class="btn btn--secondary btn--sm">
+      <i data-lucide="edit-3"></i> Edit
+    </a>
+  </div>
+</div>
+{% endif %}
+
+<!-- Providers List Table -->
+<div class="section mb-xl">
+  <div class="section__header">
+    <h3><i data-lucide="layers"></i> Configured AI Providers & Models</h3>
+  </div>
+  <div class="table-wrap">
+    <table class="table" id="ai-providers-table">
+      <thead>
+        <tr>
+          <th>Provider Name</th>
+          <th>Protocol</th>
+          <th>Model Identifier</th>
+          <th>Endpoint Base URL</th>
+          <th>Status</th>
+          <th class="col-actions text-right" style="width: 220px;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in providers %}
+        <tr class="provider-row-item">
+          <td>
+            <div style="font-weight: 700; color: var(--color-text); display: flex; align-items: center; gap: 8px;">
+              {{ p.name }}
+              {% if p.is_default %}
+                <span class="badge badge--ok" style="font-size: 10px; padding: 2px 6px;">Default</span>
+              {% endif %}
+            </div>
+          </td>
+          <td>
+            <span class="badge badge--neutral">{{ 'Anthropic' if p.provider_type == 'anthropic' else 'OpenAI' }}</span>
+          </td>
+          <td>
+            <code class="font-mono text-sm font-bold">{{ p.model_name }}</code>
+          </td>
+          <td class="text-muted font-mono text-sm">
+            {{ p.base_url }}
+          </td>
+          <td>
+            {% if p.last_tested_status == 'ok' %}
+              <span class="badge badge--ok">✓ {{ p.last_latency_ms }}ms</span>
+            {% elif p.last_tested_status == 'failed' %}
+              <span class="badge badge--error">✗ Error</span>
+            {% else %}
+              <span class="badge badge--neutral">Untested</span>
+            {% endif %}
+          </td>
+          <td class="col-actions text-right">
+            <div style="display: flex; align-items: center; justify-content: flex-end; gap: 6px;">
+              {% if not p.is_default %}
+              <button type="button" class="btn btn--secondary btn--sm" onclick="setDefaultProvider({{ p.id }})" title="Set as active default AI model">
+                Set Default
+              </button>
+              {% endif %}
+              <button type="button" class="btn btn--secondary btn--sm" onclick="testProvider({{ p.id }}, this)" title="Test connection latency">
+                <i data-lucide="zap"></i>
+              </button>
+              <a href="/plugins/ai_helper/{{ p.id }}/edit" class="btn btn--secondary btn--sm" title="Edit Provider">
+                <i data-lucide="edit-3"></i>
+              </a>
+              <button type="button" class="btn btn--danger btn--sm" onclick="deleteProvider({{ p.id }}, '{{ p.name }}')" title="Delete Provider">
+                <i data-lucide="trash-2"></i>
+              </button>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% else %}
+
+<!-- Shared Panel Empty State -->
+{% from "partials/empty_state.html" import empty_state %}
+{{ empty_state(
+  icon='sparkles',
+  title='No AI Providers Added Yet',
+  desc='Add OpenAI, Anthropic Claude, DeepSeek, Groq, OpenRouter, Google Gemini, or custom models to enable AI assistance across the panel.',
+  action_url='/plugins/ai_helper/create',
+  action_label='Add AI Provider',
+  action_icon='plus',
+  id='empty-state-ai'
+) }}
+
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+function testProvider(providerId, btn) {
+  var origHtml = btn.innerHTML;
+  btn.disabled = true;
+  btn.textContent = "Testing...";
+
+  var csrfToken = document.querySelector("meta[name='csrf-token']")?.getAttribute("content") || "";
+
+  fetch("/plugins/ai_helper/" + providerId + "/test", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-CSRF-Token": csrfToken,
+    }
+  })
+    .then(function (res) { return res.json(); })
+    .then(function (data) {
+      btn.disabled = false;
+      btn.innerHTML = origHtml;
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+
+      if (data.success) {
+        alert("✓ Connection successful! Latency: " + data.latency_ms + "ms");
+        window.location.reload();
+      } else {
+        alert("✗ Connection failed: " + (data.error || "Unknown error"));
+      }
+    })
+    .catch(function (err) {
+      btn.disabled = false;
+      btn.innerHTML = origHtml;
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+      alert("Network error: " + err.message);
+    });
+}
+
+function setDefaultProvider(providerId) {
+  var csrfToken = document.querySelector("meta[name='csrf-token']")?.getAttribute("content") || "";
+
+  fetch("/plugins/ai_helper/" + providerId + "/set-default", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-CSRF-Token": csrfToken,
+    }
+  })
+    .then(function (res) { return res.json(); })
+    .then(function (data) {
+      if (data.status === "ok") {
+        window.location.reload();
+      } else {
+        alert("Failed to set default: " + (data.message || "Unknown error"));
+      }
+    })
+    .catch(function (err) {
+      alert("Error: " + err.message);
+    });
+}
+
+function deleteProvider(providerId, providerName) {
+  if (!confirm("Are you sure you want to delete '" + providerName + "'?")) {
+    return;
+  }
+
+  var csrfToken = document.querySelector("meta[name='csrf-token']")?.getAttribute("content") || "";
+
+  fetch("/plugins/ai_helper/" + providerId, {
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/json",
+      "X-CSRF-Token": csrfToken,
+    }
+  })
+    .then(function (res) { return res.json(); })
+    .then(function (data) {
+      if (data.status === "ok") {
+        window.location.reload();
+      } else {
+        alert("Failed to delete provider: " + (data.message || "Unknown error"));
+      }
+    })
+    .catch(function (err) {
+      alert("Error deleting provider: " + err.message);
+    });
+}
+</script>
+{% endblock %}

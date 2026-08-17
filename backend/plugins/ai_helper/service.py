@@ -1,5 +1,5 @@
 """
-service.py — AI Helper service layer: key encryption, settings management, and multi-turn chat pipeline.
+service.py — AI Helper service layer: multi-provider management, key encryption, and chat pipeline.
 """
 from __future__ import annotations
 
@@ -9,11 +9,11 @@ import logging
 from typing import AsyncGenerator, Dict, List, Optional
 
 from cryptography.fernet import Fernet
-from sqlalchemy import delete, select
+from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import config
-from models.ai_helper import AiChatMessage, AiHelperSettings
+from models.ai_helper import AiChatMessage, AiHelperSettings, AiProvider
 from plugins.ai_helper import engine, prompts
 
 logger = logging.getLogger(__name__)
@@ -23,90 +23,58 @@ PROVIDER_PRESETS: Dict[str, Dict[str, any]] = {
         "name": "OpenAI",
         "type": "openai_compatible",
         "base_url": "https://api.openai.com/v1",
-        "default_model": "gpt-4o-mini",
-        "models": ["gpt-4o-mini", "gpt-4o", "o3-mini", "gpt-4-turbo"],
-        "desc": "Official OpenAI API (GPT-4o, GPT-4o-mini, o3-mini)",
+        "desc": "Official OpenAI API (/v1/chat/completions)",
     },
     "anthropic": {
         "name": "Anthropic Claude",
         "type": "anthropic",
         "base_url": "https://api.anthropic.com/v1",
-        "default_model": "claude-3-5-sonnet-20241022",
-        "models": ["claude-3-5-sonnet-20241022", "claude-3-5-haiku-20241022", "claude-3-opus-20240229"],
-        "desc": "Anthropic Claude 3.5 Sonnet & Haiku (/v1/messages)",
+        "desc": "Anthropic Claude API (/v1/messages)",
     },
     "deepseek": {
         "name": "DeepSeek",
         "type": "openai_compatible",
         "base_url": "https://api.deepseek.com/v1",
-        "default_model": "deepseek-chat",
-        "models": ["deepseek-chat", "deepseek-reasoner"],
-        "desc": "DeepSeek V3 & R1 (Cost-effective & powerful)",
+        "desc": "DeepSeek API (/v1/chat/completions)",
     },
     "openrouter": {
         "name": "OpenRouter",
         "type": "openai_compatible",
         "base_url": "https://openrouter.ai/api/v1",
-        "default_model": "openai/gpt-4o-mini",
-        "models": [
-            "openai/gpt-4o-mini",
-            "anthropic/claude-3.5-sonnet",
-            "deepseek/deepseek-chat",
-            "meta-llama/llama-3.3-70b-instruct",
-            "google/gemini-2.0-flash-exp:free"
-        ],
-        "desc": "Unified multi-model API router",
+        "desc": "Universal Multi-Model Router",
     },
     "groq": {
         "name": "Groq",
         "type": "openai_compatible",
         "base_url": "https://api.groq.com/openai/v1",
-        "default_model": "llama-3.3-70b-versatile",
-        "models": [
-            "llama-3.3-70b-versatile",
-            "llama-3.1-8b-instant",
-            "mixtral-8x7b-32768",
-            "deepseek-r1-distill-llama-70b"
-        ],
-        "desc": "Ultra-low latency LPU inference",
+        "desc": "High-Speed LPU Inference",
     },
     "gemini": {
         "name": "Google Gemini",
         "type": "openai_compatible",
         "base_url": "https://generativelanguage.googleapis.com/v1beta/openai/",
-        "default_model": "gemini-2.0-flash",
-        "models": ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"],
-        "desc": "Google Gemini via OpenAI-compatible endpoint",
+        "desc": "Google Gemini via OpenAI endpoint",
     },
     "mistral": {
         "name": "Mistral AI",
         "type": "openai_compatible",
         "base_url": "https://api.mistral.ai/v1",
-        "default_model": "mistral-large-latest",
-        "models": ["mistral-large-latest", "codestral-latest", "mistral-small-latest"],
-        "desc": "Mistral Large & Codestral coding models",
+        "desc": "Mistral AI (/v1/chat/completions)",
     },
     "together": {
         "name": "Together AI",
         "type": "openai_compatible",
         "base_url": "https://api.together.xyz/v1",
-        "default_model": "meta-llama/Llama-3.3-70B-Instruct-Turbo",
-        "models": [
-            "meta-llama/Llama-3.3-70B-Instruct-Turbo",
-            "deepseek-ai/DeepSeek-V3",
-            "mistralai/Mixtral-8x7B-Instruct-v0.1"
-        ],
-        "desc": "Open-source models cloud engine",
+        "desc": "Together AI Cloud Engine",
     },
     "custom": {
         "name": "Custom Endpoint",
         "type": "openai_compatible",
         "base_url": "",
-        "default_model": "",
-        "models": [],
-        "desc": "Any custom proxy or local/remote endpoint",
+        "desc": "Any custom or self-hosted endpoint",
     },
 }
+
 
 
 def _get_fernet() -> Fernet:
@@ -131,77 +99,183 @@ def decrypt_key(encrypted_token: str | None) -> str:
         return ""
 
 
-async def get_settings(db: AsyncSession) -> AiHelperSettings:
-    """Retrieves or creates the singleton settings record."""
-    settings = await db.get(AiHelperSettings, 1)
-    if not settings:
-        settings = AiHelperSettings(
-            id=1,
-            is_enabled=True,
-            provider_type="openai_compatible",
-            base_url="https://api.openai.com/v1",
-            model_name="gpt-4o-mini",
-            temperature=0.2,
-            max_tokens=4096,
-            custom_rules="",
-        )
-        db.add(settings)
-        await db.commit()
-        await db.refresh(settings)
-    return settings
+# -------------------------------------------------------------
+# Provider CRUD Operations
+# -------------------------------------------------------------
+
+async def list_providers(db: AsyncSession) -> List[AiProvider]:
+    """Returns all added AI providers ordered by default first, then newest."""
+    stmt = select(AiProvider).order_by(AiProvider.is_default.desc(), AiProvider.id.desc())
+    result = await db.execute(stmt)
+    return list(result.scalars().all())
 
 
-async def save_settings(db: AsyncSession, data: Dict[str, any]) -> AiHelperSettings:
-    """Updates AI Helper settings."""
-    settings = await get_settings(db)
+async def get_provider(db: AsyncSession, provider_id: int) -> Optional[AiProvider]:
+    return await db.get(AiProvider, provider_id)
 
-    if "is_enabled" in data:
-        settings.is_enabled = bool(data["is_enabled"])
+
+async def get_active_provider(db: AsyncSession) -> Optional[AiProvider]:
+    """Finds the default enabled provider, or falls back to the first enabled one."""
+    stmt = select(AiProvider).where(AiProvider.is_default == True, AiProvider.is_enabled == True)
+    result = await db.execute(stmt)
+    active = result.scalar_one_or_none()
+    if active:
+        return active
+
+    stmt_any = select(AiProvider).where(AiProvider.is_enabled == True).order_by(AiProvider.id.asc()).limit(1)
+    res_any = await db.execute(stmt_any)
+    return res_any.scalar_one_or_none()
+
+
+async def create_provider(db: AsyncSession, data: Dict[str, any]) -> AiProvider:
+    """Adds a new AI provider."""
+    # If first provider or is_default is specified, set default
+    existing_count = (await db.execute(select(AiProvider))).scalars().all()
+    should_be_default = bool(data.get("is_default")) or len(existing_count) == 0
+
+    if should_be_default:
+        await db.execute(update(AiProvider).values(is_default=False))
+
+    raw_key = data.get("api_key") or ""
+    provider = AiProvider(
+        name=str(data.get("name") or "New Provider").strip(),
+        provider_type=str(data.get("provider_type") or "openai_compatible").strip(),
+        api_key_encrypted=encrypt_key(raw_key) if raw_key else None,
+        base_url=str(data.get("base_url") or "https://api.openai.com/v1").strip(),
+        model_name=str(data.get("model_name") or "gpt-4o-mini").strip(),
+        temperature=float(data.get("temperature", 0.2)),
+        max_tokens=int(data.get("max_tokens", 4096)),
+        custom_rules=str(data.get("custom_rules") or "").strip(),
+        is_default=should_be_default,
+        is_enabled=bool(data.get("is_enabled", True)),
+    )
+    db.add(provider)
+    await db.commit()
+    await db.refresh(provider)
+    return provider
+
+
+async def update_provider(db: AsyncSession, provider_id: int, data: Dict[str, any]) -> Optional[AiProvider]:
+    """Updates an existing provider."""
+    provider = await db.get(AiProvider, provider_id)
+    if not provider:
+        return None
+
+    if data.get("is_default"):
+        await db.execute(update(AiProvider).values(is_default=False))
+        provider.is_default = True
+
+    if "name" in data:
+        provider.name = str(data["name"]).strip()
     if "provider_type" in data:
-        settings.provider_type = str(data["provider_type"]).strip() or "openai_compatible"
+        provider.provider_type = str(data["provider_type"]).strip()
     if "base_url" in data:
-        settings.base_url = str(data["base_url"]).strip()
+        provider.base_url = str(data["base_url"]).strip()
     if "model_name" in data:
-        settings.model_name = str(data["model_name"]).strip() or "gpt-4o-mini"
+        provider.model_name = str(data["model_name"]).strip()
     if "temperature" in data:
         try:
-            settings.temperature = max(0.0, min(2.0, float(data["temperature"])))
+            provider.temperature = float(data["temperature"])
         except (ValueError, TypeError):
             pass
     if "max_tokens" in data:
         try:
-            settings.max_tokens = max(128, min(32768, int(data["max_tokens"])))
+            provider.max_tokens = int(data["max_tokens"])
         except (ValueError, TypeError):
             pass
     if "custom_rules" in data:
-        settings.custom_rules = str(data["custom_rules"]).strip()
+        provider.custom_rules = str(data["custom_rules"]).strip()
+    if "is_enabled" in data:
+        provider.is_enabled = bool(data["is_enabled"])
 
-    # Only update API key if a non-empty new key is provided
-    raw_api_key = data.get("api_key")
-    if raw_api_key and isinstance(raw_api_key, str) and raw_api_key.strip():
-        settings.api_key_encrypted = encrypt_key(raw_api_key)
+    raw_key = data.get("api_key")
+    if raw_key and isinstance(raw_key, str) and raw_key.strip():
+        provider.api_key_encrypted = encrypt_key(raw_key.strip())
 
     await db.commit()
-    await db.refresh(settings)
-    return settings
+    await db.refresh(provider)
+    return provider
 
+
+async def delete_provider(db: AsyncSession, provider_id: int) -> bool:
+    """Deletes an AI provider."""
+    provider = await db.get(AiProvider, provider_id)
+    if not provider:
+        return False
+    was_default = provider.is_default
+    await db.delete(provider)
+    await db.commit()
+
+    if was_default:
+        # Pick another provider as default
+        stmt = select(AiProvider).order_by(AiProvider.id.asc()).limit(1)
+        next_p = (await db.execute(stmt)).scalar_one_or_none()
+        if next_p:
+            next_p.is_default = True
+            await db.commit()
+    return True
+
+
+async def set_default_provider(db: AsyncSession, provider_id: int) -> bool:
+    """Marks a provider as active default."""
+    target = await db.get(AiProvider, provider_id)
+    if not target:
+        return False
+    await db.execute(update(AiProvider).values(is_default=False))
+    target.is_default = True
+    target.is_enabled = True
+    await db.commit()
+    return True
+
+
+async def test_provider(db: AsyncSession, provider_id: int) -> Dict[str, any]:
+    """Runs a live test against a stored provider and records result."""
+    provider = await db.get(AiProvider, provider_id)
+    if not provider:
+        return {"success": False, "error": "Provider not found."}
+
+    api_key = decrypt_key(provider.api_key_encrypted)
+    result = await engine.test_api_connection(
+        provider_type=provider.provider_type,
+        base_url=provider.base_url,
+        api_key=api_key,
+        model_name=provider.model_name,
+    )
+
+    provider.last_tested_status = "ok" if result.get("success") else "failed"
+    provider.last_latency_ms = result.get("latency_ms")
+    await db.commit()
+    return result
+
+
+# -------------------------------------------------------------
+# Connection & Model Discovery
+# -------------------------------------------------------------
 
 async def test_connection(
     db: AsyncSession,
     override_data: Optional[Dict[str, any]] = None,
 ) -> Dict[str, any]:
     """Tests connection to the configured or submitted AI provider."""
-    settings = await get_settings(db)
-
-    provider_type = (override_data.get("provider_type") if override_data else None) or settings.provider_type
-    base_url = (override_data.get("base_url") if override_data else None) or settings.base_url
-    model_name = (override_data.get("model_name") if override_data else None) or settings.model_name
-
+    provider_type = override_data.get("provider_type") if override_data else None
+    base_url = override_data.get("base_url") if override_data else None
+    model_name = override_data.get("model_name") if override_data else None
     override_key = override_data.get("api_key") if override_data else None
-    if override_key and isinstance(override_key, str) and override_key.strip():
-        api_key = override_key.strip()
+
+    if not provider_type or not base_url or not model_name:
+        active = await get_active_provider(db)
+        if active:
+            provider_type = provider_type or active.provider_type
+            base_url = base_url or active.base_url
+            model_name = model_name or active.model_name
+            if not override_key:
+                api_key = decrypt_key(active.api_key_encrypted)
+            else:
+                api_key = override_key.strip()
+        else:
+            api_key = override_key.strip() if override_key else ""
     else:
-        api_key = decrypt_key(settings.api_key_encrypted)
+        api_key = override_key.strip() if override_key else ""
 
     if not api_key:
         return {
@@ -225,15 +299,15 @@ async def fetch_models(
     override_data: Optional[Dict[str, any]] = None,
 ) -> Dict[str, any]:
     """Fetches available model IDs from provider /models endpoint."""
-    settings = await get_settings(db)
-    provider_type = (override_data.get("provider_type") if override_data else None) or settings.provider_type
-    base_url = (override_data.get("base_url") if override_data else None) or settings.base_url
-
+    provider_type = (override_data.get("provider_type") if override_data else None) or "openai_compatible"
+    base_url = (override_data.get("base_url") if override_data else None) or "https://api.openai.com/v1"
     override_key = override_data.get("api_key") if override_data else None
+
     if override_key and isinstance(override_key, str) and override_key.strip():
         api_key = override_key.strip()
     else:
-        api_key = decrypt_key(settings.api_key_encrypted)
+        active = await get_active_provider(db)
+        api_key = decrypt_key(active.api_key_encrypted) if active else ""
 
     if not api_key:
         return {
@@ -268,6 +342,10 @@ async def fetch_models(
         }
 
 
+# -------------------------------------------------------------
+# Streaming Chat Pipeline
+# -------------------------------------------------------------
+
 async def stream_ai_chat(
     db: AsyncSession,
     session_id: str,
@@ -277,26 +355,30 @@ async def stream_ai_chat(
 ) -> AsyncGenerator[str, None]:
     """
     Main multi-turn streaming chat pipeline:
-    1. Loads active configuration & decrypted API key.
+    1. Loads active provider & decrypted API key.
     2. Builds system prompt with fixed rules + active context + custom rules.
     3. Loads previous conversation history for this session.
     4. Streams AI chunks via engine and persists the conversation.
     """
-    settings = await get_settings(db)
-    if not settings.is_enabled:
-        yield "Error: AI Assistant is currently disabled in settings."
+    active = await get_active_provider(db)
+    if not active:
+        yield "Error: No active AI provider configured. Please add an AI provider in the AI Assistant settings."
         return
 
-    api_key = decrypt_key(settings.api_key_encrypted)
+    if not active.is_enabled:
+        yield "Error: Active AI provider is currently disabled."
+        return
+
+    api_key = decrypt_key(active.api_key_encrypted)
     if not api_key:
-        yield "Error: No AI API key is configured. Please configure an API key in the AI Assistant settings."
+        yield "Error: No API key configured for the active provider. Please configure an API key."
         return
 
     # Trim context log to prevent exceeding context window
     trimmed_context = engine.trim_context_log(context_text or "")
     system_prompt = prompts.build_system_prompt(
         context=trimmed_context,
-        custom_rules=settings.custom_rules,
+        custom_rules=active.custom_rules,
     )
 
     # Fetch recent conversation history (last 10 messages)
@@ -332,13 +414,13 @@ async def stream_ai_chat(
     full_response = []
     try:
         async for chunk in engine.stream_chat(
-            provider_type=settings.provider_type,
-            base_url=settings.base_url,
+            provider_type=active.provider_type,
+            base_url=active.base_url,
             api_key=api_key,
-            model_name=settings.model_name,
+            model_name=active.model_name,
             messages=messages,
-            temperature=settings.temperature,
-            max_tokens=settings.max_tokens,
+            temperature=active.temperature,
+            max_tokens=active.max_tokens,
         ):
             full_response.append(chunk)
             yield chunk

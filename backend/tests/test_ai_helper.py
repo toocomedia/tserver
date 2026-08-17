@@ -64,15 +64,11 @@ class AIHelperTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(lines), 50)
         self.assertEqual(lines[-1], "Log line 499")
 
-    async def test_settings_save_and_retrieve(self):
-        """Verify settings persistence in database."""
+    async def test_provider_creation_and_update(self):
+        """Verify provider persistence and updates in database."""
         async with AsyncSessionLocal() as db:
-            settings = await service.get_settings(db)
-            self.assertIsNotNone(settings)
-            self.assertEqual(settings.id, 1)
-
-            # Update settings
-            await service.save_settings(db, {
+            provider = await service.create_provider(db, {
+                "name": "Anthropic Claude Test",
                 "provider_type": "anthropic",
                 "base_url": "https://api.anthropic.com/v1",
                 "model_name": "claude-3-5-sonnet-20241022",
@@ -80,13 +76,12 @@ class AIHelperTests(unittest.IsolatedAsyncioTestCase):
                 "temperature": 0.3,
                 "custom_rules": "Always suggest PostgreSQL.",
             })
-
-            updated = await service.get_settings(db)
-            self.assertEqual(updated.provider_type, "anthropic")
-            self.assertEqual(updated.model_name, "claude-3-5-sonnet-20241022")
-            self.assertEqual(updated.temperature, 0.3)
-            self.assertEqual(updated.custom_rules, "Always suggest PostgreSQL.")
-            self.assertEqual(service.decrypt_key(updated.api_key_encrypted), "sk-ant-test-key")
+            self.assertIsNotNone(provider.id)
+            self.assertEqual(provider.provider_type, "anthropic")
+            self.assertEqual(provider.model_name, "claude-3-5-sonnet-20241022")
+            self.assertEqual(provider.temperature, 0.3)
+            self.assertEqual(provider.custom_rules, "Always suggest PostgreSQL.")
+            self.assertEqual(service.decrypt_key(provider.api_key_encrypted), "sk-ant-test-key")
 
     async def test_stream_openai_compatible_mock(self):
         """Verify OpenAI SSE parsing with mocked httpx stream."""
@@ -191,11 +186,83 @@ class AIHelperTests(unittest.IsolatedAsyncioTestCase):
             def stream(self, method, url, headers=None, json=None):
                 return MockResponse()
 
+    async def test_provider_crud_lifecycle(self):
+        """Verify full lifecycle of adding, setting default, and deleting providers."""
         async with AsyncSessionLocal() as db:
-            # Set up active API key and provider
-            await service.save_settings(db, {
+            # 1. Create provider
+            p1 = await service.create_provider(db, {
+                "name": "OpenAI GPT-4o",
+                "provider_type": "openai_compatible",
+                "base_url": "https://api.openai.com/v1",
+                "model_name": "gpt-4o",
+                "api_key": "sk-openai-test",
+                "is_default": True,
+            })
+            self.assertIsNotNone(p1.id)
+            self.assertEqual(p1.name, "OpenAI GPT-4o")
+            self.assertTrue(p1.is_default)
+            self.assertEqual(service.decrypt_key(p1.api_key_encrypted), "sk-openai-test")
+
+            # 2. Create second provider
+            p2 = await service.create_provider(db, {
+                "name": "DeepSeek Chat",
+                "provider_type": "openai_compatible",
+                "base_url": "https://api.deepseek.com/v1",
+                "model_name": "deepseek-chat",
+                "api_key": "sk-deepseek-test",
+                "is_default": False,
+            })
+            self.assertFalse(p2.is_default)
+
+            # 3. List providers
+            providers = await service.list_providers(db)
+            self.assertTrue(len(providers) >= 2)
+
+            # 4. Set p2 as default
+            await service.set_default_provider(db, p2.id)
+            active = await service.get_active_provider(db)
+            self.assertEqual(active.id, p2.id)
+            self.assertEqual(active.model_name, "deepseek-chat")
+
+            # 5. Delete provider
+            await service.delete_provider(db, p2.id)
+            remaining_active = await service.get_active_provider(db)
+            self.assertNotEqual(remaining_active.id, p2.id)
+
+    async def test_chat_pipeline_and_session_memory(self):
+        """Verify multi-turn chat pipeline saves history and clears session."""
+        sse_lines = [
+            'data: {"choices":[{"delta":{"content":"Configure port 3000: [ACTION:SET_PORT:3000]"}}]}',
+            'data: [DONE]',
+        ]
+
+        class MockResponse:
+            status_code = 200
+            async def __aenter__(self):
+                return self
+            async def __aexit__(self, *args):
+                pass
+            async def aiter_lines(self):
+                for line in sse_lines:
+                    yield line
+
+        class MockClient:
+            async def __aenter__(self):
+                return self
+            async def __aexit__(self, *args):
+                pass
+            def stream(self, method, url, headers=None, json=None):
+                return MockResponse()
+
+        async with AsyncSessionLocal() as db:
+            # Set up active default provider
+            p = await service.create_provider(db, {
+                "name": "Test Active Provider",
                 "provider_type": "openai_compatible",
                 "api_key": "sk-valid-test-key",
+                "base_url": "https://api.openai.com/v1",
+                "model_name": "gpt-4o-mini",
+                "is_default": True,
                 "is_enabled": True,
             })
 
@@ -224,6 +291,7 @@ class AIHelperTests(unittest.IsolatedAsyncioTestCase):
             empty_history = await service.get_session_messages(db, session_id)
             self.assertEqual(len(empty_history), 0)
 
+
     def test_provider_presets_catalog(self):
         """Verify pre-configured presets catalog contains all popular providers."""
         presets = service.PROVIDER_PRESETS
@@ -237,9 +305,9 @@ class AIHelperTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("together", presets)
         self.assertIn("custom", presets)
 
-        # Check default models
-        self.assertEqual(presets["openai"]["default_model"], "gpt-4o-mini")
-        self.assertEqual(presets["deepseek"]["default_model"], "deepseek-chat")
+        # Check endpoints and types
+        self.assertEqual(presets["openai"]["type"], "openai_compatible")
+        self.assertEqual(presets["openai"]["base_url"], "https://api.openai.com/v1")
         self.assertEqual(presets["anthropic"]["type"], "anthropic")
 
     async def test_fetch_available_models_openai_mock(self):

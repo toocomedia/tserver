@@ -1,0 +1,404 @@
+{% extends "layout.html" %}
+
+{% block title %}{% if is_edit %}Edit AI Provider{% else %}Add AI Provider{% endif %} — {{ PANEL_NAME }}{% endblock %}
+{% block page_title %}{% if is_edit %}Edit AI Provider{% else %}Add AI Provider{% endif %}{% endblock %}
+
+{% block topbar_actions %}
+<a href="/plugins/ai_helper/" class="btn btn--secondary btn--sm">
+  <i data-lucide="arrow-left"></i> Back to Providers
+</a>
+{% endblock %}
+
+{% block content %}
+<div style="max-width: 860px; margin: 0 auto; padding-bottom: 80px;">
+
+  <!-- Step 1: Quick Presets -->
+  <div class="section mb-lg">
+    <div class="section__header">
+      <h3><i data-lucide="layers"></i> 1. Choose Provider Preset</h3>
+    </div>
+    <div class="section__body">
+      <p class="form-hint mb-md">Select an AI service provider to auto-fill its protocol format and verified Base URL:</p>
+      <div class="settings-choice-grid mb-md" id="preset-grid">
+        {% for key, p in presets.items() %}
+        <label class="settings-choice {% if (provider and provider.provider_type == p.type and p.base_url and p.base_url in provider.base_url) or (not provider and key == 'openai') %}settings-choice--active{% endif %}" 
+               data-preset-key="{{ key }}" 
+               data-preset-name="{{ p.name }}"
+               data-preset-type="{{ p.type }}" 
+               data-preset-url="{{ p.base_url }}">
+          <div class="settings-choice__header">
+            <input type="radio" name="provider_preset" value="{{ key }}" {% if (provider and provider.provider_type == p.type and p.base_url and p.base_url in provider.base_url) or (not provider and key == 'openai') %}checked{% endif %}>
+            <span class="settings-choice__title">{{ p.name }}</span>
+          </div>
+          <span class="settings-choice__desc">{{ p.desc }}</span>
+        </label>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 2: Connection & Model Form -->
+  <div class="section mb-xl">
+    <div class="section__header">
+      <h3><i data-lucide="sliders"></i> 2. Provider & Model Configuration</h3>
+    </div>
+    <div class="section__body">
+      <form id="provider-form" method="POST" action="{% if is_edit %}/plugins/ai_helper/{{ provider.id }}/edit{% else %}/plugins/ai_helper/create{% endif %}" autocomplete="off" data-lpignore="true" data-form-type="other">
+        
+        <!-- Decoy inputs to prevent browser password managers from auto-filling admin email/passwords into configuration fields -->
+        <input type="text" name="fake_email_prevent_autofill" style="display:none !important;" tabindex="-1" autocomplete="off">
+        <input type="password" name="fake_password_prevent_autofill" style="display:none !important;" tabindex="-1" autocomplete="off">
+
+        <div class="form-group mb-lg">
+          <label class="form-label" for="provider_name">Display Name</label>
+          <input type="text" class="form-input" id="provider_name" name="name" value="{{ provider.name if provider else 'OpenAI' }}" placeholder="e.g. OpenAI Production, DeepSeek V3, Claude Sonnet" required autocomplete="off" data-lpignore="true">
+          <p class="form-hint">A label to identify this AI provider model in the panel.</p>
+        </div>
+
+        <div class="form-group mb-lg">
+          <label class="form-label" for="provider_type">Protocol Format</label>
+          <div class="form-select-wrap">
+            <select class="form-select" id="provider_type" name="provider_type" autocomplete="off" data-lpignore="true">
+              <option value="openai_compatible" {% if provider and provider.provider_type == 'openai_compatible' %}selected{% endif %}>OpenAI-Compatible (/chat/completions)</option>
+              <option value="anthropic" {% if provider and provider.provider_type == 'anthropic' %}selected{% endif %}>Anthropic (/messages)</option>
+            </select>
+          </div>
+          <p class="form-hint">Select Anthropic for Claude API; use OpenAI-Compatible for all other providers (DeepSeek, OpenRouter, Groq, Gemini, Mistral, Together, Custom).</p>
+        </div>
+
+        <div class="form-group mb-lg">
+          <label class="form-label" for="api_key">API Key</label>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <input type="password" class="form-input font-mono" id="api_key" name="api_key" placeholder="{% if is_edit and has_api_key %}•••••••••••••••• (Leave blank to keep unchanged){% else %}Enter your API Key (e.g. sk-...){% endif %}" autocomplete="new-password" data-lpignore="true" data-1p-ignore="true" style="flex: 1;">
+            <button type="button" class="btn btn--secondary btn--sm" id="btn-toggle-key" style="height: 34px; padding: 0 12px;" title="Toggle show/hide">
+              <i data-lucide="eye" id="key-eye-icon"></i>
+            </button>
+          </div>
+          <p class="form-hint">Stored securely encrypted at rest using AES-128 Fernet with the panel secret key.</p>
+        </div>
+
+        <div class="form-group mb-lg">
+          <label class="form-label" for="base_url">Endpoint Base URL</label>
+          <input type="text" class="form-input font-mono" id="base_url" name="base_url" value="{{ provider.base_url if provider else 'https://api.openai.com/v1' }}" placeholder="https://api.openai.com/v1" required autocomplete="off" data-lpignore="true">
+          <p class="form-hint">Base URL of the provider API endpoint.</p>
+        </div>
+
+        <!-- Model Identifier Section with Check/Fetch and Custom option -->
+        <div class="form-group mb-lg" id="model-section">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+            <label class="form-label m-0" for="model_select">Model Identifier</label>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span id="fetch-models-count" class="badge badge--ok" hidden></span>
+              <button type="button" class="btn btn--secondary btn--sm" id="btn-fetch-models" style="height: 28px; padding: 0 10px; font-size: 11.5px;">
+                <i data-lucide="refresh-cw" style="width: 13px; height: 13px;"></i> Check & Fetch Models from API
+              </button>
+            </div>
+          </div>
+
+          <!-- Model Select List (auto-populated from API) -->
+          <div class="form-select-wrap mb-xs" id="model-select-wrap">
+            <select class="form-select font-mono" id="model_select">
+              {% if provider and provider.model_name %}
+                <option value="{{ provider.model_name }}" selected>{{ provider.model_name }} (Current Active)</option>
+              {% else %}
+                <option value="">-- Click 'Check & Fetch Models' or choose custom below --</option>
+              {% endif %}
+              <option value="__custom__">✏️ + Enter Custom Model Name...</option>
+            </select>
+          </div>
+
+          <!-- Custom Model Text Input (shown when __custom__ is selected or custom model is typed) -->
+          <div id="custom-model-wrap" {% if provider and provider.model_name %}style="display: none;"{% endif %}>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <input type="text" class="form-input font-mono" id="custom_model_input" placeholder="Type custom model name (e.g. gpt-4o, claude-3-5-sonnet, deepseek-chat)..." value="{{ provider.model_name if provider else '' }}" autocomplete="off" data-lpignore="true" style="flex: 1;">
+              <button type="button" class="btn btn--secondary btn--sm" id="btn-back-to-select" style="height: 34px; white-space: nowrap;">
+                Use Dropdown List
+              </button>
+            </div>
+          </div>
+
+          <!-- Actual Hidden Form Input submitted with form -->
+          <input type="hidden" id="model_name" name="model_name" value="{{ provider.model_name if provider else '' }}">
+
+          <p class="form-hint" id="model-hint-text">
+            Click <strong>Check & Fetch Models from API</strong> to retrieve available models from your account, or select <strong>+ Enter Custom Model Name</strong>.
+          </p>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;" class="mb-lg">
+          <div class="form-group">
+            <label class="form-label" for="temperature">Temperature</label>
+            <input type="number" step="0.05" min="0.0" max="1.0" class="form-input" id="temperature" name="temperature" value="{{ provider.temperature if provider else 0.2 }}" autocomplete="off">
+            <p class="form-hint">Recommended: <code>0.2</code> for deterministic, reliable code and commands.</p>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="max_tokens">Max Response Tokens</label>
+            <input type="number" step="256" min="256" max="32768" class="form-input" id="max_tokens" name="max_tokens" value="{{ provider.max_tokens if provider else 4096 }}" autocomplete="off">
+            <p class="form-hint">Max token length per AI response (default: 4096).</p>
+          </div>
+        </div>
+
+        <div class="form-group mb-lg">
+          <label class="form-label" for="custom_rules">Custom System Prompt Rules</label>
+          <textarea class="form-input font-mono" id="custom_rules" name="custom_rules" rows="4" style="height: auto; padding: 10px; line-height: 1.5;" placeholder="Optional prompt directives (e.g. 'Always respond in French', 'Prefer PostgreSQL').">{{ provider.custom_rules if provider else '' }}</textarea>
+          <p class="form-hint">Special instructions followed when this AI model is used.</p>
+        </div>
+
+        <div class="mb-lg">
+          <label class="form-check">
+            <input type="checkbox" name="is_default" value="true" {% if (provider and provider.is_default) or not is_edit %}checked{% endif %}>
+            <span style="font-weight: 600;">Set as Active Default AI Provider for the panel</span>
+          </label>
+        </div>
+
+        <!-- Fixed Bottom Action Bar -->
+        <div class="fixed-action-bar">
+          <div class="fixed-action-inner">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span id="test-connection-indicator" style="display: flex; align-items: center; gap: 6px; font-size: 13px;"></span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px; margin-left: auto;">
+              <a href="/plugins/ai_helper/" class="btn btn--secondary btn--sm">Cancel</a>
+              <button type="button" class="btn btn--secondary btn--sm" id="btn-test-connection">
+                <i data-lucide="zap"></i> Test Connection
+              </button>
+              <button type="submit" class="btn btn--primary btn--sm" id="btn-save-provider">
+                <i data-lucide="save"></i> {% if is_edit %}Update Provider{% else %}Save Provider{% endif %}
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  if (typeof lucide !== 'undefined') {
+    lucide.createIcons();
+  }
+
+  var modelSelect = document.getElementById("model_select");
+  var customModelWrap = document.getElementById("custom-model-wrap");
+  var customModelInput = document.getElementById("custom_model_input");
+  var modelNameHidden = document.getElementById("model_name");
+  var btnBackToSelect = document.getElementById("btn-back-to-select");
+
+  // Sync hidden model_name input with dropdown or custom text box
+  function syncModelValue() {
+    if (modelSelect.value === "__custom__") {
+      modelNameHidden.value = customModelInput.value.trim();
+    } else if (modelSelect.value) {
+      modelNameHidden.value = modelSelect.value.trim();
+      customModelInput.value = modelSelect.value.trim();
+    }
+  }
+
+  modelSelect.addEventListener("change", function () {
+    if (this.value === "__custom__") {
+      customModelWrap.style.display = "block";
+      customModelInput.focus();
+    } else {
+      customModelWrap.style.display = "none";
+    }
+    syncModelValue();
+  });
+
+  customModelInput.addEventListener("input", function () {
+    modelNameHidden.value = this.value.trim();
+  });
+
+  if (btnBackToSelect) {
+    btnBackToSelect.addEventListener("click", function () {
+      customModelWrap.style.display = "none";
+      if (modelSelect.options.length > 2) {
+        modelSelect.selectedIndex = 0;
+      }
+      syncModelValue();
+    });
+  }
+
+  // Preset Card Click Handler
+  var presetCards = document.querySelectorAll("[data-preset-key]");
+  presetCards.forEach(function (card) {
+    card.addEventListener("click", function () {
+      presetCards.forEach(function (c) { c.classList.remove("settings-choice--active"); });
+      this.classList.add("settings-choice--active");
+      var radio = this.querySelector("input[type='radio']");
+      if (radio) radio.checked = true;
+
+      var pKey = this.getAttribute("data-preset-key");
+      var pName = this.getAttribute("data-preset-name");
+      var pType = this.getAttribute("data-preset-type");
+      var pUrl = this.getAttribute("data-preset-url");
+
+      if (pName && pKey !== "custom") document.getElementById("provider_name").value = pName;
+      if (pType) document.getElementById("provider_type").value = pType;
+      if (pUrl !== null && pUrl !== "") document.getElementById("base_url").value = pUrl;
+    });
+  });
+
+  // Dynamic "Check & Fetch Models from API" Button
+  var fetchModelsBtn = document.getElementById("btn-fetch-models");
+  var fetchCountBadge = document.getElementById("fetch-models-count");
+
+  function runFetchModels() {
+    var apiKey = document.getElementById("api_key").value.trim();
+    var baseUrl = document.getElementById("base_url").value.trim();
+    var providerType = document.getElementById("provider_type").value;
+
+    fetchModelsBtn.disabled = true;
+    var origHtml = fetchModelsBtn.innerHTML;
+    fetchModelsBtn.innerHTML = '<span class="spinner-sm"></span> Checking API...';
+    if (fetchCountBadge) fetchCountBadge.hidden = true;
+
+    var payload = {
+      provider_type: providerType,
+      api_key: apiKey || undefined,
+      base_url: baseUrl,
+    };
+
+    var csrfToken = document.querySelector("meta[name='csrf-token']")?.getAttribute("content") || "";
+
+    fetch("/plugins/ai_helper/api/fetch-models", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": csrfToken,
+      },
+      body: JSON.stringify(payload),
+    })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        fetchModelsBtn.disabled = false;
+        fetchModelsBtn.innerHTML = origHtml;
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+
+        if (data.success && data.models && data.models.length > 0) {
+          // Rebuild select options
+          modelSelect.innerHTML = "";
+          
+          var curVal = modelNameHidden.value.trim();
+          var foundCurrent = false;
+
+          data.models.forEach(function (m) {
+            var opt = document.createElement("option");
+            opt.value = m;
+            opt.textContent = m;
+            if (m === curVal) {
+              opt.selected = true;
+              foundCurrent = true;
+            }
+            modelSelect.appendChild(opt);
+          });
+
+          // Add custom option at the bottom
+          var optCustom = document.createElement("option");
+          optCustom.value = "__custom__";
+          optCustom.textContent = "✏️ + Enter Custom Model Name...";
+          modelSelect.appendChild(optCustom);
+
+          if (!foundCurrent && data.models.length > 0) {
+            modelSelect.selectedIndex = 0;
+            modelNameHidden.value = data.models[0];
+            customModelInput.value = data.models[0];
+          }
+
+          customModelWrap.style.display = "none";
+          if (fetchCountBadge) {
+            fetchCountBadge.hidden = false;
+            fetchCountBadge.textContent = "✓ " + data.count + " models available";
+          }
+        } else {
+          alert("Could not fetch models from API: " + (data.error || "Please verify your API key and Base URL."));
+        }
+      })
+      .catch(function (err) {
+        fetchModelsBtn.disabled = false;
+        fetchModelsBtn.innerHTML = origHtml;
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+        alert("Network error checking models: " + err.message);
+      });
+  }
+
+  if (fetchModelsBtn) {
+    fetchModelsBtn.addEventListener("click", runFetchModels);
+  }
+
+  // Show/Hide API Key
+  var keyInput = document.getElementById("api_key");
+  var toggleBtn = document.getElementById("btn-toggle-key");
+  if (toggleBtn && keyInput) {
+    toggleBtn.addEventListener("click", function () {
+      if (keyInput.type === "password") {
+        keyInput.type = "text";
+      } else {
+        keyInput.type = "password";
+      }
+    });
+  }
+
+  // Test Connection
+  var testBtn = document.getElementById("btn-test-connection");
+  var indicator = document.getElementById("test-connection-indicator");
+
+  if (testBtn) {
+    testBtn.addEventListener("click", function () {
+      syncModelValue();
+      testBtn.disabled = true;
+      testBtn.textContent = "Testing...";
+      if (indicator) indicator.innerHTML = '<span class="text-muted">Testing connection...</span>';
+
+      var payload = {
+        provider_type: document.getElementById("provider_type").value,
+        api_key: document.getElementById("api_key").value || undefined,
+        base_url: document.getElementById("base_url").value,
+        model_name: document.getElementById("model_name").value,
+      };
+
+      var csrfToken = document.querySelector("meta[name='csrf-token']")?.getAttribute("content") || "";
+
+      fetch("/plugins/ai_helper/api/test-connection", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRF-Token": csrfToken,
+        },
+        body: JSON.stringify(payload),
+      })
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+          testBtn.disabled = false;
+          testBtn.textContent = "Test Connection";
+          if (data.success) {
+            if (indicator) indicator.innerHTML = '<span class="badge badge--ok">✓ Connected (' + data.latency_ms + 'ms)</span>';
+          } else {
+            if (indicator) indicator.innerHTML = '<span class="badge badge--error">✗ ' + (data.error || "Connection failed") + '</span>';
+          }
+        })
+        .catch(function (err) {
+          testBtn.disabled = false;
+          testBtn.textContent = "Test Connection";
+          if (indicator) indicator.innerHTML = '<span class="badge badge--error">✗ Error: ' + err.message + '</span>';
+        });
+    });
+  }
+
+  // Before form submits, ensure model_name has value
+  document.getElementById("provider-form").addEventListener("submit", function (e) {
+    syncModelValue();
+    if (!modelNameHidden.value.trim()) {
+      e.preventDefault();
+      alert("Please select or enter a Model Identifier.");
+      customModelWrap.style.display = "block";
+      customModelInput.focus();
+    }
+  });
+});
+</script>
+{% endblock %}
