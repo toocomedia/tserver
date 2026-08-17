@@ -18,6 +18,96 @@ from plugins.ai_helper import engine, prompts
 
 logger = logging.getLogger(__name__)
 
+PROVIDER_PRESETS: Dict[str, Dict[str, any]] = {
+    "openai": {
+        "name": "OpenAI",
+        "type": "openai_compatible",
+        "base_url": "https://api.openai.com/v1",
+        "default_model": "gpt-4o-mini",
+        "models": ["gpt-4o-mini", "gpt-4o", "o3-mini", "gpt-4-turbo"],
+        "desc": "Official OpenAI API (GPT-4o, GPT-4o-mini, o3-mini)",
+    },
+    "anthropic": {
+        "name": "Anthropic Claude",
+        "type": "anthropic",
+        "base_url": "https://api.anthropic.com/v1",
+        "default_model": "claude-3-5-sonnet-20241022",
+        "models": ["claude-3-5-sonnet-20241022", "claude-3-5-haiku-20241022", "claude-3-opus-20240229"],
+        "desc": "Anthropic Claude 3.5 Sonnet & Haiku (/v1/messages)",
+    },
+    "deepseek": {
+        "name": "DeepSeek",
+        "type": "openai_compatible",
+        "base_url": "https://api.deepseek.com/v1",
+        "default_model": "deepseek-chat",
+        "models": ["deepseek-chat", "deepseek-reasoner"],
+        "desc": "DeepSeek V3 & R1 (Cost-effective & powerful)",
+    },
+    "openrouter": {
+        "name": "OpenRouter",
+        "type": "openai_compatible",
+        "base_url": "https://openrouter.ai/api/v1",
+        "default_model": "openai/gpt-4o-mini",
+        "models": [
+            "openai/gpt-4o-mini",
+            "anthropic/claude-3.5-sonnet",
+            "deepseek/deepseek-chat",
+            "meta-llama/llama-3.3-70b-instruct",
+            "google/gemini-2.0-flash-exp:free"
+        ],
+        "desc": "Unified multi-model API router",
+    },
+    "groq": {
+        "name": "Groq",
+        "type": "openai_compatible",
+        "base_url": "https://api.groq.com/openai/v1",
+        "default_model": "llama-3.3-70b-versatile",
+        "models": [
+            "llama-3.3-70b-versatile",
+            "llama-3.1-8b-instant",
+            "mixtral-8x7b-32768",
+            "deepseek-r1-distill-llama-70b"
+        ],
+        "desc": "Ultra-low latency LPU inference",
+    },
+    "gemini": {
+        "name": "Google Gemini",
+        "type": "openai_compatible",
+        "base_url": "https://generativelanguage.googleapis.com/v1beta/openai/",
+        "default_model": "gemini-2.0-flash",
+        "models": ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"],
+        "desc": "Google Gemini via OpenAI-compatible endpoint",
+    },
+    "mistral": {
+        "name": "Mistral AI",
+        "type": "openai_compatible",
+        "base_url": "https://api.mistral.ai/v1",
+        "default_model": "mistral-large-latest",
+        "models": ["mistral-large-latest", "codestral-latest", "mistral-small-latest"],
+        "desc": "Mistral Large & Codestral coding models",
+    },
+    "together": {
+        "name": "Together AI",
+        "type": "openai_compatible",
+        "base_url": "https://api.together.xyz/v1",
+        "default_model": "meta-llama/Llama-3.3-70B-Instruct-Turbo",
+        "models": [
+            "meta-llama/Llama-3.3-70B-Instruct-Turbo",
+            "deepseek-ai/DeepSeek-V3",
+            "mistralai/Mixtral-8x7B-Instruct-v0.1"
+        ],
+        "desc": "Open-source models cloud engine",
+    },
+    "custom": {
+        "name": "Custom Endpoint",
+        "type": "openai_compatible",
+        "base_url": "",
+        "default_model": "",
+        "models": [],
+        "desc": "Any custom proxy or local/remote endpoint",
+    },
+}
+
 
 def _get_fernet() -> Fernet:
     secret = config.SECRET_KEY or "fallback-srv-panel-secret-key-32"
@@ -128,6 +218,54 @@ async def test_connection(
         api_key=api_key,
         model_name=model_name,
     )
+
+
+async def fetch_models(
+    db: AsyncSession,
+    override_data: Optional[Dict[str, any]] = None,
+) -> Dict[str, any]:
+    """Fetches available model IDs from provider /models endpoint."""
+    settings = await get_settings(db)
+    provider_type = (override_data.get("provider_type") if override_data else None) or settings.provider_type
+    base_url = (override_data.get("base_url") if override_data else None) or settings.base_url
+
+    override_key = override_data.get("api_key") if override_data else None
+    if override_key and isinstance(override_key, str) and override_key.strip():
+        api_key = override_key.strip()
+    else:
+        api_key = decrypt_key(settings.api_key_encrypted)
+
+    if not api_key:
+        return {
+            "success": False,
+            "models": [],
+            "error": "No API Key provided. Please enter an API key to fetch models.",
+        }
+
+    try:
+        models = await engine.fetch_available_models(
+            provider_type=provider_type,
+            base_url=base_url,
+            api_key=api_key,
+        )
+        return {
+            "success": True,
+            "models": models,
+            "count": len(models),
+            "error": None,
+        }
+    except engine.AIProviderError as e:
+        return {
+            "success": False,
+            "models": [],
+            "error": e.message,
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "models": [],
+            "error": str(e),
+        }
 
 
 async def stream_ai_chat(

@@ -37,6 +37,12 @@ class TestConnectionRequest(BaseModel):
     model_name: Optional[str] = None
 
 
+class FetchModelsRequest(BaseModel):
+    provider_type: Optional[str] = None
+    api_key: Optional[str] = None
+    base_url: Optional[str] = None
+
+
 class ChatRequest(BaseModel):
     message: str = Field(..., min_length=1)
     session_id: Optional[str] = None
@@ -66,6 +72,7 @@ async def ai_helper_settings_page(request: Request, db: AsyncSession = Depends(g
         "settings": settings,
         "has_api_key": has_api_key,
         "masked_api_key": masked_key,
+        "presets": service.PROVIDER_PRESETS,
     })
 
 
@@ -86,6 +93,13 @@ async def update_settings(req: SettingsUpdateRequest, db: AsyncSession = Depends
 async def test_connection(req: TestConnectionRequest, db: AsyncSession = Depends(get_db)):
     data = req.model_dump(exclude_unset=True)
     result = await service.test_connection(db, override_data=data if data else None)
+    return JSONResponse(result)
+
+
+@router.post("/api/fetch-models")
+async def fetch_models_endpoint(req: FetchModelsRequest, db: AsyncSession = Depends(get_db)):
+    data = req.model_dump(exclude_unset=True)
+    result = await service.fetch_models(db, override_data=data if data else None)
     return JSONResponse(result)
 
 

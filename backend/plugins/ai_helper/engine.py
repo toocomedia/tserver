@@ -283,3 +283,93 @@ async def test_api_connection(
             "error": str(e),
             "status_code": 500,
         }
+
+
+def _normalize_models_url(base_url: str, provider_type: str) -> str:
+    cleaned = (base_url or "").strip().rstrip("/")
+    if provider_type == "anthropic":
+        if not cleaned:
+            return "https://api.anthropic.com/v1/models"
+        if cleaned.endswith("/messages"):
+            return cleaned[:-9] + "/models"
+        if not cleaned.endswith("/models"):
+            return f"{cleaned}/models"
+        return cleaned
+
+    # OpenAI-compatible
+    if not cleaned:
+        return "https://api.openai.com/v1/models"
+    if cleaned.endswith("/chat/completions"):
+        return cleaned[:-17] + "/models"
+    if not cleaned.endswith("/models"):
+        return f"{cleaned}/models"
+    return cleaned
+
+
+async def fetch_available_models(
+    provider_type: str,
+    base_url: str,
+    api_key: str,
+) -> List[str]:
+    """Fetches the list of model IDs dynamically from the provider's /models endpoint."""
+    if not api_key:
+        raise AIProviderError("API key is required to fetch models.", 400)
+
+    endpoint = _normalize_models_url(base_url, provider_type)
+
+    if provider_type == "anthropic":
+        headers = {
+            "x-api-key": api_key,
+            "anthropic-version": "2023-06-01",
+        }
+    else:
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+        }
+
+    async with httpx.AsyncClient(timeout=httpx.Timeout(15.0, connect=10.0)) as client:
+        try:
+            response = await client.get(endpoint, headers=headers)
+            if response.status_code != 200:
+                error_text = response.text
+                if response.status_code == 401:
+                    raise AIProviderError("Invalid API key or unauthorized.", 401)
+                raise AIProviderError(f"Failed to fetch models (HTTP {response.status_code}): {error_text[:200]}", response.status_code)
+
+            data = response.json()
+            models_list = []
+
+            # Standard OpenAI format: {"data": [{"id": "model-id"}, ...]}
+            if isinstance(data, dict) and "data" in data and isinstance(data["data"], list):
+                for item in data["data"]:
+                    if isinstance(item, dict) and "id" in item:
+                        models_list.append(str(item["id"]))
+                    elif isinstance(item, str):
+                        models_list.append(item)
+            # Some providers return {"models": [...]}
+            elif isinstance(data, dict) and "models" in data and isinstance(data["models"], list):
+                for item in data["models"]:
+                    if isinstance(item, dict) and "name" in item:
+                        models_list.append(str(item["name"]).replace("models/", ""))
+                    elif isinstance(item, dict) and "id" in item:
+                        models_list.append(str(item["id"]))
+                    elif isinstance(item, str):
+                        models_list.append(item)
+            elif isinstance(data, list):
+                for item in data:
+                    if isinstance(item, dict) and "id" in item:
+                        models_list.append(str(item["id"]))
+                    elif isinstance(item, str):
+                        models_list.append(item)
+
+            models_list = sorted(list(set(models_list)))
+            return models_list
+        except httpx.ConnectError:
+            raise AIProviderError("Could not connect to the provider endpoint to fetch models. Check Base URL.", 502)
+        except httpx.TimeoutException:
+            raise AIProviderError("Timed out while fetching models from provider.", 504)
+        except AIProviderError:
+            raise
+        except Exception as exc:
+            raise AIProviderError(f"Error parsing models response: {str(exc)}", 500)
+

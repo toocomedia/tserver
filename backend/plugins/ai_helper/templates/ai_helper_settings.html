@@ -58,6 +58,12 @@
             </div>
           </div>
           <div class="info-row">
+            <span class="info-row__label">Active Model</span>
+            <span class="info-row__value">
+              <code class="font-mono text-sm font-bold" id="stat-active-model">{{ settings.model_name or 'gpt-4o-mini' }}</code>
+            </span>
+          </div>
+          <div class="info-row">
             <span class="info-row__label">API Key Storage</span>
             <span class="info-row__value">
               {% if has_api_key %}
@@ -77,61 +83,28 @@
         </div>
       </div>
 
-      <!-- Section 2: Choose Preset -->
+      <!-- Section 2: Choose Pre-Configured API Preset -->
       <div class="section">
         <div class="section__header">
-          <h3><i data-lucide="layers"></i> Choose Provider Preset</h3>
+          <h3><i data-lucide="layers"></i> Pre-Configured API Providers</h3>
         </div>
         <div class="section__body">
-          <p class="form-hint mb-md">Select an AI provider to auto-fill the standard Base URL and default model name:</p>
-          <div class="settings-choice-grid mb-lg">
-            <label class="settings-choice {% if settings.provider_type == 'openai_compatible' and 'openai.com' in settings.base_url %}settings-choice--active{% endif %}" data-preset-card="openai">
+          <p class="form-hint mb-md">Select an AI provider to auto-fill its verified Base URL and recommended models:</p>
+          <div class="settings-choice-grid mb-lg" id="preset-grid">
+            {% for key, p in presets.items() %}
+            <label class="settings-choice {% if (p.type == settings.provider_type and p.base_url and p.base_url in settings.base_url) or (key == 'custom' and not p.base_url) %}settings-choice--active{% endif %}" 
+                   data-preset-key="{{ key }}" 
+                   data-preset-type="{{ p.type }}" 
+                   data-preset-url="{{ p.base_url }}" 
+                   data-preset-model="{{ p.default_model }}" 
+                   data-preset-models='{{ p.models | tojson }}'>
               <div class="settings-choice__header">
-                <input type="radio" name="provider_preset" value="openai" {% if settings.provider_type == 'openai_compatible' and 'openai.com' in settings.base_url %}checked{% endif %}>
-                <span class="settings-choice__title">OpenAI</span>
+                <input type="radio" name="provider_preset" value="{{ key }}" {% if (p.type == settings.provider_type and p.base_url and p.base_url in settings.base_url) or (key == 'custom' and not p.base_url) %}checked{% endif %}>
+                <span class="settings-choice__title">{{ p.name }}</span>
               </div>
-              <span class="settings-choice__desc">Official ChatGPT API (gpt-4o-mini / gpt-4o)</span>
+              <span class="settings-choice__desc">{{ p.desc }}</span>
             </label>
-
-            <label class="settings-choice {% if settings.provider_type == 'anthropic' %}settings-choice--active{% endif %}" data-preset-card="anthropic">
-              <div class="settings-choice__header">
-                <input type="radio" name="provider_preset" value="anthropic" {% if settings.provider_type == 'anthropic' %}checked{% endif %}>
-                <span class="settings-choice__title">Anthropic Claude</span>
-              </div>
-              <span class="settings-choice__desc">Claude 3.5 Sonnet / Haiku (/v1/messages)</span>
-            </label>
-
-            <label class="settings-choice {% if 'deepseek.com' in settings.base_url %}settings-choice--active{% endif %}" data-preset-card="deepseek">
-              <div class="settings-choice__header">
-                <input type="radio" name="provider_preset" value="deepseek" {% if 'deepseek.com' in settings.base_url %}checked{% endif %}>
-                <span class="settings-choice__title">DeepSeek</span>
-              </div>
-              <span class="settings-choice__desc">DeepSeek V3 / R1 (Fast & affordable)</span>
-            </label>
-
-            <label class="settings-choice {% if 'openrouter.ai' in settings.base_url %}settings-choice--active{% endif %}" data-preset-card="openrouter">
-              <div class="settings-choice__header">
-                <input type="radio" name="provider_preset" value="openrouter" {% if 'openrouter.ai' in settings.base_url %}checked{% endif %}>
-                <span class="settings-choice__title">OpenRouter</span>
-              </div>
-              <span class="settings-choice__desc">Universal multi-model gateway</span>
-            </label>
-
-            <label class="settings-choice {% if 'groq.com' in settings.base_url %}settings-choice--active{% endif %}" data-preset-card="groq">
-              <div class="settings-choice__header">
-                <input type="radio" name="provider_preset" value="groq" {% if 'groq.com' in settings.base_url %}checked{% endif %}>
-                <span class="settings-choice__title">Groq</span>
-              </div>
-              <span class="settings-choice__desc">Ultra-fast Llama 3.3 inference</span>
-            </label>
-
-            <label class="settings-choice" data-preset-card="custom">
-              <div class="settings-choice__header">
-                <input type="radio" name="provider_preset" value="custom">
-                <span class="settings-choice__title">Custom URL</span>
-              </div>
-              <span class="settings-choice__desc">Any custom proxy or OpenAI-compatible endpoint</span>
-            </label>
+            {% endfor %}
           </div>
         </div>
       </div>
@@ -142,22 +115,26 @@
           <h3><i data-lucide="sliders"></i> Connection & Model Parameters</h3>
         </div>
         <div class="section__body">
-          <form id="ai-settings-form">
+          <form id="ai-settings-form" autocomplete="off" data-lpignore="true" data-form-type="other">
+            <!-- Decoy inputs to prevent browser password managers from auto-filling admin email/passwords into configuration fields -->
+            <input type="text" name="fake_email_prevent_autofill" style="display:none !important;" tabindex="-1" autocomplete="off">
+            <input type="password" name="fake_password_prevent_autofill" style="display:none !important;" tabindex="-1" autocomplete="off">
+
             <div class="form-group mb-lg">
               <label class="form-label" for="provider_type">Protocol Format</label>
               <div class="form-select-wrap">
-                <select class="form-select" id="provider_type" name="provider_type">
+                <select class="form-select" id="provider_type" name="provider_type" autocomplete="off" data-lpignore="true">
                   <option value="openai_compatible" {% if settings.provider_type == 'openai_compatible' %}selected{% endif %}>OpenAI-Compatible (/chat/completions)</option>
                   <option value="anthropic" {% if settings.provider_type == 'anthropic' %}selected{% endif %}>Anthropic (/messages)</option>
                 </select>
               </div>
-              <p class="form-hint">Use Anthropic for Claude API; use OpenAI-Compatible for all other providers.</p>
+              <p class="form-hint">Use Anthropic for Claude API; use OpenAI-Compatible for all other providers (DeepSeek, OpenRouter, Groq, Gemini, Mistral, Together, custom).</p>
             </div>
 
             <div class="form-group mb-lg">
               <label class="form-label" for="api_key">API Key</label>
               <div style="display: flex; align-items: center; gap: 8px;">
-                <input type="password" class="form-input font-mono" id="api_key" name="api_key" placeholder="{% if has_api_key %}•••••••••••••••• (Leave blank to keep current key){% else %}Enter your API Key (e.g. sk-...){% endif %}" autocomplete="off" style="flex: 1;">
+                <input type="password" class="form-input font-mono" id="api_key" name="ai_panel_api_key" placeholder="{% if has_api_key %}•••••••••••••••• (Leave blank to keep current key){% else %}Enter your API Key (e.g. sk-...){% endif %}" autocomplete="new-password" data-lpignore="true" data-1p-ignore="true" style="flex: 1;">
                 <button type="button" class="btn btn--secondary btn--sm" id="btn-toggle-key" style="height: 34px; padding: 0 12px;" title="Toggle show/hide">
                   <i data-lucide="eye" id="key-eye-icon"></i>
                 </button>
@@ -167,25 +144,45 @@
 
             <div class="form-group mb-lg">
               <label class="form-label" for="base_url">Endpoint Base URL</label>
-              <input type="text" class="form-input font-mono" id="base_url" name="base_url" value="{{ settings.base_url }}" placeholder="https://api.openai.com/v1">
+              <input type="text" class="form-input font-mono" id="base_url" name="ai_base_url" value="{{ settings.base_url }}" placeholder="https://api.openai.com/v1" autocomplete="off" data-lpignore="true">
               <p class="form-hint">Base URL of the provider API.</p>
             </div>
 
             <div class="form-group mb-lg">
-              <label class="form-label" for="model_name">Model Identifier</label>
-              <input type="text" class="form-input font-mono" id="model_name" name="model_name" value="{{ settings.model_name }}" placeholder="gpt-4o-mini">
-              <p class="form-hint">Examples: <code>gpt-4o-mini</code>, <code>claude-3-5-sonnet-20241022</code>, <code>deepseek-chat</code>, <code>llama-3.3-70b-versatile</code></p>
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
+                <label class="form-label m-0" for="model_name">Model Identifier</label>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span id="fetch-models-count" class="badge badge--ok" hidden></span>
+                  <button type="button" class="btn btn--secondary btn--sm" id="btn-fetch-models" style="height: 26px; padding: 0 8px; font-size: 11px;">
+                    <i data-lucide="refresh-cw" style="width: 12px; height: 12px;"></i> Fetch Models from API
+                  </button>
+                </div>
+              </div>
+              <input type="text" list="model-suggestions" class="form-input font-mono" id="model_name" name="ai_model_name" value="{{ settings.model_name or 'gpt-4o-mini' }}" placeholder="gpt-4o-mini" autocomplete="off" data-lpignore="true">
+              <datalist id="model-suggestions">
+                <option value="{{ settings.model_name }}"></option>
+                <option value="gpt-4o-mini"></option>
+                <option value="gpt-4o"></option>
+                <option value="claude-3-5-sonnet-20241022"></option>
+                <option value="claude-3-5-haiku-20241022"></option>
+                <option value="deepseek-chat"></option>
+                <option value="deepseek-reasoner"></option>
+                <option value="llama-3.3-70b-versatile"></option>
+                <option value="gemini-2.0-flash"></option>
+                <option value="mistral-large-latest"></option>
+              </datalist>
+              <p class="form-hint">Type any custom model ID, pick from recommended presets, or click <strong>Fetch Models from API</strong> to discover all models available on your account.</p>
             </div>
 
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;" class="mb-lg">
               <div class="form-group">
                 <label class="form-label" for="temperature">Temperature</label>
-                <input type="number" step="0.05" min="0.0" max="1.0" class="form-input" id="temperature" name="temperature" value="{{ settings.temperature }}">
+                <input type="number" step="0.05" min="0.0" max="1.0" class="form-input" id="temperature" name="temperature" value="{{ settings.temperature }}" autocomplete="off">
                 <p class="form-hint">Recommended: <code>0.2</code> for reliable, accurate code & configurations.</p>
               </div>
               <div class="form-group">
                 <label class="form-label" for="max_tokens">Max Response Tokens</label>
-                <input type="number" step="256" min="256" max="32768" class="form-input" id="max_tokens" name="max_tokens" value="{{ settings.max_tokens }}">
+                <input type="number" step="256" min="256" max="32768" class="form-input" id="max_tokens" name="max_tokens" value="{{ settings.max_tokens }}" autocomplete="off">
                 <p class="form-hint">Maximum token output per response (default: 4096).</p>
               </div>
             </div>
@@ -223,7 +220,7 @@
             These rules are injected into every prompt along with the built-in VPS architecture knowledge. You can enforce language preferences, preferred technology stacks, or server conventions.
           </p>
 
-          <form id="ai-rules-form">
+          <form id="ai-rules-form" autocomplete="off" data-lpignore="true">
             <div class="form-group mb-lg">
               <label class="form-label" for="custom_rules">System Prompt Rules</label>
               <textarea class="form-input font-mono" id="custom_rules" name="custom_rules" rows="10" style="height: auto; min-height: 180px; padding: 12px; line-height: 1.5;" placeholder="Example:
@@ -356,58 +353,106 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
-  // Presets Auto-fill
-  var presets = {
-    openai: {
-      type: "openai_compatible",
-      url: "https://api.openai.com/v1",
-      model: "gpt-4o-mini"
-    },
-    anthropic: {
-      type: "anthropic",
-      url: "https://api.anthropic.com/v1",
-      model: "claude-3-5-sonnet-20241022"
-    },
-    openrouter: {
-      type: "openai_compatible",
-      url: "https://openrouter.ai/api/v1",
-      model: "openai/gpt-4o-mini"
-    },
-    deepseek: {
-      type: "openai_compatible",
-      url: "https://api.deepseek.com/v1",
-      model: "deepseek-chat"
-    },
-    groq: {
-      type: "openai_compatible",
-      url: "https://api.groq.com/openai/v1",
-      model: "llama-3.3-70b-versatile"
-    },
-    custom: {
-      type: "openai_compatible",
-      url: "",
-      model: ""
-    }
-  };
+  // Populate datalist helper
+  function updateModelSuggestions(modelsList) {
+    var datalist = document.getElementById("model-suggestions");
+    if (!datalist) return;
+    datalist.innerHTML = "";
 
-  document.querySelectorAll("[data-preset-card]").forEach(function (card) {
+    // Keep current model in datalist
+    var currentVal = document.getElementById("model_name").value.trim();
+    if (currentVal) {
+      var optCur = document.createElement("option");
+      optCur.value = currentVal;
+      datalist.appendChild(optCur);
+    }
+
+    (modelsList || []).forEach(function (m) {
+      if (m && m !== currentVal) {
+        var opt = document.createElement("option");
+        opt.value = m;
+        datalist.appendChild(opt);
+      }
+    });
+  }
+
+  var presetCards = document.querySelectorAll("[data-preset-key]");
+
+  // Preset Card Click Handler (explicit user click)
+  presetCards.forEach(function (card) {
     card.addEventListener("click", function () {
-      document.querySelectorAll("[data-preset-card]").forEach(function (c) { 
-        c.classList.remove("settings-choice--active"); 
-      });
+      presetCards.forEach(function (c) { c.classList.remove("settings-choice--active"); });
       this.classList.add("settings-choice--active");
       var radio = this.querySelector("input[type='radio']");
       if (radio) radio.checked = true;
 
-      var presetKey = this.getAttribute("data-preset-card");
-      var p = presets[presetKey];
-      if (p) {
-        document.getElementById("provider_type").value = p.type;
-        if (p.url) document.getElementById("base_url").value = p.url;
-        if (p.model) document.getElementById("model_name").value = p.model;
-      }
+      var pType = this.getAttribute("data-preset-type");
+      var pUrl = this.getAttribute("data-preset-url");
+      var pModel = this.getAttribute("data-preset-model");
+
+      if (pType) document.getElementById("provider_type").value = pType;
+      if (pUrl !== null && pUrl !== "") document.getElementById("base_url").value = pUrl;
+      if (pModel) document.getElementById("model_name").value = pModel;
+
+      try {
+        var models = JSON.parse(this.getAttribute("data-preset-models") || "[]");
+        updateModelSuggestions(models);
+      } catch (e) {}
     });
   });
+
+  // Dynamic "Fetch Models from API" Button
+  var fetchModelsBtn = document.getElementById("btn-fetch-models");
+  var fetchCountBadge = document.getElementById("fetch-models-count");
+
+  if (fetchModelsBtn) {
+    fetchModelsBtn.addEventListener("click", function () {
+      fetchModelsBtn.disabled = true;
+      var origHtml = fetchModelsBtn.innerHTML;
+      fetchModelsBtn.innerHTML = '<span class="spinner-sm"></span> Fetching...';
+      if (fetchCountBadge) fetchCountBadge.hidden = true;
+
+      var payload = {
+        provider_type: document.getElementById("provider_type").value,
+        api_key: document.getElementById("api_key").value || undefined,
+        base_url: document.getElementById("base_url").value,
+      };
+
+      var csrfToken = document.querySelector("meta[name='csrf-token']")?.getAttribute("content") || "";
+
+      fetch("/plugins/ai_helper/api/fetch-models", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRF-Token": csrfToken,
+        },
+        body: JSON.stringify(payload),
+      })
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+          fetchModelsBtn.disabled = false;
+          fetchModelsBtn.innerHTML = origHtml;
+          if (typeof lucide !== 'undefined') lucide.createIcons();
+
+          if (data.success && data.models && data.models.length > 0) {
+            updateModelSuggestions(data.models);
+            if (fetchCountBadge) {
+              fetchCountBadge.hidden = false;
+              fetchCountBadge.textContent = data.count + " models available";
+            }
+            alert("Discovered " + data.count + " models from provider! You can pick from the datalist dropdown or type in the input.");
+          } else {
+            alert("Could not fetch models: " + (data.error || "Unknown error"));
+          }
+        })
+        .catch(function (err) {
+          fetchModelsBtn.disabled = false;
+          fetchModelsBtn.innerHTML = origHtml;
+          if (typeof lucide !== 'undefined') lucide.createIcons();
+          alert("Network error fetching models: " + err.message);
+        });
+    });
+  }
 
   // Show/Hide API Key
   var keyInput = document.getElementById("api_key");

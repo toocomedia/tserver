@@ -224,6 +224,55 @@ class AIHelperTests(unittest.IsolatedAsyncioTestCase):
             empty_history = await service.get_session_messages(db, session_id)
             self.assertEqual(len(empty_history), 0)
 
+    def test_provider_presets_catalog(self):
+        """Verify pre-configured presets catalog contains all popular providers."""
+        presets = service.PROVIDER_PRESETS
+        self.assertIn("openai", presets)
+        self.assertIn("anthropic", presets)
+        self.assertIn("deepseek", presets)
+        self.assertIn("openrouter", presets)
+        self.assertIn("groq", presets)
+        self.assertIn("gemini", presets)
+        self.assertIn("mistral", presets)
+        self.assertIn("together", presets)
+        self.assertIn("custom", presets)
+
+        # Check default models
+        self.assertEqual(presets["openai"]["default_model"], "gpt-4o-mini")
+        self.assertEqual(presets["deepseek"]["default_model"], "deepseek-chat")
+        self.assertEqual(presets["anthropic"]["type"], "anthropic")
+
+    async def test_fetch_available_models_openai_mock(self):
+        """Verify fetching model IDs from standard OpenAI-compatible /models endpoint."""
+        mock_json = {
+            "data": [
+                {"id": "gpt-4o"},
+                {"id": "gpt-4o-mini"},
+                {"id": "text-embedding-3-small"}
+            ]
+        }
+
+        class MockResponse:
+            status_code = 200
+            def json(self):
+                return mock_json
+
+        class MockClient:
+            async def __aenter__(self):
+                return self
+            async def __aexit__(self, *args):
+                pass
+            async def get(self, url, headers=None):
+                return MockResponse()
+
+        with patch("httpx.AsyncClient", return_value=MockClient()):
+            models = await engine.fetch_available_models(
+                provider_type="openai_compatible",
+                base_url="https://api.openai.com/v1",
+                api_key="sk-test",
+            )
+            self.assertEqual(models, ["gpt-4o", "gpt-4o-mini", "text-embedding-3-small"])
+
 
 if __name__ == "__main__":
     unittest.main()
