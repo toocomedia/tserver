@@ -653,6 +653,20 @@
       });
   };
 
+  window.openPermissionsDrawer = function () {
+    var modal = document.getElementById("permissions-drawer-modal");
+    if (!modal) return;
+    modal.classList.remove("hidden");
+    document.body.classList.add("modal-open");
+  };
+
+  window.closePermissionsDrawer = function () {
+    var modal = document.getElementById("permissions-drawer-modal");
+    if (!modal) return;
+    modal.classList.add("hidden");
+    document.body.classList.remove("modal-open");
+  };
+
   window.toggleSelectiveFields = function () {
     var selContainer = document.getElementById("selective-scope-container");
     if (!selContainer) return;
@@ -683,7 +697,7 @@
 
     if (btn) {
       btn.disabled = true;
-      btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Saving...';
+      btn.textContent = "Saving...";
     }
 
     fetch("/plugins/ai_helper/api/permissions", {
@@ -698,8 +712,7 @@
       .then(function (data) {
         if (btn) {
           btn.disabled = false;
-          btn.innerHTML = '<i data-lucide="save"></i> Save Permissions';
-          if (typeof lucide !== "undefined") lucide.createIcons();
+          btn.textContent = "Save Permissions";
         }
 
         if (statusMsg) {
@@ -707,7 +720,10 @@
             statusMsg.className = "alert alert--ok mt-sm";
             statusMsg.textContent = "Permissions updated successfully!";
             statusMsg.style.display = "block";
-            setTimeout(function () { statusMsg.style.display = "none"; }, 3000);
+            setTimeout(function () {
+              statusMsg.style.display = "none";
+              window.closePermissionsDrawer();
+            }, 1200);
           } else {
             statusMsg.className = "alert alert--danger mt-sm";
             statusMsg.textContent = "Failed to update permissions: " + (data.message || "Unknown error");
@@ -718,8 +734,7 @@
       .catch(function (err) {
         if (btn) {
           btn.disabled = false;
-          btn.innerHTML = '<i data-lucide="save"></i> Save Permissions';
-          if (typeof lucide !== "undefined") lucide.createIcons();
+          btn.textContent = "Save Permissions";
         }
         if (statusMsg) {
           statusMsg.className = "alert alert--danger mt-sm";
@@ -729,6 +744,14 @@
       });
   };
 
+  // Close drawer when clicking outside
+  document.addEventListener("click", function (e) {
+    var pModal = document.getElementById("permissions-drawer-modal");
+    if (pModal && e.target === pModal) {
+      window.closePermissionsDrawer();
+    }
+  });
+
   // Initialize when DOM is ready
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", function () { AiHelperAdmin.init(); });
@@ -736,4 +759,5 @@
     AiHelperAdmin.init();
   }
 })(window, document);
+
 

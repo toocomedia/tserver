@@ -9,8 +9,11 @@
 
 {% block topbar_actions %}
 <div class="d-flex align-items-center gap-sm">
+  <button type="button" class="btn btn--secondary btn--sm" id="btn-open-permissions" onclick="openPermissionsDrawer()">
+    Permissions
+  </button>
   <button type="button" class="btn btn--primary btn--sm" id="btn-open-add" onclick="openAddDrawer()">
-    <i data-lucide="plus"></i> Add Provider
+    Add Provider
   </button>
 </div>
 {% endblock %}

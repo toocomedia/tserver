@@ -41,7 +41,6 @@ temp_*.html
 !/docs/python_app_hosting.md
 /rules/
 /tools/
-!backend/plugins/ai_helper/tools/
 push-to-github.bat
 
 # Node / Build artifacts
