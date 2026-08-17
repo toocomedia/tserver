@@ -2,49 +2,39 @@
 <div id="perm-tab-policy" class="perm-tab-pane active">
   <div class="form-group mb-lg">
     <label class="form-label">Global Access Mode</label>
-    <div class="perm-mode-cards">
-      
-      <label class="perm-mode-card {% if policy.global_mode == 'full_read_only' %}perm-mode-card--active{% endif %}">
+    
+    <div class="perm-radio-list">
+      <label class="perm-radio-item {% if policy.global_mode == 'full_read_only' %}perm-radio-item--active{% endif %}">
         <input type="radio" name="global_mode" value="full_read_only" {% if policy.global_mode == 'full_read_only' %}checked{% endif %} onchange="updateAccessModeUI()">
-        <div class="perm-mode-card__body">
-          <div class="d-flex align-items-center justify-content-between">
-            <span class="font-bold text-sm">Global Read-Only</span>
-            <span class="badge badge--ok">Safe</span>
-          </div>
-          <span class="text-xs text-muted">Allow inspecting configs and logs across all enabled categories.</span>
+        <div class="perm-radio-item__text">
+          <span class="font-bold text-sm">Global Read-Only</span>
+          <span class="text-xs text-muted">Inspect configs and logs across all enabled categories.</span>
         </div>
       </label>
 
-      <label class="perm-mode-card {% if policy.global_mode == 'selective' %}perm-mode-card--active{% endif %}">
+      <label class="perm-radio-item {% if policy.global_mode == 'selective' %}perm-radio-item--active{% endif %}">
         <input type="radio" name="global_mode" value="selective" {% if policy.global_mode == 'selective' %}checked{% endif %} onchange="updateAccessModeUI()">
-        <div class="perm-mode-card__body">
-          <div class="d-flex align-items-center justify-content-between">
-            <span class="font-bold text-sm">Granular Scope</span>
-            <span class="badge badge--warning">Restricted</span>
-          </div>
-          <span class="text-xs text-muted">Restrict AI inspection strictly to chosen whitelisted resources.</span>
+        <div class="perm-radio-item__text">
+          <span class="font-bold text-sm">Granular Scope</span>
+          <span class="text-xs text-muted">Restrict AI inspection strictly to whitelisted resources.</span>
         </div>
       </label>
 
-      <label class="perm-mode-card {% if policy.global_mode == 'disabled' %}perm-mode-card--active{% endif %}">
+      <label class="perm-radio-item {% if policy.global_mode == 'disabled' %}perm-radio-item--active{% endif %}">
         <input type="radio" name="global_mode" value="disabled" {% if policy.global_mode == 'disabled' %}checked{% endif %} onchange="updateAccessModeUI()">
-        <div class="perm-mode-card__body">
-          <div class="d-flex align-items-center justify-content-between">
-            <span class="font-bold text-sm">Disabled</span>
-            <span class="badge badge--error">Blocked</span>
-          </div>
-          <span class="text-xs text-muted">Globally block AI from querying any server tools or data.</span>
+        <div class="perm-radio-item__text">
+          <span class="font-bold text-sm">Disabled</span>
+          <span class="text-xs text-muted">Block AI from querying any server tools or data.</span>
         </div>
       </label>
-
     </div>
   </div>
 
-  <div class="form-group p-sm border rounded" style="background: var(--color-surface);">
+  <div class="form-group pt-sm" style="border-top: 1px solid var(--color-line);">
     <label class="form-check m-0" style="cursor: pointer; justify-content: space-between;">
       <div>
         <span class="font-bold text-sm d-block">On-Demand Tool Confirmation</span>
-        <span class="text-xs text-muted">Ask for user confirmation before inspecting sensitive logs or files.</span>
+        <span class="text-xs text-muted">Ask confirmation before inspecting sensitive logs or files.</span>
       </div>
       <input type="checkbox" name="ask_on_demand" class="form-check-input" {% if policy.ask_on_demand %}checked{% endif %}>
     </label>

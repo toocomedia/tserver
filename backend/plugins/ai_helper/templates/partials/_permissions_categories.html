@@ -2,55 +2,55 @@
 <div id="perm-tab-categories" class="perm-tab-pane" style="display: none;">
   <div class="form-group mb-sm">
     <label class="form-label">Category Permissions</label>
-    <p class="text-xs text-muted">Enable or disable entire resource categories for the AI assistant.</p>
+    <p class="text-xs text-muted">Enable or disable categories for the AI assistant.</p>
   </div>
 
-  <div class="perm-category-grid">
+  <div class="perm-category-list">
     
-    <label class="perm-category-item">
-      <div class="perm-category-item__info">
-        <span class="font-bold text-sm">Domains & Proxy</span>
-        <span class="text-xs text-muted">Domain settings, SSL, routing</span>
+    <label class="perm-category-row">
+      <div>
+        <span class="font-bold text-sm d-block">Domains & Proxy</span>
+        <span class="text-xs text-muted">Domains, SSL certificates, and proxy routing</span>
       </div>
       <input type="checkbox" class="form-check-input" name="allow_domains_proxy" {% if policy.allow_domains_proxy %}checked{% endif %}>
     </label>
 
-    <label class="perm-category-item">
-      <div class="perm-category-item__info">
-        <span class="font-bold text-sm">DNS Records</span>
+    <label class="perm-category-row">
+      <div>
+        <span class="font-bold text-sm d-block">DNS Records</span>
         <span class="text-xs text-muted">DNS zones and record lookups</span>
       </div>
       <input type="checkbox" class="form-check-input" name="allow_dns" {% if policy.allow_dns %}checked{% endif %}>
     </label>
 
-    <label class="perm-category-item">
-      <div class="perm-category-item__info">
-        <span class="font-bold text-sm">PHP Websites</span>
+    <label class="perm-category-row">
+      <div>
+        <span class="font-bold text-sm d-block">PHP Websites</span>
         <span class="text-xs text-muted">PHP webapps and vhost configs</span>
       </div>
       <input type="checkbox" class="form-check-input" name="allow_php_sites" {% if policy.allow_php_sites %}checked{% endif %}>
     </label>
 
-    <label class="perm-category-item">
-      <div class="perm-category-item__info">
-        <span class="font-bold text-sm">Container & Apps</span>
+    <label class="perm-category-row">
+      <div>
+        <span class="font-bold text-sm d-block">Container & Apps</span>
         <span class="text-xs text-muted">Docker, Python, and app status</span>
       </div>
       <input type="checkbox" class="form-check-input" name="allow_container_apps" {% if policy.allow_container_apps %}checked{% endif %}>
     </label>
 
-    <label class="perm-category-item">
-      <div class="perm-category-item__info">
-        <span class="font-bold text-sm">Databases</span>
+    <label class="perm-category-row">
+      <div>
+        <span class="font-bold text-sm d-block">Databases</span>
         <span class="text-xs text-muted">Database engines and tables</span>
       </div>
       <input type="checkbox" class="form-check-input" name="allow_databases" {% if policy.allow_databases %}checked{% endif %}>
     </label>
 
-    <label class="perm-category-item">
-      <div class="perm-category-item__info">
-        <span class="font-bold text-sm">Files (Read-Only)</span>
-        <span class="text-xs text-muted">Inspect codebase and config files</span>
+    <label class="perm-category-row">
+      <div>
+        <span class="font-bold text-sm d-block">Files (Read-Only)</span>
+        <span class="text-xs text-muted">Codebase and configuration files</span>
       </div>
       <input type="checkbox" class="form-check-input" name="allow_files_read" {% if policy.allow_files_read %}checked{% endif %}>
     </label>

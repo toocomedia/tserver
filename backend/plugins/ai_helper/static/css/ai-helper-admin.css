@@ -1,4 +1,4 @@
-/* ai-helper-admin.css — Clean styling for AI Provider Management & Permissions */
+/* ai-helper-admin.css — Minimalist styling for AI Helper & Permissions */
 
 /* Preset Selection Grid */
 .settings-choice-grid {
@@ -18,19 +18,18 @@
   border-radius: 4px;
   cursor: pointer;
   user-select: none;
-  transition: border-color 0.15s ease, background 0.15s ease;
+  transition: border-color 0.15s ease;
 }
 
 .settings-choice:hover {
-  border-color: var(--color-text);
+  border-color: var(--color-muted);
 }
 
 .settings-choice--active {
   border-color: var(--color-accent) !important;
-  background: rgba(199, 244, 100, 0.08) !important;
 }
 
-/* Multi-Model Dropdown Menu */
+/* Multi-Model Dropdown */
 .model-dropdown-wrap {
   position: relative;
   width: 100%;
@@ -44,7 +43,7 @@
   right: 0;
   background: var(--color-surface);
   border: 1px solid var(--color-line);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
   z-index: 1000;
   border-radius: 4px;
   max-height: 240px;
@@ -57,9 +56,8 @@
   align-items: center;
   justify-content: space-between;
   padding: 5px 8px;
-  border-radius: 4px;
+  border-radius: 3px;
   gap: 8px;
-  transition: background 0.1s;
 }
 
 .model-dropdown-item:hover {
@@ -67,119 +65,101 @@
 }
 
 .model-dropdown-item--default {
-  background: rgba(199, 244, 100, 0.1) !important;
+  background: rgba(199, 244, 100, 0.08) !important;
 }
 
-/* Permissions Tabs */
+/* Permissions Minimal Tabs */
 .perm-tab-nav {
   display: flex;
   gap: 4px;
-  padding: 8px 20px;
+  padding: 10px 20px;
   background: var(--color-surface);
   border-bottom: 1px solid var(--color-line);
 }
 
 .perm-tab-btn {
   background: transparent;
-  border: 1px solid transparent;
-  border-radius: 4px;
-  padding: 5px 12px;
-  font-size: 12px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 4px 10px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--color-muted);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: color 0.15s ease, border-color 0.15s ease;
 }
 
 .perm-tab-btn:hover {
   color: var(--color-text);
-  background: rgba(255, 255, 255, 0.05);
 }
 
 .perm-tab-btn.active {
   color: var(--color-text);
-  background: var(--color-bg);
-  border-color: var(--color-line);
+  border-bottom-color: var(--color-accent);
 }
 
-/* Permissions Mode Cards */
-.perm-mode-cards {
+/* Minimal Radio List (Tab 1) */
+.perm-radio-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
-.perm-mode-card {
+.perm-radio-item {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
-  padding: 10px 14px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-line);
-  border-radius: 6px;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 4px;
   cursor: pointer;
   user-select: none;
-  transition: border-color 0.15s ease, background 0.15s ease;
+  transition: background 0.1s ease;
 }
 
-.perm-mode-card:hover {
-  border-color: var(--color-text);
+.perm-radio-item:hover {
+  background: var(--color-surface);
 }
 
-.perm-mode-card--active {
-  border-color: var(--color-accent) !important;
-  background: rgba(199, 244, 100, 0.05) !important;
+.perm-radio-item--active {
+  background: var(--color-surface);
 }
 
-.perm-mode-card input[type="radio"] {
+.perm-radio-item input[type="radio"] {
   margin-top: 3px;
   cursor: pointer;
 }
 
-.perm-mode-card__body {
-  flex: 1;
-}
-
-/* Category Grid */
-.perm-category-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-}
-
-@media (max-width: 580px) {
-  .perm-category-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-.perm-category-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 12px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-line);
-  border-radius: 6px;
-  cursor: pointer;
-  user-select: none;
-}
-
-.perm-category-item:hover {
-  border-color: var(--color-text);
-}
-
-.perm-category-item__info {
+.perm-radio-item__text {
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 
-/* Multi-Select Droplist Component */
-.perm-select-group {
-  position: relative;
+/* Minimal Flat Category Rows (Tab 2) */
+.perm-category-list {
+  display: flex;
+  flex-direction: column;
 }
 
+.perm-category-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 4px;
+  border-bottom: 1px solid var(--color-line);
+  cursor: pointer;
+  user-select: none;
+}
+
+.perm-category-row:last-child {
+  border-bottom: none;
+}
+
+.perm-category-row:hover {
+  opacity: 0.9;
+}
+
+/* Multi-Select Droplist (Tab 3) */
 .perm-multiselect {
   position: relative;
   width: 100%;
@@ -238,7 +218,7 @@
   right: 0;
   background: var(--color-surface);
   border: 1px solid var(--color-line);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.4);
   border-radius: 4px;
   z-index: 1000;
   padding: 8px;

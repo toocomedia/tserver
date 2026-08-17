@@ -8,12 +8,12 @@
   <div class="d-flex flex-column gap-md">
     
     <!-- Domains Dropdown -->
-    <div class="perm-select-group" id="ms-domains">
+    <div class="form-group m-0">
       <div class="d-flex align-items-center justify-content-between mb-xs">
-        <label class="text-xs font-bold">Whitelisted Domains</label>
+        <label class="form-label m-0">Whitelisted Domains</label>
         <span id="count-badge-domains" class="text-xs text-muted">0 selected</span>
       </div>
-      <div class="perm-multiselect">
+      <div class="perm-multiselect" id="ms-domains">
         <div class="perm-multiselect__trigger form-select" tabindex="0">
           <div class="perm-multiselect__tags" id="ms-tags-domains">
             <span class="perm-multiselect__placeholder text-muted" id="ms-placeholder-domains">Click to select domains...</span>
@@ -22,7 +22,7 @@
         </div>
         <div class="perm-multiselect__dropdown">
           <div class="perm-multiselect__search-bar">
-            <input type="text" class="form-input form-input--sm perm-multiselect__search" placeholder="Search or type domain...">
+            <input type="text" class="form-input form-input--sm perm-multiselect__search font-mono text-xs" placeholder="Search or type domain...">
             <button type="button" class="btn btn--secondary btn--sm btn-add-custom-tag">+ Add</button>
           </div>
           <div class="perm-multiselect__actions">
@@ -36,12 +36,12 @@
     </div>
 
     <!-- Apps Dropdown -->
-    <div class="perm-select-group" id="ms-apps">
+    <div class="form-group m-0">
       <div class="d-flex align-items-center justify-content-between mb-xs">
-        <label class="text-xs font-bold">Whitelisted Applications</label>
+        <label class="form-label m-0">Whitelisted Applications</label>
         <span id="count-badge-apps" class="text-xs text-muted">0 selected</span>
       </div>
-      <div class="perm-multiselect">
+      <div class="perm-multiselect" id="ms-apps">
         <div class="perm-multiselect__trigger form-select" tabindex="0">
           <div class="perm-multiselect__tags" id="ms-tags-apps">
             <span class="perm-multiselect__placeholder text-muted" id="ms-placeholder-apps">Click to select apps...</span>
@@ -50,7 +50,7 @@
         </div>
         <div class="perm-multiselect__dropdown">
           <div class="perm-multiselect__search-bar">
-            <input type="text" class="form-input form-input--sm perm-multiselect__search" placeholder="Search apps...">
+            <input type="text" class="form-input form-input--sm perm-multiselect__search font-mono text-xs" placeholder="Search apps...">
             <button type="button" class="btn btn--secondary btn--sm btn-add-custom-tag">+ Add</button>
           </div>
           <div class="perm-multiselect__actions">
@@ -64,12 +64,12 @@
     </div>
 
     <!-- Databases Dropdown -->
-    <div class="perm-select-group" id="ms-databases">
+    <div class="form-group m-0">
       <div class="d-flex align-items-center justify-content-between mb-xs">
-        <label class="text-xs font-bold">Whitelisted Databases</label>
+        <label class="form-label m-0">Whitelisted Databases</label>
         <span id="count-badge-databases" class="text-xs text-muted">0 selected</span>
       </div>
-      <div class="perm-multiselect">
+      <div class="perm-multiselect" id="ms-databases">
         <div class="perm-multiselect__trigger form-select" tabindex="0">
           <div class="perm-multiselect__tags" id="ms-tags-databases">
             <span class="perm-multiselect__placeholder text-muted" id="ms-placeholder-databases">Click to select databases...</span>
@@ -78,7 +78,7 @@
         </div>
         <div class="perm-multiselect__dropdown">
           <div class="perm-multiselect__search-bar">
-            <input type="text" class="form-input form-input--sm perm-multiselect__search" placeholder="Search databases...">
+            <input type="text" class="form-input form-input--sm perm-multiselect__search font-mono text-xs" placeholder="Search databases...">
             <button type="button" class="btn btn--secondary btn--sm btn-add-custom-tag">+ Add</button>
           </div>
           <div class="perm-multiselect__actions">
@@ -92,12 +92,12 @@
     </div>
 
     <!-- File Targets Dropdown -->
-    <div class="perm-select-group" id="ms-file_targets">
+    <div class="form-group m-0">
       <div class="d-flex align-items-center justify-content-between mb-xs">
-        <label class="text-xs font-bold">Whitelisted Webroots & Codebases</label>
+        <label class="form-label m-0">Whitelisted Webroots & Files</label>
         <span id="count-badge-file_targets" class="text-xs text-muted">0 selected</span>
       </div>
-      <div class="perm-multiselect">
+      <div class="perm-multiselect" id="ms-file_targets">
         <div class="perm-multiselect__trigger form-select" tabindex="0">
           <div class="perm-multiselect__tags" id="ms-tags-file_targets">
             <span class="perm-multiselect__placeholder text-muted" id="ms-placeholder-file_targets">Click to select file paths...</span>
@@ -106,7 +106,7 @@
         </div>
         <div class="perm-multiselect__dropdown">
           <div class="perm-multiselect__search-bar">
-            <input type="text" class="form-input form-input--sm perm-multiselect__search" placeholder="Search file paths...">
+            <input type="text" class="form-input form-input--sm perm-multiselect__search font-mono text-xs" placeholder="Search file paths...">
             <button type="button" class="btn btn--secondary btn--sm btn-add-custom-tag">+ Add</button>
           </div>
           <div class="perm-multiselect__actions">

@@ -25,5 +25,8 @@
 {% endblock %}
 
 {% block scripts %}
+<script>
+  window.INITIAL_RESOURCES = {{ (resources or {}) | tojson | safe }};
+</script>
 <script type="module" src="/plugins/ai_helper/static/js/ai-helper-admin.js"></script>
 {% endblock %}

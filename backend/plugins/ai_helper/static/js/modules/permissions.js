@@ -13,6 +13,10 @@ export const PermissionsManager = {
     this.pickers.databases = new MultiSelectPicker({ key: "databases" });
     this.pickers.file_targets = new MultiSelectPicker({ key: "file_targets" });
 
+    if (window.INITIAL_RESOURCES) {
+      this.populateResources(window.INITIAL_RESOURCES);
+    }
+
     // Tab Switching inside Permissions Drawer
     document.querySelectorAll(".perm-tab-btn").forEach((btn) => {
       btn.addEventListener("click", () => {
@@ -37,46 +41,31 @@ export const PermissionsManager = {
     this.fetchResources();
   },
 
+  populateResources(res) {
+    if (!res) return;
+    this.cachedResources = res;
+    if (this.pickers.domains) this.pickers.domains.setOptions(res.domains || []);
+    if (this.pickers.apps) this.pickers.apps.setOptions(res.apps || []);
+    if (this.pickers.databases) this.pickers.databases.setOptions(res.databases || []);
+    if (this.pickers.file_targets) this.pickers.file_targets.setOptions(res.file_targets || []);
+  },
+
   fetchResources() {
     fetch("/plugins/ai_helper/api/resources")
       .then((res) => res.json())
       .then((data) => {
         if (data.status === "ok" && data.resources) {
-          this.cachedResources = data.resources;
-          if (this.pickers.domains) this.pickers.domains.setOptions(data.resources.domains || []);
-          if (this.pickers.apps) this.pickers.apps.setOptions(data.resources.apps || []);
-          if (this.pickers.databases) this.pickers.databases.setOptions(data.resources.databases || []);
-          if (this.pickers.file_targets) this.pickers.file_targets.setOptions(data.resources.file_targets || []);
+          this.populateResources(data.resources);
         }
       })
       .catch((err) => console.debug("Resource discovery error:", err));
   },
 
   updateAccessModeUI() {
-    const selectedRadio = document.querySelector('input[name="global_mode"]:checked');
-    const mode = selectedRadio ? selectedRadio.value : "full_read_only";
-
-    document.querySelectorAll(".perm-mode-card").forEach((card) => {
-      const radio = card.querySelector('input[type="radio"]');
-      card.classList.toggle("perm-mode-card--active", !!(radio && radio.checked));
+    document.querySelectorAll(".perm-radio-item").forEach((item) => {
+      const radio = item.querySelector('input[type="radio"]');
+      item.classList.toggle("perm-radio-item--active", !!(radio && radio.checked));
     });
-
-    const headerBadge = document.getElementById("perm-header-mode-badge");
-    if (headerBadge) {
-      if (mode === "full_read_only") {
-        headerBadge.className = "badge badge--ok";
-        headerBadge.textContent = "Global Read-Only";
-      } else if (mode === "selective") {
-        headerBadge.className = "badge badge--warning";
-        headerBadge.textContent = "Granular Scope";
-      } else {
-        headerBadge.className = "badge badge--error";
-        headerBadge.textContent = "Disabled";
-      }
-    }
-
-    const dot = document.getElementById("scope-active-indicator");
-    if (dot) dot.classList.toggle("perm-tab-dot--active", mode === "selective");
   },
 
   openDrawer() {
@@ -84,6 +73,9 @@ export const PermissionsManager = {
     if (!modal) return;
     modal.classList.remove("hidden");
     document.body.classList.add("modal-open");
+    if (window.INITIAL_RESOURCES && !this.cachedResources) {
+      this.populateResources(window.INITIAL_RESOURCES);
+    }
     this.fetchResources();
     this.updateAccessModeUI();
     if (typeof lucide !== "undefined") lucide.createIcons();
@@ -105,7 +97,7 @@ export const PermissionsManager = {
       .then((data) => {
         if (data.status === "ok" && data.logs) {
           if (data.logs.length === 0) {
-            container.innerHTML = '<div class="p-lg text-center text-muted text-xs"><p class="m-0">No tool execution audit logs recorded yet.</p></div>';
+            container.innerHTML = '<div class="p-md text-center text-muted text-xs"><p class="m-0">No tool execution audit logs recorded yet.</p></div>';
             return;
           }
           let html = '<div class="table-wrap m-0"><table class="table table--compact text-xs" style="margin: 0;"><thead><tr><th style="width: 80px;">Status</th><th style="width: 140px;">Tool</th><th>Reason / Target</th><th style="width: 80px; text-align: right;">Time</th></tr></thead><tbody>';
@@ -172,10 +164,10 @@ export const PermissionsManager = {
             setTimeout(() => {
               statusMsg.style.display = "none";
               this.closeDrawer();
-            }, 1200);
+            }, 1000);
           } else {
             statusMsg.className = "alert alert--danger mt-sm";
-            statusMsg.textContent = "Failed to update permissions: " + (data.message || "Unknown error");
+            statusMsg.textContent = "Failed: " + (data.message || "Unknown error");
             statusMsg.style.display = "block";
           }
         }
@@ -188,7 +180,7 @@ export const PermissionsManager = {
         }
         if (statusMsg) {
           statusMsg.className = "alert alert--danger mt-sm";
-          statusMsg.textContent = "Error saving permissions: " + err.message;
+          statusMsg.textContent = "Error: " + err.message;
           statusMsg.style.display = "block";
         }
       });
