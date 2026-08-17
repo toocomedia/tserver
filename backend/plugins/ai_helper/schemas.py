@@ -3,7 +3,7 @@ schemas.py — Pydantic request and response schemas for AI Helper plugin.
 """
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import Any, List, Optional
 from pydantic import BaseModel, Field
 
 
@@ -55,3 +55,16 @@ class ProviderSummary(BaseModel):
     models: List[str] = []
     is_default: bool
     is_enabled: bool
+
+
+class PermissionPolicyPayload(BaseModel):
+    global_mode: Optional[str] = "full_read_only"  # full_read_only | selective | disabled
+    allow_domains_proxy: Optional[bool] = True
+    allow_dns: Optional[bool] = True
+    allow_php_sites: Optional[bool] = True
+    allow_container_apps: Optional[bool] = True
+    allow_databases: Optional[bool] = True
+    allow_files_read: Optional[bool] = True
+    allowed_domains: Optional[Any] = "[]"
+    allowed_app_ids: Optional[Any] = "[]"
+    ask_on_demand: Optional[bool] = False

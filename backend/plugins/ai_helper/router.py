@@ -1,5 +1,5 @@
 """
-router.py — FastAPI router for AI Helper: multi-provider management, settings, and streaming chat.
+router.py — FastAPI router for AI Helper: multi-provider management, settings, permissions, and streaming chat.
 """
 from __future__ import annotations
 
@@ -16,6 +16,7 @@ from plugins.ai_helper import service
 from plugins.ai_helper.schemas import (
     ChatRequest,
     FetchModelsRequest,
+    PermissionPolicyPayload,
     ProviderPayload,
     TestConnectionRequest,
 )
@@ -38,15 +39,19 @@ def _mask_key(decrypted_key: str) -> str:
 
 @router.get("/", response_class=HTMLResponse)
 async def ai_helper_index(request: Request, db: AsyncSession = Depends(get_db)):
-    """Main list view: displays all added AI providers and active status."""
+    """Main list view: displays all added AI providers, active status, and permission policy."""
     providers = await service.list_providers(db)
     active_provider = await service.get_active_provider(db)
+    policy = await service.get_permission_policy(db)
+    audit_logs = service.get_audit_logs(limit=25)
 
     return templates.TemplateResponse("ai_helper_list.html", {
         "request": request,
         "active_page": "ai_helper",
         "providers": providers,
         "active_provider": active_provider,
+        "policy": policy,
+        "audit_logs": audit_logs,
         "presets": service.PROVIDER_PRESETS,
     })
 
@@ -93,7 +98,7 @@ async def ai_helper_create_action(
         "is_default": is_default,
         "is_enabled": is_enabled,
     }
-    provider = await service.create_provider(db, data)
+    await service.create_provider(db, data)
     return RedirectResponse(url="/plugins/ai_helper/", status_code=303)
 
 
@@ -181,7 +186,62 @@ async def ai_helper_delete_provider(provider_id: int, db: AsyncSession = Depends
 
 
 # -------------------------------------------------------------
-# API Endpoints (Test Connection, Model Fetching, Chat Stream)
+# Permissions API Endpoints
+# -------------------------------------------------------------
+
+@router.get("/api/permissions")
+async def get_permissions_endpoint(db: AsyncSession = Depends(get_db)):
+    """Returns current AI Helper permissions policy and summary."""
+    policy = await service.get_permission_policy(db)
+    return JSONResponse({
+        "status": "ok",
+        "policy": {
+            "global_mode": policy.global_mode,
+            "allow_domains_proxy": policy.allow_domains_proxy,
+            "allow_dns": policy.allow_dns,
+            "allow_php_sites": policy.allow_php_sites,
+            "allow_container_apps": policy.allow_container_apps,
+            "allow_databases": policy.allow_databases,
+            "allow_files_read": policy.allow_files_read,
+            "allowed_domains": policy.allowed_domains,
+            "allowed_app_ids": policy.allowed_app_ids,
+            "ask_on_demand": policy.ask_on_demand,
+        }
+    })
+
+
+@router.post("/api/permissions")
+async def update_permissions_endpoint(req: PermissionPolicyPayload, db: AsyncSession = Depends(get_db)):
+    """Updates AI Helper permissions policy."""
+    data = req.model_dump(exclude_unset=True)
+    policy = await service.update_permission_policy(db, data)
+    return JSONResponse({
+        "status": "ok",
+        "message": "Permission policy updated successfully.",
+        "policy": {
+            "global_mode": policy.global_mode,
+            "allow_domains_proxy": policy.allow_domains_proxy,
+            "allow_dns": policy.allow_dns,
+            "allow_php_sites": policy.allow_php_sites,
+            "allow_container_apps": policy.allow_container_apps,
+            "allow_databases": policy.allow_databases,
+            "allow_files_read": policy.allow_files_read,
+            "allowed_domains": policy.allowed_domains,
+            "allowed_app_ids": policy.allowed_app_ids,
+            "ask_on_demand": policy.ask_on_demand,
+        }
+    })
+
+
+@router.get("/api/audit-logs")
+async def get_audit_logs_endpoint(limit: int = 50):
+    """Returns recent tool call audit logs."""
+    logs = service.get_audit_logs(limit=limit)
+    return JSONResponse({"status": "ok", "logs": logs})
+
+
+# -------------------------------------------------------------
+# Providers & Streaming Chat Endpoints
 # -------------------------------------------------------------
 
 @router.get("/api/providers")

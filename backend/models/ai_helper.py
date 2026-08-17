@@ -84,3 +84,23 @@ class AiChatMessage(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), nullable=False
     )
+
+
+class AiPermissionPolicy(Base):
+    __tablename__ = "ai_permission_policies"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, default=1)
+    global_mode: Mapped[str] = mapped_column(String(32), default="full_read_only", nullable=False)  # full_read_only | selective | disabled
+    allow_domains_proxy: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    allow_dns: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    allow_php_sites: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    allow_container_apps: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    allow_databases: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    allow_files_read: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    allowed_domains: Mapped[str] = mapped_column(Text, default="[]", nullable=False)
+    allowed_app_ids: Mapped[str] = mapped_column(Text, default="[]", nullable=False)
+    ask_on_demand: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+

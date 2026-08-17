@@ -653,6 +653,82 @@
       });
   };
 
+  window.toggleSelectiveFields = function () {
+    var selContainer = document.getElementById("selective-scope-container");
+    if (!selContainer) return;
+    var mode = document.querySelector('input[name="global_mode"]:checked')?.value;
+    selContainer.style.display = (mode === "selective") ? "block" : "none";
+  };
+
+  window.savePermissions = function () {
+    var form = document.getElementById("ai-permissions-form");
+    if (!form) return;
+
+    var btn = document.getElementById("btn-save-permissions");
+    var statusMsg = document.getElementById("permissions-status-msg");
+    var csrfToken = document.querySelector("meta[name='csrf-token']")?.getAttribute("content") || "";
+
+    var globalMode = form.querySelector('input[name="global_mode"]:checked')?.value || "full_read_only";
+    var payload = {
+      global_mode: globalMode,
+      allow_domains_proxy: form.querySelector('input[name="allow_domains_proxy"]')?.checked || false,
+      allow_dns: form.querySelector('input[name="allow_dns"]')?.checked || false,
+      allow_php_sites: form.querySelector('input[name="allow_php_sites"]')?.checked || false,
+      allow_container_apps: form.querySelector('input[name="allow_container_apps"]')?.checked || false,
+      allow_databases: form.querySelector('input[name="allow_databases"]')?.checked || false,
+      allow_files_read: form.querySelector('input[name="allow_files_read"]')?.checked || false,
+      allowed_domains: form.querySelector('input[name="allowed_domains"]')?.value || "[]",
+      allowed_app_ids: form.querySelector('input[name="allowed_app_ids"]')?.value || "[]",
+    };
+
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Saving...';
+    }
+
+    fetch("/plugins/ai_helper/api/permissions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": csrfToken,
+      },
+      body: JSON.stringify(payload),
+    })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '<i data-lucide="save"></i> Save Permissions';
+          if (typeof lucide !== "undefined") lucide.createIcons();
+        }
+
+        if (statusMsg) {
+          if (data.status === "ok") {
+            statusMsg.className = "alert alert--ok mt-sm";
+            statusMsg.textContent = "Permissions updated successfully!";
+            statusMsg.style.display = "block";
+            setTimeout(function () { statusMsg.style.display = "none"; }, 3000);
+          } else {
+            statusMsg.className = "alert alert--danger mt-sm";
+            statusMsg.textContent = "Failed to update permissions: " + (data.message || "Unknown error");
+            statusMsg.style.display = "block";
+          }
+        }
+      })
+      .catch(function (err) {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '<i data-lucide="save"></i> Save Permissions';
+          if (typeof lucide !== "undefined") lucide.createIcons();
+        }
+        if (statusMsg) {
+          statusMsg.className = "alert alert--danger mt-sm";
+          statusMsg.textContent = "Error saving permissions: " + err.message;
+          statusMsg.style.display = "block";
+        }
+      });
+  };
+
   // Initialize when DOM is ready
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", function () { AiHelperAdmin.init(); });
@@ -660,3 +736,4 @@
     AiHelperAdmin.init();
   }
 })(window, document);
+

@@ -15,5 +15,5 @@ from models.container_app_backup import ContainerAppBackup
 from models.file_manager_event import FileManagerEvent
 from models.guard_operation import GuardOperation
 from models.safe_install_run import SafeInstallRun
-from models.ai_helper import AiHelperSettings, AiChatMessage
+from models.ai_helper import AiChatMessage, AiHelperSettings, AiPermissionPolicy, AiProvider
 

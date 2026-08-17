@@ -1,20 +1,21 @@
 """
-service.py — AI Helper service layer: multi-provider management, key encryption, and chat pipeline.
+service.py — AI Helper service layer: multi-provider management, key encryption, tool-calling, and streaming chat pipeline.
 """
 from __future__ import annotations
 
 import base64
 import hashlib
+import json
 import logging
-from typing import AsyncGenerator, Dict, List, Optional
+from typing import Any, AsyncGenerator, Dict, List, Optional
 
 from cryptography.fernet import Fernet
 from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import config
-from models.ai_helper import AiChatMessage, AiHelperSettings, AiProvider
-from plugins.ai_helper import engine, prompts
+from models.ai_helper import AiChatMessage, AiHelperSettings, AiPermissionPolicy, AiProvider
+from plugins.ai_helper import engine, permissions, prompts, tools
 
 logger = logging.getLogger(__name__)
 
@@ -74,7 +75,6 @@ PROVIDER_PRESETS: Dict[str, Dict[str, any]] = {
         "desc": "Self-hosted / custom endpoint",
     },
 }
-
 
 
 def _get_fernet() -> Fernet:
@@ -231,7 +231,6 @@ async def delete_provider(db: AsyncSession, provider_id: int) -> bool:
     await db.commit()
 
     if was_default:
-        # Pick another provider as default
         stmt = select(AiProvider).order_by(AiProvider.id.asc()).limit(1)
         next_p = (await db.execute(stmt)).scalar_one_or_none()
         if next_p:
@@ -270,6 +269,25 @@ async def test_provider(db: AsyncSession, provider_id: int) -> Dict[str, any]:
     provider.last_latency_ms = result.get("latency_ms")
     await db.commit()
     return result
+
+
+# -------------------------------------------------------------
+# Permissions Policy Management
+# -------------------------------------------------------------
+
+async def get_permission_policy(db: AsyncSession) -> AiPermissionPolicy:
+    """Retrieves or creates the permission policy."""
+    return await permissions.get_or_create_policy(db)
+
+
+async def update_permission_policy(db: AsyncSession, data: Dict[str, Any]) -> AiPermissionPolicy:
+    """Updates AI permission settings."""
+    return await permissions.update_policy(db, data)
+
+
+def get_audit_logs(limit: int = 50) -> List[Dict[str, Any]]:
+    """Retrieves recent tool call audit logs."""
+    return permissions.audit.get_recent_audit_logs(limit)
 
 
 # -------------------------------------------------------------
@@ -381,7 +399,7 @@ async def fetch_models(
 
 
 # -------------------------------------------------------------
-# Streaming Chat Pipeline
+# Streaming Chat Pipeline with Tool Calling Support
 # -------------------------------------------------------------
 
 async def stream_ai_chat(
@@ -394,11 +412,13 @@ async def stream_ai_chat(
     model_name: Optional[str] = None,
 ) -> AsyncGenerator[str, None]:
     """
-    Main multi-turn streaming chat pipeline:
+    Multi-turn streaming chat pipeline with tool calling support:
     1. Loads specified or active provider & decrypted API key.
-    2. Builds system prompt with fixed rules + active context + custom rules.
+    2. Builds modular system prompt (base + tools + action tags + context + custom rules).
     3. Loads previous conversation history for this session.
-    4. Streams AI chunks via engine and persists the conversation.
+    4. Evaluates tool calling if permissions permit.
+    5. Executes requested panel tools and feeds results back to AI.
+    6. Streams AI response chunks and persists the conversation.
     """
     active = None
     if provider_id:
@@ -419,14 +439,17 @@ async def stream_ai_chat(
         yield "Error: No API key configured for the active provider. Please configure an API key."
         return
 
-    # Effective model name to use
     effective_model = model_name.strip() if model_name and model_name.strip() else active.model_name
 
-    # Trim context log to prevent exceeding context window
+    # Check permission policy
+    policy = await permissions.get_or_create_policy(db)
+    tools_enabled = (policy.global_mode != "disabled")
+
     trimmed_context = engine.trim_context_log(context_text or "")
     system_prompt = prompts.build_system_prompt(
         context=trimmed_context,
         custom_rules=active.custom_rules,
+        include_tools_rules=tools_enabled,
     )
 
     # Fetch recent conversation history (last 10 messages)
@@ -439,7 +462,7 @@ async def stream_ai_chat(
     result = await db.execute(stmt)
     recent_records = list(reversed(result.scalars().all()))
 
-    messages: List[Dict[str, str]] = [
+    messages: List[Dict[str, Any]] = [
         {"role": "system", "content": system_prompt}
     ]
 
@@ -458,7 +481,64 @@ async def stream_ai_chat(
     db.add(user_record)
     await db.commit()
 
-    # Stream response
+    # Tool calling step if enabled
+    if tools_enabled:
+        tool_defs = tools.get_tool_definitions(active.provider_type)
+        try:
+            tool_step = await engine.chat_completion_step(
+                provider_type=active.provider_type,
+                base_url=active.base_url,
+                api_key=api_key,
+                model_name=effective_model,
+                messages=messages,
+                tools=tool_defs,
+                temperature=active.temperature,
+                max_tokens=active.max_tokens,
+            )
+            tool_calls = tool_step.get("tool_calls") or []
+
+            if tool_calls:
+                # Add assistant message with tool call requests
+                raw_msg = tool_step.get("raw_message")
+                if raw_msg:
+                    messages.append(raw_msg)
+                else:
+                    messages.append({"role": "assistant", "content": tool_step.get("content") or ""})
+
+                for tc in tool_calls:
+                    fn_name = tc.get("name")
+                    fn_args = tc.get("arguments") or {}
+                    tc_id = tc.get("id") or "call_0"
+
+                    tool_output = await tools.execute_tool(
+                        db=db,
+                        tool_name=fn_name,
+                        arguments=fn_args,
+                        session_id=session_id,
+                    )
+
+                    if active.provider_type == "anthropic":
+                        messages.append({
+                            "role": "user",
+                            "content": [
+                                {
+                                    "type": "tool_result",
+                                    "tool_use_id": tc_id,
+                                    "content": json.dumps(tool_output),
+                                }
+                            ],
+                        })
+                    else:
+                        messages.append({
+                            "role": "tool",
+                            "tool_call_id": tc_id,
+                            "name": fn_name,
+                            "content": json.dumps(tool_output),
+                        })
+        except Exception as exc:
+            logger.warning("Tool calling step failed or skipped: %s. Continuing standard stream.", exc)
+
+    # Stream final assistant response
     full_response = []
     try:
         async for chunk in engine.stream_chat(

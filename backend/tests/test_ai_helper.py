@@ -374,6 +374,144 @@ class AIHelperTests(unittest.IsolatedAsyncioTestCase):
             self.assertIn("claude-3-5-sonnet", updated.models_list)
             self.assertIn("claude-3-5-sonnet", updated.get_models())
 
+    def test_modular_prompts_architecture(self):
+        """Verify prompt sub-package separation and dynamic assembly."""
+        from plugins.ai_helper.prompts import base_rules, tool_rules, action_tags, builder
+        self.assertIn("AI Assistant for the Barq VPS Control Panel", base_rules.FIXED_CORE_SYSTEM_PROMPT)
+        self.assertIn("Panel Inspection Tools & Permissions", tool_rules.TOOL_USAGE_RULES)
+        self.assertIn("[ACTION:SET_PORT:", action_tags.ACTION_TAGS_SPEC)
+
+        assembled = builder.build_system_prompt(
+            context="Active file: index.php",
+            custom_rules="Enforce strict typing.",
+            include_tools_rules=True,
+        )
+        self.assertIn("Panel Inspection Tools & Permissions", assembled)
+        self.assertIn("Active file: index.php", assembled)
+        self.assertIn("Enforce strict typing.", assembled)
+
+        # Without tools rules when tools are disabled
+        assembled_no_tools = builder.build_system_prompt(
+            context=None,
+            custom_rules=None,
+            include_tools_rules=False,
+        )
+        self.assertNotIn("Panel Inspection Tools & Permissions", assembled_no_tools)
+
+    def test_tool_definitions_formats(self):
+        """Verify OpenAI and Anthropic JSON tool schema formats."""
+        from plugins.ai_helper.tools import definitions
+        openai_tools = definitions.get_tool_definitions("openai_compatible")
+        self.assertTrue(len(openai_tools) >= 7)
+        self.assertEqual(openai_tools[0]["type"], "function")
+        self.assertIn("name", openai_tools[0]["function"])
+        self.assertIn("parameters", openai_tools[0]["function"])
+
+        anthropic_tools = definitions.get_tool_definitions("anthropic")
+        self.assertTrue(len(anthropic_tools) >= 7)
+        self.assertIn("name", anthropic_tools[0])
+        self.assertIn("input_schema", anthropic_tools[0])
+
+    async def test_permission_policy_enforcement(self):
+        """Verify permission policy checks and selective filters."""
+        from plugins.ai_helper.permissions import policy, PermissionDeniedError
+        async with AsyncSessionLocal() as db:
+            # 1. Default full_read_only policy
+            await policy.update_policy(db, {
+                "global_mode": "full_read_only",
+                "allow_domains_proxy": True,
+                "allow_dns": True,
+            })
+            self.assertTrue(await policy.check_tool_permission(db, "get_domains_and_ssl", {}))
+            self.assertTrue(await policy.check_tool_permission(db, "get_dns_records", {"domain": "test.com"}))
+
+            # 2. Category flag disabled
+            await policy.update_policy(db, {
+                "allow_dns": False,
+            })
+            with self.assertRaises(PermissionDeniedError):
+                await policy.check_tool_permission(db, "get_dns_records", {"domain": "test.com"})
+
+            # 3. Global mode disabled
+            await policy.update_policy(db, {
+                "global_mode": "disabled",
+            })
+            with self.assertRaises(PermissionDeniedError):
+                await policy.check_tool_permission(db, "get_domains_and_ssl", {})
+
+            # 4. Selective mode
+            await policy.update_policy(db, {
+                "global_mode": "selective",
+                "allow_domains_proxy": True,
+                "allowed_domains": ["allowed.com"],
+            })
+            # Allowed domain
+            self.assertTrue(await policy.check_tool_permission(db, "get_domains_and_ssl", {"domain_name": "allowed.com"}))
+            # Denied domain
+            with self.assertRaises(PermissionDeniedError):
+                await policy.check_tool_permission(db, "get_domains_and_ssl", {"domain_name": "forbidden.com"})
+
+    async def test_tool_registry_execution(self):
+        """Verify tool execution via registry and safe data sanitization."""
+        from plugins.ai_helper.tools import registry
+        from models.domain import Domain
+        from models.proxy import ReverseProxy
+
+        async with AsyncSessionLocal() as db:
+            # Reset permission policy to full_read_only
+            from plugins.ai_helper.permissions import policy
+            await policy.update_policy(db, {
+                "global_mode": "full_read_only",
+                "allow_domains_proxy": True,
+                "allow_databases": True,
+            })
+
+            # Create test domain
+            test_domain = Domain(
+                name="ai-test.local",
+                server_ip="127.0.0.1",
+                project_type="proxy",
+                nginx_active=True,
+            )
+            db.add(test_domain)
+            await db.commit()
+            await db.refresh(test_domain)
+
+            # Create test proxy
+            test_proxy = ReverseProxy(
+                domain_id=test_domain.id,
+                full_domain="ai-test.local",
+                subdomain="",
+                target_ip="127.0.0.1",
+                target_port=8080,
+                protocol="http",
+                ssl_enabled=False,
+            )
+            db.add(test_proxy)
+            await db.commit()
+
+            # Execute get_domains_and_ssl
+            res_domains = await registry.execute_tool(db, "get_domains_and_ssl", {"domain_name": "ai-test.local"})
+            self.assertEqual(res_domains["status"], "ok")
+            self.assertTrue(any(d["domain"] == "ai-test.local" for d in res_domains["domains"]))
+
+            # Execute get_reverse_proxy_routes
+            res_proxy = await registry.execute_tool(db, "get_reverse_proxy_routes", {"domain": "ai-test.local"})
+            self.assertEqual(res_proxy["status"], "ok")
+            self.assertEqual(res_proxy["reverse_proxies"][0]["target_port"], 8080)
+
+            # Execute get_databases_overview
+            res_db = await registry.execute_tool(db, "get_databases_overview", {})
+            self.assertEqual(res_db["status"], "ok")
+            self.assertIn("container_databases", res_db)
+            self.assertIn("php_databases", res_db)
+
+            # Clean up
+            await db.delete(test_proxy)
+            await db.delete(test_domain)
+            await db.commit()
+
 
 if __name__ == "__main__":
     unittest.main()
+

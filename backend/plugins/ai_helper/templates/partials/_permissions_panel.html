@@ -1,0 +1,161 @@
+<div class="section mb-xl" id="ai-permissions-section">
+  <div class="section__header d-flex align-items-center justify-content-between">
+    <div>
+      <h3 class="m-0"><i data-lucide="shield-check"></i> AI Permissions & Capabilities</h3>
+      <p class="text-muted text-sm m-0">Control what panel data and service tools the AI Assistant can inspect in real-time.</p>
+    </div>
+    <button type="button" class="btn btn--primary btn--sm" id="btn-save-permissions" onclick="savePermissions()">
+      <i data-lucide="save"></i> Save Permissions
+    </button>
+  </div>
+
+  <form id="ai-permissions-form" class="card p-lg" onsubmit="event.preventDefault(); savePermissions();">
+    <!-- Global Mode Selector -->
+    <div class="form-group mb-lg">
+      <label class="form-label font-bold mb-xs">Global Permission Mode</label>
+      <div class="d-flex gap-md flex-wrap">
+        <label class="radio-card d-flex align-items-center gap-sm p-sm border rounded cursor-pointer" style="flex: 1; min-width: 220px; background: var(--color-bg-card);">
+          <input type="radio" name="global_mode" value="full_read_only" {% if policy.global_mode == 'full_read_only' %}checked{% endif %} onchange="toggleSelectiveFields()">
+          <div>
+            <div class="font-bold text-sm">Full Read-Only Access</div>
+            <div class="text-xs text-muted">AI can inspect all enabled categories below.</div>
+          </div>
+        </label>
+
+        <label class="radio-card d-flex align-items-center gap-sm p-sm border rounded cursor-pointer" style="flex: 1; min-width: 220px; background: var(--color-bg-card);">
+          <input type="radio" name="global_mode" value="selective" {% if policy.global_mode == 'selective' %}checked{% endif %} onchange="toggleSelectiveFields()">
+          <div>
+            <div class="font-bold text-sm">Selective Access Scope</div>
+            <div class="text-xs text-muted">Confined to explicitly selected domains/apps only.</div>
+          </div>
+        </label>
+
+        <label class="radio-card d-flex align-items-center gap-sm p-sm border rounded cursor-pointer" style="flex: 1; min-width: 220px; background: var(--color-bg-card);">
+          <input type="radio" name="global_mode" value="disabled" {% if policy.global_mode == 'disabled' %}checked{% endif %} onchange="toggleSelectiveFields()">
+          <div>
+            <div class="font-bold text-sm">Disable All Tools</div>
+            <div class="text-xs text-muted">Pure conversational mode with zero tool inspection.</div>
+          </div>
+        </label>
+      </div>
+    </div>
+
+    <!-- Category Toggles -->
+    <div class="form-group mb-lg">
+      <label class="form-label font-bold mb-xs">Service Category Permissions (Read-Only)</label>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px;">
+        
+        <label class="toggle-card p-sm border rounded d-flex align-items-center justify-content-between" style="background: var(--color-bg-subtle);">
+          <div>
+            <div class="font-bold text-sm"><i data-lucide="globe"></i> Domains & Reverse Proxy</div>
+            <div class="text-xs text-muted">Inspect domain list, SSL certificates, and Nginx proxy ports.</div>
+          </div>
+          <input type="checkbox" name="allow_domains_proxy" {% if policy.allow_domains_proxy %}checked{% endif %}>
+        </label>
+
+        <label class="toggle-card p-sm border rounded d-flex align-items-center justify-content-between" style="background: var(--color-bg-subtle);">
+          <div>
+            <div class="font-bold text-sm"><i data-lucide="radio"></i> DNS Records</div>
+            <div class="text-xs text-muted">Query PowerDNS zone records (A, CNAME, MX, TXT).</div>
+          </div>
+          <input type="checkbox" name="allow_dns" {% if policy.allow_dns %}checked{% endif %}>
+        </label>
+
+        <label class="toggle-card p-sm border rounded d-flex align-items-center justify-content-between" style="background: var(--color-bg-subtle);">
+          <div>
+            <div class="font-bold text-sm"><i data-lucide="code-2"></i> PHP Websites</div>
+            <div class="text-xs text-muted">Inspect WordPress & Laravel presets, PHP versions, and webroots.</div>
+          </div>
+          <input type="checkbox" name="allow_php_sites" {% if policy.allow_php_sites %}checked{% endif %}>
+        </label>
+
+        <label class="toggle-card p-sm border rounded d-flex align-items-center justify-content-between" style="background: var(--color-bg-subtle);">
+          <div>
+            <div class="font-bold text-sm"><i data-lucide="box"></i> Container & Python Apps</div>
+            <div class="text-xs text-muted">Inspect app status, host ports, and recent deployment logs.</div>
+          </div>
+          <input type="checkbox" name="allow_container_apps" {% if policy.allow_container_apps %}checked{% endif %}>
+        </label>
+
+        <label class="toggle-card p-sm border rounded d-flex align-items-center justify-content-between" style="background: var(--color-bg-subtle);">
+          <div>
+            <div class="font-bold text-sm"><i data-lucide="database"></i> Database Overview</div>
+            <div class="text-xs text-muted">Inspect DB names and engines (zero passwords or data rows).</div>
+          </div>
+          <input type="checkbox" name="allow_databases" {% if policy.allow_databases %}checked{% endif %}>
+        </label>
+
+        <label class="toggle-card p-sm border rounded d-flex align-items-center justify-content-between" style="background: var(--color-bg-subtle);">
+          <div>
+            <div class="font-bold text-sm"><i data-lucide="folder"></i> File Manager (Read-Only)</div>
+            <div class="text-xs text-muted">Read website files & config scripts (sandboxed, writes blocked).</div>
+          </div>
+          <input type="checkbox" name="allow_files_read" {% if policy.allow_files_read %}checked{% endif %}>
+        </label>
+
+      </div>
+    </div>
+
+    <!-- Selective Scopes (Collapsible) -->
+    <div id="selective-scope-container" class="form-group mb-lg p-md border rounded" style="background: var(--color-bg-subtle); display: {% if policy.global_mode == 'selective' %}block{% else %}none{% endif %};">
+      <h4 class="text-sm font-bold mb-xs"><i data-lucide="filter"></i> Selective Scope Filters</h4>
+      <p class="text-xs text-muted mb-sm">Leave empty to allow all items in enabled categories, or specify comma-separated items.</p>
+      
+      <div class="row g-md">
+        <div class="col-md-6 mb-sm">
+          <label class="form-label text-xs font-bold">Allowed Domains (Comma-separated)</label>
+          <input type="text" class="form-control form-control--sm" name="allowed_domains" value="{{ policy.allowed_domains }}" placeholder="example.com, myapp.com">
+        </div>
+        <div class="col-md-6 mb-sm">
+          <label class="form-label text-xs font-bold">Allowed App IDs (Comma-separated)</label>
+          <input type="text" class="form-control form-control--sm" name="allowed_app_ids" value="{{ policy.allowed_app_ids }}" placeholder="1, 2, 5">
+        </div>
+      </div>
+    </div>
+
+    <div id="permissions-status-msg" class="alert alert--ok mt-sm" style="display: none;"></div>
+  </form>
+</div>
+
+<!-- Audit Log Section -->
+<div class="section mb-xl" id="ai-audit-section">
+  <div class="section__header">
+    <h3><i data-lucide="history"></i> Recent AI Tool Activity Audit</h3>
+  </div>
+  <div class="table-wrap">
+    <table class="table text-sm">
+      <thead>
+        <tr>
+          <th>Time</th>
+          <th>Tool Called</th>
+          <th>Status</th>
+          <th>Details</th>
+        </tr>
+      </thead>
+      <tbody id="ai-audit-tbody">
+        {% if audit_logs and audit_logs|length > 0 %}
+          {% for log in audit_logs %}
+          <tr>
+            <td class="text-muted font-mono text-xs">{{ log.timestamp.split('T')[1].split('.')[0] if 'T' in log.timestamp else log.timestamp }}</td>
+            <td class="font-mono font-bold">{{ log.tool_name }}</td>
+            <td>
+              {% if log.status == 'success' or log.status == 'allowed' %}
+                <span class="badge badge--ok">{{ log.status }}</span>
+              {% elif log.status == 'denied' %}
+                <span class="badge badge--error">Denied</span>
+              {% else %}
+                <span class="badge badge--neutral">{{ log.status }}</span>
+              {% endif %}
+            </td>
+            <td class="text-muted text-xs">{{ log.details or '-' }}</td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="4" class="text-center text-muted py-md">No recent tool inspection calls recorded.</td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>

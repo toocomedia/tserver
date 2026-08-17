@@ -1,8 +1,6 @@
 """
-prompts.py — Backwards-compatible facade module delegating to plugins.ai_helper.prompts.*
+prompts/__init__.py — AI Assistant prompts and instruction package.
 """
-from __future__ import annotations
-
 from plugins.ai_helper.prompts.base_rules import FIXED_CORE_SYSTEM_PROMPT
 from plugins.ai_helper.prompts.builder import build_system_prompt
 
