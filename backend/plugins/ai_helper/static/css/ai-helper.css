@@ -189,7 +189,7 @@
   justify-content: center;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.18s ease;
+  transition: opacity 0.12s ease;
 }
 
 .ai-helper-model-modal.open {
@@ -222,21 +222,23 @@
 .ai-helper-model-arrow-btn {
   background: transparent;
   border: none;
-  color: rgba(255, 255, 255, 0.4);
-  font-size: 11px;
-  height: 28px;
+  color: rgba(255, 255, 255, 0.35);
+  height: 24px;
   width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   outline: none;
-  transition: color 0.15s ease, transform 0.15s ease;
+  transition: color 0.1s ease;
+}
+
+.ai-helper-model-arrow-btn svg {
+  stroke: currentColor;
 }
 
 .ai-helper-model-arrow-btn:hover {
   color: #ffffff;
-  transform: scale(1.15);
 }
 
 /* 3-Item Viewport (Text only, no boxes) */
@@ -275,19 +277,17 @@
   font-size: 12.5px;
   font-weight: 500;
   cursor: pointer;
-  transition: color 0.15s ease, transform 0.15s ease;
+  transition: color 0.1s ease;
 }
 
 .ai-helper-model-text-item:hover {
-  color: rgba(255, 255, 255, 0.85);
-  transform: scale(1.04);
+  color: rgba(255, 255, 255, 0.9);
 }
 
 .ai-helper-model-text-item--active {
   color: var(--color-accent, #ffffff) !important;
-  font-size: 14px !important;
+  font-size: 13.5px !important;
   font-weight: 700 !important;
-  transform: scale(1.08);
 }
 
 .ai-helper-model-title {
