@@ -12,52 +12,79 @@
 {% block content %}
 <div style="max-width: 640px; margin: 0 auto; padding: 16px 0 100px;">
 
-  <form id="provider-form" method="POST" action="{% if is_edit %}/plugins/ai_helper/{{ provider.id }}/edit{% else %}/plugins/ai_helper/create{% endif %}" autocomplete="off" data-lpignore="true">
+  <form id="provider-form" method="POST" action="{% if is_edit %}/plugins/ai_helper/{{ provider.id }}/edit{% else %}/plugins/ai_helper/create{% endif %}" autocomplete="off" data-lpignore="true" data-form-type="other">
     {% include "partials/csrf_field.html" %}
 
-    <!-- Provider Preset -->
+    <!-- Decoy inputs to prevent password autofill -->
+    <input type="text" name="fake_email_prevent_autofill" style="display:none !important;" tabindex="-1" autocomplete="off">
+    <input type="password" name="fake_password_prevent_autofill" style="display:none !important;" tabindex="-1" autocomplete="off">
+
+    <!-- Provider Service Choice Cards (Step Pages Style) -->
     <div class="form-group mb-lg">
-      <label class="form-label" for="form_preset_select">Provider Preset</label>
-      <div class="form-select-wrap">
-        <select class="form-select" id="form_preset_select">
-          {% for key, p in presets.items() %}
-          <option value="{{ key }}" 
-                  data-name="{{ p.name }}" 
-                  data-type="{{ p.type }}" 
-                  data-url="{{ p.base_url }}"
-                  {% if (provider and provider.provider_type == p.type and p.base_url in (provider.base_url or '')) or (not provider and key == 'openai') %}selected{% endif %}>
-            {{ p.name }} ({{ p.desc }})
-          </option>
-          {% endfor %}
-        </select>
+      <label class="form-label">Provider</label>
+      <div class="settings-choice-grid mb-xs" id="form-preset-grid" style="grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px;">
+        {% for key, p in presets.items() %}
+        {% set is_active = (provider and provider.provider_type == p.type and p.base_url and p.base_url in provider.base_url) or (not provider and key == 'openai') %}
+        <label class="settings-choice settings-choice--compact {% if is_active %}settings-choice--active{% endif %}"
+               data-preset-key="{{ key }}" 
+               data-name="{{ p.name }}"
+               data-type="{{ p.type }}" 
+               data-url="{{ p.base_url }}"
+               style="padding: 12px 14px; min-height: auto;">
+          <div class="settings-choice__header" style="gap: 6px;">
+            <input type="radio" name="provider_preset" value="{{ key }}" {% if is_active %}checked{% endif %}>
+            <span class="settings-choice__title" style="font-size: 12px; font-weight: 700;">{{ p.name }}</span>
+          </div>
+          <span class="settings-choice__desc" style="font-size: 10.5px; margin-top: 2px;">{{ p.desc }}</span>
+        </label>
+        {% endfor %}
       </div>
     </div>
 
-    <!-- API Key -->
+    <!-- API Key Input with Show/Hide -->
     <div class="form-group mb-lg">
       <label class="form-label" for="api_key">API Key</label>
-      <div class="d-flex align-items-center gap-xs">
-        <input type="password" class="form-input font-mono" id="api_key" name="api_key" placeholder="{% if is_edit and has_api_key %}•••••••••••••••• (Leave blank to keep unchanged){% else %}Enter API key (sk-...){% endif %}" autocomplete="new-password" data-lpignore="true" style="flex: 1;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <input type="password" class="form-input font-mono" id="api_key" name="api_key" placeholder="{% if is_edit and has_api_key %}•••••••••••••••• (Leave blank to keep unchanged){% else %}Enter API key (sk-...){% endif %}" autocomplete="new-password" data-lpignore="true" data-1p-ignore="true" style="flex: 1;">
         <button type="button" class="btn btn--secondary btn--sm" id="btn-toggle-key" style="height: 34px; padding: 0 10px;" title="Toggle visibility">
           <i data-lucide="eye" id="key-eye-icon"></i>
         </button>
       </div>
     </div>
 
-    <!-- Default Model -->
-    <div class="form-group mb-md">
-      <div class="d-flex align-items-center justify-content-between mb-xs">
-        <label class="form-label m-0" for="model_name">Default Model</label>
-        <span id="model-status" class="badge-minimal badge-minimal--neutral" style="display: none;"></span>
+    <!-- Model Dropdown with Checkbox Multi-Selection -->
+    <div class="form-group mb-lg" id="model-section">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+        <label class="form-label m-0">Models & Default</label>
+        <span id="model-status" class="badge badge--neutral" style="display: none;"></span>
       </div>
-      <input type="text" class="form-input font-mono" id="model_name" name="model_name" placeholder="e.g. gpt-4o-mini" value="{{ provider.model_name if provider else 'gpt-4o-mini' }}" required autocomplete="off" data-lpignore="true">
-    </div>
 
-    <!-- Enabled Models -->
-    <div class="form-group mb-lg">
-      <label class="form-label" for="models_list">Enabled Models</label>
-      <input type="text" class="form-input font-mono" id="models_list" name="models_list" placeholder="e.g. gpt-4o-mini, gpt-4o, o3-mini" value="{{ provider.models_list if provider else 'gpt-4o-mini, gpt-4o' }}" autocomplete="off" data-lpignore="true">
-      <span class="text-small text-muted" style="margin-top: 4px; display: block;">Comma-separated models available for this API key.</span>
+      <div class="model-dropdown-wrap" id="model-dropdown-wrap" style="position: relative;">
+        <!-- Dropdown Trigger (using panel .form-select base styling) -->
+        <div class="form-select font-mono" id="model-trigger" tabindex="0" style="display: flex; align-items: center; justify-content: space-between; cursor: pointer; user-select: none;">
+          <span id="model-trigger-text" class="text-truncate">-- Enter API key to load models --</span>
+          <span class="text-muted" style="font-size: 11px; margin-left: 8px;">▾</span>
+        </div>
+
+        <!-- Dropdown Menu with Checkboxes -->
+        <div class="model-dropdown-menu" id="model-menu" style="display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: var(--color-surface); border: 1px solid var(--color-line); box-shadow: 0 10px 30px rgba(0,0,0,0.35); z-index: 1000; border-radius: 4px; max-height: 260px; overflow-y: auto; padding: 6px;">
+          <!-- Quick Filter / Add Model Input -->
+          <div style="display: flex; gap: 6px; padding: 4px 4px 8px; border-bottom: 1px solid var(--color-line); margin-bottom: 6px;">
+            <input type="text" class="form-input font-mono text-xs" id="filter-model-input" placeholder="Search or type custom model..." style="height: 28px; padding: 2px 8px; flex: 1;" autocomplete="off" data-lpignore="true">
+            <button type="button" class="btn btn--secondary btn--sm" id="btn-add-model" style="height: 28px; padding: 0 8px; font-size: 11px;">
+              + Add
+            </button>
+          </div>
+
+          <!-- List with Checkboxes & Default Selector -->
+          <div id="models-list-items" style="display: flex; flex-direction: column; gap: 2px;">
+            <span class="text-muted" style="font-size: 11px; padding: 6px 8px;">Enter API key to load models</span>
+          </div>
+        </div>
+      </div>
+
+      <input type="hidden" id="model_name" name="model_name" value="{{ provider.model_name if provider else '' }}">
+      <input type="hidden" id="models_list" name="models_list" value="{{ provider.models_list if provider else '' }}">
     </div>
 
     <!-- Default Provider Checkbox -->
@@ -68,7 +95,7 @@
       </label>
     </div>
 
-    <!-- Advanced Settings -->
+    <!-- Advanced Settings (Unboxed) -->
     <details class="mb-xl" id="advanced-settings-details" style="border: none; background: transparent;">
       <summary style="cursor: pointer; display: inline-flex; align-items: center; gap: 8px; font-weight: 600; font-size: 13px; color: var(--color-muted); padding: 8px 0; user-select: none;">
         <i data-lucide="sliders"></i>
@@ -109,105 +136,406 @@
 
         <div class="form-group">
           <label class="form-label" for="custom_rules">Custom Rules</label>
-          <textarea class="form-input font-mono" id="custom_rules" name="custom_rules" rows="3" style="height: auto; padding: 10px; line-height: 1.45;" placeholder="Optional prompt directives (e.g. 'Prefer PostgreSQL over MySQL').">{{ provider.custom_rules if provider else '' }}</textarea>
+          <textarea class="form-input font-mono" id="custom_rules" name="custom_rules" rows="3" style="height: auto; padding: 10px; line-height: 1.5;" placeholder="Optional prompt directives (e.g. 'Prefer PostgreSQL').">{{ provider.custom_rules if provider else '' }}</textarea>
         </div>
       </div>
     </details>
 
-    <div class="d-flex align-items-center justify-content-between gap-sm">
-      <span id="test-indicator" class="d-flex align-items-center gap-xs text-small"></span>
-      <div class="d-flex align-items-center gap-xs">
-        <a href="/plugins/ai_helper/" class="btn btn--secondary btn--sm">Cancel</a>
-        <button type="button" class="btn btn--secondary btn--sm" id="btn-test-connection">
-          <i data-lucide="zap"></i> Test Connection
-        </button>
-        <button type="submit" class="btn btn--primary btn--sm" id="btn-save-provider">
-          <i data-lucide="save"></i> {% if is_edit %}Update Provider{% else %}Save Provider{% endif %}
-        </button>
+    <!-- Fixed Bottom Action Bar -->
+    <div class="fixed-action-bar">
+      <div class="fixed-action-bar__inner">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span id="test-indicator" style="display: flex; align-items: center; gap: 6px; font-size: 13px;"></span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px; margin-left: auto;">
+          <a href="/plugins/ai_helper/" class="btn btn--secondary btn--sm">Cancel</a>
+          <button type="button" class="btn btn--secondary btn--sm" id="btn-test-connection">
+            <i data-lucide="zap"></i> Test Connection
+          </button>
+          <button type="submit" class="btn btn--primary btn--sm" id="btn-save-provider">
+            <i data-lucide="save"></i> {% if is_edit %}Update Provider{% else %}Save Provider{% endif %}
+          </button>
+        </div>
       </div>
     </div>
 
   </form>
+
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
 document.addEventListener("DOMContentLoaded", function () {
-  var presetSelect = document.getElementById("form_preset_select");
+  if (typeof lucide !== 'undefined') {
+    lucide.createIcons();
+  }
+
   var providerNameInput = document.getElementById("provider_name");
   var providerTypeSelect = document.getElementById("provider_type");
   var baseUrlInput = document.getElementById("base_url");
   var apiKeyInput = document.getElementById("api_key");
-  var modelNameInput = document.getElementById("model_name");
-  var modelsListInput = document.getElementById("models_list");
+
+  var modelDropdownWrap = document.getElementById("model-dropdown-wrap");
+  var modelTrigger = document.getElementById("model-trigger");
+  var modelTriggerText = document.getElementById("model-trigger-text");
+  var modelMenu = document.getElementById("model-menu");
+  var filterModelInput = document.getElementById("filter-model-input");
+  var btnAddModel = document.getElementById("btn-add-model");
+  var modelsListItems = document.getElementById("models-list-items");
+
+  var modelNameHidden = document.getElementById("model_name");
+  var modelsListHidden = document.getElementById("models_list");
   var modelStatus = document.getElementById("model-status");
-  var btnTest = document.getElementById("btn-test-connection");
-  var testIndicator = document.getElementById("test-indicator");
-  var btnToggleKey = document.getElementById("btn-toggle-key");
-  var keyEyeIcon = document.getElementById("key-eye-icon");
 
-  if (presetSelect) {
-    presetSelect.addEventListener("change", function () {
-      var opt = presetSelect.options[presetSelect.selectedIndex];
-      if (!opt) return;
-      var name = opt.getAttribute("data-name");
-      var type = opt.getAttribute("data-type");
-      var url = opt.getAttribute("data-url");
+  var allKnownModels = [];
+  var enabledModels = [];
+  var defaultModel = "";
 
-      if (name && providerNameInput) providerNameInput.value = name;
-      if (type && providerTypeSelect) providerTypeSelect.value = type;
-      if (url && baseUrlInput) baseUrlInput.value = url;
-    });
+  {% if provider %}
+  var initModelsRaw = "{{ provider.models_list or '' }}";
+  var initModel = "{{ provider.model_name or '' }}";
+  enabledModels = initModelsRaw ? initModelsRaw.split(",").map(function(s){ return s.trim(); }).filter(Boolean) : [];
+  if (initModel && !enabledModels.includes(initModel)) {
+    enabledModels.unshift(initModel);
   }
+  if (enabledModels.length === 0 && initModel) {
+    enabledModels = [initModel];
+  }
+  allKnownModels = Array.from(new Set(enabledModels));
+  defaultModel = initModel || (enabledModels[0] || "gpt-4o-mini");
+  {% else %}
+  allKnownModels = ["gpt-4o-mini", "gpt-4o", "o3-mini"];
+  enabledModels = ["gpt-4o-mini", "gpt-4o"];
+  defaultModel = "gpt-4o-mini";
+  {% endif %}
 
-  if (btnToggleKey && apiKeyInput) {
-    btnToggleKey.addEventListener("click", function () {
-      if (apiKeyInput.type === "password") {
-        apiKeyInput.type = "text";
-        if (keyEyeIcon) keyEyeIcon.setAttribute("data-lucide", "eye-off");
+  function updateModelDropdownUI() {
+    if (modelNameHidden) modelNameHidden.value = defaultModel;
+    if (modelsListHidden) modelsListHidden.value = enabledModels.join(", ");
+
+    if (modelTriggerText) {
+      if (!defaultModel && enabledModels.length === 0) {
+        modelTriggerText.textContent = "-- Enter API key to load models --";
       } else {
-        apiKeyInput.type = "password";
-        if (keyEyeIcon) keyEyeIcon.setAttribute("data-lucide", "eye");
+        var count = enabledModels.length;
+        if (count > 1) {
+          modelTriggerText.textContent = (defaultModel || enabledModels[0]) + " (" + count + " models enabled)";
+        } else {
+          modelTriggerText.textContent = defaultModel || (enabledModels[0] || "-- Select Model --");
+        }
       }
-      if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+
+    if (!modelsListItems) return;
+    modelsListItems.innerHTML = "";
+
+    var filterText = (filterModelInput ? filterModelInput.value.trim().toLowerCase() : "");
+    var filtered = allKnownModels.filter(function(m) {
+      return !filterText || m.toLowerCase().indexOf(filterText) !== -1;
+    });
+
+    if (filtered.length === 0) {
+      var emptyEl = document.createElement("div");
+      emptyEl.className = "text-muted";
+      emptyEl.style.cssText = "font-size: 11px; padding: 8px 10px;";
+      emptyEl.textContent = filterText ? "No match for '" + filterText + "'. Click '+ Add' to create it." : "No models loaded.";
+      modelsListItems.appendChild(emptyEl);
+      return;
+    }
+
+    filtered.forEach(function(m) {
+      var isEnabled = enabledModels.includes(m);
+      var isDefault = (m === defaultModel);
+
+      var row = document.createElement("div");
+      row.style.cssText = "display: flex; align-items: center; justify-content: space-between; padding: 5px 8px; border-radius: 4px; gap: 8px; transition: background 0.1s;";
+      if (isDefault) {
+        row.style.background = "rgba(var(--color-accent-rgb, 99, 102, 241), 0.1)";
+      }
+
+      var checkLabel = document.createElement("label");
+      checkLabel.className = "form-check m-0";
+      checkLabel.style.cssText = "flex: 1; min-width: 0; cursor: pointer; gap: 8px;";
+
+      var cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.value = m;
+      cb.checked = isEnabled;
+      cb.addEventListener("change", function(e) {
+        if (this.checked) {
+          if (!enabledModels.includes(m)) enabledModels.push(m);
+          if (!defaultModel) defaultModel = m;
+        } else {
+          enabledModels = enabledModels.filter(function(x) { return x !== m; });
+          if (defaultModel === m) {
+            defaultModel = enabledModels[0] || "";
+          }
+        }
+        updateModelDropdownUI();
+      });
+
+      var nameSpan = document.createElement("span");
+      nameSpan.className = "font-mono text-xs text-truncate";
+      nameSpan.textContent = m;
+      if (isDefault) {
+        nameSpan.style.fontWeight = "700";
+        nameSpan.style.color = "var(--color-accent)";
+      }
+
+      checkLabel.appendChild(cb);
+      checkLabel.appendChild(nameSpan);
+      row.appendChild(checkLabel);
+
+      var defBtn = document.createElement("button");
+      defBtn.type = "button";
+      defBtn.style.cssText = "background: none; border: none; font-size: 11px; cursor: pointer; padding: 2px 6px; border-radius: 3px;";
+      if (isDefault) {
+        defBtn.style.color = "var(--color-accent)";
+        defBtn.style.fontWeight = "700";
+        defBtn.innerHTML = "★ Default";
+      } else {
+        defBtn.style.color = "var(--color-muted)";
+        defBtn.textContent = "Set Default";
+        defBtn.addEventListener("click", function(e) {
+          e.stopPropagation();
+          defaultModel = m;
+          if (!enabledModels.includes(m)) enabledModels.push(m);
+          updateModelDropdownUI();
+        });
+      }
+      row.appendChild(defBtn);
+
+      modelsListItems.appendChild(row);
     });
   }
 
-  if (btnTest) {
-    btnTest.addEventListener("click", function () {
-      var key = apiKeyInput ? apiKeyInput.value.trim() : "";
-      var csrfToken = document.querySelector("meta[name='csrf-token']")?.getAttribute("content") || "";
+  // Toggle Dropdown Menu
+  if (modelTrigger && modelMenu) {
+    modelTrigger.addEventListener("click", function(e) {
+      e.stopPropagation();
+      var isOpen = (modelMenu.style.display === "block");
+      modelMenu.style.display = isOpen ? "none" : "block";
+      if (!isOpen && filterModelInput) {
+        filterModelInput.focus();
+      }
+    });
 
-      btnTest.disabled = true;
-      testIndicator.innerHTML = '<span class="spinner-sm"></span> Testing...';
+    modelMenu.addEventListener("click", function(e) {
+      e.stopPropagation();
+    });
+
+    document.addEventListener("click", function() {
+      if (modelMenu) modelMenu.style.display = "none";
+    });
+  }
+
+  // Add Custom Model from Filter Input
+  function addCustomModelFromFilter() {
+    if (!filterModelInput) return;
+    var val = filterModelInput.value.trim();
+    if (!val) return;
+    if (!allKnownModels.includes(val)) {
+      allKnownModels.unshift(val);
+    }
+    if (!enabledModels.includes(val)) {
+      enabledModels.push(val);
+    }
+    if (!defaultModel) {
+      defaultModel = val;
+    }
+    filterModelInput.value = "";
+    updateModelDropdownUI();
+  }
+
+  if (btnAddModel && filterModelInput) {
+    btnAddModel.addEventListener("click", addCustomModelFromFilter);
+    filterModelInput.addEventListener("keydown", function(e) {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        addCustomModelFromFilter();
+      }
+    });
+    filterModelInput.addEventListener("input", function() {
+      updateModelDropdownUI();
+    });
+  }
+
+  function setDropdownOptions(modelsList, selectedValue) {
+    if (!modelsList || modelsList.length === 0) return;
+    
+    modelsList.forEach(function (m) {
+      if (m && !allKnownModels.includes(m.trim())) {
+        allKnownModels.push(m.trim());
+      }
+    });
+
+    if (selectedValue && !allKnownModels.includes(selectedValue.trim())) {
+      allKnownModels.unshift(selectedValue.trim());
+    }
+
+    if (selectedValue) {
+      defaultModel = selectedValue;
+      if (!enabledModels.includes(selectedValue)) enabledModels.push(selectedValue);
+    } else if (enabledModels.length === 0 && allKnownModels.length > 0) {
+      defaultModel = allKnownModels[0];
+      enabledModels = [allKnownModels[0]];
+    }
+
+    updateModelDropdownUI();
+  }
+
+  updateModelDropdownUI();
+
+  // Auto-Check & Fetch Models from API
+  var fetchTimeout = null;
+  var lastFetchedKey = "";
+
+  function autoFetchModels() {
+    var apiKey = apiKeyInput ? apiKeyInput.value.trim() : "";
+    var baseUrl = baseUrlInput ? baseUrlInput.value.trim() : "";
+    var providerType = providerTypeSelect ? providerTypeSelect.value : "openai_compatible";
+
+    var isEditMode = {% if is_edit and has_api_key %}true{% else %}false{% endif %};
+    if (!apiKey && !isEditMode) {
+      return;
+    }
+
+    if (apiKey === lastFetchedKey && apiKey !== "") {
+      return;
+    }
+    lastFetchedKey = apiKey;
+
+    if (modelStatus) {
+      modelStatus.style.display = "inline-flex";
+      modelStatus.className = "badge badge--neutral";
+      modelStatus.innerHTML = '<span class="spinner-sm"></span> Loading models...';
+    }
+
+    var payload = {
+      provider_type: providerType,
+      api_key: apiKey || undefined,
+      base_url: baseUrl,
+    };
+
+    var csrfToken = document.querySelector("meta[name='csrf-token']")?.getAttribute("content") || "";
+
+    fetch("/plugins/ai_helper/api/fetch-models", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": csrfToken,
+      },
+      body: JSON.stringify(payload),
+    })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        if (data.success && data.models && data.models.length > 0) {
+          setDropdownOptions(data.models, modelNameHidden.value);
+          if (modelStatus) {
+            modelStatus.className = "badge badge--ok";
+            modelStatus.innerHTML = "✓ " + data.count + " models loaded";
+            modelStatus.style.display = "inline-flex";
+          }
+        } else {
+          if (modelStatus) {
+            modelStatus.className = "badge badge--error";
+            modelStatus.innerHTML = "Failed to load models";
+            modelStatus.style.display = "inline-flex";
+          }
+        }
+      })
+      .catch(function () {
+        if (modelStatus) modelStatus.style.display = "none";
+      });
+  }
+
+  if (apiKeyInput) {
+    apiKeyInput.addEventListener("input", function () {
+      clearTimeout(fetchTimeout);
+      var val = this.value.trim();
+      if (val.length >= 6) {
+        fetchTimeout = setTimeout(autoFetchModels, 500);
+      }
+    });
+
+    apiKeyInput.addEventListener("blur", function () {
+      if (this.value.trim().length >= 6) {
+        autoFetchModels();
+      }
+    });
+  }
+
+  // Show/Hide API Key Toggle
+  var toggleBtn = document.getElementById("btn-toggle-key");
+  if (toggleBtn && apiKeyInput) {
+    toggleBtn.addEventListener("click", function () {
+      apiKeyInput.type = (apiKeyInput.type === "password") ? "text" : "password";
+    });
+  }
+
+  // Test Connection
+  var testBtn = document.getElementById("btn-test-connection");
+  var indicator = document.getElementById("test-indicator");
+
+  if (testBtn) {
+    testBtn.addEventListener("click", function () {
+      syncModelValue();
+      testBtn.disabled = true;
+      var origHtml = testBtn.innerHTML;
+      testBtn.textContent = "Testing...";
+      if (indicator) indicator.innerHTML = '<span class="spinner-sm"></span> <span class="text-muted">Testing...</span>';
+
+      var payload = {
+        provider_type: providerTypeSelect ? providerTypeSelect.value : "openai_compatible",
+        api_key: apiKeyInput ? apiKeyInput.value : undefined,
+        base_url: baseUrlInput ? baseUrlInput.value : "",
+        model_name: modelNameHidden.value,
+      };
+
+      var csrfToken = document.querySelector("meta[name='csrf-token']")?.getAttribute("content") || "";
 
       fetch("/plugins/ai_helper/api/test-connection", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "X-CSRF-Token": csrfToken },
-        body: JSON.stringify({
-          provider_type: providerTypeSelect.value,
-          base_url: baseUrlInput.value,
-          model_name: modelNameInput.value,
-          api_key: key || undefined,
-          provider_id: {% if provider %}{{ provider.id }}{% else %}undefined{% endif %}
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRF-Token": csrfToken,
+        },
+        body: JSON.stringify(payload),
+      })
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+          testBtn.disabled = false;
+          testBtn.innerHTML = origHtml;
+          if (typeof lucide !== 'undefined') lucide.createIcons();
+
+          if (data.success) {
+            if (indicator) indicator.innerHTML = '<span class="badge badge--ok">✓ Connected (' + data.latency_ms + 'ms)</span>';
+          } else {
+            if (indicator) indicator.innerHTML = '<span class="badge badge--error">✗ ' + (data.error || "Connection failed") + '</span>';
+          }
         })
-      })
-      .then(function(res) { return res.json(); })
-      .then(function(data) {
-        btnTest.disabled = false;
-        if (data.status === "ok") {
-          testIndicator.innerHTML = '<span class="badge-minimal badge-minimal--active">✓ Online (' + data.latency_ms + 'ms)</span>';
-        } else {
-          testIndicator.innerHTML = '<span class="badge-minimal badge-minimal--danger">✕ ' + (data.message || 'Failed') + '</span>';
-        }
-      })
-      .catch(function(err) {
-        btnTest.disabled = false;
-        testIndicator.innerHTML = '<span class="badge-minimal badge-minimal--danger">✕ ' + err.message + '</span>';
-      });
+        .catch(function (err) {
+          testBtn.disabled = false;
+          testBtn.innerHTML = origHtml;
+          if (typeof lucide !== 'undefined') lucide.createIcons();
+          if (indicator) indicator.innerHTML = '<span class="badge badge--error">✗ Error: ' + err.message + '</span>';
+        });
     });
   }
+
+  // Form submit verification
+  document.getElementById("provider-form").addEventListener("submit", function (e) {
+    if (!modelNameHidden.value.trim()) {
+      e.preventDefault();
+      alert("Please select or add at least one Model.");
+      if (modelTrigger) modelTrigger.click();
+    }
+  });
+
+  {% if not is_edit %}
+  selectPresetCard("openai");
+  {% endif %}
 });
 </script>
 {% endblock %}
