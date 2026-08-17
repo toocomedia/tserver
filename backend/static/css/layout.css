@@ -533,7 +533,8 @@ html[data-sidebar-style="gradient"] .sidebar__item--active:hover {
 
 .content__inner {
   width: 100%;
-  max-width: 100%;
+  max-width: var(--max-content-width);
+  margin-inline: auto;
   padding: 0 var(--page-gutter) var(--space-xl);
   /* NO top padding — first element (action-toolbar etc.) sits flush
      directly under the page-header divider line. */

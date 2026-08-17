@@ -174,6 +174,8 @@
   gap: 28px;
   align-items: start;
   width: 100%;
+  max-width: var(--max-content-width);
+  margin-inline: auto;
 }
 
 .php-split-nav {
