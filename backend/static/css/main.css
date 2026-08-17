@@ -206,7 +206,7 @@
   --button-min-width-sm: 70px;
   --page-gutter:       20px;
   --content-gap:       16px;
-  --max-content-width: 1400px;
+  --max-content-width: 100%;
 
   /* Skeleton / loading timing (see components/loading.css) */
   --skeleton-shimmer-duration: 1.6s;

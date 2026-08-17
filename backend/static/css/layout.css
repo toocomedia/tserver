@@ -370,14 +370,11 @@ html[data-sidebar-style="gradient"] .sidebar__item--active:hover {
   height: var(--topbar-height);
   min-height: var(--topbar-height);
   padding: 0 var(--page-gutter);
-  margin-bottom: var(--space-lg);
+  margin-bottom: 0;
   background: var(--color-bg);
-  border-bottom: none;
+  border-bottom: 1px solid var(--color-line);
   flex-shrink: 0;
   flex-wrap: nowrap;
-  width: 100%;
-  max-width: var(--max-content-width);
-  margin-inline: auto;
 }
 
 .page-header:has(+ .content--flush),
@@ -536,8 +533,7 @@ html[data-sidebar-style="gradient"] .sidebar__item--active:hover {
 
 .content__inner {
   width: 100%;
-  max-width: var(--max-content-width);
-  margin-inline: auto;
+  max-width: 100%;
   padding: 0 var(--page-gutter) var(--space-xl);
   /* NO top padding — first element (action-toolbar etc.) sits flush
      directly under the page-header divider line. */
