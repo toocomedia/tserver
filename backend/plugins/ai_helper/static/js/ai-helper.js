@@ -110,18 +110,38 @@
         "    </div>",
         "  </div>",
         "</div>",
+        '<div class="ai-helper-model-modal" id="ai-helper-model-modal">',
+        '  <div class="ai-helper-model-modal-backdrop" id="ai-helper-model-modal-backdrop"></div>',
+        '  <div class="ai-helper-model-modal-card">',
+        '    <div class="ai-helper-model-modal-header">',
+        '      <span class="ai-helper-model-modal-title">Select AI Model</span>',
+        '      <button type="button" class="ai-helper-btn-icon" id="ai-helper-model-modal-close" title="Close">',
+        '        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>',
+        '      </button>',
+        '    </div>',
+        '    <button type="button" class="ai-helper-model-arrow-btn" id="ai-helper-model-arrow-up" title="Previous model">',
+        '      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"></polyline></svg>',
+        '    </button>',
+        '    <div class="ai-helper-model-viewport" id="ai-helper-model-viewport">',
+        '      <div class="ai-helper-model-list" id="ai-helper-model-list">',
+        '      </div>',
+        '    </div>',
+        '    <button type="button" class="ai-helper-model-arrow-btn" id="ai-helper-model-arrow-down" title="Next model">',
+        '      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>',
+        '    </button>',
+        '  </div>',
+        '</div>',
         '<div class="ai-helper-footer">',
         '  <form class="ai-helper-input-box" id="ai-helper-form">',
         '    <textarea class="ai-helper-textarea" id="ai-helper-input" rows="2" placeholder="Ask a question or paste error logs..."></textarea>',
         '    <div class="ai-helper-toolbar">',
         '      <div class="ai-helper-toolbar-left">',
-        '        <div class="form-select-wrap ai-helper-model-wrap">',
-        '          <select class="form-select font-mono ai-helper-model-picker" id="ai-helper-model-picker" title="Select AI Model">',
-        '            <option value="">Default Model</option>',
-        '          </select>',
-        '        </div>',
+        '        <button type="button" class="ai-helper-model-trigger" id="ai-helper-model-trigger" title="Switch AI Model">',
+        '          <span class="ai-helper-model-trigger-name" id="ai-helper-model-trigger-text">Select Model</span>',
+        '          <span class="ai-helper-model-trigger-chevron">▾</span>',
+        '        </button>',
         '        <span class="ai-helper-status-pill" id="ai-helper-status-model">Ready</span>',
-        "      </div>",
+        '      </div>',
         '      <div class="ai-helper-toolbar-right">',
         '        <button type="button" class="btn btn--danger btn--sm" id="ai-helper-stop-btn" style="display: none; height: 26px; padding: 0 8px; font-size: 11px; min-width: auto;" title="Stop generation">',
         '          <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg> Stop',
@@ -129,10 +149,10 @@
         '        <button type="submit" class="btn btn--primary btn--sm" id="ai-helper-send-btn" style="width: 26px; height: 26px; padding: 0; min-width: 26px;" title="Send message (Enter)">',
         '          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>',
         '        </button>',
-        "      </div>",
-        "    </div>",
-        "  </form>",
-        "</div>",
+        '      </div>',
+        '    </div>',
+        '  </form>',
+        '</div>',
       ].join("\n");
 
       document.body.appendChild(drawer);
@@ -142,10 +162,19 @@
       this.inputEl = document.getElementById("ai-helper-input");
       this.sendBtnEl = document.getElementById("ai-helper-send-btn");
       this.stopBtnEl = document.getElementById("ai-helper-stop-btn");
-      this.modelPickerEl = document.getElementById("ai-helper-model-picker");
       this.contextBarEl = document.getElementById("ai-helper-context-bar");
       this.contextTextEl = document.getElementById("ai-helper-context-text");
       this.statusEl = document.getElementById("ai-helper-status-model");
+
+      this.modelModalEl = document.getElementById("ai-helper-model-modal");
+      this.modelModalBackdrop = document.getElementById("ai-helper-model-modal-backdrop");
+      this.modelModalClose = document.getElementById("ai-helper-model-modal-close");
+      this.modelViewportEl = document.getElementById("ai-helper-model-viewport");
+      this.modelListEl = document.getElementById("ai-helper-model-list");
+      this.modelArrowUp = document.getElementById("ai-helper-model-arrow-up");
+      this.modelArrowDown = document.getElementById("ai-helper-model-arrow-down");
+      this.modelTriggerBtn = document.getElementById("ai-helper-model-trigger");
+      this.modelTriggerText = document.getElementById("ai-helper-model-trigger-text");
 
       // Auto-grow textarea
       this.inputEl.addEventListener("input", function () {
@@ -166,19 +195,43 @@
         AiHelper.setContext(null);
       });
 
-      this.modelPickerEl.addEventListener("change", function () {
-        var val = this.value || "";
-        if (val && val.indexOf(":") !== -1) {
-          var parts = val.split(":");
-          AiHelper.selectedProviderId = parts[0];
-          AiHelper.selectedModelName = parts.slice(1).join(":");
-          localStorage.setItem("ai_helper_selected_target", val);
-        } else {
-          AiHelper.selectedProviderId = null;
-          AiHelper.selectedModelName = null;
-          localStorage.removeItem("ai_helper_selected_target");
-        }
-      });
+      var self = this;
+      if (this.modelTriggerBtn) {
+        this.modelTriggerBtn.addEventListener("click", function (e) {
+          e.preventDefault();
+          self.openModelModal();
+        });
+      }
+
+      if (this.modelModalBackdrop) {
+        this.modelModalBackdrop.addEventListener("click", function () {
+          self.closeModelModal();
+        });
+      }
+
+      if (this.modelModalClose) {
+        this.modelModalClose.addEventListener("click", function () {
+          self.closeModelModal();
+        });
+      }
+
+      if (this.modelArrowUp) {
+        this.modelArrowUp.addEventListener("click", function (e) {
+          e.stopPropagation();
+          if (self.modelViewportEl) {
+            self.modelViewportEl.scrollBy({ top: -52, behavior: "smooth" });
+          }
+        });
+      }
+
+      if (this.modelArrowDown) {
+        this.modelArrowDown.addEventListener("click", function (e) {
+          e.stopPropagation();
+          if (self.modelViewportEl) {
+            self.modelViewportEl.scrollBy({ top: 52, behavior: "smooth" });
+          }
+        });
+      }
 
       document.getElementById("ai-helper-form").addEventListener("submit", function (e) {
         e.preventDefault();
@@ -244,47 +297,123 @@
       });
     },
 
+    openModelModal: function () {
+      if (!this.modelModalEl) return;
+      this.modelModalEl.classList.add("open");
+      this._scrollToActiveModel();
+    },
+
+    closeModelModal: function () {
+      if (!this.modelModalEl) return;
+      this.modelModalEl.classList.remove("open");
+    },
+
+    _scrollToActiveModel: function () {
+      if (!this.modelListEl || !this.modelViewportEl) return;
+      var active = this.modelListEl.querySelector(".ai-helper-model-item--active");
+      if (active) {
+        var topPos = active.offsetTop - this.modelViewportEl.offsetTop;
+        this.modelViewportEl.scrollTo({ top: topPos - 50, behavior: "smooth" });
+      }
+    },
+
+    selectModel: function (providerId, modelName, providerName) {
+      this.selectedProviderId = providerId;
+      this.selectedModelName = modelName;
+      var fullVal = providerId + ":" + modelName;
+      localStorage.setItem("ai_helper_selected_target", fullVal);
+
+      if (this.modelTriggerText) {
+        this.modelTriggerText.textContent = modelName;
+        this.modelTriggerText.title = providerName ? (providerName + " · " + modelName) : modelName;
+      }
+
+      if (this.modelListEl) {
+        var items = this.modelListEl.querySelectorAll(".ai-helper-model-item");
+        items.forEach(function (el) {
+          if (el.getAttribute("data-val") === fullVal) {
+            el.classList.add("ai-helper-model-item--active");
+          } else {
+            el.classList.remove("ai-helper-model-item--active");
+          }
+        });
+      }
+
+      this.closeModelModal();
+    },
+
     _loadProviders: function () {
       var self = this;
       fetch("/plugins/ai_helper/api/providers")
         .then(function (res) { return res.json(); })
         .then(function (data) {
           if (data.status === "ok" && data.providers && data.providers.length > 0) {
-            self.modelPickerEl.innerHTML = "";
+            if (!self.modelListEl) return;
+            self.modelListEl.innerHTML = "";
             var found = false;
             var targetVal = (self.selectedProviderId && self.selectedModelName)
               ? self.selectedProviderId + ":" + self.selectedModelName
               : null;
 
+            var allItems = [];
             data.providers.forEach(function (p) {
               var models = (p.models && p.models.length > 0) ? p.models : [p.model_name];
-
               models.forEach(function (m) {
-                var opt = document.createElement("option");
-                var optVal = p.id + ":" + m;
-                opt.value = optVal;
-                opt.textContent = (data.providers.length > 1 ? (p.name + " · " + m) : m);
-
-                if (targetVal && targetVal === optVal) {
-                  opt.selected = true;
-                  found = true;
-                } else if (!targetVal && p.is_default && m === p.model_name) {
-                  opt.selected = true;
-                  found = true;
-                  self.selectedProviderId = p.id;
-                  self.selectedModelName = m;
-                }
-                self.modelPickerEl.appendChild(opt);
+                allItems.push({
+                  providerId: p.id,
+                  providerName: p.name,
+                  modelName: m,
+                  isDefault: p.is_default && m === p.model_name,
+                });
               });
             });
 
-            if (!found && self.modelPickerEl.options.length > 0) {
-              self.modelPickerEl.selectedIndex = 0;
-              var firstVal = self.modelPickerEl.options[0].value;
-              if (firstVal && firstVal.indexOf(":") !== -1) {
-                var pParts = firstVal.split(":");
-                self.selectedProviderId = pParts[0];
-                self.selectedModelName = pParts.slice(1).join(":");
+            allItems.forEach(function (item) {
+              var fullVal = item.providerId + ":" + item.modelName;
+              var isSelected = false;
+
+              if (targetVal && targetVal === fullVal) {
+                isSelected = true;
+                found = true;
+              } else if (!targetVal && item.isDefault) {
+                isSelected = true;
+                found = true;
+                self.selectedProviderId = item.providerId;
+                self.selectedModelName = item.modelName;
+              }
+
+              var card = document.createElement("div");
+              card.className = "ai-helper-model-item" + (isSelected ? " ai-helper-model-item--active" : "");
+              card.setAttribute("data-val", fullVal);
+              card.setAttribute("data-provider-id", item.providerId);
+              card.setAttribute("data-model-name", item.modelName);
+              card.setAttribute("data-provider-name", item.providerName);
+
+              card.innerHTML = [
+                '<div class="ai-helper-model-item-info">',
+                '  <span class="ai-helper-model-item-name font-mono">' + item.modelName + '</span>',
+                '  <span class="ai-helper-model-item-provider badge badge--neutral text-xs">' + item.providerName + '</span>',
+                '</div>',
+                '<span class="ai-helper-model-item-check">✓</span>',
+              ].join("");
+
+              card.addEventListener("click", function () {
+                self.selectModel(item.providerId, item.modelName, item.providerName);
+              });
+
+              self.modelListEl.appendChild(card);
+            });
+
+            if (!found && allItems.length > 0) {
+              var first = allItems[0];
+              self.selectModel(first.providerId, first.modelName, first.providerName);
+            } else if (found) {
+              var activeItem = allItems.find(function (it) {
+                return (it.providerId == self.selectedProviderId && it.modelName == self.selectedModelName);
+              });
+              if (activeItem && self.modelTriggerText) {
+                self.modelTriggerText.textContent = activeItem.modelName;
+                self.modelTriggerText.title = activeItem.providerName + " · " + activeItem.modelName;
               }
             }
           }
