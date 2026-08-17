@@ -37,6 +37,7 @@ def _mask_key(decrypted_key: str) -> str:
 # Web Views: List, Add, Edit
 # -------------------------------------------------------------
 
+@router.get("", response_class=HTMLResponse)
 @router.get("/", response_class=HTMLResponse)
 async def ai_helper_index(request: Request, db: AsyncSession = Depends(get_db)):
     """Main list view: displays all added AI providers, active status, and permission policy."""
