@@ -83,8 +83,17 @@ class PluginManager:
                 return bool(service.is_installed())
             return True
         except Exception as exc:
-            logger.warning("Could not check installation status for %s: %s", plugin_id, exc)
+            logger.warning("Could not check installation status for %s: %s", plugin_id, exc, exc_info=True)
+            manifest_path = plugin_dir / "plugin.json"
+            if manifest_path.exists():
+                try:
+                    data = json.loads(manifest_path.read_text(encoding="utf-8"))
+                    if not data.get("install_script"):
+                        return True
+                except Exception:
+                    pass
             return False
+
 
     @staticmethod
     def _required_dependencies(data: dict[str, Any]) -> list[str]:
