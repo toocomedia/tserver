@@ -2,10 +2,12 @@
 <div id="perm-tab-scope" class="perm-tab-pane" style="display: none;">
   <div class="form-group mb-sm">
     <label class="form-label">Granular Resource Whitelist</label>
-    <p class="text-xs text-muted">Select specific resources accessible to the AI when in Granular Scope mode.</p>
+    <p class="text-xs text-muted">Select specific resources accessible to the AI when in Granular Whitelist mode.</p>
   </div>
 
-  <div class="d-flex flex-column gap-md">
+  <div id="scope-mode-notice" class="alert alert--neutral mb-md text-xs" style="display: none;"></div>
+
+  <div id="scope-lists-wrap" class="d-flex flex-column gap-md">
     
     <!-- Domains Dropdown -->
     <div class="form-group m-0">

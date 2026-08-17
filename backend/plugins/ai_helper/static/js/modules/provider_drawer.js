@@ -203,7 +203,7 @@ export const ProviderDrawerManager = {
 
       const checkLabel = document.createElement("label");
       checkLabel.className = "form-check m-0";
-      checkLabel.style.cssText = "flex: 1; cursor: pointer; gap: 8px;";
+      checkLabel.style.cssText = "flex: 1; cursor: pointer; gap: 8px; color: var(--color-text);";
 
       const checkbox = document.createElement("input");
       checkbox.type = "checkbox";
@@ -225,7 +225,7 @@ export const ProviderDrawerManager = {
 
       const nameSpan = document.createElement("span");
       nameSpan.className = "font-mono text-xs";
-      nameSpan.style.fontWeight = isDefault ? "700" : "500";
+      nameSpan.style.cssText = "color: var(--color-text); font-weight: " + (isDefault ? "700" : "500") + ";";
       nameSpan.textContent = m;
 
       checkLabel.appendChild(checkbox);

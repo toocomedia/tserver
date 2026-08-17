@@ -55,9 +55,15 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 5px 8px;
+  padding: 6px 8px;
   border-radius: 3px;
   gap: 8px;
+  color: var(--color-text);
+}
+
+.model-dropdown-item label,
+.model-dropdown-item span {
+  color: var(--color-text) !important;
 }
 
 .model-dropdown-item:hover {
@@ -96,43 +102,6 @@
 .perm-tab-btn.active {
   color: var(--color-text);
   border-bottom-color: var(--color-accent);
-}
-
-/* Minimal Radio List (Tab 1) */
-.perm-radio-list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.perm-radio-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 8px 10px;
-  border-radius: 4px;
-  cursor: pointer;
-  user-select: none;
-  transition: background 0.1s ease;
-}
-
-.perm-radio-item:hover {
-  background: var(--color-surface);
-}
-
-.perm-radio-item--active {
-  background: var(--color-surface);
-}
-
-.perm-radio-item input[type="radio"] {
-  margin-top: 3px;
-  cursor: pointer;
-}
-
-.perm-radio-item__text {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
 }
 
 /* Minimal Flat Category Rows (Tab 2) */
@@ -196,6 +165,7 @@
   padding: 1px 6px;
   font-size: 11px;
   font-family: monospace;
+  color: var(--color-text);
 }
 
 .perm-tag__remove {
@@ -259,6 +229,12 @@
   border-radius: 3px;
   cursor: pointer;
   transition: background 0.1s ease;
+  color: var(--color-text);
+}
+
+.perm-multiselect__item label,
+.perm-multiselect__item span {
+  color: var(--color-text) !important;
 }
 
 .perm-multiselect__item:hover {

@@ -62,10 +62,44 @@ export const PermissionsManager = {
   },
 
   updateAccessModeUI() {
-    document.querySelectorAll(".perm-radio-item").forEach((item) => {
-      const radio = item.querySelector('input[type="radio"]');
-      item.classList.toggle("perm-radio-item--active", !!(radio && radio.checked));
+    const selectedRadio = document.querySelector('input[name="global_mode"]:checked');
+    const mode = selectedRadio ? selectedRadio.value : "full_read_only";
+
+    document.querySelectorAll("[data-mode-card]").forEach((card) => {
+      const isSelected = card.getAttribute("data-mode-card") === mode;
+      card.classList.toggle("settings-choice--active", isSelected);
+      const radio = card.querySelector('input[type="radio"]');
+      if (radio) radio.checked = isSelected;
     });
+
+    const noticeEl = document.getElementById("scope-mode-notice");
+    const listsWrap = document.getElementById("scope-lists-wrap");
+    const tabWhitelistBtn = document.querySelector('.perm-tab-btn[data-target="perm-tab-scope"]');
+
+    if (noticeEl) {
+      if (mode === "full_read_only") {
+        noticeEl.className = "alert alert--neutral mb-md text-xs";
+        noticeEl.style.display = "block";
+        noticeEl.textContent = "Full Access is active. The Whitelist below is bypassed.";
+      } else if (mode === "disabled") {
+        noticeEl.className = "alert alert--danger mb-md text-xs";
+        noticeEl.style.display = "block";
+        noticeEl.textContent = "AI Access is Blocked. All tools and whitelists are disabled.";
+      } else {
+        noticeEl.className = "alert alert--ok mb-md text-xs";
+        noticeEl.style.display = "block";
+        noticeEl.textContent = "Granular Whitelist is active. Only selected items below are accessible.";
+      }
+    }
+
+    if (listsWrap) {
+      listsWrap.style.opacity = (mode === "selective") ? "1" : "0.45";
+      listsWrap.style.pointerEvents = (mode === "selective") ? "auto" : "none";
+    }
+
+    if (tabWhitelistBtn) {
+      tabWhitelistBtn.textContent = (mode === "selective") ? "Whitelist (Active)" : "Whitelist";
+    }
   },
 
   openDrawer() {

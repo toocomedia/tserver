@@ -1,40 +1,60 @@
 <!-- Tab 1: Access Policy -->
 <div id="perm-tab-policy" class="perm-tab-pane active">
   <div class="form-group mb-lg">
-    <label class="form-label">Global Access Mode</label>
+    <label class="form-label">Access Level</label>
     
-    <div class="perm-radio-list">
-      <label class="perm-radio-item {% if policy.global_mode == 'full_read_only' %}perm-radio-item--active{% endif %}">
-        <input type="radio" name="global_mode" value="full_read_only" {% if policy.global_mode == 'full_read_only' %}checked{% endif %} onchange="updateAccessModeUI()">
-        <div class="perm-radio-item__text">
-          <span class="font-bold text-sm">Global Read-Only</span>
-          <span class="text-xs text-muted">Inspect configs and logs across all enabled categories.</span>
+    <div class="settings-choice-grid mb-xs" style="grid-template-columns: 1fr; gap: 8px;">
+      
+      <!-- Option 1: Full Access -->
+      <label class="settings-choice {% if policy.global_mode == 'full_read_only' %}settings-choice--active{% endif %}" data-mode-card="full_read_only" style="padding: 12px 14px; min-height: auto;">
+        <div class="d-flex align-items-center justify-content-between" style="width: 100%;">
+          <div class="d-flex align-items-center gap-sm">
+            <input type="radio" name="global_mode" value="full_read_only" {% if policy.global_mode == 'full_read_only' %}checked{% endif %} onchange="updateAccessModeUI()">
+            <div>
+              <span class="font-bold text-sm d-block" style="color: var(--color-text);">Full Access</span>
+              <span class="text-xs text-muted">Read access across all categories (no whitelist restrictions).</span>
+            </div>
+          </div>
+          <span class="badge badge--ok" style="font-size: 10px;">Full</span>
         </div>
       </label>
 
-      <label class="perm-radio-item {% if policy.global_mode == 'selective' %}perm-radio-item--active{% endif %}">
-        <input type="radio" name="global_mode" value="selective" {% if policy.global_mode == 'selective' %}checked{% endif %} onchange="updateAccessModeUI()">
-        <div class="perm-radio-item__text">
-          <span class="font-bold text-sm">Granular Scope</span>
-          <span class="text-xs text-muted">Restrict AI inspection strictly to whitelisted resources.</span>
+      <!-- Option 2: Granular Whitelist -->
+      <label class="settings-choice {% if policy.global_mode == 'selective' %}settings-choice--active{% endif %}" data-mode-card="selective" style="padding: 12px 14px; min-height: auto;">
+        <div class="d-flex align-items-center justify-content-between" style="width: 100%;">
+          <div class="d-flex align-items-center gap-sm">
+            <input type="radio" name="global_mode" value="selective" {% if policy.global_mode == 'selective' %}checked{% endif %} onchange="updateAccessModeUI()">
+            <div>
+              <span class="font-bold text-sm d-block" style="color: var(--color-text);">Granular Whitelist</span>
+              <span class="text-xs text-muted">Restrict AI strictly to chosen resources configured in the Whitelist tab.</span>
+            </div>
+          </div>
+          <span class="badge badge--warning" style="font-size: 10px;">Whitelist</span>
         </div>
       </label>
 
-      <label class="perm-radio-item {% if policy.global_mode == 'disabled' %}perm-radio-item--active{% endif %}">
-        <input type="radio" name="global_mode" value="disabled" {% if policy.global_mode == 'disabled' %}checked{% endif %} onchange="updateAccessModeUI()">
-        <div class="perm-radio-item__text">
-          <span class="font-bold text-sm">Disabled</span>
-          <span class="text-xs text-muted">Block AI from querying any server tools or data.</span>
+      <!-- Option 3: Block AI -->
+      <label class="settings-choice {% if policy.global_mode == 'disabled' %}settings-choice--active{% endif %}" data-mode-card="disabled" style="padding: 12px 14px; min-height: auto;">
+        <div class="d-flex align-items-center justify-content-between" style="width: 100%;">
+          <div class="d-flex align-items-center gap-sm">
+            <input type="radio" name="global_mode" value="disabled" {% if policy.global_mode == 'disabled' %}checked{% endif %} onchange="updateAccessModeUI()">
+            <div>
+              <span class="font-bold text-sm d-block" style="color: var(--color-text);">Block AI Access</span>
+              <span class="text-xs text-muted">Completely disable AI assistant from querying any server tools or data.</span>
+            </div>
+          </div>
+          <span class="badge badge--error" style="font-size: 10px;">Blocked</span>
         </div>
       </label>
+
     </div>
   </div>
 
   <div class="form-group pt-sm" style="border-top: 1px solid var(--color-line);">
     <label class="form-check m-0" style="cursor: pointer; justify-content: space-between;">
       <div>
-        <span class="font-bold text-sm d-block">On-Demand Tool Confirmation</span>
-        <span class="text-xs text-muted">Ask confirmation before inspecting sensitive logs or files.</span>
+        <span class="font-bold text-sm d-block" style="color: var(--color-text);">On-Demand Confirmation</span>
+        <span class="text-xs text-muted">Ask for confirmation before inspecting sensitive logs or files.</span>
       </div>
       <input type="checkbox" name="ask_on_demand" class="form-check-input" {% if policy.ask_on_demand %}checked{% endif %}>
     </label>
