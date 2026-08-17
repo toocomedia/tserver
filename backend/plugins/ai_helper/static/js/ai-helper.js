@@ -258,14 +258,12 @@
 
             data.providers.forEach(function (p) {
               var models = (p.models && p.models.length > 0) ? p.models : [p.model_name];
-              var optGroup = document.createElement("optgroup");
-              optGroup.label = p.name + (p.is_default ? " (Default)" : "");
 
               models.forEach(function (m) {
                 var opt = document.createElement("option");
                 var optVal = p.id + ":" + m;
                 opt.value = optVal;
-                opt.textContent = m;
+                opt.textContent = (data.providers.length > 1 ? (p.name + " · " + m) : m);
 
                 if (targetVal && targetVal === optVal) {
                   opt.selected = true;
@@ -276,10 +274,8 @@
                   self.selectedProviderId = p.id;
                   self.selectedModelName = m;
                 }
-                optGroup.appendChild(opt);
+                self.modelPickerEl.appendChild(opt);
               });
-
-              self.modelPickerEl.appendChild(optGroup);
             });
 
             if (!found && self.modelPickerEl.options.length > 0) {

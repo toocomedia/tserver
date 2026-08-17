@@ -39,18 +39,18 @@
             </div>
           </td>
           <td>
-            <span class="badge badge--neutral">{{ 'Anthropic' if p.provider_type == 'anthropic' else 'OpenAI' }}</span>
+            <span class="badge badge--neutral">{{ 'Anthropic' if p.provider_type == 'anthropic' else 'OpenAI Compatible' }}</span>
           </td>
           <td>
             <div style="display: flex; flex-wrap: wrap; gap: 4px; align-items: center;">
               {% for m in p.get_models() %}
-                <code class="font-mono text-xs" style="padding: 2px 6px; border-radius: 3px; background: var(--color-surface); {% if m == p.model_name %}color: var(--color-accent); font-weight: 700; border: 1px solid rgba(var(--color-accent-rgb, 120, 120, 120), 0.3);{% endif %}" title="{% if m == p.model_name %}Default model for this provider{% endif %}">
-                  {{ m }}{% if m == p.model_name %} ★{% endif %}
-                </code>
+                <span class="badge {% if m == p.model_name %}badge--ok{% else %}badge--neutral{% endif %} font-mono" style="font-size: 11px; padding: 2px 6px;" title="{% if m == p.model_name %}Default model for this provider{% endif %}">
+                  {% if m == p.model_name %}★ {% endif %}{{ m }}
+                </span>
               {% endfor %}
             </div>
           </td>
-          <td class="text-muted font-mono text-sm">
+          <td class="text-muted font-mono text-xs">
             {{ p.base_url }}
           </td>
           <td>

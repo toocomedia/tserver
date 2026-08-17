@@ -233,5 +233,13 @@
   color: var(--color-text) !important;
 }
 
+.ai-helper-model-picker option {
+  background: var(--color-surface, #1e2023) !important;
+  color: var(--color-text, #ffffff) !important;
+  padding: 4px 8px;
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+}
+
 .ai-helper-toolbar-right { display: flex; align-items: center; gap: 4px; }
 .ai-helper-status-pill { font-size: 10px; color: var(--color-muted); }
