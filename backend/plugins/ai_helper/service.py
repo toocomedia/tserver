@@ -377,17 +377,23 @@ async def stream_ai_chat(
     user_message: str,
     context_key: Optional[str] = None,
     context_text: Optional[str] = None,
+    provider_id: Optional[int] = None,
 ) -> AsyncGenerator[str, None]:
     """
     Main multi-turn streaming chat pipeline:
-    1. Loads active provider & decrypted API key.
+    1. Loads specified or active provider & decrypted API key.
     2. Builds system prompt with fixed rules + active context + custom rules.
     3. Loads previous conversation history for this session.
     4. Streams AI chunks via engine and persists the conversation.
     """
-    active = await get_active_provider(db)
+    active = None
+    if provider_id:
+        active = await get_provider(db, provider_id)
     if not active:
-        yield "Error: No active AI provider configured. Please add an AI provider in the AI Assistant settings."
+        active = await get_active_provider(db)
+
+    if not active:
+        yield "Error: No AI provider configured. Please add an AI provider in AI Assistant settings."
         return
 
     if not active.is_enabled:

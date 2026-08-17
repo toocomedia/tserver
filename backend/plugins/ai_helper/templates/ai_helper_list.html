@@ -5,104 +5,397 @@
 
 {% block topbar_actions %}
 <div class="d-flex align-items-center gap-sm">
-  <a href="/plugins/ai_helper/create" class="btn btn--primary btn--sm" id="btn-add-provider">
+  <button type="button" class="btn btn--primary btn--sm" id="btn-open-add" onclick="openAddDrawer()">
     <i data-lucide="plus"></i> Add Provider
-  </a>
+  </button>
 </div>
 {% endblock %}
 
 {% block content %}
-{% if providers and providers|length > 0 %}
-
-<div class="section mb-xl">
-  <div class="section__header">
-    <h3><i data-lucide="layers"></i> AI Providers</h3>
-  </div>
-  <div class="table-wrap">
-    <table class="table" id="ai-providers-table">
-      <thead>
-        <tr>
-          <th>Provider</th>
-          <th>Protocol</th>
-          <th>Model</th>
-          <th>Endpoint</th>
-          <th>Status</th>
-          <th class="col-actions text-right" style="width: 220px;">Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for p in providers %}
-        <tr class="provider-row-item">
-          <td>
-            <div style="font-weight: 700; color: var(--color-text); display: flex; align-items: center; gap: 8px;">
-              {{ p.name }}
-              {% if p.is_default %}
-                <span class="badge badge--ok">Default</span>
-              {% endif %}
-            </div>
-          </td>
-          <td>
-            <span class="badge badge--neutral">{{ 'Anthropic' if p.provider_type == 'anthropic' else 'OpenAI' }}</span>
-          </td>
-          <td>
-            <code class="font-mono text-sm font-bold">{{ p.model_name }}</code>
-          </td>
-          <td class="text-muted font-mono text-sm">
-            {{ p.base_url }}
-          </td>
-          <td>
-            {% if p.last_tested_status == 'ok' %}
-              <span class="badge badge--ok"><span class="badge-dot"></span>{{ p.last_latency_ms }}ms</span>
-            {% elif p.last_tested_status == 'failed' %}
-              <span class="badge badge--error"><span class="badge-dot"></span>Failed</span>
-            {% else %}
-              <span class="badge badge--neutral"><span class="badge-dot"></span>Untested</span>
-            {% endif %}
-          </td>
-          <td class="col-actions text-right">
-            <div style="display: flex; align-items: center; justify-content: flex-end; gap: 6px;">
-              {% if not p.is_default %}
-              <button type="button" class="btn btn--secondary btn--sm" onclick="setDefaultProvider({{ p.id }})" title="Set as default AI model">
-                Set Default
-              </button>
-              {% endif %}
-              <button type="button" class="btn btn--secondary btn--sm" onclick="testProvider({{ p.id }}, this)" title="Test Connection">
-                <i data-lucide="zap"></i>
-              </button>
-              <a href="/plugins/ai_helper/{{ p.id }}/edit" class="btn btn--secondary btn--sm" title="Edit Provider">
-                <i data-lucide="edit-3"></i>
-              </a>
-              <button type="button" class="btn btn--danger btn--sm" onclick="deleteProvider({{ p.id }}, '{{ p.name }}')" title="Delete Provider">
-                <i data-lucide="trash-2"></i>
-              </button>
-            </div>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-</div>
-
-{% else %}
-
-<!-- Shared Panel Empty State -->
-{% from "partials/empty_state.html" import empty_state %}
-{{ empty_state(
-  icon='sparkles',
-  title='No AI Providers Added',
-  desc='Add an AI provider to enable assistant features across the panel.',
-  action_url='/plugins/ai_helper/create',
-  action_label='Add Provider',
-  action_icon='plus',
-  id='empty-state-ai'
-) }}
-
-{% endif %}
+{% include "partials/_providers_table.html" %}
+{% include "partials/_provider_drawer.html" %}
 {% endblock %}
 
 {% block scripts %}
 <script>
+var drawerModal = document.getElementById("provider-drawer-modal");
+var drawerForm = document.getElementById("provider-drawer-form");
+var drawerTitle = document.getElementById("drawer-title");
+var drawerSaveBtn = document.getElementById("drawer-btn-save");
+
+var apiKeyInput = document.getElementById("drawer_api_key");
+var providerNameInput = document.getElementById("drawer_provider_name");
+var baseUrlInput = document.getElementById("drawer_base_url");
+var providerTypeSelect = document.getElementById("drawer_provider_type");
+var tempInput = document.getElementById("drawer_temperature");
+var tokensInput = document.getElementById("drawer_max_tokens");
+var rulesInput = document.getElementById("drawer_custom_rules");
+var isDefaultCheck = document.getElementById("drawer_is_default");
+
+var modelSelectWrap = document.getElementById("drawer-model-select-wrap");
+var modelSelect = document.getElementById("drawer_model_select");
+var modelCustomWrap = document.getElementById("drawer-model-custom-wrap");
+var customModelInput = document.getElementById("drawer_custom_model_input");
+var modelNameHidden = document.getElementById("drawer_model_name");
+var btnToggleCustom = document.getElementById("drawer-btn-toggle-custom");
+var btnToggleLabel = document.getElementById("drawer-btn-toggle-label");
+var modelStatus = document.getElementById("drawer-model-status");
+var testIndicator = document.getElementById("drawer-test-indicator");
+
+var isCustomMode = false;
+var currentEditId = null;
+
+function syncModelValue() {
+  if (isCustomMode) {
+    modelNameHidden.value = customModelInput.value.trim();
+  } else if (modelSelect && modelSelect.value) {
+    modelNameHidden.value = modelSelect.value.trim();
+    customModelInput.value = modelSelect.value.trim();
+  }
+}
+
+function setDropdownOptions(modelsList, selectedValue) {
+  if (!modelsList || modelsList.length === 0) return;
+  modelSelect.innerHTML = "";
+  var found = false;
+
+  modelsList.forEach(function (m) {
+    if (!m) return;
+    var opt = document.createElement("option");
+    opt.value = m;
+    opt.textContent = m;
+    if (m === selectedValue) {
+      opt.selected = true;
+      found = true;
+    }
+    modelSelect.appendChild(opt);
+  });
+
+  if (!found && selectedValue) {
+    var optCur = document.createElement("option");
+    optCur.value = selectedValue;
+    optCur.textContent = selectedValue;
+    optCur.selected = true;
+    modelSelect.insertBefore(optCur, modelSelect.firstChild);
+  } else if (!found && modelsList.length > 0) {
+    modelSelect.selectedIndex = 0;
+  }
+
+  syncModelValue();
+}
+
+function selectPresetCard(presetKey) {
+  var cards = document.querySelectorAll("#preset-choice-grid .settings-choice");
+  cards.forEach(function (card) {
+    var isMatch = card.getAttribute("data-preset-key") === presetKey;
+    var radio = card.querySelector("input[type='radio']");
+    if (isMatch) {
+      card.classList.add("settings-choice--active");
+      if (radio) radio.checked = true;
+
+      var pName = card.getAttribute("data-name");
+      var pType = card.getAttribute("data-type");
+      var pUrl = card.getAttribute("data-url");
+      var pModel = card.getAttribute("data-model");
+      var pModelsRaw = card.getAttribute("data-models");
+
+      if (pName && presetKey !== "custom" && !currentEditId) providerNameInput.value = pName;
+      if (pType) providerTypeSelect.value = pType;
+      if (pUrl !== null && pUrl !== "") baseUrlInput.value = pUrl;
+
+      try {
+        var models = JSON.parse(pModelsRaw || "[]");
+        if (models.length > 0) {
+          setDropdownOptions(models, pModel || models[0]);
+        }
+      } catch (e) {}
+    } else {
+      card.classList.remove("settings-choice--active");
+      if (radio) radio.checked = false;
+    }
+  });
+}
+
+// Preset Card Click Listener
+document.querySelectorAll("#preset-choice-grid .settings-choice").forEach(function (card) {
+  card.addEventListener("click", function () {
+    var key = this.getAttribute("data-preset-key");
+    if (key) selectPresetCard(key);
+    if (apiKeyInput && apiKeyInput.value.trim().length >= 8) {
+      autoFetchModels();
+    }
+  });
+});
+
+// Toggle Custom / Dropdown Mode
+if (btnToggleCustom) {
+  btnToggleCustom.addEventListener("click", function () {
+    isCustomMode = !isCustomMode;
+    if (isCustomMode) {
+      modelSelectWrap.style.display = "none";
+      modelCustomWrap.style.display = "block";
+      btnToggleLabel.textContent = "Select from List";
+      customModelInput.value = modelNameHidden.value;
+      customModelInput.focus();
+    } else {
+      modelCustomWrap.style.display = "none";
+      modelSelectWrap.style.display = "block";
+      btnToggleLabel.textContent = "Custom Model";
+      if (customModelInput.value.trim()) {
+        setDropdownOptions([customModelInput.value.trim()], customModelInput.value.trim());
+      }
+    }
+    syncModelValue();
+  });
+}
+
+modelSelect.addEventListener("change", syncModelValue);
+customModelInput.addEventListener("input", syncModelValue);
+
+// Auto-Check & Fetch Models from API
+var fetchTimeout = null;
+var lastFetchedKey = "";
+
+function autoFetchModels() {
+  var apiKey = apiKeyInput ? apiKeyInput.value.trim() : "";
+  var baseUrl = baseUrlInput ? baseUrlInput.value.trim() : "";
+  var providerType = providerTypeSelect ? providerTypeSelect.value : "openai_compatible";
+
+  if (!apiKey && !currentEditId) {
+    return;
+  }
+
+  if (apiKey === lastFetchedKey && apiKey !== "") {
+    return;
+  }
+  lastFetchedKey = apiKey;
+
+  if (modelStatus) {
+    modelStatus.style.display = "inline-flex";
+    modelStatus.className = "badge badge--neutral";
+    modelStatus.innerHTML = '<span class="spinner-sm"></span> Checking...';
+  }
+
+  var payload = {
+    provider_type: providerType,
+    api_key: apiKey || undefined,
+    base_url: baseUrl,
+  };
+
+  var csrfToken = document.querySelector("meta[name='csrf-token']")?.getAttribute("content") || "";
+
+  fetch("/plugins/ai_helper/api/fetch-models", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-CSRF-Token": csrfToken,
+    },
+    body: JSON.stringify(payload),
+  })
+    .then(function (res) { return res.json(); })
+    .then(function (data) {
+      if (data.success && data.models && data.models.length > 0) {
+        setDropdownOptions(data.models, modelNameHidden.value);
+        if (modelStatus) {
+          modelStatus.className = "badge badge--ok";
+          modelStatus.innerHTML = "✓ " + data.count + " models available";
+          modelStatus.style.display = "inline-flex";
+        }
+      } else {
+        if (modelStatus) modelStatus.style.display = "none";
+      }
+    })
+    .catch(function () {
+      if (modelStatus) modelStatus.style.display = "none";
+    });
+}
+
+if (apiKeyInput) {
+  apiKeyInput.addEventListener("input", function () {
+    clearTimeout(fetchTimeout);
+    var val = this.value.trim();
+    if (val.length >= 8) {
+      fetchTimeout = setTimeout(autoFetchModels, 600);
+    }
+  });
+
+  apiKeyInput.addEventListener("blur", function () {
+    if (this.value.trim().length >= 8) {
+      autoFetchModels();
+    }
+  });
+}
+
+// Show/Hide API Key Toggle
+var toggleKeyBtn = document.getElementById("drawer-btn-toggle-key");
+if (toggleKeyBtn && apiKeyInput) {
+  toggleKeyBtn.addEventListener("click", function () {
+    apiKeyInput.type = (apiKeyInput.type === "password") ? "text" : "password";
+  });
+}
+
+// Drawer Open / Close Functions
+function openAddDrawer() {
+  currentEditId = null;
+  drawerForm.action = "/plugins/ai_helper/create";
+  drawerTitle.innerHTML = '<i data-lucide="sparkles"></i> <span>Add AI Provider</span>';
+  drawerSaveBtn.innerHTML = '<i data-lucide="save"></i> Save Provider';
+
+  apiKeyInput.value = "";
+  apiKeyInput.placeholder = "Enter API key (sk-...)";
+  tempInput.value = "0.2";
+  tokensInput.value = "4096";
+  rulesInput.value = "";
+  isDefaultCheck.checked = true;
+  if (testIndicator) testIndicator.innerHTML = "";
+  if (modelStatus) modelStatus.style.display = "none";
+
+  isCustomMode = false;
+  modelCustomWrap.style.display = "none";
+  modelSelectWrap.style.display = "block";
+  btnToggleLabel.textContent = "Custom Model";
+
+  selectPresetCard("openai");
+
+  drawerModal.classList.remove("hidden");
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+  apiKeyInput.focus();
+}
+
+function openEditDrawer(providerId) {
+  var row = document.getElementById("provider-row-" + providerId);
+  if (!row) return;
+
+  currentEditId = providerId;
+  drawerForm.action = "/plugins/ai_helper/" + providerId + "/edit";
+  drawerTitle.innerHTML = '<i data-lucide="edit-3"></i> <span>Edit AI Provider</span>';
+  drawerSaveBtn.innerHTML = '<i data-lucide="save"></i> Update Provider';
+
+  var pName = row.getAttribute("data-name") || "";
+  var pType = row.getAttribute("data-type") || "openai_compatible";
+  var pUrl = row.getAttribute("data-url") || "";
+  var pModel = row.getAttribute("data-model") || "";
+  var pTemp = row.getAttribute("data-temp") || "0.2";
+  var pTokens = row.getAttribute("data-tokens") || "4096";
+  var pRules = row.getAttribute("data-rules") || "";
+  var pDefault = row.getAttribute("data-default") === "1";
+  var hasKey = row.getAttribute("data-has-key") === "1";
+
+  providerNameInput.value = pName;
+  providerTypeSelect.value = pType;
+  baseUrlInput.value = pUrl;
+  tempInput.value = pTemp;
+  tokensInput.value = pTokens;
+  rulesInput.value = pRules;
+  isDefaultCheck.checked = pDefault;
+
+  apiKeyInput.value = "";
+  apiKeyInput.placeholder = hasKey ? "•••••••••••••••• (Leave blank to keep unchanged)" : "Enter API key (sk-...)";
+
+  if (testIndicator) testIndicator.innerHTML = "";
+  if (modelStatus) modelStatus.style.display = "none";
+
+  // Match preset card
+  var matchedPreset = "custom";
+  document.querySelectorAll("#preset-choice-grid .settings-choice").forEach(function (c) {
+    var cType = c.getAttribute("data-type");
+    var cUrl = c.getAttribute("data-url");
+    if (cType === pType && cUrl && pUrl.indexOf(cUrl) !== -1) {
+      matchedPreset = c.getAttribute("data-preset-key");
+    }
+  });
+  selectPresetCard(matchedPreset);
+
+  // Set model
+  setDropdownOptions([pModel], pModel);
+  modelNameHidden.value = pModel;
+  customModelInput.value = pModel;
+
+  isCustomMode = false;
+  modelCustomWrap.style.display = "none";
+  modelSelectWrap.style.display = "block";
+  btnToggleLabel.textContent = "Custom Model";
+
+  drawerModal.classList.remove("hidden");
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function closeProviderDrawer() {
+  drawerModal.classList.add("hidden");
+}
+
+// Close drawer on backdrop click or ESC key
+drawerModal.addEventListener("click", function (e) {
+  if (e.target === drawerModal) {
+    closeProviderDrawer();
+  }
+});
+
+document.addEventListener("keydown", function (e) {
+  if (e.key === "Escape" && !drawerModal.classList.contains("hidden")) {
+    closeProviderDrawer();
+  }
+});
+
+// Test Connection in Drawer
+var drawerTestBtn = document.getElementById("drawer-btn-test");
+if (drawerTestBtn) {
+  drawerTestBtn.addEventListener("click", function () {
+    syncModelValue();
+    drawerTestBtn.disabled = true;
+    var origHtml = drawerTestBtn.innerHTML;
+    drawerTestBtn.textContent = "Testing...";
+    if (testIndicator) testIndicator.innerHTML = '<span class="spinner-sm"></span> <span class="text-muted">Testing...</span>';
+
+    var payload = {
+      provider_type: providerTypeSelect ? providerTypeSelect.value : "openai_compatible",
+      api_key: apiKeyInput ? apiKeyInput.value : undefined,
+      base_url: baseUrlInput ? baseUrlInput.value : "",
+      model_name: modelNameHidden.value,
+    };
+
+    var csrfToken = document.querySelector("meta[name='csrf-token']")?.getAttribute("content") || "";
+
+    fetch("/plugins/ai_helper/api/test-connection", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": csrfToken,
+      },
+      body: JSON.stringify(payload),
+    })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        drawerTestBtn.disabled = false;
+        drawerTestBtn.innerHTML = origHtml;
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+
+        if (data.success) {
+          if (testIndicator) testIndicator.innerHTML = '<span class="badge badge--ok">✓ Connected (' + data.latency_ms + 'ms)</span>';
+        } else {
+          if (testIndicator) testIndicator.innerHTML = '<span class="badge badge--error">✗ ' + (data.error || "Failed") + '</span>';
+        }
+      })
+      .catch(function (err) {
+        drawerTestBtn.disabled = false;
+        drawerTestBtn.innerHTML = origHtml;
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+        if (testIndicator) testIndicator.innerHTML = '<span class="badge badge--error">✗ Error: ' + err.message + '</span>';
+      });
+  });
+}
+
+// Drawer Form Submit validation
+drawerForm.addEventListener("submit", function (e) {
+  syncModelValue();
+  if (!modelNameHidden.value.trim()) {
+    e.preventDefault();
+    alert("Please select or enter a Model.");
+    if (isCustomMode) customModelInput.focus();
+  }
+});
+
+// Row action functions
 function testProvider(providerId, btn) {
   var origHtml = btn.innerHTML;
   btn.disabled = true;
@@ -186,6 +479,10 @@ function deleteProvider(providerId, providerName) {
     .catch(function (err) {
       alert("Error deleting provider: " + err.message);
     });
+}
+
+if (window.location.search.indexOf("open=create") !== -1) {
+  openAddDrawer();
 }
 </script>
 {% endblock %}

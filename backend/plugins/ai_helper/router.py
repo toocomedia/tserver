@@ -9,48 +9,19 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, StreamingResponse
-from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
 from plugins.ai_helper import service
+from plugins.ai_helper.schemas import (
+    ChatRequest,
+    FetchModelsRequest,
+    ProviderPayload,
+    TestConnectionRequest,
+)
 from templating import templates
 
 router = APIRouter(prefix="/plugins/ai_helper", tags=["ai-helper"])
-
-
-class ProviderPayload(BaseModel):
-    name: str = Field(..., min_length=1)
-    provider_type: str = "openai_compatible"
-    api_key: Optional[str] = None
-    base_url: str = "https://api.openai.com/v1"
-    model_name: str = "gpt-4o-mini"
-    temperature: Optional[float] = 0.2
-    max_tokens: Optional[int] = 4096
-    custom_rules: Optional[str] = ""
-    is_default: Optional[bool] = False
-    is_enabled: Optional[bool] = True
-
-
-class TestConnectionRequest(BaseModel):
-    provider_type: Optional[str] = None
-    api_key: Optional[str] = None
-    base_url: Optional[str] = None
-    model_name: Optional[str] = None
-
-
-class FetchModelsRequest(BaseModel):
-    provider_type: Optional[str] = None
-    api_key: Optional[str] = None
-    base_url: Optional[str] = None
-
-
-class ChatRequest(BaseModel):
-    message: str = Field(..., min_length=1)
-    session_id: Optional[str] = None
-    context_key: Optional[str] = None
-    context: Optional[str] = None
-    stream: bool = True
 
 
 def _mask_key(decrypted_key: str) -> str:
@@ -76,6 +47,7 @@ async def ai_helper_index(request: Request, db: AsyncSession = Depends(get_db)):
         "active_page": "ai_helper",
         "providers": providers,
         "active_provider": active_provider,
+        "presets": service.PROVIDER_PRESETS,
     })
 
 
@@ -208,6 +180,24 @@ async def ai_helper_delete_provider(provider_id: int, db: AsyncSession = Depends
 # API Endpoints (Test Connection, Model Fetching, Chat Stream)
 # -------------------------------------------------------------
 
+@router.get("/api/providers")
+async def get_providers_list(db: AsyncSession = Depends(get_db)):
+    """Returns list of enabled AI providers for client-side model switcher."""
+    providers = await service.list_providers(db)
+    items = [
+        {
+            "id": p.id,
+            "name": p.name,
+            "provider_type": p.provider_type,
+            "model_name": p.model_name,
+            "is_default": p.is_default,
+        }
+        for p in providers
+        if p.is_enabled
+    ]
+    return JSONResponse({"status": "ok", "providers": items})
+
+
 @router.post("/api/test-connection")
 async def test_connection(req: TestConnectionRequest, db: AsyncSession = Depends(get_db)):
     data = req.model_dump(exclude_unset=True)
@@ -235,6 +225,7 @@ async def chat_endpoint(req: ChatRequest, db: AsyncSession = Depends(get_db)):
             user_message=req.message,
             context_key=req.context_key,
             context_text=req.context,
+            provider_id=req.provider_id,
         ):
             chunks.append(chunk)
         return JSONResponse({
@@ -252,6 +243,7 @@ async def chat_endpoint(req: ChatRequest, db: AsyncSession = Depends(get_db)):
             user_message=req.message,
             context_key=req.context_key,
             context_text=req.context,
+            provider_id=req.provider_id,
         ):
             yield f"data: {json.dumps({'type': 'token', 'token': chunk})}\n\n"
         yield "data: [DONE]\n\n"

@@ -19,23 +19,27 @@
     <input type="text" name="fake_email_prevent_autofill" style="display:none !important;" tabindex="-1" autocomplete="off">
     <input type="password" name="fake_password_prevent_autofill" style="display:none !important;" tabindex="-1" autocomplete="off">
 
-    <!-- Provider Service Preset -->
+    <!-- Provider Service Choice Cards (Step Pages Style) -->
     <div class="form-group mb-lg">
-      <label class="form-label" for="preset_selector">Provider</label>
-      <div class="form-select-wrap">
-        <select class="form-select" id="preset_selector">
-          {% for key, p in presets.items() %}
-          <option value="{{ key }}" 
-                  data-name="{{ p.name }}"
-                  data-type="{{ p.type }}" 
-                  data-url="{{ p.base_url }}"
-                  data-model="{{ p.default_model }}"
-                  data-models='{{ p.models | tojson }}'
-                  {% if (provider and provider.provider_type == p.type and p.base_url and p.base_url in provider.base_url) or (not provider and key == 'openai') %}selected{% endif %}>
-            {{ p.name }} ({{ p.desc }})
-          </option>
-          {% endfor %}
-        </select>
+      <label class="form-label">Provider</label>
+      <div class="settings-choice-grid mb-xs" id="form-preset-grid" style="grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px;">
+        {% for key, p in presets.items() %}
+        {% set is_active = (provider and provider.provider_type == p.type and p.base_url and p.base_url in provider.base_url) or (not provider and key == 'openai') %}
+        <label class="settings-choice settings-choice--compact {% if is_active %}settings-choice--active{% endif %}"
+               data-preset-key="{{ key }}" 
+               data-name="{{ p.name }}"
+               data-type="{{ p.type }}" 
+               data-url="{{ p.base_url }}"
+               data-model="{{ p.default_model }}"
+               data-models='{{ p.models | tojson }}'
+               style="padding: 12px 14px; min-height: auto;">
+          <div class="settings-choice__header" style="gap: 6px;">
+            <input type="radio" name="provider_preset" value="{{ key }}" {% if is_active %}checked{% endif %}>
+            <span class="settings-choice__title" style="font-size: 12px; font-weight: 700;">{{ p.name }}</span>
+          </div>
+          <span class="settings-choice__desc" style="font-size: 10.5px; margin-top: 2px;">{{ p.desc }}</span>
+        </label>
+        {% endfor %}
       </div>
     </div>
 
@@ -165,7 +169,6 @@ document.addEventListener("DOMContentLoaded", function () {
     lucide.createIcons();
   }
 
-  var presetSelector = document.getElementById("preset_selector");
   var providerNameInput = document.getElementById("provider_name");
   var providerTypeSelect = document.getElementById("provider_type");
   var baseUrlInput = document.getElementById("base_url");
@@ -221,6 +224,49 @@ document.addEventListener("DOMContentLoaded", function () {
     syncModelValue();
   }
 
+  function selectPresetCard(presetKey) {
+    var cards = document.querySelectorAll("#form-preset-grid .settings-choice");
+    cards.forEach(function (card) {
+      var isMatch = card.getAttribute("data-preset-key") === presetKey;
+      var radio = card.querySelector("input[type='radio']");
+      if (isMatch) {
+        card.classList.add("settings-choice--active");
+        if (radio) radio.checked = true;
+
+        var pName = card.getAttribute("data-name");
+        var pType = card.getAttribute("data-type");
+        var pUrl = card.getAttribute("data-url");
+        var pModel = card.getAttribute("data-model");
+        var pModelsRaw = card.getAttribute("data-models");
+
+        var isEdit = {% if is_edit %}true{% else %}false{% endif %};
+        if (pName && presetKey !== "custom" && !isEdit && providerNameInput) providerNameInput.value = pName;
+        if (pType && providerTypeSelect) providerTypeSelect.value = pType;
+        if (pUrl !== null && pUrl !== "" && baseUrlInput) baseUrlInput.value = pUrl;
+
+        try {
+          var models = JSON.parse(pModelsRaw || "[]");
+          if (models.length > 0) {
+            setDropdownOptions(models, pModel || models[0]);
+          }
+        } catch (e) {}
+      } else {
+        card.classList.remove("settings-choice--active");
+        if (radio) radio.checked = false;
+      }
+    });
+  }
+
+  document.querySelectorAll("#form-preset-grid .settings-choice").forEach(function (card) {
+    card.addEventListener("click", function () {
+      var key = this.getAttribute("data-preset-key");
+      if (key) selectPresetCard(key);
+      if (apiKeyInput && apiKeyInput.value.trim().length >= 8) {
+        autoFetchModels();
+      }
+    });
+  });
+
   // Toggle Custom / Dropdown Mode
   if (btnToggleCustom) {
     btnToggleCustom.addEventListener("click", function () {
@@ -255,7 +301,6 @@ document.addEventListener("DOMContentLoaded", function () {
     var baseUrl = baseUrlInput ? baseUrlInput.value.trim() : "";
     var providerType = providerTypeSelect ? providerTypeSelect.value : "openai_compatible";
 
-    // Only run if we have an API key or in edit mode with stored key
     var isEditMode = {% if is_edit and has_api_key %}true{% else %}false{% endif %};
     if (!apiKey && !isEditMode) {
       return;
@@ -269,7 +314,7 @@ document.addEventListener("DOMContentLoaded", function () {
     if (modelStatus) {
       modelStatus.style.display = "inline-flex";
       modelStatus.className = "badge badge--neutral";
-      modelStatus.innerHTML = '<span class="spinner-sm"></span> Checking models...';
+      modelStatus.innerHTML = '<span class="spinner-sm"></span> Checking...';
     }
 
     var payload = {
@@ -298,19 +343,14 @@ document.addEventListener("DOMContentLoaded", function () {
             modelStatus.style.display = "inline-flex";
           }
         } else {
-          if (modelStatus) {
-            modelStatus.style.display = "none";
-          }
+          if (modelStatus) modelStatus.style.display = "none";
         }
       })
       .catch(function () {
-        if (modelStatus) {
-          modelStatus.style.display = "none";
-        }
+        if (modelStatus) modelStatus.style.display = "none";
       });
   }
 
-  // Trigger auto-fetch on API key input (debounced) and blur
   if (apiKeyInput) {
     apiKeyInput.addEventListener("input", function () {
       clearTimeout(fetchTimeout);
@@ -325,56 +365,6 @@ document.addEventListener("DOMContentLoaded", function () {
         autoFetchModels();
       }
     });
-  }
-
-  // Preset Selector change handler
-  if (presetSelector) {
-    presetSelector.addEventListener("change", function () {
-      var opt = this.options[this.selectedIndex];
-      if (opt) {
-        var pName = opt.getAttribute("data-name");
-        var pType = opt.getAttribute("data-type");
-        var pUrl = opt.getAttribute("data-url");
-        var pModel = opt.getAttribute("data-model");
-        var pModelsRaw = opt.getAttribute("data-models");
-
-        if (pName && this.value !== "custom" && providerNameInput) {
-          providerNameInput.value = pName;
-        }
-        if (pType && providerTypeSelect) {
-          providerTypeSelect.value = pType;
-        }
-        if (pUrl !== null && pUrl !== "" && baseUrlInput) {
-          baseUrlInput.value = pUrl;
-        }
-
-        try {
-          var models = JSON.parse(pModelsRaw || "[]");
-          if (models.length > 0) {
-            setDropdownOptions(models, pModel || models[0]);
-          }
-        } catch (e) {}
-
-        // If key already entered, trigger live discovery
-        if (apiKeyInput && apiKeyInput.value.trim().length >= 8) {
-          autoFetchModels();
-        }
-      }
-    });
-
-    // Initialize preset models on first load if creating new
-    {% if not is_edit %}
-    var initOpt = presetSelector.options[presetSelector.selectedIndex];
-    if (initOpt) {
-      try {
-        var initModels = JSON.parse(initOpt.getAttribute("data-models") || "[]");
-        var initModel = initOpt.getAttribute("data-model");
-        if (initModels.length > 0) {
-          setDropdownOptions(initModels, initModel || initModels[0]);
-        }
-      } catch (e) {}
-    }
-    {% endif %}
   }
 
   // Show/Hide API Key Toggle
@@ -444,6 +434,11 @@ document.addEventListener("DOMContentLoaded", function () {
       if (isCustomMode) customModelInput.focus();
     }
   });
+
+  // Initial load preset models setup
+  {% if not is_edit %}
+  selectPresetCard("openai");
+  {% endif %}
 });
 </script>
 {% endblock %}

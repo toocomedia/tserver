@@ -1,0 +1,156 @@
+<!-- Slide-Out Right Split Drawer (Base CSS: modal-backdrop--slide & modal--slide) -->
+<div class="modal-backdrop modal-backdrop--slide hidden" id="provider-drawer-modal" role="dialog" aria-modal="true">
+  <div class="modal modal--slide" style="max-width: 560px;">
+    
+    <div class="modal__header">
+      <h3 id="drawer-title" style="display: flex; align-items: center; gap: 8px;">
+        <i data-lucide="sparkles"></i> <span>Add AI Provider</span>
+      </h3>
+      <button type="button" class="btn btn--secondary btn--sm" onclick="closeProviderDrawer()" aria-label="Close" style="padding: 0 10px; height: 30px;">
+        ✕
+      </button>
+    </div>
+
+    <div class="modal__body" style="overflow-y: auto; flex: 1; padding: 20px;">
+      <form id="provider-drawer-form" method="POST" action="/plugins/ai_helper/create" autocomplete="off" data-lpignore="true">
+        {% include "partials/csrf_field.html" %}
+
+        <!-- Decoy inputs to prevent password autofill -->
+        <input type="text" name="fake_email_prevent_autofill" style="display:none !important;" tabindex="-1" autocomplete="off">
+        <input type="password" name="fake_password_prevent_autofill" style="display:none !important;" tabindex="-1" autocomplete="off">
+
+        <!-- Provider Choice Cards (Step Pages Style) -->
+        <div class="form-group mb-lg">
+          <label class="form-label">Provider</label>
+          <div class="settings-choice-grid mb-xs" id="preset-choice-grid" style="grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px;">
+            {% for key, p in presets.items() %}
+            <label class="settings-choice settings-choice--compact {% if loop.first %}settings-choice--active{% endif %}" 
+                   data-preset-key="{{ key }}"
+                   data-name="{{ p.name }}"
+                   data-type="{{ p.type }}"
+                   data-url="{{ p.base_url }}"
+                   data-model="{{ p.default_model }}"
+                   data-models='{{ p.models | tojson }}'
+                   style="padding: 12px 14px; min-height: auto;">
+              <div class="settings-choice__header" style="gap: 6px;">
+                <input type="radio" name="provider_preset" value="{{ key }}" {% if loop.first %}checked{% endif %}>
+                <span class="settings-choice__title" style="font-size: 12px; font-weight: 700;">{{ p.name }}</span>
+              </div>
+              <span class="settings-choice__desc" style="font-size: 10.5px; margin-top: 2px;">{{ p.desc }}</span>
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- API Key Input with Show/Hide -->
+        <div class="form-group mb-lg">
+          <label class="form-label" for="drawer_api_key">API Key</label>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <input type="password" class="form-input font-mono" id="drawer_api_key" name="api_key" placeholder="Enter API key (sk-...)" autocomplete="new-password" data-lpignore="true" style="flex: 1;">
+            <button type="button" class="btn btn--secondary btn--sm" id="drawer-btn-toggle-key" style="height: 34px; padding: 0 10px;" title="Toggle visibility">
+              <i data-lucide="eye" id="drawer-key-eye-icon"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Model Identifier with Auto-Check & Custom Toggle -->
+        <div class="form-group mb-lg" id="drawer-model-section">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+            <label class="form-label m-0" for="drawer_model_select">Model</label>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span id="drawer-model-status" class="badge badge--ok" style="display: none;"></span>
+              <button type="button" class="btn btn--secondary btn--sm" id="drawer-btn-toggle-custom" style="height: 24px; padding: 0 8px; font-size: 11px;">
+                <i data-lucide="edit-2" style="width: 11px; height: 11px;"></i> <span id="drawer-btn-toggle-label">Custom Model</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Dropdown mode -->
+          <div class="form-select-wrap" id="drawer-model-select-wrap">
+            <select class="form-select font-mono" id="drawer_model_select">
+              <option value="gpt-4o-mini" selected>gpt-4o-mini</option>
+            </select>
+          </div>
+
+          <!-- Custom text mode -->
+          <div id="drawer-model-custom-wrap" style="display: none;">
+            <input type="text" class="form-input font-mono" id="drawer_custom_model_input" placeholder="e.g. gpt-4o, claude-3-5-sonnet, deepseek-chat" autocomplete="off" data-lpignore="true">
+          </div>
+
+          <input type="hidden" id="drawer_model_name" name="model_name" value="gpt-4o-mini">
+        </div>
+
+        <!-- Default Provider Checkbox -->
+        <div class="form-group mb-lg">
+          <label class="form-check">
+            <input type="checkbox" id="drawer_is_default" name="is_default" value="true" checked>
+            <span>Set as active default AI provider</span>
+          </label>
+        </div>
+
+        <!-- Advanced Settings (Unboxed) -->
+        <details class="mb-lg" id="drawer-advanced-details" style="border: none; background: transparent;">
+          <summary style="cursor: pointer; display: inline-flex; align-items: center; gap: 8px; font-weight: 600; font-size: 12.5px; color: var(--color-muted); padding: 6px 0; user-select: none;">
+            <i data-lucide="sliders" style="width: 13px; height: 13px;"></i>
+            <span>Advanced Settings</span>
+          </summary>
+
+          <div style="display: flex; flex-direction: column; gap: 14px; margin-top: 12px;">
+            <div class="form-group">
+              <label class="form-label" for="drawer_provider_name">Display Name</label>
+              <input type="text" class="form-input" id="drawer_provider_name" name="name" value="OpenAI" placeholder="e.g. OpenAI Production" required autocomplete="off" data-lpignore="true">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="drawer_base_url">Base URL</label>
+              <input type="text" class="form-input font-mono" id="drawer_base_url" name="base_url" value="https://api.openai.com/v1" placeholder="https://api.openai.com/v1" required autocomplete="off" data-lpignore="true">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="drawer_provider_type">Protocol</label>
+              <div class="form-select-wrap">
+                <select class="form-select" id="drawer_provider_type" name="provider_type" autocomplete="off" data-lpignore="true">
+                  <option value="openai_compatible" selected>OpenAI-Compatible (/chat/completions)</option>
+                  <option value="anthropic">Anthropic (/messages)</option>
+                </select>
+              </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+              <div class="form-group">
+                <label class="form-label" for="drawer_temperature">Temperature</label>
+                <input type="number" step="0.05" min="0.0" max="1.0" class="form-input" id="drawer_temperature" name="temperature" value="0.2" autocomplete="off">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="drawer_max_tokens">Max Tokens</label>
+                <input type="number" step="256" min="256" max="32768" class="form-input" id="drawer_max_tokens" name="max_tokens" value="4096" autocomplete="off">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="drawer_custom_rules">Custom Rules</label>
+              <textarea class="form-input font-mono" id="drawer_custom_rules" name="custom_rules" rows="3" style="height: auto; padding: 8px; line-height: 1.4;" placeholder="Optional prompt directives (e.g. 'Prefer PostgreSQL')."></textarea>
+            </div>
+          </div>
+        </details>
+
+      </form>
+    </div>
+
+    <div class="modal__footer" style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+      <div>
+        <span id="drawer-test-indicator" style="display: flex; align-items: center; gap: 6px; font-size: 12px;"></span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <button type="button" class="btn btn--secondary btn--sm" onclick="closeProviderDrawer()">Cancel</button>
+        <button type="button" class="btn btn--secondary btn--sm" id="drawer-btn-test">
+          <i data-lucide="zap"></i> Test
+        </button>
+        <button type="submit" form="provider-drawer-form" class="btn btn--primary btn--sm" id="drawer-btn-save">
+          <i data-lucide="save"></i> Save Provider
+        </button>
+      </div>
+    </div>
+
+  </div>
+</div>
