@@ -45,6 +45,7 @@ async def ai_helper_index(request: Request, db: AsyncSession = Depends(get_db)):
     active_provider = await service.get_active_provider(db)
     policy = await service.get_permission_policy(db)
     audit_logs = service.get_audit_logs(limit=25)
+    resources = await service.get_discoverable_resources(db)
 
     return templates.TemplateResponse("ai_helper_list.html", {
         "request": request,
@@ -53,6 +54,7 @@ async def ai_helper_index(request: Request, db: AsyncSession = Depends(get_db)):
         "active_provider": active_provider,
         "policy": policy,
         "audit_logs": audit_logs,
+        "resources": resources,
         "presets": service.PROVIDER_PRESETS,
     })
 
@@ -190,6 +192,13 @@ async def ai_helper_delete_provider(provider_id: int, db: AsyncSession = Depends
 # Permissions API Endpoints
 # -------------------------------------------------------------
 
+@router.get("/api/resources")
+async def get_resources_endpoint(db: AsyncSession = Depends(get_db)):
+    """Returns discoverable system resources for interactive permission whitelists."""
+    resources = await service.get_discoverable_resources(db)
+    return JSONResponse({"status": "ok", "resources": resources})
+
+
 @router.get("/api/permissions")
 async def get_permissions_endpoint(db: AsyncSession = Depends(get_db)):
     """Returns current AI Helper permissions policy and summary."""
@@ -206,6 +215,8 @@ async def get_permissions_endpoint(db: AsyncSession = Depends(get_db)):
             "allow_files_read": policy.allow_files_read,
             "allowed_domains": policy.allowed_domains,
             "allowed_app_ids": policy.allowed_app_ids,
+            "allowed_databases": policy.allowed_databases,
+            "allowed_file_targets": policy.allowed_file_targets,
             "ask_on_demand": policy.ask_on_demand,
         }
     })
@@ -229,6 +240,8 @@ async def update_permissions_endpoint(req: PermissionPolicyPayload, db: AsyncSes
             "allow_files_read": policy.allow_files_read,
             "allowed_domains": policy.allowed_domains,
             "allowed_app_ids": policy.allowed_app_ids,
+            "allowed_databases": policy.allowed_databases,
+            "allowed_file_targets": policy.allowed_file_targets,
             "ask_on_demand": policy.ask_on_demand,
         }
     })

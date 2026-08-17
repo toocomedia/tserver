@@ -439,17 +439,47 @@ class AIHelperTests(unittest.IsolatedAsyncioTestCase):
             with self.assertRaises(PermissionDeniedError):
                 await policy.check_tool_permission(db, "get_domains_and_ssl", {})
 
-            # 4. Selective mode
+            # 4. Granular Scope (Selective mode)
             await policy.update_policy(db, {
                 "global_mode": "selective",
                 "allow_domains_proxy": True,
+                "allow_databases": True,
+                "allow_files_read": True,
                 "allowed_domains": ["allowed.com"],
+                "allowed_app_ids": ["app-123"],
+                "allowed_databases": ["production_db"],
+                "allowed_file_targets": ["container:1", "php:2"],
             })
             # Allowed domain
             self.assertTrue(await policy.check_tool_permission(db, "get_domains_and_ssl", {"domain_name": "allowed.com"}))
             # Denied domain
             with self.assertRaises(PermissionDeniedError):
                 await policy.check_tool_permission(db, "get_domains_and_ssl", {"domain_name": "forbidden.com"})
+
+            # Allowed DB
+            self.assertTrue(await policy.check_tool_permission(db, "get_databases_overview", {"database_name": "production_db"}))
+            # Denied DB
+            with self.assertRaises(PermissionDeniedError):
+                await policy.check_tool_permission(db, "get_databases_overview", {"database_name": "secret_db"})
+
+            # Allowed File target
+            self.assertTrue(await policy.check_tool_permission(db, "list_website_directory", {"target_id": "container:1"}))
+            # Denied File target
+            with self.assertRaises(PermissionDeniedError):
+                await policy.check_tool_permission(db, "list_website_directory", {"target_id": "container:99"})
+
+    async def test_discoverable_resources(self):
+        """Verify discovery of domains, apps, databases, and file targets for permissions UI."""
+        async with AsyncSessionLocal() as db:
+            resources = await service.get_discoverable_resources(db)
+            self.assertIn("domains", resources)
+            self.assertIn("apps", resources)
+            self.assertIn("databases", resources)
+            self.assertIn("file_targets", resources)
+            self.assertIsInstance(resources["domains"], list)
+            self.assertIsInstance(resources["apps"], list)
+            self.assertIsInstance(resources["databases"], list)
+            self.assertIsInstance(resources["file_targets"], list)
 
     async def test_tool_registry_execution(self):
         """Verify tool execution via registry and safe data sanitization."""

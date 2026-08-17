@@ -167,18 +167,22 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="/plugins/ai_helper/static/js/ai-helper-admin.js"></script>
-<script>
-document.addEventListener("DOMContentLoaded", function() {
+<script type="module" src="/plugins/ai_helper/static/js/ai-helper-admin.js"></script>
+<script type="module">
+document.addEventListener("DOMContentLoaded", () => {
   {% if is_edit and provider %}
-  AiHelperAdmin.currentEditId = {{ provider.id }};
-  var initModelsRaw = {{ (provider.models_list or "")|tojson }};
-  var initModel = {{ (provider.model_name or "")|tojson }};
-  var mList = initModelsRaw ? initModelsRaw.split(",").map(function(s){ return s.trim(); }).filter(Boolean) : [];
-  if (initModel && !mList.includes(initModel)) mList.unshift(initModel);
-  AiHelperAdmin.setDropdownOptions(mList, initModel || (mList.length > 0 ? mList[0] : "gpt-4o-mini"));
+  if (window.AiHelperAdmin) {
+    window.AiHelperAdmin.currentEditId = {{ provider.id }};
+    const initModelsRaw = {{ (provider.models_list or "")|tojson }};
+    const initModel = {{ (provider.model_name or "")|tojson }};
+    const mList = initModelsRaw ? initModelsRaw.split(",").map((s) => s.trim()).filter(Boolean) : [];
+    if (initModel && !mList.includes(initModel)) mList.unshift(initModel);
+    window.AiHelperAdmin.setDropdownOptions(mList, initModel || (mList.length > 0 ? mList[0] : ""));
+  }
   {% else %}
-  AiHelperAdmin.selectPresetCard("openai");
+  if (window.AiHelperAdmin) {
+    window.AiHelperAdmin.selectPresetCard("openai");
+  }
   {% endif %}
 });
 </script>

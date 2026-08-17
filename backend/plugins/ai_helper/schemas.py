@@ -67,4 +67,6 @@ class PermissionPolicyPayload(BaseModel):
     allow_files_read: Optional[bool] = True
     allowed_domains: Optional[Any] = "[]"
     allowed_app_ids: Optional[Any] = "[]"
+    allowed_databases: Optional[Any] = "[]"
+    allowed_file_targets: Optional[Any] = "[]"
     ask_on_demand: Optional[bool] = False

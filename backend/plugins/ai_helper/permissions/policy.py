@@ -66,6 +66,8 @@ async def get_or_create_policy(db: AsyncSession) -> AiPermissionPolicy:
             allow_files_read=True,
             allowed_domains="[]",
             allowed_app_ids="[]",
+            allowed_databases="[]",
+            allowed_file_targets="[]",
             ask_on_demand=False,
         )
         db.add(policy)
@@ -95,19 +97,13 @@ async def update_policy(db: AsyncSession, data: Dict[str, Any]) -> AiPermissionP
         if flag in data:
             setattr(policy, flag, bool(data[flag]))
 
-    if "allowed_domains" in data:
-        val = data["allowed_domains"]
-        if isinstance(val, list):
-            policy.allowed_domains = json.dumps([str(x).strip() for x in val if str(x).strip()])
-        else:
-            policy.allowed_domains = str(val or "[]").strip()
-
-    if "allowed_app_ids" in data:
-        val = data["allowed_app_ids"]
-        if isinstance(val, list):
-            policy.allowed_app_ids = json.dumps([str(x).strip() for x in val if str(x).strip()])
-        else:
-            policy.allowed_app_ids = str(val or "[]").strip()
+    for list_field in ("allowed_domains", "allowed_app_ids", "allowed_databases", "allowed_file_targets"):
+        if list_field in data:
+            val = data[list_field]
+            if isinstance(val, list):
+                setattr(policy, list_field, json.dumps([str(x).strip() for x in val if str(x).strip()]))
+            else:
+                setattr(policy, list_field, str(val or "[]").strip())
 
     await db.commit()
     await db.refresh(policy)
@@ -161,22 +157,36 @@ async def check_tool_permission(
         audit.record_tool_call(tool_name, arguments, "denied", session_id, "File manager read access disabled")
         raise PermissionDeniedError(tool_name, "Permission to read website files is disabled.")
 
-    # 3. Selective Scopes (if global_mode == 'selective')
+    # 3. Granular Resource Scopes (if global_mode == 'selective')
     if policy.global_mode == "selective":
         allowed_domains = _parse_list(policy.allowed_domains)
         allowed_apps = _parse_list(policy.allowed_app_ids)
+        allowed_dbs = _parse_list(getattr(policy, "allowed_databases", "[]"))
+        allowed_files = _parse_list(getattr(policy, "allowed_file_targets", "[]"))
 
         # Check domain argument if present
         domain_arg = str(arguments.get("domain") or arguments.get("domain_name") or "").strip().lower()
         if domain_arg and allowed_domains and domain_arg not in allowed_domains:
-            audit.record_tool_call(tool_name, arguments, "denied", session_id, f"Domain '{domain_arg}' not in selective allowed list")
-            raise PermissionDeniedError(tool_name, f"Domain '{domain_arg}' is not in the allowed selective inspection list.")
+            audit.record_tool_call(tool_name, arguments, "denied", session_id, f"Domain '{domain_arg}' not in granular whitelist")
+            raise PermissionDeniedError(tool_name, f"Domain '{domain_arg}' is not in the allowed granular scope whitelist.")
 
         # Check app_id argument if present
         app_id_arg = str(arguments.get("app_id") or "").strip().lower()
         if app_id_arg and allowed_apps and app_id_arg not in allowed_apps:
-            audit.record_tool_call(tool_name, arguments, "denied", session_id, f"App ID '{app_id_arg}' not in selective allowed list")
-            raise PermissionDeniedError(tool_name, f"App ID '{app_id_arg}' is not in the allowed selective inspection list.")
+            audit.record_tool_call(tool_name, arguments, "denied", session_id, f"App ID '{app_id_arg}' not in granular whitelist")
+            raise PermissionDeniedError(tool_name, f"App ID '{app_id_arg}' is not in the allowed granular scope whitelist.")
+
+        # Check database filter if database name is queried or filtered
+        db_name_arg = str(arguments.get("database_name") or arguments.get("db_name") or "").strip().lower()
+        if db_name_arg and allowed_dbs and db_name_arg not in allowed_dbs:
+            audit.record_tool_call(tool_name, arguments, "denied", session_id, f"Database '{db_name_arg}' not in granular whitelist")
+            raise PermissionDeniedError(tool_name, f"Database '{db_name_arg}' is not in the allowed granular scope whitelist.")
+
+        # Check target_id argument for files
+        target_id_arg = str(arguments.get("target_id") or "").strip().lower()
+        if target_id_arg and allowed_files and target_id_arg not in allowed_files:
+            audit.record_tool_call(tool_name, arguments, "denied", session_id, f"File target '{target_id_arg}' not in granular whitelist")
+            raise PermissionDeniedError(tool_name, f"File target '{target_id_arg}' is not in the allowed granular scope whitelist.")
 
     audit.record_tool_call(tool_name, arguments, "allowed", session_id, "Access granted by policy")
     return True

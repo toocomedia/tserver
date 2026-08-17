@@ -99,6 +99,8 @@ class AiPermissionPolicy(Base):
     allow_files_read: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     allowed_domains: Mapped[str] = mapped_column(Text, default="[]", nullable=False)
     allowed_app_ids: Mapped[str] = mapped_column(Text, default="[]", nullable=False)
+    allowed_databases: Mapped[str] = mapped_column(Text, default="[]", nullable=False)
+    allowed_file_targets: Mapped[str] = mapped_column(Text, default="[]", nullable=False)
     ask_on_demand: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), onupdate=func.now(), nullable=False

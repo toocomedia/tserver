@@ -1,4 +1,4 @@
-<!-- Slide-Out Right Split Drawer (Base CSS: modal-backdrop--slide & modal--slide) -->
+<!-- Slide-Out Right Split Drawer Modal -->
 <div class="modal-backdrop modal-backdrop--slide hidden" id="provider-drawer-modal" role="dialog" aria-modal="true">
   <div class="modal modal--slide" style="max-width: 560px;">
     
@@ -15,20 +15,16 @@
       <form id="provider-drawer-form" method="POST" action="/plugins/ai_helper/create" autocomplete="off" data-lpignore="true">
         {% include "partials/csrf_field.html" %}
 
-        <!-- Decoy inputs to prevent password autofill -->
         <input type="text" name="fake_email_prevent_autofill" style="display:none !important;" tabindex="-1" autocomplete="off">
         <input type="password" name="fake_password_prevent_autofill" style="display:none !important;" tabindex="-1" autocomplete="off">
 
-        <!-- Provider Choice Cards (Step Pages Style) -->
+        <!-- Provider Choice Cards -->
         <div class="form-group mb-lg">
           <label class="form-label">Provider</label>
           <div class="settings-choice-grid mb-xs" id="preset-choice-grid" style="grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px;">
             {% for key, p in presets.items() %}
             <label class="settings-choice settings-choice--compact {% if loop.first %}settings-choice--active{% endif %}" 
-                   data-preset-key="{{ key }}"
-                   data-name="{{ p.name }}"
-                   data-type="{{ p.type }}"
-                   data-url="{{ p.base_url }}"
+                   data-preset-key="{{ key }}" data-name="{{ p.name }}" data-type="{{ p.type }}" data-url="{{ p.base_url }}"
                    style="padding: 12px 14px; min-height: auto;">
               <div class="settings-choice__header" style="gap: 6px;">
                 <input type="radio" name="provider_preset" value="{{ key }}" {% if loop.first %}checked{% endif %}>
@@ -40,7 +36,7 @@
           </div>
         </div>
 
-        <!-- API Key Input with Show/Hide -->
+        <!-- API Key Input -->
         <div class="form-group mb-lg">
           <label class="form-label" for="drawer_api_key">API Key</label>
           <div style="display: flex; align-items: center; gap: 8px;">
@@ -59,26 +55,17 @@
           </div>
 
           <div class="model-dropdown-wrap" id="drawer-model-dropdown-wrap" style="position: relative;">
-            <!-- Dropdown Trigger (using panel .form-select base styling) -->
             <div class="form-select font-mono" id="drawer-model-trigger" tabindex="0" style="display: flex; align-items: center; justify-content: space-between; cursor: pointer; user-select: none;">
               <span id="drawer-model-trigger-text" class="text-truncate">-- Enter API key to load models --</span>
               <span class="text-muted" style="font-size: 11px; margin-left: 8px;">▾</span>
             </div>
 
-            <!-- Dropdown Menu with Checkboxes -->
             <div class="model-dropdown-menu" id="drawer-model-menu" style="display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: var(--color-surface); border: 1px solid var(--color-line); box-shadow: 0 10px 30px rgba(0,0,0,0.35); z-index: 1000; border-radius: 4px; max-height: 260px; overflow-y: auto; padding: 6px;">
-              <!-- Quick Filter / Add Model Input & Recheck API -->
               <div style="display: flex; gap: 6px; padding: 4px 4px 8px; border-bottom: 1px solid var(--color-line); margin-bottom: 6px;">
                 <input type="text" class="form-input font-mono text-xs" id="drawer-filter-model-input" placeholder="Search or type custom model..." style="height: 28px; padding: 2px 8px; flex: 1;" autocomplete="off" data-lpignore="true">
-                <button type="button" class="btn btn--secondary btn--sm" id="drawer-btn-add-model" style="height: 28px; padding: 0 8px; font-size: 11px;" title="Add custom model">
-                  + Add
-                </button>
-                <button type="button" class="btn btn--secondary btn--sm" id="drawer-btn-fetch-models" style="height: 28px; padding: 0 8px; font-size: 11px;" title="Recheck & fetch all available models from API">
-                  ↻ Recheck
-                </button>
+                <button type="button" class="btn btn--secondary btn--sm" id="drawer-btn-add-model" style="height: 28px; padding: 0 8px; font-size: 11px;">+ Add</button>
+                <button type="button" class="btn btn--secondary btn--sm" id="drawer-btn-fetch-models" style="height: 28px; padding: 0 8px; font-size: 11px;">↻ Fetch</button>
               </div>
-
-              <!-- List with Checkboxes & Default Selector -->
               <div id="drawer-models-list-items" style="display: flex; flex-direction: column; gap: 2px;">
                 <span class="text-muted" style="font-size: 11px; padding: 6px 8px;">Enter API key to load models</span>
               </div>
@@ -97,52 +84,45 @@
           </label>
         </div>
 
-        <!-- Advanced Settings (Unboxed) -->
+        <!-- Advanced Settings -->
         <details class="mb-lg" id="drawer-advanced-details" style="border: none; background: transparent;">
           <summary style="cursor: pointer; display: inline-flex; align-items: center; gap: 8px; font-weight: 600; font-size: 12.5px; color: var(--color-muted); padding: 6px 0; user-select: none;">
-            <i data-lucide="sliders" style="width: 13px; height: 13px;"></i>
-            <span>Advanced Settings</span>
+            <i data-lucide="sliders" style="width: 13px; height: 13px;"></i> <span>Advanced Settings</span>
           </summary>
-
-          <div style="display: flex; flex-direction: column; gap: 14px; margin-top: 12px;">
-            <div class="form-group">
+          <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 10px;">
+            <div class="form-group m-0">
               <label class="form-label" for="drawer_provider_name">Display Name</label>
-              <input type="text" class="form-input" id="drawer_provider_name" name="name" value="OpenAI" placeholder="e.g. OpenAI Production" required autocomplete="off" data-lpignore="true">
+              <input type="text" class="form-input" id="drawer_provider_name" name="name" value="OpenAI" required autocomplete="off">
             </div>
-
-            <div class="form-group">
+            <div class="form-group m-0">
               <label class="form-label" for="drawer_base_url">Base URL</label>
-              <input type="text" class="form-input font-mono" id="drawer_base_url" name="base_url" value="https://api.openai.com/v1" placeholder="https://api.openai.com/v1" required autocomplete="off" data-lpignore="true">
+              <input type="text" class="form-input font-mono" id="drawer_base_url" name="base_url" value="https://api.openai.com/v1" required autocomplete="off">
             </div>
-
-            <div class="form-group">
+            <div class="form-group m-0">
               <label class="form-label" for="drawer_provider_type">Protocol</label>
               <div class="form-select-wrap">
-                <select class="form-select" id="drawer_provider_type" name="provider_type" autocomplete="off" data-lpignore="true">
+                <select class="form-select" id="drawer_provider_type" name="provider_type" autocomplete="off">
                   <option value="openai_compatible" selected>OpenAI-Compatible (/chat/completions)</option>
                   <option value="anthropic">Anthropic (/messages)</option>
                 </select>
               </div>
             </div>
-
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-              <div class="form-group">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+              <div class="form-group m-0">
                 <label class="form-label" for="drawer_temperature">Temperature</label>
-                <input type="number" step="0.05" min="0.0" max="1.0" class="form-input" id="drawer_temperature" name="temperature" value="0.2" autocomplete="off">
+                <input type="number" step="0.05" min="0.0" max="1.0" class="form-input" id="drawer_temperature" name="temperature" value="0.2">
               </div>
-              <div class="form-group">
+              <div class="form-group m-0">
                 <label class="form-label" for="drawer_max_tokens">Max Tokens</label>
-                <input type="number" step="256" min="256" max="32768" class="form-input" id="drawer_max_tokens" name="max_tokens" value="4096" autocomplete="off">
+                <input type="number" step="256" min="256" max="32768" class="form-input" id="drawer_max_tokens" name="max_tokens" value="4096">
               </div>
             </div>
-
-            <div class="form-group">
+            <div class="form-group m-0">
               <label class="form-label" for="drawer_custom_rules">Custom Rules</label>
-              <textarea class="form-input font-mono" id="drawer_custom_rules" name="custom_rules" rows="3" style="height: auto; padding: 8px; line-height: 1.4;" placeholder="Optional prompt directives (e.g. 'Prefer PostgreSQL')."></textarea>
+              <textarea class="form-input font-mono" id="drawer_custom_rules" name="custom_rules" rows="3" style="height: auto; padding: 8px; line-height: 1.4;" placeholder="Optional prompt directives."></textarea>
             </div>
           </div>
         </details>
-
       </form>
     </div>
 
@@ -152,12 +132,8 @@
       </div>
       <div style="display: flex; align-items: center; gap: 8px;">
         <button type="button" class="btn btn--secondary btn--sm" onclick="closeDrawer()">Cancel</button>
-        <button type="button" class="btn btn--secondary btn--sm" id="drawer-btn-test">
-          <i data-lucide="zap"></i> Test
-        </button>
-        <button type="submit" form="provider-drawer-form" class="btn btn--primary btn--sm" id="drawer-btn-save">
-          <i data-lucide="save"></i> Save Provider
-        </button>
+        <button type="button" class="btn btn--secondary btn--sm" id="drawer-btn-test"><i data-lucide="zap"></i> Test</button>
+        <button type="submit" form="provider-drawer-form" class="btn btn--primary btn--sm" id="drawer-btn-save"><i data-lucide="save"></i> Save Provider</button>
       </div>
     </div>
 

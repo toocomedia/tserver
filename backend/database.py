@@ -351,6 +351,17 @@ def _migrate_sync(sync_conn) -> None:
             logger.info("Migrating ai_providers: add models_list")
             sync_conn.execute(text("ALTER TABLE ai_providers ADD COLUMN models_list TEXT DEFAULT '' NOT NULL"))
 
+    # --- ai_permission_policies: granular scopes (databases, file targets) ---
+    if "ai_permission_policies" in tables:
+        cols = _column_names(sync_conn, "ai_permission_policies")
+        for col, ddl in {
+            "allowed_databases": "TEXT DEFAULT '[]' NOT NULL",
+            "allowed_file_targets": "TEXT DEFAULT '[]' NOT NULL",
+        }.items():
+            if col not in cols:
+                logger.info("Migrating ai_permission_policies: add %s", col)
+                sync_conn.execute(text(f"ALTER TABLE ai_permission_policies ADD COLUMN {col} {ddl}"))
+
 
 async def init_db():
     """Create all tables on startup if they do not exist, then migrate."""
