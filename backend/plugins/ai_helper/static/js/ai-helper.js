@@ -112,23 +112,13 @@
         "</div>",
         '<div class="ai-helper-model-modal" id="ai-helper-model-modal">',
         '  <div class="ai-helper-model-modal-backdrop" id="ai-helper-model-modal-backdrop"></div>',
-        '  <div class="ai-helper-model-modal-card">',
-        '    <div class="ai-helper-model-modal-header">',
-        '      <span class="ai-helper-model-modal-title">Select AI Model</span>',
-        '      <button type="button" class="ai-helper-btn-icon" id="ai-helper-model-modal-close" title="Close">',
-        '        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>',
-        '      </button>',
-        '    </div>',
-        '    <button type="button" class="ai-helper-model-arrow-btn" id="ai-helper-model-arrow-up" title="Previous model">',
-        '      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"></polyline></svg>',
-        '    </button>',
+        '  <div class="ai-helper-model-modal-content">',
+        '    <button type="button" class="ai-helper-model-arrow-btn" id="ai-helper-model-arrow-up" title="Previous model">▲</button>',
         '    <div class="ai-helper-model-viewport" id="ai-helper-model-viewport">',
         '      <div class="ai-helper-model-list" id="ai-helper-model-list">',
         '      </div>',
         '    </div>',
-        '    <button type="button" class="ai-helper-model-arrow-btn" id="ai-helper-model-arrow-down" title="Next model">',
-        '      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>',
-        '    </button>',
+        '    <button type="button" class="ai-helper-model-arrow-btn" id="ai-helper-model-arrow-down" title="Next model">▼</button>',
         '  </div>',
         '</div>',
         '<div class="ai-helper-footer">',
@@ -310,10 +300,10 @@
 
     _scrollToActiveModel: function () {
       if (!this.modelListEl || !this.modelViewportEl) return;
-      var active = this.modelListEl.querySelector(".ai-helper-model-item--active");
+      var active = this.modelListEl.querySelector(".ai-helper-model-text-item--active");
       if (active) {
         var topPos = active.offsetTop - this.modelViewportEl.offsetTop;
-        this.modelViewportEl.scrollTo({ top: topPos - 50, behavior: "smooth" });
+        this.modelViewportEl.scrollTo({ top: topPos - 38, behavior: "smooth" });
       }
     },
 
@@ -329,12 +319,12 @@
       }
 
       if (this.modelListEl) {
-        var items = this.modelListEl.querySelectorAll(".ai-helper-model-item");
+        var items = this.modelListEl.querySelectorAll(".ai-helper-model-text-item");
         items.forEach(function (el) {
           if (el.getAttribute("data-val") === fullVal) {
-            el.classList.add("ai-helper-model-item--active");
+            el.classList.add("ai-helper-model-text-item--active");
           } else {
-            el.classList.remove("ai-helper-model-item--active");
+            el.classList.remove("ai-helper-model-text-item--active");
           }
         });
       }
@@ -382,26 +372,20 @@
                 self.selectedModelName = item.modelName;
               }
 
-              var card = document.createElement("div");
-              card.className = "ai-helper-model-item" + (isSelected ? " ai-helper-model-item--active" : "");
-              card.setAttribute("data-val", fullVal);
-              card.setAttribute("data-provider-id", item.providerId);
-              card.setAttribute("data-model-name", item.modelName);
-              card.setAttribute("data-provider-name", item.providerName);
+              var itemEl = document.createElement("div");
+              itemEl.className = "ai-helper-model-text-item" + (isSelected ? " ai-helper-model-text-item--active" : "");
+              itemEl.setAttribute("data-val", fullVal);
+              itemEl.setAttribute("data-provider-id", item.providerId);
+              itemEl.setAttribute("data-model-name", item.modelName);
+              itemEl.setAttribute("data-provider-name", item.providerName);
 
-              card.innerHTML = [
-                '<div class="ai-helper-model-item-info">',
-                '  <span class="ai-helper-model-item-name font-mono">' + item.modelName + '</span>',
-                '  <span class="ai-helper-model-item-provider badge badge--neutral text-xs">' + item.providerName + '</span>',
-                '</div>',
-                '<span class="ai-helper-model-item-check">✓</span>',
-              ].join("");
+              itemEl.innerHTML = '<span class="ai-helper-model-title font-mono">' + item.modelName + '</span>';
 
-              card.addEventListener("click", function () {
+              itemEl.addEventListener("click", function () {
                 self.selectModel(item.providerId, item.modelName, item.providerName);
               });
 
-              self.modelListEl.appendChild(card);
+              self.modelListEl.appendChild(itemEl);
             });
 
             if (!found && allItems.length > 0) {

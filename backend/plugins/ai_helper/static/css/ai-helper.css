@@ -179,7 +179,7 @@
 .ai-helper-toolbar { display: flex; align-items: center; justify-content: space-between; margin-top: 4px; padding-top: 4px; border-top: 1px solid rgba(255, 255, 255, 0.04); gap: 6px; }
 .ai-helper-toolbar-left { display: flex; align-items: center; gap: 6px; min-width: 0; flex: 1; }
 
-/* Centered Model Picker Modal with Blur Backdrop */
+/* Centered Model Picker with Opacity Black Backdrop (Minimal text & arrows, no boxes) */
 .ai-helper-model-modal {
   position: absolute;
   inset: 0;
@@ -189,7 +189,7 @@
   justify-content: center;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: opacity 0.18s ease;
 }
 
 .ai-helper-model-modal.open {
@@ -200,76 +200,54 @@
 .ai-helper-model-modal-backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.55);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: rgba(0, 0, 0, 0.75);
   z-index: 96;
 }
 
-.ai-helper-model-modal-card {
+.ai-helper-model-modal-content {
   position: relative;
   z-index: 97;
-  width: 320px;
-  max-width: 88%;
-  background: var(--color-surface);
-  border: 1px solid var(--color-line);
-  border-radius: 8px;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
-  padding: 10px 12px;
   display: flex;
   flex-direction: column;
-  align-items: stretch;
-  transform: scale(0.94);
-  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.ai-helper-model-modal.open .ai-helper-model-modal-card {
-  transform: scale(1);
-}
-
-.ai-helper-model-modal-header {
-  display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding-bottom: 6px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  margin-bottom: 4px;
+  justify-content: center;
+  width: 260px;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  user-select: none;
 }
 
-.ai-helper-model-modal-title {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--color-text);
-}
-
-/* Arrow Scroll Buttons */
+/* Minimal Arrow Buttons */
 .ai-helper-model-arrow-btn {
   background: transparent;
   border: none;
-  color: var(--color-muted);
-  height: 22px;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 11px;
+  height: 28px;
+  width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  border-radius: 4px;
-  transition: background 0.15s, color 0.15s;
-  padding: 0;
-  margin: 2px 0;
+  outline: none;
+  transition: color 0.15s ease, transform 0.15s ease;
 }
 
 .ai-helper-model-arrow-btn:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--color-text);
+  color: #ffffff;
+  transform: scale(1.15);
 }
 
-/* 3-Item Visible Model Viewport */
+/* 3-Item Viewport (Text only, no boxes) */
 .ai-helper-model-viewport {
-  height: 154px; /* Exactly 3 items: 3 * 46px + 2 * 6px = 150px */
+  height: 114px; /* 3 items * 38px = 114px */
+  width: 100%;
   overflow-y: auto;
   overflow-x: hidden;
   scroll-behavior: smooth;
   scrollbar-width: none;
+  text-align: center;
 }
 
 .ai-helper-model-viewport::-webkit-scrollbar {
@@ -279,72 +257,44 @@
 .ai-helper-model-list {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 2px 0;
+  align-items: center;
+  gap: 0;
 }
 
-/* Model Card Item */
-.ai-helper-model-item {
-  height: 46px;
-  box-sizing: border-box;
-  background: var(--color-bg);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 6px;
-  padding: 0 12px;
+/* Minimal Text Item (No borders, no boxes) */
+.ai-helper-model-text-item {
+  height: 38px;
+  width: 100%;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 12.5px;
+  font-weight: 500;
   cursor: pointer;
-  user-select: none;
-  transition: border-color 0.15s, background 0.15s, transform 0.1s;
+  transition: color 0.15s ease, transform 0.15s ease;
 }
 
-.ai-helper-model-item:hover {
-  border-color: var(--color-text);
-  transform: translateY(-1px);
+.ai-helper-model-text-item:hover {
+  color: rgba(255, 255, 255, 0.85);
+  transform: scale(1.04);
 }
 
-.ai-helper-model-item--active {
-  border-color: var(--color-accent) !important;
-  background: rgba(var(--color-accent-rgb, 99, 102, 241), 0.12) !important;
+.ai-helper-model-text-item--active {
+  color: var(--color-accent, #ffffff) !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  transform: scale(1.08);
 }
 
-.ai-helper-model-item-info {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-  overflow: hidden;
-}
-
-.ai-helper-model-item-name {
-  font-size: 11.5px;
-  font-weight: 600;
-  color: var(--color-text);
+.ai-helper-model-title {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.ai-helper-model-item--active .ai-helper-model-item-name {
-  color: var(--color-accent);
-}
-
-.ai-helper-model-item-provider {
-  font-size: 10px;
-  padding: 1px 5px;
-}
-
-.ai-helper-model-item-check {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--color-accent);
-  opacity: 0;
-  transition: opacity 0.15s;
-}
-
-.ai-helper-model-item--active .ai-helper-model-item-check {
-  opacity: 1;
+  max-width: 220px;
 }
 
 /* Minimal Bottom Model Trigger Button */
