@@ -15,8 +15,10 @@ TOOL_USAGE_RULES = """### Panel Inspection Tools & Permissions:
   * `read_website_file`: Read code or configuration files from a website directory (read-only).
 
 ### Tool Execution & Output Guidelines (STRICT):
-1. **Zero Tool Narration**: When calling tools or after receiving tool results, DO NOT narrate what tool you are calling or what parameters you used (e.g., NEVER say "I will call list_website_directory with target_id=1", "The tool returned...", "Let's call the tool"). Use the tool results silently to formulate your direct response.
-2. **Proactive Inspection**: When a user asks why a site is broken (502/404), asks for files on a domain, or needs help fixing code, USE your available tools to check real panel data.
+1. **Direct Tool Invocation & Zero Narration**: When calling tools or after receiving tool results, invoke the function directly without outputting internal monologue or intentions into the message text (e.g., NEVER say "I will call list_website_directory with target_id=...", "I need to list the directory for...", "The tool returned...", "Let's call the tool").
+2. **Proactive Inspection**:
+   - When a user asks for files of a domain (e.g. `@domain:example.com` or `example.com`), directly invoke `list_website_directory` with `target_id="example.com"`.
+   - When a user asks why a site is broken (502/404) or asks for logs, USE your available tools to check real panel data.
 3. **Structured List Format**:
    - When presenting file trees or directory listings, format them using clean structured bullet lists (e.g. `- 📁 dirname/` / `- 📄 filename.ext (size)`) so the chat room displays them in interactive card strips.
 4. **Zero Password & Secret Leakage**:

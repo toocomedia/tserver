@@ -98,13 +98,13 @@ RAW_TOOL_SCHEMAS: List[Dict[str, Any]] = [
     },
     {
         "name": "list_website_directory",
-        "description": "Lists files and subdirectories inside an application or website root directory.",
+        "description": "Lists files and subdirectories inside an application or website root directory. Accepts either a domain name (e.g. 'wp.tooco.net') or a target identifier ('kind:id' like 'php:1', 'container:2', 'static:3').",
         "parameters": {
             "type": "object",
             "properties": {
                 "target_id": {
                     "type": "string",
-                    "description": "Target identifier in format 'kind:id' (e.g. 'static:1', 'php:2', 'python:3', 'container:4').",
+                    "description": "Target identifier: either a domain name (e.g. 'wp.tooco.net') or format 'kind:id' (e.g. 'php:1', 'container:2', 'static:3').",
                 },
                 "relative_path": {
                     "type": "string",
@@ -116,13 +116,13 @@ RAW_TOOL_SCHEMAS: List[Dict[str, Any]] = [
     },
     {
         "name": "read_website_file",
-        "description": "Reads a code or configuration file (e.g. package.json, composer.json, nginx.conf, Dockerfile, index.php) from a website root directory in read-only mode.",
+        "description": "Reads a code or configuration file (e.g. package.json, composer.json, nginx.conf, Dockerfile, index.php, wp-config.php) from a website root directory in read-only mode. Accepts either a domain name or target identifier.",
         "parameters": {
             "type": "object",
             "properties": {
                 "target_id": {
                     "type": "string",
-                    "description": "Target identifier in format 'kind:id' (e.g. 'static:1', 'php:2', 'python:3', 'container:4').",
+                    "description": "Target identifier: either a domain name (e.g. 'wp.tooco.net') or format 'kind:id' (e.g. 'php:1', 'container:2', 'static:3').",
                 },
                 "file_path": {
                     "type": "string",

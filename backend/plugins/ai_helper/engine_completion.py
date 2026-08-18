@@ -88,24 +88,42 @@ async def _openai_completion_step(
             raw_tool_calls = choice_msg.get("tool_calls") or []
 
             parsed_tools = []
-            for tc in raw_tool_calls:
+            normalized_tool_calls = []
+            for i, tc in enumerate(raw_tool_calls):
                 func_data = tc.get("function") or {}
-                fn_name = func_data.get("name")
-                fn_args_raw = func_data.get("arguments") or "{}"
+                fn_name = func_data.get("name") or tc.get("name") or "unknown"
+                fn_args_raw = func_data.get("arguments") or tc.get("arguments") or "{}"
                 try:
-                    fn_args = json.loads(fn_args_raw) if isinstance(fn_args_raw, str) else fn_args_raw
+                    fn_args = json.loads(fn_args_raw) if isinstance(fn_args_raw, str) else (fn_args_raw or {})
                 except Exception:
                     fn_args = {}
+
+                tc_id = tc.get("id") or f"call_{i}_{fn_name}"
                 parsed_tools.append({
-                    "id": tc.get("id") or f"call_{len(parsed_tools)}",
+                    "id": tc_id,
                     "name": fn_name,
                     "arguments": fn_args,
                 })
+                normalized_tool_calls.append({
+                    "id": tc_id,
+                    "type": "function",
+                    "function": {
+                        "name": fn_name,
+                        "arguments": json.dumps(fn_args) if isinstance(fn_args, dict) else str(fn_args_raw),
+                    },
+                })
+
+            normalized_msg: Dict[str, Any] = {
+                "role": "assistant",
+                "content": content if content else None,
+            }
+            if normalized_tool_calls:
+                normalized_msg["tool_calls"] = normalized_tool_calls
 
             return {
                 "content": content,
                 "tool_calls": parsed_tools,
-                "raw_message": choice_msg,
+                "raw_message": normalized_msg,
             }
         except httpx.ConnectError:
             raise AIProviderError("Could not connect to the AI provider endpoint.", 502, "connect_error")

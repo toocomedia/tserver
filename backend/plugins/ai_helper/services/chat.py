@@ -42,7 +42,7 @@ def _extract_text_tool_calls(step_content: str) -> List[Dict[str, Any]]:
             re.DOTALL | re.IGNORECASE,
         ):
             params[pm.group(1).strip()] = pm.group(2).strip()
-        tool_calls.append({"id": f"call_{len(tool_calls)}", "name": fn_name, "arguments": params})
+        tool_calls.append({"id": f"call_{len(tool_calls)}_{fn_name}", "name": fn_name, "arguments": params})
 
     if tool_calls:
         return tool_calls
@@ -63,14 +63,16 @@ def _extract_text_tool_calls(step_content: str) -> List[Dict[str, Any]]:
             re.DOTALL | re.IGNORECASE,
         ):
             params[pm.group(1).strip()] = pm.group(2).strip()
-        tool_calls.append({"id": f"call_{len(tool_calls)}", "name": fn_name, "arguments": params})
+        tool_calls.append({"id": f"call_{len(tool_calls)}_{fn_name}", "name": fn_name, "arguments": params})
 
     return tool_calls
 
 
 def _sanitize_history_content(text: str) -> str:
-    """Removes unfulfilled XML and DSML pseudo tool calls from message history."""
+    """Removes unfulfilled XML/DSML pseudo tool calls and error banners from message history."""
     if not text:
+        return ""
+    if text.strip().startswith("[Error from AI Provider:") or text.strip().startswith("[Error:"):
         return ""
     clean = re.sub(r"<[｜|]{1,2}DSML[｜|]{1,2}[\s\S]*?</[｜|]{1,2}DSML[｜|]{1,2}[^>]*>", "", text, flags=re.IGNORECASE)
     clean = re.sub(r"<[｜|][\s\S]*?[｜|]>", "", clean)
@@ -79,6 +81,71 @@ def _sanitize_history_content(text: str) -> str:
     clean = re.sub(r"<parameter=[a-zA-Z0-9_]+>[\s\S]*?</parameter>", "", clean, flags=re.IGNORECASE)
     clean = re.sub(r"<\/?(?:tool_call|function|parameter|invoke)[^>]*>", "", clean, flags=re.IGNORECASE)
     return clean.strip()
+
+
+def _normalize_messages_for_llm(messages: List[Dict[str, Any]], provider_type: str) -> List[Dict[str, Any]]:
+    """
+    Validates and normalizes conversation messages to guarantee strict compliance
+    with OpenAI and Anthropic tool calling schemas:
+    1. Ensures every assistant message with 'tool_calls' is followed immediately and exclusively
+       by matching 'role: tool' messages for each tool_call_id (OpenAI protocol).
+    2. If any tool call ID lacks a response, injects a synthetic tool response error message
+       so the AI provider never returns a 400 Bad Request error.
+    3. Converts orphaned 'role: tool' messages to user context messages.
+    """
+    if not messages:
+        return []
+
+    normalized: List[Dict[str, Any]] = []
+    i = 0
+    while i < len(messages):
+        msg = messages[i]
+        role = msg.get("role")
+
+        if role == "assistant" and msg.get("tool_calls"):
+            tool_calls = msg.get("tool_calls") or []
+            normalized.append(msg)
+            i += 1
+
+            if provider_type != "anthropic":
+                existing_tool_responses: Dict[str, Dict[str, Any]] = {}
+                while i < len(messages) and messages[i].get("role") == "tool":
+                    t_msg = messages[i]
+                    t_id = t_msg.get("tool_call_id")
+                    if t_id:
+                        existing_tool_responses[t_id] = t_msg
+                    i += 1
+
+                for idx, tc in enumerate(tool_calls):
+                    tc_id = tc.get("id") or f"call_{idx}"
+                    if tc_id in existing_tool_responses:
+                        normalized.append(existing_tool_responses[tc_id])
+                    else:
+                        fn_name = (tc.get("function") or {}).get("name") or tc.get("name") or "tool"
+                        normalized.append({
+                            "role": "tool",
+                            "tool_call_id": tc_id,
+                            "name": fn_name,
+                            "content": json.dumps({"status": "error", "message": "Tool execution was skipped or interrupted."}),
+                        })
+            continue
+
+        elif role == "tool":
+            # Orphaned tool message not directly following an assistant tool_calls message
+            content_str = msg.get("content") or ""
+            fn_name = msg.get("name") or "tool"
+            normalized.append({
+                "role": "user",
+                "content": f"[Tool Result for {fn_name}]: {content_str}",
+            })
+            i += 1
+            continue
+
+        else:
+            normalized.append(msg)
+            i += 1
+
+    return normalized
 
 
 async def stream_ai_chat(
@@ -98,7 +165,7 @@ async def stream_ai_chat(
     2. Builds modular system prompt (base + tools + action tags + context + custom rules).
     3. Loads previous conversation history strictly for this session and sanitizes history.
     4. Evaluates tool calling in a multi-turn loop if permissions permit.
-    5. Executes requested panel tools and feeds results back to AI.
+    5. Executes requested panel tools and feeds results back to AI with strict schema compliance.
     6. Streams AI response chunks and persists the conversation.
     7. Updates or auto-titles the AiChatSession record.
     """
@@ -188,70 +255,135 @@ async def stream_ai_chat(
     # Tool calling loop if enabled
     if tools_enabled:
         tool_defs = tools.get_tool_definitions(active.provider_type)
-        max_tool_iterations = 3
+        max_tool_iterations = 4
 
         for _ in range(max_tool_iterations):
             try:
+                norm_messages = _normalize_messages_for_llm(messages, active.provider_type)
                 tool_step = await engine.chat_completion_step(
                     provider_type=active.provider_type,
                     base_url=active.base_url,
                     api_key=api_key,
                     model_name=effective_model,
-                    messages=messages,
+                    messages=norm_messages,
                     tools=tool_defs,
                     temperature=active.temperature,
                     max_tokens=active.max_tokens,
                 )
                 tool_calls = tool_step.get("tool_calls") or []
+                step_content = tool_step.get("content") or ""
 
                 if not tool_calls:
-                    # Check for DeepSeek DSML or XML pseudo tool call syntax
-                    step_content = tool_step.get("content") or ""
+                    # Check for DeepSeek DSML or XML pseudo tool call syntax in text
                     tool_calls = _extract_text_tool_calls(step_content)
+                    is_text_pseudo_tool = bool(tool_calls)
+                else:
+                    is_text_pseudo_tool = False
 
                 if not tool_calls:
+                    # Model has finished tool usage
                     break
 
                 raw_msg = tool_step.get("raw_message")
-                if raw_msg:
-                    messages.append(raw_msg)
-                else:
-                    messages.append({"role": "assistant", "content": tool_step.get("content") or ""})
 
-                for tc in tool_calls:
-                    fn_name = tc.get("name")
-                    fn_args = tc.get("arguments") or {}
-                    tc_id = tc.get("id") or f"call_{len(messages)}"
+                if is_text_pseudo_tool:
+                    # Text-based pseudo tool calls (DSML/XML)
+                    messages.append({"role": "assistant", "content": step_content})
+                    tool_results_list = []
+                    for tc in tool_calls:
+                        fn_name = tc.get("name")
+                        fn_args = tc.get("arguments") or {}
+                        try:
+                            tool_output = await tools.execute_tool(
+                                db=db,
+                                tool_name=fn_name,
+                                arguments=fn_args,
+                                session_id=session_id,
+                            )
+                        except Exception as e:
+                            tool_output = {"status": "error", "message": str(e)}
+                        tool_results_list.append(f"[Result for {fn_name}]:\n{json.dumps(tool_output)}")
 
-                    tool_output = await tools.execute_tool(
-                        db=db,
-                        tool_name=fn_name,
-                        arguments=fn_args,
-                        session_id=session_id,
-                    )
+                    messages.append({
+                        "role": "user",
+                        "content": "\n\n".join(tool_results_list) + "\n\nPresent the findings directly and clearly in clean Markdown now without repeating or outputting tool calls.",
+                    })
 
-                    tool_json_str = json.dumps(tool_output)
-                    if active.provider_type == "anthropic":
-                        messages.append({
-                            "role": "user",
-                            "content": [
-                                {
-                                    "type": "tool_result",
-                                    "tool_use_id": tc_id,
-                                    "content": tool_json_str,
-                                }
-                            ],
-                        })
+                elif active.provider_type == "anthropic":
+                    # Anthropic Claude native tool calling
+                    if raw_msg:
+                        messages.append(raw_msg)
                     else:
+                        messages.append({"role": "assistant", "content": step_content})
+
+                    tool_results = []
+                    for tc in tool_calls:
+                        fn_name = tc.get("name")
+                        fn_args = tc.get("arguments") or {}
+                        tc_id = tc.get("id") or f"tool_{len(messages)}"
+                        try:
+                            tool_output = await tools.execute_tool(
+                                db=db,
+                                tool_name=fn_name,
+                                arguments=fn_args,
+                                session_id=session_id,
+                            )
+                        except Exception as e:
+                            tool_output = {"status": "error", "message": str(e)}
+                        tool_results.append({
+                            "type": "tool_result",
+                            "tool_use_id": tc_id,
+                            "content": json.dumps(tool_output),
+                        })
+
+                    messages.append({
+                        "role": "user",
+                        "content": tool_results,
+                    })
+
+                else:
+                    # Native OpenAI-compatible tool calling
+                    if raw_msg and raw_msg.get("tool_calls"):
+                        messages.append(raw_msg)
+                    else:
+                        norm_calls = [
+                            {
+                                "id": tc.get("id") or f"call_{idx}_{tc.get('name')}",
+                                "type": "function",
+                                "function": {
+                                    "name": tc.get("name"),
+                                    "arguments": json.dumps(tc.get("arguments") or {}) if isinstance(tc.get("arguments"), dict) else str(tc.get("arguments") or "{}"),
+                                },
+                            }
+                            for idx, tc in enumerate(tool_calls)
+                        ]
+                        messages.append({
+                            "role": "assistant",
+                            "content": step_content if step_content else None,
+                            "tool_calls": norm_calls,
+                        })
+
+                    for tc in tool_calls:
+                        fn_name = tc.get("name")
+                        fn_args = tc.get("arguments") or {}
+                        tc_id = tc.get("id") or f"call_{len(messages)}"
+
+                        try:
+                            tool_output = await tools.execute_tool(
+                                db=db,
+                                tool_name=fn_name,
+                                arguments=fn_args,
+                                session_id=session_id,
+                            )
+                        except Exception as exc:
+                            tool_output = {"status": "error", "message": str(exc)}
+
+                        tool_json_str = json.dumps(tool_output)
                         messages.append({
                             "role": "tool",
                             "tool_call_id": tc_id,
                             "name": fn_name,
                             "content": tool_json_str,
-                        })
-                        messages.append({
-                            "role": "user",
-                            "content": f"[SYSTEM TOOL RESULT for {fn_name}]:\n{tool_json_str}\n\nPresent the results directly and clearly in clean Markdown now without repeating or outputting tool calls.",
                         })
             except Exception as exc:
                 logger.warning("Tool calling step failed or skipped: %s. Continuing standard stream.", exc)
@@ -259,30 +391,34 @@ async def stream_ai_chat(
 
     # Stream final assistant response
     full_response = []
+    has_error = False
     try:
+        final_normalized_messages = _normalize_messages_for_llm(messages, active.provider_type)
         async for chunk in engine.stream_chat(
             provider_type=active.provider_type,
             base_url=active.base_url,
             api_key=api_key,
             model_name=effective_model,
-            messages=messages,
+            messages=final_normalized_messages,
             temperature=active.temperature,
             max_tokens=active.max_tokens,
         ):
             full_response.append(chunk)
             yield chunk
     except engine.AIProviderError as exc:
+        has_error = True
         err_msg = f"\n\n[Error from AI Provider: {exc.message}]"
         full_response.append(err_msg)
         yield err_msg
     except Exception as exc:
+        has_error = True
         err_msg = f"\n\n[Error: {str(exc)}]"
         full_response.append(err_msg)
         yield err_msg
 
-    # Save assistant response to database
+    # Save assistant response to database if not a provider error
     complete_text = "".join(full_response).strip()
-    if complete_text:
+    if complete_text and not has_error:
         persisted_text = _sanitize_history_content(complete_text) or complete_text
         assistant_record = AiChatMessage(
             session_id=session_id,
@@ -294,3 +430,4 @@ async def stream_ai_chat(
         session_record.message_count += 1
         session_record.updated_at = datetime.now()
         await db.commit()
+

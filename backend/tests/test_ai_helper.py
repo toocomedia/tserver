@@ -794,7 +794,219 @@ class AIHelperTests(unittest.IsolatedAsyncioTestCase):
             self.assertIn("</think>", full_text)
             self.assertIn("Here is the fixed config.", full_text)
 
+    async def test_normalize_messages_for_llm_openai_contract(self):
+        """Verify _normalize_messages_for_llm enforces the strict OpenAI tool call sequence."""
+        from plugins.ai_helper.services.chat import _normalize_messages_for_llm
+
+        # 1. Missing tool responses get filled with synthetic error responses
+        broken_messages = [
+            {"role": "user", "content": "list files"},
+            {
+                "role": "assistant",
+                "content": None,
+                "tool_calls": [
+                    {"id": "call_123", "type": "function", "function": {"name": "list_website_directory", "arguments": "{}"}},
+                    {"id": "call_456", "type": "function", "function": {"name": "get_apps_overview", "arguments": "{}"}},
+                ],
+            },
+            # Only response for call_123 was provided
+            {"role": "tool", "tool_call_id": "call_123", "name": "list_website_directory", "content": '{"status":"ok"}'},
+        ]
+
+        normalized = _normalize_messages_for_llm(broken_messages, "openai_compatible")
+        self.assertEqual(len(normalized), 4)
+        self.assertEqual(normalized[0]["role"], "user")
+        self.assertEqual(normalized[1]["role"], "assistant")
+        self.assertEqual(normalized[2]["role"], "tool")
+        self.assertEqual(normalized[2]["tool_call_id"], "call_123")
+        self.assertEqual(normalized[3]["role"], "tool")
+        self.assertEqual(normalized[3]["tool_call_id"], "call_456")
+        self.assertIn("error", normalized[3]["content"])
+
+        # 2. Orphaned tool message gets converted to user message
+        orphaned = [
+            {"role": "user", "content": "hello"},
+            {"role": "tool", "tool_call_id": "orphan_1", "name": "list_website_directory", "content": '{"status":"ok"}'},
+        ]
+        norm_orphaned = _normalize_messages_for_llm(orphaned, "openai_compatible")
+        self.assertEqual(len(norm_orphaned), 2)
+        self.assertEqual(norm_orphaned[1]["role"], "user")
+        self.assertIn("[Tool Result for list_website_directory]", norm_orphaned[1]["content"])
+
+    async def test_files_target_resolution_with_domain_and_mentions(self):
+        """Verify _resolve_file_target resolves @domain: prefixes and domain names."""
+        from plugins.ai_helper.tools import files
+        from models.domain import Domain
+        import uuid
+
+        async with AsyncSessionLocal() as db:
+            unique_name = f"test-resolve-{uuid.uuid4().hex[:6]}.net"
+            # Create a test domain
+            test_domain = Domain(
+                name=unique_name,
+                server_ip="127.0.0.1",
+                project_type="static",
+                nginx_active=True,
+            )
+            db.add(test_domain)
+            await db.commit()
+            await db.refresh(test_domain)
+
+            # Test resolving via @domain:unique_name
+            t1 = await files._resolve_file_target(db, f"@domain:{unique_name}")
+            self.assertEqual(t1.id, f"static:{test_domain.id}")
+
+            # Test resolving via plain domain name unique_name
+            t2 = await files._resolve_file_target(db, unique_name)
+            self.assertEqual(t2.id, f"static:{test_domain.id}")
+
+            # Clean up
+            await db.delete(test_domain)
+            await db.commit()
+
+    def test_sanitize_history_content_ignores_error_banners(self):
+        """Verify _sanitize_history_content filters out previous AI provider error banners."""
+        from plugins.ai_helper.services.chat import _sanitize_history_content
+        err1 = "\n\n[Error from AI Provider: Provider error (400): An assistant message with 'tool_calls' must be followed by tool messages responding to each 'tool_call_id'.]"
+        self.assertEqual(_sanitize_history_content(err1), "")
+
+        err2 = "[Error: Network timeout connecting to endpoint]"
+        self.assertEqual(_sanitize_history_content(err2), "")
+
+    async def test_end_to_end_tool_calling_flow_with_mock_client(self):
+        """Verify full multi-turn chat pipeline with mock tool call and response streaming."""
+        import uuid
+        from models.domain import Domain
+
+        async with AsyncSessionLocal() as db:
+            # Set up active provider
+            provider = await service.create_provider(db, {
+                "name": "Tool Mock Provider",
+                "provider_type": "openai_compatible",
+                "api_key": "sk-tool-test-key",
+                "base_url": "https://api.openai.com/v1",
+                "model_name": "gpt-4o",
+                "is_default": True,
+                "is_enabled": True,
+            })
+
+            unique_domain = f"test-wp-{uuid.uuid4().hex[:6]}.net"
+            test_domain = Domain(
+                name=unique_domain,
+                server_ip="127.0.0.1",
+                project_type="static",
+                nginx_active=True,
+            )
+            db.add(test_domain)
+            await db.commit()
+
+            step1_post_response = {
+                "choices": [
+                    {
+                        "message": {
+                            "role": "assistant",
+                            "content": None,
+                            "tool_calls": [
+                                {
+                                    "id": "call_mock_1",
+                                    "type": "function",
+                                    "function": {
+                                        "name": "list_website_directory",
+                                        "arguments": json.dumps({"target_id": unique_domain}),
+                                    },
+                                }
+                            ],
+                        }
+                    }
+                ]
+            }
+
+            step2_post_response = {
+                "choices": [
+                    {
+                        "message": {
+                            "role": "assistant",
+                            "content": "Here is the file list:\n- 📁 wp-content/\n- 📄 wp-config.php",
+                            "tool_calls": None,
+                        }
+                    }
+                ]
+            }
+
+            post_call_count = 0
+
+            class MockPostResponse:
+                def __init__(self, data):
+                    self.status_code = 200
+                    self._data = data
+                def json(self):
+                    return self._data
+
+            sse_lines = [
+                'data: {"choices":[{"delta":{"content":"Here is the file list:\\n- 📁 wp-content/\\n- 📄 wp-config.php"}}]}',
+                'data: [DONE]',
+            ]
+
+            class MockStreamResponse:
+                status_code = 200
+                async def __aenter__(self):
+                    return self
+                async def __aexit__(self, *args):
+                    pass
+                async def aiter_lines(self):
+                    for line in sse_lines:
+                        yield line
+
+            class MockToolClient:
+                async def __aenter__(self):
+                    return self
+                async def __aexit__(self, *args):
+                    pass
+                async def post(self, url, headers=None, json=None):
+                    nonlocal post_call_count
+                    post_call_count += 1
+                    if post_call_count == 1:
+                        # Verify initial request has tools defined
+                        return MockPostResponse(step1_post_response)
+                    else:
+                        # Verify that messages sent in turn 2 contain tool response for call_mock_1
+                        messages = json.get("messages") or []
+                        has_tool_response = any(m.get("role") == "tool" and m.get("tool_call_id") == "call_mock_1" for m in messages)
+                        if not has_tool_response:
+                            raise Exception("Schema violation: missing matching tool response")
+                        return MockPostResponse(step2_post_response)
+
+                def stream(self, method, url, headers=None, json=None):
+                    # Verify final stream messages are normalized
+                    messages = json.get("messages") or []
+                    has_tool_response = any(m.get("role") == "tool" and m.get("tool_call_id") == "call_mock_1" for m in messages)
+                    if not has_tool_response:
+                        raise Exception("Stream schema violation: missing tool response")
+                    return MockStreamResponse()
+
+            session_id = f"tool_sess_{uuid.uuid4().hex[:8]}"
+            with patch("httpx.AsyncClient", return_value=MockToolClient()):
+                chunks = []
+                async for chunk in service.stream_ai_chat(
+                    db=db,
+                    session_id=session_id,
+                    user_message=f"give me the list of file of @domain:{unique_domain}",
+                    provider_id=provider.id,
+                ):
+                    chunks.append(chunk)
+
+                result_text = "".join(chunks)
+                self.assertIn("wp-config.php", result_text)
+                self.assertNotIn("Error from AI Provider", result_text)
+
+            # Cleanup
+            await db.delete(test_domain)
+            await db.delete(provider)
+            await db.commit()
+
 
 if __name__ == "__main__":
     unittest.main()
+
+
 
