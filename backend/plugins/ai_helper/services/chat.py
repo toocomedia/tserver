@@ -24,23 +24,23 @@ logger = logging.getLogger(__name__)
 # The router detects this prefix and wraps as type=tool_activity SSE events.
 _ACTIVITY_PREFIX = "\x00ACTIVITY\x00"
 
-# Friendly labels for each tool name
+# Friendly labels and icon identifiers for each tool name
 _TOOL_LABELS = {
-    "get_domains_and_ssl": ("\U0001F310", "Checking SSL & domain config"),
-    "get_reverse_proxy_routes": ("\U0001F501", "Reading Nginx proxy routes"),
-    "get_dns_records": ("\U0001F4CB", "Querying DNS records"),
-    "get_apps_overview": ("\U0001F4E6", "Listing hosted apps"),
-    "get_app_logs": ("\U0001F4DC", "Fetching deployment logs"),
-    "get_databases_overview": ("\U0001F5C4", "Reading database overview"),
-    "list_website_directory": ("\U0001F4C1", "Scanning directory"),
-    "read_website_file": ("\U0001F4C4", "Reading file"),
+    "get_domains_and_ssl": ("globe", "Checking SSL & domain config"),
+    "get_reverse_proxy_routes": ("route", "Reading Nginx proxy routes"),
+    "get_dns_records": ("list", "Querying DNS records"),
+    "get_apps_overview": ("box", "Listing hosted apps"),
+    "get_app_logs": ("file-text", "Fetching deployment logs"),
+    "get_databases_overview": ("database", "Reading database overview"),
+    "list_website_directory": ("folder", "Scanning directory"),
+    "read_website_file": ("file", "Reading file"),
 }
 
 
 def _activity_event(tool_name: str, status: str, args: dict | None = None) -> str:
     """Builds an activity sentinel string to yield from the generator."""
     import json as _json
-    icon, label = _TOOL_LABELS.get(tool_name, ("\u2699\uFE0F", tool_name.replace("_", " ").title()))
+    icon, label = _TOOL_LABELS.get(tool_name, ("tool", tool_name.replace("_", " ").title()))
     # Add context detail from args
     detail = ""
     if args:

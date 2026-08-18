@@ -510,12 +510,24 @@
 
     _updateActivityPanel: function (panelEl, items, activity) {
       var key = activity.tool;
+      var TOOL_SVGS = {
+        "globe": '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>',
+        "route": '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="19" r="3"></circle><path d="M9 19h8.5a4.5 4.5 0 0 0 0-9H10a4.5 4.5 0 0 1 0-9H18"></path></svg>',
+        "list": '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>',
+        "box": '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>',
+        "file-text": '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>',
+        "database": '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>',
+        "folder": '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>',
+        "file": '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>',
+      };
+      var iconSvg = TOOL_SVGS[activity.icon] || '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>';
+
       if (activity.status === "start") {
         var item = document.createElement("div");
         item.className = "ai-activity-item ai-activity-item--loading";
         item.innerHTML = (
           '<span class="ai-activity-spinner"></span>' +
-          '<span class="ai-activity-icon">' + activity.icon + '</span>' +
+          '<span class="ai-activity-icon">' + iconSvg + '</span>' +
           '<span class="ai-activity-label">' + activity.label +
           (activity.detail ? ' <span class="ai-activity-detail">' + activity.detail + '</span>' : '') +
           '</span>' +
@@ -530,11 +542,11 @@
         if (activity.status === "done") {
           el.classList.add("ai-activity-item--done");
           el.querySelector(".ai-activity-spinner").style.display = "none";
-          el.querySelector(".ai-activity-status").textContent = "\u2714";
+          el.querySelector(".ai-activity-status").innerHTML = '<span class="ai-sec-dot ai-sec-dot--ok"></span>';
         } else if (activity.status === "error") {
           el.classList.add("ai-activity-item--error");
           el.querySelector(".ai-activity-spinner").style.display = "none";
-          el.querySelector(".ai-activity-status").textContent = "\u26A0";
+          el.querySelector(".ai-activity-status").innerHTML = '<span class="ai-sec-dot ai-sec-dot--critical"></span>';
         }
       }
       this._scrollToBottom();
@@ -557,11 +569,12 @@
         var summary = document.createElement("button");
         summary.type = "button";
         summary.className = "ai-activity-summary-toggle";
-        summary.textContent = "\U0001F4D6 Read " + count + (count === 1 ? " source" : " sources") + " ▾";
+        var BOOK_SVG = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:3px;"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>';
+        summary.innerHTML = BOOK_SVG + " Read " + count + (count === 1 ? " source" : " sources") + " ▾";
         summary.addEventListener("click", function () {
           var expanded = activityPanel.getAttribute("data-expanded") === "true";
           activityPanel.setAttribute("data-expanded", expanded ? "false" : "true");
-          summary.textContent = (expanded ? "\U0001F4D6 Read " + count + (count === 1 ? " source" : " sources") + " ▾" : "\U0001F4D6 Read " + count + (count === 1 ? " source" : " sources") + " ▴");
+          summary.innerHTML = (expanded ? BOOK_SVG + " Read " + count + (count === 1 ? " source" : " sources") + " ▾" : BOOK_SVG + " Read " + count + (count === 1 ? " source" : " sources") + " ▴");
         });
         activityPanel.setAttribute("data-expanded", "false");
         activityPanel.insertBefore(summary, activityPanel.firstChild);

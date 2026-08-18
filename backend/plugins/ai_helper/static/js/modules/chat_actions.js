@@ -161,7 +161,7 @@
             .then(function () {
               // Disable the button so it can't be double-clicked
               secretsBtn.disabled = true;
-              secretsBtn.textContent = "\uD83D\uDD13 Credentials Unlocked";
+              secretsBtn.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px;"><polyline points="20 6 9 17 4 12"></polyline></svg> Credentials Unlocked';
               secretsBtn.classList.add("ai-action-tag--secrets-granted");
               // Trigger the AI to re-run the previous request with secrets consent
               if (window.AiHelper && window.AiHelper.sendMessage) {
@@ -169,7 +169,7 @@
               }
             })
             .catch(function () {
-              secretsBtn.textContent = "\u26A0\uFE0F Failed to unlock";
+              secretsBtn.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg> Failed to unlock';
             });
           return;
         }
