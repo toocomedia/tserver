@@ -259,16 +259,65 @@
 
     _renderEmptyState: function () {
       var meta = TASK_META[this.activeTaskType] || TASK_META.general;
-      var title = this.activeTaskType === "general" ? "How can I help?" : "How can I help with " + meta.label + "?";
+      var title = this.activeTaskType === "general" ? "How can I help you today?" : "How can I help with " + meta.label + "?";
+
+      var suggestions = [
+        { label: "Deploy a Node.js / Python app", prompt: "How do I deploy an application using Docker or PM2 on this panel?" },
+        { label: "Fix 502 Bad Gateway error", prompt: "What are the common causes and step-by-step fix for 502 Bad Gateway?" },
+        { label: "Nginx reverse proxy setup", prompt: "How do I configure Nginx reverse proxy routing and SSL?" },
+      ];
+
+      if (this.activeTaskType === "error_diag") {
+        suggestions = [
+          { label: "Explain error logs", prompt: "Please explain what caused this error and how to fix it:\n\n```\n\n```" },
+          { label: "Troubleshoot 502/504 Gateway error", prompt: "How do I diagnose 502/504 errors on Nginx and upstream services?" },
+          { label: "Check high CPU or memory", prompt: "How do I identify and fix processes causing high CPU or memory?" },
+        ];
+      } else if (this.activeTaskType === "domain") {
+        suggestions = [
+          { label: "Setup Nginx reverse proxy", prompt: "How do I configure Nginx reverse proxy for a custom domain?" },
+          { label: "Fix Let's Encrypt SSL error", prompt: "How do I troubleshoot and renew Let's Encrypt SSL certificate?" },
+          { label: "Add security headers", prompt: "What security headers should I add to my Nginx configuration?" },
+        ];
+      } else if (this.activeTaskType === "app" || this.activeTaskType === "container") {
+        suggestions = [
+          { label: "Write a Dockerfile", prompt: "Can you help me write an optimized Dockerfile for my app?" },
+          { label: "Docker Compose setup", prompt: "How do I configure docker-compose for multi-container apps?" },
+          { label: "Check container logs", prompt: "How do I view and troubleshoot live Docker container logs?" },
+        ];
+      } else if (this.activeTaskType === "database") {
+        suggestions = [
+          { label: "PostgreSQL connection test", prompt: "How do I test and troubleshoot PostgreSQL connection and credentials?" },
+          { label: "Optimize database performance", prompt: "What are best practices for database indexes and memory settings?" },
+          { label: "Database backup & restore", prompt: "How do I backup and restore databases safely?" },
+        ];
+      } else if (this.activeTaskType === "system") {
+        suggestions = [
+          { label: "Check disk space & clean cache", prompt: "How do I check VPS disk usage and clean unnecessary cache files?" },
+          { label: "Inspect system memory & swap", prompt: "How do I configure swap and check RAM usage on this VPS?" },
+          { label: "Firewall & open ports", prompt: "How do I verify open network ports and firewall rules?" },
+        ];
+      }
+
+      var itemsHtml = suggestions
+        .map(function (s) {
+          return (
+            '<button type="button" class="ai-suggested-item" data-ai-suggest="' +
+            s.prompt.replace(/"/g, "&quot;") +
+            '"><span>' +
+            s.label +
+            '</span><span class="ai-suggested-arrow">→</span></button>'
+          );
+        })
+        .join("\n");
+
       this.messagesEl.innerHTML = [
         '<div class="ai-empty-state" id="ai-empty-state">',
-        '  <div class="ai-empty-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg></div>',
-        "  <h4>" + title + "</h4>",
-        "  <p>Ask anything about setting up apps, writing Dockerfiles, configuring Nginx, or troubleshooting errors.</p>",
+        '  <div class="ai-empty-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg></div>',
+        '  <h4 class="ai-empty-title">' + title + "</h4>",
+        '  <div class="ai-empty-hint">Ask a question or select a prompt:</div>',
         '  <div class="ai-suggested-prompts">',
-        '    <button type="button" class="ai-suggested-item" data-ai-suggest="How do I deploy a Node.js application on this panel?">Deploy a Node.js application</button>',
-        '    <button type="button" class="ai-suggested-item" data-ai-suggest="What environment variables do I need for PostgreSQL connection?">PostgreSQL connection variables</button>',
-        '    <button type="button" class="ai-suggested-item" data-ai-suggest="Explain common reasons for 502 Bad Gateway errors.">Fix 502 Bad Gateway error</button>',
+        itemsHtml,
         "  </div>",
         "</div>",
       ].join("\n");
