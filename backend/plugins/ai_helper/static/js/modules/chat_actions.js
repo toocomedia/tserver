@@ -201,7 +201,7 @@
         }
 
         // 6e. File Tree Item click — copy single item name or ask AI
-        var fileItem = e.target.closest(".ai-file-item");
+        var fileItem = e.target.closest(".ai-file-row, .ai-file-item");
         if (fileItem) {
           e.preventDefault();
           var itemName = fileItem.getAttribute("data-name") || fileItem.querySelector(".ai-file-name").textContent;

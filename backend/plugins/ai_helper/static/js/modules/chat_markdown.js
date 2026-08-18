@@ -123,7 +123,7 @@
       if (folders.length > 0) {
         foldersHtml = folders.map(function (f) {
           return (
-            '<div class="ai-file-item ai-file-item--folder" data-name="' + f.name + '" title="' + f.name + '">' +
+            '<div class="ai-file-row ai-file-row--folder" data-name="' + f.name + '" title="' + f.name + '">' +
             '  <span class="ai-file-icon">📁</span>' +
             '  <span class="ai-file-name">' + f.name + '</span>' +
             (f.meta ? '  <span class="ai-file-meta">' + f.meta + '</span>' : '') +
@@ -142,7 +142,7 @@
             metaBadge = '<span class="ai-file-meta' + (isMasked ? ' ai-file-meta--masked' : '') + '">' + cleanMeta + '</span>';
           }
           return (
-            '<div class="ai-file-item ai-file-item--file ai-file-item--' + f.fileType + '" data-name="' + f.name + '" title="' + f.name + '">' +
+            '<div class="ai-file-row ai-file-row--file" data-name="' + f.name + '" title="' + f.name + '">' +
             '  <span class="ai-file-icon">' + f.icon + '</span>' +
             '  <span class="ai-file-name">' + f.name + '</span>' +
             metaBadge +
@@ -155,16 +155,14 @@
         '<div class="ai-file-tree-card" data-raw-names="' + encodedNames + '">',
         '  <div class="ai-file-tree-header">',
         '    <div class="ai-file-tree-header-left">',
-        '      <span class="ai-file-tree-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg></span>',
+        '      <span class="ai-file-tree-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg></span>',
         '      <span class="ai-file-tree-title">Directory Contents</span>',
         '      <span class="ai-file-tree-count">' + countLabel + '</span>',
         '    </div>',
-        '    <div class="ai-file-tree-actions">',
-        '      <button type="button" class="ai-file-tree-copy-btn" title="Copy file names"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> Copy</button>',
-        '    </div>',
+        '    <button type="button" class="ai-file-tree-copy-btn" title="Copy file names"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> Copy</button>',
         '  </div>',
         '  <div class="ai-file-tree-body">',
-        '    <div class="ai-file-tree-grid">' + foldersHtml + filesHtml + '</div>',
+        '    <div class="ai-file-tree-list">' + foldersHtml + filesHtml + '</div>',
         '  </div>',
         '</div>',
       ].join("\n");

@@ -308,134 +308,105 @@ body.ai-helper-resizing { cursor: ew-resize !important; user-select: none !impor
 .ai-helper-status-pill { font-size: 10.5px; color: var(--color-muted); }
 
 /* ==========================================================================
-   Directory Tree Explorer Card Widget
+   Directory Tree Explorer (Minimal Single-Box List)
    ========================================================================== */
 .ai-file-tree-card {
-  background: var(--color-surface, #1e1e24);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  border-radius: 8px;
-  margin: 10px 0;
+  background: var(--color-surface);
+  border: none;
+  border-radius: 6px;
+  margin: 6px 0 8px;
   width: 100%;
+  max-width: 420px;
   box-sizing: border-box;
   overflow: hidden;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
 }
 .ai-file-tree-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 12px;
-  background: rgba(255, 255, 255, 0.025);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  gap: 8px;
+  padding: 6px 8px 4px;
+  background: transparent;
+  border: none;
+  gap: 6px;
 }
 .ai-file-tree-header-left {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   min-width: 0;
 }
 .ai-file-tree-icon {
-  color: var(--color-accent, #60a5fa);
+  color: var(--color-accent);
   display: inline-flex;
   align-items: center;
   flex-shrink: 0;
 }
 .ai-file-tree-title {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
-  color: var(--color-text, #f3f4f6);
+  color: var(--color-muted);
   white-space: nowrap;
 }
 .ai-file-tree-count {
-  font-size: 10px;
-  font-weight: 500;
-  color: var(--color-muted, #9ca3af);
-  background: var(--color-bg, #111827);
-  padding: 1px 7px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  font-size: 9.5px;
+  color: var(--color-muted);
+  opacity: 0.7;
   white-space: nowrap;
 }
-.ai-file-tree-actions {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
-}
 .ai-file-tree-copy-btn {
-  background: var(--color-bg, #111827);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  color: var(--color-muted, #9ca3af);
-  font-size: 11px;
+  background: transparent;
+  border: none;
+  color: var(--color-muted);
+  font-size: 10.5px;
   font-weight: 500;
-  padding: 3px 8px;
-  border-radius: 5px;
+  padding: 2px 6px;
+  border-radius: 4px;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
   cursor: pointer;
-  transition: all 0.12s ease;
+  transition: background 0.1s ease, color 0.1s ease;
 }
 .ai-file-tree-copy-btn:hover {
-  background: var(--color-accent, #3b82f6);
-  color: #ffffff;
-  border-color: transparent;
+  background: var(--color-surface-hover, var(--color-secondary-btn));
+  color: var(--color-text);
 }
 .ai-file-tree-body {
-  padding: 8px;
-  max-height: 320px;
+  padding: 2px 4px 6px;
+  max-height: 280px;
   overflow-y: auto;
 }
-.ai-file-tree-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 4px;
+.ai-file-tree-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
 }
-.ai-file-item {
+.ai-file-row {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 6px;
-  padding: 5px 8px;
-  border-radius: 5px;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.03);
+  padding: 3px 6px;
+  border-radius: 4px;
+  background: transparent;
+  border: none;
   font-family: var(--font-mono, monospace);
-  font-size: 11.5px;
-  color: var(--color-text, #e5e7eb);
+  font-size: 11px;
+  color: var(--color-text);
   cursor: pointer;
   user-select: none;
-  transition: all 0.12s ease;
+  transition: background 0.1s ease;
   min-width: 0;
 }
-.ai-file-item:hover {
-  background: rgba(255, 255, 255, 0.07);
-  border-color: rgba(255, 255, 255, 0.1);
-  transform: translateY(-1px);
+.ai-file-row:hover {
+  background: var(--color-surface-hover, var(--color-secondary-btn));
 }
-.ai-file-item--folder {
-  font-weight: 600;
-  color: var(--color-accent, #60a5fa);
-  background: rgba(59, 130, 246, 0.06);
-  border-color: rgba(59, 130, 246, 0.12);
-}
-.ai-file-item--folder:hover {
-  background: rgba(59, 130, 246, 0.12);
-}
-.ai-file-item--env {
-  color: #fbbf24;
-}
-.ai-file-item--python {
-  color: #38bdf8;
-}
-.ai-file-item--shell {
-  color: #4ade80;
-}
-.ai-file-item--config {
-  color: #c084fc;
+.ai-file-row--folder {
+  color: var(--color-accent);
+  font-weight: 500;
 }
 .ai-file-icon {
-  font-size: 12px;
+  font-size: 11px;
   display: inline-flex;
   align-items: center;
   flex-shrink: 0;
@@ -447,84 +418,72 @@ body.ai-helper-resizing { cursor: ew-resize !important; user-select: none !impor
   flex: 1;
 }
 .ai-file-meta {
-  font-size: 9px;
-  color: var(--color-muted, #9ca3af);
-  background: rgba(255, 255, 255, 0.05);
-  padding: 1px 5px;
-  border-radius: 3px;
+  font-size: 9.5px;
+  color: var(--color-muted);
+  opacity: 0.65;
   white-space: nowrap;
   flex-shrink: 0;
 }
 .ai-file-meta--masked {
   color: #f59e0b;
-  background: rgba(245, 158, 11, 0.15);
+  opacity: 1;
   font-weight: 600;
 }
 
 /* ==========================================================================
-   Security Audit Card Widget
+   Security Audit Card (Minimal)
    ========================================================================== */
 .ai-security-card {
-  background: var(--color-surface, #1e1e24);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  border-radius: 8px;
-  margin: 10px 0;
+  background: var(--color-surface);
+  border: none;
+  border-radius: 6px;
+  margin: 6px 0 8px;
   width: 100%;
+  max-width: 480px;
   box-sizing: border-box;
   overflow: hidden;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
 }
 .ai-security-card-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 12px;
-  background: rgba(255, 255, 255, 0.025);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  gap: 8px;
+  padding: 6px 8px 4px;
+  background: transparent;
+  border: none;
+  gap: 6px;
 }
-.ai-security-card-icon { font-size: 13px; }
+.ai-security-card-icon { font-size: 12px; }
 .ai-security-card-title {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
-  color: var(--color-text, #f3f4f6);
+  color: var(--color-muted);
   flex: 1;
 }
 .ai-security-card-body {
-  padding: 8px 10px;
+  padding: 2px 4px 6px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
 }
 .ai-sec-row {
   display: flex;
   align-items: flex-start;
-  gap: 7px;
-  padding: 4px 8px;
+  gap: 6px;
+  padding: 3px 6px;
   border-radius: 4px;
   font-size: 11.5px;
   line-height: 1.4;
+  background: transparent;
+  border: none;
 }
-.ai-sec-critical {
-  background: rgba(239, 68, 68, 0.1);
-  color: #f87171;
-  border-left: 2px solid #ef4444;
+.ai-sec-row:hover {
+  background: var(--color-surface-hover, var(--color-secondary-btn));
 }
-.ai-sec-warning {
-  background: rgba(245, 158, 11, 0.1);
-  color: #fbbf24;
-  border-left: 2px solid #f59e0b;
-}
-.ai-sec-ok {
-  background: rgba(34, 197, 94, 0.1);
-  color: #4ade80;
-  border-left: 2px solid #22c55e;
-}
-.ai-sec-info {
-  background: rgba(255, 255, 255, 0.02);
-  color: var(--color-text, #e5e7eb);
-}
-.ai-sec-icon { font-size: 11px; flex-shrink: 0; margin-top: 1px; }
+.ai-sec-critical { color: #f87171; }
+.ai-sec-warning { color: #fbbf24; }
+.ai-sec-ok { color: #4ade80; }
+.ai-sec-info { color: var(--color-muted); }
+.ai-sec-icon { font-size: 10px; flex-shrink: 0; margin-top: 1px; }
 .ai-sec-text { flex: 1; word-break: break-word; }
 
 /* Security Badges & Unlock Action Tags */
@@ -532,21 +491,21 @@ body.ai-helper-resizing { cursor: ew-resize !important; user-select: none !impor
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 2px 7px;
-  border-radius: 4px;
-  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 10.5px;
   font-weight: 500;
-  margin: 2px;
+  margin: 1px;
+  border: none;
 }
-.ai-security-badge--critical { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
-.ai-security-badge--warning { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
-.ai-security-badge--ok { background: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3); }
+.ai-security-badge--critical { background: var(--color-surface); color: #f87171; }
+.ai-security-badge--warning { background: var(--color-surface); color: #fbbf24; }
+.ai-security-badge--ok { background: var(--color-surface); color: #4ade80; }
 
 .ai-action-tag--secrets {
   background: #f59e0b !important;
   color: #111827 !important;
   font-weight: 600 !important;
-  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
 }
 .ai-action-tag--secrets:hover {
   background: #d97706 !important;
@@ -559,18 +518,19 @@ body.ai-helper-resizing { cursor: ew-resize !important; user-select: none !impor
 }
 
 /* ==========================================================================
-   Real-Time Tool Activity Panel (What AI is Reading)
+   Real-Time Tool Activity Panel (Minimal)
    ========================================================================== */
 .ai-activity-panel {
   display: none;
   flex-direction: column;
-  gap: 4px;
-  padding: 6px 10px;
-  margin: 4px 0 8px;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  gap: 3px;
+  padding: 4px 8px;
+  margin: 4px 0 6px;
+  background: var(--color-surface);
+  border: none;
   border-radius: 6px;
   width: 100%;
+  max-width: 420px;
   box-sizing: border-box;
 }
 .ai-activity-panel--done[data-expanded="false"] .ai-activity-item {
@@ -579,39 +539,30 @@ body.ai-helper-resizing { cursor: ew-resize !important; user-select: none !impor
 .ai-activity-summary-toggle {
   background: transparent;
   border: none;
-  color: var(--color-muted, #9ca3af);
-  font-size: 10.5px;
+  color: var(--color-muted);
+  font-size: 10px;
   font-weight: 500;
   cursor: pointer;
-  padding: 2px 0;
+  padding: 1px 0;
   display: flex;
   align-items: center;
   gap: 4px;
 }
 .ai-activity-summary-toggle:hover {
-  color: var(--color-text, #ffffff);
+  color: var(--color-text);
 }
 .ai-activity-item {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 11px;
-  color: var(--color-muted, #9ca3af);
-  padding: 2px 0;
+  gap: 5px;
+  font-size: 10.5px;
+  color: var(--color-muted);
+  padding: 1px 0;
 }
-.ai-activity-item--loading {
-  color: var(--color-text, #f3f4f6);
-}
-.ai-activity-item--done {
-  color: #4ade80;
-}
-.ai-activity-item--error {
-  color: #f87171;
-}
-.ai-activity-icon {
-  font-size: 11px;
-  flex-shrink: 0;
-}
+.ai-activity-item--loading { color: var(--color-text); }
+.ai-activity-item--done { color: #4ade80; }
+.ai-activity-item--error { color: #f87171; }
+.ai-activity-icon { font-size: 10px; flex-shrink: 0; }
 .ai-activity-label {
   flex: 1;
   white-space: nowrap;
@@ -619,21 +570,22 @@ body.ai-helper-resizing { cursor: ew-resize !important; user-select: none !impor
   text-overflow: ellipsis;
 }
 .ai-activity-detail {
-  color: var(--color-muted, #9ca3af);
+  color: var(--color-muted);
   font-family: var(--font-mono, monospace);
-  font-size: 10px;
-  margin-left: 4px;
+  font-size: 9.5px;
+  margin-left: 3px;
+  opacity: 0.8;
 }
 .ai-activity-status {
-  font-size: 10px;
+  font-size: 9.5px;
   font-weight: 700;
   flex-shrink: 0;
 }
 .ai-activity-spinner {
-  width: 10px;
-  height: 10px;
-  border: 1.5px solid rgba(255, 255, 255, 0.15);
-  border-top-color: var(--color-accent, #3b82f6);
+  width: 9px;
+  height: 9px;
+  border: 1.5px solid rgba(255, 255, 255, 0.12);
+  border-top-color: var(--color-accent);
   border-radius: 50%;
   animation: aiSpin 0.8s linear infinite;
   display: inline-block;
