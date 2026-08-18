@@ -1,5 +1,5 @@
 /**
- * chat_markdown.js — Markdown & Action Tag Parser for AI Assistant messages.
+ * chat_markdown.js — Markdown & Action Tag Parser with In-Bubble Line Numbers & Code Collapse.
  */
 (function () {
   "use strict";
@@ -84,19 +84,42 @@
         }
       );
 
-      // Code blocks ```lang ... ```
+      // Code blocks ```lang ... ``` with Line Numbers & Collapsible Box
       escaped = escaped.replace(/```([a-zA-Z0-9_-]*)\n([\s\S]*?)```/g, function (_, lang, code) {
         var cleanLang = (lang || "code").toLowerCase();
+        var trimmedCode = code.replace(/\r\n/g, "\n").replace(/\r/g, "\n").replace(/^\n+|\n+$/g, "");
+        var codeLines = trimmedCode.split("\n");
+        var lineCount = codeLines.length;
+
+        var gutterHtml = '<div class="ai-code-lines-gutter">';
+        for (var li = 1; li <= lineCount; li++) {
+          gutterHtml += "<span>" + li + "</span>";
+        }
+        gutterHtml += "</div>";
+
+        var isCollapsible = lineCount > 10;
+        var state = isCollapsible ? "collapsed" : "expanded";
+        var collapseBtn = isCollapsible
+          ? '<button type="button" class="ai-code-toggle-collapse-btn" title="Toggle collapse">Expand (' + lineCount + ' lines) ▾</button>'
+          : "";
+
         return [
-          '<div class="ai-code-block" data-lang="' + cleanLang + '">',
+          '<div class="ai-code-block" data-lang="' + cleanLang + '" data-state="' + state + '" data-lines="' + lineCount + '">',
           '  <div class="ai-code-header">',
-          '    <span class="ai-code-lang">' + cleanLang + "</span>",
+          '    <div class="ai-code-header-left">',
+          '      <span class="ai-code-lang">' + cleanLang + "</span>",
+          '      <span class="ai-code-line-count">' + lineCount + " lines</span>",
+          "    </div>",
           '    <div class="ai-code-actions">',
+          "      " + collapseBtn,
           '      <button type="button" class="ai-code-expand-btn" data-ai-code-view="true" title="Open Code View Window">Code View</button>',
           '      <button type="button" class="ai-code-copy-btn" title="Copy snippet">Copy</button>',
           "    </div>",
           "  </div>",
-          '  <pre><code class="language-' + cleanLang + '">' + code.trim() + "</code></pre>",
+          '  <div class="ai-code-body">',
+          "    " + gutterHtml,
+          '    <pre><code class="language-' + cleanLang + '">' + trimmedCode + "</code></pre>",
+          "  </div>",
           "</div>",
         ].join("\n");
       });

@@ -1,6 +1,6 @@
 /**
- * chat_actions.js — Action Registry & Interactive Tool Handlers for AI Assistant Chat Room.
- * Extensible system for action tags, code snippet actions, and panel integrations.
+ * chat_actions.js — Action Registry & Interactive Handlers for AI Assistant Chat Room.
+ * Handles code view triggers, in-bubble code collapse, long message toggles, and tool tags.
  */
 (function () {
   "use strict";
@@ -19,7 +19,6 @@
       if (handlers[key]) {
         return handlers[key](actionVal, element);
       }
-      // Default fallback: copy to clipboard
       this.copyToClipboard(actionVal, element);
     },
 
@@ -54,12 +53,69 @@
       }, 1500);
     },
 
+    checkLongMessages: function (containerEl) {
+      if (!containerEl) return;
+      var assistantMsgs = containerEl.querySelectorAll(".ai-msg--assistant");
+      assistantMsgs.forEach(function (msgWrap) {
+        var bubble = msgWrap.querySelector(".ai-msg-bubble");
+        if (!bubble) return;
+        // Threshold: 360px height
+        if (bubble.scrollHeight > 360 && !msgWrap.querySelector(".ai-msg-expand-toggle-btn")) {
+          bubble.classList.add("ai-msg-bubble--collapsible");
+          var btn = document.createElement("button");
+          btn.type = "button";
+          btn.className = "ai-msg-expand-toggle-btn";
+          btn.textContent = "Show more ▾";
+          btn.setAttribute("title", "Toggle message expansion");
+          msgWrap.appendChild(btn);
+        }
+      });
+    },
+
     init: function (containerEl) {
       var self = this;
       if (!containerEl) return;
 
       containerEl.addEventListener("click", function (e) {
-        // 1. Code View / Expand button
+        // 1. In-bubble Code Block Collapse / Expand Toggle
+        var codeCollapseBtn = e.target.closest(".ai-code-toggle-collapse-btn");
+        if (codeCollapseBtn) {
+          e.preventDefault();
+          var codeBlock = codeCollapseBtn.closest(".ai-code-block");
+          if (codeBlock) {
+            var curState = codeBlock.getAttribute("data-state") || "collapsed";
+            var nextState = curState === "expanded" ? "collapsed" : "expanded";
+            codeBlock.setAttribute("data-state", nextState);
+            var lineCount = codeBlock.getAttribute("data-lines") || "";
+            if (nextState === "expanded") {
+              codeCollapseBtn.textContent = "Collapse ▴";
+            } else {
+              codeCollapseBtn.textContent = "Expand (" + lineCount + " lines) ▾";
+            }
+          }
+          return;
+        }
+
+        // 2. Long Message Bubble Collapse / Expand Toggle
+        var msgToggleBtn = e.target.closest(".ai-msg-expand-toggle-btn");
+        if (msgToggleBtn) {
+          e.preventDefault();
+          var msgWrap = msgToggleBtn.closest(".ai-msg");
+          var bubbleEl = msgWrap ? msgWrap.querySelector(".ai-msg-bubble") : null;
+          if (bubbleEl) {
+            var isExpanded = bubbleEl.classList.contains("ai-msg-bubble--expanded");
+            if (isExpanded) {
+              bubbleEl.classList.remove("ai-msg-bubble--expanded");
+              msgToggleBtn.textContent = "Show more ▾";
+            } else {
+              bubbleEl.classList.add("ai-msg-bubble--expanded");
+              msgToggleBtn.textContent = "Show less ▴";
+            }
+          }
+          return;
+        }
+
+        // 3. Code View Modal Window trigger
         var expandBtn = e.target.closest(".ai-code-expand-btn, [data-ai-code-view]");
         if (expandBtn) {
           e.preventDefault();
@@ -74,7 +130,7 @@
           return;
         }
 
-        // 2. Code block copy button
+        // 4. Code block copy button
         var copyBtn = e.target.closest(".ai-code-copy-btn");
         if (copyBtn) {
           e.preventDefault();
@@ -86,24 +142,24 @@
           return;
         }
 
-        // 3. Thought Process Box toggle
+        // 5. Thought Process Box toggle
         var thoughtHeader = e.target.closest(".ai-thought-header");
         if (thoughtHeader) {
           e.preventDefault();
           var thoughtBox = thoughtHeader.closest(".ai-thought-box");
           if (thoughtBox) {
             var currentState = thoughtBox.getAttribute("data-state") || "collapsed";
-            var nextState = currentState === "expanded" ? "collapsed" : "expanded";
-            thoughtBox.setAttribute("data-state", nextState);
+            var nextThoughtState = currentState === "expanded" ? "collapsed" : "expanded";
+            thoughtBox.setAttribute("data-state", nextThoughtState);
             var chevron = thoughtBox.querySelector(".ai-thought-chevron");
             if (chevron) {
-              chevron.textContent = nextState === "expanded" ? "▴" : "▾";
+              chevron.textContent = nextThoughtState === "expanded" ? "▴" : "▾";
             }
           }
           return;
         }
 
-        // 4. Checklist Item toggle
+        // 6. Checklist Item toggle
         var checkItem = e.target.closest(".ai-checklist-item");
         if (checkItem) {
           var isChecked = checkItem.classList.contains("ai-checklist-item--checked");
@@ -119,7 +175,7 @@
           return;
         }
 
-        // 5. Interactive Action Tag
+        // 7. Interactive Action Tag
         var tag = e.target.closest(".ai-action-tag");
         if (tag) {
           var actionType = tag.getAttribute("data-action");

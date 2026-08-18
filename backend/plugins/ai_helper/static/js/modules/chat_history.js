@@ -53,6 +53,10 @@
       if (this.panelEl) this.panelEl.classList.remove("open");
     },
 
+    isOpen: function () {
+      return this.panelEl ? this.panelEl.classList.contains("open") : false;
+    },
+
     removeSession: function (sessionId) {
       if (this.cachedServerSessions) {
         this.cachedServerSessions = this.cachedServerSessions.filter(function (s) {

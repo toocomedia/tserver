@@ -349,11 +349,29 @@
     },
 
     toggleHistoryView: function () {
-      if (window.AiHelperHistory && window.AiHelperHistory.isOpen()) this.closeHistoryView();
-      else this.openHistoryView();
+      if (window.AiHelperHistory && typeof window.AiHelperHistory.isOpen === "function") {
+        if (window.AiHelperHistory.isOpen()) this.closeHistoryView();
+        else this.openHistoryView();
+      } else {
+        var panel = document.getElementById("ai-helper-history-panel");
+        if (panel && panel.classList.contains("open")) this.closeHistoryView();
+        else this.openHistoryView();
+      }
     },
-    openHistoryView: function () { if (window.AiHelperHistory) window.AiHelperHistory.open(); },
-    closeHistoryView: function () { if (window.AiHelperHistory) window.AiHelperHistory.close(); },
+    openHistoryView: function () {
+      if (window.AiHelperHistory) window.AiHelperHistory.open();
+      else {
+        var panel = document.getElementById("ai-helper-history-panel");
+        if (panel) panel.classList.add("open");
+      }
+    },
+    closeHistoryView: function () {
+      if (window.AiHelperHistory) window.AiHelperHistory.close();
+      else {
+        var panel = document.getElementById("ai-helper-history-panel");
+        if (panel) panel.classList.remove("open");
+      }
+    },
 
     send: function (msg) {
       if (!msg || this.isStreaming) return;
@@ -434,6 +452,7 @@
       if (text.trim() && window.AiHelperCache) {
         window.AiHelperCache.appendMessage(this.sessionId, { role: "assistant", content: text, created_at: new Date().toISOString() }, { title: this.sessionTitle, taskType: this.activeTaskType, context: this.activeContext });
       }
+      if (window.AiHelperActions) window.AiHelperActions.checkLongMessages(this.messagesEl);
     },
 
     _appendMessageToDOM: function (role, content, timeIso) {
@@ -449,6 +468,7 @@
       time.textContent = d.getHours() + ":" + (d.getMinutes() < 10 ? "0" : "") + d.getMinutes();
       wrap.appendChild(time);
       this.messagesEl.appendChild(wrap);
+      if (window.AiHelperActions) window.AiHelperActions.checkLongMessages(this.messagesEl);
       this._scrollToBottom();
       return wrap;
     },
