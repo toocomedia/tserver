@@ -7,14 +7,14 @@
   "use strict";
 
   var TASK_META = {
-    general: { label: "General", icon: "✨", color: "#6366f1" },
-    error_diag: { label: "Error Diagnostic", icon: "⚠️", color: "#ef4444" },
-    domain: { label: "Domains & SSL", icon: "🌐", color: "#f59e0b" },
-    app: { label: "Apps & Docker", icon: "📦", color: "#06b6d4" },
-    container: { label: "Apps & Docker", icon: "📦", color: "#06b6d4" },
-    database: { label: "Database", icon: "🗄️", color: "#8b5cf6" },
-    file_manager: { label: "Files & Code", icon: "📁", color: "#10b981" },
-    system: { label: "System & VPS", icon: "⚙️", color: "#64748b" },
+    general: { label: "General" },
+    error_diag: { label: "Error Diagnostic" },
+    domain: { label: "Domains & SSL" },
+    app: { label: "Apps & Docker" },
+    container: { label: "Apps & Docker" },
+    database: { label: "Database" },
+    file_manager: { label: "Files & Code" },
+    system: { label: "System & VPS" },
   };
 
   var AiHelper = {
@@ -194,9 +194,11 @@
       if (!this.taskBadgeEl) return;
       var meta = TASK_META[this.activeTaskType] || TASK_META.general;
       this.taskBadgeEl.textContent = meta.label;
-      this.taskBadgeEl.style.borderColor = meta.color;
-      this.taskBadgeEl.style.color = meta.color;
-      this.taskBadgeEl.style.background = meta.color + "18";
+      if (this.activeTaskType && this.activeTaskType !== "general") {
+        this.taskBadgeEl.classList.add("ai-helper-task-badge--active");
+      } else {
+        this.taskBadgeEl.classList.remove("ai-helper-task-badge--active");
+      }
     },
 
     setTaskType: function (t) { this.activeTaskType = t || "general"; this._updateTaskBadge(); },
@@ -288,11 +290,23 @@
       this.inputEl.focus();
     },
 
+    _getCsrfToken: function () {
+      var meta = document.querySelector('meta[name="csrf-token"]');
+      if (meta && meta.getAttribute("content")) return meta.getAttribute("content");
+      var input = document.querySelector('input[name="csrf_token"]');
+      if (input && input.value) return input.value;
+      return "";
+    },
+
     deleteSession: function (sessId) {
       if (!confirm("Delete this conversation?")) return;
       var cache = window.AiHelperCache;
       if (cache) cache.removeSession(sessId);
-      fetch("/plugins/ai_helper/api/sessions/" + sessId, { method: "DELETE" }).catch(function () {});
+      var csrf = this._getCsrfToken();
+      fetch("/plugins/ai_helper/api/sessions/" + sessId, {
+        method: "DELETE",
+        headers: { "X-CSRF-Token": csrf },
+      }).catch(function () {});
       if (this.sessionId === sessId) this.startNewChat({ taskType: "general" });
       else if (window.AiHelperHistory) window.AiHelperHistory.render();
     },
@@ -301,7 +315,11 @@
       if (!confirm("Clear ALL conversation histories? This cannot be undone.")) return;
       var cache = window.AiHelperCache;
       if (cache) cache.clearAll();
-      fetch("/plugins/ai_helper/api/sessions", { method: "DELETE" }).catch(function () {});
+      var csrf = this._getCsrfToken();
+      fetch("/plugins/ai_helper/api/sessions", {
+        method: "DELETE",
+        headers: { "X-CSRF-Token": csrf },
+      }).catch(function () {});
       this.startNewChat({ taskType: "general" });
     },
 
@@ -340,7 +358,7 @@
 
       fetch("/plugins/ai_helper/api/chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "X-CSRF-Token": document.querySelector("meta[name='csrf-token']")?.getAttribute("content") || "" },
+        headers: { "Content-Type": "application/json", "X-CSRF-Token": this._getCsrfToken() },
         body: JSON.stringify({ message: msg, session_id: this.sessionId, task_type: this.activeTaskType, session_title: this.sessionTitle, context_key: this.activeContext, context: this.activeContext, provider_id: this.selectedProviderId ? parseInt(this.selectedProviderId, 10) : undefined, model_name: this.selectedModelName || undefined, stream: true }),
         signal: this.abortController.signal,
       }).then(function (res) {

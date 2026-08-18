@@ -128,7 +128,7 @@
       var taskMeta = window.AiHelper ? window.AiHelper.TASK_META : {};
 
       list.forEach(function (s) {
-        var meta = taskMeta[s.task_type] || { label: "General", color: "#6366f1" };
+        var meta = taskMeta[s.task_type] || { label: "General" };
         var isActive = s.session_id === activeSessionId;
         var timeStr = self._formatRelativeTime(s.updated_at);
 
@@ -142,7 +142,7 @@
           '  <button type="button" class="ai-history-card-del" title="Delete conversation">✕</button>',
           "</div>",
           '<div class="ai-history-card-footer">',
-          '  <span class="ai-history-task-tag" style="color:' + meta.color + "; border-color:" + meta.color + '; background:' + meta.color + '15;">' + meta.label + "</span>",
+          '  <span class="ai-history-task-tag">' + self._escapeHtml(meta.label || "General") + "</span>",
           '  <span class="ai-history-card-meta">' + (s.message_count || 0) + " msgs · " + timeStr + "</span>",
           "</div>",
         ].join("\n");
