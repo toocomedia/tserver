@@ -209,6 +209,25 @@
           return;
         }
 
+        // 6f. File Tree Expand/Collapse button (>5 items)
+        var expandFilesBtn = e.target.closest(".ai-file-expand-btn");
+        if (expandFilesBtn) {
+          e.preventDefault();
+          var card = expandFilesBtn.closest(".ai-file-tree-card");
+          if (card) {
+            var isExp = card.classList.contains("ai-file-tree-card--expanded");
+            var hiddenCount = expandFilesBtn.getAttribute("data-hidden-count") || "";
+            if (isExp) {
+              card.classList.remove("ai-file-tree-card--expanded");
+              expandFilesBtn.textContent = "Show " + hiddenCount + " more items ▾";
+            } else {
+              card.classList.add("ai-file-tree-card--expanded");
+              expandFilesBtn.textContent = "Show less ▴";
+            }
+          }
+          return;
+        }
+
         // 7. Thought Box Header Toggle
         var thoughtHeader = e.target.closest(".ai-thought-header");
         if (thoughtHeader) {

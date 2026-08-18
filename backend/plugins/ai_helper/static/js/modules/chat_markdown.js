@@ -41,6 +41,9 @@
       var files = [];
       var plainNames = [];
 
+      var FOLDER_SVG = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>';
+      var FILE_SVG = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>';
+
       lines.forEach(function (rawLine) {
         var line = (rawLine || "").trim();
         if (!line) return;
@@ -56,7 +59,7 @@
 
         // Clean out emojis, code tags, html tags, backticks
         var clean = line
-          .replace(/[📁📄🗂️📂]/g, "")
+          .replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, "")
           .replace(/\[(?:DIR|FILE)\]/gi, "")
           .replace(/&lt;\/?code&gt;/gi, "")
           .replace(/<\/?code>/gi, "")
@@ -87,27 +90,17 @@
         if (isFolder) {
           folders.push({ name: clean, meta: meta });
         } else {
-          // File extension icon helper
-          var extMatch = clean.match(/\.([a-zA-Z0-9_-]+)$/);
-          var ext = extMatch ? extMatch[1].toLowerCase() : "";
-          var fileType = "file";
-          var icon = "📄";
-          if (ext === "py") { icon = "🐍"; fileType = "python"; }
-          else if (ext === "js" || ext === "ts" || ext === "jsx" || ext === "tsx") { icon = "🟨"; fileType = "js"; }
-          else if (ext === "json" || ext === "yaml" || ext === "yml" || ext === "ini" || ext === "toml") { icon = "⚙️"; fileType = "config"; }
-          else if (clean.startsWith(".env") || ext === "env") { icon = "🔐"; fileType = "env"; }
-          else if (ext === "sh" || ext === "bash") { icon = "💻"; fileType = "shell"; }
-          else if (ext === "md" || ext === "txt" || ext === "rst") { icon = "📝"; fileType = "doc"; }
-          else if (ext === "html" || ext === "css" || ext === "scss") { icon = "🌐"; fileType = "web"; }
-          else if (ext === "sql" || ext === "db") { icon = "🗄️"; fileType = "db"; }
-
-          files.push({ name: clean, meta: meta, icon: icon, fileType: fileType });
+          files.push({ name: clean, meta: meta });
         }
       });
 
-      if (folders.length === 0 && files.length === 0) return "";
+      var allItems = [];
+      folders.forEach(function (f) { allItems.push({ type: "folder", name: f.name, meta: f.meta }); });
+      files.forEach(function (f) { allItems.push({ type: "file", name: f.name, meta: f.meta }); });
 
-      var totalCount = folders.length + files.length;
+      if (allItems.length === 0) return "";
+
+      var totalCount = allItems.length;
       var countLabel = "";
       if (folders.length > 0 && files.length > 0) {
         countLabel = folders.length + " dir" + (folders.length > 1 ? "s" : "") + ", " + files.length + " file" + (files.length > 1 ? "s" : "");
@@ -119,36 +112,28 @@
 
       var encodedNames = encodeURIComponent(plainNames.join("\n"));
 
-      var foldersHtml = "";
-      if (folders.length > 0) {
-        foldersHtml = folders.map(function (f) {
-          return (
-            '<div class="ai-file-row ai-file-row--folder" data-name="' + f.name + '" title="' + f.name + '">' +
-            '  <span class="ai-file-icon">📁</span>' +
-            '  <span class="ai-file-name">' + f.name + '</span>' +
-            (f.meta ? '  <span class="ai-file-meta">' + f.meta + '</span>' : '') +
-            '</div>'
-          );
-        }).join("");
-      }
+      var rowsHtml = allItems.map(function (item, idx) {
+        var isHidden = idx >= 5;
+        var iconSvg = item.type === "folder" ? FOLDER_SVG : FILE_SVG;
+        var metaBadge = "";
+        if (item.meta) {
+          var cleanMeta = item.meta.replace(/,\s*sensitive\s*—\s*/gi, " · ").replace(/,\s*/g, " · ");
+          var isMasked = item.meta.toLowerCase().indexOf("mask") !== -1;
+          metaBadge = '<span class="ai-file-meta' + (isMasked ? ' ai-file-meta--masked' : '') + '">' + cleanMeta + '</span>';
+        }
+        return (
+          '<div class="ai-file-row ai-file-row--' + item.type + (isHidden ? ' ai-file-row--hidden' : '') + '" data-name="' + item.name + '" title="' + item.name + '">' +
+          '  <span class="ai-file-icon">' + iconSvg + '</span>' +
+          '  <span class="ai-file-name">' + item.name + '</span>' +
+          metaBadge +
+          '</div>'
+        );
+      }).join("");
 
-      var filesHtml = "";
-      if (files.length > 0) {
-        filesHtml = files.map(function (f) {
-          var metaBadge = "";
-          if (f.meta) {
-            var cleanMeta = f.meta.replace(/,\s*sensitive\s*—\s*/gi, " · ").replace(/,\s*/g, " · ");
-            var isMasked = f.meta.toLowerCase().indexOf("mask") !== -1;
-            metaBadge = '<span class="ai-file-meta' + (isMasked ? ' ai-file-meta--masked' : '') + '">' + cleanMeta + '</span>';
-          }
-          return (
-            '<div class="ai-file-row ai-file-row--file" data-name="' + f.name + '" title="' + f.name + '">' +
-            '  <span class="ai-file-icon">' + f.icon + '</span>' +
-            '  <span class="ai-file-name">' + f.name + '</span>' +
-            metaBadge +
-            '</div>'
-          );
-        }).join("");
+      var expandBtnHtml = "";
+      if (totalCount > 5) {
+        var hiddenCount = totalCount - 5;
+        expandBtnHtml = '<button type="button" class="ai-file-expand-btn" data-hidden-count="' + hiddenCount + '">Show ' + hiddenCount + ' more items ▾</button>';
       }
 
       return [
@@ -162,7 +147,7 @@
         '    <button type="button" class="ai-file-tree-copy-btn" title="Copy file names"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> Copy</button>',
         '  </div>',
         '  <div class="ai-file-tree-body">',
-        '    <div class="ai-file-tree-list">' + foldersHtml + filesHtml + '</div>',
+        '    <div class="ai-file-tree-list">' + rowsHtml + '</div>' + expandBtnHtml,
         '  </div>',
         '</div>',
       ].join("\n");
@@ -258,19 +243,23 @@
       escaped = escaped.replace(/&lt;\/?(?:tool_call|function|parameter|invoke|DSML)[^&gt;]*&gt;/gi, "");
 
       // Replace structured Action Tags: [ACTION:TYPE:VALUE]
+      var renderSecretsBtn = function () {
+        var sid = window.AiHelper && window.AiHelper.sessionId ? window.AiHelper.sessionId : "";
+        return (
+          '<button type="button" class="ai-action-tag ai-action-tag--secrets" ' +
+          'data-action="ALLOW_SECRETS" data-session-id="' + sid + '" ' +
+          'title="Grant permission to view credential files for this session">' +
+          '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:3px;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg> Unlock Credentials' +
+          '</button>'
+        );
+      };
+
       escaped = escaped.replace(
         /\[ACTION:([A-Z_]+):([^\]]+)\]/g,
         function (_, actionType, actionVal) {
-          // Special: ALLOW_SECRETS renders as an amber unlock button
+          // Special: ALLOW_SECRETS renders as an unlock button with monochrome key icon
           if (actionType === "ALLOW_SECRETS") {
-            var sid = window.AiHelper && window.AiHelper.sessionId ? window.AiHelper.sessionId : "";
-            return (
-              '<button type="button" class="ai-action-tag ai-action-tag--secrets" ' +
-              'data-action="ALLOW_SECRETS" data-session-id="' + sid + '" ' +
-              'title="Grant permission to view credential files for this session">' +
-              '\uD83D\uDD10 Unlock Credentials' +
-              '</button>'
-            );
+            return renderSecretsBtn();
           }
           // Special: SECURITY_FINDING renders as coloured severity badge
           if (actionType === "SECURITY_FINDING") {
@@ -279,8 +268,7 @@
               var sev = parts[1].toLowerCase();
               var desc = parts[2];
               var cls = sev === "critical" ? "ai-security-badge--critical" : sev === "warning" ? "ai-security-badge--warning" : "ai-security-badge--ok";
-              var icon = sev === "critical" ? "\u274C" : sev === "warning" ? "\u26A0\uFE0F" : "\u2705";
-              return '<span class="ai-security-badge ' + cls + '">' + icon + ' ' + desc + '</span>';
+              return '<span class="ai-security-badge ' + cls + '"><span class="ai-sec-dot ai-sec-dot--' + sev + '"></span> ' + desc + '</span>';
             }
           }
           var label = actionType.replace(/_/g, " ").toLowerCase();
@@ -297,6 +285,10 @@
           );
         }
       );
+
+      // Model drift fallbacks for allow secrets text
+      escaped = escaped.replace(/(?:click\s+)?[\uD83D\uDD13\uD83D\uDD10\uD83D\uDD12]?\s*Credentials Unlocked/gi, renderSecretsBtn);
+      escaped = escaped.replace(/\[(?:ALLOW_SECRETS|UNLOCK_CREDENTIALS)\]/gi, renderSecretsBtn);
 
       // Code blocks ```lang ... ``` — branched rendering by language type
       escaped = escaped.replace(/```([a-zA-Z0-9_-]*)\n([\s\S]*?)```/g, function (_, lang, code) {
@@ -315,17 +307,19 @@
             if (m) {
               var sev = m[1].toUpperCase();
               var cls = sev === "CRITICAL" ? "ai-sec-critical" : sev === "WARNING" ? "ai-sec-warning" : sev === "OK" ? "ai-sec-ok" : "ai-sec-info";
-              var icon = sev === "CRITICAL" ? "\u274C" : sev === "WARNING" ? "\u26A0\uFE0F" : sev === "OK" ? "\u2705" : "\u2139\uFE0F";
-              return '<div class="ai-sec-row ' + cls + '"><span class="ai-sec-icon">' + icon + '</span><span class="ai-sec-text">' + m[2] + '</span></div>';
+              var sevKey = sev.toLowerCase();
+              return '<div class="ai-sec-row ' + cls + '"><span class="ai-sec-dot ai-sec-dot--' + sevKey + '"></span><span class="ai-sec-text">' + m[2] + '</span></div>';
             }
-            return '<div class="ai-sec-row ai-sec-info"><span class="ai-sec-text">' + t + '</span></div>';
+            return '<div class="ai-sec-row ai-sec-info"><span class="ai-sec-dot ai-sec-dot--info"></span><span class="ai-sec-text">' + t + '</span></div>';
           }).join("");
           return [
             '<div class="ai-security-card">',
             '  <div class="ai-security-card-header">',
-            '    <span class="ai-security-card-icon">\uD83D\uDD12</span>',
-            '    <span class="ai-security-card-title">Security Audit</span>',
-            '    <button type="button" class="ai-card-strip-btn ai-card-strip-copy-btn" title="Copy findings"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></button>',
+            '    <div class="ai-security-card-header-left">',
+            '      <span class="ai-security-card-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg></span>',
+            '      <span class="ai-security-card-title">Security Audit</span>',
+            '    </div>',
+            '    <button type="button" class="ai-card-strip-btn ai-card-strip-copy-btn" title="Copy findings"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> Copy</button>',
             '  </div>',
             '  <div class="ai-security-card-body">' + secHtml + '</div>',
             '</div>',
@@ -396,6 +390,12 @@
         ].join("\n");
       });
 
+      // Headings: #### H4, ### H3, ## H2, # H1
+      escaped = escaped.replace(/(?:^|\n)####\s+([^\n]+)/g, '\n<h5 class="ai-msg-h5">$1</h5>');
+      escaped = escaped.replace(/(?:^|\n)###\s+([^\n]+)/g, '\n<h4 class="ai-msg-h4">$1</h4>');
+      escaped = escaped.replace(/(?:^|\n)##\s+([^\n]+)/g, '\n<h3 class="ai-msg-h3">$1</h3>');
+      escaped = escaped.replace(/(?:^|\n)#\s+([^\n]+)/g, '\n<h2 class="ai-msg-h2">$1</h2>');
+
       // Inline code `code`
       escaped = escaped.replace(/`([^`]+)`/g, "<code>$1</code>");
 
@@ -405,24 +405,42 @@
       // Italic *text* or _text_
       escaped = escaped.replace(/\*([^*]+)\*/g, "<em>$1</em>");
 
-      // Markdown Tables (| Header | Header | ... |)
-      escaped = escaped.replace(/(?:^|\n)(\|.+?\|\n\|[-:| ]+?\|\n(?:\|.+?\|\n?)+)/g, function (match) {
+      // Markdown Tables (with or without outer pipes)
+      escaped = escaped.replace(/(?:^|\n)((?:\|?[^\n|]+\|[^\n]+\n)(?:\|?[-:| ]+[-:| ]*\|[-:| ]*\n)(?:(?:\|?[^\n|]+\|[^\n]+(?:\n|$))+))/g, function (match) {
         var lines = match.trim().split("\n");
         if (lines.length < 3) return match;
-        var headerCols = lines[0].split("|").slice(1, -1);
-        var ths = headerCols.map(function (c) { return "<th>" + c.trim() + "</th>"; }).join("");
+
+        var parseRow = function (rowLine) {
+          var trimmed = rowLine.trim();
+          if (trimmed.startsWith("|")) trimmed = trimmed.substring(1);
+          if (trimmed.endsWith("|")) trimmed = trimmed.substring(0, trimmed.length - 1);
+          return trimmed.split("|").map(function (c) { return c.trim(); });
+        };
+
+        var headerCols = parseRow(lines[0]);
+        var ths = headerCols.map(function (c) { return "<th>" + c + "</th>"; }).join("");
+
+        // Check if 2-column key-value / record table (e.g. Field | Value, Key | Value)
+        var isKeyValue = headerCols.length === 2;
+        var tableCls = isKeyValue ? "ai-table ai-table--keyvalue" : "ai-table";
+
         var trs = [];
         for (var i = 2; i < lines.length; i++) {
-          var rowCols = lines[i].split("|").slice(1, -1);
-          var tds = rowCols.map(function (c) { return "<td>" + c.trim() + "</td>"; }).join("");
+          if (!lines[i].trim()) continue;
+          var rowCols = parseRow(lines[i]);
+          var tds = rowCols.map(function (c, colIdx) {
+            var colCls = (isKeyValue && colIdx === 0) ? ' class="ai-col-key"' : ((isKeyValue && colIdx === 1) ? ' class="ai-col-val"' : '');
+            return "<td" + colCls + ">" + c + "</td>";
+          }).join("");
           trs.push("<tr>" + tds + "</tr>");
         }
+
         return (
-          '<div class="ai-table-wrap"><table class="ai-table"><thead><tr>' +
+          '\n<div class="ai-table-wrap"><table class="' + tableCls + '"><thead><tr>' +
           ths +
           "</tr></thead><tbody>" +
           trs.join("") +
-          "</tbody></table></div>"
+          "</tbody></table></div>\n"
         );
       });
 
@@ -443,6 +461,17 @@
         return "\n" + self._buildDirectoryCard(lines) + "\n";
       });
 
+      // Unordered lists: lines starting with `- ` or `* `
+      escaped = escaped.replace(/(?:^|\n)((?:(?:- |\* )[^\n]+(?:\n|$))+)/g, function (match) {
+        if (match.indexOf('class="ai-') !== -1 || match.indexOf('ai-file-') !== -1) return match;
+        var lines = match.trim().split("\n");
+        var lis = lines.map(function (l) {
+          var itemText = l.replace(/^[-*]\s+/, "").trim();
+          return "<li>" + itemText + "</li>";
+        }).join("");
+        return '\n<ul class="ai-msg-ul">' + lis + '</ul>\n';
+      });
+
       // Blockquotes > quote
       escaped = escaped.replace(/(?:^|\n)&gt; (.*)/g, '\n<blockquote class="ai-blockquote">$1</blockquote>');
 
@@ -459,7 +488,13 @@
             trimmed.startsWith("<div class=\"ai-table-wrap\"") ||
             trimmed.startsWith("<div class=\"ai-thought-box\"") ||
             trimmed.startsWith("<blockquote class=\"ai-blockquote\"") ||
-            trimmed.startsWith("<div class=\"ai-checklist-item\"")
+            trimmed.startsWith("<div class=\"ai-checklist-item\"") ||
+            trimmed.startsWith("<ul class=\"ai-msg-ul\"") ||
+            trimmed.startsWith("<ol class=\"ai-msg-ol\"") ||
+            trimmed.startsWith("<h2") ||
+            trimmed.startsWith("<h3") ||
+            trimmed.startsWith("<h4") ||
+            trimmed.startsWith("<h5")
           ) {
             return trimmed;
           }

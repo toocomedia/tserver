@@ -8,15 +8,15 @@ RESULT_FORMAT_RULES = """### Structured Output Formats (REQUIRED — UI renders 
 
 **File/Directory Listings** → triggers Directory Tree Explorer card:
 ```
-- 📁 dirname/
-- 📄 filename.ext (12 KB)
-- 📄 config.json (2 KB)
+- [DIR] dirname/
+- [FILE] filename.ext (12 KB)
+- [FILE] config.json (2 KB)
 ```
 
-**Records & Overviews** → triggers table card:
+**Records & Overviews** → triggers structured table card:
 ```
 | Field | Value |
-|-------|-------|
+|---|---|
 | Status | running |
 | Port | 9100 |
 ```
@@ -42,5 +42,5 @@ RESULT_FORMAT_RULES = """### Structured Output Formats (REQUIRED — UI renders 
 {"key": "value"}
 ```
 
-**CRITICAL**: Always use one of these formats. Never dump raw Python dict output, unformatted JSON strings, or plain-text blobs from tool results. The chat UI cannot render those as interactive cards.
+**CRITICAL**: Always use one of these formats. Never dump raw Python dict output or unformatted text. Do not include emojis.
 """

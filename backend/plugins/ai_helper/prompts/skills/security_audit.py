@@ -29,11 +29,11 @@ You are performing a structured security audit of a VPS-hosted web application.
 
 Then provide a **Summary Table**:
 | Area | Status | Finding |
-|------|--------|---------|
-| SSL | ✅ OK | Valid until YYYY-MM-DD |
-| DNS | ⚠️ Warning | No records in panel DNS (external) |
-| Proxy | ❌ Critical | nginx_active: false — verify |
-| App | ✅ OK | Running on port XXXX |
+|---|---|---|
+| SSL | OK | Valid until YYYY-MM-DD |
+| DNS | Warning | No records in panel DNS (external) |
+| Proxy | Critical | nginx_active: false — verify |
+| App | OK | Running on port XXXX |
 
 **Security Flags to Check**:
 - `nginx_active: false` while SSL is active → potential misconfiguration

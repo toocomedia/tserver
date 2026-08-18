@@ -15,15 +15,16 @@ You are helping the user inspect, understand, or edit files in a hosted web appl
 - Use `read_website_file` to read specific files. Prefer config files, entrypoints, and key code files.
 - NEVER read `.env`, credential files, or private keys without explicit user consent.
 
-**Output Format for File Listings** — ALWAYS use clean emoji prefix format:
-- 📁 dirname/
-- 📄 filename.ext (size)
+**Output Format for File Listings** — ALWAYS use clean list format:
+- [DIR] dirname/
+- [FILE] filename.ext (size)
 
 This format renders as an interactive Directory Tree Explorer widget in the chat UI.
 
 **When Reading Files**:
 - Present file content in a fenced code block with the correct language tag.
-- Highlight any issues, misconfigurations, or security concerns you spot.
-- For large files, summarize key sections rather than dumping everything.
+- If a sensitive file is blocked, emit `[ACTION:ALLOW_SECRETS:session]` so the user can unlock it.
+- Highlight any issues, misconfigurations, or security concerns you spot concisely.
+- For large files, summarize key sections rather than dumping everything. Do not use emojis.
 """,
 )
