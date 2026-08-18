@@ -22,6 +22,7 @@ from plugins.ai_helper.schemas import (
     TestConnectionRequest,
     UpdateSessionPayload,
 )
+from plugins.ai_helper.services.secrets_consent import grant_consent, revoke_consent
 from templating import templates
 
 router = APIRouter(prefix="/plugins/ai_helper", tags=["ai-helper"])
@@ -305,6 +306,10 @@ async def fetch_models_endpoint(req: FetchModelsRequest, db: AsyncSession = Depe
 async def chat_endpoint(req: ChatRequest, db: AsyncSession = Depends(get_db)):
     session_id = req.session_id or f"session_{uuid.uuid4().hex[:12]}"
 
+    # If frontend explicitly sends allow_secrets=True, grant consent immediately
+    if req.allow_secrets:
+        grant_consent(session_id)
+
     if not req.stream:
         # Non-streaming response
         chunks = []
@@ -352,6 +357,24 @@ async def chat_endpoint(req: ChatRequest, db: AsyncSession = Depends(get_db)):
             "X-Accel-Buffering": "no",
         },
     )
+
+
+# -------------------------------------------------------------
+# Secrets Consent API Endpoints
+# -------------------------------------------------------------
+
+@router.post("/api/sessions/{session_id}/allow-secrets")
+async def grant_secrets_consent(session_id: str):
+    """Grants secrets viewing consent for a specific chat session."""
+    grant_consent(session_id)
+    return JSONResponse({"status": "ok", "message": "Secrets consent granted for this session.", "session_id": session_id})
+
+
+@router.delete("/api/sessions/{session_id}/allow-secrets")
+async def revoke_secrets_consent(session_id: str):
+    """Revokes secrets viewing consent for a specific chat session."""
+    revoke_consent(session_id)
+    return JSONResponse({"status": "ok", "message": "Secrets consent revoked. Credentials will be masked again.", "session_id": session_id})
 
 
 # -------------------------------------------------------------

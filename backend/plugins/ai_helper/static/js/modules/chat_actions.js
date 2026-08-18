@@ -142,12 +142,49 @@
           return;
         }
 
-        // 6. Action Tag Click (Copy or apply value)
-        var actionTag = e.target.closest(".ai-action-tag");
+        // 6. Action Tag Click — general (Copy or apply value)
+        var actionTag = e.target.closest(".ai-action-tag:not(.ai-action-tag--secrets)");
         if (actionTag) {
           e.preventDefault();
           var val = actionTag.getAttribute("data-copy") || actionTag.innerText;
           self.copyToClipboard(val, actionTag);
+          return;
+        }
+
+        // 6b. ALLOW_SECRETS button — POST to consent API then send follow-up message
+        var secretsBtn = e.target.closest(".ai-action-tag--secrets");
+        if (secretsBtn) {
+          e.preventDefault();
+          var sid = secretsBtn.getAttribute("data-session-id") || (window.AiHelper ? window.AiHelper.sessionId : "");
+          if (!sid) return;
+          fetch("/plugins/ai_helper/api/sessions/" + encodeURIComponent(sid) + "/allow-secrets", { method: "POST" })
+            .then(function () {
+              // Disable the button so it can't be double-clicked
+              secretsBtn.disabled = true;
+              secretsBtn.textContent = "\uD83D\uDD13 Credentials Unlocked";
+              secretsBtn.classList.add("ai-action-tag--secrets-granted");
+              // Trigger the AI to re-run the previous request with secrets consent
+              if (window.AiHelper && window.AiHelper.sendMessage) {
+                window.AiHelper.sendMessage("I allow secrets — please re-run your last file check.");
+              }
+            })
+            .catch(function () {
+              secretsBtn.textContent = "\u26A0\uFE0F Failed to unlock";
+            });
+          return;
+        }
+
+        // 6c. Security card copy button
+        var secCopyBtn = e.target.closest(".ai-security-card .ai-card-strip-copy-btn");
+        if (secCopyBtn) {
+          e.preventDefault();
+          var secCard = secCopyBtn.closest(".ai-security-card");
+          if (secCard) {
+            var rows = secCard.querySelectorAll(".ai-sec-text");
+            var lines = [];
+            rows.forEach(function (r) { lines.push(r.textContent.trim()); });
+            self.copyToClipboard(lines.join("\n"), secCopyBtn);
+          }
           return;
         }
 

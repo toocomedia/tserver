@@ -47,6 +47,7 @@ class ChatRequest(BaseModel):
     context_key: Optional[str] = None
     context: Optional[str] = None
     stream: bool = True
+    allow_secrets: bool = False  # user explicitly grants secrets consent for this message/session
 
 
 class CreateSessionPayload(BaseModel):

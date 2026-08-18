@@ -4,11 +4,12 @@ services/sessions.py — AI Chat Session management, task separation, auto-titli
 from __future__ import annotations
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased
 
 from models.ai_helper import AiChatMessage, AiChatSession
 
@@ -112,16 +113,31 @@ async def list_sessions(
     result = await db.execute(stmt)
     sessions = result.scalars().all()
 
+    if not sessions:
+        return []
+
+    session_ids = [s.session_id for s in sessions]
+
+    # Single correlated subquery: get last message content per session (avoids N+1)
+    last_msg_subq = (
+        select(
+            AiChatMessage.session_id,
+            func.max(AiChatMessage.id).label("max_id"),
+        )
+        .where(AiChatMessage.session_id.in_(session_ids))
+        .group_by(AiChatMessage.session_id)
+        .subquery()
+    )
+    last_msg_stmt = (
+        select(AiChatMessage.session_id, AiChatMessage.content)
+        .join(last_msg_subq, AiChatMessage.id == last_msg_subq.c.max_id)
+    )
+    last_msg_res = await db.execute(last_msg_stmt)
+    last_messages: Dict[str, str] = {row.session_id: row.content for row in last_msg_res}
+
     items = []
     for s in sessions:
-        last_msg_stmt = (
-            select(AiChatMessage.content)
-            .where(AiChatMessage.session_id == s.session_id)
-            .order_by(AiChatMessage.id.desc())
-            .limit(1)
-        )
-        last_msg_res = await db.execute(last_msg_stmt)
-        last_content = last_msg_res.scalar_one_or_none()
+        last_content = last_messages.get(s.session_id, "")
         preview = ""
         if last_content:
             preview = last_content[:90].replace("\n", " ").strip()

@@ -30,6 +30,7 @@ async def execute_tool(
     tool_name: str,
     arguments: Dict[str, Any],
     session_id: Optional[str] = None,
+    secrets_allowed: bool = False,
 ) -> Dict[str, Any]:
     """
     Validates permissions and dispatches execution of an AI tool call.
@@ -56,7 +57,11 @@ async def execute_tool(
 
     # 2. Execute Handler
     try:
-        result = await handler(db=db, **arguments)
+        # Pass secrets_allowed to file tools only (others don't use it)
+        if tool_name in ("list_website_directory", "read_website_file"):
+            result = await handler(db=db, secrets_allowed=secrets_allowed, **arguments)
+        else:
+            result = await handler(db=db, **arguments)
         audit.record_tool_call(tool_name, arguments, "success", session_id, "Executed successfully")
         return result
     except Exception as exc:

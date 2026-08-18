@@ -6,9 +6,17 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import re
 from typing import Any, AsyncGenerator, Dict, List
 
 import httpx
+
+# Meta-commentary phrases the model should never emit as visible chat text.
+# Stripped from stream chunks as a backend safety net independent of the prompt.
+_META_COMMENTARY_RE = re.compile(
+    r"^(Let me (?:check|look|inspect|verify|examine|analyze|review|read|list|call)|I should |Now I have |I called |The tool |Let's (?:check|look|call)|I'll now |I need to |I will now )[^\n]*\n?",
+    re.IGNORECASE | re.MULTILINE,
+)
 
 from plugins.ai_helper.engine import (
     AIProviderError,
@@ -88,13 +96,18 @@ async def _stream_openai_compatible(
                                     yield "</think>\n"
                                 clean_content = content
                                 if "<" in clean_content and any(k in clean_content for k in ["DSML", "tool_call", "function=", "parameter=", "invoke", "｜"]):
-                                    import re
+                                    # Strip all DSML/XML tool call variants including the tool_calls closing tag
                                     clean_content = re.sub(r"<[｜|]{1,2}DSML[｜|]{1,2}[\s\S]*?(?:</[｜|]{1,2}DSML[｜|]{1,2}[^>]*>|$)", "", clean_content, flags=re.IGNORECASE)
                                     clean_content = re.sub(r"<[｜|][\s\S]*?[｜|]>", "", clean_content)
                                     clean_content = re.sub(r"<tool_call>[\s\S]*?(?:</tool_call>|$)", "", clean_content, flags=re.IGNORECASE)
                                     clean_content = re.sub(r"<(?:function=|invoke)[\s\S]*?(?:</(?:function|invoke)>|$)", "", clean_content, flags=re.IGNORECASE)
                                     clean_content = re.sub(r"<parameter[\s\S]*?(?:</parameter>|$)", "", clean_content, flags=re.IGNORECASE)
+                                    # Critical: catch </｜｜DSML｜｜tool_calls> and any remaining stray DSML tags
+                                    clean_content = re.sub(r"</[｜|]{1,2}DSML[｜|]{1,2}[a-zA-Z_]*>", "", clean_content, flags=re.IGNORECASE)
+                                    clean_content = re.sub(r"<[｜|]{1,2}DSML[｜|]{1,2}/?[a-zA-Z_]*>", "", clean_content, flags=re.IGNORECASE)
                                     clean_content = re.sub(r"<\/?(?:tool_call|function|parameter|invoke|DSML)[^>]*>", "", clean_content, flags=re.IGNORECASE)
+                                # Strip model meta-commentary that leaked outside <think> tags
+                                clean_content = _META_COMMENTARY_RE.sub("", clean_content)
                                 if clean_content:
                                     yield clean_content
                     except json.JSONDecodeError:

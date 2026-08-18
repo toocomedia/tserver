@@ -125,6 +125,28 @@
       escaped = escaped.replace(
         /\[ACTION:([A-Z_]+):([^\]]+)\]/g,
         function (_, actionType, actionVal) {
+          // Special: ALLOW_SECRETS renders as an amber unlock button
+          if (actionType === "ALLOW_SECRETS") {
+            var sid = window.AiHelper && window.AiHelper.sessionId ? window.AiHelper.sessionId : "";
+            return (
+              '<button type="button" class="ai-action-tag ai-action-tag--secrets" ' +
+              'data-action="ALLOW_SECRETS" data-session-id="' + sid + '" ' +
+              'title="Grant permission to view credential files for this session">' +
+              '\uD83D\uDD10 Unlock Credentials' +
+              '</button>'
+            );
+          }
+          // Special: SECURITY_FINDING renders as coloured severity badge
+          if (actionType === "SECURITY_FINDING") {
+            var parts = actionVal.match(/^(critical|warning|ok):(.+)$/i);
+            if (parts) {
+              var sev = parts[1].toLowerCase();
+              var desc = parts[2];
+              var cls = sev === "critical" ? "ai-security-badge--critical" : sev === "warning" ? "ai-security-badge--warning" : "ai-security-badge--ok";
+              var icon = sev === "critical" ? "\u274C" : sev === "warning" ? "\u26A0\uFE0F" : "\u2705";
+              return '<span class="ai-security-badge ' + cls + '">' + icon + ' ' + desc + '</span>';
+            }
+          }
           var label = actionType.replace(/_/g, " ").toLowerCase();
           return (
             '<span class="ai-action-tag" data-action="' +
@@ -140,28 +162,91 @@
         }
       );
 
-      // Code blocks ```lang ... ``` -> One-Line Card Strip with Split Viewer Expand
+      // Code blocks ```lang ... ``` — branched rendering by language type
       escaped = escaped.replace(/```([a-zA-Z0-9_-]*)\n([\s\S]*?)```/g, function (_, lang, code) {
         var cleanLang = (lang || "code").toLowerCase();
         var trimmedCode = code.replace(/\r\n/g, "\n").replace(/\r/g, "\n").replace(/^\n+|\n+$/g, "");
         var codeLines = trimmedCode.split("\n");
         var lineCount = codeLines.length;
-        var filename = EXT_MAP[cleanLang] || ("snippet." + cleanLang);
         var encodedCode = encodeURIComponent(trimmedCode);
 
+        // --- Security findings card ---
+        if (cleanLang === "security") {
+          var secHtml = codeLines.map(function (line) {
+            var t = line.trim();
+            if (!t) return "";
+            var m = t.match(/^\[(CRITICAL|WARNING|OK|INFO)\]\s*(.+)$/i);
+            if (m) {
+              var sev = m[1].toUpperCase();
+              var cls = sev === "CRITICAL" ? "ai-sec-critical" : sev === "WARNING" ? "ai-sec-warning" : sev === "OK" ? "ai-sec-ok" : "ai-sec-info";
+              var icon = sev === "CRITICAL" ? "\u274C" : sev === "WARNING" ? "\u26A0\uFE0F" : sev === "OK" ? "\u2705" : "\u2139\uFE0F";
+              return '<div class="ai-sec-row ' + cls + '"><span class="ai-sec-icon">' + icon + '</span><span class="ai-sec-text">' + m[2] + '</span></div>';
+            }
+            return '<div class="ai-sec-row ai-sec-info"><span class="ai-sec-text">' + t + '</span></div>';
+          }).join("");
+          return [
+            '<div class="ai-security-card">',
+            '  <div class="ai-security-card-header">',
+            '    <span class="ai-security-card-icon">\uD83D\uDD12</span>',
+            '    <span class="ai-security-card-title">Security Audit</span>',
+            '    <button type="button" class="ai-card-strip-btn ai-card-strip-copy-btn" title="Copy findings"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></button>',
+            '  </div>',
+            '  <div class="ai-security-card-body">' + secHtml + '</div>',
+            '</div>',
+          ].join("\n");
+        }
+
+        // --- Log output card ---
+        if (cleanLang === "log" || cleanLang === "text" || cleanLang === "plaintext") {
+          return [
+            '<div class="ai-card-strip ai-card-strip--log" data-lang="log" data-code="' + encodedCode + '" data-title="log-output.txt">',
+            '  <div class="ai-card-strip-left">',
+            '    <span class="ai-card-strip-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><line x1="10" y1="9" x2="8" y2="9"></line></svg></span>',
+            '    <span class="ai-card-strip-lang">LOG</span>',
+            '    <span class="ai-card-strip-name">Output</span>',
+            '    <span class="ai-card-strip-count">' + lineCount + (lineCount === 1 ? " line" : " lines") + '</span>',
+            '  </div>',
+            '  <div class="ai-card-strip-actions">',
+            '    <button type="button" class="ai-card-strip-btn ai-card-strip-expand-btn" data-ai-code-view="true" title="Open log in viewer"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg> Expand</button>',
+            '    <button type="button" class="ai-card-strip-btn ai-card-strip-copy-btn" title="Copy log"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></button>',
+            '  </div>',
+            '</div>',
+          ].join("\n");
+        }
+
+        // --- JSON data card ---
+        if (cleanLang === "json") {
+          return [
+            '<div class="ai-card-strip ai-card-strip--json" data-lang="json" data-code="' + encodedCode + '" data-title="data.json">',
+            '  <div class="ai-card-strip-left">',
+            '    <span class="ai-card-strip-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg></span>',
+            '    <span class="ai-card-strip-lang">JSON</span>',
+            '    <span class="ai-card-strip-name">Data</span>',
+            '    <span class="ai-card-strip-count">' + lineCount + (lineCount === 1 ? " line" : " lines") + '</span>',
+            '  </div>',
+            '  <div class="ai-card-strip-actions">',
+            '    <button type="button" class="ai-card-strip-btn ai-card-strip-expand-btn" data-ai-code-view="true" title="Open JSON in viewer"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg> Expand</button>',
+            '    <button type="button" class="ai-card-strip-btn ai-card-strip-copy-btn" title="Copy JSON"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></button>',
+            '  </div>',
+            '</div>',
+          ].join("\n");
+        }
+
+        // --- Default: code card (existing behaviour) ---
+        var filename = EXT_MAP[cleanLang] || ("snippet." + cleanLang);
         return [
           '<div class="ai-card-strip" data-lang="' + cleanLang + '" data-code="' + encodedCode + '" data-title="' + filename + '">',
           '  <div class="ai-card-strip-left">',
           '    <span class="ai-card-strip-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg></span>',
-          '    <span class="ai-card-strip-lang">' + cleanLang.toUpperCase() + "</span>",
-          '    <span class="ai-card-strip-name">' + filename + "</span>",
-          '    <span class="ai-card-strip-count">' + lineCount + (lineCount === 1 ? " line" : " lines") + "</span>",
-          "  </div>",
+          '    <span class="ai-card-strip-lang">' + cleanLang.toUpperCase() + '</span>',
+          '    <span class="ai-card-strip-name">' + filename + '</span>',
+          '    <span class="ai-card-strip-count">' + lineCount + (lineCount === 1 ? " line" : " lines") + '</span>',
+          '  </div>',
           '  <div class="ai-card-strip-actions">',
           '    <button type="button" class="ai-card-strip-btn ai-card-strip-expand-btn" data-ai-code-view="true" title="Open full code in Split Viewer"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg> Expand</button>',
           '    <button type="button" class="ai-card-strip-btn ai-card-strip-copy-btn" title="Copy code"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></button>',
-          "  </div>",
-          "</div>",
+          '  </div>',
+          '</div>',
         ].join("\n");
       });
 

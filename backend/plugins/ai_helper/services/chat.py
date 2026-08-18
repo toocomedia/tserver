@@ -6,7 +6,7 @@ from __future__ import annotations
 import json
 import logging
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, AsyncGenerator, Dict, List, Optional
 
 from sqlalchemy import select
@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from models.ai_helper import AiChatMessage
 from plugins.ai_helper import engine, permissions, prompts, tools
 from plugins.ai_helper.services.providers import decrypt_key, get_active_provider, get_provider
+from plugins.ai_helper.services.secrets_consent import check_consent_phrase, is_secrets_allowed
 from plugins.ai_helper.services.sessions import generate_title_from_prompt, get_or_create_session
 
 logger = logging.getLogger(__name__)
@@ -190,6 +191,10 @@ async def stream_ai_chat(
 
     effective_model = model_name.strip() if model_name and model_name.strip() else active.model_name
 
+    # Check secrets consent from user message
+    check_consent_phrase(session_id, user_message)
+    secrets_allowed = is_secrets_allowed(session_id)
+
     # Check permission policy
     policy = await permissions.get_or_create_policy(db)
     tools_enabled = (policy.global_mode != "disabled")
@@ -199,6 +204,8 @@ async def stream_ai_chat(
         context=trimmed_context,
         custom_rules=active.custom_rules,
         include_tools_rules=tools_enabled,
+        skill=task_type,
+        secrets_allowed=secrets_allowed,
     )
 
     # Manage or create AiChatSession
@@ -219,12 +226,12 @@ async def stream_ai_chat(
         else:
             session_record.title = generate_title_from_prompt(user_message)
 
-    # Fetch recent conversation history strictly for this session (last 10 messages)
+    # Fetch recent conversation history strictly for this session (last 20 messages)
     stmt = (
         select(AiChatMessage)
         .where(AiChatMessage.session_id == session_id)
         .order_by(AiChatMessage.id.desc())
-        .limit(10)
+        .limit(20)
     )
     result = await db.execute(stmt)
     recent_records = list(reversed(result.scalars().all()))
@@ -249,13 +256,14 @@ async def stream_ai_chat(
     )
     db.add(user_record)
     session_record.message_count += 1
-    session_record.updated_at = datetime.now()
+    session_record.updated_at = datetime.now(tz=timezone.utc)
     await db.commit()
 
     # Tool calling loop if enabled
+    tool_was_executed = False
     if tools_enabled:
         tool_defs = tools.get_tool_definitions(active.provider_type)
-        max_tool_iterations = 4
+        max_tool_iterations = 6
 
         for _ in range(max_tool_iterations):
             try:
@@ -284,6 +292,7 @@ async def stream_ai_chat(
                     # Model has finished tool usage
                     break
 
+                tool_was_executed = True
                 raw_msg = tool_step.get("raw_message")
 
                 if is_text_pseudo_tool:
@@ -299,6 +308,7 @@ async def stream_ai_chat(
                                 tool_name=fn_name,
                                 arguments=fn_args,
                                 session_id=session_id,
+                                secrets_allowed=secrets_allowed,
                             )
                         except Exception as e:
                             tool_output = {"status": "error", "message": str(e)}
@@ -327,6 +337,7 @@ async def stream_ai_chat(
                                 tool_name=fn_name,
                                 arguments=fn_args,
                                 session_id=session_id,
+                                secrets_allowed=secrets_allowed,
                             )
                         except Exception as e:
                             tool_output = {"status": "error", "message": str(e)}
@@ -374,6 +385,7 @@ async def stream_ai_chat(
                                 tool_name=fn_name,
                                 arguments=fn_args,
                                 session_id=session_id,
+                                secrets_allowed=secrets_allowed,
                             )
                         except Exception as exc:
                             tool_output = {"status": "error", "message": str(exc)}
@@ -386,8 +398,26 @@ async def stream_ai_chat(
                             "content": tool_json_str,
                         })
             except Exception as exc:
-                logger.warning("Tool calling step failed or skipped: %s. Continuing standard stream.", exc)
+                logger.warning("Tool calling step failed or skipped: %s. Injecting error context and continuing stream.", exc)
+                messages.append({
+                    "role": "user",
+                    "content": f"[Tool step failed: {str(exc)}. Report this failure clearly to the user and present any results already obtained above.]",
+                })
                 break
+
+        # After tool loop: inject mandatory response instruction if tools were used.
+        # This guarantees the model produces visible output and doesn't just trail off.
+        if tool_was_executed:
+            messages.append({
+                "role": "user",
+                "content": (
+                    "Now present ALL findings above in clean, structured Markdown directly to the user. "
+                    "Do NOT output any internal reasoning or planning text. Do NOT make further tool calls. "
+                    "Use the required output formats: ```security for security findings, "
+                    "```log for log output, markdown tables for records, "
+                    "and 📁/📄 bullet lists for file listings."
+                ),
+            })
 
     # Stream final assistant response
     full_response = []
@@ -428,6 +458,6 @@ async def stream_ai_chat(
         )
         db.add(assistant_record)
         session_record.message_count += 1
-        session_record.updated_at = datetime.now()
+        session_record.updated_at = datetime.now(tz=timezone.utc)
         await db.commit()
 

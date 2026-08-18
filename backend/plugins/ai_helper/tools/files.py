@@ -1,6 +1,7 @@
 """
 tools/files.py — Confined, sandboxed Read-Only file manager tool handlers.
 Supports flexible target resolution by domain, kind:id, or resource ID.
+Enforces strict secret masking on ALL file reads; bypassed only with explicit session consent.
 """
 from __future__ import annotations
 
@@ -13,20 +14,80 @@ from plugins.file_manager import file_operations, file_targets
 
 logger = logging.getLogger(__name__)
 
+# ---------------------------------------------------------------------------
+# Secret Detection Patterns — applied to ALL file reads by default
+# ---------------------------------------------------------------------------
 
-def _mask_env_secrets(content: str) -> str:
-    """Masks secret values in .env files."""
+# Matches assignment-style credential lines in any config/code file
+_INLINE_SECRET_RE = re.compile(
+    r"((?:KEY|SECRET|PASS(?:WORD)?|TOKEN|AUTH|CREDENTIAL|PRIVATE|PWD|WEBHOOK|"
+    r"SIGNING|ENCRYPTION|JWT|API_?KEY|ACCESS_?TOKEN|CLIENT_?SECRET|"
+    r"DB_?PASS(?:WORD)?|DATABASE_?(?:URL|PASS(?:WORD)?)|SMTP_?PASS(?:WORD)?|"
+    r"RSA|DSA|ECDSA)\s*=\s*)(\S+)",
+    re.IGNORECASE,
+)
+
+# JSON/YAML style: "password": "value" or password: value
+_JSON_SECRET_RE = re.compile(
+    r"""(["']?(?:password|passwd|secret(?:_?key)?|api[_-]?key|auth[_-]?token|"""
+    r"""private[_-]?key|access[_-]?token|client[_-]?secret|db[_-]?pass(?:word)?|"""
+    r"""database[_-]?(?:url|password)|smtp[_-]?pass(?:word)?|jwt[_-]?secret|"""
+    r"""encryption[_-]?key|webhook[_-]?secret|signing[_-]?key|"""
+    r"""credentials?)["']?\s*[:=]\s*)(["\']?)(\S{4,}?)(\3)""",
+    re.IGNORECASE,
+)
+
+# High-risk filenames that are fully blocked unless secrets_allowed
+_BLOCKED_FILENAMES = frozenset({
+    ".env", ".env.local", ".env.production", ".env.staging", ".env.development",
+    "secrets.json", "credentials.json", "service-account.json",
+    "id_rsa", "id_ed25519", "id_ecdsa", "id_dsa",
+    ".htpasswd", "wp-config.php", "settings.php",
+})
+
+# High-risk extensions that are fully blocked unless secrets_allowed
+_BLOCKED_EXTENSIONS = frozenset({
+    ".pem", ".key", ".p12", ".pfx", ".jks", ".pkcs12", ".crt", ".cer",
+})
+
+
+def _is_high_risk_file(file_path: str) -> bool:
+    """Returns True if the file is in the blocked names/extensions list."""
+    import os
+    basename = os.path.basename((file_path or "").strip().lower().lstrip("/"))
+    _, ext = os.path.splitext(basename)
+    return basename in _BLOCKED_FILENAMES or ext in _BLOCKED_EXTENSIONS
+
+
+def _mask_all_secrets(content: str) -> str:
+    """
+    Masks credential values in any file type.
+    Applied to ALL file reads when secrets are not allowed.
+    """
     lines = []
-    secret_patterns = re.compile(r"(KEY|SECRET|PASS|TOKEN|AUTH|CREDENTIAL|PRIVATE)", re.IGNORECASE)
     for line in content.splitlines():
-        if "=" in line and not line.strip().startswith("#"):
-            k, v = line.split("=", 1)
-            if secret_patterns.search(k):
-                lines.append(f"{k}=••••••••")
-                continue
-        lines.append(line)
+        stripped = line.strip()
+        if stripped.startswith("#") or stripped.startswith("//"):
+            lines.append(line)
+            continue
+        # Mask KEY=value style (env, ini, shell)
+        masked = _INLINE_SECRET_RE.sub(r"\1••••••••", line)
+        # Mask JSON/YAML "password": "value" style
+        masked = _JSON_SECRET_RE.sub(r"\1\2••••••••\4", masked)
+        lines.append(masked)
     return "\n".join(lines)
 
+
+# ---------------------------------------------------------------------------
+# Legacy alias (kept for backwards compat with any direct callers)
+# ---------------------------------------------------------------------------
+def _mask_env_secrets(content: str) -> str:
+    return _mask_all_secrets(content)
+
+
+# ---------------------------------------------------------------------------
+# Target Resolution
+# ---------------------------------------------------------------------------
 
 async def _resolve_file_target(db: AsyncSession, target_id: str, target_type: str = "") -> file_targets.FileTarget:
     """Resolves target_id string flexibly into a FileTarget."""
@@ -107,11 +168,16 @@ async def _resolve_file_target(db: AsyncSession, target_id: str, target_type: st
     raise ValueError(f"Managed application target '{clean_id}' not found in registered domains or applications.")
 
 
+# ---------------------------------------------------------------------------
+# Tool Handlers
+# ---------------------------------------------------------------------------
+
 async def list_website_directory(
     db: AsyncSession,
     target_id: str = "",
     relative_path: str = "",
     target_type: str = "",
+    secrets_allowed: bool = False,
     **kwargs: Any,
 ) -> Dict[str, Any]:
     """Lists files and folders inside a website/application root directory."""
@@ -144,9 +210,26 @@ async def read_website_file(
     file_path: str = "",
     target_type: str = "",
     max_chars: int = 8000,
+    secrets_allowed: bool = False,
     **kwargs: Any,
 ) -> Dict[str, Any]:
-    """Reads a file in read-only mode from a verified website root directory."""
+    """
+    Reads a file in read-only mode from a verified website root directory.
+    High-risk credential files are fully blocked unless secrets_allowed=True.
+    All other files have secret values masked unless secrets_allowed=True.
+    """
+    # Gate 1: block high-risk files entirely unless user consented
+    if not secrets_allowed and _is_high_risk_file(file_path):
+        return {
+            "status": "secrets_blocked",
+            "file_path": file_path,
+            "message": (
+                f"'{file_path}' is a sensitive credential file and cannot be read without explicit user consent. "
+                "The user must type 'I allow secrets' or click the unlock button in chat."
+            ),
+            "action_required": "ALLOW_SECRETS",
+        }
+
     try:
         effective_id = target_id or kwargs.get("target") or ""
         target = await _resolve_file_target(db, effective_id, target_type)
@@ -154,8 +237,9 @@ async def read_website_file(
         res = file_operations.read_text(context, file_path)
         content = res.get("content", "")
 
-        if file_path.endswith(".env") or "secret" in file_path.lower():
-            content = _mask_env_secrets(content)
+        # Gate 2: mask secrets in all other files unless user consented
+        if not secrets_allowed:
+            content = _mask_all_secrets(content)
 
         if len(content) > max_chars:
             content = content[:max_chars] + f"\n... [Truncated {len(content) - max_chars} characters]"
@@ -167,6 +251,7 @@ async def read_website_file(
             "file_path": file_path,
             "size": res.get("size", len(content)),
             "content": content,
+            "secrets_masked": not secrets_allowed,
         }
     except Exception as exc:
         return {
