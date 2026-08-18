@@ -130,16 +130,17 @@ body.ai-helper-resizing { cursor: ew-resize !important; user-select: none !impor
   flex: 1; padding: 14px; overflow-y: auto; display: flex; flex-direction: column;
   gap: 12px; scroll-behavior: smooth; background: var(--color-bg);
 }
-.ai-msg { display: flex; flex-direction: column; max-width: 92%; position: relative; }
-.ai-msg--user { align-self: flex-end; }
+.ai-msg { display: flex; flex-direction: column; width: 100%; max-width: 100%; position: relative; margin-bottom: 4px; }
+.ai-msg--user { align-self: flex-end; max-width: 90%; }
 .ai-msg--user .ai-msg-bubble {
   background: var(--color-surface); color: var(--color-text); font-weight: 500;
   border-radius: 0; border: none; padding: 8px 12px; font-size: 12.5px; line-height: 1.5; word-break: break-word;
 }
-.ai-msg--assistant { align-self: flex-start; max-width: 96%; }
+.ai-msg--assistant { align-self: flex-start; width: 100%; max-width: 100%; }
 .ai-msg--assistant .ai-msg-bubble {
   background: var(--color-surface); color: var(--color-text); border-radius: 0;
   border: none; padding: 10px 14px; font-size: 12.5px; line-height: 1.55; word-break: break-word;
+  width: 100%; box-sizing: border-box;
 }
 
 /* Long Message Bubble Collapsible State */
@@ -152,11 +153,11 @@ body.ai-helper-resizing { cursor: ew-resize !important; user-select: none !impor
 .ai-msg-bubble--expanded::after { display: none !important; }
 
 .ai-msg-expand-toggle-btn {
-  align-self: flex-start; margin-top: 4px; background: var(--color-secondary-btn); border: none;
-  color: var(--color-muted); font-size: 10.5px; font-weight: 600; padding: 3px 8px; border-radius: 0;
-  cursor: pointer; transition: background 0.12s, color 0.12s;
+  align-self: flex-start; margin-top: 6px; margin-bottom: 4px; background: var(--color-header-bg-bar);
+  border: 1px solid var(--color-line); color: var(--color-text); font-size: 10.5px; font-weight: 600;
+  padding: 3px 9px; border-radius: 0; cursor: pointer; transition: background 0.12s, border-color 0.12s;
 }
-.ai-msg-expand-toggle-btn:hover { background: var(--color-header-bg-bar); color: var(--color-text); }
+.ai-msg-expand-toggle-btn:hover { background: var(--color-secondary-btn); border-color: var(--color-accent); }
 
 .ai-msg-time { font-size: 10px; color: var(--color-muted); margin-top: 3px; align-self: flex-end; }
 .ai-msg--assistant .ai-msg-time { align-self: flex-start; }
@@ -164,7 +165,7 @@ body.ai-helper-resizing { cursor: ew-resize !important; user-select: none !impor
 /* Thinking Process Box */
 .ai-thought-box {
   background: var(--color-header-bg-bar); border: none; border-left: 2px solid var(--color-accent);
-  border-radius: 0; margin: 4px 0 8px; overflow: hidden;
+  border-radius: 0; margin: 8px 0 12px; overflow: hidden; width: 100%; box-sizing: border-box;
 }
 .ai-thought-header {
   padding: 6px 10px; display: flex; align-items: center; justify-content: space-between;
@@ -186,46 +187,45 @@ body.ai-helper-resizing { cursor: ew-resize !important; user-select: none !impor
 .ai-thought-box[data-state="expanded"] .ai-thought-body { display: block; }
 
 /* Markdown Inside Bubbles */
-.ai-msg-bubble p { margin: 0 0 6px 0; }
+.ai-msg-bubble p { margin: 0 0 8px 0; }
 .ai-msg-bubble p:last-child { margin-bottom: 0; }
-.ai-msg-bubble ul, .ai-msg-bubble ol { margin: 0 0 6px 0; padding-left: 18px; }
+.ai-msg-bubble ul, .ai-msg-bubble ol { margin: 0 0 8px 0; padding-left: 18px; }
 [dir="rtl"] .ai-msg-bubble ul, [dir="rtl"] .ai-msg-bubble ol { padding-left: 0; padding-right: 18px; }
 .ai-msg-bubble code { font-family: var(--font-mono, monospace); background: var(--color-secondary-btn); padding: 1px 5px; border-radius: 0; font-size: 11px; }
 
-/* In-Bubble Code Block with Line Numbers & Collapse */
-.ai-code-block { position: relative; background: var(--color-header-bg-bar); border: none; border-radius: 0; margin: 6px 0; overflow: hidden; }
-.ai-code-header { display: flex; align-items: center; justify-content: space-between; padding: 4px 8px; background: var(--color-header-bg-bar); border-bottom: 1px solid var(--color-line); }
-.ai-code-header-left { display: flex; align-items: center; gap: 6px; }
-.ai-code-lang { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--color-muted); font-family: var(--font-mono, monospace); }
-.ai-code-line-count { font-size: 9.5px; color: var(--color-muted); opacity: 0.75; }
-.ai-code-actions { display: flex; align-items: center; gap: 4px; }
-.ai-code-toggle-collapse-btn, .ai-code-expand-btn, .ai-code-copy-btn {
-  background: var(--color-surface); border: none; color: var(--color-muted); font-size: 10px;
-  padding: 2px 6px; border-radius: 0; cursor: pointer; transition: background 0.12s, color 0.12s;
+/* One-Line Card Strip for Code & File Lists */
+.ai-card-strip {
+  display: flex; align-items: center; justify-content: space-between; padding: 6px 10px;
+  background: var(--color-header-bg-bar); border: 1px solid var(--color-line); border-radius: 0;
+  margin: 10px 0; gap: 8px; cursor: pointer; width: 100%; box-sizing: border-box;
+  transition: background 0.12s ease, border-color 0.12s ease;
 }
-.ai-code-toggle-collapse-btn:hover, .ai-code-expand-btn:hover, .ai-code-copy-btn:hover { background: var(--color-secondary-btn); color: var(--color-text); }
-
-.ai-code-body { display: flex; overflow-x: auto; position: relative; }
-.ai-code-block[data-state="collapsed"] .ai-code-body { max-height: 180px; overflow-y: hidden; }
-.ai-code-block[data-state="collapsed"] .ai-code-body::after {
-  content: ""; position: absolute; bottom: 0; left: 0; right: 0; height: 40px;
-  background: linear-gradient(transparent, var(--color-header-bg-bar)); pointer-events: none;
+.ai-card-strip:hover { background: var(--color-secondary-btn); border-color: var(--color-accent); }
+.ai-card-strip-left { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1; }
+.ai-card-strip-icon { color: var(--color-accent); display: flex; align-items: center; flex-shrink: 0; }
+.ai-card-strip-lang {
+  font-size: 9.5px; font-weight: 700; padding: 1px 6px; background: var(--color-surface);
+  color: var(--color-text); letter-spacing: 0.4px; font-family: var(--font-mono, monospace); flex-shrink: 0;
 }
-.ai-code-block[data-state="expanded"] .ai-code-body { max-height: none; }
-
-.ai-code-lines-gutter {
-  width: 32px; padding: 8px 4px; background: rgba(0, 0, 0, 0.1); border-right: 1px solid var(--color-line);
-  display: flex; flex-direction: column; align-items: flex-end; user-select: none; flex-shrink: 0;
-  font-size: 11px; line-height: 1.45; color: var(--color-muted); font-family: var(--font-mono, monospace); opacity: 0.55;
+.ai-card-strip-name {
+  font-size: 11.5px; font-weight: 600; color: var(--color-text); font-family: var(--font-mono, monospace);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.ai-code-block pre { margin: 0; padding: 8px 10px; overflow-x: auto; font-size: 11.5px; font-family: var(--font-mono, monospace); line-height: 1.45; flex: 1; }
+.ai-card-strip-count { font-size: 10px; color: var(--color-muted); white-space: nowrap; flex-shrink: 0; }
+.ai-card-strip-actions { display: flex; align-items: center; gap: 5px; flex-shrink: 0; }
+.ai-card-strip-btn {
+  background: var(--color-surface); border: none; color: var(--color-text); font-size: 11px;
+  font-weight: 500; padding: 3px 8px; border-radius: 0; display: inline-flex; align-items: center;
+  gap: 4px; cursor: pointer; transition: background 0.12s, color 0.12s;
+}
+.ai-card-strip-btn:hover { background: var(--color-accent); color: var(--color-on-accent, #111111); }
 
 /* Checklists & Tables */
-.ai-checklist-item { display: flex; align-items: flex-start; gap: 6px; padding: 2px 0; font-size: 12.5px; cursor: pointer; user-select: none; }
+.ai-checklist-item { display: flex; align-items: flex-start; gap: 6px; padding: 3px 0; font-size: 12.5px; cursor: pointer; user-select: none; }
 .ai-check-icon { font-size: 11px; color: var(--color-muted); width: 14px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .ai-checklist-item--checked { color: var(--color-muted); text-decoration: line-through; }
 .ai-checklist-item--checked .ai-check-icon { color: var(--color-accent); font-weight: 700; }
-.ai-table-wrap { overflow-x: auto; margin: 6px 0; }
+.ai-table-wrap { overflow-x: auto; margin: 10px 0; width: 100%; box-sizing: border-box; }
 .ai-table { width: 100%; border-collapse: collapse; font-size: 11.5px; text-align: left; }
 .ai-table th { background: var(--color-header-bg-bar); padding: 5px 8px; font-weight: 600; color: var(--color-text); }
 .ai-table td { padding: 4px 8px; color: var(--color-text); border-bottom: 1px solid var(--color-line); }

@@ -14,13 +14,11 @@ TOOL_USAGE_RULES = """### Panel Inspection Tools & Permissions:
   * `list_website_directory`: List directory files inside verified website roots.
   * `read_website_file`: Read code or configuration files from a website directory (read-only).
 
-### Tool Execution Guidelines:
-1. **Proactive Inspection**: When a user asks why a site is broken (502/404), how a domain is configured, or needs help fixing code, USE your available tools to check real panel data instead of asking the user to look up ports or configuration files manually.
-2. **Permission Awareness**:
-   - If a tool returns a `Permission Denied` message or is not accessible, politely inform the user: *"I don't currently have permission to inspect this resource. You can enable it in AI Assistant Settings -> Permissions."*
-   - Never attempt to bypass permissions or guess hidden values.
-3. **Read-Only Guarantee**:
-   - All tools are strictly read-only. File modification or direct command execution is not permitted via tools. Always suggest changes cleanly in code blocks or action tags for the user to review.
+### Tool Execution & Output Guidelines (STRICT):
+1. **Zero Tool Narration**: When calling tools or after receiving tool results, DO NOT narrate what tool you are calling or what parameters you used (e.g., NEVER say "I will call list_website_directory with target_id=1", "The tool returned...", "Let's call the tool"). Use the tool results silently to formulate your direct response.
+2. **Proactive Inspection**: When a user asks why a site is broken (502/404), asks for files on a domain, or needs help fixing code, USE your available tools to check real panel data.
+3. **Structured List Format**:
+   - When presenting file trees or directory listings, format them using clean structured bullet lists (e.g. `- 📁 dirname/` / `- 📄 filename.ext (size)`) so the chat room displays them in interactive card strips.
 4. **Zero Password & Secret Leakage**:
-   - Never display database passwords, API tokens, or private keys. If a tool output or config file contains credentials, mask them (e.g. `••••••••`).
+   - Never display database passwords, API tokens, or private keys. If a tool output contains credentials, mask them (e.g. `••••••••`).
 """

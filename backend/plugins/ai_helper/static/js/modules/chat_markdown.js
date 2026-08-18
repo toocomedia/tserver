@@ -1,8 +1,36 @@
 /**
- * chat_markdown.js — Markdown & Action Tag Parser with In-Bubble Line Numbers & Code Collapse.
+ * chat_markdown.js — Markdown & Action Tag Parser with One-Line Card Strips & Split Viewer Integration.
  */
 (function () {
   "use strict";
+
+  var EXT_MAP = {
+    nginx: "nginx.conf",
+    dockerfile: "Dockerfile",
+    docker: "Dockerfile",
+    compose: "docker-compose.yml",
+    yaml: "config.yaml",
+    yml: "config.yml",
+    json: "config.json",
+    bash: "script.sh",
+    sh: "script.sh",
+    shell: "script.sh",
+    python: "main.py",
+    py: "main.py",
+    php: "index.php",
+    javascript: "app.js",
+    js: "app.js",
+    typescript: "app.ts",
+    ts: "app.ts",
+    sql: "query.sql",
+    html: "index.html",
+    css: "style.css",
+    ini: "config.ini",
+    env: ".env",
+    xml: "data.xml",
+    markdown: "README.md",
+    md: "README.md",
+  };
 
   var AiHelperMarkdown = {
     render: function (text) {
@@ -49,6 +77,26 @@
             "</div>",
           ].join("\n");
           mainText = "";
+        } else {
+          // Auto-capture untagged chain-of-thought monologue
+          var metaReasoningMatch = mainText.match(/^(?:The user wants me to|Now I have the information for|I called the tool|The tool suggests using|Let me structure the response)[\s\S]*?(?=\n\n(?:Here['’]s|📁|📄|```|\*\*|#|[A-Z][a-z]+ is |To |You can|$))/i);
+          if (metaReasoningMatch && metaReasoningMatch[0].length < mainText.length) {
+            var reasoningText = metaReasoningMatch[0].trim();
+            var thoughtBody = this._renderMarkdownCore(reasoningText);
+            thoughtHtml = [
+              '<div class="ai-thought-box" data-state="collapsed">',
+              '  <div class="ai-thought-header">',
+              '    <div class="ai-thought-header-left">',
+              '      <span class="ai-thought-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a7 7 0 0 0-7 7c0 2.38 1.19 4.47 3 5.74V17a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v-2.26c1.81-1.27 3-3.36 3-5.74a7 7 0 0 0-7-7z"></path><path d="M9 21h6"></path></svg></span>',
+              '      <span class="ai-thought-title">Thought Process</span>',
+              "    </div>",
+              '    <span class="ai-thought-chevron">▾</span>',
+              "  </div>",
+              '  <div class="ai-thought-body">' + (thoughtBody || "<em>Reasoning logs</em>") + "</div>",
+              "</div>",
+            ].join("\n");
+            mainText = mainText.substring(metaReasoningMatch[0].length).trim();
+          }
         }
       }
 
@@ -64,6 +112,14 @@
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;");
+
+      // Filter raw XML pseudo tool calls if emitted in text (both closed and streaming unclosed)
+      escaped = escaped.replace(/&lt;tool_call&gt;[\s\S]*?(?:&lt;\/tool_call&gt;|$)/gi, "");
+      escaped = escaped.replace(/&lt;function=[a-zA-Z0-9_]+&gt;[\s\S]*?(?:&lt;\/function&gt;|$)/gi, "");
+      escaped = escaped.replace(/&lt;parameter=[a-zA-Z0-9_]+&gt;[\s\S]*?(?:&lt;\/parameter&gt;|$)/gi, "");
+      escaped = escaped.replace(/&lt;\/?tool_call\/?&gt;/gi, "");
+      escaped = escaped.replace(/&lt;\/?function.*?&gt;/gi, "");
+      escaped = escaped.replace(/&lt;\/?parameter.*?&gt;/gi, "");
 
       // Replace structured Action Tags: [ACTION:TYPE:VALUE]
       escaped = escaped.replace(
@@ -84,41 +140,26 @@
         }
       );
 
-      // Code blocks ```lang ... ``` with Line Numbers & Collapsible Box
+      // Code blocks ```lang ... ``` -> One-Line Card Strip with Split Viewer Expand
       escaped = escaped.replace(/```([a-zA-Z0-9_-]*)\n([\s\S]*?)```/g, function (_, lang, code) {
         var cleanLang = (lang || "code").toLowerCase();
         var trimmedCode = code.replace(/\r\n/g, "\n").replace(/\r/g, "\n").replace(/^\n+|\n+$/g, "");
         var codeLines = trimmedCode.split("\n");
         var lineCount = codeLines.length;
-
-        var gutterHtml = '<div class="ai-code-lines-gutter">';
-        for (var li = 1; li <= lineCount; li++) {
-          gutterHtml += "<span>" + li + "</span>";
-        }
-        gutterHtml += "</div>";
-
-        var isCollapsible = lineCount > 10;
-        var state = isCollapsible ? "collapsed" : "expanded";
-        var collapseBtn = isCollapsible
-          ? '<button type="button" class="ai-code-toggle-collapse-btn" title="Toggle collapse">Expand (' + lineCount + ' lines) ▾</button>'
-          : "";
+        var filename = EXT_MAP[cleanLang] || ("snippet." + cleanLang);
+        var encodedCode = encodeURIComponent(trimmedCode);
 
         return [
-          '<div class="ai-code-block" data-lang="' + cleanLang + '" data-state="' + state + '" data-lines="' + lineCount + '">',
-          '  <div class="ai-code-header">',
-          '    <div class="ai-code-header-left">',
-          '      <span class="ai-code-lang">' + cleanLang + "</span>",
-          '      <span class="ai-code-line-count">' + lineCount + " lines</span>",
-          "    </div>",
-          '    <div class="ai-code-actions">',
-          "      " + collapseBtn,
-          '      <button type="button" class="ai-code-expand-btn" data-ai-code-view="true" title="Open Code View Window">Code View</button>',
-          '      <button type="button" class="ai-code-copy-btn" title="Copy snippet">Copy</button>',
-          "    </div>",
+          '<div class="ai-card-strip" data-lang="' + cleanLang + '" data-code="' + encodedCode + '" data-title="' + filename + '">',
+          '  <div class="ai-card-strip-left">',
+          '    <span class="ai-card-strip-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg></span>',
+          '    <span class="ai-card-strip-lang">' + cleanLang.toUpperCase() + "</span>",
+          '    <span class="ai-card-strip-name">' + filename + "</span>",
+          '    <span class="ai-card-strip-count">' + lineCount + (lineCount === 1 ? " line" : " lines") + "</span>",
           "  </div>",
-          '  <div class="ai-code-body">',
-          "    " + gutterHtml,
-          '    <pre><code class="language-' + cleanLang + '">' + trimmedCode + "</code></pre>",
+          '  <div class="ai-card-strip-actions">',
+          '    <button type="button" class="ai-card-strip-btn ai-card-strip-expand-btn" data-ai-code-view="true" title="Open full code in Split Viewer"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg> Expand</button>',
+          '    <button type="button" class="ai-card-strip-btn ai-card-strip-copy-btn" title="Copy code"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></button>',
           "  </div>",
           "</div>",
         ].join("\n");
@@ -165,6 +206,28 @@
         }
       );
 
+      // Directory / File List -> One-Line Card Strip with Split Viewer Expand
+      escaped = escaped.replace(/(?:^|\n)((?:- (?:📁|📄|\[FILE:)[^\n]+(?:\n|$))+)/gi, function (match) {
+        var lines = match.trim().split("\n");
+        var formattedLines = lines.map(function (l) { return l.replace(/^- /, "").trim(); }).join("\n");
+        var encodedList = encodeURIComponent(formattedLines);
+
+        return [
+          '\n<div class="ai-card-strip ai-card-strip--list" data-lang="markdown" data-code="' + encodedList + '" data-title="Directory Contents">',
+          '  <div class="ai-card-strip-left">',
+          '    <span class="ai-card-strip-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg></span>',
+          '    <span class="ai-card-strip-lang">FILES</span>',
+          '    <span class="ai-card-strip-name">Directory Contents</span>',
+          '    <span class="ai-card-strip-count">' + lines.length + (lines.length === 1 ? " item" : " items") + "</span>",
+          "  </div>",
+          '  <div class="ai-card-strip-actions">',
+          '    <button type="button" class="ai-card-strip-btn ai-card-strip-expand-btn" data-ai-code-view="true" title="Open full list in Split Viewer"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg> Expand</button>',
+          '    <button type="button" class="ai-card-strip-btn ai-card-strip-copy-btn" title="Copy list"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></button>',
+          "  </div>",
+          "</div>",
+        ].join("\n");
+      });
+
       // Blockquotes > quote
       escaped = escaped.replace(/(?:^|\n)&gt; (.*)/g, '\n<blockquote class="ai-blockquote">$1</blockquote>');
 
@@ -175,7 +238,7 @@
           var trimmed = p.trim();
           if (!trimmed) return "";
           if (
-            trimmed.startsWith("<div class=\"ai-code-block\"") ||
+            trimmed.startsWith("<div class=\"ai-card-strip\"") ||
             trimmed.startsWith("<div class=\"ai-table-wrap\"") ||
             trimmed.startsWith("<div class=\"ai-thought-box\"") ||
             trimmed.startsWith("<blockquote class=\"ai-blockquote\"") ||

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from datetime import datetime
 from typing import Any, AsyncGenerator, Dict, List, Optional
 
@@ -17,6 +18,16 @@ from plugins.ai_helper.services.providers import decrypt_key, get_active_provide
 from plugins.ai_helper.services.sessions import generate_title_from_prompt, get_or_create_session
 
 logger = logging.getLogger(__name__)
+
+
+def _sanitize_history_content(text: str) -> str:
+    """Removes unfulfilled XML pseudo tool calls from message history."""
+    if not text:
+        return ""
+    clean = re.sub(r"<tool_call>[\s\S]*?</tool_call>", "", text)
+    clean = re.sub(r"<function=[a-zA-Z0-9_]+>[\s\S]*?</function>", "", clean)
+    clean = re.sub(r"<parameter=[a-zA-Z0-9_]+>[\s\S]*?</parameter>", "", clean)
+    return clean.strip()
 
 
 async def stream_ai_chat(
@@ -34,8 +45,8 @@ async def stream_ai_chat(
     Multi-turn streaming chat pipeline with tool calling support:
     1. Loads specified or active provider & decrypted API key.
     2. Builds modular system prompt (base + tools + action tags + context + custom rules).
-    3. Loads previous conversation history strictly for this session.
-    4. Evaluates tool calling if permissions permit.
+    3. Loads previous conversation history strictly for this session and sanitizes history.
+    4. Evaluates tool calling in a multi-turn loop if permissions permit.
     5. Executes requested panel tools and feeds results back to AI.
     6. Streams AI response chunks and persists the conversation.
     7. Updates or auto-titles the AiChatSession record.
@@ -105,7 +116,9 @@ async def stream_ai_chat(
     ]
 
     for record in recent_records:
-        messages.append({"role": record.role, "content": record.content})
+        clean_history = _sanitize_history_content(record.content)
+        if clean_history:
+            messages.append({"role": record.role, "content": clean_history})
 
     messages.append({"role": "user", "content": user_message})
 
@@ -121,23 +134,40 @@ async def stream_ai_chat(
     session_record.updated_at = datetime.now()
     await db.commit()
 
-    # Tool calling step if enabled
+    # Tool calling loop if enabled
     if tools_enabled:
         tool_defs = tools.get_tool_definitions(active.provider_type)
-        try:
-            tool_step = await engine.chat_completion_step(
-                provider_type=active.provider_type,
-                base_url=active.base_url,
-                api_key=api_key,
-                model_name=effective_model,
-                messages=messages,
-                tools=tool_defs,
-                temperature=active.temperature,
-                max_tokens=active.max_tokens,
-            )
-            tool_calls = tool_step.get("tool_calls") or []
+        max_tool_iterations = 3
 
-            if tool_calls:
+        for _ in range(max_tool_iterations):
+            try:
+                tool_step = await engine.chat_completion_step(
+                    provider_type=active.provider_type,
+                    base_url=active.base_url,
+                    api_key=api_key,
+                    model_name=effective_model,
+                    messages=messages,
+                    tools=tool_defs,
+                    temperature=active.temperature,
+                    max_tokens=active.max_tokens,
+                )
+                tool_calls = tool_step.get("tool_calls") or []
+
+                if not tool_calls:
+                    # Check for XML pseudo tool call syntax emitted in text by some models
+                    step_content = tool_step.get("content") or ""
+                    if "<function=" in step_content or "<tool_call>" in step_content:
+                        for m in re.finditer(r"<function=([a-zA-Z0-9_]+)>(.*?)</function>", step_content, re.DOTALL):
+                            fn_name = m.group(1)
+                            body = m.group(2)
+                            params = {}
+                            for pm in re.finditer(r"<parameter=([a-zA-Z0-9_]+)>(.*?)</parameter>", body, re.DOTALL):
+                                params[pm.group(1).strip()] = pm.group(2).strip()
+                            tool_calls.append({"id": f"call_{len(tool_calls)}", "name": fn_name, "arguments": params})
+
+                if not tool_calls:
+                    break
+
                 raw_msg = tool_step.get("raw_message")
                 if raw_msg:
                     messages.append(raw_msg)
@@ -147,7 +177,7 @@ async def stream_ai_chat(
                 for tc in tool_calls:
                     fn_name = tc.get("name")
                     fn_args = tc.get("arguments") or {}
-                    tc_id = tc.get("id") or "call_0"
+                    tc_id = tc.get("id") or f"call_{len(messages)}"
 
                     tool_output = await tools.execute_tool(
                         db=db,
@@ -156,6 +186,7 @@ async def stream_ai_chat(
                         session_id=session_id,
                     )
 
+                    tool_json_str = json.dumps(tool_output)
                     if active.provider_type == "anthropic":
                         messages.append({
                             "role": "user",
@@ -163,7 +194,7 @@ async def stream_ai_chat(
                                 {
                                     "type": "tool_result",
                                     "tool_use_id": tc_id,
-                                    "content": json.dumps(tool_output),
+                                    "content": tool_json_str,
                                 }
                             ],
                         })
@@ -172,10 +203,15 @@ async def stream_ai_chat(
                             "role": "tool",
                             "tool_call_id": tc_id,
                             "name": fn_name,
-                            "content": json.dumps(tool_output),
+                            "content": tool_json_str,
                         })
-        except Exception as exc:
-            logger.warning("Tool calling step failed or skipped: %s. Continuing standard stream.", exc)
+                        messages.append({
+                            "role": "user",
+                            "content": f"[SYSTEM TOOL RESULT for {fn_name}]:\n{tool_json_str}\n\nPresent the results directly and clearly in clean Markdown now without repeating or outputting tool calls.",
+                        })
+            except Exception as exc:
+                logger.warning("Tool calling step failed or skipped: %s. Continuing standard stream.", exc)
+                break
 
     # Stream final assistant response
     full_response = []
@@ -203,10 +239,12 @@ async def stream_ai_chat(
     # Save assistant response to database
     complete_text = "".join(full_response).strip()
     if complete_text:
+        # Sanitize any raw tool call tags before persisting
+        persisted_text = _sanitize_history_content(complete_text) or complete_text
         assistant_record = AiChatMessage(
             session_id=session_id,
             role="assistant",
-            content=complete_text,
+            content=persisted_text,
             context_key=context_key,
         )
         db.add(assistant_record)

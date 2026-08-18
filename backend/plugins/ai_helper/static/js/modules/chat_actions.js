@@ -1,53 +1,35 @@
 /**
- * chat_actions.js — Action Registry & Interactive Handlers for AI Assistant Chat Room.
- * Handles code view triggers, in-bubble code collapse, long message toggles, and tool tags.
+ * chat_actions.js — Interaction handlers for chat actions, copy, cards, and thought toggles.
  */
 (function () {
   "use strict";
 
-  var handlers = {};
-
   var AiHelperActions = {
-    register: function (actionType, handlerFn) {
-      if (actionType && typeof handlerFn === "function") {
-        handlers[actionType.toUpperCase()] = handlerFn;
-      }
-    },
-
-    execute: function (actionType, actionVal, element) {
-      var key = (actionType || "").toUpperCase();
-      if (handlers[key]) {
-        return handlers[key](actionVal, element);
-      }
-      this.copyToClipboard(actionVal, element);
-    },
-
-    copyToClipboard: function (text, triggerEl) {
+    copyToClipboard: function (text, btnEl) {
       if (!text) return;
+      var self = this;
       if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(text).then(function () {
-          AiHelperActions._flashSuccess(triggerEl, "Copied!");
+          if (btnEl) self._showCopyFeedback(btnEl);
         });
       } else {
-        var ta = document.createElement("textarea");
-        ta.value = text;
-        ta.style.position = "fixed";
-        ta.style.opacity = "0";
-        document.body.appendChild(ta);
-        ta.select();
+        var textarea = document.createElement("textarea");
+        textarea.value = text;
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
         try {
           document.execCommand("copy");
-          AiHelperActions._flashSuccess(triggerEl, "Copied!");
+          if (btnEl) self._showCopyFeedback(btnEl);
         } catch (e) {}
-        document.body.removeChild(ta);
+        document.body.removeChild(textarea);
       }
     },
 
-    _flashSuccess: function (el, msg) {
-      if (!el) return;
-      var origText = el.getAttribute("data-orig-text") || el.textContent;
-      if (!el.getAttribute("data-orig-text")) el.setAttribute("data-orig-text", origText);
-      el.textContent = msg;
+    _showCopyFeedback: function (el) {
+      var origText = el.textContent;
+      el.textContent = "Copied!";
       setTimeout(function () {
         el.textContent = origText;
       }, 1500);
@@ -67,7 +49,13 @@
           btn.className = "ai-msg-expand-toggle-btn";
           btn.textContent = "Show more ▾";
           btn.setAttribute("title", "Toggle message expansion");
-          msgWrap.appendChild(btn);
+
+          var timeEl = msgWrap.querySelector(".ai-msg-time");
+          if (timeEl) {
+            msgWrap.insertBefore(btn, timeEl);
+          } else {
+            msgWrap.appendChild(btn);
+          }
         }
       });
     },
@@ -77,7 +65,34 @@
       if (!containerEl) return;
 
       containerEl.addEventListener("click", function (e) {
-        // 1. In-bubble Code Block Collapse / Expand Toggle
+        // 1. One-Line Card Strip Copy Button
+        var copyBtnInStrip = e.target.closest(".ai-card-strip-copy-btn");
+        if (copyBtnInStrip) {
+          e.preventDefault();
+          e.stopPropagation();
+          var stripEl = copyBtnInStrip.closest(".ai-card-strip");
+          if (stripEl) {
+            var rawData = decodeURIComponent(stripEl.getAttribute("data-code") || "");
+            self.copyToClipboard(rawData, copyBtnInStrip);
+          }
+          return;
+        }
+
+        // 2. One-Line Card Strip Expand (Open in Split Viewer)
+        var cardStrip = e.target.closest(".ai-card-strip-expand-btn, .ai-card-strip");
+        if (cardStrip) {
+          e.preventDefault();
+          var targetStrip = cardStrip.classList.contains("ai-card-strip") ? cardStrip : cardStrip.closest(".ai-card-strip");
+          if (targetStrip && window.AiHelperCodeView) {
+            var codeText = decodeURIComponent(targetStrip.getAttribute("data-code") || "");
+            var lang = targetStrip.getAttribute("data-lang") || "text";
+            var title = targetStrip.getAttribute("data-title") || "snippet.txt";
+            window.AiHelperCodeView.open(codeText, lang, title);
+          }
+          return;
+        }
+
+        // 3. In-bubble Code Block Collapse / Expand Toggle
         var codeCollapseBtn = e.target.closest(".ai-code-toggle-collapse-btn");
         if (codeCollapseBtn) {
           e.preventDefault();
@@ -96,7 +111,7 @@
           return;
         }
 
-        // 2. Long Message Bubble Collapse / Expand Toggle
+        // 4. Long Message Bubble Collapse / Expand Toggle
         var msgToggleBtn = e.target.closest(".ai-msg-expand-toggle-btn");
         if (msgToggleBtn) {
           e.preventDefault();
@@ -115,22 +130,7 @@
           return;
         }
 
-        // 3. Code View Modal Window trigger
-        var expandBtn = e.target.closest(".ai-code-expand-btn, [data-ai-code-view]");
-        if (expandBtn) {
-          e.preventDefault();
-          var block = expandBtn.closest(".ai-code-block");
-          if (block) {
-            var codeTag = block.querySelector("code");
-            var lang = block.getAttribute("data-lang") || "text";
-            if (codeTag && window.AiHelperCodeView) {
-              window.AiHelperCodeView.open(codeTag.innerText, lang);
-            }
-          }
-          return;
-        }
-
-        // 4. Code block copy button
+        // 5. Code block copy button
         var copyBtn = e.target.closest(".ai-code-copy-btn");
         if (copyBtn) {
           e.preventDefault();
@@ -142,65 +142,47 @@
           return;
         }
 
-        // 5. Thought Process Box toggle
+        // 6. Action Tag Click (Copy or apply value)
+        var actionTag = e.target.closest(".ai-action-tag");
+        if (actionTag) {
+          e.preventDefault();
+          var val = actionTag.getAttribute("data-copy") || actionTag.innerText;
+          self.copyToClipboard(val, actionTag);
+          return;
+        }
+
+        // 7. Thought Box Header Toggle
         var thoughtHeader = e.target.closest(".ai-thought-header");
         if (thoughtHeader) {
           e.preventDefault();
           var thoughtBox = thoughtHeader.closest(".ai-thought-box");
           if (thoughtBox) {
-            var currentState = thoughtBox.getAttribute("data-state") || "collapsed";
-            var nextThoughtState = currentState === "expanded" ? "collapsed" : "expanded";
-            thoughtBox.setAttribute("data-state", nextThoughtState);
+            var state = thoughtBox.getAttribute("data-state") || "collapsed";
             var chevron = thoughtBox.querySelector(".ai-thought-chevron");
-            if (chevron) {
-              chevron.textContent = nextThoughtState === "expanded" ? "▴" : "▾";
+            if (state === "collapsed") {
+              thoughtBox.setAttribute("data-state", "expanded");
+              if (chevron) chevron.textContent = "▴";
+            } else {
+              thoughtBox.setAttribute("data-state", "collapsed");
+              if (chevron) chevron.textContent = "▾";
             }
           }
           return;
         }
 
-        // 6. Checklist Item toggle
+        // 8. Checklist Item Click Toggle
         var checkItem = e.target.closest(".ai-checklist-item");
         if (checkItem) {
-          var isChecked = checkItem.classList.contains("ai-checklist-item--checked");
-          if (isChecked) {
-            checkItem.classList.remove("ai-checklist-item--checked");
-            var icon1 = checkItem.querySelector(".ai-check-icon");
-            if (icon1) icon1.textContent = "○";
-          } else {
-            checkItem.classList.add("ai-checklist-item--checked");
-            var icon2 = checkItem.querySelector(".ai-check-icon");
-            if (icon2) icon2.textContent = "✓";
+          e.preventDefault();
+          checkItem.classList.toggle("ai-checklist-item--checked");
+          var iconEl = checkItem.querySelector(".ai-check-icon");
+          if (iconEl) {
+            iconEl.textContent = checkItem.classList.contains("ai-checklist-item--checked") ? "✓" : "○";
           }
-          return;
-        }
-
-        // 7. Interactive Action Tag
-        var tag = e.target.closest(".ai-action-tag");
-        if (tag) {
-          var actionType = tag.getAttribute("data-action");
-          var actionVal = tag.getAttribute("data-copy") || tag.textContent;
-          self.execute(actionType, actionVal, tag);
-          return;
         }
       });
     },
   };
-
-  // Register common built-in action handlers
-  AiHelperActions.register("COPY", function (val, el) {
-    AiHelperActions.copyToClipboard(val, el);
-  });
-
-  AiHelperActions.register("SET_PORT", function (val, el) {
-    AiHelperActions.copyToClipboard(val, el);
-    var portInput = document.querySelector('input[name="target_port"], input[name="port"], input[name="container_port"]');
-    if (portInput) {
-      portInput.value = val;
-      portInput.dispatchEvent(new Event("input", { bubbles: true }));
-      AiHelperActions._flashSuccess(el, "Port Set!");
-    }
-  });
 
   window.AiHelperActions = AiHelperActions;
 })();

@@ -86,7 +86,15 @@ async def _stream_openai_compatible(
                                 if in_think_block:
                                     in_think_block = False
                                     yield "</think>\n"
-                                yield content
+                                clean_content = content
+                                if "<tool_call>" in clean_content or "</tool_call>" in clean_content or "<function=" in clean_content or "<parameter=" in clean_content:
+                                    import re
+                                    clean_content = re.sub(r"<tool_call>[\s\S]*?(?:</tool_call>|$)", "", clean_content)
+                                    clean_content = re.sub(r"<function=[a-zA-Z0-9_]+>[\s\S]*?(?:</function>|$)", "", clean_content)
+                                    clean_content = re.sub(r"<parameter=[a-zA-Z0-9_]+>[\s\S]*?(?:</parameter>|$)", "", clean_content)
+                                    clean_content = clean_content.replace("<tool_call>", "").replace("</tool_call>", "")
+                                if clean_content:
+                                    yield clean_content
                     except json.JSONDecodeError:
                         continue
 
