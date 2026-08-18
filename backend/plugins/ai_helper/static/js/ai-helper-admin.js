@@ -72,7 +72,7 @@ window.openInfoDrawer = (id) => {
   if (rulesEl) rulesEl.textContent = rules.trim() || "No custom prompt rules configured.";
 
   // Clone status from table row
-  const rowStatusBadge = row.querySelector("td:nth-child(5) .badge");
+  const rowStatusBadge = row.querySelector("td:nth-child(5) .badge-minimal") || row.querySelector("td:nth-child(5) .badge");
   if (statusBadge && rowStatusBadge) {
     statusBadge.className = rowStatusBadge.className;
     statusBadge.innerHTML = rowStatusBadge.innerHTML;
@@ -93,14 +93,14 @@ window.openInfoDrawer = (id) => {
       .map((m) => {
         const isSelected = m === model;
         return `
-          <div class="info-model-row" style="display: flex; align-items: center; justify-content: space-between; padding: 4px 8px; border-radius: 4px; background: ${
-            isSelected ? "rgba(var(--color-accent-rgb, 96, 165, 250), 0.12)" : "rgba(255, 255, 255, 0.02)"
-          }; font-family: var(--font-mono, monospace); font-size: 11px;">
+          <div class="info-model-row" style="display: flex; align-items: center; justify-content: space-between; padding: 5px 8px; border-radius: 4px; background: ${
+            isSelected ? "var(--color-surface)" : "transparent"
+          }; font-family: var(--font-mono, monospace); font-size: 11.5px;">
             <div style="display: flex; align-items: center; gap: 6px; min-width: 0;">
-              <span style="color: ${isSelected ? "var(--color-accent, #60a5fa)" : "var(--color-muted)"}; font-size: 10px;">${isSelected ? "★" : "•"}</span>
+              <span style="color: ${isSelected ? "var(--color-accent)" : "var(--color-muted)"}; font-size: 11px;">${isSelected ? "★" : "•"}</span>
               <span class="text-truncate" style="color: ${isSelected ? "var(--color-text)" : "var(--color-muted)"}; font-weight: ${isSelected ? "600" : "400"};">${m}</span>
             </div>
-            ${isSelected ? '<span class="badge badge--ok text-xs" style="font-size: 9px; padding: 1px 5px;">Active Default</span>' : ""}
+            ${isSelected ? '<span class="badge-minimal badge-minimal--active" style="font-size: 9px; padding: 1px 5px;">Active</span>' : ""}
           </div>
         `;
       })

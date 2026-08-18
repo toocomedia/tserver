@@ -1,10 +1,10 @@
-<!-- Provider Info Split Drawer Modal -->
+<!-- Provider Info Minimal Drawer Modal -->
 <div class="modal-backdrop modal-backdrop--slide hidden" id="provider-info-drawer-modal" role="dialog" aria-modal="true">
-  <div class="modal modal--slide" style="max-width: 520px; background: var(--color-bg);">
+  <div class="modal modal--slide" style="max-width: 480px; background: var(--color-bg); border: none;">
     
-    <div class="modal__header" style="background: var(--color-surface); border: none; padding: 14px 18px; display: flex; align-items: center; justify-content: space-between;">
+    <div class="modal__header" style="background: transparent; border: none; padding: 16px 20px 8px; display: flex; align-items: center; justify-content: space-between;">
       <div style="display: flex; align-items: center; gap: 8px;">
-        <i data-lucide="info" style="color: var(--color-accent); width: 16px; height: 16px;"></i>
+        <i data-lucide="cpu" style="color: var(--color-accent); width: 16px; height: 16px;"></i>
         <h3 id="info-drawer-title" style="margin: 0; font-size: 15px; font-weight: 700; color: var(--color-text);">Provider Information</h3>
       </div>
       <button type="button" class="btn btn--secondary btn--sm" onclick="closeInfoDrawer()" aria-label="Close" style="padding: 0 10px; height: 28px;">
@@ -12,77 +12,70 @@
       </button>
     </div>
 
-    <div class="modal__body" style="overflow-y: auto; flex: 1; padding: 18px; display: flex; flex-direction: column; gap: 14px;">
+    <div class="modal__body" style="overflow-y: auto; flex: 1; padding: 8px 20px 20px; display: flex; flex-direction: column; gap: 16px;">
       
-      <!-- Top Overview Box -->
-      <div style="background: var(--color-surface); border-radius: 6px; padding: 14px; display: flex; flex-direction: column; gap: 10px;">
-        <div style="display: flex; align-items: center; justify-content: space-between;">
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <span id="info-provider-name" style="font-size: 14px; font-weight: 700; color: var(--color-text);">Provider Name</span>
-            <span id="info-provider-default" class="badge badge--ok" style="display: none;">Default</span>
-          </div>
-          <span id="info-provider-status" class="badge badge--neutral">Untested</span>
+      <!-- Title & Badges Header -->
+      <div style="display: flex; align-items: center; justify-content: space-between; padding-bottom: 8px;">
+        <div style="display: flex; align-items: center; gap: 8px; min-width: 0;">
+          <span id="info-provider-name" style="font-size: 16px; font-weight: 700; color: var(--color-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Provider Name</span>
+          <span id="info-provider-default" class="badge-minimal badge-minimal--active" style="display: none;">Default</span>
         </div>
+        <span id="info-provider-status" class="badge-minimal badge-minimal--neutral">Untested</span>
+      </div>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 11.5px; margin-top: 4px;">
-          <div>
-            <span class="text-muted" style="display: block; font-size: 10px; text-transform: uppercase;">Protocol</span>
-            <span id="info-provider-type" class="font-mono" style="font-weight: 600; color: var(--color-text);">OpenAI Compatible</span>
-          </div>
-          <div>
-            <span class="text-muted" style="display: block; font-size: 10px; text-transform: uppercase;">Active Model</span>
-            <span id="info-provider-active-model" class="font-mono" style="font-weight: 600; color: var(--color-accent);">gpt-4o-mini</span>
-          </div>
-          <div>
-            <span class="text-muted" style="display: block; font-size: 10px; text-transform: uppercase;">Temperature</span>
-            <span id="info-provider-temp" class="font-mono" style="color: var(--color-text);">0.2</span>
-          </div>
-          <div>
-            <span class="text-muted" style="display: block; font-size: 10px; text-transform: uppercase;">Max Tokens</span>
-            <span id="info-provider-tokens" class="font-mono" style="color: var(--color-text);">4096</span>
-          </div>
+      <!-- Clean Key-Value Specifications List -->
+      <div style="display: flex; flex-direction: column; gap: 8px; font-size: 12px; line-height: 1.5;">
+        <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px;">
+          <span class="text-muted" style="font-size: 11px;">Protocol</span>
+          <span id="info-provider-type" class="font-mono" style="font-weight: 600; color: var(--color-text);">OpenAI Compatible</span>
         </div>
-
-        <div style="margin-top: 4px;">
-          <span class="text-muted" style="display: block; font-size: 10px; text-transform: uppercase;">API Endpoint URL</span>
-          <div style="display: flex; align-items: center; gap: 6px; margin-top: 2px;">
-            <code id="info-provider-url" class="font-mono text-xs" style="background: var(--color-bg); padding: 4px 8px; border-radius: 4px; flex: 1; word-break: break-all;">https://api.openai.com/v1</code>
-          </div>
+        <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px;">
+          <span class="text-muted" style="font-size: 11px;">Active Model</span>
+          <span id="info-provider-active-model" class="font-mono" style="font-weight: 600; color: var(--color-text);">gpt-4o-mini</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px;">
+          <span class="text-muted" style="font-size: 11px;">API Endpoint</span>
+          <span id="info-provider-url" class="font-mono text-small text-muted text-truncate" style="max-width: 280px; text-align: right;" title="">https://api.openai.com/v1</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px;">
+          <span class="text-muted" style="font-size: 11px;">Temperature</span>
+          <span id="info-provider-temp" class="font-mono" style="color: var(--color-text);">0.2</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px;">
+          <span class="text-muted" style="font-size: 11px;">Max Tokens</span>
+          <span id="info-provider-tokens" class="font-mono" style="color: var(--color-text);">4096</span>
         </div>
       </div>
 
-      <!-- Models List Box -->
-      <div style="background: var(--color-surface); border-radius: 6px; padding: 14px; display: flex; flex-direction: column; gap: 8px;">
+      <!-- Configured Models List (Minimal Flat List) -->
+      <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 4px;">
         <div style="display: flex; align-items: center; justify-content: space-between;">
-          <span style="font-size: 12px; font-weight: 600; color: var(--color-text); display: flex; align-items: center; gap: 6px;">
-            <i data-lucide="layers" style="width: 13px; height: 13px; color: var(--color-accent);"></i> Configured Models
+          <span style="font-size: 12px; font-weight: 600; color: var(--color-text);">
+            Configured Models
           </span>
-          <span id="info-models-count" class="badge badge--neutral" style="font-size: 10px;">0 models</span>
+          <span id="info-models-count" class="badge-minimal badge-minimal--neutral" style="font-size: 10px;">0 models</span>
         </div>
 
-        <!-- Filter Input for Models -->
-        <input type="text" class="form-input font-mono text-xs" id="info-filter-models" placeholder="Search models..." style="height: 28px; padding: 2px 8px; font-size: 11px;" autocomplete="off">
+        <input type="text" class="form-input font-mono text-xs" id="info-filter-models" placeholder="Filter models..." style="height: 30px; padding: 4px 10px; font-size: 11px; background: var(--color-surface); border: none; border-radius: 4px;" autocomplete="off">
 
-        <div id="info-models-container" style="display: flex; flex-direction: column; gap: 2px; max-height: 220px; overflow-y: auto; padding-right: 2px;">
+        <div id="info-models-container" style="display: flex; flex-direction: column; gap: 2px; max-height: 200px; overflow-y: auto;">
           <!-- Populated by JavaScript -->
         </div>
       </div>
 
-      <!-- Custom Rules Box -->
-      <div id="info-rules-section" style="background: var(--color-surface); border-radius: 6px; padding: 14px; display: flex; flex-direction: column; gap: 6px;">
-        <span style="font-size: 12px; font-weight: 600; color: var(--color-text); display: flex; align-items: center; gap: 6px;">
-          <i data-lucide="file-text" style="width: 13px; height: 13px; color: var(--color-accent);"></i> Custom System Prompt Rules
+      <!-- Custom System Prompt Rules (Minimal Flat View) -->
+      <div id="info-rules-section" style="display: flex; flex-direction: column; gap: 6px; margin-top: 4px;">
+        <span style="font-size: 12px; font-weight: 600; color: var(--color-text);">
+          Custom System Prompt Rules
         </span>
-        <pre id="info-custom-rules" class="font-mono" style="margin: 0; font-size: 11px; line-height: 1.45; background: var(--color-bg); padding: 8px 10px; border-radius: 4px; white-space: pre-wrap; word-break: break-word; color: var(--color-muted); max-height: 140px; overflow-y: auto;">None</pre>
+        <pre id="info-custom-rules" class="font-mono text-small text-muted" style="margin: 0; font-size: 11.5px; line-height: 1.55; padding: 8px 10px; background: var(--color-surface); border: none; border-radius: 4px; white-space: pre-wrap; word-break: break-word; max-height: 140px; overflow-y: auto;">None</pre>
       </div>
 
     </div>
 
-    <div class="modal__footer" style="background: var(--color-surface); border: none; padding: 12px 18px; display: flex; align-items: center; justify-content: space-between;">
+    <div class="modal__footer" style="background: transparent; border: none; padding: 12px 20px 18px; display: flex; align-items: center; justify-content: space-between;">
       <button type="button" class="btn btn--secondary btn--sm" onclick="closeInfoDrawer()">Close</button>
-      <div style="display: flex; align-items: center; gap: 8px;">
-        <button type="button" class="btn btn--primary btn--sm" id="info-btn-edit"><i data-lucide="edit-3"></i> Edit Provider</button>
-      </div>
+      <button type="button" class="btn btn--primary btn--sm" id="info-btn-edit"><i data-lucide="edit-3"></i> Edit Provider</button>
     </div>
 
   </div>
