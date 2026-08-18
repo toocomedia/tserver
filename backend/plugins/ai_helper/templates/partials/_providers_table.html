@@ -68,7 +68,7 @@
           </td>
           <td class="col-actions text-right">
             <div style="display: flex; align-items: center; justify-content: flex-end; gap: 5px; white-space: nowrap;">
-              <button type="button" class="btn btn--secondary btn--sm" onclick="openInfoDrawer({{ p.id }})" title="View Provider Details & Models">
+              <button type="button" class="btn btn--secondary btn--sm btn-provider-info" data-id="{{ p.id }}" onclick="window.openInfoDrawer && window.openInfoDrawer({{ p.id }})" title="View Provider Details & Models">
                 <i data-lucide="info"></i> Info
               </button>
               {% if not p.is_default %}

@@ -260,53 +260,189 @@
     _renderEmptyState: function () {
       var meta = TASK_META[this.activeTaskType] || TASK_META.general;
       var title = this.activeTaskType === "general" ? "How can I help you today?" : "How can I help with " + meta.label + "?";
+      var hint = "Select a capability or ask anything about your server:";
+
+      var ICONS = {
+        shield: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>',
+        globe: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>',
+        diag: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>',
+        app: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>',
+        db: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>',
+        file: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>',
+        server: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>',
+      };
 
       var suggestions = [
-        { label: "Deploy a Node.js / Python app", prompt: "How do I deploy an application using Docker or PM2 on this panel?" },
-        { label: "Fix 502 Bad Gateway error", prompt: "What are the common causes and step-by-step fix for 502 Bad Gateway?" },
-        { label: "Nginx reverse proxy setup", prompt: "How do I configure Nginx reverse proxy routing and SSL?" },
+        {
+          icon: "shield",
+          label: "Domain Security & SSL Check",
+          desc: "Audit domains, SSL certificates & expiry",
+          prompt: "Please perform a security check on all domains: verify SSL certificates, expiration dates, reverse proxy routes, and report any misconfigurations or vulnerabilities."
+        },
+        {
+          icon: "diag",
+          label: "Diagnose Server & Error Logs",
+          desc: "Inspect recent app logs and 502/504 errors",
+          prompt: "Please check recent application and container error logs to diagnose any crashes, failed deployments, or performance bottlenecks."
+        },
+        {
+          icon: "app",
+          label: "Apps & Container Overview",
+          desc: "List running apps, ports & runtime status",
+          prompt: "List all deployed applications (PHP, Python, Container/Railpack), their status, ports, and verify that all services are running properly."
+        },
+        {
+          icon: "db",
+          label: "Databases & Project Files",
+          desc: "Explore database instances & website roots",
+          prompt: "Show active database instances (PostgreSQL, MariaDB, SQLite) and list website project directories."
+        }
       ];
 
       if (this.activeTaskType === "error_diag") {
         suggestions = [
-          { label: "Explain error logs", prompt: "Please explain what caused this error and how to fix it:\n\n```\n\n```" },
-          { label: "Troubleshoot 502/504 Gateway error", prompt: "How do I diagnose 502/504 errors on Nginx and upstream services?" },
-          { label: "Check high CPU or memory", prompt: "How do I identify and fix processes causing high CPU or memory?" },
+          {
+            icon: "diag",
+            label: "Diagnose App Crash Logs",
+            desc: "Analyze recent error logs for root causes",
+            prompt: "Please diagnose recent application crash logs and give me step-by-step resolution."
+          },
+          {
+            icon: "server",
+            label: "Troubleshoot 502/504 Gateway Error",
+            desc: "Check Nginx upstream connection & ports",
+            prompt: "How do I diagnose 502 Bad Gateway and 504 Gateway Timeout errors on Nginx and upstream services?"
+          },
+          {
+            icon: "diag",
+            label: "Identify CPU & Memory Spikes",
+            desc: "Locate processes consuming high VPS resources",
+            prompt: "How do I identify and fix processes causing high CPU or memory spikes on this VPS?"
+          }
         ];
       } else if (this.activeTaskType === "domain") {
         suggestions = [
-          { label: "Setup Nginx reverse proxy", prompt: "How do I configure Nginx reverse proxy for a custom domain?" },
-          { label: "Fix Let's Encrypt SSL error", prompt: "How do I troubleshoot and renew Let's Encrypt SSL certificate?" },
-          { label: "Add security headers", prompt: "What security headers should I add to my Nginx configuration?" },
+          {
+            icon: "shield",
+            label: "Domain Security & SSL Audit",
+            desc: "Audit domain SSL expiration & proxy bindings",
+            prompt: "Run a security audit for all registered domains, SSL expiration dates, and reverse proxy bindings."
+          },
+          {
+            icon: "globe",
+            label: "Nginx Reverse Proxy Routing",
+            desc: "Inspect upstream ports & proxy headers",
+            prompt: "How do I configure Nginx reverse proxy routing, WebSocket support, and SSL for a custom domain?"
+          },
+          {
+            icon: "globe",
+            label: "Check DNS Records",
+            desc: "Inspect PowerDNS zones (A, CNAME, MX)",
+            prompt: "Query DNS records and zones configured on this panel."
+          }
         ];
       } else if (this.activeTaskType === "app" || this.activeTaskType === "container") {
         suggestions = [
-          { label: "Write a Dockerfile", prompt: "Can you help me write an optimized Dockerfile for my app?" },
-          { label: "Docker Compose setup", prompt: "How do I configure docker-compose for multi-container apps?" },
-          { label: "Check container logs", prompt: "How do I view and troubleshoot live Docker container logs?" },
+          {
+            icon: "app",
+            label: "Check Container & App Status",
+            desc: "Inspect live runtime status and recent logs",
+            prompt: "Check status and recent logs of all installed applications and containers."
+          },
+          {
+            icon: "file",
+            label: "Write Optimized Dockerfile",
+            desc: "Generate Dockerfile & compose configuration",
+            prompt: "Can you help me write an optimized Dockerfile and docker-compose setup for my app?"
+          },
+          {
+            icon: "diag",
+            label: "Fix Deployment Failures",
+            desc: "Troubleshoot build steps & startup crashes",
+            prompt: "Why did my application build or deployment fail? Check recent logs and explain how to fix it."
+          }
         ];
       } else if (this.activeTaskType === "database") {
         suggestions = [
-          { label: "PostgreSQL connection test", prompt: "How do I test and troubleshoot PostgreSQL connection and credentials?" },
-          { label: "Optimize database performance", prompt: "What are best practices for database indexes and memory settings?" },
-          { label: "Database backup & restore", prompt: "How do I backup and restore databases safely?" },
+          {
+            icon: "db",
+            label: "List Active Databases",
+            desc: "Inspect PostgreSQL, MariaDB & SQLite instances",
+            prompt: "Show active database instances (PostgreSQL, MariaDB, SQLite) and verify connection status."
+          },
+          {
+            icon: "shield",
+            label: "Database Backup & Safety",
+            desc: "Best practices for automated backups & restore",
+            prompt: "How do I backup and restore databases safely on this server?"
+          },
+          {
+            icon: "server",
+            label: "Optimize Database Performance",
+            desc: "Tune buffer pools, connections & indexes",
+            prompt: "What are best practices for database indexes and memory settings on a VPS?"
+          }
+        ];
+      } else if (this.activeTaskType === "file_manager") {
+        suggestions = [
+          {
+            icon: "file",
+            label: "Explore Website Root Files",
+            desc: "List directories & code files in web root",
+            prompt: "List files and subdirectories in the website document root."
+          },
+          {
+            icon: "shield",
+            label: "Audit Configuration Files",
+            desc: "Check nginx.conf, Dockerfile & environment",
+            prompt: "Read and audit the web server configuration (nginx.conf, Dockerfile, env settings) for security and best practices."
+          },
+          {
+            icon: "shield",
+            label: "Scan for Suspicious Files",
+            desc: "Detect malicious scripts or wrong permissions",
+            prompt: "Scan website directory for unexpected scripts or permission issues."
+          }
         ];
       } else if (this.activeTaskType === "system") {
         suggestions = [
-          { label: "Check disk space & clean cache", prompt: "How do I check VPS disk usage and clean unnecessary cache files?" },
-          { label: "Inspect system memory & swap", prompt: "How do I configure swap and check RAM usage on this VPS?" },
-          { label: "Firewall & open ports", prompt: "How do I verify open network ports and firewall rules?" },
+          {
+            icon: "server",
+            label: "Check Disk Space & Clean Cache",
+            desc: "Inspect disk usage & clean build caches",
+            prompt: "How do I check VPS disk usage and clean unnecessary cache and log files?"
+          },
+          {
+            icon: "server",
+            label: "Inspect Memory & Swap",
+            desc: "Review RAM usage & swap configuration",
+            prompt: "How do I configure swap and check RAM usage on this VPS?"
+          },
+          {
+            icon: "shield",
+            label: "Firewall & Port Audit",
+            desc: "Verify open network ports & UFW rules",
+            prompt: "How do I verify open network ports and firewall rules on this server?"
+          }
         ];
       }
 
       var itemsHtml = suggestions
         .map(function (s) {
+          var iconSvg = ICONS[s.icon] || ICONS.app;
           return (
             '<button type="button" class="ai-suggested-item" data-ai-suggest="' +
             s.prompt.replace(/"/g, "&quot;") +
-            '"><span>' +
-            s.label +
-            '</span><span class="ai-suggested-arrow">→</span></button>'
+            '">' +
+            '  <span class="ai-suggested-item-left">' +
+            '    <span class="ai-suggested-icon">' + iconSvg + '</span>' +
+            '    <span class="ai-suggested-info">' +
+            '      <span class="ai-suggested-label">' + s.label + '</span>' +
+            '      <span class="ai-suggested-desc">' + s.desc + '</span>' +
+            '    </span>' +
+            '  </span>' +
+            '  <span class="ai-suggested-arrow">→</span>' +
+            '</button>'
           );
         })
         .join("\n");
@@ -315,7 +451,7 @@
         '<div class="ai-empty-state" id="ai-empty-state">',
         '  <div class="ai-empty-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg></div>',
         '  <h4 class="ai-empty-title">' + title + "</h4>",
-        '  <div class="ai-empty-hint">Ask a question or select a prompt:</div>',
+        '  <div class="ai-empty-hint">' + hint + "</div>",
         '  <div class="ai-suggested-prompts">',
         itemsHtml,
         "  </div>",

@@ -29,5 +29,18 @@
 <script>
   window.INITIAL_RESOURCES = {{ (resources or {}) | tojson | safe }};
 </script>
-<script type="module" src="/plugins/ai_helper/static/js/ai-helper-admin.js"></script>
+<script type="module" src="/plugins/ai_helper/static/js/ai-helper-admin.js?v={{ APP_VERSION }}"></script>
+<script>
+  // Event delegation fallback for instant responsiveness
+  document.addEventListener("click", function (e) {
+    var infoBtn = e.target.closest(".btn-provider-info");
+    if (infoBtn) {
+      e.preventDefault();
+      var id = infoBtn.getAttribute("data-id");
+      if (id && typeof window.openInfoDrawer === "function") {
+        window.openInfoDrawer(id);
+      }
+    }
+  });
+</script>
 {% endblock %}
