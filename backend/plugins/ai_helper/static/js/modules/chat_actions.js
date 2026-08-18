@@ -188,6 +188,27 @@
           return;
         }
 
+        // 6d. File Tree Card Copy All button
+        var fileTreeCopyBtn = e.target.closest(".ai-file-tree-copy-btn");
+        if (fileTreeCopyBtn) {
+          e.preventDefault();
+          var card = fileTreeCopyBtn.closest(".ai-file-tree-card");
+          if (card) {
+            var rawNames = decodeURIComponent(card.getAttribute("data-raw-names") || "");
+            self.copyToClipboard(rawNames, fileTreeCopyBtn);
+          }
+          return;
+        }
+
+        // 6e. File Tree Item click — copy single item name or ask AI
+        var fileItem = e.target.closest(".ai-file-item");
+        if (fileItem) {
+          e.preventDefault();
+          var itemName = fileItem.getAttribute("data-name") || fileItem.querySelector(".ai-file-name").textContent;
+          self.copyToClipboard(itemName, fileItem);
+          return;
+        }
+
         // 7. Thought Box Header Toggle
         var thoughtHeader = e.target.closest(".ai-thought-header");
         if (thoughtHeader) {

@@ -434,9 +434,15 @@
       this.inputEl.value = "";
       this.inputEl.style.height = "auto";
 
-      var assistantBubble = this._appendMessageToDOM("assistant", "");
-      var bubbleContent = assistantBubble.querySelector(".ai-msg-bubble");
+      var assistantWrap = this._appendMessageToDOM("assistant", "");
+      var bubbleContent = assistantWrap.querySelector(".ai-msg-bubble");
       bubbleContent.innerHTML = '<span class="ai-cursor"></span>';
+
+      // Activity panel — shows real-time tool reads above the bubble
+      var activityPanel = document.createElement("div");
+      activityPanel.className = "ai-activity-panel";
+      assistantWrap.insertBefore(activityPanel, bubbleContent);
+      var activityItems = {}; // tool_name -> item element
 
       this.isStreaming = true;
       this.sendBtnEl.style.display = "none";
@@ -460,7 +466,7 @@
         var buffer = "";
         function read() {
           return reader.read().then(function (result) {
-            if (result.done) return self._finishStreaming(bubbleContent, fullText, startTime);
+            if (result.done) return self._finishStreaming(bubbleContent, activityPanel, fullText, startTime);
             buffer += decoder.decode(result.value, { stream: true });
             var lines = buffer.split("\n");
             buffer = lines.pop();
@@ -468,13 +474,20 @@
               var line = lines[i].trim();
               if (!line || !line.startsWith("data:")) continue;
               var d = line.substring(5).trim();
-              if (d === "[DONE]") return self._finishStreaming(bubbleContent, fullText, startTime);
+              if (d === "[DONE]") return self._finishStreaming(bubbleContent, activityPanel, fullText, startTime);
               try {
                 var p = JSON.parse(d);
                 if (p.type === "token" && p.token) {
                   fullText += p.token;
                   bubbleContent.innerHTML = self.renderMarkdown(fullText) + '<span class="ai-cursor"></span>';
                   self._scrollToBottom();
+                } else if (p.type === "tool_activity" && p.activity) {
+                  self._updateActivityPanel(activityPanel, activityItems, p.activity);
+                  if (self.statusEl) {
+                    self.statusEl.textContent = p.activity.status === "start"
+                      ? (p.activity.icon + " " + p.activity.label + "...")
+                      : "Processing...";
+                  }
                 }
               } catch (e) {}
             }
@@ -492,7 +505,42 @@
       });
     },
 
-    _finishStreaming: function (bubble, text, start) {
+    // Public alias used by ALLOW_SECRETS button handler
+    sendMessage: function (msg) { this.send(msg); },
+
+    _updateActivityPanel: function (panelEl, items, activity) {
+      var key = activity.tool;
+      if (activity.status === "start") {
+        var item = document.createElement("div");
+        item.className = "ai-activity-item ai-activity-item--loading";
+        item.innerHTML = (
+          '<span class="ai-activity-spinner"></span>' +
+          '<span class="ai-activity-icon">' + activity.icon + '</span>' +
+          '<span class="ai-activity-label">' + activity.label +
+          (activity.detail ? ' <span class="ai-activity-detail">' + activity.detail + '</span>' : '') +
+          '</span>' +
+          '<span class="ai-activity-status">...</span>'
+        );
+        panelEl.appendChild(item);
+        items[key] = item;
+        panelEl.style.display = "flex";
+      } else if (items[key]) {
+        var el = items[key];
+        el.classList.remove("ai-activity-item--loading");
+        if (activity.status === "done") {
+          el.classList.add("ai-activity-item--done");
+          el.querySelector(".ai-activity-spinner").style.display = "none";
+          el.querySelector(".ai-activity-status").textContent = "\u2714";
+        } else if (activity.status === "error") {
+          el.classList.add("ai-activity-item--error");
+          el.querySelector(".ai-activity-spinner").style.display = "none";
+          el.querySelector(".ai-activity-status").textContent = "\u26A0";
+        }
+      }
+      this._scrollToBottom();
+    },
+
+    _finishStreaming: function (bubble, activityPanel, text, start) {
       this.isStreaming = false;
       this.sendBtnEl.style.display = "flex";
       this.stopBtnEl.style.display = "none";
@@ -502,6 +550,22 @@
         window.AiHelperCache.appendMessage(this.sessionId, { role: "assistant", content: text, created_at: new Date().toISOString() }, { title: this.sessionTitle, taskType: this.activeTaskType, context: this.activeContext });
       }
       if (window.AiHelperActions) window.AiHelperActions.checkLongMessages(this.messagesEl);
+      // Collapse activity panel into summary toggle
+      if (activityPanel && activityPanel.children.length > 0) {
+        var count = activityPanel.children.length;
+        activityPanel.classList.add("ai-activity-panel--done");
+        var summary = document.createElement("button");
+        summary.type = "button";
+        summary.className = "ai-activity-summary-toggle";
+        summary.textContent = "\U0001F4D6 Read " + count + (count === 1 ? " source" : " sources") + " ▾";
+        summary.addEventListener("click", function () {
+          var expanded = activityPanel.getAttribute("data-expanded") === "true";
+          activityPanel.setAttribute("data-expanded", expanded ? "false" : "true");
+          summary.textContent = (expanded ? "\U0001F4D6 Read " + count + (count === 1 ? " source" : " sources") + " ▾" : "\U0001F4D6 Read " + count + (count === 1 ? " source" : " sources") + " ▴");
+        });
+        activityPanel.setAttribute("data-expanded", "false");
+        activityPanel.insertBefore(summary, activityPanel.firstChild);
+      }
     },
 
     _appendMessageToDOM: function (role, content, timeIso) {

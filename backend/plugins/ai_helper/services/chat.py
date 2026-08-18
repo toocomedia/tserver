@@ -20,6 +20,43 @@ from plugins.ai_helper.services.sessions import generate_title_from_prompt, get_
 
 logger = logging.getLogger(__name__)
 
+# Sentinel prefix used to pass tool activity events through the async generator.
+# The router detects this prefix and wraps as type=tool_activity SSE events.
+_ACTIVITY_PREFIX = "\x00ACTIVITY\x00"
+
+# Friendly labels for each tool name
+_TOOL_LABELS = {
+    "get_domains_and_ssl": ("\U0001F310", "Checking SSL & domain config"),
+    "get_reverse_proxy_routes": ("\U0001F501", "Reading Nginx proxy routes"),
+    "get_dns_records": ("\U0001F4CB", "Querying DNS records"),
+    "get_apps_overview": ("\U0001F4E6", "Listing hosted apps"),
+    "get_app_logs": ("\U0001F4DC", "Fetching deployment logs"),
+    "get_databases_overview": ("\U0001F5C4", "Reading database overview"),
+    "list_website_directory": ("\U0001F4C1", "Scanning directory"),
+    "read_website_file": ("\U0001F4C4", "Reading file"),
+}
+
+
+def _activity_event(tool_name: str, status: str, args: dict | None = None) -> str:
+    """Builds an activity sentinel string to yield from the generator."""
+    import json as _json
+    icon, label = _TOOL_LABELS.get(tool_name, ("\u2699\uFE0F", tool_name.replace("_", " ").title()))
+    # Add context detail from args
+    detail = ""
+    if args:
+        for key in ("target_id", "domain", "domain_name", "app_id", "file_path"):
+            if args.get(key):
+                detail = str(args[key])
+                break
+    payload = _json.dumps({
+        "tool": tool_name,
+        "status": status,   # "start" | "done" | "error"
+        "icon": icon,
+        "label": label,
+        "detail": detail,
+    })
+    return _ACTIVITY_PREFIX + payload
+
 
 def _extract_text_tool_calls(step_content: str) -> List[Dict[str, Any]]:
     """Extracts DeepSeek DSML or XML pseudo tool calls emitted in raw text."""
@@ -302,6 +339,7 @@ async def stream_ai_chat(
                     for tc in tool_calls:
                         fn_name = tc.get("name")
                         fn_args = tc.get("arguments") or {}
+                        yield _activity_event(fn_name, "start", fn_args)
                         try:
                             tool_output = await tools.execute_tool(
                                 db=db,
@@ -310,8 +348,10 @@ async def stream_ai_chat(
                                 session_id=session_id,
                                 secrets_allowed=secrets_allowed,
                             )
+                            yield _activity_event(fn_name, "done", fn_args)
                         except Exception as e:
                             tool_output = {"status": "error", "message": str(e)}
+                            yield _activity_event(fn_name, "error", fn_args)
                         tool_results_list.append(f"[Result for {fn_name}]:\n{json.dumps(tool_output)}")
 
                     messages.append({
@@ -331,6 +371,7 @@ async def stream_ai_chat(
                         fn_name = tc.get("name")
                         fn_args = tc.get("arguments") or {}
                         tc_id = tc.get("id") or f"tool_{len(messages)}"
+                        yield _activity_event(fn_name, "start", fn_args)
                         try:
                             tool_output = await tools.execute_tool(
                                 db=db,
@@ -339,8 +380,10 @@ async def stream_ai_chat(
                                 session_id=session_id,
                                 secrets_allowed=secrets_allowed,
                             )
+                            yield _activity_event(fn_name, "done", fn_args)
                         except Exception as e:
                             tool_output = {"status": "error", "message": str(e)}
+                            yield _activity_event(fn_name, "error", fn_args)
                         tool_results.append({
                             "type": "tool_result",
                             "tool_use_id": tc_id,
@@ -379,6 +422,7 @@ async def stream_ai_chat(
                         fn_args = tc.get("arguments") or {}
                         tc_id = tc.get("id") or f"call_{len(messages)}"
 
+                        yield _activity_event(fn_name, "start", fn_args)
                         try:
                             tool_output = await tools.execute_tool(
                                 db=db,
@@ -387,8 +431,10 @@ async def stream_ai_chat(
                                 session_id=session_id,
                                 secrets_allowed=secrets_allowed,
                             )
+                            yield _activity_event(fn_name, "done", fn_args)
                         except Exception as exc:
                             tool_output = {"status": "error", "message": str(exc)}
+                            yield _activity_event(fn_name, "error", fn_args)
 
                         tool_json_str = json.dumps(tool_output)
                         messages.append({

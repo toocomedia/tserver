@@ -33,6 +33,143 @@
   };
 
   var AiHelperMarkdown = {
+    _buildDirectoryCard: function (lines) {
+      if (!Array.isArray(lines)) {
+        lines = (lines || "").split("\n");
+      }
+      var folders = [];
+      var files = [];
+      var plainNames = [];
+
+      lines.forEach(function (rawLine) {
+        var line = (rawLine || "").trim();
+        if (!line) return;
+
+        // Strip leading markdown bullets / dashes / numbers
+        line = line.replace(/^[-*+]\s+/, "").replace(/^\d+\.\s+/, "").trim();
+
+        // Check if folder or file
+        var isFolder = false;
+        if (line.indexOf("📁") !== -1 || line.indexOf("🗂️") !== -1 || line.indexOf("📂") !== -1 || line.indexOf("[DIR]") !== -1) {
+          isFolder = true;
+        }
+
+        // Clean out emojis, code tags, html tags, backticks
+        var clean = line
+          .replace(/[📁📄🗂️📂]/g, "")
+          .replace(/\[(?:DIR|FILE)\]/gi, "")
+          .replace(/&lt;\/?code&gt;/gi, "")
+          .replace(/<\/?code>/gi, "")
+          .replace(/`/g, "")
+          .trim();
+
+        // Extract metadata if in parens e.g. (76 B, sensitive — masked) or (921 B)
+        var metaMatch = clean.match(/\(([^)]+)\)$/);
+        var meta = "";
+        if (metaMatch) {
+          meta = metaMatch[1].trim();
+          clean = clean.substring(0, metaMatch.index).trim();
+        }
+
+        // If ends with slash, it's a folder
+        if (clean.endsWith("/")) {
+          isFolder = true;
+        }
+
+        if (!clean) return;
+
+        if (isFolder && !clean.endsWith("/")) {
+          clean += "/";
+        }
+
+        plainNames.push(clean);
+
+        if (isFolder) {
+          folders.push({ name: clean, meta: meta });
+        } else {
+          // File extension icon helper
+          var extMatch = clean.match(/\.([a-zA-Z0-9_-]+)$/);
+          var ext = extMatch ? extMatch[1].toLowerCase() : "";
+          var fileType = "file";
+          var icon = "📄";
+          if (ext === "py") { icon = "🐍"; fileType = "python"; }
+          else if (ext === "js" || ext === "ts" || ext === "jsx" || ext === "tsx") { icon = "🟨"; fileType = "js"; }
+          else if (ext === "json" || ext === "yaml" || ext === "yml" || ext === "ini" || ext === "toml") { icon = "⚙️"; fileType = "config"; }
+          else if (clean.startsWith(".env") || ext === "env") { icon = "🔐"; fileType = "env"; }
+          else if (ext === "sh" || ext === "bash") { icon = "💻"; fileType = "shell"; }
+          else if (ext === "md" || ext === "txt" || ext === "rst") { icon = "📝"; fileType = "doc"; }
+          else if (ext === "html" || ext === "css" || ext === "scss") { icon = "🌐"; fileType = "web"; }
+          else if (ext === "sql" || ext === "db") { icon = "🗄️"; fileType = "db"; }
+
+          files.push({ name: clean, meta: meta, icon: icon, fileType: fileType });
+        }
+      });
+
+      if (folders.length === 0 && files.length === 0) return "";
+
+      var totalCount = folders.length + files.length;
+      var countLabel = "";
+      if (folders.length > 0 && files.length > 0) {
+        countLabel = folders.length + " dir" + (folders.length > 1 ? "s" : "") + ", " + files.length + " file" + (files.length > 1 ? "s" : "");
+      } else if (folders.length > 0) {
+        countLabel = folders.length + " folder" + (folders.length > 1 ? "s" : "");
+      } else {
+        countLabel = files.length + " file" + (files.length > 1 ? "s" : "");
+      }
+
+      var encodedNames = encodeURIComponent(plainNames.join("\n"));
+
+      var foldersHtml = "";
+      if (folders.length > 0) {
+        foldersHtml = folders.map(function (f) {
+          return (
+            '<div class="ai-file-item ai-file-item--folder" data-name="' + f.name + '" title="' + f.name + '">' +
+            '  <span class="ai-file-icon">📁</span>' +
+            '  <span class="ai-file-name">' + f.name + '</span>' +
+            (f.meta ? '  <span class="ai-file-meta">' + f.meta + '</span>' : '') +
+            '</div>'
+          );
+        }).join("");
+      }
+
+      var filesHtml = "";
+      if (files.length > 0) {
+        filesHtml = files.map(function (f) {
+          var metaBadge = "";
+          if (f.meta) {
+            var cleanMeta = f.meta.replace(/,\s*sensitive\s*—\s*/gi, " · ").replace(/,\s*/g, " · ");
+            var isMasked = f.meta.toLowerCase().indexOf("mask") !== -1;
+            metaBadge = '<span class="ai-file-meta' + (isMasked ? ' ai-file-meta--masked' : '') + '">' + cleanMeta + '</span>';
+          }
+          return (
+            '<div class="ai-file-item ai-file-item--file ai-file-item--' + f.fileType + '" data-name="' + f.name + '" title="' + f.name + '">' +
+            '  <span class="ai-file-icon">' + f.icon + '</span>' +
+            '  <span class="ai-file-name">' + f.name + '</span>' +
+            metaBadge +
+            '</div>'
+          );
+        }).join("");
+      }
+
+      return [
+        '<div class="ai-file-tree-card" data-raw-names="' + encodedNames + '">',
+        '  <div class="ai-file-tree-header">',
+        '    <div class="ai-file-tree-header-left">',
+        '      <span class="ai-file-tree-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg></span>',
+        '      <span class="ai-file-tree-title">Directory Contents</span>',
+        '      <span class="ai-file-tree-count">' + countLabel + '</span>',
+        '    </div>',
+        '    <div class="ai-file-tree-actions">',
+        '      <button type="button" class="ai-file-tree-copy-btn" title="Copy file names"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> Copy</button>',
+        '    </div>',
+        '  </div>',
+        '  <div class="ai-file-tree-body">',
+        '    <div class="ai-file-tree-grid">' + foldersHtml + filesHtml + '</div>',
+        '  </div>',
+        '</div>',
+      ].join("\n");
+    },
+
     render: function (text) {
       if (!text) return "";
 
@@ -105,6 +242,7 @@
 
     _renderMarkdownCore: function (text) {
       if (!text) return "";
+      var self = this;
 
       // Escape HTML entities
       var escaped = text
@@ -232,6 +370,16 @@
           ].join("\n");
         }
 
+        // --- Directory / Files card in code block ---
+        if (cleanLang === "files" || cleanLang === "dir" || cleanLang === "tree" || cleanLang === "directory") {
+          return self._buildDirectoryCard(codeLines);
+        }
+        if ((cleanLang === "markdown" || cleanLang === "text" || cleanLang === "plaintext" || cleanLang === "code" || !cleanLang) &&
+            codeLines.length >= 2 &&
+            codeLines.filter(function(l) { return l.indexOf("📁") !== -1 || l.indexOf("📄") !== -1; }).length >= Math.min(2, codeLines.length)) {
+          return self._buildDirectoryCard(codeLines);
+        }
+
         // --- Default: code card (existing behaviour) ---
         var filename = EXT_MAP[cleanLang] || ("snippet." + cleanLang);
         return [
@@ -291,26 +439,10 @@
         }
       );
 
-      // Directory / File List -> One-Line Card Strip with Split Viewer Expand
-      escaped = escaped.replace(/(?:^|\n)((?:- (?:📁|📄|\[FILE:)[^\n]+(?:\n|$))+)/gi, function (match) {
+      // Directory / File List -> Beautiful Inline File Tree Explorer Card
+      escaped = escaped.replace(/(?:^|\n)((?:(?:- |\* |)\s*(?:📁|📄|\[DIR\]|\[FILE:?\])[^\n]+(?:\n|$))+)/gi, function (match) {
         var lines = match.trim().split("\n");
-        var formattedLines = lines.map(function (l) { return l.replace(/^- /, "").trim(); }).join("\n");
-        var encodedList = encodeURIComponent(formattedLines);
-
-        return [
-          '\n<div class="ai-card-strip ai-card-strip--list" data-lang="markdown" data-code="' + encodedList + '" data-title="Directory Contents">',
-          '  <div class="ai-card-strip-left">',
-          '    <span class="ai-card-strip-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg></span>',
-          '    <span class="ai-card-strip-lang">FILES</span>',
-          '    <span class="ai-card-strip-name">Directory Contents</span>',
-          '    <span class="ai-card-strip-count">' + lines.length + (lines.length === 1 ? " item" : " items") + "</span>",
-          "  </div>",
-          '  <div class="ai-card-strip-actions">',
-          '    <button type="button" class="ai-card-strip-btn ai-card-strip-expand-btn" data-ai-code-view="true" title="Open full list in Split Viewer"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg> Expand</button>',
-          '    <button type="button" class="ai-card-strip-btn ai-card-strip-copy-btn" title="Copy list"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></button>',
-          "  </div>",
-          "</div>",
-        ].join("\n");
+        return "\n" + self._buildDirectoryCard(lines) + "\n";
       });
 
       // Blockquotes > quote
@@ -324,6 +456,8 @@
           if (!trimmed) return "";
           if (
             trimmed.startsWith("<div class=\"ai-card-strip\"") ||
+            trimmed.startsWith("<div class=\"ai-file-tree-card\"") ||
+            trimmed.startsWith("<div class=\"ai-security-card\"") ||
             trimmed.startsWith("<div class=\"ai-table-wrap\"") ||
             trimmed.startsWith("<div class=\"ai-thought-box\"") ||
             trimmed.startsWith("<blockquote class=\"ai-blockquote\"") ||

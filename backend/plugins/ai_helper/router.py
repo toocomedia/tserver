@@ -22,6 +22,7 @@ from plugins.ai_helper.schemas import (
     TestConnectionRequest,
     UpdateSessionPayload,
 )
+from plugins.ai_helper.services.chat import _ACTIVITY_PREFIX
 from plugins.ai_helper.services.secrets_consent import grant_consent, revoke_consent
 from templating import templates
 
@@ -345,7 +346,12 @@ async def chat_endpoint(req: ChatRequest, db: AsyncSession = Depends(get_db)):
             task_type=req.task_type or "general",
             session_title=req.session_title,
         ):
-            yield f"data: {json.dumps({'type': 'token', 'token': chunk})}\n\n"
+            if chunk.startswith(_ACTIVITY_PREFIX):
+                # Route tool activity events separately — don't include in text stream
+                activity_json = chunk[len(_ACTIVITY_PREFIX):]
+                yield f"data: {json.dumps({'type': 'tool_activity', 'activity': json.loads(activity_json)})}\n\n"
+            else:
+                yield f"data: {json.dumps({'type': 'token', 'token': chunk})}\n\n"
         yield "data: [DONE]\n\n"
 
     return StreamingResponse(

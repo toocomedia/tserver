@@ -6,7 +6,7 @@ from __future__ import annotations
 
 RESULT_FORMAT_RULES = """### Structured Output Formats (REQUIRED — UI renders these as interactive cards):
 
-**File/Directory Listings** → triggers file card strip:
+**File/Directory Listings** → triggers Directory Tree Explorer card:
 ```
 - 📁 dirname/
 - 📄 filename.ext (12 KB)
