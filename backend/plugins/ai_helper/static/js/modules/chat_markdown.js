@@ -39,10 +39,8 @@
       var thoughtHtml = "";
       var mainText = text;
 
-      // 1. Extract and render <think>...</think> or active unclosed <think>...
-      var thinkMatchClosed = mainText.match(/^<think>([\s\S]*?)<\/think>\s*/i);
-      var thinkMatchUnclosed = null;
-
+      // 1. Extract and render <think>...</think> anywhere in the message
+      var thinkMatchClosed = mainText.match(/<think>([\s\S]*?)<\/think>/i);
       if (thinkMatchClosed) {
         var thoughtContent = this._renderMarkdownCore(thinkMatchClosed[1].trim());
         thoughtHtml = [
@@ -57,9 +55,10 @@
           '  <div class="ai-thought-body">' + (thoughtContent || "<em>No reasoning logs</em>") + "</div>",
           "</div>",
         ].join("\n");
-        mainText = mainText.substring(thinkMatchClosed[0].length);
+        mainText = mainText.replace(/<think>[\s\S]*?<\/think>/i, "").trim();
       } else {
-        thinkMatchUnclosed = mainText.match(/^<think>([\s\S]*)$/i);
+        // Active streaming unclosed <think>...
+        var thinkMatchUnclosed = mainText.match(/<think>([\s\S]*)$/i);
         if (thinkMatchUnclosed) {
           var rawThought = thinkMatchUnclosed[1].trim();
           var liveThoughtContent = this._renderMarkdownCore(rawThought);
@@ -76,7 +75,7 @@
             '  <div class="ai-thought-body">' + (liveThoughtContent || "<em>Analyzing request...</em>") + "</div>",
             "</div>",
           ].join("\n");
-          mainText = "";
+          mainText = mainText.substring(0, thinkMatchUnclosed.index).trim();
         } else {
           // Auto-capture untagged chain-of-thought monologue
           var metaReasoningMatch = mainText.match(/^(?:The user wants me to|Now I have the information for|I called the tool|The tool suggests using|Let me structure the response)[\s\S]*?(?=\n\n(?:Here['’]s|📁|📄|```|\*\*|#|[A-Z][a-z]+ is |To |You can|$))/i);
@@ -113,13 +112,14 @@
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;");
 
-      // Filter raw XML pseudo tool calls if emitted in text (both closed and streaming unclosed)
+      // Filter raw XML & DeepSeek DSML pseudo tool calls if emitted in text
+      escaped = escaped.replace(/&lt;[｜|]{1,2}DSML[｜|]{1,2}[\s\S]*?(?:&lt;\/[｜|]{1,2}DSML[｜|]{1,2}[^&gt;]*&gt;|$)/gi, "");
+      escaped = escaped.replace(/&lt;[｜|][\s\S]*?[｜|]&gt;/gi, "");
       escaped = escaped.replace(/&lt;tool_call&gt;[\s\S]*?(?:&lt;\/tool_call&gt;|$)/gi, "");
       escaped = escaped.replace(/&lt;function=[a-zA-Z0-9_]+&gt;[\s\S]*?(?:&lt;\/function&gt;|$)/gi, "");
+      escaped = escaped.replace(/&lt;invoke\s+name=[^&gt;]+&gt;[\s\S]*?(?:&lt;\/invoke&gt;|$)/gi, "");
       escaped = escaped.replace(/&lt;parameter=[a-zA-Z0-9_]+&gt;[\s\S]*?(?:&lt;\/parameter&gt;|$)/gi, "");
-      escaped = escaped.replace(/&lt;\/?tool_call\/?&gt;/gi, "");
-      escaped = escaped.replace(/&lt;\/?function.*?&gt;/gi, "");
-      escaped = escaped.replace(/&lt;\/?parameter.*?&gt;/gi, "");
+      escaped = escaped.replace(/&lt;\/?(?:tool_call|function|parameter|invoke|DSML)[^&gt;]*&gt;/gi, "");
 
       // Replace structured Action Tags: [ACTION:TYPE:VALUE]
       escaped = escaped.replace(

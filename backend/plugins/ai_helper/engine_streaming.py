@@ -87,12 +87,14 @@ async def _stream_openai_compatible(
                                     in_think_block = False
                                     yield "</think>\n"
                                 clean_content = content
-                                if "<tool_call>" in clean_content or "</tool_call>" in clean_content or "<function=" in clean_content or "<parameter=" in clean_content:
+                                if "<" in clean_content and any(k in clean_content for k in ["DSML", "tool_call", "function=", "parameter=", "invoke", "｜"]):
                                     import re
-                                    clean_content = re.sub(r"<tool_call>[\s\S]*?(?:</tool_call>|$)", "", clean_content)
-                                    clean_content = re.sub(r"<function=[a-zA-Z0-9_]+>[\s\S]*?(?:</function>|$)", "", clean_content)
-                                    clean_content = re.sub(r"<parameter=[a-zA-Z0-9_]+>[\s\S]*?(?:</parameter>|$)", "", clean_content)
-                                    clean_content = clean_content.replace("<tool_call>", "").replace("</tool_call>", "")
+                                    clean_content = re.sub(r"<[｜|]{1,2}DSML[｜|]{1,2}[\s\S]*?(?:</[｜|]{1,2}DSML[｜|]{1,2}[^>]*>|$)", "", clean_content, flags=re.IGNORECASE)
+                                    clean_content = re.sub(r"<[｜|][\s\S]*?[｜|]>", "", clean_content)
+                                    clean_content = re.sub(r"<tool_call>[\s\S]*?(?:</tool_call>|$)", "", clean_content, flags=re.IGNORECASE)
+                                    clean_content = re.sub(r"<(?:function=|invoke)[\s\S]*?(?:</(?:function|invoke)>|$)", "", clean_content, flags=re.IGNORECASE)
+                                    clean_content = re.sub(r"<parameter[\s\S]*?(?:</parameter>|$)", "", clean_content, flags=re.IGNORECASE)
+                                    clean_content = re.sub(r"<\/?(?:tool_call|function|parameter|invoke|DSML)[^>]*>", "", clean_content, flags=re.IGNORECASE)
                                 if clean_content:
                                     yield clean_content
                     except json.JSONDecodeError:

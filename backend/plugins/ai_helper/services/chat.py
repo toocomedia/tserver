@@ -1,5 +1,5 @@
 """
-services/chat.py — Multi-turn streaming chat pipeline with tool calling, context trimming, and session auto-tracking.
+services/chat.py — Multi-turn streaming chat pipeline with tool calling, DSML support, and session auto-tracking.
 """
 from __future__ import annotations
 
@@ -20,13 +20,64 @@ from plugins.ai_helper.services.sessions import generate_title_from_prompt, get_
 logger = logging.getLogger(__name__)
 
 
+def _extract_text_tool_calls(step_content: str) -> List[Dict[str, Any]]:
+    """Extracts DeepSeek DSML or XML pseudo tool calls emitted in raw text."""
+    if not step_content:
+        return []
+    tool_calls = []
+
+    # 1. DeepSeek DSML format: <｜｜DSML｜｜invoke name="fn_name">...<｜｜DSML｜｜parameter name="target_id"...>val</｜｜DSML｜｜parameter>...</｜｜DSML｜｜invoke>
+    dsml_invokes = re.finditer(
+        r"<[｜|]{1,2}DSML[｜|]{1,2}invoke\s+name=[\"']?([a-zA-Z0-9_]+)[\"']?[^>]*>(.*?)</[｜|]{1,2}DSML[｜|]{1,2}invoke>",
+        step_content,
+        re.DOTALL | re.IGNORECASE,
+    )
+    for m in dsml_invokes:
+        fn_name = m.group(1)
+        body = m.group(2)
+        params = {}
+        for pm in re.finditer(
+            r"<[｜|]{1,2}DSML[｜|]{1,2}parameter\s+name=[\"']?([a-zA-Z0-9_]+)[\"']?[^>]*>(.*?)</[｜|]{1,2}DSML[｜|]{1,2}parameter>",
+            body,
+            re.DOTALL | re.IGNORECASE,
+        ):
+            params[pm.group(1).strip()] = pm.group(2).strip()
+        tool_calls.append({"id": f"call_{len(tool_calls)}", "name": fn_name, "arguments": params})
+
+    if tool_calls:
+        return tool_calls
+
+    # 2. Standard XML: <function=fn_name>...</function> or <invoke name="fn_name">...</invoke>
+    fn_matches = re.finditer(
+        r"<(?:function=|invoke\s+name=[\"']?)([a-zA-Z0-9_]+)[\"']?[^>]*>(.*?)</(?:function|invoke)>",
+        step_content,
+        re.DOTALL | re.IGNORECASE,
+    )
+    for m in fn_matches:
+        fn_name = m.group(1)
+        body = m.group(2)
+        params = {}
+        for pm in re.finditer(
+            r"<(?:parameter=|parameter\s+name=[\"']?)([a-zA-Z0-9_]+)[\"']?[^>]*>(.*?)</parameter>",
+            body,
+            re.DOTALL | re.IGNORECASE,
+        ):
+            params[pm.group(1).strip()] = pm.group(2).strip()
+        tool_calls.append({"id": f"call_{len(tool_calls)}", "name": fn_name, "arguments": params})
+
+    return tool_calls
+
+
 def _sanitize_history_content(text: str) -> str:
-    """Removes unfulfilled XML pseudo tool calls from message history."""
+    """Removes unfulfilled XML and DSML pseudo tool calls from message history."""
     if not text:
         return ""
-    clean = re.sub(r"<tool_call>[\s\S]*?</tool_call>", "", text)
-    clean = re.sub(r"<function=[a-zA-Z0-9_]+>[\s\S]*?</function>", "", clean)
-    clean = re.sub(r"<parameter=[a-zA-Z0-9_]+>[\s\S]*?</parameter>", "", clean)
+    clean = re.sub(r"<[｜|]{1,2}DSML[｜|]{1,2}[\s\S]*?</[｜|]{1,2}DSML[｜|]{1,2}[^>]*>", "", text, flags=re.IGNORECASE)
+    clean = re.sub(r"<[｜|][\s\S]*?[｜|]>", "", clean)
+    clean = re.sub(r"<tool_call>[\s\S]*?</tool_call>", "", clean, flags=re.IGNORECASE)
+    clean = re.sub(r"<function=[a-zA-Z0-9_]+>[\s\S]*?</function>", "", clean, flags=re.IGNORECASE)
+    clean = re.sub(r"<parameter=[a-zA-Z0-9_]+>[\s\S]*?</parameter>", "", clean, flags=re.IGNORECASE)
+    clean = re.sub(r"<\/?(?:tool_call|function|parameter|invoke)[^>]*>", "", clean, flags=re.IGNORECASE)
     return clean.strip()
 
 
@@ -154,16 +205,9 @@ async def stream_ai_chat(
                 tool_calls = tool_step.get("tool_calls") or []
 
                 if not tool_calls:
-                    # Check for XML pseudo tool call syntax emitted in text by some models
+                    # Check for DeepSeek DSML or XML pseudo tool call syntax
                     step_content = tool_step.get("content") or ""
-                    if "<function=" in step_content or "<tool_call>" in step_content:
-                        for m in re.finditer(r"<function=([a-zA-Z0-9_]+)>(.*?)</function>", step_content, re.DOTALL):
-                            fn_name = m.group(1)
-                            body = m.group(2)
-                            params = {}
-                            for pm in re.finditer(r"<parameter=([a-zA-Z0-9_]+)>(.*?)</parameter>", body, re.DOTALL):
-                                params[pm.group(1).strip()] = pm.group(2).strip()
-                            tool_calls.append({"id": f"call_{len(tool_calls)}", "name": fn_name, "arguments": params})
+                    tool_calls = _extract_text_tool_calls(step_content)
 
                 if not tool_calls:
                     break
@@ -239,7 +283,6 @@ async def stream_ai_chat(
     # Save assistant response to database
     complete_text = "".join(full_response).strip()
     if complete_text:
-        # Sanitize any raw tool call tags before persisting
         persisted_text = _sanitize_history_content(complete_text) or complete_text
         assistant_record = AiChatMessage(
             session_id=session_id,
