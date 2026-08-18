@@ -247,6 +247,9 @@ document.addEventListener("DOMContentLoaded", function() {
   });
 </script>
 {% if is_plugin_active('ai_helper') %}
+<script src="/plugins/ai_helper/static/js/modules/chat_cache.js?v={{ APP_VERSION }}"></script>
+<script src="/plugins/ai_helper/static/js/modules/chat_markdown.js?v={{ APP_VERSION }}"></script>
+<script src="/plugins/ai_helper/static/js/modules/chat_history.js?v={{ APP_VERSION }}"></script>
 <script src="/plugins/ai_helper/static/js/ai-helper.js?v={{ APP_VERSION }}"></script>
 {% endif %}
 {% block scripts %}{% endblock %}

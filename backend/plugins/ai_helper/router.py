@@ -15,10 +15,12 @@ from database import get_db
 from plugins.ai_helper import service
 from plugins.ai_helper.schemas import (
     ChatRequest,
+    CreateSessionPayload,
     FetchModelsRequest,
     PermissionPolicyPayload,
     ProviderPayload,
     TestConnectionRequest,
+    UpdateSessionPayload,
 )
 from templating import templates
 
@@ -312,6 +314,8 @@ async def chat_endpoint(req: ChatRequest, db: AsyncSession = Depends(get_db)):
             context_text=req.context,
             provider_id=req.provider_id,
             model_name=req.model_name,
+            task_type=req.task_type or "general",
+            session_title=req.session_title,
         ):
             chunks.append(chunk)
         return JSONResponse({
@@ -331,6 +335,8 @@ async def chat_endpoint(req: ChatRequest, db: AsyncSession = Depends(get_db)):
             context_text=req.context,
             provider_id=req.provider_id,
             model_name=req.model_name,
+            task_type=req.task_type or "general",
+            session_title=req.session_title,
         ):
             yield f"data: {json.dumps({'type': 'token', 'token': chunk})}\n\n"
         yield "data: [DONE]\n\n"
@@ -346,13 +352,96 @@ async def chat_endpoint(req: ChatRequest, db: AsyncSession = Depends(get_db)):
     )
 
 
-@router.get("/api/sessions/{session_id}/messages")
-async def get_session_history(session_id: str, db: AsyncSession = Depends(get_db)):
-    messages = await service.get_session_messages(db, session_id)
-    return JSONResponse({"status": "ok", "session_id": session_id, "messages": messages})
+# -------------------------------------------------------------
+# Sessions & Task History Endpoints
+# -------------------------------------------------------------
+
+@router.get("/api/sessions")
+async def list_sessions_endpoint(
+    task_type: Optional[str] = None,
+    limit: int = 50,
+    db: AsyncSession = Depends(get_db),
+):
+    """Returns list of chat sessions, optionally filtered by task type."""
+    sessions = await service.list_sessions(db, task_type=task_type, limit=limit)
+    return JSONResponse({"status": "ok", "sessions": sessions})
+
+
+@router.post("/api/sessions")
+async def create_session_endpoint(
+    req: CreateSessionPayload,
+    db: AsyncSession = Depends(get_db),
+):
+    """Creates or initializes a new chat session."""
+    session_id = f"sess_{uuid.uuid4().hex[:12]}"
+    session = await service.get_or_create_session(
+        db=db,
+        session_id=session_id,
+        title=req.title or "New Chat",
+        task_type=req.task_type or "general",
+        context_key=req.context_key,
+        provider_id=req.provider_id,
+        model_name=req.model_name,
+    )
+    return JSONResponse({
+        "status": "ok",
+        "session": {
+            "id": session.id,
+            "session_id": session.session_id,
+            "title": session.title,
+            "task_type": session.task_type,
+            "context_key": session.context_key,
+            "model_name": session.model_name,
+            "provider_id": session.provider_id,
+            "message_count": session.message_count,
+            "created_at": session.created_at.isoformat() if session.created_at else None,
+            "updated_at": session.updated_at.isoformat() if session.updated_at else None,
+        }
+    })
+
+
+@router.get("/api/sessions/{session_id}")
+async def get_session_endpoint(session_id: str, db: AsyncSession = Depends(get_db)):
+    """Gets metadata for a specific session."""
+    session = await service.get_session(db, session_id)
+    if not session:
+        raise HTTPException(404, "Session not found.")
+    return JSONResponse({"status": "ok", "session": session})
+
+
+@router.patch("/api/sessions/{session_id}")
+async def update_session_endpoint(
+    session_id: str,
+    req: UpdateSessionPayload,
+    db: AsyncSession = Depends(get_db),
+):
+    """Updates session title or task type."""
+    data = req.model_dump(exclude_unset=True)
+    updated = await service.update_session(db, session_id, data)
+    if not updated:
+        raise HTTPException(404, "Session not found.")
+    return JSONResponse({"status": "ok", "session": updated})
 
 
 @router.delete("/api/sessions/{session_id}")
-async def clear_session_history(session_id: str, db: AsyncSession = Depends(get_db)):
-    await service.clear_session(db, session_id)
-    return JSONResponse({"status": "ok", "message": "Session history cleared."})
+async def delete_session_endpoint(session_id: str, db: AsyncSession = Depends(get_db)):
+    """Deletes a session and its message history."""
+    await service.delete_session(db, session_id)
+    return JSONResponse({"status": "ok", "message": "Session and messages deleted."})
+
+
+@router.delete("/api/sessions")
+async def clear_all_sessions_endpoint(
+    task_type: Optional[str] = None,
+    db: AsyncSession = Depends(get_db),
+):
+    """Clears all conversation history or history for a specific task."""
+    await service.clear_all_sessions(db, task_type=task_type)
+    return JSONResponse({"status": "ok", "message": "All session histories cleared."})
+
+
+@router.get("/api/sessions/{session_id}/messages")
+async def get_session_history(session_id: str, db: AsyncSession = Depends(get_db)):
+    """Retrieves all chat messages for a session."""
+    messages = await service.get_session_messages(db, session_id)
+    return JSONResponse({"status": "ok", "session_id": session_id, "messages": messages})

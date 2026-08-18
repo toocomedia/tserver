@@ -541,6 +541,144 @@ class AIHelperTests(unittest.IsolatedAsyncioTestCase):
             await db.delete(test_domain)
             await db.commit()
 
+    async def test_session_crud_and_task_types(self):
+        """Verify session creation, updating, retrieval, and deletion with task scopes."""
+        async with AsyncSessionLocal() as db:
+            import uuid
+            session_id = f"test_sess_{uuid.uuid4().hex[:8]}"
+            session = await service.get_or_create_session(
+                db=db,
+                session_id=session_id,
+                title="Node.js App Deployment",
+                task_type="app",
+                context_key="app:42",
+            )
+            self.assertIsNotNone(session.id)
+            self.assertEqual(session.session_id, session_id)
+            self.assertEqual(session.title, "Node.js App Deployment")
+            self.assertEqual(session.task_type, "app")
+            self.assertEqual(session.context_key, "app:42")
+
+            # Retrieve session
+            fetched = await service.get_session(db, session_id)
+            self.assertIsNotNone(fetched)
+            self.assertEqual(fetched["title"], "Node.js App Deployment")
+            self.assertEqual(fetched["task_type"], "app")
+
+            # Update session
+            updated = await service.update_session(db, session_id, {"title": "Node.js Production Setup", "task_type": "container"})
+            self.assertEqual(updated["title"], "Node.js Production Setup")
+            self.assertEqual(updated["task_type"], "container")
+
+            # Delete session
+            deleted = await service.delete_session(db, session_id)
+            self.assertTrue(deleted)
+            self.assertIsNone(await service.get_session(db, session_id))
+
+    def test_auto_title_generation(self):
+        """Verify auto-generation of clean session titles from prompts."""
+        title1 = service._generate_title_from_prompt("How do I configure Nginx reverse proxy on port 8080?")
+        self.assertEqual(title1, "Configure Nginx reverse proxy on port 8080?")
+
+        title2 = service._generate_title_from_prompt("Explain common reasons for 502 Bad Gateway errors.")
+        self.assertEqual(title2, "Common reasons for 502 Bad Gateway errors.")
+
+        title3 = service._generate_title_from_prompt("```bash\ndocker run -p 3000:3000\n```")
+        self.assertNotIn("```", title3)
+
+        title4 = service._generate_title_from_prompt("")
+        self.assertEqual(title4, "New Chat")
+
+    async def test_task_separation_in_chat(self):
+        """Verify that conversation history in Task A is isolated and does not leak into Task B."""
+        sse_lines = [
+            'data: {"choices":[{"delta":{"content":"Generic AI response"}}]}',
+            'data: [DONE]',
+        ]
+
+        class MockResponse:
+            status_code = 200
+            async def __aenter__(self):
+                return self
+            async def __aexit__(self, *args):
+                pass
+            async def aiter_lines(self):
+                for line in sse_lines:
+                    yield line
+
+        class MockClient:
+            async def __aenter__(self):
+                return self
+            async def __aexit__(self, *args):
+                pass
+            def stream(self, method, url, headers=None, json=None):
+                return MockResponse()
+
+        async with AsyncSessionLocal() as db:
+            import uuid
+            provider = await service.create_provider(db, {
+                "name": "Test Isolation Provider",
+                "provider_type": "openai_compatible",
+                "api_key": "sk-iso-test-key",
+                "base_url": "https://api.openai.com/v1",
+                "model_name": "gpt-4o-mini",
+                "is_default": True,
+                "is_enabled": True,
+            })
+
+            session_a = f"task_a_{uuid.uuid4().hex[:8]}"
+            session_b = f"task_b_{uuid.uuid4().hex[:8]}"
+
+            with patch("httpx.AsyncClient", return_value=MockClient()):
+                # Run chat in Task A
+                chunks_a = []
+                async for chunk in service.stream_ai_chat(
+                    db=db,
+                    session_id=session_a,
+                    user_message="Hello from Task A (Error Diagnostic)",
+                    task_type="error_diag",
+                    provider_id=provider.id,
+                ):
+                    chunks_a.append(chunk)
+
+                # Run chat in Task B
+                chunks_b = []
+                async for chunk in service.stream_ai_chat(
+                    db=db,
+                    session_id=session_b,
+                    user_message="Hello from Task B (Domain Config)",
+                    task_type="domain",
+                    provider_id=provider.id,
+                ):
+                    chunks_b.append(chunk)
+
+            # Check messages in Task A
+            msgs_a = await service.get_session_messages(db, session_a)
+            self.assertEqual(len(msgs_a), 2)
+            self.assertEqual(msgs_a[0]["content"], "Hello from Task A (Error Diagnostic)")
+
+            # Check messages in Task B
+            msgs_b = await service.get_session_messages(db, session_b)
+            self.assertEqual(len(msgs_b), 2)
+            self.assertEqual(msgs_b[0]["content"], "Hello from Task B (Domain Config)")
+
+            # Verify no cross-contamination
+            self.assertFalse(any("Task B" in m["content"] for m in msgs_a))
+            self.assertFalse(any("Task A" in m["content"] for m in msgs_b))
+
+            # Verify sessions listed with correct task types
+            sessions = await service.list_sessions(db)
+            sess_a_meta = next((s for s in sessions if s["session_id"] == session_a), None)
+            sess_b_meta = next((s for s in sessions if s["session_id"] == session_b), None)
+            self.assertIsNotNone(sess_a_meta)
+            self.assertIsNotNone(sess_b_meta)
+            self.assertEqual(sess_a_meta["task_type"], "error_diag")
+            self.assertEqual(sess_b_meta["task_type"], "domain")
+
+            # Clean up
+            await service.delete_session(db, session_a)
+            await service.delete_session(db, session_b)
+
 
 if __name__ == "__main__":
     unittest.main()

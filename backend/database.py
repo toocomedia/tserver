@@ -362,6 +362,27 @@ def _migrate_sync(sync_conn) -> None:
                 logger.info("Migrating ai_permission_policies: add %s", col)
                 sync_conn.execute(text(f"ALTER TABLE ai_permission_policies ADD COLUMN {col} {ddl}"))
 
+    # --- ai_chat_sessions: session & task history management ---
+    if "ai_chat_sessions" not in tables:
+        logger.info("Creating ai_chat_sessions table")
+        sync_conn.execute(text("""
+            CREATE TABLE ai_chat_sessions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                session_id VARCHAR(64) NOT NULL UNIQUE,
+                title VARCHAR(255) DEFAULT 'New Chat' NOT NULL,
+                task_type VARCHAR(64) DEFAULT 'general' NOT NULL,
+                context_key VARCHAR(128),
+                model_name VARCHAR(128),
+                provider_id INTEGER,
+                message_count INTEGER DEFAULT 0 NOT NULL,
+                is_archived BOOLEAN DEFAULT 0 NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL
+            )
+        """))
+        sync_conn.execute(text("CREATE INDEX ix_ai_chat_sessions_session_id ON ai_chat_sessions (session_id)"))
+        sync_conn.execute(text("CREATE INDEX ix_ai_chat_sessions_task_type ON ai_chat_sessions (task_type)"))
+
 
 async def init_db():
     """Create all tables on startup if they do not exist, then migrate."""

@@ -40,11 +40,27 @@ class FetchModelsRequest(BaseModel):
 class ChatRequest(BaseModel):
     message: str = Field(..., min_length=1)
     session_id: Optional[str] = None
+    task_type: Optional[str] = "general"
+    session_title: Optional[str] = None
     provider_id: Optional[int] = None
     model_name: Optional[str] = None
     context_key: Optional[str] = None
     context: Optional[str] = None
     stream: bool = True
+
+
+class CreateSessionPayload(BaseModel):
+    title: Optional[str] = "New Chat"
+    task_type: Optional[str] = "general"
+    context_key: Optional[str] = None
+    provider_id: Optional[int] = None
+    model_name: Optional[str] = None
+
+
+class UpdateSessionPayload(BaseModel):
+    title: Optional[str] = None
+    task_type: Optional[str] = None
+    is_archived: Optional[bool] = None
 
 
 class ProviderSummary(BaseModel):

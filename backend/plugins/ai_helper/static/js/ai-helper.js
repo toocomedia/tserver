@@ -1,41 +1,56 @@
 /**
  * ai-helper.js — Universal Vanilla JS Client SDK for SRV / Barq AI Assistant.
- * Clean, modern layout, bottom model selector with multi-model support,
- * large auto-expanding input, live SSE streaming, and Markdown renderer.
+ * Multi-session conversation history, task separation, instant local caching,
+ * dynamic model switcher, live SSE streaming, and rich Markdown formatting.
  */
 (function () {
   "use strict";
 
+  var TASK_META = {
+    general: { label: "General", icon: "✨", color: "#6366f1" },
+    error_diag: { label: "Error Diagnostic", icon: "⚠️", color: "#ef4444" },
+    domain: { label: "Domains & SSL", icon: "🌐", color: "#f59e0b" },
+    app: { label: "Apps & Docker", icon: "📦", color: "#06b6d4" },
+    container: { label: "Apps & Docker", icon: "📦", color: "#06b6d4" },
+    database: { label: "Database", icon: "🗄️", color: "#8b5cf6" },
+    file_manager: { label: "Files & Code", icon: "📁", color: "#10b981" },
+    system: { label: "System & VPS", icon: "⚙️", color: "#64748b" },
+  };
+
   var AiHelper = {
+    TASK_META: TASK_META,
     sessionId: null,
+    sessionTitle: "New Chat",
+    activeTaskType: "general",
     activeContext: null,
     selectedProviderId: null,
     selectedModelName: null,
     isStreaming: false,
     abortController: null,
+
+    // DOM Elements
     drawerEl: null,
     backdropEl: null,
     messagesEl: null,
     inputEl: null,
     sendBtnEl: null,
     stopBtnEl: null,
-    modelPickerEl: null,
     contextBarEl: null,
     contextTextEl: null,
     statusEl: null,
+    taskBadgeEl: null,
 
     init: function () {
-      if (document.getElementById("ai-helper-drawer")) {
-        return; // Already initialized
-      }
+      if (document.getElementById("ai-helper-drawer")) return;
 
-      this.sessionId = localStorage.getItem("ai_helper_session_id");
+      var cache = window.AiHelperCache;
+      this.sessionId = cache ? cache.getActiveSessionId() : null;
       if (!this.sessionId) {
         this.sessionId = "sess_" + Math.random().toString(36).substring(2, 12);
-        localStorage.setItem("ai_helper_session_id", this.sessionId);
+        if (cache) cache.setActiveSessionId(this.sessionId);
       }
 
-      var savedSelection = localStorage.getItem("ai_helper_selected_target") || null;
+      var savedSelection = cache ? cache.getSelectedTarget() : null;
       if (savedSelection && savedSelection.indexOf(":") !== -1) {
         var parts = savedSelection.split(":");
         this.selectedProviderId = parts[0];
@@ -45,9 +60,12 @@
       this._injectDOM();
       this._bindGlobalTriggers();
       this._loadProviders();
+      this._renderActiveSessionHistory();
     },
 
     _injectDOM: function () {
+      var self = this;
+
       // 1. Floating Launcher Button
       var floatBtn = document.createElement("button");
       floatBtn.id = "ai-helper-floating-btn";
@@ -56,18 +74,14 @@
       floatBtn.setAttribute("aria-label", "Open AI Assistant");
       floatBtn.innerHTML =
         '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>';
-      floatBtn.addEventListener("click", function () {
-        AiHelper.toggle();
-      });
+      floatBtn.addEventListener("click", function () { self.toggle(); });
       document.body.appendChild(floatBtn);
 
       // 2. Backdrop
       var backdrop = document.createElement("div");
       backdrop.id = "ai-helper-backdrop";
       backdrop.className = "ai-helper-backdrop";
-      backdrop.addEventListener("click", function () {
-        AiHelper.close();
-      });
+      backdrop.addEventListener("click", function () { self.close(); });
       document.body.appendChild(backdrop);
       this.backdropEl = backdrop;
 
@@ -78,77 +92,43 @@
       drawer.innerHTML = [
         '<div class="ai-helper-header">',
         '  <div class="ai-helper-header-info">',
-        '    <span class="ai-helper-header-icon">',
-        '      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>',
-        "    </span>",
+        '    <span class="ai-helper-header-icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg></span>',
         '    <h3 class="ai-helper-title">AI Assistant</h3>',
+        '    <span class="ai-helper-task-badge" id="ai-helper-task-badge" title="Active Task Scope">General</span>',
         "  </div>",
         '  <div class="ai-helper-header-actions">',
-        '    <button type="button" class="ai-helper-btn-icon" id="ai-helper-clear-btn" title="Clear Chat History">',
-        '      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>',
-        "    </button>",
-        '    <button type="button" class="ai-helper-btn-icon" id="ai-helper-close-btn" title="Close">',
-        '      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>',
-        "    </button>",
+        '    <button type="button" class="ai-helper-btn-icon" id="ai-helper-new-chat-btn" title="Start New Conversation / Task (+)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>',
+        '    <button type="button" class="ai-helper-btn-icon" id="ai-helper-history-toggle-btn" title="Chat History & Tasks"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg></button>',
+        '    <button type="button" class="ai-helper-btn-icon" id="ai-helper-close-btn" title="Close"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>',
         "  </div>",
         "</div>",
-        '<div class="ai-helper-context-bar" id="ai-helper-context-bar" style="display: none;">',
-        '  <span class="ai-helper-context-text" id="ai-helper-context-text"></span>',
-        '  <button type="button" class="ai-helper-btn-icon" style="width:20px;height:20px;" id="ai-helper-clear-context" title="Clear context">✕</button>',
-        "</div>",
-        '<div class="ai-helper-messages" id="ai-helper-messages">',
-        '  <div class="ai-empty-state" id="ai-empty-state">',
-        '    <div class="ai-empty-icon">',
-        '      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>',
-        "    </div>",
-        "    <h4>How can I help?</h4>",
-        "    <p>Ask anything about setting up apps, writing Dockerfiles, configuring Nginx, or troubleshooting errors.</p>",
-        '    <div class="ai-suggested-prompts">',
-        '      <button type="button" class="ai-suggested-item" data-ai-suggest="How do I deploy a Node.js application on this panel?">Deploy a Node.js application</button>',
-        '      <button type="button" class="ai-suggested-item" data-ai-suggest="What environment variables do I need for PostgreSQL connection?">PostgreSQL connection variables</button>',
-        '      <button type="button" class="ai-suggested-item" data-ai-suggest="Explain common reasons for 502 Bad Gateway errors.">Fix 502 Bad Gateway error</button>',
-        "    </div>",
+        '<div class="ai-helper-history-panel" id="ai-helper-history-panel">',
+        '  <div class="ai-helper-history-header">',
+        '    <div class="ai-helper-history-title-row"><span class="ai-helper-history-title">Conversations & Tasks</span><button type="button" class="btn btn--secondary btn--sm" id="ai-helper-history-back-btn" style="height: 24px; padding: 0 8px; font-size: 11px;">← Back to Chat</button></div>',
+        '    <div class="ai-helper-history-search-box"><input type="text" id="ai-helper-history-search" class="ai-helper-history-search-input" placeholder="Search conversations..."></div>',
+        '    <div class="ai-helper-task-chips" id="ai-helper-task-chips"><button type="button" class="ai-task-chip active" data-task-filter="all">All</button><button type="button" class="ai-task-chip" data-task-filter="general">General</button><button type="button" class="ai-task-chip" data-task-filter="error_diag">Errors</button><button type="button" class="ai-task-chip" data-task-filter="app">Apps</button><button type="button" class="ai-task-chip" data-task-filter="domain">Domains</button><button type="button" class="ai-task-chip" data-task-filter="database">Databases</button></div>',
         "  </div>",
+        '  <div class="ai-helper-history-list" id="ai-helper-history-list"><div class="ai-history-loading">Loading conversations...</div></div>',
+        '  <div class="ai-helper-history-footer"><button type="button" class="ai-helper-history-clear-all" id="ai-helper-clear-all-btn">Clear All History</button></div>',
+        "</div>",
+        '<div class="ai-helper-chat-body" id="ai-helper-chat-body">',
+        '  <div class="ai-helper-context-bar" id="ai-helper-context-bar" style="display: none;"><span class="ai-helper-context-text" id="ai-helper-context-text"></span><button type="button" class="ai-helper-btn-icon" style="width:20px;height:20px;" id="ai-helper-clear-context" title="Clear context">✕</button></div>',
+        '  <div class="ai-helper-messages" id="ai-helper-messages"></div>',
         "</div>",
         '<div class="ai-helper-model-modal" id="ai-helper-model-modal">',
         '  <div class="ai-helper-model-modal-backdrop" id="ai-helper-model-modal-backdrop"></div>',
-        '  <div class="ai-helper-model-modal-content">',
-        '    <button type="button" class="ai-helper-model-arrow-btn" id="ai-helper-model-arrow-up" title="Previous model">',
-        '      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"></polyline></svg>',
-        '    </button>',
-        '    <div class="ai-helper-model-viewport" id="ai-helper-model-viewport">',
-        '      <div class="ai-helper-model-list" id="ai-helper-model-list">',
-        '      </div>',
-        '    </div>',
-        '    <button type="button" class="ai-helper-model-arrow-btn" id="ai-helper-model-arrow-down" title="Next model">',
-        '      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>',
-        '    </button>',
-        '  </div>',
-        '</div>',
-        '<div class="ai-helper-footer">',
+        '  <div class="ai-helper-model-modal-content"><button type="button" class="ai-helper-model-arrow-btn" id="ai-helper-model-arrow-up" title="Previous model"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"></polyline></svg></button><div class="ai-helper-model-viewport" id="ai-helper-model-viewport"><div class="ai-helper-model-list" id="ai-helper-model-list"></div></div><button type="button" class="ai-helper-model-arrow-btn" id="ai-helper-model-arrow-down" title="Next model"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg></button></div>',
+        "</div>",
+        '<div class="ai-helper-footer" id="ai-helper-footer">',
         '  <form class="ai-helper-input-box" id="ai-helper-form">',
-        '    <textarea class="ai-helper-textarea" id="ai-helper-input" rows="2" placeholder="Ask a question or paste error logs..."></textarea>',
+        '    <textarea class="ai-helper-textarea" id="ai-helper-input" rows="2" placeholder="Ask a question, run task, or paste error logs..."></textarea>',
         '    <div class="ai-helper-toolbar">',
-        '      <div class="ai-helper-toolbar-left">',
-        '        <button type="button" class="ai-helper-model-trigger" id="ai-helper-model-trigger" title="Switch AI Model">',
-        '          <span class="ai-helper-model-trigger-name" id="ai-helper-model-trigger-text">Select Model</span>',
-        '          <span class="ai-helper-model-trigger-chevron">▾</span>',
-        '        </button>',
-        '        <span class="ai-helper-status-pill" id="ai-helper-status-model">Ready</span>',
-        '      </div>',
-        '      <div class="ai-helper-toolbar-right">',
-        '        <button type="button" class="btn btn--danger btn--sm" id="ai-helper-stop-btn" style="display: none; height: 26px; padding: 0 8px; font-size: 11px; min-width: auto;" title="Stop generation">',
-        '          <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg> Stop',
-        '        </button>',
-        '        <button type="submit" class="btn btn--primary btn--sm" id="ai-helper-send-btn" style="width: 26px; height: 26px; padding: 0; min-width: 26px;" title="Send message (Enter)">',
-        '          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>',
-        '        </button>',
-        '      </div>',
-        '    </div>',
-        '  </form>',
-        '</div>',
+        '      <div class="ai-helper-toolbar-left"><button type="button" class="ai-helper-model-trigger" id="ai-helper-model-trigger" title="Switch AI Model"><span class="ai-helper-model-trigger-name" id="ai-helper-model-trigger-text">Select Model</span><span class="ai-helper-model-trigger-chevron">▾</span></button><span class="ai-helper-status-pill" id="ai-helper-status-model">Ready</span></div>',
+        '      <div class="ai-helper-toolbar-right"><button type="button" class="btn btn--danger btn--sm" id="ai-helper-stop-btn" style="display: none; height: 26px; padding: 0 8px; font-size: 11px; min-width: auto;" title="Stop generation"><svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg> Stop</button><button type="submit" class="btn btn--primary btn--sm" id="ai-helper-send-btn" style="width: 26px; height: 26px; padding: 0; min-width: 26px;" title="Send message (Enter)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg></button></div>',
+        "    </div>",
+        "  </form>",
+        "</div>",
       ].join("\n");
-
       document.body.appendChild(drawer);
 
       this.drawerEl = drawer;
@@ -159,343 +139,333 @@
       this.contextBarEl = document.getElementById("ai-helper-context-bar");
       this.contextTextEl = document.getElementById("ai-helper-context-text");
       this.statusEl = document.getElementById("ai-helper-status-model");
+      this.taskBadgeEl = document.getElementById("ai-helper-task-badge");
 
-      this.modelModalEl = document.getElementById("ai-helper-model-modal");
-      this.modelModalBackdrop = document.getElementById("ai-helper-model-modal-backdrop");
-      this.modelModalClose = document.getElementById("ai-helper-model-modal-close");
-      this.modelViewportEl = document.getElementById("ai-helper-model-viewport");
-      this.modelListEl = document.getElementById("ai-helper-model-list");
-      this.modelArrowUp = document.getElementById("ai-helper-model-arrow-up");
-      this.modelArrowDown = document.getElementById("ai-helper-model-arrow-down");
-      this.modelTriggerBtn = document.getElementById("ai-helper-model-trigger");
-      this.modelTriggerText = document.getElementById("ai-helper-model-trigger-text");
+      // Initialize History Module
+      if (window.AiHelperHistory) {
+        window.AiHelperHistory.init(
+          document.getElementById("ai-helper-history-panel"),
+          document.getElementById("ai-helper-history-list"),
+          document.getElementById("ai-helper-history-search"),
+          function (sessId) { self.switchSession(sessId); },
+          function (sessId) { self.deleteSession(sessId); },
+          function () { self.clearAllHistory(); }
+        );
+      }
 
-      // Auto-grow textarea
+      this._wireEvents();
+    },
+
+    _wireEvents: function () {
+      var self = this;
       this.inputEl.addEventListener("input", function () {
         this.style.height = "auto";
         this.style.height = Math.min(this.scrollHeight, 150) + "px";
       });
 
-      // Wire drawer internal events
-      document.getElementById("ai-helper-close-btn").addEventListener("click", function () {
-        AiHelper.close();
-      });
-
-      document.getElementById("ai-helper-clear-btn").addEventListener("click", function () {
-        AiHelper.clearSession();
-      });
-
-      document.getElementById("ai-helper-clear-context").addEventListener("click", function () {
-        AiHelper.setContext(null);
-      });
-
-      var self = this;
-      if (this.modelTriggerBtn) {
-        this.modelTriggerBtn.addEventListener("click", function (e) {
-          e.preventDefault();
-          self.openModelModal();
-        });
-      }
-
-      if (this.modelModalBackdrop) {
-        this.modelModalBackdrop.addEventListener("click", function () {
-          self.closeModelModal();
-        });
-      }
-
-      if (this.modelModalClose) {
-        this.modelModalClose.addEventListener("click", function () {
-          self.closeModelModal();
-        });
-      }
-
-      if (this.modelArrowUp) {
-        this.modelArrowUp.addEventListener("click", function (e) {
-          e.stopPropagation();
-          if (self.modelViewportEl) {
-            self.modelViewportEl.scrollBy({ top: -52, behavior: "smooth" });
-          }
-        });
-      }
-
-      if (this.modelArrowDown) {
-        this.modelArrowDown.addEventListener("click", function (e) {
-          e.stopPropagation();
-          if (self.modelViewportEl) {
-            self.modelViewportEl.scrollBy({ top: 52, behavior: "smooth" });
-          }
-        });
-      }
+      document.getElementById("ai-helper-close-btn").addEventListener("click", function () { self.close(); });
+      document.getElementById("ai-helper-new-chat-btn").addEventListener("click", function () { self.startNewChat({ taskType: "general" }); });
+      document.getElementById("ai-helper-history-toggle-btn").addEventListener("click", function () { self.toggleHistoryView(); });
+      document.getElementById("ai-helper-history-back-btn").addEventListener("click", function () { self.closeHistoryView(); });
+      document.getElementById("ai-helper-clear-all-btn").addEventListener("click", function () { self.clearAllHistory(); });
+      document.getElementById("ai-helper-clear-context").addEventListener("click", function () { self.setContext(null); });
 
       document.getElementById("ai-helper-form").addEventListener("submit", function (e) {
         e.preventDefault();
-        var msg = AiHelper.inputEl.value.trim();
-        if (msg && !AiHelper.isStreaming) {
-          AiHelper.send(msg);
-        }
+        var msg = self.inputEl.value.trim();
+        if (msg && !self.isStreaming) self.send(msg);
       });
-
-      this.stopBtnEl.addEventListener("click", function () {
-        AiHelper.stop();
-      });
-
+      this.stopBtnEl.addEventListener("click", function () { self.stop(); });
       this.inputEl.addEventListener("keydown", function (e) {
         if (e.key === "Enter" && !e.shiftKey) {
           e.preventDefault();
-          var msg = AiHelper.inputEl.value.trim();
-          if (msg && !AiHelper.isStreaming) {
-            AiHelper.send(msg);
-          }
+          var msg = self.inputEl.value.trim();
+          if (msg && !self.isStreaming) self.send(msg);
         }
       });
 
-      // Delegate suggested prompts
       this.messagesEl.addEventListener("click", function (e) {
-        var suggestBtn = e.target.closest("[data-ai-suggest]");
-        if (suggestBtn) {
-          var prompt = suggestBtn.getAttribute("data-ai-suggest");
-          AiHelper.send(prompt);
-        }
-      });
-
-      // Delegate copy buttons and action badges
-      this.drawerEl.addEventListener("click", function (e) {
-        var copyCodeBtn = e.target.closest(".ai-code-copy-btn");
-        if (copyCodeBtn) {
-          var pre = copyCodeBtn.parentElement.querySelector("pre");
-          if (pre) {
-            navigator.clipboard.writeText(pre.innerText).then(function () {
-              var orig = copyCodeBtn.innerText;
-              copyCodeBtn.innerText = "Copied";
-              setTimeout(function () {
-                copyCodeBtn.innerText = orig;
-              }, 2000);
-            });
-          }
-          return;
-        }
-
-        var actionTag = e.target.closest(".ai-action-tag");
-        if (actionTag) {
-          var copyVal = actionTag.getAttribute("data-copy");
-          if (copyVal) {
-            navigator.clipboard.writeText(copyVal).then(function () {
-              var prevBg = actionTag.style.background;
-              actionTag.style.background = "rgba(16, 185, 129, 0.35)";
-              setTimeout(function () {
-                actionTag.style.background = prevBg;
-              }, 1500);
-            });
-          }
-        }
+        var suggest = e.target.closest("[data-ai-suggest]");
+        if (suggest) self.send(suggest.getAttribute("data-ai-suggest"));
       });
     },
 
-    openModelModal: function () {
-      if (!this.modelModalEl) return;
-      this.modelModalEl.classList.add("open");
-      this._scrollToActiveModel();
+    _updateTaskBadge: function () {
+      if (!this.taskBadgeEl) return;
+      var meta = TASK_META[this.activeTaskType] || TASK_META.general;
+      this.taskBadgeEl.textContent = meta.label;
+      this.taskBadgeEl.style.borderColor = meta.color;
+      this.taskBadgeEl.style.color = meta.color;
+      this.taskBadgeEl.style.background = meta.color + "18";
     },
 
-    closeModelModal: function () {
-      if (!this.modelModalEl) return;
-      this.modelModalEl.classList.remove("open");
-    },
-
-    _scrollToActiveModel: function () {
-      if (!this.modelListEl || !this.modelViewportEl) return;
-      var active = this.modelListEl.querySelector(".ai-helper-model-text-item--active");
-      if (active) {
-        var topPos = active.offsetTop - this.modelViewportEl.offsetTop;
-        this.modelViewportEl.scrollTo({ top: topPos - 38, behavior: "smooth" });
+    setTaskType: function (t) { this.activeTaskType = t || "general"; this._updateTaskBadge(); },
+    setContext: function (ctx) {
+      this.activeContext = ctx;
+      if (this.contextBarEl && this.contextTextEl) {
+        this.contextTextEl.textContent = ctx ? "Context: " + ctx.slice(0, 80) : "";
+        this.contextBarEl.style.display = ctx ? "flex" : "none";
       }
     },
 
-    selectModel: function (providerId, modelName, providerName) {
-      this.selectedProviderId = providerId;
-      this.selectedModelName = modelName;
-      var fullVal = providerId + ":" + modelName;
-      localStorage.setItem("ai_helper_selected_target", fullVal);
-
-      if (this.modelTriggerText) {
-        this.modelTriggerText.textContent = modelName;
-        this.modelTriggerText.title = providerName ? (providerName + " · " + modelName) : modelName;
+    _renderActiveSessionHistory: function () {
+      var cache = window.AiHelperCache;
+      var messages = cache ? cache.getCachedMessages(this.sessionId) : [];
+      this.messagesEl.innerHTML = "";
+      if (messages && messages.length > 0) {
+        for (var i = 0; i < messages.length; i++) {
+          this._appendMessageToDOM(messages[i].role, messages[i].content, messages[i].created_at);
+        }
+        this._scrollToBottom();
+      } else {
+        this._renderEmptyState();
       }
-
-      if (this.modelListEl) {
-        var items = this.modelListEl.querySelectorAll(".ai-helper-model-text-item");
-        items.forEach(function (el) {
-          if (el.getAttribute("data-val") === fullVal) {
-            el.classList.add("ai-helper-model-text-item--active");
-          } else {
-            el.classList.remove("ai-helper-model-text-item--active");
-          }
-        });
-      }
-
-      this.closeModelModal();
+      this._syncSessionMessagesFromServer(this.sessionId);
     },
 
-    _loadProviders: function () {
+    _renderEmptyState: function () {
+      var meta = TASK_META[this.activeTaskType] || TASK_META.general;
+      var title = this.activeTaskType === "general" ? "How can I help?" : "How can I help with " + meta.label + "?";
+      this.messagesEl.innerHTML = [
+        '<div class="ai-empty-state" id="ai-empty-state">',
+        '  <div class="ai-empty-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg></div>',
+        "  <h4>" + title + "</h4>",
+        "  <p>Ask anything about setting up apps, writing Dockerfiles, configuring Nginx, or troubleshooting errors.</p>",
+        '  <div class="ai-suggested-prompts">',
+        '    <button type="button" class="ai-suggested-item" data-ai-suggest="How do I deploy a Node.js application on this panel?">Deploy a Node.js application</button>',
+        '    <button type="button" class="ai-suggested-item" data-ai-suggest="What environment variables do I need for PostgreSQL connection?">PostgreSQL connection variables</button>',
+        '    <button type="button" class="ai-suggested-item" data-ai-suggest="Explain common reasons for 502 Bad Gateway errors.">Fix 502 Bad Gateway error</button>',
+        "  </div>",
+        "</div>",
+      ].join("\n");
+    },
+
+    _syncSessionMessagesFromServer: function (sessionId) {
       var self = this;
-      fetch("/plugins/ai_helper/api/providers")
-        .then(function (res) { return res.json(); })
+      fetch("/plugins/ai_helper/api/sessions/" + sessionId + "/messages")
+        .then(function (res) { return res.ok ? res.json() : null; })
         .then(function (data) {
-          if (data.status === "ok" && data.providers && data.providers.length > 0) {
-            if (!self.modelListEl) return;
-            self.modelListEl.innerHTML = "";
-            var found = false;
-            var targetVal = (self.selectedProviderId && self.selectedModelName)
-              ? self.selectedProviderId + ":" + self.selectedModelName
-              : null;
-
-            var allItems = [];
-            data.providers.forEach(function (p) {
-              var models = (p.models && p.models.length > 0) ? p.models : [p.model_name];
-              models.forEach(function (m) {
-                allItems.push({
-                  providerId: p.id,
-                  providerName: p.name,
-                  modelName: m,
-                  isDefault: p.is_default && m === p.model_name,
-                });
-              });
-            });
-
-            allItems.forEach(function (item) {
-              var fullVal = item.providerId + ":" + item.modelName;
-              var isSelected = false;
-
-              if (targetVal && targetVal === fullVal) {
-                isSelected = true;
-                found = true;
-              } else if (!targetVal && item.isDefault) {
-                isSelected = true;
-                found = true;
-                self.selectedProviderId = item.providerId;
-                self.selectedModelName = item.modelName;
-              }
-
-              var itemEl = document.createElement("div");
-              itemEl.className = "ai-helper-model-text-item" + (isSelected ? " ai-helper-model-text-item--active" : "");
-              itemEl.setAttribute("data-val", fullVal);
-              itemEl.setAttribute("data-provider-id", item.providerId);
-              itemEl.setAttribute("data-model-name", item.modelName);
-              itemEl.setAttribute("data-provider-name", item.providerName);
-
-              itemEl.innerHTML = '<span class="ai-helper-model-title font-mono">' + item.modelName + '</span>';
-
-              itemEl.addEventListener("click", function () {
-                self.selectModel(item.providerId, item.modelName, item.providerName);
-              });
-
-              self.modelListEl.appendChild(itemEl);
-            });
-
-            if (!found && allItems.length > 0) {
-              var first = allItems[0];
-              self.selectModel(first.providerId, first.modelName, first.providerName);
-            } else if (found) {
-              var activeItem = allItems.find(function (it) {
-                return (it.providerId == self.selectedProviderId && it.modelName == self.selectedModelName);
-              });
-              if (activeItem && self.modelTriggerText) {
-                self.modelTriggerText.textContent = activeItem.modelName;
-                self.modelTriggerText.title = activeItem.providerName + " · " + activeItem.modelName;
-              }
+          if (data && data.status === "ok" && Array.isArray(data.messages) && data.session_id === self.sessionId) {
+            var cache = window.AiHelperCache;
+            if (cache) cache.setSession(sessionId, { title: self.sessionTitle, task_type: self.activeTaskType }, data.messages);
+            self.messagesEl.innerHTML = "";
+            if (data.messages.length > 0) {
+              data.messages.forEach(function (m) { self._appendMessageToDOM(m.role, m.content, m.created_at); });
+              self._scrollToBottom();
+            } else {
+              self._renderEmptyState();
             }
           }
-        })
-        .catch(function () {});
+        }).catch(function () {});
+    },
+
+    startNewChat: function (opts) {
+      opts = opts || {};
+      this.sessionId = "sess_" + Math.random().toString(36).substring(2, 12);
+      this.sessionTitle = opts.title || "New Chat";
+      this.activeTaskType = opts.taskType || "general";
+      this.setContext(opts.context || null);
+
+      var cache = window.AiHelperCache;
+      if (cache) cache.setActiveSessionId(this.sessionId);
+
+      this._updateTaskBadge();
+      this.closeHistoryView();
+      this.messagesEl.innerHTML = "";
+      this._renderEmptyState();
+      this.inputEl.value = "";
+      this.inputEl.focus();
+      if (opts.initialPrompt) this.send(opts.initialPrompt);
+    },
+
+    switchSession: function (sessId) {
+      if (!sessId) return;
+      this.sessionId = sessId;
+      var cache = window.AiHelperCache;
+      if (cache) cache.setActiveSessionId(sessId);
+      this.closeHistoryView();
+      this._renderActiveSessionHistory();
+      this.inputEl.focus();
+    },
+
+    deleteSession: function (sessId) {
+      if (!confirm("Delete this conversation?")) return;
+      var cache = window.AiHelperCache;
+      if (cache) cache.removeSession(sessId);
+      fetch("/plugins/ai_helper/api/sessions/" + sessId, { method: "DELETE" }).catch(function () {});
+      if (this.sessionId === sessId) this.startNewChat({ taskType: "general" });
+      else if (window.AiHelperHistory) window.AiHelperHistory.render();
+    },
+
+    clearAllHistory: function () {
+      if (!confirm("Clear ALL conversation histories? This cannot be undone.")) return;
+      var cache = window.AiHelperCache;
+      if (cache) cache.clearAll();
+      fetch("/plugins/ai_helper/api/sessions", { method: "DELETE" }).catch(function () {});
+      this.startNewChat({ taskType: "general" });
+    },
+
+    toggleHistoryView: function () {
+      if (window.AiHelperHistory && window.AiHelperHistory.isOpen()) this.closeHistoryView();
+      else this.openHistoryView();
+    },
+    openHistoryView: function () { if (window.AiHelperHistory) window.AiHelperHistory.open(); },
+    closeHistoryView: function () { if (window.AiHelperHistory) window.AiHelperHistory.close(); },
+
+    send: function (msg) {
+      if (!msg || this.isStreaming) return;
+      var empty = document.getElementById("ai-empty-state");
+      if (empty) empty.remove();
+
+      this._appendMessageToDOM("user", msg);
+      var cache = window.AiHelperCache;
+      if (cache) cache.appendMessage(this.sessionId, { role: "user", content: msg, created_at: new Date().toISOString() }, { title: this.sessionTitle, taskType: this.activeTaskType, context: this.activeContext });
+
+      this.inputEl.value = "";
+      this.inputEl.style.height = "auto";
+
+      var assistantBubble = this._appendMessageToDOM("assistant", "");
+      var bubbleContent = assistantBubble.querySelector(".ai-msg-bubble");
+      bubbleContent.innerHTML = '<span class="ai-cursor"></span>';
+
+      this.isStreaming = true;
+      this.sendBtnEl.style.display = "none";
+      this.stopBtnEl.style.display = "inline-flex";
+      if (this.statusEl) this.statusEl.textContent = "Thinking...";
+
+      var fullText = "";
+      var startTime = Date.now();
+      var self = this;
+      this.abortController = new AbortController();
+
+      fetch("/plugins/ai_helper/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-CSRF-Token": document.querySelector("meta[name='csrf-token']")?.getAttribute("content") || "" },
+        body: JSON.stringify({ message: msg, session_id: this.sessionId, task_type: this.activeTaskType, session_title: this.sessionTitle, context_key: this.activeContext, context: this.activeContext, provider_id: this.selectedProviderId ? parseInt(this.selectedProviderId, 10) : undefined, model_name: this.selectedModelName || undefined, stream: true }),
+        signal: this.abortController.signal,
+      }).then(function (res) {
+        if (!res.ok) throw new Error("HTTP error " + res.status);
+        var reader = res.body.getReader();
+        var decoder = new TextDecoder("utf-8");
+        var buffer = "";
+        function read() {
+          return reader.read().then(function (result) {
+            if (result.done) return self._finishStreaming(bubbleContent, fullText, startTime);
+            buffer += decoder.decode(result.value, { stream: true });
+            var lines = buffer.split("\n");
+            buffer = lines.pop();
+            for (var i = 0; i < lines.length; i++) {
+              var line = lines[i].trim();
+              if (!line || !line.startsWith("data:")) continue;
+              var d = line.substring(5).trim();
+              if (d === "[DONE]") return self._finishStreaming(bubbleContent, fullText, startTime);
+              try {
+                var p = JSON.parse(d);
+                if (p.type === "token" && p.token) {
+                  fullText += p.token;
+                  bubbleContent.innerHTML = self.renderMarkdown(fullText) + '<span class="ai-cursor"></span>';
+                  self._scrollToBottom();
+                }
+              } catch (e) {}
+            }
+            return read();
+          });
+        }
+        return read();
+      }).catch(function (err) {
+        if (err.name === "AbortError") return;
+        self.isStreaming = false;
+        self.sendBtnEl.style.display = "flex";
+        self.stopBtnEl.style.display = "none";
+        bubbleContent.innerHTML = '<p style="color: var(--color-danger, #ef4444); margin: 0;">Error: ' + err.message + "</p>";
+        if (self.statusEl) self.statusEl.textContent = "Error";
+      });
+    },
+
+    _finishStreaming: function (bubble, text, start) {
+      this.isStreaming = false;
+      this.sendBtnEl.style.display = "flex";
+      this.stopBtnEl.style.display = "none";
+      bubble.innerHTML = this.renderMarkdown(text);
+      if (this.statusEl) this.statusEl.textContent = (Date.now() - start) + "ms";
+      if (text.trim() && window.AiHelperCache) {
+        window.AiHelperCache.appendMessage(this.sessionId, { role: "assistant", content: text, created_at: new Date().toISOString() }, { title: this.sessionTitle, taskType: this.activeTaskType, context: this.activeContext });
+      }
+    },
+
+    _appendMessageToDOM: function (role, content, timeIso) {
+      var wrap = document.createElement("div");
+      wrap.className = "ai-msg ai-msg--" + role;
+      var bubble = document.createElement("div");
+      bubble.className = "ai-msg-bubble";
+      bubble.innerHTML = this.renderMarkdown(content);
+      wrap.appendChild(bubble);
+      var time = document.createElement("span");
+      time.className = "ai-msg-time";
+      var d = timeIso ? new Date(timeIso) : new Date();
+      time.textContent = d.getHours() + ":" + (d.getMinutes() < 10 ? "0" : "") + d.getMinutes();
+      wrap.appendChild(time);
+      this.messagesEl.appendChild(wrap);
+      this._scrollToBottom();
+      return wrap;
+    },
+
+    _scrollToBottom: function () {
+      if (this.messagesEl) this.messagesEl.scrollTop = this.messagesEl.scrollHeight;
+    },
+
+    renderMarkdown: function (text) {
+      return window.AiHelperMarkdown ? window.AiHelperMarkdown.render(text) : (text || "");
     },
 
     _bindGlobalTriggers: function () {
+      var self = this;
       document.addEventListener("click", function (e) {
-        var promptTrigger = e.target.closest("[data-ai-prompt]");
-        if (promptTrigger) {
+        var p = e.target.closest("[data-ai-prompt]");
+        if (p) {
           e.preventDefault();
-          var prompt = promptTrigger.getAttribute("data-ai-prompt");
-          var ctx = promptTrigger.getAttribute("data-ai-context") || null;
-          AiHelper.open({ context: ctx, initialPrompt: prompt });
+          self.open({ context: p.getAttribute("data-ai-context"), initialPrompt: p.getAttribute("data-ai-prompt"), taskType: p.getAttribute("data-ai-task") || "general" });
           return;
         }
-
-        var errorTrigger = e.target.closest("[data-ai-explain-error]");
-        if (errorTrigger) {
+        var err = e.target.closest("[data-ai-explain-error]");
+        if (err) {
           e.preventDefault();
-          var targetSelector = errorTrigger.getAttribute("data-ai-explain-error");
-          var targetEl = document.querySelector(targetSelector);
-          var errorText = targetEl ? targetEl.innerText : "Error log unavailable.";
-          var errorCtx = errorTrigger.getAttribute("data-ai-context") || "Error Diagnostic";
-          AiHelper.explainError(errorText, { context: errorCtx });
-          return;
+          var targetEl = document.querySelector(err.getAttribute("data-ai-explain-error"));
+          self.explainError(targetEl ? targetEl.innerText : "Error log unavailable.", { context: err.getAttribute("data-ai-context") || "Error Diagnostic" });
         }
       });
     },
 
-    open: function (options) {
-      options = options || {};
+    open: function (opts) {
+      opts = opts || {};
       this.init();
-
-      if (options.context) {
-        this.setContext(options.context);
-      }
-
+      if (opts.taskType) this.setTaskType(opts.taskType);
+      if (opts.context) this.setContext(opts.context);
       this.drawerEl.classList.add("open");
       this.backdropEl.classList.add("active");
+      this.closeHistoryView();
       this.inputEl.focus();
-
-      if (options.initialPrompt) {
-        this.send(options.initialPrompt);
+      if (opts.initialPrompt) {
+        var msgs = window.AiHelperCache ? window.AiHelperCache.getCachedMessages(this.sessionId) : [];
+        if (msgs && msgs.length > 0) this.startNewChat({ taskType: opts.taskType || this.activeTaskType, context: opts.context || this.activeContext, initialPrompt: opts.initialPrompt });
+        else this.send(opts.initialPrompt);
       }
     },
 
     close: function () {
       if (this.drawerEl) this.drawerEl.classList.remove("open");
       if (this.backdropEl) this.backdropEl.classList.remove("active");
+      this.closeHistoryView();
     },
 
     toggle: function () {
-      if (this.drawerEl && this.drawerEl.classList.contains("open")) {
-        this.close();
-      } else {
-        this.open();
-      }
+      if (this.drawerEl && this.drawerEl.classList.contains("open")) this.close();
+      else this.open();
     },
 
-    setContext: function (context) {
-      this.activeContext = context;
-      if (this.contextBarEl && this.contextTextEl) {
-        if (context) {
-          this.contextTextEl.textContent = "Context: " + context.slice(0, 80);
-          this.contextBarEl.style.display = "flex";
-        } else {
-          this.contextBarEl.style.display = "none";
-        }
-      }
-    },
-
-    clearSession: function () {
-      if (confirm("Clear AI conversation history?")) {
-        var oldSess = this.sessionId;
-        this.sessionId = "sess_" + Math.random().toString(36).substring(2, 12);
-        localStorage.setItem("ai_helper_session_id", this.sessionId);
-        this.messagesEl.innerHTML =
-          '<div class="ai-empty-state"><h4>Conversation cleared</h4><p>How can I assist you now?</p></div>';
-
-        fetch("/plugins/ai_helper/api/sessions/" + oldSess, { method: "DELETE" }).catch(
-          function () {}
-        );
-      }
-    },
-
-    explainError: function (errorText, options) {
-      options = options || {};
-      var prompt = "Here is an error log from my server/application. Please explain what caused it and give me the exact step-by-step fix:\n\n```\n" + errorText.trim().slice(-4000) + "\n```";
-      this.open({
-        context: options.context || "Error Analysis",
-        initialPrompt: prompt,
-      });
+    explainError: function (errText, opts) {
+      opts = opts || {};
+      this.open({ taskType: "error_diag", context: opts.context || "Error Diagnostic", initialPrompt: "Here is an error log from my server/application. Please explain what caused it and give me the exact step-by-step fix:\n\n```\n" + (errText || "").trim().slice(-4000) + "\n```" });
     },
 
     stop: function () {
@@ -504,226 +474,28 @@
         this.isStreaming = false;
         this.sendBtnEl.style.display = "flex";
         this.stopBtnEl.style.display = "none";
+        this.messagesEl.querySelectorAll(".ai-cursor").forEach(function (c) { c.remove(); });
+        if (this.statusEl) this.statusEl.textContent = "Stopped";
+      }
+    },
 
-        var cursors = this.messagesEl.querySelectorAll(".ai-cursor");
-        cursors.forEach(function (c) { c.remove(); });
-
-        if (this.statusEl) {
-          this.statusEl.textContent = "Stopped";
+    _loadProviders: function () {
+      var self = this;
+      fetch("/plugins/ai_helper/api/providers").then(function (r) { return r.json(); }).then(function (d) {
+        if (d.status === "ok" && d.providers && d.providers.length > 0) {
+          var p = d.providers[0];
+          if (!self.selectedProviderId) self.selectedProviderId = p.id;
+          if (!self.selectedModelName) self.selectedModelName = p.model_name;
+          var trigger = document.getElementById("ai-helper-model-trigger-text");
+          if (trigger) trigger.textContent = self.selectedModelName;
         }
-      }
-    },
-
-    send: function (messageText) {
-      if (!messageText || this.isStreaming) return;
-
-      var emptyState = document.getElementById("ai-empty-state");
-      if (emptyState) emptyState.remove();
-
-      // 1. Render User Message
-      this._appendMessage("user", messageText);
-      this.inputEl.value = "";
-      this.inputEl.style.height = "auto";
-
-      // 2. Prepare Assistant Bubble
-      var assistantBubble = this._appendMessage("assistant", "");
-      var bubbleContent = assistantBubble.querySelector(".ai-msg-bubble");
-      bubbleContent.innerHTML = '<span class="ai-cursor"></span>';
-
-      this.isStreaming = true;
-      this.sendBtnEl.style.display = "none";
-      this.stopBtnEl.style.display = "inline-flex";
-      if (this.statusEl) {
-        this.statusEl.textContent = "Thinking...";
-      }
-
-      var fullText = "";
-      var csrfToken = document.querySelector("meta[name='csrf-token']")?.getAttribute("content") || "";
-      var startTime = Date.now();
-
-      this.abortController = new AbortController();
-
-      var payload = {
-        message: messageText,
-        session_id: this.sessionId,
-        context: this.activeContext,
-        provider_id: this.selectedProviderId ? parseInt(this.selectedProviderId, 10) : undefined,
-        model_name: this.selectedModelName || undefined,
-        stream: true,
-      };
-
-      fetch("/plugins/ai_helper/api/chat", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-CSRF-Token": csrfToken,
-        },
-        body: JSON.stringify(payload),
-        signal: this.abortController.signal,
-      })
-        .then(function (response) {
-          if (!response.ok) {
-            throw new Error("HTTP error " + response.status);
-          }
-          var reader = response.body.getReader();
-          var decoder = new TextDecoder("utf-8");
-          var buffer = "";
-
-          function readStream() {
-            return reader.read().then(function (result) {
-              if (result.done) {
-                AiHelper.isStreaming = false;
-                AiHelper.sendBtnEl.style.display = "flex";
-                AiHelper.stopBtnEl.style.display = "none";
-                bubbleContent.innerHTML = AiHelper.renderMarkdown(fullText);
-                var duration = Date.now() - startTime;
-                if (AiHelper.statusEl) {
-                  AiHelper.statusEl.textContent = duration + "ms";
-                }
-                return;
-              }
-
-              buffer += decoder.decode(result.value, { stream: true });
-              var lines = buffer.split("\n");
-              buffer = lines.pop();
-
-              for (var i = 0; i < lines.length; i++) {
-                var line = lines[i].trim();
-                if (!line || !line.startsWith("data:")) continue;
-                var dataStr = line.substring(5).trim();
-                if (dataStr === "[DONE]") {
-                  AiHelper.isStreaming = false;
-                  AiHelper.sendBtnEl.style.display = "flex";
-                  AiHelper.stopBtnEl.style.display = "none";
-                  bubbleContent.innerHTML = AiHelper.renderMarkdown(fullText);
-                  var dur = Date.now() - startTime;
-                  if (AiHelper.statusEl) {
-                    AiHelper.statusEl.textContent = dur + "ms";
-                  }
-                  return;
-                }
-
-                try {
-                  var parsed = JSON.parse(dataStr);
-                  if (parsed.type === "token" && parsed.token) {
-                    fullText += parsed.token;
-                    bubbleContent.innerHTML =
-                      AiHelper.renderMarkdown(fullText) + '<span class="ai-cursor"></span>';
-                    AiHelper._scrollToBottom();
-                  }
-                } catch (e) {}
-              }
-
-              return readStream();
-            });
-          }
-
-          return readStream();
-        })
-        .catch(function (err) {
-          if (err.name === "AbortError") return;
-          AiHelper.isStreaming = false;
-          AiHelper.sendBtnEl.style.display = "flex";
-          AiHelper.stopBtnEl.style.display = "none";
-          bubbleContent.innerHTML =
-            '<p style="color: var(--color-danger, #ef4444); margin: 0;">Error communicating with AI assistant: ' +
-            err.message +
-            "</p>";
-          if (AiHelper.statusEl) {
-            AiHelper.statusEl.textContent = "Error";
-          }
-        });
-    },
-
-    _appendMessage: function (role, content) {
-      var wrapper = document.createElement("div");
-      wrapper.className = "ai-msg ai-msg--" + role;
-
-      var bubble = document.createElement("div");
-      bubble.className = "ai-msg-bubble";
-      bubble.innerHTML = this.renderMarkdown(content);
-      wrapper.appendChild(bubble);
-
-      var timeEl = document.createElement("span");
-      timeEl.className = "ai-msg-time";
-      var now = new Date();
-      timeEl.textContent = now.getHours() + ":" + (now.getMinutes() < 10 ? "0" : "") + now.getMinutes();
-      wrapper.appendChild(timeEl);
-
-      this.messagesEl.appendChild(wrapper);
-      this._scrollToBottom();
-      return wrapper;
-    },
-
-    _scrollToBottom: function () {
-      if (this.messagesEl) {
-        this.messagesEl.scrollTop = this.messagesEl.scrollHeight;
-      }
-    },
-
-    renderMarkdown: function (text) {
-      if (!text) return "";
-      var escaped = text
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;");
-
-      // Replace structured Action Tags: [ACTION:TYPE:VALUE]
-      escaped = escaped.replace(
-        /\[ACTION:([A-Z_]+):([^\]]+)\]/g,
-        function (_, actionType, actionVal) {
-          var label = actionType.replace(/_/g, " ").toLowerCase();
-          return (
-            '<span class="ai-action-tag" data-action="' +
-            actionType +
-            '" data-copy="' +
-            actionVal +
-            '" title="Click to copy ' +
-            label +
-            '">' +
-            actionVal +
-            "</span>"
-          );
-        }
-      );
-
-      // Code blocks ```lang ... ```
-      escaped = escaped.replace(/```([a-zA-Z0-9_-]*)\n([\s\S]*?)```/g, function (_, lang, code) {
-        return (
-          '<div class="ai-code-block">' +
-          '<button type="button" class="ai-code-copy-btn">Copy</button>' +
-          "<pre><code>" + code.trim() + "</code></pre>" +
-          "</div>"
-        );
-      });
-
-      // Inline code `code`
-      escaped = escaped.replace(/`([^`]+)`/g, "<code>$1</code>");
-
-      // Bold **text**
-      escaped = escaped.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
-
-      // Italic *text*
-      escaped = escaped.replace(/\*([^*]+)\*/g, "<em>$1</em>");
-
-      // Convert newlines to paragraphs/breaks
-      var paragraphs = escaped.split(/\n\n+/);
-      return paragraphs
-        .map(function (p) {
-          return "<p>" + p.replace(/\n/g, "<br>") + "</p>";
-        })
-        .join("");
+      }).catch(function () {});
     },
   };
 
-  // Expose globally
   window.AiHelper = AiHelper;
-
-  // Auto-init once DOM is ready
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", function () {
-      AiHelper.init();
-    });
+    document.addEventListener("DOMContentLoaded", function () { AiHelper.init(); });
   } else {
     AiHelper.init();
   }
