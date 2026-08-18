@@ -89,9 +89,11 @@
     _buildAvailableTargets: function () {
       var targets = [];
       this.providers.forEach(function (p) {
-        if (!p.is_enabled) return;
+        if (p.is_enabled === false) return;
         var models = [];
-        if (p.models_list && typeof p.models_list === "string") {
+        if (Array.isArray(p.models) && p.models.length > 0) {
+          models = p.models.map(function (m) { return String(m).trim(); }).filter(Boolean);
+        } else if (p.models_list && typeof p.models_list === "string") {
           models = p.models_list.split(",").map(function (m) { return m.trim(); }).filter(Boolean);
         }
         if (p.model_name && models.indexOf(p.model_name) === -1) {

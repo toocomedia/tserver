@@ -277,7 +277,9 @@ async def get_providers_list(db: AsyncSession = Depends(get_db)):
             "provider_type": p.provider_type,
             "model_name": p.model_name,
             "models": p.get_models(),
+            "models_list": p.models_list,
             "is_default": p.is_default,
+            "is_enabled": p.is_enabled,
         }
         for p in providers
         if p.is_enabled

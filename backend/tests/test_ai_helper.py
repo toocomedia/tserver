@@ -679,6 +679,34 @@ class AIHelperTests(unittest.IsolatedAsyncioTestCase):
             await service.delete_session(db, session_a)
             await service.delete_session(db, session_b)
 
+    async def test_api_providers_list_endpoint(self):
+        """Verify GET /api/providers returns correctly structured JSON with enabled models."""
+        from plugins.ai_helper.router import get_providers_list
+        async with AsyncSessionLocal() as db:
+            p = await service.create_provider(db, {
+                "name": "Endpoint Test Provider",
+                "provider_type": "openai_compatible",
+                "api_key": "sk-ep-key",
+                "base_url": "https://api.openai.com/v1",
+                "model_name": "gpt-4o-mini",
+                "models_list": "gpt-4o, gpt-4o-mini, o1-preview",
+                "is_enabled": True,
+                "is_default": True,
+            })
+
+            resp = await get_providers_list(db=db)
+            self.assertEqual(resp.status_code, 200)
+            data = json.loads(resp.body.decode("utf-8"))
+            self.assertEqual(data["status"], "ok")
+            self.assertTrue(len(data["providers"]) > 0)
+
+            found = next((item for item in data["providers"] if item["id"] == p.id), None)
+            self.assertIsNotNone(found)
+            self.assertEqual(found["model_name"], "gpt-4o-mini")
+            self.assertIn("gpt-4o", found["models"])
+            self.assertIn("o1-preview", found["models"])
+            self.assertTrue(found["is_enabled"])
+
 
 if __name__ == "__main__":
     unittest.main()
