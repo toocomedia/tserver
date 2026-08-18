@@ -50,16 +50,10 @@
         if (cache) cache.setActiveSessionId(this.sessionId);
       }
 
-      var savedSelection = cache ? cache.getSelectedTarget() : null;
-      if (savedSelection && savedSelection.indexOf(":") !== -1) {
-        var parts = savedSelection.split(":");
-        this.selectedProviderId = parts[0];
-        this.selectedModelName = parts.slice(1).join(":");
-      }
-
       this._injectDOM();
+      this._initComponents();
+      this._wireEvents();
       this._bindGlobalTriggers();
-      this._loadProviders();
       this._renderActiveSessionHistory();
     },
 
@@ -97,8 +91,8 @@
         '    <span class="ai-helper-task-badge" id="ai-helper-task-badge" title="Active Task Scope">General</span>',
         "  </div>",
         '  <div class="ai-helper-header-actions">',
-        '    <button type="button" class="ai-helper-btn-icon" id="ai-helper-new-chat-btn" title="Start New Conversation / Task (+)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>',
-        '    <button type="button" class="ai-helper-btn-icon" id="ai-helper-history-toggle-btn" title="Chat History & Tasks"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg></button>',
+        '    <button type="button" class="ai-helper-btn-icon" id="ai-helper-new-chat-btn" title="Start New Conversation (+)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>',
+        '    <button type="button" class="ai-helper-btn-icon" id="ai-helper-history-toggle-btn" title="Conversations & Tasks"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg></button>',
         '    <button type="button" class="ai-helper-btn-icon" id="ai-helper-close-btn" title="Close"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>',
         "  </div>",
         "</div>",
@@ -140,8 +134,12 @@
       this.contextTextEl = document.getElementById("ai-helper-context-text");
       this.statusEl = document.getElementById("ai-helper-status-model");
       this.taskBadgeEl = document.getElementById("ai-helper-task-badge");
+    },
 
-      // Initialize History Module
+    _initComponents: function () {
+      var self = this;
+
+      // 1. History Module
       if (window.AiHelperHistory) {
         window.AiHelperHistory.init(
           document.getElementById("ai-helper-history-panel"),
@@ -153,7 +151,18 @@
         );
       }
 
-      this._wireEvents();
+      // 2. Model Switcher Module
+      if (window.AiHelperModels) {
+        window.AiHelperModels.init("ai-helper-model-trigger", "ai-helper-model-modal", function (pId, mName) {
+          self.selectedProviderId = pId;
+          self.selectedModelName = mName;
+        });
+      }
+
+      // 3. Interactive Actions & Tools Module
+      if (window.AiHelperActions) {
+        window.AiHelperActions.init(this.messagesEl);
+      }
     },
 
     _wireEvents: function () {
@@ -188,6 +197,14 @@
         var suggest = e.target.closest("[data-ai-suggest]");
         if (suggest) self.send(suggest.getAttribute("data-ai-suggest"));
       });
+    },
+
+    _getCsrfToken: function () {
+      var meta = document.querySelector('meta[name="csrf-token"]');
+      if (meta && meta.getAttribute("content")) return meta.getAttribute("content");
+      var input = document.querySelector('input[name="csrf_token"]');
+      if (input && input.value) return input.value;
+      return "";
     },
 
     _updateTaskBadge: function () {
@@ -230,7 +247,7 @@
       var title = this.activeTaskType === "general" ? "How can I help?" : "How can I help with " + meta.label + "?";
       this.messagesEl.innerHTML = [
         '<div class="ai-empty-state" id="ai-empty-state">',
-        '  <div class="ai-empty-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg></div>',
+        '  <div class="ai-empty-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg></div>',
         "  <h4>" + title + "</h4>",
         "  <p>Ask anything about setting up apps, writing Dockerfiles, configuring Nginx, or troubleshooting errors.</p>",
         '  <div class="ai-suggested-prompts">',
@@ -288,14 +305,6 @@
       this.closeHistoryView();
       this._renderActiveSessionHistory();
       this.inputEl.focus();
-    },
-
-    _getCsrfToken: function () {
-      var meta = document.querySelector('meta[name="csrf-token"]');
-      if (meta && meta.getAttribute("content")) return meta.getAttribute("content");
-      var input = document.querySelector('input[name="csrf_token"]');
-      if (input && input.value) return input.value;
-      return "";
     },
 
     deleteSession: function (sessId) {
@@ -495,19 +504,6 @@
         this.messagesEl.querySelectorAll(".ai-cursor").forEach(function (c) { c.remove(); });
         if (this.statusEl) this.statusEl.textContent = "Stopped";
       }
-    },
-
-    _loadProviders: function () {
-      var self = this;
-      fetch("/plugins/ai_helper/api/providers").then(function (r) { return r.json(); }).then(function (d) {
-        if (d.status === "ok" && d.providers && d.providers.length > 0) {
-          var p = d.providers[0];
-          if (!self.selectedProviderId) self.selectedProviderId = p.id;
-          if (!self.selectedModelName) self.selectedModelName = p.model_name;
-          var trigger = document.getElementById("ai-helper-model-trigger-text");
-          if (trigger) trigger.textContent = self.selectedModelName;
-        }
-      }).catch(function () {});
     },
   };
 
