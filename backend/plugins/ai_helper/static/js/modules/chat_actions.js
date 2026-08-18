@@ -59,17 +59,67 @@
       if (!containerEl) return;
 
       containerEl.addEventListener("click", function (e) {
-        // 1. Code block copy button
+        // 1. Code View / Expand button
+        var expandBtn = e.target.closest(".ai-code-expand-btn, [data-ai-code-view]");
+        if (expandBtn) {
+          e.preventDefault();
+          var block = expandBtn.closest(".ai-code-block");
+          if (block) {
+            var codeTag = block.querySelector("code");
+            var lang = block.getAttribute("data-lang") || "text";
+            if (codeTag && window.AiHelperCodeView) {
+              window.AiHelperCodeView.open(codeTag.innerText, lang);
+            }
+          }
+          return;
+        }
+
+        // 2. Code block copy button
         var copyBtn = e.target.closest(".ai-code-copy-btn");
         if (copyBtn) {
-          var codeEl = copyBtn.parentElement.querySelector("code");
+          e.preventDefault();
+          var blockForCopy = copyBtn.closest(".ai-code-block");
+          var codeEl = blockForCopy ? blockForCopy.querySelector("code") : copyBtn.parentElement.querySelector("code");
           if (codeEl) {
             self.copyToClipboard(codeEl.innerText, copyBtn);
           }
           return;
         }
 
-        // 2. Interactive Action Tag
+        // 3. Thought Process Box toggle
+        var thoughtHeader = e.target.closest(".ai-thought-header");
+        if (thoughtHeader) {
+          e.preventDefault();
+          var thoughtBox = thoughtHeader.closest(".ai-thought-box");
+          if (thoughtBox) {
+            var currentState = thoughtBox.getAttribute("data-state") || "collapsed";
+            var nextState = currentState === "expanded" ? "collapsed" : "expanded";
+            thoughtBox.setAttribute("data-state", nextState);
+            var chevron = thoughtBox.querySelector(".ai-thought-chevron");
+            if (chevron) {
+              chevron.textContent = nextState === "expanded" ? "▴" : "▾";
+            }
+          }
+          return;
+        }
+
+        // 4. Checklist Item toggle
+        var checkItem = e.target.closest(".ai-checklist-item");
+        if (checkItem) {
+          var isChecked = checkItem.classList.contains("ai-checklist-item--checked");
+          if (isChecked) {
+            checkItem.classList.remove("ai-checklist-item--checked");
+            var icon1 = checkItem.querySelector(".ai-check-icon");
+            if (icon1) icon1.textContent = "○";
+          } else {
+            checkItem.classList.add("ai-checklist-item--checked");
+            var icon2 = checkItem.querySelector(".ai-check-icon");
+            if (icon2) icon2.textContent = "✓";
+          }
+          return;
+        }
+
+        // 5. Interactive Action Tag
         var tag = e.target.closest(".ai-action-tag");
         if (tag) {
           var actionType = tag.getAttribute("data-action");

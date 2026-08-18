@@ -274,6 +274,7 @@ async def _stream_openai_compatible(
                     else:
                         raise AIProviderError(f"Provider error ({response.status_code}): {err_msg}", response.status_code)
 
+                in_think_block = False
                 async for line in response.aiter_lines():
                     line = line.strip()
                     if not line or not line.startswith("data:"):
@@ -286,11 +287,25 @@ async def _stream_openai_compatible(
                         choices = chunk.get("choices") or []
                         if choices:
                             delta = choices[0].get("delta") or {}
+                            # Check for reasoning / thought deltas (DeepSeek R1, Ollama, OpenRouter, Groq)
+                            reasoning = delta.get("reasoning_content") or delta.get("reasoning") or delta.get("thinking")
+                            if reasoning:
+                                if not in_think_block:
+                                    in_think_block = True
+                                    yield "<think>"
+                                yield reasoning
+
                             content = delta.get("content")
                             if content:
+                                if in_think_block:
+                                    in_think_block = False
+                                    yield "</think>\n"
                                 yield content
                     except json.JSONDecodeError:
                         continue
+
+                if in_think_block:
+                    yield "</think>\n"
         except httpx.ConnectError:
             raise AIProviderError("Could not connect to the AI provider endpoint. Please check the Base URL.", 502, "connect_error")
         except httpx.TimeoutException:
@@ -348,6 +363,7 @@ async def _stream_anthropic(
                     else:
                         raise AIProviderError(f"Anthropic error ({response.status_code}): {err_msg}", response.status_code)
 
+                in_think_block = False
                 async for line in response.aiter_lines():
                     line = line.strip()
                     if not line or not line.startswith("data:"):
@@ -358,14 +374,32 @@ async def _stream_anthropic(
                         event_type = chunk.get("type")
                         if event_type == "content_block_delta":
                             delta = chunk.get("delta") or {}
-                            if delta.get("type") == "text_delta":
+                            delta_type = delta.get("type")
+                            if delta_type == "thinking_delta":
+                                think_text = delta.get("thinking")
+                                if think_text:
+                                    if not in_think_block:
+                                        in_think_block = True
+                                        yield "<think>"
+                                    yield think_text
+                            elif delta_type == "text_delta":
+                                if in_think_block:
+                                    in_think_block = False
+                                    yield "</think>\n"
                                 text = delta.get("text")
                                 if text:
                                     yield text
-                        elif event_type == "message_stop":
-                            break
+                        elif event_type in ("message_stop", "content_block_stop"):
+                            if in_think_block and event_type == "message_stop":
+                                in_think_block = False
+                                yield "</think>\n"
+                            if event_type == "message_stop":
+                                break
                     except json.JSONDecodeError:
                         continue
+
+                if in_think_block:
+                    yield "</think>\n"
         except httpx.ConnectError:
             raise AIProviderError("Could not connect to the Anthropic endpoint. Please check the Base URL.", 502, "connect_error")
         except httpx.TimeoutException:

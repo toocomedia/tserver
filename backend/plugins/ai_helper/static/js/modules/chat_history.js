@@ -53,8 +53,18 @@
       if (this.panelEl) this.panelEl.classList.remove("open");
     },
 
-    isOpen: function () {
-      return this.panelEl && this.panelEl.classList.contains("open");
+    removeSession: function (sessionId) {
+      if (this.cachedServerSessions) {
+        this.cachedServerSessions = this.cachedServerSessions.filter(function (s) {
+          return s.session_id !== sessionId;
+        });
+      }
+      this.render();
+    },
+
+    clearAll: function () {
+      this.cachedServerSessions = [];
+      this.render();
     },
 
     loadAndRender: function () {

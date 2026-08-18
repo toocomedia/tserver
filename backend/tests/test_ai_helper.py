@@ -707,6 +707,93 @@ class AIHelperTests(unittest.IsolatedAsyncioTestCase):
             self.assertIn("o1-preview", found["models"])
             self.assertTrue(found["is_enabled"])
 
+    async def test_stream_openai_compatible_reasoning_deltas(self):
+        """Verify OpenAI-compatible stream correctly parses reasoning_content into <think> tags."""
+        sse_lines = [
+            'data: {"choices":[{"delta":{"reasoning_content":"Let me analyze the logs..."}}]}',
+            'data: {"choices":[{"delta":{"reasoning_content":" The issue is port 80."}}]}',
+            'data: {"choices":[{"delta":{"content":"Change the port to 8080."}}]}',
+            'data: [DONE]',
+        ]
+
+        class MockResponse:
+            status_code = 200
+            async def __aenter__(self):
+                return self
+            async def __aexit__(self, *args):
+                pass
+            async def aiter_lines(self):
+                for line in sse_lines:
+                    yield line
+
+        class MockClient:
+            async def __aenter__(self):
+                return self
+            async def __aexit__(self, *args):
+                pass
+            def stream(self, method, url, headers=None, json=None):
+                return MockResponse()
+
+        with patch("httpx.AsyncClient", return_value=MockClient()):
+            chunks = []
+            async for chunk in engine.stream_chat(
+                provider_type="openai_compatible",
+                base_url="https://api.deepseek.com/v1",
+                api_key="sk-deepseek",
+                model_name="deepseek-reasoner",
+                messages=[{"role": "user", "content": "fix my port"}],
+            ):
+                chunks.append(chunk)
+
+            full_text = "".join(chunks)
+            self.assertIn("<think>", full_text)
+            self.assertIn("Let me analyze the logs... The issue is port 80.", full_text)
+            self.assertIn("</think>", full_text)
+            self.assertIn("Change the port to 8080.", full_text)
+
+    async def test_stream_anthropic_thinking_deltas(self):
+        """Verify Anthropic stream correctly parses thinking_delta into <think> tags."""
+        sse_lines = [
+            'data: {"type": "content_block_delta", "delta": {"type": "thinking_delta", "thinking": "Evaluating Nginx config..."}}',
+            'data: {"type": "content_block_delta", "delta": {"type": "text_delta", "text": "Here is the fixed config."}}',
+            'data: {"type": "message_stop"}',
+        ]
+
+        class MockResponse:
+            status_code = 200
+            async def __aenter__(self):
+                return self
+            async def __aexit__(self, *args):
+                pass
+            async def aiter_lines(self):
+                for line in sse_lines:
+                    yield line
+
+        class MockClient:
+            async def __aenter__(self):
+                return self
+            async def __aexit__(self, *args):
+                pass
+            def stream(self, method, url, headers=None, json=None):
+                return MockResponse()
+
+        with patch("httpx.AsyncClient", return_value=MockClient()):
+            chunks = []
+            async for chunk in engine.stream_chat(
+                provider_type="anthropic",
+                base_url="https://api.anthropic.com/v1",
+                api_key="sk-ant",
+                model_name="claude-3-7-sonnet",
+                messages=[{"role": "user", "content": "check nginx"}],
+            ):
+                chunks.append(chunk)
+
+            full_text = "".join(chunks)
+            self.assertIn("<think>", full_text)
+            self.assertIn("Evaluating Nginx config...", full_text)
+            self.assertIn("</think>", full_text)
+            self.assertIn("Here is the fixed config.", full_text)
+
 
 if __name__ == "__main__":
     unittest.main()

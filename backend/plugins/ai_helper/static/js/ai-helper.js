@@ -164,7 +164,17 @@
         window.AiHelperActions.init(this.messagesEl);
       }
 
-      // 4. Resize Controller Module
+      // 4. Code View Window Module
+      if (window.AiHelperCodeView) {
+        window.AiHelperCodeView.init();
+      }
+
+      // 5. Shortcut Mentions (@) and Slash Commands (/) Module
+      if (window.AiHelperMentions) {
+        window.AiHelperMentions.init(this.inputEl, document.getElementById("ai-helper-footer"));
+      }
+
+      // 6. Resize Controller Module
       if (window.AiHelperResize) {
         window.AiHelperResize.init(this.drawerEl);
       }
@@ -316,19 +326,20 @@
       if (!confirm("Delete this conversation?")) return;
       var cache = window.AiHelperCache;
       if (cache) cache.removeSession(sessId);
+      if (window.AiHelperHistory) window.AiHelperHistory.removeSession(sessId);
       var csrf = this._getCsrfToken();
       fetch("/plugins/ai_helper/api/sessions/" + sessId, {
         method: "DELETE",
         headers: { "X-CSRF-Token": csrf },
       }).catch(function () {});
       if (this.sessionId === sessId) this.startNewChat({ taskType: "general" });
-      else if (window.AiHelperHistory) window.AiHelperHistory.render();
     },
 
     clearAllHistory: function () {
       if (!confirm("Clear ALL conversation histories? This cannot be undone.")) return;
       var cache = window.AiHelperCache;
       if (cache) cache.clearAll();
+      if (window.AiHelperHistory) window.AiHelperHistory.clearAll();
       var csrf = this._getCsrfToken();
       fetch("/plugins/ai_helper/api/sessions", {
         method: "DELETE",
