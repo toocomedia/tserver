@@ -163,6 +163,11 @@
       if (window.AiHelperActions) {
         window.AiHelperActions.init(this.messagesEl);
       }
+
+      // 4. Resize Controller Module
+      if (window.AiHelperResize) {
+        window.AiHelperResize.init(this.drawerEl);
+      }
     },
 
     _wireEvents: function () {
