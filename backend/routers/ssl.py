@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, Request, Form, Query, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from urllib.parse import quote
 
 from database import get_db
 from models.domain import Domain
@@ -23,17 +24,16 @@ async def _build_eligible(db: AsyncSession) -> list[dict]:
     """Domains and proxies with nginx active and no existing cert."""
     issued_domains = {
         r.full_domain
-        for r in (await db.execute(select(SslCert))).scalars().all()
+        for r in (await db.scalars(select(SslCert))).all()
     }
 
     eligible: list[dict] = []
 
-    all_domains = (await db.execute(
-        select(Domain).order_by(Domain.name)
-    )).scalars().all()
-
-    for d in all_domains:
-        if nginx_service.config_exists(d.name) and d.name not in issued_domains:
+    domains = (await db.scalars(
+        select(Domain).where(Domain.nginx_active == True)
+    )).all()
+    for d in domains:
+        if d.name not in issued_domains:
             eligible.append({
                 "id": d.id,
                 "label": d.name,
@@ -41,12 +41,11 @@ async def _build_eligible(db: AsyncSession) -> list[dict]:
                 "type": "domain",
             })
 
-    all_proxies = (await db.execute(
-        select(ReverseProxy).order_by(ReverseProxy.full_domain)
-    )).scalars().all()
-
-    for p in all_proxies:
-        if nginx_service.config_exists(p.full_domain) and p.full_domain not in issued_domains:
+    proxies = (await db.scalars(
+        select(ReverseProxy).where(ReverseProxy.nginx_config_path.isnot(None))
+    )).all()
+    for p in proxies:
+        if p.full_domain not in issued_domains:
             eligible.append({
                 "id": p.domain_id,  # may be None for external
                 "label": f"{p.full_domain} (proxy → {p.target_ip}:{p.target_port})",
@@ -65,41 +64,16 @@ async def ssl_index(
     request: Request,
     offset: int = 0,
     limit: int = 6,
-    db: AsyncSession = Depends(get_db)
-):
-    """Show issued SSL certs with live expiry status using DB LIMIT and OFFSET."""
-    cert_list, total = await ssl_service.list_certs_paginated(db, limit=limit, offset=offset)
-    return templates.TemplateResponse("pages/ssl/index.html", {
-        "request": request,
-        "active_page": "ssl",
-        "cert_list": cert_list,
-        "total_count": total,
-        "current_offset": offset,
-        "current_limit": limit,
-    })
-
-
-# ---------------------------------------------------------------
-# ISSUE — form
-# ---------------------------------------------------------------
-@router.get("/issue", response_class=HTMLResponse)
-async def ssl_issue_page(
-    request: Request,
     domain_id: int | None = Query(default=None),
     full_domain: str | None = Query(default=None),
-    db: AsyncSession = Depends(get_db),
+    open_issue: int | None = Query(default=None),
+    db: AsyncSession = Depends(get_db)
 ):
-    """
-    Issue SSL form.
-    Dropdown shows domains AND proxy subdomains that:
-      - have an active nginx config
-      - do NOT already have a cert
-    Preselect prefers full_domain (exact host); falls back to domain_id.
-    """
+    """Show issued SSL certs with live expiry status and slide drawer for issuing."""
+    cert_list, total = await ssl_service.list_certs_paginated(db, limit=limit, offset=offset)
     eligible = await _build_eligible(db)
-    preselect_full = (full_domain or "").strip().lower() or None
 
-    # Legacy: domain_id alone → preselect apex domain name if present
+    preselect_full = (full_domain or "").strip().lower() or None
     if not preselect_full and domain_id is not None:
         for item in eligible:
             if item.get("id") == domain_id and item.get("type") == "domain":
@@ -111,13 +85,37 @@ async def ssl_issue_page(
                     preselect_full = item["full_domain"]
                     break
 
-    return templates.TemplateResponse("pages/ssl/issue.html", {
+    auto_open = bool(open_issue or preselect_full)
+
+    return templates.TemplateResponse("pages/ssl/index.html", {
         "request": request,
         "active_page": "ssl",
+        "cert_list": cert_list,
+        "total_count": total,
+        "current_offset": offset,
+        "current_limit": limit,
         "eligible": eligible,
         "preselect_full_domain": preselect_full,
-        "error": None,
+        "auto_open_issue": auto_open,
     })
+
+
+# ---------------------------------------------------------------
+# ISSUE — form (redirects to index with side drawer open)
+# ---------------------------------------------------------------
+@router.get("/issue", response_class=HTMLResponse)
+async def ssl_issue_page(
+    request: Request,
+    domain_id: int | None = Query(default=None),
+    full_domain: str | None = Query(default=None),
+):
+    """Redirect to SSL index and open slide-out issue drawer."""
+    query_parts = ["open_issue=1"]
+    if full_domain:
+        query_parts.append(f"full_domain={quote(full_domain.strip().lower())}")
+    if domain_id:
+        query_parts.append(f"domain_id={domain_id}")
+    return RedirectResponse(f"/ssl/?{'&'.join(query_parts)}", status_code=303)
 
 
 # ---------------------------------------------------------------

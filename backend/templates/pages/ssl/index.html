@@ -6,7 +6,7 @@
 {% block page_title %}{{ _('ssl_certificates') }}{% endblock %}
 
 {% block topbar_actions %}
-  <a href="/ssl/issue" class="btn btn--primary" id="btn-issue-ssl">{{ _('issue_certificate') }}</a>
+  <button type="button" class="btn btn--primary" id="btn-issue-ssl" onclick="openModal('issue-ssl-drawer-modal')">{{ _('issue_certificate') }}</button>
 {% endblock %}
 
 {% block content %}
@@ -58,84 +58,85 @@
     <colgroup>
       <col style="width:30%">
       <col style="width:18%">
-      <col style="width:12%">
+      <col style="width:14%">
       <col style="width:14%">
       <col style="width:12%">
-      <col style="width:26%">
+      <col style="width:12%">
     </colgroup>
     <thead>
       <tr>
-        <th>{{ _('domain') }}</th>
-        <th>{{ _('expiry_date') }}</th>
-        <th>{{ _('days_left') }}</th>
-        <th>{{ _('status') }}</th>
+        <th>{{ _('domain_1') }}</th>
+        <th>{{ _('expires_1') }}</th>
         <th>{{ _('auto_renew') }}</th>
-        <th class="col-actions" style="width:26%;">{{ _('actions') }}</th>
+        <th>{{ _('status') }}</th>
+        <th>{{ _('nginx_target') }}</th>
+        <th class="col-actions">{{ _('actions') }}</th>
       </tr>
     </thead>
     <tbody>
       {% for item in cert_list %}
       {% set cert = item.cert %}
-      <tr id="cert-row-{{ cert.id }}">
-
-        <td class="table-title">{{ cert.full_domain }}</td>
-
-        <td class="text-small">
+      {% set days = item.days_left %}
+      {% set status = item.status %}
+      <tr id="cert-row-{{ cert.id }}" class="cert-row-item">
+        <td class="font-mono">
+          <strong>{{ cert.full_domain }}</strong>
+          {% if cert.domain_id %}
+          <span class="text-muted text-small">#{{ cert.domain_id }}</span>
+          {% endif %}
+        </td>
+        <td>
           {% if cert.expiry_date %}
-            {{ cert.expiry_date.strftime('%Y-%m-%d') }}
+            <span>{{ cert.expiry_date.strftime('%Y-%m-%d') }}</span>
+            {% if days is not none %}
+              {% if days <= 0 %}
+                <span class="text-danger text-small">({{ _('expired') }})</span>
+              {% elif days <= 15 %}
+                <span class="text-warning text-small">({{ days }} {{ _('days_left') }})</span>
+              {% else %}
+                <span class="text-muted text-small">({{ days }} {{ _('days') }})</span>
+              {% endif %}
+            {% endif %}
           {% else %}
             <span class="text-muted">—</span>
           {% endif %}
         </td>
-
         <td>
-          {% if item.days_left is not none %}
-            <span style="font-weight:700;
-              color: {% if item.days_left > 30 %}var(--color-accent-2)
-                     {% elif item.days_left > 0 %}var(--color-warn)
-                     {% else %}var(--color-danger){% endif %};">
-              {{ item.days_left }}d
-            </span>
+          {% if cert.auto_renew %}
+            <span class="badge-minimal badge-minimal--active">{{ _('active') }}</span>
           {% else %}
-            <span class="text-muted">—</span>
+            <span class="badge-minimal badge-minimal--neutral">{{ _('off') }}</span>
           {% endif %}
         </td>
-
         <td>
-          {% if item.status == 'ok' %}
-            <span class="status-badge status-badge--success">{{ _('valid') }}</span>
-          {% elif item.status == 'warning' %}
-            <span class="status-badge status-badge--warning">{{ _('expiring') }}</span>
-          {% elif item.status == 'expired' %}
-            <span class="status-badge status-badge--danger">{{ _('expired') }}</span>
-          {% elif item.status == 'issued' %}
-            <span class="status-badge status-badge--success">{{ _('issued') }}</span>
+          {% if status == 'ok' %}
+            <span class="badge-minimal badge-minimal--active">{{ _('valid') }}</span>
+          {% elif status == 'warning' %}
+            <span class="badge-minimal badge-minimal--warning">{{ _('expiring') }}</span>
+          {% elif status == 'expired' %}
+            <span class="badge-minimal badge-minimal--danger">{{ _('expired') }}</span>
           {% else %}
-            <span class="status-badge status-badge--success">{{ _('issued') }}</span>
+            <span class="badge-minimal badge-minimal--neutral">{{ _('unknown') }}</span>
           {% endif %}
         </td>
-
         <td>
-          <label class="form-check" style="margin:0;">
-            <input type="checkbox" class="auto-renew-toggle" data-id="{{ cert.id }}" {% if cert.auto_renew %}checked{% endif %}>
-            <span style="display:none;">{{ _('auto_renew') }}</span>
-          </label>
+          {% if cert.domain_id %}
+            <a href="/domains/{{ cert.domain_id }}" class="text-small">{{ _('view_domain') }}</a>
+          {% else %}
+            <span class="text-muted text-small">{{ _('proxy_host') }}</span>
+          {% endif %}
         </td>
-
         <td class="col-actions" style="position:relative;">
           {% import "partials/list_actions_toggle.html" as list_actions %}
           {{ list_actions.button() }}
           {% call list_actions.tray() %}
-            <form method="post" action="/ssl/{{ cert.id }}/renew" style="display:contents;" onsubmit="renewCert(event, {{ cert.id }}, '{{ cert.full_domain }}')">
-              {% include "partials/csrf_field.html" %}
-              <button type="submit" class="btn btn--secondary btn--sm" id="btn-renew-{{ cert.id }}" title="Renew Certificate">
-                <svg viewbox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"></path><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
-                <span>{{ _('renew_certificate') }}</span>
-              </button>
-            </form>
-            <button class="btn btn--danger btn--sm" id="btn-revoke-{{ cert.id }}" title="Revoke Certificate" onclick="revokeCert({{ cert.id }}, '{{ cert.full_domain }}')">
-              <svg viewbox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path></svg>
-              <span>{{ _('revoke_certificate') }}</span>
+            <button class="btn btn--secondary btn--sm" onclick="renewCert(event, {{ cert.id }}, '{{ cert.full_domain }}')">
+              <svg viewbox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+              <span>{{ _('renew') }}</span>
+            </button>
+            <button class="btn btn--secondary btn--sm" onclick="revokeCert({{ cert.id }}, '{{ cert.full_domain }}')">
+              <svg viewbox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M18.36 6.64a9 9 0 1 1-12.73 0M12 2v10"/></svg>
+              <span>{{ _('revoke') }}</span>
             </button>
           {% endcall %}
         </td>
@@ -143,34 +144,159 @@
       {% endfor %}
     </tbody>
   </table>
-</div>
+  </div>
 
-<!-- Auto-renew info -->
-<p class="text-small text-muted" style="margin-top:var(--space-lg);">
-  {{ _('toggle_the_auto_renew_switch_to_enable_o') }}
-</p>
-</div>
+  <!-- DB PAGINATION CONTROLS -->
+  {% if total_count > current_limit %}
+  <div class="d-flex justify-content-between align-items-center mt-md pt-sm border-top">
+    <span class="text-muted text-small">
+      Showing {{ current_offset + 1 }} to {{ [current_offset + current_limit, total_count]|min }} of {{ total_count }} certificates
+    </span>
+    <div class="d-flex gap-xs">
+      {% if current_offset > 0 %}
+      <a href="/ssl/?offset={{ [current_offset - current_limit, 0]|max }}&limit={{ current_limit }}" class="btn btn--secondary btn--sm">
+        &larr; Previous
+      </a>
+      {% endif %}
+      {% if current_offset + current_limit < total_count %}
+      <a href="/ssl/?offset={{ current_offset + current_limit }}&limit={{ current_limit }}" class="btn btn--secondary btn--sm">
+        Next &rarr;
+      </a>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
 {% else %}
 {% from "partials/empty_state.html" import empty_state %}
 {{ empty_state(
   icon='shield-check',
-  title=_('no_ssl_certificates'),
-  desc=_('secure_your_domains_with_free_let_s_encr'),
-  action_url='/ssl/issue',
+  title=_('no_ssl_certificates_issued_yet'),
+  desc=_('issue_a_free_let_s_encrypt_certificate_f'),
+  action_url="javascript:openModal('issue-ssl-drawer-modal')",
   action_label=_('issue_certificate_1'),
   action_icon='shield-plus',
   id='empty-state'
 ) }}
 {% endif %}
 </div><!-- /.ssl-page -->
+
+<!-- SLIDE-OUT RIGHT DRAWER FOR ADD / ISSUE SSL -->
+<div class="modal-backdrop modal-backdrop--slide hidden" id="issue-ssl-drawer-modal" role="dialog" aria-modal="true">
+  <div class="modal modal--slide" style="max-width: 520px;">
+    
+    <div class="modal__header">
+      <h3 style="display: flex; align-items: center; gap: 8px;">
+        <span>{{ _('issue_ssl') }}</span>
+      </h3>
+      <button type="button" class="btn btn--secondary btn--sm" onclick="closeModal('issue-ssl-drawer-modal')" aria-label="Close" style="padding: 0 10px; height: 30px;">
+        ✕
+      </button>
+    </div>
+
+    <div class="modal__body" style="overflow-y: auto; flex: 1; padding: 24px;">
+      <p style="font-size: 12.5px; color: var(--color-muted); margin: 0 0 20px 0; line-height: 1.45;">
+        {{ _('issue_ssl_desc') }}
+      </p>
+
+      {% if eligible %}
+      <form method="post" action="/ssl/issue" id="issue-form" autocomplete="off">
+        {% include "partials/csrf_field.html" %}
+
+        <!-- DOMAIN SELECT -->
+        <div class="form-group mb-lg">
+          <label class="form-label" for="full_domain_select">{{ _('domain_subdomain') }}</label>
+          <div class="form-select-wrap">
+            <select id="full_domain_select" class="form-select clean-input" required>
+              <option value="" disabled {% if not preselect_full_domain %}selected{% endif %}>
+                {{ _('select_a_domain') }}
+              </option>
+              {% for item in eligible %}
+                <option value="{{ item.full_domain }}" data-domain-id="{{ item.id if item.id is not none else '' }}" {% if preselect_full_domain and item.full_domain == preselect_full_domain %}selected{% endif %}>
+                  {{ item.label }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <input type="hidden" name="full_domain" id="full_domain" value="{{ preselect_full_domain or '' }}">
+        <input type="hidden" name="domain_id" id="domain_id" value="">
+
+        <!-- INCLUDE WWW CHECKBOX -->
+        <div class="form-group mb-md" id="www-group" style="display: none;">
+          <label class="form-check" style="cursor: pointer; display: flex; align-items: center; gap: 8px;">
+            <input type="checkbox" name="include_www" id="include_www" value="true">
+            <span>{{ _('also_include') }} <strong id="www-label">www.domain.com</strong></span>
+          </label>
+        </div>
+
+        <!-- AUTO-RENEW CHECKBOX -->
+        <div class="form-group mb-xl">
+          <label class="form-check" style="cursor: pointer; display: flex; align-items: center; gap: 8px;">
+            <input type="checkbox" name="auto_renew" id="auto_renew" value="true" checked>
+            <span>{{ _('auto_renew') }}</span>
+          </label>
+        </div>
+
+        <!-- LIVE PREVIEW BOX -->
+        <div id="cert-preview-card" style="background: var(--color-bg-alt, rgba(255, 255, 255, 0.02)); border-radius: 8px; padding: 18px; margin-bottom: 24px; display: flex; flex-direction: column; gap: 12px;">
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <strong style="font-size: 12px;">{{ _('overview') }}</strong>
+            <span class="badge-minimal badge-minimal--active">Let's Encrypt</span>
+          </div>
+
+          <div id="preview-empty-state" style="color: var(--color-muted); font-size: 12px;">
+            {{ _('select_a_domain') }}
+          </div>
+
+          <div id="preview-details" style="display: none; flex-direction: column; gap: 10px;">
+            <div>
+              <div style="font-size: 11px; color: var(--color-muted); margin-bottom: 2px;">{{ _('hostname') }}</div>
+              <div id="preview-domain-text" style="font-family: monospace; font-size: 14px; font-weight: 700; color: var(--color-text);"></div>
+            </div>
+
+            <div>
+              <div style="font-size: 11px; color: var(--color-muted); margin-bottom: 2px;">{{ _('auto_renew') }}</div>
+              <span class="badge-minimal badge-minimal--active" id="preview-auto-renew-badge" data-enabled-text="{{ _('enabled') }}" data-disabled-text="{{ _('disabled') }}">{{ _('enabled') }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ACTION BUTTONS -->
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <button type="submit" class="btn btn--primary" id="btn-submit" style="flex: 1; height: 38px;">
+            {{ _('issue_certificate_1') }}
+          </button>
+          <button type="button" class="btn btn--secondary" onclick="closeModal('issue-ssl-drawer-modal')" style="height: 38px;">
+            {{ _('cancel') }}
+          </button>
+        </div>
+      </form>
+      {% else %}
+      <div style="text-align: center; padding: 24px 0; color: var(--color-muted);">
+        <p style="margin-bottom: 16px;">{{ _('no_eligible_domains_found') }}</p>
+        <a href="/domains/create" class="btn btn--secondary btn--sm">{{ _('add_domain_1') }}</a>
+      </div>
+      {% endif %}
+    </div>
+
+  </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
-<script src="/static/js/modules/ssl.js"></script>
+<script src="/static/js/modules/ssl.js?v={{ APP_VERSION }}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
   if (typeof hideSkeleton === 'function') hideSkeleton('ssl-skeleton');
   else if (typeof window.hideSkeleton === 'function') window.hideSkeleton('ssl-skeleton');
+
+  {% if auto_open_issue %}
+  if (typeof openModal === 'function') {
+    openModal('issue-ssl-drawer-modal');
+  }
+  {% endif %}
 });
 
 function filterSSLTable() {

@@ -961,6 +961,7 @@
   "free_ram_cache_tooltip": "Safely drops clean inactive kernel pagecaches, freeing physical RAM instantly.",
   "smart_flush_swap_tooltip": "Cleans RAM cache and safely purges stale swap allocations if free memory allows.",
   "issue_ssl": "Issue SSL",
+  "issue_ssl_desc": "Provision a free automated TLS certificate via Let's Encrypt.",
   "auto_renew": "Auto-Renew",
   "provider": "Provider",
   "disabled": "Disabled",
