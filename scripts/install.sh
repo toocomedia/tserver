@@ -106,8 +106,12 @@ write_release_info() {
 [[ -f "$SOURCE_DIR/backend/requirements.txt" ]] || die "requirements.txt not found"
 OS_COMPAT="$SCRIPT_DIR/os_compat.sh"
 [[ -f "$OS_COMPAT" ]] || die "OS compatibility helper is missing: $OS_COMPAT"
+PYTHON_REQUIREMENTS_HELPER="$SCRIPT_DIR/python_requirements.sh"
+[[ -f "$PYTHON_REQUIREMENTS_HELPER" ]] || die "Python requirements helper is missing: $PYTHON_REQUIREMENTS_HELPER"
 # shellcheck source=scripts/os_compat.sh
 . "$OS_COMPAT"
+# shellcheck source=scripts/python_requirements.sh
+. "$PYTHON_REQUIREMENTS_HELPER"
 srv_os_require_supported || exit 1
 info "Detected supported platform: ${SRV_OS_PRETTY_NAME} (${SRV_OS_ARCH})"
 
@@ -424,6 +428,9 @@ if [[ "$PYTHON_MAJOR" -ne 3 || "$PYTHON_MINOR" -lt 10 || "$PYTHON_MINOR" -gt 14 
   die "Unsupported Python ${PYTHON_VERSION}. SRV Panel requires Python 3.10 through 3.14."
 fi
 info "Using distro Python: $PYTHON_BIN ($($PYTHON_BIN --version 2>&1))"
+srv_python_select_constraints "$PYTHON_BIN" "$SOURCE_DIR/backend" || \
+  die "No tested dependency constraints exist for Python ${PYTHON_VERSION}."
+info "Using tested Python constraints: $(basename "$SRV_PYTHON_CONSTRAINT_FILE")"
 
 # ---------------------------------------------------------------
 # User + directories
@@ -442,10 +449,12 @@ if [[ ! -d "$PANEL_DIR/venv" ]]; then
 fi
 info "Checking DNS resolution for Python dependencies..."
 require_dns
-"$PANEL_DIR/venv/bin/pip" install --upgrade pip
-info "Installing Python requirements..."
-"$PANEL_DIR/venv/bin/pip" install -r "$SOURCE_DIR/backend/requirements.txt"
-"$PANEL_DIR/venv/bin/python" -c "import fastapi, uvicorn, sqlalchemy, aiosqlite, httpx, asyncpg, cryptography, psutil"
+info "Installing and verifying Python requirements..."
+srv_python_install_requirements \
+  "$PANEL_DIR/venv" \
+  "$SOURCE_DIR/backend/requirements.txt" \
+  "$SRV_PYTHON_CONSTRAINT_FILE" || \
+  die "Python dependencies are incompatible with ${SRV_OS_PRETTY_NAME} / Python ${PYTHON_VERSION}."
 
 # ---------------------------------------------------------------
 # Deploy app code

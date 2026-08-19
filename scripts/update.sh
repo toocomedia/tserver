@@ -111,6 +111,31 @@ else
   die "Cannot find backend in SOURCE_DIR=$SOURCE_DIR"
 fi
 
+PYTHON_REQUIREMENTS_HELPER="$SCRIPTS_SRC/python_requirements.sh"
+[[ -f "$PYTHON_REQUIREMENTS_HELPER" ]] || die "Python requirements helper is missing: $PYTHON_REQUIREMENTS_HELPER"
+# shellcheck source=scripts/python_requirements.sh
+. "$PYTHON_REQUIREMENTS_HELPER"
+trap 'srv_python_cleanup_preflight' EXIT
+
+if [[ "$NO_PIP" != "1" ]]; then
+  UPDATE_REQUIREMENTS="$BACKEND_SRC/requirements.txt"
+  [[ -f "$UPDATE_REQUIREMENTS" ]] || die "No requirements.txt found in $BACKEND_SRC"
+  srv_python_select_constraints "$PANEL_PYTHON" "$BACKEND_SRC" || \
+    die "No tested dependency constraints exist for panel Python ${PANEL_PYTHON_VERSION}."
+  info "Preflighting $(basename "$SRV_PYTHON_CONSTRAINT_FILE") before changing the installed environment..."
+  srv_python_preflight_requirements \
+    "$PANEL_PYTHON" \
+    "$UPDATE_REQUIREMENTS" \
+    "$SRV_PYTHON_CONSTRAINT_FILE" || \
+    die "Update dependencies are incompatible with ${SRV_OS_PRETTY_NAME} / Python ${PANEL_PYTHON_VERSION}."
+  info "Applying verified Python requirements..."
+  srv_python_install_requirements \
+    "$PANEL_DIR/venv" \
+    "$UPDATE_REQUIREMENTS" \
+    "$SRV_PYTHON_CONSTRAINT_FILE" || \
+    die "Verified Python requirements could not be applied to the installed environment."
+fi
+
 info "Update from: $BACKEND_SRC → $PANEL_DIR/app"
 
 # ---------------------------------------------------------------
@@ -164,21 +189,6 @@ chown -R "$PANEL_USER":"$PANEL_USER" "$PANEL_DIR/app" "$PANEL_DIR/scripts"
 mkdir -p /var/lib/srv-panel/apps /var/lib/srv-panel/app-env
 chown -R "$PANEL_USER":"$PANEL_USER" /var/lib/srv-panel
 chmod 700 /var/lib/srv-panel /var/lib/srv-panel/apps /var/lib/srv-panel/app-env
-
-# ---------------------------------------------------------------
-# Python deps
-# ---------------------------------------------------------------
-if [[ "$NO_PIP" != "1" ]]; then
-  if [[ -f "$PANEL_DIR/app/requirements.txt" ]]; then
-    info "Installing requirements..."
-    "$PANEL_DIR/venv/bin/pip" install -r "$PANEL_DIR/app/requirements.txt"
-  elif [[ -f "$BACKEND_SRC/requirements.txt" ]]; then
-    "$PANEL_DIR/venv/bin/pip" install -r "$BACKEND_SRC/requirements.txt"
-  else
-    warn "No requirements.txt found — skipping pip"
-  fi
-  "$PANEL_DIR/venv/bin/python" -c "import fastapi, uvicorn, sqlalchemy, aiosqlite, httpx, asyncpg, cryptography, psutil"
-fi
 
 # Ensure .env not clobbered; re-assert ownership
 if [[ -f "$PANEL_DIR/.env" ]]; then

@@ -1,0 +1,2 @@
+# Tested SRV Panel constraints for Python 3.11 (Debian 12).
+SQLAlchemy==2.0.51

@@ -1,0 +1,2 @@
+# Tested SRV Panel constraints for Python 3.14 (Ubuntu 26.04).
+SQLAlchemy==2.0.51
