@@ -33,6 +33,13 @@ die()  { echo -e "${RED}ERROR:${NC} $*" >&2; exit 1; }
 export DEBIAN_FRONTEND=noninteractive
 export NONINTERACTIVE="${NONINTERACTIVE:-0}"
 
+if [ ! -t 0 ]; then
+  echo -e "\033[1;33m[NOTICE] You are running the installer via a pipe (curl | bash).\033[0m"
+  echo -e "\033[1;33mThis can cause terminal lockups on certain VPS consoles.\033[0m"
+  echo -e "\033[1;33mForcing NONINTERACTIVE=1 mode to protect your session.\033[0m"
+  export NONINTERACTIVE=1
+fi
+
 # NOTE: Never use `exec </dev/tty` here.
 # When this file is run via `curl | bash`, stdin IS the script.
 # Redirecting stdin aborts the rest of the file with no error.
