@@ -251,6 +251,18 @@
 {% block scripts %}
 <script src="/static/js/modules/ssl.js?v={{ APP_VERSION }}"></script>
 <script>
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, function(char) {
+    return {
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;"
+    }[char];
+  });
+}
+
 document.addEventListener('DOMContentLoaded', function() {
   if (typeof hideSkeleton === 'function') hideSkeleton('ssl-skeleton');
   else if (typeof window.hideSkeleton === 'function') window.hideSkeleton('ssl-skeleton');

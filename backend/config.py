@@ -37,7 +37,7 @@ def _env_bool(name: str, default: bool = False) -> bool:
 # ---------------------------------------------------------
 # Pagination
 # ---------------------------------------------------------
-DEFAULT_PAGE_LIMIT: int = _env_int("DEFAULT_PAGE_LIMIT", 6)
+DEFAULT_PAGE_LIMIT: int = _env_int("DEFAULT_PAGE_LIMIT", 8)
 
 # ---------------------------------------------------------
 # Server

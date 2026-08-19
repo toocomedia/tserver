@@ -609,6 +609,17 @@ function convertSubdomainToRecord(subdomain, parentDomain) {
   );
 }
 
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, (char) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  }[char]));
+}
+
+window.escapeHtml = escapeHtml;
 window.PATHS = PATHS;
 window.path = path;
 window.publicUrl = publicUrl;
