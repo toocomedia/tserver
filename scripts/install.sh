@@ -95,13 +95,13 @@ can_prompt() {
 }
 
 # read from /dev/tty so prompts work even if stdin is a pipe
-# added -t 15 to auto-timeout after 15 seconds to prevent hanging
+# added -t 5 to auto-timeout after 5 seconds to prevent hanging
 _read_tty() {
   local prompt="$1"
   if [[ -r /dev/tty ]]; then
-    read -t 15 -r -p "$prompt" REPLY </dev/tty || REPLY=""
+    read -t 5 -r -p "$prompt" REPLY </dev/tty || REPLY=""
   else
-    read -t 15 -r -p "$prompt" REPLY || REPLY=""
+    read -t 5 -r -p "$prompt" REPLY || REPLY=""
   fi
 }
 
@@ -255,16 +255,12 @@ case "${PANEL_DOMAIN,,}" in
   ""|ip|none|"_") PANEL_DOMAIN="$SERVER_IP" ;;
 esac
 
-# --- CERTBOT_EMAIL (required for SSL — always ask interactively) ---
+# --- CERTBOT_EMAIL (required for SSL — auto-generate on timeout) ---
 if can_prompt; then
   echo ""
   echo "  Email for Let's Encrypt SSL (required — used when you issue certificates)."
   while true; do
-    if [[ -n "${CERTBOT_EMAIL:-}" && "$CERTBOT_EMAIL" != "admin@localhost" ]]; then
-      ask "CERTBOT_EMAIL" "$CERTBOT_EMAIL"
-    else
-      ask_required "CERTBOT_EMAIL" "you@example.com"
-    fi
+    ask "CERTBOT_EMAIL" "${CERTBOT_EMAIL:-admin@$SERVER_IP}"
     CERTBOT_EMAIL="$REPLY"
     if is_email "$CERTBOT_EMAIL"; then
       break
@@ -272,7 +268,7 @@ if can_prompt; then
     echo "    Invalid email. Example: admin@yourdomain.com"
   done
 else
-  CERTBOT_EMAIL="${CERTBOT_EMAIL:-admin@localhost}"
+  CERTBOT_EMAIL="${CERTBOT_EMAIL:-admin@$SERVER_IP}"
 fi
 
 # --- Panel admin (web login) ---
@@ -287,20 +283,32 @@ if can_prompt; then
   [[ -n "$ADMIN_USER" ]] || ADMIN_USER="admin"
   while true; do
     if [[ -r /dev/tty ]]; then
-      read -r -s -p "  Admin password (min 8 chars): " ADMIN_PASSWORD </dev/tty || ADMIN_PASSWORD=""
-      echo ""
-      read -r -s -p "  Confirm password: " ADMIN_PASSWORD2 </dev/tty || ADMIN_PASSWORD2=""
+      read -t 10 -r -s -p "  Admin password (min 8 chars, waits 10s then auto-generates): " ADMIN_PASSWORD </dev/tty || ADMIN_PASSWORD=""
       echo ""
     else
-      read -r -s -p "  Admin password (min 8 chars): " ADMIN_PASSWORD || ADMIN_PASSWORD=""
-      echo ""
-      read -r -s -p "  Confirm password: " ADMIN_PASSWORD2 || ADMIN_PASSWORD2=""
+      read -t 10 -r -s -p "  Admin password (min 8 chars, waits 10s then auto-generates): " ADMIN_PASSWORD || ADMIN_PASSWORD=""
       echo ""
     fi
+    
+    if [[ -z "$ADMIN_PASSWORD" ]]; then
+      ADMIN_PASSWORD="$(openssl rand -hex 8)"
+      echo "  -> Auto-generated password: $ADMIN_PASSWORD"
+      break
+    fi
+
     if [[ ${#ADMIN_PASSWORD} -lt 8 ]]; then
       echo "    Password must be at least 8 characters."
       continue
     fi
+    
+    if [[ -r /dev/tty ]]; then
+      read -t 10 -r -s -p "  Confirm password: " ADMIN_PASSWORD2 </dev/tty || ADMIN_PASSWORD2=""
+      echo ""
+    else
+      read -t 10 -r -s -p "  Confirm password: " ADMIN_PASSWORD2 || ADMIN_PASSWORD2=""
+      echo ""
+    fi
+    
     if [[ "$ADMIN_PASSWORD" != "$ADMIN_PASSWORD2" ]]; then
       echo "    Passwords do not match."
       continue
@@ -311,7 +319,8 @@ if can_prompt; then
 else
   ADMIN_USER="${ADMIN_USER:-admin}"
   if [[ -z "${ADMIN_PASSWORD:-}" ]]; then
-    die "NONINTERACTIVE install requires ADMIN_PASSWORD (min 8 chars)"
+    ADMIN_PASSWORD="$(openssl rand -hex 8)"
+    echo "NONINTERACTIVE: Auto-generated admin password: $ADMIN_PASSWORD"
   fi
   if [[ ${#ADMIN_PASSWORD} -lt 8 ]]; then
     die "ADMIN_PASSWORD must be at least 8 characters"
