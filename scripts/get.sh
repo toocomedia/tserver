@@ -96,7 +96,15 @@ export INSTALL_SOURCE_COMMIT="$SOURCE_COMMIT"
 chmod +x "$CLONE_DIR/scripts/"*.sh
 
 info "Starting install.sh (prompts use /dev/tty)..."
-# Run as a file so install can prompt safely
-bash "$CLONE_DIR/scripts/install.sh"
+# Run as a file so install can prompt safely.
+# By this point get.sh has been fully buffered by bash — the curl pipe is
+# exhausted. Passing </dev/tty gives install.sh a real terminal as fd 0
+# from the very first instruction, making `read` and Ctrl+C work correctly
+# in a `curl | bash` pipeline.
+if [[ -r /dev/tty ]]; then
+  bash "$CLONE_DIR/scripts/install.sh" </dev/tty
+else
+  bash "$CLONE_DIR/scripts/install.sh"
+fi
 
 info "Done. Temp clone removed."
