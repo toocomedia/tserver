@@ -574,6 +574,41 @@ function initLazyImageSkeletons() {
   });
 }
 
+function convertSubdomainToRecord(subdomain, parentDomain) {
+  confirmAction(
+    `Convert '${subdomain}' from a standalone DNS zone into an A record inside '${parentDomain}'? The separate zone will be deleted.`,
+    async () => {
+      if (typeof showGlobalLoader === "function") {
+        showGlobalLoader("Converting DNS Zone...");
+      }
+      try {
+        const res = await panel.post(`/dns/api/${encodeURIComponent(subdomain)}/convert-to-record`);
+        if (typeof hideGlobalLoader === "function") hideGlobalLoader();
+        if (typeof toast === "function") {
+          toast(`Converted '${subdomain}' to an A record in '${parentDomain}'`, "success");
+        }
+        if (res && res.redirect_url) {
+          window.location.href = res.redirect_url;
+        } else {
+          window.location.reload();
+        }
+      } catch (err) {
+        if (typeof hideGlobalLoader === "function") hideGlobalLoader();
+        if (typeof toast === "function") {
+          toast(err.message || "Failed to convert DNS zone.", "danger");
+        } else {
+          alert(err.message || "Failed to convert DNS zone.");
+        }
+      }
+    },
+    {
+      title: "Convert Subdomain to Record",
+      okLabel: "Convert to Record",
+      danger: false,
+    }
+  );
+}
+
 window.PATHS = PATHS;
 window.path = path;
 window.publicUrl = publicUrl;
@@ -588,3 +623,4 @@ window.hideSkeleton = hideSkeleton;
 window.showSkeleton = showSkeleton;
 window.confirmAction = confirmAction;
 window.initLazyImageSkeletons = initLazyImageSkeletons;
+window.convertSubdomainToRecord = convertSubdomainToRecord;

@@ -12,8 +12,9 @@ function initSslIssuePage() {
   const wwwLabel            = document.getElementById("www-label");
   const wwwCheckbox         = document.getElementById("include_www");
   const autoRenewCheckbox   = document.getElementById("auto_renew");
-  const previewPrimary      = document.getElementById("preview-primary-domain");
-  const previewSans         = document.getElementById("preview-sans");
+  const previewEmpty        = document.getElementById("preview-empty-state");
+  const previewDetails      = document.getElementById("preview-details");
+  const previewDomainText   = document.getElementById("preview-domain-text");
   const previewAutoRenewBadge = document.getElementById("preview-auto-renew-badge");
   const form                = document.getElementById("issue-form");
   const submitBtn           = document.getElementById("btn-submit");
@@ -26,8 +27,8 @@ function initSslIssuePage() {
       if (hiddenDomain) hiddenDomain.value = "";
       if (hiddenId)     hiddenId.value = "";
       if (wwwGroup)     wwwGroup.style.display = "none";
-      if (previewPrimary) previewPrimary.textContent = "—";
-      if (previewSans)    previewSans.textContent    = "—";
+      if (previewEmpty)   previewEmpty.style.display = "block";
+      if (previewDetails) previewDetails.style.display = "none";
       return;
     }
 
@@ -50,20 +51,23 @@ function initSslIssuePage() {
   }
 
   function updatePreview(domain, isRoot) {
-    if (previewPrimary) previewPrimary.textContent = domain;
+    if (previewEmpty)   previewEmpty.style.display = "none";
+    if (previewDetails) previewDetails.style.display = "flex";
 
     const includeWww = isRoot && wwwCheckbox && wwwCheckbox.checked;
     const domains = [domain];
     if (includeWww) domains.push(`www.${domain}`);
 
-    if (previewSans) previewSans.textContent = domains.join(",  ");
+    if (previewDomainText) previewDomainText.textContent = domains.join(",  ");
 
     if (previewAutoRenewBadge && autoRenewCheckbox) {
+      const enabledText = previewAutoRenewBadge.getAttribute("data-enabled-text") || "Enabled";
+      const disabledText = previewAutoRenewBadge.getAttribute("data-disabled-text") || "Disabled";
       if (autoRenewCheckbox.checked) {
-        previewAutoRenewBadge.textContent = "Enabled";
+        previewAutoRenewBadge.textContent = enabledText;
         previewAutoRenewBadge.className = "badge-minimal badge-minimal--active";
       } else {
-        previewAutoRenewBadge.textContent = "Disabled";
+        previewAutoRenewBadge.textContent = disabledText;
         previewAutoRenewBadge.className = "badge-minimal badge-minimal--neutral";
       }
     }

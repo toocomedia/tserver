@@ -169,7 +169,7 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="/static/js/modules/dns.js"></script>
+<script src="/static/js/modules/dns.js?v={{ APP_VERSION }}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
   if (typeof hideSkeleton === 'function') hideSkeleton('dns-records-skeleton');

@@ -959,5 +959,10 @@
   "free_ram_cache": "Free RAM Cache",
   "smart_flush_swap": "Smart Flush Swap",
   "free_ram_cache_tooltip": "Safely drops clean inactive kernel pagecaches, freeing physical RAM instantly.",
-  "smart_flush_swap_tooltip": "Cleans RAM cache and safely purges stale swap allocations if free memory allows."
+  "smart_flush_swap_tooltip": "Cleans RAM cache and safely purges stale swap allocations if free memory allows.",
+  "issue_ssl": "Issue SSL",
+  "auto_renew": "Auto-Renew",
+  "provider": "Provider",
+  "disabled": "Disabled",
+  "certificate_overview": "Certificate Overview"
 }
