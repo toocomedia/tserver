@@ -50,11 +50,9 @@ async def domains_bulk_action(payload: BulkActionRequest, db: AsyncSession = Dep
 @router.get("/", response_class=HTMLResponse)
 async def domains_list(
     request: Request,
-    offset: int = 0,
-    limit: int = 6,
     db: AsyncSession = Depends(get_db)
 ):
-    domains, total = await domain_service.get_paginated(db, limit=limit, offset=offset)
+    domains = await domain_service.get_all(db)
 
     # Batch fetch all SSL certs in a single query
     all_certs = {c.full_domain: c for c in (await db.execute(select(SslCert))).scalars().all()}
@@ -76,9 +74,7 @@ async def domains_list(
         "request": request,
         "active_page": "domains",
         "domain_statuses": domain_statuses,
-        "total_count": total,
-        "current_offset": offset,
-        "current_limit": limit,
+        "total_count": len(domains),
     })
 
 

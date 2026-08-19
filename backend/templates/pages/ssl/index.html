@@ -81,15 +81,6 @@
   </table>
   </div>
 
-  <!-- LOAD MORE BUTTON -->
-  {% if total_count > current_limit %}
-  <div class="d-flex justify-content-center mt-lg" id="load-more-container">
-    <button type="button" class="btn btn--secondary" id="btn-load-more" onclick="loadMoreSsl()">
-      {{ _('load_more') }}
-    </button>
-  </div>
-  {% endif %}
-
 {% else %}
 {% from "partials/empty_state.html" import empty_state %}
 {{ empty_state(
@@ -197,38 +188,6 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   {% endif %}
 });
-
-let currentSslOffset = {{ cert_list|length }};
-const sslLimit = 8;
-
-async function loadMoreSsl() {
-  const btn = document.getElementById('btn-load-more');
-  if (btn) btn.disabled = true;
-  try {
-    const res = await fetch(`/ssl/api/rows?offset=${currentSslOffset}&limit=${sslLimit}`);
-    if (res.ok) {
-      const html = await res.text();
-      const loadedCount = parseInt(res.headers.get('X-Loaded-Count') || '0', 10);
-      const hasMore = res.headers.get('X-Has-More') === '1';
-
-      if (html && html.trim()) {
-        const tbody = document.querySelector('#ssl-table tbody');
-        if (tbody) {
-          tbody.insertAdjacentHTML('beforeend', html);
-        }
-      }
-      currentSslOffset += loadedCount;
-      if (!hasMore || loadedCount === 0) {
-        const container = document.getElementById('load-more-container');
-        if (container) container.remove();
-      }
-    }
-  } catch (err) {
-    if (typeof toast === 'function') toast("Failed to load more certificates", "danger");
-  } finally {
-    if (btn) btn.disabled = false;
-  }
-}
 
 function filterSSLTable() {
   const query = document.getElementById('ssl-search-input').value.toLowerCase().trim();

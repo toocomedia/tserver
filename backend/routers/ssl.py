@@ -62,15 +62,13 @@ async def _build_eligible(db: AsyncSession) -> list[dict]:
 @router.get("/", response_class=HTMLResponse)
 async def ssl_index(
     request: Request,
-    offset: int = 0,
-    limit: int = 8,
     domain_id: int | None = Query(default=None),
     full_domain: str | None = Query(default=None),
     open_issue: int | None = Query(default=None),
     db: AsyncSession = Depends(get_db)
 ):
     """Show issued SSL certs with live expiry status and slide drawer for issuing."""
-    cert_list, total = await ssl_service.list_certs_paginated(db, limit=limit, offset=offset)
+    cert_list = await ssl_service.list_certs(db)
     eligible = await _build_eligible(db)
 
     preselect_full = (full_domain or "").strip().lower() or None
@@ -91,9 +89,7 @@ async def ssl_index(
         "request": request,
         "active_page": "ssl",
         "cert_list": cert_list,
-        "total_count": total,
-        "current_offset": offset,
-        "current_limit": limit,
+        "total_count": len(cert_list),
         "eligible": eligible,
         "preselect_full_domain": preselect_full,
         "auto_open_issue": auto_open,

@@ -87,9 +87,9 @@ document.addEventListener('mouseout', (e) => {
 
 /**
  * Base Client-Side List Pagination ("Load More" button engine).
- * Configured with default limit of 6 items per page.
+ * Configured with default limit of 8 items per page.
  */
-const DEFAULT_PAGE_LIMIT = 6;
+const DEFAULT_PAGE_LIMIT = 8;
 
 function applyListPagination(container, limit = DEFAULT_PAGE_LIMIT) {
   if (!container) return;
@@ -154,11 +154,12 @@ function applyListPagination(container, limit = DEFAULT_PAGE_LIMIT) {
   const isContainerHidden = container.classList.contains('is-hidden') || (parent && parent.classList.contains('is-hidden'));
 
   if (remainingCount > 0 && !isContainerHidden) {
+    const loadMoreText = (typeof window._ === 'function' ? window._('load_more') : null) || 'Load More';
     wrap.style.display = 'flex';
     wrap.innerHTML = `
       <button type="button" class="btn btn--secondary btn--sm load-more-btn">
         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
-        <span>Load More</span>
+        <span>${loadMoreText}</span>
       </button>
     `;
     const btn = wrap.querySelector('.load-more-btn');
