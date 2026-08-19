@@ -950,5 +950,6 @@
   "auto_renew": "تجديد تلقائي",
   "provider": "المزود",
   "disabled": "معطل",
-  "certificate_overview": "نظرة عامة على الشهادة"
+  "certificate_overview": "نظرة عامة على الشهادة",
+  "load_more": "تحميل المزيد"
 }

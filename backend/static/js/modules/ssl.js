@@ -19,7 +19,9 @@ function initSslIssuePage() {
   const form                = document.getElementById("issue-form");
   const submitBtn           = document.getElementById("btn-submit");
 
-  if (!select) return;   // Not on issue page
+  if (!select || !form) return;   // Not on issue page / drawer
+  if (form._sslInitialized) return;
+  form._sslInitialized = true;
 
   function updateForm() {
     const opt = select.options[select.selectedIndex];
@@ -97,33 +99,34 @@ function initSslIssuePage() {
   }
 
   // Intercept submit, use global loader and async fetch for certbot
-  if (form && submitBtn) {
-    form.addEventListener("submit", async (e) => {
-      updateForm();
-      const opt = select.options[select.selectedIndex];
-      if (!opt || !opt.value) {
-        e.preventDefault();
-        return;
-      }
-      e.preventDefault();
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (submitBtn && submitBtn.disabled) return;
+
+    updateForm();
+    const opt = select.options[select.selectedIndex];
+    if (!opt || !opt.value) {
+      return;
+    }
+    
+    if (submitBtn) submitBtn.disabled = true;
+    showGlobalLoader("Issuing Certificate... (This may take 30–60s)");
+    try {
+      const data = Object.fromEntries(new FormData(form).entries());
+      data.full_domain = opt.value;
+      data.domain_id = opt.getAttribute("data-domain-id") || "";
+      form.querySelectorAll("input[type=checkbox]").forEach((cb) => {
+        data[cb.name] = cb.checked;
+      });
       
-      showGlobalLoader("Issuing Certificate... (This may take 30–60s)");
-      try {
-        const data = Object.fromEntries(new FormData(form).entries());
-        data.full_domain = opt.value;
-        data.domain_id = opt.getAttribute("data-domain-id") || "";
-        form.querySelectorAll("input[type=checkbox]").forEach((cb) => {
-          data[cb.name] = cb.checked;
-        });
-        
-        await panel.post(form.action, data);
-        window.location.href = "/ssl/?issued=" + encodeURIComponent(data.full_domain || "");
-      } catch (err) {
-        hideGlobalLoader();
-        toast(err.message || "Failed to issue SSL certificate.", "danger");
-      }
-    });
-  }
+      await panel.post(form.action, data);
+      window.location.href = "/ssl/?issued=" + encodeURIComponent(data.full_domain || "");
+    } catch (err) {
+      hideGlobalLoader();
+      if (submitBtn) submitBtn.disabled = false;
+      toast(err.message || "Failed to issue SSL certificate.", "danger");
+    }
+  });
 
   // Auto-dismiss flash alerts
   ["alert-issued", "alert-renewed", "alert-revoked", "alert-error"].forEach((id) => {
@@ -135,25 +138,30 @@ function initSslIssuePage() {
   updateForm();
 }
 
-document.addEventListener("app:init", initSslIssuePage);
 document.addEventListener("DOMContentLoaded", initSslIssuePage);
+document.addEventListener("app:init", initSslIssuePage);
 
-document.addEventListener("app:init", () => {
-  document.querySelectorAll('.auto-renew-toggle').forEach(checkbox => {
-    checkbox.addEventListener('change', async (e) => {
-      const id = e.target.getAttribute('data-id');
-      const checked = e.target.checked;
-      e.target.disabled = true;
-      try {
-        await panel.post(`/ssl/api/${id}/auto-renew`, { auto_renew: checked });
-        toast(checked ? "Auto-renew enabled" : "Auto-renew disabled", "success");
-      } catch (err) {
-        // Revert UI on failure
-        e.target.checked = !checked;
-        toast(err.message || "Failed to update auto-renew", "danger");
-      } finally {
-        e.target.disabled = false;
-      }
-    });
+function initAutoRenewToggles() {
+  if (document._sslAutoRenewInitialized) return;
+  document._sslAutoRenewInitialized = true;
+
+  document.addEventListener('change', async (e) => {
+    if (!e.target.classList.contains('auto-renew-toggle')) return;
+    const checkbox = e.target;
+    const id = checkbox.getAttribute('data-id');
+    const checked = checkbox.checked;
+    checkbox.disabled = true;
+    try {
+      await panel.post(`/ssl/api/${id}/auto-renew`, { auto_renew: checked });
+      toast(checked ? "Auto-renew enabled" : "Auto-renew disabled", "success");
+    } catch (err) {
+      checkbox.checked = !checked;
+      toast(err.message || "Failed to update auto-renew", "danger");
+    } finally {
+      checkbox.disabled = false;
+    }
   });
-});
+}
+
+document.addEventListener("DOMContentLoaded", initAutoRenewToggles);
+document.addEventListener("app:init", initAutoRenewToggles);

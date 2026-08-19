@@ -7,6 +7,7 @@ Strategy: certonly --webroot
   - After cert is issued we call nginx_service to update config to HTTPS
   - Works identically for domains and reverse-proxy subdomains
 """
+import asyncio
 import logging
 import re
 from datetime import datetime, timezone
@@ -30,6 +31,7 @@ import config
 logger = logging.getLogger(__name__)
 
 _LE_LIVE = Path("/etc/letsencrypt/live")
+_CERTBOT_LOCK = asyncio.Lock()
 
 
 # ---------------------------------------------------------------
@@ -332,7 +334,8 @@ async def issue_cert(
             cmd += ["-d", f"www.{full_domain}"]
 
         logger.info("Running certbot for: %s (www=%s)", full_domain, include_www)
-        result = await shell.run(cmd, timeout=120)
+        async with _CERTBOT_LOCK:
+            result = await shell.run(cmd, timeout=120)
 
         if not result.success:
             logger.error("Certbot failed for %s: %s", full_domain, result.stderr)
@@ -493,7 +496,8 @@ async def renew_cert(db: AsyncSession, cert_id: int) -> SslCert:
         f"--cert-name={cert.full_domain}",
         "--non-interactive",
     ]
-    result = await shell.run(cmd, timeout=120)
+    async with _CERTBOT_LOCK:
+        result = await shell.run(cmd, timeout=120)
     if not result.success:
         raise HTTPException(
             status_code=500,
@@ -539,7 +543,8 @@ async def revoke_cert(
             "--delete-after-revoke",
         ]
         timeout = 60
-    result = await shell.run(cmd, timeout=timeout)
+    async with _CERTBOT_LOCK:
+        result = await shell.run(cmd, timeout=timeout)
     if not result.success:
         logger.warning("Certbot cleanup warning for %s: %s", domain_name, result.stderr)
         # Non-fatal — continue to revert nginx

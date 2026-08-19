@@ -145,31 +145,14 @@
   </table>
   </div>
 
-  <!-- DB PAGINATION CONTROLS -->
+  <!-- LOAD MORE BUTTON -->
   {% if total_count > current_limit %}
-  <div class="d-flex justify-content-between align-items-center mt-md pt-sm border-top">
-    <span class="text-muted text-small">
-      Showing {{ current_offset + 1 }} to {{ [current_offset + current_limit, total_count]|min }} of {{ total_count }} certificates
-    </span>
-    <div class="d-flex gap-xs">
-      {% if current_offset > 0 %}
-      <a href="/ssl/?offset={{ [current_offset - current_limit, 0]|max }}&limit={{ current_limit }}" class="btn btn--secondary btn--sm">
-        &larr; Previous
-      </a>
-      {% endif %}
-      {% if current_offset + current_limit < total_count %}
-      <a href="/ssl/?offset={{ current_offset + current_limit }}&limit={{ current_limit }}" class="btn btn--secondary btn--sm">
-        Next &rarr;
-      </a>
-      {% endif %}
-    </div>
+  <div class="d-flex justify-content-center mt-lg" id="load-more-container">
+    <button type="button" class="btn btn--secondary" id="btn-load-more" onclick="loadMoreSsl()">
+      {{ _('load_more') }}
+    </button>
   </div>
   {% endif %}
-
-  <!-- Auto-renew info -->
-  <p class="text-small text-muted" style="margin-top:var(--space-lg);">
-    {{ _('toggle_the_auto_renew_switch_to_enable_o') }}
-  </p>
 
 {% else %}
 {% from "partials/empty_state.html" import empty_state %}
@@ -278,6 +261,84 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   {% endif %}
 });
+
+let currentSslOffset = {{ cert_list|length }};
+const sslLimit = 8;
+const totalSslCount = {{ total_count }};
+
+async function loadMoreSsl() {
+  const btn = document.getElementById('btn-load-more');
+  if (btn) btn.disabled = true;
+  try {
+    const res = await panel.get(`/ssl/api/list?offset=${currentSslOffset}&limit=${sslLimit}`);
+    if (res && res.items) {
+      const tbody = document.querySelector('#ssl-table tbody');
+      res.items.forEach(item => {
+        const tr = document.createElement('tr');
+        tr.id = `cert-row-${item.id}`;
+        
+        let daysHtml = '<span class="text-muted">—</span>';
+        if (item.expiry_date) {
+          let dayBadge = '';
+          if (item.days_left !== null && item.days_left !== undefined) {
+            const color = item.days_left > 30 ? 'var(--color-accent-2)' : (item.days_left > 0 ? 'var(--color-warn)' : 'var(--color-danger)');
+            dayBadge = `<span style="font-weight:700; color:${color};">(${item.days_left}d)</span>`;
+          }
+          daysHtml = `<span>${item.expiry_date}</span> ${dayBadge}`;
+        }
+
+        let statusClass = 'status-badge--success';
+        let statusText = "{{ _('valid') }}";
+        if (item.status === 'warning') { statusClass = 'status-badge--warning'; statusText = "{{ _('expiring') }}"; }
+        else if (item.status === 'expired') { statusClass = 'status-badge--danger'; statusText = "{{ _('expired') }}"; }
+
+        tr.innerHTML = `
+          <td class="table-title">${escapeHtml(item.full_domain)}</td>
+          <td class="text-small">${daysHtml}</td>
+          <td>
+            ${item.days_left !== null && item.days_left !== undefined ? `<span style="font-weight:700; color: ${item.days_left > 30 ? 'var(--color-accent-2)' : (item.days_left > 0 ? 'var(--color-warn)' : 'var(--color-danger)')};">${item.days_left}d</span>` : '<span class="text-muted">—</span>'}
+          </td>
+          <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+          <td>
+            <label class="form-check" style="margin:0;">
+              <input type="checkbox" class="auto-renew-toggle" data-id="${item.id}" ${item.auto_renew ? 'checked' : ''}>
+              <span style="display:none;">{{ _('auto_renew') }}</span>
+            </label>
+          </td>
+          <td class="col-actions" style="position:relative;">
+            <div class="list-actions">
+              <button class="list-actions__toggle" onclick="toggleActionTray(this)" aria-label="Actions">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>
+              </button>
+              <div class="list-actions__tray">
+                <form method="post" action="/ssl/${item.id}/renew" style="display:contents;" onsubmit="renewCert(event, ${item.id}, '${escapeHtml(item.full_domain)}')">
+                  <button type="submit" class="btn btn--secondary btn--sm" id="btn-renew-${item.id}" title="Renew Certificate">
+                    <svg viewbox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"></path><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+                    <span>{{ _('renew_certificate') }}</span>
+                  </button>
+                </form>
+                <button class="btn btn--danger btn--sm" id="btn-revoke-${item.id}" title="Revoke Certificate" onclick="revokeCert(${item.id}, '${escapeHtml(item.full_domain)}')">
+                  <svg viewbox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path></svg>
+                  <span>{{ _('revoke_certificate') }}</span>
+                </button>
+              </div>
+            </div>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+      currentSslOffset += res.items.length;
+      if (!res.has_more || currentSslOffset >= totalSslCount) {
+        const container = document.getElementById('load-more-container');
+        if (container) container.remove();
+      }
+    }
+  } catch (err) {
+    toast(err.message || "Failed to load more certificates", "danger");
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
 
 function filterSSLTable() {
   const query = document.getElementById('ssl-search-input').value.toLowerCase().trim();

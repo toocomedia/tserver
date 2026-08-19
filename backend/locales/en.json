@@ -965,5 +965,6 @@
   "auto_renew": "Auto-Renew",
   "provider": "Provider",
   "disabled": "Disabled",
-  "certificate_overview": "Certificate Overview"
+  "certificate_overview": "Certificate Overview",
+  "load_more": "Load More"
 }

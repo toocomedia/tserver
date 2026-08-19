@@ -63,7 +63,7 @@ async def _build_eligible(db: AsyncSession) -> list[dict]:
 async def ssl_index(
     request: Request,
     offset: int = 0,
-    limit: int = 6,
+    limit: int = 8,
     domain_id: int | None = Query(default=None),
     full_domain: str | None = Query(default=None),
     open_issue: int | None = Query(default=None),
@@ -98,6 +98,35 @@ async def ssl_index(
         "preselect_full_domain": preselect_full,
         "auto_open_issue": auto_open,
     })
+
+
+@router.get("/api/list")
+async def ssl_api_list(
+    offset: int = 0,
+    limit: int = 8,
+    db: AsyncSession = Depends(get_db)
+):
+    """API endpoint returning paginated certificates for Load More."""
+    cert_list, total = await ssl_service.list_certs_paginated(db, limit=limit, offset=offset)
+    items = []
+    for item in cert_list:
+        c = item["cert"]
+        items.append({
+            "id": c.id,
+            "full_domain": c.full_domain,
+            "domain_id": c.domain_id,
+            "expiry_date": c.expiry_date.strftime('%Y-%m-%d') if c.expiry_date else None,
+            "days_left": item["days_left"],
+            "status": item["status"],
+            "auto_renew": c.auto_renew,
+        })
+    return {
+        "items": items,
+        "total": total,
+        "offset": offset,
+        "limit": limit,
+        "has_more": (offset + limit) < total
+    }
 
 
 # ---------------------------------------------------------------
