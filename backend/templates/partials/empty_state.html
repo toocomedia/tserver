@@ -1,48 +1,119 @@
 {# ============================================================
    SHARED REUSABLE EMPTY STATE COMPONENT
-   Fading-Edge Abstract Grid Pattern with Sharp Brutalist Geometry
+   Option 2: Pure Fluid Shapes & Orbit Rings with Balanced Grid
    ============================================================ #}
 
 {% macro empty_state(icon='layers', title=None, desc=None, action_url=None, action_label=None, action_icon='plus', action_onclick=None, action_btn_id=None, secondary_url=None, secondary_label=None, compact=false, id=None, grid_variant='standard') -%}
 <div class="empty-state-grid-card{% if compact %} empty-state-grid-card--compact{% endif %}"{% if id %} id="{{ id }}"{% endif %}>
-  <!-- 1. Fading Grid Background -->
+  <!-- 1. Smooth Balanced Grid Background -->
   <div class="{% if grid_variant == 'dots' %}grid-pattern-dots{% elif grid_variant == 'iso' %}grid-pattern-iso{% else %}grid-pattern-bg{% endif %}"></div>
 
-  <!-- 2. Central Ambient Glow -->
-  <div class="grid-ambient-glow"></div>
-
-  <!-- 3. Abstract Grid Decorative Cells (Full view only) -->
-  {% if not compact %}
-  <div class="grid-matrix-layer">
-    <div class="grid-cell-accent"></div>
-    <div class="grid-cell-tint"></div>
-    <div class="grid-crosshair" style="top: 0; left: 48px;"></div>
-    <div class="grid-crosshair" style="top: 0; right: 48px;"></div>
-    <div class="grid-crosshair" style="bottom: 0; right: 48px;"></div>
-    <div class="grid-crosshair" style="bottom: 0; left: 48px;"></div>
+  <!-- 2. Fluid Vector Art (Option 2) -->
+  <div class="empty-vector-art">
+    {% if '<svg' in icon %}
+      {{ icon | safe }}
+    {% elif icon in ['shield', 'shield-check', 'shield-plus', 'ssl', 'lock'] %}
+      <!-- SSL Guard Shield & Orbit Rings -->
+      <svg width="170" height="120" viewBox="0 0 180 130" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <ellipse cx="90" cy="65" rx="76" ry="46" stroke="var(--vector-stroke-muted)" stroke-width="1.2" stroke-dasharray="4 4" opacity="0.6"/>
+        <ellipse cx="90" cy="65" rx="54" ry="32" stroke="var(--vector-stroke-light)" stroke-width="1" opacity="0.4"/>
+        <rect x="14" y="32" width="38" height="16" rx="8" fill="var(--vector-fill-card)" stroke="var(--vector-stroke-light)" stroke-width="1"/>
+        <circle cx="22" cy="40" r="2.5" fill="var(--vector-stroke)"/>
+        <line x1="28" y1="40" x2="44" y2="40" stroke="var(--vector-stroke-muted)" stroke-width="1.5" stroke-linecap="round"/>
+        <rect x="128" y="76" width="38" height="16" rx="8" fill="var(--vector-fill-card)" stroke="var(--vector-stroke-light)" stroke-width="1"/>
+        <line x1="136" y1="84" x2="152" y2="84" stroke="var(--vector-stroke-muted)" stroke-width="1.5" stroke-linecap="round"/>
+        <circle cx="158" cy="84" r="2.5" fill="var(--vector-stroke-light)"/>
+        <path d="M90 24L116 34V64C116 80 90 96 90 96C90 96 64 80 64 64V34L90 24Z" fill="var(--vector-fill-card)" stroke="var(--vector-stroke)" stroke-width="1.8" stroke-linejoin="round"/>
+        <circle cx="90" cy="56" r="5" stroke="var(--vector-stroke)" stroke-width="1.8"/>
+        <path d="M90 61V68" stroke="var(--vector-stroke)" stroke-width="2" stroke-linecap="round"/>
+        <path d="M85 53V49C85 46.2 87.2 44 90 44C92.8 44 95 46.2 95 49V53" stroke="var(--vector-stroke)" stroke-width="1.8" stroke-linecap="round"/>
+      </svg>
+    {% elif icon in ['proxy', 'arrow-left-right', 'shuffle', 'route', 'git-fork', 'repeat'] %}
+      <!-- Proxy Curved Routing Stream -->
+      <svg width="160" height="100" viewBox="0 0 160 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M44 35 C70 35, 90 65, 116 65" stroke="var(--vector-stroke)" stroke-width="1.8" stroke-linecap="round"/>
+        <path d="M44 65 C70 65, 90 35, 116 35" stroke="var(--vector-stroke-muted)" stroke-width="1.4" stroke-dasharray="3 3"/>
+        <rect x="12" y="24" width="34" height="22" rx="6" fill="var(--vector-fill-card)" stroke="var(--vector-stroke)" stroke-width="1.6"/>
+        <circle cx="21" cy="35" r="2.5" fill="var(--vector-stroke)"/>
+        <line x1="27" y1="35" x2="39" y2="35" stroke="var(--vector-stroke-muted)" stroke-width="1.5" stroke-linecap="round"/>
+        <rect x="114" y="54" width="36" height="22" rx="6" fill="var(--vector-fill-card)" stroke="var(--vector-stroke)" stroke-width="1.6"/>
+        <circle cx="123" cy="65" r="2.5" fill="var(--vector-stroke)"/>
+        <line x1="129" y1="65" x2="143" y2="65" stroke="var(--vector-stroke-muted)" stroke-width="1.5" stroke-linecap="round"/>
+        <circle cx="80" cy="50" r="3" fill="var(--vector-stroke)"/>
+      </svg>
+    {% elif icon in ['database', 'server', 'hard-drive', 'supabase', 'layers', 'table', 'database-cluster'] %}
+      <!-- Database Isometric Cylinder Disks -->
+      <svg width="140" height="100" viewBox="0 0 140 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <ellipse cx="70" cy="78" rx="54" ry="18" stroke="var(--vector-stroke-light)" stroke-width="1.2" stroke-dasharray="3 3" opacity="0.6"/>
+        <ellipse cx="70" cy="66" rx="38" ry="12" fill="var(--vector-fill-card)" stroke="var(--vector-stroke)" stroke-width="1.6"/>
+        <path d="M32 66V74C32 81 49 86 70 86C91 86 108 81 108 74V66" stroke="var(--vector-stroke)" stroke-width="1.6" fill="var(--vector-fill-card)"/>
+        <ellipse cx="70" cy="44" rx="38" ry="12" fill="var(--vector-fill-card)" stroke="var(--vector-stroke)" stroke-width="1.6"/>
+        <path d="M32 44V52C32 59 49 64 70 64C91 64 108 59 108 52V44" stroke="var(--vector-stroke)" stroke-width="1.6" fill="var(--vector-fill-card)"/>
+        <ellipse cx="70" cy="22" rx="38" ry="12" fill="var(--vector-fill-card)" stroke="var(--vector-stroke)" stroke-width="1.8"/>
+        <path d="M32 22V30C32 37 49 42 70 42C91 42 108 37 108 30V22" stroke="var(--vector-stroke)" stroke-width="1.8" fill="var(--vector-fill-card)"/>
+      </svg>
+    {% elif icon in ['globe', 'network', 'dns', 'world', 'link'] %}
+      <!-- Orbital Globe & DNS Tags -->
+      <svg width="150" height="100" viewBox="0 0 150 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <ellipse cx="75" cy="50" rx="60" ry="22" transform="rotate(-15 75 50)" stroke="var(--vector-stroke-muted)" stroke-width="1.3" stroke-dasharray="4 4"/>
+        <circle cx="75" cy="50" r="26" fill="var(--vector-fill-card)" stroke="var(--vector-stroke)" stroke-width="1.8"/>
+        <ellipse cx="75" cy="50" rx="13" ry="26" stroke="var(--vector-stroke-light)" stroke-width="1.2"/>
+        <line x1="49" y1="50" x2="101" y2="50" stroke="var(--vector-stroke-light)" stroke-width="1.2"/>
+        <rect x="10" y="22" width="34" height="16" rx="4" fill="var(--vector-fill-card)" stroke="var(--vector-stroke)" stroke-width="1.4"/>
+        <text x="16" y="33" font-family="monospace" font-size="8.5" font-weight="700" fill="var(--vector-stroke)">A</text>
+        <circle cx="33" cy="30" r="2" fill="var(--vector-stroke-muted)"/>
+      </svg>
+    {% elif icon in ['box', 'boxes', 'package', 'puzzle', 'archive', 'terminal', 'code', 'apps', 'layout', 'cpu', 'cpu-chip'] %}
+      <!-- Floating Code Terminal Pod -->
+      <svg width="150" height="100" viewBox="0 0 160 110" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="36" y="24" width="96" height="66" rx="8" fill="var(--vector-fill-soft)" stroke="var(--vector-stroke-light)" stroke-width="1" stroke-dasharray="3 3"/>
+        <rect x="28" y="18" width="96" height="66" rx="8" fill="var(--vector-fill-card)" stroke="var(--vector-stroke)" stroke-width="1.8"/>
+        <circle cx="39" cy="28" r="2" fill="var(--vector-stroke)"/>
+        <circle cx="46" cy="28" r="2" fill="var(--vector-stroke-light)"/>
+        <circle cx="53" cy="28" r="2" fill="var(--vector-stroke-light)"/>
+        <path d="M40 44L44 47L40 50" stroke="var(--vector-stroke)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+        <line x1="48" y1="47" x2="80" y2="47" stroke="var(--vector-stroke-muted)" stroke-width="1.6" stroke-linecap="round"/>
+        <rect x="84" y="44" width="4" height="6" fill="var(--vector-stroke)"/>
+        <line x1="40" y1="60" x2="105" y2="60" stroke="var(--vector-stroke-light)" stroke-width="1.4" stroke-linecap="round"/>
+        <line x1="40" y1="68" x2="75" y2="68" stroke="var(--vector-stroke-light)" stroke-width="1.4" stroke-linecap="round"/>
+        <rect x="104" y="64" width="44" height="18" rx="9" fill="var(--vector-fill-card)" stroke="var(--vector-stroke)" stroke-width="1.4"/>
+        <circle cx="113" cy="73" r="2.5" fill="var(--vector-stroke)"/>
+        <line x1="120" y1="73" x2="138" y2="73" stroke="var(--vector-stroke-muted)" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    {% elif icon in ['bell', 'activity', 'bell-off', 'notifications'] %}
+      <!-- Floating Bell with Concentric Radar Pulse -->
+      <svg width="140" height="100" viewBox="0 0 150 110" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M42 55C42 36.7 56.7 22 75 22C93.3 22 108 36.7 108 55" stroke="var(--vector-stroke-light)" stroke-width="1.2" stroke-dasharray="3 3"/>
+        <path d="M54 55C54 43.4 63.4 34 75 34C86.6 34 96 43.4 96 55" stroke="var(--vector-stroke-light)" stroke-width="1.4"/>
+        <path d="M75 38C67.3 38 61 44.3 61 52V64L55 70H95L89 64V52C89 44.3 82.7 38 75 38Z" fill="var(--vector-fill-card)" stroke="var(--vector-stroke)" stroke-width="1.8" stroke-linejoin="round"/>
+        <circle cx="75" cy="76" r="3.5" stroke="var(--vector-stroke)" stroke-width="1.8"/>
+        <path d="M73 34C73 32.9 73.9 32 75 32C76.1 32 77 32.9 77 34" stroke="var(--vector-stroke)" stroke-width="1.8" stroke-linecap="round"/>
+        <circle cx="88" cy="46" r="3" fill="var(--vector-stroke)"/>
+      </svg>
+    {% elif icon in ['search', 'search-x', 'filter', 'filter-x'] %}
+      <!-- Floating Search Lens & Card -->
+      <svg width="140" height="100" viewBox="0 0 150 110" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="25" y="24" width="100" height="60" rx="8" fill="var(--vector-fill-card)" stroke="var(--vector-stroke-light)" stroke-width="1.4"/>
+        <line x1="38" y1="40" x2="80" y2="40" stroke="var(--vector-stroke-muted)" stroke-width="1.6" stroke-linecap="round"/>
+        <line x1="38" y1="52" x2="65" y2="52" stroke="var(--vector-stroke-light)" stroke-width="1.4" stroke-linecap="round"/>
+        <line x1="38" y1="64" x2="90" y2="64" stroke="var(--vector-stroke-light)" stroke-width="1.4" stroke-linecap="round"/>
+        <circle cx="95" cy="56" r="16" fill="var(--vector-fill-card)" stroke="var(--vector-stroke)" stroke-width="1.8"/>
+        <line x1="107" y1="68" x2="118" y2="79" stroke="var(--vector-stroke)" stroke-width="2.2" stroke-linecap="round"/>
+        <path d="M91 52L99 60M99 52L91 60" stroke="var(--vector-stroke-muted)" stroke-width="1.6" stroke-linecap="round"/>
+      </svg>
+    {% elif icon in ['alert-circle', 'alert-triangle', 'errors'] %}
+      <!-- Floating Alert Hexagon/Triangle -->
+      <svg width="140" height="100" viewBox="0 0 150 110" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <polygon points="75,18 125,92 25,92" fill="var(--vector-fill-card)" stroke="var(--vector-stroke)" stroke-width="1.8" stroke-linejoin="round"/>
+        <line x1="75" y1="45" x2="75" y2="68" stroke="var(--vector-stroke)" stroke-width="2" stroke-linecap="round"/>
+        <circle cx="75" cy="78" r="2" fill="var(--vector-stroke)"/>
+      </svg>
+    {% else %}
+      <i data-lucide="{{ icon }}" style="width: 44px; height: 44px; stroke-width: 1.5; color: var(--vector-stroke);"></i>
+    {% endif %}
   </div>
-  {% endif %}
 
-  <!-- 4. Hero Abstract Graphic -->
-  <div class="empty-hero-art">
-    <div class="hero-cube-minimal">
-      <div class="cube-backdrop"></div>
-      <div class="cube-accent-tint"></div>
-      <div class="cube-frame">
-        {% if icon %}
-          {% if '<svg' in icon %}
-            {{ icon | safe }}
-          {% else %}
-            <i data-lucide="{{ icon }}"></i>
-          {% endif %}
-        {% else %}
-          <i data-lucide="layers"></i>
-        {% endif %}
-      </div>
-    </div>
-  </div>
-
-  <!-- 5. Content & Actions -->
+  <!-- 3. Content & Actions -->
   <div class="empty-state-content">
     {% if title %}
       <h3 class="empty-state-title">{{ title }}</h3>

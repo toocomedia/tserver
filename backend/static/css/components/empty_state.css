@@ -1,62 +1,73 @@
 /* ============================================================
-   EMPTY STATE COMPONENT SYSTEM
-   Rich Fading-Edge Abstract Grid Pattern & Sharp Geometry
+   EMPTY STATE COMPONENT SYSTEM — FLUID VECTOR ART & BALANCED GRID
+   Option 2: Pure Fluid Shapes, Orbit Rings & Soft Radial Vignette
    ============================================================ */
 
-:root {
-  --grid-line-color:      rgba(15, 23, 32, 0.065);
-  --grid-line-bold:       rgba(15, 23, 32, 0.13);
-  --grid-dot-color:       rgba(15, 23, 32, 0.16);
-  --grid-crosshair-color: rgba(15, 23, 32, 0.30);
-  --grid-glow-color:      rgba(199, 244, 100, 0.18);
-  --grid-accent-cell:     rgba(199, 244, 100, 0.22);
-  --grid-size:            48px;
+:root, [data-theme="light"] {
+  --grid-line-color:      rgba(15, 23, 32, 0.07);
+  --grid-dot-color:       rgba(15, 23, 32, 0.15);
+  --grid-size:            36px;
 
   --empty-title-color:    #0F1720;
-  --empty-desc-color:     #525866;
+  --empty-desc-color:     #5F645D;
+
+  --vector-stroke:        #0F1720;
+  --vector-stroke-muted:  #71796F;
+  --vector-stroke-light:  #D0D5C9;
+  --vector-fill-card:     #FFFFFF;
+  --vector-fill-soft:     rgba(15, 23, 32, 0.03);
 }
 
 [data-theme="dark"] {
   --grid-line-color:      rgba(255, 255, 255, 0.065);
-  --grid-line-bold:       rgba(255, 255, 255, 0.13);
-  --grid-dot-color:       rgba(255, 255, 255, 0.16);
-  --grid-crosshair-color: rgba(255, 255, 255, 0.30);
-  --grid-glow-color:      rgba(199, 244, 100, 0.14);
-  --grid-accent-cell:     rgba(199, 244, 100, 0.18);
+  --grid-dot-color:       rgba(255, 255, 255, 0.15);
+  --grid-size:            36px;
 
   --empty-title-color:    #FFFFFF;
   --empty-desc-color:     #9CA3AF;
+
+  --vector-stroke:        #FFFFFF;
+  --vector-stroke-muted:  #9CA3AF;
+  --vector-stroke-light:  rgba(255, 255, 255, 0.14);
+  --vector-fill-card:     #141D27;
+  --vector-fill-soft:     rgba(255, 255, 255, 0.03);
 }
 
 [data-theme="amoled"] {
-  --grid-line-color:      rgba(255, 255, 255, 0.08);
-  --grid-line-bold:       rgba(255, 255, 255, 0.16);
-  --grid-dot-color:       rgba(255, 255, 255, 0.20);
-  --grid-crosshair-color: rgba(199, 244, 100, 0.55);
-  --grid-glow-color:      rgba(199, 244, 100, 0.17);
-  --grid-accent-cell:     rgba(199, 244, 100, 0.22);
+  --grid-line-color:      rgba(255, 255, 255, 0.075);
+  --grid-dot-color:       rgba(255, 255, 255, 0.18);
+  --grid-size:            36px;
 
   --empty-title-color:    #FFFFFF;
-  --empty-desc-color:     #A1A7B3;
+  --empty-desc-color:     #9CA3AF;
+
+  --vector-stroke:        #FFFFFF;
+  --vector-stroke-muted:  #A1A1AA;
+  --vector-stroke-light:  rgba(255, 255, 255, 0.18);
+  --vector-fill-card:     #111114;
+  --vector-fill-soft:     rgba(255, 255, 255, 0.04);
 }
 
 [data-theme="charcoal"] {
   --grid-line-color:      rgba(255, 255, 255, 0.07);
-  --grid-line-bold:       rgba(255, 255, 255, 0.14);
-  --grid-dot-color:       rgba(255, 255, 255, 0.18);
-  --grid-crosshair-color: rgba(255, 255, 255, 0.35);
-  --grid-glow-color:      rgba(199, 244, 100, 0.13);
-  --grid-accent-cell:     rgba(199, 244, 100, 0.16);
+  --grid-dot-color:       rgba(255, 255, 255, 0.16);
+  --grid-size:            36px;
 
   --empty-title-color:    #FFFFFF;
-  --empty-desc-color:     #A3AAB8;
+  --empty-desc-color:     #B0B7C3;
+
+  --vector-stroke:        #FFFFFF;
+  --vector-stroke-muted:  #A1A1AA;
+  --vector-stroke-light:  rgba(255, 255, 255, 0.16);
+  --vector-fill-card:     #26262B;
+  --vector-fill-soft:     rgba(255, 255, 255, 0.035);
 }
 
 /* 1. Base Container (Centered Horizontally & Vertically on Page) */
 .empty-state-grid-card {
   position: relative;
   width: 100%;
-  min-height: clamp(420px, calc(100vh - var(--topbar-height, 52px) - 140px), 740px);
+  min-height: clamp(400px, calc(100vh - var(--topbar-height, 52px) - 140px), 680px);
   border: none !important;
   background: transparent !important;
   box-shadow: none !important;
@@ -65,14 +76,14 @@
   align-items: center;
   justify-content: center;
   text-align: center;
-  padding: 40px 20px;
+  padding: 48px 24px;
   overflow: hidden;
   margin: 0 auto;
   z-index: 1;
   transition: opacity var(--skeleton-fade-duration, 0.4s) ease, visibility var(--skeleton-fade-duration, 0.4s) ease;
 }
 
-/* Skeleton overlay coordination: Keep empty state hidden while skeleton is active, reveal smoothly once dismissed */
+/* Skeleton overlay coordination */
 .skeleton-overlay:not(.is-hidden) ~ .empty-state-grid-card,
 .skeleton-overlay:not(.is-hidden) ~ * .empty-state-grid-card,
 .skeleton-overlay:not(.is-hidden) + .empty-state-grid-card,
@@ -87,14 +98,14 @@
 
 /* Compact Variant for Sub-panels, Table Insets, and Split Views */
 .empty-state-grid-card--compact {
-  min-height: 220px;
+  min-height: 200px;
   padding: 24px 16px;
   margin: 0;
   border: none !important;
   background: transparent !important;
 }
 
-/* 2. Abstract Grid Background Layers (Spacious 48px Grid) */
+/* 2. Abstract Grid Background Layers (Smooth Fading Lines) */
 .grid-pattern-bg {
   position: absolute;
   inset: 0;
@@ -105,8 +116,8 @@
     linear-gradient(to bottom, var(--grid-line-color) 1px, transparent 1px);
   background-size: var(--grid-size) var(--grid-size);
   background-position: center center;
-  -webkit-mask-image: radial-gradient(ellipse 65% 65% at 50% 50%, #000 20%, transparent 80%);
-  mask-image: radial-gradient(ellipse 65% 65% at 50% 50%, #000 20%, transparent 80%);
+  -webkit-mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, #000 25%, transparent 80%);
+  mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, #000 25%, transparent 80%);
 }
 
 .grid-pattern-dots {
@@ -115,176 +126,56 @@
   pointer-events: none;
   z-index: 1;
   background-image: radial-gradient(var(--grid-dot-color) 1.5px, transparent 1.5px);
-  background-size: 32px 32px;
+  background-size: 24px 24px;
   background-position: center center;
-  -webkit-mask-image: radial-gradient(ellipse 65% 65% at 50% 50%, #000 20%, transparent 80%);
-  mask-image: radial-gradient(ellipse 65% 65% at 50% 50%, #000 20%, transparent 80%);
+  -webkit-mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, #000 25%, transparent 80%);
+  mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, #000 25%, transparent 80%);
 }
 
 .grid-pattern-iso {
   position: absolute;
-  inset: -100px;
+  inset: -60px;
   pointer-events: none;
   z-index: 1;
   background-image: 
     linear-gradient(30deg, var(--grid-line-color) 1px, transparent 1px),
     linear-gradient(150deg, var(--grid-line-color) 1px, transparent 1px);
-  background-size: 56px 32px;
+  background-size: 56px 32.33px;
   background-position: center center;
-  -webkit-mask-image: radial-gradient(ellipse 60% 60% at 50% 50%, #000 15%, transparent 75%);
-  mask-image: radial-gradient(ellipse 60% 60% at 50% 50%, #000 15%, transparent 75%);
+  -webkit-mask-image: radial-gradient(ellipse 65% 65% at 50% 50%, #000 20%, transparent 75%);
+  mask-image: radial-gradient(ellipse 65% 65% at 50% 50%, #000 20%, transparent 75%);
 }
 
-/* 3. Central Ambient Depth Glow */
-.grid-ambient-glow {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 320px;
-  height: 320px;
-  transform: translate(-50%, -50%);
-  background: radial-gradient(circle at 50% 50%, var(--grid-glow-color) 0%, transparent 65%);
-  pointer-events: none;
-  z-index: 2;
-  filter: blur(32px);
-}
-
-.empty-state-grid-card--compact .grid-ambient-glow {
-  width: 200px;
-  height: 200px;
-}
-
-/* 4. Abstract Matrix Decorative Accents (Precision Snapped to Grid) */
-.grid-matrix-layer {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 384px;
-  height: 240px;
-  transform: translate(-50%, -50%);
-  pointer-events: none;
-  z-index: 2;
-}
-
-.empty-state-grid-card--compact .grid-matrix-layer {
-  display: none;
-}
-
-.grid-cell-accent {
-  position: absolute;
-  top: 0;
-  left: 48px;
-  width: 48px;
-  height: 48px;
-  background: var(--grid-accent-cell);
-  border: 1px solid var(--color-accent);
-  opacity: 0.45;
-}
-
-.grid-cell-tint {
-  position: absolute;
-  bottom: 0;
-  right: 48px;
-  width: 48px;
-  height: 48px;
-  border: 1px dashed var(--grid-line-bold);
-  opacity: 0.6;
-}
-
-.grid-crosshair {
-  position: absolute;
-  width: 11px;
-  height: 11px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--grid-crosshair-color);
-  font-family: var(--font-mono, monospace);
-  font-size: 11px;
-  transform: translate(-50%, -50%);
-}
-.grid-crosshair::before {
-  content: "+";
-}
-
-/* 5. Clean, Refined Hero Graphic */
-.empty-hero-art {
+/* 3. FLUID VECTOR ART STAGE (OPTION 2) */
+.empty-vector-art {
   position: relative;
   z-index: 3;
   margin-bottom: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.hero-cube-minimal {
-  position: relative;
-  width: 64px;
-  height: 64px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-line);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.empty-state-grid-card:hover .empty-vector-art {
+  transform: translateY(-3px);
 }
 
-.hero-cube-minimal::after {
-  content: "";
-  position: absolute;
-  bottom: -1px;
-  right: -1px;
-  width: 7px;
-  height: 7px;
-  background: var(--color-accent);
+.empty-vector-art svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
 }
 
-.hero-cube-minimal::before {
-  content: "";
-  position: absolute;
-  top: -1px;
-  left: -1px;
-  width: 7px;
-  height: 7px;
-  border-top: 1px solid var(--color-text);
-  border-left: 1px solid var(--color-text);
+/* Compact scale */
+.empty-state-grid-card--compact .empty-vector-art {
+  margin-bottom: 12px;
+}
+.empty-state-grid-card--compact .empty-vector-art svg {
+  transform: scale(0.75);
 }
 
-.empty-state-grid-card--compact .hero-cube-minimal {
-  width: 48px;
-  height: 48px;
-}
-
-.cube-backdrop,
-.cube-accent-tint {
-  display: none;
-}
-
-.cube-frame {
-  position: static;
-  width: 100%;
-  height: 100%;
-  border: none !important;
-  background: transparent !important;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.cube-frame svg,
-.cube-frame i[data-lucide] {
-  width: 24px;
-  height: 24px;
-  color: var(--color-text);
-  stroke-width: 1.75;
-}
-
-.empty-state-grid-card--compact .cube-frame svg,
-.empty-state-grid-card--compact .cube-frame i[data-lucide] {
-  width: 20px;
-  height: 20px;
-}
-
-/* 6. Typography & Actions Layer */
+/* 4. Typography & Actions Layer */
 .empty-state-content {
   position: relative;
   z-index: 3;
@@ -311,9 +202,9 @@
 .empty-state-desc {
   font-size: 13.5px;
   color: var(--empty-desc-color, var(--color-muted));
-  line-height: 1.55;
-  margin: 0 0 20px;
-  max-width: 390px;
+  line-height: 1.5;
+  margin: 0 0 22px;
+  max-width: 360px;
 }
 
 .empty-state-grid-card--compact .empty-state-desc {
@@ -324,41 +215,41 @@
 .empty-state-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   flex-wrap: wrap;
   justify-content: center;
 }
 
 .empty-state-actions .btn {
-  height: 30px;
-  padding: 0 12px;
-  font-size: 12px;
+  height: 34px;
+  padding: 0 16px;
+  font-size: 12.5px;
   font-weight: 600;
-  letter-spacing: 0.02em;
-  background: var(--color-surface) !important;
-  border: 1px solid var(--color-line) !important;
-  color: var(--color-text) !important;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 5px;
+  gap: 6px;
   cursor: pointer;
   text-decoration: none;
-  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  transition: opacity 0.15s ease, background 0.15s ease;
 }
 
-.empty-state-actions .btn:hover {
-  background: var(--color-surface-hover) !important;
-  border-color: var(--color-text) !important;
+.empty-state-actions .btn--primary {
+  background: var(--color-text) !important;
+  color: var(--color-bg) !important;
+}
+.empty-state-actions .btn--primary:hover {
+  opacity: 0.88;
+}
+
+.empty-state-actions .btn--secondary {
+  background: var(--color-surface) !important;
+  border: 1px solid var(--color-line) !important;
   color: var(--color-text) !important;
 }
-
-.empty-state-actions .btn svg,
-.empty-state-actions .btn i[data-lucide] {
-  width: 13px;
-  height: 13px;
-  color: var(--color-text);
-  opacity: 0.9;
+.empty-state-actions .btn--secondary:hover {
+  background: var(--color-surface-hover) !important;
+  border-color: var(--color-text) !important;
 }
 
 @media (max-width: 768px) {
