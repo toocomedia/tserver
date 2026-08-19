@@ -31,6 +31,7 @@
   <link rel="stylesheet" href="/static/css/components/sections.css?v={{ APP_VERSION }}">
   <link rel="stylesheet" href="/static/css/components/shapes.css?v={{ APP_VERSION }}">
   <link rel="stylesheet" href="/static/css/components/modals.css?v={{ APP_VERSION }}">
+  <link rel="stylesheet" href="/static/css/components/delete_drawer.css?v={{ APP_VERSION }}">
   <link rel="stylesheet" href="/static/css/components/alerts.css?v={{ APP_VERSION }}">
   <link rel="stylesheet" href="/static/css/components/stepper.css?v={{ APP_VERSION }}">
   <link rel="stylesheet" href="/static/css/components/loading.css?v={{ APP_VERSION }}">
@@ -155,6 +156,9 @@
   </div>
 </div>
 
+<!-- SHARED DELETE SPLIT DRAWER -->
+{% include "partials/delete_drawer.html" %}
+
 <!-- GLOBAL LOADER OVERLAY -->
 <div id="global-loader" class="global-loader hidden">
   <div class="global-loader__spinner"></div>
@@ -165,6 +169,7 @@
 <div id="toast-container" role="status" aria-live="polite"></div>
 
 <!-- JS -->
+<script src="/static/js/modules/delete-drawer.js?v={{ APP_VERSION }}"></script>
 <script src="/static/js/main.js?v={{ APP_VERSION }}"></script>
 <script src="/static/js/modules/resource-guard-banner.js?v={{ APP_VERSION }}"></script>
 <script src="/static/js/resource-views.js?v={{ APP_VERSION }}"></script>

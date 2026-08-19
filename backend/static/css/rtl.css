@@ -842,3 +842,27 @@ html[dir="rtl"] .topbar-search-expandable__close {
   margin-right: 0 !important;
   margin-left: 4px !important;
 }
+
+/* --------------------------------------------------------------------------
+   12. Delete Split Drawer in RTL
+   -------------------------------------------------------------------------- */
+html[dir="rtl"] .delete-drawer-backdrop {
+  justify-content: flex-start;
+}
+
+html[dir="rtl"] .delete-drawer {
+  border-left: none;
+  border-right: 1px solid var(--color-line);
+  box-shadow: 8px 0 28px rgba(0, 0, 0, 0.2);
+  animation: deleteDrawerSlideInLeft 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes deleteDrawerSlideInLeft {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+

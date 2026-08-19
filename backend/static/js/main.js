@@ -263,8 +263,20 @@ document.addEventListener("keydown", (e) => {
  */
 function confirmAction(message, onConfirm, options) {
   const opts = options || {};
-  const title = opts.title || "Confirm Action";
   const danger = options ? !!opts.danger : true;
+
+  if (danger && typeof window.openDeleteDrawer === "function") {
+    window.openDeleteDrawer({
+      title: opts.title,
+      message: message,
+      itemName: opts.itemName,
+      okLabel: opts.okLabel,
+      onConfirm: onConfirm
+    });
+    return;
+  }
+
+  const title = opts.title || "Confirm Action";
   const okLabel = opts.okLabel || (danger ? "Delete" : "Confirm");
 
   const modal = document.getElementById("confirm-modal");

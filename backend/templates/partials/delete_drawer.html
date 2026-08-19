@@ -1,0 +1,33 @@
+<!-- SHARED DELETE SPLIT DRAWER (Modular Component) -->
+<div id="delete-drawer-backdrop" class="delete-drawer-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="delete-drawer-title" aria-describedby="delete-drawer-message">
+  <div class="delete-drawer" id="delete-drawer">
+    <div class="delete-drawer__header">
+      <div class="delete-drawer__title-wrap">
+        <span class="delete-drawer__badge-icon">
+          <i data-lucide="alert-triangle"></i>
+        </span>
+        <h2 id="delete-drawer-title" class="delete-drawer__title" data-delete-drawer-title>{{ _('confirm_delete') }}</h2>
+      </div>
+      <button type="button" class="btn btn--ghost btn--icon delete-drawer__close-btn" data-delete-drawer-close aria-label="{{ _('close') }}">
+        <i data-lucide="x"></i>
+      </button>
+    </div>
+
+    <div class="delete-drawer__body">
+      <div class="delete-drawer__target-box" data-delete-drawer-item-box hidden>
+        <span class="delete-drawer__target-label">{{ _('target_item') }}</span>
+        <div class="delete-drawer__target-name" data-delete-drawer-item></div>
+      </div>
+      <p id="delete-drawer-message" class="delete-drawer__message" data-delete-drawer-message>{{ _('delete_warning_permanent') }}</p>
+      <div class="delete-drawer__extra" data-delete-drawer-extra hidden></div>
+    </div>
+
+    <div class="delete-drawer__footer">
+      <button type="button" class="btn btn--secondary delete-drawer__cancel-btn" data-delete-drawer-close>{{ _('cancel') }}</button>
+      <button type="button" class="btn btn--danger delete-drawer__confirm-btn" id="delete-drawer-confirm-btn" data-delete-drawer-confirm disabled data-countdown="5" data-base-label="{{ _('delete') }}" data-countdown-tpl="{{ _('delete_countdown') }}">
+        <i data-lucide="trash-2"></i>
+        <span data-delete-drawer-btn-text>{{ _('delete') }} (5s)</span>
+      </button>
+    </div>
+  </div>
+</div>

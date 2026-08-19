@@ -1,0 +1,220 @@
+/* ============================================================
+   DELETE SPLIT DRAWER COMPONENT (delete_drawer.css)
+   Modular side-split delete drawer with countdown confirmation
+   ============================================================ */
+
+.delete-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  z-index: 1100;
+  opacity: 1;
+  transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.delete-drawer-backdrop.hidden {
+  display: none !important;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.delete-drawer {
+  position: relative;
+  width: 440px;
+  max-width: 100%;
+  height: 100vh;
+  background: var(--color-bg);
+  border-left: 1px solid var(--color-line);
+  box-shadow: -8px 0 28px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  transform: translateX(0);
+  animation: deleteDrawerSlideInRight 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  font-family: var(--font-sans);
+  color: var(--color-text);
+  overflow: hidden;
+}
+
+@keyframes deleteDrawerSlideInRight {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+/* Header */
+.delete-drawer__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-md) var(--space-lg);
+  border-bottom: 1px solid var(--color-line);
+  background: var(--color-bg);
+  min-height: 64px;
+}
+
+.delete-drawer__title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.delete-drawer__badge-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--color-danger) 14%, transparent);
+  color: var(--color-danger);
+  flex-shrink: 0;
+}
+
+.delete-drawer__badge-icon svg,
+.delete-drawer__badge-icon i {
+  width: 18px;
+  height: 18px;
+}
+
+.delete-drawer__title {
+  margin: 0;
+  font-size: var(--font-h3);
+  font-weight: 700;
+  color: var(--color-text);
+  line-height: 1.25;
+}
+
+.delete-drawer__close-btn {
+  color: var(--color-muted);
+}
+
+.delete-drawer__close-btn:hover {
+  color: var(--color-text);
+}
+
+/* Body */
+.delete-drawer__body {
+  padding: var(--space-lg);
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.delete-drawer__target-box {
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: 6px;
+  padding: 12px 14px;
+}
+
+.delete-drawer__target-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-muted);
+  margin-bottom: 4px;
+}
+
+.delete-drawer__target-name {
+  font-family: var(--font-mono, monospace);
+  font-size: var(--font-small);
+  font-weight: 600;
+  color: var(--color-text);
+  word-break: break-all;
+}
+
+.delete-drawer__message {
+  margin: 0;
+  font-size: var(--font-body);
+  color: var(--color-muted);
+  line-height: 1.5;
+}
+
+.delete-drawer__extra {
+  font-size: var(--font-small);
+  color: var(--color-muted);
+}
+
+/* Footer & Countdown Action Button */
+.delete-drawer__footer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: var(--space-md) var(--space-lg);
+  border-top: 1px solid var(--color-line);
+  background: var(--color-bg);
+}
+
+.delete-drawer__footer .btn {
+  flex: 1;
+  height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.delete-drawer__confirm-btn {
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.delete-drawer__confirm-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  filter: grayscale(0.2);
+}
+
+.delete-drawer__confirm-btn:not(:disabled) {
+  opacity: 1;
+  cursor: pointer;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--color-danger) 35%, transparent);
+}
+
+/* Mobile Adjustments */
+@media (max-width: 600px) {
+  .delete-drawer {
+    width: 100%;
+    height: auto;
+    max-height: 90vh;
+    border-left: none;
+    border-top: 1px solid var(--color-line);
+    border-radius: 16px 16px 0 0;
+    align-self: flex-end;
+    animation: deleteDrawerSlideUp 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  .delete-drawer-backdrop {
+    align-items: flex-end;
+    justify-content: center;
+  }
+
+  @keyframes deleteDrawerSlideUp {
+    from {
+      transform: translateY(100%);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+
+  .delete-drawer__footer {
+    flex-direction: column-reverse;
+  }
+
+  .delete-drawer__footer .btn {
+    width: 100%;
+  }
+}
