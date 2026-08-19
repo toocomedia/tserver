@@ -1,5 +1,8 @@
 #!/bin/bash
-# install.sh — Full VPS Control Panel bootstrap (Ubuntu 22.04/24.04)
+# install.sh — Full VPS Control Panel bootstrap
+# Supported: Ubuntu 20.04/22.04/24.04, Debian 11/12,
+#            Rocky Linux 8/9, AlmaLinux 8/9, Fedora 38+
+#
 # Usage (root):
 #   sudo bash scripts/install.sh
 #   sudo SERVER_IP=1.2.3.4 PANEL_DOMAIN=panel.example.com CERTBOT_EMAIL=a@b.com \
@@ -8,6 +11,47 @@
 # Env:
 #   SOURCE_DIR, PANEL_DIR, PANEL_PORT, SKIP_APT, SKIP_UFW, DO_UPGRADE, NONINTERACTIVE
 set -euo pipefail
+
+# ---------------------------------------------------------------
+# Load shared libraries (OS detection + step progress)
+# ---------------------------------------------------------------
+SCRIPT_DIR_EARLY="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=scripts/os_detect.sh
+if [[ -f "${SCRIPT_DIR_EARLY}/os_detect.sh" ]]; then
+  # shellcheck disable=SC1091
+  source "${SCRIPT_DIR_EARLY}/os_detect.sh"
+else
+  # Minimal fallback when sourced before clone is complete
+  OS_FAMILY="debian"
+  PKG_UPDATE="apt-get update -y"
+  PKG_INSTALL="apt-get install -y"
+  PKG_CHECK="dpkg -s"
+  PDNS_SERVER_PKG="pdns-server"
+  PDNS_SQLITE_PKG="pdns-backend-sqlite3"
+  PYTHON_BASE_PKGS="python3 python3-venv python3-dev python3-pip"
+  JEMALLOC_PKG="libjemalloc2"
+  ZRAM_PKG="zram-tools"
+  SUDO_PKG="sudo"
+  FIREWALL_TOOL="ufw"
+  export DEBIAN_FRONTEND=noninteractive
+  ensure_epel()   { :; }
+  ensure_pdns_repo() { :; }
+  firewalld_open_ports() { :; }
+fi
+
+TOTAL_STEPS=12
+# shellcheck source=scripts/progress.sh
+if [[ -f "${SCRIPT_DIR_EARLY}/progress.sh" ]]; then
+  # shellcheck disable=SC1091
+  source "${SCRIPT_DIR_EARLY}/progress.sh"
+else
+  # Minimal no-op fallback
+  step_start() { echo -e "\n==> $*"; }
+  step_ok()    { echo "    done"; }
+  step_skip()  { echo "    skipped${1:+: $1}"; }
+  step_warn()  { echo "    WARNING: $*"; }
+  _progress_init() { :; }
+fi
 
 # ---------------------------------------------------------------
 # Defaults
@@ -21,18 +65,12 @@ SKIP_APT="${SKIP_APT:-0}"
 SKIP_UFW="${SKIP_UFW:-0}"
 DO_UPGRADE="${DO_UPGRADE:-0}"
 NONINTERACTIVE="${NONINTERACTIVE:-0}"
+INSTALL_LOG="${INSTALL_LOG:-/var/log/tserver-install.log}"
 
-RED='\033[0;31m'; GRN='\033[0;32m'; YLW='\033[1;33m'; BLU='\033[0;34m'; NC='\033[0m'
+RED='\033[0;31m'; GRN='\033[0;32m'; YLW='\033[1;33m'; NC='\033[0m'
 info()  { echo -e "${GRN}==>${NC} $*"; }
 warn()  { echo -e "${YLW}WARNING:${NC} $*"; }
 die()   { echo -e "${RED}ERROR:${NC} $*" >&2; exit 1; }
-step()  { echo -e "${BLU}==> [Step $1/$2]${NC} $3"; }
-
-if [[ -f "$SCRIPT_DIR/os_helper.sh" ]]; then
-  source "$SCRIPT_DIR/os_helper.sh"
-else
-  warn "os_helper.sh not found. Package installation may fail."
-fi
 
 # A failed lookup makes pip misleadingly report that a valid package has no
 # matching version. Check DNS before apt and again before pip, while printing
@@ -75,16 +113,23 @@ write_release_info() {
 }
 
 # ---------------------------------------------------------------
-# Preflight
+# Preflight  (Step 1)
 # ---------------------------------------------------------------
+_progress_init
+step_start "Preflight checks"
+
 [[ "$(id -u)" -eq 0 ]] || die "Run as root (sudo bash scripts/install.sh)"
 
-if [[ "${OS_FAMILY:-}" != "debian" && "${OS_FAMILY:-}" != "rhel" && "${OS_FAMILY:-}" != "arch" ]]; then
-  warn "Designed for Debian/Ubuntu, RHEL variants, and Arch — continuing on unknown OS"
-fi
+info "Detected OS: ${OS_NAME} (family: ${OS_FAMILY})"
+case "$OS_FAMILY" in
+  debian|rhel) ;;
+  *) warn "Unrecognised OS family — proceeding with best-effort Debian-style commands" ;;
+esac
 
 [[ -d "$SOURCE_DIR/backend" ]] || die "SOURCE_DIR missing backend/: $SOURCE_DIR"
 [[ -f "$SOURCE_DIR/backend/requirements.txt" ]] || die "requirements.txt not found"
+
+step_ok
 
 # ---------------------------------------------------------------
 # Interactive input — always read keyboard from /dev/tty
@@ -95,13 +140,18 @@ can_prompt() {
 }
 
 # read from /dev/tty so prompts work even if stdin is a pipe
-# added -t 5 to auto-timeout after 5 seconds to prevent hanging
+# NOTE: Do NOT combine -p with </dev/tty redirection — on many VPS terminals
+# (especially curl|bash) bash silently fails to render the -p prompt when stdin
+# is redirected, causing the script to appear frozen. Always write the prompt
+# to /dev/tty explicitly with printf, then read separately.
 _read_tty() {
   local prompt="$1"
   if [[ -r /dev/tty ]]; then
-    read -t 5 -r -p "$prompt" REPLY </dev/tty || REPLY=""
+    printf '%s' "$prompt" >/dev/tty
+    read -r REPLY </dev/tty || REPLY=""
   else
-    read -t 5 -r -p "$prompt" REPLY || REPLY=""
+    printf '%s' "$prompt" >&2
+    read -r REPLY || REPLY=""
   fi
 }
 
@@ -169,28 +219,6 @@ detect_ip() {
 # ---------------------------------------------------------------
 # Config values (smart prompts)
 # ---------------------------------------------------------------
-if [[ -d "$PANEL_DIR" ]] && can_prompt; then
-  echo ""
-  warn "An existing installation was found at $PANEL_DIR."
-  echo "    Running this installer again will update core files (like a repair/upgrade)."
-  echo "    Your database and .env configuration will be preserved by default."
-  echo ""
-  ask "Do you want to completely DELETE the old installation and start fresh? (y/N)" "n"
-  if [[ "${REPLY,,}" == "y" || "${REPLY,,}" == "yes" ]]; then
-    echo ""
-    warn "This will WIPE all panel data, configurations, and the database!"
-    ask_required "Type 'DELETE' to confirm" "or press Ctrl+C to abort"
-    if [[ "$REPLY" == "DELETE" ]]; then
-      info "Removing existing installation at $PANEL_DIR ..."
-      systemctl stop srv-panel 2>/dev/null || true
-      systemctl disable srv-panel 2>/dev/null || true
-      rm -rf "$PANEL_DIR"
-    else
-      die "Aborting installation to prevent accidental data loss."
-    fi
-  fi
-fi
-
 # Drop common doc placeholders
 case "${SERVER_IP:-}" in
   YOUR.VPS.IP|x.x.x.x|1.2.3.4)
@@ -201,8 +229,8 @@ esac
 
 DETECTED_IP="$(detect_ip)"
 
+step_start "Install configuration"
 echo ""
-info "Install configuration"
 echo "    (Press Enter to accept defaults. Values are used for DNS + SSL later.)"
 echo ""
 
@@ -255,12 +283,16 @@ case "${PANEL_DOMAIN,,}" in
   ""|ip|none|"_") PANEL_DOMAIN="$SERVER_IP" ;;
 esac
 
-# --- CERTBOT_EMAIL (required for SSL — auto-generate on timeout) ---
+# --- CERTBOT_EMAIL (required for SSL — always ask interactively) ---
 if can_prompt; then
   echo ""
   echo "  Email for Let's Encrypt SSL (required — used when you issue certificates)."
   while true; do
-    ask "CERTBOT_EMAIL" "${CERTBOT_EMAIL:-admin@$SERVER_IP}"
+    if [[ -n "${CERTBOT_EMAIL:-}" && "$CERTBOT_EMAIL" != "admin@localhost" ]]; then
+      ask "CERTBOT_EMAIL" "$CERTBOT_EMAIL"
+    else
+      ask_required "CERTBOT_EMAIL" "you@example.com"
+    fi
     CERTBOT_EMAIL="$REPLY"
     if is_email "$CERTBOT_EMAIL"; then
       break
@@ -268,7 +300,7 @@ if can_prompt; then
     echo "    Invalid email. Example: admin@yourdomain.com"
   done
 else
-  CERTBOT_EMAIL="${CERTBOT_EMAIL:-admin@$SERVER_IP}"
+  CERTBOT_EMAIL="${CERTBOT_EMAIL:-admin@localhost}"
 fi
 
 # --- Panel admin (web login) ---
@@ -283,32 +315,24 @@ if can_prompt; then
   [[ -n "$ADMIN_USER" ]] || ADMIN_USER="admin"
   while true; do
     if [[ -r /dev/tty ]]; then
-      read -t 10 -r -s -p "  Admin password (min 8 chars, waits 10s then auto-generates): " ADMIN_PASSWORD </dev/tty || ADMIN_PASSWORD=""
-      echo ""
+      printf '  Admin password (min 8 chars): ' >/dev/tty
+      read -r -s ADMIN_PASSWORD </dev/tty || ADMIN_PASSWORD=""
+      printf '\n' >/dev/tty
+      printf '  Confirm password: ' >/dev/tty
+      read -r -s ADMIN_PASSWORD2 </dev/tty || ADMIN_PASSWORD2=""
+      printf '\n' >/dev/tty
     else
-      read -t 10 -r -s -p "  Admin password (min 8 chars, waits 10s then auto-generates): " ADMIN_PASSWORD || ADMIN_PASSWORD=""
+      printf '  Admin password (min 8 chars): ' >&2
+      read -r -s ADMIN_PASSWORD || ADMIN_PASSWORD=""
+      echo ""
+      printf '  Confirm password: ' >&2
+      read -r -s ADMIN_PASSWORD2 || ADMIN_PASSWORD2=""
       echo ""
     fi
-    
-    if [[ -z "$ADMIN_PASSWORD" ]]; then
-      ADMIN_PASSWORD="$(openssl rand -hex 8)"
-      echo "  -> Auto-generated password: $ADMIN_PASSWORD"
-      break
-    fi
-
     if [[ ${#ADMIN_PASSWORD} -lt 8 ]]; then
       echo "    Password must be at least 8 characters."
       continue
     fi
-    
-    if [[ -r /dev/tty ]]; then
-      read -t 10 -r -s -p "  Confirm password: " ADMIN_PASSWORD2 </dev/tty || ADMIN_PASSWORD2=""
-      echo ""
-    else
-      read -t 10 -r -s -p "  Confirm password: " ADMIN_PASSWORD2 || ADMIN_PASSWORD2=""
-      echo ""
-    fi
-    
     if [[ "$ADMIN_PASSWORD" != "$ADMIN_PASSWORD2" ]]; then
       echo "    Passwords do not match."
       continue
@@ -319,8 +343,7 @@ if can_prompt; then
 else
   ADMIN_USER="${ADMIN_USER:-admin}"
   if [[ -z "${ADMIN_PASSWORD:-}" ]]; then
-    ADMIN_PASSWORD="$(openssl rand -hex 8)"
-    echo "NONINTERACTIVE: Auto-generated admin password: $ADMIN_PASSWORD"
+    die "NONINTERACTIVE install requires ADMIN_PASSWORD (min 8 chars)"
   fi
   if [[ ${#ADMIN_PASSWORD} -lt 8 ]]; then
     die "ADMIN_PASSWORD must be at least 8 characters"
@@ -330,6 +353,7 @@ fi
 export SERVER_IP PANEL_DOMAIN CERTBOT_EMAIL PANEL_DIR PANEL_PORT
 
 info "Install config"
+echo "    OS            = ${OS_NAME}"
 echo "    SOURCE_DIR    = $SOURCE_DIR"
 echo "    PANEL_DIR     = $PANEL_DIR"
 echo "    SERVER_IP     = $SERVER_IP"
@@ -340,57 +364,113 @@ else
 fi
 echo "    CERTBOT_EMAIL = $CERTBOT_EMAIL"
 echo "    ADMIN_USER    = $ADMIN_USER"
+step_ok  # step 2 — configuration
 
 # ---------------------------------------------------------------
-# Packages
+# Step 3 — DNS verification
 # ---------------------------------------------------------------
+step_start "DNS verification"
 if [[ "$SKIP_APT" != "1" ]]; then
-  info "Checking DNS resolution for package downloads..."
   require_dns
-  step 1 5 "Updating package indexes..."
-  pkg_update
+  step_ok
+else
+  step_skip "SKIP_APT=1"
+fi
+
+# ---------------------------------------------------------------
+# Step 4 — System package update
+# ---------------------------------------------------------------
+step_start "System package update"
+if [[ "$SKIP_APT" != "1" ]]; then
+  # Ensure EPEL is present on RHEL-family before anything else
+  ensure_epel
+  $PKG_UPDATE
   if [[ "$DO_UPGRADE" == "1" ]]; then
-    step 2 5 "Full system upgrade (DO_UPGRADE=1)..."
-    pkg_upgrade
+    info "Full system upgrade (DO_UPGRADE=1)..."
+    case "$OS_FAMILY" in
+      debian) apt-get upgrade -y ;;
+      rhel)   dnf upgrade -y 2>/dev/null || yum upgrade -y ;;
+    esac
   fi
+  step_ok
+else
+  step_skip "SKIP_APT=1"
+fi
 
-  step 3 5 "Installing core packages..."
-  # Do not let a PowerDNS post-install restart hide an unrelated failed package.
-  # PowerDNS is installed separately below and starts only after its managed
+# ---------------------------------------------------------------
+# Step 5 — Core packages
+# ---------------------------------------------------------------
+step_start "Installing core packages"
+if [[ "$SKIP_APT" != "1" ]]; then
+  # Build package list — core packages common to all distros
+  CORE_PKGS=(
+    nginx certbot sqlite3
+    curl wget git openssl rsync "$SUDO_PKG" acl
+  )
+  # Python packages (names differ slightly per OS family)
+  # shellcheck disable=SC2206
+  CORE_PKGS+=($PYTHON_BASE_PKGS)
+  # Debian-only: ufw firewall
+  [[ "$OS_FAMILY" == "debian" ]] && CORE_PKGS+=(ufw)
+  # Optional extras (empty string = skip)
+  [[ -n "${ZRAM_PKG:-}"     ]] && CORE_PKGS+=("$ZRAM_PKG")
+  [[ -n "${JEMALLOC_PKG:-}" ]] && CORE_PKGS+=("$JEMALLOC_PKG")
+
+  # Do not let a PowerDNS post-install restart hide unrelated failures.
+  # PowerDNS is installed separately below and starts only after its
   # config and database are written by setup_powerdns.sh.
-  pkg_install \
-    python3 python3-venv python3-dev python3-pip \
-    nginx \
-    certbot \
-    sqlite3 \
-    curl wget git ufw openssl rsync sudo acl \
-    zram-tools libjemalloc2
+  $PKG_INSTALL "${CORE_PKGS[@]}"
+  step_ok
+else
+  step_skip "SKIP_APT=1"
+fi
 
+# ---------------------------------------------------------------
+# Step 6 — PowerDNS
+# ---------------------------------------------------------------
+step_start "Installing PowerDNS (service start deferred)"
+if [[ "$SKIP_APT" != "1" ]]; then
+  # RHEL may need the official PowerDNS repo
+  ensure_pdns_repo
+
+  # On Debian-family, block the PowerDNS post-install daemon start until
+  # we have written its config.  Not needed (or available) on RHEL.
   POLICY_RC_CREATED=0
-  if [[ ! -e /usr/sbin/policy-rc.d ]]; then
-    cat > /usr/sbin/policy-rc.d <<'EOF'
+  if [[ "$OS_FAMILY" == "debian" && ! -e /usr/sbin/policy-rc.d ]]; then
+    cat > /usr/sbin/policy-rc.d <<'POLICYEOF'
 #!/bin/sh
 # Prevent daemon starts while srv-panel prepares PowerDNS configuration.
 exit 101
-EOF
+POLICYEOF
     chmod 755 /usr/sbin/policy-rc.d
     POLICY_RC_CREATED=1
   fi
-  step 4 5 "Installing PowerDNS packages (service start deferred)..."
-  if ! pkg_install pdns-server pdns-backend-sqlite3; then
+
+  if ! $PKG_INSTALL "$PDNS_SERVER_PKG" "$PDNS_SQLITE_PKG"; then
     [[ "$POLICY_RC_CREATED" == "1" ]] && rm -f /usr/sbin/policy-rc.d
     die "PowerDNS package installation failed"
   fi
   [[ "$POLICY_RC_CREATED" == "1" ]] && rm -f /usr/sbin/policy-rc.d
 
-  # Stop crash-loop until we write config
-  systemctl stop pdns 2>/dev/null || systemctl stop powerdns 2>/dev/null || true
-  systemctl reset-failed pdns 2>/dev/null || systemctl reset-failed powerdns 2>/dev/null || true
+  # Verify critical packages installed
+  for pkg in python3 nginx certbot "$PDNS_SERVER_PKG" "$PDNS_SQLITE_PKG" sqlite3; do
+    $PKG_CHECK "$pkg" &>/dev/null || die "Package missing after install: $pkg"
+  done
 
-  # Prefer python3.11 if available (optional package on some images)
+  # Stop crash-loop until we write config
+  systemctl stop pdns 2>/dev/null || true
+  systemctl reset-failed pdns 2>/dev/null || true
+
+  # Prefer python3.11 if available (optional on some images)
   if ! command -v python3.11 &>/dev/null; then
-    pkg_install python3.11 python3.11-venv python3.11-dev 2>/dev/null || true
+    case "$OS_FAMILY" in
+      debian) $PKG_INSTALL python3.11 python3.11-venv python3.11-dev 2>/dev/null || true ;;
+      rhel)   $PKG_INSTALL python3.11 python3.11-devel 2>/dev/null || true ;;
+    esac
   fi
+  step_ok
+else
+  step_skip "SKIP_APT=1"
 fi
 
 PYTHON_BIN="python3"
@@ -400,16 +480,15 @@ fi
 info "Using Python: $PYTHON_BIN ($($PYTHON_BIN --version 2>&1))"
 
 # ---------------------------------------------------------------
-# User + directories
+# Step 7 — Python virtualenv + dependencies
 # ---------------------------------------------------------------
+step_start "Creating user, directories, virtualenv and Python deps"
 info "Creating panel user and directories..."
 id -u "$PANEL_USER" &>/dev/null || useradd -r -m -d "$PANEL_DIR" -s /usr/sbin/nologin "$PANEL_USER"
 mkdir -p "$PANEL_DIR"/{app,scripts,backups}
 mkdir -p /var/www/acme-challenge/.well-known/acme-challenge
 
-# ---------------------------------------------------------------
 # Virtualenv + deps
-# ---------------------------------------------------------------
 info "Creating virtualenv..."
 if [[ ! -d "$PANEL_DIR/venv" ]]; then
   "$PYTHON_BIN" -m venv "$PANEL_DIR/venv"
@@ -419,10 +498,12 @@ require_dns
 "$PANEL_DIR/venv/bin/pip" install --upgrade pip
 info "Installing Python requirements..."
 "$PANEL_DIR/venv/bin/pip" install -r "$SOURCE_DIR/backend/requirements.txt"
+step_ok
 
 # ---------------------------------------------------------------
-# Deploy app code
+# Step 8 — Application deployment
 # ---------------------------------------------------------------
+step_start "Deploying application code"
 info "Deploying application to $PANEL_DIR/app ..."
 rsync -a --delete \
   --exclude '__pycache__' \
@@ -441,10 +522,12 @@ if [[ -d "$SOURCE_DIR/nginx-configs" ]]; then
   mkdir -p "$PANEL_DIR/nginx-configs"
   rsync -a "$SOURCE_DIR/nginx-configs/" "$PANEL_DIR/nginx-configs/"
 fi
+step_ok
 
 # ---------------------------------------------------------------
-# .env (create or merge — never wipe PDNS key)
+# Step 9 — Environment configuration
 # ---------------------------------------------------------------
+step_start "Environment configuration"
 PANEL_ENV="$PANEL_DIR/.env"
 info "Configuring $PANEL_ENV ..."
 
@@ -476,8 +559,8 @@ _set_env "SECURITY_HEADERS" "true" 0
 _set_env "HSTS_ENABLED" "false" 0
 _set_env "SESSION_HTTPS_ONLY" "false" 0
 _set_env "DB_PATH" "$PANEL_DIR/app/panel.db" 1
-_set_env "NGINX_SITES_AVAILABLE" "${NGINX_SITES_AVAILABLE:-/etc/nginx/sites-available}" 0
-_set_env "NGINX_SITES_ENABLED" "${NGINX_SITES_ENABLED:-/etc/nginx/sites-enabled}" 0
+_set_env "NGINX_SITES_AVAILABLE" "/etc/nginx/sites-available" 0
+_set_env "NGINX_SITES_ENABLED" "/etc/nginx/sites-enabled" 0
 _set_env "NGINX_WEBROOT" "/var/www" 0
 _set_env "PRIVILEGED_SUDO" "true" 0
 _set_env "DEBUG" "false" 0
@@ -494,20 +577,23 @@ fi
 
 chmod 640 "$PANEL_ENV"
 chown root:"$PANEL_USER" "$PANEL_ENV"
+step_ok
 
 # ---------------------------------------------------------------
-# PowerDNS + Nginx
+# Step 10 — PowerDNS + Nginx
 # ---------------------------------------------------------------
-step 5 5 "Configuring PowerDNS..."
+step_start "Configuring PowerDNS and Nginx"
+info "Configuring PowerDNS..."
 bash "$PANEL_DIR/scripts/setup_powerdns.sh"
 
-step 6 6 "Configuring Nginx..."
-setup_nginx_dirs
+info "Configuring Nginx..."
 bash "$PANEL_DIR/scripts/setup_nginx.sh"
+step_ok
 
 # ---------------------------------------------------------------
-# Permissions for panel user
+# Step 11 — Permissions, sudoers, systemd
 # ---------------------------------------------------------------
+step_start "Permissions, sudoers and systemd unit"
 info "Setting ownership..."
 chown -R "$PANEL_USER":"$PANEL_USER" "$PANEL_DIR/app" "$PANEL_DIR/venv" "$PANEL_DIR/scripts" "$PANEL_DIR/backups"
 chown root:"$PANEL_USER" "$PANEL_ENV"
@@ -588,11 +674,8 @@ cat > "$SUDOERS_FILE" <<EOF
 # Installed by scripts/install.sh — validate: visudo -cf $SUDOERS_FILE
 Defaults:$PANEL_USER !requiretty
 Defaults:$PANEL_USER env_keep += "BUILDKIT_HOST"
-Cmnd_Alias SRV_PANEL_CMDS_1 = $NGINX_BIN, $CERTBOT_BIN, $OPENSSL_BIN, $TEE_BIN, $LN_BIN, $RM_BIN, $MKDIR_BIN, $SYSTEMCTL_BIN, $JOURNALCTL_BIN, $SYSCTL_BIN, $DOCKER_BIN, $RAILPACK_BIN
-Cmnd_Alias SRV_PANEL_CMDS_2 = /bin/bash $OPTIMIZE_SH *, /usr/bin/bash $OPTIMIZE_SH *, $OPTIMIZE_SH *, /bin/bash $UPDATE_SH *, /usr/bin/bash $UPDATE_SH *, /bin/bash $GET_UPDATE_SH *, /usr/bin/bash $GET_UPDATE_SH *, $UPDATE_SH *, $GET_UPDATE_SH *
-Cmnd_Alias SRV_PANEL_CMDS_3 = /bin/bash $DOCKER_INSTALL_SH, /usr/bin/bash $DOCKER_INSTALL_SH, /bin/bash $MARIADB_INSTALL_SH, /usr/bin/bash $MARIADB_INSTALL_SH, /bin/bash $MARIADB_CHECK_UPDATE_SH, /usr/bin/bash $MARIADB_CHECK_UPDATE_SH, /bin/bash $MARIADB_UPDATE_SH, /usr/bin/bash $MARIADB_UPDATE_SH
-Cmnd_Alias SRV_PANEL_CMDS_4 = $MARIADB_HELPER, $PHP_RUNTIME_HELPER, $PHP_SITE_HELPER, $LARAVEL_HELPER, $FILAMENT_HELPER, /bin/bash $PANEL_DIR/app/plugins/*, /usr/bin/bash $PANEL_DIR/app/plugins/*
-$PANEL_USER ALL=(root) NOPASSWD: SRV_PANEL_CMDS_1, SRV_PANEL_CMDS_2, SRV_PANEL_CMDS_3, SRV_PANEL_CMDS_4
+Cmnd_Alias SRV_PANEL_CMDS = $NGINX_BIN, $CERTBOT_BIN, $OPENSSL_BIN, $TEE_BIN, $LN_BIN, $RM_BIN, $MKDIR_BIN, $SYSTEMCTL_BIN, $JOURNALCTL_BIN, $SYSCTL_BIN, $DOCKER_BIN, $RAILPACK_BIN, /bin/bash $OPTIMIZE_SH *, /usr/bin/bash $OPTIMIZE_SH *, $OPTIMIZE_SH *, /bin/bash $UPDATE_SH *, /usr/bin/bash $UPDATE_SH *, /bin/bash $GET_UPDATE_SH *, /usr/bin/bash $GET_UPDATE_SH *, $UPDATE_SH *, $GET_UPDATE_SH *, /bin/bash $DOCKER_INSTALL_SH, /usr/bin/bash $DOCKER_INSTALL_SH, /bin/bash $MARIADB_INSTALL_SH, /usr/bin/bash $MARIADB_INSTALL_SH, /bin/bash $MARIADB_CHECK_UPDATE_SH, /usr/bin/bash $MARIADB_CHECK_UPDATE_SH, /bin/bash $MARIADB_UPDATE_SH, /usr/bin/bash $MARIADB_UPDATE_SH, $MARIADB_HELPER, $PHP_RUNTIME_HELPER, $PHP_SITE_HELPER, $LARAVEL_HELPER, $FILAMENT_HELPER, /bin/bash $PANEL_DIR/app/plugins/*, /usr/bin/bash $PANEL_DIR/app/plugins/*
+$PANEL_USER ALL=(root) NOPASSWD: SRV_PANEL_CMDS
 EOF
 chmod 440 "$SUDOERS_FILE"
 if ! visudo -cf "$SUDOERS_FILE" >/dev/null; then
@@ -627,26 +710,47 @@ EOF
 
 systemctl daemon-reload
 systemctl enable srv-panel
+step_ok
 
 # ---------------------------------------------------------------
-# UFW (optional)
+# Firewall (optional — ufw on Debian, firewalld on RHEL)
 # ---------------------------------------------------------------
-if [[ "$SKIP_UFW" != "1" ]] && command -v ufw &>/dev/null; then
-  if ufw status 2>/dev/null | grep -qi "Status: active"; then
-    info "UFW active — allowing 22, 80, 443, 53..."
-    ufw allow OpenSSH 2>/dev/null || ufw allow 22/tcp || true
-    ufw allow 80/tcp || true
-    ufw allow 443/tcp || true
-    ufw allow 53/tcp || true
-    ufw allow 53/udp || true
-  else
-    info "UFW installed but inactive — skip (set rules manually if needed)"
-  fi
+# Re-detect after package installs in case firewall was just installed
+if command -v ufw &>/dev/null; then FIREWALL_TOOL="ufw";
+elif command -v firewall-cmd &>/dev/null; then FIREWALL_TOOL="firewalld"; fi
+
+if [[ "$SKIP_UFW" != "1" ]]; then
+  case "$FIREWALL_TOOL" in
+    ufw)
+      if ufw status 2>/dev/null | grep -qi "Status: active"; then
+        info "UFW active — allowing SSH, 80, 443, 53..."
+        ufw allow OpenSSH 2>/dev/null || ufw allow 22/tcp || true
+        ufw allow 80/tcp  || true
+        ufw allow 443/tcp || true
+        ufw allow 53/tcp  || true
+        ufw allow 53/udp  || true
+      else
+        info "UFW installed but inactive — skipping (configure manually if needed)"
+      fi
+      ;;
+    firewalld)
+      if systemctl is-active --quiet firewalld 2>/dev/null; then
+        info "firewalld active — allowing SSH, HTTP, HTTPS, DNS..."
+        firewalld_open_ports
+      else
+        info "firewalld installed but inactive — skipping"
+      fi
+      ;;
+    none)
+      info "No firewall detected — skipping (configure iptables/nftables manually)"
+      ;;
+  esac
 fi
 
 # ---------------------------------------------------------------
-# Start + health
+# Step 12 — Service start, health check, admin seed
 # ---------------------------------------------------------------
+step_start "Starting service and seeding admin user"
 info "Starting srv-panel..."
 systemctl restart srv-panel
 sleep 2
@@ -664,9 +768,7 @@ else
   warn "Health check failed — panel may still be starting. Check logs."
 fi
 
-# ---------------------------------------------------------------
 # Seed panel admin (web login) — password never written to .env
-# ---------------------------------------------------------------
 info "Creating panel admin user '${ADMIN_USER}'..."
 if [[ -x "$PANEL_DIR/scripts/create_admin.sh" ]]; then
   if bash "$PANEL_DIR/scripts/create_admin.sh" \
@@ -691,6 +793,7 @@ else
 fi
 # Drop password from shell environment
 unset ADMIN_PASSWORD
+step_ok
 
 # ---------------------------------------------------------------
 # Remove temp git clone (never leave /tmp/tserver-* around)

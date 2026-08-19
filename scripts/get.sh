@@ -24,8 +24,9 @@ REPO_URL="${REPO_URL:-https://github.com/toocomedia/tserver.git}"
 REPO_REF="${REPO_REF:-${REPO_BRANCH:-main}}"
 CLONE_DIR="${CLONE_DIR:-/tmp/tserver-install}"
 
-RED='\033[0;31m'; GRN='\033[0;32m'; NC='\033[0m'
+RED='\033[0;31m'; GRN='\033[0;32m'; YLW='\033[1;33m'; NC='\033[0m'
 info() { echo -e "${GRN}==>${NC} $*"; }
+warn() { echo -e "${YLW}WARNING:${NC} $*"; }
 die()  { echo -e "${RED}ERROR:${NC} $*" >&2; exit 1; }
 
 [[ "$(id -u)" -eq 0 ]] || die "Run as root: curl ... | sudo bash   OR   sudo bash get.sh"
@@ -33,11 +34,18 @@ die()  { echo -e "${RED}ERROR:${NC} $*" >&2; exit 1; }
 export DEBIAN_FRONTEND=noninteractive
 export NONINTERACTIVE="${NONINTERACTIVE:-0}"
 
-if [ ! -t 0 ]; then
-  echo -e "\033[1;33m[NOTICE] You are running the installer via a pipe (curl | bash).\033[0m"
-  echo -e "\033[1;33mIf the installer hangs at a prompt, press Ctrl+C and use:\033[0m"
-  echo -e "  \033[0;32mcurl -O https://raw.githubusercontent.com/toocomedia/tserver/main/scripts/get.sh && sudo bash get.sh\033[0m\n"
+# ---- Minimal OS detection (full detection runs inside install.sh) -----------
+_OS_FAMILY="debian"
+if [[ -f /etc/os-release ]]; then
+  # shellcheck source=/dev/null
+  . /etc/os-release
+  case "${ID:-}" in
+    rhel|centos|rocky|almalinux|fedora|ol|cloudlinux) _OS_FAMILY="rhel" ;;
+  esac
 fi
+info "OS: ${PRETTY_NAME:-${ID:-unknown}}  (family: ${_OS_FAMILY})"
+# Ensure dnf/yum get the right frontend on RHEL
+[[ "$_OS_FAMILY" == "rhel" ]] && unset DEBIAN_FRONTEND || true
 
 # NOTE: Never use `exec </dev/tty` here.
 # When this file is run via `curl | bash`, stdin IS the script.
@@ -51,24 +59,24 @@ cleanup_temp() {
 }
 trap 'cleanup_temp' EXIT
 
-info "[1/4] Installing git (if needed)..."
+info "Installing git (if needed)..."
 if ! command -v git &>/dev/null; then
-  if command -v apt-get &>/dev/null; then
-    apt-get update -y && apt-get install -y git
-  elif command -v dnf &>/dev/null; then
-    dnf install -y git
-  elif command -v yum &>/dev/null; then
-    yum install -y git
-  elif command -v zypper &>/dev/null; then
-    zypper install -y git
-  elif command -v pacman &>/dev/null; then
-    pacman -Sy --noconfirm git
-  else
-    die "No supported package manager found (apt, dnf, yum, zypper, pacman). Please install git manually."
-  fi
+  case "$_OS_FAMILY" in
+    rhel)
+      if command -v dnf &>/dev/null; then
+        dnf install -y git
+      else
+        yum install -y git
+      fi
+      ;;
+    *)
+      apt-get update -y
+      apt-get install -y git
+      ;;
+  esac
 fi
 
-info "[2/4] Cloning ${REPO_URL} (${REPO_REF})..."
+info "Cloning ${REPO_URL} (${REPO_REF})..."
 rm -rf "$CLONE_DIR"
 # Do not assume the selected version is a branch: releases and exact commits
 # must be installable too.  Fetching the requested ref then detaching records
@@ -79,7 +87,7 @@ git -C "$CLONE_DIR" fetch --depth 1 origin "$REPO_REF"
 git -C "$CLONE_DIR" checkout -q --detach FETCH_HEAD
 
 SOURCE_COMMIT="$(git -C "$CLONE_DIR" rev-parse HEAD)"
-info "[3/4] Resolved source commit: ${SOURCE_COMMIT}"
+info "Resolved source commit: ${SOURCE_COMMIT}"
 
 export SOURCE_DIR="$CLONE_DIR"
 export CLEANUP_SOURCE_DIR="$CLONE_DIR"
@@ -87,7 +95,7 @@ export INSTALL_SOURCE_REF="$REPO_REF"
 export INSTALL_SOURCE_COMMIT="$SOURCE_COMMIT"
 chmod +x "$CLONE_DIR/scripts/"*.sh
 
-info "[4/4] Starting install.sh (prompts use /dev/tty)..."
+info "Starting install.sh (prompts use /dev/tty)..."
 # Run as a file so install can prompt safely
 bash "$CLONE_DIR/scripts/install.sh"
 
