@@ -1,42 +1,50 @@
 /* ============================================================
-   EMPTY STATE COMPONENT SYSTEM — FLUID VECTOR ART & BALANCED GRID
-   Option 2: Pure Fluid Shapes, Orbit Rings & Soft Radial Vignette
+   EMPTY STATE COMPONENT SYSTEM — FLUID VECTOR ART & TEXTURED GRID
    ============================================================ */
 
 :root, [data-theme="light"] {
-  --grid-line-color:      rgba(15, 23, 32, 0.07);
-  --grid-dot-color:       rgba(15, 23, 32, 0.15);
-  --grid-size:            36px;
+  --grid-line-color:      rgba(15, 23, 32, 0.08);
+  --grid-line-bold:       rgba(15, 23, 32, 0.16);
+  --grid-dot-color:       rgba(15, 23, 32, 0.18);
+  --grid-crosshair:       rgba(15, 23, 32, 0.35);
+  --grid-cell-tint:       rgba(15, 23, 32, 0.025);
+  --grid-size:            40px;
 
   --empty-title-color:    #0F1720;
   --empty-desc-color:     #5F645D;
 
   --vector-stroke:        #0F1720;
-  --vector-stroke-muted:  #71796F;
-  --vector-stroke-light:  #D0D5C9;
+  --vector-stroke-muted:  #64748B;
+  --vector-stroke-light:  #CBD5E1;
   --vector-fill-card:     #FFFFFF;
   --vector-fill-soft:     rgba(15, 23, 32, 0.03);
 }
 
 [data-theme="dark"] {
-  --grid-line-color:      rgba(255, 255, 255, 0.065);
-  --grid-dot-color:       rgba(255, 255, 255, 0.15);
-  --grid-size:            36px;
+  --grid-line-color:      rgba(255, 255, 255, 0.07);
+  --grid-line-bold:       rgba(255, 255, 255, 0.14);
+  --grid-dot-color:       rgba(255, 255, 255, 0.18);
+  --grid-crosshair:       rgba(255, 255, 255, 0.32);
+  --grid-cell-tint:       rgba(255, 255, 255, 0.025);
+  --grid-size:            40px;
 
   --empty-title-color:    #FFFFFF;
-  --empty-desc-color:     #9CA3AF;
+  --empty-desc-color:     #94A3B8;
 
-  --vector-stroke:        #FFFFFF;
-  --vector-stroke-muted:  #9CA3AF;
-  --vector-stroke-light:  rgba(255, 255, 255, 0.14);
+  --vector-stroke:        #F8FAFC;
+  --vector-stroke-muted:  #94A3B8;
+  --vector-stroke-light:  rgba(255, 255, 255, 0.15);
   --vector-fill-card:     #141D27;
   --vector-fill-soft:     rgba(255, 255, 255, 0.03);
 }
 
 [data-theme="amoled"] {
-  --grid-line-color:      rgba(255, 255, 255, 0.075);
-  --grid-dot-color:       rgba(255, 255, 255, 0.18);
-  --grid-size:            36px;
+  --grid-line-color:      rgba(255, 255, 255, 0.08);
+  --grid-line-bold:       rgba(255, 255, 255, 0.16);
+  --grid-dot-color:       rgba(255, 255, 255, 0.20);
+  --grid-crosshair:       rgba(255, 255, 255, 0.38);
+  --grid-cell-tint:       rgba(255, 255, 255, 0.03);
+  --grid-size:            40px;
 
   --empty-title-color:    #FFFFFF;
   --empty-desc-color:     #9CA3AF;
@@ -49,14 +57,17 @@
 }
 
 [data-theme="charcoal"] {
-  --grid-line-color:      rgba(255, 255, 255, 0.07);
-  --grid-dot-color:       rgba(255, 255, 255, 0.16);
-  --grid-size:            36px;
+  --grid-line-color:      rgba(255, 255, 255, 0.075);
+  --grid-line-bold:       rgba(255, 255, 255, 0.15);
+  --grid-dot-color:       rgba(255, 255, 255, 0.18);
+  --grid-crosshair:       rgba(255, 255, 255, 0.35);
+  --grid-cell-tint:       rgba(255, 255, 255, 0.03);
+  --grid-size:            40px;
 
   --empty-title-color:    #FFFFFF;
   --empty-desc-color:     #B0B7C3;
 
-  --vector-stroke:        #FFFFFF;
+  --vector-stroke:        #F4F4F5;
   --vector-stroke-muted:  #A1A1AA;
   --vector-stroke-light:  rgba(255, 255, 255, 0.16);
   --vector-fill-card:     #26262B;
@@ -80,7 +91,6 @@
   overflow: hidden;
   margin: 0 auto;
   z-index: 1;
-  transition: opacity var(--skeleton-fade-duration, 0.4s) ease, visibility var(--skeleton-fade-duration, 0.4s) ease;
 }
 
 /* Skeleton overlay coordination */
@@ -105,7 +115,7 @@
   background: transparent !important;
 }
 
-/* 2. Abstract Grid Background Layers (Smooth Fading Lines) */
+/* 2. Abstract Grid Background with Subtle Textured Variations */
 .grid-pattern-bg {
   position: absolute;
   inset: 0;
@@ -116,8 +126,8 @@
     linear-gradient(to bottom, var(--grid-line-color) 1px, transparent 1px);
   background-size: var(--grid-size) var(--grid-size);
   background-position: center center;
-  -webkit-mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, #000 25%, transparent 80%);
-  mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, #000 25%, transparent 80%);
+  -webkit-mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, #000 20%, transparent 80%);
+  mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, #000 20%, transparent 80%);
 }
 
 .grid-pattern-dots {
@@ -128,8 +138,8 @@
   background-image: radial-gradient(var(--grid-dot-color) 1.5px, transparent 1.5px);
   background-size: 24px 24px;
   background-position: center center;
-  -webkit-mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, #000 25%, transparent 80%);
-  mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, #000 25%, transparent 80%);
+  -webkit-mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, #000 20%, transparent 80%);
+  mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, #000 20%, transparent 80%);
 }
 
 .grid-pattern-iso {
@@ -146,7 +156,48 @@
   mask-image: radial-gradient(ellipse 65% 65% at 50% 50%, #000 20%, transparent 75%);
 }
 
-/* 3. FLUID VECTOR ART STAGE (OPTION 2) */
+/* 3. Subtle Asymmetrical Grid Accents (Crosshairs & Soft Ghost Cells) */
+.grid-accents-layer {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 480px;
+  height: 280px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.empty-state-grid-card--compact .grid-accents-layer {
+  display: none;
+}
+
+.grid-cross {
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--grid-crosshair);
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  line-height: 1;
+  transform: translate(-50%, -50%);
+}
+.grid-cross::before {
+  content: "+";
+}
+
+.grid-tint-block {
+  position: absolute;
+  width: var(--grid-size);
+  height: var(--grid-size);
+  background: var(--grid-cell-tint);
+  border: 1px dashed var(--grid-line-bold);
+}
+
+/* 4. FLUID VECTOR ART STAGE (STATIC — ZERO ANIMATIONS) */
 .empty-vector-art {
   position: relative;
   z-index: 3;
@@ -154,11 +205,6 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.empty-state-grid-card:hover .empty-vector-art {
-  transform: translateY(-3px);
 }
 
 .empty-vector-art svg {
@@ -175,7 +221,7 @@
   transform: scale(0.75);
 }
 
-/* 4. Typography & Actions Layer */
+/* 5. Typography & Minimal Surface Actions */
 .empty-state-content {
   position: relative;
   z-index: 3;
@@ -203,7 +249,7 @@
   font-size: 13.5px;
   color: var(--empty-desc-color, var(--color-muted));
   line-height: 1.5;
-  margin: 0 0 22px;
+  margin: 0 0 20px;
   max-width: 360px;
 }
 
@@ -212,44 +258,44 @@
   margin-bottom: 14px;
 }
 
+/* Minimal Surface Buttons (No custom inverted black/white styling) */
 .empty-state-actions {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   flex-wrap: wrap;
   justify-content: center;
 }
 
 .empty-state-actions .btn {
-  height: 34px;
-  padding: 0 16px;
-  font-size: 12.5px;
+  height: 32px;
+  padding: 0 14px;
+  font-size: 12px;
   font-weight: 600;
+  background: var(--color-surface) !important;
+  border: 1px solid var(--color-line) !important;
+  color: var(--color-text) !important;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
   cursor: pointer;
   text-decoration: none;
-  transition: opacity 0.15s ease, background 0.15s ease;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
-.empty-state-actions .btn--primary {
-  background: var(--color-text) !important;
-  color: var(--color-bg) !important;
-}
-.empty-state-actions .btn--primary:hover {
-  opacity: 0.88;
-}
-
-.empty-state-actions .btn--secondary {
-  background: var(--color-surface) !important;
-  border: 1px solid var(--color-line) !important;
-  color: var(--color-text) !important;
-}
-.empty-state-actions .btn--secondary:hover {
+.empty-state-actions .btn:hover {
   background: var(--color-surface-hover) !important;
   border-color: var(--color-text) !important;
+  color: var(--color-text) !important;
+}
+
+.empty-state-actions .btn svg,
+.empty-state-actions .btn i[data-lucide] {
+  width: 13px;
+  height: 13px;
+  color: var(--color-text);
+  opacity: 0.85;
 }
 
 @media (max-width: 768px) {

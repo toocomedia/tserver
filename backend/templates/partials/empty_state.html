@@ -1,119 +1,226 @@
 {# ============================================================
    SHARED REUSABLE EMPTY STATE COMPONENT
-   Option 2: Pure Fluid Shapes & Orbit Rings with Balanced Grid
+   Strict Rule: No bare icons alone. Expansive, rich vector art
+   scaled up with orbit rings, multi-node flows & satellite pills.
    ============================================================ #}
 
 {% macro empty_state(icon='layers', title=None, desc=None, action_url=None, action_label=None, action_icon='plus', action_onclick=None, action_btn_id=None, secondary_url=None, secondary_label=None, compact=false, id=None, grid_variant='standard') -%}
 <div class="empty-state-grid-card{% if compact %} empty-state-grid-card--compact{% endif %}"{% if id %} id="{{ id }}"{% endif %}>
-  <!-- 1. Smooth Balanced Grid Background -->
+  <!-- 1. Textured Background Grid -->
   <div class="{% if grid_variant == 'dots' %}grid-pattern-dots{% elif grid_variant == 'iso' %}grid-pattern-iso{% else %}grid-pattern-bg{% endif %}"></div>
 
-  <!-- 2. Fluid Vector Art (Option 2) -->
+  <!-- 2. Subtle Asymmetrical Grid Accents -->
+  {% if not compact %}
+  <div class="grid-accents-layer">
+    <div class="grid-cross" style="top: 20px; left: 40px;"></div>
+    <div class="grid-cross" style="top: 20px; right: 80px;"></div>
+    <div class="grid-cross" style="bottom: 40px; left: 80px;"></div>
+    <div class="grid-cross" style="bottom: 20px; right: 40px;"></div>
+    <div class="grid-tint-block" style="top: 40px; right: 120px;"></div>
+  </div>
+  {% endif %}
+
+  <!-- 3. Expanded Fluid Vector Art (Scaled up, rich multi-element composition) -->
   <div class="empty-vector-art">
     {% if '<svg' in icon %}
       {{ icon | safe }}
     {% elif icon in ['shield', 'shield-check', 'shield-plus', 'ssl', 'lock'] %}
-      <!-- SSL Guard Shield & Orbit Rings -->
-      <svg width="170" height="120" viewBox="0 0 180 130" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <ellipse cx="90" cy="65" rx="76" ry="46" stroke="var(--vector-stroke-muted)" stroke-width="1.2" stroke-dasharray="4 4" opacity="0.6"/>
-        <ellipse cx="90" cy="65" rx="54" ry="32" stroke="var(--vector-stroke-light)" stroke-width="1" opacity="0.4"/>
-        <rect x="14" y="32" width="38" height="16" rx="8" fill="var(--vector-fill-card)" stroke="var(--vector-stroke-light)" stroke-width="1"/>
-        <circle cx="22" cy="40" r="2.5" fill="var(--vector-stroke)"/>
-        <line x1="28" y1="40" x2="44" y2="40" stroke="var(--vector-stroke-muted)" stroke-width="1.5" stroke-linecap="round"/>
-        <rect x="128" y="76" width="38" height="16" rx="8" fill="var(--vector-fill-card)" stroke="var(--vector-stroke-light)" stroke-width="1"/>
-        <line x1="136" y1="84" x2="152" y2="84" stroke="var(--vector-stroke-muted)" stroke-width="1.5" stroke-linecap="round"/>
-        <circle cx="158" cy="84" r="2.5" fill="var(--vector-stroke-light)"/>
-        <path d="M90 24L116 34V64C116 80 90 96 90 96C90 96 64 80 64 64V34L90 24Z" fill="var(--vector-fill-card)" stroke="var(--vector-stroke)" stroke-width="1.8" stroke-linejoin="round"/>
-        <circle cx="90" cy="56" r="5" stroke="var(--vector-stroke)" stroke-width="1.8"/>
-        <path d="M90 61V68" stroke="var(--vector-stroke)" stroke-width="2" stroke-linecap="round"/>
-        <path d="M85 53V49C85 46.2 87.2 44 90 44C92.8 44 95 46.2 95 49V53" stroke="var(--vector-stroke)" stroke-width="1.8" stroke-linecap="round"/>
+      <!-- 1. SSL Guard: Large Shield & Concentric Orbit Rings -->
+      <svg width="220" height="145" viewBox="0 0 220 145" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- Concentric Orbit Rings -->
+        <ellipse cx="110" cy="72" rx="98" ry="58" stroke="var(--vector-stroke-muted)" stroke-width="1.2" stroke-dasharray="4 4" opacity="0.5"/>
+        <ellipse cx="110" cy="72" rx="72" ry="42" stroke="var(--vector-stroke-light)" stroke-width="1" opacity="0.35"/>
+
+        <!-- Left Satellite Pill (TLS 1.3) -->
+        <g opacity="0.85">
+          <rect x="8" y="36" width="46" height="18" rx="9" fill="var(--vector-fill-card)" stroke="var(--vector-stroke-light)" stroke-width="1.2"/>
+          <circle cx="17" cy="45" r="2.5" fill="var(--vector-stroke)"/>
+          <line x1="24" y1="45" x2="44" y2="45" stroke="var(--vector-stroke-muted)" stroke-width="1.6" stroke-linecap="round"/>
+        </g>
+
+        <!-- Right Satellite Pill (Auto-Renew) -->
+        <g opacity="0.85">
+          <rect x="166" y="88" width="46" height="18" rx="9" fill="var(--vector-fill-card)" stroke="var(--vector-stroke-light)" stroke-width="1.2"/>
+          <line x1="174" y1="97" x2="194" y2="97" stroke="var(--vector-stroke-muted)" stroke-width="1.6" stroke-linecap="round"/>
+          <circle cx="202" cy="97" r="2.5" fill="var(--vector-stroke-light)"/>
+        </g>
+
+        <!-- Main Large Shield -->
+        <path d="M110 20L144 32V72C144 94 110 114 110 114C110 114 76 94 76 72V32L110 20Z" fill="var(--vector-fill-card)" stroke="var(--vector-stroke)" stroke-width="2" stroke-linejoin="round"/>
+        
+        <!-- Inner Inset Shield Outline -->
+        <path d="M110 29L134 38V69C134 85 110 100 110 100C110 100 86 85 86 69V38L110 29Z" stroke="var(--vector-stroke-light)" stroke-width="1.2" stroke-dasharray="3 3"/>
+
+        <!-- Lock Core & Shackle -->
+        <circle cx="110" cy="62" r="6" stroke="var(--vector-stroke)" stroke-width="2"/>
+        <path d="M110 68V76" stroke="var(--vector-stroke)" stroke-width="2.2" stroke-linecap="round"/>
+        <path d="M104 58V53C104 49.7 106.7 47 110 47C113.3 47 116 49.7 116 53V58" stroke="var(--vector-stroke)" stroke-width="2" stroke-linecap="round"/>
       </svg>
     {% elif icon in ['proxy', 'arrow-left-right', 'shuffle', 'route', 'git-fork', 'repeat'] %}
-      <!-- Proxy Curved Routing Stream -->
-      <svg width="160" height="100" viewBox="0 0 160 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M44 35 C70 35, 90 65, 116 65" stroke="var(--vector-stroke)" stroke-width="1.8" stroke-linecap="round"/>
-        <path d="M44 65 C70 65, 90 35, 116 35" stroke="var(--vector-stroke-muted)" stroke-width="1.4" stroke-dasharray="3 3"/>
-        <rect x="12" y="24" width="34" height="22" rx="6" fill="var(--vector-fill-card)" stroke="var(--vector-stroke)" stroke-width="1.6"/>
-        <circle cx="21" cy="35" r="2.5" fill="var(--vector-stroke)"/>
-        <line x1="27" y1="35" x2="39" y2="35" stroke="var(--vector-stroke-muted)" stroke-width="1.5" stroke-linecap="round"/>
-        <rect x="114" y="54" width="36" height="22" rx="6" fill="var(--vector-fill-card)" stroke="var(--vector-stroke)" stroke-width="1.6"/>
-        <circle cx="123" cy="65" r="2.5" fill="var(--vector-stroke)"/>
-        <line x1="129" y1="65" x2="143" y2="65" stroke="var(--vector-stroke-muted)" stroke-width="1.5" stroke-linecap="round"/>
-        <circle cx="80" cy="50" r="3" fill="var(--vector-stroke)"/>
+      <!-- 2. Reverse Proxy: S-Curve Routing Stream with Dual Pods -->
+      <svg width="230" height="135" viewBox="0 0 230 135" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- Dual Wave S-Curves -->
+        <path d="M60 48 C95 48, 135 88, 170 88" stroke="var(--vector-stroke)" stroke-width="2" stroke-linecap="round"/>
+        <path d="M60 88 C95 88, 135 48, 170 48" stroke="var(--vector-stroke-muted)" stroke-width="1.5" stroke-dasharray="4 4"/>
+
+        <!-- Source Endpoint Pod -->
+        <rect x="10" y="34" width="50" height="28" rx="6" fill="var(--vector-fill-card)" stroke="var(--vector-stroke)" stroke-width="1.8"/>
+        <circle cx="22" cy="48" r="3" fill="var(--vector-stroke)"/>
+        <line x1="30" y1="44" x2="50" y2="44" stroke="var(--vector-stroke-muted)" stroke-width="1.8" stroke-linecap="round"/>
+        <line x1="30" y1="52" x2="44" y2="52" stroke="var(--vector-stroke-light)" stroke-width="1.5" stroke-linecap="round"/>
+
+        <!-- Secondary Source Pod -->
+        <rect x="16" y="76" width="44" height="24" rx="5" fill="var(--vector-fill-card)" stroke="var(--vector-stroke-light)" stroke-width="1.2"/>
+        <line x1="26" y1="88" x2="48" y2="88" stroke="var(--vector-stroke-light)" stroke-width="1.5" stroke-linecap="round"/>
+
+        <!-- Destination Target Pod -->
+        <rect x="170" y="74" width="52" height="28" rx="6" fill="var(--vector-fill-card)" stroke="var(--vector-stroke)" stroke-width="1.8"/>
+        <circle cx="182" cy="88" r="3" fill="var(--vector-stroke)"/>
+        <line x1="190" y1="84" x2="212" y2="84" stroke="var(--vector-stroke-muted)" stroke-width="1.8" stroke-linecap="round"/>
+        <line x1="190" y1="92" x2="204" y2="92" stroke="var(--vector-stroke-light)" stroke-width="1.5" stroke-linecap="round"/>
+
+        <!-- Secondary Target Pod -->
+        <rect x="172" y="36" width="46" height="24" rx="5" fill="var(--vector-fill-card)" stroke="var(--vector-stroke-light)" stroke-width="1.2"/>
+        <line x1="182" y1="48" x2="206" y2="48" stroke="var(--vector-stroke-light)" stroke-width="1.5" stroke-linecap="round"/>
+
+        <!-- Center Flow Node -->
+        <circle cx="115" cy="68" r="4" fill="var(--vector-stroke)"/>
       </svg>
     {% elif icon in ['database', 'server', 'hard-drive', 'supabase', 'layers', 'table', 'database-cluster'] %}
-      <!-- Database Isometric Cylinder Disks -->
-      <svg width="140" height="100" viewBox="0 0 140 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <ellipse cx="70" cy="78" rx="54" ry="18" stroke="var(--vector-stroke-light)" stroke-width="1.2" stroke-dasharray="3 3" opacity="0.6"/>
-        <ellipse cx="70" cy="66" rx="38" ry="12" fill="var(--vector-fill-card)" stroke="var(--vector-stroke)" stroke-width="1.6"/>
-        <path d="M32 66V74C32 81 49 86 70 86C91 86 108 81 108 74V66" stroke="var(--vector-stroke)" stroke-width="1.6" fill="var(--vector-fill-card)"/>
-        <ellipse cx="70" cy="44" rx="38" ry="12" fill="var(--vector-fill-card)" stroke="var(--vector-stroke)" stroke-width="1.6"/>
-        <path d="M32 44V52C32 59 49 64 70 64C91 64 108 59 108 52V44" stroke="var(--vector-stroke)" stroke-width="1.6" fill="var(--vector-fill-card)"/>
-        <ellipse cx="70" cy="22" rx="38" ry="12" fill="var(--vector-fill-card)" stroke="var(--vector-stroke)" stroke-width="1.8"/>
-        <path d="M32 22V30C32 37 49 42 70 42C91 42 108 37 108 30V22" stroke="var(--vector-stroke)" stroke-width="1.8" fill="var(--vector-fill-card)"/>
+      <!-- 3. Databases: 3-Tier Isometric Cylinder Disks & Ripples -->
+      <svg width="210" height="145" viewBox="0 0 210 145" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- Base Ripple Waves -->
+        <ellipse cx="105" cy="112" rx="84" ry="24" stroke="var(--vector-stroke-light)" stroke-width="1.2" stroke-dasharray="4 4" opacity="0.5"/>
+        <ellipse cx="105" cy="112" rx="60" ry="17" stroke="var(--vector-stroke-light)" stroke-width="1" opacity="0.3"/>
+
+        <!-- Bottom Cylinder Tier -->
+        <ellipse cx="105" cy="94" rx="52" ry="16" fill="var(--vector-fill-card)" stroke="var(--vector-stroke)" stroke-width="1.8"/>
+        <path d="M53 94V106C53 115 76 122 105 122C134 122 157 115 157 106V94" stroke="var(--vector-stroke)" stroke-width="1.8" fill="var(--vector-fill-card)"/>
+
+        <!-- Middle Cylinder Tier -->
+        <ellipse cx="105" cy="64" rx="52" ry="16" fill="var(--vector-fill-card)" stroke="var(--vector-stroke)" stroke-width="1.8"/>
+        <path d="M53 64V76C53 85 76 92 105 92C134 92 157 85 157 76V64" stroke="var(--vector-stroke)" stroke-width="1.8" fill="var(--vector-fill-card)"/>
+
+        <!-- Top Cylinder Tier -->
+        <ellipse cx="105" cy="34" rx="52" ry="16" fill="var(--vector-fill-card)" stroke="var(--vector-stroke)" stroke-width="2"/>
+        <path d="M53 34V46C53 55 76 62 105 62C134 62 157 55 157 46V34" stroke="var(--vector-stroke)" stroke-width="2" fill="var(--vector-fill-card)"/>
+
+        <!-- Platter Bars & LED Indicators -->
+        <line x1="82" y1="34" x2="118" y2="34" stroke="var(--vector-stroke-muted)" stroke-width="1.8" stroke-linecap="round"/>
+        <circle cx="130" cy="34" r="2.5" fill="var(--vector-stroke)"/>
       </svg>
     {% elif icon in ['globe', 'network', 'dns', 'world', 'link'] %}
-      <!-- Orbital Globe & DNS Tags -->
-      <svg width="150" height="100" viewBox="0 0 150 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <ellipse cx="75" cy="50" rx="60" ry="22" transform="rotate(-15 75 50)" stroke="var(--vector-stroke-muted)" stroke-width="1.3" stroke-dasharray="4 4"/>
-        <circle cx="75" cy="50" r="26" fill="var(--vector-fill-card)" stroke="var(--vector-stroke)" stroke-width="1.8"/>
-        <ellipse cx="75" cy="50" rx="13" ry="26" stroke="var(--vector-stroke-light)" stroke-width="1.2"/>
-        <line x1="49" y1="50" x2="101" y2="50" stroke="var(--vector-stroke-light)" stroke-width="1.2"/>
-        <rect x="10" y="22" width="34" height="16" rx="4" fill="var(--vector-fill-card)" stroke="var(--vector-stroke)" stroke-width="1.4"/>
-        <text x="16" y="33" font-family="monospace" font-size="8.5" font-weight="700" fill="var(--vector-stroke)">A</text>
-        <circle cx="33" cy="30" r="2" fill="var(--vector-stroke-muted)"/>
+      <!-- 4. Domains & DNS: Orbital Globe with Satellite Record Badges -->
+      <svg width="230" height="145" viewBox="0 0 230 145" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- Tilted Orbital Ring -->
+        <ellipse cx="115" cy="72" rx="92" ry="32" transform="rotate(-15 115 72)" stroke="var(--vector-stroke-muted)" stroke-width="1.4" stroke-dasharray="4 4"/>
+
+        <!-- Center Globe Sphere -->
+        <circle cx="115" cy="72" r="38" fill="var(--vector-fill-card)" stroke="var(--vector-stroke)" stroke-width="2"/>
+        <ellipse cx="115" cy="72" rx="18" ry="38" stroke="var(--vector-stroke-light)" stroke-width="1.3"/>
+        <line x1="77" y1="72" x2="153" y2="72" stroke="var(--vector-stroke-light)" stroke-width="1.3"/>
+
+        <!-- Floating Left Record Badge (A) -->
+        <rect x="12" y="30" width="44" height="22" rx="5" fill="var(--vector-fill-card)" stroke="var(--vector-stroke)" stroke-width="1.6"/>
+        <text x="20" y="45" font-family="monospace" font-size="10" font-weight="700" fill="var(--vector-stroke)">A</text>
+        <circle cx="44" cy="41" r="2.5" fill="var(--vector-stroke-muted)"/>
+
+        <!-- Floating Right Record Badge (DNS) -->
+        <rect x="172" y="90" width="48" height="22" rx="5" fill="var(--vector-fill-card)" stroke="var(--vector-stroke)" stroke-width="1.6"/>
+        <text x="180" y="105" font-family="monospace" font-size="9.5" font-weight="700" fill="var(--vector-stroke)">DNS</text>
+        <circle cx="209" cy="101" r="2.5" fill="var(--vector-stroke-muted)"/>
       </svg>
     {% elif icon in ['box', 'boxes', 'package', 'puzzle', 'archive', 'terminal', 'code', 'apps', 'layout', 'cpu', 'cpu-chip'] %}
-      <!-- Floating Code Terminal Pod -->
-      <svg width="150" height="100" viewBox="0 0 160 110" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect x="36" y="24" width="96" height="66" rx="8" fill="var(--vector-fill-soft)" stroke="var(--vector-stroke-light)" stroke-width="1" stroke-dasharray="3 3"/>
-        <rect x="28" y="18" width="96" height="66" rx="8" fill="var(--vector-fill-card)" stroke="var(--vector-stroke)" stroke-width="1.8"/>
-        <circle cx="39" cy="28" r="2" fill="var(--vector-stroke)"/>
-        <circle cx="46" cy="28" r="2" fill="var(--vector-stroke-light)"/>
-        <circle cx="53" cy="28" r="2" fill="var(--vector-stroke-light)"/>
-        <path d="M40 44L44 47L40 50" stroke="var(--vector-stroke)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-        <line x1="48" y1="47" x2="80" y2="47" stroke="var(--vector-stroke-muted)" stroke-width="1.6" stroke-linecap="round"/>
-        <rect x="84" y="44" width="4" height="6" fill="var(--vector-stroke)"/>
-        <line x1="40" y1="60" x2="105" y2="60" stroke="var(--vector-stroke-light)" stroke-width="1.4" stroke-linecap="round"/>
-        <line x1="40" y1="68" x2="75" y2="68" stroke="var(--vector-stroke-light)" stroke-width="1.4" stroke-linecap="round"/>
-        <rect x="104" y="64" width="44" height="18" rx="9" fill="var(--vector-fill-card)" stroke="var(--vector-stroke)" stroke-width="1.4"/>
-        <circle cx="113" cy="73" r="2.5" fill="var(--vector-stroke)"/>
-        <line x1="120" y1="73" x2="138" y2="73" stroke="var(--vector-stroke-muted)" stroke-width="1.5" stroke-linecap="round"/>
+      <!-- 5. Apps & Plugins: Code Terminal Container with Sparkline -->
+      <svg width="230" height="145" viewBox="0 0 230 145" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- Backdrop Shadow Frame -->
+        <rect x="48" y="28" width="138" height="92" rx="8" fill="var(--vector-fill-soft)" stroke="var(--vector-stroke-light)" stroke-width="1.2" stroke-dasharray="4 4"/>
+
+        <!-- Main Terminal Window -->
+        <rect x="36" y="18" width="138" height="92" rx="8" fill="var(--vector-fill-card)" stroke="var(--vector-stroke)" stroke-width="2"/>
+        
+        <!-- Window Controls -->
+        <circle cx="50" cy="30" r="2.5" fill="var(--vector-stroke)"/>
+        <circle cx="59" cy="30" r="2.5" fill="var(--vector-stroke-light)"/>
+        <circle cx="68" cy="30" r="2.5" fill="var(--vector-stroke-light)"/>
+
+        <!-- Terminal Prompt ">" & Command -->
+        <path d="M52 52L57 56L52 60" stroke="var(--vector-stroke)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        <line x1="62" y1="56" x2="110" y2="56" stroke="var(--vector-stroke-muted)" stroke-width="1.8" stroke-linecap="round"/>
+        <rect x="115" y="52" width="5" height="8" fill="var(--vector-stroke)"/>
+
+        <!-- Output Skeleton Lines -->
+        <line x1="52" y1="74" x2="148" y2="74" stroke="var(--vector-stroke-light)" stroke-width="1.6" stroke-linecap="round"/>
+        <line x1="52" y1="86" x2="105" y2="86" stroke="var(--vector-stroke-light)" stroke-width="1.6" stroke-linecap="round"/>
+
+        <!-- Floating Runtime Capsule Badge -->
+        <rect x="144" y="80" width="60" height="24" rx="12" fill="var(--vector-fill-card)" stroke="var(--vector-stroke)" stroke-width="1.6"/>
+        <circle cx="156" cy="92" r="3" fill="var(--vector-stroke)"/>
+        <line x1="165" y1="92" x2="192" y2="92" stroke="var(--vector-stroke-muted)" stroke-width="1.8" stroke-linecap="round"/>
       </svg>
     {% elif icon in ['bell', 'activity', 'bell-off', 'notifications'] %}
-      <!-- Floating Bell with Concentric Radar Pulse -->
-      <svg width="140" height="100" viewBox="0 0 150 110" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M42 55C42 36.7 56.7 22 75 22C93.3 22 108 36.7 108 55" stroke="var(--vector-stroke-light)" stroke-width="1.2" stroke-dasharray="3 3"/>
-        <path d="M54 55C54 43.4 63.4 34 75 34C86.6 34 96 43.4 96 55" stroke="var(--vector-stroke-light)" stroke-width="1.4"/>
-        <path d="M75 38C67.3 38 61 44.3 61 52V64L55 70H95L89 64V52C89 44.3 82.7 38 75 38Z" fill="var(--vector-fill-card)" stroke="var(--vector-stroke)" stroke-width="1.8" stroke-linejoin="round"/>
-        <circle cx="75" cy="76" r="3.5" stroke="var(--vector-stroke)" stroke-width="1.8"/>
-        <path d="M73 34C73 32.9 73.9 32 75 32C76.1 32 77 32.9 77 34" stroke="var(--vector-stroke)" stroke-width="1.8" stroke-linecap="round"/>
-        <circle cx="88" cy="46" r="3" fill="var(--vector-stroke)"/>
+      <!-- 6. Notifications: Bell & Concentric Radar Pulses -->
+      <svg width="210" height="145" viewBox="0 0 210 145" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- Radar Pulse Arcs -->
+        <path d="M55 75C55 47.4 77.4 25 105 25C132.6 25 155 47.4 155 75" stroke="var(--vector-stroke-light)" stroke-width="1.3" stroke-dasharray="4 4"/>
+        <path d="M72 75C72 56.8 86.8 42 105 42C123.2 42 138 56.8 138 75" stroke="var(--vector-stroke-light)" stroke-width="1.5"/>
+
+        <!-- Large Notification Bell -->
+        <path d="M105 46C94 46 85 55 85 66V84L76 92H134L125 84V66C125 55 116 46 105 46Z" fill="var(--vector-fill-card)" stroke="var(--vector-stroke)" stroke-width="2" stroke-linejoin="round"/>
+        <circle cx="105" cy="100" r="4.5" stroke="var(--vector-stroke)" stroke-width="2"/>
+        <path d="M102 40C102 38.3 103.3 37 105 37C106.7 37 108 38.3 108 40" stroke="var(--vector-stroke)" stroke-width="2" stroke-linecap="round"/>
+        
+        <!-- Status Node Indicator -->
+        <circle cx="124" cy="58" r="3.5" fill="var(--vector-stroke)"/>
       </svg>
     {% elif icon in ['search', 'search-x', 'filter', 'filter-x'] %}
-      <!-- Floating Search Lens & Card -->
-      <svg width="140" height="100" viewBox="0 0 150 110" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect x="25" y="24" width="100" height="60" rx="8" fill="var(--vector-fill-card)" stroke="var(--vector-stroke-light)" stroke-width="1.4"/>
-        <line x1="38" y1="40" x2="80" y2="40" stroke="var(--vector-stroke-muted)" stroke-width="1.6" stroke-linecap="round"/>
-        <line x1="38" y1="52" x2="65" y2="52" stroke="var(--vector-stroke-light)" stroke-width="1.4" stroke-linecap="round"/>
-        <line x1="38" y1="64" x2="90" y2="64" stroke="var(--vector-stroke-light)" stroke-width="1.4" stroke-linecap="round"/>
-        <circle cx="95" cy="56" r="16" fill="var(--vector-fill-card)" stroke="var(--vector-stroke)" stroke-width="1.8"/>
-        <line x1="107" y1="68" x2="118" y2="79" stroke="var(--vector-stroke)" stroke-width="2.2" stroke-linecap="round"/>
-        <path d="M91 52L99 60M99 52L91 60" stroke="var(--vector-stroke-muted)" stroke-width="1.6" stroke-linecap="round"/>
+      <!-- 7. Search / Table Inset: Floating Card & Lens -->
+      <svg width="210" height="145" viewBox="0 0 210 145" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="30" y="30" width="130" height="80" rx="8" fill="var(--vector-fill-card)" stroke="var(--vector-stroke-light)" stroke-width="1.6"/>
+        <line x1="48" y1="52" x2="105" y2="52" stroke="var(--vector-stroke-muted)" stroke-width="2" stroke-linecap="round"/>
+        <line x1="48" y1="68" x2="85" y2="68" stroke="var(--vector-stroke-light)" stroke-width="1.6" stroke-linecap="round"/>
+        <line x1="48" y1="84" x2="120" y2="84" stroke="var(--vector-stroke-light)" stroke-width="1.6" stroke-linecap="round"/>
+        <circle cx="135" cy="74" r="22" fill="var(--vector-fill-card)" stroke="var(--vector-stroke)" stroke-width="2.2"/>
+        <line x1="151" y1="90" x2="168" y2="107" stroke="var(--vector-stroke)" stroke-width="2.8" stroke-linecap="round"/>
+        <path d="M129 68L141 80M141 68L129 80" stroke="var(--vector-stroke-muted)" stroke-width="2" stroke-linecap="round"/>
       </svg>
     {% elif icon in ['alert-circle', 'alert-triangle', 'errors'] %}
-      <!-- Floating Alert Hexagon/Triangle -->
-      <svg width="140" height="100" viewBox="0 0 150 110" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <polygon points="75,18 125,92 25,92" fill="var(--vector-fill-card)" stroke="var(--vector-stroke)" stroke-width="1.8" stroke-linejoin="round"/>
-        <line x1="75" y1="45" x2="75" y2="68" stroke="var(--vector-stroke)" stroke-width="2" stroke-linecap="round"/>
-        <circle cx="75" cy="78" r="2" fill="var(--vector-stroke)"/>
+      <!-- 8. System Errors: Large Alert Hexagon & Pulse Rings -->
+      <svg width="210" height="145" viewBox="0 0 210 145" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <ellipse cx="105" cy="72" rx="88" ry="52" stroke="var(--vector-stroke-light)" stroke-width="1.2" stroke-dasharray="4 4" opacity="0.5"/>
+        <polygon points="105,22 172,118 38,118" fill="var(--vector-fill-card)" stroke="var(--vector-stroke)" stroke-width="2.2" stroke-linejoin="round"/>
+        <line x1="105" y1="56" x2="105" y2="86" stroke="var(--vector-stroke)" stroke-width="2.6" stroke-linecap="round"/>
+        <circle cx="105" cy="100" r="2.8" fill="var(--vector-stroke)"/>
       </svg>
     {% else %}
-      <i data-lucide="{{ icon }}" style="width: 44px; height: 44px; stroke-width: 1.5; color: var(--vector-stroke);"></i>
+      <!-- 9. Universal Fallback: Expansive Multi-Ring Composition (No bare icon alone) -->
+      <svg width="210" height="145" viewBox="0 0 210 145" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- Concentric Orbit Rings -->
+        <ellipse cx="105" cy="72" rx="92" ry="54" stroke="var(--vector-stroke-muted)" stroke-width="1.2" stroke-dasharray="4 4" opacity="0.5"/>
+        <ellipse cx="105" cy="72" rx="68" ry="38" stroke="var(--vector-stroke-light)" stroke-width="1" opacity="0.35"/>
+        
+        <!-- Left Capsule Pill -->
+        <rect x="10" y="42" width="42" height="18" rx="9" fill="var(--vector-fill-card)" stroke="var(--vector-stroke-light)" stroke-width="1.2"/>
+        <circle cx="19" cy="51" r="2.5" fill="var(--vector-stroke)"/>
+        <line x1="26" y1="51" x2="42" y2="51" stroke="var(--vector-stroke-muted)" stroke-width="1.5" stroke-linecap="round"/>
+
+        <!-- Right Capsule Pill -->
+        <rect x="158" y="84" width="42" height="18" rx="9" fill="var(--vector-fill-card)" stroke="var(--vector-stroke-light)" stroke-width="1.2"/>
+        <line x1="166" y1="93" x2="182" y2="93" stroke="var(--vector-stroke-muted)" stroke-width="1.5" stroke-linecap="round"/>
+        <circle cx="190" cy="93" r="2.5" fill="var(--vector-stroke-light)"/>
+
+        <!-- Center Framed Node with Scaled Icon -->
+        <rect x="75" y="42" width="60" height="60" rx="10" fill="var(--vector-fill-card)" stroke="var(--vector-stroke)" stroke-width="2"/>
+        <foreignObject x="85" y="52" width="40" height="40">
+          <div xmlns="http://www.w3.org/1999/xhtml" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;">
+            <i data-lucide="{{ icon }}" style="width: 28px; height: 28px; stroke-width: 1.8; color: var(--vector-stroke);"></i>
+          </div>
+        </foreignObject>
+      </svg>
     {% endif %}
   </div>
 
-  <!-- 3. Content & Actions -->
+  <!-- 4. Content & Minimal Surface Action Buttons -->
   <div class="empty-state-content">
     {% if title %}
       <h3 class="empty-state-title">{{ title }}</h3>
@@ -127,13 +234,13 @@
     <div class="empty-state-actions">
       {% if action_label %}
         {% if action_url %}
-          <a href="{{ action_url }}" class="btn btn--primary{% if compact %} btn--sm{% endif %}"{% if action_btn_id %} id="{{ action_btn_id }}"{% endif %}>
-            {% if action_icon %}<i data-lucide="{{ action_icon }}" style="width: 14px; height: 14px;"></i>{% endif %}
+          <a href="{{ action_url }}" class="btn{% if compact %} btn--sm{% endif %}"{% if action_btn_id %} id="{{ action_btn_id }}"{% endif %}>
+            {% if action_icon %}<i data-lucide="{{ action_icon }}" style="width: 13px; height: 13px;"></i>{% endif %}
             {{ action_label }}
           </a>
         {% elif action_onclick %}
-          <button type="button" class="btn btn--primary{% if compact %} btn--sm{% endif %}" onclick="{{ action_onclick }}"{% if action_btn_id %} id="{{ action_btn_id }}"{% endif %}>
-            {% if action_icon %}<i data-lucide="{{ action_icon }}" style="width: 14px; height: 14px;"></i>{% endif %}
+          <button type="button" class="btn{% if compact %} btn--sm{% endif %}" onclick="{{ action_onclick }}"{% if action_btn_id %} id="{{ action_btn_id }}"{% endif %}>
+            {% if action_icon %}<i data-lucide="{{ action_icon }}" style="width: 13px; height: 13px;"></i>{% endif %}
             {{ action_label }}
           </button>
         {% endif %}
