@@ -20,18 +20,16 @@
   <div data-detail-content hidden></div>
 
 <template id="site-delete-extra">
-  <fieldset class="php-site-delete-modal__database" id="dynamic-db-choice" style="margin-top:16px;">
-    <legend class="form-label">{{ _('database') }}</legend>
-    <label class="form-check php-site-delete-modal__choice" style="background:var(--color-surface);border:1px solid var(--color-line);padding:12px;margin-bottom:8px;border-radius:6px;cursor:pointer;">
-      <input type="radio" name="php_delete_database" value="false" checked>
-      <span style="margin-left:8px;">{{ _('delete_site_keep_database') }}</span>
+  <div style="margin-top:16px;">
+    <label class="form-check" style="align-items:flex-start; margin-bottom: 0;">
+      <input type="hidden" name="php_delete_database" value="false">
+      <input type="checkbox" name="php_delete_database" value="true">
+      <div>
+        <span><strong>{{ _('delete_site_and_database') }}</strong></span>
+        <span class="form-hint" style="display:block; margin-top:2px;">{{ _('delete_database_too') }}</span>
+      </div>
     </label>
-    <label class="form-check php-site-delete-modal__choice php-site-delete-modal__choice--danger" style="background:var(--color-surface);border:1px solid var(--color-line);padding:12px;margin-bottom:8px;border-radius:6px;cursor:pointer;">
-      <input type="radio" name="php_delete_database" value="true">
-      <span style="margin-left:8px;">{{ _('delete_site_and_database') }}</span>
-    </label>
-    <p class="form-hint" style="margin-top:4px;">{{ _('delete_database_too') }}</p>
-  </fieldset>
+  </div>
 </template>
 </section>
 {% endblock %}

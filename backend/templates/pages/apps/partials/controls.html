@@ -28,15 +28,15 @@
 {% if not deletion_active %}
 <template id="app-delete-extra">
   {% if app.postgres_mode in ('create', 'supabase') %}
-    <div class="form-group" style="margin-top:16px;">
-      <label class="form-label" for="drawer-delete-scope">{{ _('database_cleanup') }}</label>
-      <div class="form-select-wrap">
-        <select class="form-select" id="drawer-delete-scope" name="delete_scope">
-          <option value="app_only">{{ _('delete_app_keep_database') }}</option>
-          <option value="app_and_database">{{ _('delete_app_and_its_database_user') }}</option>
-        </select>
-      </div>
-      <p class="form-hint" style="margin-top:6px;">{{ _('keeping_the_database_preserves_data_but_') }}</p>
+    <div style="margin-top:16px;">
+      <label class="form-check" style="align-items:flex-start;">
+        <input type="hidden" name="delete_scope" value="app_only">
+        <input type="checkbox" name="delete_scope" value="app_and_database">
+        <div>
+          <span><strong>{{ _('delete_app_and_its_database_user') }}</strong></span>
+          <span class="form-hint" style="display:block; margin-top:2px;">{{ _('keeping_the_database_preserves_data_but_') }}</span>
+        </div>
+      </label>
     </div>
   {% else %}
     <input type="hidden" name="delete_scope" value="app_only">
