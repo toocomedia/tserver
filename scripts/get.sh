@@ -35,9 +35,8 @@ export NONINTERACTIVE="${NONINTERACTIVE:-0}"
 
 if [ ! -t 0 ]; then
   echo -e "\033[1;33m[NOTICE] You are running the installer via a pipe (curl | bash).\033[0m"
-  echo -e "\033[1;33mThis can cause terminal lockups on certain VPS consoles.\033[0m"
-  echo -e "\033[1;33mForcing NONINTERACTIVE=1 mode to protect your session.\033[0m"
-  export NONINTERACTIVE=1
+  echo -e "\033[1;33mIf the installer hangs at a prompt, press Ctrl+C and use:\033[0m"
+  echo -e "  \033[0;32mcurl -O https://raw.githubusercontent.com/toocomedia/tserver/main/scripts/get.sh && sudo bash get.sh\033[0m\n"
 fi
 
 # NOTE: Never use `exec </dev/tty` here.
