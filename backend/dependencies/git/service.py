@@ -3,6 +3,8 @@ from __future__ import annotations
 import os, shutil, subprocess, threading, time
 from typing import Any
 
+from services.platform_support_service import platform_support_service
+
 class GitDependencyService:
     dependency_id = "git"
     CACHE_SECONDS = 300.0
@@ -37,10 +39,11 @@ class GitDependencyService:
                 "can_toggle": False, "healthy": False, "state": "unknown" if installed else "not_installed",
                 "detected_version": None, "error": None}
     def install(self):
-        if os.name == "nt": return False, "Git repair is only available on Linux."
+        platform_error = platform_support_service.capability_error("core")
+        if platform_error: return False, platform_error
         try:
             result = subprocess.run(["sudo", "-n", "apt-get", "install", "-y", "git", "openssh-client"], capture_output=True, text=True, timeout=300)
         except subprocess.TimeoutExpired: return False, "Git installation timed out."
         return (True, "Git & SSH are ready.") if result.returncode == 0 and self._probe()["healthy"] else (False, (result.stderr or result.stdout or "Git installation failed.")[-1000:])
-    def get_install_guide(self): return {"supported": os.name != "nt", "command":"sudo apt-get install -y git openssh-client", "warning":"Git is required by panel update checks and hosted Git applications."}
+    def get_install_guide(self): return platform_support_service.install_guide("core", "sudo apt-get install -y git openssh-client", "Git is required by panel update checks and hosted Git applications.")
     def get_uninstall_guide(self): return {"command":"Not available", "warning":"Git is a core panel runtime and cannot be removed here."}

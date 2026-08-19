@@ -4,12 +4,20 @@ A fast, lightweight, and modern control panel for your VPS.
 
 ## 🚀 One-Click Install
 
-Run this command as `root` on a fresh Ubuntu 22.04 or 24.04 server to automatically install the panel:
+Run these commands on a fresh supported amd64 VPS: Ubuntu 22.04/24.04/26.04 or Debian 12/13.
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/toocomedia/tserver/main/scripts/get.sh -o /tmp/tserver-get.sh
+sudo bash /tmp/tserver-get.sh
+rm -f /tmp/tserver-get.sh
+```
+*(This installs dependencies, PowerDNS, Nginx, and the panel service. It prompts for an admin password.)*
+
+The piped form remains supported for interactive terminals:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/toocomedia/tserver/main/scripts/get.sh | sudo bash
 ```
-*(This will install dependencies, setup PowerDNS, Nginx, and the Panel service. It will prompt you for an admin password during installation.)*
 
 ---
 

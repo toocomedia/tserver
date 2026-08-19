@@ -12,6 +12,10 @@
   "usage": {
     "process_names": ["rspamd", "redis-server"]
   },
+  "requires": {
+    "dependencies": [],
+    "platforms": ["ubuntu:22.04", "ubuntu:24.04"]
+  },
   "install_script": "scripts/install_rspamd.sh",
   "uninstall_script": "scripts/uninstall_rspamd.sh"
 }

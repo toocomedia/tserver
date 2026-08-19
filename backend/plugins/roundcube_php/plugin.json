@@ -14,7 +14,8 @@
     "process_names": ["php", "php-fpm"]
   },
   "requires": {
-    "dependencies": ["php"]
+    "dependencies": ["php"],
+    "platforms": ["ubuntu:22.04", "ubuntu:24.04"]
   },
   "install_script": "scripts/install_roundcube.sh",
   "uninstall_script": "scripts/uninstall_roundcube.sh"

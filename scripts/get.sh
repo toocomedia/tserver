@@ -33,6 +33,27 @@ die()  { echo -e "${RED}ERROR:${NC} $*" >&2; exit 1; }
 export DEBIAN_FRONTEND=noninteractive
 export NONINTERACTIVE="${NONINTERACTIVE:-0}"
 
+require_bootstrap_os() {
+  [[ -r /etc/os-release ]] || die "Cannot detect this operating system from /etc/os-release."
+  # shellcheck disable=SC1091
+  . /etc/os-release
+  local arch
+  arch="$(uname -m 2>/dev/null || echo unknown)"
+  [[ "$arch" == "x86_64" || "$arch" == "amd64" ]] || \
+    die "Unsupported CPU architecture ${arch}. SRV Panel currently supports amd64 only."
+  case "${ID:-unknown}:${VERSION_ID:-unknown}" in
+    ubuntu:22.04|ubuntu:24.04|ubuntu:26.04|debian:12|debian:13) ;;
+    ubuntu:*) die "Unsupported Ubuntu version ${VERSION_ID:-unknown}. Supported versions: 22.04, 24.04, 26.04." ;;
+    debian:*) die "Unsupported Debian version ${VERSION_ID:-unknown}. Supported versions: 12, 13." ;;
+    *) die "Unsupported operating system ${PRETTY_NAME:-${ID:-unknown}}. Supported systems: Ubuntu 22.04/24.04/26.04 and Debian 12/13." ;;
+  esac
+}
+
+require_bootstrap_os
+if [[ "$NONINTERACTIVE" != "1" && ! -r /dev/tty ]]; then
+  die "Interactive installation requires a controlling terminal. Download get.sh and run it as a file, or set NONINTERACTIVE=1 with all required values."
+fi
+
 # NOTE: Never use `exec </dev/tty` here.
 # When this file is run via `curl | bash`, stdin IS the script.
 # Redirecting stdin aborts the rest of the file with no error.
@@ -71,7 +92,12 @@ export INSTALL_SOURCE_COMMIT="$SOURCE_COMMIT"
 chmod +x "$CLONE_DIR/scripts/"*.sh
 
 info "Starting install.sh (prompts use /dev/tty)..."
-# Run as a file so install can prompt safely
-bash "$CLONE_DIR/scripts/install.sh"
+# Redirect only the child. Redirecting this curl-fed parent would discard the
+# unread remainder of get.sh.
+if [[ "$NONINTERACTIVE" == "1" ]]; then
+  bash "$CLONE_DIR/scripts/install.sh"
+else
+  bash "$CLONE_DIR/scripts/install.sh" </dev/tty
+fi
 
 info "Done. Temp clone removed."

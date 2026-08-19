@@ -80,9 +80,11 @@ EOF
   fi
 
   # 4. Python jemalloc in service
-  if [[ -f "$SERVICE_FILE" ]] && [[ -f /usr/lib/x86_64-linux-gnu/libjemalloc.so.2 ]]; then
+  local jemalloc_lib=""
+  jemalloc_lib="$(ldconfig -p 2>/dev/null | awk '/libjemalloc\.so\.2/ {value=$NF} END {print value}')"
+  if [[ -f "$SERVICE_FILE" ]] && [[ -n "$jemalloc_lib" ]] && [[ -f "$jemalloc_lib" ]]; then
     if ! grep -q "libjemalloc.so.2" "$SERVICE_FILE"; then
-      sed -i '/\[Service\]/a Environment="LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so.2"' "$SERVICE_FILE"
+      sed -i "/\[Service\]/a Environment=\"LD_PRELOAD=${jemalloc_lib}\"" "$SERVICE_FILE"
       systemctl daemon-reload 2>/dev/null || true
       nohup bash -c 'sleep 1 && systemctl restart srv-panel' >/dev/null 2>&1 &
     fi

@@ -28,6 +28,8 @@
           <span class="badge badge--muted"><span class="badge-dot"></span> {{ _('disabled') }}</span>
         {% elif plugin.effective_status == 'missing' %}
           <span class="badge badge--muted"><span class="badge-dot"></span> {{ _('not_installed') }}</span>
+        {% elif plugin.effective_status == 'unsupported' %}
+          <span class="badge badge--danger"><span class="badge-dot"></span> UNSUPPORTED</span>
         {% else %}
           <span class="badge badge--danger"><span class="badge-dot"></span> {{ plugin.effective_status | upper }}</span>
         {% endif %}
@@ -57,7 +59,7 @@
         <form method="post" action="/plugins/api/install" style="display:inline-flex;">
           <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
           <input type="hidden" name="plugin_id" value="{{ plugin.id }}">
-          <button type="submit" class="btn btn--primary btn--sm" {% if plugin.paused_by %}disabled title="Install required system dependency first" {% endif %}>{{ _('install') }} {{ plugin.name }}</button>
+          <button type="submit" class="btn btn--primary btn--sm" {% if plugin.paused_by or not plugin.platform_supported %}disabled title="{{ plugin.platform_error or 'Install required system dependency first' }}" {% endif %}>{{ _('install') }} {{ plugin.name }}</button>
         </form>
         {% if plugin.data_purge %}
         <form method="post" action="/plugins/api/purge-data" style="display:inline-flex;">
@@ -70,6 +72,10 @@
       {% endif %}
     </div>
   </header>
+
+  {% if plugin.platform_error %}
+  <div class="alert alert--warning" style="margin-bottom: 1rem;">{{ plugin.platform_error }}</div>
+  {% endif %}
 
   <!-- DESCRIPTION -->
   {% if plugin.description %}

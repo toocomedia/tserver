@@ -11,6 +11,8 @@ import time
 from pathlib import Path
 from typing import Any
 
+from services.platform_support_service import platform_support_service
+
 import config
 
 
@@ -217,6 +219,9 @@ class PHPDependencyService:
              ("panel_managed" if managed_installed else "external"))
         )
         external_repository_configured = self._external_repository_configured()
+        external_repository_error = platform_support_service.capability_error(
+            "php_external_repository"
+        )
         return {
             "id": self.dependency_id, "installed": bool(installed), "running": running,
             "healthy": healthy,
@@ -228,6 +233,8 @@ class PHPDependencyService:
             "versions": runtime_versions, "available_versions": available,
             "external_repository": {
                 "configured": external_repository_configured,
+                "supported": external_repository_error is None,
+                "unsupported_reason": external_repository_error,
                 "name": EXTERNAL_REPOSITORY_NAME,
                 "ppa": EXTERNAL_REPOSITORY_PPA,
                 "official_ubuntu": False,
@@ -262,6 +269,8 @@ class PHPDependencyService:
             "available_versions": [],
             "external_repository": {
                 "configured": False,
+                "supported": platform_support_service.capability_error("php_external_repository") is None,
+                "unsupported_reason": platform_support_service.capability_error("php_external_repository"),
                 "name": EXTERNAL_REPOSITORY_NAME,
                 "ppa": EXTERNAL_REPOSITORY_PPA,
                 "official_ubuntu": False,
@@ -333,6 +342,11 @@ class PHPDependencyService:
 
     def enable_external_repository(self) -> tuple[bool, str]:
         """Enable only the reviewed PHP PPA, never a user-provided repository."""
+        platform_error = platform_support_service.capability_error(
+            "php_external_repository"
+        )
+        if platform_error:
+            return False, platform_error
         if not self._operation_lock.acquire(blocking=False):
             return self._operation_busy()
         try:
@@ -397,11 +411,11 @@ class PHPDependencyService:
         return False, "Choose a PHP version from the PHP Runtime page."
 
     def get_install_guide(self) -> dict[str, Any]:
-        return {
-            "supported": os.name != "nt",
-            "command": "Choose a version and use Install in SRV Panel.",
-            "warning": "PHP versions are never installed automatically.",
-        }
+        return platform_support_service.install_guide(
+            "php",
+            "Choose a version and use Install in SRV Panel.",
+            "PHP versions are never installed automatically.",
+        )
 
     def get_uninstall_guide(self) -> dict[str, Any]:
         return {

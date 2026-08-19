@@ -134,6 +134,10 @@
   <p class="text-danger hidden" style="margin-bottom: 1rem;" data-role="dependency-error"></p>
   {% endif %}
 
+  {% if not dependency.install_guide.supported and dependency.install_guide.unsupported_reason %}
+  <div class="alert alert--warning" style="margin-bottom: 1rem;">{{ dependency.install_guide.unsupported_reason }}</div>
+  {% endif %}
+
   <!-- MANUAL TERMINAL INSTALLATION COMMAND / UNINSTALL GUIDE -->
   {% if not dependency.installed %}
   <div data-role="installation-guide">

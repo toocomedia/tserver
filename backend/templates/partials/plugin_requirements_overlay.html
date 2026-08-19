@@ -12,7 +12,9 @@
       <div class="plugin-check-window__status-header">
         <span class="plugin-check-window__label">{{ _('requirements_status') }}</span>
         <span class="tray-overall-status">
-          {% if plugin.paused_by %}
+          {% if plugin.platform_error %}
+            <span class="badge badge--danger">UNSUPPORTED</span>
+          {% elif plugin.paused_by %}
             <span class="badge badge--danger">✕ {{ _('unmet') }} ({{ _('missing') }} {{ plugin.paused_by | title }})</span>
           {% elif plugin.dependency_status and plugin.dependency_status | length > 0 %}
             {% set all_healthy = true %}
@@ -57,6 +59,9 @@
     {% endif %}
     {% if plugin.manifest_error %}
       <div class="plugin-check-window__error">⚠️ {{ plugin.manifest_error }}</div>
+    {% endif %}
+    {% if plugin.platform_error %}
+      <div class="plugin-check-window__error">{{ plugin.platform_error }}</div>
     {% endif %}
   </div>
 </div>

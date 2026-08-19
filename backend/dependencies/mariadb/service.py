@@ -12,6 +12,8 @@ import time
 from pathlib import Path
 from typing import Any
 
+from services.platform_support_service import platform_support_service
+
 import config
 
 
@@ -155,8 +157,9 @@ class MariaDBDependencyService:
         return True, "MariaDB enabled." if enabled else "MariaDB disabled."
 
     def install(self) -> tuple[bool, str]:
-        if os.name == "nt":
-            return False, "MariaDB installation is only available on Linux."
+        platform_error = platform_support_service.capability_error("mariadb")
+        if platform_error:
+            return False, platform_error
         installer = self._script_path("install_mariadb.sh")
         if not installer.is_file():
             return False, "MariaDB installer script is missing. Run the panel updater first."
@@ -239,11 +242,11 @@ class MariaDBDependencyService:
         return True, result.stdout.strip()[-2000:] or "MariaDB updated successfully."
 
     def get_install_guide(self) -> dict[str, Any]:
-        return {
-            "supported": os.name != "nt",
-            "command": "sudo bash /opt/srv-panel/scripts/install_mariadb.sh",
-            "warning": "Uses this server's configured APT repositories and binds MariaDB to localhost only.",
-        }
+        return platform_support_service.install_guide(
+            "mariadb",
+            "sudo bash /opt/srv-panel/scripts/install_mariadb.sh",
+            "Uses this server's configured APT repositories and binds MariaDB to localhost only.",
+        )
 
     def get_uninstall_guide(self) -> dict[str, Any]:
         return {

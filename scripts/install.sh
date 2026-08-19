@@ -1,5 +1,5 @@
 #!/bin/bash
-# install.sh — Full VPS Control Panel bootstrap (Ubuntu 22.04/24.04)
+# install.sh — Full VPS Control Panel bootstrap
 # Usage (root):
 #   sudo bash scripts/install.sh
 #   sudo SERVER_IP=1.2.3.4 PANEL_DOMAIN=panel.example.com CERTBOT_EMAIL=a@b.com \
@@ -7,6 +7,7 @@
 #
 # Env:
 #   SOURCE_DIR, PANEL_DIR, PANEL_PORT, SKIP_APT, SKIP_UFW, DO_UPGRADE, NONINTERACTIVE
+#   SERVER_IP, PANEL_DOMAIN, CERTBOT_EMAIL, ADMIN_USER, ADMIN_PASSWORD
 set -euo pipefail
 
 # ---------------------------------------------------------------
@@ -21,11 +22,40 @@ SKIP_APT="${SKIP_APT:-0}"
 SKIP_UFW="${SKIP_UFW:-0}"
 DO_UPGRADE="${DO_UPGRADE:-0}"
 NONINTERACTIVE="${NONINTERACTIVE:-0}"
+POLICY_RC_CREATED=0
+POLICY_RC_PATH="/usr/sbin/policy-rc.d"
 
 RED='\033[0;31m'; GRN='\033[0;32m'; YLW='\033[1;33m'; NC='\033[0m'
 info()  { echo -e "${GRN}==>${NC} $*"; }
 warn()  { echo -e "${YLW}WARNING:${NC} $*"; }
 die()   { echo -e "${RED}ERROR:${NC} $*" >&2; exit 1; }
+
+cleanup_install() {
+  local status=$?
+  trap - EXIT
+  if [[ "${POLICY_RC_CREATED:-0}" == "1" && -f "${POLICY_RC_PATH:-/usr/sbin/policy-rc.d}" ]]; then
+    rm -f -- "$POLICY_RC_PATH"
+  fi
+  case "${CLEANUP_SOURCE_DIR:-}" in
+    /tmp/tserver-install|/tmp/tserver-install/*|/tmp/tserver-update|/tmp/tserver-update/*)
+      rm -rf -- "$CLEANUP_SOURCE_DIR"
+      ;;
+  esac
+  exit "$status"
+}
+
+cancel_install() {
+  local status="$1"
+  trap - INT TERM HUP
+  echo "" >&2
+  echo "ERROR: Installation cancelled." >&2
+  exit "$status"
+}
+
+trap cleanup_install EXIT
+trap 'cancel_install 130' INT
+trap 'cancel_install 143' TERM
+trap 'cancel_install 129' HUP
 
 # A failed lookup makes pip misleadingly report that a valid package has no
 # matching version. Check DNS before apt and again before pip, while printing
@@ -72,16 +102,18 @@ write_release_info() {
 # ---------------------------------------------------------------
 [[ "$(id -u)" -eq 0 ]] || die "Run as root (sudo bash scripts/install.sh)"
 
-if [[ -f /etc/os-release ]]; then
-  # shellcheck source=/dev/null
-  . /etc/os-release
-  if [[ "${ID:-}" != "ubuntu" ]]; then
-    warn "Designed for Ubuntu 22.04/24.04 — continuing on ${ID:-unknown}"
-  fi
-fi
-
 [[ -d "$SOURCE_DIR/backend" ]] || die "SOURCE_DIR missing backend/: $SOURCE_DIR"
 [[ -f "$SOURCE_DIR/backend/requirements.txt" ]] || die "requirements.txt not found"
+OS_COMPAT="$SCRIPT_DIR/os_compat.sh"
+[[ -f "$OS_COMPAT" ]] || die "OS compatibility helper is missing: $OS_COMPAT"
+# shellcheck source=scripts/os_compat.sh
+. "$OS_COMPAT"
+srv_os_require_supported || exit 1
+info "Detected supported platform: ${SRV_OS_PRETTY_NAME} (${SRV_OS_ARCH})"
+
+if [[ "$NONINTERACTIVE" != "1" && ! -r /dev/tty ]]; then
+  die "Interactive installation requires a controlling terminal. Run get.sh as a file, or set NONINTERACTIVE=1 with all required values."
+fi
 
 # ---------------------------------------------------------------
 # Interactive input — always read keyboard from /dev/tty
@@ -95,10 +127,31 @@ can_prompt() {
 _read_tty() {
   local prompt="$1"
   if [[ -r /dev/tty ]]; then
-    read -r -p "$prompt" REPLY </dev/tty || REPLY=""
+    if ! IFS= read -r -p "$prompt" REPLY </dev/tty; then
+      die "Terminal input closed before installation configuration completed."
+    fi
   else
-    read -r -p "$prompt" REPLY || REPLY=""
+    if ! IFS= read -r -p "$prompt" REPLY; then
+      die "Standard input closed before installation configuration completed."
+    fi
   fi
+}
+
+_read_secret_tty() {
+  local prompt="$1" variable="$2" value=""
+  if [[ -r /dev/tty ]]; then
+    if ! IFS= read -r -s -p "$prompt" value </dev/tty; then
+      echo "" >&2
+      die "Terminal input closed before installation configuration completed."
+    fi
+  else
+    if ! IFS= read -r -s -p "$prompt" value; then
+      echo "" >&2
+      die "Standard input closed before installation configuration completed."
+    fi
+  fi
+  printf -v "$variable" '%s' "$value"
+  echo ""
 }
 
 ask() {
@@ -173,7 +226,7 @@ case "${SERVER_IP:-}" in
     ;;
 esac
 
-DETECTED_IP="$(detect_ip)"
+DETECTED_IP="${SERVER_IP:-$(detect_ip)}"
 
 echo ""
 info "Install configuration"
@@ -196,6 +249,7 @@ if can_prompt; then
 else
   SERVER_IP="${SERVER_IP:-$DETECTED_IP}"
   [[ -n "$SERVER_IP" ]] || die "Could not detect SERVER_IP. Set SERVER_IP=x.x.x.x"
+  is_ip "$SERVER_IP" || die "SERVER_IP must be an IPv4 address."
 fi
 
 # --- PANEL_DOMAIN (optional, smart) ---
@@ -246,31 +300,25 @@ if can_prompt; then
     echo "    Invalid email. Example: admin@yourdomain.com"
   done
 else
-  CERTBOT_EMAIL="${CERTBOT_EMAIL:-admin@localhost}"
+  CERTBOT_EMAIL="${CERTBOT_EMAIL:-}"
+  [[ -n "$CERTBOT_EMAIL" ]] || die "NONINTERACTIVE install requires CERTBOT_EMAIL."
+  is_email "$CERTBOT_EMAIL" || die "CERTBOT_EMAIL must be a valid email address."
 fi
 
 # --- Panel admin (web login) ---
-ADMIN_USER="${ADMIN_USER:-admin}"
+ADMIN_USER="${ADMIN_USER:-}"
 ADMIN_PASSWORD="${ADMIN_PASSWORD:-}"
 
 if can_prompt; then
+  ADMIN_USER="${ADMIN_USER:-admin}"
   echo ""
   echo "  Panel web login (required to open the control panel)."
   ask "Admin username" "${ADMIN_USER}"
   ADMIN_USER="$(echo "${REPLY:-admin}" | tr -d '[:space:]')"
   [[ -n "$ADMIN_USER" ]] || ADMIN_USER="admin"
   while true; do
-    if [[ -r /dev/tty ]]; then
-      read -r -s -p "  Admin password (min 8 chars): " ADMIN_PASSWORD </dev/tty || ADMIN_PASSWORD=""
-      echo ""
-      read -r -s -p "  Confirm password: " ADMIN_PASSWORD2 </dev/tty || ADMIN_PASSWORD2=""
-      echo ""
-    else
-      read -r -s -p "  Admin password (min 8 chars): " ADMIN_PASSWORD || ADMIN_PASSWORD=""
-      echo ""
-      read -r -s -p "  Confirm password: " ADMIN_PASSWORD2 || ADMIN_PASSWORD2=""
-      echo ""
-    fi
+    _read_secret_tty "  Admin password (min 8 chars): " ADMIN_PASSWORD
+    _read_secret_tty "  Confirm password: " ADMIN_PASSWORD2
     if [[ ${#ADMIN_PASSWORD} -lt 8 ]]; then
       echo "    Password must be at least 8 characters."
       continue
@@ -283,7 +331,7 @@ if can_prompt; then
   done
   unset ADMIN_PASSWORD2
 else
-  ADMIN_USER="${ADMIN_USER:-admin}"
+  [[ -n "$ADMIN_USER" ]] || die "NONINTERACTIVE install requires ADMIN_USER."
   if [[ -z "${ADMIN_PASSWORD:-}" ]]; then
     die "NONINTERACTIVE install requires ADMIN_PASSWORD (min 8 chars)"
   fi
@@ -305,6 +353,13 @@ else
 fi
 echo "    CERTBOT_EMAIL = $CERTBOT_EMAIL"
 echo "    ADMIN_USER    = $ADMIN_USER"
+
+# Test-only preflight used by Linux PTY tests. It exits before package, service,
+# filesystem, or database changes.
+if [[ "${SRV_INSTALLER_PREFLIGHT_ONLY:-0}" == "1" ]]; then
+  info "Installer preflight complete. No system changes were made."
+  exit 0
+fi
 
 # ---------------------------------------------------------------
 # Packages
@@ -328,25 +383,28 @@ if [[ "$SKIP_APT" != "1" ]]; then
     nginx \
     certbot \
     sqlite3 \
-    curl wget git ufw openssl rsync sudo acl \
-    zram-tools libjemalloc2
+    curl wget git ufw openssl rsync sudo acl
+  info "Installing optional low-memory packages..."
+  DEBIAN_FRONTEND=noninteractive apt-get install -y zram-tools libjemalloc2 || \
+    warn "Optional zram-tools/libjemalloc2 packages are unavailable; base installation will continue."
 
-  POLICY_RC_CREATED=0
-  if [[ ! -e /usr/sbin/policy-rc.d ]]; then
-    cat > /usr/sbin/policy-rc.d <<'EOF'
+  if [[ ! -e "$POLICY_RC_PATH" ]]; then
+    cat > "$POLICY_RC_PATH" <<'EOF'
 #!/bin/sh
 # Prevent daemon starts while srv-panel prepares PowerDNS configuration.
 exit 101
 EOF
-    chmod 755 /usr/sbin/policy-rc.d
+    chmod 755 "$POLICY_RC_PATH"
     POLICY_RC_CREATED=1
   fi
   info "Installing PowerDNS packages (service start deferred)..."
   if ! DEBIAN_FRONTEND=noninteractive apt-get install -y pdns-server pdns-backend-sqlite3; then
-    [[ "$POLICY_RC_CREATED" == "1" ]] && rm -f /usr/sbin/policy-rc.d
+    [[ "$POLICY_RC_CREATED" == "1" ]] && rm -f "$POLICY_RC_PATH"
+    POLICY_RC_CREATED=0
     die "PowerDNS package installation failed"
   fi
-  [[ "$POLICY_RC_CREATED" == "1" ]] && rm -f /usr/sbin/policy-rc.d
+  [[ "$POLICY_RC_CREATED" == "1" ]] && rm -f "$POLICY_RC_PATH"
+  POLICY_RC_CREATED=0
 
   # Ensure critical packages are present even if apt returned non-zero from pdns restart
   for pkg in python3 nginx certbot pdns-server pdns-backend-sqlite3 sqlite3; do
@@ -356,17 +414,16 @@ EOF
   systemctl stop pdns 2>/dev/null || true
   systemctl reset-failed pdns 2>/dev/null || true
 
-  # Prefer python3.11 if available (optional package on some images)
-  if ! command -v python3.11 &>/dev/null; then
-    apt-get install -y python3.11 python3.11-venv python3.11-dev 2>/dev/null || true
-  fi
 fi
 
 PYTHON_BIN="python3"
-if command -v python3.11 &>/dev/null; then
-  PYTHON_BIN="python3.11"
+PYTHON_VERSION="$($PYTHON_BIN -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')"
+PYTHON_MAJOR="${PYTHON_VERSION%%.*}"
+PYTHON_MINOR="${PYTHON_VERSION#*.}"
+if [[ "$PYTHON_MAJOR" -ne 3 || "$PYTHON_MINOR" -lt 10 || "$PYTHON_MINOR" -gt 14 ]]; then
+  die "Unsupported Python ${PYTHON_VERSION}. SRV Panel requires Python 3.10 through 3.14."
 fi
-info "Using Python: $PYTHON_BIN ($($PYTHON_BIN --version 2>&1))"
+info "Using distro Python: $PYTHON_BIN ($($PYTHON_BIN --version 2>&1))"
 
 # ---------------------------------------------------------------
 # User + directories
@@ -388,6 +445,7 @@ require_dns
 "$PANEL_DIR/venv/bin/pip" install --upgrade pip
 info "Installing Python requirements..."
 "$PANEL_DIR/venv/bin/pip" install -r "$SOURCE_DIR/backend/requirements.txt"
+"$PANEL_DIR/venv/bin/python" -c "import fastapi, uvicorn, sqlalchemy, aiosqlite, httpx, asyncpg, cryptography, psutil"
 
 # ---------------------------------------------------------------
 # Deploy app code

@@ -228,5 +228,49 @@ class PluginManagerTests(unittest.TestCase):
 
         is_healthy.assert_not_called()
 
+    def test_platform_selector_marks_plugin_unsupported_and_blocks_actions(self):
+        manager = PluginManager()
+        manager.plugins = {
+            "ubuntu_only": {
+                "id": "ubuntu_only",
+                "name": "Ubuntu Only",
+                "manifest_enabled": True,
+                "manifest_error": None,
+                "installed": True,
+                "usage": {},
+                "requires": {
+                    "dependencies": [],
+                    "platforms": ["ubuntu:24.04"],
+                },
+            }
+        }
+        reason = "Ubuntu Only is not verified on Debian 13 (amd64)."
+
+        with patch(
+            "plugins.manager.platform_support_service.plugin_support",
+            return_value=(False, reason),
+        ):
+            plugin = manager.get_plugin("ubuntu_only")
+            self.assertFalse(plugin["platform_supported"])
+            self.assertEqual(plugin["platform_error"], reason)
+            self.assertEqual(plugin["effective_status"], "unsupported")
+
+            with self.assertRaises(PluginUnavailableError) as error:
+                manager.availability_dependency("ubuntu_only")()
+            self.assertEqual(error.exception.status_code, 409)
+            self.assertEqual(error.exception.code, "platform_unsupported")
+
+            enabled, message = asyncio.run(
+                manager.toggle_plugin("ubuntu_only", True)
+            )
+            self.assertFalse(enabled)
+            self.assertEqual(message, reason)
+
+            installed, message = asyncio.run(
+                manager.run_plugin_script("ubuntu_only", "install")
+            )
+            self.assertFalse(installed)
+            self.assertEqual(message, reason)
+
 if __name__ == "__main__":
     unittest.main()

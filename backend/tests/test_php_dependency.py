@@ -139,11 +139,30 @@ class PHPDependencyServiceTests(unittest.TestCase):
         service = PHPDependencyService()
         service._helper_call = Mock(return_value={"message": "repository enabled"})
 
-        success, message = service.enable_external_repository()
+        with patch(
+            "dependencies.php.service.platform_support_service.capability_error",
+            return_value=None,
+        ):
+            success, message = service.enable_external_repository()
 
         self.assertTrue(success)
         self.assertEqual("repository enabled", message)
         service._helper_call.assert_called_once_with("enable_external_repository", timeout=600)
+
+    def test_external_repository_is_rejected_when_platform_is_not_ubuntu(self):
+        service = PHPDependencyService()
+        service._helper_call = Mock()
+        reason = "Php External Repository is not supported on Debian 13."
+
+        with patch(
+            "dependencies.php.service.platform_support_service.capability_error",
+            return_value=reason,
+        ):
+            success, message = service.enable_external_repository()
+
+        self.assertFalse(success)
+        self.assertEqual(reason, message)
+        service._helper_call.assert_not_called()
 
     def test_invalid_version_never_reaches_root_helper(self):
         service = PHPDependencyService()

@@ -140,7 +140,7 @@ def require_ubuntu() -> None:
     except OSError:
         fail("Cannot identify this Linux distribution from /etc/os-release.")
     if values.get("ID", "").strip().strip('"') != "ubuntu":
-        fail("The external PHP repository action is supported only on Ubuntu.")
+        fail("The external PHP repository action is supported only on Ubuntu. On Debian, use PHP versions available from configured APT sources.")
 
 
 def verify_fpm(item_version: str) -> None:

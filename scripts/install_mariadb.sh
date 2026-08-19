@@ -2,7 +2,13 @@
 # Install panel-managed native MariaDB from the server's configured APT sources.
 set -euo pipefail
 
-PANEL_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PANEL_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+OS_HELPER="$SCRIPT_DIR/os_compat.sh"
+[[ -f "$OS_HELPER" ]] || { echo "OS compatibility helper is missing: $OS_HELPER" >&2; exit 1; }
+# shellcheck source=scripts/os_compat.sh
+. "$OS_HELPER"
+srv_os_require_supported || exit 1
 CONFIG_DIR="/etc/mysql/mariadb.conf.d"
 CONFIG_FILE="$CONFIG_DIR/60-srv-panel.cnf"
 HELPER_SOURCE="$PANEL_DIR/scripts/mariadb_manager_helper.py"

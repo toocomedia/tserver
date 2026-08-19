@@ -87,7 +87,11 @@ class DockerDependencyServiceTests(unittest.TestCase):
             )
             service.get_status = Mock(return_value={"healthy": True, "error": None})
 
-            success, message = service.install()
+            with patch(
+                "dependencies.docker.service.platform_support_service.capability_error",
+                return_value=None,
+            ):
+                success, message = service.install()
 
             self.assertTrue(success)
             self.assertIn("installed", message)
@@ -98,8 +102,10 @@ class DockerDependencyServiceTests(unittest.TestCase):
     def test_installer_script_uses_official_repository_and_preserves_data(self):
         script = BACKEND.parent / "scripts" / "install_docker.sh"
         content = script.read_text(encoding="utf-8")
-        self.assertIn("https://download.docker.com/linux/ubuntu", content)
-        self.assertIn("22.04|24.04", content)
+        self.assertIn('. "$OS_COMPAT"', content)
+        self.assertIn("srv_os_require_supported", content)
+        self.assertIn("https://download.docker.com/linux/${SRV_OS_ID}", content)
+        self.assertIn("Suites: $codename", content)
         self.assertIn("docker-compose-plugin", content)
         self.assertNotIn("get.docker.com", content)
         self.assertNotIn("rm -rf /var/lib/docker", content)

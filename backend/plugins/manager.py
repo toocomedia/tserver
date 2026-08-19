@@ -22,6 +22,7 @@ from jinja2 import ChoiceLoader, FileSystemLoader
 import config
 from dependencies.registry import CORE_DEPENDENCY_IDS
 from services.component_state import component_state_store
+from services.platform_support_service import SUPPORTED_PLATFORMS, platform_support_service
 
 logger = logging.getLogger(__name__)
 
@@ -101,6 +102,12 @@ class PluginManager:
         dependencies = requires.get("dependencies", []) if isinstance(requires, dict) else []
         return dependencies if isinstance(dependencies, list) else []
 
+    @staticmethod
+    def _required_platforms(data: dict[str, Any]) -> list[str]:
+        requires = data.get("requires") or {}
+        platforms = requires.get("platforms", []) if isinstance(requires, dict) else []
+        return platforms if isinstance(platforms, list) else []
+
     def _validate_manifest(self, data: dict[str, Any], plugin_dir: Path) -> str | None:
         plugin_id = data.get("id")
         if not isinstance(plugin_id, str) or not PLUGIN_ID_RE.fullmatch(plugin_id):
@@ -119,6 +126,12 @@ class PluginManager:
         unknown = sorted(set(dependencies) - CORE_DEPENDENCY_IDS)
         if unknown:
             return f"Unknown dependencies: {', '.join(unknown)}."
+        platforms = self._required_platforms(data)
+        if any(not isinstance(item, str) for item in platforms):
+            return "requires.platforms must contain platform selectors."
+        unknown_platforms = sorted(set(platforms) - set(SUPPORTED_PLATFORMS))
+        if unknown_platforms:
+            return f"Unknown platforms: {', '.join(unknown_platforms)}."
 
         usage = data.get("usage")
         if not isinstance(usage, dict):
@@ -170,6 +183,12 @@ class PluginManager:
         result["operation"] = state.operation
         result["last_error"] = state.last_error
 
+        platform_supported, platform_error = platform_support_service.plugin_support(
+            self._required_platforms(result)
+        )
+        result["platform_supported"] = platform_supported
+        result["platform_error"] = platform_error
+
         if not result.get("installed", False) and result.get("dir_path"):
             installed = self._check_plugin_installed(Path(result["dir_path"]), plugin_id)
             result["installed"] = installed
@@ -181,7 +200,7 @@ class PluginManager:
         for dependency_id in self._required_dependencies(result):
             healthy = (
                 dependency_manager.is_healthy(dependency_id)
-                if check_dependencies
+                if check_dependencies and platform_supported
                 else None
             )
             requirements.append({"id": dependency_id, "healthy": healthy})
@@ -192,6 +211,8 @@ class PluginManager:
 
         if result.get("manifest_error"):
             effective_status = "invalid"
+        elif not platform_supported:
+            effective_status = "unsupported"
         elif not result.get("installed", False):
             effective_status = "missing"
         elif state.operation != "idle":
@@ -286,6 +307,13 @@ class PluginManager:
                     f"Required dependency is unavailable: {dependencies}.",
                     503,
                 )
+            if status == "unsupported":
+                raise PluginUnavailableError(
+                    plugin_id,
+                    "platform_unsupported",
+                    plugin.get("platform_error") or "Plugin is not supported on this platform.",
+                    409,
+                )
             if status == "disabled":
                 raise PluginUnavailableError(
                     plugin_id, "plugin_disabled", "Plugin is disabled.", 409
@@ -350,10 +378,14 @@ class PluginManager:
     def get_sidebar_items(self) -> List[Dict[str, Any]]:
         items = []
         for plugin_id, plugin in self.plugins.items():
+            platform_supported, _ = platform_support_service.plugin_support(
+                self._required_platforms(plugin)
+            )
             if (
                 not plugin.get("sidebar", False)
                 or plugin.get("manifest_error")
                 or not plugin.get("installed", False)
+                or not platform_supported
             ):
                 continue
             state = component_state_store.get(
@@ -431,6 +463,8 @@ class PluginManager:
             return False, "Plugin not found."
         if enabled and not plugin.get("installed", False):
             return False, "Cannot enable plugin before it is installed."
+        if enabled and not plugin.get("platform_supported", True):
+            return False, plugin.get("platform_error") or "Plugin is not supported on this platform."
         if enabled and plugin.get("paused_by"):
             dependencies = ", ".join(plugin["paused_by"])
             return False, f"Required dependency is unavailable: {dependencies}."
@@ -491,6 +525,8 @@ class PluginManager:
         plugin = self.get_plugin(plugin_id)
         if not plugin:
             return False, "Plugin not found."
+        if action == "install" and not plugin.get("platform_supported", True):
+            return False, plugin.get("platform_error") or "Plugin is not supported on this platform."
         if action == "install" and plugin.get("paused_by"):
             if "docker" in plugin["paused_by"]:
                 return False, "Docker daemon is not available."

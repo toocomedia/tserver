@@ -35,6 +35,8 @@
     </form>
     {% if dependency.external_repository.configured %}
     <button class="btn btn--secondary btn--sm" type="button" disabled title="External PHP repository is already enabled">{{ _('external_php_source_enabled') }}</button>
+    {% elif not dependency.external_repository.supported %}
+    <button class="btn btn--secondary btn--sm" type="button" disabled title="{{ dependency.external_repository.unsupported_reason }}">{{ _('enable_external_php_source') }}</button>
     {% else %}
     <form method="post" action="/api/dependencies/php/enable-external-repository" data-php-external-repository data-confirmation="ENABLE EXTERNAL PHP REPOSITORY">
       <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
@@ -100,7 +102,9 @@
 <p class="text-small text-muted mb-sm">{{ _('install_only_the_php_versions_your_scrip') }}</p>
 
 {% set missing_versions = dependency.versions | rejectattr('installed') | rejectattr('available_from_apt') | list %}
-{% if missing_versions and not dependency.external_repository.configured %}
+{% if missing_versions and not dependency.external_repository.supported %}
+<p class="text-small text-muted mb-md">{{ dependency.external_repository.unsupported_reason }} Install PHP versions available from this server's configured APT sources.</p>
+{% elif missing_versions and not dependency.external_repository.configured %}
 <p class="text-small text-muted mb-md">{{ _('some_versions_missing_info') }} {{ dependency.external_repository.name }} {{ _('without_installing_php') }}</p>
 {% elif dependency.external_repository.configured %}
 <p class="text-small text-muted mb-md">{{ _('external_php_source_enabled_1') }}</p>

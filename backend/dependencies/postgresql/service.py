@@ -10,6 +10,8 @@ import time
 from pathlib import Path
 from typing import Any
 
+from services.platform_support_service import platform_support_service
+
 import config
 
 
@@ -127,8 +129,9 @@ class PostgreSQLDependencyService:
         return Path(__file__).resolve().parents[2] / "plugins" / "postgres_manager" / "scripts" / "install.sh"
 
     def install(self) -> tuple[bool, str]:
-        if os.name == "nt":
-            return False, "PostgreSQL installation is only available on Linux."
+        platform_error = platform_support_service.capability_error("postgresql")
+        if platform_error:
+            return False, platform_error
         installer = self._installer_path()
         if not installer.is_file():
             return False, "PostgreSQL installer script is missing."
@@ -144,7 +147,11 @@ class PostgreSQLDependencyService:
         return True, "PostgreSQL installed successfully."
 
     def get_install_guide(self) -> dict[str, Any]:
-        return {"supported": os.name != "nt", "command": "sudo apt-get install -y postgresql postgresql-client", "warning": "The panel installer also configures PostgreSQL Manager permissions."}
+        return platform_support_service.install_guide(
+            "postgresql",
+            "sudo apt-get install -y postgresql postgresql-client",
+            "The panel installer also configures PostgreSQL Manager permissions.",
+        )
 
     def get_uninstall_guide(self) -> dict[str, Any]:
         return {"command": "sudo systemctl disable --now postgresql", "warning": "Database data is preserved; SRV Panel never removes /var/lib/postgresql."}

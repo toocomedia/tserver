@@ -75,7 +75,7 @@
       {% for plugin in plugins %}
         {% if plugin.effective_status == 'active' %}
           {% set plugin_status_label = 'Active' %}{% set plugin_status_tone = 'success' %}
-        {% elif plugin.effective_status in ['missing', 'invalid', 'error', 'unhealthy'] %}
+        {% elif plugin.effective_status in ['missing', 'invalid', 'unsupported', 'error', 'unhealthy'] %}
           {% set plugin_status_label = plugin.effective_status | replace('_', ' ') | title %}{% set plugin_status_tone = 'danger' %}
         {% elif plugin.effective_status in ['paused', 'disabled', 'stopped'] %}
           {% set plugin_status_label = plugin.effective_status | replace('_', ' ') | title %}{% set plugin_status_tone = 'warning' %}

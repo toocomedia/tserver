@@ -3,6 +3,8 @@ from __future__ import annotations
 import os, re, shutil, subprocess, threading, time
 from typing import Any
 
+from services.platform_support_service import platform_support_service
+
 class PythonDependencyService:
     dependency_id = "python"
     CACHE_SECONDS = 300.0
@@ -11,7 +13,7 @@ class PythonDependencyService:
         self._cache_at = 0.0
         self._cache_lock = threading.Lock()
     def _python(self):
-        for name in ("python3.13", "python3.12", "python3.11", "python3"):
+        for name in ("python3.14", "python3.13", "python3.12", "python3.11", "python3"):
             if path := shutil.which(name): return path
         return None
     def _probe(self) -> dict[str, Any]:
@@ -44,5 +46,10 @@ class PythonDependencyService:
                 "can_toggle": False, "healthy": False, "state": "unknown" if installed else "not_installed",
                 "detected_version": None, "error": None}
     def install(self): return False, "Python is installed with SRV Panel. Run the panel installer/update to repair this core runtime."
-    def get_install_guide(self): return {"supported":False,"command":"sudo bash /opt/srv-panel/scripts/update.sh","warning":"Do not remove Python: SRV Panel and hosted apps use it."}
+    def get_install_guide(self):
+        info = platform_support_service.get()
+        reason = "Python is installed or repaired by the SRV Panel installer/update."
+        if info["selector"] == "ubuntu:22.04":
+            reason = "Native hosted Python apps require Python 3.11 or newer; Ubuntu 22.04 provides Python 3.10 by default."
+        return {"supported":False,"platform":info["pretty_name"],"unsupported_reason":reason,"command":"sudo bash /opt/srv-panel/scripts/update.sh","warning":"Do not remove Python: SRV Panel and hosted apps use it."}
     def get_uninstall_guide(self): return {"command":"Not available","warning":"Python is a core panel runtime and cannot be removed here."}

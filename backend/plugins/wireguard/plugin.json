@@ -10,6 +10,10 @@
   "sidebar_label": "WireGuard VPN",
   "enabled": true,
   "usage": {},
+  "requires": {
+    "dependencies": [],
+    "platforms": ["ubuntu:22.04", "ubuntu:24.04"]
+  },
   "install_script": "scripts/install_wireguard.sh",
   "uninstall_script": "scripts/uninstall_wireguard.sh"
 }

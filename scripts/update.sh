@@ -55,6 +55,21 @@ done
 
 [[ "$(id -u)" -eq 0 ]] || die "Run as root"
 [[ -d "$PANEL_DIR/app" ]] || die "Panel not installed at $PANEL_DIR (run install.sh first)"
+OS_COMPAT="$SCRIPT_DIR/os_compat.sh"
+[[ -f "$OS_COMPAT" ]] || die "OS compatibility helper is missing: $OS_COMPAT"
+# shellcheck source=scripts/os_compat.sh
+. "$OS_COMPAT"
+srv_os_require_supported || exit 1
+info "Detected supported platform: ${SRV_OS_PRETTY_NAME} (${SRV_OS_ARCH})"
+
+PANEL_PYTHON="$PANEL_DIR/venv/bin/python"
+[[ -x "$PANEL_PYTHON" ]] || die "Panel Python is missing: $PANEL_PYTHON"
+PANEL_PYTHON_VERSION="$($PANEL_PYTHON -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')"
+PANEL_PYTHON_MAJOR="${PANEL_PYTHON_VERSION%%.*}"
+PANEL_PYTHON_MINOR="${PANEL_PYTHON_VERSION#*.}"
+if [[ "$PANEL_PYTHON_MAJOR" -ne 3 || "$PANEL_PYTHON_MINOR" -lt 10 || "$PANEL_PYTHON_MINOR" -gt 14 ]]; then
+  die "Unsupported panel Python ${PANEL_PYTHON_VERSION}. SRV Panel requires Python 3.10 through 3.14."
+fi
 
 # Load PANEL_DOMAIN from env if present
 if [[ -f "$PANEL_DIR/.env" ]]; then
@@ -162,6 +177,7 @@ if [[ "$NO_PIP" != "1" ]]; then
   else
     warn "No requirements.txt found — skipping pip"
   fi
+  "$PANEL_DIR/venv/bin/python" -c "import fastapi, uvicorn, sqlalchemy, aiosqlite, httpx, asyncpg, cryptography, psutil"
 fi
 
 # Ensure .env not clobbered; re-assert ownership

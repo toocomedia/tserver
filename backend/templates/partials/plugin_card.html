@@ -9,7 +9,7 @@
     <div class="plugin-card__main">
       <div class="plugin-card__header-row">
         <a href="/plugins/info/{{ plugin.id }}" style="text-decoration:none; color:inherit; min-width:0; overflow:hidden;">
-          <h3 class="plugin-card__title" {% if plugin.effective_status in ['missing', 'invalid'] %}style="color: var(--color-muted)" {% endif %}>{{ _(plugin.name) }}</h3>
+          <h3 class="plugin-card__title" {% if plugin.effective_status in ['missing', 'invalid', 'unsupported'] %}style="color: var(--color-muted)" {% endif %}>{{ _(plugin.name) }}</h3>
         </a>
         <span class="plugin-card__meta">v{{ plugin.version }}</span>
       </div>
@@ -26,14 +26,16 @@
             <span style="color: var(--color-muted);">{{ _('paused') }}</span>
           {% elif plugin.effective_status == 'invalid' %}
             <span style="color: var(--color-danger);">{{ _('blocked') }}</span>
+          {% elif plugin.effective_status == 'unsupported' %}
+            <span style="color: var(--color-danger);">UNSUPPORTED</span>
           {% else %}
             <span>{{ plugin.effective_status | replace('_', ' ') | upper }}</span>
           {% endif %}
         </div>
 
         <div class="plugin-card__actions">
-          {% if plugin.dependency_status or plugin.manifest_error or (action_error and action_error_plugin_id == plugin.id) %}
-            <button type="button" class="btn-clean-icon requirements-info-btn {% if plugin.paused_by %}requirements-info-btn--danger{% endif %}" title="{% if plugin.paused_by %}Missing Requirements — Click to Check Details{% else %}System Check & Details{% endif %}" onclick="toggleAndCheckPlugin(this);">
+          {% if plugin.dependency_status or plugin.manifest_error or plugin.platform_error or (action_error and action_error_plugin_id == plugin.id) %}
+            <button type="button" class="btn-clean-icon requirements-info-btn {% if plugin.paused_by or plugin.platform_error %}requirements-info-btn--danger{% endif %}" title="{% if plugin.platform_error %}{{ plugin.platform_error }}{% elif plugin.paused_by %}Missing Requirements — Click to Check Details{% else %}System Check & Details{% endif %}" onclick="toggleAndCheckPlugin(this);">
               <svg viewbox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
             </button>
           {% endif %}
@@ -41,7 +43,7 @@
             <form method="post" action="/plugins/api/install" style="display:inline-flex;">
               <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
               <input type="hidden" name="plugin_id" value="{{ plugin.id }}">
-              <button type="submit" class="btn-clean btn-clean--primary" title="Install {{ plugin.name }}" {% if plugin.paused_by %}disabled style="opacity:0.5;" title="Install required system dependency first" {% endif %}>
+              <button type="submit" class="btn-clean btn-clean--primary" title="Install {{ plugin.name }}" {% if plugin.paused_by or not plugin.platform_supported %}disabled style="opacity:0.5;" title="{{ plugin.platform_error or 'Install required system dependency first' }}" {% endif %}>
                 <span>{{ _('install') if _('install') else 'Install' }}</span>
                 <svg viewbox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
               </button>
@@ -93,7 +95,7 @@
   </div>
 
   <!-- ABSOLUTE OVERLAY POPUP WINDOW (ZERO CARD RESIZING) -->
-  {% if plugin.dependency_status or plugin.manifest_error or (action_error and action_error_plugin_id == plugin.id) %}
+  {% if plugin.dependency_status or plugin.manifest_error or plugin.platform_error or (action_error and action_error_plugin_id == plugin.id) %}
   {% include "partials/plugin_requirements_overlay.html" %}
   {% endif %}
 </div>

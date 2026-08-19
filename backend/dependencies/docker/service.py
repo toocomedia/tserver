@@ -12,6 +12,8 @@ import time
 from pathlib import Path
 from typing import Any
 
+from services.platform_support_service import platform_support_service
+
 import config
 
 
@@ -178,8 +180,9 @@ class DockerDependencyService:
         return Path(__file__).resolve().parents[3] / "scripts" / "install_docker.sh"
 
     def install(self) -> tuple[bool, str]:
-        if not self._is_linux():
-            return False, "Docker installation is only available on supported Ubuntu servers."
+        platform_error = platform_support_service.capability_error("docker")
+        if platform_error:
+            return False, platform_error
         installer = self._installer_path().resolve()
         if not installer.is_file():
             return False, "Docker installer script is missing. Run the panel updater first."
@@ -220,17 +223,11 @@ class DockerDependencyService:
         return values
 
     def get_install_guide(self) -> dict[str, Any]:
-        release = self._os_release()
-        supported = release.get("ID") == "ubuntu" and release.get("VERSION_ID") in {
-            "22.04",
-            "24.04",
-        }
-        return {
-            "supported": supported,
-            "platform": release.get("PRETTY_NAME") or platform.platform(),
-            "command": "sudo bash /opt/srv-panel/scripts/install_docker.sh",
-            "warning": "The panel installer uses Docker's official Ubuntu apt repository.",
-        }
+        return platform_support_service.install_guide(
+            "docker",
+            "sudo bash /opt/srv-panel/scripts/install_docker.sh",
+            "Uses Docker's official repository for this supported Ubuntu or Debian release.",
+        )
 
     def get_uninstall_guide(self) -> dict[str, Any]:
         return {
