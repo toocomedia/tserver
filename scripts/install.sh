@@ -131,27 +131,34 @@ esac
 
 step_ok
 
+# Re-attach stdin to the controlling terminal.
+# When invoked via `curl | bash`, the child bash process inherits the
+# exhausted pipe as stdin. `exec </dev/tty` replaces fd 0 with the real
+# terminal so that every subsequent `read` call (and Ctrl+C) works normally.
+# This is safe here because install.sh is always run as a FILE, never piped.
+if [[ "${NONINTERACTIVE}" != "1" ]] && [[ -r /dev/tty ]]; then
+  exec </dev/tty
+fi
+
 # ---------------------------------------------------------------
-# Interactive input — always read keyboard from /dev/tty
-# Never use `exec </dev/tty` (breaks curl|bash scripts).
+# Interactive input helpers
+# stdin is the terminal (re-attached via exec above for curl|bash runs).
 # ---------------------------------------------------------------
 can_prompt() {
   [[ "${NONINTERACTIVE}" != "1" ]] && [[ -r /dev/tty ]]
 }
 
-# read from /dev/tty so prompts work even if stdin is a pipe
-# NOTE: Do NOT combine -p with </dev/tty redirection — on many VPS terminals
-# (especially curl|bash) bash silently fails to render the -p prompt when stdin
-# is redirected, causing the script to appear frozen. Always write the prompt
-# to /dev/tty explicitly with printf, then read separately.
+# read from stdin (which is now /dev/tty after the exec above).
+# NOTE: We keep the </dev/tty fallback only for the edge case where the
+# exec could not run (e.g. NONINTERACTIVE=1 or no controlling terminal).
 _read_tty() {
   local prompt="$1"
   if [[ -r /dev/tty ]]; then
-    printf '%s' "$prompt" >/dev/tty
-    read -r REPLY </dev/tty || REPLY=""
+    printf '%s' "$prompt"
+    read -r REPLY || REPLY=""
   else
     printf '%s' "$prompt" >&2
-    read -r REPLY || REPLY=""
+    read -r REPLY </dev/null 2>/dev/null || REPLY=""
   fi
 }
 
@@ -315,18 +322,18 @@ if can_prompt; then
   [[ -n "$ADMIN_USER" ]] || ADMIN_USER="admin"
   while true; do
     if [[ -r /dev/tty ]]; then
-      printf '  Admin password (min 8 chars): ' >/dev/tty
-      read -r -s ADMIN_PASSWORD </dev/tty || ADMIN_PASSWORD=""
-      printf '\n' >/dev/tty
-      printf '  Confirm password: ' >/dev/tty
-      read -r -s ADMIN_PASSWORD2 </dev/tty || ADMIN_PASSWORD2=""
-      printf '\n' >/dev/tty
+      printf '  Admin password (min 8 chars): '
+      read -r -s ADMIN_PASSWORD || ADMIN_PASSWORD=""
+      printf '\n'
+      printf '  Confirm password: '
+      read -r -s ADMIN_PASSWORD2 || ADMIN_PASSWORD2=""
+      printf '\n'
     else
       printf '  Admin password (min 8 chars): ' >&2
-      read -r -s ADMIN_PASSWORD || ADMIN_PASSWORD=""
+      read -r -s ADMIN_PASSWORD </dev/null 2>/dev/null || ADMIN_PASSWORD=""
       echo ""
       printf '  Confirm password: ' >&2
-      read -r -s ADMIN_PASSWORD2 || ADMIN_PASSWORD2=""
+      read -r -s ADMIN_PASSWORD2 </dev/null 2>/dev/null || ADMIN_PASSWORD2=""
       echo ""
     fi
     if [[ ${#ADMIN_PASSWORD} -lt 8 ]]; then
