@@ -1,101 +1,91 @@
 {% extends "layout.html" %}
 
 {% block title %}{{ _('issue_ssl_certificate') }} — {{ PANEL_NAME }}{% endblock %}
-{% block page_title %}{{ _('issue_ssl_certificate') }}{% endblock %}
+{% block page_title %}{{ _('issue_ssl') }}{% endblock %}
 
 {% block topbar_actions %}
   <a href="/ssl/" class="btn btn--secondary" id="btn-back">{{ _('back') }}</a>
 {% endblock %}
 
 {% block content %}
+<div id="issue-ssl-panel" style="max-width: 800px; margin: 0 auto; width: 100%;">
 
-<div class="section" style="max-width:560px;" id="issue-panel">
-  <div class="section__header">
-    <h3>{{ _('new_certificate') }}</h3>
-  </div>
-  <div class="section__body">
+  {% if error %}
+  <div class="alert alert--danger mb-lg" id="form-error" role="alert">{{ error }}</div>
+  {% endif %}
 
-    {% if error %}
-    <div class="alert alert--danger mb-lg" id="form-error">{{ error }}</div>
-    {% endif %}
+  {% if eligible %}
+  <form method="post" action="/ssl/issue" class="clean-form" id="issue-form">
+    {% include "partials/csrf_field.html" %}
 
-    <!-- How it works -->
-    <div class="alert alert--info mb-lg" id="info-block">
-      {{ _('certificates_are_issued_via') }} <strong>{{ _('let_s_encrypt') }}</strong> {{ _('using_the_http_01_challenge') }}<br><br>
-      {{ _('requirements_before_issuing') }}<br>
-      <strong>1.</strong> {{ _('domain_dns_must_point_to_this_server') }}<br>
-      <strong>2.</strong> {{ _('nginx_must_be_active_http_must_respond') }}<br>
-      <strong>3.</strong> {{ _('no_existing_cert_for_this_domain') }}<br><br>
-      {{ _('after_issue_nginx_is_automatically_updat') }}
-    </div>
-
-    {% if eligible %}
-    <form method="post" action="/ssl/issue" class="form" id="issue-form">
-      {% include "partials/csrf_field.html" %}
-
-      <!-- DOMAIN — dropdown only, no free text -->
-      <div class="form-group">
-        <label class="form-label" for="full_domain_select">{{ _('domain_subdomain') }}</label>
+    <div style="display: flex; flex-direction: column;">
+      <!-- DOMAIN SELECTION -->
+      <div class="form-group-horizontal">
+        <div class="form-label-wrap">
+          <label class="form-label" for="full_domain_select">{{ _('domain_subdomain') }}</label>
+          <span class="form-hint">{{ _('only_domains_with_active_nginx_config_an') }}</span>
+        </div>
         <div class="form-select-wrap">
-          <select id="full_domain_select" class="form-select" required onchange="syncHidden(this)">
+          <select id="full_domain_select" class="form-select clean-input" required>
             <option value="" disabled {% if not preselect_full_domain %}selected{% endif %}>
               {{ _('select_a_domain') }}
             </option>
             {% for item in eligible %}
-              <option value="{{ item.full_domain }}" data-domain-id="{{ item.id if item.id is not none else '' }}" {% if preselect_full_domain and item.full_domain== preselect_full_domain %}selected{% endif %}>
+              <option value="{{ item.full_domain }}" data-domain-id="{{ item.id if item.id is not none else '' }}" {% if preselect_full_domain and item.full_domain == preselect_full_domain %}selected{% endif %}>
                 {{ item.label }}
               </option>
             {% endfor %}
           </select>
         </div>
-        <span class="form-hint">{{ _('only_domains_with_active_nginx_config_an') }}</span>
       </div>
 
       <!-- Hidden fields synced from select -->
-      <input type="hidden" name="full_domain" id="full_domain" value="">
+      <input type="hidden" name="full_domain" id="full_domain" value="{{ preselect_full_domain or '' }}">
       <input type="hidden" name="domain_id" id="domain_id" value="">
 
-      <!-- Include www -->
-      <div class="form-group" id="www-group" style="display:none;">
-        <label class="form-check">
-          <input type="checkbox" name="include_www" id="include_www" value="true">
-          <span>{{ _('also_include') }} <strong id="www-label">{{ _('www_domain_com') }}</strong></span>
-        </label>
-        <span class="form-hint">
-          {{ _('adds_www_subdomain_to_the_same_certifica') }}
-        </span>
-      </div>
-
-      <!-- Live summary -->
-      <div class="section" id="cert-preview" style="display:none; background:var(--color-surface);">
-        <div class="section__body" style="padding:var(--space-md);">
-          <span class="text-small text-muted">{{ _('certificate_will_be_issued_for') }}</span><br>
-          <span style="font-weight:700; font-size:var(--font-body);" id="preview-domains"></span>
+      <!-- INCLUDE WWW -->
+      <div class="form-group-horizontal" id="www-group" style="display:none;">
+        <div class="form-label-wrap">
+          <label class="form-label">{{ _('also_include') }} WWW</label>
+          <span class="form-hint">{{ _('adds_www_subdomain_to_the_same_certifica') }}</span>
+        </div>
+        <div>
+          <label class="form-check" style="cursor: pointer; display: inline-flex; align-items: center; gap: 8px;">
+            <input type="checkbox" name="include_www" id="include_www" value="true">
+            <span>{{ _('also_include') }} <strong id="www-label">www.domain.com</strong></span>
+          </label>
         </div>
       </div>
 
-      <div class="form-actions">
-        <button type="submit" class="btn btn--primary" id="btn-submit">
-          {{ _('issue_certificate_1') }}
-        </button>
-        <a href="/ssl/" class="btn btn--secondary">{{ _('cancel') }}</a>
+      <!-- LIVE PREVIEW -->
+      <div class="info-row-strict" id="cert-preview" style="display:none; margin-top: 8px; border-top: 1px solid var(--color-line);">
+        <div class="info-row-strict__label">{{ _('certificate_will_be_issued_for') }}</div>
+        <div class="info-row-strict__val" id="preview-domains" style="font-family: monospace; font-weight: 600;"></div>
       </div>
-
-    </form>
-
-    {% else %}
-    <div class="alert alert--info" id="no-eligible">
-      {{ _('no_eligible_domains_found') }}<br><br>
-      {{ _('a_domain_is_eligible_when') }}<br>
-      {{ _('it_has_an_active_nginx_config_http_worki') }}<br>
-      {{ _('it_does_not_already_have_an_ssl_certific') }}<br><br>
-      <a href="/domains/create" class="btn btn--secondary btn--sm">{{ _('add_a_domain_1') }}</a>
     </div>
-    {% endif %}
 
-  </div>
+    <div class="form-actions" style="margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--color-line); display: flex; gap: 12px;">
+      <button type="submit" class="btn btn--primary" id="btn-submit">
+        {{ _('issue_certificate_1') }}
+      </button>
+      <a href="/ssl/" class="btn btn--secondary">{{ _('cancel') }}</a>
+    </div>
+  </form>
+
+  {% else %}
+  {% from "partials/empty_state.html" import empty_state %}
+  {{ empty_state(
+    icon='shield-check',
+    title=_('no_eligible_domains_found'),
+    desc=_('a_domain_is_eligible_when'),
+    action_url='/domains/create',
+    action_label=_('add_domain_1'),
+    action_icon='plus',
+    id='no-eligible'
+  ) }}
+  {% endif %}
+
 </div>
-
 {% endblock %}
 
 {% block scripts %}

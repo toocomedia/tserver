@@ -3,8 +3,8 @@ routers/ssl.py — SSL Manager routes.
 Routes call ssl_service only. No direct certbot or nginx calls here.
 """
 import logging
-from fastapi import APIRouter, Depends, Request, Form, Query
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi import APIRouter, Depends, Request, Form, Query, HTTPException
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
@@ -123,19 +123,52 @@ async def ssl_issue_page(
 # ---------------------------------------------------------------
 # ISSUE — submit
 # ---------------------------------------------------------------
-@router.post("/issue", response_class=HTMLResponse)
+@router.post("/issue")
 async def ssl_issue_submit(
     request: Request,
-    full_domain: str = Form(...),
-    domain_id: str = Form(""),
-    include_www: bool = Form(default=False),
     db: AsyncSession = Depends(get_db),
 ):
-    """Run certbot for the selected domain/subdomain."""
-    full_domain = full_domain.strip().lower()
+    """Run certbot for the selected domain/subdomain. Supports both JSON and Form requests."""
+    content_type = request.headers.get("content-type", "").lower()
+    is_json_request = "application/json" in content_type or request.headers.get("accept", "").startswith("application/json")
+
+    full_domain = ""
+    domain_id_raw = ""
+    include_www = False
+
+    if "application/json" in content_type:
+        try:
+            body = await request.json()
+            full_domain = str(body.get("full_domain") or "").strip().lower()
+            domain_id_raw = body.get("domain_id")
+            include_www = bool(body.get("include_www", False))
+        except Exception:
+            raise HTTPException(400, "Invalid JSON payload")
+    else:
+        form_data = await request.form()
+        full_domain = str(form_data.get("full_domain") or "").strip().lower()
+        domain_id_raw = form_data.get("domain_id")
+        include_www = form_data.get("include_www") in ("true", "yes", "1", True)
+
+    if not full_domain:
+        if is_json_request:
+            raise HTTPException(400, "Domain name is required.")
+        eligible = await _build_eligible(db)
+        return templates.TemplateResponse("pages/ssl/issue.html", {
+            "request": request,
+            "active_page": "ssl",
+            "eligible": eligible,
+            "preselect_full_domain": None,
+            "error": "Please select a valid domain.",
+        }, status_code=400)
+
+    # Automatically force include_www = False if full_domain is a subdomain
+    if full_domain.count(".") > 1 or full_domain.startswith("www."):
+        include_www = False
+
     resolved_domain_id: int | None = None
-    if domain_id and str(domain_id).strip().isdigit():
-        resolved_domain_id = int(domain_id)
+    if domain_id_raw is not None and str(domain_id_raw).strip().isdigit():
+        resolved_domain_id = int(str(domain_id_raw).strip())
 
     # Resolve domain_id from host if missing (external proxy or form omit)
     if resolved_domain_id is None:
@@ -153,9 +186,13 @@ async def ssl_issue_submit(
         cert = await ssl_service.issue_cert(
             db, resolved_domain_id, full_domain, include_www
         )
+        if is_json_request:
+            return JSONResponse({"status": "ok", "full_domain": cert.full_domain})
         return RedirectResponse(f"/ssl/?issued={cert.full_domain}", status_code=303)
     except Exception as exc:
         error_msg = str(exc.detail) if hasattr(exc, "detail") else str(exc)
+        if is_json_request:
+            raise HTTPException(status_code=getattr(exc, "status_code", 400), detail=error_msg)
         eligible = await _build_eligible(db)
         return templates.TemplateResponse("pages/ssl/issue.html", {
             "request": request,

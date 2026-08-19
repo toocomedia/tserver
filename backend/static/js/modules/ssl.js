@@ -4,7 +4,7 @@
  * updates live preview of domains to be certified.
  */
 
-document.addEventListener("app:init", () => {
+function initSslIssuePage() {
   const select      = document.getElementById("full_domain_select");
   const hiddenDomain = document.getElementById("full_domain");
   const hiddenId     = document.getElementById("domain_id");
@@ -62,7 +62,7 @@ document.addEventListener("app:init", () => {
     wwwCheckbox.addEventListener("change", () => {
       const opt = select.options[select.selectedIndex];
       if (opt && opt.value) {
-        const isRoot = opt.value.split(".").length === 2;
+        const isRoot = !opt.text.includes("proxy →") && opt.value.split(".").length === 2;
         updatePreview(opt.value, isRoot);
       }
     });
@@ -71,6 +71,7 @@ document.addEventListener("app:init", () => {
   // Intercept submit, use global loader and async fetch for certbot
   if (form && submitBtn) {
     form.addEventListener("submit", async (e) => {
+      updateForm();
       const opt = select.options[select.selectedIndex];
       if (!opt || !opt.value) {
         e.preventDefault();
@@ -81,6 +82,8 @@ document.addEventListener("app:init", () => {
       showGlobalLoader("Issuing Certificate... (This may take 30–60s)");
       try {
         const data = Object.fromEntries(new FormData(form).entries());
+        data.full_domain = opt.value;
+        data.domain_id = opt.getAttribute("data-domain-id") || "";
         form.querySelectorAll("input[type=checkbox]").forEach((cb) => {
           data[cb.name] = cb.checked;
         });
@@ -100,9 +103,12 @@ document.addEventListener("app:init", () => {
     if (el) setTimeout(() => el.remove(), 6000);
   });
 
-  // Trigger initial sync if a value is already selected (e.g. preselect_id)
-  if (select.value) updateForm();
-});
+  // Initial sync immediately
+  updateForm();
+}
+
+document.addEventListener("app:init", initSslIssuePage);
+document.addEventListener("DOMContentLoaded", initSslIssuePage);
 
 document.addEventListener("app:init", () => {
   document.querySelectorAll('.auto-renew-toggle').forEach(checkbox => {

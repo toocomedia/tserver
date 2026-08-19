@@ -12,7 +12,7 @@ from sqlalchemy import select
 
 from database import get_db
 from models.domain import Domain
-from services import dns_service
+from services import dns_service, domain_service
 from templating import templates
 import config
 
@@ -39,18 +39,25 @@ CONTENT_LABELS = {
 # ---------------------------------------------------------------
 @router.get("/", response_class=HTMLResponse)
 async def dns_index(request: Request, db: AsyncSession = Depends(get_db)):
-    """Show all managed DNS zones with record counts."""
+    """Show all managed DNS zones with record counts. Excludes subdomains that are records in parent zones."""
     domains = (await db.execute(
         select(Domain).order_by(Domain.name)
     )).scalars().all()
 
     zones = []
     for domain in domains:
+        # If this domain is a subdomain managed inside a parent zone, skip listing it as a separate standalone zone
+        if domain.parent_domain and not domain.dns_zone_created:
+            continue
+
+        parent, prefix = await domain_service.find_parent_domain(db, domain.name)
         records = await dns_service.list_records(domain.name)
         zones.append({
             "domain": domain,
             "record_count": len(records),
             "zone_exists": domain.dns_zone_created,
+            "parent_domain_match": parent.name if parent else None,
+            "subdomain_prefix": prefix if parent else None,
         })
 
     return templates.TemplateResponse("pages/dns/index.html", {
@@ -77,6 +84,11 @@ async def dns_records(
     if not domain:
         return RedirectResponse("/dns/", status_code=303)
 
+    # If this domain is a subdomain routed to a parent zone, redirect to parent zone records
+    if domain.parent_domain and not domain.dns_zone_created:
+        return RedirectResponse(f"/dns/{domain.parent_domain}/records", status_code=303)
+
+    parent, prefix = await domain_service.find_parent_domain(db, domain.name)
     records = await dns_service.list_records(domain_name)
 
     # Flatten rrsets into individual record rows for the table
@@ -96,12 +108,52 @@ async def dns_records(
         "request": request,
         "active_page": "dns",
         "domain": domain,
+        "parent_domain_match": parent.name if parent else None,
+        "subdomain_prefix": prefix if parent else None,
         "rows": rows,
         "record_types": RECORD_TYPES,
         "content_labels": CONTENT_LABELS,
         "templates": config.DNS_TEMPLATES,
         "server_ip": config.SERVER_IP,
     })
+
+
+# ---------------------------------------------------------------
+# CONVERT SUBDOMAIN ZONE TO PARENT RECORD
+# ---------------------------------------------------------------
+@router.post("/{domain_name}/convert-to-record")
+async def dns_convert_to_record(
+    domain_name: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """Convert an existing standalone subdomain DNS zone to an A record in its parent zone."""
+    try:
+        domain = await domain_service.convert_zone_to_parent_record(db, domain_name)
+        return RedirectResponse(
+            f"/dns/{domain.parent_domain}/records?success=Converted+{domain.name}+to+record+in+{domain.parent_domain}",
+            status_code=303
+        )
+    except Exception as exc:
+        error = str(exc.detail) if hasattr(exc, "detail") else str(exc)
+        return RedirectResponse(
+            f"/dns/{domain_name}/records?error={error}",
+            status_code=303
+        )
+
+
+@router.post("/api/{domain_name}/convert-to-record")
+async def dns_api_convert_to_record(
+    domain_name: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """API endpoint to convert standalone subdomain DNS zone to record in parent zone."""
+    domain = await domain_service.convert_zone_to_parent_record(db, domain_name)
+    return {
+        "status": "ok",
+        "domain": domain.name,
+        "parent_domain": domain.parent_domain,
+        "redirect_url": f"/dns/{domain.parent_domain}/records",
+    }
 
 
 # ---------------------------------------------------------------

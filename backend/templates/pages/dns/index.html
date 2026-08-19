@@ -67,6 +67,12 @@
             {% import "partials/list_actions_toggle.html" as list_actions %}
             {{ list_actions.button() }}
             {% call list_actions.tray() %}
+              {% if z.parent_domain_match and z.zone_exists %}
+              <button type="button" class="btn btn--secondary btn--sm" onclick="convertSubdomainToRecord('{{ z.domain.name }}', '{{ z.parent_domain_match }}')" title="Convert to record in {{ z.parent_domain_match }}">
+                <svg viewbox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"/></svg>
+                <span>Use Record in {{ z.parent_domain_match }}</span>
+              </button>
+              {% endif %}
               {% if z.zone_exists %}
               <a href="/dns/{{ z.domain.name }}/records?add=1" class="btn btn--primary btn--sm" title="Add DNS Record" id="btn-add-{{ z.domain.name }}">
                 <svg viewbox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"></path></svg>
@@ -102,12 +108,8 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="/static/js/modules/dns.js"></script>
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-  if (typeof hideSkeleton === 'function') hideSkeleton('dns-skeleton');
-  else if (typeof window.hideSkeleton === 'function') window.hideSkeleton('dns-skeleton');
-});
-
 function filterDnsTable() {
   const query = document.getElementById('dns-search-input').value.toLowerCase().trim();
   const filter = document.getElementById('dns-status-filter').value;

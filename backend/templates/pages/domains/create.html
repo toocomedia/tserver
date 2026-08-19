@@ -47,35 +47,6 @@
           <div class="form-error mt-xs text-danger" id="name-error" style="display:none; font-weight:600; font-size:12px;"></div>
         </div>
       </div>
-
-      <!-- SMART SUBDOMAIN DETECTION PANEL -->
-      <div id="subdomain-smart-panel" style="display:none; padding:16px; border:1px solid var(--color-line); background:var(--color-bg-alt, rgba(255,255,255,0.02));">
-        <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
-          <span style="display:inline-block; width:7px; height:7px; background:var(--color-text); border-radius:50%;"></span>
-          <strong style="font-size:13px; letter-spacing:0.3px;" id="subdomain-smart-header">{{ _('parent_zone_detected') }}</strong>
-        </div>
-        <p style="font-size:12px; color:var(--color-muted); margin:0 0 14px 0;" id="subdomain-smart-text">
-          {{ _('parent_zone_detected_desc') }}
-        </p>
-
-        <div class="settings-choice-grid" style="grid-template-columns: 1fr 1fr; gap: 10px;">
-          <label class="settings-choice settings-choice--active" id="dns-choice-parent" onclick="selectDnsMode('parent_record')">
-            <div class="settings-choice__header">
-              <input type="radio" name="dns_mode_opt" value="parent_record" checked>
-              <span class="settings-choice__title" id="dns-title-parent">{{ _('add_as_parent_record') }}</span>
-            </div>
-            <span class="settings-choice__desc" id="dns-desc-parent">{{ _('add_as_parent_record_desc') }}</span>
-          </label>
-
-          <label class="settings-choice" id="dns-choice-newzone" onclick="selectDnsMode('new_zone')">
-            <div class="settings-choice__header">
-              <input type="radio" name="dns_mode_opt" value="new_zone">
-              <span class="settings-choice__title">{{ _('create_standalone_zone') }}</span>
-            </div>
-            <span class="settings-choice__desc" id="dns-desc-newzone">{{ _('create_standalone_zone_desc') }}</span>
-          </label>
-        </div>
-      </div>
     </div>
 
     <!-- STEP 2: DOMAIN TYPE (WEBSITE VS DNS ONLY) -->
@@ -204,9 +175,6 @@ const input = document.getElementById('name');
 const nameError = document.getElementById('name-error');
 const form = document.getElementById('create-domain-form');
 const submitBtn = document.getElementById('btn-submit');
-const smartPanel = document.getElementById('subdomain-smart-panel');
-const smartHeader = document.getElementById('subdomain-smart-header');
-const smartText = document.getElementById('subdomain-smart-text');
 const dnsModeInput = document.getElementById('dns-mode-input');
 const parentDomainInput = document.getElementById('parent-domain-input');
 
@@ -237,7 +205,6 @@ function onHostnameInput() {
 async function checkHostnameApi() {
   const val = input.value.trim().toLowerCase();
   if (!val || !domainRe.test(val)) {
-    smartPanel.style.display = 'none';
     currentParentDomain = null;
     currentSubdomainPrefix = null;
     parentDomainInput.value = '';
@@ -255,7 +222,6 @@ async function checkHostnameApi() {
       nameError.textContent = data.message || `Domain '${val}' already exists.`;
       nameError.style.display = 'block';
       input.classList.add('form-input--error');
-      smartPanel.style.display = 'none';
       return;
     } else {
       nameError.style.display = 'none';
@@ -266,24 +232,9 @@ async function checkHostnameApi() {
       currentParentDomain = data.parent_domain;
       currentSubdomainPrefix = data.subdomain_prefix;
       parentDomainInput.value = data.parent_domain;
-
-      // Update smart panel UI
-      smartHeader.textContent = `Parent Zone '${data.parent_domain}' Detected`;
-      smartText.textContent = `Choose how to configure DNS routing for '${val}':`;
-      document.getElementById('dns-title-parent').textContent = `Add to ${data.parent_domain}`;
-      document.getElementById('dns-desc-parent').textContent = `Add an A record in '${data.parent_domain}' (Recommended).`;
-      document.getElementById('dns-desc-newzone').textContent = `Create a separate authoritative DNS zone.`;
-
-      smartPanel.style.display = 'block';
-
-      // Default to parent_record if previously unset or parent_record
-      if (!dnsModeInput.value || dnsModeInput.value === 'parent_record') {
-        selectDnsMode('parent_record');
-      } else {
-        selectDnsMode('new_zone');
-      }
+      dnsModeInput.value = 'parent_record';
+      updateReviewDns();
     } else {
-      smartPanel.style.display = 'none';
       currentParentDomain = null;
       currentSubdomainPrefix = null;
       parentDomainInput.value = '';
@@ -297,18 +248,6 @@ async function checkHostnameApi() {
 
 function selectDnsMode(mode) {
   dnsModeInput.value = mode;
-
-  const parentChoice = document.getElementById('dns-choice-parent');
-  const newZoneChoice = document.getElementById('dns-choice-newzone');
-
-  if (parentChoice) parentChoice.classList.toggle('settings-choice--active', mode === 'parent_record');
-  if (newZoneChoice) newZoneChoice.classList.toggle('settings-choice--active', mode === 'new_zone');
-
-  const parentRadio = parentChoice?.querySelector('input[type="radio"]');
-  const newZoneRadio = newZoneChoice?.querySelector('input[type="radio"]');
-  if (parentRadio) parentRadio.checked = (mode === 'parent_record');
-  if (newZoneRadio) newZoneRadio.checked = (mode === 'new_zone');
-
   updateReviewDns();
 }
 

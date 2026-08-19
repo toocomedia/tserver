@@ -7,6 +7,12 @@
 
 {% block topbar_actions %}
   <a href="/dns/" class="btn btn--secondary" id="btn-back">{{ _('all_zones_1') }}</a>
+  {% if parent_domain_match and domain.dns_zone_created %}
+  <button type="button" class="btn btn--secondary" id="btn-convert-record" onclick="convertSubdomainToRecord('{{ domain.name }}', '{{ parent_domain_match }}')">
+    <svg viewbox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 4px;"><path d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"/></svg>
+    <span>Use Record in {{ parent_domain_match }}</span>
+  </button>
+  {% endif %}
   <button type="button" class="btn btn--primary" id="btn-add-record" onclick="openModal('add-record-modal')">{{ _('custom_dns_record') }}</button>
 {% endblock %}
 

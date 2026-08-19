@@ -6,6 +6,7 @@ smart subdomain detection, and DNS record vs standalone zone routing.
 import unittest
 from unittest.mock import AsyncMock, patch, MagicMock
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+from starlette.middleware.sessions import SessionMiddleware
 from database import Base
 from models.domain import Domain
 from services import domain_service
@@ -264,6 +265,183 @@ class TestDomainCreationAndSubdomains(unittest.IsolatedAsyncioTestCase):
                 self.assertFalse(data["exists"])
                 self.assertFalse(data["is_subdomain"])
                 self.assertIsNone(data["parent_domain"])
+        finally:
+            test_app.dependency_overrides.pop(get_db, None)
+
+    @patch("services.dns_service.list_records", new_callable=AsyncMock, return_value=[])
+    async def test_dns_index_and_records_redirect_for_subdomain(self, mock_list_records):
+        import httpx
+        from fastapi import FastAPI
+        from starlette.middleware.sessions import SessionMiddleware
+        from routers.dns import router as dns_router
+        from database import get_db
+
+        test_app = FastAPI()
+        test_app.add_middleware(SessionMiddleware, secret_key="test-secret")
+        test_app.include_router(dns_router)
+
+        async with self.session_factory() as session:
+            parent = Domain(
+                name="parentzone.com",
+                server_ip="1.2.3.4",
+                project_type="static",
+                dns_zone_created=True,
+                nginx_active=True,
+            )
+            sub = Domain(
+                name="app.parentzone.com",
+                server_ip="1.2.3.4",
+                project_type="static",
+                dns_zone_created=False,
+                parent_domain="parentzone.com",
+                nginx_active=True,
+            )
+            session.add(parent)
+            session.add(sub)
+            await session.commit()
+
+        async def override_get_db():
+            async with self.session_factory() as session:
+                yield session
+
+        test_app.dependency_overrides[get_db] = override_get_db
+        try:
+            transport = httpx.ASGITransport(app=test_app)
+            async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+                # 1. /dns/ index should only list parentzone.com, NOT app.parentzone.com as separate zone
+                res = await client.get("/dns/")
+                self.assertEqual(res.status_code, 200)
+                self.assertIn("parentzone.com", res.text)
+                # app.parentzone.com should not be a separate row in the table
+                mock_list_records.assert_called_with("parentzone.com")
+
+                # 2. Accessing /dns/app.parentzone.com/records should redirect (303) to /dns/parentzone.com/records
+                res = await client.get("/dns/app.parentzone.com/records", follow_redirects=False)
+                self.assertEqual(res.status_code, 303)
+                self.assertEqual(res.headers["location"], "/dns/parentzone.com/records")
+        finally:
+            test_app.dependency_overrides.pop(get_db, None)
+
+    @patch("services.ssl_service.issue_cert", new_callable=AsyncMock)
+    async def test_ssl_issue_json_and_form_for_subdomains(self, mock_issue_cert):
+        import httpx
+        from fastapi import FastAPI
+        from routers.ssl import router as ssl_router
+        from database import get_db
+        from models.ssl_cert import SslCert
+
+        mock_cert = MagicMock()
+        mock_cert.full_domain = "app.parentzone.com"
+        mock_issue_cert.return_value = mock_cert
+
+        test_app = FastAPI()
+        test_app.add_middleware(SessionMiddleware, secret_key="test-secret")
+        test_app.include_router(ssl_router)
+
+        async with self.session_factory() as session:
+            sub = Domain(
+                name="app.parentzone.com",
+                server_ip="1.2.3.4",
+                project_type="static",
+                dns_zone_created=False,
+                parent_domain="parentzone.com",
+                nginx_active=True,
+            )
+            session.add(sub)
+            await session.commit()
+            sub_id = sub.id
+
+        async def override_get_db():
+            async with self.session_factory() as session:
+                yield session
+
+        test_app.dependency_overrides[get_db] = override_get_db
+        try:
+            transport = httpx.ASGITransport(app=test_app)
+            async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+                # 1. JSON POST with include_www=True for a subdomain should force include_www=False
+                res = await client.post(
+                    "/ssl/issue",
+                    json={"full_domain": "app.parentzone.com", "domain_id": str(sub_id), "include_www": True},
+                    headers={"Accept": "application/json", "Content-Type": "application/json"},
+                )
+                self.assertEqual(res.status_code, 200)
+                data = res.json()
+                self.assertEqual(data["status"], "ok")
+                self.assertEqual(data["full_domain"], "app.parentzone.com")
+                # Ensure include_www was forced to False for subdomain
+                mock_issue_cert.assert_awaited_with(unittest.mock.ANY, sub_id, "app.parentzone.com", False)
+
+                # 2. Form POST with subdomain
+                mock_issue_cert.reset_mock()
+                res = await client.post(
+                    "/ssl/issue",
+                    data={"full_domain": "app.parentzone.com", "domain_id": str(sub_id)},
+                    follow_redirects=False,
+                )
+                self.assertEqual(res.status_code, 303)
+                self.assertEqual(res.headers["location"], "/ssl/?issued=app.parentzone.com")
+                mock_issue_cert.assert_awaited_with(unittest.mock.ANY, sub_id, "app.parentzone.com", False)
+        finally:
+            test_app.dependency_overrides.pop(get_db, None)
+
+    @patch("services.dns_service.delete_zone", new_callable=AsyncMock)
+    @patch("services.dns_service.add_a_record", new_callable=AsyncMock)
+    async def test_convert_subdomain_zone_to_parent_record(self, mock_add_a_record, mock_delete_zone):
+        import httpx
+        from fastapi import FastAPI
+        from routers.dns import router as dns_router
+        from database import get_db
+
+        test_app = FastAPI()
+        test_app.add_middleware(SessionMiddleware, secret_key="test-secret")
+        test_app.include_router(dns_router)
+
+        async with self.session_factory() as session:
+            parent = Domain(
+                name="maincompany.com",
+                server_ip="5.6.7.8",
+                project_type="static",
+                dns_zone_created=True,
+                nginx_active=True,
+            )
+            sub = Domain(
+                name="portal.maincompany.com",
+                server_ip="5.6.7.8",
+                project_type="static",
+                dns_zone_created=True, # Initially a standalone zone
+                parent_domain=None,
+                nginx_active=True,
+            )
+            session.add(parent)
+            session.add(sub)
+            await session.commit()
+
+        async def override_get_db():
+            async with self.session_factory() as session:
+                yield session
+
+        test_app.dependency_overrides[get_db] = override_get_db
+        try:
+            transport = httpx.ASGITransport(app=test_app)
+            async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+                res = await client.post("/dns/api/portal.maincompany.com/convert-to-record")
+                self.assertEqual(res.status_code, 200)
+                data = res.json()
+                self.assertEqual(data["status"], "ok")
+                self.assertEqual(data["parent_domain"], "maincompany.com")
+                self.assertEqual(data["redirect_url"], "/dns/maincompany.com/records")
+
+                # Verify A record was added in parent zone
+                mock_add_a_record.assert_awaited_once_with("maincompany.com", "portal", "5.6.7.8")
+                # Verify standalone zone was deleted
+                mock_delete_zone.assert_awaited_once_with("portal.maincompany.com")
+
+            # Verify DB state
+            async with self.session_factory() as session:
+                updated_sub = await domain_service.get_by_name(session, "portal.maincompany.com")
+                self.assertFalse(updated_sub.dns_zone_created)
+                self.assertEqual(updated_sub.parent_domain, "maincompany.com")
         finally:
             test_app.dependency_overrides.pop(get_db, None)
 

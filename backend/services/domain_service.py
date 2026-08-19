@@ -131,6 +131,13 @@ async def create(
             else:
                 raise HTTPException(status_code=400, detail=f"Domain '{name}' is not a subdomain of '{parent_domain}'.")
 
+            # Ensure parent zone exists in PowerDNS before adding record
+            if not parent_obj.dns_zone_created:
+                await dns_service.create_zone(parent_domain)
+                steps_done.append(f"dns_zone:{parent_domain}")
+                parent_obj.dns_zone_created = True
+                await db.flush()
+
             # Add A record in parent zone
             await dns_service.add_a_record(parent_domain, prefix, config.SERVER_IP)
             steps_done.append(f"dns_parent_record:{parent_domain}:{prefix}")
@@ -327,5 +334,43 @@ async def enable_static_site(db: AsyncSession, domain_id: int) -> Domain:
     domain.webroot_path = webroot
     domain.nginx_config_path = nginx_config_path
     await db.flush()
-    logger.info("Enabled static site for domain: %s", domain.name)
+    logger.info("Static site enabled for: %s", domain.name)
+    return domain
+
+
+# ---------------------------------------------------------------
+# CONVERT SUBDOMAIN ZONE TO PARENT RECORD
+# ---------------------------------------------------------------
+async def convert_zone_to_parent_record(db: AsyncSession, domain_name: str) -> Domain:
+    """
+    Convert an existing standalone DNS zone for a subdomain into an A record inside its parent domain's zone.
+    """
+    domain = await get_by_name(db, domain_name)
+    if not domain:
+        raise HTTPException(status_code=404, detail=f"Domain '{domain_name}' not found.")
+
+    parent, prefix = await find_parent_domain(db, domain.name)
+    if not parent:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Domain '{domain.name}' has no registered parent domain in your panel."
+        )
+
+    # Ensure parent zone exists in PowerDNS
+    if not parent.dns_zone_created:
+        await dns_service.create_zone(parent.name)
+        parent.dns_zone_created = True
+        await db.flush()
+
+    # Add A record in parent zone
+    await dns_service.add_a_record(parent.name, prefix, domain.server_ip or config.SERVER_IP)
+
+    # Delete standalone DNS zone for this subdomain
+    if domain.dns_zone_created:
+        await dns_service.delete_zone(domain.name)
+
+    domain.dns_zone_created = False
+    domain.parent_domain = parent.name
+    await db.commit()
+    logger.info("Converted zone '%s' to A record in parent zone '%s'", domain.name, parent.name)
     return domain
