@@ -163,12 +163,33 @@
         if (typeof options.onConfirm === 'function') {
           await options.onConfirm();
         } else if (options.deleteUrl) {
-          if (typeof window.submitPost === 'function') {
-            window.submitPost(options.deleteUrl);
+          const payload = {};
+          if (extraEl && !extraEl.hidden) {
+            extraEl.querySelectorAll('input, select, textarea').forEach(inp => {
+              if (inp.name) {
+                if ((inp.type === 'radio' || inp.type === 'checkbox') && !inp.checked) return;
+                payload[inp.name] = inp.value;
+              }
+            });
+          }
+
+          if (options.deleteEvent) {
+            document.dispatchEvent(new CustomEvent(options.deleteEvent, {
+              detail: { payload, triggerItem: options.itemName, deleteUrl: options.deleteUrl }
+            }));
+          } else if (typeof window.submitPost === 'function') {
+            window.submitPost(options.deleteUrl, payload);
           } else {
             const form = document.createElement('form');
             form.method = 'POST';
             form.action = options.deleteUrl;
+            Object.entries(payload).forEach(([k, v]) => {
+              const hidden = document.createElement('input');
+              hidden.type = 'hidden';
+              hidden.name = k;
+              hidden.value = v;
+              form.appendChild(hidden);
+            });
             document.body.appendChild(form);
             form.submit();
           }
@@ -214,13 +235,23 @@
         const message = trigger.getAttribute('data-delete-message');
         const itemName = trigger.getAttribute('data-delete-item');
         const okLabel = trigger.getAttribute('data-delete-label');
+        const extraId = trigger.getAttribute('data-delete-extra-id');
+        const deleteEvent = trigger.getAttribute('data-delete-event');
+
+        let extraHtml = '';
+        if (extraId) {
+          const tpl = document.getElementById(extraId);
+          if (tpl) extraHtml = tpl.innerHTML;
+        }
 
         openDeleteDrawer({
           title,
           message,
           itemName,
           deleteUrl,
-          okLabel
+          deleteEvent,
+          okLabel,
+          extraHtml
         });
       }
     });

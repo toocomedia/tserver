@@ -343,7 +343,7 @@
           if (btn) btn.disabled = false;
         }
       },
-      { title: "Remove panel SSL", okLabel: "Remove SSL", danger: true }
+      { danger: true, title: "Remove Panel SSL", okLabel: "Remove SSL", itemName: "Panel SSL" }
     );
   }
 

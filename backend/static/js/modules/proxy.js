@@ -270,7 +270,8 @@ function initDeleteButtons() {
             btn.classList.remove("is-loading");
             btn.innerHTML = origHtml;
           }
-        }
+        },
+        { danger: true, title: "Delete Proxy", okLabel: "Delete Proxy", itemName: name }
       );
     });
   });

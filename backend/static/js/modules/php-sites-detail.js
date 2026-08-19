@@ -6,15 +6,7 @@ const siteId = root?.dataset.siteId;
 const loading = root?.querySelector("[data-detail-loading]");
 const content = root?.querySelector("[data-detail-content]");
 const errorEl = root?.querySelector("[data-detail-error]");
-const deleteModal = root?.querySelector("[data-php-site-delete-modal]");
-const deleteModalTitle = root?.querySelector("[data-php-site-delete-title]");
-const deleteModalDesc = root?.querySelector("[data-php-site-delete-description]");
-const deleteConfirm = root?.querySelector("[data-php-site-delete-confirm]");
-const deleteConfirmText = root?.querySelector("[data-php-site-delete-confirmation]");
-const deleteDbChoice = root?.querySelector("[data-php-site-delete-database]");
-const deleteModalErr = root?.querySelector("[data-php-site-delete-error]");
-const deleteSubmit = root?.querySelector("[data-php-site-delete-submit]");
-let site, options, pendingAction;
+let site, options;
 let currentTab = "overview";
 const validTabs = ["overview", "runtime", "database", "ssl", "logs", "danger"];
 
@@ -106,7 +98,7 @@ function render() {
   const vSelect = options ? `<select id="php-runtime-ver" class="form-select" data-runtime-version style="width:160px; height:32px;">${vers}</select>` : `<select class="form-select" disabled style="width:160px; height:32px;"><option>${t("loading")}</option></select>`;
 
   const ssl = site.ssl || {};
-  const sslAct = can("issue_ssl") ? btn("ssl-issue", t("issue_ssl"), "primary") : `${can("renew_ssl") ? btn("ssl-renew", t("renew")) : ""}${can("revoke_ssl") ? btn("ssl-revoke", t("revoke"), "danger") : ""}`;
+  const sslAct = can("issue_ssl") ? btn("ssl-issue", t("issue_ssl"), "primary") : `${can("renew_ssl") ? btn("ssl-renew", t("renew")) : ""}${can("revoke_ssl") ? btn("ssl-revoke", t("revoke"), "danger", `data-delete-drawer-trigger data-delete-url="${actionUrl(siteId, "/ssl")}" data-delete-title="${t("revoke")}" data-delete-message="${t("revoke_ssl_confirmation_desc")}" data-delete-item="${site.domain}" data-delete-label="${t("revoke")}"`) : ""}`;
 
   const wpRetry = can("wordpress_retry") ? `
     <div class="d-flex align-center gap-sm" style="flex-wrap:wrap;">
@@ -221,7 +213,7 @@ function render() {
                 <div class="d-flex align-center gap-sm" style="flex-wrap:wrap;">
                   ${btn("db-reveal", t("reveal_credentials"))}
                   ${btn("db-rotate", t("rotate_password"))}
-                  ${can("delete_database") ? btn("db-delete", t("delete_database"), "danger") : ""}
+                  ${can("delete_database") ? btn("db-delete", t("delete_database"), "danger", `data-delete-drawer-trigger data-delete-url="${actionUrl(siteId, "/database")}" data-delete-title="${t("delete_database")}" data-delete-message="${t("delete_database_confirmation_desc")}" data-delete-item="${site.database?.database}" data-delete-label="${t("delete_database")}"`) : ""}
                 </div>
               `)}
               <div class="php-detail__credentials" data-credentials hidden style="margin-top: 12px;"></div>
@@ -289,8 +281,8 @@ function render() {
             ${card(t("danger_zone"), `
               <p class="form-hint" style="max-width:640px; line-height:1.6; margin:0;">${esc(t("delete_php_site_desc"))}</p>
               <div class="d-flex align-center gap-md" style="flex-wrap:wrap; margin-top: 12px;">
-                ${can("archive") ? btn("archive-site", t("archive_website"), "secondary") : ""}
-                ${can("delete_site") ? btn("delete-site", t("delete_website"), "danger") : ""}
+                ${can("archive") ? btn("archive-site", t("archive_website"), "secondary", `data-delete-drawer-trigger data-delete-url="${actionUrl(siteId, "/archive")}" data-delete-title="${t("archive_website")}" data-delete-message="${t("archive_confirmation_desc")}" data-delete-item="${site.domain}" data-delete-label="${t("archive_website")}"`) : ""}
+                ${can("delete_site") ? btn("delete-site", t("delete_website"), "danger", `data-delete-drawer-trigger data-delete-url="${actionUrl(siteId)}" data-delete-title="${t("delete_website")}" data-delete-message="${t("delete_php_site_desc")}" data-delete-item="${site.domain}" data-delete-label="${t("delete_website")}" ${site.database ? 'data-delete-extra-id="site-delete-extra"' : ''}`) : ""}
               </div>
             `, "php-card--danger")}
           </div>
@@ -305,32 +297,7 @@ function render() {
   }
 }
 
-function openModal(kind) {
-  if (!site || !deleteModal) return;
-  const db = site.database?.database;
-  const map = {
-    site: { title: t("delete_website"), desc: `${t("delete_php_site_desc")} ${site.domain}`, exp: `DELETE ${site.domain}` },
-    database: { title: t("delete_database"), desc: `${t("delete_database_confirmation_desc")} ${db}`, exp: `DELETE DATABASE ${db}` },
-    ssl: { title: t("revoke"), desc: `${t("revoke_ssl_confirmation_desc")} ${site.domain}`, exp: `REVOKE ${site.domain}` },
-    archive: { title: t("archive_website"), desc: `${t("archive_confirmation_desc")} ARCHIVE ${site.domain}`, exp: `ARCHIVE ${site.domain}` },
-  };
-  pendingAction = { kind, ...map[kind] };
-  if (deleteModalTitle) deleteModalTitle.textContent = pendingAction.title;
-  if (deleteModalDesc) deleteModalDesc.textContent = pendingAction.desc;
-  if (deleteConfirmText) deleteConfirmText.textContent = pendingAction.exp;
-  if (deleteDbChoice) deleteDbChoice.hidden = kind !== "site" || !site.database;
-  if (deleteSubmit) { deleteSubmit.textContent = pendingAction.title; deleteSubmit.disabled = true; }
-  if (deleteConfirm) deleteConfirm.value = "";
-  deleteModal.classList.remove("hidden");
-  deleteConfirm?.focus();
-}
 
-function closeModal() {
-  deleteModal?.classList.add("hidden");
-  if (deleteConfirm) deleteConfirm.value = "";
-  if (deleteModalErr) { deleteModalErr.textContent = ""; deleteModalErr.hidden = true; }
-  pendingAction = null;
-}
 
 async function handle(action, trigger) {
   const id = siteId;
@@ -389,34 +356,7 @@ async function handle(action, trigger) {
   await load();
 }
 
-async function submitModal() {
-  if (!pendingAction || deleteConfirm.value.trim() !== pendingAction.exp) return;
-  const { kind, exp } = pendingAction;
-  deleteSubmit.disabled = true;
-  try {
-    if (kind === "site") {
-      const dropDb = deleteDbChoice?.querySelector("input:checked")?.value === "true";
-      const payload = await request(actionUrl(siteId), "DELETE", { confirmation: exp, delete_database: dropDb });
-      if (payload?.status_url) await waitForOperation(payload);
-      window.location.assign("/php-sites/");
-      return;
-    }
-    if (kind === "database") await request(actionUrl(siteId, "/database"), "DELETE", { confirmation: exp });
-    if (kind === "ssl") {
-      const payload = await request(actionUrl(siteId, "/ssl"), "DELETE", { confirmation: exp });
-      if (payload?.status_url) await waitForOperation(payload);
-    }
-    if (kind === "archive") {
-      const payload = await request(actionUrl(siteId, "/archive"), "POST", { confirmation: exp });
-      if (payload?.status_url) await waitForOperation(payload);
-    }
-    closeModal();
-    await load();
-  } catch (err) {
-    if (deleteModalErr) { deleteModalErr.textContent = err.message; deleteModalErr.hidden = false; }
-    deleteSubmit.disabled = false;
-  }
-}
+
 
 async function load() {
   if (!site) loading.hidden = false;
@@ -440,15 +380,48 @@ root?.addEventListener("click", async (e) => {
     switchTab(tabBtn.dataset.tabTarget);
     return;
   }
-  if (e.target.closest("[data-php-site-delete-close]") || e.target === deleteModal) { closeModal(); return; }
+
   const trigger = e.target.closest("[data-action]");
   if (!trigger) return;
-  const kind = { "delete-site": "site", "db-delete": "database", "ssl-revoke": "ssl", "archive-site": "archive" }[trigger.dataset.action];
-  if (kind) { openModal(kind); return; }
+  if (trigger.hasAttribute("data-delete-drawer-trigger")) return; // Let declarative API handle it
   trigger.disabled = true;
   setError("");
   try { await handle(trigger.dataset.action, trigger); }
   catch (err) { setError(err.message); trigger.disabled = false; }
+});
+
+document.addEventListener("php-site-action", async (e) => {
+  const { payload, triggerItem, deleteUrl } = e.detail;
+  try {
+    let endpoint = deleteUrl;
+    let method = "DELETE";
+    let apiPayload = { confirmation: `DELETE ${triggerItem}` };
+
+    if (deleteUrl === "site") {
+      endpoint = actionUrl(siteId);
+      apiPayload.delete_database = payload?.php_delete_database === "true";
+    } else if (deleteUrl === "archive") {
+      endpoint = actionUrl(siteId, "/archive");
+      method = "POST";
+      apiPayload.confirmation = `ARCHIVE ${triggerItem}`;
+    } else if (deleteUrl.includes("/database")) {
+      apiPayload.confirmation = `DELETE DATABASE ${triggerItem}`;
+    } else if (deleteUrl.includes("/ssl")) {
+      apiPayload.confirmation = `REVOKE ${triggerItem}`;
+    }
+
+    const res = await request(endpoint, method, apiPayload);
+    if (res?.status_url) await waitForOperation(res);
+    
+    if (deleteUrl === "site") {
+      window.location.assign("/php-sites/");
+    } else {
+      await load();
+    }
+  } catch (err) {
+    if (typeof toast === "function") toast(err.message, "danger");
+    else alert(err.message);
+  }
 });
 
 window.addEventListener("hashchange", () => {
@@ -456,9 +429,6 @@ window.addEventListener("hashchange", () => {
   if (validTabs.includes(hash)) switchTab(hash);
 });
 
-deleteConfirm?.addEventListener("input", () => {
-  deleteSubmit.disabled = deleteConfirm.value.trim() !== pendingAction?.exp;
-});
-deleteSubmit?.addEventListener("click", submitModal);
+
 
 if (root) load();

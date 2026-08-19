@@ -19,40 +19,20 @@
   <div class="alert alert--danger mb-lg" data-detail-error hidden role="alert"></div>
   <div data-detail-content hidden></div>
 
-  <!-- DESTRUCTIVE CONFIRMATION MODAL -->
-  <div class="modal-backdrop hidden php-site-delete-modal" data-php-site-delete-modal role="dialog" aria-modal="true" aria-labelledby="php-site-delete-title">
-    <div class="modal modal--wide">
-      <div class="modal__header">
-        <h2 id="php-site-delete-title" data-php-site-delete-title>{{ _('delete_website') }}</h2>
-        <button class="btn btn--ghost btn--icon" type="button" data-php-site-delete-close aria-label="{{ _('close') }}">×</button>
-      </div>
-      <div class="modal__body">
-        <p class="php-site-delete-modal__description" data-php-site-delete-description></p>
-        <div class="form-group php-site-delete-modal__confirmation">
-          <label class="form-label" for="php-site-delete-confirm">{{ _('delete_site_confirmation_label') }}</label>
-          <p class="form-hint"><code data-php-site-delete-confirmation></code></p>
-          <input class="form-input clean-input" id="php-site-delete-confirm" type="text" data-php-site-delete-confirm autocomplete="off" spellcheck="false">
-        </div>
-        <fieldset class="php-site-delete-modal__database" data-php-site-delete-database>
-          <legend class="form-label">{{ _('database') }}</legend>
-          <label class="form-check php-site-delete-modal__choice">
-            <input type="radio" name="php_delete_database" value="false" checked>
-            <span>{{ _('delete_site_keep_database') }}</span>
-          </label>
-          <label class="form-check php-site-delete-modal__choice php-site-delete-modal__choice--danger">
-            <input type="radio" name="php_delete_database" value="true">
-            <span>{{ _('delete_site_and_database') }}</span>
-          </label>
-          <p class="form-hint">{{ _('delete_database_too') }}</p>
-        </fieldset>
-        <div class="alert alert--danger php-site-delete-modal__error" data-php-site-delete-error hidden role="alert"></div>
-      </div>
-      <div class="modal__footer">
-        <button class="btn btn--secondary" type="button" data-php-site-delete-close>{{ _('cancel') }}</button>
-        <button class="btn btn--danger" type="button" data-php-site-delete-submit disabled>{{ _('delete_website') }}</button>
-      </div>
-    </div>
-  </div>
+<template id="site-delete-extra">
+  <fieldset class="php-site-delete-modal__database" id="dynamic-db-choice" style="margin-top:16px;">
+    <legend class="form-label">{{ _('database') }}</legend>
+    <label class="form-check php-site-delete-modal__choice" style="background:var(--color-surface);border:1px solid var(--color-line);padding:12px;margin-bottom:8px;border-radius:6px;cursor:pointer;">
+      <input type="radio" name="php_delete_database" value="false" checked>
+      <span style="margin-left:8px;">{{ _('delete_site_keep_database') }}</span>
+    </label>
+    <label class="form-check php-site-delete-modal__choice php-site-delete-modal__choice--danger" style="background:var(--color-surface);border:1px solid var(--color-line);padding:12px;margin-bottom:8px;border-radius:6px;cursor:pointer;">
+      <input type="radio" name="php_delete_database" value="true">
+      <span style="margin-left:8px;">{{ _('delete_site_and_database') }}</span>
+    </label>
+    <p class="form-hint" style="margin-top:4px;">{{ _('delete_database_too') }}</p>
+  </fieldset>
+</template>
 </section>
 {% endblock %}
 

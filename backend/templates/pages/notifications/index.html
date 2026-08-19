@@ -99,7 +99,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (err) {
           toast(err.message, 'danger');
         }
-      });
+      }, { danger: true, title: "Delete All Notifications", okLabel: "Delete All", itemName: "All Notifications" });
     });
   }
 

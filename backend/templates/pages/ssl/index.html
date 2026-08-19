@@ -228,7 +228,8 @@ function revokeCert(id, domain) {
         hideGlobalLoader();
         toast(err.message || "Failed to revoke SSL.", "danger");
       }
-    }
+    },
+    { danger: true, title: "Revoke SSL Certificate", okLabel: "Revoke", itemName: domain }
   );
 }
 

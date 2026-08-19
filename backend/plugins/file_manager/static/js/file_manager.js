@@ -196,7 +196,7 @@ window.openBulkDeleteModal = () => {
       btn.classList.remove('is-loading');
       btn.disabled = false;
     }
-  });
+  }, { danger: true, title: "Delete Selected Items", okLabel: "Delete Items", itemName: `${state.selectedEntries.size} Items` });
 };
 
 function setupGlobalListeners() {
@@ -451,11 +451,29 @@ function onEntryAction(action, entry) {
     document.getElementById('modal-transfer-title').textContent = action === 'copy' ? 'Copy Item' : 'Rename / Move Item';
     openModal('modal-transfer');
   } else if (action === 'delete') {
-    document.getElementById('delete-file-path').value = getEntryPath(entry);
-    document.getElementById('delete-prompt-label').textContent = `Type "DELETE ${getEntryPath(entry)}" to confirm`;
-    document.getElementById('delete-confirmation').value = '';
-    document.getElementById('delete-file-error').style.display = 'none';
-    openModal('modal-delete-file');
+    const p = getEntryPath(entry);
+    if (typeof window.openDeleteDrawer === "function") {
+      window.openDeleteDrawer({
+        title: "Delete File / Folder",
+        message: `Are you sure you want to delete this item?`,
+        itemName: p,
+        okLabel: "Delete",
+        onConfirm: async () => {
+          try {
+            await api.deleteFile(state.appId, state.rootId, p, `DELETE ${p}`);
+            loadEntries();
+          } catch (err) {
+            window.toast(`Delete error: ${err.message}`, 'error');
+          }
+        }
+      });
+    } else {
+      document.getElementById('delete-file-path').value = p;
+      document.getElementById('delete-prompt-label').textContent = `Type "DELETE ${p}" to confirm`;
+      document.getElementById('delete-confirmation').value = '';
+      document.getElementById('delete-file-error').style.display = 'none';
+      openModal('modal-delete-file');
+    }
   } else if (action === 'properties') {
     showProperties(entry);
   }

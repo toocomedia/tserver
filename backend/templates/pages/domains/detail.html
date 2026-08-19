@@ -291,7 +291,8 @@ function deleteDomain(id, name) {
         return;
       }
       toast('Refresh the page (Ctrl+F5) and try again.', 'danger');
-    }
+    },
+    { danger: true, title: 'Delete Domain', itemName: name, okLabel: 'Delete Domain' }
   );
 }
 

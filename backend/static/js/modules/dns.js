@@ -83,7 +83,8 @@ function bindDeleteButtons() {
           btn.disabled = true;
           btn.textContent = "…";
           postDeleteRecord(domain, name, type);
-        }
+        },
+        { danger: true, title: "Delete Record", okLabel: "Delete Record", itemName: name }
       );
     });
   });
@@ -148,7 +149,8 @@ window.convertSubdomainToRecord = function(subdomain, parentDomain) {
 
   confirmAction(
     `Convert '${subdomain}' from a standalone DNS zone into an A record inside '${parentDomain}'? The separate zone will be deleted.`,
-    () => performConvertSubdomain(subdomain, parentDomain)
+    () => performConvertSubdomain(subdomain, parentDomain),
+    { danger: true, title: "Convert Subdomain", okLabel: "Convert", itemName: subdomain }
   );
 };
 

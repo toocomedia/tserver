@@ -198,7 +198,7 @@ function deleteDomain(id, name) {
     } catch (e) {
       toast(e.message, 'danger');
     }
-  });
+  }, { danger: true, title: 'Delete Domain', itemName: name, okLabel: 'Delete Domain' });
 }
 </script>
 {% endblock %}

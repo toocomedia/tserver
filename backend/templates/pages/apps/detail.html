@@ -77,7 +77,7 @@
 {% if deployment and deployment.status in ('queued', 'running') %}
 <script src="/static/js/modules/app-deployment.js"></script>
 {% endif %}
-<script type="module" src="/static/js/modules/app-delete.js"></script>
+
 <script>
 document.addEventListener('DOMContentLoaded', () => {
   if (typeof lucide !== 'undefined') lucide.createIcons();
