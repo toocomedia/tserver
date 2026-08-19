@@ -100,6 +100,31 @@ async def ssl_index(
     })
 
 
+@router.get("/api/rows", response_class=HTMLResponse)
+async def ssl_api_rows(
+    request: Request,
+    offset: int = 0,
+    limit: int = 8,
+    db: AsyncSession = Depends(get_db)
+):
+    """API endpoint returning pre-rendered HTML table rows for Load More."""
+    cert_list, total = await ssl_service.list_certs_paginated(db, limit=limit, offset=offset)
+    rendered = ""
+    template = templates.get_template("pages/ssl/_row.html")
+    for item in cert_list:
+        rendered += template.render({
+            "request": request,
+            "item": item,
+            "_": getattr(request.state, "_", lambda k: k),
+        })
+    has_more = (offset + len(cert_list)) < total
+    response = HTMLResponse(content=rendered)
+    response.headers["X-Has-More"] = "1" if has_more else "0"
+    response.headers["X-Loaded-Count"] = str(len(cert_list))
+    response.headers["X-Total-Count"] = str(total)
+    return response
+
+
 @router.get("/api/list")
 async def ssl_api_list(
     offset: int = 0,

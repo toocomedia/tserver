@@ -1,0 +1,64 @@
+{% set cert = item.cert %}
+<tr id="cert-row-{{ cert.id }}" class="cert-row-item">
+  <td class="table-title">{{ cert.full_domain }}</td>
+
+  <td class="text-small">
+    {% if cert.expiry_date %}
+      {{ cert.expiry_date.strftime('%Y-%m-%d') }}
+    {% else %}
+      <span class="text-muted">—</span>
+    {% endif %}
+  </td>
+
+  <td>
+    {% if item.days_left is not none %}
+      <span style="font-weight:700;
+        color: {% if item.days_left > 30 %}var(--color-accent-2)
+               {% elif item.days_left > 0 %}var(--color-warn)
+               {% else %}var(--color-danger){% endif %};">
+        {{ item.days_left }}d
+      </span>
+    {% else %}
+      <span class="text-muted">—</span>
+    {% endif %}
+  </td>
+
+  <td>
+    {% if item.status == 'ok' %}
+      <span class="status-badge status-badge--success">{{ _('valid') }}</span>
+    {% elif item.status == 'warning' %}
+      <span class="status-badge status-badge--warning">{{ _('expiring') }}</span>
+    {% elif item.status == 'expired' %}
+      <span class="status-badge status-badge--danger">{{ _('expired') }}</span>
+    {% elif item.status == 'issued' %}
+      <span class="status-badge status-badge--success">{{ _('issued') }}</span>
+    {% else %}
+      <span class="status-badge status-badge--success">{{ _('issued') }}</span>
+    {% endif %}
+  </td>
+
+  <td>
+    <label class="form-check" style="margin:0;">
+      <input type="checkbox" class="auto-renew-toggle" data-id="{{ cert.id }}" {% if cert.auto_renew %}checked{% endif %}>
+      <span style="display:none;">{{ _('auto_renew') }}</span>
+    </label>
+  </td>
+
+  <td class="col-actions" style="position:relative;">
+    {% import "partials/list_actions_toggle.html" as list_actions %}
+    {{ list_actions.button() }}
+    {% call list_actions.tray() %}
+      <form method="post" action="/ssl/{{ cert.id }}/renew" style="display:contents;" onsubmit="renewCert(event, {{ cert.id }}, '{{ cert.full_domain }}')">
+        {% include "partials/csrf_field.html" %}
+        <button type="submit" class="btn btn--secondary btn--sm" id="btn-renew-{{ cert.id }}" title="Renew Certificate">
+          <svg viewbox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"></path><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+          <span>{{ _('renew_certificate') }}</span>
+        </button>
+      </form>
+      <button class="btn btn--danger btn--sm" id="btn-revoke-{{ cert.id }}" title="Revoke Certificate" onclick="revokeCert({{ cert.id }}, '{{ cert.full_domain }}')">
+        <svg viewbox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path></svg>
+        <span>{{ _('revoke_certificate') }}</span>
+      </button>
+    {% endcall %}
+  </td>
+</tr>
