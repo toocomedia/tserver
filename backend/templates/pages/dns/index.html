@@ -110,6 +110,11 @@
 {% block scripts %}
 <script src="/static/js/modules/dns.js"></script>
 <script>
+document.addEventListener('DOMContentLoaded', function() {
+  if (typeof hideSkeleton === 'function') hideSkeleton('dns-skeleton');
+  else if (typeof window.hideSkeleton === 'function') window.hideSkeleton('dns-skeleton');
+});
+
 function filterDnsTable() {
   const query = document.getElementById('dns-search-input').value.toLowerCase().trim();
   const filter = document.getElementById('dns-status-filter').value;

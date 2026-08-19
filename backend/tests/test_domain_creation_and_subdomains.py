@@ -370,7 +370,7 @@ class TestDomainCreationAndSubdomains(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(data["status"], "ok")
                 self.assertEqual(data["full_domain"], "app.parentzone.com")
                 # Ensure include_www was forced to False for subdomain
-                mock_issue_cert.assert_awaited_with(unittest.mock.ANY, sub_id, "app.parentzone.com", False)
+                mock_issue_cert.assert_awaited_with(unittest.mock.ANY, sub_id, "app.parentzone.com", False, True)
 
                 # 2. Form POST with subdomain
                 mock_issue_cert.reset_mock()
@@ -381,7 +381,7 @@ class TestDomainCreationAndSubdomains(unittest.IsolatedAsyncioTestCase):
                 )
                 self.assertEqual(res.status_code, 303)
                 self.assertEqual(res.headers["location"], "/ssl/?issued=app.parentzone.com")
-                mock_issue_cert.assert_awaited_with(unittest.mock.ANY, sub_id, "app.parentzone.com", False)
+                mock_issue_cert.assert_awaited_with(unittest.mock.ANY, sub_id, "app.parentzone.com", False, True)
         finally:
             test_app.dependency_overrides.pop(get_db, None)
 

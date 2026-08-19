@@ -135,6 +135,7 @@ async def ssl_issue_submit(
     full_domain = ""
     domain_id_raw = ""
     include_www = False
+    auto_renew = True
 
     if "application/json" in content_type:
         try:
@@ -142,13 +143,17 @@ async def ssl_issue_submit(
             full_domain = str(body.get("full_domain") or "").strip().lower()
             domain_id_raw = body.get("domain_id")
             include_www = bool(body.get("include_www", False))
+            if "auto_renew" in body:
+                auto_renew = bool(body.get("auto_renew"))
         except Exception:
             raise HTTPException(400, "Invalid JSON payload")
     else:
         form_data = await request.form()
         full_domain = str(form_data.get("full_domain") or "").strip().lower()
         domain_id_raw = form_data.get("domain_id")
-        include_www = form_data.get("include_www") in ("true", "yes", "1", True)
+        include_www = form_data.get("include_www") in ("true", "yes", "1", "on", True)
+        if "auto_renew" in form_data:
+            auto_renew = form_data.get("auto_renew") in ("true", "yes", "1", "on", True)
 
     if not full_domain:
         if is_json_request:
@@ -184,7 +189,7 @@ async def ssl_issue_submit(
 
     try:
         cert = await ssl_service.issue_cert(
-            db, resolved_domain_id, full_domain, include_www
+            db, resolved_domain_id, full_domain, include_www, auto_renew
         )
         if is_json_request:
             return JSONResponse({"status": "ok", "full_domain": cert.full_domain})

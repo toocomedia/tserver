@@ -5,16 +5,18 @@
  */
 
 function initSslIssuePage() {
-  const select      = document.getElementById("full_domain_select");
-  const hiddenDomain = document.getElementById("full_domain");
-  const hiddenId     = document.getElementById("domain_id");
-  const wwwGroup     = document.getElementById("www-group");
-  const wwwLabel     = document.getElementById("www-label");
-  const wwwCheckbox  = document.getElementById("include_www");
-  const preview      = document.getElementById("cert-preview");
-  const previewDomains = document.getElementById("preview-domains");
-  const form         = document.getElementById("issue-form");
-  const submitBtn    = document.getElementById("btn-submit");
+  const select              = document.getElementById("full_domain_select");
+  const hiddenDomain        = document.getElementById("full_domain");
+  const hiddenId            = document.getElementById("domain_id");
+  const wwwGroup            = document.getElementById("www-group");
+  const wwwLabel            = document.getElementById("www-label");
+  const wwwCheckbox         = document.getElementById("include_www");
+  const autoRenewCheckbox   = document.getElementById("auto_renew");
+  const previewPrimary      = document.getElementById("preview-primary-domain");
+  const previewSans         = document.getElementById("preview-sans");
+  const previewAutoRenewBadge = document.getElementById("preview-auto-renew-badge");
+  const form                = document.getElementById("issue-form");
+  const submitBtn           = document.getElementById("btn-submit");
 
   if (!select) return;   // Not on issue page
 
@@ -24,7 +26,8 @@ function initSslIssuePage() {
       if (hiddenDomain) hiddenDomain.value = "";
       if (hiddenId)     hiddenId.value = "";
       if (wwwGroup)     wwwGroup.style.display = "none";
-      if (preview)      preview.style.display  = "none";
+      if (previewPrimary) previewPrimary.textContent = "—";
+      if (previewSans)    previewSans.textContent    = "—";
       return;
     }
 
@@ -47,12 +50,23 @@ function initSslIssuePage() {
   }
 
   function updatePreview(domain, isRoot) {
-    if (!preview || !previewDomains) return;
-    preview.style.display = "block";
+    if (previewPrimary) previewPrimary.textContent = domain;
+
     const includeWww = isRoot && wwwCheckbox && wwwCheckbox.checked;
     const domains = [domain];
     if (includeWww) domains.push(`www.${domain}`);
-    previewDomains.textContent = domains.join(",  ");
+
+    if (previewSans) previewSans.textContent = domains.join(",  ");
+
+    if (previewAutoRenewBadge && autoRenewCheckbox) {
+      if (autoRenewCheckbox.checked) {
+        previewAutoRenewBadge.textContent = "Enabled";
+        previewAutoRenewBadge.className = "badge-minimal badge-minimal--active";
+      } else {
+        previewAutoRenewBadge.textContent = "Disabled";
+        previewAutoRenewBadge.className = "badge-minimal badge-minimal--neutral";
+      }
+    }
   }
 
   // Events
@@ -60,6 +74,16 @@ function initSslIssuePage() {
 
   if (wwwCheckbox) {
     wwwCheckbox.addEventListener("change", () => {
+      const opt = select.options[select.selectedIndex];
+      if (opt && opt.value) {
+        const isRoot = !opt.text.includes("proxy →") && opt.value.split(".").length === 2;
+        updatePreview(opt.value, isRoot);
+      }
+    });
+  }
+
+  if (autoRenewCheckbox) {
+    autoRenewCheckbox.addEventListener("change", () => {
       const opt = select.options[select.selectedIndex];
       if (opt && opt.value) {
         const isRoot = !opt.text.includes("proxy →") && opt.value.split(".").length === 2;

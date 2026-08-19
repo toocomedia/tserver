@@ -274,6 +274,7 @@ async def issue_cert(
     domain_id: int | None,
     full_domain: str,
     include_www: bool = False,
+    auto_renew: bool = True,
 ) -> SslCert:
     """
     Issue a Let's Encrypt cert via certbot certonly --webroot.
@@ -463,7 +464,7 @@ async def issue_cert(
             full_domain=full_domain,
             cert_path=cert_path,
             expiry_date=expiry,
-            auto_renew=True,
+            auto_renew=auto_renew,
         )
         db.add(cert)
         await db.flush()
