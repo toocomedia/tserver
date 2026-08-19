@@ -45,13 +45,24 @@ cleanup_temp() {
 }
 trap 'cleanup_temp' EXIT
 
-info "Installing git (if needed)..."
+info "[1/4] Installing git (if needed)..."
 if ! command -v git &>/dev/null; then
-  apt-get update -y
-  apt-get install -y git
+  if command -v apt-get &>/dev/null; then
+    apt-get update -y && apt-get install -y git
+  elif command -v dnf &>/dev/null; then
+    dnf install -y git
+  elif command -v yum &>/dev/null; then
+    yum install -y git
+  elif command -v zypper &>/dev/null; then
+    zypper install -y git
+  elif command -v pacman &>/dev/null; then
+    pacman -Sy --noconfirm git
+  else
+    die "No supported package manager found (apt, dnf, yum, zypper, pacman). Please install git manually."
+  fi
 fi
 
-info "Cloning ${REPO_URL} (${REPO_REF})..."
+info "[2/4] Cloning ${REPO_URL} (${REPO_REF})..."
 rm -rf "$CLONE_DIR"
 # Do not assume the selected version is a branch: releases and exact commits
 # must be installable too.  Fetching the requested ref then detaching records
@@ -62,7 +73,7 @@ git -C "$CLONE_DIR" fetch --depth 1 origin "$REPO_REF"
 git -C "$CLONE_DIR" checkout -q --detach FETCH_HEAD
 
 SOURCE_COMMIT="$(git -C "$CLONE_DIR" rev-parse HEAD)"
-info "Resolved source commit: ${SOURCE_COMMIT}"
+info "[3/4] Resolved source commit: ${SOURCE_COMMIT}"
 
 export SOURCE_DIR="$CLONE_DIR"
 export CLEANUP_SOURCE_DIR="$CLONE_DIR"
@@ -70,7 +81,7 @@ export INSTALL_SOURCE_REF="$REPO_REF"
 export INSTALL_SOURCE_COMMIT="$SOURCE_COMMIT"
 chmod +x "$CLONE_DIR/scripts/"*.sh
 
-info "Starting install.sh (prompts use /dev/tty)..."
+info "[4/4] Starting install.sh (prompts use /dev/tty)..."
 # Run as a file so install can prompt safely
 bash "$CLONE_DIR/scripts/install.sh"
 

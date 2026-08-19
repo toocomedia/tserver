@@ -22,10 +22,17 @@ SKIP_UFW="${SKIP_UFW:-0}"
 DO_UPGRADE="${DO_UPGRADE:-0}"
 NONINTERACTIVE="${NONINTERACTIVE:-0}"
 
-RED='\033[0;31m'; GRN='\033[0;32m'; YLW='\033[1;33m'; NC='\033[0m'
+RED='\033[0;31m'; GRN='\033[0;32m'; YLW='\033[1;33m'; BLU='\033[0;34m'; NC='\033[0m'
 info()  { echo -e "${GRN}==>${NC} $*"; }
 warn()  { echo -e "${YLW}WARNING:${NC} $*"; }
 die()   { echo -e "${RED}ERROR:${NC} $*" >&2; exit 1; }
+step()  { echo -e "${BLU}==> [Step $1/$2]${NC} $3"; }
+
+if [[ -f "$SCRIPT_DIR/os_helper.sh" ]]; then
+  source "$SCRIPT_DIR/os_helper.sh"
+else
+  warn "os_helper.sh not found. Package installation may fail."
+fi
 
 # A failed lookup makes pip misleadingly report that a valid package has no
 # matching version. Check DNS before apt and again before pip, while printing
@@ -72,12 +79,8 @@ write_release_info() {
 # ---------------------------------------------------------------
 [[ "$(id -u)" -eq 0 ]] || die "Run as root (sudo bash scripts/install.sh)"
 
-if [[ -f /etc/os-release ]]; then
-  # shellcheck source=/dev/null
-  . /etc/os-release
-  if [[ "${ID:-}" != "ubuntu" ]]; then
-    warn "Designed for Ubuntu 22.04/24.04 — continuing on ${ID:-unknown}"
-  fi
+if [[ "${OS_FAMILY:-}" != "debian" && "${OS_FAMILY:-}" != "rhel" && "${OS_FAMILY:-}" != "arch" ]]; then
+  warn "Designed for Debian/Ubuntu, RHEL variants, and Arch — continuing on unknown OS"
 fi
 
 [[ -d "$SOURCE_DIR/backend" ]] || die "SOURCE_DIR missing backend/: $SOURCE_DIR"
@@ -92,12 +95,13 @@ can_prompt() {
 }
 
 # read from /dev/tty so prompts work even if stdin is a pipe
+# added -t 15 to auto-timeout after 15 seconds to prevent hanging
 _read_tty() {
   local prompt="$1"
   if [[ -r /dev/tty ]]; then
-    read -r -p "$prompt" REPLY </dev/tty || REPLY=""
+    read -t 15 -r -p "$prompt" REPLY </dev/tty || REPLY=""
   else
-    read -r -p "$prompt" REPLY || REPLY=""
+    read -t 15 -r -p "$prompt" REPLY || REPLY=""
   fi
 }
 
@@ -312,18 +316,18 @@ echo "    ADMIN_USER    = $ADMIN_USER"
 if [[ "$SKIP_APT" != "1" ]]; then
   info "Checking DNS resolution for package downloads..."
   require_dns
-  info "Updating apt indexes..."
-  apt-get update -y
+  step 1 5 "Updating package indexes..."
+  pkg_update
   if [[ "$DO_UPGRADE" == "1" ]]; then
-    info "Full system upgrade (DO_UPGRADE=1)..."
-    DEBIAN_FRONTEND=noninteractive apt-get upgrade -y
+    step 2 5 "Full system upgrade (DO_UPGRADE=1)..."
+    pkg_upgrade
   fi
 
-  info "Installing core packages..."
+  step 3 5 "Installing core packages..."
   # Do not let a PowerDNS post-install restart hide an unrelated failed package.
   # PowerDNS is installed separately below and starts only after its managed
   # config and database are written by setup_powerdns.sh.
-  DEBIAN_FRONTEND=noninteractive apt-get install -y \
+  pkg_install \
     python3 python3-venv python3-dev python3-pip \
     nginx \
     certbot \
@@ -341,24 +345,20 @@ EOF
     chmod 755 /usr/sbin/policy-rc.d
     POLICY_RC_CREATED=1
   fi
-  info "Installing PowerDNS packages (service start deferred)..."
-  if ! DEBIAN_FRONTEND=noninteractive apt-get install -y pdns-server pdns-backend-sqlite3; then
+  step 4 5 "Installing PowerDNS packages (service start deferred)..."
+  if ! pkg_install pdns-server pdns-backend-sqlite3; then
     [[ "$POLICY_RC_CREATED" == "1" ]] && rm -f /usr/sbin/policy-rc.d
     die "PowerDNS package installation failed"
   fi
   [[ "$POLICY_RC_CREATED" == "1" ]] && rm -f /usr/sbin/policy-rc.d
 
-  # Ensure critical packages are present even if apt returned non-zero from pdns restart
-  for pkg in python3 nginx certbot pdns-server pdns-backend-sqlite3 sqlite3; do
-    dpkg -s "$pkg" &>/dev/null || die "Package missing after apt: $pkg"
-  done
   # Stop crash-loop until we write config
-  systemctl stop pdns 2>/dev/null || true
-  systemctl reset-failed pdns 2>/dev/null || true
+  systemctl stop pdns 2>/dev/null || systemctl stop powerdns 2>/dev/null || true
+  systemctl reset-failed pdns 2>/dev/null || systemctl reset-failed powerdns 2>/dev/null || true
 
   # Prefer python3.11 if available (optional package on some images)
   if ! command -v python3.11 &>/dev/null; then
-    apt-get install -y python3.11 python3.11-venv python3.11-dev 2>/dev/null || true
+    pkg_install python3.11 python3.11-venv python3.11-dev 2>/dev/null || true
   fi
 fi
 
@@ -445,8 +445,8 @@ _set_env "SECURITY_HEADERS" "true" 0
 _set_env "HSTS_ENABLED" "false" 0
 _set_env "SESSION_HTTPS_ONLY" "false" 0
 _set_env "DB_PATH" "$PANEL_DIR/app/panel.db" 1
-_set_env "NGINX_SITES_AVAILABLE" "/etc/nginx/sites-available" 0
-_set_env "NGINX_SITES_ENABLED" "/etc/nginx/sites-enabled" 0
+_set_env "NGINX_SITES_AVAILABLE" "${NGINX_SITES_AVAILABLE:-/etc/nginx/sites-available}" 0
+_set_env "NGINX_SITES_ENABLED" "${NGINX_SITES_ENABLED:-/etc/nginx/sites-enabled}" 0
 _set_env "NGINX_WEBROOT" "/var/www" 0
 _set_env "PRIVILEGED_SUDO" "true" 0
 _set_env "DEBUG" "false" 0
@@ -467,10 +467,11 @@ chown root:"$PANEL_USER" "$PANEL_ENV"
 # ---------------------------------------------------------------
 # PowerDNS + Nginx
 # ---------------------------------------------------------------
-info "Configuring PowerDNS..."
+step 5 5 "Configuring PowerDNS..."
 bash "$PANEL_DIR/scripts/setup_powerdns.sh"
 
-info "Configuring Nginx..."
+step 6 6 "Configuring Nginx..."
+setup_nginx_dirs
 bash "$PANEL_DIR/scripts/setup_nginx.sh"
 
 # ---------------------------------------------------------------
