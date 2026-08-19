@@ -169,6 +169,28 @@ detect_ip() {
 # ---------------------------------------------------------------
 # Config values (smart prompts)
 # ---------------------------------------------------------------
+if [[ -d "$PANEL_DIR" ]] && can_prompt; then
+  echo ""
+  warn "An existing installation was found at $PANEL_DIR."
+  echo "    Running this installer again will update core files (like a repair/upgrade)."
+  echo "    Your database and .env configuration will be preserved by default."
+  echo ""
+  ask "Do you want to completely DELETE the old installation and start fresh? (y/N)" "n"
+  if [[ "${REPLY,,}" == "y" || "${REPLY,,}" == "yes" ]]; then
+    echo ""
+    warn "This will WIPE all panel data, configurations, and the database!"
+    ask_required "Type 'DELETE' to confirm" "or press Ctrl+C to abort"
+    if [[ "$REPLY" == "DELETE" ]]; then
+      info "Removing existing installation at $PANEL_DIR ..."
+      systemctl stop srv-panel 2>/dev/null || true
+      systemctl disable srv-panel 2>/dev/null || true
+      rm -rf "$PANEL_DIR"
+    else
+      die "Aborting installation to prevent accidental data loss."
+    fi
+  fi
+fi
+
 # Drop common doc placeholders
 case "${SERVER_IP:-}" in
   YOUR.VPS.IP|x.x.x.x|1.2.3.4)
