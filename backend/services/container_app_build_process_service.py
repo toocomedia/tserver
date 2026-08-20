@@ -33,9 +33,7 @@ def run(deployment_id: int, command: list[str], timeout: int, env: dict[str, str
             proc_env["XDG_RUNTIME_DIR"] = str(build_tmp)
         except Exception:
             pass
-        prefix = []
-    else:
-        prefix = ["sudo", "-n"] if hasattr(os, "geteuid") and os.geteuid() != 0 and config.PRIVILEGED_SUDO else []
+    prefix = ["sudo", "-n"] if hasattr(os, "geteuid") and os.geteuid() != 0 and config.PRIVILEGED_SUDO else []
     process = subprocess.Popen([*prefix, *command], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=proc_env)
     with _lock:
         _processes[deployment_id] = process
