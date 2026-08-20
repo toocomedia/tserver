@@ -3,7 +3,9 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+import posixpath
 import re
+import shlex
 import subprocess
 from urllib.parse import urlsplit
 
@@ -67,14 +69,149 @@ def validate_port(value: int) -> int:
     return value
 
 
+LABEL_RE = re.compile(r"^[a-z0-9_-]{1,32}$")
+
+
+def validate_root_directory(value: str | None) -> str:
+    if not value:
+        return ""
+    val = value.strip().replace("\\", "/").strip("/")
+    if ".." in val.split("/"):
+        raise HTTPException(400, "Root directory must not contain path traversal.")
+    if len(val) > 255:
+        raise HTTPException(400, "Root directory length must not exceed 255 characters.")
+    return val
+
+
+def validate_dockerfile_path(value: str | None) -> str:
+    if not value:
+        return "Dockerfile"
+    val = value.strip().replace("\\", "/").lstrip("/")
+    if ".." in val.split("/") or not val:
+        raise HTTPException(400, "Dockerfile path must not contain path traversal.")
+    if len(val) > 255:
+        raise HTTPException(400, "Dockerfile path length must not exceed 255 characters.")
+    return val
+
+
+def validate_health_path(value: str | None) -> str:
+    if not value:
+        return "/"
+    val = value.strip()
+    if not val.startswith("/") or len(val) > 255 or any(c in val for c in ["\r", "\n", "\t"]):
+        raise HTTPException(400, "Health check path must start with '/' and be a single line under 255 characters.")
+    return val
+
+
+def validate_startup_timeout(value: int | None) -> int:
+    if value is None:
+        return 45
+    try:
+        val = int(value)
+    except (ValueError, TypeError):
+        raise HTTPException(400, "Startup timeout must be an integer.")
+    if val < 10 or val > 300:
+        raise HTTPException(400, "Startup timeout must be between 10 and 300 seconds.")
+    return val
+
+
+def parse_build_args(value: str | dict | None) -> str | None:
+    if not value:
+        return None
+    import json as _json
+    if isinstance(value, str):
+        try:
+            value = _json.loads(value)
+        except _json.JSONDecodeError as exc:
+            raise HTTPException(400, "Build args must be a valid JSON object.") from exc
+    if not isinstance(value, dict):
+        raise HTTPException(400, "Build args must be key-value pairs.")
+    arg_key_re = re.compile(r"^[A-Za-z_][A-Za-z0-9_]{0,127}$")
+    cleaned = {}
+    for k, v in value.items():
+        if not isinstance(k, str) or not arg_key_re.fullmatch(k):
+            raise HTTPException(400, f"Invalid build argument name '{k}'.")
+        cleaned[k] = str(v) if v is not None else ""
+    return _json.dumps(cleaned) if cleaned else None
+
+
+def parse_storage_mounts(app_id: int, items: list[dict] | str | None) -> str | None:
+    if not items:
+        return None
+    import json as _json
+    if isinstance(items, str):
+        try:
+            items = _json.loads(items)
+        except _json.JSONDecodeError as exc:
+            raise HTTPException(400, "Storage mounts must be a valid JSON list.") from exc
+    if not isinstance(items, list):
+        raise HTTPException(400, "Storage mounts must be a list.")
+    if len(items) > 16:
+        raise HTTPException(400, "Maximum 16 storage mounts allowed per application.")
+
+    parsed = []
+    used_labels = set()
+    used_paths = set()
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        raw_label = str(item.get("label", "")).strip().lower()
+        raw_path = str(item.get("mount_path", "") or item.get("path", "")).strip()
+        if not raw_label and not raw_path:
+            continue
+        if not LABEL_RE.fullmatch(raw_label):
+            raise HTTPException(400, f"Storage mount label '{raw_label}' must be 1-32 lowercase alphanumeric characters, dashes, or underscores.")
+        if raw_label in used_labels:
+            raise HTTPException(400, f"Duplicate storage mount label '{raw_label}'.")
+        norm_path = posixpath.normpath(raw_path)
+        if not norm_path.startswith("/") or ".." in norm_path or len(norm_path) > 512:
+            raise HTTPException(400, f"Storage mount path '{raw_path}' must be a clean absolute POSIX path.")
+        if norm_path in {"/", "/proc", "/sys", "/dev", "/etc", "/var", "/tmp"}:
+            raise HTTPException(400, f"Cannot mount storage directly to system root path '{norm_path}'.")
+        for existing in used_paths:
+            if norm_path == existing:
+                raise HTTPException(400, f"Duplicate storage mount path '{norm_path}'.")
+            if norm_path.startswith(existing.rstrip("/") + "/") or existing.startswith(norm_path.rstrip("/") + "/"):
+                raise HTTPException(400, f"Storage mount path '{norm_path}' overlaps with '{existing}'. Nested mounts are not allowed.")
+        used_labels.add(raw_label)
+        used_paths.add(norm_path)
+        volume_name = f"srv-container-app-{app_id}-vol-{raw_label}"
+        parsed.append({
+            "label": raw_label,
+            "volume": volume_name,
+            "mount_path": norm_path,
+        })
+    return _json.dumps(parsed) if parsed else None
+
+
+def validate_custom_start_command(command: str | None) -> str | None:
+    if not command or not command.strip():
+        return None
+    val = command.strip()
+    try:
+        tokens = shlex.split(val)
+    except ValueError as exc:
+        raise HTTPException(400, f"Invalid custom start command syntax: {exc}") from exc
+    if not tokens:
+        return None
+    return val
+
+
 async def create_app(
     db: AsyncSession, *, domain: Domain, source_type: str, build_mode: str,
     repository_url: str | None, branch: str | None, image_reference: str | None,
     internal_port: int, ssl_requested: bool, environment_values: dict[str, str],
     database_mode: str = "none", database_url: str | None = None,
     database_attachments: list[dict[str, str]] | None = None,
+    git_ref: str | None = None, git_ref_type: str = "branch",
+    draft_key_id: str | None = None, root_directory: str = "",
+    dockerfile_path: str = "Dockerfile", build_args: str | dict | None = None,
+    custom_start_command: str | None = None, storage_mounts: list[dict] | str | None = None,
+    health_path: str = "/", startup_timeout_seconds: int = 45,
 ) -> ContainerApp:
-    _validate_source(domain, source_type, build_mode, repository_url, branch, image_reference)
+    ref_val = (git_ref or branch or "main").strip()
+    ref_type_val = (git_ref_type or "branch").strip().lower()
+    _validate_source(domain, source_type, build_mode, repository_url, ref_val, image_reference, ref_type_val, has_deploy_key=bool(draft_key_id))
     if await db.scalar(select(ContainerApp.id).where(ContainerApp.domain_id == domain.id)):
         raise HTTPException(409, "This domain already has a container app.")
     # Docker resources cannot participate in the database transaction below.
@@ -100,23 +237,42 @@ async def create_app(
         domain_id=domain.id, source_type=source_type,
         build_mode="image" if is_image else build_mode,
         repository_url=None if is_image else repository_url,
-        branch=None if is_image else (branch or "main"),
+        branch=None if is_image else ref_val,
+        git_ref=None if is_image else ref_val,
+        git_ref_type="branch" if is_image else ref_type_val,
         image_reference=validate_image_reference(image_reference or "") if is_image else None,
         container_name="pending", internal_port=port,
         host_port=await next_host_port(db), env_path="pending", ssl_requested=ssl_requested,
         database_mode="none", database_provider=None,
+        root_directory=validate_root_directory(root_directory),
+        dockerfile_path=validate_dockerfile_path(dockerfile_path),
+        build_args=parse_build_args(build_args),
+        custom_start_command=validate_custom_start_command(custom_start_command),
+        health_path=validate_health_path(health_path),
+        startup_timeout_seconds=validate_startup_timeout(startup_timeout_seconds),
     )
     db.add(app)
     await db.flush()
     app.container_name, app.env_path = f"srv-container-app-{app.id}", str(env_path(app.id))
-    attachments = await databases.create_attachments(db, app, attachment_specs)
-    databases.rebuild_environment(app, attachments, database_values)
+    app.storage_mounts = parse_storage_mounts(app.id, storage_mounts)
+    if draft_key_id:
+        pub_key, key_path = repository_service.attach_deploy_key(draft_key_id, app.id)
+        app.deploy_key_public = pub_key
+        app.deploy_key_path = str(key_path)
+    try:
+        attachments = await databases.create_attachments(db, app, attachment_specs)
+        databases.rebuild_environment(app, attachments, database_values)
+    except Exception:
+        if draft_key_id:
+            repository_service.delete_deploy_key(app.id)
+        raise
     return app
 
 
 def _validate_source(
     domain: Domain, source_type: str, build_mode: str, repository_url: str | None,
-    branch: str | None, image_reference: str | None,
+    branch: str | None, image_reference: str | None, git_ref_type: str = "branch",
+    has_deploy_key: bool = False,
 ) -> None:
     if not dependency_manager.is_healthy("docker"):
         raise HTTPException(409, "Docker daemon is not available.")
@@ -129,7 +285,11 @@ def _validate_source(
         raise HTTPException(400, "Choose a Git build mode or registry image.")
     if not dependency_manager.is_healthy("git"):
         raise HTTPException(409, "Git & SSH dependency is required.")
-    repository_service.validate_source(repository_url or "", branch or "main")
+    repository_service.validate_source(repository_url or "", branch or "main", git_ref_type)
+    if has_deploy_key:
+        repo = (repository_url or "").strip()
+        if not (repo.startswith("git@") or repo.startswith("ssh://")):
+            raise HTTPException(400, "SSH deploy keys require an SSH repository URL (e.g. git@github.com:owner/repo.git).")
 
 
 def write_env(path: Path, values: dict[str, str]) -> None:

@@ -26,9 +26,25 @@ async def remove_selected_data(
         item = managed[database_id]
         database_lifecycle.purge_managed(item)
         await db.delete(item)
-    if delete_app_volume and app.data_volume:
-        await container_app_cleanup_service.remove_volume(app.data_volume)
-        app.data_volume, app.data_mount_path = None, None
+    if delete_app_volume:
+        volumes_to_remove = set(await container_app_cleanup_service.list_app_storage_volumes(app.id))
+        if app.data_volume:
+            volumes_to_remove.add(app.data_volume)
+            app.data_volume, app.data_mount_path = None, None
+        if app.storage_mounts:
+            import json as _json
+            try:
+                mounts = _json.loads(app.storage_mounts)
+                if isinstance(mounts, list):
+                    for mount in mounts:
+                        vol = mount.get("volume")
+                        if vol:
+                            volumes_to_remove.add(vol)
+            except Exception:
+                pass
+        for volume in sorted(volumes_to_remove):
+            await container_app_cleanup_service.remove_volume(volume)
+        app.storage_mounts = None
     if delete_wordpress_files and app.wordpress_content_volume:
         await container_app_cleanup_service.remove_volume(app.wordpress_content_volume)
         app.wordpress_content_volume = None
@@ -39,7 +55,7 @@ async def remove_selected_data(
     remaining_backups = bool(await db.scalar(select(ContainerAppBackup.id).where(
         ContainerAppBackup.app_id == app.id,
     )))
-    remaining_data = bool(remaining) or bool(app.data_volume) or bool(app.wordpress_content_volume) or remaining_backups
+    remaining_data = bool(remaining) or bool(app.data_volume) or bool(app.storage_mounts) or bool(app.wordpress_content_volume) or remaining_backups
     return remaining_data
 
 

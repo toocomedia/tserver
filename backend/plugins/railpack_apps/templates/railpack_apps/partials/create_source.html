@@ -39,11 +39,27 @@
   <input type="hidden" id="source_type" name="source_type" value="git" data-source-type>
 
   <div class="apps-engine-source-grid" data-git-fields>
-    <div class="form-group">
+    <div class="form-group" style="grid-column: span 2;">
       <span class="section-label">Repository URL</span>
-      <input class="input-optic input-optic--code" id="repository_url" name="repository_url" placeholder="https://github.com/owner/project.git" data-repository-url>
+      <input class="input-optic input-optic--code" id="repository_url" name="repository_url" placeholder="https://github.com/owner/project.git or git@github.com:owner/project.git" data-repository-url>
     </div>
+
     <div class="form-group dropdown-optic" style="position: relative; overflow: visible;">
+      <span class="section-label">Reference Type</span>
+      <div class="custom-dropdown" data-custom-dropdown="git_ref_type">
+        <input type="hidden" id="git_ref_type" name="git_ref_type" value="branch" data-git-ref-type data-dropdown-value>
+        <div class="custom-dropdown__trigger" data-dropdown-trigger tabindex="0">
+          <span class="custom-dropdown__label" data-dropdown-label>Branch</span>
+        </div>
+        <div class="custom-dropdown__menu" data-dropdown-menu>
+          <div class="custom-dropdown__item is-selected" data-dropdown-item data-value="branch" data-label="Branch">Branch</div>
+          <div class="custom-dropdown__item" data-dropdown-item data-value="tag" data-label="Git Tag">Git Tag</div>
+          <div class="custom-dropdown__item" data-dropdown-item data-value="commit" data-label="Commit SHA">Commit SHA</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-group dropdown-optic" data-git-branch-group style="position: relative; overflow: visible;">
       <span class="section-label">Branch <span data-branch-spinner class="step-spinner" style="display: none; vertical-align: middle; margin-left: 8px; width: 14px; height: 14px; border-width: 2px;"></span></span>
       <div class="custom-dropdown" data-custom-dropdown="branch">
         <input type="hidden" id="branch" name="branch" value="main" data-branch data-dropdown-value>
@@ -52,6 +68,32 @@
         </div>
         <div class="custom-dropdown__menu" data-dropdown-menu data-branch-menu>
           <div class="custom-dropdown__item is-selected" data-dropdown-item data-value="main" data-label="main">main</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-group" data-git-custom-ref-group hidden>
+      <span class="section-label" data-git-custom-ref-label>Reference Value</span>
+      <input class="input-optic input-optic--code" id="git_ref_input" placeholder="v1.0.0 or 40-char SHA" data-git-custom-ref>
+    </div>
+    <input type="hidden" id="git_ref" name="git_ref" value="" data-git-ref>
+
+    <div class="form-group" style="grid-column: span 2; margin-top: 8px;">
+      <div class="optic-card" style="padding: 16px; cursor: default; text-align: left; height: auto;">
+        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+          <div>
+            <span class="optic-card__name" style="font-size: 14px; display: block; margin-bottom: 2px;">SSH Deploy Key (Private Repositories)</span>
+            <span style="font-size: 12px; color: var(--color-muted);">Generate an ed25519 read key to attach to your GitHub / GitLab / Bitbucket deploy keys.</span>
+          </div>
+          <button type="button" class="btn-optic btn-optic--sm" data-generate-deploy-key>Generate Deploy Key</button>
+        </div>
+        <input type="hidden" id="draft_key_id" name="draft_key_id" value="" data-draft-key-id>
+        <div data-deploy-key-display hidden style="margin-top: 14px; width: 100%;">
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <textarea class="input-optic input-optic--code" readonly rows="2" style="font-size: 12px; resize: none; width: 100%;" data-deploy-key-public></textarea>
+            <button type="button" class="btn-optic btn-optic--sm" data-copy-deploy-key style="white-space: nowrap;">Copy Key</button>
+          </div>
+          <span style="font-size: 11px; color: var(--color-muted); margin-top: 4px; display: block;">Add this key as a Read-Only Deploy Key in your repository host settings.</span>
         </div>
       </div>
     </div>

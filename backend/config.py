@@ -126,6 +126,8 @@ CONTAINER_APP_ENV_ROOT: str = os.getenv("CONTAINER_APP_ENV_ROOT", "/var/lib/srv-
 CONTAINER_APP_PORT_START: int = _env_int("CONTAINER_APP_PORT_START", 31000)
 CONTAINER_APP_BUILD_TIMEOUT: int = _env_int("CONTAINER_APP_BUILD_TIMEOUT", 1200)
 CONTAINER_APP_BACKUP_ROOT: str = os.getenv("CONTAINER_APP_BACKUP_ROOT", "/var/lib/srv-panel/container-app-backups")
+DEPLOY_KEY_ROOT: str = os.getenv("DEPLOY_KEY_ROOT", "/var/lib/srv-panel/deploy-keys")
+KNOWN_HOSTS_PATH: str = os.getenv("KNOWN_HOSTS_PATH", "/var/lib/srv-panel/known_hosts")
 PLUGIN_PLATFORM_APPROVALS_PATH: str = os.getenv(
     "PLUGIN_PLATFORM_APPROVALS_PATH",
     "/var/lib/srv-panel/plugin-platform-approvals.json",

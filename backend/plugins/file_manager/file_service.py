@@ -142,6 +142,20 @@ def _roots(app: ContainerApp, container: dict[str, Any]) -> list[FileRoot]:
         if workdir:
             roots.append(FileRoot("application", "Application files", workdir, "container", False))
     mounts = container.get("Mounts") or []
+    if getattr(app, "storage_mounts", None):
+        try:
+            parsed_mounts = json.loads(app.storage_mounts)
+            if isinstance(parsed_mounts, list):
+                for m in parsed_mounts:
+                    if isinstance(m, dict):
+                        vol = m.get("volume")
+                        m_path = _safe_container_root(m.get("mount_path"))
+                        label = m.get("label", "storage")
+                        if vol and m_path and _has_volume(mounts, vol, m_path):
+                            root_id = f"storage-{label}"
+                            roots.append(FileRoot(root_id, f"Storage ({label})", m_path, "container", True))
+        except Exception:
+            pass
     data_path = _safe_container_root(app.data_mount_path)
     if app.data_volume and data_path and _has_volume(mounts, app.data_volume, data_path):
         roots.append(FileRoot("data", "Persistent data", data_path, "container", True))

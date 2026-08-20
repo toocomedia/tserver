@@ -28,8 +28,8 @@ _COMPOSE_IMAGE_DB: dict[str, str] = {
 }
 
 
-def inspect_repository(repository_url: str, branch: str) -> dict[str, object]:
-    with repository_service.temporary_clone(repository_url, branch, allow_default_branch=True) as checkout:
+def inspect_repository(repository_url: str, branch: str, *, ssh_key_path: str | Path | None = None) -> dict[str, object]:
+    with repository_service.temporary_clone(repository_url, branch, allow_default_branch=True, ssh_key_path=ssh_key_path) as checkout:
         root = checkout.path
         files = {path.name for path in root.iterdir() if path.is_file()}
         text = _read_sources(root)

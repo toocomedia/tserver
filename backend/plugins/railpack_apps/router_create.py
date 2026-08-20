@@ -44,15 +44,43 @@ async def create_page(request: Request, db: AsyncSession = Depends(get_db)):
 
 
 
+def _resolve_session_draft_key(request: Request, draft_key_id: str | None) -> Path | None:
+    if not draft_key_id or not draft_key_id.strip():
+        return None
+    did = draft_key_id.strip()
+    session_drafts = request.session.get("draft_deploy_keys")
+    if not isinstance(session_drafts, list) or did not in session_drafts:
+        raise HTTPException(403, "Draft deploy key was not generated in this session.")
+    return repository_service.get_draft_deploy_key_path(did)
+
+
+@router.post("/draft-deploy-key")
+async def draft_deploy_key(request: Request):
+    try:
+        draft_id, public_key = await asyncio.to_thread(repository_service.create_draft_deploy_key)
+        session_drafts = request.session.get("draft_deploy_keys", [])
+        if not isinstance(session_drafts, list):
+            session_drafts = []
+        session_drafts.append(draft_id)
+        request.session["draft_deploy_keys"] = session_drafts[-20:]
+        return JSONResponse({"draft_id": draft_id, "public_key": public_key})
+    except Exception as exc:
+        if isinstance(exc, HTTPException):
+            raise exc
+        raise HTTPException(500, f"Could not generate deploy key: {exc}") from exc
+
+
 @router.post("/inspect")
-async def inspect(repository_url: str = Form(...), branch: str = Form("main")):
-    return JSONResponse(container_app_inspection_service.inspect_repository(repository_url.strip(), branch.strip() or "main"))
+async def inspect(request: Request, repository_url: str = Form(...), branch: str = Form("main"), draft_key_id: str = Form("")):
+    ssh_key = _resolve_session_draft_key(request, draft_key_id)
+    return JSONResponse(container_app_inspection_service.inspect_repository(repository_url.strip(), branch.strip() or "main", ssh_key_path=ssh_key))
 
 
 @router.post("/inspect-branches")
-async def inspect_branches(repository_url: str = Form(...)):
+async def inspect_branches(request: Request, repository_url: str = Form(...), draft_key_id: str = Form("")):
     try:
-        result = await asyncio.to_thread(repository_service.list_branches, repository_url.strip())
+        ssh_key = _resolve_session_draft_key(request, draft_key_id)
+        result = await asyncio.to_thread(repository_service.list_branches, repository_url.strip(), ssh_key_path=ssh_key)
         return JSONResponse({"default_branch": result.default_branch, "branches": result.branches})
     except Exception as exc:
         if isinstance(exc, HTTPException):
@@ -75,8 +103,19 @@ async def create(
     internal_port: int = Form(3000), ssl: bool = Form(False), environment_values: str = Form("{}"),
     database_mode: str = Form("none"), database_url: str = Form(""), database_attachments: str = Form(""),
     preset: str = Form(""), wordpress_site_title: str = Form(""), wordpress_admin_user: str = Form(""),
-    wordpress_admin_email: str = Form(""), wordpress_admin_password: str = Form(""), db: AsyncSession = Depends(get_db),
+    wordpress_admin_email: str = Form(""), wordpress_admin_password: str = Form(""),
+    git_ref: str = Form(""), git_ref_type: str = Form("branch"), draft_key_id: str = Form(""),
+    root_directory: str = Form(""), dockerfile_path: str = Form("Dockerfile"),
+    build_args: str = Form(""), custom_start_command: str = Form(""),
+    storage_mounts: str = Form("[]"), health_path: str = Form("/"),
+    startup_timeout_seconds: int = Form(45),
+    db: AsyncSession = Depends(get_db),
 ):
+    if draft_key_id.strip():
+        _resolve_session_draft_key(request, draft_key_id)
+        repo = repository_url.strip()
+        if not (repo.startswith("git@") or repo.startswith("ssh://")):
+            raise HTTPException(400, "SSH deploy keys require an SSH repository URL (e.g. git@github.com:owner/repo.git).")
     domain = await db.get(Domain, domain_id)
     if domain is None:
         raise HTTPException(404, "Domain not found.")
@@ -90,6 +129,11 @@ async def create(
         branch=branch.strip() or "main", image_reference=image_reference.strip() or None, internal_port=internal_port,
         ssl_requested=ssl and not has_certificate, environment_values=_environment_values(environment_values), database_mode=database_mode,
         database_url=database_url.strip() or None, database_attachments=attachments,
+        git_ref=git_ref.strip() or None, git_ref_type=git_ref_type.strip() or "branch",
+        draft_key_id=draft_key_id.strip() or None, root_directory=root_directory.strip(),
+        dockerfile_path=dockerfile_path.strip() or "Dockerfile", build_args=build_args.strip() or None,
+        custom_start_command=custom_start_command.strip() or None, storage_mounts=storage_mounts.strip() or None,
+        health_path=health_path.strip() or "/", startup_timeout_seconds=startup_timeout_seconds,
     )
     if preset == "wordpress":
         await _configure_wordpress(app, wordpress_site_title, wordpress_admin_user, wordpress_admin_email, wordpress_admin_password, db)

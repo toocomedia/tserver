@@ -28,6 +28,8 @@ async def uninstall(db: AsyncSession, app: ContainerApp, domain: Domain, *, remo
     await _step(errors, "restore domain site", lambda: _restore_domain_site(db, domain))
     await _step(errors, "remove build files", lambda: asyncio.to_thread(_remove_path, container_app_service._root(app.id)))
     await _step(errors, "remove environment file", lambda: asyncio.to_thread(_remove_path, Path(app.env_path)))
+    from dependencies.git import repository_service
+    await _step(errors, "remove deploy key", lambda: asyncio.to_thread(repository_service.delete_deploy_key, app.id))
     if errors:
         raise HTTPException(500, "Cleanup incomplete: " + "; ".join(errors))
 
@@ -57,6 +59,23 @@ async def remove_volume(volume: str) -> None:
     result = await asyncio.to_thread(container_app_service._run, ["docker", "volume", "rm", volume], timeout=45)
     if result.returncode and not _missing(result.stderr):
         raise HTTPException(502, (result.stderr or result.stdout or "Could not remove data volume.")[-1000:])
+
+
+async def list_app_storage_volumes(app_id: int) -> list[str]:
+    """Return volumes owned by this Railpack app, including detached mounts."""
+    result = await asyncio.to_thread(
+        container_app_service._run,
+        [
+            "docker", "volume", "ls",
+            "--filter", "label=srv-panel.plugin=railpack_apps",
+            "--filter", f"label=srv-panel.app-id={app_id}",
+            "--format", "{{.Name}}",
+        ],
+        timeout=30,
+    )
+    if result.returncode:
+        raise HTTPException(502, (result.stderr or result.stdout or "Could not list app storage volumes.")[-1000:])
+    return [name.strip() for name in result.stdout.splitlines() if name.strip()]
 
 
 async def _restore_domain_site(db: AsyncSession, domain: Domain) -> None:

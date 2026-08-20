@@ -3,6 +3,9 @@ from __future__ import annotations
 
 import asyncio
 from datetime import datetime
+import json
+from pathlib import Path
+import shlex
 import shutil
 
 from fastapi import HTTPException
@@ -136,7 +139,11 @@ async def _deploy_after_commit(deployment_id: int, token: int, operation_id: int
             await asyncio.to_thread(_replace_container, app, image)
             replacement_started = True
             await progress.stage(db, deployment, "health", "Checking the private HTTP endpoint.")
-            await progress.wait_for_http(app.host_port)
+            await progress.wait_for_http(
+                app.host_port,
+                path=app.health_path or "/",
+                timeout_seconds=app.startup_timeout_seconds or 45,
+            )
             from services import container_app_control_service
             await progress.stage(db, deployment, "routing", "Publishing the application route.")
             await container_app_control_service.publish(db, app, domain)
@@ -217,7 +224,11 @@ async def _restore_previous(
     try:
         await progress.stage(db, deployment, "rollback", "Restoring the previous image.")
         await asyncio.to_thread(_replace_container, app, image)
-        await progress.wait_for_http(app.host_port)
+        await progress.wait_for_http(
+            app.host_port,
+            path=app.health_path or "/",
+            timeout_seconds=app.startup_timeout_seconds or 45,
+        )
         from services import container_app_control_service
         await container_app_control_service.publish(db, app, domain)
         app.image_digest = image
@@ -240,22 +251,55 @@ def _build_or_pull(app: ContainerApp, deployment: ContainerAppDeployment) -> str
     if source.exists():
         shutil.rmtree(source)
     progress.append_log(deployment, "source", "Cloning selected Git revision.")
-    checkout = repository_service.clone(app.repository_url or "", app.branch or "main", source)
+    ref = app.git_ref or app.branch or "main"
+    ref_type = app.git_ref_type or "branch"
+    checkout = repository_service.clone(
+        app.repository_url or "",
+        ref,
+        source,
+        git_ref_type=ref_type,
+        ssh_key_path=app.deploy_key_path,
+    )
     app.deployed_revision = checkout.revision.sha
     image = f"srv-panel/railpack-app:{app.id}-{deployment.id}"
+
+    root_dir = (app.root_directory or "").strip().replace("\\", "/").strip("/")
+    build_root = (source / root_dir).resolve() if root_dir else source.resolve()
+    try:
+        build_root.relative_to(source.resolve())
+    except ValueError:
+        raise RuntimeError("Root directory is outside repository.")
+    if not build_root.exists() or not build_root.is_dir():
+        raise RuntimeError(f"Root directory '{root_dir}' does not exist in repository.")
+
     if app.build_mode == "dockerfile":
         # Route Dockerfile builds through the panel-owned constrained Buildx builder.
         builder = config.BUILDX_BUILDER_NAME
+        dockerfile_rel = (app.dockerfile_path or "Dockerfile").strip().replace("\\", "/").lstrip("/")
+        dockerfile_file = (build_root / dockerfile_rel).resolve()
+        try:
+            dockerfile_file.relative_to(build_root)
+        except ValueError:
+            raise RuntimeError("Dockerfile path is outside root directory.")
         command = [
             "docker", "buildx", "build",
             "--builder", builder,
             "--tag", image,
             "--load",  # export result to local Docker images
-            str(source),
+            "-f", str(dockerfile_file),
         ]
+        if app.build_args:
+            try:
+                args_obj = json.loads(app.build_args)
+                if isinstance(args_obj, dict):
+                    for k, v in args_obj.items():
+                        command.extend(["--build-arg", f"{k}={v}"])
+            except Exception:
+                pass
+        command.append(str(build_root))
     else:
         # Railpack — BUILDKIT_HOST is set inside build_process.run() already
-        command = ["railpack", "build", "--name", image, str(source)]
+        command = ["railpack", "build", "--name", image, str(build_root)]
     progress.append_log(deployment, "build", "Building application image.")
     result = build_process.run(deployment.id, command, config.CONTAINER_APP_BUILD_TIMEOUT)
     deployment.output = (deployment.output + result.stdout + result.stderr)[-80_000:]
@@ -297,11 +341,39 @@ def _replace_container(app: ContainerApp, image: str) -> None:
         "--env-file", app.env_path,
     ]
     command.extend(["--add-host", "host.docker.internal:host-gateway"])
-    if app.data_volume and app.data_mount_path:
+    if getattr(app, "storage_mounts", None) and isinstance(app.storage_mounts, str):
+        try:
+            mounts = json.loads(app.storage_mounts)
+        except Exception as exc:
+            raise RuntimeError(f"Invalid storage mounts configuration: {exc}") from exc
+        if not isinstance(mounts, list):
+            raise RuntimeError("Storage mounts configuration must be a list.")
+        for mount in mounts:
+            if not isinstance(mount, dict):
+                continue
+            vol = mount.get("volume")
+            path = mount.get("mount_path")
+            if not vol or not path:
+                raise RuntimeError(f"Storage mount is missing volume or path: {mount}")
+            _require(
+                apps._run([
+                    "docker", "volume", "create",
+                    "--label", "srv-panel.plugin=railpack_apps",
+                    "--label", f"srv-panel.app-id={app.id}",
+                    vol,
+                ], timeout=30),
+                f"Could not create storage volume {vol}.",
+            )
+            command.extend(["-v", f"{vol}:{path}"])
+    elif getattr(app, "data_volume", None) and getattr(app, "data_mount_path", None) and isinstance(app.data_volume, str) and isinstance(app.data_mount_path, str):
         command.extend(["-v", f"{app.data_volume}:{app.data_mount_path}"])
-    if app.preset == "wordpress" and app.wordpress_content_volume:
+    if getattr(app, "preset", None) == "wordpress" and getattr(app, "wordpress_content_volume", None) and isinstance(app.wordpress_content_volume, str):
         command.extend(["-v", f"{app.wordpress_content_volume}:/var/www/html/wp-content"])
-    _require(apps._run([*command, image], timeout=60), "Container did not start.")
+
+    command.append(image)
+    if getattr(app, "custom_start_command", None) and isinstance(app.custom_start_command, str) and app.custom_start_command.strip():
+        command.extend(shlex.split(app.custom_start_command.strip()))
+    _require(apps._run(command, timeout=60), "Container did not start.")
 
 
 def _ensure_network(app: ContainerApp) -> None:

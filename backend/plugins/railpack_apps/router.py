@@ -149,6 +149,61 @@ async def deploy(app_id: int, db: AsyncSession = Depends(get_db)):
     return RedirectResponse(f"/plugins/railpack_apps/{app.id}?deployment={deployment.id}", status_code=303)
 
 
+@router.post("/{app_id}/settings")
+async def update_settings(
+    app_id: int,
+    request: Request,
+    git_ref: str | None = Form(None),
+    git_ref_type: str | None = Form(None),
+    root_directory: str | None = Form(None),
+    dockerfile_path: str | None = Form(None),
+    build_args: str | None = Form(None),
+    custom_start_command: str | None = Form(None),
+    health_path: str | None = Form(None),
+    startup_timeout_seconds: int | None = Form(None),
+    storage_mounts: str | None = Form(None),
+    db: AsyncSession = Depends(get_db),
+):
+    app = await _app(db, app_id)
+    active = await container_app_deployment_service.active_deployment(db, app.id)
+    if active:
+        raise HTTPException(409, "Settings cannot be updated while a deployment is running or queued.")
+
+    from dependencies.git import repository_service
+    from services import container_app_service
+
+    if git_ref is not None and app.source_type == "git":
+        ref_type = git_ref_type or app.git_ref_type or "branch"
+        repository_service.validate_source(app.repository_url or "", git_ref.strip(), ref_type)
+        app.git_ref = git_ref.strip()
+        app.branch = app.git_ref
+        app.git_ref_type = ref_type
+    if root_directory is not None:
+        app.root_directory = container_app_service.validate_root_directory(root_directory)
+    if dockerfile_path is not None:
+        app.dockerfile_path = container_app_service.validate_dockerfile_path(dockerfile_path)
+    if build_args is not None:
+        app.build_args = container_app_service.parse_build_args(build_args)
+    if custom_start_command is not None:
+        app.custom_start_command = container_app_service.validate_custom_start_command(custom_start_command)
+    if health_path is not None:
+        app.health_path = container_app_service.validate_health_path(health_path)
+    if startup_timeout_seconds is not None:
+        app.startup_timeout_seconds = container_app_service.validate_startup_timeout(startup_timeout_seconds)
+    if storage_mounts is not None:
+        new_mounts_json = container_app_service.parse_storage_mounts(app.id, storage_mounts)
+        app.storage_mounts = new_mounts_json
+
+    await db.commit()
+
+    if "application/json" in request.headers.get("accept", ""):
+        return JSONResponse({"status": "ok", "app_id": app.id})
+    return RedirectResponse(
+        f"/plugins/railpack_apps/{app.id}?{urlencode({'notice': 'Settings updated. Redeploy to apply storage changes; removed storage data is preserved until DELETE ALL.'})}",
+        status_code=303,
+    )
+
+
 @router.post("/{app_id}/uninstall")
 async def uninstall(
     app_id: int, confirmation: str = Form(""),
@@ -167,7 +222,7 @@ async def uninstall(
     if confirmation != "DELETE ALL":
         raise HTTPException(400, "Type DELETE ALL to confirm this removal.")
     delete_database_ids = list(managed_ids - set(keep_database_ids))
-    delete_app_volume = bool(app.data_volume) and not keep_app_volume
+    delete_app_volume = (bool(app.data_volume) or bool(app.storage_mounts)) and not keep_app_volume
     delete_wordpress_files = bool(app.wordpress_content_volume) and not keep_wordpress_files
     delete_saved_backups = not keep_saved_backups
     app.status, app.last_error = "deleting", None

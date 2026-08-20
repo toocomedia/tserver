@@ -1,4 +1,4 @@
-import { addEnvironmentRow, csrfHeaders, environmentValues, fetchJson, inspectRegistryImage, renderDeployment, renderInspection, setHidden, setText, initDropdowns } from './railpack-app-create-ui.js';
+import { addEnvironmentRow, addStorageMountRow, storageMountValues, csrfHeaders, environmentValues, fetchJson, inspectRegistryImage, renderDeployment, renderInspection, setHidden, setText, initDropdowns } from './railpack-app-create-ui.js';
 const form = document.querySelector('[data-railpack-builder]');
 if (form) {
   const state = { step: 1, unlocked: 1, appId: null, deploymentId: null };
@@ -46,6 +46,7 @@ if (form) {
     if (wordpress) query('#internal_port').value = '80';
     wordpressDatabaseState(wordpress);
     domainState();
+    updateRefType();
     renderStep(1);
   }
   function domainState() {
@@ -69,7 +70,6 @@ if (form) {
     const row = query('[data-kind="mariadb"]');
     if (required) {
       row.querySelector('[data-database-enabled]').checked = true;
-      // provider may be in the external options panel
       const providerEl = _dbField(row, '[data-database-provider]');
       if (providerEl) providerEl.value = 'docker';
     }
@@ -77,7 +77,6 @@ if (form) {
     attachmentState(row);
   }
   function _dbField(row, selector) {
-    // First check inside the card row itself, then in the sibling options panel
     const inRow = row.querySelector(selector);
     if (inRow) return inRow;
     const kind = row.dataset.kind;
@@ -116,8 +115,40 @@ if (form) {
     setText(reqEl, required ? 'Required by WordPress. The private MariaDB service is created with this app.' : '');
   }
 
+  function updateRefType() {
+    const refTypeInput = query('[data-git-ref-type]');
+    const branchGroup = query('[data-git-branch-group]');
+    const customRefGroup = query('[data-git-custom-ref-group]');
+    const customRefLabel = query('[data-git-custom-ref-label]');
+    const customRefInput = query('[data-git-custom-ref]');
+    const gitRefHidden = query('[data-git-ref]');
+    const type = refTypeInput?.value || 'branch';
+    const isBranch = type === 'branch';
+    if (branchGroup) setHidden(branchGroup, !isBranch);
+    if (customRefGroup) setHidden(customRefGroup, isBranch);
+    if (customRefLabel) setText(customRefLabel, type === 'tag' ? 'Tag Name' : 'Commit SHA');
+    if (isBranch) {
+      if (gitRefHidden) gitRefHidden.value = query('#branch')?.value || 'main';
+    } else {
+      if (gitRefHidden) gitRefHidden.value = customRefInput?.value || '';
+    }
+  }
+
+  function updateBuildModeFields() {
+    const buildModeInput = query('#build_mode');
+    const dockerfilePathGroup = query('[data-dockerfile-path-group]');
+    const buildArgsGroup = query('[data-build-args-group]');
+    const mode = buildModeInput?.value || 'railpack';
+    const isDockerfile = mode === 'dockerfile';
+    if (dockerfilePathGroup) setHidden(dockerfilePathGroup, !isDockerfile);
+    if (buildArgsGroup) setHidden(buildArgsGroup, !isDockerfile);
+  }
+
   function applyInspection(data) {
-    if (['railpack', 'dockerfile'].includes(data.build_mode)) query('#build_mode').value = data.build_mode;
+    if (['railpack', 'dockerfile'].includes(data.build_mode)) {
+      query('#build_mode').value = data.build_mode;
+      updateBuildModeFields();
+    }
     const port = Number(data.internal_port);
     if (Number.isInteger(port) && port > 0 && port <= 65535) query('#internal_port').value = port;
     (data.database_types || []).forEach((kind) => {
@@ -127,6 +158,7 @@ if (form) {
     });
     setText(query('[data-database-detection]'), data.database_types?.length ? `Detected: ${data.database_types.join(', ')}. Review the selected services.` : 'No database detected. You can still choose services manually.');
     renderInspection(form, data);
+    updateBuildModeFields();
   }
   async function inspectSource() {
     const domainInput = query('[data-domain-select]');
@@ -153,6 +185,7 @@ if (form) {
       const body = new FormData();
       body.set('repository_url', query('[data-repository-url]').value);
       body.set('branch', query('[data-branch]').value || 'main');
+      body.set('draft_key_id', query('[data-draft-key-id]')?.value || '');
       const data = await fetchJson('/plugins/railpack_apps/inspect', { method: 'POST', headers: csrfHeaders(), body });
       query('[data-repository-url]').value = data.repository_url;
       query('[data-branch]').value = data.branch;
@@ -200,8 +233,10 @@ if (form) {
   function submitValues() {
     const error = query('[data-environment-error]');
     try {
+      updateRefType();
       query('[data-environment-values]').value = JSON.stringify(environmentValues(form));
       query('[data-database-attachments]').value = JSON.stringify(attachments());
+      query('[data-storage-mounts]').value = JSON.stringify(storageMountValues(form));
       setHidden(error, true);
       return true;
     } catch (reason) { setText(error, reason.message); setHidden(error, false); return false; }
@@ -268,8 +303,49 @@ if (form) {
 
   query('[data-source-type]').addEventListener('change', sourceState);
   query('[data-domain-select]').addEventListener('change', () => { domainState(); });
+  query('[data-git-ref-type]')?.addEventListener('change', updateRefType);
+  query('[data-git-custom-ref]')?.addEventListener('input', updateRefType);
+  query('#build_mode')?.addEventListener('change', updateBuildModeFields);
 
   query('[data-add-environment]').addEventListener('click', () => addEnvironmentRow(form));
+  query('[data-add-storage-mount]')?.addEventListener('click', () => addStorageMountRow(form));
+
+  const generateDeployKeyBtn = query('[data-generate-deploy-key]');
+  const deployKeyDisplay = query('[data-deploy-key-display]');
+  const deployKeyPublicText = query('[data-deploy-key-public]');
+  const draftKeyIdInput = query('[data-draft-key-id]');
+  const copyDeployKeyBtn = query('[data-copy-deploy-key]');
+
+  if (generateDeployKeyBtn) {
+    generateDeployKeyBtn.addEventListener('click', async () => {
+      generateDeployKeyBtn.disabled = true;
+      generateDeployKeyBtn.textContent = 'Generating...';
+      try {
+        const data = await fetchJson('/plugins/railpack_apps/draft-deploy-key', {
+          method: 'POST',
+          headers: csrfHeaders(),
+        });
+        if (draftKeyIdInput) draftKeyIdInput.value = data.draft_id;
+        if (deployKeyPublicText) deployKeyPublicText.value = data.public_key;
+        if (deployKeyDisplay) setHidden(deployKeyDisplay, false);
+        generateDeployKeyBtn.textContent = 'Regenerate Key';
+      } catch (err) {
+        alert('Failed to generate deploy key: ' + err.message);
+        generateDeployKeyBtn.textContent = 'Generate Deploy Key';
+      } finally {
+        generateDeployKeyBtn.disabled = false;
+      }
+    });
+  }
+
+  if (copyDeployKeyBtn && deployKeyPublicText) {
+    copyDeployKeyBtn.addEventListener('click', () => {
+      navigator.clipboard.writeText(deployKeyPublicText.value);
+      copyDeployKeyBtn.textContent = 'Copied!';
+      setTimeout(() => { copyDeployKeyBtn.textContent = 'Copy Key'; }, 2000);
+    });
+  }
+
   form.querySelectorAll('[data-database-row]').forEach((row) => {
     row.querySelector('[data-database-enabled]').addEventListener('change', () => attachmentState(row));
     const providerEl = _dbField(row, '[data-database-provider]');
@@ -292,6 +368,7 @@ if (form) {
       try {
         const body = new FormData();
         body.set('repository_url', repoInput.value);
+        body.set('draft_key_id', query('[data-draft-key-id]')?.value || '');
         const data = await fetchJson('/plugins/railpack_apps/inspect-branches', { method: 'POST', headers: csrfHeaders(), body });
         if (branchMenu) {
             branchMenu.innerHTML = '';

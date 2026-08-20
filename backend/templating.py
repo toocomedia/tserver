@@ -198,6 +198,18 @@ templates.env.globals["get_dir"] = get_dir
 templates.env.globals["is_rtl"] = is_rtl
 templates.env.globals["get_available_languages"] = i18n_service.get_available_languages
 
+import json as _json
+
+def _from_json_filter(value: str | None):
+    if not value:
+        return []
+    try:
+        return _json.loads(value)
+    except Exception:
+        return []
+
+templates.env.filters["from_json"] = _from_json_filter
+
 import os
 
 def get_app_version():

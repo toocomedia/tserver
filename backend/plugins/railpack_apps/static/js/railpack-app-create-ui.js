@@ -38,6 +38,63 @@ export function addEnvironmentRow(form, key = '', value = '') {
   list.append(row);
 }
 
+export function addStorageMountRow(form, label = '', mountPath = '') {
+  const list = form.querySelector('[data-storage-mounts-list]');
+  const noMountsHint = form.querySelector('[data-no-storage-mounts]');
+  if (noMountsHint) noMountsHint.hidden = true;
+
+  const row = document.createElement('div');
+  row.className = 'apps-engine-source-grid';
+  row.style.gridTemplateColumns = '1fr 1.5fr auto';
+  row.style.gap = '8px';
+  row.style.alignItems = 'center';
+  row.dataset.storageMountRow = '';
+
+  const labelInput = document.createElement('input');
+  labelInput.className = 'input-optic input-optic--code';
+  labelInput.placeholder = 'Label (e.g. uploads)';
+  labelInput.value = label;
+  labelInput.dataset.mountLabel = '';
+
+  const pathInput = document.createElement('input');
+  pathInput.className = 'input-optic input-optic--code';
+  pathInput.placeholder = 'Path (e.g. /app/uploads)';
+  pathInput.value = mountPath;
+  pathInput.dataset.mountPath = '';
+
+  const removeBtn = document.createElement('button');
+  removeBtn.className = 'btn btn--secondary btn--sm';
+  removeBtn.type = 'button';
+  removeBtn.textContent = 'Remove';
+  removeBtn.addEventListener('click', () => {
+    row.remove();
+    if (list.children.length === 0 && noMountsHint) {
+      noMountsHint.hidden = false;
+    }
+  });
+
+  row.append(labelInput, pathInput, removeBtn);
+  list.append(row);
+}
+
+export function storageMountValues(form) {
+  const mounts = [];
+  const validLabel = /^[a-z0-9_-]{1,32}$/;
+  form.querySelectorAll('[data-storage-mount-row]').forEach((row) => {
+    const label = row.querySelector('[data-mount-label]').value.trim().toLowerCase();
+    const mountPath = row.querySelector('[data-mount-path]').value.trim();
+    if (!label && !mountPath) return;
+    if (!validLabel.test(label)) {
+      throw new Error(`Mount label "${label}" must be 1-32 lowercase characters, numbers, dashes, or underscores.`);
+    }
+    if (!mountPath.startsWith('/') || mountPath.includes('..') || mountPath.length > 512) {
+      throw new Error(`Mount path "${mountPath}" must be a valid absolute container path.`);
+    }
+    mounts.push({ label, mount_path: mountPath });
+  });
+  return mounts;
+}
+
 export function environmentValues(form) {
   const values = {};
   const validKey = /^[A-Z_][A-Z0-9_]{0,127}$/;

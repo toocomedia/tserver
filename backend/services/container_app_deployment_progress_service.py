@@ -35,18 +35,25 @@ def runtime_error_summary(app: ContainerApp) -> str:
     return "App did not start its private HTTP service. Check runtime logs."
 
 
-async def wait_for_http(port: int) -> None:
-    for _ in range(20):
+async def wait_for_http(port: int, path: str = "/", timeout_seconds: int = 45) -> None:
+    health_path = path if (path and path.startswith("/")) else f"/{path or ''}"
+    request_data = f"GET {health_path} HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n".encode("utf-8")
+    deadline = asyncio.get_event_loop().time() + max(10, timeout_seconds)
+    while asyncio.get_event_loop().time() < deadline:
         try:
-            reader, writer = await asyncio.wait_for(asyncio.open_connection("127.0.0.1", port), timeout=1)
-            writer.write(b"GET / HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n")
+            reader, writer = await asyncio.wait_for(asyncio.open_connection("127.0.0.1", port), timeout=1.5)
+            writer.write(request_data)
             await writer.drain()
             line = await asyncio.wait_for(reader.readline(), timeout=3)
             writer.close()
             await writer.wait_closed()
-            if line.startswith(b"HTTP/") and int(line.split()[1]) < 500:
-                return
+            if line.startswith(b"HTTP/"):
+                parts = line.split()
+                if len(parts) >= 2:
+                    code = int(parts[1])
+                    if 200 <= code < 400:
+                        return
         except (OSError, asyncio.TimeoutError, ValueError, IndexError):
             pass
         await asyncio.sleep(1)
-    raise RuntimeError("Container did not return a healthy HTTP response on its private port.")
+    raise RuntimeError(f"Container did not return a healthy HTTP response on {health_path} within {timeout_seconds}s.")

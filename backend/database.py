@@ -250,11 +250,40 @@ def _migrate_sync(sync_conn) -> None:
             "wordpress_admin_user": "VARCHAR(64)",
             "wordpress_admin_email": "VARCHAR(255)",
             "wordpress_pending_secret_path": "VARCHAR(512)",
+            "git_ref": "VARCHAR(128)",
+            "git_ref_type": "VARCHAR(16) DEFAULT 'branch' NOT NULL",
+            "deploy_key_path": "VARCHAR(512)",
+            "deploy_key_public": "TEXT",
+            "root_directory": "VARCHAR(255) DEFAULT ''",
+            "dockerfile_path": "VARCHAR(255) DEFAULT 'Dockerfile'",
+            "build_args": "TEXT",
+            "custom_start_command": "TEXT",
+            "storage_mounts": "TEXT",
+            "health_path": "VARCHAR(255) DEFAULT '/' NOT NULL",
+            "startup_timeout_seconds": "INTEGER DEFAULT 45 NOT NULL",
         }
         for col, ddl in container_columns.items():
             if col not in cols:
                 logger.info("Migrating container_apps: add %s", col)
                 sync_conn.execute(text(f"ALTER TABLE container_apps ADD COLUMN {col} {ddl}"))
+
+        import json as _json
+        rows = sync_conn.execute(text(
+            "SELECT id, branch, git_ref, data_volume, data_mount_path, storage_mounts FROM container_apps"
+        )).mappings().all()
+        for row in rows:
+            updates = {}
+            if row["git_ref"] is None and row["branch"]:
+                updates["git_ref"] = row["branch"]
+            if not row["storage_mounts"] and row["data_volume"] and row["data_mount_path"]:
+                updates["storage_mounts"] = _json.dumps([{
+                    "label": "data",
+                    "volume": row["data_volume"],
+                    "mount_path": row["data_mount_path"],
+                }])
+            if updates:
+                set_clause = ", ".join(f"{k} = :{k}" for k in updates)
+                sync_conn.execute(text(f"UPDATE container_apps SET {set_clause} WHERE id = :id"), {"id": row["id"], **updates})
 
     if "container_apps" in tables and "container_app_databases" in tables:
         existing = sync_conn.execute(text("SELECT COUNT(*) FROM container_app_databases")).scalar() or 0

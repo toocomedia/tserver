@@ -1,0 +1,15 @@
+<section class="master-card" style="margin-top: 20px; border-color: rgba(255,255,255,0.08);">
+  <div class="master-card__header" style="display: flex; justify-content: space-between; align-items: center;">
+    <div>
+      <span style="font-size: 15px; font-weight: 600; color: var(--text-base);">Persistent Storage Mounts</span>
+      <span style="font-size: 12px; color: var(--color-muted); display: block; margin-top: 2px;">Attach dedicated Docker volumes to directories inside your container.</span>
+    </div>
+    <button type="button" class="btn-optic btn-optic--sm" data-add-storage-mount>Add Mount</button>
+  </div>
+  <div class="master-card__body" style="padding: 16px;">
+    <div data-storage-mounts-list style="display: flex; flex-direction: column; gap: 10px;">
+      <!-- Mount rows populated dynamically -->
+    </div>
+    <p class="form-hint" data-no-storage-mounts style="margin: 0; font-size: 12px;">No persistent storage mounts configured. Files written outside mounted volumes are ephemeral.</p>
+  </div>
+</section>

@@ -37,5 +37,42 @@
         <div class="inspection-value-optic accent" data-inspection-databases></div>
       </div>
     </div>
+
+    <!-- Advanced Build & Runtime Options -->
+    <div style="margin-top: 24px; border-top: 1px solid var(--border-color, rgba(255,255,255,0.08)); padding-top: 20px;">
+      <span class="section-label" style="margin-bottom: 12px; display: block;">Build & Runtime Settings</span>
+      <div class="apps-engine-source-grid">
+        <div class="form-group">
+          <span class="section-label">Root Directory</span>
+          <input class="input-optic input-optic--code" id="root_directory" name="root_directory" placeholder="./" data-root-directory>
+          <span class="form-hint" style="font-size: 11px; margin-top: 4px;">Relative path inside the repo containing your app or package.</span>
+        </div>
+        <div class="form-group" data-dockerfile-path-group hidden>
+          <span class="section-label">Dockerfile Path</span>
+          <input class="input-optic input-optic--code" id="dockerfile_path" name="dockerfile_path" value="Dockerfile" placeholder="Dockerfile" data-dockerfile-path>
+          <span class="form-hint" style="font-size: 11px; margin-top: 4px;">Relative to the Root Directory.</span>
+        </div>
+        <div class="form-group" style="grid-column: span 2;" data-build-args-group hidden>
+          <span class="section-label">Build Arguments (Dockerfile Mode)</span>
+          <textarea class="input-optic input-optic--code" id="build_args" name="build_args" rows="2" placeholder='{"NODE_ENV": "production", "PUBLIC_API_URL": "https://api.example.com"}' style="resize: vertical; font-size: 12px;" data-build-args></textarea>
+          <span class="form-hint" style="font-size: 11px; margin-top: 4px; color: var(--color-muted);">JSON object of --build-arg values. Build arguments are stored in image layers; never pass private tokens or secrets here. Use Environment Variables for secrets.</span>
+        </div>
+        <div class="form-group" style="grid-column: span 2;">
+          <span class="section-label">Custom Start Command (Container CMD Override)</span>
+          <input class="input-optic input-optic--code" id="custom_start_command" name="custom_start_command" placeholder="e.g. gunicorn -w 4 -b 0.0.0.0:3000 main:app" data-custom-start-command>
+          <span class="form-hint" style="font-size: 11px; margin-top: 4px;">Optional command tokens to override the container image's default CMD.</span>
+        </div>
+        <div class="form-group">
+          <span class="section-label">Health Check Path</span>
+          <input class="input-optic input-optic--code" id="health_path" name="health_path" value="/" placeholder="/" required data-health-path>
+          <span class="form-hint" style="font-size: 11px; margin-top: 4px;">HTTP path probed on 127.0.0.1 after startup (200-399 = healthy).</span>
+        </div>
+        <div class="form-group">
+          <span class="section-label">Startup Timeout (Seconds)</span>
+          <input class="input-optic input-optic--code" id="startup_timeout_seconds" name="startup_timeout_seconds" type="number" min="10" max="300" value="45" required data-startup-timeout>
+          <span class="form-hint" style="font-size: 11px; margin-top: 4px;">Maximum wait time before rolling back or failing (10-300s).</span>
+        </div>
+      </div>
+    </div>
   </div>
 </section>
