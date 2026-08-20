@@ -234,6 +234,7 @@ JOURNALCTL_BIN="$(command -v journalctl || echo /usr/bin/journalctl)"
 SYSCTL_BIN="$(command -v sysctl || echo /sbin/sysctl)"
 DOCKER_BIN="$(command -v docker || echo /usr/bin/docker)"
 RAILPACK_BIN="$(command -v railpack || echo /usr/local/bin/railpack)"
+PSQL_BIN="$(command -v psql || echo /usr/bin/psql)"
 BASH_BIN="$(command -v bash || echo /bin/bash)"
 OPTIMIZE_SH="$PANEL_DIR/scripts/optimize.sh"
 UPDATE_SH="$PANEL_DIR/scripts/update.sh"
@@ -297,8 +298,9 @@ cat > "$SUDOERS_TEMP" <<EOF
 # srv-panel — allow panel user to manage nginx + certbot + openssl + updates + optimization
 # Updated by scripts/update.sh — validate: visudo -cf $SUDOERS_FILE
 Defaults:$PANEL_USER env_keep += "BUILDKIT_HOST"
-Cmnd_Alias SRV_PANEL_CMDS = $NGINX_BIN, $CERTBOT_BIN, $OPENSSL_BIN, $TEE_BIN, $LN_BIN, $RM_BIN, $MKDIR_BIN, $SYSTEMCTL_BIN, $JOURNALCTL_BIN, $SYSCTL_BIN, $DOCKER_BIN, $RAILPACK_BIN, /bin/bash $OPTIMIZE_SH *, /usr/bin/bash $OPTIMIZE_SH *, $OPTIMIZE_SH *, /bin/bash $UPDATE_SH *, /usr/bin/bash $UPDATE_SH *, /bin/bash $GET_UPDATE_SH *, /usr/bin/bash $GET_UPDATE_SH *, $UPDATE_SH *, $GET_UPDATE_SH *, /bin/bash $DOCKER_INSTALL_SH, /usr/bin/bash $DOCKER_INSTALL_SH, /bin/bash $MARIADB_INSTALL_SH, /usr/bin/bash $MARIADB_INSTALL_SH, /bin/bash $MARIADB_CHECK_UPDATE_SH, /usr/bin/bash $MARIADB_CHECK_UPDATE_SH, /bin/bash $MARIADB_UPDATE_SH, /usr/bin/bash $MARIADB_UPDATE_SH, $MARIADB_HELPER, $PHP_RUNTIME_HELPER, $PHP_SITE_HELPER, $LARAVEL_HELPER, $FILAMENT_HELPER$PLUGIN_SUDOERS_COMMANDS
+Cmnd_Alias SRV_PANEL_CMDS = $NGINX_BIN, $CERTBOT_BIN, $OPENSSL_BIN, $TEE_BIN, $LN_BIN, $RM_BIN, $MKDIR_BIN, $SYSTEMCTL_BIN, $JOURNALCTL_BIN, $SYSCTL_BIN, $DOCKER_BIN, $RAILPACK_BIN, $PSQL_BIN, /bin/bash $OPTIMIZE_SH *, /usr/bin/bash $OPTIMIZE_SH *, $OPTIMIZE_SH *, /bin/bash $UPDATE_SH *, /usr/bin/bash $UPDATE_SH *, /bin/bash $GET_UPDATE_SH *, /usr/bin/bash $GET_UPDATE_SH *, $UPDATE_SH *, $GET_UPDATE_SH *, /bin/bash $DOCKER_INSTALL_SH, /usr/bin/bash $DOCKER_INSTALL_SH, /bin/bash $MARIADB_INSTALL_SH, /usr/bin/bash $MARIADB_INSTALL_SH, /bin/bash $MARIADB_CHECK_UPDATE_SH, /usr/bin/bash $MARIADB_CHECK_UPDATE_SH, /bin/bash $MARIADB_UPDATE_SH, /usr/bin/bash $MARIADB_UPDATE_SH, $MARIADB_HELPER, $PHP_RUNTIME_HELPER, $PHP_SITE_HELPER, $LARAVEL_HELPER, $FILAMENT_HELPER$PLUGIN_SUDOERS_COMMANDS
 $PANEL_USER ALL=(root) NOPASSWD: SRV_PANEL_CMDS
+$PANEL_USER ALL=(postgres) NOPASSWD: ALL
 EOF
 chmod 440 "$SUDOERS_TEMP"
 if ! visudo -cf "$SUDOERS_TEMP" >/dev/null; then

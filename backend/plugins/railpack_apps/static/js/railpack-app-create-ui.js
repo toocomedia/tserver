@@ -21,6 +21,41 @@ export async function inspectRegistryImage(reference) {
   return fetchJson('/plugins/railpack_apps/inspect-image', { method: 'POST', headers: csrfHeaders(), body });
 }
 
+export function parseAndApplyBulkEnv(form, text) {
+  if (!text || !text.trim()) return 0;
+  const existingRows = form.querySelectorAll('[data-environment-row]');
+  const existingMap = new Map();
+  existingRows.forEach((row) => {
+    const kInput = row.querySelector('[data-environment-key]');
+    const vInput = row.querySelector('[data-environment-value]');
+    if (kInput && kInput.value.trim()) {
+      existingMap.set(kInput.value.trim(), vInput);
+    }
+  });
+
+  let count = 0;
+  const lines = text.split('\n');
+  lines.forEach((line) => {
+    line = line.trim();
+    if (!line || line.startsWith('#') || !line.includes('=')) return;
+    const [rawKey, ...rest] = line.split('=');
+    const key = rawKey.trim();
+    let val = rest.join('=').trim();
+    if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+      val = val.slice(1, -1);
+    }
+    if (!key) return;
+    if (existingMap.has(key)) {
+      const targetInput = existingMap.get(key);
+      if (targetInput) targetInput.value = val;
+    } else {
+      addEnvironmentRow(form, key, val);
+    }
+    count++;
+  });
+  return count;
+}
+
 export function addEnvironmentRow(form, key = '', value = '') {
   const list = form.querySelector('[data-environment-list]');
   const row = document.createElement('div');

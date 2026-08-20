@@ -18,4 +18,8 @@ if ! docker inspect --format '{{.State.Running}}' srv-panel-buildkit 2>/dev/null
   docker run -d --name srv-panel-buildkit --restart unless-stopped --privileged \
     --label 'srv-panel.engine=railpack-buildkit' moby/buildkit:buildx-stable-1 >/dev/null
 fi
+if ! docker buildx inspect srv-panel-builder >/dev/null 2>&1; then
+  docker buildx create --name srv-panel-builder --driver docker-container >/dev/null 2>&1 || true
+fi
 railpack --version
+

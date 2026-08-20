@@ -238,6 +238,37 @@ async def _restore_previous(
         return False
 
 
+def _ensure_buildx_builder(builder: str) -> str:
+    if not builder:
+        return ""
+    try:
+        res = apps._run(["docker", "buildx", "inspect", builder], timeout=10)
+        if res.returncode != 0:
+            apps._run(["docker", "buildx", "create", "--name", builder, "--driver", "docker-container"], timeout=15)
+    except Exception:
+        pass
+    return builder
+
+
+def _read_app_env(app: ContainerApp) -> dict[str, str]:
+    if not getattr(app, "env_path", None):
+        return {}
+    path = Path(app.env_path)
+    if not path.is_file():
+        return {}
+    env: dict[str, str] = {}
+    try:
+        for line in path.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                k, v = line.split("=", 1)
+                if k.strip():
+                    env[k.strip()] = v
+    except Exception:
+        pass
+    return env
+
+
 def _build_or_pull(app: ContainerApp, deployment: ContainerAppDeployment) -> str:
     if app.source_type == "image":
         progress.append_log(deployment, "pull", f"Pulling {app.image_reference}.")
@@ -251,31 +282,31 @@ def _build_or_pull(app: ContainerApp, deployment: ContainerAppDeployment) -> str
     if source.exists():
         shutil.rmtree(source)
     progress.append_log(deployment, "source", "Cloning selected Git revision.")
-    ref = app.git_ref or app.branch or "main"
-    ref_type = app.git_ref_type or "branch"
+    ref = getattr(app, "git_ref", None) or getattr(app, "branch", None) or "main"
+    ref_type = getattr(app, "git_ref_type", None) or "branch"
     checkout = repository_service.clone(
-        app.repository_url or "",
+        getattr(app, "repository_url", None) or "",
         ref,
         source,
         git_ref_type=ref_type,
-        ssh_key_path=app.deploy_key_path,
+        ssh_key_path=getattr(app, "deploy_key_path", None),
     )
     app.deployed_revision = checkout.revision.sha
     image = f"srv-panel/railpack-app:{app.id}-{deployment.id}"
 
-    root_dir = (app.root_directory or "").strip().replace("\\", "/").strip("/")
+    root_dir = (getattr(app, "root_directory", None) or "").strip().replace("\\", "/").strip("/")
     build_root = (source / root_dir).resolve() if root_dir else source.resolve()
     try:
         build_root.relative_to(source.resolve())
     except ValueError:
         raise RuntimeError("Root directory is outside repository.")
-    if not build_root.exists() or not build_root.is_dir():
+    if root_dir and (not build_root.exists() or not build_root.is_dir()):
         raise RuntimeError(f"Root directory '{root_dir}' does not exist in repository.")
 
-    if app.build_mode == "dockerfile":
+    if getattr(app, "build_mode", None) == "dockerfile":
         # Route Dockerfile builds through the panel-owned constrained Buildx builder.
-        builder = config.BUILDX_BUILDER_NAME
-        dockerfile_rel = (app.dockerfile_path or "Dockerfile").strip().replace("\\", "/").lstrip("/")
+        builder = _ensure_buildx_builder(config.BUILDX_BUILDER_NAME)
+        dockerfile_rel = (getattr(app, "dockerfile_path", None) or "Dockerfile").strip().replace("\\", "/").lstrip("/")
         dockerfile_file = (build_root / dockerfile_rel).resolve()
         try:
             dockerfile_file.relative_to(build_root)
@@ -288,9 +319,10 @@ def _build_or_pull(app: ContainerApp, deployment: ContainerAppDeployment) -> str
             "--load",  # export result to local Docker images
             "-f", str(dockerfile_file),
         ]
-        if app.build_args:
+        build_args_val = getattr(app, "build_args", None)
+        if build_args_val:
             try:
-                args_obj = json.loads(app.build_args)
+                args_obj = json.loads(build_args_val)
                 if isinstance(args_obj, dict):
                     for k, v in args_obj.items():
                         command.extend(["--build-arg", f"{k}={v}"])
@@ -299,7 +331,11 @@ def _build_or_pull(app: ContainerApp, deployment: ContainerAppDeployment) -> str
         command.append(str(build_root))
     else:
         # Railpack — BUILDKIT_HOST is set inside build_process.run() already
-        command = ["railpack", "build", "--name", image, str(build_root)]
+        command = ["railpack", "build", "--name", image]
+        env_vars = _read_app_env(app)
+        for k, v in env_vars.items():
+            command.extend(["--env", f"{k}={v}"])
+        command.append(str(build_root))
     progress.append_log(deployment, "build", "Building application image.")
     result = build_process.run(deployment.id, command, config.CONTAINER_APP_BUILD_TIMEOUT)
     deployment.output = (deployment.output + result.stdout + result.stderr)[-80_000:]

@@ -38,12 +38,13 @@ def inspect_repository(repository_url: str, branch: str, *, ssh_key_path: str | 
         # Detect databases with confidence levels
         databases, suggestions = _databases_with_confidence(root, files, text)
 
-        build_mode = "dockerfile" if "Dockerfile" in files else "railpack"
+        build_mode = "railpack"
         return {
             "repository_url": checkout.repository_url,
             "branch": checkout.branch,
             "runtime": runtime,
             "build_mode": build_mode,
+            "has_dockerfile": "Dockerfile" in files,
             "internal_port": _port(text, runtime),
             "database_types": [d["kind"] for d in databases],
             "database_detected": bool(databases),

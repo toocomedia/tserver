@@ -50,7 +50,10 @@ def _run_psql(args: list[str], timeout: int = 10) -> str:
         logger.debug("[DEV] Mock psql call: %s", args)
         return ""
 
-    cmd = ["sudo", "-n", "-u", "postgres", "psql", "-t", "-A"] + args
+    if hasattr(os, "geteuid") and os.geteuid() == 0:
+        cmd = ["runuser", "-u", "postgres", "--", "psql", "-t", "-A"] + args
+    else:
+        cmd = ["sudo", "-n", "-u", "postgres", "psql", "-t", "-A"] + args
     logger.debug("psql cmd: %s", " ".join(cmd))
     try:
         res = subprocess.run(

@@ -1,7 +1,20 @@
 <section class="form-group apps-engine-environment">
   <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
     <span class="section-label" style="margin:0;">Custom Environment Variables</span>
-    <button class="btn-optic btn-optic--sm" type="button" data-add-environment>+ Add Variable</button>
+    <div style="display: flex; gap: 8px;">
+      <button class="btn-optic btn-optic--sm" type="button" data-toggle-bulk-env>Paste .env</button>
+      <button class="btn-optic btn-optic--sm" type="button" data-add-environment>+ Add Variable</button>
+    </div>
   </div>
+
+  <div data-bulk-env-panel hidden style="margin-bottom: 16px; padding: 12px; background: var(--bg-card, rgba(255,255,255,0.03)); border: 1px solid var(--border-color, rgba(255,255,255,0.08));">
+    <span class="form-hint" style="margin-bottom: 8px; display: block; font-size: 12px;">Paste KEY=VALUE lines (e.g. from your .env file):</span>
+    <textarea class="input-optic input-optic--code" data-bulk-env-input rows="4" placeholder="APP_SECRET=your-secret&#10;NODE_ENV=production&#10;CUSTOM_KEY=value" style="width: 100%; font-size: 12px; resize: vertical; box-sizing: border-box;"></textarea>
+    <div style="display: flex; gap: 8px; margin-top: 8px; justify-content: flex-end;">
+      <button class="btn-optic btn-optic--sm" type="button" data-cancel-bulk-env>Cancel</button>
+      <button class="btn-optic btn-optic--sm btn-optic--primary" type="button" data-apply-bulk-env>Apply to List</button>
+    </div>
+  </div>
+
   <div class="apps-engine-environment__list" data-environment-list></div>
 </section>

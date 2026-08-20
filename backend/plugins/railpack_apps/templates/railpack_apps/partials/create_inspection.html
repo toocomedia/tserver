@@ -40,8 +40,11 @@
 
     <!-- Advanced Build & Runtime Options -->
     <div style="margin-top: 24px; border-top: 1px solid var(--border-color, rgba(255,255,255,0.08)); padding-top: 20px;">
-      <span class="section-label" style="margin-bottom: 12px; display: block;">Build & Runtime Settings</span>
-      <div class="apps-engine-source-grid">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <span class="section-label" style="margin: 0;">Build & Runtime Settings</span>
+        <button class="btn-optic btn-optic--sm" type="button" data-toggle-advanced-build style="font-size: 12px; height: 28px; padding: 0 12px;">⚙ Advanced Options</button>
+      </div>
+      <div class="apps-engine-source-grid" data-advanced-build-panel hidden style="margin-top: 12px;">
         <div class="form-group">
           <span class="section-label">Root Directory</span>
           <input class="input-optic input-optic--code" id="root_directory" name="root_directory" placeholder="./" data-root-directory>

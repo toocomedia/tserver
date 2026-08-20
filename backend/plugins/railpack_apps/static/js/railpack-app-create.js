@@ -1,4 +1,4 @@
-import { addEnvironmentRow, addStorageMountRow, storageMountValues, csrfHeaders, environmentValues, fetchJson, inspectRegistryImage, renderDeployment, renderInspection, setHidden, setText, initDropdowns } from './railpack-app-create-ui.js';
+import { addEnvironmentRow, addStorageMountRow, storageMountValues, csrfHeaders, environmentValues, fetchJson, inspectRegistryImage, renderDeployment, renderInspection, setHidden, setText, initDropdowns, parseAndApplyBulkEnv } from './railpack-app-create-ui.js';
 const form = document.querySelector('[data-railpack-builder]');
 if (form) {
   const state = { step: 1, unlocked: 1, appId: null, deploymentId: null };
@@ -343,6 +343,42 @@ if (form) {
       navigator.clipboard.writeText(deployKeyPublicText.value);
       copyDeployKeyBtn.textContent = 'Copied!';
       setTimeout(() => { copyDeployKeyBtn.textContent = 'Copy Key'; }, 2000);
+    });
+  }
+
+  const toggleAdvBtn = query('[data-toggle-advanced-build]');
+  const advPanel = query('[data-advanced-build-panel]');
+  if (toggleAdvBtn && advPanel) {
+    toggleAdvBtn.addEventListener('click', () => {
+      const isHidden = advPanel.hidden;
+      advPanel.hidden = !isHidden;
+      toggleAdvBtn.textContent = isHidden ? '⚙ Hide Advanced Options' : '⚙ Advanced Options';
+    });
+  }
+
+  const toggleBulkBtn = query('[data-toggle-bulk-env]');
+  const bulkPanel = query('[data-bulk-env-panel]');
+  const bulkInput = query('[data-bulk-env-input]');
+  const applyBulkBtn = query('[data-apply-bulk-env]');
+  const cancelBulkBtn = query('[data-cancel-bulk-env]');
+
+  if (toggleBulkBtn && bulkPanel) {
+    toggleBulkBtn.addEventListener('click', () => {
+      bulkPanel.hidden = !bulkPanel.hidden;
+      if (!bulkPanel.hidden && bulkInput) bulkInput.focus();
+    });
+  }
+  if (cancelBulkBtn && bulkPanel) {
+    cancelBulkBtn.addEventListener('click', () => {
+      bulkPanel.hidden = true;
+      if (bulkInput) bulkInput.value = '';
+    });
+  }
+  if (applyBulkBtn && bulkPanel && bulkInput) {
+    applyBulkBtn.addEventListener('click', () => {
+      parseAndApplyBulkEnv(form, bulkInput.value);
+      bulkPanel.hidden = true;
+      bulkInput.value = '';
     });
   }
 
