@@ -35,7 +35,7 @@ def network_name(app_id: int) -> str:
 
 
 def _run(command: list[str], *, timeout: int) -> subprocess.CompletedProcess[str]:
-    prefix = ["sudo", "-E", "-n"] if hasattr(os, "geteuid") and os.geteuid() != 0 and config.PRIVILEGED_SUDO else []
+    prefix = ["sudo", "-n"] if hasattr(os, "geteuid") and os.geteuid() != 0 and config.PRIVILEGED_SUDO else []
     environment = os.environ.copy()
     if command and command[0] == "railpack":
         environment["BUILDKIT_HOST"] = "docker-container://srv-panel-buildkit"
@@ -44,7 +44,7 @@ def _run(command: list[str], *, timeout: int) -> subprocess.CompletedProcess[str
 
 def run_binary(command: list[str], *, timeout: int) -> subprocess.CompletedProcess[bytes]:
     """Run an owned Docker command without decoding file content as text."""
-    prefix = ["sudo", "-E", "-n"] if hasattr(os, "geteuid") and os.geteuid() != 0 and config.PRIVILEGED_SUDO else []
+    prefix = ["sudo", "-n"] if hasattr(os, "geteuid") and os.geteuid() != 0 and config.PRIVILEGED_SUDO else []
     return subprocess.run(
         [*prefix, *command], capture_output=True, timeout=timeout, check=False,
         shell=False,
