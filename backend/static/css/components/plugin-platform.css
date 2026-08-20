@@ -1,0 +1,17 @@
+.plugin-card--unverified {
+  background: color-mix(in srgb, var(--color-warn) 7%, var(--color-surface));
+}
+
+.plugin-card--unverified:hover {
+  background: color-mix(in srgb, var(--color-warn) 11%, var(--color-surface)) !important;
+}
+
+.plugin-platform-notice {
+  color: var(--color-warn);
+  font-weight: 600;
+}
+
+.plugin-platform-status {
+  color: var(--color-warn);
+  font-weight: 800;
+}

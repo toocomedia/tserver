@@ -20,7 +20,9 @@
     <div class="info-hero-row__main">
       <div class="info-hero-row__title-line">
         <h1 class="info-hero-row__title">{{ plugin.name }}</h1>
-        {% if plugin.effective_status == 'active' %}
+        {% if plugin.platform_unverified %}
+          <span class="badge badge--warning"><span class="badge-dot"></span> {{ _('unverified') }}</span>
+        {% elif plugin.effective_status == 'active' %}
           <span class="badge badge--healthy"><span class="badge-dot"></span> {{ _('active_1') }}</span>
         {% elif plugin.effective_status == 'paused' %}
           <span class="badge badge--warning"><span class="badge-dot"></span> {{ _('paused_missing_dependency') }}</span>
@@ -29,7 +31,7 @@
         {% elif plugin.effective_status == 'missing' %}
           <span class="badge badge--muted"><span class="badge-dot"></span> {{ _('not_installed') }}</span>
         {% elif plugin.effective_status == 'unsupported' %}
-          <span class="badge badge--danger"><span class="badge-dot"></span> UNSUPPORTED</span>
+          <span class="badge badge--danger"><span class="badge-dot"></span> {{ _('unsupported') }}</span>
         {% else %}
           <span class="badge badge--danger"><span class="badge-dot"></span> {{ plugin.effective_status | upper }}</span>
         {% endif %}
@@ -38,7 +40,21 @@
     </div>
 
     <div class="info-hero-row__actions">
-      {% if plugin.installed %}
+      {% if plugin.platform_unverified and not plugin.platform_approved %}
+        <form method="post" action="/plugins/api/install" style="display:inline-flex;" data-unverified-install data-confirmation="{{ plugin.platform_confirmation }}" data-prompt="{{ _('plugin_unverified_prompt') }}" data-error="{{ _('plugin_unverified_confirmation_error') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+          <input type="hidden" name="plugin_id" value="{{ plugin.id }}">
+          <input type="hidden" name="unverified_confirmation" value="">
+          <button type="submit" class="btn btn--warning btn--sm">{{ _('approve_unverified') if plugin.installed else _('install_unverified') }}</button>
+        </form>
+        {% if plugin.installed %}
+          <form method="post" action="/plugins/api/uninstall" style="display:inline-flex;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+            <input type="hidden" name="plugin_id" value="{{ plugin.id }}">
+            <button type="submit" class="btn btn--danger btn--sm" onclick="return confirm('Uninstall {{ plugin.name }}?')">{{ _('uninstall') }}</button>
+          </form>
+        {% endif %}
+      {% elif plugin.installed %}
         {% if plugin.route_prefix and plugin.effective_status == 'active' %}
           <a href="{{ plugin.route_prefix }}" class="btn btn--primary btn--sm">{{ _('manage') }} {{ plugin.name }}</a>
         {% endif %}
@@ -59,7 +75,8 @@
         <form method="post" action="/plugins/api/install" style="display:inline-flex;">
           <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
           <input type="hidden" name="plugin_id" value="{{ plugin.id }}">
-          <button type="submit" class="btn btn--primary btn--sm" {% if plugin.paused_by or not plugin.platform_supported %}disabled title="{{ plugin.platform_error or 'Install required system dependency first' }}" {% endif %}>{{ _('install') }} {{ plugin.name }}</button>
+          <input type="hidden" name="unverified_confirmation" value="">
+          <button type="submit" class="btn btn--primary btn--sm" {% if plugin.paused_by or not plugin.platform_supported %}disabled title="{{ plugin.platform_error or _('install_required_dependency_first') }}" {% endif %}>{{ _('install') }} {{ plugin.name }}</button>
         </form>
         {% if plugin.data_purge %}
         <form method="post" action="/plugins/api/purge-data" style="display:inline-flex;">
@@ -73,8 +90,10 @@
     </div>
   </header>
 
-  {% if plugin.platform_error %}
-  <div class="alert alert--warning" style="margin-bottom: 1rem;">{{ plugin.platform_error }}</div>
+  {% if plugin.platform_unverified %}
+  <div class="alert alert--warning" style="margin-bottom: 1rem;"><strong>{{ _('unverified') }}</strong> — {{ _('plugin_unverified_on') }} {{ plugin.platform_name }} ({{ plugin.platform_arch }}). {{ _('plugin_unverified_notice') }}</div>
+  {% elif plugin.platform_error %}
+  <div class="alert alert--danger" style="margin-bottom: 1rem;">{{ plugin.platform_error }}</div>
   {% endif %}
 
   <!-- DESCRIPTION -->
@@ -142,4 +161,8 @@
   {% endif %}
 
 </article>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/modules/plugin-install.js?v={{ APP_VERSION }}"></script>
 {% endblock %}

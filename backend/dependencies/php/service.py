@@ -86,8 +86,18 @@ class PHPDependencyService:
                 contents = source_file.read_text(encoding="utf-8", errors="ignore").lower()
             except OSError:
                 continue
-            if any(marker in contents for marker in EXTERNAL_REPOSITORY_MARKERS):
-                return True
+            if source_file.suffix == ".sources":
+                for stanza in re.split(r"\n\s*\n", contents):
+                    if not any(marker in stanza for marker in EXTERNAL_REPOSITORY_MARKERS):
+                        continue
+                    if not re.search(r"^enabled:\s*no\s*$", stanza, re.MULTILINE):
+                        return True
+                continue
+            for line in contents.splitlines():
+                if line.lstrip().startswith("#"):
+                    continue
+                if any(marker in line for marker in EXTERNAL_REPOSITORY_MARKERS):
+                    return True
         return False
 
     def _available_versions(self) -> list[str]:

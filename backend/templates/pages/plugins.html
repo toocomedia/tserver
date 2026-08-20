@@ -73,7 +73,9 @@
       </div>
       {% from "partials/resource_list_row.html" import render as render_resource_row with context %}
       {% for plugin in plugins %}
-        {% if plugin.effective_status == 'active' %}
+        {% if plugin.platform_unverified %}
+          {% set plugin_status_label = _('unverified') %}{% set plugin_status_tone = 'warning' %}
+        {% elif plugin.effective_status == 'active' %}
           {% set plugin_status_label = 'Active' %}{% set plugin_status_tone = 'success' %}
         {% elif plugin.effective_status in ['missing', 'invalid', 'unsupported', 'error', 'unhealthy'] %}
           {% set plugin_status_label = plugin.effective_status | replace('_', ' ') | title %}{% set plugin_status_tone = 'danger' %}
@@ -123,6 +125,7 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="/static/js/modules/plugin-install.js?v={{ APP_VERSION }}"></script>
 <script>
 // Hide the skeleton once the server-rendered DOM is ready.
 document.addEventListener('DOMContentLoaded', function() {

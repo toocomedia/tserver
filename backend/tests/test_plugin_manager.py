@@ -249,6 +249,14 @@ class PluginManagerTests(unittest.TestCase):
         with patch(
             "plugins.manager.platform_support_service.plugin_support",
             return_value=(False, reason),
+        ), patch(
+            "plugins.manager.platform_support_service.get",
+            return_value={
+                "supported": False,
+                "selector": "debian:11",
+                "pretty_name": "Debian 11",
+                "arch": "amd64",
+            },
         ):
             plugin = manager.get_plugin("ubuntu_only")
             self.assertFalse(plugin["platform_supported"])
@@ -271,6 +279,87 @@ class PluginManagerTests(unittest.TestCase):
             )
             self.assertFalse(installed)
             self.assertEqual(message, reason)
+
+    def test_supported_os_can_approve_plugin_as_unverified(self):
+        manager = PluginManager()
+        manager.plugins = {
+            "maddy": {
+                "id": "maddy",
+                "name": "Maddy",
+                "manifest_enabled": True,
+                "manifest_error": None,
+                "installed": True,
+                "usage": {},
+                "requires": {"platforms": ["ubuntu:24.04"]},
+            }
+        }
+        platform = {
+            "supported": True,
+            "selector": "ubuntu:26.04",
+            "pretty_name": "Ubuntu 26.04 LTS",
+            "arch": "amd64",
+        }
+        with patch(
+            "plugins.manager.platform_support_service.plugin_support",
+            return_value=(False, "Plugin is not verified on Ubuntu 26.04 LTS (amd64)."),
+        ), patch(
+            "plugins.manager.platform_support_service.get", return_value=platform
+        ), patch(
+            "plugins.manager.plugin_platform_approval_service.is_approved",
+            return_value=False,
+        ), patch(
+            "plugins.manager.plugin_platform_approval_service.approve"
+        ) as approve:
+            plugin = manager.get_plugin("maddy")
+            self.assertTrue(plugin["platform_unverified"])
+            self.assertFalse(plugin["platform_allowed"])
+            self.assertEqual(plugin["effective_status"], "unverified")
+
+            accepted, message = manager.approve_unverified_platform(plugin, "wrong")
+            self.assertFalse(accepted)
+            self.assertIn("INSTALL maddy UNVERIFIED", message)
+
+            accepted, _ = manager.approve_unverified_platform(
+                plugin, "INSTALL maddy UNVERIFIED"
+            )
+            self.assertTrue(accepted)
+            approve.assert_called_once_with("maddy", "ubuntu:26.04")
+
+    def test_approved_unverified_plugin_remains_labeled_but_is_available(self):
+        manager = PluginManager()
+        manager.plugins = {
+            "maddy": {
+                "id": "maddy",
+                "name": "Maddy",
+                "manifest_enabled": True,
+                "manifest_error": None,
+                "installed": True,
+                "sidebar": True,
+                "usage": {},
+                "requires": {"platforms": ["ubuntu:24.04"]},
+            }
+        }
+        with patch(
+            "plugins.manager.platform_support_service.plugin_support",
+            return_value=(False, "Plugin is not verified."),
+        ), patch(
+            "plugins.manager.platform_support_service.get",
+            return_value={
+                "supported": True,
+                "selector": "ubuntu:26.04",
+                "pretty_name": "Ubuntu 26.04 LTS",
+                "arch": "amd64",
+            },
+        ), patch(
+            "plugins.manager.plugin_platform_approval_service.is_approved",
+            return_value=True,
+        ):
+            plugin = manager.get_plugin("maddy")
+            self.assertTrue(plugin["platform_unverified"])
+            self.assertTrue(plugin["platform_approved"])
+            self.assertTrue(plugin["platform_allowed"])
+            self.assertEqual(plugin["effective_status"], "active")
+            manager.availability_dependency("maddy")()
 
 if __name__ == "__main__":
     unittest.main()

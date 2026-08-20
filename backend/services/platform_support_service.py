@@ -17,7 +17,7 @@ SUPPORTED_PLATFORMS: dict[str, frozenset[str]] = {
         {"core", "docker", "php", "mariadb", "postgresql", "railpack_apps", "native_python", "php_external_repository"}
     ),
     "ubuntu:26.04": frozenset(
-        {"core", "docker", "php", "mariadb", "postgresql", "railpack_apps", "native_python", "php_external_repository"}
+        {"core", "docker", "php", "mariadb", "postgresql", "railpack_apps", "native_python"}
     ),
     "debian:12": frozenset(
         {"core", "docker", "php", "mariadb", "postgresql", "railpack_apps", "native_python"}
@@ -104,6 +104,11 @@ class PlatformSupportService:
         if not info["supported"]:
             return str(info["error"])
         if capability not in info["capabilities"]:
+            if capability == "php_external_repository" and info["id"] == "ubuntu":
+                return (
+                    f"Ondrej PHP PPA does not publish packages for {info['pretty_name']} "
+                    f"({info['codename']}). Use PHP versions available from configured APT sources."
+                )
             return f"{capability.replace('_', ' ').title()} is not supported on {info['pretty_name']}."
         return None
 
@@ -116,7 +121,7 @@ class PlatformSupportService:
             return False, str(info["error"])
         if info["selector"] in allowed:
             return True, None
-        return False, f"Plugin is not supported on {info['pretty_name']} ({info['arch']})."
+        return False, f"Plugin is not verified on {info['pretty_name']} ({info['arch']})."
 
     def install_guide(self, capability: str, command: str, warning: str) -> dict[str, Any]:
         info = self.get()

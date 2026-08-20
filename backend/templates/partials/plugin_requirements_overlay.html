@@ -13,7 +13,11 @@
         <span class="plugin-check-window__label">{{ _('requirements_status') }}</span>
         <span class="tray-overall-status">
           {% if plugin.platform_error %}
-            <span class="badge badge--danger">UNSUPPORTED</span>
+            {% if plugin.platform_unverified %}
+              <span class="badge badge--warning">{{ _('unverified') }}</span>
+            {% else %}
+              <span class="badge badge--danger">{{ _('unsupported') }}</span>
+            {% endif %}
           {% elif plugin.paused_by %}
             <span class="badge badge--danger">✕ {{ _('unmet') }} ({{ _('missing') }} {{ plugin.paused_by | title }})</span>
           {% elif plugin.dependency_status and plugin.dependency_status | length > 0 %}

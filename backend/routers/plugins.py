@@ -92,9 +92,17 @@ async def plugin_asset(plugin_id: str, filename: str):
 
 
 @router.post("/api/install")
-async def install_plugin_api(request: Request, plugin_id: str = Form(...)):
+async def install_plugin_api(
+    request: Request,
+    plugin_id: str = Form(...),
+    unverified_confirmation: str = Form(""),
+):
     """Run installation script for a plugin."""
-    success, message = await plugin_manager.run_plugin_script(plugin_id, "install")
+    success, message = await plugin_manager.run_plugin_script(
+        plugin_id,
+        "install",
+        unverified_confirmation=unverified_confirmation,
+    )
     if success:
         return RedirectResponse("/plugins/", status_code=303)
     query = urlencode({"plugin_id": plugin_id, "error": message[:240]})

@@ -6,13 +6,14 @@
     </button>
   {% endif %}
 
-  {% if not plugin.installed %}
-    <form method="post" action="/plugins/api/install" style="display:inline-flex;">
+  {% if not plugin.installed or (plugin.platform_unverified and not plugin.platform_approved) %}
+    <form method="post" action="/plugins/api/install" style="display:inline-flex;"{% if plugin.platform_unverified and not plugin.platform_approved %} data-unverified-install data-confirmation="{{ plugin.platform_confirmation }}" data-prompt="{{ _('plugin_unverified_prompt') }}" data-error="{{ _('plugin_unverified_confirmation_error') }}"{% endif %}>
       <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
       <input type="hidden" name="plugin_id" value="{{ plugin.id }}">
-      <button type="submit" class="btn btn--primary btn--sm" title="Install {{ plugin.name }}" {% if plugin.paused_by or not plugin.platform_supported %}disabled style="opacity:0.5;" title="{{ plugin.platform_error or 'Install required system dependency first' }}" {% endif %}>
+      <input type="hidden" name="unverified_confirmation" value="">
+      <button type="submit" class="btn btn--primary btn--sm" title="{{ _('install_unverified') if plugin.platform_unverified else _('install') }} {{ plugin.name }}" {% if plugin.paused_by or (not plugin.platform_supported and not plugin.platform_unverified) %}disabled style="opacity:0.5;" title="{{ plugin.platform_error or _('install_required_dependency_first') }}" {% endif %}>
         <svg viewbox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-        <span>{{ _('install') }}</span>
+        <span>{% if plugin.platform_unverified %}{{ _('approve_unverified') if plugin.installed else _('install_unverified') }}{% else %}{{ _('install') }}{% endif %}</span>
       </button>
     </form>
     {% if plugin.data_purge %}

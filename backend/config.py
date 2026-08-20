@@ -126,6 +126,10 @@ CONTAINER_APP_ENV_ROOT: str = os.getenv("CONTAINER_APP_ENV_ROOT", "/var/lib/srv-
 CONTAINER_APP_PORT_START: int = _env_int("CONTAINER_APP_PORT_START", 31000)
 CONTAINER_APP_BUILD_TIMEOUT: int = _env_int("CONTAINER_APP_BUILD_TIMEOUT", 1200)
 CONTAINER_APP_BACKUP_ROOT: str = os.getenv("CONTAINER_APP_BACKUP_ROOT", "/var/lib/srv-panel/container-app-backups")
+PLUGIN_PLATFORM_APPROVALS_PATH: str = os.getenv(
+    "PLUGIN_PLATFORM_APPROVALS_PATH",
+    "/var/lib/srv-panel/plugin-platform-approvals.json",
+)
 BUILDX_BUILDER_NAME: str = _env_str("BUILDX_BUILDER_NAME", "srv-panel-builder")
 FILE_MANAGER_MAX_TEXT_BYTES: int = _env_int("FILE_MANAGER_MAX_TEXT_BYTES", 2 * 1024 * 1024)
 FILE_MANAGER_MAX_TRANSFER_BYTES: int = _env_int("FILE_MANAGER_MAX_TRANSFER_BYTES", 100 * 1024 * 1024)

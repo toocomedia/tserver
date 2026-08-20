@@ -38,6 +38,7 @@ EXTERNAL_REPOSITORY_MARKERS = (
     "ppa.launchpadcontent.net/ondrej/php",
     "ppa.launchpad.net/ondrej/php",
 )
+PPA_SUPPORTED_UBUNTU_CODENAMES = frozenset({"jammy", "noble"})
 
 
 def fail(message: str) -> None:
@@ -115,32 +116,151 @@ def apt_candidate(package: str) -> str:
     fail(f"{package} is unavailable from this server's configured APT repositories.")
 
 
-def external_repository_configured() -> bool:
+def os_release() -> dict[str, str]:
+    try:
+        return {
+            key: value.strip().strip('"').strip("'")
+            for line in Path("/etc/os-release").read_text(encoding="utf-8").splitlines()
+            if "=" in line
+            for key, value in (line.split("=", 1),)
+        }
+    except OSError:
+        fail("Cannot identify this Linux distribution from /etc/os-release.")
+
+
+def apt_source_files() -> list[Path]:
     source_files = [Path("/etc/apt/sources.list")]
     source_directory = Path("/etc/apt/sources.list.d")
     if source_directory.is_dir():
         source_files.extend(source_directory.glob("*.list"))
         source_files.extend(source_directory.glob("*.sources"))
-    for source_file in source_files:
+    return source_files
+
+
+def external_repository_configured() -> bool:
+    for source_file in apt_source_files():
         try:
-            contents = source_file.read_text(encoding="utf-8", errors="ignore").lower()
+            contents = source_file.read_text(encoding="utf-8", errors="ignore")
         except OSError:
             continue
-        if any(marker in contents for marker in EXTERNAL_REPOSITORY_MARKERS):
-            return True
+        if source_file.suffix == ".sources":
+            for stanza in re.split(r"\n\s*\n", contents):
+                lowered = stanza.lower()
+                if not any(marker in lowered for marker in EXTERNAL_REPOSITORY_MARKERS):
+                    continue
+                if not re.search(r"^enabled:\s*no\s*$", stanza, re.IGNORECASE | re.MULTILINE):
+                    return True
+            continue
+        for line in contents.splitlines():
+            if line.lstrip().startswith("#"):
+                continue
+            lowered = line.lower()
+            if any(marker in lowered for marker in EXTERNAL_REPOSITORY_MARKERS):
+                return True
     return False
 
 
-def require_ubuntu() -> None:
-    try:
-        values = dict(
-            line.split("=", 1) for line in Path("/etc/os-release").read_text(encoding="utf-8").splitlines()
-            if "=" in line
+def _disable_list_suite(contents: str, codename: str) -> tuple[str, bool]:
+    changed = False
+    result: list[str] = []
+    suite_pattern = re.compile(rf"(?:^|\s){re.escape(codename)}(?:\s|$)", re.IGNORECASE)
+    for line in contents.splitlines(keepends=True):
+        lowered = line.lower()
+        if (
+            not line.lstrip().startswith("#")
+            and any(marker in lowered for marker in EXTERNAL_REPOSITORY_MARKERS)
+            and suite_pattern.search(line)
+        ):
+            indentation = line[: len(line) - len(line.lstrip())]
+            line = f"{indentation}# {line.lstrip()}"
+            changed = True
+        result.append(line)
+    return "".join(result), changed
+
+
+def _disable_deb822_suite(contents: str, codename: str) -> tuple[str, bool]:
+    changed = False
+    parts = re.split(r"(\n[ \t]*\n)", contents)
+    for index in range(0, len(parts), 2):
+        stanza = parts[index]
+        lowered = stanza.lower()
+        if not any(marker in lowered for marker in EXTERNAL_REPOSITORY_MARKERS):
+            continue
+        suites = re.search(r"^suites:\s*(.+)$", stanza, re.IGNORECASE | re.MULTILINE)
+        if not suites or codename not in suites.group(1).lower().split():
+            continue
+        if re.search(r"^enabled:\s*no\s*$", stanza, re.IGNORECASE | re.MULTILINE):
+            continue
+        if re.search(r"^enabled:", stanza, re.IGNORECASE | re.MULTILINE):
+            stanza = re.sub(
+                r"^enabled:.*$", "Enabled: no", stanza,
+                count=1, flags=re.IGNORECASE | re.MULTILINE,
+            )
+        else:
+            stanza = f"Enabled: no\n{stanza}"
+        parts[index] = stanza
+        changed = True
+    return "".join(parts), changed
+
+
+def disable_unpublished_ppa_suite() -> list[str]:
+    release = os_release()
+    if release.get("ID", "").lower() != "ubuntu":
+        return []
+    codename = (
+        release.get("UBUNTU_CODENAME")
+        or release.get("VERSION_CODENAME")
+        or ""
+    ).lower()
+    if not codename or codename in PPA_SUPPORTED_UBUNTU_CODENAMES:
+        return []
+    changed_files: list[str] = []
+    for source_file in apt_source_files():
+        try:
+            contents = source_file.read_text(encoding="utf-8", errors="ignore")
+        except OSError:
+            continue
+        if source_file.suffix == ".sources":
+            updated, changed = _disable_deb822_suite(contents, codename)
+        else:
+            updated, changed = _disable_list_suite(contents, codename)
+        if not changed:
+            continue
+        temporary = source_file.with_name(f"{source_file.name}.srv-panel.tmp")
+        temporary.write_text(updated, encoding="utf-8")
+        os.chmod(temporary, stat.S_IMODE(source_file.stat().st_mode))
+        os.replace(temporary, source_file)
+        changed_files.append(str(source_file))
+    return changed_files
+
+
+def refresh_apt() -> None:
+    disabled = disable_unpublished_ppa_suite()
+    if disabled:
+        print(
+            "==> Disabled an unpublished Ondrej PHP PPA suite: "
+            + ", ".join(disabled),
+            file=sys.stderr,
         )
-    except OSError:
-        fail("Cannot identify this Linux distribution from /etc/os-release.")
-    if values.get("ID", "").strip().strip('"') != "ubuntu":
+    print("==> Refreshing configured APT repositories...", file=sys.stderr)
+    run(["apt-get", "update", "-qq"], timeout=300)
+
+
+def require_supported_ppa_platform() -> None:
+    values = os_release()
+    if values.get("ID", "").lower() != "ubuntu":
         fail("The external PHP repository action is supported only on Ubuntu. On Debian, use PHP versions available from configured APT sources.")
+    codename = (
+        values.get("UBUNTU_CODENAME")
+        or values.get("VERSION_CODENAME")
+        or "unknown"
+    ).lower()
+    if codename not in PPA_SUPPORTED_UBUNTU_CODENAMES:
+        fail(
+            f"The external PHP PPA does not publish packages for Ubuntu "
+            f"{values.get('VERSION_ID', 'unknown')} ({codename}). Use PHP versions "
+            "available from Ubuntu's configured APT sources."
+        )
 
 
 def verify_fpm(item_version: str) -> None:
@@ -186,8 +306,7 @@ def install_version(data: dict[str, Any]) -> dict[str, Any]:
     packages = [fpm_package, cli_package, *extension_packages]
     if package_installed(fpm_package) and item_version not in state:
         fail(f"PHP {item_version} is installed outside SRV Panel and cannot be adopted automatically.")
-    print("==> Refreshing configured APT repositories...", file=sys.stderr)
-    run(["apt-get", "update", "-qq"], timeout=300)
+    refresh_apt()
     for package in packages:
         apt_candidate(package)
     print(f"==> Installing PHP {item_version}-FPM and the panel extension baseline...", file=sys.stderr)
@@ -220,8 +339,7 @@ def install_site_extensions(data: dict[str, Any]) -> dict[str, Any]:
     packages = [f"php{item_version}-{name}" for name in names]
     added = [package for package in packages if not package_installed(package)]
     if added:
-        print("==> Refreshing configured APT repositories...", file=sys.stderr)
-        run(["apt-get", "update", "-qq"], timeout=300)
+        refresh_apt()
         for package in added:
             apt_candidate(package)
         run(["apt-get", "install", "-y", "--no-install-recommends", *added], timeout=900)
@@ -233,22 +351,20 @@ def install_site_extensions(data: dict[str, Any]) -> dict[str, Any]:
 
 
 def check_available(_: dict[str, Any]) -> dict[str, Any]:
-    print("==> Refreshing configured APT repositories...", file=sys.stderr)
-    run(["apt-get", "update", "-qq"], timeout=300)
+    refresh_apt()
     return {"message": "PHP version availability was refreshed from the configured APT sources."}
 
 
 def enable_external_repository(_: dict[str, Any]) -> dict[str, Any]:
     """Enable the one reviewed PHP PPA; repository URLs are never user input."""
-    require_ubuntu()
+    require_supported_ppa_platform()
     if external_repository_configured():
-        print("==> Refreshing configured APT repositories...", file=sys.stderr)
-        run(["apt-get", "update", "-qq"], timeout=300)
+        refresh_apt()
         return {"message": "The external PHP repository is already enabled; package availability was refreshed."}
     add_repository = shutil.which("add-apt-repository")
     if not add_repository:
         print("==> Installing Ubuntu repository management support...", file=sys.stderr)
-        run(["apt-get", "update", "-qq"], timeout=300)
+        refresh_apt()
         run(["apt-get", "install", "-y", "software-properties-common"], timeout=300)
         add_repository = shutil.which("add-apt-repository")
     if not add_repository:
@@ -257,8 +373,7 @@ def enable_external_repository(_: dict[str, Any]) -> dict[str, Any]:
     run([add_repository, "--yes", EXTERNAL_REPOSITORY_PPA], timeout=300)
     if not external_repository_configured():
         fail("The external PHP repository could not be verified after it was added.")
-    print("==> Refreshing configured APT repositories...", file=sys.stderr)
-    run(["apt-get", "update", "-qq"], timeout=300)
+    refresh_apt()
     return {"message": "External PHP repository enabled. Choose individual PHP versions to install."}
 
 

@@ -23,6 +23,7 @@ import config
 from dependencies.registry import CORE_DEPENDENCY_IDS
 from services.component_state import component_state_store
 from services.platform_support_service import SUPPORTED_PLATFORMS, platform_support_service
+from services.plugin_platform_approval_service import plugin_platform_approval_service
 
 logger = logging.getLogger(__name__)
 
@@ -186,8 +187,25 @@ class PluginManager:
         platform_supported, platform_error = platform_support_service.plugin_support(
             self._required_platforms(result)
         )
+        platform = platform_support_service.get()
+        platform_unverified = bool(
+            self._required_platforms(result)
+            and not platform_supported
+            and platform.get("supported")
+        )
+        platform_selector = str(platform.get("selector") or "unknown:unknown")
+        platform_approved = bool(
+            platform_unverified
+            and plugin_platform_approval_service.is_approved(plugin_id, platform_selector)
+        )
         result["platform_supported"] = platform_supported
         result["platform_error"] = platform_error
+        result["platform_unverified"] = platform_unverified
+        result["platform_approved"] = platform_approved
+        result["platform_allowed"] = platform_supported or platform_approved
+        result["platform_name"] = platform.get("pretty_name", platform_selector)
+        result["platform_arch"] = platform.get("arch", "unknown")
+        result["platform_confirmation"] = self.unverified_confirmation(plugin_id)
 
         if not result.get("installed", False) and result.get("dir_path"):
             installed = self._check_plugin_installed(Path(result["dir_path"]), plugin_id)
@@ -200,7 +218,7 @@ class PluginManager:
         for dependency_id in self._required_dependencies(result):
             healthy = (
                 dependency_manager.is_healthy(dependency_id)
-                if check_dependencies and platform_supported
+                if check_dependencies and result["platform_allowed"]
                 else None
             )
             requirements.append({"id": dependency_id, "healthy": healthy})
@@ -211,7 +229,9 @@ class PluginManager:
 
         if result.get("manifest_error"):
             effective_status = "invalid"
-        elif not platform_supported:
+        elif platform_unverified and not platform_approved:
+            effective_status = "unverified"
+        elif not result["platform_allowed"]:
             effective_status = "unsupported"
         elif not result.get("installed", False):
             effective_status = "missing"
@@ -225,6 +245,28 @@ class PluginManager:
             effective_status = "active"
         result["effective_status"] = effective_status
         return result
+
+    @staticmethod
+    def unverified_confirmation(plugin_id: str) -> str:
+        return f"INSTALL {plugin_id} UNVERIFIED"
+
+    def approve_unverified_platform(
+        self, plugin: dict[str, Any], confirmation: str
+    ) -> tuple[bool, str]:
+        if not plugin.get("platform_unverified"):
+            return False, plugin.get("platform_error") or "Plugin platform cannot be overridden."
+        expected = self.unverified_confirmation(plugin["id"])
+        if confirmation.strip() != expected:
+            return False, f"Type {expected} to install this unverified plugin."
+        selector = str(platform_support_service.get().get("selector") or "")
+        if not selector:
+            return False, "Could not identify the current platform."
+        try:
+            plugin_platform_approval_service.approve(plugin["id"], selector)
+        except OSError as exc:
+            logger.error("Could not persist unverified plugin approval: %s", exc)
+            return False, "Could not save unverified plugin approval."
+        return True, "Unverified platform approved."
 
     def discover_plugins(self, *, check_dependencies: bool = True) -> List[Dict[str, Any]]:
         self.plugins.clear()
@@ -314,6 +356,13 @@ class PluginManager:
                     plugin.get("platform_error") or "Plugin is not supported on this platform.",
                     409,
                 )
+            if status == "unverified":
+                raise PluginUnavailableError(
+                    plugin_id,
+                    "platform_unverified",
+                    plugin.get("platform_error") or "Plugin requires unverified platform approval.",
+                    409,
+                )
             if status == "disabled":
                 raise PluginUnavailableError(
                     plugin_id, "plugin_disabled", "Plugin is disabled.", 409
@@ -378,14 +427,12 @@ class PluginManager:
     def get_sidebar_items(self) -> List[Dict[str, Any]]:
         items = []
         for plugin_id, plugin in self.plugins.items():
-            platform_supported, _ = platform_support_service.plugin_support(
-                self._required_platforms(plugin)
-            )
+            effective = self._effective(plugin, check_dependencies=False)
             if (
                 not plugin.get("sidebar", False)
                 or plugin.get("manifest_error")
-                or not plugin.get("installed", False)
-                or not platform_supported
+                or not effective.get("installed", False)
+                or not effective.get("platform_allowed", False)
             ):
                 continue
             state = component_state_store.get(
@@ -463,7 +510,7 @@ class PluginManager:
             return False, "Plugin not found."
         if enabled and not plugin.get("installed", False):
             return False, "Cannot enable plugin before it is installed."
-        if enabled and not plugin.get("platform_supported", True):
+        if enabled and not plugin.get("platform_allowed", plugin.get("platform_supported", True)):
             return False, plugin.get("platform_error") or "Plugin is not supported on this platform."
         if enabled and plugin.get("paused_by"):
             dependencies = ", ".join(plugin["paused_by"])
@@ -519,13 +566,26 @@ class PluginManager:
                 from services.resource_guard_service import resource_guard_service
                 resource_guard_service.unregister(token)
 
-    async def run_plugin_script(self, plugin_id: str, action: str) -> tuple[bool, str]:
+    async def run_plugin_script(
+        self,
+        plugin_id: str,
+        action: str,
+        *,
+        unverified_confirmation: str = "",
+    ) -> tuple[bool, str]:
         if action not in {"install", "uninstall"}:
             return False, "Unsupported plugin action."
         plugin = self.get_plugin(plugin_id)
         if not plugin:
             return False, "Plugin not found."
-        if action == "install" and not plugin.get("platform_supported", True):
+        if action == "install" and plugin.get("platform_unverified") and not plugin.get("platform_approved"):
+            approved, message = self.approve_unverified_platform(
+                plugin, unverified_confirmation
+            )
+            if not approved:
+                return False, message
+            plugin = self.get_plugin(plugin_id)
+        if action == "install" and not plugin.get("platform_allowed", plugin.get("platform_supported", True)):
             return False, plugin.get("platform_error") or "Plugin is not supported on this platform."
         if action == "install" and plugin.get("paused_by"):
             if "docker" in plugin["paused_by"]:

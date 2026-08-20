@@ -69,6 +69,14 @@ class PlatformSupportServiceTests(unittest.TestCase):
         self.assertNotIn("native_python", ubuntu_2204["capabilities"])
         self.assertIn("php_external_repository", ubuntu_2204["capabilities"])
 
+        ubuntu_2604 = self._probe("ubuntu", "26.04").get(force=True)
+        self.assertIn("native_python", ubuntu_2604["capabilities"])
+        self.assertNotIn("php_external_repository", ubuntu_2604["capabilities"])
+        repository_error = self._probe("ubuntu", "26.04").capability_error(
+            "php_external_repository"
+        )
+        self.assertIn("does not publish packages", repository_error)
+
         debian_13 = self._probe("debian", "13").get(force=True)
         self.assertIn("native_python", debian_13["capabilities"])
         self.assertNotIn("php_external_repository", debian_13["capabilities"])
