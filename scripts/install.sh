@@ -108,10 +108,14 @@ OS_COMPAT="$SCRIPT_DIR/os_compat.sh"
 [[ -f "$OS_COMPAT" ]] || die "OS compatibility helper is missing: $OS_COMPAT"
 PYTHON_REQUIREMENTS_HELPER="$SCRIPT_DIR/python_requirements.sh"
 [[ -f "$PYTHON_REQUIREMENTS_HELPER" ]] || die "Python requirements helper is missing: $PYTHON_REQUIREMENTS_HELPER"
+SUDOERS_COMPAT_HELPER="$SCRIPT_DIR/sudoers_compat.sh"
+[[ -f "$SUDOERS_COMPAT_HELPER" ]] || die "Sudoers compatibility helper is missing: $SUDOERS_COMPAT_HELPER"
 # shellcheck source=scripts/os_compat.sh
 . "$OS_COMPAT"
 # shellcheck source=scripts/python_requirements.sh
 . "$PYTHON_REQUIREMENTS_HELPER"
+# shellcheck source=scripts/sudoers_compat.sh
+. "$SUDOERS_COMPAT_HELPER"
 srv_os_require_supported || exit 1
 info "Detected supported platform: ${SRV_OS_PRETTY_NAME} (${SRV_OS_ARCH})"
 
@@ -618,19 +622,21 @@ if ! bash "$COMPOSER_INSTALL_SH"; then
   warn "Composer installation failed — native Laravel creation will remain unavailable"
 fi
 
-cat > "$SUDOERS_FILE" <<EOF
+PLUGIN_SUDOERS_COMMANDS="$(srv_sudoers_plugin_commands "$PANEL_DIR")"
+SUDOERS_TEMP="$(mktemp /etc/sudoers.d/.srv-panel.XXXXXX)"
+cat > "$SUDOERS_TEMP" <<EOF
 # srv-panel — allow panel user to manage nginx + certbot + site files + optimization
 # Installed by scripts/install.sh — validate: visudo -cf $SUDOERS_FILE
-Defaults:$PANEL_USER !requiretty
 Defaults:$PANEL_USER env_keep += "BUILDKIT_HOST"
-Cmnd_Alias SRV_PANEL_CMDS = $NGINX_BIN, $CERTBOT_BIN, $OPENSSL_BIN, $TEE_BIN, $LN_BIN, $RM_BIN, $MKDIR_BIN, $SYSTEMCTL_BIN, $JOURNALCTL_BIN, $SYSCTL_BIN, $DOCKER_BIN, $RAILPACK_BIN, /bin/bash $OPTIMIZE_SH *, /usr/bin/bash $OPTIMIZE_SH *, $OPTIMIZE_SH *, /bin/bash $UPDATE_SH *, /usr/bin/bash $UPDATE_SH *, /bin/bash $GET_UPDATE_SH *, /usr/bin/bash $GET_UPDATE_SH *, $UPDATE_SH *, $GET_UPDATE_SH *, /bin/bash $DOCKER_INSTALL_SH, /usr/bin/bash $DOCKER_INSTALL_SH, /bin/bash $MARIADB_INSTALL_SH, /usr/bin/bash $MARIADB_INSTALL_SH, /bin/bash $MARIADB_CHECK_UPDATE_SH, /usr/bin/bash $MARIADB_CHECK_UPDATE_SH, /bin/bash $MARIADB_UPDATE_SH, /usr/bin/bash $MARIADB_UPDATE_SH, $MARIADB_HELPER, $PHP_RUNTIME_HELPER, $PHP_SITE_HELPER, $LARAVEL_HELPER, $FILAMENT_HELPER, /bin/bash $PANEL_DIR/app/plugins/*, /usr/bin/bash $PANEL_DIR/app/plugins/*
+Cmnd_Alias SRV_PANEL_CMDS = $NGINX_BIN, $CERTBOT_BIN, $OPENSSL_BIN, $TEE_BIN, $LN_BIN, $RM_BIN, $MKDIR_BIN, $SYSTEMCTL_BIN, $JOURNALCTL_BIN, $SYSCTL_BIN, $DOCKER_BIN, $RAILPACK_BIN, /bin/bash $OPTIMIZE_SH *, /usr/bin/bash $OPTIMIZE_SH *, $OPTIMIZE_SH *, /bin/bash $UPDATE_SH *, /usr/bin/bash $UPDATE_SH *, /bin/bash $GET_UPDATE_SH *, /usr/bin/bash $GET_UPDATE_SH *, $UPDATE_SH *, $GET_UPDATE_SH *, /bin/bash $DOCKER_INSTALL_SH, /usr/bin/bash $DOCKER_INSTALL_SH, /bin/bash $MARIADB_INSTALL_SH, /usr/bin/bash $MARIADB_INSTALL_SH, /bin/bash $MARIADB_CHECK_UPDATE_SH, /usr/bin/bash $MARIADB_CHECK_UPDATE_SH, /bin/bash $MARIADB_UPDATE_SH, /usr/bin/bash $MARIADB_UPDATE_SH, $MARIADB_HELPER, $PHP_RUNTIME_HELPER, $PHP_SITE_HELPER, $LARAVEL_HELPER, $FILAMENT_HELPER$PLUGIN_SUDOERS_COMMANDS
 $PANEL_USER ALL=(root) NOPASSWD: SRV_PANEL_CMDS
 EOF
-chmod 440 "$SUDOERS_FILE"
-if ! visudo -cf "$SUDOERS_FILE" >/dev/null; then
-  rm -f "$SUDOERS_FILE"
+chmod 440 "$SUDOERS_TEMP"
+if ! visudo -cf "$SUDOERS_TEMP" >/dev/null; then
+  rm -f "$SUDOERS_TEMP"
   die "sudoers validation failed — not installing broken rules"
 fi
+mv -f "$SUDOERS_TEMP" "$SUDOERS_FILE"
 
 # ---------------------------------------------------------------
 # systemd unit
