@@ -7,7 +7,7 @@
   {% endif %}
 
   {% if not plugin.installed or (plugin.platform_unverified and not plugin.platform_approved) %}
-    <form method="post" action="/plugins/api/install" style="display:inline-flex;"{% if plugin.platform_unverified and not plugin.platform_approved %} data-unverified-install data-confirmation="{{ plugin.platform_confirmation }}" data-prompt="{{ _('plugin_unverified_prompt') }}" data-error="{{ _('plugin_unverified_confirmation_error') }}"{% endif %}>
+    <form method="post" action="/plugins/api/install" style="display:inline-flex;"{% if plugin.platform_unverified and not plugin.platform_approved %} data-unverified-install data-approval-token="{{ plugin.platform_confirmation }}" data-confirm="{{ _('plugin_unverified_prompt') }}"{% endif %}>
       <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
       <input type="hidden" name="plugin_id" value="{{ plugin.id }}">
       <input type="hidden" name="unverified_confirmation" value="">

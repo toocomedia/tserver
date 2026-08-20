@@ -4,16 +4,11 @@
       if (form.dataset.unverifiedBound === 'true') return;
       form.dataset.unverifiedBound = 'true';
       form.addEventListener('submit', function (event) {
-        var expected = form.dataset.confirmation || '';
+        var expected = form.dataset.approvalToken || '';
         var input = form.querySelector('input[name="unverified_confirmation"]');
         if (input && input.value === expected) return;
         event.preventDefault();
-        var entered = window.prompt((form.dataset.prompt || '') + '\n\n' + expected);
-        if (entered === null) return;
-        if (entered.trim() !== expected) {
-          window.alert(form.dataset.error || '');
-          return;
-        }
+        if (!window.confirm(form.dataset.confirm || '')) return;
         input.value = expected;
         form.requestSubmit();
       });

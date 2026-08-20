@@ -317,7 +317,7 @@ class PluginManagerTests(unittest.TestCase):
 
             accepted, message = manager.approve_unverified_platform(plugin, "wrong")
             self.assertFalse(accepted)
-            self.assertIn("INSTALL maddy UNVERIFIED", message)
+            self.assertIn("Confirm the unverified installation", message)
 
             accepted, _ = manager.approve_unverified_platform(
                 plugin, "INSTALL maddy UNVERIFIED"

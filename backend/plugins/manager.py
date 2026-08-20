@@ -257,7 +257,7 @@ class PluginManager:
             return False, plugin.get("platform_error") or "Plugin platform cannot be overridden."
         expected = self.unverified_confirmation(plugin["id"])
         if confirmation.strip() != expected:
-            return False, f"Type {expected} to install this unverified plugin."
+            return False, "Confirm the unverified installation in the panel."
         selector = str(platform_support_service.get().get("selector") or "")
         if not selector:
             return False, "Could not identify the current platform."

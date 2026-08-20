@@ -14,7 +14,7 @@
         <span class="tray-overall-status">
           {% if plugin.platform_error %}
             {% if plugin.platform_unverified %}
-              <span class="badge badge--warning">{{ _('unverified') }}</span>
+              <span class="badge badge--muted">{{ _('unverified') }}</span>
             {% else %}
               <span class="badge badge--danger">{{ _('unsupported') }}</span>
             {% endif %}

@@ -74,7 +74,7 @@
       {% from "partials/resource_list_row.html" import render as render_resource_row with context %}
       {% for plugin in plugins %}
         {% if plugin.platform_unverified %}
-          {% set plugin_status_label = _('unverified') %}{% set plugin_status_tone = 'warning' %}
+          {% set plugin_status_label = _('unverified') %}{% set plugin_status_tone = 'muted' %}
         {% elif plugin.effective_status == 'active' %}
           {% set plugin_status_label = 'Active' %}{% set plugin_status_tone = 'success' %}
         {% elif plugin.effective_status in ['missing', 'invalid', 'unsupported', 'error', 'unhealthy'] %}
