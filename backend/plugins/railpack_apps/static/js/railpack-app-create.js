@@ -346,6 +346,15 @@ if (form) {
     });
   }
 
+  const addEnvBtn = query('[data-add-environment]');
+  if (addEnvBtn) {
+    addEnvBtn.addEventListener('click', () => addEnvironmentRow(form));
+  }
+  const addMountBtn = query('[data-add-storage-mount]');
+  if (addMountBtn) {
+    addMountBtn.addEventListener('click', () => addStorageMountRow(form));
+  }
+
   form.querySelectorAll('[data-database-row]').forEach((row) => {
     row.querySelector('[data-database-enabled]').addEventListener('change', () => attachmentState(row));
     const providerEl = _dbField(row, '[data-database-provider]');

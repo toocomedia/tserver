@@ -475,7 +475,7 @@ class RailpackBuildOptionsTests(unittest.TestCase):
             db.scalars = AsyncMock(return_value=scalars_mock)
             db.scalar = AsyncMock(return_value=None)
 
-            with patch.object(container_app_cleanup_service, "list_app_storage_volumes", new=AsyncMock(return_value=["srv-container-app-12-vol-detached"]), \
+            with patch.object(container_app_cleanup_service, "list_app_storage_volumes", new=AsyncMock(return_value=["srv-container-app-12-vol-detached"])), \
                  patch.object(container_app_cleanup_service, "remove_volume") as mock_rm_vol, \
                  patch.object(container_app_cleanup_service, "remove_private_network"):
 
