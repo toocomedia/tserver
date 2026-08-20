@@ -25,6 +25,13 @@ def run(deployment_id: int, command: list[str], timeout: int, env: dict[str, str
         proc_env.update(env)
     if command and command[0] == "railpack":
         proc_env["BUILDKIT_HOST"] = "docker-container://srv-panel-buildkit"
+        build_tmp = Path(config.CONTAINER_APP_ENV_ROOT).parent / "build" / str(deployment_id) / "tmp"
+        try:
+            build_tmp.mkdir(parents=True, exist_ok=True)
+            proc_env["TMPDIR"] = str(build_tmp)
+            proc_env["XDG_RUNTIME_DIR"] = str(build_tmp)
+        except Exception:
+            pass
         prefix = []
     else:
         prefix = ["sudo", "-n"] if hasattr(os, "geteuid") and os.geteuid() != 0 and config.PRIVILEGED_SUDO else []
