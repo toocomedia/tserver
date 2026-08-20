@@ -440,6 +440,7 @@ class RailpackBuildOptionsTests(unittest.TestCase):
             return Mock(revision=Mock(sha="abcdef123456"))
 
         with patch.object(container_app_service, "root", return_value=Path(self.temp_dir)), \
+             patch.object(container_app_service, "_run", return_value=Mock(returncode=0)), \
              patch.object(repository_service, "clone", side_effect=fake_clone), \
              patch("services.container_app_build_process_service.run") as mock_run:
 
@@ -633,6 +634,69 @@ class RailpackBuildOptionsTests(unittest.TestCase):
         self.assertEqual(mounts[0]["volume"], "srv-container-app-1-vol-data")
         self.assertEqual(mounts[0]["mount_path"], "/app/data")
         verify_conn.close()
+
+    def test_railpack_build_passes_secrets_via_railpack_json_and_env_dict(self):
+        env_file = Path(self.temp_dir) / "app.env"
+        env_file.write_text("DATABASE_URL=postgresql://user:pass@127.0.0.1:5432/appdb\nAPP_SECRET=topsecret\n", encoding="utf-8")
+
+        app = Mock(
+            id=15,
+            source_type="git",
+            build_mode="railpack",
+            repository_url="https://github.com/org/umami",
+            branch="main",
+            git_ref="main",
+            git_ref_type="branch",
+            deploy_key_path=None,
+            root_directory="",
+            env_path=str(env_file),
+            build_args=None,
+        )
+        deployment = Mock(id=2, output="")
+
+        def fake_clone(url, branch, target, **kwargs):
+            target.mkdir(parents=True, exist_ok=True)
+            (target / "package.json").write_text('{"name": "umami"}', encoding="utf-8")
+            return Mock(revision=Mock(sha="umami123456"))
+
+        with patch.object(container_app_service, "root", return_value=Path(self.temp_dir)), \
+             patch.object(container_app_deployment_service, "_ensure_buildkit_daemon"), \
+             patch.object(repository_service, "clone", side_effect=fake_clone), \
+             patch("services.container_app_build_process_service.run") as mock_run:
+
+            mock_run.return_value = Mock(returncode=0, stdout="Railpack build success", stderr="")
+
+            image = container_app_deployment_service._build_or_pull(app, deployment)
+            self.assertEqual(image, "srv-panel/railpack-app:15-2")
+
+            # Check CLI arguments - MUST NOT contain --env KEY=VALUE
+            build_cmd = mock_run.call_args[0][1]
+            self.assertEqual(build_cmd[0], "railpack")
+            self.assertEqual(build_cmd[1], "build")
+            self.assertNotIn("--env", build_cmd)
+            self.assertFalse(any("DATABASE_URL=" in item for item in build_cmd))
+
+            # Check railpack.json written with secrets declared by name
+            source_dir = Path(self.temp_dir) / "build" / "2" / "source"
+            railpack_json_file = source_dir / "railpack.json"
+            self.assertTrue(railpack_json_file.exists())
+            railpack_config = json.loads(railpack_json_file.read_text(encoding="utf-8"))
+            self.assertIn("DATABASE_URL", railpack_config["secrets"])
+            self.assertIn("APP_SECRET", railpack_config["secrets"])
+
+            # Check env passed safely to subprocess environment
+            passed_env = mock_run.call_args[1].get("env")
+            self.assertIsNotNone(passed_env)
+            self.assertEqual(passed_env["DATABASE_URL"], "postgresql://user:pass@127.0.0.1:5432/appdb")
+            self.assertEqual(passed_env["APP_SECRET"], "topsecret")
+
+    def test_ensure_buildx_builder_raises_descriptive_repair_error_when_creation_fails(self):
+        with patch.object(container_app_service, "_run") as mock_run:
+            mock_run.return_value = Mock(returncode=1, stdout="", stderr="Error: docker-container driver not supported")
+            with self.assertRaises(RuntimeError) as ctx:
+                container_app_deployment_service._ensure_buildx_builder("srv-panel-builder")
+            self.assertIn("srv-panel-builder", str(ctx.exception))
+            self.assertIn("Repair with: docker buildx create", str(ctx.exception))
 
 
 if __name__ == "__main__":

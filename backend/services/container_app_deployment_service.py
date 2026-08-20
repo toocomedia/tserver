@@ -238,35 +238,96 @@ async def _restore_previous(
         return False
 
 
+def _ensure_buildkit_daemon() -> None:
+    inspect_res = apps._run(["docker", "inspect", "--format", "{{.HostConfig.ExtraHosts}}", "srv-panel-buildkit"], timeout=10)
+    has_host_gateway = inspect_res.returncode == 0 and "host.docker.internal" in (inspect_res.stdout or "")
+    running_res = apps._run(["docker", "inspect", "--format", "{{.State.Running}}", "srv-panel-buildkit"], timeout=10)
+    is_running = running_res.returncode == 0 and (running_res.stdout or "").strip() == "true"
+
+    if not is_running or not has_host_gateway:
+        apps._run(["docker", "rm", "-f", "srv-panel-buildkit"], timeout=15)
+        create_res = apps._run([
+            "docker", "run", "-d",
+            "--name", "srv-panel-buildkit",
+            "--restart", "unless-stopped",
+            "--privileged",
+            "--add-host", "host.docker.internal:host-gateway",
+            "--label", "srv-panel.engine=railpack-buildkit",
+            "moby/buildkit:buildx-stable-1",
+        ], timeout=45)
+        if create_res.returncode != 0:
+            err = (create_res.stderr or create_res.stdout or "Failed to start srv-panel-buildkit").strip()
+            raise RuntimeError(f"Could not start BuildKit daemon (srv-panel-buildkit): {err}")
+
+
 def _ensure_buildx_builder(builder: str) -> str:
     if not builder:
-        return ""
-    try:
-        res = apps._run(["docker", "buildx", "inspect", builder], timeout=10)
-        if res.returncode != 0:
-            apps._run(["docker", "buildx", "create", "--name", builder, "--driver", "docker-container"], timeout=15)
-    except Exception:
-        pass
-    return builder
+        raise RuntimeError("Buildx builder name is not configured.")
+    inspect_res = apps._run(["docker", "buildx", "inspect", builder], timeout=10)
+    if inspect_res.returncode == 0:
+        return builder
+    create_res = apps._run([
+        "docker", "buildx", "create",
+        "--name", builder,
+        "--driver", "docker-container",
+        "--driver-opt", "default-load=true",
+        "--bootstrap",
+    ], timeout=45)
+    if create_res.returncode == 0:
+        return builder
+    verify_res = apps._run(["docker", "buildx", "inspect", builder], timeout=10)
+    if verify_res.returncode == 0:
+        return builder
+    err_detail = (create_res.stderr or create_res.stdout or "Unknown error").strip()
+    raise RuntimeError(
+        f"Buildx builder '{builder}' is missing and could not be created or booted: {err_detail}. "
+        f"Repair with: docker buildx create --name {builder} --driver docker-container --bootstrap"
+    )
 
 
 def _read_app_env(app: ContainerApp) -> dict[str, str]:
     if not getattr(app, "env_path", None):
         return {}
-    path = Path(app.env_path)
-    if not path.is_file():
+    env_file = Path(app.env_path)
+    if not env_file.exists():
         return {}
-    env: dict[str, str] = {}
+    result: dict[str, str] = {}
     try:
-        for line in path.read_text(encoding="utf-8").splitlines():
+        for line in env_file.read_text(encoding="utf-8").splitlines():
             line = line.strip()
-            if line and not line.startswith("#") and "=" in line:
-                k, v = line.split("=", 1)
-                if k.strip():
-                    env[k.strip()] = v
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            k, _, v = line.partition("=")
+            k = k.strip()
+            v = v.strip()
+            if (v.startswith('"') and v.endswith('"')) or (v.startswith("'") and v.endswith("'")):
+                v = v[1:-1]
+            if k:
+                result[k] = v
     except Exception:
         pass
-    return env
+    return result
+
+
+def _inject_railpack_secrets(build_root: Path, secret_names: list[str]) -> None:
+    if not secret_names or not build_root.exists():
+        return
+    config_path = build_root / "railpack.json"
+    data: dict[str, Any] = {}
+    if config_path.exists():
+        try:
+            data = json.loads(config_path.read_text(encoding="utf-8"))
+        except Exception:
+            data = {}
+    existing_secrets = data.get("secrets", [])
+    if not isinstance(existing_secrets, list):
+        existing_secrets = []
+    merged = list(dict.fromkeys(existing_secrets + secret_names))
+    data["secrets"] = merged
+    try:
+        config_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+    except Exception:
+        pass
 
 
 def _build_or_pull(app: ContainerApp, deployment: ContainerAppDeployment) -> str:
@@ -303,6 +364,7 @@ def _build_or_pull(app: ContainerApp, deployment: ContainerAppDeployment) -> str
     if root_dir and (not build_root.exists() or not build_root.is_dir()):
         raise RuntimeError(f"Root directory '{root_dir}' does not exist in repository.")
 
+    build_env: dict[str, str] | None = None
     if getattr(app, "build_mode", None) == "dockerfile":
         # Route Dockerfile builds through the panel-owned constrained Buildx builder.
         builder = _ensure_buildx_builder(config.BUILDX_BUILDER_NAME)
@@ -330,14 +392,17 @@ def _build_or_pull(app: ContainerApp, deployment: ContainerAppDeployment) -> str
                 pass
         command.append(str(build_root))
     else:
-        # Railpack — BUILDKIT_HOST is set inside build_process.run() already
-        command = ["railpack", "build", "--name", image]
+        # Railpack: ensure BuildKit daemon is running with host.docker.internal gateway
+        _ensure_buildkit_daemon()
+        # Declare secrets by name in railpack.json; pass values via process env
         env_vars = _read_app_env(app)
-        for k, v in env_vars.items():
-            command.extend(["--env", f"{k}={v}"])
-        command.append(str(build_root))
+        if env_vars:
+            _inject_railpack_secrets(build_root, list(env_vars.keys()))
+            build_env = env_vars
+        command = ["railpack", "build", "--name", image, str(build_root)]
+
     progress.append_log(deployment, "build", "Building application image.")
-    result = build_process.run(deployment.id, command, config.CONTAINER_APP_BUILD_TIMEOUT)
+    result = build_process.run(deployment.id, command, config.CONTAINER_APP_BUILD_TIMEOUT, env=build_env)
     deployment.output = (deployment.output + result.stdout + result.stderr)[-80_000:]
     if result.returncode:
         raise RuntimeError("Build failed. See deployment output.")

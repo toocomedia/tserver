@@ -486,7 +486,7 @@ class BuildxRoutingTests(unittest.TestCase):
 
         captured_commands = []
 
-        def fake_run(dep_id, cmd, timeout):
+        def fake_run(dep_id, cmd, timeout, **kwargs):
             captured_commands.append(list(cmd))
             return SimpleNamespace(returncode=0, stdout="sha256:abc", stderr="")
 
@@ -495,6 +495,8 @@ class BuildxRoutingTests(unittest.TestCase):
         with (
             patch("services.container_app_deployment_service.apps.root",
                   return_value=Path(tempfile.mkdtemp())),
+            patch("services.container_app_service._run",
+                  return_value=SimpleNamespace(returncode=0, stdout="", stderr="")),
             patch("services.container_app_deployment_service.repository_service") as rs,
             patch("services.container_app_deployment_service.build_process") as bp,
             patch("services.container_app_deployment_service.progress"),
@@ -536,7 +538,7 @@ class BuildxRoutingTests(unittest.TestCase):
 
         captured_commands = []
 
-        def fake_run(dep_id, cmd, timeout):
+        def fake_run(dep_id, cmd, timeout, **kwargs):
             captured_commands.append(list(cmd))
             return SimpleNamespace(returncode=0, stdout="", stderr="")
 
@@ -545,6 +547,7 @@ class BuildxRoutingTests(unittest.TestCase):
         with (
             patch("services.container_app_deployment_service.apps.root",
                   return_value=Path(tempfile.mkdtemp())),
+            patch("services.container_app_deployment_service._ensure_buildkit_daemon"),
             patch("services.container_app_deployment_service.repository_service") as rs,
             patch("services.container_app_deployment_service.build_process") as bp,
             patch("services.container_app_deployment_service.progress"),
@@ -585,7 +588,7 @@ class SourceCleanupTests(unittest.IsolatedAsyncioTestCase):
         )
         deployment = SimpleNamespace(id=1, output="", stage="")
 
-        def fake_build(dep_id, cmd, timeout):
+        def fake_build(dep_id, cmd, timeout, **kwargs):
             return SimpleNamespace(returncode=0, stdout="", stderr="")
 
         fake_checkout = SimpleNamespace(revision=SimpleNamespace(sha="abc"))
@@ -593,6 +596,8 @@ class SourceCleanupTests(unittest.IsolatedAsyncioTestCase):
         with (
             patch("services.container_app_deployment_service.apps.root",
                   return_value=Path(tmp)),
+            patch("services.container_app_service._run",
+                  return_value=SimpleNamespace(returncode=0, stdout="", stderr="")),
             patch("services.container_app_deployment_service.repository_service") as rs,
             patch("services.container_app_deployment_service.build_process") as bp,
             patch("services.container_app_deployment_service.progress"),

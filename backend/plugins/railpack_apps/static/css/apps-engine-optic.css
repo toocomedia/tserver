@@ -724,3 +724,8 @@ html[data-theme="charcoal"] .apps-engine-optic .db-toggle-icon {
   gap: 8px;
   flex-wrap: wrap;
 }
+
+/* Ensure hidden elements remain hidden regardless of grid/flex defaults */
+[hidden], .hidden {
+  display: none !important;
+}

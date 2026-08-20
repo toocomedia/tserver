@@ -4,6 +4,7 @@
 {% block head %}<link rel="stylesheet" href="/plugins/railpack_apps/static/css/apps-engine-recovery.css">{% endblock %}
 {% block topbar_actions %}<a class="btn btn--primary" href="/plugins/railpack_apps/create">+ Deploy App</a>{% endblock %}
 {% block content %}
+{% include "partials/csrf_field.html" %}
 {% include "railpack_apps/partials/orphan_recovery.html" %}
 
 {% if apps %}

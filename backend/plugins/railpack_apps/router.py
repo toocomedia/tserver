@@ -68,7 +68,8 @@ async def bulk_action(req: BulkActionRequest, db: AsyncSession = Depends(get_db)
                 managed_ids = [item.id for item in attachments if item.provider in {"docker", "panel_postgres", "panel_mariadb"}]
                 await container_app_removal_service.remove_selected_data(
                     db, app, attachments, database_ids=managed_ids,
-                    delete_app_volume=bool(app.data_volume), delete_wordpress_files=bool(app.wordpress_content_volume),
+                    delete_app_volume=bool(app.data_volume or getattr(app, "storage_mounts", None)),
+                    delete_wordpress_files=bool(app.wordpress_content_volume),
                     delete_backups=True
                 )
                 await db.execute(delete(ContainerAppDeployment).where(ContainerAppDeployment.app_id == app.id))

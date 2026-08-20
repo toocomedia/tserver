@@ -38,13 +38,22 @@ def inspect_repository(repository_url: str, branch: str, *, ssh_key_path: str | 
         # Detect databases with confidence levels
         databases, suggestions = _databases_with_confidence(root, files, text)
 
-        build_mode = "railpack"
+        has_dockerfile = "Dockerfile" in files
+        has_app_manifest = bool(files & {
+            "package.json", "requirements.txt", "pyproject.toml", "Pipfile", "poetry.lock",
+            "composer.json", "go.mod", "Gemfile", "pom.xml", "build.gradle", "build.gradle.kts",
+            "Cargo.toml", "deno.json", "bun.lockb", "railpack.json", "Procfile", "index.html"
+        })
+        # If repo only has a Dockerfile without standard app manifests, select Dockerfile mode;
+        # otherwise default to Railpack (with Dockerfile detected hint if Dockerfile exists).
+        build_mode = "dockerfile" if (has_dockerfile and not has_app_manifest) else "railpack"
+
         return {
             "repository_url": checkout.repository_url,
             "branch": checkout.branch,
             "runtime": runtime,
             "build_mode": build_mode,
-            "has_dockerfile": "Dockerfile" in files,
+            "has_dockerfile": has_dockerfile,
             "internal_port": _port(text, runtime),
             "database_types": [d["kind"] for d in databases],
             "database_detected": bool(databases),

@@ -1,7 +1,16 @@
 export const csrfHeaders = () => ({ 'X-CSRF-Token': document.querySelector('[name="csrf_token"]')?.value || '' });
 
 export function setHidden(element, hidden) {
-  if (element) element.hidden = hidden;
+  if (element) {
+    element.hidden = !!hidden;
+    if (hidden) {
+      element.classList.add('hidden');
+      element.style.setProperty('display', 'none', 'important');
+    } else {
+      element.classList.remove('hidden');
+      element.style.removeProperty('display');
+    }
+  }
 }
 
 export function setText(element, value) {
@@ -146,13 +155,24 @@ export function environmentValues(form) {
 export function renderInspection(form, data) {
   setText(form.querySelector('[data-inspection-runtime]'), data.runtime || 'Source ready');
   
+  const dockerfileHint = form.querySelector('[data-dockerfile-hint]');
+  if (dockerfileHint) {
+    dockerfileHint.hidden = !data.has_dockerfile;
+  }
+
   const buildModeInput = form.querySelector('#build_mode');
-  if (buildModeInput && data.build_mode) {
-    buildModeInput.value = data.build_mode;
+  const targetMode = data.build_mode || 'railpack';
+  if (buildModeInput) {
+    buildModeInput.value = targetMode;
     const dropdown = buildModeInput.closest('.custom-dropdown');
     if (dropdown) {
-      const item = dropdown.querySelector(`[data-dropdown-item][data-value="${data.build_mode}"]`);
-      if (item) item.click();
+      const item = dropdown.querySelector(`[data-dropdown-item][data-value="${targetMode}"]`);
+      if (item) {
+        dropdown.querySelectorAll('[data-dropdown-item]').forEach(i => i.classList.remove('is-selected'));
+        item.classList.add('is-selected');
+        const triggerLabel = dropdown.querySelector('[data-dropdown-label]');
+        if (triggerLabel) triggerLabel.textContent = item.dataset.label || item.textContent;
+      }
     }
   }
   

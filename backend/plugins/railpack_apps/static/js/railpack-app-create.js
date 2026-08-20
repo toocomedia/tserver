@@ -145,8 +145,9 @@ if (form) {
   }
 
   function applyInspection(data) {
-    if (['railpack', 'dockerfile'].includes(data.build_mode)) {
-      query('#build_mode').value = data.build_mode;
+    const targetMode = data.build_mode || 'railpack';
+    if (query('#build_mode')) {
+      query('#build_mode').value = targetMode;
       updateBuildModeFields();
     }
     const port = Number(data.internal_port);
@@ -350,8 +351,8 @@ if (form) {
   const advPanel = query('[data-advanced-build-panel]');
   if (toggleAdvBtn && advPanel) {
     toggleAdvBtn.addEventListener('click', () => {
-      const isHidden = advPanel.hidden;
-      advPanel.hidden = !isHidden;
+      const isHidden = advPanel.hidden || advPanel.classList.contains('hidden') || advPanel.style.display === 'none';
+      setHidden(advPanel, !isHidden);
       toggleAdvBtn.textContent = isHidden ? '⚙ Hide Advanced Options' : '⚙ Advanced Options';
     });
   }
@@ -364,20 +365,21 @@ if (form) {
 
   if (toggleBulkBtn && bulkPanel) {
     toggleBulkBtn.addEventListener('click', () => {
-      bulkPanel.hidden = !bulkPanel.hidden;
-      if (!bulkPanel.hidden && bulkInput) bulkInput.focus();
+      const isHidden = bulkPanel.hidden || bulkPanel.classList.contains('hidden') || bulkPanel.style.display === 'none';
+      setHidden(bulkPanel, !isHidden);
+      if (isHidden && bulkInput) bulkInput.focus();
     });
   }
   if (cancelBulkBtn && bulkPanel) {
     cancelBulkBtn.addEventListener('click', () => {
-      bulkPanel.hidden = true;
+      setHidden(bulkPanel, true);
       if (bulkInput) bulkInput.value = '';
     });
   }
   if (applyBulkBtn && bulkPanel && bulkInput) {
     applyBulkBtn.addEventListener('click', () => {
       parseAndApplyBulkEnv(form, bulkInput.value);
-      bulkPanel.hidden = true;
+      setHidden(bulkPanel, true);
       bulkInput.value = '';
     });
   }
