@@ -322,8 +322,10 @@ def _inject_railpack_secrets(build_root: Path, secret_names: list[str]) -> None:
     existing_secrets = data.get("secrets", [])
     if not isinstance(existing_secrets, list):
         existing_secrets = []
-    merged = list(dict.fromkeys(existing_secrets + secret_names))
-    data["secrets"] = merged
+    filtered_names = [k for k in secret_names if k and k not in {"PORT", "INTERNAL_PORT", "HOST_PORT", "CONTAINER_PORT"}]
+    merged = list(dict.fromkeys(existing_secrets + filtered_names))
+    if merged:
+        data["secrets"] = merged
     try:
         config_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
     except Exception:
