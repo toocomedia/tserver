@@ -26,14 +26,25 @@ def run(deployment_id: int, command: list[str], timeout: int, env: dict[str, str
         proc_env.update(env)
     if command and command[0] == "railpack":
         proc_env["BUILDKIT_HOST"] = "docker-container://srv-panel-buildkit"
-        build_tmp = Path(config.CONTAINER_APP_ENV_ROOT).parent / "build" / str(deployment_id) / "tmp"
+        build_dir = Path(config.CONTAINER_APP_ENV_ROOT).parent / "build" / str(deployment_id)
+        build_tmp = build_dir / "tmp"
+        build_cache = build_dir / "cache"
         try:
             build_tmp.mkdir(parents=True, exist_ok=True)
+            build_cache.mkdir(parents=True, exist_ok=True)
             proc_env["TMPDIR"] = str(build_tmp)
+            proc_env["TEMP"] = str(build_tmp)
+            proc_env["TMP"] = str(build_tmp)
             proc_env["XDG_RUNTIME_DIR"] = str(build_tmp)
+            proc_env["XDG_CACHE_HOME"] = str(build_cache)
+            proc_env["XDG_DATA_HOME"] = str(build_cache / "data")
+            proc_env["XDG_STATE_HOME"] = str(build_cache / "state")
+            proc_env["XDG_CONFIG_HOME"] = str(build_cache / "config")
         except Exception:
             pass
-    prefix = ["sudo", "-n"] if hasattr(os, "geteuid") and os.geteuid() != 0 and config.PRIVILEGED_SUDO else []
+        prefix = []
+    else:
+        prefix = ["sudo", "-n"] if hasattr(os, "geteuid") and os.geteuid() != 0 and config.PRIVILEGED_SUDO else []
     process = subprocess.Popen([*prefix, *command], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=proc_env)
     with _lock:
         _processes[deployment_id] = process

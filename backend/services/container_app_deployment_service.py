@@ -239,6 +239,7 @@ async def _restore_previous(
 
 
 def _ensure_buildkit_daemon() -> None:
+    apps._run(["rm", "-rf", "/tmp/railpack*", "/tmp/mise*"], timeout=10)
     inspect_res = apps._run(["docker", "inspect", "--format", "{{.HostConfig.ExtraHosts}}", "srv-panel-buildkit"], timeout=10)
     has_host_gateway = inspect_res.returncode == 0 and "host.docker.internal" in (inspect_res.stdout or "")
     running_res = apps._run(["docker", "inspect", "--format", "{{.State.Running}}", "srv-panel-buildkit"], timeout=10)
