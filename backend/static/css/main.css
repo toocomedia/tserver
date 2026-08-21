@@ -370,17 +370,17 @@ p {
 
 [data-theme="amoled"] {
   --color-bg:         #000000;
-  --color-surface:    #141417;
-  --color-surface-hover: #1F1F24;
-  --color-header-bg-bar: #24242C;
+  --color-surface:    #181A19;
+  --color-surface-hover: #222524;
+  --color-header-bg-bar: #262927;
   --color-sidebar:    #000000;
   --color-sidebar-text: #D4D4D8;
   --color-sidebar-hover: var(--color-text);
   --color-sidebar-border: rgba(255, 255, 255, 0.16);
-  --color-sidebar-bg-hover: #1F1F24;
+  --color-sidebar-bg-hover: #222524;
   --color-text:       #FFFFFF;
   --color-muted:      #9CA3AF;
-  --color-line:       #2A2A34;
+  --color-line:       #2A2E2C;
   
   /* Keep accents the same */
   --color-accent:     #C7F464; 
@@ -393,8 +393,8 @@ p {
   /* Button Fills (AMOLED) */
   --color-neutral-btn:   #EAECEF;
   --color-neutral-text:  #000000;
-  --color-secondary-btn: #24242C;
-  --color-secondary-hover:#32323D;
+  --color-secondary-btn: #262927;
+  --color-secondary-hover:#323634;
   --color-danger-btn:    #350A0A;
   --color-danger-text:   #FCA5A5;
   
@@ -403,7 +403,7 @@ p {
   --color-on-accent:  #111111;
   --color-alert-success-bg: #111A11;
   --color-alert-danger-bg:  #1A1111;
-  --color-row-active: #1F1F24;
+  --color-row-active: #222524;
 }
 
 [data-theme="charcoal"] {
