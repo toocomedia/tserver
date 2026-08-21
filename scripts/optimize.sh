@@ -146,13 +146,13 @@ disable_optimization() {
     nohup bash -c 'sleep 1 && systemctl restart srv-panel' >/dev/null 2>&1 &
   fi
 
-  # 5. Disable any active disk swapfile (full 0 MB swap when optimization is off)
-  if swapon --show=NAME 2>/dev/null | grep -q "^/swapfile$"; then
-    swapoff "/swapfile" 2>/dev/null || true
-  fi
-  if [[ -f "/swapfile" ]]; then
-    rm -f "/swapfile"
-  fi
+  # 5. Disable every managed disk swapfile. A resize may retain a temporary
+  # path when the kernel keeps the active file busy during rename.
+  for swap_path in $(swapon --show=NAME --noheadings 2>/dev/null | grep -E '^/swapfile'); do
+    swapoff "$swap_path" 2>/dev/null || true
+    rm -f "$swap_path" 2>/dev/null || true
+  done
+  rm -f "/swapfile" "/swapfile.new" /swapfile.tmp.* 2>/dev/null || true
   if [[ -f /etc/fstab ]]; then
     sed -i '\|/swapfile|d' /etc/fstab
   fi
@@ -421,14 +421,19 @@ set_swap() {
   done
   rm -f "$SWAP_FILE" 2>/dev/null || true
 
-  # Rename new into place
-  mv "$SWAP_FILE_TMP" "$SWAP_FILE" 2>/dev/null || true
+  # Keep a path that is guaranteed to name the active file after reboot.
+  # Some kernels reject renaming an active swapfile with Text file busy.
+  local persistent_swap_file="$SWAP_FILE"
+  if ! mv "$SWAP_FILE_TMP" "$SWAP_FILE" 2>/dev/null; then
+    persistent_swap_file="$SWAP_FILE_TMP"
+    echo "WARNING: Active swapfile could not be renamed; keeping $persistent_swap_file."
+  fi
 
-  # Persist in /etc/fstab if not present
+  # Replace stale managed entries with the exact active path. Never claim a
+  # successful resize when fstab points at a different file.
   if [[ -f /etc/fstab ]]; then
-    if ! grep -q "^$SWAP_FILE" /etc/fstab; then
-      echo "$SWAP_FILE none swap sw 0 0" >> /etc/fstab
-    fi
+    sed -i '\|^/swapfile|d' /etc/fstab
+    echo "$persistent_swap_file none swap sw 0 0" >> /etc/fstab
   fi
 
   echo "==> Swap successfully configured to ${target_mb} MB total."
@@ -574,13 +579,11 @@ get_status() {
     swappiness="$(cat /proc/sys/vm/swappiness 2>/dev/null || echo "60")"
   fi
 
-  if [[ -f /swapfile ]]; then
-    local sz
-    sz="$(stat -c%s /swapfile 2>/dev/null || stat -f%z /swapfile 2>/dev/null || echo 0)"
-    if [[ "$sz" =~ ^[0-9]+$ ]] && [[ "$sz" -gt 0 ]]; then
-      swapfile_size_mb=$((sz / 1024 / 1024))
+  while read -r path _type size_kb _used_kb _priority; do
+    if [[ "$path" == /swapfile* ]] && [[ "$size_kb" =~ ^[0-9]+$ ]]; then
+      swapfile_size_mb=$((swapfile_size_mb + size_kb / 1024))
     fi
-  fi
+  done < <(swapon --show=NAME,TYPE,SIZE,USED,PRIO --noheadings --bytes 2>/dev/null | awk '{printf "%s %s %d %s %s\\n", $1, $2, $3 / 1024, $4, $5}')
 
   cat <<EOF
 {

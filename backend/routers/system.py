@@ -175,14 +175,18 @@ async def _get_optimization_status() -> dict:
             "has_snaps": has_snaps
         }
 
-    # 5. Swapfile and Safety Inspection
+    # 5. Managed disk swap inspection. A safe resize can retain a versioned
+    # /swapfile path when Linux will not rename an active swapfile.
     swapfile_size_mb = 0
-    swapfile_path = Path("/swapfile")
-    if swapfile_path.is_file():
-        try:
-            swapfile_size_mb = round(swapfile_path.stat().st_size / (1024 * 1024))
-        except Exception:
-            pass
+    try:
+        swaps = Path("/proc/swaps")
+        if swaps.is_file():
+            for line in swaps.read_text(encoding="utf-8", errors="ignore").splitlines()[1:]:
+                fields = line.split()
+                if len(fields) >= 3 and fields[0].startswith("/swapfile"):
+                    swapfile_size_mb += round(int(fields[2]) / 1024)
+    except (OSError, ValueError):
+        pass
 
     can_purge_swap = False
     can_disable_swap = True
