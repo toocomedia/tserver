@@ -7,10 +7,11 @@
   align-items: center;
   justify-content: center;
   gap: 5px;
-  padding: 3px 7px;
+  min-height: 20px;
+  padding: 0 8px;
   font-size: 11px;
   font-weight: 600;
-  line-height: 1;
+  line-height: normal;
   white-space: nowrap;
   vertical-align: middle;
   border-radius: 4px !important;
@@ -18,6 +19,11 @@
   background: var(--color-header-bg-bar);
   color: var(--color-text);
   border: none;
+}
+
+/* Hide any legacy dot elements */
+.badge-dot {
+  display: none !important;
 }
 
 /* Icons within badges */
@@ -34,68 +40,4 @@
   justify-content: center;
   vertical-align: middle;
   flex-shrink: 0;
-}
-
-/* Status indicator dot */
-.badge-dot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50% !important;
-  flex-shrink: 0;
-  background-color: var(--color-muted);
-}
-
-/* Auto dot for minimal/status badges without explicit .badge-dot or icon */
-.badge-minimal:not(:has(i)):not(:has(svg)):not(:has(.badge-dot))::before,
-.status-badge:not(:has(i)):not(:has(svg)):not(:has(.badge-dot))::before {
-  content: "";
-  width: 5px;
-  height: 5px;
-  border-radius: 50% !important;
-  flex-shrink: 0;
-  background-color: var(--color-muted);
-}
-
-/* Active / Healthy / OK / Success */
-.badge--active .badge-dot,
-.badge--healthy .badge-dot,
-.badge--ok .badge-dot,
-.badge-minimal--active .badge-dot,
-.badge-minimal--active:not(:has(i)):not(:has(svg))::before,
-.status-badge--success .badge-dot,
-.status-badge--success:not(:has(i)):not(:has(svg))::before {
-  background-color: var(--color-status-green, #10B981) !important;
-}
-
-/* Danger / Error / Problem / Missing */
-.badge--danger .badge-dot,
-.badge--error .badge-dot,
-.badge--missing .badge-dot,
-.badge--problem .badge-dot,
-.badge-minimal--danger .badge-dot,
-.badge-minimal--danger:not(:has(i)):not(:has(svg))::before,
-.status-badge--danger .badge-dot,
-.status-badge--danger:not(:has(i)):not(:has(svg))::before {
-  background-color: var(--color-danger, #EF4444) !important;
-}
-
-/* Warning / Needs Attention */
-.badge--warn .badge-dot,
-.badge--warning .badge-dot,
-.badge-minimal--warn .badge-dot,
-.badge-minimal--warn:not(:has(i)):not(:has(svg))::before,
-.status-badge--warning .badge-dot,
-.status-badge--warning:not(:has(i)):not(:has(svg))::before {
-  background-color: var(--color-warn, #F59E0B) !important;
-}
-
-/* Inactive / Neutral / Muted / Stopped */
-.badge--inactive .badge-dot,
-.badge--stopped .badge-dot,
-.badge--neutral .badge-dot,
-.badge-minimal--neutral .badge-dot,
-.badge-minimal--neutral:not(:has(i)):not(:has(svg))::before,
-.status-badge--muted .badge-dot,
-.status-badge--muted:not(:has(i)):not(:has(svg))::before {
-  background-color: var(--color-muted) !important;
 }
