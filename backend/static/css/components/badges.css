@@ -1,94 +1,30 @@
-/* badges.css */
-.badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding: 2px 6px;
-  line-height: 1;
-  white-space: nowrap;
-  color: var(--color-muted);
-  border-radius: 0 !important;
-  box-shadow: none !important;
-}
+/* badges.css — Minimal, Low-Color Badges & Labels */
 
-.badge--active,
-.badge--healthy,
-.badge--ok {
-  color: var(--color-text);
-}
-.badge--active .badge-dot,
-.badge--healthy .badge-dot,
-.badge--ok .badge-dot {
-  background-color: var(--color-status-green, #10B981);
-}
-
-.badge--inactive,
-.badge--stopped,
-.badge--neutral {
-  color: var(--color-muted);
-}
-.badge--inactive .badge-dot,
-.badge--stopped .badge-dot,
-.badge--neutral .badge-dot {
-  background-color: var(--color-muted);
-}
-
-.badge--missing,
-.badge--danger,
-.badge--error,
-.badge--problem {
-  color: var(--color-danger);
-}
-.badge--missing .badge-dot,
-.badge--danger .badge-dot,
-.badge--error .badge-dot,
-.badge--problem .badge-dot {
-  background-color: var(--color-danger);
-}
-
-.badge-dot {
-  width: 6px;
-  height: 6px;
-  flex-shrink: 0;
-}
-
-/* Flat status badges used in list rows. */
+.badge,
+.badge-minimal,
 .status-badge {
-  display: inline-flex;
-  align-items: center;
-  min-height: 24px;
-  padding: 0 var(--space-sm);
-  font-size: var(--font-small);
-  font-weight: 600;
-  line-height: 1;
-  white-space: nowrap;
-  border: none;
-  border-radius: 0;
-}
-.status-badge--success { background: var(--color-alert-success-bg); color: #3b5e13; }
-.status-badge--muted { background: var(--color-header-bg-bar); color: var(--color-muted); }
-.status-badge--warning { background: var(--color-surface); color: var(--color-warn); }
-.status-badge--danger { background: var(--color-alert-danger-bg); color: var(--color-danger); }
-
-/* Minimal Rounded Badges for Statuses & Presets */
-.badge-minimal {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 5px;
-  padding: 4px 8px;
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  border-radius: 4px !important;
+  padding: 3px 7px;
+  font-size: 11px;
+  font-weight: 600;
   line-height: 1;
+  white-space: nowrap;
   vertical-align: middle;
+  border-radius: 4px !important;
+  box-shadow: none !important;
+  background: var(--color-header-bg-bar);
+  color: var(--color-text);
+  border: none;
 }
+
+/* Icons within badges */
+.badge i,
+.badge svg,
+.badge-minimal i,
+.badge-minimal svg,
 .badge-minimal i[class*="devicon-"],
 .badge-minimal [class^="devicon-"] {
   font-size: 12px;
@@ -97,33 +33,69 @@
   align-items: center;
   justify-content: center;
   vertical-align: middle;
-}
-.badge-minimal--active {
-  background: var(--color-alert-success-bg);
-  color: #3b5e13;
-}
-.badge-minimal--danger {
-  background: var(--color-alert-danger-bg);
-  color: var(--color-danger);
-}
-.badge-minimal--neutral {
-  background: var(--color-header-bg-bar);
-  color: var(--color-muted);
+  flex-shrink: 0;
 }
 
-/* Base Dark Theme Badge Overrides (Midnight, Deep Dark, Charcoal) */
-:is([data-theme="dark"], [data-theme="amoled"], [data-theme="charcoal"]) :is(.status-badge--success, .badge-minimal--active, .badge--active, .badge--healthy, .badge--ok) {
-  color: #9FD640 !important;
+/* Status indicator dot */
+.badge-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50% !important;
+  flex-shrink: 0;
+  background-color: var(--color-muted);
 }
 
-:is([data-theme="dark"], [data-theme="amoled"], [data-theme="charcoal"]) :is(.status-badge--danger, .badge-minimal--danger, .badge--danger, .badge--error, .badge--missing, .badge--problem) {
-  color: #FCA5A5 !important;
+/* Auto dot for minimal/status badges without explicit .badge-dot or icon */
+.badge-minimal:not(:has(i)):not(:has(svg)):not(:has(.badge-dot))::before,
+.status-badge:not(:has(i)):not(:has(svg)):not(:has(.badge-dot))::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  border-radius: 50% !important;
+  flex-shrink: 0;
+  background-color: var(--color-muted);
 }
 
-:is([data-theme="dark"], [data-theme="amoled"], [data-theme="charcoal"]) .status-badge--warning {
-  color: #FBBF24 !important;
+/* Active / Healthy / OK / Success */
+.badge--active .badge-dot,
+.badge--healthy .badge-dot,
+.badge--ok .badge-dot,
+.badge-minimal--active .badge-dot,
+.badge-minimal--active:not(:has(i)):not(:has(svg))::before,
+.status-badge--success .badge-dot,
+.status-badge--success:not(:has(i)):not(:has(svg))::before {
+  background-color: var(--color-status-green, #10B981) !important;
 }
 
-:is([data-theme="dark"], [data-theme="amoled"], [data-theme="charcoal"]) :is(.status-badge--muted, .badge-minimal--neutral, .badge--inactive, .badge--stopped, .badge--neutral) {
-  color: #E5E7EB !important;
+/* Danger / Error / Problem / Missing */
+.badge--danger .badge-dot,
+.badge--error .badge-dot,
+.badge--missing .badge-dot,
+.badge--problem .badge-dot,
+.badge-minimal--danger .badge-dot,
+.badge-minimal--danger:not(:has(i)):not(:has(svg))::before,
+.status-badge--danger .badge-dot,
+.status-badge--danger:not(:has(i)):not(:has(svg))::before {
+  background-color: var(--color-danger, #EF4444) !important;
+}
+
+/* Warning / Needs Attention */
+.badge--warn .badge-dot,
+.badge--warning .badge-dot,
+.badge-minimal--warn .badge-dot,
+.badge-minimal--warn:not(:has(i)):not(:has(svg))::before,
+.status-badge--warning .badge-dot,
+.status-badge--warning:not(:has(i)):not(:has(svg))::before {
+  background-color: var(--color-warn, #F59E0B) !important;
+}
+
+/* Inactive / Neutral / Muted / Stopped */
+.badge--inactive .badge-dot,
+.badge--stopped .badge-dot,
+.badge--neutral .badge-dot,
+.badge-minimal--neutral .badge-dot,
+.badge-minimal--neutral:not(:has(i)):not(:has(svg))::before,
+.status-badge--muted .badge-dot,
+.status-badge--muted:not(:has(i)):not(:has(svg))::before {
+  background-color: var(--color-muted) !important;
 }
