@@ -20,6 +20,7 @@ from models.domain import Domain
 from services import container_app_service as apps
 from services import container_app_deployment_progress_service as progress
 from services import container_app_build_process_service as build_process
+from services.apps_engine import build_secrets
 from services.resource_guard_service import resource_guard_service
 from services.resource_guard_operation_service import resource_guard_operation_service
 from services.resource_guard_profiles import classify_deployment
@@ -239,7 +240,6 @@ async def _restore_previous(
 
 
 def _ensure_buildkit_daemon() -> None:
-    apps._run(["rm", "-rf", "/tmp/railpack*", "/tmp/mise*"], timeout=10)
     inspect_res = apps._run(["docker", "inspect", "--format", "{{.HostConfig.ExtraHosts}}", "srv-panel-buildkit"], timeout=10)
     has_host_gateway = inspect_res.returncode == 0 and "host.docker.internal" in (inspect_res.stdout or "")
     running_res = apps._run(["docker", "inspect", "--format", "{{.State.Running}}", "srv-panel-buildkit"], timeout=10)
@@ -311,26 +311,7 @@ def _read_app_env(app: ContainerApp) -> dict[str, str]:
 
 
 def _inject_railpack_secrets(build_root: Path, secret_names: list[str]) -> None:
-    if not secret_names or not build_root.exists():
-        return
-    config_path = build_root / "railpack.json"
-    data: dict[str, Any] = {}
-    if config_path.exists():
-        try:
-            data = json.loads(config_path.read_text(encoding="utf-8"))
-        except Exception:
-            data = {}
-    existing_secrets = data.get("secrets", [])
-    if not isinstance(existing_secrets, list):
-        existing_secrets = []
-    filtered_names = [k for k in secret_names if k and k not in {"PORT", "INTERNAL_PORT", "HOST_PORT", "CONTAINER_PORT"}]
-    merged = list(dict.fromkeys(existing_secrets + filtered_names))
-    if merged:
-        data["secrets"] = merged
-    try:
-        config_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
-    except Exception:
-        pass
+    build_secrets.inject_railpack_secrets(build_root, secret_names)
 
 
 def _build_or_pull(app: ContainerApp, deployment: ContainerAppDeployment) -> str:
@@ -399,9 +380,15 @@ def _build_or_pull(app: ContainerApp, deployment: ContainerAppDeployment) -> str
         _ensure_buildkit_daemon()
         # Declare secrets by name in railpack.json; pass values via process env
         env_vars = _read_app_env(app)
-        if env_vars:
-            _inject_railpack_secrets(build_root, list(env_vars.keys()))
-            build_env = env_vars
+        try:
+            secret_names = build_secrets.select_names(
+                env_vars, getattr(app, "build_secret_keys", None),
+            )
+        except ValueError as exc:
+            raise RuntimeError(str(exc)) from exc
+        if secret_names:
+            _inject_railpack_secrets(build_root, secret_names)
+            build_env = {key: env_vars[key] for key in secret_names}
         command = ["railpack", "build", "--name", image, str(build_root)]
 
     progress.append_log(deployment, "build", "Building application image.")

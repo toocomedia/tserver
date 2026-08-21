@@ -197,6 +197,16 @@ def validate_custom_start_command(command: str | None) -> str | None:
     return val
 
 
+def parse_build_secret_keys(value: str | list[str] | None) -> str | None:
+    import json as _json
+    from services.apps_engine import build_secrets
+    try:
+        keys = build_secrets.parse_requested_keys(value)
+    except (TypeError, ValueError, _json.JSONDecodeError) as exc:
+        raise HTTPException(400, str(exc)) from exc
+    return _json.dumps(keys) if keys is not None else None
+
+
 async def create_app(
     db: AsyncSession, *, domain: Domain, source_type: str, build_mode: str,
     repository_url: str | None, branch: str | None, image_reference: str | None,
@@ -208,6 +218,7 @@ async def create_app(
     dockerfile_path: str = "Dockerfile", build_args: str | dict | None = None,
     custom_start_command: str | None = None, storage_mounts: list[dict] | str | None = None,
     health_path: str = "/", startup_timeout_seconds: int = 45,
+    build_secret_keys: str | list[str] | None = None,
 ) -> ContainerApp:
     ref_val = (git_ref or branch or "main").strip()
     ref_type_val = (git_ref_type or "branch").strip().lower()
@@ -247,6 +258,7 @@ async def create_app(
         root_directory=validate_root_directory(root_directory),
         dockerfile_path=validate_dockerfile_path(dockerfile_path),
         build_args=parse_build_args(build_args),
+        build_secret_keys=parse_build_secret_keys(build_secret_keys),
         custom_start_command=validate_custom_start_command(custom_start_command),
         health_path=validate_health_path(health_path),
         startup_timeout_seconds=validate_startup_timeout(startup_timeout_seconds),

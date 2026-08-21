@@ -106,7 +106,7 @@ async def create(
     wordpress_admin_email: str = Form(""), wordpress_admin_password: str = Form(""),
     git_ref: str = Form(""), git_ref_type: str = Form("branch"), draft_key_id: str = Form(""),
     root_directory: str = Form(""), dockerfile_path: str = Form("Dockerfile"),
-    build_args: str = Form(""), custom_start_command: str = Form(""),
+    build_args: str = Form(""), build_secret_keys: str = Form(""), custom_start_command: str = Form(""),
     storage_mounts: str = Form("[]"), health_path: str = Form("/"),
     startup_timeout_seconds: int = Form(45),
     db: AsyncSession = Depends(get_db),
@@ -132,6 +132,7 @@ async def create(
         git_ref=git_ref.strip() or None, git_ref_type=git_ref_type.strip() or "branch",
         draft_key_id=draft_key_id.strip() or None, root_directory=root_directory.strip(),
         dockerfile_path=dockerfile_path.strip() or "Dockerfile", build_args=build_args.strip() or None,
+        build_secret_keys=build_secret_keys.strip() or None,
         custom_start_command=custom_start_command.strip() or None, storage_mounts=storage_mounts.strip() or None,
         health_path=health_path.strip() or "/", startup_timeout_seconds=startup_timeout_seconds,
     )

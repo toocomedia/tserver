@@ -33,6 +33,7 @@ class ContainerApp(Base):
     root_directory: Mapped[str | None] = mapped_column(String(255), default="")
     dockerfile_path: Mapped[str | None] = mapped_column(String(255), default="Dockerfile")
     build_args: Mapped[str | None] = mapped_column(Text)
+    build_secret_keys: Mapped[str | None] = mapped_column(Text)
     custom_start_command: Mapped[str | None] = mapped_column(Text)
     health_path: Mapped[str] = mapped_column(String(255), default="/", nullable=False)
     startup_timeout_seconds: Mapped[int] = mapped_column(Integer, default=45, nullable=False)

@@ -159,6 +159,7 @@ async def update_settings(
     root_directory: str | None = Form(None),
     dockerfile_path: str | None = Form(None),
     build_args: str | None = Form(None),
+    build_secret_keys: str | None = Form(None),
     custom_start_command: str | None = Form(None),
     health_path: str | None = Form(None),
     startup_timeout_seconds: int | None = Form(None),
@@ -185,6 +186,8 @@ async def update_settings(
         app.dockerfile_path = container_app_service.validate_dockerfile_path(dockerfile_path)
     if build_args is not None:
         app.build_args = container_app_service.parse_build_args(build_args)
+    if build_secret_keys is not None:
+        app.build_secret_keys = container_app_service.parse_build_secret_keys(build_secret_keys)
     if custom_start_command is not None:
         app.custom_start_command = container_app_service.validate_custom_start_command(custom_start_command)
     if health_path is not None:

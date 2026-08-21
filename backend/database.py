@@ -257,6 +257,7 @@ def _migrate_sync(sync_conn) -> None:
             "root_directory": "VARCHAR(255) DEFAULT ''",
             "dockerfile_path": "VARCHAR(255) DEFAULT 'Dockerfile'",
             "build_args": "TEXT",
+            "build_secret_keys": "TEXT",
             "custom_start_command": "TEXT",
             "storage_mounts": "TEXT",
             "health_path": "VARCHAR(255) DEFAULT '/' NOT NULL",
