@@ -1073,11 +1073,14 @@
       return;
     }
     toast('Initiating full server reboot...', 'warning');
+    const button = document.getElementById('btn-reboot-server');
+    if (button) button.disabled = true;
     try {
       const res = await panel.post('/api/system/reboot');
-      toast(res?.detail || 'Server reboot initiated successfully.', 'success');
+      toast(res?.detail || 'Server reboot accepted.', 'success');
     } catch (e) {
-      toast('Reboot command sent to server.', 'success');
+      if (button) button.disabled = false;
+      toast(e?.message || 'Could not confirm reboot request. Check server availability.', 'error');
     }
   }
 

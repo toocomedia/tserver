@@ -34,6 +34,7 @@ from services import php_site_usage_service
 from services import process_usage_classifier
 from services import plugin_usage_service
 from services import container_app_usage_service
+from services import server_control_service
 from services.resource_guard_service import resource_guard_service
 from templating import templates
 from utils.shell import run
@@ -641,12 +642,11 @@ async def clean_swap_cache():
 @router.post("/api/system/reboot")
 async def reboot_server():
     """Reboot the entire server/VPS."""
-    async def _do_reboot():
-        await asyncio.sleep(1)
-        await run(["sudo", "reboot"])
-
-    asyncio.create_task(_do_reboot())
-    return {"success": True, "detail": "Server reboot initiated. The system will restart in a moment."}
+    try:
+        await server_control_service.request_reboot()
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    return {"success": True, "detail": "Server reboot accepted. The system will restart shortly."}
 
 
 
