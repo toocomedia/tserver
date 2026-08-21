@@ -99,17 +99,24 @@ function initSslIssuePage() {
   }
 
   // Intercept submit, use global loader and async fetch for certbot
+  let isSubmitting = false;
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
-    if (submitBtn && submitBtn.disabled) return;
+    if (isSubmitting) return;
 
     updateForm();
     const opt = select.options[select.selectedIndex];
     if (!opt || !opt.value) {
+      toast("Please select a valid domain.", "warning");
+      select.focus();
       return;
     }
     
-    if (submitBtn) submitBtn.disabled = true;
+    isSubmitting = true;
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.classList.add("is-loading");
+    }
     showGlobalLoader("Issuing Certificate... (This may take 30–60s)");
     try {
       const data = Object.fromEntries(new FormData(form).entries());
@@ -123,7 +130,11 @@ function initSslIssuePage() {
       window.location.href = "/ssl/?issued=" + encodeURIComponent(data.full_domain || "");
     } catch (err) {
       hideGlobalLoader();
-      if (submitBtn) submitBtn.disabled = false;
+      isSubmitting = false;
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.classList.remove("is-loading");
+      }
       toast(err.message || "Failed to issue SSL certificate.", "danger");
     }
   });

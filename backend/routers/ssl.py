@@ -21,19 +21,19 @@ router = APIRouter(prefix="/ssl", tags=["ssl"])
 
 
 async def _build_eligible(db: AsyncSession) -> list[dict]:
-    """Domains and proxies with nginx active and no existing cert."""
+    """Domains and proxies with no existing cert."""
     issued_domains = {
         r.full_domain
         for r in (await db.scalars(select(SslCert))).all()
     }
 
     eligible: list[dict] = []
+    seen_domains: set[str] = set()
 
-    domains = (await db.scalars(
-        select(Domain).where(Domain.nginx_active == True)
-    )).all()
+    domains = (await db.scalars(select(Domain))).all()
     for d in domains:
-        if d.name not in issued_domains:
+        if d.name not in issued_domains and d.name not in seen_domains:
+            seen_domains.add(d.name)
             eligible.append({
                 "id": d.id,
                 "label": d.name,
@@ -45,7 +45,8 @@ async def _build_eligible(db: AsyncSession) -> list[dict]:
         select(ReverseProxy).where(ReverseProxy.nginx_config_path.isnot(None))
     )).all()
     for p in proxies:
-        if p.full_domain not in issued_domains:
+        if p.full_domain not in issued_domains and p.full_domain not in seen_domains:
+            seen_domains.add(p.full_domain)
             eligible.append({
                 "id": p.domain_id,  # may be None for external
                 "label": f"{p.full_domain} (proxy → {p.target_ip}:{p.target_port})",
@@ -260,28 +261,40 @@ async def ssl_issue_submit(
 # RENEW
 # ---------------------------------------------------------------
 @router.post("/{cert_id}/renew")
-async def ssl_renew(cert_id: int, db: AsyncSession = Depends(get_db)):
-    """Renew a specific cert by ID."""
+async def ssl_renew(cert_id: int, request: Request, db: AsyncSession = Depends(get_db)):
+    """Renew a specific cert by ID. Supports both JSON and Form requests."""
+    content_type = request.headers.get("content-type", "").lower()
+    is_json_request = "application/json" in content_type or request.headers.get("accept", "").startswith("application/json")
     try:
         await ssl_service.renew_cert(db, cert_id)
+        if is_json_request:
+            return JSONResponse({"status": "ok"})
         return RedirectResponse(f"/ssl/?renewed=1", status_code=303)
     except Exception as exc:
         error = str(exc.detail) if hasattr(exc, "detail") else str(exc)
-        return RedirectResponse(f"/ssl/?error={error}", status_code=303)
+        if is_json_request:
+            raise HTTPException(status_code=getattr(exc, "status_code", 400), detail=error)
+        return RedirectResponse(f"/ssl/?error={quote(error)}", status_code=303)
 
 
 # ---------------------------------------------------------------
 # REVOKE
 # ---------------------------------------------------------------
 @router.post("/{cert_id}/revoke")
-async def ssl_revoke(cert_id: int, db: AsyncSession = Depends(get_db)):
-    """Revoke cert, revert nginx to HTTP-only."""
+async def ssl_revoke(cert_id: int, request: Request, db: AsyncSession = Depends(get_db)):
+    """Revoke cert, revert nginx to HTTP-only. Supports both JSON and Form requests."""
+    content_type = request.headers.get("content-type", "").lower()
+    is_json_request = "application/json" in content_type or request.headers.get("accept", "").startswith("application/json")
     try:
         await ssl_service.revoke_cert(db, cert_id)
+        if is_json_request:
+            return JSONResponse({"status": "ok"})
         return RedirectResponse("/ssl/?revoked=1", status_code=303)
     except Exception as exc:
         error = str(exc.detail) if hasattr(exc, "detail") else str(exc)
-        return RedirectResponse(f"/ssl/?error={error}", status_code=303)
+        if is_json_request:
+            raise HTTPException(status_code=getattr(exc, "status_code", 400), detail=error)
+        return RedirectResponse(f"/ssl/?error={quote(error)}", status_code=303)
 
 from pydantic import BaseModel
 class AutoRenewPayload(BaseModel):

@@ -309,15 +309,32 @@ async def issue_cert(
             logger.info("Cert already exists for: %s, skipping certbot and updating nginx config", full_domain)
             skip_certbot = True
 
+    # Resolve domain and proxy objects
+    domain_obj = None
+    if domain_id is not None:
+        domain_obj = await db.scalar(select(Domain).where(Domain.id == domain_id))
+    if domain_obj is None:
+        domain_obj = await db.scalar(select(Domain).where(Domain.name == full_domain))
+
+    proxy_obj = await db.scalar(
+        select(ReverseProxy).where(ReverseProxy.full_domain == full_domain)
+    )
+
     if not skip_certbot:
         # Guard: nginx must exist for this exact host (not parent domain)
         if not nginx_service.config_exists(full_domain):
-            raise HTTPException(
-                status_code=400,
-                detail=f"Nginx config not found for {full_domain}. HTTP must be active before issuing SSL."
-            )
+            if domain_obj:
+                logger.info("Nginx config missing for domain %s. Auto-creating HTTP static config for ACME verification.", full_domain)
+                domain_obj.nginx_config_path = await nginx_service.create_static_site(full_domain)
+                domain_obj.nginx_active = True
+                await nginx_service.reload()
+            else:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Nginx config not found for {full_domain}. HTTP must be active before issuing SSL."
+                )
 
-        nginx_service.ensure_acme_root()
+        await nginx_service.ensure_acme_root_privileged()
 
         # Build certbot command
         cmd = [
@@ -370,15 +387,6 @@ async def issue_cert(
     key_path  = _key_path(full_domain)
 
     # Update nginx config to HTTPS — determine if domain or proxy
-    domain_obj = None
-    if domain_id is not None:
-        domain_obj = await db.scalar(select(Domain).where(Domain.id == domain_id))
-    if domain_obj is None:
-        domain_obj = await db.scalar(select(Domain).where(Domain.name == full_domain))
-
-    proxy_obj = await db.scalar(
-        select(ReverseProxy).where(ReverseProxy.full_domain == full_domain)
-    )
     hosted_app = None
     container_app = None
     php_site = None

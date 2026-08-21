@@ -10,7 +10,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="ssl-page">
+<div class="ssl-page" style="position: relative;">
 
 <!-- SKELETON LOADING OVERLAY -->
 {{ skeleton_overlay('ssl-skeleton', controls=1, tables=[{ 'rows': 4 }]) }}
@@ -155,7 +155,7 @@
 
         <!-- ACTION BUTTONS -->
         <div style="display: flex; align-items: center; gap: 10px; margin-top: 24px;">
-          <button type="submit" class="btn btn--primary" id="btn-submit" style="flex: 1; height: 38px;">
+          <button type="submit" class="btn btn--primary" id="btn-submit" data-no-loading="true" style="flex: 1; height: 38px;">
             {{ _('issue_certificate_1') }}
           </button>
           <button type="button" class="btn btn--secondary" onclick="closeModal('issue-ssl-drawer-modal')" style="height: 38px;">
@@ -179,8 +179,8 @@
 <script src="/static/js/modules/ssl.js?v={{ APP_VERSION }}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-  if (typeof hideSkeleton === 'function') hideSkeleton('ssl-skeleton');
-  else if (typeof window.hideSkeleton === 'function') window.hideSkeleton('ssl-skeleton');
+  if (typeof hideSkeleton === 'function') hideSkeleton('ssl-skeleton', 0);
+  else if (typeof window.hideSkeleton === 'function') window.hideSkeleton('ssl-skeleton', 0);
 
   {% if auto_open_issue %}
   if (typeof openModal === 'function') {
