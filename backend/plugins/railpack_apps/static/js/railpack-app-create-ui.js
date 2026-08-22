@@ -193,6 +193,16 @@ export function renderDeployment(form, data) {
   setText(form.querySelector('[data-deployment-state]'), state);
   setText(form.querySelector('[data-deployment-summary]'), labels[data.stage] || 'Deployment is running on the server.');
   setText(form.querySelector('[data-deployment-output]'), `${data.output || ''}${data.error ? `\n[error] ${data.error}` : ''}`);
+  const liveOut = form.querySelector('[data-deployment-live-output]');
+  if (liveOut) {
+    if (data.output) {
+      liveOut.style.display = 'block';
+      liveOut.textContent = `${data.output}${data.error ? `\n[error] ${data.error}` : ''}`;
+      liveOut.scrollTop = liveOut.scrollHeight;
+    } else {
+      liveOut.style.display = 'none';
+    }
+  }
   renderDeploymentSteps(form.querySelector('[data-deployment-steps]'), data, labels);
 }
 
