@@ -13,6 +13,69 @@
   max-height: 860px;
   display: flex;
   flex-direction: column;
+  transition: width 0.22s cubic-bezier(0.16, 1, 0.3, 1), margin 0.22s ease;
+}
+
+/* ── AI Guided Mode (60/40 Split Screen) ────────────────────────── */
+.apps-engine-optic.is-ai-mode,
+body.apps-engine-ai-active .apps-engine-optic {
+  width: calc(100% - 40vw);
+  min-width: 340px;
+  max-width: 100%;
+  margin-left: 0;
+  margin-right: auto;
+  padding-right: 28px;
+  box-sizing: border-box;
+}
+
+[dir="rtl"] .apps-engine-optic.is-ai-mode,
+[dir="rtl"] body.apps-engine-ai-active .apps-engine-optic {
+  margin-right: 0;
+  margin-left: auto;
+  padding-right: 0;
+  padding-left: 28px;
+}
+
+/* Hide bottom bar navigation buttons when AI guided mode is active */
+.apps-engine-optic.is-ai-mode [data-wizard-next],
+body.apps-engine-ai-active .apps-engine-optic [data-wizard-next],
+.apps-engine-optic.is-ai-mode [data-wizard-back],
+body.apps-engine-ai-active .apps-engine-optic [data-wizard-back] {
+  display: none !important;
+}
+
+/* Match fixed action bar width to the 60% split container */
+.apps-engine-optic.is-ai-mode .fixed-action-bar,
+body.apps-engine-ai-active .apps-engine-optic .fixed-action-bar {
+  width: calc(100% - 40vw);
+  left: 0;
+  right: auto;
+  box-sizing: border-box;
+}
+
+[dir="rtl"] .apps-engine-optic.is-ai-mode .fixed-action-bar,
+[dir="rtl"] body.apps-engine-ai-active .apps-engine-optic .fixed-action-bar {
+  left: auto;
+  right: 0;
+}
+
+/* AI Mode indicator in action bar */
+.apps-engine-wizard__ai-indicator {
+  display: none;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--color-accent);
+  background: var(--color-surface, rgba(255, 255, 255, 0.05));
+  padding: 4px 10px;
+  border-radius: 4px;
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
+}
+
+.apps-engine-optic.is-ai-mode .apps-engine-wizard__ai-indicator,
+body.apps-engine-ai-active .apps-engine-optic .apps-engine-wizard__ai-indicator {
+  display: inline-flex;
 }
 
 .apps-engine-optic .wizard-form {

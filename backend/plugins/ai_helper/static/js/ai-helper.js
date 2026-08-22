@@ -771,10 +771,20 @@
         this.drawerEl.classList.add("ai-helper-drawer--split");
         this.backdropEl.classList.remove("active");
         this.backdropEl.classList.add("ai-helper-backdrop--split");
+        document.body.classList.add("apps-engine-ai-active", "ai-helper-split-active");
+        document.querySelectorAll(".apps-engine-optic").forEach(function (el) {
+          el.classList.add("is-ai-mode");
+        });
+        window.dispatchEvent(new CustomEvent("ai-helper:mode-change", { detail: { split: true, active: true } }));
       } else {
         this.drawerEl.classList.remove("ai-helper-drawer--split");
         this.backdropEl.classList.remove("ai-helper-backdrop--split");
         this.backdropEl.classList.add("active");
+        document.body.classList.remove("apps-engine-ai-active", "ai-helper-split-active");
+        document.querySelectorAll(".apps-engine-optic").forEach(function (el) {
+          el.classList.remove("is-ai-mode");
+        });
+        window.dispatchEvent(new CustomEvent("ai-helper:mode-change", { detail: { split: false, active: true } }));
       }
 
       this.drawerEl.classList.add("open");
@@ -796,6 +806,11 @@
         this.backdropEl.classList.remove("active");
         this.backdropEl.classList.remove("ai-helper-backdrop--split");
       }
+      document.body.classList.remove("apps-engine-ai-active", "ai-helper-split-active");
+      document.querySelectorAll(".apps-engine-optic").forEach(function (el) {
+        el.classList.remove("is-ai-mode");
+      });
+      window.dispatchEvent(new CustomEvent("ai-helper:mode-change", { detail: { split: false, active: false } }));
       this.closeHistoryView();
     },
 

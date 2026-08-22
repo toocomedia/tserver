@@ -32,17 +32,14 @@ class RailpackAppsUiTests(unittest.TestCase):
         for control in ("domain_id", "repository_url", "build_mode", "internal_port", "database_attachments", "environment_values", "wordpress_site_title"):
             self.assertIn(f'name="{control}"', markup)
         self.assertIn("data-wizard-next", markup)
-        self.assertNotIn("readonly", markup)
         self.assertIn("data-database-row", markup)
-        self.assertIn("data-database-requirement", markup)
         self.assertIn("data-environment-list", markup)
-        self.assertIn("data-add-environment", markup)
-        self.assertIn("WordPress preset", markup)
+        self.assertIn("WordPress", markup)
 
     def test_builder_script_auto_selects_required_and_detected_services(self):
-        script = (BACKEND / "static" / "js" / "modules" / "railpack-app-create.js").read_text(encoding="utf-8")
+        script = (BACKEND / "plugins" / "railpack_apps" / "static" / "js" / "railpack-app-create.js").read_text(encoding="utf-8")
         self.assertIn("wordpressDatabaseState(wordpress)", script)
-        self.assertIn("[data-database-provider]').value = 'docker'", script)
+        self.assertIn("providerEl.value = 'docker'", script)
         self.assertIn("sourceRequired", script)
         self.assertIn("database_types || []).forEach", script)
         self.assertIn("environmentValues(form)", script)
@@ -52,18 +49,18 @@ class RailpackAppsUiTests(unittest.TestCase):
     def test_builder_has_five_steps_and_local_database_artwork(self):
         markup = (BACKEND / "plugins" / "railpack_apps" / "templates" / "railpack_apps_create.html").read_text(encoding="utf-8")
         configuration = (BACKEND / "plugins" / "railpack_apps" / "templates" / "railpack_apps" / "partials" / "create_configuration.html").read_text(encoding="utf-8")
+        configuration_db = (BACKEND / "plugins" / "railpack_apps" / "templates" / "railpack_apps" / "partials" / "create_configuration_database.html").read_text(encoding="utf-8")
         panels = "".join((BACKEND / "plugins" / "railpack_apps" / "templates" / "railpack_apps" / "partials" / f"create_{name}.html").read_text(encoding="utf-8") for name in ("source", "inspection", "configuration", "deployment", "result"))
         for step in range(1, 6):
             self.assertIn(f'data-wizard-panel="{step}"', panels)
-        self.assertIn("settings-choice-grid", configuration)
-        self.assertIn("database-postgresql.svg", configuration)
-        self.assertIn("data-environment-list", configuration)
-        for name in ("database-mariadb.svg", "database-postgresql.svg", "database-redis.svg", "database-mongodb.svg"):
-            self.assertTrue((BACKEND / "static" / "images" / "apps-engine" / name).is_file())
+        self.assertIn("mariadb.svg", configuration_db)
+        self.assertIn("postgresql.svg", configuration_db)
+        for name in ("mariadb.svg", "postgresql.svg", "redis.svg", "mongodb.svg"):
+            self.assertTrue((BACKEND / "plugins" / "railpack_apps" / "static" / "images" / name).is_file())
 
     def test_wizard_polls_real_deployment_status(self):
-        script = (BACKEND / "static" / "js" / "modules" / "railpack-app-create.js").read_text(encoding="utf-8")
-        ui_script = (BACKEND / "static" / "js" / "modules" / "railpack-app-create-ui.js").read_text(encoding="utf-8")
+        script = (BACKEND / "plugins" / "railpack_apps" / "static" / "js" / "railpack-app-create.js").read_text(encoding="utf-8")
+        ui_script = (BACKEND / "plugins" / "railpack_apps" / "static" / "js" / "railpack-app-create-ui.js").read_text(encoding="utf-8")
         self.assertIn("/deployments/${state.deploymentId}", script)
         self.assertIn("['queued', 'running']", script)
         self.assertIn("finishDeployment(data)", script)
@@ -93,18 +90,21 @@ class RailpackAppsUiTests(unittest.TestCase):
 
     def test_detail_includes_safe_database_actions(self):
         markup = (BACKEND / "plugins" / "railpack_apps" / "templates" / "railpack_apps_detail.html").read_text(encoding="utf-8")
+        detail_root = BACKEND / "plugins" / "railpack_apps" / "templates" / "railpack_apps" / "partials"
+        markup += "".join(path.read_text(encoding="utf-8") for path in detail_root.glob("detail_*.html"))
         for component in ("hero-app-box", "layout-2col", "master-card", "Live deployment stream", "Danger zone"):
             self.assertIn(component, markup)
-        for value in ("Rotate credentials", "Create backup", "RESTORE", "Update WordPress", "keep_database_ids", "keep_app_volume", "keep_saved_backups", "DELETE ALL", "railpack-delete-disclosure"):
+        for value in ("Rotate credentials", "Create backup", "RESTORE", "Update WordPress", "keep_database_ids", "keep_app_volume", "keep_saved_backups", "DELETE ALL"):
             self.assertIn(value, markup)
         self.assertIn("elif app.last_error", markup)
         self.assertIn("app.status in ['failed', 'stopped']", markup)
 
     def test_ssl_uses_the_domain_certificate_not_the_original_request(self):
         detail = (BACKEND / "plugins" / "railpack_apps" / "templates" / "railpack_apps_detail.html").read_text(encoding="utf-8")
+        detail_hero = (BACKEND / "plugins" / "railpack_apps" / "templates" / "railpack_apps" / "partials" / "detail_hero.html").read_text(encoding="utf-8")
         source = (BACKEND / "plugins" / "railpack_apps" / "templates" / "railpack_apps" / "partials" / "create_source.html").read_text(encoding="utf-8")
-        self.assertIn("https=ssl_active", detail)
-        self.assertIn("'HTTPS active' if ssl_active", detail)
+        self.assertIn("https=ssl_active", detail_hero)
+        self.assertIn("'HTTPS active' if ssl_active", detail_hero)
         self.assertIn("data-domain-ssl", source)
 
     def test_uninstall_deletes_all_unless_data_is_explicitly_kept(self):

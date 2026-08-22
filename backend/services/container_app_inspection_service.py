@@ -162,6 +162,11 @@ def _text_markers(lower_text: str) -> list[str]:
     return [kind for kind, tokens in _TEXT_MARKERS.items() if any(t in lower_text for t in tokens)]
 
 
+def _databases(text: str) -> list[str]:
+    """Compatibility helper returning database kinds from text markers."""
+    return _text_markers(text.lower())
+
+
 def _runtime(files: set[str]) -> str:
     if "package.json" in files:
         return "Node.js"

@@ -68,9 +68,9 @@ async def get_or_create_policy(db: AsyncSession) -> AiPermissionPolicy:
             allow_container_apps=True,
             allow_databases=True,
             allow_files_read=True,
-            allow_web_fetch=False,
+            allow_web_fetch=True,
             allow_file_edits=False,
-            allow_app_deploy=False,
+            allow_app_deploy=True,
             allowed_domains="[]",
             allowed_app_ids="[]",
             allowed_databases="[]",
@@ -81,6 +81,7 @@ async def get_or_create_policy(db: AsyncSession) -> AiPermissionPolicy:
         await db.commit()
         await db.refresh(policy)
     return policy
+
 
 
 async def update_policy(db: AsyncSession, data: Dict[str, Any]) -> AiPermissionPolicy:

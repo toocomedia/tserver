@@ -776,3 +776,143 @@ body.ai-helper-resizing { cursor: ew-resize !important; user-select: none !impor
   display: inline-block;
   flex-shrink: 0;
 }
+
+/* ==========================================================================
+   AI Action Plan Card & Big Action Next Button (App Deploy Flow)
+   ========================================================================== */
+.ai-app-plan-card {
+  margin: 14px 0 10px;
+  background: var(--color-surface, rgba(255, 255, 255, 0.04));
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
+  border-radius: 8px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+.ai-app-plan-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.ai-app-plan-card-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--color-text);
+}
+
+.ai-app-plan-card-icon {
+  color: var(--color-accent);
+  display: inline-flex;
+  align-items: center;
+}
+
+.ai-app-plan-summary {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--color-muted);
+  margin: 0;
+}
+
+.ai-app-plan-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 8px;
+  margin: 2px 0;
+}
+
+.ai-app-plan-chip {
+  background: var(--color-bg, rgba(0, 0, 0, 0.2));
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.06));
+  border-radius: 6px;
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ai-app-plan-chip-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--color-muted);
+  font-weight: 600;
+}
+
+.ai-app-plan-chip-value {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text);
+  font-family: var(--font-mono, monospace);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Big Action Button in AI Chat */
+.ai-action-btn--big-next {
+  width: 100%;
+  min-height: 40px;
+  padding: 10px 18px;
+  background: var(--color-accent);
+  color: var(--color-on-accent, #111111);
+  border: none;
+  border-radius: 6px;
+  font-size: 13.5px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+  transition: transform 0.15s ease, opacity 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+  margin-top: 4px;
+}
+
+.ai-action-btn--big-next:hover {
+  opacity: 0.95;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+}
+
+.ai-action-btn--big-next:active {
+  transform: translateY(0);
+}
+
+.ai-action-btn--big-next.is-applied {
+  background: var(--color-surface-hover, var(--color-secondary-btn, #2a2a2a));
+  color: var(--color-text);
+  cursor: default;
+  box-shadow: none;
+  transform: none;
+}
+
+.ai-action-btn--big-next.is-applied:hover {
+  transform: none;
+  opacity: 1;
+}
+
+.ai-action-btn--big-next.ai-action-btn--deploy {
+  background: var(--color-accent);
+}
+
+.ai-action-btn--big-next .ai-btn-arrow {
+  font-size: 15px;
+  transition: transform 0.15s ease;
+}
+
+.ai-action-btn--big-next:hover .ai-btn-arrow {
+  transform: translateX(3px);
+}
+[dir="rtl"] .ai-action-btn--big-next:hover .ai-btn-arrow {
+  transform: translateX(-3px);
+}

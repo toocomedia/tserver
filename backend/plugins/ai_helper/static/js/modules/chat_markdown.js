@@ -271,26 +271,54 @@
               return '<span class="ai-security-badge ' + cls + '"><span class="ai-sec-dot ai-sec-dot--' + sev + '"></span> ' + desc + '</span>';
             }
           }
-          // Special: APP_PLAN renders as a structured deployment action card
+          // Special: APP_PLAN renders as a structured deployment action card with big action button
           if (actionType === "APP_PLAN") {
             var planId = actionVal.trim();
             return [
               '<div class="ai-app-plan-card" data-plan-id="' + planId + '">',
               '  <div class="ai-app-plan-card-header">',
               '    <div class="ai-app-plan-card-header-left">',
-              '      <span class="ai-app-plan-card-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg></span>',
-              '      <span class="ai-app-plan-card-title">Deployment Proposal</span>',
+              '      <span class="ai-app-plan-card-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg></span>',
+              '      <span class="ai-app-plan-card-title">Optimal Configuration Prepared</span>',
               '    </div>',
-              '    <span class="badge badge--ok" style="font-size: 10px;">Verified Plan</span>',
+              '    <span class="badge badge--ok" style="font-size: 10px; font-weight: 600;">Verified Plan</span>',
               '  </div>',
               '  <div class="ai-app-plan-card-body">',
-              '    <p class="text-xs text-muted mb-xs">Configuration verified on server. Click below to load into the wizard for review.</p>',
-              '    <button type="button" class="btn btn--primary btn--sm ai-action-btn--apply-plan" data-action="APP_PLAN" data-plan-id="' + planId + '">',
-              '      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="margin-right: 4px;"><path d="M12 3v12"></path><path d="m8 11 4 4 4-4"></path><path d="M8 21h8"></path></svg> Apply to Deploy Form',
+              '    <p class="ai-app-plan-summary">Optimal settings for runtime, port, environment variables, database, and storage have been prepared. Click below to load into the wizard and proceed.</p>',
+              '    <button type="button" class="ai-action-btn--big-next" data-action="APP_PLAN" data-plan-id="' + planId + '">',
+              '      <span class="ai-btn-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></span>',
+              '      <span class="ai-btn-text">Accept & Go Next</span>',
+              '      <span class="ai-btn-arrow">→</span>',
               '    </button>',
               '  </div>',
               '</div>',
             ].join("\n");
+          }
+          // Special: APP_NEXT renders a prominent next step button
+          if (actionType === "APP_NEXT" || actionType === "APP_STEP") {
+            var btnText = actionVal.trim() || "Accept & Continue";
+            return (
+              '<div style="margin: 10px 0;">' +
+              '  <button type="button" class="ai-action-btn--big-next" data-action="APP_NEXT">' +
+              '    <span class="ai-btn-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></span>' +
+              '    <span class="ai-btn-text">' + btnText + '</span>' +
+              '    <span class="ai-btn-arrow">→</span>' +
+              '  </button>' +
+              '</div>'
+            );
+          }
+          // Special: APP_DEPLOY renders a prominent deploy button
+          if (actionType === "APP_DEPLOY") {
+            var deployText = actionVal.trim() || "Accept & Deploy Application";
+            return (
+              '<div style="margin: 10px 0;">' +
+              '  <button type="button" class="ai-action-btn--big-next ai-action-btn--deploy" data-action="APP_DEPLOY">' +
+              '    <span class="ai-btn-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2v10m-7-3l7-7 7 7M5 15v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4"/></svg></span>' +
+              '    <span class="ai-btn-text">' + deployText + '</span>' +
+              '    <span class="ai-btn-arrow">🚀</span>' +
+              '  </button>' +
+              '</div>'
+            );
           }
           var label = actionType.replace(/_/g, " ").toLowerCase();
           return (

@@ -142,10 +142,30 @@
           return;
         }
 
-        // 6a. APP_PLAN Apply Button — fetch validated plan from server and apply to wizard
-        var applyPlanBtn = e.target.closest(".ai-action-btn--apply-plan, [data-action='APP_PLAN']");
+        // 6a. APP_PLAN / APP_NEXT / APP_DEPLOY Action Buttons — apply plan to wizard and guide step-by-step
+        var applyPlanBtn = e.target.closest(".ai-action-btn--apply-plan, .ai-action-btn--big-next, [data-action='APP_PLAN'], [data-action='APP_NEXT'], [data-action='APP_DEPLOY']");
         if (applyPlanBtn) {
           e.preventDefault();
+          var actionType = applyPlanBtn.getAttribute("data-action") || "APP_PLAN";
+
+          if (actionType === "APP_NEXT") {
+            if (typeof window.advanceAiWizard === "function") {
+              window.advanceAiWizard();
+              applyPlanBtn.innerHTML = "✓ Step Accepted";
+              applyPlanBtn.classList.add("is-applied");
+            }
+            return;
+          }
+
+          if (actionType === "APP_DEPLOY") {
+            if (typeof window.startAiDeployment === "function") {
+              applyPlanBtn.innerHTML = "🚀 Deploying Application...";
+              applyPlanBtn.classList.add("is-applied");
+              window.startAiDeployment();
+            }
+            return;
+          }
+
           var planId = applyPlanBtn.getAttribute("data-plan-id");
           if (!planId) return;
           applyPlanBtn.disabled = true;
@@ -162,11 +182,10 @@
 
               // If currently on Apps Engine Create page: apply directly to wizard
               if (window.applyAiAppPlan && typeof window.applyAiAppPlan === "function") {
-                window.applyAiAppPlan(plan);
-                applyPlanBtn.innerHTML = "✓ Applied to Form";
-                applyPlanBtn.classList.remove("btn--primary");
-                applyPlanBtn.classList.add("btn--secondary");
-                if (window.AiHelper) window.AiHelper.close();
+                window.applyAiAppPlan(plan, { autoAdvance: true });
+                applyPlanBtn.innerHTML = "✓ Configuration Accepted & Applied";
+                applyPlanBtn.classList.add("is-applied");
+                // Do NOT close AI Helper — keep 60/40 split view open for user guidance
               } else {
                 // Redirect to create page with plan param
                 window.location.href = "/plugins/railpack_apps/create?plan=" + encodeURIComponent(planId);

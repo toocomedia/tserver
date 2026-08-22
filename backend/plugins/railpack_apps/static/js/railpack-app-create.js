@@ -478,9 +478,9 @@ if (form) {
   }
 
   // -------------------------------------------------------------
-  // AI Action Plan Integration
+  // AI Wizard Flow & Action Plan Integration
   // -------------------------------------------------------------
-  window.applyAiAppPlan = function (planData) {
+  window.applyAiAppPlan = function (planData, options = {}) {
     if (!planData) return;
     const p = planData.payload || planData;
 
@@ -518,7 +518,7 @@ if (form) {
       query("#build_mode").value = p.build_mode;
     }
 
-    // 5. Set Environment Variables
+    // 5. Set Environment Variables (Optimal values)
     if (p.environment_values && typeof p.environment_values === "object") {
       const envLines = Object.entries(p.environment_values)
         .map(([k, v]) => `${k}=${v}`)
@@ -526,7 +526,7 @@ if (form) {
       parseAndApplyBulkEnv(form, envLines);
     }
 
-    // 6. Set Databases
+    // 6. Set Database Attachments
     if (Array.isArray(p.database_attachments)) {
       p.database_attachments.forEach((att) => {
         const row = query(`[data-kind="${att.kind}"]`);
@@ -553,7 +553,7 @@ if (form) {
       });
     }
 
-    // 8. Advance directly to Step 3 (Configuration) for review
+    // 8. Advance wizard to Step 3 (Configuration) for instant visual feedback
     state.unlocked = Math.max(state.unlocked, 3);
     renderStep(3);
 
@@ -565,6 +565,38 @@ if (form) {
       }).catch(() => {});
     }
   };
+
+  // Expose step controller for in-chat AI actions
+  window.advanceAiWizard = function (targetStep) {
+    if (typeof targetStep === "number") {
+      state.unlocked = Math.max(state.unlocked, targetStep);
+      renderStep(targetStep);
+      return;
+    }
+    if (state.step === 1) {
+      inspectSource();
+    } else if (state.step === 2) {
+      state.unlocked = Math.max(state.unlocked, 3);
+      renderStep(3);
+    } else if (state.step === 3) {
+      startDeployment();
+    }
+  };
+
+  window.startAiDeployment = function () {
+    startDeployment();
+  };
+
+  // Listen for AI assistant mode changes (split / closed)
+  window.addEventListener("ai-helper:mode-change", (e) => {
+    const opticEl = form.closest(".apps-engine-optic");
+    if (!opticEl) return;
+    if (e.detail && e.detail.active && e.detail.split) {
+      opticEl.classList.add("is-ai-mode");
+    } else if (e.detail && !e.detail.active) {
+      opticEl.classList.remove("is-ai-mode");
+    }
+  });
 
   // Wire Set Up With AI buttons (Git and Docker Image)
   queryAll("[data-ai-setup-trigger]").forEach((btn) => {
@@ -604,7 +636,6 @@ if (form) {
       });
     });
   });
-
 
   // Handle ?plan= query parameter on page load
   const urlParams = new URLSearchParams(window.location.search);
