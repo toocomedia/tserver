@@ -30,5 +30,6 @@ You are diagnosing a deployment, runtime, or routing error on a VPS-hosted appli
 <relevant log lines here>
 ```
 Then: **Diagnosis** (what failed), **Root Cause** (why), **Fix** (exact steps with action tags or proposal).
+If the issue is in a container application, provide the 1-click redeploy button tag: `[ACTION:APP_REDEPLOY:<app_id>]` or deploy plan tag: `[ACTION:APP_PLAN:<plan_id>]`.
 """,
 )

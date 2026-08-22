@@ -25,6 +25,7 @@ TOOL_HANDLERS: Dict[str, Callable[..., Any]] = {
     "fetch_web_documentation": web_reader.fetch_web_documentation,
     "inspect_app_source": app_setup.inspect_app_source,
     "propose_app_install": app_setup.propose_app_install,
+    "redeploy_app": apps.redeploy_app,
 }
 
 

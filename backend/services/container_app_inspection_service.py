@@ -8,6 +8,7 @@ Detection precedence (highest → lowest):
 """
 from __future__ import annotations
 
+import json
 import re
 from pathlib import Path
 
@@ -34,9 +35,22 @@ def inspect_repository(repository_url: str, branch: str, *, ssh_key_path: str | 
         files = {path.name for path in root.iterdir() if path.is_file()}
         text = _read_sources(root)
         runtime = _runtime(files)
+        framework = _framework(root, files, text, runtime)
 
         # Detect databases with confidence levels
         databases, suggestions = _databases_with_confidence(root, files, text)
+
+        # Extract environment template (.env.example / .env.sample)
+        env_sample = _parse_env_sample(root)
+
+        # Extract package scripts
+        package_scripts = _parse_package_scripts(root)
+
+        # Detect storage mount needs (SQLite, uploads, CMS data)
+        storage_mounts = _detect_storage_mounts(framework, databases, files, text)
+
+        # Compose summary if present
+        compose_info = _parse_compose_details(root)
 
         has_dockerfile = "Dockerfile" in files
         has_app_manifest = bool(files & {
@@ -52,14 +66,129 @@ def inspect_repository(repository_url: str, branch: str, *, ssh_key_path: str | 
             "repository_url": checkout.repository_url,
             "branch": checkout.branch,
             "runtime": runtime,
+            "framework": framework,
             "build_mode": build_mode,
             "has_dockerfile": has_dockerfile,
-            "internal_port": _port(text, runtime),
+            "internal_port": _port(text, runtime, framework, compose_info),
             "database_types": [d["kind"] for d in databases],
             "database_detected": bool(databases),
             "database_detections": databases,          # [{kind, confidence}]
             "database_suggestions": suggestions,       # [{kind, confidence, reason}] — LOW only
+            "env_sample": env_sample,                  # {KEY: default_value}
+            "storage_mount_suggestions": storage_mounts, # [{label, mount_path, reason}]
+            "package_scripts": package_scripts,
+            "compose_info": compose_info,
         }
+
+
+def _framework(root: Path, files: set[str], text: str, runtime: str) -> str:
+    lower_text = text.lower()
+    if "next.config.js" in files or "next.config.mjs" in files or "next.config.ts" in files or '"next"' in lower_text:
+        return "Next.js"
+    if "nuxt.config.js" in files or "nuxt.config.ts" in files or '"nuxt"' in lower_text:
+        return "Nuxt"
+    if "remix.config.js" in files or '"@remix-run' in lower_text:
+        return "Remix"
+    if "astro.config.mjs" in files or '"astro"' in lower_text:
+        return "Astro"
+    if "svelte.config.js" in files or '"@sveltejs/kit"' in lower_text:
+        return "SvelteKit"
+    if "manage.py" in files or "django" in lower_text:
+        return "Django"
+    if "fastapi" in lower_text:
+        return "FastAPI"
+    if "flask" in lower_text:
+        return "Flask"
+    if "artisan" in files or "laravel/framework" in lower_text:
+        return "Laravel"
+    if "bin/rails" in files or "rails" in lower_text:
+        return "Ruby on Rails"
+    if "strapi" in lower_text:
+        return "Strapi"
+    if "ghost" in lower_text:
+        return "Ghost"
+    if "pocketbase" in lower_text:
+        return "PocketBase"
+    if "n8n" in lower_text:
+        return "n8n"
+    if runtime == "Node.js" and ("express" in lower_text or "fastify" in lower_text or "nestjs" in lower_text):
+        return "Express/NestJS"
+    return runtime
+
+
+def _parse_env_sample(root: Path) -> dict[str, str]:
+    """Parse .env.example, .env.sample, .env.template, or env.example."""
+    for candidate in (".env.example", ".env.sample", ".env.template", "env.example", ".env.dist", "example.env"):
+        path = root / candidate
+        if path.is_file():
+            try:
+                result: dict[str, str] = {}
+                for line in path.read_text(encoding="utf-8", errors="ignore").splitlines():
+                    line = line.strip()
+                    if not line or line.startswith("#") or "=" not in line:
+                        continue
+                    key, _, val = line.partition("=")
+                    key = key.strip()
+                    val = val.strip().strip("'\"")
+                    if key:
+                        result[key] = val
+                if result:
+                    return result
+            except Exception:
+                pass
+    return {}
+
+
+def _parse_package_scripts(root: Path) -> dict[str, str]:
+    pkg_path = root / "package.json"
+    if pkg_path.is_file():
+        try:
+            data = json.loads(pkg_path.read_text(encoding="utf-8", errors="ignore"))
+            scripts = data.get("scripts")
+            if isinstance(scripts, dict):
+                return {k: str(v) for k, v in scripts.items() if isinstance(v, str)}
+        except Exception:
+            pass
+    return {}
+
+
+def _detect_storage_mounts(framework: str, databases: list[dict], files: set[str], text: str) -> list[dict[str, str]]:
+    """Detect persistent volume storage paths."""
+    mounts: list[dict[str, str]] = []
+    lower = text.lower()
+    
+    # 1. SQLite persistence
+    if "sqlite" in lower or any(d.get("kind") == "sqlite" for d in databases):
+        mounts.append({"label": "data", "mount_path": "/app/data", "reason": "Persistent SQLite storage"})
+    
+    # 2. Framework-specific persistent mounts
+    if framework == "Ghost":
+        mounts.append({"label": "content", "mount_path": "/var/lib/ghost/content", "reason": "Ghost uploads and themes"})
+    elif framework == "Strapi":
+        mounts.append({"label": "uploads", "mount_path": "/app/public/uploads", "reason": "Media and file uploads"})
+    elif framework == "PocketBase":
+        mounts.append({"label": "pb-data", "mount_path": "/pb_data", "reason": "PocketBase database and uploads"})
+    elif framework == "n8n":
+        mounts.append({"label": "n8n-data", "mount_path": "/home/node/.n8n", "reason": "n8n workflow and credential storage"})
+    elif "uploads" in lower or "upload_dir" in lower:
+        mounts.append({"label": "uploads", "mount_path": "/app/uploads", "reason": "Application uploads storage"})
+        
+    return mounts
+
+
+def _parse_compose_details(root: Path) -> dict[str, object]:
+    compose_file = _find_compose(root)
+    if not compose_file:
+        return {}
+    try:
+        text = compose_file.read_text(encoding="utf-8", errors="ignore")
+        ports = re.findall(r"['\"]?(\d{2,5}):(\d{2,5})['\"]?", text)
+        return {
+            "file": compose_file.name,
+            "detected_ports": [int(p[1]) for p in ports if p[1].isdigit()],
+        }
+    except Exception:
+        return {}
 
 
 def _databases_with_confidence(
@@ -187,13 +316,33 @@ def _runtime(files: set[str]) -> str:
     return "Detected by Railpack"
 
 
-def _port(text: str, runtime: str) -> int:
-    for pattern in (r"EXPOSE\s+(\d{2,5})", r"(?:--port|port\s*[=:])\\s*(\\d{2,5})", r"PORT\s*\|\|\s*(\d{2,5})"):
+def _port(text: str, runtime: str, framework: str = "", compose_info: dict | None = None) -> int:
+    if compose_info and compose_info.get("detected_ports"):
+        for p in compose_info["detected_ports"]:
+            if 1 <= p <= 65535:
+                return p
+    for pattern in (r"EXPOSE\s+(\d{2,5})", r"(?:--port|port\s*[=:])\s*(\d{2,5})", r"PORT\s*\|\|\s*(\d{2,5})"):
         match = re.search(pattern, text, re.IGNORECASE)
         if match:
             value = int(match.group(1))
             if 1 <= value <= 65535:
                 return value
+    if framework == "Ghost":
+        return 2368
+    if framework == "Strapi":
+        return 1337
+    if framework == "PocketBase":
+        return 8090
+    if framework == "n8n":
+        return 5678
+    if framework in ("Next.js", "Nuxt", "Remix", "Astro", "SvelteKit"):
+        return 3000
+    if framework == "Django":
+        return 8000
+    if framework == "FastAPI":
+        return 8000
+    if framework == "Flask":
+        return 5000
     return {"Python": 8000, "PHP": 8080, "Go": 8080, "Java": 8080, "Static site": 80}.get(runtime, 3000)
 
 

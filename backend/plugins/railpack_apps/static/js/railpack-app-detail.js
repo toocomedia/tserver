@@ -85,3 +85,21 @@ if (editModal && editOpenBtn) {
     });
   }
 }
+
+document.querySelectorAll('[data-ai-diagnose-app]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (!window.AiHelper) return;
+    const appId = btn.getAttribute('data-ai-diagnose-app');
+    const appName = btn.getAttribute('data-app-name') || ('App #' + appId);
+    const outputEl = document.querySelector('[data-deployment-output]');
+    const logSnippet = outputEl ? outputEl.textContent.slice(-2000) : '';
+    const prompt = `Application ${appName} (ID #${appId}) failed or is stopped.\nRecent logs:\n\`\`\`log\n${logSnippet}\n\`\`\`\nPlease diagnose the root cause, explain what is needed, and provide the redeploy action.`;
+    window.AiHelper.open({
+      split: true,
+      taskType: 'app_redeploy',
+      context: `App #${appId} (${appName})`,
+      initialPrompt: prompt,
+    });
+  });
+});
+

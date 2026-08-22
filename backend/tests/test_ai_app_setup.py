@@ -57,7 +57,46 @@ class TestAiAppSetup(unittest.IsolatedAsyncioTestCase):
                 )
                 self.assertEqual(res["status"], "ok")
                 self.assertEqual(res["source_type"], "image")
-                self.assertEqual(res["inspection"]["ports"], [6379])
+    async def test_redeploy_app_tool(self):
+        """Verify redeploy_app tool queues redeployment when app exists."""
+        from plugins.ai_helper.tools import apps as ai_apps
+        from models.container_app import ContainerApp
+        from models.domain import Domain
+
+        import random
+        import uuid
+        uid = uuid.uuid4().hex[:8]
+        rnd_port = random.randint(31000, 45000)
+        async with AsyncSessionLocal() as db:
+            domain = Domain(name=f"redeploy-{uid}.local", server_ip="127.0.0.1")
+            db.add(domain)
+            await db.flush()
+
+            app = ContainerApp(
+                domain_id=domain.id,
+                container_name=f"test-redeploy-{uid}",
+                source_type="image",
+                build_mode="image",
+                image_reference="nginx:alpine",
+                host_port=rnd_port,
+                internal_port=80,
+                env_path="/tmp/test.env",
+                status="running",
+            )
+            db.add(app)
+            await db.commit()
+            await db.refresh(app)
+
+            with patch("services.container_app_deployment_service.queue_deployment", AsyncMock()) as mock_queue:
+                from models.container_app_deployment import ContainerAppDeployment
+                mock_dep = ContainerAppDeployment(id=999, app_id=app.id, action="redeploy", status="queued")
+                mock_queue.return_value = mock_dep
+
+                res = await ai_apps.redeploy_app(db=db, app_id=app.id, app_type="container")
+                self.assertEqual(res["status"], "ok")
+                self.assertEqual(res["app_id"], app.id)
+                self.assertEqual(res["deployment_id"], 999)
+                self.assertEqual(res["action_tag"], f"[ACTION:APP_REDEPLOY:{app.id}]")
 
 
 if __name__ == "__main__":

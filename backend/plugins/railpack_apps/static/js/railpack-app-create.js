@@ -343,11 +343,12 @@ if (form) {
     const output = query('[data-deployment-output]')?.textContent || '';
     const errText = query('[data-deployment-error-text]')?.textContent || 'Deployment failed';
     const logSnippet = output.slice(-2000);
-    const prompt = `The application build or deployment failed with:\nError: ${errText}\n\nRecent build logs:\n\`\`\`log\n${logSnippet}\n\`\`\`\nPlease diagnose the root cause, explain what is missing (e.g. environment variable, database, port), and propose a corrected configuration to fix and redeploy.`;
+    const appCtx = state.appId ? ` for App #${state.appId}` : '';
+    const prompt = `The application build or deployment failed${appCtx} with:\nError: ${errText}\n\nRecent build logs:\n\`\`\`log\n${logSnippet}\n\`\`\`\nPlease diagnose the root cause, explain what is missing (e.g. environment variable, database, port), and propose a corrected configuration to fix and redeploy.`;
     window.AiHelper.open({
       split: true,
-      taskType: "error_diag",
-      context: `App Deployment Failure #${state.deploymentId || ""}`,
+      taskType: "app_redeploy",
+      context: `App Deployment Failure #${state.deploymentId || state.appId || ""}`,
       initialPrompt: prompt,
     });
   });

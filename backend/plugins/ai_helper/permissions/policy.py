@@ -36,6 +36,7 @@ TOOL_CATEGORY_MAP: Dict[str, str] = {
     "inspect_app_source": "apps",
     "propose_app_install": "app_deploy",
     "propose_file_edit": "file_edits",
+    "redeploy_app": "apps",
 }
 
 

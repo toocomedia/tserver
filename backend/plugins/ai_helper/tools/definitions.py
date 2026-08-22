@@ -222,7 +222,7 @@ RAW_TOOL_SCHEMAS: List[Dict[str, Any]] = [
                     "items": {
                         "type": "object",
                         "properties": {
-                            "kind": {"type": "string", "enum": ["postgres", "mariadb", "redis", "supabase"]},
+                            "kind": {"type": "string", "enum": ["postgres", "postgresql", "mariadb", "mysql", "redis", "mongodb", "sqlite", "supabase"]},
                             "provider": {"type": "string", "enum": ["docker", "external", "supabase"]},
                             "environment_key": {"type": "string"},
                         },
@@ -260,6 +260,29 @@ RAW_TOOL_SCHEMAS: List[Dict[str, Any]] = [
                 },
             },
             "required": ["source_type"],
+        },
+    },
+    {
+        "name": "redeploy_app",
+        "description": "Triggers a clean rebuild and container redeployment for an existing application on the App Engine.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "app_id": {
+                    "type": "integer",
+                    "description": "The application ID to redeploy.",
+                },
+                "app_type": {
+                    "type": "string",
+                    "enum": ["container", "python"],
+                    "description": "The type of application (default: 'container').",
+                },
+                "reason": {
+                    "type": "string",
+                    "description": "Optional reason or diagnostic note for the redeployment.",
+                },
+            },
+            "required": ["app_id"],
         },
     },
 ]

@@ -151,3 +151,36 @@ async def get_app_logs(
         }
 
     return {"status": "error", "message": f"Unsupported app type: {app_type}"}
+
+
+async def redeploy_app(
+    db: AsyncSession,
+    app_id: int,
+    app_type: str = "container",
+    reason: str = "",
+    **kwargs: Any,
+) -> Dict[str, Any]:
+    """Triggers a clean rebuild and container redeployment for an existing application."""
+    kind = (app_type or "container").lower().strip()
+    if kind == "container":
+        app = await db.get(ContainerApp, app_id)
+        if not app:
+            return {"status": "error", "message": f"Container app #{app_id} not found."}
+        try:
+            from services import container_app_deployment_service
+            dep = await container_app_deployment_service.queue_deployment(
+                db, app, action="deploy" if app.status == "pending" else "redeploy"
+            )
+            return {
+                "status": "ok",
+                "app_id": app.id,
+                "deployment_id": dep.id,
+                "action": dep.action,
+                "action_tag": f"[ACTION:APP_REDEPLOY:{app.id}]",
+                "message": f"Redeployment queued successfully for {app.container_name} (Deployment #{dep.id}).",
+            }
+        except Exception as exc:
+            return {"status": "error", "message": f"Could not queue redeployment: {str(exc)}"}
+
+    return {"status": "error", "message": f"Redeployment not supported for app type '{app_type}'."}
+

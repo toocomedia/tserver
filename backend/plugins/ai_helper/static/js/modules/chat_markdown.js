@@ -320,6 +320,29 @@
               '</div>'
             );
           }
+          // Special: APP_REDEPLOY / APP_REBUILD renders a prominent redeployment action card
+          if (actionType === "APP_REDEPLOY" || actionType === "APP_REBUILD") {
+            var appId = actionVal.trim().replace(/^#/, "");
+            return [
+              '<div class="ai-app-plan-card ai-app-plan-card--redeploy" data-app-id="' + appId + '">',
+              '  <div class="ai-app-plan-card-header">',
+              '    <div class="ai-app-plan-card-header-left">',
+              '      <span class="ai-app-plan-card-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"></path><path d="M1 20v-6h6"></path><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg></span>',
+              '      <span class="ai-app-plan-card-title">Redeploy Application ' + (appId ? '#' + appId : '') + '</span>',
+              '    </div>',
+              '    <span class="badge badge--accent" style="font-size: 10px; font-weight: 600;">Action Ready</span>',
+              '  </div>',
+              '  <div class="ai-app-plan-card-body">',
+              '    <p class="ai-app-plan-summary">Trigger a clean rebuild and container restart with the latest configuration and code revision.</p>',
+              '    <button type="button" class="ai-action-btn--big-next ai-action-btn--deploy" data-action="APP_REDEPLOY" data-app-id="' + appId + '">',
+              '      <span class="ai-btn-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2v10m-7-3l7-7 7 7M5 15v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4"/></svg></span>',
+              '      <span class="ai-btn-text">Redeploy Application Now</span>',
+              '      <span class="ai-btn-arrow">🚀</span>',
+              '    </button>',
+              '  </div>',
+              '</div>',
+            ].join("\n");
+          }
           var label = actionType.replace(/_/g, " ").toLowerCase();
           return (
             '<span class="ai-action-tag" data-action="' +

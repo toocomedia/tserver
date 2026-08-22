@@ -144,8 +144,8 @@
           return;
         }
 
-        // 6a. APP_PLAN / APP_NEXT / APP_DEPLOY Action Buttons — apply plan to wizard and guide step-by-step
-        var applyPlanBtn = e.target.closest(".ai-action-btn--apply-plan, .ai-action-btn--big-next, [data-action='APP_PLAN'], [data-action='APP_NEXT'], [data-action='APP_DEPLOY']");
+        // 6a. APP_PLAN / APP_NEXT / APP_DEPLOY / APP_REDEPLOY Action Buttons — apply plan to wizard and guide step-by-step
+        var applyPlanBtn = e.target.closest(".ai-action-btn--apply-plan, .ai-action-btn--big-next, [data-action='APP_PLAN'], [data-action='APP_NEXT'], [data-action='APP_DEPLOY'], [data-action='APP_REDEPLOY'], [data-action='APP_REBUILD']");
         if (applyPlanBtn) {
           e.preventDefault();
           var actionType = applyPlanBtn.getAttribute("data-action") || "APP_PLAN";
@@ -159,7 +159,48 @@
             return;
           }
 
-          if (actionType === "APP_DEPLOY" || actionType === "APP_REBUILD") {
+          if (actionType === "APP_REDEPLOY" || actionType === "APP_REBUILD") {
+            var redeployAppId = applyPlanBtn.getAttribute("data-app-id");
+            if (!redeployAppId) {
+              var parentCard = applyPlanBtn.closest(".ai-app-plan-card--redeploy, [data-app-id]");
+              if (parentCard) redeployAppId = parentCard.getAttribute("data-app-id");
+            }
+            if (redeployAppId) {
+              applyPlanBtn.disabled = true;
+              applyPlanBtn.innerHTML = '<span class="ai-btn-icon">⏳</span> Redeploying Application...';
+              applyPlanBtn.classList.add("is-applied");
+
+              var csrfTok = window._csrfToken || (document.querySelector('meta[name="csrf-token"]') ? document.querySelector('meta[name="csrf-token"]').getAttribute("content") : "");
+              fetch("/plugins/railpack_apps/" + encodeURIComponent(redeployAppId) + "/deploy", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "Accept": "application/json",
+                  "X-CSRF-Token": csrfTok
+                }
+              })
+                .then(function (res) {
+                  if (!res.ok) throw new Error("Failed to queue redeployment (status " + res.status + ").");
+                  return res.json().catch(function () { return {}; });
+                })
+                .then(function (data) {
+                  applyPlanBtn.innerHTML = '<span class="ai-btn-icon">✓</span> Redeployment Started';
+                  if (window.toast) window.toast("Redeployment queued successfully.", "success");
+                  if (window.location.pathname.indexOf("/plugins/railpack_apps/" + redeployAppId) !== -1) {
+                    setTimeout(function () { window.location.reload(); }, 1200);
+                  }
+                })
+                .catch(function (err) {
+                  applyPlanBtn.disabled = false;
+                  applyPlanBtn.classList.remove("is-applied");
+                  applyPlanBtn.innerHTML = '<span class="ai-btn-icon">🚀</span> Retry Redeploy Application <span class="ai-btn-arrow">→</span>';
+                  if (window.toast) window.toast(err.message, "error");
+                });
+              return;
+            }
+          }
+
+          if (actionType === "APP_DEPLOY") {
             applyPlanBtn.disabled = true;
             applyPlanBtn.innerHTML = '<span class="ai-btn-icon">⏳</span> Deploying Application...';
             applyPlanBtn.classList.add("is-applied");
