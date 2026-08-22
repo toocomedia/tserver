@@ -7,6 +7,11 @@ if (form) {
   const panel = (step) => query(`[data-wizard-panel="${step}"]`);
   function renderStep(step) {
     state.step = step;
+    const opticEl = form.closest('.apps-engine-optic');
+    if (opticEl) {
+      opticEl.classList.remove('is-step-1', 'is-step-2', 'is-step-3', 'is-step-4', 'is-step-5');
+      opticEl.classList.add(`is-step-${step}`);
+    }
     for (let index = 1; index <= 5; index += 1) {
       setHidden(panel(index), index !== step);
       const nav = query(`[data-wizard-nav="${index}"]`);
@@ -529,15 +534,26 @@ if (form) {
     // 6. Set Database Attachments
     if (Array.isArray(p.database_attachments)) {
       p.database_attachments.forEach((att) => {
-        const row = query(`[data-kind="${att.kind}"]`);
+        const rawKind = String(att.kind || "").toLowerCase();
+        let targetKind = rawKind;
+        if (rawKind.includes("postgre") || rawKind.includes("psql") || rawKind === "postgres") targetKind = "postgresql";
+        else if (rawKind.includes("maria") || rawKind.includes("mysql")) targetKind = "mariadb";
+        else if (rawKind.includes("redis") || rawKind.includes("valkey") || rawKind.includes("keydb")) targetKind = "redis";
+        else if (rawKind.includes("mongo")) targetKind = "mongodb";
+
+        const row = query(`[data-database-row][data-kind="${targetKind}"]`) || query(`[data-kind="${targetKind}"]`) || query(`[data-kind="${rawKind}"]`);
         if (row) {
           const chk = row.querySelector("[data-database-enabled]");
           if (chk) {
             chk.checked = true;
-            chk.dispatchEvent(new Event("change", { bubbles: true }));
+            row.classList.add("selected", "settings-choice--active");
+            attachmentState(row);
           }
           const prov = _dbField(row, "[data-database-provider]");
-          if (prov && att.provider) prov.value = att.provider;
+          if (prov && att.provider) {
+            prov.value = att.provider;
+            attachmentState(row);
+          }
           const keyInput = row.querySelector("[data-database-key]");
           if (keyInput && att.environment_key) keyInput.value = att.environment_key;
         }

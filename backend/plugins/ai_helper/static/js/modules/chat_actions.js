@@ -160,9 +160,10 @@
           }
 
           if (actionType === "APP_DEPLOY") {
+            applyPlanBtn.disabled = true;
+            applyPlanBtn.innerHTML = '<span class="ai-btn-icon">⏳</span> Deploying Application...';
+            applyPlanBtn.classList.add("is-applied");
             if (typeof window.startAiDeployment === "function") {
-              applyPlanBtn.innerHTML = "🚀 Deploying Application...";
-              applyPlanBtn.classList.add("is-applied");
               window.startAiDeployment();
             }
             return;
@@ -185,22 +186,27 @@
               // If currently on Apps Engine Create page: apply directly to wizard
               if (window.applyAiAppPlan && typeof window.applyAiAppPlan === "function") {
                 window.applyAiAppPlan(plan, { autoAdvance: true });
-                applyPlanBtn.innerHTML = "✓ Configuration Accepted & Applied";
-                applyPlanBtn.classList.add("is-applied");
-                // Do NOT close AI Helper — keep 60/40 split view open for user guidance
+                // Transform button to big Deploy CTA
+                applyPlanBtn.disabled = false;
+                applyPlanBtn.setAttribute("data-action", "APP_DEPLOY");
+                applyPlanBtn.className = "ai-action-btn--big-next ai-action-btn--deploy";
+                applyPlanBtn.innerHTML = '<span class="ai-btn-icon">🚀</span> Accept & Deploy Application <span class="ai-btn-arrow">→</span>';
+                // Do NOT close AI Helper — keep 60/40 split view open for live deployment guidance
               } else {
                 // Redirect to create page with plan param
                 window.location.href = "/plugins/railpack_apps/create?plan=" + encodeURIComponent(planId);
               }
             })
             .catch(function (err) {
-              applyPlanBtn.disabled = false;
               // If on wizard create page, advance wizard to inspect/configure anyway
               if (typeof window.advanceAiWizard === "function") {
-                applyPlanBtn.innerHTML = "✓ Opening Configuration";
-                applyPlanBtn.classList.add("is-applied");
                 window.advanceAiWizard();
+                applyPlanBtn.disabled = false;
+                applyPlanBtn.setAttribute("data-action", "APP_DEPLOY");
+                applyPlanBtn.className = "ai-action-btn--big-next ai-action-btn--deploy";
+                applyPlanBtn.innerHTML = '<span class="ai-btn-icon">🚀</span> Accept & Deploy Application <span class="ai-btn-arrow">→</span>';
               } else {
+                applyPlanBtn.disabled = false;
                 applyPlanBtn.textContent = "Error: " + err.message;
               }
             });
