@@ -125,9 +125,10 @@ export function storageMountValues(form) {
   const mounts = [];
   const validLabel = /^[a-z0-9_-]{1,32}$/;
   form.querySelectorAll('[data-storage-mount-row]').forEach((row) => {
-    const label = row.querySelector('[data-mount-label]').value.trim().toLowerCase();
+    let label = row.querySelector('[data-mount-label]').value.trim().toLowerCase();
     const mountPath = row.querySelector('[data-mount-path]').value.trim();
     if (!label && !mountPath) return;
+    label = label.replace(/[^a-z0-9_-]+/g, '-').replace(/^[-_]+|[-_]+$/g, '').slice(0, 32) || 'data';
     if (!validLabel.test(label)) {
       throw new Error(`Mount label "${label}" must be 1-32 lowercase characters, numbers, dashes, or underscores.`);
     }

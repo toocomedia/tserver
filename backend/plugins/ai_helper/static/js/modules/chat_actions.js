@@ -159,12 +159,23 @@
             return;
           }
 
-          if (actionType === "APP_DEPLOY") {
+          if (actionType === "APP_DEPLOY" || actionType === "APP_REBUILD") {
             applyPlanBtn.disabled = true;
             applyPlanBtn.innerHTML = '<span class="ai-btn-icon">⏳</span> Deploying Application...';
             applyPlanBtn.classList.add("is-applied");
             if (typeof window.startAiDeployment === "function") {
-              window.startAiDeployment();
+              Promise.resolve(window.startAiDeployment())
+                .then(function () {
+                  applyPlanBtn.innerHTML = '<span class="ai-btn-icon">✓</span> Deployment Started';
+                })
+                .catch(function (err) {
+                  applyPlanBtn.disabled = false;
+                  applyPlanBtn.classList.remove("is-applied");
+                  applyPlanBtn.innerHTML = '<span class="ai-btn-icon">🚀</span> Retry Deploy Application <span class="ai-btn-arrow">→</span>';
+                  if (err && err.message && window.toast) {
+                    window.toast(err.message, "error");
+                  }
+                });
             }
             return;
           }

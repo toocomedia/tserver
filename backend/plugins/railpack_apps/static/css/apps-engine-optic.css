@@ -43,19 +43,12 @@ body.apps-engine-ai-active .apps-engine-optic {
   box-sizing: border-box;
 }
 
-/* Hide bottom bar navigation buttons on early steps when AI guided mode is active; allow on step 3 (Deploy) */
+/* In AI mode, all actions are guided via the AI drawer — hide wizard bottom navigation buttons */
+.apps-engine-optic.is-ai-mode [data-wizard-next],
+body.apps-engine-ai-active .apps-engine-optic [data-wizard-next],
 .apps-engine-optic.is-ai-mode [data-wizard-back],
-body.apps-engine-ai-active .apps-engine-optic [data-wizard-back],
-.apps-engine-optic.is-ai-mode.is-step-1 [data-wizard-next],
-.apps-engine-optic.is-ai-mode.is-step-2 [data-wizard-next],
-body.apps-engine-ai-active .apps-engine-optic.is-step-1 [data-wizard-next],
-body.apps-engine-ai-active .apps-engine-optic.is-step-2 [data-wizard-next] {
+body.apps-engine-ai-active .apps-engine-optic [data-wizard-back] {
   display: none !important;
-}
-
-.apps-engine-optic.is-ai-mode.is-step-3 [data-wizard-next],
-body.apps-engine-ai-active .apps-engine-optic.is-step-3 [data-wizard-next] {
-  display: inline-flex !important;
 }
 
 /* Fixed action bar in standard and AI mode */

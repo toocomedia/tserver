@@ -5,6 +5,7 @@ Generates immutable server-side AiActionPlan records for wizard autofill.
 from __future__ import annotations
 
 import logging
+import re
 from typing import Any, Dict, List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -100,8 +101,10 @@ async def propose_app_install(
     if isinstance(storage_mounts, list):
         for item in storage_mounts:
             if isinstance(item, dict) and item.get("mount_path"):
+                raw_lbl = str(item.get("label", "data")).strip().lower()
+                clean_lbl = re.sub(r"[^a-z0-9_-]+", "-", raw_lbl).strip("-_")[:32] or "data"
                 clean_mounts.append({
-                    "label": str(item.get("label", "data")).strip().lower(),
+                    "label": clean_lbl,
                     "mount_path": str(item.get("mount_path", "")).strip(),
                 })
 

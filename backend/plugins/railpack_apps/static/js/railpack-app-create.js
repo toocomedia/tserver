@@ -265,11 +265,16 @@ if (form) {
   }
 
   async function startDeployment() {
-    if (!submitValues() || !form.reportValidity()) return;
+    if (!submitValues() || !form.reportValidity()) {
+      const errText = query('[data-environment-error]')?.textContent || 'Validation error: please check required fields.';
+      throw new Error(errText);
+    }
     const nextBtn = query('[data-wizard-next]');
-    const originalText = nextBtn.textContent;
-    nextBtn.disabled = true;
-    nextBtn.innerHTML = '<span class="step-spinner" style="width: 14px; height: 14px; border-width: 2px; margin-right: 8px;"></span>Deploying...';
+    const originalText = nextBtn ? nextBtn.textContent : '';
+    if (nextBtn) {
+      nextBtn.disabled = true;
+      nextBtn.innerHTML = '<span class="step-spinner" style="width: 14px; height: 14px; border-width: 2px; margin-right: 8px;"></span>Deploying...';
+    }
     try {
       const data = await fetchJson(form.action, { method: 'POST', headers: { ...csrfHeaders(), Accept: 'application/json' }, body: new FormData(form) });
       state.appId = data.app_id;
@@ -277,12 +282,16 @@ if (form) {
       state.unlocked = 4;
       renderStep(4);
       pollDeployment();
+      return { success: true, app_id: data.app_id, deployment_id: data.deployment_id };
     } catch (error) { 
       setText(query('[data-environment-error]'), error.message); 
       setHidden(query('[data-environment-error]'), false); 
+      throw error;
     } finally {
-      nextBtn.disabled = false;
-      nextBtn.textContent = originalText;
+      if (nextBtn) {
+        nextBtn.disabled = false;
+        nextBtn.textContent = originalText;
+      }
     }
   }
 
@@ -599,7 +608,12 @@ if (form) {
     if (Array.isArray(p.storage_mounts)) {
       p.storage_mounts.forEach((m) => {
         if (m.mount_path) {
-          addStorageMountRow(form, m.label || "data", m.mount_path);
+          const cleanLabel = String(m.label || "data")
+            .toLowerCase()
+            .replace(/[^a-z0-9_-]+/g, "-")
+            .replace(/^[-_]+|[-_]+$/g, "")
+            .slice(0, 32) || "data";
+          addStorageMountRow(form, cleanLabel, m.mount_path);
         }
       });
     }

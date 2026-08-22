@@ -155,7 +155,7 @@ def parse_storage_mounts(app_id: int, items: list[dict] | str | None) -> str | N
     for item in items:
         if not isinstance(item, dict):
             continue
-        raw_label = str(item.get("label", "")).strip().lower()
+        raw_label = str(item.get("label", "")).strip()
         raw_path = str(item.get("mount_path", "") or item.get("path", "")).strip()
         if not raw_label and not raw_path:
             continue
