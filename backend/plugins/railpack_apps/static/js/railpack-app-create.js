@@ -3,6 +3,7 @@ const form = document.querySelector('[data-railpack-builder]');
 if (form) {
   const state = { step: 1, unlocked: 1, appId: null, deploymentId: null };
   const query = (selector) => form.querySelector(selector);
+  const queryAll = (selector) => form.querySelectorAll(selector);
   const panel = (step) => query(`[data-wizard-panel="${step}"]`);
   function renderStep(step) {
     state.step = step;

@@ -40,18 +40,17 @@
 
   <div class="apps-engine-source-grid" data-git-fields>
     <div class="form-group" style="grid-column: span 2;">
-      <div class="d-flex justify-content-between align-items-center mb-xs">
-        <span class="section-label" style="margin-bottom: 0;">Repository URL</span>
+      <span class="section-label">Repository URL</span>
+      <div style="display: flex; gap: 8px; align-items: stretch; width: 100%;">
+        <input class="input-optic input-optic--code" style="flex: 1; margin: 0; min-width: 0;" id="repository_url" name="repository_url" placeholder="https://github.com/owner/project.git or git@github.com:owner/project.git" data-repository-url>
         {% if is_plugin_active('ai_helper') %}
-        <button type="button" class="btn btn--secondary btn--sm" data-ai-setup-trigger="git" title="Auto-detect source, ports, and databases with AI">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 4px;"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+        <button type="button" class="btn-optic btn-optic--primary" data-ai-setup-trigger="git" style="white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 0 16px; font-size: 13px; font-weight: 500; height: auto;" title="Auto-detect source, ports, and databases with AI">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
           Set up with AI
         </button>
         {% endif %}
       </div>
-      <input class="input-optic input-optic--code" id="repository_url" name="repository_url" placeholder="https://github.com/owner/project.git or git@github.com:owner/project.git" data-repository-url>
     </div>
-
 
     <div class="form-group dropdown-optic" style="position: relative; overflow: visible;">
       <span class="section-label">Reference Type</span>
@@ -109,17 +108,18 @@
   </div>
 
   <div class="form-group" data-image-field hidden>
-    <div class="d-flex justify-content-between align-items-center mb-xs">
-      <span class="section-label" style="font-size:13px; margin-bottom: 0;">Registry Image</span>
+    <span class="section-label" style="font-size:13px;">Registry Image</span>
+    <div style="display: flex; gap: 8px; align-items: stretch; width: 100%;">
+      <input class="input-optic input-optic--code" style="flex: 1; margin: 0; min-width: 0;" id="image_reference" name="image_reference" placeholder="ghcr.io/org/app:1.0" data-image-reference>
       {% if is_plugin_active('ai_helper') %}
-      <button type="button" class="btn btn--secondary btn--sm" data-ai-setup-trigger="image" title="Auto-detect configuration with AI">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 4px;"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+      <button type="button" class="btn-optic btn-optic--primary" data-ai-setup-trigger="image" style="white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 0 16px; font-size: 13px; font-weight: 500; height: auto;" title="Auto-detect configuration with AI">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
         Set up with AI
       </button>
       {% endif %}
     </div>
-    <input class="input-optic input-optic--code" id="image_reference" name="image_reference" placeholder="ghcr.io/org/app:1.0" data-image-reference>
   </div>
+
 
 
 </section>
