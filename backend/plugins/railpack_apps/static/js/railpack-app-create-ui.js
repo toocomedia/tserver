@@ -20,7 +20,19 @@ export function setText(element, value) {
 export async function fetchJson(url, options) {
   const response = await fetch(url, options);
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.detail || 'The request could not be completed.');
+  if (!response.ok) {
+    let msg = 'The request could not be completed.';
+    if (typeof data.detail === 'string') {
+      msg = data.detail;
+    } else if (Array.isArray(data.detail)) {
+      msg = data.detail.map((d) => (d && typeof d === 'object' ? (d.msg || d.message || JSON.stringify(d)) : String(d))).join(', ');
+    } else if (data.detail && typeof data.detail === 'object') {
+      msg = data.detail.message || data.detail.msg || JSON.stringify(data.detail);
+    } else if (data.message) {
+      msg = data.message;
+    }
+    throw new Error(msg);
+  }
   return data;
 }
 
