@@ -117,6 +117,9 @@ class AiPermissionPolicy(Base):
     allow_container_apps: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     allow_databases: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     allow_files_read: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    allow_web_fetch: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    allow_file_edits: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    allow_app_deploy: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     allowed_domains: Mapped[str] = mapped_column(Text, default="[]", nullable=False)
     allowed_app_ids: Mapped[str] = mapped_column(Text, default="[]", nullable=False)
     allowed_databases: Mapped[str] = mapped_column(Text, default="[]", nullable=False)
@@ -125,4 +128,43 @@ class AiPermissionPolicy(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), onupdate=func.now(), nullable=False
     )
+
+
+class AiActionPlan(Base):
+    """Immutable server-persisted action plan proposed by AI Assistant."""
+    __tablename__ = "ai_action_plans"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    plan_id: Mapped[str] = mapped_column(String(64), unique=True, index=True, nullable=False)
+    user_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    session_id: Mapped[str] = mapped_column(String(64), index=True, nullable=False)
+    action_type: Mapped[str] = mapped_column(String(32), nullable=False)  # "app_install" | "file_edit"
+    status: Mapped[str] = mapped_column(String(32), default="awaiting_approval", nullable=False)  # "draft" | "awaiting_input" | "awaiting_approval" | "applied" | "expired" | "cancelled"
+    payload_json: Mapped[str] = mapped_column(Text, nullable=False)
+    payload_hash: Mapped[str] = mapped_column(String(64), nullable=False)  # SHA-256 of payload_json
+    summary: Mapped[str] = mapped_column(String(512), default="", nullable=False)
+    confidence: Mapped[float] = mapped_column(Float, default=1.0, nullable=False)
+    reasoning: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+
+
+class AiActionEvent(Base):
+    """Audit history and state transitions for action plans."""
+    __tablename__ = "ai_action_events"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    plan_id: Mapped[str] = mapped_column(String(64), index=True, nullable=False)
+    event_type: Mapped[str] = mapped_column(String(32), nullable=False)  # "created" | "viewed" | "applied" | "rejected" | "expired"
+    user_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    details: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), nullable=False
+    )
+
 

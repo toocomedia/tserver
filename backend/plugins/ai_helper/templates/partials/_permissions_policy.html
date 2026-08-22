@@ -5,19 +5,20 @@
     
     <div class="settings-choice-grid mb-xs" style="grid-template-columns: 1fr; gap: 8px;">
       
-      <!-- Option 1: Full Access -->
+      <!-- Option 1: Read All -->
       <label class="settings-choice {% if policy.global_mode == 'full_read_only' %}settings-choice--active{% endif %}" data-mode-card="full_read_only" style="padding: 12px 14px; min-height: auto;">
         <div class="d-flex align-items-center justify-content-between" style="width: 100%;">
           <div class="d-flex align-items-center gap-sm">
             <input type="radio" name="global_mode" value="full_read_only" {% if policy.global_mode == 'full_read_only' %}checked{% endif %} onchange="updateAccessModeUI()">
             <div class="text-left">
-              <span class="font-bold text-sm d-block" style="color: var(--color-text);">Full Access</span>
-              <span class="text-xs text-muted">Read access across all categories (no whitelist restrictions).</span>
+              <span class="font-bold text-sm d-block" style="color: var(--color-text);">Read All</span>
+              <span class="text-xs text-muted">Read access across enabled categories (no whitelist restrictions).</span>
             </div>
           </div>
-          <span class="badge badge--ok" style="font-size: 10px;">Full</span>
+          <span class="badge badge--ok" style="font-size: 10px;">Read All</span>
         </div>
       </label>
+
 
       <!-- Option 2: Granular Whitelist -->
       <label class="settings-choice {% if policy.global_mode == 'selective' %}settings-choice--active{% endif %}" data-mode-card="selective" style="padding: 12px 14px; min-height: auto;">

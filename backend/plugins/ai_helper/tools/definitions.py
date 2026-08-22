@@ -136,7 +136,134 @@ RAW_TOOL_SCHEMAS: List[Dict[str, Any]] = [
             "required": ["target_id", "file_path"],
         },
     },
+    {
+        "name": "fetch_web_documentation",
+        "description": "Fetches and reads documentation, README, or setup guides from a public HTTPS URL or GitHub repository to determine installation requirements, environment variables, ports, and databases.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "url": {
+                    "type": "string",
+                    "description": "The HTTPS URL to fetch (e.g. 'https://github.com/n8n-io/n8n', 'https://docs.ghost.org/install').",
+                },
+                "max_chars": {
+                    "type": "integer",
+                    "description": "Maximum characters to retrieve (default: 8000).",
+                },
+            },
+            "required": ["url"],
+        },
+    },
+    {
+        "name": "inspect_app_source",
+        "description": "Inspects a Git repository or Docker image reference to detect runtime, internal ports, environment variables, and database requirements.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "source_type": {
+                    "type": "string",
+                    "enum": ["git", "image"],
+                    "description": "The source type: 'git' or 'image'.",
+                },
+                "repository_url": {
+                    "type": "string",
+                    "description": "The Git repository URL (if source_type is 'git').",
+                },
+                "branch": {
+                    "type": "string",
+                    "description": "The Git branch name (default: 'main').",
+                },
+                "image_reference": {
+                    "type": "string",
+                    "description": "The Docker image reference (if source_type is 'image', e.g. 'ghost:5', 'n8nio/n8n:latest').",
+                },
+            },
+            "required": ["source_type"],
+        },
+    },
+    {
+        "name": "propose_app_install",
+        "description": "Proposes a validated application installation plan for the App Engine deployment wizard. Returns a secure server-side plan ID that can be autofilled into the form. NEVER ask for passwords or API secrets.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "source_type": {
+                    "type": "string",
+                    "enum": ["git", "image"],
+                    "description": "Source type ('git' or 'image').",
+                },
+                "repository_url": {
+                    "type": "string",
+                    "description": "Git repository URL if source_type is 'git'.",
+                },
+                "branch": {
+                    "type": "string",
+                    "description": "Git branch if source_type is 'git' (default: 'main').",
+                },
+                "image_reference": {
+                    "type": "string",
+                    "description": "Docker image reference if source_type is 'image'.",
+                },
+                "internal_port": {
+                    "type": "integer",
+                    "description": "Container internal HTTP port (e.g. 3000, 8080, 80).",
+                },
+                "build_mode": {
+                    "type": "string",
+                    "enum": ["railpack", "dockerfile", "image"],
+                    "description": "Build mode ('railpack', 'dockerfile', or 'image').",
+                },
+                "environment_values": {
+                    "type": "object",
+                    "description": "Key-value dictionary of non-secret environment variables (e.g. {'NODE_ENV': 'production'}).",
+                },
+                "database_attachments": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "kind": {"type": "string", "enum": ["postgres", "mariadb", "redis", "supabase"]},
+                            "provider": {"type": "string", "enum": ["docker", "external", "supabase"]},
+                            "environment_key": {"type": "string"},
+                        },
+                        "required": ["kind", "provider", "environment_key"],
+                    },
+                    "description": "Database services to attach to this application.",
+                },
+                "storage_mounts": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "label": {"type": "string"},
+                            "mount_path": {"type": "string"},
+                        },
+                        "required": ["label", "mount_path"],
+                    },
+                    "description": "Persistent storage volumes to mount inside the container.",
+                },
+                "domain_name": {
+                    "type": "string",
+                    "description": "Target domain name for the application.",
+                },
+                "summary": {
+                    "type": "string",
+                    "description": "Brief 1-sentence summary of the proposed installation.",
+                },
+                "confidence": {
+                    "type": "number",
+                    "description": "Confidence score from 0.0 to 1.0.",
+                },
+                "reasoning": {
+                    "type": "string",
+                    "description": "Explanation of detected architecture and recommended settings.",
+                },
+            },
+            "required": ["source_type"],
+        },
+    },
 ]
+
 
 
 def get_tool_definitions(provider_type: str = "openai_compatible") -> List[Dict[str, Any]]:

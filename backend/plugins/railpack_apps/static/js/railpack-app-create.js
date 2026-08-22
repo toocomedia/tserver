@@ -475,4 +475,119 @@ if (form) {
 
     scrollContainer.updateScrollMask();
   }
+
+  // -------------------------------------------------------------
+  // AI Action Plan Integration
+  // -------------------------------------------------------------
+  window.applyAiAppPlan = function (planData) {
+    if (!planData) return;
+    const p = planData.payload || planData;
+
+    // 1. Set Source Type
+    const srcType = (p.source_type || "git").toLowerCase();
+    const srcCard = query(`[data-source-card="${srcType}"]`);
+    if (srcCard) srcCard.click();
+
+    // 2. Set Domain if specified
+    if (p.domain_name) {
+      const domItem = query(`[data-dropdown-item][data-domain-name="${p.domain_name}"]`);
+      if (domItem && !domItem.classList.contains("is-disabled")) {
+        domItem.click();
+      }
+    }
+
+    // 3. Set Git / Image inputs
+    if (srcType === "git") {
+      if (p.repository_url) query("[data-repository-url]").value = p.repository_url;
+      if (p.branch) {
+        const branchInput = query("#branch");
+        if (branchInput) branchInput.value = p.branch;
+        const branchLabel = query('[data-custom-dropdown="branch"] [data-dropdown-label]');
+        if (branchLabel) branchLabel.textContent = p.branch;
+      }
+    } else if (srcType === "image") {
+      if (p.image_reference) query("[data-image-reference]").value = p.image_reference;
+    }
+
+    // 4. Set Port & Build Mode
+    if (p.internal_port && query("#internal_port")) {
+      query("#internal_port").value = p.internal_port;
+    }
+    if (p.build_mode && query("#build_mode")) {
+      query("#build_mode").value = p.build_mode;
+    }
+
+    // 5. Set Environment Variables
+    if (p.environment_values && typeof p.environment_values === "object") {
+      const envLines = Object.entries(p.environment_values)
+        .map(([k, v]) => `${k}=${v}`)
+        .join("\n");
+      parseAndApplyBulkEnv(form, envLines);
+    }
+
+    // 6. Set Databases
+    if (Array.isArray(p.database_attachments)) {
+      p.database_attachments.forEach((att) => {
+        const row = query(`[data-kind="${att.kind}"]`);
+        if (row) {
+          const chk = row.querySelector("[data-database-enabled]");
+          if (chk) {
+            chk.checked = true;
+            chk.dispatchEvent(new Event("change", { bubbles: true }));
+          }
+          const prov = _dbField(row, "[data-database-provider]");
+          if (prov && att.provider) prov.value = att.provider;
+          const keyInput = row.querySelector("[data-database-key]");
+          if (keyInput && att.environment_key) keyInput.value = att.environment_key;
+        }
+      });
+    }
+
+    // 7. Set Storage Mounts
+    if (Array.isArray(p.storage_mounts)) {
+      p.storage_mounts.forEach((m) => {
+        if (m.mount_path) {
+          addStorageMountRow(form, m.label || "data", m.mount_path);
+        }
+      });
+    }
+
+    // 8. Advance directly to Step 3 (Configuration) for review
+    state.unlocked = Math.max(state.unlocked, 3);
+    renderStep(3);
+
+    // 9. Mark plan applied on backend
+    if (planData.plan_id) {
+      fetchJson(`/plugins/ai_helper/api/action-plans/${encodeURIComponent(planData.plan_id)}/mark-applied`, {
+        method: "POST",
+        headers: csrfHeaders(),
+      }).catch(() => {});
+    }
+  };
+
+  // Wire Set Up With AI button
+  const aiSetupBtn = query("[data-ai-setup-trigger]");
+  if (aiSetupBtn) {
+    aiSetupBtn.addEventListener("click", () => {
+      if (window.AiHelper) {
+        window.AiHelper.open({
+          taskType: "app_deploy",
+          context: "App Engine Setup Wizard",
+          initialPrompt: "I want to install and configure an application on my server. Here is the repository / image / doc URL:\n\n",
+        });
+      }
+    });
+  }
+
+  // Handle ?plan= query parameter on page load
+  const urlParams = new URLSearchParams(window.location.search);
+  const planParam = urlParams.get("plan");
+  if (planParam) {
+    fetchJson(`/plugins/ai_helper/api/action-plans/${encodeURIComponent(planParam)}`)
+      .then((data) => {
+        if (data.plan) window.applyAiAppPlan(data.plan);
+      })
+      .catch((err) => console.warn("Could not auto-apply plan from URL:", err));
+  }
 }
+

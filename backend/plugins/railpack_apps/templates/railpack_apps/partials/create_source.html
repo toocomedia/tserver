@@ -1,25 +1,34 @@
 <section class="unboxed-step-container" data-wizard-panel="1">
 
-  <div class="dropdown-optic" style="margin-bottom: 20px;">
-    <div class="custom-dropdown" data-custom-dropdown="domain_id" data-no-autoselect>
-      <input type="hidden" id="domain_id" name="domain_id" required data-dropdown-value data-domain-select>
-      <div class="custom-dropdown__trigger" data-dropdown-trigger tabindex="0">
-        <span class="custom-dropdown__label" data-dropdown-label>Select Target Domain...</span>
-      </div>
-      <div class="custom-dropdown__menu" data-dropdown-menu>
-        {% for domain in domains %}
-        <div class="custom-dropdown__item {% if domain.id in used_domain_ids or domain.project_type != 'static' %}is-disabled{% endif %}" 
-             data-dropdown-item 
-             data-value="{{ domain.id }}" 
-             data-label="{{ domain.name }}"
-             data-domain-name="{{ domain.name }}" 
-             data-domain-ssl="{{ 'true' if domain.name in ssl_domain_names else 'false' }}">
-          {{ domain.name }}{% if domain.id in used_domain_ids %} — in use{% elif domain.project_type != 'static' %} — unavailable{% endif %}
+  <div class="d-flex align-items-center justify-content-between gap-sm mb-md flex-wrap">
+    <div class="dropdown-optic flex-1" style="min-width: 240px; margin-bottom: 0;">
+      <div class="custom-dropdown" data-custom-dropdown="domain_id" data-no-autoselect>
+        <input type="hidden" id="domain_id" name="domain_id" required data-dropdown-value data-domain-select>
+        <div class="custom-dropdown__trigger" data-dropdown-trigger tabindex="0">
+          <span class="custom-dropdown__label" data-dropdown-label>Select Target Domain...</span>
         </div>
-        {% endfor %}
+        <div class="custom-dropdown__menu" data-dropdown-menu>
+          {% for domain in domains %}
+          <div class="custom-dropdown__item {% if domain.id in used_domain_ids or domain.project_type != 'static' %}is-disabled{% endif %}" 
+               data-dropdown-item 
+               data-value="{{ domain.id }}" 
+               data-label="{{ domain.name }}"
+               data-domain-name="{{ domain.name }}" 
+               data-domain-ssl="{{ 'true' if domain.name in ssl_domain_names else 'false' }}">
+            {{ domain.name }}{% if domain.id in used_domain_ids %} — in use{% elif domain.project_type != 'static' %} — unavailable{% endif %}
+          </div>
+          {% endfor %}
+        </div>
       </div>
     </div>
+    {% if is_plugin_active('ai_helper') %}
+    <button type="button" class="btn btn--secondary btn--sm" id="btn-setup-with-ai" data-ai-setup-trigger title="Auto-detect source, ports, and databases with AI">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 6px;"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+      Set up with AI
+    </button>
+    {% endif %}
   </div>
+
 
   <div class="cards-grid-3">
     <div class="optic-card selected" data-source-card="git">

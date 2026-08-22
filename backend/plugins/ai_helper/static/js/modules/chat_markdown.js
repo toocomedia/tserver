@@ -271,6 +271,27 @@
               return '<span class="ai-security-badge ' + cls + '"><span class="ai-sec-dot ai-sec-dot--' + sev + '"></span> ' + desc + '</span>';
             }
           }
+          // Special: APP_PLAN renders as a structured deployment action card
+          if (actionType === "APP_PLAN") {
+            var planId = actionVal.trim();
+            return [
+              '<div class="ai-app-plan-card" data-plan-id="' + planId + '">',
+              '  <div class="ai-app-plan-card-header">',
+              '    <div class="ai-app-plan-card-header-left">',
+              '      <span class="ai-app-plan-card-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg></span>',
+              '      <span class="ai-app-plan-card-title">Deployment Proposal</span>',
+              '    </div>',
+              '    <span class="badge badge--ok" style="font-size: 10px;">Verified Plan</span>',
+              '  </div>',
+              '  <div class="ai-app-plan-card-body">',
+              '    <p class="text-xs text-muted mb-xs">Configuration verified on server. Click below to load into the wizard for review.</p>',
+              '    <button type="button" class="btn btn--primary btn--sm ai-action-btn--apply-plan" data-action="APP_PLAN" data-plan-id="' + planId + '">',
+              '      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="margin-right: 4px;"><path d="M12 3v12"></path><path d="m8 11 4 4 4-4"></path><path d="M8 21h8"></path></svg> Apply to Deploy Form',
+              '    </button>',
+              '  </div>',
+              '</div>',
+            ].join("\n");
+          }
           var label = actionType.replace(/_/g, " ").toLowerCase();
           return (
             '<span class="ai-action-tag" data-action="' +
@@ -285,6 +306,7 @@
           );
         }
       );
+
 
       // Model drift fallbacks for allow secrets text
       escaped = escaped.replace(/(?:click\s+)?[\uD83D\uDD13\uD83D\uDD10\uD83D\uDD12]?\s*Credentials Unlocked/gi, renderSecretsBtn);

@@ -55,5 +55,30 @@
       <input type="checkbox" class="form-check-input" name="allow_files_read" {% if policy.allow_files_read %}checked{% endif %}>
     </label>
 
+    <label class="perm-category-row">
+      <div>
+        <span class="font-bold text-sm d-block">Web Documentation Reader</span>
+        <span class="text-xs text-muted">Fetch online guides, Git READMEs, and docs</span>
+      </div>
+      <input type="checkbox" class="form-check-input" name="allow_web_fetch" {% if policy.allow_web_fetch %}checked{% endif %}>
+    </label>
+
+    <label class="perm-category-row">
+      <div>
+        <span class="font-bold text-sm d-block">App Installation Proposals</span>
+        <span class="text-xs text-muted">Propose new App Engine wizard setups</span>
+      </div>
+      <input type="checkbox" class="form-check-input" name="allow_app_deploy" {% if policy.allow_app_deploy %}checked{% endif %}>
+    </label>
+
+    <label class="perm-category-row">
+      <div>
+        <span class="font-bold text-sm d-block">File Modification Proposals</span>
+        <span class="text-xs text-muted">Propose configuration and code file edits</span>
+      </div>
+      <input type="checkbox" class="form-check-input" name="allow_file_edits" {% if policy.allow_file_edits %}checked{% endif %}>
+    </label>
+
+
   </div>
 </div>

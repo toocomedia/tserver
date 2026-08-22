@@ -476,3 +476,30 @@ async def get_session_history(session_id: str, db: AsyncSession = Depends(get_db
     """Retrieves all chat messages for a session."""
     messages = await service.get_session_messages(db, session_id)
     return JSONResponse({"status": "ok", "session_id": session_id, "messages": messages})
+
+
+# -------------------------------------------------------------
+# Action Plans API Endpoints
+# -------------------------------------------------------------
+
+@router.get("/api/action-plans/{plan_id}")
+async def get_action_plan_endpoint(plan_id: str, db: AsyncSession = Depends(get_db)):
+    """Retrieves validated, server-side action plan details by opaque ID."""
+    from plugins.ai_helper.services import action_plans
+    plan = await action_plans.get_action_plan(db, plan_id)
+    if not plan:
+        raise HTTPException(404, "Action plan not found or expired.")
+    return JSONResponse({"status": "ok", "plan": plan})
+
+
+@router.post("/api/action-plans/{plan_id}/mark-applied")
+async def mark_action_plan_applied_endpoint(plan_id: str, request: Request, db: AsyncSession = Depends(get_db)):
+    """Marks an action plan as applied with replay protection."""
+    from plugins.ai_helper.services import action_plans
+    user_id = request.session.get("user_id") if hasattr(request, "session") else None
+    try:
+        res = await action_plans.mark_plan_applied(db, plan_id, user_id=user_id)
+        return JSONResponse(res)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+

@@ -82,8 +82,12 @@ class PermissionPolicyPayload(BaseModel):
     allow_container_apps: Optional[bool] = True
     allow_databases: Optional[bool] = True
     allow_files_read: Optional[bool] = True
+    allow_web_fetch: Optional[bool] = False
+    allow_file_edits: Optional[bool] = False
+    allow_app_deploy: Optional[bool] = False
     allowed_domains: Optional[Any] = "[]"
     allowed_app_ids: Optional[Any] = "[]"
     allowed_databases: Optional[Any] = "[]"
     allowed_file_targets: Optional[Any] = "[]"
     ask_on_demand: Optional[bool] = False
+

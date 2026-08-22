@@ -381,12 +381,15 @@ def _migrate_sync(sync_conn) -> None:
             logger.info("Migrating ai_providers: add models_list")
             sync_conn.execute(text("ALTER TABLE ai_providers ADD COLUMN models_list TEXT DEFAULT '' NOT NULL"))
 
-    # --- ai_permission_policies: granular scopes (databases, file targets) ---
+    # --- ai_permission_policies: granular scopes & action flags ---
     if "ai_permission_policies" in tables:
         cols = _column_names(sync_conn, "ai_permission_policies")
         for col, ddl in {
             "allowed_databases": "TEXT DEFAULT '[]' NOT NULL",
             "allowed_file_targets": "TEXT DEFAULT '[]' NOT NULL",
+            "allow_web_fetch": "BOOLEAN DEFAULT 0 NOT NULL",
+            "allow_file_edits": "BOOLEAN DEFAULT 0 NOT NULL",
+            "allow_app_deploy": "BOOLEAN DEFAULT 0 NOT NULL",
         }.items():
             if col not in cols:
                 logger.info("Migrating ai_permission_policies: add %s", col)

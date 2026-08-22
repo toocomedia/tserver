@@ -142,6 +142,43 @@
           return;
         }
 
+        // 6a. APP_PLAN Apply Button — fetch validated plan from server and apply to wizard
+        var applyPlanBtn = e.target.closest(".ai-action-btn--apply-plan, [data-action='APP_PLAN']");
+        if (applyPlanBtn) {
+          e.preventDefault();
+          var planId = applyPlanBtn.getAttribute("data-plan-id");
+          if (!planId) return;
+          applyPlanBtn.disabled = true;
+          applyPlanBtn.textContent = "Loading configuration...";
+
+          fetch("/plugins/ai_helper/api/action-plans/" + encodeURIComponent(planId))
+            .then(function (res) {
+              if (!res.ok) throw new Error("Plan not found or expired.");
+              return res.json();
+            })
+            .then(function (data) {
+              var plan = data.plan;
+              if (!plan || !plan.payload) throw new Error("Invalid plan data.");
+
+              // If currently on Apps Engine Create page: apply directly to wizard
+              if (window.applyAiAppPlan && typeof window.applyAiAppPlan === "function") {
+                window.applyAiAppPlan(plan);
+                applyPlanBtn.innerHTML = "✓ Applied to Form";
+                applyPlanBtn.classList.remove("btn--primary");
+                applyPlanBtn.classList.add("btn--secondary");
+                if (window.AiHelper) window.AiHelper.close();
+              } else {
+                // Redirect to create page with plan param
+                window.location.href = "/plugins/railpack_apps/create?plan=" + encodeURIComponent(planId);
+              }
+            })
+            .catch(function (err) {
+              applyPlanBtn.disabled = false;
+              applyPlanBtn.textContent = "Error: " + err.message;
+            });
+          return;
+        }
+
         // 6. Action Tag Click — general (Copy or apply value)
         var actionTag = e.target.closest(".ai-action-tag:not(.ai-action-tag--secrets)");
         if (actionTag) {
@@ -150,6 +187,7 @@
           self.copyToClipboard(val, actionTag);
           return;
         }
+
 
         // 6b. ALLOW_SECRETS button — POST to consent API then send follow-up message
         var secretsBtn = e.target.closest(".ai-action-tag--secrets");

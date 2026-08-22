@@ -32,6 +32,10 @@ TOOL_CATEGORY_MAP: Dict[str, str] = {
     "get_databases_overview": "databases",
     "list_website_directory": "files",
     "read_website_file": "files",
+    "fetch_web_documentation": "web",
+    "inspect_app_source": "apps",
+    "propose_app_install": "app_deploy",
+    "propose_file_edit": "file_edits",
 }
 
 
@@ -64,6 +68,9 @@ async def get_or_create_policy(db: AsyncSession) -> AiPermissionPolicy:
             allow_container_apps=True,
             allow_databases=True,
             allow_files_read=True,
+            allow_web_fetch=False,
+            allow_file_edits=False,
+            allow_app_deploy=False,
             allowed_domains="[]",
             allowed_app_ids="[]",
             allowed_databases="[]",
@@ -92,6 +99,9 @@ async def update_policy(db: AsyncSession, data: Dict[str, Any]) -> AiPermissionP
         "allow_container_apps",
         "allow_databases",
         "allow_files_read",
+        "allow_web_fetch",
+        "allow_file_edits",
+        "allow_app_deploy",
         "ask_on_demand",
     ):
         if flag in data:
@@ -137,6 +147,18 @@ async def check_tool_permission(
         audit.record_tool_call(tool_name, arguments, "denied", session_id, "DNS inspection disabled")
         raise PermissionDeniedError(tool_name, "Permission to inspect DNS records is disabled.")
 
+    if category == "web" and not getattr(policy, "allow_web_fetch", False):
+        audit.record_tool_call(tool_name, arguments, "denied", session_id, "External web/documentation reading disabled")
+        raise PermissionDeniedError(tool_name, "Permission to fetch external web documentation is disabled in AI Settings.")
+
+    if category == "app_deploy" and not getattr(policy, "allow_app_deploy", False):
+        audit.record_tool_call(tool_name, arguments, "denied", session_id, "Application installation proposals disabled")
+        raise PermissionDeniedError(tool_name, "Permission to propose application installations is disabled in AI Settings.")
+
+    if category == "file_edits" and not getattr(policy, "allow_file_edits", False):
+        audit.record_tool_call(tool_name, arguments, "denied", session_id, "File modification proposals disabled")
+        raise PermissionDeniedError(tool_name, "Permission to propose file edits is disabled in AI Settings.")
+
     if category == "apps":
         app_type = (arguments.get("app_type") or "").lower()
         if app_type == "php" and not policy.allow_php_sites:
@@ -156,6 +178,7 @@ async def check_tool_permission(
     if category == "files" and not policy.allow_files_read:
         audit.record_tool_call(tool_name, arguments, "denied", session_id, "File manager read access disabled")
         raise PermissionDeniedError(tool_name, "Permission to read website files is disabled.")
+
 
     # 3. Granular Resource Scopes (if global_mode == 'selective')
     if policy.global_mode == "selective":

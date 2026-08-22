@@ -34,7 +34,11 @@ _TOOL_LABELS = {
     "get_databases_overview": ("database", "Reading database overview"),
     "list_website_directory": ("folder", "Scanning directory"),
     "read_website_file": ("file", "Reading file"),
+    "fetch_web_documentation": ("book-open", "Reading documentation"),
+    "inspect_app_source": ("search", "Inspecting app source"),
+    "propose_app_install": ("layers", "Generating deployment plan"),
 }
+
 
 
 def _activity_event(tool_name: str, status: str, args: dict | None = None) -> str:
