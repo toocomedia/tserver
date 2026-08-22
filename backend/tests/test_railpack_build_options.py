@@ -673,7 +673,8 @@ class RailpackBuildOptionsTests(unittest.TestCase):
             build_cmd = mock_run.call_args[0][1]
             self.assertEqual(build_cmd[0], "railpack")
             self.assertEqual(build_cmd[1], "build")
-            self.assertNotIn("--env", build_cmd)
+            self.assertIn("--env", build_cmd)
+            self.assertIn("DATABASE_URL", build_cmd)
             self.assertFalse(any("DATABASE_URL=" in item for item in build_cmd))
 
             # Check railpack.json written with secrets declared by name
