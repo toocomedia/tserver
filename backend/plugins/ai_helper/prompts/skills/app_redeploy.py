@@ -28,9 +28,9 @@ Diagnose build or runtime failures, identify missing environment variables, data
    - Explain the **Correction**:
      * If the failure is due to BuildKit, out-of-memory (OOM), or heavy Git build compilation on a VPS:
        Recommend switching to the official pre-built Docker image (e.g. `ghcr.io/umami-software/umami:postgresql-latest` for Umami, `ghost:5-alpine` for Ghost, `n8nio/n8n:latest` for n8n) which requires zero build RAM and deploys instantly.
-     * Provide 1-click decision chips:
-       `[OPTION:🚀 Switch to Official Pre-built Docker Image (Zero Compile RAM)|Deploy using official pre-built Docker image]`
-       `[OPTION:🔄 Retry Redeploy from Source|Retry redeploying application]`
+     * Provide 1-click decision chips (clean, no emojis):
+       `[OPTION:Switch to Official Pre-built Docker Image (Zero Compile RAM)|Deploy using official pre-built Docker image]`
+       `[OPTION:Retry Redeploy from Source|Retry redeploying application]`
 3. **Execute / Propose Redeployment Action**:
    - If an application ID is known (e.g. `#1`), provide the 1-click redeployment button tag:
      `[ACTION:APP_REDEPLOY:<app_id>]`

@@ -315,7 +315,7 @@
               '  <button type="button" class="ai-action-btn--big-next ai-action-btn--deploy" data-action="APP_DEPLOY">' +
               '    <span class="ai-btn-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2v10m-7-3l7-7 7 7M5 15v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4"/></svg></span>' +
               '    <span class="ai-btn-text">' + deployText + '</span>' +
-              '    <span class="ai-btn-arrow">🚀</span>' +
+              '    <span class="ai-btn-arrow"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg></span>' +
               '  </button>' +
               '</div>'
             );
@@ -337,7 +337,7 @@
               '    <button type="button" class="ai-action-btn--big-next ai-action-btn--deploy" data-action="APP_REDEPLOY" data-app-id="' + appId + '">',
               '      <span class="ai-btn-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2v10m-7-3l7-7 7 7M5 15v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4"/></svg></span>',
               '      <span class="ai-btn-text">Redeploy Application Now</span>',
-              '      <span class="ai-btn-arrow">🚀</span>',
+              '      <span class="ai-btn-arrow"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg></span>',
               '    </button>',
               '  </div>',
               '</div>',
@@ -351,9 +351,9 @@
             return (
               '<div class="ai-quick-options-group">' +
               '  <button type="button" class="ai-quick-option-btn" data-reply="' + escapeHtml(optReply) + '">' +
-              '    <span class="ai-quick-opt-icon">⚡</span>' +
+              '    <span class="ai-quick-opt-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span>' +
               '    <span class="ai-quick-opt-label">' + escapeHtml(optLabel) + '</span>' +
-              '    <span class="ai-quick-opt-badge">1-Click Select</span>' +
+              '    <span class="ai-quick-opt-badge">Select</span>' +
               '  </button>' +
               '</div>'
             );
@@ -381,9 +381,9 @@
         return (
           '<div class="ai-quick-options-group">' +
           '  <button type="button" class="ai-quick-option-btn" data-reply="' + escapeHtml(optReply) + '">' +
-          '    <span class="ai-quick-opt-icon">⚡</span>' +
+          '    <span class="ai-quick-opt-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span>' +
           '    <span class="ai-quick-opt-label">' + escapeHtml(optLabel) + '</span>' +
-          '    <span class="ai-quick-opt-badge">1-Click Select</span>' +
+          '    <span class="ai-quick-opt-badge">Select</span>' +
           '  </button>' +
           '</div>'
         );
