@@ -766,8 +766,18 @@
       this.init();
       if (opts.taskType) this.setTaskType(opts.taskType);
       if (opts.context) this.setContext(opts.context);
+
+      if (opts.split) {
+        this.drawerEl.classList.add("ai-helper-drawer--split");
+        this.backdropEl.classList.remove("active");
+        this.backdropEl.classList.add("ai-helper-backdrop--split");
+      } else {
+        this.drawerEl.classList.remove("ai-helper-drawer--split");
+        this.backdropEl.classList.remove("ai-helper-backdrop--split");
+        this.backdropEl.classList.add("active");
+      }
+
       this.drawerEl.classList.add("open");
-      this.backdropEl.classList.add("active");
       this.closeHistoryView();
       this.inputEl.focus();
       if (opts.initialPrompt) {
@@ -778,10 +788,17 @@
     },
 
     close: function () {
-      if (this.drawerEl) this.drawerEl.classList.remove("open");
-      if (this.backdropEl) this.backdropEl.classList.remove("active");
+      if (this.drawerEl) {
+        this.drawerEl.classList.remove("open");
+        this.drawerEl.classList.remove("ai-helper-drawer--split");
+      }
+      if (this.backdropEl) {
+        this.backdropEl.classList.remove("active");
+        this.backdropEl.classList.remove("ai-helper-backdrop--split");
+      }
       this.closeHistoryView();
     },
+
 
     toggle: function () {
       if (this.drawerEl && this.drawerEl.classList.contains("open")) this.close();

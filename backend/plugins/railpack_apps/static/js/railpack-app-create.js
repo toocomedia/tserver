@@ -565,19 +565,45 @@ if (form) {
     }
   };
 
-  // Wire Set Up With AI button
-  const aiSetupBtn = query("[data-ai-setup-trigger]");
-  if (aiSetupBtn) {
-    aiSetupBtn.addEventListener("click", () => {
-      if (window.AiHelper) {
-        window.AiHelper.open({
-          taskType: "app_deploy",
-          context: "App Engine Setup Wizard",
-          initialPrompt: "I want to install and configure an application on my server. Here is the repository / image / doc URL:\n\n",
-        });
+  // Wire Set Up With AI buttons (Git and Docker Image)
+  queryAll("[data-ai-setup-trigger]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      if (!window.AiHelper) return;
+
+      const triggerType = btn.getAttribute("data-ai-setup-trigger") || "git";
+      let enteredVal = "";
+      if (triggerType === "git") {
+        const repoInput = query("[data-repository-url]");
+        if (repoInput) enteredVal = repoInput.value.trim();
+      } else if (triggerType === "image") {
+        const imgInput = query("[data-image-reference]");
+        if (imgInput) enteredVal = imgInput.value.trim();
       }
+
+      // Check if domain is selected
+      let domainNote = "";
+      const domainInput = query("[data-domain-select]");
+      const domainLabel = query('[data-custom-dropdown="domain_id"] [data-dropdown-label]');
+      if (domainInput && domainInput.value && domainLabel && domainLabel.textContent && !domainLabel.textContent.includes("Select Target Domain")) {
+        domainNote = " for domain " + domainLabel.textContent.trim();
+      }
+
+      let promptText = "";
+      if (enteredVal) {
+        promptText = "Please analyze and configure this application" + domainNote + ":\n" + enteredVal;
+      } else {
+        promptText = "I want to install and configure an application on my server" + domainNote + ". Here is what I want to deploy:\n\n";
+      }
+
+      window.AiHelper.open({
+        split: true,
+        taskType: "app_deploy",
+        context: "App Engine Setup Wizard",
+        initialPrompt: promptText,
+      });
     });
-  }
+  });
+
 
   // Handle ?plan= query parameter on page load
   const urlParams = new URLSearchParams(window.location.search);

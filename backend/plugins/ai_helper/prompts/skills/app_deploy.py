@@ -40,6 +40,11 @@ Analyze the user's application source (Git repository, Docker image, or document
 | Database | MariaDB (Docker) | Private container DB |
 | Storage | /var/lib/ghost/content | Persistent uploads |
 
-Follow up with brief notes and the opaque plan action tag `[ACTION:APP_PLAN:<plan_id>]`.
+**Next Steps Guidance**:
+Always clearly tell the user:
+"Click the **Apply to Deploy Form** button below to autofill these settings into your deployment wizard. The wizard will advance to Step 3 (Configuration) where you can review everything and enter any secret passwords before deploying."
+
+Followed immediately by the plan action tag: `[ACTION:APP_PLAN:<plan_id>]`.
 """,
 )
+
