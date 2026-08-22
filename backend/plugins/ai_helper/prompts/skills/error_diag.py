@@ -17,6 +17,9 @@ You are diagnosing a deployment, runtime, or routing error on a VPS-hosted appli
 4. `get_apps_overview` — Confirm app status and host_port match the proxy upstream.
 
 **Correlate**:
+- If `get_app_logs` shows missing environment variables (e.g. `missing environment variable: DATABASE_URL`):
+  - Root cause: The build tool (e.g. Railpack/Prisma) requires the database connection string at build time.
+  - Fix: Attach the required private database (PostgreSQL/MariaDB) in Step 3 or configure `DATABASE_URL`. Invoke `propose_app_install` to create a corrected plan if helpful.
 - If `get_app_logs` shows a crash → root cause is in the app itself (check startup error).
 - If logs show success but site returns 502 → proxy port mismatch (compare `host_port` vs proxy upstream).
 - If logs show success and proxy is correct but returns 404 → webroot or routing issue.
@@ -26,6 +29,6 @@ You are diagnosing a deployment, runtime, or routing error on a VPS-hosted appli
 ```log
 <relevant log lines here>
 ```
-Then: **Diagnosis** (what failed), **Root Cause** (why), **Fix** (exact steps with action tags).
+Then: **Diagnosis** (what failed), **Root Cause** (why), **Fix** (exact steps with action tags or proposal).
 """,
 )

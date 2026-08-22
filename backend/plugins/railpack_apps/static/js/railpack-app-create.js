@@ -297,16 +297,47 @@ if (form) {
 
   function finishDeployment(data) {
     state.unlocked = 5;
-    setText(query('[data-result-state]'), data.status === 'success' ? 'Complete' : 'Failed');
-    setText(query('[data-result-summary]'), data.status === 'success' ? 'Deployment completed successfully.' : 'Deployment failed. Review the output and manage the app for recovery.');
+    const isSuccess = data.status === 'success';
+    setText(query('[data-result-state]'), isSuccess ? 'Complete' : 'Failed');
+    setText(query('[data-result-summary]'), isSuccess ? 'Deployment completed successfully.' : 'Deployment failed. Review the output or diagnose and fix with AI.');
     setText(query('[data-deployment-error-text]'), data.error || 'Deployment failed.');
-    setHidden(query('[data-deployment-error]'), data.status === 'success');
+    setHidden(query('[data-deployment-error]'), isSuccess);
+    setHidden(query('[data-result-failure-actions]'), isSuccess);
     const url = `/plugins/railpack_apps/${state.appId}`;
     query('[data-deployment-dashboard]').href = url;
     query('[data-deployment-details]').href = url;
-    setHidden(query(data.status === 'success' ? '[data-deployment-dashboard]' : '[data-deployment-details]'), false);
+    setHidden(query(isSuccess ? '[data-deployment-dashboard]' : '[data-deployment-details]'), false);
     renderStep(5);
+
+    // Auto-prompt AI if drawer is open during failure
+    if (!isSuccess && window.AiHelper && typeof window.AiHelper.isOpen === "function" && window.AiHelper.isOpen()) {
+      const errSnippet = data.error ? `Error: ${data.error}` : "Build/Deployment failed.";
+      const logSnippet = (data.output || "").slice(-2000);
+      const prompt = `The application build or deployment failed with:\n${errSnippet}\n\nRecent build logs:\n\`\`\`log\n${logSnippet}\n\`\`\`\nPlease diagnose the root cause, explain what is missing (e.g. environment variable, database, port), and propose a corrected configuration to fix and redeploy.`;
+      if (typeof window.AiHelper.sendMessage === "function") {
+        window.AiHelper.sendMessage(prompt);
+      }
+    }
   }
+
+  query('[data-wizard-edit-config]')?.addEventListener('click', () => {
+    state.unlocked = Math.max(state.unlocked, 3);
+    renderStep(3);
+  });
+
+  query('[data-ai-diagnose-error]')?.addEventListener('click', () => {
+    if (!window.AiHelper) return;
+    const output = query('[data-deployment-output]')?.textContent || '';
+    const errText = query('[data-deployment-error-text]')?.textContent || 'Deployment failed';
+    const logSnippet = output.slice(-2000);
+    const prompt = `The application build or deployment failed with:\nError: ${errText}\n\nRecent build logs:\n\`\`\`log\n${logSnippet}\n\`\`\`\nPlease diagnose the root cause, explain what is missing (e.g. environment variable, database, port), and propose a corrected configuration to fix and redeploy.`;
+    window.AiHelper.open({
+      split: true,
+      taskType: "error_diag",
+      context: `App Deployment Failure #${state.deploymentId || ""}`,
+      initialPrompt: prompt,
+    });
+  });
 
   query('[data-source-type]').addEventListener('change', sourceState);
   query('[data-domain-select]').addEventListener('change', () => { domainState(); });

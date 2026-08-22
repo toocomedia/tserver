@@ -18,6 +18,8 @@ def parse_requested_keys(value: str | list[str] | None) -> list[str] | None:
     """Return explicit build-secret names; None retains safe legacy selection."""
     if value is None or value == "":
         return None
+    if not isinstance(value, (str, list)):
+        return None
     raw = json.loads(value) if isinstance(value, str) else value
     if not isinstance(raw, list) or len(raw) > 32:
         raise ValueError("Build secret keys must be a list of at most 32 environment names.")
@@ -65,3 +67,21 @@ def inject_railpack_secrets(build_root: Path, secret_names: list[str]) -> None:
     temporary = config_path.with_name(f".{config_path.name}.srv-panel")
     temporary.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
     os.replace(temporary, config_path)
+
+
+def get_declared_secrets(build_root: Path) -> list[str]:
+    """Read any secret names declared in the repository's railpack.json."""
+    if not build_root.is_dir():
+        return []
+    config_path = build_root / "railpack.json"
+    if not config_path.is_file():
+        return []
+    try:
+        data = json.loads(config_path.read_text(encoding="utf-8"))
+        if isinstance(data, dict):
+            sec = data.get("secrets", [])
+            if isinstance(sec, list):
+                return [s for s in sec if isinstance(s, str) and s]
+    except Exception:
+        pass
+    return []

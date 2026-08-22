@@ -386,9 +386,21 @@ def _build_or_pull(app: ContainerApp, deployment: ContainerAppDeployment) -> str
             )
         except ValueError as exc:
             raise RuntimeError(str(exc)) from exc
-        if secret_names:
-            _inject_railpack_secrets(build_root, secret_names)
-            build_env = {key: env_vars[key] for key in secret_names}
+        declared_secrets = build_secrets.get_declared_secrets(build_root)
+        all_secret_names = list(dict.fromkeys([*secret_names, *declared_secrets]))
+        if all_secret_names:
+            _inject_railpack_secrets(build_root, all_secret_names)
+            build_env = {}
+            for key in all_secret_names:
+                if key in env_vars:
+                    build_env[key] = env_vars[key]
+                elif key == "DATABASE_URL":
+                    # Build-time dummy for Prisma/Next.js generation if DB not yet connected
+                    build_env[key] = "postgresql://postgres:postgres@127.0.0.1:5432/umami"
+                elif key in ("REDIS_URL", "MYSQL_URL"):
+                    build_env[key] = "redis://127.0.0.1:6379"
+                else:
+                    build_env[key] = "build_placeholder"
         command = ["railpack", "build", "--name", image, str(build_root)]
 
     progress.append_log(deployment, "build", "Building application image.")

@@ -1,5 +1,16 @@
 <section class="unboxed-step-container" data-wizard-panel="5" hidden>
   <div class="unboxed-step-header"><span>5. Deployment result</span><span class="badge-pill" data-result-state>Complete</span></div>
   <p class="form-hint" data-result-summary>Review the deployment output below.</p>
+
+  <div style="display: flex; gap: 8px; margin-bottom: 12px;" data-result-failure-actions hidden>
+    {% if is_plugin_active('ai_helper') %}
+    <button type="button" class="btn-optic btn-optic--primary" data-ai-diagnose-error style="display: inline-flex; align-items: center; gap: 6px;">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+      ✦ Diagnose & Fix with AI
+    </button>
+    {% endif %}
+    <button type="button" class="btn-optic" data-wizard-edit-config>Back to Configuration</button>
+  </div>
+
   <pre class="terminal-fluid" data-deployment-output></pre>
 </section>
