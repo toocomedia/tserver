@@ -51,6 +51,9 @@ async def inspect_app_source(
     return {"status": "error", "message": f"Unsupported source type '{source_type}'. Must be 'git' or 'image'."}
 
 
+import secrets as _secrets
+
+
 async def propose_app_install(
     db: AsyncSession,
     session_id: Optional[str] = None,
@@ -60,6 +63,7 @@ async def propose_app_install(
     image_reference: str = "",
     internal_port: int = 3000,
     build_mode: str = "railpack",
+    custom_start_command: str = "",
     environment_values: Optional[Dict[str, str]] = None,
     database_attachments: Optional[List[Dict[str, str]]] = None,
     storage_mounts: Optional[List[Dict[str, str]]] = None,
@@ -86,6 +90,22 @@ async def propose_app_install(
         for k, v in environment_values.items():
             if isinstance(k, str) and k.strip():
                 clean_envs[k.strip()] = str(v) if v is not None else ""
+
+    # Auto-generate framework-specific encryption secrets if not already provided
+    lower_source = f"{repository_url} {image_reference} {summary}".lower()
+    if "umami" in lower_source:
+        if "APP_SECRET" not in clean_envs:
+            clean_envs["APP_SECRET"] = _secrets.token_hex(16)
+        if (source_type or "").lower() == "git" and not custom_start_command:
+            custom_start_command = "pnpm exec prisma db push && pnpm run start"
+    elif "strapi" in lower_source:
+        for secret_key in ("APP_KEYS", "API_TOKEN_SALT", "ADMIN_JWT_SECRET", "TRANSFER_TOKEN_SALT", "JWT_SECRET"):
+            if secret_key not in clean_envs:
+                clean_envs[secret_key] = _secrets.token_hex(16)
+    elif "laravel" in lower_source and "APP_KEY" not in clean_envs:
+        clean_envs["APP_KEY"] = f"base64:{_secrets.token_urlsafe(32)}"
+    elif ("django" in lower_source or "flask" in lower_source) and "SECRET_KEY" not in clean_envs:
+        clean_envs["SECRET_KEY"] = _secrets.token_urlsafe(40)
 
     clean_dbs: List[Dict[str, str]] = []
     if isinstance(database_attachments, list):
@@ -115,6 +135,7 @@ async def propose_app_install(
         "image_reference": image_reference.strip(),
         "internal_port": port,
         "build_mode": (build_mode or "railpack").strip().lower(),
+        "custom_start_command": (custom_start_command or "").strip(),
         "environment_values": clean_envs,
         "database_attachments": clean_dbs,
         "storage_mounts": clean_mounts,
@@ -143,3 +164,4 @@ async def propose_app_install(
         "action_tag": f"[ACTION:APP_PLAN:{plan.plan_id}]",
         "message": f"Action plan created successfully with ID {plan.plan_id}.",
     }
+

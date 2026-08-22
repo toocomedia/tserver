@@ -560,12 +560,15 @@ if (form) {
       if (p.image_reference) query("[data-image-reference]").value = p.image_reference;
     }
 
-    // 4. Set Port & Build Mode
+    // 4. Set Port & Build Mode & Start Command
     if (p.internal_port && query("#internal_port")) {
       query("#internal_port").value = p.internal_port;
     }
     if (p.build_mode && query("#build_mode")) {
       query("#build_mode").value = p.build_mode;
+    }
+    if (p.custom_start_command && query("#custom_start_command")) {
+      query("#custom_start_command").value = p.custom_start_command;
     }
 
     // 5. Set Environment Variables (Optimal values)
