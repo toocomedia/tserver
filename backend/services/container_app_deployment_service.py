@@ -452,6 +452,8 @@ def _build_or_pull(app: ContainerApp, deployment: ContainerAppDeployment) -> str
             env_vars["HOST"] = "0.0.0.0"
         if "NODE_ENV" not in env_vars:
             env_vars["NODE_ENV"] = "production"
+        if "SKIP_DB_CHECK" not in env_vars:
+            env_vars["SKIP_DB_CHECK"] = "1"
 
         try:
             secret_names = build_secrets.select_names(
@@ -479,6 +481,8 @@ def _build_or_pull(app: ContainerApp, deployment: ContainerAppDeployment) -> str
                     val = "0.0.0.0"
                 elif key == "NODE_ENV":
                     val = "production"
+                elif key == "SKIP_DB_CHECK":
+                    val = "1"
                 else:
                     val = "build_placeholder"
                 build_env[key] = val
