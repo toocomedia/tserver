@@ -102,10 +102,22 @@ async def propose_app_install(
         for secret_key in ("APP_KEYS", "API_TOKEN_SALT", "ADMIN_JWT_SECRET", "TRANSFER_TOKEN_SALT", "JWT_SECRET"):
             if secret_key not in clean_envs:
                 clean_envs[secret_key] = _secrets.token_hex(16)
+    elif "plausible" in lower_source:
+        if "SECRET_KEY_BASE" not in clean_envs or clean_envs["SECRET_KEY_BASE"] in ("auto-generated", "change-me", ""):
+            clean_envs["SECRET_KEY_BASE"] = _secrets.token_urlsafe(48)
+        if "BASE_URL" not in clean_envs and domain:
+            clean_envs["BASE_URL"] = f"https://{domain}"
+        if "PHX_HOST" not in clean_envs and domain:
+            clean_envs["PHX_HOST"] = domain
     elif "laravel" in lower_source and "APP_KEY" not in clean_envs:
         clean_envs["APP_KEY"] = f"base64:{_secrets.token_urlsafe(32)}"
     elif ("django" in lower_source or "flask" in lower_source) and "SECRET_KEY" not in clean_envs:
         clean_envs["SECRET_KEY"] = _secrets.token_urlsafe(40)
+
+    # Generic fallback: Auto-generate high-entropy random values for any secret keys with placeholders
+    for key, val in list(clean_envs.items()):
+        if any(s in key.upper() for s in ("SECRET", "SALT", "KEY_BASE", "JWT", "PASSWORD", "AUTH_KEY")) and val in ("auto-generated", "placeholder", "change-me", "changeme", ""):
+            clean_envs[key] = _secrets.token_urlsafe(32)
 
     clean_dbs: List[Dict[str, str]] = []
     if isinstance(database_attachments, list):

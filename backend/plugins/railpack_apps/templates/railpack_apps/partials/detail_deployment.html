@@ -13,7 +13,7 @@
   </div>
   <div class="master-card__body">
     {% if deployment %}
-    <pre class="terminal-fluid" data-deployment-output>{% if deployment.output %}{{ deployment.output }}{% elif deployment.status == 'queued' %}Deployment #{{ deployment.id }} is queued. Waiting for builder to start...{% elif deployment.status == 'running' %}Deployment #{{ deployment.id }} is starting...{% elif deployment.status == 'cancelled' %}Deployment #{{ deployment.id }} was cancelled by user.{% else %}No output recorded.{% endif %}{% if deployment.error %}
+    <pre class="terminal-fluid" data-deployment-output style="max-height: 440px; overflow-y: auto; scroll-behavior: smooth;">{% if deployment.output %}{{ deployment.output }}{% elif deployment.status == 'queued' %}Deployment #{{ deployment.id }} is queued. Waiting for builder to start...{% elif deployment.status == 'running' %}Deployment #{{ deployment.id }} is starting...{% elif deployment.status == 'cancelled' %}Deployment #{{ deployment.id }} was cancelled by user.{% else %}No output recorded.{% endif %}{% if deployment.error %}
 [error] {{ deployment.error }}{% endif %}</pre>
     <div class="info-row"><span class="info-row__label">Deployment action</span><span class="info-row__value">{{ deployment.action | title }}</span></div>
     {% if deployments|length > 1 %}

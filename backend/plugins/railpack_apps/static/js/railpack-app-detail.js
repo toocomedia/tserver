@@ -1,6 +1,12 @@
 const deployment = document.querySelector('[data-railpack-deployment]');
 let isPolling = false;
 
+// Initial scroll to bottom
+const initialOut = deployment?.querySelector('[data-deployment-output]');
+if (initialOut) {
+  initialOut.scrollTop = initialOut.scrollHeight;
+}
+
 async function poll() {
   if (!deployment || !deployment.dataset.deploymentUrl) return;
   isPolling = true;
