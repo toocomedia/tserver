@@ -136,7 +136,7 @@ async def deployment_status(app_id: int, deployment_id: int, db: AsyncSession = 
 
 
 @router.post("/{app_id}/deploy")
-async def deploy(app_id: int, db: AsyncSession = Depends(get_db)):
+async def deploy(app_id: int, request: Request, db: AsyncSession = Depends(get_db)):
     app = await _app(db, app_id)
     try:
         deployment = await container_app_deployment_service.queue_deployment(
@@ -144,9 +144,15 @@ async def deploy(app_id: int, db: AsyncSession = Depends(get_db)):
         )
     except HTTPException as exc:
         active = await container_app_deployment_service.active_deployment(db, app.id)
+        if "application/json" in request.headers.get("accept", ""):
+            if active:
+                return JSONResponse({"deployment_id": active.id, "app_id": app.id})
+            raise exc
         if active:
             return RedirectResponse(f"/plugins/railpack_apps/{app.id}?deployment={active.id}", status_code=303)
         return RedirectResponse(f"/plugins/railpack_apps/{app.id}?{urlencode({'error': str(exc.detail)})}", status_code=303)
+    if "application/json" in request.headers.get("accept", ""):
+        return JSONResponse({"deployment_id": deployment.id, "app_id": app.id})
     return RedirectResponse(f"/plugins/railpack_apps/{app.id}?deployment={deployment.id}", status_code=303)
 
 

@@ -320,6 +320,10 @@ if (form) {
     }
   }
 
+  query('[data-wizard-retry]')?.addEventListener('click', () => {
+    startDeployment();
+  });
+
   query('[data-wizard-edit-config]')?.addEventListener('click', () => {
     state.unlocked = Math.max(state.unlocked, 3);
     renderStep(3);

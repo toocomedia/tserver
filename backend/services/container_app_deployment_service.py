@@ -388,6 +388,7 @@ def _build_or_pull(app: ContainerApp, deployment: ContainerAppDeployment) -> str
             raise RuntimeError(str(exc)) from exc
         declared_secrets = build_secrets.get_declared_secrets(build_root)
         all_secret_names = list(dict.fromkeys([*secret_names, *declared_secrets]))
+        command = ["railpack", "build", "--name", image, str(build_root)]
         if all_secret_names:
             _inject_railpack_secrets(build_root, all_secret_names)
             build_env = {}
@@ -401,7 +402,6 @@ def _build_or_pull(app: ContainerApp, deployment: ContainerAppDeployment) -> str
                     build_env[key] = "redis://127.0.0.1:6379"
                 else:
                     build_env[key] = "build_placeholder"
-        command = ["railpack", "build", "--name", image, str(build_root)]
 
     progress.append_log(deployment, "build", "Building application image.")
     result = build_process.run(deployment.id, command, config.CONTAINER_APP_BUILD_TIMEOUT, env=build_env)
