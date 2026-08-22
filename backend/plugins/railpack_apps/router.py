@@ -129,9 +129,12 @@ async def deployment_status(app_id: int, deployment_id: int, db: AsyncSession = 
     deployment = await db.get(ContainerAppDeployment, deployment_id)
     if deployment is None or deployment.app_id != app_id:
         raise HTTPException(404, "Deployment not found.")
+    from services import container_app_build_process_service as build_proc
+    live_out = build_proc.get_live_output(deployment.id)
+    full_output = (deployment.output + live_out)[-80_000:] if live_out else deployment.output
     return JSONResponse({
         "id": deployment.id, "status": deployment.status, "stage": deployment.stage,
-        "action": deployment.action, "output": deployment.output, "error": deployment.error,
+        "action": deployment.action, "output": full_output, "error": deployment.error,
     })
 
 
