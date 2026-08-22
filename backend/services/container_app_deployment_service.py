@@ -188,6 +188,46 @@ async def _mark_queued_cancelled(deployment_id: int) -> None:
             await db.commit()
 
 
+async def cancel_deployment(db: AsyncSession, app_id: int, deployment_id: int | None = None) -> ContainerAppDeployment | None:
+    """Cancels a queued or running deployment and unlocks the application."""
+    stmt = select(ContainerAppDeployment).where(
+        ContainerAppDeployment.app_id == app_id,
+        ContainerAppDeployment.status.in_(("queued", "running")),
+    )
+    if deployment_id:
+        stmt = stmt.where(ContainerAppDeployment.id == deployment_id)
+    deployment = await db.scalar(stmt.order_by(ContainerAppDeployment.id.desc()))
+    if not deployment:
+        return None
+
+    # Cancel build subprocess if running
+    build_process.cancel(deployment.id)
+
+    # Cancel resource guard operation
+    from models.guard_operation import GuardOperation
+    op = await db.scalar(select(GuardOperation).where(
+        GuardOperation.deployment_id == deployment.id,
+        GuardOperation.status.in_(("queued", "running")),
+    ))
+    if op:
+        await resource_guard_operation_service.finish(db, op.id, "cancelled")
+
+    now = datetime.utcnow()
+    deployment.status = "cancelled"
+    deployment.stage = "cancelled"
+    deployment.error = "Deployment cancelled by user."
+    deployment.finished_at = now
+
+    app = await db.get(ContainerApp, app_id)
+    if app:
+        live = await asyncio.to_thread(_container_running, app)
+        app.status = "running" if live else "stopped"
+
+    await db.commit()
+    await advance_queue()
+    return deployment
+
+
 async def advance_queue() -> None:
     """Start the oldest queued build once the current reservation ends."""
     from database import AsyncSessionLocal
@@ -492,8 +532,11 @@ def _ensure_network(app: ContainerApp) -> None:
 
 
 def _container_running(app: ContainerApp) -> bool:
-    result = apps._run(["docker", "inspect", "--format", "{{.State.Running}}", app.container_name], timeout=15)
-    return result.returncode == 0 and result.stdout.strip() == "true"
+    try:
+        result = apps._run(["docker", "inspect", "--format", "{{.State.Running}}", app.container_name], timeout=15)
+        return result.returncode == 0 and result.stdout.strip() == "true"
+    except Exception:
+        return False
 
 
 def _require(result, message: str) -> None:

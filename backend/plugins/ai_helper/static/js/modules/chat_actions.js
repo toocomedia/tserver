@@ -62,6 +62,76 @@
       });
     },
 
+    monitorDeploymentInChat: function (appId, deploymentId, containerEl) {
+      if (!containerEl) return;
+
+      var streamBox = containerEl.querySelector(".ai-live-deployment-stream");
+      if (!streamBox) {
+        streamBox = document.createElement("div");
+        streamBox.className = "ai-live-deployment-stream";
+        streamBox.style.cssText = "margin-top: 12px; background: rgba(0, 0, 0, 0.45); border: 1px solid var(--color-line, rgba(255,255,255,0.12)); border-radius: 8px; padding: 10px; font-family: monospace; font-size: 11px; line-height: 1.4;";
+        streamBox.innerHTML = [
+          '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 6px;">',
+          '  <span style="font-weight: 600; color: var(--color-text, #fff); display: flex; align-items: center; gap: 6px;">',
+          '    <span class="step-spinner" style="width: 10px; height: 10px; border-width: 2px; display: inline-block;"></span> Live Build Log #' + deploymentId,
+          '  </span>',
+          '  <span class="badge badge--accent ai-stream-stage" style="font-size: 10px; text-transform: uppercase;">QUEUED</span>',
+          '</div>',
+          '<pre class="ai-stream-logs" style="max-height: 180px; overflow-y: auto; margin: 0; white-space: pre-wrap; word-break: break-all; color: #a6accd; font-size: 11px; padding: 4px 0;">Starting deployment...</pre>',
+          '<div class="ai-stream-footer" style="margin-top: 8px; display: flex; justify-content: space-between; align-items: center; font-size: 11px;">',
+          '  <a href="/plugins/railpack_apps/' + encodeURIComponent(appId) + '?deployment=' + encodeURIComponent(deploymentId) + '#deployment" target="_blank" style="color: var(--color-accent, #6366f1); text-decoration: none; font-weight: 500;">Open Live Page ↗</a>',
+          '</div>'
+        ].join("");
+        containerEl.appendChild(streamBox);
+      }
+
+      var stageBadge = streamBox.querySelector(".ai-stream-stage");
+      var logsPre = streamBox.querySelector(".ai-stream-logs");
+      var spinner = streamBox.querySelector(".step-spinner");
+
+      function pollStream() {
+        fetch("/plugins/railpack_apps/" + encodeURIComponent(appId) + "/deployments/" + encodeURIComponent(deploymentId))
+          .then(function (res) {
+            if (!res.ok) throw new Error("Status " + res.status);
+            return res.json();
+          })
+          .then(function (item) {
+            if (stageBadge) {
+              stageBadge.textContent = (item.status || "RUNNING") + " · " + (item.stage || "BUILD");
+              if (item.status === "success") {
+                stageBadge.className = "badge badge--ok";
+                stageBadge.textContent = "SUCCESS · RUNNING";
+                if (spinner) spinner.style.display = "none";
+              } else if (item.status === "failed") {
+                stageBadge.className = "badge badge--danger";
+                stageBadge.textContent = "FAILED · " + (item.stage || "ERROR");
+                if (spinner) spinner.style.display = "none";
+              }
+            }
+            if (logsPre) {
+              var text = (item.output || "") + (item.error ? "\n[error] " + item.error : "");
+              logsPre.textContent = text || "Waiting for build output...";
+              logsPre.scrollTop = logsPre.scrollHeight;
+            }
+
+            if (["queued", "running"].indexOf(item.status) !== -1) {
+              setTimeout(pollStream, 1500);
+            } else {
+              if (item.status === "success") {
+                if (window.toast) window.toast("Application deployment completed successfully!", "success");
+              } else if (item.status === "failed") {
+                if (window.toast) window.toast("Deployment failed: " + (item.error || "See logs"), "error");
+              }
+            }
+          })
+          .catch(function () {
+            setTimeout(pollStream, 3000);
+          });
+      }
+
+      pollStream();
+    },
+
     init: function (containerEl) {
       var self = this;
       if (!containerEl) return;
@@ -186,8 +256,23 @@
                 .then(function (data) {
                   applyPlanBtn.innerHTML = '<span class="ai-btn-icon">✓</span> Redeployment Started';
                   if (window.toast) window.toast("Redeployment queued successfully.", "success");
-                  if (window.location.pathname.indexOf("/plugins/railpack_apps/" + redeployAppId) !== -1) {
-                    setTimeout(function () { window.location.reload(); }, 1200);
+                  
+                  var targetContainer = applyPlanBtn.closest(".ai-app-plan-card, .ai-msg-bubble") || applyPlanBtn.parentElement;
+                  if (data && data.deployment_id) {
+                    self.monitorDeploymentInChat(redeployAppId, data.deployment_id, targetContainer);
+                  }
+
+                  // If on app details page, activate on-page deployment card too
+                  var onPageDep = document.querySelector("[data-railpack-deployment]");
+                  if (onPageDep && data && data.deployment_id) {
+                    var depUrl = "/plugins/railpack_apps/" + redeployAppId + "/deployments/" + data.deployment_id;
+                    onPageDep.setAttribute("data-deployment-url", depUrl);
+                    onPageDep.setAttribute("data-deployment-active", "true");
+                    var stateEl = onPageDep.querySelector("[data-deployment-state]");
+                    if (stateEl) stateEl.textContent = "Queued · Prepare";
+                    if (typeof window.startRailpackDeploymentPolling === "function") {
+                      window.startRailpackDeploymentPolling(depUrl);
+                    }
                   }
                 })
                 .catch(function (err) {

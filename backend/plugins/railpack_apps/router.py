@@ -142,6 +142,7 @@ async def deploy(app_id: int, request: Request, db: AsyncSession = Depends(get_d
         deployment = await container_app_deployment_service.queue_deployment(
             db, app, action="deploy" if app.status == "pending" else "redeploy",
         )
+        await db.commit()
     except HTTPException as exc:
         active = await container_app_deployment_service.active_deployment(db, app.id)
         if "application/json" in request.headers.get("accept", ""):
@@ -154,6 +155,22 @@ async def deploy(app_id: int, request: Request, db: AsyncSession = Depends(get_d
     if "application/json" in request.headers.get("accept", ""):
         return JSONResponse({"deployment_id": deployment.id, "app_id": app.id})
     return RedirectResponse(f"/plugins/railpack_apps/{app.id}?deployment={deployment.id}", status_code=303)
+
+
+@router.post("/{app_id}/deployments/{deployment_id}/cancel")
+async def cancel_deployment_by_id(app_id: int, deployment_id: int, request: Request, db: AsyncSession = Depends(get_db)):
+    dep = await container_app_deployment_service.cancel_deployment(db, app_id, deployment_id)
+    if "application/json" in request.headers.get("accept", ""):
+        return JSONResponse({"status": "cancelled", "deployment_id": deployment_id})
+    return RedirectResponse(f"/plugins/railpack_apps/{app_id}?deployment={deployment_id}", status_code=303)
+
+
+@router.post("/{app_id}/cancel-deployment")
+async def cancel_active_deployment(app_id: int, request: Request, db: AsyncSession = Depends(get_db)):
+    dep = await container_app_deployment_service.cancel_deployment(db, app_id)
+    if "application/json" in request.headers.get("accept", ""):
+        return JSONResponse({"status": "cancelled", "deployment_id": dep.id if dep else None})
+    return RedirectResponse(f"/plugins/railpack_apps/{app_id}", status_code=303)
 
 
 @router.post("/{app_id}/settings")

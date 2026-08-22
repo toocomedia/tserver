@@ -17,7 +17,13 @@
       {% if app.status == 'running' %}<form method="post" action="/plugins/railpack_apps/{{ app.id }}/deploy" style="margin:0;">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary btn--sm">Redeploy</button></form><form method="post" action="/plugins/railpack_apps/{{ app.id }}/restart" style="margin:0;">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary btn--sm">Restart</button></form><form method="post" action="/plugins/railpack_apps/{{ app.id }}/stop" style="margin:0;">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary btn--sm">Stop</button></form>{% endif %}
       {% if app.status == 'stopped' %}<form method="post" action="/plugins/railpack_apps/{{ app.id }}/start" style="margin:0;">{% include "partials/csrf_field.html" %}<button class="btn btn--accent btn--sm">Start</button></form>{% endif %}
     {% endif %}
-    {% if deployment_active %}<a class="btn btn--secondary btn--sm" href="#deployment">View deployment</a>{% endif %}
+    {% if deployment_active %}
+      <a class="btn btn--secondary btn--sm" href="#deployment">View deployment</a>
+      <form method="post" action="/plugins/railpack_apps/{{ app.id }}/cancel-deployment" style="margin:0;">
+        {% include "partials/csrf_field.html" %}
+        <button class="btn btn--danger btn--sm" type="submit">Cancel deployment</button>
+      </form>
+    {% endif %}
     {% if app.preset == 'wordpress' and app.status == 'running' %}<form method="post" action="/plugins/railpack_apps/{{ app.id }}/wordpress/update" style="margin:0;">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary btn--sm">Update WordPress</button></form><form method="post" action="/plugins/railpack_apps/{{ app.id }}/wordpress/backup" style="margin:0;">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary btn--sm">Back up WordPress</button></form>{% endif %}
   </div>
 </div>

@@ -98,6 +98,55 @@ class TestAiAppSetup(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(res["deployment_id"], 999)
                 self.assertEqual(res["action_tag"], f"[ACTION:APP_REDEPLOY:{app.id}]")
 
+    async def test_cancel_deployment(self):
+        """Verify cancel_deployment marks deployment as cancelled and unlocks app."""
+        from models.container_app import ContainerApp
+        from models.container_app_deployment import ContainerAppDeployment
+        from models.domain import Domain
+        from services import container_app_deployment_service
+
+        import random
+        import uuid
+        uid = uuid.uuid4().hex[:8]
+        rnd_port = random.randint(31000, 45000)
+        async with AsyncSessionLocal() as db:
+            domain = Domain(name=f"cancel-{uid}.local", server_ip="127.0.0.1")
+            db.add(domain)
+            await db.flush()
+
+            app = ContainerApp(
+                domain_id=domain.id,
+                container_name=f"test-cancel-{uid}",
+                source_type="image",
+                build_mode="image",
+                image_reference="nginx:alpine",
+                host_port=rnd_port,
+                internal_port=80,
+                env_path="/tmp/test.env",
+                status="pending",
+            )
+            db.add(app)
+            await db.commit()
+            await db.refresh(app)
+
+            dep = ContainerAppDeployment(
+                app_id=app.id,
+                action="deploy",
+                status="queued",
+                stage="prepare",
+            )
+            db.add(dep)
+            await db.commit()
+            await db.refresh(dep)
+
+            cancelled_dep = await container_app_deployment_service.cancel_deployment(db, app.id, dep.id)
+            self.assertIsNotNone(cancelled_dep)
+            self.assertEqual(cancelled_dep.status, "cancelled")
+            self.assertEqual(cancelled_dep.stage, "cancelled")
+
+            await db.refresh(app)
+            self.assertIn(app.status, ("stopped", "failed", "running"))
+
 
 if __name__ == "__main__":
     unittest.main()

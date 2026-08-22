@@ -1,16 +1,38 @@
 const deployment = document.querySelector('[data-railpack-deployment]');
+let isPolling = false;
 
 async function poll() {
+  if (!deployment || !deployment.dataset.deploymentUrl) return;
+  isPolling = true;
   try {
     const response = await fetch(deployment.dataset.deploymentUrl);
     const item = await response.json();
     if (!response.ok) throw new Error(item.detail || 'Could not refresh deployment.');
-    deployment.querySelector('[data-deployment-state]').textContent = `${item.status} · ${item.stage}`;
-    deployment.querySelector('[data-deployment-output]').textContent = item.output + (item.error ? `\n[error] ${item.error}` : '');
-    if (['queued', 'running'].includes(item.status)) setTimeout(poll, 1500);
-    else window.location.reload();
-  } catch (_) { setTimeout(poll, 4000); }
+    const stateEl = deployment.querySelector('[data-deployment-state]');
+    const outEl = deployment.querySelector('[data-deployment-output]');
+    if (stateEl) stateEl.textContent = `${item.status} · ${item.stage}`;
+    if (outEl) {
+      outEl.textContent = item.output + (item.error ? `\n[error] ${item.error}` : '');
+      outEl.scrollTop = outEl.scrollHeight;
+    }
+    if (['queued', 'running'].includes(item.status)) {
+      setTimeout(poll, 1500);
+    } else {
+      isPolling = false;
+      setTimeout(() => window.location.reload(), 1500);
+    }
+  } catch (_) {
+    setTimeout(poll, 4000);
+  }
 }
+
+window.startRailpackDeploymentPolling = function (url) {
+  if (deployment && url) {
+    deployment.dataset.deploymentUrl = url;
+    deployment.dataset.deploymentActive = 'true';
+  }
+  if (!isPolling) poll();
+};
 
 if (deployment?.dataset.deploymentActive === 'true') setTimeout(poll, 800);
 

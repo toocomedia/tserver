@@ -171,6 +171,7 @@ async def redeploy_app(
             dep = await container_app_deployment_service.queue_deployment(
                 db, app, action="deploy" if app.status == "pending" else "redeploy"
             )
+            await db.commit()
             return {
                 "status": "ok",
                 "app_id": app.id,
