@@ -496,7 +496,7 @@ def _build_or_pull(app: ContainerApp, deployment: ContainerAppDeployment) -> str
                 else:
                     val = "build_placeholder"
                 build_env[key] = val
-                command.extend(["--env", key])
+                command.extend(["--env", f"{key}={val}"])
             if newly_generated and getattr(app, "env_path", None):
                 try:
                     apps.write_env(Path(app.env_path), env_vars)

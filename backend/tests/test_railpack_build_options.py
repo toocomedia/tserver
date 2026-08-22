@@ -669,13 +669,13 @@ class RailpackBuildOptionsTests(unittest.TestCase):
             image = container_app_deployment_service._build_or_pull(app, deployment)
             self.assertEqual(image, "srv-panel/railpack-app:15-2")
 
-            # Check CLI arguments - MUST NOT contain --env KEY=VALUE
+            # Check CLI arguments contain --env KEY=VALUE
             build_cmd = mock_run.call_args[0][1]
             self.assertEqual(build_cmd[0], "railpack")
             self.assertEqual(build_cmd[1], "build")
             self.assertIn("--env", build_cmd)
-            self.assertIn("DATABASE_URL", build_cmd)
-            self.assertFalse(any("DATABASE_URL=" in item for item in build_cmd))
+            self.assertTrue(any("DATABASE_URL=" in item for item in build_cmd))
+            self.assertTrue(any("APP_SECRET=" in item for item in build_cmd))
 
             # Check railpack.json written with secrets declared by name
             source_dir = Path(self.temp_dir) / "build" / "2" / "source"
