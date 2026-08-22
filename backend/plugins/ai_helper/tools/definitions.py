@@ -264,22 +264,47 @@ RAW_TOOL_SCHEMAS: List[Dict[str, Any]] = [
     },
     {
         "name": "redeploy_app",
-        "description": "Triggers a clean rebuild and container redeployment for an existing application on the App Engine.",
+        "description": "Applies configuration fixes (environment variables, custom start commands, ports, database attachments) and triggers a clean rebuild and container redeployment for an existing application.",
         "parameters": {
             "type": "object",
             "properties": {
                 "app_id": {
                     "type": "integer",
-                    "description": "The application ID to redeploy.",
+                    "description": "The application ID to fix and redeploy.",
                 },
                 "app_type": {
                     "type": "string",
                     "enum": ["container", "python"],
                     "description": "The type of application (default: 'container').",
                 },
+                "environment_values": {
+                    "type": "object",
+                    "description": "Key-value dictionary of environment variables to add or update before redeploying (e.g. {'APP_SECRET': '...', 'ENCRYPTION_KEY': '...'}).",
+                },
+                "custom_start_command": {
+                    "type": "string",
+                    "description": "Optional updated start command (e.g. 'pnpm exec prisma db push && pnpm run start').",
+                },
+                "internal_port": {
+                    "type": "integer",
+                    "description": "Optional updated internal container HTTP port.",
+                },
+                "database_attachments": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "kind": {"type": "string", "enum": ["postgres", "postgresql", "mariadb", "mysql", "redis", "mongodb", "sqlite", "supabase"]},
+                            "provider": {"type": "string", "enum": ["docker", "external", "supabase"]},
+                            "environment_key": {"type": "string"},
+                        },
+                        "required": ["kind", "provider", "environment_key"],
+                    },
+                    "description": "Database services to attach if missing.",
+                },
                 "reason": {
                     "type": "string",
-                    "description": "Optional reason or diagnostic note for the redeployment.",
+                    "description": "Diagnostic reason for why this redeployment is being triggered.",
                 },
             },
             "required": ["app_id"],

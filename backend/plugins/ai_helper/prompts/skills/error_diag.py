@@ -22,8 +22,11 @@ You are diagnosing a deployment, runtime, or routing error on a VPS-hosted appli
   - Fix: Ensure `APP_SECRET` is set in environment and start command runs database migration (`pnpm exec prisma db push && pnpm run start`).
 - If `get_app_logs` shows missing database connection:
   - Note: Attached panel databases automatically inject `DATABASE_URL`. NEVER tell the user to manually copy/paste masked passwords `••••••••`.
-- If logs show success but site returns 502 → proxy port mismatch (compare `host_port` vs proxy upstream).
-- If logs show success and proxy is correct but returns 404 → webroot or routing issue.
+**Fix Execution & Redeployment (CRITICAL)**:
+- If configuration fixes are needed (e.g. missing environment variables like `APP_SECRET`, `SECRET_KEY_BASE`, `ENCRYPTION_KEY`, missing database, or wrong start command):
+  * Call the `redeploy_app` tool with the parameters: `app_id`, `environment_values={...}`, `custom_start_command="..."`, and `database_attachments=[...]`.
+  * The tool applies the fixes to the database and `.env` file on disk before queueing the clean rebuild.
+  * In your **Fix** summary, clearly state what settings were updated and applied.
 
 **Output Format (Strict Rules: Keep under 8 lines, no emojis, exactly ONE action button)**:
 ```log
@@ -31,7 +34,7 @@ You are diagnosing a deployment, runtime, or routing error on a VPS-hosted appli
 ```
 **Diagnosis**: <what failed in 1 sentence>
 **Root Cause**: <why it failed in 1 sentence>
-**Fix**: <exact correction in 1 sentence>
+**Fix**: <exact fix applied in 1 sentence>
 
 [ACTION:APP_REDEPLOY:<app_id>]
 """,
