@@ -162,6 +162,7 @@ async def redeploy_app(
     custom_start_command: Optional[str] = None,
     internal_port: Optional[int] = None,
     database_attachments: Optional[List[Dict[str, str]]] = None,
+    git_ref: Optional[str] = None,
     build_mode: Optional[str] = None,
     image_reference: Optional[str] = None,
     **kwargs: Any,
@@ -178,6 +179,12 @@ async def redeploy_app(
             from services import container_app_service, container_app_database_service, container_app_deployment_service
 
             applied_fixes: List[str] = []
+
+            # 0. Update branch / git_ref if provided
+            if git_ref:
+                app.git_ref = git_ref.strip()
+                app.branch = git_ref.strip()
+                applied_fixes.append(f"branch='{app.branch}'")
 
             # 1. Update custom start command if provided
             if custom_start_command is not None:

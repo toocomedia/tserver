@@ -26,12 +26,40 @@ async def uninstall(db: AsyncSession, app: ContainerApp, domain: Domain, *, remo
     if remove_network and not has_docker_databases:
         await _step(errors, "remove private app network", lambda: _remove_network(app))
     await _step(errors, "restore domain site", lambda: _restore_domain_site(db, domain))
-    await _step(errors, "remove build files", lambda: asyncio.to_thread(_remove_path, container_app_service._root(app.id)))
-    await _step(errors, "remove environment file", lambda: asyncio.to_thread(_remove_path, Path(app.env_path)))
+    await _step(errors, "remove build files", lambda: asyncio.to_thread(_remove_path, container_app_service.root(app.id)))
+    env_p = Path(app.env_path) if app.env_path else container_app_service.env_path(app.id)
+    await _step(errors, "remove environment file", lambda: asyncio.to_thread(_remove_path, env_p))
     from dependencies.git import repository_service
     await _step(errors, "remove deploy key", lambda: asyncio.to_thread(repository_service.delete_deploy_key, app.id))
     if errors:
         raise HTTPException(500, "Cleanup incomplete: " + "; ".join(errors))
+
+
+async def delete_app(
+    db: AsyncSession, app: ContainerApp, *, keep_database_ids: list[int] = [], keep_app_volume: bool = False,
+) -> None:
+    """Completely uninstalls and deletes a container application record."""
+    from sqlalchemy import delete
+    from models.container_app_deployment import ContainerAppDeployment
+    from services import container_app_database_service, container_app_removal_service
+
+    domain = await db.get(Domain, app.domain_id)
+    if domain:
+        await uninstall(db, app, domain, remove_network=False)
+    attachments = await container_app_database_service.attachments_for(db, app.id)
+    managed_ids = {item.id for item in attachments if item.provider in {"docker", "panel_postgres", "panel_mariadb"}}
+    delete_database_ids = list(managed_ids - set(keep_database_ids))
+    delete_app_volume = (bool(app.data_volume) or bool(app.storage_mounts)) and not keep_app_volume
+    await container_app_removal_service.remove_selected_data(
+        db, app, attachments,
+        database_ids=delete_database_ids,
+        delete_app_volume=delete_app_volume,
+        delete_wordpress_files=bool(app.wordpress_content_volume),
+        delete_backups=True,
+    )
+    await db.execute(delete(ContainerAppDeployment).where(ContainerAppDeployment.app_id == app.id))
+    await db.delete(app)
+    await db.flush()
 
 
 async def _remove_container(app: ContainerApp) -> None:

@@ -301,8 +301,7 @@ def clone(
     if result.returncode and fallback and not ssh_key_path:
         shutil.rmtree(target, ignore_errors=True)
         source_url = fallback
-        result = _clone_branch(source_url, branch, target, env=env)
-    if result.returncode and allow_default_branch and branch == "main":
+    if result.returncode and allow_default_branch:
         shutil.rmtree(target, ignore_errors=True)
         result = _run(["git", "clone", "--depth", "1", source_url, str(target)], 180, env=env)
         if not result.returncode:

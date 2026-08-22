@@ -401,7 +401,11 @@ def _build_or_pull(app: ContainerApp, deployment: ContainerAppDeployment) -> str
         source,
         git_ref_type=ref_type,
         ssh_key_path=getattr(app, "deploy_key_path", None),
+        allow_default_branch=True,
     )
+    if checkout.branch and checkout.branch != app.branch:
+        app.branch = checkout.branch
+        app.git_ref = checkout.branch
     app.deployed_revision = checkout.revision.sha
     image = f"srv-panel/railpack-app:{app.id}-{deployment.id}"
 
@@ -486,7 +490,7 @@ def _build_or_pull(app: ContainerApp, deployment: ContainerAppDeployment) -> str
                 else:
                     val = "build_placeholder"
                 build_env[key] = val
-                command.extend(["--env", f"{key}={val}"])
+                command.extend(["--env", key])
         command.append(str(build_root))
 
     progress.append_log(deployment, "build", "Building application image.")

@@ -224,12 +224,12 @@ async def create_app(
     ref_type_val = (git_ref_type or "branch").strip().lower()
     existing_app = await db.scalar(select(ContainerApp).where(ContainerApp.domain_id == domain.id))
     if existing_app is not None:
-        if existing_app.status in ("pending", "failed"):
+        if existing_app.status in ("pending", "failed", "delete_failed", "data_preserved", "deleting"):
             from services import container_app_cleanup_service
             await container_app_cleanup_service.delete_app(db, existing_app, keep_database_ids=[], keep_app_volume=False)
             await db.flush()
         else:
-            raise HTTPException(409, "This domain already has a container app.")
+            raise HTTPException(409, "This domain already has an active container app.")
     # Docker resources cannot participate in the database transaction below.
     # Refuse an unsafe deployment before creating managed services, so a guard
     # rejection cannot leave a container whose app row was rolled back.
