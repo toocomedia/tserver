@@ -563,9 +563,17 @@ def _replace_container(app: ContainerApp, image: str) -> None:
     if getattr(app, "preset", None) == "wordpress" and getattr(app, "wordpress_content_volume", None) and isinstance(app.wordpress_content_volume, str):
         command.extend(["-v", f"{app.wordpress_content_volume}:/var/www/html/wp-content"])
 
-    command.append(image)
     if getattr(app, "custom_start_command", None) and isinstance(app.custom_start_command, str) and app.custom_start_command.strip():
-        command.extend(shlex.split(app.custom_start_command.strip()))
+        cmd_str = app.custom_start_command.strip()
+        if any(op in cmd_str for op in ("&&", "||", ";", "|", "\n")):
+            command.extend(["--entrypoint", "/bin/sh"])
+            command.append(image)
+            command.extend(["-c", cmd_str])
+        else:
+            command.append(image)
+            command.extend(shlex.split(cmd_str))
+    else:
+        command.append(image)
     _require(apps._run(command, timeout=60), "Container did not start.")
 
 
