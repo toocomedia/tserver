@@ -35,7 +35,7 @@ def run(deployment_id: int, command: list[str], timeout: int, env: dict[str, str
         proc_env["XDG_DATA_HOME"] = str(workspace.cache / "data")
         proc_env["XDG_STATE_HOME"] = str(workspace.cache / "state")
         proc_env["XDG_CONFIG_HOME"] = str(workspace.cache / "config")
-    prefix = ["sudo", "-n"] if hasattr(os, "geteuid") and os.geteuid() != 0 and config.PRIVILEGED_SUDO else []
+    prefix = ["sudo", "-E", "-n"] if hasattr(os, "geteuid") and os.geteuid() != 0 and config.PRIVILEGED_SUDO else []
     process = subprocess.Popen([*prefix, *command], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=proc_env)
     with _lock:
         _processes[deployment_id] = process

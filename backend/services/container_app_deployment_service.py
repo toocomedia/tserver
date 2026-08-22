@@ -446,6 +446,13 @@ def _build_or_pull(app: ContainerApp, deployment: ContainerAppDeployment) -> str
         _ensure_buildkit_daemon()
         # Declare secrets by name in railpack.json; pass values via process env
         env_vars = _read_app_env(app)
+        if "PORT" not in env_vars:
+            env_vars["PORT"] = str(getattr(app, "internal_port", None) or 3000)
+        if "HOST" not in env_vars:
+            env_vars["HOST"] = "0.0.0.0"
+        if "NODE_ENV" not in env_vars:
+            env_vars["NODE_ENV"] = "production"
+
         try:
             secret_names = build_secrets.select_names(
                 env_vars, getattr(app, "build_secret_keys", None),
@@ -459,16 +466,23 @@ def _build_or_pull(app: ContainerApp, deployment: ContainerAppDeployment) -> str
             _inject_railpack_secrets(build_root, all_secret_names)
             build_env = {}
             for key in all_secret_names:
-                command.extend(["--env", key])
                 if key in env_vars:
-                    build_env[key] = env_vars[key]
+                    val = str(env_vars[key])
                 elif key == "DATABASE_URL":
                     # Build-time dummy for Prisma/Next.js generation if DB not yet connected
-                    build_env[key] = "postgresql://postgres:postgres@127.0.0.1:5432/umami"
+                    val = "postgresql://postgres:postgres@127.0.0.1:5432/umami"
                 elif key in ("REDIS_URL", "MYSQL_URL"):
-                    build_env[key] = "redis://127.0.0.1:6379"
+                    val = "redis://127.0.0.1:6379"
+                elif key == "PORT":
+                    val = str(getattr(app, "internal_port", None) or 3000)
+                elif key == "HOST":
+                    val = "0.0.0.0"
+                elif key == "NODE_ENV":
+                    val = "production"
                 else:
-                    build_env[key] = "build_placeholder"
+                    val = "build_placeholder"
+                build_env[key] = val
+                command.extend(["--env", f"{key}={val}"])
         command.append(str(build_root))
 
     progress.append_log(deployment, "build", "Building application image.")

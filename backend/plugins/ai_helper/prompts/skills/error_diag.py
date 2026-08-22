@@ -25,11 +25,14 @@ You are diagnosing a deployment, runtime, or routing error on a VPS-hosted appli
 - If logs show success and proxy is correct but returns 404 → webroot or routing issue.
 - If `nginx_active: false` → Nginx config for this domain may not be active.
 
-**Output Format**:
+**Output Format (Keep under 8 lines, no emojis)**:
 ```log
-<relevant log lines here>
+<1-3 critical log lines>
 ```
-Then: **Diagnosis** (what failed), **Root Cause** (why), **Fix** (exact steps with action tags or proposal).
-If the issue is in a container application, provide the 1-click redeploy button tag: `[ACTION:APP_REDEPLOY:<app_id>]` or deploy plan tag: `[ACTION:APP_PLAN:<plan_id>]`.
+**Diagnosis**: <what failed in 1 sentence>
+**Root Cause**: <why it failed in 1 sentence>
+**Fix**: <exact correction in 1 sentence>
+
+[ACTION:APP_REDEPLOY:<app_id>]
 """,
 )

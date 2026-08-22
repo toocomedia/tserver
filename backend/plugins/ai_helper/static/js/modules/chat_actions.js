@@ -257,10 +257,10 @@
             }
             if (redeployAppId) {
               applyPlanBtn.disabled = true;
-              applyPlanBtn.innerHTML = '<span class="ai-btn-icon">⏳</span> Redeploying Application...';
+              applyPlanBtn.innerHTML = '<span class="ai-btn-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span> Redeploying Application...';
               applyPlanBtn.classList.add("is-applied");
 
-              var csrfTok = window._csrfToken || (document.querySelector('meta[name="csrf-token"]') ? document.querySelector('meta[name="csrf-token"]').getAttribute("content") : "");
+              var csrfTok = (document.querySelector('[name="csrf_token"]') ? document.querySelector('[name="csrf_token"]').value : '') || window._csrfToken || (document.querySelector('meta[name="csrf-token"]') ? document.querySelector('meta[name="csrf-token"]').getAttribute("content") : "") || "";
               fetch("/plugins/railpack_apps/" + encodeURIComponent(redeployAppId) + "/deploy", {
                 method: "POST",
                 headers: {
@@ -274,7 +274,7 @@
                   return res.json().catch(function () { return {}; });
                 })
                 .then(function (data) {
-                  applyPlanBtn.innerHTML = '<span class="ai-btn-icon">✓</span> Redeployment Started';
+                  applyPlanBtn.innerHTML = '<span class="ai-btn-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></span> Redeployment Started';
                   if (window.toast) window.toast("Redeployment queued successfully.", "success");
                   
                   var targetContainer = applyPlanBtn.closest(".ai-app-plan-card, .ai-msg-bubble") || applyPlanBtn.parentElement;
@@ -298,7 +298,7 @@
                 .catch(function (err) {
                   applyPlanBtn.disabled = false;
                   applyPlanBtn.classList.remove("is-applied");
-                  applyPlanBtn.innerHTML = '<span class="ai-btn-icon">🚀</span> Retry Redeploy Application <span class="ai-btn-arrow">→</span>';
+                  applyPlanBtn.innerHTML = 'Retry Redeploy Application';
                   if (window.toast) window.toast(err.message, "error");
                 });
               return;
@@ -307,20 +307,18 @@
 
           if (actionType === "APP_DEPLOY") {
             applyPlanBtn.disabled = true;
-            applyPlanBtn.innerHTML = '<span class="ai-btn-icon">⏳</span> Deploying Application...';
+            applyPlanBtn.innerHTML = '<span class="ai-btn-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span> Deploying Application...';
             applyPlanBtn.classList.add("is-applied");
             if (typeof window.startAiDeployment === "function") {
               Promise.resolve(window.startAiDeployment())
                 .then(function () {
-                  applyPlanBtn.innerHTML = '<span class="ai-btn-icon">✓</span> Deployment Started';
+                  applyPlanBtn.innerHTML = '<span class="ai-btn-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></span> Deployment Started';
                 })
                 .catch(function (err) {
                   applyPlanBtn.disabled = false;
                   applyPlanBtn.classList.remove("is-applied");
-                  applyPlanBtn.innerHTML = '<span class="ai-btn-icon">🚀</span> Retry Deploy Application <span class="ai-btn-arrow">→</span>';
-                  if (err && err.message && window.toast) {
-                    window.toast(err.message, "error");
-                  }
+                  applyPlanBtn.innerHTML = 'Retry Deploy Application';
+                  if (window.toast) window.toast(err.message || "Failed to start deployment.", "error");
                 });
             }
             return;
