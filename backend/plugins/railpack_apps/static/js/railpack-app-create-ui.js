@@ -207,12 +207,19 @@ export function renderDeployment(form, data) {
   setText(form.querySelector('[data-deployment-output]'), `${data.output || ''}${data.error ? `\n[error] ${data.error}` : ''}`);
   const liveOut = form.querySelector('[data-deployment-live-output]');
   if (liveOut) {
-    if (data.output) {
-      liveOut.style.display = 'block';
-      liveOut.textContent = `${data.output}${data.error ? `\n[error] ${data.error}` : ''}`;
-      liveOut.scrollTop = liveOut.scrollHeight;
-    } else {
-      liveOut.style.display = 'none';
+    const rawOut = data.output || (['queued', 'running'].includes(data.status) ? `[${data.stage || 'prepare'}] ${labels[data.stage] || 'Starting deployment on server...'}` : 'No output recorded.');
+    const errText = data.error ? `\n[error] ${data.error}` : '';
+    liveOut.textContent = `${rawOut}${errText}`;
+    liveOut.scrollTop = liveOut.scrollHeight;
+  }
+  const hint = form.querySelector('[data-deployment-live-hint]');
+  if (hint) {
+    if (['queued', 'running'].includes(data.status)) {
+      hint.textContent = 'Live streaming...';
+    } else if (data.status === 'success') {
+      hint.textContent = 'Build succeeded';
+    } else if (data.status === 'failed') {
+      hint.textContent = 'Build failed';
     }
   }
   renderDeploymentSteps(form.querySelector('[data-deployment-steps]'), data, labels);
