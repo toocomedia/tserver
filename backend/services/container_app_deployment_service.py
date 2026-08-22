@@ -285,6 +285,13 @@ def _ensure_buildkit_daemon() -> None:
     running_res = apps._run(["docker", "inspect", "--format", "{{.State.Running}}", "srv-panel-buildkit"], timeout=10)
     is_running = running_res.returncode == 0 and (running_res.stdout or "").strip() == "true"
 
+    if not is_running:
+        if inspect_res.returncode == 0 and has_host_gateway:
+            # Try to start existing container
+            start_res = apps._run(["docker", "start", "srv-panel-buildkit"], timeout=15)
+            if start_res.returncode == 0:
+                is_running = True
+
     if not is_running or not has_host_gateway:
         apps._run(["docker", "rm", "-f", "srv-panel-buildkit"], timeout=15)
         create_res = apps._run([
@@ -295,10 +302,29 @@ def _ensure_buildkit_daemon() -> None:
             "--add-host", "host.docker.internal:host-gateway",
             "--label", "srv-panel.engine=railpack-buildkit",
             "moby/buildkit:buildx-stable-1",
-        ], timeout=45)
+        ], timeout=60)
+        if create_res.returncode != 0:
+            # Fallback to moby/buildkit:latest
+            create_res = apps._run([
+                "docker", "run", "-d",
+                "--name", "srv-panel-buildkit",
+                "--restart", "unless-stopped",
+                "--privileged",
+                "--add-host", "host.docker.internal:host-gateway",
+                "--label", "srv-panel.engine=railpack-buildkit",
+                "moby/buildkit:latest",
+            ], timeout=60)
         if create_res.returncode != 0:
             err = (create_res.stderr or create_res.stdout or "Failed to start srv-panel-buildkit").strip()
-            raise RuntimeError(f"Could not start BuildKit daemon (srv-panel-buildkit): {err}")
+            raise RuntimeError(f"Could not start BuildKit daemon (srv-panel-buildkit): {err}. Ensure Docker is running and server has sufficient RAM.")
+
+    # Wait up to 10 seconds for BuildKit daemon socket inside container to become active
+    import time
+    for _ in range(10):
+        test_res = apps._run(["docker", "exec", "srv-panel-buildkit", "buildctl", "debug", "workers"], timeout=5)
+        if test_res.returncode == 0:
+            break
+        time.sleep(1)
 
 
 def _ensure_buildx_builder(builder: str) -> str:

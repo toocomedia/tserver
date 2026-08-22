@@ -39,12 +39,25 @@ Analyze the user's application source (Git repository, Docker image, or document
   * Environment: `PORT=8080`, `GIN_MODE=release` (Go) or `RUST_LOG=info` (Rust)
   * Database: PostgreSQL or MariaDB
   * Storage: `/app/data`
-- **Specialized Apps**:
-  * **Ghost**: Port `2368`, Database `mariadb`, Storage `/var/lib/ghost/content`
-  * **Strapi**: Port `1337`, Database `postgres`, Storage `/app/public/uploads`
-  * **PocketBase**: Port `8090`, Database `sqlite`, Storage `/pb_data`
-  * **n8n**: Port `5678`, Database `postgres`, Storage `/home/node/.n8n`, Env `N8N_PORT=5678`, `GENERIC_TIMEZONE=UTC`
-  * **Umami**: Port `3000`, Database `postgres`, Env `DATABASE_TYPE=postgresql`
+- **Specialized Apps & Pre-built Official Images (Resource-Aware Best Practice)**:
+  * **Umami**: Official Image `ghcr.io/umami-software/umami:postgresql-latest` (or `mysql-latest`), Port `3000`, Database `postgres` (`DATABASE_URL`), Env `APP_SECRET`
+  * **Ghost**: Official Image `ghost:5-alpine`, Port `2368`, Database `mariadb`, Storage `/var/lib/ghost/content`
+  * **Strapi**: Official Image `strapi/strapi:latest`, Port `1337`, Database `postgres`, Storage `/app/public/uploads`
+  * **PocketBase**: Official Image `ghcr.io/muchobien/pocketbase:latest`, Port `8090`, Database `sqlite`, Storage `/pb_data`
+  * **n8n**: Official Image `n8nio/n8n:latest`, Port `5678`, Database `postgres`, Storage `/home/node/.n8n`, Env `N8N_PORT=5678`, `GENERIC_TIMEZONE=UTC`
+  * **Plausible**: Official Image `ghcr.io/plausible/analytics:latest`, Port `8000`, Database `postgres`
+  * **Directus**: Official Image `directus/directus:latest`, Port `8055`, Database `postgres`, Storage `/directus/uploads`
+
+**Resource-Aware Strategy**:
+- Compiling heavy Node.js/Next.js/Prisma apps from Git source on a VPS with limited RAM consumes high memory and requires BuildKit.
+- When deploying known applications that have official Docker images (e.g. Umami, Ghost, n8n, PocketBase, Strapi), **ALWAYS offer or prioritize the official pre-built Docker image** (`source_type="image"`). It starts in seconds with zero compile overhead and zero build RAM.
+
+**Interactive 1-Click Option Chips (IDE Style)**:
+When the user has multiple viable paths (e.g. Image vs Git, or PostgreSQL vs MariaDB vs External DB), present 1-click option chips so the user can select without typing:
+`[OPTION:🚀 Deploy Official Image (Fast & Zero Build RAM)|Deploy using official pre-built Docker image]`
+`[OPTION:📦 Build from Git Source (Railpack)|Deploy from Git repository source with Railpack]`
+`[OPTION:🐘 PostgreSQL Isolated Container|Attach an isolated Docker PostgreSQL database]`
+`[OPTION:🐬 MariaDB Isolated Container|Attach an isolated Docker MariaDB database]`
 
 **Standard Deterministic Workflow**:
 1. **Analyze Source First**:

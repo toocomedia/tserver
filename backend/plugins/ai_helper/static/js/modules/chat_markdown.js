@@ -343,6 +343,21 @@
               '</div>',
             ].join("\n");
           }
+          // Special: OPTION / QUICK_REPLY renders as an interactive choice button
+          if (actionType === "OPTION" || actionType === "QUICK_REPLY" || actionType === "CHOICE") {
+            var parts = actionVal.split("|");
+            var optLabel = parts[0].trim();
+            var optReply = (parts[1] || parts[0]).trim();
+            return (
+              '<div class="ai-quick-options-group">' +
+              '  <button type="button" class="ai-quick-option-btn" data-reply="' + escapeHtml(optReply) + '">' +
+              '    <span class="ai-quick-opt-icon">⚡</span>' +
+              '    <span class="ai-quick-opt-label">' + escapeHtml(optLabel) + '</span>' +
+              '    <span class="ai-quick-opt-badge">1-Click Select</span>' +
+              '  </button>' +
+              '</div>'
+            );
+          }
           var label = actionType.replace(/_/g, " ").toLowerCase();
           return (
             '<span class="ai-action-tag" data-action="' +
@@ -357,6 +372,22 @@
           );
         }
       );
+
+      // Standalone [OPTION:Label|ReplyText]
+      escaped = escaped.replace(/\[OPTION:([^\]]+)\]/gi, function (_, content) {
+        var parts = content.split("|");
+        var optLabel = parts[0].trim();
+        var optReply = (parts[1] || parts[0]).trim();
+        return (
+          '<div class="ai-quick-options-group">' +
+          '  <button type="button" class="ai-quick-option-btn" data-reply="' + escapeHtml(optReply) + '">' +
+          '    <span class="ai-quick-opt-icon">⚡</span>' +
+          '    <span class="ai-quick-opt-label">' + escapeHtml(optLabel) + '</span>' +
+          '    <span class="ai-quick-opt-badge">1-Click Select</span>' +
+          '  </button>' +
+          '</div>'
+        );
+      });
 
 
       // Model drift fallbacks for allow secrets text

@@ -137,6 +137,26 @@
       if (!containerEl) return;
 
       containerEl.addEventListener("click", function (e) {
+        // 0. Interactive Quick Option / Decision Chip
+        var quickOptBtn = e.target.closest(".ai-quick-option-btn");
+        if (quickOptBtn) {
+          e.preventDefault();
+          var replyText = quickOptBtn.getAttribute("data-reply") || quickOptBtn.textContent.trim();
+          if (replyText) {
+            quickOptBtn.classList.add("is-selected");
+            var parentGroup = quickOptBtn.closest(".ai-quick-options-group");
+            if (parentGroup) {
+              parentGroup.querySelectorAll(".ai-quick-option-btn").forEach(function (b) {
+                if (b !== quickOptBtn) b.disabled = true;
+              });
+            }
+            if (window.AiHelper && typeof window.AiHelper.send === "function") {
+              window.AiHelper.send(replyText);
+            }
+          }
+          return;
+        }
+
         // 1. One-Line Card Strip Copy Button
         var copyBtnInStrip = e.target.closest(".ai-card-strip-copy-btn");
         if (copyBtnInStrip) {
