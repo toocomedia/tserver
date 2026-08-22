@@ -254,34 +254,41 @@ body.ai-helper-resizing { cursor: ew-resize !important; user-select: none !impor
   margin: 10px 0 14px;
   width: 100%;
   box-sizing: border-box;
-  background: var(--color-surface);
+  background: var(--color-surface, rgba(255, 255, 255, 0.04));
   border-radius: 6px;
-  border: none;
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.06));
 }
 .ai-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 12px;
+  font-size: 11.5px;
   text-align: left;
   table-layout: auto;
   border: none;
 }
 .ai-table th {
-  background: transparent;
+  background: rgba(255, 255, 255, 0.02);
   border: none;
-  padding: 8px 12px;
-  font-size: 10.5px;
-  font-weight: 600;
+  border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
+  padding: 6px 8px;
+  font-size: 10px;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.3px;
+  letter-spacing: 0.25px;
   color: var(--color-muted);
+  white-space: nowrap;
 }
 .ai-table td {
-  padding: 8px 12px;
+  padding: 6px 8px;
   color: var(--color-text);
   border: none;
-  line-height: 1.6;
+  border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.03));
+  line-height: 1.45;
   word-break: break-word;
+  vertical-align: top;
+}
+.ai-table tr:last-child td {
+  border-bottom: none;
 }
 .ai-table tr:hover td {
   background: var(--color-surface-hover, var(--color-secondary-btn));
@@ -292,16 +299,16 @@ body.ai-helper-resizing { cursor: ew-resize !important; user-select: none !impor
   table-layout: fixed;
 }
 .ai-table--keyvalue .ai-col-key {
-  width: 35%;
-  min-width: 110px;
-  max-width: 160px;
-  font-weight: 500;
+  width: 32%;
+  min-width: 90px;
+  max-width: 140px;
+  font-weight: 600;
   color: var(--color-muted);
   font-size: 11px;
 }
 .ai-table--keyvalue .ai-col-val {
   font-family: var(--font-mono, monospace);
-  font-size: 11.5px;
+  font-size: 11px;
   color: var(--color-text);
   word-break: break-word;
 }

@@ -41,8 +41,10 @@
       assistantMsgs.forEach(function (msgWrap) {
         var bubble = msgWrap.querySelector(".ai-msg-bubble");
         if (!bubble) return;
-        // Threshold: 360px height
-        if (bubble.scrollHeight > 360 && !msgWrap.querySelector(".ai-msg-expand-toggle-btn")) {
+        // Do not prematurely collapse messages containing action plans or tables
+        var hasStructuredCards = bubble.querySelector(".ai-app-plan-card, .ai-table-wrap, .ai-security-card");
+        var threshold = hasStructuredCards ? 1200 : 700;
+        if (bubble.scrollHeight > threshold && !msgWrap.querySelector(".ai-msg-expand-toggle-btn")) {
           bubble.classList.add("ai-msg-bubble--collapsible");
           var btn = document.createElement("button");
           btn.type = "button";
@@ -193,7 +195,14 @@
             })
             .catch(function (err) {
               applyPlanBtn.disabled = false;
-              applyPlanBtn.textContent = "Error: " + err.message;
+              // If on wizard create page, advance wizard to inspect/configure anyway
+              if (typeof window.advanceAiWizard === "function") {
+                applyPlanBtn.innerHTML = "✓ Opening Configuration";
+                applyPlanBtn.classList.add("is-applied");
+                window.advanceAiWizard();
+              } else {
+                applyPlanBtn.textContent = "Error: " + err.message;
+              }
             });
           return;
         }

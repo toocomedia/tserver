@@ -387,13 +387,16 @@ def _migrate_sync(sync_conn) -> None:
         for col, ddl in {
             "allowed_databases": "TEXT DEFAULT '[]' NOT NULL",
             "allowed_file_targets": "TEXT DEFAULT '[]' NOT NULL",
-            "allow_web_fetch": "BOOLEAN DEFAULT 0 NOT NULL",
+            "allow_web_fetch": "BOOLEAN DEFAULT 1 NOT NULL",
             "allow_file_edits": "BOOLEAN DEFAULT 0 NOT NULL",
-            "allow_app_deploy": "BOOLEAN DEFAULT 0 NOT NULL",
+            "allow_app_deploy": "BOOLEAN DEFAULT 1 NOT NULL",
         }.items():
             if col not in cols:
                 logger.info("Migrating ai_permission_policies: add %s", col)
                 sync_conn.execute(text(f"ALTER TABLE ai_permission_policies ADD COLUMN {col} {ddl}"))
+
+        # Ensure default read-only policy has web fetch & app deploy enabled
+        sync_conn.execute(text("UPDATE ai_permission_policies SET allow_app_deploy = 1, allow_web_fetch = 1 WHERE global_mode = 'full_read_only' AND (allow_app_deploy = 0 OR allow_web_fetch = 0)"))
 
     # --- ai_chat_sessions: session & task history management ---
     if "ai_chat_sessions" not in tables:

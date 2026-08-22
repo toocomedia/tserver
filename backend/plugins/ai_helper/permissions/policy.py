@@ -80,6 +80,19 @@ async def get_or_create_policy(db: AsyncSession) -> AiPermissionPolicy:
         db.add(policy)
         await db.commit()
         await db.refresh(policy)
+    else:
+        # Self-heal default policy if newer safe proposal flags are unset
+        modified = False
+        if policy.global_mode == "full_read_only":
+            if not getattr(policy, "allow_app_deploy", False):
+                policy.allow_app_deploy = True
+                modified = True
+            if not getattr(policy, "allow_web_fetch", False):
+                policy.allow_web_fetch = True
+                modified = True
+        if modified:
+            await db.commit()
+            await db.refresh(policy)
     return policy
 
 
