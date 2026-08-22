@@ -471,8 +471,9 @@ def _build_or_pull(app: ContainerApp, deployment: ContainerAppDeployment) -> str
         if all_secret_names:
             _inject_railpack_secrets(build_root, all_secret_names)
             build_env = {}
+            newly_generated = False
             for key in all_secret_names:
-                if key in env_vars:
+                if key in env_vars and env_vars[key]:
                     val = str(env_vars[key])
                 elif key == "DATABASE_URL":
                     # Build-time dummy for Prisma/Next.js generation if DB not yet connected
@@ -487,10 +488,20 @@ def _build_or_pull(app: ContainerApp, deployment: ContainerAppDeployment) -> str
                     val = "production"
                 elif key == "SKIP_DB_CHECK":
                     val = "1"
+                elif any(s in key.upper() for s in ("SECRET", "SALT", "KEY_BASE", "JWT", "PASSWORD", "AUTH_KEY")):
+                    import secrets as _secrets
+                    val = _secrets.token_urlsafe(32)
+                    env_vars[key] = val
+                    newly_generated = True
                 else:
                     val = "build_placeholder"
                 build_env[key] = val
                 command.extend(["--env", key])
+            if newly_generated and getattr(app, "env_path", None):
+                try:
+                    apps.write_env(Path(app.env_path), env_vars)
+                except Exception:
+                    pass
         command.append(str(build_root))
 
     progress.append_log(deployment, "build", "Building application image.")
