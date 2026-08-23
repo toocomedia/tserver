@@ -25,7 +25,13 @@ export async function fetchJson(url, options) {
     if (typeof data.detail === 'string') {
       msg = data.detail;
     } else if (Array.isArray(data.detail)) {
-      msg = data.detail.map((d) => (d && typeof d === 'object' ? (d.msg || d.message || JSON.stringify(d)) : String(d))).join(', ');
+      msg = data.detail.map((d) => {
+        if (d && typeof d === 'object') {
+          const field = Array.isArray(d.loc) ? d.loc.filter(x => x !== 'body').join('.') : '';
+          return field ? `${field}: ${d.msg || d.message}` : (d.msg || d.message || JSON.stringify(d));
+        }
+        return String(d);
+      }).join(', ');
     } else if (data.detail && typeof data.detail === 'object') {
       msg = data.detail.message || data.detail.msg || JSON.stringify(data.detail);
     } else if (data.message) {

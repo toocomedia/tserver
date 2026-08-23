@@ -266,6 +266,14 @@ if (form) {
   }
 
   async function startDeployment() {
+    const domainId = query('#domain_id')?.value;
+    if (!domainId) {
+      const err = 'Please select a target domain on Step 1 before deploying.';
+      setText(query('[data-environment-error]'), err);
+      setHidden(query('[data-environment-error]'), false);
+      renderStep(1);
+      throw new Error(err);
+    }
     if (!submitValues() || !form.reportValidity()) {
       const errText = query('[data-environment-error]')?.textContent || 'Validation error: please check required fields.';
       throw new Error(errText);
@@ -581,10 +589,22 @@ if (form) {
 
     // 2. Set Domain if specified
     if (p.domain_name) {
+      const targetDom = String(p.domain_name || "").trim().toLowerCase();
       const domInput = query('#domain_id') || query('[data-domain-select]');
       const domLabel = query('[data-custom-dropdown="domain_id"] [data-dropdown-label]');
-      const domItem = query(`[data-dropdown-item][data-domain-name="${p.domain_name}"]`);
+      let domItem = query(`[data-dropdown-item][data-domain-name="${p.domain_name}"]`);
+      if (!domItem) {
+        const allItems = queryAll('[data-custom-dropdown="domain_id"] [data-dropdown-item]');
+        for (const item of allItems) {
+          const dName = (item.dataset.domainName || item.dataset.label || item.textContent || "").trim().toLowerCase();
+          if (dName === targetDom || dName.startsWith(targetDom) || targetDom.startsWith(dName)) {
+            domItem = item;
+            break;
+          }
+        }
+      }
       if (domItem) {
+        domItem.classList.remove('is-disabled');
         if (domInput) {
           domInput.value = domItem.dataset.value;
           domInput.dataset.domainSsl = domItem.dataset.domainSsl || "false";
