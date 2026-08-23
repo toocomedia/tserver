@@ -1,6 +1,7 @@
 """
 Unit tests for the Generalized Official Compose Stacks Engine.
 """
+import copy
 import sys
 import unittest
 from pathlib import Path
@@ -279,6 +280,30 @@ class TestOfficialStacks(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(plan["payload"]["services_count"], 2)
         finally:
             await engine.dispose()
+
+    def test_ai_stack_proposal_accepts_safe_named_volume_aliases(self):
+        """AI stack proposals may use common named-volume aliases, never host mounts."""
+        from services.official_stacks.proposal_manifest import stack_from_proposal
+        manifest = copy.deepcopy(AI_STACK_MANIFEST)
+        manifest["services"][0]["volumes"] = [
+            {"type": "volume", "source": "db-data", "target": "/var/lib/postgresql/data"},
+            "db-backup:/backup:ro",
+        ]
+        stack = stack_from_proposal(manifest, ["source inspection detected named volumes"])
+        volumes = stack.services["analytics_db"].volumes
+        self.assertEqual(volumes[0].name_suffix, "db-data")
+        self.assertEqual(volumes[0].container_mount_path, "/var/lib/postgresql/data")
+        self.assertTrue(volumes[1].read_only)
+
+    def test_ai_stack_proposal_rejects_host_volume_aliases(self):
+        """Host paths remain forbidden even when the AI uses Compose long syntax."""
+        from services.official_stacks.proposal_manifest import stack_from_proposal
+        manifest = copy.deepcopy(AI_STACK_MANIFEST)
+        manifest["services"][0]["volumes"] = [
+            {"type": "bind", "source": "/srv/data", "target": "/var/lib/postgresql/data"},
+        ]
+        with self.assertRaises(ValueError):
+            stack_from_proposal(manifest, ["source inspection detected named volumes"])
 
     def test_ai_rejects_legacy_or_raw_stack_shapes(self):
         """AI proposal input accepts only explicit structured manifest fields."""

@@ -24,7 +24,11 @@ _TOP_LEVEL = {
     "allowed_nonsecret_settings", "default_environment", "url_templates", "secrets", "docs_url",
 }
 _SERVICE = {"name", "image", "ports", "depends_on", "environment", "volumes", "resources", "command", "health"}
-_VOLUME = {"name", "mount_path", "read_only", "description"}
+_VOLUME = {
+    "name", "name_suffix", "volume", "source", "label", "mount_path",
+    "container_mount_path", "target", "destination", "path", "mount",
+    "target_path", "container_path", "read_only", "readonly", "description", "type",
+}
 _HEALTH = {"type", "command", "interval_seconds", "timeout_seconds", "retries", "start_period_seconds"}
 
 
@@ -150,11 +154,74 @@ def _volumes(raw: Any, service: str) -> list[VolumeDefinition]:
         raise ValueError(f"Service '{service}' volumes are invalid.")
     result = []
     for item in raw:
-        if not isinstance(item, dict) or set(item) - _VOLUME:
-            raise ValueError(f"Service '{service}' volume is invalid.")
-        suffix = _text(item.get("name"), "Volume name", 64)
-        result.append(VolumeDefinition(suffix, _text(item.get("mount_path"), "Volume mount path", 256), bool(item.get("read_only", False)), str(item.get("description") or "Persistent data volume")[:256]))
+        if isinstance(item, str):
+            result.append(_volume_from_string(item, service))
+            continue
+        if isinstance(item, dict):
+            result.append(_volume_from_mapping(item, service))
+            continue
+        raise ValueError(f"Service '{service}' volume is invalid.")
     return result
+
+
+def _volume_from_string(raw: str, service: str) -> VolumeDefinition:
+    text = raw.strip()
+    parts = text.split(":")
+    if len(parts) not in {2, 3}:
+        raise ValueError(f"Service '{service}' volume is invalid.")
+    source, target = parts[0].strip(), parts[1].strip()
+    mode = parts[2].strip().lower() if len(parts) == 3 else ""
+    if mode and mode not in {"ro", "rw"}:
+        raise ValueError(f"Service '{service}' volume is invalid.")
+    return _volume_definition(source, target, read_only=(mode == "ro"))
+
+
+def _volume_from_mapping(item: dict[str, Any], service: str) -> VolumeDefinition:
+    if set(item) - _VOLUME:
+        raise ValueError(f"Service '{service}' volume is invalid.")
+    volume_type = str(item.get("type") or "volume").strip().lower()
+    if volume_type not in {"volume", "named_volume"}:
+        raise ValueError(f"Service '{service}' volume is invalid.")
+    source = item.get("name") or item.get("name_suffix") or item.get("volume") or item.get("source") or item.get("label")
+    target = (
+        item.get("mount_path")
+        or item.get("container_mount_path")
+        or item.get("target")
+        or item.get("destination")
+        or item.get("path")
+        or item.get("mount")
+        or item.get("target_path")
+        or item.get("container_path")
+    )
+    return _volume_definition(
+        str(source or ""),
+        str(target or ""),
+        read_only=bool(item.get("read_only", item.get("readonly", False))),
+        description=str(item.get("description") or "Persistent data volume")[:256],
+    )
+
+
+def _volume_definition(
+    source: str,
+    target: str,
+    *,
+    read_only: bool = False,
+    description: str = "Persistent data volume",
+) -> VolumeDefinition:
+    suffix = _text(source, "Volume name", 64)
+    mount_path = _text(target, "Volume mount path", 256)
+    if _looks_like_host_mount(suffix):
+        raise ValueError("Host mounts are not allowed in stack proposals.")
+    return VolumeDefinition(suffix, mount_path, read_only, description)
+
+
+def _looks_like_host_mount(source: str) -> bool:
+    return (
+        source.startswith(("/", ".", "~"))
+        or "\\" in source
+        or "/" in source
+        or re.match(r"^[A-Za-z]:", source) is not None
+    )
 
 
 def _health(raw: Any, service: str) -> HealthCheckDefinition | None:

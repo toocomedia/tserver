@@ -303,7 +303,7 @@ RAW_TOOL_SCHEMAS: List[Dict[str, Any]] = [
             "properties": {
                 "stack_manifest": {
                     "type": "object",
-                    "description": "Structured manifest only: name, display_name, vendor_name, source_repositories, version, services, startup_order, web_service, web_port, optional web_health_path, resources, named volumes, scoped secrets and web URL templates. No Compose/YAML fields.",
+                    "description": "Structured manifest only: name, display_name, vendor_name, source_repositories, version, services, startup_order, web_service, web_port, optional web_health_path, resources, named volumes, scoped secrets and web URL templates. Service volumes must be safe named volumes such as {'name':'data','mount_path':'/data'} or {'source':'data','target':'/data'}; no host paths. No Compose/YAML fields.",
                     "properties": {
                         "name": {"type": "string"}, "display_name": {"type": "string"}, "vendor_name": {"type": "string"},
                         "source_repositories": {"type": "array", "items": {"type": "string"}}, "version": {"type": "string"},

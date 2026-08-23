@@ -513,7 +513,7 @@ async def get_app_engine_capabilities(db: AsyncSession, **kwargs: Any) -> Dict[s
         "secrets": {"generators": ["urlsafe64", "base64_48", "hex32", "password"], "values_visible_to_ai": False},
         "setup_limits": "one source inspection and one reviewed plan attempt; no documentation, DNS, SSL, logs, file reads, directory scans, or hidden retries",
         "stack_manifest": {
-            "services": "one to eight service objects observed by panel source inspection: name, image tag or digest, private ports, dependencies, non-secret environment, named volumes, resources, optional command health",
+            "services": "one to eight service objects observed by panel source inspection: name, image tag or digest, private ports, dependencies, non-secret environment, safe named volumes like {name,mount_path} or {source,target}, resources, optional command health",
             "required": ["name", "version", "services", "startup_order", "web_service", "web_port"],
             "health": "web_health_path only with source or vendor evidence; unknown endpoint must be omitted",
             "secrets": "key, purpose, generator, target service, target environment; values generated only after approval",
