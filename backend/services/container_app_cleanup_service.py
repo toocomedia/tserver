@@ -91,12 +91,12 @@ async def delete_app(
 async def _remove_container(app: ContainerApp) -> None:
     if getattr(app, "deploy_type", None) == "official_stack":
         from services.official_stacks.catalog import get_stack
-        from services.official_stacks import stack_runtime_service
-        stack_id = getattr(app, "stack_catalog_id", None) or "plausible_ce"
-        stack = get_stack(stack_id)
-        if stack:
-            await asyncio.to_thread(stack_runtime_service.remove_stack_containers, app.id, stack)
-            return
+        stack_id = getattr(app, "stack_catalog_id", None)
+        if stack_id:
+            stack = get_stack(stack_id)
+            if stack:
+                await asyncio.to_thread(stack_runtime_service.remove_stack_containers, app.id, stack)
+                return
     result = await asyncio.to_thread(
         container_app_service._run, ["docker", "rm", "-f", app.container_name], timeout=45,
     )

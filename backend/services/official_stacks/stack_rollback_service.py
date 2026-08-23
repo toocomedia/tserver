@@ -21,8 +21,9 @@ async def rollback_stack(
     domain: Domain,
     target_snapshot: ContainerAppSnapshot,
 ) -> bool:
-    """Restores stack to a previously active snapshot."""
-    catalog_id = getattr(app, "stack_catalog_id", None) or "plausible_ce"
+    catalog_id = getattr(app, "stack_catalog_id", None)
+    if not catalog_id:
+        raise RuntimeError(f"App #{app.id} is missing a stack catalog identifier.")
     stack = get_stack(catalog_id)
     if stack is None:
         raise RuntimeError(f"Unknown official stack catalog '{catalog_id}'.")

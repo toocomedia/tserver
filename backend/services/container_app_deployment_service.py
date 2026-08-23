@@ -330,8 +330,9 @@ async def _deploy_official_stack(
     deployment: ContainerAppDeployment,
 ) -> None:
     from services.official_stacks.catalog import get_stack
-    from services.official_stacks import stack_runtime_service
-    stack_id = getattr(runtime, "stack_catalog_id", None) or "plausible_ce"
+    stack_id = getattr(runtime, "stack_catalog_id", None)
+    if not stack_id:
+        raise RuntimeError(f"Application #{app.id} is missing a stack catalog identifier.")
     stack = get_stack(stack_id)
     if stack is None:
         raise RuntimeError(f"Official stack '{stack_id}' was not found in the panel catalog.")

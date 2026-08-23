@@ -200,12 +200,14 @@ async def wait_service_health(
     deadline = time.time() + (hc.retries * hc.interval_seconds) + hc.start_period_seconds
 
     if hc.probe_type == "command" and hc.command:
+        last_error = ""
         while time.time() < deadline:
             probe = apps._run(["docker", "exec", cname, *hc.command], timeout=hc.timeout_seconds)
             if probe.returncode == 0:
                 return
+            last_error = (probe.stderr or probe.stdout or f"exit code {probe.returncode}").strip()
             await asyncio.sleep(hc.interval_seconds)
-        raise RuntimeError(f"Service '{service_name}' failed health check ({hc.command}) within timeout.")
+        raise RuntimeError(f"Service '{service_name}' failed health check ({hc.command}) within timeout: {last_error}")
 
     elif hc.probe_type == "http" and host_port:
         from services import container_app_deployment_progress_service as progress

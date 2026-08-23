@@ -161,12 +161,22 @@ async def create_snapshot(
     if config.get("source_type") == "git":
         source_revision = await asyncio.to_thread(_resolve_git_revision, app, config)
     elif config.get("source_type") == "image":
-        if app.image_digest and config.get("image_reference") == app.image_reference:
+        if config.get("deploy_type") == "official_stack" and config.get("stack_catalog_id"):
+            from services.official_stacks.catalog import get_stack
+            from services.official_stacks.manifest_validator import compute_stack_manifest_hash
+            stk = get_stack(config.get("stack_catalog_id"))
+            if stk:
+                image_digest = compute_stack_manifest_hash(stk, str(config.get("stack_version") or stk.default_version))
+        elif app.image_digest and config.get("image_reference") == app.image_reference:
             image_digest = app.image_digest
         else:
-            image_digest = (await container_app_image_inspect_service.inspect_image(
-                str(config.get("image_reference") or ""),
-            )).get("digest")
+            try:
+                insp = await container_app_image_inspect_service.inspect_image(
+                    str(config.get("image_reference") or ""),
+                )
+                image_digest = insp.get("digest") if isinstance(insp, dict) else None
+            except Exception:
+                image_digest = None
     revision = int(getattr(app, "configuration_revision", 1) or 1) + (1 if state == "pending" else 0)
     fingerprint = _fingerprint(config, environment, versions)
     snapshot = ContainerAppSnapshot(

@@ -9,10 +9,16 @@ BACKEND = Path(__file__).resolve().parents[1]
 if str(BACKEND) not in sys.path:
     sys.path.insert(0, str(BACKEND))
 
-from database import AsyncSessionLocal, init_db
 from models.container_app import ContainerApp
 from plugins.ai_helper.tools import app_setup
-from services.official_stacks.catalog import get_stack, list_stacks, match_repository, register_stack
+from services.official_stacks.catalog import (
+    clear_catalog,
+    get_stack,
+    list_stacks,
+    match_repository,
+    register_stack,
+    unregister_stack,
+)
 from services.official_stacks.manifest_validator import compute_stack_manifest_hash, validate_stack_request
 from services.official_stacks.schema import (
     ConfigFileDefinition,
@@ -26,43 +32,141 @@ from services.official_stacks.source_detector import detect_official_stack
 from services.official_stacks import stack_runtime_service
 from services.resource_guard_profiles import classify_deployment
 
+# Generic test stack definition used across unit tests
+GENERIC_TEST_STACK = OfficialStackDefinition(
+    catalog_id="generic_analytics",
+    display_name="Generic Analytics Stack",
+    vendor_name="Generic Vendor",
+    description="Generic 3-service stack with Database, Events DB, and Web UI.",
+    official_repositories=[
+        "https://github.com/example-vendor/analytics-stack",
+        "https://github.com/example-vendor/analytics-app",
+        "git@github.com:example-vendor/analytics-stack.git",
+    ],
+    allowed_versions=["v1.0.0"],
+    default_version="v1.0.0",
+    services={
+        "analytics_db": ServiceDefinition(
+            name="analytics_db",
+            image_reference="postgres:16-alpine",
+            pinned_tag="16-alpine",
+            internal_ports=[5432],
+            volumes=[VolumeDefinition(name_suffix="db-data", container_mount_path="/var/lib/postgresql/data")],
+            health_check=HealthCheckDefinition(
+                probe_type="command",
+                command=["pg_isready", "-U", "postgres"],
+                interval_seconds=4,
+                timeout_seconds=5,
+                retries=15,
+                start_period_seconds=15,
+            ),
+            memory_limit_mb=256,
+            environment_defaults={"POSTGRES_USER": "postgres", "POSTGRES_DB": "analytics_db"},
+        ),
+        "analytics_events": ServiceDefinition(
+            name="analytics_events",
+            image_reference="clickhouse/clickhouse-server:24.12-alpine",
+            pinned_tag="24.12-alpine",
+            internal_ports=[8123, 9000],
+            volumes=[VolumeDefinition(name_suffix="event-data", container_mount_path="/var/lib/clickhouse")],
+            config_files=[
+                ConfigFileDefinition(
+                    filename="custom-conf.xml",
+                    container_target_path="/etc/clickhouse-server/config.d/custom-conf.xml",
+                    content="<clickhouse><logger><level>warning</level></logger></clickhouse>",
+                ),
+            ],
+            health_check=HealthCheckDefinition(
+                probe_type="command",
+                command=["clickhouse-client", "--query", "SELECT 1"],
+                interval_seconds=4,
+                timeout_seconds=5,
+                retries=15,
+                start_period_seconds=20,
+            ),
+            memory_limit_mb=512,
+        ),
+        "analytics_web": ServiceDefinition(
+            name="analytics_web",
+            image_reference="example-vendor/analytics-web:v1.0.0",
+            pinned_tag="v1.0.0",
+            internal_ports=[8000],
+            depends_on=["analytics_db", "analytics_events"],
+            health_check=HealthCheckDefinition(
+                probe_type="http",
+                http_path="/api/health",
+                http_port=8000,
+                interval_seconds=5,
+                timeout_seconds=5,
+                retries=20,
+                start_period_seconds=25,
+            ),
+            memory_limit_mb=512,
+            is_web_entrypoint=True,
+        ),
+    },
+    startup_order=["analytics_db", "analytics_events", "analytics_web"],
+    web_service_name="analytics_web",
+    web_internal_port=8000,
+    web_health_path="/api/health",
+    startup_timeout_seconds=60,
+    recommended_ram_mb=2048,
+    minimum_ram_mb=1024,
+    required_secrets=[
+        SecretRequirement(key="DB_PASSWORD", purpose="Primary database password"),
+        SecretRequirement(key="SECRET_KEY_BASE", purpose="Session signing key"),
+    ],
+    allowed_nonsecret_settings=["BASE_URL", "TIMEZONE", "DISABLE_REGISTRATION"],
+    default_environment={"DISABLE_REGISTRATION": "invite_only"},
+    url_templates={
+        "DATABASE_URL": "postgresql://postgres:{DB_PASSWORD}@{analytics_db}:5432/analytics_db",
+        "EVENTS_URL": "http://{analytics_events}:8123/analytics_events",
+    },
+)
+
 
 class TestOfficialStacks(unittest.IsolatedAsyncioTestCase):
+    def setUp(self):
+        register_stack(GENERIC_TEST_STACK)
+
+    def tearDown(self):
+        clear_catalog()
+
     def test_official_stacks_schema_and_catalog(self):
         """Verify generic stack catalog registration, service graph, and hashing."""
         stacks = list_stacks()
         self.assertGreaterEqual(len(stacks), 1)
 
-        stack = get_stack("plausible_ce")
+        stack = get_stack("generic_analytics")
         self.assertIsNotNone(stack)
-        self.assertEqual(stack.catalog_id, "plausible_ce")
+        self.assertEqual(stack.catalog_id, "generic_analytics")
         self.assertEqual(len(stack.services), 3)
 
         # Test manifest fingerprinting
-        hash_val = compute_stack_manifest_hash(stack, "v3.2.1")
+        hash_val = compute_stack_manifest_hash(stack, "v1.0.0")
         self.assertEqual(len(hash_val), 64)
-        self.assertEqual(hash_val, compute_stack_manifest_hash(stack, "v3.2.1"))
+        self.assertEqual(hash_val, compute_stack_manifest_hash(stack, "v1.0.0"))
 
     def test_generic_manifest_validation(self):
         """Verify strict parameter and version validation."""
-        stack, clean = validate_stack_request("plausible_ce", "v3.2.1", {"TIMEZONE": "UTC"})
+        stack, clean = validate_stack_request("generic_analytics", "v1.0.0", {"TIMEZONE": "UTC"})
         self.assertEqual(clean["TIMEZONE"], "UTC")
 
         with self.assertRaises(ValueError):
             validate_stack_request("non_existent", "v1.0.0", {})
 
         with self.assertRaises(ValueError):
-            validate_stack_request("plausible_ce", "v99.9.9", {})
+            validate_stack_request("generic_analytics", "v99.9.9", {})
 
         with self.assertRaises(ValueError):
-            validate_stack_request("plausible_ce", "v3.2.1", {"UNAUTHORIZED_INJECTION": "bad"})
+            validate_stack_request("generic_analytics", "v1.0.0", {"UNAUTHORIZED_INJECTION": "bad"})
 
     def test_generic_environment_and_url_templates(self):
         """Verify dynamic URL template rendering across isolated internal network."""
-        stack = get_stack("plausible_ce")
+        stack = get_stack("generic_analytics")
         app = ContainerApp(id=42, domain_id=1)
         vault_secrets = {
-            "POSTGRES_PASSWORD": "super#secret!password",
+            "DB_PASSWORD": "super#secret!password",
             "SECRET_KEY_BASE": "vault-random-key",
         }
         env = stack_runtime_service.compile_stack_environment(
@@ -75,9 +179,9 @@ class TestOfficialStacks(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(env["BASE_URL"], "https://analytics.example.com")
         self.assertEqual(env["TIMEZONE"], "Europe/Berlin")
         self.assertEqual(env["SECRET_KEY_BASE"], "vault-random-key")
-        self.assertIn("srv-stack-42-plausible_db:5432/plausible_db", env["DATABASE_URL"])
+        self.assertIn("srv-stack-42-analytics_db:5432/analytics_db", env["DATABASE_URL"])
         self.assertIn("super%23secret%21password", env["DATABASE_URL"])
-        self.assertEqual(env["CLICKHOUSE_DATABASE_URL"], "http://srv-stack-42-plausible_events_db:8123/plausible_events_db")
+        self.assertEqual(env["EVENTS_URL"], "http://srv-stack-42-analytics_events:8123/analytics_events")
 
     def test_generic_resource_guard_and_naming(self):
         """Verify resource guard and container naming conventions."""
@@ -95,48 +199,59 @@ class TestOfficialStacks(unittest.IsolatedAsyncioTestCase):
     def test_repository_matching_and_source_detection(self):
         """Verify catalog repository matcher matches git repos and SSH URLs."""
         urls = [
-            "https://github.com/plausible/community-edition.git",
-            "https://github.com/plausible/community-edition",
-            "git@github.com:plausible/community-edition.git",
-            "https://github.com/plausible/analytics.git",
-            "https://github.com/plausible/hosting.git",
+            "https://github.com/example-vendor/analytics-stack.git",
+            "https://github.com/example-vendor/analytics-stack",
+            "git@github.com:example-vendor/analytics-stack.git",
+            "https://github.com/example-vendor/analytics-app.git",
         ]
         for url in urls:
             matched = match_repository(url)
             self.assertIsNotNone(matched, f"Failed matching {url}")
-            self.assertEqual(matched[0].catalog_id, "plausible_ce")
+            self.assertEqual(matched[0].catalog_id, "generic_analytics")
 
             detection = detect_official_stack(url)
             self.assertTrue(detection["is_official_stack"])
-            self.assertEqual(detection["catalog_id"], "plausible_ce")
+            self.assertEqual(detection["catalog_id"], "generic_analytics")
 
         self.assertIsNone(match_repository("https://github.com/expressjs/express.git"))
         non_stack = detect_official_stack("https://github.com/expressjs/express.git")
         self.assertFalse(non_stack["is_official_stack"])
 
+    async def _make_test_db(self):
+        from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+        from database import Base, _migrate_sync
+        test_engine = create_async_engine("sqlite+aiosqlite:///:memory:", echo=False)
+        async with test_engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+            await conn.run_sync(_migrate_sync)
+        return test_engine, async_sessionmaker(bind=test_engine, class_=AsyncSession, expire_on_commit=False)
+
     async def test_ai_propose_official_stack_plan(self):
         """Verify AI Helper propose_official_stack_install tool generates immutable plan."""
-        async with AsyncSessionLocal() as db:
-            res = await app_setup.propose_official_stack_install(
-                db=db,
-                catalog_id="plausible_ce",
-                version="v3.2.1",
-                domain_name="stats.mysite.com",
-                session_id="stack_ai_test_session",
-                user_id=1,
-                reasoning="Generic official stack test plan generation.",
-            )
-            self.assertEqual(res["status"], "ok")
-            self.assertTrue(res["plan_id"].startswith("plan_"))
+        engine, SessionFactory = await self._make_test_db()
+        try:
+            async with SessionFactory() as db:
+                res = await app_setup.propose_official_stack_install(
+                    db=db,
+                    catalog_id="generic_analytics",
+                    version="v1.0.0",
+                    domain_name="stats.mysite.com",
+                    session_id="stack_ai_test_session",
+                    user_id=1,
+                    reasoning="Generic official stack test plan generation.",
+                )
+                self.assertEqual(res["status"], "ok")
+                self.assertTrue(res["plan_id"].startswith("plan_"))
 
-            from plugins.ai_helper.services import action_plans
-            plan = await action_plans.get_action_plan(db, res["plan_id"], user_id=1)
-            self.assertIsNotNone(plan)
-            self.assertEqual(plan["action_type"], "official_stack_install")
-            self.assertEqual(plan["payload"]["stack_catalog_id"], "plausible_ce")
-            self.assertEqual(plan["payload"]["stack_version"], "v3.2.1")
-            self.assertEqual(plan["payload"]["services_count"], 3)
-
+                from plugins.ai_helper.services import action_plans
+                plan = await action_plans.get_action_plan(db, res["plan_id"], user_id=1)
+                self.assertIsNotNone(plan)
+                self.assertEqual(plan["action_type"], "official_stack_install")
+                self.assertEqual(plan["payload"]["stack_catalog_id"], "generic_analytics")
+                self.assertEqual(plan["payload"]["stack_version"], "v1.0.0")
+                self.assertEqual(plan["payload"]["services_count"], 3)
+        finally:
+            await engine.dispose()
 
     async def test_official_stack_create_flow(self):
         """Verify the create flow logic handles official_stack deploy_type correctly."""
@@ -149,12 +264,11 @@ class TestOfficialStacks(unittest.IsolatedAsyncioTestCase):
         old_ephemeral = getattr(config, "_SECRET_KEY_EPHEMERAL", False)
         config.SECRET_KEY = "test_official_stacks_secret_key_32_bytes!!"
         config._SECRET_KEY_EPHEMERAL = False
+        engine, SessionFactory = await self._make_test_db()
         try:
-            import uuid
-            dom_name = f"test-stack-{uuid.uuid4().hex[:8]}.example.com"
-            async with AsyncSessionLocal() as db:
+            async with SessionFactory() as db:
                 domain = Domain(
-                    name=dom_name,
+                    name="test-stack-flow.example.com",
                     server_ip="127.0.0.1",
                     nginx_config_path="/tmp",
                     webroot_path="/tmp",
@@ -164,7 +278,7 @@ class TestOfficialStacks(unittest.IsolatedAsyncioTestCase):
                 await db.commit()
                 await db.refresh(domain)
 
-                cat_id = "plausible_ce"
+                cat_id = "generic_analytics"
                 stack = get_stack(cat_id)
                 v = stack.default_version
                 _, clean_settings = validate_stack_request(cat_id, v, {})
@@ -181,7 +295,7 @@ class TestOfficialStacks(unittest.IsolatedAsyncioTestCase):
                     startup_timeout_seconds=stack.startup_timeout_seconds,
                 )
                 self.assertEqual(app.deploy_type, "official_stack")
-                self.assertEqual(app.stack_catalog_id, "plausible_ce")
+                self.assertEqual(app.stack_catalog_id, "generic_analytics")
 
                 real_vault_secrets = {}
                 secret_reqs_for_snapshot = []
@@ -196,13 +310,14 @@ class TestOfficialStacks(unittest.IsolatedAsyncioTestCase):
                 container_app_service.write_env(Path(app.env_path), compiled_env)
                 self.assertTrue(Path(app.env_path).exists())
 
-                snapshot = await snapshots.create_snapshot(
+                snapshot, statuses = await snapshots.create_snapshot(
                     db, app, secret_requirements=secret_reqs_for_snapshot,
                     environment_patch=compiled_env, created_by_user_id=1,
                 )
                 self.assertIsNotNone(snapshot)
                 self.assertEqual(snapshot.app_id, app.id)
         finally:
+            await engine.dispose()
             config.SECRET_KEY = old_key
             config._SECRET_KEY_EPHEMERAL = old_ephemeral
 

@@ -517,7 +517,9 @@ async def create_stack_plan_endpoint(request: Request, db: AsyncSession = Depend
         raise HTTPException(401, "Authentication required.")
 
     body = await request.json()
-    catalog_id = str(body.get("catalog_id") or "plausible_ce").strip()
+    catalog_id = str(body.get("catalog_id") or "").strip()
+    if not catalog_id:
+        raise HTTPException(400, "Official stack catalog identifier is required.")
     version = str(body.get("version") or "").strip()
     session_id = str(body.get("session_id") or "default_session").strip()
     domain_name = str(body.get("domain_name") or "").strip()

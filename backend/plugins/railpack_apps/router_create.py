@@ -128,8 +128,9 @@ async def create(
     if deploy_type == "official_stack" or source_type == "official_stack":
         from services.official_stacks.catalog import get_stack
         from services.official_stacks.manifest_validator import validate_stack_request
-        from services.official_stacks import stack_runtime_service
-        cat_id = (stack_catalog_id or "plausible_ce").strip()
+        cat_id = (stack_catalog_id or "").strip()
+        if not cat_id:
+            raise HTTPException(400, "Official stack catalog identifier is required.")
         stack = get_stack(cat_id)
         if stack is None:
             raise HTTPException(404, f"Official stack '{cat_id}' was not found in catalog.")

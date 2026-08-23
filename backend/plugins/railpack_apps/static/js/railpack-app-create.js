@@ -597,7 +597,7 @@ if (form) {
 
     // 3. Set Git / Image inputs
     if (srcType === "git" || isStack) {
-      const repoVal = p.repository_url || (p.stack_catalog_id ? "https://github.com/plausible/community-edition" : "");
+      const repoVal = p.repository_url || "";
       if (repoVal && query("[data-repository-url]")) query("[data-repository-url]").value = repoVal;
       if (p.branch) {
         const branchInput = query("#branch");
