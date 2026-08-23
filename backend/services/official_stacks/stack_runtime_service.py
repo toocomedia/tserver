@@ -169,9 +169,15 @@ def start_service_container(
     if env_file and env_file.is_file():
         run_cmd.extend(["--env-file", str(env_file)])
 
-    # Per-service environment overrides
+    # Per-service environment overrides & sensible database fallbacks
     for k, v in svc.environment_defaults.items():
         run_cmd.extend(["-e", f"{k}={v}"])
+
+    if "postgres" in (svc.image_reference or "").lower() or service_name.lower() == "postgres":
+        if "POSTGRES_USER" not in svc.environment_defaults:
+            run_cmd.extend(["-e", "POSTGRES_USER=postgres"])
+        if "POSTGRES_DB" not in svc.environment_defaults and "plausible" in stack.catalog_id:
+            run_cmd.extend(["-e", "POSTGRES_DB=plausible_db"])
 
     # Volume mounts
     for vol in svc.volumes:
@@ -221,6 +227,13 @@ async def wait_service_health(
         raw_cmd = list(hc.command)
         # Replace localhost with 127.0.0.1 to avoid BusyBox IPv6 [::1] connection refused
         sanitized_cmd = [arg.replace("http://localhost:", "http://127.0.0.1:").replace("localhost", "127.0.0.1") for arg in raw_cmd]
+        # If healthcheck is pg_isready with a non-postgres user or db name, ensure fallback to postgres user
+        if "pg_isready" in sanitized_cmd and "-U" in sanitized_cmd:
+            u_idx = sanitized_cmd.index("-U")
+            if u_idx + 1 < len(sanitized_cmd) and sanitized_cmd[u_idx + 1] != "postgres":
+                # Check if user wanted database name or user
+                sanitized_cmd[u_idx + 1] = "postgres"
+
         has_shell_tokens = any(token in sanitized_cmd for token in ["||", "&&", "|", ";", ">", "<", "$"])
         if has_shell_tokens:
             exec_cmd = ["docker", "exec", cname, "sh", "-c", " ".join(sanitized_cmd)]
@@ -234,7 +247,10 @@ async def wait_service_health(
             last_error = (probe.stderr or probe.stdout or f"exit code {probe.returncode}").strip()
             await asyncio.sleep(interval)
         else:
-            raise RuntimeError(f"Service '{service_name}' failed health check ({hc.command}) within timeout: {last_error}")
+            log_res = apps._run(["docker", "logs", "--tail", "25", cname], timeout=10)
+            c_logs = (log_res.stdout or log_res.stderr or "").strip()
+            detail = f"\n[container logs]\n{c_logs}" if c_logs else ""
+            raise RuntimeError(f"Service '{service_name}' failed health check ({hc.command}) within timeout: {last_error}{detail}")
 
     # For web entrypoint with host_port, always verify HTTP loopback responsiveness
     if is_web:
