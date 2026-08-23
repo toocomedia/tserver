@@ -90,6 +90,7 @@ async def delete_app(
 
 async def _remove_container(app: ContainerApp) -> None:
     if getattr(app, "deploy_type", None) == "official_stack":
+        from services.official_stacks import stack_runtime_service
         from services.official_stacks.catalog import get_stack
         stack_id = getattr(app, "stack_catalog_id", None)
         if stack_id:

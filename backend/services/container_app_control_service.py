@@ -18,6 +18,7 @@ async def control(db: AsyncSession, app: ContainerApp, domain: Domain, action: s
         raise HTTPException(400, "Invalid container app action.")
     is_stack = getattr(app, "deploy_type", None) == "official_stack"
     if is_stack:
+        from services.official_stacks import stack_runtime_service
         from services.official_stacks.catalog import get_stack
         stack_id = getattr(app, "stack_catalog_id", None)
         if not stack_id:

@@ -46,6 +46,7 @@ async def remove_selected_data(
             await container_app_cleanup_service.remove_volume(volume)
         app.storage_mounts = None
         if getattr(app, "deploy_type", None) == "official_stack":
+            from services.official_stacks import stack_runtime_service
             from services.official_stacks.catalog import get_stack
             stack_id = getattr(app, "stack_catalog_id", None)
             if stack_id:
