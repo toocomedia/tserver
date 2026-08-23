@@ -15,6 +15,8 @@ class ContainerAppDeployment(Base):
     status: Mapped[str] = mapped_column(String(24), default="queued", nullable=False)
     stage: Mapped[str] = mapped_column(String(32), default="queued", nullable=False)
     action: Mapped[str] = mapped_column(String(16), default="deploy", nullable=False)
+    snapshot_id: Mapped[int | None] = mapped_column(ForeignKey("container_app_snapshots.id"), index=True)
+    snapshot_fingerprint: Mapped[str | None] = mapped_column(String(64))
     profile: Mapped[str | None] = mapped_column(String(32))
     peak_ram_mb: Mapped[int | None] = mapped_column(Integer)
     guard_blocked_reason: Mapped[str | None] = mapped_column(Text)

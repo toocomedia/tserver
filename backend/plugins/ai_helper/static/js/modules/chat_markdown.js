@@ -271,7 +271,11 @@
               return '<span class="ai-security-badge ' + cls + '"><span class="ai-sec-dot ai-sec-dot--' + sev + '"></span> ' + desc + '</span>';
             }
           }
-          // Special: APP_PLAN renders as a structured deployment action card with big action button
+          // App Engine deployment controls never render inside chat.
+          if (["APP_PLAN", "APP_DEPLOY", "APP_REDEPLOY", "APP_REBUILD"].indexOf(actionType) !== -1) {
+            return '<p class="text-muted">Review App Engine deployment changes on the App page.</p>';
+          }
+          // Legacy renderer retained for historic messages; early return above disables it.
           if (actionType === "APP_PLAN") {
             var planId = actionVal.trim();
             return [

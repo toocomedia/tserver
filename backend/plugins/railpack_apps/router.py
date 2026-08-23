@@ -1,6 +1,7 @@
 """Railpack Apps plugin pages and deployment endpoints."""
 from __future__ import annotations
 
+import json
 from urllib.parse import urlencode
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
@@ -12,6 +13,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from database import get_db
 from models.container_app import ContainerApp
 from models.container_app_deployment import ContainerAppDeployment
+from models.container_app_snapshot import ContainerAppSnapshot
+from models.ai_helper import AiActionPlan
 from models.container_app_database import ContainerAppDatabase
 from models.container_app_backup import ContainerAppBackup
 from models.domain import Domain
@@ -20,6 +23,7 @@ from services import container_app_cleanup_service, container_app_database_servi
 from services import container_app_database_lifecycle_service
 from services import container_app_deployment_service
 from services import container_app_removal_service, ssl_service
+from services.apps_engine import deployment_drafts, secret_vault, snapshots
 from plugins.railpack_apps.router_create import router as create_router
 from plugins.railpack_apps.router_recovery import router as recovery_router
 from plugins.railpack_apps.router_resources import router as resource_router
@@ -118,9 +122,20 @@ async def detail(app_id: int, request: Request, db: AsyncSession = Depends(get_d
     )
     databases = await container_app_database_service.attachments_for(db, app.id)
     backups = list((await db.scalars(select(ContainerAppBackup).where(ContainerAppBackup.app_id == app.id).order_by(ContainerAppBackup.id.desc()).limit(12))).all())
+    user_id = request.session.get("user_id")
+    pending_plan = await _pending_draft(db, app.id, user_id)
+    pending_snapshot = await db.get(ContainerAppSnapshot, app.pending_snapshot_id) if app.pending_snapshot_id else None
+    active_snapshot = await db.get(ContainerAppSnapshot, app.active_snapshot_id) if app.active_snapshot_id else None
+    rollback_snapshot = await db.scalar(select(ContainerAppSnapshot).where(
+        ContainerAppSnapshot.app_id == app.id,
+        ContainerAppSnapshot.state == "superseded",
+    ).order_by(ContainerAppSnapshot.id.desc()))
+    credentials = await snapshots.credentials_for(db, app.id)
     return templates.TemplateResponse("railpack_apps_detail.html", {
         "request": request, "active_page": "railpack_apps", "app": app, "domain": domain, "ssl_active": ssl_active, "deployment": deployment, "deployments": deployments,
         "databases": databases, "database_statuses": {item.id: container_app_database_lifecycle_service.status(item) for item in databases}, "backups": backups,
+        "pending_plan": pending_plan, "pending_snapshot": pending_snapshot, "active_snapshot": active_snapshot,
+        "rollback_snapshot": rollback_snapshot, "credentials": credentials,
     })
 
 
@@ -158,6 +173,72 @@ async def deploy(app_id: int, request: Request, db: AsyncSession = Depends(get_d
     if "application/json" in request.headers.get("accept", ""):
         return JSONResponse({"deployment_id": deployment.id, "app_id": app.id})
     return RedirectResponse(f"/plugins/railpack_apps/{app.id}?deployment={deployment.id}", status_code=303)
+
+
+@router.post("/{app_id}/deployment-changes/{plan_id}/apply")
+async def apply_deployment_changes(app_id: int, plan_id: str, request: Request, db: AsyncSession = Depends(get_db)):
+    app = await _app(db, app_id)
+    if await container_app_deployment_service.active_deployment(db, app.id):
+        raise HTTPException(409, "Deployment changes cannot be applied while a deployment is running.")
+    try:
+        snapshot_id, _statuses = await deployment_drafts.apply_plan(db, app, plan_id, request.session.get("user_id"))
+        await db.commit()
+    except ValueError as exc:
+        await db.rollback()
+        return RedirectResponse(f"/plugins/railpack_apps/{app.id}?{urlencode({'error': str(exc)})}", status_code=303)
+    return RedirectResponse(f"/plugins/railpack_apps/{app.id}?snapshot={snapshot_id}", status_code=303)
+
+
+@router.post("/{app_id}/snapshots/{snapshot_id}/deploy")
+async def deploy_snapshot(app_id: int, snapshot_id: int, request: Request, action: str = Form("deploy"), db: AsyncSession = Depends(get_db)):
+    app = await _app(db, app_id)
+    if action not in {"deploy", "retry"}:
+        raise HTTPException(400, "Unsupported snapshot action.")
+    try:
+        deployment = await container_app_deployment_service.queue_deployment(db, app, action=action, snapshot_id=snapshot_id)
+        await db.commit()
+    except HTTPException as exc:
+        return RedirectResponse(f"/plugins/railpack_apps/{app.id}?{urlencode({'error': str(exc.detail)})}", status_code=303)
+    return RedirectResponse(f"/plugins/railpack_apps/{app.id}?deployment={deployment.id}", status_code=303)
+
+
+@router.post("/{app_id}/snapshots/{snapshot_id}/rollback")
+async def rollback_snapshot(app_id: int, snapshot_id: int, request: Request, db: AsyncSession = Depends(get_db)):
+    app = await _app(db, app_id)
+    snapshot = await db.get(ContainerAppSnapshot, snapshot_id)
+    if snapshot is None or snapshot.app_id != app.id or snapshot.state != "superseded":
+        raise HTTPException(400, "Only a prior active snapshot can be rolled back.")
+    deployment = await container_app_deployment_service.queue_deployment(db, app, action="rollback", snapshot_id=snapshot.id)
+    await db.commit()
+    return RedirectResponse(f"/plugins/railpack_apps/{app.id}?deployment={deployment.id}", status_code=303)
+
+
+@router.post("/{app_id}/snapshots/{snapshot_id}/discard")
+async def discard_snapshot(app_id: int, snapshot_id: int, request: Request, db: AsyncSession = Depends(get_db)):
+    app = await _app(db, app_id)
+    if await container_app_deployment_service.active_deployment(db, app.id):
+        raise HTTPException(409, "Deployment snapshot cannot be discarded while a deployment is running.")
+    snapshot = await db.get(ContainerAppSnapshot, snapshot_id)
+    if snapshot is None or snapshot.app_id != app.id or snapshot.state != "pending":
+        raise HTTPException(400, "Only a pending deployment snapshot can be discarded.")
+    snapshot.state = "discarded"
+    if app.pending_snapshot_id == snapshot.id:
+        app.pending_snapshot_id = None
+    await db.commit()
+    return RedirectResponse(f"/plugins/railpack_apps/{app.id}", status_code=303)
+
+
+@router.post("/{app_id}/credentials/{credential_id}/reveal")
+async def reveal_credential(app_id: int, credential_id: int, request: Request, action: str = "reveal", db: AsyncSession = Depends(get_db)):
+    app = await _app(db, app_id)
+    try:
+        credential, password = await secret_vault.reveal_credential(
+            db, app.id, credential_id, action=action, user_id=request.session.get("user_id"),
+        )
+        await db.commit()
+    except ValueError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    return JSONResponse({"username": credential.username, "password": password}, headers={"Cache-Control": "no-store"})
 
 
 @router.post("/{app_id}/deployments/{deployment_id}/cancel")
@@ -200,36 +281,40 @@ async def update_settings(
     from dependencies.git import repository_service
     from services import container_app_service
 
+    patch: dict[str, object] = {}
     if git_ref is not None and app.source_type == "git":
         ref_type = git_ref_type or app.git_ref_type or "branch"
         repository_service.validate_source(app.repository_url or "", git_ref.strip(), ref_type)
-        app.git_ref = git_ref.strip()
-        app.branch = app.git_ref
-        app.git_ref_type = ref_type
+        patch.update({"git_ref": git_ref.strip(), "branch": git_ref.strip(), "git_ref_type": ref_type})
     if root_directory is not None:
-        app.root_directory = container_app_service.validate_root_directory(root_directory)
+        patch["root_directory"] = container_app_service.validate_root_directory(root_directory)
     if dockerfile_path is not None:
-        app.dockerfile_path = container_app_service.validate_dockerfile_path(dockerfile_path)
+        patch["dockerfile_path"] = container_app_service.validate_dockerfile_path(dockerfile_path)
     if build_args is not None:
-        app.build_args = container_app_service.parse_build_args(build_args)
+        patch["build_args"] = container_app_service.parse_build_args(build_args)
     if build_secret_keys is not None:
-        app.build_secret_keys = container_app_service.parse_build_secret_keys(build_secret_keys)
+        patch["build_secret_keys"] = container_app_service.parse_build_secret_keys(build_secret_keys)
     if custom_start_command is not None:
-        app.custom_start_command = container_app_service.validate_custom_start_command(custom_start_command)
+        patch["custom_start_command"] = container_app_service.validate_custom_start_command(custom_start_command)
     if health_path is not None:
-        app.health_path = container_app_service.validate_health_path(health_path)
+        patch["health_path"] = container_app_service.validate_health_path(health_path)
     if startup_timeout_seconds is not None:
-        app.startup_timeout_seconds = container_app_service.validate_startup_timeout(startup_timeout_seconds)
+        patch["startup_timeout_seconds"] = container_app_service.validate_startup_timeout(startup_timeout_seconds)
     if storage_mounts is not None:
         new_mounts_json = container_app_service.parse_storage_mounts(app.id, storage_mounts)
-        app.storage_mounts = new_mounts_json
+        patch["storage_mounts"] = new_mounts_json
 
+    if app.pending_snapshot_id:
+        previous = await db.get(ContainerAppSnapshot, app.pending_snapshot_id)
+        if previous and previous.state == "pending":
+            previous.state = "discarded"
+    await snapshots.create_snapshot(db, app, config_patch=patch, created_by_user_id=request.session.get("user_id"))
     await db.commit()
 
     if "application/json" in request.headers.get("accept", ""):
         return JSONResponse({"status": "ok", "app_id": app.id})
     return RedirectResponse(
-        f"/plugins/railpack_apps/{app.id}?{urlencode({'notice': 'Settings updated. Redeploy to apply storage changes; removed storage data is preserved until DELETE ALL.'})}",
+        f"/plugins/railpack_apps/{app.id}?{urlencode({'notice': 'Settings saved as a pending deployment snapshot. Deploy candidate to apply them.'})}",
         status_code=303,
     )
 
@@ -288,6 +373,25 @@ async def _app(db: AsyncSession, app_id: int) -> ContainerApp:
     if app is None:
         raise HTTPException(404, "Container app not found.")
     return app
+
+
+async def _pending_draft(db: AsyncSession, app_id: int, user_id: int | None) -> dict | None:
+    if user_id is None:
+        return None
+    plans = list((await db.scalars(select(AiActionPlan).where(
+        AiActionPlan.action_type == "container_app_patch",
+        AiActionPlan.status == "awaiting_approval",
+        AiActionPlan.user_id == user_id,
+    ).order_by(AiActionPlan.id.desc()).limit(20))).all())
+    for plan in plans:
+        try:
+            payload = json.loads(plan.payload_json)
+        except (TypeError, ValueError):
+            continue
+        if payload.get("app_id") == app_id:
+            return {"plan_id": plan.plan_id, "summary": plan.summary, "confidence": plan.confidence,
+                    "reasoning": plan.reasoning, "payload": payload}
+    return None
 
 
 def _optional_deployment_id(value: str | None) -> int | None:

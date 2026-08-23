@@ -1,0 +1,257 @@
+"""Immutable configuration snapshots for Railpack build-then-swap deployments."""
+from __future__ import annotations
+
+import asyncio
+import copy
+import hashlib
+import json
+from pathlib import Path
+import secrets
+import shutil
+from types import SimpleNamespace
+from typing import Any
+
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from models.container_app import ContainerApp
+from models.container_app_database import ContainerAppDatabase
+from models.container_app_secret import ContainerAppCredential
+from models.container_app_snapshot import ContainerAppSnapshot
+from services import container_app_service as apps
+from services import container_app_image_inspect_service
+from services.apps_engine import build_secrets, secret_vault
+from dependencies.git import repository_service
+
+
+CONFIG_FIELDS = (
+    "source_type", "build_mode", "repository_url", "branch", "image_reference", "internal_port",
+    "data_volume", "data_mount_path", "storage_mounts", "git_ref", "git_ref_type", "deploy_key_path",
+    "root_directory", "dockerfile_path", "build_args", "build_secret_keys", "custom_start_command",
+    "health_path", "startup_timeout_seconds", "database_mode", "database_provider", "database_name",
+    "database_user", "preset", "wordpress_content_volume", "wordpress_site_title", "wordpress_admin_user",
+    "wordpress_admin_email", "cpu_limit", "memory_limit_mb", "pid_limit", "ssl_requested",
+)
+
+
+def _read_environment(app: ContainerApp) -> dict[str, str]:
+    path = Path(app.env_path)
+    if not path.is_file():
+        return {}
+    values: dict[str, str] = {}
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if "=" not in line or line.lstrip().startswith("#"):
+            continue
+        key, value = line.split("=", 1)
+        if key.strip():
+            values[key.strip()] = value.strip()
+    return values
+
+
+def _source_identity(config: dict[str, Any]) -> str:
+    if config.get("source_type") == "image":
+        return f"image:{config.get('image_reference') or ''}"
+    ref = config.get("git_ref") or config.get("branch") or "main"
+    return f"git:{config.get('repository_url') or ''}@{ref}"
+
+
+def _resolve_git_revision(app: ContainerApp, config: dict[str, Any]) -> str:
+    ref = str(config.get("git_ref") or config.get("branch") or "main")
+    ref_type = str(config.get("git_ref_type") or "branch")
+    stable_current = (
+        app.deployed_revision and ref == (app.git_ref or app.branch or "main")
+        and ref_type == (app.git_ref_type or "branch")
+    )
+    if stable_current:
+        return app.deployed_revision
+    target = apps.root(app.id) / "snapshots" / f"resolve-{secrets.token_hex(8)}" / "source"
+    try:
+        checkout = repository_service.clone(
+            str(config.get("repository_url") or ""), ref, target,
+            git_ref_type=ref_type, ssh_key_path=app.deploy_key_path, allow_default_branch=False,
+        )
+        return checkout.revision.sha
+    finally:
+        shutil.rmtree(target.parent, ignore_errors=True)
+
+
+def _fingerprint(config: dict[str, Any], environment: dict[str, str], versions: dict[str, int]) -> str:
+    private_hash = hashlib.sha256(json.dumps(environment, sort_keys=True).encode("utf-8")).hexdigest()
+    data = {"config": config, "environment_hash": private_hash, "secret_versions": versions}
+    return hashlib.sha256(json.dumps(data, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
+
+
+def _clean_requirement(item: object) -> dict[str, Any] | None:
+    if not isinstance(item, dict):
+        return None
+    key = str(item.get("key") or "").strip()
+    if not key or not build_secrets.ENV_KEY_RE.fullmatch(key):
+        raise ValueError("Secret requirements must use safe uppercase environment names.")
+    purpose = str(item.get("purpose") or "Application secret").strip()[:255]
+    result: dict[str, Any] = {"key": key, "purpose": purpose, "rotate": bool(item.get("rotate"))}
+    credential = item.get("credential")
+    if credential is not None:
+        if not isinstance(credential, dict):
+            raise ValueError("Credential metadata is invalid.")
+        username = str(credential.get("username") or "").strip()
+        label = str(credential.get("label") or "Access credentials").strip()
+        if not username:
+            raise ValueError("Generated access credential requires a documented username.")
+        result["credential"] = {"username": username[:255], "label": label[:128]}
+    return result
+
+
+def normalize_secret_requirements(values: object) -> list[dict[str, Any]]:
+    if values in (None, []):
+        return []
+    if not isinstance(values, list) or len(values) > 32:
+        raise ValueError("Secret requirements must be a list of at most 32 names.")
+    return [item for raw in values if (item := _clean_requirement(raw)) is not None]
+
+
+async def create_snapshot(
+    db: AsyncSession,
+    app: ContainerApp,
+    *,
+    config_patch: dict[str, Any] | None = None,
+    environment_patch: dict[str, str] | None = None,
+    secret_requirements: list[dict[str, Any]] | None = None,
+    state: str = "pending",
+    plan_id: str | None = None,
+    created_by_user_id: int | None = None,
+) -> tuple[ContainerAppSnapshot, list[dict[str, Any]]]:
+    """Capture complete deployment input. Generated values remain encrypted server-side."""
+    config = {field: copy.deepcopy(getattr(app, field, None)) for field in CONFIG_FIELDS}
+    for key, value in (config_patch or {}).items():
+        if key not in CONFIG_FIELDS:
+            raise ValueError(f"Unsupported App Engine configuration field: {key}.")
+        config[key] = value
+    attachments = list((await db.scalars(select(ContainerAppDatabase).where(
+        ContainerAppDatabase.app_id == app.id,
+    ).order_by(ContainerAppDatabase.id))).all())
+    config["database_attachments"] = [
+        {"id": item.id, "kind": item.kind, "provider": item.provider, "environment_key": item.environment_key,
+         "database_name": item.database_name, "username": item.username, "status": item.status}
+        for item in attachments
+    ]
+    environment = _read_environment(app)
+    for key, value in (environment_patch or {}).items():
+        if not build_secrets.ENV_KEY_RE.fullmatch(key) or not isinstance(value, str):
+            raise ValueError("Environment patch contains an invalid value.")
+        environment[key] = value
+
+    versions: dict[str, int] = {}
+    statuses: list[dict[str, Any]] = []
+    for item in normalize_secret_requirements(secret_requirements):
+        record, created = await secret_vault.ensure_secret(
+            db, app.id, item["key"], item["purpose"], rotate=item["rotate"],
+        )
+        environment[item["key"]] = await secret_vault.secret_value(db, record.id)
+        versions[item["key"]] = record.version
+        statuses.append({"key": item["key"], "purpose": item["purpose"], "status": "created" if created else "reused", "version": record.version})
+        if item.get("credential") and created:
+            credential = item["credential"]
+            await secret_vault.create_credential(db, app.id, credential["label"], credential["username"], record.id)
+
+    source_revision = None
+    image_digest = None
+    if config.get("source_type") == "git":
+        source_revision = await asyncio.to_thread(_resolve_git_revision, app, config)
+    elif config.get("source_type") == "image":
+        if app.image_digest and config.get("image_reference") == app.image_reference:
+            image_digest = app.image_digest
+        else:
+            image_digest = (await container_app_image_inspect_service.inspect_image(
+                str(config.get("image_reference") or ""),
+            )).get("digest")
+    revision = int(getattr(app, "configuration_revision", 1) or 1) + (1 if state == "pending" else 0)
+    fingerprint = _fingerprint(config, environment, versions)
+    snapshot = ContainerAppSnapshot(
+        app_id=app.id,
+        state=state,
+        configuration_revision=revision,
+        source_identity=(f"git:{config.get('repository_url') or ''}@{source_revision}" if source_revision else f"image:{image_digest or config.get('image_reference') or ''}"),
+        source_revision=source_revision,
+        image_digest=image_digest,
+        config_json=json.dumps(config, sort_keys=True),
+        environment_encrypted=secret_vault.encrypt(json.dumps(environment, sort_keys=True)),
+        secret_versions_json=json.dumps(versions, sort_keys=True),
+        fingerprint=fingerprint,
+        plan_id=plan_id,
+        created_by_user_id=created_by_user_id,
+    )
+    db.add(snapshot)
+    await db.flush()
+    if state == "pending":
+        app.pending_snapshot_id = snapshot.id
+    elif state == "active":
+        app.active_snapshot_id = snapshot.id
+    return snapshot, statuses
+
+
+async def baseline_snapshot(db: AsyncSession, app: ContainerApp) -> ContainerAppSnapshot:
+    if app.active_snapshot_id:
+        snapshot = await db.get(ContainerAppSnapshot, app.active_snapshot_id)
+        if snapshot:
+            return snapshot
+    snapshot, _ = await create_snapshot(db, app, state="active")
+    return snapshot
+
+
+async def get_snapshot(db: AsyncSession, app: ContainerApp, snapshot_id: int | None = None) -> ContainerAppSnapshot:
+    target = snapshot_id or app.pending_snapshot_id or app.active_snapshot_id
+    snapshot = await db.get(ContainerAppSnapshot, target) if target else None
+    if snapshot is None or snapshot.app_id != app.id:
+        if snapshot_id:
+            raise ValueError("Deployment snapshot was not found for this app.")
+        snapshot = await baseline_snapshot(db, app)
+    return snapshot
+
+
+def runtime_app(app: ContainerApp, snapshot: ContainerAppSnapshot) -> SimpleNamespace:
+    """Detached runtime view prevents an unverified candidate changing active settings."""
+    values = {column.name: copy.deepcopy(getattr(app, column.name)) for column in ContainerApp.__table__.columns}
+    values.update(json.loads(snapshot.config_json))
+    if values.get("source_type") == "git":
+        values["deployed_revision"] = snapshot.source_revision
+    elif snapshot.image_digest:
+        values["image_reference"] = snapshot.image_digest
+    return SimpleNamespace(**values)
+
+
+async def materialize_environment(db: AsyncSession, app: ContainerApp, snapshot: ContainerAppSnapshot) -> None:
+    environment = json.loads(secret_vault.decrypt(snapshot.environment_encrypted))
+    if not isinstance(environment, dict) or any(not isinstance(k, str) or not isinstance(v, str) for k, v in environment.items()):
+        raise RuntimeError("Snapshot environment is invalid.")
+    apps.write_env(Path(app.env_path), environment)
+
+
+async def promote_snapshot(
+    db: AsyncSession, app: ContainerApp, snapshot: ContainerAppSnapshot, runtime: SimpleNamespace,
+) -> None:
+    old = await db.get(ContainerAppSnapshot, app.active_snapshot_id) if app.active_snapshot_id else None
+    if old and old.id != snapshot.id:
+        old.state = "superseded"
+    for field in CONFIG_FIELDS:
+        setattr(app, field, getattr(runtime, field, None))
+    app.image_digest = getattr(runtime, "image_digest", app.image_digest)
+    app.deployed_revision = getattr(runtime, "deployed_revision", app.deployed_revision)
+    app.configuration_revision = snapshot.configuration_revision
+    app.active_snapshot_id = snapshot.id
+    app.pending_snapshot_id = None if app.pending_snapshot_id == snapshot.id else app.pending_snapshot_id
+    snapshot.state = "active"
+    if runtime.source_type == "image":
+        snapshot.image_digest = runtime.image_digest
+    else:
+        snapshot.source_revision = runtime.deployed_revision
+
+
+async def mark_failed(snapshot: ContainerAppSnapshot, error: str) -> None:
+    snapshot.state = "failed"
+    snapshot.failure_fingerprint = hashlib.sha256(error[:2000].encode("utf-8")).hexdigest()
+
+
+async def credentials_for(db: AsyncSession, app_id: int) -> list[ContainerAppCredential]:
+    return list((await db.scalars(select(ContainerAppCredential).where(
+        ContainerAppCredential.app_id == app_id,
+    ).order_by(ContainerAppCredential.id.desc()))).all())

@@ -200,6 +200,7 @@ async def stream_ai_chat(
     model_name: Optional[str] = None,
     task_type: Optional[str] = "general",
     session_title: Optional[str] = None,
+    user_id: Optional[int] = None,
 ) -> AsyncGenerator[str, None]:
     """
     Multi-turn streaming chat pipeline with tool calling support:
@@ -350,6 +351,7 @@ async def stream_ai_chat(
                                 tool_name=fn_name,
                                 arguments=fn_args,
                                 session_id=session_id,
+                                user_id=user_id,
                                 secrets_allowed=secrets_allowed,
                             )
                             yield _activity_event(fn_name, "done", fn_args)
@@ -382,6 +384,7 @@ async def stream_ai_chat(
                                 tool_name=fn_name,
                                 arguments=fn_args,
                                 session_id=session_id,
+                                user_id=user_id,
                                 secrets_allowed=secrets_allowed,
                             )
                             yield _activity_event(fn_name, "done", fn_args)
@@ -433,6 +436,7 @@ async def stream_ai_chat(
                                 tool_name=fn_name,
                                 arguments=fn_args,
                                 session_id=session_id,
+                                user_id=user_id,
                                 secrets_allowed=secrets_allowed,
                             )
                             yield _activity_event(fn_name, "done", fn_args)
@@ -510,4 +514,3 @@ async def stream_ai_chat(
         session_record.message_count += 1
         session_record.updated_at = datetime.now(tz=timezone.utc)
         await db.commit()
-

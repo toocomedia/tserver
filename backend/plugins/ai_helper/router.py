@@ -304,7 +304,7 @@ async def fetch_models_endpoint(req: FetchModelsRequest, db: AsyncSession = Depe
 
 
 @router.post("/api/chat")
-async def chat_endpoint(req: ChatRequest, db: AsyncSession = Depends(get_db)):
+async def chat_endpoint(req: ChatRequest, request: Request, db: AsyncSession = Depends(get_db)):
     session_id = req.session_id or f"session_{uuid.uuid4().hex[:12]}"
 
     # If frontend explicitly sends allow_secrets=True, grant consent immediately
@@ -324,6 +324,7 @@ async def chat_endpoint(req: ChatRequest, db: AsyncSession = Depends(get_db)):
             model_name=req.model_name,
             task_type=req.task_type or "general",
             session_title=req.session_title,
+            user_id=request.session.get("user_id"),
         ):
             chunks.append(chunk)
         return JSONResponse({
@@ -345,6 +346,7 @@ async def chat_endpoint(req: ChatRequest, db: AsyncSession = Depends(get_db)):
             model_name=req.model_name,
             task_type=req.task_type or "general",
             session_title=req.session_title,
+            user_id=request.session.get("user_id"),
         ):
             if chunk.startswith(_ACTIVITY_PREFIX):
                 # Route tool activity events separately — don't include in text stream
@@ -483,10 +485,10 @@ async def get_session_history(session_id: str, db: AsyncSession = Depends(get_db
 # -------------------------------------------------------------
 
 @router.get("/api/action-plans/{plan_id}")
-async def get_action_plan_endpoint(plan_id: str, db: AsyncSession = Depends(get_db)):
+async def get_action_plan_endpoint(plan_id: str, request: Request, db: AsyncSession = Depends(get_db)):
     """Retrieves validated, server-side action plan details by opaque ID."""
     from plugins.ai_helper.services import action_plans
-    plan = await action_plans.get_action_plan(db, plan_id)
+    plan = await action_plans.get_action_plan(db, plan_id, user_id=request.session.get("user_id"))
     if not plan:
         raise HTTPException(404, "Action plan not found or expired.")
     return JSONResponse({"status": "ok", "plan": plan})
@@ -502,4 +504,3 @@ async def mark_action_plan_applied_endpoint(plan_id: str, request: Request, db: 
         return JSONResponse(res)
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
-

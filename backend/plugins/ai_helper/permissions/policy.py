@@ -34,9 +34,12 @@ TOOL_CATEGORY_MAP: Dict[str, str] = {
     "read_website_file": "files",
     "fetch_web_documentation": "web",
     "inspect_app_source": "apps",
+    "search_app_source": "apps",
+    "read_app_source_file": "apps",
+    "inspect_official_image": "apps",
     "propose_app_install": "app_deploy",
+    "propose_container_app_patch": "app_deploy",
     "propose_file_edit": "file_edits",
-    "redeploy_app": "apps",
 }
 
 

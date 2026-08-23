@@ -13,6 +13,7 @@
 <form class="wizard-form apps-engine-wizard" method="post" action="/plugins/railpack_apps/create" data-railpack-builder>
   {% include "partials/csrf_field.html" %}
   <input type="hidden" name="environment_values" value="{}" data-environment-values>
+  <input type="hidden" name="secret_requirements" value="[]" data-secret-requirements>
   <input type="hidden" name="database_attachments" value="[]" data-database-attachments>
   <input type="hidden" name="storage_mounts" value="[]" data-storage-mounts>
   <input type="hidden" name="preset" value="" data-preset>

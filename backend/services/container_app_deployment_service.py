@@ -21,6 +21,7 @@ from services import container_app_service as apps
 from services import container_app_deployment_progress_service as progress
 from services import container_app_build_process_service as build_process
 from services.apps_engine import build_secrets
+from services.apps_engine import snapshots
 from services.resource_guard_service import resource_guard_service
 from services.resource_guard_operation_service import resource_guard_operation_service
 from services.resource_guard_profiles import classify_deployment
@@ -69,8 +70,10 @@ async def active_deployment(db: AsyncSession, app_id: int) -> ContainerAppDeploy
     ).order_by(ContainerAppDeployment.id.desc()))
 
 
-async def queue_deployment(db: AsyncSession, app: ContainerApp, action: str = "deploy") -> ContainerAppDeployment:
-    if action not in {"deploy", "redeploy"}:
+async def queue_deployment(
+    db: AsyncSession, app: ContainerApp, action: str = "deploy", *, snapshot_id: int | None = None,
+) -> ContainerAppDeployment:
+    if action not in {"deploy", "redeploy", "retry", "rollback"}:
         raise HTTPException(400, "Unsupported deployment action.")
     active = await db.scalar(select(ContainerAppDeployment.id).where(
         ContainerAppDeployment.app_id == app.id,
@@ -78,12 +81,21 @@ async def queue_deployment(db: AsyncSession, app: ContainerApp, action: str = "d
     ))
     if active:
         raise HTTPException(409, "A deployment is already running for this app.")
-    profile = classify_deployment(app)
+    try:
+        snapshot = await snapshots.get_snapshot(db, app, snapshot_id)
+    except (ValueError, RuntimeError) as exc:
+        raise HTTPException(400, str(exc)) from exc
+    if snapshot.state == "discarded":
+        raise HTTPException(409, "Discarded deployment snapshot cannot be deployed.")
+    profile = classify_deployment(snapshots.runtime_app(app, snapshot))
     preflight = await resource_guard_service.preflight(db, profile)
     is_build_queue = "build is already running" in preflight["reason"].lower()
     if not preflight["ok"] and not is_build_queue:
         raise HTTPException(409, preflight["reason"])
-    deployment = ContainerAppDeployment(app_id=app.id, action=action, profile=profile)
+    deployment = ContainerAppDeployment(
+        app_id=app.id, action=action, profile=profile,
+        snapshot_id=snapshot.id, snapshot_fingerprint=snapshot.fingerprint,
+    )
     db.add(deployment)
     await db.flush()
     domain = await db.get(Domain, app.domain_id)
@@ -131,31 +143,51 @@ async def _deploy_after_commit(deployment_id: int, token: int, operation_id: int
             await db.commit()
             await advance_queue()
             return
+        try:
+            snapshot = await snapshots.get_snapshot(db, app, deployment.snapshot_id)
+            prior_snapshot = await snapshots.get_snapshot(db, app, app.active_snapshot_id)
+            runtime = snapshots.runtime_app(app, snapshot)
+            prior_runtime = snapshots.runtime_app(app, prior_snapshot)
+            await snapshots.materialize_environment(db, app, snapshot)
+        except Exception as exc:
+            deployment.status, deployment.stage, deployment.error = "failed", "prepare", str(exc)
+            app.last_error = str(exc)
+            deployment.finished_at = datetime.utcnow()
+            await resource_guard_operation_service.finish(db, operation_id, "failed")
+            await db.commit()
+            resource_guard_service.unregister(token)
+            await advance_queue()
+            return
         deployment.status, deployment.started_at = "running", datetime.utcnow()
         await progress.stage(db, deployment, "prepare", "Preparing deployment.")
-        running_image, replacement_started = app.image_digest or app.image_reference, False
+        running_image, replacement_started = prior_runtime.image_digest or prior_runtime.image_reference, False
         try:
-            image = await _prepare_image(db, app, deployment)
+            image = await _prepare_image(db, runtime, deployment)
+            if runtime.source_type == "image":
+                snapshot.image_digest = runtime.image_digest
+            else:
+                snapshot.source_revision = runtime.deployed_revision
             await progress.stage(db, deployment, "start", "Starting application container.")
-            await asyncio.to_thread(_replace_container, app, image)
+            await asyncio.to_thread(_replace_container, runtime, image)
             replacement_started = True
             await progress.stage(db, deployment, "health", "Checking the private HTTP endpoint.")
             await progress.wait_for_http(
-                app.host_port,
-                path=app.health_path or "/",
-                timeout_seconds=app.startup_timeout_seconds or 45,
+                runtime.host_port,
+                path=runtime.health_path or "/",
+                timeout_seconds=runtime.startup_timeout_seconds or 45,
             )
             from services import container_app_control_service
             await progress.stage(db, deployment, "routing", "Publishing the application route.")
-            await container_app_control_service.publish(db, app, domain)
-            if app.preset == "wordpress":
+            await container_app_control_service.publish(db, runtime, domain)
+            if runtime.preset == "wordpress":
                 from services import container_app_wordpress_service
                 await progress.stage(db, deployment, "wordpress", "Finishing WordPress setup.")
-                await asyncio.to_thread(container_app_wordpress_service.install_if_pending, app, domain)
-            if app.ssl_requested:
+                await asyncio.to_thread(container_app_wordpress_service.install_if_pending, runtime, domain)
+            if runtime.ssl_requested:
                 from services import ssl_service
                 await progress.stage(db, deployment, "ssl", "Configuring HTTPS.")
-                await ssl_service.configure_container_app_ssl(db, app, domain)
+                await ssl_service.configure_container_app_ssl(db, runtime, domain)
+            await snapshots.promote_snapshot(db, app, snapshot, runtime)
             app.status, app.last_error, app.deployed_at = "running", None, datetime.utcnow()
             deployment.status = "success"
             await progress.stage(db, deployment, "complete", "Deployment complete.")
@@ -164,8 +196,10 @@ async def _deploy_after_commit(deployment_id: int, token: int, operation_id: int
             progress.append_log(deployment, "cancelled", str(exc))
             app.status, app.last_error = ("running", None) if await asyncio.to_thread(_container_running, app) else ("failed", str(exc))
         except Exception as exc:
-            deployment.output = (deployment.output + await asyncio.to_thread(progress.container_logs, app))[-80_000:]
-            restored = await _restore_previous(app, domain, db, running_image, replacement_started, deployment)
+            deployment.output = (deployment.output + await asyncio.to_thread(progress.container_logs, runtime))[-80_000:]
+            await snapshots.materialize_environment(db, app, prior_snapshot)
+            restored = await _restore_previous(prior_runtime, domain, db, running_image, replacement_started, deployment)
+            await snapshots.mark_failed(snapshot, str(exc))
             app.status, app.last_error = ("running", None) if restored else ("failed", str(exc)[:1000])
             deployment.status, deployment.error = "failed", str(exc)[:2000]
             deployment.output = (deployment.output + f"[error] {exc}\n")[-80_000:]
@@ -399,6 +433,7 @@ def _build_or_pull(app: ContainerApp, deployment: ContainerAppDeployment) -> str
         getattr(app, "repository_url", None) or "",
         ref,
         source,
+        revision=getattr(app, "deployed_revision", None),
         git_ref_type=ref_type,
         ssh_key_path=getattr(app, "deploy_key_path", None),
         allow_default_branch=True,
@@ -448,7 +483,7 @@ def _build_or_pull(app: ContainerApp, deployment: ContainerAppDeployment) -> str
     else:
         # Railpack: ensure BuildKit daemon is running with host.docker.internal gateway
         _ensure_buildkit_daemon()
-        # Declare secrets by name in railpack.json; pass values via process env
+        # Declare selected secret names. Values are private process environment only.
         env_vars = _read_app_env(app)
         if "PORT" not in env_vars:
             env_vars["PORT"] = str(getattr(app, "internal_port", None) or 3000)
@@ -466,42 +501,15 @@ def _build_or_pull(app: ContainerApp, deployment: ContainerAppDeployment) -> str
         except ValueError as exc:
             raise RuntimeError(str(exc)) from exc
         declared_secrets = build_secrets.get_declared_secrets(build_root)
-        all_secret_names = list(dict.fromkeys([*secret_names, *declared_secrets, *env_vars.keys()]))
+        all_secret_names = list(dict.fromkeys([*secret_names, *declared_secrets]))
         command = ["railpack", "build", "--name", image]
+        build_env = {key: env_vars[key] for key in ("PORT", "HOST", "NODE_ENV", "SKIP_DB_CHECK") if key in env_vars}
+        missing_secrets = [key for key in all_secret_names if not env_vars.get(key)]
+        if missing_secrets:
+            raise RuntimeError(f"Required build secrets are missing: {', '.join(missing_secrets)}.")
         if all_secret_names:
             _inject_railpack_secrets(build_root, all_secret_names)
-            build_env = {}
-            newly_generated = False
-            for key in all_secret_names:
-                if key in env_vars and env_vars[key]:
-                    val = str(env_vars[key])
-                elif key == "DATABASE_URL":
-                    # Build-time dummy for Prisma/Next.js generation if DB not yet connected
-                    val = "postgresql://postgres:postgres@127.0.0.1:5432/umami"
-                elif key in ("REDIS_URL", "MYSQL_URL"):
-                    val = "redis://127.0.0.1:6379"
-                elif key == "PORT":
-                    val = str(getattr(app, "internal_port", None) or 3000)
-                elif key == "HOST":
-                    val = "0.0.0.0"
-                elif key == "NODE_ENV":
-                    val = "production"
-                elif key == "SKIP_DB_CHECK":
-                    val = "1"
-                elif any(s in key.upper() for s in ("SECRET", "SALT", "KEY_BASE", "JWT", "PASSWORD", "AUTH_KEY")):
-                    import secrets as _secrets
-                    val = _secrets.token_urlsafe(32)
-                    env_vars[key] = val
-                    newly_generated = True
-                else:
-                    val = "build_placeholder"
-                build_env[key] = val
-                command.extend(["--env", f"{key}={val}"])
-            if newly_generated and getattr(app, "env_path", None):
-                try:
-                    apps.write_env(Path(app.env_path), env_vars)
-                except Exception:
-                    pass
+            build_env.update({key: env_vars[key] for key in all_secret_names})
         command.append(str(build_root))
 
     progress.append_log(deployment, "build", "Building application image.")

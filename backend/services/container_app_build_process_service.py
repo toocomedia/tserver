@@ -7,6 +7,7 @@ import threading
 
 import config
 from services.apps_engine import build_workspace
+from services.apps_engine import build_secrets
 
 import time
 
@@ -37,6 +38,15 @@ def run(deployment_id: int, command: list[str], timeout: int, env: dict[str, str
     proc_env = os.environ.copy()
     if env:
         proc_env.update(env)
+    sensitive_values = [
+        value for key, value in (env or {}).items()
+        if value and (key in build_secrets.LEGACY_SECRET_NAMES or key.endswith(build_secrets.LEGACY_SECRET_SUFFIXES))
+    ]
+
+    def redact(line: str) -> str:
+        for value in sensitive_values:
+            line = line.replace(value, "[REDACTED]")
+        return line
     if command and command[0] == "railpack":
         proc_env["BUILDKIT_HOST"] = "docker-container://srv-panel-buildkit"
         workspace = build_workspace.prepare(deployment_id)
@@ -66,6 +76,7 @@ def run(deployment_id: int, command: list[str], timeout: int, env: dict[str, str
     def _read_stream(stream, chunks_list):
         try:
             for line in iter(stream.readline, ""):
+                line = redact(line)
                 chunks_list.append(line)
                 with _lock:
                     if deployment_id in _live_output:

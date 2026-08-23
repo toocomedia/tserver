@@ -11,12 +11,6 @@
     </div>
   </div>
   <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
-    {% if app.status not in ['deleting', 'delete_failed'] and not deployment_active %}
-      {% if app.status == 'pending' %}<form method="post" action="/plugins/railpack_apps/{{ app.id }}/deploy" style="margin:0;">{% include "partials/csrf_field.html" %}<button class="btn btn--accent btn--sm">Deploy app</button></form>{% endif %}
-      {% if app.status in ['failed', 'stopped'] %}<form method="post" action="/plugins/railpack_apps/{{ app.id }}/deploy" style="margin:0;">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary btn--sm">Redeploy</button></form><button type="button" class="btn btn--secondary btn--sm" data-ai-diagnose-app="{{ app.id }}" data-app-name="{{ domain.name if domain else app.container_name }}" style="display:inline-flex; align-items:center; gap:4px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg> Fix & Redeploy with AI</button>{% endif %}
-      {% if app.status == 'running' %}<form method="post" action="/plugins/railpack_apps/{{ app.id }}/deploy" style="margin:0;">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary btn--sm">Redeploy</button></form><form method="post" action="/plugins/railpack_apps/{{ app.id }}/restart" style="margin:0;">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary btn--sm">Restart</button></form><form method="post" action="/plugins/railpack_apps/{{ app.id }}/stop" style="margin:0;">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary btn--sm">Stop</button></form>{% endif %}
-      {% if app.status == 'stopped' %}<form method="post" action="/plugins/railpack_apps/{{ app.id }}/start" style="margin:0;">{% include "partials/csrf_field.html" %}<button class="btn btn--accent btn--sm">Start</button></form>{% endif %}
-    {% endif %}
     {% if deployment_active %}
       <a class="btn btn--secondary btn--sm" href="#deployment">View deployment</a>
       <form method="post" action="/plugins/railpack_apps/{{ app.id }}/cancel-deployment" style="margin:0;">

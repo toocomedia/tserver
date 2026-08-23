@@ -121,7 +121,7 @@ document.querySelectorAll('[data-ai-diagnose-app]').forEach(btn => {
     const appName = btn.getAttribute('data-app-name') || ('App #' + appId);
     const outputEl = document.querySelector('[data-deployment-output]');
     const logSnippet = outputEl ? outputEl.textContent.slice(-2000) : '';
-    const prompt = `Application ${appName} (ID #${appId}) failed or is stopped.\nRecent logs:\n\`\`\`log\n${logSnippet}\n\`\`\`\nPlease diagnose the root cause, explain what is needed, and provide the redeploy action.`;
+    const prompt = `Application ${appName} (ID #${appId}) failed or is stopped.\nRecent logs:\n\`\`\`log\n${logSnippet}\n\`\`\`\nDiagnose source-aware root cause and create a review-only deployment draft if change is justified. Do not deploy or expose secret values.`;
     window.AiHelper.open({
       split: true,
       taskType: 'app_redeploy',
@@ -131,3 +131,25 @@ document.querySelectorAll('[data-ai-diagnose-app]').forEach(btn => {
   });
 });
 
+const csrfToken = document.querySelector('[name="csrf_token"]')?.value
+  || document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
+async function revealCredential(row, action) {
+  const response = await fetch(`${row.dataset.revealUrl}?action=${encodeURIComponent(action)}`, {
+    method: 'POST',
+    headers: { 'X-CSRF-Token': csrfToken, Accept: 'application/json' },
+  });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.detail || 'Could not reveal credentials.');
+  row.querySelector('[data-access-password]').textContent = data.password;
+  return data.password;
+}
+
+document.querySelectorAll('[data-access-credential]').forEach(row => {
+  row.querySelector('[data-credential-show]')?.addEventListener('click', async () => {
+    try { await revealCredential(row, 'reveal'); } catch (error) { window.alert(error.message); }
+  });
+  row.querySelector('[data-credential-copy]')?.addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(await revealCredential(row, 'copy')); } catch (error) { window.alert(error.message); }
+  });
+});

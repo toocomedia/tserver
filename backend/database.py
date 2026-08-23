@@ -262,6 +262,9 @@ def _migrate_sync(sync_conn) -> None:
             "storage_mounts": "TEXT",
             "health_path": "VARCHAR(255) DEFAULT '/' NOT NULL",
             "startup_timeout_seconds": "INTEGER DEFAULT 45 NOT NULL",
+            "configuration_revision": "INTEGER DEFAULT 1 NOT NULL",
+            "active_snapshot_id": "INTEGER",
+            "pending_snapshot_id": "INTEGER",
         }
         for col, ddl in container_columns.items():
             if col not in cols:
@@ -341,6 +344,8 @@ def _migrate_sync(sync_conn) -> None:
             "profile":              "VARCHAR(32)",
             "peak_ram_mb":          "INTEGER",
             "guard_blocked_reason": "TEXT",
+            "snapshot_id": "INTEGER",
+            "snapshot_fingerprint": "VARCHAR(64)",
         }.items():
             if col not in cols:
                 logger.info("Migrating container_app_deployments: add %s", col)
@@ -438,6 +443,8 @@ async def init_db():
     import models.app_environment  # noqa: F401
     import models.container_app  # noqa: F401
     import models.container_app_deployment  # noqa: F401
+    import models.container_app_snapshot  # noqa: F401
+    import models.container_app_secret  # noqa: F401
     import models.container_app_database  # noqa: F401
     import models.container_app_backup  # noqa: F401
     import models.file_manager_event  # noqa: F401
@@ -452,3 +459,5 @@ async def init_db():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
         await conn.run_sync(_migrate_sync)
+    from services.apps_engine.baseline import create_missing_baselines
+    await create_missing_baselines(AsyncSessionLocal)

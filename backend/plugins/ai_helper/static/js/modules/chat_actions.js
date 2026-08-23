@@ -234,8 +234,8 @@
           return;
         }
 
-        // 6a. APP_PLAN / APP_NEXT / APP_DEPLOY / APP_REDEPLOY Action Buttons — apply plan to wizard and guide step-by-step
-        var applyPlanBtn = e.target.closest(".ai-action-btn--apply-plan, .ai-action-btn--big-next, [data-action='APP_PLAN'], [data-action='APP_NEXT'], [data-action='APP_DEPLOY'], [data-action='APP_REDEPLOY'], [data-action='APP_REBUILD']");
+        // App Engine deployment actions cannot be triggered from chat.
+        var applyPlanBtn = e.target.closest(".ai-action-btn--apply-plan, [data-action='APP_NEXT']");
         if (applyPlanBtn) {
           e.preventDefault();
           var actionType = applyPlanBtn.getAttribute("data-action") || "APP_PLAN";

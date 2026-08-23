@@ -1,0 +1,60 @@
+<section class="master-card" id="deployment-changes">
+  <div class="master-card__header">Deployment changes</div>
+  <div class="master-card__body" style="display:flex; flex-direction:column; gap:12px;">
+    {% if pending_plan %}
+      <div class="info-row"><span class="info-row__label">Diagnosis</span><span class="info-row__value">{{ pending_plan.reasoning or pending_plan.summary }}</span></div>
+      <div class="info-row"><span class="info-row__label">Source evidence</span><span class="info-row__value mono">{{ pending_plan.payload.source_identity }}</span></div>
+      {% for key, value in pending_plan.payload.patch.items() %}
+      <div class="info-row"><span class="info-row__label">{{ key | replace('_', ' ') | title }}</span><span class="info-row__value"><span class="text-muted">{{ app | attr(key) }}</span> → {{ value }}</span></div>
+      {% endfor %}
+      {% for secret in pending_plan.payload.secret_requirements %}
+      <div class="info-row"><span class="info-row__label">Secret {{ secret.key }}</span><span class="info-row__value">{{ secret.purpose or 'Application secret' }} · pending</span></div>
+      {% endfor %}
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <form method="post" action="/plugins/railpack_apps/{{ app.id }}/deployment-changes/{{ pending_plan.plan_id }}/apply">{% include "partials/csrf_field.html" %}<button class="btn btn--accent btn--sm">Apply changes</button></form>
+        <button type="button" class="btn btn--secondary btn--sm" data-ai-diagnose-app="{{ app.id }}" data-app-name="{{ domain.name if domain else app.container_name }}">Review AI plan</button>
+      </div>
+    {% else %}
+      <div class="info-row"><span class="info-row__label">Diagnosis</span><span class="info-row__value">No pending AI draft.</span></div>
+      <button type="button" class="btn btn--secondary btn--sm" data-ai-diagnose-app="{{ app.id }}" data-app-name="{{ domain.name if domain else app.container_name }}">Review AI plan</button>
+    {% endif %}
+
+    {% if pending_snapshot %}
+      <div class="info-row"><span class="info-row__label">Candidate snapshot</span><span class="info-row__value mono">#{{ pending_snapshot.id }} · {{ pending_snapshot.fingerprint[:12] }}</span></div>
+      <div class="info-row"><span class="info-row__label">Snapshot status</span><span class="info-row__value">Pending. Old app stays running while candidate builds.</span></div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <form method="post" action="/plugins/railpack_apps/{{ app.id }}/snapshots/{{ pending_snapshot.id }}/deploy">{% include "partials/csrf_field.html" %}<button class="btn btn--accent btn--sm">Deploy candidate</button></form>
+        <form method="post" action="/plugins/railpack_apps/{{ app.id }}/snapshots/{{ pending_snapshot.id }}/discard">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary btn--sm">Discard plan</button></form>
+      </div>
+    {% elif not active_snapshot and app.status == 'pending' %}
+      <div class="info-row"><span class="info-row__label">Snapshot status</span><span class="info-row__value">Baseline snapshot will be encrypted before first deployment.</span></div>
+      <form method="post" action="/plugins/railpack_apps/{{ app.id }}/deploy">{% include "partials/csrf_field.html" %}<button class="btn btn--accent btn--sm">Deploy candidate</button></form>
+    {% endif %}
+
+    {% if active_snapshot %}
+      <div class="info-row"><span class="info-row__label">Active snapshot</span><span class="info-row__value mono">#{{ active_snapshot.id }} · {{ active_snapshot.fingerprint[:12] }}</span></div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        {% if not deployment_active %}
+        <form method="post" action="/plugins/railpack_apps/{{ app.id }}/snapshots/{{ active_snapshot.id }}/deploy">{% include "partials/csrf_field.html" %}<input type="hidden" name="action" value="retry"><button class="btn btn--secondary btn--sm">Retry same snapshot</button></form>
+        {% if app.status == 'stopped' %}<form method="post" action="/plugins/railpack_apps/{{ app.id }}/start">{% include "partials/csrf_field.html" %}<button class="btn btn--accent btn--sm">Start</button></form>{% endif %}
+        {% if rollback_snapshot %}<form method="post" action="/plugins/railpack_apps/{{ app.id }}/snapshots/{{ rollback_snapshot.id }}/rollback">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary btn--sm">Rollback</button></form>{% endif %}
+        {% endif %}
+      </div>
+      <span class="text-muted" style="font-size:12px;">Retry same snapshot changes no settings. It remains manual.</span>
+    {% endif %}
+  </div>
+</section>
+
+{% if credentials %}
+<section class="master-card" id="access-credentials">
+  <div class="master-card__header">Access credentials</div>
+  <div class="master-card__body" style="display:flex; flex-direction:column; gap:10px;">
+    {% for credential in credentials %}
+    <div class="info-row" data-access-credential data-reveal-url="/plugins/railpack_apps/{{ app.id }}/credentials/{{ credential.id }}/reveal">
+      <span class="info-row__label">{{ credential.label }}</span>
+      <span class="info-row__value">{{ credential.username }} · <span class="mono" data-access-password>••••••••</span> <button class="btn btn--secondary btn--sm" type="button" data-credential-show>Show</button> <button class="btn btn--secondary btn--sm" type="button" data-credential-copy>Copy</button></span>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}

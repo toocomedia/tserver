@@ -102,6 +102,22 @@ class TestAiActionPlans(unittest.IsolatedAsyncioTestCase):
                 await action_plans.mark_plan_applied(db, plan.plan_id)
             self.assertIn("expired", str(ctx.exception).lower())
 
+    async def test_owned_plan_rejects_foreign_user_and_tampered_payload(self):
+        payload = {"app_id": 7, "base_configuration_revision": 1, "patch": {"health_path": "/health"}}
+        async with AsyncSessionLocal() as db:
+            plan = await action_plans.create_action_plan(
+                db=db, session_id="test_sess_owner", action_type="container_app_patch",
+                payload=payload, user_id=101,
+            )
+            self.assertIsNone(await action_plans.get_action_plan(db, plan.plan_id, user_id=202))
+            with self.assertRaises(ValueError):
+                await action_plans.mark_plan_applied(db, plan.plan_id, user_id=202)
+            plan.payload_json = json.dumps({"app_id": 7, "patch": {"health_path": "/unsafe"}})
+            await db.commit()
+            with self.assertRaises(ValueError) as ctx:
+                await action_plans.mark_plan_applied(db, plan.plan_id, user_id=101)
+            self.assertIn("integrity", str(ctx.exception).lower())
+
 
 if __name__ == "__main__":
     unittest.main()

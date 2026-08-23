@@ -322,7 +322,7 @@ if (form) {
     if (!isSuccess && window.AiHelper && typeof window.AiHelper.isOpen === "function" && window.AiHelper.isOpen()) {
       const errSnippet = data.error ? `Error: ${data.error}` : "Build/Deployment failed.";
       const logSnippet = (data.output || "").slice(-2000);
-      const prompt = `The application build or deployment failed with:\n${errSnippet}\n\nRecent build logs:\n\`\`\`log\n${logSnippet}\n\`\`\`\nPlease diagnose the root cause, explain what is missing (e.g. environment variable, database, port), and propose a corrected configuration to fix and redeploy.`;
+      const prompt = `The application build or deployment failed with:\n${errSnippet}\n\nRecent build logs:\n\`\`\`log\n${logSnippet}\n\`\`\`\nDiagnose root cause and create a review-only configuration draft if justified. Do not deploy or expose secret values.`;
       if (typeof window.AiHelper.sendMessage === "function") {
         window.AiHelper.sendMessage(prompt);
       }
@@ -344,7 +344,7 @@ if (form) {
     const errText = query('[data-deployment-error-text]')?.textContent || 'Deployment failed';
     const logSnippet = output.slice(-2000);
     const appCtx = state.appId ? ` for App #${state.appId}` : '';
-    const prompt = `The application build or deployment failed${appCtx} with:\nError: ${errText}\n\nRecent build logs:\n\`\`\`log\n${logSnippet}\n\`\`\`\nPlease diagnose the root cause, explain what is missing (e.g. environment variable, database, port), and propose a corrected configuration to fix and redeploy.`;
+    const prompt = `The application build or deployment failed${appCtx} with:\nError: ${errText}\n\nRecent build logs:\n\`\`\`log\n${logSnippet}\n\`\`\`\nDiagnose root cause and create a review-only configuration draft if justified. Do not deploy or expose secret values.`;
     window.AiHelper.open({
       split: true,
       taskType: "app_redeploy",
@@ -578,6 +578,10 @@ if (form) {
         .join("\n");
       parseAndApplyBulkEnv(form, envLines);
     }
+    if (Array.isArray(p.secret_requirements)) {
+      const secretInput = query("[data-secret-requirements]");
+      if (secretInput) secretInput.value = JSON.stringify(p.secret_requirements);
+    }
 
     // 6. Set Database Attachments
     if (Array.isArray(p.database_attachments)) {
@@ -717,4 +721,3 @@ if (form) {
       .catch((err) => console.warn("Could not auto-apply plan from URL:", err));
   }
 }
-

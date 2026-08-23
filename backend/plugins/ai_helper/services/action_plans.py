@@ -77,7 +77,9 @@ async def create_action_plan(
     return plan
 
 
-async def get_action_plan(db: AsyncSession, plan_id: str) -> Optional[Dict[str, Any]]:
+async def get_action_plan(
+    db: AsyncSession, plan_id: str, *, user_id: Optional[int] = None,
+) -> Optional[Dict[str, Any]]:
     """
     Retrieves an action plan by opaque ID.
     Enforces TTL expiration check and returns a structured dictionary.
@@ -85,6 +87,8 @@ async def get_action_plan(db: AsyncSession, plan_id: str) -> Optional[Dict[str, 
     stmt = select(AiActionPlan).where(AiActionPlan.plan_id == plan_id)
     plan = (await db.execute(stmt)).scalar_one_or_none()
     if not plan:
+        return None
+    if plan.user_id is not None and plan.user_id != user_id:
         return None
 
     now = datetime.now(timezone.utc)
@@ -112,13 +116,17 @@ async def get_action_plan(db: AsyncSession, plan_id: str) -> Optional[Dict[str, 
         "payload": parsed_payload,
         "payload_hash": plan.payload_hash,
         "session_id": plan.session_id,
+        "user_id": plan.user_id,
         "is_expired": plan.status == "expired",
         "expires_at": plan.expires_at.isoformat() if plan.expires_at else None,
         "created_at": plan.created_at.isoformat() if plan.created_at else None,
     }
 
 
-async def mark_plan_applied(db: AsyncSession, plan_id: str, user_id: Optional[int] = None) -> Dict[str, Any]:
+async def mark_plan_applied(
+    db: AsyncSession, plan_id: str, user_id: Optional[int] = None,
+    *, expected_hash: str | None = None, expected_action_type: str | None = None,
+) -> Dict[str, Any]:
     """
     Marks a plan as applied (executed / imported into wizard).
     Replay-protected: rejects plans that are not in 'awaiting_approval' status.
@@ -127,6 +135,18 @@ async def mark_plan_applied(db: AsyncSession, plan_id: str, user_id: Optional[in
     plan = (await db.execute(stmt)).scalar_one_or_none()
     if not plan:
         raise ValueError(f"Action plan '{plan_id}' not found.")
+    if plan.user_id is not None and plan.user_id != user_id:
+        raise ValueError("This action plan belongs to another user.")
+    if expected_action_type and plan.action_type != expected_action_type:
+        raise ValueError("Action plan type is not valid for this operation.")
+    if expected_hash and plan.payload_hash != expected_hash:
+        raise ValueError("Action plan payload hash does not match.")
+    try:
+        parsed = json.loads(plan.payload_json)
+    except Exception as exc:
+        raise ValueError("Action plan payload is invalid.") from exc
+    if _compute_hash(parsed) != plan.payload_hash:
+        raise ValueError("Action plan payload integrity check failed.")
 
     if plan.status == "applied":
         raise ValueError("This action plan has already been applied (replay prevented).")

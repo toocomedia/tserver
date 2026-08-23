@@ -16,6 +16,7 @@ from models.hosted_app import HostedApp
 from models.ssl_cert import SslCert
 from services import container_app_database_service, container_app_deployment_service
 from services import container_app_image_inspect_service, container_app_inspection_service, container_app_service, container_app_wordpress_service
+from services.apps_engine import secret_vault, snapshots
 from dependencies.git import repository_service
 from templating import templates
 
@@ -100,7 +101,7 @@ async def inspect_image(image_reference: str = Form(...)):
 async def create(
     request: Request, domain_id: int = Form(...), source_type: str = Form(...), build_mode: str = Form("railpack"),
     repository_url: str = Form(""), branch: str = Form("main"), image_reference: str = Form(""),
-    internal_port: int = Form(3000), ssl: bool = Form(False), environment_values: str = Form("{}"),
+    internal_port: int = Form(3000), ssl: bool = Form(False), environment_values: str = Form("{}"), secret_requirements: str = Form("[]"),
     database_mode: str = Form("none"), database_url: str = Form(""), database_attachments: str = Form(""),
     preset: str = Form(""), wordpress_site_title: str = Form(""), wordpress_admin_user: str = Form(""),
     wordpress_admin_email: str = Form(""), wordpress_admin_password: str = Form(""),
@@ -116,6 +117,10 @@ async def create(
         repo = repository_url.strip()
         if not (repo.startswith("git@") or repo.startswith("ssh://")):
             raise HTTPException(400, "SSH deploy keys require an SSH repository URL (e.g. git@github.com:owner/repo.git).")
+    requested_secrets = _secret_requirements(secret_requirements)
+    if requested_secrets:
+        # Fail before creating databases, app directories, or files when panel key is not persistent.
+        secret_vault.encrypt("")
     domain = await db.get(Domain, domain_id)
     if domain is None:
         raise HTTPException(404, "Domain not found.")
@@ -138,6 +143,10 @@ async def create(
     )
     if preset == "wordpress":
         await _configure_wordpress(app, wordpress_site_title, wordpress_admin_user, wordpress_admin_email, wordpress_admin_password, db)
+    if requested_secrets:
+        await snapshots.create_snapshot(
+            db, app, secret_requirements=requested_secrets, created_by_user_id=request.session.get("user_id"),
+        )
     domain.project_type = "container"
     deployment = await container_app_deployment_service.queue_deployment(db, app)
     await db.commit()
@@ -172,6 +181,16 @@ def _environment_values(raw: str) -> dict[str, str]:
         raise HTTPException(400, "Environment values are invalid.") from exc
     if not isinstance(value, dict) or any(not isinstance(k, str) or not isinstance(v, str) for k, v in value.items()):
         raise HTTPException(400, "Environment values must be a key/value object.")
+    return value
+
+
+def _secret_requirements(raw: str) -> list[dict]:
+    try:
+        value = json.loads(raw or "[]")
+    except json.JSONDecodeError as exc:
+        raise HTTPException(400, "Secret requirements are invalid.") from exc
+    if not isinstance(value, list) or len(value) > 32 or any(not isinstance(item, dict) for item in value):
+        raise HTTPException(400, "Secret requirements are invalid.")
     return value
 
 

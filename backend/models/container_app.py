@@ -56,4 +56,7 @@ class ContainerApp(Base):
     last_error: Mapped[str | None] = mapped_column(Text)
     deployed_revision: Mapped[str | None] = mapped_column(String(64))
     deployed_at: Mapped[datetime | None] = mapped_column(DateTime)
+    configuration_revision: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    active_snapshot_id: Mapped[int | None] = mapped_column(Integer)
+    pending_snapshot_id: Mapped[int | None] = mapped_column(Integer)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)

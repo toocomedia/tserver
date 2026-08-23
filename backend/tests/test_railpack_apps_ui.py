@@ -97,7 +97,8 @@ class RailpackAppsUiTests(unittest.TestCase):
         for value in ("Rotate credentials", "Create backup", "RESTORE", "Update WordPress", "keep_database_ids", "keep_app_volume", "keep_saved_backups", "DELETE ALL"):
             self.assertIn(value, markup)
         self.assertIn("elif app.last_error", markup)
-        self.assertIn("app.status in ['failed', 'stopped']", markup)
+        self.assertIn("Deployment changes", markup)
+        self.assertIn("Retry same snapshot", markup)
 
     def test_ssl_uses_the_domain_certificate_not_the_original_request(self):
         detail = (BACKEND / "plugins" / "railpack_apps" / "templates" / "railpack_apps_detail.html").read_text(encoding="utf-8")
