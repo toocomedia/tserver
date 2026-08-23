@@ -67,6 +67,11 @@ class VisibleOutputTests(unittest.TestCase):
     def test_missing_plan_reports_the_last_safe_validation_error(self):
         self.assertIn("manifest", missing_plan_message(["Stack manifest is invalid."]))
 
+    def test_missing_plan_without_tool_error_is_not_user_retry_instruction(self):
+        message = missing_plan_message([])
+        self.assertIn("server-side planning record", message)
+        self.assertNotIn("retry the setup chat", message)
+
 
 if __name__ == "__main__":
     unittest.main()

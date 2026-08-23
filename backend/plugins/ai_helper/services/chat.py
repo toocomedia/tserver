@@ -333,13 +333,14 @@ async def stream_ai_chat(
     setup_stack_correction_allowed = False
     setup_stack_correction_prompted = False
     setup_stack_correction_reason = ""
+    setup_plan_tool_prompted = False
     if tools_enabled:
         tool_defs = tools.get_tool_definitions(
             active.provider_type,
             tool_names=setup_handoff.SETUP_TOOL_NAMES if setup_plan_required else None,
         )
         tool_counts: Dict[str, int] = {}
-        max_tool_iterations = 4 if setup_plan_required else 6
+        max_tool_iterations = 5 if setup_plan_required else 6
 
         async def _execute_tool(fn_name: str, fn_args: Dict[str, Any]) -> Dict[str, Any]:
             """Execute approved tools while bounding setup-only evidence collection."""
@@ -411,6 +412,14 @@ async def stream_ai_chat(
                             )
                         messages.append({"role": "user", "content": correction_message})
                         setup_stack_correction_prompted = True
+                        setup_plan_tool_prompted = True
+                        continue
+                    if setup_plan_required and not setup_plan_tool_prompted and not setup_plan_id:
+                        messages.append({
+                            "role": "user",
+                            "content": setup_handoff.PLAN_TOOL_REQUIRED_MESSAGE,
+                        })
+                        setup_plan_tool_prompted = True
                         continue
                     break
 

@@ -68,6 +68,13 @@ PLAN_REQUIRED_MESSAGE = (
     "sources, fetch docs, check DNS/SSL, reveal or generate secret values, or emit action tags."
 )
 
+PLAN_TOOL_REQUIRED_MESSAGE = (
+    "This is an App Engine setup request, not a normal answer. You must call exactly "
+    "one reviewed setup planning tool now: propose_app_install for a single app, or "
+    "propose_stack_install when source inspection shows Compose services or unsupported "
+    "single-app datastores. Do not answer in plain text until the planning tool returns."
+)
+
 STACK_CORRECTION_MESSAGE = (
     "The single-app proposal was rejected by server validation because the inspected "
     "source needs private internal stack services. Do not inspect more sources or fetch "
@@ -97,5 +104,5 @@ def missing_plan_message(errors: list[str]) -> str:
         )
     return (
         "No reviewed setup plan was created, so nothing was applied. "
-        "The provider did not call the required planning tool; retry the setup chat."
+        "The provider stopped before creating the required server-side planning record."
     )
