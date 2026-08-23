@@ -206,12 +206,11 @@ def _build_inventory(
     # We run one listing for all images and classify. The legacy dangling-only
     # filter is handled implicitly; repoTag == <none>:<none> => dangling.
     seen_image_ids: set[str] = set()
-    # Primary: all images with repository tag
     result_all = _run(
         ["docker", "images", "--format", "{{.ID}}\t{{.Repository}}:{{.Tag}}\t{{.Size}}\t{{.CreatedAt}}"],
-        timeout=30,
+        timeout=12,
     )
-    if result_all.returncode == 0 and result_all.stdout:
+    if result_all is not None and getattr(result_all, "returncode", 1) == 0 and getattr(result_all, "stdout", None):
         for line in result_all.stdout.splitlines():
             if not line.strip():
                 continue
@@ -266,9 +265,9 @@ def _build_inventory(
         fallback = _run(
             ["docker", "images", "--filter", "dangling=true",
              "--format", "{{.ID}}\t{{.Size}}\t{{.CreatedAt}}"],
-            timeout=30,
+            timeout=10,
         )
-        if fallback.returncode == 0:
+        if fallback is not None and getattr(fallback, "returncode", 1) == 0:
             for line in fallback.stdout.splitlines():
                 parts = line.split("\t", 2)
                 if len(parts) < 1 or not parts[0].strip():
@@ -452,20 +451,19 @@ def _is_docker_size(value: str) -> bool:
 
 def _collect_build_cache_mb() -> float | None:
     """Return aggregate Docker builder cache size in MB, or None if unavailable.
-    Tries `docker buildx du` then `docker builder du` then `docker system df`.
+    Tries `docker buildx du` then `docker builder du`.
     Guarded: output containing tabs (image listing mock) is ignored so unit tests
     that mock _run with image lines do not create a spurious cache item.
+    Timeouts kept short (6s) so inventory stays fast.
     """
     builder_name = getattr(config, "BUILDX_BUILDER_NAME", "") or "srv-panel-builder"
-    # 1) buildx du --builder <name> --format "{{.Size}}"  (newer docker)
+    # Only 2 fast probes — enough on modern docker, avoids 80s worst-case
     for cmd in (
         ["docker", "buildx", "du", "--builder", builder_name],
-        ["docker", "builder", "du", "--format", "{{.Size}}"],
         ["docker", "builder", "du"],
-        ["docker", "system", "df", "--format", "{{.Size}}"],
     ):
         try:
-            res = _run(cmd, timeout=20)
+            res = _run(cmd, timeout=6)
         except Exception:
             continue
         if res.returncode != 0 or not res.stdout:

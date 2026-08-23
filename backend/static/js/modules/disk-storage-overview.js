@@ -173,10 +173,8 @@
     $("btn-prune-builder")?.addEventListener("click", ()=>{
       confirmAction("Prune Docker builder cache? This frees BuildKit cache but does not delete active images.", pruneBuilder, { title:"Prune Builder Cache", okLabel:"Prune cache", danger:false });
     });
-    // Auto-scan once on usage page load (debounced)
-    if($("disk-consumers-section")){
-      setTimeout(scan, 800);
-    }
+    // No auto-scan — user triggers via Scan button to avoid long initial load on slow VPS
+    // Section stays idle until clicked; badge/bar remain hidden.
   });
 
   // Expose for manual refresh from usage inline script
