@@ -26,6 +26,8 @@ def tool_limit_result(
     task_type: str | None,
     tool_name: str,
     tool_counts: Mapping[str, int],
+    *,
+    allow_stack_correction: bool = False,
 ) -> dict[str, str] | None:
     """Avoid repeated slow evidence reads once setup has enough facts to plan."""
     if not requires_reviewed_plan(task_type):
@@ -39,7 +41,11 @@ def tool_limit_result(
                 "image probes, and diagnostics are not part of setup."
             ),
         }
-    if tool_name in _PROPOSAL_TOOLS and any(tool_counts.get(name, 0) for name in _PROPOSAL_TOOLS):
+    if (
+        tool_name in _PROPOSAL_TOOLS
+        and any(tool_counts.get(name, 0) for name in _PROPOSAL_TOOLS)
+        and not (allow_stack_correction and tool_name == "propose_stack_install")
+    ):
         return {
             "status": "limit_reached",
             "message": "This App Engine setup already used its one reviewed setup proposal attempt.",
@@ -61,6 +67,26 @@ PLAN_REQUIRED_MESSAGE = (
     "from the capabilities and source inspection already provided. Do not inspect more "
     "sources, fetch docs, check DNS/SSL, reveal or generate secret values, or emit action tags."
 )
+
+STACK_CORRECTION_MESSAGE = (
+    "The single-app proposal was rejected by server validation because the inspected "
+    "source needs private internal stack services. Do not inspect more sources or fetch "
+    "documentation. Create one restricted stack review plan now with propose_stack_install "
+    "from the existing capabilities and source inspection evidence."
+)
+
+
+def needs_stack_correction(tool_name: str, tool_output: Mapping[str, object]) -> bool:
+    """Whether a rejected single-app proposal should get one stack-plan correction."""
+    if tool_name != "propose_app_install" or tool_output.get("status") == "ok":
+        return False
+    message = str(tool_output.get("message") or "").lower()
+    return (
+        "restricted stack setup plan" in message
+        or "unsupported single-app datastore" in message
+        or "compose service evidence" in message
+    )
+
 
 def missing_plan_message(errors: list[str]) -> str:
     """Give the user the final actionable plan error without exposing tool internals."""

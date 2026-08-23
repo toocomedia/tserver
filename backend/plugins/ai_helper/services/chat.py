@@ -330,18 +330,26 @@ async def stream_ai_chat(
     sensitive_file_blocked = False
     setup_plan_required = tools_enabled and setup_handoff.requires_reviewed_plan(task_type)
     setup_plan_errors: List[str] = []
+    setup_stack_correction_allowed = False
+    setup_stack_correction_prompted = False
+    setup_stack_correction_reason = ""
     if tools_enabled:
         tool_defs = tools.get_tool_definitions(
             active.provider_type,
             tool_names=setup_handoff.SETUP_TOOL_NAMES if setup_plan_required else None,
         )
         tool_counts: Dict[str, int] = {}
-        max_tool_iterations = 3 if setup_plan_required else 6
+        max_tool_iterations = 4 if setup_plan_required else 6
 
         async def _execute_tool(fn_name: str, fn_args: Dict[str, Any]) -> Dict[str, Any]:
             """Execute approved tools while bounding setup-only evidence collection."""
-            nonlocal sensitive_file_blocked
-            limited = setup_handoff.tool_limit_result(task_type, fn_name, tool_counts)
+            nonlocal sensitive_file_blocked, setup_stack_correction_allowed, setup_stack_correction_reason
+            limited = setup_handoff.tool_limit_result(
+                task_type,
+                fn_name,
+                tool_counts,
+                allow_stack_correction=setup_stack_correction_allowed,
+            )
             if limited is not None:
                 return limited
             tool_counts[fn_name] = tool_counts.get(fn_name, 0) + 1
@@ -360,6 +368,9 @@ async def stream_ai_chat(
                     message = str(tool_output.get("message") or "The planning tool rejected this proposal.").strip()
                     if message:
                         setup_plan_errors.append(message)
+                if setup_handoff.needs_stack_correction(fn_name, tool_output):
+                    setup_stack_correction_allowed = True
+                    setup_stack_correction_reason = str(tool_output.get("message") or "").strip()
             return tool_output
 
         for _ in range(max_tool_iterations):
@@ -386,6 +397,21 @@ async def stream_ai_chat(
                     is_text_pseudo_tool = False
 
                 if not tool_calls:
+                    if (
+                        setup_plan_required
+                        and setup_stack_correction_allowed
+                        and not setup_stack_correction_prompted
+                        and not setup_plan_id
+                    ):
+                        correction_message = setup_handoff.STACK_CORRECTION_MESSAGE
+                        if setup_stack_correction_reason:
+                            correction_message = (
+                                f"{correction_message}\n\n"
+                                f"Previous single-app rejection: {setup_stack_correction_reason[:420]}"
+                            )
+                        messages.append({"role": "user", "content": correction_message})
+                        setup_stack_correction_prompted = True
+                        continue
                     break
 
                 tool_was_executed = True

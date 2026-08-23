@@ -3,7 +3,11 @@ from __future__ import annotations
 
 import unittest
 
-from plugins.ai_helper.services.setup_handoff import missing_plan_message, tool_limit_result
+from plugins.ai_helper.services.setup_handoff import (
+    missing_plan_message,
+    needs_stack_correction,
+    tool_limit_result,
+)
 from plugins.ai_helper.services.visible_output import VisibleOutputFilter, strip_hidden_reasoning
 
 
@@ -36,6 +40,29 @@ class VisibleOutputTests(unittest.TestCase):
             tool_limit_result("app_deploy", "propose_stack_install", {"propose_stack_install": 1})["status"],
             "limit_reached",
         )
+        self.assertEqual(
+            tool_limit_result("app_deploy", "propose_stack_install", {"propose_app_install": 1})["status"],
+            "limit_reached",
+        )
+        self.assertIsNone(
+            tool_limit_result(
+                "app_deploy",
+                "propose_stack_install",
+                {"propose_app_install": 1},
+                allow_stack_correction=True,
+            )
+        )
+
+    def test_single_app_datastore_rejection_allows_one_stack_correction(self):
+        output = {
+            "status": "unsupported",
+            "message": (
+                "This repository needs unsupported single-app datastore services "
+                "(clickhouse). Use a restricted stack setup plan with private internal services."
+            ),
+        }
+        self.assertTrue(needs_stack_correction("propose_app_install", output))
+        self.assertFalse(needs_stack_correction("propose_stack_install", output))
 
     def test_missing_plan_reports_the_last_safe_validation_error(self):
         self.assertIn("manifest", missing_plan_message(["Stack manifest is invalid."]))
