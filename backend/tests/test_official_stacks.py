@@ -305,6 +305,35 @@ class TestOfficialStacks(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(ValueError):
             stack_from_proposal(manifest, ["source inspection detected named volumes"])
 
+    def test_server_fallback_builds_stack_args_from_compose_inspection(self):
+        """If the provider stops, the panel can create a generic stack plan from inspection facts."""
+        source_result = {
+            "status": "ok",
+            "source_type": "compose_stack",
+            "inspection": {
+                "repository_url": "https://github.com/example/app",
+                "branch": "main",
+                "internal_port": 8000,
+                "env_sample": {"BASE_URL": "", "SECRET_KEY_BASE": ""},
+                "compose_info": {
+                    "services": [
+                        {"name": "db", "image": "postgres:16-alpine", "internal_ports": []},
+                        {"name": "events", "image": "clickhouse/clickhouse-server:24.12-alpine", "internal_ports": []},
+                        {"name": "web", "image": "example/app:v1.2.3", "internal_ports": [8000]},
+                    ],
+                    "evidence": ["docker-compose.yml: service 'web' uses image 'example/app:v1.2.3'."],
+                },
+            },
+        }
+        args = app_setup.stack_plan_args_from_inspection(source_result, domain_name="stats.example.com")
+        self.assertIsNotNone(args)
+        manifest = args["stack_manifest"]
+        self.assertEqual(manifest["web_service"], "web")
+        self.assertEqual(manifest["web_port"], 8000)
+        self.assertEqual(manifest["services"][0]["volumes"][0]["mount_path"], "/var/lib/postgresql/data")
+        self.assertIn({"key": "SECRET_KEY_BASE", "purpose": "Application secret", "generator": "base64_48", "service": "web", "environment": "SECRET_KEY_BASE"}, manifest["secrets"])
+        self.assertEqual(args["nonsecret_settings"]["BASE_URL"], "https://stats.example.com")
+
     def test_ai_rejects_legacy_or_raw_stack_shapes(self):
         """AI proposal input accepts only explicit structured manifest fields."""
         from services.official_stacks.proposal_manifest import stack_from_proposal

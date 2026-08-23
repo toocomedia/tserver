@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.ai_helper import AiChatMessage
 from plugins.ai_helper import engine, permissions, prompts, tools
+from plugins.ai_helper.tools import app_setup as app_setup_tools
 from plugins.ai_helper.services.providers import decrypt_key, get_active_provider, get_provider
 from plugins.ai_helper.services.secrets_consent import check_consent_phrase, is_secrets_allowed
 from plugins.ai_helper.services.sessions import generate_title_from_prompt, get_or_create_session
@@ -42,6 +43,21 @@ _TOOL_LABELS = {
     "propose_app_install": ("layers", "Generating deployment plan"),
     "propose_stack_install": ("layers", "Generating stack deployment plan"),
 }
+
+
+def _extract_setup_domain(*texts: str | None) -> str:
+    """Best-effort target domain extraction for server-owned setup fallback."""
+    joined = "\n".join(text or "" for text in texts)
+    domain_pattern = r"([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?){1,})"
+    explicit = re.search(rf"\bdomain\s+{domain_pattern}", joined, re.IGNORECASE)
+    if explicit:
+        return explicit.group(1).strip().lower()
+    ignored = {"github.com", "www.github.com", "gitlab.com", "bitbucket.org"}
+    for match in re.finditer(rf"\b{domain_pattern}\b", joined, re.IGNORECASE):
+        candidate = match.group(1).strip().lower()
+        if candidate not in ignored:
+            return candidate
+    return ""
 
 
 
@@ -334,6 +350,9 @@ async def stream_ai_chat(
     setup_stack_correction_prompted = False
     setup_stack_correction_reason = ""
     setup_plan_tool_prompted = False
+    setup_server_plan_attempted = False
+    setup_source_result: Dict[str, Any] | None = None
+    setup_target_domain = _extract_setup_domain(user_message, context_text)
     if tools_enabled:
         tool_defs = tools.get_tool_definitions(
             active.provider_type,
@@ -344,7 +363,7 @@ async def stream_ai_chat(
 
         async def _execute_tool(fn_name: str, fn_args: Dict[str, Any]) -> Dict[str, Any]:
             """Execute approved tools while bounding setup-only evidence collection."""
-            nonlocal sensitive_file_blocked, setup_stack_correction_allowed, setup_stack_correction_reason
+            nonlocal sensitive_file_blocked, setup_stack_correction_allowed, setup_stack_correction_reason, setup_source_result
             limited = setup_handoff.tool_limit_result(
                 task_type,
                 fn_name,
@@ -364,6 +383,8 @@ async def stream_ai_chat(
             )
             if fn_name == "read_website_file" and tool_output.get("status") == "secrets_blocked":
                 sensitive_file_blocked = True
+            if fn_name == "inspect_app_source" and tool_output.get("status") == "ok":
+                setup_source_result = tool_output
             if fn_name in {"propose_app_install", "propose_stack_install", "propose_official_stack_install"}:
                 if tool_output.get("status") != "ok":
                     message = str(tool_output.get("message") or "The planning tool rejected this proposal.").strip()
@@ -398,6 +419,33 @@ async def stream_ai_chat(
                     is_text_pseudo_tool = False
 
                 if not tool_calls:
+                    if (
+                        setup_plan_required
+                        and setup_source_result
+                        and not setup_server_plan_attempted
+                        and not setup_plan_id
+                    ):
+                        fallback_args = app_setup_tools.stack_plan_args_from_inspection(
+                            setup_source_result,
+                            domain_name=setup_target_domain,
+                        )
+                        setup_server_plan_attempted = True
+                        if fallback_args:
+                            yield _activity_event("propose_stack_install", "start", fallback_args)
+                            try:
+                                tool_output = await _execute_tool("propose_stack_install", fallback_args)
+                                setup_plan_id = setup_plan_id or _setup_plan_id("propose_stack_install", tool_output)
+                                yield _activity_event("propose_stack_install", "done", fallback_args)
+                            except Exception as exc:
+                                tool_output = {"status": "error", "message": str(exc)}
+                                yield _activity_event("propose_stack_install", "error", fallback_args)
+                            messages.append({
+                                "role": "user",
+                                "content": f"[Server setup fallback result]:\n{json.dumps(tool_output)}",
+                            })
+                            if setup_plan_id:
+                                break
+                            continue
                     if (
                         setup_plan_required
                         and setup_stack_correction_allowed

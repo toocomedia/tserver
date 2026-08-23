@@ -30,6 +30,37 @@ _DATABASE_KIND_ALIASES = {
     "mongo": "mongodb",
 }
 _UNSUPPORTED_SINGLE_APP_DATASTORES = {"clickhouse"}
+_STACK_DB_DEFAULTS = {
+    "postgres": {
+        "ports": [5432],
+        "volume": "/var/lib/postgresql/data",
+        "env": {"POSTGRES_USER": "postgres", "POSTGRES_DB": "app"},
+        "secret": ("POSTGRES_PASSWORD", "PostgreSQL password", "password"),
+        "url": ("DATABASE_URL", "postgresql://postgres:{POSTGRES_PASSWORD}@{service}:5432/app"),
+    },
+    "mysql": {
+        "ports": [3306],
+        "volume": "/var/lib/mysql",
+        "env": {"MYSQL_DATABASE": "app", "MYSQL_USER": "app"},
+        "secret": ("MYSQL_PASSWORD", "MySQL password", "password"),
+        "url": ("DATABASE_URL", "mysql://app:{MYSQL_PASSWORD}@{service}:3306/app"),
+    },
+    "mariadb": {
+        "ports": [3306],
+        "volume": "/var/lib/mysql",
+        "env": {"MARIADB_DATABASE": "app", "MARIADB_USER": "app"},
+        "secret": ("MARIADB_PASSWORD", "MariaDB password", "password"),
+        "url": ("DATABASE_URL", "mysql://app:{MARIADB_PASSWORD}@{service}:3306/app"),
+    },
+    "clickhouse": {
+        "ports": [8123, 9000],
+        "volume": "/var/lib/clickhouse",
+        "env": {},
+        "url": ("CLICKHOUSE_URL", "http://{service}:8123/default"),
+    },
+    "redis": {"ports": [6379], "volume": "/data", "env": {}, "url": ("REDIS_URL", "redis://{service}:6379/0")},
+    "mongo": {"ports": [27017], "volume": "/data/db", "env": {}, "url": ("MONGODB_URL", "mongodb://{service}:27017/app")},
+}
 
 
 def _install_mode(source_type: str, build_mode: str) -> tuple[str, str] | None:
@@ -387,6 +418,196 @@ def _inspection_database_kinds(inspection: Dict[str, Any]) -> set[str]:
             if isinstance(item, dict):
                 result.add(str(item.get("kind") or "").strip().lower())
     return {item for item in result if item}
+
+
+def stack_plan_args_from_inspection(
+    source_result: Dict[str, Any],
+    *,
+    domain_name: str = "",
+) -> Dict[str, Any] | None:
+    """Build a restricted stack proposal from server source inspection facts."""
+    if not isinstance(source_result, dict) or source_result.get("status") != "ok":
+        return None
+    inspection = source_result.get("inspection")
+    if not isinstance(inspection, dict):
+        return None
+    compose_info = inspection.get("compose_info")
+    if not isinstance(compose_info, dict):
+        return None
+    raw_services = compose_info.get("services")
+    if not isinstance(raw_services, list) or not raw_services:
+        return None
+
+    service_map: dict[str, dict[str, Any]] = {}
+    for item in raw_services[:8]:
+        if not isinstance(item, dict):
+            continue
+        image = str(item.get("image") or "").strip()
+        if not image:
+            continue
+        name = _stack_name(str(item.get("name") or image.rsplit("/", 1)[-1].split(":", 1)[0]))
+        if not name or name in service_map:
+            continue
+        kind = _stack_service_kind(name, image)
+        ports = [int(port) for port in item.get("internal_ports") or [] if _valid_port(port)]
+        if not ports:
+            ports = list((_STACK_DB_DEFAULTS.get(kind) or {}).get("ports") or [])
+        service_map[name] = _stack_service_from_evidence(name, image, ports, kind)
+
+    if not service_map:
+        return None
+
+    web_service = _choose_web_service(service_map, inspection)
+    if not web_service:
+        return None
+    web_port = service_map[web_service]["ports"][0]
+    for name, service in service_map.items():
+        if name != web_service and name not in service_map[web_service]["depends_on"]:
+            service_map[web_service]["depends_on"].append(name)
+
+    env_sample = inspection.get("env_sample") if isinstance(inspection.get("env_sample"), dict) else {}
+    default_environment = _nonsecret_env_defaults(env_sample)
+    allowed_settings = sorted(default_environment)
+    if "BASE_URL" not in allowed_settings:
+        allowed_settings.append("BASE_URL")
+
+    secrets = _stack_secrets(service_map, web_service, env_sample)
+    url_templates = _stack_url_templates(service_map)
+    repo = str(inspection.get("repository_url") or source_result.get("repository_url") or "").strip()
+    stack_name = _stack_name(repo.rsplit("/", 1)[-1].removesuffix(".git") if repo else "source-stack")
+
+    manifest = {
+        "name": stack_name or "source-stack",
+        "display_name": f"{(stack_name or 'Source stack').replace('-', ' ').replace('_', ' ').title()} Stack",
+        "vendor_name": "",
+        "source_repositories": [repo] if repo.startswith(("https://", "http://", "git@", "ssh://")) else [],
+        "version": str(inspection.get("branch") or "source-inspection"),
+        "services": list(service_map.values()),
+        "startup_order": [name for name in service_map if name != web_service] + [web_service],
+        "web_service": web_service,
+        "web_port": web_port,
+        "startup_timeout_seconds": 120,
+        "recommended_ram_mb": 2048 if any(_stack_service_kind(n, s["image"]) == "clickhouse" for n, s in service_map.items()) else 1024,
+        "minimum_ram_mb": 1024,
+        "allowed_nonsecret_settings": allowed_settings,
+        "default_environment": default_environment,
+        "url_templates": url_templates,
+        "secrets": secrets,
+    }
+    settings = {"BASE_URL": f"https://{domain_name.strip()}"} if domain_name.strip() else {}
+    evidence = list(compose_info.get("evidence") or [])
+    evidence.append("Panel source inspection generated this restricted stack plan; repository Compose was not executed.")
+    return {
+        "stack_manifest": manifest,
+        "domain_name": domain_name.strip(),
+        "nonsecret_settings": settings,
+        "evidence": evidence[:12],
+        "summary": f"Deploy restricted stack for {repo or stack_name}",
+        "confidence": 0.72,
+        "reasoning": "Server fallback created a restricted stack plan from bounded Compose source evidence.",
+    }
+
+
+def _stack_service_from_evidence(name: str, image: str, ports: list[int], kind: str) -> dict[str, Any]:
+    defaults = _STACK_DB_DEFAULTS.get(kind) or {}
+    service = {
+        "name": name,
+        "image": image,
+        "ports": ports or [8000],
+        "depends_on": [],
+        "environment": dict(defaults.get("env") or {}),
+        "volumes": [],
+        "resources": {"memory_mb": 768 if kind == "clickhouse" else 256 if defaults else 512, "cpu": "1.0"},
+    }
+    if defaults.get("volume"):
+        service["volumes"].append({"name": f"{name}-data", "mount_path": defaults["volume"]})
+    return service
+
+
+def _choose_web_service(services: dict[str, dict[str, Any]], inspection: dict[str, Any]) -> str:
+    for name, service in services.items():
+        if _stack_service_kind(name, service["image"]) not in _STACK_DB_DEFAULTS:
+            if not service["ports"] and _valid_port(inspection.get("internal_port")):
+                service["ports"] = [int(inspection["internal_port"])]
+            return name
+    return ""
+
+
+def _stack_service_kind(name: str, image: str) -> str:
+    text = f"{name} {image}".lower()
+    for kind in ("clickhouse", "postgres", "mariadb", "mysql", "redis", "mongo"):
+        if kind in text:
+            return kind
+    return "web"
+
+
+def _stack_secrets(services: dict[str, dict[str, Any]], web_service: str, env_sample: dict[str, Any]) -> list[dict[str, str]]:
+    secrets: list[dict[str, str]] = []
+    seen: set[tuple[str, str]] = set()
+    for name, service in services.items():
+        defaults = _STACK_DB_DEFAULTS.get(_stack_service_kind(name, service["image"])) or {}
+        secret = defaults.get("secret")
+        if secret:
+            key, purpose, generator = secret
+            _append_stack_secret(secrets, seen, key, purpose, generator, name, key)
+    for raw_key in env_sample:
+        key = str(raw_key).strip().upper()
+        if any(token in key for token in ("SECRET", "KEY_BASE", "TOKEN", "PRIVATE_KEY", "API_KEY")):
+            generator = "base64_48" if key == "SECRET_KEY_BASE" else "urlsafe64"
+            _append_stack_secret(secrets, seen, key, "Application secret", generator, web_service, key)
+    return secrets
+
+
+def _append_stack_secret(
+    secrets: list[dict[str, str]], seen: set[tuple[str, str]], key: str, purpose: str,
+    generator: str, service: str, environment: str,
+) -> None:
+    target = (service, environment)
+    if target in seen:
+        return
+    seen.add(target)
+    secrets.append({"key": key, "purpose": purpose, "generator": generator, "service": service, "environment": environment})
+
+
+def _stack_url_templates(services: dict[str, dict[str, Any]]) -> dict[str, str]:
+    templates: dict[str, str] = {}
+    for name, service in services.items():
+        defaults = _STACK_DB_DEFAULTS.get(_stack_service_kind(name, service["image"])) or {}
+        url = defaults.get("url")
+        if not url:
+            continue
+        key, template = url
+        templates.setdefault(key, template.replace("{service}", f"{{{name}}}"))
+    return templates
+
+
+def _nonsecret_env_defaults(env_sample: dict[str, Any]) -> dict[str, str]:
+    result: dict[str, str] = {}
+    for raw_key, raw_value in env_sample.items():
+        key = str(raw_key).strip().upper()
+        if not re.fullmatch(r"[A-Z_][A-Z0-9_]{0,127}", key):
+            continue
+        if any(token in key for token in ("PASSWORD", "SECRET", "TOKEN", "PRIVATE_KEY", "API_KEY", "KEY_BASE")):
+            continue
+        value = str(raw_value or "")
+        if len(value) <= 4096 and "\n" not in value and "{" not in value:
+            result[key] = value
+    return result
+
+
+def _stack_name(raw: str) -> str:
+    name = re.sub(r"[^a-z0-9_-]+", "-", raw.strip().lower()).strip("-_")
+    if not name or not re.match(r"^[a-z]", name):
+        name = f"stack-{name}" if name else "source-stack"
+    return name[:48]
+
+
+def _valid_port(raw: Any) -> bool:
+    try:
+        port = int(raw)
+    except (TypeError, ValueError):
+        return False
+    return 1 <= port <= 65535
 
 
 async def propose_stack_install(
