@@ -83,6 +83,21 @@ def pull_stack_images(stack: OfficialStackDefinition) -> Dict[str, str]:
     for svc_name, svc in stack.services.items():
         image_ref = svc.image_reference
         pull_res = apps._run(["docker", "pull", image_ref], timeout=300)
+        if pull_res.returncode != 0 and "/" in image_ref and not image_ref.startswith(("ghcr.io/", "quay.io/", "gcr.io/", "docker.io/")):
+            # Try ghcr.io fallback (e.g. ghcr.io/plausible/community-edition:v3.2.1 or ghcr.io/plausible/analytics:...)
+            candidates = [
+                f"ghcr.io/{image_ref}",
+                f"ghcr.io/plausible/community-edition:{image_ref.split(':')[-1]}" if "plausible" in image_ref else None,
+            ]
+            for cand in candidates:
+                if cand:
+                    retry_res = apps._run(["docker", "pull", cand], timeout=300)
+                    if retry_res.returncode == 0:
+                        pull_res = retry_res
+                        image_ref = cand
+                        # Tag as requested image_ref locally so run_cmd finds it directly
+                        apps._run(["docker", "tag", cand, svc.image_reference], timeout=20)
+                        break
         if pull_res.returncode != 0:
             raise RuntimeError(f"Failed to pull image '{image_ref}' for service '{svc_name}': {pull_res.stderr or pull_res.stdout}")
         insp = apps._run(["docker", "image", "inspect", "--format", "{{index .RepoDigests 0}}", image_ref], timeout=20)
