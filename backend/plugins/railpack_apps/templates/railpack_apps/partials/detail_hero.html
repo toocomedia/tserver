@@ -2,7 +2,7 @@
   <div>
     <div class="hero-app-box__header">
       <h1>{{ domain.name if domain else app.container_name }}</h1>
-      <span class="badge-pill {% if app.status == 'running' %}badge-pill--accent{% endif %}">{{ app.status | title }}</span>
+      <span class="badge-pill {% if app.status == 'running' %}badge-pill--accent{% elif app.status in ['failed', 'delete_failed'] %}badge-pill--danger{% endif %}">{{ app.status | title }}</span>
     </div>
     <div class="hero-stats">
       <span>URL: {% if domain %}<a href="{{ public_url(domain.name, https=ssl_active) }}" target="_blank" rel="noopener" style="font-weight:700;">{{ domain.name }}</a>{% else %}<span class="text-muted">Domain missing</span>{% endif %}</span>
@@ -17,7 +17,41 @@
         {% include "partials/csrf_field.html" %}
         <button class="btn btn--danger btn--sm" type="submit">Cancel deployment</button>
       </form>
+    {% elif app.status not in ['deleting', 'delete_failed'] %}
+      {% if app.status == 'running' %}
+        <form method="post" action="/plugins/railpack_apps/{{ app.id }}/restart" style="margin:0;">
+          {% include "partials/csrf_field.html" %}
+          <button class="btn btn--secondary btn--sm" type="submit">Restart</button>
+        </form>
+        <form method="post" action="/plugins/railpack_apps/{{ app.id }}/stop" style="margin:0;">
+          {% include "partials/csrf_field.html" %}
+          <button class="btn btn--secondary btn--sm" type="submit">Stop</button>
+        </form>
+      {% elif app.status in ['stopped', 'failed'] %}
+        <form method="post" action="/plugins/railpack_apps/{{ app.id }}/start" style="margin:0;">
+          {% include "partials/csrf_field.html" %}
+          <button class="btn btn--accent btn--sm" type="submit">Start</button>
+        </form>
+        <form method="post" action="/plugins/railpack_apps/{{ app.id }}/restart" style="margin:0;">
+          {% include "partials/csrf_field.html" %}
+          <button class="btn btn--secondary btn--sm" type="submit">Restart</button>
+        </form>
+      {% endif %}
+      <form method="post" action="/plugins/railpack_apps/{{ app.id }}/deploy" style="margin:0;">
+        {% include "partials/csrf_field.html" %}
+        <button class="btn btn--secondary btn--sm" type="submit">Redeploy</button>
+      </form>
     {% endif %}
-    {% if app.preset == 'wordpress' and app.status == 'running' %}<form method="post" action="/plugins/railpack_apps/{{ app.id }}/wordpress/update" style="margin:0;">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary btn--sm">Update WordPress</button></form><form method="post" action="/plugins/railpack_apps/{{ app.id }}/wordpress/backup" style="margin:0;">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary btn--sm">Back up WordPress</button></form>{% endif %}
+    {% if app.preset == 'wordpress' and app.status == 'running' %}
+      <form method="post" action="/plugins/railpack_apps/{{ app.id }}/wordpress/update" style="margin:0;">
+        {% include "partials/csrf_field.html" %}
+        <button class="btn btn--secondary btn--sm" type="submit">Update WordPress</button>
+      </form>
+      <form method="post" action="/plugins/railpack_apps/{{ app.id }}/wordpress/backup" style="margin:0;">
+        {% include "partials/csrf_field.html" %}
+        <button class="btn btn--secondary btn--sm" type="submit">Back up WordPress</button>
+      </form>
+    {% endif %}
   </div>
 </div>
+
