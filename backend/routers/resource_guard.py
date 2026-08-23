@@ -287,6 +287,20 @@ async def disk_cleanup(payload: DiskCleanupIn, db: AsyncSession = Depends(get_db
     )
 
 
+@router.post("/api/resource-guard/builder-prune")
+async def builder_prune(db: AsyncSession = Depends(get_db)):
+    """Prune Docker builder cache (BuildKit) — safe, does not remove active images."""
+    # Use the same protection inventory logic: build cache is never protected
+    active_digests, rollback_images = await _collect_image_digests(db)
+    items = await disk_cleanup_service.inventory(active_digests, rollback_images)
+    cache_items = [i for i in items if i["type"] == disk_cleanup_service.TYPE_BUILD_CACHE]
+    if not cache_items:
+        return {"deleted": [], "freed_mb": 0.0, "errors": [], "skipped": ["No builder cache found"]}
+    return await disk_cleanup_service.run_cleanup(
+        [cache_items[0]["item_id"]], active_digests, rollback_images
+    )
+
+
 async def _collect_image_digests(db: AsyncSession) -> tuple[set[str], set[str]]:
     """Return (active_digests, rollback_images) sets from all container apps."""
     apps = (await db.scalars(select(ContainerApp))).all()

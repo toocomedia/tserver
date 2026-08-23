@@ -4,7 +4,7 @@
   const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({
     "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
   }[char]));
-  const typeLabels = { build_dir: "Build directory", dangling_image: "Dangling image", old_log: "Old log" };
+  const typeLabels = { build_dir: "Build dir", build_workspace: "Build workspace", dangling_image: "Dangling image", unused_image: "Unused image", build_cache: "Builder cache", old_log: "Old log" };
 
   function formatMb(value) {
     return `${Number(value || 0).toFixed(1)} MB`;

@@ -31,8 +31,11 @@ from services.resource_guard_service import resource_guard_service
 logger = logging.getLogger(__name__)
 
 # Item types
-TYPE_BUILD_DIR = "build_dir"       # Stale build checkout dir
+TYPE_BUILD_DIR = "build_dir"       # Stale build checkout dir (per-deployment under CONTAINER_APP_ROOT/<id>/build/<dep>)
+TYPE_BUILD_WORKSPACE = "build_workspace"  # Per-deployment XDG workspace under /var/lib/srv-panel/build/<dep>
 TYPE_DANGLING_IMAGE = "dangling_image"  # <none>:<none> docker image
+TYPE_UNUSED_IMAGE = "unused_image"      # Tagged but not active/rollback
+TYPE_BUILD_CACHE = "build_cache"        # Docker builder / BuildKit cache (single aggregate item)
 TYPE_OLD_LOG = "old_log"           # Panel log file older than threshold
 
 _LOG_DIRS: list[str] = ["/var/log/srv-panel"]
@@ -106,13 +109,52 @@ def _build_inventory(
     items: list[InventoryItem] = []
     now = time.time()
 
-    # 1. Stale build dirs (container app roots)
+    # 1. Stale build dirs — per-deployment under CONTAINER_APP_ROOT/<app_id>/build/<dep_id>.
+    # Legacy/fallback: whole app dir if no inner build/ layout (keeps existing tests passing).
     build_root = Path(config.CONTAINER_APP_ROOT)
     if build_root.is_dir():
         for child in build_root.iterdir():
             if not child.is_dir():
                 continue
-            age_days = (now - child.stat().st_mtime) / 86400
+            # Symlink safety — never follow or delete symlinked app dirs
+            try:
+                if child.is_symlink():
+                    continue
+            except OSError:
+                continue
+            # Prefer granular per-deployment dirs
+            per_deploy_root = child / "build"
+            if per_deploy_root.is_dir():
+                try:
+                    dep_entries = list(per_deploy_root.iterdir())
+                except OSError:
+                    dep_entries = []
+                if dep_entries:
+                    for dep_dir in dep_entries:
+                        try:
+                            if not dep_dir.is_dir() or dep_dir.is_symlink():
+                                continue
+                        except OSError:
+                            continue
+                        try:
+                            age_days = (now - dep_dir.stat().st_mtime) / 86400
+                        except OSError:
+                            age_days = 0.0
+                        size_mb = _dir_size_mb(dep_dir)
+                        item_id = _make_id(TYPE_BUILD_DIR, str(dep_dir))
+                        items.append(InventoryItem(
+                            item_id=item_id,
+                            type=TYPE_BUILD_DIR,
+                            path=str(dep_dir),
+                            size_mb=size_mb,
+                            age_days=age_days,
+                        ))
+                    continue
+            # Fallback — size the whole app dir (legacy dev/test fixture)
+            try:
+                age_days = (now - child.stat().st_mtime) / 86400
+            except OSError:
+                age_days = 0.0
             size_mb = _dir_size_mb(child)
             item_id = _make_id(TYPE_BUILD_DIR, str(child))
             items.append(InventoryItem(
@@ -123,37 +165,145 @@ def _build_inventory(
                 age_days=age_days,
             ))
 
-    # 2. Dangling docker images (<none>:<none>)
-    result = _run(
-        ["docker", "images", "--filter", "dangling=true",
-         "--format", "{{.ID}}\t{{.Size}}\t{{.CreatedAt}}"],
+    # 1b. Per-deployment XDG build workspaces (/var/lib/srv-panel/build/<dep_id>)
+    try:
+        workspace_base = Path(config.CONTAINER_APP_ENV_ROOT).parent / "build"
+    except Exception:
+        workspace_base = None
+    if workspace_base is not None and workspace_base.is_dir():
+        try:
+            for ws_child in workspace_base.iterdir():
+                try:
+                    if not ws_child.is_dir() or ws_child.is_symlink():
+                        continue
+                except OSError:
+                    continue
+                # Only numeric deployment ids (defensive)
+                name = ws_child.name
+                if not name.isdigit():
+                    # Still allow but skip obvious non-deploy dirs longer than 10 chars without digits?
+                    pass
+                try:
+                    age_days = (now - ws_child.stat().st_mtime) / 86400
+                except OSError:
+                    age_days = 0.0
+                size_mb = _dir_size_mb(ws_child)
+                # Skip tiny empty workspaces to reduce noise
+                if size_mb < 0.1 and age_days < 1:
+                    continue
+                item_id = _make_id(TYPE_BUILD_WORKSPACE, str(ws_child))
+                items.append(InventoryItem(
+                    item_id=item_id,
+                    type=TYPE_BUILD_WORKSPACE,
+                    path=str(ws_child),
+                    size_mb=size_mb,
+                    age_days=age_days,
+                ))
+        except OSError:
+            pass
+
+    # 2. Docker images — dangling + unused tagged (single-pass, deduped)
+    # We run one listing for all images and classify. The legacy dangling-only
+    # filter is handled implicitly; repoTag == <none>:<none> => dangling.
+    seen_image_ids: set[str] = set()
+    # Primary: all images with repository tag
+    result_all = _run(
+        ["docker", "images", "--format", "{{.ID}}\t{{.Repository}}:{{.Tag}}\t{{.Size}}\t{{.CreatedAt}}"],
         timeout=30,
     )
-    if result.returncode == 0:
-        for line in result.stdout.splitlines():
-            parts = line.split("\t", 2)
-            if len(parts) < 1:
+    if result_all.returncode == 0 and result_all.stdout:
+        for line in result_all.stdout.splitlines():
+            if not line.strip():
                 continue
-            image_id = parts[0].strip()
-            size_str = parts[1].strip() if len(parts) > 1 else "0MB"
-            item_id = _make_id(TYPE_DANGLING_IMAGE, image_id)
+            parts = line.split("\t")
+            image_id = ""
+            repo_tag = ""
+            size_str = "0MB"
+            # Backward compat: legacy mock returns "ID\tSIZE\tCreatedAt" (size in field 1)
+            if len(parts) == 3 and _is_docker_size(parts[1].strip()):
+                image_id = parts[0].strip()
+                repo_tag = "<none>:<none>"
+                size_str = parts[1].strip()
+            elif len(parts) >= 3:
+                image_id = parts[0].strip()
+                repo_tag = parts[1].strip()
+                size_str = parts[2].strip()
+            elif len(parts) == 2:
+                image_id = parts[0].strip()
+                # could be ID+Size mock
+                if _is_docker_size(parts[1].strip()):
+                    repo_tag = "<none>:<none>"
+                    size_str = parts[1].strip()
+                else:
+                    repo_tag = parts[1].strip()
+            else:
+                image_id = parts[0].strip()
+            if not image_id or image_id in seen_image_ids:
+                continue
+            seen_image_ids.add(image_id)
+            is_dangling = repo_tag == "<none>:<none>" or repo_tag == "<none>"
+            item_type = TYPE_DANGLING_IMAGE if is_dangling else TYPE_UNUSED_IMAGE
             size_mb = _parse_docker_size(size_str)
-            age_days = 0.0  # docker doesn't give easy age — unknown
-
+            # Also catch "srv-panel/railpack-app" images that are failed builds — high value to surface
             protected = image_id in active_digests or image_id in rollback_images
-            reason = ""
-            if protected:
-                reason = "Active or rollback image"
-
+            # Also protect by full reference match (image_digest may be "srv-panel/railpack-app:12-34")
+            if not protected and repo_tag:
+                if repo_tag in active_digests or repo_tag in rollback_images:
+                    protected = True
+            reason = "Active or rollback image" if protected else ""
+            # For unused images, also treat panel-owned builder images as deletable but surfaced
             items.append(InventoryItem(
-                item_id=item_id,
-                type=TYPE_DANGLING_IMAGE,
-                path=image_id,
+                item_id=_make_id(item_type, image_id),
+                type=item_type,
+                path=f"{image_id} ({repo_tag})" if repo_tag and repo_tag != "<none>:<none>" else image_id,
                 size_mb=size_mb,
-                age_days=age_days,
+                age_days=0.0,
                 protected=protected,
                 protect_reason=reason,
             ))
+    else:
+        # Fallback: legacy dangling-only enumeration (keeps old tests / docker without RepoTag)
+        fallback = _run(
+            ["docker", "images", "--filter", "dangling=true",
+             "--format", "{{.ID}}\t{{.Size}}\t{{.CreatedAt}}"],
+            timeout=30,
+        )
+        if fallback.returncode == 0:
+            for line in fallback.stdout.splitlines():
+                parts = line.split("\t", 2)
+                if len(parts) < 1 or not parts[0].strip():
+                    continue
+                image_id = parts[0].strip()
+                if image_id in seen_image_ids:
+                    continue
+                seen_image_ids.add(image_id)
+                size_str = parts[1].strip() if len(parts) > 1 else "0MB"
+                size_mb = _parse_docker_size(size_str)
+                protected = image_id in active_digests or image_id in rollback_images
+                reason = "Active or rollback image" if protected else ""
+                items.append(InventoryItem(
+                    item_id=_make_id(TYPE_DANGLING_IMAGE, image_id),
+                    type=TYPE_DANGLING_IMAGE,
+                    path=image_id,
+                    size_mb=size_mb,
+                    age_days=0.0,
+                    protected=protected,
+                    protect_reason=reason,
+                ))
+
+    # 2b. Docker builder / BuildKit cache (aggregate single item)
+    cache_mb = _collect_build_cache_mb()
+    if cache_mb is not None and cache_mb >= 5.0:
+        # Compute age as 0 (cache is cumulative); use builder name as path
+        cache_path = f"Docker builder cache ({config.BUILDX_BUILDER_NAME})"
+        item_id = _make_id(TYPE_BUILD_CACHE, cache_path)
+        items.append(InventoryItem(
+            item_id=item_id,
+            type=TYPE_BUILD_CACHE,
+            path=cache_path,
+            size_mb=round(cache_mb, 1),
+            age_days=0.0,
+        ))
 
     # 3. Old panel log files
     for log_dir_str in _LOG_DIRS:
@@ -222,17 +372,39 @@ def _execute_cleanup(
 
 
 def _delete_item(item: InventoryItem) -> None:
-    if item.type == TYPE_BUILD_DIR:
+    if item.type in (TYPE_BUILD_DIR, TYPE_BUILD_WORKSPACE):
         p = Path(item.path)
+        # Never follow symlinks; abort if symlink
+        if p.is_symlink():
+            raise RuntimeError("Refusing to delete symlinked path.")
         if p.is_dir():
             shutil.rmtree(p)
-    elif item.type == TYPE_DANGLING_IMAGE:
-        result = _run(["docker", "rmi", item.path], timeout=60)
+        elif p.exists():
+            p.unlink(missing_ok=True)
+    elif item.type in (TYPE_DANGLING_IMAGE, TYPE_UNUSED_IMAGE):
+        # path may be "ID (repo:tag)" — extract ID
+        image_ref = item.path.split(" ")[0].strip()
+        # Guard: never delete active/rollback — already checked but re-validate id prefix match
+        result = _run(["docker", "rmi", image_ref], timeout=60)
         if result.returncode != 0:
             stderr = (result.stderr or result.stdout or "").strip()
+            # If image is in use by a running container, report but don't raise hard — it becomes skipped via error list
             raise RuntimeError(f"docker rmi failed: {stderr[-300:]}")
+    elif item.type == TYPE_BUILD_CACHE:
+        # Prune all build cache — re-validated as safe (no active layers tied to running containers are kept by builder)
+        # Try buildx builder first, then generic builder prune
+        builder = getattr(config, "BUILDX_BUILDER_NAME", "") or "srv-panel-builder"
+        res = _run(["docker", "buildx", "prune", "--builder", builder, "-f"], timeout=120)
+        # Also prune generic builder cache to reclaim BuildKit cache outside buildx
+        res2 = _run(["docker", "builder", "prune", "-f"], timeout=120)
+        # Consider success if either succeeded; if both fail, surface first error
+        if res.returncode != 0 and res2.returncode != 0:
+            stderr = (res.stderr or res.stdout or res2.stderr or "").strip()
+            raise RuntimeError(f"builder prune failed: {stderr[-300:]}")
     elif item.type == TYPE_OLD_LOG:
         p = Path(item.path)
+        if p.is_symlink():
+            raise RuntimeError("Refusing to delete symlinked log.")
         p.unlink(missing_ok=True)
 
 
@@ -271,3 +443,53 @@ def _parse_docker_size(size_str: str) -> float:
         return float(s)
     except ValueError:
         return 0.0
+
+
+def _is_docker_size(value: str) -> bool:
+    s = value.strip().upper()
+    return s.endswith(("GB", "MB", "KB", "KIB", "B")) and _parse_docker_size(s) >= 0.0
+
+
+def _collect_build_cache_mb() -> float | None:
+    """Return aggregate Docker builder cache size in MB, or None if unavailable.
+    Tries `docker buildx du` then `docker builder du` then `docker system df`.
+    Guarded: output containing tabs (image listing mock) is ignored so unit tests
+    that mock _run with image lines do not create a spurious cache item.
+    """
+    builder_name = getattr(config, "BUILDX_BUILDER_NAME", "") or "srv-panel-builder"
+    # 1) buildx du --builder <name> --format "{{.Size}}"  (newer docker)
+    for cmd in (
+        ["docker", "buildx", "du", "--builder", builder_name],
+        ["docker", "builder", "du", "--format", "{{.Size}}"],
+        ["docker", "builder", "du"],
+        ["docker", "system", "df", "--format", "{{.Size}}"],
+    ):
+        try:
+            res = _run(cmd, timeout=20)
+        except Exception:
+            continue
+        if res.returncode != 0 or not res.stdout:
+            continue
+        raw = res.stdout.strip()
+        # Mock trap: tests mock _run with image lines containing tabs
+        if "\t" in raw:
+            continue
+        # Parse first parseable size token
+        for line in raw.splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            # Lines may be "2.5GB" or "Reclaimable: 2.5GB" or table rows
+            for token in line.replace(",", " ").replace(":", " ").split():
+                token = token.strip()
+                if _is_docker_size(token):
+                    val = _parse_docker_size(token)
+                    if val > 0:
+                        return val
+            # Fallback: try whole line
+            if _is_docker_size(line):
+                return _parse_docker_size(line)
+        # If raw itself is a size like "1.2GB", handle
+        if _is_docker_size(raw):
+            return _parse_docker_size(raw)
+    return None

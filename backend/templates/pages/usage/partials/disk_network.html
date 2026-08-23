@@ -13,6 +13,44 @@
   </div>
 </div>
 
+<!-- WHAT'S USING YOUR DISK (reclaimable) -->
+<div class="section mb-xl" id="disk-consumers-section" data-live-section="disk-consumers">
+  <div class="section__header" style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+    <h3 style="display:flex; align-items:center; gap:8px; margin:0;">
+      <svg viewbox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px; height:15px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+      What's using your disk
+      <span id="disk-consumers-badge" class="status-badge" style="font-weight:600; margin-left:6px;" hidden></span>
+    </h3>
+    <div style="display:flex; gap:8px;">
+      <button type="button" class="btn btn--secondary btn--sm" id="btn-scan-disk-consumers">Scan</button>
+      <button type="button" class="btn btn--ghost btn--sm" id="btn-prune-builder" title="Prune Docker builder cache">Prune builder cache</button>
+    </div>
+  </div>
+  <div class="section__body">
+    <div id="disk-consumers-breakdown" class="text-small text-muted" style="line-height:1.6;">Click Scan to see reclaimable space from failed builds and unused images.</div>
+    <div id="disk-consumers-bar" style="margin-top:10px; height:8px; background:var(--color-line); border-radius:999px; overflow:hidden; display:none;">
+      <div style="display:flex; height:100%;">
+        <div id="bar-consumers-build" style="height:100%; background:#f59e0b; width:0%"></div>
+        <div id="bar-consumers-workspace" style="height:100%; background:#fbbf24; width:0%"></div>
+        <div id="bar-consumers-images" style="height:100%; background:#60a5fa; width:0%"></div>
+        <div id="bar-consumers-cache" style="height:100%; background:#a78bfa; width:0%"></div>
+        <div id="bar-consumers-logs" style="height:100%; background:#94a3b8; width:0%"></div>
+      </div>
+    </div>
+    <div class="table-wrap mt-md" style="margin-top:14px;">
+      <table class="table" id="disk-consumers-table">
+        <thead><tr><th>Type</th><th>Path / Image</th><th>Size</th><th>Age</th><th>Protected</th><th><label class="form-check" style="display:inline-flex; align-items:center; gap:6px;"><input type="checkbox" id="disk-consumers-select-all"> Select all</label></th></tr></thead>
+        <tbody id="disk-consumers-tbody"><tr><td colspan="6" class="text-muted">Click Scan to see details.</td></tr></tbody>
+      </table>
+    </div>
+    <div class="form-actions mt-md" style="display:flex; align-items:center; gap:12px; margin-top:12px;">
+      <span id="disk-consumers-total" class="form-hint">0 MB selected</span>
+      <button type="button" class="btn btn--danger btn--sm" id="btn-clean-disk-consumers" disabled>Free selected space</button>
+    </div>
+    <p id="disk-consumers-result" class="form-hint mt-md" role="status" style="margin-top:8px;"></p>
+  </div>
+</div>
+
 <!-- NETWORK I/O METRICS -->
 <div class="section mb-xl">
   <div class="section__header">

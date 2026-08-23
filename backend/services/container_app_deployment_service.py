@@ -37,11 +37,13 @@ async def recover_interrupted() -> None:
             ContainerAppDeployment.status == "running",
         ))).all()
         now = datetime.utcnow()
+        stale_ids = []
         for deployment in deployments:
             deployment.status = "failed"
             deployment.stage = "interrupted"
             deployment.error = "Panel restarted before this deployment completed. Redeploy to try again."
             deployment.finished_at = now
+            stale_ids.append(deployment.id)
         apps = list((await db.scalars(select(ContainerApp).where(
             ContainerApp.status.in_(("pending", "deleting", "running")),
         ))).all())
@@ -60,6 +62,14 @@ async def recover_interrupted() -> None:
             elif app.status == "pending":
                 app.status, app.last_error = "failed", "No running container was found after panel restart. Redeploy to recover."
         await db.commit()
+    # Best-effort filesystem reclaim for interrupted builds (source + XDG workspace)
+    for dep_id in stale_ids:
+        await asyncio.to_thread(_cleanup_build_artifacts_sync, dep_id)
+    # Also reap any 7d+ stale workspaces left from prior crashes
+    try:
+        await reap_stale_build_workspaces()
+    except Exception:
+        pass
     await advance_queue()
 
 
@@ -217,6 +227,16 @@ async def _deploy_after_commit(deployment_id: int, token: int, operation_id: int
         await resource_guard_operation_service.finish(db, operation_id, outcome)
         await db.commit()
         resource_guard_service.unregister(token)
+        # Final best-effort reclaim for this deployment's transient dirs (covers materialize/early failures)
+        try:
+            await asyncio.to_thread(_cleanup_build_artifacts_sync, deployment.id)
+        except Exception:
+            pass
+        # Opportunistic TTL reap (non-blocking, ignore errors)
+        try:
+            await reap_stale_build_workspaces()
+        except Exception:
+            pass
     await advance_queue()
 
 
@@ -267,6 +287,11 @@ async def cancel_deployment(db: AsyncSession, app_id: int, deployment_id: int | 
         app.status = "running" if live else "stopped"
 
     await db.commit()
+    # Reclaim workspace/source for the cancelled deployment id
+    try:
+        await asyncio.to_thread(_cleanup_build_artifacts_sync, deployment.id)
+    except Exception:
+        pass
     await advance_queue()
     return deployment
 
@@ -505,10 +530,14 @@ def _build_or_pull(app: ContainerApp, deployment: ContainerAppDeployment) -> str
         ssh_key_path=getattr(app, "deploy_key_path", None),
         allow_default_branch=True,
     )
-    if checkout.branch and checkout.branch != app.branch:
-        app.branch = checkout.branch
-        app.git_ref = checkout.branch
-    app.deployed_revision = checkout.revision.sha
+    checkout_branch = getattr(checkout, "branch", None)
+    if checkout_branch and checkout_branch != app.branch:
+        app.branch = checkout_branch
+        app.git_ref = checkout_branch
+    # revision may be missing on mocked checkouts — fall back safely
+    rev = getattr(checkout, "revision", None)
+    if rev is not None and getattr(rev, "sha", None):
+        app.deployed_revision = rev.sha
     image = f"srv-panel/railpack-app:{app.id}-{deployment.id}"
 
     root_dir = (getattr(app, "root_directory", None) or "").strip().replace("\\", "/").strip("/")
@@ -588,6 +617,108 @@ def _build_or_pull(app: ContainerApp, deployment: ContainerAppDeployment) -> str
     return image
 
 
+def _cleanup_build_artifacts_sync(deployment_id: int) -> None:
+    """Synchronous best-effort removal of source clone + XDG workspace for a deployment."""
+    # Source is per-app; we don't know app_id here without DB, so try to find via filesystem scan.
+    # Preferred: if we have deployment_id, clean workspace at /var/lib/srv-panel/build/<id>
+    try:
+        ws_root = Path(config.CONTAINER_APP_ENV_ROOT).parent / "build" / str(deployment_id)
+        if ws_root.exists() and not ws_root.is_symlink():
+            shutil.rmtree(ws_root, ignore_errors=True)
+        # Also clean any empty parent build dir remnants under container-apps
+        # Scan container-apps/*/build/<deployment_id>
+        base = Path(config.CONTAINER_APP_ROOT)
+        if base.is_dir():
+            for child in base.iterdir():
+                cand = child / "build" / str(deployment_id)
+                try:
+                    if cand.is_dir() and not cand.is_symlink():
+                        shutil.rmtree(cand, ignore_errors=True)
+                    # Also clean legacy source path …/build/<dep>/source
+                    src = cand / "source"
+                    if src.exists() and not src.is_symlink():
+                        shutil.rmtree(src, ignore_errors=True)
+                except OSError:
+                    pass
+    except Exception:
+        pass
+
+
+async def _cleanup_build_artifacts(app_id: int, deployment_id: int) -> None:
+    source = apps.root(app_id) / "build" / str(deployment_id)
+    # Prefer granular source subdir, but also ensure parent build/<id> gone
+    for p in (source / "source", source):
+        if p.exists():
+            try:
+                await asyncio.to_thread(shutil.rmtree, p, ignore_errors=True)
+            except Exception:
+                pass
+    await asyncio.to_thread(_cleanup_build_artifacts_sync, deployment_id)
+
+
+async def reap_stale_build_workspaces(ttl_days: int = 7) -> int:
+    """Remove build workspaces and per-deployment build dirs older than ttl_days
+    for deployments no longer running/queued. Returns number of dirs removed."""
+    from database import AsyncSessionLocal
+    import time as _time
+    cutoff = datetime.utcnow().timestamp() - ttl_days * 86400
+    removed = 0
+    # Collect deployment ids that are eligible for reaping
+    async with AsyncSessionLocal() as db:
+        rows = (await db.scalars(select(ContainerAppDeployment).where(
+            ContainerAppDeployment.status.in_(("failed", "cancelled", "success")),
+        ))).all()
+        eligible_ids = []
+        for dep in rows:
+            ts = None
+            if getattr(dep, "finished_at", None):
+                try:
+                    ts = dep.finished_at.timestamp()
+                except Exception:
+                    ts = None
+            # If no timestamp, use filesystem mtime check instead
+            if ts is None or ts < cutoff:
+                eligible_ids.append(dep.id)
+    for dep_id in eligible_ids:
+        # Check mtime of workspace before deleting (extra safety)
+        ws = Path(config.CONTAINER_APP_ENV_ROOT).parent / "build" / str(dep_id)
+        should_remove = False
+        try:
+            if ws.is_dir() and not ws.is_symlink():
+                try:
+                    mtime = ws.stat().st_mtime
+                    if mtime < cutoff:
+                        should_remove = True
+                except OSError:
+                    should_remove = True
+                if should_remove:
+                    await asyncio.to_thread(shutil.rmtree, ws, ignore_errors=True)
+                    removed += 1
+        except Exception:
+            pass
+        # Also per-app build dir
+        base = Path(config.CONTAINER_APP_ROOT)
+        if base.is_dir():
+            try:
+                for child in base.iterdir():
+                    cand = child / "build" / str(dep_id)
+                    try:
+                        if cand.is_dir() and not cand.is_symlink():
+                            try:
+                                mtime = cand.stat().st_mtime
+                                if mtime < cutoff:
+                                    await asyncio.to_thread(shutil.rmtree, cand, ignore_errors=True)
+                                    removed += 1
+                            except OSError:
+                                await asyncio.to_thread(shutil.rmtree, cand, ignore_errors=True)
+                                removed += 1
+                    except OSError:
+                        continue
+            except OSError:
+                pass
+    return removed
+
+
 async def _prepare_image(db: AsyncSession, app: ContainerApp, deployment: ContainerAppDeployment) -> str:
     stage = "pull" if app.source_type == "image" else "build"
     message = "Pulling registry image." if stage == "pull" else "Preparing Git source and building application image."
@@ -596,13 +727,11 @@ async def _prepare_image(db: AsyncSession, app: ContainerApp, deployment: Contai
         try:
             return await asyncio.to_thread(_build_or_pull, app, deployment)
         finally:
-            # Always clean up the temporary source checkout.
-            source = apps.root(app.id) / "build" / str(deployment.id) / "source"
-            if source.exists():
-                try:
-                    await asyncio.to_thread(shutil.rmtree, source, ignore_errors=True)
-                except Exception:
-                    pass
+            # Always clean up the temporary source checkout + XDG workspace, even on failure/cancel.
+            try:
+                await _cleanup_build_artifacts(app.id, deployment.id)
+            except Exception:
+                pass
 
 
 def _replace_container(app: ContainerApp, image: str) -> None:

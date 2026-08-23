@@ -43,6 +43,11 @@ async def delete_app(
     from models.container_app_deployment import ContainerAppDeployment
     from services import container_app_database_service, container_app_removal_service
 
+    # Capture digests before DB row is removed so we can attempt image prune
+    doomed_image_digest = getattr(app, "image_digest", None)
+    doomed_previous = getattr(app, "previous_image", None)
+    doomed_app_id = app.id
+
     domain = await db.get(Domain, app.domain_id)
     if domain:
         await uninstall(db, app, domain, remove_network=False)
@@ -60,6 +65,27 @@ async def delete_app(
     await db.execute(delete(ContainerAppDeployment).where(ContainerAppDeployment.app_id == app.id))
     await db.delete(app)
     await db.flush()
+
+    # Best-effort: prune images that belonged solely to this app.
+    # Do not fail the delete if rmi fails (image in use by another app/container).
+    try:
+        await _prune_app_images(doomed_app_id, doomed_image_digest, doomed_previous, db)
+    except Exception:
+        pass
+    # Also clean any leftover build workspaces that might reference the deleted app id
+    try:
+        from pathlib import Path as _Path
+        import config as _cfg
+        # Remove container-apps/<id> root if still present (uninstall already did, but double-check)
+        leftover = _Path(_cfg.CONTAINER_APP_ROOT) / str(doomed_app_id)
+        if leftover.exists() and not leftover.is_symlink():
+            await asyncio.to_thread(shutil.rmtree, leftover, ignore_errors=True)
+        # Remove env file if orphaned
+        env_p = _Path(f"/var/lib/srv-panel/container-app-env/{doomed_app_id}.env")
+        if env_p.exists() and not env_p.is_symlink():
+            await asyncio.to_thread(_remove_path, env_p)
+    except Exception:
+        pass
 
 
 async def _remove_container(app: ContainerApp) -> None:
@@ -142,5 +168,81 @@ def _remove_path(path: Path) -> None:
         path.unlink(missing_ok=True)
 
 
+async def _prune_app_images(app_id: int, image_digest: str | None, previous_image: str | None, db: AsyncSession) -> None:
+    """Remove docker images that were exclusive to the deleted app.
+
+    - `srv-panel/railpack-app:<app_id>-*` per-deployment images (always exclusive)
+    - `image_digest` / `previous_image` if no other remaining app references them
+    Best-effort: ignore 'not found' / 'is being used' errors.
+    """
+    # Check whether digests are still referenced by any remaining app
+    remaining_digests: set[str] = set()
+    try:
+        rows = (await db.scalars(select(ContainerApp))).all()
+        for other in rows:
+            if getattr(other, "image_digest", None):
+                remaining_digests.add(str(other.image_digest))
+            if getattr(other, "previous_image", None):
+                remaining_digests.add(str(other.previous_image))
+    except Exception:
+        remaining_digests = set()
+
+    candidates: list[str] = []
+    # Per-deployment tagged images — enumerate via docker images listing
+    try:
+        res = await asyncio.to_thread(
+            container_app_service._run,
+            ["docker", "images", "--format", "{{.Repository}}:{{.Tag}} {{.ID}}"],
+            timeout=30,
+        )
+        if res.returncode == 0 and res.stdout:
+            for line in res.stdout.splitlines():
+                line=line.strip()
+                if not line:
+                    continue
+                # Format: "repo:tag ID"
+                parts = line.split()
+                if not parts:
+                    continue
+                repo_tag = parts[0]
+                img_id = parts[1] if len(parts) > 1 else repo_tag
+                if repo_tag.startswith(f"srv-panel/railpack-app:{app_id}-"):
+                    candidates.append(repo_tag)
+                elif repo_tag == f"srv-panel/railpack-app:{app_id}":
+                    candidates.append(repo_tag)
+                # Also catch IDs that correspond to per-app images when repoTag is <none>
+                # but ID was previously known as digest — handled below
+    except Exception:
+        pass
+
+    for ref in (image_digest, previous_image):
+        if ref and ref not in remaining_digests and ref not in candidates:
+            # Only prune if it looks like an app-owned image or a sha/repo reference
+            # Avoid pruning external base images (e.g., nginx:latest) that might be shared
+            if ref.startswith("srv-panel/railpack-app:") or ref.startswith("sha256:") or "/" not in ref:
+                candidates.append(ref)
+            elif ref.startswith("srv-panel/"):
+                candidates.append(ref)
+
+    # Deduplicate while preserving order
+    seen = set()
+    uniq = []
+    for c in candidates:
+        if c and c not in seen:
+            seen.add(c)
+            uniq.append(c)
+
+    for ref in uniq:
+        try:
+            res = await asyncio.to_thread(container_app_service._run, ["docker", "rmi", ref], timeout=60)
+            # Ignore not-found / in-use; treat as non-fatal
+            if res.returncode != 0 and not _missing(res.stderr or res.stdout or ""):
+                # If image is referenced by a running container, docker says "is being used"
+                if "is being used" in (res.stderr or "").lower() or "is being used" in (res.stdout or "").lower():
+                    continue
+        except Exception:
+            continue
+
+
 def _missing(message: str) -> bool:
-    return "no such" in message.lower() or "not found" in message.lower()
+    return "no such" in message.lower() or "not found" in message.lower() or "is being used" in message.lower()
