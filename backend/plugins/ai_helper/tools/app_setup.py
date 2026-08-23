@@ -317,10 +317,21 @@ async def propose_app_install(
 
 async def propose_official_stack_install(
     db: AsyncSession,
-    catalog_id: str,
+    catalog_id: str = "",
+    display_name: str = "",
     version: str = "",
     domain_name: str = "",
+    services: Optional[Dict[str, Any]] = None,
+    startup_order: Optional[List[str]] = None,
+    web_service_name: str = "",
+    web_internal_port: int = 8000,
+    web_health_path: str = "/api/health",
+    required_secrets: Optional[List[Dict[str, Any]]] = None,
+    url_templates: Optional[Dict[str, str]] = None,
+    default_environment: Optional[Dict[str, str]] = None,
     nonsecret_settings: Optional[Dict[str, str]] = None,
+    recommended_ram_mb: int = 2048,
+    post_install_message: str = "",
     session_id: Optional[str] = None,
     summary: str = "",
     confidence: float = 1.0,
@@ -328,26 +339,53 @@ async def propose_official_stack_install(
     user_id: Optional[int] = None,
     **kwargs: Any,
 ) -> Dict[str, Any]:
-    """Creates an immutable reviewed plan for an Official Vendor Stack deployment."""
+    """Creates an immutable reviewed plan for a multi-container stack deployment dynamically analyzed by AI."""
     if user_id is None:
         return {"status": "error", "message": "AI setup drafts require an authenticated panel user."}
 
-    from services.official_stacks.catalog import get_stack
+    import uuid
+    from services.official_stacks.catalog import get_stack, register_stack
+    from services.official_stacks.schema import stack_from_dict
     from services.official_stacks.manifest_validator import validate_stack_request
 
-    stack = get_stack(catalog_id)
-    if stack is None:
-        return {"status": "error", "message": f"Unknown official stack catalog '{catalog_id}'."}
+    cat_id = (catalog_id or "").strip() or f"stack_{uuid.uuid4().hex[:8]}"
+
+    if services:
+        stack_data = {
+            "catalog_id": cat_id,
+            "display_name": display_name.strip() or f"Stack ({cat_id})",
+            "vendor_name": kwargs.get("vendor_name", "Vendor"),
+            "description": kwargs.get("description", ""),
+            "official_repositories": kwargs.get("official_repositories") or [],
+            "allowed_versions": [version.strip()] if version.strip() else ["latest"],
+            "default_version": version.strip() or "latest",
+            "services": services,
+            "startup_order": startup_order or list(services.keys()),
+            "web_service_name": web_service_name or (startup_order[-1] if startup_order else list(services.keys())[0]),
+            "web_internal_port": web_internal_port,
+            "web_health_path": web_health_path,
+            "required_secrets": required_secrets or [],
+            "url_templates": url_templates or {},
+            "default_environment": default_environment or {},
+            "allowed_nonsecret_settings": list((nonsecret_settings or {}).keys()) or kwargs.get("allowed_nonsecret_settings", []),
+            "recommended_ram_mb": recommended_ram_mb,
+            "post_install_message": post_install_message,
+        }
+        stack = stack_from_dict(stack_data)
+        register_stack(stack)
+    else:
+        stack = get_stack(cat_id)
+        if stack is None:
+            return {"status": "error", "message": f"Stack '{cat_id}' is not defined. Please provide the 'services' configuration."}
 
     v = version.strip() or stack.default_version
-    try:
-        _, clean_settings = validate_stack_request(catalog_id, v, nonsecret_settings or {})
-    except ValueError as exc:
-        return {"status": "error", "message": str(exc)}
+    clean_settings = dict(nonsecret_settings or {})
+    if stack.allowed_nonsecret_settings:
+        clean_settings = {k: val for k, val in clean_settings.items() if k in stack.allowed_nonsecret_settings}
 
     payload = {
         "deploy_type": "official_stack",
-        "stack_catalog_id": catalog_id,
+        "stack_catalog_id": stack.catalog_id,
         "stack_version": v,
         "domain_name": domain_name.strip(),
         "nonsecret_settings": clean_settings,
@@ -358,7 +396,7 @@ async def propose_official_stack_install(
     }
 
     sess_id = session_id or "default_session"
-    plan_summary = summary or f"Deploy Official Stack: {stack.display_name} ({v})"
+    plan_summary = summary or f"Deploy Stack: {stack.display_name} ({v})"
 
     plan = await action_plans.create_action_plan(
         db=db,
@@ -376,5 +414,5 @@ async def propose_official_stack_install(
         "plan_id": plan.plan_id,
         "summary": plan.summary,
         "confidence": plan.confidence,
-        "message": f"Official stack proposal created for {stack.display_name}. User can review and deploy from wizard.",
+        "message": f"Stack proposal created for {stack.display_name}. User can review and deploy from wizard.",
     }

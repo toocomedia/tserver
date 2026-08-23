@@ -280,29 +280,82 @@ RAW_TOOL_SCHEMAS: List[Dict[str, Any]] = [
     },
     {
         "name": "propose_official_stack_install",
-        "description": "Creates an immutable draft plan for deploying an official vendor stack (such as Plausible Analytics). Never deploys or generates secret values.",
+        "description": "Creates an immutable draft plan for deploying a multi-container stack analyzed and configured dynamically by the AI. Never deploys or generates secret values directly.",
         "parameters": {
             "type": "object",
             "properties": {
                 "catalog_id": {
                     "type": "string",
-                    "description": "The official stack catalog identifier (e.g. 'plausible_ce').",
+                    "description": "Unique stack identifier (e.g. 'plausible_ce', 'ghost_stack', 'custom_app_stack').",
+                },
+                "display_name": {
+                    "type": "string",
+                    "description": "Human-friendly display name (e.g. 'Plausible Analytics CE', 'Ghost CMS').",
                 },
                 "version": {
                     "type": "string",
-                    "description": "The allowed version tag (e.g. 'v3.2.1'). If omitted, uses catalog default.",
+                    "description": "The release version or image tag (e.g. 'v3.2.1', 'latest').",
                 },
                 "domain_name": {
                     "type": "string",
                     "description": "Target domain name for the stack web entrypoint.",
                 },
+                "services": {
+                    "type": "object",
+                    "description": "Dictionary of cooperating services. Each service key defines: image_reference, internal_ports, volumes, health_check, config_files, depends_on, environment_defaults, memory_limit_mb, is_web_entrypoint.",
+                },
+                "startup_order": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Ordered list of service names to start (databases/caches first, web app last).",
+                },
+                "web_service_name": {
+                    "type": "string",
+                    "description": "Name of the web entrypoint service receiving reverse proxy traffic.",
+                },
+                "web_internal_port": {
+                    "type": "integer",
+                    "description": "Internal HTTP port of the web service (e.g. 8000, 3000, 2368).",
+                },
+                "web_health_path": {
+                    "type": "string",
+                    "description": "HTTP health check endpoint (e.g. '/api/health', '/').",
+                },
+                "required_secrets": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "key": {"type": "string"},
+                            "purpose": {"type": "string"},
+                        },
+                        "required": ["key", "purpose"],
+                    },
+                    "description": "List of cryptographic secrets generated securely by panel vault.",
+                },
+                "url_templates": {
+                    "type": "object",
+                    "description": "Dynamic connection string templates using {service_name} and {SECRET_KEY} placeholders.",
+                },
+                "default_environment": {
+                    "type": "object",
+                    "description": "Default environment variables configured for the stack.",
+                },
                 "nonsecret_settings": {
                     "type": "object",
-                    "description": "Allowed non-secret configuration variables (e.g. {'TIMEZONE': 'UTC', 'DISABLE_REGISTRATION': 'invite_only'}).",
+                    "description": "Non-secret user settings (e.g. {'TIMEZONE': 'UTC', 'DISABLE_REGISTRATION': 'invite_only'}).",
+                },
+                "recommended_ram_mb": {
+                    "type": "integer",
+                    "description": "Recommended RAM in MB for all cooperating containers.",
+                },
+                "post_install_message": {
+                    "type": "string",
+                    "description": "Post-installation guidance displayed to the user.",
                 },
                 "summary": {
                     "type": "string",
-                    "description": "Brief summary of the proposed official stack setup.",
+                    "description": "Brief summary of the proposed stack setup.",
                 },
                 "confidence": {
                     "type": "number",
@@ -313,7 +366,7 @@ RAW_TOOL_SCHEMAS: List[Dict[str, Any]] = [
                     "description": "Technical reasoning for the recommended stack configuration.",
                 },
             },
-            "required": ["catalog_id"],
+            "required": ["catalog_id", "domain_name"],
         },
     },
     {
