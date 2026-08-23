@@ -77,6 +77,22 @@ def _migrate_sync(sync_conn) -> None:
                 "ALTER TABLE domains ADD COLUMN parent_domain VARCHAR(255)"
             ))
 
+    # --- container_apps: stack deploy fields ---
+    if "container_apps" in tables:
+        cols = _column_names(sync_conn, "container_apps")
+        stack_cols = {
+            "deploy_type": "VARCHAR(32) DEFAULT 'railpack' NOT NULL",
+            "stack_catalog_id": "VARCHAR(64)",
+            "stack_version": "VARCHAR(32)",
+            "stack_services": "TEXT",
+        }
+        for col, ddl in stack_cols.items():
+            if col not in cols:
+                logger.info("Migrating container_apps: add %s", col)
+                sync_conn.execute(text(
+                    f"ALTER TABLE container_apps ADD COLUMN {col} {ddl}"
+                ))
+
     # --- postgres_remote_domains: v2 remote-access fields ---
     # This table existed before the v2 model. create_all() never adds columns
     # to an existing SQLite table, so upgrade each field explicitly.

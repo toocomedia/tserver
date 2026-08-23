@@ -50,6 +50,11 @@ def match_repository(url: str) -> Optional[Tuple[OfficialStackDefinition, str]]:
 # -----------------------------------------------------------------------------
 # First Official Vendor Stack: Plausible Community Edition
 # -----------------------------------------------------------------------------
+_PLAUSIBLE_LOGS_XML = "<clickhouse><logger><level>warning</level><console>1</console></logger></clickhouse>"
+_PLAUSIBLE_IPV4_XML = "<clickhouse><listen_host>0.0.0.0</listen_host></clickhouse>"
+_PLAUSIBLE_LOW_RES_XML = "<clickhouse><max_server_memory_usage_to_ram_ratio>0.5</max_server_memory_usage_to_ram_ratio><max_threads>2</max_threads></clickhouse>"
+_PLAUSIBLE_USER_OVERRIDES_XML = "<clickhouse><profiles><default><max_memory_usage>500000000</max_memory_usage><max_threads>2</max_threads></default></profiles></clickhouse>"
+
 _PLAUSIBLE_SERVICES = {
     "plausible_db": ServiceDefinition(
         name="plausible_db",
@@ -78,10 +83,10 @@ _PLAUSIBLE_SERVICES = {
             VolumeDefinition(name_suffix="event-logs", container_mount_path="/var/log/clickhouse-server"),
         ],
         config_files=[
-            ConfigFileDefinition(asset_name="logs.xml", container_target_path="/etc/clickhouse-server/config.d/logs.xml"),
-            ConfigFileDefinition(asset_name="ipv4-only.xml", container_target_path="/etc/clickhouse-server/config.d/ipv4-only.xml"),
-            ConfigFileDefinition(asset_name="low-resources.xml", container_target_path="/etc/clickhouse-server/config.d/low-resources.xml"),
-            ConfigFileDefinition(asset_name="default-profile-low-resources-overrides.xml", container_target_path="/etc/clickhouse-server/users.d/default-profile-low-resources-overrides.xml"),
+            ConfigFileDefinition(filename="logs.xml", container_target_path="/etc/clickhouse-server/config.d/logs.xml", content=_PLAUSIBLE_LOGS_XML),
+            ConfigFileDefinition(filename="ipv4-only.xml", container_target_path="/etc/clickhouse-server/config.d/ipv4-only.xml", content=_PLAUSIBLE_IPV4_XML),
+            ConfigFileDefinition(filename="low-resources.xml", container_target_path="/etc/clickhouse-server/config.d/low-resources.xml", content=_PLAUSIBLE_LOW_RES_XML),
+            ConfigFileDefinition(filename="default-profile-low-resources-overrides.xml", container_target_path="/etc/clickhouse-server/users.d/default-profile-low-resources-overrides.xml", content=_PLAUSIBLE_USER_OVERRIDES_XML),
         ],
         health_check=HealthCheckDefinition(
             probe_type="command",
@@ -140,6 +145,11 @@ PLAUSIBLE_CE = OfficialStackDefinition(
         "BASE_URL", "TIMEZONE", "DISABLE_REGISTRATION",
         "MAILER_EMAIL", "SMTP_HOST_ADDR", "SMTP_HOST_PORT", "SMTP_USER_NAME", "SMTP_USER_PWD", "MAILER_NAME",
     ],
+    default_environment={"DISABLE_REGISTRATION": "invite_only"},
+    url_templates={
+        "DATABASE_URL": "postgresql://postgres:{POSTGRES_PASSWORD}@{plausible_db}:5432/plausible_db",
+        "CLICKHOUSE_DATABASE_URL": "http://{plausible_events_db}:8123/plausible_events_db",
+    },
     required_secrets=[
         SecretRequirement(key="SECRET_KEY_BASE", purpose="Plausible cryptographic cookie and session signing secret", generator="urlsafe64"),
         SecretRequirement(key="POSTGRES_PASSWORD", purpose="PostgreSQL internal password for Plausible database", generator="hex32"),

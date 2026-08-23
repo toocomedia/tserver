@@ -1,9 +1,0 @@
-<clickhouse>
-    <max_server_memory_usage_to_ram_ratio>0.5</max_server_memory_usage_to_ram_ratio>
-    <total_memory_profiler_step>4194304</total_memory_profiler_step>
-    <max_untracked_memory>2097152</max_untracked_memory>
-    <merge_tree>
-        <max_bytes_to_merge_at_min_space_in_pool>104857600</max_bytes_to_merge_at_min_space_in_pool>
-        <max_bytes_to_merge_at_max_space_in_pool>1048576000</max_bytes_to_merge_at_max_space_in_pool>
-    </merge_tree>
-</clickhouse>

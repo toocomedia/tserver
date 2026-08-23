@@ -1,6 +1,0 @@
-<clickhouse>
-    <logger>
-        <level>warning</level>
-        <console>true</console>
-    </logger>
-</clickhouse>

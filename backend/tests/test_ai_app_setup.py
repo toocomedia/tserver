@@ -33,6 +33,7 @@ class TestAiAppSetup(unittest.IsolatedAsyncioTestCase):
                 summary="Deploy n8n automation tool",
                 confidence=0.98,
                 reasoning="Detected official n8n workflow image with Postgres DB attachment.",
+                user_id=1,
             )
 
             self.assertEqual(res["status"], "ok")

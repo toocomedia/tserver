@@ -17,8 +17,9 @@ class VolumeDefinition:
 @dataclass(frozen=True)
 class ConfigFileDefinition:
     """Internal vendor config file materialized into the stack container."""
-    asset_name: str
+    filename: str
     container_target_path: str
+    content: str = ""
     read_only: bool = True
 
 
@@ -81,6 +82,8 @@ class OfficialStackDefinition:
     recommended_ram_mb: int = 2048
     minimum_ram_mb: int = 1536
     allowed_nonsecret_settings: list[str] = field(default_factory=list)
+    default_environment: dict[str, str] = field(default_factory=dict)
+    url_templates: dict[str, str] = field(default_factory=dict)
     required_secrets: list[SecretRequirement] = field(default_factory=list)
     post_install_message: str = ""
     docs_url: str = ""

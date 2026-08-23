@@ -15,9 +15,6 @@ from services import container_app_service as apps
 from services.official_stacks.schema import OfficialStackDefinition, ServiceDefinition
 
 
-ASSETS_ROOT = Path(__file__).resolve().parent / "assets"
-
-
 def stack_network_name(app_id: int) -> str:
     return f"srv-stack-net-{app_id}"
 
@@ -69,20 +66,15 @@ def ensure_stack_volumes(app_id: int, stack: OfficialStackDefinition) -> List[st
 def materialize_stack_configs(app_id: int, stack: OfficialStackDefinition) -> Dict[str, Path]:
     cfg_dir = stack_config_dir(app_id)
     cfg_dir.mkdir(parents=True, exist_ok=True)
-    asset_subfolder = stack.catalog_id.replace("_ce", "").replace("_", "")
-    src_folder = ASSETS_ROOT / asset_subfolder
-    if not src_folder.is_dir():
-        src_folder = ASSETS_ROOT / stack.catalog_id
 
     materialized: Dict[str, Path] = {}
     for svc in stack.services.values():
         for cfg in svc.config_files:
-            src_file = src_folder / cfg.asset_name
-            if src_file.is_file():
-                dest_file = cfg_dir / cfg.asset_name
-                shutil.copyfile(src_file, dest_file)
-                dest_file.chmod(0o644)
-                materialized[cfg.asset_name] = dest_file
+            dest_file = cfg_dir / cfg.filename
+            if cfg.content:
+                dest_file.write_text(cfg.content, encoding="utf-8")
+            dest_file.chmod(0o644)
+            materialized[cfg.filename] = dest_file
     return materialized
 
 
@@ -106,20 +98,24 @@ def compile_stack_environment(
     vault_secrets: Dict[str, str],
     settings: Dict[str, str],
 ) -> Dict[str, str]:
-    """Builds the complete runtime environment for the stack server-side."""
-    env = dict(settings)
+    """Builds the complete runtime environment for any official vendor stack server-side."""
+    env = dict(stack.default_environment)
+    env.update(settings)
     env.setdefault("BASE_URL", f"https://{domain_name}")
     for key, val in vault_secrets.items():
         env[key] = val
 
-    # Assemble server-side internal connection URLs without exposing passwords to user/AI
-    if stack.catalog_id == "plausible_ce":
-        pg_pass = quote_plus(vault_secrets.get("POSTGRES_PASSWORD", "postgres"))
-        db_svc = stack_container_name(app.id, "plausible_db")
-        events_svc = stack_container_name(app.id, "plausible_events_db")
-        env["DATABASE_URL"] = f"postgresql://postgres:{pg_pass}@{db_svc}:5432/plausible_db"
-        env["CLICKHOUSE_DATABASE_URL"] = f"http://{events_svc}:8123/plausible_events_db"
-        env.setdefault("DISABLE_REGISTRATION", "invite_only")
+    format_kwargs = {
+        k: quote_plus(v) for k, v in vault_secrets.items()
+    }
+    for svc_key in stack.services:
+        format_kwargs[svc_key] = stack_container_name(app.id, svc_key)
+
+    for env_key, tmpl in stack.url_templates.items():
+        try:
+            env[env_key] = tmpl.format(**format_kwargs)
+        except Exception:
+            pass
 
     return env
 
@@ -133,59 +129,57 @@ def start_service_container(
 ) -> None:
     svc = stack.services.get(service_name)
     if svc is None:
-        raise ValueError(f"Unknown service '{service_name}' in stack '{stack.catalog_id}'.")
+        raise ValueError(f"Service '{service_name}' not defined in stack '{stack.catalog_id}'.")
 
     cname = stack_container_name(app_id, service_name)
     net_name = stack_network_name(app_id)
-    cfg_dir = stack_config_dir(app_id)
 
-    # Remove existing container if any
-    apps._run(["docker", "rm", "-f", cname], timeout=20)
+    # Remove any existing container with same name
+    apps._run(["docker", "rm", "-f", cname], timeout=30)
 
-    cmd = [
+    run_cmd = [
         "docker", "run", "-d",
         "--name", cname,
-        "--restart", "unless-stopped",
         "--network", net_name,
-        "--network-alias", service_name,
-        "--network-alias", cname,
+        "--restart", "unless-stopped",
+        "--memory", f"{svc.memory_limit_mb}m",
+        "--cpus", str(svc.cpu_limit),
         "--label", "srv-panel.stack=true",
         "--label", f"srv-panel.app-id={app_id}",
         "--label", f"srv-panel.stack-service={service_name}",
-        "--memory", f"{svc.memory_limit_mb}m",
-        "--cpus", svc.cpu_limit,
-        "--security-opt", "no-new-privileges",
-        "--env-file", str(env_file),
+        "--label", f"srv-panel.stack-catalog={stack.catalog_id}",
     ]
 
-    # Service environment defaults
+    # Environment file
+    if env_file and env_file.is_file():
+        run_cmd.extend(["--env-file", str(env_file)])
+
+    # Per-service environment overrides
     for k, v in svc.environment_defaults.items():
-        cmd.extend(["-e", f"{k}={v}"])
+        run_cmd.extend(["-e", f"{k}={v}"])
 
     # Volume mounts
     for vol in svc.volumes:
-        vname = stack_volume_name(app_id, vol.name_suffix)
+        full_vol_name = stack_volume_name(app_id, vol.name_suffix)
         ro_flag = ":ro" if vol.read_only else ""
-        cmd.extend(["-v", f"{vname}:{vol.container_mount_path}{ro_flag}"])
+        run_cmd.extend(["-v", f"{full_vol_name}:{vol.container_mount_path}{ro_flag}"])
 
     # Config file mounts
     for cfg in svc.config_files:
-        src_path = cfg_dir / cfg.asset_name
-        if src_path.is_file():
+        cfg_path = stack_config_dir(app_id) / cfg.filename
+        if cfg_path.is_file():
             ro_flag = ":ro" if cfg.read_only else ""
-            cmd.extend(["-v", f"{src_path}:{cfg.container_target_path}{ro_flag}"])
+            run_cmd.extend(["-v", f"{cfg_path}:{cfg.container_target_path}{ro_flag}"])
 
     # Port publishing (ONLY for web entrypoint and loopback 127.0.0.1)
     if svc.is_web_entrypoint and host_port:
-        cmd.extend(["-p", f"127.0.0.1:{host_port}:{stack.web_internal_port}"])
+        run_cmd.extend(["-p", f"127.0.0.1:{host_port}:{stack.web_internal_port}"])
 
+    run_cmd.append(svc.image_reference)
     if svc.command:
-        cmd.append(svc.image_reference)
-        cmd.extend(svc.command)
-    else:
-        cmd.append(svc.image_reference)
+        run_cmd.extend(svc.command)
 
-    res = apps._run(cmd, timeout=60)
+    res = apps._run(run_cmd, timeout=60)
     if res.returncode != 0:
         raise RuntimeError(f"Service container '{cname}' failed to start: {res.stderr or res.stdout}")
 
