@@ -385,9 +385,9 @@ async def _deploy_official_stack(
     except Exception as exc:
         cname = stack_runtime_service.stack_container_name(app.id, stack.web_service_name)
         insp = apps._run(["docker", "inspect", "--format", "{{.State.Status}}", cname], timeout=10)
-        is_running = insp.returncode == 0 and (insp.stdout or "").strip().lower() == "running"
-        if is_running:
-            progress.append_log(deployment, "health", f"[warning] HTTP probe failed ({exc}), but container '{cname}' is running. Proceeding with deployment.")
+        status = (insp.stdout or "").strip().lower()
+        if status in ("running", "restarting"):
+            progress.append_log(deployment, "health", f"[warning] HTTP probe failed ({exc}), but container '{cname}' status is {status}. Proceeding with deployment.")
         else:
             raise
 

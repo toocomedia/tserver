@@ -299,13 +299,19 @@ async def wait_service_health(
     # For web entrypoint with host_port, always verify HTTP loopback responsiveness
     if is_web:
         from services import container_app_deployment_progress_service as progress
-        probe_path = hc.http_path if (hc and hc.http_path) else (stack.web_health_path or "/api/health")
+        probe_path = (hc.http_path if (hc and hc.http_path) else (stack.web_health_path or "/")) or "/"
         wait_timeout = int(deadline - time.time()) if deadline > time.time() else 45
-        await progress.wait_for_http(
-            host_port,
-            path=probe_path,
-            timeout_seconds=max(wait_timeout, 30),
-        )
+        try:
+            await progress.wait_for_http(
+                host_port,
+                path=probe_path,
+                timeout_seconds=max(wait_timeout, 30),
+            )
+        except Exception as exc:
+            log_res = apps._run(["docker", "logs", "--tail", "35", cname], timeout=10)
+            c_logs = (log_res.stdout or log_res.stderr or "").strip()
+            detail = f"\n[container logs]\n{c_logs}" if c_logs else ""
+            raise RuntimeError(f"{exc}{detail}")
 
 
 def stop_stack(app_id: int, stack: OfficialStackDefinition) -> None:
