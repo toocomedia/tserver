@@ -285,22 +285,28 @@ RAW_TOOL_SCHEMAS: List[Dict[str, Any]] = [
     },
     {
         "name": "get_app_engine_capabilities",
-        "description": "Returns the live server-owned App Engine setup contract: supported modes, database/storage/network limits, secret generators, and approved stack templates. Read-only.",
+        "description": "Returns live App Engine setup contract: supported modes, database/storage/network limits, secret generators, and structured stack-manifest fields. Read-only.",
         "parameters": {"type": "object", "properties": {}},
     },
     {
         "name": "propose_stack_install",
-        "description": "Creates one immutable review plan from a server-approved stack template. It accepts no Compose, YAML, services, images, mounts, ports, or secret values and never deploys.",
+        "description": "Creates one immutable review plan from a restricted structured stack manifest. Never send Compose/YAML, host paths, public mappings, capabilities, or secret values. Never deploys.",
         "parameters": {
             "type": "object",
             "properties": {
-                "catalog_id": {
-                    "type": "string",
-                    "description": "Identifier from get_app_engine_capabilities.approved_stacks.",
-                },
-                "version": {
-                    "type": "string",
-                    "description": "Allowed template version. Omit for the template default.",
+                "stack_manifest": {
+                    "type": "object",
+                    "description": "Structured manifest only: name, display_name, vendor_name, source_repositories, version, services, startup_order, web_service, web_port, optional web_health_path, resources, named volumes, scoped secrets and web URL templates. No Compose/YAML fields.",
+                    "properties": {
+                        "name": {"type": "string"}, "display_name": {"type": "string"}, "vendor_name": {"type": "string"},
+                        "source_repositories": {"type": "array", "items": {"type": "string"}}, "version": {"type": "string"},
+                        "services": {"type": "array", "items": {"type": "object"}},
+                        "startup_order": {"type": "array", "items": {"type": "string"}},
+                        "web_service": {"type": "string"}, "web_port": {"type": "integer"}, "web_health_path": {"type": "string"},
+                        "allowed_nonsecret_settings": {"type": "array", "items": {"type": "string"}},
+                        "default_environment": {"type": "object"}, "url_templates": {"type": "object"}, "secrets": {"type": "array", "items": {"type": "object"}},
+                    },
+                    "required": ["name", "version", "services", "startup_order", "web_service", "web_port"],
                 },
                 "domain_name": {
                     "type": "string",
@@ -308,8 +314,9 @@ RAW_TOOL_SCHEMAS: List[Dict[str, Any]] = [
                 },
                 "nonsecret_settings": {
                     "type": "object",
-                    "description": "Only keys listed by the selected approved template.",
+                    "description": "Only non-secret keys declared in stack_manifest.allowed_nonsecret_settings.",
                 },
+                "evidence": {"type": "array", "items": {"type": "string"}, "description": "Source or vendor references supporting services, health and required settings."},
                 "summary": {
                     "type": "string",
                     "description": "Brief summary of the proposed stack setup.",
@@ -323,7 +330,7 @@ RAW_TOOL_SCHEMAS: List[Dict[str, Any]] = [
                     "description": "Evidence-based setup reasoning.",
                 },
             },
-            "required": ["catalog_id", "domain_name"],
+            "required": ["stack_manifest", "domain_name", "evidence"],
         },
     },
     {

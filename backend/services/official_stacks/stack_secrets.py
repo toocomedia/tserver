@@ -1,4 +1,4 @@
-"""Generate and bind approved stack secrets to one deployment snapshot."""
+"""Generate and bind reviewed stack secrets to one deployment snapshot."""
 from __future__ import annotations
 
 import json

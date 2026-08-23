@@ -1,4 +1,4 @@
-"""Strict validation and fingerprinting for Official Vendor Stacks."""
+"""Strict validation and fingerprinting for persisted App Engine stack manifests."""
 from __future__ import annotations
 
 import hashlib
@@ -67,6 +67,7 @@ def validate_stack_manifest(stack: OfficialStackDefinition) -> OfficialStackDefi
     if stack.web_health_path and not stack.web_health_path.startswith("/"):
         raise ValueError("HTTP health path must start with '/'.")
 
+    volume_names: set[str] = set()
     for name, svc in stack.services.items():
         if name != svc.name or not _SAFE_SERVICE_NAME_RE.fullmatch(name):
             raise ValueError("Stack service name is invalid.")
@@ -91,13 +92,16 @@ def validate_stack_manifest(stack: OfficialStackDefinition) -> OfficialStackDefi
             not isinstance(svc.command, list)
             or len(svc.command) > 32
             or any(not isinstance(token, str) or len(token) > 2048 for token in svc.command)
-            or any("/var/run/docker.sock" in token or "--privileged" in token for token in svc.command)
+            or any("/var/run/docker.sock" in token or "--privileged" in token or "--cap-add" in token or "--network=host" in token for token in svc.command)
         ):
             raise ValueError(f"Service '{name}' command is unsafe or invalid.")
         service_mounts: set[str] = set()
         for volume in svc.volumes:
             if not _SAFE_VOLUME_RE.fullmatch(volume.name_suffix):
                 raise ValueError(f"Service '{name}' has an invalid volume name.")
+            if volume.name_suffix in volume_names:
+                raise ValueError(f"Stack volume '{volume.name_suffix}' is declared more than once.")
+            volume_names.add(volume.name_suffix)
             path = volume.container_mount_path
             if (
                 not path.startswith("/")
@@ -119,6 +123,7 @@ def validate_stack_manifest(stack: OfficialStackDefinition) -> OfficialStackDefi
     _reject_dependency_cycles(stack)
     service_names = set(stack.services)
     secret_keys: set[str] = set()
+    secret_targets: set[tuple[str, str]] = set()
     for secret in stack.required_secrets:
         if not _SAFE_ENV_RE.fullmatch(secret.key) or secret.key in secret_keys:
             raise ValueError("Stack secret key is invalid or duplicated.")
@@ -128,6 +133,11 @@ def validate_stack_manifest(stack: OfficialStackDefinition) -> OfficialStackDefi
             raise ValueError(f"Stack secret '{secret.key}' targets an unknown service.")
         if secret.environment_key and not _SAFE_ENV_RE.fullmatch(secret.environment_key):
             raise ValueError(f"Stack secret '{secret.key}' has an invalid environment key.")
+        if secret.service_name and secret.environment_key:
+            target = (secret.service_name, secret.environment_key)
+            if target in secret_targets:
+                raise ValueError(f"Stack secret target '{secret.service_name}:{secret.environment_key}' is duplicated.")
+            secret_targets.add(target)
         secret_keys.add(secret.key)
     for key, template in stack.url_templates.items():
         if not _SAFE_ENV_RE.fullmatch(key) or not isinstance(template, str) or len(template) > 2048:

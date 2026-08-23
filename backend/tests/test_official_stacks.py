@@ -124,6 +124,33 @@ GENERIC_TEST_STACK = OfficialStackDefinition(
     },
 )
 
+AI_STACK_MANIFEST = {
+    "name": "generic_analytics",
+    "display_name": "Generic Analytics Stack",
+    "vendor_name": "Generic Vendor",
+    "source_repositories": ["https://github.com/example-vendor/analytics-stack"],
+    "version": "v1.0.0",
+    "services": [
+        {
+            "name": "analytics_db", "image": "postgres:16-alpine", "ports": [5432],
+            "environment": {"POSTGRES_USER": "postgres", "POSTGRES_DB": "analytics_db"},
+            "volumes": [{"name": "db-data", "mount_path": "/var/lib/postgresql/data"}],
+            "resources": {"memory_mb": 256, "cpu": "0.5"},
+            "health": {"type": "command", "command": ["pg_isready", "-U", "postgres"]},
+        },
+        {
+            "name": "analytics_web", "image": "example-vendor/analytics-web:v1.0.0", "ports": [8000],
+            "depends_on": ["analytics_db"], "resources": {"memory_mb": 512, "cpu": "1.0"},
+        },
+    ],
+    "startup_order": ["analytics_db", "analytics_web"], "web_service": "analytics_web", "web_port": 8000,
+    "secrets": [
+        {"key": "DB_PASSWORD", "purpose": "Database password", "generator": "password", "service": "analytics_db", "environment": "POSTGRES_PASSWORD"},
+        {"key": "SECRET_KEY_BASE", "purpose": "Application secret", "generator": "urlsafe64", "service": "analytics_web", "environment": "SECRET_KEY_BASE"},
+    ],
+    "url_templates": {"DATABASE_URL": "postgresql://postgres:{DB_PASSWORD}@{analytics_db}:5432/analytics_db"},
+}
+
 
 class TestOfficialStacks(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
@@ -226,19 +253,19 @@ class TestOfficialStacks(unittest.IsolatedAsyncioTestCase):
             await conn.run_sync(_migrate_sync)
         return test_engine, async_sessionmaker(bind=test_engine, class_=AsyncSession, expire_on_commit=False)
 
-    async def test_ai_propose_official_stack_plan(self):
-        """Verify AI Helper propose_official_stack_install tool generates immutable plan."""
+    async def test_ai_propose_general_stack_plan(self):
+        """Verify general structured manifest creates an immutable plan without catalog lookup."""
         engine, SessionFactory = await self._make_test_db()
         try:
             async with SessionFactory() as db:
-                res = await app_setup.propose_official_stack_install(
+                res = await app_setup.propose_stack_install(
                     db=db,
-                    catalog_id="generic_analytics",
-                    version="v1.0.0",
+                    stack_manifest=AI_STACK_MANIFEST,
                     domain_name="stats.mysite.com",
+                    evidence=["https://github.com/example-vendor/analytics-stack/README.md"],
                     session_id="stack_ai_test_session",
                     user_id=1,
-                    reasoning="Generic official stack test plan generation.",
+                    reasoning="Generic stack test plan generation.",
                 )
                 self.assertEqual(res["status"], "ok")
                 self.assertTrue(res["plan_id"].startswith("plan_"))
@@ -249,14 +276,13 @@ class TestOfficialStacks(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(plan["action_type"], "stack_install")
                 self.assertEqual(plan["payload"]["stack_catalog_id"], "generic_analytics")
                 self.assertEqual(plan["payload"]["stack_version"], "v1.0.0")
-                self.assertEqual(plan["payload"]["services_count"], 3)
+                self.assertEqual(plan["payload"]["services_count"], 2)
         finally:
             await engine.dispose()
 
-    async def test_ai_propose_dynamic_ai_generated_stack_plan(self):
-        """Verify AI Helper propose_official_stack_install works with dynamic LLM service formats."""
-        from services.official_stacks.schema import stack_from_dict
-        # Test polymorphic AI output with string volumes, string secrets, and health check strings
+    def test_ai_rejects_legacy_or_raw_stack_shapes(self):
+        """AI proposal input accepts only explicit structured manifest fields."""
+        from services.official_stacks.proposal_manifest import stack_from_proposal
         dynamic_payload = {
             "catalog_id": "dynamic_ai_stack",
             "display_name": "Dynamic AI Generated Stack",
@@ -280,38 +306,8 @@ class TestOfficialStacks(unittest.IsolatedAsyncioTestCase):
             "required_secrets": ["DB_PASSWORD", "SECRET_KEY_BASE"],
             "url_templates": {"DATABASE_URL": "postgresql://postgres:{DB_PASSWORD}@{db}:5432/app"},
         }
-        stk = stack_from_dict(dynamic_payload)
-        self.assertEqual(stk.catalog_id, "dynamic_ai_stack")
-        self.assertEqual(len(stk.services), 2)
-        self.assertEqual(stk.services["db"].volumes[0].name_suffix, "db-data")
-        self.assertEqual(stk.services["db"].volumes[0].container_mount_path, "/var/lib/postgresql/data")
-        self.assertEqual(stk.services["db"].health_check.command, ["pg_isready", "-U", "postgres"])
-        self.assertEqual(stk.services["web"].health_check.probe_type, "http")
-        self.assertEqual(stk.services["web"].health_check.http_path, "/api/health")
-        self.assertEqual(len(stk.required_secrets), 2)
-
-        engine, SessionFactory = await self._make_test_db()
-        try:
-            async with SessionFactory() as db:
-                res = await app_setup.propose_official_stack_install(
-                    db=db,
-                    catalog_id="dynamic_ai_stack",
-                    display_name="Dynamic AI Stack",
-                    domain_name="dynamic.example.com",
-                    services=dynamic_payload["services"],
-                    startup_order=["db", "web"],
-                    web_service_name="web",
-                    web_internal_port=8000,
-                    required_secrets=dynamic_payload["required_secrets"],
-                    url_templates=dynamic_payload["url_templates"],
-                    session_id="stack_dyn_test",
-                    user_id=1,
-                    reasoning="Dynamic AI generated stack test.",
-                )
-                self.assertEqual(res["status"], "error")
-                self.assertIn("not an approved", res["message"])
-        finally:
-            await engine.dispose()
+        with self.assertRaises(ValueError):
+            stack_from_proposal(dynamic_payload, ["https://example.test/docs"])
 
     async def test_official_stack_create_flow(self):
         """Verify the create flow logic handles official_stack deploy_type correctly."""

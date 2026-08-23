@@ -132,7 +132,7 @@ async def create(
     if deploy_type == "official_stack" or source_type == "official_stack":
         plan_id = stack_plan_id.strip()
         if not plan_id:
-            raise HTTPException(400, "Choose an approved stack review plan before deployment.")
+            raise HTTPException(400, "Choose a reviewed stack plan before deployment.")
         plan = await action_plans.get_action_plan(db, plan_id, user_id=request.session.get("user_id"))
         if not plan or not action_plans.payload_is_intact(plan) or plan["status"] != "awaiting_approval" or plan["action_type"] not in {"stack_install", "official_stack_install"}:
             raise HTTPException(400, "Stack review plan is unavailable, expired, or already used.")

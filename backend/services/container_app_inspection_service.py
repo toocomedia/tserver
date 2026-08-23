@@ -180,15 +180,8 @@ def _parse_compose_details(root: Path) -> dict[str, object]:
     compose_file = _find_compose(root)
     if not compose_file:
         return {}
-    try:
-        text = compose_file.read_text(encoding="utf-8", errors="ignore")
-        ports = re.findall(r"['\"]?(\d{2,5}):(\d{2,5})['\"]?", text)
-        return {
-            "file": compose_file.name,
-            "detected_ports": [int(p[1]) for p in ports if p[1].isdigit()],
-        }
-    except Exception:
-        return {}
+    from services.apps_engine.compose_evidence import inspect_compose_evidence
+    return inspect_compose_evidence(compose_file)
 
 
 def _databases_with_confidence(

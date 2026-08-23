@@ -1,4 +1,4 @@
-"""Rollback and snapshot recovery for Official Vendor Stacks."""
+"""Legacy rollback helper for persisted App Engine stacks."""
 from __future__ import annotations
 
 import json

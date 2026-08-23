@@ -510,27 +510,26 @@ async def mark_action_plan_applied_endpoint(plan_id: str, request: Request, db: 
 
 @router.post("/api/create-stack-plan")
 async def create_stack_plan_endpoint(request: Request, db: AsyncSession = Depends(get_db)):
-    """Silent API action: generates an immutable action plan for an official stack."""
-    from plugins.ai_helper.tools.app_setup import propose_official_stack_install
+    """Creates a reviewed general-stack plan from restricted structured fields."""
+    from plugins.ai_helper.tools.app_setup import propose_stack_install
     user_id = request.session.get("user_id") if hasattr(request, "session") else None
     if user_id is None:
         raise HTTPException(401, "Authentication required.")
 
     body = await request.json()
-    catalog_id = str(body.get("catalog_id") or "").strip()
-    if not catalog_id:
-        raise HTTPException(400, "Official stack catalog identifier is required.")
-    version = str(body.get("version") or "").strip()
+    stack_manifest = body.get("stack_manifest")
+    if not isinstance(stack_manifest, dict):
+        raise HTTPException(400, "Structured stack manifest is required.")
     session_id = str(body.get("session_id") or "default_session").strip()
     domain_name = str(body.get("domain_name") or "").strip()
     nonsecret_settings = body.get("nonsecret_settings") or {}
 
-    res = await propose_official_stack_install(
+    res = await propose_stack_install(
         db=db,
-        catalog_id=catalog_id,
-        version=version,
+        stack_manifest=stack_manifest,
         domain_name=domain_name,
         nonsecret_settings=nonsecret_settings,
+        evidence=body.get("evidence") or [],
         session_id=session_id,
         user_id=user_id,
     )

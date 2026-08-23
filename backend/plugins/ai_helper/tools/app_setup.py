@@ -64,7 +64,7 @@ async def inspect_app_source(
                 "status": "ok",
                 "source_type": "official_stack",
                 "official_stack": stack_info,
-                "message": f"{stack_info['name']} requires an Official Stack deployment ({stack_info['services_count']} services, {stack_info['recommended_ram_mb'] // 1024} GB RAM recommended).",
+                "message": f"{stack_info['name']} requires a reviewed multi-service stack deployment ({stack_info['services_count']} services, {stack_info['recommended_ram_mb'] // 1024} GB RAM recommended).",
             }
         try:
             res = container_app_inspection_service.inspect_repository(repo, branch.strip() or "main")
@@ -83,7 +83,7 @@ async def inspect_app_source(
                 "status": "ok",
                 "source_type": "official_stack",
                 "official_stack": stack_info,
-                "message": f"{stack_info['name']} requires an Official Stack deployment ({stack_info['services_count']} services, {stack_info['recommended_ram_mb'] // 1024} GB RAM recommended).",
+                "message": f"{stack_info['name']} requires a reviewed multi-service stack deployment ({stack_info['services_count']} services, {stack_info['recommended_ram_mb'] // 1024} GB RAM recommended).",
             }
         try:
             res = await container_app_image_inspect_service.inspect_image(image)
@@ -326,10 +326,9 @@ async def propose_app_install(
     }
 
 
-async def propose_official_stack_install(
+async def propose_stack_install(
     db: AsyncSession,
-    catalog_id: str = "",
-    version: str = "",
+    stack_manifest: Optional[Dict[str, Any]] = None,
     domain_name: str = "",
     nonsecret_settings: Optional[Dict[str, str]] = None,
     evidence: Optional[List[str]] = None,
@@ -340,23 +339,21 @@ async def propose_official_stack_install(
     user_id: Optional[int] = None,
     **kwargs: Any,
 ) -> Dict[str, Any]:
-    """Create a reviewed plan from one server-approved stack template only."""
+    """Create an immutable plan from generic structured fields, never raw Compose."""
     if user_id is None:
         return {"status": "error", "message": "AI setup drafts require an authenticated panel user."}
 
-    from services.official_stacks.catalog import get_stack
-    from services.official_stacks.manifest_validator import compute_stack_manifest_hash, validate_stack_request
+    from services.official_stacks.manifest_validator import compute_stack_manifest_hash
+    from services.official_stacks.proposal_manifest import stack_from_proposal, validate_stack_settings
     from services.official_stacks.schema import stack_to_dict
 
-    catalog = get_stack((catalog_id or "").strip())
-    selected_version = version.strip() or (catalog.default_version if catalog else "")
     try:
-        stack, clean_settings = validate_stack_request(
-            (catalog_id or "").strip(), selected_version, dict(nonsecret_settings or {}),
-        )
+        clean_evidence = [str(item).strip()[:512] for item in (evidence or []) if isinstance(item, str) and item.strip()][:12]
+        stack = stack_from_proposal(stack_manifest, clean_evidence)
+        clean_settings = validate_stack_settings(stack, nonsecret_settings)
     except (TypeError, ValueError) as exc:
         return {"status": "error", "message": str(exc)}
-    v = selected_version
+    v = stack.default_version
     manifest = stack_to_dict(stack)
 
     payload = {
@@ -367,7 +364,7 @@ async def propose_official_stack_install(
         "nonsecret_settings": clean_settings,
         "stack_manifest": manifest,
         "manifest_hash": compute_stack_manifest_hash(stack, v),
-        "evidence": [str(item)[:512] for item in (evidence or []) if isinstance(item, str)][:12],
+        "evidence": clean_evidence,
         "stack_display_name": stack.display_name,
         "services_count": len(stack.services),
         "recommended_ram_mb": stack.recommended_ram_mb,
@@ -376,7 +373,7 @@ async def propose_official_stack_install(
     }
 
     sess_id = session_id or "default_session"
-    plan_summary = summary or f"Deploy Stack: {stack.display_name} ({v})"
+    plan_summary = summary or f"Deploy stack: {stack.display_name} ({v})"
 
     plan = await action_plans.create_action_plan(
         db=db,
@@ -398,14 +395,13 @@ async def propose_official_stack_install(
     }
 
 
-# Compatibility name for clients still sending the old tool identifier.
-propose_stack_install = propose_official_stack_install
+async def propose_official_stack_install(db: AsyncSession, **kwargs: Any) -> Dict[str, Any]:
+    """Temporary compatibility alias; requires the same structured manifest as the new tool."""
+    return await propose_stack_install(db=db, **kwargs)
 
 
 async def get_app_engine_capabilities(db: AsyncSession, **kwargs: Any) -> Dict[str, Any]:
     """Server-owned setup contract. It deliberately omits secret values and raw Compose input."""
-    from services.official_stacks.catalog import list_stacks
-
     try:
         from dependencies import dependency_manager
         providers = {
@@ -414,28 +410,20 @@ async def get_app_engine_capabilities(db: AsyncSession, **kwargs: Any) -> Dict[s
         }
     except Exception:
         providers = {"panel_postgres": False, "panel_mariadb": False}
-    stacks = [
-        {
-            "catalog_id": item.catalog_id, "display_name": item.display_name,
-            "versions": item.allowed_versions, "services": list(item.services),
-            "nonsecret_settings": item.allowed_nonsecret_settings,
-            "secret_specs": [
-                {"key": sec.key, "purpose": sec.purpose, "generator": sec.generator,
-                 "service": sec.service_name, "environment_key": sec.environment_key}
-                for sec in item.required_secrets
-            ],
-        }
-        for item in list_stacks()
-    ]
     return {
         "status": "ok",
-        "modes": ["git_railpack", "git_dockerfile", "registry_image", "approved_compose_stack"],
-        "databases": {"single_app": {**providers, "supabase": True, "external_url": True}, "stack": "template_internal_services_only"},
+        "modes": ["git_railpack", "git_dockerfile", "registry_image", "restricted_compose_stack"],
+        "databases": {"single_app": {**providers, "supabase": True, "external_url": True}, "stack": "private internal services declared by reviewed manifest"},
         "storage": "panel-owned named volumes only; no host paths or Docker socket",
         "networking": "one loopback-only web port; dependencies private; no host network or public database ports",
         "secrets": {"generators": ["urlsafe64", "base64_48", "hex32", "password"], "values_visible_to_ai": False},
-        "unsupported": ["raw Docker Compose", "repository Compose execution", "arbitrary image topology", "privileged containers", "host mounts"],
-        "approved_stacks": stacks,
+        "stack_manifest": {
+            "services": "one to eight service objects: name, image tag or digest, private ports, dependencies, non-secret environment, named volumes, resources, optional command health",
+            "required": ["name", "version", "services", "startup_order", "web_service", "web_port"],
+            "health": "web_health_path only with source or vendor evidence; unknown endpoint must be omitted",
+            "secrets": "key, purpose, generator, target service, target environment; values generated only after approval",
+        },
+        "unsupported": ["raw Docker Compose", "repository Compose execution", "host networking", "privileged containers", "host mounts", "Docker socket", "public database ports"],
     }
 
 

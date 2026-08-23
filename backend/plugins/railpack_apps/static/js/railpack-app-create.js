@@ -586,7 +586,14 @@ if (form) {
         const titleEl = stackPanel.querySelector("[data-stack-title]");
         if (titleEl && p.stack_display_name) titleEl.textContent = p.stack_display_name;
         const badgeEl = stackPanel.querySelector("[data-stack-version-badge]");
-        if (badgeEl && p.stack_version) badgeEl.textContent = `Official Vendor Stack · ${p.stack_version}`;
+        if (badgeEl && p.stack_version) badgeEl.textContent = `Restricted Compose Stack · ${p.stack_version}`;
+        const services = Array.isArray(p.services) ? p.services : [];
+        const servicesLabel = stackPanel.querySelector("[data-stack-services-label]");
+        if (servicesLabel) servicesLabel.textContent = `Services (${p.services_count || services.length})`;
+        const servicesEl = stackPanel.querySelector("[data-stack-services]");
+        if (servicesEl) servicesEl.textContent = services.join(", ") || "Private services";
+        const memoryEl = stackPanel.querySelector("[data-stack-memory]");
+        if (memoryEl && p.recommended_ram_mb) memoryEl.textContent = `${p.recommended_ram_mb} MB RAM recommended`;
       }
     }
 

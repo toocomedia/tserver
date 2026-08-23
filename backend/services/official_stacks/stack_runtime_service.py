@@ -1,4 +1,4 @@
-"""Multi-container runtime orchestration for Official Vendor Stacks."""
+"""Legacy multi-container runtime helpers for persisted App Engine stacks."""
 from __future__ import annotations
 
 import asyncio
