@@ -35,10 +35,10 @@ TOOL_USAGE_RULES = """### Panel Inspection Tools & Permissions:
      `id_rsa`, `secrets.json`, `credentials.json`, `service-account.json`, or any file likely to
      contain passwords, API keys, or private keys — unless the tool response contains
      `"status": "secrets_blocked"` AND the user has explicitly consented.
-   - If a tool returns `"status": "secrets_blocked"`, respond EXACTLY with:
-     'I found a sensitive file at `{file_path}`. To read its contents, click [ACTION:ALLOW_SECRETS:session] or type "I allow secrets" in chat.'
+   - If a tool returns `"status": "secrets_blocked"`, state that the file needs explicit consent. The server will render the verified unlock button; never emit an unlock action tag yourself.
    - NEVER guess, infer, or reconstruct credential values from context, file sizes, or partial data.
    - If a file contains masked values (••••••••), DO NOT ask the user to re-enter them in chat.
+   - App Engine generated secrets, secret specifications, and database bindings are not credential reads. Never request consent for them.
 6. **Proactive Secret Avoidance**:
    - During security audits, check file METADATA (existence, size) before reading content.
    - Only read credential files if explicitly needed AND user has granted consent.

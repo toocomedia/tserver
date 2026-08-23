@@ -55,7 +55,7 @@ class AppsEngineSafeDeploymentTests(unittest.TestCase):
         self.assertNotIn("/deploy", hero)
         self.assertNotIn("data-ai-diagnose-app", hero)
 
-    def test_setup_handoff_prefills_only_supported_single_container_plans(self):
+    def test_setup_handoff_requires_a_reviewed_plan_and_never_unlocks_deployment_secrets(self):
         tool = (BACKEND / "plugins" / "ai_helper" / "tools" / "app_setup.py").read_text(encoding="utf-8")
         registry = (BACKEND / "plugins" / "ai_helper" / "tools" / "registry.py").read_text(encoding="utf-8")
         prompt = (BACKEND / "plugins" / "ai_helper" / "prompts" / "skills" / "app_deploy.py").read_text(encoding="utf-8")
@@ -68,9 +68,18 @@ class AppsEngineSafeDeploymentTests(unittest.TestCase):
         self.assertIn('"secret_requirements"', definitions)
         self.assertIn('"propose_container_app_patch"', registry)
         self.assertIn('"propose_app_install"', registry)
-        self.assertIn("For every supported app, call propose_app_install exactly once", prompt)
+        self.assertIn("Make exactly one review plan", prompt)
+        self.assertIn("propose_stack_install", prompt)
+        self.assertIn("Never emit a credential-unlock action tag", prompt)
         self.assertIn("APP_SETUP_PLAN", chat)
+        self.assertIn("requires_reviewed_plan", chat)
+        self.assertIn("MISSING_PLAN_MESSAGE", chat)
+        self.assertIn("VisibleOutputFilter", chat)
+        self.assertIn("UNLOCK_SENSITIVE_FILE", chat)
         self.assertIn("APP_SETUP_PLAN", markdown)
+        self.assertIn("Apply Reviewed Setup", markdown)
+        self.assertIn("UNLOCK_SENSITIVE_FILE", markdown)
+        self.assertNotIn("Thought Process", markdown)
         self.assertIn("[data-action='APP_SETUP_PLAN']", actions)
         self.assertIn("window.applyAiAppPlan(data.plan)", actions)
         self.assertIn('window.location.href = "/plugins/railpack_apps/create?plan="', actions)

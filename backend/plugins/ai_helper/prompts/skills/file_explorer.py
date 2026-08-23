@@ -23,7 +23,7 @@ This format renders as an interactive Directory Tree Explorer widget in the chat
 
 **When Reading Files**:
 - Present file content in a fenced code block with the correct language tag.
-- If a sensitive file is blocked, emit `[ACTION:ALLOW_SECRETS:session]` so the user can unlock it.
+- If a sensitive file is blocked, state that explicit consent is required; the server will render the unlock button for that exact blocked read.
 - Highlight any issues, misconfigurations, or security concerns you spot concisely.
 - For large files, summarize key sections rather than dumping everything. Do not use emojis.
 """,

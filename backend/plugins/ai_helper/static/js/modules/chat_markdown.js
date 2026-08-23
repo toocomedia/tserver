@@ -155,72 +155,9 @@
 
     render: function (text) {
       if (!text) return "";
-
-      var thoughtHtml = "";
-      var mainText = text;
-
-      // 1. Extract and render <think>...</think> anywhere in the message
-      var thinkMatchClosed = mainText.match(/<think>([\s\S]*?)<\/think>/i);
-      if (thinkMatchClosed) {
-        var thoughtContent = this._renderMarkdownCore(thinkMatchClosed[1].trim());
-        thoughtHtml = [
-          '<div class="ai-thought-box" data-state="collapsed">',
-          '  <div class="ai-thought-header">',
-          '    <div class="ai-thought-header-left">',
-          '      <span class="ai-thought-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a7 7 0 0 0-7 7c0 2.38 1.19 4.47 3 5.74V17a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v-2.26c1.81-1.27 3-3.36 3-5.74a7 7 0 0 0-7-7z"></path><path d="M9 21h6"></path></svg></span>',
-          '      <span class="ai-thought-title">Thought Process</span>',
-          "    </div>",
-          '    <span class="ai-thought-chevron">▾</span>',
-          "  </div>",
-          '  <div class="ai-thought-body">' + (thoughtContent || "<em>No reasoning logs</em>") + "</div>",
-          "</div>",
-        ].join("\n");
-        mainText = mainText.replace(/<think>[\s\S]*?<\/think>/i, "").trim();
-      } else {
-        // Active streaming unclosed <think>...
-        var thinkMatchUnclosed = mainText.match(/<think>([\s\S]*)$/i);
-        if (thinkMatchUnclosed) {
-          var rawThought = thinkMatchUnclosed[1].trim();
-          var liveThoughtContent = this._renderMarkdownCore(rawThought);
-          thoughtHtml = [
-            '<div class="ai-thought-box ai-thought-box--thinking" data-state="expanded">',
-            '  <div class="ai-thought-header">',
-            '    <div class="ai-thought-header-left">',
-            '      <span class="ai-thought-icon ai-thought-pulse"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg></span>',
-            '      <span class="ai-thought-title">Thinking...</span>',
-            '      <span class="ai-thought-live-badge">Live</span>',
-            "    </div>",
-            '    <span class="ai-thought-chevron">▴</span>',
-            "  </div>",
-            '  <div class="ai-thought-body">' + (liveThoughtContent || "<em>Analyzing request...</em>") + "</div>",
-            "</div>",
-          ].join("\n");
-          mainText = mainText.substring(0, thinkMatchUnclosed.index).trim();
-        } else {
-          // Auto-capture untagged chain-of-thought monologue
-          var metaReasoningMatch = mainText.match(/^(?:The user wants me to|Now I have the information for|I called the tool|The tool suggests using|Let me structure the response)[\s\S]*?(?=\n\n(?:Here['’]s|📁|📄|```|\*\*|#|[A-Z][a-z]+ is |To |You can|$))/i);
-          if (metaReasoningMatch && metaReasoningMatch[0].length < mainText.length) {
-            var reasoningText = metaReasoningMatch[0].trim();
-            var thoughtBody = this._renderMarkdownCore(reasoningText);
-            thoughtHtml = [
-              '<div class="ai-thought-box" data-state="collapsed">',
-              '  <div class="ai-thought-header">',
-              '    <div class="ai-thought-header-left">',
-              '      <span class="ai-thought-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a7 7 0 0 0-7 7c0 2.38 1.19 4.47 3 5.74V17a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v-2.26c1.81-1.27 3-3.36 3-5.74a7 7 0 0 0-7-7z"></path><path d="M9 21h6"></path></svg></span>',
-              '      <span class="ai-thought-title">Thought Process</span>',
-              "    </div>",
-              '    <span class="ai-thought-chevron">▾</span>',
-              "  </div>",
-              '  <div class="ai-thought-body">' + (thoughtBody || "<em>Reasoning logs</em>") + "</div>",
-              "</div>",
-            ].join("\n");
-            mainText = mainText.substring(metaReasoningMatch[0].length).trim();
-          }
-        }
-      }
-
-      var renderedMain = this._renderMarkdownCore(mainText);
-      return thoughtHtml + renderedMain;
+      // Older messages may contain provider reasoning. It is never a chat artifact.
+      var mainText = text.replace(/<think>[\s\S]*?(?:<\/think>|$)/gi, "").trim();
+      return this._renderMarkdownCore(mainText);
     },
 
     _renderMarkdownCore: function (text) {
@@ -247,18 +184,21 @@
         var sid = window.AiHelper && window.AiHelper.sessionId ? window.AiHelper.sessionId : "";
         return (
           '<button type="button" class="ai-action-tag ai-action-tag--secrets" ' +
-          'data-action="ALLOW_SECRETS" data-session-id="' + sid + '" ' +
+          'data-action="UNLOCK_SENSITIVE_FILE" data-session-id="' + sid + '" ' +
           'title="Grant permission to view credential files for this session">' +
           '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:3px;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg> Unlock Credentials' +
           '</button>'
         );
       };
 
+      // Model-authored unlock tags are ignored. Only the server emits the verified
+      // UNLOCK_SENSITIVE_FILE tag after a read tool actually returned secrets_blocked.
+      escaped = escaped.replace(/\[ACTION:(?:ALLOW_SECRETS|UNLOCK_CREDENTIALS):?[^\]]*\]/gi, "");
+
       escaped = escaped.replace(
         /\[ACTION:([A-Z_]+):([^\]]+)\]/g,
         function (_, actionType, actionVal) {
-          // Special: ALLOW_SECRETS renders as an unlock button with monochrome key icon
-          if (actionType === "ALLOW_SECRETS") {
+          if (actionType === "UNLOCK_SENSITIVE_FILE") {
             return renderSecretsBtn();
           }
           // Special: SECURITY_FINDING renders as coloured severity badge
@@ -279,15 +219,15 @@
               '  <div class="ai-app-plan-card-header">',
               '    <div class="ai-app-plan-card-header-left">',
               '      <span class="ai-app-plan-card-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg></span>',
-              '      <span class="ai-app-plan-card-title">Optimal Configuration Prepared</span>',
+              '      <span class="ai-app-plan-card-title">Reviewed Setup Ready</span>',
               '    </div>',
               '    <span class="badge badge--ok" style="font-size: 10px; font-weight: 600;">Verified Plan</span>',
               '  </div>',
               '  <div class="ai-app-plan-card-body">',
-              '    <p class="ai-app-plan-summary">Optimal settings for runtime, port, environment variables, database, and storage have been prepared. Click below to load into the wizard and proceed.</p>',
+              '    <p class="ai-app-plan-summary">Validated runtime, port, environment, database, and storage settings are ready. One click loads them into the wizard; deployment remains your confirmation.</p>',
               '    <button type="button" class="ai-action-btn--big-next" data-action="APP_SETUP_PLAN" data-plan-id="' + setupPlanId + '">',
               '      <span class="ai-btn-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></span>',
-              '      <span class="ai-btn-text">Accept & Go Next</span>',
+              '      <span class="ai-btn-text">Apply Reviewed Setup</span>',
               '      <span class="ai-btn-arrow">→</span>',
               '    </button>',
               '  </div>',
@@ -361,10 +301,6 @@
         return '<div class="ai-quick-options-group">' + matched.trim() + '</div>';
       });
 
-
-      // Model drift fallbacks for allow secrets text
-      escaped = escaped.replace(/(?:click\s+)?[\uD83D\uDD13\uD83D\uDD10\uD83D\uDD12]?\s*Credentials Unlocked/gi, renderSecretsBtn);
-      escaped = escaped.replace(/\[(?:ALLOW_SECRETS|UNLOCK_CREDENTIALS)\]/gi, renderSecretsBtn);
 
       // Code blocks ```lang ... ``` — branched rendering by language type
       escaped = escaped.replace(/```([a-zA-Z0-9_-]*)\n([\s\S]*?)```/g, function (_, lang, code) {

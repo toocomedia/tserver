@@ -17,6 +17,7 @@ from plugins.ai_helper import engine, permissions, prompts, tools
 from plugins.ai_helper.services.providers import decrypt_key, get_active_provider, get_provider
 from plugins.ai_helper.services.secrets_consent import check_consent_phrase, is_secrets_allowed
 from plugins.ai_helper.services.sessions import generate_title_from_prompt, get_or_create_session
+from plugins.ai_helper.services import setup_handoff, visible_output
 
 logger = logging.getLogger(__name__)
 
@@ -123,7 +124,12 @@ def _extract_text_tool_calls(step_content: str) -> List[Dict[str, Any]]:
     return tool_calls
 
 
-def _sanitize_history_content(text: str) -> str:
+def _sanitize_history_content(
+    text: str,
+    *,
+    allow_setup_action: bool = False,
+    allow_sensitive_file_unlock: bool = False,
+) -> str:
     """Removes unfulfilled XML/DSML pseudo tool calls and error banners from message history."""
     if not text:
         return ""
@@ -135,7 +141,11 @@ def _sanitize_history_content(text: str) -> str:
     clean = re.sub(r"<function=[a-zA-Z0-9_]+>[\s\S]*?</function>", "", clean, flags=re.IGNORECASE)
     clean = re.sub(r"<parameter=[a-zA-Z0-9_]+>[\s\S]*?</parameter>", "", clean, flags=re.IGNORECASE)
     clean = re.sub(r"<\/?(?:tool_call|function|parameter|invoke)[^>]*>", "", clean, flags=re.IGNORECASE)
-    return clean.strip()
+    return visible_output.strip_hidden_reasoning(
+        clean,
+        allow_setup_action=allow_setup_action,
+        allow_sensitive_file_unlock=allow_sensitive_file_unlock,
+    ).strip()
 
 
 def _normalize_messages_for_llm(messages: List[Dict[str, Any]], provider_type: str) -> List[Dict[str, Any]]:
@@ -317,9 +327,32 @@ async def stream_ai_chat(
     # Tool calling loop if enabled
     tool_was_executed = False
     setup_plan_id: str | None = None
+    sensitive_file_blocked = False
+    setup_plan_required = tools_enabled and setup_handoff.requires_reviewed_plan(task_type)
     if tools_enabled:
         tool_defs = tools.get_tool_definitions(active.provider_type)
-        max_tool_iterations = 6
+        tool_counts: Dict[str, int] = {}
+        plan_request_sent = False
+        max_tool_iterations = 7
+
+        async def _execute_tool(fn_name: str, fn_args: Dict[str, Any]) -> Dict[str, Any]:
+            """Execute approved tools while bounding setup-only evidence collection."""
+            nonlocal sensitive_file_blocked
+            limited = setup_handoff.tool_limit_result(task_type, fn_name, tool_counts)
+            if limited is not None:
+                return limited
+            tool_counts[fn_name] = tool_counts.get(fn_name, 0) + 1
+            tool_output = await tools.execute_tool(
+                db=db,
+                tool_name=fn_name,
+                arguments=fn_args,
+                session_id=session_id,
+                user_id=user_id,
+                secrets_allowed=secrets_allowed,
+            )
+            if fn_name == "read_website_file" and tool_output.get("status") == "secrets_blocked":
+                sensitive_file_blocked = True
+            return tool_output
 
         for _ in range(max_tool_iterations):
             try:
@@ -346,6 +379,10 @@ async def stream_ai_chat(
 
                 if not tool_calls:
                     # Model has finished tool usage
+                    if setup_plan_required and not setup_plan_id and not plan_request_sent:
+                        plan_request_sent = True
+                        messages.append({"role": "user", "content": setup_handoff.PLAN_REQUIRED_MESSAGE})
+                        continue
                     break
 
                 tool_was_executed = True
@@ -360,14 +397,7 @@ async def stream_ai_chat(
                         fn_args = tc.get("arguments") or {}
                         yield _activity_event(fn_name, "start", fn_args)
                         try:
-                            tool_output = await tools.execute_tool(
-                                db=db,
-                                tool_name=fn_name,
-                                arguments=fn_args,
-                                session_id=session_id,
-                                user_id=user_id,
-                                secrets_allowed=secrets_allowed,
-                            )
+                            tool_output = await _execute_tool(fn_name, fn_args)
                             setup_plan_id = setup_plan_id or _setup_plan_id(fn_name, tool_output)
                             yield _activity_event(fn_name, "done", fn_args)
                         except Exception as e:
@@ -394,14 +424,7 @@ async def stream_ai_chat(
                         tc_id = tc.get("id") or f"tool_{len(messages)}"
                         yield _activity_event(fn_name, "start", fn_args)
                         try:
-                            tool_output = await tools.execute_tool(
-                                db=db,
-                                tool_name=fn_name,
-                                arguments=fn_args,
-                                session_id=session_id,
-                                user_id=user_id,
-                                secrets_allowed=secrets_allowed,
-                            )
+                            tool_output = await _execute_tool(fn_name, fn_args)
                             setup_plan_id = setup_plan_id or _setup_plan_id(fn_name, tool_output)
                             yield _activity_event(fn_name, "done", fn_args)
                         except Exception as e:
@@ -447,14 +470,7 @@ async def stream_ai_chat(
 
                         yield _activity_event(fn_name, "start", fn_args)
                         try:
-                            tool_output = await tools.execute_tool(
-                                db=db,
-                                tool_name=fn_name,
-                                arguments=fn_args,
-                                session_id=session_id,
-                                user_id=user_id,
-                                secrets_allowed=secrets_allowed,
-                            )
+                            tool_output = await _execute_tool(fn_name, fn_args)
                             setup_plan_id = setup_plan_id or _setup_plan_id(fn_name, tool_output)
                             yield _activity_event(fn_name, "done", fn_args)
                         except Exception as exc:
@@ -478,7 +494,7 @@ async def stream_ai_chat(
 
         # After tool loop: inject mandatory response instruction if tools were used.
         # This guarantees the model produces visible output and doesn't just trail off.
-        if tool_was_executed:
+        if tool_was_executed and not (setup_plan_required and not setup_plan_id):
             messages.append({
                 "role": "user",
                 "content": (
@@ -493,39 +509,59 @@ async def stream_ai_chat(
     # Stream final assistant response
     full_response = []
     has_error = False
-    try:
-        final_normalized_messages = _normalize_messages_for_llm(messages, active.provider_type)
-        async for chunk in engine.stream_chat(
-            provider_type=active.provider_type,
-            base_url=active.base_url,
-            api_key=api_key,
-            model_name=effective_model,
-            messages=final_normalized_messages,
-            temperature=active.temperature,
-            max_tokens=active.max_tokens,
-        ):
-            full_response.append(chunk)
-            yield chunk
-    except engine.AIProviderError as exc:
-        has_error = True
-        err_msg = f"\n\n[Error from AI Provider: {exc.message}]"
-        full_response.append(err_msg)
-        yield err_msg
-    except Exception as exc:
-        has_error = True
-        err_msg = f"\n\n[Error: {str(exc)}]"
-        full_response.append(err_msg)
-        yield err_msg
+    if setup_plan_required and not setup_plan_id:
+        full_response.append(setup_handoff.MISSING_PLAN_MESSAGE)
+        yield setup_handoff.MISSING_PLAN_MESSAGE
+    else:
+        visible_filter = visible_output.VisibleOutputFilter()
+        try:
+            final_normalized_messages = _normalize_messages_for_llm(messages, active.provider_type)
+            async for chunk in engine.stream_chat(
+                provider_type=active.provider_type,
+                base_url=active.base_url,
+                api_key=api_key,
+                model_name=effective_model,
+                messages=final_normalized_messages,
+                temperature=active.temperature,
+                max_tokens=active.max_tokens,
+            ):
+                visible_chunk = visible_filter.push(chunk)
+                if visible_chunk:
+                    full_response.append(visible_chunk)
+                    yield visible_chunk
+            final_chunk = visible_filter.finish()
+            if final_chunk:
+                full_response.append(final_chunk)
+                yield final_chunk
+        except engine.AIProviderError as exc:
+            has_error = True
+            err_msg = f"\n\n[Error from AI Provider: {exc.message}]"
+            full_response.append(err_msg)
+            yield err_msg
+        except Exception as exc:
+            has_error = True
+            err_msg = f"\n\n[Error: {str(exc)}]"
+            full_response.append(err_msg)
+            yield err_msg
 
     if setup_plan_id and not has_error:
         setup_action = f"\n\n[ACTION:APP_SETUP_PLAN:{setup_plan_id}]"
         full_response.append(setup_action)
         yield setup_action
 
+    if sensitive_file_blocked and not secrets_allowed and not has_error:
+        unlock_action = "\n\nSensitive file access is blocked. [ACTION:UNLOCK_SENSITIVE_FILE:session]"
+        full_response.append(unlock_action)
+        yield unlock_action
+
     # Save assistant response to database if not a provider error
     complete_text = "".join(full_response).strip()
     if complete_text and not has_error:
-        persisted_text = _sanitize_history_content(complete_text) or complete_text
+        persisted_text = _sanitize_history_content(
+            complete_text,
+            allow_setup_action=bool(setup_plan_id),
+            allow_sensitive_file_unlock=sensitive_file_blocked and not secrets_allowed,
+        ) or complete_text
         assistant_record = AiChatMessage(
             session_id=session_id,
             role="assistant",

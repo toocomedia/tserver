@@ -1,5 +1,5 @@
 /**
- * chat_actions.js — Interaction handlers for chat actions, copy, cards, and thought toggles.
+ * chat_actions.js — Interaction handlers for chat actions, copy, and reviewed setup cards.
  */
 (function () {
   "use strict";
@@ -250,7 +250,7 @@
           if (!setupPlanId) return;
 
           applyPlanBtn.disabled = true;
-          applyPlanBtn.innerHTML = '<span class="ai-btn-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></span> <span class="ai-btn-text">Applying Plan...</span>';
+          applyPlanBtn.innerHTML = '<span class="ai-btn-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></span> <span class="ai-btn-text">Loading Reviewed Setup...</span>';
 
           if (typeof window.applyAiAppPlan === "function") {
             fetch("/plugins/ai_helper/api/action-plans/" + encodeURIComponent(setupPlanId))
@@ -263,13 +263,13 @@
                   throw new Error("Invalid setup plan.");
                 }
                 window.applyAiAppPlan(data.plan);
-                applyPlanBtn.innerHTML = '<span class="ai-btn-icon">✓</span> <span class="ai-btn-text">Plan Applied & Step 3 Ready</span>';
+                applyPlanBtn.innerHTML = '<span class="ai-btn-icon">✓</span> <span class="ai-btn-text">Setup Loaded & Ready to Deploy</span>';
                 applyPlanBtn.classList.add("is-applied");
                 if (window.toast) window.toast("Configuration plan loaded into setup wizard.", "success");
               })
               .catch(function (err) {
                 applyPlanBtn.disabled = false;
-                applyPlanBtn.innerHTML = '<span class="ai-btn-text">Accept & Go Next</span> <span class="ai-btn-arrow">→</span>';
+                applyPlanBtn.innerHTML = '<span class="ai-btn-text">Apply Reviewed Setup</span> <span class="ai-btn-arrow">→</span>';
                 if (window.toast) window.toast(err.message, "error");
               });
             return;
@@ -288,7 +288,7 @@
         }
 
 
-        // 6b. ALLOW_SECRETS button — POST to consent API then send follow-up message
+        // 6b. Server-verified sensitive-file unlock — grants session consent after a user click.
         var secretsBtn = e.target.closest(".ai-action-tag--secrets");
         if (secretsBtn) {
           e.preventDefault();
