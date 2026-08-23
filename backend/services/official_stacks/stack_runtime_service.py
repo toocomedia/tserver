@@ -209,15 +209,26 @@ async def wait_service_health(
     svc = stack.services.get(service_name)
     hc = svc.health_check if svc else None
     cname = stack_container_name(app_id, service_name)
-    retries = hc.retries if hc else 15
+    retries = hc.retries if hc else 20
     interval = hc.interval_seconds if hc else 4
-    start_period = hc.start_period_seconds if hc else 15
+    start_period = hc.start_period_seconds if hc else 20
     deadline = time.time() + (retries * interval) + start_period
 
-    if hc and hc.probe_type == "command" and hc.command:
+    is_web = bool(host_port and svc and (svc.is_web_entrypoint or service_name == stack.web_service_name))
+
+    if hc and hc.probe_type == "command" and hc.command and not is_web:
         last_error = ""
+        raw_cmd = list(hc.command)
+        # Replace localhost with 127.0.0.1 to avoid BusyBox IPv6 [::1] connection refused
+        sanitized_cmd = [arg.replace("http://localhost:", "http://127.0.0.1:").replace("localhost", "127.0.0.1") for arg in raw_cmd]
+        has_shell_tokens = any(token in sanitized_cmd for token in ["||", "&&", "|", ";", ">", "<", "$"])
+        if has_shell_tokens:
+            exec_cmd = ["docker", "exec", cname, "sh", "-c", " ".join(sanitized_cmd)]
+        else:
+            exec_cmd = ["docker", "exec", cname, *sanitized_cmd]
+
         while time.time() < deadline:
-            probe = apps._run(["docker", "exec", cname, *hc.command], timeout=hc.timeout_seconds)
+            probe = apps._run(exec_cmd, timeout=hc.timeout_seconds)
             if probe.returncode == 0:
                 break
             last_error = (probe.stderr or probe.stdout or f"exit code {probe.returncode}").strip()
@@ -226,14 +237,14 @@ async def wait_service_health(
             raise RuntimeError(f"Service '{service_name}' failed health check ({hc.command}) within timeout: {last_error}")
 
     # For web entrypoint with host_port, always verify HTTP loopback responsiveness
-    if host_port and svc and (svc.is_web_entrypoint or service_name == stack.web_service_name):
+    if is_web:
         from services import container_app_deployment_progress_service as progress
-        probe_path = hc.http_path if (hc and hc.http_path) else (stack.web_health_path or "/")
-        wait_timeout = int(deadline - time.time()) if deadline > time.time() else 30
+        probe_path = hc.http_path if (hc and hc.http_path) else (stack.web_health_path or "/api/health")
+        wait_timeout = int(deadline - time.time()) if deadline > time.time() else 45
         await progress.wait_for_http(
             host_port,
             path=probe_path,
-            timeout_seconds=max(wait_timeout, 20),
+            timeout_seconds=max(wait_timeout, 30),
         )
 
 
