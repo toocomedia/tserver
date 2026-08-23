@@ -16,6 +16,20 @@ from services.apps_engine import deployment_drafts, source_access
 
 logger = logging.getLogger(__name__)
 
+_SUPPORTED_GIT_BUILD_MODES = {"railpack", "dockerfile"}
+_SUPPORTED_DATABASE_KINDS = {"postgres", "postgresql", "mariadb", "mysql", "redis", "mongodb", "sqlite", "supabase"}
+
+
+def _install_mode(source_type: str, build_mode: str) -> tuple[str, str] | None:
+    """Accept only deployment modes the single-container App Engine can create."""
+    source = (source_type or "").strip().lower()
+    mode = (build_mode or "railpack").strip().lower()
+    if source == "image":
+        return source, "image"
+    if source == "git" and mode in _SUPPORTED_GIT_BUILD_MODES:
+        return source, mode
+    return None
+
 
 async def inspect_app_source(
     db: AsyncSession,
@@ -159,6 +173,7 @@ async def propose_app_install(
     build_mode: str = "railpack",
     custom_start_command: str = "",
     environment_values: Optional[Dict[str, str]] = None,
+    secret_requirements: Optional[List[Dict[str, Any]]] = None,
     database_attachments: Optional[List[Dict[str, str]]] = None,
     storage_mounts: Optional[List[Dict[str, str]]] = None,
     domain_name: str = "",
@@ -172,6 +187,17 @@ async def propose_app_install(
     Creates and saves a validated server-side AiActionPlan for application installation.
     Returns the opaque plan_id for UI action rendering.
     """
+    if user_id is None:
+        return {"status": "error", "message": "AI setup drafts require an authenticated panel user."}
+
+    source_and_mode = _install_mode(source_type, build_mode)
+    if source_and_mode is None:
+        return {
+            "status": "unsupported",
+            "message": "App Engine supports one registry image or one Git app built by Railpack or Dockerfile. Docker Compose and multi-service stacks need a separate supported Compose deployment path.",
+        }
+    source_type, build_mode = source_and_mode
+
     try:
         port = int(internal_port)
         if port < 1 or port > 65535:
@@ -186,20 +212,38 @@ async def propose_app_install(
                 clean_envs[k.strip()] = str(v) if v is not None else ""
 
     # AI may name secret requirements, but must never receive or generate their values.
-    secret_requirements = [
+    cleaned_secrets = [
         {"key": key, "purpose": "Application secret"}
         for key in list(clean_envs)
         if any(s in key.upper() for s in ("SECRET", "SALT", "KEY_BASE", "JWT", "PASSWORD", "AUTH_KEY"))
     ]
-    for item in secret_requirements:
+    for item in cleaned_secrets:
         clean_envs.pop(item["key"], None)
+
+    if isinstance(secret_requirements, list):
+        known_secret_keys = {item["key"] for item in cleaned_secrets}
+        for item in secret_requirements:
+            if not isinstance(item, dict):
+                continue
+            key = str(item.get("key") or "").strip()
+            if not re.fullmatch(r"[A-Z][A-Z0-9_]{0,127}", key) or key in known_secret_keys:
+                continue
+            purpose = str(item.get("purpose") or "Application secret").strip()[:256]
+            cleaned_secrets.append({"key": key, "purpose": purpose or "Application secret"})
+            known_secret_keys.add(key)
 
     clean_dbs: List[Dict[str, str]] = []
     if isinstance(database_attachments, list):
         for item in database_attachments:
             if isinstance(item, dict) and item.get("kind"):
+                kind = str(item.get("kind", "")).strip().lower()
+                if kind not in _SUPPORTED_DATABASE_KINDS:
+                    return {
+                        "status": "unsupported",
+                        "message": f"App Engine cannot attach '{kind}' to a single-container Railpack app. No setup draft was created.",
+                    }
                 clean_dbs.append({
-                    "kind": str(item.get("kind", "")).strip().lower(),
+                    "kind": kind,
                     "provider": str(item.get("provider", "docker")).strip().lower(),
                     "environment_key": str(item.get("environment_key", "DATABASE_URL")).strip(),
                 })
@@ -224,7 +268,7 @@ async def propose_app_install(
         "build_mode": (build_mode or "railpack").strip().lower(),
         "custom_start_command": (custom_start_command or "").strip(),
         "environment_values": clean_envs,
-        "secret_requirements": secret_requirements,
+        "secret_requirements": cleaned_secrets,
         "database_attachments": clean_dbs,
         "storage_mounts": clean_mounts,
         "domain_name": domain_name.strip(),
@@ -249,5 +293,5 @@ async def propose_app_install(
         "plan_id": plan.plan_id,
         "summary": plan.summary,
         "confidence": plan.confidence,
-        "message": "Setup draft created. Review it in the App Engine setup page; no chat action is available.",
+        "message": "Setup draft created. Server will offer a safe setup handoff; it does not deploy the app.",
     }

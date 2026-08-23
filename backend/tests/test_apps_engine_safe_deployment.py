@@ -55,6 +55,24 @@ class AppsEngineSafeDeploymentTests(unittest.TestCase):
         self.assertNotIn("/deploy", hero)
         self.assertNotIn("data-ai-diagnose-app", hero)
 
+    def test_setup_handoff_prefills_only_supported_single_container_plans(self):
+        tool = (BACKEND / "plugins" / "ai_helper" / "tools" / "app_setup.py").read_text(encoding="utf-8")
+        registry = (BACKEND / "plugins" / "ai_helper" / "tools" / "registry.py").read_text(encoding="utf-8")
+        prompt = (BACKEND / "plugins" / "ai_helper" / "prompts" / "skills" / "app_deploy.py").read_text(encoding="utf-8")
+        chat = (BACKEND / "plugins" / "ai_helper" / "services" / "chat.py").read_text(encoding="utf-8")
+        markdown = (BACKEND / "plugins" / "ai_helper" / "static" / "js" / "modules" / "chat_markdown.js").read_text(encoding="utf-8")
+        actions = (BACKEND / "plugins" / "ai_helper" / "static" / "js" / "modules" / "chat_actions.js").read_text(encoding="utf-8")
+        definitions = (BACKEND / "plugins" / "ai_helper" / "tools" / "definitions.py").read_text(encoding="utf-8")
+        self.assertIn("_SUPPORTED_GIT_BUILD_MODES", tool)
+        self.assertIn("Docker Compose and multi-service stacks", tool)
+        self.assertIn('"secret_requirements"', definitions)
+        self.assertIn('{"propose_container_app_patch", "propose_app_install"}', registry)
+        self.assertIn("Only call propose_app_install", prompt)
+        self.assertIn("APP_SETUP_PLAN", chat)
+        self.assertIn("APP_SETUP_PLAN", markdown)
+        self.assertIn("[data-action='APP_SETUP_PLAN']", actions)
+        self.assertIn('window.location.href = "/plugins/railpack_apps/create?plan="', actions)
+
 
 if __name__ == "__main__":
     unittest.main()

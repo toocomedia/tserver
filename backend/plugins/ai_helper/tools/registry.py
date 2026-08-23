@@ -87,7 +87,7 @@ async def execute_tool(
         # Pass secrets_allowed to file tools only (others don't use it)
         if tool_name in ("list_website_directory", "read_website_file"):
             result = await handler(db=db, secrets_allowed=secrets_allowed, **arguments)
-        elif tool_name == "propose_container_app_patch":
+        elif tool_name in {"propose_container_app_patch", "propose_app_install"}:
             result = await handler(db=db, session_id=session_id, user_id=user_id, **arguments)
         else:
             result = await handler(db=db, **arguments)

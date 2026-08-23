@@ -234,11 +234,15 @@
           return;
         }
 
-        // App Engine deployment actions cannot be triggered from chat.
-        var applyPlanBtn = e.target.closest(".ai-action-btn--apply-plan, [data-action='APP_NEXT']");
+        // Safe App Engine setup handoff. This only opens the prefilled wizard.
+        var applyPlanBtn = e.target.closest("[data-action='APP_SETUP_PLAN']");
         if (applyPlanBtn) {
           e.preventDefault();
-          var actionType = applyPlanBtn.getAttribute("data-action") || "APP_PLAN";
+          var actionType = applyPlanBtn.getAttribute("data-action") || "APP_SETUP_PLAN";
+          var setupPlanId = applyPlanBtn.getAttribute("data-plan-id");
+          if (!setupPlanId) return;
+          window.location.href = "/plugins/railpack_apps/create?plan=" + encodeURIComponent(setupPlanId);
+          return;
 
           if (actionType === "APP_NEXT") {
             if (typeof window.advanceAiWizard === "function") {

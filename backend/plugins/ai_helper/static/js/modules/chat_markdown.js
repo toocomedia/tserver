@@ -271,6 +271,29 @@
               return '<span class="ai-security-badge ' + cls + '"><span class="ai-sec-dot ai-sec-dot--' + sev + '"></span> ' + desc + '</span>';
             }
           }
+          // Only server-appended setup handoffs render in chat. They never deploy.
+          if (actionType === "APP_SETUP_PLAN") {
+            var setupPlanId = actionVal.trim();
+            return [
+              '<div class="ai-app-plan-card" data-plan-id="' + setupPlanId + '">',
+              '  <div class="ai-app-plan-card-header">',
+              '    <div class="ai-app-plan-card-header-left">',
+              '      <span class="ai-app-plan-card-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg></span>',
+              '      <span class="ai-app-plan-card-title">Optimal Configuration Prepared</span>',
+              '    </div>',
+              '    <span class="badge badge--ok" style="font-size: 10px; font-weight: 600;">Verified Plan</span>',
+              '  </div>',
+              '  <div class="ai-app-plan-card-body">',
+              '    <p class="ai-app-plan-summary">Optimal settings for runtime, port, environment variables, database, and storage have been prepared. Click below to load into the wizard and proceed.</p>',
+              '    <button type="button" class="ai-action-btn--big-next" data-action="APP_SETUP_PLAN" data-plan-id="' + setupPlanId + '">',
+              '      <span class="ai-btn-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></span>',
+              '      <span class="ai-btn-text">Accept & Go Next</span>',
+              '      <span class="ai-btn-arrow">→</span>',
+              '    </button>',
+              '  </div>',
+              '</div>',
+            ].join("\n");
+          }
           // App Engine deployment controls never render inside chat.
           if (["APP_PLAN", "APP_DEPLOY", "APP_REDEPLOY", "APP_REBUILD"].indexOf(actionType) !== -1) {
             return '<p class="text-muted">Review App Engine deployment changes on the App page.</p>';

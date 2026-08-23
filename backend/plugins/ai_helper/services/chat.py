@@ -62,6 +62,16 @@ def _activity_event(tool_name: str, status: str, args: dict | None = None) -> st
     return _ACTIVITY_PREFIX + payload
 
 
+def _setup_plan_id(tool_name: str, tool_output: Dict[str, Any]) -> str | None:
+    """Return only a server-created, safe wizard handoff plan identifier."""
+    if tool_name != "propose_app_install" or tool_output.get("status") != "ok":
+        return None
+    plan_id = tool_output.get("plan_id")
+    if isinstance(plan_id, str) and re.fullmatch(r"plan_[0-9a-f]{16}", plan_id):
+        return plan_id
+    return None
+
+
 def _extract_text_tool_calls(step_content: str) -> List[Dict[str, Any]]:
     """Extracts DeepSeek DSML or XML pseudo tool calls emitted in raw text."""
     if not step_content:
@@ -303,6 +313,7 @@ async def stream_ai_chat(
 
     # Tool calling loop if enabled
     tool_was_executed = False
+    setup_plan_id: str | None = None
     if tools_enabled:
         tool_defs = tools.get_tool_definitions(active.provider_type)
         max_tool_iterations = 6
@@ -354,6 +365,7 @@ async def stream_ai_chat(
                                 user_id=user_id,
                                 secrets_allowed=secrets_allowed,
                             )
+                            setup_plan_id = setup_plan_id or _setup_plan_id(fn_name, tool_output)
                             yield _activity_event(fn_name, "done", fn_args)
                         except Exception as e:
                             tool_output = {"status": "error", "message": str(e)}
@@ -387,6 +399,7 @@ async def stream_ai_chat(
                                 user_id=user_id,
                                 secrets_allowed=secrets_allowed,
                             )
+                            setup_plan_id = setup_plan_id or _setup_plan_id(fn_name, tool_output)
                             yield _activity_event(fn_name, "done", fn_args)
                         except Exception as e:
                             tool_output = {"status": "error", "message": str(e)}
@@ -439,6 +452,7 @@ async def stream_ai_chat(
                                 user_id=user_id,
                                 secrets_allowed=secrets_allowed,
                             )
+                            setup_plan_id = setup_plan_id or _setup_plan_id(fn_name, tool_output)
                             yield _activity_event(fn_name, "done", fn_args)
                         except Exception as exc:
                             tool_output = {"status": "error", "message": str(exc)}
@@ -499,6 +513,11 @@ async def stream_ai_chat(
         err_msg = f"\n\n[Error: {str(exc)}]"
         full_response.append(err_msg)
         yield err_msg
+
+    if setup_plan_id and not has_error:
+        setup_action = f"\n\n[ACTION:APP_SETUP_PLAN:{setup_plan_id}]"
+        full_response.append(setup_action)
+        yield setup_action
 
     # Save assistant response to database if not a provider error
     complete_text = "".join(full_response).strip()

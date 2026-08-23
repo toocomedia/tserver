@@ -221,6 +221,18 @@ RAW_TOOL_SCHEMAS: List[Dict[str, Any]] = [
                     "type": "object",
                     "description": "Key-value dictionary of non-secret environment variables (e.g. {'NODE_ENV': 'production'}).",
                 },
+                "secret_requirements": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "key": {"type": "string"},
+                            "purpose": {"type": "string"},
+                        },
+                        "required": ["key", "purpose"],
+                    },
+                    "description": "Required secret names and purposes only. Never include a secret value.",
+                },
                 "database_attachments": {
                     "type": "array",
                     "items": {
