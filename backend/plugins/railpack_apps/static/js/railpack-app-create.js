@@ -473,7 +473,7 @@ if (form) {
   const repoInput = query('[data-repository-url]');
   if (repoInput) {
     repoInput.addEventListener('blur', async () => {
-      if (!repoInput.value) return;
+      if (!repoInput.value || query('#deploy_type')?.value === 'official_stack') return;
       const branchSpinner = query('[data-branch-spinner]');
       const branchMenu = query('[data-branch-menu]');
       if (branchSpinner) branchSpinner.style.display = 'inline-block';

@@ -187,8 +187,9 @@ def start_service_container(
             run_cmd.extend(["-v", f"{cfg_path}:{cfg.container_target_path}{ro_flag}"])
 
     # Port publishing (ONLY for web entrypoint and loopback 127.0.0.1)
-    if svc.is_web_entrypoint and host_port:
-        run_cmd.extend(["-p", f"127.0.0.1:{host_port}:{stack.web_internal_port}"])
+    if host_port and (svc.is_web_entrypoint or service_name == stack.web_service_name):
+        port_to_publish = stack.web_internal_port or (svc.internal_ports[0] if svc.internal_ports else 8000)
+        run_cmd.extend(["-p", f"127.0.0.1:{host_port}:{port_to_publish}"])
 
     run_cmd.append(svc.image_reference)
     if svc.command:
@@ -206,30 +207,33 @@ async def wait_service_health(
     host_port: Optional[int] = None,
 ) -> None:
     svc = stack.services.get(service_name)
-    if not svc or not svc.health_check:
-        await asyncio.sleep(2)
-        return
-
-    hc = svc.health_check
+    hc = svc.health_check if svc else None
     cname = stack_container_name(app_id, service_name)
-    deadline = time.time() + (hc.retries * hc.interval_seconds) + hc.start_period_seconds
+    retries = hc.retries if hc else 15
+    interval = hc.interval_seconds if hc else 4
+    start_period = hc.start_period_seconds if hc else 15
+    deadline = time.time() + (retries * interval) + start_period
 
-    if hc.probe_type == "command" and hc.command:
+    if hc and hc.probe_type == "command" and hc.command:
         last_error = ""
         while time.time() < deadline:
             probe = apps._run(["docker", "exec", cname, *hc.command], timeout=hc.timeout_seconds)
             if probe.returncode == 0:
-                return
+                break
             last_error = (probe.stderr or probe.stdout or f"exit code {probe.returncode}").strip()
-            await asyncio.sleep(hc.interval_seconds)
-        raise RuntimeError(f"Service '{service_name}' failed health check ({hc.command}) within timeout: {last_error}")
+            await asyncio.sleep(interval)
+        else:
+            raise RuntimeError(f"Service '{service_name}' failed health check ({hc.command}) within timeout: {last_error}")
 
-    elif hc.probe_type == "http" and host_port:
+    # For web entrypoint with host_port, always verify HTTP loopback responsiveness
+    if host_port and svc and (svc.is_web_entrypoint or service_name == stack.web_service_name):
         from services import container_app_deployment_progress_service as progress
+        probe_path = hc.http_path if (hc and hc.http_path) else (stack.web_health_path or "/")
+        wait_timeout = int(deadline - time.time()) if deadline > time.time() else 30
         await progress.wait_for_http(
             host_port,
-            path=hc.http_path or "/",
-            timeout_seconds=int(deadline - time.time()) if deadline > time.time() else 30,
+            path=probe_path,
+            timeout_seconds=max(wait_timeout, 20),
         )
 
 
