@@ -18,7 +18,18 @@ from services.apps_engine import deployment_drafts, source_access
 logger = logging.getLogger(__name__)
 
 _SUPPORTED_GIT_BUILD_MODES = {"railpack", "dockerfile"}
-_SUPPORTED_DATABASE_KINDS = {"postgres", "postgresql", "mariadb", "mysql", "redis", "mongodb", "sqlite", "supabase"}
+_SUPPORTED_DATABASE_KINDS = {"postgresql", "mariadb", "redis", "mongodb"}
+_DATABASE_KIND_ALIASES = {
+    "postgres": "postgresql",
+    "postgresql": "postgresql",
+    "mysql": "mariadb",
+    "mariadb": "mariadb",
+    "mariadb/mysql": "mariadb",
+    "redis": "redis",
+    "mongodb": "mongodb",
+    "mongo": "mongodb",
+}
+_UNSUPPORTED_SINGLE_APP_DATASTORES = {"clickhouse"}
 
 
 def _install_mode(source_type: str, build_mode: str) -> tuple[str, str] | None:
@@ -218,6 +229,9 @@ async def propose_app_install(
             "message": "App Engine supports one registry image or one Git app built by Railpack or Dockerfile. Docker Compose and multi-service stacks need a separate supported Compose deployment path.",
         }
     source_type, build_mode = source_and_mode
+    source_error = _single_app_source_error(source_type, repository_url, branch)
+    if source_error:
+        return {"status": "unsupported", "message": source_error}
 
     try:
         port = int(internal_port)
@@ -260,15 +274,16 @@ async def propose_app_install(
     if isinstance(database_attachments, list):
         for item in database_attachments:
             if isinstance(item, dict) and item.get("kind"):
-                kind = str(item.get("kind", "")).strip().lower()
+                kind = _normalize_database_kind(str(item.get("kind", "")).strip().lower())
                 if kind not in _SUPPORTED_DATABASE_KINDS:
                     return {
                         "status": "unsupported",
                         "message": f"App Engine cannot attach '{kind}' to a single-container Railpack app. No setup draft was created.",
                     }
+                provider = _normalize_database_provider(str(item.get("provider", "docker")).strip().lower(), kind)
                 clean_dbs.append({
                     "kind": kind,
-                    "provider": str(item.get("provider", "docker")).strip().lower(),
+                    "provider": provider,
                     "environment_key": str(item.get("environment_key", "DATABASE_URL")).strip(),
                 })
 
@@ -326,6 +341,52 @@ async def propose_app_install(
         "confidence": plan.confidence,
         "message": "Reviewed setup plan created. The user can deploy it with the server-rendered Deploy reviewed setup action.",
     }
+
+
+def _normalize_database_kind(kind: str) -> str:
+    return _DATABASE_KIND_ALIASES.get(kind, kind)
+
+
+def _normalize_database_provider(provider: str, kind: str) -> str:
+    if provider in {"panel", "panel_managed", "managed"}:
+        return "panel_postgres" if kind == "postgresql" else "panel_mariadb" if kind == "mariadb" else "docker"
+    if provider in {"postgres", "postgresql"}:
+        return "panel_postgres"
+    if provider in {"mysql", "mariadb"}:
+        return "panel_mariadb"
+    return provider or "docker"
+
+
+def _single_app_source_error(source_type: str, repository_url: str, branch: str) -> str:
+    if source_type != "git" or not repository_url.strip():
+        return ""
+    try:
+        inspection = container_app_inspection_service.inspect_repository(repository_url.strip(), branch.strip() or "main")
+    except Exception:
+        return ""
+    compose_services = (inspection.get("compose_info") or {}).get("services") if isinstance(inspection, dict) else None
+    if compose_services:
+        return "This repository contains Compose service evidence, so a single-app plan was rejected. Use a restricted stack setup plan."
+    kinds = _inspection_database_kinds(inspection)
+    unsupported = sorted(kinds & _UNSUPPORTED_SINGLE_APP_DATASTORES)
+    if unsupported:
+        return (
+            "This repository needs unsupported single-app datastore services "
+            f"({', '.join(unsupported)}). Use a restricted stack setup plan with private internal services."
+        )
+    return ""
+
+
+def _inspection_database_kinds(inspection: Dict[str, Any]) -> set[str]:
+    result = set()
+    for key in ("database_types",):
+        for item in inspection.get(key) or []:
+            result.add(str(item).strip().lower())
+    for key in ("database_detections", "database_suggestions"):
+        for item in inspection.get(key) or []:
+            if isinstance(item, dict):
+                result.add(str(item.get("kind") or "").strip().lower())
+    return {item for item in result if item}
 
 
 async def propose_stack_install(

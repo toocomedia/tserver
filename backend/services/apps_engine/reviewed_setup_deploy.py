@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from models.domain import Domain
 from models.ssl_cert import SslCert
 from plugins.ai_helper.services import action_plans
-from services import container_app_deployment_service, container_app_service
+from services import container_app_deployment_service, container_app_inspection_service, container_app_service
 from services.apps_engine import secret_vault, snapshots
 from services.official_stacks import compose_runtime
 from services.official_stacks.manifest_validator import compute_stack_manifest_hash, validate_stack_manifest
@@ -120,6 +120,7 @@ async def _deploy_app(
     domain = await _domain_from_payload(db, payload)
     source_type = str(payload.get("source_type") or "image")
     build_mode = str(payload.get("build_mode") or ("image" if source_type == "image" else "railpack"))
+    _reject_unsafe_single_app_source(payload)
     try:
         port = int(payload.get("internal_port") or 3000)
         requested_secrets = snapshots.normalize_secret_requirements(payload.get("secret_requirements") or [])
@@ -140,7 +141,7 @@ async def _deploy_app(
         internal_port=port,
         ssl_requested=ssl_requested and not has_certificate,
         environment_values=_string_map(payload.get("environment_values"), "Environment values"),
-        database_attachments=payload.get("database_attachments") or [],
+        database_attachments=_database_attachments(payload.get("database_attachments")),
         custom_start_command=str(payload.get("custom_start_command") or "").strip() or None,
         storage_mounts=payload.get("storage_mounts") or None,
         health_path=str(payload.get("health_path") or "disabled").strip() or "disabled",
@@ -160,3 +161,77 @@ async def _deploy_app(
         raise HTTPException(409, str(exc)) from exc
     await db.commit()
     return app.id, deployment.id
+
+
+def _database_attachments(raw: Any) -> list[dict[str, str]]:
+    if raw in (None, "", []):
+        return []
+    if not isinstance(raw, list):
+        raise HTTPException(400, "Database attachments are invalid.")
+    result: list[dict[str, str]] = []
+    for item in raw:
+        if not isinstance(item, dict):
+            raise HTTPException(400, "Database attachments are invalid.")
+        kind = _database_kind(str(item.get("kind") or "").strip().lower())
+        provider = _database_provider(str(item.get("provider") or "docker").strip().lower(), kind)
+        result.append({
+            "kind": kind,
+            "provider": provider,
+            "environment_key": str(item.get("environment_key") or "").strip(),
+            "external_url": str(item.get("external_url") or "").strip(),
+            "supabase_project_id": str(item.get("supabase_project_id") or "").strip(),
+        })
+    return result
+
+
+def _database_kind(kind: str) -> str:
+    return {
+        "postgres": "postgresql",
+        "postgresql": "postgresql",
+        "mysql": "mariadb",
+        "mariadb": "mariadb",
+        "mariadb/mysql": "mariadb",
+        "mongo": "mongodb",
+        "mongodb": "mongodb",
+        "redis": "redis",
+    }.get(kind, kind)
+
+
+def _database_provider(provider: str, kind: str) -> str:
+    if provider in {"panel", "panel_managed", "managed"}:
+        return "panel_postgres" if kind == "postgresql" else "panel_mariadb" if kind == "mariadb" else "docker"
+    if provider in {"postgres", "postgresql"}:
+        return "panel_postgres"
+    if provider in {"mysql", "mariadb"}:
+        return "panel_mariadb"
+    return provider or "docker"
+
+
+def _reject_unsafe_single_app_source(payload: dict[str, Any]) -> None:
+    if str(payload.get("source_type") or "").strip().lower() != "git":
+        return
+    repo = str(payload.get("repository_url") or "").strip()
+    if not repo:
+        return
+    try:
+        inspection = container_app_inspection_service.inspect_repository(repo, str(payload.get("branch") or "main").strip() or "main")
+    except Exception:
+        return
+    compose_services = (inspection.get("compose_info") or {}).get("services") if isinstance(inspection, dict) else None
+    kinds = _inspection_database_kinds(inspection)
+    unsupported = sorted(kinds & {"clickhouse"})
+    if compose_services or unsupported:
+        reason = "Compose services" if compose_services else f"unsupported datastore services ({', '.join(unsupported)})"
+        raise HTTPException(
+            400,
+            f"Reviewed setup plan is a single-app plan, but source inspection found {reason}. Create a restricted stack setup plan instead.",
+        )
+
+
+def _inspection_database_kinds(inspection: dict[str, Any]) -> set[str]:
+    result = {str(item).strip().lower() for item in inspection.get("database_types") or []}
+    for key in ("database_detections", "database_suggestions"):
+        for item in inspection.get(key) or []:
+            if isinstance(item, dict):
+                result.add(str(item.get("kind") or "").strip().lower())
+    return {item for item in result if item}

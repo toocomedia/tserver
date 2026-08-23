@@ -250,8 +250,8 @@ RAW_TOOL_SCHEMAS: List[Dict[str, Any]] = [
                     "items": {
                         "type": "object",
                         "properties": {
-                            "kind": {"type": "string", "enum": ["postgres", "postgresql", "mariadb", "mysql", "redis", "mongodb", "sqlite", "supabase"]},
-                            "provider": {"type": "string", "enum": ["docker", "external", "supabase"]},
+                            "kind": {"type": "string", "enum": ["postgresql", "mariadb", "redis", "mongodb"]},
+                            "provider": {"type": "string", "enum": ["docker", "panel_postgres", "panel_mariadb", "external", "supabase"]},
                             "environment_key": {"type": "string"},
                         },
                         "required": ["kind", "provider", "environment_key"],

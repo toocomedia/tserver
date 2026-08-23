@@ -67,7 +67,13 @@ class AppsEngineSafeDeploymentTests(unittest.TestCase):
         self.assertIn("Docker Compose and multi-service stacks", tool)
         self.assertIn("_resolve_stack_manifest_images", tool)
         self.assertIn("_needs_digest_resolution", tool)
+        self.assertIn("_normalize_database_kind", tool)
+        self.assertIn("_single_app_source_error", tool)
+        inspector = (BACKEND / "services" / "container_app_inspection_service.py").read_text(encoding="utf-8")
+        self.assertIn('"clickhouse"', inspector)
+        self.assertIn('"mix.exs"', inspector)
         self.assertIn('"secret_requirements"', definitions)
+        self.assertIn('"panel_postgres"', definitions)
         self.assertIn("APP_SETUP_TOOL_NAMES", definitions)
         self.assertIn('"propose_container_app_patch"', registry)
         self.assertIn('"propose_app_install"', registry)
@@ -93,8 +99,11 @@ class AppsEngineSafeDeploymentTests(unittest.TestCase):
         self.assertIn('var hasSetupPlan = bubble.querySelector(".ai-app-plan-card")', actions)
         self.assertIn('bubble.classList.remove("ai-msg-bubble--collapsible")', actions)
         create_router = (BACKEND / "plugins" / "railpack_apps" / "router_create.py").read_text(encoding="utf-8")
+        deploy_helper = (BACKEND / "services" / "apps_engine" / "reviewed_setup_deploy.py").read_text(encoding="utf-8")
         self.assertIn("/deploy-reviewed-plan/{plan_id}", create_router)
         self.assertIn("reviewed_setup_deploy.deploy_plan", create_router)
+        self.assertIn("_database_attachments", deploy_helper)
+        self.assertIn("_reject_unsafe_single_app_source", deploy_helper)
 
 
 if __name__ == "__main__":

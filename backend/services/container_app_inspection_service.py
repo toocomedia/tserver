@@ -26,6 +26,7 @@ _COMPOSE_IMAGE_DB: dict[str, str] = {
     "mysql":      "mariadb/mysql",
     "mongo":      "mongodb",
     "redis":      "redis",
+    "clickhouse": "clickhouse",
 }
 
 
@@ -276,6 +277,7 @@ _TEXT_MARKERS: dict[str, tuple[str, ...]] = {
     "mariadb/mysql": ("mariadb", "mysql", "pymysql", "mysqlclient", "mysql-connector"),
     "mongodb":      ("mongodb", "mongoose", "pymongo", "mongo-driver"),
     "redis":        ("redis", "ioredis", "go-redis"),
+    "clickhouse":   ("clickhouse", "click_house"),
     "sqlite":       ("sqlite", "sqlite3"),
 }
 
@@ -292,6 +294,8 @@ def _databases(text: str) -> list[str]:
 def _runtime(files: set[str]) -> str:
     if "package.json" in files:
         return "Node.js"
+    if "mix.exs" in files:
+        return "Elixir"
     if files & {"requirements.txt", "pyproject.toml", "Pipfile", "poetry.lock"}:
         return "Python"
     if "composer.json" in files:
@@ -336,7 +340,7 @@ def _port(text: str, runtime: str, framework: str = "", compose_info: dict | Non
         return 8000
     if framework == "Flask":
         return 5000
-    return {"Python": 8000, "PHP": 8080, "Go": 8080, "Java": 8080, "Static site": 80}.get(runtime, 3000)
+    return {"Python": 8000, "PHP": 8080, "Go": 8080, "Java": 8080, "Elixir": 4000, "Static site": 80}.get(runtime, 3000)
 
 
 def _read_sources(root: Path) -> str:
@@ -344,6 +348,7 @@ def _read_sources(root: Path) -> str:
         "Dockerfile", "Procfile", "package.json", "package-lock.json", "yarn.lock", "pnpm-lock.yaml",
         "railpack.json", "nixpacks.toml", "requirements.txt", "pyproject.toml", "Pipfile", "poetry.lock",
         "Gemfile", "go.mod", "pom.xml", "build.gradle", "build.gradle.kts", "composer.json",
+        "mix.exs", "mix.lock", "config/runtime.exs", "config/config.exs", "config/prod.exs",
         "config/database.yml", "config/database.php",
     )
     texts = []
