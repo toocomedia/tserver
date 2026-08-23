@@ -254,20 +254,52 @@ def _collect_usage_snapshot() -> dict:
     # Swap
     swap = _psutil.swap_memory()
 
-    # Disk — all mounted partitions
+    # Disk — all mounted partitions (filtered to real storage, skip pseudo/overlay that duplicate root in df)
     disks = []
     for part in _psutil.disk_partitions(all=False):
         try:
-            usage = _psutil.disk_usage(part.mountpoint)
+            # Skip Docker overlay layers and tmpfs pseudo mounts that make df output confusing
+            # (overlay, tmpfs, squashfs etc duplicate / and clutter the UI)
+            fst = (part.fstype or "").lower()
+            dev = (part.device or "")
+            mnt = part.mountpoint or ""
+            if fst in ("tmpfs", "devtmpfs", "squashfs", "overlay", "nsfs", "cgroup", "cgroup2", "efivarfs"):
+                continue
+            if dev in ("tmpfs", "overlay", "none", "udev"):
+                continue
+            if mnt.startswith("/var/lib/docker/"):
+                continue
+            if mnt.startswith("/run/credentials"):
+                continue
+            # Extra guard: overlay device with overlay fstype
+            if dev == "overlay" or fst == "overlay":
+                continue
+            usage = _psutil.disk_usage(mnt)
             disks.append({
-                "mount": part.mountpoint,
-                "device": part.device,
+                "mount": mnt,
+                "device": dev,
+                "fstype": part.fstype,
                 "total_gb": round(usage.total / (1024 ** 3), 1),
                 "used_gb": round(usage.used / (1024 ** 3), 1),
                 "free_gb": round(usage.free / (1024 ** 3), 1),
                 "percent": usage.percent,
             })
-        except PermissionError:
+        except (PermissionError, FileNotFoundError, OSError):
+            pass
+    # Fallback: if filtering removed everything (unlikely on minimal VPS), show root
+    if not disks:
+        try:
+            usage = _psutil.disk_usage("/")
+            disks.append({
+                "mount": "/",
+                "device": "/dev/vda2",
+                "fstype": "ext4",
+                "total_gb": round(usage.total / (1024 ** 3), 1),
+                "used_gb": round(usage.used / (1024 ** 3), 1),
+                "free_gb": round(usage.free / (1024 ** 3), 1),
+                "percent": usage.percent,
+            })
+        except Exception:
             pass
 
     # Network I/O

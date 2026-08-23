@@ -282,9 +282,16 @@ async def disk_cleanup(payload: DiskCleanupIn, db: AsyncSession = Depends(get_db
     if not payload.include_ids:
         raise HTTPException(400, "include_ids must not be empty.")
     active_digests, rollback_images = await _collect_image_digests(db)
-    return await disk_cleanup_service.run_cleanup(
+    result = await disk_cleanup_service.run_cleanup(
         payload.include_ids, active_digests, rollback_images
     )
+    # Invalidate disk stats cache so /api/stats reflects freed space immediately
+    try:
+        from routers.system import _invalidate_stats_cache
+        _invalidate_stats_cache()
+    except Exception:
+        pass
+    return result
 
 
 @router.post("/api/resource-guard/builder-prune")
@@ -296,9 +303,15 @@ async def builder_prune(db: AsyncSession = Depends(get_db)):
     cache_items = [i for i in items if i["type"] == disk_cleanup_service.TYPE_BUILD_CACHE]
     if not cache_items:
         return {"deleted": [], "freed_mb": 0.0, "errors": [], "skipped": ["No builder cache found"]}
-    return await disk_cleanup_service.run_cleanup(
+    result = await disk_cleanup_service.run_cleanup(
         [cache_items[0]["item_id"]], active_digests, rollback_images
     )
+    try:
+        from routers.system import _invalidate_stats_cache
+        _invalidate_stats_cache()
+    except Exception:
+        pass
+    return result
 
 
 async def _collect_image_digests(db: AsyncSession) -> tuple[set[str], set[str]]:

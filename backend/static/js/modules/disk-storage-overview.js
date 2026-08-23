@@ -124,14 +124,22 @@
     try{
       const res = await panel.post("/api/resource-guard/disk-cleanup", { include_ids: includeIds });
       const errs = res.errors?.length ? ` ${res.errors.length} item(s) skipped.` : "";
+      const details = res.errors?.length ? ` Skipped: ${res.errors.slice(0,2).join(" | ")}${res.errors.length>2?" …":""}` : "";
       const el = $("disk-consumers-result");
-      if(el) el.textContent = `Freed ${formatMb(res.freed_mb)}.${errs}`;
-      toast(`Freed ${formatMb(res.freed_mb)}`,"success");
+      if(res.errors?.length){
+        if(el) el.textContent = `Freed ${formatMb(res.freed_mb)}.${errs}${details}`;
+        toast(res.errors[0]||`Some items could not be removed.${errs}`,"warning");
+      }else{
+        if(el) el.textContent = `Freed ${formatMb(res.freed_mb)}.${errs}`;
+        toast(`Freed ${formatMb(res.freed_mb)}`,"success");
+      }
       await scan();
       // Also refresh the mount bars via global fetchStats if available
       if(typeof fetchStats==="function") try{ fetchStats(true); }catch(_){}
     }catch(e){
       toast(e.message||"Could not free disk space","danger");
+      const el=$("disk-consumers-result");
+      if(el) el.textContent = e.message||"Cleanup failed";
     }finally{
       if(btn){ btn.classList.remove("is-loading"); btn.removeAttribute("aria-busy"); }
       updateSelection();

@@ -206,6 +206,8 @@ def _build_inventory(
     # We run one listing for all images and classify. The legacy dangling-only
     # filter is handled implicitly; repoTag == <none>:<none> => dangling.
     seen_image_ids: set[str] = set()
+    # Collect in-use refs once so we can protect BuildKit and active app containers
+    in_use_refs = _collect_in_use_image_refs()
     result_all = _run(
         ["docker", "images", "--format", "{{.ID}}\t{{.Repository}}:{{.Tag}}\t{{.Size}}\t{{.CreatedAt}}"],
         timeout=12,
@@ -245,12 +247,20 @@ def _build_inventory(
             size_mb = _parse_docker_size(size_str)
             # Also catch "srv-panel/railpack-app" images that are failed builds — high value to surface
             protected = image_id in active_digests or image_id in rollback_images
+            reason = "Active or rollback image" if protected else ""
             # Also protect by full reference match (image_digest may be "srv-panel/railpack-app:12-34")
             if not protected and repo_tag:
                 if repo_tag in active_digests or repo_tag in rollback_images:
                     protected = True
-            reason = "Active or rollback image" if protected else ""
-            # For unused images, also treat panel-owned builder images as deletable but surfaced
+                    reason = "Active or rollback image"
+            # Protect images currently in use by a running container (BuildKit, active app)
+            if not protected and _is_in_use(image_id, repo_tag, in_use_refs):
+                protected = True
+                reason = "In use by running container"
+            # Explicitly protect BuildKit base image even if container is stopped — required for next build
+            if not protected and repo_tag.startswith("moby/buildkit"):
+                protected = True
+                reason = "BuildKit base image — required for builds"
             items.append(InventoryItem(
                 item_id=_make_id(item_type, image_id),
                 type=item_type,
@@ -279,7 +289,11 @@ def _build_inventory(
                 size_str = parts[1].strip() if len(parts) > 1 else "0MB"
                 size_mb = _parse_docker_size(size_str)
                 protected = image_id in active_digests or image_id in rollback_images
-                reason = "Active or rollback image" if protected else ""
+                if not protected and _is_in_use(image_id, "", in_use_refs):
+                    protected = True
+                    reason = "In use by running container"
+                else:
+                    reason = "Active or rollback image" if protected else ""
                 items.append(InventoryItem(
                     item_id=_make_id(TYPE_DANGLING_IMAGE, image_id),
                     type=TYPE_DANGLING_IMAGE,
@@ -381,14 +395,38 @@ def _delete_item(item: InventoryItem) -> None:
         elif p.exists():
             p.unlink(missing_ok=True)
     elif item.type in (TYPE_DANGLING_IMAGE, TYPE_UNUSED_IMAGE):
-        # path may be "ID (repo:tag)" — extract ID
-        image_ref = item.path.split(" ")[0].strip()
-        # Guard: never delete active/rollback — already checked but re-validate id prefix match
-        result = _run(["docker", "rmi", image_ref], timeout=60)
-        if result.returncode != 0:
-            stderr = (result.stderr or result.stdout or "").strip()
-            # If image is in use by a running container, report but don't raise hard — it becomes skipped via error list
-            raise RuntimeError(f"docker rmi failed: {stderr[-300:]}")
+        # path may be "ID (repo:tag)" — try ID first, then repoTag for robustness
+        refs_to_try: list[str] = []
+        if " (" in item.path and item.path.endswith(")"):
+            id_part, repo_part = item.path.split(" (", 1)
+            repo_tag = repo_part.rstrip(")").strip()
+            refs_to_try.append(id_part.strip())
+            if repo_tag and repo_tag != "<none>:<none>":
+                refs_to_try.append(repo_tag)
+        else:
+            refs_to_try.append(item.path.split(" ")[0].strip())
+        last_err = ""
+        for ref in refs_to_try:
+            if not ref:
+                continue
+            result = _run(["docker", "rmi", ref], timeout=90)
+            if result.returncode == 0:
+                last_err = ""
+                break
+            last_err = (result.stderr or result.stdout or "").strip()
+            low = last_err.lower()
+            # No such image — try next ref
+            if "no such image" in low or "not found" in low:
+                continue
+            # In use or dependent — surface immediately, trying other ref won't help
+            if "is being used" in low or "has dependent" in low or "must force" in low:
+                raise RuntimeError(f"docker rmi failed: {last_err[-400:]}")
+            # Other error — try next ref if available, otherwise raise
+            if ref != refs_to_try[-1]:
+                continue
+            raise RuntimeError(f"docker rmi failed: {last_err[-400:]}")
+        if last_err:
+            raise RuntimeError(f"docker rmi failed: {last_err[-400:]}")
     elif item.type == TYPE_BUILD_CACHE:
         # Prune all build cache — re-validated as safe (no active layers tied to running containers are kept by builder)
         # Try buildx builder first, then generic builder prune
@@ -447,6 +485,46 @@ def _parse_docker_size(size_str: str) -> float:
 def _is_docker_size(value: str) -> bool:
     s = value.strip().upper()
     return s.endswith(("GB", "MB", "KB", "KIB", "B")) and _parse_docker_size(s) >= 0.0
+
+
+def _collect_in_use_image_refs() -> set[str]:
+    """Images referenced by running containers — must not be offered as deletable.
+    Covers moby/buildkit (srv-panel-buildkit) and any active app container.
+    Short timeout so inventory stays fast."""
+    refs: set[str] = set()
+    try:
+        res = _run(["docker", "ps", "--format", "{{.Image}}"], timeout=6)
+        if res.returncode == 0 and res.stdout:
+            for line in res.stdout.splitlines():
+                line = line.strip()
+                if line:
+                    refs.add(line)
+                    # Also store short ID form if it's a sha256:...
+                    if line.startswith("sha256:"):
+                        refs.add(line.replace("sha256:", "")[:12])
+                        refs.add(line)
+    except Exception:
+        pass
+    return refs
+
+
+def _is_in_use(image_id: str, repo_tag: str, in_use: set[str]) -> bool:
+    if not in_use:
+        return False
+    if image_id and image_id in in_use:
+        return True
+    if repo_tag and repo_tag in in_use:
+        return True
+    # Handle sha256: prefix and short-ID prefix matches
+    for ref in in_use:
+        # ref may be sha256:abcd... or short id
+        if image_id and (ref == image_id or ref.startswith(image_id) or image_id.startswith(ref.replace("sha256:", ""))):
+            return True
+        if image_id and image_id in ref:
+            # 12-char ID contained in full sha
+            if len(image_id) >= 8 and image_id[:8] in ref:
+                return True
+    return False
 
 
 def _collect_build_cache_mb() -> float | None:
