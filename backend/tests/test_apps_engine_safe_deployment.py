@@ -67,10 +67,11 @@ class AppsEngineSafeDeploymentTests(unittest.TestCase):
         self.assertIn("Docker Compose and multi-service stacks", tool)
         self.assertIn('"secret_requirements"', definitions)
         self.assertIn('{"propose_container_app_patch", "propose_app_install"}', registry)
-        self.assertIn("Only call propose_app_install", prompt)
+        self.assertIn("For every supported app, call propose_app_install exactly once", prompt)
         self.assertIn("APP_SETUP_PLAN", chat)
         self.assertIn("APP_SETUP_PLAN", markdown)
         self.assertIn("[data-action='APP_SETUP_PLAN']", actions)
+        self.assertIn("window.applyAiAppPlan(data.plan)", actions)
         self.assertIn('window.location.href = "/plugins/railpack_apps/create?plan="', actions)
 
 

@@ -241,6 +241,21 @@
           var actionType = applyPlanBtn.getAttribute("data-action") || "APP_SETUP_PLAN";
           var setupPlanId = applyPlanBtn.getAttribute("data-plan-id");
           if (!setupPlanId) return;
+          if (typeof window.applyAiAppPlan === "function") {
+            fetch("/plugins/ai_helper/api/action-plans/" + encodeURIComponent(setupPlanId))
+              .then(function (res) {
+                if (!res.ok) throw new Error("Plan not found or expired.");
+                return res.json();
+              })
+              .then(function (data) {
+                if (!data.plan || data.plan.action_type !== "app_install") throw new Error("Invalid setup plan.");
+                window.applyAiAppPlan(data.plan);
+              })
+              .catch(function (err) {
+                if (window.toast) window.toast(err.message, "error");
+              });
+            return;
+          }
           window.location.href = "/plugins/railpack_apps/create?plan=" + encodeURIComponent(setupPlanId);
           return;
 
