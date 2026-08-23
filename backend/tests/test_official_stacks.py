@@ -253,6 +253,66 @@ class TestOfficialStacks(unittest.IsolatedAsyncioTestCase):
         finally:
             await engine.dispose()
 
+    async def test_ai_propose_dynamic_ai_generated_stack_plan(self):
+        """Verify AI Helper propose_official_stack_install works with dynamic LLM service formats."""
+        from services.official_stacks.schema import stack_from_dict
+        # Test polymorphic AI output with string volumes, string secrets, and health check strings
+        dynamic_payload = {
+            "catalog_id": "dynamic_ai_stack",
+            "display_name": "Dynamic AI Generated Stack",
+            "services": {
+                "db": {
+                    "image": "postgres:16-alpine",
+                    "volumes": ["db-data:/var/lib/postgresql/data"],
+                    "health_check": "pg_isready -U postgres",
+                    "ports": [5432],
+                },
+                "web": {
+                    "image": "ghcr.io/myvendor/myapp:latest",
+                    "ports": [8000],
+                    "health_check": "/api/health",
+                    "depends_on": ["db"],
+                },
+            },
+            "startup_order": "db, web",
+            "web_service_name": "web",
+            "web_internal_port": 8000,
+            "required_secrets": ["DB_PASSWORD", "SECRET_KEY_BASE"],
+            "url_templates": {"DATABASE_URL": "postgresql://postgres:{DB_PASSWORD}@{db}:5432/app"},
+        }
+        stk = stack_from_dict(dynamic_payload)
+        self.assertEqual(stk.catalog_id, "dynamic_ai_stack")
+        self.assertEqual(len(stk.services), 2)
+        self.assertEqual(stk.services["db"].volumes[0].name_suffix, "db-data")
+        self.assertEqual(stk.services["db"].volumes[0].container_mount_path, "/var/lib/postgresql/data")
+        self.assertEqual(stk.services["db"].health_check.command, ["pg_isready", "-U", "postgres"])
+        self.assertEqual(stk.services["web"].health_check.probe_type, "http")
+        self.assertEqual(stk.services["web"].health_check.http_path, "/api/health")
+        self.assertEqual(len(stk.required_secrets), 2)
+
+        engine, SessionFactory = await self._make_test_db()
+        try:
+            async with SessionFactory() as db:
+                res = await app_setup.propose_official_stack_install(
+                    db=db,
+                    catalog_id="dynamic_ai_stack",
+                    display_name="Dynamic AI Stack",
+                    domain_name="dynamic.example.com",
+                    services=dynamic_payload["services"],
+                    startup_order=["db", "web"],
+                    web_service_name="web",
+                    web_internal_port=8000,
+                    required_secrets=dynamic_payload["required_secrets"],
+                    url_templates=dynamic_payload["url_templates"],
+                    session_id="stack_dyn_test",
+                    user_id=1,
+                    reasoning="Dynamic AI generated stack test.",
+                )
+                self.assertEqual(res["status"], "ok")
+                self.assertTrue(res["plan_id"].startswith("plan_"))
+        finally:
+            await engine.dispose()
+
     async def test_official_stack_create_flow(self):
         """Verify the create flow logic handles official_stack deploy_type correctly."""
         import config
