@@ -73,6 +73,8 @@ class AppsEngineSafeDeploymentTests(unittest.TestCase):
         self.assertIn("[data-action='APP_SETUP_PLAN']", actions)
         self.assertIn("window.applyAiAppPlan(data.plan)", actions)
         self.assertIn('window.location.href = "/plugins/railpack_apps/create?plan="', actions)
+        self.assertIn('var hasSetupPlan = bubble.querySelector(".ai-app-plan-card")', actions)
+        self.assertIn('bubble.classList.remove("ai-msg-bubble--collapsible")', actions)
 
 
 if __name__ == "__main__":

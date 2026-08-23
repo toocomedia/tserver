@@ -41,8 +41,15 @@
       assistantMsgs.forEach(function (msgWrap) {
         var bubble = msgWrap.querySelector(".ai-msg-bubble");
         if (!bubble) return;
-        // Do not prematurely collapse messages containing action plans or tables
-        var hasStructuredCards = bubble.querySelector(".ai-app-plan-card, .ai-table-wrap, .ai-security-card");
+        // A setup handoff must remain visible; its accept button cannot sit below a collapsed message.
+        var hasSetupPlan = bubble.querySelector(".ai-app-plan-card");
+        if (hasSetupPlan) {
+          bubble.classList.remove("ai-msg-bubble--collapsible");
+          var existingToggle = msgWrap.querySelector(".ai-msg-expand-toggle-btn");
+          if (existingToggle) existingToggle.remove();
+          return;
+        }
+        var hasStructuredCards = bubble.querySelector(".ai-table-wrap, .ai-security-card");
         var threshold = hasStructuredCards ? 1200 : 700;
         if (bubble.scrollHeight > threshold && !msgWrap.querySelector(".ai-msg-expand-toggle-btn")) {
           bubble.classList.add("ai-msg-bubble--collapsible");
