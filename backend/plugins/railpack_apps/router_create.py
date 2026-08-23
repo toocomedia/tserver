@@ -18,6 +18,10 @@ from models.ssl_cert import SslCert
 from services import container_app_database_service, container_app_deployment_service
 from services import container_app_image_inspect_service, container_app_inspection_service, container_app_service, container_app_wordpress_service
 from services.apps_engine import secret_vault, snapshots
+from services.official_stacks import stack_runtime_service
+from services.official_stacks.catalog import get_stack, register_stack
+from services.official_stacks.schema import stack_from_dict
+from services.official_stacks.manifest_validator import validate_stack_request
 from dependencies.git import repository_service
 from templating import templates
 
@@ -126,8 +130,6 @@ async def create(
     has_certificate = await db.scalar(select(SslCert.id).where(SslCert.full_domain == domain.name)) is not None
 
     if deploy_type == "official_stack" or source_type == "official_stack":
-        from services.official_stacks.catalog import get_stack
-        from services.official_stacks.manifest_validator import validate_stack_request
         cat_id = (stack_catalog_id or "").strip()
         if not cat_id:
             raise HTTPException(400, "Official stack catalog identifier is required.")
