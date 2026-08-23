@@ -17,7 +17,7 @@ class Base(DeclarativeBase):
 engine = create_async_engine(
     DATABASE_URL,
     echo=False,
-    connect_args={"check_same_thread": False},
+    connect_args={"check_same_thread": False, "timeout": 30.0},
 )
 
 AsyncSessionLocal = async_sessionmaker(

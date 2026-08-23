@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import asyncio
+from pathlib import Path
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
@@ -141,7 +142,10 @@ async def create(
         except ValueError as exc:
             raise HTTPException(400, str(exc)) from exc
 
-        secret_vault.encrypt("")
+        try:
+            secret_vault.encrypt("")
+        except RuntimeError as exc:
+            raise HTTPException(400, str(exc)) from exc
         app = await container_app_service.create_app(
             db, domain=domain, source_type="image", build_mode="image",
             deploy_type="official_stack", stack_catalog_id=cat_id, stack_version=v,
