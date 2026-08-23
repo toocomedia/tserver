@@ -6,6 +6,13 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 
+APP_SETUP_TOOL_NAMES = frozenset({
+    "get_app_engine_capabilities",
+    "inspect_app_source",
+    "propose_app_install",
+    "propose_stack_install",
+})
+
 RAW_TOOL_SCHEMAS: List[Dict[str, Any]] = [
     {
         "name": "get_domains_and_ssl",
@@ -290,7 +297,7 @@ RAW_TOOL_SCHEMAS: List[Dict[str, Any]] = [
     },
     {
         "name": "propose_stack_install",
-        "description": "Creates one immutable review plan from a restricted structured stack manifest. Never send Compose/YAML, host paths, public mappings, capabilities, or secret values. Never deploys.",
+        "description": "Creates one immutable review plan from restricted structured stack fields. Use only services/images/ports/dependencies/volumes observed by panel source inspection. Never send raw Compose/YAML, host paths, public mappings, capabilities, or secret values. Never deploys.",
         "parameters": {
             "type": "object",
             "properties": {
@@ -398,12 +405,14 @@ RAW_TOOL_SCHEMAS: List[Dict[str, Any]] = [
 
 
 
-def get_tool_definitions(provider_type: str = "openai_compatible") -> List[Dict[str, Any]]:
+def get_tool_definitions(provider_type: str = "openai_compatible", tool_names: set[str] | None = None) -> List[Dict[str, Any]]:
     """
     Returns tool definitions formatted for the target provider:
     - OpenAI / DeepSeek / Groq format: list of {'type': 'function', 'function': {...}}
     - Anthropic Claude format: list of {'name': ..., 'description': ..., 'input_schema': {...}}
     """
+    schemas = [t for t in RAW_TOOL_SCHEMAS if tool_names is None or t["name"] in tool_names]
+
     if provider_type == "anthropic":
         return [
             {
@@ -411,7 +420,7 @@ def get_tool_definitions(provider_type: str = "openai_compatible") -> List[Dict[
                 "description": t["description"],
                 "input_schema": t["parameters"],
             }
-            for t in RAW_TOOL_SCHEMAS
+            for t in schemas
         ]
 
     # OpenAI-compatible format
@@ -424,5 +433,5 @@ def get_tool_definitions(provider_type: str = "openai_compatible") -> List[Dict[
                 "parameters": t["parameters"],
             },
         }
-        for t in RAW_TOOL_SCHEMAS
+        for t in schemas
     ]

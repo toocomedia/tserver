@@ -27,7 +27,6 @@ async def chat_completion_step(
     model_name: str,
     messages: List[Dict[str, Any]],
     tools: Optional[List[Dict[str, Any]]] = None,
-    force_tool_name: Optional[str] = None,
     temperature: float = 0.2,
     max_tokens: int = 4096,
 ) -> Dict[str, Any]:
@@ -36,10 +35,10 @@ async def chat_completion_step(
     """
     if provider_type == "anthropic":
         return await _anthropic_completion_step(
-            base_url, api_key, model_name, messages, tools, force_tool_name, temperature, max_tokens
+            base_url, api_key, model_name, messages, tools, temperature, max_tokens
         )
     return await _openai_completion_step(
-        base_url, api_key, model_name, messages, tools, force_tool_name, temperature, max_tokens
+        base_url, api_key, model_name, messages, tools, temperature, max_tokens
     )
 
 
@@ -49,7 +48,6 @@ async def _openai_completion_step(
     model_name: str,
     messages: List[Dict[str, Any]],
     tools: Optional[List[Dict[str, Any]]] = None,
-    force_tool_name: Optional[str] = None,
     temperature: float = 0.2,
     max_tokens: int = 4096,
 ) -> Dict[str, Any]:
@@ -66,10 +64,7 @@ async def _openai_completion_step(
     }
     if tools:
         payload["tools"] = tools
-        payload["tool_choice"] = (
-            {"type": "function", "function": {"name": force_tool_name}}
-            if force_tool_name else "auto"
-        )
+        payload["tool_choice"] = "auto"
 
     async with httpx.AsyncClient(timeout=httpx.Timeout(READ_TIMEOUT, connect=CONNECT_TIMEOUT)) as client:
         try:
@@ -142,7 +137,6 @@ async def _anthropic_completion_step(
     model_name: str,
     messages: List[Dict[str, Any]],
     tools: Optional[List[Dict[str, Any]]] = None,
-    force_tool_name: Optional[str] = None,
     temperature: float = 0.2,
     max_tokens: int = 4096,
 ) -> Dict[str, Any]:
@@ -171,8 +165,6 @@ async def _anthropic_completion_step(
         payload["system"] = system_prompt.strip()
     if tools:
         payload["tools"] = tools
-        if force_tool_name:
-            payload["tool_choice"] = {"type": "tool", "name": force_tool_name}
 
     async with httpx.AsyncClient(timeout=httpx.Timeout(READ_TIMEOUT, connect=CONNECT_TIMEOUT)) as client:
         try:

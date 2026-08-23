@@ -38,7 +38,6 @@ class TestAiAppSetup(unittest.IsolatedAsyncioTestCase):
 
             self.assertEqual(res["status"], "ok")
             self.assertTrue(res["plan_id"].startswith("plan_"))
-            self.assertEqual(res["action_tag"], f"[ACTION:APP_PLAN:{res['plan_id']}]")
             self.assertEqual(res["summary"], "Deploy n8n automation tool")
             self.assertEqual(res["confidence"], 0.98)
 

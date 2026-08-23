@@ -46,11 +46,12 @@ def stack_from_proposal(raw: Any, evidence: list[str] | None = None) -> Official
         raise ValueError("Stack proposal requires a non-empty services list.")
     if len(services_raw) > 8:
         raise ValueError("Stack proposal can contain at most eight services.")
+    version = _text(raw.get("version") or "proposal", "Version", 80)
+    web_service = _text(raw.get("web_service"), "Web service", 48)
     services = {service.name: service for service in (_service(item) for item in services_raw)}
     if len(services) != len(services_raw):
         raise ValueError("Stack service names must be unique.")
 
-    web_service = _text(raw.get("web_service"), "Web service", 48)
     try:
         web_port = int(raw.get("web_port"))
     except (TypeError, ValueError) as exc:
@@ -74,8 +75,8 @@ def stack_from_proposal(raw: Any, evidence: list[str] | None = None) -> Official
         vendor_name=str(raw.get("vendor_name") or "").strip()[:120],
         description=str(raw.get("description") or "").strip()[:1000],
         official_repositories=_url_list(raw.get("source_repositories")),
-        allowed_versions=[_text(raw.get("version") or "proposal", "Version", 80)],
-        default_version=_text(raw.get("version") or "proposal", "Version", 80),
+        allowed_versions=[version],
+        default_version=version,
         services=services,
         startup_order=_names(raw.get("startup_order"), "Startup order"),
         web_service_name=web_service,

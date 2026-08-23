@@ -329,18 +329,18 @@ async def stream_ai_chat(
     setup_plan_id: str | None = None
     sensitive_file_blocked = False
     setup_plan_required = tools_enabled and setup_handoff.requires_reviewed_plan(task_type)
-    setup_source_type = ""
     setup_plan_errors: List[str] = []
     if tools_enabled:
-        tool_defs = tools.get_tool_definitions(active.provider_type)
+        tool_defs = tools.get_tool_definitions(
+            active.provider_type,
+            tool_names=setup_handoff.SETUP_TOOL_NAMES if setup_plan_required else None,
+        )
         tool_counts: Dict[str, int] = {}
-        forced_tool_name: str | None = None
-        plan_attempts = 0
-        max_tool_iterations = 8
+        max_tool_iterations = 3 if setup_plan_required else 6
 
         async def _execute_tool(fn_name: str, fn_args: Dict[str, Any]) -> Dict[str, Any]:
             """Execute approved tools while bounding setup-only evidence collection."""
-            nonlocal sensitive_file_blocked, setup_source_type, plan_attempts
+            nonlocal sensitive_file_blocked
             limited = setup_handoff.tool_limit_result(task_type, fn_name, tool_counts)
             if limited is not None:
                 return limited
@@ -355,10 +355,7 @@ async def stream_ai_chat(
             )
             if fn_name == "read_website_file" and tool_output.get("status") == "secrets_blocked":
                 sensitive_file_blocked = True
-            if fn_name == "inspect_app_source":
-                setup_source_type = str(tool_output.get("source_type") or "").strip().lower()
             if fn_name in {"propose_app_install", "propose_stack_install", "propose_official_stack_install"}:
-                plan_attempts += 1
                 if tool_output.get("status") != "ok":
                     message = str(tool_output.get("message") or "The planning tool rejected this proposal.").strip()
                     if message:
@@ -375,11 +372,9 @@ async def stream_ai_chat(
                     model_name=effective_model,
                     messages=norm_messages,
                     tools=tool_defs,
-                    force_tool_name=forced_tool_name,
                     temperature=active.temperature,
                     max_tokens=active.max_tokens,
                 )
-                forced_tool_name = None
                 tool_calls = tool_step.get("tool_calls") or []
                 step_content = tool_step.get("content") or ""
 
@@ -391,21 +386,6 @@ async def stream_ai_chat(
                     is_text_pseudo_tool = False
 
                 if not tool_calls:
-                    # Model has finished tool usage
-                    if setup_plan_required and not setup_plan_id and plan_attempts < 2:
-                        forced_tool_name = (
-                            "propose_stack_install" if setup_source_type == "official_stack"
-                            else "propose_app_install"
-                        )
-                        retry_context = (
-                            f" The previous plan was rejected: {setup_plan_errors[-1]}"
-                            if setup_plan_errors else ""
-                        )
-                        messages.append({
-                            "role": "user",
-                            "content": setup_handoff.PLAN_REQUIRED_MESSAGE + retry_context,
-                        })
-                        continue
                     break
 
                 tool_was_executed = True

@@ -241,40 +241,45 @@
           return;
         }
 
-        // Safe App Engine setup handoff. This only opens the prefilled wizard.
+        // Safe App Engine setup handoff. The click is the explicit deploy approval.
         var applyPlanBtn = e.target.closest("[data-action='APP_SETUP_PLAN']");
         if (applyPlanBtn) {
           e.preventDefault();
-          var actionType = applyPlanBtn.getAttribute("data-action") || "APP_SETUP_PLAN";
           var setupPlanId = applyPlanBtn.getAttribute("data-plan-id");
           if (!setupPlanId) return;
 
           applyPlanBtn.disabled = true;
-          applyPlanBtn.innerHTML = '<span class="ai-btn-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></span> <span class="ai-btn-text">Loading Reviewed Setup...</span>';
+          applyPlanBtn.innerHTML = '<span class="ai-btn-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></span> <span class="ai-btn-text">Starting deployment...</span>';
 
-          if (typeof window.applyAiAppPlan === "function") {
-            fetch("/plugins/ai_helper/api/action-plans/" + encodeURIComponent(setupPlanId))
-              .then(function (res) {
-                if (!res.ok) throw new Error("Plan not found or expired.");
-                return res.json();
-              })
-              .then(function (data) {
-                if (!data.plan || (data.plan.action_type !== "app_install" && data.plan.action_type !== "stack_install" && data.plan.action_type !== "official_stack_install")) {
-                  throw new Error("Invalid setup plan.");
-                }
-                window.applyAiAppPlan(data.plan);
-                applyPlanBtn.innerHTML = '<span class="ai-btn-icon">✓</span> <span class="ai-btn-text">Setup Loaded & Ready to Deploy</span>';
-                applyPlanBtn.classList.add("is-applied");
-                if (window.toast) window.toast("Configuration plan loaded into setup wizard.", "success");
-              })
-              .catch(function (err) {
-                applyPlanBtn.disabled = false;
-                applyPlanBtn.innerHTML = '<span class="ai-btn-text">Apply Reviewed Setup</span> <span class="ai-btn-arrow">→</span>';
-                if (window.toast) window.toast(err.message, "error");
-              });
-            return;
+          var csrfToken = "";
+          if (typeof window.getCsrfToken === "function") {
+            csrfToken = window.getCsrfToken();
+          } else {
+            var csrfMeta = document.querySelector('meta[name="csrf-token"]');
+            var csrfInput = document.querySelector('input[name="csrf_token"]');
+            csrfToken = (csrfMeta && csrfMeta.content) || (csrfInput && csrfInput.value) || "";
           }
-          window.location.href = "/plugins/railpack_apps/create?plan=" + encodeURIComponent(setupPlanId);
+          fetch("/plugins/railpack_apps/deploy-reviewed-plan/" + encodeURIComponent(setupPlanId), {
+            method: "POST",
+            headers: { "Accept": "application/json", "X-CSRF-Token": csrfToken }
+          })
+            .then(function (res) {
+              return res.json().catch(function () { return {}; }).then(function (data) {
+                if (!res.ok) throw new Error(data.detail || data.message || "Reviewed setup could not be deployed.");
+                return data;
+              });
+            })
+            .then(function (data) {
+              applyPlanBtn.innerHTML = '<span class="ai-btn-icon">✓</span> <span class="ai-btn-text">Deployment queued</span>';
+              applyPlanBtn.classList.add("is-applied");
+              if (window.toast) window.toast("Reviewed setup deployment queued.", "success");
+              self.monitorDeploymentInChat(data.app_id, data.deployment_id, applyPlanBtn.closest(".ai-app-plan-card") || containerEl);
+            })
+            .catch(function (err) {
+              applyPlanBtn.disabled = false;
+              applyPlanBtn.innerHTML = '<span class="ai-btn-text">Deploy reviewed setup</span> <span class="ai-btn-arrow">→</span>';
+              if (window.toast) window.toast(err.message, "error");
+            });
           return;
         }
 

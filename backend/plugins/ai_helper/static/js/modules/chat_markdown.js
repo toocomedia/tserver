@@ -211,7 +211,7 @@
               return '<span class="ai-security-badge ' + cls + '"><span class="ai-sec-dot ai-sec-dot--' + sev + '"></span> ' + desc + '</span>';
             }
           }
-          // Only server-appended setup handoffs render in chat. They never deploy.
+          // Only server-appended setup handoffs render in chat. The click is approval.
           if (actionType === "APP_SETUP_PLAN") {
             var setupPlanId = actionVal.trim();
             return [
@@ -224,10 +224,10 @@
               '    <span class="badge badge--ok" style="font-size: 10px; font-weight: 600;">Verified Plan</span>',
               '  </div>',
               '  <div class="ai-app-plan-card-body">',
-              '    <p class="ai-app-plan-summary">Validated runtime, port, environment, database, and storage settings are ready. One click loads them into the wizard; deployment remains your confirmation.</p>',
+              '    <p class="ai-app-plan-summary">Validated runtime, port, environment, database, storage, and secret requirements are ready. The next click deploys the reviewed setup.</p>',
               '    <button type="button" class="ai-action-btn--big-next" data-action="APP_SETUP_PLAN" data-plan-id="' + setupPlanId + '">',
               '      <span class="ai-btn-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></span>',
-              '      <span class="ai-btn-text">Apply Reviewed Setup</span>',
+              '      <span class="ai-btn-text">Deploy reviewed setup</span>',
               '      <span class="ai-btn-arrow">→</span>',
               '    </button>',
               '  </div>',

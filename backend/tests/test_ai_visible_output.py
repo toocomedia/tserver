@@ -28,11 +28,14 @@ class VisibleOutputTests(unittest.TestCase):
     def test_unclosed_thinking_is_removed_from_history(self):
         self.assertEqual(strip_hidden_reasoning("Visible <think>private"), "Visible ")
 
-    def test_setup_evidence_reads_are_bounded_but_plan_tool_is_not(self):
+    def test_setup_evidence_reads_and_plan_tools_are_bounded(self):
         counts = {"fetch_web_documentation": 2}
         limited = tool_limit_result("app_deploy", "fetch_web_documentation", counts)
-        self.assertEqual(limited["status"], "limit_reached")
-        self.assertIsNone(tool_limit_result("app_deploy", "propose_stack_install", counts))
+        self.assertEqual(limited["status"], "setup_tool_not_available")
+        self.assertEqual(
+            tool_limit_result("app_deploy", "propose_stack_install", {"propose_stack_install": 1})["status"],
+            "limit_reached",
+        )
 
     def test_missing_plan_reports_the_last_safe_validation_error(self):
         self.assertIn("manifest", missing_plan_message(["Stack manifest is invalid."]))

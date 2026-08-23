@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import logging
 import re
+import copy
 from typing import Any, Dict, List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -68,7 +69,8 @@ async def inspect_app_source(
             }
         try:
             res = container_app_inspection_service.inspect_repository(repo, branch.strip() or "main")
-            return {"status": "ok", "source_type": "git", "inspection": res}
+            source_kind = "compose_stack" if (res.get("compose_info") or {}).get("services") else "git"
+            return {"status": "ok", "source_type": source_kind, "inspection": res}
         except Exception as exc:
             return {"status": "error", "message": f"Git inspection failed: {str(exc)}"}
 
@@ -322,7 +324,7 @@ async def propose_app_install(
         "plan_id": plan.plan_id,
         "summary": plan.summary,
         "confidence": plan.confidence,
-        "message": "Setup draft created. Server will offer a safe setup handoff; it does not deploy the app.",
+        "message": "Reviewed setup plan created. The user can deploy it with the server-rendered Deploy reviewed setup action.",
     }
 
 
@@ -349,6 +351,7 @@ async def propose_stack_install(
 
     try:
         clean_evidence = [str(item).strip()[:512] for item in (evidence or []) if isinstance(item, str) and item.strip()][:12]
+        stack_manifest = await _resolve_stack_manifest_images(stack_manifest)
         stack = stack_from_proposal(stack_manifest, clean_evidence)
         clean_settings = validate_stack_settings(stack, nonsecret_settings)
     except (TypeError, ValueError) as exc:
@@ -391,13 +394,43 @@ async def propose_stack_install(
         "plan_id": plan.plan_id,
         "summary": plan.summary,
         "confidence": plan.confidence,
-        "message": f"Stack proposal created for {stack.display_name}. User can review and deploy from wizard.",
+        "message": f"Reviewed stack setup created for {stack.display_name}. The user can deploy it with the server-rendered Deploy reviewed setup action.",
     }
 
 
 async def propose_official_stack_install(db: AsyncSession, **kwargs: Any) -> Dict[str, Any]:
     """Temporary compatibility alias; requires the same structured manifest as the new tool."""
     return await propose_stack_install(db=db, **kwargs)
+
+
+async def _resolve_stack_manifest_images(stack_manifest: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    """Pin untagged/latest proposal images to immutable digests before validation."""
+    if not isinstance(stack_manifest, dict):
+        return stack_manifest
+    manifest = copy.deepcopy(stack_manifest)
+    services = manifest.get("services")
+    if not isinstance(services, list):
+        return manifest
+    for service in services:
+        if not isinstance(service, dict):
+            continue
+        image = str(service.get("image") or "").strip()
+        if not image or not _needs_digest_resolution(image):
+            continue
+        try:
+            inspection = await container_app_image_inspect_service.inspect_image(image)
+        except Exception as exc:
+            raise ValueError(f"Service '{service.get('name') or image}' image '{image}' could not be resolved to an immutable digest: {exc}") from exc
+        digest = str(inspection.get("digest") or "").strip()
+        if "@sha256:" not in digest:
+            raise ValueError(f"Service '{service.get('name') or image}' image '{image}' did not resolve to an immutable digest.")
+        service["image"] = digest
+    return manifest
+
+
+def _needs_digest_resolution(image: str) -> bool:
+    tail = image.rsplit("/", 1)[-1]
+    return "@sha256:" not in image and (":" not in tail or tail.endswith(":latest"))
 
 
 async def get_app_engine_capabilities(db: AsyncSession, **kwargs: Any) -> Dict[str, Any]:
@@ -417,13 +450,14 @@ async def get_app_engine_capabilities(db: AsyncSession, **kwargs: Any) -> Dict[s
         "storage": "panel-owned named volumes only; no host paths or Docker socket",
         "networking": "one loopback-only web port; dependencies private; no host network or public database ports",
         "secrets": {"generators": ["urlsafe64", "base64_48", "hex32", "password"], "values_visible_to_ai": False},
+        "setup_limits": "one source inspection and one reviewed plan attempt; no documentation, DNS, SSL, logs, file reads, directory scans, or hidden retries",
         "stack_manifest": {
-            "services": "one to eight service objects: name, image tag or digest, private ports, dependencies, non-secret environment, named volumes, resources, optional command health",
+            "services": "one to eight service objects observed by panel source inspection: name, image tag or digest, private ports, dependencies, non-secret environment, named volumes, resources, optional command health",
             "required": ["name", "version", "services", "startup_order", "web_service", "web_port"],
             "health": "web_health_path only with source or vendor evidence; unknown endpoint must be omitted",
             "secrets": "key, purpose, generator, target service, target environment; values generated only after approval",
         },
-        "unsupported": ["raw Docker Compose", "repository Compose execution", "host networking", "privileged containers", "host mounts", "Docker socket", "public database ports"],
+        "unsupported": ["raw Docker Compose", "repository Compose execution", "external setup docs during install", "DNS/SSL checks during setup", "host networking", "privileged containers", "host mounts", "Docker socket", "public database ports"],
     }
 
 

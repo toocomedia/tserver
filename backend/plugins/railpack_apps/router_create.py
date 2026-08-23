@@ -22,6 +22,7 @@ from services.official_stacks import compose_runtime
 from services.official_stacks.schema import stack_from_dict
 from services.official_stacks.manifest_validator import compute_stack_manifest_hash, validate_stack_manifest
 from plugins.ai_helper.services import action_plans
+from services.apps_engine import reviewed_setup_deploy
 from dependencies.git import repository_service
 from templating import templates
 
@@ -100,6 +101,19 @@ async def inspect_image(image_reference: str = Form(...)):
         return JSONResponse(await container_app_image_inspect_service.inspect_image(image_reference.strip()))
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
+
+
+@router.post("/deploy-reviewed-plan/{plan_id}")
+async def deploy_reviewed_plan(plan_id: str, request: Request, db: AsyncSession = Depends(get_db)):
+    app_id, deployment_id = await reviewed_setup_deploy.deploy_plan(
+        db, plan_id.strip(), user_id=request.session.get("user_id"),
+    )
+    return JSONResponse({
+        "status": "ok",
+        "app_id": app_id,
+        "deployment_id": deployment_id,
+        "redirect": f"/plugins/railpack_apps/{app_id}?deployment={deployment_id}",
+    })
 
 
 @router.post("/create")
