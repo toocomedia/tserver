@@ -255,7 +255,9 @@
                 return res.json();
               })
               .then(function (data) {
-                if (!data.plan || data.plan.action_type !== "app_install") throw new Error("Invalid setup plan.");
+                if (!data.plan || (data.plan.action_type !== "app_install" && data.plan.action_type !== "official_stack_install")) {
+                  throw new Error("Invalid setup plan.");
+                }
                 window.applyAiAppPlan(data.plan);
               })
               .catch(function (err) {

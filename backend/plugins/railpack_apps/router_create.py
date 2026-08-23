@@ -134,6 +134,8 @@ async def create(
             raise HTTPException(404, f"Official stack '{cat_id}' was not found in catalog.")
         v = (stack_version.strip() or stack.default_version)
         parsed_settings = _environment_values(nonsecret_settings or "{}")
+        if not parsed_settings and environment_values and environment_values.strip() != "{}":
+            parsed_settings = _environment_values(environment_values)
         try:
             _, clean_settings = validate_stack_request(cat_id, v, parsed_settings)
         except ValueError as exc:

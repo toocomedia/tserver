@@ -32,7 +32,7 @@ if (form) {
     setText(query('[data-wizard-step-title]'), stepDescriptions[step - 1]);
     if (step === 1) setText(query('[data-wizard-next]'), query('[data-source-type]').value === 'git' ? 'Inspect repository' : 'Review configuration');
     if (step === 2) setText(query('[data-wizard-next]'), 'Continue to configuration');
-    if (step === 3) setText(query('[data-wizard-next]'), 'Deploy app');
+    if (step === 3) setText(query('[data-wizard-next]'), query('#deploy_type')?.value === 'official_stack' ? 'Deploy stack' : 'Deploy app');
     setTimeout(() => {
       const scrollContainer = query('.wizard-content-area');
       if (scrollContainer && scrollContainer.updateScrollMask) scrollContainer.updateScrollMask();
@@ -533,6 +533,27 @@ if (form) {
   window.applyAiAppPlan = function (planData, options = {}) {
     if (!planData) return;
     const p = planData.payload || planData;
+    const isStack = planData.action_type === "official_stack_install" || p.deploy_type === "official_stack" || !!p.stack_catalog_id;
+
+    if (isStack) {
+      const depTypeInput = query("#deploy_type") || query("[data-deploy-type]");
+      if (depTypeInput) depTypeInput.value = "official_stack";
+      const catInput = query("#stack_catalog_id") || query("[data-stack-catalog-id]");
+      if (catInput) catInput.value = p.stack_catalog_id || "";
+      const verInput = query("#stack_version") || query("[data-stack-version]");
+      if (verInput) verInput.value = p.stack_version || "";
+      const settingsInput = query("#nonsecret_settings") || query("[data-nonsecret-settings]");
+      if (settingsInput) settingsInput.value = JSON.stringify(p.nonsecret_settings || {});
+
+      const stackPanel = query("[data-stack-configuration-panel]");
+      if (stackPanel) {
+        stackPanel.style.display = "block";
+        const titleEl = stackPanel.querySelector("[data-stack-title]");
+        if (titleEl && p.stack_display_name) titleEl.textContent = p.stack_display_name;
+        const badgeEl = stackPanel.querySelector("[data-stack-version-badge]");
+        if (badgeEl && p.stack_version) badgeEl.textContent = `Official Vendor Stack · ${p.stack_version}`;
+      }
+    }
 
     // 1. Set Source Type
     const srcType = (p.source_type || "git").toLowerCase();
@@ -572,8 +593,9 @@ if (form) {
     }
 
     // 5. Set Environment Variables (Optimal values)
-    if (p.environment_values && typeof p.environment_values === "object") {
-      const envLines = Object.entries(p.environment_values)
+    const envObj = p.environment_values || p.nonsecret_settings;
+    if (envObj && typeof envObj === "object") {
+      const envLines = Object.entries(envObj)
         .map(([k, v]) => `${k}=${v}`)
         .join("\n");
       parseAndApplyBulkEnv(form, envLines);
