@@ -340,6 +340,9 @@ async def _deploy_official_stack(
     prior_snapshot: ContainerAppSnapshot, runtime: SimpleNamespace, prior_runtime: SimpleNamespace,
     deployment: ContainerAppDeployment,
 ) -> None:
+    from services.official_stacks import stack_runtime_service
+    from services.official_stacks.catalog import get_stack
+
     stack = stack_runtime_service.load_app_stack_manifest(app.id)
     if stack is None:
         stack_id = getattr(runtime, "stack_catalog_id", None)
