@@ -36,9 +36,17 @@ async def control(db: AsyncSession, app: ContainerApp, domain: Domain, action: s
             svc = stack.services[svc_name]
             cname = stack_runtime_service.stack_container_name(app.id, svc_name)
             await _docker(["docker", action, cname])
-        await container_app_deployment_progress_service.wait_for_http(
-            app.host_port, path=stack.web_health_path, timeout_seconds=stack.startup_timeout_seconds,
-        )
+        health_path = (stack.web_health_path or "").strip()
+        if health_path.lower() not in {"disabled", "none", "skip", "off"}:
+            try:
+                await container_app_deployment_progress_service.wait_for_http(
+                    app.host_port, path=health_path or "/", timeout_seconds=stack.startup_timeout_seconds,
+                )
+            except RuntimeError as exc:
+                cname = stack_runtime_service.stack_container_name(app.id, stack.web_service_name)
+                insp = container_app_service._run(["docker", "inspect", "--format", "{{.State.Status}}", cname], timeout=10)
+                if insp.returncode != 0 or (insp.stdout or "").strip().lower() != "running":
+                    raise HTTPException(409, container_app_deployment_progress_service.runtime_error_summary(app)) from exc
         await publish(db, app, domain)
         app.status, app.last_error = "running", None
         return
@@ -50,8 +58,17 @@ async def control(db: AsyncSession, app: ContainerApp, domain: Domain, action: s
         return
     try:
         await _docker(["docker", action, app.container_name])
-        await container_app_deployment_progress_service.wait_for_http(app.host_port)
-    except RuntimeError as exc:
+        health_path = (getattr(app, "health_path", None) or "").strip()
+        if health_path.lower() not in {"disabled", "none", "skip", "off"}:
+            try:
+                await container_app_deployment_progress_service.wait_for_http(
+                    app.host_port, path=health_path or "/", timeout_seconds=getattr(app, "startup_timeout_seconds", None) or 45,
+                )
+            except RuntimeError:
+                insp = container_app_service._run(["docker", "inspect", "--format", "{{.State.Status}}", app.container_name], timeout=10)
+                if insp.returncode != 0 or (insp.stdout or "").strip().lower() != "running":
+                    raise
+    except (RuntimeError, HTTPException) as exc:
         raise HTTPException(
             409, container_app_deployment_progress_service.runtime_error_summary(app)
         ) from exc

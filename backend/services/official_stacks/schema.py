@@ -119,22 +119,33 @@ def stack_from_dict(data: dict[str, Any]) -> OfficialStackDefinition:
             raw_vols = [raw_vols]
         for i, v in enumerate(raw_vols):
             if isinstance(v, VolumeDefinition):
-                vols.append(v)
+                v_suf = v.name_suffix
+                scoped_suf = v_suf if (v_suf.startswith(f"{sname}-") or v_suf == sname) else f"{sname}-{v_suf}"
+                vols.append(VolumeDefinition(
+                    name_suffix=scoped_suf,
+                    container_mount_path=v.container_mount_path,
+                    read_only=v.read_only,
+                    description=v.description,
+                ))
             elif isinstance(v, str):
                 if ":" in v:
                     parts = v.split(":", 1)
+                    raw_suf = parts[0].strip() or f"vol-{i}"
+                    scoped_suf = raw_suf if (raw_suf.startswith(f"{sname}-") or raw_suf == sname) else f"{sname}-{raw_suf}"
                     vols.append(VolumeDefinition(
-                        name_suffix=parts[0].strip() or f"vol-{i}",
+                        name_suffix=scoped_suf,
                         container_mount_path=parts[1].strip(),
                     ))
                 else:
                     vols.append(VolumeDefinition(
-                        name_suffix=f"vol-{i}",
+                        name_suffix=f"{sname}-vol-{i}",
                         container_mount_path=v.strip(),
                     ))
             elif isinstance(v, dict):
+                raw_suf = str(v.get("name_suffix") or v.get("name") or v.get("volume") or f"vol-{i}").strip()
+                scoped_suf = raw_suf if (raw_suf.startswith(f"{sname}-") or raw_suf == sname) else f"{sname}-{raw_suf}"
                 vols.append(VolumeDefinition(
-                    name_suffix=str(v.get("name_suffix") or v.get("name") or v.get("volume") or f"vol-{i}").strip(),
+                    name_suffix=scoped_suf,
                     container_mount_path=str(v.get("container_mount_path") or v.get("mount_path") or v.get("path") or "").strip(),
                     read_only=bool(v.get("read_only", False)),
                     description=str(v.get("description", "Persistent data volume")),

@@ -399,6 +399,9 @@ class RailpackBuildOptionsTests(unittest.TestCase):
 
         # Health path
         self.assertEqual(container_app_service.validate_health_path("/healthz"), "/healthz")
+        self.assertEqual(container_app_service.validate_health_path("disabled"), "disabled")
+        self.assertEqual(container_app_service.validate_health_path("none"), "disabled")
+        self.assertEqual(container_app_service.validate_health_path(""), "/")
         with self.assertRaises(HTTPException):
             container_app_service.validate_health_path("not-a-slash")
 

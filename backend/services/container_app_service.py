@@ -98,8 +98,10 @@ def validate_health_path(value: str | None) -> str:
     if not value:
         return "/"
     val = value.strip()
+    if val.lower() in {"disabled", "none", "skip", "off"}:
+        return "disabled"
     if not val.startswith("/") or len(val) > 255 or any(c in val for c in ["\r", "\n", "\t"]):
-        raise HTTPException(400, "Health check path must start with '/' and be a single line under 255 characters.")
+        raise HTTPException(400, "Health check path must start with '/' (or be 'disabled' to skip) and be a single line under 255 characters.")
     return val
 
 

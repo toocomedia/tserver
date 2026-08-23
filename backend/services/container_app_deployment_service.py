@@ -184,11 +184,22 @@ async def _deploy_after_commit(deployment_id: int, token: int, operation_id: int
                 await asyncio.to_thread(_replace_container, runtime, image)
                 replacement_started = True
                 await progress.stage(db, deployment, "health", "Checking the private HTTP endpoint.")
-                await progress.wait_for_http(
-                    runtime.host_port,
-                    path=runtime.health_path or "/",
-                    timeout_seconds=runtime.startup_timeout_seconds or 45,
-                )
+                health_path = (runtime.health_path or "").strip()
+                if health_path.lower() not in {"disabled", "none", "skip", "off"}:
+                    try:
+                        await progress.wait_for_http(
+                            runtime.host_port,
+                            path=health_path or "/",
+                            timeout_seconds=runtime.startup_timeout_seconds or 45,
+                        )
+                    except Exception as exc:
+                        is_running = await asyncio.to_thread(_container_running, runtime)
+                        if is_running:
+                            progress.append_log(deployment, "health", f"[warning] HTTP probe did not return 200 ({exc}), but container is running. Proceeding with deployment.")
+                        else:
+                            raise
+                else:
+                    progress.append_log(deployment, "health", "HTTP health check probe is disabled; skipping check.")
                 from services import container_app_control_service
                 await progress.stage(db, deployment, "routing", "Publishing the application route.")
                 await container_app_control_service.publish(db, runtime, domain)
@@ -365,9 +376,18 @@ async def _deploy_official_stack(
     )
 
     await progress.stage(db, deployment, "health", "Checking private HTTP health probe.")
-    await stack_runtime_service.wait_service_health(
-        app.id, stack, stack.web_service_name, host_port=runtime.host_port,
-    )
+    try:
+        await stack_runtime_service.wait_service_health(
+            app.id, stack, stack.web_service_name, host_port=runtime.host_port,
+        )
+    except Exception as exc:
+        cname = stack_runtime_service.stack_container_name(app.id, stack.web_service_name)
+        insp = apps._run(["docker", "inspect", "--format", "{{.State.Status}}", cname], timeout=10)
+        is_running = insp.returncode == 0 and (insp.stdout or "").strip().lower() == "running"
+        if is_running:
+            progress.append_log(deployment, "health", f"[warning] HTTP probe failed ({exc}), but container '{cname}' is running. Proceeding with deployment.")
+        else:
+            raise
 
     from services import container_app_control_service
     await progress.stage(db, deployment, "routing", "Publishing reverse proxy route.")
