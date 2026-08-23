@@ -63,9 +63,38 @@ def ensure_stack_volumes(app_id: int, stack: OfficialStackDefinition) -> List[st
     return created_volumes
 
 
+def stack_manifest_path(app_id: int) -> Path:
+    return apps.root(app_id) / "stack_manifest.json"
+
+
+def save_app_stack_manifest(app_id: int, stack: OfficialStackDefinition) -> Path:
+    """Persists the complete stack manifest to the app root directory so redeploys are self-contained."""
+    import json
+    from services.official_stacks.schema import stack_to_dict
+    m_path = stack_manifest_path(app_id)
+    m_path.parent.mkdir(parents=True, exist_ok=True)
+    m_path.write_text(json.dumps(stack_to_dict(stack), indent=2), encoding="utf-8")
+    return m_path
+
+
+def load_app_stack_manifest(app_id: int) -> Optional[OfficialStackDefinition]:
+    """Loads the app's own persisted stack manifest from disk."""
+    import json
+    from services.official_stacks.schema import stack_from_dict
+    m_path = stack_manifest_path(app_id)
+    if m_path.is_file():
+        try:
+            data = json.loads(m_path.read_text(encoding="utf-8"))
+            return stack_from_dict(data)
+        except Exception:
+            return None
+    return None
+
+
 def materialize_stack_configs(app_id: int, stack: OfficialStackDefinition) -> Dict[str, Path]:
     cfg_dir = stack_config_dir(app_id)
     cfg_dir.mkdir(parents=True, exist_ok=True)
+    save_app_stack_manifest(app_id, stack)
 
     materialized: Dict[str, Path] = {}
     for svc in stack.services.values():
@@ -84,20 +113,15 @@ def pull_stack_images(stack: OfficialStackDefinition) -> Dict[str, str]:
         image_ref = svc.image_reference
         pull_res = apps._run(["docker", "pull", image_ref], timeout=300)
         if pull_res.returncode != 0 and "/" in image_ref and not image_ref.startswith(("ghcr.io/", "quay.io/", "gcr.io/", "docker.io/")):
-            # Try ghcr.io fallback (e.g. ghcr.io/plausible/community-edition:v3.2.1 or ghcr.io/plausible/analytics:...)
-            candidates = [
-                f"ghcr.io/{image_ref}",
-                f"ghcr.io/plausible/community-edition:{image_ref.split(':')[-1]}" if "plausible" in image_ref else None,
-            ]
-            for cand in candidates:
-                if cand:
-                    retry_res = apps._run(["docker", "pull", cand], timeout=300)
-                    if retry_res.returncode == 0:
-                        pull_res = retry_res
-                        image_ref = cand
-                        # Tag as requested image_ref locally so run_cmd finds it directly
-                        apps._run(["docker", "tag", cand, svc.image_reference], timeout=20)
-                        break
+            # Standard registry fallbacks
+            for prefix in ("ghcr.io/", "docker.io/"):
+                cand = f"{prefix}{image_ref}"
+                retry_res = apps._run(["docker", "pull", cand], timeout=300)
+                if retry_res.returncode == 0:
+                    pull_res = retry_res
+                    image_ref = cand
+                    apps._run(["docker", "tag", cand, svc.image_reference], timeout=20)
+                    break
         if pull_res.returncode != 0:
             raise RuntimeError(f"Failed to pull image '{image_ref}' for service '{svc_name}': {pull_res.stderr or pull_res.stdout}")
         insp = apps._run(["docker", "image", "inspect", "--format", "{{index .RepoDigests 0}}", image_ref], timeout=20)
@@ -172,7 +196,7 @@ def start_service_container(
     sname_lower = service_name.lower()
 
     if any(k in img_lower or k in sname_lower for k in ("postgres", "pgsql", "psql")):
-        for alias in ["postgres", "db", "database", "plausible_db"]:
+        for alias in ["postgres", "db", "database"]:
             if alias != service_name:
                 run_cmd.extend(["--network-alias", alias])
     elif any(k in img_lower or k in sname_lower for k in ("mysql", "mariadb")):
@@ -184,7 +208,7 @@ def start_service_container(
             if alias != service_name:
                 run_cmd.extend(["--network-alias", alias])
     elif any(k in img_lower or k in sname_lower for k in ("clickhouse", "influx", "timescale")):
-        for alias in ["clickhouse", "events", "events_db", "plausible_events_db"]:
+        for alias in ["clickhouse", "events", "events_db"]:
             if alias != service_name:
                 run_cmd.extend(["--network-alias", alias])
 

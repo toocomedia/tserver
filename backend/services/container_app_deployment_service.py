@@ -340,14 +340,13 @@ async def _deploy_official_stack(
     prior_snapshot: ContainerAppSnapshot, runtime: SimpleNamespace, prior_runtime: SimpleNamespace,
     deployment: ContainerAppDeployment,
 ) -> None:
-    from services.official_stacks import stack_runtime_service
-    from services.official_stacks.catalog import get_stack
-    stack_id = getattr(runtime, "stack_catalog_id", None)
-    if not stack_id:
-        raise RuntimeError(f"Application #{app.id} is missing a stack catalog identifier.")
-    stack = get_stack(stack_id)
+    stack = stack_runtime_service.load_app_stack_manifest(app.id)
     if stack is None:
-        raise RuntimeError(f"Official stack '{stack_id}' was not found in the panel catalog.")
+        stack_id = getattr(runtime, "stack_catalog_id", None)
+        if stack_id:
+            stack = get_stack(stack_id)
+    if stack is None:
+        raise RuntimeError(f"Stack definition for App #{app.id} was not found on disk or catalog.")
 
     await progress.stage(db, deployment, "pull", f"Pulling {stack.display_name} container images.")
     await asyncio.to_thread(stack_runtime_service.pull_stack_images, stack)

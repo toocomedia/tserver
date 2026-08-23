@@ -31,7 +31,7 @@ def list_stacks() -> List[OfficialStackDefinition]:
 
 
 def clear_catalog() -> None:
-    """Clears all registered stack definitions."""
+    """Clears dynamically registered stack definitions."""
     _CATALOG.clear()
 
 
@@ -40,10 +40,10 @@ def match_repository(url: str) -> Optional[Tuple[OfficialStackDefinition, str]]:
     cleaned = (url or "").strip().lower().rstrip("/")
     if not cleaned:
         return None
-    # Normalize github / git URLs
     clean_repo = re.sub(r"\.git$", "", cleaned)
     clean_repo = re.sub(r"^git@([^:]+):", r"https://\1/", clean_repo)
     clean_repo = re.sub(r"^ssh://git@([^/]+)/", r"https://\1/", clean_repo)
+
     for stack in _CATALOG.values():
         for official_repo in stack.official_repositories:
             norm_official = re.sub(r"\.git$", "", official_repo.lower().rstrip("/"))

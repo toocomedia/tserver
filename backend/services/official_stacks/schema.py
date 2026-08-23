@@ -89,6 +89,12 @@ class OfficialStackDefinition:
     docs_url: str = ""
 
 
+def stack_to_dict(stack: OfficialStackDefinition) -> dict[str, Any]:
+    """Serializes an OfficialStackDefinition to a JSON-serializable dictionary."""
+    import dataclasses
+    return dataclasses.asdict(stack)
+
+
 def stack_from_dict(data: dict[str, Any]) -> OfficialStackDefinition:
     """Constructs an OfficialStackDefinition dynamically from dictionary / AI tool output with full polymorphism."""
     import json
