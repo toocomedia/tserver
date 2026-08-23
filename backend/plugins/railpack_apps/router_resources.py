@@ -122,6 +122,7 @@ async def control(app_id: int, action: str, db: AsyncSession = Depends(get_db)):
             app.status, app.last_error = "failed", str(exc.detail)[:240]
             await db.commit()
         return RedirectResponse(f"/plugins/railpack_apps/{app.id}", status_code=303)
+    await db.commit()
     return RedirectResponse(f"/plugins/railpack_apps/{app.id}", status_code=303)
 
 

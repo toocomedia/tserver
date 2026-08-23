@@ -18,10 +18,10 @@ from models.ssl_cert import SslCert
 from services import container_app_database_service, container_app_deployment_service
 from services import container_app_image_inspect_service, container_app_inspection_service, container_app_service, container_app_wordpress_service
 from services.apps_engine import secret_vault, snapshots
-from services.official_stacks import stack_runtime_service
-from services.official_stacks.catalog import get_stack, register_stack
+from services.official_stacks import compose_runtime
 from services.official_stacks.schema import stack_from_dict
-from services.official_stacks.manifest_validator import validate_stack_request
+from services.official_stacks.manifest_validator import compute_stack_manifest_hash, validate_stack_manifest
+from plugins.ai_helper.services import action_plans
 from dependencies.git import repository_service
 from templating import templates
 
@@ -113,10 +113,10 @@ async def create(
     git_ref: str = Form(""), git_ref_type: str = Form("branch"), draft_key_id: str = Form(""),
     root_directory: str = Form(""), dockerfile_path: str = Form("Dockerfile"),
     build_args: str = Form(""), build_secret_keys: str = Form(""), custom_start_command: str = Form(""),
-    storage_mounts: str = Form("[]"), health_path: str = Form("/"),
+    storage_mounts: str = Form("[]"), health_path: str = Form("disabled"),
     startup_timeout_seconds: int = Form(45),
     deploy_type: str = Form("railpack"), stack_catalog_id: str = Form(""),
-    stack_version: str = Form(""), nonsecret_settings: str = Form("{}"),
+    stack_version: str = Form(""), nonsecret_settings: str = Form("{}"), stack_plan_id: str = Form(""), app_plan_id: str = Form(""),
     db: AsyncSession = Depends(get_db),
 ):
     if draft_key_id.strip():
@@ -130,19 +130,20 @@ async def create(
     has_certificate = await db.scalar(select(SslCert.id).where(SslCert.full_domain == domain.name)) is not None
 
     if deploy_type == "official_stack" or source_type == "official_stack":
-        cat_id = (stack_catalog_id or "").strip()
-        if not cat_id:
-            raise HTTPException(400, "Official stack catalog identifier is required.")
-        stack = get_stack(cat_id)
-        if stack is None:
-            raise HTTPException(404, f"Official stack '{cat_id}' was not found in catalog.")
-        v = (stack_version.strip() or stack.default_version)
-        parsed_settings = _environment_values(nonsecret_settings or "{}")
-        if not parsed_settings and environment_values and environment_values.strip() != "{}":
-            parsed_settings = _environment_values(environment_values)
+        plan_id = stack_plan_id.strip()
+        if not plan_id:
+            raise HTTPException(400, "Choose an approved stack review plan before deployment.")
+        plan = await action_plans.get_action_plan(db, plan_id, user_id=request.session.get("user_id"))
+        if not plan or not action_plans.payload_is_intact(plan) or plan["status"] != "awaiting_approval" or plan["action_type"] not in {"stack_install", "official_stack_install"}:
+            raise HTTPException(400, "Stack review plan is unavailable, expired, or already used.")
+        payload = plan.get("payload") or {}
         try:
-            _, clean_settings = validate_stack_request(cat_id, v, parsed_settings)
-        except ValueError as exc:
+            stack = validate_stack_manifest(stack_from_dict(payload.get("stack_manifest") or {}))
+            v = str(payload.get("stack_version") or stack.default_version)
+            if payload.get("stack_catalog_id") != stack.catalog_id or payload.get("manifest_hash") != compute_stack_manifest_hash(stack, v):
+                raise ValueError("Stack review plan does not match its server manifest.")
+            clean_settings = _environment_values(json.dumps(payload.get("nonsecret_settings") or {}))
+        except (TypeError, ValueError) as exc:
             raise HTTPException(400, str(exc)) from exc
 
         try:
@@ -151,36 +152,60 @@ async def create(
             raise HTTPException(400, str(exc)) from exc
         app = await container_app_service.create_app(
             db, domain=domain, source_type="image", build_mode="image",
-            deploy_type="official_stack", stack_catalog_id=cat_id, stack_version=v,
+            deploy_type="official_stack", stack_catalog_id=stack.catalog_id, stack_version=v,
+            stack_services=compose_runtime.manifest_json(stack),
             repository_url=stack.official_repositories[0] if stack.official_repositories else None,
             branch=v, image_reference=stack.services[stack.web_service_name].image_reference,
             internal_port=stack.web_internal_port,
             ssl_requested=ssl and not has_certificate,
-            environment_values={},
-            health_path=stack.web_health_path,
+            environment_values=clean_settings,
+            health_path=stack.web_health_path or "disabled",
             startup_timeout_seconds=stack.startup_timeout_seconds,
         )
 
-        real_vault_secrets = {}
-        secret_reqs_for_snapshot = []
-        for sec_req in stack.required_secrets:
-            sec_rec, _ = await secret_vault.ensure_secret(db, app.id, sec_req.key, sec_req.purpose)
-            real_vault_secrets[sec_req.key] = await secret_vault.secret_value(db, sec_rec.id)
-            secret_reqs_for_snapshot.append({"key": sec_req.key, "purpose": sec_req.purpose})
-
-        compiled_env = stack_runtime_service.compile_stack_environment(
-            app, stack, domain.name, real_vault_secrets, clean_settings,
-        )
-        container_app_service.write_env(Path(app.env_path), compiled_env)
+        container_app_service.write_env(Path(app.env_path), clean_settings)
 
         await snapshots.create_snapshot(
-            db, app, secret_requirements=secret_reqs_for_snapshot,
-            environment_patch=compiled_env, created_by_user_id=request.session.get("user_id"),
+            db, app, environment_patch=clean_settings, plan_id=plan_id,
+            created_by_user_id=request.session.get("user_id"),
         )
         domain.project_type = "container"
         deployment = await container_app_deployment_service.queue_deployment(db, app)
+        try:
+            await action_plans.mark_plan_applied(
+                db, plan_id, user_id=request.session.get("user_id"), expected_hash=plan["payload_hash"],
+                expected_action_type=plan["action_type"],
+            )
+        except ValueError as exc:
+            raise HTTPException(409, str(exc)) from exc
         await db.commit()
         return _create_response(request, app.id, deployment.id)
+
+    app_plan = None
+    if app_plan_id.strip():
+        app_plan = await action_plans.get_action_plan(db, app_plan_id.strip(), user_id=request.session.get("user_id"))
+        if not app_plan or not action_plans.payload_is_intact(app_plan) or app_plan["status"] != "awaiting_approval" or app_plan["action_type"] != "app_install":
+            raise HTTPException(400, "Application setup plan is unavailable, expired, or already used.")
+        plan_payload = app_plan.get("payload") or {}
+        plan_domain = str(plan_payload.get("domain_name") or "").strip().lower()
+        if plan_domain and plan_domain != domain.name.lower():
+            raise HTTPException(400, "Application setup plan was prepared for another domain.")
+        source_type = str(plan_payload.get("source_type") or source_type)
+        build_mode = str(plan_payload.get("build_mode") or build_mode)
+        repository_url = str(plan_payload.get("repository_url") or "")
+        branch = str(plan_payload.get("branch") or "main")
+        image_reference = str(plan_payload.get("image_reference") or "")
+        try:
+            internal_port = int(plan_payload.get("internal_port") or internal_port)
+        except (TypeError, ValueError) as exc:
+            raise HTTPException(400, "Application setup plan has an invalid internal port.") from exc
+        custom_start_command = str(plan_payload.get("custom_start_command") or "")
+        health_path = str(plan_payload.get("health_path") or "disabled")
+        environment_values = json.dumps(plan_payload.get("environment_values") or {})
+        secret_requirements = json.dumps(plan_payload.get("secret_requirements") or [])
+        database_attachments = json.dumps(plan_payload.get("database_attachments") or [])
+        storage_mounts = json.dumps(plan_payload.get("storage_mounts") or [])
+        database_mode, database_url = "none", ""
 
     requested_secrets = _secret_requirements(secret_requirements)
     if requested_secrets:
@@ -200,16 +225,25 @@ async def create(
         dockerfile_path=dockerfile_path.strip() or "Dockerfile", build_args=build_args.strip() or None,
         build_secret_keys=build_secret_keys.strip() or None,
         custom_start_command=custom_start_command.strip() or None, storage_mounts=storage_mounts.strip() or None,
-        health_path=health_path.strip() or "/", startup_timeout_seconds=startup_timeout_seconds,
+        health_path=health_path.strip() or "disabled", startup_timeout_seconds=startup_timeout_seconds,
     )
     if preset == "wordpress":
         await _configure_wordpress(app, wordpress_site_title, wordpress_admin_user, wordpress_admin_email, wordpress_admin_password, db)
-    if requested_secrets:
+    if requested_secrets or app_plan:
         await snapshots.create_snapshot(
-            db, app, secret_requirements=requested_secrets, created_by_user_id=request.session.get("user_id"),
+            db, app, secret_requirements=requested_secrets, plan_id=app_plan_id.strip() or None,
+            created_by_user_id=request.session.get("user_id"),
         )
     domain.project_type = "container"
     deployment = await container_app_deployment_service.queue_deployment(db, app)
+    if app_plan:
+        try:
+            await action_plans.mark_plan_applied(
+                db, app_plan_id.strip(), user_id=request.session.get("user_id"),
+                expected_hash=app_plan["payload_hash"], expected_action_type="app_install",
+            )
+        except ValueError as exc:
+            raise HTTPException(409, str(exc)) from exc
     await db.commit()
     return _create_response(request, app.id, deployment.id)
 

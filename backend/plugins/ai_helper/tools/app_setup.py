@@ -190,6 +190,7 @@ async def propose_app_install(
     internal_port: int = 3000,
     build_mode: str = "railpack",
     custom_start_command: str = "",
+    health_path: str = "disabled",
     environment_values: Optional[Dict[str, str]] = None,
     secret_requirements: Optional[List[Dict[str, Any]]] = None,
     database_attachments: Optional[List[Dict[str, str]]] = None,
@@ -231,7 +232,7 @@ async def propose_app_install(
 
     # AI may name secret requirements, but must never receive or generate their values.
     cleaned_secrets = [
-        {"key": key, "purpose": "Application secret"}
+        {"key": key, "purpose": "Application secret", "generator": "urlsafe64"}
         for key in list(clean_envs)
         if any(s in key.upper() for s in ("SECRET", "SALT", "KEY_BASE", "JWT", "PASSWORD", "AUTH_KEY"))
     ]
@@ -247,7 +248,10 @@ async def propose_app_install(
             if not re.fullmatch(r"[A-Z][A-Z0-9_]{0,127}", key) or key in known_secret_keys:
                 continue
             purpose = str(item.get("purpose") or "Application secret").strip()[:256]
-            cleaned_secrets.append({"key": key, "purpose": purpose or "Application secret"})
+            generator = str(item.get("generator") or "urlsafe64").strip()
+            if generator not in {"urlsafe64", "password", "hex32"}:
+                continue
+            cleaned_secrets.append({"key": key, "purpose": purpose or "Application secret", "generator": generator})
             known_secret_keys.add(key)
 
     clean_dbs: List[Dict[str, str]] = []
@@ -277,6 +281,12 @@ async def propose_app_install(
                     "mount_path": str(item.get("mount_path", "")).strip(),
                 })
 
+    clean_health_path = (health_path or "disabled").strip()
+    if clean_health_path.lower() in {"", "disabled", "none", "skip", "off"}:
+        clean_health_path = "disabled"
+    elif not clean_health_path.startswith("/") or len(clean_health_path) > 255 or any(c in clean_health_path for c in "\r\n\t"):
+        return {"status": "error", "message": "Health path must be disabled or an evidence-backed absolute path."}
+
     payload = {
         "source_type": (source_type or "image").strip().lower(),
         "repository_url": repository_url.strip(),
@@ -285,6 +295,7 @@ async def propose_app_install(
         "internal_port": port,
         "build_mode": (build_mode or "railpack").strip().lower(),
         "custom_start_command": (custom_start_command or "").strip(),
+        "health_path": clean_health_path,
         "environment_values": clean_envs,
         "secret_requirements": cleaned_secrets,
         "database_attachments": clean_dbs,
@@ -318,20 +329,10 @@ async def propose_app_install(
 async def propose_official_stack_install(
     db: AsyncSession,
     catalog_id: str = "",
-    display_name: str = "",
     version: str = "",
     domain_name: str = "",
-    services: Optional[Dict[str, Any]] = None,
-    startup_order: Optional[List[str]] = None,
-    web_service_name: str = "",
-    web_internal_port: int = 8000,
-    web_health_path: str = "/api/health",
-    required_secrets: Optional[List[Dict[str, Any]]] = None,
-    url_templates: Optional[Dict[str, str]] = None,
-    default_environment: Optional[Dict[str, str]] = None,
     nonsecret_settings: Optional[Dict[str, str]] = None,
-    recommended_ram_mb: int = 2048,
-    post_install_message: str = "",
+    evidence: Optional[List[str]] = None,
     session_id: Optional[str] = None,
     summary: str = "",
     confidence: float = 1.0,
@@ -339,49 +340,24 @@ async def propose_official_stack_install(
     user_id: Optional[int] = None,
     **kwargs: Any,
 ) -> Dict[str, Any]:
-    """Creates an immutable reviewed plan for a multi-container stack deployment dynamically analyzed by AI."""
+    """Create a reviewed plan from one server-approved stack template only."""
     if user_id is None:
         return {"status": "error", "message": "AI setup drafts require an authenticated panel user."}
 
-    import uuid
-    from services.official_stacks.catalog import get_stack, register_stack
-    from services.official_stacks.schema import stack_from_dict
-    from services.official_stacks.manifest_validator import validate_stack_request
+    from services.official_stacks.catalog import get_stack
+    from services.official_stacks.manifest_validator import compute_stack_manifest_hash, validate_stack_request
+    from services.official_stacks.schema import stack_to_dict
 
-    cat_id = (catalog_id or "").strip() or f"stack_{uuid.uuid4().hex[:8]}"
-
-    if services:
-        stack_data = {
-            "catalog_id": cat_id,
-            "display_name": display_name.strip() or f"Stack ({cat_id})",
-            "vendor_name": kwargs.get("vendor_name", "Vendor"),
-            "description": kwargs.get("description", ""),
-            "official_repositories": kwargs.get("official_repositories") or [],
-            "allowed_versions": [version.strip()] if version.strip() else ["latest"],
-            "default_version": version.strip() or "latest",
-            "services": services,
-            "startup_order": startup_order or list(services.keys()),
-            "web_service_name": web_service_name or (startup_order[-1] if startup_order else list(services.keys())[0]),
-            "web_internal_port": web_internal_port,
-            "web_health_path": web_health_path,
-            "required_secrets": required_secrets or [],
-            "url_templates": url_templates or {},
-            "default_environment": default_environment or {},
-            "allowed_nonsecret_settings": list((nonsecret_settings or {}).keys()) or kwargs.get("allowed_nonsecret_settings", []),
-            "recommended_ram_mb": recommended_ram_mb,
-            "post_install_message": post_install_message,
-        }
-        stack = stack_from_dict(stack_data)
-        register_stack(stack)
-    else:
-        stack = get_stack(cat_id)
-        if stack is None:
-            return {"status": "error", "message": f"Stack '{cat_id}' is not defined. Please provide the 'services' configuration."}
-
-    v = version.strip() or stack.default_version
-    clean_settings = dict(nonsecret_settings or {})
-    if stack.allowed_nonsecret_settings:
-        clean_settings = {k: val for k, val in clean_settings.items() if k in stack.allowed_nonsecret_settings}
+    catalog = get_stack((catalog_id or "").strip())
+    selected_version = version.strip() or (catalog.default_version if catalog else "")
+    try:
+        stack, clean_settings = validate_stack_request(
+            (catalog_id or "").strip(), selected_version, dict(nonsecret_settings or {}),
+        )
+    except (TypeError, ValueError) as exc:
+        return {"status": "error", "message": str(exc)}
+    v = selected_version
+    manifest = stack_to_dict(stack)
 
     payload = {
         "deploy_type": "official_stack",
@@ -389,6 +365,10 @@ async def propose_official_stack_install(
         "stack_version": v,
         "domain_name": domain_name.strip(),
         "nonsecret_settings": clean_settings,
+        "stack_manifest": manifest,
+        "manifest_hash": compute_stack_manifest_hash(stack, v),
+        "evidence": [str(item)[:512] for item in (evidence or []) if isinstance(item, str)][:12],
+        "stack_display_name": stack.display_name,
         "services_count": len(stack.services),
         "recommended_ram_mb": stack.recommended_ram_mb,
         "services": list(stack.services.keys()),
@@ -401,7 +381,7 @@ async def propose_official_stack_install(
     plan = await action_plans.create_action_plan(
         db=db,
         session_id=sess_id,
-        action_type="official_stack_install",
+        action_type="stack_install",
         payload=payload,
         summary=plan_summary,
         confidence=confidence,
@@ -416,3 +396,56 @@ async def propose_official_stack_install(
         "confidence": plan.confidence,
         "message": f"Stack proposal created for {stack.display_name}. User can review and deploy from wizard.",
     }
+
+
+# Compatibility name for clients still sending the old tool identifier.
+propose_stack_install = propose_official_stack_install
+
+
+async def get_app_engine_capabilities(db: AsyncSession, **kwargs: Any) -> Dict[str, Any]:
+    """Server-owned setup contract. It deliberately omits secret values and raw Compose input."""
+    from services.official_stacks.catalog import list_stacks
+
+    try:
+        from dependencies import dependency_manager
+        providers = {
+            "panel_postgres": dependency_manager.is_healthy("postgresql"),
+            "panel_mariadb": dependency_manager.is_healthy("mariadb"),
+        }
+    except Exception:
+        providers = {"panel_postgres": False, "panel_mariadb": False}
+    stacks = [
+        {
+            "catalog_id": item.catalog_id, "display_name": item.display_name,
+            "versions": item.allowed_versions, "services": list(item.services),
+            "nonsecret_settings": item.allowed_nonsecret_settings,
+            "secret_specs": [
+                {"key": sec.key, "purpose": sec.purpose, "generator": sec.generator,
+                 "service": sec.service_name, "environment_key": sec.environment_key}
+                for sec in item.required_secrets
+            ],
+        }
+        for item in list_stacks()
+    ]
+    return {
+        "status": "ok",
+        "modes": ["git_railpack", "git_dockerfile", "registry_image", "approved_compose_stack"],
+        "databases": {"single_app": {**providers, "supabase": True, "external_url": True}, "stack": "template_internal_services_only"},
+        "storage": "panel-owned named volumes only; no host paths or Docker socket",
+        "networking": "one loopback-only web port; dependencies private; no host network or public database ports",
+        "secrets": {"generators": ["urlsafe64", "base64_48", "hex32", "password"], "values_visible_to_ai": False},
+        "unsupported": ["raw Docker Compose", "repository Compose execution", "arbitrary image topology", "privileged containers", "host mounts"],
+        "approved_stacks": stacks,
+    }
+
+
+async def get_app_engine_diagnostics(db: AsyncSession, app_id: int, **kwargs: Any) -> Dict[str, Any]:
+    app = await db.get(ContainerApp, app_id)
+    if app is None:
+        return {"status": "error", "message": "App Engine app was not found."}
+    from models.domain import Domain
+    from services import container_app_diagnostics_service
+    domain = await db.get(Domain, app.domain_id)
+    if domain is None:
+        return {"status": "error", "message": "App Engine domain was not found."}
+    return {"status": "ok", "diagnostics": await container_app_diagnostics_service.collect(db, app, domain)}

@@ -35,9 +35,9 @@ def runtime_error_summary(app: ContainerApp) -> str:
     return "App did not start its private HTTP service. Check runtime logs."
 
 
-async def wait_for_http(port: int, path: str = "/", timeout_seconds: int = 45) -> None:
+async def wait_for_http(port: int, path: str = "/", timeout_seconds: int = 45, host_header: str = "localhost") -> None:
     health_path = path if (path and path.startswith("/")) else f"/{path or ''}"
-    request_data = f"GET {health_path} HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n".encode("utf-8")
+    request_data = f"GET {health_path} HTTP/1.1\r\nHost: {host_header or 'localhost'}\r\nConnection: close\r\n\r\n".encode("utf-8")
     deadline = asyncio.get_event_loop().time() + max(10, timeout_seconds)
     last_status_code: int | None = None
     while asyncio.get_event_loop().time() < deadline:
@@ -60,6 +60,6 @@ async def wait_for_http(port: int, path: str = "/", timeout_seconds: int = 45) -
         await asyncio.sleep(1)
     if last_status_code is not None:
         if last_status_code == 404:
-            raise RuntimeError(f"Container returned HTTP 404 Not Found on '{health_path}' within {timeout_seconds}s. Verify the health check path (e.g. '/api/health' for Plausible or '/' for default).")
+            raise RuntimeError(f"Container returned HTTP 404 Not Found on verified path '{health_path}' within {timeout_seconds}s. Review source or vendor evidence before changing it.")
         raise RuntimeError(f"Container returned HTTP {last_status_code} on '{health_path}' within {timeout_seconds}s (expected 2xx/3xx). Check application logs.")
     raise RuntimeError(f"Container did not return a healthy HTTP response on {health_path} within {timeout_seconds}s.")

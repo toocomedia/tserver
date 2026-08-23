@@ -28,6 +28,13 @@ def _compute_hash(payload: Dict[str, Any]) -> str:
     return hashlib.sha256(normalized_json.encode("utf-8")).hexdigest()
 
 
+def payload_is_intact(plan: Dict[str, Any]) -> bool:
+    """Check a retrieved plan before any caller reads its deployment fields."""
+    payload = plan.get("payload") if isinstance(plan, dict) else None
+    expected = plan.get("payload_hash") if isinstance(plan, dict) else None
+    return isinstance(payload, dict) and isinstance(expected, str) and _compute_hash(payload) == expected
+
+
 async def create_action_plan(
     db: AsyncSession,
     session_id: str,

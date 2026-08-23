@@ -51,7 +51,9 @@ def _read_environment(app: ContainerApp) -> dict[str, str]:
 
 def _source_identity(config: dict[str, Any]) -> str:
     if config.get("deploy_type") == "official_stack" or config.get("stack_catalog_id"):
-        return f"stack:{config.get('stack_catalog_id')}@{config.get('stack_version') or 'default'}"
+        manifest = str(config.get("stack_services") or "")
+        manifest_hash = hashlib.sha256(manifest.encode("utf-8")).hexdigest()[:16] if manifest else "legacy"
+        return f"stack:{config.get('stack_catalog_id')}@{config.get('stack_version') or 'default'}:{manifest_hash}"
     if config.get("source_type") == "image":
         return f"image:{config.get('image_reference') or ''}"
     ref = config.get("git_ref") or config.get("branch") or "main"
@@ -91,7 +93,10 @@ def _clean_requirement(item: object) -> dict[str, Any] | None:
     if not key or not build_secrets.ENV_KEY_RE.fullmatch(key):
         raise ValueError("Secret requirements must use safe uppercase environment names.")
     purpose = str(item.get("purpose") or "Application secret").strip()[:255]
-    result: dict[str, Any] = {"key": key, "purpose": purpose, "rotate": bool(item.get("rotate"))}
+    generator = str(item.get("generator") or "urlsafe64").strip()
+    if generator not in {"urlsafe64", "base64_48", "hex32", "password"}:
+        raise ValueError("Secret requirement generator is not supported.")
+    result: dict[str, Any] = {"key": key, "purpose": purpose, "generator": generator, "rotate": bool(item.get("rotate"))}
     credential = item.get("credential")
     if credential is not None:
         if not isinstance(credential, dict):
@@ -143,18 +148,9 @@ async def create_snapshot(
             raise ValueError("Environment patch contains an invalid value.")
         environment[key] = value
 
+    requirements = normalize_secret_requirements(secret_requirements)
     versions: dict[str, int] = {}
-    statuses: list[dict[str, Any]] = []
-    for item in normalize_secret_requirements(secret_requirements):
-        record, created = await secret_vault.ensure_secret(
-            db, app.id, item["key"], item["purpose"], rotate=item["rotate"],
-        )
-        environment[item["key"]] = await secret_vault.secret_value(db, record.id)
-        versions[item["key"]] = record.version
-        statuses.append({"key": item["key"], "purpose": item["purpose"], "status": "created" if created else "reused", "version": record.version})
-        if item.get("credential") and created:
-            credential = item["credential"]
-            await secret_vault.create_credential(db, app.id, credential["label"], credential["username"], record.id)
+    statuses = [{"key": item["key"], "purpose": item["purpose"], "status": "pending_approval"} for item in requirements]
 
     source_revision = None
     image_digest = None
@@ -189,6 +185,7 @@ async def create_snapshot(
         config_json=json.dumps(config, sort_keys=True),
         environment_encrypted=secret_vault.encrypt(json.dumps(environment, sort_keys=True)),
         secret_versions_json=json.dumps(versions, sort_keys=True),
+        secret_requirements_json=json.dumps(requirements, sort_keys=True),
         fingerprint=fingerprint,
         plan_id=plan_id,
         created_by_user_id=created_by_user_id,
@@ -239,6 +236,36 @@ async def materialize_environment(db: AsyncSession, app: ContainerApp, snapshot:
     apps.write_env(Path(app.env_path), environment)
 
 
+async def bind_deferred_secrets(
+    db: AsyncSession, app: ContainerApp, snapshot: ContainerAppSnapshot,
+) -> list[dict[str, Any]]:
+    """Generate named values only in the approved deployment worker, then bind them to this snapshot."""
+    requirements = normalize_secret_requirements(json.loads(snapshot.secret_requirements_json or "[]"))
+    if not requirements:
+        return []
+    environment = json.loads(secret_vault.decrypt(snapshot.environment_encrypted))
+    versions = json.loads(snapshot.secret_versions_json or "{}")
+    statuses: list[dict[str, Any]] = []
+    for item in requirements:
+        key = item["key"]
+        if key in versions and key in environment:
+            statuses.append({"key": key, "purpose": item["purpose"], "status": "bound", "version": versions[key]})
+            continue
+        record, created = await secret_vault.ensure_secret(
+            db, app.id, key, item["purpose"], rotate=item["rotate"], generator=item["generator"],
+        )
+        environment[key] = await secret_vault.secret_value(db, record.id)
+        versions[key] = record.version
+        statuses.append({"key": key, "purpose": item["purpose"], "status": "created" if created else "reused", "version": record.version})
+        if item.get("credential") and created:
+            credential = item["credential"]
+            await secret_vault.create_credential(db, app.id, credential["label"], credential["username"], record.id)
+    snapshot.environment_encrypted = secret_vault.encrypt(json.dumps(environment, sort_keys=True))
+    snapshot.secret_versions_json = json.dumps(versions, sort_keys=True)
+    refresh_fingerprint(snapshot)
+    return statuses
+
+
 async def promote_snapshot(
     db: AsyncSession, app: ContainerApp, snapshot: ContainerAppSnapshot, runtime: SimpleNamespace,
 ) -> None:
@@ -262,6 +289,23 @@ async def promote_snapshot(
 async def mark_failed(snapshot: ContainerAppSnapshot, error: str) -> None:
     snapshot.state = "failed"
     snapshot.failure_fingerprint = hashlib.sha256(error[:2000].encode("utf-8")).hexdigest()
+
+
+def bind_stack_manifest(snapshot: ContainerAppSnapshot, runtime: SimpleNamespace, manifest: str) -> None:
+    """Persist a resolved Compose manifest before it can be retried or rolled back."""
+    config = json.loads(snapshot.config_json)
+    config["stack_services"] = manifest
+    snapshot.config_json = json.dumps(config, sort_keys=True)
+    snapshot.source_identity = _source_identity(config)
+    refresh_fingerprint(snapshot)
+    runtime.stack_services = manifest
+
+
+def refresh_fingerprint(snapshot: ContainerAppSnapshot) -> None:
+    config = json.loads(snapshot.config_json)
+    environment = json.loads(secret_vault.decrypt(snapshot.environment_encrypted))
+    versions = json.loads(snapshot.secret_versions_json or "{}")
+    snapshot.fingerprint = _fingerprint(config, environment, versions)
 
 
 async def credentials_for(db: AsyncSession, app_id: int) -> list[ContainerAppCredential]:

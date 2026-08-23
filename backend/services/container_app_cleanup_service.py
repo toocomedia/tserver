@@ -90,11 +90,15 @@ async def delete_app(
 
 async def _remove_container(app: ContainerApp) -> None:
     if getattr(app, "deploy_type", None) == "official_stack":
-        from services.official_stacks import stack_runtime_service
-        from services.official_stacks.catalog import get_stack
-        stack_id = getattr(app, "stack_catalog_id", None)
-        if stack_id:
-            stack = get_stack(stack_id)
+        from services.official_stacks import compose_runtime
+        try:
+            await asyncio.to_thread(compose_runtime.down, app.id)
+            return
+        except Exception:
+            # Old unnormalized stacks retain their safe legacy cleanup path.
+            from services.official_stacks import stack_runtime_service
+            from services.official_stacks.catalog import get_stack
+            stack = get_stack(getattr(app, "stack_catalog_id", None) or "")
             if stack:
                 await asyncio.to_thread(stack_runtime_service.remove_stack_containers, app.id, stack)
                 return

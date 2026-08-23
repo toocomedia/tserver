@@ -46,13 +46,14 @@ async def remove_selected_data(
             await container_app_cleanup_service.remove_volume(volume)
         app.storage_mounts = None
         if getattr(app, "deploy_type", None) == "official_stack":
-            from services.official_stacks import stack_runtime_service
-            from services.official_stacks.catalog import get_stack
-            stack_id = getattr(app, "stack_catalog_id", None)
-            if stack_id:
-                stack = get_stack(stack_id)
-                if stack:
-                    await asyncio.to_thread(stack_runtime_service.purge_stack_volumes, app.id, stack)
+            from services.official_stacks import compose_runtime, stack_runtime_service
+            try:
+                stack = compose_runtime.stack_from_runtime(app)
+            except RuntimeError:
+                from services.official_stacks.catalog import get_stack
+                stack = get_stack(getattr(app, "stack_catalog_id", None) or "")
+            if stack:
+                await asyncio.to_thread(stack_runtime_service.purge_stack_volumes, app.id, stack)
     if delete_wordpress_files and app.wordpress_content_volume:
         await container_app_cleanup_service.remove_volume(app.wordpress_content_volume)
         app.wordpress_content_volume = None

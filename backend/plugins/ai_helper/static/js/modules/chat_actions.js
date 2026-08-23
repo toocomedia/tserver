@@ -242,7 +242,7 @@
         }
 
         // Safe App Engine setup handoff. This only opens the prefilled wizard.
-        var applyPlanBtn = e.target.closest("[data-action='APP_SETUP_PLAN'], [data-action='APP_PLAN']");
+        var applyPlanBtn = e.target.closest("[data-action='APP_SETUP_PLAN']");
         if (applyPlanBtn) {
           e.preventDefault();
           var actionType = applyPlanBtn.getAttribute("data-action") || "APP_SETUP_PLAN";
@@ -259,7 +259,7 @@
                 return res.json();
               })
               .then(function (data) {
-                if (!data.plan || (data.plan.action_type !== "app_install" && data.plan.action_type !== "official_stack_install")) {
+                if (!data.plan || (data.plan.action_type !== "app_install" && data.plan.action_type !== "stack_install" && data.plan.action_type !== "official_stack_install")) {
                   throw new Error("Invalid setup plan.");
                 }
                 window.applyAiAppPlan(data.plan);
@@ -275,133 +275,6 @@
             return;
           }
           window.location.href = "/plugins/railpack_apps/create?plan=" + encodeURIComponent(setupPlanId);
-          return;
-
-          if (actionType === "APP_NEXT") {
-            if (typeof window.advanceAiWizard === "function") {
-              window.advanceAiWizard();
-              applyPlanBtn.innerHTML = "✓ Step Accepted";
-              applyPlanBtn.classList.add("is-applied");
-            }
-            return;
-          }
-
-          if (actionType === "APP_REDEPLOY" || actionType === "APP_REBUILD") {
-            var redeployAppId = applyPlanBtn.getAttribute("data-app-id");
-            if (!redeployAppId) {
-              var parentCard = applyPlanBtn.closest(".ai-app-plan-card--redeploy, [data-app-id]");
-              if (parentCard) redeployAppId = parentCard.getAttribute("data-app-id");
-            }
-            if (redeployAppId) {
-              applyPlanBtn.disabled = true;
-              applyPlanBtn.innerHTML = '<span class="ai-btn-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span> Redeploying Application...';
-              applyPlanBtn.classList.add("is-applied");
-
-              var csrfTok = (document.querySelector('[name="csrf_token"]') ? document.querySelector('[name="csrf_token"]').value : '') || window._csrfToken || (document.querySelector('meta[name="csrf-token"]') ? document.querySelector('meta[name="csrf-token"]').getAttribute("content") : "") || "";
-              fetch("/plugins/railpack_apps/" + encodeURIComponent(redeployAppId) + "/deploy", {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  "Accept": "application/json",
-                  "X-CSRF-Token": csrfTok
-                }
-              })
-                .then(function (res) {
-                  if (!res.ok) throw new Error("Failed to queue redeployment (status " + res.status + ").");
-                  return res.json().catch(function () { return {}; });
-                })
-                .then(function (data) {
-                  applyPlanBtn.innerHTML = '<span class="ai-btn-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></span> Redeployment Started';
-                  if (window.toast) window.toast("Redeployment queued successfully.", "success");
-                  
-                  var targetContainer = applyPlanBtn.closest(".ai-app-plan-card, .ai-msg-bubble") || applyPlanBtn.parentElement;
-                  if (data && data.deployment_id) {
-                    self.monitorDeploymentInChat(redeployAppId, data.deployment_id, targetContainer);
-                  }
-
-                  // If on app details page, activate on-page deployment card too
-                  var onPageDep = document.querySelector("[data-railpack-deployment]");
-                  if (onPageDep && data && data.deployment_id) {
-                    var depUrl = "/plugins/railpack_apps/" + redeployAppId + "/deployments/" + data.deployment_id;
-                    onPageDep.setAttribute("data-deployment-url", depUrl);
-                    onPageDep.setAttribute("data-deployment-active", "true");
-                    var stateEl = onPageDep.querySelector("[data-deployment-state]");
-                    if (stateEl) stateEl.textContent = "Queued · Prepare";
-                    if (typeof window.startRailpackDeploymentPolling === "function") {
-                      window.startRailpackDeploymentPolling(depUrl);
-                    }
-                  }
-                })
-                .catch(function (err) {
-                  applyPlanBtn.disabled = false;
-                  applyPlanBtn.classList.remove("is-applied");
-                  applyPlanBtn.innerHTML = 'Retry Redeploy Application';
-                  if (window.toast) window.toast(err.message, "error");
-                });
-              return;
-            }
-          }
-
-          if (actionType === "APP_DEPLOY") {
-            applyPlanBtn.disabled = true;
-            applyPlanBtn.innerHTML = '<span class="ai-btn-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span> Deploying Application...';
-            applyPlanBtn.classList.add("is-applied");
-            if (typeof window.startAiDeployment === "function") {
-              Promise.resolve(window.startAiDeployment())
-                .then(function () {
-                  applyPlanBtn.innerHTML = '<span class="ai-btn-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></span> Deployment Started';
-                })
-                .catch(function (err) {
-                  applyPlanBtn.disabled = false;
-                  applyPlanBtn.classList.remove("is-applied");
-                  applyPlanBtn.innerHTML = 'Retry Deploy Application';
-                  if (window.toast) window.toast(err.message || "Failed to start deployment.", "error");
-                });
-            }
-            return;
-          }
-
-          var planId = applyPlanBtn.getAttribute("data-plan-id");
-          if (!planId) return;
-          applyPlanBtn.disabled = true;
-          applyPlanBtn.textContent = "Loading configuration...";
-
-          fetch("/plugins/ai_helper/api/action-plans/" + encodeURIComponent(planId))
-            .then(function (res) {
-              if (!res.ok) throw new Error("Plan not found or expired.");
-              return res.json();
-            })
-            .then(function (data) {
-              var plan = data.plan;
-              if (!plan || !plan.payload) throw new Error("Invalid plan data.");
-
-              // If currently on Apps Engine Create page: apply directly to wizard
-              if (window.applyAiAppPlan && typeof window.applyAiAppPlan === "function") {
-                window.applyAiAppPlan(plan, { autoAdvance: true });
-                // Transform button to big Deploy CTA
-                applyPlanBtn.disabled = false;
-                applyPlanBtn.setAttribute("data-action", "APP_DEPLOY");
-                applyPlanBtn.className = "ai-action-btn--big-next ai-action-btn--deploy";
-                applyPlanBtn.innerHTML = '<span class="ai-btn-icon">🚀</span> Accept & Deploy Application <span class="ai-btn-arrow">→</span>';
-                // Do NOT close AI Helper — keep 60/40 split view open for live deployment guidance
-              } else {
-                // Redirect to create page with plan param
-                window.location.href = "/plugins/railpack_apps/create?plan=" + encodeURIComponent(planId);
-              }
-            })
-            .catch(function (err) {
-              // If on wizard create page, advance wizard to inspect/configure anyway
-              if (typeof window.advanceAiWizard === "function") {
-                window.advanceAiWizard();
-                applyPlanBtn.disabled = false;
-                applyPlanBtn.setAttribute("data-action", "APP_DEPLOY");
-                applyPlanBtn.className = "ai-action-btn--big-next ai-action-btn--deploy";
-                applyPlanBtn.innerHTML = '<span class="ai-btn-icon">🚀</span> Accept & Deploy Application <span class="ai-btn-arrow">→</span>';
-              } else {
-                applyPlanBtn.disabled = false;
-                applyPlanBtn.textContent = "Error: " + err.message;
-              }
-            });
           return;
         }
 

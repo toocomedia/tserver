@@ -1,5 +1,5 @@
 <section class="master-card" id="deployment-changes">
-  <div class="master-card__header">Deployment changes</div>
+  <div class="master-card__header" style="display:flex; justify-content:space-between; align-items:center;">Deployment changes <a class="btn btn--secondary btn--sm" href="/plugins/railpack_apps/{{ app.id }}/diagnostics" target="_blank" rel="noopener">Diagnostics</a></div>
   <div class="master-card__body" style="display:flex; flex-direction:column; gap:12px;">
     {% if pending_plan %}
       <div class="info-row"><span class="info-row__label">Diagnosis</span><span class="info-row__value">{{ pending_plan.reasoning or pending_plan.summary }}</span></div>
@@ -21,9 +21,10 @@
 
     {% if pending_snapshot %}
       <div class="info-row"><span class="info-row__label">Candidate snapshot</span><span class="info-row__value mono">#{{ pending_snapshot.id }} · {{ pending_snapshot.fingerprint[:12] }}</span></div>
-      <div class="info-row"><span class="info-row__label">Snapshot status</span><span class="info-row__value">Pending. Old app stays running while candidate builds.</span></div>
+      <div class="info-row"><span class="info-row__label">Snapshot status</span><span class="info-row__value">{{ pending_snapshot.state | title }}. Old app stays running while the candidate is reviewed.</span></div>
       <div style="display:flex; gap:8px; flex-wrap:wrap;">
-        <form method="post" action="/plugins/railpack_apps/{{ app.id }}/snapshots/{{ pending_snapshot.id }}/deploy">{% include "partials/csrf_field.html" %}<button class="btn btn--accent btn--sm">Deploy candidate</button></form>
+        <form method="post" action="/plugins/railpack_apps/{{ app.id }}/snapshots/{{ pending_snapshot.id }}/deploy">{% include "partials/csrf_field.html" %}<input type="hidden" name="action" value="{{ 'retry' if pending_snapshot.state == 'failed' else 'deploy' }}"><button class="btn btn--accent btn--sm">{{ 'Retry candidate' if pending_snapshot.state == 'failed' else 'Deploy candidate' }}</button></form>
+        {% if pending_snapshot.state == 'pending' %}<form method="post" action="/plugins/railpack_apps/{{ app.id }}/snapshots/{{ pending_snapshot.id }}/deploy">{% include "partials/csrf_field.html" %}<input type="hidden" name="action" value="rebuild"><button class="btn btn--secondary btn--sm">Rebuild candidate</button></form>{% endif %}
         <form method="post" action="/plugins/railpack_apps/{{ app.id }}/snapshots/{{ pending_snapshot.id }}/discard">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary btn--sm">Discard plan</button></form>
       </div>
     {% elif not active_snapshot and app.status == 'pending' %}
@@ -35,12 +36,12 @@
       <div class="info-row"><span class="info-row__label">Active snapshot</span><span class="info-row__value mono">#{{ active_snapshot.id }} · {{ active_snapshot.fingerprint[:12] }}</span></div>
       <div style="display:flex; gap:8px; flex-wrap:wrap;">
         {% if not deployment_active %}
-        <form method="post" action="/plugins/railpack_apps/{{ app.id }}/snapshots/{{ active_snapshot.id }}/deploy">{% include "partials/csrf_field.html" %}<input type="hidden" name="action" value="retry"><button class="btn btn--secondary btn--sm">Retry same snapshot</button></form>
+        <form method="post" action="/plugins/railpack_apps/{{ app.id }}/snapshots/{{ active_snapshot.id }}/deploy">{% include "partials/csrf_field.html" %}<input type="hidden" name="action" value="deploy"><button class="btn btn--secondary btn--sm">Redeploy saved snapshot</button></form>
         {% if app.status == 'stopped' %}<form method="post" action="/plugins/railpack_apps/{{ app.id }}/start">{% include "partials/csrf_field.html" %}<button class="btn btn--accent btn--sm">Start</button></form>{% endif %}
         {% if rollback_snapshot %}<form method="post" action="/plugins/railpack_apps/{{ app.id }}/snapshots/{{ rollback_snapshot.id }}/rollback">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary btn--sm">Rollback</button></form>{% endif %}
         {% endif %}
       </div>
-      <span class="text-muted" style="font-size:12px;">Retry same snapshot changes no settings. It remains manual.</span>
+      <span class="text-muted" style="font-size:12px;">Redeploy uses saved image digests. Start, retry, rebuild, and rollback remain distinct manual actions.</span>
     {% endif %}
   </div>
 </section>

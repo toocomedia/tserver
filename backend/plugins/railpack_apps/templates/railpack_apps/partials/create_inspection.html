@@ -68,8 +68,8 @@
         </div>
         <div class="form-group">
           <span class="section-label">Health Check Path</span>
-          <input class="input-optic input-optic--code" id="health_path" name="health_path" value="/" placeholder="/" required data-health-path>
-          <span class="form-hint" style="font-size: 11px; margin-top: 4px;">HTTP path probed on 127.0.0.1 after startup (200-399 = healthy).</span>
+          <input class="input-optic input-optic--code" id="health_path" name="health_path" value="disabled" placeholder="disabled or /verified-path" required data-health-path>
+          <span class="form-hint" style="font-size: 11px; margin-top: 4px;">Optional. Use a path only when source or vendor evidence verifies it; otherwise leave disabled.</span>
         </div>
         <div class="form-group">
           <span class="section-label">Startup Timeout (Seconds)</span>

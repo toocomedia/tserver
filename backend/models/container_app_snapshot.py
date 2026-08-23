@@ -20,9 +20,9 @@ class ContainerAppSnapshot(Base):
     config_json: Mapped[str] = mapped_column(Text, nullable=False)
     environment_encrypted: Mapped[str] = mapped_column(Text, nullable=False)
     secret_versions_json: Mapped[str] = mapped_column(Text, default="{}", nullable=False)
+    secret_requirements_json: Mapped[str] = mapped_column(Text, default="[]", nullable=False)
     fingerprint: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     plan_id: Mapped[str | None] = mapped_column(String(64), index=True)
     failure_fingerprint: Mapped[str | None] = mapped_column(String(64))
     created_by_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
-

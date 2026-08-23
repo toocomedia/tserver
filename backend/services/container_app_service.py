@@ -222,7 +222,7 @@ async def create_app(
     health_path: str = "/", startup_timeout_seconds: int = 45,
     build_secret_keys: str | list[str] | None = None,
     deploy_type: str = "railpack", stack_catalog_id: str | None = None,
-    stack_version: str | None = None,
+    stack_version: str | None = None, stack_services: str | None = None,
 ) -> ContainerApp:
     ref_val = (git_ref or branch or "main").strip()
     ref_type_val = (git_ref_type or "branch").strip().lower()
@@ -259,6 +259,7 @@ async def create_app(
         deploy_type=deploy_type,
         stack_catalog_id=stack_catalog_id,
         stack_version=stack_version,
+        stack_services=stack_services,
         repository_url=None if is_image else repository_url,
         branch=None if is_image else ref_val,
         git_ref=None if is_image else ref_val,

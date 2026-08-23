@@ -56,6 +56,8 @@ class ContainerApp(Base):
     stack_catalog_id: Mapped[str | None] = mapped_column(String(64))
     stack_version: Mapped[str | None] = mapped_column(String(32))
     stack_services: Mapped[str | None] = mapped_column(Text)
+    health_state: Mapped[str] = mapped_column(String(24), default="unknown", nullable=False)
+    health_detail: Mapped[str | None] = mapped_column(Text)
     status: Mapped[str] = mapped_column(String(24), default="pending", nullable=False)
     last_error: Mapped[str | None] = mapped_column(Text)
     deployed_revision: Mapped[str | None] = mapped_column(String(64))

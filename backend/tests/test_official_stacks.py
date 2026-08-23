@@ -246,7 +246,7 @@ class TestOfficialStacks(unittest.IsolatedAsyncioTestCase):
                 from plugins.ai_helper.services import action_plans
                 plan = await action_plans.get_action_plan(db, res["plan_id"], user_id=1)
                 self.assertIsNotNone(plan)
-                self.assertEqual(plan["action_type"], "official_stack_install")
+                self.assertEqual(plan["action_type"], "stack_install")
                 self.assertEqual(plan["payload"]["stack_catalog_id"], "generic_analytics")
                 self.assertEqual(plan["payload"]["stack_version"], "v1.0.0")
                 self.assertEqual(plan["payload"]["services_count"], 3)
@@ -308,8 +308,8 @@ class TestOfficialStacks(unittest.IsolatedAsyncioTestCase):
                     user_id=1,
                     reasoning="Dynamic AI generated stack test.",
                 )
-                self.assertEqual(res["status"], "ok")
-                self.assertTrue(res["plan_id"].startswith("plan_"))
+                self.assertEqual(res["status"], "error")
+                self.assertIn("not an approved", res["message"])
         finally:
             await engine.dispose()
 

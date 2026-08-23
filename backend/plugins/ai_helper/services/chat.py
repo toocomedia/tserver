@@ -36,7 +36,10 @@ _TOOL_LABELS = {
     "read_website_file": ("file", "Reading file"),
     "fetch_web_documentation": ("book-open", "Reading documentation"),
     "inspect_app_source": ("search", "Inspecting app source"),
+    "get_app_engine_capabilities": ("layers", "Reading App Engine capabilities"),
+    "get_app_engine_diagnostics": ("activity", "Collecting runtime diagnostics"),
     "propose_app_install": ("layers", "Generating deployment plan"),
+    "propose_stack_install": ("layers", "Generating stack deployment plan"),
 }
 
 
@@ -64,7 +67,7 @@ def _activity_event(tool_name: str, status: str, args: dict | None = None) -> st
 
 def _setup_plan_id(tool_name: str, tool_output: Dict[str, Any]) -> str | None:
     """Return only a server-created, safe wizard handoff plan identifier."""
-    if tool_name not in {"propose_app_install", "propose_official_stack_install"} or tool_output.get("status") != "ok":
+    if tool_name not in {"propose_app_install", "propose_stack_install", "propose_official_stack_install"} or tool_output.get("status") != "ok":
         return None
     plan_id = tool_output.get("plan_id")
     if isinstance(plan_id, str) and re.fullmatch(r"plan_[0-9a-f]{16}", plan_id):

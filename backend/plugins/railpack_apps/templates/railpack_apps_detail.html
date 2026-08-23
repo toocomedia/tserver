@@ -23,7 +23,7 @@
         <span>Application settings</span>
         <div style="display: flex; gap: 6px; align-items: center;">
           <span class="badge-pill">{{ app.source_type | upper }}</span>
-          {% if not deployment_active and app.status not in ['deleting', 'delete_failed'] %}
+          {% if not deployment_active and app.status not in ['deleting', 'delete_failed'] and app.deploy_type != 'official_stack' %}
           <button type="button" class="btn btn--secondary btn--sm" data-edit-settings-open>Edit</button>
           {% endif %}
         </div>
@@ -36,7 +36,8 @@
         {% if app.root_directory %}<div class="info-row"><span class="info-row__label">Root Directory</span><span class="info-row__value mono">{{ app.root_directory }}</span></div>{% endif %}
         {% if app.build_mode == 'dockerfile' %}<div class="info-row"><span class="info-row__label">Dockerfile</span><span class="info-row__value mono">{{ app.dockerfile_path or 'Dockerfile' }}</span></div>{% endif %}
         {% endif %}
-        <div class="info-row"><span class="info-row__label">Health Check</span><span class="info-row__value mono">{{ app.health_path or '/' }} ({{ app.startup_timeout_seconds or 45 }}s timeout)</span></div>
+        <div class="info-row"><span class="info-row__label">Readiness</span><span class="info-row__value">{{ app.health_state | replace('_', ' ') | title }}{% if app.health_detail %} · {{ app.health_detail }}{% endif %}</span></div>
+        <div class="info-row"><span class="info-row__label">Health Check</span><span class="info-row__value mono">{{ 'No verified HTTP endpoint' if app.health_path == 'disabled' else (app.health_path or '/') }} ({{ app.startup_timeout_seconds or 45 }}s timeout)</span></div>
         {% if app.custom_start_command %}<div class="info-row"><span class="info-row__label">Start Command</span><span class="info-row__value mono" style="word-break: break-all;">{{ app.custom_start_command }}</span></div>{% endif %}
         <div class="info-row"><span class="info-row__label">Database services</span><span class="info-row__value">{{ databases | length }} attached</span></div>
         {% if app.deploy_key_public %}

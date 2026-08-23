@@ -45,6 +45,9 @@ TOOL_HANDLERS: Dict[str, Callable[..., Any]] = {
     "read_app_source_file": app_setup.read_app_source_file,
     "inspect_official_image": app_setup.inspect_official_image,
     "propose_app_install": app_setup.propose_app_install,
+    "get_app_engine_capabilities": app_setup.get_app_engine_capabilities,
+    "get_app_engine_diagnostics": app_setup.get_app_engine_diagnostics,
+    "propose_stack_install": app_setup.propose_stack_install,
     "propose_official_stack_install": app_setup.propose_official_stack_install,
     "propose_container_app_patch": app_setup.propose_container_app_patch,
 }
@@ -88,7 +91,7 @@ async def execute_tool(
         # Pass secrets_allowed to file tools only (others don't use it)
         if tool_name in ("list_website_directory", "read_website_file"):
             result = await handler(db=db, secrets_allowed=secrets_allowed, **arguments)
-        elif tool_name in {"propose_container_app_patch", "propose_app_install", "propose_official_stack_install"}:
+        elif tool_name in {"propose_container_app_patch", "propose_app_install", "propose_stack_install", "propose_official_stack_install"}:
             result = await handler(db=db, session_id=session_id, user_id=user_id, **arguments)
         else:
             result = await handler(db=db, **arguments)

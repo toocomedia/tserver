@@ -18,35 +18,43 @@ async def control(db: AsyncSession, app: ContainerApp, domain: Domain, action: s
         raise HTTPException(400, "Invalid container app action.")
     is_stack = getattr(app, "deploy_type", None) == "official_stack"
     if is_stack:
-        from services.official_stacks import stack_runtime_service
-        from services.official_stacks.catalog import get_stack
-        stack_id = getattr(app, "stack_catalog_id", None)
-        if not stack_id:
-            raise HTTPException(400, f"App #{app.id} is missing a stack catalog identifier.")
-        stack = get_stack(stack_id)
-        if stack is None:
-            raise HTTPException(404, f"Official stack '{stack_id}' was not found in catalog.")
+        from services.official_stacks import compose_runtime, stack_runtime_service
+        try:
+            stack = compose_runtime.stack_from_runtime(app)
+        except RuntimeError as exc:
+            raise HTTPException(409, str(exc)) from exc
+        legacy_runtime = not getattr(app, "stack_services", None) and not compose_runtime.compose_path(app.id).is_file()
         if action == "stop":
             await _offline(db, domain)
-            await asyncio.to_thread(stack_runtime_service.stop_stack, app.id, stack)
-            app.status, app.last_error = "stopped", None
+            if legacy_runtime:
+                await asyncio.to_thread(stack_runtime_service.stop_stack, app.id, stack)
+            else:
+                await asyncio.to_thread(compose_runtime.stop, app.id)
+            app.status, app.last_error, app.health_state = "stopped", None, "unverified"
+            app.health_detail = "Stack is stopped."
             return
-        # Start or Restart
-        for svc_name in stack.startup_order:
-            svc = stack.services[svc_name]
-            cname = stack_runtime_service.stack_container_name(app.id, svc_name)
-            await _docker(["docker", action, cname])
+        if legacy_runtime:
+            for service_name in stack.startup_order:
+                await _docker(["docker", action, stack_runtime_service.stack_container_name(app.id, service_name)])
+        else:
+            if action == "restart":
+                await asyncio.to_thread(compose_runtime.stop, app.id)
+            await asyncio.to_thread(compose_runtime.start, app.id)
+        states = await asyncio.to_thread(stack_runtime_service.inspect_stack_services, app.id, stack)
+        if any(item["status"] not in {"running", "restarting"} for item in states.values()):
+            raise HTTPException(409, "Saved stack did not start all services. Open diagnostics before retrying.")
         health_path = (stack.web_health_path or "").strip()
-        if health_path.lower() not in {"disabled", "none", "skip", "off"}:
+        app.health_state, app.health_detail = "unverified", "No verified HTTP readiness endpoint is configured."
+        if health_path:
             try:
                 await container_app_deployment_progress_service.wait_for_http(
-                    app.host_port, path=health_path or "/", timeout_seconds=stack.startup_timeout_seconds,
+                    app.host_port, path=health_path, host_header=domain.name,
+                    timeout_seconds=stack.startup_timeout_seconds,
                 )
             except RuntimeError as exc:
-                cname = stack_runtime_service.stack_container_name(app.id, stack.web_service_name)
-                insp = container_app_service._run(["docker", "inspect", "--format", "{{.State.Status}}", cname], timeout=10)
-                if insp.returncode != 0 or (insp.stdout or "").strip().lower() != "running":
-                    raise HTTPException(409, container_app_deployment_progress_service.runtime_error_summary(app)) from exc
+                app.health_state, app.health_detail = "degraded", str(exc)[:1000]
+            else:
+                app.health_state, app.health_detail = "healthy", f"Private HTTP check passed on {health_path}."
         await publish(db, app, domain)
         app.status, app.last_error = "running", None
         return
@@ -54,20 +62,26 @@ async def control(db: AsyncSession, app: ContainerApp, domain: Domain, action: s
     if action == "stop":
         await _offline(db, domain)
         await _docker(["docker", "stop", "--time", "20", app.container_name])
-        app.status, app.last_error = "stopped", None
+        app.status, app.last_error, app.health_state = "stopped", None, "unverified"
+        app.health_detail = "Application is stopped."
         return
     try:
         await _docker(["docker", action, app.container_name])
         health_path = (getattr(app, "health_path", None) or "").strip()
+        app.health_state, app.health_detail = "unverified", "No HTTP readiness endpoint is configured."
         if health_path.lower() not in {"disabled", "none", "skip", "off"}:
             try:
                 await container_app_deployment_progress_service.wait_for_http(
-                    app.host_port, path=health_path or "/", timeout_seconds=getattr(app, "startup_timeout_seconds", None) or 45,
+                    app.host_port, path=health_path or "/", host_header=domain.name,
+                    timeout_seconds=getattr(app, "startup_timeout_seconds", None) or 45,
                 )
-            except RuntimeError:
+            except RuntimeError as exc:
                 insp = container_app_service._run(["docker", "inspect", "--format", "{{.State.Status}}", app.container_name], timeout=10)
                 if insp.returncode != 0 or (insp.stdout or "").strip().lower() != "running":
                     raise
+                app.health_state, app.health_detail = "degraded", str(exc)[:1000]
+            else:
+                app.health_state, app.health_detail = "healthy", f"Private HTTP check passed on {health_path or '/'}."
     except (RuntimeError, HTTPException) as exc:
         raise HTTPException(
             409, container_app_deployment_progress_service.runtime_error_summary(app)

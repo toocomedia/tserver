@@ -217,6 +217,10 @@ RAW_TOOL_SCHEMAS: List[Dict[str, Any]] = [
                     "enum": ["railpack", "dockerfile", "image"],
                     "description": "Build mode ('railpack', 'dockerfile', or 'image').",
                 },
+                "health_path": {
+                    "type": "string",
+                    "description": "Use only an exact source/vendor-verified HTTP path; otherwise send 'disabled'. Never guess /health.",
+                },
                 "environment_values": {
                     "type": "object",
                     "description": "Key-value dictionary of non-secret environment variables (e.g. {'NODE_ENV': 'production'}).",
@@ -228,6 +232,7 @@ RAW_TOOL_SCHEMAS: List[Dict[str, Any]] = [
                         "properties": {
                             "key": {"type": "string"},
                             "purpose": {"type": "string"},
+                            "generator": {"type": "string", "enum": ["urlsafe64", "password", "hex32"]},
                         },
                         "required": ["key", "purpose"],
                     },
@@ -279,79 +284,31 @@ RAW_TOOL_SCHEMAS: List[Dict[str, Any]] = [
         },
     },
     {
-        "name": "propose_official_stack_install",
-        "description": "Creates an immutable draft plan for deploying a multi-container stack analyzed and configured dynamically by the AI. Never deploys or generates secret values directly.",
+        "name": "get_app_engine_capabilities",
+        "description": "Returns the live server-owned App Engine setup contract: supported modes, database/storage/network limits, secret generators, and approved stack templates. Read-only.",
+        "parameters": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "propose_stack_install",
+        "description": "Creates one immutable review plan from a server-approved stack template. It accepts no Compose, YAML, services, images, mounts, ports, or secret values and never deploys.",
         "parameters": {
             "type": "object",
             "properties": {
                 "catalog_id": {
                     "type": "string",
-                    "description": "Unique stack identifier (e.g. 'plausible_ce', 'ghost_stack', 'custom_app_stack').",
-                },
-                "display_name": {
-                    "type": "string",
-                    "description": "Human-friendly display name (e.g. 'Plausible Analytics CE', 'Ghost CMS').",
+                    "description": "Identifier from get_app_engine_capabilities.approved_stacks.",
                 },
                 "version": {
                     "type": "string",
-                    "description": "The release version or image tag (e.g. 'v3.2.1', 'latest').",
+                    "description": "Allowed template version. Omit for the template default.",
                 },
                 "domain_name": {
                     "type": "string",
                     "description": "Target domain name for the stack web entrypoint.",
                 },
-                "services": {
-                    "type": "object",
-                    "description": "Dictionary of cooperating services. Each service key defines: image_reference, internal_ports, volumes, health_check, config_files, depends_on, environment_defaults, memory_limit_mb, is_web_entrypoint.",
-                },
-                "startup_order": {
-                    "type": "array",
-                    "items": {"type": "string"},
-                    "description": "Ordered list of service names to start (databases/caches first, web app last).",
-                },
-                "web_service_name": {
-                    "type": "string",
-                    "description": "Name of the web entrypoint service receiving reverse proxy traffic.",
-                },
-                "web_internal_port": {
-                    "type": "integer",
-                    "description": "Internal HTTP port of the web service (e.g. 8000, 3000, 2368).",
-                },
-                "web_health_path": {
-                    "type": "string",
-                    "description": "HTTP health check endpoint (e.g. '/api/health', '/').",
-                },
-                "required_secrets": {
-                    "type": "array",
-                    "items": {
-                        "type": "object",
-                        "properties": {
-                            "key": {"type": "string"},
-                            "purpose": {"type": "string"},
-                        },
-                        "required": ["key", "purpose"],
-                    },
-                    "description": "List of cryptographic secrets generated securely by panel vault.",
-                },
-                "url_templates": {
-                    "type": "object",
-                    "description": "Dynamic connection string templates using {service_name} and {SECRET_KEY} placeholders.",
-                },
-                "default_environment": {
-                    "type": "object",
-                    "description": "Default environment variables configured for the stack.",
-                },
                 "nonsecret_settings": {
                     "type": "object",
-                    "description": "Non-secret user settings (e.g. {'TIMEZONE': 'UTC', 'DISABLE_REGISTRATION': 'invite_only'}).",
-                },
-                "recommended_ram_mb": {
-                    "type": "integer",
-                    "description": "Recommended RAM in MB for all cooperating containers.",
-                },
-                "post_install_message": {
-                    "type": "string",
-                    "description": "Post-installation guidance displayed to the user.",
+                    "description": "Only keys listed by the selected approved template.",
                 },
                 "summary": {
                     "type": "string",
@@ -363,10 +320,17 @@ RAW_TOOL_SCHEMAS: List[Dict[str, Any]] = [
                 },
                 "reasoning": {
                     "type": "string",
-                    "description": "Technical reasoning for the recommended stack configuration.",
+                    "description": "Evidence-based setup reasoning.",
                 },
             },
             "required": ["catalog_id", "domain_name"],
+        },
+    },
+    {
+        "name": "get_app_engine_diagnostics",
+        "description": "Returns one sanitized runtime diagnostic result for an App Engine app: stage, service state, bounded redacted logs, proxy/SSL/DNS state, snapshots, and classified root cause. Read-only.",
+        "parameters": {
+            "type": "object", "properties": {"app_id": {"type": "integer"}}, "required": ["app_id"],
         },
     },
     {

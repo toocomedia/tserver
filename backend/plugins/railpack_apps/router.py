@@ -153,6 +153,14 @@ async def deployment_status(app_id: int, deployment_id: int, db: AsyncSession = 
     })
 
 
+@router.get("/{app_id}/diagnostics")
+async def diagnostics(app_id: int, db: AsyncSession = Depends(get_db)):
+    app = await _app(db, app_id)
+    domain = await db.get(Domain, app.domain_id)
+    from services import container_app_diagnostics_service
+    return JSONResponse(await container_app_diagnostics_service.collect(db, app, domain))
+
+
 @router.post("/{app_id}/deploy")
 async def deploy(app_id: int, request: Request, db: AsyncSession = Depends(get_db)):
     app = await _app(db, app_id)
@@ -192,7 +200,7 @@ async def apply_deployment_changes(app_id: int, plan_id: str, request: Request, 
 @router.post("/{app_id}/snapshots/{snapshot_id}/deploy")
 async def deploy_snapshot(app_id: int, snapshot_id: int, request: Request, action: str = Form("deploy"), db: AsyncSession = Depends(get_db)):
     app = await _app(db, app_id)
-    if action not in {"deploy", "retry"}:
+    if action not in {"deploy", "retry", "rebuild"}:
         raise HTTPException(400, "Unsupported snapshot action.")
     try:
         deployment = await container_app_deployment_service.queue_deployment(db, app, action=action, snapshot_id=snapshot_id)
@@ -274,6 +282,8 @@ async def update_settings(
     db: AsyncSession = Depends(get_db),
 ):
     app = await _app(db, app_id)
+    if app.deploy_type == "official_stack":
+        raise HTTPException(400, "Stack settings are fixed by the approved server manifest. Create a reviewed candidate to change them.")
     active = await container_app_deployment_service.active_deployment(db, app.id)
     if active:
         raise HTTPException(409, "Settings cannot be updated while a deployment is running or queued.")

@@ -34,6 +34,7 @@ def decrypt(value: str) -> str:
 
 async def ensure_secret(
     db: AsyncSession, app_id: int, key: str, purpose: str, *, rotate: bool = False,
+    generator: str = "urlsafe64",
 ) -> tuple[ContainerAppSecret, bool]:
     """Return active secret, or make an opaque high-entropy value server-side."""
     current = await db.scalar(select(ContainerAppSecret).where(
@@ -53,11 +54,23 @@ async def ensure_secret(
         key=key,
         purpose=purpose[:255] or "Application secret",
         version=int(previous) + 1,
-        encrypted_value=encrypt(secrets.token_urlsafe(48)),
+        encrypted_value=encrypt(_generated_value(generator)),
     )
     db.add(record)
     await db.flush()
     return record, True
+
+
+def _generated_value(generator: str) -> str:
+    if generator == "base64_48":
+        return base64.b64encode(secrets.token_bytes(48)).decode("ascii")
+    if generator == "hex32":
+        return secrets.token_hex(32)
+    if generator == "password":
+        return secrets.token_urlsafe(36)
+    if generator != "urlsafe64":
+        raise ValueError("Unsupported App Engine secret generator.")
+    return secrets.token_urlsafe(48)
 
 
 async def secret_value(db: AsyncSession, secret_id: int) -> str:

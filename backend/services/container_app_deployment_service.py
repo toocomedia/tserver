@@ -83,7 +83,7 @@ async def active_deployment(db: AsyncSession, app_id: int) -> ContainerAppDeploy
 async def queue_deployment(
     db: AsyncSession, app: ContainerApp, action: str = "deploy", *, snapshot_id: int | None = None,
 ) -> ContainerAppDeployment:
-    if action not in {"deploy", "redeploy", "retry", "rollback"}:
+    if action not in {"deploy", "redeploy", "retry", "rebuild", "rollback"}:
         raise HTTPException(400, "Unsupported deployment action.")
     active = await db.scalar(select(ContainerAppDeployment.id).where(
         ContainerAppDeployment.app_id == app.id,
@@ -91,12 +91,20 @@ async def queue_deployment(
     ))
     if active:
         raise HTTPException(409, "A deployment is already running for this app.")
+    if action == "redeploy" and snapshot_id is None:
+        snapshot_id = app.active_snapshot_id
+    if action == "retry" and snapshot_id is None:
+        snapshot_id = app.pending_snapshot_id
+    if action == "rebuild" and snapshot_id is None:
+        raise HTTPException(400, "Rebuild requires a reviewed candidate snapshot.")
     try:
         snapshot = await snapshots.get_snapshot(db, app, snapshot_id)
     except (ValueError, RuntimeError) as exc:
         raise HTTPException(400, str(exc)) from exc
     if snapshot.state == "discarded":
         raise HTTPException(409, "Discarded deployment snapshot cannot be deployed.")
+    if action == "rebuild" and snapshot.state != "pending":
+        raise HTTPException(409, "Rebuild requires a pending reviewed candidate snapshot.")
     profile = classify_deployment(snapshots.runtime_app(app, snapshot))
     preflight = await resource_guard_service.preflight(db, profile)
     is_build_queue = "build is already running" in preflight["reason"].lower()
@@ -158,6 +166,8 @@ async def _deploy_after_commit(deployment_id: int, token: int, operation_id: int
             prior_snapshot = await snapshots.get_snapshot(db, app, app.active_snapshot_id)
             runtime = snapshots.runtime_app(app, snapshot)
             prior_runtime = snapshots.runtime_app(app, prior_snapshot)
+            await snapshots.bind_deferred_secrets(db, app, snapshot)
+            deployment.snapshot_fingerprint = snapshot.fingerprint
             await snapshots.materialize_environment(db, app, snapshot)
         except Exception as exc:
             deployment.status, deployment.stage, deployment.error = "failed", "prepare", str(exc)
@@ -185,19 +195,24 @@ async def _deploy_after_commit(deployment_id: int, token: int, operation_id: int
                 replacement_started = True
                 await progress.stage(db, deployment, "health", "Checking the private HTTP endpoint.")
                 health_path = (runtime.health_path or "").strip()
+                app.health_state, app.health_detail = "unverified", "No HTTP readiness endpoint is configured."
                 if health_path.lower() not in {"disabled", "none", "skip", "off"}:
                     try:
                         await progress.wait_for_http(
                             runtime.host_port,
                             path=health_path or "/",
+                            host_header=domain.name,
                             timeout_seconds=runtime.startup_timeout_seconds or 45,
                         )
                     except Exception as exc:
                         is_running = await asyncio.to_thread(_container_running, runtime)
                         if is_running:
                             progress.append_log(deployment, "health", f"[warning] HTTP probe did not return 200 ({exc}), but container is running. Proceeding with deployment.")
+                            app.health_state, app.health_detail = "degraded", str(exc)[:1000]
                         else:
                             raise
+                    else:
+                        app.health_state, app.health_detail = "healthy", f"Private HTTP check passed on {health_path or '/'}."
                 else:
                     progress.append_log(deployment, "health", "HTTP health check probe is disabled; skipping check.")
                 from services import container_app_control_service
@@ -210,7 +225,11 @@ async def _deploy_after_commit(deployment_id: int, token: int, operation_id: int
                 if runtime.ssl_requested:
                     from services import ssl_service
                     await progress.stage(db, deployment, "ssl", "Configuring HTTPS.")
-                    await ssl_service.configure_container_app_ssl(db, runtime, domain)
+                    try:
+                        await ssl_service.configure_container_app_ssl(db, runtime, domain)
+                    except Exception as exc:
+                        app.health_state, app.health_detail = "public_check_pending", f"Private service is running; HTTPS/DNS check is pending: {str(exc)[:800]}"
+                        progress.append_log(deployment, "ssl", f"[warning] HTTPS/DNS is pending and does not block startup: {exc}")
                 await snapshots.promote_snapshot(db, app, snapshot, runtime)
                 app.status, app.last_error, app.deployed_at = "running", None, datetime.utcnow()
                 deployment.status = "success"
@@ -221,10 +240,19 @@ async def _deploy_after_commit(deployment_id: int, token: int, operation_id: int
             app.status, app.last_error = ("running", None) if await asyncio.to_thread(_container_running, app) else ("failed", str(exc))
         except Exception as exc:
             if getattr(runtime, "deploy_type", None) == "official_stack":
+                restored = await _restore_previous_stack(app, domain, db, prior_snapshot, prior_runtime, deployment)
                 await snapshots.mark_failed(snapshot, str(exc))
-                app.status, app.last_error = "failed", str(exc)[:1000]
+                app.status, app.last_error = ("running", None) if restored else ("failed", str(exc)[:1000])
+                app.health_state = "failed" if not restored else app.health_state
+                if not restored:
+                    app.health_detail = str(exc)[:1000]
                 deployment.status, deployment.error = "failed", str(exc)[:2000]
                 deployment.output = (deployment.output + f"[error] {exc}\n")[-80_000:]
+                deployment.diagnostics_json = json.dumps({
+                    "stage": deployment.stage, "root_cause": str(exc)[:1000],
+                    "rollback": "restored" if restored else "not_available_or_failed",
+                    "active_snapshot_id": app.active_snapshot_id, "pending_snapshot_id": app.pending_snapshot_id,
+                }, sort_keys=True)
             else:
                 deployment.output = (deployment.output + await asyncio.to_thread(progress.container_logs, runtime))[-80_000:]
                 await snapshots.materialize_environment(db, app, prior_snapshot)
@@ -340,65 +368,78 @@ async def _deploy_official_stack(
     prior_snapshot: ContainerAppSnapshot, runtime: SimpleNamespace, prior_runtime: SimpleNamespace,
     deployment: ContainerAppDeployment,
 ) -> None:
-    from services.official_stacks import stack_runtime_service
-    from services.official_stacks.catalog import get_stack
+    from services.apps_engine import secret_vault
+    from services.official_stacks import compose_runtime, stack_runtime_service
+    from services.official_stacks.manifest_validator import compute_stack_manifest_hash
+    from services.official_stacks.stack_secrets import values_for_snapshot
 
-    stack = stack_runtime_service.load_app_stack_manifest(app.id)
-    if stack is None:
-        stack_id = getattr(runtime, "stack_catalog_id", None)
-        if stack_id:
-            stack = get_stack(stack_id)
-    if stack is None:
-        raise RuntimeError(f"Stack definition for App #{app.id} was not found on disk or catalog.")
+    stack = compose_runtime.stack_from_runtime(runtime)
+    await progress.stage(db, deployment, "pull", f"Pulling and pinning {stack.display_name} images.")
+    stack = await asyncio.to_thread(compose_runtime.resolved_images, stack)
+    manifest = compose_runtime.manifest_json(stack)
+    snapshots.bind_stack_manifest(snapshot, runtime, manifest)
+    snapshot.image_digest = compute_stack_manifest_hash(stack, str(runtime.stack_version or stack.default_version))
 
-    await progress.stage(db, deployment, "pull", f"Pulling {stack.display_name} container images.")
-    await asyncio.to_thread(stack_runtime_service.pull_stack_images, stack)
+    vault_secrets, secret_versions = await values_for_snapshot(db, app.id, stack, snapshot.secret_versions_json)
+    snapshot.secret_versions_json = json.dumps(secret_versions, sort_keys=True)
+    snapshots.refresh_fingerprint(snapshot)
+    deployment.snapshot_fingerprint = snapshot.fingerprint
+    snapshot_environment = json.loads(secret_vault.decrypt(snapshot.environment_encrypted))
+    settings = {
+        key: value for key, value in snapshot_environment.items()
+        if key in set(stack.allowed_nonsecret_settings)
+    }
+    environments = compose_runtime.service_environments(app, stack, domain.name, vault_secrets, settings)
+    await progress.stage(db, deployment, "prepare", "Rendering the panel-owned Compose project.")
+    await asyncio.to_thread(compose_runtime.write_project, app, stack, environments)
+    await asyncio.to_thread(compose_runtime.validate_project, app.id)
 
-    await progress.stage(db, deployment, "prepare", "Setting up stack network, configs, and volumes.")
-    await asyncio.to_thread(stack_runtime_service.ensure_stack_network, app.id)
-    await asyncio.to_thread(stack_runtime_service.ensure_stack_volumes, app.id, stack)
-    await asyncio.to_thread(stack_runtime_service.materialize_stack_configs, app.id, stack)
+    await progress.stage(db, deployment, "start", f"Starting {stack.display_name} services.")
+    await asyncio.to_thread(compose_runtime.up, app.id)
 
-    await progress.stage(db, deployment, "dependencies", "Starting dependency services.")
+    await progress.stage(db, deployment, "dependencies", "Checking required private service health.")
     for svc_name in stack.startup_order:
-        svc = stack.services[svc_name]
-        if svc.is_web_entrypoint:
-            continue
-        progress.append_log(deployment, "dependencies", f"Starting {svc_name} container.")
-        await asyncio.to_thread(
-            stack_runtime_service.start_service_container,
-            app.id, stack, svc_name, Path(app.env_path),
-        )
-        await stack_runtime_service.wait_service_health(app.id, stack, svc_name)
+        if not stack.services[svc_name].is_web_entrypoint and stack.services[svc_name].health_check:
+            await stack_runtime_service.wait_service_health(app.id, stack, svc_name)
 
-    await progress.stage(db, deployment, "start", f"Starting {stack.display_name} web service.")
-    await asyncio.to_thread(
-        stack_runtime_service.start_service_container,
-        app.id, stack, stack.web_service_name, Path(app.env_path), host_port=runtime.host_port,
-    )
+    service_states = await asyncio.to_thread(stack_runtime_service.inspect_stack_services, app.id, stack)
+    web_status = service_states[stack.web_service_name]["status"]
+    if web_status not in {"running", "restarting"}:
+        raise RuntimeError(f"Web service '{stack.web_service_name}' is {web_status}; Compose stack cannot be published.")
 
-    await progress.stage(db, deployment, "health", "Checking private HTTP health probe.")
-    try:
-        await stack_runtime_service.wait_service_health(
-            app.id, stack, stack.web_service_name, host_port=runtime.host_port,
-        )
-    except Exception as exc:
-        cname = stack_runtime_service.stack_container_name(app.id, stack.web_service_name)
-        insp = apps._run(["docker", "inspect", "--format", "{{.State.Status}}", cname], timeout=10)
-        status = (insp.stdout or "").strip().lower()
-        if status in ("running", "restarting"):
-            progress.append_log(deployment, "health", f"[warning] HTTP probe failed ({exc}), but container '{cname}' status is {status}. Proceeding with deployment.")
-        else:
-            raise
+    await progress.stage(db, deployment, "health", "Checking verified private readiness rules.")
+    readiness, readiness_detail = "unverified", "No verified HTTP readiness endpoint is configured."
+    health_path = (stack.web_health_path or "").strip()
+    if health_path:
+        try:
+            await progress.wait_for_http(
+                runtime.host_port, path=health_path, host_header=domain.name,
+                timeout_seconds=stack.startup_timeout_seconds,
+            )
+            readiness, readiness_detail = "healthy", f"Private HTTP check passed on {health_path}."
+        except Exception as exc:
+            readiness, readiness_detail = "degraded", str(exc)[:1000]
+            progress.append_log(deployment, "health", f"[warning] {readiness_detail}; process remains running.")
+    app.health_state, app.health_detail = readiness, readiness_detail
+    deployment.diagnostics_json = json.dumps({
+        "stage": "private_readiness", "readiness": readiness,
+        "services": service_states, "http_path": health_path or None,
+        "public_check": "pending_until_route_and_dns_are_available",
+    }, sort_keys=True)
 
     from services import container_app_control_service
     await progress.stage(db, deployment, "routing", "Publishing reverse proxy route.")
     await container_app_control_service.publish(db, runtime, domain)
+    progress.append_log(deployment, "routing", "Public DNS and SSL are checked after routing and never gate container startup.")
 
     if runtime.ssl_requested:
         from services import ssl_service
         await progress.stage(db, deployment, "ssl", "Configuring HTTPS.")
-        await ssl_service.configure_container_app_ssl(db, runtime, domain)
+        try:
+            await ssl_service.configure_container_app_ssl(db, runtime, domain)
+        except Exception as exc:
+            app.health_state, app.health_detail = "public_check_pending", f"Private service is running; HTTPS/DNS check is pending: {str(exc)[:800]}"
+            progress.append_log(deployment, "ssl", f"[warning] HTTPS/DNS is pending and does not block startup: {exc}")
 
     await snapshots.promote_snapshot(db, app, snapshot, runtime)
     app.status, app.last_error, app.deployed_at = "running", None, datetime.utcnow()
@@ -426,6 +467,38 @@ async def _restore_previous(
         return True
     except Exception as exc:
         progress.append_log(deployment, "rollback", f"Rollback failed: {exc}")
+        return False
+
+
+async def _restore_previous_stack(
+    app: ContainerApp, domain: Domain, db: AsyncSession, prior_snapshot: ContainerAppSnapshot,
+    prior_runtime: SimpleNamespace, deployment: ContainerAppDeployment,
+) -> bool:
+    """Best-effort stack rollback. Compose replaces containers but never removes named volumes."""
+    from services.apps_engine import secret_vault
+    from services.official_stacks import compose_runtime, stack_runtime_service
+    from services.official_stacks.stack_secrets import values_for_snapshot
+
+    try:
+        stack = compose_runtime.stack_from_runtime(prior_runtime)
+        secrets, _versions = await values_for_snapshot(db, app.id, stack, prior_snapshot.secret_versions_json)
+        environment = json.loads(secret_vault.decrypt(prior_snapshot.environment_encrypted))
+        settings = {key: value for key, value in environment.items() if key in set(stack.allowed_nonsecret_settings)}
+        await asyncio.to_thread(compose_runtime.write_project, app, stack, compose_runtime.service_environments(app, stack, domain.name, secrets, settings))
+        await progress.stage(db, deployment, "rollback", "Restoring the prior saved Compose snapshot.")
+        await asyncio.to_thread(compose_runtime.up, app.id)
+        for service_name in stack.startup_order:
+            if not stack.services[service_name].is_web_entrypoint and stack.services[service_name].health_check:
+                await stack_runtime_service.wait_service_health(app.id, stack, service_name)
+        states = await asyncio.to_thread(stack_runtime_service.inspect_stack_services, app.id, stack)
+        if any(item["status"] not in {"running", "restarting"} for item in states.values()):
+            return False
+        from services import container_app_control_service
+        await container_app_control_service.publish(db, prior_runtime, domain)
+        app.health_state, app.health_detail = "unverified", "Prior snapshot restored; public verification remains pending."
+        return True
+    except Exception as rollback_error:
+        progress.append_log(deployment, "rollback", f"Saved stack rollback failed: {rollback_error}")
         return False
 
 
@@ -828,6 +901,11 @@ def _ensure_network(app: ContainerApp) -> None:
 
 def _container_running(app: ContainerApp) -> bool:
     try:
+        if getattr(app, "deploy_type", None) == "official_stack":
+            from services.official_stacks import compose_runtime, stack_runtime_service
+            stack = compose_runtime.stack_from_runtime(app)
+            states = stack_runtime_service.inspect_stack_services(app.id, stack)
+            return bool(states.get(stack.web_service_name, {}).get("is_running"))
         result = apps._run(["docker", "inspect", "--format", "{{.State.Running}}", app.container_name], timeout=15)
         return result.returncode == 0 and result.stdout.strip() == "true"
     except Exception:

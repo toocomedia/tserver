@@ -22,6 +22,7 @@ class ContainerAppDeployment(Base):
     guard_blocked_reason: Mapped[str | None] = mapped_column(Text)
     output: Mapped[str] = mapped_column(Text, default="", nullable=False)
     error: Mapped[str | None] = mapped_column(Text)
+    diagnostics_json: Mapped[str | None] = mapped_column(Text)
     started_at: Mapped[datetime | None] = mapped_column(DateTime)
     finished_at: Mapped[datetime | None] = mapped_column(DateTime)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)

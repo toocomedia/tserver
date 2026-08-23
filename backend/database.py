@@ -281,6 +281,8 @@ def _migrate_sync(sync_conn) -> None:
             "configuration_revision": "INTEGER DEFAULT 1 NOT NULL",
             "active_snapshot_id": "INTEGER",
             "pending_snapshot_id": "INTEGER",
+            "health_state": "VARCHAR(24) DEFAULT 'unknown' NOT NULL",
+            "health_detail": "TEXT",
         }
         for col, ddl in container_columns.items():
             if col not in cols:
@@ -320,6 +322,12 @@ def _migrate_sync(sync_conn) -> None:
                     "VALUES (:app_id, 'postgresql', :provider, 'DATABASE_URL', :database_name, :username, 'ready')"
                 ), {"app_id": row["id"], "provider": provider,
                     "database_name": row["database_name"], "username": row["database_user"]})
+
+    if "container_app_deployments" in tables and "diagnostics_json" not in _column_names(sync_conn, "container_app_deployments"):
+        sync_conn.execute(text("ALTER TABLE container_app_deployments ADD COLUMN diagnostics_json TEXT"))
+
+    if "container_app_snapshots" in tables and "secret_requirements_json" not in _column_names(sync_conn, "container_app_snapshots"):
+        sync_conn.execute(text("ALTER TABLE container_app_snapshots ADD COLUMN secret_requirements_json TEXT DEFAULT '[]' NOT NULL"))
 
     if "container_app_backups" in tables and "database_backup_id" not in _column_names(sync_conn, "container_app_backups"):
         sync_conn.execute(text("ALTER TABLE container_app_backups ADD COLUMN database_backup_id INTEGER"))

@@ -61,6 +61,8 @@ class SecretRequirement:
     key: str
     purpose: str
     generator: str = "urlsafe64"  # "urlsafe64" | "base64_48" | "hex32" | "password"
+    service_name: str | None = None
+    environment_key: str | None = None
 
 
 @dataclass(frozen=True)
@@ -96,7 +98,7 @@ def stack_to_dict(stack: OfficialStackDefinition) -> dict[str, Any]:
 
 
 def stack_from_dict(data: dict[str, Any]) -> OfficialStackDefinition:
-    """Constructs an OfficialStackDefinition dynamically from dictionary / AI tool output with full polymorphism."""
+    """Deserialize a stored panel manifest or legacy on-disk manifest; never an AI request."""
     import json
     import shlex
 
@@ -277,6 +279,8 @@ def stack_from_dict(data: dict[str, Any]) -> OfficialStackDefinition:
                         key=s_key,
                         purpose=str(sec.get("purpose") or sec.get("description") or f"Secret key for {s_key}"),
                         generator=str(sec.get("generator", "urlsafe64")),
+                        service_name=str(sec.get("service_name") or sec.get("service") or "").strip() or None,
+                        environment_key=str(sec.get("environment_key") or sec.get("env") or "").strip() or None,
                     ))
 
     # 3. Parse startup_order & web service
@@ -338,7 +342,7 @@ def stack_from_dict(data: dict[str, Any]) -> OfficialStackDefinition:
         startup_order=startup_order,
         web_service_name=web_svc,
         web_internal_port=int(data.get("web_internal_port", 8000)),
-        web_health_path=str(data.get("web_health_path", "/api/health")),
+        web_health_path=str(data.get("web_health_path", "")).strip(),
         startup_timeout_seconds=int(data.get("startup_timeout_seconds", 60)),
         recommended_ram_mb=int(data.get("recommended_ram_mb", 2048)),
         minimum_ram_mb=int(data.get("minimum_ram_mb", 1024)),

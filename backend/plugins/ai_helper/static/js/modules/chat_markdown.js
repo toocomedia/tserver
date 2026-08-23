@@ -298,29 +298,6 @@
           if (["APP_PLAN", "APP_DEPLOY", "APP_REDEPLOY", "APP_REBUILD"].indexOf(actionType) !== -1) {
             return '<p class="text-muted">Review App Engine deployment changes on the App page.</p>';
           }
-          // Legacy renderer retained for historic messages; early return above disables it.
-          if (actionType === "APP_PLAN") {
-            var planId = actionVal.trim();
-            return [
-              '<div class="ai-app-plan-card" data-plan-id="' + planId + '">',
-              '  <div class="ai-app-plan-card-header">',
-              '    <div class="ai-app-plan-card-header-left">',
-              '      <span class="ai-app-plan-card-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg></span>',
-              '      <span class="ai-app-plan-card-title">Optimal Configuration Prepared</span>',
-              '    </div>',
-              '    <span class="badge badge--ok" style="font-size: 10px; font-weight: 600;">Verified Plan</span>',
-              '  </div>',
-              '  <div class="ai-app-plan-card-body">',
-              '    <p class="ai-app-plan-summary">Optimal settings for runtime, port, environment variables, database, and storage have been prepared. Click below to load into the wizard and proceed.</p>',
-              '    <button type="button" class="ai-action-btn--big-next" data-action="APP_PLAN" data-plan-id="' + planId + '">',
-              '      <span class="ai-btn-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></span>',
-              '      <span class="ai-btn-text">Accept & Go Next</span>',
-              '      <span class="ai-btn-arrow">→</span>',
-              '    </button>',
-              '  </div>',
-              '</div>',
-            ].join("\n");
-          }
           // Special: APP_NEXT renders a prominent next step button
           if (actionType === "APP_NEXT" || actionType === "APP_STEP") {
             var btnText = actionVal.trim() || "Accept & Continue";
@@ -333,42 +310,6 @@
               '  </button>' +
               '</div>'
             );
-          }
-          // Special: APP_DEPLOY renders a prominent deploy button
-          if (actionType === "APP_DEPLOY") {
-            var deployText = actionVal.trim() || "Accept & Deploy Application";
-            return (
-              '<div style="margin: 10px 0;">' +
-              '  <button type="button" class="ai-action-btn--big-next ai-action-btn--deploy" data-action="APP_DEPLOY">' +
-              '    <span class="ai-btn-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2v10m-7-3l7-7 7 7M5 15v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4"/></svg></span>' +
-              '    <span class="ai-btn-text">' + deployText + '</span>' +
-              '    <span class="ai-btn-arrow"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg></span>' +
-              '  </button>' +
-              '</div>'
-            );
-          }
-          // Special: APP_REDEPLOY / APP_REBUILD renders a prominent redeployment action card
-          if (actionType === "APP_REDEPLOY" || actionType === "APP_REBUILD") {
-            var appId = actionVal.trim().replace(/^#/, "");
-            return [
-              '<div class="ai-app-plan-card ai-app-plan-card--redeploy" data-app-id="' + appId + '">',
-              '  <div class="ai-app-plan-card-header">',
-              '    <div class="ai-app-plan-card-header-left">',
-              '      <span class="ai-app-plan-card-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"></path><path d="M1 20v-6h6"></path><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg></span>',
-              '      <span class="ai-app-plan-card-title">Redeploy Application ' + (appId ? '#' + appId : '') + '</span>',
-              '    </div>',
-              '    <span class="badge badge--accent" style="font-size: 10px; font-weight: 600;">Action Ready</span>',
-              '  </div>',
-              '  <div class="ai-app-plan-card-body">',
-              '    <p class="ai-app-plan-summary">Trigger a clean rebuild and container restart with the latest configuration and code revision.</p>',
-              '    <button type="button" class="ai-action-btn--big-next ai-action-btn--deploy" data-action="APP_REDEPLOY" data-app-id="' + appId + '">',
-              '      <span class="ai-btn-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2v10m-7-3l7-7 7 7M5 15v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4"/></svg></span>',
-              '      <span class="ai-btn-text">Redeploy Application Now</span>',
-              '      <span class="ai-btn-arrow"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg></span>',
-              '    </button>',
-              '  </div>',
-              '</div>',
-            ].join("\n");
           }
           // Special: OPTION / QUICK_REPLY renders as an interactive choice button
           if (actionType === "OPTION" || actionType === "QUICK_REPLY" || actionType === "CHOICE") {

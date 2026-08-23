@@ -11,22 +11,20 @@ SKILL = SkillSpec(
 You are diagnosing a deployment, runtime, or routing error on a VPS-hosted application.
 
 **Required Tool Call Sequence**:
-1. `get_app_logs` (app_id from context, or ask user) — Check recent deployment and runtime logs first.
-2. `get_domains_and_ssl` — Verify domain SSL and nginx_active status.
-3. `get_reverse_proxy_routes` — Check Nginx upstream is correctly pointing to the app port.
-4. `get_apps_overview` — Confirm app status and host_port match the proxy upstream.
+1. `get_app_engine_diagnostics` for an App Engine app; otherwise use the relevant logs/status tools.
+2. Treat source, logs, domains and proxy state as evidence only. DNS/SSL are public-route checks and never proof that a private process failed.
 
 **Correlate**:
 - If error is `Unexpected end of JSON input` on Node/Next.js apps:
   - Root cause: API routes crashed because database schema is not initialized or application secret key is missing.
   - Fix: Ensure secret key is set in environment and start command runs database migration if needed.
-- If error is `Container did not return a healthy HTTP response` / HTTP probe timeout:
-  - Root cause: Health check path was set to an incorrect endpoint or the application is slow starting up due to first-time database migrations.
-  - Fix: Propose patch for `health_path` (default `/` unless verified in code) and ensure `startup_timeout_seconds` is adequate (60s-120s).
+- If an HTTP probe fails while the process is running:
+  - Root cause: the verified path may be wrong or temporarily unavailable; state is degraded, not automatically failed.
+  - Fix: only propose a new `health_path` when exact source/vendor evidence supports it. Otherwise keep it disabled/unverified.
 - If `get_app_logs` shows missing database connection:
   - Note: Attached panel databases automatically inject `DATABASE_URL`. NEVER tell the user to manually copy/paste masked passwords `••••••••`.
 **App Engine Draft Rule (CRITICAL)**:
-- Whenever a configuration fix or setting modification is identified, you MUST ALWAYS execute the tool call `propose_container_app_patch` in your response (specifying app_id, patch dictionary, and evidence).
+- Whenever a configuration fix is justified by evidence, execute `propose_container_app_patch` (app_id, patch, evidence). Do not create a patch only to restart or recover.
 - NEVER output raw text YAML blocks in the chat without calling `propose_container_app_patch`. The tool call is the only mechanism that creates the interactive "Apply changes" button for the user in the panel UI.
 
 **Output Format (concise)**:

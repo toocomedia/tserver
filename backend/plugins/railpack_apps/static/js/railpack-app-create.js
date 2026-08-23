@@ -5,6 +5,15 @@ if (form) {
   const appliedPlanIds = new Set();
   const query = (selector) => form.querySelector(selector);
   const queryAll = (selector) => form.querySelectorAll(selector);
+  const clearEditedPlan = (event) => {
+    if (!event.isTrusted || event.target?.matches('[data-app-plan-id], [data-stack-plan-id]')) return;
+    const appPlan = query('[data-app-plan-id]');
+    const stackPlan = query('[data-stack-plan-id]');
+    if (appPlan?.value) appPlan.value = '';
+    if (stackPlan?.value) stackPlan.value = '';
+  };
+  form.addEventListener('input', clearEditedPlan);
+  form.addEventListener('change', clearEditedPlan);
   const panel = (step) => query(`[data-wizard-panel="${step}"]`);
   function renderStep(step) {
     state.step = step;
@@ -556,6 +565,8 @@ if (form) {
     if (!planData) return;
     const p = planData.payload || planData;
     const isStack = planData.action_type === "official_stack_install" || p.deploy_type === "official_stack" || !!p.stack_catalog_id;
+    const appPlanInput = query("#app_plan_id") || query("[data-app-plan-id]");
+    if (appPlanInput) appPlanInput.value = isStack ? "" : (planData.plan_id || "");
 
     if (isStack) {
       const depTypeInput = query("#deploy_type") || query("[data-deploy-type]");
@@ -566,6 +577,8 @@ if (form) {
       if (verInput) verInput.value = p.stack_version || "";
       const settingsInput = query("#nonsecret_settings") || query("[data-nonsecret-settings]");
       if (settingsInput) settingsInput.value = JSON.stringify(p.nonsecret_settings || {});
+      const planInput = query("#stack_plan_id") || query("[data-stack-plan-id]");
+      if (planInput) planInput.value = planData.plan_id || "";
 
       const stackPanel = query("[data-stack-configuration-panel]");
       if (stackPanel) {
@@ -632,6 +645,9 @@ if (form) {
     // 4. Set Port & Build Mode & Start Command
     if (p.internal_port && query("#internal_port")) {
       query("#internal_port").value = p.internal_port;
+    }
+    if (p.health_path && query("#health_path")) {
+      query("#health_path").value = p.health_path;
     }
     if (p.build_mode && query("#build_mode")) {
       query("#build_mode").value = p.build_mode;
@@ -700,15 +716,7 @@ if (form) {
     state.unlocked = Math.max(state.unlocked, 3);
     renderStep(3);
 
-    // 9. Mark plan applied on backend (deduplicated)
-    const pid = planData.plan_id || (p && p.plan_id);
-    if (pid && !appliedPlanIds.has(pid)) {
-      appliedPlanIds.add(pid);
-      fetchJson(`/plugins/ai_helper/api/action-plans/${encodeURIComponent(pid)}/mark-applied`, {
-        method: "POST",
-        headers: csrfHeaders(),
-      }).catch(() => {});
-    }
+    // Plan consumption happens atomically with the server-side stack creation request.
   };
 
   // Expose step controller for in-chat AI actions
