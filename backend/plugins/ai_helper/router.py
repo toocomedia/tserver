@@ -503,6 +503,8 @@ async def mark_action_plan_applied_endpoint(plan_id: str, request: Request, db: 
         res = await action_plans.mark_plan_applied(db, plan_id, user_id=user_id)
         return JSONResponse(res)
     except ValueError as exc:
+        if "already been applied" in str(exc):
+            return JSONResponse({"status": "ok", "already_applied": True, "plan_id": plan_id})
         raise HTTPException(400, str(exc)) from exc
 
 

@@ -488,18 +488,18 @@ def _is_docker_size(value: str) -> bool:
 
 
 def _collect_in_use_image_refs() -> set[str]:
-    """Images referenced by running containers — must not be offered as deletable.
-    Covers moby/buildkit (srv-panel-buildkit) and any active app container.
+    """Images referenced by any container (running or stopped) — must not be offered as deletable.
+    Covers moby/buildkit (srv-panel-buildkit) and any app container even when stopped/paused
+    (railpack builds are stopped until next build, plugins may be stopped).
     Short timeout so inventory stays fast."""
     refs: set[str] = set()
     try:
-        res = _run(["docker", "ps", "--format", "{{.Image}}"], timeout=6)
+        res = _run(["docker", "ps", "-a", "--format", "{{.Image}}"], timeout=6)
         if res.returncode == 0 and res.stdout:
             for line in res.stdout.splitlines():
                 line = line.strip()
                 if line:
                     refs.add(line)
-                    # Also store short ID form if it's a sha256:...
                     if line.startswith("sha256:"):
                         refs.add(line.replace("sha256:", "")[:12])
                         refs.add(line)

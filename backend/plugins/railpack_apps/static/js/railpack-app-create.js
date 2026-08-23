@@ -2,6 +2,7 @@ import { addEnvironmentRow, addStorageMountRow, storageMountValues, csrfHeaders,
 const form = document.querySelector('[data-railpack-builder]');
 if (form) {
   const state = { step: 1, unlocked: 1, appId: null, deploymentId: null };
+  const appliedPlanIds = new Set();
   const query = (selector) => form.querySelector(selector);
   const queryAll = (selector) => form.querySelectorAll(selector);
   const panel = (step) => query(`[data-wizard-panel="${step}"]`);
@@ -652,9 +653,11 @@ if (form) {
     state.unlocked = Math.max(state.unlocked, 3);
     renderStep(3);
 
-    // 9. Mark plan applied on backend
-    if (planData.plan_id) {
-      fetchJson(`/plugins/ai_helper/api/action-plans/${encodeURIComponent(planData.plan_id)}/mark-applied`, {
+    // 9. Mark plan applied on backend (deduplicated)
+    const pid = planData.plan_id || (p && p.plan_id);
+    if (pid && !appliedPlanIds.has(pid)) {
+      appliedPlanIds.add(pid);
+      fetchJson(`/plugins/ai_helper/api/action-plans/${encodeURIComponent(pid)}/mark-applied`, {
         method: "POST",
         headers: csrfHeaders(),
       }).catch(() => {});
