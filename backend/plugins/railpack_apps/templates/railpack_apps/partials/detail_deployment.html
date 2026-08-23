@@ -2,11 +2,16 @@
   <div class="master-card__header" style="display: flex; justify-content: space-between; align-items: center;">
     <span>Live deployment stream</span>
     <div style="display: flex; gap: 8px; align-items: center;">
-      <span class="badge-pill" data-deployment-state>{% if deployment %}{{ deployment.status | title }} · {{ deployment.stage | title }}{% else %}Not deployed yet{% endif %}</span>
+      <span class="badge-pill {% if deployment and deployment.status == 'failed' %}badge-pill--danger{% elif deployment and deployment.status == 'success' %}badge-pill--accent{% endif %}" data-deployment-state>{% if deployment %}{{ deployment.status | title }} · {{ deployment.stage | title }}{% else %}Not deployed yet{% endif %}</span>
       {% if deployment and deployment.status in ['queued', 'running'] %}
       <form method="post" action="/plugins/railpack_apps/{{ app.id }}/deployments/{{ deployment.id }}/cancel" style="margin:0;">
         {% include "partials/csrf_field.html" %}
         <button class="btn btn--danger btn--sm" type="submit">Cancel</button>
+      </form>
+      {% elif deployment and deployment.status == 'failed' and not deployment_active %}
+      <form method="post" action="/plugins/railpack_apps/{{ app.id }}/deploy" style="margin:0;">
+        {% include "partials/csrf_field.html" %}
+        <button class="btn btn--secondary btn--sm" type="submit">Retry</button>
       </form>
       {% endif %}
     </div>

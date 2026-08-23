@@ -156,6 +156,8 @@ def start_service_container(
         "docker", "run", "-d",
         "--name", cname,
         "--network", net_name,
+        "--network-alias", service_name,
+        "--network-alias", cname,
         "--restart", "unless-stopped",
         "--memory", f"{svc.memory_limit_mb}m",
         "--cpus", str(svc.cpu_limit),
@@ -165,6 +167,27 @@ def start_service_container(
         "--label", f"srv-panel.stack-catalog={stack.catalog_id}",
     ]
 
+    # Universal network aliases so any container can discover databases and caches
+    img_lower = (svc.image_reference or "").lower()
+    sname_lower = service_name.lower()
+
+    if any(k in img_lower or k in sname_lower for k in ("postgres", "pgsql", "psql")):
+        for alias in ["postgres", "db", "database", "plausible_db"]:
+            if alias != service_name:
+                run_cmd.extend(["--network-alias", alias])
+    elif any(k in img_lower or k in sname_lower for k in ("mysql", "mariadb")):
+        for alias in ["mysql", "mariadb", "db", "database"]:
+            if alias != service_name:
+                run_cmd.extend(["--network-alias", alias])
+    elif any(k in img_lower or k in sname_lower for k in ("redis", "keydb", "valkey")):
+        for alias in ["redis", "cache"]:
+            if alias != service_name:
+                run_cmd.extend(["--network-alias", alias])
+    elif any(k in img_lower or k in sname_lower for k in ("clickhouse", "influx", "timescale")):
+        for alias in ["clickhouse", "events", "events_db", "plausible_events_db"]:
+            if alias != service_name:
+                run_cmd.extend(["--network-alias", alias])
+
     # Environment file
     if env_file and env_file.is_file():
         run_cmd.extend(["--env-file", str(env_file)])
@@ -173,11 +196,8 @@ def start_service_container(
     for k, v in svc.environment_defaults.items():
         run_cmd.extend(["-e", f"{k}={v}"])
 
-    if "postgres" in (svc.image_reference or "").lower() or service_name.lower() == "postgres":
-        if "POSTGRES_USER" not in svc.environment_defaults:
-            run_cmd.extend(["-e", "POSTGRES_USER=postgres"])
-        if "POSTGRES_DB" not in svc.environment_defaults and "plausible" in stack.catalog_id:
-            run_cmd.extend(["-e", "POSTGRES_DB=plausible_db"])
+    if ("postgres" in img_lower or "postgres" in sname_lower) and "POSTGRES_USER" not in svc.environment_defaults:
+        run_cmd.extend(["-e", "POSTGRES_USER=postgres"])
 
     # Volume mounts
     for vol in svc.volumes:
