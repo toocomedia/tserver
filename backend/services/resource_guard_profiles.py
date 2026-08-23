@@ -25,6 +25,7 @@ PROFILES: dict[str, dict] = {
     "build_small":         {"ram_mb": 400,  "cpu": "0.5",  "timeout": 600,  "swap_threshold": 80,  "label": "Small Git build"},
     # docker pull — mainly disk I/O, negligible swap impact
     "image_pull":          {"ram_mb": 100,  "cpu": "0.5",  "timeout": 300,  "swap_threshold": 95,  "label": "Registry image pull"},
+    "official_stack_pull": {"ram_mb": 400,  "cpu": "1.0",  "timeout": 600,  "swap_threshold": 95,  "label": "Official stack pull and startup"},
     # Running containers — sized by memory_limit_mb set on the app
     "container_large":     {"ram_mb": 384,  "cpu": "0.5",  "timeout": None, "swap_threshold": 95,  "label": "Large app runtime"},
     "container_standard":  {"ram_mb": 256,  "cpu": "0.5",  "timeout": None, "swap_threshold": 95,  "label": "Standard app runtime"},
@@ -58,6 +59,8 @@ _DB_PROFILES: dict[str, str] = {
 
 def classify_deployment(app: ContainerApp) -> str:
     """Return the profile name for the heavy phase of deploying *app*."""
+    if getattr(app, "deploy_type", None) == "official_stack":
+        return "official_stack_pull"
     if app.source_type == "image":
         return "image_pull"
     # Git source — Dockerfile or Railpack

@@ -31,6 +31,7 @@ CONFIG_FIELDS = (
     "health_path", "startup_timeout_seconds", "database_mode", "database_provider", "database_name",
     "database_user", "preset", "wordpress_content_volume", "wordpress_site_title", "wordpress_admin_user",
     "wordpress_admin_email", "cpu_limit", "memory_limit_mb", "pid_limit", "ssl_requested",
+    "deploy_type", "stack_catalog_id", "stack_version", "stack_services",
 )
 
 
@@ -49,6 +50,8 @@ def _read_environment(app: ContainerApp) -> dict[str, str]:
 
 
 def _source_identity(config: dict[str, Any]) -> str:
+    if config.get("deploy_type") == "official_stack" or config.get("stack_catalog_id"):
+        return f"stack:{config.get('stack_catalog_id')}@{config.get('stack_version') or 'default'}"
     if config.get("source_type") == "image":
         return f"image:{config.get('image_reference') or ''}"
     ref = config.get("git_ref") or config.get("branch") or "main"
@@ -170,7 +173,7 @@ async def create_snapshot(
         app_id=app.id,
         state=state,
         configuration_revision=revision,
-        source_identity=(f"git:{config.get('repository_url') or ''}@{source_revision}" if source_revision else f"image:{image_digest or config.get('image_reference') or ''}"),
+        source_identity=_source_identity(config),
         source_revision=source_revision,
         image_digest=image_digest,
         config_json=json.dumps(config, sort_keys=True),

@@ -504,3 +504,32 @@ async def mark_action_plan_applied_endpoint(plan_id: str, request: Request, db: 
         return JSONResponse(res)
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
+
+
+@router.post("/api/create-stack-plan")
+async def create_stack_plan_endpoint(request: Request, db: AsyncSession = Depends(get_db)):
+    """Silent API action: generates an immutable action plan for an official stack."""
+    from plugins.ai_helper.tools.app_setup import propose_official_stack_install
+    user_id = request.session.get("user_id") if hasattr(request, "session") else None
+    if user_id is None:
+        raise HTTPException(401, "Authentication required.")
+
+    body = await request.json()
+    catalog_id = str(body.get("catalog_id") or "plausible_ce").strip()
+    version = str(body.get("version") or "").strip()
+    session_id = str(body.get("session_id") or "default_session").strip()
+    domain_name = str(body.get("domain_name") or "").strip()
+    nonsecret_settings = body.get("nonsecret_settings") or {}
+
+    res = await propose_official_stack_install(
+        db=db,
+        catalog_id=catalog_id,
+        version=version,
+        domain_name=domain_name,
+        nonsecret_settings=nonsecret_settings,
+        session_id=session_id,
+        user_id=user_id,
+    )
+    if res.get("status") != "ok":
+        raise HTTPException(400, res.get("message", "Could not create stack plan."))
+    return JSONResponse(res)

@@ -162,47 +162,56 @@ async def _deploy_after_commit(deployment_id: int, token: int, operation_id: int
         await progress.stage(db, deployment, "prepare", "Preparing deployment.")
         running_image, replacement_started = prior_runtime.image_digest or prior_runtime.image_reference, False
         try:
-            image = await _prepare_image(db, runtime, deployment)
-            if runtime.source_type == "image":
-                snapshot.image_digest = runtime.image_digest
+            if getattr(runtime, "deploy_type", None) == "official_stack":
+                await _deploy_official_stack(db, app, domain, snapshot, prior_snapshot, runtime, prior_runtime, deployment)
             else:
-                snapshot.source_revision = runtime.deployed_revision
-            await progress.stage(db, deployment, "start", "Starting application container.")
-            await asyncio.to_thread(_replace_container, runtime, image)
-            replacement_started = True
-            await progress.stage(db, deployment, "health", "Checking the private HTTP endpoint.")
-            await progress.wait_for_http(
-                runtime.host_port,
-                path=runtime.health_path or "/",
-                timeout_seconds=runtime.startup_timeout_seconds or 45,
-            )
-            from services import container_app_control_service
-            await progress.stage(db, deployment, "routing", "Publishing the application route.")
-            await container_app_control_service.publish(db, runtime, domain)
-            if runtime.preset == "wordpress":
-                from services import container_app_wordpress_service
-                await progress.stage(db, deployment, "wordpress", "Finishing WordPress setup.")
-                await asyncio.to_thread(container_app_wordpress_service.install_if_pending, runtime, domain)
-            if runtime.ssl_requested:
-                from services import ssl_service
-                await progress.stage(db, deployment, "ssl", "Configuring HTTPS.")
-                await ssl_service.configure_container_app_ssl(db, runtime, domain)
-            await snapshots.promote_snapshot(db, app, snapshot, runtime)
-            app.status, app.last_error, app.deployed_at = "running", None, datetime.utcnow()
-            deployment.status = "success"
-            await progress.stage(db, deployment, "complete", "Deployment complete.")
+                image = await _prepare_image(db, runtime, deployment)
+                if runtime.source_type == "image":
+                    snapshot.image_digest = runtime.image_digest
+                else:
+                    snapshot.source_revision = runtime.deployed_revision
+                await progress.stage(db, deployment, "start", "Starting application container.")
+                await asyncio.to_thread(_replace_container, runtime, image)
+                replacement_started = True
+                await progress.stage(db, deployment, "health", "Checking the private HTTP endpoint.")
+                await progress.wait_for_http(
+                    runtime.host_port,
+                    path=runtime.health_path or "/",
+                    timeout_seconds=runtime.startup_timeout_seconds or 45,
+                )
+                from services import container_app_control_service
+                await progress.stage(db, deployment, "routing", "Publishing the application route.")
+                await container_app_control_service.publish(db, runtime, domain)
+                if runtime.preset == "wordpress":
+                    from services import container_app_wordpress_service
+                    await progress.stage(db, deployment, "wordpress", "Finishing WordPress setup.")
+                    await asyncio.to_thread(container_app_wordpress_service.install_if_pending, runtime, domain)
+                if runtime.ssl_requested:
+                    from services import ssl_service
+                    await progress.stage(db, deployment, "ssl", "Configuring HTTPS.")
+                    await ssl_service.configure_container_app_ssl(db, runtime, domain)
+                await snapshots.promote_snapshot(db, app, snapshot, runtime)
+                app.status, app.last_error, app.deployed_at = "running", None, datetime.utcnow()
+                deployment.status = "success"
+                await progress.stage(db, deployment, "complete", "Deployment complete.")
         except build_process.BuildCancelled as exc:
             deployment.status, deployment.stage, deployment.error = "cancelled", "cancelled", str(exc)
             progress.append_log(deployment, "cancelled", str(exc))
             app.status, app.last_error = ("running", None) if await asyncio.to_thread(_container_running, app) else ("failed", str(exc))
         except Exception as exc:
-            deployment.output = (deployment.output + await asyncio.to_thread(progress.container_logs, runtime))[-80_000:]
-            await snapshots.materialize_environment(db, app, prior_snapshot)
-            restored = await _restore_previous(prior_runtime, domain, db, running_image, replacement_started, deployment)
-            await snapshots.mark_failed(snapshot, str(exc))
-            app.status, app.last_error = ("running", None) if restored else ("failed", str(exc)[:1000])
-            deployment.status, deployment.error = "failed", str(exc)[:2000]
-            deployment.output = (deployment.output + f"[error] {exc}\n")[-80_000:]
+            if getattr(runtime, "deploy_type", None) == "official_stack":
+                await snapshots.mark_failed(snapshot, str(exc))
+                app.status, app.last_error = "failed", str(exc)[:1000]
+                deployment.status, deployment.error = "failed", str(exc)[:2000]
+                deployment.output = (deployment.output + f"[error] {exc}\n")[-80_000:]
+            else:
+                deployment.output = (deployment.output + await asyncio.to_thread(progress.container_logs, runtime))[-80_000:]
+                await snapshots.materialize_environment(db, app, prior_snapshot)
+                restored = await _restore_previous(prior_runtime, domain, db, running_image, replacement_started, deployment)
+                await snapshots.mark_failed(snapshot, str(exc))
+                app.status, app.last_error = ("running", None) if restored else ("failed", str(exc)[:1000])
+                deployment.status, deployment.error = "failed", str(exc)[:2000]
+                deployment.output = (deployment.output + f"[error] {exc}\n")[-80_000:]
         deployment.finished_at = datetime.utcnow()
         outcome = {"success": "succeeded", "cancelled": "cancelled"}.get(deployment.status, "failed")
         await resource_guard_operation_service.finish(db, operation_id, outcome)
@@ -288,6 +297,64 @@ async def advance_queue() -> None:
         await resource_guard_operation_service.start(db, operation)
         await db.commit()
         asyncio.create_task(_deploy_after_commit(deployment.id, token, operation.id))
+
+
+async def _deploy_official_stack(
+    db: AsyncSession, app: ContainerApp, domain: Domain, snapshot: ContainerAppSnapshot,
+    prior_snapshot: ContainerAppSnapshot, runtime: SimpleNamespace, prior_runtime: SimpleNamespace,
+    deployment: ContainerAppDeployment,
+) -> None:
+    from services.official_stacks.catalog import get_stack
+    from services.official_stacks import stack_runtime_service
+    stack_id = getattr(runtime, "stack_catalog_id", None) or "plausible_ce"
+    stack = get_stack(stack_id)
+    if stack is None:
+        raise RuntimeError(f"Official stack '{stack_id}' was not found in the panel catalog.")
+
+    await progress.stage(db, deployment, "pull", f"Pulling {stack.display_name} container images.")
+    await asyncio.to_thread(stack_runtime_service.pull_stack_images, stack)
+
+    await progress.stage(db, deployment, "prepare", "Setting up stack network, configs, and volumes.")
+    await asyncio.to_thread(stack_runtime_service.ensure_stack_network, app.id)
+    await asyncio.to_thread(stack_runtime_service.ensure_stack_volumes, app.id, stack)
+    await asyncio.to_thread(stack_runtime_service.materialize_stack_configs, app.id, stack)
+
+    await progress.stage(db, deployment, "dependencies", "Starting dependency services.")
+    for svc_name in stack.startup_order:
+        svc = stack.services[svc_name]
+        if svc.is_web_entrypoint:
+            continue
+        progress.append_log(deployment, "dependencies", f"Starting {svc_name} container.")
+        await asyncio.to_thread(
+            stack_runtime_service.start_service_container,
+            app.id, stack, svc_name, Path(app.env_path),
+        )
+        await stack_runtime_service.wait_service_health(app.id, stack, svc_name)
+
+    await progress.stage(db, deployment, "start", f"Starting {stack.display_name} web service.")
+    await asyncio.to_thread(
+        stack_runtime_service.start_service_container,
+        app.id, stack, stack.web_service_name, Path(app.env_path), host_port=runtime.host_port,
+    )
+
+    await progress.stage(db, deployment, "health", "Checking private HTTP health probe.")
+    await stack_runtime_service.wait_service_health(
+        app.id, stack, stack.web_service_name, host_port=runtime.host_port,
+    )
+
+    from services import container_app_control_service
+    await progress.stage(db, deployment, "routing", "Publishing reverse proxy route.")
+    await container_app_control_service.publish(db, runtime, domain)
+
+    if runtime.ssl_requested:
+        from services import ssl_service
+        await progress.stage(db, deployment, "ssl", "Configuring HTTPS.")
+        await ssl_service.configure_container_app_ssl(db, runtime, domain)
+
+    await snapshots.promote_snapshot(db, app, snapshot, runtime)
+    app.status, app.last_error, app.deployed_at = "running", None, datetime.utcnow()
+    deployment.status = "success"
+    await progress.stage(db, deployment, "complete", f"{stack.display_name} deployment complete.")
 
 
 async def _restore_previous(

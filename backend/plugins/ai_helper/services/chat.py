@@ -64,7 +64,7 @@ def _activity_event(tool_name: str, status: str, args: dict | None = None) -> st
 
 def _setup_plan_id(tool_name: str, tool_output: Dict[str, Any]) -> str | None:
     """Return only a server-created, safe wizard handoff plan identifier."""
-    if tool_name != "propose_app_install" or tool_output.get("status") != "ok":
+    if tool_name not in {"propose_app_install", "propose_official_stack_install"} or tool_output.get("status") != "ok":
         return None
     plan_id = tool_output.get("plan_id")
     if isinstance(plan_id, str) and re.fullmatch(r"plan_[0-9a-f]{16}", plan_id):

@@ -110,6 +110,8 @@ async def create(
     build_args: str = Form(""), build_secret_keys: str = Form(""), custom_start_command: str = Form(""),
     storage_mounts: str = Form("[]"), health_path: str = Form("/"),
     startup_timeout_seconds: int = Form(45),
+    deploy_type: str = Form("railpack"), stack_catalog_id: str = Form(""),
+    stack_version: str = Form(""), nonsecret_settings: str = Form("{}"),
     db: AsyncSession = Depends(get_db),
 ):
     if draft_key_id.strip():
@@ -117,14 +119,64 @@ async def create(
         repo = repository_url.strip()
         if not (repo.startswith("git@") or repo.startswith("ssh://")):
             raise HTTPException(400, "SSH deploy keys require an SSH repository URL (e.g. git@github.com:owner/repo.git).")
-    requested_secrets = _secret_requirements(secret_requirements)
-    if requested_secrets:
-        # Fail before creating databases, app directories, or files when panel key is not persistent.
-        secret_vault.encrypt("")
     domain = await db.get(Domain, domain_id)
     if domain is None:
         raise HTTPException(404, "Domain not found.")
     has_certificate = await db.scalar(select(SslCert.id).where(SslCert.full_domain == domain.name)) is not None
+
+    if deploy_type == "official_stack" or source_type == "official_stack":
+        from services.official_stacks.catalog import get_stack
+        from services.official_stacks.manifest_validator import validate_stack_request
+        from services.official_stacks import stack_runtime_service
+        cat_id = (stack_catalog_id or "plausible_ce").strip()
+        stack = get_stack(cat_id)
+        if stack is None:
+            raise HTTPException(404, f"Official stack '{cat_id}' was not found in catalog.")
+        v = (stack_version.strip() or stack.default_version)
+        parsed_settings = _environment_values(nonsecret_settings or "{}")
+        try:
+            _, clean_settings = validate_stack_request(cat_id, v, parsed_settings)
+        except ValueError as exc:
+            raise HTTPException(400, str(exc)) from exc
+
+        secret_vault.encrypt("")
+        app = await container_app_service.create_app(
+            db, domain=domain, source_type="image", build_mode="image",
+            deploy_type="official_stack", stack_catalog_id=cat_id, stack_version=v,
+            repository_url=stack.official_repositories[0] if stack.official_repositories else None,
+            branch=v, image_reference=stack.services[stack.web_service_name].image_reference,
+            internal_port=stack.web_internal_port,
+            ssl_requested=ssl and not has_certificate,
+            environment_values={},
+            health_path=stack.web_health_path,
+            startup_timeout_seconds=stack.startup_timeout_seconds,
+        )
+
+        real_vault_secrets = {}
+        secret_reqs_for_snapshot = []
+        for sec_req in stack.required_secrets:
+            sec_rec, _ = await secret_vault.ensure_secret(db, app.id, sec_req.key, sec_req.purpose)
+            real_vault_secrets[sec_req.key] = await secret_vault.secret_value(db, sec_rec.id)
+            secret_reqs_for_snapshot.append({"key": sec_req.key, "purpose": sec_req.purpose})
+
+        compiled_env = stack_runtime_service.compile_stack_environment(
+            app, stack, domain.name, real_vault_secrets, clean_settings,
+        )
+        container_app_service.write_env(Path(app.env_path), compiled_env)
+
+        await snapshots.create_snapshot(
+            db, app, secret_requirements=secret_reqs_for_snapshot,
+            environment_patch=compiled_env, created_by_user_id=request.session.get("user_id"),
+        )
+        domain.project_type = "container"
+        deployment = await container_app_deployment_service.queue_deployment(db, app)
+        await db.commit()
+        return _create_response(request, app.id, deployment.id)
+
+    requested_secrets = _secret_requirements(secret_requirements)
+    if requested_secrets:
+        # Fail before creating databases, app directories, or files when panel key is not persistent.
+        secret_vault.encrypt("")
     attachments = _attachments(database_attachments)
     if preset == "wordpress":
         attachments = _prepare_wordpress(attachments, wordpress_site_title, wordpress_admin_user, wordpress_admin_email, wordpress_admin_password)

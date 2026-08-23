@@ -57,6 +57,15 @@ async def inspect_app_source(
         repo = repository_url.strip()
         if not repo:
             return {"status": "error", "message": "Repository URL is required for Git inspection."}
+        from services.official_stacks.source_detector import detect_official_stack
+        stack_info = detect_official_stack(repo)
+        if stack_info.get("is_official_stack"):
+            return {
+                "status": "ok",
+                "source_type": "official_stack",
+                "official_stack": stack_info,
+                "message": f"{stack_info['name']} requires an Official Stack deployment ({stack_info['services_count']} services, {stack_info['recommended_ram_mb'] // 1024} GB RAM recommended).",
+            }
         try:
             res = container_app_inspection_service.inspect_repository(repo, branch.strip() or "main")
             return {"status": "ok", "source_type": "git", "inspection": res}
@@ -67,6 +76,15 @@ async def inspect_app_source(
         image = image_reference.strip()
         if not image:
             return {"status": "error", "message": "Image reference is required for Docker inspection."}
+        from services.official_stacks.source_detector import detect_official_stack
+        stack_info = detect_official_stack(image)
+        if stack_info.get("is_official_stack"):
+            return {
+                "status": "ok",
+                "source_type": "official_stack",
+                "official_stack": stack_info,
+                "message": f"{stack_info['name']} requires an Official Stack deployment ({stack_info['services_count']} services, {stack_info['recommended_ram_mb'] // 1024} GB RAM recommended).",
+            }
         try:
             res = await container_app_image_inspect_service.inspect_image(image)
             return {"status": "ok", "source_type": "image", "inspection": res}
@@ -294,4 +312,69 @@ async def propose_app_install(
         "summary": plan.summary,
         "confidence": plan.confidence,
         "message": "Setup draft created. Server will offer a safe setup handoff; it does not deploy the app.",
+    }
+
+
+async def propose_official_stack_install(
+    db: AsyncSession,
+    catalog_id: str,
+    version: str = "",
+    domain_name: str = "",
+    nonsecret_settings: Optional[Dict[str, str]] = None,
+    session_id: Optional[str] = None,
+    summary: str = "",
+    confidence: float = 1.0,
+    reasoning: str = "",
+    user_id: Optional[int] = None,
+    **kwargs: Any,
+) -> Dict[str, Any]:
+    """Creates an immutable reviewed plan for an Official Vendor Stack deployment."""
+    if user_id is None:
+        return {"status": "error", "message": "AI setup drafts require an authenticated panel user."}
+
+    from services.official_stacks.catalog import get_stack
+    from services.official_stacks.manifest_validator import validate_stack_request
+
+    stack = get_stack(catalog_id)
+    if stack is None:
+        return {"status": "error", "message": f"Unknown official stack catalog '{catalog_id}'."}
+
+    v = version.strip() or stack.default_version
+    try:
+        _, clean_settings = validate_stack_request(catalog_id, v, nonsecret_settings or {})
+    except ValueError as exc:
+        return {"status": "error", "message": str(exc)}
+
+    payload = {
+        "deploy_type": "official_stack",
+        "stack_catalog_id": catalog_id,
+        "stack_version": v,
+        "domain_name": domain_name.strip(),
+        "nonsecret_settings": clean_settings,
+        "services_count": len(stack.services),
+        "recommended_ram_mb": stack.recommended_ram_mb,
+        "services": list(stack.services.keys()),
+        "post_install_message": stack.post_install_message,
+    }
+
+    sess_id = session_id or "default_session"
+    plan_summary = summary or f"Deploy Official Stack: {stack.display_name} ({v})"
+
+    plan = await action_plans.create_action_plan(
+        db=db,
+        session_id=sess_id,
+        action_type="official_stack_install",
+        payload=payload,
+        summary=plan_summary,
+        confidence=confidence,
+        reasoning=reasoning,
+        user_id=user_id,
+    )
+
+    return {
+        "status": "ok",
+        "plan_id": plan.plan_id,
+        "summary": plan.summary,
+        "confidence": plan.confidence,
+        "message": f"Official stack proposal created for {stack.display_name}. User can review and deploy from wizard.",
     }

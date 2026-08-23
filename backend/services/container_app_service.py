@@ -219,6 +219,8 @@ async def create_app(
     custom_start_command: str | None = None, storage_mounts: list[dict] | str | None = None,
     health_path: str = "/", startup_timeout_seconds: int = 45,
     build_secret_keys: str | list[str] | None = None,
+    deploy_type: str = "railpack", stack_catalog_id: str | None = None,
+    stack_version: str | None = None,
 ) -> ContainerApp:
     ref_val = (git_ref or branch or "main").strip()
     ref_type_val = (git_ref_type or "branch").strip().lower()
@@ -234,7 +236,7 @@ async def create_app(
     # Refuse an unsafe deployment before creating managed services, so a guard
     # rejection cannot leave a container whose app row was rolled back.
     from services.resource_guard_service import resource_guard_service
-    profile = "image_pull" if source_type == "image" else "build_large"
+    profile = "image_pull" if source_type == "image" or deploy_type == "official_stack" else "build_large"
     preflight = await resource_guard_service.preflight(db, profile)
     if not preflight["ok"] and "build is already running" not in preflight["reason"].lower():
         raise HTTPException(409, f"Resource Guard blocked deployment before creating resources: {preflight['reason']}")
@@ -252,6 +254,9 @@ async def create_app(
     app = ContainerApp(
         domain_id=domain.id, source_type=source_type,
         build_mode="image" if is_image else build_mode,
+        deploy_type=deploy_type,
+        stack_catalog_id=stack_catalog_id,
+        stack_version=stack_version,
         repository_url=None if is_image else repository_url,
         branch=None if is_image else ref_val,
         git_ref=None if is_image else ref_val,

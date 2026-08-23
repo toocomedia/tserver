@@ -16,6 +16,31 @@ from services import container_app_deployment_progress_service, container_app_se
 async def control(db: AsyncSession, app: ContainerApp, domain: Domain, action: str) -> None:
     if action not in {"start", "stop", "restart"}:
         raise HTTPException(400, "Invalid container app action.")
+    is_stack = getattr(app, "deploy_type", None) == "official_stack"
+    if is_stack:
+        from services.official_stacks.catalog import get_stack
+        from services.official_stacks import stack_runtime_service
+        stack_id = getattr(app, "stack_catalog_id", None) or "plausible_ce"
+        stack = get_stack(stack_id)
+        if stack is None:
+            raise HTTPException(404, f"Official stack '{stack_id}' was not found in catalog.")
+        if action == "stop":
+            await _offline(db, domain)
+            await asyncio.to_thread(stack_runtime_service.stop_stack, app.id, stack)
+            app.status, app.last_error = "stopped", None
+            return
+        # Start or Restart
+        for svc_name in stack.startup_order:
+            svc = stack.services[svc_name]
+            cname = stack_runtime_service.stack_container_name(app.id, svc_name)
+            await _docker(["docker", action, cname])
+        await container_app_deployment_progress_service.wait_for_http(
+            app.host_port, path=stack.web_health_path, timeout_seconds=stack.startup_timeout_seconds,
+        )
+        await publish(db, app, domain)
+        app.status, app.last_error = "running", None
+        return
+
     if action == "stop":
         await _offline(db, domain)
         await _docker(["docker", "stop", "--time", "20", app.container_name])
