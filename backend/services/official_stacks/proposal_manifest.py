@@ -23,13 +23,25 @@ _TOP_LEVEL = {
     "startup_timeout_seconds", "recommended_ram_mb", "minimum_ram_mb",
     "allowed_nonsecret_settings", "default_environment", "url_templates", "secrets", "docs_url",
 }
-_SERVICE = {"name", "image", "ports", "depends_on", "environment", "volumes", "resources", "command", "health"}
+_SERVICE = {"name", "image", "ports", "internal_ports", "depends_on", "environment", "volumes", "resources", "command", "health"}
 _VOLUME = {
     "name", "name_suffix", "volume", "source", "label", "mount_path",
     "container_mount_path", "target", "destination", "path", "mount",
     "target_path", "container_path", "read_only", "readonly", "description", "type",
 }
 _HEALTH = {"type", "command", "interval_seconds", "timeout_seconds", "retries", "start_period_seconds"}
+_DEFAULT_INTERNAL_PORTS = {
+    "postgres": [5432],
+    "postgresql": [5432],
+    "mysql": [3306],
+    "mariadb": [3306],
+    "clickhouse": [8123, 9000],
+    "redis": [6379],
+    "valkey": [6379],
+    "keydb": [6379],
+    "mongo": [27017],
+    "mongodb": [27017],
+}
 
 
 def stack_from_proposal(raw: Any, evidence: list[str] | None = None) -> OfficialStackDefinition:
@@ -60,8 +72,10 @@ def stack_from_proposal(raw: Any, evidence: list[str] | None = None) -> Official
         web_port = int(raw.get("web_port"))
     except (TypeError, ValueError) as exc:
         raise ValueError("Web port is invalid.") from exc
-    if web_service not in services or web_port not in services[web_service].internal_ports:
+    if web_service not in services:
         raise ValueError("Web service and web port must match a declared service port.")
+    if web_port not in services[web_service].internal_ports:
+        services[web_service] = _with_internal_port(services[web_service], web_port)
     services[web_service] = _as_web_service(services[web_service])
 
     evidence_items = [item for item in (evidence or []) if isinstance(item, str) and item.strip()]
@@ -126,8 +140,11 @@ def _service(raw: Any) -> ServiceDefinition:
     image = _text(raw.get("image"), f"Image for {name}", 512)
     if image.endswith(":latest") or ("@sha256:" not in image and ":" not in image.rsplit("/", 1)[-1]):
         raise ValueError(f"Service '{name}' image needs an explicit non-latest tag or digest.")
-    ports = raw.get("ports")
-    if not isinstance(ports, list) or not ports:
+    ports = raw.get("ports", raw.get("internal_ports"))
+    if ports is None or ports == []:
+        ports = _default_internal_ports(name, image)
+    ports = _normalize_ports(ports)
+    if not ports:
         raise ValueError(f"Service '{name}' needs private internal ports.")
     parsed_ports = [_number(port, f"Port for {name}", 1, 65535) for port in ports]
     if len(set(parsed_ports)) != len(parsed_ports):
@@ -162,6 +179,25 @@ def _volumes(raw: Any, service: str) -> list[VolumeDefinition]:
             continue
         raise ValueError(f"Service '{service}' volume is invalid.")
     return result
+
+
+def _default_internal_ports(name: str, image: str) -> list[int]:
+    text = f"{name} {image}".lower()
+    for marker, ports in _DEFAULT_INTERNAL_PORTS.items():
+        if marker in text:
+            return list(ports)
+    return []
+
+
+def _normalize_ports(raw: Any) -> list[Any]:
+    if isinstance(raw, list):
+        return raw
+    if isinstance(raw, int):
+        return [raw]
+    if isinstance(raw, str):
+        values = [int(item) for item in re.findall(r"(?<![0-9.])(\d{1,5})(?![0-9.])", raw)]
+        return [values[-1]] if values else []
+    return []
 
 
 def _volume_from_string(raw: str, service: str) -> VolumeDefinition:
@@ -330,3 +366,10 @@ def _text(raw: Any, label: str, maximum: int) -> str:
 
 def _as_web_service(service: ServiceDefinition) -> ServiceDefinition:
     return ServiceDefinition(**{**service.__dict__, "is_web_entrypoint": True})
+
+
+def _with_internal_port(service: ServiceDefinition, port: int) -> ServiceDefinition:
+    ports = list(service.internal_ports)
+    if port not in ports:
+        ports.append(port)
+    return ServiceDefinition(**{**service.__dict__, "internal_ports": ports})

@@ -334,6 +334,16 @@ class TestOfficialStacks(unittest.IsolatedAsyncioTestCase):
         self.assertIn({"key": "SECRET_KEY_BASE", "purpose": "Application secret", "generator": "base64_48", "service": "web", "environment": "SECRET_KEY_BASE"}, manifest["secrets"])
         self.assertEqual(args["nonsecret_settings"]["BASE_URL"], "https://stats.example.com")
 
+    def test_ai_stack_proposal_infers_safe_private_ports(self):
+        """Missing harmless port details are inferred; only unsafe networking remains rejected."""
+        from services.official_stacks.proposal_manifest import stack_from_proposal
+        manifest = copy.deepcopy(AI_STACK_MANIFEST)
+        manifest["services"][0].pop("ports")
+        manifest["services"][1]["ports"] = "8000"
+        stack = stack_from_proposal(manifest, ["source inspection detected private service ports"])
+        self.assertEqual(stack.services["analytics_db"].internal_ports, [5432])
+        self.assertEqual(stack.services["analytics_web"].internal_ports, [8000])
+
     def test_ai_rejects_legacy_or_raw_stack_shapes(self):
         """AI proposal input accepts only explicit structured manifest fields."""
         from services.official_stacks.proposal_manifest import stack_from_proposal
