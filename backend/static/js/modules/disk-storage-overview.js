@@ -104,9 +104,18 @@
     if(resultEl) resultEl.textContent="";
     try{
       const data = await panel.get("/api/resource-guard/disk-inventory");
-      const items = [...(data.deletable||[]), ...(data.protected||[])];
+      // General-safe: only show deletable (general) reclaimable space. Protected / plugin / dependency
+      // images are hidden to avoid clutter and accidental deletion of panel needs.
+      const items = data.deletable||[];
+      const protCount = (data.protected||[]).length;
       renderTable(items);
-      if(!items.length) toast("No reclaimable disk space found.", "info");
+      if(!items.length){
+        const msg = protCount ? `No reclaimable space — ${protCount} protected item(s) kept for apps/plugins.` : "No reclaimable disk space found.";
+        toast(msg, "info");
+        if(resultEl && protCount) resultEl.textContent = `Kept ${protCount} protected item(s) for existing apps/plugins.`;
+      } else if(protCount){
+        if(resultEl) resultEl.textContent = `${protCount} protected item(s) kept (not shown).`;
+      }
     }catch(e){
       toast(e.message||"Could not scan disk space","danger");
       const tbody=$("disk-consumers-tbody");

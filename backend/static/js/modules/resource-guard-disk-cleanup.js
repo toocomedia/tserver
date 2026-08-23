@@ -58,7 +58,13 @@
     $("resource-guard-disk-result").textContent = "";
     try {
       const data = await panel.get("/api/resource-guard/disk-inventory");
-      renderInventory([...(data.deletable || []), ...(data.protected || [])]);
+      // General-safe: only show deletable (general) reclaimable space. Protected / system images are hidden.
+      const items = data.deletable || [];
+      const prot = (data.protected || []).length;
+      renderInventory(items);
+      if (!items.length && prot) {
+        $("resource-guard-disk-result").textContent = `Kept ${prot} protected item(s) for existing apps/plugins (not shown).`;
+      }
     } catch (error) {
       toast(error.message || "Could not scan disk space", "danger");
     } finally {

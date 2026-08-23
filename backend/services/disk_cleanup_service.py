@@ -67,10 +67,13 @@ class InventoryItem:
 async def inventory(
     active_digests: set[str],
     rollback_images: set[str],
+    existing_app_ids: set[str] | None = None,
 ) -> list[dict[str, Any]]:
     """Return full inventory (deletable + protected items clearly marked)."""
+    if existing_app_ids is None:
+        existing_app_ids = set()
     items = await asyncio.to_thread(
-        _build_inventory, active_digests, rollback_images
+        _build_inventory, active_digests, rollback_images, existing_app_ids
     )
     return [i.to_dict() for i in items]
 
@@ -79,19 +82,22 @@ async def run_cleanup(
     include_ids: list[str],
     active_digests: set[str],
     rollback_images: set[str],
+    existing_app_ids: set[str] | None = None,
 ) -> dict[str, Any]:
     """Delete items whose item_id is in *include_ids*.
 
     Protection is re-checked server-side before each deletion.
     Returns: {deleted, skipped, freed_mb, errors}
     """
+    if existing_app_ids is None:
+        existing_app_ids = set()
     token = resource_guard_service.register(
         "container_app", "disk-cleanup", "background",
         "Disk cleanup", profile="native_light",
     )
     try:
         result = await asyncio.to_thread(
-            _execute_cleanup, include_ids, active_digests, rollback_images
+            _execute_cleanup, include_ids, active_digests, rollback_images, existing_app_ids
         )
     finally:
         resource_guard_service.unregister(token)
@@ -102,10 +108,28 @@ async def run_cleanup(
 # Internals
 # ---------------------------------------------------------------------------
 
+def _extract_app_id_from_srv_panel_tag(repo_tag: str) -> str | None:
+    """Extract app id from srv-panel/railpack-app:{id}-{deployment} or :{id}."""
+    if not repo_tag.startswith("srv-panel/railpack-app:"):
+        return None
+    try:
+        tag = repo_tag.split(":", 1)[1]
+        # tag is like "2-6" or "2"
+        app_part = tag.split("-", 1)[0]
+        if app_part.isdigit():
+            return app_part
+    except Exception:
+        pass
+    return None
+
+
 def _build_inventory(
     active_digests: set[str],
     rollback_images: set[str],
+    existing_app_ids: set[str] | None = None,
 ) -> list[InventoryItem]:
+    if existing_app_ids is None:
+        existing_app_ids = set()
     items: list[InventoryItem] = []
     now = time.time()
 
@@ -243,6 +267,11 @@ def _build_inventory(
                 continue
             seen_image_ids.add(image_id)
             is_dangling = repo_tag == "<none>:<none>" or repo_tag == "<none>"
+            # General-safe: only surface srv-panel app images and dangling.
+            # Plugin / dependency / panel images (postgres, redis, nginx, moby/*) are hidden
+            # to avoid accidental deletion of system needs.
+            if not is_dangling and not repo_tag.startswith("srv-panel/"):
+                continue
             item_type = TYPE_DANGLING_IMAGE if is_dangling else TYPE_UNUSED_IMAGE
             size_mb = _parse_docker_size(size_str)
             # Also catch "srv-panel/railpack-app" images that are failed builds — high value to surface
@@ -253,14 +282,22 @@ def _build_inventory(
                 if repo_tag in active_digests or repo_tag in rollback_images:
                     protected = True
                     reason = "Active or rollback image"
-            # Protect images currently in use by a running container (BuildKit, active app)
+            # Protect images currently in use by any container (even stopped) — Railpack is stopped until next build
             if not protected and _is_in_use(image_id, repo_tag, in_use_refs):
                 protected = True
-                reason = "In use by running container"
+                reason = "In use by container (including stopped)"
             # Explicitly protect BuildKit base image even if container is stopped — required for next build
             if not protected and repo_tag.startswith("moby/buildkit"):
                 protected = True
                 reason = "BuildKit base image — required for builds"
+            # General-safe for existing apps: any srv-panel/railpack-app image whose app still exists
+            # is kept, even if not the current digest (app may be stopped/paused). Only orphaned
+            # images (app deleted) are reclaimable. This prevents messing with plugins/apps.
+            if not protected and not is_dangling and repo_tag.startswith("srv-panel/railpack-app:"):
+                app_id = _extract_app_id_from_srv_panel_tag(repo_tag)
+                if app_id and app_id in existing_app_ids:
+                    protected = True
+                    reason = "App image — kept for existing app"
             items.append(InventoryItem(
                 item_id=_make_id(item_type, image_id),
                 type=item_type,
@@ -344,8 +381,11 @@ def _execute_cleanup(
     include_ids: list[str],
     active_digests: set[str],
     rollback_images: set[str],
+    existing_app_ids: set[str] | None = None,
 ) -> dict[str, Any]:
-    all_items = _build_inventory(active_digests, rollback_images)
+    if existing_app_ids is None:
+        existing_app_ids = set()
+    all_items = _build_inventory(active_digests, rollback_images, existing_app_ids)
     by_id = {item.item_id: item for item in all_items}
 
     deleted: list[str] = []
@@ -384,12 +424,41 @@ def _execute_cleanup(
     }
 
 
+def _allowed_deletable_roots() -> list[Path]:
+    roots: list[Path] = []
+    try:
+        roots.append(Path(config.CONTAINER_APP_ROOT).resolve())
+    except Exception:
+        pass
+    try:
+        roots.append((Path(config.CONTAINER_APP_ENV_ROOT).parent / "build").resolve())
+    except Exception:
+        pass
+    # Also allow /var/log/srv-panel for old logs (handled separately)
+    return roots
+
+def _is_under_allowed_root(path: Path) -> bool:
+    try:
+        rp = path.resolve()
+        for root in _allowed_deletable_roots():
+            try:
+                rp.relative_to(root)
+                return True
+            except ValueError:
+                continue
+    except Exception:
+        pass
+    return False
+
 def _delete_item(item: InventoryItem) -> None:
     if item.type in (TYPE_BUILD_DIR, TYPE_BUILD_WORKSPACE):
         p = Path(item.path)
         # Never follow symlinks; abort if symlink
         if p.is_symlink():
             raise RuntimeError("Refusing to delete symlinked path.")
+        # General-safe: only delete under known reclaimable roots
+        if not _is_under_allowed_root(p):
+            raise RuntimeError(f"Refusing to delete path outside allowed roots: {p}")
         if p.is_dir():
             shutil.rmtree(p)
         elif p.exists():
@@ -442,6 +511,21 @@ def _delete_item(item: InventoryItem) -> None:
         p = Path(item.path)
         if p.is_symlink():
             raise RuntimeError("Refusing to delete symlinked log.")
+        # Only allow deletion under known log dirs
+        allowed_log = False
+        try:
+            rp = p.resolve()
+            for ld in _LOG_DIRS:
+                try:
+                    rp.relative_to(Path(ld).resolve())
+                    allowed_log = True
+                    break
+                except Exception:
+                    continue
+        except Exception:
+            pass
+        if not allowed_log:
+            raise RuntimeError(f"Refusing to delete log outside allowed dirs: {p}")
         p.unlink(missing_ok=True)
 
 

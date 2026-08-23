@@ -354,6 +354,19 @@ if (form) {
     });
   });
 
+  queryAll('[data-source-card]').forEach((card) => {
+    card.addEventListener('click', () => {
+      queryAll('[data-source-card]').forEach((c) => c.classList.remove('selected'));
+      card.classList.add('selected');
+      const srcType = card.dataset.sourceCard;
+      const srcInput = query('[data-source-type]');
+      if (srcInput && srcInput.value !== srcType) {
+        srcInput.value = srcType;
+        sourceState();
+      }
+    });
+  });
+
   query('[data-source-type]').addEventListener('change', sourceState);
   query('[data-domain-select]').addEventListener('change', () => { domainState(); });
   query('[data-git-ref-type]')?.addEventListener('change', updateRefType);
@@ -559,19 +572,33 @@ if (form) {
     // 1. Set Source Type
     const srcType = (p.source_type || "git").toLowerCase();
     const srcCard = query(`[data-source-card="${srcType}"]`);
-    if (srcCard) srcCard.click();
+    if (srcCard) {
+      queryAll('[data-source-card]').forEach((c) => c.classList.remove('selected'));
+      srcCard.classList.add('selected');
+    }
+    const srcInput = query('[data-source-type]');
+    if (srcInput) srcInput.value = srcType;
 
     // 2. Set Domain if specified
     if (p.domain_name) {
+      const domInput = query('#domain_id') || query('[data-domain-select]');
+      const domLabel = query('[data-custom-dropdown="domain_id"] [data-dropdown-label]');
       const domItem = query(`[data-dropdown-item][data-domain-name="${p.domain_name}"]`);
-      if (domItem && !domItem.classList.contains("is-disabled")) {
-        domItem.click();
+      if (domItem) {
+        if (domInput) {
+          domInput.value = domItem.dataset.value;
+          domInput.dataset.domainSsl = domItem.dataset.domainSsl || "false";
+          domInput.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        if (domLabel) domLabel.textContent = domItem.dataset.label || p.domain_name;
+        domItem.classList.add('is-selected');
       }
     }
 
     // 3. Set Git / Image inputs
-    if (srcType === "git") {
-      if (p.repository_url) query("[data-repository-url]").value = p.repository_url;
+    if (srcType === "git" || isStack) {
+      const repoVal = p.repository_url || (p.stack_catalog_id ? "https://github.com/plausible/community-edition" : "");
+      if (repoVal && query("[data-repository-url]")) query("[data-repository-url]").value = repoVal;
       if (p.branch) {
         const branchInput = query("#branch");
         if (branchInput) branchInput.value = p.branch;
@@ -579,7 +606,7 @@ if (form) {
         if (branchLabel) branchLabel.textContent = p.branch;
       }
     } else if (srcType === "image") {
-      if (p.image_reference) query("[data-image-reference]").value = p.image_reference;
+      if (p.image_reference && query("[data-image-reference]")) query("[data-image-reference]").value = p.image_reference;
     }
 
     // 4. Set Port & Build Mode & Start Command

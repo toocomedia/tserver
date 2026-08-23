@@ -242,12 +242,16 @@
         }
 
         // Safe App Engine setup handoff. This only opens the prefilled wizard.
-        var applyPlanBtn = e.target.closest("[data-action='APP_SETUP_PLAN']");
+        var applyPlanBtn = e.target.closest("[data-action='APP_SETUP_PLAN'], [data-action='APP_PLAN']");
         if (applyPlanBtn) {
           e.preventDefault();
           var actionType = applyPlanBtn.getAttribute("data-action") || "APP_SETUP_PLAN";
           var setupPlanId = applyPlanBtn.getAttribute("data-plan-id");
           if (!setupPlanId) return;
+
+          applyPlanBtn.disabled = true;
+          applyPlanBtn.innerHTML = '<span class="ai-btn-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></span> <span class="ai-btn-text">Applying Plan...</span>';
+
           if (typeof window.applyAiAppPlan === "function") {
             fetch("/plugins/ai_helper/api/action-plans/" + encodeURIComponent(setupPlanId))
               .then(function (res) {
@@ -259,8 +263,13 @@
                   throw new Error("Invalid setup plan.");
                 }
                 window.applyAiAppPlan(data.plan);
+                applyPlanBtn.innerHTML = '<span class="ai-btn-icon">✓</span> <span class="ai-btn-text">Plan Applied & Step 3 Ready</span>';
+                applyPlanBtn.classList.add("is-applied");
+                if (window.toast) window.toast("Configuration plan loaded into setup wizard.", "success");
               })
               .catch(function (err) {
+                applyPlanBtn.disabled = false;
+                applyPlanBtn.innerHTML = '<span class="ai-btn-text">Accept & Go Next</span> <span class="ai-btn-arrow">→</span>';
                 if (window.toast) window.toast(err.message, "error");
               });
             return;

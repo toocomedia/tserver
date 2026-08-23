@@ -264,8 +264,8 @@ async def inspect_image(payload: InspectImageIn):
 @router.get("/api/resource-guard/disk-inventory")
 async def disk_inventory(db: AsyncSession = Depends(get_db)):
     """Return a dry-run inventory of disk space that can be freed."""
-    active_digests, rollback_images = await _collect_image_digests(db)
-    items = await disk_cleanup_service.inventory(active_digests, rollback_images)
+    active_digests, rollback_images, existing_ids = await _collect_image_digests(db)
+    items = await disk_cleanup_service.inventory(active_digests, rollback_images, existing_ids)
     deletable = [i for i in items if not i["protected"]]
     protected = [i for i in items if i["protected"]]
     total_mb = round(sum(i["size_mb"] for i in deletable), 1)
@@ -281,9 +281,9 @@ async def disk_cleanup(payload: DiskCleanupIn, db: AsyncSession = Depends(get_db
     """Execute cleanup for the selected item IDs."""
     if not payload.include_ids:
         raise HTTPException(400, "include_ids must not be empty.")
-    active_digests, rollback_images = await _collect_image_digests(db)
+    active_digests, rollback_images, existing_ids = await _collect_image_digests(db)
     result = await disk_cleanup_service.run_cleanup(
-        payload.include_ids, active_digests, rollback_images
+        payload.include_ids, active_digests, rollback_images, existing_ids
     )
     # Invalidate disk stats cache so /api/stats reflects freed space immediately
     try:
@@ -298,13 +298,13 @@ async def disk_cleanup(payload: DiskCleanupIn, db: AsyncSession = Depends(get_db
 async def builder_prune(db: AsyncSession = Depends(get_db)):
     """Prune Docker builder cache (BuildKit) — safe, does not remove active images."""
     # Use the same protection inventory logic: build cache is never protected
-    active_digests, rollback_images = await _collect_image_digests(db)
-    items = await disk_cleanup_service.inventory(active_digests, rollback_images)
+    active_digests, rollback_images, existing_ids = await _collect_image_digests(db)
+    items = await disk_cleanup_service.inventory(active_digests, rollback_images, existing_ids)
     cache_items = [i for i in items if i["type"] == disk_cleanup_service.TYPE_BUILD_CACHE]
     if not cache_items:
         return {"deleted": [], "freed_mb": 0.0, "errors": [], "skipped": ["No builder cache found"]}
     result = await disk_cleanup_service.run_cleanup(
-        [cache_items[0]["item_id"]], active_digests, rollback_images
+        [cache_items[0]["item_id"]], active_digests, rollback_images, existing_ids
     )
     try:
         from routers.system import _invalidate_stats_cache
@@ -314,14 +314,18 @@ async def builder_prune(db: AsyncSession = Depends(get_db)):
     return result
 
 
-async def _collect_image_digests(db: AsyncSession) -> tuple[set[str], set[str]]:
-    """Return (active_digests, rollback_images) sets from all container apps."""
+async def _collect_image_digests(db: AsyncSession) -> tuple[set[str], set[str], set[str]]:
+    """Return (active_digests, rollback_images, existing_app_ids) sets from all container apps.
+    existing_app_ids is used for general-safe protection: any srv-panel/railpack-app image
+    belonging to an existing app is kept, even if not the active digest (stopped plugins)."""
     apps = (await db.scalars(select(ContainerApp))).all()
     active: set[str] = set()
     rollback: set[str] = set()
+    existing_ids: set[str] = set()
     for app in apps:
+        existing_ids.add(str(app.id))
         if app.image_digest:
             active.add(app.image_digest)
         if app.previous_image:
             rollback.add(app.previous_image)
-    return active, rollback
+    return active, rollback, existing_ids
