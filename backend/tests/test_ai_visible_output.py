@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import unittest
 
-from plugins.ai_helper.services.setup_handoff import tool_limit_result
+from plugins.ai_helper.services.setup_handoff import missing_plan_message, tool_limit_result
 from plugins.ai_helper.services.visible_output import VisibleOutputFilter, strip_hidden_reasoning
 
 
@@ -33,6 +33,9 @@ class VisibleOutputTests(unittest.TestCase):
         limited = tool_limit_result("app_deploy", "fetch_web_documentation", counts)
         self.assertEqual(limited["status"], "limit_reached")
         self.assertIsNone(tool_limit_result("app_deploy", "propose_stack_install", counts))
+
+    def test_missing_plan_reports_the_last_safe_validation_error(self):
+        self.assertIn("manifest", missing_plan_message(["Stack manifest is invalid."]))
 
 
 if __name__ == "__main__":

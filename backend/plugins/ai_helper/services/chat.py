@@ -329,15 +329,18 @@ async def stream_ai_chat(
     setup_plan_id: str | None = None
     sensitive_file_blocked = False
     setup_plan_required = tools_enabled and setup_handoff.requires_reviewed_plan(task_type)
+    setup_source_type = ""
+    setup_plan_errors: List[str] = []
     if tools_enabled:
         tool_defs = tools.get_tool_definitions(active.provider_type)
         tool_counts: Dict[str, int] = {}
-        plan_request_sent = False
-        max_tool_iterations = 7
+        forced_tool_name: str | None = None
+        plan_attempts = 0
+        max_tool_iterations = 8
 
         async def _execute_tool(fn_name: str, fn_args: Dict[str, Any]) -> Dict[str, Any]:
             """Execute approved tools while bounding setup-only evidence collection."""
-            nonlocal sensitive_file_blocked
+            nonlocal sensitive_file_blocked, setup_source_type, plan_attempts
             limited = setup_handoff.tool_limit_result(task_type, fn_name, tool_counts)
             if limited is not None:
                 return limited
@@ -352,6 +355,14 @@ async def stream_ai_chat(
             )
             if fn_name == "read_website_file" and tool_output.get("status") == "secrets_blocked":
                 sensitive_file_blocked = True
+            if fn_name == "inspect_app_source":
+                setup_source_type = str(tool_output.get("source_type") or "").strip().lower()
+            if fn_name in {"propose_app_install", "propose_stack_install", "propose_official_stack_install"}:
+                plan_attempts += 1
+                if tool_output.get("status") != "ok":
+                    message = str(tool_output.get("message") or "The planning tool rejected this proposal.").strip()
+                    if message:
+                        setup_plan_errors.append(message)
             return tool_output
 
         for _ in range(max_tool_iterations):
@@ -364,9 +375,11 @@ async def stream_ai_chat(
                     model_name=effective_model,
                     messages=norm_messages,
                     tools=tool_defs,
+                    force_tool_name=forced_tool_name,
                     temperature=active.temperature,
                     max_tokens=active.max_tokens,
                 )
+                forced_tool_name = None
                 tool_calls = tool_step.get("tool_calls") or []
                 step_content = tool_step.get("content") or ""
 
@@ -379,9 +392,19 @@ async def stream_ai_chat(
 
                 if not tool_calls:
                     # Model has finished tool usage
-                    if setup_plan_required and not setup_plan_id and not plan_request_sent:
-                        plan_request_sent = True
-                        messages.append({"role": "user", "content": setup_handoff.PLAN_REQUIRED_MESSAGE})
+                    if setup_plan_required and not setup_plan_id and plan_attempts < 2:
+                        forced_tool_name = (
+                            "propose_stack_install" if setup_source_type == "official_stack"
+                            else "propose_app_install"
+                        )
+                        retry_context = (
+                            f" The previous plan was rejected: {setup_plan_errors[-1]}"
+                            if setup_plan_errors else ""
+                        )
+                        messages.append({
+                            "role": "user",
+                            "content": setup_handoff.PLAN_REQUIRED_MESSAGE + retry_context,
+                        })
                         continue
                     break
 
@@ -510,8 +533,9 @@ async def stream_ai_chat(
     full_response = []
     has_error = False
     if setup_plan_required and not setup_plan_id:
-        full_response.append(setup_handoff.MISSING_PLAN_MESSAGE)
-        yield setup_handoff.MISSING_PLAN_MESSAGE
+        missing_plan = setup_handoff.missing_plan_message(setup_plan_errors)
+        full_response.append(missing_plan)
+        yield missing_plan
     else:
         visible_filter = visible_output.VisibleOutputFilter()
         try:

@@ -44,7 +44,14 @@ PLAN_REQUIRED_MESSAGE = (
     "Do not inspect more sources, reveal or generate secret values, or emit action tags."
 )
 
-MISSING_PLAN_MESSAGE = (
-    "No reviewed setup plan was created, so nothing was applied. "
-    "Retry the setup chat to create a validated plan before opening the wizard."
-)
+def missing_plan_message(errors: list[str]) -> str:
+    """Give the user the final actionable plan error without exposing tool internals."""
+    if errors:
+        return (
+            "The reviewed setup plan could not be created: "
+            f"{errors[-1][:420]} Nothing was applied."
+        )
+    return (
+        "No reviewed setup plan was created, so nothing was applied. "
+        "The provider did not call the required planning tool; retry the setup chat."
+    )
