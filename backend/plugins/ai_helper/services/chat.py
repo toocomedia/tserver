@@ -178,6 +178,26 @@ def _sanitize_history_content(
     ).strip()
 
 
+def _flatten_tool_messages_for_text_generation(messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """
+    Converts tool call messages into standard assistant/user text messages for final non-tool streaming.
+    Prevents provider 400 errors (e.g. Gemini 'Function call missing thought_signature' or missing tool defs).
+    """
+    flattened: List[Dict[str, Any]] = []
+    for msg in messages:
+        role = msg.get("role")
+        if role == "assistant" and msg.get("tool_calls"):
+            content = msg.get("content") or ""
+            flattened.append({"role": "assistant", "content": content or "Inspected configuration."})
+        elif role == "tool":
+            fn = msg.get("name") or "tool"
+            raw_content = msg.get("content") or ""
+            flattened.append({"role": "user", "content": f"[Tool Result for {fn}]:\n{raw_content}"})
+        else:
+            flattened.append(msg)
+    return flattened
+
+
 def _normalize_messages_for_llm(messages: List[Dict[str, Any]], provider_type: str) -> List[Dict[str, Any]]:
     """
     Validates and normalizes conversation messages to guarantee strict compliance
@@ -627,7 +647,8 @@ async def stream_ai_chat(
     has_error = False
     visible_filter = visible_output.VisibleOutputFilter()
     try:
-        final_normalized_messages = _normalize_messages_for_llm(messages, active.provider_type)
+        flattened_messages = _flatten_tool_messages_for_text_generation(messages)
+        final_normalized_messages = _normalize_messages_for_llm(flattened_messages, active.provider_type)
         async for chunk in engine.stream_chat(
             provider_type=active.provider_type,
             base_url=active.base_url,
@@ -656,7 +677,7 @@ async def stream_ai_chat(
         full_response.append(err_msg)
         yield err_msg
 
-    if setup_plan_id and not has_error:
+    if setup_plan_id:
         setup_action = f"\n\n[ACTION:APP_SETUP_PLAN:{setup_plan_id}]"
         full_response.append(setup_action)
         yield setup_action
