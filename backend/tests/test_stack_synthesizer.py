@@ -66,6 +66,7 @@ class TestStackSynthesizer(unittest.TestCase):
         self.assertEqual(services["analytics"]["image"], "plausible/analytics:v1.0.0")
         self.assertIn("analytics_postgres", services)
         self.assertIn("analytics_clickhouse", services)
+        self.assertEqual(services["analytics_clickhouse"]["image"], "clickhouse/clickhouse-server:24.3-alpine")
 
         # Plausible web depends on postgres & clickhouse
         self.assertIn("analytics_postgres", services["analytics"]["depends_on"])
