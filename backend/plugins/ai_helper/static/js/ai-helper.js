@@ -636,7 +636,11 @@
         self.isStreaming = false;
         self.sendBtnEl.style.display = "flex";
         self.stopBtnEl.style.display = "none";
-        bubbleContent.innerHTML = '<p style="color: var(--color-danger, #ef4444); margin: 0;">Error: ' + err.message + "</p>";
+        var errorDisplay = err.message || "Connection error";
+        if (errorDisplay.toLowerCase().includes("failed to fetch") || errorDisplay.toLowerCase().includes("network error")) {
+          errorDisplay = "Connection timed out or dropped while communicating with the AI provider. Please verify your provider API key, token balance, and server connectivity.";
+        }
+        bubbleContent.innerHTML = '<p style="color: var(--color-danger, #ef4444); margin: 0; line-height: 1.5;"><strong>Error:</strong> ' + errorDisplay + "</p>";
         if (self.statusEl) self.statusEl.textContent = "Error";
       });
     },

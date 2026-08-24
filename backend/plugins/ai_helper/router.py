@@ -3,7 +3,9 @@ router.py — FastAPI router for AI Helper: multi-provider management, settings,
 """
 from __future__ import annotations
 
+import asyncio
 import json
+import logging
 import uuid
 from typing import Optional
 
@@ -333,28 +335,52 @@ async def chat_endpoint(req: ChatRequest, request: Request, db: AsyncSession = D
             "response": "".join(chunks),
         })
 
-    # Streaming response (Server-Sent Events)
+    # Streaming response (Server-Sent Events) with keepalive heartbeat
     async def sse_event_generator():
         yield ": ping\n\n"
         yield f"data: {json.dumps({'type': 'start', 'session_id': session_id})}\n\n"
-        async for chunk in service.stream_ai_chat(
-            db=db,
-            session_id=session_id,
-            user_message=req.message,
-            context_key=req.context_key,
-            context_text=req.context,
-            provider_id=req.provider_id,
-            model_name=req.model_name,
-            task_type=req.task_type or "general",
-            session_title=req.session_title,
-            user_id=request.session.get("user_id"),
-        ):
-            if chunk.startswith(_ACTIVITY_PREFIX):
-                # Route tool activity events separately — don't include in text stream
-                activity_json = chunk[len(_ACTIVITY_PREFIX):]
-                yield f"data: {json.dumps({'type': 'tool_activity', 'activity': json.loads(activity_json)})}\n\n"
-            else:
-                yield f"data: {json.dumps({'type': 'token', 'token': chunk})}\n\n"
+        queue: asyncio.Queue[str | None] = asyncio.Queue()
+
+        async def producer():
+            try:
+                async for chunk in service.stream_ai_chat(
+                    db=db,
+                    session_id=session_id,
+                    user_message=req.message,
+                    context_key=req.context_key,
+                    context_text=req.context,
+                    provider_id=req.provider_id,
+                    model_name=req.model_name,
+                    task_type=req.task_type or "general",
+                    session_title=req.session_title,
+                    user_id=request.session.get("user_id"),
+                ):
+                    await queue.put(chunk)
+            except Exception as exc:
+                logger.exception("AI stream generation failed: %s", exc)
+                await queue.put(f"\n\n[Error: {str(exc)}]")
+            finally:
+                await queue.put(None)
+
+        producer_task = asyncio.create_task(producer())
+
+        try:
+            while True:
+                try:
+                    chunk = await asyncio.wait_for(queue.get(), timeout=3.0)
+                    if chunk is None:
+                        break
+                    if chunk.startswith(_ACTIVITY_PREFIX):
+                        activity_json = chunk[len(_ACTIVITY_PREFIX):]
+                        yield f"data: {json.dumps({'type': 'tool_activity', 'activity': json.loads(activity_json)})}\n\n"
+                    else:
+                        yield f"data: {json.dumps({'type': 'token', 'token': chunk})}\n\n"
+                except asyncio.TimeoutError:
+                    yield ": ping\n\n"
+        finally:
+            if not producer_task.done():
+                producer_task.cancel()
+
         yield "data: [DONE]\n\n"
 
     return StreamingResponse(
