@@ -15,6 +15,11 @@ from services import container_app_image_inspect_service, container_app_inspecti
 from services.official_stacks.manifest_validator import compute_stack_manifest_hash
 from services.official_stacks.proposal_manifest import stack_from_proposal, validate_stack_settings
 from services.official_stacks.schema import stack_to_dict
+from services.official_stacks.stack_synthesizer import (
+    requires_multi_container_stack,
+    synthesize_stack_from_compose,
+    synthesize_stack_from_inspection,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -30,38 +35,6 @@ _DATABASE_KIND_ALIASES = {
     "keydb": "redis",
     "mongodb": "mongodb",
     "mongo": "mongodb",
-}
-
-_STACK_DB_DEFAULTS = {
-    "postgres": {
-        "ports": [5432],
-        "volume": "/var/lib/postgresql/data",
-        "env": {"POSTGRES_USER": "postgres", "POSTGRES_DB": "app"},
-        "secret": ("POSTGRES_PASSWORD", "PostgreSQL password", "password"),
-        "url": ("DATABASE_URL", "postgresql://postgres:{POSTGRES_PASSWORD}@{service}:5432/app"),
-    },
-    "mysql": {
-        "ports": [3306],
-        "volume": "/var/lib/mysql",
-        "env": {"MYSQL_DATABASE": "app", "MYSQL_USER": "app"},
-        "secret": ("MYSQL_PASSWORD", "MySQL password", "password"),
-        "url": ("DATABASE_URL", "mysql://app:{MYSQL_PASSWORD}@{service}:3306/app"),
-    },
-    "mariadb": {
-        "ports": [3306],
-        "volume": "/var/lib/mysql",
-        "env": {"MARIADB_DATABASE": "app", "MARIADB_USER": "app"},
-        "secret": ("MARIADB_PASSWORD", "MariaDB password", "password"),
-        "url": ("DATABASE_URL", "mysql://app:{MARIADB_PASSWORD}@{service}:3306/app"),
-    },
-    "clickhouse": {
-        "ports": [8123, 9000],
-        "volume": "/var/lib/clickhouse",
-        "env": {},
-        "url": ("CLICKHOUSE_URL", "http://{service}:8123/default"),
-    },
-    "redis": {"ports": [6379], "volume": "/data", "env": {}, "url": ("REDIS_URL", "redis://{service}:6379/0")},
-    "mongo": {"ports": [27017], "volume": "/data/db", "env": {}, "url": ("MONGODB_URL", "mongodb://{service}:27017/app")},
 }
 
 
@@ -254,143 +227,7 @@ def build_stack_args_from_compose(
     repo_url: str = "",
 ) -> Dict[str, Any] | None:
     """Deterministically extracts a stack proposal manifest from source inspection facts."""
-    compose_info = inspection.get("compose_info") if isinstance(inspection, dict) else None
-    if not isinstance(compose_info, dict):
-        return None
-    raw_services = compose_info.get("services")
-    if not isinstance(raw_services, list) or not raw_services:
-        return None
-
-    service_map: dict[str, dict[str, Any]] = {}
-    for item in raw_services[:8]:
-        if not isinstance(item, dict):
-            continue
-        image = str(item.get("image") or "").strip()
-        if not image:
-            continue
-        name_raw = str(item.get("name") or image.rsplit("/", 1)[-1].split(":", 1)[0])
-        name = re.sub(r"[^a-z0-9_-]+", "-", name_raw.strip().lower()).strip("-_") or "svc"
-        if not re.match(r"^[a-z]", name):
-            name = f"svc-{name}"
-        name = name[:48]
-        if name in service_map:
-            continue
-
-        kind = "web"
-        text = f"{name} {image}".lower()
-        for k in ("clickhouse", "postgres", "mariadb", "mysql", "redis", "mongo"):
-            if k in text:
-                kind = k
-                break
-
-        defaults = _STACK_DB_DEFAULTS.get(kind) or {}
-        ports = [int(p) for p in (item.get("internal_ports") or []) if normalize_port(p, 0) > 0]
-        if not ports:
-            ports = list(defaults.get("ports") or [8000])
-
-        svc: dict[str, Any] = {
-            "name": name,
-            "image": image,
-            "ports": ports,
-            "depends_on": [],
-            "environment": dict(defaults.get("env") or {}),
-            "volumes": [],
-            "resources": {"memory_mb": 768 if kind == "clickhouse" else 256 if defaults else 512, "cpu": "1.0"},
-        }
-        if defaults.get("volume"):
-            svc["volumes"].append({"name": f"{name}-data", "mount_path": defaults["volume"]})
-        service_map[name] = svc
-
-    if not service_map:
-        return None
-
-    web_svc = ""
-    for n, s in service_map.items():
-        text = f"{n} {s['image']}".lower()
-        if not any(k in text for k in ("postgres", "mariadb", "mysql", "clickhouse", "redis", "mongo")):
-            web_svc = n
-            break
-    if not web_svc:
-        web_svc = list(service_map.keys())[0]
-
-    for n in service_map:
-        if n != web_svc and n not in service_map[web_svc]["depends_on"]:
-            service_map[web_svc]["depends_on"].append(n)
-
-    env_sample = inspection.get("env_sample") if isinstance(inspection.get("env_sample"), dict) else {}
-    default_env: dict[str, str] = {}
-    for raw_k, raw_v in env_sample.items():
-        k = str(raw_k).strip().upper()
-        if re.fullmatch(r"[A-Z_][A-Z0-9_]{0,127}", k) and not any(t in k for t in ("PASSWORD", "SECRET", "TOKEN", "KEY_BASE")):
-            default_env[k] = str(raw_v or "")
-
-    allowed_settings = sorted(default_env)
-    if "BASE_URL" not in allowed_settings:
-        allowed_settings.append("BASE_URL")
-
-    secrets: list[dict[str, str]] = []
-    seen: set[tuple[str, str]] = set()
-    for n, s in service_map.items():
-        text = f"{n} {s['image']}".lower()
-        for k, d in _STACK_DB_DEFAULTS.items():
-            if k in text and d.get("secret"):
-                sec_k, purp, gen = d["secret"]
-                if (n, sec_k) not in seen:
-                    seen.add((n, sec_k))
-                    secrets.append({"key": sec_k, "purpose": purp, "generator": gen, "service": n, "environment": sec_k})
-
-    for raw_k in env_sample:
-        k = str(raw_k).strip().upper()
-        if any(t in k for t in ("SECRET", "KEY_BASE", "TOKEN", "PRIVATE_KEY", "API_KEY")):
-            gen = "base64_48" if k == "SECRET_KEY_BASE" else "urlsafe64"
-            if (web_svc, k) not in seen:
-                seen.add((web_svc, k))
-                secrets.append({"key": k, "purpose": "Application secret", "generator": gen, "service": web_svc, "environment": k})
-
-    url_templates: dict[str, str] = {}
-    for n, s in service_map.items():
-        text = f"{n} {s['image']}".lower()
-        for k, d in _STACK_DB_DEFAULTS.items():
-            if k in text and d.get("url"):
-                uk, ut = d["url"]
-                url_templates.setdefault(uk, ut.replace("{service}", f"{{{n}}}"))
-
-    clean_repo = repo_url or str(inspection.get("repository_url") or "")
-    stack_name = re.sub(r"[^a-z0-9_-]+", "-", (clean_repo.rsplit("/", 1)[-1].removesuffix(".git") if clean_repo else "stack")).strip("-_") or "stack"
-    if not re.match(r"^[a-z]", stack_name):
-        stack_name = f"stack-{stack_name}"
-
-    manifest = {
-        "name": stack_name[:48],
-        "display_name": f"{stack_name.replace('-', ' ').title()} Stack",
-        "vendor_name": "",
-        "source_repositories": [clean_repo] if clean_repo.startswith(("https://", "http://", "git@")) else [],
-        "version": str(inspection.get("branch") or "main"),
-        "services": list(service_map.values()),
-        "startup_order": [n for n in service_map if n != web_svc] + [web_svc],
-        "web_service": web_svc,
-        "web_port": service_map[web_svc]["ports"][0],
-        "startup_timeout_seconds": 120,
-        "recommended_ram_mb": 2048 if any("clickhouse" in f"{n} {s['image']}".lower() for n, s in service_map.items()) else 1024,
-        "minimum_ram_mb": 512,
-        "allowed_nonsecret_settings": allowed_settings,
-        "default_environment": default_env,
-        "url_templates": url_templates,
-        "secrets": secrets,
-    }
-    settings = {"BASE_URL": f"https://{domain_name.strip()}"} if domain_name.strip() else {}
-    evidence = list(compose_info.get("evidence") or [])
-    evidence.append("Panel source inspection generated this restricted stack plan.")
-
-    return {
-        "stack_manifest": manifest,
-        "domain_name": domain_name.strip(),
-        "nonsecret_settings": settings,
-        "evidence": evidence[:12],
-        "summary": f"Deploy restricted stack for {clean_repo or stack_name}",
-        "confidence": 0.95,
-        "reasoning": "Server inspected Compose configuration and generated verified stack deployment.",
-    }
+    return synthesize_stack_from_compose(inspection, domain_name=domain_name, repo_url=repo_url)
 
 
 async def build_automatic_setup_plan(
@@ -424,10 +261,11 @@ async def build_automatic_setup_plan(
         except Exception as exc:
             logger.warning("Automatic inspection failed during fallback: %s", exc)
 
-    # Check if multi-container stack
-    compose_services = (inspection.get("compose_info") or {}).get("services") if isinstance(inspection, dict) else None
-    if compose_services and len(compose_services) > 1:
-        stack_args = build_stack_args_from_compose(inspection, domain_name=domain_name, repo_url=repository_url)
+    # Check if multi-container stack is needed (via Compose or multi-datastore / ClickHouse)
+    if requires_multi_container_stack(inspection):
+        stack_args = synthesize_stack_from_compose(inspection, domain_name=domain_name, repo_url=repository_url)
+        if not stack_args:
+            stack_args = synthesize_stack_from_inspection(inspection, domain_name=domain_name, repo_url=repository_url)
         if stack_args:
             try:
                 payload = await build_stack_payload(

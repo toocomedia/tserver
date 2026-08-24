@@ -5,6 +5,7 @@ import re
 from typing import Any
 
 from services.official_stacks.manifest_validator import validate_stack_manifest
+from services.official_stacks.proposal_normalizer import normalize_stack_proposal_manifest
 from services.official_stacks.schema import (
     HealthCheckDefinition,
     OfficialStackDefinition,
@@ -48,6 +49,7 @@ def stack_from_proposal(raw: Any, evidence: list[str] | None = None) -> Official
     """Convert an evidence-backed field manifest; reject Compose/YAML and hidden options."""
     if not isinstance(raw, dict) or not raw:
         raise ValueError("Stack proposal requires a structured manifest object.")
+    raw = normalize_stack_proposal_manifest(raw)
     unknown = set(raw) - _TOP_LEVEL
     if unknown:
         raise ValueError(f"Stack proposal has unsupported fields: {', '.join(sorted(unknown))}.")

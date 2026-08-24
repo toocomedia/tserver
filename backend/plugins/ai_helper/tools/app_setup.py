@@ -258,13 +258,19 @@ async def propose_app_install(
     stype = (source_type or ("image" if image_reference.strip() else "git")).strip().lower()
     bmode = (build_mode or ("image" if stype == "image" else "railpack")).strip().lower()
 
-    # If git repo contains multi-service compose stack, promote to stack install seamlessly
+    # If git repo contains multi-service compose stack or multi-datastore requirement, promote to stack install seamlessly
     if stype == "git" and repository_url.strip():
         try:
             inspection = container_app_inspection_service.inspect_repository(repository_url.strip(), branch.strip() or "main")
-            compose_services = (inspection.get("compose_info") or {}).get("services") if isinstance(inspection, dict) else None
-            if compose_services and len(compose_services) > 1:
-                stack_args = setup_plan_builder.build_stack_args_from_compose(inspection, domain_name=domain_name, repo_url=repository_url)
+            from services.official_stacks.stack_synthesizer import (
+                requires_multi_container_stack,
+                synthesize_stack_from_compose,
+                synthesize_stack_from_inspection,
+            )
+            if requires_multi_container_stack(inspection):
+                stack_args = synthesize_stack_from_compose(inspection, domain_name=domain_name, repo_url=repository_url)
+                if not stack_args:
+                    stack_args = synthesize_stack_from_inspection(inspection, domain_name=domain_name, repo_url=repository_url)
                 if stack_args:
                     stack_payload = await setup_plan_builder.build_stack_payload(
                         stack_manifest=stack_args["stack_manifest"],
