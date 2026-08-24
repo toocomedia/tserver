@@ -63,6 +63,7 @@ class TestStackSynthesizer(unittest.TestCase):
 
         services = {s["name"]: s for s in manifest["services"]}
         self.assertIn("analytics", services)
+        self.assertEqual(services["analytics"]["image"], "plausible/analytics:v1.0.0")
         self.assertIn("analytics_postgres", services)
         self.assertIn("analytics_clickhouse", services)
 

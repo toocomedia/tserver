@@ -158,6 +158,19 @@ def synthesize_stack_from_compose(
     )
 
 
+def _derive_web_image(clean_repo: str, inspection: dict[str, Any], tag: str) -> str:
+    """Derives container image reference from inspection facts or repository coordinates."""
+    img = str(inspection.get("image_reference") or inspection.get("image") or "").strip()
+    if img:
+        return img
+    norm_repo = clean_repo.lower().removesuffix(".git").rstrip("/")
+    parts = [p for p in norm_repo.split("/") if p and not p.endswith(":")]
+    if len(parts) >= 2:
+        return f"{parts[-2]}/{parts[-1]}:{tag}"
+    base_name = norm_repo.rsplit("/", 1)[-1] if norm_repo else "app"
+    return f"{base_name}:{tag}"
+
+
 def synthesize_stack_from_inspection(
     inspection: dict[str, Any],
     domain_name: str = "",
@@ -186,10 +199,12 @@ def synthesize_stack_from_inspection(
     elif not any(c.isdigit() for c in tag):
         tag = "v1.0.0"
 
+    web_image = _derive_web_image(clean_repo, inspection, tag)
+
     # 1. Main web service
     service_map[app_svc_name] = {
         "name": app_svc_name,
-        "image": f"{base_name}:{tag}",
+        "image": web_image,
         "ports": [app_port],
         "depends_on": [],
         "environment": {},
