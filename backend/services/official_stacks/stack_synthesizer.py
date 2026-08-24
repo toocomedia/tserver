@@ -171,6 +171,8 @@ def _derive_web_image(clean_repo: str, inspection: dict[str, Any], tag: str) -> 
     if img:
         return img
     norm_repo = clean_repo.lower().removesuffix(".git").rstrip("/")
+    if "plausible/analytics" in norm_repo or "plausible/community-edition" in norm_repo:
+        return f"ghcr.io/plausible/community-edition:{tag}"
     parts = [p for p in norm_repo.split("/") if p and not p.endswith(":")]
     if len(parts) >= 2:
         return f"{parts[-2]}/{parts[-1]}:{tag}"
@@ -199,12 +201,18 @@ def synthesize_stack_from_inspection(
 
     service_map: dict[str, dict[str, Any]] = {}
 
-    raw_branch = str(inspection.get("branch") or "v1.0.0").strip()
-    tag = "v1.0.0" if raw_branch.lower() in ("main", "master", "latest", "trunk", "") else raw_branch
-    if not tag.startswith("v") and tag and tag[0].isdigit():
-        tag = f"v{tag}"
-    elif not any(c.isdigit() for c in tag):
-        tag = "v1.0.0"
+    raw_branch = str(inspection.get("branch") or "").strip()
+    version_hint = str(inspection.get("version") or "").strip()
+    if raw_branch.startswith("v") and any(c.isdigit() for c in raw_branch):
+        tag = raw_branch
+    elif version_hint and any(c.isdigit() for c in version_hint):
+        tag = version_hint if version_hint.startswith("v") else f"v{version_hint}"
+    elif any(c.isdigit() for c in raw_branch) and "." in raw_branch:
+        tag = f"v{raw_branch}"
+    elif "plausible" in clean_repo.lower():
+        tag = "v2"
+    else:
+        tag = "v1"
 
     web_image = _derive_web_image(clean_repo, inspection, tag)
 
@@ -268,6 +276,7 @@ def _build_stack_definition_bundle(
     repo_url: str,
     evidence_source: str,
 ) -> dict[str, Any]:
+    clean_repo = repo_url or str(inspection.get("repository_url") or "")
     web_svc = ""
     for n, s in service_map.items():
         text = f"{n} {s['image']}".lower()
@@ -310,6 +319,29 @@ def _build_stack_definition_bundle(
             if (web_svc, k) not in seen:
                 seen.add((web_svc, k))
                 secrets.append({"key": k, "purpose": "Application secret", "generator": gen, "service": web_svc, "environment": k})
+
+    # Dynamic framework secret deduction when missing from sample
+    runtime_str = str(inspection.get("runtime") or "").lower()
+    framework_str = str(inspection.get("framework") or "").lower()
+    deduce_context = f"{clean_repo} {runtime_str} {framework_str}".lower()
+
+    if any(k in deduce_context for k in ("elixir", "phoenix", "plausible")):
+        for sec_k, gen in [("SECRET_KEY_BASE", "base64_48"), ("TOTP_VAULT_KEY", "urlsafe64")]:
+            if (web_svc, sec_k) not in seen:
+                seen.add((web_svc, sec_k))
+                secrets.append({"key": sec_k, "purpose": "Elixir/Phoenix application secret", "generator": gen, "service": web_svc, "environment": sec_k})
+    elif any(k in deduce_context for k in ("laravel", "php")):
+        if (web_svc, "APP_KEY") not in seen:
+            seen.add((web_svc, "APP_KEY"))
+            secrets.append({"key": "APP_KEY", "purpose": "Laravel application key", "generator": "urlsafe64", "service": web_svc, "environment": "APP_KEY"})
+    elif any(k in deduce_context for k in ("rails", "ruby")):
+        if (web_svc, "SECRET_KEY_BASE") not in seen:
+            seen.add((web_svc, "SECRET_KEY_BASE"))
+            secrets.append({"key": "SECRET_KEY_BASE", "purpose": "Rails secret key base", "generator": "urlsafe64", "service": web_svc, "environment": "SECRET_KEY_BASE"})
+    elif any(k in deduce_context for k in ("django", "python")):
+        if (web_svc, "SECRET_KEY") not in seen:
+            seen.add((web_svc, "SECRET_KEY"))
+            secrets.append({"key": "SECRET_KEY", "purpose": "Django secret key", "generator": "urlsafe64", "service": web_svc, "environment": "SECRET_KEY"})
 
     url_templates: dict[str, str] = {}
     for n, s in service_map.items():

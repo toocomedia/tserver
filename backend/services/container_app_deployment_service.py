@@ -419,11 +419,19 @@ async def _deploy_official_stack(
             readiness, readiness_detail = "healthy", f"Private HTTP check passed on {health_path}."
         except Exception as exc:
             readiness, readiness_detail = "degraded", str(exc)[:1000]
-            progress.append_log(deployment, "health", f"[warning] {readiness_detail}; process remains running.")
+            progress.append_log(deployment, "health", f"[warning] HTTP probe on {health_path} did not return 200 ({exc}); containers remain running in degraded state. Diagnostics collected.")
     app.health_state, app.health_detail = readiness, readiness_detail
+    logs_summary: dict[str, str] = {}
+    if readiness == "degraded":
+        try:
+            from services.container_app_diagnostics_service import _container_logs
+            logs_summary = {name: _container_logs(item["container_name"]) for name, item in service_states.items()}
+        except Exception:
+            pass
     deployment.diagnostics_json = json.dumps({
         "stage": "private_readiness", "readiness": readiness,
         "services": service_states, "http_path": health_path or None,
+        "logs": logs_summary,
         "public_check": "pending_until_route_and_dns_are_available",
     }, sort_keys=True)
 

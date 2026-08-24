@@ -19,7 +19,9 @@
         <polyline points="18 15 12 9 6 15"></polyline>
       </svg>
     </div>
-    <ul class="sidebar__nav" id="sidebar-nav" role="list">
+    <div class="sidebar__views" id="sidebar-views">
+
+    <ul class="sidebar__nav sidebar__view sidebar__view--main is-active" id="sidebar-nav" role="list">
 
     <li>
       <a href="{{ path('home') }}" class="sidebar__item" data-path="{{ path('home') }}" aria-label="Dashboard">
@@ -124,19 +126,20 @@
 
     {% set plugin_items = get_plugin_sidebar_items() %}
     {% if plugin_items %}
-    <li class="sidebar__section-label">{{ _('plugins_services') }}</li>
-    {% for item in plugin_items %}
     <li>
-      <a href="{{ item.route }}" class="sidebar__item" data-path="{{ item.route }}" aria-label="{{ item.label }}">
-        {% if item.icon.startswith('devicon-') %}
-        <i class="{{ item.icon }}" aria-hidden="true"></i>
-        {% else %}
-        <i data-lucide="{{ item.icon }}" aria-hidden="true"></i>
-        {% endif %}
-        {{ _(item.label) }}
-      </a>
+      <button type="button" class="sidebar__section-tab" id="plugins-services-tab" aria-haspopup="true" aria-controls="sidebar-plugins-view" aria-expanded="false">
+        <svg viewbox="0 0 24 24" aria-hidden="true">
+          <rect x="3" y="3" width="7" height="7"></rect>
+          <rect x="14" y="3" width="7" height="7"></rect>
+          <rect x="14" y="14" width="7" height="7"></rect>
+          <rect x="3" y="14" width="7" height="7"></rect>
+        </svg>
+        {{ _('plugins_services') }}
+        <svg class="sidebar__tab-chevron" viewbox="0 0 24 24" aria-hidden="true">
+          <polyline points="9 18 15 12 9 6"></polyline>
+        </svg>
+      </button>
     </li>
-    {% endfor %}
     {% endif %}
 
     <li class="sidebar__section-label">{{ _('system') }}</li>
@@ -183,6 +186,33 @@
     </li>
 
     </ul>
+
+    {% if plugin_items %}
+    <div class="sidebar__view sidebar__view--plugins" id="sidebar-plugins-view" aria-hidden="true">
+      <button type="button" class="sidebar__view-back" id="plugins-services-back" aria-label="{{ _('back') }}">
+        <svg viewbox="0 0 24 24" aria-hidden="true">
+          <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+        {{ _('plugins_services') }}
+      </button>
+      <ul class="sidebar__nav" id="sidebar-plugins-nav" role="list">
+        {% for item in plugin_items %}
+        <li>
+          <a href="{{ item.route }}" class="sidebar__item" data-path="{{ item.route }}" aria-label="{{ item.label }}">
+            {% if item.icon.startswith('devicon-') %}
+            <i class="{{ item.icon }}" aria-hidden="true"></i>
+            {% else %}
+            <i data-lucide="{{ item.icon }}" aria-hidden="true"></i>
+            {% endif %}
+            {{ _(item.label) }}
+          </a>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+
+    </div>
     <div class="sidebar__scroll-arrow sidebar__scroll-arrow--down" id="sidebar-scroll-down" aria-label="Scroll down">
       <svg viewbox="0 0 24 24">
         <polyline points="6 9 12 15 18 9"></polyline>

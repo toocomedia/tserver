@@ -335,6 +335,7 @@ async def chat_endpoint(req: ChatRequest, request: Request, db: AsyncSession = D
 
     # Streaming response (Server-Sent Events)
     async def sse_event_generator():
+        yield ": ping\n\n"
         yield f"data: {json.dumps({'type': 'start', 'session_id': session_id})}\n\n"
         async for chunk in service.stream_ai_chat(
             db=db,

@@ -438,21 +438,34 @@ document.addEventListener("DOMContentLoaded", () => {
     setInterval(fetchNotificationCount, 60000);
   }
 
-  // Sidebar custom scroll logic
+  // Sidebar custom scroll logic + Plugins Services view swapping
   const sidebarNav = document.getElementById("sidebar-nav");
   const scrollUpBtn = document.getElementById("sidebar-scroll-up");
   const scrollDownBtn = document.getElementById("sidebar-scroll-down");
+  const pluginsView = document.getElementById("sidebar-plugins-view");
+  const pluginsNav = pluginsView ? pluginsView.querySelector(".sidebar__nav") : null;
+  let updateScrollArrows = null;
 
   if (sidebarNav && scrollUpBtn && scrollDownBtn) {
-    const updateScrollArrows = () => {
-      const { scrollTop, scrollHeight, clientHeight } = sidebarNav;
-      
+    const navLists = [sidebarNav, pluginsNav].filter(Boolean);
+    const getActiveNav = () => {
+      return navLists.find((nav) => {
+        const view = nav.classList.contains("sidebar__view")
+          ? nav
+          : nav.closest(".sidebar__view");
+        return view ? view.classList.contains("is-active") : true;
+      }) || sidebarNav;
+    };
+
+    updateScrollArrows = () => {
+      const { scrollTop, scrollHeight, clientHeight } = getActiveNav();
+
       if (scrollTop > 0) {
         scrollUpBtn.classList.add("visible");
       } else {
         scrollUpBtn.classList.remove("visible");
       }
-      
+
       if (Math.ceil(scrollTop + clientHeight) < scrollHeight) {
         scrollDownBtn.classList.add("visible");
       } else {
@@ -460,18 +473,56 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     };
 
-    sidebarNav.addEventListener("scroll", updateScrollArrows);
+    navLists.forEach((nav) => nav.addEventListener("scroll", updateScrollArrows));
     window.addEventListener("resize", updateScrollArrows);
     // Initial check (delay slightly to ensure render)
     setTimeout(updateScrollArrows, 100);
 
     scrollUpBtn.addEventListener("click", () => {
-      sidebarNav.scrollBy({ top: -200, behavior: "smooth" });
+      getActiveNav().scrollBy({ top: -200, behavior: "smooth" });
     });
 
     scrollDownBtn.addEventListener("click", () => {
-      sidebarNav.scrollBy({ top: 200, behavior: "smooth" });
+      getActiveNav().scrollBy({ top: 200, behavior: "smooth" });
     });
+  }
+
+  // Plugins Services sidebar tab: swap main items <-> plugins/services list
+  if (pluginsView && sidebarNav) {
+    const pluginsTab = document.getElementById("plugins-services-tab");
+    const pluginsBack = document.getElementById("plugins-services-back");
+    const viewsWrap = document.getElementById("sidebar-views");
+
+    const showPluginsView = () => {
+      pluginsView.classList.add("is-active");
+      pluginsView.removeAttribute("aria-hidden");
+      sidebarNav.classList.remove("is-active");
+      sidebarNav.classList.add("is-behind");
+      if (pluginsTab) pluginsTab.setAttribute("aria-expanded", "true");
+      if (updateScrollArrows) updateScrollArrows();
+    };
+
+    const showMainView = () => {
+      pluginsView.classList.remove("is-active");
+      pluginsView.setAttribute("aria-hidden", "true");
+      sidebarNav.classList.remove("is-behind");
+      sidebarNav.classList.add("is-active");
+      if (pluginsTab) pluginsTab.setAttribute("aria-expanded", "false");
+      if (updateScrollArrows) updateScrollArrows();
+    };
+
+    if (pluginsTab) pluginsTab.addEventListener("click", showPluginsView);
+    if (pluginsBack) pluginsBack.addEventListener("click", showMainView);
+    // When landing on a plugin/service page, open that view instantly (no animation)
+    if (bestMatch && pluginsView.contains(bestMatch)) {
+      if (viewsWrap) viewsWrap.classList.add("is-instant");
+      showPluginsView();
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          if (viewsWrap) viewsWrap.classList.remove("is-instant");
+        });
+      });
+    }
   }
 
   // Sidebar Search
@@ -499,40 +550,43 @@ document.addEventListener("DOMContentLoaded", () => {
 
     sidebarSearchInput.addEventListener("input", (e) => {
       const term = e.target.value.toLowerCase().trim();
-      const items = sidebarNav.querySelectorAll("li");
-      
-      let currentSectionLabel = null;
-      let sectionHasVisibleItems = false;
-      
-      items.forEach(li => {
-        if (li.classList.contains("sidebar__section-label")) {
-          // If we had a previous section, hide it if it had no visible items
-          if (currentSectionLabel && !sectionHasVisibleItems) {
-            currentSectionLabel.style.display = "none";
-          }
-          currentSectionLabel = li;
-          sectionHasVisibleItems = false; // reset for new section
-          // Show by default unless we hide it later
-          li.style.display = ""; 
-        } else {
-          // Regular item
-          const text = li.textContent.toLowerCase();
-          if (text.includes(term)) {
+
+      const filterList = (listEl) => {
+        let currentSectionLabel = null;
+        let sectionHasVisibleItems = false;
+
+        listEl.querySelectorAll("li").forEach(li => {
+          if (li.classList.contains("sidebar__section-label") || li.querySelector(".sidebar__section-tab")) {
+            // If we had a previous section, hide it if it had no visible items
+            if (currentSectionLabel && !sectionHasVisibleItems) {
+              currentSectionLabel.style.display = "none";
+            }
+            currentSectionLabel = li.classList.contains("sidebar__section-label") ? li : null;
+            sectionHasVisibleItems = false; // reset for new section
+            // Show by default unless we hide it later
             li.style.display = "";
-            sectionHasVisibleItems = true;
           } else {
-            li.style.display = "none";
+            // Regular item
+            const text = li.textContent.toLowerCase();
+            if (text.includes(term)) {
+              li.style.display = "";
+              sectionHasVisibleItems = true;
+            } else {
+              li.style.display = "none";
+            }
           }
+        });
+
+        // Check last section
+        if (currentSectionLabel && !sectionHasVisibleItems) {
+          currentSectionLabel.style.display = "none";
         }
-      });
-      
-      // Check last section
-      if (currentSectionLabel && !sectionHasVisibleItems) {
-        currentSectionLabel.style.display = "none";
-      }
-      
+      };
+
+      [sidebarNav, pluginsNav].filter(Boolean).forEach(filterList);
+
       // Update arrows
-      sidebarNav.dispatchEvent(new Event("scroll"));
+      if (updateScrollArrows) updateScrollArrows();
     });
   }
 

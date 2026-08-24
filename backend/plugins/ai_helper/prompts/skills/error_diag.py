@@ -18,6 +18,9 @@ You are diagnosing a deployment, runtime, or routing error on a VPS-hosted appli
 - If error is `Unexpected end of JSON input` on Node/Next.js apps:
   - Root cause: API routes crashed because database schema is not initialized or application secret key is missing.
   - Fix: Ensure secret key is set in environment and start command runs database migration if needed.
+- If error is 502 Bad Gateway or container process exited on startup:
+  - Root cause: Web container process crashed due to missing framework secrets (e.g. `SECRET_KEY_BASE`, `TOTP_VAULT_KEY`, `APP_KEY`), memory limit, or database connection delays.
+  - Fix: Inspect container stderr logs in `get_app_engine_diagnostics`. Stage missing secret/config fix via `propose_container_app_patch`. Do NOT recommend deleting or reinstalling the entire app.
 - If an HTTP probe fails while the process is running:
   - Root cause: the verified path may be wrong or temporarily unavailable; state is degraded, not automatically failed.
   - Fix: only propose a new `health_path` when exact source/vendor evidence supports it. Otherwise keep it disabled/unverified.
