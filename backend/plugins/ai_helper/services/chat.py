@@ -18,7 +18,7 @@ from plugins.ai_helper.tools import app_setup as app_setup_tools
 from plugins.ai_helper.services.providers import decrypt_key, get_active_provider, get_provider
 from plugins.ai_helper.services.secrets_consent import check_consent_phrase, is_secrets_allowed
 from plugins.ai_helper.services.sessions import generate_title_from_prompt, get_or_create_session
-from plugins.ai_helper.services import setup_handoff, visible_output
+from plugins.ai_helper.services import setup_handoff, setup_plan_builder, visible_output
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +58,20 @@ def _extract_setup_domain(*texts: str | None) -> str:
         if candidate not in ignored:
             return candidate
     return ""
+
+
+def _extract_setup_source(*texts: str | None) -> tuple[str, str, str]:
+    """Returns (source_type, repository_url, image_reference) extracted from user input/context."""
+    joined = "\n".join(text or "" for text in texts)
+    git_match = re.search(r"(https?://[^\s\"'<>]*(?:github|gitlab|bitbucket)[^\s\"'<>]*|git@[^\s\"'<>]+|https?://[^\s\"'<>]+\.git)", joined, re.IGNORECASE)
+    if git_match:
+        return "git", git_match.group(1).strip(), ""
+    img_match = re.search(r"(?:image[:\s]+)?([a-z0-9_.-]+/[a-z0-9_.-]+(?::[a-z0-9_.-]+)?|[a-z0-9_-]+:[a-z0-9_.-]+)", joined, re.IGNORECASE)
+    if img_match:
+        val = img_match.group(1).strip()
+        if not val.startswith("http"):
+            return "image", "", val
+    return "git", "", ""
 
 
 
@@ -578,9 +592,25 @@ async def stream_ai_chat(
                 })
                 break
 
-        # After tool loop: inject mandatory response instruction if tools were used.
-        # This guarantees the model produces visible output and doesn't just trail off.
-        if tool_was_executed and not (setup_plan_required and not setup_plan_id):
+        # After tool loop: ensure a setup plan is created if this was a setup request
+        if setup_plan_required and not setup_plan_id:
+            stype, repo, img = _extract_setup_source(user_message, context_text)
+            try:
+                fallback_plan = await setup_plan_builder.build_automatic_setup_plan(
+                    db=db,
+                    session_id=session_id,
+                    user_id=user_id,
+                    source_type=stype,
+                    repository_url=repo,
+                    image_reference=img,
+                    domain_name=setup_target_domain,
+                    inspection_result=setup_source_result,
+                )
+                setup_plan_id = fallback_plan.plan_id
+            except Exception as exc:
+                logger.warning("Automatic setup plan creation fallback failed: %s", exc)
+
+        if tool_was_executed:
             messages.append({
                 "role": "user",
                 "content": (
@@ -595,41 +625,36 @@ async def stream_ai_chat(
     # Stream final assistant response
     full_response = []
     has_error = False
-    if setup_plan_required and not setup_plan_id:
-        missing_plan = setup_handoff.missing_plan_message(setup_plan_errors)
-        full_response.append(missing_plan)
-        yield missing_plan
-    else:
-        visible_filter = visible_output.VisibleOutputFilter()
-        try:
-            final_normalized_messages = _normalize_messages_for_llm(messages, active.provider_type)
-            async for chunk in engine.stream_chat(
-                provider_type=active.provider_type,
-                base_url=active.base_url,
-                api_key=api_key,
-                model_name=effective_model,
-                messages=final_normalized_messages,
-                temperature=active.temperature,
-                max_tokens=active.max_tokens,
-            ):
-                visible_chunk = visible_filter.push(chunk)
-                if visible_chunk:
-                    full_response.append(visible_chunk)
-                    yield visible_chunk
-            final_chunk = visible_filter.finish()
-            if final_chunk:
-                full_response.append(final_chunk)
-                yield final_chunk
-        except engine.AIProviderError as exc:
-            has_error = True
-            err_msg = f"\n\n[Error from AI Provider: {exc.message}]"
-            full_response.append(err_msg)
-            yield err_msg
-        except Exception as exc:
-            has_error = True
-            err_msg = f"\n\n[Error: {str(exc)}]"
-            full_response.append(err_msg)
-            yield err_msg
+    visible_filter = visible_output.VisibleOutputFilter()
+    try:
+        final_normalized_messages = _normalize_messages_for_llm(messages, active.provider_type)
+        async for chunk in engine.stream_chat(
+            provider_type=active.provider_type,
+            base_url=active.base_url,
+            api_key=api_key,
+            model_name=effective_model,
+            messages=final_normalized_messages,
+            temperature=active.temperature,
+            max_tokens=active.max_tokens,
+        ):
+            visible_chunk = visible_filter.push(chunk)
+            if visible_chunk:
+                full_response.append(visible_chunk)
+                yield visible_chunk
+        final_chunk = visible_filter.finish()
+        if final_chunk:
+            full_response.append(final_chunk)
+            yield final_chunk
+    except engine.AIProviderError as exc:
+        has_error = True
+        err_msg = f"\n\n[Error from AI Provider: {exc.message}]"
+        full_response.append(err_msg)
+        yield err_msg
+    except Exception as exc:
+        has_error = True
+        err_msg = f"\n\n[Error: {str(exc)}]"
+        full_response.append(err_msg)
+        yield err_msg
 
     if setup_plan_id and not has_error:
         setup_action = f"\n\n[ACTION:APP_SETUP_PLAN:{setup_plan_id}]"

@@ -253,103 +253,60 @@ async def propose_app_install(
     if user_id is None:
         return {"status": "error", "message": "AI setup drafts require an authenticated panel user."}
 
-    source_and_mode = _install_mode(source_type, build_mode)
-    if source_and_mode is None:
-        return {
-            "status": "unsupported",
-            "message": "App Engine supports one registry image or one Git app built by Railpack or Dockerfile. Docker Compose and multi-service stacks need a separate supported Compose deployment path.",
-        }
-    source_type, build_mode = source_and_mode
-    source_error = _single_app_source_error(source_type, repository_url, branch)
-    if source_error:
-        return {"status": "unsupported", "message": source_error}
+    from plugins.ai_helper.services import setup_plan_builder
 
-    try:
-        port = int(internal_port)
-        if port < 1 or port > 65535:
-            port = 3000
-    except (ValueError, TypeError):
-        port = 3000
+    stype = (source_type or ("image" if image_reference.strip() else "git")).strip().lower()
+    bmode = (build_mode or ("image" if stype == "image" else "railpack")).strip().lower()
 
-    clean_envs: Dict[str, str] = {}
-    if isinstance(environment_values, dict):
-        for k, v in environment_values.items():
-            if isinstance(k, str) and k.strip():
-                clean_envs[k.strip()] = str(v) if v is not None else ""
-
-    # AI may name secret requirements, but must never receive or generate their values.
-    cleaned_secrets = [
-        {"key": key, "purpose": "Application secret", "generator": "urlsafe64"}
-        for key in list(clean_envs)
-        if any(s in key.upper() for s in ("SECRET", "SALT", "KEY_BASE", "JWT", "PASSWORD", "AUTH_KEY"))
-    ]
-    for item in cleaned_secrets:
-        clean_envs.pop(item["key"], None)
-
-    if isinstance(secret_requirements, list):
-        known_secret_keys = {item["key"] for item in cleaned_secrets}
-        for item in secret_requirements:
-            if not isinstance(item, dict):
-                continue
-            key = str(item.get("key") or "").strip()
-            if not re.fullmatch(r"[A-Z][A-Z0-9_]{0,127}", key) or key in known_secret_keys:
-                continue
-            purpose = str(item.get("purpose") or "Application secret").strip()[:256]
-            generator = str(item.get("generator") or "urlsafe64").strip()
-            if generator not in {"urlsafe64", "password", "hex32"}:
-                continue
-            cleaned_secrets.append({"key": key, "purpose": purpose or "Application secret", "generator": generator})
-            known_secret_keys.add(key)
-
-    clean_dbs: List[Dict[str, str]] = []
-    if isinstance(database_attachments, list):
-        for item in database_attachments:
-            if isinstance(item, dict) and item.get("kind"):
-                kind = _normalize_database_kind(str(item.get("kind", "")).strip().lower())
-                if kind not in _SUPPORTED_DATABASE_KINDS:
+    # If git repo contains multi-service compose stack, promote to stack install seamlessly
+    if stype == "git" and repository_url.strip():
+        try:
+            inspection = container_app_inspection_service.inspect_repository(repository_url.strip(), branch.strip() or "main")
+            compose_services = (inspection.get("compose_info") or {}).get("services") if isinstance(inspection, dict) else None
+            if compose_services and len(compose_services) > 1:
+                stack_args = setup_plan_builder.build_stack_args_from_compose(inspection, domain_name=domain_name, repo_url=repository_url)
+                if stack_args:
+                    stack_payload = await setup_plan_builder.build_stack_payload(
+                        stack_manifest=stack_args["stack_manifest"],
+                        domain_name=domain_name,
+                        nonsecret_settings=stack_args.get("nonsecret_settings"),
+                        evidence=stack_args.get("evidence"),
+                    )
+                    plan = await action_plans.create_action_plan(
+                        db=db,
+                        session_id=session_id or "default_session",
+                        action_type="stack_install",
+                        payload=stack_payload,
+                        summary=summary or stack_args.get("summary") or f"Deploy stack: {repository_url}",
+                        confidence=confidence,
+                        reasoning=reasoning or stack_args.get("reasoning") or "Multi-service stack plan generated from repository inspection.",
+                        user_id=user_id,
+                    )
                     return {
-                        "status": "unsupported",
-                        "message": f"App Engine cannot attach '{kind}' to a single-container Railpack app. No setup draft was created.",
+                        "status": "ok",
+                        "plan_id": plan.plan_id,
+                        "summary": plan.summary,
+                        "confidence": plan.confidence,
+                        "message": "Reviewed stack setup plan created. The user can deploy it with the server-rendered Deploy reviewed setup action.",
                     }
-                provider = _normalize_database_provider(str(item.get("provider", "docker")).strip().lower(), kind)
-                clean_dbs.append({
-                    "kind": kind,
-                    "provider": provider,
-                    "environment_key": str(item.get("environment_key", "DATABASE_URL")).strip(),
-                })
+        except Exception as exc:
+            logger.warning("Auto-detection for stack proposal failed: %s", exc)
 
-    clean_mounts: List[Dict[str, str]] = []
-    if isinstance(storage_mounts, list):
-        for item in storage_mounts:
-            if isinstance(item, dict) and item.get("mount_path"):
-                raw_lbl = str(item.get("label", "data")).strip().lower()
-                clean_lbl = re.sub(r"[^a-z0-9_-]+", "-", raw_lbl).strip("-_")[:32] or "data"
-                clean_mounts.append({
-                    "label": clean_lbl,
-                    "mount_path": str(item.get("mount_path", "")).strip(),
-                })
-
-    clean_health_path = (health_path or "disabled").strip()
-    if clean_health_path.lower() in {"", "disabled", "none", "skip", "off"}:
-        clean_health_path = "disabled"
-    elif not clean_health_path.startswith("/") or len(clean_health_path) > 255 or any(c in clean_health_path for c in "\r\n\t"):
-        return {"status": "error", "message": "Health path must be disabled or an evidence-backed absolute path."}
-
-    payload = {
-        "source_type": (source_type or "image").strip().lower(),
-        "repository_url": repository_url.strip(),
-        "branch": branch.strip() or "main",
-        "image_reference": image_reference.strip(),
-        "internal_port": port,
-        "build_mode": (build_mode or "railpack").strip().lower(),
-        "custom_start_command": (custom_start_command or "").strip(),
-        "health_path": clean_health_path,
-        "environment_values": clean_envs,
-        "secret_requirements": cleaned_secrets,
-        "database_attachments": clean_dbs,
-        "storage_mounts": clean_mounts,
-        "domain_name": domain_name.strip(),
-    }
+    payload = setup_plan_builder.build_single_app_payload(
+        source_type=stype,
+        repository_url=repository_url,
+        branch=branch,
+        image_reference=image_reference,
+        internal_port=internal_port,
+        build_mode=bmode,
+        custom_start_command=custom_start_command,
+        health_path=health_path,
+        environment_values=environment_values,
+        secret_requirements=secret_requirements,
+        database_attachments=database_attachments,
+        storage_mounts=storage_mounts,
+        domain_name=domain_name,
+    )
 
     sess_id = session_id or "default_session"
     plan_summary = summary or f"Install {image_reference or repository_url or 'Application'}"
@@ -627,38 +584,22 @@ async def propose_stack_install(
     if user_id is None:
         return {"status": "error", "message": "AI setup drafts require an authenticated panel user."}
 
-    from services.official_stacks.manifest_validator import compute_stack_manifest_hash
-    from services.official_stacks.proposal_manifest import stack_from_proposal, validate_stack_settings
-    from services.official_stacks.schema import stack_to_dict
+    from plugins.ai_helper.services import setup_plan_builder
 
     try:
-        clean_evidence = [str(item).strip()[:512] for item in (evidence or []) if isinstance(item, str) and item.strip()][:12]
-        stack_manifest = await _resolve_stack_manifest_images(stack_manifest)
-        stack = stack_from_proposal(stack_manifest, clean_evidence)
-        clean_settings = validate_stack_settings(stack, nonsecret_settings)
+        payload = await setup_plan_builder.build_stack_payload(
+            stack_manifest=stack_manifest or {},
+            domain_name=domain_name,
+            nonsecret_settings=nonsecret_settings,
+            evidence=evidence,
+        )
     except (TypeError, ValueError) as exc:
         return {"status": "error", "message": str(exc)}
-    v = stack.default_version
-    manifest = stack_to_dict(stack)
-
-    payload = {
-        "deploy_type": "official_stack",
-        "stack_catalog_id": stack.catalog_id,
-        "stack_version": v,
-        "domain_name": domain_name.strip(),
-        "nonsecret_settings": clean_settings,
-        "stack_manifest": manifest,
-        "manifest_hash": compute_stack_manifest_hash(stack, v),
-        "evidence": clean_evidence,
-        "stack_display_name": stack.display_name,
-        "services_count": len(stack.services),
-        "recommended_ram_mb": stack.recommended_ram_mb,
-        "services": list(stack.services.keys()),
-        "post_install_message": stack.post_install_message,
-    }
 
     sess_id = session_id or "default_session"
-    plan_summary = summary or f"Deploy stack: {stack.display_name} ({v})"
+    stack_display = payload.get("stack_display_name") or "Stack"
+    v = payload.get("stack_version") or "1.0"
+    plan_summary = summary or f"Deploy stack: {stack_display} ({v})"
 
     plan = await action_plans.create_action_plan(
         db=db,
@@ -676,7 +617,7 @@ async def propose_stack_install(
         "plan_id": plan.plan_id,
         "summary": plan.summary,
         "confidence": plan.confidence,
-        "message": f"Reviewed stack setup created for {stack.display_name}. The user can deploy it with the server-rendered Deploy reviewed setup action.",
+        "message": f"Reviewed stack setup created for {stack_display}. The user can deploy it with the server-rendered Deploy reviewed setup action.",
     }
 
 

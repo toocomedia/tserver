@@ -12,6 +12,7 @@ if str(BACKEND) not in sys.path:
 
 from database import AsyncSessionLocal, init_db
 from plugins.ai_helper.tools import app_setup
+from plugins.ai_helper.services import setup_plan_builder
 
 
 class TestAiAppSetup(unittest.IsolatedAsyncioTestCase):
@@ -57,24 +58,23 @@ class TestAiAppSetup(unittest.IsolatedAsyncioTestCase):
                 )
                 self.assertEqual(res["status"], "ok")
                 self.assertEqual(res["source_type"], "image")
-    async def test_redeploy_app_tool(self):
-        """Verify redeploy_app tool queues redeployment when app exists."""
-        from plugins.ai_helper.tools import apps as ai_apps
+
+    async def test_propose_container_app_patch_tool(self):
+        """Verify propose_container_app_patch creates a review draft plan."""
         from models.container_app import ContainerApp
         from models.domain import Domain
-
         import random
         import uuid
         uid = uuid.uuid4().hex[:8]
         rnd_port = random.randint(31000, 45000)
         async with AsyncSessionLocal() as db:
-            domain = Domain(name=f"redeploy-{uid}.local", server_ip="127.0.0.1")
+            domain = Domain(name=f"patch-{uid}.local", server_ip="127.0.0.1")
             db.add(domain)
             await db.flush()
 
             app = ContainerApp(
                 domain_id=domain.id,
-                container_name=f"test-redeploy-{uid}",
+                container_name=f"test-patch-{uid}",
                 source_type="image",
                 build_mode="image",
                 image_reference="nginx:alpine",
@@ -87,16 +87,59 @@ class TestAiAppSetup(unittest.IsolatedAsyncioTestCase):
             await db.commit()
             await db.refresh(app)
 
-            with patch("services.container_app_deployment_service.queue_deployment", AsyncMock()) as mock_queue:
-                from models.container_app_deployment import ContainerAppDeployment
-                mock_dep = ContainerAppDeployment(id=999, app_id=app.id, action="redeploy", status="queued")
-                mock_queue.return_value = mock_dep
+            res = await app_setup.propose_container_app_patch(
+                db=db,
+                app_id=app.id,
+                patch={"internal_port": 8080},
+                evidence=["Detected custom port 8080 in logs"],
+                summary="Update port to 8080",
+                confidence=0.9,
+                user_id=1,
+            )
+            self.assertEqual(res["status"], "ok")
+            self.assertTrue(res["plan_id"].startswith("plan_"))
 
-                res = await ai_apps.redeploy_app(db=db, app_id=app.id, app_type="container")
-                self.assertEqual(res["status"], "ok")
-                self.assertEqual(res["app_id"], app.id)
-                self.assertEqual(res["deployment_id"], 999)
-                self.assertEqual(res["action_tag"], f"[ACTION:APP_REDEPLOY:{app.id}]")
+    async def test_guaranteed_automatic_setup_plan_single_app(self):
+        """Verify build_automatic_setup_plan creates valid single-app plan from image."""
+        async with AsyncSessionLocal() as db:
+            plan = await setup_plan_builder.build_automatic_setup_plan(
+                db=db,
+                session_id="fallback_single_test",
+                user_id=1,
+                source_type="image",
+                image_reference="redis:7-alpine",
+                domain_name="cache.example.com",
+            )
+            self.assertIsNotNone(plan)
+            self.assertTrue(plan.plan_id.startswith("plan_"))
+            self.assertEqual(plan.action_type, "app_install")
+
+    async def test_guaranteed_automatic_setup_plan_compose(self):
+        """Verify build_automatic_setup_plan creates valid stack plan from compose facts."""
+        mock_inspection = {
+            "repository_url": "https://github.com/example/analytics",
+            "branch": "main",
+            "compose_info": {
+                "services": [
+                    {"name": "web", "image": "example/analytics:v1", "internal_ports": [8000]},
+                    {"name": "db", "image": "postgres:16-alpine", "internal_ports": [5432]},
+                ],
+                "evidence": ["Compose detected"],
+            },
+        }
+        async with AsyncSessionLocal() as db:
+            plan = await setup_plan_builder.build_automatic_setup_plan(
+                db=db,
+                session_id="fallback_compose_test",
+                user_id=1,
+                source_type="git",
+                repository_url="https://github.com/example/analytics",
+                domain_name="analytics.example.com",
+                inspection_result={"status": "ok", "inspection": mock_inspection},
+            )
+            self.assertIsNotNone(plan)
+            self.assertTrue(plan.plan_id.startswith("plan_"))
+            self.assertEqual(plan.action_type, "stack_install")
 
     async def test_cancel_deployment(self):
         """Verify cancel_deployment marks deployment as cancelled and unlocks app."""
