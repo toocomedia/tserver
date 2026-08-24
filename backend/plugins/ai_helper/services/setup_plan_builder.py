@@ -114,7 +114,7 @@ def build_single_app_payload(
                 continue
             purpose = str(item.get("purpose") or "Application secret").strip()[:256]
             generator = str(item.get("generator") or "urlsafe64").strip()
-            if generator not in {"urlsafe64", "password", "hex32", "base64_48"}:
+            if generator not in {"urlsafe64", "base64_32", "base64_48", "base64_64", "hex32", "hex64", "password"}:
                 generator = "urlsafe64"
             cleaned_secrets.append({"key": key, "purpose": purpose or "Application secret", "generator": generator})
             known_secret_keys.add(key)

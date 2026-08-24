@@ -94,7 +94,7 @@ def _clean_requirement(item: object) -> dict[str, Any] | None:
         raise ValueError("Secret requirements must use safe uppercase environment names.")
     purpose = str(item.get("purpose") or "Application secret").strip()[:255]
     generator = str(item.get("generator") or "urlsafe64").strip()
-    if generator not in {"urlsafe64", "base64_48", "hex32", "password"}:
+    if generator not in {"urlsafe64", "base64_32", "base64_48", "base64_64", "hex32", "hex64", "password"}:
         raise ValueError("Secret requirement generator is not supported.")
     result: dict[str, Any] = {"key": key, "purpose": purpose, "generator": generator, "rotate": bool(item.get("rotate"))}
     credential = item.get("credential")

@@ -16,8 +16,8 @@ You are diagnosing a deployment, runtime, or routing error on a VPS-hosted appli
 
 **Correlate**:
 - If error is 502 Bad Gateway or container process exited on startup:
-  - Root cause: Web container process crashed due to invalid/missing environment variables (e.g. `BASE_URL`), invalid framework secrets (e.g. `SECRET_KEY_BASE`, `TOTP_VAULT_KEY` requires `base64_32`, `APP_KEY`), or memory limits.
-  - Fix: Stage the exact fix via `propose_container_app_patch(app_id=..., patch={}, environment_values={...}, secret_requirements=[{key, purpose, generator}], evidence=[...])`. Do NOT recommend deleting or reinstalling the entire app.
+  - Root cause: Web container process crashed due to invalid/missing environment variables (e.g. `BASE_URL`), invalid framework secrets (e.g. `SECRET_KEY_BASE` uses `base64_48`, `TOTP_VAULT_KEY` strictly requires `base64_32` for 32 bytes, `APP_KEY`), or memory limits.
+  - Fix: Stage the exact fix via `propose_container_app_patch(app_id=..., patch={}, environment_values={...}, secret_requirements=[{"key": "TOTP_VAULT_KEY", "purpose": "TOTP encryption key", "generator": "base64_32", "rotate": True}], evidence=[...])`. Do NOT recommend deleting or reinstalling the entire app.
 - If an HTTP probe fails while the process is running:
   - Root cause: the verified path may be wrong or temporarily unavailable; state is degraded, not automatically failed.
   - Fix: only propose a new `health_path` when exact source/vendor evidence supports it.
