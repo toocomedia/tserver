@@ -54,7 +54,7 @@ async def delete_app(
     attachments = await container_app_database_service.attachments_for(db, app.id)
     managed_ids = {item.id for item in attachments if item.provider in {"docker", "panel_postgres", "panel_mariadb"}}
     delete_database_ids = list(managed_ids - set(keep_database_ids))
-    delete_app_volume = (bool(app.data_volume) or bool(app.storage_mounts)) and not keep_app_volume
+    delete_app_volume = (bool(app.data_volume) or bool(app.storage_mounts) or getattr(app, "deploy_type", None) == "official_stack") and not keep_app_volume
     await container_app_removal_service.remove_selected_data(
         db, app, attachments,
         database_ids=delete_database_ids,
@@ -129,12 +129,11 @@ async def remove_volume(volume: str) -> None:
 
 
 async def list_app_storage_volumes(app_id: int) -> list[str]:
-    """Return volumes owned by this Railpack app, including detached mounts."""
+    """Return volumes owned by this Railpack app or stack, including detached mounts."""
     result = await asyncio.to_thread(
         container_app_service._run,
         [
             "docker", "volume", "ls",
-            "--filter", "label=srv-panel.plugin=railpack_apps",
             "--filter", f"label=srv-panel.app-id={app_id}",
             "--format", "{{.Name}}",
         ],
@@ -202,7 +201,7 @@ async def _prune_app_images(app_id: int, image_digest: str | None, previous_imag
         )
         if res.returncode == 0 and res.stdout:
             for line in res.stdout.splitlines():
-                line=line.strip()
+                line = line.strip()
                 if not line:
                     continue
                 # Format: "repo:tag ID"
@@ -210,20 +209,15 @@ async def _prune_app_images(app_id: int, image_digest: str | None, previous_imag
                 if not parts:
                     continue
                 repo_tag = parts[0]
-                img_id = parts[1] if len(parts) > 1 else repo_tag
                 if repo_tag.startswith(f"srv-panel/railpack-app:{app_id}-"):
                     candidates.append(repo_tag)
                 elif repo_tag == f"srv-panel/railpack-app:{app_id}":
                     candidates.append(repo_tag)
-                # Also catch IDs that correspond to per-app images when repoTag is <none>
-                # but ID was previously known as digest — handled below
     except Exception:
         pass
 
     for ref in (image_digest, previous_image):
         if ref and ref not in remaining_digests and ref not in candidates:
-            # Only prune if it looks like an app-owned image or a sha/repo reference
-            # Avoid pruning external base images (e.g., nginx:latest) that might be shared
             if ref.startswith("srv-panel/railpack-app:") or ref.startswith("sha256:") or "/" not in ref:
                 candidates.append(ref)
             elif ref.startswith("srv-panel/"):
@@ -240,9 +234,7 @@ async def _prune_app_images(app_id: int, image_digest: str | None, previous_imag
     for ref in uniq:
         try:
             res = await asyncio.to_thread(container_app_service._run, ["docker", "rmi", ref], timeout=60)
-            # Ignore not-found / in-use; treat as non-fatal
             if res.returncode != 0 and not _missing(res.stderr or res.stdout or ""):
-                # If image is referenced by a running container, docker says "is being used"
                 if "is being used" in (res.stderr or "").lower() or "is being used" in (res.stdout or "").lower():
                     continue
         except Exception:

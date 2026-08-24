@@ -204,8 +204,11 @@ def stop(app_id: int) -> None:
         raise RuntimeError(f"Compose could not stop stack: {(result.stderr or result.stdout)[-1000:]}")
 
 
-def down(app_id: int) -> None:
-    result = _compose(app_id, "down", "--remove-orphans", timeout=120)
+def down(app_id: int, *, volumes: bool = False) -> None:
+    args = ["down", "--remove-orphans"]
+    if volumes:
+        args.insert(1, "--volumes")
+    result = _compose(app_id, *args, timeout=120)
     if result.returncode:
         raise RuntimeError(f"Compose could not remove stack containers: {(result.stderr or result.stdout)[-1000:]}")
 

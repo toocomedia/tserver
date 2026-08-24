@@ -1,6 +1,8 @@
 """Selective, confirmed removal of Railpack application data."""
 from __future__ import annotations
 
+import asyncio
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -47,6 +49,10 @@ async def remove_selected_data(
         app.storage_mounts = None
         if getattr(app, "deploy_type", None) == "official_stack":
             from services.official_stacks import compose_runtime, stack_runtime_service
+            try:
+                await asyncio.to_thread(compose_runtime.down, app.id, volumes=True)
+            except Exception:
+                pass
             try:
                 stack = compose_runtime.stack_from_runtime(app)
             except RuntimeError:

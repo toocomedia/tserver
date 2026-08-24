@@ -72,7 +72,7 @@ async def bulk_action(req: BulkActionRequest, db: AsyncSession = Depends(get_db)
                 managed_ids = [item.id for item in attachments if item.provider in {"docker", "panel_postgres", "panel_mariadb"}]
                 await container_app_removal_service.remove_selected_data(
                     db, app, attachments, database_ids=managed_ids,
-                    delete_app_volume=bool(app.data_volume or getattr(app, "storage_mounts", None)),
+                    delete_app_volume=bool(app.data_volume or getattr(app, "storage_mounts", None) or getattr(app, "deploy_type", None) == "official_stack"),
                     delete_wordpress_files=bool(app.wordpress_content_volume),
                     delete_backups=True
                 )
@@ -353,7 +353,7 @@ async def uninstall(
     if confirmation != "DELETE ALL":
         raise HTTPException(400, "Type DELETE ALL to confirm this removal.")
     delete_database_ids = list(managed_ids - set(keep_database_ids))
-    delete_app_volume = (bool(app.data_volume) or bool(app.storage_mounts)) and not keep_app_volume
+    delete_app_volume = (bool(app.data_volume) or bool(app.storage_mounts) or getattr(app, "deploy_type", None) == "official_stack") and not keep_app_volume
     delete_wordpress_files = bool(app.wordpress_content_volume) and not keep_wordpress_files
     delete_saved_backups = not keep_saved_backups
     app.status, app.last_error = "deleting", None
