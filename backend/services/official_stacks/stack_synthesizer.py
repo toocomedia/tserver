@@ -50,8 +50,14 @@ _STACK_DB_DEFAULTS: dict[str, dict[str, Any]] = {
         "volume": "/var/lib/clickhouse",
         "env": {},
         "url": ("CLICKHOUSE_DATABASE_URL", "http://{service}:8123/plausible_events_db"),
-        "image": "clickhouse/clickhouse-server:24.3-alpine",
-        "health": {"type": "command", "command": ["clickhouse-client", "--query", "SELECT 1"]},
+        "health": {
+            "type": "command",
+            "command": ["wget", "--spider", "-q", "http://127.0.0.1:8123/ping"],
+            "interval_seconds": 5,
+            "timeout_seconds": 5,
+            "retries": 20,
+            "start_period_seconds": 30,
+        },
         "ram_mb": 768,
     },
     "redis": {

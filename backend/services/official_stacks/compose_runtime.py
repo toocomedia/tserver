@@ -118,7 +118,7 @@ def render_compose(
             "networks": [network],
             "mem_limit": f"{service.memory_limit_mb}m",
             "cpus": str(service.cpu_limit),
-            "pids_limit": 256,
+            "pids_limit": 1024,
             "security_opt": ["no-new-privileges:true"],
             "labels": {
                 "srv-panel.stack": "true",
