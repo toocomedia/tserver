@@ -326,7 +326,7 @@ def _build_stack_definition_bundle(
     deduce_context = f"{clean_repo} {runtime_str} {framework_str}".lower()
 
     if any(k in deduce_context for k in ("elixir", "phoenix", "plausible")):
-        for sec_k, gen in [("SECRET_KEY_BASE", "base64_48"), ("TOTP_VAULT_KEY", "urlsafe64")]:
+        for sec_k, gen in [("SECRET_KEY_BASE", "base64_48"), ("TOTP_VAULT_KEY", "base64_32")]:
             if (web_svc, sec_k) not in seen:
                 seen.add((web_svc, sec_k))
                 secrets.append({"key": sec_k, "purpose": "Elixir/Phoenix application secret", "generator": gen, "service": web_svc, "environment": sec_k})

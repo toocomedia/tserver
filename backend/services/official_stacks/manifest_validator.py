@@ -14,7 +14,7 @@ _SAFE_SERVICE_NAME_RE = re.compile(r"^[a-z][a-z0-9_-]{0,47}$")
 _SAFE_VOLUME_RE = re.compile(r"^[a-z][a-z0-9_-]{0,63}$")
 _SAFE_IMAGE_RE = re.compile(r"^[a-z0-9][a-z0-9._/@:+-]{0,511}$")
 _SAFE_ENV_RE = re.compile(r"^[A-Z_][A-Z0-9_]{0,127}$")
-_SAFE_GENERATORS = {"urlsafe64", "base64_48", "hex32", "password"}
+_SAFE_GENERATORS = {"urlsafe64", "base64_32", "base64_48", "base64_64", "hex32", "hex64", "password"}
 
 
 def validate_stack_request(

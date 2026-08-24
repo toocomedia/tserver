@@ -29,8 +29,12 @@ def source_identity(app: ContainerApp) -> str:
     return f"git:{app.repository_url or ''}@{app.deployed_revision or app.git_ref or app.branch or 'main'}"
 
 
-def _normalize_patch(app: ContainerApp, patch: object) -> dict[str, Any]:
-    if not isinstance(patch, dict) or not patch:
+def _normalize_patch(app: ContainerApp, patch: object, allow_empty: bool = False) -> dict[str, Any]:
+    if patch is None or patch == {}:
+        if allow_empty:
+            return {}
+        raise ValueError("AI proposal must contain at least one supported configuration change.")
+    if not isinstance(patch, dict):
         raise ValueError("AI proposal must contain at least one supported configuration change.")
     if set(patch) - PATCH_FIELDS:
         raise ValueError("AI proposal includes unsupported configuration fields.")
@@ -96,7 +100,8 @@ def proposal_payload(
     app: ContainerApp, *, patch: object, environment_values: object,
     secret_requirements: object, evidence: object, confidence: float,
 ) -> dict[str, Any]:
-    clean_patch = _normalize_patch(app, patch)
+    has_env_or_secrets = bool(environment_values or secret_requirements)
+    clean_patch = _normalize_patch(app, patch, allow_empty=has_env_or_secrets)
     clean_secrets = snapshots.normalize_secret_requirements(secret_requirements)
     if not isinstance(evidence, list) or not evidence or len(evidence) > 20:
         raise ValueError("AI proposal must include concise source or log evidence.")
@@ -130,7 +135,7 @@ async def apply_plan(
         raise ValueError("App settings changed after this draft. Review a new AI plan.")
     if payload.get("source_identity") != source_identity(app):
         raise ValueError("Selected source changed after this draft. Review a new AI plan.")
-    patch = _normalize_patch(app, payload.get("patch"))
+    patch = _normalize_patch(app, payload.get("patch"), allow_empty=True)
     environment = _nonsecret_environment(payload.get("environment_values"))
 
     raw_attachments = payload.get("database_attachments") or []

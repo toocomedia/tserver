@@ -7,10 +7,13 @@
       {% for key, value in pending_plan.payload.patch.items() %}
       <div class="info-row"><span class="info-row__label">{{ key | replace('_', ' ') | title }}</span><span class="info-row__value"><span class="text-muted">{{ app | attr(key) }}</span> → {{ value }}</span></div>
       {% endfor %}
-      {% for secret in pending_plan.payload.secret_requirements %}
-      <div class="info-row"><span class="info-row__label">Secret {{ secret.key }}</span><span class="info-row__value">{{ secret.purpose or 'Application secret' }} · pending</span></div>
+      {% for key, value in (pending_plan.payload.environment_values or {}).items() %}
+      <div class="info-row"><span class="info-row__label">Environment {{ key }}</span><span class="info-row__value mono">{{ value }}</span></div>
       {% endfor %}
-      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+      {% for secret in pending_plan.payload.secret_requirements %}
+      <div class="info-row"><span class="info-row__label">Secret {{ secret.key }}</span><span class="info-row__value">{{ secret.purpose or 'Application secret' }} ({{ secret.generator }}) · auto-generate on apply</span></div>
+      {% endfor %}
+      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:4px;">
         <form method="post" action="/plugins/railpack_apps/{{ app.id }}/deployment-changes/{{ pending_plan.plan_id }}/apply">{% include "partials/csrf_field.html" %}<button class="btn btn--accent btn--sm">Apply changes</button></form>
         <button type="button" class="btn btn--secondary btn--sm" data-ai-diagnose-app="{{ app.id }}" data-app-name="{{ domain.name if domain else app.container_name }}">Review AI plan</button>
       </div>
@@ -36,7 +39,7 @@
       <div class="info-row"><span class="info-row__label">Active snapshot</span><span class="info-row__value mono">#{{ active_snapshot.id }} · {{ active_snapshot.fingerprint[:12] }}</span></div>
       <div style="display:flex; gap:8px; flex-wrap:wrap;">
         {% if not deployment_active %}
-        <form method="post" action="/plugins/railpack_apps/{{ app.id }}/snapshots/{{ active_snapshot.id }}/deploy">{% include "partials/csrf_field.html" %}<input type="hidden" name="action" value="deploy"><button class="btn btn--secondary btn--sm">Redeploy saved snapshot</button></form>
+        <form method="post" action="/plugins/railpack_apps/{{ app.id }}/snapshots/{{ active_snapshot.id }}/deploy">{% include "partials/csrf_field.html" %}<input type="hidden" name="action" value="deploy"><button class="btn btn--secondary btn--sm">Retry same snapshot</button></form>
         {% if app.status == 'stopped' %}<form method="post" action="/plugins/railpack_apps/{{ app.id }}/start">{% include "partials/csrf_field.html" %}<button class="btn btn--accent btn--sm">Start</button></form>{% endif %}
         {% if rollback_snapshot %}<form method="post" action="/plugins/railpack_apps/{{ app.id }}/snapshots/{{ rollback_snapshot.id }}/rollback">{% include "partials/csrf_field.html" %}<button class="btn btn--secondary btn--sm">Rollback</button></form>{% endif %}
         {% endif %}

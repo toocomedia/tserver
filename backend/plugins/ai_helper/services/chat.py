@@ -19,6 +19,7 @@ from plugins.ai_helper.services.providers import decrypt_key, get_active_provide
 from plugins.ai_helper.services.secrets_consent import check_consent_phrase, is_secrets_allowed
 from plugins.ai_helper.services.sessions import generate_title_from_prompt, get_or_create_session
 from plugins.ai_helper.services import setup_handoff, setup_plan_builder, visible_output
+missing_plan_message = setup_handoff.missing_plan_message
 
 logger = logging.getLogger(__name__)
 

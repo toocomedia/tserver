@@ -62,10 +62,16 @@ async def ensure_secret(
 
 
 def _generated_value(generator: str) -> str:
+    if generator == "base64_32":
+        return base64.b64encode(secrets.token_bytes(32)).decode("ascii")
     if generator == "base64_48":
         return base64.b64encode(secrets.token_bytes(48)).decode("ascii")
+    if generator == "base64_64":
+        return base64.b64encode(secrets.token_bytes(64)).decode("ascii")
     if generator == "hex32":
         return secrets.token_hex(32)
+    if generator == "hex64":
+        return secrets.token_hex(64)
     if generator == "password":
         return secrets.token_urlsafe(36)
     if generator != "urlsafe64":

@@ -363,7 +363,9 @@ html[data-sidebar-style="line"][dir="rtl"] .sidebar__item--active:hover {
   border-right-color: var(--color-accent) !important;
 }
 
-html[data-sidebar-style="opacity"][dir="rtl"] .sidebar__item {
+html[data-sidebar-style="opacity"][dir="rtl"] .sidebar__item,
+html[data-sidebar-style="opacity"][dir="rtl"] .sidebar__section-tab,
+html[data-sidebar-style="opacity"][dir="rtl"] .sidebar__view-back {
   margin: 2px 12px;
   border-left-color: transparent !important;
   border-right-color: transparent !important;
@@ -375,7 +377,9 @@ html[data-sidebar-style="opacity"][dir="rtl"] .sidebar__item--active:hover {
   border-right-color: transparent !important;
 }
 
-html[data-sidebar-style="gradient"][dir="rtl"] .sidebar__item {
+html[data-sidebar-style="gradient"][dir="rtl"] .sidebar__item,
+html[data-sidebar-style="gradient"][dir="rtl"] .sidebar__section-tab,
+html[data-sidebar-style="gradient"][dir="rtl"] .sidebar__view-back {
   border-left: none !important;
   border-right: none !important;
   padding-left: var(--space-md);

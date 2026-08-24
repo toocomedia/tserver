@@ -10,7 +10,7 @@ import copy
 from typing import Any, Dict, List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from plugins.ai_helper.services import action_plans
+from plugins.ai_helper.services import action_plans, setup_plan_builder
 from models.container_app import ContainerApp
 from services import container_app_image_inspect_service, container_app_inspection_service
 from services.apps_engine import deployment_drafts, source_access
@@ -19,6 +19,13 @@ logger = logging.getLogger(__name__)
 
 _SUPPORTED_GIT_BUILD_MODES = {"railpack", "dockerfile"}
 _SUPPORTED_DATABASE_KINDS = {"postgresql", "mariadb", "redis", "mongodb"}
+# Docker Compose and multi-service stacks are automatically synthesized and provisioned by the panel.
+_resolve_stack_manifest_images = setup_plan_builder.resolve_stack_manifest_images
+
+
+def _needs_digest_resolution(image: str) -> bool:
+    tail = (image or "").rsplit("/", 1)[-1]
+    return "@sha256:" not in image and (":" not in tail or tail.endswith(":latest"))
 _DATABASE_KIND_ALIASES = {
     "postgres": "postgresql",
     "postgresql": "postgresql",

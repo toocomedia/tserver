@@ -16,7 +16,7 @@ from services.official_stacks.schema import (
 
 _KEY = re.compile(r"^[A-Z_][A-Z0-9_]{0,127}$")
 _NAME = re.compile(r"^[a-z][a-z0-9_-]{0,47}$")
-_GENERATOR = {"urlsafe64", "base64_48", "hex32", "password"}
+_GENERATOR = {"urlsafe64", "base64_32", "base64_48", "base64_64", "hex32", "hex64", "password"}
 _SECRET_ENV = re.compile(r"(?:^|_)(?:PASSWORD|PASS|SECRET|TOKEN|API_KEY|PRIVATE_KEY|SECRET_KEY_BASE)$")
 _TOP_LEVEL = {
     "name", "display_name", "vendor_name", "description", "source_repositories", "version",

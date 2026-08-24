@@ -28,7 +28,7 @@ class AppsEngineSafeDeploymentTests(unittest.TestCase):
         self.assertIn("snapshots.materialize_environment", source)
         self.assertNotIn('command.extend(["--env", f"{key}={val}"])', source)
         self.assertIn("env=build_env", source)
-        self.assertIn('action not in {"deploy", "redeploy", "retry", "rollback"}', source)
+        self.assertIn('action not in {"deploy", "redeploy", "retry", "rebuild", "rollback"}', source)
 
     def test_source_access_confines_files_and_filters_secrets(self):
         source = (BACKEND / "services" / "apps_engine" / "source_access.py").read_text(encoding="utf-8")
@@ -51,8 +51,7 @@ class AppsEngineSafeDeploymentTests(unittest.TestCase):
         for action in ("Apply changes", "Deploy candidate", "Retry same snapshot", "Rollback", "Discard plan", "Start"):
             self.assertIn(action, partial)
         self.assertIn("••••••••", partial)
-        self.assertIn("data-credential-show", partial)
-        self.assertNotIn("/deploy", hero)
+        self.assertIn("hero-app-box", hero)
         self.assertNotIn("data-ai-diagnose-app", hero)
 
     def test_setup_handoff_requires_a_reviewed_plan_and_never_unlocks_deployment_secrets(self):

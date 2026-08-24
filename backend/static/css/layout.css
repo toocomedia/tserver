@@ -404,7 +404,9 @@ html[dir="rtl"] .sidebar__view-back:hover svg {
 }
 
 /* Sidebar Active Style: Opacity */
-html[data-sidebar-style="opacity"] .sidebar__item {
+html[data-sidebar-style="opacity"] .sidebar__item,
+html[data-sidebar-style="opacity"] .sidebar__section-tab,
+html[data-sidebar-style="opacity"] .sidebar__view-back {
   margin: 2px 12px;
   border-left-color: transparent !important;
 }
@@ -427,7 +429,9 @@ html[data-sidebar-style="line"] .sidebar__item--active {
 }
 
 /* Sidebar Active Style: Gradient */
-html[data-sidebar-style="gradient"] .sidebar__item {
+html[data-sidebar-style="gradient"] .sidebar__item,
+html[data-sidebar-style="gradient"] .sidebar__section-tab,
+html[data-sidebar-style="gradient"] .sidebar__view-back {
   border-left: none !important;
   padding-left: calc(var(--space-md) + 4px);
 }

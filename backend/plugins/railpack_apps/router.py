@@ -190,11 +190,17 @@ async def apply_deployment_changes(app_id: int, plan_id: str, request: Request, 
         raise HTTPException(409, "Deployment changes cannot be applied while a deployment is running.")
     try:
         snapshot_id, _statuses = await deployment_drafts.apply_plan(db, app, plan_id, request.session.get("user_id"))
+        deployment = await container_app_deployment_service.queue_deployment(
+            db, app, action="deploy", snapshot_id=snapshot_id,
+        )
         await db.commit()
     except ValueError as exc:
         await db.rollback()
         return RedirectResponse(f"/plugins/railpack_apps/{app.id}?{urlencode({'error': str(exc)})}", status_code=303)
-    return RedirectResponse(f"/plugins/railpack_apps/{app.id}?snapshot={snapshot_id}", status_code=303)
+    except HTTPException:
+        await db.commit()
+        return RedirectResponse(f"/plugins/railpack_apps/{app.id}?snapshot={snapshot_id}", status_code=303)
+    return RedirectResponse(f"/plugins/railpack_apps/{app.id}?deployment={deployment.id}", status_code=303)
 
 
 @router.post("/{app_id}/snapshots/{snapshot_id}/deploy")
