@@ -1,5 +1,75 @@
+// railpack-app-detail.js — App Engine application detail page controller
 const deployment = document.querySelector('[data-railpack-deployment]');
 let isPolling = false;
+
+// ── Tab Management ────────────────────────────────────────────────
+function initAppTabs() {
+  const tabButtons = document.querySelectorAll('[data-app-tab]');
+  const tabPanels = document.querySelectorAll('[data-tab-panel]');
+  if (!tabButtons.length || !tabPanels.length) return;
+
+  function activateTab(tabName) {
+    if (!tabName) tabName = 'overview';
+    tabButtons.forEach(btn => {
+      const isTarget = btn.getAttribute('data-app-tab') === tabName;
+      btn.classList.toggle('is-active', isTarget);
+      btn.setAttribute('aria-selected', isTarget ? 'true' : 'false');
+    });
+    tabPanels.forEach(panel => {
+      const isTarget = panel.getAttribute('data-tab-panel') === tabName;
+      panel.classList.toggle('is-active', isTarget);
+    });
+    try {
+      sessionStorage.setItem('app_detail_active_tab', tabName);
+      if (window.location.hash !== '#' + tabName) {
+        history.replaceState(null, '', '#' + tabName);
+      }
+    } catch (_) {}
+  }
+
+  tabButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const tabName = btn.getAttribute('data-app-tab');
+      activateTab(tabName);
+    });
+  });
+
+  // Switch buttons inside content (e.g. "View Logs", "Review & Apply")
+  document.querySelectorAll('[data-switch-to-tab]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const target = btn.getAttribute('data-switch-to-tab');
+      activateTab(target);
+    });
+  });
+
+  // Initial tab from hash, query param, or session storage
+  const hash = (window.location.hash || '').replace('#', '');
+  const storedTab = sessionStorage.getItem('app_detail_active_tab');
+  const urlParams = new URLSearchParams(window.location.search);
+  const deploymentRequested = urlParams.get('deployment');
+
+  if (deploymentRequested) {
+    activateTab('deployments');
+  } else if (hash && document.querySelector(`[data-tab-panel="${hash}"]`)) {
+    activateTab(hash);
+  } else if (storedTab && document.querySelector(`[data-tab-panel="${storedTab}"]`)) {
+    activateTab(storedTab);
+  } else {
+    activateTab('overview');
+  }
+}
+initAppTabs();
+
+// ── Expandable Text (Show More / Show Less) ───────────────────────
+document.querySelectorAll('[data-expand-toggle]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const parent = btn.closest('.expandable-text');
+    if (!parent) return;
+    const isExpanded = parent.classList.toggle('is-expanded');
+    btn.textContent = isExpanded ? 'Show less' : 'Show more';
+  });
+});
 
 // Initial scroll to bottom
 const initialOut = deployment?.querySelector('[data-deployment-output]');

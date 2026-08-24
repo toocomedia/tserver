@@ -138,8 +138,10 @@ def _service(raw: Any) -> ServiceDefinition:
     if not _NAME.fullmatch(name):
         raise ValueError("Service name is invalid.")
     image = _text(raw.get("image"), f"Image for {name}", 512)
-    if image.endswith(":latest") or ("@sha256:" not in image and ":" not in image.rsplit("/", 1)[-1]):
-        raise ValueError(f"Service '{name}' image needs an explicit non-latest tag or digest.")
+    if not image:
+        raise ValueError(f"Service '{name}' needs a valid Docker image reference.")
+    if "@" not in image and ":" not in image.rsplit("/", 1)[-1]:
+        image = f"{image}:latest"
     ports = raw.get("ports", raw.get("internal_ports"))
     if ports is None or ports == []:
         ports = _default_internal_ports(name, image)
@@ -155,8 +157,9 @@ def _service(raw: Any) -> ServiceDefinition:
     command = raw.get("command")
     if command is not None and (not isinstance(command, list) or not all(isinstance(item, str) for item in command)):
         raise ValueError(f"Service '{name}' command must be an argument list.")
+    tag = image.rsplit(":", 1)[-1] if ":" in image else "latest"
     return ServiceDefinition(
-        name=name, image_reference=image, pinned_tag=image.rsplit(":", 1)[-1],
+        name=name, image_reference=image, pinned_tag=tag,
         internal_ports=parsed_ports, depends_on=_names(raw.get("depends_on", []), "Dependency", allow_empty=True),
         environment_defaults=_environment(raw.get("environment")), volumes=_volumes(raw.get("volumes"), name),
         health_check=_health(raw.get("health"), name), memory_limit_mb=_number(resources.get("memory_mb", 512), f"Memory for {name}", 64, 16384),

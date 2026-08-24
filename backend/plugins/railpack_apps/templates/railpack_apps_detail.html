@@ -2,146 +2,348 @@
 {% block title %}{{ domain.name if domain else app.container_name }} — {{ PANEL_NAME }}{% endblock %}
 {% block page_title %}Apps Engine{% endblock %}
 {% block topbar_actions %}<a class="btn btn--secondary" href="/plugins/railpack_apps/">All apps</a>{% endblock %}
+{% block head_extra %}
+<link rel="stylesheet" href="/plugins/railpack_apps/static/css/apps-engine-optic.css">
+{% endblock %}
 {% block content %}
 {% set deployment_active = deployment and deployment.status in ['queued', 'running'] %}
 {% if request.query_params.get('error') %}<div class="alert alert--error">{{ request.query_params.get('error') }}</div>{% elif app.status == 'delete_failed' %}<div class="alert alert--error">Removal did not finish. Retry the removal below. Runtime controls are disabled until cleanup completes.</div>{% elif app.status == 'data_preserved' %}<div class="alert alert--info">The application runtime was removed. Its managed data remains available below until you explicitly delete it.</div>{% elif app.last_error %}<div class="alert alert--error">{{ app.last_error }}</div>{% endif %}
 
 {% include "railpack_apps/partials/detail_hero.html" %}
 
-{% include "railpack_apps/partials/detail_deployment_changes.html" %}
+<!-- TAB NAVIGATION -->
+<nav class="tabs-nav" aria-label="Application Sections" style="margin-top: 18px; margin-bottom: 20px;">
+  <button type="button" class="tabs-nav__btn is-active" data-app-tab="overview">
+    <span>Overview</span>
+  </button>
+  <button type="button" class="tabs-nav__btn" data-app-tab="settings">
+    <span>Settings</span>
+  </button>
+  <button type="button" class="tabs-nav__btn" data-app-tab="deployments">
+    <span>Deployments & Snapshots</span>
+    {% if pending_plan or pending_snapshot %}<span class="badge-pill badge-pill--accent" style="font-size: 10px; padding: 1px 6px;">1</span>{% endif %}
+  </button>
+  <button type="button" class="tabs-nav__btn" data-app-tab="databases">
+    <span>Databases & Storage</span>
+    {% if databases %}<span class="badge-pill" style="font-size: 10px; padding: 1px 6px;">{{ databases | length }}</span>{% endif %}
+  </button>
+  <button type="button" class="tabs-nav__btn tabs-nav__btn--danger" data-app-tab="danger">
+    <span>Danger Zone</span>
+  </button>
+</nav>
 
-<div class="layout-2col">
-  <div>
-    {% include "railpack_apps/partials/detail_deployment.html" %}
-
-    {% include "railpack_apps/partials/detail_databases.html" %}
+<!-- TAB 1: OVERVIEW -->
+<div class="app-detail-tab-panel is-active" data-tab-panel="overview">
+  {% if pending_plan or pending_snapshot %}
+  <div class="alert alert--info mb-md" style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
+    <span><strong>Pending Changes Ready:</strong> An AI draft or deployment snapshot candidate is pending review.</span>
+    <button type="button" class="btn btn--accent btn--sm" data-switch-to-tab="deployments">Review & Apply</button>
   </div>
+  {% endif %}
 
-  <div>
-    <div class="master-card">
-      <div class="master-card__header" style="display: flex; justify-content: space-between; align-items: center;">
-        <span>Application settings</span>
-        <div style="display: flex; gap: 6px; align-items: center;">
-          <span class="badge-pill">{{ app.source_type | upper }}</span>
-          {% if not deployment_active and app.status not in ['deleting', 'delete_failed'] and app.deploy_type != 'official_stack' %}
-          <button type="button" class="btn btn--secondary btn--sm" data-edit-settings-open>Edit</button>
+  <div class="layout-2col">
+    <div>
+      <!-- QUICK START & ACCESS CREDENTIALS CARD -->
+      <div class="master-card app-quickstart-card">
+        <div class="master-card__header" style="display: flex; justify-content: space-between; align-items: center;">
+          <span>App Access & Credentials</span>
+          <span class="app-quickstart-badge">Quick Start</span>
+        </div>
+        <div class="master-card__body" style="display: flex; flex-direction: column; gap: 12px;">
+          <div class="info-row">
+            <span class="info-row__label">Public URL</span>
+            <span class="info-row__value">
+              {% if domain %}
+              <a href="{{ public_url(domain.name, https=ssl_active) }}" target="_blank" rel="noopener" style="font-weight: 700;">
+                {{ domain.name }} ↗
+              </a>
+              {% else %}
+              <span class="text-muted">No domain bound</span>
+              {% endif %}
+            </span>
+          </div>
+
+          <div class="info-row">
+            <span class="info-row__label">Port Route</span>
+            <span class="info-row__value mono">127.0.0.1:{{ app.host_port }} → {{ app.internal_port }}</span>
+          </div>
+
+          <div class="info-row">
+            <span class="info-row__label">SSL Security</span>
+            <span class="info-row__value">{{ 'HTTPS active (Let’s Encrypt)' if ssl_active else 'HTTP only' }}</span>
+          </div>
+
+          <!-- Stored / Decrypted App Credentials -->
+          {% if credentials %}
+          <div style="margin-top: 4px; padding-top: 10px; border-top: 1px solid var(--color-line);">
+            <span class="form-hint" style="font-weight: 600; text-transform: uppercase; font-size: 11px; margin-bottom: 8px; display: block;">Generated Credentials</span>
+            {% for credential in credentials %}
+            <div class="info-row" data-access-credential data-reveal-url="/plugins/railpack_apps/{{ app.id }}/credentials/{{ credential.id }}/reveal" style="margin-bottom: 6px;">
+              <span class="info-row__label">{{ credential.label }}</span>
+              <span class="info-row__value">
+                <span style="font-weight: 600;">{{ credential.username }}</span> · 
+                <span class="mono" data-access-password>••••••••</span>
+                <button class="btn btn--secondary btn--sm" type="button" data-credential-show style="margin-left: 4px;">Show</button>
+                <button class="btn btn--secondary btn--sm" type="button" data-credential-copy>Copy</button>
+              </span>
+            </div>
+            {% endfor %}
+          </div>
+          {% endif %}
+
+          <!-- Known Default Credentials & Initial Setup Guidance -->
+          {% if app.stack_catalog_id == 'umami' or (app.image_reference and 'umami' in app.image_reference) or (app.repository_url and 'umami' in app.repository_url) %}
+          <div style="margin-top: 4px; padding: 10px 12px; background: var(--color-surface); border-radius: 6px; border-left: 3px solid var(--color-accent);">
+            <div style="font-size: 12px; font-weight: 700; margin-bottom: 4px;">Default Administrator Login</div>
+            <div style="font-size: 12px; line-height: 1.5; color: var(--color-text);">
+              Username: <code class="mono" style="background: var(--bg-card); padding: 1px 4px; border-radius: 3px;">admin</code><br>
+              Password: <code class="mono" style="background: var(--bg-card); padding: 1px 4px; border-radius: 3px;">umami</code>
+            </div>
+            <p class="form-hint" style="margin: 6px 0 0 0; font-size: 11px;">Change this password immediately after your first sign in.</p>
+          </div>
+          {% elif app.preset == 'wordpress' %}
+          <div style="margin-top: 4px; padding: 10px 12px; background: var(--color-surface); border-radius: 6px; border-left: 3px solid var(--color-accent);">
+            <div style="font-size: 12px; font-weight: 700; margin-bottom: 4px;">WordPress Setup Details</div>
+            <div style="font-size: 12px; line-height: 1.5;">
+              {% if app.wordpress_site_title %}Site: <strong>{{ app.wordpress_site_title }}</strong><br>{% endif %}
+              {% if app.wordpress_admin_user %}Admin User: <code class="mono">{{ app.wordpress_admin_user }}</code><br>{% endif %}
+              {% if app.wordpress_admin_email %}Admin Email: {{ app.wordpress_admin_email }}{% endif %}
+            </div>
+          </div>
+          {% elif app.stack_catalog_id == 'plausible' or (app.image_reference and 'plausible' in app.image_reference) %}
+          <div style="margin-top: 4px; padding: 10px 12px; background: var(--color-surface); border-radius: 6px;">
+            <div style="font-size: 12px; font-weight: 700; margin-bottom: 2px;">Initial Account Setup</div>
+            <p class="form-hint" style="margin: 0; font-size: 11px;">Open your public URL above to register your primary server administrator account.</p>
+          </div>
+          {% elif app.stack_catalog_id == 'n8n' or (app.image_reference and 'n8n' in app.image_reference) %}
+          <div style="margin-top: 4px; padding: 10px 12px; background: var(--color-surface); border-radius: 6px;">
+            <div style="font-size: 12px; font-weight: 700; margin-bottom: 2px;">Initial Account Setup</div>
+            <p class="form-hint" style="margin: 0; font-size: 11px;">Open your public URL above to create your owner profile on first visit.</p>
+          </div>
           {% endif %}
         </div>
       </div>
-      <div class="master-card__body">
-        <div class="info-row"><span class="info-row__label">Runtime</span><span class="info-row__value">{{ app.build_mode | title }}</span></div>
-        <div class="info-row"><span class="info-row__label">Private route</span><span class="info-row__value mono">127.0.0.1:{{ app.host_port }} → {{ app.internal_port }}</span></div>
-        {% if app.source_type == 'git' %}
-        <div class="info-row"><span class="info-row__label">Git Reference</span><span class="info-row__value mono">{{ app.git_ref or app.branch }} ({{ app.git_ref_type or 'branch' }})</span></div>
-        {% if app.root_directory %}<div class="info-row"><span class="info-row__label">Root Directory</span><span class="info-row__value mono">{{ app.root_directory }}</span></div>{% endif %}
-        {% if app.build_mode == 'dockerfile' %}<div class="info-row"><span class="info-row__label">Dockerfile</span><span class="info-row__value mono">{{ app.dockerfile_path or 'Dockerfile' }}</span></div>{% endif %}
-        {% endif %}
-        <div class="info-row"><span class="info-row__label">Readiness</span><span class="info-row__value">{{ app.health_state | replace('_', ' ') | title }}{% if app.health_detail %} · {{ app.health_detail }}{% endif %}</span></div>
-        <div class="info-row"><span class="info-row__label">Health Check</span><span class="info-row__value mono">{{ 'No verified HTTP endpoint' if app.health_path == 'disabled' else (app.health_path or '/') }} ({{ app.startup_timeout_seconds or 45 }}s timeout)</span></div>
-        {% if app.custom_start_command %}<div class="info-row"><span class="info-row__label">Start Command</span><span class="info-row__value mono" style="word-break: break-all;">{{ app.custom_start_command }}</span></div>{% endif %}
-        <div class="info-row"><span class="info-row__label">Database services</span><span class="info-row__value">{{ databases | length }} attached</span></div>
-        {% if app.deploy_key_public %}
-        <div class="info-row" style="flex-direction: column; align-items: flex-start; gap: 4px;">
-          <span class="info-row__label">SSH Deploy Key</span>
-          <div style="display: flex; gap: 6px; width: 100%;">
-            <input class="form-input form-input--code" readonly value="{{ app.deploy_key_public }}" style="font-size: 11px; height: 28px; width: 100%;">
-            <button type="button" class="btn btn--secondary btn--sm" onclick="navigator.clipboard.writeText('{{ app.deploy_key_public }}')" style="white-space: nowrap;">Copy</button>
-          </div>
-        </div>
-        {% endif %}
-        {% if app.storage_mounts %}
-        <div class="info-row" style="flex-direction: column; align-items: flex-start; gap: 4px;">
-          <span class="info-row__label">Storage Mounts</span>
-          <div style="font-size: 12px; display: flex; flex-direction: column; gap: 4px; width: 100%;">
-            {% for mount in app.storage_mounts | from_json if app.storage_mounts %}
-            <div style="padding: 4px 8px; background: var(--bg-card); border-radius: 4px; font-family: monospace;">{{ mount.volume }} → {{ mount.mount_path }}</div>
-            {% endfor %}
-          </div>
-        </div>
-        {% endif %}
-      </div>
     </div>
 
-    {% if not deployment_active and app.status not in ['deleting', 'delete_failed'] %}
-    <!-- EDIT SETTINGS MODAL -->
-    <div class="modal-backdrop hidden" data-edit-settings-modal role="dialog" aria-modal="true" aria-labelledby="edit-settings-title">
-      <div class="modal">
-        <div class="modal__header">
-          <h2 id="edit-settings-title">Edit Application Settings</h2>
-          <button class="btn btn--ghost btn--icon" type="button" data-edit-settings-close aria-label="Close">×</button>
+    <div>
+      <!-- RECENT DEPLOYMENT SUMMARY -->
+      <div class="master-card">
+        <div class="master-card__header" style="display: flex; justify-content: space-between; align-items: center;">
+          <span>Deployment Summary</span>
+          <button type="button" class="btn btn--secondary btn--sm" data-switch-to-tab="deployments">View Logs</button>
         </div>
-        <form class="form" method="post" action="/plugins/railpack_apps/{{ app.id }}/settings">
-          {% include "partials/csrf_field.html" %}
-          <div class="modal__body">
-            {% if app.source_type == 'git' %}
-            <div class="form-group">
-              <label class="form-label" for="setting_git_ref">Git Reference</label>
-              <input class="form-input form-input--code" id="setting_git_ref" name="git_ref" value="{{ app.git_ref or app.branch or '' }}" placeholder="main, v1.0.0, or SHA">
-            </div>
-            <div class="form-group">
-              <label class="form-label" for="setting_git_ref_type">Reference Type</label>
-              <select class="form-select" id="setting_git_ref_type" name="git_ref_type">
-                <option value="branch" {% if (app.git_ref_type or 'branch') == 'branch' %}selected{% endif %}>Branch</option>
-                <option value="tag" {% if app.git_ref_type == 'tag' %}selected{% endif %}>Tag</option>
-                <option value="commit" {% if app.git_ref_type == 'commit' %}selected{% endif %}>Commit SHA</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label class="form-label" for="setting_root_directory">Root Directory</label>
-              <input class="form-input form-input--code" id="setting_root_directory" name="root_directory" value="{{ app.root_directory or '' }}" placeholder="./">
-            </div>
-            {% if app.build_mode == 'dockerfile' %}
-            <div class="form-group">
-              <label class="form-label" for="setting_dockerfile_path">Dockerfile Path</label>
-              <input class="form-input form-input--code" id="setting_dockerfile_path" name="dockerfile_path" value="{{ app.dockerfile_path or 'Dockerfile' }}" placeholder="Dockerfile">
-            </div>
-            <div class="form-group">
-              <label class="form-label" for="setting_build_args">Build Arguments (JSON)</label>
-              <textarea class="form-input form-input--code" id="setting_build_args" name="build_args" rows="2" placeholder='{"ARG": "VAL"}'>{{ app.build_args or '' }}</textarea>
-            </div>
-            {% endif %}
-            {% endif %}
-            <div class="form-group">
-              <label class="form-label" for="setting_custom_start_command">Custom Start Command (CMD Override)</label>
-              <input class="form-input form-input--code" id="setting_custom_start_command" name="custom_start_command" value="{{ app.custom_start_command or '' }}" placeholder="e.g. gunicorn -w 4 app:app">
-            </div>
-            <div class="form-group">
-              <label class="form-label" for="setting_health_path">Health Check Path</label>
-              <input class="form-input form-input--code" id="setting_health_path" name="health_path" value="{{ app.health_path or '/' }}" placeholder="/" required>
-            </div>
-            <div class="form-group">
-              <label class="form-label" for="setting_startup_timeout_seconds">Startup Timeout (Seconds)</label>
-              <input class="form-input form-input--code" id="setting_startup_timeout_seconds" name="startup_timeout_seconds" type="number" min="10" max="300" value="{{ app.startup_timeout_seconds or 45 }}" required>
-            </div>
-            <div class="form-group">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                <label class="form-label" style="margin-bottom: 0;">Persistent Storage Mounts</label>
-                <button type="button" class="btn btn--secondary btn--sm" data-edit-add-mount>+ Add Mount</button>
-              </div>
-              <input type="hidden" name="storage_mounts" value="{{ app.storage_mounts or '[]' }}" data-edit-storage-mounts>
-              <div data-edit-mounts-list style="display: flex; flex-direction: column; gap: 8px;">
-                {% for mount in app.storage_mounts | from_json if app.storage_mounts %}
-                <div style="display: flex; gap: 8px; align-items: center;" data-edit-mount-row>
-                  <input class="form-input form-input--code" style="flex: 1;" placeholder="Label" value="{{ mount.label }}" data-edit-mount-label>
-                  <input class="form-input form-input--code" style="flex: 1.5;" placeholder="Mount Path (e.g. /app/uploads)" value="{{ mount.mount_path }}" data-edit-mount-path>
-                  <button type="button" class="btn btn--secondary btn--sm" data-edit-mount-remove>Remove</button>
-                </div>
-                {% endfor %}
-              </div>
-            </div>
+        <div class="master-card__body" style="display: flex; flex-direction: column; gap: 10px;">
+          <div class="info-row">
+            <span class="info-row__label">Deployment State</span>
+            <span class="info-row__value">
+              <span class="badge-pill {% if deployment and deployment.status == 'failed' %}badge-pill--danger{% elif deployment and deployment.status == 'success' %}badge-pill--accent{% endif %}">
+                {% if deployment %}{{ deployment.status | title }} · {{ deployment.stage | title }}{% else %}Not deployed yet{% endif %}
+              </span>
+            </span>
           </div>
-          <div class="modal__footer">
-            <button class="btn btn--secondary" type="button" data-edit-settings-close>Cancel</button>
-            <button class="btn btn--primary" type="submit">Save Changes</button>
+          {% if deployment %}
+          <div class="info-row">
+            <span class="info-row__label">Latest Build ID</span>
+            <span class="info-row__value mono">#{{ deployment.id }} ({{ deployment.action | title }})</span>
           </div>
-        </form>
+          {% endif %}
+          <div class="info-row">
+            <span class="info-row__label">Readiness</span>
+            <span class="info-row__value">{{ app.health_state | replace('_', ' ') | title }}{% if app.health_detail %} · {{ app.health_detail }}{% endif %}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-row__label">Database services</span>
+            <span class="info-row__value">{{ databases | length }} attached</span>
+          </div>
+        </div>
       </div>
     </div>
-    {% endif %}
-
-    {% include "railpack_apps/partials/detail_danger_zone.html" %}
   </div>
 </div>
+
+<!-- TAB 2: SETTINGS -->
+<div class="app-detail-tab-panel" data-tab-panel="settings">
+  <div class="master-card">
+    <div class="master-card__header" style="display: flex; justify-content: space-between; align-items: center;">
+      <span>Application settings</span>
+      <div style="display: flex; gap: 6px; align-items: center;">
+        <span class="badge-pill">{{ app.source_type | upper }}</span>
+        {% if not deployment_active and app.status not in ['deleting', 'delete_failed'] and app.deploy_type != 'official_stack' %}
+        <button type="button" class="btn btn--secondary btn--sm" data-edit-settings-open>Edit Settings</button>
+        {% endif %}
+      </div>
+    </div>
+    <div class="master-card__body" style="display: flex; flex-direction: column; gap: 12px;">
+      <div class="info-row">
+        <span class="info-row__label">Runtime Mode</span>
+        <span class="info-row__value">{{ app.build_mode | title }}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-row__label">Private Route</span>
+        <span class="info-row__value mono">127.0.0.1:{{ app.host_port }} → {{ app.internal_port }}</span>
+      </div>
+      {% if app.source_type == 'git' %}
+      <div class="info-row">
+        <span class="info-row__label">Git Reference</span>
+        <span class="info-row__value mono">{{ app.git_ref or app.branch }} ({{ app.git_ref_type or 'branch' }})</span>
+      </div>
+      {% if app.root_directory %}
+      <div class="info-row">
+        <span class="info-row__label">Root Directory</span>
+        <span class="info-row__value mono">{{ app.root_directory }}</span>
+      </div>
+      {% endif %}
+      {% if app.build_mode == 'dockerfile' %}
+      <div class="info-row">
+        <span class="info-row__label">Dockerfile Path</span>
+        <span class="info-row__value mono">{{ app.dockerfile_path or 'Dockerfile' }}</span>
+      </div>
+      {% endif %}
+      {% endif %}
+      <div class="info-row">
+        <span class="info-row__label">Readiness</span>
+        <span class="info-row__value">{{ app.health_state | replace('_', ' ') | title }}{% if app.health_detail %} · {{ app.health_detail }}{% endif %}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-row__label">Health Check</span>
+        <span class="info-row__value mono">{{ 'No verified HTTP endpoint' if app.health_path == 'disabled' else (app.health_path or '/') }} ({{ app.startup_timeout_seconds or 45 }}s timeout)</span>
+      </div>
+
+      {% if app.custom_start_command %}
+      <div class="info-row" style="flex-direction: column; align-items: flex-start; gap: 4px;">
+        <span class="info-row__label">Start Command</span>
+        <div class="expandable-text" style="width: 100%;">
+          <div class="expandable-text__content mono" style="background: var(--bg-card); padding: 6px 10px; border-radius: 4px;">{{ app.custom_start_command }}</div>
+          {% if app.custom_start_command|length > 60 %}
+          <button type="button" class="expandable-text__toggle" data-expand-toggle>Show more</button>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="info-row">
+        <span class="info-row__label">Database Services</span>
+        <span class="info-row__value">{{ databases | length }} attached</span>
+      </div>
+
+      {% if app.deploy_key_public %}
+      <div class="info-row" style="flex-direction: column; align-items: flex-start; gap: 4px;">
+        <span class="info-row__label">SSH Deploy Key</span>
+        <div style="display: flex; gap: 6px; width: 100%;">
+          <input class="form-input form-input--code" readonly value="{{ app.deploy_key_public }}" style="font-size: 11px; height: 28px; width: 100%;">
+          <button type="button" class="btn btn--secondary btn--sm" onclick="navigator.clipboard.writeText('{{ app.deploy_key_public }}')" style="white-space: nowrap;">Copy</button>
+        </div>
+      </div>
+      {% endif %}
+
+      {% if app.storage_mounts %}
+      <div class="info-row" style="flex-direction: column; align-items: flex-start; gap: 4px;">
+        <span class="info-row__label">Storage Mounts</span>
+        <div style="font-size: 12px; display: flex; flex-direction: column; gap: 4px; width: 100%;">
+          {% for mount in app.storage_mounts | from_json if app.storage_mounts %}
+          <div style="padding: 4px 8px; background: var(--bg-card); border-radius: 4px; font-family: monospace;">{{ mount.volume }} → {{ mount.mount_path }}</div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if not deployment_active and app.status not in ['deleting', 'delete_failed'] %}
+  <!-- EDIT SETTINGS MODAL -->
+  <div class="modal-backdrop hidden" data-edit-settings-modal role="dialog" aria-modal="true" aria-labelledby="edit-settings-title">
+    <div class="modal">
+      <div class="modal__header">
+        <h2 id="edit-settings-title">Edit Application Settings</h2>
+        <button class="btn btn--ghost btn--icon" type="button" data-edit-settings-close aria-label="Close">×</button>
+      </div>
+      <form class="form" method="post" action="/plugins/railpack_apps/{{ app.id }}/settings">
+        {% include "partials/csrf_field.html" %}
+        <div class="modal__body">
+          {% if app.source_type == 'git' %}
+          <div class="form-group">
+            <label class="form-label" for="setting_git_ref">Git Reference</label>
+            <input class="form-input form-input--code" id="setting_git_ref" name="git_ref" value="{{ app.git_ref or app.branch or '' }}" placeholder="main, v1.0.0, or SHA">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="setting_git_ref_type">Reference Type</label>
+            <select class="form-select" id="setting_git_ref_type" name="git_ref_type">
+              <option value="branch" {% if (app.git_ref_type or 'branch') == 'branch' %}selected{% endif %}>Branch</option>
+              <option value="tag" {% if app.git_ref_type == 'tag' %}selected{% endif %}>Tag</option>
+              <option value="commit" {% if app.git_ref_type == 'commit' %}selected{% endif %}>Commit SHA</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="setting_root_directory">Root Directory</label>
+            <input class="form-input form-input--code" id="setting_root_directory" name="root_directory" value="{{ app.root_directory or '' }}" placeholder="./">
+          </div>
+          {% if app.build_mode == 'dockerfile' %}
+          <div class="form-group">
+            <label class="form-label" for="setting_dockerfile_path">Dockerfile Path</label>
+            <input class="form-input form-input--code" id="setting_dockerfile_path" name="dockerfile_path" value="{{ app.dockerfile_path or 'Dockerfile' }}" placeholder="Dockerfile">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="setting_build_args">Build Arguments (JSON)</label>
+            <textarea class="form-input form-input--code" id="setting_build_args" name="build_args" rows="2" placeholder='{"ARG": "VAL"}'>{{ app.build_args or '' }}</textarea>
+          </div>
+          {% endif %}
+          {% endif %}
+          <div class="form-group">
+            <label class="form-label" for="setting_custom_start_command">Custom Start Command (CMD Override)</label>
+            <input class="form-input form-input--code" id="setting_custom_start_command" name="custom_start_command" value="{{ app.custom_start_command or '' }}" placeholder="e.g. gunicorn -w 4 app:app">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="setting_health_path">Health Check Path</label>
+            <input class="form-input form-input--code" id="setting_health_path" name="health_path" value="{{ app.health_path or '/' }}" placeholder="/" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="setting_startup_timeout_seconds">Startup Timeout (Seconds)</label>
+            <input class="form-input form-input--code" id="setting_startup_timeout_seconds" name="startup_timeout_seconds" type="number" min="10" max="300" value="{{ app.startup_timeout_seconds or 45 }}" required>
+          </div>
+          <div class="form-group">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <label class="form-label" style="margin-bottom: 0;">Persistent Storage Mounts</label>
+              <button type="button" class="btn btn--secondary btn--sm" data-edit-add-mount>+ Add Mount</button>
+            </div>
+            <input type="hidden" name="storage_mounts" value="{{ app.storage_mounts or '[]' }}" data-edit-storage-mounts>
+            <div data-edit-mounts-list style="display: flex; flex-direction: column; gap: 8px;">
+              {% for mount in app.storage_mounts | from_json if app.storage_mounts %}
+              <div style="display: flex; gap: 8px; align-items: center;" data-edit-mount-row>
+                <input class="form-input form-input--code" style="flex: 1;" placeholder="Label" value="{{ mount.label }}" data-edit-mount-label>
+                <input class="form-input form-input--code" style="flex: 1.5;" placeholder="Mount Path (e.g. /app/uploads)" value="{{ mount.mount_path }}" data-edit-mount-path>
+                <button type="button" class="btn btn--secondary btn--sm" data-edit-mount-remove>Remove</button>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+        <div class="modal__footer">
+          <button class="btn btn--secondary" type="button" data-edit-settings-close>Cancel</button>
+          <button class="btn btn--primary" type="submit">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<!-- TAB 3: DEPLOYMENTS & SNAPSHOTS -->
+<div class="app-detail-tab-panel" data-tab-panel="deployments">
+  {% include "railpack_apps/partials/detail_deployment_changes.html" %}
+
+  {% include "railpack_apps/partials/detail_deployment.html" %}
+</div>
+
+<!-- TAB 4: DATABASES & STORAGE -->
+<div class="app-detail-tab-panel" data-tab-panel="databases">
+  {% include "railpack_apps/partials/detail_databases.html" %}
+</div>
+
+<!-- TAB 5: DANGER ZONE -->
+<div class="app-detail-tab-panel" data-tab-panel="danger">
+  {% include "railpack_apps/partials/detail_danger_zone.html" %}
+</div>
+
 {% endblock %}
 {% block scripts %}
 <script type="module" src="/plugins/railpack_apps/static/js/railpack-app-detail.js"></script>

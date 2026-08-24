@@ -844,3 +844,61 @@ html[data-theme="charcoal"] .apps-engine-optic .db-toggle-icon {
 [hidden], .hidden {
   display: none !important;
 }
+
+/* ── App Detail Tab Panels & Expandable Text ──────────────────── */
+.app-detail-tab-panel {
+  display: none;
+}
+.app-detail-tab-panel.is-active {
+  display: block;
+}
+
+.expandable-text {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 100%;
+}
+.expandable-text__content {
+  max-height: 48px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  word-break: break-all;
+  transition: max-height 0.2s ease;
+  line-height: 1.4;
+  font-size: 12px;
+}
+.expandable-text.is-expanded .expandable-text__content {
+  max-height: 600px;
+  overflow-y: auto;
+}
+.expandable-text__toggle {
+  background: transparent;
+  border: none;
+  color: var(--color-accent, #6366f1);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  margin-top: 2px;
+  text-align: left;
+  display: inline-block;
+  align-self: flex-start;
+}
+.expandable-text__toggle:hover {
+  text-decoration: underline;
+}
+
+.app-quickstart-card {
+  border-left: 3px solid var(--color-accent, #6366f1);
+  background: color-mix(in srgb, var(--color-accent, #6366f1) 4%, var(--color-surface, #18191a));
+}
+.app-quickstart-badge {
+  background: color-mix(in srgb, var(--color-accent, #6366f1) 15%, transparent);
+  color: var(--color-accent, #6366f1);
+  font-weight: 600;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
