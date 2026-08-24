@@ -31,8 +31,8 @@ class TestAiSkillsLoader(unittest.TestCase):
         self.assertIsNotNone(skill_main)
         self.assertEqual(skill_main, skill_alias1)
         self.assertEqual(skill_main, skill_alias2)
-        self.assertIn("[ACTION:APP_PLAN:", skill_main.prompt)
-        self.assertIn("NEVER ask the user for passwords", skill_main.prompt)
+        self.assertIn("propose_app_install", skill_main.prompt)
+        self.assertIn("Never deploy", skill_main.prompt)
 
     def test_app_redeploy_skill_aliases(self):
         """Verify app_redeploy skill can be retrieved via aliases."""
@@ -45,7 +45,7 @@ class TestAiSkillsLoader(unittest.TestCase):
         self.assertEqual(skill_main, skill_alias1)
         self.assertEqual(skill_main, skill_alias2)
         self.assertEqual(skill_main, skill_alias3)
-        self.assertIn("[ACTION:APP_REDEPLOY:", skill_main.prompt)
+        self.assertIn("propose_container_app_patch", skill_main.prompt)
 
 
 if __name__ == "__main__":

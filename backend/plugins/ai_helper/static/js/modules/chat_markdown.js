@@ -213,22 +213,29 @@
           }
           // Only server-appended setup handoffs render in chat. The click is approval.
           if (actionType === "APP_SETUP_PLAN") {
-            var setupPlanId = actionVal.trim();
+            var parts = actionVal.trim().split(":");
+            var setupPlanId = parts[0].trim();
+            var planKind = (parts[1] || "").trim().toLowerCase();
+            var isPatch = planKind === "patch" || planKind === "redeploy" || planKind === "fix";
+            var cardTitle = isPatch ? "Reviewed Fix Ready" : "Reviewed Setup Plan Ready";
+            var summaryText = isPatch
+              ? "Configuration and required secrets are verified. Click below to apply changes and redeploy immediately."
+              : "Configuration and required secrets are verified. Click below to deploy.";
+            var btnText = isPatch ? "Apply Fix & Redeploy" : "Deploy reviewed setup";
             return [
               '<div class="ai-app-plan-card" data-plan-id="' + setupPlanId + '">',
               '  <div class="ai-app-plan-card-header">',
               '    <div class="ai-app-plan-card-header-left">',
               '      <span class="ai-app-plan-card-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg></span>',
-              '      <span class="ai-app-plan-card-title">Reviewed Plan Ready</span>',
+              '      <span class="ai-app-plan-card-title">' + cardTitle + '</span>',
               '    </div>',
               '    <span class="badge badge--ok" style="font-size: 10px; font-weight: 600;">Verified Plan</span>',
               '  </div>',
               '  <div class="ai-app-plan-card-body">',
-              '    <p class="ai-app-plan-summary">Configuration and required secrets are verified. Click below to apply changes and redeploy immediately.</p>',
+              '    <p class="ai-app-plan-summary">' + summaryText + '</p>',
               '    <button type="button" class="ai-action-btn--big-next" data-action="APP_SETUP_PLAN" data-plan-id="' + setupPlanId + '">',
               '      <span class="ai-btn-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></span>',
-              '      <span class="ai-btn-text">Apply Fix & Redeploy</span>',
-              '      <!-- Deploy reviewed setup -->',
+              '      <span class="ai-btn-text">' + btnText + '</span>',
               '      <span class="ai-btn-arrow">→</span>',
               '    </button>',
               '  </div>',

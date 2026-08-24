@@ -245,7 +245,8 @@
         var applyPlanBtn = e.target.closest("[data-action='APP_SETUP_PLAN']");
         if (applyPlanBtn) {
           e.preventDefault();
-          var setupPlanId = applyPlanBtn.getAttribute("data-plan-id");
+          var rawPlanVal = applyPlanBtn.getAttribute("data-plan-id") || "";
+          var setupPlanId = rawPlanVal.split(":")[0].trim();
           if (!setupPlanId) return;
 
           applyPlanBtn.disabled = true;

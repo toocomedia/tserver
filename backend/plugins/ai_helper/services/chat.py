@@ -378,6 +378,7 @@ async def stream_ai_chat(
     # Tool calling loop if enabled
     tool_was_executed = False
     setup_plan_id: str | None = None
+    setup_plan_kind: str = "install"
     sensitive_file_blocked = False
     setup_plan_required = tools_enabled and setup_handoff.requires_reviewed_plan(task_type)
     setup_plan_errors: List[str] = []
@@ -519,7 +520,10 @@ async def stream_ai_chat(
                         yield _activity_event(fn_name, "start", fn_args)
                         try:
                             tool_output = await _execute_tool(fn_name, fn_args)
-                            setup_plan_id = setup_plan_id or _setup_plan_id(fn_name, tool_output)
+                            p_id = _setup_plan_id(fn_name, tool_output)
+                            if p_id and not setup_plan_id:
+                                setup_plan_id = p_id
+                                setup_plan_kind = "patch" if fn_name == "propose_container_app_patch" else "install"
                             yield _activity_event(fn_name, "done", fn_args)
                         except Exception as e:
                             tool_output = {"status": "error", "message": str(e)}
@@ -546,7 +550,10 @@ async def stream_ai_chat(
                         yield _activity_event(fn_name, "start", fn_args)
                         try:
                             tool_output = await _execute_tool(fn_name, fn_args)
-                            setup_plan_id = setup_plan_id or _setup_plan_id(fn_name, tool_output)
+                            p_id = _setup_plan_id(fn_name, tool_output)
+                            if p_id and not setup_plan_id:
+                                setup_plan_id = p_id
+                                setup_plan_kind = "patch" if fn_name == "propose_container_app_patch" else "install"
                             yield _activity_event(fn_name, "done", fn_args)
                         except Exception as e:
                             tool_output = {"status": "error", "message": str(e)}
@@ -592,7 +599,10 @@ async def stream_ai_chat(
                         yield _activity_event(fn_name, "start", fn_args)
                         try:
                             tool_output = await _execute_tool(fn_name, fn_args)
-                            setup_plan_id = setup_plan_id or _setup_plan_id(fn_name, tool_output)
+                            p_id = _setup_plan_id(fn_name, tool_output)
+                            if p_id and not setup_plan_id:
+                                setup_plan_id = p_id
+                                setup_plan_kind = "patch" if fn_name == "propose_container_app_patch" else "install"
                             yield _activity_event(fn_name, "done", fn_args)
                         except Exception as exc:
                             tool_output = {"status": "error", "message": str(exc)}
@@ -679,7 +689,8 @@ async def stream_ai_chat(
         yield err_msg
 
     if setup_plan_id:
-        setup_action = f"\n\n[ACTION:APP_SETUP_PLAN:{setup_plan_id}]"
+        kind_suffix = ":patch" if setup_plan_kind == "patch" else ""
+        setup_action = f"\n\n[ACTION:APP_SETUP_PLAN:{setup_plan_id}{kind_suffix}]"
         full_response.append(setup_action)
         yield setup_action
 
