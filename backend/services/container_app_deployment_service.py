@@ -207,6 +207,12 @@ async def _deploy_after_commit(deployment_id: int, token: int, operation_id: int
                     except Exception as exc:
                         is_running = await asyncio.to_thread(_container_running, runtime)
                         if is_running:
+                            inspect_res = apps._run(["docker", "inspect", "--format", "{{.State.Status}}", runtime.container_name], timeout=10)
+                            status_str = (inspect_res.stdout or "").strip()
+                            if status_str == "restarting":
+                                progress.append_log(deployment, "health", f"[guard] Application container is crash-looping ({exc}). Stopping container to protect server CPU.")
+                                apps._run(["docker", "stop", runtime.container_name], timeout=15)
+                                raise RuntimeError(f"Application container is crash-looping ({exc}). Stopped to protect server resources.")
                             progress.append_log(deployment, "health", f"[warning] HTTP probe did not return 200 ({exc}), but container is running. Proceeding with deployment.")
                             app.health_state, app.health_detail = "degraded", str(exc)[:1000]
                         else:
@@ -421,15 +427,24 @@ async def _deploy_official_stack(
             progress.append_log(deployment, "health", f"[ok] {readiness_detail}")
         except Exception as exc:
             readiness, readiness_detail = "degraded", str(exc)[:1000]
-            progress.append_log(deployment, "health", f"[warning] HTTP probe on {health_path} did not return 200 ({exc}); containers remain running in degraded state.")
+            progress.append_log(deployment, "health", f"[warning] HTTP probe on {health_path} did not return 200 ({exc}); checking container stability.")
+            is_crash_looping = False
             try:
                 from services.container_app_diagnostics_service import _container_logs
-                for name, item in service_states.items():
+                latest_states = await asyncio.to_thread(stack_runtime_service.inspect_stack_services, app.id, stack)
+                if any(item.get("status") == "restarting" for item in latest_states.values()):
+                    is_crash_looping = True
+                for name, item in latest_states.items():
                     clogs = _container_logs(item["container_name"])
                     if clogs:
                         progress.append_log(deployment, "health", f"--- Logs for {name} ({item['container_name']}) ---\n{clogs[-1500:]}")
             except Exception:
                 pass
+
+            if is_crash_looping:
+                progress.append_log(deployment, "health", "[guard] Stopped crash-looping service(s) to protect server CPU and memory.")
+                await asyncio.to_thread(compose_runtime.stop, app.id)
+                readiness_detail = "Application failed startup checks and was in a crash loop. Stopped to protect server resources."
     app.health_state, app.health_detail = readiness, readiness_detail
     logs_summary: dict[str, str] = {}
     if readiness == "degraded":
@@ -856,10 +871,10 @@ def _replace_container(app: ContainerApp, image: str) -> None:
         _require(apps._run(["docker", "rm", "-f", app.container_name], timeout=30), "Could not replace existing app container.")
     _ensure_network(app)
     command = [
-        "docker", "run", "-d", "--name", app.container_name, "--restart", "unless-stopped",
+        "docker", "run", "-d", "--name", app.container_name, "--restart", "on-failure:10",
         "--label", "srv-panel.plugin=railpack_apps", "--label", f"srv-panel.app-id={app.id}",
         "--memory", f"{app.memory_limit_mb}m", "--memory-swap", f"{app.memory_limit_mb}m",
-        "--cpus", app.cpu_limit, "--pids-limit", str(app.pid_limit), "--security-opt", "no-new-privileges",
+        "--cpus", app.cpu_limit, "--cpu-shares", "512", "--pids-limit", str(app.pid_limit), "--security-opt", "no-new-privileges",
         "--network", apps.network_name(app.id), "-p", f"127.0.0.1:{app.host_port}:{app.internal_port}",
         "--env-file", app.env_path,
     ]

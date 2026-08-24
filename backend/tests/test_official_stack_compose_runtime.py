@@ -59,6 +59,8 @@ class TestOfficialStackComposeRuntime(unittest.TestCase):
         rendered = compose_runtime.render_compose(self.app, self.stack, env)
         web = rendered["services"]["web"]
         self.assertEqual(web["ports"], ["127.0.0.1:32171:8000"])
+        self.assertEqual(web["restart"], "on-failure:10")
+        self.assertEqual(web["cpu_shares"], 512)
         self.assertNotIn("ports", rendered["services"]["db"])
         self.assertNotIn("db-password", str(rendered))
         self.assertNotIn("app-secret", str(rendered))

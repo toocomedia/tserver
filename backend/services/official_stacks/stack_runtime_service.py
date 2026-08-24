@@ -182,9 +182,10 @@ def start_service_container(
         "--network", net_name,
         "--network-alias", service_name,
         "--network-alias", cname,
-        "--restart", "unless-stopped",
+        "--restart", "on-failure:10",
         "--memory", f"{svc.memory_limit_mb}m",
         "--cpus", str(svc.cpu_limit),
+        "--cpu-shares", "512",
         "--label", "srv-panel.stack=true",
         "--label", f"srv-panel.app-id={app_id}",
         "--label", f"srv-panel.stack-service={service_name}",
@@ -222,6 +223,11 @@ def start_service_container(
 
     if ("postgres" in img_lower or "postgres" in sname_lower) and "POSTGRES_USER" not in svc.environment_defaults:
         run_cmd.extend(["-e", "POSTGRES_USER=postgres"])
+    if ("clickhouse" in img_lower or "clickhouse" in sname_lower):
+        if "CLICKHOUSE_USER" not in svc.environment_defaults:
+            run_cmd.extend(["-e", "CLICKHOUSE_USER=default"])
+        if "CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT" not in svc.environment_defaults:
+            run_cmd.extend(["-e", "CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1"])
 
     # Volume mounts
     for vol in svc.volumes:

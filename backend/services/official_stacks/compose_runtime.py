@@ -113,11 +113,12 @@ def render_compose(
         spec: dict[str, Any] = {
             "container_name": f"srv-stack-{app.id}-{name}",
             "image": service.pinned_digest or service.image_reference,
-            "restart": "unless-stopped",
+            "restart": "on-failure:10",
             "env_file": [str(env_file)],
             "networks": [network],
             "mem_limit": f"{service.memory_limit_mb}m",
             "cpus": str(service.cpu_limit),
+            "cpu_shares": 512,
             "pids_limit": 1024,
             "security_opt": ["no-new-privileges:true"],
             "labels": {

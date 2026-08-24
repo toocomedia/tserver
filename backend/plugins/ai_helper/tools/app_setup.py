@@ -62,8 +62,13 @@ _STACK_DB_DEFAULTS = {
     "clickhouse": {
         "ports": [8123, 9000],
         "volume": "/var/lib/clickhouse",
-        "env": {},
-        "url": ("CLICKHOUSE_URL", "http://{service}:8123/default"),
+        "env": {
+            "CLICKHOUSE_DB": "plausible_events_db",
+            "CLICKHOUSE_USER": "default",
+            "CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT": "1",
+        },
+        "secret": ("CLICKHOUSE_PASSWORD", "ClickHouse password", "password"),
+        "url": ("CLICKHOUSE_DATABASE_URL", "http://default:{CLICKHOUSE_PASSWORD}@{service}:8123/plausible_events_db"),
     },
     "redis": {"ports": [6379], "volume": "/data", "env": {}, "url": ("REDIS_URL", "redis://{service}:6379/0")},
     "mongo": {"ports": [27017], "volume": "/data/db", "env": {}, "url": ("MONGODB_URL", "mongodb://{service}:27017/app")},

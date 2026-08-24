@@ -78,8 +78,10 @@ class TestStackSynthesizer(unittest.TestCase):
         # Check dynamic secrets deduction for Elixir/Phoenix (even without SECRET_KEY_BASE in env_sample)
         secret_keys = {sec["key"] for sec in manifest["secrets"]}
         self.assertIn("POSTGRES_PASSWORD", secret_keys)
+        self.assertIn("CLICKHOUSE_PASSWORD", secret_keys)
         self.assertIn("SECRET_KEY_BASE", secret_keys)
         self.assertIn("TOTP_VAULT_KEY", secret_keys)
+        self.assertEqual(services["analytics_clickhouse"]["environment"]["CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT"], "1")
 
         # Validate with stack_from_proposal
         stack = stack_from_proposal(manifest, bundle["evidence"])

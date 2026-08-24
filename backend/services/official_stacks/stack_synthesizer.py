@@ -48,8 +48,13 @@ _STACK_DB_DEFAULTS: dict[str, dict[str, Any]] = {
     "clickhouse": {
         "ports": [8123, 9000],
         "volume": "/var/lib/clickhouse",
-        "env": {},
-        "url": ("CLICKHOUSE_DATABASE_URL", "http://{service}:8123/plausible_events_db"),
+        "env": {
+            "CLICKHOUSE_DB": "plausible_events_db",
+            "CLICKHOUSE_USER": "default",
+            "CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT": "1",
+        },
+        "secret": ("CLICKHOUSE_PASSWORD", "ClickHouse password", "password"),
+        "url": ("CLICKHOUSE_DATABASE_URL", "http://default:{CLICKHOUSE_PASSWORD}@{service}:8123/plausible_events_db"),
         "image": "clickhouse/clickhouse-server:24.3-alpine",
         "health": {
             "type": "command",
