@@ -335,6 +335,8 @@ def _build_stack_definition_bundle(
             if (web_svc, sec_k) not in seen:
                 seen.add((web_svc, sec_k))
                 secrets.append({"key": sec_k, "purpose": "Elixir/Phoenix application secret", "generator": gen, "service": web_svc, "environment": sec_k})
+        if not service_map[web_svc].get("command"):
+            service_map[web_svc]["command"] = ["sh", "-c", "sleep 3 && /entrypoint.sh db createdb && /entrypoint.sh db migrate && /entrypoint.sh run"]
     elif any(k in deduce_context for k in ("laravel", "php")):
         if (web_svc, "APP_KEY") not in seen:
             seen.add((web_svc, "APP_KEY"))

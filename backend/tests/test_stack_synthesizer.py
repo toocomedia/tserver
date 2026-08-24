@@ -63,6 +63,7 @@ class TestStackSynthesizer(unittest.TestCase):
         services = {s["name"]: s for s in manifest["services"]}
         self.assertIn("analytics", services)
         self.assertEqual(services["analytics"]["image"], "ghcr.io/plausible/community-edition:v2")
+        self.assertIn("db migrate", " ".join(services["analytics"]["command"]))
         self.assertIn("analytics_postgres", services)
         self.assertIn("analytics_clickhouse", services)
         self.assertEqual(services["analytics_clickhouse"]["image"], "clickhouse/clickhouse-server:24.3-alpine")
