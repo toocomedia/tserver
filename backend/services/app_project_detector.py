@@ -3,8 +3,15 @@ from __future__ import annotations
 
 import ast
 import re
-import tomllib
 from pathlib import Path
+
+try:
+    import tomllib
+except ModuleNotFoundError:
+    try:
+        import tomli as tomllib  # type: ignore
+    except ModuleNotFoundError:
+        tomllib = None
 
 ENV_RE = re.compile(r"\b(?:getenv|environ\.get)\(\s*['\"]([A-Za-z_][A-Za-z0-9_]*)")
 ENV_INDEX_RE = re.compile(r"environ\s*\[\s*['\"]([A-Za-z_][A-Za-z0-9_]*)")
@@ -69,8 +76,20 @@ def _explicit_entrypoint(root: Path) -> tuple[str | None, str | None]:
     entrypoint = None
     pyproject = root / "pyproject.toml"
     if pyproject.exists():
-        try: entrypoint = tomllib.loads(_read(pyproject)).get("tool", {}).get("fastapi", {}).get("entrypoint")
-        except (tomllib.TOMLDecodeError, AttributeError): pass
+        if tomllib is not None:
+            try:
+                data = tomllib.loads(_read(pyproject))
+                if isinstance(data, dict):
+                    entrypoint = data.get("tool", {}).get("fastapi", {}).get("entrypoint")
+            except Exception:
+                pass
+        else:
+            for line in _read(pyproject).splitlines():
+                if "entrypoint" in line and "=" in line:
+                    match = re.search(r'entrypoint\s*=\s*["\']([^"\']+)["\']', line)
+                    if match:
+                        entrypoint = match.group(1).strip()
+                        break
     procfile = root / "Procfile"
     if procfile.exists():
         for line in _read(procfile).splitlines():
