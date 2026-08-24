@@ -30,7 +30,27 @@ async def deploy_plan(
         return await _deploy_stack(db, plan, user_id=user_id, ssl_requested=ssl_requested)
     if action_type == "app_install":
         return await _deploy_app(db, plan, user_id=user_id, ssl_requested=ssl_requested)
+    if action_type == "container_app_patch":
+        return await _deploy_patch(db, plan, user_id=user_id)
     raise HTTPException(400, "Reviewed setup plan type is not deployable.")
+
+
+async def _deploy_patch(db: AsyncSession, plan: dict[str, Any], *, user_id: int | None) -> tuple[int, int]:
+    from models.container_app import ContainerApp
+    from services.apps_engine import deployment_drafts
+    payload = plan.get("payload") or {}
+    app_id = payload.get("app_id")
+    if not app_id:
+        raise HTTPException(400, "Patch plan is missing app ID.")
+    app = await db.get(ContainerApp, int(app_id))
+    if not app:
+        raise HTTPException(404, "App for this patch was not found.")
+    snapshot_id, _ = await deployment_drafts.apply_plan(db, app, plan["plan_id"], user_id)
+    deployment = await container_app_deployment_service.queue_deployment(
+        db, app, action="deploy", snapshot_id=snapshot_id,
+    )
+    await db.commit()
+    return app.id, deployment.id
 
 
 async def _domain_from_payload(db: AsyncSession, payload: dict[str, Any]) -> Domain:
