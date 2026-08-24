@@ -355,6 +355,13 @@ def _build_stack_definition_bundle(
     stack_name = _sanitize_name(clean_repo.rsplit("/", 1)[-1].removesuffix(".git") if clean_repo else "stack") or "stack"
     has_clickhouse = any("clickhouse" in f"{n} {s['image']}".lower() for n, s in service_map.items())
 
+    health_path = str(inspection.get("health_path") or "").strip()
+    if not health_path:
+        if any(k in deduce_context for k in ("elixir", "phoenix", "plausible")):
+            health_path = "/api/health"
+        else:
+            health_path = "/"
+
     manifest: dict[str, Any] = {
         "name": stack_name[:48],
         "display_name": f"{stack_name.replace('-', ' ').title()} Stack",
@@ -365,6 +372,7 @@ def _build_stack_definition_bundle(
         "startup_order": [n for n in service_map if n != web_svc] + [web_svc],
         "web_service": web_svc,
         "web_port": service_map[web_svc]["ports"][0],
+        "web_health_path": health_path,
         "startup_timeout_seconds": 120,
         "recommended_ram_mb": 2048 if has_clickhouse else 1024,
         "minimum_ram_mb": 512,

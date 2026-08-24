@@ -409,17 +409,27 @@ async def _deploy_official_stack(
 
     await progress.stage(db, deployment, "health", "Checking verified private readiness rules.")
     readiness, readiness_detail = "unverified", "No verified HTTP readiness endpoint is configured."
-    health_path = (stack.web_health_path or "").strip()
+    health_path = (stack.web_health_path or "/").strip()
     if health_path:
         try:
+            progress.append_log(deployment, "health", f"Waiting for web service to respond on {health_path} (timeout {min(stack.startup_timeout_seconds or 60, 60)}s)...")
             await progress.wait_for_http(
                 runtime.host_port, path=health_path, host_header=domain.name,
-                timeout_seconds=stack.startup_timeout_seconds,
+                timeout_seconds=min(stack.startup_timeout_seconds or 60, 60),
             )
             readiness, readiness_detail = "healthy", f"Private HTTP check passed on {health_path}."
+            progress.append_log(deployment, "health", f"[ok] {readiness_detail}")
         except Exception as exc:
             readiness, readiness_detail = "degraded", str(exc)[:1000]
-            progress.append_log(deployment, "health", f"[warning] HTTP probe on {health_path} did not return 200 ({exc}); containers remain running in degraded state. Diagnostics collected.")
+            progress.append_log(deployment, "health", f"[warning] HTTP probe on {health_path} did not return 200 ({exc}); containers remain running in degraded state.")
+            try:
+                from services.container_app_diagnostics_service import _container_logs
+                for name, item in service_states.items():
+                    clogs = _container_logs(item["container_name"])
+                    if clogs:
+                        progress.append_log(deployment, "health", f"--- Logs for {name} ({item['container_name']}) ---\n{clogs[-1500:]}")
+            except Exception:
+                pass
     app.health_state, app.health_detail = readiness, readiness_detail
     logs_summary: dict[str, str] = {}
     if readiness == "degraded":
