@@ -221,6 +221,9 @@ async def _fetch_url_internal(url: str, max_chars: int) -> Dict[str, Any]:
                 else:
                     parsed_doc = raw_text.strip()
 
+                from services.apps_engine.doc_evidence import redact_secret_values
+                parsed_doc = redact_secret_values(parsed_doc)
+
                 if len(parsed_doc) > max_chars:
                     parsed_doc = parsed_doc[:max_chars] + f"\n... [Truncated {len(parsed_doc) - max_chars} characters]"
 

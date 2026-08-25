@@ -1,7 +1,9 @@
 """Bounded App Engine inspection and reviewed-plan handoff policy."""
 from __future__ import annotations
 
+import re
 from typing import Mapping
+from urllib.parse import urlsplit
 
 from plugins.ai_helper.tools.definitions import APP_SETUP_TOOL_NAMES
 
@@ -20,6 +22,7 @@ APP_DIAGNOSTIC_TOOL_NAMES = frozenset({"get_app_engine_diagnostics", "propose_co
 _TOOL_LIMITS = {
     "get_app_engine_capabilities": 2,
     "inspect_app_source": 2,
+    "fetch_web_documentation": 1,
     "propose_app_install": 1,
     "propose_stack_install": 1,
 }
@@ -52,8 +55,8 @@ def tool_limit_result(
             "status": "setup_tool_not_available",
             "message": (
                 "App Engine setup can only use capabilities, source inspection, "
-                "and a reviewed setup proposal. External docs, DNS, file reads, "
-                "image probes, and diagnostics are not part of setup."
+                "one direct documentation read, and a reviewed setup proposal. "
+                "DNS, general file reads, image probes, and diagnostics are not part of setup."
             ),
         }
     proposal_count = sum(tool_counts.get(name, 0) for name in _PROPOSAL_TOOLS)
@@ -80,7 +83,8 @@ def tool_limit_result(
 PLAN_REQUIRED_MESSAGE = (
     "The App Engine setup must create exactly one validated server-side review plan "
     "from the capabilities and source inspection already provided. Do not inspect more "
-    "sources, fetch docs, check DNS/SSL, reveal or generate secret values, or emit action tags."
+    "sources, repeat documentation reads, check DNS/SSL, reveal or generate secret values, "
+    "or emit deployment action tags."
 )
 
 PLAN_TOOL_REQUIRED_MESSAGE = (
@@ -132,17 +136,33 @@ def is_setup_interview_pending(
 
     inspection = setup_source_result.get("inspection") if isinstance(setup_source_result.get("inspection"), dict) else setup_source_result
     doc_evidence = inspection.get("documentation_evidence") or {}
-    
-    # 1. Check if admin setup commands exist in doc_evidence (e.g. registeradmin, createsuperuser)
-    if doc_evidence.get("detected_admin_commands") and "@" not in clean_msg and "admin" not in clean_msg:
+
+    setup_hints = doc_evidence.get("setup_hints") if isinstance(doc_evidence.get("setup_hints"), dict) else {}
+    required_inputs = setup_hints.get("required_inputs") or []
+    needs_admin_email = any(
+        isinstance(item, dict) and item.get("name") == "admin_email"
+        for item in required_inputs
+    )
+
+    # 1. Check documented setup hints/commands for a missing administrator email.
+    if (needs_admin_email or doc_evidence.get("detected_admin_commands")) and "@" not in clean_msg and "admin" not in clean_msg:
         return True
 
-    # 2. Check if multiple databases were detected (e.g. Postgres + Clickhouse + Redis, or Postgres + SQLite)
+    # 2. Preserve the existing reviewed choice when inspection recommends an official image.
+    image_advice = setup_source_result.get("official_image_recommendation") or inspection.get("official_image_recommendation")
+    if isinstance(image_advice, dict) and image_advice.get("has_official_image") and not any(
+        token in clean_msg for token in (
+            "docker image", "use docker", "source build", "build from source", "railpack", "dockerfile",
+        )
+    ):
+        return True
+
+    # 3. Check if multiple databases were detected (e.g. Postgres + Clickhouse + Redis, or Postgres + SQLite)
     db_detections = inspection.get("database_detections") or []
     if len(db_detections) > 1 and not any(k in clean_msg for k in ("postgres", "mysql", "mariadb", "sqlite", "clickhouse", "mongo")):
         return True
 
-    # 3. Check if detected docker images or compose services offer build choices
+    # 4. Check if detected docker images or compose services offer build choices
     detected_imgs = doc_evidence.get("detected_docker_images") or []
     has_compose = bool((inspection.get("compose_info") or {}).get("services"))
     if (detected_imgs or has_compose) and not any(k in clean_msg for k in ("docker image", "docker", "railpack", "source build", "compose", "stack")):
@@ -157,6 +177,61 @@ def is_recommendation_decision_pending(
 ) -> bool:
     """Whether setup decision or interview is awaiting user choice before plan generation."""
     return is_setup_interview_pending(setup_source_result, user_message)
+
+
+def needs_documentation_fallback(setup_source_result: Mapping[str, object] | None) -> bool:
+    """Allow one official read only when bounded local setup sections are absent."""
+    if not isinstance(setup_source_result, dict):
+        return True
+    inspection = setup_source_result.get("inspection") if isinstance(setup_source_result.get("inspection"), dict) else setup_source_result
+    evidence = inspection.get("documentation_evidence") if isinstance(inspection, dict) else None
+    return not (isinstance(evidence, dict) and evidence.get("found") and evidence.get("sources"))
+
+
+def setup_documentation_url_allowed(
+    setup_source_result: Mapping[str, object] | None,
+    user_message: str,
+    requested_url: str,
+) -> bool:
+    """Restrict fallback reads to URLs evidenced by inspection or supplied by the user."""
+    requested = _normalized_https_url(requested_url)
+    if not requested:
+        return False
+    allowed: list[str] = re.findall(r"https://[^\s<>\"']+", user_message or "", flags=re.IGNORECASE)
+
+    def collect(value: object) -> None:
+        if isinstance(value, dict):
+            for item in value.values():
+                collect(item)
+        elif isinstance(value, (list, tuple)):
+            for item in value:
+                collect(item)
+        elif isinstance(value, str):
+            allowed.extend(re.findall(r"https://[^\s<>\"']+", value, flags=re.IGNORECASE))
+
+    collect(setup_source_result)
+    request_parts = urlsplit(requested)
+    for candidate in allowed:
+        normalized = _normalized_https_url(candidate)
+        if not normalized:
+            continue
+        parts = urlsplit(normalized)
+        base_path = parts.path.rstrip("/").removesuffix(".git")
+        if request_parts.hostname == parts.hostname and (
+            requested == normalized
+            or not base_path
+            or request_parts.path.rstrip("/").startswith(base_path + "/")
+        ):
+            return True
+    return False
+
+
+def _normalized_https_url(value: str) -> str:
+    clean = (value or "").strip().rstrip(".,);]")
+    parsed = urlsplit(clean)
+    if parsed.scheme.lower() != "https" or not parsed.hostname or parsed.username or parsed.password:
+        return ""
+    return clean
 
 
 def missing_plan_message(errors: list[str]) -> str:

@@ -1,7 +1,7 @@
 """Doc and env evidence extractor for App Engine inspection.
 
-Extracts installation snippets from any markdown file (with early stop and strict caps)
-and parses non-standard environment sample files.
+Extracts bounded installation evidence from markdown files and parses
+non-standard environment sample files.
 """
 from __future__ import annotations
 
@@ -9,8 +9,12 @@ import re
 from pathlib import Path
 from typing import Any
 
-# Maximum characters extracted from markdown documentation to minimize LLM token usage
-MAX_DOC_SNIPPET_CHARS = 3500
+from services.apps_engine import build_secrets
+
+# Bounded evidence pack: at most three useful sections and 6,000 total chars.
+MAX_DOC_SNIPPET_CHARS = 6000
+MAX_DOC_SOURCE_CHARS = 2200
+MAX_DOC_SOURCES = 3
 
 # Heading patterns that indicate setup / installation instructions
 _INSTALL_HEADER_RE = re.compile(
@@ -35,75 +39,155 @@ _ENV_TEMPLATE_PATTERNS = (
     "template.env", "env.default", "env.template", ".env.defaults",
 )
 
+_SETUP_INPUT_PATTERNS = (
+    (
+        "admin_email", "Admin Email", "email",
+        re.compile(r"\b(?:admin(?:istrator)?|superuser|owner)\s+(?:e-?mail|email\s+address)\b|\bADMIN_EMAIL\b", re.IGNORECASE),
+    ),
+    (
+        "admin_username", "Admin Username", "text",
+        re.compile(r"\b(?:admin(?:istrator)?|superuser|owner)\s+(?:user(?:name)?|login)\b|\bADMIN_(?:USER|USERNAME)\b", re.IGNORECASE),
+    ),
+    (
+        "site_name", "Site Name", "text",
+        re.compile(r"\b(?:site|instance)\s+(?:name|title)\b|\b(?:SITE|INSTANCE)_(?:NAME|TITLE)\b", re.IGNORECASE),
+    ),
+)
+_EXTRA_SECRET_PARTS = ("LICENSE_KEY", "LICENSE_TOKEN", "SMTP_PASS", "ADMIN_PASS")
+_SECRET_NAME_RE = re.compile(
+    r"(?:PASS(?:WORD)?|SECRET|TOKEN|API[_-]?KEY|PRIVATE[_-]?KEY|LICENSE[_-]?KEY)",
+    re.IGNORECASE,
+)
 
-def find_install_instructions(root: Path) -> dict[str, Any]:
+
+def find_install_instructions(
+    root: Path,
+    env_sample: dict[str, str] | None = None,
+) -> dict[str, Any]:
     """
-    Search markdown documentation files for installation and setup guides.
-    Stops immediately after finding the first relevant match to save token usage.
+    Search markdown documentation files for a small, structured setup evidence pack.
+    Compatibility fields ``file`` and ``snippet`` retain the first/combined result.
     """
     if not root.is_dir():
         return {"found": False}
 
-    # Collect actual markdown files from root and docs/
-    md_files: list[Path] = [p for p in root.iterdir() if p.is_file() and p.name.lower().endswith(".md")]
-    docs_dir = root / "docs"
-    if docs_dir.is_dir():
-        md_files.extend([p for p in docs_dir.iterdir() if p.is_file() and p.name.lower().endswith(".md")])
-
-    # Sort files: priority doc names first, then others
-    def _doc_priority(p: Path) -> int:
-        name_lower = p.name.lower()
-        if name_lower in _PRIORITY_DOC_NAMES:
-            return _PRIORITY_DOC_NAMES.index(name_lower)
-        return len(_PRIORITY_DOC_NAMES) + 1
-
-    md_files.sort(key=_doc_priority)
+    md_files = _markdown_files(root)
+    admin_command_hints: list[dict[str, str]] = []
+    image_hints: list[dict[str, str]] = []
+    sources: list[dict[str, str]] = []
+    remaining = MAX_DOC_SNIPPET_CHARS
 
     for doc_path in md_files:
+        if len(sources) >= MAX_DOC_SOURCES or remaining <= 0:
+            break
         try:
-            content = doc_path.read_text(encoding="utf-8", errors="ignore")[:40_000]
+            content = redact_secret_values(doc_path.read_text(encoding="utf-8", errors="ignore")[:40_000])
             if not content:
                 continue
-
-            match = _INSTALL_HEADER_RE.search(content)
-            if match:
-                start_pos = match.start()
-                snippet = content[start_pos : start_pos + MAX_DOC_SNIPPET_CHARS]
-                
-                # Check for post-install admin commands and docker images inside snippet or file
-                detected_cmds = _extract_admin_commands(content)
-                detected_imgs = _extract_docker_images(content)
-                
-                return {
-                    "found": True,
-                    "file": doc_path.name,
-                    "snippet": snippet.strip(),
-                    "detected_admin_commands": detected_cmds,
-                    "detected_docker_images": detected_imgs,
-                }
-            
-            # If no heading matches, but file contains 'docker run' or 'docker-compose'
-            if "docker run" in content.lower() or "docker-compose" in content.lower():
-                snippet = content[:MAX_DOC_SNIPPET_CHARS]
-                detected_cmds = _extract_admin_commands(content)
-                detected_imgs = _extract_docker_images(content)
-                return {
-                    "found": True,
-                    "file": doc_path.name,
-                    "snippet": snippet.strip(),
-                    "detected_admin_commands": detected_cmds,
-                    "detected_docker_images": detected_imgs,
-                }
+            sections = _relevant_sections(content)
+            if not sections:
+                continue
+            for heading, raw_snippet in sections:
+                if len(sources) >= MAX_DOC_SOURCES or remaining <= 0:
+                    break
+                snippet = raw_snippet[:min(MAX_DOC_SOURCE_CHARS, remaining)].strip()
+                if not snippet:
+                    continue
+                source = {"file": doc_path.name, "heading": heading, "snippet": snippet}
+                sources.append(source)
+                remaining -= len(snippet)
+                evidence = _source_label(source)
+                for command in _extract_admin_commands(snippet):
+                    _append_evidenced_value(admin_command_hints, "command", command, evidence)
+                for image in _extract_docker_images(snippet):
+                    _append_evidenced_value(image_hints, "image", image, evidence)
         except Exception:
             continue
 
-    return {"found": False}
+    parsed_env, env_file = _read_expanded_env_sample(root)
+    effective_env = env_sample if isinstance(env_sample, dict) else parsed_env
+    hints = _extract_setup_hints(sources, effective_env, env_file)
+    detected_cmds = [item["command"] for item in admin_command_hints]
+    detected_imgs = [item["image"] for item in image_hints]
+    if detected_cmds and not any(item.get("name") == "admin_email" for item in hints["required_inputs"]):
+        _append_hint(hints["required_inputs"], {
+            "name": "admin_email", "label": "Admin Email", "kind": "email",
+            "secret": False, "evidence": _source_label(sources[0]) if sources else "documentation",
+        })
+    hints["admin_commands"] = admin_command_hints
+    hints["docker_images"] = image_hints
+    if not sources:
+        return {"found": False, "sources": [], "setup_hints": hints}
+
+    combined = "\n\n---\n\n".join(source["snippet"] for source in sources)[:MAX_DOC_SNIPPET_CHARS]
+    return {
+        "found": True,
+        "file": sources[0]["file"],
+        "snippet": combined,
+        "sources": sources,
+        "detected_admin_commands": detected_cmds,
+        "detected_docker_images": detected_imgs,
+        "setup_hints": hints,
+    }
 
 
 def parse_expanded_env_samples(root: Path) -> dict[str, str]:
     """Parse any environment template file (TEMPLATE.env, .env.example, etc.)."""
+    result, _ = _read_expanded_env_sample(root)
+    return result
+
+
+def redact_secret_values(text: str) -> str:
+    """Remove credential values from documentation before AI-visible use."""
+    safe = re.sub(
+        r"-----BEGIN ([A-Z ]*PRIVATE KEY)-----[\s\S]*?-----END \1-----",
+        "[PRIVATE KEY REDACTED]",
+        text or "",
+        flags=re.IGNORECASE,
+    )
+    lines: list[str] = []
+    for line in safe.splitlines():
+        assignment = re.match(r"^(\s*(?:export\s+)?([A-Z][A-Z0-9_-]*)\s*=\s*).*$", line)
+        if assignment and _SECRET_NAME_RE.search(assignment.group(2)):
+            lines.append(f"{assignment.group(1)}[REDACTED]")
+            continue
+        line = re.sub(
+            r"\b([A-Za-z_][A-Za-z0-9_-]*)\s*=\s*(?:\"[^\"]*\"|'[^']*'|[^\s]+)",
+            lambda match: f"{match.group(1)}=[REDACTED]"
+            if _SECRET_NAME_RE.search(match.group(1)) else match.group(0),
+            line,
+        )
+        line = re.sub(
+            r'(["\']([A-Za-z0-9_-]*(?:password|secret|token|api[_-]?key|private[_-]?key|license[_-]?key)[A-Za-z0-9_-]*)["\']\s*:\s*)["\'][^"\']*["\']',
+            lambda match: f'{match.group(1)}"[REDACTED]"',
+            line,
+            flags=re.IGNORECASE,
+        )
+        line = re.sub(
+            r"(--(?:password|secret|token|api-key|private-key|license-key)(?:=|\s+))\S+",
+            r"\1[REDACTED]",
+            line,
+            flags=re.IGNORECASE,
+        )
+        line = re.sub(r"(https?://[^\s:/@]+:)[^\s@]+(@)", r"\1[REDACTED]\2", line)
+        lines.append(line)
+    return "\n".join(lines)
+
+
+def ai_safe_env_sample(env_sample: dict[str, str]) -> dict[str, str]:
+    """Keep useful defaults while omitting all credential-like sample values."""
+    return {
+        key: "[REDACTED]"
+        if build_secrets.is_sensitive_key(key) or _SECRET_NAME_RE.search(key)
+        else value
+        for key, value in env_sample.items()
+    }
+
+
+def _read_expanded_env_sample(root: Path) -> tuple[dict[str, str], str]:
+    """Return the first environment template and its evidence filename."""
     if not root.is_dir():
-        return {}
+        return {}, ""
 
     # Collect actual candidate files from root
     all_files = [p for p in root.iterdir() if p.is_file() and p.name != ".env"]
@@ -134,11 +218,90 @@ def parse_expanded_env_samples(root: Path) -> dict[str, str]:
                 if key:
                     result[key] = val
             if result:
-                return result
+                return result, path.name
         except Exception:
             pass
 
-    return {}
+    return {}, ""
+
+
+def _markdown_files(root: Path) -> list[Path]:
+    files = [p for p in root.iterdir() if p.is_file() and p.suffix.lower() == ".md"]
+    docs_dir = root / "docs"
+    if docs_dir.is_dir():
+        files.extend(p for p in docs_dir.iterdir() if p.is_file() and p.suffix.lower() == ".md")
+
+    def priority(path: Path) -> tuple[int, str]:
+        name = path.name.lower()
+        rank = _PRIORITY_DOC_NAMES.index(name) if name in _PRIORITY_DOC_NAMES else len(_PRIORITY_DOC_NAMES)
+        return rank, str(path).lower()
+
+    return sorted(files, key=priority)
+
+
+def _relevant_sections(content: str) -> list[tuple[str, str]]:
+    matches = list(_INSTALL_HEADER_RE.finditer(content))
+    sections: list[tuple[str, str]] = []
+    for match in matches:
+        header = match.group(0).strip()
+        level = len(header) - len(header.lstrip("#"))
+        end = len(content)
+        for next_header in re.finditer(r"(?m)^#{1,4}\s+\S.*$", content[match.end():]):
+            raw = next_header.group(0)
+            next_level = len(raw) - len(raw.lstrip("#"))
+            if next_level <= level:
+                end = match.end() + next_header.start()
+                break
+        heading = header.lstrip("#").strip()
+        sections.append((heading, content[match.start():end].strip()))
+    if not sections and any(marker in content.lower() for marker in ("docker run", "docker-compose", "docker compose")):
+        sections.append(("Docker setup", content.strip()))
+    return sections
+
+
+def _extract_setup_hints(
+    sources: list[dict[str, str]],
+    env_sample: dict[str, str],
+    env_file: str,
+) -> dict[str, list[dict[str, Any]]]:
+    required_inputs: list[dict[str, Any]] = []
+    secret_names: list[dict[str, Any]] = []
+
+    for source in sources:
+        evidence = _source_label(source)
+        text = source["snippet"]
+        for name, label, kind, pattern in _SETUP_INPUT_PATTERNS:
+            if pattern.search(text):
+                _append_hint(required_inputs, {"name": name, "label": label, "kind": kind, "secret": False, "evidence": evidence})
+
+    env_evidence = env_file or "environment sample"
+    for raw_key in env_sample:
+        key = build_secrets.normalize_environment_key(raw_key)
+        if not key:
+            continue
+        if build_secrets.is_sensitive_key(key) or any(part in key for part in _EXTRA_SECRET_PARTS):
+            _append_hint(secret_names, {"name": key, "evidence": env_evidence})
+            continue
+        for name, label, kind, pattern in _SETUP_INPUT_PATTERNS:
+            if pattern.search(key):
+                _append_hint(required_inputs, {"name": name, "label": label, "kind": kind, "secret": False, "evidence": env_evidence})
+
+    return {"required_inputs": required_inputs, "secret_names": secret_names}
+
+
+def _append_hint(items: list[dict[str, Any]], item: dict[str, Any]) -> None:
+    if not any(existing.get("name") == item.get("name") for existing in items):
+        items.append(item)
+
+
+def _source_label(source: dict[str, str]) -> str:
+    heading = source.get("heading") or "Setup"
+    return f"{source.get('file', 'documentation')}#{heading}"
+
+
+def _append_evidenced_value(items: list[dict[str, str]], key: str, value: str, evidence: str) -> None:
+    if not any(item.get(key) == value for item in items):
+        items.append({key: value, "evidence": evidence})
 
 
 def _extract_admin_commands(text: str) -> list[str]:

@@ -12,7 +12,6 @@ if str(BACKEND) not in sys.path:
     sys.path.insert(0, str(BACKEND))
 
 from services.apps_engine import doc_evidence
-from services import container_app_inspection_service
 
 
 class TestDocEvidence(unittest.TestCase):
@@ -66,6 +65,66 @@ docker run -p 3000:3000 myapp:latest
         result = doc_evidence.find_install_instructions(self.root)
         self.assertTrue(result.get("found"))
         self.assertLessEqual(len(result.get("snippet", "")), doc_evidence.MAX_DOC_SNIPPET_CHARS + 50)
+
+    def test_collects_at_most_three_bounded_setup_sections(self):
+        for index, name in enumerate(("GUIDE.md", "INSTALL.md", "SETUP.md", "README.md"), 1):
+            (self.root / name).write_text(
+                f"# Project {index}\n## Installation\n" + (f"setup-{index} " * 700),
+                encoding="utf-8",
+            )
+
+        result = doc_evidence.find_install_instructions(self.root)
+
+        self.assertEqual(len(result["sources"]), 3)
+        self.assertLessEqual(sum(len(source["snippet"]) for source in result["sources"]), 6000)
+        self.assertTrue(all(source.get("file") and source.get("heading") for source in result["sources"]))
+
+    def test_structured_hints_include_evidence_and_never_secret_values(self):
+        (self.root / "GUIDE.md").write_text(
+            """# Guide
+## Installation
+Set the administrator email, then run:
+`docker exec web python manage.py createsuperuser --email admin@example.com --password do-not-leak`
+Use image example/control-panel:latest.
+""",
+            encoding="utf-8",
+        )
+        (self.root / "TEMPLATE.env").write_text(
+            "ADMIN_EMAIL=admin@example.com\nADMIN_PASSWORD=do-not-leak\nLICENSE_KEY=license-do-not-leak\nSITE_NAME=Control Panel\n",
+            encoding="utf-8",
+        )
+
+        env_sample = doc_evidence.parse_expanded_env_samples(self.root)
+        result = doc_evidence.find_install_instructions(self.root, env_sample=env_sample)
+        hints = result["setup_hints"]
+
+        self.assertIn("admin_email", {item["name"] for item in hints["required_inputs"]})
+        self.assertIn("site_name", {item["name"] for item in hints["required_inputs"]})
+        self.assertIn("ADMIN_PASSWORD", {item["name"] for item in hints["secret_names"]})
+        self.assertIn("LICENSE_KEY", {item["name"] for item in hints["secret_names"]})
+        self.assertIn("GUIDE.md#Installation", hints["admin_commands"][0]["evidence"])
+        self.assertNotIn("do-not-leak", str(result))
+        self.assertNotIn("license-do-not-leak", str(result))
+
+    def test_inspection_env_sample_redacts_secret_values(self):
+        result = doc_evidence.ai_safe_env_sample({
+            "APP_MODE": "production",
+            "ADMIN_PASSWORD": "do-not-leak",
+            "API_TOKEN": "token-do-not-leak",
+        })
+
+        self.assertEqual(result["APP_MODE"], "production")
+        self.assertEqual(result["ADMIN_PASSWORD"], "[REDACTED]")
+        self.assertEqual(result["API_TOKEN"], "[REDACTED]")
+
+    def test_redacts_inline_script_credentials(self):
+        safe = doc_evidence.redact_secret_values(
+            "cross-env API_TOKEN=token-do-not-leak npm start --password do-not-leak"
+        )
+
+        self.assertNotIn("token-do-not-leak", safe)
+        self.assertNotIn("do-not-leak", safe)
+        self.assertIn("API_TOKEN=[REDACTED]", safe)
 
     def test_parse_expanded_env_samples_template_env(self):
         template_env = """# Database configuration

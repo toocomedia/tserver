@@ -46,7 +46,7 @@ def inspect_repository(repository_url: str, branch: str, *, ssh_key_path: str | 
         env_sample = doc_evidence.parse_expanded_env_samples(root)
 
         # Extract markdown installation instructions (GUIDE.md, INSTALL.md, README.md setup sections)
-        documentation_evidence = doc_evidence.find_install_instructions(root)
+        documentation_evidence = doc_evidence.find_install_instructions(root, env_sample=env_sample)
 
         # Extract package scripts
         package_scripts = _parse_package_scripts(root)
@@ -82,7 +82,7 @@ def inspect_repository(repository_url: str, branch: str, *, ssh_key_path: str | 
             "database_detected": bool(databases),
             "database_detections": databases,          # [{kind, confidence}]
             "database_suggestions": suggestions,       # [{kind, confidence, reason}] — LOW only
-            "env_sample": env_sample,                  # {KEY: default_value}
+            "env_sample": doc_evidence.ai_safe_env_sample(env_sample),  # secret names retained; values omitted
             "documentation_evidence": documentation_evidence,
             "storage_mount_suggestions": storage_mounts, # [{label, mount_path, reason}]
             "package_scripts": package_scripts,
@@ -168,7 +168,8 @@ def _parse_package_scripts(root: Path) -> dict[str, str]:
             data = json.loads(pkg_path.read_text(encoding="utf-8", errors="ignore"))
             scripts = data.get("scripts")
             if isinstance(scripts, dict):
-                return {k: str(v) for k, v in scripts.items() if isinstance(v, str)}
+                from services.apps_engine.doc_evidence import redact_secret_values
+                return {k: redact_secret_values(v) for k, v in scripts.items() if isinstance(v, str)}
         except Exception:
             pass
     return {}

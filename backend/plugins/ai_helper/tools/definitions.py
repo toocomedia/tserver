@@ -9,6 +9,7 @@ from typing import Any, Dict, List
 APP_SETUP_TOOL_NAMES = frozenset({
     "get_app_engine_capabilities",
     "inspect_app_source",
+    "fetch_web_documentation",
     "propose_app_install",
     "propose_stack_install",
 })

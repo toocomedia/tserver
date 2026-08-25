@@ -33,6 +33,12 @@ class TestAiSkillsLoader(unittest.TestCase):
         self.assertEqual(skill_main, skill_alias2)
         self.assertIn("propose_app_install", skill_main.prompt)
         self.assertIn("Never deploy", skill_main.prompt)
+        self.assertIn("documentation_evidence.sources", skill_main.prompt)
+        self.assertIn("fetch_web_documentation", skill_main.prompt)
+        self.assertIn("at most once", skill_main.prompt)
+        self.assertIn("[ACTION:RUN_CMD:<command>]", skill_main.prompt)
+        self.assertIn("required administrator inputs", skill_main.prompt)
+        self.assertIn("server vault", skill_main.prompt)
 
     def test_app_redeploy_skill_aliases(self):
         """Verify app_redeploy skill can be retrieved via aliases."""

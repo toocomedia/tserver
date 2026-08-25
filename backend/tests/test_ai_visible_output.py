@@ -11,6 +11,8 @@ from plugins.ai_helper.services.setup_handoff import (
     needs_stack_correction,
     tool_limit_result,
     is_recommendation_decision_pending,
+    needs_documentation_fallback,
+    setup_documentation_url_allowed,
 )
 from plugins.ai_helper.services.visible_output import VisibleOutputFilter, strip_hidden_reasoning
 
@@ -37,9 +39,14 @@ class VisibleOutputTests(unittest.TestCase):
         self.assertEqual(strip_hidden_reasoning("Visible <think>private"), "Visible ")
 
     def test_setup_evidence_reads_and_plan_tools_are_bounded(self):
-        counts = {"fetch_web_documentation": 2}
+        counts = {"fetch_web_documentation": 1}
         limited = tool_limit_result("app_deploy", "fetch_web_documentation", counts)
-        self.assertEqual(limited["status"], "setup_tool_not_available")
+        self.assertEqual(limited["status"], "limit_reached")
+        self.assertIsNone(tool_limit_result("app_deploy", "fetch_web_documentation", {}))
+        self.assertEqual(
+            tool_limit_result("app_deploy", "read_website_file", {})["status"],
+            "setup_tool_not_available",
+        )
         self.assertEqual(
             tool_limit_result("app_deploy", "propose_stack_install", {"propose_stack_install": 1})["status"],
             "limit_reached",
@@ -99,6 +106,50 @@ class VisibleOutputTests(unittest.TestCase):
         # When no advice was returned, decision is not pending
         self.assertFalse(is_recommendation_decision_pending(res_without_advice, "Deploy https://github.com/myuser/app"))
         self.assertFalse(is_recommendation_decision_pending(None, "Deploy app"))
+
+    def test_structured_admin_email_hint_keeps_existing_input_interview(self):
+        result = {
+            "status": "ok",
+            "inspection": {
+                "documentation_evidence": {
+                    "setup_hints": {
+                        "required_inputs": [{"name": "admin_email", "secret": False}],
+                    },
+                },
+            },
+        }
+
+        self.assertTrue(is_recommendation_decision_pending(result, "Set up this app"))
+        self.assertFalse(is_recommendation_decision_pending(result, "email: owner@example.com"))
+
+    def test_documentation_fallback_requires_missing_local_evidence_and_verified_url(self):
+        complete = {
+            "inspection": {
+                "repository_url": "https://github.com/example/app.git",
+                "documentation_evidence": {
+                    "found": True,
+                    "sources": [{"file": "README.md", "heading": "Install", "snippet": "setup"}],
+                },
+            },
+        }
+        missing = {
+            "inspection": {
+                "repository_url": "https://github.com/example/app.git",
+                "documentation_evidence": {"found": False, "sources": []},
+            },
+        }
+
+        self.assertFalse(needs_documentation_fallback(complete))
+        self.assertTrue(needs_documentation_fallback(missing))
+        self.assertTrue(setup_documentation_url_allowed(
+            missing, "Deploy this app", "https://github.com/example/app/blob/main/docs/install.md",
+        ))
+        self.assertTrue(setup_documentation_url_allowed(
+            missing, "Docs: https://docs.example.com/install", "https://docs.example.com/install",
+        ))
+        self.assertFalse(setup_documentation_url_allowed(
+            missing, "Deploy this app", "https://third-party.example/tutorial",
+        ))
 
 
 if __name__ == "__main__":

@@ -419,6 +419,7 @@ async def stream_ai_chat(
     setup_stack_correction_reason = ""
     setup_plan_tool_prompted = False
     setup_server_plan_attempted = False
+    setup_documentation_failed = False
     setup_source_result: Dict[str, Any] | None = None
     # Multi-turn setup context extraction with session persistence
     history_texts = [r.content for r in recent_records]
@@ -480,6 +481,11 @@ async def stream_ai_chat(
                     doc_ev = (inspection.get("documentation_evidence") or {}) if isinstance(inspection, dict) else {}
                     detected_imgs = doc_ev.get("detected_docker_images") or []
                     admin_cmds = doc_ev.get("detected_admin_commands") or []
+                    setup_hints = doc_ev.get("setup_hints") if isinstance(doc_ev.get("setup_hints"), dict) else {}
+                    needs_admin_email = any(
+                        isinstance(item, dict) and item.get("name") == "admin_email"
+                        for item in (setup_hints.get("required_inputs") or [])
+                    )
                     has_compose = bool((inspection.get("compose_info") or {}).get("services")) if isinstance(inspection, dict) else False
                     
                     options_list = []
@@ -498,7 +504,7 @@ async def stream_ai_chat(
                     options_list.append(f"[OPTION:Option {opt_num}: Build from Git Source (Railpack/Dockerfile)|Option {opt_num}]")
                     
                     admin_prompt = ""
-                    if admin_cmds and "@" not in user_message:
+                    if (admin_cmds or needs_admin_email) and "@" not in user_message:
                         options_list.append("[INPUT:admin_email|admin@example.com|Admin Email]")
                         admin_prompt = "Initial administrator setup is required according to documentation (e.g. registeradmin). You MUST explicitly ask the user: 'What admin email address should be used to initialize the superuser account?' and output [INPUT:admin_email|admin@example.com|Admin Email]."
                     
@@ -576,6 +582,8 @@ async def stream_ai_chat(
                     tool_names_to_load = frozenset({"propose_stack_install"})
                 else:
                     tool_names_to_load = frozenset({"propose_app_install", "propose_stack_install"})
+                if setup_handoff.needs_documentation_fallback(setup_source_result):
+                    tool_names_to_load |= frozenset({"fetch_web_documentation"})
             else:
                 tool_names_to_load = setup_handoff.SETUP_TOOL_NAMES
         elif is_app_diag and app_id:
@@ -595,7 +603,7 @@ async def stream_ai_chat(
 
         async def _execute_tool(fn_name: str, fn_args: Dict[str, Any]) -> Dict[str, Any]:
             """Execute approved tools while bounding setup-only evidence collection."""
-            nonlocal sensitive_file_blocked, setup_stack_correction_allowed, setup_stack_correction_reason, setup_source_result
+            nonlocal sensitive_file_blocked, setup_stack_correction_allowed, setup_stack_correction_reason, setup_source_result, setup_documentation_failed
             limited = setup_handoff.tool_limit_result(
                 task_type,
                 fn_name,
@@ -604,7 +612,26 @@ async def stream_ai_chat(
             )
             if limited is not None:
                 return limited
+            if fn_name == "fetch_web_documentation":
+                if not setup_source_result or setup_source_result.get("status") != "ok":
+                    return {
+                        "status": "local_inspection_required",
+                        "message": "Inspect the application source before using the documentation fallback.",
+                    }
+                if not setup_handoff.needs_documentation_fallback(setup_source_result):
+                    return {
+                        "status": "local_evidence_sufficient",
+                        "message": "Use the collected local documentation evidence; no external read is needed.",
+                    }
             tool_counts[fn_name] = tool_counts.get(fn_name, 0) + 1
+            if fn_name == "fetch_web_documentation" and not setup_handoff.setup_documentation_url_allowed(
+                setup_source_result, user_message, str(fn_args.get("url") or ""),
+            ):
+                setup_documentation_failed = True
+                return {
+                    "status": "documentation_source_not_verified",
+                    "message": "Use an inspected official source URL or an HTTPS documentation URL supplied by the user.",
+                }
             if fn_name in {"propose_app_install", "propose_stack_install", "propose_official_stack_install"}:
                 if setup_target_domain and not fn_args.get("domain_name"):
                     fn_args["domain_name"] = setup_target_domain
@@ -620,6 +647,8 @@ async def stream_ai_chat(
                 user_id=user_id,
                 secrets_allowed=secrets_allowed,
             )
+            if fn_name == "fetch_web_documentation" and tool_output.get("status") != "ok":
+                setup_documentation_failed = True
             if fn_name == "read_website_file" and tool_output.get("status") == "secrets_blocked":
                 sensitive_file_blocked = True
             if fn_name == "inspect_app_source" and tool_output.get("status") == "ok":
@@ -839,6 +868,7 @@ async def stream_ai_chat(
         if (
             setup_plan_required
             and not setup_plan_id
+            and not setup_documentation_failed
             and not setup_handoff.is_recommendation_decision_pending(setup_source_result, user_message)
         ):
             stype, repo, img = _extract_setup_source(user_message, context_text)
@@ -859,7 +889,13 @@ async def stream_ai_chat(
 
         if tool_was_executed:
             if setup_plan_required:
-                if setup_handoff.is_setup_interview_pending(setup_source_result, user_message):
+                if setup_documentation_failed:
+                    content_str = (
+                        "The single official documentation read failed. Continue from the existing local inspection facts, "
+                        "state that documentation was unavailable, and ask one concise [INPUT:] or [OPTION:] question "
+                        "for the meaningful unknown needed to finish the reviewed plan. Do not stop setup or claim a plan is ready."
+                    )
+                elif setup_handoff.is_setup_interview_pending(setup_source_result, user_message):
                     content_str = (
                         "Now summarize the inspected application architecture, services, and deployment configuration in clean, structured Markdown tables. "
                         "Do NOT output tool calls, JSON ASTs, or internal schema errors. "
