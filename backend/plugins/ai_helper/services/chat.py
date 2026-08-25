@@ -531,6 +531,33 @@ async def stream_ai_chat(
         except Exception as exc:
             yield _activity_event("inspect_app_source", "error", {"repository_url": repo, "image_reference": img})
 
+    # 2. Fast 1-Turn Pre-Diagnostics for App Engine Diagnostic Tasks:
+    if tools_enabled and is_app_diag and app_id:
+        yield _activity_event("get_app_engine_diagnostics", "start", {"app_id": app_id})
+        try:
+            diag_res = await tools.execute_tool(
+                db=db,
+                tool_name="get_app_engine_diagnostics",
+                arguments={"app_id": app_id},
+                session_id=session_id,
+                user_id=user_id,
+                secrets_allowed=secrets_allowed,
+            )
+            yield _activity_event("get_app_engine_diagnostics", "done", {"app_id": app_id})
+            if diag_res.get("status") == "ok":
+                tool_was_executed = True
+                messages.append({
+                    "role": "user",
+                    "content": (
+                        f"[Pre-collected App Engine Runtime Diagnostics for App #{app_id}]:\n"
+                        f"{json.dumps(diag_res.get('diagnostics') or diag_res)}\n\n"
+                        "Using the pre-collected container runtime logs, process status, and readiness diagnostics above, "
+                        "diagnose the exact root cause and propose a fix using `propose_container_app_patch`."
+                    ),
+                })
+        except Exception as exc:
+            yield _activity_event("get_app_engine_diagnostics", "error", {"app_id": app_id})
+
     if tools_enabled:
         # Determine scoped tool definitions
         if setup_plan_required:

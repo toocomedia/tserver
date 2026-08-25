@@ -111,9 +111,12 @@ def is_setup_interview_pending(
     if not isinstance(setup_source_result, dict):
         return False
     
-    msg = (user_message or "").lower()
+    import re
+    # Strip URLs so 'github.com' or 'gitlab.com' does not falsely match 'git' keyword
+    clean_msg = re.sub(r"https?://\S+", "", (user_message or "").lower())
+
     # If user explicitly said to proceed, deploy, or answered options, don't block
-    if any(token in msg for token in (
+    if any(token in clean_msg for token in (
         "option 1", "option 2", "option 3", "deploy now", "apply now", "confirm", "proceed",
         "use postgres", "use postgresql", "use mysql", "use mariadb", "use sqlite", "use clickhouse",
         "admin email", "my email", "@", "password:", "email:"
@@ -124,17 +127,18 @@ def is_setup_interview_pending(
     doc_evidence = inspection.get("documentation_evidence") or {}
     
     # 1. Check if admin setup commands exist in doc_evidence (e.g. registeradmin, createsuperuser)
-    if doc_evidence.get("detected_admin_commands") and "@" not in msg and "admin" not in msg:
+    if doc_evidence.get("detected_admin_commands") and "@" not in clean_msg and "admin" not in clean_msg:
         return True
 
     # 2. Check if multiple databases were detected (e.g. Postgres + Clickhouse + Redis, or Postgres + SQLite)
     db_detections = inspection.get("database_detections") or []
-    if len(db_detections) > 1 and not any(k in msg for k in ("postgres", "mysql", "mariadb", "sqlite", "clickhouse", "mongo")):
+    if len(db_detections) > 1 and not any(k in clean_msg for k in ("postgres", "mysql", "mariadb", "sqlite", "clickhouse", "mongo")):
         return True
 
     # 3. Check if detected docker images or compose services offer build choices
     detected_imgs = doc_evidence.get("detected_docker_images") or []
-    if (detected_imgs or inspection.get("compose_info")) and not any(k in msg for k in ("docker", "image", "railpack", "source", "git", "compose")):
+    has_compose = bool((inspection.get("compose_info") or {}).get("services"))
+    if (detected_imgs or has_compose) and not any(k in clean_msg for k in ("docker image", "docker", "railpack", "source build", "compose", "stack")):
         return True
 
     return False

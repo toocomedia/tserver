@@ -682,6 +682,24 @@ class TestAiAppSetup(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(manifest["web_port"], 3000)
         self.assertEqual(res["domain_name"], "open.blagh.co")
 
+    def test_is_setup_interview_pending_triggers_on_github_url(self):
+        """Verify is_setup_interview_pending triggers options presentation for repos with choices even when URL has github.com."""
+        from plugins.ai_helper.services.setup_handoff import is_setup_interview_pending
+        inspection = {
+            "status": "ok",
+            "inspection": {
+                "compose_info": {"services": [{"name": "app"}]},
+                "documentation_evidence": {"detected_docker_images": ["msgbyte/tianji:latest"]},
+            },
+        }
+        # First turn: user provides github URL -> should ask options
+        user_msg = "Please analyze and configure this application for domain cc.blagh.co: https://github.com/msgbyte/tianji"
+        self.assertTrue(is_setup_interview_pending(inspection, user_msg))
+
+        # Second turn: user picks Option 1 -> should not block
+        reply_msg = "Option 1"
+        self.assertFalse(is_setup_interview_pending(inspection, reply_msg))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -146,7 +146,10 @@ async def create_snapshot(
     for key, value in (environment_patch or {}).items():
         if not build_secrets.ENV_KEY_RE.fullmatch(key) or not isinstance(value, str):
             raise ValueError("Environment patch contains an invalid value.")
-        environment[key] = value
+        if value == "" or value.lower() in ("__delete__", "__unset__", "null", "none"):
+            environment.pop(key, None)
+        else:
+            environment[key] = value
 
     requirements = normalize_secret_requirements(secret_requirements)
     versions: dict[str, int] = {}
