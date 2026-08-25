@@ -279,7 +279,26 @@ def _normalize_messages_for_llm(messages: List[Dict[str, Any]], provider_type: s
             normalized.append(msg)
             i += 1
 
-    return normalized
+    # Merge consecutive same-role messages to guarantee strict provider compatibility (e.g. Anthropic, Gemini, Mistral)
+    merged: List[Dict[str, Any]] = []
+    for msg in normalized:
+        if (
+            merged
+            and merged[-1].get("role") == msg.get("role")
+            and not msg.get("tool_calls")
+            and not merged[-1].get("tool_calls")
+            and merged[-1].get("role") in {"user", "assistant"}
+        ):
+            prev_content = str(merged[-1].get("content") or "").strip()
+            new_content = str(msg.get("content") or "").strip()
+            if prev_content and new_content:
+                merged[-1]["content"] = f"{prev_content}\n\n{new_content}"
+            elif new_content:
+                merged[-1]["content"] = new_content
+        else:
+            merged.append(msg)
+
+    return merged
 
 
 async def stream_ai_chat(
