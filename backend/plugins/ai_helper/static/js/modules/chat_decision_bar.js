@@ -1,6 +1,6 @@
 /**
- * chat_decision_bar.js — Floating Quick-Decision Bar pinned above the Chat Input Box.
- * Allows 1-click interactive selection when the AI proposes multiple setup methods.
+ * chat_decision_bar.js — Interactive Setup & Configuration Card pinned above Chat Input.
+ * Allows step-by-step option selection and credential input collection before submitting to AI.
  */
 (function () {
   "use strict";
@@ -8,6 +8,9 @@
   var AiHelperDecisionBar = {
     containerEl: null,
     onSelectCallback: null,
+    state: {
+      selectedOption: null,
+    },
 
     init: function (containerEl, onSelectCallback) {
       this.containerEl = containerEl;
@@ -21,99 +24,148 @@
       if (!options.length && !inputs.length) return;
 
       var self = this;
-      var title = promptTitle || (inputs.length ? "Required Setup Input & Method:" : "Select Setup Method:");
+      self.state.selectedOption = options.length ? options[0].reply : null;
+      var hasBoth = options.length > 0 && inputs.length > 0;
+      var title = promptTitle || (inputs.length ? "Configuration & Setup Method:" : "Select Setup Method:");
 
       var html = [
-        '<div class="ai-decision-bar-inner">',
-        '  <div class="ai-decision-bar-header">',
-        '    <div class="ai-decision-bar-header-left">',
-        '      <span class="ai-decision-bar-title">' + this._escapeHtml(title) + "</span>",
-        "    </div>",
-        '    <button type="button" class="ai-decision-bar-close" title="Dismiss">✕</button>',
-        "  </div>",
+        '<div class="ai-decision-card" style="background: var(--color-surface, #1e1e1e); border: 1px solid var(--color-line, rgba(255,255,255,0.12)); border-radius: 8px; padding: 12px; margin: 8px 12px 10px 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.25); color: var(--color-text, #ffffff); font-family: inherit;">',
+        '  <div class="ai-decision-card-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">',
+        '    <span style="font-size:12px; font-weight:600; color:var(--color-text, #ffffff); display:flex; align-items:center; gap:6px;">' +
+        '      <span style="display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--color-accent, #6366f1);"></span>' +
+        this._escapeHtml(title) +
+        '    </span>',
+        '    <button type="button" class="ai-decision-card-close" style="background:transparent; border:none; color:var(--color-muted, #94a3b8); cursor:pointer; font-size:14px; padding:2px 6px; line-height:1;" title="Dismiss">✕</button>',
+        '  </div>',
       ];
 
+      // Render Options Group
+      if (options.length) {
+        html.push('  <div class="ai-decision-options-group" style="display:flex; flex-direction:column; gap:6px; margin-bottom:' + (inputs.length ? '10px' : '0') + ';">');
+        options.forEach(function (opt, idx) {
+          var isRecommended = opt.isRecommended || /recommended/i.test(opt.label);
+          var isDefaultSelected = hasBoth && idx === 0;
+          var badgeHtml = isRecommended
+            ? '<span class="ai-quick-opt-badge" style="font-size:10px; font-weight:600; padding:2px 6px; border-radius:4px; background:rgba(99,102,241,0.2); color:var(--color-accent, #818cf8); margin-left:auto;">Recommended</span>'
+            : '';
+
+          html.push(
+            '    <button type="button" class="ai-quick-option-btn ' + (isDefaultSelected ? 'is-selected' : '') + '" data-reply="' + self._escapeHtml(opt.reply) + '" style="display:flex; align-items:center; gap:8px; padding:7px 10px; background:var(--color-bg, #121212); border:1px solid ' + (isDefaultSelected ? 'var(--color-accent, #6366f1)' : 'var(--color-line, rgba(255,255,255,0.1))') + '; border-radius:6px; color:var(--color-text, #ffffff); font-size:12px; font-weight:500; cursor:pointer; text-align:left; transition:all 0.15s ease;">',
+            '      <span class="ai-opt-radio" style="width:12px; height:12px; border-radius:50%; border:2px solid ' + (isDefaultSelected ? 'var(--color-accent, #6366f1)' : 'var(--color-muted, #64748b)') + '; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;">' + (isDefaultSelected ? '<span style="width:4px; height:4px; border-radius:50%; background:var(--color-accent, #6366f1);"></span>' : '') + '</span>',
+            '      <span style="flex:1; line-height:1.3;">' + self._escapeHtml(opt.label) + '</span>',
+            '      ' + badgeHtml,
+            '    </button>'
+          );
+        });
+        html.push('  </div>');
+      }
+
+      // Render Inputs Group
       if (inputs.length) {
-        html.push('  <div class="ai-decision-bar-inputs" style="padding: 6px 12px 2px 12px;">');
+        html.push('  <div class="ai-decision-inputs-group" style="display:flex; flex-direction:column; gap:8px; margin-top:' + (options.length ? '8px' : '0') + ';">');
         inputs.forEach(function (inp) {
           html.push(
-            '    <div class="ai-decision-input-row" style="display:flex;gap:8px;align-items:center;margin-bottom:6px;">',
-            '      <label style="font-size:12px;font-weight:500;color:#cbd5e1;white-space:nowrap;">' + self._escapeHtml(inp.label || "Admin Email:") + '</label>',
-            '      <input type="text" class="ai-decision-field-input" data-key="' + self._escapeHtml(inp.key) + '" placeholder="' + self._escapeHtml(inp.placeholder || "admin@example.com") + '" style="flex:1;background:rgba(0,0,0,0.35);border:1px solid rgba(255,255,255,0.18);border-radius:6px;padding:6px 10px;color:#fff;font-size:12px;outline:none;" />',
-            '      <button type="button" class="ai-decision-field-submit" style="background:#3b82f6;color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:12px;cursor:pointer;font-weight:500;white-space:nowrap;">Submit</button>',
+            '    <div style="display:flex; flex-direction:column; gap:4px;">',
+            '      <label style="font-size:11.5px; font-weight:500; color:var(--color-muted, #94a3b8);">' + self._escapeHtml(inp.label || "Admin Email:") + '</label>',
+            '      <div style="display:flex; gap:6px;">',
+            '        <input type="text" class="ai-decision-field-input" data-key="' + self._escapeHtml(inp.key) + '" placeholder="' + self._escapeHtml(inp.placeholder || "admin@example.com") + '" style="flex:1; background:var(--color-bg, #121212); border:1px solid var(--color-line, rgba(255,255,255,0.15)); border-radius:6px; padding:7px 10px; color:var(--color-text, #ffffff); font-size:12px; outline:none; box-sizing:border-box;" />',
+            '      </div>',
             '    </div>'
           );
         });
         html.push('  </div>');
       }
 
-      if (options.length) {
-        html.push('  <div class="ai-decision-bar-options">');
-        options.forEach(function (opt, idx) {
-          var isRecommended = opt.isRecommended || /recommended/i.test(opt.label);
-          var badgeHtml = isRecommended
-            ? '<span class="ai-decision-badge ai-decision-badge--rec">Recommended</span>'
-            : '<span class="ai-decision-badge">Option ' + (idx + 1) + "</span>";
-
-          html.push(
-            '    <button type="button" class="ai-decision-btn" data-reply="' + self._escapeHtml(opt.reply) + '">',
-            '      <div class="ai-decision-btn-top">',
-            '        <span class="ai-decision-btn-label">' + self._escapeHtml(opt.label) + "</span>",
-            "        " + badgeHtml,
-            "      </div>",
-            opt.description ? '      <div class="ai-decision-btn-desc">' + self._escapeHtml(opt.description) + "</div>" : "",
-            "    </button>"
-          );
-        });
-        html.push("  </div>");
+      // Render Submit Action Button if inputs exist or hasBoth
+      if (hasBoth || inputs.length > 0) {
+        html.push(
+          '  <div style="display:flex; justify-content:flex-end; margin-top:10px;">',
+          '    <button type="button" class="ai-decision-submit-all-btn" style="background:var(--color-accent, #6366f1); color:var(--color-on-accent, #ffffff); border:none; border-radius:6px; padding:7px 16px; font-size:12px; font-weight:600; cursor:pointer; transition:opacity 0.15s ease;">Continue</button>',
+          '  </div>'
+        );
       }
 
       html.push("</div>");
       this.containerEl.innerHTML = html.join("\n");
       this.containerEl.style.display = "block";
 
-      // Attach click handlers
-      var closeBtn = this.containerEl.querySelector(".ai-decision-bar-close");
+      // Bind close button
+      var closeBtn = this.containerEl.querySelector(".ai-decision-card-close");
       if (closeBtn) {
         closeBtn.addEventListener("click", function () {
           self.hide();
         });
       }
 
-      var btns = this.containerEl.querySelectorAll(".ai-decision-btn");
-      btns.forEach(function (btn) {
+      // Handle Option buttons
+      var optBtns = this.containerEl.querySelectorAll(".ai-quick-option-btn");
+      optBtns.forEach(function (btn) {
         btn.addEventListener("click", function () {
           var reply = btn.getAttribute("data-reply");
-          self.hide();
-          if (typeof self.onSelectCallback === "function") {
-            self.onSelectCallback(reply);
+          if (!hasBoth) {
+            // If only options exist, 1-click submit immediately
+            self.hide();
+            if (typeof self.onSelectCallback === "function") {
+              self.onSelectCallback(reply);
+            }
+          } else {
+            // If both options and inputs exist, toggle selection state without closing
+            self.state.selectedOption = reply;
+            optBtns.forEach(function (b) {
+              var isSel = b === btn;
+              b.classList.toggle("is-selected", isSel);
+              b.style.borderColor = isSel ? "var(--color-accent, #6366f1)" : "var(--color-line, rgba(255,255,255,0.1))";
+              var radio = b.querySelector(".ai-opt-radio");
+              if (radio) {
+                radio.style.borderColor = isSel ? "var(--color-accent, #6366f1)" : "var(--color-muted, #64748b)";
+                radio.innerHTML = isSel ? '<span style="width:4px; height:4px; border-radius:50%; background:var(--color-accent, #6366f1);"></span>' : '';
+              }
+            });
           }
         });
       });
 
-      var inputRows = this.containerEl.querySelectorAll(".ai-decision-input-row");
-      inputRows.forEach(function (row) {
-        var inputEl = row.querySelector(".ai-decision-field-input");
-        var submitBtn = row.querySelector(".ai-decision-field-submit");
-        var handleSubmit = function () {
-          var val = (inputEl ? inputEl.value : "").trim();
-          if (!val) return;
-          self.hide();
-          if (typeof self.onSelectCallback === "function") {
-            self.onSelectCallback(val);
+      // Handle Submit All Button
+      var submitAllBtn = this.containerEl.querySelector(".ai-decision-submit-all-btn");
+      var doSubmitAll = function () {
+        var inputEls = self.containerEl.querySelectorAll(".ai-decision-field-input");
+        var inputVals = [];
+        inputEls.forEach(function (inp) {
+          var val = inp.value.trim();
+          if (val) {
+            inputVals.push(val);
           }
-        };
-        if (submitBtn) {
-          submitBtn.addEventListener("click", handleSubmit);
+        });
+
+        var finalMessage = "";
+        if (self.state.selectedOption && inputVals.length) {
+          finalMessage = self.state.selectedOption + " with admin email: " + inputVals.join(", ");
+        } else if (self.state.selectedOption) {
+          finalMessage = self.state.selectedOption;
+        } else if (inputVals.length) {
+          finalMessage = inputVals.join(", ");
         }
-        if (inputEl) {
-          inputEl.addEventListener("keydown", function (e) {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              handleSubmit();
-            }
-          });
+
+        if (!finalMessage) return;
+        self.hide();
+        if (typeof self.onSelectCallback === "function") {
+          self.onSelectCallback(finalMessage);
         }
+      };
+
+      if (submitAllBtn) {
+        submitAllBtn.addEventListener("click", doSubmitAll);
+      }
+
+      // Allow pressing Enter in input fields
+      var inputEls = this.containerEl.querySelectorAll(".ai-decision-field-input");
+      inputEls.forEach(function (inp) {
+        inp.addEventListener("keydown", function (e) {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            doSubmitAll();
+          }
+        });
       });
     },
 
@@ -181,7 +233,7 @@
       }
 
       if (options.length > 0 || inputs.length > 0) {
-        this.show(options, inputs.length ? "Configuration Input Required:" : "Select Setup Method:", inputs);
+        this.show(options, inputs.length ? "Configuration & Setup Method:" : "Select Setup Method:", inputs);
       }
     },
 

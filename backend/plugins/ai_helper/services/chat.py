@@ -53,14 +53,16 @@ _TOOL_LABELS = {
 def _extract_setup_domain(*texts: str | None) -> str:
     """Best-effort target domain extraction for server-owned setup fallback."""
     joined = "\n".join(text or "" for text in texts)
+    # Strip email addresses so email domains (e.g. riadh@tooco.net) are never confused for website domains
+    cleaned = re.sub(r"[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+", "", joined)
     domain_pattern = r"([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?){1,})"
-    explicit = re.search(rf"\bdomain\s+{domain_pattern}", joined, re.IGNORECASE)
+    explicit = re.search(rf"\bdomain\s+(?:is\s+|for\s+)?{domain_pattern}", cleaned, re.IGNORECASE)
     if explicit:
         return explicit.group(1).strip().lower()
-    ignored = {"github.com", "www.github.com", "gitlab.com", "bitbucket.org"}
-    for match in re.finditer(rf"\b{domain_pattern}\b", joined, re.IGNORECASE):
+    ignored = {"github.com", "www.github.com", "gitlab.com", "bitbucket.org", "docker.com", "docker.io", "localhost"}
+    for match in re.finditer(rf"\b{domain_pattern}\b", cleaned, re.IGNORECASE):
         candidate = match.group(1).strip().lower()
-        if candidate not in ignored:
+        if candidate not in ignored and "." in candidate:
             return candidate
     return ""
 
@@ -406,11 +408,15 @@ async def stream_ai_chat(
     setup_source_result: Dict[str, Any] | None = None
     # Multi-turn setup context extraction with session persistence
     history_texts = [r.content for r in recent_records]
-    setup_target_domain = (
-        _extract_setup_domain(user_message, context_text)
-        or (session_record.target_domain if session_record else "")
-        or _extract_setup_domain(*history_texts)
-    )
+    existing_domain = (session_record.target_domain if session_record else "").strip()
+    new_explicit_domain = _extract_setup_domain(user_message, context_text)
+    if new_explicit_domain:
+        setup_target_domain = new_explicit_domain
+    elif existing_domain:
+        setup_target_domain = existing_domain
+    else:
+        setup_target_domain = _extract_setup_domain(*history_texts)
+
     if setup_target_domain and session_record and session_record.target_domain != setup_target_domain:
         session_record.target_domain = setup_target_domain
 
@@ -549,6 +555,14 @@ async def stream_ai_chat(
             if limited is not None:
                 return limited
             tool_counts[fn_name] = tool_counts.get(fn_name, 0) + 1
+            if fn_name in {"propose_app_install", "propose_stack_install", "propose_official_stack_install"}:
+                if setup_target_domain and (not fn_args.get("domain_name") or fn_args.get("domain_name") != setup_target_domain):
+                    fn_args["domain_name"] = setup_target_domain
+                if repo and not fn_args.get("repository_url"):
+                    fn_args["repository_url"] = repo
+                if img and not fn_args.get("image_reference"):
+                    fn_args["image_reference"] = img
+
             tool_output = await tools.execute_tool(
                 db=db,
                 tool_name=fn_name,
@@ -562,12 +576,6 @@ async def stream_ai_chat(
             if fn_name == "inspect_app_source" and tool_output.get("status") == "ok":
                 setup_source_result = tool_output
             if fn_name in {"propose_app_install", "propose_stack_install", "propose_official_stack_install"}:
-                if setup_target_domain and not fn_args.get("domain_name"):
-                    fn_args["domain_name"] = setup_target_domain
-                if repo and not fn_args.get("repository_url"):
-                    fn_args["repository_url"] = repo
-                if img and not fn_args.get("image_reference"):
-                    fn_args["image_reference"] = img
                 if tool_output.get("status") != "ok":
                     message = str(tool_output.get("message") or "The planning tool rejected this proposal.").strip()
                     if message:
