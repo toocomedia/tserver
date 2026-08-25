@@ -95,6 +95,7 @@ async def get_app_logs(
     limit_lines = min(max(10, max_lines), 250)
 
     if kind == "container":
+        c_app = await db.get(ContainerApp, app_id)
         stmt = (
             select(ContainerAppDeployment)
             .where(ContainerAppDeployment.app_id == app_id)
@@ -102,19 +103,38 @@ async def get_app_logs(
             .limit(1)
         )
         dep = (await db.execute(stmt)).scalar_one_or_none()
-        if not dep:
-            return {"status": "ok", "app_id": app_id, "logs": "No deployment logs found for this container app."}
 
-        raw_output = (dep.output or "") + ("\n" + dep.error if dep.error else "")
-        lines = raw_output.strip().splitlines()[-limit_lines:]
-        return {
+        runtime_logs: Dict[str, str] = {}
+        if c_app:
+            try:
+                import asyncio
+                from services.container_app_diagnostics_service import _container_logs
+                if c_app.deploy_type == "official_stack":
+                    from services.official_stacks import compose_runtime, stack_runtime_service
+                    stack = compose_runtime.stack_from_runtime(c_app)
+                    services = await asyncio.to_thread(stack_runtime_service.inspect_stack_services, c_app.id, stack)
+                    runtime_logs = {name: await asyncio.to_thread(_container_logs, item["container_name"]) for name, item in services.items()}
+                elif c_app.container_name:
+                    runtime_logs = {"web": await asyncio.to_thread(_container_logs, c_app.container_name)}
+            except Exception:
+                pass
+
+        if not dep and not runtime_logs:
+            return {"status": "ok", "app_id": app_id, "logs": "No deployment or runtime logs found for this container app."}
+
+        raw_output = ((dep.output or "") + ("\n" + dep.error if dep and dep.error else "")) if dep else ""
+        lines = raw_output.strip().splitlines()[-limit_lines:] if raw_output else []
+        res: Dict[str, Any] = {
             "status": "ok",
             "app_id": app_id,
-            "deployment_id": dep.id,
-            "stage": dep.stage,
-            "deployment_status": dep.status,
+            "deployment_id": dep.id if dep else None,
+            "stage": dep.stage if dep else None,
+            "deployment_status": dep.status if dep else None,
             "recent_logs": "\n".join(lines),
         }
+        if runtime_logs:
+            res["container_runtime_logs"] = {k: v[-8000:] for k, v in runtime_logs.items() if v}
+        return res
 
     elif kind == "python":
         stmt = (

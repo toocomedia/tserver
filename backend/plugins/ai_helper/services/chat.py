@@ -503,13 +503,17 @@ async def stream_ai_chat(
                         admin_prompt = "Initial administrator setup is required according to documentation (e.g. registeradmin). You MUST explicitly ask the user: 'What admin email address should be used to initialize the superuser account?' and output [INPUT:admin_email|admin@example.com|Admin Email]."
                     
                     options_str = "\n".join(options_list)
+                    if admin_prompt:
+                        prompt_tail = f"{admin_prompt} Ask the user for their required setup credentials and preferred setup method."
+                    else:
+                        prompt_tail = "Ask the user to select their preferred setup method from the options above. Do not prompt for unused credentials."
+
                     action_instruction = (
                         "Present the source inspection facts clearly in clean Markdown tables (Application Overview, Services, Detected Databases, Configuration). "
                         "Do NOT call proposal planning tools yet. "
-                        f"{admin_prompt} "
-                        "Ask the user any required configuration questions (such as their Admin Email and preferred setup method) "
-                        f"and provide the interactive option tags and input tags:\n{options_str}\n"
-                        "Wait for the user to confirm their choices and email before generating the reviewed plan."
+                        f"{prompt_tail} "
+                        f"Provide the interactive option tags and input tags:\n{options_str}\n"
+                        "Wait for the user to confirm their choices before generating the reviewed plan."
                     )
                 elif needs_stack:
                     action_instruction = (

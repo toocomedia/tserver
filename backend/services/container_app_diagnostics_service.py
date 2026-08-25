@@ -69,8 +69,13 @@ async def collect(db: AsyncSession, app: ContainerApp, domain: Domain) -> dict[s
         except (TypeError, ValueError, json.JSONDecodeError):
             stored = {"status": "invalid_saved_diagnostics"}
     return {
-        "deployment": {"id": deployment.id if deployment else None, "status": deployment.status if deployment else None,
-                       "stage": deployment.stage if deployment else None, "error": _redact((deployment.error or "")[:2000]) if deployment else None},
+        "deployment": {
+            "id": deployment.id if deployment else None,
+            "status": deployment.status if deployment else None,
+            "stage": deployment.stage if deployment else None,
+            "error": _redact((deployment.error or "")[:2000]) if deployment else None,
+            "output_snippet": _redact((deployment.output or "")[-8000:]) if deployment else None,
+        },
         "readiness": {"state": app.health_state, "detail": _redact((app.health_detail or "")[:2000])},
         "services": services, "recent_logs": logs,
         "reverse_proxy": {"configured": bool(domain.nginx_config_path), "config_path": domain.nginx_config_path or None,

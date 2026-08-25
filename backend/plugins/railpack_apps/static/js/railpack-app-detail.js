@@ -190,8 +190,8 @@ document.querySelectorAll('[data-ai-diagnose-app]').forEach(btn => {
     const appId = btn.getAttribute('data-ai-diagnose-app');
     const appName = btn.getAttribute('data-app-name') || ('App #' + appId);
     const outputEl = document.querySelector('[data-deployment-output]');
-    const logSnippet = outputEl ? outputEl.textContent.slice(-2000) : '';
-    const prompt = `Application ${appName} (ID #${appId}) failed or is stopped.\nRecent logs:\n\`\`\`log\n${logSnippet}\n\`\`\`\nDiagnose source-aware root cause and create a review-only deployment draft if change is justified. Do not deploy or expose secret values.`;
+    const logSnippet = outputEl ? outputEl.textContent.trim().slice(-6000) : '';
+    const prompt = `Application ${appName} (ID #${appId}) failed or is stopped.\nRecent deployment output:\n\`\`\`log\n${logSnippet}\n\`\`\`\nDiagnose source-aware root cause and propose a fix using propose_container_app_patch. Detail all files/variables being edited and container lifecycle. Do not deploy or expose secret values.`;
     window.AiHelper.open({
       split: true,
       taskType: 'app_redeploy',
