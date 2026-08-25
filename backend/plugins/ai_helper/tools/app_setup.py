@@ -9,6 +9,7 @@ import logging
 import re
 import copy
 from typing import Any, Dict, List, Optional
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from plugins.ai_helper.services import action_plans, setup_plan_builder
@@ -290,6 +291,13 @@ async def propose_app_install(
 
     stype = (source_type or ("image" if image_reference.strip() else "git")).strip().lower()
     bmode = (build_mode or ("image" if stype == "image" else "railpack")).strip().lower()
+
+    if not domain_name.strip() and session_id:
+        from models.ai_helper import AiChatSession
+        stmt = select(AiChatSession.target_domain).where(AiChatSession.session_id == session_id)
+        stored_domain = (await db.execute(stmt)).scalar_one_or_none()
+        if stored_domain:
+            domain_name = stored_domain.strip()
 
     # If git repo contains multi-service compose stack or multi-datastore requirement, promote to stack install seamlessly
     if stype == "git" and repository_url.strip():
@@ -730,7 +738,36 @@ async def propose_stack_install(
     if user_id is None:
         return {"status": "error", "message": "AI setup drafts require an authenticated panel user."}
 
+    if not domain_name.strip() and session_id:
+        from models.ai_helper import AiChatSession
+        stmt = select(AiChatSession.target_domain).where(AiChatSession.session_id == session_id)
+        stored_domain = (await db.execute(stmt)).scalar_one_or_none()
+        if stored_domain:
+            domain_name = stored_domain.strip()
+
     from plugins.ai_helper.services import setup_plan_builder
+
+    # Auto-synthesize manifest from inspection if incomplete or missing
+    if not stack_manifest or not isinstance(stack_manifest, dict) or not stack_manifest.get("services"):
+        repo = str(kwargs.get("repository_url") or "").strip()
+        if repo:
+            try:
+                inspection = container_app_inspection_service.inspect_repository(repo, str(kwargs.get("branch") or "main"))
+                from services.official_stacks.stack_synthesizer import (
+                    synthesize_stack_from_compose,
+                    synthesize_stack_from_inspection,
+                )
+                stack_args = synthesize_stack_from_compose(inspection, domain_name=domain_name, repo_url=repo)
+                if not stack_args:
+                    stack_args = synthesize_stack_from_inspection(inspection, domain_name=domain_name, repo_url=repo)
+                if stack_args:
+                    stack_manifest = stack_args["stack_manifest"]
+                    if not nonsecret_settings:
+                        nonsecret_settings = stack_args.get("nonsecret_settings")
+                    if not evidence:
+                        evidence = stack_args.get("evidence")
+            except Exception as exc:
+                logger.warning("Auto-synthesize in propose_stack_install fallback failed: %s", exc)
 
     try:
         payload = await setup_plan_builder.build_stack_payload(

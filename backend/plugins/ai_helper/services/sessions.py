@@ -59,6 +59,10 @@ async def get_or_create_session(
     context_key: Optional[str] = None,
     provider_id: Optional[int] = None,
     model_name: Optional[str] = None,
+    target_domain: Optional[str] = None,
+    repository_url: Optional[str] = None,
+    image_reference: Optional[str] = None,
+    active_plan_id: Optional[str] = None,
 ) -> AiChatSession:
     """Retrieves an existing chat session or creates a new one."""
     stmt = select(AiChatSession).where(AiChatSession.session_id == session_id)
@@ -75,6 +79,14 @@ async def get_or_create_session(
             session.model_name = model_name
         if provider_id:
             session.provider_id = provider_id
+        if target_domain and not session.target_domain:
+            session.target_domain = target_domain
+        if repository_url and not session.repository_url:
+            session.repository_url = repository_url
+        if image_reference and not session.image_reference:
+            session.image_reference = image_reference
+        if active_plan_id:
+            session.active_plan_id = active_plan_id
         await db.commit()
         await db.refresh(session)
         return session
@@ -90,6 +102,10 @@ async def get_or_create_session(
         context_key=context_key,
         model_name=model_name,
         provider_id=provider_id,
+        target_domain=target_domain,
+        repository_url=repository_url,
+        image_reference=image_reference,
+        active_plan_id=active_plan_id,
         message_count=existing_count,
         is_archived=False,
     )
@@ -97,6 +113,38 @@ async def get_or_create_session(
     await db.commit()
     await db.refresh(session)
     return session
+
+
+async def update_session_anchors(
+    db: AsyncSession,
+    session_id: str,
+    *,
+    target_domain: Optional[str] = None,
+    repository_url: Optional[str] = None,
+    image_reference: Optional[str] = None,
+    active_plan_id: Optional[str] = None,
+) -> None:
+    """Updates persistent immutable setup anchors on the chat session."""
+    stmt = select(AiChatSession).where(AiChatSession.session_id == session_id)
+    session = (await db.execute(stmt)).scalar_one_or_none()
+    if not session:
+        return
+    updated = False
+    if target_domain and target_domain.strip():
+        session.target_domain = target_domain.strip().lower()
+        updated = True
+    if repository_url and repository_url.strip():
+        session.repository_url = repository_url.strip()
+        updated = True
+    if image_reference and image_reference.strip():
+        session.image_reference = image_reference.strip()
+        updated = True
+    if active_plan_id and active_plan_id.strip():
+        session.active_plan_id = active_plan_id.strip()
+        updated = True
+    if updated:
+        session.updated_at = datetime.now()
+        await db.commit()
 
 
 async def list_sessions(

@@ -105,6 +105,19 @@ def normalize_stack_proposal_manifest(raw: Any) -> dict[str, Any]:
             if canonical_key not in manifest or manifest[canonical_key] is None:
                 manifest[canonical_key] = val
 
+    # Strip safe non-manifest metadata that LLMs commonly emit
+    manifest.pop("named_volumes", None)
+    manifest.pop("networks", None)
+    manifest.pop("volumes_from", None)
+    top_resources = manifest.pop("resources", None)
+    if isinstance(top_resources, dict) and "recommended_ram_mb" not in manifest:
+        mem = top_resources.get("memory_mb") or top_resources.get("memory")
+        if isinstance(mem, (int, str)):
+            try:
+                manifest["recommended_ram_mb"] = int(mem)
+            except ValueError:
+                pass
+
     # Special case: stray top-level 'port' or 'ports'
     if "port" in manifest:
         raw_port = manifest.pop("port")
@@ -158,13 +171,60 @@ def _normalize_service_dict(svc: dict[str, Any], top_deps: Any) -> None:
         if isinstance(svc_deps, list) and not svc.get("depends_on"):
             svc["depends_on"] = list(svc_deps)
 
-    # Normalize ports into list
+    # Ensure image reference is pinned if unpinned or :latest
+    raw_img = str(svc.get("image") or "").strip()
+    s_name = str(svc.get("name") or "").lower()
+    s_text = f"{s_name} {raw_img}".lower()
+    if raw_img:
+        if raw_img.endswith(":latest") or ":" not in raw_img.rsplit("/", 1)[-1]:
+            if any(k in s_text for k in ("postgres", "postgresql", "psql")):
+                svc["image"] = "postgres:16-alpine"
+            elif any(k in s_text for k in ("redis", "valkey", "keydb")):
+                svc["image"] = "redis:7-alpine"
+            elif any(k in s_text for k in ("mariadb", "mysql")):
+                svc["image"] = "mariadb:11"
+            elif "clickhouse" in s_text:
+                svc["image"] = "clickhouse/clickhouse-server:24.3-alpine"
+            elif any(k in s_text for k in ("redpanda", "kafka")) and "console" not in s_text:
+                svc["image"] = "redpandadata/redpanda:v24.1.2"
+            elif "console" in s_text:
+                svc["image"] = "redpandadata/console:v3.7.2"
+            elif "nginx" in s_text:
+                svc["image"] = "nginx:alpine"
+            elif "shynet" in s_text:
+                svc["image"] = "milesmcc/shynet:v0.12.0"
+            else:
+                base_img = raw_img.removesuffix(":latest")
+                svc["image"] = f"{base_img}:v1"
+
+    # Normalize ports into list and auto-fill if empty
     if "ports" in svc:
         p = svc["ports"]
         if isinstance(p, (int, str)) and not isinstance(p, (list, tuple, dict)):
             svc["ports"] = [p]
         elif isinstance(p, tuple):
             svc["ports"] = list(p)
+    if not svc.get("ports"):
+        if any(k in s_text for k in ("postgres", "postgresql", "psql")):
+            svc["ports"] = [5432]
+        elif any(k in s_text for k in ("redis", "valkey", "keydb")):
+            svc["ports"] = [6379]
+        elif any(k in s_text for k in ("mariadb", "mysql")):
+            svc["ports"] = [3306]
+        elif "clickhouse" in s_text:
+            svc["ports"] = [8123, 9000]
+        elif any(k in s_text for k in ("redpanda", "kafka")) and "console" not in s_text:
+            svc["ports"] = [9092, 9644]
+        elif "console" in s_text:
+            svc["ports"] = [8080]
+        elif "nginx" in s_text:
+            svc["ports"] = [80]
+        elif "shynet" in s_text:
+            svc["ports"] = [8080]
+        elif "mongo" in s_text:
+            svc["ports"] = [27017]
+        else:
+            svc["ports"] = [8000]
 
     # Normalize depends_on into list
     if "depends_on" in svc:

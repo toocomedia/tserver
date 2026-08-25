@@ -83,6 +83,35 @@ def inspect_repository(repository_url: str, branch: str, *, ssh_key_path: str | 
 
 
 def _framework(root: Path, files: set[str], text: str, runtime: str) -> str:
+    # 1. Primary check: Top-level package.json dependencies and package name
+    pkg_path = root / "package.json"
+    if pkg_path.is_file():
+        try:
+            pkg_data = json.loads(pkg_path.read_text(encoding="utf-8", errors="ignore"))
+            pkg_name = str(pkg_data.get("name") or "").lower()
+            deps = {**pkg_data.get("dependencies", {}), **pkg_data.get("devDependencies", {})}
+            deps_lower = {k.lower() for k in deps}
+            if "next" in deps_lower or "next.config.js" in files or "next.config.mjs" in files or "next.config.ts" in files:
+                return "Next.js"
+            if "nuxt" in deps_lower or "nuxt.config.js" in files or "nuxt.config.ts" in files:
+                return "Nuxt"
+            if "@remix-run/node" in deps_lower or "@remix-run/react" in deps_lower or "remix.config.js" in files:
+                return "Remix"
+            if "astro" in deps_lower or "astro.config.mjs" in files:
+                return "Astro"
+            if "@sveltejs/kit" in deps_lower or "svelte.config.js" in files:
+                return "SvelteKit"
+            if "n8n" in pkg_name or "@n8n/core" in deps_lower or "n8n-core" in deps_lower:
+                return "n8n"
+            if "ghost" in pkg_name or "ghost" in deps_lower:
+                return "Ghost"
+            if "strapi" in pkg_name or "@strapi/strapi" in deps_lower:
+                return "Strapi"
+            if any(k in deps_lower for k in ("express", "fastify", "nestjs", "@nestjs/core")):
+                return "Express/NestJS"
+        except Exception:
+            pass
+
     lower_text = text.lower()
     if "next.config.js" in files or "next.config.mjs" in files or "next.config.ts" in files or '"next"' in lower_text:
         return "Next.js"
@@ -110,8 +139,6 @@ def _framework(root: Path, files: set[str], text: str, runtime: str) -> str:
         return "Ghost"
     if "pocketbase" in lower_text:
         return "PocketBase"
-    if "n8n" in lower_text:
-        return "n8n"
     if runtime == "Node.js" and ("express" in lower_text or "fastify" in lower_text or "nestjs" in lower_text):
         return "Express/NestJS"
     return runtime

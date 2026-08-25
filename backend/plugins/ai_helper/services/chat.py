@@ -402,10 +402,38 @@ async def stream_ai_chat(
     setup_plan_tool_prompted = False
     setup_server_plan_attempted = False
     setup_source_result: Dict[str, Any] | None = None
-    setup_target_domain = _extract_setup_domain(user_message, context_text)
+    # Multi-turn setup context extraction with session persistence
+    history_texts = [r.content for r in recent_records]
+    setup_target_domain = (
+        _extract_setup_domain(user_message, context_text)
+        or (session_record.target_domain if session_record else "")
+        or _extract_setup_domain(*history_texts)
+    )
+    if setup_target_domain and session_record and session_record.target_domain != setup_target_domain:
+        session_record.target_domain = setup_target_domain
+
+    stype, repo, img = _extract_setup_source(user_message, context_text)
+    if not repo and session_record and session_record.repository_url:
+        repo = session_record.repository_url
+        stype = "git"
+    if not img and session_record and session_record.image_reference:
+        img = session_record.image_reference
+        stype = "image"
+    if not repo and not img:
+        stype_h, repo_h, img_h = _extract_setup_source(*history_texts)
+        if repo_h:
+            repo, stype = repo_h, "git"
+        elif img_h:
+            img, stype = img_h, "image"
+
+    if repo and session_record and session_record.repository_url != repo:
+        session_record.repository_url = repo
+    if img and session_record and session_record.image_reference != img:
+        session_record.image_reference = img
+    await db.commit()
+
     app_id = _extract_app_id(user_message, context_key, context_text)
     is_app_diag = setup_handoff.is_diagnostic_task(task_type, has_app_id=bool(app_id))
-    stype, repo, img = _extract_setup_source(user_message, context_text)
 
     # 1. Fast 1-Turn Pre-Inspection for App Engine Setup:
     if tools_enabled and setup_plan_required and (repo or img) and not setup_source_result:
@@ -427,6 +455,7 @@ async def stream_ai_chat(
                     "content": (
                         f"[Pre-collected Source Inspection Facts for {repo or img}]:\n"
                         f"{json.dumps(setup_source_result)}\n\n"
+                        f"Target Domain: {setup_target_domain or 'not specified'}\n"
                         "Using the pre-inspected facts above, immediately evaluate the architecture and propose "
                         "the installation plan using propose_app_install or propose_stack_install."
                     ),
@@ -482,6 +511,12 @@ async def stream_ai_chat(
             if fn_name == "inspect_app_source" and tool_output.get("status") == "ok":
                 setup_source_result = tool_output
             if fn_name in {"propose_app_install", "propose_stack_install", "propose_official_stack_install"}:
+                if setup_target_domain and not fn_args.get("domain_name"):
+                    fn_args["domain_name"] = setup_target_domain
+                if repo and not fn_args.get("repository_url"):
+                    fn_args["repository_url"] = repo
+                if img and not fn_args.get("image_reference"):
+                    fn_args["image_reference"] = img
                 if tool_output.get("status") != "ok":
                     message = str(tool_output.get("message") or "The planning tool rejected this proposal.").strip()
                     if message:
@@ -715,16 +750,26 @@ async def stream_ai_chat(
                 logger.warning("Automatic setup plan creation fallback failed: %s", exc)
 
         if tool_was_executed:
-            messages.append({
-                "role": "user",
-                "content": (
-                    "Now present ALL findings above in clean, structured Markdown directly to the user. "
-                    "Do NOT output any internal reasoning or planning text. Do NOT make further tool calls. "
-                    "Use the required output formats: ```security for security findings, "
-                    "```log for log output, markdown tables for records, "
-                    "and 📁/📄 bullet lists for file listings."
-                ),
-            })
+            if setup_plan_required:
+                messages.append({
+                    "role": "user",
+                    "content": (
+                        "Now summarize the inspected application architecture, services, and deployment configuration in clean, structured Markdown tables. "
+                        "Do NOT output tool calls, JSON ASTs, or internal schema errors. "
+                        "State clearly that the reviewed setup plan is ready to deploy."
+                    ),
+                })
+            else:
+                messages.append({
+                    "role": "user",
+                    "content": (
+                        "Now present ALL findings above in clean, structured Markdown directly to the user. "
+                        "Do NOT output any internal reasoning or planning text. Do NOT make further tool calls. "
+                        "Use the required output formats: ```security for security findings, "
+                        "```log for log output, markdown tables for records, "
+                        "and 📁/📄 bullet lists for file listings."
+                    ),
+                })
 
     # Stream final assistant response
     full_response = []

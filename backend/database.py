@@ -447,6 +447,17 @@ def _migrate_sync(sync_conn) -> None:
         """))
         sync_conn.execute(text("CREATE INDEX ix_ai_chat_sessions_session_id ON ai_chat_sessions (session_id)"))
         sync_conn.execute(text("CREATE INDEX ix_ai_chat_sessions_task_type ON ai_chat_sessions (task_type)"))
+    else:
+        cols = _column_names(sync_conn, "ai_chat_sessions")
+        for col, ddl in {
+            "target_domain": "VARCHAR(255)",
+            "repository_url": "VARCHAR(512)",
+            "image_reference": "VARCHAR(512)",
+            "active_plan_id": "VARCHAR(64)",
+        }.items():
+            if col not in cols:
+                logger.info("Migrating ai_chat_sessions: add %s", col)
+                sync_conn.execute(text(f"ALTER TABLE ai_chat_sessions ADD COLUMN {col} {ddl}"))
 
 
 async def init_db():

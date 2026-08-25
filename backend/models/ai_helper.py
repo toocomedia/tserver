@@ -85,6 +85,10 @@ class AiChatSession(Base):
     provider_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     message_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     is_archived: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    target_domain: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    repository_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    image_reference: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    active_plan_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), nullable=False
     )

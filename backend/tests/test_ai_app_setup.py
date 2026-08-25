@@ -536,6 +536,105 @@ class TestAiAppSetup(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(_extract_app_id("app_id: 15"), 15)
         self.assertIsNone(_extract_app_id("Deploy my python app on example.com"))
 
+    async def test_multiturn_domain_persistence(self):
+        """Verify propose_stack_install auto-populates domain_name from session anchors."""
+        from models.ai_helper import AiChatSession
+        from plugins.ai_helper.services import action_plans
+        from plugins.ai_helper.tools import app_setup
+        sess_id = f"sess_domain_test_{uuid.uuid4().hex[:8]}"
+        async with AsyncSessionLocal() as db:
+            session = AiChatSession(
+                session_id=sess_id,
+                title="OpenPanel Setup",
+                task_type="app_deploy",
+                target_domain="open.blagh.co",
+                repository_url="https://github.com/Openpanel-dev/openpanel",
+            )
+            db.add(session)
+            await db.commit()
+
+            manifest = {
+                "name": "openpanel",
+                "version": "main",
+                "services": [
+                    {"name": "op-db", "image": "postgres:14-alpine", "ports": [5432]},
+                    {"name": "openpanel", "image": "openpanel/api:main", "ports": [3000]},
+                ],
+                "startup_order": ["op-db", "openpanel"],
+                "web_service": "openpanel",
+                "web_port": 3000,
+            }
+            res = await app_setup.propose_stack_install(
+                db=db,
+                stack_manifest=manifest,
+                domain_name="",  # Omitted on purpose to test session anchor inheritance
+                session_id=sess_id,
+                user_id=1,
+            )
+            self.assertEqual(res["status"], "ok")
+            plan = await action_plans.get_action_plan(db, res["plan_id"], user_id=1)
+            self.assertIsNotNone(plan)
+            self.assertEqual(plan["payload"]["domain_name"], "open.blagh.co")
+
+    def test_shynet_stack_synthesis_defaults(self):
+        """Verify Shynet compose inspection with empty ports and unpinned images synthesizes cleanly."""
+        from services.official_stacks.stack_synthesizer import synthesize_stack_from_compose
+        inspection = {
+            "repository_url": "https://github.com/milesmcc/shynet",
+            "branch": "master",
+            "runtime": "Python",
+            "internal_port": 8080,
+            "compose_info": {
+                "services": [
+                    {"name": "shynet", "image": "milesmcc/shynet:latest", "internal_ports": []},
+                    {"name": "db", "image": "postgres", "internal_ports": []},
+                    {"name": "webserver", "image": "nginx", "internal_ports": [80]},
+                ],
+            },
+        }
+        res = synthesize_stack_from_compose(inspection, domain_name="open.blagh.co", repo_url="https://github.com/milesmcc/shynet")
+        self.assertIsNotNone(res)
+        manifest = res["stack_manifest"]
+        self.assertEqual(res["domain_name"], "open.blagh.co")
+        services = {s["name"]: s for s in manifest["services"]}
+        # Ports auto-defaulted
+        self.assertEqual(services["db"]["ports"], [5432])
+        self.assertEqual(services["shynet"]["ports"], [8080])
+        self.assertEqual(services["webserver"]["ports"], [80])
+        # Images auto-pinned
+        self.assertNotIn(":latest", services["db"]["image"])
+        self.assertNotIn(":latest", services["shynet"]["image"])
+        self.assertNotIn(":latest", services["webserver"]["image"])
+
+    def test_openpanel_stack_synthesis(self):
+        """Verify OpenPanel compose inspection with all backing databases synthesizes cleanly."""
+        from services.official_stacks.stack_synthesizer import synthesize_stack_from_compose
+        inspection = {
+            "repository_url": "https://github.com/Openpanel-dev/openpanel",
+            "branch": "main",
+            "runtime": "Node.js",
+            "internal_port": 3000,
+            "compose_info": {
+                "services": [
+                    {"name": "op-db", "image": "postgres:14-alpine", "internal_ports": [5432]},
+                    {"name": "op-kv", "image": "redis:7.2.5-alpine", "internal_ports": [6379]},
+                    {"name": "op-ch", "image": "clickhouse/clickhouse-server:24.3-alpine", "internal_ports": [8123, 9000]},
+                    {"name": "op-rp", "image": "redpandadata/redpanda:v24.1.2", "internal_ports": [9092, 9644]},
+                    {"name": "op-rp-console", "image": "redpandadata/console:v3.7.2", "internal_ports": [8080]},
+                ],
+            },
+        }
+        res = synthesize_stack_from_compose(inspection, domain_name="open.blagh.co", repo_url="https://github.com/Openpanel-dev/openpanel")
+        self.assertIsNotNone(res)
+        manifest = res["stack_manifest"]
+        services = {s["name"]: s for s in manifest["services"]}
+        self.assertIn("openpanel", services)
+        self.assertEqual(services["openpanel"]["ports"], [3000])
+        self.assertEqual(manifest["web_service"], "openpanel")
+        self.assertEqual(manifest["web_port"], 3000)
+        self.assertEqual(res["domain_name"], "open.blagh.co")
+
 
 if __name__ == "__main__":
     unittest.main()
+

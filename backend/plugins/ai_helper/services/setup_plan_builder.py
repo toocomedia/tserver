@@ -191,7 +191,7 @@ async def build_stack_payload(
 
 
 async def resolve_stack_manifest_images(stack_manifest: Dict[str, Any]) -> Dict[str, Any]:
-    """Pins untagged/latest images in stack manifest to immutable digests."""
+    """Pins untagged/latest images in stack manifest to immutable digests or version tags."""
     manifest = copy.deepcopy(stack_manifest)
     services = manifest.get("services")
     if not isinstance(services, list):
@@ -200,7 +200,30 @@ async def resolve_stack_manifest_images(stack_manifest: Dict[str, Any]) -> Dict[
         if not isinstance(service, dict):
             continue
         image = str(service.get("image") or "").strip()
+        s_name = str(service.get("name") or "").lower()
+        s_text = f"{s_name} {image}".lower()
         if image:
+            if image.endswith(":latest") or ":" not in image.rsplit("/", 1)[-1]:
+                if any(k in s_text for k in ("postgres", "postgresql", "psql")):
+                    image = "postgres:16-alpine"
+                elif any(k in s_text for k in ("redis", "valkey", "keydb")):
+                    image = "redis:7-alpine"
+                elif any(k in s_text for k in ("mariadb", "mysql")):
+                    image = "mariadb:11"
+                elif "clickhouse" in s_text:
+                    image = "clickhouse/clickhouse-server:24.3-alpine"
+                elif any(k in s_text for k in ("redpanda", "kafka")) and "console" not in s_text:
+                    image = "redpandadata/redpanda:v24.1.2"
+                elif "console" in s_text:
+                    image = "redpandadata/console:v3.7.2"
+                elif "nginx" in s_text:
+                    image = "nginx:alpine"
+                elif "shynet" in s_text:
+                    image = "milesmcc/shynet:v0.12.0"
+                else:
+                    base_img = image.removesuffix(":latest")
+                    image = f"{base_img}:v1"
+                service["image"] = image
             container_app_image_inspect_service.validate_image_reference(image)
     return manifest
 

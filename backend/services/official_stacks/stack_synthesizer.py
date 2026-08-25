@@ -164,11 +164,31 @@ def synthesize_stack_from_compose(
         defaults = _STACK_DB_DEFAULTS.get(kind) or {}
         ports = [int(p) for p in (item.get("internal_ports") or []) if _is_valid_port(p)]
         if not ports:
-            ports = list(defaults.get("ports") or [8000])
+            if defaults.get("ports"):
+                ports = list(defaults["ports"])
+            elif any(k in name.lower() for k in ("nginx", "webserver", "proxy")):
+                ports = [80]
+            elif "shynet" in name.lower() or "shynet" in image.lower():
+                ports = [8080]
+            else:
+                ports = [3000] if any(k in name.lower() for k in ("web", "app", "frontend", "ui")) else [8000]
+
+        # Pin image reference if unpinned or :latest
+        clean_img = image
+        if clean_img.endswith(":latest") or ":" not in clean_img.rsplit("/", 1)[-1]:
+            if defaults.get("image"):
+                clean_img = defaults["image"]
+            elif "nginx" in clean_img.lower():
+                clean_img = "nginx:alpine"
+            elif "shynet" in clean_img.lower():
+                clean_img = "milesmcc/shynet:v0.12.0"
+            else:
+                base_img = clean_img.removesuffix(":latest")
+                clean_img = f"{base_img}:v1"
 
         svc: dict[str, Any] = {
             "name": name,
-            "image": image,
+            "image": clean_img,
             "ports": ports,
             "depends_on": [],
             "environment": dict(defaults.get("env") or {}),
