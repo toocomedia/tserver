@@ -12,7 +12,7 @@ from models.domain import Domain
 from models.ssl_cert import SslCert
 from plugins.ai_helper.services import action_plans
 from services import container_app_deployment_service, container_app_inspection_service, container_app_service
-from services.apps_engine import secret_vault, snapshots
+from services.apps_engine import database_provider_capabilities, secret_vault, snapshots
 from services.official_stacks import compose_runtime
 from services.official_stacks.manifest_validator import compute_stack_manifest_hash, validate_stack_manifest
 from services.official_stacks.schema import stack_from_dict
@@ -218,13 +218,10 @@ def _database_kind(kind: str) -> str:
 
 
 def _database_provider(provider: str, kind: str) -> str:
-    if provider in {"panel", "panel_managed", "managed"}:
-        return "panel_postgres" if kind == "postgresql" else "panel_mariadb" if kind == "mariadb" else "docker"
-    if provider in {"postgres", "postgresql"}:
-        return "panel_postgres"
-    if provider in {"mysql", "mariadb"}:
-        return "panel_mariadb"
-    return provider or "docker"
+    try:
+        return database_provider_capabilities.canonical_provider(kind, provider)
+    except database_provider_capabilities.ProviderChoiceRequired as exc:
+        raise HTTPException(400, str(exc)) from exc
 
 
 def _reject_unsafe_single_app_source(payload: dict[str, Any]) -> None:

@@ -27,6 +27,7 @@ _TOOL_LIMITS = {
     "propose_stack_install": 1,
 }
 _PROPOSAL_TOOLS = frozenset({"propose_app_install", "propose_stack_install"})
+_SECRET_INPUT_RE = re.compile(r"(?:pass(?:word)?|secret|token|api[_-]?key|private[_-]?key|encryption[_-]?key)", re.I)
 
 
 def requires_reviewed_plan(task_type: str | None) -> bool:
@@ -122,9 +123,15 @@ def is_setup_interview_pending(
     if not isinstance(setup_source_result, dict):
         return False
     
-    import re
     # Strip URLs so 'github.com' or 'gitlab.com' does not falsely match 'git' keyword
     clean_msg = re.sub(r"https?://\S+", "", (user_message or "").lower())
+
+    # A staged browser interview returns all values in one message. A chosen
+    # deployment method alone never completes documented application inputs.
+    if required_setup_inputs(setup_source_result):
+        return bool(missing_setup_inputs(setup_source_result, user_message))
+    if re.search(r"(?im)^\s*deployment_method\s*:\s*\S+", user_message or ""):
+        return False
 
     # If user explicitly said to proceed, deploy, or answered options, don't block
     if any(token in clean_msg for token in (
@@ -137,18 +144,7 @@ def is_setup_interview_pending(
     inspection = setup_source_result.get("inspection") if isinstance(setup_source_result.get("inspection"), dict) else setup_source_result
     doc_evidence = inspection.get("documentation_evidence") or {}
 
-    setup_hints = doc_evidence.get("setup_hints") if isinstance(doc_evidence.get("setup_hints"), dict) else {}
-    required_inputs = setup_hints.get("required_inputs") or []
-    needs_admin_email = any(
-        isinstance(item, dict) and item.get("name") == "admin_email"
-        for item in required_inputs
-    )
-
-    # 1. Check documented setup hints/commands for a missing administrator email.
-    if (needs_admin_email or doc_evidence.get("detected_admin_commands")) and "@" not in clean_msg and "admin" not in clean_msg:
-        return True
-
-    # 2. Preserve the existing reviewed choice when inspection recommends an official image.
+    # Preserve the existing reviewed choice when inspection recommends an official image.
     image_advice = setup_source_result.get("official_image_recommendation") or inspection.get("official_image_recommendation")
     if isinstance(image_advice, dict) and image_advice.get("has_official_image") and not any(
         token in clean_msg for token in (
@@ -157,12 +153,12 @@ def is_setup_interview_pending(
     ):
         return True
 
-    # 3. Check if multiple databases were detected (e.g. Postgres + Clickhouse + Redis, or Postgres + SQLite)
+    # Check if multiple databases were detected (e.g. Postgres + Clickhouse + Redis, or Postgres + SQLite)
     db_detections = inspection.get("database_detections") or []
     if len(db_detections) > 1 and not any(k in clean_msg for k in ("postgres", "mysql", "mariadb", "sqlite", "clickhouse", "mongo")):
         return True
 
-    # 4. Check if detected docker images or compose services offer build choices
+    # Check if detected docker images or compose services offer build choices
     detected_imgs = doc_evidence.get("detected_docker_images") or []
     has_compose = bool((inspection.get("compose_info") or {}).get("services"))
     if (detected_imgs or has_compose) and not any(k in clean_msg for k in ("docker image", "docker", "railpack", "source build", "compose", "stack")):
@@ -224,6 +220,47 @@ def setup_documentation_url_allowed(
         ):
             return True
     return False
+
+
+def required_setup_inputs(setup_source_result: Mapping[str, object] | None) -> list[dict[str, str]]:
+    """Return documented user-owned fields, excluding every vault-managed field."""
+    if not isinstance(setup_source_result, Mapping):
+        return []
+    inspection = setup_source_result.get("inspection") if isinstance(setup_source_result.get("inspection"), Mapping) else setup_source_result
+    evidence = inspection.get("documentation_evidence") if isinstance(inspection, Mapping) else {}
+    hints = evidence.get("setup_hints") if isinstance(evidence, Mapping) else {}
+    raw_inputs = hints.get("required_inputs") if isinstance(hints, Mapping) else []
+    results: list[dict[str, str]] = []
+    names: set[str] = set()
+    for item in raw_inputs if isinstance(raw_inputs, list) else []:
+        if not isinstance(item, Mapping):
+            continue
+        name = str(item.get("name") or "").strip().lower()
+        if not name or name in names or bool(item.get("secret")) or _SECRET_INPUT_RE.search(name):
+            continue
+        names.add(name)
+        results.append({
+            "name": name,
+            "label": str(item.get("label") or name.replace("_", " ").title()),
+            "placeholder": str(item.get("placeholder") or ""),
+        })
+    if not results and isinstance(evidence, Mapping) and evidence.get("detected_admin_commands"):
+        results.append({"name": "admin_email", "label": "Admin Email", "placeholder": "admin@example.com"})
+    return results
+
+
+def missing_setup_inputs(setup_source_result: Mapping[str, object] | None, user_message: str) -> list[dict[str, str]]:
+    """Check named, combined interview answers without treating a choice as an input."""
+    message = user_message or ""
+    missing: list[dict[str, str]] = []
+    for item in required_setup_inputs(setup_source_result):
+        key = re.escape(item["name"])
+        found = re.search(rf"(?im)^\s*(?:[-*]\s*)?{key}\s*:\s*(\S.*)$", message)
+        if not found and item["name"] == "admin_email":
+            found = re.search(r"(?i)\b[\w.+-]+@[\w.-]+\.[A-Z]{2,}\b", message)
+        if not found:
+            missing.append(item)
+    return missing
 
 
 def _normalized_https_url(value: str) -> str:

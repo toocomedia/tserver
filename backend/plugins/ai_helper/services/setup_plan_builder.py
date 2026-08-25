@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from plugins.ai_helper.services import action_plans
 from services import container_app_image_inspect_service, container_app_inspection_service
 from services.apps_engine import build_secrets
+from services.apps_engine import database_provider_capabilities
 from services.official_stacks.manifest_validator import compute_stack_manifest_hash
 from services.official_stacks.proposal_manifest import stack_from_proposal, validate_stack_settings
 from services.official_stacks.schema import stack_to_dict
@@ -45,14 +46,7 @@ def normalize_database_kind(kind: str) -> str:
 
 
 def normalize_database_provider(provider: str, kind: str) -> str:
-    prov = (provider or "docker").strip().lower()
-    if prov in {"panel", "panel_managed", "managed"}:
-        return "panel_postgres" if kind == "postgresql" else "panel_mariadb" if kind == "mariadb" else "docker"
-    if prov in {"postgres", "postgresql"}:
-        return "panel_postgres"
-    if prov in {"mysql", "mariadb"}:
-        return "panel_mariadb"
-    return prov or "docker"
+    return database_provider_capabilities.canonical_provider(kind, provider)
 
 
 def normalize_port(port_val: Any, default: int = 3000) -> int:
@@ -118,6 +112,7 @@ def build_single_app_payload(
             if isinstance(item, dict) and item.get("kind"):
                 kind = normalize_database_kind(str(item.get("kind", "")))
                 provider = normalize_database_provider(str(item.get("provider", "docker")), kind)
+                database_provider_capabilities.require_available(kind, provider)
                 clean_dbs.append({
                     "kind": kind,
                     "provider": provider,

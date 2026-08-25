@@ -421,6 +421,7 @@ async def stream_ai_chat(
     setup_server_plan_attempted = False
     setup_documentation_failed = False
     setup_source_result: Dict[str, Any] | None = None
+    setup_provider_choice: Dict[str, Any] | None = None
     # Multi-turn setup context extraction with session persistence
     history_texts = [r.content for r in recent_records]
     explicit_domain = _extract_explicit_setup_domain(user_message, context_text)
@@ -480,46 +481,54 @@ async def stream_ai_chat(
                     inspection = setup_source_result.get("inspection") if isinstance(setup_source_result.get("inspection"), dict) else setup_source_result
                     doc_ev = (inspection.get("documentation_evidence") or {}) if isinstance(inspection, dict) else {}
                     detected_imgs = doc_ev.get("detected_docker_images") or []
-                    admin_cmds = doc_ev.get("detected_admin_commands") or []
-                    setup_hints = doc_ev.get("setup_hints") if isinstance(doc_ev.get("setup_hints"), dict) else {}
-                    needs_admin_email = any(
-                        isinstance(item, dict) and item.get("name") == "admin_email"
-                        for item in (setup_hints.get("required_inputs") or [])
-                    )
+                    required_inputs = setup_handoff.required_setup_inputs(setup_source_result)
                     has_compose = bool((inspection.get("compose_info") or {}).get("services")) if isinstance(inspection, dict) else False
-                    
                     options_list = []
-                    if detected_imgs:
+                    if has_compose:
+                        # A reviewed Compose topology owns its private services. A
+                        # documented image never replaces that topology by default.
+                        options_list.append("[OPTION:Docker Compose Stack (Recommended)|deployment_method:compose_stack]")
+                    elif detected_imgs:
                         primary_img = detected_imgs[0]
-                        options_list.append(f"[OPTION:Option 1 (Recommended): Run Docker Image ({primary_img})|Option 1]")
-                        if has_compose:
-                            options_list.append("[OPTION:Option 2: Docker Compose Stack (Multi-container)|Option 2]")
-                            if len(detected_imgs) > 1:
-                                for idx, img_name in enumerate(detected_imgs[1:2], 3):
-                                    options_list.append(f"[OPTION:Option {idx}: Alternative Image ({img_name})|Option {idx}]")
-                    elif has_compose:
-                        options_list.append("[OPTION:Option 1 (Recommended): Docker Compose Stack (App + Services)|Option 1]")
-                    
-                    opt_num = len(options_list) + 1
-                    options_list.append(f"[OPTION:Option {opt_num}: Build from Git Source (Railpack/Dockerfile)|Option {opt_num}]")
-                    
-                    admin_prompt = ""
-                    if (admin_cmds or needs_admin_email) and "@" not in user_message:
-                        options_list.append("[INPUT:admin_email|admin@example.com|Admin Email]")
-                        admin_prompt = "Initial administrator setup is required according to documentation (e.g. registeradmin). You MUST explicitly ask the user: 'What admin email address should be used to initialize the superuser account?' and output [INPUT:admin_email|admin@example.com|Admin Email]."
-                    
-                    options_str = "\n".join(options_list)
-                    if admin_prompt:
-                        prompt_tail = f"{admin_prompt} Ask the user for their required setup credentials and preferred setup method."
+                        options_list.append(f"[OPTION:Run Docker Image (Recommended): {primary_img}|deployment_method:registry_image]")
+                        options_list.append("[OPTION:Build from Git Source|deployment_method:git_build]")
                     else:
-                        prompt_tail = "Ask the user to select their preferred setup method from the options above. Do not prompt for unused credentials."
+                        options_list.append("[OPTION:Build from Git Source (Recommended)|deployment_method:git_build]")
+
+                    if not has_compose and isinstance(inspection, dict):
+                        from services.apps_engine import database_provider_capabilities
+                        detected_kinds = {
+                            str(item.get("kind") or "").lower()
+                            for item in (inspection.get("database_detections") or [])
+                            if isinstance(item, dict)
+                        }
+                        for record in database_provider_capabilities.provider_capabilities(force=True):
+                            kind = str(record.get("kind") or "")
+                            if kind not in detected_kinds:
+                                continue
+                            for choice in record.get("providers") or []:
+                                provider = str(choice.get("provider_id") or choice.get("id") or "")
+                                state = str(choice.get("managed_dependency_state") or choice.get("state") or "")
+                                if provider == "docker":
+                                    options_list.append(f"[OPTION:Private {kind} container (Recommended)|provider.{kind}:docker]")
+                                elif state == "active":
+                                    options_list.append(f"[OPTION:{choice.get('label')}|provider.{kind}:{provider}]")
+                                elif state == "stopped" and choice.get("can_activate"):
+                                    options_list.append(f"[OPTION:Activate {choice.get('label')} from Dependencies|provider.{kind}:activate:{provider}]")
+
+                    for item in required_inputs:
+                        options_list.append(
+                            f"[INPUT:{item['name']}|{item['placeholder']}|{item['label']}]"
+                        )
+                    options_str = "\n".join(options_list)
 
                     action_instruction = (
                         "Present the source inspection facts clearly in clean Markdown tables (Application Overview, Services, Detected Databases, Configuration). "
                         "Do NOT call proposal planning tools yet. "
-                        f"{prompt_tail} "
-                        f"Provide the interactive option tags and input tags:\n{options_str}\n"
-                        "Wait for the user to confirm their choices before generating the reviewed plan."
+                        "Declare every unresolved deployment choice, provider choice, and documented non-secret input together using the exact interactive tags below. "
+                        "Do not ask for passwords, keys, tokens, or secrets. The browser will show one question at a time and send one combined answer only after completion. "
+                        f"Provide these interactive option and input tags exactly:\n{options_str}\n"
+                        "Wait for the combined interview answer before generating the reviewed plan."
                     )
                 elif needs_stack:
                     action_instruction = (
@@ -603,7 +612,7 @@ async def stream_ai_chat(
 
         async def _execute_tool(fn_name: str, fn_args: Dict[str, Any]) -> Dict[str, Any]:
             """Execute approved tools while bounding setup-only evidence collection."""
-            nonlocal sensitive_file_blocked, setup_stack_correction_allowed, setup_stack_correction_reason, setup_source_result, setup_documentation_failed
+            nonlocal sensitive_file_blocked, setup_stack_correction_allowed, setup_stack_correction_reason, setup_source_result, setup_documentation_failed, setup_provider_choice
             limited = setup_handoff.tool_limit_result(
                 task_type,
                 fn_name,
@@ -654,6 +663,8 @@ async def stream_ai_chat(
             if fn_name == "inspect_app_source" and tool_output.get("status") == "ok":
                 setup_source_result = tool_output
             if fn_name in {"propose_app_install", "propose_stack_install", "propose_official_stack_install"}:
+                if tool_output.get("status") == "provider_choice_required":
+                    setup_provider_choice = tool_output
                 if tool_output.get("status") != "ok":
                     message = str(tool_output.get("message") or "The planning tool rejected this proposal.").strip()
                     if message:
@@ -687,6 +698,8 @@ async def stream_ai_chat(
                 step_content = tool_step.get("content") or ""
 
                 if not tool_calls:
+                    if setup_provider_choice:
+                        break
                     # Check for DeepSeek DSML or XML pseudo tool call syntax in text
                     tool_calls = _extract_text_tool_calls(step_content)
                     is_text_pseudo_tool = bool(tool_calls)
@@ -869,6 +882,7 @@ async def stream_ai_chat(
             setup_plan_required
             and not setup_plan_id
             and not setup_documentation_failed
+            and not setup_provider_choice
             and not setup_handoff.is_recommendation_decision_pending(setup_source_result, user_message)
         ):
             stype, repo, img = _extract_setup_source(user_message, context_text)
@@ -895,6 +909,19 @@ async def stream_ai_chat(
                         "state that documentation was unavailable, and ask one concise [INPUT:] or [OPTION:] question "
                         "for the meaningful unknown needed to finish the reviewed plan. Do not stop setup or claim a plan is ready."
                     )
+                elif setup_provider_choice:
+                    dependency_id = str(setup_provider_choice.get("dependency_id") or "")
+                    provider_state = str(setup_provider_choice.get("provider_state") or "unavailable")
+                    if dependency_id and provider_state == "stopped":
+                        content_str = (
+                            "The selected managed provider is stopped. No plan was created. "
+                            f"Activate it explicitly, then send the combined interview answer again: [ACTION:OPEN_DEPENDENCY:{dependency_id}]"
+                        )
+                    else:
+                        content_str = (
+                            "The selected managed provider is unavailable, so no plan was created. "
+                            "Choose the documented private container provider or install/repair the dependency from Dependencies."
+                        )
                 elif setup_handoff.is_setup_interview_pending(setup_source_result, user_message):
                     content_str = (
                         "Now summarize the inspected application architecture, services, and deployment configuration in clean, structured Markdown tables. "

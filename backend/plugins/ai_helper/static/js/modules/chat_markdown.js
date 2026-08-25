@@ -201,6 +201,10 @@
           if (actionType === "UNLOCK_SENSITIVE_FILE") {
             return renderSecretsBtn();
           }
+          if (actionType === "OPEN_DEPENDENCY" && /^[a-z0-9_-]{1,64}$/i.test(actionVal.trim())) {
+            var dependencyId = actionVal.trim();
+            return '<a class="ai-action-tag" href="/dependencies/' + encodeURIComponent(dependencyId) + '">Open Dependencies</a>';
+          }
           // Special: SECURITY_FINDING renders as coloured severity badge
           if (actionType === "SECURITY_FINDING") {
             var parts = actionVal.match(/^(critical|warning|ok):(.+)$/i);

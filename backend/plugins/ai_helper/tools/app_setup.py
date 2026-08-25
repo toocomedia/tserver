@@ -347,21 +347,32 @@ async def propose_app_install(
                 "message": f"Stack setup plan proposal failed: {exc}",
             }
 
-    payload = setup_plan_builder.build_single_app_payload(
-        source_type=stype,
-        repository_url=repository_url,
-        branch=branch,
-        image_reference=image_reference,
-        internal_port=internal_port,
-        build_mode=bmode,
-        custom_start_command=custom_start_command,
-        health_path=health_path,
-        environment_values=environment_values,
-        secret_requirements=secret_requirements,
-        database_attachments=database_attachments,
-        storage_mounts=storage_mounts,
-        domain_name=domain_name,
-    )
+    try:
+        payload = setup_plan_builder.build_single_app_payload(
+            source_type=stype,
+            repository_url=repository_url,
+            branch=branch,
+            image_reference=image_reference,
+            internal_port=internal_port,
+            build_mode=bmode,
+            custom_start_command=custom_start_command,
+            health_path=health_path,
+            environment_values=environment_values,
+            secret_requirements=secret_requirements,
+            database_attachments=database_attachments,
+            storage_mounts=storage_mounts,
+            domain_name=domain_name,
+        )
+    except setup_plan_builder.database_provider_capabilities.ProviderChoiceRequired as exc:
+        return {
+            "status": "provider_choice_required",
+            "message": str(exc),
+            "kind": exc.kind,
+            "provider": exc.provider,
+            "provider_state": exc.state,
+            "dependency_id": exc.dependency_id,
+            "provider_capabilities": setup_plan_builder.database_provider_capabilities.provider_capabilities(),
+        }
 
     sess_id = session_id or "default_session"
     plan_summary = summary or f"Install {image_reference or repository_url or 'Application'}"
@@ -391,13 +402,8 @@ def _normalize_database_kind(kind: str) -> str:
 
 
 def _normalize_database_provider(provider: str, kind: str) -> str:
-    if provider in {"panel", "panel_managed", "managed"}:
-        return "panel_postgres" if kind == "postgresql" else "panel_mariadb" if kind == "mariadb" else "docker"
-    if provider in {"postgres", "postgresql"}:
-        return "panel_postgres"
-    if provider in {"mysql", "mariadb"}:
-        return "panel_mariadb"
-    return provider or "docker"
+    from services.apps_engine import database_provider_capabilities
+    return database_provider_capabilities.canonical_provider(kind, provider)
 
 
 def _single_app_source_error(source_type: str, repository_url: str, branch: str) -> str:
@@ -836,18 +842,12 @@ async def _resolve_stack_manifest_images(stack_manifest: Optional[Dict[str, Any]
 
 async def get_app_engine_capabilities(db: AsyncSession, **kwargs: Any) -> Dict[str, Any]:
     """Server-owned setup contract. It deliberately omits secret values and raw Compose input."""
-    try:
-        from dependencies import dependency_manager
-        providers = {
-            "panel_postgres": dependency_manager.is_healthy("postgresql"),
-            "panel_mariadb": dependency_manager.is_healthy("mariadb"),
-        }
-    except Exception:
-        providers = {"panel_postgres": False, "panel_mariadb": False}
+    from services.apps_engine import database_provider_capabilities
+    provider_records = database_provider_capabilities.provider_capabilities(force=True)
     return {
         "status": "ok",
         "modes": ["git_railpack", "git_dockerfile", "registry_image", "restricted_compose_stack"],
-        "databases": {"single_app": {**providers, "supabase": True, "external_url": True}, "stack": "private internal services declared by reviewed manifest"},
+        "databases": {"provider_records": provider_records, "stack": "private internal services declared by reviewed manifest"},
         "storage": "panel-owned named volumes only; no host paths or Docker socket",
         "networking": "one loopback-only web port; dependencies private; no host network or public database ports",
         "secrets": {"generators": ["urlsafe64", "base64_48", "hex32", "password"], "values_visible_to_ai": False},
