@@ -614,7 +614,7 @@
         var buffer = "";
         function read() {
           return reader.read().then(function (result) {
-            if (result.done) return self._finishStreaming(bubbleContent, activityPanel, fullText, startTime);
+            if (result.done) return self._finishStreaming(bubbleContent, activityPanel, fullText, startTime, activityItems);
             buffer += decoder.decode(result.value, { stream: true });
             var lines = buffer.split("\n");
             buffer = lines.pop();
@@ -622,7 +622,7 @@
               var line = lines[i].trim();
               if (!line || !line.startsWith("data:")) continue;
               var d = line.substring(5).trim();
-              if (d === "[DONE]") return self._finishStreaming(bubbleContent, activityPanel, fullText, startTime);
+              if (d === "[DONE]") return self._finishStreaming(bubbleContent, activityPanel, fullText, startTime, activityItems);
               try {
                 var p = JSON.parse(d);
                 if (p.type === "token" && p.token) {
@@ -707,7 +707,7 @@
       this._scrollToBottom();
     },
 
-    _finishStreaming: function (bubble, activityPanel, text, start) {
+    _finishStreaming: function (bubble, activityPanel, text, start, activityItems) {
       this.isStreaming = false;
       this.sendBtnEl.style.display = "flex";
       this.stopBtnEl.style.display = "none";
@@ -722,16 +722,29 @@
       if (window.AiHelperActions) window.AiHelperActions.checkLongMessages(this.messagesEl);
       // Collapse activity panel into summary toggle
       if (activityPanel && activityPanel.children.length > 0) {
-        var count = activityPanel.children.length;
+        var items = activityPanel.querySelectorAll(".ai-activity-item");
+        var count = items.length || activityPanel.children.length;
         activityPanel.classList.add("ai-activity-panel--done");
         var summary = document.createElement("button");
         summary.type = "button";
         summary.className = "ai-activity-summary-toggle";
         var BOOK_SVG = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:3px;"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>';
         var CHECK_SVG = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:3px;"><polyline points="20 6 9 17 4 12"></polyline></svg>';
-        var hasSetupTools = Object.keys(activityItems).some(function (k) {
-          return k.indexOf("propose") !== -1 || k.indexOf("inspect") !== -1 || k.indexOf("reasoning") !== -1 || k.indexOf("planning") !== -1 || k.indexOf("app") !== -1;
-        });
+        var hasSetupTools = false;
+        if (activityItems && typeof activityItems === "object") {
+          hasSetupTools = Object.keys(activityItems).some(function (k) {
+            return k.indexOf("propose") !== -1 || k.indexOf("inspect") !== -1 || k.indexOf("reasoning") !== -1 || k.indexOf("planning") !== -1 || k.indexOf("app") !== -1;
+          });
+        }
+        if (!hasSetupTools && items.length > 0) {
+          for (var j = 0; j < items.length; j++) {
+            var txt = (items[j].textContent || "").toLowerCase();
+            if (txt.indexOf("inspect") !== -1 || txt.indexOf("plan") !== -1 || txt.indexOf("synthesiz") !== -1 || txt.indexOf("evaluat") !== -1 || txt.indexOf("app") !== -1) {
+              hasSetupTools = true;
+              break;
+            }
+          }
+        }
         var iconSvg = hasSetupTools ? CHECK_SVG : BOOK_SVG;
         var labelText = hasSetupTools
           ? (count === 1 ? "1 pipeline step completed" : count + " pipeline steps completed")
