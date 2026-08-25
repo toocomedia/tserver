@@ -41,8 +41,12 @@ def inspect_repository(repository_url: str, branch: str, *, ssh_key_path: str | 
         # Detect databases with confidence levels
         databases, suggestions = _databases_with_confidence(root, files, text)
 
-        # Extract environment template (.env.example / .env.sample)
-        env_sample = _parse_env_sample(root)
+        # Extract environment template (.env.example / .env.sample / TEMPLATE.env)
+        from services.apps_engine import doc_evidence
+        env_sample = doc_evidence.parse_expanded_env_samples(root)
+
+        # Extract markdown installation instructions (GUIDE.md, INSTALL.md, README.md setup sections)
+        documentation_evidence = doc_evidence.find_install_instructions(root)
 
         # Extract package scripts
         package_scripts = _parse_package_scripts(root)
@@ -79,6 +83,7 @@ def inspect_repository(repository_url: str, branch: str, *, ssh_key_path: str | 
             "database_detections": databases,          # [{kind, confidence}]
             "database_suggestions": suggestions,       # [{kind, confidence, reason}] — LOW only
             "env_sample": env_sample,                  # {KEY: default_value}
+            "documentation_evidence": documentation_evidence,
             "storage_mount_suggestions": storage_mounts, # [{label, mount_path, reason}]
             "package_scripts": package_scripts,
             "compose_info": compose_info,
@@ -151,26 +156,9 @@ def _framework(root: Path, files: set[str], text: str, runtime: str) -> str:
 
 
 def _parse_env_sample(root: Path) -> dict[str, str]:
-    """Parse .env.example, .env.sample, .env.template, or env.example."""
-    for candidate in (".env.example", ".env.sample", ".env.template", "env.example", ".env.dist", "example.env"):
-        path = root / candidate
-        if path.is_file():
-            try:
-                result: dict[str, str] = {}
-                for line in path.read_text(encoding="utf-8", errors="ignore").splitlines():
-                    line = line.strip()
-                    if not line or line.startswith("#") or "=" not in line:
-                        continue
-                    key, _, val = line.partition("=")
-                    key = key.strip()
-                    val = val.strip().strip("'\"")
-                    if key:
-                        result[key] = val
-                if result:
-                    return result
-            except Exception:
-                pass
-    return {}
+    """Parse any environment template file using doc_evidence."""
+    from services.apps_engine import doc_evidence
+    return doc_evidence.parse_expanded_env_samples(root)
 
 
 def _parse_package_scripts(root: Path) -> dict[str, str]:
