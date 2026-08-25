@@ -130,7 +130,7 @@ class RailpackAppsUiTests(unittest.TestCase):
         self.assertIn('data-app-tab="command"', detail)
         self.assertIn('data-tab-panel="command"', detail)
         self.assertIn("railpack-app-command.js", detail)
-        self.assertIn("In-App Command Runner", runner_partial)
+        self.assertIn("Command Runner", runner_partial)
         self.assertIn("data-app-command-runner", runner_partial)
         self.assertIn("data-command-input", runner_partial)
         self.assertIn("data-terminal-output", runner_partial)
