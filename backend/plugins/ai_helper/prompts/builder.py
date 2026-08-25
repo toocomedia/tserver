@@ -12,6 +12,9 @@ from plugins.ai_helper.prompts.tool_rules import APP_ENGINE_TOOL_RULES, TOOL_USA
 
 _APP_ENGINE_SKILLS = frozenset({
     "app_deploy", "app_install", "setup_app", "error_diag", "app_redeploy", "app_inspect", "app_recovery",
+    "app_build", "build_architect", "nixpacks_build", "docker_build",
+    "stack_architect", "stack_template", "compose_stack", "multi_container",
+    "container_fix", "error_resolver", "sre_troubleshoot", "auto_healing",
 })
 
 

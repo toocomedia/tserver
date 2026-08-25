@@ -6,8 +6,15 @@ from typing import Mapping
 from plugins.ai_helper.tools.definitions import APP_SETUP_TOOL_NAMES
 
 
-_SETUP_TASK_TYPES = frozenset({"app_deploy", "app_install", "setup_app"})
-_DIAGNOSTIC_TASK_TYPES = frozenset({"error_diag", "app_redeploy", "error", "debug"})
+_SETUP_TASK_TYPES = frozenset({
+    "app_deploy", "app_install", "setup_app", "app_build", "build_architect",
+    "nixpacks_build", "docker_build", "stack_architect", "stack_template",
+    "compose_stack", "multi_container",
+})
+_DIAGNOSTIC_TASK_TYPES = frozenset({
+    "error_diag", "app_redeploy", "error", "debug",
+    "container_fix", "error_resolver", "sre_troubleshoot", "auto_healing",
+})
 SETUP_TOOL_NAMES = APP_SETUP_TOOL_NAMES
 APP_DIAGNOSTIC_TOOL_NAMES = frozenset({"get_app_engine_diagnostics", "propose_container_app_patch", "get_app_logs"})
 _TOOL_LIMITS = {
