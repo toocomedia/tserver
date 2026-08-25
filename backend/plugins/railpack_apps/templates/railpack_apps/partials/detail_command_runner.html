@@ -1,0 +1,116 @@
+<div class="master-card app-command-runner-card" data-app-command-runner data-app-id="{{ app.id }}" data-app-status="{{ app.status }}">
+  <div class="master-card__header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <span style="font-weight: 700; font-size: 14px;">In-App Command Runner</span>
+      <span class="badge-pill {% if app.status == 'running' %}badge-pill--accent{% else %}badge-pill--danger{% endif %}" style="font-size: 11px;">
+        <span class="status-dot {% if app.status == 'running' %}status-dot--active{% endif %}" style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: currentColor; margin-right: 4px;"></span>
+        {{ app.status | title }}
+      </span>
+    </div>
+
+    <!-- TARGET CONTAINER SELECTOR (FOR MULTI-SERVICE STACKS) OR BADGE -->
+    <div style="display: flex; align-items: center; gap: 8px;">
+      {% if app_containers and app_containers | length > 1 %}
+      <label for="app-cmd-target-container" class="form-hint" style="margin: 0; font-size: 11px; text-transform: uppercase; font-weight: 600;">Container:</label>
+      <select id="app-cmd-target-container" class="form-select form-select--sm mono" data-command-container-select style="font-size: 11px; padding: 3px 8px; height: 28px; min-width: 170px;">
+        {% for c in app_containers %}
+        <option value="{{ c.name }}" {% if c.is_primary %}selected{% endif %}>{{ c.label }}</option>
+        {% endfor %}
+      </select>
+      {% else %}
+      <div style="display: flex; align-items: center; gap: 6px;">
+        <span class="form-hint" style="margin: 0; font-size: 11px; text-transform: uppercase; font-weight: 600;">Target:</span>
+        <code class="mono" style="font-size: 11px; background: var(--bg-card); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--color-line);" data-command-single-container="{{ app_containers[0].name if app_containers else (app.container_name or 'srv-app-' ~ app.id) }}">
+          {{ app_containers[0].name if app_containers else (app.container_name or 'srv-app-' ~ app.id) }}
+        </code>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="master-card__body" style="display: flex; flex-direction: column; gap: 14px; padding: 16px;">
+    {% if app.status != 'running' %}
+    <div class="alert alert--warning" style="margin-bottom: 0; font-size: 12px;">
+      <strong>Application is not running:</strong> Commands can only be executed when the container status is <code>running</code>. Start or deploy the app to enable the command runner.
+    </div>
+    {% endif %}
+
+    <!-- QUICK COMMAND CHIPS -->
+    {% if quick_commands %}
+    <div class="app-command-chips-wrapper">
+      <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--color-muted); margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;">
+        <span>Suggested Commands</span>
+        <span style="font-size: 10px; font-weight: normal; color: var(--color-muted);">Click to fill & run</span>
+      </div>
+      <div class="app-command-chips" style="display: flex; flex-wrap: wrap; gap: 6px;">
+        {% for item in quick_commands %}
+        <button type="button" class="btn btn--secondary btn--sm app-cmd-chip" data-quick-command="{{ item.command }}" title="{{ item.command }}" style="font-size: 11px; padding: 2px 8px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;">
+          {{ item.label }}
+        </button>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- TERMINAL SCREEN -->
+    <div class="app-terminal-window" style="background: #090d16; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; overflow: hidden; box-shadow: inset 0 2px 6px rgba(0,0,0,0.4);">
+      <!-- Terminal Window Bar -->
+      <div class="app-terminal-bar" style="background: #0f172a; padding: 8px 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.06); display: flex; justify-content: space-between; align-items: center;">
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #ef4444; opacity: 0.8;"></span>
+          <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #f59e0b; opacity: 0.8;"></span>
+          <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #10b981; opacity: 0.8;"></span>
+          <span class="mono" style="font-size: 11px; color: #94a3b8; margin-left: 6px;" data-terminal-target-display>
+            root@{{ app_containers[0].name if app_containers else (app.container_name or 'srv-app-' ~ app.id) }}:/
+          </span>
+        </div>
+        <div style="display: flex; gap: 6px;">
+          <button type="button" class="btn btn--ghost btn--sm" data-terminal-copy style="color: #94a3b8; padding: 2px 8px; font-size: 11px; height: 22px;">
+            Copy Output
+          </button>
+          <button type="button" class="btn btn--ghost btn--sm" data-terminal-clear style="color: #94a3b8; padding: 2px 8px; font-size: 11px; height: 22px;">
+            Clear
+          </button>
+        </div>
+      </div>
+
+      <!-- Terminal Output Screen -->
+      <div class="app-terminal-output mono" data-terminal-output style="padding: 14px; min-height: 240px; max-height: 480px; overflow-y: auto; font-size: 12px; line-height: 1.5; color: #e2e8f0; white-space: pre-wrap; word-break: break-all; scroll-behavior: smooth;">
+<span style="color: #64748b;"># Container Command Console (Scoped to active app container)</span>
+<span style="color: #64748b;"># Ready. Type a command below or click a quick command chip.</span>
+</div>
+    </div>
+
+    <!-- COMMAND INPUT PROMPT -->
+    <form class="app-command-input-form" data-command-form style="display: flex; gap: 8px; align-items: center;">
+      <div class="app-command-input-group" style="position: relative; flex: 1; display: flex; align-items: center;">
+        <span class="mono" style="position: absolute; left: 12px; color: var(--color-accent, #6366f1); font-weight: 700; font-size: 13px; pointer-events: none;">$&nbsp;</span>
+        <input 
+          type="text" 
+          class="form-input form-input--code" 
+          data-command-input 
+          placeholder="Enter command to run in container... (e.g. ls -la, python manage.py migrate)" 
+          style="padding-left: 28px; width: 100%; font-size: 12.5px; height: 38px; background: var(--bg-card);"
+          autocomplete="off"
+          autocorrect="off"
+          autocapitalize="off"
+          spellcheck="false"
+          {% if app.status != 'running' %}disabled{% endif %}
+        >
+      </div>
+      <button 
+        type="submit" 
+        class="btn btn--primary" 
+        data-command-submit-btn
+        style="height: 38px; min-width: 90px; display: inline-flex; align-items: center; justify-content: center; gap: 6px;"
+        {% if app.status != 'running' %}disabled{% endif %}
+      >
+        <span data-command-btn-text>Run</span>
+      </button>
+    </form>
+    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: var(--color-muted); margin-top: -6px;">
+      <span>Tip: Press <strong>Enter</strong> to run. Use <strong>↑</strong> and <strong>↓</strong> arrow keys for command history.</span>
+      <span>Execution is sandboxed to container</span>
+    </div>
+  </div>
+</div>

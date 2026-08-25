@@ -122,6 +122,20 @@ class RailpackAppsUiTests(unittest.TestCase):
         self.assertEqual(redirect_response.status_code, 303)
         self.assertEqual(redirect_response.headers["location"], "/plugins/railpack_apps/8?deployment=13")
 
+    def test_detail_includes_command_runner_tab_and_partial(self):
+        detail = (BACKEND / "plugins" / "railpack_apps" / "templates" / "railpack_apps_detail.html").read_text(encoding="utf-8")
+        runner_partial = (BACKEND / "plugins" / "railpack_apps" / "templates" / "railpack_apps" / "partials" / "detail_command_runner.html").read_text(encoding="utf-8")
+        script = (BACKEND / "plugins" / "railpack_apps" / "static" / "js" / "railpack-app-command.js").read_text(encoding="utf-8")
+
+        self.assertIn('data-app-tab="command"', detail)
+        self.assertIn('data-tab-panel="command"', detail)
+        self.assertIn("railpack-app-command.js", detail)
+        self.assertIn("In-App Command Runner", runner_partial)
+        self.assertIn("data-app-command-runner", runner_partial)
+        self.assertIn("data-command-input", runner_partial)
+        self.assertIn("data-terminal-output", runner_partial)
+        self.assertIn("/plugins/railpack_apps/${appId}/command/run", script)
+
 
 if __name__ == "__main__":
     unittest.main()

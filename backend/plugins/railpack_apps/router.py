@@ -24,6 +24,8 @@ from services import container_app_database_lifecycle_service
 from services import container_app_deployment_service
 from services import container_app_removal_service, ssl_service
 from services.apps_engine import deployment_drafts, secret_vault, snapshots
+from plugins.railpack_apps import command_service
+from plugins.railpack_apps.router_command import router as command_router
 from plugins.railpack_apps.router_create import router as create_router
 from plugins.railpack_apps.router_recovery import router as recovery_router
 from plugins.railpack_apps.router_resources import router as resource_router
@@ -103,6 +105,7 @@ async def bulk_action(req: BulkActionRequest, db: AsyncSession = Depends(get_db)
 
 router.include_router(create_router)
 router.include_router(recovery_router)
+router.include_router(command_router)
 
 
 @router.get("/{app_id}", response_class=HTMLResponse)
@@ -133,11 +136,14 @@ async def detail(app_id: int, request: Request, db: AsyncSession = Depends(get_d
     credentials = await snapshots.credentials_for(db, app.id)
     from plugins.railpack_apps.documentation_service import get_app_documentation
     app_docs = get_app_documentation(app, domain, active_snapshot)
+    app_containers = command_service.get_authorized_containers(app)
+    quick_commands = command_service.get_quick_commands(app, domain)
     return templates.TemplateResponse("railpack_apps_detail.html", {
         "request": request, "active_page": "railpack_apps", "app": app, "domain": domain, "ssl_active": ssl_active, "deployment": deployment, "deployments": deployments,
         "databases": databases, "database_statuses": {item.id: container_app_database_lifecycle_service.status(item) for item in databases}, "backups": backups,
         "pending_plan": pending_plan, "pending_snapshot": pending_snapshot, "active_snapshot": active_snapshot,
         "rollback_snapshot": rollback_snapshot, "credentials": credentials, "app_docs": app_docs,
+        "app_containers": app_containers, "quick_commands": quick_commands,
     })
 
 

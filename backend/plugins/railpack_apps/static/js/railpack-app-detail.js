@@ -26,6 +26,7 @@ function initAppTabs() {
       }
     } catch (_) {}
   }
+  window.activateAppTab = activateTab;
 
   tabButtons.forEach(btn => {
     btn.addEventListener('click', () => {

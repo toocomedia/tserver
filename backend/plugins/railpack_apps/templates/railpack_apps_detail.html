@@ -2,7 +2,7 @@
 {% block title %}{{ domain.name if domain else app.container_name }} — {{ PANEL_NAME }}{% endblock %}
 {% block page_title %}Apps Engine{% endblock %}
 {% block topbar_actions %}<a class="btn btn--secondary" href="/plugins/railpack_apps/">All apps</a>{% endblock %}
-{% block head_extra %}
+{% block head %}
 <link rel="stylesheet" href="/plugins/railpack_apps/static/css/apps-engine-optic.css">
 {% endblock %}
 {% block content %}
@@ -26,6 +26,10 @@
   <button type="button" class="tabs-nav__btn" data-app-tab="databases">
     <span>Databases & Storage</span>
     {% if databases %}<span class="badge-pill" style="font-size: 10px; padding: 1px 6px;">{{ databases | length }}</span>{% endif %}
+  </button>
+  <button type="button" class="tabs-nav__btn" data-app-tab="command">
+    <span>Command Runner</span>
+    {% if app.status == 'running' %}<span class="badge-pill badge-pill--accent" style="font-size: 9px; padding: 1px 5px;">CLI</span>{% endif %}
   </button>
   <button type="button" class="tabs-nav__btn" data-app-tab="docs">
     <span>Documentation</span>
@@ -342,12 +346,17 @@
   {% include "railpack_apps/partials/detail_databases.html" %}
 </div>
 
-<!-- TAB 5: DOCUMENTATION -->
+<!-- TAB 5: COMMAND RUNNER -->
+<div class="app-detail-tab-panel" data-tab-panel="command">
+  {% include "railpack_apps/partials/detail_command_runner.html" %}
+</div>
+
+<!-- TAB 6: DOCUMENTATION -->
 <div class="app-detail-tab-panel" data-tab-panel="docs">
   {% include "railpack_apps/partials/detail_documentation.html" %}
 </div>
 
-<!-- TAB 6: DANGER ZONE -->
+<!-- TAB 7: DANGER ZONE -->
 <div class="app-detail-tab-panel" data-tab-panel="danger">
   {% include "railpack_apps/partials/detail_danger_zone.html" %}
 </div>
@@ -355,5 +364,6 @@
 {% endblock %}
 {% block scripts %}
 <script type="module" src="/plugins/railpack_apps/static/js/railpack-app-detail.js"></script>
+<script type="module" src="/plugins/railpack_apps/static/js/railpack-app-command.js"></script>
 <script type="module" src="/static/js/modules/app-delete.js"></script>
 {% endblock %}

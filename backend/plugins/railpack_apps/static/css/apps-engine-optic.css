@@ -902,3 +902,47 @@ html[data-theme="charcoal"] .apps-engine-optic .db-toggle-icon {
   padding: 2px 8px;
   border-radius: 4px;
 }
+
+/* ── App Command Runner & Interactive Terminal ───────────────── */
+.app-command-runner-card {
+  border-top: 2px solid var(--color-accent, #6366f1);
+}
+
+.app-command-chips .app-cmd-chip {
+  transition: all 0.15s ease;
+  border-color: var(--color-line);
+}
+.app-command-chips .app-cmd-chip:hover {
+  border-color: var(--color-accent, #6366f1);
+  color: var(--color-accent, #6366f1);
+  background: color-mix(in srgb, var(--color-accent, #6366f1) 10%, transparent);
+  transform: translateY(-1px);
+}
+
+.app-terminal-window {
+  background: #090d16;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3), inset 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+.app-terminal-output::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.app-terminal-output::-webkit-scrollbar-track {
+  background: #090d16;
+}
+.app-terminal-output::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 3px;
+}
+.app-terminal-output::-webkit-scrollbar-thumb:hover {
+  background: #334155;
+}
+
+.app-command-input-group input:focus {
+  border-color: var(--color-accent, #6366f1) !important;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent, #6366f1) 25%, transparent) !important;
+}
