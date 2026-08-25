@@ -43,6 +43,8 @@ _TOOL_LABELS = {
     "get_app_engine_diagnostics": ("activity", "Collecting runtime diagnostics"),
     "propose_app_install": ("layers", "Generating deployment plan"),
     "propose_stack_install": ("layers", "Generating stack deployment plan"),
+    "ai_reasoning": ("cpu", "AI analyzing stack dependencies"),
+    "ai_planning": ("layers", "Generating deployment plan"),
 }
 
 
@@ -431,8 +433,12 @@ async def stream_ai_chat(
                     setup_stack_correction_reason = str(tool_output.get("message") or "").strip()
             return tool_output
 
-        for _ in range(max_tool_iterations):
+        reasoning_active = False
+        for iteration in range(max_tool_iterations):
             try:
+                if iteration > 0 and setup_source_result:
+                    yield _activity_event("ai_reasoning", "start", {"domain": setup_target_domain})
+                    reasoning_active = True
                 norm_messages = _normalize_messages_for_llm(messages, active.provider_type)
                 tool_step = await engine.chat_completion_step(
                     provider_type=active.provider_type,
@@ -444,6 +450,9 @@ async def stream_ai_chat(
                     temperature=active.temperature,
                     max_tokens=active.max_tokens,
                 )
+                if reasoning_active:
+                    yield _activity_event("ai_reasoning", "done", {"domain": setup_target_domain})
+                    reasoning_active = False
                 tool_calls = tool_step.get("tool_calls") or []
                 step_content = tool_step.get("content") or ""
 

@@ -303,7 +303,7 @@ def clone(
         source_url = fallback
     if result.returncode and allow_default_branch:
         shutil.rmtree(target, ignore_errors=True)
-        result = _run(["git", "clone", "--depth", "1", source_url, str(target)], 180, env=env)
+        result = _run(["git", "clone", "--depth", "1", source_url, str(target)], 45, env=env)
         if not result.returncode:
             branch = _run(
                 ["git", "-C", str(target), "branch", "--show-current"], 10, env=env
@@ -313,7 +313,7 @@ def clone(
     if revision:
         fetched = _run(
             ["git", "-C", str(target), "fetch", "--depth", "1", "origin", revision],
-            180,
+            45,
             env=env,
         )
         if fetched.returncode:
@@ -323,6 +323,7 @@ def clone(
         if checked.returncode:
             shutil.rmtree(target, ignore_errors=True)
             raise HTTPException(400, f"Git checkout failed: {_safe_error(checked)}")
+        return GitCheckout(target, source_url, branch, _revision(target, env=env))
     return GitCheckout(target, source_url, branch, _revision(target, env=env))
 
 
@@ -348,7 +349,7 @@ def remote_revision(repository_url: str, branch: str, *, git_ref_type: str = "br
 def _clone_branch(url: str, branch: str, target: Path, *, env: dict[str, str] | None = None):
     return _run(
         ["git", "clone", "--depth", "1", "--branch", branch, url, str(target)],
-        180,
+        30,
         env=env,
     )
 
