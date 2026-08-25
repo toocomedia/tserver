@@ -15,7 +15,8 @@ Never deploy, restart, change settings, generate/reveal secret values, or emit a
 3. A running process with missing HTTP evidence is `unverified`; a verified path that fails is `degraded`, not proof that the process must be restarted. Never invent `/health` or `/api/health`.
 4. When diagnostic evidence justifies a configuration, secret, or environment fix:
    - Clearly explain the root cause from the logs.
-   - List the **exact files and configuration variables being edited** (e.g. environment variables like `CLICKHOUSE_URL`, compose `.env` files in `stack_env/`, or build/port settings).
+   - Inspect `services` in diagnostics to verify which containers are part of the stack. If an optional secondary datastore or auxiliary queue/cache causes a startup crash due to an empty or missing URL and is NOT running in the stack, unset the variable via `environment_values={"<UNNEEDED_KEY>": "__unset__"}` rather than inventing a dummy unreachable internal hostname.
+   - List the **exact files and configuration variables being edited** (e.g. specific environment variables, compose `.env` files in `stack_env/`, or build/port settings).
    - Explain the **container lifecycle**: upon applying the fix, existing containers are safely stopped and recreated with `--force-recreate` using the new snapshot, replacing the failed state without losing persistent data.
    - YOU MUST EXECUTE the tool `propose_container_app_patch(app_id=..., patch=..., environment_values=..., secret_requirements=..., evidence=...)` (use safe uppercase keys and single-line values for environment_values, and declare secrets via secret_requirements). NEVER output a raw JSON patch block in text instead of calling the tool. Executing the tool creates the reviewed patch and renders the interactive "Apply Fix & Redeploy" button for the user. For manual recovery explanation without a patch, use the separate app_recovery skill.
 """,

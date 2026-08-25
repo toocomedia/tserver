@@ -550,13 +550,16 @@ async def stream_ai_chat(
             yield _activity_event("get_app_engine_diagnostics", "done", {"app_id": app_id})
             if diag_res.get("status") == "ok":
                 tool_was_executed = True
+                diag_data = diag_res.get("diagnostics") or diag_res
                 messages.append({
                     "role": "user",
                     "content": (
                         f"[Pre-collected App Engine Runtime Diagnostics for App #{app_id}]:\n"
-                        f"{json.dumps(diag_res.get('diagnostics') or diag_res)}\n\n"
-                        "Using the pre-collected container runtime logs, process status, and readiness diagnostics above, "
-                        "diagnose the exact root cause and propose a fix using `propose_container_app_patch`."
+                        f"{json.dumps(diag_data)}\n\n"
+                        "Using the pre-collected container runtime logs, deployment logs, process status, and service list above:\n"
+                        "1. Diagnose the exact root cause from the error and container stderr.\n"
+                        "2. Inspect the `services` dictionary to confirm which containers/datastores are actually provisioned in the stack. Never configure connection URLs for services or auxiliary containers that do not exist in the stack; if an unprovisioned optional service variable causes a crash due to empty or missing URL, unset it (e.g. with '__unset__') so the application runs with its active services.\n"
+                        "3. Explicitly list the files and variables being edited, explain container recreation lifecycle, and stage the fix using `propose_container_app_patch`."
                     ),
                 })
         except Exception as exc:
