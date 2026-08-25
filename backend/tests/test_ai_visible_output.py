@@ -1,12 +1,16 @@
-"""Focused safeguards for visible AI chat output and setup handoffs."""
-from __future__ import annotations
-
+from pathlib import Path
+import sys
 import unittest
+
+BACKEND = Path(__file__).resolve().parents[1]
+if str(BACKEND) not in sys.path:
+    sys.path.insert(0, str(BACKEND))
 
 from plugins.ai_helper.services.setup_handoff import (
     missing_plan_message,
     needs_stack_correction,
     tool_limit_result,
+    is_recommendation_decision_pending,
 )
 from plugins.ai_helper.services.visible_output import VisibleOutputFilter, strip_hidden_reasoning
 
@@ -71,6 +75,30 @@ class VisibleOutputTests(unittest.TestCase):
         message = missing_plan_message([])
         self.assertIn("server-side planning record", message)
         self.assertNotIn("retry the setup chat", message)
+
+    def test_recommendation_decision_pending_behavior(self):
+        res_with_advice = {
+            "status": "ok",
+            "official_image_recommendation": {
+                "has_official_image": True,
+                "recommended_image": "jellyfin/jellyfin:latest",
+                "recommended_port": 8096,
+            },
+        }
+        res_without_advice = {"status": "ok"}
+
+        # When advice is present and user message is open, decision is pending
+        self.assertTrue(is_recommendation_decision_pending(res_with_advice, "Deploy https://github.com/jellyfin/jellyfin"))
+        self.assertTrue(is_recommendation_decision_pending(res_with_advice, "Setup Jellyfin on cc.blagh.co"))
+
+        # When user explicitly chooses, decision is no longer pending
+        self.assertFalse(is_recommendation_decision_pending(res_with_advice, "Use option 1"))
+        self.assertFalse(is_recommendation_decision_pending(res_with_advice, "Deploy using docker image"))
+        self.assertFalse(is_recommendation_decision_pending(res_with_advice, "Build from source"))
+
+        # When no advice was returned, decision is not pending
+        self.assertFalse(is_recommendation_decision_pending(res_without_advice, "Deploy https://github.com/myuser/app"))
+        self.assertFalse(is_recommendation_decision_pending(None, "Deploy app"))
 
 
 if __name__ == "__main__":

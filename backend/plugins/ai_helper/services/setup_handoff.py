@@ -95,6 +95,24 @@ def needs_stack_correction(tool_name: str, tool_output: Mapping[str, object]) ->
     )
 
 
+def is_recommendation_decision_pending(
+    setup_source_result: Mapping[str, object] | None,
+    user_message: str,
+) -> bool:
+    """Whether an official image recommendation is awaiting user choice before plan generation."""
+    if not isinstance(setup_source_result, dict):
+        return False
+    if not setup_source_result.get("official_image_recommendation"):
+        return False
+    msg = (user_message or "").lower()
+    if any(token in msg for token in (
+        "option 1", "option 2", "official", "docker image", "use image",
+        "use docker", "git source", "from source", "railpack", "build from source",
+    )):
+        return False
+    return True
+
+
 def missing_plan_message(errors: list[str]) -> str:
     """Give the user the final actionable plan error without exposing tool internals."""
     if errors:

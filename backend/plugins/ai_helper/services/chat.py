@@ -455,6 +455,8 @@ async def stream_ai_chat(
                     is_text_pseudo_tool = False
 
                 if not tool_calls:
+                    if setup_handoff.is_recommendation_decision_pending(setup_source_result, user_message):
+                        break
                     if (
                         setup_plan_required
                         and setup_source_result
@@ -623,8 +625,12 @@ async def stream_ai_chat(
                 })
                 break
 
-        # After tool loop: ensure a setup plan is created if this was a setup request
-        if setup_plan_required and not setup_plan_id:
+        # After tool loop: ensure a setup plan is created if this was a setup request and decision is not pending
+        if (
+            setup_plan_required
+            and not setup_plan_id
+            and not setup_handoff.is_recommendation_decision_pending(setup_source_result, user_message)
+        ):
             stype, repo, img = _extract_setup_source(user_message, context_text)
             try:
                 fallback_plan = await setup_plan_builder.build_automatic_setup_plan(
