@@ -768,7 +768,12 @@
         var p = e.target.closest("[data-ai-prompt]");
         if (p) {
           e.preventDefault();
-          self.open({ context: p.getAttribute("data-ai-context"), initialPrompt: p.getAttribute("data-ai-prompt"), taskType: p.getAttribute("data-ai-task") || "general" });
+          self.open({
+            context: p.getAttribute("data-ai-context"),
+            initialPrompt: p.getAttribute("data-ai-prompt"),
+            taskType: p.getAttribute("data-ai-task") || "general",
+            fresh: p.getAttribute("data-ai-fresh") === "true",
+          });
           return;
         }
         var err = e.target.closest("[data-ai-explain-error]");
@@ -785,6 +790,15 @@
       this.init();
       if (opts.taskType) this.setTaskType(opts.taskType);
       if (opts.context) this.setContext(opts.context);
+
+      var isCreatePage = window.location.pathname.indexOf("/apps/create") !== -1 || window.location.pathname.indexOf("/railpack-apps/create") !== -1 || window.location.pathname.indexOf("/apps/new") !== -1;
+      if (opts.fresh || isCreatePage) {
+        var cachedMsgs = window.AiHelperCache ? window.AiHelperCache.getCachedMessages(this.sessionId) : [];
+        if (cachedMsgs && cachedMsgs.length > 0) {
+          this.startNewChat({ taskType: opts.taskType || (isCreatePage ? "app_deploy" : this.activeTaskType), context: opts.context || (isCreatePage ? "new_app" : this.activeContext), initialPrompt: opts.initialPrompt });
+          return;
+        }
+      }
 
       if (opts.split) {
         this.drawerEl.classList.add("ai-helper-drawer--split");

@@ -60,6 +60,12 @@ async def remove_selected_data(
                 stack = get_stack(getattr(app, "stack_catalog_id", None) or "")
             if stack:
                 await asyncio.to_thread(stack_runtime_service.purge_stack_volumes, app.id, stack)
+        try:
+            extra_vols = await container_app_cleanup_service.list_app_storage_volumes(app.id)
+            for v in extra_vols:
+                await container_app_cleanup_service.remove_volume(v)
+        except Exception:
+            pass
     if delete_wordpress_files and app.wordpress_content_volume:
         await container_app_cleanup_service.remove_volume(app.wordpress_content_volume)
         app.wordpress_content_volume = None

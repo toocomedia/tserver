@@ -63,11 +63,11 @@ class TestAiAppSetup(unittest.IsolatedAsyncioTestCase):
         """Verify propose_container_app_patch creates a review draft plan."""
         from models.container_app import ContainerApp
         from models.domain import Domain
-        import random
+        from services import container_app_service
         import uuid
         uid = uuid.uuid4().hex[:8]
-        rnd_port = random.randint(31000, 45000)
         async with AsyncSessionLocal() as db:
+            rnd_port = await container_app_service.next_host_port(db)
             domain = Domain(name=f"patch-{uid}.local", server_ip="127.0.0.1")
             db.add(domain)
             await db.flush()
@@ -194,11 +194,11 @@ class TestAiAppSetup(unittest.IsolatedAsyncioTestCase):
         """Verify an existing Git app can be patched in-place to Docker image mode."""
         from models.container_app import ContainerApp
         from models.domain import Domain
-        import random
+        from services import container_app_service
         import uuid
         uid = uuid.uuid4().hex[:8]
-        rnd_port = random.randint(31000, 45000)
         async with AsyncSessionLocal() as db:
+            rnd_port = await container_app_service.next_host_port(db)
             domain = Domain(name=f"jellyfin-{uid}.local", server_ip="127.0.0.1")
             db.add(domain)
             await db.flush()
@@ -296,9 +296,11 @@ class TestAiAppSetup(unittest.IsolatedAsyncioTestCase):
         """Verify propose_container_app_patch safely normalizes environment values and secrets."""
         from models.container_app import ContainerApp
         from models.domain import Domain
+        from services import container_app_service
         import uuid
         uid = uuid.uuid4().hex[:8]
         async with AsyncSessionLocal() as db:
+            rnd_port = await container_app_service.next_host_port(db)
             domain = Domain(name=f"norm-{uid}.local", server_ip="127.0.0.1")
             db.add(domain)
             await db.flush()
@@ -309,7 +311,7 @@ class TestAiAppSetup(unittest.IsolatedAsyncioTestCase):
                 source_type="image",
                 build_mode="image",
                 image_reference="nginx:alpine",
-                host_port=32145,
+                host_port=rnd_port,
                 internal_port=80,
                 env_path="/tmp/test_norm.env",
                 status="running",
@@ -343,7 +345,114 @@ class TestAiAppSetup(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(len(payload["secret_requirements"]), 1)
             self.assertEqual(payload["secret_requirements"][0]["key"], "APP_JWT_SECRET")
 
+    async def test_propose_container_app_patch_graceful_metadata_filtering(self):
+        """Verify propose_container_app_patch filters extraneous stack/diagnostic fields gracefully."""
+        from models.container_app import ContainerApp
+        from models.domain import Domain
+        from services import container_app_service
+        import uuid
+        uid = uuid.uuid4().hex[:8]
+        async with AsyncSessionLocal() as db:
+            rnd_port = await container_app_service.next_host_port(db)
+            domain = Domain(name=f"patchmeta-{uid}.local", server_ip="127.0.0.1")
+            db.add(domain)
+            await db.flush()
+
+            app = ContainerApp(
+                domain_id=domain.id,
+                container_name=f"test-meta-{uid}",
+                source_type="image",
+                build_mode="image",
+                image_reference="nginx:alpine",
+                host_port=rnd_port,
+                internal_port=80,
+                env_path="/tmp/test_meta.env",
+                status="running",
+            )
+            db.add(app)
+            await db.commit()
+            await db.refresh(app)
+
+            # AI emits extra fields like service / yaml / diagnostic notes in patch
+            res = await app_setup.propose_container_app_patch(
+                db=db,
+                app_id=app.id,
+                patch={
+                    "service": "op-rp-console",
+                    "notes": "Fix broker connection",
+                    "internal_port": 8080,
+                },
+                environment_values={"KAFKA_BROKERS": "op-rp:9092"},
+                evidence=["Detected broker config missing in logs"],
+                summary="Add KAFKA_BROKERS configuration",
+                confidence=1.0,
+                user_id=1,
+            )
+            self.assertEqual(res["status"], "ok")
+            self.assertTrue(res["plan_id"].startswith("plan_"))
+
+            from plugins.ai_helper.services import action_plans
+            plan = await action_plans.get_action_plan(db, res["plan_id"], user_id=1)
+            self.assertIsNotNone(plan)
+            payload = plan["payload"]
+            self.assertEqual(payload["patch"]["internal_port"], 8080)
+            self.assertNotIn("service", payload["patch"])
+            self.assertNotIn("notes", payload["patch"])
+            self.assertEqual(payload["environment_values"], {"KAFKA_BROKERS": "op-rp:9092"})
+
+    async def test_delete_app_purges_ai_sessions(self):
+        """Verify deleting an app cascades and removes associated AI chat sessions."""
+        from models.container_app import ContainerApp
+        from models.domain import Domain
+        from models.ai_helper import AiChatMessage, AiChatSession
+        from services import container_app_cleanup_service, container_app_service
+        import uuid
+        uid = uuid.uuid4().hex[:8]
+        sess_id = f"sess_del_{uid}"
+        async with AsyncSessionLocal() as db:
+            rnd_port = await container_app_service.next_host_port(db)
+            domain = Domain(name=f"delsess-{uid}.local", server_ip="127.0.0.1")
+            db.add(domain)
+            await db.flush()
+
+            app = ContainerApp(
+                domain_id=domain.id,
+                container_name=f"test-del-{uid}",
+                source_type="image",
+                build_mode="image",
+                image_reference="nginx:alpine",
+                host_port=rnd_port,
+                internal_port=80,
+                env_path="/tmp/test_del.env",
+                status="running",
+            )
+            db.add(app)
+            await db.flush()
+
+            session = AiChatSession(
+                session_id=sess_id,
+                title="Test Chat",
+                task_type="app_deploy",
+                context_key=f"app:{app.id}",
+            )
+            db.add(session)
+            msg = AiChatMessage(session_id=sess_id, role="user", content="Deploy openpanel")
+            db.add(msg)
+            await db.commit()
+
+            # Now delete the app
+            with patch("services.nginx_service.create_static_site", AsyncMock(return_value="")), \
+                 patch("services.nginx_service.reload", AsyncMock(return_value=True)):
+                await container_app_cleanup_service.delete_app(db, app)
+            await db.commit()
+
+            # Verify session is cleaned up
+            from sqlalchemy import select
+            remaining_sess = await db.scalar(select(AiChatSession.session_id).where(AiChatSession.session_id == sess_id))
+            self.assertIsNone(remaining_sess)
+
 
 if __name__ == "__main__":
     unittest.main()
+
 

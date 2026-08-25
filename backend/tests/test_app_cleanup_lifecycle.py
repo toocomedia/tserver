@@ -1,8 +1,13 @@
 import asyncio
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
+
+BACKEND = Path(__file__).resolve().parents[1]
+if str(BACKEND) not in sys.path:
+    sys.path.insert(0, str(BACKEND))
 
 from models.hosted_app import HostedApp
 from services import app_cleanup_service, app_lifecycle_service

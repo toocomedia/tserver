@@ -35,11 +35,17 @@ def _normalize_patch(app: ContainerApp, patch: object, allow_empty: bool = False
             return {}
         raise ValueError("AI proposal must contain at least one supported configuration change.")
     if not isinstance(patch, dict):
+        if allow_empty:
+            return {}
         raise ValueError("AI proposal must contain at least one supported configuration change.")
-    if set(patch) - PATCH_FIELDS:
-        raise ValueError("AI proposal includes unsupported configuration fields.")
+
+    # Gracefully filter to supported patch fields
+    filtered_patch = {k: v for k, v in patch.items() if k in PATCH_FIELDS}
+    if not filtered_patch and not allow_empty:
+        raise ValueError("AI proposal must contain at least one supported configuration change.")
+
     result: dict[str, Any] = {}
-    for key, raw in patch.items():
+    for key, raw in filtered_patch.items():
         if key == "source_type":
             if raw not in {"git", "image"}:
                 raise ValueError("Source type is invalid.")

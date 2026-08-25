@@ -48,9 +48,7 @@ async def delete_app(
     doomed_previous = getattr(app, "previous_image", None)
     doomed_app_id = app.id
 
-    domain = await db.get(Domain, app.domain_id)
-    if domain:
-        await uninstall(db, app, domain, remove_network=False)
+    # 1. Remove app volumes and stack compose data while Compose files are intact
     attachments = await container_app_database_service.attachments_for(db, app.id)
     managed_ids = {item.id for item in attachments if item.provider in {"docker", "panel_postgres", "panel_mariadb"}}
     delete_database_ids = list(managed_ids - set(keep_database_ids))
@@ -62,7 +60,30 @@ async def delete_app(
         delete_wordpress_files=bool(app.wordpress_content_volume),
         delete_backups=True,
     )
+
+    # 2. Uninstall container, network, restore domain site, and delete build files
+    domain = await db.get(Domain, app.domain_id)
+    if domain:
+        await uninstall(db, app, domain, remove_network=False)
+
+    # 3. Clean up DB records
     await db.execute(delete(ContainerAppDeployment).where(ContainerAppDeployment.app_id == app.id))
+
+    # 4. Cascade purge AI chat sessions and action plans for this app ID
+    try:
+        from models.ai_helper import AiChatMessage, AiChatSession, AiActionPlan
+        session_ids = list((await db.scalars(
+            select(AiChatSession.session_id).where(
+                (AiChatSession.context_key == f"app:{doomed_app_id}") |
+                (AiChatSession.context_key == f"container_app:{doomed_app_id}")
+            )
+        )).all())
+        if session_ids:
+            await db.execute(delete(AiChatMessage).where(AiChatMessage.session_id.in_(session_ids)))
+            await db.execute(delete(AiChatSession).where(AiChatSession.session_id.in_(session_ids)))
+    except Exception:
+        pass
+
     await db.delete(app)
     await db.flush()
 
@@ -130,7 +151,8 @@ async def remove_volume(volume: str) -> None:
 
 async def list_app_storage_volumes(app_id: int) -> list[str]:
     """Return volumes owned by this Railpack app or stack, including detached mounts."""
-    result = await asyncio.to_thread(
+    vol_names: set[str] = set()
+    res1 = await asyncio.to_thread(
         container_app_service._run,
         [
             "docker", "volume", "ls",
@@ -139,9 +161,22 @@ async def list_app_storage_volumes(app_id: int) -> list[str]:
         ],
         timeout=30,
     )
-    if result.returncode:
-        raise HTTPException(502, (result.stderr or result.stdout or "Could not list app storage volumes.")[-1000:])
-    return [name.strip() for name in result.stdout.splitlines() if name.strip()]
+    if not res1.returncode and res1.stdout:
+        vol_names.update(line.strip() for line in res1.stdout.splitlines() if line.strip())
+
+    res2 = await asyncio.to_thread(
+        container_app_service._run,
+        [
+            "docker", "volume", "ls",
+            "--filter", f"name=srv-stack-{app_id}-",
+            "--format", "{{.Name}}",
+        ],
+        timeout=30,
+    )
+    if not res2.returncode and res2.stdout:
+        vol_names.update(line.strip() for line in res2.stdout.splitlines() if line.strip())
+
+    return sorted(vol_names)
 
 
 async def _restore_domain_site(db: AsyncSession, domain: Domain) -> None:

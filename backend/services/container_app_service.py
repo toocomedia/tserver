@@ -39,16 +39,22 @@ def _run(command: list[str], *, timeout: int) -> subprocess.CompletedProcess[str
     environment = os.environ.copy()
     if command and command[0] == "railpack":
         environment["BUILDKIT_HOST"] = "docker-container://srv-panel-buildkit"
-    return subprocess.run([*prefix, *command], capture_output=True, text=True, timeout=timeout, check=False, shell=False, env=environment)
+    try:
+        return subprocess.run([*prefix, *command], capture_output=True, text=True, timeout=timeout, check=False, shell=False, env=environment)
+    except FileNotFoundError:
+        return subprocess.CompletedProcess([*prefix, *command], returncode=1, stdout="", stderr="Executable not found")
 
 
 def run_binary(command: list[str], *, timeout: int) -> subprocess.CompletedProcess[bytes]:
     """Run an owned Docker command without decoding file content as text."""
     prefix = ["sudo", "-n"] if hasattr(os, "geteuid") and os.geteuid() != 0 and config.PRIVILEGED_SUDO else []
-    return subprocess.run(
-        [*prefix, *command], capture_output=True, timeout=timeout, check=False,
-        shell=False,
-    )
+    try:
+        return subprocess.run(
+            [*prefix, *command], capture_output=True, timeout=timeout, check=False,
+            shell=False,
+        )
+    except FileNotFoundError:
+        return subprocess.CompletedProcess([*prefix, *command], returncode=1, stdout=b"", stderr=b"Executable not found")
 
 
 async def next_host_port(db: AsyncSession) -> int:
@@ -234,6 +240,15 @@ async def create_app(
             await db.flush()
         else:
             raise HTTPException(409, "This domain already has an active container app.")
+
+    # Pre-deployment sweep: ensure no leftover named volumes linger from a previous app on this domain
+    try:
+        from services import container_app_cleanup_service
+        leftover_vols = await container_app_cleanup_service.list_app_storage_volumes(domain.id)
+        for vol in leftover_vols:
+            await container_app_cleanup_service.remove_volume(vol)
+    except Exception:
+        pass
     # Docker resources cannot participate in the database transaction below.
     # Refuse an unsafe deployment before creating managed services, so a guard
     # rejection cannot leave a container whose app row was rolled back.
