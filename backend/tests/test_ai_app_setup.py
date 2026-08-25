@@ -151,11 +151,12 @@ class TestAiAppSetup(unittest.IsolatedAsyncioTestCase):
         from models.domain import Domain
         from services import container_app_deployment_service
 
-        import random
         import uuid
         uid = uuid.uuid4().hex[:8]
-        rnd_port = random.randint(31000, 45000)
         async with AsyncSessionLocal() as db:
+            from sqlalchemy import func, select
+            max_port = (await db.execute(select(func.max(ContainerApp.host_port)))).scalar() or 31000
+            rnd_port = max_port + 10
             domain = Domain(name=f"cancel-{uid}.local", server_ip="127.0.0.1")
             db.add(domain)
             await db.flush()
@@ -240,17 +241,12 @@ class TestAiAppSetup(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(res["status"], "ok")
             self.assertTrue(res["plan_id"].startswith("plan_"))
 
-    def test_source_image_advisor_jellyfin(self):
-        """Verify source_image_advisor recognizes Jellyfin Git repo and recommends official image."""
-        from services.apps_engine.source_image_advisor import advise_official_image
-        advice = advise_official_image("https://github.com/jellyfin/jellyfin")
-        self.assertIsNotNone(advice)
-        self.assertTrue(advice["has_official_image"])
-        self.assertEqual(advice["recommended_image"], "jellyfin/jellyfin:latest")
-        self.assertEqual(advice["recommended_port"], 8096)
-
-        no_advice = advise_official_image("https://github.com/myuser/custom-python-app")
-        self.assertIsNone(no_advice)
+    def test_dynamic_doc_evidence_image_detection(self):
+        """Verify doc_evidence extracts docker images from markdown without hardcoding."""
+        from services.apps_engine.doc_evidence import _extract_docker_images
+        text = "Run with docker: `docker run -d -p 8096:8096 jellyfin/jellyfin:latest`"
+        images = _extract_docker_images(text)
+        self.assertIn("jellyfin/jellyfin:latest", images)
 
     def test_environment_normalization_helpers(self):
         """Verify build_secrets normalizes keys, values, and separates secrets."""

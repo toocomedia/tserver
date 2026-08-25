@@ -454,22 +454,29 @@ async def stream_ai_chat(
                 tool_was_executed = True
                 from services.official_stacks.stack_synthesizer import requires_multi_container_stack
                 needs_stack = requires_multi_container_stack(setup_source_result)
-                if setup_handoff.is_recommendation_decision_pending(setup_source_result, user_message):
-                    rec = setup_source_result.get("official_image_recommendation") or {}
-                    rec_img = rec.get("recommended_image") or "official Docker image"
-                    has_compose = bool((setup_source_result.get("compose_info") or {}).get("services"))
-                    options_str = (
-                        f"[OPTION:Option 1 (Recommended): Official Docker Image ({rec_img})|Option 1]\n"
-                        "[OPTION:Option 2: Build from Git source code (Railpack/Dockerfile)|Option 2]\n"
-                    )
+                if setup_handoff.is_setup_interview_pending(setup_source_result, user_message):
+                    inspection = setup_source_result.get("inspection") if isinstance(setup_source_result.get("inspection"), dict) else setup_source_result
+                    doc_ev = (inspection.get("documentation_evidence") or {}) if isinstance(inspection, dict) else {}
+                    detected_imgs = doc_ev.get("detected_docker_images") or []
+                    has_compose = bool((inspection.get("compose_info") or {}).get("services")) if isinstance(inspection, dict) else False
+                    
+                    options_list = []
+                    if detected_imgs:
+                        for idx, img_name in enumerate(detected_imgs[:2], 1):
+                            options_list.append(f"[OPTION:Option {idx} (Docker Image): Use {img_name}|Option {idx}]")
                     if has_compose:
-                        options_str += "[OPTION:Option 3: Docker Compose Stack|Option 3]\n"
+                        opt_num = len(options_list) + 1
+                        options_list.append(f"[OPTION:Option {opt_num}: Deploy with Docker Compose Stack|Option {opt_num}]")
+                    opt_num = len(options_list) + 1
+                    options_list.append(f"[OPTION:Option {opt_num}: Build from Git Source (Railpack/Dockerfile)|Option {opt_num}]")
+                    
+                    options_str = "\n".join(options_list)
                     action_instruction = (
-                        f"An official image recommendation is available for this application ({rec_img}). "
-                        "Present the source inspection facts clearly in Markdown tables. "
-                        "Explain why the official image is recommended, ask the user to select their setup method, "
-                        f"and output the interactive decision options:\n{options_str}"
-                        "Do NOT call proposal tools until the user chooses an option."
+                        "Present the source inspection facts clearly in clean Markdown tables (Application Overview, Services, Detected Databases, Configuration). "
+                        "Do NOT call proposal planning tools yet. "
+                        "Ask the user any required configuration questions (e.g. database selection if multiple are detected, admin email/credentials if required in docs, or deployment mode) "
+                        f"and provide the interactive option tags:\n{options_str}\n"
+                        "Wait for the user to confirm their choices."
                     )
                 elif needs_stack:
                     action_instruction = (

@@ -103,23 +103,49 @@ def needs_stack_correction(tool_name: str, tool_output: Mapping[str, object]) ->
     )
 
 
+def is_setup_interview_pending(
+    setup_source_result: Mapping[str, object] | None,
+    user_message: str,
+) -> bool:
+    """Whether the app setup requires user input or choice before plan generation."""
+    if not isinstance(setup_source_result, dict):
+        return False
+    
+    msg = (user_message or "").lower()
+    # If user explicitly said to proceed, deploy, or answered options, don't block
+    if any(token in msg for token in (
+        "option 1", "option 2", "option 3", "deploy now", "apply now", "confirm", "proceed",
+        "use postgres", "use postgresql", "use mysql", "use mariadb", "use sqlite", "use clickhouse",
+        "admin email", "my email", "@", "password:", "email:"
+    )):
+        return False
+
+    inspection = setup_source_result.get("inspection") if isinstance(setup_source_result.get("inspection"), dict) else setup_source_result
+    doc_evidence = inspection.get("documentation_evidence") or {}
+    
+    # 1. Check if admin setup commands exist in doc_evidence (e.g. registeradmin, createsuperuser)
+    if doc_evidence.get("detected_admin_commands") and "@" not in msg and "admin" not in msg:
+        return True
+
+    # 2. Check if multiple databases were detected (e.g. Postgres + Clickhouse + Redis, or Postgres + SQLite)
+    db_detections = inspection.get("database_detections") or []
+    if len(db_detections) > 1 and not any(k in msg for k in ("postgres", "mysql", "mariadb", "sqlite", "clickhouse", "mongo")):
+        return True
+
+    # 3. Check if detected docker images or compose services offer build choices
+    detected_imgs = doc_evidence.get("detected_docker_images") or []
+    if (detected_imgs or inspection.get("compose_info")) and not any(k in msg for k in ("docker", "image", "railpack", "source", "git", "compose")):
+        return True
+
+    return False
+
+
 def is_recommendation_decision_pending(
     setup_source_result: Mapping[str, object] | None,
     user_message: str,
 ) -> bool:
-    """Whether an official image recommendation is awaiting user choice before plan generation."""
-    if not isinstance(setup_source_result, dict):
-        return False
-    if not setup_source_result.get("official_image_recommendation"):
-        return False
-    msg = (user_message or "").lower()
-    if any(token in msg for token in (
-        "option 1", "option 2", "option 3", "official", "docker image", "use image",
-        "use docker", "git source", "from source", "railpack", "build from source",
-        "compose", "docker compose", "docker-compose", "stack",
-    )):
-        return False
-    return True
+    """Whether setup decision or interview is awaiting user choice before plan generation."""
+    return is_setup_interview_pending(setup_source_result, user_message)
 
 
 def missing_plan_message(errors: list[str]) -> str:
