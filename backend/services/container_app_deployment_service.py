@@ -391,10 +391,7 @@ async def _deploy_official_stack(
     snapshots.refresh_fingerprint(snapshot)
     deployment.snapshot_fingerprint = snapshot.fingerprint
     snapshot_environment = json.loads(secret_vault.decrypt(snapshot.environment_encrypted))
-    settings = {
-        key: value for key, value in snapshot_environment.items()
-        if key in set(stack.allowed_nonsecret_settings)
-    }
+    settings = dict(snapshot_environment)
     environments = compose_runtime.service_environments(app, stack, domain.name, vault_secrets, settings)
     await progress.stage(db, deployment, "prepare", "Rendering the panel-owned Compose project.")
     await asyncio.to_thread(compose_runtime.write_project, app, stack, environments)
@@ -516,7 +513,7 @@ async def _restore_previous_stack(
         stack = compose_runtime.stack_from_runtime(prior_runtime)
         secrets, _versions = await values_for_snapshot(db, app.id, stack, prior_snapshot.secret_versions_json)
         environment = json.loads(secret_vault.decrypt(prior_snapshot.environment_encrypted))
-        settings = {key: value for key, value in environment.items() if key in set(stack.allowed_nonsecret_settings)}
+        settings = dict(environment)
         await asyncio.to_thread(compose_runtime.write_project, app, stack, compose_runtime.service_environments(app, stack, domain.name, secrets, settings))
         await progress.stage(db, deployment, "rollback", "Restoring the prior saved Compose snapshot.")
         await asyncio.to_thread(compose_runtime.up, app.id)

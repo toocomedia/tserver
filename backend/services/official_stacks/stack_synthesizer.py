@@ -49,12 +49,12 @@ _STACK_DB_DEFAULTS: dict[str, dict[str, Any]] = {
         "ports": [8123, 9000],
         "volume": "/var/lib/clickhouse",
         "env": {
-            "CLICKHOUSE_DB": "plausible_events_db",
+            "CLICKHOUSE_DB": "{CLICKHOUSE_DB}",
             "CLICKHOUSE_USER": "default",
             "CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT": "1",
         },
         "secret": ("CLICKHOUSE_PASSWORD", "ClickHouse password", "password"),
-        "url": ("CLICKHOUSE_DATABASE_URL", "http://default:{CLICKHOUSE_PASSWORD}@{service}:8123/plausible_events_db"),
+        "url": ("CLICKHOUSE_DATABASE_URL", "http://default:{CLICKHOUSE_PASSWORD}@{service}:8123/{CLICKHOUSE_DB}"),
         "image": "clickhouse/clickhouse-server:24.3-alpine",
         "health": {
             "type": "command",
@@ -302,9 +302,7 @@ def _build_stack_definition_bundle(
         if re.fullmatch(r"[A-Z_][A-Z0-9_]{0,127}", k) and not any(t in k for t in ("PASSWORD", "SECRET", "TOKEN", "KEY_BASE")):
             default_env[k] = str(raw_v or "")
 
-    allowed_settings = sorted(default_env)
-    if "BASE_URL" not in allowed_settings:
-        allowed_settings.append("BASE_URL")
+    allowed_settings = sorted(set(default_env) | {"BASE_URL", "KAFKA_BROKERS", "CLICKHOUSE_DB"} | {k for s in service_map.values() for k in s.get("environment", {})})
 
     secrets: list[dict[str, str]] = []
     seen: set[tuple[str, str]] = set()
@@ -350,16 +348,46 @@ def _build_stack_definition_bundle(
             seen.add((web_svc, "SECRET_KEY"))
             secrets.append({"key": "SECRET_KEY", "purpose": "Django secret key", "generator": "urlsafe64", "service": web_svc, "environment": "SECRET_KEY"})
 
+    clean_repo = repo_url or str(inspection.get("repository_url") or "")
+    stack_name = _sanitize_name(clean_repo.rsplit("/", 1)[-1].removesuffix(".git") if clean_repo else "stack") or "stack"
+
+    # Derive dynamic ClickHouse database name
+    context_str = f"{clean_repo} {stack_name}".lower()
+    if "plausible" in context_str:
+        ch_db = "plausible_events_db"
+    elif "openpanel" in context_str:
+        ch_db = "openpanel"
+    else:
+        s_clean = re.sub(r"[^a-zA-Z0-9_]+", "_", stack_name).strip("_")
+        ch_db = f"{s_clean}_db" if s_clean and s_clean != "stack" else "events_db"
+
+    # Substitute dynamic ClickHouse DB into service environments
+    for n, s in service_map.items():
+        if "CLICKHOUSE_DB" in s.get("environment", {}):
+            s["environment"]["CLICKHOUSE_DB"] = s["environment"]["CLICKHOUSE_DB"].replace("{CLICKHOUSE_DB}", ch_db)
+
+    # Auto-wire Redpanda / Kafka broker to Redpanda Console
+    broker_svc = ""
+    for n, s in service_map.items():
+        text = f"{n} {s['image']}".lower()
+        if any(k in text for k in ("op-rp", "redpanda", "kafka")) and "console" not in text:
+            broker_svc = n
+            break
+    if broker_svc:
+        for n, s in service_map.items():
+            text = f"{n} {s['image']}".lower()
+            if "console" in text or "op-rp-console" in text:
+                s["environment"].setdefault("KAFKA_BROKERS", f"{broker_svc}:9092")
+
     url_templates: dict[str, str] = {}
     for n, s in service_map.items():
         text = f"{n} {s['image']}".lower()
         for k, d in _STACK_DB_DEFAULTS.items():
             if k in text and d.get("url"):
                 uk, ut = d["url"]
-                url_templates.setdefault(uk, ut.replace("{service}", f"{{{n}}}"))
+                rendered_ut = ut.replace("{service}", f"{{{n}}}").replace("{CLICKHOUSE_DB}", ch_db)
+                url_templates.setdefault(uk, rendered_ut)
 
-    clean_repo = repo_url or str(inspection.get("repository_url") or "")
-    stack_name = _sanitize_name(clean_repo.rsplit("/", 1)[-1].removesuffix(".git") if clean_repo else "stack") or "stack"
     has_clickhouse = any("clickhouse" in f"{n} {s['image']}".lower() for n, s in service_map.items())
 
     health_path = str(inspection.get("health_path") or "").strip()

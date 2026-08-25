@@ -111,6 +111,51 @@ class TestStackProposalNormalizer(unittest.TestCase):
         with self.assertRaises(ValueError):
             stack_from_proposal(dangerous_manifest, ["evidence"])
 
+    def test_synthesizer_dynamic_clickhouse_db_naming(self):
+        from services.official_stacks.stack_synthesizer import synthesize_stack_from_compose
+        
+        # Test Openpanel ClickHouse synthesis
+        openpanel_compose = {
+            "compose_info": {
+                "services": [
+                    {"name": "op-ch", "image": "clickhouse/clickhouse-server:24.3-alpine", "internal_ports": [8123]},
+                    {"name": "op-rp", "image": "redpandadata/redpanda:v24.1.2", "internal_ports": [9092]},
+                    {"name": "op-rp-console", "image": "redpandadata/console:v2.5.2", "internal_ports": [8080]},
+                    {"name": "openpanel", "image": "openpanel/openpanel:latest", "internal_ports": [3000]},
+                ]
+            },
+            "repository_url": "https://github.com/openpanel-dev/openpanel",
+        }
+        bundle = synthesize_stack_from_compose(openpanel_compose, domain_name="blagh.co", repo_url="https://github.com/openpanel-dev/openpanel")
+        self.assertIsNotNone(bundle)
+        manifest = bundle["stack_manifest"]
+        
+        # Verify ClickHouse DB is 'openpanel' and NOT hardcoded 'plausible_events_db'
+        ch_svc = next(s for s in manifest["services"] if s["name"] == "op-ch")
+        self.assertEqual(ch_svc["environment"]["CLICKHOUSE_DB"], "openpanel")
+        self.assertIn("/openpanel", manifest["url_templates"]["CLICKHOUSE_DATABASE_URL"])
+        
+        # Verify Redpanda Console has KAFKA_BROKERS auto-wired to op-rp:9092
+        rp_console_svc = next(s for s in manifest["services"] if s["name"] == "op-rp-console")
+        self.assertEqual(rp_console_svc["environment"].get("KAFKA_BROKERS"), "op-rp:9092")
+
+    def test_synthesizer_plausible_clickhouse_db_naming(self):
+        from services.official_stacks.stack_synthesizer import synthesize_stack_from_compose
+        plausible_compose = {
+            "compose_info": {
+                "services": [
+                    {"name": "plausible_events_db", "image": "clickhouse/clickhouse-server:24.3-alpine", "internal_ports": [8123]},
+                    {"name": "plausible", "image": "ghcr.io/plausible/community-edition:v2", "internal_ports": [8000]},
+                ]
+            },
+            "repository_url": "https://github.com/plausible/analytics",
+        }
+        bundle = synthesize_stack_from_compose(plausible_compose, domain_name="stats.co", repo_url="https://github.com/plausible/analytics")
+        self.assertIsNotNone(bundle)
+        manifest = bundle["stack_manifest"]
+        ch_svc = next(s for s in manifest["services"] if "plausible_events_db" in s["name"])
+        self.assertEqual(ch_svc["environment"]["CLICKHOUSE_DB"], "plausible_events_db")
+
 
 if __name__ == "__main__":
     unittest.main()

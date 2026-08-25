@@ -78,6 +78,10 @@ def service_environments(
 ) -> dict[str, dict[str, str]]:
     """Build isolated service environments; secret values never share an app-wide env file."""
     environments = {name: dict(service.environment_defaults) for name, service in stack.services.items()}
+    for name, svc_env in environments.items():
+        for k, v in settings.items():
+            if k in svc_env or (k == "KAFKA_BROKERS" and ("console" in name or "op-rp-console" in name)):
+                svc_env[k] = v
     web_env = environments[stack.web_service_name]
     web_env.setdefault("BASE_URL", f"https://{domain_name}")
     web_env.update(stack.default_environment)
