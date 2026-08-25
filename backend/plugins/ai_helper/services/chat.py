@@ -458,25 +458,35 @@ async def stream_ai_chat(
                     inspection = setup_source_result.get("inspection") if isinstance(setup_source_result.get("inspection"), dict) else setup_source_result
                     doc_ev = (inspection.get("documentation_evidence") or {}) if isinstance(inspection, dict) else {}
                     detected_imgs = doc_ev.get("detected_docker_images") or []
+                    admin_cmds = doc_ev.get("detected_admin_commands") or []
                     has_compose = bool((inspection.get("compose_info") or {}).get("services")) if isinstance(inspection, dict) else False
                     
                     options_list = []
-                    if detected_imgs:
-                        for idx, img_name in enumerate(detected_imgs[:2], 1):
-                            options_list.append(f"[OPTION:Option {idx} (Docker Image): Use {img_name}|Option {idx}]")
                     if has_compose:
-                        opt_num = len(options_list) + 1
-                        options_list.append(f"[OPTION:Option {opt_num}: Deploy with Docker Compose Stack|Option {opt_num}]")
+                        options_list.append("[OPTION:Option 1 (Recommended): Docker Compose Stack (App + Database + Proxy)|Option 1]")
+                        if detected_imgs:
+                            for idx, img_name in enumerate(detected_imgs[:2], 2):
+                                options_list.append(f"[OPTION:Option {idx}: Run Docker Image ({img_name})|Option {idx}]")
+                    elif detected_imgs:
+                        for idx, img_name in enumerate(detected_imgs[:2], 1):
+                            rec_tag = " (Recommended)" if idx == 1 else ""
+                            options_list.append(f"[OPTION:Option {idx}{rec_tag}: Run Docker Image ({img_name})|Option {idx}]")
+                    
                     opt_num = len(options_list) + 1
                     options_list.append(f"[OPTION:Option {opt_num}: Build from Git Source (Railpack/Dockerfile)|Option {opt_num}]")
+                    
+                    admin_prompt = ""
+                    if admin_cmds and "@" not in user_message:
+                        admin_prompt = "Initial administrator setup is required according to documentation (e.g. registeradmin). You MUST explicitly ask the user: 'What admin email address should be used to initialize the superuser account?'."
                     
                     options_str = "\n".join(options_list)
                     action_instruction = (
                         "Present the source inspection facts clearly in clean Markdown tables (Application Overview, Services, Detected Databases, Configuration). "
                         "Do NOT call proposal planning tools yet. "
-                        "Ask the user any required configuration questions (e.g. database selection if multiple are detected, admin email/credentials if required in docs, or deployment mode) "
-                        f"and provide the interactive option tags:\n{options_str}\n"
-                        "Wait for the user to confirm their choices."
+                        f"{admin_prompt} "
+                        "Ask the user any required configuration questions (such as their Admin Email and preferred setup method) "
+                        f"and provide the interactive option tags with recommended badges:\n{options_str}\n"
+                        "Wait for the user to confirm their choices and email before generating the reviewed plan."
                     )
                 elif needs_stack:
                     action_instruction = (
