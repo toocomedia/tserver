@@ -16,7 +16,7 @@ from services.apps_engine import build_secrets, snapshots
 
 
 PATCH_FIELDS = {
-    "git_ref", "git_ref_type", "build_mode", "image_reference", "root_directory", "dockerfile_path",
+    "source_type", "git_ref", "git_ref_type", "build_mode", "image_reference", "root_directory", "dockerfile_path",
     "build_args", "build_secret_keys", "custom_start_command", "internal_port", "health_path",
     "startup_timeout_seconds", "storage_mounts",
 }
@@ -40,7 +40,11 @@ def _normalize_patch(app: ContainerApp, patch: object, allow_empty: bool = False
         raise ValueError("AI proposal includes unsupported configuration fields.")
     result: dict[str, Any] = {}
     for key, raw in patch.items():
-        if key == "git_ref":
+        if key == "source_type":
+            if raw not in {"git", "image"}:
+                raise ValueError("Source type is invalid.")
+            result[key] = raw
+        elif key == "git_ref":
             ref = str(raw or "").strip()
             apps.repository_service.validate_source(app.repository_url or "", ref, str(patch.get("git_ref_type") or app.git_ref_type or "branch"))
             result[key] = ref
@@ -72,8 +76,20 @@ def _normalize_patch(app: ContainerApp, patch: object, allow_empty: bool = False
             result[key] = apps.validate_startup_timeout(int(raw))
         elif key == "storage_mounts":
             result[key] = apps.parse_storage_mounts(app.id, raw)
-    if result.get("build_mode") == "image" and app.source_type != "image":
-        raise ValueError("Switching a Git app to registry-image mode requires a new App Engine app.")
+
+    target_source = result.get("source_type") or app.source_type
+    target_mode = result.get("build_mode") or app.build_mode
+    if target_mode == "image" or target_source == "image":
+        result["source_type"] = "image"
+        result["build_mode"] = "image"
+        image_ref = result.get("image_reference") or app.image_reference
+        if not image_ref:
+            raise ValueError("An image reference is required when switching to registry-image mode.")
+        result["image_reference"] = apps.validate_image_reference(image_ref)
+    elif target_source == "git":
+        result["source_type"] = "git"
+        if target_mode not in {"railpack", "dockerfile"}:
+            result["build_mode"] = "railpack"
     return result
 
 

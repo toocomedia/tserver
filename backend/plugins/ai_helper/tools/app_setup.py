@@ -124,7 +124,12 @@ async def inspect_app_source(
         try:
             res = container_app_inspection_service.inspect_repository(repo, branch.strip() or "main")
             source_kind = "compose_stack" if (res.get("compose_info") or {}).get("services") else "git"
-            return {"status": "ok", "source_type": source_kind, "inspection": res}
+            from services.apps_engine.source_image_advisor import advise_official_image
+            advice = advise_official_image(repo, str(res.get("framework") or ""))
+            response: Dict[str, Any] = {"status": "ok", "source_type": source_kind, "inspection": res}
+            if advice:
+                response["official_image_recommendation"] = advice
+            return response
         except Exception as exc:
             return {"status": "error", "message": f"Git inspection failed: {str(exc)}"}
 

@@ -190,6 +190,65 @@ class TestAiAppSetup(unittest.IsolatedAsyncioTestCase):
             await db.refresh(app)
             self.assertIn(app.status, ("stopped", "failed", "running"))
 
+    async def test_propose_container_app_patch_git_to_image_transition(self):
+        """Verify an existing Git app can be patched in-place to Docker image mode."""
+        from models.container_app import ContainerApp
+        from models.domain import Domain
+        import random
+        import uuid
+        uid = uuid.uuid4().hex[:8]
+        rnd_port = random.randint(31000, 45000)
+        async with AsyncSessionLocal() as db:
+            domain = Domain(name=f"jellyfin-{uid}.local", server_ip="127.0.0.1")
+            db.add(domain)
+            await db.flush()
+
+            app = ContainerApp(
+                domain_id=domain.id,
+                container_name=f"test-jellyfin-{uid}",
+                source_type="git",
+                build_mode="railpack",
+                repository_url="https://github.com/jellyfin/jellyfin",
+                branch="master",
+                host_port=rnd_port,
+                internal_port=3000,
+                env_path="/tmp/test_jellyfin.env",
+                status="failed",
+            )
+            db.add(app)
+            await db.commit()
+            await db.refresh(app)
+
+            res = await app_setup.propose_container_app_patch(
+                db=db,
+                app_id=app.id,
+                patch={
+                    "source_type": "image",
+                    "build_mode": "image",
+                    "image_reference": "jellyfin/jellyfin:latest",
+                    "internal_port": 8096,
+                    "health_path": "disabled",
+                },
+                evidence=["Jellyfin is best deployed via official Docker image jellyfin/jellyfin on port 8096."],
+                summary="Switch App to official Jellyfin Docker image",
+                confidence=1.0,
+                user_id=1,
+            )
+            self.assertEqual(res["status"], "ok")
+            self.assertTrue(res["plan_id"].startswith("plan_"))
+
+    def test_source_image_advisor_jellyfin(self):
+        """Verify source_image_advisor recognizes Jellyfin Git repo and recommends official image."""
+        from services.apps_engine.source_image_advisor import advise_official_image
+        advice = advise_official_image("https://github.com/jellyfin/jellyfin")
+        self.assertIsNotNone(advice)
+        self.assertTrue(advice["has_official_image"])
+        self.assertEqual(advice["recommended_image"], "jellyfin/jellyfin:latest")
+        self.assertEqual(advice["recommended_port"], 8096)
+
+        no_advice = advise_official_image("https://github.com/myuser/custom-python-app")
+        self.assertIsNone(no_advice)
+
 
 if __name__ == "__main__":
     unittest.main()
