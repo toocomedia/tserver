@@ -191,7 +191,7 @@ def validate_project(app_id: int) -> None:
 
 def up(app_id: int) -> None:
     validate_project(app_id)
-    result = _compose(app_id, "up", "--detach", "--remove-orphans", timeout=180)
+    result = _compose(app_id, "up", "--detach", "--remove-orphans", "--force-recreate", timeout=180)
     if result.returncode:
         raise RuntimeError(f"Compose could not start stack: {(result.stderr or result.stdout)[-1500:]}")
 

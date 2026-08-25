@@ -56,7 +56,7 @@ async def values_for_snapshot(
                     record = None
         if record is None:
             record, _created = await secret_vault.ensure_secret(
-                db, app_id, requirement.key, requirement.purpose, rotate=True, generator=requirement.generator,
+                db, app_id, requirement.key, requirement.purpose, rotate=False, generator=requirement.generator,
             )
             versions[requirement.key] = record.version
         values[requirement.key] = await secret_vault.secret_value(db, record.id)
