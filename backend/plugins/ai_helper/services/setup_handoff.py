@@ -9,10 +9,10 @@ from plugins.ai_helper.tools.definitions import APP_SETUP_TOOL_NAMES
 _SETUP_TASK_TYPES = frozenset({"app_deploy", "app_install", "setup_app"})
 SETUP_TOOL_NAMES = APP_SETUP_TOOL_NAMES
 _TOOL_LIMITS = {
-    "get_app_engine_capabilities": 1,
-    "inspect_app_source": 1,
-    "propose_app_install": 1,
-    "propose_stack_install": 1,
+    "get_app_engine_capabilities": 2,
+    "inspect_app_source": 2,
+    "propose_app_install": 3,
+    "propose_stack_install": 3,
 }
 _PROPOSAL_TOOLS = frozenset({"propose_app_install", "propose_stack_install"})
 
@@ -36,19 +36,16 @@ def tool_limit_result(
         return {
             "status": "setup_tool_not_available",
             "message": (
-                "App Engine setup can only use capabilities, one source inspection, "
-                "and one reviewed setup proposal. External docs, DNS, file reads, "
+                "App Engine setup can only use capabilities, source inspection, "
+                "and a reviewed setup proposal. External docs, DNS, file reads, "
                 "image probes, and diagnostics are not part of setup."
             ),
         }
-    if (
-        tool_name in _PROPOSAL_TOOLS
-        and any(tool_counts.get(name, 0) for name in _PROPOSAL_TOOLS)
-        and not (allow_stack_correction and tool_name == "propose_stack_install")
-    ):
+    proposal_count = sum(tool_counts.get(name, 0) for name in _PROPOSAL_TOOLS)
+    if tool_name in _PROPOSAL_TOOLS and proposal_count >= 3:
         return {
             "status": "limit_reached",
-            "message": "This App Engine setup already used its one reviewed setup proposal attempt.",
+            "message": "This App Engine setup reached its maximum proposal attempts.",
         }
     limit = _TOOL_LIMITS.get(tool_name)
     if limit is None or tool_counts.get(tool_name, 0) < limit:

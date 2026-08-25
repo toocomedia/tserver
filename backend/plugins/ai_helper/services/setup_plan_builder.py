@@ -200,17 +200,8 @@ async def resolve_stack_manifest_images(stack_manifest: Dict[str, Any]) -> Dict[
         if not isinstance(service, dict):
             continue
         image = str(service.get("image") or "").strip()
-        if not image:
-            continue
-        tail = image.rsplit("/", 1)[-1]
-        if "@sha256:" not in image and (":" not in tail or tail.endswith(":latest")):
-            try:
-                inspection = await container_app_image_inspect_service.inspect_image(image)
-                digest = str(inspection.get("digest") or "").strip()
-                if "@sha256:" in digest:
-                    service["image"] = digest
-            except Exception as exc:
-                logger.warning("Could not resolve digest for %s: %s", image, exc)
+        if image:
+            container_app_image_inspect_service.validate_image_reference(image)
     return manifest
 
 

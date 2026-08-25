@@ -704,7 +704,7 @@ async def propose_official_stack_install(db: AsyncSession, **kwargs: Any) -> Dic
 
 
 async def _resolve_stack_manifest_images(stack_manifest: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
-    """Pin untagged/latest proposal images to immutable digests before validation."""
+    """Validates image references quickly without downloading container layers during chat."""
     if not isinstance(stack_manifest, dict):
         return stack_manifest
     manifest = copy.deepcopy(stack_manifest)
@@ -715,22 +715,9 @@ async def _resolve_stack_manifest_images(stack_manifest: Optional[Dict[str, Any]
         if not isinstance(service, dict):
             continue
         image = str(service.get("image") or "").strip()
-        if not image or not _needs_digest_resolution(image):
-            continue
-        try:
-            inspection = await container_app_image_inspect_service.inspect_image(image)
-        except Exception as exc:
-            raise ValueError(f"Service '{service.get('name') or image}' image '{image}' could not be resolved to an immutable digest: {exc}") from exc
-        digest = str(inspection.get("digest") or "").strip()
-        if "@sha256:" not in digest:
-            raise ValueError(f"Service '{service.get('name') or image}' image '{image}' did not resolve to an immutable digest.")
-        service["image"] = digest
+        if image:
+            container_app_image_inspect_service.validate_image_reference(image)
     return manifest
-
-
-def _needs_digest_resolution(image: str) -> bool:
-    tail = image.rsplit("/", 1)[-1]
-    return "@sha256:" not in image and (":" not in tail or tail.endswith(":latest"))
 
 
 async def get_app_engine_capabilities(db: AsyncSession, **kwargs: Any) -> Dict[str, Any]:
