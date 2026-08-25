@@ -532,8 +532,34 @@ def _stack_service_from_evidence(name: str, image: str, ports: list[int], kind: 
 
 
 def _choose_web_service(services: dict[str, dict[str, Any]], inspection: dict[str, Any]) -> str:
+    repo = str(inspection.get("repository_url") or "").strip()
+    repo_base = repo.rsplit("/", 1)[-1].removesuffix(".git").lower() if repo else ""
+    infra_keywords = (
+        "postgres", "postgresql", "mariadb", "mysql", "clickhouse", "redis", "mongo", "mongodb",
+        "redpanda", "kafka", "zookeeper", "rabbitmq", "nats", "op-rp", "memcached", "minio",
+    )
+
+    # Priority 1: Match repository base name
+    if repo_base:
+        for name, service in services.items():
+            text = f"{name} {service.get('image', '')}".lower()
+            if (name.lower() == repo_base or repo_base in name.lower()) and not any(k in text for k in infra_keywords):
+                if not service["ports"] and _valid_port(inspection.get("internal_port")):
+                    service["ports"] = [int(inspection["internal_port"])]
+                return name
+
+    # Priority 2: Match app/web keywords
     for name, service in services.items():
-        if _stack_service_kind(name, service["image"]) not in _STACK_DB_DEFAULTS:
+        text = f"{name} {service.get('image', '')}".lower()
+        if any(k in name.lower() for k in ("app", "web", "frontend", "server")) and not any(k in text for k in infra_keywords):
+            if not service["ports"] and _valid_port(inspection.get("internal_port")):
+                service["ports"] = [int(inspection["internal_port"])]
+            return name
+
+    # Priority 3: Any non-infrastructure service
+    for name, service in services.items():
+        text = f"{name} {service.get('image', '')}".lower()
+        if not any(k in text for k in infra_keywords):
             if not service["ports"] and _valid_port(inspection.get("internal_port")):
                 service["ports"] = [int(inspection["internal_port"])]
             return name

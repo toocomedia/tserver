@@ -434,7 +434,7 @@ async def _deploy_official_stack(
                 for name, item in latest_states.items():
                     clogs = _container_logs(item["container_name"])
                     if clogs:
-                        progress.append_log(deployment, "health", f"--- Logs for {name} ({item['container_name']}) ---\n{clogs[-1500:]}")
+                        progress.append_log(deployment, "health", f"--- Logs for {name} ({item['container_name']}) ---\n{clogs[-12000:]}")
             except Exception:
                 pass
 

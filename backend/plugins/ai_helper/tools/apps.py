@@ -87,12 +87,12 @@ async def get_app_logs(
     db: AsyncSession,
     app_id: int,
     app_type: str,
-    max_lines: int = 50,
+    max_lines: int = 150,
     **kwargs: Any,
 ) -> Dict[str, Any]:
     """Retrieves recent deployment or build logs for an app."""
     kind = app_type.lower().strip()
-    limit_lines = min(max(10, max_lines), 100)
+    limit_lines = min(max(10, max_lines), 250)
 
     if kind == "container":
         stmt = (

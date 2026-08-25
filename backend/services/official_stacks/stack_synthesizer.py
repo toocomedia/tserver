@@ -282,12 +282,38 @@ def _build_stack_definition_bundle(
     evidence_source: str,
 ) -> dict[str, Any]:
     clean_repo = repo_url or str(inspection.get("repository_url") or "")
+    repo_base = clean_repo.rsplit("/", 1)[-1].removesuffix(".git").lower() if clean_repo else ""
+
+    # Infrastructure keywords that must NEVER be chosen as the public web entrypoint
+    infra_keywords = (
+        "postgres", "postgresql", "mariadb", "mysql", "clickhouse", "redis", "mongo", "mongodb",
+        "redpanda", "kafka", "zookeeper", "rabbitmq", "nats", "op-rp", "memcached", "minio",
+    )
+
     web_svc = ""
-    for n, s in service_map.items():
-        text = f"{n} {s['image']}".lower()
-        if not any(k in text for k in ("postgres", "mariadb", "mysql", "clickhouse", "redis", "mongo")):
-            web_svc = n
-            break
+    # Priority 1: Match repository base name (e.g. 'openpanel', 'plausible', 'umami')
+    if repo_base:
+        for n, s in service_map.items():
+            if n.lower() == repo_base or (repo_base in n.lower() and not any(k in f"{n} {s['image']}".lower() for k in infra_keywords)):
+                web_svc = n
+                break
+
+    # Priority 2: Match common application service names ('app', 'web', 'frontend', 'server')
+    if not web_svc:
+        for n, s in service_map.items():
+            text = f"{n} {s['image']}".lower()
+            if any(k in n.lower() for k in ("app", "web", "frontend", "server")) and not any(k in text for k in infra_keywords):
+                web_svc = n
+                break
+
+    # Priority 3: Any non-infrastructure service
+    if not web_svc:
+        for n, s in service_map.items():
+            text = f"{n} {s['image']}".lower()
+            if not any(k in text for k in infra_keywords):
+                web_svc = n
+                break
+
     if not web_svc:
         web_svc = list(service_map.keys())[0]
 

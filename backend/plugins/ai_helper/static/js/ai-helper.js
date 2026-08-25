@@ -855,7 +855,7 @@
 
     explainError: function (errText, opts) {
       opts = opts || {};
-      this.open({ taskType: "error_diag", context: opts.context || "Error Diagnostic", initialPrompt: "Here is an error log from my server/application. Please explain what caused it and give me the exact step-by-step fix:\n\n```\n" + (errText || "").trim().slice(-4000) + "\n```" });
+      this.open({ taskType: "error_diag", context: opts.context || "Error Diagnostic", initialPrompt: "Here is an error log from my server/application. Please explain what caused it and give me the exact step-by-step fix:\n\n```\n" + (errText || "").trim().slice(-16000) + "\n```" });
     },
 
     stop: function () {

@@ -139,6 +139,10 @@ class TestStackProposalNormalizer(unittest.TestCase):
         rp_console_svc = next(s for s in manifest["services"] if s["name"] == "op-rp-console")
         self.assertEqual(rp_console_svc["environment"].get("KAFKA_BROKERS"), "op-rp:9092")
 
+        # Verify Web Service is 'openpanel' on port 3000 and NEVER op-rp (broker)
+        self.assertEqual(manifest["web_service"], "openpanel")
+        self.assertEqual(manifest["web_port"], 3000)
+
     def test_synthesizer_plausible_clickhouse_db_naming(self):
         from services.official_stacks.stack_synthesizer import synthesize_stack_from_compose
         plausible_compose = {

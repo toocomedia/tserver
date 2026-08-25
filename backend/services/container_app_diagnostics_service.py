@@ -23,10 +23,10 @@ def _redact(text: str) -> str:
 
 
 def _container_logs(name: str) -> str:
-    result = apps._run(["docker", "logs", "--tail", "80", name], timeout=20)
+    result = apps._run(["docker", "logs", "--tail", "250", name], timeout=20)
     if result.returncode:
         return ""
-    return _redact((result.stdout + result.stderr).strip())[-12_000:]
+    return _redact((result.stdout + result.stderr).strip())[-24_000:]
 
 
 def _root_cause(app: ContainerApp, services: dict[str, Any], deployment: ContainerAppDeployment | None) -> str:
