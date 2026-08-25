@@ -532,6 +532,22 @@ class TestAiAppSetup(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(_extract_app_id("app_id: 15"), 15)
         self.assertIsNone(_extract_app_id("Deploy my python app on example.com"))
 
+    def test_extract_setup_domain_ignores_emails_and_preserves_explicit(self):
+        """Verify _extract_setup_domain strips emails and properly identifies explicit domains."""
+        from plugins.ai_helper.services.chat import _extract_explicit_setup_domain, _extract_setup_domain
+
+        # Explicit domain extraction
+        self.assertEqual(_extract_explicit_setup_domain("Please analyze and configure this application for domain cc.blagh.co: https://github.com/milesmcc/shynet/"), "cc.blagh.co")
+        self.assertEqual(_extract_explicit_setup_domain("Option 1 with admin email: riadh@tooco.net"), "")
+        self.assertEqual(_extract_explicit_setup_domain("Change domain to newapp.mydomain.org"), "newapp.mydomain.org")
+
+        # Fallback setup domain extraction
+        self.assertEqual(_extract_setup_domain("Please analyze and configure this application for domain cc.blagh.co: https://github.com/milesmcc/shynet/"), "cc.blagh.co")
+        # Email address must NOT be extracted as a setup domain
+        self.assertEqual(_extract_setup_domain("Option 1 with admin email: riadh@tooco.net"), "")
+        self.assertEqual(_extract_setup_domain("admin@example.com"), "")
+        self.assertEqual(_extract_setup_domain("Deploy my app on myapp.example.com with user@company.org"), "myapp.example.com")
+
     async def test_multiturn_domain_persistence(self):
         """Verify propose_stack_install auto-populates domain_name from session anchors."""
         from models.ai_helper import AiChatSession

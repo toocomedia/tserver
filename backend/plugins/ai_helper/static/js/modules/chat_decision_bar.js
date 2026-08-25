@@ -178,6 +178,13 @@
 
     extractAndShow: function (text) {
       if (!text || typeof text !== "string") return;
+
+      // If a setup action plan or other action tag is present, the plan is finalized — do not show the decision bar
+      if (/\[ACTION:APP_SETUP_PLAN:/i.test(text) || /ready to deploy/i.test(text)) {
+        this.hide();
+        return;
+      }
+
       var options = [];
       var regex = /\[OPTION:([^\]]+)\]/gi;
       var match;
@@ -205,35 +212,38 @@
         });
       }
 
-      // Fallback: If AI formatted as Option 1... Option 2... without brackets
-      if (options.length === 0 && /Option 1[\s\S]*Option 2/i.test(text)) {
-        var opt1Match = text.match(/Option 1[^\n:]*:\s*([^\n]+)/i);
-        var opt2Match = text.match(/Option 2[^\n:]*:\s*([^\n]+)/i);
-        if (opt1Match && opt2Match) {
-          options.push({
-            label: "Option 1 (Recommended): " + opt1Match[1].trim(),
-            reply: "Option 1",
-            isRecommended: true,
-          });
-          options.push({
-            label: "Option 2: " + opt2Match[1].trim(),
-            reply: "Option 2",
-            isRecommended: false,
+      // Fallback: only if no action tags are present and the AI was prompting the user without brackets
+      if (!/\[ACTION:/i.test(text)) {
+        if (options.length === 0 && /Option 1[\s\S]*Option 2/i.test(text) && /(?:choose|select|confirm|preferred|selection)/i.test(text)) {
+          var opt1Match = text.match(/Option 1[^\n:]*:\s*([^\n]+)/i);
+          var opt2Match = text.match(/Option 2[^\n:]*:\s*([^\n]+)/i);
+          if (opt1Match && opt2Match) {
+            options.push({
+              label: "Option 1 (Recommended): " + opt1Match[1].trim(),
+              reply: "Option 1",
+              isRecommended: true,
+            });
+            options.push({
+              label: "Option 2: " + opt2Match[1].trim(),
+              reply: "Option 2",
+              isRecommended: false,
+            });
+          }
+        }
+
+        if (inputs.length === 0 && /(?:what|enter|provide|specify|require[sd]?)\s+(?:your\s+)?admin\s+email/i.test(text)) {
+          inputs.push({
+            key: "admin_email",
+            placeholder: "admin@example.com",
+            label: "Admin Email:",
           });
         }
       }
 
-      // Fallback: If AI explicitly asked for admin email in text without an [INPUT:] tag
-      if (inputs.length === 0 && /admin email|superuser email|email address to proceed|provide your admin email/i.test(text)) {
-        inputs.push({
-          key: "admin_email",
-          placeholder: "admin@example.com",
-          label: "Admin Email:",
-        });
-      }
-
       if (options.length > 0 || inputs.length > 0) {
         this.show(options, inputs.length ? "Configuration & Setup Method:" : "Select Setup Method:", inputs);
+      } else {
+        this.hide();
       }
     },
 
