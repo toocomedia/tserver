@@ -617,6 +617,42 @@ class TestAiAppSetup(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(services["db"]["image"], "postgres:16-alpine")
         self.assertEqual(services["webserver"]["image"], "nginx:alpine")
         self.assertEqual(services["shynet"]["image"], "milesmcc/shynet:latest")
+        # Web entrypoint must be the real app container, not the auxiliary webserver
+        self.assertEqual(manifest["web_service"], "shynet")
+        self.assertEqual(manifest["web_port"], 8080)
+
+    def test_app_documentation_service(self):
+        """Verify get_app_documentation compiles superuser commands and CLI runbook."""
+        from models.container_app import ContainerApp
+        from models.domain import Domain
+        from plugins.railpack_apps.documentation_service import get_app_documentation
+
+        app = ContainerApp(
+            id=12,
+            container_name="srv-app-12",
+            image_reference="milesmcc/shynet:latest",
+            internal_port=8080,
+            host_port=32100,
+            wordpress_admin_email="riadh@tooco.net",
+        )
+        domain = Domain(name="cc.blagh.co")
+        docs = get_app_documentation(app, domain)
+
+        self.assertEqual(docs["target_container"], "srv-app-12")
+        self.assertEqual(docs["admin_email"], "riadh@tooco.net")
+        self.assertEqual(docs["domain_url"], "https://cc.blagh.co")
+        
+        # Verify admin command has user email and correct executable
+        self.assertTrue(len(docs["admin_commands"]) >= 1)
+        shynet_admin = docs["admin_commands"][0]
+        self.assertIn("registeradmin riadh@tooco.net", shynet_admin["command"])
+        self.assertIn("docker exec -it srv-app-12", shynet_admin["command"])
+
+        # Verify maintenance commands exist
+        m_cmds = {c["title"]: c["command"] for c in docs["maintenance_commands"]}
+        self.assertIn("Follow Live Application Logs", m_cmds)
+        self.assertIn("Open Interactive Container Shell", m_cmds)
+        self.assertEqual(m_cmds["Follow Live Application Logs"], "docker logs -f --tail 100 srv-app-12")
 
     def test_openpanel_stack_synthesis(self):
         """Verify OpenPanel compose inspection with all backing databases synthesizes cleanly."""
@@ -649,4 +685,5 @@ class TestAiAppSetup(unittest.IsolatedAsyncioTestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
 

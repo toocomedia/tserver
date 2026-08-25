@@ -483,15 +483,16 @@ async def stream_ai_chat(
                     has_compose = bool((inspection.get("compose_info") or {}).get("services")) if isinstance(inspection, dict) else False
                     
                     options_list = []
-                    if has_compose:
-                        options_list.append("[OPTION:Option 1 (Recommended): Docker Compose Stack (App + Database + Proxy)|Option 1]")
-                        if detected_imgs:
-                            for idx, img_name in enumerate(detected_imgs[:2], 2):
-                                options_list.append(f"[OPTION:Option {idx}: Run Docker Image ({img_name})|Option {idx}]")
-                    elif detected_imgs:
-                        for idx, img_name in enumerate(detected_imgs[:2], 1):
-                            rec_tag = " (Recommended)" if idx == 1 else ""
-                            options_list.append(f"[OPTION:Option {idx}{rec_tag}: Run Docker Image ({img_name})|Option {idx}]")
+                    if detected_imgs:
+                        primary_img = detected_imgs[0]
+                        options_list.append(f"[OPTION:Option 1 (Recommended): Run Docker Image ({primary_img})|Option 1]")
+                        if has_compose:
+                            options_list.append("[OPTION:Option 2: Docker Compose Stack (Multi-container)|Option 2]")
+                            if len(detected_imgs) > 1:
+                                for idx, img_name in enumerate(detected_imgs[1:2], 3):
+                                    options_list.append(f"[OPTION:Option {idx}: Alternative Image ({img_name})|Option {idx}]")
+                    elif has_compose:
+                        options_list.append("[OPTION:Option 1 (Recommended): Docker Compose Stack (App + Services)|Option 1]")
                     
                     opt_num = len(options_list) + 1
                     options_list.append(f"[OPTION:Option {opt_num}: Build from Git Source (Railpack/Dockerfile)|Option {opt_num}]")

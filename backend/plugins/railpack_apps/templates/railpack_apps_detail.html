@@ -27,6 +27,9 @@
     <span>Databases & Storage</span>
     {% if databases %}<span class="badge-pill" style="font-size: 10px; padding: 1px 6px;">{{ databases | length }}</span>{% endif %}
   </button>
+  <button type="button" class="tabs-nav__btn" data-app-tab="docs">
+    <span>Documentation</span>
+  </button>
   <button type="button" class="tabs-nav__btn tabs-nav__btn--danger" data-app-tab="danger">
     <span>Danger Zone</span>
   </button>
@@ -339,7 +342,12 @@
   {% include "railpack_apps/partials/detail_databases.html" %}
 </div>
 
-<!-- TAB 5: DANGER ZONE -->
+<!-- TAB 5: DOCUMENTATION -->
+<div class="app-detail-tab-panel" data-tab-panel="docs">
+  {% include "railpack_apps/partials/detail_documentation.html" %}
+</div>
+
+<!-- TAB 6: DANGER ZONE -->
 <div class="app-detail-tab-panel" data-tab-panel="danger">
   {% include "railpack_apps/partials/detail_danger_zone.html" %}
 </div>

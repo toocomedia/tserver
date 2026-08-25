@@ -1,0 +1,115 @@
+<div class="layout-2col">
+  <div>
+    <!-- ADMINISTRATOR & INITIAL SETUP COMMANDS -->
+    {% if app_docs and app_docs.admin_commands %}
+    <div class="master-card mb-lg">
+      <div class="master-card__header">
+        <span>Initial Setup & Superuser Commands</span>
+      </div>
+      <div class="master-card__body" style="display: flex; flex-direction: column; gap: 14px;">
+        <p class="form-hint" style="margin: 0; font-size: 12px; line-height: 1.5;">
+          The commands below can be executed directly in your server terminal (via SSH) to initialize administrator accounts or manage application credentials.
+        </p>
+        {% for cmd in app_docs.admin_commands %}
+        <div style="background: var(--color-surface); border: 1px solid var(--color-line); border-radius: 6px; padding: 12px;">
+          <div style="font-size: 12px; font-weight: 600; color: var(--color-text); margin-bottom: 4px;">{{ cmd.title }}</div>
+          {% if cmd.description %}
+          <p style="font-size: 11px; color: var(--color-muted); margin: 0 0 8px 0; line-height: 1.4;">{{ cmd.description }}</p>
+          {% endif %}
+          <div style="display: flex; align-items: center; gap: 8px; background: var(--bg-card); padding: 7px 10px; border-radius: 4px; border: 1px solid var(--color-line);">
+            <code class="mono" style="flex: 1; font-size: 11.5px; word-break: break-all; color: var(--color-text);">{{ cmd.command }}</code>
+            <button class="btn btn--secondary btn--sm" type="button" data-copy-text="{{ cmd.command }}">Copy</button>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- RUNTIME & MAINTENANCE RUNBOOK -->
+    {% if app_docs and app_docs.maintenance_commands %}
+    <div class="master-card mb-lg">
+      <div class="master-card__header">
+        <span>Container Management & CLI Runbook</span>
+      </div>
+      <div class="master-card__body" style="display: flex; flex-direction: column; gap: 12px;">
+        {% for cmd in app_docs.maintenance_commands %}
+        <div style="background: var(--color-surface); border: 1px solid var(--color-line); border-radius: 6px; padding: 10px 12px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <span style="font-size: 12px; font-weight: 600; color: var(--color-text);">{{ cmd.title }}</span>
+            <button class="btn btn--secondary btn--sm" type="button" data-copy-text="{{ cmd.command }}" style="padding: 2px 8px; font-size: 11px;">Copy</button>
+          </div>
+          {% if cmd.description %}
+          <div style="font-size: 11px; color: var(--color-muted); margin-bottom: 6px;">{{ cmd.description }}</div>
+          {% endif %}
+          <div style="background: var(--bg-card); padding: 6px 8px; border-radius: 4px; border: 1px solid var(--color-line);">
+            <code class="mono" style="font-size: 11px; word-break: break-all; color: var(--color-text);">{{ cmd.command }}</code>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <div>
+    <!-- APPLICATION REFERENCE INFO -->
+    <div class="master-card mb-lg">
+      <div class="master-card__header">
+        <span>Application Reference</span>
+      </div>
+      <div class="master-card__body" style="display: flex; flex-direction: column; gap: 10px;">
+        <div class="info-row">
+          <span class="info-row__label">Target Container</span>
+          <span class="info-row__value mono">{{ app_docs.target_container if app_docs else (app.container_name or 'srv-app-' ~ app.id) }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-row__label">Internal Web Port</span>
+          <span class="info-row__value mono">{{ app.internal_port }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-row__label">Host Publishing Port</span>
+          <span class="info-row__value mono">{{ app.host_port }}</span>
+        </div>
+        {% if domain %}
+        <div class="info-row">
+          <span class="info-row__label">Public Domain URL</span>
+          <span class="info-row__value"><a href="https://{{ domain.name }}" target="_blank" rel="noopener" style="color: var(--color-accent);">https://{{ domain.name }} ↗</a></span>
+        </div>
+        {% endif %}
+        {% if app.image_reference %}
+        <div class="info-row">
+          <span class="info-row__label">Docker Image</span>
+          <span class="info-row__value mono" style="font-size: 11px;">{{ app.image_reference }}</span>
+        </div>
+        {% elif app.repository_url %}
+        <div class="info-row">
+          <span class="info-row__label">Git Repository</span>
+          <span class="info-row__value mono" style="font-size: 11px;">{{ app.repository_url }} ({{ app.branch }})</span>
+        </div>
+        {% endif %}
+        {% if app.wordpress_admin_email %}
+        <div class="info-row">
+          <span class="info-row__label">Configured Admin Email</span>
+          <span class="info-row__value">{{ app.wordpress_admin_email }}</span>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if app_docs and app_docs.setup_notes %}
+    <div class="master-card">
+      <div class="master-card__header">
+        <span>Setup Notes</span>
+      </div>
+      <div class="master-card__body">
+        {% for note in app_docs.setup_notes %}
+        <p class="form-hint" style="margin: 0 0 6px 0; font-size: 12px; line-height: 1.5; color: var(--color-text);">
+          {{ note }}
+        </p>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>

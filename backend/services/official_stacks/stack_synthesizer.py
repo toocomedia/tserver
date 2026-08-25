@@ -336,6 +336,7 @@ def _build_stack_definition_bundle(
     infra_keywords = (
         "postgres", "postgresql", "mariadb", "mysql", "clickhouse", "redis", "mongo", "mongodb",
         "redpanda", "kafka", "zookeeper", "rabbitmq", "nats", "op-rp", "memcached", "minio",
+        "nginx", "caddy", "traefik", "envoy", "haproxy", "proxy", "webserver", "gateway", "ingress",
     )
 
     web_svc = ""

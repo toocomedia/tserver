@@ -223,3 +223,23 @@ document.querySelectorAll('[data-access-credential]').forEach(row => {
     try { await navigator.clipboard.writeText(await revealCredential(row, 'copy')); } catch (error) { window.alert(error.message); }
   });
 });
+
+document.querySelectorAll('[data-copy-text]').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    const text = btn.getAttribute('data-copy-text');
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      const orig = btn.textContent;
+      btn.textContent = 'Copied!';
+      btn.classList.add('btn--accent');
+      setTimeout(() => {
+        btn.textContent = orig;
+        btn.classList.remove('btn--accent');
+      }, 1500);
+    } catch (_) {
+      window.prompt('Copy command:', text);
+    }
+  });
+});
+
