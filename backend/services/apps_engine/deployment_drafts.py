@@ -29,20 +29,23 @@ def source_identity(app: ContainerApp) -> str:
     return f"git:{app.repository_url or ''}@{app.deployed_revision or app.git_ref or app.branch or 'main'}"
 
 
-def _normalize_patch(app: ContainerApp, patch: object, allow_empty: bool = False) -> dict[str, Any]:
-    if patch is None or patch == {}:
-        if allow_empty:
-            return {}
-        raise ValueError("AI proposal must contain at least one supported configuration change.")
-    if not isinstance(patch, dict):
-        if allow_empty:
-            return {}
-        raise ValueError("AI proposal must contain at least one supported configuration change.")
+def _normalize_patch(app: ContainerApp, patch: object, allow_empty: bool = True) -> dict[str, Any]:
+    if patch is None or patch == {} or not isinstance(patch, dict):
+        return {}
+
+    # Normalize aliases
+    norm_patch = dict(patch)
+    if "web_port" in norm_patch and "internal_port" not in norm_patch:
+        norm_patch["internal_port"] = norm_patch.pop("web_port")
+    if "port" in norm_patch and "internal_port" not in norm_patch:
+        norm_patch["internal_port"] = norm_patch.pop("port")
+    if "web_health_path" in norm_patch and "health_path" not in norm_patch:
+        norm_patch["health_path"] = norm_patch.pop("web_health_path")
 
     # Gracefully filter to supported patch fields
-    filtered_patch = {k: v for k, v in patch.items() if k in PATCH_FIELDS}
+    filtered_patch = {k: v for k, v in norm_patch.items() if k in PATCH_FIELDS}
     if not filtered_patch and not allow_empty:
-        raise ValueError("AI proposal must contain at least one supported configuration change.")
+        return {}
 
     result: dict[str, Any] = {}
     for key, raw in filtered_patch.items():
@@ -108,8 +111,7 @@ def proposal_payload(
     app: ContainerApp, *, patch: object, environment_values: object,
     secret_requirements: object, evidence: object, confidence: float,
 ) -> dict[str, Any]:
-    has_env_or_secrets = bool(environment_values or secret_requirements)
-    clean_patch = _normalize_patch(app, patch, allow_empty=has_env_or_secrets)
+    clean_patch = _normalize_patch(app, patch, allow_empty=True)
     clean_envs, auto_secrets = build_secrets.normalize_environment_map(environment_values)
 
     merged_secrets: list[dict[str, Any]] = []

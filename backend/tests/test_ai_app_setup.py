@@ -4,6 +4,7 @@ test_ai_app_setup.py — Unit tests for AI application setup and proposal genera
 from pathlib import Path
 import sys
 import unittest
+import uuid
 from unittest.mock import AsyncMock, patch
 
 BACKEND = Path(__file__).resolve().parents[1]
@@ -11,6 +12,8 @@ if str(BACKEND) not in sys.path:
     sys.path.insert(0, str(BACKEND))
 
 from database import AsyncSessionLocal, init_db
+from models.container_app import ContainerApp
+from models.domain import Domain
 from plugins.ai_helper.tools import app_setup
 from plugins.ai_helper.services import setup_plan_builder
 
@@ -450,6 +453,54 @@ class TestAiAppSetup(unittest.IsolatedAsyncioTestCase):
             from sqlalchemy import select
             remaining_sess = await db.scalar(select(AiChatSession.session_id).where(AiChatSession.session_id == sess_id))
             self.assertIsNone(remaining_sess)
+
+    async def test_propose_container_app_patch_aliases_and_empty(self):
+        """Verify propose_container_app_patch gracefully handles web_port/port aliases and empty patch."""
+        uid = uuid.uuid4().hex[:6]
+        async with AsyncSessionLocal() as db:
+            domain = Domain(name=f"patch-test-{uid}.com", server_ip="127.0.0.1")
+            db.add(domain)
+            await db.flush()
+
+            import random
+            rnd_port = random.randint(35000, 39000)
+            app = ContainerApp(
+                domain_id=domain.id,
+                container_name=f"test-patch-{uid}",
+                source_type="image",
+                build_mode="image",
+                image_reference="nginx:alpine",
+                host_port=rnd_port,
+                internal_port=80,
+                env_path="/tmp/test_patch.env",
+                status="running",
+            )
+            db.add(app)
+            await db.commit()
+            await db.refresh(app)
+
+            # Test 1: Patch with alias web_port: 8080 and web_service
+            res1 = await app_setup.propose_container_app_patch(
+                db=db,
+                app_id=app.id,
+                patch={"web_service": "op-rp-console", "web_port": 8080},
+                evidence=["Log evidence: listening on 8080"],
+                user_id=1,
+            )
+            self.assertEqual(res1["status"], "ok")
+            self.assertIn("plan_id", res1)
+
+            # Test 2: Patch with empty patch and only environment values
+            res2 = await app_setup.propose_container_app_patch(
+                db=db,
+                app_id=app.id,
+                patch={},
+                environment_values={"KAFKA_BROKERS": "op-rp:9092"},
+                evidence=["Log evidence: missing broker"],
+                user_id=1,
+            )
+            self.assertEqual(res2["status"], "ok")
+            self.assertIn("plan_id", res2)
 
 
 if __name__ == "__main__":
