@@ -413,7 +413,8 @@ async def _deploy_official_stack(
     await progress.stage(db, deployment, "health", "Checking verified private readiness rules.")
     readiness, readiness_detail = "unverified", "No verified HTTP readiness endpoint is configured."
     health_path = (stack.web_health_path or "/").strip()
-    if health_path:
+    raw_db_ports = {5432, 3306, 6379, 27017}
+    if health_path and stack.web_internal_port not in raw_db_ports:
         try:
             progress.append_log(deployment, "health", f"Waiting for web service to respond on {health_path} (timeout {min(stack.startup_timeout_seconds or 60, 60)}s)...")
             await progress.wait_for_http(

@@ -72,6 +72,21 @@ _STACK_DB_DEFAULTS = {
     },
     "redis": {"ports": [6379], "volume": "/data", "env": {}, "url": ("REDIS_URL", "redis://{service}:6379/0")},
     "mongo": {"ports": [27017], "volume": "/data/db", "env": {}, "url": ("MONGODB_URL", "mongodb://{service}:27017/app")},
+    "redpanda": {
+        "ports": [9092, 9644],
+        "volume": "/var/lib/redpanda/data",
+        "env": {},
+        "command": [
+            "redpanda", "start",
+            "--smp", "1",
+            "--memory", "512M",
+            "--reserve-memory", "0M",
+            "--overprovisioned",
+            "--kafka-addr", "0.0.0.0:9092",
+            "--advertise-kafka-addr", "{service}:9092",
+        ],
+    },
+    "kafka": {"ports": [9092], "volume": "/var/lib/kafka/data", "env": {}},
 }
 
 
@@ -439,7 +454,38 @@ def stack_plan_args_from_inspection(
 
     web_service = _choose_web_service(service_map, inspection)
     if not web_service:
-        return None
+        # All services are backing infrastructure; synthesize application container
+        app_name = _stack_name(repo.rsplit("/", 1)[-1].removesuffix(".git") if repo else "app") or "app"
+        app_port = 8000
+        if inspection.get("internal_port"):
+            try:
+                p = int(inspection["internal_port"])
+                if 1 <= p <= 65535:
+                    app_port = p
+            except (ValueError, TypeError):
+                pass
+        else:
+            r = str(inspection.get("runtime") or "").lower()
+            if "node" in r or "javascript" in r or "typescript" in r:
+                app_port = 3000
+            elif "go" in r or "java" in r:
+                app_port = 8080
+
+        norm_repo = repo.lower().removesuffix(".git").rstrip("/")
+        parts = [p for p in norm_repo.split("/") if p and not p.endswith(":")]
+        tag = str(inspection.get("branch") or "latest").strip() or "latest"
+        web_image = f"{parts[-2]}/{parts[-1]}:{tag}" if len(parts) >= 2 else f"{app_name}:{tag}"
+        service_map[app_name] = {
+            "name": app_name,
+            "image": web_image,
+            "ports": [app_port],
+            "depends_on": list(service_map.keys()),
+            "environment": {},
+            "volumes": [],
+            "resources": {"memory_mb": 512, "cpu": "1.0"},
+        }
+        web_service = app_name
+
     web_port = service_map[web_service]["ports"][0]
     for name, service in service_map.items():
         if name != web_service and name not in service_map[web_service]["depends_on"]:
@@ -453,12 +499,21 @@ def stack_plan_args_from_inspection(
     stack_name = _stack_name(repo.rsplit("/", 1)[-1].removesuffix(".git") if repo else "source-stack")
 
     # Derive dynamic ClickHouse database name
-    context_str = f"{repo} {stack_name}".lower()
-    if "plausible" in context_str:
-        ch_db = "plausible_events_db"
-    elif "openpanel" in context_str:
-        ch_db = "openpanel"
-    else:
+    ch_db = ""
+    if isinstance(env_sample, dict):
+        ch_db = str(env_sample.get("CLICKHOUSE_DB") or env_sample.get("CLICKHOUSE_DATABASE") or "").strip()
+    if not ch_db:
+        for s in service_map.values():
+            val = str(s.get("environment", {}).get("CLICKHOUSE_DB") or "").strip()
+            if val and val != "{CLICKHOUSE_DB}":
+                ch_db = val
+                break
+    if not ch_db:
+        for n, s in service_map.items():
+            if _stack_service_kind(n, s.get("image", "")) == "clickhouse" and n.endswith(("_db", "_events_db")):
+                ch_db = n
+                break
+    if not ch_db:
         s_clean = re.sub(r"[^a-zA-Z0-9_]+", "_", stack_name or "").strip("_")
         ch_db = f"{s_clean}_db" if s_clean and s_clean != "stack" else "events_db"
 
@@ -473,6 +528,17 @@ def stack_plan_args_from_inspection(
         text = f"{n} {s['image']}".lower()
         if any(k in text for k in ("op-rp", "redpanda", "kafka")) and "console" not in text:
             broker_svc = n
+            if "redpanda" in text or "op-rp" in text:
+                if not s.get("command"):
+                    s["command"] = [
+                        "redpanda", "start",
+                        "--smp", "1",
+                        "--memory", "512M",
+                        "--reserve-memory", "0M",
+                        "--overprovisioned",
+                        "--kafka-addr", "0.0.0.0:9092",
+                        "--advertise-kafka-addr", f"{n}:9092",
+                    ]
             break
     if broker_svc:
         for n, s in service_map.items():
@@ -528,6 +594,8 @@ def _stack_service_from_evidence(name: str, image: str, ports: list[int], kind: 
     }
     if defaults.get("volume"):
         service["volumes"].append({"name": f"{name}-data", "mount_path": defaults["volume"]})
+    if defaults.get("command"):
+        service["command"] = [c.replace("{service}", name) for c in defaults["command"]]
     return service
 
 
@@ -551,7 +619,7 @@ def _choose_web_service(services: dict[str, dict[str, Any]], inspection: dict[st
     # Priority 2: Match app/web keywords
     for name, service in services.items():
         text = f"{name} {service.get('image', '')}".lower()
-        if any(k in name.lower() for k in ("app", "web", "frontend", "server")) and not any(k in text for k in infra_keywords):
+        if any(k in name.lower() for k in ("app", "web", "frontend", "server", "api")) and not any(k in text for k in infra_keywords):
             if not service["ports"] and _valid_port(inspection.get("internal_port")):
                 service["ports"] = [int(inspection["internal_port"])]
             return name
@@ -568,7 +636,7 @@ def _choose_web_service(services: dict[str, dict[str, Any]], inspection: dict[st
 
 def _stack_service_kind(name: str, image: str) -> str:
     text = f"{name} {image}".lower()
-    for kind in ("clickhouse", "postgres", "mariadb", "mysql", "redis", "mongo"):
+    for kind in ("clickhouse", "postgres", "mariadb", "mysql", "redis", "mongo", "redpanda", "kafka"):
         if kind in text:
             return kind
     return "web"

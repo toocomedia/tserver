@@ -130,10 +130,10 @@ class TestStackProposalNormalizer(unittest.TestCase):
         self.assertIsNotNone(bundle)
         manifest = bundle["stack_manifest"]
         
-        # Verify ClickHouse DB is 'openpanel' and NOT hardcoded 'plausible_events_db'
+        # Verify ClickHouse DB is dynamically derived as 'openpanel_db'
         ch_svc = next(s for s in manifest["services"] if s["name"] == "op-ch")
-        self.assertEqual(ch_svc["environment"]["CLICKHOUSE_DB"], "openpanel")
-        self.assertIn("/openpanel", manifest["url_templates"]["CLICKHOUSE_DATABASE_URL"])
+        self.assertEqual(ch_svc["environment"]["CLICKHOUSE_DB"], "openpanel_db")
+        self.assertIn("/openpanel_db", manifest["url_templates"]["CLICKHOUSE_DATABASE_URL"])
         
         # Verify Redpanda Console has KAFKA_BROKERS auto-wired to op-rp:9092
         rp_console_svc = next(s for s in manifest["services"] if s["name"] == "op-rp-console")

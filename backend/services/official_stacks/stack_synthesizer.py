@@ -91,6 +91,29 @@ _STACK_DB_DEFAULTS: dict[str, dict[str, Any]] = {
         "image": "mongo:7",
         "ram_mb": 384,
     },
+    "redpanda": {
+        "ports": [9092, 9644],
+        "volume": "/var/lib/redpanda/data",
+        "env": {},
+        "command": [
+            "redpanda", "start",
+            "--smp", "1",
+            "--memory", "512M",
+            "--reserve-memory", "0M",
+            "--overprovisioned",
+            "--kafka-addr", "0.0.0.0:9092",
+            "--advertise-kafka-addr", "{service}:9092",
+        ],
+        "image": "redpandadata/redpanda:v24.1.2",
+        "ram_mb": 512,
+    },
+    "kafka": {
+        "ports": [9092],
+        "volume": "/var/lib/kafka/data",
+        "env": {},
+        "image": "apache/kafka:latest",
+        "ram_mb": 512,
+    },
 }
 
 
@@ -108,7 +131,7 @@ def requires_multi_container_stack(inspection: dict[str, Any]) -> bool:
             if isinstance(item, dict) and item.get("kind"):
                 kinds.add(str(item.get("kind")).strip().lower())
 
-    if "clickhouse" in kinds:
+    if "clickhouse" in kinds or "redpanda" in kinds or "kafka" in kinds:
         return True
     if len(kinds - {"sqlite"}) >= 2:
         return True
@@ -156,6 +179,8 @@ def synthesize_stack_from_compose(
             svc["volumes"].append({"name": f"{name}-data", "mount_path": defaults["volume"]})
         if defaults.get("health"):
             svc["health"] = defaults["health"]
+        if defaults.get("command"):
+            svc["command"] = [c.replace("{service}", name) for c in defaults["command"]]
         service_map[name] = svc
 
     if not service_map:
@@ -176,8 +201,6 @@ def _derive_web_image(clean_repo: str, inspection: dict[str, Any], tag: str) -> 
     if img:
         return img
     norm_repo = clean_repo.lower().removesuffix(".git").rstrip("/")
-    if "plausible/analytics" in norm_repo or "plausible/community-edition" in norm_repo:
-        return f"ghcr.io/plausible/community-edition:{tag}"
     parts = [p for p in norm_repo.split("/") if p and not p.endswith(":")]
     if len(parts) >= 2:
         return f"{parts[-2]}/{parts[-1]}:{tag}"
@@ -214,10 +237,8 @@ def synthesize_stack_from_inspection(
         tag = version_hint if version_hint.startswith("v") else f"v{version_hint}"
     elif any(c.isdigit() for c in raw_branch) and "." in raw_branch:
         tag = f"v{raw_branch}"
-    elif "plausible" in clean_repo.lower():
-        tag = "v2"
     else:
-        tag = "v1"
+        tag = raw_branch or "v1"
 
     web_image = _derive_web_image(clean_repo, inspection, tag)
 
@@ -291,18 +312,18 @@ def _build_stack_definition_bundle(
     )
 
     web_svc = ""
-    # Priority 1: Match repository base name (e.g. 'openpanel', 'plausible', 'umami')
+    # Priority 1: Match repository base name (non-infrastructure service)
     if repo_base:
         for n, s in service_map.items():
-            if n.lower() == repo_base or (repo_base in n.lower() and not any(k in f"{n} {s['image']}".lower() for k in infra_keywords)):
+            if (n.lower() == repo_base or repo_base in n.lower()) and not any(k in f"{n} {s['image']}".lower() for k in infra_keywords):
                 web_svc = n
                 break
 
-    # Priority 2: Match common application service names ('app', 'web', 'frontend', 'server')
+    # Priority 2: Match common application service names ('app', 'web', 'frontend', 'server', 'api')
     if not web_svc:
         for n, s in service_map.items():
             text = f"{n} {s['image']}".lower()
-            if any(k in n.lower() for k in ("app", "web", "frontend", "server")) and not any(k in text for k in infra_keywords):
+            if any(k in n.lower() for k in ("app", "web", "frontend", "server", "api")) and not any(k in text for k in infra_keywords):
                 web_svc = n
                 break
 
@@ -314,8 +335,36 @@ def _build_stack_definition_bundle(
                 web_svc = n
                 break
 
+    # If all services in compose are backing infrastructure, dynamically synthesize the application container!
     if not web_svc:
-        web_svc = list(service_map.keys())[0]
+        app_svc_name = _sanitize_name(repo_base or "app") or "app"
+        app_port = 8000
+        if inspection.get("internal_port"):
+            try:
+                p = int(inspection["internal_port"])
+                if 1 <= p <= 65535:
+                    app_port = p
+            except (ValueError, TypeError):
+                pass
+        else:
+            r = str(inspection.get("runtime") or "").lower()
+            if "node" in r or "javascript" in r or "typescript" in r:
+                app_port = 3000
+            elif "go" in r or "java" in r:
+                app_port = 8080
+
+        tag = str(inspection.get("branch") or "latest").strip() or "latest"
+        web_image = _derive_web_image(clean_repo, inspection, tag)
+        service_map[app_svc_name] = {
+            "name": app_svc_name,
+            "image": web_image,
+            "ports": [app_port],
+            "depends_on": list(service_map.keys()),
+            "environment": {},
+            "volumes": [],
+            "resources": {"memory_mb": 512, "cpu": "1.0"},
+        }
+        web_svc = app_svc_name
 
     for n in service_map:
         if n != web_svc and n not in service_map[web_svc]["depends_on"]:
@@ -354,7 +403,7 @@ def _build_stack_definition_bundle(
     framework_str = str(inspection.get("framework") or "").lower()
     deduce_context = f"{clean_repo} {runtime_str} {framework_str}".lower()
 
-    if any(k in deduce_context for k in ("elixir", "phoenix", "plausible")):
+    if any(k in deduce_context for k in ("elixir", "phoenix")):
         for sec_k, gen in [("SECRET_KEY_BASE", "base64_48"), ("TOTP_VAULT_KEY", "base64_32")]:
             if (web_svc, sec_k) not in seen:
                 seen.add((web_svc, sec_k))
@@ -377,13 +426,22 @@ def _build_stack_definition_bundle(
     clean_repo = repo_url or str(inspection.get("repository_url") or "")
     stack_name = _sanitize_name(clean_repo.rsplit("/", 1)[-1].removesuffix(".git") if clean_repo else "stack") or "stack"
 
-    # Derive dynamic ClickHouse database name
-    context_str = f"{clean_repo} {stack_name}".lower()
-    if "plausible" in context_str:
-        ch_db = "plausible_events_db"
-    elif "openpanel" in context_str:
-        ch_db = "openpanel"
-    else:
+    # Derive dynamic ClickHouse database name from env sample, compose env, service name, or stack name
+    ch_db = ""
+    if isinstance(env_sample, dict):
+        ch_db = str(env_sample.get("CLICKHOUSE_DB") or env_sample.get("CLICKHOUSE_DATABASE") or "").strip()
+    if not ch_db:
+        for s in service_map.values():
+            val = str(s.get("environment", {}).get("CLICKHOUSE_DB") or "").strip()
+            if val and val != "{CLICKHOUSE_DB}":
+                ch_db = val
+                break
+    if not ch_db:
+        for n, s in service_map.items():
+            if _identify_kind(n, s.get("image", "")) == "clickhouse" and n.endswith(("_db", "_events_db")):
+                ch_db = n
+                break
+    if not ch_db:
         s_clean = re.sub(r"[^a-zA-Z0-9_]+", "_", stack_name).strip("_")
         ch_db = f"{s_clean}_db" if s_clean and s_clean != "stack" else "events_db"
 
@@ -392,12 +450,23 @@ def _build_stack_definition_bundle(
         if "CLICKHOUSE_DB" in s.get("environment", {}):
             s["environment"]["CLICKHOUSE_DB"] = s["environment"]["CLICKHOUSE_DB"].replace("{CLICKHOUSE_DB}", ch_db)
 
-    # Auto-wire Redpanda / Kafka broker to Redpanda Console
+    # Auto-wire Redpanda / Kafka broker advertised address & console
     broker_svc = ""
     for n, s in service_map.items():
         text = f"{n} {s['image']}".lower()
         if any(k in text for k in ("op-rp", "redpanda", "kafka")) and "console" not in text:
             broker_svc = n
+            if "redpanda" in text or "op-rp" in text:
+                if not s.get("command"):
+                    s["command"] = [
+                        "redpanda", "start",
+                        "--smp", "1",
+                        "--memory", "512M",
+                        "--reserve-memory", "0M",
+                        "--overprovisioned",
+                        "--kafka-addr", "0.0.0.0:9092",
+                        "--advertise-kafka-addr", f"{n}:9092",
+                    ]
             break
     if broker_svc:
         for n, s in service_map.items():
@@ -418,7 +487,7 @@ def _build_stack_definition_bundle(
 
     health_path = str(inspection.get("health_path") or "").strip()
     if not health_path:
-        if any(k in deduce_context for k in ("elixir", "phoenix", "plausible")):
+        if any(k in deduce_context for k in ("elixir", "phoenix")):
             health_path = "/api/health"
         else:
             health_path = "/"
@@ -467,7 +536,7 @@ def _sanitize_name(raw: str) -> str:
 
 def _identify_kind(name: str, image: str) -> str:
     text = f"{name} {image}".lower()
-    for k in ("clickhouse", "postgres", "mariadb", "mysql", "redis", "mongo"):
+    for k in ("clickhouse", "postgres", "mariadb", "mysql", "redis", "mongo", "redpanda", "kafka"):
         if k in text:
             return k
     return "web"

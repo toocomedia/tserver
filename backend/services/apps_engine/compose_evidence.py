@@ -54,6 +54,10 @@ def inspect_compose_evidence(path: Path) -> dict[str, object]:
                 if 1 <= internal <= 65535 and internal not in current["internal_ports"]:
                     current["internal_ports"].append(internal)
 
+    for item in services:
+        if not item.get("image") and item.get("name"):
+            item["image"] = f"{item['name']}:latest"
+
     safe_services = [item for item in services if item.get("image")][:8]
     ports = sorted({port for item in safe_services for port in item["internal_ports"]})
     return {
