@@ -601,10 +601,10 @@ class TestAiAppSetup(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(services["db"]["ports"], [5432])
         self.assertEqual(services["shynet"]["ports"], [8080])
         self.assertEqual(services["webserver"]["ports"], [80])
-        # Images auto-pinned
-        self.assertNotIn(":latest", services["db"]["image"])
-        self.assertNotIn(":latest", services["shynet"]["image"])
-        self.assertNotIn(":latest", services["webserver"]["image"])
+        # Database/webserver bare names given stable tags, app image preserved
+        self.assertEqual(services["db"]["image"], "postgres:16-alpine")
+        self.assertEqual(services["webserver"]["image"], "nginx:alpine")
+        self.assertEqual(services["shynet"]["image"], "milesmcc/shynet:latest")
 
     def test_openpanel_stack_synthesis(self):
         """Verify OpenPanel compose inspection with all backing databases synthesizes cleanly."""

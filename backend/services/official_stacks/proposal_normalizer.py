@@ -171,31 +171,23 @@ def _normalize_service_dict(svc: dict[str, Any], top_deps: Any) -> None:
         if isinstance(svc_deps, list) and not svc.get("depends_on"):
             svc["depends_on"] = list(svc_deps)
 
-    # Ensure image reference is pinned if unpinned or :latest
+    # Normalize image reference
     raw_img = str(svc.get("image") or "").strip()
     s_name = str(svc.get("name") or "").lower()
     s_text = f"{s_name} {raw_img}".lower()
     if raw_img:
-        if raw_img.endswith(":latest") or ":" not in raw_img.rsplit("/", 1)[-1]:
-            if any(k in s_text for k in ("postgres", "postgresql", "psql")):
-                svc["image"] = "postgres:16-alpine"
-            elif any(k in s_text for k in ("redis", "valkey", "keydb")):
-                svc["image"] = "redis:7-alpine"
-            elif any(k in s_text for k in ("mariadb", "mysql")):
-                svc["image"] = "mariadb:11"
-            elif "clickhouse" in s_text:
-                svc["image"] = "clickhouse/clickhouse-server:24.3-alpine"
-            elif any(k in s_text for k in ("redpanda", "kafka")) and "console" not in s_text:
-                svc["image"] = "redpandadata/redpanda:v24.1.2"
-            elif "console" in s_text:
-                svc["image"] = "redpandadata/console:v3.7.2"
-            elif "nginx" in s_text:
-                svc["image"] = "nginx:alpine"
-            elif "shynet" in s_text:
-                svc["image"] = "milesmcc/shynet:v0.12.0"
-            else:
-                base_img = raw_img.removesuffix(":latest")
-                svc["image"] = f"{base_img}:v1"
+        if raw_img in ("postgres", "postgresql"):
+            svc["image"] = "postgres:16-alpine"
+        elif raw_img in ("redis", "valkey"):
+            svc["image"] = "redis:7-alpine"
+        elif raw_img in ("mariadb", "mysql"):
+            svc["image"] = "mariadb:11"
+        elif raw_img == "clickhouse":
+            svc["image"] = "clickhouse/clickhouse-server:24.3-alpine"
+        elif raw_img == "nginx":
+            svc["image"] = "nginx:alpine"
+        else:
+            svc["image"] = raw_img
 
     # Normalize ports into list and auto-fill if empty
     if "ports" in svc:

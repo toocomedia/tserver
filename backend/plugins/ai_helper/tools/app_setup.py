@@ -336,8 +336,16 @@ async def propose_app_install(
                         "confidence": plan.confidence,
                         "message": "Reviewed stack setup plan created. The user can deploy it with the server-rendered Deploy reviewed setup action.",
                     }
+                return {
+                    "status": "error",
+                    "message": "The inspected repository contains Compose services or multi-datastore requirements. A restricted stack setup plan must be created via propose_stack_install.",
+                }
         except Exception as exc:
             logger.warning("Auto-detection for stack proposal failed: %s", exc)
+            return {
+                "status": "error",
+                "message": f"Stack setup plan proposal failed: {exc}",
+            }
 
     payload = setup_plan_builder.build_single_app_payload(
         source_type=stype,

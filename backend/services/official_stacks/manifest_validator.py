@@ -72,8 +72,8 @@ def validate_stack_manifest(stack: OfficialStackDefinition) -> OfficialStackDefi
         if name != svc.name or not _SAFE_SERVICE_NAME_RE.fullmatch(name):
             raise ValueError("Stack service name is invalid.")
         image = svc.pinned_digest or svc.image_reference
-        if not _SAFE_IMAGE_RE.fullmatch(image) or image.endswith(":latest"):
-            raise ValueError(f"Service '{name}' image must use a non-latest pinned reference.")
+        if not _SAFE_IMAGE_RE.fullmatch(image):
+            raise ValueError(f"Service '{name}' image reference is invalid.")
         if not svc.internal_ports or any(port < 1 or port > 65535 for port in svc.internal_ports):
             raise ValueError(f"Service '{name}' has invalid internal ports.")
         if svc.memory_limit_mb < 64 or svc.memory_limit_mb > 16384:

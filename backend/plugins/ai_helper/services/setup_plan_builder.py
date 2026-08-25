@@ -191,7 +191,7 @@ async def build_stack_payload(
 
 
 async def resolve_stack_manifest_images(stack_manifest: Dict[str, Any]) -> Dict[str, Any]:
-    """Pins untagged/latest images in stack manifest to immutable digests or version tags."""
+    """Validates image references in stack manifest."""
     manifest = copy.deepcopy(stack_manifest)
     services = manifest.get("services")
     if not isinstance(services, list):
@@ -200,30 +200,7 @@ async def resolve_stack_manifest_images(stack_manifest: Dict[str, Any]) -> Dict[
         if not isinstance(service, dict):
             continue
         image = str(service.get("image") or "").strip()
-        s_name = str(service.get("name") or "").lower()
-        s_text = f"{s_name} {image}".lower()
         if image:
-            if image.endswith(":latest") or ":" not in image.rsplit("/", 1)[-1]:
-                if any(k in s_text for k in ("postgres", "postgresql", "psql")):
-                    image = "postgres:16-alpine"
-                elif any(k in s_text for k in ("redis", "valkey", "keydb")):
-                    image = "redis:7-alpine"
-                elif any(k in s_text for k in ("mariadb", "mysql")):
-                    image = "mariadb:11"
-                elif "clickhouse" in s_text:
-                    image = "clickhouse/clickhouse-server:24.3-alpine"
-                elif any(k in s_text for k in ("redpanda", "kafka")) and "console" not in s_text:
-                    image = "redpandadata/redpanda:v24.1.2"
-                elif "console" in s_text:
-                    image = "redpandadata/console:v3.7.2"
-                elif "nginx" in s_text:
-                    image = "nginx:alpine"
-                elif "shynet" in s_text:
-                    image = "milesmcc/shynet:v0.12.0"
-                else:
-                    base_img = image.removesuffix(":latest")
-                    image = f"{base_img}:v1"
-                service["image"] = image
             container_app_image_inspect_service.validate_image_reference(image)
     return manifest
 
@@ -274,25 +251,22 @@ async def build_automatic_setup_plan(
         if not stack_args:
             stack_args = synthesize_stack_from_inspection(inspection, domain_name=domain_name, repo_url=repository_url)
         if stack_args:
-            try:
-                payload = await build_stack_payload(
-                    stack_manifest=stack_args["stack_manifest"],
-                    domain_name=domain_name,
-                    nonsecret_settings=stack_args.get("nonsecret_settings"),
-                    evidence=stack_args.get("evidence"),
-                )
-                return await action_plans.create_action_plan(
-                    db=db,
-                    session_id=session_id,
-                    action_type="stack_install",
-                    payload=payload,
-                    summary=stack_args.get("summary") or "Deploy application stack",
-                    confidence=0.9,
-                    reasoning=stack_args.get("reasoning") or "Automatic verified stack setup plan.",
-                    user_id=user_id,
-                )
-            except Exception as exc:
-                logger.warning("Stack payload build failed, falling back to single app: %s", exc)
+            payload = await build_stack_payload(
+                stack_manifest=stack_args["stack_manifest"],
+                domain_name=domain_name,
+                nonsecret_settings=stack_args.get("nonsecret_settings"),
+                evidence=stack_args.get("evidence"),
+            )
+            return await action_plans.create_action_plan(
+                db=db,
+                session_id=session_id,
+                action_type="stack_install",
+                payload=payload,
+                summary=stack_args.get("summary") or "Deploy application stack",
+                confidence=0.9,
+                reasoning=stack_args.get("reasoning") or "Automatic verified stack setup plan.",
+                user_id=user_id,
+            )
 
     # Single-container application setup
     detected_port = 3000

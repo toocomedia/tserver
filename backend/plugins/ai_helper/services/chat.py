@@ -29,7 +29,7 @@ _ACTIVITY_PREFIX = "\x00ACTIVITY\x00"
 
 # Friendly labels and icon identifiers for each tool name
 _TOOL_LABELS = {
-    "get_domains_and_ssl": ("globe", "Checking SSL & domain config"),
+    "get_domains_and_ssl": ("globe", "Checking SSL & domain configuration"),
     "get_reverse_proxy_routes": ("route", "Reading Nginx proxy routes"),
     "get_dns_records": ("list", "Querying DNS records"),
     "get_apps_overview": ("box", "Listing hosted apps"),
@@ -38,13 +38,15 @@ _TOOL_LABELS = {
     "list_website_directory": ("folder", "Scanning directory"),
     "read_website_file": ("file", "Reading file"),
     "fetch_web_documentation": ("book-open", "Reading documentation"),
-    "inspect_app_source": ("search", "Inspecting app source"),
+    "inspect_app_source": ("search", "Inspecting repository & Compose services"),
     "get_app_engine_capabilities": ("layers", "Reading App Engine capabilities"),
     "get_app_engine_diagnostics": ("activity", "Collecting runtime diagnostics"),
     "propose_app_install": ("layers", "Generating deployment plan"),
-    "propose_stack_install": ("layers", "Generating stack deployment plan"),
-    "ai_reasoning": ("cpu", "AI analyzing stack dependencies"),
-    "ai_planning": ("layers", "Generating deployment plan"),
+    "propose_stack_install": ("layers", "Synthesizing stack deployment plan"),
+    "propose_official_stack_install": ("layers", "Synthesizing stack deployment plan"),
+    "propose_container_app_patch": ("layers", "Creating container patch plan"),
+    "ai_reasoning": ("cpu", "Evaluating architecture & stack dependencies"),
+    "ai_planning": ("layers", "Finalizing reviewed setup plan"),
 }
 
 
@@ -450,14 +452,23 @@ async def stream_ai_chat(
             yield _activity_event("inspect_app_source", "done", {"repository_url": repo, "image_reference": img})
             if setup_source_result.get("status") == "ok":
                 tool_was_executed = True
+                from services.official_stacks.stack_synthesizer import requires_multi_container_stack
+                needs_stack = requires_multi_container_stack(setup_source_result)
+                if needs_stack:
+                    action_instruction = (
+                        "Compose services or auxiliary datastores were detected. You MUST call `propose_stack_install` to create a restricted stack setup plan."
+                    )
+                else:
+                    action_instruction = (
+                        "Propose the installation plan using `propose_app_install` (or `propose_stack_install` if multi-container)."
+                    )
                 messages.append({
                     "role": "user",
                     "content": (
                         f"[Pre-collected Source Inspection Facts for {repo or img}]:\n"
                         f"{json.dumps(setup_source_result)}\n\n"
                         f"Target Domain: {setup_target_domain or 'not specified'}\n"
-                        "Using the pre-inspected facts above, immediately evaluate the architecture and propose "
-                        "the installation plan using propose_app_install or propose_stack_install."
+                        f"Using the pre-inspected facts above, {action_instruction}"
                     ),
                 })
         except Exception as exc:
@@ -466,11 +477,14 @@ async def stream_ai_chat(
     if tools_enabled:
         # Determine scoped tool definitions
         if setup_plan_required:
-            tool_names_to_load = (
-                frozenset({"propose_app_install", "propose_stack_install"})
-                if (setup_source_result and setup_source_result.get("status") == "ok")
-                else setup_handoff.SETUP_TOOL_NAMES
-            )
+            if setup_source_result and setup_source_result.get("status") == "ok":
+                from services.official_stacks.stack_synthesizer import requires_multi_container_stack
+                if requires_multi_container_stack(setup_source_result):
+                    tool_names_to_load = frozenset({"propose_stack_install"})
+                else:
+                    tool_names_to_load = frozenset({"propose_app_install", "propose_stack_install"})
+            else:
+                tool_names_to_load = setup_handoff.SETUP_TOOL_NAMES
         elif is_app_diag and app_id:
             tool_names_to_load = setup_handoff.APP_DIAGNOSTIC_TOOL_NAMES
         else:
@@ -529,8 +543,8 @@ async def stream_ai_chat(
         reasoning_active = False
         for iteration in range(max_tool_iterations):
             try:
-                if iteration > 0 and setup_source_result:
-                    yield _activity_event("ai_reasoning", "start", {"domain": setup_target_domain})
+                if setup_plan_required and not reasoning_active:
+                    yield _activity_event("ai_reasoning", "start", {"domain": setup_target_domain or repo})
                     reasoning_active = True
                 norm_messages = _normalize_messages_for_llm(messages, active.provider_type)
                 tool_step = await engine.chat_completion_step(
@@ -544,7 +558,7 @@ async def stream_ai_chat(
                     max_tokens=active.max_tokens,
                 )
                 if reasoning_active:
-                    yield _activity_event("ai_reasoning", "done", {"domain": setup_target_domain})
+                    yield _activity_event("ai_reasoning", "done", {"domain": setup_target_domain or repo})
                     reasoning_active = False
                 tool_calls = tool_step.get("tool_calls") or []
                 step_content = tool_step.get("content") or ""
@@ -772,6 +786,10 @@ async def stream_ai_chat(
                 })
 
     # Stream final assistant response
+    if setup_plan_required and setup_plan_id:
+        yield _activity_event("ai_planning", "start", {"domain": setup_target_domain or repo})
+        yield _activity_event("ai_planning", "done", {"domain": setup_target_domain or repo})
+
     full_response = []
     has_error = False
     visible_filter = visible_output.VisibleOutputFilter()

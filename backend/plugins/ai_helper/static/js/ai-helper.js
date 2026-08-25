@@ -728,11 +728,20 @@
         summary.type = "button";
         summary.className = "ai-activity-summary-toggle";
         var BOOK_SVG = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:3px;"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>';
-        summary.innerHTML = BOOK_SVG + " Read " + count + (count === 1 ? " source" : " sources") + " ▾";
+        var CHECK_SVG = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:3px;"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+        var hasSetupTools = Object.keys(activityItems).some(function (k) {
+          return k.indexOf("propose") !== -1 || k.indexOf("inspect") !== -1 || k.indexOf("reasoning") !== -1 || k.indexOf("planning") !== -1 || k.indexOf("app") !== -1;
+        });
+        var iconSvg = hasSetupTools ? CHECK_SVG : BOOK_SVG;
+        var labelText = hasSetupTools
+          ? (count === 1 ? "1 pipeline step completed" : count + " pipeline steps completed")
+          : ("Read " + count + (count === 1 ? " source" : " sources"));
+
+        summary.innerHTML = iconSvg + " " + labelText + " ▾";
         summary.addEventListener("click", function () {
           var expanded = activityPanel.getAttribute("data-expanded") === "true";
           activityPanel.setAttribute("data-expanded", expanded ? "false" : "true");
-          summary.innerHTML = (expanded ? BOOK_SVG + " Read " + count + (count === 1 ? " source" : " sources") + " ▾" : BOOK_SVG + " Read " + count + (count === 1 ? " source" : " sources") + " ▴");
+          summary.innerHTML = (expanded ? iconSvg + " " + labelText + " ▾" : iconSvg + " " + labelText + " ▴");
         });
         activityPanel.setAttribute("data-expanded", "false");
         activityPanel.insertBefore(summary, activityPanel.firstChild);

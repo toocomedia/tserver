@@ -122,7 +122,7 @@ def requires_multi_container_stack(inspection: dict[str, Any]) -> bool:
     if not isinstance(inspection, dict):
         return False
     compose_services = (inspection.get("compose_info") or {}).get("services")
-    if isinstance(compose_services, list) and len(compose_services) > 1:
+    if isinstance(compose_services, list) and len(compose_services) >= 1:
         return True
 
     kinds: set[str] = {str(k).strip().lower() for k in (inspection.get("database_types") or [])}
@@ -152,13 +152,18 @@ def synthesize_stack_from_compose(
     for item in compose_info["services"]:
         if not isinstance(item, dict):
             continue
-        image = str(item.get("image") or "").strip()
-        if not image:
-            continue
-        name_raw = str(item.get("name") or image.rsplit("/", 1)[-1].split(":", 1)[0])
-        name = _sanitize_name(name_raw)
+        raw_img = str(item.get("image") or "").strip()
+        name_raw = str(item.get("name") or (raw_img.rsplit("/", 1)[-1].split(":", 1)[0] if raw_img else "app"))
+        name = _sanitize_name(name_raw) or "app"
         if name in service_map:
             continue
+
+        if not raw_img:
+            clean_repo = repo_url or str(inspection.get("repository_url") or "")
+            tag = str(inspection.get("branch") or "v1").strip() or "v1"
+            image = _derive_web_image(clean_repo, inspection, tag)
+        else:
+            image = raw_img
 
         kind = _identify_kind(name, image)
         defaults = _STACK_DB_DEFAULTS.get(kind) or {}
@@ -173,18 +178,20 @@ def synthesize_stack_from_compose(
             else:
                 ports = [3000] if any(k in name.lower() for k in ("web", "app", "frontend", "ui")) else [8000]
 
-        # Pin image reference if unpinned or :latest
+        # Clean image reference: provide defaults for bare db names, keep actual tags for app images
         clean_img = image
-        if clean_img.endswith(":latest") or ":" not in clean_img.rsplit("/", 1)[-1]:
-            if defaults.get("image"):
-                clean_img = defaults["image"]
-            elif "nginx" in clean_img.lower():
-                clean_img = "nginx:alpine"
-            elif "shynet" in clean_img.lower():
-                clean_img = "milesmcc/shynet:v0.12.0"
-            else:
-                base_img = clean_img.removesuffix(":latest")
-                clean_img = f"{base_img}:v1"
+        if clean_img in ("postgres", "postgresql"):
+            clean_img = "postgres:16-alpine"
+        elif clean_img in ("redis", "valkey"):
+            clean_img = "redis:7-alpine"
+        elif clean_img in ("mariadb", "mysql"):
+            clean_img = "mariadb:11"
+        elif clean_img == "clickhouse":
+            clean_img = "clickhouse/clickhouse-server:24.3-alpine"
+        elif clean_img == "nginx":
+            clean_img = "nginx:alpine"
+        elif not clean_img and defaults.get("image"):
+            clean_img = defaults["image"]
 
         svc: dict[str, Any] = {
             "name": name,
