@@ -477,7 +477,8 @@ async def stream_ai_chat(
                     
                     admin_prompt = ""
                     if admin_cmds and "@" not in user_message:
-                        admin_prompt = "Initial administrator setup is required according to documentation (e.g. registeradmin). You MUST explicitly ask the user: 'What admin email address should be used to initialize the superuser account?'."
+                        options_list.append("[INPUT:admin_email|admin@example.com|Admin Email]")
+                        admin_prompt = "Initial administrator setup is required according to documentation (e.g. registeradmin). You MUST explicitly ask the user: 'What admin email address should be used to initialize the superuser account?' and output [INPUT:admin_email|admin@example.com|Admin Email]."
                     
                     options_str = "\n".join(options_list)
                     action_instruction = (
@@ -485,7 +486,7 @@ async def stream_ai_chat(
                         "Do NOT call proposal planning tools yet. "
                         f"{admin_prompt} "
                         "Ask the user any required configuration questions (such as their Admin Email and preferred setup method) "
-                        f"and provide the interactive option tags with recommended badges:\n{options_str}\n"
+                        f"and provide the interactive option tags and input tags:\n{options_str}\n"
                         "Wait for the user to confirm their choices and email before generating the reviewed plan."
                     )
                 elif needs_stack:
@@ -801,13 +802,22 @@ async def stream_ai_chat(
 
         if tool_was_executed:
             if setup_plan_required:
-                messages.append({
-                    "role": "user",
-                    "content": (
+                if setup_handoff.is_setup_interview_pending(setup_source_result, user_message):
+                    content_str = (
+                        "Now summarize the inspected application architecture, services, and deployment configuration in clean, structured Markdown tables. "
+                        "Do NOT output tool calls, JSON ASTs, or internal schema errors. "
+                        "State clearly that the required setup details (such as Admin Email or deployment option) are requested from the user to finalize the deployment plan. "
+                        "Do NOT claim the reviewed setup plan is ready to deploy yet."
+                    )
+                else:
+                    content_str = (
                         "Now summarize the inspected application architecture, services, and deployment configuration in clean, structured Markdown tables. "
                         "Do NOT output tool calls, JSON ASTs, or internal schema errors. "
                         "State clearly that the reviewed setup plan is ready to deploy."
-                    ),
+                    )
+                messages.append({
+                    "role": "user",
+                    "content": content_str,
                 })
             else:
                 messages.append({

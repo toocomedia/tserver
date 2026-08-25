@@ -278,8 +278,8 @@
         }
       );
 
-      // Strip leading list bullets (- or * or •) and standalone [OPTION:...] from message body
-      escaped = escaped.replace(/(?:^[ \t]*[-*•][ \t]*|(?:\r?\n)[ \t]*[-*•][ \t]*)?\[OPTION:[^\]]+\]/gi, "");
+      // Strip leading list bullets (- or * or •) and standalone [OPTION:...] / [INPUT:...] from message body
+      escaped = escaped.replace(/(?:^[ \t]*[-*•][ \t]*|(?:\r?\n)[ \t]*[-*•][ \t]*)?\[(?:OPTION|INPUT):[^\]]+\]/gi, "");
 
 
       // Code blocks ```lang ... ``` — branched rendering by language type
