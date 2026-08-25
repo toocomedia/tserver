@@ -7,9 +7,9 @@ import secrets
 from pathlib import Path
 from dotenv import load_dotenv
 
-# Load .env from parent directory (the panel install root)
-_env_path = Path(__file__).parent.parent / ".env"
-load_dotenv(_env_path)
+# Load .env from backend directory and parent directory (the panel install root)
+load_dotenv(Path(__file__).parent / ".env")
+load_dotenv(Path(__file__).parent.parent / ".env")
 
 
 def _env_str(name: str, default: str = "") -> str:
