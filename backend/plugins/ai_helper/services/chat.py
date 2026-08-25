@@ -454,7 +454,24 @@ async def stream_ai_chat(
                 tool_was_executed = True
                 from services.official_stacks.stack_synthesizer import requires_multi_container_stack
                 needs_stack = requires_multi_container_stack(setup_source_result)
-                if needs_stack:
+                if setup_handoff.is_recommendation_decision_pending(setup_source_result, user_message):
+                    rec = setup_source_result.get("official_image_recommendation") or {}
+                    rec_img = rec.get("recommended_image") or "official Docker image"
+                    has_compose = bool((setup_source_result.get("compose_info") or {}).get("services"))
+                    options_str = (
+                        f"[OPTION:Option 1 (Recommended): Official Docker Image ({rec_img})|Option 1]\n"
+                        "[OPTION:Option 2: Build from Git source code (Railpack/Dockerfile)|Option 2]\n"
+                    )
+                    if has_compose:
+                        options_str += "[OPTION:Option 3: Docker Compose Stack|Option 3]\n"
+                    action_instruction = (
+                        f"An official image recommendation is available for this application ({rec_img}). "
+                        "Present the source inspection facts clearly in Markdown tables. "
+                        "Explain why the official image is recommended, ask the user to select their setup method, "
+                        f"and output the interactive decision options:\n{options_str}"
+                        "Do NOT call proposal tools until the user chooses an option."
+                    )
+                elif needs_stack:
                     action_instruction = (
                         "Compose services or auxiliary datastores were detected. You MUST call `propose_stack_install` to create a restricted stack setup plan."
                     )
@@ -477,7 +494,9 @@ async def stream_ai_chat(
     if tools_enabled:
         # Determine scoped tool definitions
         if setup_plan_required:
-            if setup_source_result and setup_source_result.get("status") == "ok":
+            if setup_handoff.is_recommendation_decision_pending(setup_source_result, user_message):
+                tool_names_to_load = frozenset()
+            elif setup_source_result and setup_source_result.get("status") == "ok":
                 from services.official_stacks.stack_synthesizer import requires_multi_container_stack
                 if requires_multi_container_stack(setup_source_result):
                     tool_names_to_load = frozenset({"propose_stack_install"})

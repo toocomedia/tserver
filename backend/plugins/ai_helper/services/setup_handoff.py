@@ -114,8 +114,9 @@ def is_recommendation_decision_pending(
         return False
     msg = (user_message or "").lower()
     if any(token in msg for token in (
-        "option 1", "option 2", "official", "docker image", "use image",
+        "option 1", "option 2", "option 3", "official", "docker image", "use image",
         "use docker", "git source", "from source", "railpack", "build from source",
+        "compose", "docker compose", "docker-compose", "stack",
     )):
         return False
     return True

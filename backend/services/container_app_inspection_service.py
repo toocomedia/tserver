@@ -63,7 +63,10 @@ def inspect_repository(repository_url: str, branch: str, *, ssh_key_path: str | 
         # otherwise default to Railpack (with Dockerfile detected hint if Dockerfile exists).
         build_mode = "dockerfile" if (has_dockerfile and not has_app_manifest) else "railpack"
 
-        return {
+        from services.apps_engine.source_image_advisor import advise_official_image
+        advice = advise_official_image(checkout.repository_url, framework)
+
+        res_dict = {
             "repository_url": checkout.repository_url,
             "branch": checkout.branch,
             "runtime": runtime,
@@ -80,6 +83,9 @@ def inspect_repository(repository_url: str, branch: str, *, ssh_key_path: str | 
             "package_scripts": package_scripts,
             "compose_info": compose_info,
         }
+        if advice:
+            res_dict["official_image_recommendation"] = advice
+        return res_dict
 
 
 def _framework(root: Path, files: set[str], text: str, runtime: str) -> str:
