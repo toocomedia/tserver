@@ -114,6 +114,7 @@
         '  <div class="ai-helper-model-modal-content"><button type="button" class="ai-helper-model-arrow-btn" id="ai-helper-model-arrow-up" title="Previous model"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"></polyline></svg></button><div class="ai-helper-model-viewport" id="ai-helper-model-viewport"><div class="ai-helper-model-list" id="ai-helper-model-list"></div></div><button type="button" class="ai-helper-model-arrow-btn" id="ai-helper-model-arrow-down" title="Next model"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg></button></div>',
         "</div>",
         '<div class="ai-helper-footer" id="ai-helper-footer">',
+        '  <div class="ai-helper-decision-bar" id="ai-helper-decision-bar" style="display: none;"></div>',
         '  <form class="ai-helper-input-box" id="ai-helper-form">',
         '    <textarea class="ai-helper-textarea" id="ai-helper-input" rows="2" placeholder="Ask a question, run task, or paste error logs..."></textarea>',
         '    <div class="ai-helper-toolbar">',
@@ -177,6 +178,14 @@
       // 6. Resize Controller Module
       if (window.AiHelperResize) {
         window.AiHelperResize.init(this.drawerEl);
+      }
+
+      // 7. Quick-Decision Bar Module (Pinned above input)
+      if (window.AiHelperDecisionBar) {
+        window.AiHelperDecisionBar.init(
+          document.getElementById("ai-helper-decision-bar"),
+          function (reply) { self.send(reply); }
+        );
       }
     },
 
@@ -564,6 +573,9 @@
       if (empty) empty.remove();
 
       this._appendMessageToDOM("user", msg);
+      if (window.AiHelperDecisionBar) {
+        window.AiHelperDecisionBar.hide();
+      }
       var cache = window.AiHelperCache;
       if (cache) cache.appendMessage(this.sessionId, { role: "user", content: msg, created_at: new Date().toISOString() }, { title: this.sessionTitle, taskType: this.activeTaskType, context: this.activeContext });
 
@@ -698,6 +710,9 @@
       this.stopBtnEl.style.display = "none";
       bubble.innerHTML = this.renderMarkdown(text);
       if (this.statusEl) this.statusEl.textContent = (Date.now() - start) + "ms";
+      if (window.AiHelperDecisionBar) {
+        window.AiHelperDecisionBar.extractAndShow(text);
+      }
       if (text.trim() && window.AiHelperCache) {
         window.AiHelperCache.appendMessage(this.sessionId, { role: "assistant", content: text, created_at: new Date().toISOString() }, { title: this.sessionTitle, taskType: this.activeTaskType, context: this.activeContext });
       }
