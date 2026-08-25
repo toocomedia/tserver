@@ -7,12 +7,14 @@ from plugins.ai_helper.tools.definitions import APP_SETUP_TOOL_NAMES
 
 
 _SETUP_TASK_TYPES = frozenset({"app_deploy", "app_install", "setup_app"})
+_DIAGNOSTIC_TASK_TYPES = frozenset({"error_diag", "app_redeploy", "error", "debug"})
 SETUP_TOOL_NAMES = APP_SETUP_TOOL_NAMES
+APP_DIAGNOSTIC_TOOL_NAMES = frozenset({"get_app_engine_diagnostics", "propose_container_app_patch", "get_app_logs"})
 _TOOL_LIMITS = {
     "get_app_engine_capabilities": 2,
     "inspect_app_source": 2,
-    "propose_app_install": 3,
-    "propose_stack_install": 3,
+    "propose_app_install": 1,
+    "propose_stack_install": 1,
 }
 _PROPOSAL_TOOLS = frozenset({"propose_app_install", "propose_stack_install"})
 
@@ -20,6 +22,12 @@ _PROPOSAL_TOOLS = frozenset({"propose_app_install", "propose_stack_install"})
 def requires_reviewed_plan(task_type: str | None) -> bool:
     """Whether this chat is an App Engine setup request with a wizard handoff."""
     return (task_type or "").strip().lower() in _SETUP_TASK_TYPES
+
+
+def is_diagnostic_task(task_type: str | None, has_app_id: bool = False) -> bool:
+    """Whether this chat is an App Engine diagnostic/redeploy task."""
+    t = (task_type or "").strip().lower()
+    return t in _DIAGNOSTIC_TASK_TYPES or (has_app_id and t in {"general", ""})
 
 
 def tool_limit_result(
@@ -42,7 +50,9 @@ def tool_limit_result(
             ),
         }
     proposal_count = sum(tool_counts.get(name, 0) for name in _PROPOSAL_TOOLS)
-    if tool_name in _PROPOSAL_TOOLS and proposal_count >= 3:
+    if tool_name in _PROPOSAL_TOOLS and proposal_count >= 1:
+        if allow_stack_correction and tool_name == "propose_stack_install" and proposal_count < 2:
+            return None
         return {
             "status": "limit_reached",
             "message": "This App Engine setup reached its maximum proposal attempts.",
@@ -57,6 +67,7 @@ def tool_limit_result(
             f"{tool_name}. Use the collected evidence to create the reviewed setup plan now."
         ),
     }
+
 
 
 PLAN_REQUIRED_MESSAGE = (

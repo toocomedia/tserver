@@ -6,9 +6,13 @@ optional skill injection + active page context + custom admin instructions.
 from __future__ import annotations
 
 from plugins.ai_helper.prompts.action_tags import ACTION_TAGS_SPEC
-from plugins.ai_helper.prompts.base_rules import FIXED_CORE_SYSTEM_PROMPT
+from plugins.ai_helper.prompts.base_rules import APP_ENGINE_CORE_SYSTEM_PROMPT, FIXED_CORE_SYSTEM_PROMPT
 from plugins.ai_helper.prompts.result_format import RESULT_FORMAT_RULES
-from plugins.ai_helper.prompts.tool_rules import TOOL_USAGE_RULES
+from plugins.ai_helper.prompts.tool_rules import APP_ENGINE_TOOL_RULES, TOOL_USAGE_RULES
+
+_APP_ENGINE_SKILLS = frozenset({
+    "app_deploy", "app_install", "setup_app", "error_diag", "app_redeploy", "app_inspect", "app_recovery",
+})
 
 
 def build_system_prompt(
@@ -20,8 +24,8 @@ def build_system_prompt(
 ) -> str:
     """
     Assembles the multi-layered system prompt:
-    1. Fixed Core Rules (immutable, panel-aware guardrails + anti-monologue + mandatory output)
-    2. Tool Usage Rules + Credentials Policy (immutable, read-only boundaries)
+    1. Fixed Core Rules (scoped lightweight App Engine prompt for container tasks, or general VPS prompt)
+    2. Tool Usage Rules (scoped for container tasks, or general panel inspection)
     3. Result Format Rules (exact markdown syntax for UI card rendering)
     4. Structured Action Tags (UI copy/apply button triggers)
     5. Skill Injection (task-specific pre-prompt, auto-selected by task_type)
@@ -29,15 +33,21 @@ def build_system_prompt(
     7. Active Page / Task Context (dynamic context from wizard, error log, or file editor)
     8. Custom User Rules (configured by the admin in AI Settings)
     """
-    sections = [
-        FIXED_CORE_SYSTEM_PROMPT.strip(),
-    ]
+    normalized_skill = (skill or "").strip().lower()
+    is_app_engine_task = normalized_skill in _APP_ENGINE_SKILLS
 
-    if include_tools_rules:
-        sections.append(TOOL_USAGE_RULES.strip())
+    if is_app_engine_task:
+        sections = [APP_ENGINE_CORE_SYSTEM_PROMPT.strip()]
+        if include_tools_rules:
+            sections.append(APP_ENGINE_TOOL_RULES.strip())
+    else:
+        sections = [FIXED_CORE_SYSTEM_PROMPT.strip()]
+        if include_tools_rules:
+            sections.append(TOOL_USAGE_RULES.strip())
 
     sections.append(RESULT_FORMAT_RULES.strip())
     sections.append(ACTION_TAGS_SPEC.strip())
+
 
     # Skill injection — task-specific augmentation
     if skill:

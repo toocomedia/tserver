@@ -502,8 +502,40 @@ class TestAiAppSetup(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(res2["status"], "ok")
             self.assertIn("plan_id", res2)
 
+    def test_scoped_app_engine_prompt_builder(self):
+        """Verify build_system_prompt generates scoped lightweight prompts for container tasks."""
+        from plugins.ai_helper.prompts import builder
+
+        # 1. App deploy skill prompt
+        deploy_prompt = builder.build_system_prompt(skill="app_deploy")
+        self.assertIn("specialized in App Engine", deploy_prompt)
+        self.assertNotIn("PHP Engine", deploy_prompt)
+        self.assertNotIn("PowerDNS", deploy_prompt)
+        self.assertIn("App Engine setup plan", deploy_prompt)
+
+        # 2. Error diag skill prompt
+        diag_prompt = builder.build_system_prompt(skill="error_diag")
+        self.assertIn("specialized in App Engine", diag_prompt)
+        self.assertNotIn("PHP Engine", diag_prompt)
+        self.assertIn("Error Diagnosis Mode", diag_prompt)
+
+        # 3. General task prompt still includes full VPS architecture
+        general_prompt = builder.build_system_prompt(skill="general")
+        self.assertIn("PHP Engine", general_prompt)
+        self.assertIn("PowerDNS", general_prompt)
+
+
+    def test_extract_app_id_from_various_formats(self):
+        """Verify _extract_app_id parses ID from failure notifications and context keys."""
+        from plugins.ai_helper.services.chat import _extract_app_id
+
+        self.assertEqual(_extract_app_id("Application open.blagh.co (ID #3) failed or is stopped."), 3)
+        self.assertEqual(_extract_app_id("Application open.blagh.co (ID 12) is crashing"), 12)
+        self.assertEqual(_extract_app_id("app:42"), 42)
+        self.assertEqual(_extract_app_id("container:7"), 7)
+        self.assertEqual(_extract_app_id("app_id: 15"), 15)
+        self.assertIsNone(_extract_app_id("Deploy my python app on example.com"))
+
 
 if __name__ == "__main__":
     unittest.main()
-
-

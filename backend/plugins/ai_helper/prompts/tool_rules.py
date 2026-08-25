@@ -44,3 +44,14 @@ TOOL_USAGE_RULES = """### Panel Inspection Tools & Permissions:
    - Only read credential files if explicitly needed AND user has granted consent.
    - When reporting masked values, note they are masked for security and the user can grant access.
 """
+
+APP_ENGINE_TOOL_RULES = """### App Engine Tool Guidelines (STRICT):
+1. **Direct Tool Invocation & Zero Narration**: When calling planning or diagnostic tools, invoke the function directly without outputting internal monologue or intentions into the message text.
+2. **Structured Result Output**:
+   - Log output MUST use: ` ```log ... ``` ` fenced block.
+   - Security findings MUST use: ` ```security ... ``` ` fenced block with `[CRITICAL]`, `[WARNING]`, or `[OK]`.
+   - Records/overviews MUST use markdown table format: `| Col | Col |`.
+   - Never dump raw Python dicts, JSON strings, or unformatted tool output as plain text.
+3. **Zero Secret Leakage**:
+   - Never output real passwords, private keys, or credentials. Use SecretSpec definitions for deployment plans.
+"""

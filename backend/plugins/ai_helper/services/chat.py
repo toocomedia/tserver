@@ -77,6 +77,18 @@ def _extract_setup_source(*texts: str | None) -> tuple[str, str, str]:
     return "git", "", ""
 
 
+def _extract_app_id(*texts: str | None) -> int | None:
+    """Extract App Engine app ID from user message, context key, or context text."""
+    joined = "\n".join(text or "" for text in texts)
+    m = re.search(r"(?:app_id[:=\s]+|container:|app:|\bID\s*#?\s*)(\d+)\b", joined, re.IGNORECASE)
+    if m:
+        try:
+            return int(m.group(1))
+        except ValueError:
+            pass
+    return None
+
+
 
 def _activity_event(tool_name: str, status: str, args: dict | None = None) -> str:
     """Builds an activity sentinel string to yield from the generator."""
@@ -391,13 +403,59 @@ async def stream_ai_chat(
     setup_server_plan_attempted = False
     setup_source_result: Dict[str, Any] | None = None
     setup_target_domain = _extract_setup_domain(user_message, context_text)
+    app_id = _extract_app_id(user_message, context_key, context_text)
+    is_app_diag = setup_handoff.is_diagnostic_task(task_type, has_app_id=bool(app_id))
+    stype, repo, img = _extract_setup_source(user_message, context_text)
+
+    # 1. Fast 1-Turn Pre-Inspection for App Engine Setup:
+    if tools_enabled and setup_plan_required and (repo or img) and not setup_source_result:
+        yield _activity_event("inspect_app_source", "start", {"repository_url": repo, "image_reference": img})
+        try:
+            setup_source_result = await tools.execute_tool(
+                db=db,
+                tool_name="inspect_app_source",
+                arguments={"source_type": stype, "repository_url": repo, "image_reference": img},
+                session_id=session_id,
+                user_id=user_id,
+                secrets_allowed=secrets_allowed,
+            )
+            yield _activity_event("inspect_app_source", "done", {"repository_url": repo, "image_reference": img})
+            if setup_source_result.get("status") == "ok":
+                tool_was_executed = True
+                messages.append({
+                    "role": "user",
+                    "content": (
+                        f"[Pre-collected Source Inspection Facts for {repo or img}]:\n"
+                        f"{json.dumps(setup_source_result)}\n\n"
+                        "Using the pre-inspected facts above, immediately evaluate the architecture and propose "
+                        "the installation plan using propose_app_install or propose_stack_install."
+                    ),
+                })
+        except Exception as exc:
+            yield _activity_event("inspect_app_source", "error", {"repository_url": repo, "image_reference": img})
+
     if tools_enabled:
+        # Determine scoped tool definitions
+        if setup_plan_required:
+            tool_names_to_load = (
+                frozenset({"propose_app_install", "propose_stack_install"})
+                if (setup_source_result and setup_source_result.get("status") == "ok")
+                else setup_handoff.SETUP_TOOL_NAMES
+            )
+        elif is_app_diag and app_id:
+            tool_names_to_load = setup_handoff.APP_DIAGNOSTIC_TOOL_NAMES
+        else:
+            tool_names_to_load = None
+
         tool_defs = tools.get_tool_definitions(
             active.provider_type,
-            tool_names=setup_handoff.SETUP_TOOL_NAMES if setup_plan_required else None,
+            tool_names=tool_names_to_load,
         )
         tool_counts: Dict[str, int] = {}
-        max_tool_iterations = 5 if setup_plan_required else 6
+        if setup_source_result and setup_source_result.get("status") == "ok":
+            tool_counts["inspect_app_source"] = 1
+        max_tool_iterations = 4 if setup_plan_required else (4 if (is_app_diag and app_id) else 6)
+
 
         async def _execute_tool(fn_name: str, fn_args: Dict[str, Any]) -> Dict[str, Any]:
             """Execute approved tools while bounding setup-only evidence collection."""
@@ -703,8 +761,47 @@ async def stream_ai_chat(
         full_response.append(err_msg)
         yield err_msg
 
+    # Diagnostic auto-patch fallback: guarantee reviewed redeploy button on failed/diagnosed apps
+    if app_id and not setup_plan_id and is_app_diag and not has_error:
+        try:
+            from models.container_app import ContainerApp
+            from plugins.ai_helper.tools import app_setup as _app_setup_tools
+            app_obj = await db.get(ContainerApp, app_id)
+            if app_obj is not None:
+                patch_args: Dict[str, Any] = {}
+                combined_diag_text = (
+                    user_message + "\n" + (context_text or "") + "\n" +
+                    "".join(full_response)
+                )
+                fix_img_match = re.search(
+                    r"(?:correct|suggested|recommend(?:ed)?)\s+image\s*(?:reference)?(?:\s*(?:is|should be|:))\s*([a-z0-9_.-]+/[a-z0-9_.-]+(?::[a-z0-9_.-]+)?)",
+                    combined_diag_text,
+                    re.IGNORECASE,
+                )
+                if fix_img_match:
+                    cand_img = fix_img_match.group(1).strip()
+                    if cand_img != app_obj.image_reference:
+                        patch_args["image_reference"] = cand_img
+
+                auto_patch_res = await _app_setup_tools.propose_container_app_patch(
+                    db=db,
+                    app_id=app_id,
+                    patch=patch_args,
+                    evidence=["Diagnostic analysis generated reviewed deployment draft."],
+                    summary=f"Redeploy & apply fix for App Engine app #{app_id}",
+                    confidence=0.95,
+                    session_id=session_id,
+                    user_id=user_id,
+                )
+                if auto_patch_res.get("status") == "ok":
+                    setup_plan_id = auto_patch_res.get("plan_id")
+                    setup_plan_kind = "patch"
+        except Exception as exc:
+            logger.warning("Final diagnostic auto-patch fallback failed: %s", exc)
+
     if setup_plan_id:
         kind_suffix = ":patch" if setup_plan_kind == "patch" else ""
+
         setup_action = f"\n\n[ACTION:APP_SETUP_PLAN:{setup_plan_id}{kind_suffix}]"
         full_response.append(setup_action)
         yield setup_action

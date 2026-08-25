@@ -4,6 +4,7 @@ Generates immutable server-side AiActionPlan records for wizard autofill.
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 import re
 import copy
@@ -137,7 +138,7 @@ async def inspect_app_source(
                 "message": f"{stack_info['name']} requires a reviewed multi-service stack deployment ({stack_info['services_count']} services, {stack_info['recommended_ram_mb'] // 1024} GB RAM recommended).",
             }
         try:
-            res = container_app_inspection_service.inspect_repository(repo, branch.strip() or "main")
+            res = await asyncio.to_thread(container_app_inspection_service.inspect_repository, repo, branch.strip() or "main")
             source_kind = "compose_stack" if (res.get("compose_info") or {}).get("services") else "git"
             from services.apps_engine.source_image_advisor import advise_official_image
             advice = advise_official_image(repo, str(res.get("framework") or ""))
