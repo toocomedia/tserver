@@ -230,20 +230,20 @@ RAW_TOOL_SCHEMAS: List[Dict[str, Any]] = [
                 },
                 "environment_values": {
                     "type": "object",
-                    "description": "Key-value dictionary of non-secret environment variables (e.g. {'NODE_ENV': 'production'}).",
+                    "description": "Key-value dictionary of non-secret environment variables (e.g. {'NODE_ENV': 'production', 'LOG_LEVEL': 'info'}). Keys must use safe uppercase names; values must be single-line strings. Never include secrets, passwords, or DATABASE_URL here.",
                 },
                 "secret_requirements": {
                     "type": "array",
                     "items": {
                         "type": "object",
                         "properties": {
-                            "key": {"type": "string"},
-                            "purpose": {"type": "string"},
-                            "generator": {"type": "string", "enum": ["urlsafe64", "password", "hex32"]},
+                            "key": {"type": "string", "description": "Safe uppercase secret key name (e.g. APP_KEY, JWT_SECRET)."},
+                            "purpose": {"type": "string", "description": "Description of secret purpose."},
+                            "generator": {"type": "string", "enum": ["urlsafe64", "base64_32", "base64_48", "base64_64", "hex32", "hex64", "password"]},
                         },
                         "required": ["key", "purpose"],
                     },
-                    "description": "Required secret names and purposes only. Never include a secret value.",
+                    "description": "Required secret names, purposes, and generator algorithms only. Never include raw secret values.",
                 },
                 "database_attachments": {
                     "type": "array",
@@ -390,8 +390,8 @@ RAW_TOOL_SCHEMAS: List[Dict[str, Any]] = [
             "properties": {
                 "app_id": {"type": "integer"},
                 "patch": {"type": "object", "description": "Only supported non-secret app settings."},
-                "environment_values": {"type": "object", "description": "Non-secret environment values only."},
-                "secret_requirements": {"type": "array", "description": "Secret key, purpose, optional rotation. Never include values."},
+                "environment_values": {"type": "object", "description": "Non-secret environment values only. Safe uppercase names with single-line values. Never include secrets or DATABASE_URL."},
+                "secret_requirements": {"type": "array", "description": "Secret key name, purpose, and generator algorithm (e.g. urlsafe64, password, base64_32). Never include raw values."},
                 "database_attachments": {"type": "array", "description": "Optional managed database attachment specifications."},
                 "evidence": {"type": "array", "items": {"type": "string"}},
                 "summary": {"type": "string"},

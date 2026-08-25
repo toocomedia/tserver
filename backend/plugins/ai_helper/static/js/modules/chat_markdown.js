@@ -259,18 +259,9 @@
               '</div>'
             );
           }
-          // Special: OPTION / QUICK_REPLY renders as an interactive choice button
+          // Options are rendered in the pinned decision bar above input; strip from message bubble
           if (actionType === "OPTION" || actionType === "QUICK_REPLY" || actionType === "CHOICE") {
-            var parts = actionVal.split("|");
-            var optLabel = parts[0].trim();
-            var optReply = (parts[1] || parts[0]).trim();
-            return (
-              '<button type="button" class="ai-quick-option-btn" data-reply="' + escapeHtml(optReply) + '">' +
-              '  <span class="ai-quick-opt-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span>' +
-              '  <span class="ai-quick-opt-label">' + escapeHtml(optLabel) + '</span>' +
-              '  <span class="ai-quick-opt-badge">Select</span>' +
-              '</button>'
-            );
+            return "";
           }
           var label = actionType.replace(/_/g, " ").toLowerCase();
           return (
@@ -287,27 +278,8 @@
         }
       );
 
-      // Strip leading list bullets (- or * or •) before standalone [OPTION:...]
-      escaped = escaped.replace(/(?:^[ \t]*[-*•][ \t]*|(?:\r?\n)[ \t]*[-*•][ \t]*)(\[OPTION:[^\]]+\])/gi, "\n$1");
-
-      // Standalone [OPTION:Label|ReplyText]
-      escaped = escaped.replace(/\[OPTION:([^\]]+)\]/gi, function (_, content) {
-        var parts = content.split("|");
-        var optLabel = parts[0].trim();
-        var optReply = (parts[1] || parts[0]).trim();
-        return (
-          '<button type="button" class="ai-quick-option-btn" data-reply="' + escapeHtml(optReply) + '">' +
-          '  <span class="ai-quick-opt-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span>' +
-          '  <span class="ai-quick-opt-label">' + escapeHtml(optLabel) + '</span>' +
-          '  <span class="ai-quick-opt-badge">Select</span>' +
-          '</button>'
-        );
-      });
-
-      // Group consecutive .ai-quick-option-btn into a single clean .ai-quick-options-group container
-      escaped = escaped.replace(/(?:<button type="button" class="ai-quick-option-btn"[^>]*>[\s\S]*?<\/button>\s*)+/g, function (matched) {
-        return '<div class="ai-quick-options-group">' + matched.trim() + '</div>';
-      });
+      // Strip leading list bullets (- or * or •) and standalone [OPTION:...] from message body
+      escaped = escaped.replace(/(?:^[ \t]*[-*•][ \t]*|(?:\r?\n)[ \t]*[-*•][ \t]*)?\[OPTION:[^\]]+\]/gi, "");
 
 
       // Code blocks ```lang ... ``` — branched rendering by language type

@@ -94,22 +94,8 @@ def _normalize_patch(app: ContainerApp, patch: object, allow_empty: bool = False
 
 
 def _nonsecret_environment(values: object) -> dict[str, str]:
-    if values in (None, {}):
-        return {}
-    if not isinstance(values, dict) or len(values) > 64:
-        raise ValueError("Non-secret environment values are invalid.")
-    clean: dict[str, str] = {}
-    for raw_key, raw_value in values.items():
-        key = str(raw_key).strip()
-        if not build_secrets.ENV_KEY_RE.fullmatch(key):
-            raise ValueError("Environment key is invalid.")
-        if key == "DATABASE_URL" or any(part in key for part in SENSITIVE_PARTS):
-            raise ValueError(f"{key} must be declared as a secret requirement, never sent to AI as a value.")
-        value = str(raw_value)
-        if len(value) > 4096 or "\n" in value or "\r" in value:
-            raise ValueError("Environment value is invalid.")
-        clean[key] = value
-    return clean
+    clean_envs, _ = build_secrets.normalize_environment_map(values)
+    return clean_envs
 
 
 def proposal_payload(
@@ -118,7 +104,19 @@ def proposal_payload(
 ) -> dict[str, Any]:
     has_env_or_secrets = bool(environment_values or secret_requirements)
     clean_patch = _normalize_patch(app, patch, allow_empty=has_env_or_secrets)
-    clean_secrets = snapshots.normalize_secret_requirements(secret_requirements)
+    clean_envs, auto_secrets = build_secrets.normalize_environment_map(environment_values)
+
+    merged_secrets: list[dict[str, Any]] = []
+    if isinstance(secret_requirements, list):
+        merged_secrets.extend([s for s in secret_requirements if isinstance(s, dict)])
+
+    known_keys = {str(s.get("key") or "").upper() for s in merged_secrets}
+    for auto_s in auto_secrets:
+        if auto_s["key"].upper() not in known_keys:
+            merged_secrets.append(auto_s)
+            known_keys.add(auto_s["key"].upper())
+
+    clean_secrets = snapshots.normalize_secret_requirements(merged_secrets)
     if not isinstance(evidence, list) or not evidence or len(evidence) > 20:
         raise ValueError("AI proposal must include concise source or log evidence.")
     clean_evidence = [str(item)[:800] for item in evidence if isinstance(item, str) and item.strip()]
@@ -129,7 +127,7 @@ def proposal_payload(
         "base_configuration_revision": int(app.configuration_revision or 1),
         "source_identity": source_identity(app),
         "patch": clean_patch,
-        "environment_values": _nonsecret_environment(environment_values),
+        "environment_values": clean_envs,
         "secret_requirements": clean_secrets,
         "evidence": clean_evidence,
         "confidence": max(0.0, min(1.0, float(confidence))),

@@ -23,9 +23,6 @@
         '<div class="ai-decision-bar-inner">',
         '  <div class="ai-decision-bar-header">',
         '    <div class="ai-decision-bar-header-left">',
-        '      <span class="ai-decision-bar-icon">',
-        '        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>',
-        "      </span>",
         '      <span class="ai-decision-bar-title">' + this._escapeHtml(title) + "</span>",
         "    </div>",
         '    <button type="button" class="ai-decision-bar-close" title="Dismiss">✕</button>',
@@ -36,11 +33,11 @@
       options.forEach(function (opt, idx) {
         var isRecommended = opt.isRecommended || /recommended/i.test(opt.label);
         var badgeHtml = isRecommended
-          ? '<span class="ai-decision-badge ai-decision-badge--rec">★ Recommended</span>'
+          ? '<span class="ai-decision-badge ai-decision-badge--rec">Recommended</span>'
           : '<span class="ai-decision-badge">Option ' + (idx + 1) + "</span>";
 
         html.push(
-          '    <button type="button" class="ai-decision-btn ' + (isRecommended ? "ai-decision-btn--recommended" : "") + '" data-reply="' + self._escapeHtml(opt.reply) + '">',
+          '    <button type="button" class="ai-decision-btn" data-reply="' + self._escapeHtml(opt.reply) + '">',
           '      <div class="ai-decision-btn-top">',
           '        <span class="ai-decision-btn-label">' + self._escapeHtml(opt.label) + "</span>",
           "        " + badgeHtml,
@@ -98,8 +95,26 @@
         });
       }
 
+      // Fallback: If AI formatted as Option 1... Option 2... without brackets
+      if (options.length === 0 && /Option 1[\s\S]*Option 2/i.test(text)) {
+        var opt1Match = text.match(/Option 1[^\n:]*:\s*([^\n]+)/i);
+        var opt2Match = text.match(/Option 2[^\n:]*:\s*([^\n]+)/i);
+        if (opt1Match && opt2Match) {
+          options.push({
+            label: "Option 1 (Recommended): " + opt1Match[1].trim(),
+            reply: "Option 1",
+            isRecommended: true,
+          });
+          options.push({
+            label: "Option 2: " + opt2Match[1].trim(),
+            reply: "Option 2",
+            isRecommended: false,
+          });
+        }
+      }
+
       if (options.length > 0) {
-        this.show(options, "Quick Choice Required — Select Setup Method:");
+        this.show(options, "Select Setup Method:");
       }
     },
 

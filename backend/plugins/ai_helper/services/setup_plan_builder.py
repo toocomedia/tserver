@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from plugins.ai_helper.services import action_plans
 from services import container_app_image_inspect_service, container_app_inspection_service
+from services.apps_engine import build_secrets
 from services.official_stacks.manifest_validator import compute_stack_manifest_hash
 from services.official_stacks.proposal_manifest import stack_from_proposal, validate_stack_settings
 from services.official_stacks.schema import stack_to_dict
@@ -89,35 +90,27 @@ def build_single_app_payload(
     domain_name: str = "",
 ) -> Dict[str, Any]:
     """Constructs and normalizes a single-container App Engine plan payload."""
-    clean_envs: Dict[str, str] = {}
-    if isinstance(environment_values, dict):
-        for k, v in environment_values.items():
-            if isinstance(k, str) and k.strip():
-                clean_envs[k.strip()] = str(v) if v is not None else ""
+    norm_port = normalize_port(internal_port, 3000)
+    clean_envs, auto_secrets = build_secrets.normalize_environment_map(environment_values)
+    if "PORT" in clean_envs:
+        clean_envs["PORT"] = str(norm_port)
 
-    # Strip raw secret values; identify keys that need server-side generation
-    cleaned_secrets = [
-        {"key": key, "purpose": "Application secret", "generator": "urlsafe64"}
-        for key in list(clean_envs)
-        if any(s in key.upper() for s in ("SECRET", "SALT", "KEY_BASE", "JWT", "PASSWORD", "AUTH_KEY"))
-    ]
-    for item in cleaned_secrets:
-        clean_envs.pop(item["key"], None)
+    cleaned_secrets: List[Dict[str, Any]] = list(auto_secrets)
+    known_secret_keys = {item["key"] for item in cleaned_secrets}
 
     if isinstance(secret_requirements, list):
-        known_secret_keys = {item["key"] for item in cleaned_secrets}
         for item in secret_requirements:
             if not isinstance(item, dict):
                 continue
-            key = str(item.get("key") or "").strip()
-            if not re.fullmatch(r"[A-Z][A-Z0-9_]{0,127}", key) or key in known_secret_keys:
+            raw_key = build_secrets.normalize_environment_key(item.get("key") or "")
+            if not raw_key or not build_secrets.ENV_KEY_RE.fullmatch(raw_key) or raw_key in known_secret_keys:
                 continue
-            purpose = str(item.get("purpose") or "Application secret").strip()[:256]
-            generator = str(item.get("generator") or "urlsafe64").strip()
+            purpose = str(item.get("purpose") or f"Generated {raw_key.lower().replace('_', ' ')}").strip()[:256]
+            generator = str(item.get("generator") or build_secrets.infer_secret_generator(raw_key)).strip()
             if generator not in {"urlsafe64", "base64_32", "base64_48", "base64_64", "hex32", "hex64", "password"}:
-                generator = "urlsafe64"
-            cleaned_secrets.append({"key": key, "purpose": purpose or "Application secret", "generator": generator})
-            known_secret_keys.add(key)
+                generator = build_secrets.infer_secret_generator(raw_key)
+            cleaned_secrets.append({"key": raw_key, "purpose": purpose or "Application secret", "generator": generator})
+            known_secret_keys.add(raw_key)
 
     clean_dbs: List[Dict[str, str]] = []
     if isinstance(database_attachments, list):
@@ -154,7 +147,7 @@ def build_single_app_payload(
         "repository_url": repository_url.strip(),
         "branch": branch.strip() or "main",
         "image_reference": image_reference.strip(),
-        "internal_port": normalize_port(internal_port, 3000),
+        "internal_port": norm_port,
         "build_mode": bmode,
         "custom_start_command": (custom_start_command or "").strip(),
         "health_path": normalize_health_path(health_path),

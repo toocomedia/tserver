@@ -249,6 +249,101 @@ class TestAiAppSetup(unittest.IsolatedAsyncioTestCase):
         no_advice = advise_official_image("https://github.com/myuser/custom-python-app")
         self.assertIsNone(no_advice)
 
+    def test_environment_normalization_helpers(self):
+        """Verify build_secrets normalizes keys, values, and separates secrets."""
+        from services.apps_engine import build_secrets
+        self.assertEqual(build_secrets.normalize_environment_key("node-env"), "NODE_ENV")
+        self.assertEqual(build_secrets.normalize_environment_key("app.api_url"), "APP_API_URL")
+        self.assertEqual(build_secrets.normalize_environment_key("123port"), "ENV_123PORT")
+        self.assertEqual(build_secrets.normalize_environment_key(""), "")
+
+        self.assertEqual(build_secrets.normalize_environment_value('"production"\n'), "production")
+        self.assertEqual(build_secrets.normalize_environment_value("'https://example.com'\r\n"), "https://example.com")
+        self.assertEqual(build_secrets.normalize_environment_value("`single_line`"), "single_line")
+
+        clean_envs, secrets = build_secrets.normalize_environment_map({
+            "node-env": "production\r\n",
+            "app.jwt_secret": "raw_secret_value",
+            "db-password": "raw_db_password",
+            "encryption_key": "raw_enc_key",
+            "DATABASE_URL": "postgresql://user:pass@host/db",
+        })
+        self.assertEqual(clean_envs, {"NODE_ENV": "production"})
+        secret_keys = {s["key"] for s in secrets}
+        self.assertIn("APP_JWT_SECRET", secret_keys)
+        self.assertIn("DB_PASSWORD", secret_keys)
+        self.assertIn("ENCRYPTION_KEY", secret_keys)
+        self.assertNotIn("DATABASE_URL", clean_envs)
+
+    def test_setup_plan_builder_normalization_and_port_sync(self):
+        """Verify setup_plan_builder single app payload normalizes env and syncs PORT."""
+        payload = setup_plan_builder.build_single_app_payload(
+            source_type="image",
+            image_reference="redis:alpine",
+            internal_port=6379,
+            environment_values={
+                "log-level": "info\n",
+                "PORT": "3000",
+                "auth-token": "secret_token",
+            },
+        )
+        self.assertEqual(payload["environment_values"]["LOG_LEVEL"], "info")
+        self.assertEqual(payload["environment_values"]["PORT"], "6379")
+        self.assertEqual(len(payload["secret_requirements"]), 1)
+        self.assertEqual(payload["secret_requirements"][0]["key"], "AUTH_TOKEN")
+
+    async def test_propose_container_app_patch_environment_normalization(self):
+        """Verify propose_container_app_patch safely normalizes environment values and secrets."""
+        from models.container_app import ContainerApp
+        from models.domain import Domain
+        import uuid
+        uid = uuid.uuid4().hex[:8]
+        async with AsyncSessionLocal() as db:
+            domain = Domain(name=f"norm-{uid}.local", server_ip="127.0.0.1")
+            db.add(domain)
+            await db.flush()
+
+            app = ContainerApp(
+                domain_id=domain.id,
+                container_name=f"test-norm-{uid}",
+                source_type="image",
+                build_mode="image",
+                image_reference="nginx:alpine",
+                host_port=32145,
+                internal_port=80,
+                env_path="/tmp/test_norm.env",
+                status="running",
+            )
+            db.add(app)
+            await db.commit()
+            await db.refresh(app)
+
+            res = await app_setup.propose_container_app_patch(
+                db=db,
+                app_id=app.id,
+                patch={"internal_port": 8080},
+                environment_values={
+                    "node-env": "production\r\n",
+                    "app_jwt_secret": "my_secret_token",
+                },
+                evidence=["Config fix required in environment"],
+                summary="Normalize environment variables test",
+                confidence=1.0,
+                user_id=1,
+            )
+            self.assertEqual(res["status"], "ok")
+            plan_id = res["plan_id"]
+            self.assertTrue(plan_id.startswith("plan_"))
+
+            from plugins.ai_helper.services import action_plans
+            plan = await action_plans.get_action_plan(db, plan_id, user_id=1)
+            self.assertIsNotNone(plan)
+            payload = plan["payload"]
+            self.assertEqual(payload["environment_values"], {"NODE_ENV": "production"})
+            self.assertEqual(len(payload["secret_requirements"]), 1)
+            self.assertEqual(payload["secret_requirements"][0]["key"], "APP_JWT_SECRET")
+
 
 if __name__ == "__main__":
     unittest.main()
+

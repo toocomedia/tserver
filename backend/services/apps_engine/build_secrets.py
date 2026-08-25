@@ -12,6 +12,87 @@ ENV_KEY_RE = re.compile(r"^[A-Z_][A-Z0-9_]{0,127}$")
 RUNTIME_METADATA_KEYS = {"PORT", "INTERNAL_PORT", "HOST_PORT", "CONTAINER_PORT"}
 LEGACY_SECRET_NAMES = {"DATABASE_URL", "REDIS_URL", "MYSQL_URL", "MONGODB_URL"}
 LEGACY_SECRET_SUFFIXES = ("_SECRET", "_TOKEN", "_PASSWORD", "_API_KEY", "_PRIVATE_KEY")
+SENSITIVE_PARTS = ("SECRET", "TOKEN", "PASSWORD", "API_KEY", "PRIVATE_KEY", "SALT", "JWT", "KEY_BASE", "AUTH_KEY", "ENCRYPTION_KEY")
+
+
+def normalize_environment_key(raw_key: Any) -> str:
+    """Normalize environment key into safe uppercase identifier ^[A-Z_][A-Z0-9_]{0,127}$."""
+    key = str(raw_key or "").strip()
+    if not key:
+        return ""
+    key = re.sub(r"[^A-Za-z0-9_]+", "_", key).upper()
+    key = re.sub(r"_+", "_", key)
+    key = key.strip("_")
+    if not key:
+        return ""
+    if key[0].isdigit():
+        key = f"ENV_{key}"
+    return key[:128]
+
+
+def normalize_environment_value(raw_value: Any) -> str:
+    """Normalize environment value to a safe, clean, one-line string."""
+    if raw_value is None:
+        return ""
+    val = str(raw_value).strip()
+    if len(val) >= 2:
+        if (val.startswith('"') and val.endswith('"')) or (val.startswith("'") and val.endswith("'")) or (val.startswith("`") and val.endswith("`")):
+            val = val[1:-1].strip()
+    val = re.sub(r"[\r\n]+", " ", val).strip()
+    return val[:4096]
+
+
+def is_sensitive_key(key: str) -> bool:
+    """Detect if a key represents a secret, password, token, or managed credential."""
+    upper = key.upper()
+    return upper == "DATABASE_URL" or any(part in upper for part in SENSITIVE_PARTS)
+
+
+def infer_secret_generator(key: str) -> str:
+    """Infer the most appropriate generator algorithm for a secret key."""
+    upper = key.upper()
+    if any(p in upper for p in ("ENCRYPT", "AES", "VAULT", "SIGN")):
+        return "base64_32"
+    if any(p in upper for p in ("PASSWORD", "PASS", "PASSWD")):
+        return "password"
+    if any(p in upper for p in ("HEX", "HASH")):
+        return "hex32"
+    return "urlsafe64"
+
+
+def normalize_environment_map(values: object) -> tuple[dict[str, str], list[dict[str, Any]]]:
+    """
+    Sanitizes environment dictionary into:
+    1. Clean non-secret uppercase environment variables with single-line values.
+    2. Auto-extracted secret requirements for any sensitive keys.
+    """
+    if values in (None, {}):
+        return {}, []
+    if not isinstance(values, dict):
+        raise ValueError("Environment values must be a dictionary.")
+    if len(values) > 64:
+        raise ValueError("Too many environment values (maximum 64).")
+
+    clean_envs: dict[str, str] = {}
+    extracted_secrets: list[dict[str, Any]] = []
+
+    for raw_k, raw_v in values.items():
+        k = normalize_environment_key(raw_k)
+        if not k or not ENV_KEY_RE.fullmatch(k):
+            continue
+        if k == "DATABASE_URL":
+            continue
+        if is_sensitive_key(k):
+            extracted_secrets.append({
+                "key": k,
+                "purpose": f"Generated {k.lower().replace('_', ' ')}",
+                "generator": infer_secret_generator(k),
+            })
+            continue
+        clean_envs[k] = normalize_environment_value(raw_v)
+
+    return clean_envs, extracted_secrets
+
 
 
 def parse_requested_keys(value: str | list[str] | None) -> list[str] | None:
