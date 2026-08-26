@@ -146,6 +146,22 @@ ALLOWED_HOSTS=example.com
         self.assertEqual(result.get("DJANGO_SECRET_KEY"), "secret_sample_key")
         self.assertEqual(result.get("ALLOWED_HOSTS"), "example.com")
 
+    def test_mail_environment_keys_become_non_secret_setup_questions(self):
+        (self.root / "TEMPLATE.env").write_text(
+            "EMAIL_HOST=smtp.example.com\nEMAIL_PORT=465\nEMAIL_HOST_USER=mailer\n"
+            "EMAIL_HOST_PASSWORD=do-not-leak\nSERVER_EMAIL=App <noreply@example.com>\n",
+            encoding="utf-8",
+        )
+
+        result = doc_evidence.find_install_instructions(self.root)
+        hints = result["setup_hints"]
+        self.assertEqual(
+            {item["name"] for item in hints["required_inputs"]},
+            {"smtp_host", "smtp_port", "smtp_username", "sender_email"},
+        )
+        self.assertIn("EMAIL_HOST_PASSWORD", {item["name"] for item in hints["secret_names"]})
+        self.assertNotIn("do-not-leak", str(result))
+
 
 if __name__ == "__main__":
     unittest.main()

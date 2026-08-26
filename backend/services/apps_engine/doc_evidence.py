@@ -52,6 +52,22 @@ _SETUP_INPUT_PATTERNS = (
         "site_name", "Site Name", "text",
         re.compile(r"\b(?:site|instance)\s+(?:name|title)\b|\b(?:SITE|INSTANCE)_(?:NAME|TITLE)\b", re.IGNORECASE),
     ),
+    (
+        "smtp_host", "SMTP Host", "text",
+        re.compile(r"\b(?:SMTP|EMAIL|MAIL)_(?:HOST|SERVER)\b|\bSMTP\s+(?:host|server)\b", re.IGNORECASE),
+    ),
+    (
+        "smtp_port", "SMTP Port", "number",
+        re.compile(r"\b(?:SMTP|EMAIL|MAIL)_PORT\b|\bSMTP\s+port\b", re.IGNORECASE),
+    ),
+    (
+        "smtp_username", "SMTP Username", "text",
+        re.compile(r"\b(?:SMTP|EMAIL|MAIL)(?:_(?:HOST|SERVER))?_(?:USER|USERNAME)\b|\bSMTP\s+(?:user|username)\b", re.IGNORECASE),
+    ),
+    (
+        "sender_email", "Sender Email", "email",
+        re.compile(r"\b(?:SERVER|FROM|SENDER|DEFAULT)_EMAIL\b|\b(?:sender|from)\s+email\b", re.IGNORECASE),
+    ),
 )
 _EXTRA_SECRET_PARTS = ("LICENSE_KEY", "LICENSE_TOKEN", "SMTP_PASS", "ADMIN_PASS")
 _SECRET_NAME_RE = re.compile(
@@ -284,14 +300,22 @@ def _extract_setup_hints(
             continue
         for name, label, kind, pattern in _SETUP_INPUT_PATTERNS:
             if pattern.search(key):
-                _append_hint(required_inputs, {"name": name, "label": label, "kind": kind, "secret": False, "evidence": env_evidence})
+                _append_hint(required_inputs, {
+                    "name": name, "label": label, "kind": kind, "secret": False,
+                    "environment_key": key, "evidence": env_evidence,
+                })
 
     return {"required_inputs": required_inputs, "secret_names": secret_names}
 
 
 def _append_hint(items: list[dict[str, Any]], item: dict[str, Any]) -> None:
-    if not any(existing.get("name") == item.get("name") for existing in items):
+    existing = next((entry for entry in items if entry.get("name") == item.get("name")), None)
+    if existing is None:
         items.append(item)
+        return
+    for key, value in item.items():
+        if value and not existing.get(key):
+            existing[key] = value
 
 
 def _source_label(source: dict[str, str]) -> str:

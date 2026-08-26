@@ -242,11 +242,21 @@ def required_setup_inputs(setup_source_result: Mapping[str, object] | None) -> l
         results.append({
             "name": name,
             "label": str(item.get("label") or name.replace("_", " ").title()),
-            "placeholder": str(item.get("placeholder") or ""),
+            "placeholder": str(item.get("placeholder") or _input_placeholder(name)),
         })
     if not results and isinstance(evidence, Mapping) and evidence.get("detected_admin_commands"):
         results.append({"name": "admin_email", "label": "Admin Email", "placeholder": "admin@example.com"})
     return results
+
+
+def _input_placeholder(name: str) -> str:
+    return {
+        "admin_email": "admin@example.com",
+        "sender_email": "noreply@example.com",
+        "smtp_host": "smtp.example.com",
+        "smtp_port": "587",
+        "smtp_username": "mailbox username",
+    }.get(name, "")
 
 
 def missing_setup_inputs(setup_source_result: Mapping[str, object] | None, user_message: str) -> list[dict[str, str]]:
