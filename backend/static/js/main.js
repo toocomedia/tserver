@@ -397,6 +397,21 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  // Sidebar item click feedback: show micro-spinner on clicked item
+  document.querySelectorAll(".sidebar__item").forEach((item) => {
+    item.addEventListener("click", (e) => {
+      if (e.button === 0 && !e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey) {
+        const href = item.getAttribute("href");
+        if (href && href !== "#" && !href.startsWith("javascript:")) {
+          document.querySelectorAll(".sidebar__item.is-loading").forEach((el) => {
+            el.classList.remove("is-loading");
+          });
+          item.classList.add("is-loading");
+        }
+      }
+    });
+  });
+
   // Mobile menu toggle
   const mobileToggle = document.getElementById("mobile-menu-toggle");
   const sidebar = document.querySelector(".sidebar");

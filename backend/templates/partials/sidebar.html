@@ -20,8 +20,9 @@
       </svg>
     </div>
     <div class="sidebar__views" id="sidebar-views">
+    {% set is_in_plugins = request and request.url and request.url.path.startswith('/plugins') %}
 
-    <ul class="sidebar__nav sidebar__view sidebar__view--main is-active" id="sidebar-nav" role="list">
+    <ul class="sidebar__nav sidebar__view sidebar__view--main {% if is_in_plugins %}is-behind{% else %}is-active{% endif %}" id="sidebar-nav" role="list">
 
     <li>
       <a href="{{ path('home') }}" class="sidebar__item" data-path="{{ path('home') }}" aria-label="Dashboard">
@@ -127,7 +128,7 @@
     {% set plugin_items = get_plugin_sidebar_items() %}
     {% if plugin_items %}
     <li>
-      <button type="button" class="sidebar__section-tab" id="plugins-services-tab" aria-haspopup="true" aria-controls="sidebar-plugins-view" aria-expanded="false">
+      <button type="button" class="sidebar__section-tab" id="plugins-services-tab" aria-haspopup="true" aria-controls="sidebar-plugins-view" aria-expanded="{{ 'true' if is_in_plugins else 'false' }}">
         <svg viewbox="0 0 24 24" aria-hidden="true">
           <rect x="3" y="3" width="7" height="7"></rect>
           <rect x="14" y="3" width="7" height="7"></rect>
@@ -188,7 +189,7 @@
     </ul>
 
     {% if plugin_items %}
-    <div class="sidebar__view sidebar__view--plugins" id="sidebar-plugins-view" aria-hidden="true">
+    <div class="sidebar__view sidebar__view--plugins {% if is_in_plugins %}is-active{% endif %}" id="sidebar-plugins-view"{% if not is_in_plugins %} aria-hidden="true"{% endif %}>
       <button type="button" class="sidebar__view-back" id="plugins-services-back" aria-label="{{ _('back') }}">
         <svg class="sidebar__back-icon" viewbox="0 0 24 24" aria-hidden="true">
           <polyline points="15 18 9 12 15 6"></polyline>
@@ -197,8 +198,9 @@
       </button>
       <ul class="sidebar__nav" id="sidebar-plugins-nav" role="list">
         {% for item in plugin_items %}
+        {% set item_is_active = request and request.url and (request.url.path == item.route or request.url.path.startswith(item.route + '/')) %}
         <li>
-          <a href="{{ item.route }}" class="sidebar__item" data-path="{{ item.route }}" aria-label="{{ item.label }}">
+          <a href="{{ item.route }}" class="sidebar__item{% if item_is_active %} sidebar__item--active{% endif %}" data-path="{{ item.route }}" aria-label="{{ item.label }}">
             {% if item.icon.startswith('devicon-') %}
             <i class="{{ item.icon }}" aria-hidden="true"></i>
             {% else %}
