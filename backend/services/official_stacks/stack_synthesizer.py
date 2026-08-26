@@ -405,7 +405,20 @@ def _build_stack_definition_bundle(
         if re.fullmatch(r"[A-Z_][A-Z0-9_]{0,127}", k) and not any(t in k for t in ("PASSWORD", "SECRET", "TOKEN", "KEY_BASE")):
             default_env[k] = str(raw_v or "")
 
-    allowed_settings = sorted(set(default_env) | {"BASE_URL", "KAFKA_BROKERS", "CLICKHOUSE_DB"} | {k for s in service_map.values() for k in s.get("environment", {})})
+    runtime_str = str(inspection.get("runtime") or "").lower()
+    framework_str = str(inspection.get("framework") or "").lower()
+    deduce_context = f"{clean_repo} {runtime_str} {framework_str}".lower()
+
+    # Deduce framework-specific non-secret settings
+    framework_settings: set[str] = set()
+    if any(k in deduce_context for k in ("django", "python", "shynet")):
+        framework_settings.update(["ALLOWED_HOSTS", "HOSTNAME", "CSRF_TRUSTED_ORIGINS"])
+    if any(k in deduce_context for k in ("laravel", "php")):
+        framework_settings.update(["APP_URL", "APP_ENV"])
+    if any(k in deduce_context for k in ("node", "next", "nuxt", "express")):
+        framework_settings.update(["HOSTNAME", "PORT", "NODE_ENV"])
+
+    allowed_settings = sorted(set(default_env) | {"BASE_URL", "KAFKA_BROKERS", "CLICKHOUSE_DB"} | framework_settings | {k for s in service_map.values() for k in s.get("environment", {})})
 
     secrets: list[dict[str, str]] = []
     seen: set[tuple[str, str]] = set()
@@ -425,11 +438,6 @@ def _build_stack_definition_bundle(
             if (web_svc, k) not in seen:
                 seen.add((web_svc, k))
                 secrets.append({"key": k, "purpose": "Application secret", "generator": gen, "service": web_svc, "environment": k})
-
-    # Dynamic framework secret deduction when missing from sample
-    runtime_str = str(inspection.get("runtime") or "").lower()
-    framework_str = str(inspection.get("framework") or "").lower()
-    deduce_context = f"{clean_repo} {runtime_str} {framework_str}".lower()
 
     if any(k in deduce_context for k in ("elixir", "phoenix")):
         for sec_k, gen in [("SECRET_KEY_BASE", "base64_48"), ("TOTP_VAULT_KEY", "base64_32")]:
@@ -539,12 +547,21 @@ def _build_stack_definition_bundle(
         "url_templates": url_templates,
         "secrets": secrets,
     }
-    settings = {"BASE_URL": f"https://{domain_name.strip()}"} if domain_name.strip() else {}
+    clean_dom = domain_name.strip()
+    settings: dict[str, str] = {}
+    if clean_dom:
+        settings["BASE_URL"] = f"https://{clean_dom}"
+        if any(k in deduce_context for k in ("django", "python", "shynet")):
+            settings["ALLOWED_HOSTS"] = f"{clean_dom},localhost,127.0.0.1"
+            settings["HOSTNAME"] = clean_dom
+            settings["CSRF_TRUSTED_ORIGINS"] = f"https://{clean_dom}"
+        elif any(k in deduce_context for k in ("laravel", "php")):
+            settings["APP_URL"] = f"https://{clean_dom}"
     evidence = [f"Panel source inspection generated this restricted stack plan from {evidence_source}."]
 
     return {
         "stack_manifest": manifest,
-        "domain_name": domain_name.strip(),
+        "domain_name": clean_dom,
         "nonsecret_settings": settings,
         "evidence": evidence,
         "summary": f"Deploy restricted stack for {clean_repo or stack_name}",

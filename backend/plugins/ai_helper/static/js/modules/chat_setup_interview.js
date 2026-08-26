@@ -62,11 +62,14 @@
         var inputParts = match[1].split("|");
         var key = (inputParts[0] || "").trim().toLowerCase();
         if (!key || SECRET_INPUT.test(key)) continue;
+        var reqPart = (inputParts[3] || "").trim().toLowerCase();
+        var isRequired = reqPart === "required" || (/^(?:admin_email|admin_username)$/i.test(key) && reqPart !== "optional");
         inputs.push({
           type: "input",
           key: key,
           label: (inputParts[2] || key.replace(/_/g, " ")).trim(),
           placeholder: (inputParts[1] || "").trim(),
+          required: isRequired,
         });
       }
       var steps = [];
@@ -86,32 +89,37 @@
       var rawValue = this.answers[step.key] || (step.type === "options" ? this._defaultOption(step.options).reply : "");
       if (step.type === "options" && !this.answers[step.key]) this.answers[step.key] = rawValue;
       var html = [
-        '<div class="ai-decision-card" style="background:var(--color-surface,#1e1e1e);border:1px solid var(--color-line,rgba(255,255,255,.12));border-radius:8px;padding:12px;margin:8px 12px 10px;color:var(--color-text,#fff);">',
-        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">',
-        '<span style="font-size:12px;font-weight:600;">' + this._escape(step.title || step.label || "Configuration") + '</span>',
-        '<span style="font-size:11px;color:var(--color-muted,#94a3b8);">' + current + " / " + total + "</span>",
+        '<div class="ai-decision-card" style="background:var(--color-surface,#1a1a1a);border-radius:6px;padding:8px 10px;margin:4px 6px 6px;color:var(--color-text,#fff);">',
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">',
+        '<span style="font-size:11.5px;font-weight:600;color:var(--color-text,#fff);">' + this._escape(step.title || step.label || "Configuration") + '</span>',
+        '<span style="font-size:10.5px;color:var(--color-muted,#94a3b8);">' + current + " / " + total + "</span>",
         "</div>",
       ];
       if (step.type === "options") {
-        html.push('<div style="display:flex;flex-direction:column;gap:6px;">');
+        html.push('<div style="display:flex;flex-direction:column;gap:4px;">');
         step.options.forEach(function (option) {
           var selected = option.reply === rawValue;
-          html.push('<button type="button" class="ai-setup-option" data-reply="' + self._escape(option.reply) + '" style="display:flex;gap:8px;align-items:center;padding:7px 10px;background:var(--color-bg,#121212);border:1px solid ' + (selected ? "var(--color-accent,#6366f1)" : "var(--color-line,rgba(255,255,255,.1))") + ';border-radius:6px;color:inherit;text-align:left;cursor:pointer;">' + self._escape(option.label) + "</button>");
+          var optBg = selected ? "var(--color-surface-hover,rgba(99,102,241,0.15))" : "var(--color-bg,#121212)";
+          var optBorder = selected ? "1px solid var(--color-accent,#6366f1)" : "1px solid transparent";
+          html.push('<button type="button" class="ai-setup-option" data-reply="' + self._escape(option.reply) + '" style="display:flex;align-items:center;padding:5px 8px;background:' + optBg + ';border:' + optBorder + ';border-radius:4px;color:inherit;text-align:left;cursor:pointer;font-size:12px;transition:background .1s ease;">' + self._escape(option.label) + "</button>");
         });
         html.push("</div>");
       } else {
         var inputType = /email/i.test(step.key + " " + step.label) ? "email" : "text";
         var val = rawValue === "[skip]" ? "" : rawValue;
-        var labelText = this._escape(step.label) + ' <span style="font-size:11px;color:var(--color-muted,#94a3b8);font-weight:normal;">(Optional)</span>';
-        html.push('<label style="display:flex;flex-direction:column;gap:5px;font-size:12px;">' + labelText + '<input class="ai-setup-input" type="' + inputType + '" data-key="' + this._escape(step.key) + '" value="' + this._escape(val) + '" placeholder="' + this._escape(step.placeholder) + '" style="background:var(--color-bg,#121212);border:1px solid var(--color-line,rgba(255,255,255,.15));border-radius:6px;padding:7px 10px;color:inherit;" /></label>');
+        var badge = step.required
+          ? ' <span style="font-size:10px;color:var(--color-danger,#ef4444);font-weight:600;">* Required</span>'
+          : ' <span style="font-size:10px;color:var(--color-muted,#94a3b8);font-weight:normal;">(Optional)</span>';
+        var reqAttr = step.required ? ' required' : '';
+        html.push('<label style="display:flex;flex-direction:column;gap:4px;font-size:11.5px;">' + this._escape(step.label) + badge + '<input class="ai-setup-input"' + reqAttr + ' type="' + inputType + '" data-key="' + this._escape(step.key) + '" value="' + this._escape(val) + '" placeholder="' + this._escape(step.placeholder) + '" style="background:var(--color-bg,#121212);border:1px solid var(--color-line,rgba(255,255,255,.1));border-radius:4px;padding:5px 8px;color:inherit;font-size:12px;outline:none;" /></label>');
       }
-      html.push('<div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;">');
-      html.push('<button type="button" class="ai-setup-back"' + (this.index ? "" : " disabled") + ' style="background:transparent;border:0;color:var(--color-muted,#94a3b8);cursor:pointer;font-size:12px;">Back</button>');
-      html.push('<div style="display:flex;gap:8px;align-items:center;">');
-      if (step.type === "input") {
-        html.push('<button type="button" class="ai-setup-skip" style="background:transparent;border:1px solid var(--color-line,rgba(255,255,255,.2));color:var(--color-muted,#94a3b8);border-radius:6px;padding:6px 12px;cursor:pointer;font-size:12px;">Skip</button>');
+      html.push('<div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;">');
+      html.push('<button type="button" class="ai-setup-back"' + (this.index ? "" : " disabled") + ' style="background:transparent;border:0;color:var(--color-muted,#94a3b8);cursor:pointer;font-size:11.5px;padding:2px 4px;">Back</button>');
+      html.push('<div style="display:flex;gap:6px;align-items:center;">');
+      if (step.type === "input" && !step.required) {
+        html.push('<button type="button" class="ai-setup-skip" style="background:transparent;border:0;color:var(--color-muted,#94a3b8);cursor:pointer;font-size:11.5px;padding:4px 8px;">Skip</button>');
       }
-      html.push('<button type="button" class="ai-setup-next" style="background:var(--color-accent,#6366f1);color:#fff;border:0;border-radius:6px;padding:7px 16px;cursor:pointer;font-size:12px;">' + (current === total ? "Send" : "Continue") + "</button>");
+      html.push('<button type="button" class="ai-setup-next" style="background:var(--color-accent,#6366f1);color:#fff;border:0;border-radius:4px;padding:4px 12px;cursor:pointer;font-size:11.5px;font-weight:500;">' + (current === total ? "Send" : "Continue") + "</button>");
       html.push("</div></div></div>");
       this.containerEl.innerHTML = html.join("\n");
       this.containerEl.style.display = "block";
@@ -147,8 +155,10 @@
       var step = this.steps[this.index];
       var input = this.containerEl.querySelector(".ai-setup-input");
       if (!input) return true;
+      if (step.required && !input.reportValidity()) return false;
       var trimmed = input.value.trim();
-      this.answers[step.key] = trimmed || "[skip]";
+      if (step.required && !trimmed) return false;
+      this.answers[step.key] = trimmed || (step.required ? "" : "[skip]");
       return true;
     },
 

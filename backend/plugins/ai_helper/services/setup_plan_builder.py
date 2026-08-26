@@ -89,6 +89,16 @@ def build_single_app_payload(
     if "PORT" in clean_envs:
         clean_envs["PORT"] = str(norm_port)
 
+    clean_dom = (domain_name or "").strip()
+    context_text = f"{repository_url} {image_reference}".lower()
+    if clean_dom:
+        if any(k in context_text for k in ("django", "shynet")) or "ALLOWED_HOSTS" in clean_envs:
+            clean_envs.setdefault("ALLOWED_HOSTS", f"{clean_dom},localhost,127.0.0.1")
+            clean_envs.setdefault("HOSTNAME", clean_dom)
+            clean_envs.setdefault("CSRF_TRUSTED_ORIGINS", f"https://{clean_dom}")
+        elif any(k in context_text for k in ("laravel", "php")):
+            clean_envs.setdefault("APP_URL", f"https://{clean_dom}")
+
     cleaned_secrets: List[Dict[str, Any]] = list(auto_secrets)
     known_secret_keys = {item["key"] for item in cleaned_secrets}
 

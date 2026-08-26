@@ -597,10 +597,10 @@
       var bubbleContent = assistantWrap.querySelector(".ai-msg-bubble");
       bubbleContent.innerHTML = '<span class="ai-cursor"></span>';
 
-      // Activity panel — shows real-time tool reads above the bubble
+      // Activity panel — shows real-time tool reads and grounding evidence
       var activityPanel = document.createElement("div");
       activityPanel.className = "ai-activity-panel";
-      assistantWrap.insertBefore(activityPanel, bubbleContent);
+      assistantWrap.appendChild(activityPanel);
       var activityItems = {}; // tool_name -> item element
 
       this.isStreaming = true;
@@ -741,33 +741,27 @@
         var summary = document.createElement("button");
         summary.type = "button";
         summary.className = "ai-activity-summary-toggle";
-        var BOOK_SVG = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:3px;"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>';
-        var CHECK_SVG = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:3px;"><polyline points="20 6 9 17 4 12"></polyline></svg>';
-        var hasSetupTools = false;
-        if (activityItems && typeof activityItems === "object") {
-          hasSetupTools = Object.keys(activityItems).some(function (k) {
-            return k.indexOf("propose") !== -1 || k.indexOf("inspect") !== -1 || k.indexOf("reasoning") !== -1 || k.indexOf("planning") !== -1 || k.indexOf("app") !== -1;
-          });
-        }
-        if (!hasSetupTools && items.length > 0) {
-          for (var j = 0; j < items.length; j++) {
-            var txt = (items[j].textContent || "").toLowerCase();
-            if (txt.indexOf("inspect") !== -1 || txt.indexOf("plan") !== -1 || txt.indexOf("synthesiz") !== -1 || txt.indexOf("evaluat") !== -1 || txt.indexOf("app") !== -1) {
-              hasSetupTools = true;
-              break;
-            }
+        var SEARCH_SVG = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>';
+
+        // Extract sample names of tools/files/URLs for summary label
+        var usedDetails = [];
+        for (var j = 0; j < items.length; j++) {
+          var detailEl = items[j].querySelector(".ai-activity-detail");
+          var labelEl = items[j].querySelector(".ai-activity-label");
+          var txt = detailEl ? detailEl.textContent.trim() : (labelEl ? labelEl.textContent.trim() : "");
+          if (txt && usedDetails.indexOf(txt) === -1 && usedDetails.length < 3) {
+            usedDetails.push(txt);
           }
         }
-        var iconSvg = hasSetupTools ? CHECK_SVG : BOOK_SVG;
-        var labelText = hasSetupTools
-          ? (count === 1 ? "1 pipeline step completed" : count + " pipeline steps completed")
-          : ("Read " + count + (count === 1 ? " source" : " sources"));
+        var detailSummary = usedDetails.length > 0 ? " (" + usedDetails.join(", ") + ")" : "";
+        var labelText = "Sources & Tools Consulted (" + count + ")" + detailSummary;
 
-        summary.innerHTML = iconSvg + " " + labelText + " ▾";
+        summary.innerHTML = SEARCH_SVG + " " + labelText + ' <span class="ai-activity-chevron" style="margin-left:auto;">▾</span>';
         summary.addEventListener("click", function () {
           var expanded = activityPanel.getAttribute("data-expanded") === "true";
           activityPanel.setAttribute("data-expanded", expanded ? "false" : "true");
-          summary.innerHTML = (expanded ? iconSvg + " " + labelText + " ▾" : iconSvg + " " + labelText + " ▴");
+          var chevron = summary.querySelector(".ai-activity-chevron");
+          if (chevron) chevron.textContent = expanded ? "▾" : "▴";
         });
         activityPanel.setAttribute("data-expanded", "false");
         activityPanel.insertBefore(summary, activityPanel.firstChild);

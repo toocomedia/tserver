@@ -546,8 +546,9 @@ async def stream_ai_chat(
                                     options_list.append(f"[OPTION:Activate {choice.get('label')} from Dependencies|provider.{kind}:activate:{provider}]")
 
                     for item in required_inputs:
+                        req_flag = "required" if item.get("required") else "optional"
                         options_list.append(
-                            f"[INPUT:{item['name']}|{item['placeholder']}|{item['label']}]"
+                            f"[INPUT:{item['name']}|{item['placeholder']}|{item['label']}|{req_flag}]"
                         )
                     options_str = "\n".join(options_list)
                     setup_interview_options_str = options_str

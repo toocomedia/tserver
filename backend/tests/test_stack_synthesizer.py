@@ -163,10 +163,34 @@ class TestStackSynthesizer(unittest.TestCase):
             "framework": "Django",
             "database_types": ["postgresql", "redis"],
         }
-        bundle = synthesize_stack_from_inspection(django_insp, repo_url="https://github.com/example/django-app")
+        bundle = synthesize_stack_from_inspection(django_insp, domain_name="django.example.com", repo_url="https://github.com/example/django-app")
         self.assertIsNotNone(bundle)
         keys = {s["key"] for s in bundle["stack_manifest"]["secrets"]}
         self.assertIn("SECRET_KEY", keys)
+        self.assertEqual(bundle["nonsecret_settings"]["ALLOWED_HOSTS"], "django.example.com,localhost,127.0.0.1")
+        self.assertEqual(bundle["nonsecret_settings"]["HOSTNAME"], "django.example.com")
+        self.assertEqual(bundle["nonsecret_settings"]["CSRF_TRUSTED_ORIGINS"], "https://django.example.com")
+        self.assertIn("ALLOWED_HOSTS", bundle["stack_manifest"]["allowed_nonsecret_settings"])
+
+    def test_shynet_compose_stack_framework_settings(self):
+        shynet_compose = {
+            "compose_info": {
+                "services": [
+                    {"name": "shynet", "image": "milesmcc/shynet:latest", "internal_ports": [8080]},
+                    {"name": "db", "image": "postgres:16-alpine", "internal_ports": [5432]},
+                    {"name": "webserver", "image": "nginx:alpine", "internal_ports": [80]},
+                ]
+            },
+            "runtime": "Python",
+            "framework": "Django",
+            "repository_url": "https://github.com/milesmcc/shynet",
+        }
+        bundle = synthesize_stack_from_compose(shynet_compose, domain_name="ccc.blagh.co", repo_url="https://github.com/milesmcc/shynet")
+        self.assertIsNotNone(bundle)
+        self.assertEqual(bundle["nonsecret_settings"]["ALLOWED_HOSTS"], "ccc.blagh.co,localhost,127.0.0.1")
+        self.assertEqual(bundle["nonsecret_settings"]["HOSTNAME"], "ccc.blagh.co")
+        self.assertEqual(bundle["nonsecret_settings"]["BASE_URL"], "https://ccc.blagh.co")
+        self.assertIn("ALLOWED_HOSTS", bundle["stack_manifest"]["allowed_nonsecret_settings"])
 
     def test_branch_tag_resolution(self):
         # Tagged release

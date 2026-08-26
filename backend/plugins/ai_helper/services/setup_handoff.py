@@ -227,15 +227,15 @@ def setup_documentation_url_allowed(
     return False
 
 
-def required_setup_inputs(setup_source_result: Mapping[str, object] | None) -> list[dict[str, str]]:
-    """Return documented user-owned fields, excluding every vault-managed field."""
+def required_setup_inputs(setup_source_result: Mapping[str, object] | None) -> list[dict[str, Any]]:
+    """Return documented user-owned fields, distinguishing required from optional."""
     if not isinstance(setup_source_result, Mapping):
         return []
     inspection = setup_source_result.get("inspection") if isinstance(setup_source_result.get("inspection"), Mapping) else setup_source_result
     evidence = inspection.get("documentation_evidence") if isinstance(inspection, Mapping) else {}
     hints = evidence.get("setup_hints") if isinstance(evidence, Mapping) else {}
     raw_inputs = hints.get("required_inputs") if isinstance(hints, Mapping) else []
-    results: list[dict[str, str]] = []
+    results: list[dict[str, Any]] = []
     names: set[str] = set()
     for item in raw_inputs if isinstance(raw_inputs, list) else []:
         if not isinstance(item, Mapping):
@@ -244,13 +244,15 @@ def required_setup_inputs(setup_source_result: Mapping[str, object] | None) -> l
         if not name or name in names or bool(item.get("secret")) or _SECRET_INPUT_RE.search(name):
             continue
         names.add(name)
+        is_req = bool(item.get("required")) or (name in {"admin_email", "admin_username"} and bool(evidence.get("detected_admin_commands")))
         results.append({
             "name": name,
             "label": str(item.get("label") or name.replace("_", " ").title()),
             "placeholder": str(item.get("placeholder") or _input_placeholder(name)),
+            "required": is_req,
         })
     if not results and isinstance(evidence, Mapping) and evidence.get("detected_admin_commands"):
-        results.append({"name": "admin_email", "label": "Admin Email", "placeholder": "admin@example.com"})
+        results.append({"name": "admin_email", "label": "Admin Email", "placeholder": "admin@example.com", "required": True})
     return results
 
 
@@ -264,18 +266,21 @@ def _input_placeholder(name: str) -> str:
     }.get(name, "")
 
 
-def missing_setup_inputs(setup_source_result: Mapping[str, object] | None, user_message: str) -> list[dict[str, str]]:
+def missing_setup_inputs(setup_source_result: Mapping[str, object] | None, user_message: str) -> list[dict[str, Any]]:
     """Check named, combined interview answers without treating a choice as an input."""
     message = user_message or ""
     is_interview_response = "setup interview answers:" in message.lower()
-    missing: list[dict[str, str]] = []
+    missing: list[dict[str, Any]] = []
     for item in required_setup_inputs(setup_source_result):
         key = re.escape(item["name"])
         found = re.search(rf"(?im)^\s*(?:[-*]\s*)?{key}\s*:\s*(.*)$", message)
         if found:
             val = found.group(1).strip()
-            # If explicit skip / disabled / none / empty in interview response, field is answered/skipped
+            # If explicit skip / disabled / none / empty, check if field is required vs optional
             if not val or val.lower() in {"[skip]", "[skipped]", "skip", "skipped", "none", "disabled", "off", "n/a", "__unset__"}:
+                if not item.get("required"):
+                    continue
+                missing.append(item)
                 continue
             # Non-empty value provided
             continue
@@ -283,10 +288,9 @@ def missing_setup_inputs(setup_source_result: Mapping[str, object] | None, user_
             found_email = re.search(r"(?i)\b[\w.+-]+@[\w.-]+\.[A-Z]{2,}\b", message)
             if found_email:
                 continue
-        if is_interview_response:
-            # If the staged interview completed in browser, unlisted non-critical fields are treated as skipped
-            if item["name"] != "admin_email":
-                continue
+        if is_interview_response and not item.get("required"):
+            # Optional fields omitted in interview submission are treated as skipped
+            continue
         missing.append(item)
     return missing
 

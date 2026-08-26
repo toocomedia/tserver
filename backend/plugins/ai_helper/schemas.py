@@ -15,7 +15,7 @@ class ProviderPayload(BaseModel):
     model_name: str = "gpt-4o-mini"
     models: Optional[List[str]] = None
     models_list: Optional[str] = None
-    temperature: Optional[float] = 0.2
+    temperature: Optional[float] = 0.1
     max_tokens: Optional[int] = 4096
     custom_rules: Optional[str] = ""
     is_default: Optional[bool] = False

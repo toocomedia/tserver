@@ -16,7 +16,7 @@ class AiProvider(Base):
     api_key_encrypted: Mapped[str | None] = mapped_column(Text, nullable=True)
     base_url: Mapped[str] = mapped_column(String(512), default="https://api.openai.com/v1", nullable=False)
     model_name: Mapped[str] = mapped_column(String(128), default="gpt-4o-mini", nullable=False)
-    temperature: Mapped[float] = mapped_column(Float, default=0.2, nullable=False)
+    temperature: Mapped[float] = mapped_column(Float, default=0.1, nullable=False)
     max_tokens: Mapped[int] = mapped_column(Integer, default=4096, nullable=False)
     custom_rules: Mapped[str] = mapped_column(Text, default="", nullable=False)
     is_default: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
@@ -65,7 +65,7 @@ class AiHelperSettings(Base):
     api_key_encrypted: Mapped[str | None] = mapped_column(Text, nullable=True)
     base_url: Mapped[str] = mapped_column(String(512), default="https://api.openai.com/v1", nullable=False)
     model_name: Mapped[str] = mapped_column(String(128), default="gpt-4o-mini", nullable=False)
-    temperature: Mapped[float] = mapped_column(Float, default=0.2, nullable=False)
+    temperature: Mapped[float] = mapped_column(Float, default=0.1, nullable=False)
     max_tokens: Mapped[int] = mapped_column(Integer, default=4096, nullable=False)
     custom_rules: Mapped[str] = mapped_column(Text, default="", nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
