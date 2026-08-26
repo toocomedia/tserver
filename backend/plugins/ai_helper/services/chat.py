@@ -97,12 +97,23 @@ def _extract_setup_domain(*texts: str | None) -> str:
 def _extract_setup_source(*texts: str | None) -> tuple[str, str, str]:
     """Returns (source_type, repository_url, image_reference) extracted from user input/context."""
     joined = "\n".join(text or "" for text in texts)
-    reg_img_match = re.search(r"deployment_method\s*:\s*registry_image(?::([^\s\n]+))?", joined, re.IGNORECASE)
+    # 1. Match explicit registry_image deployment choice from interview answers or user message
+    reg_img_match = re.search(r"(?:deployment_method\s*:\s*)*(?:registry_image:)([^\s\n]+)", joined, re.IGNORECASE)
     if reg_img_match and reg_img_match.group(1):
         return "image", "", reg_img_match.group(1).strip()
+
+    # 2. Match explicit compose_stack deployment choice
+    if re.search(r"(?:deployment_method\s*:\s*)*compose_stack", joined, re.IGNORECASE):
+        git_m = re.search(r"(https?://[^\s\"'<>]*(?:github|gitlab|bitbucket)[^\s\"'<>]*|git@[^\s\"'<>]+|https?://[^\s\"'<>]+\.git)", joined, re.IGNORECASE)
+        if git_m:
+            return "git", git_m.group(1).strip(), ""
+
+    # 3. Match git URLs
     git_match = re.search(r"(https?://[^\s\"'<>]*(?:github|gitlab|bitbucket)[^\s\"'<>]*|git@[^\s\"'<>]+|https?://[^\s\"'<>]+\.git)", joined, re.IGNORECASE)
-    if git_match:
+    if git_match and "registry_image:" not in joined.lower():
         return "git", git_match.group(1).strip(), ""
+
+    # 4. Match image references
     img_match = re.search(r"(?:image[:\s]+)?([a-z0-9_.-]+/[a-z0-9_.-]+(?::[a-z0-9_.-]+)?|[a-z0-9_-]+:[a-z0-9_.-]+)", joined, re.IGNORECASE)
     if img_match:
         val = img_match.group(1).strip()
@@ -455,18 +466,27 @@ async def stream_ai_chat(
         session_record.target_domain = setup_target_domain
 
     stype, repo, img = _extract_setup_source(user_message, context_text)
-    if not repo and session_record and session_record.repository_url:
-        repo = session_record.repository_url
-        stype = "git"
-    if not img and session_record and session_record.image_reference:
-        img = session_record.image_reference
+    user_chose_image = bool(stype == "image" and img) or "registry_image:" in (user_message or "").lower()
+    if user_chose_image:
         stype = "image"
-    if not repo and not img:
-        stype_h, repo_h, img_h = _extract_setup_source(*history_texts)
-        if repo_h:
-            repo, stype = repo_h, "git"
-        elif img_h:
-            img, stype = img_h, "image"
+        if not img:
+            m = re.search(r"registry_image:([^\s\n]+)", user_message or "", re.IGNORECASE)
+            if m:
+                img = m.group(1).strip()
+        repo = ""
+    else:
+        if not repo and session_record and session_record.repository_url:
+            repo = session_record.repository_url
+            stype = "git"
+        if not img and session_record and session_record.image_reference:
+            img = session_record.image_reference
+            stype = "image"
+        if not repo and not img:
+            stype_h, repo_h, img_h = _extract_setup_source(*history_texts)
+            if repo_h:
+                repo, stype = repo_h, "git"
+            elif img_h:
+                img, stype = img_h, "image"
 
     if repo and session_record and session_record.repository_url != repo:
         session_record.repository_url = repo
@@ -493,7 +513,7 @@ async def stream_ai_chat(
             if setup_source_result.get("status") == "ok":
                 tool_was_executed = True
                 from services.official_stacks.stack_synthesizer import requires_multi_container_stack
-                needs_stack = requires_multi_container_stack(setup_source_result)
+                needs_stack = False if user_chose_image else requires_multi_container_stack(setup_source_result)
                 if setup_handoff.is_setup_interview_pending(setup_source_result, user_message):
                     inspection = setup_source_result.get("inspection") if isinstance(setup_source_result.get("inspection"), dict) else setup_source_result
                     doc_ev = (inspection.get("documentation_evidence") or {}) if isinstance(inspection, dict) else {}
@@ -616,14 +636,13 @@ async def stream_ai_chat(
         if setup_plan_required:
             if setup_handoff.is_recommendation_decision_pending(setup_source_result, user_message):
                 tool_names_to_load = frozenset()
+            elif user_chose_image:
+                tool_names_to_load = frozenset({"propose_app_install", "fetch_web_documentation", "search_web_docs"})
             elif setup_source_result and setup_source_result.get("status") == "ok":
-                from services.official_stacks.stack_synthesizer import requires_multi_container_stack
-                if requires_multi_container_stack(setup_source_result):
-                    tool_names_to_load = frozenset({"propose_stack_install"})
+                if needs_stack:
+                    tool_names_to_load = frozenset({"propose_stack_install", "fetch_web_documentation", "search_web_docs"})
                 else:
-                    tool_names_to_load = frozenset({"propose_app_install", "propose_stack_install"})
-                if setup_handoff.needs_documentation_fallback(setup_source_result):
-                    tool_names_to_load |= frozenset({"fetch_web_documentation"})
+                    tool_names_to_load = frozenset({"propose_app_install", "propose_stack_install", "fetch_web_documentation", "search_web_docs"})
             else:
                 tool_names_to_load = setup_handoff.SETUP_TOOL_NAMES
         elif is_app_diag and app_id:
@@ -746,20 +765,42 @@ async def stream_ai_chat(
                         and not setup_server_plan_attempted
                         and not setup_plan_id
                     ):
-                        fallback_args = app_setup_tools.stack_plan_args_from_inspection(
-                            setup_source_result,
-                            domain_name=setup_target_domain,
-                        )
+                        if user_chose_image:
+                            from plugins.ai_helper.services import setup_plan_builder
+                            fallback_payload = setup_plan_builder.build_single_app_payload(
+                                source_type="image",
+                                repository_url="",
+                                image_reference=img or (setup_source_result.get("official_image_recommendation") or {}).get("image") or "milesmcc/shynet:latest",
+                                inspection=setup_source_result.get("inspection") if isinstance(setup_source_result.get("inspection"), dict) else setup_source_result,
+                                domain_name=setup_target_domain,
+                                user_message=user_message,
+                            )
+                            fallback_args = {
+                                "source_type": "image",
+                                "image_reference": img or (setup_source_result.get("official_image_recommendation") or {}).get("image") or "milesmcc/shynet:latest",
+                                "domain_name": setup_target_domain,
+                                "summary": f"Deploy {img or 'application'} image",
+                                "environment_variables": fallback_payload.get("environment_variables", {}),
+                                "port": fallback_payload.get("port", 8080),
+                            }
+                            tool_to_call = "propose_app_install"
+                        else:
+                            fallback_args = app_setup_tools.stack_plan_args_from_inspection(
+                                setup_source_result,
+                                domain_name=setup_target_domain,
+                            )
+                            tool_to_call = "propose_stack_install"
+
                         setup_server_plan_attempted = True
                         if fallback_args:
-                            yield _activity_event("propose_stack_install", "start", fallback_args)
+                            yield _activity_event(tool_to_call, "start", fallback_args)
                             try:
-                                tool_output = await _execute_tool("propose_stack_install", fallback_args)
-                                setup_plan_id = setup_plan_id or _setup_plan_id("propose_stack_install", tool_output)
-                                yield _activity_event("propose_stack_install", "done", fallback_args)
+                                tool_output = await _execute_tool(tool_to_call, fallback_args)
+                                setup_plan_id = setup_plan_id or _setup_plan_id(tool_to_call, tool_output)
+                                yield _activity_event(tool_to_call, "done", fallback_args)
                             except Exception as exc:
                                 tool_output = {"status": "error", "message": str(exc)}
-                                yield _activity_event("propose_stack_install", "error", fallback_args)
+                                yield _activity_event(tool_to_call, "error", fallback_args)
                             messages.append({
                                 "role": "user",
                                 "content": f"[Server setup fallback result]:\n{json.dumps(tool_output)}",

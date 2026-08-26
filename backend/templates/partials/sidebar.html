@@ -134,7 +134,7 @@
           <rect x="14" y="14" width="7" height="7"></rect>
           <rect x="3" y="14" width="7" height="7"></rect>
         </svg>
-        {{ _('plugins_services') }}
+        <span class="sidebar__tab-label">{{ _('plugins_services') }}</span>
         <svg class="sidebar__tab-chevron" viewbox="0 0 24 24" aria-hidden="true">
           <polyline points="9 18 15 12 9 6"></polyline>
         </svg>
@@ -190,10 +190,10 @@
     {% if plugin_items %}
     <div class="sidebar__view sidebar__view--plugins" id="sidebar-plugins-view" aria-hidden="true">
       <button type="button" class="sidebar__view-back" id="plugins-services-back" aria-label="{{ _('back') }}">
-        <svg viewbox="0 0 24 24" aria-hidden="true">
+        <svg class="sidebar__back-icon" viewbox="0 0 24 24" aria-hidden="true">
           <polyline points="15 18 9 12 15 6"></polyline>
         </svg>
-        {{ _('plugins_services') }}
+        <span class="sidebar__back-label">{{ _('plugins_services') }}</span>
       </button>
       <ul class="sidebar__nav" id="sidebar-plugins-nav" role="list">
         {% for item in plugin_items %}

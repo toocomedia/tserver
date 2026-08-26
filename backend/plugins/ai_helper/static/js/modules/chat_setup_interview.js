@@ -166,7 +166,13 @@
       if (this.completed) return;
       this.completed = true;
       var lines = ["Setup interview answers:"];
-      this.steps.forEach(function (step) { lines.push(step.key + ": " + (interview.answers[step.key] || "[skip]")); });
+      this.steps.forEach(function (step) {
+        var rawVal = interview.answers[step.key] || "[skip]";
+        if (typeof rawVal === "string" && rawVal.indexOf(step.key + ":") === 0) {
+          rawVal = rawVal.substring(step.key.length + 1).trim();
+        }
+        lines.push(step.key + ": " + rawVal);
+      });
       this.hide();
       if (typeof this.onComplete === "function") this.onComplete(lines.join("\n"));
     },

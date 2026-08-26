@@ -493,12 +493,26 @@ document.addEventListener("DOMContentLoaded", () => {
     const pluginsBack = document.getElementById("plugins-services-back");
     const viewsWrap = document.getElementById("sidebar-views");
 
+    const isChildPluginActive = () => {
+      return !!(bestMatch && pluginsView.contains(bestMatch));
+    };
+
+    const updatePluginsTabActiveState = (isPluginsShowing) => {
+      if (!pluginsTab) return;
+      if (isChildPluginActive() && !isPluginsShowing) {
+        pluginsTab.classList.add("sidebar__section-tab--active");
+      } else {
+        pluginsTab.classList.remove("sidebar__section-tab--active");
+      }
+    };
+
     const showPluginsView = () => {
       pluginsView.classList.add("is-active");
       pluginsView.removeAttribute("aria-hidden");
       sidebarNav.classList.remove("is-active");
       sidebarNav.classList.add("is-behind");
       if (pluginsTab) pluginsTab.setAttribute("aria-expanded", "true");
+      updatePluginsTabActiveState(true);
       if (updateScrollArrows) updateScrollArrows();
     };
 
@@ -508,13 +522,14 @@ document.addEventListener("DOMContentLoaded", () => {
       sidebarNav.classList.remove("is-behind");
       sidebarNav.classList.add("is-active");
       if (pluginsTab) pluginsTab.setAttribute("aria-expanded", "false");
+      updatePluginsTabActiveState(false);
       if (updateScrollArrows) updateScrollArrows();
     };
 
     if (pluginsTab) pluginsTab.addEventListener("click", showPluginsView);
     if (pluginsBack) pluginsBack.addEventListener("click", showMainView);
     // When landing on a plugin/service page, open that view instantly (no animation)
-    if (bestMatch && pluginsView.contains(bestMatch)) {
+    if (isChildPluginActive()) {
       if (viewsWrap) viewsWrap.classList.add("is-instant");
       showPluginsView();
       requestAnimationFrame(() => {
@@ -522,6 +537,8 @@ document.addEventListener("DOMContentLoaded", () => {
           if (viewsWrap) viewsWrap.classList.remove("is-instant");
         });
       });
+    } else {
+      updatePluginsTabActiveState(false);
     }
   }
 

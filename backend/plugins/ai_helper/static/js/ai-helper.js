@@ -691,7 +691,12 @@
       var iconSvg = TOOL_SVGS[activity.icon] || '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>';
 
       if (activity.status === "start") {
-        var item = document.createElement("div");
+        var item = items[key];
+        if (!item) {
+          item = document.createElement("div");
+          panelEl.appendChild(item);
+          items[key] = item;
+        }
         item.className = "ai-activity-item ai-activity-item--loading";
         item.innerHTML = (
           '<span class="ai-activity-spinner"></span>' +
@@ -701,20 +706,22 @@
           '</span>' +
           '<span class="ai-activity-status">...</span>'
         );
-        panelEl.appendChild(item);
-        items[key] = item;
         panelEl.style.display = "flex";
       } else if (items[key]) {
         var el = items[key];
         el.classList.remove("ai-activity-item--loading");
         if (activity.status === "done") {
           el.classList.add("ai-activity-item--done");
-          el.querySelector(".ai-activity-spinner").style.display = "none";
-          el.querySelector(".ai-activity-status").innerHTML = '<span class="ai-sec-dot ai-sec-dot--ok"></span>';
+          var sp = el.querySelector(".ai-activity-spinner");
+          if (sp) sp.style.display = "none";
+          var st = el.querySelector(".ai-activity-status");
+          if (st) st.innerHTML = '<span class="ai-sec-dot ai-sec-dot--ok"></span>';
         } else if (activity.status === "error") {
           el.classList.add("ai-activity-item--error");
-          el.querySelector(".ai-activity-spinner").style.display = "none";
-          el.querySelector(".ai-activity-status").innerHTML = '<span class="ai-sec-dot ai-sec-dot--critical"></span>';
+          var sp = el.querySelector(".ai-activity-spinner");
+          if (sp) sp.style.display = "none";
+          var st = el.querySelector(".ai-activity-status");
+          if (st) st.innerHTML = '<span class="ai-sec-dot ai-sec-dot--critical"></span>';
         }
       }
       this._scrollToBottom();
