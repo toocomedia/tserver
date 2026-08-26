@@ -5,7 +5,7 @@
   font-family: 'Onest';
   font-style: normal;
   font-weight: 100 900;
-  font-display: swap;
+  font-display: optional;
   src: url('/static/fonts/Onest-Variable.woff2') format('woff2');
 }
 
@@ -248,7 +248,7 @@
 
 html, body {
   height: 100%;
-  font-family: 'Onest', system-ui, sans-serif;
+  font-family: 'Onest', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   font-size: var(--font-body);
   color: var(--color-text);
   background: var(--color-bg);

@@ -1,7 +1,36 @@
 <!DOCTYPE html>
-<html lang="{{ get_lang() }}" dir="{{ get_dir() }}">
+<html lang="{{ get_lang() }}" dir="{{ get_dir() }}" data-sidebar-style="opacity">
 <head>
   <meta charset="UTF-8">
+  <!-- Zero-Latency Theme & Sidebar Layout Initializer: Runs before ANY stylesheet or DOM parsing -->
+  <script>
+    (function() {
+      try {
+        var s = localStorage.getItem('sidebar_style');
+        if (s) document.documentElement.setAttribute('data-sidebar-style', s);
+        var t = localStorage.getItem('theme') || 'system';
+        if (t === 'dark' || t === 'amoled' || t === 'charcoal') {
+          document.documentElement.setAttribute('data-theme', t);
+        } else if (t === 'system' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+          document.documentElement.setAttribute('data-theme', 'charcoal');
+        }
+      } catch (e) {}
+    })();
+  </script>
+
+  <style>
+    /* Critical Sidebar Shell: Prevents FOUC & layout shifts on initial paint */
+    .sidebar { background: #0B0C0B; color: #FFFFFF; width: 260px; }
+    html[data-sidebar-style="opacity"] .sidebar__item,
+    html[data-sidebar-style="opacity"] .sidebar__section-tab,
+    html[data-sidebar-style="opacity"] .sidebar__view-back {
+      box-sizing: border-box;
+      width: calc(100% - 24px);
+      margin: 2px 12px;
+      border-radius: 6px;
+    }
+  </style>
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="VPS Control Panel — manage domains, DNS, SSL and reverse proxies.">
   <meta name="csrf-token" content="{{ csrf_token(request) }}">
@@ -11,11 +40,13 @@
   <link rel="icon" type="image/png" href="/static/favicon.png">
   <link rel="shortcut icon" href="/static/favicon.ico">
 
-  <!-- Preload Fonts -->
+  <!-- Preload Fonts & Connect CDNs Early -->
   <link rel="preload" href="/static/fonts/Onest-Variable.woff2" as="font" type="font/woff2" crossorigin>
   {% if is_rtl() %}
   <link rel="preload" href="/static/fonts/ar/bahij.woff" as="font" type="font/woff" crossorigin>
   {% endif %}
+  <link rel="preconnect" href="https://cdn.jsdelivr.net">
+  <link rel="preconnect" href="https://unpkg.com">
 
   <!-- CSS -->
   <link rel="stylesheet" href="/static/css/main.css?v={{ APP_VERSION }}">
@@ -44,28 +75,10 @@
   {% endif %}
   <!-- Devicon & Lucide Icons -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/devicon.min.css">
-  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://unpkg.com/lucide@latest" defer></script>
 
   <script>
     window.IS_RTL = {{ 'true' if get_dir() == 'rtl' else 'false' }};
-
-    var theme = localStorage.getItem('theme') || 'system';
-    if (theme === 'dark' || theme === 'amoled' || theme === 'charcoal') {
-      document.documentElement.setAttribute('data-theme', theme);
-    } else if (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      document.documentElement.setAttribute('data-theme', 'charcoal');
-    }
-
-    var sidebarStyle = localStorage.getItem('sidebar_style') || 'opacity';
-    if (sidebarStyle === 'line') {
-      document.documentElement.setAttribute('data-sidebar-style', 'line');
-    } else if (sidebarStyle === 'opacity') {
-      document.documentElement.setAttribute('data-sidebar-style', 'opacity');
-    } else if (sidebarStyle === 'gradient') {
-      document.documentElement.setAttribute('data-sidebar-style', 'gradient');
-    } else if (sidebarStyle === 'full') {
-      document.documentElement.setAttribute('data-sidebar-style', 'full');
-    }
     
     // JS Translations Catalog
     window.I18N = {{ get_js_translations() | safe }};
