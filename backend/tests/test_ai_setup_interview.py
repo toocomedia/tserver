@@ -73,8 +73,9 @@ class SetupInterviewTests(unittest.TestCase):
         self.assertIn("if (typeof this.onComplete === \"function\") this.onComplete", source)
         self.assertIn("SECRET_INPUT", source)
         chat_source = (BACKEND / "plugins" / "ai_helper" / "services" / "chat.py").read_text(encoding="utf-8")
-        self.assertIn('if not has_compose and detected_imgs:', chat_source)
-        self.assertNotIn('Docker Compose Stack (Recommended)', chat_source)
+        self.assertIn('if has_compose:', chat_source)
+        self.assertIn('Docker Compose Stack (Recommended)', chat_source)
+        self.assertIn('Build from Git Source (Railpack)', chat_source)
 
 
 if __name__ == "__main__":

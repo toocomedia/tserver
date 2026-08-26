@@ -145,11 +145,10 @@ def is_setup_interview_pending(
     doc_evidence = inspection.get("documentation_evidence") or {}
     has_compose = bool((inspection.get("compose_info") or {}).get("services"))
 
-    # A Compose topology is already the deployment decision. Do not ask the
-    # user to select the only valid private stack merely because docs mention
-    # an image as well.
+    # Compose is a real user-visible deployment choice alongside the panel's
+    # Railpack path. Keep asking instead of reducing it to a fake one-option card.
     if has_compose:
-        return False
+        return True
 
     # Preserve the existing reviewed choice when inspection recommends an official image.
     image_advice = setup_source_result.get("official_image_recommendation") or inspection.get("official_image_recommendation")
