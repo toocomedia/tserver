@@ -99,7 +99,7 @@ Use image example/control-panel:latest.
         hints = result["setup_hints"]
 
         self.assertIn("admin_email", {item["name"] for item in hints["required_inputs"]})
-        self.assertIn("site_name", {item["name"] for item in hints["required_inputs"]})
+        self.assertNotIn("site_name", {item["name"] for item in hints["required_inputs"]})
         self.assertIn("ADMIN_PASSWORD", {item["name"] for item in hints["secret_names"]})
         self.assertIn("LICENSE_KEY", {item["name"] for item in hints["secret_names"]})
         self.assertIn("GUIDE.md#Installation", hints["admin_commands"][0]["evidence"])
@@ -146,7 +146,7 @@ ALLOWED_HOSTS=example.com
         self.assertEqual(result.get("DJANGO_SECRET_KEY"), "secret_sample_key")
         self.assertEqual(result.get("ALLOWED_HOSTS"), "example.com")
 
-    def test_mail_environment_keys_become_non_secret_setup_questions(self):
+    def test_optional_mail_environment_keys_do_not_become_setup_questions(self):
         (self.root / "TEMPLATE.env").write_text(
             "EMAIL_HOST=smtp.example.com\nEMAIL_PORT=465\nEMAIL_HOST_USER=mailer\n"
             "EMAIL_HOST_PASSWORD=do-not-leak\nSERVER_EMAIL=App <noreply@example.com>\n",
@@ -155,12 +155,20 @@ ALLOWED_HOSTS=example.com
 
         result = doc_evidence.find_install_instructions(self.root)
         hints = result["setup_hints"]
+        self.assertEqual(hints["required_inputs"], [])
+        self.assertIn("EMAIL_HOST_PASSWORD", {item["name"] for item in hints["secret_names"]})
+        self.assertNotIn("do-not-leak", str(result))
+
+    def test_explicitly_required_mail_settings_become_setup_questions(self):
+        (self.root / "GUIDE.md").write_text(
+            "# Setup\n## Configuration\nYou must configure SMTP host, SMTP port, SMTP username, and sender email.\n",
+            encoding="utf-8",
+        )
+        hints = doc_evidence.find_install_instructions(self.root)["setup_hints"]
         self.assertEqual(
             {item["name"] for item in hints["required_inputs"]},
             {"smtp_host", "smtp_port", "smtp_username", "sender_email"},
         )
-        self.assertIn("EMAIL_HOST_PASSWORD", {item["name"] for item in hints["secret_names"]})
-        self.assertNotIn("do-not-leak", str(result))
 
 
 if __name__ == "__main__":

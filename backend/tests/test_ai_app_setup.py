@@ -692,9 +692,9 @@ class TestAiAppSetup(unittest.IsolatedAsyncioTestCase):
                 "documentation_evidence": {"detected_docker_images": ["msgbyte/tianji:latest"]},
             },
         }
-        # First turn: user provides github URL -> should ask options
+        # A Compose topology is selected automatically; it is not a fake one-option interview.
         user_msg = "Please analyze and configure this application for domain cc.blagh.co: https://github.com/msgbyte/tianji"
-        self.assertTrue(is_setup_interview_pending(inspection, user_msg))
+        self.assertFalse(is_setup_interview_pending(inspection, user_msg))
 
         # Second turn: user picks Option 1 -> should not block
         reply_msg = "Option 1"
@@ -703,5 +703,4 @@ class TestAiAppSetup(unittest.IsolatedAsyncioTestCase):
 
 if __name__ == "__main__":
     unittest.main()
-
 

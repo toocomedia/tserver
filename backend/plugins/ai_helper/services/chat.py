@@ -484,15 +484,11 @@ async def stream_ai_chat(
                     required_inputs = setup_handoff.required_setup_inputs(setup_source_result)
                     has_compose = bool((inspection.get("compose_info") or {}).get("services")) if isinstance(inspection, dict) else False
                     options_list = []
-                    if has_compose:
-                        # A reviewed Compose topology owns its private services. A
-                        # documented image never replaces that topology by default.
-                        options_list.append("[OPTION:Docker Compose Stack (Recommended)|deployment_method:compose_stack]")
-                    elif detected_imgs:
+                    if not has_compose and detected_imgs:
                         primary_img = detected_imgs[0]
                         options_list.append(f"[OPTION:Run Docker Image (Recommended): {primary_img}|deployment_method:registry_image]")
                         options_list.append("[OPTION:Build from Git Source|deployment_method:git_build]")
-                    else:
+                    elif not has_compose:
                         options_list.append("[OPTION:Build from Git Source (Recommended)|deployment_method:git_build]")
 
                     if not has_compose and isinstance(inspection, dict):

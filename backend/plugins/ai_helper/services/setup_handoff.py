@@ -143,6 +143,13 @@ def is_setup_interview_pending(
 
     inspection = setup_source_result.get("inspection") if isinstance(setup_source_result.get("inspection"), dict) else setup_source_result
     doc_evidence = inspection.get("documentation_evidence") or {}
+    has_compose = bool((inspection.get("compose_info") or {}).get("services"))
+
+    # A Compose topology is already the deployment decision. Do not ask the
+    # user to select the only valid private stack merely because docs mention
+    # an image as well.
+    if has_compose:
+        return False
 
     # Preserve the existing reviewed choice when inspection recommends an official image.
     image_advice = setup_source_result.get("official_image_recommendation") or inspection.get("official_image_recommendation")
@@ -160,8 +167,7 @@ def is_setup_interview_pending(
 
     # Check if detected docker images or compose services offer build choices
     detected_imgs = doc_evidence.get("detected_docker_images") or []
-    has_compose = bool((inspection.get("compose_info") or {}).get("services"))
-    if (detected_imgs or has_compose) and not any(k in clean_msg for k in ("docker image", "docker", "railpack", "source build", "compose", "stack")):
+    if detected_imgs and not any(k in clean_msg for k in ("docker image", "docker", "railpack", "source build", "compose", "stack")):
         return True
 
     return False

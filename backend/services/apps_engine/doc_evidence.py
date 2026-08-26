@@ -287,7 +287,8 @@ def _extract_setup_hints(
         evidence = _source_label(source)
         text = source["snippet"]
         for name, label, kind, pattern in _SETUP_INPUT_PATTERNS:
-            if pattern.search(text):
+            match = pattern.search(text)
+            if match and _is_documented_required(text, match.start(), match.end()):
                 _append_hint(required_inputs, {"name": name, "label": label, "kind": kind, "secret": False, "evidence": evidence})
 
     env_evidence = env_file or "environment sample"
@@ -298,14 +299,17 @@ def _extract_setup_hints(
         if build_secrets.is_sensitive_key(key) or any(part in key for part in _EXTRA_SECRET_PARTS):
             _append_hint(secret_names, {"name": key, "evidence": env_evidence})
             continue
-        for name, label, kind, pattern in _SETUP_INPUT_PATTERNS:
-            if pattern.search(key):
-                _append_hint(required_inputs, {
-                    "name": name, "label": label, "kind": kind, "secret": False,
-                    "environment_key": key, "evidence": env_evidence,
-                })
-
     return {"required_inputs": required_inputs, "secret_names": secret_names}
+
+
+def _is_documented_required(text: str, start: int, end: int) -> bool:
+    """An env example alone is not a user question; require explicit docs wording."""
+    context = text[max(0, start - 180):min(len(text), end + 180)]
+    return bool(re.search(
+        r"\b(?:required|must|need(?:s|ed)?\s+to|configure|provide|enter|set)\b",
+        context,
+        re.IGNORECASE,
+    ))
 
 
 def _append_hint(items: list[dict[str, Any]], item: dict[str, Any]) -> None:
