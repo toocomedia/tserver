@@ -72,11 +72,47 @@ class SetupInterviewTests(unittest.TestCase):
         self.assertIn("if (self.index + 1 < self.steps.length)", source)
         self.assertIn("if (typeof this.onComplete === \"function\") this.onComplete", source)
         self.assertIn("SECRET_INPUT", source)
+        self.assertIn("ai-setup-skip", source)
         chat_source = (BACKEND / "plugins" / "ai_helper" / "services" / "chat.py").read_text(encoding="utf-8")
         self.assertIn('if has_compose:', chat_source)
-        self.assertIn('Docker Compose Stack (Recommended)', chat_source)
+        self.assertIn('Docker Compose Stack', chat_source)
+        self.assertIn('Run Docker Image', chat_source)
         self.assertIn('Build from Git Source (Railpack)', chat_source)
+
+    def test_skipped_inputs_do_not_block_setup_interview(self):
+        result = {"inspection": {"documentation_evidence": {"setup_hints": {"required_inputs": [
+            {"name": "admin_email", "label": "Admin Email"},
+            {"name": "smtp_host", "label": "SMTP Host"},
+            {"name": "smtp_port", "label": "SMTP Port"},
+        ]}}}}
+        self.assertEqual([item["name"] for item in setup_handoff.required_setup_inputs(result)], ["admin_email", "smtp_host", "smtp_port"])
+        # If user skips SMTP inputs in interview answers, interview is NOT pending
+        answers_with_skips = (
+            "Setup interview answers:\n"
+            "deployment_method: git_build\n"
+            "admin_email: owner@example.com\n"
+            "smtp_host: [skip]\n"
+            "smtp_port: [skip]"
+        )
+        self.assertFalse(setup_handoff.is_setup_interview_pending(result, answers_with_skips))
+        self.assertEqual(setup_handoff.missing_setup_inputs(result, answers_with_skips), [])
+
+        # If user submits interview without non-critical unlisted inputs, it is also not pending
+        answers_minimal = (
+            "Setup interview answers:\n"
+            "deployment_method: git_build\n"
+            "admin_email: owner@example.com"
+        )
+        self.assertFalse(setup_handoff.is_setup_interview_pending(result, answers_minimal))
+
+    def test_extract_setup_source_handles_registry_image_choice(self):
+        from plugins.ai_helper.services.chat import _extract_setup_source
+        stype, repo, img = _extract_setup_source("Setup interview answers:\ndeployment_method: registry_image:msgbyte/tianji:latest\nadmin_email: admin@example.com")
+        self.assertEqual(stype, "image")
+        self.assertEqual(img, "msgbyte/tianji:latest")
+        self.assertEqual(repo, "")
 
 
 if __name__ == "__main__":
     unittest.main()
+

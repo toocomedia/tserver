@@ -130,7 +130,7 @@ def is_setup_interview_pending(
     # deployment method alone never completes documented application inputs.
     if required_setup_inputs(setup_source_result):
         return bool(missing_setup_inputs(setup_source_result, user_message))
-    if re.search(r"(?im)^\s*deployment_method\s*:\s*\S+", user_message or ""):
+    if re.search(r"(?im)^\s*deployment_method\s*:\s*\S+", user_message or "") or "setup interview answers:" in (user_message or "").lower():
         return False
 
     # If user explicitly said to proceed, deploy, or answered options, don't block
@@ -267,14 +267,27 @@ def _input_placeholder(name: str) -> str:
 def missing_setup_inputs(setup_source_result: Mapping[str, object] | None, user_message: str) -> list[dict[str, str]]:
     """Check named, combined interview answers without treating a choice as an input."""
     message = user_message or ""
+    is_interview_response = "setup interview answers:" in message.lower()
     missing: list[dict[str, str]] = []
     for item in required_setup_inputs(setup_source_result):
         key = re.escape(item["name"])
-        found = re.search(rf"(?im)^\s*(?:[-*]\s*)?{key}\s*:\s*(\S.*)$", message)
-        if not found and item["name"] == "admin_email":
-            found = re.search(r"(?i)\b[\w.+-]+@[\w.-]+\.[A-Z]{2,}\b", message)
-        if not found:
-            missing.append(item)
+        found = re.search(rf"(?im)^\s*(?:[-*]\s*)?{key}\s*:\s*(.*)$", message)
+        if found:
+            val = found.group(1).strip()
+            # If explicit skip / disabled / none / empty in interview response, field is answered/skipped
+            if not val or val.lower() in {"[skip]", "[skipped]", "skip", "skipped", "none", "disabled", "off", "n/a", "__unset__"}:
+                continue
+            # Non-empty value provided
+            continue
+        if item["name"] == "admin_email":
+            found_email = re.search(r"(?i)\b[\w.+-]+@[\w.-]+\.[A-Z]{2,}\b", message)
+            if found_email:
+                continue
+        if is_interview_response:
+            # If the staged interview completed in browser, unlisted non-critical fields are treated as skipped
+            if item["name"] != "admin_email":
+                continue
+        missing.append(item)
     return missing
 
 

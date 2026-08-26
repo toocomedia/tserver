@@ -83,30 +83,36 @@
       var step = this.steps[this.index];
       var total = this.steps.length;
       var current = this.index + 1;
-      var value = this.answers[step.key] || (step.type === "options" ? this._defaultOption(step.options).reply : "");
-      if (step.type === "options" && !this.answers[step.key]) this.answers[step.key] = value;
+      var rawValue = this.answers[step.key] || (step.type === "options" ? this._defaultOption(step.options).reply : "");
+      if (step.type === "options" && !this.answers[step.key]) this.answers[step.key] = rawValue;
       var html = [
         '<div class="ai-decision-card" style="background:var(--color-surface,#1e1e1e);border:1px solid var(--color-line,rgba(255,255,255,.12));border-radius:8px;padding:12px;margin:8px 12px 10px;color:var(--color-text,#fff);">',
         '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">',
-        '<span style="font-size:12px;font-weight:600;">' + this._escape(step.title) + '</span>',
+        '<span style="font-size:12px;font-weight:600;">' + this._escape(step.title || step.label || "Configuration") + '</span>',
         '<span style="font-size:11px;color:var(--color-muted,#94a3b8);">' + current + " / " + total + "</span>",
         "</div>",
       ];
       if (step.type === "options") {
         html.push('<div style="display:flex;flex-direction:column;gap:6px;">');
         step.options.forEach(function (option) {
-          var selected = option.reply === value;
+          var selected = option.reply === rawValue;
           html.push('<button type="button" class="ai-setup-option" data-reply="' + self._escape(option.reply) + '" style="display:flex;gap:8px;align-items:center;padding:7px 10px;background:var(--color-bg,#121212);border:1px solid ' + (selected ? "var(--color-accent,#6366f1)" : "var(--color-line,rgba(255,255,255,.1))") + ';border-radius:6px;color:inherit;text-align:left;cursor:pointer;">' + self._escape(option.label) + "</button>");
         });
         html.push("</div>");
       } else {
         var inputType = /email/i.test(step.key + " " + step.label) ? "email" : "text";
-        html.push('<label style="display:flex;flex-direction:column;gap:5px;font-size:12px;">' + this._escape(step.label) + '<input class="ai-setup-input" required type="' + inputType + '" data-key="' + this._escape(step.key) + '" value="' + this._escape(value) + '" placeholder="' + this._escape(step.placeholder) + '" style="background:var(--color-bg,#121212);border:1px solid var(--color-line,rgba(255,255,255,.15));border-radius:6px;padding:7px 10px;color:inherit;" /></label>');
+        var val = rawValue === "[skip]" ? "" : rawValue;
+        var labelText = this._escape(step.label) + ' <span style="font-size:11px;color:var(--color-muted,#94a3b8);font-weight:normal;">(Optional)</span>';
+        html.push('<label style="display:flex;flex-direction:column;gap:5px;font-size:12px;">' + labelText + '<input class="ai-setup-input" type="' + inputType + '" data-key="' + this._escape(step.key) + '" value="' + this._escape(val) + '" placeholder="' + this._escape(step.placeholder) + '" style="background:var(--color-bg,#121212);border:1px solid var(--color-line,rgba(255,255,255,.15));border-radius:6px;padding:7px 10px;color:inherit;" /></label>');
       }
-      html.push('<div style="display:flex;justify-content:space-between;margin-top:10px;">');
-      html.push('<button type="button" class="ai-setup-back"' + (this.index ? "" : " disabled") + ' style="background:transparent;border:0;color:var(--color-muted,#94a3b8);cursor:pointer;">Back</button>');
-      html.push('<button type="button" class="ai-setup-next" style="background:var(--color-accent,#6366f1);color:#fff;border:0;border-radius:6px;padding:7px 16px;cursor:pointer;">' + (current === total ? "Send" : "Continue") + "</button>");
-      html.push("</div></div>");
+      html.push('<div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;">');
+      html.push('<button type="button" class="ai-setup-back"' + (this.index ? "" : " disabled") + ' style="background:transparent;border:0;color:var(--color-muted,#94a3b8);cursor:pointer;font-size:12px;">Back</button>');
+      html.push('<div style="display:flex;gap:8px;align-items:center;">');
+      if (step.type === "input") {
+        html.push('<button type="button" class="ai-setup-skip" style="background:transparent;border:1px solid var(--color-line,rgba(255,255,255,.2));color:var(--color-muted,#94a3b8);border-radius:6px;padding:6px 12px;cursor:pointer;font-size:12px;">Skip</button>');
+      }
+      html.push('<button type="button" class="ai-setup-next" style="background:var(--color-accent,#6366f1);color:#fff;border:0;border-radius:6px;padding:7px 16px;cursor:pointer;font-size:12px;">' + (current === total ? "Send" : "Continue") + "</button>");
+      html.push("</div></div></div>");
       this.containerEl.innerHTML = html.join("\n");
       this.containerEl.style.display = "block";
       this.containerEl.querySelectorAll(".ai-setup-option").forEach(function (button) {
@@ -119,6 +125,14 @@
         self._saveCurrent();
         if (self.index) { self.index -= 1; self._render(); }
       });
+      var skipBtn = this.containerEl.querySelector(".ai-setup-skip");
+      if (skipBtn) {
+        skipBtn.addEventListener("click", function () {
+          self.answers[step.key] = "[skip]";
+          if (self.index + 1 < self.steps.length) { self.index += 1; self._render(); return; }
+          self._complete();
+        });
+      }
       var next = function () {
         if (!self._saveCurrent()) return;
         if (self.index + 1 < self.steps.length) { self.index += 1; self._render(); return; }
@@ -133,16 +147,16 @@
       var step = this.steps[this.index];
       var input = this.containerEl.querySelector(".ai-setup-input");
       if (!input) return true;
-      if (!input.reportValidity()) return false;
-      this.answers[step.key] = input.value.trim();
-      return Boolean(this.answers[step.key]);
+      var trimmed = input.value.trim();
+      this.answers[step.key] = trimmed || "[skip]";
+      return true;
     },
 
     _complete: function () {
       if (this.completed) return;
       this.completed = true;
       var lines = ["Setup interview answers:"];
-      this.steps.forEach(function (step) { lines.push(step.key + ": " + interview.answers[step.key]); });
+      this.steps.forEach(function (step) { lines.push(step.key + ": " + (interview.answers[step.key] || "[skip]")); });
       this.hide();
       if (typeof this.onComplete === "function") this.onComplete(lines.join("\n"));
     },

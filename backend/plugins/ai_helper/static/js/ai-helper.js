@@ -259,8 +259,13 @@
         for (var i = 0; i < messages.length; i++) {
           this._appendMessageToDOM(messages[i].role, messages[i].content, messages[i].created_at);
         }
+        var lastMsg = messages[messages.length - 1];
+        if (lastMsg && lastMsg.role === "assistant" && window.AiHelperDecisionBar) {
+          window.AiHelperDecisionBar.extractAndShow(lastMsg.content);
+        }
         this._scrollToBottom();
       } else {
+        if (window.AiHelperDecisionBar) window.AiHelperDecisionBar.hide();
         this._renderEmptyState();
       }
       this._syncSessionMessagesFromServer(this.sessionId);
@@ -479,8 +484,13 @@
             self.messagesEl.innerHTML = "";
             if (data.messages.length > 0) {
               data.messages.forEach(function (m) { self._appendMessageToDOM(m.role, m.content, m.created_at); });
+              var lastMsg = data.messages[data.messages.length - 1];
+              if (lastMsg && lastMsg.role === "assistant" && window.AiHelperDecisionBar) {
+                window.AiHelperDecisionBar.extractAndShow(lastMsg.content);
+              }
               self._scrollToBottom();
             } else {
+              if (window.AiHelperDecisionBar) window.AiHelperDecisionBar.hide();
               self._renderEmptyState();
             }
           }
@@ -499,6 +509,7 @@
 
       this._updateTaskBadge();
       this.closeHistoryView();
+      if (window.AiHelperDecisionBar) window.AiHelperDecisionBar.hide();
       this.messagesEl.innerHTML = "";
       this._renderEmptyState();
       this.inputEl.value = "";

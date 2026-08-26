@@ -97,6 +97,9 @@ def _extract_setup_domain(*texts: str | None) -> str:
 def _extract_setup_source(*texts: str | None) -> tuple[str, str, str]:
     """Returns (source_type, repository_url, image_reference) extracted from user input/context."""
     joined = "\n".join(text or "" for text in texts)
+    reg_img_match = re.search(r"deployment_method\s*:\s*registry_image(?::([^\s\n]+))?", joined, re.IGNORECASE)
+    if reg_img_match and reg_img_match.group(1):
+        return "image", "", reg_img_match.group(1).strip()
     git_match = re.search(r"(https?://[^\s\"'<>]*(?:github|gitlab|bitbucket)[^\s\"'<>]*|git@[^\s\"'<>]+|https?://[^\s\"'<>]+\.git)", joined, re.IGNORECASE)
     if git_match:
         return "git", git_match.group(1).strip(), ""
@@ -435,6 +438,7 @@ async def stream_ai_chat(
     setup_documentation_failed = False
     setup_source_result: Dict[str, Any] | None = None
     setup_provider_choice: Dict[str, Any] | None = None
+    setup_interview_options_str: str = ""
     # Multi-turn setup context extraction with session persistence
     history_texts = [r.content for r in recent_records]
     explicit_domain = _extract_explicit_setup_domain(user_message, context_text)
@@ -493,19 +497,32 @@ async def stream_ai_chat(
                 if setup_handoff.is_setup_interview_pending(setup_source_result, user_message):
                     inspection = setup_source_result.get("inspection") if isinstance(setup_source_result.get("inspection"), dict) else setup_source_result
                     doc_ev = (inspection.get("documentation_evidence") or {}) if isinstance(inspection, dict) else {}
-                    detected_imgs = doc_ev.get("detected_docker_images") or []
+                    detected_imgs = list(doc_ev.get("detected_docker_images") or [])
+                    image_rec = setup_source_result.get("official_image_recommendation") or (inspection.get("official_image_recommendation") if isinstance(inspection, dict) else None)
+                    if isinstance(image_rec, dict) and image_rec.get("image") and image_rec.get("image") not in detected_imgs:
+                        detected_imgs.append(str(image_rec.get("image")).strip())
+                    if img and img not in detected_imgs:
+                        detected_imgs.append(img)
+
+                    primary_img = detected_imgs[0] if detected_imgs else ""
                     required_inputs = setup_handoff.required_setup_inputs(setup_source_result)
                     has_compose = bool((inspection.get("compose_info") or {}).get("services")) if isinstance(inspection, dict) else False
+
                     options_list = []
+                    # 1. Compose stack option if compose services exist
                     if has_compose:
-                        options_list.append("[OPTION:Docker Compose Stack (Recommended)|deployment_method:compose_stack]")
-                        options_list.append("[OPTION:Build from Git Source (Railpack)|deployment_method:git_build]")
-                    elif detected_imgs:
-                        primary_img = detected_imgs[0]
-                        options_list.append(f"[OPTION:Run Docker Image (Recommended): {primary_img}|deployment_method:registry_image]")
-                        options_list.append("[OPTION:Build from Git Source|deployment_method:git_build]")
-                    else:
-                        options_list.append("[OPTION:Build from Git Source (Recommended)|deployment_method:git_build]")
+                        rec_label = " (Recommended)" if not primary_img else ""
+                        options_list.append(f"[OPTION:Docker Compose Stack{rec_label}|deployment_method:compose_stack]")
+
+                    # 2. Ready Docker image option if detected or provided
+                    if primary_img:
+                        rec_label = " (Recommended)" if not has_compose else ""
+                        options_list.append(f"[OPTION:Run Docker Image{rec_label}: {primary_img}|deployment_method:registry_image:{primary_img}]")
+
+                    # 3. Build from Git Source (Railpack)
+                    if repo or stype == "git" or not (has_compose or primary_img):
+                        rec_label = " (Recommended)" if not (has_compose or primary_img) else ""
+                        options_list.append(f"[OPTION:Build from Git Source (Railpack){rec_label}|deployment_method:git_build]")
 
                     if not has_compose and isinstance(inspection, dict):
                         from services.apps_engine import database_provider_capabilities
@@ -533,6 +550,7 @@ async def stream_ai_chat(
                             f"[INPUT:{item['name']}|{item['placeholder']}|{item['label']}]"
                         )
                     options_str = "\n".join(options_list)
+                    setup_interview_options_str = options_str
 
                     action_instruction = (
                         "Present the source inspection facts clearly in clean Markdown tables (Application Overview, Services, Detected Databases, Configuration). "
@@ -656,7 +674,7 @@ async def stream_ai_chat(
             if fn_name in {"propose_app_install", "propose_stack_install", "propose_official_stack_install"}:
                 if setup_target_domain and not fn_args.get("domain_name"):
                     fn_args["domain_name"] = setup_target_domain
-                if repo and not fn_args.get("repository_url"):
+                if repo and not fn_args.get("repository_url") and fn_args.get("source_type") != "image":
                     fn_args["repository_url"] = repo
                 if img and not fn_args.get("image_reference"):
                     fn_args["image_reference"] = img
@@ -935,10 +953,14 @@ async def stream_ai_chat(
                             "Choose the documented private container provider or install/repair the dependency from Dependencies."
                         )
                 elif setup_handoff.is_setup_interview_pending(setup_source_result, user_message):
+                    tags_block = f"\n{setup_interview_options_str}\n" if setup_interview_options_str else ""
                     content_str = (
                         "Now summarize the inspected application architecture, services, and deployment configuration in clean, structured Markdown tables. "
                         "Do NOT output tool calls, JSON ASTs, or internal schema errors. "
-                        "State clearly that the required setup details (such as Admin Email or deployment option) are requested from the user to finalize the deployment plan. "
+                        "Declare every unresolved deployment choice, provider choice, and documented non-secret input together using the exact interactive tags below:"
+                        f"{tags_block}"
+                        "Do not ask for passwords, keys, tokens, or secrets. "
+                        "State clearly that the required setup details are requested from the user to finalize the deployment plan. "
                         "Do NOT claim the reviewed setup plan is ready to deploy yet."
                     )
                 else:
@@ -1040,6 +1062,13 @@ async def stream_ai_chat(
                     setup_plan_kind = "patch"
         except Exception as exc:
             logger.warning("Final diagnostic auto-patch fallback failed: %s", exc)
+
+    if setup_plan_required and not setup_plan_id and setup_interview_options_str and not has_error:
+        full_text_so_far = "".join(full_response)
+        if "[OPTION:" not in full_text_so_far and "[INPUT:" not in full_text_so_far:
+            append_tags = f"\n\n{setup_interview_options_str}"
+            full_response.append(append_tags)
+            yield append_tags
 
     if setup_plan_id:
         kind_suffix = ":patch" if setup_plan_kind == "patch" else ""
