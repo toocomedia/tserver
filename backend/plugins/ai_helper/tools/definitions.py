@@ -10,6 +10,8 @@ APP_SETUP_TOOL_NAMES = frozenset({
     "get_app_engine_capabilities",
     "inspect_app_source",
     "fetch_web_documentation",
+    "search_web_docs",
+    "search_docker_hub",
     "propose_app_install",
     "propose_stack_install",
 })
@@ -160,6 +162,42 @@ RAW_TOOL_SCHEMAS: List[Dict[str, Any]] = [
                 },
             },
             "required": ["url"],
+        },
+    },
+    {
+        "name": "search_web_docs",
+        "description": "Searches public web documentation, guides, and technical references (via Jina Search) to find installation commands, environment variables, ports, and configuration specifications for unfamiliar frameworks or tools.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "The search query (e.g. 'n8n docker compose environment variables', 'Ghost CMS port configuration').",
+                },
+                "max_chars": {
+                    "type": "integer",
+                    "description": "Maximum characters of search markdown snippets to return (default: 8000).",
+                },
+            },
+            "required": ["query"],
+        },
+    },
+    {
+        "name": "search_docker_hub",
+        "description": "Searches the public Docker Hub registry for container images matching a keyword or application name. Returns official image indicators, star ratings, pull counts, and descriptions.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "The image or application name to search on Docker Hub (e.g. 'redis', 'n8n', 'plausible').",
+                },
+                "max_results": {
+                    "type": "integer",
+                    "description": "Maximum number of repository results to return (default: 5, max: 15).",
+                },
+            },
+            "required": ["query"],
         },
     },
     {

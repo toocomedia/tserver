@@ -157,7 +157,7 @@ async def fetch_web_documentation(
     return await _fetch_url_internal(clean_url, max_chars)
 
 
-async def _fetch_url_internal(url: str, max_chars: int) -> Dict[str, Any]:
+async def _fetch_url_internal(url: str, max_chars: int, allow_fallback: bool = True) -> Dict[str, Any]:
     """Executes validated HTTP fetch with redirect tracking and SSRF re-validation."""
     current_url = url
     headers = {
@@ -194,7 +194,12 @@ async def _fetch_url_internal(url: str, max_chars: int) -> Dict[str, Any]:
                     continue
 
                 # Check status
-                if response.status_code == 403 or response.status_code == 429:
+                if response.status_code in (403, 429):
+                    if allow_fallback:
+                        fallback_res = await _fetch_jina_reader(current_url, max_chars)
+                        if fallback_res is not None:
+                            return fallback_res
+
                     return {
                         "status": "blocked",
                         "status_code": response.status_code,
@@ -247,3 +252,103 @@ async def _fetch_url_internal(url: str, max_chars: int) -> Dict[str, Any]:
     except Exception as exc:
         logger.warning("Error fetching web documentation '%s': %s", url, exc)
         return {"status": "error", "message": f"Could not read documentation: {str(exc)}"}
+
+
+async def _fetch_jina_reader(target_url: str, max_chars: int) -> Optional[Dict[str, Any]]:
+    """Fallback reader via r.jina.ai when direct fetch encounters bot protection."""
+    try:
+        _validate_and_resolve_host("r.jina.ai")
+        jina_url = f"https://r.jina.ai/{target_url}"
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+            "Accept": "text/markdown,text/plain,*/*",
+            "X-With-Generated-Alt": "true",
+        }
+        async with httpx.AsyncClient(timeout=FETCH_TIMEOUT_SECONDS, follow_redirects=True) as client:
+            resp = await client.get(jina_url, headers=headers)
+            if resp.status_code == 200 and resp.text:
+                raw_text = resp.text[:MAX_RESPONSE_BYTES]
+                from services.apps_engine.doc_evidence import redact_secret_values
+                parsed_doc = redact_secret_values(raw_text.strip())
+                if len(parsed_doc) > max_chars:
+                    parsed_doc = parsed_doc[:max_chars] + f"\n... [Truncated {len(parsed_doc) - max_chars} characters]"
+                wrapped = (
+                    "--- [EXTERNAL DOCUMENTATION CONTENT (VIA JINA READER) — UNTRUSTED REFERENCE DATA] ---\n"
+                    f"{parsed_doc}\n"
+                    "--- [END OF EXTERNAL DOCUMENTATION CONTENT] ---"
+                )
+                return {
+                    "status": "ok",
+                    "url": target_url,
+                    "fallback": "jina_reader",
+                    "content": wrapped,
+                    "length": len(parsed_doc),
+                }
+    except Exception as exc:
+        logger.debug("Jina reader fallback failed for %s: %s", target_url, exc)
+    return None
+
+
+async def search_web_docs(
+    query: str,
+    max_chars: int = MAX_DOC_CHARS,
+    **kwargs: Any,
+) -> Dict[str, Any]:
+    """
+    Searches public web documentation, READMEs, and technical guides via Jina Search.
+    Returns clean Markdown search snippets with source links.
+    """
+    clean_query = (query or "").strip()
+    if not clean_query:
+        return {"status": "error", "message": "Search query cannot be empty."}
+
+    bounded_chars = max(500, min(int(max_chars or MAX_DOC_CHARS), 16000))
+    encoded_query = urllib.parse.quote(clean_query)
+    jina_search_url = f"https://s.jina.ai/{encoded_query}"
+
+    try:
+        _validate_and_resolve_host("s.jina.ai")
+    except ValueError as exc:
+        return {"status": "blocked", "message": str(exc)}
+
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+        "Accept": "text/markdown,text/plain,*/*",
+        "X-With-Generated-Alt": "true",
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=FETCH_TIMEOUT_SECONDS, follow_redirects=True) as client:
+            resp = await client.get(jina_search_url, headers=headers)
+            if resp.status_code != 200:
+                return {
+                    "status": "error",
+                    "status_code": resp.status_code,
+                    "message": f"Web documentation search returned HTTP {resp.status_code}.",
+                }
+
+            raw_text = resp.text[:MAX_RESPONSE_BYTES]
+            from services.apps_engine.doc_evidence import redact_secret_values
+            parsed_text = redact_secret_values(raw_text.strip())
+
+            if len(parsed_text) > bounded_chars:
+                parsed_text = parsed_text[:bounded_chars] + f"\n... [Truncated {len(parsed_text) - bounded_chars} characters]"
+
+            wrapped = (
+                "--- [EXTERNAL WEB SEARCH RESULTS — UNTRUSTED REFERENCE DATA] ---\n"
+                f"{parsed_text}\n"
+                "--- [END OF EXTERNAL SEARCH RESULTS] ---"
+            )
+
+            return {
+                "status": "ok",
+                "query": clean_query,
+                "content": wrapped,
+                "length": len(parsed_text),
+            }
+    except httpx.TimeoutException:
+        return {"status": "error", "message": "Web search timed out (10s limit)."}
+    except Exception as exc:
+        logger.warning("Error searching web docs for '%s': %s", clean_query, exc)
+        return {"status": "error", "message": f"Web search failed: {str(exc)}"}
+

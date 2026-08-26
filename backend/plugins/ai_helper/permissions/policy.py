@@ -33,6 +33,8 @@ TOOL_CATEGORY_MAP: Dict[str, str] = {
     "list_website_directory": "files",
     "read_website_file": "files",
     "fetch_web_documentation": "web",
+    "search_web_docs": "web",
+    "search_docker_hub": "apps",
     "inspect_app_source": "apps",
     "search_app_source": "apps",
     "read_app_source_file": "apps",

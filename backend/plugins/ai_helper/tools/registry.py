@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from plugins.ai_helper.permissions import audit
 from plugins.ai_helper.permissions.policy import PermissionDeniedError, check_tool_permission
-from plugins.ai_helper.tools import app_setup, apps, databases, dns, domains_proxy, files, web_reader
+from plugins.ai_helper.tools import app_setup, apps, databases, dns, docker_hub, domains_proxy, files, web_reader
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +40,8 @@ TOOL_HANDLERS: Dict[str, Callable[..., Any]] = {
     "list_website_directory": files.list_website_directory,
     "read_website_file": files.read_website_file,
     "fetch_web_documentation": web_reader.fetch_web_documentation,
+    "search_web_docs": web_reader.search_web_docs,
+    "search_docker_hub": docker_hub.search_docker_hub,
     "inspect_app_source": app_setup.inspect_app_source,
     "search_app_source": app_setup.search_app_source,
     "read_app_source_file": app_setup.read_app_source_file,

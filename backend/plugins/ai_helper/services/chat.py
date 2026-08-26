@@ -38,6 +38,11 @@ _TOOL_LABELS = {
     "list_website_directory": ("folder", "Scanning directory"),
     "read_website_file": ("file", "Reading file"),
     "fetch_web_documentation": ("book-open", "Reading documentation"),
+    "search_web_docs": ("search", "Searching web documentation"),
+    "search_docker_hub": ("box", "Searching Docker Hub"),
+    "search_app_source": ("search", "Searching repository source code"),
+    "read_app_source_file": ("file", "Reading source file"),
+    "inspect_official_image": ("search", "Inspecting official image registry"),
     "inspect_app_source": ("search", "Inspecting repository & Compose services"),
     "get_app_engine_capabilities": ("layers", "Reading App Engine capabilities"),
     "get_app_engine_diagnostics": ("activity", "Collecting runtime diagnostics"),
@@ -53,9 +58,17 @@ _TOOL_LABELS = {
 def _extract_explicit_setup_domain(*texts: str | None) -> str:
     """Extract domain if explicitly indicated by domain/host keywords."""
     joined = "\n".join(text or "" for text in texts)
-    cleaned = re.sub(r"[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+", "", joined)
-    domain_pattern = r"([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+)"
-    explicit = re.search(rf"\b(?:domain|host|hostname)\s+(?:is\s+|to\s+|for\s+|:\s*)?{domain_pattern}", cleaned, re.IGNORECASE)
+    for pattern in (
+        r"\b(?:domain|host(?:name)?|fqdn|site)\s*[:=]?\s*([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+)",
+        r"(?:for|to|at)\s+([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+)",
+    ):
+        match = re.search(pattern, joined, re.IGNORECASE)
+        if match:
+            candidate = match.group(1).strip().lower()
+            ignored = {"github.com", "www.github.com", "gitlab.com", "bitbucket.org", "docker.io", "hub.docker.com"}
+            if candidate not in ignored and not candidate.endswith((".yml", ".yaml", ".json", ".js", ".ts", ".py", ".md", ".txt", ".sh", ".html", ".css", ".png", ".jpg", ".jpeg", ".svg")):
+                return candidate
+    explicit = re.search(r"@domain:([a-z0-9.-]+)", joined, re.IGNORECASE)
     if explicit:
         candidate = explicit.group(1).strip().lower()
         ignored = {"github.com", "www.github.com", "gitlab.com", "bitbucket.org", "docker.io", "hub.docker.com"}
@@ -115,7 +128,7 @@ def _activity_event(tool_name: str, status: str, args: dict | None = None) -> st
     # Add context detail from args
     detail = ""
     if args:
-        for key in ("target_id", "domain", "domain_name", "app_id", "file_path"):
+        for key in ("query", "url", "image_reference", "target_id", "domain", "domain_name", "app_id", "file_path"):
             if args.get(key):
                 detail = str(args[key])
                 break

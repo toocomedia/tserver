@@ -5,6 +5,7 @@ non-standard environment sample files.
 """
 from __future__ import annotations
 
+import os
 import re
 from pathlib import Path
 from typing import Any
@@ -200,8 +201,64 @@ def ai_safe_env_sample(env_sample: dict[str, str]) -> dict[str, str]:
     }
 
 
+def scan_code_env_vars(root: Path, max_files: int = 60) -> dict[str, str]:
+    """
+    Scans source code files (JS/TS, Python, PHP, Go) across the repository
+    for environment variable references (e.g. process.env.PORT, os.getenv('DB_HOST')).
+    Excludes dependency and build directories.
+    """
+    if not root.is_dir():
+        return {}
+
+    ignored_dirs = {
+        ".git", "node_modules", "vendor", "venv", ".venv",
+        "__pycache__", "dist", "build", ".next", ".nuxt", "target", ".cache"
+    }
+    allowed_suffixes = {
+        ".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs",
+        ".py", ".php", ".go", ".rb"
+    }
+    ignored_env_names = {
+        "PATH", "PWD", "HOME", "SHELL", "USER", "HOSTNAME",
+        "LANG", "LC_ALL", "TERM", "TEMP", "TMP", "SHLVL", "EDITOR",
+    }
+
+    env_patterns = [
+        re.compile(r"\bprocess\.env(?:\.([A-Z][A-Z0-9_]*)|\[['\"]([A-Z][A-Z0-9_]*)['\"]\])"),
+        re.compile(r"\bos\.(?:environ|getenv)\s*(?:\[|\()\s*['\"]([A-Z][A-Z0-9_]*)['\"]"),
+        re.compile(r"\b(?:getenv|env)\s*\(\s*['\"]([A-Z][A-Z0-9_]*)['\"]"),
+        re.compile(r"\bos\.Getenv\s*\(\s*['\"]([A-Z][A-Z0-9_]*)['\"]"),
+    ]
+
+    discovered_keys: set[str] = set()
+    scanned_count = 0
+
+    for current_dir, dirnames, filenames in os.walk(root):
+        dirnames[:] = [d for d in dirnames if d not in ignored_dirs and not d.startswith(".")]
+        for fname in filenames:
+            ext = Path(fname).suffix.lower()
+            if ext in allowed_suffixes:
+                file_path = Path(current_dir) / fname
+                try:
+                    text = file_path.read_text(encoding="utf-8", errors="ignore")[:30_000]
+                    for pattern in env_patterns:
+                        for match in pattern.finditer(text):
+                            key = match.group(1) or match.group(2) if match.lastindex and match.lastindex >= 2 else match.group(1)
+                            if key and key not in ignored_env_names and len(key) >= 2:
+                                discovered_keys.add(key)
+                except Exception:
+                    pass
+                scanned_count += 1
+                if scanned_count >= max_files:
+                    break
+        if scanned_count >= max_files:
+            break
+
+    return {k: "" for k in sorted(discovered_keys)}
+
+
 def _read_expanded_env_sample(root: Path) -> tuple[dict[str, str], str]:
-    """Return the first environment template and its evidence filename."""
+    """Return the first environment template and its evidence filename, or fallback to code scan."""
     if not root.is_dir():
         return {}, ""
 
@@ -237,6 +294,11 @@ def _read_expanded_env_sample(root: Path) -> tuple[dict[str, str], str]:
                 return result, path.name
         except Exception:
             pass
+
+    # Fallback: scan source code for environment variable references
+    code_env = scan_code_env_vars(root)
+    if code_env:
+        return code_env, "source code scan"
 
     return {}, ""
 

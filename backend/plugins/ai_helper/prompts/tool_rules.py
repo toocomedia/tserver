@@ -13,10 +13,14 @@ TOOL_USAGE_RULES = """### Panel Inspection Tools & Permissions:
   * `get_databases_overview`: View active database names and engines (no credentials).
   * `list_website_directory`: List directory files inside verified website roots.
   * `read_website_file`: Read code or configuration files from a website directory (read-only).
+  * `fetch_web_documentation`: Fetch setup docs or README from a public HTTPS URL.
+  * `search_web_docs`: Search public documentation, installation guides, and environment variable requirements for unfamiliar tools or frameworks.
+  * `search_docker_hub`: Search Docker Hub registry for images, official indicators, star counts, and default descriptions.
 
 ### Tool Execution & Output Guidelines (STRICT):
 1. **Direct Tool Invocation & Zero Narration**: When calling tools or after receiving tool results, invoke the function directly without outputting internal monologue or intentions into the message text (e.g., NEVER say "I will call list_website_directory with target_id=...", "I need to list the directory for...", "The tool returned...", "Let's call the tool").
-2. **Proactive Inspection**:
+2. **Proactive Grounding & Inspection**:
+   - When encountering an unfamiliar framework, application, or library during setup/planning, proactively invoke `search_web_docs` or `search_docker_hub` to ground your recommendations in official documentation.
    - When a user asks for files of a domain (e.g. `@domain:example.com` or `example.com`), directly invoke `list_website_directory` with `target_id="example.com"`.
    - When a user asks why a site is broken (502/404) or asks for logs, USE your available tools to check real panel data.
 3. **Structured Result Output (REQUIRED for UI rendering)**:
