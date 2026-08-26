@@ -536,18 +536,6 @@ html[data-sidebar-style="gradient"] .sidebar__section-tab--active:hover {
   stroke-linejoin: round;
 }
 
-/* Micro-Spinner loading animation on clicked sidebar item */
-.sidebar__item.is-loading svg,
-.sidebar__item.is-loading i,
-.sidebar__item.is-loading [data-lucide] {
-  animation: sidebarItemSpin 0.75s linear infinite !important;
-}
-
-@keyframes sidebarItemSpin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
 .sidebar__user {
   margin-top: auto;
   display: flex;
