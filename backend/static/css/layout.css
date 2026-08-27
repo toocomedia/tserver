@@ -285,20 +285,13 @@ html[dir="rtl"] .sidebar__section-tab:hover .sidebar__tab-chevron {
 .sidebar__view {
   position: absolute;
   inset: 0;
-  display: flex;
+  display: none;
   flex-direction: column;
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-  transition: opacity 0.15s ease, visibility 0s linear 0.15s;
 }
 
 .sidebar__view.is-active {
-  opacity: 1;
-  visibility: visible;
-  pointer-events: auto;
+  display: flex;
   z-index: 1;
-  transition-delay: 0s;
 }
 
 .sidebar__view--plugins {
@@ -306,8 +299,7 @@ html[dir="rtl"] .sidebar__section-tab:hover .sidebar__tab-chevron {
 }
 
 .sidebar__view--plugins .sidebar__nav {
-  padding-top: 4px;
-  border-top: 1px solid var(--color-line);
+  padding-top: 0;
 }
 
 /* Submenu Back / Section Header */
@@ -318,7 +310,7 @@ html[dir="rtl"] .sidebar__section-tab:hover .sidebar__tab-chevron {
   flex-shrink: 0;
   stroke: currentColor;
   fill: none;
-  stroke-width: 2;
+  stroke-width: 1.75;
   stroke-linecap: round;
   stroke-linejoin: round;
   transition: transform 0.2s ease, stroke 0.15s ease;
@@ -360,26 +352,12 @@ html[dir="rtl"] .sidebar__view-back:hover .sidebar__back-icon {
 
 /* Active Style: Opacity */
 html[data-sidebar-style="opacity"] .sidebar__item,
-html[data-sidebar-style="opacity"] .sidebar__section-tab {
+html[data-sidebar-style="opacity"] .sidebar__section-tab,
+html[data-sidebar-style="opacity"] .sidebar__view-back {
   width: calc(100% - 24px);
   margin: 2px 12px;
   border-radius: 6px;
   border-inline-start-color: transparent !important;
-}
-
-html[data-sidebar-style="opacity"] .sidebar__view-back {
-  width: calc(100% - 24px);
-  margin: 2px 12px 6px 12px;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
-  border-inline-start: 1px solid rgba(255, 255, 255, 0.08) !important;
-}
-
-html[data-sidebar-style="opacity"] .sidebar__view-back:hover {
-  background: color-mix(in srgb, var(--color-accent) 12%, transparent) !important;
-  border-color: color-mix(in srgb, var(--color-accent) 35%, transparent) !important;
-  color: var(--color-accent) !important;
 }
 
 html[data-sidebar-style="opacity"] .sidebar__item--active,
@@ -430,8 +408,9 @@ html[data-sidebar-style="gradient"][dir="rtl"] .sidebar__section-tab--active:hov
 .sidebar__item svg,
 .sidebar__item i,
 .sidebar__item [data-lucide],
-.sidebar__item [class^="devicon-"],
-.sidebar__item [class*=" devicon-"] {
+.sidebar__item [class*="devicon-"],
+.sidebar__view-back svg,
+.sidebar__section-tab svg {
   width: 16px;
   height: 16px;
   min-width: 16px;
@@ -442,10 +421,14 @@ html[data-sidebar-style="gradient"][dir="rtl"] .sidebar__section-tab--active:hov
   align-items: center;
   justify-content: center;
   line-height: 1;
-  color: inherit;
+  color: inherit !important;
+  stroke: currentColor;
+  fill: none;
 }
 
-.sidebar__item svg {
+.sidebar__item svg,
+.sidebar__view-back svg,
+.sidebar__section-tab svg {
   stroke: currentColor;
   fill: none;
   stroke-width: 1.75;
