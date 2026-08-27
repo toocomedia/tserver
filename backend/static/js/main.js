@@ -487,53 +487,25 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Plugins Services sidebar tab: swap main items <-> plugins/services list
+  // Plugins Services sidebar tab: toggle main <-> plugins views
   if (pluginsView && sidebarNav) {
     const pluginsTab = document.getElementById("plugins-services-tab");
     const pluginsBack = document.getElementById("plugins-services-back");
-    const viewsWrap = document.getElementById("sidebar-views");
 
-    const isChildPluginActive = () => {
-      return !!(bestMatch && pluginsView.contains(bestMatch));
-    };
-
-    const updatePluginsTabActiveState = (isPluginsShowing) => {
-      if (!pluginsTab) return;
-      if (isChildPluginActive() && !isPluginsShowing) {
-        pluginsTab.classList.add("sidebar__section-tab--active");
-      } else {
-        pluginsTab.classList.remove("sidebar__section-tab--active");
-      }
-    };
-
-    const showPluginsView = () => {
+    const setView = (toPlugins) => {
+      pluginsView.classList.toggle("is-active", toPlugins);
+      sidebarNav.classList.toggle("is-active", !toPlugins);
       if (pluginsTab) {
-        pluginsTab.classList.remove("sidebar__section-tab--active");
-        pluginsTab.setAttribute("aria-expanded", "true");
+        pluginsTab.setAttribute("aria-expanded", toPlugins);
+        const onPluginPage = !!(bestMatch && pluginsView.contains(bestMatch));
+        pluginsTab.classList.toggle("sidebar__section-tab--active", !toPlugins && onPluginPage);
       }
-      sidebarNav.classList.remove("is-active");
-      sidebarNav.classList.add("is-behind");
-      pluginsView.removeAttribute("aria-hidden");
-      pluginsView.classList.add("is-active");
       if (updateScrollArrows) updateScrollArrows();
     };
 
-    const showMainView = () => {
-      pluginsView.classList.remove("is-active");
-      pluginsView.setAttribute("aria-hidden", "true");
-      sidebarNav.classList.remove("is-behind");
-      sidebarNav.classList.add("is-active");
-      if (pluginsTab) pluginsTab.setAttribute("aria-expanded", "false");
-      updatePluginsTabActiveState(false);
-      if (updateScrollArrows) updateScrollArrows();
-    };
-
-    if (pluginsTab) pluginsTab.addEventListener("click", showPluginsView);
-    if (pluginsBack) pluginsBack.addEventListener("click", showMainView);
-
-    // Initial state: sync tab active state with whichever view is currently active
-    const isShowingPluginsInitially = pluginsView.classList.contains("is-active");
-    updatePluginsTabActiveState(isShowingPluginsInitially);
+    pluginsTab?.addEventListener("click", () => setView(true));
+    pluginsBack?.addEventListener("click", () => setView(false));
+    setView(pluginsView.classList.contains("is-active"));
   }
 
   // Sidebar Search
