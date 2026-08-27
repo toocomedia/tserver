@@ -10,7 +10,7 @@
   <!-- Top-Right Action Buttons (Appear on Mouseover) -->
   <div class="compact-card-1x1__actions">
     {% if not plugin.installed or (plugin.platform_unverified and not plugin.platform_approved) %}
-      <form method="post" action="/plugins/api/install" style="display:inline-flex;"{% if plugin.platform_unverified and not plugin.platform_approved %} data-unverified-install data-approval-token="{{ plugin.platform_confirmation }}" data-confirm="{{ _('plugin_unverified_prompt') }}"{% endif %}>
+      <form method="post" action="/plugin-manager/api/install" style="display:inline-flex;"{% if plugin.platform_unverified and not plugin.platform_approved %} data-unverified-install data-approval-token="{{ plugin.platform_confirmation }}" data-confirm="{{ _('plugin_unverified_prompt') }}"{% endif %}>
         <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
         <input type="hidden" name="plugin_id" value="{{ plugin.id }}">
         <input type="hidden" name="unverified_confirmation" value="">
@@ -19,7 +19,7 @@
         </button>
       </form>
       {% if plugin.data_purge %}
-      <form method="post" action="/plugins/api/purge-data" style="display:inline-flex;">
+      <form method="post" action="/plugin-manager/api/purge-data" style="display:inline-flex;">
         <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
         <input type="hidden" name="plugin_id" value="{{ plugin.id }}">
         <input type="hidden" name="confirmation" value="">
@@ -36,7 +36,7 @@
       {% endif %}
 
       {% if plugin.effective_status != 'invalid' %}
-      <form method="post" action="/plugins/api/toggle" style="display:inline-flex;">
+      <form method="post" action="/plugin-manager/api/toggle" style="display:inline-flex;">
         <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
         <input type="hidden" name="plugin_id" value="{{ plugin.id }}">
         <input type="hidden" name="enabled" value="{% if plugin.enabled %}false{% else %}true{% endif %}">
@@ -50,7 +50,7 @@
       </form>
       {% endif %}
 
-      <form method="post" action="/plugins/api/uninstall" style="display:inline-flex;">
+      <form method="post" action="/plugin-manager/api/uninstall" style="display:inline-flex;">
         <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
         <input type="hidden" name="plugin_id" value="{{ plugin.id }}">
         <button type="submit" class="btn-clean-icon btn-clean-icon--danger" title="Uninstall {{ plugin.name }}" onclick="return confirm('Uninstall {{ plugin.name }}?')">

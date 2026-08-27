@@ -234,6 +234,7 @@ async def errors_shortcut_redirect(request: Request):
 app.include_router(notifications.router)
 plugin_manager.init_app(app)
 app.include_router(plugins.router)
+app.include_router(plugins.legacy_router)
 app.include_router(dependencies.router)
 app.include_router(php_sites.router)
 app.include_router(php_sites.page_router)

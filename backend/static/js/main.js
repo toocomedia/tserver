@@ -520,7 +520,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     pluginsTab?.addEventListener("click", () => setView(true));
     pluginsBack?.addEventListener("click", () => setView(false));
-    setView(pluginsView.classList.contains("is-active"));
+
+    // Only open plugins view if current page is actually a service item in the submenu
+    const isChildPlugin = !!(bestMatch && pluginsView.contains(bestMatch));
+    setView(isChildPlugin);
   }
 
   // Sidebar Search

@@ -41,14 +41,14 @@
 
     <div class="info-hero-row__actions">
       {% if plugin.platform_unverified and not plugin.platform_approved %}
-        <form method="post" action="/plugins/api/install" style="display:inline-flex;" data-unverified-install data-approval-token="{{ plugin.platform_confirmation }}" data-confirm="{{ _('plugin_unverified_prompt') }}">
+        <form method="post" action="/plugin-manager/api/install" style="display:inline-flex;" data-unverified-install data-approval-token="{{ plugin.platform_confirmation }}" data-confirm="{{ _('plugin_unverified_prompt') }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
           <input type="hidden" name="plugin_id" value="{{ plugin.id }}">
           <input type="hidden" name="unverified_confirmation" value="">
           <button type="submit" class="btn btn--secondary btn--sm">{{ _('approve_unverified') if plugin.installed else _('install_unverified') }}</button>
         </form>
         {% if plugin.installed %}
-          <form method="post" action="/plugins/api/uninstall" style="display:inline-flex;">
+          <form method="post" action="/plugin-manager/api/uninstall" style="display:inline-flex;">
             <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
             <input type="hidden" name="plugin_id" value="{{ plugin.id }}">
             <button type="submit" class="btn btn--danger btn--sm" onclick="return confirm('Uninstall {{ plugin.name }}?')">{{ _('uninstall') }}</button>
@@ -59,27 +59,27 @@
           <a href="{{ plugin.route_prefix }}" class="btn btn--primary btn--sm">{{ _('manage') }} {{ plugin.name }}</a>
         {% endif %}
         {% if plugin.effective_status != 'invalid' %}
-          <form method="post" action="/plugins/api/toggle" style="display:inline-flex;">
+          <form method="post" action="/plugin-manager/api/toggle" style="display:inline-flex;">
             <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
             <input type="hidden" name="plugin_id" value="{{ plugin.id }}">
             <input type="hidden" name="enabled" value="{% if plugin.enabled %}false{% else %}true{% endif %}">
             <button type="submit" class="btn btn--secondary btn--sm">{% if plugin.enabled %}Disable{% else %}Enable{% endif %}</button>
           </form>
         {% endif %}
-        <form method="post" action="/plugins/api/uninstall" style="display:inline-flex;">
+        <form method="post" action="/plugin-manager/api/uninstall" style="display:inline-flex;">
           <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
           <input type="hidden" name="plugin_id" value="{{ plugin.id }}">
           <button type="submit" class="btn btn--danger btn--sm" onclick="return confirm('Uninstall {{ plugin.name }}?')">{{ _('uninstall') }}</button>
         </form>
       {% else %}
-        <form method="post" action="/plugins/api/install" style="display:inline-flex;">
+        <form method="post" action="/plugin-manager/api/install" style="display:inline-flex;">
           <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
           <input type="hidden" name="plugin_id" value="{{ plugin.id }}">
           <input type="hidden" name="unverified_confirmation" value="">
           <button type="submit" class="btn btn--primary btn--sm" {% if plugin.paused_by or not plugin.platform_supported %}disabled title="{{ plugin.platform_error or _('install_required_dependency_first') }}" {% endif %}>{{ _('install') }} {{ plugin.name }}</button>
         </form>
         {% if plugin.data_purge %}
-        <form method="post" action="/plugins/api/purge-data" style="display:inline-flex;">
+        <form method="post" action="/plugin-manager/api/purge-data" style="display:inline-flex;">
           <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
           <input type="hidden" name="plugin_id" value="{{ plugin.id }}">
           <input type="hidden" name="confirmation" value="">

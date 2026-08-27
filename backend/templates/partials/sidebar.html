@@ -20,7 +20,8 @@
       </svg>
     </div>
     <div class="sidebar__views" id="sidebar-views">
-    {% set is_in_plugins = request and request.url and request.url.path.startswith('/plugins') %}
+    {% set req_path = request.url.path if (request and request.url) else '' %}
+    {% set is_in_plugins = req_path.startswith('/plugins/') %}
 
     <ul class="sidebar__nav sidebar__view sidebar__view--main {{ 'is-active' if not is_in_plugins else '' }}" id="sidebar-nav" role="list">
 

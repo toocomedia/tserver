@@ -103,7 +103,7 @@
       <h2>{{ _('upload_plugin_zip_1') }}</h2>
       <button class="btn btn--ghost btn--icon" onclick="closeModal('upload-plugin-modal')">✕</button>
     </div>
-    <form method="post" action="/plugins/api/upload" enctype="multipart/form-data">
+    <form method="post" action="/plugin-manager/api/upload" enctype="multipart/form-data">
       <div class="modal__body">
         <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
         <div class="form-group mb-3">
@@ -174,7 +174,7 @@ async function toggleAndCheckPlugin(triggerEl) {
     const depsList = win.querySelector('.tray-deps-list');
     const overallStatusEl = win.querySelector('.tray-overall-status');
     try {
-      const res = await fetch('/plugins/api/check/' + pluginId);
+      const res = await fetch('/plugin-manager/api/check/' + pluginId);
       if (!res.ok) return;
       const data = await res.json();
       if (data && data.dependency_status && depsList) {

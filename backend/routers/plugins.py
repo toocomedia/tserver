@@ -14,7 +14,21 @@ from plugins.manager import PLUGIN_ID_RE, plugin_manager
 from templating import templates
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/plugins", tags=["plugins"])
+router = APIRouter(prefix="/plugin-manager", tags=["plugin-manager"])
+legacy_router = APIRouter(prefix="/plugins", tags=["plugins-legacy"])
+
+
+@legacy_router.get("/", include_in_schema=False)
+@legacy_router.get("", include_in_schema=False)
+async def legacy_plugins_redirect():
+    """Redirect legacy /plugins/ link to /plugin-manager/."""
+    return RedirectResponse("/plugin-manager/", status_code=301)
+
+
+@legacy_router.get("/info/{plugin_id}", include_in_schema=False)
+async def legacy_plugin_info_redirect(plugin_id: str):
+    """Redirect legacy plugin info sub-page."""
+    return RedirectResponse(f"/plugin-manager/info/{plugin_id}", status_code=301)
 
 
 @router.get("/", response_class=HTMLResponse)
@@ -69,6 +83,7 @@ async def check_plugin_api(plugin_id: str):
 
 
 @router.get("/assets/{plugin_id}/{filename}")
+@legacy_router.get("/assets/{plugin_id}/{filename}", include_in_schema=False)
 async def plugin_asset(plugin_id: str, filename: str):
     """Serve plugin static assets like icons."""
     import config
@@ -92,6 +107,7 @@ async def plugin_asset(plugin_id: str, filename: str):
 
 
 @router.post("/api/install")
+@legacy_router.post("/api/install", include_in_schema=False)
 async def install_plugin_api(
     request: Request,
     plugin_id: str = Form(...),
@@ -104,21 +120,23 @@ async def install_plugin_api(
         unverified_confirmation=unverified_confirmation,
     )
     if success:
-        return RedirectResponse("/plugins/", status_code=303)
+        return RedirectResponse("/plugin-manager/", status_code=303)
     query = urlencode({"plugin_id": plugin_id, "error": message[:240]})
-    return RedirectResponse(f"/plugins/?{query}", status_code=303)
+    return RedirectResponse(f"/plugin-manager/?{query}", status_code=303)
 
 
 @router.post("/api/uninstall")
+@legacy_router.post("/api/uninstall", include_in_schema=False)
 async def uninstall_plugin_api(request: Request, plugin_id: str = Form(...)):
     """Run uninstallation script for a plugin."""
     success, message = await plugin_manager.run_plugin_script(plugin_id, "uninstall")
     if success:
-        return RedirectResponse("/plugins/", status_code=303)
+        return RedirectResponse("/plugin-manager/", status_code=303)
     return JSONResponse({"detail": message}, status_code=400)
 
 
 @router.post("/api/purge-data")
+@legacy_router.post("/api/purge-data", include_in_schema=False)
 async def purge_plugin_data_api(
     request: Request,
     plugin_id: str = Form(...),
@@ -127,21 +145,23 @@ async def purge_plugin_data_api(
     """Permanently remove preserved plugin volumes after explicit confirmation."""
     success, message = await plugin_manager.purge_plugin_data(plugin_id, confirmation)
     if success:
-        return RedirectResponse("/plugins/", status_code=303)
+        return RedirectResponse("/plugin-manager/", status_code=303)
     return JSONResponse({"detail": message}, status_code=400)
 
 
 @router.post("/api/toggle")
+@legacy_router.post("/api/toggle", include_in_schema=False)
 async def toggle_plugin(request: Request, plugin_id: str = Form(...), enabled: bool = Form(...)):
     """Enable or disable a plugin."""
     success, message = await plugin_manager.toggle_plugin(plugin_id, enabled)
     if success:
-        return RedirectResponse("/plugins/", status_code=303)
+        return RedirectResponse("/plugin-manager/", status_code=303)
     query = urlencode({"plugin_id": plugin_id, "error": message[:240]})
-    return RedirectResponse(f"/plugins/?{query}", status_code=303)
+    return RedirectResponse(f"/plugin-manager/?{query}", status_code=303)
 
 
 @router.post("/api/upload")
+@legacy_router.post("/api/upload", include_in_schema=False)
 async def upload_plugin(request: Request, plugin_file: UploadFile = File(...)):
     """Upload and install a plugin zip package."""
     if not plugin_file.filename.endswith(".zip"):
@@ -156,7 +176,7 @@ async def upload_plugin(request: Request, plugin_file: UploadFile = File(...)):
 
         success, message = plugin_manager.upload_plugin_zip(str(temp_path))
         if success:
-            return RedirectResponse("/plugins/", status_code=303)
+            return RedirectResponse("/plugin-manager/", status_code=303)
         return JSONResponse({"detail": message}, status_code=400)
     except Exception as exc:
         logger.error("Plugin upload error: %s", exc)

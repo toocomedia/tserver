@@ -32,7 +32,7 @@ PATHS: dict[str, str] = {
     "usage": "/usage",
     "health": "/api/health",
     "api_settings": "/api/settings",
-    "plugins": "/plugins/",
+    "plugins": "/plugin-manager/",
     "dependencies": "/dependencies",
     "apps": "/apps/",
     "php_sites": "/php-sites/",
