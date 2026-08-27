@@ -397,6 +397,21 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  // Instant active state on click (zero-latency visual feedback before navigation)
+  document.querySelectorAll(".sidebar__item").forEach((item) => {
+    item.addEventListener("click", (e) => {
+      if (e.button === 0 && !e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey) {
+        const href = item.getAttribute("href");
+        if (href && href !== "#" && !href.startsWith("javascript:")) {
+          document.querySelectorAll(".sidebar__item--active").forEach((el) => {
+            el.classList.remove("sidebar__item--active");
+          });
+          item.classList.add("sidebar__item--active");
+        }
+      }
+    });
+  });
+
   // Mobile menu toggle
   const mobileToggle = document.getElementById("mobile-menu-toggle");
   const sidebar = document.querySelector(".sidebar");

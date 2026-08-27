@@ -228,12 +228,13 @@
   text-align: start;
   white-space: nowrap;
   cursor: pointer;
-  transition: color 0.12s ease, background 0.12s ease, border-color 0.12s ease;
+  transition: background 0.1s ease, color 0.1s ease, border-color 0.1s ease;
 }
 
 .sidebar__item:hover,
 .sidebar__section-tab:hover,
 .sidebar__view-back:hover {
+  transition: none !important;
   background: var(--color-sidebar-bg-hover);
   color: var(--color-sidebar-hover);
 }
@@ -274,7 +275,7 @@ html[dir="rtl"] .sidebar__section-tab:hover .sidebar__tab-chevron {
   transform: scaleX(-1) translateX(3px);
 }
 
-/* Sidebar View Switching (Pure opacity crossfade, zero layout shift) */
+/* Sidebar View Switching: Smooth directional slide & fade */
 .sidebar__views {
   position: relative;
   flex: 1;
@@ -285,21 +286,70 @@ html[dir="rtl"] .sidebar__section-tab:hover .sidebar__tab-chevron {
 .sidebar__view {
   position: absolute;
   inset: 0;
-  display: none;
+  display: flex;
   flex-direction: column;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+              visibility 0s linear 0.22s;
 }
 
-.sidebar__view.is-active {
-  display: flex;
-  z-index: 1;
+.sidebar__view--main {
+  transform: translateX(0);
+}
+
+.sidebar__view--main.is-active {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateX(0);
+  transition-delay: 0s;
+}
+
+.sidebar__view--main:not(.is-active) {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateX(-16px);
 }
 
 .sidebar__view--plugins {
   padding-top: var(--space-sm);
+  transform: translateX(16px);
+}
+
+.sidebar__view--plugins.is-active {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateX(0);
+  transition-delay: 0s;
+}
+
+.sidebar__view--plugins:not(.is-active) {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateX(16px);
 }
 
 .sidebar__view--plugins .sidebar__nav {
   padding-top: 0;
+}
+
+html[dir="rtl"] .sidebar__view--main:not(.is-active) {
+  transform: translateX(16px);
+}
+
+html[dir="rtl"] .sidebar__view--plugins:not(.is-active) {
+  transform: translateX(-16px);
+}
+
+html[dir="rtl"] .sidebar__view--main.is-active,
+html[dir="rtl"] .sidebar__view--plugins.is-active {
+  transform: translateX(0);
 }
 
 /* Submenu Back / Section Header */
@@ -360,11 +410,24 @@ html[data-sidebar-style="opacity"] .sidebar__view-back {
   border-inline-start-color: transparent !important;
 }
 
+html[data-sidebar-style="opacity"] .sidebar__item:hover,
+html[data-sidebar-style="opacity"] .sidebar__section-tab:hover,
+html[data-sidebar-style="opacity"] .sidebar__view-back:hover {
+  transition: none !important;
+  background: var(--color-sidebar-bg-hover);
+  color: var(--color-sidebar-hover);
+}
+
 html[data-sidebar-style="opacity"] .sidebar__item--active,
-html[data-sidebar-style="opacity"] .sidebar__item--active:hover,
-html[data-sidebar-style="opacity"] .sidebar__section-tab--active,
-html[data-sidebar-style="opacity"] .sidebar__section-tab--active:hover {
+html[data-sidebar-style="opacity"] .sidebar__section-tab--active {
   background: color-mix(in srgb, var(--color-accent) 15%, transparent) !important;
+  color: var(--color-accent) !important;
+}
+
+html[data-sidebar-style="opacity"] .sidebar__item--active:hover,
+html[data-sidebar-style="opacity"] .sidebar__section-tab--active:hover {
+  transition: none !important;
+  background: color-mix(in srgb, var(--color-accent) 22%, transparent) !important;
   color: var(--color-accent) !important;
 }
 
