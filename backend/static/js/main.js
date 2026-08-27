@@ -528,18 +528,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (pluginsTab) pluginsTab.addEventListener("click", showPluginsView);
     if (pluginsBack) pluginsBack.addEventListener("click", showMainView);
-    // When landing on a plugin/service page, open that view instantly (no animation)
-    if (isChildPluginActive()) {
-      if (viewsWrap) viewsWrap.classList.add("is-instant");
-      showPluginsView();
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          if (viewsWrap) viewsWrap.classList.remove("is-instant");
-        });
-      });
-    } else {
-      updatePluginsTabActiveState(false);
-    }
+
+    // Keep main navigation view active on load; highlight plugins tab if on a plugin page
+    updatePluginsTabActiveState(false);
   }
 
   // Sidebar Search
