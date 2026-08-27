@@ -373,7 +373,7 @@ html[dir="rtl"] .sidebar__view-back .sidebar__back-icon {
 
 html[dir="rtl"] .sidebar__view-back:hover svg,
 html[dir="rtl"] .sidebar__view-back:hover .sidebar__back-icon {
-  transform: scaleX(-1) translateX(-3px);
+  transform: scaleX(-1) translateX(-4px);
 }
 
 html[dir="rtl"] .sidebar__item--active,
@@ -394,14 +394,27 @@ html[data-sidebar-style="line"][dir="rtl"] .sidebar__section-tab--active:hover {
 }
 
 html[data-sidebar-style="opacity"][dir="rtl"] .sidebar__item,
-html[data-sidebar-style="opacity"][dir="rtl"] .sidebar__section-tab,
-html[data-sidebar-style="opacity"][dir="rtl"] .sidebar__view-back {
+html[data-sidebar-style="opacity"][dir="rtl"] .sidebar__section-tab {
   box-sizing: border-box;
   width: calc(100% - 24px);
   margin: 2px 12px;
   border-radius: 6px;
   border-left-color: transparent !important;
   border-right-color: transparent !important;
+}
+
+html[data-sidebar-style="opacity"][dir="rtl"] .sidebar__view-back {
+  box-sizing: border-box;
+  width: calc(100% - 24px);
+  margin: 2px 12px 6px 12px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+html[data-sidebar-style="opacity"][dir="rtl"] .sidebar__view-back:hover {
+  background: color-mix(in srgb, var(--color-accent) 12%, transparent) !important;
+  border-color: color-mix(in srgb, var(--color-accent) 35%, transparent) !important;
 }
 
 html[data-sidebar-style="opacity"][dir="rtl"] .sidebar__item--active,

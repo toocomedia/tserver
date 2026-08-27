@@ -507,12 +507,14 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     const showPluginsView = () => {
-      pluginsView.classList.add("is-active");
-      pluginsView.removeAttribute("aria-hidden");
+      if (pluginsTab) {
+        pluginsTab.classList.remove("sidebar__section-tab--active");
+        pluginsTab.setAttribute("aria-expanded", "true");
+      }
       sidebarNav.classList.remove("is-active");
       sidebarNav.classList.add("is-behind");
-      if (pluginsTab) pluginsTab.setAttribute("aria-expanded", "true");
-      updatePluginsTabActiveState(true);
+      pluginsView.removeAttribute("aria-hidden");
+      pluginsView.classList.add("is-active");
       if (updateScrollArrows) updateScrollArrows();
     };
 
@@ -529,8 +531,9 @@ document.addEventListener("DOMContentLoaded", () => {
     if (pluginsTab) pluginsTab.addEventListener("click", showPluginsView);
     if (pluginsBack) pluginsBack.addEventListener("click", showMainView);
 
-    // Keep main navigation view active on load; highlight plugins tab if on a plugin page
-    updatePluginsTabActiveState(false);
+    // Initial state: sync tab active state with whichever view is currently active
+    const isShowingPluginsInitially = pluginsView.classList.contains("is-active");
+    updatePluginsTabActiveState(isShowingPluginsInitially);
   }
 
   // Sidebar Search
