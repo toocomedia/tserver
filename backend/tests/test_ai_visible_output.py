@@ -83,6 +83,23 @@ class VisibleOutputTests(unittest.TestCase):
         self.assertIn("server-side planning record", message)
         self.assertNotIn("retry the setup chat", message)
 
+    def test_missing_plan_includes_recovery_action_tags(self):
+        msg_with_error = missing_plan_message(["Port 3000 collision"])
+        self.assertIn("[ACTION:SETUP_RETRY_PLAN]", msg_with_error)
+        self.assertIn("[ACTION:SETUP_EDIT_ANSWERS]", msg_with_error)
+
+        msg_without_error = missing_plan_message([])
+        self.assertIn("[ACTION:SETUP_RETRY_PLAN]", msg_without_error)
+        self.assertIn("[ACTION:SETUP_EDIT_ANSWERS]", msg_without_error)
+
+    def test_setup_recovery_actions_pass_visible_filter(self):
+        text = "Plan failed. [ACTION:SETUP_RETRY_PLAN] [ACTION:SETUP_EDIT_ANSWERS] [ACTION:SETUP_RETRY_INSPECTION:github.com/test/repo] [ACTION:SETUP_CHANGE_SOURCE]"
+        filtered = strip_hidden_reasoning(text)
+        self.assertIn("[ACTION:SETUP_RETRY_PLAN]", filtered)
+        self.assertIn("[ACTION:SETUP_EDIT_ANSWERS]", filtered)
+        self.assertIn("[ACTION:SETUP_RETRY_INSPECTION:github.com/test/repo]", filtered)
+        self.assertIn("[ACTION:SETUP_CHANGE_SOURCE]", filtered)
+
     def test_recommendation_decision_pending_behavior(self):
         res_with_advice = {
             "status": "ok",

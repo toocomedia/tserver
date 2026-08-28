@@ -308,12 +308,14 @@ def _normalized_https_url(value: str) -> str:
 
 def missing_plan_message(errors: list[str]) -> str:
     """Give the user the final actionable plan error without exposing tool internals."""
+    recovery_tags = "\n\n[ACTION:SETUP_RETRY_PLAN] [ACTION:SETUP_EDIT_ANSWERS]"
     if errors:
         return (
             "The reviewed setup plan could not be created: "
-            f"{errors[-1][:420]} Nothing was applied."
+            f"{errors[-1][:420]} Nothing was applied.{recovery_tags}"
         )
     return (
         "No reviewed setup plan was created, so nothing was applied. "
         "The provider stopped before creating the required server-side planning record."
+        f"{recovery_tags}"
     )

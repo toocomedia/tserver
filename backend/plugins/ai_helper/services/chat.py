@@ -1016,12 +1016,26 @@ async def stream_ai_chat(
                         "State clearly that the required setup details are requested from the user to finalize the deployment plan. "
                         "Do NOT claim the reviewed setup plan is ready to deploy yet."
                     )
-                else:
+                elif setup_plan_id:
                     content_str = (
                         "The reviewed setup plan has been created and validated. "
                         "Briefly summarize the chosen configuration (e.g. selected deployment option, configured target domain, and provided credentials/settings) in a clean Markdown summary. "
                         "Do NOT ask the setup interview questions again, do NOT list options or request admin email again, and do NOT output [OPTION:] or [INPUT:] tags. "
                         "State clearly that the reviewed setup plan is ready to deploy using the action button below."
+                    )
+                elif setup_source_result and setup_source_result.get("status") != "ok":
+                    target_source = repo or img or ""
+                    retry_target = f":{target_source}" if target_source else ""
+                    content_str = (
+                        "Source inspection could not verify the repository or image. "
+                        "Explain the issue clearly to the user and include recovery action tags: "
+                        f"[ACTION:SETUP_RETRY_INSPECTION{retry_target}] [ACTION:SETUP_CHANGE_SOURCE]"
+                    )
+                else:
+                    content_str = (
+                        "The reviewed setup plan could not be created from the current settings. "
+                        "Explain why clearly to the user, and include recovery action tags so they can edit or retry: "
+                        "[ACTION:SETUP_RETRY_PLAN] [ACTION:SETUP_EDIT_ANSWERS]"
                     )
                 messages.append({
                     "role": "user",
@@ -1116,12 +1130,23 @@ async def stream_ai_chat(
         except Exception as exc:
             logger.warning("Final diagnostic auto-patch fallback failed: %s", exc)
 
-    if setup_plan_required and not setup_plan_id and setup_interview_options_str and not has_error:
+    if setup_plan_required and not setup_plan_id and not has_error:
         full_text_so_far = "".join(full_response)
-        if "[OPTION:" not in full_text_so_far and "[INPUT:" not in full_text_so_far:
-            append_tags = f"\n\n{setup_interview_options_str}"
-            full_response.append(append_tags)
-            yield append_tags
+        if setup_interview_options_str:
+            if "[OPTION:" not in full_text_so_far and "[INPUT:" not in full_text_so_far:
+                append_tags = f"\n\n{setup_interview_options_str}"
+                full_response.append(append_tags)
+                yield append_tags
+        elif not setup_handoff.is_setup_interview_pending(setup_source_result, user_message):
+            if "[ACTION:SETUP_" not in full_text_so_far and "[ACTION:OPEN_DEPENDENCY" not in full_text_so_far:
+                if setup_source_result and setup_source_result.get("status") != "ok":
+                    target_source = repo or img or ""
+                    retry_target = f":{target_source}" if target_source else ""
+                    append_recovery = f"\n\n[ACTION:SETUP_RETRY_INSPECTION{retry_target}] [ACTION:SETUP_CHANGE_SOURCE]"
+                else:
+                    append_recovery = "\n\n[ACTION:SETUP_RETRY_PLAN] [ACTION:SETUP_EDIT_ANSWERS]"
+                full_response.append(append_recovery)
+                yield append_recovery
 
     if setup_plan_id:
         kind_suffix = ":patch" if setup_plan_kind == "patch" else ""

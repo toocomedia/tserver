@@ -196,14 +196,46 @@
       escaped = escaped.replace(/\[ACTION:(?:ALLOW_SECRETS|UNLOCK_CREDENTIALS):?[^\]]*\]/gi, "");
 
       escaped = escaped.replace(
-        /\[ACTION:([A-Z_]+):([^\]]+)\]/g,
-        function (_, actionType, actionVal) {
+        /\[ACTION:([A-Z_]+)(?::([^\]]+))?\]/g,
+        function (_, actionType, rawActionVal) {
+          var actionVal = (rawActionVal || "").trim();
           if (actionType === "UNLOCK_SENSITIVE_FILE") {
             return renderSecretsBtn();
           }
-          if (actionType === "OPEN_DEPENDENCY" && /^[a-z0-9_-]{1,64}$/i.test(actionVal.trim())) {
-            var dependencyId = actionVal.trim();
+          if (actionType === "OPEN_DEPENDENCY" && /^[a-z0-9_-]{1,64}$/i.test(actionVal)) {
+            var dependencyId = actionVal;
             return '<a class="ai-action-tag" href="/dependencies/' + encodeURIComponent(dependencyId) + '">Open Dependencies</a>';
+          }
+          // Setup Lifecycle & Recovery Action Buttons
+          if (actionType === "SETUP_RETRY_INSPECTION") {
+            var targetAttr = actionVal ? ' data-target="' + actionVal.replace(/"/g, '&quot;') + '"' : '';
+            return (
+              '<button type="button" class="btn btn--secondary btn--sm ai-action-btn" data-action="SETUP_RETRY_INSPECTION"' + targetAttr + ' style="margin: 4px 4px 4px 0; font-size: 11px; padding: 4px 10px; display: inline-flex; align-items: center; gap: 4px;">' +
+              '  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg> Retry Inspection' +
+              '</button>'
+            );
+          }
+          if (actionType === "SETUP_EDIT_ANSWERS") {
+            return (
+              '<button type="button" class="btn btn--secondary btn--sm ai-action-btn" data-action="SETUP_EDIT_ANSWERS" style="margin: 4px 4px 4px 0; font-size: 11px; padding: 4px 10px; display: inline-flex; align-items: center; gap: 4px;">' +
+              '  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg> Edit Answers' +
+              '</button>'
+            );
+          }
+          if (actionType === "SETUP_RETRY_PLAN") {
+            return (
+              '<button type="button" class="btn btn--primary btn--sm ai-action-btn" data-action="SETUP_RETRY_PLAN" style="margin: 4px 4px 4px 0; font-size: 11px; padding: 4px 10px; display: inline-flex; align-items: center; gap: 4px;">' +
+              '  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg> Retry Setup Plan' +
+              '</button>'
+            );
+          }
+          if (actionType === "SETUP_CHANGE_SOURCE" || actionType === "SETUP_CHANGE_METHOD") {
+            var btnLabel = actionType === "SETUP_CHANGE_METHOD" ? "Change Method" : "Change Source";
+            return (
+              '<button type="button" class="btn btn--secondary btn--sm ai-action-btn" data-action="' + actionType + '" style="margin: 4px 4px 4px 0; font-size: 11px; padding: 4px 10px; display: inline-flex; align-items: center; gap: 4px;">' +
+              '  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 3h5v5"></path><path d="M4 20L21 3"></path><path d="M21 16v5h-5"></path><path d="M15 15l6 6"></path><path d="M4 4l5 5"></path></svg> ' + btnLabel +
+              '</button>'
+            );
           }
           // Special: SECURITY_FINDING renders as coloured severity badge
           if (actionType === "SECURITY_FINDING") {
@@ -217,9 +249,9 @@
           }
           // Only server-appended setup handoffs render in chat. The click is approval.
           if (actionType === "APP_SETUP_PLAN") {
-            var parts = actionVal.trim().split(":");
-            var setupPlanId = parts[0].trim();
-            var planKind = (parts[1] || "").trim().toLowerCase();
+            var planParts = actionVal.split(":");
+            var setupPlanId = planParts[0].trim();
+            var planKind = (planParts[1] || "").trim().toLowerCase();
             var isPatch = planKind === "patch" || planKind === "redeploy" || planKind === "fix";
             var cardTitle = isPatch ? "Reviewed Fix Ready" : "Reviewed Setup Plan Ready";
             var summaryText = isPatch
@@ -252,7 +284,7 @@
           }
           // Special: APP_NEXT renders a prominent next step button
           if (actionType === "APP_NEXT" || actionType === "APP_STEP") {
-            var btnText = actionVal.trim() || "Accept & Continue";
+            var btnText = actionVal || "Accept & Continue";
             return (
               '<div style="margin: 10px 0;">' +
               '  <button type="button" class="ai-action-btn--big-next" data-action="APP_NEXT">' +

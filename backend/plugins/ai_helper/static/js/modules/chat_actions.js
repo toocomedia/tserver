@@ -123,13 +123,25 @@
 
             if (["queued", "running"].indexOf(item.status) !== -1) {
               setTimeout(pollStream, 1500);
-            } else {
               if (item.status === "success") {
                 if (window.toast) window.toast("Application deployment completed successfully!", "success");
               } else if (item.status === "failed") {
                 if (window.toast) window.toast("Deployment failed: " + (item.error || "See logs"), "error");
+                var streamFooter = streamBox.querySelector(".ai-stream-footer");
+                if (streamFooter && !streamFooter.querySelector(".ai-deploy-retry-btn")) {
+                  var retryBtn = document.createElement("button");
+                  retryBtn.type = "button";
+                  retryBtn.className = "btn btn--secondary btn--sm ai-deploy-retry-btn";
+                  retryBtn.style.cssText = "font-size: 11px; padding: 2px 8px; margin-left: 8px;";
+                  retryBtn.innerHTML = "↻ Retry Deployment";
+                  retryBtn.addEventListener("click", function () {
+                    if (window.AiHelper && typeof window.AiHelper.send === "function") {
+                      window.AiHelper.send("Deployment failed. Please diagnose recent logs and retry deploying with any needed fix.");
+                    }
+                  });
+                  streamFooter.appendChild(retryBtn);
+                }
               }
-            }
           })
           .catch(function () {
             setTimeout(pollStream, 3000);
@@ -282,6 +294,46 @@
               if (window.toast) window.toast(err.message, "error");
             });
           return;
+        }
+
+        // 5b. Setup Lifecycle Recovery Action Buttons
+        var setupRecoveryBtn = e.target.closest("[data-action^='SETUP_']");
+        if (setupRecoveryBtn) {
+          e.preventDefault();
+          var recoveryAction = setupRecoveryBtn.getAttribute("data-action");
+          if (recoveryAction === "SETUP_RETRY_INSPECTION") {
+            var target = setupRecoveryBtn.getAttribute("data-target") || "";
+            if (window.AiHelper && typeof window.AiHelper.send === "function") {
+              window.AiHelper.send(target ? "Please inspect application source: " + target : "Please retry inspecting the application source.");
+            }
+            return;
+          }
+          if (recoveryAction === "SETUP_EDIT_ANSWERS") {
+            var reopened = window.AiHelperDecisionBar && window.AiHelperDecisionBar.editAnswers();
+            if (!reopened && window.AiHelper && typeof window.AiHelper.send === "function") {
+              window.AiHelper.send("Please show the setup configuration questions and options again.");
+            }
+            return;
+          }
+          if (recoveryAction === "SETUP_RETRY_PLAN") {
+            if (window.AiHelper && typeof window.AiHelper.send === "function") {
+              window.AiHelper.send("Please retry creating the reviewed setup plan with the confirmed settings.");
+            }
+            return;
+          }
+          if (recoveryAction === "SETUP_CHANGE_SOURCE") {
+            if (window.AiHelper && typeof window.AiHelper.send === "function") {
+              window.AiHelper.send("I want to change the repository or Docker image source for this setup.");
+            }
+            return;
+          }
+          if (recoveryAction === "SETUP_CHANGE_METHOD") {
+            var reopenedMethod = window.AiHelperDecisionBar && window.AiHelperDecisionBar.editAnswers();
+            if (!reopenedMethod && window.AiHelper && typeof window.AiHelper.send === "function") {
+              window.AiHelper.send("Please show the deployment method choices again (Compose stack, Docker image, Railpack build).");
+            }
+            return;
+          }
         }
 
         // 6. Action Tag Click — general (Copy or apply value)

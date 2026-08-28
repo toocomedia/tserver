@@ -21,7 +21,7 @@
 
     extractAndShow: function (text) {
       if (!text || typeof text !== "string") return;
-      if (/\[ACTION:APP_SETUP_PLAN:/i.test(text) || /ready to deploy/i.test(text)) {
+      if (/\[ACTION:APP_SETUP_PLAN:/i.test(text)) {
         this.hide();
         return;
       }
@@ -32,9 +32,19 @@
       }
       this.steps = parsed.steps;
       this.index = 0;
-      this.answers = {};
+      this.answers = this.answers || {};
       this.completed = false;
       this._render();
+    },
+
+    editAnswers: function () {
+      if (this.steps && this.steps.length) {
+        this.index = 0;
+        this.completed = false;
+        this._render();
+        return true;
+      }
+      return false;
     },
 
     _parse: function (text) {

@@ -19,5 +19,12 @@
     extractAndShow: function (text) {
       window.AiHelperSetupInterview.extractAndShow(text);
     },
+
+    editAnswers: function () {
+      if (window.AiHelperSetupInterview && typeof window.AiHelperSetupInterview.editAnswers === "function") {
+        return window.AiHelperSetupInterview.editAnswers();
+      }
+      return false;
+    },
   };
 })();
