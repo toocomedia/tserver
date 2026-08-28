@@ -1,0 +1,7 @@
+version: '3.8'
+services:
+  shynet:
+    image: https://github.com/milesmcc/shynet
+    restart: always
+    ports: []
+    environment: {}

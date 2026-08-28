@@ -1,0 +1,50 @@
+================================================================================
+AI PLAN & SPEC TEST REPORT: SHYNET ANALYTICS STACK
+Generated: 2026-08-28 10:07:20 UTC
+Active AI Provider: Offline Simulation Engine (deterministic-builder)
+Target: https://github.com/milesmcc/shynet (Source: git)
+Status: [PASS] (Total Duration: 4114ms)
+================================================================================
+
+[1. AI SEARCH & TOOL EXECUTION TRACE]
+--------------------------------------------------------------------------------
+  1. Tool: inspect_app_source -> DONE (+5ms)
+     Label: Simulated local inspection
+     Detail: https://github.com/milesmcc/shynet
+  2. Tool: propose_app_spec_plan -> DONE (+25ms)
+     Label: Synthesizing validated plan
+     Detail: shynet.test.internal
+
+[Turn 1 Response Snippet]:
+  Generated configuration in dry-run mode.
+
+[2. GENERATED PLAN (JSON)]
+--------------------------------------------------------------------------------
+{}
+
+[3. EXPORTED DOCKER COMPOSE (YAML)]
+--------------------------------------------------------------------------------
+version: '3.8'
+services:
+  shynet:
+    image: https://github.com/milesmcc/shynet
+    restart: always
+    ports: []
+    environment: {}
+
+[4. VALIDATION RESULTS & ISSUES TO FIX]
+--------------------------------------------------------------------------------
+Detected Services: app
+Detected Internal Port: Unspecified
+Detected Database Provider: none
+Total Errors: 0 | Total Warnings: 2
+
+[WARNING] Field: port
+     Problem:  Internal port is not explicitly declared.
+     FIX HERE: Declare internal_port or web_port to avoid fallback to default 3000.
+
+[WARNING] Field: environment_values
+     Problem:  Application typically requires postgresql but no DATABASE_URL or database attachment was found.
+     FIX HERE: Add DATABASE_URL template or attach a managed postgresql container.
+
+================================================================================
