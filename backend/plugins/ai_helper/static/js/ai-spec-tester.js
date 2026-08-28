@@ -17,7 +17,57 @@ document.addEventListener("DOMContentLoaded", function () {
   const auditSummary = document.getElementById("audit-summary-box");
   const auditIssues = document.getElementById("audit-issues-list");
   const providerSelect = document.getElementById("provider-select");
-  const modelOverrideInput = document.getElementById("model-override-input");
+  const modelSelect = document.getElementById("model-select");
+  const modelCustomInput = document.getElementById("model-custom-input");
+  const providersDataScript = document.getElementById("providers-data");
+
+  const providers = JSON.parse(providersDataScript ? providersDataScript.textContent : "[]");
+  const DEFAULT_MODELS = {
+    anthropic: ["claude-3-5-sonnet-20241022", "claude-3-5-haiku-20241022", "claude-3-opus-20240229"],
+    openai_compatible: ["gpt-4o", "gpt-4o-mini", "o3-mini", "o1", "deepseek-chat", "deepseek-reasoner"],
+    ollama: ["llama3.2", "llama3.1", "qwen2.5-coder", "deepseek-r1", "mistral"],
+  };
+
+  function populateModels() {
+    if (!modelSelect || !providerSelect) return;
+    const selectedProviderId = parseInt(providerSelect.value, 10);
+    const provider = providers.find(function (p) { return p.id === selectedProviderId; });
+    if (!provider) return;
+
+    const modelSet = new Set();
+    if (provider.model_name) modelSet.add(provider.model_name.trim());
+    if (Array.isArray(provider.models)) {
+      provider.models.forEach(function (m) { if (m && m.trim()) modelSet.add(m.trim()); });
+    }
+    const common = DEFAULT_MODELS[provider.type] || DEFAULT_MODELS.openai_compatible;
+    common.forEach(function (m) { modelSet.add(m); });
+
+    const modelList = Array.from(modelSet);
+    modelSelect.innerHTML = modelList.map(function (m) {
+      const isSelected = m === provider.model_name ? "selected" : "";
+      return `<option value="${escapeHtml(m)}" ${isSelected}>${escapeHtml(m)}</option>`;
+    }).join("") + '<option value="__custom__">Custom model (type below)...</option>';
+
+    toggleCustomInput();
+  }
+
+  function toggleCustomInput() {
+    if (!modelSelect || !modelCustomInput) return;
+    if (modelSelect.value === "__custom__") {
+      modelCustomInput.style.display = "block";
+      modelCustomInput.focus();
+    } else {
+      modelCustomInput.style.display = "none";
+    }
+  }
+
+  if (providerSelect) {
+    providerSelect.addEventListener("change", populateModels);
+  }
+  if (modelSelect) {
+    modelSelect.addEventListener("change", toggleCustomInput);
+  }
+  populateModels();
 
   // Tab switching
   const tabBtns = document.querySelectorAll(".dev-tab-btn");
@@ -62,7 +112,9 @@ document.addEventListener("DOMContentLoaded", function () {
       const customTarget = customInput ? customInput.value.trim() : "";
       const offline = offlineCheck ? offlineCheck.checked : false;
       const providerId = providerSelect && providerSelect.value ? parseInt(providerSelect.value, 10) : null;
-      const modelName = modelOverrideInput ? modelOverrideInput.value.trim() : "";
+      const selectedModel = (modelSelect && modelSelect.value === "__custom__")
+        ? (modelCustomInput ? modelCustomInput.value.trim() : "")
+        : (modelSelect ? modelSelect.value : "");
 
       runBtn.disabled = true;
       btnText.textContent = "Running AI Test (Streaming)...";
@@ -86,7 +138,7 @@ document.addEventListener("DOMContentLoaded", function () {
             custom_target: customTarget,
             offline: offline,
             provider_id: providerId,
-            model_name: modelName || null,
+            model_name: selectedModel || null,
           }),
         });
 

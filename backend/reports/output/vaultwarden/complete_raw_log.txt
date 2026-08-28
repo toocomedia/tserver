@@ -1,0 +1,15 @@
+=== OFFLINE SIMULATION: Vaultwarden (Bitwarden Server) (vaultwarden) ===
+Mode: Deterministic Local Plan Builder
+Duration: 116ms
+
+--- ACTIVITIES ---
+  [5ms] inspect_app_source -> done: Simulated local inspection (vaultwarden/server:latest)
+  [25ms] propose_app_spec_plan -> done: Synthesizing validated plan (vaultwarden.test.internal)
+
+--- EXTRACTED PLAN ---
+Plan ID: plan_435f741c18434465
+{}
+
+--- VALIDATION FINDINGS ---
+Verdict: PASS (Errors: 0, Warnings: 1)
+  [WARNING] port: Internal port is not explicitly declared. -> FIX: Declare internal_port or web_port to avoid fallback to default 3000.

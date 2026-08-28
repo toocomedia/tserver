@@ -124,6 +124,12 @@ def save_app_output_files(result: RunResult, base_dir: Path) -> Dict[str, Path]:
     txt_path.write_text(report_text, encoding="utf-8")
     saved["report_txt"] = txt_path
 
+    # 4. complete_raw_log.txt
+    if result.raw_log:
+        raw_log_path = app_dir / "complete_raw_log.txt"
+        raw_log_path.write_text(result.raw_log, encoding="utf-8")
+        saved["raw_log"] = raw_log_path
+
     return saved
 
 

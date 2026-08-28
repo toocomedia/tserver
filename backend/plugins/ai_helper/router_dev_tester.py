@@ -40,12 +40,24 @@ async def spec_tester_page(request: Request, db: AsyncSession = Depends(get_db))
     provider = await get_active_provider(db)
     all_providers = await list_providers(db)
     catalog = get_catalog()
+    enabled_providers = [p for p in all_providers if p.is_enabled]
+    providers_payload = [
+        {
+            "id": p.id,
+            "name": p.name,
+            "type": p.provider_type,
+            "model_name": p.model_name,
+            "models": p.get_models(),
+        }
+        for p in enabled_providers
+    ]
 
     return templates.TemplateResponse("ai_spec_tester.html", {
         "request": request,
         "active_page": "ai_helper",
         "provider": provider,
-        "providers": [p for p in all_providers if p.is_enabled],
+        "providers": enabled_providers,
+        "providers_json": json.dumps(providers_payload),
         "catalog": catalog,
     })
 
