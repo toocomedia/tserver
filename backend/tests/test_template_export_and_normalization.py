@@ -77,8 +77,7 @@ class TestTemplateExportAndNormalization(unittest.TestCase):
             },
         }
         self.assertTrue(is_setup_interview_pending(source_result, "Please inspect https://github.com/umami-software/umami"))
-        self.assertFalse(is_setup_interview_pending(source_result, "Setup interview answers:\nsetup_flow: direct_apply\ndeployment_method: compose_stack"))
-        self.assertTrue(is_setup_interview_pending(source_result, "Setup interview answers:\nsetup_flow: check_steps"))
+        self.assertFalse(is_setup_interview_pending(source_result, "Setup interview answers:\ndeployment_method: compose_stack\nprovider.postgresql: docker"))
 
     def test_inspection_cache_and_server_fallback_limits(self):
         from plugins.ai_helper.services.setup_handoff import (

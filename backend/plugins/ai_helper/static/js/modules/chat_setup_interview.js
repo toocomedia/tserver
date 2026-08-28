@@ -83,12 +83,7 @@
         });
       }
       var steps = [];
-      if (deployment.length) {
-        var isFlowChoice = deployment.every(function (o) { return o.reply.indexOf("setup_flow:") === 0; });
-        var title = isFlowChoice ? "How would you like to proceed?" : "Deployment method";
-        var key = isFlowChoice ? "setup_flow" : "deployment_method";
-        steps.push({ type: "options", key: key, title: title, options: deployment });
-      }
+      if (deployment.length) steps.push({ type: "options", key: "deployment_method", title: "Deployment method", options: deployment });
       Object.keys(providers).forEach(function (kind) {
         steps.push({ type: "options", key: "provider." + kind, title: "Provider for " + kind, options: providers[kind] });
       });
@@ -98,118 +93,98 @@
     _render: function () {
       if (!this.containerEl || !this.steps.length) return;
       var self = this;
-      var step = this.steps[this.index];
-      var total = this.steps.length;
-      var current = this.index + 1;
-      var isFlow = step.key === "setup_flow";
-      var rawValue = this.answers[step.key] || (step.type === "options" ? this._defaultOption(step.options).reply : "");
-      if (step.type === "options" && !this.answers[step.key]) this.answers[step.key] = rawValue;
       var html = [
-        '<div class="ai-decision-card" style="background:var(--color-surface,#1a1a1a);border-radius:6px;padding:8px 10px;margin:4px 6px 6px;color:var(--color-text,#fff);">',
-        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">',
-        '<span style="font-size:11.5px;font-weight:600;color:var(--color-text,#fff);">' + this._escape(step.title || step.label || "Configuration") + '</span>',
-        '<span style="font-size:10.5px;color:var(--color-muted,#94a3b8);">' + (total > 1 ? current + " / " + total : "") + "</span>",
-        "</div>",
+        '<div class="ai-decision-card" style="background:var(--color-surface,#1a1a1a);border:1px solid var(--color-line,rgba(255,255,255,.1));border-radius:6px;padding:10px 12px;margin:4px 0;color:var(--color-text,#fff);">',
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">',
+        '<span style="font-size:11.5px;font-weight:600;letter-spacing:0.3px;color:var(--color-text,#fff);">Configuration Settings</span>',
+        '<span style="font-size:10px;color:var(--color-muted,#94a3b8);">' + this.steps.length + ' fields</span>',
+        '</div>',
       ];
-      if (step.type === "options") {
-        html.push('<div style="display:flex;flex-direction:column;gap:4px;">');
-        step.options.forEach(function (option) {
-          var selected = option.reply === rawValue;
-          var optBg = selected ? "var(--color-surface-hover,rgba(99,102,241,0.15))" : "var(--color-bg,#121212)";
-          var optBorder = selected ? "1px solid var(--color-accent,#6366f1)" : "1px solid transparent";
-          html.push('<button type="button" class="ai-setup-option" data-reply="' + self._escape(option.reply) + '" style="display:flex;align-items:center;padding:5px 8px;background:' + optBg + ';border:' + optBorder + ';border-radius:4px;color:inherit;text-align:left;cursor:pointer;font-size:12px;transition:background .1s ease;">' + self._escape(option.label) + "</button>");
-        });
-        html.push("</div>");
-      } else {
-        var inputType = /email/i.test(step.key + " " + step.label) ? "email" : "text";
-        var val = rawValue === "[skip]" ? "" : rawValue;
-        var badge = step.required
-          ? ' <span style="font-size:10px;color:var(--color-danger,#ef4444);font-weight:600;">* Required</span>'
-          : ' <span style="font-size:10px;color:var(--color-muted,#94a3b8);font-weight:normal;">(Optional)</span>';
-        var reqAttr = step.required ? ' required' : '';
-        html.push('<label style="display:flex;flex-direction:column;gap:4px;font-size:11.5px;">' + this._escape(step.label) + badge + '<input class="ai-setup-input"' + reqAttr + ' type="' + inputType + '" data-key="' + this._escape(step.key) + '" value="' + this._escape(val) + '" placeholder="' + this._escape(step.placeholder) + '" style="background:var(--color-bg,#121212);border:1px solid var(--color-line,rgba(255,255,255,.1));border-radius:4px;padding:5px 8px;color:inherit;font-size:12px;outline:none;" /></label>');
-      }
-      if (!isFlow) {
-        html.push('<div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;">');
-        html.push('<button type="button" class="ai-setup-back"' + (this.index ? "" : ' style="visibility:hidden;"') + ' style="background:transparent;border:0;color:var(--color-muted,#94a3b8);cursor:pointer;font-size:11.5px;padding:2px 4px;">Back</button>');
-        html.push('<div style="display:flex;gap:6px;align-items:center;">');
-        if (step.type === "input" && !step.required) {
-          html.push('<button type="button" class="ai-setup-skip" style="background:transparent;border:0;color:var(--color-muted,#94a3b8);cursor:pointer;font-size:11.5px;padding:4px 8px;">Skip</button>');
+
+      this.steps.forEach(function (step) {
+        var rawValue = self.answers[step.key] || (step.type === "options" ? self._defaultOption(step.options).reply : "");
+        if (step.type === "options" && !self.answers[step.key]) self.answers[step.key] = rawValue;
+
+        html.push('<div style="margin-bottom:8px;">');
+        html.push('<div style="font-size:10.5px;font-weight:600;color:var(--color-muted,#94a3b8);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">' + self._escape(step.title || step.label || "Configuration") + '</div>');
+
+        if (step.type === "options") {
+          html.push('<div style="display:flex;flex-direction:column;gap:3px;">');
+          step.options.forEach(function (option) {
+            var selected = option.reply === rawValue;
+            var optBg = selected ? "var(--color-surface-hover,rgba(99,102,241,0.18))" : "var(--color-bg,#121212)";
+            var optBorder = selected ? "1px solid var(--color-accent,#6366f1)" : "1px solid var(--color-line,rgba(255,255,255,.07))";
+            var checkMark = selected ? '<span style="color:var(--color-accent,#6366f1);font-weight:600;margin-right:6px;"></span>' : '<span style="opacity:0;margin-right:6px;"></span>';
+            html.push('<button type="button" class="ai-setup-option" data-step-key="' + self._escape(step.key) + '" data-reply="' + self._escape(option.reply) + '" style="display:flex;align-items:center;padding:5px 8px;background:' + optBg + ';border:' + optBorder + ';border-radius:4px;color:inherit;text-align:left;cursor:pointer;font-size:11.5px;transition:background .1s ease;">' + checkMark + self._escape(option.label) + "</button>");
+          });
+          html.push('</div>');
+        } else {
+          var inputType = /email/i.test(step.key + " " + step.label) ? "email" : "text";
+          var val = rawValue === "[skip]" ? "" : rawValue;
+          var badge = step.required
+            ? ' <span style="font-size:10px;color:var(--color-danger,#ef4444);font-weight:600;">* Required</span>'
+            : ' <span style="font-size:10px;color:var(--color-muted,#94a3b8);font-weight:normal;">(Optional)</span>';
+          var reqAttr = step.required ? ' required' : '';
+          html.push('<label style="display:flex;flex-direction:column;gap:4px;font-size:11.5px;">' + self._escape(step.label) + badge + '<input class="ai-setup-input"' + reqAttr + ' type="' + inputType + '" data-key="' + self._escape(step.key) + '" value="' + self._escape(val) + '" placeholder="' + self._escape(step.placeholder) + '" style="background:var(--color-bg,#121212);border:1px solid var(--color-line,rgba(255,255,255,.1));border-radius:4px;padding:5px 8px;color:inherit;font-size:12px;outline:none;" /></label>');
         }
-        html.push('<button type="button" class="ai-setup-next" style="background:var(--color-accent,#6366f1);color:#fff;border:0;border-radius:4px;padding:4px 12px;cursor:pointer;font-size:11.5px;font-weight:500;">' + (current === total ? "Send" : "Continue") + "</button>");
-        html.push("</div></div>");
-      }
-      html.push("</div>");
+        html.push('</div>');
+      });
+
+      html.push('<button type="button" class="ai-setup-submit-btn" style="background:var(--color-accent,#6366f1);color:#fff;border:0;border-radius:4px;padding:7px 14px;cursor:pointer;font-size:11.5px;font-weight:600;width:100%;margin-top:4px;display:flex;align-items:center;justify-content:center;gap:6px;">');
+      html.push('<span>Confirm Configuration</span>');
+      html.push('<span>→</span>');
+      html.push('</button>');
+      html.push('</div>');
+
       this.containerEl.innerHTML = html.join("\n");
       this.containerEl.style.display = "block";
+
       this.containerEl.querySelectorAll(".ai-setup-option").forEach(function (button) {
         button.addEventListener("click", function () {
+          var stepKey = button.getAttribute("data-step-key") || "";
           var reply = button.getAttribute("data-reply") || "";
-          self.answers[step.key] = reply;
-          if (isFlow || reply.indexOf("setup_flow:") === 0) {
-            self._complete();
-            return;
-          }
+          self.answers[stepKey] = reply;
           self._render();
         });
       });
-      var backBtn = this.containerEl.querySelector(".ai-setup-back");
-      if (backBtn) {
-        backBtn.addEventListener("click", function () {
-          self._saveCurrent();
-          if (self.index) { self.index -= 1; self._render(); }
-        });
-      }
-      var skipBtn = this.containerEl.querySelector(".ai-setup-skip");
-      if (skipBtn) {
-        skipBtn.addEventListener("click", function () {
-          self.answers[step.key] = "[skip]";
-          if (self.index + 1 < self.steps.length) { self.index += 1; self._render(); return; }
+
+      var submitBtn = this.containerEl.querySelector(".ai-setup-submit-btn");
+      if (submitBtn) {
+        submitBtn.addEventListener("click", function () {
+          if (!self._saveAllInputs()) return;
           self._complete();
         });
       }
-      var next = function () {
-        if (!self._saveCurrent()) return;
-        if (self.index + 1 < self.steps.length) { self.index += 1; self._render(); return; }
-        self._complete();
-      };
-      var nextBtn = this.containerEl.querySelector(".ai-setup-next");
-      if (nextBtn) nextBtn.addEventListener("click", next);
-      var input = this.containerEl.querySelector(".ai-setup-input");
-      if (input) input.addEventListener("keydown", function (event) { if (event.key === "Enter") { event.preventDefault(); next(); } });
     },
 
-    _saveCurrent: function () {
-      var step = this.steps[this.index];
-      var input = this.containerEl.querySelector(".ai-setup-input");
-      if (!input) return true;
-      if (step.required && !input.reportValidity()) return false;
-      var trimmed = input.value.trim();
-      if (step.required && !trimmed) return false;
-      this.answers[step.key] = trimmed || (step.required ? "" : "[skip]");
-      return true;
+    _saveAllInputs: function () {
+      var self = this;
+      var valid = true;
+      this.containerEl.querySelectorAll(".ai-setup-input").forEach(function (input) {
+        var key = input.getAttribute("data-key");
+        var step = self.steps.filter(function (s) { return s.key === key; })[0];
+        if (step && step.required && !input.reportValidity()) {
+          valid = false;
+          return;
+        }
+        var trimmed = input.value.trim();
+        self.answers[key] = trimmed || (step && step.required ? "" : "[skip]");
+      });
+      return valid;
     },
 
     _complete: function () {
       if (this.completed) return;
       this.completed = true;
       var lines = ["Setup interview answers:"];
-      var flowAnswer = this.answers["setup_flow"];
-      if (flowAnswer) {
-        var val = flowAnswer.replace(/^setup_flow:/, "").trim();
-        lines.push("setup_flow: " + val);
-        if (val === "direct_apply") {
-          lines.push("deployment_method: compose_stack");
+      var self = this;
+      this.steps.forEach(function (step) {
+        var rawVal = self.answers[step.key] || "[skip]";
+        if (typeof rawVal === "string" && rawVal.indexOf(step.key + ":") === 0) {
+          rawVal = rawVal.substring(step.key.length + 1).trim();
         }
-      } else {
-        this.steps.forEach(function (step) {
-          var rawVal = interview.answers[step.key] || "[skip]";
-          if (typeof rawVal === "string" && rawVal.indexOf(step.key + ":") === 0) {
-            rawVal = rawVal.substring(step.key.length + 1).trim();
-          }
-          lines.push(step.key + ": " + rawVal);
-        });
-      }
+        lines.push(step.key + ": " + rawVal);
+      });
       this.hide();
       if (typeof this.onComplete === "function") this.onComplete(lines.join("\n"));
     },

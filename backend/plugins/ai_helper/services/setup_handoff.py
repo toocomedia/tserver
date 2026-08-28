@@ -152,15 +152,13 @@ def is_setup_interview_pending(
     # Strip URLs so 'github.com' or 'gitlab.com' does not falsely match 'git' keyword
     clean_msg = re.sub(r"https?://\S+", "", (user_message or "").lower())
 
-    # A staged browser interview returns all values in one message. A chosen
-    # deployment method alone never completes documented application inputs.
     if required_setup_inputs(setup_source_result):
         return bool(missing_setup_inputs(setup_source_result, user_message))
-    # Check if user asked to customize steps
-    if "setup_flow: check_steps" in (user_message or "").lower() or "check_steps" in clean_msg:
-        return True
 
-    if re.search(r"(?im)^\s*(?:deployment_method|setup_flow\s*:\s*direct_apply)\b", user_message or "") or "direct_apply" in clean_msg:
+    if "setup interview answers:" in (user_message or "").lower():
+        return False
+
+    if re.search(r"(?im)^\s*deployment_method\b", user_message or ""):
         return False
 
     # If user explicitly said to proceed, deploy, or answered options, don't block

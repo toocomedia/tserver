@@ -153,8 +153,40 @@
       ].join("\n");
     },
 
+    _escape: function (str) {
+      return String(str || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    },
+
+    _renderSetupAnswers: function (text) {
+      var lines = text.split("\n").slice(1);
+      var items = [];
+      var self = this;
+      lines.forEach(function (line) {
+        var parts = line.split(":");
+        if (parts.length >= 2) {
+          var k = parts[0].trim().replace(/^provider\./, "").replace(/_/g, " ");
+          var v = parts.slice(1).join(":").trim();
+          if (v && v !== "[skip]") {
+            if (v === "compose_stack") v = "Docker Compose";
+            else if (v === "git_build") v = "Railpack";
+            else if (v === "docker") v = "Container";
+            items.push('<div style="display:flex;gap:6px;font-size:11.5px;line-height:1.4;"><span style="color:var(--color-muted,#94a3b8);text-transform:capitalize;">' + self._escape(k) + ':</span><span style="font-weight:500;">' + self._escape(v) + '</span></div>');
+          }
+        }
+      });
+      return [
+        '<div style="background:var(--color-surface,#18181b);border:1px solid var(--color-line,rgba(255,255,255,.08));border-radius:6px;padding:8px 10px;margin:2px 0;">',
+        '  <div style="font-size:10.5px;font-weight:600;color:var(--color-muted,#a1a1aa);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px;">Configuration Confirmed</div>',
+        '  <div>' + items.join("") + '</div>',
+        '</div>',
+      ].join("\n");
+    },
+
     render: function (text) {
       if (!text) return "";
+      if (text.indexOf("Setup interview answers:") === 0) {
+        return this._renderSetupAnswers(text);
+      }
       // Older messages may contain provider reasoning. It is never a chat artifact.
       var mainText = text.replace(/<think>[\s\S]*?(?:<\/think>|$)/gi, "").trim();
       return this._renderMarkdownCore(mainText);
@@ -253,7 +285,7 @@
             var setupPlanId = planParts[0].trim();
             var planKind = (planParts[1] || "").trim().toLowerCase();
             var isPatch = planKind === "patch" || planKind === "redeploy" || planKind === "fix";
-            var cardTitle = isPatch ? "Reviewed Fix Ready" : "Reviewed Setup Plan Ready";
+            var cardTitle = isPatch ? "Fix Ready" : "Setup Plan Ready";
             var summaryText = isPatch
               ? "Configuration and required secrets are verified. Click below to apply changes and redeploy immediately."
               : "Configuration and required secrets are verified. Click below to deploy.";
@@ -265,15 +297,20 @@
               '      <span class="ai-app-plan-card-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg></span>',
               '      <span class="ai-app-plan-card-title">' + cardTitle + '</span>',
               '    </div>',
-              '    <span class="badge badge--ok" style="font-size: 10px; font-weight: 600;">Verified Plan</span>',
+              '    <span class="badge badge--ok" style="font-size: 10px; font-weight: 600;">Verified</span>',
               '  </div>',
               '  <div class="ai-app-plan-card-body">',
               '    <p class="ai-app-plan-summary">' + summaryText + '</p>',
-              '    <button type="button" class="ai-action-btn--big-next" data-action="APP_SETUP_PLAN" data-plan-id="' + setupPlanId + '">',
-              '      <span class="ai-btn-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></span>',
-              '      <span class="ai-btn-text">' + btnText + '</span>',
-              '      <span class="ai-btn-arrow">→</span>',
-              '    </button>',
+              '    <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">',
+              '      <button type="button" class="ai-action-btn--big-next" data-action="APP_SETUP_PLAN" data-plan-id="' + setupPlanId + '">',
+              '        <span class="ai-btn-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></span>',
+              '        <span class="ai-btn-text">' + btnText + '</span>',
+              '        <span class="ai-btn-arrow">→</span>',
+              '      </button>',
+              '      <button type="button" class="btn btn--secondary btn--sm ai-edit-answers-btn" data-action="SETUP_EDIT_ANSWERS" style="font-size: 11.5px; padding: 6px 12px; cursor: pointer;">',
+              '        Customize',
+              '      </button>',
+              '    </div>',
               '  </div>',
               '</div>',
             ].join("\n");
