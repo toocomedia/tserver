@@ -135,7 +135,12 @@
       this.containerEl.style.display = "block";
       this.containerEl.querySelectorAll(".ai-setup-option").forEach(function (button) {
         button.addEventListener("click", function () {
-          self.answers[step.key] = button.getAttribute("data-reply") || "";
+          var reply = button.getAttribute("data-reply") || "";
+          self.answers[step.key] = reply;
+          if (reply === "setup_flow:direct_apply") {
+            self._complete();
+            return;
+          }
           self._render();
         });
       });
@@ -176,13 +181,19 @@
       if (this.completed) return;
       this.completed = true;
       var lines = ["Setup interview answers:"];
-      this.steps.forEach(function (step) {
-        var rawVal = interview.answers[step.key] || "[skip]";
-        if (typeof rawVal === "string" && rawVal.indexOf(step.key + ":") === 0) {
-          rawVal = rawVal.substring(step.key.length + 1).trim();
-        }
-        lines.push(step.key + ": " + rawVal);
-      });
+      var firstKey = this.steps.length ? this.steps[0].key : "";
+      if (firstKey && this.answers[firstKey] === "setup_flow:direct_apply") {
+        lines.push("setup_flow: direct_apply");
+        lines.push("deployment_method: compose_stack");
+      } else {
+        this.steps.forEach(function (step) {
+          var rawVal = interview.answers[step.key] || "[skip]";
+          if (typeof rawVal === "string" && rawVal.indexOf(step.key + ":") === 0) {
+            rawVal = rawVal.substring(step.key.length + 1).trim();
+          }
+          lines.push(step.key + ": " + rawVal);
+        });
+      }
       this.hide();
       if (typeof this.onComplete === "function") this.onComplete(lines.join("\n"));
     },

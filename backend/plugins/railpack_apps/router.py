@@ -29,6 +29,7 @@ from plugins.railpack_apps.router_command import router as command_router
 from plugins.railpack_apps.router_create import router as create_router
 from plugins.railpack_apps.router_recovery import router as recovery_router
 from plugins.railpack_apps.router_resources import router as resource_router
+from plugins.railpack_apps.router_template import router as template_router
 from templating import templates
 
 router = APIRouter(prefix="/plugins/railpack_apps", tags=["railpack-apps"])
@@ -106,6 +107,7 @@ async def bulk_action(req: BulkActionRequest, db: AsyncSession = Depends(get_db)
 router.include_router(create_router)
 router.include_router(recovery_router)
 router.include_router(command_router)
+router.include_router(template_router)
 
 
 @router.get("/{app_id}", response_class=HTMLResponse)

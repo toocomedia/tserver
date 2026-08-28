@@ -35,13 +35,68 @@ _FORBIDDEN_PATHS = ("/var/run/docker.sock", "/etc", "/proc", "/sys")
 _FORBIDDEN_COMMANDS = ("--privileged", "--cap-add", "--network=host", "/var/run/docker.sock")
 
 
+def normalize_app_spec_dict(raw: dict[str, Any]) -> dict[str, Any]:
+    """Normalize common Docker Compose and AI-friendly aliases into canonical AppSpec fields."""
+    data = dict(raw)
+    services_raw = data.get("services")
+    if isinstance(services_raw, dict):
+        norm_services: dict[str, Any] = {}
+        for sname, sval in services_raw.items():
+            if not isinstance(sval, dict):
+                norm_services[sname] = sval
+                continue
+            sdict = dict(sval)
+            if "name" not in sdict:
+                sdict["name"] = sname
+            if "image" in sdict and "image_reference" not in sdict:
+                sdict["image_reference"] = sdict.pop("image")
+            if "port" in sdict and "internal_ports" not in sdict:
+                val = sdict.pop("port")
+                sdict["internal_ports"] = [val] if isinstance(val, int) else ([int(val)] if str(val).isdigit() else [])
+            elif "ports" in sdict and "internal_ports" not in sdict:
+                val = sdict.pop("ports")
+                if isinstance(val, list):
+                    sdict["internal_ports"] = [p if isinstance(p, int) else int(p) for p in val if str(p).isdigit()]
+                elif isinstance(val, int):
+                    sdict["internal_ports"] = [val]
+            if "environment" in sdict and "environment_defaults" not in sdict:
+                sdict["environment_defaults"] = sdict.pop("environment")
+            elif "env" in sdict and "environment_defaults" not in sdict:
+                sdict["environment_defaults"] = sdict.pop("env")
+            if "health_path" in sdict and "health_check" not in sdict:
+                hp = str(sdict.pop("health_path")).strip()
+                if hp and hp != "disabled":
+                    sdict["health_check"] = {"probe_type": "http", "http_path": hp}
+                else:
+                    sdict["health_check"] = None
+            norm_services[sname] = sdict
+        data["services"] = norm_services
+
+    services = data.get("services")
+    if isinstance(services, dict) and services:
+        first_name = next(iter(services))
+        if not data.get("web_service_name"):
+            web_cand = next((k for k in services if k in ("web", "app")), first_name)
+            data["web_service_name"] = web_cand
+        web_svc = services.get(data.get("web_service_name")) or services.get(first_name)
+        if not data.get("web_port") and isinstance(web_svc, dict):
+            i_ports = web_svc.get("internal_ports")
+            if isinstance(i_ports, list) and i_ports:
+                data["web_port"] = i_ports[0]
+            elif isinstance(web_svc.get("port"), int):
+                data["web_port"] = web_svc.get("port")
+    if not data.get("display_name") and data.get("name"):
+        data["display_name"] = str(data["name"]).title()
+    return data
+
+
 def validate_app_spec(candidate: dict[str, Any] | AppSpec) -> AppSpec:
     """Return a typed AppSpec only when every accepted field is explicitly safe."""
     if isinstance(candidate, AppSpec):
         from services.apps_engine.app_spec_codec import app_spec_to_dict
         raw = app_spec_to_dict(candidate)
     elif isinstance(candidate, dict):
-        raw = candidate
+        raw = normalize_app_spec_dict(candidate)
     else:
         raise ValueError("AppSpec must be an object.")
     _reject_unknown(raw, _TOP_LEVEL, "AppSpec")

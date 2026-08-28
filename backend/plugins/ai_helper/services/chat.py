@@ -531,22 +531,22 @@ async def stream_ai_chat(
                     has_compose = bool((inspection.get("compose_info") or {}).get("services")) if isinstance(inspection, dict) else False
 
                     options_list = []
-                    # 1. Compose stack option if compose services exist
+                    # 1. 1-Click Direct Apply option
+                    options_list.append("[OPTION:⚡ Direct Apply with Recommended Defaults (Recommended)|setup_flow:direct_apply]")
+
+                    # 2. Compose stack option if compose services exist
                     if has_compose:
-                        rec_label = " (Recommended)" if not primary_img else ""
-                        options_list.append(f"[OPTION:Docker Compose Stack{rec_label}|deployment_method:compose_stack]")
+                        options_list.append("[OPTION:Docker Compose Stack|deployment_method:compose_stack]")
 
-                    # 2. Ready Docker image option if detected or provided
+                    # 3. Ready Docker image option if detected or provided
                     if primary_img:
-                        rec_label = " (Recommended)" if not has_compose else ""
-                        options_list.append(f"[OPTION:Run Docker Image{rec_label}: {primary_img}|deployment_method:registry_image:{primary_img}]")
+                        options_list.append(f"[OPTION:Run Docker Image: {primary_img}|deployment_method:registry_image:{primary_img}]")
 
-                    # 3. Build from Git Source (Railpack)
+                    # 4. Build from Git Source (Railpack)
                     if repo or stype == "git" or not (has_compose or primary_img):
-                        rec_label = " (Recommended)" if not (has_compose or primary_img) else ""
-                        options_list.append(f"[OPTION:Build from Git Source (Railpack){rec_label}|deployment_method:git_build]")
+                        options_list.append("[OPTION:Build from Git Source (Railpack)|deployment_method:git_build]")
 
-                    if not has_compose and isinstance(inspection, dict):
+                    if isinstance(inspection, dict):
                         from services.apps_engine import database_provider_capabilities
                         detected_kinds = {
                             str(item.get("kind") or "").lower()
@@ -576,7 +576,8 @@ async def stream_ai_chat(
                     setup_interview_options_str = options_str
 
                     action_instruction = (
-                        "Present the source inspection facts clearly in clean Markdown tables (Application Overview, Services, Detected Databases, Configuration). "
+                        "Give a concise 2-sentence summary of the inspected application (app name, port, and detected database). "
+                        "Do NOT output repetitive Markdown tables, configuration variable lists, or schema details. "
                         "Do NOT call proposal planning tools yet. "
                         "Declare every unresolved deployment choice, provider choice, and documented non-secret input together using the exact interactive tags below. "
                         "Do not ask for passwords, keys, tokens, or secrets. The browser will show one question at a time and send one combined answer only after completion. "
@@ -1008,7 +1009,8 @@ async def stream_ai_chat(
                 elif setup_handoff.is_setup_interview_pending(setup_source_result, user_message):
                     tags_block = f"\n{setup_interview_options_str}\n" if setup_interview_options_str else ""
                     content_str = (
-                        "Now summarize the inspected application architecture, services, and deployment configuration in clean, structured Markdown tables. "
+                        "Give a concise 2-sentence summary of the inspected application (app name, port, and detected database). "
+                        "Do NOT output repetitive Markdown tables, lists of environment variables, or schema details. "
                         "Do NOT output tool calls, JSON ASTs, or internal schema errors. "
                         "Declare every unresolved deployment choice, provider choice, and documented non-secret input together using the exact interactive tags below:"
                         f"{tags_block}"

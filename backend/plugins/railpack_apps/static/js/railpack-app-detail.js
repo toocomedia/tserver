@@ -244,3 +244,31 @@ document.querySelectorAll('[data-copy-text]').forEach(btn => {
   });
 });
 
+document.querySelectorAll('[data-copy-compose-template]').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    const appId = btn.getAttribute('data-copy-compose-template');
+    if (!appId) return;
+    const orig = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Copying...';
+    try {
+      const res = await fetch(`/plugins/railpack_apps/${encodeURIComponent(appId)}/compose-template/raw`, {
+        headers: { Accept: 'application/json' },
+      });
+      const data = await res.json();
+      btn.disabled = false;
+      btn.textContent = orig;
+      if (data && data.yaml) {
+        await navigator.clipboard.writeText(data.yaml);
+        if (window.toast) window.toast('docker-compose.yml copied to clipboard!', 'success');
+      } else {
+        if (window.toast) window.toast('Could not copy template.', 'error');
+      }
+    } catch (_) {
+      btn.disabled = false;
+      btn.textContent = orig;
+      if (window.toast) window.toast('Failed to load compose template.', 'error');
+    }
+  });
+});
+
