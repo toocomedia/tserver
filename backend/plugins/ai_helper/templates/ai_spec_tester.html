@@ -80,6 +80,28 @@
       </div>
     </div>
 
+    <div class="dev-tester-controls" style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--color-border, #2d3343);">
+      <div>
+        <label class="form-label" style="font-size: 12px; margin-bottom: 4px;">AI Provider</label>
+        <select id="provider-select" class="form-select">
+          {% for p in providers %}
+          <option value="{{ p.id }}" {% if provider and p.id == provider.id %}selected{% endif %}>
+            {{ p.name }} ({{ p.provider_type }})
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="form-label" style="font-size: 12px; margin-bottom: 4px;">Model Name Override (Optional)</label>
+        <input type="text" id="model-override-input" class="form-input" placeholder="e.g. gpt-4o, claude-3-5-sonnet, deepseek-chat" value="{{ provider.model_name if provider else '' }}">
+      </div>
+      <div style="padding-top: 20px;">
+        <a href="/plugins/ai_helper" target="_blank" style="color: #93c5fd; font-size: 12px; text-decoration: none; font-weight: 500;">
+          ⚙ Manage API Keys & Models in AI Assistant ↗
+        </a>
+      </div>
+    </div>
+
     <div style="margin-top: 10px; font-size: 11.5px; color: var(--color-text-muted, #9ca3af);">
       Active AI Provider: <strong>{{ provider.name if provider else 'None' }}</strong> ({{ provider.model_name if provider else 'N/A' }}) ·
       100% Safe Dry-Run: No containers deployed, no domains modified.
@@ -108,7 +130,8 @@
           <button type="button" class="dev-tab-btn active" data-tab="compose">Docker Compose YAML</button>
           <button type="button" class="dev-tab-btn" data-tab="json">AppSpec JSON</button>
           <button type="button" class="dev-tab-btn" data-tab="audit">Fixes & Audit Report</button>
-          <button type="button" class="dev-tab-btn" data-tab="raw">Full Text Report</button>
+          <button type="button" class="dev-tab-btn" data-tab="rawlog">Complete Raw Log</button>
+          <button type="button" class="dev-tab-btn" data-tab="raw">Scorecard Report</button>
         </div>
         <div id="verdict-container"></div>
       </div>
@@ -135,7 +158,15 @@
         <div id="audit-issues-list"></div>
       </div>
 
-      <!-- Tab 4: Raw Text Report -->
+      <!-- Tab 4: Complete Raw Log -->
+      <div id="tab-pane-rawlog" class="tab-pane" style="display: none;">
+        <div style="display: flex; justify-content: flex-end; margin-bottom: 6px;">
+          <button type="button" class="btn btn--secondary btn--sm" onclick="copyCode('code-rawlog')">Copy Complete Log</button>
+        </div>
+        <pre class="code-viewer"><code id="code-rawlog">Run a test to inspect the full turn-by-turn prompts, tool executions, and raw AI responses.</code></pre>
+      </div>
+
+      <!-- Tab 5: Raw Scorecard Report -->
       <div id="tab-pane-raw" class="tab-pane" style="display: none;">
         <div style="display: flex; justify-content: flex-end; margin-bottom: 6px;">
           <button type="button" class="btn btn--secondary btn--sm" onclick="copyCode('code-raw')">Copy Report</button>

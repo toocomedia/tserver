@@ -13,8 +13,11 @@ document.addEventListener("DOMContentLoaded", function () {
   const codeCompose = document.getElementById("code-compose");
   const codeJson = document.getElementById("code-json");
   const codeRaw = document.getElementById("code-raw");
+  const codeRawLog = document.getElementById("code-rawlog");
   const auditSummary = document.getElementById("audit-summary-box");
   const auditIssues = document.getElementById("audit-issues-list");
+  const providerSelect = document.getElementById("provider-select");
+  const modelOverrideInput = document.getElementById("model-override-input");
 
   // Tab switching
   const tabBtns = document.querySelectorAll(".dev-tab-btn");
@@ -31,18 +34,41 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   });
 
-  // Run Test Action
+  function renderActivities(activities) {
+    if (!timelineEl) return;
+    if (!Array.isArray(activities) || activities.length === 0) {
+      timelineEl.innerHTML = '<div style="padding: 12px; font-size: 12px; color: #9ca3af;">Inspecting and generating plan...</div>';
+      return;
+    }
+    timelineEl.innerHTML = activities.map(function (act) {
+      const statusClass = act.status === "done" || act.status === "ok" ? "done" : (act.status === "error" ? "error" : "");
+      return `
+        <div class="timeline-item ${statusClass}">
+          <div>
+            <span class="timeline-tool">${escapeHtml(act.tool)}</span>
+            <span class="timeline-time">+${act.timestamp_ms}ms</span>
+          </div>
+          ${act.label ? `<div style="color: #cbd5e1; margin-top: 2px;">${escapeHtml(act.label)}</div>` : ""}
+          ${act.detail ? `<div style="color: #64748b; font-size: 11px; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(act.detail)}</div>` : ""}
+        </div>
+      `;
+    }).join("");
+  }
+
+  // Run Test Action with Streaming Reader
   if (runBtn) {
     runBtn.addEventListener("click", async function () {
       const appSlug = appSelect ? appSelect.value : "";
       const customTarget = customInput ? customInput.value.trim() : "";
       const offline = offlineCheck ? offlineCheck.checked : false;
+      const providerId = providerSelect && providerSelect.value ? parseInt(providerSelect.value, 10) : null;
+      const modelName = modelOverrideInput ? modelOverrideInput.value.trim() : "";
 
       runBtn.disabled = true;
-      btnText.textContent = "Running AI Test (Dry Run)...";
+      btnText.textContent = "Running AI Test (Streaming)...";
       durationEl.textContent = "";
       verdictEl.innerHTML = "";
-      timelineEl.innerHTML = '<div style="padding: 12px; font-size: 12px; color: #93c5fd;">Inspecting application and generating plan...</div>';
+      timelineEl.innerHTML = '<div style="padding: 12px; font-size: 12px; color: #93c5fd;">Connecting to server stream...</div>';
 
       try {
         const csrfMeta = document.querySelector('meta[name="csrf-token"]');
@@ -59,44 +85,70 @@ document.addEventListener("DOMContentLoaded", function () {
             app_slug: appSlug,
             custom_target: customTarget,
             offline: offline,
+            provider_id: providerId,
+            model_name: modelName || null,
           }),
         });
 
-        const data = await res.json();
-        if (!res.ok || data.status === "error") {
-          throw new Error(data.message || "Failed to execute AI test run.");
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}: Failed to connect to test runner.`);
         }
 
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        let finalData = null;
+        let activitiesList = [];
+
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+
+          const lines = buffer.split("\n");
+          buffer = lines.pop();
+
+          for (let i = 0; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (!line || line.startsWith(":")) continue; // heartbeat ping
+            if (line.startsWith("data:")) {
+              const rawJson = line.slice(5).trim();
+              if (!rawJson) continue;
+              try {
+                const event = JSON.parse(rawJson);
+                if (event.type === "activity") {
+                  activitiesList.push(event);
+                  renderActivities(activitiesList);
+                } else if (event.type === "final") {
+                  finalData = event;
+                } else if (event.type === "error") {
+                  throw new Error(event.message || "Execution error");
+                }
+              } catch (parseErr) {
+                // Ignore chunk parse error
+              }
+            }
+          }
+        }
+
+        if (!finalData) {
+          throw new Error("Stream closed before receiving final test results.");
+        }
+
+        const data = finalData;
+
         // 1. Duration & Verdict
-        durationEl.textContent = `${data.duration_ms}ms · ${data.provider_name}`;
+        durationEl.textContent = `${data.duration_ms}ms · ${data.provider_name} (${data.model_name})`;
         const verdict = data.validation ? data.validation.verdict : "FAIL";
         verdictEl.innerHTML = `<span class="verdict-badge ${verdict}">${verdict}</span>`;
 
-        // 2. Render Timeline
-        if (Array.isArray(data.activities) && data.activities.length > 0) {
-          timelineEl.innerHTML = data.activities.map(function (act) {
-            const statusClass = act.status === "done" || act.status === "ok" ? "done" : (act.status === "error" ? "error" : "");
-            return `
-              <div class="timeline-item ${statusClass}">
-                <div>
-                  <span class="timeline-tool">${escapeHtml(act.tool)}</span>
-                  <span class="timeline-time">+${act.timestamp_ms}ms</span>
-                </div>
-                ${act.label ? `<div style="color: #cbd5e1; margin-top: 2px;">${escapeHtml(act.label)}</div>` : ""}
-                ${act.detail ? `<div style="color: #64748b; font-size: 11px; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(act.detail)}</div>` : ""}
-              </div>
-            `;
-          }).join("");
-        } else {
-          timelineEl.innerHTML = '<div style="padding: 12px; font-size: 12px; color: #9ca3af;">Deterministic offline plan synthesis completed.</div>';
-        }
-
-        // 3. Tab Contents
+        // 2. Tab Contents
         codeCompose.textContent = data.compose_yaml || "# (No Compose YAML generated)";
         codeJson.textContent = JSON.stringify(data.plan_data || {}, null, 2);
         codeRaw.textContent = data.report_text || "No report generated.";
+        if (codeRawLog) codeRawLog.textContent = data.raw_log || "(No raw execution log recorded.)";
 
-        // 4. Audit & Fixes
+        // 3. Audit & Fixes
         const val = data.validation || {};
         auditSummary.innerHTML = `
           <div style="background: rgba(255,255,255,0.03); padding: 10px; border-radius: 6px; margin-bottom: 12px;">

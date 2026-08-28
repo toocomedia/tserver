@@ -1,19 +1,19 @@
 ================================================================================
-AI PLAN & SPEC TEST REPORT: VAULTWARDEN (BITWARDEN SERVER)
-Generated: 2026-08-28 10:25:51 UTC
-Active AI Provider: Test Isolation Provider (gpt-4o-mini)
-Target: vaultwarden/server:latest (Source: image)
-Status: [PASS] (Total Duration: 104ms)
+AI PLAN & SPEC TEST REPORT: GHOST CMS
+Generated: 2026-08-28 10:18:37 UTC
+Active AI Provider: Test Isolation Provider (test-override-model)
+Target: ghost:5-alpine (Source: image)
+Status: [PASS] (Total Duration: 71ms)
 ================================================================================
 
 [1. AI SEARCH & TOOL EXECUTION TRACE]
 --------------------------------------------------------------------------------
   1. Tool: inspect_app_source -> DONE (+5ms)
      Label: Simulated local inspection
-     Detail: vaultwarden/server:latest
+     Detail: ghost:5-alpine
   2. Tool: propose_app_spec_plan -> DONE (+25ms)
      Label: Synthesizing validated plan
-     Detail: vaultwarden.test.internal
+     Detail: ghost.test.internal
 
 [Turn 1 Response Snippet]:
   Generated configuration in dry-run mode.
@@ -26,8 +26,8 @@ Status: [PASS] (Total Duration: 104ms)
 --------------------------------------------------------------------------------
 version: '3.8'
 services:
-  vaultwarden:
-    image: vaultwarden/server:latest
+  ghost:
+    image: ghost:5-alpine
     restart: always
     ports: []
     environment: {}

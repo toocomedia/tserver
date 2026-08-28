@@ -161,7 +161,14 @@ class AiPlanTesterTests(unittest.IsolatedAsyncioTestCase):
             req = RunTestRequest(app_slug="vaultwarden", offline=True)
             res = await run_test_api(req, db)
             self.assertEqual(res.status_code, 200)
-            data = json.loads(res.body.decode("utf-8"))
+            chunks = []
+            async for chunk in res.body_iterator:
+                chunks.append(chunk)
+            body_str = "".join(chunks)
+            self.assertIn(": ping", body_str)
+            self.assertIn("data: {", body_str)
+            final_line = next(line for line in body_str.split("\n") if '"type": "final"' in line)
+            data = json.loads(final_line.replace("data: ", "").strip())
             self.assertEqual(data["status"], "ok")
             self.assertEqual(data["app"]["slug"], "vaultwarden")
             self.assertEqual(data["validation"]["verdict"], "PASS")
