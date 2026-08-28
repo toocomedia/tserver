@@ -79,3 +79,18 @@ class TestTemplateExportAndNormalization(unittest.TestCase):
         self.assertTrue(is_setup_interview_pending(source_result, "Please inspect https://github.com/umami-software/umami"))
         self.assertFalse(is_setup_interview_pending(source_result, "Setup interview answers:\nsetup_flow: direct_apply\ndeployment_method: compose_stack"))
         self.assertTrue(is_setup_interview_pending(source_result, "Setup interview answers:\nsetup_flow: check_steps"))
+
+    def test_inspection_cache_and_server_fallback_limits(self):
+        from plugins.ai_helper.services.setup_handoff import (
+            cache_inspection,
+            get_cached_inspection,
+            tool_limit_result,
+        )
+        cache_inspection("sess_123", "https://github.com/umami-software/umami", {"status": "ok", "app": "umami"})
+        cached = get_cached_inspection("sess_123", "https://github.com/umami-software/umami")
+        self.assertIsNotNone(cached)
+        self.assertEqual(cached.get("app"), "umami")
+
+        tool_counts = {"propose_app_spec_plan": 2}
+        res = tool_limit_result("app_deploy", "propose_app_spec_plan", tool_counts, is_server_fallback=True)
+        self.assertIsNone(res)

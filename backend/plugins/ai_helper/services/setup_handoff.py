@@ -33,9 +33,29 @@ _PROPOSAL_TOOLS = frozenset({"propose_app_install", "propose_stack_install", "pr
 _SECRET_INPUT_RE = re.compile(r"(?:pass(?:word)?|secret|token|api[_-]?key|private[_-]?key|encryption[_-]?key)", re.I)
 
 
+
 def requires_reviewed_plan(task_type: str | None) -> bool:
     """Whether this chat is an App Engine setup request with a wizard handoff."""
     return (task_type or "").strip().lower() in _SETUP_TASK_TYPES
+
+
+_INSPECTION_CACHE: dict[str, dict[str, Any]] = {}
+
+
+def cache_inspection(session_id: str | None, key: str | None, data: dict[str, Any]) -> None:
+    """Store pre-inspected facts in memory to prevent slow re-cloning on subsequent turns."""
+    if not key or not isinstance(data, dict):
+        return
+    k = f"{session_id or ''}:{key.strip().lower()}"
+    _INSPECTION_CACHE[k] = data
+
+
+def get_cached_inspection(session_id: str | None, key: str | None) -> dict[str, Any] | None:
+    """Retrieve pre-inspected facts if already executed for this session and source."""
+    if not key:
+        return None
+    k = f"{session_id or ''}:{key.strip().lower()}"
+    return _INSPECTION_CACHE.get(k)
 
 
 def is_diagnostic_task(task_type: str | None, has_app_id: bool = False) -> bool:
@@ -50,6 +70,7 @@ def tool_limit_result(
     tool_counts: Mapping[str, int],
     *,
     allow_stack_correction: bool = False,
+    is_server_fallback: bool = False,
 ) -> dict[str, str] | None:
     """Avoid repeated slow evidence reads once setup has enough facts to plan."""
     if not requires_reviewed_plan(task_type):
@@ -63,6 +84,8 @@ def tool_limit_result(
                 "DNS, general file reads, image probes, and diagnostics are not part of setup."
             ),
         }
+    if is_server_fallback and tool_name in _PROPOSAL_TOOLS:
+        return None
     proposal_count = sum(tool_counts.get(name, 0) for name in _PROPOSAL_TOOLS)
     if tool_name in _PROPOSAL_TOOLS and proposal_count >= 1:
         if allow_stack_correction and tool_name in {"propose_stack_install", "propose_app_spec_plan"} and proposal_count < 2:

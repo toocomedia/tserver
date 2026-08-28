@@ -837,12 +837,23 @@
       if (isCreatePage && !opts.context && !this.activeContext) {
         this.setContext("new_app");
       }
-      if (opts.fresh || isCreatePage) {
-        var cachedMsgs = window.AiHelperCache ? window.AiHelperCache.getCachedMessages(this.sessionId) : [];
-        if (cachedMsgs && cachedMsgs.length > 0 && opts.fresh) {
-          this.startNewChat({ taskType: opts.taskType || (isCreatePage ? "app_deploy" : this.activeTaskType), context: opts.context || (isCreatePage ? "new_app" : this.activeContext), initialPrompt: opts.initialPrompt });
-          return;
+      if (opts.fresh || (isCreatePage && opts.initialPrompt)) {
+        this.startNewChat({
+          taskType: opts.taskType || (isCreatePage ? "app_deploy" : this.activeTaskType),
+          context: opts.context || (isCreatePage ? "new_app" : this.activeContext),
+          initialPrompt: opts.initialPrompt,
+        });
+        if (opts.split) {
+          this.drawerEl.classList.add("ai-helper-drawer--split");
+          this.backdropEl.classList.remove("active");
+          this.backdropEl.classList.add("ai-helper-backdrop--split");
+          document.body.classList.add("apps-engine-ai-active", "ai-helper-split-active");
+          document.querySelectorAll(".apps-engine-optic").forEach(function (el) { el.classList.add("is-ai-mode"); });
+          window.dispatchEvent(new CustomEvent("ai-helper:mode-change", { detail: { split: true, active: true } }));
         }
+        this.drawerEl.classList.add("open");
+        this.closeHistoryView();
+        return;
       }
 
       if (opts.split) {

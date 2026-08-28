@@ -500,117 +500,129 @@ async def stream_ai_chat(
     is_app_diag = setup_handoff.is_diagnostic_task(task_type, has_app_id=bool(app_id))
 
     # 1. Fast 1-Turn Pre-Inspection for App Engine Setup:
-    if tools_enabled and setup_plan_required and (repo or img) and not setup_source_result:
-        yield _activity_event("inspect_app_source", "start", {"repository_url": repo, "image_reference": img})
-        try:
-            setup_source_result = await tools.execute_tool(
-                db=db,
-                tool_name="inspect_app_source",
-                arguments={"source_type": stype, "repository_url": repo, "image_reference": img},
-                session_id=session_id,
-                user_id=user_id,
-                secrets_allowed=secrets_allowed,
-            )
-            yield _activity_event("inspect_app_source", "done", {"repository_url": repo, "image_reference": img})
-            if setup_source_result.get("status") == "ok":
-                tool_was_executed = True
-                from services.official_stacks.stack_synthesizer import requires_multi_container_stack
-                needs_stack = False if user_chose_image else requires_multi_container_stack(setup_source_result)
-                if setup_handoff.is_setup_interview_pending(setup_source_result, user_message):
-                    inspection = setup_source_result.get("inspection") if isinstance(setup_source_result.get("inspection"), dict) else setup_source_result
-                    doc_ev = (inspection.get("documentation_evidence") or {}) if isinstance(inspection, dict) else {}
-                    detected_imgs = list(doc_ev.get("detected_docker_images") or [])
-                    image_rec = setup_source_result.get("official_image_recommendation") or (inspection.get("official_image_recommendation") if isinstance(inspection, dict) else None)
-                    if isinstance(image_rec, dict) and image_rec.get("image") and image_rec.get("image") not in detected_imgs:
-                        detected_imgs.append(str(image_rec.get("image")).strip())
-                    if img and img not in detected_imgs:
-                        detected_imgs.append(img)
+    if tools_enabled and setup_plan_required and (repo or img):
+        cached_insp = setup_handoff.get_cached_inspection(session_id, repo or img)
+        if cached_insp:
+            setup_source_result = cached_insp
+            tool_was_executed = True
+        elif not setup_source_result:
+            yield _activity_event("inspect_app_source", "start", {"repository_url": repo, "image_reference": img})
+            try:
+                setup_source_result = await tools.execute_tool(
+                    db=db,
+                    tool_name="inspect_app_source",
+                    arguments={"source_type": stype, "repository_url": repo, "image_reference": img},
+                    session_id=session_id,
+                    user_id=user_id,
+                    secrets_allowed=secrets_allowed,
+                )
+                yield _activity_event("inspect_app_source", "done", {"repository_url": repo, "image_reference": img})
+                if setup_source_result.get("status") == "ok":
+                    tool_was_executed = True
+                    setup_handoff.cache_inspection(session_id, repo or img, setup_source_result)
+            except Exception as exc:
+                yield _activity_event("inspect_app_source", "error", {"repository_url": repo, "image_reference": img})
 
-                    primary_img = detected_imgs[0] if detected_imgs else ""
-                    required_inputs = setup_handoff.required_setup_inputs(setup_source_result)
-                    has_compose = bool((inspection.get("compose_info") or {}).get("services")) if isinstance(inspection, dict) else False
+        if setup_source_result and setup_source_result.get("status") == "ok":
+            from services.official_stacks.stack_synthesizer import requires_multi_container_stack
+            needs_stack = False if user_chose_image else requires_multi_container_stack(setup_source_result)
+            if setup_handoff.is_setup_interview_pending(setup_source_result, user_message):
+                inspection = setup_source_result.get("inspection") if isinstance(setup_source_result.get("inspection"), dict) else setup_source_result
+                doc_ev = (inspection.get("documentation_evidence") or {}) if isinstance(inspection, dict) else {}
+                detected_imgs = list(doc_ev.get("detected_docker_images") or [])
+                image_rec = setup_source_result.get("official_image_recommendation") or (inspection.get("official_image_recommendation") if isinstance(inspection, dict) else None)
+                if isinstance(image_rec, dict) and image_rec.get("image") and image_rec.get("image") not in detected_imgs:
+                    detected_imgs.append(str(image_rec.get("image")).strip())
+                if img and img not in detected_imgs:
+                    detected_imgs.append(img)
 
-                    is_check_steps = bool(re.search(r"(?i)\b(?:check[_-]?steps|customize|review[_-]?steps)\b", user_message or ""))
-                    options_list = []
+                primary_img = detected_imgs[0] if detected_imgs else ""
+                required_inputs = setup_handoff.required_setup_inputs(setup_source_result)
+                has_compose = bool((inspection.get("compose_info") or {}).get("services")) if isinstance(inspection, dict) else False
 
-                    if not is_check_steps:
-                        # 2 Clear Choices: Direct Apply vs Check on Steps
-                        options_list.append("[OPTION:⚡ Direct Apply (Recommended)|setup_flow:direct_apply]")
-                        options_list.append("[OPTION:🔍 Check on Steps & Customize|setup_flow:check_steps]")
-                    else:
-                        # Detailed customization steps
-                        if has_compose:
-                            options_list.append("[OPTION:Docker Compose Stack (Recommended)|deployment_method:compose_stack]")
-                        if primary_img:
-                            options_list.append(f"[OPTION:Run Docker Image: {primary_img}|deployment_method:registry_image:{primary_img}]")
-                        if repo or stype == "git" or not (has_compose or primary_img):
-                            options_list.append("[OPTION:Build from Git Source (Railpack)|deployment_method:git_build]")
+                is_check_steps = bool(re.search(r"(?i)\b(?:check[_-]?steps|customize|review[_-]?steps)\b", user_message or ""))
+                options_list = []
 
-                        if isinstance(inspection, dict):
-                            from services.apps_engine import database_provider_capabilities
-                            detected_kinds = {
-                                str(item.get("kind") or "").lower()
-                                for item in (inspection.get("database_detections") or [])
-                                if isinstance(item, dict)
-                            }
-                            for record in database_provider_capabilities.provider_capabilities(force=True):
-                                kind = str(record.get("kind") or "")
-                                if kind not in detected_kinds:
-                                    continue
-                                for choice in record.get("providers") or []:
-                                    provider = str(choice.get("provider_id") or choice.get("id") or "")
-                                    state = str(choice.get("managed_dependency_state") or choice.get("state") or "")
-                                    if provider == "docker":
-                                        options_list.append(f"[OPTION:Private {kind} container (Recommended)|provider.{kind}:docker]")
-                                    elif state == "active":
-                                        options_list.append(f"[OPTION:{choice.get('label')}|provider.{kind}:{provider}]")
-                                    elif state == "stopped" and choice.get("can_activate"):
-                                        options_list.append(f"[OPTION:Activate {choice.get('label')} from Dependencies|provider.{kind}:activate:{provider}]")
+                if not is_check_steps:
+                    # 2 Clear Choices: Direct Apply vs Check on Steps
+                    options_list.append("[OPTION:⚡ Direct Apply (Recommended)|setup_flow:direct_apply]")
+                    options_list.append("[OPTION:🔍 Check on Steps & Customize|setup_flow:check_steps]")
+                else:
+                    # Detailed customization steps
+                    if has_compose:
+                        options_list.append("[OPTION:Docker Compose Stack (Recommended)|deployment_method:compose_stack]")
+                    if primary_img:
+                        options_list.append(f"[OPTION:Run Docker Image: {primary_img}|deployment_method:registry_image:{primary_img}]")
+                    if repo or stype == "git" or not (has_compose or primary_img):
+                        options_list.append("[OPTION:Build from Git Source (Railpack)|deployment_method:git_build]")
 
-                        for item in required_inputs:
-                            req_flag = "required" if item.get("required") else "optional"
-                            options_list.append(
-                                f"[INPUT:{item['name']}|{item['placeholder']}|{item['label']}|{req_flag}]"
-                            )
+                    if isinstance(inspection, dict):
+                        from services.apps_engine import database_provider_capabilities
+                        detected_kinds = {
+                            str(item.get("kind") or "").lower()
+                            for item in (inspection.get("database_detections") or [])
+                            if isinstance(item, dict)
+                        }
+                        for record in database_provider_capabilities.provider_capabilities(force=True):
+                            kind = str(record.get("kind") or "")
+                            if kind not in detected_kinds:
+                                continue
+                            for choice in record.get("providers") or []:
+                                provider = str(choice.get("provider_id") or choice.get("id") or "")
+                                state = str(choice.get("managed_dependency_state") or choice.get("state") or "")
+                                if provider == "docker":
+                                    options_list.append(f"[OPTION:Private {kind} container (Recommended)|provider.{kind}:docker]")
+                                elif state == "active":
+                                    options_list.append(f"[OPTION:{choice.get('label')}|provider.{kind}:{provider}]")
+                                elif state == "stopped" and choice.get("can_activate"):
+                                    options_list.append(f"[OPTION:Activate {choice.get('label')} from Dependencies|provider.{kind}:activate:{provider}]")
 
-                    options_str = "\n".join(options_list)
-                    setup_interview_options_str = options_str
-
-                    if not is_check_steps:
-                        action_instruction = (
-                            "Give a concise 2-sentence summary of the inspected application (app name, port, and detected database). "
-                            "Do NOT output tables or configuration variable lists. "
-                            "Do NOT call proposal planning tools yet. "
-                            f"Present the two flow choices using the exact interactive tags below:\n{options_str}\n"
-                            "Ask the user if they want to proceed with Direct Apply or check configuration steps."
+                    for item in required_inputs:
+                        req_flag = "required" if item.get("required") else "optional"
+                        options_list.append(
+                            f"[INPUT:{item['name']}|{item['placeholder']}|{item['label']}|{req_flag}]"
                         )
-                    else:
-                        action_instruction = (
-                            "List the configuration options clearly for the user to review. "
-                            "Do NOT output tables or repetitive text. "
-                            "Do NOT call proposal planning tools yet. "
-                            f"Declare every unresolved deployment choice, provider choice, and documented non-secret input together using the exact interactive tags below:\n{options_str}\n"
-                            "Wait for the combined interview answer before generating the reviewed plan."
-                        )
-                elif needs_stack:
+
+                options_str = "\n".join(options_list)
+                setup_interview_options_str = options_str
+
+                if not is_check_steps:
                     action_instruction = (
-                        "Compose services or auxiliary datastores were detected. You MUST call `propose_app_spec_plan` to create a validated AppSpec review plan."
+                        "Give a concise 2-sentence summary of the inspected application (app name, port, and detected database). "
+                        "Do NOT output tables or configuration variable lists. "
+                        "Do NOT call proposal planning tools yet. "
+                        f"Present the two flow choices using the exact interactive tags below:\n{options_str}\n"
+                        "Ask the user if they want to proceed with Direct Apply or check configuration steps."
                     )
                 else:
                     action_instruction = (
-                        "Propose the installation plan using `propose_app_install` (or `propose_app_spec_plan` if multi-container)."
+                        "List the configuration options clearly for the user to review. "
+                        "Do NOT output tables or repetitive text. "
+                        "Do NOT call proposal planning tools yet. "
+                        f"Declare every unresolved deployment choice, provider choice, and documented non-secret input together using the exact interactive tags below:\n{options_str}\n"
+                        "Wait for the combined interview answer before generating the reviewed plan."
                     )
-                messages.append({
-                    "role": "user",
-                    "content": (
-                        f"[Pre-collected Source Inspection Facts for {repo or img}]:\n"
-                        f"{json.dumps(setup_source_result)}\n\n"
-                        f"Target Domain: {setup_target_domain or 'not specified'}\n"
-                        f"Using the pre-inspected facts above, {action_instruction}"
-                    ),
-                })
-        except Exception as exc:
-            yield _activity_event("inspect_app_source", "error", {"repository_url": repo, "image_reference": img})
+            elif needs_stack:
+                action_instruction = (
+                    "Compose services or auxiliary datastores were detected. The verified services, images, and ports are already confirmed in the pre-collected inspection facts above. "
+                    "Do NOT search Docker Hub or the web unless critical information is genuinely missing. "
+                    "You MUST call `propose_app_spec_plan` to create a validated AppSpec review plan using these verified facts."
+                )
+            else:
+                action_instruction = (
+                    "The verified application facts are confirmed above. "
+                    "Do NOT search Docker Hub or the web unless critical information is genuinely missing. "
+                    "Propose the installation plan directly using `propose_app_install` (or `propose_app_spec_plan` if multi-container)."
+                )
+            messages.append({
+                "role": "user",
+                "content": (
+                    f"[Pre-collected Source Inspection Facts for {repo or img}]:\n"
+                    f"{json.dumps(setup_source_result)}\n\n"
+                    f"Target Domain: {setup_target_domain or 'not specified'}\n"
+                    f"Using the pre-inspected facts above, {action_instruction}"
+                ),
+            })
 
     # 2. Fast 1-Turn Pre-Diagnostics for App Engine Diagnostic Tasks:
     if tools_enabled and is_app_diag and app_id:
@@ -671,7 +683,7 @@ async def stream_ai_chat(
         max_tool_iterations = 4 if setup_plan_required else (4 if (is_app_diag and app_id) else 6)
 
 
-        async def _execute_tool(fn_name: str, fn_args: Dict[str, Any]) -> Dict[str, Any]:
+        async def _execute_tool(fn_name: str, fn_args: Dict[str, Any], *, is_server_fallback: bool = False) -> Dict[str, Any]:
             """Execute approved tools while bounding setup-only evidence collection."""
             nonlocal sensitive_file_blocked, setup_stack_correction_allowed, setup_stack_correction_reason, setup_source_result, setup_documentation_failed, setup_search_fallback_succeeded, setup_provider_choice
             limited = setup_handoff.tool_limit_result(
@@ -679,6 +691,7 @@ async def stream_ai_chat(
                 fn_name,
                 tool_counts,
                 allow_stack_correction=setup_stack_correction_allowed,
+                is_server_fallback=is_server_fallback,
             )
             if limited is not None:
                 return limited
@@ -815,7 +828,7 @@ async def stream_ai_chat(
                         if fallback_args:
                             yield _activity_event(tool_to_call, "start", fallback_args)
                             try:
-                                tool_output = await _execute_tool(tool_to_call, fallback_args)
+                                tool_output = await _execute_tool(tool_to_call, fallback_args, is_server_fallback=True)
                                 setup_plan_id = setup_plan_id or _setup_plan_id(tool_to_call, tool_output)
                                 yield _activity_event(tool_to_call, "done", fallback_args)
                             except Exception as exc:

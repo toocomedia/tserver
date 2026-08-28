@@ -789,6 +789,7 @@ if (form) {
       }
 
       window.AiHelper.open({
+        fresh: true,
         split: true,
         taskType: "app_deploy",
         context: "App Engine Setup Wizard",
