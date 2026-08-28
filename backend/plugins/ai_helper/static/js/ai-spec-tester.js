@@ -45,9 +45,16 @@ document.addEventListener("DOMContentLoaded", function () {
       timelineEl.innerHTML = '<div style="padding: 12px; font-size: 12px; color: #93c5fd;">Inspecting application and generating plan...</div>';
 
       try {
+        const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+        const csrfInput = document.querySelector('input[name="csrf_token"]');
+        const csrfToken = (csrfMeta && csrfMeta.getAttribute("content")) || (csrfInput && csrfInput.value) || "";
+
         const res = await fetch("/plugins/ai_helper/api/spec-tester/run", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRF-Token": csrfToken,
+          },
           body: JSON.stringify({
             app_slug: appSlug,
             custom_target: customTarget,
