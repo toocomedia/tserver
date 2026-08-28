@@ -175,7 +175,7 @@
       <span>Application settings</span>
       <div style="display: flex; gap: 6px; align-items: center;">
         <span class="badge-pill">{{ app.source_type | upper }}</span>
-        {% if not deployment_active and app.status not in ['deleting', 'delete_failed'] and app.deploy_type != 'official_stack' %}
+        {% if not deployment_active and app.status not in ['deleting', 'delete_failed'] and app.deploy_type not in ['official_stack', 'app_spec'] %}
         <button type="button" class="btn btn--secondary btn--sm" data-edit-settings-open>Edit Settings</button>
         {% endif %}
       </div>

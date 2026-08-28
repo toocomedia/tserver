@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from plugins.ai_helper.permissions import audit
 from plugins.ai_helper.permissions.policy import PermissionDeniedError, check_tool_permission
-from plugins.ai_helper.tools import app_setup, apps, databases, dns, docker_hub, domains_proxy, files, web_reader
+from plugins.ai_helper.tools import app_setup, app_spec_setup, apps, databases, dns, docker_hub, domains_proxy, files, web_reader
 
 logger = logging.getLogger(__name__)
 
@@ -50,6 +50,7 @@ TOOL_HANDLERS: Dict[str, Callable[..., Any]] = {
     "get_app_engine_capabilities": app_setup.get_app_engine_capabilities,
     "get_app_engine_diagnostics": app_setup.get_app_engine_diagnostics,
     "propose_stack_install": app_setup.propose_stack_install,
+    "propose_app_spec_plan": app_spec_setup.propose_app_spec_plan,
     "propose_official_stack_install": app_setup.propose_official_stack_install,
     "propose_container_app_patch": app_setup.propose_container_app_patch,
 }
@@ -93,7 +94,7 @@ async def execute_tool(
         # Pass secrets_allowed to file tools only (others don't use it)
         if tool_name in ("list_website_directory", "read_website_file"):
             result = await handler(db=db, secrets_allowed=secrets_allowed, **arguments)
-        elif tool_name in {"propose_container_app_patch", "propose_app_install", "propose_stack_install", "propose_official_stack_install"}:
+        elif tool_name in {"propose_container_app_patch", "propose_app_install", "propose_stack_install", "propose_app_spec_plan", "propose_official_stack_install"}:
             result = await handler(db=db, session_id=session_id, user_id=user_id, **arguments)
         else:
             result = await handler(db=db, **arguments)

@@ -14,6 +14,7 @@ from models.container_app_deployment import ContainerAppDeployment
 from models.domain import Domain
 from models.ssl_cert import SslCert
 from services import container_app_service as apps
+from services.apps_engine.runtime_dispatch import is_compose_app
 
 _SENSITIVE = re.compile(r"(?i)\b(password|secret|token|api[_-]?key|database[_-]?url)\b\s*([=:])\s*[^\s,'\"]+")
 
@@ -48,7 +49,7 @@ async def collect(db: AsyncSession, app: ContainerApp, domain: Domain) -> dict[s
     cert = await db.scalar(select(SslCert).where(SslCert.full_domain == domain.name))
     services: dict[str, Any] = {}
     logs: dict[str, str] = {}
-    if app.deploy_type == "official_stack":
+    if is_compose_app(app):
         try:
             from services.official_stacks import compose_runtime, stack_runtime_service
             stack = compose_runtime.stack_from_runtime(app)

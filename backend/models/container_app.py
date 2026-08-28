@@ -52,7 +52,7 @@ class ContainerApp(Base):
     memory_limit_mb: Mapped[int] = mapped_column(Integer, default=512, nullable=False)
     pid_limit: Mapped[int] = mapped_column(Integer, default=256, nullable=False)
     ssl_requested: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    deploy_type: Mapped[str] = mapped_column(String(24), default="railpack", nullable=False)  # railpack | official_stack
+    deploy_type: Mapped[str] = mapped_column(String(24), default="railpack", nullable=False)  # railpack | official_stack | app_spec
     stack_catalog_id: Mapped[str | None] = mapped_column(String(64))
     stack_version: Mapped[str | None] = mapped_column(String(32))
     stack_services: Mapped[str | None] = mapped_column(Text)

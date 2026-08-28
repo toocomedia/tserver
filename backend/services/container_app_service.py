@@ -253,7 +253,9 @@ async def create_app(
     # Refuse an unsafe deployment before creating managed services, so a guard
     # rejection cannot leave a container whose app row was rolled back.
     from services.resource_guard_service import resource_guard_service
-    profile = "image_pull" if source_type == "image" or deploy_type == "official_stack" else "build_large"
+    profile = "official_stack_pull" if deploy_type in {"official_stack", "app_spec"} else (
+        "image_pull" if source_type == "image" else "build_large"
+    )
     preflight = await resource_guard_service.preflight(db, profile)
     if not preflight["ok"] and "build is already running" not in preflight["reason"].lower():
         raise HTTPException(409, f"Resource Guard blocked deployment before creating resources: {preflight['reason']}")

@@ -43,6 +43,7 @@ TOOL_CATEGORY_MAP: Dict[str, str] = {
     "get_app_engine_capabilities": "app_deploy",
     "propose_app_install": "app_deploy",
     "propose_stack_install": "app_deploy",
+    "propose_app_spec_plan": "app_deploy",
     "propose_official_stack_install": "app_deploy",
     "propose_container_app_patch": "app_deploy",
     "propose_file_edit": "file_edits",

@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Optional
 from models.container_app import ContainerApp
 from models.container_app_snapshot import ContainerAppSnapshot
 from models.domain import Domain
+from services.apps_engine.runtime_dispatch import is_compose_app
 
 
 def get_app_documentation(
@@ -15,8 +16,14 @@ def get_app_documentation(
 ) -> Dict[str, Any]:
     """Generates structured documentation and interactive CLI runbook commands for an App Engine app."""
     # Determine the primary container name to run commands in
-    if app.deploy_type == "official_stack":
-        target_container = f"srv-stack-{app.id}-{app.stack_catalog_id or 'web'}"
+    if is_compose_app(app):
+        service_name = "web"
+        try:
+            from services.official_stacks.compose_runtime import stack_from_runtime
+            service_name = stack_from_runtime(app).web_service_name
+        except Exception:
+            pass
+        target_container = f"srv-stack-{app.id}-{service_name}"
         if app.image_reference and "shynet" in app.image_reference.lower():
             target_container = f"srv-stack-{app.id}-shynet"
     else:

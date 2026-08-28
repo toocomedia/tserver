@@ -77,7 +77,7 @@ class AppsEngineSafeDeploymentTests(unittest.TestCase):
         self.assertIn('"propose_container_app_patch"', registry)
         self.assertIn('"propose_app_install"', registry)
         self.assertIn("Make exactly one review plan", prompt)
-        self.assertIn("propose_stack_install", prompt)
+        self.assertIn("propose_app_spec_plan", prompt)
         self.assertIn("fetch_web_documentation", prompt)
         self.assertIn("at most once", prompt)
         self.assertIn("Never emit a credential-unlock action tag", prompt)

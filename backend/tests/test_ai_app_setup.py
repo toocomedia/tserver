@@ -142,7 +142,7 @@ class TestAiAppSetup(unittest.IsolatedAsyncioTestCase):
             )
             self.assertIsNotNone(plan)
             self.assertTrue(plan.plan_id.startswith("plan_"))
-            self.assertEqual(plan.action_type, "stack_install")
+            self.assertEqual(plan.action_type, "app_spec_install")
 
     async def test_cancel_deployment(self):
         """Verify cancel_deployment marks deployment as cancelled and unlocks app."""

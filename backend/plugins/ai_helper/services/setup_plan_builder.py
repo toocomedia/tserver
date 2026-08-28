@@ -256,7 +256,8 @@ async def build_automatic_setup_plan(
         if not stack_args:
             stack_args = synthesize_stack_from_inspection(inspection, domain_name=domain_name, repo_url=repository_url)
         if stack_args:
-            payload = await build_stack_payload(
+            from plugins.ai_helper.services.app_spec_plan_builder import build_payload
+            payload = build_payload(
                 stack_manifest=stack_args["stack_manifest"],
                 domain_name=domain_name,
                 nonsecret_settings=stack_args.get("nonsecret_settings"),
@@ -265,7 +266,7 @@ async def build_automatic_setup_plan(
             return await action_plans.create_action_plan(
                 db=db,
                 session_id=session_id,
-                action_type="stack_install",
+                action_type="app_spec_install",
                 payload=payload,
                 summary=stack_args.get("summary") or "Deploy application stack",
                 confidence=0.9,

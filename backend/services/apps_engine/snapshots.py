@@ -20,7 +20,9 @@ from models.container_app_secret import ContainerAppCredential
 from models.container_app_snapshot import ContainerAppSnapshot
 from services import container_app_service as apps
 from services import container_app_image_inspect_service
-from services.apps_engine import build_secrets, secret_vault
+from services.apps_engine import build_secrets, secret_vault, snapshot_envelope
+from services.apps_engine.app_spec import AppSpec
+from services.apps_engine.app_spec_codec import app_spec_to_dict
 from dependencies.git import repository_service
 
 
@@ -93,7 +95,9 @@ def _clean_requirement(item: object) -> dict[str, Any] | None:
     if not key or not build_secrets.ENV_KEY_RE.fullmatch(key):
         raise ValueError("Secret requirements must use safe uppercase environment names.")
     purpose = str(item.get("purpose") or "Application secret").strip()[:255]
-    generator = str(item.get("generator") or "urlsafe64").strip()
+    if not item.get("generator"):
+        raise ValueError("Secret requirement generator is required.")
+    generator = str(item.get("generator")).strip()
     if generator not in {"urlsafe64", "base64_32", "base64_48", "base64_64", "hex32", "hex64", "password"}:
         raise ValueError("Secret requirement generator is not supported.")
     result: dict[str, Any] = {"key": key, "purpose": purpose, "generator": generator, "rotate": bool(item.get("rotate"))}
@@ -127,8 +131,11 @@ async def create_snapshot(
     state: str = "pending",
     plan_id: str | None = None,
     created_by_user_id: int | None = None,
+    app_spec: AppSpec | None = None,
 ) -> tuple[ContainerAppSnapshot, list[dict[str, Any]]]:
     """Capture complete deployment input. Generated values remain encrypted server-side."""
+    if app_spec is not None and config_patch:
+        raise ValueError("Compose AppSpec snapshots cannot include legacy configuration patches.")
     config = {field: copy.deepcopy(getattr(app, field, None)) for field in CONFIG_FIELDS}
     for key, value in (config_patch or {}).items():
         if key not in CONFIG_FIELDS:
@@ -151,15 +158,27 @@ async def create_snapshot(
         else:
             environment[key] = value
 
+    if app_spec is not None:
+        from services.apps_engine.security_policy import validate_app_spec
+        app_spec = validate_app_spec(app_spec)
+        secret_requirements = [
+            {
+                "key": item.key,
+                "purpose": item.purpose,
+                "generator": item.generator,
+                "rotate": item.rotate,
+            }
+            for item in app_spec.required_secrets
+        ]
     requirements = normalize_secret_requirements(secret_requirements)
     versions: dict[str, int] = {}
     statuses = [{"key": item["key"], "purpose": item["purpose"], "status": "pending_approval"} for item in requirements]
 
     source_revision = None
     image_digest = None
-    if config.get("source_type") == "git":
+    if app_spec is None and config.get("source_type") == "git":
         source_revision = await asyncio.to_thread(_resolve_git_revision, app, config)
-    elif config.get("source_type") == "image":
+    elif app_spec is None and config.get("source_type") == "image":
         if config.get("deploy_type") == "official_stack" and config.get("stack_catalog_id"):
             from services.official_stacks.catalog import get_stack
             from services.official_stacks.manifest_validator import compute_stack_manifest_hash
@@ -177,15 +196,16 @@ async def create_snapshot(
             except Exception:
                 image_digest = None
     revision = int(getattr(app, "configuration_revision", 1) or 1) + (1 if state == "pending" else 0)
-    fingerprint = _fingerprint(config, environment, versions)
+    stored_config = snapshot_envelope.compose_envelope(app_spec) if app_spec is not None else config
+    fingerprint = _fingerprint(stored_config, environment, versions)
     snapshot = ContainerAppSnapshot(
         app_id=app.id,
         state=state,
         configuration_revision=revision,
-        source_identity=_source_identity(config),
+        source_identity=f"appspec:{app_spec.name}" if app_spec is not None else _source_identity(config),
         source_revision=source_revision,
         image_digest=image_digest,
-        config_json=json.dumps(config, sort_keys=True),
+        config_json=json.dumps(stored_config, sort_keys=True),
         environment_encrypted=secret_vault.encrypt(json.dumps(environment, sort_keys=True)),
         secret_versions_json=json.dumps(versions, sort_keys=True),
         secret_requirements_json=json.dumps(requirements, sort_keys=True),
@@ -224,11 +244,31 @@ async def get_snapshot(db: AsyncSession, app: ContainerApp, snapshot_id: int | N
 def runtime_app(app: ContainerApp, snapshot: ContainerAppSnapshot) -> SimpleNamespace:
     """Detached runtime view prevents an unverified candidate changing active settings."""
     values = {column.name: copy.deepcopy(getattr(app, column.name)) for column in ContainerApp.__table__.columns}
-    values.update(json.loads(snapshot.config_json))
-    if values.get("source_type") == "git":
+    stored = snapshot_envelope.decode(snapshot.config_json)
+    is_compose = snapshot_envelope.runtime_kind(snapshot.config_json) == snapshot_envelope.COMPOSE_RUNTIME_KIND
+    if is_compose:
+        spec = snapshot_envelope.app_spec(snapshot.config_json)
+        values.update({
+            "deploy_type": "app_spec",
+            "stack_catalog_id": spec.name,
+            "stack_version": spec.default_version,
+            "stack_services": json.dumps(app_spec_to_dict(spec), sort_keys=True),
+            "source_type": "image",
+            "build_mode": "image",
+            "image_reference": spec.services[spec.web_service_name].pinned_digest
+                or spec.services[spec.web_service_name].image_reference,
+            "internal_port": spec.web_port,
+            "health_path": spec.web_health_path or "disabled",
+            "startup_timeout_seconds": spec.startup_timeout_seconds,
+            "image_digest": snapshot.image_digest,
+        })
+    else:
+        values.update(stored)
+    if not is_compose and values.get("source_type") == "git":
         values["deployed_revision"] = snapshot.source_revision
-    elif snapshot.image_digest:
+    elif not is_compose and snapshot.image_digest:
         values["image_reference"] = snapshot.image_digest
+        values["image_digest"] = snapshot.image_digest
     return SimpleNamespace(**values)
 
 
@@ -267,31 +307,6 @@ async def bind_deferred_secrets(
     snapshot.secret_versions_json = json.dumps(versions, sort_keys=True)
     refresh_fingerprint(snapshot)
     return statuses
-
-
-async def promote_snapshot(
-    db: AsyncSession, app: ContainerApp, snapshot: ContainerAppSnapshot, runtime: SimpleNamespace,
-) -> None:
-    old = await db.get(ContainerAppSnapshot, app.active_snapshot_id) if app.active_snapshot_id else None
-    if old and old.id != snapshot.id:
-        old.state = "superseded"
-    for field in CONFIG_FIELDS:
-        setattr(app, field, getattr(runtime, field, None))
-    app.image_digest = getattr(runtime, "image_digest", app.image_digest)
-    app.deployed_revision = getattr(runtime, "deployed_revision", app.deployed_revision)
-    app.configuration_revision = snapshot.configuration_revision
-    app.active_snapshot_id = snapshot.id
-    app.pending_snapshot_id = None if app.pending_snapshot_id == snapshot.id else app.pending_snapshot_id
-    snapshot.state = "active"
-    if runtime.source_type == "image":
-        snapshot.image_digest = runtime.image_digest
-    else:
-        snapshot.source_revision = runtime.deployed_revision
-
-
-async def mark_failed(snapshot: ContainerAppSnapshot, error: str) -> None:
-    snapshot.state = "failed"
-    snapshot.failure_fingerprint = hashlib.sha256(error[:2000].encode("utf-8")).hexdigest()
 
 
 def bind_stack_manifest(snapshot: ContainerAppSnapshot, runtime: SimpleNamespace, manifest: str) -> None:

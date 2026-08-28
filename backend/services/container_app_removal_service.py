@@ -11,6 +11,7 @@ from models.container_app_backup import ContainerAppBackup
 from models.container_app_database import ContainerAppDatabase
 from services import container_app_backup_service, container_app_cleanup_service
 from services import container_app_database_lifecycle_service as database_lifecycle
+from services.apps_engine.runtime_dispatch import is_compose_app
 
 
 async def remove_selected_data(
@@ -47,7 +48,7 @@ async def remove_selected_data(
         for volume in sorted(volumes_to_remove):
             await container_app_cleanup_service.remove_volume(volume)
         app.storage_mounts = None
-        if getattr(app, "deploy_type", None) == "official_stack":
+        if is_compose_app(app):
             from services.official_stacks import compose_runtime, stack_runtime_service
             try:
                 await asyncio.to_thread(compose_runtime.down, app.id, volumes=True)

@@ -15,6 +15,7 @@ from models.container_app_database import ContainerAppDatabase
 from models.domain import Domain
 from models.ssl_cert import SslCert
 from services import container_app_service, nginx_service
+from services.apps_engine.runtime_dispatch import is_compose_app
 
 
 async def uninstall(db: AsyncSession, app: ContainerApp, domain: Domain, *, remove_network: bool = True) -> None:
@@ -52,7 +53,7 @@ async def delete_app(
     attachments = await container_app_database_service.attachments_for(db, app.id)
     managed_ids = {item.id for item in attachments if item.provider in {"docker", "panel_postgres", "panel_mariadb"}}
     delete_database_ids = list(managed_ids - set(keep_database_ids))
-    delete_app_volume = (bool(app.data_volume) or bool(app.storage_mounts) or getattr(app, "deploy_type", None) == "official_stack") and not keep_app_volume
+    delete_app_volume = (bool(app.data_volume) or bool(app.storage_mounts) or is_compose_app(app)) and not keep_app_volume
     await container_app_removal_service.remove_selected_data(
         db, app, attachments,
         database_ids=delete_database_ids,
@@ -110,7 +111,7 @@ async def delete_app(
 
 
 async def _remove_container(app: ContainerApp) -> None:
-    if getattr(app, "deploy_type", None) == "official_stack":
+    if is_compose_app(app):
         from services.official_stacks import compose_runtime
         try:
             await asyncio.to_thread(compose_runtime.down, app.id)

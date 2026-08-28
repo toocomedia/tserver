@@ -21,7 +21,8 @@ from services import container_app_service as apps
 from services import container_app_deployment_progress_service as progress
 from services import container_app_build_process_service as build_process
 from services.apps_engine import build_secrets
-from services.apps_engine import snapshots
+from services.apps_engine import app_spec_snapshots, snapshot_lifecycle, snapshots
+from services.apps_engine.runtime_dispatch import is_compose_app
 from services.resource_guard_service import resource_guard_service
 from services.resource_guard_operation_service import resource_guard_operation_service
 from services.resource_guard_profiles import classify_deployment
@@ -161,15 +162,26 @@ async def _deploy_after_commit(deployment_id: int, token: int, operation_id: int
             await db.commit()
             await advance_queue()
             return
+        modern_compose = False
         try:
             snapshot = await snapshots.get_snapshot(db, app, deployment.snapshot_id)
             prior_snapshot = await snapshots.get_snapshot(db, app, app.active_snapshot_id)
-            runtime = snapshots.runtime_app(app, snapshot)
             prior_runtime = snapshots.runtime_app(app, prior_snapshot)
+            modern_compose = app_spec_snapshots.runtime_kind(snapshot) == "compose"
+            if modern_compose:
+                from services.apps_engine import compose_runtime as app_spec_runtime
+                await asyncio.to_thread(app_spec_runtime.pin_snapshot_images, snapshot)
             await snapshots.bind_deferred_secrets(db, app, snapshot)
+            if modern_compose:
+                app_spec_snapshots.seal_prepared(snapshot)
             deployment.snapshot_fingerprint = snapshot.fingerprint
-            await snapshots.materialize_environment(db, app, snapshot)
+            await db.commit()
+            runtime = snapshots.runtime_app(app, snapshot)
+            if not modern_compose:
+                await snapshots.materialize_environment(db, app, snapshot)
         except Exception as exc:
+            if "snapshot" in locals() and modern_compose:
+                await snapshot_lifecycle.mark_failed(snapshot, str(exc))
             deployment.status, deployment.stage, deployment.error = "failed", "prepare", str(exc)
             app.last_error = str(exc)
             deployment.finished_at = datetime.utcnow()
@@ -182,7 +194,7 @@ async def _deploy_after_commit(deployment_id: int, token: int, operation_id: int
         await progress.stage(db, deployment, "prepare", "Preparing deployment.")
         running_image, replacement_started = prior_runtime.image_digest or prior_runtime.image_reference, False
         try:
-            if getattr(runtime, "deploy_type", None) == "official_stack":
+            if modern_compose or getattr(runtime, "deploy_type", None) == "official_stack":
                 await _deploy_official_stack(db, app, domain, snapshot, prior_snapshot, runtime, prior_runtime, deployment)
             else:
                 image = await _prepare_image(db, runtime, deployment)
@@ -236,7 +248,7 @@ async def _deploy_after_commit(deployment_id: int, token: int, operation_id: int
                     except Exception as exc:
                         app.health_state, app.health_detail = "public_check_pending", f"Private service is running; HTTPS/DNS check is pending: {str(exc)[:800]}"
                         progress.append_log(deployment, "ssl", f"[warning] HTTPS/DNS is pending and does not block startup: {exc}")
-                await snapshots.promote_snapshot(db, app, snapshot, runtime)
+                await snapshot_lifecycle.promote_snapshot(db, app, snapshot, runtime)
                 app.status, app.last_error, app.deployed_at = "running", None, datetime.utcnow()
                 deployment.status = "success"
                 await progress.stage(db, deployment, "complete", "Deployment complete.")
@@ -245,9 +257,11 @@ async def _deploy_after_commit(deployment_id: int, token: int, operation_id: int
             progress.append_log(deployment, "cancelled", str(exc))
             app.status, app.last_error = ("running", None) if await asyncio.to_thread(_container_running, app) else ("failed", str(exc))
         except Exception as exc:
-            if getattr(runtime, "deploy_type", None) == "official_stack":
-                restored = await _restore_previous_stack(app, domain, db, prior_snapshot, prior_runtime, deployment)
-                await snapshots.mark_failed(snapshot, str(exc))
+            if modern_compose or getattr(runtime, "deploy_type", None) == "official_stack":
+                restored = False
+                if prior_snapshot.id != snapshot.id and prior_snapshot.state in {"active", "superseded"}:
+                    restored = await _restore_previous_stack(app, domain, db, prior_snapshot, prior_runtime, deployment)
+                await snapshot_lifecycle.mark_failed(snapshot, str(exc))
                 app.status, app.last_error = ("running", None) if restored else ("failed", str(exc)[:1000])
                 app.health_state = "failed" if not restored else app.health_state
                 if not restored:
@@ -263,7 +277,7 @@ async def _deploy_after_commit(deployment_id: int, token: int, operation_id: int
                 deployment.output = (deployment.output + await asyncio.to_thread(progress.container_logs, runtime))[-80_000:]
                 await snapshots.materialize_environment(db, app, prior_snapshot)
                 restored = await _restore_previous(prior_runtime, domain, db, running_image, replacement_started, deployment)
-                await snapshots.mark_failed(snapshot, str(exc))
+                await snapshot_lifecycle.mark_failed(snapshot, str(exc))
                 app.status, app.last_error = ("running", None) if restored else ("failed", str(exc)[:1000])
                 deployment.status, deployment.error = "failed", str(exc)[:2000]
                 deployment.output = (deployment.output + f"[error] {exc}\n")[-80_000:]
@@ -379,19 +393,27 @@ async def _deploy_official_stack(
     from services.official_stacks.manifest_validator import compute_stack_manifest_hash
     from services.official_stacks.stack_secrets import values_for_snapshot
 
-    stack = compose_runtime.stack_from_runtime(runtime)
-    await progress.stage(db, deployment, "pull", f"Pulling and pinning {stack.display_name} images.")
-    stack = await asyncio.to_thread(compose_runtime.resolved_images, stack)
-    manifest = compose_runtime.manifest_json(stack)
-    snapshots.bind_stack_manifest(snapshot, runtime, manifest)
-    snapshot.image_digest = compute_stack_manifest_hash(stack, str(runtime.stack_version or stack.default_version))
+    modern_compose = app_spec_snapshots.runtime_kind(snapshot) == "compose"
+    if modern_compose:
+        from services.apps_engine import compose_runtime as app_spec_runtime
+        stack = app_spec_runtime.stack_for_snapshot(snapshot)
+        if snapshot.state != "prepared":
+            raise RuntimeError("Compose AppSpec snapshot must be sealed before deployment.")
+    else:
+        stack = compose_runtime.stack_from_runtime(runtime)
+        await progress.stage(db, deployment, "pull", f"Pulling and pinning {stack.display_name} images.")
+        stack = await asyncio.to_thread(compose_runtime.resolved_images, stack)
+        manifest = compose_runtime.manifest_json(stack)
+        snapshots.bind_stack_manifest(snapshot, runtime, manifest)
+        snapshot.image_digest = compute_stack_manifest_hash(stack, str(runtime.stack_version or stack.default_version))
 
     vault_secrets, secret_versions = await values_for_snapshot(db, app.id, stack, snapshot.secret_versions_json)
     snapshot.secret_versions_json = json.dumps(secret_versions, sort_keys=True)
     snapshots.refresh_fingerprint(snapshot)
     deployment.snapshot_fingerprint = snapshot.fingerprint
     snapshot_environment = json.loads(secret_vault.decrypt(snapshot.environment_encrypted))
-    settings = dict(snapshot_environment)
+    secret_keys = {requirement.key for requirement in stack.required_secrets}
+    settings = {key: value for key, value in snapshot_environment.items() if key not in secret_keys}
     environments = compose_runtime.service_environments(app, stack, domain.name, vault_secrets, settings)
     await progress.stage(db, deployment, "prepare", "Rendering the panel-owned Compose project.")
     await asyncio.to_thread(compose_runtime.write_project, app, stack, environments)
@@ -412,7 +434,9 @@ async def _deploy_official_stack(
 
     await progress.stage(db, deployment, "health", "Checking verified private readiness rules.")
     readiness, readiness_detail = "unverified", "No verified HTTP readiness endpoint is configured."
-    health_path = (stack.web_health_path or "/").strip()
+    health_path = (
+        (stack.web_health_path or "") if modern_compose else (stack.web_health_path or "/")
+    ).strip()
     raw_db_ports = {5432, 3306, 6379, 27017}
     if health_path and stack.web_internal_port not in raw_db_ports:
         try:
@@ -443,6 +467,8 @@ async def _deploy_official_stack(
                 progress.append_log(deployment, "health", "[guard] Stopped crash-looping service(s) to protect server CPU and memory.")
                 await asyncio.to_thread(compose_runtime.stop, app.id)
                 readiness_detail = "Application failed startup checks and was in a crash loop. Stopped to protect server resources."
+            if modern_compose:
+                raise RuntimeError(f"AppSpec web readiness check failed: {readiness_detail}") from exc
     app.health_state, app.health_detail = readiness, readiness_detail
     logs_summary: dict[str, str] = {}
     if readiness == "degraded":
@@ -472,7 +498,7 @@ async def _deploy_official_stack(
             app.health_state, app.health_detail = "public_check_pending", f"Private service is running; HTTPS/DNS check is pending: {str(exc)[:800]}"
             progress.append_log(deployment, "ssl", f"[warning] HTTPS/DNS is pending and does not block startup: {exc}")
 
-    await snapshots.promote_snapshot(db, app, snapshot, runtime)
+    await snapshot_lifecycle.promote_snapshot(db, app, snapshot, runtime)
     app.status, app.last_error, app.deployed_at = "running", None, datetime.utcnow()
     deployment.status = "success"
     await progress.stage(db, deployment, "complete", f"{stack.display_name} deployment complete.")
@@ -514,7 +540,8 @@ async def _restore_previous_stack(
         stack = compose_runtime.stack_from_runtime(prior_runtime)
         secrets, _versions = await values_for_snapshot(db, app.id, stack, prior_snapshot.secret_versions_json)
         environment = json.loads(secret_vault.decrypt(prior_snapshot.environment_encrypted))
-        settings = dict(environment)
+        secret_keys = {requirement.key for requirement in stack.required_secrets}
+        settings = {key: value for key, value in environment.items() if key not in secret_keys}
         await asyncio.to_thread(compose_runtime.write_project, app, stack, compose_runtime.service_environments(app, stack, domain.name, secrets, settings))
         await progress.stage(db, deployment, "rollback", "Restoring the prior saved Compose snapshot.")
         await asyncio.to_thread(compose_runtime.up, app.id)
@@ -932,7 +959,7 @@ def _ensure_network(app: ContainerApp) -> None:
 
 def _container_running(app: ContainerApp) -> bool:
     try:
-        if getattr(app, "deploy_type", None) == "official_stack":
+        if is_compose_app(app):
             from services.official_stacks import compose_runtime, stack_runtime_service
             stack = compose_runtime.stack_from_runtime(app)
             states = stack_runtime_service.inspect_stack_services(app.id, stack)

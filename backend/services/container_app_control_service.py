@@ -11,12 +11,13 @@ from models.container_app import ContainerApp
 from models.domain import Domain
 from models.ssl_cert import SslCert
 from services import container_app_deployment_progress_service, container_app_service, nginx_service
+from services.apps_engine.runtime_dispatch import is_compose_app
 
 
 async def control(db: AsyncSession, app: ContainerApp, domain: Domain, action: str) -> None:
     if action not in {"start", "stop", "restart"}:
         raise HTTPException(400, "Invalid container app action.")
-    is_stack = getattr(app, "deploy_type", None) == "official_stack"
+    is_stack = is_compose_app(app)
     if is_stack:
         from services.official_stacks import compose_runtime, stack_runtime_service
         try:

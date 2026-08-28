@@ -14,6 +14,7 @@ APP_SETUP_TOOL_NAMES = frozenset({
     "search_docker_hub",
     "propose_app_install",
     "propose_stack_install",
+    "propose_app_spec_plan",
 })
 
 RAW_TOOL_SCHEMAS: List[Dict[str, Any]] = [
@@ -377,6 +378,26 @@ RAW_TOOL_SCHEMAS: List[Dict[str, Any]] = [
                 },
             },
             "required": ["stack_manifest", "domain_name", "evidence"],
+        },
+    },
+    {
+        "name": "propose_app_spec_plan",
+        "description": "Creates an immutable review plan from an evidence-backed canonical AppSpec. Validates strict allowlists and never performs web calls, creates apps or snapshots, generates secrets, or deploys.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "app_spec": {
+                    "type": "object",
+                    "description": "Canonical AppSpec with name, display_name, web_service_name, web_port, services object, required_secrets, default_environment, and url_templates.",
+                },
+                "domain_name": {"type": "string"},
+                "evidence": {"type": "array", "items": {"type": "string"}},
+                "environment_values": {"type": "object"},
+                "summary": {"type": "string"},
+                "confidence": {"type": "number"},
+                "reasoning": {"type": "string"},
+            },
+            "required": ["app_spec", "domain_name", "evidence"],
         },
     },
     {

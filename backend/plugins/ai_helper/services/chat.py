@@ -48,6 +48,7 @@ _TOOL_LABELS = {
     "get_app_engine_diagnostics": ("activity", "Collecting runtime diagnostics"),
     "propose_app_install": ("layers", "Generating deployment plan"),
     "propose_stack_install": ("layers", "Synthesizing stack deployment plan"),
+    "propose_app_spec_plan": ("layers", "Validating Compose AppSpec plan"),
     "propose_official_stack_install": ("layers", "Synthesizing stack deployment plan"),
     "propose_container_app_patch": ("layers", "Creating container patch plan"),
     "ai_reasoning": ("cpu", "Evaluating architecture & stack dependencies"),
@@ -158,7 +159,7 @@ def _activity_event(tool_name: str, status: str, args: dict | None = None) -> st
 
 def _setup_plan_id(tool_name: str, tool_output: Dict[str, Any]) -> str | None:
     """Return only a server-created, safe wizard handoff plan identifier."""
-    if tool_name not in {"propose_app_install", "propose_stack_install", "propose_official_stack_install", "propose_container_app_patch"} or tool_output.get("status") != "ok":
+    if tool_name not in {"propose_app_install", "propose_stack_install", "propose_app_spec_plan", "propose_official_stack_install", "propose_container_app_patch"} or tool_output.get("status") != "ok":
         return None
     plan_id = tool_output.get("plan_id")
     if isinstance(plan_id, str) and re.fullmatch(r"plan_[0-9a-f]{16}", plan_id):
@@ -447,6 +448,7 @@ async def stream_ai_chat(
     setup_plan_tool_prompted = False
     setup_server_plan_attempted = False
     setup_documentation_failed = False
+    setup_search_fallback_succeeded = False
     setup_source_result: Dict[str, Any] | None = None
     setup_provider_choice: Dict[str, Any] | None = None
     setup_interview_options_str: str = ""
@@ -583,11 +585,11 @@ async def stream_ai_chat(
                     )
                 elif needs_stack:
                     action_instruction = (
-                        "Compose services or auxiliary datastores were detected. You MUST call `propose_stack_install` to create a restricted stack setup plan."
+                        "Compose services or auxiliary datastores were detected. You MUST call `propose_app_spec_plan` to create a validated AppSpec review plan."
                     )
                 else:
                     action_instruction = (
-                        "Propose the installation plan using `propose_app_install` (or `propose_stack_install` if multi-container)."
+                        "Propose the installation plan using `propose_app_install` (or `propose_app_spec_plan` if multi-container)."
                     )
                 messages.append({
                     "role": "user",
@@ -640,9 +642,9 @@ async def stream_ai_chat(
                 tool_names_to_load = frozenset({"propose_app_install", "fetch_web_documentation", "search_web_docs"})
             elif setup_source_result and setup_source_result.get("status") == "ok":
                 if needs_stack:
-                    tool_names_to_load = frozenset({"propose_stack_install", "fetch_web_documentation", "search_web_docs"})
+                    tool_names_to_load = frozenset({"propose_app_spec_plan", "fetch_web_documentation", "search_docker_hub", "search_web_docs"})
                 else:
-                    tool_names_to_load = frozenset({"propose_app_install", "propose_stack_install", "fetch_web_documentation", "search_web_docs"})
+                    tool_names_to_load = frozenset({"propose_app_install", "propose_app_spec_plan", "fetch_web_documentation", "search_docker_hub", "search_web_docs"})
             else:
                 tool_names_to_load = setup_handoff.SETUP_TOOL_NAMES
         elif is_app_diag and app_id:
@@ -662,7 +664,7 @@ async def stream_ai_chat(
 
         async def _execute_tool(fn_name: str, fn_args: Dict[str, Any]) -> Dict[str, Any]:
             """Execute approved tools while bounding setup-only evidence collection."""
-            nonlocal sensitive_file_blocked, setup_stack_correction_allowed, setup_stack_correction_reason, setup_source_result, setup_documentation_failed, setup_provider_choice
+            nonlocal sensitive_file_blocked, setup_stack_correction_allowed, setup_stack_correction_reason, setup_source_result, setup_documentation_failed, setup_search_fallback_succeeded, setup_provider_choice
             limited = setup_handoff.tool_limit_result(
                 task_type,
                 fn_name,
@@ -682,6 +684,11 @@ async def stream_ai_chat(
                         "status": "local_evidence_sufficient",
                         "message": "Use the collected local documentation evidence; no external read is needed.",
                     }
+            if fn_name == "search_web_docs" and not setup_documentation_failed:
+                return {
+                    "status": "last_fallback_not_needed",
+                    "message": "Use source inspection or one direct official documentation read before web search.",
+                }
             tool_counts[fn_name] = tool_counts.get(fn_name, 0) + 1
             if fn_name == "fetch_web_documentation" and not setup_handoff.setup_documentation_url_allowed(
                 setup_source_result, user_message, str(fn_args.get("url") or ""),
@@ -691,7 +698,7 @@ async def stream_ai_chat(
                     "status": "documentation_source_not_verified",
                     "message": "Use an inspected official source URL or an HTTPS documentation URL supplied by the user.",
                 }
-            if fn_name in {"propose_app_install", "propose_stack_install", "propose_official_stack_install"}:
+            if fn_name in {"propose_app_install", "propose_stack_install", "propose_app_spec_plan", "propose_official_stack_install"}:
                 if setup_target_domain and not fn_args.get("domain_name"):
                     fn_args["domain_name"] = setup_target_domain
                 if repo and not fn_args.get("repository_url") and fn_args.get("source_type") != "image":
@@ -708,11 +715,13 @@ async def stream_ai_chat(
             )
             if fn_name == "fetch_web_documentation" and tool_output.get("status") != "ok":
                 setup_documentation_failed = True
+            if fn_name == "search_web_docs" and tool_output.get("status") == "ok":
+                setup_search_fallback_succeeded = True
             if fn_name == "read_website_file" and tool_output.get("status") == "secrets_blocked":
                 sensitive_file_blocked = True
             if fn_name == "inspect_app_source" and tool_output.get("status") == "ok":
                 setup_source_result = tool_output
-            if fn_name in {"propose_app_install", "propose_stack_install", "propose_official_stack_install"}:
+            if fn_name in {"propose_app_install", "propose_stack_install", "propose_app_spec_plan", "propose_official_stack_install"}:
                 if tool_output.get("status") == "provider_choice_required":
                     setup_provider_choice = tool_output
                 if tool_output.get("status") != "ok":
@@ -785,11 +794,13 @@ async def stream_ai_chat(
                             }
                             tool_to_call = "propose_app_install"
                         else:
-                            fallback_args = app_setup_tools.stack_plan_args_from_inspection(
+                            legacy_stack_args = app_setup_tools.stack_plan_args_from_inspection(
                                 setup_source_result,
                                 domain_name=setup_target_domain,
                             )
-                            tool_to_call = "propose_stack_install"
+                            from plugins.ai_helper.tools import app_spec_setup
+                            fallback_args = app_spec_setup.args_from_stack_inspection(legacy_stack_args)
+                            tool_to_call = "propose_app_spec_plan"
 
                         setup_server_plan_attempted = True
                         if fallback_args:
@@ -953,7 +964,7 @@ async def stream_ai_chat(
         if (
             setup_plan_required
             and not setup_plan_id
-            and not setup_documentation_failed
+            and not (setup_documentation_failed and not setup_search_fallback_succeeded)
             and not setup_provider_choice
             and not setup_handoff.is_recommendation_decision_pending(setup_source_result, user_message)
         ):
@@ -975,7 +986,7 @@ async def stream_ai_chat(
 
         if tool_was_executed:
             if setup_plan_required:
-                if setup_documentation_failed:
+                if setup_documentation_failed and not setup_search_fallback_succeeded:
                     content_str = (
                         "The single official documentation read failed. Continue from the existing local inspection facts, "
                         "state that documentation was unavailable, and ask one concise [INPUT:] or [OPTION:] question "

@@ -313,7 +313,8 @@ async def propose_app_install(
                 if not stack_args:
                     stack_args = synthesize_stack_from_inspection(inspection, domain_name=domain_name, repo_url=repository_url)
                 if stack_args:
-                    stack_payload = await setup_plan_builder.build_stack_payload(
+                    from plugins.ai_helper.services.app_spec_plan_builder import build_payload
+                    stack_payload = build_payload(
                         stack_manifest=stack_args["stack_manifest"],
                         domain_name=domain_name,
                         nonsecret_settings=stack_args.get("nonsecret_settings"),
@@ -322,7 +323,7 @@ async def propose_app_install(
                     plan = await action_plans.create_action_plan(
                         db=db,
                         session_id=session_id or "default_session",
-                        action_type="stack_install",
+                        action_type="app_spec_install",
                         payload=stack_payload,
                         summary=summary or stack_args.get("summary") or f"Deploy stack: {repository_url}",
                         confidence=confidence,
@@ -338,7 +339,7 @@ async def propose_app_install(
                     }
                 return {
                     "status": "error",
-                    "message": "The inspected repository contains Compose services or multi-datastore requirements. A restricted stack setup plan must be created via propose_stack_install.",
+                    "message": "The inspected repository contains Compose services or multi-datastore requirements. A validated AppSpec plan must be created via propose_app_spec_plan.",
                 }
         except Exception as exc:
             logger.warning("Auto-detection for stack proposal failed: %s", exc)
@@ -475,6 +476,7 @@ def stack_plan_args_from_inspection(
     if not service_map:
         return None
 
+    repo = str(inspection.get("repository_url") or source_result.get("repository_url") or "").strip()
     web_service = _choose_web_service(service_map, inspection)
     if not web_service:
         # All services are backing infrastructure; synthesize application container
@@ -518,7 +520,6 @@ def stack_plan_args_from_inspection(
     default_environment = _nonsecret_env_defaults(env_sample)
     allowed_settings = sorted(set(default_environment) | {"BASE_URL", "KAFKA_BROKERS", "CLICKHOUSE_DB"} | {k for s in service_map.values() for k in s.get("environment", {})})
 
-    repo = str(inspection.get("repository_url") or source_result.get("repository_url") or "").strip()
     stack_name = _stack_name(repo.rsplit("/", 1)[-1].removesuffix(".git") if repo else "source-stack")
 
     # Derive dynamic ClickHouse database name

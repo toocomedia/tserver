@@ -74,7 +74,7 @@ async def bulk_action(req: BulkActionRequest, db: AsyncSession = Depends(get_db)
                 managed_ids = [item.id for item in attachments if item.provider in {"docker", "panel_postgres", "panel_mariadb"}]
                 await container_app_removal_service.remove_selected_data(
                     db, app, attachments, database_ids=managed_ids,
-                    delete_app_volume=bool(app.data_volume or getattr(app, "storage_mounts", None) or getattr(app, "deploy_type", None) == "official_stack"),
+                    delete_app_volume=bool(app.data_volume or getattr(app, "storage_mounts", None) or getattr(app, "deploy_type", None) in {"official_stack", "app_spec"}),
                     delete_wordpress_files=bool(app.wordpress_content_volume),
                     delete_backups=True
                 )
@@ -296,7 +296,7 @@ async def update_settings(
     db: AsyncSession = Depends(get_db),
 ):
     app = await _app(db, app_id)
-    if app.deploy_type == "official_stack":
+    if app.deploy_type in {"official_stack", "app_spec"}:
         raise HTTPException(400, "Stack settings are fixed by the approved server manifest. Create a reviewed candidate to change them.")
     active = await container_app_deployment_service.active_deployment(db, app.id)
     if active:
@@ -361,7 +361,7 @@ async def uninstall(
     if confirmation != "DELETE ALL":
         raise HTTPException(400, "Type DELETE ALL to confirm this removal.")
     delete_database_ids = list(managed_ids - set(keep_database_ids))
-    delete_app_volume = (bool(app.data_volume) or bool(app.storage_mounts) or getattr(app, "deploy_type", None) == "official_stack") and not keep_app_volume
+    delete_app_volume = (bool(app.data_volume) or bool(app.storage_mounts) or getattr(app, "deploy_type", None) in {"official_stack", "app_spec"}) and not keep_app_volume
     delete_wordpress_files = bool(app.wordpress_content_volume) and not keep_wordpress_files
     delete_saved_backups = not keep_saved_backups
     app.status, app.last_error = "deleting", None

@@ -8,6 +8,8 @@ from fastapi import HTTPException
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from models.container_app_deployment import ContainerAppDeployment
+from models.container_app_snapshot import ContainerAppSnapshot
 from models.domain import Domain
 from models.ssl_cert import SslCert
 from plugins.ai_helper.services import action_plans
@@ -23,16 +25,52 @@ async def deploy_plan(
 ) -> tuple[int, int]:
     """Validate, consume, create candidate snapshot, and queue deployment once."""
     plan = await action_plans.get_action_plan(db, plan_id, user_id=user_id)
-    if not plan or not action_plans.payload_is_intact(plan) or plan["status"] != "awaiting_approval":
-        raise HTTPException(400, "Reviewed setup plan is unavailable, expired, or already used.")
+    if not plan or not action_plans.payload_is_intact(plan):
+        raise HTTPException(400, "Reviewed setup plan is unavailable or invalid.")
+    if plan["status"] in {"executing", "applied"}:
+        existing = await _existing_result(db, plan_id)
+        if existing:
+            return existing
+        raise HTTPException(409, "Reviewed setup plan is already executing.")
+    if plan["status"] != "awaiting_approval":
+        raise HTTPException(400, "Reviewed setup plan is expired or already used.")
     action_type = str(plan.get("action_type") or "")
-    if action_type in {"stack_install", "official_stack_install"}:
-        return await _deploy_stack(db, plan, user_id=user_id, ssl_requested=ssl_requested)
-    if action_type == "app_install":
-        return await _deploy_app(db, plan, user_id=user_id, ssl_requested=ssl_requested)
     if action_type == "container_app_patch":
         return await _deploy_patch(db, plan, user_id=user_id)
-    raise HTTPException(400, "Reviewed setup plan type is not deployable.")
+    allowed = {"app_install", "stack_install", "official_stack_install", "app_spec_install"}
+    if action_type not in allowed:
+        raise HTTPException(400, "Reviewed setup plan type is not deployable.")
+    try:
+        await action_plans.begin_plan_execution(
+            db, plan_id, user_id=user_id, expected_hash=plan["payload_hash"],
+            expected_action_types=allowed,
+        )
+        if action_type in {"stack_install", "official_stack_install"}:
+            result = await _deploy_stack(db, plan, user_id=user_id, ssl_requested=ssl_requested)
+        elif action_type == "app_spec_install":
+            result = await _deploy_app_spec(db, plan, user_id=user_id, ssl_requested=ssl_requested)
+        else:
+            result = await _deploy_app(db, plan, user_id=user_id, ssl_requested=ssl_requested)
+        await action_plans.finish_plan_execution(
+            db, plan_id, user_id=user_id, expected_hash=plan["payload_hash"],
+        )
+        await db.commit()
+        return result
+    except Exception:
+        await db.rollback()
+        raise
+
+
+async def _existing_result(db: AsyncSession, plan_id: str) -> tuple[int, int] | None:
+    snapshot = await db.scalar(select(ContainerAppSnapshot).where(
+        ContainerAppSnapshot.plan_id == plan_id,
+    ).order_by(ContainerAppSnapshot.id.desc()))
+    if snapshot is None:
+        return None
+    deployment = await db.scalar(select(ContainerAppDeployment).where(
+        ContainerAppDeployment.snapshot_id == snapshot.id,
+    ).order_by(ContainerAppDeployment.id.desc()))
+    return (snapshot.app_id, deployment.id) if deployment else None
 
 
 async def _deploy_patch(db: AsyncSession, plan: dict[str, Any], *, user_id: int | None) -> tuple[int, int]:
@@ -122,14 +160,56 @@ async def _deploy_stack(
     )
     domain.project_type = "container"
     deployment = await container_app_deployment_service.queue_deployment(db, app)
+    return app.id, deployment.id
+
+
+async def _deploy_app_spec(
+    db: AsyncSession, plan: dict[str, Any], *, user_id: int | None, ssl_requested: bool,
+) -> tuple[int, int]:
+    import hashlib
+    import json
+
+    from services.apps_engine.app_spec_codec import app_spec_to_dict
+    from services.apps_engine.security_policy import validate_app_spec
+
+    payload = plan.get("payload") or {}
+    domain = await _domain_from_payload(db, payload)
     try:
-        await action_plans.mark_plan_applied(
-            db, plan["plan_id"], user_id=user_id, expected_hash=plan["payload_hash"],
-            expected_action_type=plan["action_type"],
-        )
-    except ValueError as exc:
-        raise HTTPException(409, str(exc)) from exc
-    await db.commit()
+        spec = validate_app_spec(payload.get("app_spec") or {})
+        normalized = json.dumps(app_spec_to_dict(spec), sort_keys=True, separators=(",", ":"))
+        if hashlib.sha256(normalized.encode("utf-8")).hexdigest() != payload.get("app_spec_hash"):
+            raise ValueError("AppSpec plan hash is invalid.")
+        environment = _string_map(payload.get("environment_values"), "AppSpec environment")
+        secret_vault.encrypt("")
+    except (TypeError, ValueError, RuntimeError) as exc:
+        raise HTTPException(400, str(exc)) from exc
+    has_certificate = await _has_certificate(db, domain)
+    web_service = spec.services[spec.web_service_name]
+    app = await container_app_service.create_app(
+        db,
+        domain=domain,
+        source_type="image",
+        build_mode="image",
+        deploy_type="app_spec",
+        stack_catalog_id=spec.name,
+        stack_version=spec.default_version,
+        image_reference=web_service.pinned_digest or web_service.image_reference,
+        internal_port=spec.web_port,
+        ssl_requested=ssl_requested and not has_certificate,
+        environment_values=environment,
+        health_path=spec.web_health_path or "disabled",
+        startup_timeout_seconds=spec.startup_timeout_seconds,
+    )
+    await snapshots.create_snapshot(
+        db,
+        app,
+        app_spec=spec,
+        environment_patch=environment,
+        plan_id=plan["plan_id"],
+        created_by_user_id=user_id,
+    )
+    domain.project_type = "container"
+    deployment = await container_app_deployment_service.queue_deployment(db, app)
     return app.id, deployment.id
 
 
@@ -172,14 +252,6 @@ async def _deploy_app(
     )
     domain.project_type = "container"
     deployment = await container_app_deployment_service.queue_deployment(db, app)
-    try:
-        await action_plans.mark_plan_applied(
-            db, plan["plan_id"], user_id=user_id,
-            expected_hash=plan["payload_hash"], expected_action_type="app_install",
-        )
-    except ValueError as exc:
-        raise HTTPException(409, str(exc)) from exc
-    await db.commit()
     return app.id, deployment.id
 
 

@@ -114,8 +114,8 @@ GENERIC_TEST_STACK = OfficialStackDefinition(
     recommended_ram_mb=2048,
     minimum_ram_mb=1024,
     required_secrets=[
-        SecretRequirement(key="DB_PASSWORD", purpose="Primary database password"),
-        SecretRequirement(key="SECRET_KEY_BASE", purpose="Session signing key"),
+        SecretRequirement(key="DB_PASSWORD", purpose="Primary database password", generator="password"),
+        SecretRequirement(key="SECRET_KEY_BASE", purpose="Session signing key", generator="urlsafe64"),
     ],
     allowed_nonsecret_settings=["BASE_URL", "TIMEZONE", "DISABLE_REGISTRATION"],
     default_environment={"DISABLE_REGISTRATION": "invite_only"},
@@ -422,7 +422,11 @@ class TestOfficialStacks(unittest.IsolatedAsyncioTestCase):
                 for sec_req in stack.required_secrets:
                     sec_rec, _ = await secret_vault.ensure_secret(db, app.id, sec_req.key, sec_req.purpose)
                     real_vault_secrets[sec_req.key] = await secret_vault.secret_value(db, sec_rec.id)
-                    secret_reqs_for_snapshot.append({"key": sec_req.key, "purpose": sec_req.purpose})
+                    secret_reqs_for_snapshot.append({
+                        "key": sec_req.key,
+                        "purpose": sec_req.purpose,
+                        "generator": sec_req.generator,
+                    })
 
                 compiled_env = stack_runtime_service.compile_stack_environment(
                     app, stack, domain.name, real_vault_secrets, clean_settings,

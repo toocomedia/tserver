@@ -11,7 +11,7 @@ import logging
 from typing import Any, Dict, Optional
 import uuid
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.ai_helper import AiActionEvent, AiActionPlan
@@ -184,3 +184,61 @@ async def mark_plan_applied(
 
     logger.info("AI Action Plan [%s] marked as applied", plan_id)
     return {"status": "ok", "plan_id": plan_id, "plan_status": "applied"}
+
+
+async def begin_plan_execution(
+    db: AsyncSession,
+    plan_id: str,
+    *,
+    user_id: Optional[int],
+    expected_hash: str,
+    expected_action_types: set[str],
+) -> None:
+    """Atomically claim one reviewed deployment plan without committing its work."""
+    owner_clause = AiActionPlan.user_id.is_(None) if user_id is None else (
+        (AiActionPlan.user_id == user_id) | AiActionPlan.user_id.is_(None)
+    )
+    result = await db.execute(
+        update(AiActionPlan)
+        .where(
+            AiActionPlan.plan_id == plan_id,
+            AiActionPlan.status == "awaiting_approval",
+            AiActionPlan.payload_hash == expected_hash,
+            AiActionPlan.action_type.in_(expected_action_types),
+            owner_clause,
+        )
+        .values(status="executing")
+    )
+    if result.rowcount != 1:
+        raise ValueError("Reviewed setup plan is already executing, applied, expired, or unavailable.")
+    db.add(AiActionEvent(
+        plan_id=plan_id,
+        event_type="executing",
+        user_id=user_id,
+        details="Atomic deployment approval claimed",
+    ))
+    await db.flush()
+
+
+async def finish_plan_execution(
+    db: AsyncSession, plan_id: str, *, user_id: Optional[int], expected_hash: str,
+) -> None:
+    """Mark a claimed plan applied in the same transaction as its provisioning rows."""
+    result = await db.execute(
+        update(AiActionPlan)
+        .where(
+            AiActionPlan.plan_id == plan_id,
+            AiActionPlan.status == "executing",
+            AiActionPlan.payload_hash == expected_hash,
+        )
+        .values(status="applied")
+    )
+    if result.rowcount != 1:
+        raise ValueError("Reviewed setup plan execution state changed unexpectedly.")
+    db.add(AiActionEvent(
+        plan_id=plan_id,
+        event_type="applied",
+        user_id=user_id,
+        details="Provisioning rows and deployment queue created atomically",
+    ))
+    await db.flush()

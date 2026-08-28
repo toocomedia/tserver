@@ -143,7 +143,7 @@ class AiActionPlan(Base):
     user_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     session_id: Mapped[str] = mapped_column(String(64), index=True, nullable=False)
     action_type: Mapped[str] = mapped_column(String(32), nullable=False)  # "app_install" | "file_edit"
-    status: Mapped[str] = mapped_column(String(32), default="awaiting_approval", nullable=False)  # "draft" | "awaiting_input" | "awaiting_approval" | "applied" | "expired" | "cancelled"
+    status: Mapped[str] = mapped_column(String(32), default="awaiting_approval", nullable=False)  # awaiting_approval | executing | applied | expired | cancelled
     payload_json: Mapped[str] = mapped_column(Text, nullable=False)
     payload_hash: Mapped[str] = mapped_column(String(64), nullable=False)  # SHA-256 of payload_json
     summary: Mapped[str] = mapped_column(String(512), default="", nullable=False)
@@ -170,5 +170,4 @@ class AiActionEvent(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), nullable=False
     )
-
 

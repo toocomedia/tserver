@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from models.container_app import ContainerApp
+from services.apps_engine.runtime_dispatch import is_compose_app
 
 # ---------------------------------------------------------------------------
 # Profile value rationale (update after VPS acceptance runs A1–A9)
@@ -59,7 +60,7 @@ _DB_PROFILES: dict[str, str] = {
 
 def classify_deployment(app: ContainerApp) -> str:
     """Return the profile name for the heavy phase of deploying *app*."""
-    if getattr(app, "deploy_type", None) == "official_stack":
+    if is_compose_app(app):
         return "official_stack_pull"
     if app.source_type == "image":
         return "image_pull"

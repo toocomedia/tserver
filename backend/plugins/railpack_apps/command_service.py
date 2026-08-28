@@ -12,13 +12,14 @@ from fastapi import HTTPException
 from models.container_app import ContainerApp
 from models.domain import Domain
 from services import container_app_service as apps
+from services.apps_engine.runtime_dispatch import is_compose_app
 
 
 def get_authorized_containers(app: ContainerApp) -> List[Dict[str, Any]]:
     """Returns a list of containers authorized for command execution for this app."""
     containers: List[Dict[str, Any]] = []
 
-    if getattr(app, "deploy_type", None) == "official_stack":
+    if is_compose_app(app):
         # Multi-service official stack
         service_names: List[str] = []
         raw = getattr(app, "stack_services", None)
@@ -41,7 +42,12 @@ def get_authorized_containers(app: ContainerApp) -> List[Dict[str, Any]]:
         if not service_names and app.stack_catalog_id:
             service_names = [app.stack_catalog_id]
 
-        primary_service = app.stack_catalog_id or (service_names[0] if service_names else "web")
+        primary_service = service_names[0] if service_names else "web"
+        try:
+            from services.official_stacks.compose_runtime import stack_from_runtime
+            primary_service = stack_from_runtime(app).web_service_name
+        except Exception:
+            pass
 
         # Put primary service first
         ordered_services = []

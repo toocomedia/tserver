@@ -23,10 +23,13 @@ _TOOL_LIMITS = {
     "get_app_engine_capabilities": 2,
     "inspect_app_source": 2,
     "fetch_web_documentation": 1,
+    "search_docker_hub": 1,
+    "search_web_docs": 1,
     "propose_app_install": 1,
     "propose_stack_install": 1,
+    "propose_app_spec_plan": 1,
 }
-_PROPOSAL_TOOLS = frozenset({"propose_app_install", "propose_stack_install"})
+_PROPOSAL_TOOLS = frozenset({"propose_app_install", "propose_stack_install", "propose_app_spec_plan"})
 _SECRET_INPUT_RE = re.compile(r"(?:pass(?:word)?|secret|token|api[_-]?key|private[_-]?key|encryption[_-]?key)", re.I)
 
 
@@ -62,7 +65,7 @@ def tool_limit_result(
         }
     proposal_count = sum(tool_counts.get(name, 0) for name in _PROPOSAL_TOOLS)
     if tool_name in _PROPOSAL_TOOLS and proposal_count >= 1:
-        if allow_stack_correction and tool_name == "propose_stack_install" and proposal_count < 2:
+        if allow_stack_correction and tool_name in {"propose_stack_install", "propose_app_spec_plan"} and proposal_count < 2:
             return None
         return {
             "status": "limit_reached",
@@ -91,14 +94,14 @@ PLAN_REQUIRED_MESSAGE = (
 PLAN_TOOL_REQUIRED_MESSAGE = (
     "This is an App Engine setup request, not a normal answer. You must call exactly "
     "one reviewed setup planning tool now: propose_app_install for a single app, or "
-    "propose_stack_install when source inspection shows Compose services or unsupported "
+    "propose_app_spec_plan when source inspection shows Compose services or unsupported "
     "single-app datastores. Do not answer in plain text until the planning tool returns."
 )
 
 STACK_CORRECTION_MESSAGE = (
     "The single-app proposal was rejected by server validation because the inspected "
     "source needs private internal stack services. Do not inspect more sources or fetch "
-    "documentation. Create one restricted stack review plan now with propose_stack_install "
+    "documentation. Create one restricted AppSpec review plan now with propose_app_spec_plan "
     "from the existing capabilities and source inspection evidence."
 )
 

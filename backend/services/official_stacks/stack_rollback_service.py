@@ -10,7 +10,7 @@ from models.container_app import ContainerApp
 from models.container_app_snapshot import ContainerAppSnapshot
 from models.domain import Domain
 from services import container_app_control_service, container_app_service as apps
-from services.apps_engine import snapshots
+from services.apps_engine import snapshot_lifecycle, snapshots
 from services.official_stacks.catalog import get_stack
 from services.official_stacks import stack_runtime_service
 
@@ -50,5 +50,5 @@ async def rollback_stack(
 
     # 3. Publish Nginx route
     await container_app_control_service.publish(db, runtime, domain)
-    await snapshots.promote_snapshot(db, app, target_snapshot, runtime)
+    await snapshot_lifecycle.promote_snapshot(db, app, target_snapshot, runtime)
     return True
