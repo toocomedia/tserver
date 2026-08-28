@@ -158,6 +158,7 @@ async def run_test_api(payload: RunTestRequest, db: AsyncSession = Depends(get_d
                             },
                             "report_text": format_app_report_text(res),
                             "raw_log": res.raw_log,
+                            "timing": res.timing,
                         }
                         await queue.put(json.dumps(payload_data))
                     else:

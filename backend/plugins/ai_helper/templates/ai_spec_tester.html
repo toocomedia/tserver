@@ -110,6 +110,20 @@
     </div>
   </div>
 
+  <!-- Live Telemetry & Timing Bar -->
+  <div id="telemetry-bar" style="display: none; margin-bottom: 16px; padding: 10px 14px; background: rgba(30, 41, 59, 0.7); border: 1px solid var(--color-border, #334155); border-radius: 8px; font-size: 12px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+      <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+        <span style="color: #94a3b8; font-weight: 600;">⏱ TELEMETRY:</span>
+        <span id="stat-total-time" class="badge-minimal badge-minimal--active">Total: 0.0s</span>
+        <span id="stat-turn1-time" class="badge-minimal badge-minimal--neutral">Turn 1 (Inspect & AI): 0.0s</span>
+        <span id="stat-turn2-time" class="badge-minimal badge-minimal--neutral">Turn 2 (Synthesis): 0.0s</span>
+        <span id="stat-audit-time" class="badge-minimal badge-minimal--neutral">Audit: 0ms</span>
+      </div>
+      <div id="stat-live-stage" style="color: #38bdf8; font-weight: 500;"></div>
+    </div>
+  </div>
+
   <!-- Workspace Grid -->
   <div class="dev-tester-grid">
     <!-- Left: AI Tool & Search Timeline -->
@@ -129,51 +143,39 @@
     <div class="dev-tester-card" style="display: flex; flex-direction: column;">
       <div style="display: flex; justify-content: space-between; align-items: center;">
         <div class="dev-tabs">
-          <button type="button" class="dev-tab-btn active" data-tab="compose">Docker Compose YAML</button>
-          <button type="button" class="dev-tab-btn" data-tab="json">AppSpec JSON</button>
-          <button type="button" class="dev-tab-btn" data-tab="audit">Fixes & Audit Report</button>
-          <button type="button" class="dev-tab-btn" data-tab="rawlog">Complete Raw Log</button>
-          <button type="button" class="dev-tab-btn" data-tab="raw">Scorecard Report</button>
+          <button type="button" class="dev-tab-btn active" data-tab="template">App Template</button>
+          <button type="button" class="dev-tab-btn" data-tab="audit">Issues & Fixes</button>
+          <button type="button" class="dev-tab-btn" data-tab="rawlog">AI Trace & Full Log</button>
         </div>
         <div id="verdict-container"></div>
       </div>
 
-      <!-- Tab 1: Compose YAML -->
-      <div id="tab-pane-compose" class="tab-pane">
-        <div style="display: flex; justify-content: flex-end; margin-bottom: 6px;">
-          <button type="button" class="btn btn--secondary btn--sm" onclick="copyCode('code-compose')">Copy YAML</button>
+      <!-- Tab 1: App Template (Unified System) -->
+      <div id="tab-pane-template" class="tab-pane">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <div style="display: flex; gap: 4px; align-items: center;">
+            <span style="font-size: 11.5px; color: var(--color-text-muted, #9ca3af); margin-right: 6px;">Format:</span>
+            <button type="button" id="btn-tpl-yaml" class="btn btn--sm btn--primary" style="padding: 2px 10px; font-size: 11.5px;">YAML (Compose)</button>
+            <button type="button" id="btn-tpl-json" class="btn btn--sm btn--secondary" style="padding: 2px 10px; font-size: 11.5px;">JSON (AppSpec)</button>
+          </div>
+          <button type="button" class="btn btn--secondary btn--sm" onclick="copyTemplateCode()">Copy Template</button>
         </div>
-        <pre class="code-viewer"><code id="code-compose"># Run a test to generate Docker Compose YAML</code></pre>
+        <pre class="code-viewer"><code id="code-template"># Run a test to generate the App Template</code></pre>
       </div>
 
-      <!-- Tab 2: AppSpec JSON -->
-      <div id="tab-pane-json" class="tab-pane" style="display: none;">
-        <div style="display: flex; justify-content: flex-end; margin-bottom: 6px;">
-          <button type="button" class="btn btn--secondary btn--sm" onclick="copyCode('code-json')">Copy JSON</button>
-        </div>
-        <pre class="code-viewer"><code id="code-json">{}</code></pre>
-      </div>
-
-      <!-- Tab 3: Audit & Fixes -->
+      <!-- Tab 2: Audit & Fixes -->
       <div id="tab-pane-audit" class="tab-pane" style="display: none; overflow-y: auto; max-height: 480px;">
         <div id="audit-summary-box" style="margin-bottom: 12px; font-size: 13px;"></div>
         <div id="audit-issues-list"></div>
       </div>
 
-      <!-- Tab 4: Complete Raw Log -->
+      <!-- Tab 3: AI Trace & Full Log -->
       <div id="tab-pane-rawlog" class="tab-pane" style="display: none;">
-        <div style="display: flex; justify-content: flex-end; margin-bottom: 6px;">
-          <button type="button" class="btn btn--secondary btn--sm" onclick="copyCode('code-rawlog')">Copy Complete Log</button>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <span id="rawlog-live-status" style="font-size: 12px; color: #38bdf8;"></span>
+          <button type="button" class="btn btn--secondary btn--sm" onclick="copyCode('code-rawlog')">Copy Full Log</button>
         </div>
-        <pre class="code-viewer"><code id="code-rawlog">Run a test to inspect the full turn-by-turn prompts, tool executions, and raw AI responses.</code></pre>
-      </div>
-
-      <!-- Tab 5: Raw Scorecard Report -->
-      <div id="tab-pane-raw" class="tab-pane" style="display: none;">
-        <div style="display: flex; justify-content: flex-end; margin-bottom: 6px;">
-          <button type="button" class="btn btn--secondary btn--sm" onclick="copyCode('code-raw')">Copy Report</button>
-        </div>
-        <pre class="code-viewer"><code id="code-raw">No test run yet.</code></pre>
+        <pre class="code-viewer"><code id="code-rawlog">Run a test to observe the full turn-by-turn prompts, tool executions, and raw AI responses.</code></pre>
       </div>
     </div>
   </div>

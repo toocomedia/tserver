@@ -82,6 +82,7 @@ def build_single_app_payload(
     database_attachments: Optional[List[Dict[str, str]]] = None,
     storage_mounts: Optional[List[Dict[str, str]]] = None,
     domain_name: str = "",
+    **_extra: Any,
 ) -> Dict[str, Any]:
     """Constructs and normalizes a single-container App Engine plan payload."""
     norm_port = normalize_port(internal_port, 3000)

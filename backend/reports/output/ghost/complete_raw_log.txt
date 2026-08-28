@@ -1,15 +1,15 @@
-=== AI DEV TEST RUN: Vaultwarden (Bitwarden Server) (vaultwarden) ===
+=== AI DEV TEST RUN: Ghost CMS (ghost) ===
 Provider: Test Isolation Provider | Model: gpt-4o-mini
-Target: vaultwarden/server:latest (image)
-Total Duration: 113ms
+Target: ghost:5-alpine (image)
+Total Duration: 70ms
 Timing: Turn 1 (Inspect & AI): 25ms | Turn 2 (Synthesis): 0ms | Audit: 5ms
 
 --- [1] TURN 1 USER PROMPT ---
-Simulate setup for vaultwarden/server:latest
+Simulate setup for ghost:5-alpine
 
 --- [2] INTERMEDIATE TOOL ACTIVITIES ---
-  [5ms] inspect_app_source -> DONE: Simulated local inspection (vaultwarden/server:latest)
-  [25ms] propose_app_spec_plan -> DONE: Synthesizing validated plan (vaultwarden.test.internal)
+  [5ms] inspect_app_source -> DONE: Simulated local inspection (ghost:5-alpine)
+  [25ms] propose_app_spec_plan -> DONE: Synthesizing validated plan (ghost.test.internal)
 
 --- [3] TURN 1 RAW AI RESPONSE ---
 Generated configuration in dry-run mode.
@@ -21,7 +21,7 @@ Generated configuration in dry-run mode.
 (Turn 2 skipped)
 
 --- [6] EXTRACTED SETUP PLAN ---
-Plan ID: plan_713ad3ee0ce849b9
+Plan ID: plan_10102ce8622c4db5
 {}
 
 --- [7] VALIDATION FINDINGS & AUDIT ---

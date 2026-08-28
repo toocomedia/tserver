@@ -17,6 +17,13 @@ def format_app_report_text(result: RunResult) -> str:
     status_str = val.status if val else ("ERROR" if result.error else "UNKNOWN")
     now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
 
+    t = result.timing
+    timing_str = (
+        f"Timing: Turn 1 (Inspect & AI): {t.get('turn1_ms', 0)}ms | "
+        f"Turn 2 (Synthesis): {t.get('turn2_ms', 0)}ms | "
+        f"Audit: {t.get('validation_ms', 0)}ms"
+    )
+
     lines = [
         "=" * 80,
         f"AI PLAN & SPEC TEST REPORT: {result.app.name.upper()}",
@@ -24,6 +31,7 @@ def format_app_report_text(result: RunResult) -> str:
         f"Active AI Provider: {result.provider_name} ({result.model_name})",
         f"Target: {result.app.target} (Source: {result.app.source_type})",
         f"Status: [{status_str}] (Total Duration: {result.duration_ms}ms)",
+        f"{timing_str}",
         "=" * 80,
         "",
         "[1. AI SEARCH & TOOL EXECUTION TRACE]",
@@ -96,6 +104,54 @@ def format_app_report_text(result: RunResult) -> str:
         lines.append("  [ERROR] Validation was not performed due to plan generation failure.")
 
     lines.append("=" * 80)
+    return "\n".join(lines)
+
+
+def format_raw_execution_log(result: RunResult) -> str:
+    """Formats full raw text log including prompts, tools, timing telemetry, and outputs."""
+    app = result.app
+    val = result.validation
+    t = result.timing
+    lines = [
+        f"=== AI DEV TEST RUN: {app.name} ({app.slug}) ===",
+        f"Provider: {result.provider_name} | Model: {result.model_name}",
+        f"Target: {app.target} ({app.source_type})",
+        f"Total Duration: {result.duration_ms}ms",
+        (
+            f"Timing: Turn 1 (Inspect & AI): {t.get('turn1_ms', 0)}ms | "
+            f"Turn 2 (Synthesis): {t.get('turn2_ms', 0)}ms | "
+            f"Audit: {t.get('validation_ms', 0)}ms"
+        ),
+        "",
+        "--- [1] TURN 1 USER PROMPT ---",
+        result.turn1_prompt or "(None)",
+        "",
+        "--- [2] INTERMEDIATE TOOL ACTIVITIES ---",
+        *(
+            f"  [{a.timestamp_ms}ms] {a.tool} -> {a.status.upper()}: {a.label} ({a.detail})"
+            for a in result.activities
+        ),
+        "",
+        "--- [3] TURN 1 RAW AI RESPONSE ---",
+        result.turn1_response or "(Empty response)",
+        "",
+        "--- [4] TURN 2 USER PROMPT ---",
+        result.turn2_prompt or "(Turn 2 skipped; plan synthesized in Turn 1)",
+        "",
+        "--- [5] TURN 2 RAW AI RESPONSE ---",
+        result.turn2_response or "(Turn 2 skipped)",
+        "",
+        "--- [6] EXTRACTED SETUP PLAN ---",
+        f"Plan ID: {result.plan_id or 'None'}",
+        json.dumps(result.plan_data or {}, indent=2),
+        "",
+        "--- [7] VALIDATION FINDINGS & AUDIT ---",
+        f"Verdict: {val.status if val else 'UNKNOWN'} (Errors: {val.error_count if val else 0}, Warnings: {val.warning_count if val else 0})",
+        *(
+            f"  [{i.severity}] {i.field}: {i.message} -> FIX: {i.fix_advice}"
+            for i in (val.issues if val else [])
+        ),
+    ]
     return "\n".join(lines)
 
 

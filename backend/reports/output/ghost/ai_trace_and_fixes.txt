@@ -1,9 +1,10 @@
 ================================================================================
 AI PLAN & SPEC TEST REPORT: GHOST CMS
-Generated: 2026-08-28 10:18:37 UTC
-Active AI Provider: Test Isolation Provider (test-override-model)
+Generated: 2026-08-28 10:39:41 UTC
+Active AI Provider: Test Isolation Provider (gpt-4o-mini)
 Target: ghost:5-alpine (Source: image)
-Status: [PASS] (Total Duration: 71ms)
+Status: [PASS] (Total Duration: 70ms)
+Timing: Turn 1 (Inspect & AI): 25ms | Turn 2 (Synthesis): 0ms | Audit: 5ms
 ================================================================================
 
 [1. AI SEARCH & TOOL EXECUTION TRACE]
