@@ -564,19 +564,19 @@ if (form) {
   window.applyAiAppPlan = function (planData, options = {}) {
     if (!planData) return;
     const p = planData.payload || planData;
-    const isStack = planData.action_type === "official_stack_install" || p.deploy_type === "official_stack" || !!p.stack_catalog_id;
+    const isStack = planData.action_type === "official_stack_install" || planData.action_type === "stack_install" || planData.action_type === "app_spec_install" || p.deploy_type === "official_stack" || p.deploy_type === "app_spec" || !!p.stack_catalog_id;
     const appPlanInput = query("#app_plan_id") || query("[data-app-plan-id]");
     if (appPlanInput) appPlanInput.value = isStack ? "" : (planData.plan_id || "");
 
     if (isStack) {
       const depTypeInput = query("#deploy_type") || query("[data-deploy-type]");
-      if (depTypeInput) depTypeInput.value = "official_stack";
+      if (depTypeInput) depTypeInput.value = p.deploy_type || "official_stack";
       const catInput = query("#stack_catalog_id") || query("[data-stack-catalog-id]");
-      if (catInput) catInput.value = p.stack_catalog_id || "";
+      if (catInput) catInput.value = p.stack_catalog_id || (p.app_spec && p.app_spec.name) || "";
       const verInput = query("#stack_version") || query("[data-stack-version]");
-      if (verInput) verInput.value = p.stack_version || "";
+      if (verInput) verInput.value = p.stack_version || (p.app_spec && p.app_spec.default_version) || "";
       const settingsInput = query("#nonsecret_settings") || query("[data-nonsecret-settings]");
-      if (settingsInput) settingsInput.value = JSON.stringify(p.nonsecret_settings || {});
+      if (settingsInput) settingsInput.value = JSON.stringify(p.nonsecret_settings || p.environment_values || {});
       const planInput = query("#stack_plan_id") || query("[data-stack-plan-id]");
       if (planInput) planInput.value = planData.plan_id || "";
 
@@ -584,10 +584,12 @@ if (form) {
       if (stackPanel) {
         stackPanel.style.display = "block";
         const titleEl = stackPanel.querySelector("[data-stack-title]");
-        if (titleEl && p.stack_display_name) titleEl.textContent = p.stack_display_name;
+        if (titleEl) titleEl.textContent = p.stack_display_name || (p.app_spec && p.app_spec.name) || "Compose Stack";
         const badgeEl = stackPanel.querySelector("[data-stack-version-badge]");
-        if (badgeEl && p.stack_version) badgeEl.textContent = `Restricted Compose Stack · ${p.stack_version}`;
-        const services = Array.isArray(p.services) ? p.services : [];
+        const stackVer = p.stack_version || (p.app_spec && p.app_spec.default_version) || "latest";
+        if (badgeEl) badgeEl.textContent = `Restricted Compose Stack · ${stackVer}`;
+        const rawServices = Array.isArray(p.services) ? p.services : (p.app_spec && p.app_spec.services ? Object.keys(p.app_spec.services) : []);
+        const services = Array.isArray(rawServices) ? rawServices : [];
         const servicesLabel = stackPanel.querySelector("[data-stack-services-label]");
         if (servicesLabel) servicesLabel.textContent = `Services (${p.services_count || services.length})`;
         const servicesEl = stackPanel.querySelector("[data-stack-services]");

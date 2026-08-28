@@ -102,10 +102,17 @@ class AppsEngineSafeDeploymentTests(unittest.TestCase):
         self.assertIn('bubble.classList.remove("ai-msg-bubble--collapsible")', actions)
         create_router = (BACKEND / "plugins" / "railpack_apps" / "router_create.py").read_text(encoding="utf-8")
         deploy_helper = (BACKEND / "services" / "apps_engine" / "reviewed_setup_deploy.py").read_text(encoding="utf-8")
+        wizard_js = (BACKEND / "plugins" / "railpack_apps" / "static" / "js" / "railpack-app-create.js").read_text(encoding="utf-8")
         self.assertIn("/deploy-reviewed-plan/{plan_id}", create_router)
         self.assertIn("reviewed_setup_deploy.deploy_plan", create_router)
-        self.assertIn("_database_attachments", deploy_helper)
-        self.assertIn("_reject_unsafe_single_app_source", deploy_helper)
+        self.assertIn("except HTTPException:", create_router)
+        self.assertIn("except ValueError as exc:", create_router)
+        self.assertIn("except RuntimeError as exc:", create_router)
+        self.assertIn('_database_attachments', deploy_helper)
+        self.assertIn('_reject_unsafe_single_app_source', deploy_helper)
+        self.assertIn('normalize_keys=True', deploy_helper)
+        self.assertIn('app_spec_install', wizard_js)
+        self.assertIn('stack_install', wizard_js)
 
 
 if __name__ == "__main__":

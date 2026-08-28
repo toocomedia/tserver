@@ -3,7 +3,10 @@ from __future__ import annotations
 
 import json
 import asyncio
+import logging
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
@@ -105,15 +108,26 @@ async def inspect_image(image_reference: str = Form(...)):
 
 @router.post("/deploy-reviewed-plan/{plan_id}")
 async def deploy_reviewed_plan(plan_id: str, request: Request, db: AsyncSession = Depends(get_db)):
-    app_id, deployment_id = await reviewed_setup_deploy.deploy_plan(
-        db, plan_id.strip(), user_id=request.session.get("user_id"),
-    )
-    return JSONResponse({
-        "status": "ok",
-        "app_id": app_id,
-        "deployment_id": deployment_id,
-        "redirect": f"/plugins/railpack_apps/{app_id}?deployment={deployment_id}",
-    })
+    try:
+        app_id, deployment_id = await reviewed_setup_deploy.deploy_plan(
+            db, plan_id.strip(), user_id=request.session.get("user_id"),
+        )
+        return JSONResponse({
+            "status": "ok",
+            "app_id": app_id,
+            "deployment_id": deployment_id,
+            "redirect": f"/plugins/railpack_apps/{app_id}?deployment={deployment_id}",
+        })
+    except HTTPException:
+        raise
+    except ValueError as exc:
+        status_code = 409 if any(w in str(exc).lower() for w in ("already", "conflict", "executing", "applied")) else 400
+        raise HTTPException(status_code, str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    except Exception as exc:
+        logger.exception("Deploy reviewed plan failed for plan %s: %s", plan_id, exc)
+        raise HTTPException(400, f"Deployment failed: {exc}") from exc
 
 
 @router.post("/create")
@@ -143,13 +157,18 @@ async def create(
         raise HTTPException(404, "Domain not found.")
     has_certificate = await db.scalar(select(SslCert.id).where(SslCert.full_domain == domain.name)) is not None
 
-    if deploy_type == "official_stack" or source_type == "official_stack":
-        plan_id = stack_plan_id.strip()
+    if deploy_type in {"official_stack", "app_spec"} or source_type in {"official_stack", "app_spec"}:
+        plan_id = (stack_plan_id or app_plan_id).strip()
         if not plan_id:
             raise HTTPException(400, "Choose a reviewed stack plan before deployment.")
         plan = await action_plans.get_action_plan(db, plan_id, user_id=request.session.get("user_id"))
-        if not plan or not action_plans.payload_is_intact(plan) or plan["status"] != "awaiting_approval" or plan["action_type"] not in {"stack_install", "official_stack_install"}:
+        if not plan or not action_plans.payload_is_intact(plan) or plan["status"] != "awaiting_approval" or plan["action_type"] not in {"stack_install", "official_stack_install", "app_spec_install"}:
             raise HTTPException(400, "Stack review plan is unavailable, expired, or already used.")
+        if plan["action_type"] == "app_spec_install":
+            app_id, deployment_id = await reviewed_setup_deploy.deploy_plan(
+                db, plan_id, user_id=request.session.get("user_id"), ssl_requested=ssl,
+            )
+            return _create_response(request, app_id, deployment_id)
         payload = plan.get("payload") or {}
         try:
             stack = validate_stack_manifest(stack_from_dict(payload.get("stack_manifest") or {}))
@@ -198,33 +217,30 @@ async def create(
     app_plan = None
     if app_plan_id.strip():
         app_plan = await action_plans.get_action_plan(db, app_plan_id.strip(), user_id=request.session.get("user_id"))
-        if not app_plan or not action_plans.payload_is_intact(app_plan) or app_plan["status"] != "awaiting_approval" or app_plan["action_type"] != "app_install":
-            raise HTTPException(400, "Application setup plan is unavailable, expired, or already used.")
-        plan_payload = app_plan.get("payload") or {}
-        plan_domain = str(plan_payload.get("domain_name") or "").strip().lower()
-        if plan_domain and plan_domain != domain.name.lower():
-            raise HTTPException(400, "Application setup plan was prepared for another domain.")
-        source_type = str(plan_payload.get("source_type") or source_type)
-        build_mode = str(plan_payload.get("build_mode") or build_mode)
-        repository_url = str(plan_payload.get("repository_url") or "")
-        branch = str(plan_payload.get("branch") or "main")
-        image_reference = str(plan_payload.get("image_reference") or "")
-        try:
-            internal_port = int(plan_payload.get("internal_port") or internal_port)
-        except (TypeError, ValueError) as exc:
-            raise HTTPException(400, "Application setup plan has an invalid internal port.") from exc
-        custom_start_command = str(plan_payload.get("custom_start_command") or "")
-        health_path = str(plan_payload.get("health_path") or "disabled")
-        environment_values = json.dumps(plan_payload.get("environment_values") or {})
-        secret_requirements = json.dumps(plan_payload.get("secret_requirements") or [])
-        database_attachments = json.dumps(plan_payload.get("database_attachments") or [])
-        storage_mounts = json.dumps(plan_payload.get("storage_mounts") or [])
-        database_mode, database_url = "none", ""
+        if app_plan and action_plans.payload_is_intact(app_plan) and app_plan.get("status") == "awaiting_approval":
+            plan_payload = app_plan.get("payload") or {}
+            plan_domain = str(plan_payload.get("domain_name") or "").strip().lower()
+            if plan_domain and plan_domain != domain.name.lower():
+                raise HTTPException(400, "Application setup plan was prepared for another domain.")
+            # Populate form defaults only if not provided by user in the form
+            if not environment_values or environment_values.strip() in ("{}", ""):
+                environment_values = json.dumps(plan_payload.get("environment_values") or {})
+            if not secret_requirements or secret_requirements.strip() in ("[]", ""):
+                secret_requirements = json.dumps(plan_payload.get("secret_requirements") or [])
+            if not database_attachments or database_attachments.strip() in ("[]", ""):
+                database_attachments = json.dumps(plan_payload.get("database_attachments") or [])
+            if not storage_mounts or storage_mounts.strip() in ("[]", ""):
+                storage_mounts = json.dumps(plan_payload.get("storage_mounts") or [])
+            if not repository_url.strip() and plan_payload.get("repository_url"):
+                repository_url = str(plan_payload.get("repository_url") or "")
+            if not image_reference.strip() and plan_payload.get("image_reference"):
+                image_reference = str(plan_payload.get("image_reference") or "")
 
     requested_secrets = _secret_requirements(secret_requirements)
-    if requested_secrets:
-        # Fail before creating databases, app directories, or files when panel key is not persistent.
+    try:
         secret_vault.encrypt("")
+    except RuntimeError as exc:
+        raise HTTPException(400, str(exc)) from exc
     attachments = _attachments(database_attachments)
     if preset == "wordpress":
         attachments = _prepare_wordpress(attachments, wordpress_site_title, wordpress_admin_user, wordpress_admin_email, wordpress_admin_password)
@@ -250,14 +266,15 @@ async def create(
         )
     domain.project_type = "container"
     deployment = await container_app_deployment_service.queue_deployment(db, app)
-    if app_plan:
+    if app_plan and app_plan.get("status") == "awaiting_approval":
         try:
             await action_plans.mark_plan_applied(
                 db, app_plan_id.strip(), user_id=request.session.get("user_id"),
-                expected_hash=app_plan["payload_hash"], expected_action_type="app_install",
+                expected_hash=app_plan["payload_hash"],
+                expected_action_type=app_plan.get("action_type"),
             )
-        except ValueError as exc:
-            raise HTTPException(409, str(exc)) from exc
+        except Exception as exc:
+            logger.warning("Could not mark action plan applied: %s", exc)
     await db.commit()
     return _create_response(request, app.id, deployment.id)
 

@@ -151,12 +151,14 @@ async def create_snapshot(
     ]
     environment = _read_environment(app)
     for key, value in (environment_patch or {}).items():
-        if not build_secrets.ENV_KEY_RE.fullmatch(key) or not isinstance(value, str):
-            raise ValueError("Environment patch contains an invalid value.")
-        if value == "" or value.lower() in ("__delete__", "__unset__", "null", "none"):
-            environment.pop(key, None)
+        clean_key = build_secrets.normalize_environment_key(key)
+        if not clean_key or not build_secrets.ENV_KEY_RE.fullmatch(clean_key) or not isinstance(value, str):
+            raise ValueError(f"Environment patch contains an invalid key '{key}'.")
+        clean_val = build_secrets.normalize_environment_value(value)
+        if clean_val == "" or clean_val.lower() in ("__delete__", "__unset__", "null", "none"):
+            environment.pop(clean_key, None)
         else:
-            environment[key] = value
+            environment[clean_key] = clean_val
 
     if app_spec is not None:
         from services.apps_engine.security_policy import validate_app_spec
