@@ -123,6 +123,7 @@
 
             if (["queued", "running"].indexOf(item.status) !== -1) {
               setTimeout(pollStream, 1500);
+            } else {
               if (item.status === "success") {
                 if (window.toast) window.toast("Application deployment completed successfully!", "success");
               } else if (item.status === "failed") {
@@ -142,6 +143,7 @@
                   streamFooter.appendChild(retryBtn);
                 }
               }
+            }
           })
           .catch(function () {
             setTimeout(pollStream, 3000);
