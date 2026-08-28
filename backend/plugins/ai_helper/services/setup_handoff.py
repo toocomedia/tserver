@@ -87,7 +87,9 @@ def tool_limit_result(
     if is_server_fallback and tool_name in _PROPOSAL_TOOLS:
         return None
     proposal_count = sum(tool_counts.get(name, 0) for name in _PROPOSAL_TOOLS)
-    if tool_name in _PROPOSAL_TOOLS and proposal_count >= 2:
+    if tool_name in _PROPOSAL_TOOLS and proposal_count >= 1:
+        if allow_stack_correction and tool_name in {"propose_stack_install", "propose_app_spec_plan"} and proposal_count < 2:
+            return None
         return {
             "status": "limit_reached",
             "message": "This App Engine setup reached its maximum proposal attempts.",
@@ -142,38 +144,22 @@ def needs_stack_correction(tool_name: str, tool_output: Mapping[str, object]) ->
 def is_setup_interview_pending(
     setup_source_result: Mapping[str, object] | None,
     user_message: str,
-    history_texts: list[str] | None = None,
 ) -> bool:
     """Whether the app setup requires user input or choice before plan generation."""
     if not isinstance(setup_source_result, dict):
         return False
-
-    msg_lower = (user_message or "").lower()
-    # Explicit user requests to re-open or edit answers
-    if any(phrase in msg_lower for phrase in (
-        "show the setup configuration questions",
-        "show the deployment method choices",
-        "change the repository or docker image source",
-        "edit answers",
-    )):
-        return True
-
-    messages_to_check = [user_message or ""]
-    if history_texts:
-        messages_to_check.extend(history_texts)
-    combined_lower = "\n".join(messages_to_check).lower()
+    
+    # Strip URLs so 'github.com' or 'gitlab.com' does not falsely match 'git' keyword
+    clean_msg = re.sub(r"https?://\S+", "", (user_message or "").lower())
 
     if required_setup_inputs(setup_source_result):
-        return bool(missing_setup_inputs(setup_source_result, user_message, history_texts=history_texts))
+        return bool(missing_setup_inputs(setup_source_result, user_message))
 
-    if "setup interview answers:" in combined_lower:
+    if "setup interview answers:" in (user_message or "").lower():
         return False
 
-    if re.search(r"(?im)^\s*deployment_method\b", combined_lower):
+    if re.search(r"(?im)^\s*deployment_method\b", user_message or ""):
         return False
-
-    # Strip URLs so 'github.com' or 'gitlab.com' does not falsely match 'git' keyword
-    clean_msg = re.sub(r"https?://\S+", "", combined_lower)
 
     # If user explicitly said to proceed, deploy, or answered options, don't block
     if any(token in clean_msg for token in (
@@ -217,10 +203,9 @@ def is_setup_interview_pending(
 def is_recommendation_decision_pending(
     setup_source_result: Mapping[str, object] | None,
     user_message: str,
-    history_texts: list[str] | None = None,
 ) -> bool:
     """Whether setup decision or interview is awaiting user choice before plan generation."""
-    return is_setup_interview_pending(setup_source_result, user_message, history_texts=history_texts)
+    return is_setup_interview_pending(setup_source_result, user_message)
 
 
 def needs_documentation_fallback(setup_source_result: Mapping[str, object] | None) -> bool:
@@ -309,21 +294,14 @@ def _input_placeholder(name: str) -> str:
     }.get(name, "")
 
 
-def missing_setup_inputs(
-    setup_source_result: Mapping[str, object] | None,
-    user_message: str,
-    history_texts: list[str] | None = None,
-) -> list[dict[str, Any]]:
+def missing_setup_inputs(setup_source_result: Mapping[str, object] | None, user_message: str) -> list[dict[str, Any]]:
     """Check named, combined interview answers without treating a choice as an input."""
-    messages = [user_message or ""]
-    if history_texts:
-        messages.extend(reversed(history_texts))
-    combined_text = "\n".join(messages)
-    is_interview_response = any("setup interview answers:" in m.lower() for m in messages)
+    message = user_message or ""
+    is_interview_response = "setup interview answers:" in message.lower()
     missing: list[dict[str, Any]] = []
     for item in required_setup_inputs(setup_source_result):
         key = re.escape(item["name"])
-        found = re.search(rf"(?im)^\s*(?:[-*]\s*)?{key}\s*:\s*(.*)$", combined_text)
+        found = re.search(rf"(?im)^\s*(?:[-*]\s*)?{key}\s*:\s*(.*)$", message)
         if found:
             val = found.group(1).strip()
             # If explicit skip / disabled / none / empty, check if field is required vs optional
@@ -335,7 +313,7 @@ def missing_setup_inputs(
             # Non-empty value provided
             continue
         if item["name"] == "admin_email":
-            found_email = re.search(r"(?i)\b[\w.+-]+@[\w.-]+\.[A-Z]{2,}\b", combined_text)
+            found_email = re.search(r"(?i)\b[\w.+-]+@[\w.-]+\.[A-Z]{2,}\b", message)
             if found_email:
                 continue
         if is_interview_response and not item.get("required"):

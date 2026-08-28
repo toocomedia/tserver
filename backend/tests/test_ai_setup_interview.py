@@ -69,30 +69,15 @@ class SetupInterviewTests(unittest.TestCase):
 
     def test_staged_browser_module_defers_chat_callback(self):
         source = (BACKEND / "plugins" / "ai_helper" / "static" / "js" / "modules" / "chat_setup_interview.js").read_text(encoding="utf-8")
-        self.assertIn("ai-decision-card", source)
-        self.assertIn("ai-setup-submit-btn", source)
-        self.assertIn("Confirm Configuration", source)
+        self.assertIn("if (self.index + 1 < self.steps.length)", source)
         self.assertIn("if (typeof this.onComplete === \"function\") this.onComplete", source)
         self.assertIn("SECRET_INPUT", source)
+        self.assertIn("ai-setup-skip", source)
         chat_source = (BACKEND / "plugins" / "ai_helper" / "services" / "chat.py").read_text(encoding="utf-8")
         self.assertIn('if has_compose:', chat_source)
         self.assertIn('Docker Compose Stack', chat_source)
         self.assertIn('Run Docker Image', chat_source)
         self.assertIn('Build from Git Source (Railpack)', chat_source)
-
-    def test_retry_message_preserves_history_answers(self):
-        result = {"inspection": {"documentation_evidence": {"setup_hints": {"required_inputs": [
-            {"name": "admin_email", "label": "Admin Email", "required": True},
-        ]}}}}
-        history = [
-            "Please analyze this repo: https://github.com/example/app",
-            "Here are the options...",
-            "Setup interview answers:\ndeployment_method: git_build\nadmin_email: admin@example.com",
-            "The reviewed setup plan could not be created...",
-        ]
-        retry_msg = "Please retry creating the reviewed setup plan with the confirmed settings."
-        self.assertFalse(setup_handoff.is_setup_interview_pending(result, retry_msg, history_texts=history))
-        self.assertEqual(setup_handoff.missing_setup_inputs(result, retry_msg, history_texts=history), [])
 
     def test_skipped_inputs_do_not_block_setup_interview(self):
         result = {"inspection": {"documentation_evidence": {"setup_hints": {"required_inputs": [

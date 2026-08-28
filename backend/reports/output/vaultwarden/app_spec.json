@@ -1,1 +1,15 @@
-{}
+{
+  "name": "vaultwarden",
+  "display_name": "Vaultwarden (Bitwarden Server)",
+  "web_service_name": "vaultwarden",
+  "web_port": 3000,
+  "services": {
+    "vaultwarden": {
+      "image_reference": "vaultwarden/server:latest",
+      "internal_ports": [
+        3000
+      ],
+      "environment_defaults": {}
+    }
+  }
+}

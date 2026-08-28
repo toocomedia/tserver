@@ -1,9 +1,9 @@
 ================================================================================
-AI PLAN & SPEC TEST REPORT: VAULTWARDEN (BITWARDEN SERVER)
-Generated: 2026-08-28 10:54:16 UTC
+AI PLAN & SPEC TEST REPORT: PLAUSIBLE ANALYTICS
+Generated: 2026-08-28 10:53:57 UTC
 Active AI Provider: Test Isolation Provider (gpt-4o-mini)
-Target: vaultwarden/server:latest (Source: image)
-Status: [PASS] (Total Duration: 115ms)
+Target: plausible/analytics:latest (Source: image)
+Status: [PASS] (Total Duration: 78ms)
 Timing: Turn 1 (Inspect & AI): 25ms | Turn 2 (Synthesis): 0ms | Audit: 5ms
 ================================================================================
 
@@ -11,10 +11,10 @@ Timing: Turn 1 (Inspect & AI): 25ms | Turn 2 (Synthesis): 0ms | Audit: 5ms
 --------------------------------------------------------------------------------
   1. Tool: inspect_app_source -> DONE (+5ms)
      Label: Simulated local inspection
-     Detail: vaultwarden/server:latest
+     Detail: plausible/analytics:latest
   2. Tool: propose_app_spec_plan -> DONE (+25ms)
      Label: Synthesizing validated plan
-     Detail: vaultwarden.test.internal
+     Detail: plausible.test.internal
 
 [Turn 1 Response Snippet]:
   Generated configuration in dry-run mode.
@@ -22,13 +22,13 @@ Timing: Turn 1 (Inspect & AI): 25ms | Turn 2 (Synthesis): 0ms | Audit: 5ms
 [2. GENERATED APP SPEC (JSON)]
 --------------------------------------------------------------------------------
 {
-  "name": "vaultwarden",
-  "display_name": "Vaultwarden (Bitwarden Server)",
-  "web_service_name": "vaultwarden",
+  "name": "plausible",
+  "display_name": "Plausible Analytics",
+  "web_service_name": "plausible",
   "web_port": 3000,
   "services": {
-    "vaultwarden": {
-      "image_reference": "vaultwarden/server:latest",
+    "plausible": {
+      "image_reference": "plausible/analytics:latest",
       "internal_ports": [
         3000
       ],
@@ -41,8 +41,8 @@ Timing: Turn 1 (Inspect & AI): 25ms | Turn 2 (Synthesis): 0ms | Audit: 5ms
 --------------------------------------------------------------------------------
 version: '3.8'
 services:
-  vaultwarden:
-    image: vaultwarden/server:latest
+  plausible:
+    image: plausible/analytics:latest
     restart: always
     ports:
     - 3000:3000
@@ -53,7 +53,10 @@ services:
 Detected Services: app
 Detected Internal Port: 3000
 Detected Database Provider: none
-Total Errors: 0 | Total Warnings: 0
+Total Errors: 0 | Total Warnings: 1
 
-  [OK] No issues detected. Plan conforms to security, schema, and port policies.
+[WARNING] Field: environment_values
+     Problem:  Application typically requires postgresql but no DATABASE_URL or database attachment was found.
+     FIX HERE: Add DATABASE_URL template or attach a managed postgresql container.
+
 ================================================================================

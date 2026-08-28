@@ -1,15 +1,15 @@
-=== AI DEV TEST RUN: Vaultwarden (Bitwarden Server) (vaultwarden) ===
+=== AI DEV TEST RUN: Plausible Analytics (plausible) ===
 Provider: Test Isolation Provider | Model: gpt-4o-mini
-Target: vaultwarden/server:latest (image)
-Total Duration: 115ms
+Target: plausible/analytics:latest (image)
+Total Duration: 78ms
 Timing: Turn 1 (Inspect & AI): 25ms | Turn 2 (Synthesis): 0ms | Audit: 5ms
 
 --- [1] TURN 1 USER PROMPT ---
-Simulate setup for vaultwarden/server:latest
+Simulate setup for plausible/analytics:latest
 
 --- [2] INTERMEDIATE TOOL ACTIVITIES ---
-  [5ms] inspect_app_source -> DONE: Simulated local inspection (vaultwarden/server:latest)
-  [25ms] propose_app_spec_plan -> DONE: Synthesizing validated plan (vaultwarden.test.internal)
+  [5ms] inspect_app_source -> DONE: Simulated local inspection (plausible/analytics:latest)
+  [25ms] propose_app_spec_plan -> DONE: Synthesizing validated plan (plausible.test.internal)
 
 --- [3] TURN 1 RAW AI RESPONSE ---
 Generated configuration in dry-run mode.
@@ -21,12 +21,12 @@ Generated configuration in dry-run mode.
 (Turn 2 skipped)
 
 --- [6] EXTRACTED SETUP PLAN ---
-Plan ID: plan_82f6b69248104c41
+Plan ID: plan_fda61ceddc3c44aa
 {
-  "plan_id": "plan_82f6b69248104c41",
+  "plan_id": "plan_fda61ceddc3c44aa",
   "action_type": "app_install",
   "status": "awaiting_approval",
-  "summary": "Deploy vaultwarden/server:latest",
+  "summary": "Deploy plausible/analytics:latest",
   "confidence": 0.9,
   "reasoning": "Deterministic application plan generated from server source inspection.",
   "payload": {
@@ -34,23 +34,24 @@ Plan ID: plan_82f6b69248104c41
     "build_mode": "image",
     "custom_start_command": "",
     "database_attachments": [],
-    "domain_name": "vaultwarden.test.internal",
+    "domain_name": "plausible.test.internal",
     "environment_values": {},
     "health_path": "disabled",
-    "image_reference": "vaultwarden/server:latest",
+    "image_reference": "plausible/analytics:latest",
     "internal_port": 3000,
     "repository_url": "",
     "secret_requirements": [],
     "source_type": "image",
     "storage_mounts": []
   },
-  "payload_hash": "35076a01a1285c35f2be7ce74fd3ada1147ef4d43159d9235fd022b8abb76e17",
-  "session_id": "sim_vaultwarden_fb465063",
+  "payload_hash": "2b99830b1986acf6c3694bd2426f097a06794c74f975e5cc9bf3e59cf0ba2684",
+  "session_id": "sim_plausible_74e3e849",
   "user_id": 1,
   "is_expired": false,
-  "expires_at": "2026-08-28T11:24:16.146964",
-  "created_at": "2026-08-28T10:54:16"
+  "expires_at": "2026-08-28T11:23:57.746498",
+  "created_at": "2026-08-28T10:53:57"
 }
 
 --- [7] VALIDATION FINDINGS & AUDIT ---
-Verdict: PASS (Errors: 0, Warnings: 0)
+Verdict: PASS (Errors: 0, Warnings: 1)
+  [WARNING] environment_values: Application typically requires postgresql but no DATABASE_URL or database attachment was found. -> FIX: Add DATABASE_URL template or attach a managed postgresql container.

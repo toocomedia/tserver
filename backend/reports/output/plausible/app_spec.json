@@ -1,0 +1,15 @@
+{
+  "name": "plausible",
+  "display_name": "Plausible Analytics",
+  "web_service_name": "plausible",
+  "web_port": 3000,
+  "services": {
+    "plausible": {
+      "image_reference": "plausible/analytics:latest",
+      "internal_ports": [
+        3000
+      ],
+      "environment_defaults": {}
+    }
+  }
+}

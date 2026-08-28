@@ -1,7 +1,7 @@
 version: '3.8'
 services:
-  vaultwarden:
-    image: vaultwarden/server:latest
+  plausible:
+    image: plausible/analytics:latest
     restart: always
     ports:
     - 3000:3000

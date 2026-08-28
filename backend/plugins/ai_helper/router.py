@@ -563,9 +563,3 @@ async def create_stack_plan_endpoint(request: Request, db: AsyncSession = Depend
     if res.get("status") != "ok":
         raise HTTPException(400, res.get("message", "Could not create stack plan."))
     return JSONResponse(res)
-
-
-# Mount Dev Tester Playground
-from plugins.ai_helper.router_dev_tester import dev_tester_router
-router.include_router(dev_tester_router)
-
