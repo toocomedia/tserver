@@ -298,6 +298,24 @@
           return;
         }
 
+        // Check on Steps: populate App Engine page steps
+        var checkStepsBtn = e.target.closest("[data-action='CHECK_PAGE_STEPS']");
+        if (checkStepsBtn) {
+          e.preventDefault();
+          var planCard = checkStepsBtn.closest(".ai-app-plan-card");
+          var rawPlanVal = (planCard && planCard.getAttribute("data-plan-id")) || checkStepsBtn.getAttribute("data-plan-id") || "";
+          var setupPlanId = rawPlanVal.split(":")[0].trim();
+          if (!setupPlanId) return;
+
+          if (window.location.pathname.indexOf("/plugins/railpack_apps/create") !== -1) {
+            window.dispatchEvent(new CustomEvent("ai-helper:load-plan", { detail: { planId: setupPlanId } }));
+            if (window.toast) window.toast("Setup loaded into App Engine form steps.", "info");
+          } else {
+            window.location.href = "/plugins/railpack_apps/create?plan=" + encodeURIComponent(setupPlanId);
+          }
+          return;
+        }
+
         // 5b. Setup Lifecycle Recovery Action Buttons
         var setupRecoveryBtn = e.target.closest("[data-action^='SETUP_']");
         if (setupRecoveryBtn) {

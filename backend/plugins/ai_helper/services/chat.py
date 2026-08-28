@@ -526,7 +526,7 @@ async def stream_ai_chat(
         if setup_source_result and setup_source_result.get("status") == "ok":
             from services.official_stacks.stack_synthesizer import requires_multi_container_stack
             needs_stack = False if user_chose_image else requires_multi_container_stack(setup_source_result)
-            if setup_handoff.is_setup_interview_pending(setup_source_result, user_message):
+            if setup_handoff.is_setup_interview_pending(setup_source_result, user_message, history_texts=history_texts):
                 inspection = setup_source_result.get("inspection") if isinstance(setup_source_result.get("inspection"), dict) else setup_source_result
                 doc_ev = (inspection.get("documentation_evidence") or {}) if isinstance(inspection, dict) else {}
                 detected_imgs = list(doc_ev.get("detected_docker_images") or [])
@@ -642,15 +642,15 @@ async def stream_ai_chat(
     if tools_enabled:
         # Determine scoped tool definitions
         if setup_plan_required:
-            if setup_handoff.is_recommendation_decision_pending(setup_source_result, user_message):
+            if setup_handoff.is_recommendation_decision_pending(setup_source_result, user_message, history_texts=history_texts):
                 tool_names_to_load = frozenset()
             elif user_chose_image:
-                tool_names_to_load = frozenset({"propose_app_install", "fetch_web_documentation", "search_web_docs"})
+                tool_names_to_load = frozenset({"propose_app_install"})
             elif setup_source_result and setup_source_result.get("status") == "ok":
                 if needs_stack:
-                    tool_names_to_load = frozenset({"propose_app_spec_plan", "fetch_web_documentation", "search_docker_hub", "search_web_docs"})
+                    tool_names_to_load = frozenset({"propose_app_spec_plan", "propose_stack_install"})
                 else:
-                    tool_names_to_load = frozenset({"propose_app_install", "propose_app_spec_plan", "fetch_web_documentation", "search_docker_hub", "search_web_docs"})
+                    tool_names_to_load = frozenset({"propose_app_install", "propose_app_spec_plan"})
             else:
                 tool_names_to_load = setup_handoff.SETUP_TOOL_NAMES
         elif is_app_diag and app_id:
@@ -773,7 +773,7 @@ async def stream_ai_chat(
                     is_text_pseudo_tool = False
 
                 if not tool_calls:
-                    if setup_handoff.is_recommendation_decision_pending(setup_source_result, user_message):
+                    if setup_handoff.is_recommendation_decision_pending(setup_source_result, user_message, history_texts=history_texts):
                         break
                     if (
                         setup_plan_required
@@ -973,7 +973,7 @@ async def stream_ai_chat(
             and not setup_plan_id
             and not (setup_documentation_failed and not setup_search_fallback_succeeded)
             and not setup_provider_choice
-            and not setup_handoff.is_recommendation_decision_pending(setup_source_result, user_message)
+            and not setup_handoff.is_recommendation_decision_pending(setup_source_result, user_message, history_texts=history_texts)
         ):
             stype, repo, img = _extract_setup_source(user_message, context_text)
             try:
@@ -1012,7 +1012,7 @@ async def stream_ai_chat(
                             "The selected managed provider is unavailable, so no plan was created. "
                             "Choose the documented private container provider or install/repair the dependency from Dependencies."
                         )
-                elif setup_handoff.is_setup_interview_pending(setup_source_result, user_message):
+                elif setup_handoff.is_setup_interview_pending(setup_source_result, user_message, history_texts=history_texts):
                     tags_block = f"\n{setup_interview_options_str}\n" if setup_interview_options_str else ""
                     content_str = (
                         "Give a concise 2-sentence summary of the inspected application (app name, port, and detected database). "
@@ -1145,7 +1145,7 @@ async def stream_ai_chat(
                 append_tags = f"\n\n{setup_interview_options_str}"
                 full_response.append(append_tags)
                 yield append_tags
-        elif not setup_handoff.is_setup_interview_pending(setup_source_result, user_message):
+        elif not setup_handoff.is_setup_interview_pending(setup_source_result, user_message, history_texts=history_texts):
             if "[ACTION:SETUP_" not in full_text_so_far and "[ACTION:OPEN_DEPENDENCY" not in full_text_so_far:
                 if setup_source_result and setup_source_result.get("status") != "ok":
                     target_source = repo or img or ""

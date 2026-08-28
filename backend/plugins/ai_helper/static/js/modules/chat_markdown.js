@@ -289,7 +289,7 @@
             var summaryText = isPatch
               ? "Configuration and required secrets are verified. Click below to apply changes and redeploy immediately."
               : "Configuration and required secrets are verified. Click below to deploy.";
-            var btnText = isPatch ? "Apply Fix & Redeploy" : "Deploy reviewed setup";
+            var btnText = isPatch ? "Apply Fix & Redeploy" : "Direct Apply (Deploy reviewed setup)";
             return [
               '<div class="ai-app-plan-card" data-plan-id="' + setupPlanId + '">',
               '  <div class="ai-app-plan-card-header">',
@@ -307,8 +307,8 @@
               '        <span class="ai-btn-text">' + btnText + '</span>',
               '        <span class="ai-btn-arrow">→</span>',
               '      </button>',
-              '      <button type="button" class="btn btn--secondary btn--sm ai-edit-answers-btn" data-action="SETUP_EDIT_ANSWERS" style="font-size: 11.5px; padding: 6px 12px; cursor: pointer;">',
-              '        Customize',
+              '      <button type="button" class="btn btn--secondary btn--sm ai-check-steps-btn" data-action="CHECK_PAGE_STEPS" data-plan-id="' + setupPlanId + '" style="font-size: 11.5px; padding: 6px 12px; cursor: pointer;">',
+              '        Check on Steps',
               '      </button>',
               '    </div>',
               '  </div>',

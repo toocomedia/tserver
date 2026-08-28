@@ -830,7 +830,7 @@
       if (opts.taskType) this.setTaskType(opts.taskType);
       if (opts.context) this.setContext(opts.context);
 
-      var isCreatePage = window.location.pathname.indexOf("/apps/create") !== -1 || window.location.pathname.indexOf("/railpack-apps/create") !== -1 || window.location.pathname.indexOf("/apps/new") !== -1;
+      var isCreatePage = window.location.pathname.indexOf("/apps/create") !== -1 || window.location.pathname.indexOf("/railpack-apps/create") !== -1 || window.location.pathname.indexOf("/railpack_apps/create") !== -1 || window.location.pathname.indexOf("/apps/new") !== -1;
       if (isCreatePage && !opts.taskType && this.activeTaskType === "general") {
         this.setTaskType("app_deploy");
       }

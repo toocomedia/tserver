@@ -707,6 +707,8 @@ if (form) {
 
     // 7. Set Storage Mounts
     if (Array.isArray(p.storage_mounts)) {
+      const mountList = form.querySelector('[data-storage-mounts-list]');
+      if (mountList) mountList.innerHTML = '';
       p.storage_mounts.forEach((m) => {
         if (m.mount_path) {
           const cleanLabel = String(m.label || "data")
@@ -808,4 +810,16 @@ if (form) {
       })
       .catch((err) => console.warn("Could not auto-apply plan from URL:", err));
   }
+
+  // Handle in-page plan loading event from chat Check on Steps button
+  window.addEventListener("ai-helper:load-plan", (e) => {
+    const planId = e.detail && e.detail.planId;
+    if (planId) {
+      fetchJson(`/plugins/ai_helper/api/action-plans/${encodeURIComponent(planId)}`)
+        .then((data) => {
+          if (data.plan) window.applyAiAppPlan(data.plan);
+        })
+        .catch((err) => console.warn("Could not load plan into form steps:", err));
+    }
+  });
 }
