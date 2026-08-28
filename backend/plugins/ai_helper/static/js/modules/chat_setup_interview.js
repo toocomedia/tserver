@@ -83,7 +83,12 @@
         });
       }
       var steps = [];
-      if (deployment.length) steps.push({ type: "options", key: "deployment_method", title: "Deployment method", options: deployment });
+      if (deployment.length) {
+        var isFlowChoice = deployment.every(function (o) { return o.reply.indexOf("setup_flow:") === 0; });
+        var title = isFlowChoice ? "How would you like to proceed?" : "Deployment method";
+        var key = isFlowChoice ? "setup_flow" : "deployment_method";
+        steps.push({ type: "options", key: key, title: title, options: deployment });
+      }
       Object.keys(providers).forEach(function (kind) {
         steps.push({ type: "options", key: "provider." + kind, title: "Provider for " + kind, options: providers[kind] });
       });
@@ -96,13 +101,14 @@
       var step = this.steps[this.index];
       var total = this.steps.length;
       var current = this.index + 1;
+      var isFlow = step.key === "setup_flow";
       var rawValue = this.answers[step.key] || (step.type === "options" ? this._defaultOption(step.options).reply : "");
       if (step.type === "options" && !this.answers[step.key]) this.answers[step.key] = rawValue;
       var html = [
         '<div class="ai-decision-card" style="background:var(--color-surface,#1a1a1a);border-radius:6px;padding:8px 10px;margin:4px 6px 6px;color:var(--color-text,#fff);">',
         '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">',
         '<span style="font-size:11.5px;font-weight:600;color:var(--color-text,#fff);">' + this._escape(step.title || step.label || "Configuration") + '</span>',
-        '<span style="font-size:10.5px;color:var(--color-muted,#94a3b8);">' + current + " / " + total + "</span>",
+        '<span style="font-size:10.5px;color:var(--color-muted,#94a3b8);">' + (total > 1 ? current + " / " + total : "") + "</span>",
         "</div>",
       ];
       if (step.type === "options") {
@@ -123,31 +129,37 @@
         var reqAttr = step.required ? ' required' : '';
         html.push('<label style="display:flex;flex-direction:column;gap:4px;font-size:11.5px;">' + this._escape(step.label) + badge + '<input class="ai-setup-input"' + reqAttr + ' type="' + inputType + '" data-key="' + this._escape(step.key) + '" value="' + this._escape(val) + '" placeholder="' + this._escape(step.placeholder) + '" style="background:var(--color-bg,#121212);border:1px solid var(--color-line,rgba(255,255,255,.1));border-radius:4px;padding:5px 8px;color:inherit;font-size:12px;outline:none;" /></label>');
       }
-      html.push('<div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;">');
-      html.push('<button type="button" class="ai-setup-back"' + (this.index ? "" : " disabled") + ' style="background:transparent;border:0;color:var(--color-muted,#94a3b8);cursor:pointer;font-size:11.5px;padding:2px 4px;">Back</button>');
-      html.push('<div style="display:flex;gap:6px;align-items:center;">');
-      if (step.type === "input" && !step.required) {
-        html.push('<button type="button" class="ai-setup-skip" style="background:transparent;border:0;color:var(--color-muted,#94a3b8);cursor:pointer;font-size:11.5px;padding:4px 8px;">Skip</button>');
+      if (!isFlow) {
+        html.push('<div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;">');
+        html.push('<button type="button" class="ai-setup-back"' + (this.index ? "" : ' style="visibility:hidden;"') + ' style="background:transparent;border:0;color:var(--color-muted,#94a3b8);cursor:pointer;font-size:11.5px;padding:2px 4px;">Back</button>');
+        html.push('<div style="display:flex;gap:6px;align-items:center;">');
+        if (step.type === "input" && !step.required) {
+          html.push('<button type="button" class="ai-setup-skip" style="background:transparent;border:0;color:var(--color-muted,#94a3b8);cursor:pointer;font-size:11.5px;padding:4px 8px;">Skip</button>');
+        }
+        html.push('<button type="button" class="ai-setup-next" style="background:var(--color-accent,#6366f1);color:#fff;border:0;border-radius:4px;padding:4px 12px;cursor:pointer;font-size:11.5px;font-weight:500;">' + (current === total ? "Send" : "Continue") + "</button>");
+        html.push("</div></div>");
       }
-      html.push('<button type="button" class="ai-setup-next" style="background:var(--color-accent,#6366f1);color:#fff;border:0;border-radius:4px;padding:4px 12px;cursor:pointer;font-size:11.5px;font-weight:500;">' + (current === total ? "Send" : "Continue") + "</button>");
-      html.push("</div></div></div>");
+      html.push("</div>");
       this.containerEl.innerHTML = html.join("\n");
       this.containerEl.style.display = "block";
       this.containerEl.querySelectorAll(".ai-setup-option").forEach(function (button) {
         button.addEventListener("click", function () {
           var reply = button.getAttribute("data-reply") || "";
           self.answers[step.key] = reply;
-          if (reply === "setup_flow:direct_apply") {
+          if (isFlow || reply.indexOf("setup_flow:") === 0) {
             self._complete();
             return;
           }
           self._render();
         });
       });
-      this.containerEl.querySelector(".ai-setup-back").addEventListener("click", function () {
-        self._saveCurrent();
-        if (self.index) { self.index -= 1; self._render(); }
-      });
+      var backBtn = this.containerEl.querySelector(".ai-setup-back");
+      if (backBtn) {
+        backBtn.addEventListener("click", function () {
+          self._saveCurrent();
+          if (self.index) { self.index -= 1; self._render(); }
+        });
+      }
       var skipBtn = this.containerEl.querySelector(".ai-setup-skip");
       if (skipBtn) {
         skipBtn.addEventListener("click", function () {
@@ -161,7 +173,8 @@
         if (self.index + 1 < self.steps.length) { self.index += 1; self._render(); return; }
         self._complete();
       };
-      this.containerEl.querySelector(".ai-setup-next").addEventListener("click", next);
+      var nextBtn = this.containerEl.querySelector(".ai-setup-next");
+      if (nextBtn) nextBtn.addEventListener("click", next);
       var input = this.containerEl.querySelector(".ai-setup-input");
       if (input) input.addEventListener("keydown", function (event) { if (event.key === "Enter") { event.preventDefault(); next(); } });
     },
@@ -181,10 +194,13 @@
       if (this.completed) return;
       this.completed = true;
       var lines = ["Setup interview answers:"];
-      var firstKey = this.steps.length ? this.steps[0].key : "";
-      if (firstKey && this.answers[firstKey] === "setup_flow:direct_apply") {
-        lines.push("setup_flow: direct_apply");
-        lines.push("deployment_method: compose_stack");
+      var flowAnswer = this.answers["setup_flow"];
+      if (flowAnswer) {
+        var val = flowAnswer.replace(/^setup_flow:/, "").trim();
+        lines.push("setup_flow: " + val);
+        if (val === "direct_apply") {
+          lines.push("deployment_method: compose_stack");
+        }
       } else {
         this.steps.forEach(function (step) {
           var rawVal = interview.answers[step.key] || "[skip]";

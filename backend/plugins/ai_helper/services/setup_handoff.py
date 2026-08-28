@@ -133,12 +133,16 @@ def is_setup_interview_pending(
     # deployment method alone never completes documented application inputs.
     if required_setup_inputs(setup_source_result):
         return bool(missing_setup_inputs(setup_source_result, user_message))
-    if re.search(r"(?im)^\s*(?:deployment_method|setup_flow)\s*:\s*\S+", user_message or "") or "setup interview answers:" in (user_message or "").lower():
+    # Check if user asked to customize steps
+    if "setup_flow: check_steps" in (user_message or "").lower() or "check_steps" in clean_msg:
+        return True
+
+    if re.search(r"(?im)^\s*(?:deployment_method|setup_flow\s*:\s*direct_apply)\b", user_message or "") or "direct_apply" in clean_msg:
         return False
 
-    # If user explicitly said to proceed, deploy, direct apply, or answered options, don't block
+    # If user explicitly said to proceed, deploy, or answered options, don't block
     if any(token in clean_msg for token in (
-        "direct_apply", "direct apply", "option 1", "option 2", "option 3", "deploy now", "apply now", "confirm", "proceed",
+        "option 1", "option 2", "option 3", "deploy now", "apply now", "confirm", "proceed",
         "use postgres", "use postgresql", "use mysql", "use mariadb", "use sqlite", "use clickhouse",
         "admin email", "my email", "@", "password:", "email:"
     )):
