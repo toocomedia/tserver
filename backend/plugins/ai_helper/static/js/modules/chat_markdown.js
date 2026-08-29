@@ -279,7 +279,7 @@
               return '<span class="ai-security-badge ' + cls + '"><span class="ai-sec-dot ai-sec-dot--' + sev + '"></span> ' + desc + '</span>';
             }
           }
-          // Only server-appended setup handoffs render in chat. The click is approval.
+          // Only server-appended setup handoffs render in chat. The click applies to wizard for review.
           if (actionType === "APP_SETUP_PLAN") {
             var planParts = actionVal.split(":");
             var setupPlanId = planParts[0].trim();
@@ -287,9 +287,9 @@
             var isPatch = planKind === "patch" || planKind === "redeploy" || planKind === "fix";
             var cardTitle = isPatch ? "Fix Ready" : "Setup Plan Ready";
             var summaryText = isPatch
-              ? "Configuration and required secrets are verified. Click below to apply changes and redeploy immediately."
-              : "Configuration and required secrets are verified. Click below to deploy.";
-            var btnText = isPatch ? "Apply Fix & Redeploy" : "Direct Apply (Deploy reviewed setup)";
+              ? "Configuration and required secrets are verified. Click Apply Plan to review settings on the App page before redeploying."
+              : "Configuration and required secrets are verified. Click Apply Plan to review settings in the App Engine wizard before deploying.";
+            var btnText = isPatch ? "Apply Fix & Review" : "Apply Plan";
             return [
               '<div class="ai-app-plan-card" data-plan-id="' + setupPlanId + '">',
               '  <div class="ai-app-plan-card-header">',
@@ -306,9 +306,6 @@
               '        <span class="ai-btn-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></span>',
               '        <span class="ai-btn-text">' + btnText + '</span>',
               '        <span class="ai-btn-arrow">→</span>',
-              '      </button>',
-              '      <button type="button" class="btn btn--secondary btn--sm ai-check-steps-btn" data-action="CHECK_PAGE_STEPS" data-plan-id="' + setupPlanId + '" style="font-size: 11.5px; padding: 6px 12px; cursor: pointer;">',
-              '        Check on Steps',
               '      </button>',
               '    </div>',
               '  </div>',

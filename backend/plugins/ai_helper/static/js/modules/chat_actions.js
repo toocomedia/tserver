@@ -255,8 +255,8 @@
           return;
         }
 
-        // Safe App Engine setup handoff. The click is the explicit deploy approval.
-        var applyPlanBtn = e.target.closest("[data-action='APP_SETUP_PLAN']");
+        // Safe App Engine setup handoff: Apply Plan to wizard for review
+        var applyPlanBtn = e.target.closest("[data-action='APP_SETUP_PLAN'], [data-action='CHECK_PAGE_STEPS'], [data-action='APPLY_APP_PLAN']");
         if (applyPlanBtn) {
           e.preventDefault();
           var rawPlanVal = applyPlanBtn.getAttribute("data-plan-id") || "";
@@ -264,55 +264,43 @@
           if (!setupPlanId) return;
 
           applyPlanBtn.disabled = true;
-          applyPlanBtn.innerHTML = '<span class="ai-btn-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></span> <span class="ai-btn-text">Starting deployment...</span>';
+          applyPlanBtn.innerHTML = '<span class="ai-btn-icon"><span class="step-spinner" style="width: 12px; height: 12px; border-width: 2px; display: inline-block;"></span></span> <span class="ai-btn-text">Applying plan...</span>';
 
-          var csrfToken = "";
-          if (typeof window.getCsrfToken === "function") {
-            csrfToken = window.getCsrfToken();
-          } else {
-            var csrfMeta = document.querySelector('meta[name="csrf-token"]');
-            var csrfInput = document.querySelector('input[name="csrf_token"]');
-            csrfToken = (csrfMeta && csrfMeta.content) || (csrfInput && csrfInput.value) || "";
-          }
-          fetch("/plugins/railpack_apps/deploy-reviewed-plan/" + encodeURIComponent(setupPlanId), {
-            method: "POST",
-            headers: { "Accept": "application/json", "X-CSRF-Token": csrfToken }
+          fetch("/plugins/ai_helper/api/action-plans/" + encodeURIComponent(setupPlanId), {
+            headers: { "Accept": "application/json" }
           })
             .then(function (res) {
               return res.json().catch(function () { return {}; }).then(function (data) {
-                if (!res.ok) throw new Error(data.detail || data.message || "Reviewed setup could not be deployed.");
+                if (!res.ok) throw new Error(data.detail || data.message || "Could not retrieve setup plan.");
                 return data;
               });
             })
             .then(function (data) {
-              applyPlanBtn.innerHTML = '<span class="ai-btn-icon">✓</span> <span class="ai-btn-text">Deployment queued</span>';
+              var plan = data.plan || data;
+              applyPlanBtn.innerHTML = '<span class="ai-btn-icon">✓</span> <span class="ai-btn-text">Plan Applied</span>';
               applyPlanBtn.classList.add("is-applied");
-              if (window.toast) window.toast("Reviewed setup deployment queued.", "success");
-              self.monitorDeploymentInChat(data.app_id, data.deployment_id, applyPlanBtn.closest(".ai-app-plan-card") || containerEl);
+
+              // If on create page, populate wizard and close chat
+              if (window.location.pathname.indexOf("/plugins/railpack_apps/create") !== -1) {
+                if (typeof window.applyAiAppPlan === "function") {
+                  window.applyAiAppPlan(plan);
+                } else {
+                  window.dispatchEvent(new CustomEvent("ai-helper:load-plan", { detail: { planId: setupPlanId, plan: plan } }));
+                }
+                if (window.AiHelper && typeof window.AiHelper.close === "function") {
+                  window.AiHelper.close();
+                }
+                if (window.toast) window.toast("Plan applied! Review configuration on Step 3 and click Deploy when ready.", "success");
+              } else {
+                // Navigate to create page with plan param for hydration
+                window.location.href = "/plugins/railpack_apps/create?plan=" + encodeURIComponent(setupPlanId);
+              }
             })
             .catch(function (err) {
               applyPlanBtn.disabled = false;
-              applyPlanBtn.innerHTML = '<span class="ai-btn-text">Deploy reviewed setup</span> <span class="ai-btn-arrow">→</span>';
+              applyPlanBtn.innerHTML = '<span class="ai-btn-text">Apply Plan</span> <span class="ai-btn-arrow">→</span>';
               if (window.toast) window.toast(err.message, "error");
             });
-          return;
-        }
-
-        // Check on Steps: populate App Engine page steps
-        var checkStepsBtn = e.target.closest("[data-action='CHECK_PAGE_STEPS']");
-        if (checkStepsBtn) {
-          e.preventDefault();
-          var planCard = checkStepsBtn.closest(".ai-app-plan-card");
-          var rawPlanVal = (planCard && planCard.getAttribute("data-plan-id")) || checkStepsBtn.getAttribute("data-plan-id") || "";
-          var setupPlanId = rawPlanVal.split(":")[0].trim();
-          if (!setupPlanId) return;
-
-          if (window.location.pathname.indexOf("/plugins/railpack_apps/create") !== -1) {
-            window.dispatchEvent(new CustomEvent("ai-helper:load-plan", { detail: { planId: setupPlanId } }));
-            if (window.toast) window.toast("Setup loaded into App Engine form steps.", "info");
-          } else {
-            window.location.href = "/plugins/railpack_apps/create?plan=" + encodeURIComponent(setupPlanId);
-          }
           return;
         }
 
