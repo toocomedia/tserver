@@ -502,6 +502,8 @@ async def stream_ai_chat(
     # 1. Fast 1-Turn Pre-Inspection for App Engine Setup:
     if tools_enabled and setup_plan_required and (repo or img):
         cached_insp = setup_handoff.get_cached_inspection(session_id, repo or img)
+        if cached_insp and not cached_insp.get("database_types") and not (cached_insp.get("inspection") or {}).get("database_types"):
+            cached_insp = None
         if cached_insp:
             setup_source_result = cached_insp
             tool_was_executed = True
@@ -525,7 +527,7 @@ async def stream_ai_chat(
 
         if setup_source_result and setup_source_result.get("status") == "ok":
             from services.official_stacks.stack_synthesizer import requires_multi_container_stack
-            needs_stack = False if user_chose_image else requires_multi_container_stack(setup_source_result)
+            needs_stack = requires_multi_container_stack(setup_source_result)
             if setup_handoff.is_setup_interview_pending(setup_source_result, user_message):
                 inspection = setup_source_result.get("inspection") if isinstance(setup_source_result.get("inspection"), dict) else setup_source_result
                 doc_ev = (inspection.get("documentation_evidence") or {}) if isinstance(inspection, dict) else {}

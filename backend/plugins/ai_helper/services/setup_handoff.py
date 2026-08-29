@@ -58,6 +58,17 @@ def get_cached_inspection(session_id: str | None, key: str | None) -> dict[str, 
     return _INSPECTION_CACHE.get(k)
 
 
+def clear_session_inspection_cache(session_id: str | None = None) -> None:
+    """Clear in-memory session inspection cache."""
+    if session_id:
+        prefix = f"{session_id}:"
+        to_del = [k for k in _INSPECTION_CACHE if k.startswith(prefix)]
+        for k in to_del:
+            _INSPECTION_CACHE.pop(k, None)
+    else:
+        _INSPECTION_CACHE.clear()
+
+
 def is_diagnostic_task(task_type: str | None, has_app_id: bool = False) -> bool:
     """Whether this chat is an App Engine diagnostic/redeploy task."""
     t = (task_type or "").strip().lower()

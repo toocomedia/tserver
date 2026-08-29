@@ -106,6 +106,13 @@ class TestAiDeploymentGuidance(unittest.TestCase):
         self.assertIn("postgresql", rec_env["database_types"])
         self.assertIn("redis", rec_env["database_types"])
 
+    def test_strict_option_bundling_instructions_in_prompt(self):
+        """Verify the AI prompt strictly mandates bundled packages and forbids loose database options."""
+        prompt = APP_DEPLOY_SKILL.prompt
+        self.assertIn("STRICT OPTION BUNDLING (MANDATORY)", prompt)
+        self.assertIn("NEVER emit loose individual database or provider options", prompt)
+        self.assertIn("Option 1 (Recommended): Official Docker Image + Panel PostgreSQL + ClickHouse Container", prompt)
+
 
 if __name__ == "__main__":
     unittest.main()

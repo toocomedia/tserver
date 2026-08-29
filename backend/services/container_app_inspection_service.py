@@ -80,6 +80,15 @@ def inspect_repository(repository_url: str, branch: str = "main", *, ssh_key_pat
                     }
                     break
 
+        db_types = [d["kind"] for d in databases]
+        # Promote key server datastores from lockfile/source suggestions if not already confirmed
+        for s in suggestions:
+            kind = s.get("kind")
+            if kind and kind in ("clickhouse", "postgresql", "mariadb/mysql", "mariadb", "mysql", "redis", "mongodb"):
+                canonical_kind = "mariadb" if kind in ("mariadb/mysql", "mysql") else kind
+                if canonical_kind not in db_types:
+                    db_types.append(canonical_kind)
+
         res_dict = {
             "repository_url": checkout.repository_url,
             "branch": checkout.branch,
@@ -88,8 +97,8 @@ def inspect_repository(repository_url: str, branch: str = "main", *, ssh_key_pat
             "build_mode": build_mode,
             "has_dockerfile": has_dockerfile,
             "internal_port": _port(text, runtime, framework, compose_info),
-            "database_types": [d["kind"] for d in databases],
-            "database_detected": bool(databases),
+            "database_types": db_types,
+            "database_detected": bool(db_types),
             "database_detections": databases,          # [{kind, confidence}]
             "database_suggestions": suggestions,       # [{kind, confidence, reason}] — LOW only
             "env_sample": doc_evidence.ai_safe_env_sample(env_sample),  # secret names retained; values omitted

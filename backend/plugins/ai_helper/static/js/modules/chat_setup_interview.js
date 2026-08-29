@@ -63,6 +63,12 @@
           var providerKey = provider[1].toLowerCase();
           providers[providerKey] = providers[providerKey] || [];
           providers[providerKey].push(option);
+        } else if (/\b(postgres(?:ql)?|clickhouse|mariadb|mysql|redis|mongodb)\b/i.test(reply + " " + label) && !/\b(option\s*\d+|image|git|source|railpack)\b/i.test(reply)) {
+          var matchedDb = (reply + " " + label).match(/\b(postgres(?:ql)?|clickhouse|mariadb|mysql|redis|mongodb)\b/i);
+          var dbKey = (matchedDb ? matchedDb[1] : "database").toLowerCase();
+          if (dbKey === "postgres") dbKey = "postgresql";
+          providers[dbKey] = providers[dbKey] || [];
+          providers[dbKey].push(option);
         } else {
           deployment.push(option);
         }

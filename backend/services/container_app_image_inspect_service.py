@@ -35,7 +35,12 @@ _IMAGE_PROFILES: dict[str, dict[str, Any]] = {
 }
 
 _INSPECT_CACHE: dict[str, tuple[float, dict[str, Any]]] = {}
-_CACHE_TTL_SECONDS = 900.0  # 15 minutes
+_CACHE_TTL_SECONDS = 5.0  # 5 seconds to allow fast live re-inspections
+
+
+def clear_inspect_cache() -> None:
+    """Flush in-memory image inspection cache."""
+    _INSPECT_CACHE.clear()
 
 
 def _discover_source_repository(reference: str, labels: dict[str, str]) -> str | None:
@@ -72,7 +77,7 @@ def validate_image_reference(reference: str) -> str:
     return reference.strip()
 
 
-async def inspect_image(reference: str) -> dict[str, Any]:
+async def inspect_image(reference: str, force_fresh: bool = False) -> dict[str, Any]:
     """Pull *reference* and return metadata dict.
 
     Returns:
@@ -83,7 +88,7 @@ async def inspect_image(reference: str) -> dict[str, Any]:
     validate_image_reference(reference)
     ref_key = reference.strip().lower()
     now = time.time()
-    if ref_key in _INSPECT_CACHE:
+    if not force_fresh and ref_key in _INSPECT_CACHE:
         cached_time, cached_data = _INSPECT_CACHE[ref_key]
         if now - cached_time < _CACHE_TTL_SECONDS:
             return dict(cached_data)
