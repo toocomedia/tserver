@@ -48,19 +48,19 @@ class RailpackAppsCommandTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("srv-stack-10-clickhouse", names)
 
     def test_quick_commands_framework_tailored(self):
-        # WordPress
-        wp_app = SimpleNamespace(
-            image_reference="wordpress:latest",
-            repository_url=None,
+        # Python / Django app
+        py_app = SimpleNamespace(
+            image_reference="python:3.11",
+            repository_url="https://github.com/org/django-app",
             stack_catalog_id=None,
-            preset="wordpress",
-            build_mode="dockerfile",
+            preset=None,
+            build_mode="railpack",
             wordpress_admin_email="admin@test.com",
         )
-        wp_cmds = command_service.get_quick_commands(wp_app)
-        wp_labels = [c["label"] for c in wp_cmds]
-        self.assertIn("WP Info", wp_labels)
-        self.assertIn("List Users", wp_labels)
+        py_cmds = command_service.get_quick_commands(py_app)
+        py_labels = [c["label"] for c in py_cmds]
+        self.assertIn("Python Version", py_labels)
+        self.assertIn("Installed Packages", py_labels)
 
         # Shynet
         shynet_app = SimpleNamespace(
@@ -77,8 +77,8 @@ class RailpackAppsCommandTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("Migrations", shynet_labels)
 
         # Generic system commands always present
-        self.assertIn("Directory (ls -la)", wp_labels)
-        self.assertIn("Environment (env)", wp_labels)
+        self.assertIn("Directory (ls -la)", py_labels)
+        self.assertIn("Environment (env)", py_labels)
 
     async def test_execute_empty_command_raises_400(self):
         app = SimpleNamespace(id=1, status="running", container_name="srv-app-1", deploy_type="railpack")

@@ -236,10 +236,6 @@ async def _deploy_after_commit(deployment_id: int, token: int, operation_id: int
                 from services import container_app_control_service
                 await progress.stage(db, deployment, "routing", "Publishing the application route.")
                 await container_app_control_service.publish(db, runtime, domain)
-                if runtime.preset == "wordpress":
-                    from services import container_app_wordpress_service
-                    await progress.stage(db, deployment, "wordpress", "Finishing WordPress setup.")
-                    await asyncio.to_thread(container_app_wordpress_service.install_if_pending, runtime, domain)
                 if runtime.ssl_requested:
                     from services import ssl_service
                     await progress.stage(db, deployment, "ssl", "Configuring HTTPS.")

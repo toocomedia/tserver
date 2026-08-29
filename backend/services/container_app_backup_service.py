@@ -73,35 +73,6 @@ async def restore_database_backup(db: AsyncSession, app: ContainerApp, item: Con
         resource_guard_service.unregister(guard_token)
 
 
-async def create_wordpress_backup(db: AsyncSession, app: ContainerApp, item: ContainerAppDatabase) -> ContainerAppBackup:
-    database_backup = await create_database_backup(db, app, item)
-    backup = ContainerAppBackup(app_id=app.id, database_backup_id=database_backup.id, kind="wordpress", path="pending", status="running")
-    db.add(backup)
-    await db.flush()
-    path = _path(app.id, backup.id, "wordpress-content")
-    backup.path = str(path)
-    try:
-        await asyncio.to_thread(_archive_volume, app.wordpress_content_volume or "", path)
-        backup.status = "complete"
-    except Exception as exc:
-        backup.status = "failed"
-        raise HTTPException(502, f"WordPress content backup failed: {exc}") from exc
-    return backup
-
-
-async def restore_wordpress_backup(db: AsyncSession, app: ContainerApp, item: ContainerAppDatabase, backup: ContainerAppBackup, confirmation: str) -> None:
-    if backup.app_id != app.id or backup.kind != "wordpress" or backup.status != "complete":
-        raise HTTPException(404, "WordPress backup not found.")
-    if confirmation != f"RESTORE {backup.id}":
-        raise HTTPException(400, f"Type RESTORE {backup.id} to overwrite WordPress data.")
-    database_backup = await db.get(ContainerAppBackup, backup.database_backup_id)
-    if database_backup is None:
-        raise HTTPException(409, "The linked WordPress database backup is missing.")
-    await create_wordpress_backup(db, app, item)
-    await restore_database_backup(db, app, item, database_backup, f"RESTORE {database_backup.id}")
-    await asyncio.to_thread(_restore_volume, app.wordpress_content_volume or "", Path(backup.path))
-
-
 async def delete_backups(db: AsyncSession, backups: list[ContainerAppBackup]) -> None:
     for backup in backups:
         try:

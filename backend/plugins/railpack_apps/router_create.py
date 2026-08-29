@@ -19,7 +19,7 @@ from models.domain import Domain
 from models.hosted_app import HostedApp
 from models.ssl_cert import SslCert
 from services import container_app_database_service, container_app_deployment_service
-from services import container_app_image_inspect_service, container_app_inspection_service, container_app_service, container_app_wordpress_service
+from services import container_app_image_inspect_service, container_app_inspection_service, container_app_service
 from services.apps_engine import secret_vault, snapshots
 from services.official_stacks import compose_runtime
 from services.official_stacks.schema import stack_from_dict
@@ -250,9 +250,6 @@ async def create(
     except RuntimeError as exc:
         raise HTTPException(400, str(exc)) from exc
     attachments = _attachments(database_attachments)
-    if preset == "wordpress":
-        attachments = _prepare_wordpress(attachments, wordpress_site_title, wordpress_admin_user, wordpress_admin_email, wordpress_admin_password)
-        source_type, build_mode, image_reference, internal_port = "image", "image", container_app_wordpress_service.WP_IMAGE, 80
     app = await container_app_service.create_app(
         db, domain=domain, source_type=source_type, build_mode=build_mode, repository_url=repository_url.strip() or None,
         branch=branch.strip() or "main", image_reference=image_reference.strip() or None, internal_port=internal_port,
@@ -265,8 +262,6 @@ async def create(
         custom_start_command=custom_start_command.strip() or None, storage_mounts=storage_mounts.strip() or None,
         health_path=health_path.strip() or "disabled", startup_timeout_seconds=startup_timeout_seconds,
     )
-    if preset == "wordpress":
-        await _configure_wordpress(app, wordpress_site_title, wordpress_admin_user, wordpress_admin_email, wordpress_admin_password, db)
     if requested_secrets or app_plan:
         await snapshots.create_snapshot(
             db, app, secret_requirements=requested_secrets, plan_id=app_plan_id.strip() or None,
@@ -292,20 +287,6 @@ def _attachments(raw: str) -> list[dict[str, str]] | None:
         return json.loads(raw) if raw else None
     except json.JSONDecodeError as exc:
         raise HTTPException(400, "Database attachments are invalid.") from exc
-
-
-def _prepare_wordpress(attachments, title: str, user: str, email: str, password: str) -> list[dict[str, str]]:
-    container_app_wordpress_service.validate_setup(title, user, email, password)
-    attachments = attachments if attachments is not None else []
-    if not any(item.get("kind") == "mariadb" for item in attachments if isinstance(item, dict)):
-        attachments.append({"kind": "mariadb", "provider": "docker", "environment_key": "MYSQL_URL"})
-    return attachments
-
-
-async def _configure_wordpress(app, title: str, user: str, email: str, password: str, db: AsyncSession) -> None:
-    container_app_wordpress_service.prepare(app, title, user, email, password)
-    items = await container_app_database_service.attachments_for(db, app.id)
-    container_app_database_service.rebuild_environment(app, items, container_app_database_service.read_app_environment(app))
 
 
 def _environment_values(raw: str) -> dict[str, str]:

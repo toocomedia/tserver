@@ -98,52 +98,14 @@ COMMAND_RECIPES: List[Dict[str, Any]] = [
         "patterns": ("shynet",),
         "factory": lambda app, text: [
             {"label": "Admin Setup", "command": f"./manage.py registeradmin {(getattr(app, 'wordpress_admin_email', None) or '').strip() or 'admin@example.com'}"},
-            {"label": "Whitelabel Name", "command": './manage.py whitelabel "My Analytics"'},
             {"label": "Migrations", "command": "./manage.py showmigrations"},
         ],
     },
     {
-        "patterns": ("wordpress",),
-        "factory": lambda app, text: [
-            {"label": "WP Info", "command": "wp --allow-root --info"},
-            {"label": "List Users", "command": "wp --allow-root user list"},
-            {"label": "List Plugins", "command": "wp --allow-root plugin list"},
-            {"label": "List Themes", "command": "wp --allow-root theme list"},
-        ],
-    },
-    {
-        "patterns": ("django",),
-        "factory": lambda app, text: [
-            {"label": "Django Check", "command": "python manage.py check"},
-            {"label": "Show Migrations", "command": "python manage.py showmigrations"},
-            {"label": "Run Migrations", "command": "python manage.py migrate"},
-            {"label": "Python Version", "command": "python --version"},
-            {"label": "Installed Packages", "command": "pip list"},
-        ],
-    },
-    {
-        "patterns": ("python",),
-        "predicate": lambda app, text: getattr(app, "build_mode", None) == "railpack",
+        "patterns": ("django", "python"),
         "factory": lambda app, text: [
             {"label": "Python Version", "command": "python --version"},
             {"label": "Installed Packages", "command": "pip list"},
-        ],
-    },
-    {
-        "patterns": ("laravel", "php"),
-        "factory": lambda app, text: [
-            {"label": "Artisan Info", "command": "php artisan --version"},
-            {"label": "Route List", "command": "php artisan route:list"},
-            {"label": "Migration Status", "command": "php artisan migrate:status"},
-            {"label": "Config Cache", "command": "php artisan config:cache"},
-        ],
-    },
-    {
-        "patterns": ("strapi",),
-        "factory": lambda app, text: [
-            {"label": "Node Version", "command": "node -v"},
-            {"label": "NPM Packages", "command": "npm list --depth=0"},
-            {"label": "Strapi Admin User", "command": "npm run strapi admin:create-user"},
         ],
     },
     {
