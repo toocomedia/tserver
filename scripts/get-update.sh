@@ -73,5 +73,5 @@ chmod +x "$CLONE_DIR/scripts/"*.sh
 . "$CLONE_DIR/scripts/os_compat.sh"
 srv_os_require_supported || exit 1
 
-bash "$CLONE_DIR/scripts/update.sh"
+bash "$CLONE_DIR/scripts/update.sh" "$@"
 echo -e "${GRN}==>${NC} Update finished. Temp git files removed."

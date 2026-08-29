@@ -19,6 +19,7 @@ PANEL_DIR="${PANEL_DIR:-/opt/srv-panel}"
 PANEL_USER="${PANEL_USER:-panel}"
 PANEL_PORT="${PANEL_PORT:-8000}"
 NO_PIP=0
+FORCE_PIP=0
 RESTART_ONLY=0
 REFRESH_PANEL_NGINX=0
 
@@ -43,10 +44,11 @@ write_release_info() {
 for arg in "$@"; do
   case "$arg" in
     --no-pip) NO_PIP=1 ;;
+    --force-pip) FORCE_PIP=1 ;;
     --restart-only) RESTART_ONLY=1 ;;
     --refresh-panel-nginx) REFRESH_PANEL_NGINX=1 ;;
     -h|--help)
-      echo "Usage: sudo bash update.sh [--no-pip] [--restart-only] [--refresh-panel-nginx]"
+      echo "Usage: sudo bash update.sh [--no-pip] [--force-pip] [--restart-only] [--refresh-panel-nginx]"
       exit 0
       ;;
     *) die "Unknown flag: $arg" ;;
@@ -126,18 +128,27 @@ if [[ "$NO_PIP" != "1" ]]; then
   [[ -f "$UPDATE_REQUIREMENTS" ]] || die "No requirements.txt found in $BACKEND_SRC"
   srv_python_select_constraints "$PANEL_PYTHON" "$BACKEND_SRC" || \
     die "No tested dependency constraints exist for panel Python ${PANEL_PYTHON_VERSION}."
-  info "Preflighting $(basename "$SRV_PYTHON_CONSTRAINT_FILE") before changing the installed environment..."
-  srv_python_preflight_requirements \
-    "$PANEL_PYTHON" \
-    "$UPDATE_REQUIREMENTS" \
-    "$SRV_PYTHON_CONSTRAINT_FILE" || \
-    die "Update dependencies are incompatible with ${SRV_OS_PRETTY_NAME} / Python ${PANEL_PYTHON_VERSION}."
-  info "Applying verified Python requirements..."
-  srv_python_install_requirements \
-    "$PANEL_DIR/venv" \
-    "$UPDATE_REQUIREMENTS" \
-    "$SRV_PYTHON_CONSTRAINT_FILE" || \
-    die "Verified Python requirements could not be applied to the installed environment."
+
+  INSTALLED_REQ="$PANEL_DIR/app/requirements.txt"
+  INSTALLED_CON="$PANEL_DIR/app/constraints/python${SRV_PYTHON_VERSION_KEY}.txt"
+  if [[ "$FORCE_PIP" != "1" && -f "$INSTALLED_REQ" && -f "$INSTALLED_CON" ]] && \
+     cmp -s "$UPDATE_REQUIREMENTS" "$INSTALLED_REQ" && \
+     cmp -s "$SRV_PYTHON_CONSTRAINT_FILE" "$INSTALLED_CON"; then
+    info "Python requirements and constraints are unchanged — skipping pip install."
+  else
+    info "Preflighting $(basename "$SRV_PYTHON_CONSTRAINT_FILE") before changing the installed environment..."
+    srv_python_preflight_requirements \
+      "$PANEL_PYTHON" \
+      "$UPDATE_REQUIREMENTS" \
+      "$SRV_PYTHON_CONSTRAINT_FILE" || \
+      die "Update dependencies are incompatible with ${SRV_OS_PRETTY_NAME} / Python ${PANEL_PYTHON_VERSION}."
+    info "Applying verified Python requirements..."
+    srv_python_install_requirements \
+      "$PANEL_DIR/venv" \
+      "$UPDATE_REQUIREMENTS" \
+      "$SRV_PYTHON_CONSTRAINT_FILE" || \
+      die "Verified Python requirements could not be applied to the installed environment."
+  fi
 fi
 
 info "Update from: $BACKEND_SRC → $PANEL_DIR/app"
