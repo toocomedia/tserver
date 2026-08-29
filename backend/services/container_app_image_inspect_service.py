@@ -32,6 +32,48 @@ _IMAGE_PROFILES = {
         "runtime": "Umami", "internal_port": 3000, "database_types": ["postgresql"],
         "required_environment_names": ["DATABASE_URL"],
     },
+    "umami-software/umami": {
+        "runtime": "Umami", "internal_port": 3000, "database_types": ["postgresql"],
+        "required_environment_names": ["DATABASE_URL"],
+    },
+    "plausible/analytics": {
+        "runtime": "Plausible Analytics", "internal_port": 8000, "database_types": ["postgresql", "clickhouse"],
+        "required_environment_names": ["BASE_URL", "SECRET_KEY_BASE", "DATABASE_URL", "CLICKHOUSE_DATABASE_URL"],
+        "requires_multi_container": True,
+    },
+    "ghcr.io/plausible/community-edition": {
+        "runtime": "Plausible Analytics", "internal_port": 8000, "database_types": ["postgresql", "clickhouse"],
+        "required_environment_names": ["BASE_URL", "SECRET_KEY_BASE", "DATABASE_URL", "CLICKHOUSE_DATABASE_URL"],
+        "requires_multi_container": True,
+    },
+    "milesmcc/shynet": {
+        "runtime": "Shynet", "internal_port": 8080, "database_types": ["postgresql"],
+        "required_environment_names": ["SECRET_KEY", "DATABASE_URL", "ALLOWED_HOSTS"],
+    },
+    "ghost": {
+        "runtime": "Ghost", "internal_port": 2368, "database_types": ["mariadb"],
+        "required_environment_names": ["url", "database__client"],
+    },
+    "n8nio/n8n": {
+        "runtime": "n8n", "internal_port": 5678, "database_types": ["postgresql"],
+        "required_environment_names": ["N8N_ENCRYPTION_KEY", "WEBHOOK_URL"],
+    },
+    "n8n": {
+        "runtime": "n8n", "internal_port": 5678, "database_types": ["postgresql"],
+        "required_environment_names": ["N8N_ENCRYPTION_KEY", "WEBHOOK_URL"],
+    },
+    "directus/directus": {
+        "runtime": "Directus", "internal_port": 8055, "database_types": ["postgresql"],
+        "required_environment_names": ["KEY", "SECRET"],
+    },
+    "wordpress": {
+        "runtime": "WordPress", "internal_port": 80, "database_types": ["mariadb"],
+        "required_environment_names": ["WORDPRESS_DB_HOST", "WORDPRESS_DB_USER", "WORDPRESS_DB_PASSWORD", "WORDPRESS_DB_NAME"],
+    },
+    "vaultwarden/server": {
+        "runtime": "Vaultwarden", "internal_port": 80, "database_types": [],
+        "required_environment_names": ["ROCKET_PORT", "WEBSOCKET_ENABLED"],
+    },
 }
 
 _INSPECT_CACHE: dict[str, tuple[float, dict[str, Any]]] = {}
@@ -158,16 +200,38 @@ def _recommendations(
     databases = set(profile.get("database_types", []))
     databases.update(_DATABASE_ENVIRONMENTS[name] for name in environment_names if name in _DATABASE_ENVIRONMENTS)
     port = profile.get("internal_port") or _http_healthcheck_port(healthcheck)
+    if not port and exposed_ports:
+        common_ports = [int(p) for p in exposed_ports if p.isdigit()]
+        for p in (80, 8080, 8000, 3000, 5000, 8090, 5678, 2368, 8055):
+            if p in common_ports:
+                port = p
+                break
+        if not port and common_ports:
+            port = common_ports[0]
+
+    requires_multi = bool(profile.get("requires_multi_container") or "clickhouse" in databases or len(databases) >= 2)
+    summary = "Registry metadata inspected. Review every suggested setting before deployment."
+    if requires_multi:
+        summary = f"{profile.get('runtime', 'Application')} requires multi-container stack deployment (databases: {', '.join(sorted(databases))}). Recommended to deploy via AI Helper or Compose Stack."
+
     return {
-        "runtime": profile.get("runtime", "Registry image"), "build_mode": "image", "internal_port": port,
-        "database_types": sorted(databases), "required_environment_names": profile.get("required_environment_names", []),
-        "summary": "Registry metadata inspected. Review every suggested setting before deployment.",
+        "runtime": profile.get("runtime", "Registry image"),
+        "build_mode": "image",
+        "internal_port": port,
+        "database_types": sorted(databases),
+        "required_environment_names": profile.get("required_environment_names", []),
+        "requires_multi_container": requires_multi,
+        "summary": summary,
         "inspection_note": _inspection_note(exposed_ports, port),
     }
 
 
 def _without_tag(reference: str) -> str:
-    head, slash, tail = reference.lower().split("@", 1)[0].rpartition("/")
+    cleaned = reference.lower().split("@", 1)[0]
+    for prefix in ("docker.io/library/", "docker.io/", "library/"):
+        if cleaned.startswith(prefix):
+            cleaned = cleaned[len(prefix):]
+    head, slash, tail = cleaned.rpartition("/")
     return f"{head}{slash}{tail.split(':', 1)[0]}" if slash else tail.split(":", 1)[0]
 
 

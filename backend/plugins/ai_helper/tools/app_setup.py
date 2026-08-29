@@ -165,6 +165,15 @@ async def inspect_app_source(
             }
         try:
             res = await container_app_image_inspect_service.inspect_image(image)
+            if res.get("requires_multi_container") or "clickhouse" in (res.get("database_types") or []):
+                return {
+                    "status": "ok",
+                    "source_type": "official_stack",
+                    "requires_multi_container": True,
+                    "database_types": res.get("database_types", []),
+                    "inspection": res,
+                    "message": f"{res.get('runtime', 'Application')} requires a multi-container stack deployment (requires: {', '.join(res.get('database_types', []))}). Propose a validated stack via propose_app_spec_plan.",
+                }
             return {"status": "ok", "source_type": "image", "inspection": res}
         except Exception as exc:
             return {"status": "error", "message": f"Docker image inspection failed: {str(exc)}"}

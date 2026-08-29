@@ -62,6 +62,35 @@ class TestAiDeploymentGuidance(unittest.TestCase):
             svc_images = [s.get("image") for s in compose_info["services"]]
             self.assertIn("milesmcc/shynet:latest", svc_images)
 
+    def test_image_profiles_and_tag_normalization(self):
+        """Image inspect recommendations detect Plausible, Shynet, and Ghost profiles with databases and envs."""
+        from services.container_app_image_inspect_service import _without_tag, _recommendations
+
+        # Tag stripping and normalization
+        self.assertEqual(_without_tag("plausible/analytics:latest"), "plausible/analytics")
+        self.assertEqual(_without_tag("docker.io/plausible/analytics:v2"), "plausible/analytics")
+        self.assertEqual(_without_tag("docker.io/library/ghost:alpine"), "ghost")
+        self.assertEqual(_without_tag("milesmcc/shynet:latest"), "milesmcc/shynet")
+
+        # Plausible recommendations
+        rec_plausible = _recommendations("plausible/analytics:latest", ["8000"], [], None)
+        self.assertEqual(rec_plausible["internal_port"], 8000)
+        self.assertIn("postgresql", rec_plausible["database_types"])
+        self.assertIn("clickhouse", rec_plausible["database_types"])
+        self.assertTrue(rec_plausible["requires_multi_container"])
+        self.assertIn("SECRET_KEY_BASE", rec_plausible["required_environment_names"])
+
+        # Shynet recommendations
+        rec_shynet = _recommendations("milesmcc/shynet:latest", ["8080"], [], None)
+        self.assertEqual(rec_shynet["internal_port"], 8080)
+        self.assertIn("postgresql", rec_shynet["database_types"])
+        self.assertIn("SECRET_KEY", rec_shynet["required_environment_names"])
+
+        # Ghost recommendations
+        rec_ghost = _recommendations("ghost:alpine", ["2368"], [], None)
+        self.assertEqual(rec_ghost["internal_port"], 2368)
+        self.assertIn("mariadb", rec_ghost["database_types"])
+
 
 if __name__ == "__main__":
     unittest.main()
