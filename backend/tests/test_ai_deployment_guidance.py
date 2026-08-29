@@ -62,34 +62,49 @@ class TestAiDeploymentGuidance(unittest.TestCase):
             svc_images = [s.get("image") for s in compose_info["services"]]
             self.assertIn("milesmcc/shynet:latest", svc_images)
 
-    def test_image_profiles_and_tag_normalization(self):
-        """Image inspect recommendations detect Plausible, Shynet, and Ghost profiles with databases and envs."""
-        from services.container_app_image_inspect_service import _without_tag, _recommendations
+    def test_dynamic_source_repository_and_recommendations(self):
+        """Dynamic source repo discovery from OCI labels and reference, and dynamic metadata extraction."""
+        from services.container_app_image_inspect_service import (
+            _without_tag,
+            _discover_source_repository,
+            _recommendations,
+        )
 
         # Tag stripping and normalization
         self.assertEqual(_without_tag("plausible/analytics:latest"), "plausible/analytics")
         self.assertEqual(_without_tag("docker.io/plausible/analytics:v2"), "plausible/analytics")
         self.assertEqual(_without_tag("docker.io/library/ghost:alpine"), "ghost")
-        self.assertEqual(_without_tag("milesmcc/shynet:latest"), "milesmcc/shynet")
 
-        # Plausible recommendations
-        rec_plausible = _recommendations("plausible/analytics:latest", ["8000"], [], None)
-        self.assertEqual(rec_plausible["internal_port"], 8000)
-        self.assertIn("postgresql", rec_plausible["database_types"])
-        self.assertIn("clickhouse", rec_plausible["database_types"])
-        self.assertTrue(rec_plausible["requires_multi_container"])
-        self.assertIn("SECRET_KEY_BASE", rec_plausible["required_environment_names"])
+        # Dynamic upstream repo discovery from standard namespaced reference
+        self.assertEqual(_discover_source_repository("plausible/analytics:latest", {}), "https://github.com/plausible/analytics")
+        self.assertEqual(_discover_source_repository("milesmcc/shynet:latest", {}), "https://github.com/milesmcc/shynet")
 
-        # Shynet recommendations
-        rec_shynet = _recommendations("milesmcc/shynet:latest", ["8080"], [], None)
-        self.assertEqual(rec_shynet["internal_port"], 8080)
-        self.assertIn("postgresql", rec_shynet["database_types"])
-        self.assertIn("SECRET_KEY", rec_shynet["required_environment_names"])
+        # Dynamic upstream repo discovery from OCI labels
+        labels = {"org.opencontainers.image.source": "https://github.com/custom-org/custom-app.git"}
+        self.assertEqual(_discover_source_repository("myreg.io/custom-app:latest", labels), "https://github.com/custom-org/custom-app")
 
-        # Ghost recommendations
-        rec_ghost = _recommendations("ghost:alpine", ["2368"], [], None)
-        self.assertEqual(rec_ghost["internal_port"], 2368)
-        self.assertIn("mariadb", rec_ghost["database_types"])
+        # Dynamic recommendations from repo inspection
+        mock_repo_insp = {
+            "runtime": "Plausible Analytics",
+            "internal_port": 8000,
+            "database_types": ["postgresql", "clickhouse"],
+            "has_docker_compose": True,
+            "env_sample": {"BASE_URL": "http://localhost:8000", "SECRET_KEY_BASE": "changeme"},
+        }
+        rec = _recommendations("plausible/analytics:latest", ["8000"], [], None, mock_repo_insp)
+        self.assertEqual(rec["runtime"], "Plausible Analytics")
+        self.assertEqual(rec["internal_port"], 8000)
+        self.assertIn("postgresql", rec["database_types"])
+        self.assertIn("clickhouse", rec["database_types"])
+        self.assertTrue(rec["requires_multi_container"])
+        self.assertIn("BASE_URL", rec["required_environment_names"])
+        self.assertIn("SECRET_KEY_BASE", rec["required_environment_names"])
+
+        # Dynamic environment variable heuristics (when no repo is available)
+        rec_env = _recommendations("generic/app:latest", ["3000"], ["DATABASE_URL", "REDIS_HOST"], None)
+        self.assertEqual(rec_env["internal_port"], 3000)
+        self.assertIn("postgresql", rec_env["database_types"])
+        self.assertIn("redis", rec_env["database_types"])
 
 
 if __name__ == "__main__":

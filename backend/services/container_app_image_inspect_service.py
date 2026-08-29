@@ -27,57 +27,37 @@ _DATABASE_ENVIRONMENTS = {
     "DATABASE_URL": "postgresql", "POSTGRES_URL": "postgresql", "POSTGRESQL_URL": "postgresql",
     "MYSQL_URL": "mariadb", "REDIS_URL": "redis", "MONGODB_URI": "mongodb", "MONGO_URL": "mongodb",
 }
-_IMAGE_PROFILES = {
-    "docker.umami.is/umami-software/umami": {
-        "runtime": "Umami", "internal_port": 3000, "database_types": ["postgresql"],
-        "required_environment_names": ["DATABASE_URL"],
-    },
-    "umami-software/umami": {
-        "runtime": "Umami", "internal_port": 3000, "database_types": ["postgresql"],
-        "required_environment_names": ["DATABASE_URL"],
-    },
-    "plausible/analytics": {
-        "runtime": "Plausible Analytics", "internal_port": 8000, "database_types": ["postgresql", "clickhouse"],
-        "required_environment_names": ["BASE_URL", "SECRET_KEY_BASE", "DATABASE_URL", "CLICKHOUSE_DATABASE_URL"],
-        "requires_multi_container": True,
-    },
-    "ghcr.io/plausible/community-edition": {
-        "runtime": "Plausible Analytics", "internal_port": 8000, "database_types": ["postgresql", "clickhouse"],
-        "required_environment_names": ["BASE_URL", "SECRET_KEY_BASE", "DATABASE_URL", "CLICKHOUSE_DATABASE_URL"],
-        "requires_multi_container": True,
-    },
-    "milesmcc/shynet": {
-        "runtime": "Shynet", "internal_port": 8080, "database_types": ["postgresql"],
-        "required_environment_names": ["SECRET_KEY", "DATABASE_URL", "ALLOWED_HOSTS"],
-    },
-    "ghost": {
-        "runtime": "Ghost", "internal_port": 2368, "database_types": ["mariadb"],
-        "required_environment_names": ["url", "database__client"],
-    },
-    "n8nio/n8n": {
-        "runtime": "n8n", "internal_port": 5678, "database_types": ["postgresql"],
-        "required_environment_names": ["N8N_ENCRYPTION_KEY", "WEBHOOK_URL"],
-    },
-    "n8n": {
-        "runtime": "n8n", "internal_port": 5678, "database_types": ["postgresql"],
-        "required_environment_names": ["N8N_ENCRYPTION_KEY", "WEBHOOK_URL"],
-    },
-    "directus/directus": {
-        "runtime": "Directus", "internal_port": 8055, "database_types": ["postgresql"],
-        "required_environment_names": ["KEY", "SECRET"],
-    },
-    "wordpress": {
-        "runtime": "WordPress", "internal_port": 80, "database_types": ["mariadb"],
-        "required_environment_names": ["WORDPRESS_DB_HOST", "WORDPRESS_DB_USER", "WORDPRESS_DB_PASSWORD", "WORDPRESS_DB_NAME"],
-    },
-    "vaultwarden/server": {
-        "runtime": "Vaultwarden", "internal_port": 80, "database_types": [],
-        "required_environment_names": ["ROCKET_PORT", "WEBSOCKET_ENABLED"],
-    },
-}
+_IMAGE_PROFILES: dict[str, dict[str, Any]] = {}
 
 _INSPECT_CACHE: dict[str, tuple[float, dict[str, Any]]] = {}
 _CACHE_TTL_SECONDS = 900.0  # 15 minutes
+
+
+def _discover_source_repository(reference: str, labels: dict[str, str]) -> str | None:
+    """Dynamically derive upstream Git repository from OCI labels or standard image coordinates."""
+    # 1. Check standard OCI and Docker labels
+    for key in (
+        "org.opencontainers.image.source",
+        "org.opencontainers.image.url",
+        "org.label-schema.vcs-url",
+        "org.label-schema.url",
+    ):
+        val = (labels.get(key) or "").strip()
+        if val.startswith("http://") or val.startswith("https://"):
+            clean = val.removesuffix(".git").rstrip("/")
+            if "github.com" in clean or "gitlab.com" in clean:
+                return clean
+
+    # 2. Derive from standard namespaced image reference (e.g. plausible/analytics, milesmcc/shynet)
+    cleaned = reference.lower().split("@", 1)[0]
+    for prefix in ("docker.io/library/", "docker.io/", "library/"):
+        if cleaned.startswith(prefix):
+            cleaned = cleaned[len(prefix):]
+    tagless = cleaned.split(":", 1)[0]
+    parts = [p for p in tagless.split("/") if p]
+    if len(parts) == 2 and not parts[0].endswith((".com", ".io", ".org", ".net")):
+        return f"https://github.com/{parts[0]}/{parts[1]}"
+    return None
 
 
 def validate_image_reference(reference: str) -> str:
@@ -173,6 +153,15 @@ def _pull_and_inspect(reference: str) -> dict[str, Any]:
     if not was_local:
         _run(["docker", "rmi", reference], timeout=60)
 
+    repo_url = _discover_source_repository(reference, labels)
+    repo_inspection = None
+    if repo_url:
+        try:
+            from services.container_app_inspection_service import inspect_repository
+            repo_inspection = inspect_repository(repo_url)
+        except Exception as exc:
+            logger.info("Dynamic upstream repository inspection for %s skipped: %s", repo_url, exc)
+
     result = {
         "reference": reference,
         "digest": digest,
@@ -183,8 +172,9 @@ def _pull_and_inspect(reference: str) -> dict[str, Any]:
         "healthcheck": healthcheck,
         "labels": labels,
         "environment_names": environment_names,
+        "source_repository": repo_url,
     }
-    result.update(_recommendations(reference, exposed_ports, environment_names, healthcheck))
+    result.update(_recommendations(reference, exposed_ports, environment_names, healthcheck, repo_inspection))
     return result
 
 
@@ -194,12 +184,36 @@ def _environment_names(values: list[str]) -> list[str]:
 
 
 def _recommendations(
-    reference: str, exposed_ports: list[str], environment_names: list[str], healthcheck: str | None,
+    reference: str,
+    exposed_ports: list[str],
+    environment_names: list[str],
+    healthcheck: str | None,
+    repo_inspection: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    profile = _IMAGE_PROFILES.get(_without_tag(reference), {})
-    databases = set(profile.get("database_types", []))
-    databases.update(_DATABASE_ENVIRONMENTS[name] for name in environment_names if name in _DATABASE_ENVIRONMENTS)
-    port = profile.get("internal_port") or _http_healthcheck_port(healthcheck)
+    databases = set()
+    if repo_inspection and repo_inspection.get("database_types"):
+        databases.update(repo_inspection["database_types"])
+
+    all_envs = set(environment_names)
+    if repo_inspection and repo_inspection.get("env_sample"):
+        all_envs.update(repo_inspection["env_sample"].keys())
+
+    for env in all_envs:
+        upper = env.upper()
+        if any(k in upper for k in ("POSTGRES", "PG_", "DATABASE_URL")):
+            databases.add("postgresql")
+        elif any(k in upper for k in ("MYSQL", "MARIADB")):
+            databases.add("mariadb")
+        elif "CLICKHOUSE" in upper:
+            databases.add("clickhouse")
+        elif "REDIS" in upper:
+            databases.add("redis")
+        elif "MONGO" in upper:
+            databases.add("mongodb")
+
+    port = _http_healthcheck_port(healthcheck)
+    if not port and repo_inspection:
+        port = repo_inspection.get("internal_port")
     if not port and exposed_ports:
         common_ports = [int(p) for p in exposed_ports if p.isdigit()]
         for p in (80, 8080, 8000, 3000, 5000, 8090, 5678, 2368, 8055):
@@ -209,20 +223,31 @@ def _recommendations(
         if not port and common_ports:
             port = common_ports[0]
 
-    requires_multi = bool(profile.get("requires_multi_container") or "clickhouse" in databases or len(databases) >= 2)
-    summary = "Registry metadata inspected. Review every suggested setting before deployment."
+    req_envs = []
+    if repo_inspection:
+        req_envs = sorted(list(repo_inspection.get("env_sample", {}).keys()))
+
+    has_compose = bool(repo_inspection and repo_inspection.get("has_docker_compose"))
+    requires_multi = bool("clickhouse" in databases or len(databases) >= 2 or has_compose)
+
+    runtime = "Registry image"
+    if repo_inspection and repo_inspection.get("runtime"):
+        runtime = repo_inspection["runtime"]
+
+    summary = "Registry metadata inspected dynamically. Review suggested settings before deployment."
     if requires_multi:
-        summary = f"{profile.get('runtime', 'Application')} requires multi-container stack deployment (databases: {', '.join(sorted(databases))}). Recommended to deploy via AI Helper or Compose Stack."
+        summary = f"Multi-container stack detected (databases: {', '.join(sorted(databases))}). Recommended to deploy via AI Helper or Compose Stack."
 
     return {
-        "runtime": profile.get("runtime", "Registry image"),
+        "runtime": runtime,
         "build_mode": "image",
         "internal_port": port,
         "database_types": sorted(databases),
-        "required_environment_names": profile.get("required_environment_names", []),
+        "required_environment_names": req_envs,
         "requires_multi_container": requires_multi,
         "summary": summary,
         "inspection_note": _inspection_note(exposed_ports, port),
+        "compose_info": repo_inspection.get("compose_info") if repo_inspection else None,
     }
 
 
