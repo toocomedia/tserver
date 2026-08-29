@@ -69,6 +69,16 @@ def inspect_repository(repository_url: str, branch: str, *, ssh_key_path: str | 
 
         from services.apps_engine.source_image_advisor import advise_official_image
         advice = advise_official_image(checkout.repository_url, framework)
+        if not advice and compose_info and isinstance(compose_info, dict) and compose_info.get("services"):
+            for svc in compose_info["services"]:
+                img = str(svc.get("image") or "").strip()
+                if img and not any(db_prefix in img.lower() for db_prefix in ("postgres", "mysql", "mariadb", "redis", "mongo", "clickhouse", "kafka", "valkey")):
+                    advice = {
+                        "image": img,
+                        "reason": f"Discovered official pre-built image '{img}' in docker-compose.yml",
+                        "source": "compose",
+                    }
+                    break
 
         res_dict = {
             "repository_url": checkout.repository_url,
@@ -90,6 +100,8 @@ def inspect_repository(repository_url: str, branch: str, *, ssh_key_path: str | 
         }
         if advice:
             res_dict["official_image_recommendation"] = advice
+            res_dict["official_image_available"] = advice.get("image")
+            res_dict["summary"] = f"Official pre-built image '{advice.get('image')}' detected in repository. Recommended over compiling from source."
         return res_dict
 
 
