@@ -353,10 +353,11 @@ When entering `plausible/analytics` in the Docker Image card, the inspection suc
 4. This blinded the AI helper into believing the image had zero database requirements.
 5. In reality, Plausible Analytics is a **two-database application**: it requires PostgreSQL for relational data AND ClickHouse for high-speed time-series analytics.
 
-#### Solution & Code Implementation
-1. Populated `_IMAGE_PROFILES` in [container_app_image_inspect_service.py](file:///c:/Users/riadh/Desktop/srv-t/backend/services/container_app_image_inspect_service.py) with full profiles for `plausible/analytics`, `ghcr.io/plausible/community-edition`, `milesmcc/shynet`, `ghost`, `n8nio/n8n`, `directus/directus`, and `wordpress`.
-2. Updated `_without_tag` to strip registry prefixes like `docker.io/library/` and `docker.io/`.
-3. Updated `inspect_app_source` in [app_setup.py](file:///c:/Users/riadh/Desktop/srv-t/backend/plugins/ai_helper/tools/app_setup.py) so that when an image requires multiple datastores (like Plausible requiring ClickHouse + PostgreSQL), it flags `requires_multi_container: True` and prompts the AI to synthesize a validated Compose stack via `propose_app_spec_plan`.
+#### Dynamic Base Solution (Zero-Hardcoding Architecture)
+1. **Dynamic Upstream Repository Discovery**: Implemented `_discover_source_repository` in [container_app_image_inspect_service.py](file:///c:/Users/riadh/Desktop/srv-t/backend/services/container_app_image_inspect_service.py). When an image is inspected, the system inspects OCI standard labels (`org.opencontainers.image.source`, `org.opencontainers.image.url`, `org.label-schema.vcs-url`) or derives the upstream Git repository from standard namespaced image references (e.g. `plausible/analytics` -> `https://github.com/plausible/analytics`).
+2. **Dynamic Repository Inspection**: The engine dynamically inspects the upstream repository's `docker-compose.yml`, Dockerfile, and `.env.example`. This automatically discovers required databases (`postgresql`, `clickhouse`), compose services, internal ports (`8000`), and required environment variables (`BASE_URL`, `SECRET_KEY_BASE`) for **any application on GitHub or Docker Hub without hardcoded catalogs**.
+3. **Dynamic Fallback Heuristics**: If an image is private or has no source repository, the engine dynamically scans the image's `Config.Env` for standard database naming patterns (`POSTGRES_`, `MYSQL_`, `MARIADB_`, `CLICKHOUSE_`, `REDIS_`, `MONGO_`) and extracts ports from `Config.ExposedPorts`.
+4. **Multi-Container Stack Dispatch**: In [app_setup.py](file:///c:/Users/riadh/Desktop/srv-t/backend/plugins/ai_helper/tools/app_setup.py), when an image requires multiple datastores or a multi-service Compose stack, it flags `requires_multi_container: True` so the AI proposes a validated stack plan via `propose_app_spec_plan`.
 
 ---
 
