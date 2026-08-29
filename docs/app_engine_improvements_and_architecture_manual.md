@@ -338,6 +338,28 @@ Both `ports:` and `expose:` are now parsed with equal fidelity.
 
 ---
 
+### 2.7 Incident 7: Registry Image Inspection Blindspot on Multi-Database Apps (Plausible)
+
+#### Context & Failure Signature
+When entering `plausible/analytics` in the Docker Image card, the inspection succeeded, but:
+- No database was asked or selected.
+- Required environment variables (`SECRET_KEY_BASE`, `BASE_URL`, `DATABASE_URL`, `CLICKHOUSE_DATABASE_URL`) were completely missing.
+- The container was started as a solo container without ClickHouse, causing it to crash immediately.
+
+#### Deep Technical Analysis
+1. Docker image metadata on Docker Hub stores file layers and basic static labels, **never runtime secrets or dynamic connection URLs**.
+2. In [container_app_image_inspect_service.py](file:///c:/Users/riadh/Desktop/srv-t/backend/services/container_app_image_inspect_service.py), `_IMAGE_PROFILES` only contained `umami`.
+3. When `plausible/analytics` was inspected, `_recommendations` returned `database_types: []` and `required_environment_names: []`.
+4. This blinded the AI helper into believing the image had zero database requirements.
+5. In reality, Plausible Analytics is a **two-database application**: it requires PostgreSQL for relational data AND ClickHouse for high-speed time-series analytics.
+
+#### Solution & Code Implementation
+1. Populated `_IMAGE_PROFILES` in [container_app_image_inspect_service.py](file:///c:/Users/riadh/Desktop/srv-t/backend/services/container_app_image_inspect_service.py) with full profiles for `plausible/analytics`, `ghcr.io/plausible/community-edition`, `milesmcc/shynet`, `ghost`, `n8nio/n8n`, `directus/directus`, and `wordpress`.
+2. Updated `_without_tag` to strip registry prefixes like `docker.io/library/` and `docker.io/`.
+3. Updated `inspect_app_source` in [app_setup.py](file:///c:/Users/riadh/Desktop/srv-t/backend/plugins/ai_helper/tools/app_setup.py) so that when an image requires multiple datastores (like Plausible requiring ClickHouse + PostgreSQL), it flags `requires_multi_container: True` and prompts the AI to synthesize a validated Compose stack via `propose_app_spec_plan`.
+
+---
+
 ## 3. Deployment Paradigms: Build vs. Pull vs. Compose
 
 ### 3.1 The Production Compiler Dilemma
