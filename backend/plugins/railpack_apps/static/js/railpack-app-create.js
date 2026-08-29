@@ -49,7 +49,7 @@ if (form) {
     }, 10);
   }
   function sourceState() {
-    const type = query('[data-source-type]').value;
+    const type = query('[data-source-type]')?.value || 'git';
     const wordpress = type === 'wordpress';
     state.unlocked = 1;
     setHidden(query('[data-git-fields]'), type !== 'git');
@@ -58,8 +58,12 @@ if (form) {
     setHidden(query('[data-build-mode-group]'), wordpress);
     setHidden(query('[data-port-group]'), wordpress);
     toggleSourceInputs(type);
-    query('[data-preset]').value = wordpress ? 'wordpress' : '';
-    if (wordpress) query('#internal_port').value = '80';
+    const presetEl = query('[data-preset]');
+    if (presetEl) presetEl.value = wordpress ? 'wordpress' : '';
+    if (wordpress) {
+      const portEl = query('#internal_port');
+      if (portEl) portEl.value = '80';
+    }
     wordpressDatabaseState(wordpress);
     domainState();
     updateRefType();
@@ -69,23 +73,28 @@ if (form) {
     const selected = query('[data-domain-select]');
     const ssl = query('[data-ssl-request]');
     const hasSsl = selected?.dataset.domainSsl === 'true';
-    ssl.checked = false;
-    ssl.disabled = hasSsl;
+    if (ssl) {
+      ssl.checked = false;
+      ssl.disabled = hasSsl;
+    }
     setText(query('[data-ssl-hint]'), hasSsl ? 'HTTPS is already active for this domain. The existing certificate will be used.' : 'No certificate is attached to this domain. Select this option to issue HTTPS after deployment.');
   }
   function toggleSourceInputs(type) {
     const git = type === 'git';
-    query('[data-repository-url]').disabled = !git;
-    query('[data-repository-url]').required = git;
-    query('[data-branch]').disabled = !git;
-    query('[data-image-reference]').disabled = type !== 'image';
-    query('[data-image-reference]').required = type === 'image';
+    const repoEl = query('[data-repository-url]');
+    if (repoEl) { repoEl.disabled = !git; repoEl.required = git; }
+    const branchEl = query('[data-branch]');
+    if (branchEl) branchEl.disabled = !git;
+    const imgEl = query('[data-image-reference]');
+    if (imgEl) { imgEl.disabled = type !== 'image'; imgEl.required = type === 'image'; }
     form.querySelectorAll('[data-wordpress-fields] input').forEach((input) => { input.disabled = type !== 'wordpress'; input.required = type === 'wordpress'; });
   }
   function wordpressDatabaseState(required) {
     const row = query('[data-kind="mariadb"]');
+    if (!row) return;
     if (required) {
-      row.querySelector('[data-database-enabled]').checked = true;
+      const chk = row.querySelector('[data-database-enabled]');
+      if (chk) chk.checked = true;
       const providerEl = _dbField(row, '[data-database-provider]');
       if (providerEl) providerEl.value = 'docker';
     }
@@ -107,13 +116,15 @@ if (form) {
     return kind ? form.querySelector(`[data-database-options][data-database-parent="${kind}"]`) : row.querySelector('[data-database-options]');
   }
   function attachmentState(row) {
-    const required = row.dataset.sourceRequired === 'true';
-    const enabled = row.querySelector('[data-database-enabled]').checked;
+    if (!row) return;
+    const required = row.dataset?.sourceRequired === 'true';
+    const chk = row.querySelector('[data-database-enabled]');
+    const enabled = chk ? chk.checked : false;
     const provider = _dbField(row, '[data-database-provider]');
     const optionsPanel = _dbPanel(row);
     if (optionsPanel) optionsPanel.hidden = !enabled;
     row.classList.toggle('settings-choice--active', enabled);
-    row.querySelector('[data-database-enabled]').disabled = required;
+    if (chk) chk.disabled = required;
     if (provider) provider.disabled = required || !enabled;
     const providerVal = provider ? provider.value : 'docker';
     const url = _dbField(row, '[data-database-url]');
