@@ -537,6 +537,10 @@ async def stream_ai_chat(
                     detected_imgs.append(img)
 
                 primary_img = detected_imgs[0] if detected_imgs else ""
+                if not primary_img and repo:
+                    gh_match = re.search(r"(?:github\.com|gitlab\.com)/([a-zA-Z0-9_.-]+)/([a-zA-Z0-9_.-]+?)(?:\.git|/)?$", repo)
+                    if gh_match:
+                        primary_img = f"{gh_match.group(1).lower()}/{gh_match.group(2).lower()}:latest"
                 required_inputs = setup_handoff.required_setup_inputs(setup_source_result)
                 has_compose = bool((inspection.get("compose_info") or {}).get("services")) if isinstance(inspection, dict) else False
 

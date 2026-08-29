@@ -700,6 +700,27 @@ class TestAiAppSetup(unittest.IsolatedAsyncioTestCase):
         reply_msg = "Option 1"
         self.assertFalse(is_setup_interview_pending(inspection, reply_msg))
 
+    def test_git_repository_without_compose_still_triggers_setup_interview(self):
+        """Verify is_setup_interview_pending triggers options presentation for pure git repos (like Jellyfin)."""
+        from plugins.ai_helper.services.setup_handoff import is_setup_interview_pending
+        inspection = {
+            "status": "ok",
+            "source_type": "git",
+            "inspection": {
+                "repository_url": "https://github.com/jellyfin/jellyfin",
+                "compose_info": {},
+                "database_detections": [],
+                "documentation_evidence": {},
+            },
+        }
+        # First turn: should trigger interview for build choices
+        user_msg = "Please analyze and configure this application for domain cc.tooco.net: https://github.com/jellyfin/jellyfin"
+        self.assertTrue(is_setup_interview_pending(inspection, user_msg))
+
+        # Second turn: user submits interview answers -> should not block
+        reply_msg = "Setup interview answers:\ndeployment_method: registry_image:jellyfin/jellyfin:latest"
+        self.assertFalse(is_setup_interview_pending(inspection, reply_msg))
+
 
 if __name__ == "__main__":
     unittest.main()

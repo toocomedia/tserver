@@ -192,10 +192,19 @@ def is_setup_interview_pending(
     if len(db_detections) > 1 and not any(k in clean_msg for k in ("postgres", "mysql", "mariadb", "sqlite", "clickhouse", "mongo")):
         return True
 
-    # Check if detected docker images or compose services offer build choices
-    detected_imgs = doc_evidence.get("detected_docker_images") or []
-    if detected_imgs and not any(k in clean_msg for k in ("docker image", "docker", "railpack", "source build", "compose", "stack")):
-        return True
+    # For any Git repository, there is always an initial deployment & build method choice
+    # (e.g. Run Official Docker Image vs Build from Git Source vs Compose Stack).
+    stype = str(setup_source_result.get("source_type") or "").lower()
+    repo_url = str(
+        (inspection.get("repository_url") if isinstance(inspection, dict) else "")
+        or setup_source_result.get("repository_url")
+        or ""
+    ).strip()
+    if stype in {"git", "compose_stack"} or repo_url:
+        if not any(k in clean_msg for k in (
+            "docker image", "use docker", "source build", "build from source", "railpack", "dockerfile", "compose", "stack"
+        )):
+            return True
 
     return False
 
