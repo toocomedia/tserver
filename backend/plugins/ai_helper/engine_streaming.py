@@ -68,6 +68,7 @@ async def _stream_openai_compatible(
                     else:
                         raise AIProviderError(f"Provider error ({response.status_code}): {err_msg}", response.status_code)
 
+                in_think = False
                 async for line in response.aiter_lines():
                     line = line.strip()
                     if not line or not line.startswith("data:"):
@@ -80,13 +81,19 @@ async def _stream_openai_compatible(
                         choices = chunk.get("choices") or []
                         if choices:
                             delta = choices[0].get("delta") or {}
-                            # Reasoning deltas are never user-visible chat content.
                             reasoning = delta.get("reasoning_content") or delta.get("reasoning") or delta.get("thinking")
                             if reasoning:
+                                if not in_think:
+                                    in_think = True
+                                    yield "<think>"
+                                yield reasoning
                                 continue
 
                             content = delta.get("content")
                             if content:
+                                if in_think:
+                                    in_think = False
+                                    yield "</think>"
                                 clean_content = content
                                 if "<" in clean_content and any(k in clean_content for k in ["DSML", "tool_call", "function=", "parameter=", "invoke", "｜"]):
                                     # Strip all DSML/XML tool call variants including the tool_calls closing tag
@@ -105,6 +112,8 @@ async def _stream_openai_compatible(
                                     yield clean_content
                     except json.JSONDecodeError:
                         continue
+                if in_think:
+                    yield "</think>"
 
         except httpx.ConnectError:
             raise AIProviderError("Could not connect to the AI provider endpoint. Please check the Base URL.", 502, "connect_error")
@@ -163,6 +172,7 @@ async def _stream_anthropic(
                     else:
                         raise AIProviderError(f"Anthropic error ({response.status_code}): {err_msg}", response.status_code)
 
+                in_thinking = False
                 async for line in response.aiter_lines():
                     line = line.strip()
                     if not line or not line.startswith("data:"):
@@ -175,12 +185,23 @@ async def _stream_anthropic(
                             delta = chunk.get("delta") or {}
                             delta_type = delta.get("type")
                             if delta_type == "thinking_delta":
-                                continue
+                                thinking = delta.get("thinking") or ""
+                                if not in_thinking:
+                                    in_thinking = True
+                                    yield "<think>"
+                                if thinking:
+                                    yield thinking
                             elif delta_type == "text_delta":
+                                if in_thinking:
+                                    in_thinking = False
+                                    yield "</think>"
                                 text = delta.get("text")
                                 if text:
                                     yield text
                         elif event_type in ("message_stop", "content_block_stop"):
+                            if in_thinking:
+                                in_thinking = False
+                                yield "</think>"
                             if event_type == "message_stop":
                                 break
                     except json.JSONDecodeError:

@@ -297,6 +297,9 @@ if (form) {
       const data = await fetchJson(form.action, { method: 'POST', headers: { ...csrfHeaders(), Accept: 'application/json' }, body: new FormData(form) });
       state.appId = data.app_id;
       state.deploymentId = data.deployment_id;
+      try {
+        sessionStorage.removeItem("srv_app_plan_draft");
+      } catch (e) {}
       state.unlocked = 4;
       renderStep(4);
       pollDeployment();
@@ -564,13 +567,13 @@ if (form) {
   window.applyAiAppPlan = function (planData, options = {}) {
     if (!planData) return;
     const p = planData.payload || planData;
-    const isStack = planData.action_type === "official_stack_install" || p.deploy_type === "official_stack" || !!p.stack_catalog_id;
+    const isStack = planData.action_type === "official_stack_install" || planData.action_type === "stack_install" || planData.action_type === "app_spec_install" || p.deploy_type === "official_stack" || p.deploy_type === "app_spec" || !!p.stack_catalog_id;
     const appPlanInput = query("#app_plan_id") || query("[data-app-plan-id]");
     if (appPlanInput) appPlanInput.value = isStack ? "" : (planData.plan_id || "");
 
     if (isStack) {
       const depTypeInput = query("#deploy_type") || query("[data-deploy-type]");
-      if (depTypeInput) depTypeInput.value = "official_stack";
+      if (depTypeInput) depTypeInput.value = (planData.action_type === "app_spec_install" || p.deploy_type === "app_spec") ? "app_spec" : "official_stack";
       const catInput = query("#stack_catalog_id") || query("[data-stack-catalog-id]");
       if (catInput) catInput.value = p.stack_catalog_id || "";
       const verInput = query("#stack_version") || query("[data-stack-version]");
@@ -723,8 +726,47 @@ if (form) {
     state.unlocked = Math.max(state.unlocked, 3);
     renderStep(3);
 
-    // Plan consumption happens atomically with the server-side stack creation request.
+    // 9. Persist draft in sessionStorage and activate reviewed plan banner
+    try {
+      sessionStorage.setItem("srv_app_plan_draft", JSON.stringify(planData));
+    } catch (e) {}
+
+    const banner = query("[data-reviewed-plan-banner]");
+    if (banner) {
+      banner.style.display = "flex";
+      const badge = banner.querySelector("[data-reviewed-plan-badge]");
+      if (badge) {
+        badge.textContent = isStack ? (planData.action_type === "app_spec_install" ? "AppSpec Stack" : "Official Stack") : "Single App";
+      }
+      const summary = banner.querySelector("[data-reviewed-plan-summary]");
+      if (summary) {
+        const title = p.stack_display_name || p.domain_name || planData.plan_id || "Application";
+        summary.textContent = `Pre-filled from approved AI plan for ${title}. Ready to deploy.`;
+      }
+      const deployBtn = banner.querySelector("[data-deploy-reviewed-plan]");
+      if (deployBtn) {
+        deployBtn.onclick = () => startDeployment();
+      }
+      const clearBtn = banner.querySelector("[data-clear-reviewed-plan]");
+      if (clearBtn) {
+        clearBtn.onclick = () => clearPlanDraft();
+      }
+    }
   };
+
+  function clearPlanDraft() {
+    try {
+      sessionStorage.removeItem("srv_app_plan_draft");
+    } catch (e) {}
+    const banner = query("[data-reviewed-plan-banner]");
+    if (banner) banner.style.display = "none";
+    if (window.location.search.includes("plan=")) {
+      const cleanUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, cleanUrl);
+    }
+    window.location.reload();
+  }
+  window.clearPlanDraft = clearPlanDraft;
 
   // Expose step controller for in-chat AI actions
   window.advanceAiWizard = function (targetStep) {
@@ -798,18 +840,53 @@ if (form) {
     });
   });
 
-  // Handle ?plan= query parameter on page load
-  const urlParams = new URLSearchParams(window.location.search);
-  const planParam = urlParams.get("plan");
-  if (planParam) {
-    fetchJson(`/plugins/ai_helper/api/action-plans/${encodeURIComponent(planParam)}`)
-      .then((data) => {
-        if (data.plan) window.applyAiAppPlan(data.plan);
-      })
-      .catch((err) => console.warn("Could not auto-apply plan from URL:", err));
+  // 1. Check for server-injected initial plan hydration
+  let autoHydrated = false;
+  const initialPlanEl = document.getElementById("initial-app-plan");
+  if (initialPlanEl && initialPlanEl.textContent) {
+    try {
+      const initialPlan = JSON.parse(initialPlanEl.textContent);
+      if (initialPlan && (initialPlan.plan_id || initialPlan.payload)) {
+        window.applyAiAppPlan(initialPlan);
+        autoHydrated = true;
+      }
+    } catch (err) {
+      console.warn("Could not parse server initial-app-plan:", err);
+    }
   }
 
-  // Handle in-page plan loading event from chat Check on Steps button
+  // 2. Handle ?plan= query parameter on page load
+  if (!autoHydrated) {
+    const urlParams = new URLSearchParams(window.location.search);
+    const planParam = urlParams.get("plan");
+    if (planParam) {
+      fetchJson(`/plugins/ai_helper/api/action-plans/${encodeURIComponent(planParam)}`)
+        .then((data) => {
+          if (data.plan) {
+            window.applyAiAppPlan(data.plan);
+            autoHydrated = true;
+          }
+        })
+        .catch((err) => console.warn("Could not auto-apply plan from URL:", err));
+    }
+  }
+
+  // 3. Fall back to restoring draft from sessionStorage
+  if (!autoHydrated) {
+    try {
+      const savedDraft = sessionStorage.getItem("srv_app_plan_draft");
+      if (savedDraft) {
+        const parsed = JSON.parse(savedDraft);
+        if (parsed && (parsed.plan_id || parsed.payload)) {
+          window.applyAiAppPlan(parsed);
+        }
+      }
+    } catch (err) {
+      console.warn("Could not restore plan draft from sessionStorage:", err);
+    }
+  }
+
+  // 4. Handle in-page plan loading event from chat Check on Steps button
   window.addEventListener("ai-helper:load-plan", (e) => {
     const planId = e.detail && e.detail.planId;
     if (planId) {

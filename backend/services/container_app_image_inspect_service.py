@@ -10,6 +10,7 @@ import asyncio
 import json
 import logging
 import re
+import time
 from typing import Any
 
 from services.container_app_service import _run
@@ -33,6 +34,9 @@ _IMAGE_PROFILES = {
     },
 }
 
+_INSPECT_CACHE: dict[str, tuple[float, dict[str, Any]]] = {}
+_CACHE_TTL_SECONDS = 900.0  # 15 minutes
+
 
 def validate_image_reference(reference: str) -> str:
     ref = reference.strip().lower()
@@ -50,28 +54,41 @@ async def inspect_image(reference: str) -> dict[str, Any]:
         ValueError  for bad reference or pull/inspect failure
     """
     validate_image_reference(reference)
+    ref_key = reference.strip().lower()
+    now = time.time()
+    if ref_key in _INSPECT_CACHE:
+        cached_time, cached_data = _INSPECT_CACHE[ref_key]
+        if now - cached_time < _CACHE_TTL_SECONDS:
+            return dict(cached_data)
 
     token = resource_guard_service.register(
         "container_app", "image-inspect", "background",
         f"Image inspect: {reference}", profile="image_pull",
     )
     try:
-        return await asyncio.to_thread(_pull_and_inspect, reference)
+        res = await asyncio.to_thread(_pull_and_inspect, reference)
+        _INSPECT_CACHE[ref_key] = (now, dict(res))
+        return res
     finally:
         resource_guard_service.unregister(token)
 
 
 def _pull_and_inspect(reference: str) -> dict[str, Any]:
-    # Pull
-    pull = _run(["docker", "pull", reference], timeout=300)
-    if pull.returncode != 0:
-        stderr = (pull.stderr or pull.stdout or "").strip()
-        raise ValueError(f"docker pull failed: {stderr[-500:]}")
+    # Fast path: check if the image already exists locally before pulling
+    inspect = _run(["docker", "inspect", "--format", "{{json .}}", reference], timeout=15)
+    was_local = (inspect.returncode == 0)
 
-    # Inspect
-    inspect = _run(["docker", "inspect", "--format", "{{json .}}", reference], timeout=30)
-    if inspect.returncode != 0:
-        raise ValueError("docker inspect failed after successful pull.")
+    if not was_local:
+        # Pull
+        pull = _run(["docker", "pull", reference], timeout=300)
+        if pull.returncode != 0:
+            stderr = (pull.stderr or pull.stdout or "").strip()
+            raise ValueError(f"docker pull failed: {stderr[-500:]}")
+
+        # Inspect
+        inspect = _run(["docker", "inspect", "--format", "{{json .}}", reference], timeout=30)
+        if inspect.returncode != 0:
+            raise ValueError("docker inspect failed after successful pull.")
 
     try:
         raw = json.loads(inspect.stdout)
@@ -110,8 +127,9 @@ def _pull_and_inspect(reference: str) -> dict[str, Any]:
     labels: dict[str, str] = cfg.get("Labels") or {}
     environment_names = _environment_names(cfg.get("Env") or [])
 
-    # Remove the pulled image to reclaim disk immediately
-    _run(["docker", "rmi", reference], timeout=60)
+    # Remove the pulled image to reclaim disk immediately if it was freshly pulled
+    if not was_local:
+        _run(["docker", "rmi", reference], timeout=60)
 
     result = {
         "reference": reference,

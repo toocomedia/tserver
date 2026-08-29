@@ -41,6 +41,8 @@ def _normalize_patch(app: ContainerApp, patch: object, allow_empty: bool = True)
         norm_patch["internal_port"] = norm_patch.pop("port")
     if "web_health_path" in norm_patch and "health_path" not in norm_patch:
         norm_patch["health_path"] = norm_patch.pop("web_health_path")
+    if "start_command" in norm_patch and "custom_start_command" not in norm_patch:
+        norm_patch["custom_start_command"] = norm_patch.pop("start_command")
 
     # Gracefully filter to supported patch fields
     filtered_patch = {k: v for k, v in norm_patch.items() if k in PATCH_FIELDS}

@@ -1070,8 +1070,11 @@ async def stream_ai_chat(
     has_error = False
     visible_filter = visible_output.VisibleOutputFilter()
     try:
-        flattened_messages = _flatten_tool_messages_for_text_generation(messages)
-        final_normalized_messages = _normalize_messages_for_llm(flattened_messages, active.provider_type)
+        if active.provider_type == "gemini":
+            flattened_messages = _flatten_tool_messages_for_text_generation(messages)
+            final_normalized_messages = _normalize_messages_for_llm(flattened_messages, active.provider_type)
+        else:
+            final_normalized_messages = _normalize_messages_for_llm(messages, active.provider_type)
         async for chunk in engine.stream_chat(
             provider_type=active.provider_type,
             base_url=active.base_url,

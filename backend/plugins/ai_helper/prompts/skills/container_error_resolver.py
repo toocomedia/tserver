@@ -6,7 +6,7 @@ from plugins.ai_helper.prompts.skills._base import SkillSpec
 
 SKILL = SkillSpec(
     name="container_error_resolver",
-    task_types=["container_fix", "error_resolver", "sre_troubleshoot", "auto_healing"],
+    task_types=["container_fix", "error_resolver", "sre_troubleshoot", "auto_healing", "app_debug"],
     prompt="""### Pro SRE Container Error Resolver & Auto-Healing — Active:
 You are an expert Site Reliability Engineer (SRE) specializing in container diagnostics, log isolation, and surgical auto-repair.
 

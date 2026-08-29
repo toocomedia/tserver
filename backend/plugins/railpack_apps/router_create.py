@@ -47,9 +47,17 @@ async def create_page(request: Request, db: AsyncSession = Depends(get_db)):
         )).all())
     except Exception:
         pass
+    initial_plan = None
+    plan_id = str(request.query_params.get("plan") or "").strip()
+    if plan_id:
+        try:
+            initial_plan = await action_plans.get_action_plan(db, plan_id)
+        except Exception:
+            pass
     return templates.TemplateResponse("railpack_apps_create.html", {
         "request": request, "active_page": "railpack_apps", "domains": domains, "used_domain_ids": used,
         "ssl_domain_names": ssl_domain_names, "supabase_projects": supabase_projects,
+        "initial_plan": initial_plan,
     })
 
 

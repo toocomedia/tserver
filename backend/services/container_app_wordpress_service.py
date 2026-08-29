@@ -1,6 +1,12 @@
-"""WordPress preset setup and maintenance through short-lived wp-cli containers."""
+"""[DEPRECATED] WordPress legacy runner facade.
+
+All WordPress and CMS deployments should be dynamically synthesized into generic
+AppSpec Compose stacks. This facade is retained strictly for backward compatibility
+with legacy installations per .agents/rules/MODULARITY.md.
+"""
 from __future__ import annotations
 
+import warnings
 from pathlib import Path
 
 from fastapi import HTTPException
@@ -9,6 +15,12 @@ import config
 from models.container_app import ContainerApp
 from models.domain import Domain
 from services import container_app_service
+
+warnings.warn(
+    "container_app_wordpress_service is deprecated. Use generic AppSpec Compose stacks instead.",
+    DeprecationWarning,
+    stacklevel=2,
+)
 
 WP_IMAGE = "wordpress:php8.3-apache"
 WP_CLI_IMAGE = "wordpress:cli"

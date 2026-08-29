@@ -87,10 +87,9 @@ def service_environments(
     web_env.update(stack.default_environment)
     web_env.update(settings)
     if domain_name:
-        web_svc = stack.services.get(stack.web_service_name)
-        web_img = (web_svc.image_reference if web_svc else "").lower()
-        if "shynet" in web_img or "django" in web_img or "ALLOWED_HOSTS" in stack.allowed_nonsecret_settings:
+        if "ALLOWED_HOSTS" in stack.allowed_nonsecret_settings or "ALLOWED_HOSTS" in web_env or "ALLOWED_HOSTS" in stack.default_environment:
             web_env.setdefault("ALLOWED_HOSTS", f"{domain_name},localhost,127.0.0.1")
+        if "HOSTNAME" in stack.allowed_nonsecret_settings or "HOSTNAME" in web_env or "HOSTNAME" in stack.default_environment:
             web_env.setdefault("HOSTNAME", domain_name)
     for requirement in stack.required_secrets:
         if requirement.key not in vault_secrets:

@@ -1,7 +1,14 @@
 """Tests for AppSpec Docker Compose schema normalization and template export."""
 from __future__ import annotations
 
+import sys
 import unittest
+from pathlib import Path
+
+BACKEND = Path(__file__).resolve().parents[1]
+if str(BACKEND) not in sys.path:
+    sys.path.insert(0, str(BACKEND))
+
 import yaml
 
 from services.apps_engine.security_policy import validate_app_spec

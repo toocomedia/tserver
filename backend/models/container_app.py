@@ -41,12 +41,14 @@ class ContainerApp(Base):
     database_provider: Mapped[str | None] = mapped_column(String(64))
     database_name: Mapped[str | None] = mapped_column(String(63))
     database_user: Mapped[str | None] = mapped_column(String(63))
-    preset: Mapped[str | None] = mapped_column(String(24))
-    wordpress_content_volume: Mapped[str | None] = mapped_column(String(128))
-    wordpress_site_title: Mapped[str | None] = mapped_column(String(255))
-    wordpress_admin_user: Mapped[str | None] = mapped_column(String(64))
-    wordpress_admin_email: Mapped[str | None] = mapped_column(String(255))
-    wordpress_pending_secret_path: Mapped[str | None] = mapped_column(String(512))
+    # Legacy / deprecated presets and single-app columns.
+    # Preserved for database schema backward-compatibility; new apps use generic AppSpec Compose manifests.
+    preset: Mapped[str | None] = mapped_column(String(24))  # Deprecated: use deploy_type / app_spec
+    wordpress_content_volume: Mapped[str | None] = mapped_column(String(128))  # Deprecated: use generic storage_mounts
+    wordpress_site_title: Mapped[str | None] = mapped_column(String(255))  # Deprecated: use app configuration / env
+    wordpress_admin_user: Mapped[str | None] = mapped_column(String(64))  # Deprecated: use app configuration / env
+    wordpress_admin_email: Mapped[str | None] = mapped_column(String(255))  # Deprecated: use app configuration / env
+    wordpress_pending_secret_path: Mapped[str | None] = mapped_column(String(512))  # Deprecated: use secret vault references
     pending_database_specs: Mapped[str | None] = mapped_column(Text)
     cpu_limit: Mapped[str] = mapped_column(String(16), default="1.0", nullable=False)
     memory_limit_mb: Mapped[int] = mapped_column(Integer, default=512, nullable=False)

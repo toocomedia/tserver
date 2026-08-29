@@ -82,55 +82,101 @@ def get_authorized_containers(app: ContainerApp) -> List[Dict[str, Any]]:
     return containers
 
 
+SYSTEM_INSPECTION_COMMANDS: List[Dict[str, str]] = [
+    {"label": "Directory (ls -la)", "command": "ls -la"},
+    {"label": "Working Dir (pwd)", "command": "pwd"},
+    {"label": "Environment (env)", "command": "env"},
+    {"label": "Disk Space (df -h)", "command": "df -h"},
+    {"label": "Processes (ps aux)", "command": "ps aux || ps -ef"},
+    {"label": "OS Release", "command": "cat /etc/os-release 2>/dev/null || cat /etc/issue"},
+    {"label": "Whoami", "command": "whoami"},
+]
+
+# Declarative registry of framework/runtime quick command recipes
+COMMAND_RECIPES: List[Dict[str, Any]] = [
+    {
+        "patterns": ("shynet",),
+        "factory": lambda app, text: [
+            {"label": "Admin Setup", "command": f"./manage.py registeradmin {(getattr(app, 'wordpress_admin_email', None) or '').strip() or 'admin@example.com'}"},
+            {"label": "Whitelabel Name", "command": './manage.py whitelabel "My Analytics"'},
+            {"label": "Migrations", "command": "./manage.py showmigrations"},
+        ],
+    },
+    {
+        "patterns": ("wordpress",),
+        "factory": lambda app, text: [
+            {"label": "WP Info", "command": "wp --allow-root --info"},
+            {"label": "List Users", "command": "wp --allow-root user list"},
+            {"label": "List Plugins", "command": "wp --allow-root plugin list"},
+            {"label": "List Themes", "command": "wp --allow-root theme list"},
+        ],
+    },
+    {
+        "patterns": ("django",),
+        "factory": lambda app, text: [
+            {"label": "Django Check", "command": "python manage.py check"},
+            {"label": "Show Migrations", "command": "python manage.py showmigrations"},
+            {"label": "Run Migrations", "command": "python manage.py migrate"},
+            {"label": "Python Version", "command": "python --version"},
+            {"label": "Installed Packages", "command": "pip list"},
+        ],
+    },
+    {
+        "patterns": ("python",),
+        "predicate": lambda app, text: getattr(app, "build_mode", None) == "railpack",
+        "factory": lambda app, text: [
+            {"label": "Python Version", "command": "python --version"},
+            {"label": "Installed Packages", "command": "pip list"},
+        ],
+    },
+    {
+        "patterns": ("laravel", "php"),
+        "factory": lambda app, text: [
+            {"label": "Artisan Info", "command": "php artisan --version"},
+            {"label": "Route List", "command": "php artisan route:list"},
+            {"label": "Migration Status", "command": "php artisan migrate:status"},
+            {"label": "Config Cache", "command": "php artisan config:cache"},
+        ],
+    },
+    {
+        "patterns": ("strapi",),
+        "factory": lambda app, text: [
+            {"label": "Node Version", "command": "node -v"},
+            {"label": "NPM Packages", "command": "npm list --depth=0"},
+            {"label": "Strapi Admin User", "command": "npm run strapi admin:create-user"},
+        ],
+    },
+    {
+        "patterns": ("node", "npm"),
+        "factory": lambda app, text: [
+            {"label": "Node Version", "command": "node -v"},
+            {"label": "NPM Packages", "command": "npm list --depth=0"},
+        ],
+    },
+]
+
+
 def get_quick_commands(app: ContainerApp, domain: Optional[Domain] = None) -> List[Dict[str, str]]:
     """Generates suggested quick commands tailored for the app's framework/runtime."""
-    image_ref = (app.image_reference or "").lower()
-    repo_url = (app.repository_url or "").lower()
-    catalog_id = (app.stack_catalog_id or "").lower()
-    preset = (app.preset or "").lower()
+    image_ref = (getattr(app, "image_reference", None) or "").lower()
+    repo_url = (getattr(app, "repository_url", None) or "").lower()
+    catalog_id = (getattr(app, "stack_catalog_id", None) or "").lower()
+    preset = (getattr(app, "preset", None) or "").lower()
     app_text = f"{image_ref} {repo_url} {catalog_id} {preset}".lower()
 
     quick_cmds: List[Dict[str, str]] = []
 
-    # Framework-specific commands
-    if "shynet" in app_text:
-        admin_email = (app.wordpress_admin_email or "").strip() or "admin@example.com"
-        quick_cmds.append({"label": "Admin Setup", "command": f"./manage.py registeradmin {admin_email}"})
-        quick_cmds.append({"label": "Whitelabel Name", "command": './manage.py whitelabel "My Analytics"'})
-        quick_cmds.append({"label": "Migrations", "command": "./manage.py showmigrations"})
-    elif "wordpress" in app_text:
-        quick_cmds.append({"label": "WP Info", "command": "wp --allow-root --info"})
-        quick_cmds.append({"label": "List Users", "command": "wp --allow-root user list"})
-        quick_cmds.append({"label": "List Plugins", "command": "wp --allow-root plugin list"})
-        quick_cmds.append({"label": "List Themes", "command": "wp --allow-root theme list"})
-    elif "django" in app_text or "python" in app_text or app.build_mode == "railpack":
-        if "django" in app_text:
-            quick_cmds.append({"label": "Django Check", "command": "python manage.py check"})
-            quick_cmds.append({"label": "Show Migrations", "command": "python manage.py showmigrations"})
-            quick_cmds.append({"label": "Run Migrations", "command": "python manage.py migrate"})
-        quick_cmds.append({"label": "Python Version", "command": "python --version"})
-        quick_cmds.append({"label": "Installed Packages", "command": "pip list"})
-    elif "laravel" in app_text or "php" in app_text:
-        quick_cmds.append({"label": "Artisan Info", "command": "php artisan --version"})
-        quick_cmds.append({"label": "Route List", "command": "php artisan route:list"})
-        quick_cmds.append({"label": "Migration Status", "command": "php artisan migrate:status"})
-        quick_cmds.append({"label": "Config Cache", "command": "php artisan config:cache"})
-    elif "node" in app_text or "npm" in app_text or "strapi" in app_text:
-        quick_cmds.append({"label": "Node Version", "command": "node -v"})
-        quick_cmds.append({"label": "NPM Packages", "command": "npm list --depth=0"})
-        if "strapi" in app_text:
-            quick_cmds.append({"label": "Strapi Admin User", "command": "npm run strapi admin:create-user"})
+    for recipe in COMMAND_RECIPES:
+        patterns = recipe.get("patterns", ())
+        predicate = recipe.get("predicate")
+        if (predicate and predicate(app, app_text)) or any(p in app_text for p in patterns):
+            factory = recipe.get("factory")
+            if factory:
+                quick_cmds.extend(factory(app, app_text))
+            break
 
     # Standard system inspection commands
-    quick_cmds.extend([
-        {"label": "Directory (ls -la)", "command": "ls -la"},
-        {"label": "Working Dir (pwd)", "command": "pwd"},
-        {"label": "Environment (env)", "command": "env"},
-        {"label": "Disk Space (df -h)", "command": "df -h"},
-        {"label": "Processes (ps aux)", "command": "ps aux || ps -ef"},
-        {"label": "OS Release", "command": "cat /etc/os-release 2>/dev/null || cat /etc/issue"},
-        {"label": "Whoami", "command": "whoami"},
-    ])
+    quick_cmds.extend(SYSTEM_INSPECTION_COMMANDS)
 
     return quick_cmds
 
