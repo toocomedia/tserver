@@ -39,6 +39,7 @@ temp_*.html
 /docs/*
 !/docs/git_dependency_internal_api.md
 !/docs/python_app_hosting.md
+!/docs/app_engine_improvements_and_architecture_manual.md
 /rules/
 /tools/
 push-to-github.bat
