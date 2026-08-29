@@ -63,9 +63,9 @@ def inspect_repository(repository_url: str, branch: str, *, ssh_key_path: str | 
             "composer.json", "go.mod", "Gemfile", "pom.xml", "build.gradle", "build.gradle.kts",
             "Cargo.toml", "deno.json", "bun.lockb", "railpack.json", "Procfile", "index.html"
         })
-        # If repo only has a Dockerfile without standard app manifests, select Dockerfile mode;
-        # otherwise default to Railpack (with Dockerfile detected hint if Dockerfile exists).
-        build_mode = "dockerfile" if (has_dockerfile and not has_app_manifest) else "railpack"
+        # If repository provides a Dockerfile, default to dockerfile mode to use author-defined dependencies;
+        # otherwise default to Railpack.
+        build_mode = "dockerfile" if has_dockerfile else "railpack"
 
         from services.apps_engine.source_image_advisor import advise_official_image
         advice = advise_official_image(checkout.repository_url, framework)

@@ -36,7 +36,7 @@ def inspect_compose_evidence(path: Path) -> dict[str, object]:
             continue
         if current is None:
             continue
-        if line.startswith("    ports:"):
+        if line.startswith("    ports:") or line.startswith("    expose:"):
             in_ports = True
             continue
         if line.startswith("    ") and not line.startswith("      "):

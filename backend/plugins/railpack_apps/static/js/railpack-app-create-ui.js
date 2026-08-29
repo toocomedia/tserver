@@ -179,6 +179,18 @@ export function renderInspection(form, data) {
     dockerfileHint.hidden = !data.has_dockerfile;
   }
 
+  const composeHint = form.querySelector('[data-compose-hint]');
+  if (composeHint) {
+    const svcs = (data.compose_info && Array.isArray(data.compose_info.services)) ? data.compose_info.services : [];
+    if (svcs.length > 0) {
+      composeHint.hidden = false;
+      const names = svcs.map(s => s.name).filter(Boolean);
+      composeHint.textContent = `📦 Docker Compose detected (${names.join(', ')}).`;
+    } else {
+      composeHint.hidden = true;
+    }
+  }
+
   const buildModeInput = form.querySelector('#build_mode');
   const targetMode = data.build_mode || 'railpack';
   if (buildModeInput) {
