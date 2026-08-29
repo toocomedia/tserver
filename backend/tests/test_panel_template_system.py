@@ -151,6 +151,38 @@ class TestPanelTemplateSystem(unittest.IsolatedAsyncioTestCase):
         self.assertIn("shynet_data", parsed["volumes"])
         self.assertIn("db_data", parsed["volumes"])
 
+    async def test_resolve_compose_yaml_with_panel_postgres_does_not_add_container_db(self):
+        """When using panel_postgres provider, template must not synthesize a container db service."""
+        app = SimpleNamespace(
+            id=11,
+            container_name="srv-shynet-11",
+            image_reference="milesmcc/shynet:latest",
+            internal_port=8080,
+            health_path="disabled",
+            storage_mounts="[]",
+            data_volume=None,
+            data_mount_path=None,
+            env_path=None,
+            active_snapshot_id=101,
+            pending_snapshot_id=None,
+            wordpress_admin_email="admin@tooco.net",
+            deploy_type="railpack",
+        )
+        db_session = AsyncMock()
+        snapshot = SimpleNamespace(id=101, config_json="{}")
+        db_session.get.return_value = snapshot
+
+        attached_db = SimpleNamespace(id=2, kind="postgresql", provider="panel_postgres")
+        with patch("services.container_app_database_service.attachments_for", AsyncMock(return_value=[attached_db])):
+            yaml_str, filename = await _resolve_compose_yaml(db_session, app)
+
+        self.assertIn("# Database: Managed by panel_postgres (postgresql on host.docker.internal)", yaml_str)
+        self.assertIn("# Initial Admin Command: docker exec -it srv-shynet-11 ./manage.py registeradmin admin@tooco.net", yaml_str)
+
+        parsed = yaml.safe_load(yaml_str)
+        self.assertIn("srv-shynet-11", parsed["services"])
+        self.assertNotIn("db", parsed["services"])
+
 
 if __name__ == "__main__":
     unittest.main()

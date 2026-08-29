@@ -74,6 +74,24 @@ def get_app_documentation(
         except Exception:
             pass
 
+    # 2. Fallback to command_service quick commands if snapshot lacked setup instructions
+    if not admin_commands:
+        try:
+            from plugins.railpack_apps import command_service
+            quick_cmds = command_service.get_quick_commands(app)
+            for qc in quick_cmds:
+                lbl = qc.get("label", "")
+                raw = qc.get("command", "")
+                if any(k in lbl.lower() for k in ("admin", "superuser", "setup")) or any(k in raw.lower() for k in ("registeradmin", "createsuperuser")):
+                    cmd_str = f"docker exec -it {target_container} {raw}"
+                    admin_commands.append({
+                        "title": lbl or "Initial Administrator Setup",
+                        "command": cmd_str,
+                        "description": "Initial administrative setup command.",
+                    })
+        except Exception:
+            pass
+
     # 3. Universal Container Maintenance Commands
     for title, cmd, desc in (
         ("Follow Live Application Logs", f"docker logs -f --tail 100 {target_container}", "Streams realtime standard output and error logs from the container."),

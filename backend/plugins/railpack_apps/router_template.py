@@ -95,8 +95,12 @@ async def _resolve_compose_yaml(db: AsyncSession, app: ContainerApp) -> tuple[st
     db_services: dict[str, ServiceSpec] = {}
 
     for idx, db_item in enumerate(databases):
+        provider = getattr(db_item, "provider", "docker")
+        if provider != "docker":
+            continue
+
         kind = db_item.kind
-        svc_name = "db" if idx == 0 and len(databases) == 1 else f"db_{kind}"
+        svc_name = "db" if idx == 0 and len([d for d in databases if getattr(d, "provider", "docker") == "docker"]) == 1 else f"db_{kind}"
         depends.append(svc_name)
         db_img = container_app_database_service.IMAGES.get(kind, f"{kind}:latest")
         db_ports = [5432] if kind == "postgresql" else [3306] if kind == "mariadb" else [6379] if kind == "redis" else [27017]
@@ -152,8 +156,15 @@ async def _resolve_compose_yaml(db: AsyncSession, app: ContainerApp) -> tuple[st
     )
     yaml_str = template_export.app_spec_to_compose_yaml(fallback_spec)
 
-    # Prepend header comments from snapshot if available
+    # Prepend header comments from snapshot and documentation service
     header_comments = [f"# Application: {app_name.title()}"]
+
+    # If using host or external database, add explicit header comment
+    for db_item in databases:
+        prov = getattr(db_item, "provider", "docker")
+        if prov != "docker":
+            header_comments.append(f"# Database: Managed by {prov} ({db_item.kind} on host.docker.internal)")
+
     if snapshot and snapshot.config_json:
         try:
             cfg = json.loads(snapshot.config_json)
@@ -169,6 +180,20 @@ async def _resolve_compose_yaml(db: AsyncSession, app: ContainerApp) -> tuple[st
                         header_comments.append(f"# Admin Command: {c_text}")
         except Exception:
             pass
+
+    # Ensure admin setup commands from documentation service are included
+    try:
+        from plugins.railpack_apps import documentation_service
+        docs = documentation_service.get_app_documentation(app, active_snapshot=snapshot)
+        for ac in docs.get("admin_commands") or []:
+            c_text = ac.get("command", "")
+            if c_text and not any(c_text in h for h in header_comments):
+                header_comments.append(f"# Initial Admin Command: {c_text}")
+        for sn in docs.get("setup_notes") or []:
+            if sn and not any(sn in h for h in header_comments):
+                header_comments.append(f"# Note: {sn}")
+    except Exception:
+        pass
 
     if header_comments:
         yaml_str = "\n".join(header_comments) + "\n\n" + yaml_str
