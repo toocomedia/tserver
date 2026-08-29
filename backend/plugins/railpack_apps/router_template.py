@@ -103,12 +103,13 @@ async def _resolve_compose_yaml(db: AsyncSession, app: ContainerApp) -> tuple[st
         db_env: dict[str, str] = {}
         db_vol: list[VolumeSpec] = []
 
-        clean_db_name = app_name.replace("-", "_")
+        clean_db_name = (getattr(db_item, "database_name", None) or app_name).replace("-", "_")
+        clean_user = (getattr(db_item, "username", None) or clean_db_name).replace("-", "_")
         if kind == "postgresql":
-            db_env = {"POSTGRES_DB": clean_db_name, "POSTGRES_USER": clean_db_name, "POSTGRES_PASSWORD": "${DB_PASSWORD:-changeme}"}
+            db_env = {"POSTGRES_DB": clean_db_name, "POSTGRES_USER": clean_user, "POSTGRES_PASSWORD": "${DB_PASSWORD:-changeme}"}
             db_vol = [VolumeSpec(name_suffix=f"{svc_name}_data", container_mount_path="/var/lib/postgresql/data")]
         elif kind == "mariadb":
-            db_env = {"MYSQL_DATABASE": clean_db_name, "MYSQL_USER": clean_db_name, "MYSQL_PASSWORD": "${DB_PASSWORD:-changeme}", "MYSQL_ROOT_PASSWORD": "${DB_ROOT_PASSWORD:-rootpass}"}
+            db_env = {"MYSQL_DATABASE": clean_db_name, "MYSQL_USER": clean_user, "MYSQL_PASSWORD": "${DB_PASSWORD:-changeme}", "MYSQL_ROOT_PASSWORD": "${DB_ROOT_PASSWORD:-rootpass}"}
             db_vol = [VolumeSpec(name_suffix=f"{svc_name}_data", container_mount_path="/var/lib/mysql")]
         elif kind == "redis":
             db_vol = [VolumeSpec(name_suffix=f"{svc_name}_data", container_mount_path="/data")]
@@ -122,6 +123,13 @@ async def _resolve_compose_yaml(db: AsyncSession, app: ContainerApp) -> tuple[st
             environment_defaults=db_env,
             volumes=db_vol,
         )
+
+        # Adapt web environment to use the local Compose db service instead of host.docker.internal
+        for k in ("DATABASE_URL", "MYSQL_URL", "REDIS_URL", "MONGODB_URI"):
+            if k in env_map and "@host.docker.internal:" in env_map[k]:
+                env_map[k] = env_map[k].replace("@host.docker.internal:", f"@{svc_name}:")
+        if "DB_HOST" in env_map and env_map["DB_HOST"] == "host.docker.internal":
+            env_map["DB_HOST"] = svc_name
 
     web_service = ServiceSpec(
         name=app_name,

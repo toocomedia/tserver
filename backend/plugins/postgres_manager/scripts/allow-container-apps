@@ -5,10 +5,10 @@ hba="$(runuser -u postgres -- psql -tAc 'SHOW hba_file;' | xargs)"
 conf="$(runuser -u postgres -- psql -tAc 'SHOW config_file;' | xargs)"
 test -f "$hba" && test -f "$conf"
 sed -i '/# BEGIN srv-panel container apps/,/# END srv-panel container apps/d' "$hba"
-printf '\n# BEGIN srv-panel container apps\nhost all all 172.16.0.0/12 scram-sha-256\n# END srv-panel container apps\n' >> "$hba"
+printf '\n# BEGIN srv-panel container apps\nhost all all 172.16.0.0/12 scram-sha-256\nhost all all 172.16.0.0/12 md5\n# END srv-panel container apps\n' >> "$hba"
 if grep -Eq '^[[:space:]]*#?[[:space:]]*listen_addresses[[:space:]]*=' "$conf"; then
   sed -i -E "s|^[[:space:]]*#?[[:space:]]*listen_addresses[[:space:]]*=.*|listen_addresses = '*'|" "$conf"
 else
   printf '\nlisten_addresses = '\''*'\''\n' >> "$conf"
 fi
-systemctl reload postgresql
+systemctl restart postgresql || systemctl reload postgresql
