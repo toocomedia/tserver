@@ -27,11 +27,6 @@ def get_app_documentation(
     domain_name = domain.name if domain else "your-domain.com"
     domain_url = f"https://{domain_name}"
 
-    image_ref = (getattr(app, "image_reference", None) or "").lower()
-    repo_url = (getattr(app, "repository_url", None) or "").lower()
-    catalog_id = (getattr(app, "stack_catalog_id", None) or "").lower()
-    app_text = f"{image_ref} {repo_url} {catalog_id}".lower()
-
     admin_commands: List[Dict[str, str]] = []
     maintenance_commands: List[Dict[str, str]] = []
     setup_notes: List[str] = []
@@ -46,17 +41,38 @@ def get_app_documentation(
                         setup_notes.append(str(note))
                 for cmd in cfg.get("admin_commands") or []:
                     if isinstance(cmd, dict) and cmd.get("command"):
-                        admin_commands.append(cmd)
+                        cmd_copy = dict(cmd)
+                        cmd_copy["command"] = cmd_copy["command"].replace("{target}", target_container).replace("{container}", target_container).replace("{admin_email}", admin_email)
+                        admin_commands.append(cmd_copy)
+                    elif isinstance(cmd, str) and cmd.strip():
+                        cmd_str = cmd.strip().replace("{target}", target_container).replace("{container}", target_container).replace("{admin_email}", admin_email)
+                        if not cmd_str.startswith("docker exec"):
+                            cmd_str = f"docker exec -it {target_container} {cmd_str}"
+                        admin_commands.append({
+                            "title": "Administrator Command",
+                            "command": cmd_str,
+                            "description": "Administrative bootstrap command discovered in application documentation.",
+                        })
+
+                post_install = cfg.get("post_install_message") or (cfg.get("app_spec") or {}).get("post_install_message")
+                if post_install and str(post_install).strip():
+                    post_text = str(post_install).strip()
+                    if post_text not in setup_notes:
+                        setup_notes.append(post_text)
+                    import re
+                    match = re.search(r"(docker exec[^\n]+|(?:\./manage\.py|python manage\.py|artisan|wp)[^\n]+)", post_text)
+                    if match:
+                        raw_cmd = match.group(1).strip().replace("{target}", target_container).replace("{container}", target_container).replace("{admin_email}", admin_email)
+                        if not raw_cmd.startswith("docker exec"):
+                            raw_cmd = f"docker exec -it {target_container} {raw_cmd}"
+                        if not any(c.get("command") == raw_cmd for c in admin_commands):
+                            admin_commands.append({
+                                "title": "Initial Administrator Setup",
+                                "command": raw_cmd,
+                                "description": "Initializes administrative credentials according to application documentation.",
+                            })
         except Exception:
             pass
-
-    # 2. Dynamic CLI administrator command for apps with manage.py (e.g. Shynet)
-    if "shynet" in app_text and not any("registeradmin" in c.get("command", "") for c in admin_commands):
-        admin_commands.append({
-            "title": "Create Administrator Account (Superuser)",
-            "command": f"docker exec -it {target_container} ./manage.py registeradmin {admin_email}",
-            "description": "Initializes the superuser account in PostgreSQL and prints your initial temporary password.",
-        })
 
     # 3. Universal Container Maintenance Commands
     for title, cmd, desc in (

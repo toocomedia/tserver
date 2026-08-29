@@ -348,6 +348,19 @@ async def propose_app_install(
                 "message": f"Stack setup plan proposal failed: {exc}",
             }
 
+    discovered_notes = list(kwargs.get("setup_notes") or [])
+    discovered_cmds = list(kwargs.get("admin_commands") or [])
+    if not discovered_cmds and repository_url.strip():
+        try:
+            insp = container_app_inspection_service.inspect_repository(repository_url.strip(), branch.strip() or "main")
+            hints = (insp.get("documentation_evidence") or {}).get("setup_hints") or {}
+            for c in hints.get("admin_commands") or []:
+                c_text = c.get("command") if isinstance(c, dict) else str(c)
+                if c_text and c_text not in discovered_cmds:
+                    discovered_cmds.append(c_text)
+        except Exception:
+            pass
+
     try:
         payload = setup_plan_builder.build_single_app_payload(
             source_type=stype,
@@ -363,6 +376,8 @@ async def propose_app_install(
             database_attachments=database_attachments,
             storage_mounts=storage_mounts,
             domain_name=domain_name,
+            setup_notes=discovered_notes,
+            admin_commands=discovered_cmds,
         )
     except setup_plan_builder.database_provider_capabilities.ProviderChoiceRequired as exc:
         return {
@@ -590,6 +605,15 @@ def stack_plan_args_from_inspection(
         "default_environment": default_environment,
         "url_templates": url_templates,
         "secrets": secrets,
+        "post_install_message": (
+            f"Initial Administrator Setup: docker exec -it {{web_service}} {inspection.get('documentation_evidence', {}).get('setup_hints', {}).get('admin_commands', [{}])[0].get('command')}"
+            if isinstance(inspection.get("documentation_evidence"), dict)
+            and isinstance(inspection.get("documentation_evidence", {}).get("setup_hints"), dict)
+            and inspection.get("documentation_evidence", {}).get("setup_hints", {}).get("admin_commands")
+            and isinstance(inspection.get("documentation_evidence", {}).get("setup_hints", {}).get("admin_commands"), list)
+            and inspection.get("documentation_evidence", {}).get("setup_hints", {}).get("admin_commands")[0].get("command")
+            else ""
+        ),
     }
     settings = {"BASE_URL": f"https://{domain_name.strip()}"} if domain_name.strip() else {}
     evidence = list(compose_info.get("evidence") or [])

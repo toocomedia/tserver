@@ -199,6 +199,23 @@ async def create_snapshot(
                 image_digest = None
     revision = int(getattr(app, "configuration_revision", 1) or 1) + (1 if state == "pending" else 0)
     stored_config = snapshot_envelope.compose_envelope(app_spec) if app_spec is not None else config
+    if plan_id and isinstance(stored_config, dict):
+        try:
+            from models.ai_helper import AiActionPlan
+            plan = await db.get(AiActionPlan, plan_id)
+            if plan and isinstance(plan.payload, dict):
+                p_payload = plan.payload
+                if p_payload.get("setup_notes"):
+                    stored_config.setdefault("setup_notes", p_payload["setup_notes"])
+                if p_payload.get("admin_commands"):
+                    stored_config.setdefault("admin_commands", p_payload["admin_commands"])
+                if p_payload.get("post_install_message"):
+                    stored_config.setdefault("post_install_message", p_payload["post_install_message"])
+                app_spec_payload = p_payload.get("app_spec")
+                if isinstance(app_spec_payload, dict) and app_spec_payload.get("post_install_message"):
+                    stored_config.setdefault("post_install_message", app_spec_payload["post_install_message"])
+        except Exception:
+            pass
     fingerprint = _fingerprint(stored_config, environment, versions)
     snapshot = ContainerAppSnapshot(
         app_id=app.id,

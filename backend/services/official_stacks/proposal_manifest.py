@@ -23,6 +23,7 @@ _TOP_LEVEL = {
     "services", "startup_order", "web_service", "web_port", "web_health_path",
     "startup_timeout_seconds", "recommended_ram_mb", "minimum_ram_mb",
     "allowed_nonsecret_settings", "default_environment", "url_templates", "secrets", "docs_url",
+    "post_install_message",
 }
 _SERVICE = {"name", "image", "ports", "internal_ports", "depends_on", "environment", "volumes", "resources", "command", "health"}
 _VOLUME = {
@@ -110,6 +111,7 @@ def stack_from_proposal(raw: Any, evidence: list[str] | None = None) -> Official
         url_templates=_url_templates(raw.get("url_templates")),
         required_secrets=_secrets(raw.get("secrets"), services),
         docs_url=str(raw.get("docs_url") or "").strip()[:1024],
+        post_install_message=str(raw.get("post_install_message") or "").strip()[:1024],
     )
     return validate_stack_manifest(stack)
 

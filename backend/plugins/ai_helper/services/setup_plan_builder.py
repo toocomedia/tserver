@@ -82,6 +82,8 @@ def build_single_app_payload(
     database_attachments: Optional[List[Dict[str, str]]] = None,
     storage_mounts: Optional[List[Dict[str, str]]] = None,
     domain_name: str = "",
+    setup_notes: Optional[List[str]] = None,
+    admin_commands: Optional[List[Any]] = None,
 ) -> Dict[str, Any]:
     """Constructs and normalizes a single-container App Engine plan payload."""
     norm_port = normalize_port(internal_port, 3000)
@@ -147,7 +149,7 @@ def build_single_app_payload(
     elif bmode not in {"railpack", "dockerfile"}:
         bmode = "railpack"
 
-    return {
+    payload: Dict[str, Any] = {
         "source_type": stype,
         "repository_url": repository_url.strip(),
         "branch": branch.strip() or "main",
@@ -162,6 +164,11 @@ def build_single_app_payload(
         "storage_mounts": clean_mounts,
         "domain_name": domain_name.strip(),
     }
+    if setup_notes:
+        payload["setup_notes"] = list(setup_notes)
+    if admin_commands:
+        payload["admin_commands"] = list(admin_commands)
+    return payload
 
 
 async def build_stack_payload(

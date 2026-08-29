@@ -18,7 +18,7 @@ from services.apps_engine.app_spec import (
 
 def app_spec_to_dict(spec: AppSpec) -> dict[str, Any]:
     """Serialize only canonical v2 AppSpec fields."""
-    return {
+    result: dict[str, Any] = {
         "name": spec.name,
         "display_name": spec.display_name,
         "web_service_name": spec.web_service_name,
@@ -28,6 +28,11 @@ def app_spec_to_dict(spec: AppSpec) -> dict[str, Any]:
         "default_environment": dict(sorted(spec.default_environment.items())),
         "url_templates": dict(sorted(spec.url_templates.items())),
     }
+    if getattr(spec, "post_install_message", ""):
+        result["post_install_message"] = str(spec.post_install_message)
+    if getattr(spec, "docs_url", ""):
+        result["docs_url"] = str(spec.docs_url)
+    return result
 
 
 def legacy_app_spec_to_dict(spec: AppSpec) -> dict[str, Any]:

@@ -636,7 +636,14 @@ class TestAiAppSetup(unittest.IsolatedAsyncioTestCase):
             wordpress_admin_email="riadh@tooco.net",
         )
         domain = Domain(name="cc.blagh.co")
-        docs = get_app_documentation(app, domain)
+        import json
+        from models.container_app_snapshot import ContainerAppSnapshot
+        snapshot = ContainerAppSnapshot(
+            config_json=json.dumps({
+                "post_install_message": "Initial Setup: docker exec -it {target} ./manage.py registeradmin {admin_email}",
+            })
+        )
+        docs = get_app_documentation(app, domain, active_snapshot=snapshot)
 
         self.assertEqual(docs["target_container"], "srv-app-12")
         self.assertEqual(docs["admin_email"], "riadh@tooco.net")

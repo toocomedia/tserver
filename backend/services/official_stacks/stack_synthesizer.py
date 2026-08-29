@@ -528,6 +528,15 @@ def _build_stack_definition_bundle(
         else:
             health_path = "/"
 
+    post_install_message = ""
+    doc_hints = inspection.get("documentation_evidence", {}).get("setup_hints") if isinstance(inspection.get("documentation_evidence"), dict) else {}
+    admin_cmds = doc_hints.get("admin_commands") or []
+    if admin_cmds and isinstance(admin_cmds, list):
+        first_cmd = admin_cmds[0]
+        cmd_text = first_cmd.get("command") if isinstance(first_cmd, dict) else str(first_cmd)
+        if cmd_text:
+            post_install_message = f"Initial Administrator Setup: docker exec -it {{web_service}} {cmd_text}"
+
     manifest: dict[str, Any] = {
         "name": stack_name[:48],
         "display_name": f"{stack_name.replace('-', ' ').title()} Stack",
@@ -546,6 +555,7 @@ def _build_stack_definition_bundle(
         "default_environment": default_env,
         "url_templates": url_templates,
         "secrets": secrets,
+        "post_install_message": post_install_message,
     }
     clean_dom = domain_name.strip()
     settings: dict[str, str] = {}

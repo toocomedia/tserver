@@ -13,6 +13,7 @@ SECURITY_OPTIONS = ("no-new-privileges:true",)
 _TOP_LEVEL = {
     "name", "display_name", "web_service_name", "web_port", "services",
     "required_secrets", "default_environment", "url_templates",
+    "post_install_message", "docs_url",
 }
 _SERVICE = {
     "name", "image_reference", "pinned_digest", "internal_ports", "volumes",
@@ -100,7 +101,7 @@ def validate_app_spec(candidate: dict[str, Any] | AppSpec) -> AppSpec:
     else:
         raise ValueError("AppSpec must be an object.")
     _reject_unknown(raw, _TOP_LEVEL, "AppSpec")
-    if set(_TOP_LEVEL - {"required_secrets", "default_environment", "url_templates"}) - set(raw):
+    if set(_TOP_LEVEL - {"required_secrets", "default_environment", "url_templates", "post_install_message", "docs_url"}) - set(raw):
         raise ValueError("AppSpec is missing required fields.")
     services = raw.get("services")
     if not isinstance(services, dict) or not 1 <= len(services) <= 8:
