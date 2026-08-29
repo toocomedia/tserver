@@ -314,67 +314,76 @@ async def propose_app_install(
         if stored_domain:
             domain_name = stored_domain.strip()
 
-    # If git repo contains multi-service compose stack or multi-datastore requirement, promote to stack install seamlessly
-    if stype == "git" and repository_url.strip():
-        try:
+    # If source (git or image) requires multi-service compose stack or multi-datastore requirement, promote to stack install seamlessly
+    inspection = None
+    target_repo = repository_url.strip()
+    try:
+        if stype == "git" and repository_url.strip():
             inspection = container_app_inspection_service.inspect_repository(repository_url.strip(), branch.strip() or "main")
-            from services.official_stacks.stack_synthesizer import (
-                requires_multi_container_stack,
-                synthesize_stack_from_compose,
-                synthesize_stack_from_inspection,
-            )
-            if requires_multi_container_stack(inspection):
-                stack_args = synthesize_stack_from_compose(inspection, domain_name=domain_name, repo_url=repository_url)
-                if not stack_args:
-                    stack_args = synthesize_stack_from_inspection(inspection, domain_name=domain_name, repo_url=repository_url)
-                if stack_args:
-                    from plugins.ai_helper.services.app_spec_plan_builder import build_payload
-                    stack_payload = build_payload(
-                        stack_manifest=stack_args["stack_manifest"],
-                        domain_name=domain_name,
-                        nonsecret_settings=stack_args.get("nonsecret_settings"),
-                        evidence=stack_args.get("evidence"),
-                    )
-                    plan = await action_plans.create_action_plan(
-                        db=db,
-                        session_id=session_id or "default_session",
-                        action_type="app_spec_install",
-                        payload=stack_payload,
-                        summary=summary or stack_args.get("summary") or f"Deploy stack: {repository_url}",
-                        confidence=confidence,
-                        reasoning=reasoning or stack_args.get("reasoning") or "Multi-service stack plan generated from repository inspection.",
-                        user_id=user_id,
-                    )
-                    return {
-                        "status": "ok",
-                        "plan_id": plan.plan_id,
-                        "summary": plan.summary,
-                        "confidence": plan.confidence,
-                        "message": "Reviewed stack setup plan created. The user can deploy it with the server-rendered Deploy reviewed setup action.",
-                    }
+        elif stype == "image" and image_reference.strip():
+            inspection = await container_app_image_inspect_service.inspect_image(image_reference.strip())
+            target_repo = str(inspection.get("source_repository") or "").strip()
+    except Exception as exc:
+        logger.warning("Inspection during propose_app_install failed: %s", exc)
+
+    if inspection:
+        from services.official_stacks.stack_synthesizer import (
+            requires_multi_container_stack,
+            synthesize_stack_from_compose,
+            synthesize_stack_from_inspection,
+        )
+        if requires_multi_container_stack(inspection):
+            stack_args = synthesize_stack_from_compose(inspection, domain_name=domain_name, repo_url=target_repo)
+            if not stack_args:
+                stack_args = synthesize_stack_from_inspection(inspection, domain_name=domain_name, repo_url=target_repo)
+            if stack_args:
+                from plugins.ai_helper.services.app_spec_plan_builder import build_payload
+                stack_payload = build_payload(
+                    stack_manifest=stack_args["stack_manifest"],
+                    domain_name=domain_name,
+                    nonsecret_settings=stack_args.get("nonsecret_settings"),
+                    evidence=stack_args.get("evidence"),
+                )
+                plan = await action_plans.create_action_plan(
+                    db=db,
+                    session_id=session_id or "default_session",
+                    action_type="app_spec_install",
+                    payload=stack_payload,
+                    summary=summary or stack_args.get("summary") or f"Deploy stack: {image_reference or repository_url}",
+                    confidence=confidence,
+                    reasoning=reasoning or stack_args.get("reasoning") or "Multi-service stack plan generated from source inspection.",
+                    user_id=user_id,
+                )
                 return {
-                    "status": "error",
-                    "message": "The inspected repository contains Compose services or multi-datastore requirements. A validated AppSpec plan must be created via propose_app_spec_plan.",
+                    "status": "ok",
+                    "plan_id": plan.plan_id,
+                    "summary": plan.summary,
+                    "confidence": plan.confidence,
+                    "message": "Reviewed stack setup plan created. The user can deploy it with the server-rendered Deploy reviewed setup action.",
                 }
-        except Exception as exc:
-            logger.warning("Auto-detection for stack proposal failed: %s", exc)
             return {
                 "status": "error",
-                "message": f"Stack setup plan proposal failed: {exc}",
+                "message": "The inspected application contains Compose services or multi-datastore requirements (e.g. PostgreSQL + ClickHouse). A validated AppSpec plan must be created via propose_app_spec_plan.",
             }
 
     discovered_notes = list(kwargs.get("setup_notes") or [])
     discovered_cmds = list(kwargs.get("admin_commands") or [])
-    if not discovered_cmds and repository_url.strip():
-        try:
-            insp = container_app_inspection_service.inspect_repository(repository_url.strip(), branch.strip() or "main")
-            hints = (insp.get("documentation_evidence") or {}).get("setup_hints") or {}
-            for c in hints.get("admin_commands") or []:
-                c_text = c.get("command") if isinstance(c, dict) else str(c)
-                if c_text and c_text not in discovered_cmds:
-                    discovered_cmds.append(c_text)
-        except Exception:
-            pass
+    if inspection:
+        hints = (inspection.get("documentation_evidence") or {}).get("setup_hints") or {}
+        for c in hints.get("admin_commands") or []:
+            c_text = c.get("command") if isinstance(c, dict) else str(c)
+            if c_text and c_text not in discovered_cmds:
+                discovered_cmds.append(c_text)
+
+        # If caller omitted database attachments, populate dynamically discovered databases
+        if not database_attachments and inspection.get("database_types"):
+            database_attachments = []
+            for kind in inspection["database_types"]:
+                k = _normalize_database_kind(str(kind))
+                database_attachments.append({
+                    "kind": k,
+                    "provider": _normalize_database_provider("docker", k),
+                })
 
     try:
         payload = setup_plan_builder.build_single_app_payload(
