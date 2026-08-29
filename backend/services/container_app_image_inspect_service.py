@@ -27,7 +27,12 @@ _DATABASE_ENVIRONMENTS = {
     "DATABASE_URL": "postgresql", "POSTGRES_URL": "postgresql", "POSTGRESQL_URL": "postgresql",
     "MYSQL_URL": "mariadb", "REDIS_URL": "redis", "MONGODB_URI": "mongodb", "MONGO_URL": "mongodb",
 }
-_IMAGE_PROFILES: dict[str, dict[str, Any]] = {}
+_IMAGE_PROFILES: dict[str, dict[str, Any]] = {
+    "docker.umami.is/umami-software/umami": {
+        "runtime": "Umami", "internal_port": 3000, "database_types": ["postgresql"],
+        "required_environment_names": ["DATABASE_URL"],
+    },
+}
 
 _INSPECT_CACHE: dict[str, tuple[float, dict[str, Any]]] = {}
 _CACHE_TTL_SECONDS = 900.0  # 15 minutes
@@ -190,7 +195,8 @@ def _recommendations(
     healthcheck: str | None,
     repo_inspection: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    databases = set()
+    profile = _IMAGE_PROFILES.get(_without_tag(reference), {})
+    databases = set(profile.get("database_types", []))
     if repo_inspection and repo_inspection.get("database_types"):
         databases.update(repo_inspection["database_types"])
 
@@ -211,7 +217,7 @@ def _recommendations(
         elif "MONGO" in upper:
             databases.add("mongodb")
 
-    port = _http_healthcheck_port(healthcheck)
+    port = profile.get("internal_port") or _http_healthcheck_port(healthcheck)
     if not port and repo_inspection:
         port = repo_inspection.get("internal_port")
     if not port and exposed_ports:
@@ -223,14 +229,17 @@ def _recommendations(
         if not port and common_ports:
             port = common_ports[0]
 
-    req_envs = []
+    req_envs = list(profile.get("required_environment_names", []))
     if repo_inspection:
-        req_envs = sorted(list(repo_inspection.get("env_sample", {}).keys()))
+        for k in repo_inspection.get("env_sample", {}).keys():
+            if k not in req_envs:
+                req_envs.append(k)
+    req_envs.sort()
 
     has_compose = bool(repo_inspection and repo_inspection.get("has_docker_compose"))
-    requires_multi = bool("clickhouse" in databases or len(databases) >= 2 or has_compose)
+    requires_multi = bool(profile.get("requires_multi_container") or "clickhouse" in databases or len(databases) >= 2 or has_compose)
 
-    runtime = "Registry image"
+    runtime = profile.get("runtime", "Registry image")
     if repo_inspection and repo_inspection.get("runtime"):
         runtime = repo_inspection["runtime"]
 

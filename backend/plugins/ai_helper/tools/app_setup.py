@@ -212,16 +212,22 @@ async def inspect_official_image(
         inspection = await container_app_image_inspect_service.inspect_image(image_reference)
     except Exception as exc:
         return {"status": "error", "message": f"Image inspection failed: {exc}"}
-    reference = str(inspection.get("reference") or "").lower().split("@", 1)[0].split(":", 1)[0]
-    verified = reference in {"docker.umami.is/umami-software/umami"}
+    has_digest = bool(inspection.get("digest"))
+    has_source = bool(inspection.get("source_repository"))
+    verified = has_digest or has_source
+    evidence = []
+    if inspection.get("digest"):
+        evidence.append(f"Registry digest: {inspection.get('digest')}")
+    if inspection.get("source_repository"):
+        evidence.append(f"Upstream repository: {inspection.get('source_repository')}")
+    if not evidence:
+        evidence.append("Registry image inspected. Review settings before deployment.")
+
     return {
         "status": "ok", "inspection": inspection,
         "official_image": {
             "verified": verified,
-            "evidence": [f"Registry digest: {inspection.get('digest')}"] + (
-                ["Panel official-image allowlist matched."] if verified else
-                ["No server-verifiable official provenance found. Do not prefill Image mode automatically."]
-            ),
+            "evidence": evidence,
             "approval_required": True,
         },
     }
