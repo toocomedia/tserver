@@ -98,35 +98,14 @@
           </div>
           {% endif %}
 
-          <!-- Known Default Credentials & Initial Setup Guidance -->
-          {% if app.stack_catalog_id == 'umami' or (app.image_reference and 'umami' in app.image_reference) or (app.repository_url and 'umami' in app.repository_url) %}
+          <!-- Initial Setup Guidance -->
+          {% if app_docs and app_docs.setup_notes %}
+          {% for note in app_docs.setup_notes %}
           <div style="margin-top: 4px; padding: 10px 12px; background: var(--color-surface); border-radius: 6px; border-left: 3px solid var(--color-accent);">
-            <div style="font-size: 12px; font-weight: 700; margin-bottom: 4px;">Default Administrator Login</div>
-            <div style="font-size: 12px; line-height: 1.5; color: var(--color-text);">
-              Username: <code class="mono" style="background: var(--bg-card); padding: 1px 4px; border-radius: 3px;">admin</code><br>
-              Password: <code class="mono" style="background: var(--bg-card); padding: 1px 4px; border-radius: 3px;">umami</code>
-            </div>
-            <p class="form-hint" style="margin: 6px 0 0 0; font-size: 11px;">Change this password immediately after your first sign in.</p>
+            <div style="font-size: 12px; font-weight: 700; margin-bottom: 2px;">Initial Setup Guidance</div>
+            <p class="form-hint" style="margin: 0; font-size: 11px; color: var(--color-text);">{{ note }}</p>
           </div>
-          {% elif app.preset == 'wordpress' %}
-          <div style="margin-top: 4px; padding: 10px 12px; background: var(--color-surface); border-radius: 6px; border-left: 3px solid var(--color-accent);">
-            <div style="font-size: 12px; font-weight: 700; margin-bottom: 4px;">WordPress Setup Details</div>
-            <div style="font-size: 12px; line-height: 1.5;">
-              {% if app.wordpress_site_title %}Site: <strong>{{ app.wordpress_site_title }}</strong><br>{% endif %}
-              {% if app.wordpress_admin_user %}Admin User: <code class="mono">{{ app.wordpress_admin_user }}</code><br>{% endif %}
-              {% if app.wordpress_admin_email %}Admin Email: {{ app.wordpress_admin_email }}{% endif %}
-            </div>
-          </div>
-          {% elif app.stack_catalog_id == 'plausible' or (app.image_reference and 'plausible' in app.image_reference) %}
-          <div style="margin-top: 4px; padding: 10px 12px; background: var(--color-surface); border-radius: 6px;">
-            <div style="font-size: 12px; font-weight: 700; margin-bottom: 2px;">Initial Account Setup</div>
-            <p class="form-hint" style="margin: 0; font-size: 11px;">Open your public URL above to register your primary server administrator account.</p>
-          </div>
-          {% elif app.stack_catalog_id == 'n8n' or (app.image_reference and 'n8n' in app.image_reference) %}
-          <div style="margin-top: 4px; padding: 10px 12px; background: var(--color-surface); border-radius: 6px;">
-            <div style="font-size: 12px; font-weight: 700; margin-bottom: 2px;">Initial Account Setup</div>
-            <p class="form-hint" style="margin: 0; font-size: 11px;">Open your public URL above to create your owner profile on first visit.</p>
-          </div>
+          {% endfor %}
           {% endif %}
         </div>
       </div>

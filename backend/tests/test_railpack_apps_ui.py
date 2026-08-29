@@ -29,18 +29,18 @@ class RailpackAppsUiTests(unittest.TestCase):
         template_root = BACKEND / "plugins" / "railpack_apps" / "templates" / "railpack_apps"
         markup = (BACKEND / "plugins" / "railpack_apps" / "templates" / "railpack_apps_create.html").read_text(encoding="utf-8")
         markup += "".join(path.read_text(encoding="utf-8") for path in (template_root / "partials").glob("create_*.html"))
-        for control in ("domain_id", "repository_url", "build_mode", "internal_port", "database_attachments", "environment_values", "wordpress_site_title"):
+        for control in ("domain_id", "repository_url", "build_mode", "internal_port", "database_attachments", "environment_values"):
             self.assertIn(f'name="{control}"', markup)
         self.assertIn("data-wizard-next", markup)
         self.assertIn("data-database-row", markup)
         self.assertIn("data-environment-list", markup)
-        self.assertIn("WordPress", markup)
+        self.assertIn("Docker Image", markup)
+        self.assertIn("Git Repository", markup)
 
     def test_builder_script_auto_selects_required_and_detected_services(self):
         script = (BACKEND / "plugins" / "railpack_apps" / "static" / "js" / "railpack-app-create.js").read_text(encoding="utf-8")
-        self.assertIn("wordpressDatabaseState(wordpress)", script)
-        self.assertIn("providerEl.value = 'docker'", script)
-        self.assertIn("sourceRequired", script)
+        self.assertIn("sourceState()", script)
+        self.assertIn("provider ? provider.value : 'docker'", script)
         self.assertIn("database_types || []).forEach", script)
         self.assertIn("environmentValues(form)", script)
         self.assertIn("function domainState()", script)
@@ -94,7 +94,7 @@ class RailpackAppsUiTests(unittest.TestCase):
         markup += "".join(path.read_text(encoding="utf-8") for path in detail_root.glob("detail_*.html"))
         for component in ("hero-app-box", "layout-2col", "master-card", "Live deployment stream", "Danger zone"):
             self.assertIn(component, markup)
-        for value in ("Rotate credentials", "Create backup", "RESTORE", "Update WordPress", "keep_database_ids", "keep_app_volume", "keep_saved_backups", "DELETE ALL"):
+        for value in ("Rotate credentials", "Create backup", "keep_database_ids", "keep_app_volume", "keep_saved_backups", "DELETE ALL"):
             self.assertIn(value, markup)
         self.assertIn("elif app.last_error", markup)
         self.assertIn("Deployment changes", markup)

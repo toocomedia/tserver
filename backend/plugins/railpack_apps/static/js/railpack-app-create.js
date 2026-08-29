@@ -50,21 +50,10 @@ if (form) {
   }
   function sourceState() {
     const type = query('[data-source-type]')?.value || 'git';
-    const wordpress = type === 'wordpress';
     state.unlocked = 1;
     setHidden(query('[data-git-fields]'), type !== 'git');
     setHidden(query('[data-image-field]'), type !== 'image');
-    setHidden(query('[data-wordpress-fields]'), !wordpress);
-    setHidden(query('[data-build-mode-group]'), wordpress);
-    setHidden(query('[data-port-group]'), wordpress);
     toggleSourceInputs(type);
-    const presetEl = query('[data-preset]');
-    if (presetEl) presetEl.value = wordpress ? 'wordpress' : '';
-    if (wordpress) {
-      const portEl = query('#internal_port');
-      if (portEl) portEl.value = '80';
-    }
-    wordpressDatabaseState(wordpress);
     domainState();
     updateRefType();
     renderStep(1);
@@ -87,19 +76,6 @@ if (form) {
     if (branchEl) branchEl.disabled = !git;
     const imgEl = query('[data-image-reference]');
     if (imgEl) { imgEl.disabled = type !== 'image'; imgEl.required = type === 'image'; }
-    form.querySelectorAll('[data-wordpress-fields] input').forEach((input) => { input.disabled = type !== 'wordpress'; input.required = type === 'wordpress'; });
-  }
-  function wordpressDatabaseState(required) {
-    const row = query('[data-kind="mariadb"]');
-    if (!row) return;
-    if (required) {
-      const chk = row.querySelector('[data-database-enabled]');
-      if (chk) chk.checked = true;
-      const providerEl = _dbField(row, '[data-database-provider]');
-      if (providerEl) providerEl.value = 'docker';
-    }
-    row.dataset.sourceRequired = required ? 'true' : '';
-    attachmentState(row);
   }
   function _dbField(row, selector) {
     const inRow = row.querySelector(selector);

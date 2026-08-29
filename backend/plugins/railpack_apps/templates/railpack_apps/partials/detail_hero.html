@@ -42,16 +42,6 @@
         <button class="btn btn--secondary btn--sm" type="submit">Redeploy</button>
       </form>
     {% endif %}
-    {% if app.preset == 'wordpress' and app.status == 'running' %}
-      <form method="post" action="/plugins/railpack_apps/{{ app.id }}/wordpress/update" style="margin:0;">
-        {% include "partials/csrf_field.html" %}
-        <button class="btn btn--secondary btn--sm" type="submit">Update WordPress</button>
-      </form>
-      <form method="post" action="/plugins/railpack_apps/{{ app.id }}/wordpress/backup" style="margin:0;">
-        {% include "partials/csrf_field.html" %}
-        <button class="btn btn--secondary btn--sm" type="submit">Back up WordPress</button>
-      </form>
-    {% endif %}
   </div>
 </div>
 

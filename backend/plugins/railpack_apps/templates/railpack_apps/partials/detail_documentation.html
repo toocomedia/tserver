@@ -92,10 +92,10 @@
           <span class="info-row__value mono" style="font-size: 11px;">{{ app.repository_url }} ({{ app.branch }})</span>
         </div>
         {% endif %}
-        {% if app.wordpress_admin_email %}
+        {% if app_docs and app_docs.admin_email and app_docs.admin_email != 'admin@example.com' %}
         <div class="info-row">
           <span class="info-row__label">Configured Admin Email</span>
-          <span class="info-row__value">{{ app.wordpress_admin_email }}</span>
+          <span class="info-row__value">{{ app_docs.admin_email }}</span>
         </div>
         {% endif %}
       </div>

@@ -28,7 +28,7 @@
       <div class="modal__body">
         <p style="font-size: 14px; margin-bottom: 16px;">Everything local is deleted by default. Check only what you want to keep.</p>
         
-        {% if databases or app.data_volume or app.storage_mounts or app.wordpress_content_volume or backups %}
+        {% if databases or app.data_volume or app.storage_mounts or backups %}
         <div class="form-group mb-md">
           <label class="form-label" style="margin-bottom: 8px;">Keep instead</label>
           <div style="display: flex; flex-direction: column; gap: 8px;">
@@ -46,12 +46,6 @@
               <label class="form-check">
                 <input type="checkbox" name="keep_app_volume" value="true">
                 <span>Keep persistent storage volumes</span>
-              </label>
-            {% endif %}
-            {% if app.wordpress_content_volume %}
-              <label class="form-check">
-                <input type="checkbox" name="keep_wordpress_files" value="true">
-                <span>Keep WordPress uploads, plugins, and themes</span>
               </label>
             {% endif %}
             {% if backups %}

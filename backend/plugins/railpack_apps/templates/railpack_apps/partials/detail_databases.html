@@ -48,20 +48,5 @@
     {% else %}
       <p class="text-muted" style="font-size:14px;">No managed services are attached to this app.</p>
     {% endif %}
-
-    {% if app.preset == 'wordpress' %}
-      {% for backup in backups if backup.kind == 'wordpress' and backup.status == 'complete' %}
-      <hr class="settings-divider" style="margin: 20px 0;">
-      <div class="form-group" style="padding: 12px; background: var(--color-surface-hover); border-radius: var(--radius-sm);">
-        <form method="post" action="/plugins/railpack_apps/{{ app.id }}/wordpress/restore/{{ backup.id }}">
-          <label class="form-label" for="restore-wp-{{ backup.id }}">Restore WordPress backup #{{ backup.id }}</label>
-          <p class="form-hint">Type RESTORE {{ backup.id }} to continue.</p>
-          <input class="form-input mb-sm" id="restore-wp-{{ backup.id }}" name="confirmation" required>
-          {% include "partials/csrf_field.html" %}
-          <button class="btn btn--secondary btn--sm">Restore WordPress</button>
-        </form>
-      </div>
-      {% endfor %}
-    {% endif %}
   </div>
 </div>

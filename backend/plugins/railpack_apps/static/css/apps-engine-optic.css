@@ -396,6 +396,13 @@ body.apps-engine-ai-active .apps-engine-optic .apps-engine-wizard__ai-indicator 
   gap: 8px;
 }
 
+.apps-engine-optic .cards-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
 .apps-engine-optic .cards-grid-3 {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
