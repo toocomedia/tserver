@@ -455,14 +455,14 @@
 }
 
 /* Compact, Refined Form Controls & Labels */
-#roundcube-page .form-group {
+.form-group {
     display: flex;
     flex-direction: column;
     gap: 4px;
     width: 100%;
 }
 
-#roundcube-page .form-label {
+.form-label {
     font-size: 13px;
     font-weight: 500;
     color: var(--text-muted);
@@ -470,7 +470,7 @@
     display: inline-block;
 }
 
-#roundcube-page .form-input {
+.form-input {
     width: 100%;
     height: 34px !important;
     min-height: 34px !important;
@@ -488,7 +488,7 @@
     transition: background 0.2s;
 }
 
-#roundcube-page .form-input:focus {
+.form-input:focus {
     background: var(--bg-hover);
     border: none !important;
     outline: none !important;
@@ -504,7 +504,7 @@
 }
 
 /* Badges (Minimal) */
-#roundcube-page .badge {
+.badge {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -517,18 +517,18 @@
     box-sizing: border-box;
 }
 
-#roundcube-page .badge--success {
+.badge--success {
     background: rgba(34, 197, 94, 0.12);
     color: var(--color-accent-2, #22c55e);
 }
 
-#roundcube-page .badge--inactive {
+.badge--inactive {
     background: rgba(125, 125, 125, 0.08);
     color: var(--text-muted);
 }
 
 /* Buttons - Theme Variable Compliance */
-#roundcube-page .btn {
+.btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -554,48 +554,48 @@
     flex-shrink: 0;
 }
 
-#roundcube-page .btn:hover {
+.btn:hover {
     background: var(--btn-hover);
     color: var(--text-main);
     border: none !important;
 }
 
-#roundcube-page .btn:active {
+.btn:active {
     transform: scale(0.97);
 }
 
-#roundcube-page .btn.primary, #roundcube-page .btn--primary {
+.btn.primary, .btn--primary {
     background: var(--btn-primary-bg);
     color: var(--btn-primary-text);
     border: none !important;
     font-weight: 600;
 }
 
-#roundcube-page .btn.primary:hover, #roundcube-page .btn--primary:hover {
+.btn.primary:hover, .btn--primary:hover {
     background: var(--btn-primary-hover);
     color: var(--text-main);
     border: none !important;
 }
 
-#roundcube-page .btn.danger, #roundcube-page .btn--danger {
+.btn.danger, .btn--danger {
     background: var(--btn-danger-bg, rgba(239, 68, 68, 0.14));
     color: var(--btn-danger-text, #ef4444);
     border: none !important;
     font-weight: 500;
 }
 
-#roundcube-page .btn.danger:hover, #roundcube-page .btn--danger:hover {
+.btn.danger:hover, .btn--danger:hover {
     background: var(--btn-danger-hover, rgba(239, 68, 68, 0.26));
     color: var(--btn-danger-text, #ef4444);
     border: none !important;
 }
 
-#roundcube-page .btn.secondary, #roundcube-page .btn--secondary, #roundcube-page .btn--ghost {
+.btn.secondary, .btn--secondary, .btn--ghost {
     background: var(--btn-bg);
     color: var(--btn-text);
 }
 
-#roundcube-page .btn--sm {
+.btn--sm {
     height: 28px;
     padding: 0 10px;
     font-size: 12px;

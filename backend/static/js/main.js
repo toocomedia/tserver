@@ -7,7 +7,7 @@
  * One URL system for the panel (must match backend/templating.py PATHS).
  * Section indexes end with /. Detail pages: path('domains', id) → /domains/3
  */
-var PATHS = window.PATHS || {
+const PATHS = {
   home: "/",
   dashboard: "/",
   login: "/login",
@@ -28,7 +28,6 @@ var PATHS = window.PATHS || {
   php_sites: "/php-sites/",
   php_sites_create: "/php-sites/create",
 };
-window.PATHS = PATHS;
 
 function path(name, ...parts) {
   let base = PATHS[name] || (String(name).startsWith("/") ? name : `/${name}`);
@@ -368,10 +367,9 @@ function guardFormSubmitButtons() {
   );
 }
 
-/**
- * Update active sidebar item and submenu views to match current URL.
- */
-function updateSidebarActiveLink() {
+document.addEventListener("DOMContentLoaded", () => {
+  guardFormSubmitButtons();
+
   const current = window.location.pathname;
   let bestMatch = null;
   let maxLen = -1;
@@ -399,61 +397,19 @@ function updateSidebarActiveLink() {
     }
   }
 
-  // Update Plugins Services view if active item is inside submenu
-  const pluginsView = document.getElementById("sidebar-plugins-view");
-  const sidebarNav = document.getElementById("sidebar-nav");
-  const pluginsTab = document.getElementById("plugins-services-tab");
-  if (pluginsView && sidebarNav) {
-    const isChildPlugin = !!(bestMatch && pluginsView.contains(bestMatch));
-    pluginsView.classList.toggle("is-active", isChildPlugin);
-    sidebarNav.classList.toggle("is-active", !isChildPlugin);
-    if (pluginsTab) {
-      pluginsTab.setAttribute("aria-expanded", isChildPlugin);
-      pluginsTab.classList.toggle("sidebar__section-tab--active", !isChildPlugin && isChildPlugin);
-    }
-  }
-}
-window.updateSidebarActiveLink = updateSidebarActiveLink;
-
-let _mainGlobalInitDone = false;
-let _notifInterval = null;
-
-async function fetchNotificationCount() {
-  try {
-    const data = await panel.get("/api/notifications");
-    const badge = document.getElementById("nav-notif-badge");
-    if (badge && data.unread_count !== undefined) {
-      if (data.unread_count > 0) {
-        badge.textContent = data.unread_count;
-        badge.style.display = "inline-block";
-      } else {
-        badge.style.display = "none";
-      }
-    }
-  } catch (e) {
-    console.error("Failed to fetch notification count", e);
-  }
-}
-
-function initGlobalOnce() {
-  if (_mainGlobalInitDone) return;
-  _mainGlobalInitDone = true;
-
-  guardFormSubmitButtons();
-
   // Instant active state on click (zero-latency visual feedback before navigation)
-  document.addEventListener("click", (e) => {
-    const item = e.target.closest(".sidebar__item");
-    if (!item) return;
-    if (e.button === 0 && !e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey) {
-      const href = item.getAttribute("href");
-      if (href && href !== "#" && !href.startsWith("javascript:")) {
-        document.querySelectorAll(".sidebar__item--active").forEach((el) => {
-          el.classList.remove("sidebar__item--active");
-        });
-        item.classList.add("sidebar__item--active");
+  document.querySelectorAll(".sidebar__item").forEach((item) => {
+    item.addEventListener("click", (e) => {
+      if (e.button === 0 && !e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey) {
+        const href = item.getAttribute("href");
+        if (href && href !== "#" && !href.startsWith("javascript:")) {
+          document.querySelectorAll(".sidebar__item--active").forEach((el) => {
+            el.classList.remove("sidebar__item--active");
+          });
+          item.classList.add("sidebar__item--active");
+        }
       }
-    }
+    });
   });
 
   // Mobile menu toggle
@@ -473,6 +429,28 @@ function initGlobalOnce() {
 
     mobileToggle.addEventListener("click", toggleMenu);
     backdrop.addEventListener("click", closeMenu);
+  }
+
+  async function fetchNotificationCount() {
+    try {
+      const data = await panel.get("/api/notifications");
+      const badge = document.getElementById("nav-notif-badge");
+      if (badge && data.unread_count !== undefined) {
+        if (data.unread_count > 0) {
+          badge.textContent = data.unread_count;
+          badge.style.display = "inline-block";
+        } else {
+          badge.style.display = "none";
+        }
+      }
+    } catch (e) {
+      console.error("Failed to fetch notification count", e);
+    }
+  }
+
+  if (document.getElementById("nav-notif-badge")) {
+    fetchNotificationCount();
+    setInterval(fetchNotificationCount, 60000);
   }
 
   // Sidebar custom scroll logic + Plugins Services view swapping
@@ -512,6 +490,7 @@ function initGlobalOnce() {
 
     navLists.forEach((nav) => nav.addEventListener("scroll", updateScrollArrows));
     window.addEventListener("resize", updateScrollArrows);
+    // Initial check (delay slightly to ensure render)
     setTimeout(updateScrollArrows, 100);
 
     scrollUpBtn.addEventListener("click", () => {
@@ -533,7 +512,6 @@ function initGlobalOnce() {
       sidebarNav.classList.toggle("is-active", !toPlugins);
       if (pluginsTab) {
         pluginsTab.setAttribute("aria-expanded", toPlugins);
-        const bestMatch = document.querySelector(".sidebar__item--active");
         const onPluginPage = !!(bestMatch && pluginsView.contains(bestMatch));
         pluginsTab.classList.toggle("sidebar__section-tab--active", !toPlugins && onPluginPage);
       }
@@ -542,6 +520,10 @@ function initGlobalOnce() {
 
     pluginsTab?.addEventListener("click", () => setView(true));
     pluginsBack?.addEventListener("click", () => setView(false));
+
+    // Only open plugins view if current page is actually a service item in the submenu
+    const isChildPlugin = !!(bestMatch && pluginsView.contains(bestMatch));
+    setView(isChildPlugin);
   }
 
   // Sidebar Search
@@ -576,13 +558,16 @@ function initGlobalOnce() {
 
         listEl.querySelectorAll("li").forEach(li => {
           if (li.classList.contains("sidebar__section-label") || li.querySelector(".sidebar__section-tab")) {
+            // If we had a previous section, hide it if it had no visible items
             if (currentSectionLabel && !sectionHasVisibleItems) {
               currentSectionLabel.style.display = "none";
             }
             currentSectionLabel = li.classList.contains("sidebar__section-label") ? li : null;
-            sectionHasVisibleItems = false;
+            sectionHasVisibleItems = false; // reset for new section
+            // Show by default unless we hide it later
             li.style.display = "";
           } else {
+            // Regular item
             const text = li.textContent.toLowerCase();
             if (text.includes(term)) {
               li.style.display = "";
@@ -593,96 +578,25 @@ function initGlobalOnce() {
           }
         });
 
+        // Check last section
         if (currentSectionLabel && !sectionHasVisibleItems) {
           currentSectionLabel.style.display = "none";
         }
       };
 
       [sidebarNav, pluginsNav].filter(Boolean).forEach(filterList);
+
+      // Update arrows
       if (updateScrollArrows) updateScrollArrows();
     });
   }
 
-  if (document.getElementById("nav-notif-badge") && !_notifInterval) {
-    _notifInterval = setInterval(fetchNotificationCount, 60000);
-  }
-
-  document.addEventListener("app:init", initLazyImageSkeletons);
-}
-
-var _isInitialPageLoad = typeof _isInitialPageLoad !== 'undefined' ? _isInitialPageLoad : true;
-
-function initPageLifecycle() {
-  initGlobalOnce();
-  updateSidebarActiveLink();
+  // Initialize Lazy Image Skeleton Loaders
   initLazyImageSkeletons();
-  if (document.getElementById("nav-notif-badge")) {
-    fetchNotificationCount();
-  }
+  document.addEventListener("app:init", initLazyImageSkeletons);
 
-  // Trigger app:init immediately for loaded modules
+  // Trigger app:init so page-specific modules can initialize
   document.dispatchEvent(new Event("app:init"));
-
-  // Also dispatch in next animation frame for scripts loaded asynchronously
-  requestAnimationFrame(() => {
-    document.dispatchEvent(new Event("app:init"));
-    initLazyImageSkeletons();
-  });
-
-  // If this is a subsequent Turbo navigation, fire synthetic DOMContentLoaded
-  // for any legacy inline scripts on the new page waiting for it
-  if (!_isInitialPageLoad) {
-    document.dispatchEvent(new Event("DOMContentLoaded"));
-  }
-  _isInitialPageLoad = false;
-}
-
-// Hook into Turbo Drive page lifecycle
-document.addEventListener("turbo:load", initPageLifecycle);
-
-// Clean up skeletons and cached states before Turbo takes a snapshot
-document.addEventListener("turbo:before-cache", () => {
-  document.querySelectorAll(".skeleton-overlay").forEach((el) => {
-    el.classList.add("is-hidden");
-    el.style.display = "none";
-  });
-});
-
-// Dynamic Head Stylesheet Garbage Collection:
-// Removes page-specific or plugin-specific stylesheets and styles when navigating away in SPA mode
-document.addEventListener("turbo:before-render", (event) => {
-  try {
-    const newDoc = event.detail && event.detail.newBody ? event.detail.newBody.ownerDocument : null;
-    const incomingHrefs = new Set();
-    if (newDoc) {
-      newDoc.querySelectorAll('head link[rel="stylesheet"]').forEach((el) => {
-        const href = (el.getAttribute("href") || "").split("?")[0];
-        if (href) incomingHrefs.add(href);
-      });
-    }
-
-    // Remove any dynamic stylesheets that do not belong to the incoming page and are not core
-    document.querySelectorAll('head link[rel="stylesheet"]:not([data-panel-core])').forEach((link) => {
-      const href = (link.getAttribute("href") || "").split("?")[0];
-      if (!incomingHrefs.has(href)) {
-        link.remove();
-      }
-    });
-
-    // Remove dynamic inline <style> tags injected by outgoing page
-    document.querySelectorAll("head style:not([data-panel-core])").forEach((style) => {
-      style.remove();
-    });
-  } catch (e) {
-    console.warn("Error during head stylesheet cleanup:", e);
-  }
-});
-
-// Fallback for non-Turbo or early DOM ready
-document.addEventListener("DOMContentLoaded", () => {
-  if (!window.Turbo) {
-    initPageLifecycle();
-  }
 });
 
 document.addEventListener("asyncLoaded", function() {
@@ -693,7 +607,7 @@ document.addEventListener("asyncLoaded", function() {
 
 /**
  * Lazy Image Skeleton Loader: automatically marks image boxes as loaded or error,
- * and handles pre-cached images gracefully without hanging.
+ * and handles pre-cached images gracefully.
  */
 function initLazyImageSkeletons() {
   const images = document.querySelectorAll(
@@ -703,17 +617,6 @@ function initLazyImageSkeletons() {
     const parent = img.parentElement;
     if (!parent) return;
 
-    const markLoaded = () => {
-      parent.classList.remove("img-skeleton-box");
-      parent.classList.add("is-loaded");
-      img.classList.add("is-loaded");
-    };
-
-    const markError = () => {
-      parent.classList.remove("img-skeleton-box");
-      parent.classList.add("is-error");
-    };
-
     if (
       !parent.classList.contains("img-skeleton-box") &&
       !parent.classList.contains("is-loaded") &&
@@ -722,17 +625,18 @@ function initLazyImageSkeletons() {
       parent.classList.add("img-skeleton-box");
     }
 
-    if (img.complete) {
-      if (img.naturalWidth !== 0) {
-        markLoaded();
-      } else if (typeof img.decode === "function") {
-        img.decode().then(markLoaded).catch(markLoaded);
-      } else {
-        markLoaded();
-      }
+    if (img.complete && img.naturalWidth !== 0) {
+      parent.classList.add("is-loaded");
+      img.classList.add("is-loaded");
     } else {
-      img.addEventListener("load", markLoaded, { once: true });
-      img.addEventListener("error", markError, { once: true });
+      img.addEventListener("load", () => {
+        parent.classList.add("is-loaded");
+        img.classList.add("is-loaded");
+      });
+      img.addEventListener("error", () => {
+        parent.classList.remove("img-skeleton-box");
+        parent.classList.add("is-error");
+      });
     }
   });
 }

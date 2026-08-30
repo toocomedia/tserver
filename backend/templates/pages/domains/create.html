@@ -26,13 +26,8 @@
   <div class="alert alert--danger mb-lg" id="form-error" role="alert">{{ error }}</div>
   {% endif %}
 
-  <form method="post" action="/domains/create" class="clean-form" id="create-domain-form" autocomplete="off">
+  <form method="post" action="/domains/create" class="clean-form" id="create-domain-form">
     {% include "partials/csrf_field.html" %}
-    <!-- Browser autofill trap: absorbs password manager injection -->
-    <div style="display:none" aria-hidden="true">
-      <input type="text" name="prevent_autofill_user" tabindex="-1" autocomplete="username">
-      <input type="password" name="prevent_autofill_pass" tabindex="-1" autocomplete="current-password">
-    </div>
     <input type="hidden" name="ssl_enabled" id="ssl-enabled-input" value="no">
     <!-- Domain Type: 'static' (Website) or 'dns' (DNS Only) -->
     <input type="hidden" name="project_type" id="project-type-input" value="{% if project_type %}{{ project_type }}{% else %}static{% endif %}">
@@ -48,7 +43,7 @@
           <span class="form-hint">{{ _('enter_the_root_domain_or_subdomain_you_w') }}</span>
         </div>
         <div>
-          <input type="text" class="form-input clean-input{% if error %} form-input--error{% endif %}" id="name" name="name" value="{{ name or '' }}" placeholder="example.com or app.domain.com" autocomplete="one-time-code" autocapitalize="none" spellcheck="false" data-lpignore="true" data-1p-ignore="true" required autofocus oninput="onHostnameInput()">
+          <input type="text" class="form-input clean-input{% if error %} form-input--error{% endif %}" id="name" name="name" value="{{ name or '' }}" placeholder="example.com or app.domain.com" autocomplete="off" autocapitalize="none" spellcheck="false" required autofocus oninput="onHostnameInput()">
           <div class="form-error mt-xs text-danger" id="name-error" style="display:none; font-weight:600; font-size:12px;"></div>
         </div>
       </div>
@@ -176,7 +171,6 @@
 
 {% block scripts %}
 <script>
-(function() {
 const input = document.getElementById('name');
 const nameError = document.getElementById('name-error');
 const form = document.getElementById('create-domain-form');
@@ -437,19 +431,10 @@ form.addEventListener('submit', (e) => {
   submitBtn.disabled = true;
 });
 
-  // Export UI handlers needed by inline HTML attributes
-  window.onHostnameInput = onHostnameInput;
-  window.selectPurpose = selectPurpose;
-  window.selectSsl = selectSsl;
-  window.selectDnsMode = selectDnsMode;
-  window.goNextStep = goNextStep;
-  window.goBackStep = goBackStep;
-  window.goToStep = goToStep;
-
-  // Initialize UI state immediately and on DOMContentLoaded
+document.addEventListener('DOMContentLoaded', () => {
   syncDomain();
   onHostnameInput();
-  goToStep(1);
-})();
+  goToStep(1); // Initialize UI state
+});
 </script>
 {% endblock %}

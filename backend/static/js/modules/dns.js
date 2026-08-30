@@ -4,7 +4,7 @@
  */
 
 // Content label + placeholder per record type
-var TYPE_CONFIG = window.TYPE_CONFIG || {
+const TYPE_CONFIG = {
   A:     { label: "IPv4 Address",                   placeholder: "1.2.3.4" },
   AAAA:  { label: "IPv6 Address",                   placeholder: "2001:db8::1" },
   CNAME: { label: "Target Hostname",                placeholder: "example.com." },
@@ -14,7 +14,6 @@ var TYPE_CONFIG = window.TYPE_CONFIG || {
   SRV:   { label: "Priority Weight Port Target",   placeholder: "10 20 443 target.example.com." },
   CAA:   { label: "Flag Tag Value",                 placeholder: "0 issue \"letsencrypt.org\"" },
 };
-window.TYPE_CONFIG = TYPE_CONFIG;
 
 // Extra hints (quotes optional for TXT — panel auto-quotes for PowerDNS)
 
@@ -43,7 +42,6 @@ function updateContentLabel(type) {
   };
   if (hint) hint.textContent = hints[type] || "";
 }
-window.updateContentLabel = updateContentLabel;
 
 /**
  * Submit a real HTML form POST (session cookie + Form fields).

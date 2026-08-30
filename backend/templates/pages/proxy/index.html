@@ -10,10 +10,10 @@
 {% endblock %}
 
 {% block content %}
-<div class="proxy-page" style="position: relative;">
+<div class="proxy-page">
 
 <!-- SKELETON LOADING OVERLAY -->
-{{ skeleton_overlay('proxy-skeleton', header=0, controls=1, tables=[{ 'cols': [22, 18, 8, 9, 9, 10, 24], 'rows': 4 }]) }}
+{{ skeleton_overlay('proxy-skeleton', controls=1, tables=[{ 'rows': 4 }]) }}
 <!-- END SKELETON OVERLAY -->
 
 {% set created = request.query_params.get('created') %}
@@ -199,7 +199,7 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="/static/js/modules/proxy.js?v={{ APP_VERSION }}" data-turbo-eval="false"></script>
+<script src="/static/js/modules/proxy.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
   if (typeof hideSkeleton === 'function') hideSkeleton('proxy-skeleton');

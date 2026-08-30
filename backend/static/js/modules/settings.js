@@ -386,11 +386,7 @@
     el.hidden = false;
   }
 
-  function initSettings() {
-    if (!$("btn-save-panel") && !$("url-custom-fields") && !document.querySelector('input[name="theme_mode"]')) {
-      return;
-    }
-
+  document.addEventListener("app:init", () => {
     // Theme toggle logic
     const themeRadios = document.querySelectorAll('input[name="theme_mode"]');
     if (themeRadios.length) {
@@ -402,7 +398,7 @@
           if (card) card.classList.add('settings-choice--active');
         }
         
-        radio.onchange = (e) => {
+        radio.addEventListener("change", (e) => {
           if (e.target.checked) {
             themeRadios.forEach(r => {
               const card = r.closest('.settings-choice');
@@ -418,16 +414,16 @@
               document.documentElement.removeAttribute("data-theme");
             }
           }
-        };
+        });
       });
 
       // Listen for system theme changes
-      window.matchMedia('(prefers-color-scheme: dark)').onchange = e => {
+      window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
         if ((localStorage.getItem("theme") || "system") === "system") {
           if (e.matches) document.documentElement.setAttribute("data-theme", "charcoal");
           else document.documentElement.removeAttribute("data-theme");
         }
-      };
+      });
     }
 
     // Sidebar style toggle logic
@@ -441,7 +437,7 @@
           if (card) card.classList.add('settings-choice--active');
         }
         
-        radio.onchange = (e) => {
+        radio.addEventListener("change", (e) => {
           if (e.target.checked) {
             sidebarRadios.forEach(r => {
               const card = r.closest('.settings-choice');
@@ -461,41 +457,26 @@
               document.documentElement.removeAttribute("data-sidebar-style");
             }
           }
-        };
+        });
       });
     }
 
     document.querySelectorAll('input[name="url_mode"]').forEach((el) => {
-      el.onchange = syncUrlModeUi;
+      el.addEventListener("change", syncUrlModeUi);
     });
-    const custDom = $("custom_domain");
-    if (custDom) custDom.oninput = syncUrlModeUi;
-    const subLabel = $("subdomain_label");
-    if (subLabel) subLabel.oninput = syncUrlModeUi;
-    const parDom = $("parent_domain");
-    if (parDom) parDom.onchange = syncUrlModeUi;
-    const allowIp = $("allow_ip");
-    if (allowIp) allowIp.onchange = syncUrlModeUi;
+    $("custom_domain")?.addEventListener("input", syncUrlModeUi);
+    $("subdomain_label")?.addEventListener("input", syncUrlModeUi);
+    $("parent_domain")?.addEventListener("change", syncUrlModeUi);
+    $("allow_ip")?.addEventListener("change", syncUrlModeUi);
 
-    const btnPanel = $("btn-save-panel");
-    if (btnPanel) btnPanel.onclick = (e) => save(e.currentTarget);
-    const btnIp = $("btn-save-ip");
-    if (btnIp) btnIp.onclick = (e) => save(e.currentTarget);
-    const btnSec = $("btn-save-security");
-    if (btnSec) btnSec.onclick = (e) => save(e.currentTarget);
-    const btnIss = $("btn-issue-ssl");
-    if (btnIss) btnIss.onclick = (e) => issueSsl(e.currentTarget);
-    const btnRem = $("btn-remove-ssl");
-    if (btnRem) btnRem.onclick = (e) => removeSsl(e.currentTarget);
-    const btnRef = $("btn-refresh-settings");
-    if (btnRef) btnRef.onclick = refresh;
-    const btnPerf = $("btn-save-perf");
-    if (btnPerf) btnPerf.onclick = (e) => savePerformance(e.currentTarget);
+    $("btn-save-panel")?.addEventListener("click", (e) => save(e.currentTarget));
+    $("btn-save-ip")?.addEventListener("click", (e) => save(e.currentTarget));
+    $("btn-save-security")?.addEventListener("click", (e) => save(e.currentTarget));
+    $("btn-issue-ssl")?.addEventListener("click", (e) => issueSsl(e.currentTarget));
+    $("btn-remove-ssl")?.addEventListener("click", (e) => removeSsl(e.currentTarget));
+    $("btn-refresh-settings")?.addEventListener("click", refresh);
+    $("btn-save-perf")?.addEventListener("click", (e) => savePerformance(e.currentTarget));
 
     syncUrlModeUi();
-  }
-
-  document.addEventListener("app:init", initSettings);
-  document.addEventListener("turbo:load", initSettings);
-  initSettings();
+  });
 })();

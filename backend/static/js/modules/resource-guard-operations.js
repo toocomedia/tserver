@@ -69,36 +69,18 @@
     }
   }
 
-  let _opInterval = null;
-
-  function initRgOperations() {
-    const container = $("resource-guard-operations");
-    if (!container) {
-      if (_opInterval) { clearInterval(_opInterval); _opInterval = null; }
-      return;
-    }
-
-    container.onclick = (event) => {
+  document.addEventListener("app:init", () => {
+    $("resource-guard-operations")?.addEventListener("click", (event) => {
       const button = event.target.closest("[data-operation-cancel]");
       if (!button || button.disabled) return;
       confirmAction("Cancel this operation? Running work will stop as soon as possible.", () => cancelOperation(button), {
         title: "Cancel Operation", okLabel: "Cancel operation", danger: true,
       });
-    };
-
+    });
+    document.addEventListener("click", (event) => {
+      if (event.target.closest('[data-tab="tab-resource-guard"]')) loadOperations();
+    });
     if ($("tab-resource-guard")?.classList.contains("active")) loadOperations();
-    if (!_opInterval) {
-      _opInterval = window.setInterval(() => {
-        if ($("resource-guard-operations")) loadOperations();
-        else if (_opInterval) { clearInterval(_opInterval); _opInterval = null; }
-      }, 5000);
-    }
-  }
-
-  document.addEventListener("app:init", initRgOperations);
-  document.addEventListener("turbo:load", initRgOperations);
-  document.addEventListener("click", (event) => {
-    if (event.target.closest('[data-tab="tab-resource-guard"]')) loadOperations();
+    window.setInterval(loadOperations, 5000);
   });
-  initRgOperations();
 })();

@@ -5,19 +5,15 @@
 {% block title %}{{ _('php_websites') }} — {{ PANEL_NAME }}{% endblock %}
 {% block page_title %}{{ _('php_websites') }}{% endblock %}
 
-{% block head %}
-<link rel="stylesheet" href="/static/css/php-sites.css?v={{ APP_VERSION }}">
-{% endblock %}
-
 {% block topbar_actions %}
   <a href="{{ path('php_sites_create') }}" class="btn btn--primary" id="btn-add-php-site">+ {{ _('create_php_site') }}</a>
 {% endblock %}
 
 {% block content %}
-<div class="php-sites-page" style="position: relative;">
+<div class="php-sites-page">
 
 <!-- SKELETON LOADING OVERLAY -->
-{{ skeleton_overlay('php-sites-skeleton', header=0, controls=1, tables=[{ 'cols': [28, 14, 12, 14, 14, 18], 'rows': 4 }]) }}
+{{ skeleton_overlay('php-sites-skeleton', controls=1, tables=[{ 'rows': 4 }]) }}
 <!-- END SKELETON OVERLAY -->
 
 {% if sites %}
@@ -25,7 +21,7 @@
   <!-- Action Toolbar (Search & Filter) -->
   <div class="action-toolbar">
     <div class="action-toolbar__search">
-      <input type="search" id="php-search-input" class="form-control" placeholder="Search websites by domain or version..." onkeyup="filterPhpSitesTable()" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" data-lpignore="true">
+      <input type="text" id="php-search-input" class="form-control" placeholder="Search websites by domain or version..." onkeyup="filterPhpSitesTable()">
     </div>
     <div class="action-toolbar__group">
       <select id="php-status-filter" class="form-control" style="width: 140px;" onchange="filterPhpSitesTable()">
