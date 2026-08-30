@@ -65,6 +65,7 @@
       floatBtn.id = "ai-helper-floating-btn";
       floatBtn.className = "ai-helper-floating-btn";
       floatBtn.type = "button";
+      floatBtn.setAttribute("data-turbo-permanent", "");
       floatBtn.setAttribute("aria-label", "Open AI Assistant");
       floatBtn.innerHTML =
         '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>';
@@ -75,6 +76,7 @@
       var backdrop = document.createElement("div");
       backdrop.id = "ai-helper-backdrop";
       backdrop.className = "ai-helper-backdrop";
+      backdrop.setAttribute("data-turbo-permanent", "");
       backdrop.addEventListener("click", function () { self.close(); });
       document.body.appendChild(backdrop);
       this.backdropEl = backdrop;
@@ -83,6 +85,7 @@
       var drawer = document.createElement("aside");
       drawer.id = "ai-helper-drawer";
       drawer.className = "ai-helper-drawer";
+      drawer.setAttribute("data-turbo-permanent", "");
       drawer.innerHTML = [
         '<div class="ai-helper-header">',
         '  <div class="ai-helper-header-info">',

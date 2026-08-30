@@ -89,6 +89,18 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/devicon.min.css">
   <script src="https://unpkg.com/lucide@latest" defer></script>
 
+  <!-- Hotwired Turbo 8 (SPA Navigation Engine) -->
+  <script type="module">
+    import * as Turbo from 'https://cdn.jsdelivr.net/npm/@hotwired/turbo@8.0.12/+esm';
+    window.Turbo = Turbo;
+    // Strict Opt-In forms mode: Only intercept <a> links, never intercept forms/actions automatically
+    Turbo.config.forms.mode = "optin";
+  </script>
+  <style>
+    /* Suppress Turbo's built-in progress bar in favor of our branded #top-progress-bar */
+    .turbo-progress-bar { display: none !important; }
+  </style>
+
   <script>
     window.IS_RTL = {{ 'true' if get_dir() == 'rtl' else 'false' }};
     
@@ -124,7 +136,7 @@
   </header>
 
   <!-- SIDEBAR BACKDROP -->
-  <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+  <div class="sidebar-backdrop" id="sidebar-backdrop" data-turbo-permanent></div>
 
   <!-- SIDEBAR -->
   {% include "partials/sidebar.html" %}
@@ -166,7 +178,7 @@
 </div><!-- /.app -->
 
 <!-- CONFIRM MODAL (global, reused everywhere) -->
-<div id="confirm-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+<div id="confirm-modal" class="modal-backdrop hidden" data-turbo-permanent role="dialog" aria-modal="true" aria-labelledby="confirm-title">
   <div class="modal">
     <div class="modal__header">
       <h2 id="confirm-title">{{ _('confirm_action') }}</h2>
@@ -186,13 +198,13 @@
 {% include "partials/delete_drawer.html" %}
 
 <!-- GLOBAL LOADER OVERLAY -->
-<div id="global-loader" class="global-loader hidden">
+<div id="global-loader" class="global-loader hidden" data-turbo-permanent>
   <div class="global-loader__spinner"></div>
   <div class="global-loader__text" id="global-loader-text">{{ _('loading') }}</div>
 </div>
 
 <!-- TOAST CONTAINER -->
-<div id="toast-container" role="status" aria-live="polite"></div>
+<div id="toast-container" data-turbo-permanent role="status" aria-live="polite"></div>
 
 <!-- JS -->
 <script src="/static/js/modules/delete-drawer.js?v={{ APP_VERSION }}"></script>
@@ -200,31 +212,34 @@
 <script src="/static/js/modules/resource-guard-banner.js?v={{ APP_VERSION }}"></script>
 <script src="/static/js/resource-views.js?v={{ APP_VERSION }}"></script>
 <script>
-document.addEventListener("DOMContentLoaded", function() {
+(function() {
   var bar = document.getElementById("top-progress-bar");
-  
-  // 1. Navigation Progress Bar
-  document.addEventListener("click", function(e) {
-    if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
-    var link = e.target.closest("a");
-    if (!link) return;
-    
-    var href = link.getAttribute("href");
-    if (!href || href === "#" || href.startsWith("#") || href.startsWith("javascript:")) return;
-    if (link.target && link.target !== "_self") return;
-    if (link.hasAttribute("download") || link.hasAttribute("data-no-progress")) return;
 
-    try {
-      var targetUrl = new URL(link.href, window.location.href);
-      if (targetUrl.origin !== window.location.origin) return;
-      if (targetUrl.pathname === window.location.pathname && targetUrl.search === window.location.search) return;
-    } catch(err) {
-      return;
+  // Navigation Progress Bar (Turbo Lifecycle)
+  document.addEventListener("turbo:before-visit", function() {
+    if (bar) bar.className = "top-progress-bar active";
+    // Close mobile menu on navigate
+    var sidebar = document.querySelector(".sidebar");
+    var backdrop = document.getElementById("sidebar-backdrop");
+    if (sidebar && backdrop) {
+      sidebar.classList.remove("sidebar--open");
+      backdrop.classList.remove("sidebar-backdrop--visible");
     }
+  });
 
+  document.addEventListener("turbo:load", function() {
     if (bar) {
-      bar.className = "top-progress-bar active";
+      bar.style.transition = "none";
+      bar.className = "top-progress-bar";
+      void bar.offsetWidth;
+      bar.style.transition = "";
     }
+    // Re-create icons on each page visit
+    if (typeof lucide !== 'undefined') {
+      lucide.createIcons();
+    }
+    // Run async loaders for new page
+    initAsyncLoaders();
   });
 
   window.addEventListener("pageshow", function(e) {
@@ -236,46 +251,40 @@ document.addEventListener("DOMContentLoaded", function() {
     }
   });
 
-  // 2. Universal Async Loader (data-async-load)
-  var asyncContainers = document.querySelectorAll("[data-async-load]");
-  asyncContainers.forEach(function(container) {
-    var url = container.getAttribute("data-async-load");
-    if (!url) return;
-    
-    // Insert skeleton shimmer
-    container.innerHTML = '<div class="skeleton-shimmer skeleton-shimmer-box"></div>';
-    
-    fetch(url, {
-      headers: { "X-Requested-With": "XMLHttpRequest", "Accept": "text/html" }
-    })
-    .then(function(res) {
-      if (!res.ok) throw new Error("HTTP " + res.status);
-      return res.text();
-    })
-    .then(function(html) {
-      container.innerHTML = html;
-      container.classList.add("skeleton-content--enter");
-      // Double-rAF: first frame commits opacity:0, second triggers the CSS transition.
-      requestAnimationFrame(function() {
+  // Universal Async Loader (data-async-load)
+  function initAsyncLoaders() {
+    var asyncContainers = document.querySelectorAll("[data-async-load]:not([data-async-loaded])");
+    asyncContainers.forEach(function(container) {
+      container.setAttribute("data-async-loaded", "true");
+      var url = container.getAttribute("data-async-load");
+      if (!url) return;
+
+      container.innerHTML = '<div class="skeleton-shimmer skeleton-shimmer-box"></div>';
+
+      fetch(url, {
+        headers: { "X-Requested-With": "XMLHttpRequest", "Accept": "text/html" }
+      })
+      .then(function(res) {
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        return res.text();
+      })
+      .then(function(html) {
+        container.innerHTML = html;
+        container.classList.add("skeleton-content--enter");
         requestAnimationFrame(function() {
-          container.classList.remove("skeleton-content--enter");
+          requestAnimationFrame(function() {
+            container.classList.remove("skeleton-content--enter");
+          });
         });
+        var evt = new CustomEvent("asyncLoaded", { detail: { container: container } });
+        document.dispatchEvent(evt);
+      })
+      .catch(function(err) {
+        container.innerHTML = '<div class="alert alert--danger">Failed to load content: ' + err.message + '</div>';
       });
-      var evt = new CustomEvent("asyncLoaded", { detail: { container: container } });
-      document.dispatchEvent(evt);
-    })
-    .catch(function(err) {
-      container.innerHTML = '<div class="alert alert--danger">Failed to load content: ' + err.message + '</div>';
     });
-  });
-});
-</script>
-<script>
-  document.addEventListener('DOMContentLoaded', function() {
-    if (typeof lucide !== 'undefined') {
-      lucide.createIcons();
-    }
-  });
+  }
+})();
 </script>
 {% if is_plugin_active('ai_helper') %}
 <script src="/plugins/ai_helper/static/js/modules/chat_cache.js?v={{ APP_VERSION }}"></script>

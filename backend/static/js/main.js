@@ -367,9 +367,10 @@ function guardFormSubmitButtons() {
   );
 }
 
-document.addEventListener("DOMContentLoaded", () => {
-  guardFormSubmitButtons();
-
+/**
+ * Update active sidebar item and submenu views to match current URL.
+ */
+function updateSidebarActiveLink() {
   const current = window.location.pathname;
   let bestMatch = null;
   let maxLen = -1;
@@ -397,19 +398,61 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // Instant active state on click (zero-latency visual feedback before navigation)
-  document.querySelectorAll(".sidebar__item").forEach((item) => {
-    item.addEventListener("click", (e) => {
-      if (e.button === 0 && !e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey) {
-        const href = item.getAttribute("href");
-        if (href && href !== "#" && !href.startsWith("javascript:")) {
-          document.querySelectorAll(".sidebar__item--active").forEach((el) => {
-            el.classList.remove("sidebar__item--active");
-          });
-          item.classList.add("sidebar__item--active");
-        }
+  // Update Plugins Services view if active item is inside submenu
+  const pluginsView = document.getElementById("sidebar-plugins-view");
+  const sidebarNav = document.getElementById("sidebar-nav");
+  const pluginsTab = document.getElementById("plugins-services-tab");
+  if (pluginsView && sidebarNav) {
+    const isChildPlugin = !!(bestMatch && pluginsView.contains(bestMatch));
+    pluginsView.classList.toggle("is-active", isChildPlugin);
+    sidebarNav.classList.toggle("is-active", !isChildPlugin);
+    if (pluginsTab) {
+      pluginsTab.setAttribute("aria-expanded", isChildPlugin);
+      pluginsTab.classList.toggle("sidebar__section-tab--active", !isChildPlugin && isChildPlugin);
+    }
+  }
+}
+window.updateSidebarActiveLink = updateSidebarActiveLink;
+
+let _mainGlobalInitDone = false;
+let _notifInterval = null;
+
+async function fetchNotificationCount() {
+  try {
+    const data = await panel.get("/api/notifications");
+    const badge = document.getElementById("nav-notif-badge");
+    if (badge && data.unread_count !== undefined) {
+      if (data.unread_count > 0) {
+        badge.textContent = data.unread_count;
+        badge.style.display = "inline-block";
+      } else {
+        badge.style.display = "none";
       }
-    });
+    }
+  } catch (e) {
+    console.error("Failed to fetch notification count", e);
+  }
+}
+
+function initGlobalOnce() {
+  if (_mainGlobalInitDone) return;
+  _mainGlobalInitDone = true;
+
+  guardFormSubmitButtons();
+
+  // Instant active state on click (zero-latency visual feedback before navigation)
+  document.addEventListener("click", (e) => {
+    const item = e.target.closest(".sidebar__item");
+    if (!item) return;
+    if (e.button === 0 && !e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey) {
+      const href = item.getAttribute("href");
+      if (href && href !== "#" && !href.startsWith("javascript:")) {
+        document.querySelectorAll(".sidebar__item--active").forEach((el) => {
+          el.classList.remove("sidebar__item--active");
+        });
+        item.classList.add("sidebar__item--active");
+      }
+    }
   });
 
   // Mobile menu toggle
@@ -429,28 +472,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     mobileToggle.addEventListener("click", toggleMenu);
     backdrop.addEventListener("click", closeMenu);
-  }
-
-  async function fetchNotificationCount() {
-    try {
-      const data = await panel.get("/api/notifications");
-      const badge = document.getElementById("nav-notif-badge");
-      if (badge && data.unread_count !== undefined) {
-        if (data.unread_count > 0) {
-          badge.textContent = data.unread_count;
-          badge.style.display = "inline-block";
-        } else {
-          badge.style.display = "none";
-        }
-      }
-    } catch (e) {
-      console.error("Failed to fetch notification count", e);
-    }
-  }
-
-  if (document.getElementById("nav-notif-badge")) {
-    fetchNotificationCount();
-    setInterval(fetchNotificationCount, 60000);
   }
 
   // Sidebar custom scroll logic + Plugins Services view swapping
@@ -490,7 +511,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     navLists.forEach((nav) => nav.addEventListener("scroll", updateScrollArrows));
     window.addEventListener("resize", updateScrollArrows);
-    // Initial check (delay slightly to ensure render)
     setTimeout(updateScrollArrows, 100);
 
     scrollUpBtn.addEventListener("click", () => {
@@ -512,6 +532,7 @@ document.addEventListener("DOMContentLoaded", () => {
       sidebarNav.classList.toggle("is-active", !toPlugins);
       if (pluginsTab) {
         pluginsTab.setAttribute("aria-expanded", toPlugins);
+        const bestMatch = document.querySelector(".sidebar__item--active");
         const onPluginPage = !!(bestMatch && pluginsView.contains(bestMatch));
         pluginsTab.classList.toggle("sidebar__section-tab--active", !toPlugins && onPluginPage);
       }
@@ -520,10 +541,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     pluginsTab?.addEventListener("click", () => setView(true));
     pluginsBack?.addEventListener("click", () => setView(false));
-
-    // Only open plugins view if current page is actually a service item in the submenu
-    const isChildPlugin = !!(bestMatch && pluginsView.contains(bestMatch));
-    setView(isChildPlugin);
   }
 
   // Sidebar Search
@@ -558,16 +575,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
         listEl.querySelectorAll("li").forEach(li => {
           if (li.classList.contains("sidebar__section-label") || li.querySelector(".sidebar__section-tab")) {
-            // If we had a previous section, hide it if it had no visible items
             if (currentSectionLabel && !sectionHasVisibleItems) {
               currentSectionLabel.style.display = "none";
             }
             currentSectionLabel = li.classList.contains("sidebar__section-label") ? li : null;
-            sectionHasVisibleItems = false; // reset for new section
-            // Show by default unless we hide it later
+            sectionHasVisibleItems = false;
             li.style.display = "";
           } else {
-            // Regular item
             const text = li.textContent.toLowerCase();
             if (text.includes(term)) {
               li.style.display = "";
@@ -578,25 +592,52 @@ document.addEventListener("DOMContentLoaded", () => {
           }
         });
 
-        // Check last section
         if (currentSectionLabel && !sectionHasVisibleItems) {
           currentSectionLabel.style.display = "none";
         }
       };
 
       [sidebarNav, pluginsNav].filter(Boolean).forEach(filterList);
-
-      // Update arrows
       if (updateScrollArrows) updateScrollArrows();
     });
   }
 
-  // Initialize Lazy Image Skeleton Loaders
-  initLazyImageSkeletons();
-  document.addEventListener("app:init", initLazyImageSkeletons);
+  if (document.getElementById("nav-notif-badge") && !_notifInterval) {
+    _notifInterval = setInterval(fetchNotificationCount, 60000);
+  }
 
-  // Trigger app:init so page-specific modules can initialize
+  document.addEventListener("app:init", initLazyImageSkeletons);
+}
+
+let _isInitialPageLoad = true;
+
+function initPageLifecycle() {
+  initGlobalOnce();
+  updateSidebarActiveLink();
+  initLazyImageSkeletons();
+  if (document.getElementById("nav-notif-badge")) {
+    fetchNotificationCount();
+  }
+
+  // Trigger app:init so page-specific modules can initialize on every page visit
   document.dispatchEvent(new Event("app:init"));
+
+  // If this is a subsequent Turbo navigation, fire synthetic DOMContentLoaded
+  // for any inline scripts on the new page waiting for it
+  if (!_isInitialPageLoad) {
+    document.dispatchEvent(new Event("DOMContentLoaded"));
+  }
+  _isInitialPageLoad = false;
+}
+
+// Hook into Turbo Drive page lifecycle
+document.addEventListener("turbo:load", initPageLifecycle);
+
+// Fallback for non-Turbo or early DOM ready
+document.addEventListener("DOMContentLoaded", () => {
+  if (!window.Turbo) {
+    initPageLifecycle();
+  }
 });
 
 document.addEventListener("asyncLoaded", function() {
