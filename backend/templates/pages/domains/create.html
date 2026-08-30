@@ -176,6 +176,7 @@
 
 {% block scripts %}
 <script>
+(function() {
 const input = document.getElementById('name');
 const nameError = document.getElementById('name-error');
 const form = document.getElementById('create-domain-form');
@@ -436,10 +437,19 @@ form.addEventListener('submit', (e) => {
   submitBtn.disabled = true;
 });
 
-document.addEventListener('DOMContentLoaded', () => {
+  // Export UI handlers needed by inline HTML attributes
+  window.onHostnameInput = onHostnameInput;
+  window.selectPurpose = selectPurpose;
+  window.selectSsl = selectSsl;
+  window.selectDnsMode = selectDnsMode;
+  window.goNextStep = goNextStep;
+  window.goBackStep = goBackStep;
+  window.goToStep = goToStep;
+
+  // Initialize UI state immediately and on DOMContentLoaded
   syncDomain();
   onHostnameInput();
-  goToStep(1); // Initialize UI state
-});
+  goToStep(1);
+})();
 </script>
 {% endblock %}

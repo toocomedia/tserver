@@ -341,8 +341,10 @@
 
 /* Table skeleton: header row + N body rows */
 .skeleton-table-wrap {
+  margin-inline: calc(var(--page-gutter) * -1);
+  width: auto !important;
+  max-width: none !important;
   margin-bottom: 24px;
-  width: 100%;
   border: none;
   background: transparent;
 }

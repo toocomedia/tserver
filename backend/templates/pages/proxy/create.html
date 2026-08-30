@@ -257,8 +257,9 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="/static/js/modules/proxy.js"></script>
+<script src="/static/js/modules/proxy.js?v={{ APP_VERSION }}" data-turbo-eval="false"></script>
 <script>
+(function() {
   function goToStep(step) {
     const step1 = document.getElementById("proxy-step-1");
     const step2 = document.getElementById("proxy-step-2");
@@ -342,5 +343,8 @@
     if (radioNo) radioNo.checked = !enable;
     if (radioYes) radioYes.checked = enable;
   };
+
+  window.goToStep = goToStep;
+})();
 </script>
 {% endblock %}

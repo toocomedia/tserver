@@ -17,10 +17,10 @@
 {% endblock %}
 
 {% block content %}
-<div class="dns-records-page">
+<div class="dns-records-page" style="position: relative;">
 
 <!-- SKELETON LOADING OVERLAY -->
-{{ skeleton_overlay('dns-records-skeleton', tables=[{ 'cols': [28, 10, 40, 10, 12], 'rows': 4 }]) }}
+{{ skeleton_overlay('dns-records-skeleton', header=0, tables=[{ 'cols': [28, 10, 40, 10, 12], 'rows': 4 }]) }}
 <!-- END SKELETON OVERLAY -->
 
 {# Flash messages from redirect query params #}
@@ -169,7 +169,7 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="/static/js/modules/dns.js?v={{ APP_VERSION }}"></script>
+<script src="/static/js/modules/dns.js?v={{ APP_VERSION }}" data-turbo-eval="false"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
   if (typeof hideSkeleton === 'function') hideSkeleton('dns-records-skeleton');
@@ -177,6 +177,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Pass content labels from server to JS
-const CONTENT_LABELS = {{ content_labels | tojson }};
+window.CONTENT_LABELS = {{ content_labels | tojson }};
+var CONTENT_LABELS = window.CONTENT_LABELS;
 </script>
 {% endblock %}

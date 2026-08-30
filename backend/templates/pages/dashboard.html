@@ -11,10 +11,10 @@
 {% endblock %}
 
 {% block content %}
-<div class="dashboard-page">
+<div class="dashboard-page" style="position: relative;">
 
 <!-- SKELETON LOADING OVERLAY -->
-{{ skeleton_overlay('dashboard-skeleton', stat_cards=5, sections=[3], controls=1) }}
+{{ skeleton_overlay('dashboard-skeleton', header=0, stat_cards=5, sections=[3], controls=0) }}
 <!-- END SKELETON OVERLAY -->
 
 <!-- LOW-RAM RECOMMENDATION NOTICE -->

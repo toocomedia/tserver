@@ -160,6 +160,7 @@
 
 {% block scripts %}
 <script>
+(function() {
   let polling = true;
   let pollTimer = null;
   const INTERVAL = 30000;
@@ -1116,6 +1117,19 @@
   setOptimizationButtonsDisabled(true);
   fetchOptimizationStatus();
   if (!document.hidden) fetchStats();
+
+  // Export functions needed by inline onclick in HTML
+  window.manualRefreshStats = manualRefreshStats;
+  window.togglePoll = togglePoll;
+  window.rebootServer = rebootServer;
+
+  // Cleanup background polling timer when navigating away via Turbo
+  document.addEventListener('turbo:before-visit', () => {
+    if (pollTimer) clearTimeout(pollTimer);
+    pollTimer = null;
+    polling = false;
+  }, { once: true });
+})();
 </script>
-<script src="/static/js/modules/disk-storage-overview.js"></script>
+<script src="/static/js/modules/disk-storage-overview.js" data-turbo-eval="false"></script>
 {% endblock %}

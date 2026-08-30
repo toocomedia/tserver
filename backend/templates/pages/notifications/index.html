@@ -13,10 +13,10 @@
 {% endblock %}
 
 {% block content %}
-<div class="notifications-page">
+<div class="notifications-page" style="position: relative;">
 
 <!-- SKELETON LOADING OVERLAY -->
-{{ skeleton_overlay('notifications-skeleton', tables=[{ 'rows': 4 }]) }}
+{{ skeleton_overlay('notifications-skeleton', header=0, tables=[{ 'cols': [14, 56, 18, 12], 'rows': 4 }]) }}
 <!-- END SKELETON OVERLAY -->
 
     {% if not notifications %}

@@ -12,15 +12,15 @@
 {% block content %}
 <div class="dns-page">
 
-<div class="dns-list-wrapper">
+<div class="dns-list-wrapper" style="position: relative;">
   <!-- SKELETON LOADING OVERLAY -->
-  {{ skeleton_overlay('dns-skeleton', controls=1, tables=[{ 'rows': 4 }]) }}
+  {{ skeleton_overlay('dns-skeleton', header=0, controls=1, tables=[{ 'cols': [36, 14, 14, 36], 'rows': 4 }]) }}
   <!-- END SKELETON OVERLAY -->
 
   <!-- Action Toolbar (Search & Filter) -->
   <div class="action-toolbar">
     <div class="action-toolbar__search">
-      <input type="text" id="dns-search-input" class="form-control" placeholder="Search DNS zones..." onkeyup="filterDnsTable()">
+      <input type="search" id="dns-search-input" class="form-control" placeholder="Search DNS zones..." onkeyup="filterDnsTable()" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" data-lpignore="true">
     </div>
     <div class="action-toolbar__group">
       <select id="dns-status-filter" class="form-control" style="width: 140px;" onchange="filterDnsTable()">
@@ -108,7 +108,7 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="/static/js/modules/dns.js?v={{ APP_VERSION }}"></script>
+<script src="/static/js/modules/dns.js?v={{ APP_VERSION }}" data-turbo-eval="false"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
   if (typeof hideSkeleton === 'function') hideSkeleton('dns-skeleton');
