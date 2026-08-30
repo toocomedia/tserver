@@ -5,6 +5,10 @@
 {% block title %}{{ _('php_websites') }} — {{ PANEL_NAME }}{% endblock %}
 {% block page_title %}{{ _('php_websites') }}{% endblock %}
 
+{% block head %}
+<link rel="stylesheet" href="/static/css/php-sites.css?v={{ APP_VERSION }}">
+{% endblock %}
+
 {% block topbar_actions %}
   <a href="{{ path('php_sites_create') }}" class="btn btn--primary" id="btn-add-php-site">+ {{ _('create_php_site') }}</a>
 {% endblock %}

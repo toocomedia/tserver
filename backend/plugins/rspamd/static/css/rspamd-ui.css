@@ -1,5 +1,5 @@
 /* Rspamd Spam Filter Plugin Modern Minimal UI Styles */
-:root {
+#rspamd-page {
     /* Spacing rules */
     --spacing-xs: 4px;
     --spacing-sm: 8px;
@@ -83,7 +83,7 @@
 }
 
 /* Minimal Badges Consuming Theme Variables */
-.badge-minimal {
+#rspamd-page .badge-minimal {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -98,17 +98,17 @@
     box-sizing: border-box;
 }
 
-.badge-minimal--active {
+#rspamd-page .badge-minimal--active {
     background: var(--color-alert-success-bg, rgba(34, 197, 94, 0.15));
     color: var(--color-accent-2, #22c55e);
 }
 
-.badge-minimal--neutral {
+#rspamd-page .badge-minimal--neutral {
     background: var(--bg-hover);
     color: var(--text-muted);
 }
 
-.badge-minimal--danger {
+#rspamd-page .badge-minimal--danger {
     background: var(--btn-danger-bg);
     color: var(--btn-danger-text);
 }
@@ -202,7 +202,7 @@
     display: inline-block;
 }
 
-.form-control, .form-input {
+#rspamd-page .form-control, #rspamd-page .form-input {
     width: 100%;
     height: 34px !important;
     min-height: 34px !important;
@@ -220,7 +220,7 @@
     transition: background 0.2s;
 }
 
-.form-control:focus, .form-input:focus {
+#rspamd-page .form-control:focus, #rspamd-page .form-input:focus {
     background: var(--bg-hover);
     border: none !important;
     outline: none !important;
@@ -228,7 +228,7 @@
 }
 
 /* Buttons - Theme Variable Compliance & Refined Heights */
-.btn {
+#rspamd-page .btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -254,53 +254,53 @@
     flex-shrink: 0;
 }
 
-.btn:hover {
+#rspamd-page .btn:hover {
     background: var(--btn-hover);
     color: var(--text-main);
     border: none !important;
 }
 
-.btn:active {
+#rspamd-page .btn:active {
     transform: scale(0.97);
 }
 
-.btn.primary {
+#rspamd-page .btn.primary {
     background: var(--btn-primary-bg);
     color: var(--btn-primary-text);
     border: none !important;
     font-weight: 600;
 }
 
-.btn.primary:hover {
+#rspamd-page .btn.primary:hover {
     background: var(--btn-primary-hover);
     color: var(--text-main);
     border: none !important;
 }
 
-.btn.danger {
+#rspamd-page .btn.danger {
     background: var(--btn-danger-bg);
     color: var(--btn-danger-text);
     border: none !important;
     font-weight: 500;
 }
 
-.btn.danger:hover {
+#rspamd-page .btn.danger:hover {
     background: var(--btn-danger-hover);
     color: var(--btn-danger-text);
     border: none !important;
 }
 
-.btn.ghost {
+#rspamd-page .btn.ghost {
     background: transparent;
     color: var(--text-muted);
 }
 
-.btn.ghost:hover {
+#rspamd-page .btn.ghost:hover {
     background: var(--bg-hover);
     color: var(--text-main);
 }
 
-.btn--sm {
+#rspamd-page .btn--sm {
     height: 28px;
     padding: 0 10px;
     font-size: 12px;

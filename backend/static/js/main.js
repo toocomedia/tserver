@@ -191,7 +191,7 @@ function closeModal(id) {
  *   A short delay lets real content render before the fade starts.
  * showSkeleton(id): re-shows an overlay (e.g. for a full page reload).
  */
-function hideSkeleton(id, delay = 50) {
+function hideSkeleton(id, delay = 1000) {
   const el = document.getElementById(id);
   if (!el || el.classList.contains("is-hidden")) return Promise.resolve();
   return new Promise((resolve) => {
@@ -202,7 +202,7 @@ function hideSkeleton(id, delay = 50) {
           el.style.display = "none";
         }
         resolve();
-      }, 300);
+      }, 400);
     }, delay);
   });
 }
@@ -646,6 +646,36 @@ document.addEventListener("turbo:before-cache", () => {
     el.classList.add("is-hidden");
     el.style.display = "none";
   });
+});
+
+// Dynamic Head Stylesheet Garbage Collection:
+// Removes page-specific or plugin-specific stylesheets and styles when navigating away in SPA mode
+document.addEventListener("turbo:before-render", (event) => {
+  try {
+    const newDoc = event.detail && event.detail.newBody ? event.detail.newBody.ownerDocument : null;
+    const incomingHrefs = new Set();
+    if (newDoc) {
+      newDoc.querySelectorAll('head link[rel="stylesheet"]').forEach((el) => {
+        const href = (el.getAttribute("href") || "").split("?")[0];
+        if (href) incomingHrefs.add(href);
+      });
+    }
+
+    // Remove any dynamic stylesheets that do not belong to the incoming page and are not core
+    document.querySelectorAll('head link[rel="stylesheet"]:not([data-panel-core])').forEach((link) => {
+      const href = (link.getAttribute("href") || "").split("?")[0];
+      if (!incomingHrefs.has(href)) {
+        link.remove();
+      }
+    });
+
+    // Remove dynamic inline <style> tags injected by outgoing page
+    document.querySelectorAll("head style:not([data-panel-core])").forEach((style) => {
+      style.remove();
+    });
+  } catch (e) {
+    console.warn("Error during head stylesheet cleanup:", e);
+  }
 });
 
 // Fallback for non-Turbo or early DOM ready
