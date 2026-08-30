@@ -17,7 +17,6 @@ import yaml
 from services.apps_engine.app_spec import AppSpec, ServiceSpec, VolumeSpec
 from services.apps_engine.app_spec_codec import app_spec_from_dict, app_spec_to_dict
 from services.apps_engine.security_policy import validate_app_spec
-from services.official_stacks.proposal_manifest import stack_from_proposal
 from plugins.railpack_apps.documentation_service import get_app_documentation
 from plugins.railpack_apps.router_template import _resolve_compose_yaml
 
@@ -48,8 +47,8 @@ class TestPanelTemplateSystem(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(validated.post_install_message, "Initial Setup: docker exec -it {target} ./manage.py registeradmin {admin_email}")
         self.assertEqual(validated.docs_url, "https://example.com/docs")
 
-    def test_stack_from_proposal_accepts_post_install_message(self):
-        """proposal_manifest must accept post_install_message without rejecting it as unknown field."""
+    def test_validate_app_spec_accepts_post_install_message(self):
+        """validate_app_spec must accept post_install_message without rejecting it as unknown field."""
         raw_manifest = {
             "name": "shynet_stack",
             "display_name": "Shynet Analytics Stack",
@@ -71,8 +70,8 @@ class TestPanelTemplateSystem(unittest.IsolatedAsyncioTestCase):
             ],
             "post_install_message": "Initial Setup: docker exec -it {target} ./manage.py registeradmin {admin_email}",
         }
-        stack = stack_from_proposal(raw_manifest, evidence=["GUIDE.md#Setup"])
-        self.assertEqual(stack.post_install_message, "Initial Setup: docker exec -it {target} ./manage.py registeradmin {admin_email}")
+        spec = validate_app_spec(raw_manifest)
+        self.assertEqual(spec.post_install_message, "Initial Setup: docker exec -it {target} ./manage.py registeradmin {admin_email}")
 
     def test_documentation_service_extracts_admin_command_from_post_install_message(self):
         """App documentation must dynamically extract superuser command from post_install_message with zero hardcoding."""

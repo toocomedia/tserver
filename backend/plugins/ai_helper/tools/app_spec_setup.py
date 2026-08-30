@@ -6,6 +6,7 @@ import json
 import re
 from typing import Any
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from plugins.ai_helper.services import action_plans
@@ -33,6 +34,12 @@ async def propose_app_spec_plan(
     if user_id is None:
         return {"status": "error", "message": "AI setup drafts require an authenticated panel user."}
     clean_domain = (domain_name or "").strip().lower()
+    if not clean_domain and session_id:
+        from models.ai_helper import AiChatSession
+        stmt = select(AiChatSession.target_domain).where(AiChatSession.session_id == session_id)
+        stored_domain = (await db.execute(stmt)).scalar_one_or_none()
+        if stored_domain:
+            clean_domain = stored_domain.strip().lower()
     if not clean_domain:
         return {"status": "error", "message": "AppSpec plan requires a target domain."}
     clean_evidence = [
@@ -92,12 +99,11 @@ def _environment_values(raw: dict[str, str] | None) -> dict[str, str]:
 
 
 def args_from_stack_inspection(stack_args: dict[str, Any] | None) -> dict[str, Any] | None:
-    """Convert current source-inspection synthesis into canonical AppSpec tool input."""
+    """Convert source-inspection manifest into canonical AppSpec tool input."""
     if not isinstance(stack_args, dict) or not isinstance(stack_args.get("stack_manifest"), dict):
         return None
-    from services.official_stacks.proposal_manifest import stack_from_proposal
     evidence = [str(item) for item in stack_args.get("evidence") or [] if str(item).strip()]
-    spec = stack_from_proposal(stack_args["stack_manifest"], evidence)
+    spec = validate_app_spec(stack_args["stack_manifest"])
     return {
         "app_spec": app_spec_to_dict(spec),
         "domain_name": str(stack_args.get("domain_name") or ""),

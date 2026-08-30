@@ -12,17 +12,16 @@ from typing import Any, Dict, List, Optional
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from plugins.ai_helper.services import action_plans, setup_handoff, setup_plan_builder
+from plugins.ai_helper.services import action_plans, setup_handoff
 from models.container_app import ContainerApp
 from services import container_app_image_inspect_service, container_app_inspection_service
-from services.apps_engine import deployment_drafts, source_access
+from services.apps_engine import build_secrets, database_provider_capabilities, deployment_drafts, source_access
 
 logger = logging.getLogger(__name__)
 
 _SUPPORTED_GIT_BUILD_MODES = {"railpack", "dockerfile"}
 _SUPPORTED_DATABASE_KINDS = {"postgresql", "mariadb", "redis", "mongodb"}
-# Docker Compose and multi-service stacks are automatically synthesized and provisioned by the panel.
-_resolve_stack_manifest_images = setup_plan_builder.resolve_stack_manifest_images
+# Docker Compose and multi-service stacks are deployed via reviewed AppSpec plans.
 
 
 def _needs_digest_resolution(image: str) -> bool:
@@ -273,6 +272,124 @@ async def propose_container_app_patch(
     }
 
 
+def _normalize_port(port_val: Any, default: int = 3000) -> int:
+    try:
+        val = int(port_val)
+        if 1 <= val <= 65535:
+            return val
+    except (ValueError, TypeError):
+        pass
+    return default
+
+
+def _normalize_health_path(raw_path: Any) -> str:
+    path = str(raw_path or "disabled").strip()
+    if path.lower() in {"", "disabled", "none", "skip", "off"}:
+        return "disabled"
+    if path.startswith("/") and len(path) <= 255 and not any(c in path for c in "\r\n\t"):
+        return path
+    return "disabled"
+
+
+def _build_single_app_payload(
+    source_type: str,
+    repository_url: str = "",
+    branch: str = "main",
+    image_reference: str = "",
+    internal_port: int = 3000,
+    build_mode: str = "railpack",
+    custom_start_command: str = "",
+    health_path: str = "disabled",
+    environment_values: Optional[Dict[str, str]] = None,
+    secret_requirements: Optional[List[Dict[str, Any]]] = None,
+    database_attachments: Optional[List[Dict[str, str]]] = None,
+    storage_mounts: Optional[List[Dict[str, str]]] = None,
+    domain_name: str = "",
+    setup_notes: Optional[List[str]] = None,
+    admin_commands: Optional[List[Any]] = None,
+) -> Dict[str, Any]:
+    norm_port = _normalize_port(internal_port, 3000)
+    clean_envs, auto_secrets = build_secrets.normalize_environment_map(environment_values)
+    if "PORT" in clean_envs:
+        clean_envs["PORT"] = str(norm_port)
+
+    clean_dom = (domain_name or "").strip()
+    context_text = f"{repository_url} {image_reference}".lower()
+    if clean_dom:
+        if any(k in context_text for k in ("django", "shynet")) or "ALLOWED_HOSTS" in clean_envs:
+            clean_envs.setdefault("ALLOWED_HOSTS", f"{clean_dom},localhost,127.0.0.1")
+            clean_envs.setdefault("HOSTNAME", clean_dom)
+            clean_envs.setdefault("CSRF_TRUSTED_ORIGINS", f"https://{clean_dom}")
+        elif any(k in context_text for k in ("laravel", "php")):
+            clean_envs.setdefault("APP_URL", f"https://{clean_dom}")
+
+    cleaned_secrets: List[Dict[str, Any]] = list(auto_secrets)
+    known_secret_keys = {item["key"] for item in cleaned_secrets}
+
+    if isinstance(secret_requirements, list):
+        for item in secret_requirements:
+            if not isinstance(item, dict):
+                continue
+            raw_key = build_secrets.normalize_environment_key(item.get("key") or "")
+            if not raw_key or not build_secrets.ENV_KEY_RE.fullmatch(raw_key) or raw_key in known_secret_keys:
+                continue
+            purpose = str(item.get("purpose") or f"Generated {raw_key.lower().replace('_', ' ')}").strip()[:256]
+            generator = str(item.get("generator") or build_secrets.infer_secret_generator(raw_key)).strip()
+            if generator not in {"urlsafe64", "base64_32", "base64_48", "base64_64", "hex32", "hex64", "password"}:
+                generator = build_secrets.infer_secret_generator(raw_key)
+            cleaned_secrets.append({"key": raw_key, "purpose": purpose or "Application secret", "generator": generator})
+            known_secret_keys.add(raw_key)
+
+    clean_dbs: List[Dict[str, str]] = []
+    if isinstance(database_attachments, list):
+        for item in database_attachments:
+            if isinstance(item, dict) and item.get("kind"):
+                kind = _normalize_database_kind(str(item.get("kind", "")))
+                provider = _normalize_database_provider(str(item.get("provider", "docker")), kind)
+                database_provider_capabilities.require_available(kind, provider)
+                clean_dbs.append({
+                    "kind": kind,
+                    "provider": provider,
+                    "environment_key": str(item.get("environment_key", "DATABASE_URL")).strip() or "DATABASE_URL",
+                })
+
+    clean_mounts: List[Dict[str, str]] = []
+    if isinstance(storage_mounts, list):
+        for item in storage_mounts:
+            if isinstance(item, dict) and item.get("mount_path"):
+                raw_lbl = str(item.get("label", "data")).strip().lower()
+                clean_lbl = re.sub(r"[^a-z0-9_-]+", "-", raw_lbl).strip("-_")[:32] or "data"
+                clean_mounts.append({
+                    "label": clean_lbl,
+                    "mount_path": str(item.get("mount_path", "")).strip(),
+                })
+
+    stype = (source_type or "image").strip().lower()
+    bmode = (build_mode or ("image" if stype == "image" else "railpack")).strip().lower()
+    if stype == "image":
+        bmode = "image"
+    elif bmode not in {"railpack", "dockerfile"}:
+        bmode = "railpack"
+
+    return {
+        "source_type": stype,
+        "repository_url": repository_url.strip(),
+        "branch": branch.strip() or "main",
+        "image_reference": image_reference.strip(),
+        "internal_port": norm_port,
+        "build_mode": bmode,
+        "custom_start_command": (custom_start_command or "").strip(),
+        "health_path": _normalize_health_path(health_path),
+        "environment_values": clean_envs,
+        "secret_requirements": cleaned_secrets,
+        "database_attachments": clean_dbs,
+        "storage_mounts": clean_mounts,
+        "domain_name": clean_dom.lower(),
+        "setup_notes": list(setup_notes or []),
+        "admin_commands": list(admin_commands or []),
+    }
+
+
 async def propose_app_install(
     db: AsyncSession,
     session_id: Optional[str] = None,
@@ -301,8 +418,6 @@ async def propose_app_install(
     """
     if user_id is None:
         return {"status": "error", "message": "AI setup drafts require an authenticated panel user."}
-
-    from plugins.ai_helper.services import setup_plan_builder
 
     stype = (source_type or ("image" if image_reference.strip() else "git")).strip().lower()
     bmode = (build_mode or ("image" if stype == "image" else "railpack")).strip().lower()
@@ -334,48 +449,6 @@ async def propose_app_install(
     except Exception as exc:
         logger.warning("Inspection during propose_app_install failed: %s", exc)
 
-    if inspection:
-        from services.official_stacks.stack_synthesizer import (
-            requires_multi_container_stack,
-            synthesize_stack_from_compose,
-            synthesize_stack_from_inspection,
-        )
-        if requires_multi_container_stack(inspection):
-            stack_args = synthesize_stack_from_compose(inspection, domain_name=domain_name, repo_url=target_repo)
-            if not stack_args:
-                stack_args = synthesize_stack_from_inspection(inspection, domain_name=domain_name, repo_url=target_repo)
-            if stack_args:
-                from plugins.ai_helper.services.app_spec_plan_builder import build_payload
-                stack_payload = build_payload(
-                    stack_manifest=stack_args["stack_manifest"],
-                    domain_name=domain_name,
-                    nonsecret_settings=stack_args.get("nonsecret_settings"),
-                    evidence=stack_args.get("evidence"),
-                    repository_url=target_repo or repository_url.strip(),
-                    source_type=stype,
-                )
-                plan = await action_plans.create_action_plan(
-                    db=db,
-                    session_id=session_id or "default_session",
-                    action_type="app_spec_install",
-                    payload=stack_payload,
-                    summary=summary or stack_args.get("summary") or f"Deploy stack: {image_reference or repository_url}",
-                    confidence=confidence,
-                    reasoning=reasoning or stack_args.get("reasoning") or "Multi-service stack plan generated from source inspection.",
-                    user_id=user_id,
-                )
-                return {
-                    "status": "ok",
-                    "plan_id": plan.plan_id,
-                    "summary": plan.summary,
-                    "confidence": plan.confidence,
-                    "message": "Reviewed stack setup plan created. The user can deploy it with the server-rendered Deploy reviewed setup action.",
-                }
-            return {
-                "status": "error",
-                "message": "The inspected application contains Compose services or multi-datastore requirements (e.g. PostgreSQL + ClickHouse). A validated AppSpec plan must be created via propose_app_spec_plan.",
-            }
-
     discovered_notes = list(kwargs.get("setup_notes") or [])
     discovered_cmds = list(kwargs.get("admin_commands") or [])
     if inspection:
@@ -396,7 +469,7 @@ async def propose_app_install(
                 })
 
     try:
-        payload = setup_plan_builder.build_single_app_payload(
+        payload = _build_single_app_payload(
             source_type=stype,
             repository_url=repository_url,
             branch=branch,
@@ -413,7 +486,7 @@ async def propose_app_install(
             setup_notes=discovered_notes,
             admin_commands=discovered_cmds,
         )
-    except setup_plan_builder.database_provider_capabilities.ProviderChoiceRequired as exc:
+    except database_provider_capabilities.ProviderChoiceRequired as exc:
         return {
             "status": "provider_choice_required",
             "message": str(exc),
@@ -421,7 +494,7 @@ async def propose_app_install(
             "provider": exc.provider,
             "provider_state": exc.state,
             "dependency_id": exc.dependency_id,
-            "provider_capabilities": setup_plan_builder.database_provider_capabilities.provider_capabilities(),
+            "provider_capabilities": database_provider_capabilities.provider_capabilities(),
         }
 
     sess_id = session_id or "default_session"
@@ -807,77 +880,21 @@ async def propose_stack_install(
     user_id: Optional[int] = None,
     **kwargs: Any,
 ) -> Dict[str, Any]:
-    """Create an immutable plan from generic structured fields, never raw Compose."""
-    if user_id is None:
-        return {"status": "error", "message": "AI setup drafts require an authenticated panel user."}
-
-    if not domain_name.strip() and session_id:
-        from models.ai_helper import AiChatSession
-        stmt = select(AiChatSession.target_domain).where(AiChatSession.session_id == session_id)
-        stored_domain = (await db.execute(stmt)).scalar_one_or_none()
-        if stored_domain:
-            domain_name = stored_domain.strip()
-
-    from plugins.ai_helper.services import setup_plan_builder
-
-    # Auto-synthesize manifest from inspection if incomplete or missing
-    if not stack_manifest or not isinstance(stack_manifest, dict) or not stack_manifest.get("services"):
-        repo = str(kwargs.get("repository_url") or "").strip()
-        if repo:
-            try:
-                cached = setup_handoff.get_cached_inspection(session_id, repo)
-                inspection = (cached.get("inspection") or cached) if (cached and isinstance(cached, dict)) else None
-                if not inspection:
-                    inspection = container_app_inspection_service.inspect_repository(repo, str(kwargs.get("branch") or "main"))
-                from services.official_stacks.stack_synthesizer import (
-                    synthesize_stack_from_compose,
-                    synthesize_stack_from_inspection,
-                )
-                stack_args = synthesize_stack_from_compose(inspection, domain_name=domain_name, repo_url=repo)
-                if not stack_args:
-                    stack_args = synthesize_stack_from_inspection(inspection, domain_name=domain_name, repo_url=repo)
-                if stack_args:
-                    stack_manifest = stack_args["stack_manifest"]
-                    if not nonsecret_settings:
-                        nonsecret_settings = stack_args.get("nonsecret_settings")
-                    if not evidence:
-                        evidence = stack_args.get("evidence")
-            except Exception as exc:
-                logger.warning("Auto-synthesize in propose_stack_install fallback failed: %s", exc)
-
-    try:
-        payload = await setup_plan_builder.build_stack_payload(
-            stack_manifest=stack_manifest or {},
-            domain_name=domain_name,
-            nonsecret_settings=nonsecret_settings,
-            evidence=evidence,
-        )
-    except (TypeError, ValueError) as exc:
-        return {"status": "error", "message": str(exc)}
-
-    sess_id = session_id or "default_session"
-    stack_display = payload.get("stack_display_name") or "Stack"
-    v = payload.get("stack_version") or "1.0"
-    plan_summary = summary or f"Deploy stack: {stack_display} ({v})"
-
-    plan = await action_plans.create_action_plan(
+    """Forward stack proposals directly to propose_app_spec_plan."""
+    from plugins.ai_helper.tools.app_spec_setup import propose_app_spec_plan
+    return await propose_app_spec_plan(
         db=db,
-        session_id=sess_id,
-        action_type="stack_install",
-        payload=payload,
-        summary=plan_summary,
+        app_spec=stack_manifest or {},
+        domain_name=domain_name,
+        evidence=evidence or ["Direct application stack specification."],
+        environment_values=nonsecret_settings,
+        summary=summary,
         confidence=confidence,
         reasoning=reasoning,
+        session_id=session_id,
         user_id=user_id,
+        **kwargs,
     )
-
-    return {
-        "status": "ok",
-        "plan_id": plan.plan_id,
-        "summary": plan.summary,
-        "confidence": plan.confidence,
-        "message": f"Reviewed stack setup created for {stack_display}. The user can deploy it with the server-rendered Deploy reviewed setup action.",
-    }
 
 
 async def propose_official_stack_install(db: AsyncSession, **kwargs: Any) -> Dict[str, Any]:

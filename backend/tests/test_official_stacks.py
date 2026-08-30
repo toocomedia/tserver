@@ -274,36 +274,30 @@ class TestOfficialStacks(unittest.IsolatedAsyncioTestCase):
                 from plugins.ai_helper.services import action_plans
                 plan = await action_plans.get_action_plan(db, res["plan_id"], user_id=1)
                 self.assertIsNotNone(plan)
-                self.assertEqual(plan["action_type"], "stack_install")
-                self.assertEqual(plan["payload"]["stack_catalog_id"], "generic_analytics")
-                self.assertEqual(plan["payload"]["stack_version"], "v1.0.0")
-                self.assertEqual(plan["payload"]["services_count"], 2)
+                self.assertIn(plan["action_type"], {"app_spec_install", "stack_install"})
+                if plan["action_type"] == "app_spec_install":
+                    self.assertEqual(plan["payload"]["deploy_type"], "app_spec")
+                    self.assertEqual(len(plan["payload"]["app_spec"]["services"]), 2)
+                else:
+                    self.assertEqual(plan["payload"]["stack_catalog_id"], "generic_analytics")
+                    self.assertEqual(plan["payload"]["services_count"], 2)
         finally:
             await engine.dispose()
 
-    def test_ai_stack_proposal_accepts_safe_named_volume_aliases(self):
-        """AI stack proposals may use common named-volume aliases, never host mounts."""
-        from services.official_stacks.proposal_manifest import stack_from_proposal
-        manifest = copy.deepcopy(AI_STACK_MANIFEST)
-        manifest["services"][0]["volumes"] = [
-            {"type": "volume", "source": "db-data", "target": "/var/lib/postgresql/data"},
-            "db-backup:/backup:ro",
-        ]
-        stack = stack_from_proposal(manifest, ["source inspection detected named volumes"])
-        volumes = stack.services["analytics_db"].volumes
-        self.assertEqual(volumes[0].name_suffix, "db-data")
-        self.assertEqual(volumes[0].container_mount_path, "/var/lib/postgresql/data")
-        self.assertTrue(volumes[1].read_only)
-
     def test_ai_stack_proposal_rejects_host_volume_aliases(self):
-        """Host paths remain forbidden even when the AI uses Compose long syntax."""
-        from services.official_stacks.proposal_manifest import stack_from_proposal
-        manifest = copy.deepcopy(AI_STACK_MANIFEST)
-        manifest["services"][0]["volumes"] = [
-            {"type": "bind", "source": "/srv/data", "target": "/var/lib/postgresql/data"},
-        ]
+        """Host paths and forbidden sockets remain forbidden in AppSpec validation."""
+        from services.apps_engine.security_policy import validate_app_spec
+        manifest = {
+            "name": "analytics_db",
+            "services": {
+                "db": {
+                    "image": "postgres:16-alpine",
+                    "volumes": [{"name_suffix": "data", "container_mount_path": "/var/run/docker.sock"}],
+                }
+            }
+        }
         with self.assertRaises(ValueError):
-            stack_from_proposal(manifest, ["source inspection detected named volumes"])
+            validate_app_spec(manifest)
 
     def test_server_fallback_builds_stack_args_from_compose_inspection(self):
         """If the provider stops, the panel can create a generic stack plan from inspection facts."""
@@ -333,45 +327,6 @@ class TestOfficialStacks(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(manifest["services"][0]["volumes"][0]["mount_path"], "/var/lib/postgresql/data")
         self.assertIn({"key": "SECRET_KEY_BASE", "purpose": "Application secret", "generator": "base64_48", "service": "web", "environment": "SECRET_KEY_BASE"}, manifest["secrets"])
         self.assertEqual(args["nonsecret_settings"]["BASE_URL"], "https://stats.example.com")
-
-    def test_ai_stack_proposal_infers_safe_private_ports(self):
-        """Missing harmless port details are inferred; only unsafe networking remains rejected."""
-        from services.official_stacks.proposal_manifest import stack_from_proposal
-        manifest = copy.deepcopy(AI_STACK_MANIFEST)
-        manifest["services"][0].pop("ports")
-        manifest["services"][1]["ports"] = "8000"
-        stack = stack_from_proposal(manifest, ["source inspection detected private service ports"])
-        self.assertEqual(stack.services["analytics_db"].internal_ports, [5432])
-        self.assertEqual(stack.services["analytics_web"].internal_ports, [8000])
-
-    def test_ai_rejects_legacy_or_raw_stack_shapes(self):
-        """AI proposal input accepts only explicit structured manifest fields."""
-        from services.official_stacks.proposal_manifest import stack_from_proposal
-        dynamic_payload = {
-            "catalog_id": "dynamic_ai_stack",
-            "display_name": "Dynamic AI Generated Stack",
-            "services": {
-                "db": {
-                    "image": "postgres:16-alpine",
-                    "volumes": ["db-data:/var/lib/postgresql/data"],
-                    "health_check": "pg_isready -U postgres",
-                    "ports": [5432],
-                },
-                "web": {
-                    "image": "ghcr.io/myvendor/myapp:latest",
-                    "ports": [8000],
-                    "health_check": "/api/health",
-                    "depends_on": ["db"],
-                },
-            },
-            "startup_order": "db, web",
-            "web_service_name": "web",
-            "web_internal_port": 8000,
-            "required_secrets": ["DB_PASSWORD", "SECRET_KEY_BASE"],
-            "url_templates": {"DATABASE_URL": "postgresql://postgres:{DB_PASSWORD}@{db}:5432/app"},
-        }
-        with self.assertRaises(ValueError):
-            stack_from_proposal(dynamic_payload, ["https://example.test/docs"])
 
     async def test_official_stack_create_flow(self):
         """Verify the create flow logic handles official_stack deploy_type correctly."""

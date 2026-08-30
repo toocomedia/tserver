@@ -1,33 +1,36 @@
-"""Static repository inspection for the Railpack Apps builder.
+"""Static repository inspection and Context Pack Collector for App Engine.
 
-Detection precedence (highest → lowest):
-  1. docker-compose.yml  → confidence HIGH
-  2. Dockerfile EXPOSE   → confidence MEDIUM
-  3. package.json / runtime marker → confidence MEDIUM
-  4. lockfile text match → confidence LOW  (returned as suggestions, not auto-applied)
+Collects raw facts (README setup sections, .env samples, and manifest files)
+so the AI and deployment pipelines have direct, unadulterated source evidence.
 """
 from __future__ import annotations
 
 import json
 import re
 from pathlib import Path
+from typing import Any
 
 from dependencies.git import repository_service
 
-# Confidence constants
 CONFIDENCE_HIGH = "HIGH"
 CONFIDENCE_MEDIUM = "MEDIUM"
 CONFIDENCE_LOW = "LOW"
 
-# Map Compose image prefixes to canonical DB kind
 _COMPOSE_IMAGE_DB: dict[str, str] = {
-    "postgres":   "postgresql",
-    "mariadb":    "mariadb/mysql",
-    "mysql":      "mariadb/mysql",
-    "mongo":      "mongodb",
-    "redis":      "redis",
+    "postgres": "postgresql",
+    "mariadb": "mariadb/mysql",
+    "mysql": "mariadb/mysql",
+    "mongo": "mongodb",
+    "redis": "redis",
     "clickhouse": "clickhouse",
 }
+
+MANIFEST_FILENAMES = (
+    "docker-compose.yml", "docker-compose.yaml", "compose.yml", "compose.yaml",
+    "Dockerfile", "package.json", "mix.exs", "requirements.txt", "pyproject.toml",
+    "Cargo.toml", "go.mod", "composer.json", "Gemfile", ".env.example", ".env.sample",
+    "README.md", "INSTALL.md", "GUIDE.md",
+)
 
 
 def _parse_github_slug(url: str) -> tuple[str, str] | None:
@@ -41,7 +44,6 @@ def _try_fast_raw_inspect(repository_url: str, branch: str = "main") -> dict[str
     """Fast probe: fetch manifests directly via raw GitHub HTTP before falling back to full git clone."""
     import tempfile
     import urllib.request
-    import urllib.error
 
     slug = _parse_github_slug(repository_url)
     if not slug:
@@ -54,16 +56,11 @@ def _try_fast_raw_inspect(repository_url: str, branch: str = "main") -> dict[str
     elif target_branch == "main":
         branches_to_try.append("master")
 
-    manifest_candidates = [
-        "docker-compose.yml", "docker-compose.yaml", "compose.yml", "compose.yaml",
-        "Dockerfile", "package.json", ".env.example", ".env.sample", "README.md",
-    ]
-
     for br in branches_to_try:
         found_any = False
         with tempfile.TemporaryDirectory(prefix="srv-fast-inspect-") as temp_dir:
             temp_path = Path(temp_dir)
-            for fname in manifest_candidates:
+            for fname in MANIFEST_FILENAMES:
                 raw_url = f"https://raw.githubusercontent.com/{owner}/{repo}/{br}/{fname}"
                 try:
                     req = urllib.request.Request(raw_url, headers={"User-Agent": "Barq-Apps-Engine"})
@@ -71,8 +68,7 @@ def _try_fast_raw_inspect(repository_url: str, branch: str = "main") -> dict[str
                         if resp.status == 200:
                             content = resp.read()
                             (temp_path / fname).write_bytes(content)
-                            if fname in ("docker-compose.yml", "docker-compose.yaml", "compose.yml", "compose.yaml", "Dockerfile", "package.json"):
-                                found_any = True
+                            found_any = True
                 except Exception:
                     continue
 
@@ -82,6 +78,7 @@ def _try_fast_raw_inspect(repository_url: str, branch: str = "main") -> dict[str
 
 
 def inspect_repository(repository_url: str, branch: str = "main", *, ssh_key_path: str | Path | None = None) -> dict[str, object]:
+    """Inspect repository files and compile raw context pack for the deployment pipeline."""
     if not ssh_key_path and repository_url.strip().lower().startswith("https://github.com/"):
         try:
             fast_res = _try_fast_raw_inspect(repository_url, branch)
@@ -96,45 +93,42 @@ def inspect_repository(repository_url: str, branch: str = "main", *, ssh_key_pat
 
 def _analyze_directory(root: Path, repository_url: str, branch: str) -> dict[str, object]:
     files = {path.name for path in root.iterdir() if path.is_file()}
-    text = _read_sources(root)
-    runtime = _runtime(files)
-    framework = _framework(root, files, text, runtime)
-
-    # Detect databases with confidence levels
-    databases, suggestions = _databases_with_confidence(root, files, text)
-
-    # Extract environment template (.env.example / .env.sample / TEMPLATE.env)
-    from services.apps_engine import doc_evidence
-    env_sample = doc_evidence.parse_expanded_env_samples(root)
-
-    # Extract markdown installation instructions (GUIDE.md, INSTALL.md, README.md setup sections)
-    documentation_evidence = doc_evidence.find_install_instructions(root, env_sample=env_sample)
-
-    # Extract package scripts
-    package_scripts = _parse_package_scripts(root)
-
-    # Detect storage mount needs (SQLite, uploads, CMS data)
-    storage_mounts = _detect_storage_mounts(framework, databases, files, text)
-
-    # Compose summary if present
-    compose_info = _parse_compose_details(root)
-
+    runtime = _detect_runtime(files)
     has_dockerfile = "Dockerfile" in files
-    has_app_manifest = bool(files & {
-        "package.json", "requirements.txt", "pyproject.toml", "Pipfile", "poetry.lock",
-        "composer.json", "go.mod", "Gemfile", "pom.xml", "build.gradle", "build.gradle.kts",
-        "Cargo.toml", "deno.json", "bun.lockb", "railpack.json", "Procfile", "index.html"
-    })
-    # If repository provides a Dockerfile, default to dockerfile mode to use author-defined dependencies;
-    # otherwise default to Railpack.
     build_mode = "dockerfile" if has_dockerfile else "railpack"
 
+    # 1. Extract markdown setup instructions
+    from services.apps_engine import doc_evidence
+    env_sample = doc_evidence.parse_expanded_env_samples(root)
+    documentation_evidence = doc_evidence.find_install_instructions(root, env_sample=env_sample)
+
+    # 2. Parse Compose services if present
+    compose_file = _find_compose(root)
+    compose_info: dict[str, Any] = {}
+    if compose_file:
+        from services.apps_engine.compose_evidence import inspect_compose_evidence
+        compose_info = inspect_compose_evidence(compose_file) or {}
+
+    # 3. Collect raw manifest text snippets for the AI context pack
+    manifest_snippets: dict[str, str] = {}
+    for fname in ("Dockerfile", "docker-compose.yml", "docker-compose.yaml", "package.json", "mix.exs", "requirements.txt", "pyproject.toml", "Cargo.toml", "go.mod"):
+        p = root / fname
+        if p.is_file():
+            try:
+                content = p.read_text(encoding="utf-8", errors="ignore")
+                # Keep first 120 lines to keep context pack lean and fast
+                lines = content.splitlines()[:120]
+                manifest_snippets[fname] = "\n".join(lines)
+            except Exception:
+                pass
+
+    # 4. Check for official image advice
     from services.apps_engine.source_image_advisor import advise_official_image
-    advice = advise_official_image(repository_url, framework)
-    if not advice and compose_info and isinstance(compose_info, dict) and compose_info.get("services"):
+    advice = advise_official_image(repository_url, runtime)
+    if not advice and compose_info.get("services"):
         for svc in compose_info["services"]:
             img = str(svc.get("image") or "").strip()
-            if img and not any(db_prefix in img.lower() for db_prefix in ("postgres", "mysql", "mariadb", "redis", "mongo", "clickhouse", "kafka", "valkey")):
+            if img and not any(db in img.lower() for db in ("postgres", "mysql", "mariadb", "redis", "mongo", "clickhouse", "kafka")):
                 advice = {
                     "image": img,
                     "reason": f"Discovered official pre-built image '{img}' in docker-compose.yml",
@@ -142,203 +136,59 @@ def _analyze_directory(root: Path, repository_url: str, branch: str) -> dict[str
                 }
                 break
 
-    db_types = [d["kind"] for d in databases]
-    # Promote key server datastores from lockfile/source suggestions if not already confirmed
-    for s in suggestions:
-        kind = s.get("kind")
-        if kind and kind in ("clickhouse", "postgresql", "mariadb/mysql", "mariadb", "mysql", "redis", "mongodb"):
-            canonical_kind = "mariadb" if kind in ("mariadb/mysql", "mysql") else kind
-            if canonical_kind not in db_types:
-                db_types.append(canonical_kind)
+    # 5. Extract datastores from compose and image references
+    databases: list[dict[str, str]] = []
+    db_types: list[str] = []
+    if compose_file:
+        for kind in _compose_databases(compose_file):
+            if kind not in db_types:
+                db_types.append(kind)
+                databases.append({"kind": kind, "confidence": CONFIDENCE_HIGH, "reason": "docker-compose.yml service image"})
 
-    res_dict = {
+    # 6. Available panel capabilities
+    panel_capabilities: list[dict[str, Any]] = []
+    try:
+        from services.apps_engine import database_provider_capabilities
+        panel_capabilities = database_provider_capabilities.provider_capabilities(force=True)
+    except Exception:
+        pass
+
+    internal_port = _detect_port(root, compose_info, runtime)
+
+    res_dict: dict[str, object] = {
         "repository_url": repository_url,
         "branch": branch,
         "runtime": runtime,
-        "framework": framework,
+        "framework": runtime,
         "build_mode": build_mode,
         "has_dockerfile": has_dockerfile,
-        "internal_port": _port(text, runtime, framework, compose_info),
+        "internal_port": internal_port,
         "database_types": db_types,
         "database_detected": bool(db_types),
-        "database_detections": databases,          # [{kind, confidence}]
-        "database_suggestions": suggestions,       # [{kind, confidence, reason}] — LOW only
-        "env_sample": doc_evidence.ai_safe_env_sample(env_sample),  # secret names retained; values omitted
+        "database_detections": databases,
+        "database_suggestions": [],
+        "env_sample": doc_evidence.ai_safe_env_sample(env_sample),
         "documentation_evidence": documentation_evidence,
-        "storage_mount_suggestions": storage_mounts, # [{label, mount_path, reason}]
-        "package_scripts": package_scripts,
+        "storage_mount_suggestions": [],
+        "package_scripts": {},
         "compose_info": compose_info,
+        "manifest_snippets": manifest_snippets,
+        "panel_capabilities": panel_capabilities,
+        "context_pack": {
+            "runtime": runtime,
+            "manifests": list(manifest_snippets.keys()),
+            "manifest_snippets": manifest_snippets,
+            "env_keys": list(env_sample.keys()) if env_sample else [],
+            "compose_services": [s.get("name") for s in compose_info.get("services", [])] if compose_info else [],
+            "official_image": advice.get("image") if advice else None,
+        },
     }
     if advice:
         res_dict["official_image_recommendation"] = advice
         res_dict["official_image_available"] = advice.get("image")
         res_dict["summary"] = f"Official pre-built image '{advice.get('image')}' detected in repository. Recommended over compiling from source."
+
     return res_dict
-
-
-def _framework(root: Path, files: set[str], text: str, runtime: str) -> str:
-    # 1. Primary check: Top-level package.json dependencies and package name
-    pkg_path = root / "package.json"
-    if pkg_path.is_file():
-        try:
-            pkg_data = json.loads(pkg_path.read_text(encoding="utf-8", errors="ignore"))
-            pkg_name = str(pkg_data.get("name") or "").lower()
-            deps = {**pkg_data.get("dependencies", {}), **pkg_data.get("devDependencies", {})}
-            deps_lower = {k.lower() for k in deps}
-            if "next" in deps_lower or "next.config.js" in files or "next.config.mjs" in files or "next.config.ts" in files:
-                return "Next.js"
-            if "nuxt" in deps_lower or "nuxt.config.js" in files or "nuxt.config.ts" in files:
-                return "Nuxt"
-            if "@remix-run/node" in deps_lower or "@remix-run/react" in deps_lower or "remix.config.js" in files:
-                return "Remix"
-            if "astro" in deps_lower or "astro.config.mjs" in files:
-                return "Astro"
-            if "@sveltejs/kit" in deps_lower or "svelte.config.js" in files:
-                return "SvelteKit"
-            if "n8n" in pkg_name or "@n8n/core" in deps_lower or "n8n-core" in deps_lower:
-                return "n8n"
-            if "ghost" in pkg_name or "ghost" in deps_lower:
-                return "Ghost"
-            if "strapi" in pkg_name or "@strapi/strapi" in deps_lower:
-                return "Strapi"
-            if any(k in deps_lower for k in ("express", "fastify", "nestjs", "@nestjs/core")):
-                return "Express/NestJS"
-        except Exception:
-            pass
-
-    lower_text = text.lower()
-    if "next.config.js" in files or "next.config.mjs" in files or "next.config.ts" in files or '"next"' in lower_text:
-        return "Next.js"
-    if "nuxt.config.js" in files or "nuxt.config.ts" in files or '"nuxt"' in lower_text:
-        return "Nuxt"
-    if "remix.config.js" in files or '"@remix-run' in lower_text:
-        return "Remix"
-    if "astro.config.mjs" in files or '"astro"' in lower_text:
-        return "Astro"
-    if "svelte.config.js" in files or '"@sveltejs/kit"' in lower_text:
-        return "SvelteKit"
-    if "manage.py" in files or "django" in lower_text:
-        return "Django"
-    if "fastapi" in lower_text:
-        return "FastAPI"
-    if "flask" in lower_text:
-        return "Flask"
-    if "artisan" in files or "laravel/framework" in lower_text:
-        return "Laravel"
-    if "bin/rails" in files or "rails" in lower_text:
-        return "Ruby on Rails"
-    if "strapi" in lower_text:
-        return "Strapi"
-    if "ghost" in lower_text:
-        return "Ghost"
-    if "pocketbase" in lower_text:
-        return "PocketBase"
-    if runtime == "Node.js" and ("express" in lower_text or "fastify" in lower_text or "nestjs" in lower_text):
-        return "Express/NestJS"
-    return runtime
-
-
-def _parse_env_sample(root: Path) -> dict[str, str]:
-    """Parse any environment template file using doc_evidence."""
-    from services.apps_engine import doc_evidence
-    return doc_evidence.parse_expanded_env_samples(root)
-
-
-def _parse_package_scripts(root: Path) -> dict[str, str]:
-    pkg_path = root / "package.json"
-    if pkg_path.is_file():
-        try:
-            data = json.loads(pkg_path.read_text(encoding="utf-8", errors="ignore"))
-            scripts = data.get("scripts")
-            if isinstance(scripts, dict):
-                from services.apps_engine.doc_evidence import redact_secret_values
-                return {k: redact_secret_values(v) for k, v in scripts.items() if isinstance(v, str)}
-        except Exception:
-            pass
-    return {}
-
-
-def _detect_storage_mounts(framework: str, databases: list[dict], files: set[str], text: str) -> list[dict[str, str]]:
-    """Detect persistent volume storage paths."""
-    mounts: list[dict[str, str]] = []
-    lower = text.lower()
-    
-    # 1. SQLite persistence
-    if "sqlite" in lower or any(d.get("kind") == "sqlite" for d in databases):
-        mounts.append({"label": "data", "mount_path": "/app/data", "reason": "Persistent SQLite storage"})
-    
-    # 2. Framework-specific persistent mounts
-    if framework == "Ghost":
-        mounts.append({"label": "content", "mount_path": "/var/lib/ghost/content", "reason": "Ghost uploads and themes"})
-    elif framework == "Strapi":
-        mounts.append({"label": "uploads", "mount_path": "/app/public/uploads", "reason": "Media and file uploads"})
-    elif framework == "PocketBase":
-        mounts.append({"label": "pb-data", "mount_path": "/pb_data", "reason": "PocketBase database and uploads"})
-    elif framework == "n8n":
-        mounts.append({"label": "n8n-data", "mount_path": "/home/node/.n8n", "reason": "n8n workflow and credential storage"})
-    elif "uploads" in lower or "upload_dir" in lower:
-        mounts.append({"label": "uploads", "mount_path": "/app/uploads", "reason": "Application uploads storage"})
-        
-    return mounts
-
-
-def _parse_compose_details(root: Path) -> dict[str, object]:
-    compose_file = _find_compose(root)
-    if not compose_file:
-        return {}
-    from services.apps_engine.compose_evidence import inspect_compose_evidence
-    return inspect_compose_evidence(compose_file)
-
-
-def _databases_with_confidence(
-    root: Path, files: set[str], text: str
-) -> tuple[list[dict], list[dict]]:
-    """Return (confirmed, suggestions) with confidence attached.
-
-    confirmed → HIGH or MEDIUM  (auto-applied)
-    suggestions → LOW only      (shown to user, not applied)
-    """
-    confirmed: dict[str, dict] = {}   # kind → entry
-    suggested: dict[str, dict] = {}   # kind → entry
-
-    def _add(kind: str, confidence: str, reason: str) -> None:
-        if confidence in (CONFIDENCE_HIGH, CONFIDENCE_MEDIUM):
-            existing = confirmed.get(kind)
-            if existing is None or _rank(confidence) > _rank(existing["confidence"]):
-                confirmed[kind] = {"kind": kind, "confidence": confidence, "reason": reason}
-        else:  # LOW
-            if kind not in confirmed:
-                suggested[kind] = {"kind": kind, "confidence": confidence, "reason": reason}
-
-    # 1. Compose services → HIGH
-    compose_file = _find_compose(root)
-    if compose_file:
-        for kind in _compose_databases(compose_file):
-            _add(kind, CONFIDENCE_HIGH, "docker-compose.yml service image")
-
-    # 2. Dockerfile EXPOSE + FROM → MEDIUM
-    if "Dockerfile" in files:
-        dockerfile_text = (root / "Dockerfile").read_text(encoding="utf-8", errors="ignore")
-        for kind in _dockerfile_databases(dockerfile_text):
-            _add(kind, CONFIDENCE_MEDIUM, "Dockerfile FROM/RUN reference")
-
-    # 3. package.json dependencies → MEDIUM
-    if "package.json" in files:
-        pkg_text = (root / "package.json").read_text(encoding="utf-8", errors="ignore")
-        for kind in _text_markers(pkg_text.lower()):
-            _add(kind, CONFIDENCE_MEDIUM, "package.json dependency")
-
-    # 4. Lockfile / full source text → LOW (suggestions only)
-    lower = text.lower()
-    for kind in _text_markers(lower):
-        if kind not in confirmed:
-            _add(kind, CONFIDENCE_LOW, "source/lockfile text match")
-
-    return list(confirmed.values()), list(suggested.values())
-
-
-def _rank(confidence: str) -> int:
-    return {CONFIDENCE_HIGH: 2, CONFIDENCE_MEDIUM: 1, CONFIDENCE_LOW: 0}.get(confidence, 0)
 
 
 def _find_compose(root: Path) -> Path | None:
@@ -350,7 +200,6 @@ def _find_compose(root: Path) -> Path | None:
 
 
 def _compose_databases(compose_file: Path) -> list[str]:
-    """Extract DB kinds from Compose image: lines."""
     text = compose_file.read_text(encoding="utf-8", errors="ignore")
     kinds: list[str] = []
     for line in text.splitlines():
@@ -364,39 +213,7 @@ def _compose_databases(compose_file: Path) -> list[str]:
     return kinds
 
 
-def _dockerfile_databases(dockerfile_text: str) -> list[str]:
-    """Check FROM lines in a Dockerfile for known DB images."""
-    lower = dockerfile_text.lower()
-    kinds: list[str] = []
-    for line in lower.splitlines():
-        stripped = line.strip()
-        if stripped.startswith("from ") or stripped.startswith("run "):
-            for prefix, kind in _COMPOSE_IMAGE_DB.items():
-                if prefix in stripped and kind not in kinds:
-                    kinds.append(kind)
-    return kinds
-
-
-_TEXT_MARKERS: dict[str, tuple[str, ...]] = {
-    "postgresql":   ("asyncpg", "psycopg", "postgresql", "postgres", "pg8000", "pgx"),
-    "mariadb/mysql": ("mariadb", "mysql", "pymysql", "mysqlclient", "mysql-connector"),
-    "mongodb":      ("mongodb", "mongoose", "pymongo", "mongo-driver"),
-    "redis":        ("redis", "ioredis", "go-redis"),
-    "clickhouse":   ("clickhouse", "click_house"),
-    "sqlite":       ("sqlite", "sqlite3"),
-}
-
-
-def _text_markers(lower_text: str) -> list[str]:
-    return [kind for kind, tokens in _TEXT_MARKERS.items() if any(t in lower_text for t in tokens)]
-
-
-def _databases(text: str) -> list[str]:
-    """Compatibility helper returning database kinds from text markers."""
-    return _text_markers(text.lower())
-
-
-def _runtime(files: set[str]) -> str:
+def _detect_runtime(files: set[str]) -> str:
     if "package.json" in files:
         return "Node.js"
     if "mix.exs" in files:
@@ -418,49 +235,20 @@ def _runtime(files: set[str]) -> str:
     return "Detected by Railpack"
 
 
-def _port(text: str, runtime: str, framework: str = "", compose_info: dict | None = None) -> int:
+def _detect_port(root: Path, compose_info: dict, runtime: str) -> int:
     if compose_info and compose_info.get("detected_ports"):
         for p in compose_info["detected_ports"]:
             if 1 <= p <= 65535:
                 return p
-    for pattern in (r"EXPOSE\s+(\d{2,5})", r"(?:--port|port\s*[=:])\s*(\d{2,5})", r"PORT\s*\|\|\s*(\d{2,5})"):
-        match = re.search(pattern, text, re.IGNORECASE)
-        if match:
-            value = int(match.group(1))
-            if 1 <= value <= 65535:
-                return value
-    if framework == "Ghost":
-        return 2368
-    if framework == "Strapi":
-        return 1337
-    if framework == "PocketBase":
-        return 8090
-    if framework == "n8n":
-        return 5678
-    if framework in ("Next.js", "Nuxt", "Remix", "Astro", "SvelteKit"):
-        return 3000
-    if framework == "Django":
-        return 8000
-    if framework == "FastAPI":
-        return 8000
-    if framework == "Flask":
-        return 5000
+    dockerfile = root / "Dockerfile"
+    if dockerfile.is_file():
+        try:
+            txt = dockerfile.read_text(encoding="utf-8", errors="ignore")
+            m = re.search(r"EXPOSE\s+(\d{2,5})", txt, re.IGNORECASE)
+            if m:
+                val = int(m.group(1))
+                if 1 <= val <= 65535:
+                    return val
+        except Exception:
+            pass
     return {"Python": 8000, "PHP": 8080, "Go": 8080, "Java": 8080, "Elixir": 4000, "Static site": 80}.get(runtime, 3000)
-
-
-def _read_sources(root: Path) -> str:
-    names = (
-        "Dockerfile", "Procfile", "package.json", "package-lock.json", "yarn.lock", "pnpm-lock.yaml",
-        "railpack.json", "nixpacks.toml", "requirements.txt", "pyproject.toml", "Pipfile", "poetry.lock",
-        "Gemfile", "go.mod", "pom.xml", "build.gradle", "build.gradle.kts", "composer.json",
-        "mix.exs", "mix.lock", "config/runtime.exs", "config/config.exs", "config/prod.exs",
-        "config/database.yml", "config/database.php",
-    )
-    texts = []
-    for name in names:
-        path = root / name
-        if path.is_file():
-            texts.append(path.read_text(encoding="utf-8", errors="ignore")[:200_000])
-    for path in list(root.glob("*.py"))[:20]:
-        texts.append(path.read_text(encoding="utf-8", errors="ignore")[:100_000])
-    return "\n".join(texts)

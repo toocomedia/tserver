@@ -14,8 +14,7 @@ if str(BACKEND) not in sys.path:
 from database import AsyncSessionLocal, init_db
 from models.container_app import ContainerApp
 from models.domain import Domain
-from plugins.ai_helper.tools import app_setup
-from plugins.ai_helper.services import setup_plan_builder
+from plugins.ai_helper.tools import app_setup, app_spec_setup
 
 
 class TestAiAppSetup(unittest.IsolatedAsyncioTestCase):
@@ -103,9 +102,9 @@ class TestAiAppSetup(unittest.IsolatedAsyncioTestCase):
             self.assertTrue(res["plan_id"].startswith("plan_"))
 
     async def test_guaranteed_automatic_setup_plan_single_app(self):
-        """Verify build_automatic_setup_plan creates valid single-app plan from image."""
+        """Verify propose_app_install creates valid single-app plan from image."""
         async with AsyncSessionLocal() as db:
-            plan = await setup_plan_builder.build_automatic_setup_plan(
+            res = await app_setup.propose_app_install(
                 db=db,
                 session_id="fallback_single_test",
                 user_id=1,
@@ -113,36 +112,31 @@ class TestAiAppSetup(unittest.IsolatedAsyncioTestCase):
                 image_reference="redis:7-alpine",
                 domain_name="cache.example.com",
             )
-            self.assertIsNotNone(plan)
-            self.assertTrue(plan.plan_id.startswith("plan_"))
-            self.assertEqual(plan.action_type, "app_install")
+            self.assertEqual(res["status"], "ok")
+            self.assertTrue(res["plan_id"].startswith("plan_"))
 
     async def test_guaranteed_automatic_setup_plan_compose(self):
-        """Verify build_automatic_setup_plan creates valid stack plan from compose facts."""
-        mock_inspection = {
-            "repository_url": "https://github.com/example/analytics",
-            "branch": "main",
-            "compose_info": {
-                "services": [
-                    {"name": "web", "image": "example/analytics:v1", "internal_ports": [8000]},
-                    {"name": "db", "image": "postgres:16-alpine", "internal_ports": [5432]},
-                ],
-                "evidence": ["Compose detected"],
+        """Verify propose_app_spec_plan creates valid stack plan from compose facts."""
+        mock_spec = {
+            "name": "analytics",
+            "services": {
+                "web": {"image": "example/analytics:v1", "internal_ports": [8000]},
+                "db": {"image": "postgres:16-alpine", "internal_ports": [5432]},
             },
+            "web_service_name": "web",
+            "web_port": 8000,
         }
         async with AsyncSessionLocal() as db:
-            plan = await setup_plan_builder.build_automatic_setup_plan(
+            res = await app_spec_setup.propose_app_spec_plan(
                 db=db,
+                app_spec=mock_spec,
+                domain_name="analytics.example.com",
+                evidence=["Compose detected"],
                 session_id="fallback_compose_test",
                 user_id=1,
-                source_type="git",
-                repository_url="https://github.com/example/analytics",
-                domain_name="analytics.example.com",
-                inspection_result={"status": "ok", "inspection": mock_inspection},
             )
-            self.assertIsNotNone(plan)
-            self.assertTrue(plan.plan_id.startswith("plan_"))
-            self.assertEqual(plan.action_type, "app_spec_install")
+            self.assertEqual(res["status"], "ok")
+            self.assertTrue(res["plan_id"].startswith("plan_"))
 
     async def test_cancel_deployment(self):
         """Verify cancel_deployment marks deployment as cancelled and unlocks app."""
@@ -275,8 +269,8 @@ class TestAiAppSetup(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("DATABASE_URL", clean_envs)
 
     def test_setup_plan_builder_normalization_and_port_sync(self):
-        """Verify setup_plan_builder single app payload normalizes env and syncs PORT."""
-        payload = setup_plan_builder.build_single_app_payload(
+        """Verify single app payload normalizes env and syncs PORT."""
+        payload = app_setup._build_single_app_payload(
             source_type="image",
             image_reference="redis:alpine",
             internal_port=6379,
@@ -458,8 +452,8 @@ class TestAiAppSetup(unittest.IsolatedAsyncioTestCase):
             db.add(domain)
             await db.flush()
 
-            import random
-            rnd_port = random.randint(35000, 39000)
+            from services import container_app_service
+            rnd_port = await container_app_service.next_host_port(db)
             app = ContainerApp(
                 domain_id=domain.id,
                 container_name=f"test-patch-{uid}",
@@ -589,37 +583,24 @@ class TestAiAppSetup(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(plan["payload"]["domain_name"], "open.blagh.co")
 
     def test_shynet_stack_synthesis_defaults(self):
-        """Verify Shynet compose inspection with empty ports and unpinned images synthesizes cleanly."""
-        from services.official_stacks.stack_synthesizer import synthesize_stack_from_compose
-        inspection = {
-            "repository_url": "https://github.com/milesmcc/shynet",
-            "branch": "master",
-            "runtime": "Python",
-            "internal_port": 8080,
-            "compose_info": {
-                "services": [
-                    {"name": "shynet", "image": "milesmcc/shynet:latest", "internal_ports": []},
-                    {"name": "db", "image": "postgres", "internal_ports": []},
-                    {"name": "webserver", "image": "nginx", "internal_ports": [80]},
-                ],
+        """Verify Shynet compose manifest validates cleanly into AppSpec."""
+        from services.apps_engine.security_policy import validate_app_spec
+        manifest = {
+            "name": "shynet",
+            "services": {
+                "shynet": {"image": "milesmcc/shynet:latest", "ports": [8080]},
+                "db": {"image": "postgres:16-alpine", "ports": [5432]},
+                "webserver": {"image": "nginx:alpine", "ports": [80]},
             },
+            "web_service_name": "shynet",
+            "web_port": 8080,
         }
-        res = synthesize_stack_from_compose(inspection, domain_name="open.blagh.co", repo_url="https://github.com/milesmcc/shynet")
-        self.assertIsNotNone(res)
-        manifest = res["stack_manifest"]
-        self.assertEqual(res["domain_name"], "open.blagh.co")
-        services = {s["name"]: s for s in manifest["services"]}
-        # Ports auto-defaulted
-        self.assertEqual(services["db"]["ports"], [5432])
-        self.assertEqual(services["shynet"]["ports"], [8080])
-        self.assertEqual(services["webserver"]["ports"], [80])
-        # Database/webserver bare names given stable tags, app image preserved
-        self.assertEqual(services["db"]["image"], "postgres:16-alpine")
-        self.assertEqual(services["webserver"]["image"], "nginx:alpine")
-        self.assertEqual(services["shynet"]["image"], "milesmcc/shynet:latest")
-        # Web entrypoint must be the real app container, not the auxiliary webserver
-        self.assertEqual(manifest["web_service"], "shynet")
-        self.assertEqual(manifest["web_port"], 8080)
+        spec = validate_app_spec(manifest)
+        self.assertEqual(spec.name, "shynet")
+        self.assertEqual(spec.web_service_name, "shynet")
+        self.assertEqual(spec.web_port, 8080)
+        self.assertIn("db", spec.services)
+        self.assertIn("webserver", spec.services)
 
     def test_app_documentation_service(self):
         """Verify get_app_documentation compiles superuser commands and CLI runbook."""
@@ -662,32 +643,26 @@ class TestAiAppSetup(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(m_cmds["Follow Live Application Logs"], "docker logs -f --tail 100 srv-app-12")
 
     def test_openpanel_stack_synthesis(self):
-        """Verify OpenPanel compose inspection with all backing databases synthesizes cleanly."""
-        from services.official_stacks.stack_synthesizer import synthesize_stack_from_compose
-        inspection = {
-            "repository_url": "https://github.com/Openpanel-dev/openpanel",
-            "branch": "main",
-            "runtime": "Node.js",
-            "internal_port": 3000,
-            "compose_info": {
-                "services": [
-                    {"name": "op-db", "image": "postgres:14-alpine", "internal_ports": [5432]},
-                    {"name": "op-kv", "image": "redis:7.2.5-alpine", "internal_ports": [6379]},
-                    {"name": "op-ch", "image": "clickhouse/clickhouse-server:24.3-alpine", "internal_ports": [8123, 9000]},
-                    {"name": "op-rp", "image": "redpandadata/redpanda:v24.1.2", "internal_ports": [9092, 9644]},
-                    {"name": "op-rp-console", "image": "redpandadata/console:v3.7.2", "internal_ports": [8080]},
-                ],
+        """Verify OpenPanel compose manifest validates cleanly into AppSpec."""
+        from services.apps_engine.security_policy import validate_app_spec
+        manifest = {
+            "name": "openpanel",
+            "services": {
+                "openpanel": {"image": "openpanel/openpanel:latest", "ports": [3000]},
+                "op-db": {"image": "postgres:14-alpine", "ports": [5432]},
+                "op-kv": {"image": "redis:7.2.5-alpine", "ports": [6379]},
+                "op-ch": {"image": "clickhouse/clickhouse-server:24.3-alpine", "ports": [8123, 9000]},
+                "op-rp": {"image": "redpandadata/redpanda:v24.1.2", "ports": [9092, 9644]},
+                "op-rp-console": {"image": "redpandadata/console:v3.7.2", "ports": [8080]},
             },
+            "web_service_name": "openpanel",
+            "web_port": 3000,
         }
-        res = synthesize_stack_from_compose(inspection, domain_name="open.blagh.co", repo_url="https://github.com/Openpanel-dev/openpanel")
-        self.assertIsNotNone(res)
-        manifest = res["stack_manifest"]
-        services = {s["name"]: s for s in manifest["services"]}
-        self.assertIn("openpanel", services)
-        self.assertEqual(services["openpanel"]["ports"], [3000])
-        self.assertEqual(manifest["web_service"], "openpanel")
-        self.assertEqual(manifest["web_port"], 3000)
-        self.assertEqual(res["domain_name"], "open.blagh.co")
+        spec = validate_app_spec(manifest)
+        self.assertEqual(spec.name, "openpanel")
+        self.assertEqual(spec.web_service_name, "openpanel")
+        self.assertEqual(spec.web_port, 3000)
+        self.assertEqual(len(spec.services), 6)
 
     def test_is_setup_interview_pending_triggers_on_github_url(self):
         """Verify is_setup_interview_pending triggers options presentation for repos with choices even when URL has github.com."""

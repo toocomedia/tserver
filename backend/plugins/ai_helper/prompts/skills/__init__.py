@@ -10,11 +10,9 @@ from plugins.ai_helper.prompts.skills.container_error_resolver import SKILL as C
 from plugins.ai_helper.prompts.skills.database import SKILL as DATABASE_SKILL
 from plugins.ai_helper.prompts.skills.error_diag import SKILL as ERROR_DIAG_SKILL
 from plugins.ai_helper.prompts.skills.file_explorer import SKILL as FILE_EXPLORER_SKILL
-from plugins.ai_helper.prompts.skills.official_stack_architect import SKILL as OFFICIAL_STACK_ARCHITECT_SKILL
 from plugins.ai_helper.prompts.skills.security_audit import SKILL as SECURITY_AUDIT_SKILL
-from plugins.ai_helper.prompts.skills.universal_build_architect import SKILL as UNIVERSAL_BUILD_ARCHITECT_SKILL
 
-# Register all built-in skills
+# Register active built-in skills
 for skill in (
     APP_DEPLOY_SKILL,
     APP_INSPECT_SKILL,
@@ -24,9 +22,7 @@ for skill in (
     DATABASE_SKILL,
     ERROR_DIAG_SKILL,
     FILE_EXPLORER_SKILL,
-    OFFICIAL_STACK_ARCHITECT_SKILL,
     SECURITY_AUDIT_SKILL,
-    UNIVERSAL_BUILD_ARCHITECT_SKILL,
 ):
     register_skill(skill)
 

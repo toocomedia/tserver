@@ -18,7 +18,7 @@ from plugins.ai_helper.tools import app_setup as app_setup_tools
 from plugins.ai_helper.services.providers import decrypt_key, get_active_provider, get_provider
 from plugins.ai_helper.services.secrets_consent import check_consent_phrase, is_secrets_allowed
 from plugins.ai_helper.services.sessions import generate_title_from_prompt, get_or_create_session
-from plugins.ai_helper.services import setup_handoff, setup_plan_builder, visible_output
+from plugins.ai_helper.services import setup_handoff, visible_output
 missing_plan_message = setup_handoff.missing_plan_message
 
 logger = logging.getLogger(__name__)
@@ -526,8 +526,9 @@ async def stream_ai_chat(
                 yield _activity_event("inspect_app_source", "error", {"repository_url": repo, "image_reference": img})
 
         if setup_source_result and setup_source_result.get("status") == "ok":
-            from services.official_stacks.stack_synthesizer import requires_multi_container_stack
-            needs_stack = requires_multi_container_stack(setup_source_result)
+            _insp = setup_source_result.get("inspection") if isinstance(setup_source_result.get("inspection"), dict) else setup_source_result
+            _compose_svcs = (_insp.get("compose_info") or {}).get("services") if isinstance(_insp, dict) else None
+            needs_stack = bool(isinstance(_compose_svcs, list) and len(_compose_svcs) >= 1)
             if setup_handoff.is_setup_interview_pending(setup_source_result, user_message):
                 inspection = setup_source_result.get("inspection") if isinstance(setup_source_result.get("inspection"), dict) else setup_source_result
                 doc_ev = (inspection.get("documentation_evidence") or {}) if isinstance(inspection, dict) else {}
@@ -563,6 +564,9 @@ async def stream_ai_chat(
                         for item in (inspection.get("database_detections") or [])
                         if isinstance(item, dict)
                     }
+                    for dt in (inspection.get("database_types") or []):
+                        if dt:
+                            detected_kinds.add(str(dt).lower())
                     for record in database_provider_capabilities.provider_capabilities(force=True):
                         kind = str(record.get("kind") or "")
                         if kind not in detected_kinds:
@@ -587,10 +591,12 @@ async def stream_ai_chat(
                 setup_interview_options_str = options_str
 
                 action_instruction = (
-                    "Give a concise 2-sentence summary of the inspected application (app name, port, and detected database). "
-                    "Do NOT output tables or configuration variable lists. "
-                    "Do NOT call proposal planning tools yet. "
-                    f"Present the setup questions using the exact interactive tags below:\n{options_str}\n"
+                    "You are the Dynamic Application Architect. "
+                    "Analyze the inspected application using the raw evidence above and your extensive architectural knowledge. "
+                    "If the application requires databases (such as PostgreSQL, ClickHouse, MySQL, Redis, MongoDB) or specific user inputs (Domain, Admin Email, SMTP), "
+                    "present the deployment choices and input questions cleanly using [OPTION:...] and [INPUT:...]. "
+                    "Do NOT claim no database is detected if standard software requires one. "
+                    f"Available setup choices and inputs:\n{options_str}\n"
                     "Wait for the combined interview answer before generating the reviewed plan."
                 )
             elif needs_stack:
@@ -788,22 +794,12 @@ async def stream_ai_chat(
                         and not setup_plan_id
                     ):
                         if user_chose_image:
-                            from plugins.ai_helper.services import setup_plan_builder
-                            fallback_payload = setup_plan_builder.build_single_app_payload(
-                                source_type="image",
-                                repository_url="",
-                                image_reference=img or (setup_source_result.get("official_image_recommendation") or {}).get("image") or "milesmcc/shynet:latest",
-                                inspection=setup_source_result.get("inspection") if isinstance(setup_source_result.get("inspection"), dict) else setup_source_result,
-                                domain_name=setup_target_domain,
-                                user_message=user_message,
-                            )
+                            chosen_img = img or (setup_source_result.get("official_image_recommendation") or {}).get("image") or ""
                             fallback_args = {
                                 "source_type": "image",
-                                "image_reference": img or (setup_source_result.get("official_image_recommendation") or {}).get("image") or "milesmcc/shynet:latest",
+                                "image_reference": chosen_img,
                                 "domain_name": setup_target_domain,
-                                "summary": f"Deploy {img or 'application'} image",
-                                "environment_variables": fallback_payload.get("environment_variables", {}),
-                                "port": fallback_payload.get("port", 8080),
+                                "summary": f"Deploy {chosen_img or 'application'} image",
                             }
                             tool_to_call = "propose_app_install"
                         else:
@@ -972,30 +968,6 @@ async def stream_ai_chat(
                     "content": f"[Tool step failed: {str(exc)}. Report this failure clearly to the user and present any results already obtained above.]",
                 })
                 break
-
-        # After tool loop: ensure a setup plan is created if this was a setup request and decision is not pending
-        if (
-            setup_plan_required
-            and not setup_plan_id
-            and not (setup_documentation_failed and not setup_search_fallback_succeeded)
-            and not setup_provider_choice
-            and not setup_handoff.is_recommendation_decision_pending(setup_source_result, user_message)
-        ):
-            stype, repo, img = _extract_setup_source(user_message, context_text)
-            try:
-                fallback_plan = await setup_plan_builder.build_automatic_setup_plan(
-                    db=db,
-                    session_id=session_id,
-                    user_id=user_id,
-                    source_type=stype,
-                    repository_url=repo,
-                    image_reference=img,
-                    domain_name=setup_target_domain,
-                    inspection_result=setup_source_result,
-                )
-                setup_plan_id = fallback_plan.plan_id
-            except Exception as exc:
-                logger.warning("Automatic setup plan creation fallback failed: %s", exc)
 
         if tool_was_executed:
             if setup_plan_required:

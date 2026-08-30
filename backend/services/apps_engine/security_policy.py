@@ -39,7 +39,35 @@ _FORBIDDEN_COMMANDS = ("--privileged", "--cap-add", "--network=host", "/var/run/
 def normalize_app_spec_dict(raw: dict[str, Any]) -> dict[str, Any]:
     """Normalize common Docker Compose and AI-friendly aliases into canonical AppSpec fields."""
     data = dict(raw)
+    for drop in ("startup_order", "vendor_name", "source_repositories", "version", "description", "startup_timeout_seconds", "recommended_ram_mb", "minimum_ram_mb", "allowed_nonsecret_settings"):
+        data.pop(drop, None)
+    if "web_service" in data and "web_service_name" not in data:
+        data["web_service_name"] = data.pop("web_service")
+    if "secrets" in data and "required_secrets" not in data:
+        data["required_secrets"] = data.pop("secrets")
+
+    if isinstance(data.get("required_secrets"), list):
+        norm_secrets = []
+        for sec in data["required_secrets"]:
+            if isinstance(sec, dict):
+                s = dict(sec)
+                if "environment" in s and "environment_key" not in s:
+                    s["environment_key"] = s.pop("environment")
+                if "service" in s and "service_name" not in s:
+                    s["service_name"] = s.pop("service")
+                norm_secrets.append(s)
+        data["required_secrets"] = norm_secrets
+
     services_raw = data.get("services")
+    if isinstance(services_raw, list):
+        converted_services: dict[str, Any] = {}
+        for idx, item in enumerate(services_raw):
+            if isinstance(item, dict):
+                sname = str(item.get("name") or f"svc_{idx}")
+                converted_services[sname] = item
+        services_raw = converted_services
+        data["services"] = services_raw
+
     if isinstance(services_raw, dict):
         norm_services: dict[str, Any] = {}
         for sname, sval in services_raw.items():
@@ -70,6 +98,45 @@ def normalize_app_spec_dict(raw: dict[str, Any]) -> dict[str, Any]:
                     sdict["health_check"] = {"probe_type": "http", "http_path": hp}
                 else:
                     sdict["health_check"] = None
+            elif "health" in sdict and "health_check" not in sdict:
+                h = dict(sdict.pop("health")) if isinstance(sdict.get("health"), dict) else {}
+                if "type" in h and "probe_type" not in h:
+                    h["probe_type"] = h.pop("type")
+                sdict["health_check"] = h
+            if "resources" in sdict:
+                res = sdict.pop("resources")
+                if isinstance(res, dict):
+                    if "memory_mb" in res and "memory_limit_mb" not in sdict:
+                        sdict["memory_limit_mb"] = int(res["memory_mb"])
+                    if "cpu" in res and "cpu_limit" not in sdict:
+                        try:
+                            sdict["cpu_limit"] = float(res["cpu"])
+                        except (ValueError, TypeError):
+                            pass
+            if isinstance(sdict.get("volumes"), list):
+                norm_vols = []
+                for v in sdict["volumes"]:
+                    if isinstance(v, dict):
+                        vd = dict(v)
+                        if "name" in vd and "name_suffix" not in vd:
+                            vd["name_suffix"] = vd.pop("name")
+                        if "mount_path" in vd and "container_mount_path" not in vd:
+                            vd["container_mount_path"] = vd.pop("mount_path")
+                        if "target" in vd and "container_mount_path" not in vd:
+                            vd["container_mount_path"] = vd.pop("target")
+                        if "source" in vd and "name_suffix" not in vd:
+                            vd["name_suffix"] = vd.pop("source")
+                        vd.pop("type", None)
+                        norm_vols.append(vd)
+                    elif isinstance(v, str) and ":" in v:
+                        parts = v.split(":")
+                        norm_vols.append({
+                            "name_suffix": parts[0].strip(),
+                            "container_mount_path": parts[1].strip(),
+                            "read_only": len(parts) > 2 and "ro" in parts[2].lower(),
+                        })
+                sdict["volumes"] = norm_vols
+
             norm_services[sname] = sdict
         data["services"] = norm_services
 
