@@ -187,9 +187,23 @@
       if (text.indexOf("Setup interview answers:") === 0) {
         return this._renderSetupAnswers(text);
       }
-      // Older messages may contain provider reasoning. It is never a chat artifact.
+      var thinkMatch = text.match(/<think>([\s\S]*?)(?:<\/think>|$)/i);
+      var thinkHtml = "";
+      if (thinkMatch && thinkMatch[1].trim()) {
+        var isStreamingThinking = text.indexOf("</think>") === -1 && text.indexOf("<think>") !== -1;
+        var rawThink = thinkMatch[1].trim();
+        var escapedThink = rawThink.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        thinkHtml = '<div class="ai-thought-box' + (isStreamingThinking ? ' is-thinking is-expanded' : '') + '" data-thought-box>' +
+          '<button type="button" class="ai-thought-toggle" data-thought-toggle>' +
+          '<span class="ai-thought-icon">' + (isStreamingThinking ? '<span class="ai-activity-spinner"></span>' : '🧠') + '</span>' +
+          '<span class="ai-thought-label">' + (isStreamingThinking ? 'Reasoning...' : 'Reasoning') + '</span>' +
+          '<span class="ai-thought-chevron">' + (isStreamingThinking ? '▴' : '▾') + '</span>' +
+          '</button>' +
+          '<div class="ai-thought-content">' + escapedThink + '</div>' +
+          '</div>';
+      }
       var mainText = text.replace(/<think>[\s\S]*?(?:<\/think>|$)/gi, "").trim();
-      return this._renderMarkdownCore(mainText);
+      return thinkHtml + this._renderMarkdownCore(mainText);
     },
 
     _renderMarkdownCore: function (text) {

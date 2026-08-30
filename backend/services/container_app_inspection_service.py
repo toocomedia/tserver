@@ -30,88 +30,150 @@ _COMPOSE_IMAGE_DB: dict[str, str] = {
 }
 
 
+def _parse_github_slug(url: str) -> tuple[str, str] | None:
+    m = re.match(r"^https?://github\.com/([^/]+)/([^/]+?)(?:\.git)?/?$", url.strip(), re.IGNORECASE)
+    if m:
+        return m.group(1), m.group(2)
+    return None
+
+
+def _try_fast_raw_inspect(repository_url: str, branch: str = "main") -> dict[str, object] | None:
+    """Fast probe: fetch manifests directly via raw GitHub HTTP before falling back to full git clone."""
+    import tempfile
+    import urllib.request
+    import urllib.error
+
+    slug = _parse_github_slug(repository_url)
+    if not slug:
+        return None
+    owner, repo = slug
+    target_branch = branch.strip() or "main"
+    branches_to_try = [target_branch]
+    if target_branch not in ("main", "master"):
+        branches_to_try.extend(["main", "master"])
+    elif target_branch == "main":
+        branches_to_try.append("master")
+
+    manifest_candidates = [
+        "docker-compose.yml", "docker-compose.yaml", "compose.yml", "compose.yaml",
+        "Dockerfile", "package.json", ".env.example", ".env.sample", "README.md",
+    ]
+
+    for br in branches_to_try:
+        found_any = False
+        with tempfile.TemporaryDirectory(prefix="srv-fast-inspect-") as temp_dir:
+            temp_path = Path(temp_dir)
+            for fname in manifest_candidates:
+                raw_url = f"https://raw.githubusercontent.com/{owner}/{repo}/{br}/{fname}"
+                try:
+                    req = urllib.request.Request(raw_url, headers={"User-Agent": "Barq-Apps-Engine"})
+                    with urllib.request.urlopen(req, timeout=2.0) as resp:
+                        if resp.status == 200:
+                            content = resp.read()
+                            (temp_path / fname).write_bytes(content)
+                            if fname in ("docker-compose.yml", "docker-compose.yaml", "compose.yml", "compose.yaml", "Dockerfile", "package.json"):
+                                found_any = True
+                except Exception:
+                    continue
+
+            if found_any:
+                return _analyze_directory(temp_path, repository_url, br)
+    return None
+
+
 def inspect_repository(repository_url: str, branch: str = "main", *, ssh_key_path: str | Path | None = None) -> dict[str, object]:
+    if not ssh_key_path and repository_url.strip().lower().startswith("https://github.com/"):
+        try:
+            fast_res = _try_fast_raw_inspect(repository_url, branch)
+            if fast_res:
+                return fast_res
+        except Exception:
+            pass
+
     with repository_service.temporary_clone(repository_url, branch, allow_default_branch=True, ssh_key_path=ssh_key_path) as checkout:
-        root = checkout.path
-        files = {path.name for path in root.iterdir() if path.is_file()}
-        text = _read_sources(root)
-        runtime = _runtime(files)
-        framework = _framework(root, files, text, runtime)
+        return _analyze_directory(checkout.path, checkout.repository_url, checkout.branch)
 
-        # Detect databases with confidence levels
-        databases, suggestions = _databases_with_confidence(root, files, text)
 
-        # Extract environment template (.env.example / .env.sample / TEMPLATE.env)
-        from services.apps_engine import doc_evidence
-        env_sample = doc_evidence.parse_expanded_env_samples(root)
+def _analyze_directory(root: Path, repository_url: str, branch: str) -> dict[str, object]:
+    files = {path.name for path in root.iterdir() if path.is_file()}
+    text = _read_sources(root)
+    runtime = _runtime(files)
+    framework = _framework(root, files, text, runtime)
 
-        # Extract markdown installation instructions (GUIDE.md, INSTALL.md, README.md setup sections)
-        documentation_evidence = doc_evidence.find_install_instructions(root, env_sample=env_sample)
+    # Detect databases with confidence levels
+    databases, suggestions = _databases_with_confidence(root, files, text)
 
-        # Extract package scripts
-        package_scripts = _parse_package_scripts(root)
+    # Extract environment template (.env.example / .env.sample / TEMPLATE.env)
+    from services.apps_engine import doc_evidence
+    env_sample = doc_evidence.parse_expanded_env_samples(root)
 
-        # Detect storage mount needs (SQLite, uploads, CMS data)
-        storage_mounts = _detect_storage_mounts(framework, databases, files, text)
+    # Extract markdown installation instructions (GUIDE.md, INSTALL.md, README.md setup sections)
+    documentation_evidence = doc_evidence.find_install_instructions(root, env_sample=env_sample)
 
-        # Compose summary if present
-        compose_info = _parse_compose_details(root)
+    # Extract package scripts
+    package_scripts = _parse_package_scripts(root)
 
-        has_dockerfile = "Dockerfile" in files
-        has_app_manifest = bool(files & {
-            "package.json", "requirements.txt", "pyproject.toml", "Pipfile", "poetry.lock",
-            "composer.json", "go.mod", "Gemfile", "pom.xml", "build.gradle", "build.gradle.kts",
-            "Cargo.toml", "deno.json", "bun.lockb", "railpack.json", "Procfile", "index.html"
-        })
-        # If repository provides a Dockerfile, default to dockerfile mode to use author-defined dependencies;
-        # otherwise default to Railpack.
-        build_mode = "dockerfile" if has_dockerfile else "railpack"
+    # Detect storage mount needs (SQLite, uploads, CMS data)
+    storage_mounts = _detect_storage_mounts(framework, databases, files, text)
 
-        from services.apps_engine.source_image_advisor import advise_official_image
-        advice = advise_official_image(checkout.repository_url, framework)
-        if not advice and compose_info and isinstance(compose_info, dict) and compose_info.get("services"):
-            for svc in compose_info["services"]:
-                img = str(svc.get("image") or "").strip()
-                if img and not any(db_prefix in img.lower() for db_prefix in ("postgres", "mysql", "mariadb", "redis", "mongo", "clickhouse", "kafka", "valkey")):
-                    advice = {
-                        "image": img,
-                        "reason": f"Discovered official pre-built image '{img}' in docker-compose.yml",
-                        "source": "compose",
-                    }
-                    break
+    # Compose summary if present
+    compose_info = _parse_compose_details(root)
 
-        db_types = [d["kind"] for d in databases]
-        # Promote key server datastores from lockfile/source suggestions if not already confirmed
-        for s in suggestions:
-            kind = s.get("kind")
-            if kind and kind in ("clickhouse", "postgresql", "mariadb/mysql", "mariadb", "mysql", "redis", "mongodb"):
-                canonical_kind = "mariadb" if kind in ("mariadb/mysql", "mysql") else kind
-                if canonical_kind not in db_types:
-                    db_types.append(canonical_kind)
+    has_dockerfile = "Dockerfile" in files
+    has_app_manifest = bool(files & {
+        "package.json", "requirements.txt", "pyproject.toml", "Pipfile", "poetry.lock",
+        "composer.json", "go.mod", "Gemfile", "pom.xml", "build.gradle", "build.gradle.kts",
+        "Cargo.toml", "deno.json", "bun.lockb", "railpack.json", "Procfile", "index.html"
+    })
+    # If repository provides a Dockerfile, default to dockerfile mode to use author-defined dependencies;
+    # otherwise default to Railpack.
+    build_mode = "dockerfile" if has_dockerfile else "railpack"
 
-        res_dict = {
-            "repository_url": checkout.repository_url,
-            "branch": checkout.branch,
-            "runtime": runtime,
-            "framework": framework,
-            "build_mode": build_mode,
-            "has_dockerfile": has_dockerfile,
-            "internal_port": _port(text, runtime, framework, compose_info),
-            "database_types": db_types,
-            "database_detected": bool(db_types),
-            "database_detections": databases,          # [{kind, confidence}]
-            "database_suggestions": suggestions,       # [{kind, confidence, reason}] — LOW only
-            "env_sample": doc_evidence.ai_safe_env_sample(env_sample),  # secret names retained; values omitted
-            "documentation_evidence": documentation_evidence,
-            "storage_mount_suggestions": storage_mounts, # [{label, mount_path, reason}]
-            "package_scripts": package_scripts,
-            "compose_info": compose_info,
-        }
-        if advice:
-            res_dict["official_image_recommendation"] = advice
-            res_dict["official_image_available"] = advice.get("image")
-            res_dict["summary"] = f"Official pre-built image '{advice.get('image')}' detected in repository. Recommended over compiling from source."
-        return res_dict
+    from services.apps_engine.source_image_advisor import advise_official_image
+    advice = advise_official_image(repository_url, framework)
+    if not advice and compose_info and isinstance(compose_info, dict) and compose_info.get("services"):
+        for svc in compose_info["services"]:
+            img = str(svc.get("image") or "").strip()
+            if img and not any(db_prefix in img.lower() for db_prefix in ("postgres", "mysql", "mariadb", "redis", "mongo", "clickhouse", "kafka", "valkey")):
+                advice = {
+                    "image": img,
+                    "reason": f"Discovered official pre-built image '{img}' in docker-compose.yml",
+                    "source": "compose",
+                }
+                break
+
+    db_types = [d["kind"] for d in databases]
+    # Promote key server datastores from lockfile/source suggestions if not already confirmed
+    for s in suggestions:
+        kind = s.get("kind")
+        if kind and kind in ("clickhouse", "postgresql", "mariadb/mysql", "mariadb", "mysql", "redis", "mongodb"):
+            canonical_kind = "mariadb" if kind in ("mariadb/mysql", "mysql") else kind
+            if canonical_kind not in db_types:
+                db_types.append(canonical_kind)
+
+    res_dict = {
+        "repository_url": repository_url,
+        "branch": branch,
+        "runtime": runtime,
+        "framework": framework,
+        "build_mode": build_mode,
+        "has_dockerfile": has_dockerfile,
+        "internal_port": _port(text, runtime, framework, compose_info),
+        "database_types": db_types,
+        "database_detected": bool(db_types),
+        "database_detections": databases,          # [{kind, confidence}]
+        "database_suggestions": suggestions,       # [{kind, confidence, reason}] — LOW only
+        "env_sample": doc_evidence.ai_safe_env_sample(env_sample),  # secret names retained; values omitted
+        "documentation_evidence": documentation_evidence,
+        "storage_mount_suggestions": storage_mounts, # [{label, mount_path, reason}]
+        "package_scripts": package_scripts,
+        "compose_info": compose_info,
+    }
+    if advice:
+        res_dict["official_image_recommendation"] = advice
+        res_dict["official_image_available"] = advice.get("image")
+        res_dict["summary"] = f"Official pre-built image '{advice.get('image')}' detected in repository. Recommended over compiling from source."
+    return res_dict
 
 
 def _framework(root: Path, files: set[str], text: str, runtime: str) -> str:

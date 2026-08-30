@@ -12,7 +12,7 @@ from typing import Any, Dict, List, Optional
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from plugins.ai_helper.services import action_plans, setup_plan_builder
+from plugins.ai_helper.services import action_plans, setup_handoff, setup_plan_builder
 from models.container_app import ContainerApp
 from services import container_app_image_inspect_service, container_app_inspection_service
 from services.apps_engine import deployment_drafts, source_access
@@ -319,9 +319,17 @@ async def propose_app_install(
     target_repo = repository_url.strip()
     try:
         if stype == "git" and repository_url.strip():
-            inspection = container_app_inspection_service.inspect_repository(repository_url.strip(), branch.strip() or "main")
+            cached = setup_handoff.get_cached_inspection(session_id, repository_url.strip())
+            if cached and isinstance(cached, dict):
+                inspection = cached.get("inspection") or cached
+            if not inspection:
+                inspection = container_app_inspection_service.inspect_repository(repository_url.strip(), branch.strip() or "main")
         elif stype == "image" and image_reference.strip():
-            inspection = await container_app_image_inspect_service.inspect_image(image_reference.strip())
+            cached = setup_handoff.get_cached_inspection(session_id, image_reference.strip())
+            if cached and isinstance(cached, dict):
+                inspection = cached.get("inspection") or cached
+            if not inspection:
+                inspection = await container_app_image_inspect_service.inspect_image(image_reference.strip())
             target_repo = str(inspection.get("source_repository") or "").strip()
     except Exception as exc:
         logger.warning("Inspection during propose_app_install failed: %s", exc)
@@ -343,6 +351,8 @@ async def propose_app_install(
                     domain_name=domain_name,
                     nonsecret_settings=stack_args.get("nonsecret_settings"),
                     evidence=stack_args.get("evidence"),
+                    repository_url=target_repo or repository_url.strip(),
+                    source_type=stype,
                 )
                 plan = await action_plans.create_action_plan(
                     db=db,
@@ -815,7 +825,10 @@ async def propose_stack_install(
         repo = str(kwargs.get("repository_url") or "").strip()
         if repo:
             try:
-                inspection = container_app_inspection_service.inspect_repository(repo, str(kwargs.get("branch") or "main"))
+                cached = setup_handoff.get_cached_inspection(session_id, repo)
+                inspection = (cached.get("inspection") or cached) if (cached and isinstance(cached, dict)) else None
+                if not inspection:
+                    inspection = container_app_inspection_service.inspect_repository(repo, str(kwargs.get("branch") or "main"))
                 from services.official_stacks.stack_synthesizer import (
                     synthesize_stack_from_compose,
                     synthesize_stack_from_inspection,

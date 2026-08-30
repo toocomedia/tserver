@@ -250,10 +250,19 @@ async def build_automatic_setup_plan(
         inspection = inspection_result.get("inspection") or inspection_result
     else:
         try:
+            from plugins.ai_helper.services import setup_handoff
             if stype == "git" and repository_url.strip():
-                inspection = container_app_inspection_service.inspect_repository(repository_url.strip(), branch.strip() or "main")
+                cached = setup_handoff.get_cached_inspection(session_id, repository_url.strip())
+                if cached and isinstance(cached, dict):
+                    inspection = cached.get("inspection") or cached
+                if not inspection:
+                    inspection = container_app_inspection_service.inspect_repository(repository_url.strip(), branch.strip() or "main")
             elif stype == "image" and image_reference.strip():
-                inspection = await container_app_image_inspect_service.inspect_image(image_reference.strip())
+                cached = setup_handoff.get_cached_inspection(session_id, image_reference.strip())
+                if cached and isinstance(cached, dict):
+                    inspection = cached.get("inspection") or cached
+                if not inspection:
+                    inspection = await container_app_image_inspect_service.inspect_image(image_reference.strip())
         except Exception as exc:
             logger.warning("Automatic inspection failed during fallback: %s", exc)
 
@@ -269,6 +278,8 @@ async def build_automatic_setup_plan(
                 domain_name=domain_name,
                 nonsecret_settings=stack_args.get("nonsecret_settings"),
                 evidence=stack_args.get("evidence"),
+                repository_url=repository_url,
+                source_type=stype,
             )
             return await action_plans.create_action_plan(
                 db=db,

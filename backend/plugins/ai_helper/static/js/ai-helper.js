@@ -220,6 +220,17 @@
       this.messagesEl.addEventListener("click", function (e) {
         var suggest = e.target.closest("[data-ai-suggest]");
         if (suggest) self.send(suggest.getAttribute("data-ai-suggest"));
+        var thoughtToggle = e.target.closest("[data-thought-toggle]");
+        if (thoughtToggle) {
+          e.preventDefault();
+          var box = thoughtToggle.closest("[data-thought-box]");
+          if (box) {
+            var expanded = box.classList.contains("is-expanded");
+            box.classList.toggle("is-expanded", !expanded);
+            var chevron = box.querySelector(".ai-thought-chevron");
+            if (chevron) chevron.textContent = expanded ? "▾" : "▴";
+          }
+        }
       });
     },
 
@@ -761,7 +772,8 @@
           }
         }
         var detailSummary = usedDetails.length > 0 ? " (" + usedDetails.join(", ") + ")" : "";
-        var labelText = "Sources & Tools Consulted (" + count + ")" + detailSummary;
+        var elapsedSec = ((Date.now() - start) / 1000).toFixed(1);
+        var labelText = "⚡ Activities (" + count + ") · " + elapsedSec + "s" + detailSummary;
 
         summary.innerHTML = SEARCH_SVG + " " + labelText + ' <span class="ai-activity-chevron" style="margin-left:auto;">▾</span>';
         summary.addEventListener("click", function () {

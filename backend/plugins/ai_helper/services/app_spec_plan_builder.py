@@ -18,6 +18,8 @@ def build_payload(
     domain_name: str,
     nonsecret_settings: dict[str, str] | None,
     evidence: list[str] | None,
+    repository_url: str = "",
+    source_type: str = "",
 ) -> dict[str, Any]:
     """Normalize inspection output without network access or runtime side effects."""
     clean_evidence = [str(item).strip()[:1024] for item in evidence or [] if str(item).strip()][:12]
@@ -31,7 +33,7 @@ def build_payload(
     spec = validate_app_spec(canonical)
     canonical = app_spec_to_dict(spec)
     normalized = json.dumps(canonical, sort_keys=True, separators=(",", ":"))
-    return {
+    payload: dict[str, Any] = {
         "deploy_type": "app_spec",
         "domain_name": domain_name.strip().lower(),
         "app_spec": canonical,
@@ -39,4 +41,9 @@ def build_payload(
         "environment_values": settings,
         "evidence": clean_evidence,
     }
+    if repository_url and repository_url.strip():
+        payload["repository_url"] = repository_url.strip()
+    if source_type and source_type.strip():
+        payload["source_type"] = source_type.strip()
+    return payload
 

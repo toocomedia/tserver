@@ -888,6 +888,88 @@ body.ai-helper-resizing { cursor: ew-resize !important; user-select: none !impor
 }
 
 /* ==========================================================================
+   AI Thinking & Reasoning Drawer (Compact in-chat window)
+   ========================================================================== */
+.ai-thought-box {
+  margin: 6px 0 10px;
+  background: var(--color-surface, rgba(255, 255, 255, 0.03));
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
+  border-radius: 8px;
+  overflow: hidden;
+  font-size: 11.5px;
+  transition: border-color 0.2s ease;
+}
+
+.ai-thought-box.is-thinking {
+  border-color: rgba(var(--color-accent-rgb, 59, 130, 246), 0.3);
+  box-shadow: 0 0 8px rgba(var(--color-accent-rgb, 59, 130, 246), 0.1);
+}
+
+.ai-thought-toggle {
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: var(--color-muted);
+  font-size: 11.5px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 6px 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  text-align: left;
+  user-select: none;
+}
+
+.ai-thought-toggle:hover {
+  color: var(--color-text);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.ai-thought-icon {
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.ai-thought-label {
+  flex: 1;
+  font-weight: 500;
+}
+
+.ai-thought-chevron {
+  font-size: 10px;
+  margin-left: auto;
+  opacity: 0.7;
+  transition: transform 0.2s ease;
+}
+
+.ai-thought-box.is-expanded .ai-thought-chevron {
+  transform: rotate(180deg);
+}
+
+.ai-thought-content {
+  display: none;
+  padding: 8px 12px;
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--color-muted);
+  background: rgba(0, 0, 0, 0.18);
+  border-top: 1px solid var(--border-color, rgba(255, 255, 255, 0.06));
+  max-height: 180px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.ai-thought-box.is-expanded .ai-thought-content {
+  display: block;
+}
+
+/* ==========================================================================
    AI Action Plan Card & Big Action Next Button (App Deploy Flow)
    ========================================================================== */
 .ai-app-plan-card {

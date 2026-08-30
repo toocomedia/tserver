@@ -270,7 +270,45 @@ if (form) {
       renderStep(1);
       throw new Error(err);
     }
-    if (!submitValues() || !form.reportValidity()) {
+    const depType = query('#deploy_type')?.value;
+    const isStack = depType === 'official_stack' || depType === 'app_spec';
+    const repoEl = query('[data-repository-url]');
+    const imgEl = query('[data-image-reference]');
+    if (isStack) {
+      if (repoEl) repoEl.required = false;
+      if (imgEl) imgEl.required = false;
+    } else {
+      const srcType = query('[data-source-type]')?.value || 'git';
+      if (srcType === 'git' && repoEl && !repoEl.value.trim()) {
+        renderStep(1);
+        repoEl.reportValidity();
+        throw new Error('Please enter a Git repository URL on Step 1.');
+      }
+      if (srcType === 'image' && imgEl && !imgEl.value.trim()) {
+        renderStep(1);
+        imgEl.reportValidity();
+        throw new Error('Please enter a Docker image reference on Step 1.');
+      }
+    }
+
+    // Ensure hidden wizard panels do not block native form validation
+    for (let i = 1; i <= 5; i++) {
+      if (i !== state.step) {
+        panel(i)?.querySelectorAll('input, select, textarea').forEach(el => {
+          if (el.required) {
+            el.dataset.wasRequired = 'true';
+            el.required = false;
+          }
+        });
+      }
+    }
+    const valid = submitValues() && form.reportValidity();
+    form.querySelectorAll('[data-was-required="true"]').forEach(el => {
+      el.required = true;
+      delete el.dataset.wasRequired;
+    });
+
+    if (!valid) {
       const errText = query('[data-environment-error]')?.textContent || 'Validation error: please check required fields.';
       throw new Error(errText);
     }
@@ -292,6 +330,11 @@ if (form) {
       pollDeployment();
       return { success: true, app_id: data.app_id, deployment_id: data.deployment_id };
     } catch (error) { 
+      if (error.message && (error.message.includes('expired') || error.message.includes('already used') || error.message.includes('unavailable'))) {
+        try { sessionStorage.removeItem("srv_app_plan_draft"); } catch (e) {}
+        const banner = query("[data-reviewed-plan-banner]");
+        if (banner) banner.style.display = "none";
+      }
       setText(query('[data-environment-error]'), error.message); 
       setHidden(query('[data-environment-error]'), false); 
       throw error;
@@ -628,7 +671,11 @@ if (form) {
     // 3. Set Git / Image inputs
     if (srcType === "git" || isStack) {
       const repoVal = p.repository_url || "";
-      if (repoVal && query("[data-repository-url]")) query("[data-repository-url]").value = repoVal;
+      if (query("[data-repository-url]")) {
+        query("[data-repository-url]").value = repoVal;
+        if (isStack) query("[data-repository-url]").required = false;
+      }
+      if (isStack && query("[data-image-reference]")) query("[data-image-reference]").required = false;
       if (p.branch) {
         const branchInput = query("#branch");
         if (branchInput) branchInput.value = p.branch;
