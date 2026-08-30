@@ -10,10 +10,10 @@
 {% endblock %}
 
 {% block content %}
-<div class="domains-page">
+<div class="domains-page" style="position: relative;">
 
 <!-- SKELETON LOADING OVERLAY -->
-{{ skeleton_overlay('domains-skeleton', controls=1, tables=[{ 'rows': 4 }]) }}
+{{ skeleton_overlay('domains-skeleton', header=0, controls=1, tables=[{ 'cols': [26, 14, 14, 14, 14, 18], 'rows': 4 }]) }}
 <!-- END SKELETON OVERLAY -->
 
 {% if domain_statuses %}
@@ -21,7 +21,7 @@
 <!-- Action Toolbar (Search & Filter) -->
   <div class="action-toolbar">
     <div class="action-toolbar__search">
-      <input type="text" id="domain-search-input" class="form-control" placeholder="Search domains by name or IP..." onkeyup="filterDomainsTable()">
+      <input type="search" id="domain-search-input" class="form-control" placeholder="Search domains by name or IP..." onkeyup="filterDomainsTable()" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" data-lpignore="true">
     </div>
     <div class="action-toolbar__group">
       <select id="domain-status-filter" class="form-control" style="width: 140px;" onchange="filterDomainsTable()">

@@ -46,6 +46,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="VPS Control Panel — manage domains, DNS, SSL and reverse proxies.">
   <meta name="csrf-token" content="{{ csrf_token(request) }}">
+  <meta name="turbo-cache-control" content="no-preview">
   <title>{% block title %}{{ PANEL_NAME }}{% endblock %}</title>
 
   <!-- Favicon -->
@@ -82,6 +83,7 @@
   <link rel="stylesheet" href="/static/css/components/empty_state.css?v={{ APP_VERSION }}">
   <link rel="stylesheet" href="/static/css/utils.css?v={{ APP_VERSION }}">
   <link rel="stylesheet" href="/static/css/rtl.css?v={{ APP_VERSION }}">
+  <link rel="stylesheet" href="/static/css/php-sites.css?v={{ APP_VERSION }}">
   {% if is_plugin_active('ai_helper') %}
   <link rel="stylesheet" href="/plugins/ai_helper/static/css/ai-helper.css?v={{ APP_VERSION }}">
   {% endif %}
@@ -207,11 +209,11 @@
 <div id="toast-container" data-turbo-permanent role="status" aria-live="polite"></div>
 
 <!-- JS -->
-<script src="/static/js/modules/delete-drawer.js?v={{ APP_VERSION }}"></script>
-<script src="/static/js/main.js?v={{ APP_VERSION }}"></script>
-<script src="/static/js/modules/resource-guard-banner.js?v={{ APP_VERSION }}"></script>
-<script src="/static/js/resource-views.js?v={{ APP_VERSION }}"></script>
-<script>
+<script src="/static/js/modules/delete-drawer.js?v={{ APP_VERSION }}" data-turbo-eval="false"></script>
+<script src="/static/js/main.js?v={{ APP_VERSION }}" data-turbo-eval="false"></script>
+<script src="/static/js/modules/resource-guard-banner.js?v={{ APP_VERSION }}" data-turbo-eval="false"></script>
+<script src="/static/js/resource-views.js?v={{ APP_VERSION }}" data-turbo-eval="false"></script>
+<script data-turbo-eval="false">
 (function() {
   var bar = document.getElementById("top-progress-bar");
 
@@ -287,17 +289,17 @@
 })();
 </script>
 {% if is_plugin_active('ai_helper') %}
-<script src="/plugins/ai_helper/static/js/modules/chat_cache.js?v={{ APP_VERSION }}"></script>
-<script src="/plugins/ai_helper/static/js/modules/chat_markdown.js?v={{ APP_VERSION }}"></script>
-<script src="/plugins/ai_helper/static/js/modules/chat_codeview.js?v={{ APP_VERSION }}"></script>
-<script src="/plugins/ai_helper/static/js/modules/chat_mentions.js?v={{ APP_VERSION }}"></script>
-<script src="/plugins/ai_helper/static/js/modules/chat_history.js?v={{ APP_VERSION }}"></script>
-<script src="/plugins/ai_helper/static/js/modules/chat_models.js?v={{ APP_VERSION }}"></script>
-<script src="/plugins/ai_helper/static/js/modules/chat_actions.js?v={{ APP_VERSION }}"></script>
-<script src="/plugins/ai_helper/static/js/modules/chat_setup_interview.js?v={{ APP_VERSION }}"></script>
-<script src="/plugins/ai_helper/static/js/modules/chat_decision_bar.js?v={{ APP_VERSION }}"></script>
-<script src="/plugins/ai_helper/static/js/modules/chat_resize.js?v={{ APP_VERSION }}"></script>
-<script src="/plugins/ai_helper/static/js/ai-helper.js?v={{ APP_VERSION }}"></script>
+<script src="/plugins/ai_helper/static/js/modules/chat_cache.js?v={{ APP_VERSION }}" data-turbo-eval="false"></script>
+<script src="/plugins/ai_helper/static/js/modules/chat_markdown.js?v={{ APP_VERSION }}" data-turbo-eval="false"></script>
+<script src="/plugins/ai_helper/static/js/modules/chat_codeview.js?v={{ APP_VERSION }}" data-turbo-eval="false"></script>
+<script src="/plugins/ai_helper/static/js/modules/chat_mentions.js?v={{ APP_VERSION }}" data-turbo-eval="false"></script>
+<script src="/plugins/ai_helper/static/js/modules/chat_history.js?v={{ APP_VERSION }}" data-turbo-eval="false"></script>
+<script src="/plugins/ai_helper/static/js/modules/chat_models.js?v={{ APP_VERSION }}" data-turbo-eval="false"></script>
+<script src="/plugins/ai_helper/static/js/modules/chat_actions.js?v={{ APP_VERSION }}" data-turbo-eval="false"></script>
+<script src="/plugins/ai_helper/static/js/modules/chat_setup_interview.js?v={{ APP_VERSION }}" data-turbo-eval="false"></script>
+<script src="/plugins/ai_helper/static/js/modules/chat_decision_bar.js?v={{ APP_VERSION }}" data-turbo-eval="false"></script>
+<script src="/plugins/ai_helper/static/js/modules/chat_resize.js?v={{ APP_VERSION }}" data-turbo-eval="false"></script>
+<script src="/plugins/ai_helper/static/js/ai-helper.js?v={{ APP_VERSION }}" data-turbo-eval="false"></script>
 {% endif %}
 {% block scripts %}{% endblock %}
 

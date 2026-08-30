@@ -516,22 +516,23 @@
 
 {% block scripts %}
 <script>
-  // Tab logic
-  document.addEventListener('DOMContentLoaded', () => {
+(function() {
+  function initSettingsTabs() {
     const tabItems = document.querySelectorAll('.split-sidebar__item');
     const tabs = document.querySelectorAll('.split-tab');
-    
+    if (!tabItems.length) return;
+
     function switchTab(tabId) {
       tabItems.forEach(t => t.classList.toggle('active', t.getAttribute('data-tab') === tabId));
       tabs.forEach(t => t.classList.toggle('active', t.id === tabId));
     }
 
     tabItems.forEach(item => {
-      item.addEventListener('click', () => {
-        const tabId = item.getAttribute('data-tab');
+      item.onclick = function() {
+        const tabId = this.getAttribute('data-tab');
         switchTab(tabId);
         if (history.replaceState) history.replaceState(null, '', '#' + tabId);
-      });
+      };
     });
 
     if (window.location.hash) {
@@ -540,7 +541,13 @@
         switchTab(hashTab);
       }
     }
-  });
+  }
+
+  initSettingsTabs();
+  document.addEventListener('app:init', initSettingsTabs);
+  document.addEventListener('turbo:load', initSettingsTabs);
+  document.addEventListener('DOMContentLoaded', initSettingsTabs);
+})();
 </script>
 <script src="/static/js/modules/settings.js?v={{ APP_VERSION }}"></script>
 <script src="/static/js/modules/resource-guard-settings.js"></script>

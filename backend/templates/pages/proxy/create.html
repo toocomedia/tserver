@@ -26,8 +26,13 @@
 
   {% set mode = form.get('mode', 'managed') %}
 
-  <form method="post" action="/proxy/create" class="clean-form" id="create-proxy-form">
+  <form method="post" action="/proxy/create" class="clean-form" id="create-proxy-form" autocomplete="off">
     {% include "partials/csrf_field.html" %}
+    <!-- Browser autofill trap: absorbs password manager injection -->
+    <div style="display:none" aria-hidden="true">
+      <input type="text" name="prevent_autofill_user" tabindex="-1" autocomplete="username">
+      <input type="password" name="prevent_autofill_pass" tabindex="-1" autocomplete="current-password">
+    </div>
 
     <!-- Step 1: Hostname Setup -->
     <div id="proxy-step-1" style="display:flex;flex-direction:column;gap:20px;">

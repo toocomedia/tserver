@@ -64,7 +64,6 @@ function initClearAll() {
         } else {
           toast("Refresh the page (Ctrl+F5) and try again.", "danger");
         }
-        }
       },
       { danger: true, title: "Clear All Errors", okLabel: "Clear Errors", itemName: "All Errors" }
     );

@@ -7,7 +7,7 @@
  * One URL system for the panel (must match backend/templating.py PATHS).
  * Section indexes end with /. Detail pages: path('domains', id) → /domains/3
  */
-const PATHS = {
+var PATHS = window.PATHS || {
   home: "/",
   dashboard: "/",
   login: "/login",
@@ -28,6 +28,7 @@ const PATHS = {
   php_sites: "/php-sites/",
   php_sites_create: "/php-sites/create",
 };
+window.PATHS = PATHS;
 
 function path(name, ...parts) {
   let base = PATHS[name] || (String(name).startsWith("/") ? name : `/${name}`);
@@ -190,7 +191,7 @@ function closeModal(id) {
  *   A short delay lets real content render before the fade starts.
  * showSkeleton(id): re-shows an overlay (e.g. for a full page reload).
  */
-function hideSkeleton(id, delay = 1000) {
+function hideSkeleton(id, delay = 50) {
   const el = document.getElementById(id);
   if (!el || el.classList.contains("is-hidden")) return Promise.resolve();
   return new Promise((resolve) => {
@@ -201,7 +202,7 @@ function hideSkeleton(id, delay = 1000) {
           el.style.display = "none";
         }
         resolve();
-      }, 400);
+      }, 300);
     }, delay);
   });
 }
@@ -609,7 +610,7 @@ function initGlobalOnce() {
   document.addEventListener("app:init", initLazyImageSkeletons);
 }
 
-let _isInitialPageLoad = true;
+var _isInitialPageLoad = typeof _isInitialPageLoad !== 'undefined' ? _isInitialPageLoad : true;
 
 function initPageLifecycle() {
   initGlobalOnce();
@@ -619,11 +620,17 @@ function initPageLifecycle() {
     fetchNotificationCount();
   }
 
-  // Trigger app:init so page-specific modules can initialize on every page visit
+  // Trigger app:init immediately for loaded modules
   document.dispatchEvent(new Event("app:init"));
 
+  // Also dispatch in next animation frame for scripts loaded asynchronously
+  requestAnimationFrame(() => {
+    document.dispatchEvent(new Event("app:init"));
+    initLazyImageSkeletons();
+  });
+
   // If this is a subsequent Turbo navigation, fire synthetic DOMContentLoaded
-  // for any inline scripts on the new page waiting for it
+  // for any legacy inline scripts on the new page waiting for it
   if (!_isInitialPageLoad) {
     document.dispatchEvent(new Event("DOMContentLoaded"));
   }
@@ -632,6 +639,14 @@ function initPageLifecycle() {
 
 // Hook into Turbo Drive page lifecycle
 document.addEventListener("turbo:load", initPageLifecycle);
+
+// Clean up skeletons and cached states before Turbo takes a snapshot
+document.addEventListener("turbo:before-cache", () => {
+  document.querySelectorAll(".skeleton-overlay").forEach((el) => {
+    el.classList.add("is-hidden");
+    el.style.display = "none";
+  });
+});
 
 // Fallback for non-Turbo or early DOM ready
 document.addEventListener("DOMContentLoaded", () => {
@@ -648,7 +663,7 @@ document.addEventListener("asyncLoaded", function() {
 
 /**
  * Lazy Image Skeleton Loader: automatically marks image boxes as loaded or error,
- * and handles pre-cached images gracefully.
+ * and handles pre-cached images gracefully without hanging.
  */
 function initLazyImageSkeletons() {
   const images = document.querySelectorAll(
@@ -658,6 +673,17 @@ function initLazyImageSkeletons() {
     const parent = img.parentElement;
     if (!parent) return;
 
+    const markLoaded = () => {
+      parent.classList.remove("img-skeleton-box");
+      parent.classList.add("is-loaded");
+      img.classList.add("is-loaded");
+    };
+
+    const markError = () => {
+      parent.classList.remove("img-skeleton-box");
+      parent.classList.add("is-error");
+    };
+
     if (
       !parent.classList.contains("img-skeleton-box") &&
       !parent.classList.contains("is-loaded") &&
@@ -666,18 +692,17 @@ function initLazyImageSkeletons() {
       parent.classList.add("img-skeleton-box");
     }
 
-    if (img.complete && img.naturalWidth !== 0) {
-      parent.classList.add("is-loaded");
-      img.classList.add("is-loaded");
+    if (img.complete) {
+      if (img.naturalWidth !== 0) {
+        markLoaded();
+      } else if (typeof img.decode === "function") {
+        img.decode().then(markLoaded).catch(markLoaded);
+      } else {
+        markLoaded();
+      }
     } else {
-      img.addEventListener("load", () => {
-        parent.classList.add("is-loaded");
-        img.classList.add("is-loaded");
-      });
-      img.addEventListener("error", () => {
-        parent.classList.remove("img-skeleton-box");
-        parent.classList.add("is-error");
-      });
+      img.addEventListener("load", markLoaded, { once: true });
+      img.addEventListener("error", markError, { once: true });
     }
   });
 }

@@ -13,7 +13,7 @@
 <div class="ssl-page" style="position: relative;">
 
 <!-- SKELETON LOADING OVERLAY -->
-{{ skeleton_overlay('ssl-skeleton', controls=1, tables=[{ 'rows': 4 }]) }}
+{{ skeleton_overlay('ssl-skeleton', header=0, controls=1, tables=[{ 'cols': [30, 18, 18, 18, 16], 'rows': 4 }]) }}
 <!-- END SKELETON OVERLAY -->
 
 {# Status messages from redirect params #}
@@ -42,7 +42,7 @@
   <!-- Action Toolbar (Search & Filter) -->
   <div class="action-toolbar">
     <div class="action-toolbar__search">
-      <input type="text" id="ssl-search-input" class="form-control" placeholder="Search certificates by domain name..." onkeyup="filterSSLTable()">
+      <input type="search" id="ssl-search-input" class="form-control" placeholder="Search certificates by domain name..." onkeyup="filterSSLTable()" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" data-lpignore="true">
     </div>
     <div class="action-toolbar__group">
       <select id="ssl-status-filter" class="form-control" style="width: 140px;" onchange="filterSSLTable()">
@@ -178,16 +178,22 @@
 {% block scripts %}
 <script src="/static/js/modules/ssl.js?v={{ APP_VERSION }}"></script>
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-  if (typeof hideSkeleton === 'function') hideSkeleton('ssl-skeleton', 0);
-  else if (typeof window.hideSkeleton === 'function') window.hideSkeleton('ssl-skeleton', 0);
+(function() {
+  function initSslView() {
+    if (typeof hideSkeleton === 'function') hideSkeleton('ssl-skeleton');
+    else if (typeof window.hideSkeleton === 'function') window.hideSkeleton('ssl-skeleton');
 
-  {% if auto_open_issue %}
-  if (typeof openModal === 'function') {
-    openModal('issue-ssl-drawer-modal');
+    {% if auto_open_issue %}
+    if (typeof openModal === 'function') {
+      openModal('issue-ssl-drawer-modal');
+    }
+    {% endif %}
   }
-  {% endif %}
-});
+
+  initSslView();
+  document.addEventListener('turbo:load', initSslView);
+  document.addEventListener('DOMContentLoaded', initSslView);
+})();
 
 function filterSSLTable() {
   const query = document.getElementById('ssl-search-input').value.toLowerCase().trim();

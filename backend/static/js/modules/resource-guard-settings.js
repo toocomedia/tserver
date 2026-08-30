@@ -64,9 +64,16 @@
     }
   }
 
-  document.addEventListener("app:init", () => {
-    $("btn-save-resource-guard")?.addEventListener("click", save);
-    $("resource-guard-priorities")?.addEventListener("change", savePriority);
+  function initRgSettings() {
+    const btn = $("btn-save-resource-guard");
+    const prio = $("resource-guard-priorities");
+    if (!btn && !prio) return;
+    if (btn) btn.onclick = save;
+    if (prio) prio.onchange = savePriority;
     load();
-  });
+  }
+
+  document.addEventListener("app:init", initRgSettings);
+  document.addEventListener("turbo:load", initRgSettings);
+  initRgSettings();
 })();

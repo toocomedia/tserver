@@ -10,10 +10,10 @@
 {% endblock %}
 
 {% block content %}
-<div class="php-sites-page">
+<div class="php-sites-page" style="position: relative;">
 
 <!-- SKELETON LOADING OVERLAY -->
-{{ skeleton_overlay('php-sites-skeleton', controls=1, tables=[{ 'rows': 4 }]) }}
+{{ skeleton_overlay('php-sites-skeleton', header=0, controls=1, tables=[{ 'cols': [28, 14, 12, 14, 14, 18], 'rows': 4 }]) }}
 <!-- END SKELETON OVERLAY -->
 
 {% if sites %}
@@ -21,7 +21,7 @@
   <!-- Action Toolbar (Search & Filter) -->
   <div class="action-toolbar">
     <div class="action-toolbar__search">
-      <input type="text" id="php-search-input" class="form-control" placeholder="Search websites by domain or version..." onkeyup="filterPhpSitesTable()">
+      <input type="search" id="php-search-input" class="form-control" placeholder="Search websites by domain or version..." onkeyup="filterPhpSitesTable()" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" data-lpignore="true">
     </div>
     <div class="action-toolbar__group">
       <select id="php-status-filter" class="form-control" style="width: 140px;" onchange="filterPhpSitesTable()">
