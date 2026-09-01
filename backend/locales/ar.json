@@ -11,6 +11,8 @@
   "task_completed": "اكتملت",
   "task_failed": "فشلت",
   "task_cancelled": "ملغاة",
+  "clear_history": "مسح السجل",
+  "history_cleared": "تم مسح سجل المهام",
   "resource_guard_recommended_enable_it_to_": "حارس الموارد مُوصى به: فعّله لإيقاف عمليات اللوحة الثقيلة من استهلاك ذاكرة هذا الخادم ذو الذاكرة المحدودة.",
   "open_settings": "فتح الإعدادات",
   "don_t_show_again": "عدم العرض مرة أخرى",

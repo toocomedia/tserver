@@ -49,6 +49,10 @@
     document.querySelectorAll('[data-task-tab]').forEach((btn) => {
       btn.classList.toggle('is-active', btn.dataset.taskTab === activeTab);
     });
+    const clearBtn = document.getElementById('task-drawer-clear-btn');
+    if (clearBtn) {
+      clearBtn.classList.toggle('hidden', activeTab !== 'history' || historyTasksCache.length === 0);
+    }
   }
 
   function renderTasks() {
@@ -171,6 +175,24 @@
   window.toggleTaskDrawer = toggleDrawer;
   window.refreshTasks = () => fetchTasks(true);
 
+  window.clearTaskHistory = async function () {
+    try {
+      const csrf = (document.querySelector('meta[name="csrf-token"]') || {}).content || '';
+      const res = await fetch('/api/tasks/clear-history', {
+        method: 'POST',
+        headers: { 'X-CSRF-Token': csrf }
+      });
+      if (res.ok) {
+        historyTasksCache = [];
+        if (window.toast) window.toast(window._ ? window._('history_cleared') : 'Task history cleared', 'success');
+        updateTabButtons();
+        renderTasks();
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   window.cancelTask = async function (taskId) {
     if (!confirm('Stop this running task?')) return;
     try {
@@ -212,6 +234,9 @@
     // Close button
     document.getElementById('task-drawer-close-btn')?.addEventListener('click', closeDrawer);
 
+    // Clear history button
+    document.getElementById('task-drawer-clear-btn')?.addEventListener('click', window.clearTaskHistory);
+
     // Header task button click
     getHeaderBtn()?.addEventListener('click', toggleDrawer);
 
@@ -221,6 +246,7 @@
         activeTab = tabBtn.dataset.taskTab;
         updateTabButtons();
         renderTasks();
+        fetchTasks(true);
       });
     });
 

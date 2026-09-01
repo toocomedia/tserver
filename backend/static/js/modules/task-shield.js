@@ -43,8 +43,12 @@
       const action = form.action || '';
       const isPluginAction = action.includes('/plugin-manager/api/');
       const isDepAction = action.includes('/api/dependencies/') && (action.includes('/install') || action.includes('/update') || action.includes('/toggle'));
+      const isDomainAction = action.includes('/domains/create') || (action.includes('/domains/') && action.includes('/delete'));
+      const isProxyAction = action.includes('/proxy/create') || (action.includes('/proxy/') && action.includes('/delete'));
+      const isSslAction = action.includes('/ssl/issue') || (action.includes('/ssl/') && (action.includes('/renew') || action.includes('/revoke')));
+      const isSystemAction = action.includes('/api/system/memory/');
 
-      if (!isPluginAction && !isDepAction) return;
+      if (!isPluginAction && !isDepAction && !isDomainAction && !isProxyAction && !isSslAction && !isSystemAction) return;
 
       // Skip search / check queries
       if (action.includes('/check') || action.includes('/catalog-view') || action.includes('/runtime-view')) return;

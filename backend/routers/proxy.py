@@ -13,6 +13,8 @@ from sqlalchemy import select
 from database import get_db
 from models.domain import Domain
 from services import proxy_service, dns_service, nginx_service, cache_service
+from services.task_manager_service import task_manager_service
+from middleware.auth import wants_json
 from templating import templates
 import config
 
@@ -171,6 +173,52 @@ async def proxy_create_submit(
         "cache_auto_clear_hours": cache_auto_clear_hours,
     }
 
+    if wants_json(request):
+        full_dom = hostname if mode == "external" else f"{subdomain}.{resolved_domain_id}"
+        async def _run_create_proxy(task_rec):
+            task_rec.add_log(f"Setting up proxy routing for {target_ip}:{target_port}...")
+            if mode == "external":
+                p = await proxy_service.create_external_proxy(
+                    db,
+                    hostname=hostname,
+                    target_ip=target_ip,
+                    target_port=target_port,
+                    protocol=protocol,
+                    enable_ssl=enable_ssl,
+                    cache_enabled=cache_enabled,
+                    cache_ttl_minutes=cache_ttl_minutes,
+                    cache_auto_clear_hours=cache_auto_clear_hours,
+                )
+            else:
+                p = await proxy_service.create_proxy(
+                    db,
+                    domain_id=resolved_domain_id,
+                    subdomain=subdomain,
+                    target_ip=target_ip,
+                    target_port=target_port,
+                    protocol=protocol,
+                    enable_ssl=enable_ssl,
+                    cache_enabled=cache_enabled,
+                    cache_ttl_minutes=cache_ttl_minutes,
+                    cache_auto_clear_hours=cache_auto_clear_hours,
+                )
+            task_rec.add_log("Proxy configuration generated and verified.")
+            return True, f"Proxy {p.full_domain} created."
+
+        task = await task_manager_service.spawn(
+            category="proxy",
+            action="create",
+            target_id=hostname or subdomain,
+            label=f"Create Proxy: {hostname or subdomain}",
+            runner=_run_create_proxy,
+        )
+        return JSONResponse({
+            "success": True,
+            "task_id": task.id,
+            "status": "running",
+            "message": "Setting up proxy routing in background...",
+        })
+
     try:
         if mode == "external":
             proxy = await proxy_service.create_external_proxy(
@@ -228,19 +276,36 @@ async def proxy_delete(
     db: AsyncSession = Depends(get_db),
 ):
     """Delete proxy with full cleanup cascade."""
-    is_ajax = (
-        request.headers.get("x-requested-with") == "XMLHttpRequest"
-        or "application/json" in request.headers.get("accept", "")
-    )
+    proxy = await proxy_service.get_by_id(db, proxy_id)
+    proxy_label = proxy.full_domain if proxy else f"ID {proxy_id}"
+
+    if wants_json(request):
+        async def _run_delete_proxy(task_rec):
+            task_rec.add_log(f"Removing Nginx configs and caches for {proxy_label}...")
+            await proxy_service.delete_proxy(db, proxy_id)
+            task_rec.add_log("Proxy deleted successfully.")
+            return True, f"Proxy {proxy_label} deleted."
+
+        task = await task_manager_service.spawn(
+            category="proxy",
+            action="delete",
+            target_id=str(proxy_id),
+            label=f"Delete Proxy: {proxy_label}",
+            runner=_run_delete_proxy,
+            lock_type="exclusive",
+        )
+        return JSONResponse({
+            "success": True,
+            "task_id": task.id,
+            "status": "running",
+            "message": f"Deleting proxy {proxy_label}...",
+        })
+
     try:
         await proxy_service.delete_proxy(db, proxy_id)
-        if is_ajax:
-            return JSONResponse({"success": True, "message": "Reverse proxy deleted."})
         return RedirectResponse("/proxy/?deleted=1", status_code=303)
     except Exception as exc:
         error = str(exc.detail) if hasattr(exc, "detail") else str(exc)
-        if is_ajax:
-            return JSONResponse({"success": False, "error": error}, status_code=400)
         return RedirectResponse(f"/proxy/?error={error}", status_code=303)
 
 

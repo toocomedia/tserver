@@ -11,6 +11,8 @@
   "task_completed": "Completed",
   "task_failed": "Failed",
   "task_cancelled": "Cancelled",
+  "clear_history": "Clear History",
+  "history_cleared": "Task history cleared",
   "resource_guard_recommended_enable_it_to_": "Resource Guard Recommended: enable it to stop a heavy panel action from exhausting this low-RAM VPS.",
   "open_settings": "Open Settings",
   "don_t_show_again": "Don't show again",

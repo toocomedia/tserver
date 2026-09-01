@@ -10,6 +10,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
 from services import domain_service, nginx_service
+from services.task_manager_service import task_manager_service
+from middleware.auth import wants_json
 from models.ssl_cert import SslCert
 from models.proxy import ReverseProxy
 from sqlalchemy import select
@@ -194,8 +196,36 @@ async def domains_create(
     parent_domain: str | None = Form(None),
     db: AsyncSession = Depends(get_db),
 ):
+    clean_parent = parent_domain.strip() if (parent_domain and parent_domain.strip()) else None
+
+    if wants_json(request):
+        async def _run_create(task_rec):
+            task_rec.add_log(f"Creating domain records for {name}...")
+            dom = await domain_service.create(
+                db,
+                name,
+                project_type=project_type,
+                dns_mode=dns_mode,
+                parent_domain=clean_parent,
+            )
+            task_rec.add_log("Domain records created successfully.")
+            return True, f"Domain {name} created."
+
+        task = await task_manager_service.spawn(
+            category="domain",
+            action="create",
+            target_id=name,
+            label=f"Create Domain: {name}",
+            runner=_run_create,
+        )
+        return JSONResponse({
+            "success": True,
+            "task_id": task.id,
+            "status": "running",
+            "message": f"Creating domain {name}...",
+        })
+
     try:
-        clean_parent = parent_domain.strip() if (parent_domain and parent_domain.strip()) else None
         domain = await domain_service.create(
             db,
             name,
@@ -286,8 +316,34 @@ async def domains_edit_page(
 @router.post("/{domain_id}/delete")
 async def domains_delete(
     domain_id: int,
+    request: Request,
     db: AsyncSession = Depends(get_db),
 ):
+    domain = await domain_service.get_by_id(db, domain_id)
+    domain_name = domain.name if domain else f"ID {domain_id}"
+
+    if wants_json(request):
+        async def _run_delete(task_rec):
+            task_rec.add_log(f"Removing Nginx vhosts, DNS records, and files for {domain_name}...")
+            await domain_service.delete(db, domain_id)
+            task_rec.add_log("Domain deleted successfully.")
+            return True, f"Domain {domain_name} deleted."
+
+        task = await task_manager_service.spawn(
+            category="domain",
+            action="delete",
+            target_id=str(domain_id),
+            label=f"Delete Domain: {domain_name}",
+            runner=_run_delete,
+            lock_type="exclusive",
+        )
+        return JSONResponse({
+            "success": True,
+            "task_id": task.id,
+            "status": "running",
+            "message": f"Deleting domain {domain_name}...",
+        })
+
     await domain_service.delete(db, domain_id)
     return RedirectResponse("/domains/", status_code=303)
 

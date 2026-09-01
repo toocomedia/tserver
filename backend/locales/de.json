@@ -11,6 +11,8 @@
   "task_completed": "Abgeschlossen",
   "task_failed": "Fehlgeschlagen",
   "task_cancelled": "Abgebrochen",
+  "clear_history": "Verlauf löschen",
+  "history_cleared": "Aufgabenverlauf gelöscht",
   "resource_guard_recommended_enable_it_to_": "Resource Guard empfohlen: Aktivieren Sie es, um zu verhindern, dass eine schwere Panel-Aktion diesen VPS mit wenig RAM überlastet.",
   "open_settings": "Einstellungen öffnen",
   "don_t_show_again": "Nicht mehr anzeigen",

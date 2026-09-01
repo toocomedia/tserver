@@ -11,6 +11,8 @@
   "task_completed": "Завершено",
   "task_failed": "Ошибка",
   "task_cancelled": "Отменено",
+  "clear_history": "Очистить историю",
+  "history_cleared": "История задач очищена",
   "resource_guard_recommended_enable_it_to_": "Рекомендуется Resource Guard: включите его, чтобы тяжелые действия на панели не истощали этот VPS с низким объемом оперативной памяти.",
   "open_settings": "Открыть настройки",
   "don_t_show_again": "Больше не показывать",

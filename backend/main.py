@@ -92,6 +92,8 @@ async def lifespan(app: FastAPI):
     await container_app_deployment_service.recover_interrupted()
     from services import php_site_service
     await php_site_service.recover_interrupted()
+    from services.task_manager_service import task_manager_service
+    await task_manager_service.recover()
     purge_task = asyncio.create_task(_auto_purge_loop())
     update_task = asyncio.create_task(update_service.run_auto_update_loop())
     ssl_renew_task = asyncio.create_task(ssl_auto_renew.run_scheduler())

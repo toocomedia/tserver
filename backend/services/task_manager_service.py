@@ -1,12 +1,15 @@
-"""Unified background task orchestration, log streaming, and concurrency lock service."""
+"""Unified background task orchestration, log streaming, persistent history, and concurrency lock service."""
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import time
 import uuid
 from dataclasses import dataclass, field
 from typing import Any, Awaitable, Callable, Dict, List, Optional
+
+from sqlalchemy import select
 
 logger = logging.getLogger(__name__)
 
@@ -99,6 +102,24 @@ class TaskManagerService:
     def list_history(self, limit: int = 20) -> List[Dict[str, Any]]:
         return [task.to_dict(include_logs=False) for task in self._history_tasks[:limit]]
 
+    async def clear_history(self) -> int:
+        async with self._lock:
+            count = len(self._history_tasks)
+            self._history_tasks.clear()
+        try:
+            from database import AsyncSessionLocal
+            from models.system_task import SystemTask
+            from sqlalchemy import delete
+
+            async with AsyncSessionLocal() as db:
+                stmt = delete(SystemTask).where(SystemTask.status != "running")
+                result = await db.execute(stmt)
+                await db.commit()
+                return result.rowcount if result.rowcount is not None else count
+        except Exception as exc:
+            logger.debug("Could not clear task history from DB: %s", exc)
+            return count
+
     def get_task(self, task_id: str, include_logs: bool = True) -> Optional[Dict[str, Any]]:
         task = self._active_tasks.get(task_id)
         if not task:
@@ -125,12 +146,88 @@ class TaskManagerService:
         await self._archive_task(task)
         return True
 
+    async def _save_to_db(self, task: TaskRecord) -> None:
+        """Persist task state to SQLite database so history survives panel updates and reboots."""
+        try:
+            from database import AsyncSessionLocal
+            from models.system_task import SystemTask
+
+            async with AsyncSessionLocal() as db:
+                record = await db.get(SystemTask, task.id)
+                if not record:
+                    record = SystemTask(
+                        id=task.id,
+                        category=task.category,
+                        action=task.action,
+                        target_id=task.target_id,
+                        label=task.label,
+                        started_at=task.started_at,
+                    )
+                    db.add(record)
+                
+                record.status = task.status
+                record.progress = task.progress
+                record.finished_at = task.finished_at
+                record.elapsed_seconds = int((task.finished_at or time.time()) - task.started_at)
+                record.error = task.error
+                record.lock_type = task.lock_type
+                record.logs_json = json.dumps(task.logs[-MAX_TASK_LOG_LINES:])
+                await db.commit()
+        except Exception as exc:
+            logger.debug("Could not persist task to DB: %s", exc)
+
+    async def recover(self) -> None:
+        """Load past history from database on server startup and handle interrupted tasks."""
+        try:
+            from database import AsyncSessionLocal
+            from models.system_task import SystemTask
+
+            async with AsyncSessionLocal() as db:
+                stmt = select(SystemTask).order_by(SystemTask.created_at.desc()).limit(MAX_HISTORY_TASKS)
+                rows = (await db.scalars(stmt)).all()
+                recovered = []
+                for row in rows:
+                    if row.status == "running":
+                        row.status = "failed"
+                        row.error = "Interrupted by server restart"
+                        row.finished_at = time.time()
+                        await db.commit()
+                    
+                    logs = []
+                    if row.logs_json:
+                        try:
+                            logs = json.loads(row.logs_json)
+                        except Exception:
+                            logs = []
+
+                    record = TaskRecord(
+                        id=row.id,
+                        category=row.category,
+                        action=row.action,
+                        target_id=row.target_id,
+                        label=row.label,
+                        status=row.status,
+                        progress=row.progress,
+                        started_at=row.started_at,
+                        finished_at=row.finished_at,
+                        error=row.error,
+                        lock_type=row.lock_type,
+                        logs=logs,
+                    )
+                    recovered.append(record)
+                
+                async with self._lock:
+                    self._history_tasks = recovered
+        except Exception as exc:
+            logger.debug("Task history recovery skipped: %s", exc)
+
     async def _archive_task(self, task: TaskRecord) -> None:
         async with self._lock:
             self._active_tasks.pop(task.id, None)
             self._history_tasks.insert(0, task)
             if len(self._history_tasks) > MAX_HISTORY_TASKS:
                 self._history_tasks.pop()
+        await self._save_to_db(task)
 
     def create_task(
         self,
@@ -174,6 +271,7 @@ class TaskManagerService:
             cancel_callback=cancel_callback,
         )
         record.add_log(f"Started {label}...")
+        await self._save_to_db(record)
 
         async def _execute():
             try:

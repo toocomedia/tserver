@@ -36,6 +36,7 @@ from services import plugin_usage_service
 from services import container_app_usage_service
 from services import server_control_service
 from services.resource_guard_service import resource_guard_service
+from services.task_manager_service import task_manager_service
 from templating import templates
 from utils.shell import run
 import config
@@ -646,6 +647,13 @@ async def clean_ram_cache():
     if not script_path:
         return {"success": False, "detail": "optimize.sh script not found"}
 
+    task_manager_service.create_task(
+        category="system",
+        action="clean_ram",
+        target_id="memory",
+        label="Clean System RAM",
+    )
+
     res = await run(["bash", str(script_path), "clean-ram"])
     _invalidate_stats_cache()
     if res.success:
@@ -663,6 +671,13 @@ async def clean_swap_cache():
     script_path = _get_optimize_script_path()
     if not script_path:
         return {"success": False, "detail": "optimize.sh script not found"}
+
+    task_manager_service.create_task(
+        category="system",
+        action="clean_swap",
+        target_id="swap",
+        label="Clean System Swap",
+    )
 
     res = await run(["bash", str(script_path), "clean-swap"])
     _invalidate_stats_cache()

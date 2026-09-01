@@ -106,3 +106,10 @@ async def test_task_manager_api_endpoints():
         assert "active" in data
         assert "history" in data
         assert "locks" in data
+
+        # 3. Clear history endpoint
+        res = await client.post("/api/tasks/clear-history")
+        assert res.status_code == 200
+        data = res.json()
+        assert data["success"] is True
+        assert "cleared_count" in data

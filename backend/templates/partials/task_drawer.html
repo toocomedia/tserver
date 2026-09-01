@@ -19,6 +19,9 @@
       <button type="button" class="task-drawer__tab" data-task-tab="history">
         {{ _('task_history') if _('task_history') != 'task_history' else 'Recent History' }}
       </button>
+      <button type="button" class="task-drawer__clear-btn hidden" id="task-drawer-clear-btn">
+        {{ _('clear_history') if _('clear_history') != 'clear_history' else 'Clear' }}
+      </button>
     </nav>
 
     <!-- BODY -->

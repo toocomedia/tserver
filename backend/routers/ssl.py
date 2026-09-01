@@ -14,6 +14,7 @@ from models.domain import Domain
 from models.ssl_cert import SslCert
 from models.proxy import ReverseProxy
 from services import ssl_service, nginx_service
+from services.task_manager_service import task_manager_service
 from templating import templates
 
 logger = logging.getLogger(__name__)
@@ -236,17 +237,37 @@ async def ssl_issue_submit(
             if proxy:
                 resolved_domain_id = proxy.domain_id
 
+    if is_json_request:
+        async def _run_issue_ssl(task_rec):
+            task_rec.add_log(f"Requesting Let's Encrypt SSL certificate for {full_domain}...")
+            cert = await ssl_service.issue_cert(
+                db, resolved_domain_id, full_domain, include_www, auto_renew
+            )
+            task_rec.add_log("SSL certificate issued and Nginx reloaded successfully.")
+            return True, f"SSL Certificate for {cert.full_domain} issued."
+
+        task = await task_manager_service.spawn(
+            category="ssl",
+            action="issue",
+            target_id=full_domain,
+            label=f"Issue SSL: {full_domain}",
+            runner=_run_issue_ssl,
+        )
+        return JSONResponse({
+            "status": "ok",
+            "success": True,
+            "task_id": task.id,
+            "full_domain": full_domain,
+            "message": f"Issuing SSL certificate for {full_domain} in background...",
+        })
+
     try:
         cert = await ssl_service.issue_cert(
             db, resolved_domain_id, full_domain, include_www, auto_renew
         )
-        if is_json_request:
-            return JSONResponse({"status": "ok", "full_domain": cert.full_domain})
         return RedirectResponse(f"/ssl/?issued={cert.full_domain}", status_code=303)
     except Exception as exc:
         error_msg = str(exc.detail) if hasattr(exc, "detail") else str(exc)
-        if is_json_request:
-            raise HTTPException(status_code=getattr(exc, "status_code", 400), detail=error_msg)
         eligible = await _build_eligible(db)
         return templates.TemplateResponse("pages/ssl/issue.html", {
             "request": request,

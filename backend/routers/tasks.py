@@ -48,3 +48,10 @@ async def cancel_task(task_id: str):
     if not success:
         raise HTTPException(status_code=400, detail="Task could not be cancelled or is already finished.")
     return {"success": True, "message": "Task cancellation requested."}
+
+
+@router.post("/clear-history")
+async def clear_task_history():
+    """Clear past completed/failed tasks from history and database."""
+    count = await task_manager_service.clear_history()
+    return {"success": True, "cleared_count": count, "message": "Task history cleared."}

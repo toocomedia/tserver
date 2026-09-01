@@ -126,6 +126,27 @@
   color: var(--color-neutral-text);
 }
 
+.task-drawer__clear-btn {
+  padding: 8px 12px;
+  font-size: var(--font-small, 11px);
+  font-weight: 600;
+  background: transparent;
+  color: var(--color-muted);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.task-drawer__clear-btn:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-danger);
+}
+
+.task-drawer__clear-btn.hidden {
+  display: none;
+}
+
 /* Content Body */
 .task-drawer__body {
   flex: 1;

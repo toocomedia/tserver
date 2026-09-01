@@ -11,6 +11,8 @@
   "task_completed": "Tamamlandı",
   "task_failed": "Başarısız",
   "task_cancelled": "İptal Edildi",
+  "clear_history": "Geçmişi Temizle",
+  "history_cleared": "Görev geçmişi temizlendi",
   "resource_guard_recommended_enable_it_to_": "Kaynak Koruması Önerilir: Ağır panel eyleminin bu düşük RAM'li VPS'yi tüketmesini engellemek için etkinleştirin.",
   "open_settings": "Ayarları Aç",
   "don_t_show_again": "Bir daha gösterme",
