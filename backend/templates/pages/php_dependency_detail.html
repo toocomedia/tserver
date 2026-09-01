@@ -10,6 +10,22 @@
 
 {% block content %}
 <div class="php-dependency-page">
+  <!-- TOP LEVEL TAB STRIP -->
+  <div class="tabs-nav mb-lg" role="tablist" data-php-top-tabs>
+    <button class="tabs-nav__btn btn--ghost is-active" type="button" role="tab" data-php-tab-btn="versions" id="top-tab-versions">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:2px;"><path d="M4 5h16v14H4z"></path><path d="M8 9h8M8 13h5"></path></svg>
+      {{ _('php_versions') }}
+    </button>
+    <button class="tabs-nav__btn btn--ghost" type="button" role="tab" data-php-tab-btn="extensions" id="top-tab-extensions">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:2px;"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path></svg>
+      {{ _('php_extensions') }}
+    </button>
+    <button class="tabs-nav__btn btn--ghost" type="button" role="tab" data-php-tab-btn="tools" id="top-tab-tools">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:2px;"><path d="m14.7 6.3 3 3L8.5 18.5 5 19l.5-3.5L14.7 6.3z"></path></svg>
+      {{ _('panel_tools') }}
+    </button>
+  </div>
+
   <!-- SKELETON LOADING OVERLAY -->
   {{ skeleton_overlay('php-runtime-skeleton', header=1, sections=[1], tables=[{'rows': 7}]) }}
   <!-- END SKELETON OVERLAY -->
@@ -22,6 +38,7 @@
 {% block scripts %}
 <script>
 (function () {
+  var topNav = document.querySelector('[data-php-top-tabs]');
   var root = document.querySelector('[data-php-runtime]');
   if (!root) return;
   var content = root.querySelector('[data-php-runtime-content]');
@@ -115,32 +132,31 @@
     });
   }
 
-  function bindTabs() {
-    content.querySelectorAll('[data-php-tab-btn]').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        activeTab = btn.getAttribute('data-php-tab-btn');
-        content.querySelectorAll('[data-php-tab-btn]').forEach(function (b) {
-          b.classList.toggle('is-active', b === btn);
-        });
-        content.querySelectorAll('[data-php-tab-panel]').forEach(function (panel) {
-          panel.hidden = panel.getAttribute('data-php-tab-panel') !== activeTab;
-        });
-        if (activeTab === 'extensions') {
-          loadExtensions();
-        }
-      });
-    });
-
-    // Restore active tab
-    var currentBtn = content.querySelector('[data-php-tab-btn="' + activeTab + '"]');
-    if (currentBtn) {
-      content.querySelectorAll('[data-php-tab-btn]').forEach(function (b) {
-        b.classList.toggle('is-active', b === currentBtn);
-      });
-      content.querySelectorAll('[data-php-tab-panel]').forEach(function (panel) {
-        panel.hidden = panel.getAttribute('data-php-tab-panel') !== activeTab;
+  function applyActiveTab() {
+    if (topNav) {
+      topNav.querySelectorAll('[data-php-tab-btn]').forEach(function (b) {
+        b.classList.toggle('is-active', b.getAttribute('data-php-tab-btn') === activeTab);
       });
     }
+    content.querySelectorAll('[data-php-tab-panel]').forEach(function (panel) {
+      panel.hidden = panel.getAttribute('data-php-tab-panel') !== activeTab;
+    });
+    if (activeTab === 'extensions') {
+      loadExtensions();
+    }
+  }
+
+  function bindTabs() {
+    if (topNav && topNav.dataset.phpBound !== 'true') {
+      topNav.dataset.phpBound = 'true';
+      topNav.querySelectorAll('[data-php-tab-btn]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          activeTab = btn.getAttribute('data-php-tab-btn');
+          applyActiveTab();
+        });
+      });
+    }
+    applyActiveTab();
   }
 
   async function loadExtensions() {
@@ -215,80 +231,92 @@
 
   function bindExtensionControls() {
     var select = content.querySelector('[data-ext-version-select]');
-    if (select) {
+    if (select && select.dataset.bound !== 'true') {
+      select.dataset.bound = 'true';
       select.addEventListener('change', loadExtensions);
     }
     var refreshBtn = content.querySelector('[data-ext-refresh]');
-    if (refreshBtn) {
+    if (refreshBtn && refreshBtn.dataset.bound !== 'true') {
+      refreshBtn.dataset.bound = 'true';
       refreshBtn.addEventListener('click', loadExtensions);
     }
     var searchInput = content.querySelector('[data-ext-search]');
-    if (searchInput) {
+    if (searchInput && searchInput.dataset.bound !== 'true') {
+      searchInput.dataset.bound = 'true';
       searchInput.addEventListener('input', renderExtensions);
     }
     content.querySelectorAll('[data-ext-cat]').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        currentCategory = btn.getAttribute('data-ext-cat');
-        content.querySelectorAll('[data-ext-cat]').forEach(function (b) {
-          b.classList.toggle('is-active', b === btn);
+      if (btn.dataset.bound !== 'true') {
+        btn.dataset.bound = 'true';
+        btn.addEventListener('click', function () {
+          currentCategory = btn.getAttribute('data-ext-cat');
+          content.querySelectorAll('[data-ext-cat]').forEach(function (b) {
+            b.classList.toggle('is-active', b === btn);
+          });
+          renderExtensions();
         });
-        renderExtensions();
-      });
+      }
     });
 
     // Delegate install / uninstall buttons
-    content.addEventListener('click', async function (e) {
-      var extBtn = e.target.closest('[data-ext-action]');
-      if (!extBtn) return;
-      var action = extBtn.getAttribute('data-ext-action');
-      var name = extBtn.getAttribute('data-ext-name');
-      var ver = extBtn.getAttribute('data-ext-ver');
-      if (!action || !name || !ver || extBtn.disabled) return;
+    if (content.dataset.extActionBound !== 'true') {
+      content.dataset.extActionBound = 'true';
+      content.addEventListener('click', async function (e) {
+        var extBtn = e.target.closest('[data-ext-action]');
+        if (!extBtn) return;
+        var action = extBtn.getAttribute('data-ext-action');
+        var name = extBtn.getAttribute('data-ext-name');
+        var ver = extBtn.getAttribute('data-ext-ver');
+        if (!action || !name || !ver || extBtn.disabled) return;
 
-      extBtn.disabled = true;
-      var origText = extBtn.textContent;
-      extBtn.textContent = action === 'install' ? 'Installing...' : 'Uninstalling...';
+        extBtn.disabled = true;
+        var origText = extBtn.textContent;
+        extBtn.textContent = action === 'install' ? 'Installing...' : 'Uninstalling...';
 
-      try {
-        var url = '/api/dependencies/php/versions/' + encodeURIComponent(ver) + '/extensions/' + encodeURIComponent(name) + '/' + action;
-        var res = await fetch(url, { method: 'POST', headers: { 'Accept': 'application/json' } });
-        var payload = await res.json().catch(function () { return {}; });
-        if (!res.ok || !payload.success) throw new Error(payload.detail || 'Extension operation failed.');
-        if (window.toast) window.toast(payload.message || ('Extension ' + name + ' updated.'), 'success');
-        await loadExtensions();
-      } catch (err) {
-        if (window.toast) window.toast(err.message, 'error');
-        extBtn.disabled = false;
-        extBtn.textContent = origText;
-      }
-    });
+        try {
+          var url = '/api/dependencies/php/versions/' + encodeURIComponent(ver) + '/extensions/' + encodeURIComponent(name) + '/' + action;
+          var res = await fetch(url, { method: 'POST', headers: { 'Accept': 'application/json' } });
+          var payload = await res.json().catch(function () { return {}; });
+          if (!res.ok || !payload.success) throw new Error(payload.detail || 'Extension operation failed.');
+          if (window.toast) window.toast(payload.message || ('Extension ' + name + ' updated.'), 'success');
+          await loadExtensions();
+        } catch (err) {
+          if (window.toast) window.toast(err.message, 'error');
+          extBtn.disabled = false;
+          extBtn.textContent = origText;
+        }
+      });
+    }
   }
 
   function bindToolControls() {
-    content.addEventListener('click', async function (e) {
-      var toolBtn = e.target.closest('[data-tool-action]');
-      if (!toolBtn) return;
-      var action = toolBtn.getAttribute('data-tool-action');
-      var toolId = toolBtn.getAttribute('data-tool-id');
-      if (!action || !toolId || toolBtn.disabled) return;
+    if (content.dataset.toolActionBound !== 'true') {
+      content.dataset.toolActionBound = 'true';
+      content.addEventListener('click', async function (e) {
+        var toolBtn = e.target.closest('[data-tool-action]');
+        if (!toolBtn) return;
+        var action = toolBtn.getAttribute('data-tool-action');
+        var toolId = toolBtn.getAttribute('data-tool-id');
+        if (!action || !toolId || toolBtn.disabled) return;
 
-      toolBtn.disabled = true;
-      var origText = toolBtn.textContent;
-      toolBtn.textContent = action === 'install' ? 'Installing...' : 'Uninstalling...';
+        toolBtn.disabled = true;
+        var origText = toolBtn.textContent;
+        toolBtn.textContent = action === 'install' ? 'Installing...' : 'Uninstalling...';
 
-      try {
-        var url = '/api/dependencies/php/tools/' + encodeURIComponent(toolId) + '/' + action;
-        var res = await fetch(url, { method: 'POST', headers: { 'Accept': 'application/json' } });
-        var payload = await res.json().catch(function () { return {}; });
-        if (!res.ok || !payload.success) throw new Error(payload.detail || 'Tool operation failed.');
-        if (window.toast) window.toast(payload.message || ('Tool ' + toolId + ' updated.'), 'success');
-        await loadRuntime();
-      } catch (err) {
-        if (window.toast) window.toast(err.message, 'error');
-        toolBtn.disabled = false;
-        toolBtn.textContent = origText;
-      }
-    });
+        try {
+          var url = '/api/dependencies/php/tools/' + encodeURIComponent(toolId) + '/' + action;
+          var res = await fetch(url, { method: 'POST', headers: { 'Accept': 'application/json' } });
+          var payload = await res.json().catch(function () { return {}; });
+          if (!res.ok || !payload.success) throw new Error(payload.detail || 'Tool operation failed.');
+          if (window.toast) window.toast(payload.message || ('Tool ' + toolId + ' updated.'), 'success');
+          await loadRuntime();
+        } catch (err) {
+          if (window.toast) window.toast(err.message, 'error');
+          toolBtn.disabled = false;
+          toolBtn.textContent = origText;
+        }
+      });
+    }
   }
 
   function bindActions() {
@@ -296,9 +324,6 @@
     bindTabs();
     bindExtensionControls();
     bindToolControls();
-    if (activeTab === 'extensions') {
-      loadExtensions();
-    }
   }
 
   async function loadRuntime() {

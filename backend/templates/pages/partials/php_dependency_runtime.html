@@ -1,59 +1,3 @@
-<header class="info-hero-row mb-lg" data-php-operation-active="{{ 'true' if dependency.operation_in_progress else 'false' }}">
-  <div class="info-hero-row__icon">
-    {% if dependency.icon %}
-      <img src="{{ dependency.icon }}" alt="{{ dependency.name }} icon" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='block';">
-      <svg style="display: none;" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-width="1.5" d="M7 3h7l3 3v15H7z"></path><path stroke-width="1.5" d="M14 3v4h4M9 12h6M9 16h6"></path></svg>
-    {% else %}
-      <svg fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-width="1.5" d="M7 3h7l3 3v15H7z"></path><path stroke-width="1.5" d="M14 3v4h4M9 12h6M9 16h6"></path></svg>
-    {% endif %}
-  </div>
-  <div class="info-hero-row__main">
-    <div class="info-hero-row__title-line">
-      <h1 class="info-hero-row__title">{{ dependency.name }}</h1>
-      {% if dependency.healthy and dependency.desired_enabled %}
-        <span class="badge badge--healthy" data-role="dependency-status"><span class="badge-dot"></span> {{ _('healthy') }}</span>
-      {% else %}
-        <span class="badge badge--danger" data-role="dependency-status"><span class="badge-dot"></span> {{ dependency.effective_state | default('Not ready') }}</span>
-      {% endif %}
-    </div>
-    <div class="info-hero-row__meta">{{ _('system_dependency') }} · Driver v{{ dependency.version }}</div>
-  </div>
-  <div class="info-hero-row__actions">
-    {% if dependency.can_toggle %}
-    <form method="post" action="/api/dependencies/php/toggle" data-php-toggle{% if dependency.running %} data-confirmation="DISABLE ALL PHP"{% endif %}>
-      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
-      <input type="hidden" name="enabled" value="{{ 'false' if dependency.running else 'true' }}">
-      <input type="hidden" name="confirmation" value="">
-      <button class="btn {{ 'btn--danger' if dependency.running else 'btn--secondary' }} btn--sm" type="submit"{% if dependency.operation_in_progress %} disabled{% endif %}>
-        {{ _('disable') if dependency.running else _('enable') }} all PHP
-      </button>
-    </form>
-    {% endif %}
-    <form method="post" action="/api/dependencies/php/check-available" data-php-check>
-      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
-      <button class="btn btn--secondary btn--sm" type="submit"{% if dependency.operation_in_progress %} disabled{% endif %}>{{ _('check_available_versions') }}</button>
-    </form>
-    {% if dependency.external_repository.configured %}
-    <button class="btn btn--secondary btn--sm" type="button" disabled title="External PHP repository is already enabled">{{ _('external_php_source_enabled') }}</button>
-    {% elif not dependency.external_repository.supported %}
-    <button class="btn btn--secondary btn--sm" type="button" disabled title="{{ dependency.external_repository.unsupported_reason }}">{{ _('enable_external_php_source') }}</button>
-    {% else %}
-    <form method="post" action="/api/dependencies/php/enable-external-repository" data-php-external-repository data-confirmation="ENABLE EXTERNAL PHP REPOSITORY">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
-      <input type="hidden" name="confirmation" value="">
-      <button class="btn btn--secondary btn--sm" type="submit"{% if dependency.operation_in_progress %} disabled{% endif %}>{{ _('enable_external_php_source') }}</button>
-    </form>
-    {% endif %}
-  </div>
-</header>
-
-<!-- TABS NAVIGATION STRIP -->
-<div class="tabs-nav mb-lg" role="tablist" style="display:flex; gap:8px; border-bottom:1px solid var(--color-line); padding-bottom:10px;">
-  <button class="btn btn--secondary btn--sm is-active" type="button" role="tab" data-php-tab-btn="versions" style="font-weight:600;">{{ _('php_versions') }}</button>
-  <button class="btn btn--secondary btn--sm" type="button" role="tab" data-php-tab-btn="extensions" style="font-weight:600;">{{ _('php_extensions') }}</button>
-  <button class="btn btn--secondary btn--sm" type="button" role="tab" data-php-tab-btn="tools" style="font-weight:600;">{{ _('panel_tools') }}</button>
-</div>
-
 {% if dependency.last_error or dependency.error %}
 <p class="text-danger mb-md" data-php-error>{{ dependency.last_error or dependency.error }}</p>
 {% else %}
@@ -65,6 +9,55 @@
 
 <!-- TAB PANEL 1: PHP VERSIONS -->
 <div data-php-tab-panel="versions">
+  <header class="info-hero-row mb-lg" data-php-operation-active="{{ 'true' if dependency.operation_in_progress else 'false' }}">
+    <div class="info-hero-row__icon">
+      {% if dependency.icon %}
+        <img src="{{ dependency.icon }}" alt="{{ dependency.name }} icon" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='block';">
+        <svg style="display: none;" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-width="1.5" d="M7 3h7l3 3v15H7z"></path><path stroke-width="1.5" d="M14 3v4h4M9 12h6M9 16h6"></path></svg>
+      {% else %}
+        <svg fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-width="1.5" d="M7 3h7l3 3v15H7z"></path><path stroke-width="1.5" d="M14 3v4h4M9 12h6M9 16h6"></path></svg>
+      {% endif %}
+    </div>
+    <div class="info-hero-row__main">
+      <div class="info-hero-row__title-line">
+        <h1 class="info-hero-row__title">{{ dependency.name }}</h1>
+        {% if dependency.healthy and dependency.desired_enabled %}
+          <span class="badge badge--healthy" data-role="dependency-status"><span class="badge-dot"></span> {{ _('healthy') }}</span>
+        {% else %}
+          <span class="badge badge--danger" data-role="dependency-status"><span class="badge-dot"></span> {{ dependency.effective_state | default('Not ready') }}</span>
+        {% endif %}
+      </div>
+      <div class="info-hero-row__meta">{{ _('system_dependency') }} · Driver v{{ dependency.version }}</div>
+    </div>
+    <div class="info-hero-row__actions">
+      {% if dependency.can_toggle %}
+      <form method="post" action="/api/dependencies/php/toggle" data-php-toggle{% if dependency.running %} data-confirmation="DISABLE ALL PHP"{% endif %}>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+        <input type="hidden" name="enabled" value="{{ 'false' if dependency.running else 'true' }}">
+        <input type="hidden" name="confirmation" value="">
+        <button class="btn {{ 'btn--danger' if dependency.running else 'btn--secondary' }} btn--sm" type="submit"{% if dependency.operation_in_progress %} disabled{% endif %}>
+          {{ _('disable') if dependency.running else _('enable') }} all PHP
+        </button>
+      </form>
+      {% endif %}
+      <form method="post" action="/api/dependencies/php/check-available" data-php-check>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+        <button class="btn btn--secondary btn--sm" type="submit"{% if dependency.operation_in_progress %} disabled{% endif %}>{{ _('check_available_versions') }}</button>
+      </form>
+      {% if dependency.external_repository.configured %}
+      <button class="btn btn--secondary btn--sm" type="button" disabled title="External PHP repository is already enabled">{{ _('external_php_source_enabled') }}</button>
+      {% elif not dependency.external_repository.supported %}
+      <button class="btn btn--secondary btn--sm" type="button" disabled title="{{ dependency.external_repository.unsupported_reason }}">{{ _('enable_external_php_source') }}</button>
+      {% else %}
+      <form method="post" action="/api/dependencies/php/enable-external-repository" data-php-external-repository data-confirmation="ENABLE EXTERNAL PHP REPOSITORY">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+        <input type="hidden" name="confirmation" value="">
+        <button class="btn btn--secondary btn--sm" type="submit"{% if dependency.operation_in_progress %} disabled{% endif %}>{{ _('enable_external_php_source') }}</button>
+      </form>
+      {% endif %}
+    </div>
+  </header>
+
   <!-- DESCRIPTION -->
   {% if dependency.description %}
   <div class="mb-xl">
