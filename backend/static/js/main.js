@@ -244,7 +244,6 @@ document.addEventListener("submit", (e) => {
   if (!button || button.dataset.noLoading === "true") return;
   button.classList.add("is-loading");
   button.setAttribute("aria-busy", "true");
-  button.disabled = true;
 });
 
 document.addEventListener("keydown", (e) => {

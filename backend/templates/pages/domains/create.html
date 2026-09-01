@@ -428,7 +428,7 @@ form.addEventListener('submit', (e) => {
     return;
   }
   submitBtn.textContent = 'Deploying...';
-  submitBtn.disabled = true;
+  submitBtn.classList.add('is-loading');
 });
 
 document.addEventListener('DOMContentLoaded', () => {
