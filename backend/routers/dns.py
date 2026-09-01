@@ -12,7 +12,7 @@ from sqlalchemy import select
 
 from database import get_db
 from models.domain import Domain
-from services import dns_service, domain_service
+from services import dns_service, domain_service, dns_diagnostic_service
 from templating import templates
 import config
 
@@ -157,6 +157,19 @@ async def dns_api_convert_to_record(
 
 
 # ---------------------------------------------------------------
+# DIAGNOSE ZONE
+# ---------------------------------------------------------------
+@router.get("/api/{domain_name}/diagnose")
+async def dns_api_diagnose(
+    domain_name: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """Run full DNS diagnostic suite on a domain and return JSON."""
+    result = await dns_diagnostic_service.diagnose_domain(domain_name)
+    return result
+
+
+# ---------------------------------------------------------------
 # ADD RECORD
 # ---------------------------------------------------------------
 @router.post("/{domain_name}/records/add")
@@ -169,7 +182,7 @@ async def dns_add_record(
     ttl: int = Form(3600),
     db: AsyncSession = Depends(get_db),
 ):
-    """Add a DNS record to a zone."""
+    """Add a DNS record to a zone (with smart auto-normalization & RRset merging)."""
     # Validate domain is managed
     domain = (await db.execute(
         select(Domain).where(Domain.name == domain_name)
@@ -178,22 +191,33 @@ async def dns_add_record(
         return JSONResponse({"error": "Domain not found"}, status_code=404)
 
     # Validate type
-    if type.upper() not in RECORD_TYPES:
+    rtype = type.strip().upper()
+    if rtype not in RECORD_TYPES:
         return RedirectResponse(
             f"/dns/{domain_name}/records?error=Invalid+record+type",
             status_code=303
         )
 
     try:
-        await dns_service.add_record(domain_name, name.strip(), type.upper(), content.strip(), ttl)
+        clean_name, clean_type, clean_content = dns_service.normalize_record(
+            name, rtype, content, domain_name
+        )
+        await dns_service.add_record(domain_name, clean_name, clean_type, clean_content, ttl)
+        
+        # If AJAX request, return JSON
+        if "application/json" in request.headers.get("accept", "") or request.headers.get("x-requested-with") == "XMLHttpRequest":
+            return {"status": "ok", "message": "Record added successfully", "name": clean_name, "type": clean_type, "content": clean_content}
+
         return RedirectResponse(
-            f"/dns/{domain_name}/records?success=Record+added",
+            f"/dns/{domain_name}/records?success=Record+added+successfully",
             status_code=303
         )
     except Exception as exc:
         error = str(exc.detail) if hasattr(exc, "detail") else str(exc)
+        if "application/json" in request.headers.get("accept", ""):
+            return JSONResponse({"error": error}, status_code=400)
         return RedirectResponse(
-            f"/dns/{domain_name}/records?error={error}",
+            f"/dns/{domain_name}/records?error={quote(error[:300])}",
             status_code=303
         )
 
@@ -206,9 +230,10 @@ async def dns_delete_record(
     domain_name: str,
     name: str = Form(...),
     type: str = Form(...),
+    content: str | None = Form(None),
     db: AsyncSession = Depends(get_db),
 ):
-    """Delete a specific DNS record from a zone."""
+    """Delete a specific DNS record (or single value) from a zone."""
     domain = (await db.execute(
         select(Domain).where(Domain.name == domain_name)
     )).scalar_one_or_none()
@@ -223,18 +248,10 @@ async def dns_delete_record(
         )
 
     # UI may pass FQDN (example.com or www.example.com); normalize to short name
-    name = name.strip()
-    zone = domain_name.rstrip(".").lower()
-    lower = name.rstrip(".").lower()
-    if lower == zone:
-        short_name = "@"
-    elif lower.endswith("." + zone):
-        short_name = lower[: -(len(zone) + 1)]
-    else:
-        short_name = name
+    clean_name = powerdns.normalize_record_name(name, domain_name)
 
     try:
-        await dns_service.delete_record(domain_name, short_name, rtype)
+        await dns_service.delete_record(domain_name, clean_name, rtype, content=content)
         return RedirectResponse(
             f"/dns/{domain_name}/records?success=Record+deleted",
             status_code=303,

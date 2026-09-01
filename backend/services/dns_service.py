@@ -49,9 +49,21 @@ async def add_records(
     await powerdns.add_records(domain, name, rtype, contents, ttl)
 
 
-async def delete_record(domain: str, name: str, rtype: str) -> None:
-    """Delete a specific record (entire name+type RRset)."""
-    await powerdns.delete_record(domain, name, rtype)
+async def delete_record(
+    domain: str, name: str, rtype: str, content: str | None = None
+) -> None:
+    """Delete a specific record (single value if content given, or entire name+type RRset)."""
+    await powerdns.delete_record(domain, name, rtype, content=content)
+
+
+def normalize_record(
+    name: str, rtype: str, content: str, domain: str = ""
+) -> tuple[str, str, str]:
+    """Return normalized (name, rtype, content)."""
+    clean_name = powerdns.normalize_record_name(name, domain)
+    clean_type = rtype.strip().upper()
+    clean_content = powerdns.format_record_content(clean_type, content, domain)
+    return clean_name, clean_type, clean_content
 
 
 async def list_records(domain: str) -> list[dict]:
