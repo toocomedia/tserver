@@ -233,8 +233,13 @@
 
   async function syncCurrentPageTable() {
     const path = window.location.pathname;
-    // Skip on form/wizard creation pages
-    if (path.endsWith('/create') || path.endsWith('/create/') || path.includes('/edit') || path.includes('/wizard')) {
+    // Skip on form/wizard creation pages and split-layout pages (e.g. /settings/)
+    // Those pages have inline tab scripts that don't survive innerHTML replacement.
+    if (
+      path.endsWith('/create') || path.endsWith('/create/') ||
+      path.includes('/edit') || path.includes('/wizard') ||
+      path.startsWith('/settings')
+    ) {
       return;
     }
 
