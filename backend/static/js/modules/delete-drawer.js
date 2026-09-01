@@ -1,9 +1,9 @@
 /**
  * delete-drawer.js — Shared Full-Width Bottom Delete Window Component
  * Features:
- * - Edge-to-edge full-width bottom bar with dark blur backdrop
- * - Hover-hold activation timer (button is locked until hovered for intentional confirmation)
- * - Zero countdown numbers/digits displayed
+ * - Edge-to-edge full-width bottom bar (25% height)
+ * - 2.5-second continuous hover activation timer with visual fill progress
+ * - Zero numbers/digits displayed
  * - Touch press-and-hold fallback for mobile devices
  * - Programmatic API (window.openDeleteDrawer) & declarative triggers
  */
@@ -14,7 +14,7 @@
   let hoverTimer = null;
   let hoverStartTime = null;
   let currentConfirmCallback = null;
-  const HOVER_DURATION_MS = 5000; // 5s hover to unlock
+  const HOVER_DURATION_MS = 2500; // 2.5 seconds hover to unlock
 
   const getBackdrop = () => document.getElementById('delete-drawer-backdrop');
   const getDrawer = () => document.getElementById('delete-drawer');
@@ -24,7 +24,6 @@
   const getItemNameEl = () => document.querySelector('[data-delete-drawer-item]');
   const getExtraEl = () => document.querySelector('[data-delete-drawer-extra]');
   const getConfirmBtn = () => document.getElementById('delete-drawer-confirm-btn');
-  const getProgressEl = () => document.querySelector('[data-delete-drawer-progress]');
 
   function resetHoverState(btn) {
     if (hoverTimer) {
@@ -40,7 +39,7 @@
     btn.classList.add('is-locked');
     btn.setAttribute('aria-disabled', 'true');
 
-    const progressEl = getProgressEl();
+    const progressEl = btn.querySelector('[data-delete-drawer-progress]');
     if (progressEl) {
       progressEl.style.width = '0%';
     }
@@ -54,7 +53,7 @@
     }
 
     btn.classList.add('is-hovering');
-    const progressEl = getProgressEl();
+    const progressEl = btn.querySelector('[data-delete-drawer-progress]');
     hoverStartTime = performance.now();
 
     function step(timestamp) {
@@ -73,7 +72,7 @@
         if (progressEl) progressEl.style.width = '100%';
         hoverTimer = null;
         if (navigator.vibrate) {
-          try { navigator.vibrate(30); } catch (_) {}
+          try { navigator.vibrate(35); } catch (_) {}
         }
       } else {
         hoverTimer = requestAnimationFrame(step);
@@ -162,9 +161,11 @@
     // Reset button hover states
     resetHoverState(confirmBtn);
 
-    // Bind Hover / Touch events for progress unlocking
+    // Bind Pointer & Mouse & Touch events for reliable hover progress unlocking
     confirmBtn.addEventListener('mouseenter', () => startHoverProgress(confirmBtn));
     confirmBtn.addEventListener('mouseleave', () => stopHoverProgress(confirmBtn));
+    confirmBtn.addEventListener('pointerenter', () => startHoverProgress(confirmBtn));
+    confirmBtn.addEventListener('pointerleave', () => stopHoverProgress(confirmBtn));
     confirmBtn.addEventListener('touchstart', () => startHoverProgress(confirmBtn), { passive: true });
     confirmBtn.addEventListener('touchend', () => stopHoverProgress(confirmBtn), { passive: true });
     confirmBtn.addEventListener('touchcancel', () => stopHoverProgress(confirmBtn), { passive: true });
@@ -182,7 +183,7 @@
       e.preventDefault();
       e.stopPropagation();
 
-      // Block click if still locked
+      // If clicked while locked, give quick unlock or require hover
       if (!confirmBtn.classList.contains('is-unlocked')) {
         return;
       }

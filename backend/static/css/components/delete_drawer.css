@@ -1,6 +1,6 @@
 /* ============================================================
    FULL-WIDTH MINIMAL DELETE BOTTOM WINDOW (delete_drawer.css)
-   Full-width edge-to-edge 25% height bottom bar with 5s hover timer
+   Full-width edge-to-edge 25% height bottom bar with hover timer
    ============================================================ */
 
 .delete-drawer-backdrop {
@@ -9,7 +9,7 @@
   background: rgba(0, 0, 0, 0.72);
   z-index: 1100;
   opacity: 1;
-  transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: opacity 0.2s ease;
   display: flex;
   align-items: flex-end;
   justify-content: stretch;
@@ -28,10 +28,9 @@
   margin: 0;
   background: var(--color-surface, #14171f);
   border: none;
-  border-radius: 0;
   box-shadow: 0 -16px 48px rgba(0, 0, 0, 0.65);
   transform: translateY(0);
-  animation: deleteDrawerSlideUp 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: deleteDrawerSlideUp 0.2s ease forwards;
   font-family: var(--font-sans);
   color: var(--color-text);
   display: flex;
@@ -51,20 +50,19 @@
 .delete-drawer__inner {
   width: 100%;
   max-width: 1360px;
-  height: 100%;
   margin: 0 auto;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 40px;
-  padding: 36px 44px;
+  gap: 36px;
+  padding: 32px 40px;
 }
 
 /* Left Content Section */
 .delete-drawer__main {
   display: flex;
-  align-items: flex-start;
-  gap: 24px;
+  align-items: center;
+  gap: 20px;
   flex: 1;
   min-width: 0;
 }
@@ -73,20 +71,18 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 56px;
-  height: 56px;
-  border-radius: 14px;
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
   background: color-mix(in srgb, var(--color-danger) 15%, transparent);
   color: var(--color-danger);
-  border: none;
   flex-shrink: 0;
-  margin-top: 2px;
 }
 
 .delete-drawer__badge-icon svg,
 .delete-drawer__badge-icon i {
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
 }
 
 .delete-drawer__details {
@@ -95,123 +91,91 @@
 }
 
 .delete-drawer__title {
-  margin: 0 0 10px 0;
-  font-size: 1.45rem;
+  margin: 0 0 6px 0;
+  font-size: 1.35rem;
   font-weight: 700;
   color: var(--color-text);
   line-height: 1.25;
-  letter-spacing: -0.01em;
 }
 
-.delete-drawer__target-box {
+.delete-drawer__message-line {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 10px;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
-.delete-drawer__target-label {
-  font-size: 12.5px;
-  color: var(--color-muted);
-  font-weight: 500;
-}
-
-.delete-drawer__target-name {
+.delete-drawer__item-highlight {
   display: inline-block;
   font-family: var(--font-mono, monospace);
-  font-size: 13.5px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--color-danger);
   background: color-mix(in srgb, var(--color-danger) 14%, transparent);
-  border: none;
+  padding: 2px 8px;
   border-radius: 6px;
-  padding: 4px 10px;
-  word-break: break-all;
-  max-width: 480px;
+  max-width: 380px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.delete-drawer__message {
-  margin: 0;
+.delete-drawer__msg-text {
   font-size: 14.5px;
   color: var(--color-muted);
   line-height: 1.5;
-  max-width: 680px;
 }
 
 .delete-drawer__extra {
-  margin-top: 14px;
+  margin-top: 10px;
   font-size: 13.5px;
   color: var(--color-muted);
 }
 
-/* Right Action Buttons Section */
+/* Right Action Buttons Section - Simple & Clean */
 .delete-drawer__actions {
   display: flex;
   align-items: center;
-  gap: 18px;
+  gap: 16px;
   flex-shrink: 0;
 }
 
 .delete-drawer__btn {
-  min-width: 156px;
-  height: 54px;
-  font-size: 15.5px;
+  min-width: 140px;
+  height: 50px;
+  font-size: 15px;
   font-weight: 600;
-  border-radius: 12px;
+  border-radius: 10px;
   border: none;
+  outline: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0 28px;
+  padding: 0 24px;
   cursor: pointer;
   user-select: none;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .delete-drawer__cancel-btn {
-  background: color-mix(in srgb, var(--color-text) 8%, transparent);
+  background: color-mix(in srgb, var(--color-text) 10%, transparent);
   color: var(--color-text);
 }
 
 .delete-drawer__cancel-btn:hover {
-  background: color-mix(in srgb, var(--color-text) 14%, transparent);
+  background: color-mix(in srgb, var(--color-text) 18%, transparent);
 }
 
 .delete-drawer__confirm-btn {
   position: relative;
   overflow: hidden;
-  background: color-mix(in srgb, var(--color-danger) 35%, #181b24);
-  color: rgba(255, 255, 255, 0.6);
+  background: #2b1f24;
+  color: #ffffff;
   cursor: pointer;
 }
 
-.delete-drawer__confirm-btn.is-locked {
-  background: color-mix(in srgb, var(--color-danger) 35%, #181b24);
-  color: rgba(255, 255, 255, 0.6);
-  cursor: pointer;
-}
-
-.delete-drawer__confirm-btn.is-hovering {
-  color: #ffffff;
-}
-
-.delete-drawer__confirm-btn.is-unlocked {
-  background: var(--color-danger);
-  color: #ffffff;
-  box-shadow: 0 0 22px color-mix(in srgb, var(--color-danger) 60%, transparent);
-  animation: deleteBtnPulse 1.6s infinite ease-in-out;
-}
-
-@keyframes deleteBtnPulse {
-  0%, 100% {
-    box-shadow: 0 0 14px color-mix(in srgb, var(--color-danger) 50%, transparent);
-  }
-  50% {
-    box-shadow: 0 0 26px color-mix(in srgb, var(--color-danger) 80%, transparent);
-  }
+.delete-drawer__confirm-btn * {
+  pointer-events: none;
 }
 
 .delete-drawer__progress-fill {
@@ -219,10 +183,10 @@
   top: 0;
   left: 0;
   bottom: 0;
+  height: 100%;
   width: 0%;
-  background: var(--color-danger);
+  background: var(--color-danger, #ef4444);
   pointer-events: none;
-  transition: width 0.05s linear;
   z-index: 1;
 }
 
@@ -232,7 +196,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: 8px;
+  font-weight: 600;
 }
 
 .delete-drawer__btn-content svg,
@@ -241,7 +206,17 @@
   height: 18px;
 }
 
-/* Responsive Adjustments */
+.delete-drawer__confirm-btn.is-hovering {
+  box-shadow: 0 0 16px color-mix(in srgb, var(--color-danger, #ef4444) 40%, transparent);
+}
+
+.delete-drawer__confirm-btn.is-unlocked {
+  background: var(--color-danger, #ef4444);
+  color: #ffffff;
+  box-shadow: 0 0 24px color-mix(in srgb, var(--color-danger, #ef4444) 70%, transparent);
+}
+
+/* Responsive */
 @media (max-width: 860px) {
   .delete-drawer {
     min-height: auto;
@@ -250,8 +225,8 @@
   .delete-drawer__inner {
     flex-direction: column;
     align-items: stretch;
-    padding: 24px 20px 28px;
-    gap: 20px;
+    padding: 20px;
+    gap: 18px;
   }
 
   .delete-drawer__actions {
