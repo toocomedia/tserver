@@ -28,23 +28,29 @@ def install_profile(preset: str) -> str:
 
 
 async def options(versions: list[dict[str, Any]]) -> dict[str, Any]:
+    from pathlib import Path
     results: dict[str, Any] = {}
-    composer_available = False
+    composer_binary = Path("/usr/local/bin/composer")
+    composer_available = bool(composer_binary.is_file() and not composer_binary.is_symlink())
     for item in versions:
         version = str(item["version"])
         try:
             result = await asyncio.to_thread(runtime.status, version)
         except RuntimeError as exc:
-            result = {"ready": False, "composer_available": False, "missing_packages": [], "error": str(exc)}
+            result = {"ready": False, "composer_available": composer_available, "missing_packages": [], "error": str(exc)}
         results[version] = result
-        composer_available = composer_available or bool(result.get("composer_available"))
+        if result.get("composer_available"):
+            composer_available = True
     return {"composer_available": composer_available, "versions": results}
 
 
 async def ensure_requirements(version: str, *, install: bool) -> dict[str, Any]:
+    from pathlib import Path
     try:
         status = await asyncio.to_thread(runtime.status, version)
-        if not status.get("composer_available"):
+        composer_binary = Path("/usr/local/bin/composer")
+        composer_available = status.get("composer_available", False) or bool(composer_binary.is_file() and not composer_binary.is_symlink())
+        if not composer_available:
             raise HTTPException(409, "Panel-managed Composer is not installed. Please install Composer from Dependencies -> PHP Runtime -> Panel Tools first.")
         if status.get("ready"):
             return status

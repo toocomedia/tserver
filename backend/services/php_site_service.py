@@ -95,6 +95,12 @@ _ext_cache: dict[str, Any] = {}
 _ext_cache_at: float = 0.0
 
 
+def invalidate_ext_cache() -> None:
+    global _ext_cache, _ext_cache_at
+    _ext_cache = {}
+    _ext_cache_at = 0.0
+
+
 async def options(db: AsyncSession) -> dict[str, Any]:
     global _ext_cache, _ext_cache_at
     used = set((await db.scalars(select(ContainerApp.domain_id))).all())
@@ -106,7 +112,7 @@ async def options(db: AsyncSession) -> dict[str, Any]:
     certs = set((await db.scalars(select(SslCert.full_domain))).all())
     versions = await asyncio.to_thread(selectable_versions, force=False)
     now = time.monotonic()
-    if not _ext_cache or (now - _ext_cache_at > 60.0):
+    if not _ext_cache or (now - _ext_cache_at > 10.0):
         wp_vers: dict[str, Any] = {}
         db_exts: dict[str, Any] = {}
         for item in versions:

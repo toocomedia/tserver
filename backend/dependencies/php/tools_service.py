@@ -159,6 +159,11 @@ class PhpToolsService:
         with self._lock:
             try:
                 payload = self._call("install_tool", tool=tool_id)
+                try:
+                    from services.php_site_service import invalidate_ext_cache
+                    invalidate_ext_cache()
+                except Exception:
+                    pass
                 return True, str(payload.get("message") or f"{tool_id} installed successfully."), payload.get("tool", {})
             except Exception as exc:
                 return False, str(exc), {}
@@ -167,6 +172,11 @@ class PhpToolsService:
         with self._lock:
             try:
                 payload = self._call("uninstall_tool", tool=tool_id)
+                try:
+                    from services.php_site_service import invalidate_ext_cache
+                    invalidate_ext_cache()
+                except Exception:
+                    pass
                 return True, str(payload.get("message") or f"{tool_id} uninstalled successfully."), payload.get("tool", {})
             except Exception as exc:
                 return False, str(exc), {}

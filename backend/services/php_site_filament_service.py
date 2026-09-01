@@ -14,18 +14,27 @@ PRESET = "filament"
 
 
 async def options() -> dict[str, Any]:
+    from pathlib import Path
+    composer_binary = Path("/usr/local/bin/composer")
+    composer_available = bool(composer_binary.is_file() and not composer_binary.is_symlink())
     try:
-        return await asyncio.to_thread(runtime.status)
+        res = await asyncio.to_thread(runtime.status)
+        if res.get("composer_available") or composer_available:
+            res["composer_available"] = True
+        return res
     except RuntimeError as exc:
-        return {"composer_available": False, "error": str(exc)}
+        return {"composer_available": composer_available, "error": str(exc)}
 
 
 async def ensure_requirements() -> None:
+    from pathlib import Path
     try:
         status = await asyncio.to_thread(runtime.status)
     except RuntimeError as exc:
         raise HTTPException(502, str(exc)) from exc
-    if not status.get("composer_available"):
+    composer_binary = Path("/usr/local/bin/composer")
+    composer_available = status.get("composer_available", False) or bool(composer_binary.is_file() and not composer_binary.is_symlink())
+    if not composer_available:
         raise HTTPException(409, "Panel-managed Composer is not installed. Please install Composer from Dependencies -> PHP Runtime -> Panel Tools first.")
 
 
