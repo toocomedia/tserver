@@ -1,9 +1,10 @@
 /* ============================================================
-   SHARED FULL-WIDTH MINIMAL DELETE BOTTOM WINDOW (delete_drawer.css)
+   SHARED FULL-WIDTH DELETE BOTTOM WINDOW (delete_drawer.css)
    Sharp Two-Tier Bar (Option 1 Standard)
+   - Uses Shared System Colors (var(--color-...))
    - Zero border-radius (exact panel geometry)
    - Zero blur
-   - Generous padding (36px 48px) and spacious gaps
+   - Generous padding and spacious layout
    - Automatic 5s countdown fill timer
    - Two-tier layout: Top (Title/Badge + Action Buttons), Bottom (Options Tray)
    ============================================================ */
@@ -11,7 +12,7 @@
 .delete-drawer-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.72);
+  background: rgba(0, 0, 0, 0.7);
   z-index: 1100;
   opacity: 1;
   transition: opacity 0.2s ease;
@@ -31,14 +32,15 @@
   width: 100%;
   min-height: 20vh;
   margin: 0;
-  background: #12141c;
+  background: var(--color-surface);
   border: none;
+  border-top: 1px solid var(--color-line);
   border-radius: 0 !important;
-  box-shadow: 0 -24px 64px rgba(0, 0, 0, 0.85);
+  box-shadow: 0 -20px 60px rgba(0, 0, 0, 0.5);
   transform: translateY(0);
   animation: deleteDrawerSlideUp 0.2s ease-out forwards;
-  font-family: var(--font-sans, sans-serif);
-  color: var(--color-text, #f1f5f9);
+  font-family: var(--font-sans, inherit);
+  color: var(--color-text);
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -75,7 +77,7 @@
 }
 
 .delete-drawer__icon {
-  color: var(--color-danger, #ef4444);
+  color: var(--color-danger);
   width: 26px;
   height: 26px;
   flex-shrink: 0;
@@ -86,7 +88,7 @@
 .delete-drawer__divider {
   width: 1px;
   height: 26px;
-  background: rgba(255, 255, 255, 0.12);
+  background: var(--color-line);
   flex-shrink: 0;
 }
 
@@ -101,7 +103,7 @@
   margin: 0;
   font-size: 17px;
   font-weight: 700;
-  color: var(--color-text, #f1f5f9);
+  color: var(--color-text);
   line-height: 1.2;
   white-space: nowrap;
 }
@@ -112,8 +114,8 @@
   font-family: var(--font-mono, monospace);
   font-size: 12.5px;
   font-weight: 600;
-  color: var(--color-danger, #ef4444);
-  background: rgba(239, 68, 68, 0.12);
+  color: var(--color-danger-text);
+  background: var(--color-danger-btn);
   padding: 3px 10px;
   border: none;
   border-radius: 0 !important;
@@ -132,8 +134,8 @@
 }
 
 .delete-drawer__btn {
-  height: 46px;
-  font-size: 14px;
+  height: 44px;
+  font-size: 13.5px;
   font-weight: 600;
   border: none;
   border-radius: 0 !important;
@@ -144,27 +146,27 @@
   cursor: pointer;
   user-select: none;
   font-family: inherit;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition: background 0.15s ease, opacity 0.15s ease;
 }
 
 .delete-drawer__cancel-btn {
-  min-width: 110px;
-  padding: 0 24px;
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--color-text, #f1f5f9);
+  min-width: 100px;
+  padding: 0 22px;
+  background: var(--color-secondary-btn);
+  color: var(--color-text);
 }
 
 .delete-drawer__cancel-btn:hover {
-  background: rgba(255, 255, 255, 0.14);
+  background: var(--color-secondary-hover);
 }
 
 .delete-drawer__confirm-btn {
   position: relative;
   overflow: hidden;
-  min-width: 140px;
-  padding: 0 26px;
-  background: #231316;
-  color: #ffffff;
+  min-width: 136px;
+  padding: 0 24px;
+  background: var(--color-danger-btn);
+  color: var(--color-danger-text);
   cursor: not-allowed;
   transition: all 0.2s ease;
 }
@@ -174,13 +176,14 @@
 }
 
 .delete-drawer__confirm-btn.is-unlocked {
-  background: var(--color-danger, #ef4444);
+  background: var(--color-danger);
+  color: var(--color-on-solid, #ffffff);
   cursor: pointer;
-  box-shadow: 0 0 20px rgba(239, 68, 68, 0.55);
+  box-shadow: 0 0 20px rgba(220, 38, 38, 0.45);
 }
 
 .delete-drawer__confirm-btn.is-unlocked:hover {
-  opacity: 0.95;
+  opacity: 0.92;
 }
 
 .delete-drawer__progress-fill {
@@ -190,7 +193,7 @@
   bottom: 0;
   height: 100%;
   width: 0%;
-  background: var(--color-danger, #ef4444);
+  background: var(--color-danger);
   pointer-events: none;
   z-index: 1;
 }
@@ -201,22 +204,23 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: 8px;
   font-weight: 600;
 }
 
 .delete-drawer__btn-content svg,
 .delete-drawer__btn-content i {
-  width: 16px;
-  height: 16px;
+  width: 15px;
+  height: 15px;
 }
 
 /* Bottom Options Tray (Tier 2) */
 .delete-drawer__options-tray {
   max-width: 1360px;
   width: 100%;
-  margin: 20px auto 0;
-  padding-top: 18px;
+  margin: 18px auto 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-line);
   display: flex;
   align-items: center;
   gap: 14px;
@@ -234,48 +238,42 @@
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  font-size: 13.5px;
-  color: var(--color-muted, #8492a6);
+  font-size: 13px;
+  color: var(--color-text);
   cursor: pointer;
   user-select: none;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--color-bg);
+  border: 1px solid var(--color-line);
   padding: 8px 16px;
-  border: none;
   border-radius: 0 !important;
   margin: 0;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition: background 0.15s ease, border-color 0.15s ease;
 }
 
 .delete-drawer__options-tray .form-check:hover,
 .delete-drawer__options-tray label:hover {
-  background: rgba(255, 255, 255, 0.09);
-  color: #ffffff;
+  background: var(--color-surface-hover);
 }
 
 .delete-drawer__options-tray input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
-  border: none;
+  width: 15px;
+  height: 15px;
+  border: 1px solid var(--color-line);
   border-radius: 0 !important;
   appearance: none;
-  background: rgba(255, 255, 255, 0.14);
+  background: var(--color-bg);
   cursor: pointer;
   flex-shrink: 0;
   margin: 0;
 }
 
 .delete-drawer__options-tray input[type="checkbox"]:checked {
-  background: #ffffff;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2 6l3 3 5-5' stroke='%23000' stroke-width='2.2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background: var(--color-danger);
+  border-color: var(--color-danger);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2 6l3 3 5-5' stroke='%23fff' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
   background-size: 10px;
   background-repeat: no-repeat;
   background-position: center;
-}
-
-.delete-drawer__options-tray label:has(input:checked),
-.delete-drawer__options-tray .form-check:has(input:checked) {
-  background: rgba(255, 255, 255, 0.1);
-  color: #ffffff;
 }
 
 /* Responsive */
