@@ -1,22 +1,18 @@
 /**
  * task_drawer.css — Minimalist Right-Side Split Task Manager Drawer
- * Features:
- * - Pure dark surface design tokens with zero borders and zero divider lines
- * - Smooth right-side slide animation (transform: translateX)
- * - Compact task item cards with live progress bars and timers
- * - Collapsible dark log terminal stream
+ * Uses strictly panel design tokens (var(--color-*)) with zero borders and zero divider lines.
  */
 
 .task-drawer-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.65);
+  background: rgba(0, 0, 0, 0.6);
   z-index: 999;
   display: flex;
   justify-content: flex-end;
   opacity: 1;
   visibility: visible;
-  transition: opacity 0.22s ease, visibility 0.22s ease;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
 }
 
 .task-drawer-backdrop.hidden {
@@ -29,27 +25,28 @@
   width: 420px;
   max-width: 100vw;
   height: 100vh;
-  background: #111211;
-  color: var(--color-text, #f0f0f0);
+  background: var(--color-surface);
+  color: var(--color-text);
   display: flex;
   flex-direction: column;
-  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.5);
+  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.25);
   transform: translateX(0);
-  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 0.24s cubic-bezier(0.16, 1, 0.3, 1);
   overflow: hidden;
+  font-family: var(--font-sans, inherit);
 }
 
 .task-drawer-backdrop.hidden .task-drawer {
   transform: translateX(100%);
 }
 
-/* Header (Clean, no bottom border) */
+/* Header */
 .task-drawer__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 18px 20px;
-  background: #161816;
+  padding: 16px 20px;
+  background: var(--color-header-bg-bar);
 }
 
 .task-drawer__title-wrap {
@@ -59,38 +56,31 @@
 }
 
 .task-drawer__title {
-  font-size: 15px;
+  font-size: var(--font-body, 14px);
   font-weight: 700;
-  letter-spacing: -0.01em;
   margin: 0;
-  color: #ffffff;
+  color: var(--color-text);
 }
 
 .task-drawer__count-badge {
-  font-size: 11px;
+  font-size: var(--font-small, 11px);
   font-weight: 700;
-  padding: 2px 7px;
+  padding: 2px 8px;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.1);
-  color: #e0e0e0;
+  background: var(--color-secondary-btn);
+  color: var(--color-text);
 }
 
 .task-drawer__count-badge.is-active {
-  background: #2563eb;
-  color: #ffffff;
-  animation: pulse-task 2s infinite;
-}
-
-@keyframes pulse-task {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.6; }
+  background: var(--color-neutral-btn);
+  color: var(--color-neutral-text);
 }
 
 .task-drawer__close {
   background: transparent;
   border: none;
-  color: var(--color-muted, #888);
-  font-size: 18px;
+  color: var(--color-muted);
+  font-size: 16px;
   cursor: pointer;
   padding: 6px;
   border-radius: 4px;
@@ -101,25 +91,25 @@
 }
 
 .task-drawer__close:hover {
-  color: #ffffff;
-  background: rgba(255, 255, 255, 0.08);
+  color: var(--color-text);
+  background: var(--color-surface-hover);
 }
 
-/* Tabs (Solid pills, zero borders) */
+/* Tabs */
 .task-drawer__tabs {
   display: flex;
-  padding: 10px 20px;
+  padding: 12px 20px 8px;
   gap: 8px;
-  background: #111211;
+  background: var(--color-surface);
 }
 
 .task-drawer__tab {
   flex: 1;
   padding: 8px 12px;
-  font-size: 12px;
+  font-size: var(--font-small, 12px);
   font-weight: 600;
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--color-muted, #888);
+  background: var(--color-secondary-btn);
+  color: var(--color-muted);
   border: none;
   border-radius: 6px;
   cursor: pointer;
@@ -127,16 +117,16 @@
 }
 
 .task-drawer__tab:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: #fff;
+  background: var(--color-secondary-hover);
+  color: var(--color-text);
 }
 
 .task-drawer__tab.is-active {
-  background: rgba(255, 255, 255, 0.14);
-  color: #ffffff;
+  background: var(--color-neutral-btn);
+  color: var(--color-neutral-text);
 }
 
-/* Content List */
+/* Content Body */
 .task-drawer__body {
   flex: 1;
   overflow-y: auto;
@@ -146,10 +136,10 @@
   gap: 10px;
 }
 
-/* Task Item Card (Clean solid background, zero borders) */
+/* Task Item Card */
 .task-item {
-  background: #181a18;
-  border-radius: 8px;
+  background: var(--color-bg);
+  border-radius: 6px;
   padding: 14px;
   display: flex;
   flex-direction: column;
@@ -158,7 +148,7 @@
 }
 
 .task-item:hover {
-  background: #1e201e;
+  background: var(--color-surface-hover);
 }
 
 .task-item__top {
@@ -176,9 +166,9 @@
 }
 
 .task-item__title {
-  font-size: 13px;
+  font-size: var(--font-body, 13px);
   font-weight: 600;
-  color: #f5f5f5;
+  color: var(--color-text);
   margin: 0;
   white-space: nowrap;
   overflow: hidden;
@@ -189,8 +179,8 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 11px;
-  color: var(--color-muted, #888);
+  font-size: var(--font-small, 11px);
+  color: var(--color-muted);
 }
 
 .task-item__status-pill {
@@ -200,32 +190,34 @@
   letter-spacing: 0.04em;
   padding: 2px 6px;
   border-radius: 4px;
+  background: var(--color-secondary-btn);
+  color: var(--color-muted);
 }
 
 .task-item__status-pill--running {
-  background: rgba(37, 99, 235, 0.2);
-  color: #60a5fa;
+  background: var(--color-header-bg-bar);
+  color: var(--color-text);
 }
 
 .task-item__status-pill--succeeded {
-  background: rgba(34, 197, 94, 0.2);
-  color: #4ade80;
+  background: var(--color-alert-success-bg);
+  color: var(--color-text);
 }
 
 .task-item__status-pill--failed {
-  background: rgba(239, 68, 68, 0.2);
-  color: #f87171;
+  background: var(--color-danger-btn);
+  color: var(--color-danger-text);
 }
 
 .task-item__status-pill--cancelled {
-  background: rgba(156, 163, 175, 0.2);
-  color: #9ca3af;
+  background: var(--color-secondary-btn);
+  color: var(--color-muted);
 }
 
 /* Progress Track */
 .task-item__progress {
   height: 4px;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--color-line);
   border-radius: 2px;
   overflow: hidden;
   position: relative;
@@ -233,7 +225,7 @@
 
 .task-item__progress-bar {
   height: 100%;
-  background: #3b82f6;
+  background: var(--color-neutral);
   border-radius: 2px;
   transition: width 0.3s ease;
 }
@@ -257,8 +249,8 @@
 }
 
 .task-item__log-btn {
-  font-size: 11px;
-  color: var(--color-muted, #999);
+  font-size: var(--font-small, 11px);
+  color: var(--color-muted);
   background: transparent;
   border: none;
   padding: 4px 0;
@@ -269,12 +261,12 @@
 }
 
 .task-item__log-btn:hover {
-  color: #ffffff;
+  color: var(--color-text);
 }
 
 .task-item__cancel-btn {
-  font-size: 11px;
-  color: #ef4444;
+  font-size: var(--font-small, 11px);
+  color: var(--color-danger);
   background: transparent;
   border: none;
   cursor: pointer;
@@ -283,16 +275,16 @@
 }
 
 .task-item__cancel-btn:hover {
-  background: rgba(239, 68, 68, 0.12);
+  background: var(--color-danger-btn);
 }
 
 .task-item__terminal {
-  background: #090a09;
+  background: var(--color-sidebar);
+  color: var(--color-sidebar-text);
   border-radius: 6px;
-  padding: 8px 10px;
+  padding: 10px 12px;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 11px;
-  color: #a3e635;
   max-height: 160px;
   overflow-y: auto;
   line-height: 1.45;
@@ -309,8 +301,8 @@
 .task-drawer__empty {
   text-align: center;
   padding: 40px 20px;
-  color: var(--color-muted, #777);
-  font-size: 13px;
+  color: var(--color-muted);
+  font-size: var(--font-body, 13px);
 }
 
 /* Header Task Icon Button (In Topbar) */
@@ -320,33 +312,32 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  height: 32px;
-  padding: 0 10px;
-  background: rgba(255, 255, 255, 0.05);
+  height: var(--button-height-sm, 32px);
+  padding: 0 12px;
+  background: var(--color-surface);
   border: none;
   border-radius: 6px;
-  color: var(--color-text, #f0f0f0);
-  font-size: 12px;
+  color: var(--color-text);
+  font-size: var(--font-small, 12px);
   font-weight: 600;
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .header-task-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--color-surface-hover);
 }
 
 .header-task-btn__dot {
-  width: 7px;
-  height: 7px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
-  background: #3b82f6;
+  background: var(--color-accent);
   display: none;
 }
 
 .header-task-btn.is-active .header-task-btn__dot {
   display: inline-block;
-  animation: pulse-task 1.5s infinite;
 }
 
 .header-task-btn.is-active svg {
