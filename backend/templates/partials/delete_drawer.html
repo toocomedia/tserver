@@ -1,4 +1,4 @@
-<!-- SHARED DELETE BOTTOM DRAWER (Modular Component) -->
+<!-- SHARED FULL-WIDTH MINIMAL BOTTOM DELETE WINDOW -->
 <div id="delete-drawer-backdrop" class="delete-drawer-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="delete-drawer-title" aria-describedby="delete-drawer-message">
   <div class="delete-drawer" id="delete-drawer">
     <div class="delete-drawer__inner">
@@ -22,7 +22,7 @@
         <button type="button" class="btn btn--secondary delete-drawer__btn delete-drawer__cancel-btn" data-delete-drawer-close>
           {{ _('cancel') }}
         </button>
-        <button type="button" class="btn btn--danger delete-drawer__btn delete-drawer__confirm-btn" id="delete-drawer-confirm-btn" data-delete-drawer-confirm disabled data-base-label="{{ _('delete') }}">
+        <button type="button" class="btn btn--danger delete-drawer__btn delete-drawer__confirm-btn is-locked" id="delete-drawer-confirm-btn" data-delete-drawer-confirm aria-disabled="true" data-base-label="{{ _('delete') }}">
           <span class="delete-drawer__progress-fill" data-delete-drawer-progress></span>
           <span class="delete-drawer__btn-content">
             <i data-lucide="trash-2"></i>
@@ -30,10 +30,6 @@
           </span>
         </button>
       </div>
-
-      <button type="button" class="btn btn--ghost btn--icon delete-drawer__close-btn" data-delete-drawer-close aria-label="{{ _('close') }}">
-        <i data-lucide="x"></i>
-      </button>
     </div>
   </div>
 </div>

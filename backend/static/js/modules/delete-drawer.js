@@ -1,10 +1,11 @@
 /**
- * delete-drawer.js — Shared Bottom Delete Window Component
+ * delete-drawer.js — Shared Full-Width Bottom Delete Window Component
  * Features:
- * - Slide-up bottom dock with dark translucent backdrop
- * - Hover-hold activation timer with visual progress fill (no countdown digits)
+ * - Edge-to-edge full-width bottom bar with dark blur backdrop
+ * - Hover-hold activation timer (button is locked until hovered for intentional confirmation)
+ * - Zero countdown numbers/digits displayed
  * - Touch press-and-hold fallback for mobile devices
- * - Programmatic API (window.openDeleteDrawer) & declarative data-delete-drawer-trigger
+ * - Programmatic API (window.openDeleteDrawer) & declarative triggers
  */
 
 (function () {
@@ -13,7 +14,7 @@
   let hoverTimer = null;
   let hoverStartTime = null;
   let currentConfirmCallback = null;
-  const HOVER_DURATION_MS = 1200; // 1.2 seconds hover to unlock
+  const HOVER_DURATION_MS = 950; // ~1s hover to unlock
 
   const getBackdrop = () => document.getElementById('delete-drawer-backdrop');
   const getDrawer = () => document.getElementById('delete-drawer');
@@ -35,8 +36,9 @@
     if (!btn) btn = getConfirmBtn();
     if (!btn) return;
 
-    btn.disabled = true;
     btn.classList.remove('is-hovering', 'is-unlocked');
+    btn.classList.add('is-locked');
+    btn.setAttribute('aria-disabled', 'true');
 
     const progressEl = getProgressEl();
     if (progressEl) {
@@ -44,7 +46,7 @@
     }
   }
 
-  function startHoverProgress(btn, onUnlocked) {
+  function startHoverProgress(btn) {
     if (!btn || btn.classList.contains('is-unlocked')) return;
 
     if (hoverTimer) {
@@ -64,15 +66,14 @@
       }
 
       if (elapsed >= HOVER_DURATION_MS) {
-        // Unlocked!
-        btn.disabled = false;
-        btn.classList.remove('is-hovering');
+        // Successfully unlocked!
+        btn.classList.remove('is-locked', 'is-hovering');
         btn.classList.add('is-unlocked');
+        btn.removeAttribute('aria-disabled');
         if (progressEl) progressEl.style.width = '100%';
         hoverTimer = null;
-        if (typeof onUnlocked === 'function') onUnlocked();
         if (navigator.vibrate) {
-          try { navigator.vibrate(35); } catch (_) {}
+          try { navigator.vibrate(30); } catch (_) {}
         }
       } else {
         hoverTimer = requestAnimationFrame(step);
@@ -181,7 +182,10 @@
       e.preventDefault();
       e.stopPropagation();
 
-      if (!confirmBtn.classList.contains('is-unlocked') && confirmBtn.disabled) return;
+      // Block click if still locked
+      if (!confirmBtn.classList.contains('is-unlocked')) {
+        return;
+      }
 
       closeDeleteDrawer();
 
