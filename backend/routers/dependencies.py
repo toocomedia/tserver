@@ -92,6 +92,7 @@ async def dependency_catalog_view(request: Request):
     return templates.TemplateResponse(
         "pages/partials/dependency_catalog.html",
         {"request": request, "dependencies": dependencies},
+        headers={"Cache-Control": "no-store, no-cache, must-revalidate"},
     )
 
 
@@ -106,6 +107,7 @@ async def php_runtime_view(request: Request):
     return templates.TemplateResponse(
         "pages/partials/php_dependency_runtime.html",
         {"request": request, "dependency": dependency, "tools": tools},
+        headers={"Cache-Control": "no-store, no-cache, must-revalidate"},
     )
 
 
