@@ -993,5 +993,18 @@
   "setup_with_ai": "Set up with AI",
   "select_target_domain": "Select Target Domain...",
   "in_use": "in use",
-  "apply_to_form": "Apply to Deploy Form"
+  "apply_to_form": "Apply to Deploy Form",
+  "php_versions": "PHP Versions",
+  "php_extensions": "PHP Extensions",
+  "php_extensions_manager": "PHP Extensions Manager",
+  "php_extensions_manager_desc": "Inspect, install, and remove PHP extensions per runtime version.",
+  "search_extensions_placeholder": "Search extensions (e.g. redis, gd, imagick)...",
+  "loading_extensions": "Loading extensions",
+  "extension": "Extension",
+  "panel_tools": "Panel Tools",
+  "panel_php_tools": "Panel PHP Tools",
+  "panel_php_tools_desc": "CLI utilities required by panel features and modern PHP frameworks.",
+  "binary_path": "Binary Path",
+  "not_installed": "Not Installed",
+  "no_php_installed": "No PHP version installed"
 }

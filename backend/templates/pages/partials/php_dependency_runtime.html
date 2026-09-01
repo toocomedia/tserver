@@ -47,70 +47,12 @@
   </div>
 </header>
 
-<!-- DESCRIPTION -->
-{% if dependency.description %}
-<div class="mb-xl">
-  <h2 class="info-group-title">{{ _('description') }}</h2>
-  <p style="font-size: 13px; color: var(--color-text); line-height: 1.55;">
-    {{ dependency.description }}
-  </p>
+<!-- TABS NAVIGATION STRIP -->
+<div class="tabs-nav mb-lg" role="tablist" style="display:flex; gap:8px; border-bottom:1px solid var(--color-line); padding-bottom:10px;">
+  <button class="btn btn--secondary btn--sm is-active" type="button" role="tab" data-php-tab-btn="versions" style="font-weight:600;">{{ _('php_versions') }}</button>
+  <button class="btn btn--secondary btn--sm" type="button" role="tab" data-php-tab-btn="extensions" style="font-weight:600;">{{ _('php_extensions') }}</button>
+  <button class="btn btn--secondary btn--sm" type="button" role="tab" data-php-tab-btn="tools" style="font-weight:600;">{{ _('panel_tools') }}</button>
 </div>
-{% endif %}
-
-<!-- SYSTEM SPECIFICATIONS -->
-<div class="mb-xl">
-  <h2 class="info-group-title">{{ _('system_specifications') }}</h2>
-  
-  <div class="clean-specs-grid">
-    <div class="clean-specs-item">
-      <div class="clean-specs-item__key">{{ _('installed_status') }}</div>
-      <div class="clean-specs-item__val" data-role="installed-value">{{ 'Yes' if dependency.installed else 'No' }}</div>
-    </div>
-    <div class="clean-specs-item">
-      <div class="clean-specs-item__key">{{ _('install_source') }}</div>
-      <div class="clean-specs-item__val" data-role="install-source">{{ dependency.install_origin | replace('_', ' ') if dependency.install_origin else 'Multiple' }}</div>
-    </div>
-    <div class="clean-specs-item">
-      <div class="clean-specs-item__key">{{ _('service_state') }}</div>
-      <div class="clean-specs-item__val" data-role="daemon-value">{{ ('Running' if dependency.running else 'Stopped') if dependency.can_toggle else 'Core runtime' }}</div>
-    </div>
-    <div class="clean-specs-item">
-      <div class="clean-specs-item__key">{{ _('version_detected') }}</div>
-      <div class="clean-specs-item__val" data-role="version-value">{{ dependency.detected_version if dependency.detected_version else 'Multiple versions' }}</div>
-    </div>
-    {% if dependency.update %}
-    <div class="clean-specs-item">
-      <div class="clean-specs-item__key">{{ _('update_status') }}</div>
-      <div class="clean-specs-item__val">{{ dependency.update.state | replace('_', ' ') }}</div>
-    </div>
-    {% endif %}
-    <div class="clean-specs-item">
-      <div class="clean-specs-item__key">{{ _('used_by_plugins') }}</div>
-      <div class="clean-specs-item__val">
-        {% if dependency.dependents %}
-          {{ dependency.dependents | map(attribute='name') | join(', ') }}
-        {% else %}
-          No plugins currently depend on this service.
-        {% endif %}
-      </div>
-    </div>
-  </div>
-</div>
-
-<h2 class="info-group-title">{{ _('runtime_management') }}</h2>
-
-<p class="text-small text-muted mb-sm">{{ _('install_only_the_php_versions_your_scrip') }}</p>
-
-{% set missing_versions = dependency.versions | rejectattr('installed') | rejectattr('available_from_apt') | list %}
-{% if missing_versions and not dependency.external_repository.supported %}
-<p class="text-small text-muted mb-md">{{ dependency.external_repository.unsupported_reason }} Install PHP versions available from this server's configured APT sources.</p>
-{% elif missing_versions and not dependency.external_repository.configured %}
-<p class="text-small text-muted mb-md">{{ _('some_versions_missing_info') }} {{ dependency.external_repository.name }} {{ _('without_installing_php') }}</p>
-{% elif dependency.external_repository.configured %}
-<p class="text-small text-muted mb-md">{{ _('external_php_source_enabled_1') }}</p>
-{% else %}
-<div class="mb-md"></div>
-{% endif %}
 
 {% if dependency.last_error or dependency.error %}
 <p class="text-danger mb-md" data-php-error>{{ dependency.last_error or dependency.error }}</p>
@@ -121,75 +63,250 @@
 <p class="text-small text-muted mb-md" data-php-operation-message>Another PHP runtime operation is running. All actions are temporarily disabled.</p>
 {% endif %}
 
-<div class="table-wrap mb-md">
-  <table class="table">
-    <colgroup>
-      <col style="width:22%">
-      <col style="width:28%">
-      <col style="width:20%">
-      <col style="width:15%">
-      <col style="width:15%">
-    </colgroup>
-    <thead>
-      <tr>
-        <th>{{ _('php_version') }}</th>
-        <th>{{ _('package') }}</th>
-        <th>{{ _('status') }}</th>
-        <th>{{ _('socket') }}</th>
-        <th class="col-actions">{{ _('actions') }}</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for runtime in dependency.versions %}
-      <tr>
-        <td><span class="table-title">PHP {{ runtime.version }}</span></td>
-        <td><span class="text-small text-muted" title="{{ runtime.package_version or '' }}">{{ runtime.package_version or '—' }}</span></td>
-        <td>
-          {% if runtime.installed and runtime.healthy %}
-          <span class="badge-minimal badge-minimal--active">{{ _('ready') }}</span>
-          {% elif runtime.installed and runtime.managed %}
-          <span class="badge-minimal badge-minimal--danger" title="{{ runtime.error or 'PHP-FPM needs repair.' }}">{{ _('needs_repair') }}</span>
-          {% elif runtime.installed %}
-          <span class="badge-minimal badge-minimal--neutral">{{ _('external') }}</span>
-          {% elif runtime.available_from_apt %}
-          <span class="badge-minimal badge-minimal--neutral">{{ _('available') }}</span>
+<!-- TAB PANEL 1: PHP VERSIONS -->
+<div data-php-tab-panel="versions">
+  <!-- DESCRIPTION -->
+  {% if dependency.description %}
+  <div class="mb-xl">
+    <h2 class="info-group-title">{{ _('description') }}</h2>
+    <p style="font-size: 13px; color: var(--color-text); line-height: 1.55;">
+      {{ dependency.description }}
+    </p>
+  </div>
+  {% endif %}
+
+  <!-- SYSTEM SPECIFICATIONS -->
+  <div class="mb-xl">
+    <h2 class="info-group-title">{{ _('system_specifications') }}</h2>
+    <div class="clean-specs-grid">
+      <div class="clean-specs-item">
+        <div class="clean-specs-item__key">{{ _('installed_status') }}</div>
+        <div class="clean-specs-item__val" data-role="installed-value">{{ 'Yes' if dependency.installed else 'No' }}</div>
+      </div>
+      <div class="clean-specs-item">
+        <div class="clean-specs-item__key">{{ _('install_source') }}</div>
+        <div class="clean-specs-item__val" data-role="install-source">{{ dependency.install_origin | replace('_', ' ') if dependency.install_origin else 'Multiple' }}</div>
+      </div>
+      <div class="clean-specs-item">
+        <div class="clean-specs-item__key">{{ _('service_state') }}</div>
+        <div class="clean-specs-item__val" data-role="daemon-value">{{ ('Running' if dependency.running else 'Stopped') if dependency.can_toggle else 'Core runtime' }}</div>
+      </div>
+      <div class="clean-specs-item">
+        <div class="clean-specs-item__key">{{ _('version_detected') }}</div>
+        <div class="clean-specs-item__val" data-role="version-value">{{ dependency.detected_version if dependency.detected_version else 'Multiple versions' }}</div>
+      </div>
+      {% if dependency.update %}
+      <div class="clean-specs-item">
+        <div class="clean-specs-item__key">{{ _('update_status') }}</div>
+        <div class="clean-specs-item__val">{{ dependency.update.state | replace('_', ' ') }}</div>
+      </div>
+      {% endif %}
+      <div class="clean-specs-item">
+        <div class="clean-specs-item__key">{{ _('used_by_plugins') }}</div>
+        <div class="clean-specs-item__val">
+          {% if dependency.dependents %}
+            {{ dependency.dependents | map(attribute='name') | join(', ') }}
           {% else %}
-          <span class="badge-minimal badge-minimal--neutral">{{ _('unavailable') }}</span>
+            No plugins currently depend on this service.
           {% endif %}
-        </td>
-        <td>
-          <span class="text-small text-muted" title="{{ runtime.socket_path }}">
-            {% if runtime.installed and runtime.socket_healthy %}Ready{% elif runtime.installed %}Unavailable{% else %}—{% endif %}
-          </span>
-        </td>
-        <td class="col-actions">
-          <div style="display:flex; gap:8px; justify-content:flex-end;">
-            {% if runtime.can_install %}
-            <form method="post" action="/api/dependencies/php/versions/{{ runtime.version }}/install" data-php-install style="margin:0;">
-              <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
-              <button class="btn btn--secondary btn--sm" type="submit"{% if dependency.operation_in_progress or not dependency.desired_enabled %} disabled{% endif %}{% if not dependency.desired_enabled %} title="Enable PHP before installing another version"{% endif %}>{{ _('install') }}</button>
-            </form>
-            {% elif runtime.can_uninstall %}
-            <form method="post" action="/api/dependencies/php/versions/{{ runtime.version }}/uninstall" data-php-uninstall data-confirmation="REMOVE PHP {{ runtime.version }}" style="margin:0;">
-              <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
-              <input type="hidden" name="confirmation" value="">
-              <button class="btn btn--danger btn--sm" type="submit"{% if dependency.operation_in_progress %} disabled{% endif %}>{{ _('uninstall') }}</button>
-            </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h2 class="info-group-title">{{ _('runtime_management') }}</h2>
+  <p class="text-small text-muted mb-sm">{{ _('install_only_the_php_versions_your_scrip') }}</p>
+
+  {% set missing_versions = dependency.versions | rejectattr('installed') | rejectattr('available_from_apt') | list %}
+  {% if missing_versions and not dependency.external_repository.supported %}
+  <p class="text-small text-muted mb-md">{{ dependency.external_repository.unsupported_reason }} Install PHP versions available from this server's configured APT sources.</p>
+  {% elif missing_versions and not dependency.external_repository.configured %}
+  <p class="text-small text-muted mb-md">{{ _('some_versions_missing_info') }} {{ dependency.external_repository.name }} {{ _('without_installing_php') }}</p>
+  {% elif dependency.external_repository.configured %}
+  <p class="text-small text-muted mb-md">{{ _('external_php_source_enabled_1') }}</p>
+  {% else %}
+  <div class="mb-md"></div>
+  {% endif %}
+
+  <div class="table-wrap mb-md">
+    <table class="table">
+      <colgroup>
+        <col style="width:22%">
+        <col style="width:28%">
+        <col style="width:20%">
+        <col style="width:15%">
+        <col style="width:15%">
+      </colgroup>
+      <thead>
+        <tr>
+          <th>{{ _('php_version') }}</th>
+          <th>{{ _('package') }}</th>
+          <th>{{ _('status') }}</th>
+          <th>{{ _('socket') }}</th>
+          <th class="col-actions">{{ _('actions') }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for runtime in dependency.versions %}
+        <tr>
+          <td><span class="table-title">PHP {{ runtime.version }}</span></td>
+          <td><span class="text-small text-muted" title="{{ runtime.package_version or '' }}">{{ runtime.package_version or '—' }}</span></td>
+          <td>
+            {% if runtime.installed and runtime.healthy %}
+            <span class="badge-minimal badge-minimal--active">{{ _('ready') }}</span>
+            {% elif runtime.installed and runtime.managed %}
+            <span class="badge-minimal badge-minimal--danger" title="{{ runtime.error or 'PHP-FPM needs repair.' }}">{{ _('needs_repair') }}</span>
             {% elif runtime.installed %}
-            <span class="text-small text-muted">{{ _('external_1') }}</span>
+            <span class="badge-minimal badge-minimal--neutral">{{ _('external') }}</span>
+            {% elif runtime.available_from_apt %}
+            <span class="badge-minimal badge-minimal--neutral">{{ _('available') }}</span>
             {% else %}
-            <span class="text-small text-muted">—</span>
+            <span class="badge-minimal badge-minimal--neutral">{{ _('unavailable') }}</span>
             {% endif %}
-          </div>
-        </td>
-      </tr>
-      {% else %}
-      <tr>
-        <td colspan="5" class="text-center text-muted" style="padding: 24px;">{{ _('no_php_fpm_versions_are_available_from_t') }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+          </td>
+          <td>
+            <span class="text-small text-muted" title="{{ runtime.socket_path }}">
+              {% if runtime.installed and runtime.socket_healthy %}Ready{% elif runtime.installed %}Unavailable{% else %}—{% endif %}
+            </span>
+          </td>
+          <td class="col-actions">
+            <div style="display:flex; gap:8px; justify-content:flex-end;">
+              {% if runtime.can_install %}
+              <form method="post" action="/api/dependencies/php/versions/{{ runtime.version }}/install" data-php-install style="margin:0;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+                <button class="btn btn--secondary btn--sm" type="submit"{% if dependency.operation_in_progress or not dependency.desired_enabled %} disabled{% endif %}{% if not dependency.desired_enabled %} title="Enable PHP before installing another version"{% endif %}>{{ _('install') }}</button>
+              </form>
+              {% elif runtime.can_uninstall %}
+              <form method="post" action="/api/dependencies/php/versions/{{ runtime.version }}/uninstall" data-php-uninstall data-confirmation="REMOVE PHP {{ runtime.version }}" style="margin:0;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+                <input type="hidden" name="confirmation" value="">
+                <button class="btn btn--danger btn--sm" type="submit"{% if dependency.operation_in_progress %} disabled{% endif %}>{{ _('uninstall') }}</button>
+              </form>
+              {% elif runtime.installed %}
+              <span class="text-small text-muted">{{ _('external_1') }}</span>
+              {% else %}
+              <span class="text-small text-muted">—</span>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="5" class="text-center text-muted" style="padding: 24px;">{{ _('no_php_fpm_versions_are_available_from_t') }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="text-small text-muted">{{ _('only_panel_installed_php_can_be_removed_') }}</p>
 </div>
 
-<p class="text-small text-muted">{{ _('only_panel_installed_php_can_be_removed_') }}</p>
+<!-- TAB PANEL 2: PHP EXTENSIONS MANAGER -->
+<div data-php-tab-panel="extensions" hidden>
+  <div class="mb-lg d-flex align-center justify-between gap-md" style="flex-wrap:wrap;">
+    <div>
+      <h2 class="info-group-title" style="margin-bottom:4px;">{{ _('php_extensions_manager') }}</h2>
+      <p class="text-small text-muted" style="margin:0;">{{ _('php_extensions_manager_desc') }}</p>
+    </div>
+    <div class="d-flex align-center gap-sm">
+      <label for="php-ext-version-select" style="font-size:12px; font-weight:600; color:var(--color-muted); white-space:nowrap;">{{ _('php_version') }}:</label>
+      <select id="php-ext-version-select" class="form-select" data-ext-version-select style="height:34px; padding:0 10px; font-size:13px; width:auto; min-width:130px;">
+        {% for runtime in dependency.versions if runtime.installed %}
+          <option value="{{ runtime.version }}" {% if loop.first %}selected{% endif %}>PHP {{ runtime.version }} ({{ _('installed') }})</option>
+        {% else %}
+          <option value="" disabled selected>{{ _('no_php_installed') }}</option>
+        {% endfor %}
+      </select>
+      <button class="btn btn--secondary btn--sm" type="button" data-ext-refresh style="height:34px;">{{ _('refresh') }}</button>
+    </div>
+  </div>
+
+  <div class="mb-md d-flex align-center gap-sm" style="flex-wrap:wrap;">
+    <div style="flex:1; min-width:220px;">
+      <input type="text" class="form-input" data-ext-search placeholder="{{ _('search_extensions_placeholder') }}" style="height:34px; font-size:13px;">
+    </div>
+    <div class="d-flex align-center gap-xs" data-ext-categories style="flex-wrap:wrap;">
+      <button class="btn btn--sm btn--secondary is-active" type="button" data-ext-cat="all">All</button>
+      <button class="btn btn--sm btn--secondary" type="button" data-ext-cat="Database">Database</button>
+      <button class="btn btn--sm btn--secondary" type="button" data-ext-cat="Caching">Caching</button>
+      <button class="btn btn--sm btn--secondary" type="button" data-ext-cat="Graphics">Graphics</button>
+      <button class="btn btn--sm btn--secondary" type="button" data-ext-cat="Core & Math">Core</button>
+      <button class="btn btn--sm btn--secondary" type="button" data-ext-cat="Networking">Networking</button>
+    </div>
+  </div>
+
+  <div data-ext-loading class="text-center text-muted" style="padding:40px;" hidden>
+    <span>{{ _('loading_extensions') }}...</span>
+  </div>
+
+  <div class="table-wrap mb-md" data-ext-table-wrap>
+    <table class="table">
+      <colgroup>
+        <col style="width:24%">
+        <col style="width:38%">
+        <col style="width:18%">
+        <col style="width:20%">
+      </colgroup>
+      <thead>
+        <tr>
+          <th>{{ _('extension') }}</th>
+          <th>{{ _('description') }}</th>
+          <th>{{ _('status') }}</th>
+          <th class="col-actions">{{ _('actions') }}</th>
+        </tr>
+      </thead>
+      <tbody data-ext-tbody>
+        <!-- Populated dynamically via JS -->
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- TAB PANEL 3: PANEL TOOLS (COMPOSER, WP-CLI) -->
+<div data-php-tab-panel="tools" hidden>
+  <div class="mb-lg">
+    <h2 class="info-group-title" style="margin-bottom:4px;">{{ _('panel_php_tools') }}</h2>
+    <p class="text-small text-muted" style="margin:0;">{{ _('panel_php_tools_desc') }}</p>
+  </div>
+
+  <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:18px;" data-tools-grid>
+    {% for tool in tools %}
+    <div class="master-card" data-tool-card="{{ tool.id }}" style="background:var(--color-surface); border:1px solid var(--color-line); padding:20px; border-radius:0;">
+      <div class="d-flex align-center justify-between mb-sm">
+        <div class="d-flex align-center gap-sm">
+          <div style="width:36px; height:36px; background:var(--color-bg); display:flex; align-items:center; justify-content:center; border:1px solid var(--color-line); font-weight:700; font-family:var(--font-mono, monospace); font-size:13px;">
+            {% if tool.id == 'composer' %}C{% elif tool.id == 'wp' %}WP{% else %}T{% endif %}
+          </div>
+          <div>
+            <div style="font-weight:700; font-size:15px; color:var(--color-text);">{{ tool.name }}</div>
+            <div class="text-small text-muted">{{ tool.category }}</div>
+          </div>
+        </div>
+        <div>
+          {% if tool.installed %}
+            <span class="badge badge--healthy"><span class="badge-dot"></span> {{ _('installed') }}</span>
+          {% else %}
+            <span class="badge badge--danger"><span class="badge-dot"></span> {{ _('not_installed') }}</span>
+          {% endif %}
+        </div>
+      </div>
+
+      <p style="font-size:12.5px; color:var(--color-text); line-height:1.5; margin:0 0 14px 0;">{{ tool.description }}</p>
+
+      <div style="background:var(--color-bg); padding:8px 12px; font-size:12px; border:1px solid var(--color-line); margin-bottom:16px;">
+        <div style="margin-bottom:3px;"><span class="text-muted">{{ _('binary_path') }}:</span> <code>{{ tool.path }}</code></div>
+        <div><span class="text-muted">{{ _('version') }}:</span> <strong data-tool-ver>{{ tool.version or '—' }}</strong></div>
+      </div>
+
+      <div class="d-flex align-center gap-sm" style="justify-content:flex-end;">
+        {% if tool.installed %}
+          <button class="btn btn--secondary btn--sm" type="button" data-tool-action="install" data-tool-id="{{ tool.id }}">{{ _('update') }}</button>
+          <button class="btn btn--danger btn--sm" type="button" data-tool-action="uninstall" data-tool-id="{{ tool.id }}">{{ _('uninstall') }}</button>
+        {% else %}
+          <button class="btn btn--primary btn--sm" type="button" data-tool-action="install" data-tool-id="{{ tool.id }}">+ {{ _('install') }} {{ tool.name }}</button>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>

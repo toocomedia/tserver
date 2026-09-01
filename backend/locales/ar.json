@@ -975,8 +975,20 @@
   "provider": "المزود",
   "certificate_overview": "نظرة عامة على الشهادة",
   "load_more": "تحميل المزيد",
-  "setup_with_ai": "الإعداد بواسطة الذكاء الاصطناعي",
   "select_target_domain": "اختر النطاق المستهدف...",
   "in_use": "قيد الاستخدام",
-  "apply_to_form": "تطبيق على نموذج النشر"
+  "apply_to_form": "تطبيق على نموذج النشر",
+  "php_versions": "إصدارات PHP",
+  "php_extensions": "إضافات PHP",
+  "php_extensions_manager": "مدير إضافات PHP",
+  "php_extensions_manager_desc": "فحص وتثبيت وإزالة إضافات PHP لكل إصدار تشغيل.",
+  "search_extensions_placeholder": "البحث عن الإضافات (مثل redis، gd، imagick)...",
+  "loading_extensions": "جاري تحميل الإضافات",
+  "extension": "الإضافة",
+  "panel_tools": "أدوات اللوحة",
+  "panel_php_tools": "أدوات PHP للوحة",
+  "panel_php_tools_desc": "أدوات سطر الأوامر التي تتطلبها ميزات اللوحة وأطر عمل PHP الحديثة.",
+  "binary_path": "مسار الملف التنفيذي",
+  "not_installed": "غير مثبت",
+  "no_php_installed": "لا يوجد إصدار PHP مثبت"
 }

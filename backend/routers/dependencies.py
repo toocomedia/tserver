@@ -96,9 +96,11 @@ async def php_runtime_view(request: Request):
     dependency = await asyncio.to_thread(dependency_manager.get_status, "php", force=True)
     if dependency is None:
         raise HTTPException(status_code=404, detail="PHP dependency is unavailable.")
+    from dependencies.php.tools_service import php_tools_service
+    tools = await asyncio.to_thread(php_tools_service.get_tools_status)
     return templates.TemplateResponse(
         "pages/partials/php_dependency_runtime.html",
-        {"request": request, "dependency": dependency},
+        {"request": request, "dependency": dependency, "tools": tools},
     )
 
 
@@ -515,3 +517,97 @@ async def dependency_uninstall_guide(dependency_id: str):
         "precheck": dependency_manager.precheck(dependency_id, "uninstall"),
         "guide": service.get_uninstall_guide(),
     }
+
+
+# ==============================================================================
+# PHP TOOLS & EXTENSION MANAGEMENT
+# ==============================================================================
+
+@router.get("/api/dependencies/php/tools")
+async def php_tools_status():
+    from dependencies.php.tools_service import php_tools_service
+    tools = await asyncio.to_thread(php_tools_service.get_tools_status)
+    return {"success": True, "tools": tools}
+
+
+@router.post("/api/dependencies/php/tools/{tool_id}/install")
+async def php_install_tool(
+    tool_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    from dependencies.php.tools_service import php_tools_service
+    from services.resource_guard_service import resource_guard_service
+    preflight = await resource_guard_service.preflight(db, "native_light")
+    if not preflight["ok"]:
+        return JSONResponse(
+            {"success": False, "detail": f"Resource Guard blocked tool installation: {preflight['reason']}"},
+            status_code=409,
+        )
+    token = resource_guard_service.register(
+        "dependency", f"php_tool_{tool_id}", "normal", f"Install PHP Tool: {tool_id}", profile="native_light"
+    )
+    try:
+        success, message, tool_info = await asyncio.to_thread(php_tools_service.install_tool, tool_id)
+    finally:
+        resource_guard_service.unregister(token)
+    if not success:
+        return JSONResponse({"success": False, "detail": message}, status_code=409)
+    return {"success": True, "message": message, "tool": tool_info}
+
+
+@router.post("/api/dependencies/php/tools/{tool_id}/uninstall")
+async def php_uninstall_tool(tool_id: str):
+    from dependencies.php.tools_service import php_tools_service
+    success, message, tool_info = await asyncio.to_thread(php_tools_service.uninstall_tool, tool_id)
+    if not success:
+        return JSONResponse({"success": False, "detail": message}, status_code=409)
+    return {"success": True, "message": message, "tool": tool_info}
+
+
+@router.get("/api/dependencies/php/versions/{version}/extensions")
+async def php_list_extensions(version: str):
+    from dependencies.php.extension_service import php_extension_service
+    try:
+        data = await asyncio.to_thread(php_extension_service.list_extensions, version)
+        return {"success": True, **data}
+    except Exception as exc:
+        return JSONResponse({"success": False, "detail": str(exc)}, status_code=400)
+
+
+@router.post("/api/dependencies/php/versions/{version}/extensions/{extension}/install")
+async def php_install_extension(
+    version: str,
+    extension: str,
+    db: AsyncSession = Depends(get_db),
+):
+    from dependencies.php.extension_service import php_extension_service
+    from services.resource_guard_service import resource_guard_service
+    preflight = await resource_guard_service.preflight(db, "native_light")
+    if not preflight["ok"]:
+        return JSONResponse(
+            {"success": False, "detail": f"Resource Guard blocked extension install: {preflight['reason']}"},
+            status_code=409,
+        )
+    token = resource_guard_service.register(
+        "dependency", f"php_ext_{version}_{extension}", "normal",
+        f"Install PHP {version} extension {extension}", profile="native_light"
+    )
+    try:
+        success, message = await asyncio.to_thread(php_extension_service.install_extension, version, extension)
+    finally:
+        resource_guard_service.unregister(token)
+    if not success:
+        return JSONResponse({"success": False, "detail": message}, status_code=409)
+    return {"success": True, "message": message}
+
+
+@router.post("/api/dependencies/php/versions/{version}/extensions/{extension}/uninstall")
+async def php_uninstall_extension(
+    version: str,
+    extension: str,
+):
+    from dependencies.php.extension_service import php_extension_service
+    success, message = await asyncio.to_thread(php_extension_service.uninstall_extension, version, extension)
+    if not success:
+        return JSONResponse({"success": False, "detail": message}, status_code=409)
+    return {"success": True, "message": message}

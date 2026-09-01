@@ -214,5 +214,44 @@ class PHPDependencyServiceTests(unittest.TestCase):
         self.assertIn("PHP_RUNTIME_HELPER", update_script)
 
 
+class PHPToolsServiceTests(unittest.TestCase):
+    def test_tools_status_returns_composer_and_wp(self):
+        from dependencies.php.tools_service import php_tools_service
+        tools = php_tools_service.get_tools_status()
+        tool_ids = {t["id"] for t in tools}
+        self.assertIn("composer", tool_ids)
+        self.assertIn("wp", tool_ids)
+
+    def test_tools_install_and_uninstall(self):
+        from dependencies.php.tools_service import php_tools_service
+        with patch.object(php_tools_service, "_call", return_value={"message": "Composer installed", "tool": {"installed": True}}):
+            success, msg, info = php_tools_service.install_tool("composer")
+            self.assertTrue(success)
+            self.assertEqual("Composer installed", msg)
+
+
+class PHPExtensionServiceTests(unittest.TestCase):
+    def test_list_extensions_validates_version(self):
+        from dependencies.php.extension_service import php_extension_service
+        with self.assertRaises(ValueError):
+            php_extension_service.list_extensions("invalid_ver; rm -rf /")
+
+    def test_list_extensions_returns_catalog(self):
+        from dependencies.php.extension_service import php_extension_service
+        res = php_extension_service.list_extensions("8.3")
+        self.assertEqual("8.3", res["version"])
+        ext_names = {e["name"] for e in res["extensions"]}
+        self.assertIn("curl", ext_names)
+        self.assertIn("mysql", ext_names)
+        self.assertIn("redis", ext_names)
+
+    def test_install_and_uninstall_extension(self):
+        from dependencies.php.extension_service import php_extension_service
+        with patch.object(php_extension_service, "_call", return_value={"message": "redis installed"}):
+            success, msg = php_extension_service.install_extension("8.3", "redis")
+            self.assertTrue(success)
+            self.assertEqual("redis installed", msg)
+
+
 if __name__ == "__main__":
     unittest.main()

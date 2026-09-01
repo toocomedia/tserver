@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import json
-import fcntl
+try:
+    import fcntl
+except ImportError:
+    fcntl = None
 import os
 import re
 import shutil
@@ -23,15 +26,56 @@ LOCK_PATH = STATE_PATH.parent / "operation.lock"
 # are never treated as substitutes for system extensions.
 SITE_EXTENSION_NAMES = ("curl", "gd", "intl", "mbstring", "mysql", "xml", "zip", "opcache")
 SITE_EXTENSION_SET = frozenset(SITE_EXTENSION_NAMES)
+
+EXTENSION_METADATA = {
+    "bcmath": {"category": "Core & Math", "description": "Arbitrary precision mathematics"},
+    "bz2": {"category": "Compression", "description": "Bzip2 compression archive support"},
+    "curl": {"category": "Networking", "description": "cURL HTTP client library"},
+    "gd": {"category": "Graphics", "description": "GD graphics library and image processing"},
+    "gmp": {"category": "Core & Math", "description": "GNU Multiple Precision arithmetic"},
+    "imagick": {"category": "Graphics", "description": "ImageMagick advanced image processing"},
+    "intl": {"category": "Localization", "description": "Internationalization and ICU formatting"},
+    "ldap": {"category": "Networking", "description": "Lightweight Directory Access Protocol"},
+    "mbstring": {"category": "Strings", "description": "Multibyte string encoding support"},
+    "memcached": {"category": "Caching", "description": "Memcached distributed caching client"},
+    "mongodb": {"category": "Database", "description": "MongoDB NoSQL driver"},
+    "mysql": {"category": "Database", "description": "MySQL, MariaDB, and PDO MySQL driver"},
+    "opcache": {"category": "Performance", "description": "Zend OPcache opcode execution caching"},
+    "pgsql": {"category": "Database", "description": "PostgreSQL and PDO PostgreSQL driver"},
+    "readline": {"category": "Core & Utility", "description": "GNU Readline interactive terminal support"},
+    "redis": {"category": "Caching", "description": "Redis memory caching and session driver"},
+    "soap": {"category": "Web Services", "description": "SOAP protocol client and server"},
+    "sqlite3": {"category": "Database", "description": "SQLite3 database and PDO SQLite driver"},
+    "ssh2": {"category": "Networking", "description": "SSH2 secure shell protocol bindings"},
+    "xml": {"category": "Parsing", "description": "XML, DOM, and SimpleXML document processing"},
+    "zip": {"category": "Compression", "description": "Zip archive compression and extraction"},
+}
+
+AVAILABLE_EXTENSION_NAMES = tuple(EXTENSION_METADATA.keys())
+AVAILABLE_EXTENSION_SET = frozenset(AVAILABLE_EXTENSION_NAMES)
+
 FPM_MODULES = {
+    "bcmath": frozenset({"bcmath"}),
+    "bz2": frozenset({"bz2"}),
     "curl": frozenset({"curl"}),
     "gd": frozenset({"gd"}),
+    "gmp": frozenset({"gmp"}),
+    "imagick": frozenset({"imagick"}),
     "intl": frozenset({"intl"}),
+    "ldap": frozenset({"ldap"}),
     "mbstring": frozenset({"mbstring"}),
+    "memcached": frozenset({"memcached"}),
+    "mongodb": frozenset({"mongodb"}),
     "mysql": frozenset({"mysqli", "pdo_mysql"}),
+    "opcache": frozenset({"zend opcache"}),
+    "pgsql": frozenset({"pgsql", "pdo_pgsql"}),
+    "readline": frozenset({"readline"}),
+    "redis": frozenset({"redis"}),
+    "soap": frozenset({"soap"}),
+    "sqlite3": frozenset({"sqlite3", "pdo_sqlite"}),
+    "ssh2": frozenset({"ssh2"}),
     "xml": frozenset({"dom", "xml"}),
     "zip": frozenset({"zip"}),
-    "opcache": frozenset({"zend opcache"}),
 }
 EXTERNAL_REPOSITORY_PPA = "ppa:ondrej/php"
 EXTERNAL_REPOSITORY_MARKERS = (
@@ -435,6 +479,80 @@ def set_all_enabled(data: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def list_extensions(data: dict[str, Any]) -> dict[str, Any]:
+    item_version = version(data.get("version"))
+    binary = shutil.which(f"php-fpm{item_version}") or shutil.which(f"php{item_version}")
+    loaded_modules = set()
+    if binary:
+        out = run([binary, "-m"], timeout=15).stdout
+        loaded_modules = {
+            line.strip().lower()
+            for line in out.splitlines()
+            if line.strip() and not (line.startswith("[") and line.endswith("]"))
+        }
+
+    results = []
+    for ext_name, meta in EXTENSION_METADATA.items():
+        pkg = f"php{item_version}-{ext_name}"
+        installed = package_installed(pkg)
+        required_fpm = FPM_MODULES.get(ext_name, {ext_name})
+        loaded = bool(required_fpm and required_fpm.issubset(loaded_modules))
+        results.append({
+            "name": ext_name,
+            "package": pkg,
+            "installed": installed,
+            "loaded": loaded,
+            "category": meta.get("category", "General"),
+            "description": meta.get("description", ""),
+        })
+    return {"version": item_version, "extensions": results}
+
+
+def install_extension(data: dict[str, Any]) -> dict[str, Any]:
+    item_version = version(data.get("version"))
+    ext_name = str(data.get("extension") or "").strip().lower()
+    if ext_name not in AVAILABLE_EXTENSION_SET:
+        fail(f"Invalid or unsupported PHP extension: {ext_name}")
+    pkg = f"php{item_version}-{ext_name}"
+    state = load_state()
+    refresh_apt()
+    apt_candidate(pkg)
+    run(["apt-get", "install", "-y", "--no-install-recommends", pkg], timeout=900)
+    if item_version in state:
+        state[item_version] = sorted(set(state.get(item_version, []) + [pkg]))
+        save_state(state)
+    run(["systemctl", "reload-or-restart", f"php{item_version}-fpm"], timeout=90)
+    verify_fpm(item_version)
+    return {
+        "version": item_version,
+        "extension": ext_name,
+        "package": pkg,
+        "message": f"Extension {ext_name} for PHP {item_version} installed successfully.",
+    }
+
+
+def uninstall_extension(data: dict[str, Any]) -> dict[str, Any]:
+    item_version = version(data.get("version"))
+    ext_name = str(data.get("extension") or "").strip().lower()
+    if ext_name not in AVAILABLE_EXTENSION_SET:
+        fail(f"Invalid or unsupported PHP extension: {ext_name}")
+    pkg = f"php{item_version}-{ext_name}"
+    state = load_state()
+    if package_installed(pkg):
+        run(["apt-get", "purge", "-y", pkg], timeout=900)
+    if item_version in state:
+        state[item_version] = [p for p in state.get(item_version, []) if p != pkg]
+        save_state(state)
+    run(["systemctl", "reload-or-restart", f"php{item_version}-fpm"], timeout=90)
+    verify_fpm(item_version)
+    return {
+        "version": item_version,
+        "extension": ext_name,
+        "package": pkg,
+        "message": f"Extension {ext_name} for PHP {item_version} uninstalled successfully.",
+    }
+
+
 def list_managed(_: dict[str, Any]) -> dict[str, Any]:
     return {"versions": sorted(load_state(), key=lambda value: tuple(int(part) for part in value.split(".")))}
 
@@ -444,6 +562,9 @@ OPERATIONS = {
     "enable_external_repository": enable_external_repository,
     "install_version": install_version,
     "install_site_extensions": install_site_extensions,
+    "list_extensions": list_extensions,
+    "install_extension": install_extension,
+    "uninstall_extension": uninstall_extension,
     "set_all_enabled": set_all_enabled,
     "uninstall_version": uninstall_version,
     "list_managed": list_managed,
@@ -454,6 +575,8 @@ MUTATING_OPERATIONS = frozenset({
     "enable_external_repository",
     "install_version",
     "install_site_extensions",
+    "install_extension",
+    "uninstall_extension",
     "set_all_enabled",
     "uninstall_version",
 })
@@ -472,10 +595,11 @@ def main() -> None:
     LOCK_PATH.parent.mkdir(parents=True, exist_ok=True)
     with LOCK_PATH.open("a+", encoding="utf-8") as lock_file:
         os.chmod(LOCK_PATH, stat.S_IRUSR | stat.S_IWUSR)
-        try:
-            fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except BlockingIOError:
-            fail("Another PHP runtime operation is already running.")
+        if fcntl is not None:
+            try:
+                fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError:
+                fail("Another PHP runtime operation is already running.")
         print(json.dumps({"ok": True, "result": handler(data)}))
 
 

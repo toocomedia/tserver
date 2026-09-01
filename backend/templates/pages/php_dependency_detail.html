@@ -27,6 +27,9 @@
   var content = root.querySelector('[data-php-runtime-content]');
   var operationPending = false;
   var runtimeRefreshTimer = null;
+  var activeTab = 'versions';
+  var loadedExtensions = [];
+  var currentCategory = 'all';
   var actionSelector = '[data-php-install], [data-php-uninstall], [data-php-check], [data-php-external-repository], [data-php-toggle]';
 
   function setActionsDisabled(disabled) {
@@ -112,8 +115,190 @@
     });
   }
 
+  function bindTabs() {
+    content.querySelectorAll('[data-php-tab-btn]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        activeTab = btn.getAttribute('data-php-tab-btn');
+        content.querySelectorAll('[data-php-tab-btn]').forEach(function (b) {
+          b.classList.toggle('is-active', b === btn);
+        });
+        content.querySelectorAll('[data-php-tab-panel]').forEach(function (panel) {
+          panel.hidden = panel.getAttribute('data-php-tab-panel') !== activeTab;
+        });
+        if (activeTab === 'extensions') {
+          loadExtensions();
+        }
+      });
+    });
+
+    // Restore active tab
+    var currentBtn = content.querySelector('[data-php-tab-btn="' + activeTab + '"]');
+    if (currentBtn) {
+      content.querySelectorAll('[data-php-tab-btn]').forEach(function (b) {
+        b.classList.toggle('is-active', b === currentBtn);
+      });
+      content.querySelectorAll('[data-php-tab-panel]').forEach(function (panel) {
+        panel.hidden = panel.getAttribute('data-php-tab-panel') !== activeTab;
+      });
+    }
+  }
+
+  async function loadExtensions() {
+    var select = content.querySelector('[data-ext-version-select]');
+    var loading = content.querySelector('[data-ext-loading]');
+    var tableWrap = content.querySelector('[data-ext-table-wrap]');
+    if (!select || !select.value) return;
+
+    var version = select.value;
+    if (loading) loading.hidden = false;
+    if (tableWrap) tableWrap.hidden = true;
+
+    try {
+      var res = await fetch('/api/dependencies/php/versions/' + encodeURIComponent(version) + '/extensions');
+      var data = await res.json().catch(function () { return {}; });
+      if (!res.ok || !data.success) throw new Error(data.detail || 'Failed to load extensions.');
+      loadedExtensions = data.extensions || [];
+      renderExtensions();
+    } catch (err) {
+      if (window.toast) window.toast(err.message, 'error');
+    } finally {
+      if (loading) loading.hidden = true;
+      if (tableWrap) tableWrap.hidden = false;
+    }
+  }
+
+  function renderExtensions() {
+    var tbody = content.querySelector('[data-ext-tbody]');
+    var searchInput = content.querySelector('[data-ext-search]');
+    var query = (searchInput ? searchInput.value : '').toLowerCase().trim();
+    if (!tbody) return;
+
+    var select = content.querySelector('[data-ext-version-select]');
+    var version = select ? select.value : '';
+
+    var filtered = loadedExtensions.filter(function (ext) {
+      var matchCat = currentCategory === 'all' || ext.category === currentCategory;
+      var matchQuery = !query || ext.name.toLowerCase().includes(query) || (ext.description && ext.description.toLowerCase().includes(query)) || ext.package.toLowerCase().includes(query);
+      return matchCat && matchQuery;
+    });
+
+    if (!filtered.length) {
+      tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted" style="padding:24px;">No matching extensions found.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = filtered.map(function (ext) {
+      var statusHtml = '';
+      if (ext.installed && ext.loaded) {
+        statusHtml = '<span class="badge-minimal badge-minimal--active">Loaded in FPM</span>';
+      } else if (ext.installed) {
+        statusHtml = '<span class="badge-minimal badge-minimal--active">Installed</span>';
+      } else {
+        statusHtml = '<span class="badge-minimal badge-minimal--neutral">Available</span>';
+      }
+
+      var actionBtn = '';
+      if (ext.installed) {
+        actionBtn = '<button class="btn btn--danger btn--sm" type="button" data-ext-action="uninstall" data-ext-name="' + ext.name + '" data-ext-ver="' + version + '">Uninstall</button>';
+      } else {
+        actionBtn = '<button class="btn btn--secondary btn--sm" type="button" data-ext-action="install" data-ext-name="' + ext.name + '" data-ext-ver="' + version + '">Install</button>';
+      }
+
+      return '<tr>' +
+        '<td><div class="table-title">' + ext.name + '</div><div class="text-small text-muted"><code>' + ext.package + '</code></div></td>' +
+        '<td><div style="font-size:12.5px; color:var(--color-text);">' + (ext.description || '—') + '</div><span class="badge-minimal badge-minimal--neutral" style="font-size:10px; margin-top:2px;">' + (ext.category || 'General') + '</span></td>' +
+        '<td>' + statusHtml + '</td>' +
+        '<td class="col-actions"><div style="display:flex; justify-content:flex-end;">' + actionBtn + '</div></td>' +
+      '</tr>';
+    }).join('');
+  }
+
+  function bindExtensionControls() {
+    var select = content.querySelector('[data-ext-version-select]');
+    if (select) {
+      select.addEventListener('change', loadExtensions);
+    }
+    var refreshBtn = content.querySelector('[data-ext-refresh]');
+    if (refreshBtn) {
+      refreshBtn.addEventListener('click', loadExtensions);
+    }
+    var searchInput = content.querySelector('[data-ext-search]');
+    if (searchInput) {
+      searchInput.addEventListener('input', renderExtensions);
+    }
+    content.querySelectorAll('[data-ext-cat]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        currentCategory = btn.getAttribute('data-ext-cat');
+        content.querySelectorAll('[data-ext-cat]').forEach(function (b) {
+          b.classList.toggle('is-active', b === btn);
+        });
+        renderExtensions();
+      });
+    });
+
+    // Delegate install / uninstall buttons
+    content.addEventListener('click', async function (e) {
+      var extBtn = e.target.closest('[data-ext-action]');
+      if (!extBtn) return;
+      var action = extBtn.getAttribute('data-ext-action');
+      var name = extBtn.getAttribute('data-ext-name');
+      var ver = extBtn.getAttribute('data-ext-ver');
+      if (!action || !name || !ver || extBtn.disabled) return;
+
+      extBtn.disabled = true;
+      var origText = extBtn.textContent;
+      extBtn.textContent = action === 'install' ? 'Installing...' : 'Uninstalling...';
+
+      try {
+        var url = '/api/dependencies/php/versions/' + encodeURIComponent(ver) + '/extensions/' + encodeURIComponent(name) + '/' + action;
+        var res = await fetch(url, { method: 'POST', headers: { 'Accept': 'application/json' } });
+        var payload = await res.json().catch(function () { return {}; });
+        if (!res.ok || !payload.success) throw new Error(payload.detail || 'Extension operation failed.');
+        if (window.toast) window.toast(payload.message || ('Extension ' + name + ' updated.'), 'success');
+        await loadExtensions();
+      } catch (err) {
+        if (window.toast) window.toast(err.message, 'error');
+        extBtn.disabled = false;
+        extBtn.textContent = origText;
+      }
+    });
+  }
+
+  function bindToolControls() {
+    content.addEventListener('click', async function (e) {
+      var toolBtn = e.target.closest('[data-tool-action]');
+      if (!toolBtn) return;
+      var action = toolBtn.getAttribute('data-tool-action');
+      var toolId = toolBtn.getAttribute('data-tool-id');
+      if (!action || !toolId || toolBtn.disabled) return;
+
+      toolBtn.disabled = true;
+      var origText = toolBtn.textContent;
+      toolBtn.textContent = action === 'install' ? 'Installing...' : 'Uninstalling...';
+
+      try {
+        var url = '/api/dependencies/php/tools/' + encodeURIComponent(toolId) + '/' + action;
+        var res = await fetch(url, { method: 'POST', headers: { 'Accept': 'application/json' } });
+        var payload = await res.json().catch(function () { return {}; });
+        if (!res.ok || !payload.success) throw new Error(payload.detail || 'Tool operation failed.');
+        if (window.toast) window.toast(payload.message || ('Tool ' + toolId + ' updated.'), 'success');
+        await loadRuntime();
+      } catch (err) {
+        if (window.toast) window.toast(err.message, 'error');
+        toolBtn.disabled = false;
+        toolBtn.textContent = origText;
+      }
+    });
+  }
+
   function bindActions() {
     content.querySelectorAll(actionSelector).forEach(bind);
+    bindTabs();
+    bindExtensionControls();
+    bindToolControls();
+    if (activeTab === 'extensions') {
+      loadExtensions();
+    }
   }
 
   async function loadRuntime() {
