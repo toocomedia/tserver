@@ -281,8 +281,8 @@ function render() {
             ${card(t("danger_zone"), `
               <p class="form-hint" style="max-width:640px; line-height:1.6; margin:0;">${esc(t("delete_php_site_desc"))}</p>
               <div class="d-flex align-center gap-md" style="flex-wrap:wrap; margin-top: 12px;">
-                ${can("archive") ? btn("archive-site", t("archive_website"), "secondary", `data-delete-drawer-trigger data-delete-url="${actionUrl(siteId, "/archive")}" data-delete-title="${t("archive_website")}" data-delete-message="${t("archive_confirmation_desc")}" data-delete-item="${site.domain}" data-delete-label="${t("archive_website")}"`) : ""}
-                ${can("delete_site") ? btn("delete-site", t("delete_website"), "danger", `data-delete-drawer-trigger data-delete-url="${actionUrl(siteId)}" data-delete-title="${t("delete_website")}" data-delete-message="${t("delete_php_site_desc")}" data-delete-item="${site.domain}" data-delete-label="${t("delete_website")}" ${site.database ? 'data-delete-extra-id="site-delete-extra"' : ''}`) : ""}
+                ${can("archive") ? btn("archive-site", t("archive_website"), "secondary", `data-delete-drawer-trigger data-delete-event="php-site-action" data-delete-url="${actionUrl(siteId, "/archive")}" data-delete-title="${t("archive_website")}" data-delete-message="${t("archive_confirmation_desc")}" data-delete-item="${site.domain}" data-delete-label="${t("archive_website")}"`) : ""}
+                ${can("delete_site") ? btn("delete-site", t("delete_website"), "danger", `data-delete-drawer-trigger data-delete-event="php-site-action" data-delete-url="${actionUrl(siteId)}" data-delete-title="${t("delete_website")}" data-delete-message="${t("delete_php_site_desc")}" data-delete-item="${site.domain}" data-delete-label="${t("delete_website")}" ${site.database ? 'data-delete-extra-id="site-delete-extra"' : ''}`) : ""}
               </div>
             `, "php-card--danger")}
           </div>
@@ -397,10 +397,13 @@ document.addEventListener("php-site-action", async (e) => {
     let method = "DELETE";
     let apiPayload = { confirmation: `DELETE ${triggerItem}` };
 
-    if (deleteUrl === "site") {
+    const isSiteDelete = deleteUrl === actionUrl(siteId) || deleteUrl === `sites/${siteId}`;
+    const isArchive = deleteUrl === actionUrl(siteId, "/archive") || deleteUrl.endsWith("/archive");
+
+    if (isSiteDelete) {
       endpoint = actionUrl(siteId);
       apiPayload.delete_database = payload?.php_delete_database === "true";
-    } else if (deleteUrl === "archive") {
+    } else if (isArchive) {
       endpoint = actionUrl(siteId, "/archive");
       method = "POST";
       apiPayload.confirmation = `ARCHIVE ${triggerItem}`;
@@ -412,8 +415,8 @@ document.addEventListener("php-site-action", async (e) => {
 
     const res = await request(endpoint, method, apiPayload);
     if (res?.status_url) await waitForOperation(res);
-    
-    if (deleteUrl === "site") {
+
+    if (isSiteDelete) {
       window.location.assign("/php-sites/");
     } else {
       await load();

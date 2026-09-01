@@ -48,12 +48,12 @@
       </form>
       {% endif %}
       {% if dependency.installed and dependency.can_toggle %}
-      <form method="post" action="/api/dependencies/{{ dependency.id }}/toggle">
+      <form method="post" action="/api/dependencies/{{ dependency.id }}/toggle" id="form-toggle-dep-{{ dependency.id }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
         {% if dependency.running %}
         <input type="hidden" name="enabled" value="false">
         <input type="hidden" name="confirmed" value="true">
-        <button class="btn btn--danger btn--sm" type="submit" onclick="return confirm('Disable {{ dependency.name }}? Dependent plugins will be paused.')">{{ _('disable_service') }}</button>
+        <button class="btn btn--danger btn--sm" type="button" id="btn-disable-dep-{{ dependency.id }}">{{ _('disable_service') }}</button>
         {% else %}
         <input type="hidden" name="enabled" value="true">
         <button class="btn btn--primary btn--sm" type="submit">{{ _('enable_service') }}</button>
@@ -166,6 +166,29 @@
 {% block scripts %}
 <script>
 (function () {
+  var depName = {{ dependency.name | tojson }};
+  var depId = {{ dependency.id | tojson }};
+
+  // ── Disable service button → openDeleteDrawer ──
+  var disableBtn = document.getElementById('btn-disable-dep-' + depId);
+  if (disableBtn) {
+    disableBtn.addEventListener('click', function () {
+      var form = document.getElementById('form-toggle-dep-' + depId);
+      if (typeof window.openDeleteDrawer === 'function') {
+        window.openDeleteDrawer({
+          title: 'Disable ' + depName,
+          message: 'Disabling ' + depName + ' will pause all dependent plugins until the service is re-enabled.',
+          itemName: depName,
+          okLabel: 'Disable Service',
+          onConfirm: function () { form.submit(); }
+        });
+      } else if (window.confirm('Disable ' + depName + '? Dependent plugins will be paused.')) {
+        form.submit();
+      }
+    });
+  }
+
+  // ── Install form ──
   document.querySelectorAll('[data-dependency-install-form]').forEach(function (form) {
     form.addEventListener('submit', async function (event) {
       event.preventDefault();
@@ -177,13 +200,12 @@
       var stateDetail = card.querySelector('[data-role="install-state-detail"]');
       var elapsed = card.querySelector('[data-role="install-elapsed"]');
       var errorBox = card.querySelector('[data-role="dependency-error"]');
-      var dependencyName = {{ dependency.name | tojson }};
       var startedAt = Date.now();
 
       button.disabled = true;
       button.textContent = 'Installing…';
       stateBox.classList.remove('hidden', 'is-success', 'is-error');
-      stateTitle.textContent = 'Installing ' + dependencyName;
+      stateTitle.textContent = 'Installing ' + depName;
       stateDetail.textContent = 'Installation is running on the server. Keep this page open.';
       errorBox.classList.add('hidden');
       errorBox.textContent = '';
@@ -201,7 +223,7 @@
         });
         var payload = await response.json();
         if (!response.ok || !payload.success) {
-          throw new Error(payload.detail || dependencyName + ' installation failed.');
+          throw new Error(payload.detail || depName + ' installation failed.');
         }
 
         var status = payload.status || {};
@@ -217,10 +239,10 @@
         }
 
         stateBox.classList.add('is-success');
-        stateTitle.textContent = dependencyName + ' installed successfully';
-        stateDetail.textContent = dependencyName + ' is installed and responding. Refreshing controls…';
+        stateTitle.textContent = depName + ' installed successfully';
+        stateDetail.textContent = depName + ' is installed and responding. Refreshing controls…';
         button.textContent = 'Installed';
-        if (window.toast) window.toast(dependencyName + ' installed successfully.', 'success');
+        if (window.toast) window.toast(depName + ' installed successfully.', 'success');
         window.setTimeout(function () {
           window.location.reload();
         }, 500);
@@ -240,11 +262,46 @@
     });
   });
 
+  // ── Update check / update form ──
   document.querySelectorAll('[data-dependency-update-check], [data-dependency-update-form]').forEach(function (form) {
     form.addEventListener('submit', async function (event) {
       event.preventDefault();
       var expected = form.getAttribute('data-confirmation');
       if (expected) {
+        var isUpdate = form.hasAttribute('data-dependency-update-form');
+        if (typeof window.openDeleteDrawer === 'function') {
+          window.openDeleteDrawer({
+            title: isUpdate ? ('Update ' + depName) : 'Confirm Action',
+            message: isUpdate
+              ? ('This will update ' + depName + '. The service may briefly restart during the update.')
+              : 'Are you sure you want to continue?',
+            itemName: depName,
+            okLabel: isUpdate ? 'Update Now' : 'Confirm',
+            onConfirm: async function () {
+              form.querySelector('input[name="confirmation"]').value = expected;
+              var button = form.querySelector('button');
+              button.disabled = true;
+              try {
+                var token = form.querySelector('input[name="csrf_token"]').value;
+                var response = await fetch(form.action, {
+                  method: 'POST',
+                  body: new FormData(form),
+                  headers: { 'Accept': 'application/json', 'X-CSRF-Token': token }
+                });
+                var payload = await response.json();
+                if (!response.ok || !payload.success) throw new Error(payload.detail || 'Dependency operation failed.');
+                if (window.toast) window.toast(payload.message, 'success');
+                window.location.reload();
+              } catch (error) {
+                button.disabled = false;
+                if (window.toast) window.toast(error.message, 'error');
+                else window.alert(error.message);
+              }
+            }
+          });
+          return;
+        }
+        // Fallback
         var entered = window.prompt('Type ' + expected + ' to continue.');
         if (entered !== expected) return;
         form.querySelector('input[name="confirmation"]').value = entered;

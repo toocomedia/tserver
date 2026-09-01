@@ -59,17 +59,76 @@
       if (operationPending) return;
       var expected = form.getAttribute('data-confirmation');
       if (expected) {
-        var message;
+        var drawerTitle, drawerMessage, drawerItem, drawerLabel;
         if (form.hasAttribute('data-php-external-repository')) {
-          message = 'This adds the third-party Ondřej Surý PHP PPA to Ubuntu. No PHP versions will be installed. Type ' + expected + ' to continue.';
+          drawerTitle = 'Enable External PHP Repository';
+          drawerMessage = 'This adds the third-party Ondřej Surý PHP PPA to Ubuntu. No PHP versions will be installed. This operation cannot be undone from the panel.';
+          drawerItem = expected;
+          drawerLabel = 'Enable Repository';
         } else if (form.hasAttribute('data-php-toggle')) {
-          message = 'This stops every panel-managed PHP-FPM version. All managed PHP websites will go offline until PHP is enabled again. Files and databases are preserved. Type ' + expected + ' to continue.';
+          drawerTitle = 'Disable All PHP';
+          drawerMessage = 'This stops every panel-managed PHP-FPM version. All managed PHP websites will go offline until PHP is enabled again. Files and databases are preserved.';
+          drawerItem = 'All PHP-FPM Versions';
+          drawerLabel = 'Disable All PHP';
         } else {
-          message = 'Type ' + expected + ' to remove this PHP version. Website files and databases are preserved.';
+          // PHP version uninstall
+          var ver = expected.replace('REMOVE PHP ', '');
+          drawerTitle = 'Uninstall PHP ' + ver;
+          drawerMessage = 'This removes the PHP ' + ver + ' runtime. Website files and databases are preserved. You can reinstall this version at any time.';
+          drawerItem = 'PHP ' + ver;
+          drawerLabel = 'Uninstall';
         }
-        var entered = window.prompt(message);
-        if (entered !== expected) return;
-        form.querySelector('input[name="confirmation"]').value = entered;
+
+        if (typeof window.openDeleteDrawer === 'function') {
+          window.openDeleteDrawer({
+            title: drawerTitle,
+            message: drawerMessage,
+            itemName: drawerItem,
+            okLabel: drawerLabel,
+            onConfirm: async function () {
+              form.querySelector('input[name="confirmation"]').value = expected;
+              operationPending = true;
+              setActionsDisabled(true);
+              try {
+                var response = await fetch(form.action, {method: 'POST', body: new FormData(form), headers: {'Accept': 'application/json'}});
+                var payload = await response.json().catch(function () { return {}; });
+                if (!response.ok || !payload.success) throw new Error(payload.detail || 'PHP operation failed.');
+                if (window.toast) window.toast(payload.message, 'success');
+                await loadRuntime();
+              } catch (error) {
+                showError(error.message);
+                if (window.toast) window.toast(error.message, 'error');
+                if (String(error.message).includes('Another PHP runtime operation')) {
+                  await loadRuntime();
+                }
+              } finally {
+                operationPending = false;
+                setActionsDisabled(false);
+              }
+            }
+          });
+        } else {
+          // Fallback
+          var entered = window.prompt('Type ' + expected + ' to continue.');
+          if (entered !== expected) return;
+          form.querySelector('input[name="confirmation"]').value = entered;
+          operationPending = true;
+          setActionsDisabled(true);
+          try {
+            var response = await fetch(form.action, {method: 'POST', body: new FormData(form), headers: {'Accept': 'application/json'}});
+            var payload = await response.json().catch(function () { return {}; });
+            if (!response.ok || !payload.success) throw new Error(payload.detail || 'PHP operation failed.');
+            if (window.toast) window.toast(payload.message, 'success');
+            await loadRuntime();
+          } catch (error) {
+            showError(error.message);
+            if (window.toast) window.toast(error.message, 'error');
+          } finally {
+            operationPending = false;
+            setActionsDisabled(false);
+          }
+        }
+        return; // drawer handles async execution
       }
       operationPending = true;
       setActionsDisabled(true);
