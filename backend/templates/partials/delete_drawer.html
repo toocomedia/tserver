@@ -1,17 +1,18 @@
 <!-- SHARED FULL-WIDTH MINIMAL BOTTOM DELETE WINDOW -->
-<div id="delete-drawer-backdrop" class="delete-drawer-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="delete-drawer-title" aria-describedby="delete-drawer-msg-text">
+<div id="delete-drawer-backdrop" class="delete-drawer-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="delete-drawer-title">
   <div class="delete-drawer" id="delete-drawer">
     <div class="delete-drawer__inner">
       <div class="delete-drawer__main">
         <i data-lucide="alert-triangle" class="delete-drawer__icon"></i>
+        <div class="delete-drawer__divider"></div>
         <div class="delete-drawer__details">
-          <h3 id="delete-drawer-title" class="delete-drawer__title" data-delete-drawer-title>{{ _('confirm_delete') }}</h3>
-          <p class="delete-drawer__desc">
+          <div class="delete-drawer__title-row">
+            <h3 id="delete-drawer-title" class="delete-drawer__title" data-delete-drawer-title>{{ _('confirm_delete') }}</h3>
             <span class="delete-drawer__item-tag" data-delete-drawer-item-box hidden>
               <span data-delete-drawer-item></span>
             </span>
-            <span id="delete-drawer-msg-text" data-delete-drawer-message>{{ _('delete_warning_permanent') }}</span>
-          </p>
+          </div>
+          <span id="delete-drawer-msg-text" data-delete-drawer-message hidden></span>
           <div class="delete-drawer__extra" data-delete-drawer-extra hidden></div>
         </div>
       </div>
