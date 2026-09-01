@@ -50,6 +50,25 @@
     error.classList.remove('hidden');
   }
 
+  async function doSubmit(form) {
+    operationPending = true;
+    setActionsDisabled(true);
+    try {
+      var response = await fetch(form.action, {method: 'POST', body: new FormData(form), headers: {'Accept': 'application/json'}});
+      var payload = await response.json().catch(function () { return {}; });
+      if (!response.ok || !payload.success) throw new Error(payload.detail || 'PHP operation failed.');
+      if (window.toast) window.toast(payload.message, 'success');
+      await loadRuntime();
+    } catch (error) {
+      showError(error.message);
+      if (window.toast) window.toast(error.message, 'error');
+      if (String(error.message).includes('Another PHP runtime operation')) await loadRuntime();
+    } finally {
+      operationPending = false;
+      setActionsDisabled(false);
+    }
+  }
+
   function bind(form) {
     if (form.dataset.phpBound === 'true') return;
     form.dataset.phpBound = 'true';
@@ -58,95 +77,37 @@
       event.stopPropagation();
       if (operationPending) return;
       var expected = form.getAttribute('data-confirmation');
-      if (expected) {
-        var drawerTitle, drawerMessage, drawerItem, drawerLabel;
-        if (form.hasAttribute('data-php-external-repository')) {
-          drawerTitle = 'Enable External PHP Repository';
-          drawerMessage = 'This adds the third-party Ondřej Surý PHP PPA to Ubuntu. No PHP versions will be installed. This operation cannot be undone from the panel.';
-          drawerItem = expected;
-          drawerLabel = 'Enable Repository';
-        } else if (form.hasAttribute('data-php-toggle')) {
-          drawerTitle = 'Disable All PHP';
-          drawerMessage = 'This stops every panel-managed PHP-FPM version. All managed PHP websites will go offline until PHP is enabled again. Files and databases are preserved.';
-          drawerItem = 'All PHP-FPM Versions';
-          drawerLabel = 'Disable All PHP';
-        } else {
-          // PHP version uninstall
-          var ver = expected.replace('REMOVE PHP ', '');
-          drawerTitle = 'Uninstall PHP ' + ver;
-          drawerMessage = 'This removes the PHP ' + ver + ' runtime. Website files and databases are preserved. You can reinstall this version at any time.';
-          drawerItem = 'PHP ' + ver;
-          drawerLabel = 'Uninstall';
-        }
+      if (!expected) { await doSubmit(form); return; }
 
-        if (typeof window.openDeleteDrawer === 'function') {
-          window.openDeleteDrawer({
-            title: drawerTitle,
-            message: drawerMessage,
-            itemName: drawerItem,
-            okLabel: drawerLabel,
-            onConfirm: async function () {
-              form.querySelector('input[name="confirmation"]').value = expected;
-              operationPending = true;
-              setActionsDisabled(true);
-              try {
-                var response = await fetch(form.action, {method: 'POST', body: new FormData(form), headers: {'Accept': 'application/json'}});
-                var payload = await response.json().catch(function () { return {}; });
-                if (!response.ok || !payload.success) throw new Error(payload.detail || 'PHP operation failed.');
-                if (window.toast) window.toast(payload.message, 'success');
-                await loadRuntime();
-              } catch (error) {
-                showError(error.message);
-                if (window.toast) window.toast(error.message, 'error');
-                if (String(error.message).includes('Another PHP runtime operation')) {
-                  await loadRuntime();
-                }
-              } finally {
-                operationPending = false;
-                setActionsDisabled(false);
-              }
-            }
-          });
-        } else {
-          // Fallback
-          var entered = window.prompt('Type ' + expected + ' to continue.');
-          if (entered !== expected) return;
-          form.querySelector('input[name="confirmation"]').value = entered;
-          operationPending = true;
-          setActionsDisabled(true);
-          try {
-            var response = await fetch(form.action, {method: 'POST', body: new FormData(form), headers: {'Accept': 'application/json'}});
-            var payload = await response.json().catch(function () { return {}; });
-            if (!response.ok || !payload.success) throw new Error(payload.detail || 'PHP operation failed.');
-            if (window.toast) window.toast(payload.message, 'success');
-            await loadRuntime();
-          } catch (error) {
-            showError(error.message);
-            if (window.toast) window.toast(error.message, 'error');
-          } finally {
-            operationPending = false;
-            setActionsDisabled(false);
-          }
-        }
-        return; // drawer handles async execution
+      var title, message, item, label;
+      if (form.hasAttribute('data-php-external-repository')) {
+        title = 'Enable External PHP Repository';
+        message = 'This adds the third-party Ondřej Surý PHP PPA to Ubuntu. No PHP versions will be installed. This cannot be undone from the panel.';
+        item = expected; label = 'Enable Repository';
+      } else if (form.hasAttribute('data-php-toggle')) {
+        title = 'Disable All PHP';
+        message = 'This stops every panel-managed PHP-FPM version. All managed PHP websites will go offline until PHP is re-enabled. Files and databases are preserved.';
+        item = 'All PHP-FPM Versions'; label = 'Disable All PHP';
+      } else {
+        var ver = expected.replace('REMOVE PHP ', '');
+        title = 'Uninstall PHP ' + ver;
+        message = 'Removes the PHP ' + ver + ' runtime. Files and databases are preserved.';
+        item = 'PHP ' + ver; label = 'Uninstall';
       }
-      operationPending = true;
-      setActionsDisabled(true);
-      try {
-        var response = await fetch(form.action, {method: 'POST', body: new FormData(form), headers: {'Accept': 'application/json'}});
-        var payload = await response.json().catch(function () { return {}; });
-        if (!response.ok || !payload.success) throw new Error(payload.detail || 'PHP operation failed.');
-        if (window.toast) window.toast(payload.message, 'success');
-        await loadRuntime();
-      } catch (error) {
-        showError(error.message);
-        if (window.toast) window.toast(error.message, 'error');
-        if (String(error.message).includes('Another PHP runtime operation')) {
-          await loadRuntime();
-        }
-      } finally {
-        operationPending = false;
-        setActionsDisabled(false);
+
+      if (typeof window.openDeleteDrawer === 'function') {
+        window.openDeleteDrawer({
+          title: title, message: message, itemName: item, okLabel: label,
+          onConfirm: async function () {
+            form.querySelector('input[name="confirmation"]').value = expected;
+            await doSubmit(form);
+          }
+        });
+      } else {
+        var entered = window.prompt('Type ' + expected + ' to continue.');
+        if (entered !== expected) return;
+        form.querySelector('input[name="confirmation"]').value = entered;
+        await doSubmit(form);
       }
     });
   }

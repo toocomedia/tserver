@@ -20,16 +20,14 @@
   <div data-detail-content hidden></div>
 
 <template id="site-delete-extra">
-  <div style="margin-top:16px;">
-    <label class="form-check" style="align-items:flex-start; margin-bottom: 0;">
-      <input type="hidden" name="php_delete_database" value="false">
-      <input type="checkbox" name="php_delete_database" value="true">
-      <div>
-        <span><strong>{{ _('delete_site_and_database') }}</strong></span>
-        <span class="form-hint" style="display:block; margin-top:2px;">{{ _('delete_database_too') }}</span>
-      </div>
-    </label>
-  </div>
+  <label class="form-check" style="align-items:flex-start; margin-bottom: 0;">
+    <input type="hidden" name="php_delete_database" value="false">
+    <input type="checkbox" name="php_delete_database" value="true">
+    <div>
+      <span><strong>{{ _('delete_site_and_database') }}</strong></span>
+      <span class="form-hint" style="display:block; margin-top:2px;">{{ _('delete_database_too') }}</span>
+    </div>
+  </label>
 </template>
 </section>
 {% endblock %}

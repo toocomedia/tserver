@@ -98,7 +98,7 @@ function render() {
   const vSelect = options ? `<select id="php-runtime-ver" class="form-select" data-runtime-version style="width:160px; height:32px;">${vers}</select>` : `<select class="form-select" disabled style="width:160px; height:32px;"><option>${t("loading")}</option></select>`;
 
   const ssl = site.ssl || {};
-  const sslAct = can("issue_ssl") ? btn("ssl-issue", t("issue_ssl"), "primary") : `${can("renew_ssl") ? btn("ssl-renew", t("renew")) : ""}${can("revoke_ssl") ? btn("ssl-revoke", t("revoke"), "danger", `data-delete-drawer-trigger data-delete-url="${actionUrl(siteId, "/ssl")}" data-delete-title="${t("revoke")}" data-delete-message="${t("revoke_ssl_confirmation_desc")}" data-delete-item="${site.domain}" data-delete-label="${t("revoke")}"`) : ""}`;
+  const sslAct = can("issue_ssl") ? btn("ssl-issue", t("issue_ssl"), "primary") : `${can("renew_ssl") ? btn("ssl-renew", t("renew")) : ""}${can("revoke_ssl") ? btn("ssl-revoke", t("revoke"), "danger", `data-delete-drawer-trigger data-delete-event="php-site-action" data-delete-url="${actionUrl(siteId, "/ssl")}" data-delete-title="${t("revoke")}" data-delete-message="${t("revoke_ssl_confirmation_desc")}" data-delete-item="${site.domain}" data-delete-label="${t("revoke")}"`) : ""}`;
 
   const wpRetry = can("wordpress_retry") ? `
     <div class="d-flex align-center gap-sm" style="flex-wrap:wrap;">
@@ -213,7 +213,7 @@ function render() {
                 <div class="d-flex align-center gap-sm" style="flex-wrap:wrap;">
                   ${btn("db-reveal", t("reveal_credentials"))}
                   ${btn("db-rotate", t("rotate_password"))}
-                  ${can("delete_database") ? btn("db-delete", t("delete_database"), "danger", `data-delete-drawer-trigger data-delete-url="${actionUrl(siteId, "/database")}" data-delete-title="${t("delete_database")}" data-delete-message="${t("delete_database_confirmation_desc")}" data-delete-item="${site.database?.database}" data-delete-label="${t("delete_database")}"`) : ""}
+                  ${can("delete_database") ? btn("db-delete", t("delete_database"), "danger", `data-delete-drawer-trigger data-delete-event="php-site-action" data-delete-url="${actionUrl(siteId, "/database")}" data-delete-title="${t("delete_database")}" data-delete-message="${t("delete_database_confirmation_desc")}" data-delete-item="${site.database?.database}" data-delete-label="${t("delete_database")}"`) : ""}
                 </div>
               `)}
               <div class="php-detail__credentials" data-credentials hidden style="margin-top: 12px;"></div>
