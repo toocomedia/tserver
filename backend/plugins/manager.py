@@ -572,12 +572,15 @@ class PluginManager:
         action: str,
         *,
         unverified_confirmation: str = "",
+        log_callback: Optional[Callable[[str], None]] = None,
     ) -> tuple[bool, str]:
         if action not in {"install", "uninstall"}:
             return False, "Unsupported plugin action."
         plugin = self.get_plugin(plugin_id)
         if not plugin:
             return False, "Plugin not found."
+        if log_callback:
+            log_callback(f"Validating requirements for {plugin.get('name', plugin_id)}...")
         if action == "install" and plugin.get("platform_unverified") and not plugin.get("platform_approved"):
             approved, message = self.approve_unverified_platform(
                 plugin, unverified_confirmation
@@ -623,6 +626,8 @@ class PluginManager:
             await component_state_store.set(
                 "plugin", plugin_id, operation=f"{action}ing", clear_error=True
             )
+            if log_callback:
+                log_callback(f"Executing {action} script for {plugin.get('name', plugin_id)}...")
             if action == "uninstall" and "docker" in self._required_dependencies(plugin):
                 from dependencies import dependency_manager
 
@@ -675,6 +680,10 @@ class PluginManager:
                     check=False,
                     shell=False,
                 )
+                if log_callback and (result.stdout or result.stderr):
+                    for line in (result.stdout or "").splitlines() + (result.stderr or "").splitlines():
+                        if line.strip():
+                            log_callback(line)
             except subprocess.TimeoutExpired:
                 message = f"Plugin {action} timed out."
                 await component_state_store.set(
@@ -696,6 +705,8 @@ class PluginManager:
                 clear_error=True,
             )
             self.discover_plugins()
+            if log_callback:
+                log_callback(f"Plugin {action} completed successfully.")
             return True, f"Plugin {action} completed."
         finally:
             lock.release()

@@ -1,0 +1,359 @@
+/**
+ * task_drawer.css — Minimalist Right-Side Split Task Manager Drawer
+ * Features:
+ * - Pure dark surface design tokens with zero borders and zero divider lines
+ * - Smooth right-side slide animation (transform: translateX)
+ * - Compact task item cards with live progress bars and timers
+ * - Collapsible dark log terminal stream
+ */
+
+.task-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  z-index: 999;
+  display: flex;
+  justify-content: flex-end;
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.22s ease, visibility 0.22s ease;
+}
+
+.task-drawer-backdrop.hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.task-drawer {
+  width: 420px;
+  max-width: 100vw;
+  height: 100vh;
+  background: #111211;
+  color: var(--color-text, #f0f0f0);
+  display: flex;
+  flex-direction: column;
+  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.5);
+  transform: translateX(0);
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+}
+
+.task-drawer-backdrop.hidden .task-drawer {
+  transform: translateX(100%);
+}
+
+/* Header (Clean, no bottom border) */
+.task-drawer__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 20px;
+  background: #161816;
+}
+
+.task-drawer__title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.task-drawer__title {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin: 0;
+  color: #ffffff;
+}
+
+.task-drawer__count-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #e0e0e0;
+}
+
+.task-drawer__count-badge.is-active {
+  background: #2563eb;
+  color: #ffffff;
+  animation: pulse-task 2s infinite;
+}
+
+@keyframes pulse-task {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.task-drawer__close {
+  background: transparent;
+  border: none;
+  color: var(--color-muted, #888);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.task-drawer__close:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* Tabs (Solid pills, zero borders) */
+.task-drawer__tabs {
+  display: flex;
+  padding: 10px 20px;
+  gap: 8px;
+  background: #111211;
+}
+
+.task-drawer__tab {
+  flex: 1;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--color-muted, #888);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.task-drawer__tab:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.task-drawer__tab.is-active {
+  background: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+}
+
+/* Content List */
+.task-drawer__body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Task Item Card (Clean solid background, zero borders) */
+.task-item {
+  background: #181a18;
+  border-radius: 8px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: background 0.15s ease;
+}
+
+.task-item:hover {
+  background: #1e201e;
+}
+
+.task-item__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.task-item__info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.task-item__title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #f5f5f5;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.task-item__meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--color-muted, #888);
+}
+
+.task-item__status-pill {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.task-item__status-pill--running {
+  background: rgba(37, 99, 235, 0.2);
+  color: #60a5fa;
+}
+
+.task-item__status-pill--succeeded {
+  background: rgba(34, 197, 94, 0.2);
+  color: #4ade80;
+}
+
+.task-item__status-pill--failed {
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+}
+
+.task-item__status-pill--cancelled {
+  background: rgba(156, 163, 175, 0.2);
+  color: #9ca3af;
+}
+
+/* Progress Track */
+.task-item__progress {
+  height: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+  overflow: hidden;
+  position: relative;
+}
+
+.task-item__progress-bar {
+  height: 100%;
+  background: #3b82f6;
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.task-item__progress-bar--indeterminate {
+  width: 40%;
+  animation: indeterminate-track 1.4s infinite linear;
+}
+
+@keyframes indeterminate-track {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(350%); }
+}
+
+/* Log Toggle & Terminal Box */
+.task-item__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 4px;
+}
+
+.task-item__log-btn {
+  font-size: 11px;
+  color: var(--color-muted, #999);
+  background: transparent;
+  border: none;
+  padding: 4px 0;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.task-item__log-btn:hover {
+  color: #ffffff;
+}
+
+.task-item__cancel-btn {
+  font-size: 11px;
+  color: #ef4444;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.task-item__cancel-btn:hover {
+  background: rgba(239, 68, 68, 0.12);
+}
+
+.task-item__terminal {
+  background: #090a09;
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+  color: #a3e635;
+  max-height: 160px;
+  overflow-y: auto;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-all;
+  display: none;
+}
+
+.task-item__terminal.is-open {
+  display: block;
+}
+
+/* Empty State */
+.task-drawer__empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--color-muted, #777);
+  font-size: 13px;
+}
+
+/* Header Task Icon Button (In Topbar) */
+.header-task-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border: none;
+  border-radius: 6px;
+  color: var(--color-text, #f0f0f0);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.header-task-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.header-task-btn__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #3b82f6;
+  display: none;
+}
+
+.header-task-btn.is-active .header-task-btn__dot {
+  display: inline-block;
+  animation: pulse-task 1.5s infinite;
+}
+
+.header-task-btn.is-active svg {
+  animation: spin-task 3s infinite linear;
+}
+
+@keyframes spin-task {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}

@@ -76,6 +76,7 @@
   <link rel="stylesheet" href="/static/css/components/shapes.css?v={{ APP_VERSION }}">
   <link rel="stylesheet" href="/static/css/components/modals.css?v={{ APP_VERSION }}">
   <link rel="stylesheet" href="/static/css/components/delete_drawer.css?v={{ APP_VERSION }}">
+  <link rel="stylesheet" href="/static/css/components/task_drawer.css?v={{ APP_VERSION }}">
   <link rel="stylesheet" href="/static/css/components/alerts.css?v={{ APP_VERSION }}">
   <link rel="stylesheet" href="/static/css/components/stepper.css?v={{ APP_VERSION }}">
   <link rel="stylesheet" href="/static/css/components/loading.css?v={{ APP_VERSION }}">
@@ -139,6 +140,11 @@
       <h1 class="page-header__title">{% block page_title %}{% endblock %}</h1>
       <div class="page-header__actions">
         {% block topbar_actions %}{% endblock %}
+        <button type="button" class="header-task-btn" id="header-task-btn" aria-label="{{ _('task_manager') if _('task_manager') != 'task_manager' else 'Task Manager' }}" title="{{ _('task_manager') if _('task_manager') != 'task_manager' else 'Task Manager' }}">
+          <span class="header-task-btn__dot"></span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path></svg>
+          <span class="header-task-btn__text">{{ _('tasks') if _('tasks') != 'tasks' else 'Tasks' }}</span>
+        </button>
       </div>
     </div>
     {% endblock %}
@@ -185,6 +191,9 @@
 <!-- SHARED DELETE SPLIT DRAWER -->
 {% include "partials/delete_drawer.html" %}
 
+<!-- SHARED TASK MANAGER SPLIT DRAWER -->
+{% include "partials/task_drawer.html" %}
+
 <!-- GLOBAL LOADER OVERLAY -->
 <div id="global-loader" class="global-loader hidden">
   <div class="global-loader__spinner"></div>
@@ -196,6 +205,8 @@
 
 <!-- JS -->
 <script src="/static/js/modules/delete-drawer.js?v={{ APP_VERSION }}"></script>
+<script src="/static/js/modules/task-manager.js?v={{ APP_VERSION }}"></script>
+<script src="/static/js/modules/task-shield.js?v={{ APP_VERSION }}"></script>
 <script src="/static/js/main.js?v={{ APP_VERSION }}"></script>
 <script src="/static/js/modules/resource-guard-banner.js?v={{ APP_VERSION }}"></script>
 <script src="/static/js/resource-views.js?v={{ APP_VERSION }}"></script>

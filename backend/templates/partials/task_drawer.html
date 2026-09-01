@@ -1,0 +1,32 @@
+<!-- task_drawer.html — Right-Side Split Task Manager Drawer -->
+<div id="task-drawer-backdrop" class="task-drawer-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="task-drawer-title">
+  <aside id="task-drawer" class="task-drawer" aria-label="Task Manager">
+    
+    <!-- HEADER -->
+    <header class="task-drawer__header">
+      <div class="task-drawer__title-wrap">
+        <h2 id="task-drawer-title" class="task-drawer__title">{{ _('task_manager') if _('task_manager') != 'task_manager' else 'Task Manager' }}</h2>
+        <span id="task-drawer-count" class="task-drawer__count-badge">0</span>
+      </div>
+      <button type="button" class="task-drawer__close" id="task-drawer-close-btn" aria-label="Close Task Manager">✕</button>
+    </header>
+
+    <!-- TABS -->
+    <nav class="task-drawer__tabs" aria-label="Task tabs">
+      <button type="button" class="task-drawer__tab is-active" data-task-tab="active">
+        {{ _('active_tasks') if _('active_tasks') != 'active_tasks' else 'Active' }} (<span id="task-tab-active-count">0</span>)
+      </button>
+      <button type="button" class="task-drawer__tab" data-task-tab="history">
+        {{ _('task_history') if _('task_history') != 'task_history' else 'Recent History' }}
+      </button>
+    </nav>
+
+    <!-- BODY -->
+    <div id="task-drawer-body" class="task-drawer__body">
+      <div class="task-drawer__empty">
+        {{ _('no_active_tasks') if _('no_active_tasks') != 'no_active_tasks' else 'No tasks running right now.' }}
+      </div>
+    </div>
+
+  </aside>
+</div>

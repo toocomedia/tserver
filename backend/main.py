@@ -15,7 +15,7 @@ from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
 import config
 from database import init_db
-from routers import system, domains, dns, ssl, proxy, errors, auth, settings, updates, dev, notifications, plugins, dependencies, app_updates, apps, resource_guard, php_sites
+from routers import system, domains, dns, ssl, proxy, errors, auth, settings, updates, dev, notifications, plugins, dependencies, app_updates, apps, resource_guard, php_sites, tasks
 from dependencies import dependency_manager
 from plugins import plugin_manager
 from plugins.manager import PluginUnavailableError
@@ -232,6 +232,7 @@ async def errors_shortcut_redirect(request: Request):
     q = request.url.query
     return RedirectResponse(f"/admin/errors/{'?' + q if q else ''}", status_code=307)
 app.include_router(notifications.router)
+app.include_router(tasks.router)
 plugin_manager.init_app(app)
 app.include_router(plugins.router)
 app.include_router(plugins.legacy_router)

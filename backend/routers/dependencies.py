@@ -11,6 +11,8 @@ from models.php_website import PhpWebsite
 from templating import templates
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from services.task_manager_service import task_manager_service
+from middleware.auth import wants_json
 
 router = APIRouter(tags=["dependencies"])
 
@@ -178,6 +180,7 @@ async def php_enable_external_repository(
 @router.post("/api/dependencies/php/versions/{version}/install")
 async def php_install_version(
     version: str,
+    request: Request,
     db: AsyncSession = Depends(get_db),
 ):
     """Install one explicitly selected PHP-FPM version."""
@@ -200,6 +203,23 @@ async def php_install_version(
             },
             status_code=409,
         )
+
+    if wants_json(request):
+        task = await task_manager_service.spawn(
+            category="php",
+            action="install",
+            target_id=f"php_{version}",
+            label=f"Install PHP {version}",
+            runner=lambda task_rec: asyncio.to_thread(service.install_version, version),
+            lock_type="apt",
+        )
+        return {
+            "success": True,
+            "task_id": task.id,
+            "status": "running",
+            "message": f"Installing PHP {version} in background...",
+        }
+
     token = resource_guard_service.register(
         "dependency", "php", "normal", f"Install PHP {version}", profile="native_light"
     )
@@ -329,7 +349,7 @@ async def dependency_toggle(
 
 
 @router.post("/api/dependencies/{dependency_id}/install")
-async def dependency_install(dependency_id: str, db: AsyncSession = Depends(get_db)):
+async def dependency_install(dependency_id: str, request: Request, db: AsyncSession = Depends(get_db)):
     current = dependency_manager.get_status(dependency_id, force=True)
     if current is None:
         raise HTTPException(status_code=404, detail="Unknown dependency.")
@@ -357,6 +377,24 @@ async def dependency_install(dependency_id: str, db: AsyncSession = Depends(get_
             {"success": False, "detail": f"Resource Guard blocked dependency install: {result['reason']}", "resource_guard": result},
             status_code=409,
         )
+
+    dep_label = current.get("name", dependency_id)
+    if wants_json(request):
+        task = await task_manager_service.spawn(
+            category="dependency",
+            action="install",
+            target_id=dependency_id,
+            label=f"Install {dep_label}",
+            runner=lambda task_rec: dependency_manager.install(dependency_id),
+            lock_type="apt" if dependency_id in ("mariadb", "postgresql", "git", "php") else "exclusive",
+        )
+        return {
+            "success": True,
+            "task_id": task.id,
+            "status": "running",
+            "message": f"Installing {dep_label}...",
+        }
+
     guard_token = resource_guard_service.register(
         "dependency", dependency_id, "normal",
         f"Install dependency: {dependency_id}",
@@ -396,6 +434,7 @@ async def dependency_update_check(dependency_id: str):
 @router.post("/api/dependencies/{dependency_id}/update")
 async def dependency_update(
     dependency_id: str,
+    request: Request,
     confirmation: str = Form(""),
     db: AsyncSession = Depends(get_db),
 ):
@@ -423,6 +462,24 @@ async def dependency_update(
             {"detail": f"Resource Guard blocked dependency update: {result['reason']}", "resource_guard": result},
             status_code=409,
         )
+
+    dep_label = current.get("name", dependency_id)
+    if wants_json(request):
+        task = await task_manager_service.spawn(
+            category="dependency",
+            action="update",
+            target_id=dependency_id,
+            label=f"Update {dep_label}",
+            runner=lambda task_rec: dependency_manager.update(dependency_id),
+            lock_type="apt",
+        )
+        return {
+            "success": True,
+            "task_id": task.id,
+            "status": "running",
+            "message": f"Updating {dep_label}...",
+        }
+
     guard_token = resource_guard_service.register(
         "dependency", dependency_id, "normal",
         f"Update dependency: {dependency_id}",

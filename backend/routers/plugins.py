@@ -106,6 +106,10 @@ async def plugin_asset(plugin_id: str, filename: str):
     return FileResponse(file_path)
 
 
+from services.task_manager_service import task_manager_service
+from middleware.auth import wants_json
+
+
 @router.post("/api/install")
 @legacy_router.post("/api/install", include_in_schema=False)
 async def install_plugin_api(
@@ -114,6 +118,30 @@ async def install_plugin_api(
     unverified_confirmation: str = Form(""),
 ):
     """Run installation script for a plugin."""
+    plugin = plugin_manager.get_plugin(plugin_id)
+    plugin_label = plugin.get("name", plugin_id) if plugin else plugin_id
+    
+    if wants_json(request):
+        task = await task_manager_service.spawn(
+            category="plugin",
+            action="install",
+            target_id=plugin_id,
+            label=f"Install {plugin_label}",
+            runner=lambda task_rec: plugin_manager.run_plugin_script(
+                plugin_id,
+                "install",
+                unverified_confirmation=unverified_confirmation,
+                log_callback=task_rec.add_log,
+            ),
+            lock_type="exclusive",
+        )
+        return {
+            "success": True,
+            "task_id": task.id,
+            "status": "running",
+            "message": f"Installing {plugin_label}...",
+        }
+
     success, message = await plugin_manager.run_plugin_script(
         plugin_id,
         "install",
@@ -129,6 +157,29 @@ async def install_plugin_api(
 @legacy_router.post("/api/uninstall", include_in_schema=False)
 async def uninstall_plugin_api(request: Request, plugin_id: str = Form(...)):
     """Run uninstallation script for a plugin."""
+    plugin = plugin_manager.get_plugin(plugin_id)
+    plugin_label = plugin.get("name", plugin_id) if plugin else plugin_id
+
+    if wants_json(request):
+        task = await task_manager_service.spawn(
+            category="plugin",
+            action="uninstall",
+            target_id=plugin_id,
+            label=f"Uninstall {plugin_label}",
+            runner=lambda task_rec: plugin_manager.run_plugin_script(
+                plugin_id,
+                "uninstall",
+                log_callback=task_rec.add_log,
+            ),
+            lock_type="exclusive",
+        )
+        return {
+            "success": True,
+            "task_id": task.id,
+            "status": "running",
+            "message": f"Uninstalling {plugin_label}...",
+        }
+
     success, message = await plugin_manager.run_plugin_script(plugin_id, "uninstall")
     if success:
         return RedirectResponse("/plugin-manager/", status_code=303)
@@ -143,6 +194,25 @@ async def purge_plugin_data_api(
     confirmation: str = Form(...),
 ):
     """Permanently remove preserved plugin volumes after explicit confirmation."""
+    plugin = plugin_manager.get_plugin(plugin_id)
+    plugin_label = plugin.get("name", plugin_id) if plugin else plugin_id
+
+    if wants_json(request):
+        task = await task_manager_service.spawn(
+            category="plugin",
+            action="purge",
+            target_id=plugin_id,
+            label=f"Purge data: {plugin_label}",
+            runner=lambda task_rec: plugin_manager.purge_plugin_data(plugin_id, confirmation),
+            lock_type="exclusive",
+        )
+        return {
+            "success": True,
+            "task_id": task.id,
+            "status": "running",
+            "message": f"Purging {plugin_label} data...",
+        }
+
     success, message = await plugin_manager.purge_plugin_data(plugin_id, confirmation)
     if success:
         return RedirectResponse("/plugin-manager/", status_code=303)
@@ -153,6 +223,25 @@ async def purge_plugin_data_api(
 @legacy_router.post("/api/toggle", include_in_schema=False)
 async def toggle_plugin(request: Request, plugin_id: str = Form(...), enabled: bool = Form(...)):
     """Enable or disable a plugin."""
+    plugin = plugin_manager.get_plugin(plugin_id)
+    plugin_label = plugin.get("name", plugin_id) if plugin else plugin_id
+    action_label = "Enable" if enabled else "Disable"
+
+    if wants_json(request):
+        task = await task_manager_service.spawn(
+            category="plugin",
+            action="toggle",
+            target_id=plugin_id,
+            label=f"{action_label} {plugin_label}",
+            runner=lambda task_rec: plugin_manager.toggle_plugin(plugin_id, enabled),
+        )
+        return {
+            "success": True,
+            "task_id": task.id,
+            "status": "running",
+            "message": f"{action_label}ing {plugin_label}...",
+        }
+
     success, message = await plugin_manager.toggle_plugin(plugin_id, enabled)
     if success:
         return RedirectResponse("/plugin-manager/", status_code=303)
