@@ -152,28 +152,26 @@ window.runDnsDiagnostics = async function(domain) {
     stepsList.innerHTML = "";
     (data.steps || []).forEach((step) => {
       const row = document.createElement("div");
-      row.style.display = "flex";
-      row.style.flexDirection = "column";
-      row.style.padding = "8px 10px";
-      row.style.borderBottom = "1px solid var(--color-line)";
-      row.style.width = "100%";
-      row.style.boxSizing = "border-box";
-      row.style.overflow = "hidden";
-      
+      row.style.cssText = "display:flex; flex-direction:column; gap:4px; padding:10px 0; border-bottom:1px solid var(--color-line); width:100%; box-sizing:border-box;";
+
       const badgeClass = step.status === "pass" ? "badge--success" : (step.status === "warn" ? "badge--warning" : "badge--danger");
       const badgeLabel = step.status === "pass" ? "Pass" : (step.status === "warn" ? "Warn" : "Fail");
-      const iconSymbol = step.status === "pass" ? "✓" : (step.status === "warn" ? "!" : "✕");
       const iconColor = step.status === "pass" ? "var(--color-success)" : (step.status === "warn" ? "var(--color-warning)" : "var(--color-danger)");
+      const iconPath = step.status === "pass"
+        ? `<path d="M20 6L9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/>`
+        : step.status === "warn"
+        ? `<path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>`
+        : `<path d="M18 6L6 18M6 6l12 12" stroke-linecap="round" stroke-linejoin="round"/>`;
 
       row.innerHTML = `
-        <div style="display:flex; align-items:center; justify-content:space-between; gap:6px; width:100%;">
-          <div style="display:flex; align-items:center; gap:6px; font-weight:600; font-size:13px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
-            <span style="color:${iconColor}; font-weight:700; flex-shrink:0;">${iconSymbol}</span>
-            <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${step.title}</span>
+        <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:8px;">
+          <div style="display:flex; align-items:flex-start; gap:7px; font-weight:600; font-size:13px; min-width:0; flex:1;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${iconColor}" stroke-width="2.5" style="flex-shrink:0; margin-top:1px;">${iconPath}</svg>
+            <span style="word-break:break-word; overflow-wrap:anywhere; line-height:1.4;">${step.title}</span>
           </div>
-          <span class="badge ${badgeClass}" style="font-size:9px; padding:1px 6px; flex-shrink:0;">${badgeLabel}</span>
+          <span class="badge ${badgeClass}" style="font-size:9px; padding:2px 6px; flex-shrink:0; margin-top:1px;">${badgeLabel}</span>
         </div>
-        <div style="font-size:12px; color:var(--color-text-muted); margin-top:2px; word-break:break-word; overflow-wrap:anywhere; line-height:1.35;">${step.summary}</div>
+        <div style="font-size:12px; color:var(--color-muted); margin-left:21px; word-break:break-word; overflow-wrap:anywhere; line-height:1.4;">${step.summary}</div>
       `;
       stepsList.appendChild(row);
     });
@@ -183,11 +181,8 @@ window.runDnsDiagnostics = async function(domain) {
       recsList.innerHTML = "";
       data.recommendations.forEach((rec) => {
         const item = document.createElement("div");
-        item.style.fontSize = "12px";
-        item.style.lineHeight = "1.4";
-        item.style.wordBreak = "break-word";
-        item.style.overflowWrap = "anywhere";
-        item.innerHTML = `👉 <strong>${rec}</strong>`;
+        item.style.cssText = "font-size:12px; line-height:1.5; word-break:break-word; overflow-wrap:anywhere; display:flex; align-items:flex-start; gap:6px;";
+        item.innerHTML = `<span style="flex-shrink:0; color:var(--color-danger); font-weight:700; margin-top:1px;">—</span><span>${rec}</span>`;
         recsList.appendChild(item);
       });
       recsBox.classList.remove("hidden");

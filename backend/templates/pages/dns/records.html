@@ -43,10 +43,6 @@
 <div class="d-flex align-center justify-between mb-lg" id="records-toolbar" style="flex-wrap:wrap; gap:var(--space-sm);">
   <div class="d-flex gap-sm align-center">
     <span class="text-muted text-small">{{ rows|length }} record{{ 's' if rows|length != 1 else '' }}</span>
-    <button type="button" class="btn btn--ghost btn--sm text-primary" onclick="openModal('dns-diagnostics-modal'); runDnsDiagnostics('{{ domain.name }}');" style="gap:4px;">
-      <svg viewbox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-      <span>Run DNS Health Check</span>
-    </button>
   </div>
   <form method="post" action="/dns/{{ domain.name }}/records/template" class="d-flex gap-sm align-center" id="template-form">
     {% include "partials/csrf_field.html" %}
