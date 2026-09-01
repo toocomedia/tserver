@@ -45,7 +45,7 @@ async def ensure_requirements(version: str, *, install: bool) -> dict[str, Any]:
     try:
         status = await asyncio.to_thread(runtime.status, version)
         if not status.get("composer_available"):
-            raise HTTPException(409, "Panel-managed Composer is unavailable. Run the SRV Panel updater first.")
+            raise HTTPException(409, "Panel-managed Composer is not installed. Please install Composer from Dependencies -> PHP Runtime -> Panel Tools first.")
         if status.get("ready"):
             return status
         missing = ", ".join(status.get("missing_packages") or []) or "required Laravel PHP extensions"

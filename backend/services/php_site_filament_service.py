@@ -26,7 +26,7 @@ async def ensure_requirements() -> None:
     except RuntimeError as exc:
         raise HTTPException(502, str(exc)) from exc
     if not status.get("composer_available"):
-        raise HTTPException(409, "Panel-managed Composer is unavailable. Run the SRV Panel updater first.")
+        raise HTTPException(409, "Panel-managed Composer is not installed. Please install Composer from Dependencies -> PHP Runtime -> Panel Tools first.")
 
 
 async def install(site: PhpWebsite, domain: str, values: dict[str, str]) -> dict[str, Any]:

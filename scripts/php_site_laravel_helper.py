@@ -147,7 +147,7 @@ def reject_unsafe_path_chain(base: Path, target: Path) -> None:
 
 def require_composer() -> None:
     if not COMPOSER.is_file() or COMPOSER.is_symlink():
-        fail("Panel-managed Composer is unavailable. Run the SRV Panel updater first.")
+        fail("Panel-managed Composer is not installed. Please install Composer from the PHP Dependency page first.")
 
 
 def extension_status(php_version: str) -> dict[str, Any]:

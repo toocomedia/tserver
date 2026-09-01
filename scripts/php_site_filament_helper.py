@@ -159,7 +159,7 @@ def enable_access(item: dict, values: dict) -> None:
 def install(data: dict) -> dict:
     item, values = site(data), admin(data)
     if not COMPOSER.is_file() or COMPOSER.is_symlink():
-        fail("Panel-managed Composer is unavailable. Run the SRV Panel updater first.")
+        fail("Panel-managed Composer is not installed. Please install Composer from the PHP Dependency page first.")
     env, temporary = environment(item, {
         "FILAMENT_ADMIN_NAME": values["name"], "FILAMENT_ADMIN_EMAIL": values["email"], "FILAMENT_ADMIN_PASSWORD": values["password"],
     })

@@ -218,6 +218,10 @@ class PHPDependencyServiceTests(unittest.TestCase):
         self.assertIn("getCsrfToken()", page_template)
         self.assertIn("X-CSRF-Token", page_template)
         self.assertIn("/api/dependencies/php/versions/{version}/extensions/{extension}/install-pecl", router)
+        self.assertIn("PHP_TOOLS_HELPER", install_script)
+        self.assertIn("PHP_TOOLS_HELPER", update_script)
+        self.assertIn("$PHP_TOOLS_HELPER$PLUGIN_SUDOERS_COMMANDS", install_script)
+        self.assertIn("$PHP_TOOLS_HELPER$PLUGIN_SUDOERS_COMMANDS", update_script)
 
 
 class PHPToolsServiceTests(unittest.TestCase):
