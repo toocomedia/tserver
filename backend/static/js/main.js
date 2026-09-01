@@ -239,114 +239,12 @@ document.addEventListener("click", (e) => {
   }
 });
 
-/**
- * Universal Base Form Handler for Drawers, Modals & In-Place Forms
- */
-document.addEventListener("submit", async (e) => {
-  const form = e.target;
-  if (!form || form.tagName !== "FORM") return;
-  
-  // Normal form navigation exceptions (login, logout, exports)
-  if (form.dataset.noAjax === "true" || form.action.includes("/login") || form.action.includes("/logout") || form.action.includes("/export")) {
-    const button = e.submitter;
-    if (button && button.dataset.noLoading !== "true") {
-      button.classList.add("is-loading");
-      button.setAttribute("aria-busy", "true");
-      button.disabled = true;
-    }
-    return;
-  }
-
-  // Intercept if form is inside a modal / drawer, or marked with data-ajax="true"
-  const isModalOrDrawerForm = Boolean(form.closest(".modal, .modal-backdrop, .task-drawer, [data-ajax='true']"));
-  if (!isModalOrDrawerForm && form.dataset.ajax !== "true") {
-    const button = e.submitter;
-    if (button && button.dataset.noLoading !== "true") {
-      button.classList.add("is-loading");
-      button.setAttribute("aria-busy", "true");
-      button.disabled = true;
-    }
-    return;
-  }
-
-  e.preventDefault();
-  const submitBtn = e.submitter || form.querySelector("button[type=submit]");
-  if (submitBtn) {
-    submitBtn.disabled = true;
-    submitBtn.classList.add("is-loading");
-  }
-
-  try {
-    const formData = new FormData(form);
-    const csrfToken = typeof getCsrfToken === "function" ? getCsrfToken() : "";
-    
-    let body;
-    let headers = {
-      "X-Requested-With": "XMLHttpRequest",
-      "Accept": "application/json",
-    };
-    if (csrfToken) headers["X-CSRF-Token"] = csrfToken;
-
-    if (form.enctype === "multipart/form-data") {
-      body = formData;
-    } else {
-      headers["Content-Type"] = "application/x-www-form-urlencoded";
-      body = new URLSearchParams(formData);
-    }
-
-    const response = await fetch(form.action, {
-      method: form.method || "POST",
-      headers: headers,
-      body: body,
-    });
-
-    const data = await response.json().catch(() => ({}));
-
-    if (response.ok) {
-      // 1. Close active modal/drawer
-      const activeModal = form.closest(".modal-backdrop:not(.hidden)");
-      if (activeModal) {
-        activeModal.classList.add("hidden");
-      }
-
-      // 2. Open Task Manager if task was created/spawned
-      if (data.task_id || data.status === "running") {
-        if (typeof window.openTaskDrawer === "function") window.openTaskDrawer("active");
-      }
-      if (typeof window.refreshTasks === "function") window.refreshTasks();
-
-      // 3. Show toast
-      const msg = data.message || data.detail || (form.dataset.successMsg || "Action completed successfully.");
-      if (typeof window.toast === "function") {
-        window.toast(msg, "success");
-      }
-
-      // 4. Update table content in place immediately
-      if (typeof window.refreshCurrentPageContent === "function") {
-        await window.refreshCurrentPageContent();
-      }
-
-      // 5. Reset form
-      form.reset();
-    } else {
-      const errMsg = data.detail || data.error || data.message || "Failed to process request.";
-      if (typeof window.toast === "function") {
-        window.toast(errMsg, "danger");
-      } else {
-        alert(errMsg);
-      }
-    }
-  } catch (err) {
-    console.error("Base form submission error:", err);
-    if (typeof window.toast === "function") {
-      window.toast(err.message || "Network error while submitting form.", "danger");
-    }
-  } finally {
-    if (submitBtn) {
-      submitBtn.disabled = false;
-      submitBtn.classList.remove("is-loading");
-    }
-  }
+document.addEventListener("submit", (e) => {
+  const button = e.submitter || e.target.querySelector("button[type=submit]");
+  if (!button || button.dataset.noLoading === "true") return;
+  button.classList.add("is-loading");
+  button.setAttribute("aria-busy", "true");
+  button.disabled = true;
 });
 
 document.addEventListener("keydown", (e) => {
@@ -788,55 +686,7 @@ function escapeHtml(value) {
   }[char]));
 }
 
-let isRefreshingPageContent = false;
-async function refreshCurrentPageContent() {
-  if (isRefreshingPageContent) return;
-  isRefreshingPageContent = true;
-  try {
-    const res = await fetch(window.location.href, {
-      headers: { 'X-Requested-With': 'XMLHttpRequest' }
-    });
-    if (!res.ok) return;
-    const htmlText = await res.text();
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(htmlText, 'text/html');
 
-    // 1. Swap table rows if table exists
-    const currentTable = document.querySelector('table');
-    const newTable = doc.querySelector('table');
-
-    if (currentTable && newTable) {
-      const currentTbody = currentTable.querySelector('tbody');
-      const newTbody = newTable.querySelector('tbody');
-      if (currentTbody && newTbody) {
-        currentTbody.innerHTML = newTbody.innerHTML;
-      }
-    } else {
-      // If converting between empty state and table, swap main page container
-      const currentContainer = document.querySelector('.domains-page, .ssl-page, .proxy-page, .php-sites-page, .dns-records-page, main .content');
-      const newContainer = doc.querySelector('.domains-page, .ssl-page, .proxy-page, .php-sites-page, .dns-records-page, main .content');
-      if (currentContainer && newContainer) {
-        currentContainer.innerHTML = newContainer.innerHTML;
-      }
-    }
-
-    // Re-initialize any component listeners
-    document.dispatchEvent(new CustomEvent('app:init'));
-    if (typeof lucide !== 'undefined' && lucide.createIcons) {
-      lucide.createIcons();
-    }
-  } catch (e) {
-    console.debug('Failed to refresh page content in place:', e);
-  } finally {
-    isRefreshingPageContent = false;
-  }
-}
-
-document.addEventListener('task:completed', () => {
-  refreshCurrentPageContent();
-});
-
-window.refreshCurrentPageContent = refreshCurrentPageContent;
 window.escapeHtml = escapeHtml;
 window.PATHS = PATHS;
 window.path = path;

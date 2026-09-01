@@ -98,9 +98,61 @@ function initSslIssuePage() {
     });
   }
 
-  // Sync hidden inputs before base submission
-  select.addEventListener("change", updateForm);
-  form.addEventListener("submit", updateForm);
+  // Clean submit handler for drawer modal
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    updateForm();
+    const opt = select.options[select.selectedIndex];
+    if (!opt || !opt.value) {
+      if (typeof toast === "function") toast("Please select a valid domain.", "warning");
+      select.focus();
+      return;
+    }
+
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.classList.add("is-loading");
+    }
+
+    try {
+      const data = Object.fromEntries(new FormData(form).entries());
+      data.full_domain = opt.value;
+      data.domain_id = opt.getAttribute("data-domain-id") || "";
+      form.querySelectorAll("input[type=checkbox]").forEach((cb) => {
+        data[cb.name] = cb.checked;
+      });
+
+      await panel.post(form.action, data);
+
+      if (typeof closeModal === "function") {
+        closeModal("issue-ssl-drawer-modal");
+      }
+      if (typeof window.openTaskDrawer === "function") {
+        window.openTaskDrawer("active");
+      }
+      if (typeof window.refreshTasks === "function") {
+        window.refreshTasks();
+      }
+      if (typeof window.toast === "function") {
+        window.toast("SSL certificate issuance started in background.", "success");
+      }
+
+      if (window.location.pathname.startsWith("/ssl/issue")) {
+        setTimeout(() => {
+          window.location.href = "/ssl/";
+        }, 300);
+      }
+    } catch (err) {
+      if (typeof toast === "function") {
+        toast(err.message || "Failed to issue SSL certificate.", "danger");
+      }
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.classList.remove("is-loading");
+      }
+    }
+  });
 
   // Auto-dismiss flash alerts
   ["alert-issued", "alert-renewed", "alert-revoked", "alert-error"].forEach((id) => {
