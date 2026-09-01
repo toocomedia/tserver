@@ -492,7 +492,9 @@ def list_extensions(data: dict[str, Any]) -> dict[str, Any]:
         }
 
     results = []
+    seen_names = set()
     for ext_name, meta in EXTENSION_METADATA.items():
+        seen_names.add(ext_name)
         pkg = f"php{item_version}-{ext_name}"
         installed = package_installed(pkg)
         required_fpm = FPM_MODULES.get(ext_name, {ext_name})
@@ -505,14 +507,28 @@ def list_extensions(data: dict[str, Any]) -> dict[str, Any]:
             "category": meta.get("category", "General"),
             "description": meta.get("description", ""),
         })
+
+    # Also detect any installed or loaded extensions outside the default metadata list
+    for mod in sorted(loaded_modules):
+        if mod not in seen_names and not mod.startswith("zend"):
+            pkg = f"php{item_version}-{mod}"
+            results.append({
+                "name": mod,
+                "package": pkg,
+                "installed": package_installed(pkg) or True,
+                "loaded": True,
+                "category": "Custom",
+                "description": f"PHP {item_version} {mod} extension",
+            })
+
     return {"version": item_version, "extensions": results}
 
 
 def install_extension(data: dict[str, Any]) -> dict[str, Any]:
     item_version = version(data.get("version"))
     ext_name = str(data.get("extension") or "").strip().lower()
-    if ext_name not in AVAILABLE_EXTENSION_SET:
-        fail(f"Invalid or unsupported PHP extension: {ext_name}")
+    if not re.fullmatch(r"^[a-z0-9_]+$", ext_name):
+        fail(f"Invalid PHP extension name format: {ext_name}")
     pkg = f"php{item_version}-{ext_name}"
     state = load_state()
     refresh_apt()
@@ -534,8 +550,8 @@ def install_extension(data: dict[str, Any]) -> dict[str, Any]:
 def uninstall_extension(data: dict[str, Any]) -> dict[str, Any]:
     item_version = version(data.get("version"))
     ext_name = str(data.get("extension") or "").strip().lower()
-    if ext_name not in AVAILABLE_EXTENSION_SET:
-        fail(f"Invalid or unsupported PHP extension: {ext_name}")
+    if not re.fullmatch(r"^[a-z0-9_]+$", ext_name):
+        fail(f"Invalid PHP extension name format: {ext_name}")
     pkg = f"php{item_version}-{ext_name}"
     state = load_state()
     if package_installed(pkg):

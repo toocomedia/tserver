@@ -10,8 +10,8 @@
 
 {% block content %}
 <div class="php-dependency-page" style="position:relative;">
-  <!-- TOP LEVEL TAB STRIP -->
-  <div class="tabs-nav mb-lg" role="tablist" data-php-top-tabs>
+  <!-- TOP LEVEL TAB STRIP WITH MARGIN TOP -->
+  <div class="tabs-nav mb-lg" role="tablist" data-php-top-tabs style="margin-top:14px; margin-bottom:20px;">
     <button class="tabs-nav__btn btn--ghost is-active" type="button" role="tab" data-php-tab-btn="versions" id="top-tab-versions">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16v14H4z"></path><path d="M8 9h8M8 13h5"></path></svg>
       {{ _('php_versions') }}
@@ -51,6 +51,8 @@
   var activeTab = 'versions';
   var loadedExtensions = [];
   var currentCategory = 'all';
+  var visibleExtensionCount = 12;
+  var PAGE_CHUNK = 12;
   var actionSelector = '[data-php-install], [data-php-uninstall], [data-php-check], [data-php-external-repository], [data-php-toggle]';
 
   function setActionsDisabled(disabled) {
@@ -167,6 +169,7 @@
     var select = content.querySelector('[data-ext-version-select]');
     var loading = content.querySelector('[data-ext-loading]');
     var tableWrap = content.querySelector('[data-ext-table-wrap]');
+    var loadMoreWrap = content.querySelector('[data-ext-load-more-wrap]');
     if (!select || !select.value) {
       if (loading) loading.hidden = true;
       if (tableWrap) tableWrap.hidden = false;
@@ -176,12 +179,14 @@
     var version = select.value;
     if (loading) loading.hidden = false;
     if (tableWrap) tableWrap.hidden = true;
+    if (loadMoreWrap) loadMoreWrap.style.display = 'none';
 
     try {
       var res = await fetch('/api/dependencies/php/versions/' + encodeURIComponent(version) + '/extensions');
       var data = await res.json().catch(function () { return {}; });
       if (!res.ok || !data.success) throw new Error(data.detail || 'Failed to load extensions.');
       loadedExtensions = data.extensions || [];
+      visibleExtensionCount = PAGE_CHUNK;
       renderExtensions();
     } catch (err) {
       if (window.toast) window.toast(err.message, 'error');
@@ -194,6 +199,7 @@
   function renderExtensions() {
     var tbody = content.querySelector('[data-ext-tbody]');
     var searchInput = content.querySelector('[data-ext-search]');
+    var loadMoreWrap = content.querySelector('[data-ext-load-more-wrap]');
     var query = (searchInput ? searchInput.value : '').toLowerCase().trim();
     if (!tbody) return;
 
@@ -207,11 +213,17 @@
     });
 
     if (!filtered.length) {
-      tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted" style="padding:24px;">No matching extensions found.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted" style="padding:24px;">No matching extensions found. Use the "Install Any Extension" bar above to install it.</td></tr>';
+      if (loadMoreWrap) loadMoreWrap.style.display = 'none';
       return;
     }
 
-    tbody.innerHTML = filtered.map(function (ext) {
+    var displayItems = query ? filtered : filtered.slice(0, visibleExtensionCount);
+    if (loadMoreWrap) {
+      loadMoreWrap.style.display = (!query && visibleExtensionCount < filtered.length) ? 'block' : 'none';
+    }
+
+    tbody.innerHTML = displayItems.map(function (ext) {
       var statusHtml = '';
       if (ext.installed && ext.loaded) {
         statusHtml = '<span class="badge-minimal badge-minimal--active">Loaded in FPM</span>';
@@ -257,13 +269,25 @@
     var searchInput = content.querySelector('[data-ext-search]');
     if (searchInput && searchInput.dataset.bound !== 'true') {
       searchInput.dataset.bound = 'true';
-      searchInput.addEventListener('input', renderExtensions);
+      searchInput.addEventListener('input', function () {
+        visibleExtensionCount = PAGE_CHUNK;
+        renderExtensions();
+      });
+    }
+    var loadMoreBtn = content.querySelector('[data-ext-load-more]');
+    if (loadMoreBtn && loadMoreBtn.dataset.bound !== 'true') {
+      loadMoreBtn.dataset.bound = 'true';
+      loadMoreBtn.addEventListener('click', function () {
+        visibleExtensionCount += PAGE_CHUNK;
+        renderExtensions();
+      });
     }
     content.querySelectorAll('[data-ext-cat]').forEach(function (btn) {
       if (btn.dataset.bound !== 'true') {
         btn.dataset.bound = 'true';
         btn.addEventListener('click', function () {
           currentCategory = btn.getAttribute('data-ext-cat');
+          visibleExtensionCount = PAGE_CHUNK;
           content.querySelectorAll('[data-ext-cat]').forEach(function (b) {
             b.classList.toggle('is-active', b === btn);
           });
@@ -271,6 +295,48 @@
         });
       }
     });
+
+    // Custom Extension Install Form
+    var customExtForm = content.querySelector('[data-custom-ext-form]');
+    if (customExtForm && customExtForm.dataset.bound !== 'true') {
+      customExtForm.dataset.bound = 'true';
+      customExtForm.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        var nameInput = customExtForm.querySelector('[data-custom-ext-name]');
+        var submitBtn = customExtForm.querySelector('[data-custom-ext-submit]');
+        var extName = (nameInput ? nameInput.value : '').toLowerCase().trim().replace(/^php\d*\.?\d*-?/, '');
+        var verSelect = content.querySelector('[data-ext-version-select]');
+        var ver = verSelect ? verSelect.value : '';
+
+        if (!extName) {
+          if (window.toast) window.toast('Please enter a valid extension name.', 'warning');
+          return;
+        }
+        if (!ver) {
+          if (window.toast) window.toast('No installed PHP version selected.', 'warning');
+          return;
+        }
+
+        submitBtn.disabled = true;
+        var origText = submitBtn.textContent;
+        submitBtn.textContent = 'Installing...';
+
+        try {
+          var url = '/api/dependencies/php/versions/' + encodeURIComponent(ver) + '/extensions/' + encodeURIComponent(extName) + '/install';
+          var res = await fetch(url, { method: 'POST', headers: { 'Accept': 'application/json' } });
+          var payload = await res.json().catch(function () { return {}; });
+          if (!res.ok || !payload.success) throw new Error(payload.detail || 'Failed to install ' + extName);
+          if (window.toast) window.toast(payload.message || ('Extension ' + extName + ' installed successfully.'), 'success');
+          if (nameInput) nameInput.value = '';
+          await loadExtensions();
+        } catch (err) {
+          if (window.toast) window.toast(err.message, 'error');
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.textContent = origText;
+        }
+      });
+    }
 
     if (content.dataset.extActionBound !== 'true') {
       content.dataset.extActionBound = 'true';
