@@ -18,9 +18,6 @@ import config
 
 VERSION_RE = re.compile(r"^\d+\.\d+$")
 PACKAGE_RE = re.compile(r"^php(\d+\.\d+)-fpm$")
-# Always show the common PHP lines so an administrator can immediately see
-# whether their configured APT sources offer the version an older script needs.
-KNOWN_VERSION_SERIES = ("7.4", "8.0", "8.1", "8.2", "8.3", "8.4", "8.5")
 EXTERNAL_REPOSITORY_NAME = "Ondřej Surý PHP Repository"
 EXTERNAL_REPOSITORY_PPA = "ppa:ondrej/php"
 EXTERNAL_REPOSITORY_MARKERS = (
@@ -210,11 +207,11 @@ class PHPDependencyService:
             }
             if os.name != "nt" and Path("/etc/php").is_dir() else set()
         )
+        managed = self._managed_versions()
         versions = sorted(
-            set(KNOWN_VERSION_SERIES) | set(available) | configured,
+            set(available) | configured | set(managed),
             key=lambda value: tuple(int(part) for part in value.split(".")),
         )
-        managed = self._managed_versions()
         runtime_versions = [
             self._version_status(version, version in managed, version in available)
             for version in versions

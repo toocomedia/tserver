@@ -45,13 +45,13 @@ class PHPDependencyServiceTests(unittest.TestCase):
 
         status = service._probe()
 
-        self.assertEqual(["7.4", "8.0", "8.1", "8.2", "8.3", "8.4", "8.5"], [item["version"] for item in status["versions"]])
-        self.assertFalse(status["versions"][2]["installed"])
-        self.assertTrue(status["versions"][4]["managed"])
+        self.assertEqual(["8.1", "8.3"], [item["version"] for item in status["versions"]])
+        self.assertFalse(status["versions"][0]["installed"])
+        self.assertTrue(status["versions"][1]["managed"])
         self.assertEqual("panel_managed", status["install_origin"])
         self.assertFalse(status["external_repository"]["configured"])
         self.assertEqual("ppa:ondrej/php", status["external_repository"]["ppa"])
-        service._version_status.assert_called_with("8.5", False, False)
+        service._version_status.assert_called_with("8.3", True, True)
 
     def test_install_version_requires_verified_managed_socket(self):
         service = PHPDependencyService()

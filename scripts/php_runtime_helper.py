@@ -153,6 +153,15 @@ def package_installed(package: str) -> bool:
     return result.returncode == 0 and result.stdout.startswith("ii")
 
 
+def has_apt_candidate(package: str) -> bool:
+    result = run(["apt-cache", "policy", package], timeout=30)
+    for line in result.stdout.splitlines():
+        if line.strip().startswith("Candidate:"):
+            candidate = line.split(":", 1)[1].strip()
+            return bool(candidate and candidate != "(none)")
+    return False
+
+
 def apt_candidate(package: str) -> str:
     result = run(["apt-cache", "policy", package], timeout=30)
     for line in result.stdout.splitlines():
@@ -360,13 +369,18 @@ def install_version(data: dict[str, Any]) -> dict[str, Any]:
     state = load_state()
     fpm_package = f"php{item_version}-fpm"
     cli_package = f"php{item_version}-cli"
-    extension_packages = [f"php{item_version}-{name}" for name in SITE_EXTENSION_NAMES]
-    packages = [fpm_package, cli_package, *extension_packages]
     if package_installed(fpm_package) and item_version not in state:
         fail(f"PHP {item_version} is installed outside SRV Panel and cannot be adopted automatically.")
     refresh_apt()
-    for package in packages:
-        apt_candidate(package)
+    if not has_apt_candidate(fpm_package):
+        fail(f"PHP {item_version} (package {fpm_package}) is unavailable from this server's configured APT repositories.")
+    packages = [fpm_package]
+    if has_apt_candidate(cli_package):
+        packages.append(cli_package)
+    for name in SITE_EXTENSION_NAMES:
+        ext_pkg = f"php{item_version}-{name}"
+        if has_apt_candidate(ext_pkg):
+            packages.append(ext_pkg)
     print(f"==> Installing PHP {item_version}-FPM and the panel extension baseline...", file=sys.stderr)
     run(["apt-get", "install", "-y", "--no-install-recommends", *packages], timeout=900)
     run(["systemctl", "enable", "--now", f"php{item_version}-fpm"], timeout=90)
