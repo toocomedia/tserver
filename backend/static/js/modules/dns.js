@@ -147,11 +147,11 @@ window.runDnsDiagnostics = async function(domain) {
       heroTitle.textContent = "Action Required: DNS Issue Detected";
     }
     heroDesc.textContent = data.summary;
-    // Render Steps in clean minimal rows (no bulky cards, no window overflow)
+    // Render step check rows — icon + title + badge, summary below
     stepsList.innerHTML = "";
     (data.steps || []).forEach((step) => {
       const row = document.createElement("div");
-      row.style.cssText = "display:flex; flex-direction:column; gap:4px; padding:10px 0; border-bottom:1px solid var(--color-line); width:100%; box-sizing:border-box;";
+      row.style.cssText = "padding:12px 0; border-bottom:1px solid var(--color-line); display:flex; flex-direction:column; gap:5px;";
 
       const badgeClass = step.status === "pass" ? "badge--success" : (step.status === "warn" ? "badge--warning" : "badge--danger");
       const badgeLabel = step.status === "pass" ? "Pass" : (step.status === "warn" ? "Warn" : "Fail");
@@ -162,25 +162,15 @@ window.runDnsDiagnostics = async function(domain) {
         ? `<path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>`
         : `<path d="M18 6L6 18M6 6l12 12" stroke-linecap="round" stroke-linejoin="round"/>`;
 
-      // Clamp long technical summaries (DNSSEC sigs, glue records, etc.) to avoid text walls
-      const summary = step.summary || "";
-      const isLong = summary.length > 120;
-      const shortText = isLong ? summary.slice(0, 120).trimEnd() + "…" : summary;
-
-      const summaryHtml = isLong
-        ? `<span class="diag-s-short" style="display:block;">${shortText} <button type="button" onclick="var r=this.closest('[data-diag-row]'); r.querySelector('.diag-s-full').style.display='block'; this.parentNode.style.display='none';" style="background:none;border:none;color:var(--color-accent,#60a5fa);font-size:11px;cursor:pointer;padding:0;font-weight:600;">Show more</button></span><span class="diag-s-full" style="display:none; font-family:ui-monospace,monospace; font-size:10.5px; background:var(--color-bg); padding:6px 8px; border-radius:4px; max-height:80px; overflow-y:auto; word-break:break-all; white-space:pre-wrap; line-height:1.4; margin-top:2px; color:var(--color-muted);">${summary}</span>`
-        : shortText;
-
-      row.setAttribute("data-diag-row", "");
       row.innerHTML = `
-        <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:8px;">
-          <div style="display:flex; align-items:flex-start; gap:7px; font-weight:600; font-size:13px; min-width:0; flex:1;">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${iconColor}" stroke-width="2.5" style="flex-shrink:0; margin-top:1px;">${iconPath}</svg>
-            <span style="word-break:break-word; overflow-wrap:anywhere; line-height:1.4;">${step.title}</span>
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; min-width:0;">
+          <div style="display:flex; align-items:center; gap:6px; font-weight:600; font-size:13px; min-width:0; flex:1;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="${iconColor}" stroke-width="2.5" style="flex-shrink:0;">${iconPath}</svg>
+            <span style="min-width:0;">${step.title}</span>
           </div>
-          <span class="badge ${badgeClass}" style="font-size:9px; padding:2px 6px; flex-shrink:0; margin-top:1px;">${badgeLabel}</span>
+          <span class="badge ${badgeClass}" style="font-size:9px; padding:2px 7px; flex-shrink:0;">${badgeLabel}</span>
         </div>
-        <div style="font-size:12px; color:var(--color-muted); margin-left:21px; line-height:1.4;">${summaryHtml}</div>
+        <div style="font-size:11.5px; color:var(--color-muted); line-height:1.45; padding-left:19px; word-break:break-word; overflow-wrap:anywhere;">${step.summary || ""}</div>
       `;
       stepsList.appendChild(row);
     });
