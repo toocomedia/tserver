@@ -10,6 +10,7 @@
   let activeTasksCache = [];
   let historyTasksCache = [];
   let isDrawerOpen = false;
+  const openLogTaskIds = new Set();
 
   const getBackdrop = () => document.getElementById('task-drawer-backdrop');
   const getHeaderBtn = () => document.getElementById('header-task-btn');
@@ -71,6 +72,7 @@
     body.innerHTML = list.map((task) => {
       const statusTone = task.status === 'succeeded' ? 'succeeded' : task.status === 'failed' ? 'failed' : task.status === 'cancelled' ? 'cancelled' : 'running';
       const isRunning = task.status === 'running';
+      const isLogOpen = openLogTaskIds.has(task.id);
       const logs = (task.logs || []).join('\n');
       
       return `
@@ -104,11 +106,15 @@
           </div>
 
           ${logs ? `
-            <div class="task-item__terminal">${escapeHtml(logs)}</div>
+            <div class="task-item__terminal ${isLogOpen ? 'is-open' : ''}">${escapeHtml(logs)}</div>
           ` : ''}
         </div>
       `;
     }).join('');
+
+    body.querySelectorAll('.task-item__terminal.is-open').forEach((term) => {
+      term.scrollTop = term.scrollHeight;
+    });
   }
 
   function updateHeaderBadge(runningCount) {
@@ -213,12 +219,17 @@
   window.toggleTaskLogs = function (btn) {
     const item = btn.closest('.task-item');
     if (!item) return;
+    const taskId = item.dataset.taskId;
     const term = item.querySelector('.task-item__terminal');
-    if (term) {
-      term.classList.toggle('is-open');
-      if (term.classList.contains('is-open')) {
-        term.scrollTop = term.scrollHeight;
-      }
+    if (!term || !taskId) return;
+
+    if (openLogTaskIds.has(taskId)) {
+      openLogTaskIds.delete(taskId);
+      term.classList.remove('is-open');
+    } else {
+      openLogTaskIds.add(taskId);
+      term.classList.add('is-open');
+      term.scrollTop = term.scrollHeight;
     }
   };
 

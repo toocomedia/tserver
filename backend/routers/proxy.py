@@ -177,31 +177,34 @@ async def proxy_create_submit(
         full_dom = hostname if mode == "external" else f"{subdomain}.{resolved_domain_id}"
         async def _run_create_proxy(task_rec):
             task_rec.add_log(f"Setting up proxy routing for {target_ip}:{target_port}...")
-            if mode == "external":
-                p = await proxy_service.create_external_proxy(
-                    db,
-                    hostname=hostname,
-                    target_ip=target_ip,
-                    target_port=target_port,
-                    protocol=protocol,
-                    enable_ssl=enable_ssl,
-                    cache_enabled=cache_enabled,
-                    cache_ttl_minutes=cache_ttl_minutes,
-                    cache_auto_clear_hours=cache_auto_clear_hours,
-                )
-            else:
-                p = await proxy_service.create_proxy(
-                    db,
-                    domain_id=resolved_domain_id,
-                    subdomain=subdomain,
-                    target_ip=target_ip,
-                    target_port=target_port,
-                    protocol=protocol,
-                    enable_ssl=enable_ssl,
-                    cache_enabled=cache_enabled,
-                    cache_ttl_minutes=cache_ttl_minutes,
-                    cache_auto_clear_hours=cache_auto_clear_hours,
-                )
+            from database import AsyncSessionLocal
+            async with AsyncSessionLocal() as bg_db:
+                if mode == "external":
+                    p = await proxy_service.create_external_proxy(
+                        bg_db,
+                        hostname=hostname,
+                        target_ip=target_ip,
+                        target_port=target_port,
+                        protocol=protocol,
+                        enable_ssl=enable_ssl,
+                        cache_enabled=cache_enabled,
+                        cache_ttl_minutes=cache_ttl_minutes,
+                        cache_auto_clear_hours=cache_auto_clear_hours,
+                    )
+                else:
+                    p = await proxy_service.create_proxy(
+                        bg_db,
+                        domain_id=resolved_domain_id,
+                        subdomain=subdomain,
+                        target_ip=target_ip,
+                        target_port=target_port,
+                        protocol=protocol,
+                        enable_ssl=enable_ssl,
+                        cache_enabled=cache_enabled,
+                        cache_ttl_minutes=cache_ttl_minutes,
+                        cache_auto_clear_hours=cache_auto_clear_hours,
+                    )
+                await bg_db.commit()
             task_rec.add_log("Proxy configuration generated and verified.")
             return True, f"Proxy {p.full_domain} created."
 
@@ -282,8 +285,11 @@ async def proxy_delete(
     if wants_json(request):
         async def _run_delete_proxy(task_rec):
             task_rec.add_log(f"Removing Nginx configs and caches for {proxy_label}...")
-            await proxy_service.delete_proxy(db, proxy_id)
-            task_rec.add_log("Proxy deleted successfully.")
+            from database import AsyncSessionLocal
+            async with AsyncSessionLocal() as bg_db:
+                await proxy_service.delete_proxy(bg_db, proxy_id)
+                await bg_db.commit()
+            task_rec.add_log(f"Proxy {proxy_label} deleted successfully.")
             return True, f"Proxy {proxy_label} deleted."
 
         task = await task_manager_service.spawn(

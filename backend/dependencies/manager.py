@@ -51,13 +51,14 @@ class DependencyManager:
         if service is None:
             return None
         cached_status = getattr(service, "get_cached_status", None)
-        status = (
+        raw_status = (
             cached_status()
             if cached and cached_status is not None
             else service.get_status(force=force)
         )
+        status = dict(raw_status) if isinstance(raw_status, dict) else {}
         state = component_state_store.get("dependency", dependency_id)
-        status.update(self._metadata[dependency_id])
+        status.update(self._metadata.get(dependency_id, {}))
         icon = str(status.get("icon") or "")
         status["icon"] = (
             f"/dependencies/assets/{dependency_id}"
@@ -128,9 +129,9 @@ class DependencyManager:
             state.operation
             if state.operation != "idle"
             else (
-                status["state"]
-                if status["healthy"]
-                else ("disabled" if not state.desired_enabled else status["state"])
+                status.get("state", "unknown")
+                if status.get("healthy")
+                else ("disabled" if not state.desired_enabled else status.get("state", "unknown"))
             )
         )
         return status

@@ -201,14 +201,17 @@ async def domains_create(
     if wants_json(request):
         async def _run_create(task_rec):
             task_rec.add_log(f"Creating domain records for {name}...")
-            dom = await domain_service.create(
-                db,
-                name,
-                project_type=project_type,
-                dns_mode=dns_mode,
-                parent_domain=clean_parent,
-            )
-            task_rec.add_log("Domain records created successfully.")
+            from database import AsyncSessionLocal
+            async with AsyncSessionLocal() as bg_db:
+                dom = await domain_service.create(
+                    bg_db,
+                    name,
+                    project_type=project_type,
+                    dns_mode=dns_mode,
+                    parent_domain=clean_parent,
+                )
+                await bg_db.commit()
+            task_rec.add_log(f"Domain {name} records created successfully.")
             return True, f"Domain {name} created."
 
         task = await task_manager_service.spawn(
@@ -325,8 +328,11 @@ async def domains_delete(
     if wants_json(request):
         async def _run_delete(task_rec):
             task_rec.add_log(f"Removing Nginx vhosts, DNS records, and files for {domain_name}...")
-            await domain_service.delete(db, domain_id)
-            task_rec.add_log("Domain deleted successfully.")
+            from database import AsyncSessionLocal
+            async with AsyncSessionLocal() as bg_db:
+                await domain_service.delete(bg_db, domain_id)
+                await bg_db.commit()
+            task_rec.add_log(f"Domain {domain_name} deleted successfully.")
             return True, f"Domain {domain_name} deleted."
 
         task = await task_manager_service.spawn(

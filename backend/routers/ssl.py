@@ -240,10 +240,13 @@ async def ssl_issue_submit(
     if is_json_request:
         async def _run_issue_ssl(task_rec):
             task_rec.add_log(f"Requesting Let's Encrypt SSL certificate for {full_domain}...")
-            cert = await ssl_service.issue_cert(
-                db, resolved_domain_id, full_domain, include_www, auto_renew
-            )
-            task_rec.add_log("SSL certificate issued and Nginx reloaded successfully.")
+            from database import AsyncSessionLocal
+            async with AsyncSessionLocal() as bg_db:
+                cert = await ssl_service.issue_cert(
+                    bg_db, resolved_domain_id, full_domain, include_www, auto_renew
+                )
+                await bg_db.commit()
+            task_rec.add_log(f"SSL certificate for {cert.full_domain} issued and Nginx reloaded successfully.")
             return True, f"SSL Certificate for {cert.full_domain} issued."
 
         task = await task_manager_service.spawn(

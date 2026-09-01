@@ -43,12 +43,8 @@
       const action = form.action || '';
       const isPluginAction = action.includes('/plugin-manager/api/');
       const isDepAction = action.includes('/api/dependencies/') && (action.includes('/install') || action.includes('/update') || action.includes('/toggle'));
-      const isDomainAction = action.includes('/domains/create') || (action.includes('/domains/') && action.includes('/delete'));
-      const isProxyAction = action.includes('/proxy/create') || (action.includes('/proxy/') && action.includes('/delete'));
-      const isSslAction = action.includes('/ssl/issue') || (action.includes('/ssl/') && (action.includes('/renew') || action.includes('/revoke')));
-      const isSystemAction = action.includes('/api/system/memory/');
 
-      if (!isPluginAction && !isDepAction && !isDomainAction && !isProxyAction && !isSslAction && !isSystemAction) return;
+      if (!isPluginAction && !isDepAction) return;
 
       // Skip search / check queries
       if (action.includes('/check') || action.includes('/catalog-view') || action.includes('/runtime-view')) return;
@@ -115,16 +111,6 @@
       const phpRuntime = document.querySelector('[data-php-runtime]');
       if (phpRuntime && typeof window.loadRuntime === 'function') {
         window.loadRuntime();
-      }
-
-      // 3. Plugins status refresh (reload catalog if available)
-      const pluginGrid = document.querySelector('.plugin-grid');
-      if (pluginGrid && window.location.pathname.startsWith('/plugin')) {
-        // Soft reload after 600ms if on plugins page to sync cards
-        setTimeout(() => {
-          if (document.hidden) return;
-          window.location.reload();
-        }, 1200);
       }
     });
   }
