@@ -3,17 +3,15 @@
   <div class="delete-drawer" id="delete-drawer">
     <div class="delete-drawer__inner">
       <div class="delete-drawer__main">
-        <div class="delete-drawer__badge-icon">
-          <i data-lucide="alert-triangle"></i>
-        </div>
+        <i data-lucide="alert-triangle" class="delete-drawer__icon"></i>
         <div class="delete-drawer__details">
-          <h2 id="delete-drawer-title" class="delete-drawer__title" data-delete-drawer-title>{{ _('confirm_delete') }}</h2>
-          <div class="delete-drawer__message-line">
-            <span class="delete-drawer__item-highlight" data-delete-drawer-item-box hidden>
+          <h3 id="delete-drawer-title" class="delete-drawer__title" data-delete-drawer-title>{{ _('confirm_delete') }}</h3>
+          <p class="delete-drawer__desc">
+            <span class="delete-drawer__item-tag" data-delete-drawer-item-box hidden>
               <span data-delete-drawer-item></span>
             </span>
-            <span id="delete-drawer-msg-text" class="delete-drawer__msg-text" data-delete-drawer-message>{{ _('delete_warning_permanent') }}</span>
-          </div>
+            <span id="delete-drawer-msg-text" data-delete-drawer-message>{{ _('delete_warning_permanent') }}</span>
+          </p>
           <div class="delete-drawer__extra" data-delete-drawer-extra hidden></div>
         </div>
       </div>

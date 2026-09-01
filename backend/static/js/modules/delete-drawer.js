@@ -2,19 +2,18 @@
  * delete-drawer.js — Shared Full-Width Bottom Delete Window Component
  * Features:
  * - Edge-to-edge full-width bottom bar (25% height)
- * - 2.5-second continuous hover activation timer with visual fill progress
- * - Zero numbers/digits displayed
- * - Touch press-and-hold fallback for mobile devices
+ * - 5-second automatic activation timer starting when window opens
+ * - Smooth progress bar filling over 5 seconds (no countdown numbers/digits displayed)
  * - Programmatic API (window.openDeleteDrawer) & declarative triggers
  */
 
 (function () {
   'use strict';
 
-  let hoverTimer = null;
-  let hoverStartTime = null;
+  let timerId = null;
+  let timerStartTime = null;
   let currentConfirmCallback = null;
-  const HOVER_DURATION_MS = 2500; // 2.5 seconds hover to unlock
+  const TIMER_DURATION_MS = 5000; // 5 seconds wait on window show
 
   const getBackdrop = () => document.getElementById('delete-drawer-backdrop');
   const getDrawer = () => document.getElementById('delete-drawer');
@@ -25,17 +24,20 @@
   const getExtraEl = () => document.querySelector('[data-delete-drawer-extra]');
   const getConfirmBtn = () => document.getElementById('delete-drawer-confirm-btn');
 
-  function resetHoverState(btn) {
-    if (hoverTimer) {
-      cancelAnimationFrame(hoverTimer);
-      hoverTimer = null;
+  function clearTimer() {
+    if (timerId) {
+      cancelAnimationFrame(timerId);
+      timerId = null;
     }
-    hoverStartTime = null;
+    timerStartTime = null;
+  }
 
+  function resetTimerState(btn) {
+    clearTimer();
     if (!btn) btn = getConfirmBtn();
     if (!btn) return;
 
-    btn.classList.remove('is-hovering', 'is-unlocked');
+    btn.classList.remove('is-unlocked');
     btn.classList.add('is-locked');
     btn.setAttribute('aria-disabled', 'true');
 
@@ -45,57 +47,45 @@
     }
   }
 
-  function startHoverProgress(btn) {
-    if (!btn || btn.classList.contains('is-unlocked')) return;
+  function startActivationTimer(btn) {
+    if (!btn) return;
+    resetTimerState(btn);
 
-    if (hoverTimer) {
-      cancelAnimationFrame(hoverTimer);
-    }
-
-    btn.classList.add('is-hovering');
     const progressEl = btn.querySelector('[data-delete-drawer-progress]');
-    hoverStartTime = performance.now();
+    timerStartTime = performance.now();
 
     function step(timestamp) {
-      const elapsed = timestamp - hoverStartTime;
-      const pct = Math.min(100, (elapsed / HOVER_DURATION_MS) * 100);
+      const elapsed = timestamp - timerStartTime;
+      const pct = Math.min(100, (elapsed / TIMER_DURATION_MS) * 100);
 
       if (progressEl) {
         progressEl.style.width = `${pct}%`;
       }
 
-      if (elapsed >= HOVER_DURATION_MS) {
-        // Successfully unlocked!
-        btn.classList.remove('is-locked', 'is-hovering');
+      if (elapsed >= TIMER_DURATION_MS) {
+        // Unlock button!
+        btn.classList.remove('is-locked');
         btn.classList.add('is-unlocked');
         btn.removeAttribute('aria-disabled');
         if (progressEl) progressEl.style.width = '100%';
-        hoverTimer = null;
+        timerId = null;
         if (navigator.vibrate) {
           try { navigator.vibrate(35); } catch (_) {}
         }
       } else {
-        hoverTimer = requestAnimationFrame(step);
+        timerId = requestAnimationFrame(step);
       }
     }
 
-    hoverTimer = requestAnimationFrame(step);
-  }
-
-  function stopHoverProgress(btn) {
-    if (!btn) btn = getConfirmBtn();
-    if (!btn) return;
-
-    if (!btn.classList.contains('is-unlocked')) {
-      resetHoverState(btn);
-    }
+    timerId = requestAnimationFrame(step);
   }
 
   function closeDeleteDrawer() {
     const backdrop = getBackdrop();
     if (!backdrop) return;
     backdrop.classList.add('hidden');
-    resetHoverState();
+    clearTimer();
+    resetTimerState();
     currentConfirmCallback = null;
   }
 
@@ -158,18 +148,6 @@
     confirmBtn.parentNode.replaceChild(freshBtn, confirmBtn);
     confirmBtn = freshBtn;
 
-    // Reset button hover states
-    resetHoverState(confirmBtn);
-
-    // Bind Pointer & Mouse & Touch events for reliable hover progress unlocking
-    confirmBtn.addEventListener('mouseenter', () => startHoverProgress(confirmBtn));
-    confirmBtn.addEventListener('mouseleave', () => stopHoverProgress(confirmBtn));
-    confirmBtn.addEventListener('pointerenter', () => startHoverProgress(confirmBtn));
-    confirmBtn.addEventListener('pointerleave', () => stopHoverProgress(confirmBtn));
-    confirmBtn.addEventListener('touchstart', () => startHoverProgress(confirmBtn), { passive: true });
-    confirmBtn.addEventListener('touchend', () => stopHoverProgress(confirmBtn), { passive: true });
-    confirmBtn.addEventListener('touchcancel', () => stopHoverProgress(confirmBtn), { passive: true });
-
     // Show drawer
     backdrop.classList.remove('hidden');
 
@@ -178,12 +156,15 @@
       lucide.createIcons({ root: drawer || backdrop });
     }
 
+    // Start 5-second automatic timer immediately when window opens
+    startActivationTimer(confirmBtn);
+
     // Save action callback
     currentConfirmCallback = async (e) => {
       e.preventDefault();
       e.stopPropagation();
 
-      // If clicked while locked, give quick unlock or require hover
+      // Block click if still locked
       if (!confirmBtn.classList.contains('is-unlocked')) {
         return;
       }

@@ -1,6 +1,6 @@
 /* ============================================================
    FULL-WIDTH MINIMAL DELETE BOTTOM WINDOW (delete_drawer.css)
-   Full-width edge-to-edge 25% height bottom bar with hover timer
+   Full-width edge-to-edge bottom bar with automatic 5s activation timer
    ============================================================ */
 
 .delete-drawer-backdrop {
@@ -24,7 +24,7 @@
 .delete-drawer {
   position: relative;
   width: 100%;
-  min-height: 25vh;
+  min-height: 20vh;
   margin: 0;
   background: var(--color-surface, #14171f);
   border: none;
@@ -54,35 +54,26 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 36px;
-  padding: 32px 40px;
+  gap: 32px;
+  padding: 24px 36px;
 }
 
 /* Left Content Section */
 .delete-drawer__main {
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 16px;
   flex: 1;
   min-width: 0;
 }
 
-.delete-drawer__badge-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 52px;
-  height: 52px;
-  border-radius: 12px;
-  background: color-mix(in srgb, var(--color-danger) 15%, transparent);
-  color: var(--color-danger);
+.delete-drawer__icon {
+  color: var(--color-danger, #ef4444);
+  width: 28px;
+  height: 28px;
   flex-shrink: 0;
-}
-
-.delete-drawer__badge-icon svg,
-.delete-drawer__badge-icon i {
-  width: 26px;
-  height: 26px;
+  background: transparent;
+  border: none;
 }
 
 .delete-drawer__details {
@@ -91,44 +82,42 @@
 }
 
 .delete-drawer__title {
-  margin: 0 0 6px 0;
-  font-size: 1.35rem;
-  font-weight: 700;
+  margin: 0 0 3px 0;
+  font-size: 1.15rem;
+  font-weight: 600;
   color: var(--color-text);
   line-height: 1.25;
 }
 
-.delete-drawer__message-line {
+.delete-drawer__desc {
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--color-muted);
+  line-height: 1.45;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   flex-wrap: wrap;
 }
 
-.delete-drawer__item-highlight {
+.delete-drawer__item-tag {
   display: inline-block;
   font-family: var(--font-mono, monospace);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--color-danger);
-  background: color-mix(in srgb, var(--color-danger) 14%, transparent);
-  padding: 2px 8px;
-  border-radius: 6px;
-  max-width: 380px;
+  background: color-mix(in srgb, var(--color-danger) 12%, transparent);
+  padding: 1px 7px;
+  border-radius: 4px;
+  max-width: 320px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.delete-drawer__msg-text {
-  font-size: 14.5px;
-  color: var(--color-muted);
-  line-height: 1.5;
-}
-
 .delete-drawer__extra {
-  margin-top: 10px;
-  font-size: 13.5px;
+  margin-top: 8px;
+  font-size: 13px;
   color: var(--color-muted);
 }
 
@@ -136,34 +125,34 @@
 .delete-drawer__actions {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
   flex-shrink: 0;
 }
 
 .delete-drawer__btn {
-  min-width: 140px;
-  height: 50px;
-  font-size: 15px;
+  min-width: 128px;
+  height: 44px;
+  font-size: 14px;
   font-weight: 600;
-  border-radius: 10px;
+  border-radius: 8px;
   border: none;
   outline: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0 24px;
+  padding: 0 20px;
   cursor: pointer;
   user-select: none;
   transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .delete-drawer__cancel-btn {
-  background: color-mix(in srgb, var(--color-text) 10%, transparent);
+  background: color-mix(in srgb, var(--color-text) 8%, transparent);
   color: var(--color-text);
 }
 
 .delete-drawer__cancel-btn:hover {
-  background: color-mix(in srgb, var(--color-text) 18%, transparent);
+  background: color-mix(in srgb, var(--color-text) 14%, transparent);
 }
 
 .delete-drawer__confirm-btn {
@@ -202,18 +191,20 @@
 
 .delete-drawer__btn-content svg,
 .delete-drawer__btn-content i {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
 }
 
-.delete-drawer__confirm-btn.is-hovering {
-  box-shadow: 0 0 16px color-mix(in srgb, var(--color-danger, #ef4444) 40%, transparent);
+.delete-drawer__confirm-btn.is-locked {
+  cursor: not-allowed;
+  opacity: 0.85;
 }
 
 .delete-drawer__confirm-btn.is-unlocked {
   background: var(--color-danger, #ef4444);
   color: #ffffff;
-  box-shadow: 0 0 24px color-mix(in srgb, var(--color-danger, #ef4444) 70%, transparent);
+  cursor: pointer;
+  box-shadow: 0 0 20px color-mix(in srgb, var(--color-danger, #ef4444) 65%, transparent);
 }
 
 /* Responsive */
@@ -225,8 +216,8 @@
   .delete-drawer__inner {
     flex-direction: column;
     align-items: stretch;
-    padding: 20px;
-    gap: 18px;
+    padding: 18px 20px;
+    gap: 16px;
   }
 
   .delete-drawer__actions {
