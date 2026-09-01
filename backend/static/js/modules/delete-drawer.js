@@ -14,7 +14,7 @@
   let hoverTimer = null;
   let hoverStartTime = null;
   let currentConfirmCallback = null;
-  const HOVER_DURATION_MS = 950; // ~1s hover to unlock
+  const HOVER_DURATION_MS = 5000; // 5s hover to unlock
 
   const getBackdrop = () => document.getElementById('delete-drawer-backdrop');
   const getDrawer = () => document.getElementById('delete-drawer');
