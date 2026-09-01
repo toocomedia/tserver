@@ -128,6 +128,17 @@ const panel = {
     });
     return this.post(form.action, data);
   },
+
+  async submitAsyncForm(endpoint, payload, redirectUrl) {
+    const res = await this.post(endpoint, payload);
+    if (res.success || res.status === "running" || res.status === "succeeded" || res.task_id) {
+      try { sessionStorage.setItem("open_task_drawer", "auto"); } catch (e) {}
+      if (redirectUrl) {
+        window.location.href = redirectUrl;
+      }
+    }
+    return res;
+  },
 };
 
 /**
@@ -702,3 +713,4 @@ window.showSkeleton = showSkeleton;
 window.confirmAction = confirmAction;
 window.initLazyImageSkeletons = initLazyImageSkeletons;
 window.convertSubdomainToRecord = convertSubdomainToRecord;
+window.submitAsyncForm = panel.submitAsyncForm.bind(panel);

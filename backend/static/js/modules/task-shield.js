@@ -40,7 +40,33 @@
       const form = e.target;
       if (!(form instanceof HTMLFormElement)) return;
 
+      const asyncRedirect = form.getAttribute('data-async-redirect');
       const action = form.action || '';
+
+      if (asyncRedirect) {
+        e.preventDefault();
+        e.stopPropagation();
+        const submitBtn = form.querySelector('button[type="submit"]');
+        if (submitBtn) {
+          submitBtn.disabled = true;
+          submitBtn.classList.add('is-loading');
+        }
+        try {
+          const payload = Object.fromEntries(new FormData(form).entries());
+          form.querySelectorAll('input[type=checkbox]').forEach((cb) => {
+            payload[cb.name] = cb.checked;
+          });
+          await window.submitAsyncForm(action, payload, asyncRedirect);
+        } catch (err) {
+          if (window.toast) window.toast(err.message || 'Operation failed', 'danger');
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.classList.remove('is-loading');
+          }
+        }
+        return;
+      }
+
       const isPluginAction = action.includes('/plugin-manager/api/');
       const isDepAction = action.includes('/api/dependencies/') && (action.includes('/install') || action.includes('/update') || action.includes('/toggle'));
 

@@ -439,21 +439,7 @@ form.addEventListener('submit', async (e) => {
       parent_domain: document.getElementById('parent-domain-input')?.value || '',
     };
 
-    const res = await panel.post('/domains/create', payload);
-    if (res.success || res.status === 'running') {
-      if (typeof window.openTaskDrawer === 'function') {
-        window.openTaskDrawer('active');
-      }
-      if (typeof window.refreshTasks === 'function') {
-        window.refreshTasks();
-      }
-      if (typeof window.toast === 'function') {
-        window.toast(`Domain ${val} deployment started in background...`, 'success');
-      }
-      setTimeout(() => {
-        window.location.href = '/domains/';
-      }, 350);
-    }
+    await panel.submitAsyncForm('/domains/create', payload, '/domains/');
   } catch (err) {
     nameError.textContent = err.message || 'Failed to deploy domain';
     nameError.style.display = 'block';

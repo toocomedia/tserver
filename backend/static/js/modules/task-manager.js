@@ -32,11 +32,23 @@
   function openDrawer(tab) {
     const backdrop = getBackdrop();
     if (!backdrop) return;
-    if (tab) activeTab = tab;
+    if (tab === 'auto') {
+      const running = activeTasksCache.filter((t) => t.status === 'running');
+      activeTab = running.length > 0 ? 'active' : 'history';
+    } else if (tab) {
+      activeTab = tab;
+    }
     backdrop.classList.remove('hidden');
     isDrawerOpen = true;
     updateTabButtons();
-    fetchTasks(true);
+    fetchTasks(true).then(() => {
+      if (tab === 'auto' || !tab) {
+        const running = activeTasksCache.filter((t) => t.status === 'running');
+        activeTab = running.length > 0 ? 'active' : 'history';
+        updateTabButtons();
+        renderTasks();
+      }
+    });
   }
 
   function closeDrawer() {
@@ -375,8 +387,24 @@
       if (e.key === 'Escape' && isDrawerOpen) closeDrawer();
     });
 
-    // Initial check
-    fetchTasks(false);
+    // Check if redirect requested drawer open
+    let shouldAutoOpen = false;
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const flag = sessionStorage.getItem('open_task_drawer') || urlParams.get('open_tasks');
+      if (flag) {
+        shouldAutoOpen = true;
+        sessionStorage.removeItem('open_task_drawer');
+      }
+    } catch (e) {}
+
+    if (shouldAutoOpen) {
+      fetchTasks(true).then(() => {
+        openDrawer('auto');
+      });
+    } else {
+      fetchTasks(false);
+    }
     adjustPolling(false);
   });
 })();
