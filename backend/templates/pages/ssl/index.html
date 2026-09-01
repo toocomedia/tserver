@@ -10,7 +10,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="ssl-page" style="position: relative;">
+<div class="ssl-page">
 
 <!-- SKELETON LOADING OVERLAY -->
 {{ skeleton_overlay('ssl-skeleton', controls=1, tables=[{ 'rows': 4 }]) }}
@@ -179,8 +179,8 @@
 <script src="/static/js/modules/ssl.js?v={{ APP_VERSION }}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-  if (typeof hideSkeleton === 'function') hideSkeleton('ssl-skeleton', 0);
-  else if (typeof window.hideSkeleton === 'function') window.hideSkeleton('ssl-skeleton', 0);
+  if (typeof hideSkeleton === 'function') hideSkeleton('ssl-skeleton');
+  else if (typeof window.hideSkeleton === 'function') window.hideSkeleton('ssl-skeleton');
 
   {% if auto_open_issue %}
   if (typeof openModal === 'function') {
@@ -190,9 +190,9 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function filterSSLTable() {
-  const query = document.getElementById('ssl-search-input').value.toLowerCase().trim();
-  const filter = document.getElementById('ssl-status-filter').value;
-  const rows = document.querySelectorAll('#ssl-table tbody tr[id^="cert-row-"]');
+  const query = (document.getElementById('ssl-search-input')?.value || '').toLowerCase().trim();
+  const filter = document.getElementById('ssl-status-filter')?.value || 'all';
+  const rows = document.querySelectorAll('#ssl-table tbody tr.cert-row-item');
 
   rows.forEach(row => {
     const text = row.textContent.toLowerCase();
@@ -200,16 +200,12 @@ function filterSSLTable() {
     
     let matchesFilter = true;
     if (filter === 'valid') {
-      matchesFilter = row.innerText.includes('Valid') || row.innerText.includes('Issued');
+      matchesFilter = text.includes('valid') || text.includes('issued');
     } else if (filter === 'expiring') {
-      matchesFilter = row.innerText.includes('Expiring') || row.innerText.includes('Expired');
+      matchesFilter = text.includes('expiring') || text.includes('expired');
     }
 
-    if (matchesSearch && matchesFilter) {
-      row.style.display = '';
-    } else {
-      row.style.display = 'none';
-    }
+    row.style.display = (matchesSearch && matchesFilter) ? '' : 'none';
   });
 }
 
@@ -221,7 +217,11 @@ function revokeCert(id, domain) {
         await panel.post(`/ssl/${id}/revoke`);
         toast(`SSL for ${domain} revoked successfully.`, "success");
         const row = document.getElementById(`cert-row-${id}`);
-        if (row) row.remove();
+        if (row) {
+          row.style.transition = "opacity 0.25s ease";
+          row.style.opacity = "0";
+          setTimeout(() => row.remove(), 250);
+        }
         if (typeof window.refreshTasks === 'function') window.refreshTasks();
       } catch (err) {
         toast(err.message || "Failed to revoke SSL.", "danger");

@@ -1,5 +1,7 @@
 {% extends "layout.html" %}
 
+{% from "partials/skeleton_overlay.html" import skeleton_overlay %}
+
 {% block title %}{{ _('errors') }} — {{ PANEL_NAME }}{% endblock %}
 {% block page_title %}{{ _('error_tracker') }}{% endblock %}
 
@@ -12,6 +14,11 @@
 {% endblock %}
 
 {% block content %}
+<div class="errors-page">
+
+<!-- SKELETON LOADING OVERLAY -->
+{{ skeleton_overlay('errors-skeleton', controls=1, tables=[{ 'rows': 4 }]) }}
+<!-- END SKELETON OVERLAY -->
 
 {% if flash_error %}
 <div class="alert alert--danger mb-lg" id="alert-error">{{ _(flash_error) }}</div>
@@ -20,60 +27,37 @@
 <div class="alert alert--success mb-lg" id="alert-ok">{{ _(flash_ok) }}</div>
 {% endif %}
 
-<!-- Filters -->
-<div class="section mb-lg" id="error-filters">
-  <div class="section__body">
-    <form method="get" action="/admin/errors/" class="form" id="filter-form">
-      <div class="d-flex gap-sm flex-wrap align-center " style="padding-top: var(--space-md); padding-bottom: var(--space-md);">
-
-        <div class="form-group" style="margin:0; min-width:140px;">
-          <label class="form-label" for="status">{{ _('status') }}</label>
-          <div class="form-select-wrap">
-            <select name="status" id="status" class="form-select" onchange="this.form.submit()">
-              <option value="open" {% if filter_status== 'open' %}selected{% endif %}>{{ _('open') }} ({{ open_count }})</option>
-              <option value="resolved" {% if filter_status== 'resolved' %}selected{% endif %}>{{ _('resolved') }}</option>
-              <option value="all" {% if filter_status== 'all' %}selected{% endif %}>{{ _('all') }}</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="form-group" style="margin:0; min-width:140px;">
-          <label class="form-label" for="source">{{ _('source') }}</label>
-          <div class="form-select-wrap">
-            <select name="source" id="source" class="form-select" onchange="this.form.submit()">
-              <option value="">{{ _('all_sources') }}</option>
-              {% for s in sources %}
-              <option value="{{ s }}" {% if filter_source== s %}selected{% endif %}>{{ s }}</option>
-              {% endfor %}
-            </select>
-          </div>
-        </div>
-
-        <div class="form-group" style="margin:0; flex:1; min-width:180px;">
-          <label class="form-label" for="q">{{ _('search') }}</label>
-          <input class="form-input" type="search" name="q" id="q" value="{{ filter_q }}" placeholder="message or operation…">
-        </div>
-
-        <div class="form-group" style="margin:0; align-self:flex-end;">
-          <button type="submit" class="btn btn--secondary btn--sm">{{ _('filter') }}</button>
-        </div>
-
-      </div>
-    </form>
+<!-- Action Toolbar (Search & Filters) -->
+<form method="get" action="/admin/errors/" class="action-toolbar" id="filter-form">
+  <div class="action-toolbar__search">
+    <input type="search" name="q" id="error-search-input" class="form-control" placeholder="Search errors by message or operation..." value="{{ filter_q }}" onkeyup="filterErrorsTable()">
   </div>
-</div>
+  <div class="action-toolbar__group">
+    <select name="status" id="error-status-filter" class="form-control" style="width: 140px;" onchange="this.form.submit()">
+      <option value="open" {% if filter_status in ['open', 'unresolved'] %}selected{% endif %}>{{ _('open') }} ({{ open_count }})</option>
+      <option value="resolved" {% if filter_status == 'resolved' %}selected{% endif %}>{{ _('resolved') }}</option>
+      <option value="all" {% if filter_status == 'all' %}selected{% endif %}>{{ _('all') }}</option>
+    </select>
+    <select name="source" id="error-source-filter" class="form-control" style="width: 140px;" onchange="this.form.submit()">
+      <option value="">{{ _('all_sources') }}</option>
+      {% for s in sources %}
+      <option value="{{ s }}" {% if filter_source == s %}selected{% endif %}>{{ s }}</option>
+      {% endfor %}
+    </select>
+  </div>
+</form>
 
 {% if events %}
 <div class="table-wrap">
   <table class="table" id="errors-table">
     <colgroup>
       <col style="width:14%">
+      <col style="width:10%">
+      <col style="width:12%">
+      <col style="width:16%">
+      <col style="width:30%">
+      <col style="width:10%">
       <col style="width:8%">
-      <col style="width:10%">
-      <col style="width:14%">
-      <col style="width:34%">
-      <col style="width:10%">
-      <col style="width:10%">
     </colgroup>
     <thead>
       <tr>
@@ -88,29 +72,31 @@
     </thead>
     <tbody>
       {% for e in events %}
-      <tr id="error-row-{{ e.id }}" class="{% if not e.resolved %}row--active{% endif %}" data-error-id="{{ e.id }}">
+      <tr id="error-row-{{ e.id }}" class="error-row-item" data-error-id="{{ e.id }}">
         <td class="text-small">
           {% if e.created_at %}{{ e.created_at.strftime('%Y-%m-%d %H:%M') }}{% else %}—{% endif %}
         </td>
         <td>
           {% if e.level == 'critical' %}
-            <span class="badge badge--error">{{ e.level }}</span>
+            <span class="badge-minimal badge-minimal--error">{{ e.level }}</span>
           {% elif e.level == 'warning' %}
-            <span class="badge badge--neutral">{{ e.level }}</span>
+            <span class="badge-minimal badge-minimal--neutral">{{ e.level }}</span>
           {% else %}
-            <span class="badge badge--error">{{ e.level }}</span>
+            <span class="badge-minimal badge-minimal--error">{{ e.level }}</span>
           {% endif %}
         </td>
         <td class="text-small">{{ e.source }}</td>
-        <td class="text-small" style="font-weight:600;">{{ e.operation }}</td>
-        <td class="text-small" title="{{ e.message }}">
+        <td>
+          <span class="table-title">{{ e.operation }}</span>
+        </td>
+        <td class="text-small text-muted" title="{{ e.message }}">
           {{ e.message[:80] }}{% if e.message|length > 80 %}…{% endif %}
         </td>
         <td>
           {% if e.resolved %}
-            <span class="badge badge--ok badge--dot">{{ _('resolved') }}</span>
+            <span class="badge-minimal badge-minimal--active">{{ _('resolved') }}</span>
           {% else %}
-            <span class="badge badge--error badge--dot">{{ _('open') }}</span>
+            <span class="badge-minimal badge-minimal--neutral">{{ _('open') }}</span>
           {% endif %}
         </td>
         <td class="col-actions" style="position:relative;">
@@ -132,14 +118,32 @@
 {% from "partials/empty_state.html" import empty_state %}
 {{ empty_state(
   icon='check-circle-2',
-  title=_('no_errors_recorded') ~ (' (' ~ _('open') ~ ')' if filter_status == 'open' else ''),
+  title=_('no_errors_recorded') ~ (' (' ~ _('open') ~ ')' if filter_status in ['open', 'unresolved'] else ''),
   desc=_('failures_from_domains_dns_ssl_and_proxy_'),
   id='empty-state'
 ) }}
 {% endif %}
-
+</div><!-- /.errors-page -->
 {% endblock %}
 
 {% block scripts %}
 <script src="/static/js/modules/errors.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  if (typeof hideSkeleton === 'function') hideSkeleton('errors-skeleton');
+  else if (typeof window.hideSkeleton === 'function') window.hideSkeleton('errors-skeleton');
+});
+
+function filterErrorsTable() {
+  const query = (document.getElementById('error-search-input')?.value || '').toLowerCase().trim();
+  const rows = document.querySelectorAll('.error-row-item');
+  if (!rows || rows.length === 0) return;
+
+  rows.forEach(row => {
+    const text = row.textContent.toLowerCase();
+    const matchesSearch = !query || text.includes(query);
+    row.style.display = matchesSearch ? '' : 'none';
+  });
+}
+</script>
 {% endblock %}

@@ -1,6 +1,8 @@
 {% set cert = item.cert %}
 <tr id="cert-row-{{ cert.id }}" class="cert-row-item">
-  <td class="table-title">{{ cert.full_domain }}</td>
+  <td>
+    <span class="table-title">{{ cert.full_domain }}</span>
+  </td>
 
   <td class="text-small">
     {% if cert.expiry_date %}
@@ -24,16 +26,14 @@
   </td>
 
   <td>
-    {% if item.status == 'ok' %}
-      <span class="status-badge status-badge--success">{{ _('valid') }}</span>
+    {% if item.status == 'ok' or item.status == 'issued' %}
+      <span class="badge-minimal badge-minimal--active">{{ _('valid') if item.status == 'ok' else _('issued') }}</span>
     {% elif item.status == 'warning' %}
-      <span class="status-badge status-badge--warning">{{ _('expiring') }}</span>
+      <span class="badge-minimal badge-minimal--neutral">{{ _('expiring') }}</span>
     {% elif item.status == 'expired' %}
-      <span class="status-badge status-badge--danger">{{ _('expired') }}</span>
-    {% elif item.status == 'issued' %}
-      <span class="status-badge status-badge--success">{{ _('issued') }}</span>
+      <span class="badge-minimal badge-minimal--error">{{ _('expired') }}</span>
     {% else %}
-      <span class="status-badge status-badge--success">{{ _('issued') }}</span>
+      <span class="badge-minimal badge-minimal--active">{{ _('issued') }}</span>
     {% endif %}
   </td>
 

@@ -32,7 +32,7 @@ async def errors_index(
 ):
     """List error log events with DB LIMIT + OFFSET pagination."""
     resolved = None
-    if status == "unresolved":
+    if status in ("unresolved", "open"):
         resolved = False
     elif status == "resolved":
         resolved = True
