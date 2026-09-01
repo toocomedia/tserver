@@ -75,15 +75,24 @@
       const isLogOpen = openLogTaskIds.has(task.id);
       const logs = (task.logs || []).join('\n');
       
+      let timeStr = '';
+      if (task.started_at) {
+        const d = new Date(task.started_at * 1000);
+        timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      }
+      
       return `
         <div class="task-item" data-task-id="${escapeHtml(task.id)}">
-          <div class="task-item__top">
-            <div class="task-item__info">
-              <h4 class="task-item__title">${escapeHtml(task.label || task.id)}</h4>
-              <div class="task-item__meta">
-                <span class="task-item__status-pill task-item__status-pill--${statusTone}">${escapeHtml(task.status)}</span>
-                <span>${task.elapsed_seconds || 0}s elapsed</span>
-              </div>
+          <div class="task-item__header-row">
+            <h4 class="task-item__title" title="${escapeHtml(task.label || task.id)}">${escapeHtml(task.label || task.id)}</h4>
+            ${timeStr ? `<span class="task-item__time">${timeStr}</span>` : ''}
+          </div>
+
+          <div class="task-item__meta-row">
+            <div class="task-item__meta">
+              <span class="task-item__status-pill task-item__status-pill--${statusTone}">${escapeHtml(task.status)}</span>
+              ${task.elapsed_seconds !== undefined ? `<span class="task-item__duration">${task.elapsed_seconds}s elapsed</span>` : ''}
+              ${task.category ? `<span class="task-item__category">${escapeHtml(task.category)}</span>` : ''}
             </div>
             ${isRunning && task.can_cancel ? `
               <button type="button" class="task-item__cancel-btn" onclick="window.cancelTask('${escapeHtml(task.id)}')">Cancel</button>
@@ -96,16 +105,13 @@
             </div>
           ` : ''}
 
-          <div class="task-item__footer">
-            ${logs ? `
+          ${logs ? `
+            <div class="task-item__footer">
               <button type="button" class="task-item__log-btn" onclick="window.toggleTaskLogs(this)">
                 <span>Logs (${(task.logs || []).length})</span>
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
               </button>
-            ` : '<span></span>'}
-          </div>
-
-          ${logs ? `
+            </div>
             <div class="task-item__terminal ${isLogOpen ? 'is-open' : ''}">${escapeHtml(logs)}</div>
           ` : ''}
         </div>
