@@ -1,27 +1,24 @@
-<!-- SHARED FULL-WIDTH MINIMAL BOTTOM DELETE WINDOW -->
+<!-- SHARED FULL-WIDTH MINIMAL BOTTOM DELETE WINDOW (OPTION 1: SHARP TWO-TIER BAR) -->
 <div id="delete-drawer-backdrop" class="delete-drawer-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="delete-drawer-title">
   <div class="delete-drawer" id="delete-drawer">
-    <div class="delete-drawer__inner">
-      <div class="delete-drawer__main">
+    <div class="delete-drawer__top">
+      <div class="delete-drawer__left">
         <i data-lucide="alert-triangle" class="delete-drawer__icon"></i>
         <div class="delete-drawer__divider"></div>
-        <div class="delete-drawer__details">
-          <div class="delete-drawer__title-row">
-            <h3 id="delete-drawer-title" class="delete-drawer__title" data-delete-drawer-title>{{ _('confirm_delete') }}</h3>
-            <span class="delete-drawer__item-tag" data-delete-drawer-item-box hidden>
-              <span data-delete-drawer-item></span>
-            </span>
-          </div>
-          <span id="delete-drawer-msg-text" data-delete-drawer-message hidden></span>
-          <div class="delete-drawer__extra" data-delete-drawer-extra hidden></div>
+        <div class="delete-drawer__title-group">
+          <span id="delete-drawer-title" class="delete-drawer__title" data-delete-drawer-title>{{ _('confirm_delete') }}</span>
+          <span class="delete-drawer__item-tag" data-delete-drawer-item-box hidden>
+            <span data-delete-drawer-item></span>
+          </span>
         </div>
+        <span id="delete-drawer-msg-text" data-delete-drawer-message hidden></span>
       </div>
 
       <div class="delete-drawer__actions">
-        <button type="button" class="delete-drawer__btn delete-drawer__cancel-btn" data-delete-drawer-close>
+        <button type="button" class="btn delete-drawer__btn delete-drawer__cancel-btn" data-delete-drawer-close>
           {{ _('cancel') }}
         </button>
-        <button type="button" class="delete-drawer__btn delete-drawer__confirm-btn is-locked" id="delete-drawer-confirm-btn" data-delete-drawer-confirm data-base-label="{{ _('delete') }}">
+        <button type="button" class="btn delete-drawer__btn delete-drawer__confirm-btn is-locked" id="delete-drawer-confirm-btn" data-delete-drawer-confirm data-base-label="{{ _('delete') }}">
           <div class="delete-drawer__progress-fill" data-delete-drawer-progress></div>
           <span class="delete-drawer__btn-content">
             <i data-lucide="trash-2"></i>
@@ -30,5 +27,8 @@
         </button>
       </div>
     </div>
+
+    <!-- Bottom Options Strip (Tier 2: shown when extra options exist) -->
+    <div class="delete-drawer__options-tray" data-delete-drawer-extra hidden></div>
   </div>
 </div>
