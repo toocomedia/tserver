@@ -647,15 +647,16 @@ async def clean_ram_cache():
     if not script_path:
         return {"success": False, "detail": "optimize.sh script not found"}
 
-    task_manager_service.create_task(
+    res = await run(["bash", str(script_path), "clean-ram"])
+    _invalidate_stats_cache()
+    await task_manager_service.record_completed_task(
         category="system",
         action="clean_ram",
         target_id="memory",
         label="Clean System RAM",
+        success=res.success,
+        message="RAM cache cleaned successfully" if res.success else "Failed to clean RAM cache",
     )
-
-    res = await run(["bash", str(script_path), "clean-ram"])
-    _invalidate_stats_cache()
     if res.success:
         try:
             data = json.loads(res.stdout)
@@ -672,15 +673,16 @@ async def clean_swap_cache():
     if not script_path:
         return {"success": False, "detail": "optimize.sh script not found"}
 
-    task_manager_service.create_task(
+    res = await run(["bash", str(script_path), "clean-swap"])
+    _invalidate_stats_cache()
+    await task_manager_service.record_completed_task(
         category="system",
         action="clean_swap",
         target_id="swap",
         label="Clean System Swap",
+        success=res.success,
+        message="Swap cleaned successfully" if res.success else "Failed to purge swap",
     )
-
-    res = await run(["bash", str(script_path), "clean-swap"])
-    _invalidate_stats_cache()
     if res.success:
         try:
             data = json.loads(res.stdout)

@@ -203,6 +203,14 @@ async def dns_add_record(
             name, rtype, content, domain_name
         )
         await dns_service.add_record(domain_name, clean_name, clean_type, clean_content, ttl)
+        await task_manager_service.record_completed_task(
+            category="dns",
+            action="create",
+            target_id=f"{domain_name}:{clean_name}",
+            label=f"Add DNS: {clean_name} ({clean_type})",
+            success=True,
+            message=f"DNS record {clean_name} ({clean_type}) added to {domain_name}.",
+        )
         
         # If AJAX request, return JSON
         if "application/json" in request.headers.get("accept", "") or request.headers.get("x-requested-with") == "XMLHttpRequest":
@@ -227,6 +235,7 @@ async def dns_add_record(
 # ---------------------------------------------------------------
 @router.post("/{domain_name}/records/delete")
 async def dns_delete_record(
+    request: Request,
     domain_name: str,
     name: str = Form(...),
     type: str = Form(...),
@@ -238,10 +247,14 @@ async def dns_delete_record(
         select(Domain).where(Domain.name == domain_name)
     )).scalar_one_or_none()
     if not domain:
+        if "application/json" in request.headers.get("accept", ""):
+            return JSONResponse({"error": "Domain not found"}, status_code=404)
         return RedirectResponse("/dns/", status_code=303)
 
     rtype = type.strip().upper()
     if rtype == "SOA":
+        if "application/json" in request.headers.get("accept", ""):
+            return JSONResponse({"error": "SOA records cannot be deleted"}, status_code=400)
         return RedirectResponse(
             f"/dns/{domain_name}/records?error=SOA+records+cannot+be+deleted",
             status_code=303,
@@ -252,6 +265,16 @@ async def dns_delete_record(
 
     try:
         await dns_service.delete_record(domain_name, clean_name, rtype, content=content)
+        await task_manager_service.record_completed_task(
+            category="dns",
+            action="delete",
+            target_id=f"{domain_name}:{clean_name}",
+            label=f"Delete DNS: {clean_name} ({rtype})",
+            success=True,
+            message=f"DNS record {clean_name} ({rtype}) deleted from {domain_name}.",
+        )
+        if "application/json" in request.headers.get("accept", "") or request.headers.get("x-requested-with") == "XMLHttpRequest":
+            return {"status": "ok", "message": "Record deleted successfully"}
         return RedirectResponse(
             f"/dns/{domain_name}/records?success=Record+deleted",
             status_code=303,
@@ -259,7 +282,8 @@ async def dns_delete_record(
     except Exception as exc:
         logger.warning("Delete record failed: %s", exc)
         error = str(exc.detail) if hasattr(exc, "detail") else str(exc)
-        # Keep query string short for browser URL limits
+        if "application/json" in request.headers.get("accept", ""):
+            return JSONResponse({"error": error}, status_code=400)
         return RedirectResponse(
             f"/dns/{domain_name}/records?error={quote(error[:300])}",
             status_code=303,

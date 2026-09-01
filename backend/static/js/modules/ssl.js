@@ -98,73 +98,9 @@ function initSslIssuePage() {
     });
   }
 
-  // Submit handler: opens Task Manager drawer for live progress
-  let isSubmitting = false;
-  form.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    if (isSubmitting) return;
-
-    updateForm();
-    const opt = select.options[select.selectedIndex];
-    if (!opt || !opt.value) {
-      toast("Please select a valid domain.", "warning");
-      select.focus();
-      return;
-    }
-    
-    isSubmitting = true;
-    if (submitBtn) {
-      submitBtn.disabled = true;
-      submitBtn.classList.add("is-loading");
-    }
-    try {
-      const data = Object.fromEntries(new FormData(form).entries());
-      data.full_domain = opt.value;
-      data.domain_id = opt.getAttribute("data-domain-id") || "";
-      form.querySelectorAll("input[type=checkbox]").forEach((cb) => {
-        data[cb.name] = cb.checked;
-      });
-      
-      await panel.post(form.action, data);
-      
-      // Close drawer modal if open
-      if (typeof closeModal === 'function') {
-        closeModal('issue-ssl-drawer-modal');
-      }
-
-      // Open Task Drawer to show real-time Certbot progress
-      if (typeof window.openTaskDrawer === 'function') {
-        window.openTaskDrawer('active');
-      }
-      if (typeof window.refreshTasks === 'function') {
-        window.refreshTasks();
-      }
-
-      if (window.toast) {
-        window.toast("SSL issuance started in background.", "success");
-      }
-
-      isSubmitting = false;
-      if (submitBtn) {
-        submitBtn.disabled = false;
-        submitBtn.classList.remove("is-loading");
-      }
-
-      // If on standalone /ssl/issue page, navigate to list; if on /ssl/ index drawer, stay live without reload!
-      if (window.location.pathname.startsWith('/ssl/issue')) {
-        setTimeout(() => {
-          window.location.href = "/ssl/";
-        }, 400);
-      }
-    } catch (err) {
-      isSubmitting = false;
-      if (submitBtn) {
-        submitBtn.disabled = false;
-        submitBtn.classList.remove("is-loading");
-      }
-      toast(err.message || "Failed to issue SSL certificate.", "danger");
-    }
-  });
+  // Sync hidden inputs before base submission
+  select.addEventListener("change", updateForm);
+  form.addEventListener("submit", updateForm);
 
   // Auto-dismiss flash alerts
   ["alert-issued", "alert-renewed", "alert-revoked", "alert-error"].forEach((id) => {

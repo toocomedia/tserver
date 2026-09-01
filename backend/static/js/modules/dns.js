@@ -205,16 +205,43 @@ window.runDnsDiagnostics = async function(domain) {
 };
 
 /**
- * Submit a real HTML form POST for deletion
+ * Submit an AJAX POST for deletion and remove row live
  */
-function postDeleteRecord(domain, name, type, content) {
-  if (typeof window.submitPost !== "function") {
-    if (typeof toast === "function") toast("Page scripts incomplete — hard-refresh (Ctrl+F5).", "danger");
-    return;
+async function postDeleteRecord(btn, domain, name, type, content) {
+  try {
+    const payload = { name, type };
+    if (content) payload.content = content;
+    const csrfToken = typeof getCsrfToken === "function" ? getCsrfToken() : "";
+    const res = await fetch(`/dns/${encodeURIComponent(domain)}/records/delete`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "X-Requested-With": "XMLHttpRequest",
+        "Accept": "application/json",
+      },
+      body: new URLSearchParams({ ...payload, csrf_token: csrfToken }),
+    });
+
+    if (res.ok) {
+      const row = btn.closest("tr");
+      if (row) {
+        row.style.transition = "opacity 0.25s ease";
+        row.style.opacity = "0";
+        setTimeout(() => row.remove(), 250);
+      }
+      if (typeof toast === "function") toast(`Deleted ${type} record "${name}".`, "success");
+      if (typeof window.refreshTasks === "function") window.refreshTasks();
+    } else {
+      const err = await res.json().catch(() => ({}));
+      if (typeof toast === "function") toast(err.error || err.detail || "Failed to delete record.", "danger");
+      btn.disabled = false;
+      btn.textContent = "Delete";
+    }
+  } catch (err) {
+    if (typeof toast === "function") toast(err.message || "Network error while deleting record.", "danger");
+    btn.disabled = false;
+    btn.textContent = "Delete";
   }
-  const payload = { name, type };
-  if (content) payload.content = content;
-  window.submitPost(`/dns/${encodeURIComponent(domain)}/records/delete`, payload);
 }
 
 function bindDeleteButtons() {
@@ -245,7 +272,7 @@ function bindDeleteButtons() {
         async () => {
           btn.disabled = true;
           btn.textContent = "…";
-          postDeleteRecord(domain, name, type, content);
+          await postDeleteRecord(btn, domain, name, type, content);
         },
         { danger: true, title: "Delete Record", okLabel: "Delete Record", itemName: name }
       );

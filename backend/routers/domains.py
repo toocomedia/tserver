@@ -5,7 +5,7 @@ Routes call services only — no direct DB or nginx calls here.
 import logging
 import os
 from fastapi import APIRouter, Depends, Request, Form, HTTPException
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db

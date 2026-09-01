@@ -445,6 +445,51 @@ class TestDomainCreationAndSubdomains(unittest.IsolatedAsyncioTestCase):
         finally:
             test_app.dependency_overrides.pop(get_db, None)
 
+    @patch("services.domain_service.delete", new_callable=AsyncMock)
+    async def test_ajax_domain_delete(self, mock_delete):
+        """Verify POST /domains/{id}/delete with Accept: application/json returns 200 JSON with task info."""
+        from routers.domains import router as domains_router
+        from database import get_db
+        import httpx
+        from fastapi import FastAPI
+        from starlette.middleware.sessions import SessionMiddleware
+
+        test_app = FastAPI()
+        test_app.add_middleware(SessionMiddleware, secret_key="test-secret-key-abcdef-123456789")
+        test_app.include_router(domains_router)
+
+        async with self.session_factory() as session:
+            dom = Domain(
+                id=1,
+                name="deleteme.com",
+                server_ip="1.2.3.4",
+                project_type="static",
+                dns_zone_created=True,
+                nginx_active=True,
+            )
+            session.add(dom)
+            await session.commit()
+
+        async def override_get_db():
+            async with self.session_factory() as session:
+                yield session
+
+        test_app.dependency_overrides[get_db] = override_get_db
+        try:
+            transport = httpx.ASGITransport(app=test_app)
+            async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+                res = await client.post(
+                    "/domains/1/delete",
+                    headers={"Accept": "application/json"}
+                )
+                self.assertEqual(res.status_code, 200)
+                data = res.json()
+                self.assertTrue(data.get("success"))
+                self.assertEqual(data.get("status"), "running")
+                self.assertIn("task_id", data)
+        finally:
+            test_app.dependency_overrides.pop(get_db, None)
+
 
 if __name__ == "__main__":
     unittest.main()
