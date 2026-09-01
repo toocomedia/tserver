@@ -417,18 +417,53 @@ function selectSsl(enable) {
   }
 }
 
-form.addEventListener('submit', (e) => {
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
   const val = input.value.trim().toLowerCase();
   if (!val || !domainRe.test(val)) {
-    e.preventDefault();
     goToStep(1);
     nameError.textContent = 'Please enter a valid domain format (e.g. example.com)';
     nameError.style.display = 'block';
     input.focus();
     return;
   }
-  submitBtn.textContent = 'Deploying...';
+  submitBtn.disabled = true;
   submitBtn.classList.add('is-loading');
+
+  try {
+    const payload = {
+      name: val,
+      project_type: document.getElementById('project-type-input')?.value || 'static',
+      ssl_enabled: document.getElementById('ssl-enabled-input')?.value || 'no',
+      dns_mode: document.getElementById('dns-mode-input')?.value || 'new_zone',
+      parent_domain: document.getElementById('parent-domain-input')?.value || '',
+    };
+
+    const res = await panel.post('/domains/create', payload);
+    if (res.success || res.status === 'running') {
+      if (typeof window.openTaskDrawer === 'function') {
+        window.openTaskDrawer('active');
+      }
+      if (typeof window.refreshTasks === 'function') {
+        window.refreshTasks();
+      }
+      if (typeof window.toast === 'function') {
+        window.toast(`Domain ${val} deployment started in background...`, 'success');
+      }
+      setTimeout(() => {
+        window.location.href = '/domains/';
+      }, 350);
+    }
+  } catch (err) {
+    nameError.textContent = err.message || 'Failed to deploy domain';
+    nameError.style.display = 'block';
+    goToStep(1);
+    submitBtn.disabled = false;
+    submitBtn.classList.remove('is-loading');
+    if (typeof window.toast === 'function') {
+      window.toast(err.message || 'Failed to deploy domain', 'danger');
+    }
+  }
 });
 
 document.addEventListener('DOMContentLoaded', () => {

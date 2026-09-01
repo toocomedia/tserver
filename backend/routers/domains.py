@@ -189,16 +189,46 @@ async def domains_create_page(request: Request):
 @router.post("/create", response_class=HTMLResponse)
 async def domains_create(
     request: Request,
-    name: str = Form(...),
-    project_type: str = Form("static"),
-    ssl_enabled: str = Form("no"),
-    dns_mode: str = Form("new_zone"),
-    parent_domain: str | None = Form(None),
     db: AsyncSession = Depends(get_db),
 ):
-    clean_parent = parent_domain.strip() if (parent_domain and parent_domain.strip()) else None
+    content_type = request.headers.get("content-type", "").lower()
+    is_json = "application/json" in content_type or wants_json(request)
 
-    if wants_json(request):
+    if "application/json" in content_type:
+        try:
+            body = await request.json()
+            name = str(body.get("name") or "").strip().lower()
+            project_type = str(body.get("project_type") or "static").strip().lower()
+            ssl_enabled = str(body.get("ssl_enabled") or "no").strip().lower()
+            dns_mode = str(body.get("dns_mode") or "new_zone").strip().lower()
+            parent_domain = body.get("parent_domain")
+        except Exception:
+            raise HTTPException(400, "Invalid JSON payload")
+    else:
+        form_data = await request.form()
+        name = str(form_data.get("name") or "").strip().lower()
+        project_type = str(form_data.get("project_type") or "static").strip().lower()
+        ssl_enabled = str(form_data.get("ssl_enabled") or "no").strip().lower()
+        dns_mode = str(form_data.get("dns_mode") or "new_zone").strip().lower()
+        parent_domain = form_data.get("parent_domain")
+
+    if not name:
+        if is_json:
+            raise HTTPException(400, "Domain name is required.")
+        return templates.TemplateResponse("pages/domains/create.html", {
+            "request": request,
+            "active_page": "domains",
+            "server_ip": config.SERVER_IP,
+            "error": "Domain name is required.",
+            "name": "",
+            "project_type": project_type,
+            "dns_mode": dns_mode,
+            "parent_domain": parent_domain or "",
+        }, status_code=400)
+
+    clean_parent = str(parent_domain).strip() if (parent_domain and str(parent_domain).strip()) else None
+
+    if is_json:
         async def _run_create(task_rec):
             task_rec.add_log(f"Creating domain records for {name}...")
             from database import AsyncSessionLocal
@@ -211,7 +241,20 @@ async def domains_create(
                     parent_domain=clean_parent,
                 )
                 await bg_db.commit()
-            task_rec.add_log(f"Domain {name} records created successfully.")
+                task_rec.add_log(f"Domain {name} records and Nginx configuration created.")
+
+                if ssl_enabled == "yes" and project_type != "dns":
+                    task_rec.add_log(f"Requesting Let's Encrypt SSL certificate for {name}...")
+                    try:
+                        await ssl_service.issue_cert(
+                            bg_db, dom.id, name, include_www=False, auto_renew=True
+                        )
+                        await bg_db.commit()
+                        task_rec.add_log(f"SSL certificate for {name} issued successfully.")
+                    except Exception as ssl_err:
+                        task_rec.add_log(f"Warning: SSL certificate issuance skipped: {ssl_err}")
+
+            task_rec.add_log(f"Domain {name} setup completed successfully.")
             return True, f"Domain {name} created."
 
         task = await task_manager_service.spawn(
@@ -225,7 +268,7 @@ async def domains_create(
             "success": True,
             "task_id": task.id,
             "status": "running",
-            "message": f"Creating domain {name}...",
+            "message": f"Creating domain {name} in background...",
         })
 
     try:

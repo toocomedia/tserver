@@ -140,24 +140,45 @@ async def proxy_create_page(
 @router.post("/create", response_class=HTMLResponse)
 async def proxy_create_submit(
     request: Request,
-    mode: str = Form("managed"),
-    domain_id: str = Form(""),
-    subdomain: str = Form(""),
-    hostname: str = Form(""),
-    target_ip: str = Form(...),
-    target_port: int = Form(...),
-    protocol: str = Form("http"),
-    enable_ssl: bool = Form(False),
-    cache_enabled: bool = Form(False),
-    cache_ttl_minutes: int = Form(10),
-    cache_auto_clear_hours: int = Form(0),
     db: AsyncSession = Depends(get_db),
 ):
     """Run proxy cascade for managed or external mode."""
-    mode = (mode or "managed").strip().lower()
+    content_type = request.headers.get("content-type", "").lower()
+    is_json = "application/json" in content_type or wants_json(request)
+
+    if "application/json" in content_type:
+        try:
+            body = await request.json()
+            mode = str(body.get("mode") or "managed").strip().lower()
+            domain_id_raw = body.get("domain_id")
+            subdomain = str(body.get("subdomain") or "").strip().lower()
+            hostname = str(body.get("hostname") or "").strip().lower()
+            target_ip = str(body.get("target_ip") or "").strip()
+            target_port = int(body.get("target_port") or 80)
+            protocol = str(body.get("protocol") or "http").strip().lower()
+            enable_ssl = bool(body.get("enable_ssl", False))
+            cache_enabled = bool(body.get("cache_enabled", False))
+            cache_ttl_minutes = int(body.get("cache_ttl_minutes") or 10)
+            cache_auto_clear_hours = int(body.get("cache_auto_clear_hours") or 0)
+        except Exception:
+            raise HTTPException(400, "Invalid JSON payload")
+    else:
+        form_data = await request.form()
+        mode = str(form_data.get("mode") or "managed").strip().lower()
+        domain_id_raw = form_data.get("domain_id")
+        subdomain = str(form_data.get("subdomain") or "").strip().lower()
+        hostname = str(form_data.get("hostname") or "").strip().lower()
+        target_ip = str(form_data.get("target_ip") or "").strip()
+        target_port = int(form_data.get("target_port") or 80)
+        protocol = str(form_data.get("protocol") or "http").strip().lower()
+        enable_ssl = form_data.get("enable_ssl") in ("true", "yes", "1", "on", True)
+        cache_enabled = form_data.get("cache_enabled") in ("true", "yes", "1", "on", True)
+        cache_ttl_minutes = int(form_data.get("cache_ttl_minutes") or 10)
+        cache_auto_clear_hours = int(form_data.get("cache_auto_clear_hours") or 0)
+
     resolved_domain_id: int | None = None
-    if domain_id and str(domain_id).strip().isdigit():
-        resolved_domain_id = int(domain_id)
+    if domain_id_raw and str(domain_id_raw).strip().isdigit():
+        resolved_domain_id = int(str(domain_id_raw).strip())
 
     form_state = {
         "mode": mode,
@@ -173,10 +194,10 @@ async def proxy_create_submit(
         "cache_auto_clear_hours": cache_auto_clear_hours,
     }
 
-    if wants_json(request):
-        full_dom = hostname if mode == "external" else f"{subdomain}.{resolved_domain_id}"
+    if is_json:
+        target_name = hostname if mode == "external" else (f"{subdomain}.{resolved_domain_id}" if subdomain else str(resolved_domain_id))
         async def _run_create_proxy(task_rec):
-            task_rec.add_log(f"Setting up proxy routing for {target_ip}:{target_port}...")
+            task_rec.add_log(f"Setting up reverse proxy routing for {target_ip}:{target_port}...")
             from database import AsyncSessionLocal
             async with AsyncSessionLocal() as bg_db:
                 if mode == "external":
@@ -192,6 +213,8 @@ async def proxy_create_submit(
                         cache_auto_clear_hours=cache_auto_clear_hours,
                     )
                 else:
+                    if resolved_domain_id is None:
+                        raise ValueError("Parent domain is required for managed mode")
                     p = await proxy_service.create_proxy(
                         bg_db,
                         domain_id=resolved_domain_id,
@@ -205,14 +228,14 @@ async def proxy_create_submit(
                         cache_auto_clear_hours=cache_auto_clear_hours,
                     )
                 await bg_db.commit()
-            task_rec.add_log("Proxy configuration generated and verified.")
+            task_rec.add_log(f"Proxy {p.full_domain} configuration generated and verified.")
             return True, f"Proxy {p.full_domain} created."
 
         task = await task_manager_service.spawn(
             category="proxy",
             action="create",
-            target_id=hostname or subdomain,
-            label=f"Create Proxy: {hostname or subdomain}",
+            target_id=target_name,
+            label=f"Create Proxy: {target_name}",
             runner=_run_create_proxy,
         )
         return JSONResponse({

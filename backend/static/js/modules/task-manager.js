@@ -12,6 +12,11 @@
   let isDrawerOpen = false;
   const openLogTaskIds = new Set();
 
+  let isInitialPoll = true;
+  let knownRunningIds = new Set();
+  let knownCompletedIds = new Set();
+  let isSyncingPage = false;
+
   const getBackdrop = () => document.getElementById('task-drawer-backdrop');
   const getHeaderBtn = () => document.getElementById('header-task-btn');
   const getCountBadge = () => document.getElementById('task-drawer-count');
@@ -148,16 +153,48 @@
       if (!res.ok) return;
       const data = await res.json();
 
-      const prevActiveCount = activeTasksCache.length;
       activeTasksCache = data.active || [];
       if (data.history) historyTasksCache = data.history || [];
 
-      const running = activeTasksCache.filter((t) => t.status === 'running');
-      updateHeaderBadge(running.length);
+      const currentRunning = activeTasksCache.filter((t) => t.status === 'running');
+      const currentRunningIds = new Set(currentRunning.map((t) => t.id));
+      updateHeaderBadge(currentRunning.length);
 
-      // Broadcast completed event if active tasks decreased
-      if (prevActiveCount > 0 && activeTasksCache.length < prevActiveCount) {
-        document.dispatchEvent(new CustomEvent('task:completed'));
+      let completedCount = 0;
+
+      if (!isInitialPoll) {
+        // Any task that was running and is no longer running has finished
+        for (const prevId of knownRunningIds) {
+          if (!currentRunningIds.has(prevId)) {
+            completedCount++;
+          }
+        }
+        // Also check if new completed tasks appeared in history
+        if (data.history) {
+          for (const h of data.history) {
+            if (h.id && !knownCompletedIds.has(h.id) && !knownRunningIds.has(h.id)) {
+              completedCount++;
+            }
+          }
+        }
+      }
+
+      // Update tracking sets
+      knownRunningIds = currentRunningIds;
+      if (data.history) {
+        data.history.forEach((h) => { if (h.id) knownCompletedIds.add(h.id); });
+      }
+      activeTasksCache.forEach((t) => {
+        if (t.id && (t.status === 'succeeded' || t.status === 'failed' || t.status === 'cancelled')) {
+          knownCompletedIds.add(t.id);
+        }
+      });
+
+      isInitialPoll = false;
+
+      // Broadcast completed event whenever task(s) finish
+      if (completedCount > 0) {
+        document.dispatchEvent(new CustomEvent('task:completed', { detail: { count: completedCount } }));
       }
 
       if (isDrawerOpen) {
@@ -169,11 +206,77 @@
         document.dispatchEvent(new CustomEvent('task:locks-updated', { detail: data.locks }));
       }
 
-      adjustPolling(running.length > 0);
+      adjustPolling(currentRunning.length > 0);
     } catch (e) {
       console.debug('Task poll error:', e);
     }
   }
+
+  async function syncCurrentPageTable() {
+    const path = window.location.pathname;
+    // Skip on form/wizard creation pages
+    if (path.endsWith('/create') || path.endsWith('/create/') || path.includes('/edit') || path.includes('/wizard')) {
+      return;
+    }
+
+    if (isSyncingPage) return;
+    isSyncingPage = true;
+
+    try {
+      const res = await fetch(window.location.href, {
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest',
+          'Accept': 'text/html',
+          'Cache-Control': 'no-cache'
+        }
+      });
+      if (!res.ok) return;
+      const html = await res.text();
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, 'text/html');
+
+      // Priority 1: Match #main-content .content__inner (covers whole page body + drawer modals seamlessly)
+      const currentInner = document.querySelector('#main-content .content__inner');
+      const newInner = doc.querySelector('#main-content .content__inner');
+
+      if (currentInner && newInner) {
+        currentInner.innerHTML = newInner.innerHTML;
+      } else {
+        // Priority 2: Fallback to table-wrap or table if custom layout
+        const currentTableWrap = document.querySelector('.table-wrap, .table');
+        const newTableWrap = doc.querySelector('.table-wrap, .table');
+        if (currentTableWrap && newTableWrap) {
+          currentTableWrap.innerHTML = newTableWrap.innerHTML;
+        }
+      }
+
+      // Recreate Lucide icons if available
+      if (typeof lucide !== 'undefined' && lucide.createIcons) {
+        lucide.createIcons();
+      }
+
+      // Re-init lazy image skeletons
+      if (typeof window.initLazyImageSkeletons === 'function') {
+        window.initLazyImageSkeletons();
+      }
+
+      // Hide/remove any skeleton overlays in fresh HTML
+      document.querySelectorAll('.skeleton-overlay').forEach((el) => {
+        el.classList.add('is-hidden');
+        el.style.display = 'none';
+      });
+
+      // Dispatch events for page-specific initialization
+      document.dispatchEvent(new CustomEvent('app:init'));
+      document.dispatchEvent(new CustomEvent('page:refreshed', { detail: { url: window.location.href } }));
+    } catch (err) {
+      console.debug('Failed to sync page table in place:', err);
+    } finally {
+      isSyncingPage = false;
+    }
+  }
+
+  document.addEventListener('task:completed', syncCurrentPageTable);
 
   function adjustPolling(hasRunning) {
     const targetInterval = isDrawerOpen ? 1200 : (hasRunning ? 1800 : 15000);

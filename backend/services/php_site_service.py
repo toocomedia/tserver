@@ -452,6 +452,7 @@ async def queue_action(
 
 async def _run_after_commit(operation_id: int, action: str, payload: dict[str, Any]) -> None:
     from database import AsyncSessionLocal
+    from services.task_manager_service import task_manager_service
 
     await asyncio.sleep(0.3)
     async with AsyncSessionLocal() as db:
@@ -463,6 +464,16 @@ async def _run_after_commit(operation_id: int, action: str, payload: dict[str, A
             return
         operation.status, operation.started_at = "running", datetime.utcnow()
         await db.commit()
+
+        task_label = f"PHP Site {domain.name}: {action.replace('_', ' ').title()}"
+        task_rec = task_manager_service.create_task(
+            category="php_site",
+            action=action,
+            target_id=str(site.id),
+            label=task_label,
+        )
+        task_rec.add_log(f"Started PHP website operation: {action} on {domain.name}")
+
         from services.resource_guard_service import resource_guard_service
         task = asyncio.current_task()
         framework_install = (
@@ -508,6 +519,12 @@ async def _run_after_commit(operation_id: int, action: str, payload: dict[str, A
                 raise RuntimeError("Unsupported PHP website operation.")
             operation.status, operation.stage = "succeeded", "complete"
             operation.message, operation.error = "Operation complete.", None
+            if task_rec:
+                task_rec.status = "succeeded"
+                task_rec.progress = 100
+                task_rec.finished_at = time.time()
+                task_rec.add_log(f"PHP website operation {action} on {domain.name} completed successfully.")
+                await task_manager_service._archive_task(task_rec)
         except asyncio.CancelledError:
             operation.status, operation.stage = "failed", "cancelled"
             operation.error = "The PHP website operation was cancelled before completion. Retry the action."
@@ -517,6 +534,11 @@ async def _run_after_commit(operation_id: int, action: str, payload: dict[str, A
                 site.status = "degraded"
             site.last_error = operation.error
             await db.commit()
+            if task_rec:
+                task_rec.status = "cancelled"
+                task_rec.finished_at = time.time()
+                task_rec.add_log("Operation was cancelled.")
+                await task_manager_service._archive_task(task_rec)
             if guard_token is not None:
                 resource_guard_service.unregister(guard_token)
                 guard_token = None
@@ -530,6 +552,12 @@ async def _run_after_commit(operation_id: int, action: str, payload: dict[str, A
             elif site.status not in {"active", "disabled", "archived"}:
                 site.status = "failed"
             site.last_error = operation.error[:1000]
+            if task_rec:
+                task_rec.status = "failed"
+                task_rec.finished_at = time.time()
+                task_rec.error = operation.error
+                task_rec.add_log(f"Error: {operation.error}")
+                await task_manager_service._archive_task(task_rec)
         operation.finished_at = datetime.utcnow()
         await db.commit()
         if guard_token is not None:
@@ -1065,6 +1093,15 @@ async def delete_site(
         await nginx_service.reload()
         await db.execute(delete(PhpWebsiteOperation).where(PhpWebsiteOperation.site_id == site.id))
         await db.delete(site)
+        from services.task_manager_service import task_manager_service
+        await task_manager_service.record_completed_task(
+            category="php_site",
+            action="delete",
+            target_id=str(site.id),
+            label=f"Delete PHP Site: {domain.name}",
+            success=True,
+            message=f"PHP website for {domain.name} deleted successfully.",
+        )
         return domain
     except Exception as exc:
         site.status, site.last_error = "failed", str(getattr(exc, "detail", exc))[:1000]

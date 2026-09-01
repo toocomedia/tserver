@@ -192,34 +192,3 @@ function initAutoRenewToggles() {
 document.addEventListener("DOMContentLoaded", initAutoRenewToggles);
 document.addEventListener("app:init", initAutoRenewToggles);
 
-/**
- * Reload SSL table in place when a cert issuance/renewal/revocation task completes
- */
-async function reloadSslTable() {
-  if (!window.location.pathname.startsWith("/ssl")) return;
-  try {
-    const res = await fetch("/ssl/", { headers: { "X-Requested-With": "XMLHttpRequest" } });
-    if (!res.ok) return;
-    const html = await res.text();
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(html, "text/html");
-
-    const newTbody = doc.querySelector("#ssl-table tbody");
-    const currentTbody = document.querySelector("#ssl-table tbody");
-
-    if (newTbody && currentTbody) {
-      currentTbody.innerHTML = newTbody.innerHTML;
-    } else {
-      const newPage = doc.querySelector(".ssl-page");
-      const currentPage = document.querySelector(".ssl-page");
-      if (newPage && currentPage) {
-        currentPage.innerHTML = newPage.innerHTML;
-      }
-    }
-  } catch (err) {
-    console.debug("Failed to reload SSL table in place:", err);
-  }
-}
-
-document.addEventListener("task:completed", reloadSslTable);
-

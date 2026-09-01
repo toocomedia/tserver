@@ -328,45 +328,4 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 });
 
-/**
- * Convert standalone subdomain zone to parent record
- */
-window.convertSubdomainToRecord = function(subdomain, parentDomain) {
-  if (typeof confirmAction !== "function") {
-    if (!confirm(`Convert '${subdomain}' from a standalone DNS zone into an A record inside '${parentDomain}'?`)) return;
-    performConvertSubdomain(subdomain, parentDomain);
-    return;
-  }
-
-  confirmAction(
-    `Convert '${subdomain}' from a standalone DNS zone into an A record inside '${parentDomain}'? The separate zone will be deleted.`,
-    () => performConvertSubdomain(subdomain, parentDomain),
-    { danger: true, title: "Convert Subdomain", okLabel: "Convert", itemName: subdomain }
-  );
-};
-
-async function performConvertSubdomain(subdomain, parentDomain) {
-  if (typeof showGlobalLoader === "function") {
-    showGlobalLoader("Converting DNS Zone...");
-  }
-  try {
-    const res = await panel.post(`/dns/api/${encodeURIComponent(subdomain)}/convert-to-record`);
-    if (typeof hideGlobalLoader === "function") hideGlobalLoader();
-    if (typeof toast === "function") {
-      toast(`Converted '${subdomain}' to an A record in '${parentDomain}'`, "success");
-    }
-    if (res && res.redirect_url) {
-      window.location.href = res.redirect_url;
-    } else {
-      window.location.reload();
-    }
-  } catch (err) {
-    if (typeof hideGlobalLoader === "function") hideGlobalLoader();
-    if (typeof toast === "function") {
-      toast(err.message || "Failed to convert DNS zone.", "danger");
-    } else {
-      alert(err.message || "Failed to convert DNS zone.");
-    }
-  }
-}
 

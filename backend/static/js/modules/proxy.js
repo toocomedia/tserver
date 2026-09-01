@@ -184,26 +184,7 @@ function initCreateForm() {
       el.addEventListener("change", updatePreview);
     });
 
-  if (form && submitBtn) {
-    form.addEventListener("submit", (e) => {
-      if (isExternal()) {
-        if (!hostnameIn || !hostnameIn.value.trim()) {
-          e.preventDefault();
-          return;
-        }
-      } else {
-        if (!domainSelect || !domainSelect.value) {
-          e.preventDefault();
-          return;
-        }
-      }
-      const ssl = sslCheck && sslCheck.checked;
-      submitBtn.textContent = ssl
-        ? "Creating… (SSL may take 30–60s)"
-        : "Creating…";
-      submitBtn.disabled = true;
-    });
-  }
+
 
   syncModeUI();
 }

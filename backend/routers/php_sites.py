@@ -16,7 +16,6 @@ from schemas import php_sites as schemas
 from services import php_site_laravel_service as laravel
 from services import php_site_runtime as runtime
 from services import php_site_service as service
-from services.task_manager_service import task_manager_service
 from templating import templates
 
 
@@ -101,15 +100,6 @@ async def api_sites(db: AsyncSession = Depends(get_db)):
 @router.post("/sites", status_code=202)
 async def api_create_site(body: schemas.SiteCreate, db: AsyncSession = Depends(get_db)):
     site, operation = await service.create_site(db, body)
-    
-    # Track in unified Task Manager
-    task_manager_service.create_task(
-        category="php_site",
-        action="create",
-        target_id=str(site.id),
-        label=f"Create PHP Site: domain {body.domain_id}",
-    )
-    
     return {
         "site_id": site.id,
         "operation_id": operation.id,
@@ -375,15 +365,6 @@ async def api_delete_site(
     site_id: int, body: schemas.DeleteSite, db: AsyncSession = Depends(get_db),
 ):
     site = await service.get_site(db, site_id)
-    domain_name = str(site.domain_id)
-    
-    task_manager_service.create_task(
-        category="php_site",
-        action="delete",
-        target_id=str(site_id),
-        label=f"Delete PHP Site: {site_id}",
-    )
-    
     domain = await service.delete_site(
         db, site, body.confirmation, delete_database_data=body.delete_database,
     )

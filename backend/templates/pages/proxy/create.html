@@ -337,5 +337,61 @@
     if (radioNo) radioNo.checked = !enable;
     if (radioYes) radioYes.checked = enable;
   };
+
+  const proxyForm = document.getElementById("create-proxy-form");
+  if (proxyForm) {
+    proxyForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const submitBtn = document.getElementById("btn-submit");
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.classList.add("is-loading");
+      }
+
+      try {
+        const modeExternal = document.getElementById("mode-external");
+        const isExternal = modeExternal && modeExternal.checked;
+        const payload = {
+          mode: isExternal ? "external" : "managed",
+          domain_id: document.getElementById("domain_id")?.value || "",
+          subdomain: document.getElementById("subdomain")?.value || "",
+          hostname: document.getElementById("hostname")?.value || "",
+          target_ip: document.getElementById("target_ip")?.value || "",
+          target_port: parseInt(document.getElementById("target_port")?.value || "80", 10),
+          protocol: document.getElementById("protocol")?.value || "http",
+          enable_ssl: document.getElementById("enable_ssl")?.checked || false,
+          cache_enabled: document.getElementById("cache_enabled")?.checked || false,
+          cache_ttl_minutes: parseInt(document.getElementById("cache_ttl_minutes")?.value || "10", 10),
+          cache_auto_clear_hours: parseInt(document.getElementById("cache_auto_clear_hours")?.value || "0", 10),
+        };
+
+        const res = await panel.post("/proxy/create", payload);
+        if (res.success || res.status === "running") {
+          if (typeof window.openTaskDrawer === "function") {
+            window.openTaskDrawer("active");
+          }
+          if (typeof window.refreshTasks === "function") {
+            window.refreshTasks();
+          }
+          if (typeof window.toast === "function") {
+            window.toast("Reverse proxy setup started in background...", "success");
+          }
+          setTimeout(() => {
+            window.location.href = "/proxy/";
+          }, 350);
+        }
+      } catch (err) {
+        if (typeof window.toast === "function") {
+          window.toast(err.message || "Failed to create proxy", "danger");
+        } else {
+          alert(err.message || "Failed to create proxy");
+        }
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.classList.remove("is-loading");
+        }
+      }
+    });
+  }
 </script>
 {% endblock %}
