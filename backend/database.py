@@ -491,6 +491,7 @@ async def init_db():
     import models.php_website_database  # noqa: F401
     import models.php_website_operation  # noqa: F401
     import models.ai_helper  # noqa: F401
+    import models.system_task  # noqa: F401
     async with engine.begin() as conn:
         await conn.execute(text("PRAGMA journal_mode=WAL"))
         await conn.execute(text("PRAGMA busy_timeout=30000"))

@@ -15,18 +15,12 @@
       </div>
 
       <div class="plugin-card__description">
-        {% if plugin.platform_unverified %}
-          <span class="plugin-platform-notice"><strong>{{ _('unverified') }}</strong> — {{ _('plugin_unverified_on') }} {{ plugin.platform_name }} ({{ plugin.platform_arch }}). {{ _('plugin_unverified_notice') }}</span>
-        {% else %}
-          {{ _(plugin.description) }}
-        {% endif %}
+        {{ _(plugin.description) }}
       </div>
 
       <div class="plugin-card__footer-row">
         <div class="plugin-card__status">
-          {% if plugin.platform_unverified %}
-            <span class="plugin-platform-status">{{ _('unverified') }}</span>
-          {% elif plugin.effective_status == 'missing' %}
+          {% if plugin.effective_status == 'missing' %}
             <span style="color: var(--color-danger);">{{ _('missing_1') }}</span>
           {% elif plugin.effective_status == 'active' %}
             <span style="color: var(--color-text); font-weight:800;">{{ _('active_1') }}</span>
@@ -43,17 +37,16 @@
 
         <div class="plugin-card__actions">
           {% if plugin.dependency_status or plugin.manifest_error or plugin.platform_error or (action_error and action_error_plugin_id == plugin.id) %}
-            <button type="button" class="btn-clean-icon requirements-info-btn {% if plugin.paused_by or (plugin.platform_error and not plugin.platform_unverified) %}requirements-info-btn--danger{% endif %}" title="{% if plugin.platform_error %}{{ plugin.platform_error }}{% elif plugin.paused_by %}Missing Requirements — Click to Check Details{% else %}System Check & Details{% endif %}" onclick="toggleAndCheckPlugin(this);">
+            <button type="button" class="btn-clean-icon requirements-info-btn {% if plugin.paused_by or plugin.platform_error %}requirements-info-btn--danger{% endif %}" title="{% if plugin.platform_error %}{{ plugin.platform_error }}{% elif plugin.paused_by %}Missing Requirements — Click to Check Details{% else %}System Check & Details{% endif %}" onclick="toggleAndCheckPlugin(this);">
               <svg viewbox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
             </button>
           {% endif %}
-          {% if not plugin.installed or (plugin.platform_unverified and not plugin.platform_approved) %}
-            <form method="post" action="/plugin-manager/api/install" style="display:inline-flex;"{% if plugin.platform_unverified and not plugin.platform_approved %} data-unverified-install data-approval-token="{{ plugin.platform_confirmation }}" data-confirm="{{ _('plugin_unverified_prompt') }}"{% endif %}>
+          {% if not plugin.installed %}
+            <form method="post" action="/plugin-manager/api/install" style="display:inline-flex;">
               <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
               <input type="hidden" name="plugin_id" value="{{ plugin.id }}">
-              <input type="hidden" name="unverified_confirmation" value="">
-              <button type="submit" class="btn-clean btn-clean--primary" title="{{ _('install_unverified') if plugin.platform_unverified else _('install') }} {{ plugin.name }}" {% if plugin.paused_by or (not plugin.platform_supported and not plugin.platform_unverified) %}disabled style="opacity:0.5;" title="{{ plugin.platform_error or _('install_required_dependency_first') }}" {% endif %}>
-                <span>{% if plugin.platform_unverified %}{{ _('approve_unverified') if plugin.installed else _('install_unverified') }}{% else %}{{ _('install') }}{% endif %}</span>
+              <button type="submit" class="btn-clean btn-clean--primary" title="{{ _('install') }} {{ plugin.name }}" {% if plugin.paused_by or not plugin.platform_supported %}disabled style="opacity:0.5;" title="{{ plugin.platform_error or _('install_required_dependency_first') }}" {% endif %}>
+                <span>{{ _('install') }}</span>
                 <svg viewbox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
               </button>
             </form>

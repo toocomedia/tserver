@@ -9,12 +9,11 @@
 
   <!-- Top-Right Action Buttons (Appear on Mouseover) -->
   <div class="compact-card-1x1__actions">
-    {% if not plugin.installed or (plugin.platform_unverified and not plugin.platform_approved) %}
-      <form method="post" action="/plugin-manager/api/install" style="display:inline-flex;"{% if plugin.platform_unverified and not plugin.platform_approved %} data-unverified-install data-approval-token="{{ plugin.platform_confirmation }}" data-confirm="{{ _('plugin_unverified_prompt') }}"{% endif %}>
+    {% if not plugin.installed %}
+      <form method="post" action="/plugin-manager/api/install" style="display:inline-flex;">
         <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
         <input type="hidden" name="plugin_id" value="{{ plugin.id }}">
-        <input type="hidden" name="unverified_confirmation" value="">
-        <button type="submit" class="btn-clean-icon btn-clean-icon--primary" title="{{ _('install_unverified') if plugin.platform_unverified else _('install') }} {{ plugin.name }}" {% if plugin.paused_by or (not plugin.platform_supported and not plugin.platform_unverified) %}disabled style="opacity:0.5;" title="{{ plugin.platform_error or _('install_required_dependency_first') }}" {% endif %}>
+        <button type="submit" class="btn-clean-icon btn-clean-icon--primary" title="{{ _('install') }} {{ plugin.name }}" {% if plugin.paused_by or not plugin.platform_supported %}disabled style="opacity:0.5;" title="{{ plugin.platform_error or _('install_required_dependency_first') }}" {% endif %}>
           <svg viewbox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
         </button>
       </form>
@@ -72,9 +71,7 @@
       <div class="compact-card-1x1__title">{{ _(plugin.name) }}</div>
     </a>
     <span class="compact-card-1x1__status">
-      {% if plugin.platform_unverified %}
-        {{ _('unverified') }}
-      {% elif plugin.effective_status == 'active' %}
+      {% if plugin.effective_status == 'active' %}
         {{ _('active_1') }}
       {% elif plugin.effective_status == 'paused' %}
         {{ _('paused') }}

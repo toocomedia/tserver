@@ -42,18 +42,23 @@ class PlatformSupportServiceTests(unittest.TestCase):
         self.addCleanup(environment.stop)
         return PlatformSupportService()
 
-    def test_all_guaranteed_platforms_are_supported(self):
-        for os_id, version in (
-            ("ubuntu", "22.04"),
-            ("ubuntu", "24.04"),
-            ("ubuntu", "26.04"),
-            ("debian", "12"),
-            ("debian", "13"),
-        ):
-            with self.subTest(platform=f"{os_id}:{version}"):
-                info = self._probe(os_id, version).get(force=True)
+    def test_linux_distributions_amd64_and_arm64_are_supported(self):
+        cases = (
+            ("ubuntu", "22.04", "amd64"),
+            ("ubuntu", "24.04", "amd64"),
+            ("ubuntu", "24.10", "amd64"),
+            ("ubuntu", "26.04", "arm64"),
+            ("debian", "12", "amd64"),
+            ("debian", "13", "arm64"),
+            ("almalinux", "9", "amd64"),
+            ("rocky", "9", "arm64"),
+        )
+        for os_id, version, arch in cases:
+            with self.subTest(platform=f"{os_id}:{version}:{arch}"):
+                info = self._probe(os_id, version, arch).get(force=True)
                 self.assertTrue(info["supported"])
-                self.assertEqual(info["arch"], "amd64")
+                self.assertEqual(info["arch"], arch)
+                self.assertIsNone(info["error"])
                 for capability in (
                     "core",
                     "docker",
@@ -61,39 +66,21 @@ class PlatformSupportServiceTests(unittest.TestCase):
                     "mariadb",
                     "postgresql",
                     "railpack_apps",
+                    "native_python",
                 ):
                     self.assertIn(capability, info["capabilities"])
 
-    def test_python_and_php_repository_capabilities_match_policy(self):
-        ubuntu_2204 = self._probe("ubuntu", "22.04").get(force=True)
-        self.assertNotIn("native_python", ubuntu_2204["capabilities"])
-        self.assertIn("php_external_repository", ubuntu_2204["capabilities"])
-
-        ubuntu_2604 = self._probe("ubuntu", "26.04").get(force=True)
-        self.assertIn("native_python", ubuntu_2604["capabilities"])
-        self.assertNotIn("php_external_repository", ubuntu_2604["capabilities"])
-        repository_error = self._probe("ubuntu", "26.04").capability_error(
-            "php_external_repository"
-        )
-        self.assertIn("does not publish packages", repository_error)
-
-        debian_13 = self._probe("debian", "13").get(force=True)
-        self.assertIn("native_python", debian_13["capabilities"])
-        self.assertNotIn("php_external_repository", debian_13["capabilities"])
-
-    def test_unsupported_versions_os_and_arch_have_exact_reasons(self):
+    def test_unsupported_32bit_architectures_are_rejected(self):
         cases = (
-            ("ubuntu", "20.04", "amd64", "Unsupported Ubuntu version 20.04"),
-            ("ubuntu", "25.10", "amd64", "Unsupported Ubuntu version 25.10"),
-            ("debian", "11", "amd64", "Unsupported Debian version 11"),
-            ("rocky", "9", "amd64", "Unsupported operating system Rocky 9"),
-            ("ubuntu", "24.04", "arm64", "Unsupported CPU architecture arm64"),
+            ("ubuntu", "24.04", "i386"),
+            ("debian", "12", "armv7l"),
+            ("debian", "12", "mips"),
         )
-        for os_id, version, arch, reason in cases:
+        for os_id, version, arch in cases:
             with self.subTest(platform=f"{os_id}:{version}:{arch}"):
                 info = self._probe(os_id, version, arch).get(force=True)
                 self.assertFalse(info["supported"])
-                self.assertIn(reason, info["error"])
+                self.assertIn("Unsupported CPU architecture", info["error"])
 
     def test_install_guide_preserves_contract_and_reports_platform(self):
         service = self._probe("debian", "13")
@@ -104,18 +91,11 @@ class PlatformSupportServiceTests(unittest.TestCase):
         self.assertEqual(guide["command"], "sudo command")
         self.assertEqual(guide["warning"], "warning")
 
-    def test_shell_and_backend_matrices_stay_aligned(self):
-        helper = (BACKEND.parent / "scripts" / "os_compat.sh").read_text(
-            encoding="utf-8"
-        )
-        for selector in (
-            "ubuntu:22.04",
-            "ubuntu:24.04",
-            "ubuntu:26.04",
-            "debian:12",
-            "debian:13",
-        ):
-            self.assertIn(selector, helper)
+    def test_plugin_support_always_verifies_supported_hosts(self):
+        service = self._probe("ubuntu", "24.04")
+        supported, error = service.plugin_support()
+        self.assertTrue(supported)
+        self.assertIsNone(error)
 
 
 if __name__ == "__main__":

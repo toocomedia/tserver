@@ -115,7 +115,6 @@ from middleware.auth import wants_json
 async def install_plugin_api(
     request: Request,
     plugin_id: str = Form(...),
-    unverified_confirmation: str = Form(""),
 ):
     """Run installation script for a plugin."""
     plugin = plugin_manager.get_plugin(plugin_id)
@@ -130,7 +129,6 @@ async def install_plugin_api(
             runner=lambda task_rec: plugin_manager.run_plugin_script(
                 plugin_id,
                 "install",
-                unverified_confirmation=unverified_confirmation,
                 log_callback=task_rec.add_log,
             ),
             lock_type="exclusive",
@@ -145,7 +143,6 @@ async def install_plugin_api(
     success, message = await plugin_manager.run_plugin_script(
         plugin_id,
         "install",
-        unverified_confirmation=unverified_confirmation,
     )
     if success:
         return RedirectResponse("/plugin-manager/", status_code=303)

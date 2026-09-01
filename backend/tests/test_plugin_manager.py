@@ -228,104 +228,56 @@ class PluginManagerTests(unittest.TestCase):
 
         is_healthy.assert_not_called()
 
-    def test_platform_selector_marks_plugin_unsupported_and_blocks_actions(self):
+    def test_unsupported_platform_blocks_plugin(self):
         manager = PluginManager()
         manager.plugins = {
-            "ubuntu_only": {
-                "id": "ubuntu_only",
-                "name": "Ubuntu Only",
+            "demo_plugin": {
+                "id": "demo_plugin",
+                "name": "Demo Plugin",
                 "manifest_enabled": True,
                 "manifest_error": None,
                 "installed": True,
+                "sidebar": True,
                 "usage": {},
                 "requires": {
                     "dependencies": [],
-                    "platforms": ["ubuntu:24.04"],
                 },
             }
         }
-        reason = "Ubuntu Only is not verified on Debian 13 (amd64)."
+        reason = "SRV Panel requires a Linux operating system."
 
         with patch(
-            "plugins.manager.platform_support_service.plugin_support",
-            return_value=(False, reason),
-        ), patch(
             "plugins.manager.platform_support_service.get",
             return_value={
                 "supported": False,
-                "selector": "debian:11",
-                "pretty_name": "Debian 11",
+                "pretty_name": "Windows",
                 "arch": "amd64",
+                "error": reason,
             },
         ):
-            plugin = manager.get_plugin("ubuntu_only")
+            plugin = manager.get_plugin("demo_plugin")
             self.assertFalse(plugin["platform_supported"])
             self.assertEqual(plugin["platform_error"], reason)
             self.assertEqual(plugin["effective_status"], "unsupported")
 
             with self.assertRaises(PluginUnavailableError) as error:
-                manager.availability_dependency("ubuntu_only")()
+                manager.availability_dependency("demo_plugin")()
             self.assertEqual(error.exception.status_code, 409)
             self.assertEqual(error.exception.code, "platform_unsupported")
 
             enabled, message = asyncio.run(
-                manager.toggle_plugin("ubuntu_only", True)
+                manager.toggle_plugin("demo_plugin", True)
             )
             self.assertFalse(enabled)
             self.assertEqual(message, reason)
 
             installed, message = asyncio.run(
-                manager.run_plugin_script("ubuntu_only", "install")
+                manager.run_plugin_script("demo_plugin", "install")
             )
             self.assertFalse(installed)
             self.assertEqual(message, reason)
 
-    def test_supported_os_can_approve_plugin_as_unverified(self):
-        manager = PluginManager()
-        manager.plugins = {
-            "maddy": {
-                "id": "maddy",
-                "name": "Maddy",
-                "manifest_enabled": True,
-                "manifest_error": None,
-                "installed": True,
-                "usage": {},
-                "requires": {"platforms": ["ubuntu:24.04"]},
-            }
-        }
-        platform = {
-            "supported": True,
-            "selector": "ubuntu:26.04",
-            "pretty_name": "Ubuntu 26.04 LTS",
-            "arch": "amd64",
-        }
-        with patch(
-            "plugins.manager.platform_support_service.plugin_support",
-            return_value=(False, "Plugin is not verified on Ubuntu 26.04 LTS (amd64)."),
-        ), patch(
-            "plugins.manager.platform_support_service.get", return_value=platform
-        ), patch(
-            "plugins.manager.plugin_platform_approval_service.is_approved",
-            return_value=False,
-        ), patch(
-            "plugins.manager.plugin_platform_approval_service.approve"
-        ) as approve:
-            plugin = manager.get_plugin("maddy")
-            self.assertTrue(plugin["platform_unverified"])
-            self.assertFalse(plugin["platform_allowed"])
-            self.assertEqual(plugin["effective_status"], "unverified")
-
-            accepted, message = manager.approve_unverified_platform(plugin, "wrong")
-            self.assertFalse(accepted)
-            self.assertIn("Confirm the unverified installation", message)
-
-            accepted, _ = manager.approve_unverified_platform(
-                plugin, "INSTALL maddy UNVERIFIED"
-            )
-            self.assertTrue(accepted)
-            approve.assert_called_once_with("maddy", "ubuntu:26.04")
-
-    def test_approved_unverified_plugin_remains_labeled_but_is_available(self):
+    def test_supported_platform_allows_clean_plugin_lifecycle(self):
         manager = PluginManager()
         manager.plugins = {
             "maddy": {
@@ -336,27 +288,20 @@ class PluginManagerTests(unittest.TestCase):
                 "installed": True,
                 "sidebar": True,
                 "usage": {},
-                "requires": {"platforms": ["ubuntu:24.04"]},
+                "requires": {"dependencies": []},
             }
         }
         with patch(
-            "plugins.manager.platform_support_service.plugin_support",
-            return_value=(False, "Plugin is not verified."),
-        ), patch(
             "plugins.manager.platform_support_service.get",
             return_value={
                 "supported": True,
-                "selector": "ubuntu:26.04",
-                "pretty_name": "Ubuntu 26.04 LTS",
+                "pretty_name": "Ubuntu 24.04 LTS",
                 "arch": "amd64",
+                "error": None,
             },
-        ), patch(
-            "plugins.manager.plugin_platform_approval_service.is_approved",
-            return_value=True,
         ):
             plugin = manager.get_plugin("maddy")
-            self.assertTrue(plugin["platform_unverified"])
-            self.assertTrue(plugin["platform_approved"])
+            self.assertTrue(plugin["platform_supported"])
             self.assertTrue(plugin["platform_allowed"])
             self.assertEqual(plugin["effective_status"], "active")
             manager.availability_dependency("maddy")()

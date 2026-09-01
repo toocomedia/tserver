@@ -11,8 +11,7 @@
   "enabled": true,
   "usage": {},
   "requires": {
-    "dependencies": [],
-    "platforms": ["ubuntu:22.04", "ubuntu:24.04"]
+    "dependencies": []
   },
   "install_script": "scripts/install_wireguard.sh",
   "uninstall_script": "scripts/uninstall_wireguard.sh"

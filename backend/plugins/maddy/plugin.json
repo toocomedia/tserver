@@ -13,8 +13,7 @@
     "process_names": ["maddy"]
   },
   "requires": {
-    "dependencies": [],
-    "platforms": ["ubuntu:22.04", "ubuntu:24.04"]
+    "dependencies": []
   },
   "install_script": "scripts/install_maddy.sh",
   "uninstall_script": "scripts/uninstall_maddy.sh"

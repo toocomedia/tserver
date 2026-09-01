@@ -22,8 +22,7 @@ from jinja2 import ChoiceLoader, FileSystemLoader
 import config
 from dependencies.registry import CORE_DEPENDENCY_IDS
 from services.component_state import component_state_store
-from services.platform_support_service import SUPPORTED_PLATFORMS, platform_support_service
-from services.plugin_platform_approval_service import plugin_platform_approval_service
+from services.platform_support_service import platform_support_service
 
 logger = logging.getLogger(__name__)
 
@@ -103,12 +102,6 @@ class PluginManager:
         dependencies = requires.get("dependencies", []) if isinstance(requires, dict) else []
         return dependencies if isinstance(dependencies, list) else []
 
-    @staticmethod
-    def _required_platforms(data: dict[str, Any]) -> list[str]:
-        requires = data.get("requires") or {}
-        platforms = requires.get("platforms", []) if isinstance(requires, dict) else []
-        return platforms if isinstance(platforms, list) else []
-
     def _validate_manifest(self, data: dict[str, Any], plugin_dir: Path) -> str | None:
         plugin_id = data.get("id")
         if not isinstance(plugin_id, str) or not PLUGIN_ID_RE.fullmatch(plugin_id):
@@ -127,12 +120,6 @@ class PluginManager:
         unknown = sorted(set(dependencies) - CORE_DEPENDENCY_IDS)
         if unknown:
             return f"Unknown dependencies: {', '.join(unknown)}."
-        platforms = self._required_platforms(data)
-        if any(not isinstance(item, str) for item in platforms):
-            return "requires.platforms must contain platform selectors."
-        unknown_platforms = sorted(set(platforms) - set(SUPPORTED_PLATFORMS))
-        if unknown_platforms:
-            return f"Unknown platforms: {', '.join(unknown_platforms)}."
 
         usage = data.get("usage")
         if not isinstance(usage, dict):
@@ -184,28 +171,14 @@ class PluginManager:
         result["operation"] = state.operation
         result["last_error"] = state.last_error
 
-        platform_supported, platform_error = platform_support_service.plugin_support(
-            self._required_platforms(result)
-        )
-        platform = platform_support_service.get()
-        platform_unverified = bool(
-            self._required_platforms(result)
-            and not platform_supported
-            and platform.get("supported")
-        )
-        platform_selector = str(platform.get("selector") or "unknown:unknown")
-        platform_approved = bool(
-            platform_unverified
-            and plugin_platform_approval_service.is_approved(plugin_id, platform_selector)
-        )
+        platform_info = platform_support_service.get()
+        platform_supported = bool(platform_info.get("supported", True))
+        platform_error = platform_info.get("error")
         result["platform_supported"] = platform_supported
         result["platform_error"] = platform_error
-        result["platform_unverified"] = platform_unverified
-        result["platform_approved"] = platform_approved
-        result["platform_allowed"] = platform_supported or platform_approved
-        result["platform_name"] = platform.get("pretty_name", platform_selector)
-        result["platform_arch"] = platform.get("arch", "unknown")
-        result["platform_confirmation"] = self.unverified_confirmation(plugin_id)
+        result["platform_allowed"] = platform_supported
+        result["platform_name"] = platform_info.get("pretty_name", "Linux")
+        result["platform_arch"] = platform_info.get("arch", "unknown")
 
         if not result.get("installed", False) and result.get("dir_path"):
             installed = self._check_plugin_installed(Path(result["dir_path"]), plugin_id)
@@ -229,9 +202,7 @@ class PluginManager:
 
         if result.get("manifest_error"):
             effective_status = "invalid"
-        elif platform_unverified and not platform_approved:
-            effective_status = "unverified"
-        elif not result["platform_allowed"]:
+        elif not result.get("platform_allowed", True):
             effective_status = "unsupported"
         elif not result.get("installed", False):
             effective_status = "missing"
@@ -245,28 +216,6 @@ class PluginManager:
             effective_status = "active"
         result["effective_status"] = effective_status
         return result
-
-    @staticmethod
-    def unverified_confirmation(plugin_id: str) -> str:
-        return f"INSTALL {plugin_id} UNVERIFIED"
-
-    def approve_unverified_platform(
-        self, plugin: dict[str, Any], confirmation: str
-    ) -> tuple[bool, str]:
-        if not plugin.get("platform_unverified"):
-            return False, plugin.get("platform_error") or "Plugin platform cannot be overridden."
-        expected = self.unverified_confirmation(plugin["id"])
-        if confirmation.strip() != expected:
-            return False, "Confirm the unverified installation in the panel."
-        selector = str(platform_support_service.get().get("selector") or "")
-        if not selector:
-            return False, "Could not identify the current platform."
-        try:
-            plugin_platform_approval_service.approve(plugin["id"], selector)
-        except OSError as exc:
-            logger.error("Could not persist unverified plugin approval: %s", exc)
-            return False, "Could not save unverified plugin approval."
-        return True, "Unverified platform approved."
 
     def discover_plugins(self, *, check_dependencies: bool = True) -> List[Dict[str, Any]]:
         self.plugins.clear()
@@ -571,7 +520,6 @@ class PluginManager:
         plugin_id: str,
         action: str,
         *,
-        unverified_confirmation: str = "",
         log_callback: Optional[Callable[[str], None]] = None,
     ) -> tuple[bool, str]:
         if action not in {"install", "uninstall"}:
@@ -581,19 +529,13 @@ class PluginManager:
             return False, "Plugin not found."
         if log_callback:
             log_callback(f"Validating requirements for {plugin.get('name', plugin_id)}...")
-        if action == "install" and plugin.get("platform_unverified") and not plugin.get("platform_approved"):
-            approved, message = self.approve_unverified_platform(
-                plugin, unverified_confirmation
-            )
-            if not approved:
-                return False, message
-            plugin = self.get_plugin(plugin_id)
-        if action == "install" and not plugin.get("platform_allowed", plugin.get("platform_supported", True)):
+        if action == "install" and not plugin.get("platform_allowed", True):
             return False, plugin.get("platform_error") or "Plugin is not supported on this platform."
         if action == "install" and plugin.get("paused_by"):
             if "docker" in plugin["paused_by"]:
                 return False, "Docker daemon is not available."
-            return False, "A required system dependency is not available."
+            dependencies = ", ".join(plugin["paused_by"])
+            return False, f"Required dependency is unavailable: {dependencies}."
         if action == "install":
             from database import AsyncSessionLocal
             from services.resource_guard_service import resource_guard_service

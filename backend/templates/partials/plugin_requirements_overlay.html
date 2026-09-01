@@ -13,11 +13,7 @@
         <span class="plugin-check-window__label">{{ _('requirements_status') }}</span>
         <span class="tray-overall-status">
           {% if plugin.platform_error %}
-            {% if plugin.platform_unverified %}
-              <span class="badge badge--muted">{{ _('unverified') }}</span>
-            {% else %}
-              <span class="badge badge--danger">{{ _('unsupported') }}</span>
-            {% endif %}
+            <span class="badge badge--danger">{{ _('unsupported') }}</span>
           {% elif plugin.paused_by %}
             <span class="badge badge--danger">✕ {{ _('unmet') }} ({{ _('missing') }} {{ plugin.paused_by | title }})</span>
           {% elif plugin.dependency_status and plugin.dependency_status | length > 0 %}
@@ -58,14 +54,15 @@
       </div>
     </div>
 
-    {% if action_error and action_error_plugin_id == plugin.id and not plugin.paused_by %}
-      <div class="plugin-check-window__error">⚠️ {{ action_error }}</div>
-    {% endif %}
-    {% if plugin.manifest_error %}
-      <div class="plugin-check-window__error">⚠️ {{ plugin.manifest_error }}</div>
-    {% endif %}
-    {% if plugin.platform_error %}
-      <div class="plugin-check-window__error">{{ plugin.platform_error }}</div>
+    <!-- Error/Notice Details if any -->
+    {% if plugin.manifest_error or plugin.platform_error %}
+      <div class="plugin-check-window__notice plugin-check-window__notice--danger">
+        {{ plugin.manifest_error or plugin.platform_error }}
+      </div>
+    {% elif action_error and action_error_plugin_id == plugin.id %}
+      <div class="plugin-check-window__notice plugin-check-window__notice--danger">
+        {{ action_error }}
+      </div>
     {% endif %}
   </div>
 </div>

@@ -75,6 +75,16 @@
       // Skip search / check queries
       if (action.includes('/check') || action.includes('/catalog-view') || action.includes('/runtime-view')) return;
 
+      // Data purge confirmation handling
+      if (action.includes('/purge-data')) {
+        const confInput = form.querySelector('input[name="confirmation"]');
+        if (!confInput || !confInput.value) {
+          e.preventDefault();
+          e.stopPropagation();
+          return;
+        }
+      }
+
       e.preventDefault();
       e.stopPropagation();
 
@@ -120,7 +130,10 @@
         } else {
           alert(err.message || 'Operation failed');
         }
-        if (submitBtn) submitBtn.disabled = false;
+      } finally {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+        }
       }
     }, true);
   }

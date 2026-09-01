@@ -1,4 +1,4 @@
-"""Supported OS/version/architecture matrix shared by backend lifecycle guards."""
+"""Supported OS/architecture capabilities shared by backend lifecycle guards."""
 from __future__ import annotations
 
 import os
@@ -8,24 +8,18 @@ import time
 from pathlib import Path
 from typing import Any, Iterable
 
+SUPPORTED_CAPABILITIES: frozenset[str] = frozenset({
+    "core",
+    "docker",
+    "php",
+    "mariadb",
+    "postgresql",
+    "railpack_apps",
+    "native_python",
+    "php_external_repository",
+})
 
-SUPPORTED_PLATFORMS: dict[str, frozenset[str]] = {
-    "ubuntu:22.04": frozenset(
-        {"core", "docker", "php", "mariadb", "postgresql", "railpack_apps", "php_external_repository"}
-    ),
-    "ubuntu:24.04": frozenset(
-        {"core", "docker", "php", "mariadb", "postgresql", "railpack_apps", "native_python", "php_external_repository"}
-    ),
-    "ubuntu:26.04": frozenset(
-        {"core", "docker", "php", "mariadb", "postgresql", "railpack_apps", "native_python"}
-    ),
-    "debian:12": frozenset(
-        {"core", "docker", "php", "mariadb", "postgresql", "railpack_apps", "native_python"}
-    ),
-    "debian:13": frozenset(
-        {"core", "docker", "php", "mariadb", "postgresql", "railpack_apps", "native_python"}
-    ),
-}
+SUPPORTED_ARCHITECTURES: frozenset[str] = frozenset({"amd64", "arm64"})
 
 
 def _read_os_release(path: Path) -> dict[str, str]:
@@ -53,36 +47,37 @@ class PlatformSupportService:
     def _probe(self) -> dict[str, Any]:
         release_path = Path(os.environ.get("SRV_OS_RELEASE_FILE", "/etc/os-release"))
         release = _read_os_release(release_path)
-        os_id = release.get("ID", "unknown").lower()
-        version_id = release.get("VERSION_ID", "unknown")
-        pretty_name = release.get("PRETTY_NAME") or f"{os_id} {version_id}"
+        os_id = release.get("ID", "linux" if os.name != "nt" else "unknown").lower()
+        version_id = release.get("VERSION_ID", "")
+        pretty_name = release.get("PRETTY_NAME") or (f"{os_id} {version_id}".strip() or "Linux")
+        
         raw_arch = os.environ.get("SRV_OS_ARCH") or platform.machine() or "unknown"
-        arch = "amd64" if raw_arch.lower() in {"x86_64", "amd64"} else raw_arch.lower()
-        selector = f"{os_id}:{version_id}"
-        capabilities = SUPPORTED_PLATFORMS.get(selector, frozenset()) if arch == "amd64" else frozenset()
-
-        if arch != "amd64":
-            error = f"Unsupported CPU architecture {arch}. SRV Panel currently supports amd64 only."
-        elif selector in SUPPORTED_PLATFORMS:
-            error = None
-        elif os_id == "ubuntu":
-            error = f"Unsupported Ubuntu version {version_id}. Supported versions: 22.04, 24.04, 26.04."
-        elif os_id == "debian":
-            error = f"Unsupported Debian version {version_id}. Supported versions: 12, 13."
+        raw_arch_lower = raw_arch.lower()
+        if raw_arch_lower in {"x86_64", "amd64"}:
+            arch = "amd64"
+        elif raw_arch_lower in {"aarch64", "arm64"}:
+            arch = "arm64"
         else:
-            error = (
-                f"Unsupported operating system {pretty_name}. Supported systems: "
-                "Ubuntu 22.04/24.04/26.04 and Debian 12/13."
-            )
+            arch = raw_arch_lower
+
+        selector = f"{os_id}:{version_id}" if version_id else os_id
+
+        # Verify host platform architecture (64-bit required)
+        error: str | None = None
+        if arch not in SUPPORTED_ARCHITECTURES:
+            error = f"Unsupported CPU architecture {arch}. SRV Panel requires 64-bit architecture (amd64 or arm64)."
+
+        capabilities = sorted(SUPPORTED_CAPABILITIES) if error is None else []
+
         return {
             "id": os_id,
             "version_id": version_id,
-            "codename": release.get("UBUNTU_CODENAME") or release.get("VERSION_CODENAME") or "unknown",
+            "codename": release.get("UBUNTU_CODENAME") or release.get("VERSION_CODENAME") or "",
             "pretty_name": pretty_name,
             "arch": arch,
             "selector": selector,
             "supported": error is None,
-            "capabilities": sorted(capabilities),
+            "capabilities": capabilities,
             "error": error,
         }
 
@@ -104,24 +99,14 @@ class PlatformSupportService:
         if not info["supported"]:
             return str(info["error"])
         if capability not in info["capabilities"]:
-            if capability == "php_external_repository" and info["id"] == "ubuntu":
-                return (
-                    f"Ondrej PHP PPA does not publish packages for {info['pretty_name']} "
-                    f"({info['codename']}). Use PHP versions available from configured APT sources."
-                )
             return f"{capability.replace('_', ' ').title()} is not supported on {info['pretty_name']}."
         return None
 
-    def plugin_support(self, selectors: Iterable[str]) -> tuple[bool, str | None]:
-        allowed = tuple(selectors)
-        if not allowed:
-            return True, None
+    def plugin_support(self, selectors: Iterable[str] = ()) -> tuple[bool, str | None]:
         info = self.get()
         if not info["supported"]:
             return False, str(info["error"])
-        if info["selector"] in allowed:
-            return True, None
-        return False, f"Plugin is not verified on {info['pretty_name']} ({info['arch']})."
+        return True, None
 
     def install_guide(self, capability: str, command: str, warning: str) -> dict[str, Any]:
         info = self.get()
